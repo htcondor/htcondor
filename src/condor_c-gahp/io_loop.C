@@ -208,6 +208,10 @@ io_loop(void * arg, Stream * sock) {
 
 				delete line;
 			}
+
+			if (result_buffer.IsError()) {
+				return 1;
+			}
 		}
 
 	} while (!exit_signaled);

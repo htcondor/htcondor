@@ -76,9 +76,6 @@ int handle_gahp_command(char ** argv, int argc);
 int parse_gahp_command (const char *, char ***, int *);
 int schedd_thread (void * arg, Stream * sock);
 
-int BeginQmgmtTransaction(DCSchedd &, int write);
-int FinishTransaction(int commit);
-
 int io_loop_reaper (Service*, int pid, int exit_status);
 
 

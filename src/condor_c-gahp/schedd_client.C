@@ -173,8 +173,9 @@ doContactSchedd()
 
 	SchedDRequest * current_command = NULL;
 
-	CondorError errstack;
+	int error=FALSE;
 	char error_msg[1000];
+	CondorError errstack;
 
 	// Try connecting to schedd
 	DCSchedd dc_schedd ( ScheddAddr );
@@ -210,67 +211,107 @@ doContactSchedd()
 		}
 
 		current_command->status = SchedDRequest::SDCS_COMPLETED;
-
 	}
 
+	
+	SchedDRequest::schedd_command_type commands [] = {
+		SchedDRequest::SDC_REMOVE_JOB,
+		SchedDRequest::SDC_HOLD_JOB,
+		SchedDRequest::SDC_RELEASE_JOB };
 
+	const char * command_titles [] = {
+		"removing", "putting on hold", "releasing" };
 
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
-		if (current_command->status != SchedDRequest::SDCS_NEW) {
-			delete current_command;
-			command_queue.DeleteCurrent();
-			continue;
-		}
+	// REMOVE
+	// HOLD
+	// RELEASE
+	int i=0;
+	while (i<3) {
+		
+		
+		StringList id_list;
+		SimpleList <SchedDRequest*> this_batch;
 
-		if (current_command->command == SchedDRequest::SDC_REMOVE_JOB ||
-			current_command->command == SchedDRequest::SDC_HOLD_JOB ||
-			current_command->command == SchedDRequest::SDC_RELEASE_JOB) {
-			int error = 0;
+		SchedDRequest::schedd_command_type this_command = commands[i];
+		const char * this_action = command_titles[i];
+		const char * this_reason = NULL;
 
-			// Make a job string
+		dprintf (D_FULLDEBUG, "Processing %s requests\n", this_action);
+		
+		error = FALSE;
+
+		// Create a batch of commands with the same command type AND the same reason		
+		command_queue.Rewind();
+		while (command_queue.Next(current_command)) {
+			if (current_command->status != SchedDRequest::SDCS_NEW)
+				continue;
+
+			if (current_command->command != this_command)
+				continue;
+
+			if ((this_reason != NULL) && (strcmp (current_command->reason, this_reason) != 0))
+				continue;
+
+			if (this_reason == NULL)
+				this_reason = current_command->reason;
+				
 			char job_id_buff[30];
 			sprintf (job_id_buff, "%d.%d",
 				current_command->cluster_id,
 				current_command->proc_id);
-
-			StringList id_list;
 			id_list.append (job_id_buff);
-			current_command->status = SchedDRequest::SDCS_PENDING;
 
-			const char * action;
-			ClassAd * result_ad= NULL;
+			this_batch.Append (current_command);
+		}
 
-			if (current_command->command == SchedDRequest::SDC_REMOVE_JOB)  {
-				result_ad=
-					dc_schedd.removeJobs (&id_list,
-							current_command->reason,
-							&errstack);
-				action = "removing";
-			} else if (current_command->command == SchedDRequest::SDC_HOLD_JOB) {
-				result_ad=
-					dc_schedd.holdJobs (&id_list,
-							current_command->reason,
-				 			&errstack);
-				action = "putting on hold";
-			} else if (current_command->command == SchedDRequest::SDC_RELEASE_JOB)  {
-				result_ad=
-					dc_schedd.releaseJobs (&id_list,
-							current_command->reason,
-							&errstack);
-				action = "releasing";
-			}
+		// If we haven't found any....
+		if (id_list.isEmpty()) {
+			i++;
+			continue;	// ... then try the next command
+		}
 
-			if (!result_ad) {
-				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-			} else {
-				result_ad->dPrint (D_FULLDEBUG);
+		// Perform the appropriate command on the current batch
+		ClassAd * result_ad= NULL;
+		if (current_command->command == SchedDRequest::SDC_REMOVE_JOB)  {
+			result_ad=
+				dc_schedd.removeJobs (
+					&id_list,
+					this_reason,
+					&errstack);
+		} else if (current_command->command == SchedDRequest::SDC_HOLD_JOB) {
+			result_ad=
+				dc_schedd.holdJobs (
+					&id_list,
+					this_reason,
+			 		&errstack);
+		} else if (current_command->command == SchedDRequest::SDC_RELEASE_JOB)  {
+			result_ad=
+				dc_schedd.releaseJobs (
+					&id_list,
+					this_reason,
+					&errstack);
+		}
 
-				// Check the result
+		// Analyze the result ad
+		if (!result_ad) {
+			error = TRUE;
+			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+		}
+		else {
+			result_ad->dPrint (D_FULLDEBUG);
+		}
+
+		// Go through the batch again, and create responses for each request
+		this_batch.Rewind();
+		while (this_batch.Next(current_command)) {
+			
+			// Check the result
+			char job_id_buff[30];
+			if (result_ad && (error == FALSE)) {
 				sprintf (job_id_buff, "job_%d_%d",
 					current_command->cluster_id,
 					current_command->proc_id);
+				
 				int remove_result;
 				if (result_ad->LookupInteger (job_id_buff, remove_result)) {
 					switch (remove_result) {
@@ -305,14 +346,15 @@ doContactSchedd()
 					delete result_ad;
 				} else {
 					strcpy (error_msg, "Unable to get result");
-				} // fi get result
-			} // if remove result ad
+				} // fi lookup result for job
+			} // fi error == FALSE
 
 			if (error) {
-				dprintf (D_ALWAYS, "Error %s %d,%d\n",
-						action,
+				dprintf (D_ALWAYS, "Error %s %d,%d: %s\n",
+						this_action,
 						current_command->cluster_id,
-						current_command->proc_id);
+						current_command->proc_id,
+						error_msg);
 
 				const char * result[2];
 				result[0] = GAHP_RESULT_FAILURE;
@@ -321,10 +363,9 @@ doContactSchedd()
 				enqueue_result (current_command->request_id, result, 2);
 			} else {
 				dprintf (D_ALWAYS, "Succeess %s %d,%d\n",
-						action,
+						this_action,
 						current_command->cluster_id,
 						current_command->proc_id);
-				current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 				const char * result[2];
 				result[0] = GAHP_RESULT_SUCCESS;
@@ -333,392 +374,352 @@ doContactSchedd()
 				enqueue_result (current_command->request_id, result, 2);
 			} // fi error
 
-				// Mark the status
+			// Mark the status
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
-		} else if (current_command->command == SchedDRequest::SDC_UPDATE_CONSTRAINED ) {
-			int error = 0;
+		} // elihw this_batch
+	}
+
+	dprintf (D_FULLDEBUG, "Processing JOB_STAGE_IN requests\n");
+	
+
+	// JOB_STAGE_IN
+	SimpleList <SchedDRequest*> this_batch;
+
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_JOB_STAGE_IN)
+			continue;
 
 
-			if (!BeginQmgmtTransaction(dc_schedd, TRUE)) {
+		this_batch.Append (current_command);
+	}
+
+	if (this_batch.Number() > 0) {
+	ClassAd ** array = new ClassAd*[this_batch.Number()];
+	i=0;
+	this_batch.Rewind();
+	while (this_batch.Next(current_command)) {
+		array[i++] = current_command->classad;
+	}
+
+  	error = FALSE;
+
+  	if (!dc_schedd.spoolJobFiles( 1,
+  								  array,
+  								  &errstack )) {
+  		error = TRUE;
+  		sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+  		dprintf (D_ALWAYS, "%s\n", error_msg);
+  	}
+  
+	this_batch.Rewind();
+	while (this_batch.Next(current_command)) {
+		current_command->status = SchedDRequest::SDCS_COMPLETED;
+
+		if (error) {
+			const char * result[] = {
+								GAHP_RESULT_FAILURE,
+								error_msg };
+			enqueue_result (current_command->request_id, result, 2);
+
+		} else {
+			const char * result[] = {
+										GAHP_RESULT_SUCCESS,
+										NULL };
+			enqueue_result (current_command->request_id, result, 2);
+		}
+	} // elihw (command_queue)
+	} // fi has STAGE_IN requests
+
+
+	// Now do all the QMGMT transactions
+	error = FALSE;
+
+	// Try connecting to the queue
+	Qmgr_connection * qmgr_connection;
+	
+	if ((qmgr_connection = ConnectQ(ScheddAddr, QMGMT_TIMEOUT, false )) == NULL) {
+		error = TRUE;
+		sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+		dprintf (D_ALWAYS, "%s\n", error_msg);
+	} else {
+		AbortTransaction(); // Just so we can call BeginTransaction() in the loop
+	}
+
+
+	dprintf (D_FULLDEBUG, "Processing UPDATE_CONSTRAINED/UDATE_JOB requests\n");
+	
+	// UPDATE_CONSTRAINED
+	// UDATE_JOB
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+		
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if ((current_command->command != SchedDRequest::SDC_UPDATE_CONSTRAINED) &&
+			(current_command->command != SchedDRequest::SDC_UPDATE_JOB))
+			continue;
+
+		if (qmgr_connection == NULL)
+			goto update_report_result;
+		
+		error = FALSE;
+		BeginTransaction();
+		
+		current_command->status = SchedDRequest::SDCS_PENDING;
+			
+		current_command->classad->ResetExpr();
+		ExprTree *tree;
+		while( (tree = current_command->classad->NextExpr()) ) {
+			ExprTree *lhs = NULL, *rhs = NULL;
+			char *lhstr = NULL, *rhstr = NULL;
+
+			if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
+			if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
+			if( !lhs || !rhs || !lhstr || !rhstr) {
+				sprintf (error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
+												 current_command->constraint );
+				dprintf ( D_ALWAYS, "%s\n", error_msg);
 				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-				dprintf (D_ALWAYS, "%s\n", error_msg);
 			} else {
-				current_command->classad->ResetExpr();
-				ExprTree *tree;
-				while( (tree = current_command->classad->NextExpr()) ) {
-					ExprTree *lhs = NULL, *rhs = NULL;
-					char *lhstr = NULL, *rhstr = NULL;
-
-					if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-					if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-					if( !lhs || !rhs || !lhstr || !rhstr) {
-						sprintf (error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
-														 current_command->constraint );
-						dprintf ( D_ALWAYS, "%s\n", error_msg);
-						error = TRUE;
-					} else if( SetAttributeByConstraint(current_command->constraint,
+				if (current_command->command == SchedDRequest::SDC_UPDATE_CONSTRAINED) {
+					if( SetAttributeByConstraint(current_command->constraint,
 												lhstr,
 												rhstr) == -1 ) {
 						sprintf (error_msg, "ERROR: Failed (errno=%d) to SetAttributeByConstraint %s=%s for constraint %s",
-										 errno, lhstr, rhstr, current_command->constraint );
+									errno, lhstr, rhstr, current_command->constraint );
 						dprintf ( D_ALWAYS, "%s\n", error_msg);
-
 						error = TRUE;
 					}
-
-					free(lhstr);
-					free(rhstr);
-
-					if (error)
-						break;
-				} // elihw classad
-			}
-
-			if (error) {
-				const char * result[] = {
-					GAHP_RESULT_FAILURE,
-					error_msg };
-				FinishTransaction(FALSE);
-				enqueue_result (current_command->request_id, result, 2);
-			} else {
-				const char * result[] = {
-					GAHP_RESULT_SUCCESS,
-					NULL };
-				FinishTransaction(TRUE);
-				enqueue_result (current_command->request_id, result, 2);
-			} // fi
-			current_command->status = SchedDRequest::SDCS_COMPLETED;
-		} else if (current_command->command == SchedDRequest::SDC_UPDATE_JOB ) {
-			int error = 0;
-
-			if (!BeginQmgmtTransaction(dc_schedd, TRUE)) {
-				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-				dprintf (D_ALWAYS, "%s\n", error_msg);
-			} else {
-				current_command->classad->ResetExpr();
-				ExprTree *tree;
-				while( (tree = current_command->classad->NextExpr()) ) {
-					ExprTree *lhs = NULL, *rhs = NULL;
-					char *lhstr = NULL, *rhstr = NULL;
-
-					if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-					if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-					if( !lhs || !rhs || !lhstr || !rhstr) {
-						sprintf (error_msg, "ERROR: ClassAd problem in Updating for job %d.%d",
-														 current_command->cluster_id,
-														 current_command->proc_id);
-						dprintf ( D_ALWAYS, "%s\n", error_msg);
-						error = TRUE;
-					} else if( SetAttribute(current_command->cluster_id,
+				} else if (current_command->command == SchedDRequest::SDC_UPDATE_JOB) {
+					if( SetAttribute(current_command->cluster_id,
 											current_command->proc_id,
 											lhstr,
 											rhstr) == -1 ) {
 						sprintf (error_msg, "ERROR: Failed to SetAttribute() %s=%s for job %d.%d",
 										 lhstr, rhstr, current_command->cluster_id,  current_command->proc_id);
 						dprintf ( D_ALWAYS, "%s\n", error_msg);
-
 						error = TRUE;
 					}
-
-					free(lhstr);
-					free(rhstr);
-
-					if (error)
-						break;
-				} // elihw classad
+				}
 			}
 
-			if (error) {
-				const char * result[] = {
-					GAHP_RESULT_FAILURE,
-					error_msg };
-				FinishTransaction(FALSE);
-				enqueue_result (current_command->request_id, result, 2);
-			} else {
-				const char * result[] = {
-					GAHP_RESULT_SUCCESS,
-					NULL };
-				FinishTransaction(TRUE);
-				enqueue_result (current_command->request_id, result, 2);
-			} // fi
+			free(lhstr);
+			free(rhstr);
 
+			if (error)
+				break;
+		} // elihw classad
+
+update_report_result:
+		if (error) {
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg };
+
+			AbortTransaction();
+			//CloseConnection();
+			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		} else {
+			const char * result[] = {
+				GAHP_RESULT_SUCCESS,
+				NULL };
+			CloseConnection();
 
-		} else if (current_command->command == SchedDRequest::SDC_STATUS_CONSTRAINED ) {
+			enqueue_result (current_command->request_id, result, 2);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		} // fi
+
+	} // elihw
+
+	dprintf (D_FULLDEBUG, "Processing SUBMIT_JOB requests\n");
+
+	// SUBMIT_JOB
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_SUBMIT_JOB)
+			continue;
+
+		int ClusterId = -1;
+		int ProcId = -1;
+
+		if (qmgr_connection == NULL)
+			goto submit_report_result;
+
+		BeginTransaction();
+		error = FALSE;
+
+		if ((ClusterId = NewCluster()) == -1) {
+			error = TRUE;
+			strcpy (error_msg, "Unable to create a new job cluster");
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+		} else {
+			ProcId = NewProc (ClusterId);
+
+			current_command->classad->Assign(ATTR_CLUSTER_ID, ClusterId);
+			current_command->classad->Assign(ATTR_PROC_ID, ProcId);
+
+			// Set all the classad attribute on the remote classad
+			current_command->classad->ResetExpr();
+			ExprTree *tree;
+			while( (tree = current_command->classad->NextExpr()) ) {
+				ExprTree *lhs;
+				ExprTree *rhs;
+				char *lhstr, *rhstr;
+
+				lhs = NULL, rhs = NULL;
+				rhs = NULL, rhstr = NULL;
+
+				if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
+				if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
+				if( !lhs || !rhs || !lhstr || !rhstr) {
+					sprintf (error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
+												 current_command->constraint );
+					dprintf ( D_ALWAYS, "%s\n", error_msg);
+					error = TRUE;
+				} else if( SetAttribute (ClusterId, ProcId,
+											lhstr,
+											rhstr) == -1 ) {
+					sprintf (error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
+									 lhstr, rhstr, ClusterId, ProcId );
+					dprintf ( D_ALWAYS, "%s\n", error_msg);
+					error = TRUE;
+				}
+
+				if (lhstr) free(lhstr);
+				if (rhstr) free(rhstr);
+
+				if (error) break;
+			} // elihw classad
+		} // fi NewCluster()
+
+submit_report_result:
+		char job_id_buff[30];
+		sprintf (job_id_buff, "%d.%d", ClusterId, ProcId);
+
+		if (error) {
+			const char * result[] = {
+								GAHP_RESULT_FAILURE,
+								job_id_buff,
+									error_msg };
+			enqueue_result (current_command->request_id, result, 3);
+			AbortTransaction();
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		} else {
+			const char * result[] = {
+									GAHP_RESULT_SUCCESS,
+									job_id_buff,
+									NULL };
+			enqueue_result (current_command->request_id, result, 3);
+			CloseConnection();
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		}
+	} // elihw
+
+
+	dprintf (D_FULLDEBUG, "Processing STATUS_CONSTRAINED requests\n");
+		
+	// STATUS_CONSTRAINED
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_STATUS_CONSTRAINED)
+			continue;
+
+		if (qmgr_connection != NULL) {
 			SimpleList <MyString *> matching_ads;
 
-			int error = FALSE;
-
+			error = FALSE;
+			
 			ClassAdXMLUnparser XMLer;
 			XMLer.SetUseCompactSpacing(true);
 
-			if (!BeginQmgmtTransaction(dc_schedd, FALSE)) {
-				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-				dprintf (D_ALWAYS, "%s\n", error_msg);
-			} else {
-				ClassAd * next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
-				while (next_ad != NULL) {
-					MyString * da_buffer = new MyString();	// Use a ptr to avoid excessive copying
-					XMLer.Unparse (next_ad, *da_buffer);
-					matching_ads.Append (da_buffer);
-					next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
-				}
-
-				// now output this list of classads into a result
-				const char ** result  = new const char* [matching_ads.Length() + 3];
-
-				MyString _ad_count;
-				_ad_count += matching_ads.Length();
-
-				int count=0;
-				result[count++] = GAHP_RESULT_SUCCESS;
-				result[count++] = NULL;
-				result[count++] = _ad_count.Value();
-
-				MyString *next_string;
-				matching_ads.Rewind();
-				while (matching_ads.Next(next_string)) {
-					result[count++] = next_string->Value();
-				}
-
-				enqueue_result (current_command->request_id, result, count);
-				current_command->status = SchedDRequest::SDCS_COMPLETED;
-
-				// Cleanup
-				matching_ads.Rewind();
-				while (matching_ads.Next(next_string)) {
-					delete next_string;
-				}
-				FinishTransaction (TRUE);
-				delete [] result;
+			ClassAd * next_ad = GetNextJobByConstraint( current_command->constraint, 1 );
+			while (next_ad != NULL) {
+				MyString * da_buffer = new MyString();	// Use a ptr to avoid excessive copying
+				XMLer.Unparse (next_ad, *da_buffer);
+				matching_ads.Append (da_buffer);
+				next_ad = GetNextJobByConstraint( current_command->constraint, 0 );
 			}
 
-			if (error) {
-				FinishTransaction(FALSE);
+			// now output this list of classads into a result
+			const char ** result  = new const char* [matching_ads.Length() + 3];
 
-				const char * result[] = {
-					GAHP_RESULT_FAILURE,
-					error_msg,
-					"0"};
-				enqueue_result (current_command->request_id, result, 3);
-			}
-		} else if (current_command->command == SchedDRequest::SDC_SUBMIT_JOB ) {
-			int error = 0;
-			int ClusterId = -1;
-			int ProcId = -1;
+			MyString _ad_count;
+			_ad_count += matching_ads.Length();
 
-			// TODO (optimization):
-			// Find all other jobs from this cluster
-			// And submit them together
-			// This is tricky because the first job of this cluster might
-			// have been submitted on the previous cycle of this function
+			int count=0;
+			result[count++] = GAHP_RESULT_SUCCESS;
+			result[count++] = NULL;
+			result[count++] = _ad_count.Value();
 
-			if (!BeginQmgmtTransaction(dc_schedd, TRUE)) {
-				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-				dprintf (D_ALWAYS, "%s\n", error_msg);
-			} else if ((ClusterId = NewCluster()) == -1) {
-				error = TRUE;
-				strcpy (error_msg, "Unable to create a new job cluster");
-				dprintf (D_ALWAYS, "%s\n", error_msg);
-			} else {
-				ProcId = NewProc (ClusterId);
-
-				current_command->classad->Assign(ATTR_CLUSTER_ID, ClusterId);
-				current_command->classad->Assign(ATTR_PROC_ID, ProcId);
-
-				// Set all the classad attribute on the remote classad
-				current_command->classad->ResetExpr();
-				ExprTree *tree;
-				while( (tree = current_command->classad->NextExpr()) ) {
-					ExprTree *lhs;
-					ExprTree *rhs;
-					char *lhstr, *rhstr;
-
-					lhs = NULL, rhs = NULL;
-					rhs = NULL, rhstr = NULL;
-
-					if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-					if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-					if( !lhs || !rhs || !lhstr || !rhstr) {
-						sprintf (error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
-														 current_command->constraint );
-						dprintf ( D_ALWAYS, "%s\n", error_msg);
-						error = TRUE;
-					} else if( SetAttribute (ClusterId, ProcId,
-												lhstr,
-												rhstr) == -1 ) {
-						sprintf (error_msg, "ERROR: Failed to SetAttribute %s=%s for job %d.%d",
-										 lhstr, rhstr, ClusterId, ProcId );
-						dprintf ( D_ALWAYS, "%s\n", error_msg);
-
-						error = TRUE;
-					}
-
-					if (lhstr) free(lhstr);
-					if (rhstr) free(rhstr);
-
-					if (error) break;
-				} // elihw classad
-
-				// Commit
-				if (error)
-					FinishTransaction(FALSE);
-				else
-					FinishTransaction(TRUE);
-
-
-				// Now transfer the sandbox
-				// This has been moved to a separate command, JOB_STAGE_IN,
-				// by Jaime's request, despite Carey's disgruntlement....
-
-				/*CondorError errstack;
-				ClassAd* array [1];
-				array[0] = current_command->classad;
-				if (!dc_schedd.spoolJobFiles( 1,
-												  array,
-												  &errstack )) {
-					error = TRUE;
-					sprintf (error_msg, "Error transferring sandbox for job %d.%d", ClusterId, ProcId);
-					dprintf (D_ALWAYS, "%s\n", error_msg);
-				}*/
-
-				current_command->status = SchedDRequest::SDCS_COMPLETED;
-
-
-
-			} // fi NewCluster()
-
-			char job_id_buff[30];
-			sprintf (job_id_buff, "%d.%d", ClusterId, ProcId);
-
-			if (error) {
-				const char * result[] = {
-									GAHP_RESULT_FAILURE,
-									job_id_buff,
-									error_msg };
-				enqueue_result (current_command->request_id, result, 3);
-
-			} else {
-				const char * result[] = {
-										GAHP_RESULT_SUCCESS,
-										job_id_buff,
-										NULL };
-				enqueue_result (current_command->request_id, result, 3);
-			}
-		} else if (current_command->command == SchedDRequest::SDC_JOB_STAGE_IN ) {
-			int error = FALSE;
-			CondorError errstack;
-			ClassAd* array[] = { current_command->classad };
-
-			if (!dc_schedd.spoolJobFiles( 1,
-										  array,
-										  &errstack )) {
-				error = TRUE;
-				sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
-				dprintf (D_ALWAYS, "%s\n", error_msg);
+			MyString *next_string;
+			matching_ads.Rewind();
+			while (matching_ads.Next(next_string)) {
+				result[count++] = next_string->Value();
 			}
 
+			enqueue_result (current_command->request_id, result, count);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 
-			if (error) {
-				const char * result[] = {
-									GAHP_RESULT_FAILURE,
-									error_msg };
-				enqueue_result (current_command->request_id, result, 2);
-
-			} else {
-				const char * result[] = {
-										GAHP_RESULT_SUCCESS,
-										NULL };
-				enqueue_result (current_command->request_id, result, 2);
+			// Cleanup
+			matching_ads.Rewind();
+			while (matching_ads.Next(next_string)) {
+				delete next_string;
 			}
-		} else {
-			// Unknown command (should never happen because of prior verifications)
-		} // fi commmand = ...
-	} // elihw (command_queue)
+			//CommitTransaction();
+			delete [] result;
+		}
+		else {
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg,
+				"0" };
+			//CloseConnection();
+			enqueue_result (current_command->request_id, result, 3);
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		}
+	}	//elihw
 
+	
+	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
+
+
+//	FinishQmgmtTransaction (TRUE);
+
+	DisconnectQ (qmgr_connection, FALSE);
+	if (qmgmt_sock)
+		delete qmgmt_sock;
+	qmgmt_sock = NULL;
+
+	// Clean up the list
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+		if (current_command->status == SchedDRequest::SDCS_COMPLETED) {
+			command_queue.DeleteCurrent();
+			delete current_command;
+		}
+	}
+	
 	// Come back soon..
 	// QUESTION: Should this always be a fixed time period?
 	daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval );
 	return TRUE;
 
 }
-
-int
-BeginQmgmtTransaction(DCSchedd & dc_schedd, int write) {
-	// Prepare for Queue management commands
-	CondorError errstack;
-	qmgmt_sock = (ReliSock*) dc_schedd.startCommand( QMGMT_CMD,
-													 Stream::reli_sock,
-													 QMGMT_TIMEOUT,
-													 &errstack);
-	if (!qmgmt_sock) {
-		//TODO: oh shit, what do we do?
-		dprintf (D_ALWAYS, "Unable to start QMGMT_CMD\n");
-		return FALSE;
-	}
-
-	if (!write)
-		return TRUE;
-
-	// Re-authenticate...
-	// I'm not sure why we have to do this.. i just borrowed this code from ConnectQ()
-	char *username = my_username();
-	char *domain = my_domainname();
-	if (!username) {
-		dprintf (D_FULLDEBUG, "Unable to get username to re-authenticate!\n");
-	}else {
-		qmgmt_sock->setOwner( username );
-
-		if (!qmgmt_sock->isAuthenticated()) {
-			int rval;
-
-			 if ( !write ) {
-				rval = InitializeReadOnlyConnection( username );
-			} else {
-				rval = InitializeConnection( username, domain );
-			}
-
-			char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
-			MyString methods;
-			if (p) {
-				methods = p;
-				free(p);
-			} else {
-				methods = SecMan::getDefaultAuthenticationMethods();
-			}
-
-			if (!qmgmt_sock->authenticate(methods.Value(), &errstack)) {
-				dprintf (D_ALWAYS, "Can't authenticate\n");
-				delete qmgmt_sock;
-				qmgmt_sock = NULL;
-				return FALSE;
-			}
-		}
-	}
-	if (username) free(username);
-	if (domain) free (domain);
-
-	return TRUE;
-}
-
-int
-FinishTransaction(int commit) {
-	if (commit)
-		CloseConnection();
-
-	if (qmgmt_sock)
-		delete qmgmt_sock;
-
-	qmgmt_sock = NULL;
-
-	return TRUE;
-}
-
 
 
 int

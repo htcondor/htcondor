@@ -36,6 +36,10 @@
  *
  **/
 
+
+
+	
+ 
 class SchedDRequest {
 public:
 	static SchedDRequest * createRemoveRequest (const int request_id,
@@ -100,7 +104,7 @@ public:
 	} status;
 
 	// Command being sent
-	enum {
+typedef enum {
 		SDC_NOOP,
 		SDC_ERROR,
 		SDC_REMOVE_JOB,
@@ -112,7 +116,9 @@ public:
 		SDC_UPDATE_CONSTRAINED,
 		SDC_UPDATE_JOB,
 		SDC_JOB_STAGE_IN,
-	} command;
+} schedd_command_type;
+	
+	schedd_command_type command;
 
 protected:
 	SchedDRequest() {
