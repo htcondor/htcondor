@@ -23,7 +23,8 @@
 
 static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern 	"C" int _EXCEPT_(char*, ...);
-extern	"C"	void	dprintf(int, char* fmt, ...);
+extern	"C"	void dprintf(int, char* fmt, ...);
+extern  "C" int  xdr_mywrapstring (XDR *, char **);
 
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
@@ -1519,11 +1520,8 @@ int AttrList::put(Stream& s)
 
 int AttrList::get(Stream& s)
 {
-    AttrListElem*   elem;
     ExprTree*       tree;
-    char*           name;
     char*           line;
-    int             status;
     int             numExprs;
 
     exprList       = NULL;
@@ -1563,6 +1561,92 @@ int AttrList::get(Stream& s)
     delete [] line;
 
     return 1;
+}
+
+// xdr shipping code
+int AttrList::put(XDR *xdrs)
+{
+    AttrListElem*   elem;
+    char*           line;
+    int             numExprs = 0;
+
+	xdrs->x_op = XDR_ENCODE;
+
+    //get the number of expressions
+    for(elem = exprList; elem; elem = elem->next)
+        numExprs++;
+
+	// ship number of expressions
+    if(!xdr_int (xdrs, &numExprs))
+        return 0;
+
+	// ship expressions themselves
+    line = new char[200];
+    for(elem = exprList; elem; elem = elem->next) {
+        strcpy(line, "");
+        elem->tree->PrintToStr(line);
+        if(!xdr_mywrapstring (xdrs, &line)) {
+            delete [] line;
+            return 0;
+        }
+    }
+    delete [] line;
+
+    return 1;
+}
+
+int AttrList::get(XDR *xdrs)
+{
+    ExprTree*       tree;
+    char*           line;
+    int             numExprs;
+	int             errorFlag = 0;
+
+	xdrs->x_op = XDR_DECODE;
+    exprList       = NULL;
+    associatedList = NULL;
+    tail           = NULL;
+    ptrExpr        = NULL;
+    ptrName        = NULL;
+
+    if(!xdr_int (xdrs, &numExprs))
+        return 0;
+    
+    line = new char[200];
+	if (!line)
+	{
+		return 0;
+	}
+
+	// if we encounter a parse error, we still read the remaining strings from
+	// the xdr stream --- we just don't parse these.  Also, we return a FALSE
+	// indicating failure
+    for(int i = 0; i < numExprs; i++) 
+	{ 
+		strcpy(line, "");
+		if(!xdr_mywrapstring (xdrs, &line)) {
+            delete [] line;
+            return 0;
+        }
+        
+		// parse iff no errorFlag
+		if (!errorFlag)
+		{
+			int result = Parse (line, tree);
+			if(result == 0 && tree->MyType() != LX_ERROR) 
+			{
+				Insert (tree);
+			}
+			else 
+			{
+				errorFlag = 1;
+			}
+		}
+	}
+
+    delete [] line;
+
+	return (!errorFlag);
 }
 
 int AttrList::code(Stream& s)                                           

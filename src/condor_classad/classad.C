@@ -25,6 +25,7 @@ static Registration regi;                   // this is the registration for
                                             // procedure.
 static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern "C" int _EXCEPT_(char*, ...);
+extern "C" int xdr_mywrapstring (XDR *, char **);
 
 //
 // AdType Constructor.
@@ -81,7 +82,7 @@ ClassAd::ClassAd(ProcObj* procObj) : AttrList(procObj)
 	targetType = NULL;
 }
 
-ClassAd::ClassAd(const CONTEXT* context) : AttrList(context)
+ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {
 	myType = NULL;
 	targetType = NULL;
@@ -529,7 +530,6 @@ int ClassAd::put(Stream& s)
 
 int ClassAd::get(Stream& s)
 {
-    AttrListElem*   elem;
     ExprTree*       tree;
     char*           name;
     char*           line;
@@ -600,4 +600,46 @@ int ClassAd::code(Stream& s)
         return put(s);
     else
         return get(s);
+}
+
+int ClassAd::put (XDR *xdrs)
+{
+	xdrs->x_op = XDR_ENCODE;
+
+	if (!AttrList::put (xdrs))
+		return 0;
+
+	if (!xdr_mywrapstring (xdrs, &myType->name))
+		return 0;
+
+	if (!xdr_mywrapstring (xdrs, &targetType->name))
+		return 0;
+
+	return 1;
+}
+
+
+int ClassAd::get (XDR *xdrs)
+{
+	char buf[100];
+	char *line = buf;
+
+	if (!line) return 0;
+
+	xdrs->x_op = XDR_DECODE;
+
+	if (!AttrList::get (xdrs)) 
+		return 0;
+
+	if (!xdr_mywrapstring (xdrs, &line)) 
+		return 0;
+
+	SetMyTypeName (line);
+
+	if (!xdr_mywrapstring (xdrs, &line)) 
+		return 0;
+
+	SetTargetTypeName (line);
+
+	return 1;
 }

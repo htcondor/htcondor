@@ -1136,6 +1136,7 @@ int MultOp::EvalTree(AttrList* classad, EvalResult* val)
 		{
 			rArgVal.i = 0;
 		}
+	}
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
         val->type = LX_INTEGER;
@@ -1174,7 +1175,7 @@ int MultOp::EvalTree(AttrList* classad, EvalResult* val)
 
 
 //---------------tw-----------------------
-int MultOp::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* val)
+int MultOp::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* val) 
 {
     if(!val) 
     {
@@ -1222,6 +1223,7 @@ int MultOp::EvalTree(AttrList* my_classad, AttrList* req_classad, EvalResult* va
 		{
 			rArgVal.i = 0;
 		}
+	}
     if(lArgType == LX_INTEGER && rArgType == LX_INTEGER)
     {
         val->type = LX_INTEGER;
