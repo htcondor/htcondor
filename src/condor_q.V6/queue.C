@@ -209,7 +209,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix (arg, "pool")) {
 			if( pool ) {
-				free( pool );
+				delete [] pool;
 			}
 			pool = get_full_hostname(argv[++i]);
 			if( ! pool ) {
@@ -217,7 +217,6 @@ processCommandLineArguments (int argc, char *argv[])
 						 argv[0], argv[i] );
 				exit(1);
 			}
-			pool = strdup( pool );
 		} 
 		else
 		if (match_prefix (arg, "D")) {

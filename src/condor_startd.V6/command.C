@@ -590,6 +590,7 @@ accept_request_claim( Resource* rip )
 		rip->r_cur->client()->sethost( client_host );
 	} else {
 		rip->r_cur->client()->sethost( full_client_host );
+		delete [] full_client_host;
 	}
 	free( client_host );
 
