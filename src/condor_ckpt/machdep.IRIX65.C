@@ -61,12 +61,12 @@ BOOL StackGrowsDown()
 
 /*
   Return the index into the jmp_buf where the stack pointer is stored.
-  Expect that the jmp_buf will be viewed as an array of integers for
-  this.
+  Expect that the jmp_buf will be viewed as an array of int-like quantities
+  for this.
 */
 int JmpBufSP_Index()
 {
-	return 39;
+	return 34;
 }
 
 /*
@@ -87,7 +87,7 @@ stack_start_addr()
 long
 stack_end_addr()
 {
-	return DEFUSRSTACK_32 -1;
+	return DEFUSRSTACK_32 - 1;
 }
 
 /*
@@ -173,8 +173,10 @@ segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot )
 {
 	if (my_map == NULL)
 		return -1;
+
 	start = (long) my_map[seg_num].pr_vaddr;
 	end = start + my_map[seg_num].pr_size;
+
 	prot = my_map[seg_num].pr_mflags;
 	if (seg_num == text_loc)
 		return 1;
@@ -208,7 +210,7 @@ display_prmap()
 
 	num_segments();
 	for (i = 0; i < prmap_count; i++) {
-	  dprintf( D_ALWAYS, "addr = 0x%p, size = 0x%lx, offset = 0x%x",
+	  dprintf( D_ALWAYS, "addr = 0x%p, size = 0x%x, offset = 0x%x",
 		 my_map[i].pr_vaddr, my_map[i].pr_size, my_map[i].pr_off);
 	  for (j = 0; j < sizeof(MA_FLAGS) / sizeof(MA_FLAGS[0]); j++) {
 	    if (my_map[i].pr_mflags & MA_FLAGS[j].flag_val) {
