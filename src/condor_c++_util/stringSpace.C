@@ -42,7 +42,8 @@ hashFunction (const MyString &str, int numBuckets)
 
 
 StringSpace::
-StringSpace (int sz) : stringSpace ((int) (1.25 * sz), &hashFunction) 
+StringSpace (int initial_size, bool makeCaseSensitive) : 
+	stringSpace ((int) (1.25 * initial_size), &hashFunction) 
 {
 	SSStringEnt filler;
 
@@ -51,10 +52,21 @@ StringSpace (int sz) : stringSpace ((int) (1.25 * sz), &hashFunction)
 	filler.adoptMode = SS_INVALID;
 	filler.refCount = 0;
 	strTable.fill (filler);
-	caseSensitive = true;
+
+	// Two things to note:
+	// 1. We used to be able to set the case sensitivity in a separate
+	//    function, but there are cases where that would give bad 
+	//    results, like if we inserted a capitalized string, then
+	//    switched to case insensitive.
+	// 2. The way we achieve case insensitivity is by converting 
+	//    strings to lower case. That sucks: we should be insensitive
+	//    but case-preserving. I'm thinking about this one.
+	// --Alain Roy 30-Aug-2001
+	caseSensitive = makeCaseSensitive;
 
 	// the current index
-	current = 0;	
+	current = 0; 
+	return;
 }
 
 
@@ -62,6 +74,7 @@ StringSpace::
 ~StringSpace ()
 {
 	purge ();
+	return;
 }
 
 
@@ -100,11 +113,11 @@ purge ()
 
 	// clean up the hash table
 	stringSpace.clear();
+	return;
 }
 
-
 int StringSpace::
-getCanonical (const char *str, int adopt)
+getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 {
 	int index;
 	MyString myStr(str);
@@ -151,7 +164,8 @@ getCanonical (const char *str, int adopt)
 
 
 int StringSpace::
-getCanonical (const char *str, SSString &canonical, int adopt)
+getCanonical (const char *str, SSString &canonical, 
+			  StringSpaceAdoptionMethod adopt)
 {
 	canonical.context = ((canonical.index=getCanonical(str,adopt)) != -1) ?
 							this : 0;
@@ -160,7 +174,8 @@ getCanonical (const char *str, SSString &canonical, int adopt)
 
 
 int StringSpace::
-getCanonical (const char *str, SSString *&canonical, int adopt)
+getCanonical (const char *str, SSString *&canonical, 
+			  StringSpaceAdoptionMethod adopt)
 {
 	if (!(canonical = new SSString)) return -1;
 	return getCanonical (str, *canonical, adopt);
@@ -172,6 +187,7 @@ SSString ()
 {
 	context = NULL;
 	index = 0;
+	return;
 }
 
 
@@ -180,6 +196,7 @@ SSString (const SSString &sstr)
 {
 	context = NULL;
 	copy (sstr);
+	return;
 }
 
 
@@ -187,6 +204,7 @@ SSString::
 ~SSString()
 {
 	dispose();
+	return;
 }
 
 
@@ -200,7 +218,10 @@ SSString::copy (const SSString &sstr)
     context = sstr.context;
 
     // update reference count
-    if (context) context->strTable[index].refCount++;
+    if (context) {
+		context->strTable[index].refCount++;
+	}
+	return;
 }
 
 const SSString& 
@@ -208,6 +229,33 @@ SSString::operator=( const SSString &str )
 {
 	copy( str );
 	return( *this );
+}
+
+bool operator== (const SSString &s1, const SSString &s2)
+{
+	bool are_equal;
+
+	if (   s1.context == s2.context
+	    && s1.index   == s2.index) {
+		are_equal = true;
+	} else {
+		are_equal = false;
+	}
+	return are_equal;
+}
+
+
+bool operator!= (const SSString &s1, const SSString &s2)
+{
+	bool are_not_equal;
+
+	if (   s1.context != s2.context
+	    || s1.index   != s2.index) {
+		are_not_equal = true;
+	} else {
+		are_not_equal = false;
+	}
+	return are_not_equal;
 }
 
 void 
@@ -240,6 +288,7 @@ SSString::dispose ()
     }
 
 	context = NULL;
+	return;
 }   
         
 void StringSpace::
@@ -248,7 +297,13 @@ dump (void)
 	printf ("String space dump:  %d strings\n", current);
 	for (int i = 0; i < current; i++)
 	{
-		printf ("%s %d\t", strTable[i].string, strTable[i].refCount);
+		if (strTable[i].string == NULL) {
+			printf ("(disposed) %d\n", strTable[i].refCount);
+		} else {
+			printf ("%s %d\t", strTable[i].string, strTable[i].refCount);
+		}
 	}
-	printf ("\nDone\n");	
+	printf ("\nDone\n");
+	return;
 }
+
