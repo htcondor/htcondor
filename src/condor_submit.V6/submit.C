@@ -349,6 +349,10 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	// We must strdup ScheddAddr, cuz we got it from
+	// get_schedd_addr which uses a (gasp!) _static_ buffer.
+	ScheddAddr = strdup(ScheddAddr);
+
 	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
 		fprintf( stderr, "ERROR: Failed to open command file\n");
