@@ -84,6 +84,17 @@ timeout settings.
   In 6.7.0, the \Condor{schedd} would leak a copy of ClassAd for every
   job it tried to spawn (on average, around 2000 bytes per job).
 
+\item Fixed an important bug in the low-level code that Condor uses to
+  transfer files across a network.
+  There were certain temporary failure cases that were being treated
+  as permanent, fatal errors.
+  This resulted in file transfers that aborted prematurely, causing
+  jobs to needlessly re-run.
+  The code now gracefully recovers from these temporary errors.
+  This should significantly help throughput for some sites,
+  particularly ones that transfer very large files as output from
+  their jobs.
+
 \item Fixed a number of bugs in the \Opt{-format} option to \Condor{q}
   and \Condor{status}.
   Now, these tools will properly handle printing boolean expressions
