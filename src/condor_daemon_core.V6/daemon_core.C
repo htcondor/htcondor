@@ -6258,6 +6258,8 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 
 		/* allocate a piece of memory here so 64bit architectures don't
 			complain about assigning a non-pointer to a pointer type */
+		/* XXX this memory is leaked if the timer is canceled before it fires.
+			*/
 		pid_t *child_pid_ptr = new pid_t[1];
 		child_pid_ptr[0] = child_pid;
 		Register_DataPtr( child_pid_ptr );
@@ -6853,3 +6855,4 @@ bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
 	}
 	return false; // to make MSVC++ happy
 }
+
