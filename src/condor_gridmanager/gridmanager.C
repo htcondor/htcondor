@@ -771,9 +771,33 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 				if ( resource_name[0] == '\0' ) {
 
+					const char *hold_reason =
+						"GlobusResource is not set in the job ad";	
+					char buffer[128];
 					dprintf( D_ALWAYS, "Job %d.%d has no Globus resource name!\n",
 							 procID.cluster, procID.proc );
-					// TODO: What do we do about this job? (put it on hold)
+					// No GlobusResource, so put the job on hold
+					SetAttributeInt( procID.cluster,
+									 procID.proc,
+									 ATTR_JOB_STATUS,
+									 HELD );
+					if ( GetAttributeString( procID.cluster, procID.proc,
+											 ATTR_RELEASE_REASON, buffer )
+						 >= 0 ) {
+						SetAttributeString( procID.cluster, procID.proc,
+											ATTR_LAST_RELEASE_REASON, buffer );
+					}
+					DeleteAttribute( procID.cluster,
+									 procID.proc,
+									 ATTR_RELEASE_REASON );
+					SetAttributeString( procID.cluster,
+										procID.proc,
+										ATTR_HOLD_REASON,
+										hold_reason );
+					sprintf( buffer, "%s = \"%s\"", ATTR_HOLD_REASON,
+							 hold_reason );
+					next_ad->InsertOrUpdate( buffer );
+					WriteHoldEventToUserLog( next_ad );
 
 					delete next_ad;
 
@@ -806,6 +830,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 			} else {
 
+				// We already know about this job, skip
 				delete next_ad;
 
 			}
