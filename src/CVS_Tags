@@ -1,3 +1,15 @@
+12/5/02 V6_4-merge-1
+	The state of the V6_4-branch before merging into 6.5. The last merge
+	was from 6_4_3 into 6_5.
+
+12/5/02 V6_5-pre-merge-V6_4-merge-1
+	The state of the V6_5-branch before merging the V6_4-branch as tagged 
+	at V6_4-merge-1, since V6_4_3 was merged into V6_5-branch.
+
+12/5/02 V6_5-post-merge-V6_4-merge-1
+	The state of the V6_5-branch after merging the V6_4-branch as tagged 
+	at V6_4-merge-1, since V6_4_3 was merged into V6_5-branch.
+
 10/30/02 V6_5-edg-branch
 	A new branch off of V6_5 for EDG code, specifically for Francesco
 	Giacomini's DAGMan callout to the EDG Resource Broker.
