@@ -319,9 +319,9 @@ OsProc::StartJob()
 		if (fds[2] != -1) {
 			close(fds[2]);
 		}
-		set_priv(priv); /* so logging works again */
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
 		dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
+		set_priv(priv); /* go back to original priv state before leaving */
 		return 0;
 	}
 
