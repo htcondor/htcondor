@@ -49,7 +49,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "clib.h"
-#include "condor_sys.h"
+#include "condor_syscall_mode.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "string_list.h"
