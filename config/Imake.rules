@@ -8,7 +8,7 @@
 
 .f.o:
 	$(Fortran) $(FFLAGS) -c $<
-	
+
 #define SET_GID_MODE		02775
 #define EXECUTABLE_MODE		0755
 #define OBJECT_MODE		0644
@@ -1041,12 +1041,20 @@ depend:	ALWAYS				               @@\
 */
 
 #ifndef man_target
-#define man_target(name)			@@\
-release_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE) @@\
-static_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE) @@\
-strip_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE)
+#define man_target(name)					@@\
+man_full_target(name,strip)					@@\
+man_full_target(name,static)					@@\
+man_full_target(name,release)
 #endif
 
+#ifndef man_full_target
+#define man_full_target(name,type)				@@\
+manpages:: type##_dir/man/man1/##name				@@\
+type##_dir/man/man1/##name: $(EXT_TRIGGER)/man-current		@@\
+	/bin/rm -f type##_dir/man/man1/##name			@@\
+	cp $(MAN_DIR)/man1/##name type##_dir/man/man1/##name	@@\
+	chmod 0644 type##_dir/man/man1/##name
+#endif
 
 /*
 ** Externals build rule
@@ -1054,7 +1062,13 @@ strip_copy_target($(MAN_DIR)/man1/##name##,man/man1,##name##,OBJECT_MODE)
 
 #ifndef ext_target
 #define ext_target(package_id,ext_dep)				@@\
-$(EXT_TRIGGER)/$(##package_id##): ext_dep			@@\
-	$(EXT_ROOT)/build_external --extern_dir=$(EXT_ROOT) --package_name=$(##package_id##) --extern_config=$(EXT_CONFIG_SH) @@\
+ext_nodep_target(package_id,ext_dep)				@@\
 externals:: $(EXT_TRIGGER)/$(##package_id##)
 #endif
+
+#ifndef ext_nodep_target
+#define ext_nodep_target(package_id,ext_dep)			@@\
+$(EXT_TRIGGER)/$(##package_id##): ext_dep			@@\
+	$(EXT_ROOT)/build_external --extern_dir=$(EXT_ROOT) --package_name=$(##package_id##) --extern_config=$(EXT_CONFIG_SH)
+#endif
+
