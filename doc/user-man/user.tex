@@ -1235,6 +1235,18 @@ The default clauses corresponding to the different possible values of
 
 \end{enumerate}
 
+To ensure that the job is matched to a machine with enough local disk
+space to hold all the transfered files, Condor automatically adds an
+attribute to your job add, \Attr{DiskUsage} which includes the total
+size of your job's executable and all input files you have specified
+to be transfered.
+Then, Condor adds an additional clause in your \Attr{Requirements}
+expression that states that the remote machine must have at least
+enough available disk space to hold all these files:
+\begin{verbatim}
+  && (Disk >= DiskUsage)
+\end{verbatim}
+
 If you use \verb@should_transfer_files = IF_NEEDED@ and would prefer
 your job ran in the local file system domain and did not transfer files
 (but are still willing to allow the job to run remotely and transfer
