@@ -742,12 +742,12 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 	if(!mrec) {
 		return 0;
 	}
-	ClassAd *jobAd = GetJobAd(jobId.cluster, jobId.proc);
+	ClassAd *jobAd = GetJobAd(jobId->cluster, jobId->proc);
 	if (!jobAd) {
-		dprintf(D_ALWAYS, "failed to find job %d.%d\n", jobId.cluster, jobId.proc);
+		dprintf(D_ALWAYS, "failed to find job %d.%d\n", jobId->cluster, jobId->proc);
 		return 0;
 	}
-	ClassAd *jobAdCopy = new ClassAd(jobAd);	// make a copy for Agent
+	ClassAd *jobAdCopy = new ClassAd(*jobAd);	// make a copy for Agent
 	switch((pid = fork())) 	{
 	    case -1:	/* error */
 
