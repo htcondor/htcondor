@@ -963,16 +963,18 @@ Checkpoint( int sig, int code, void *scp )
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 
-	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
-
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
+	    // WARNING: This test should be done before any other code in
+	    // the signal handler.
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
 			Suicide();
 		else
 			return;
 	}
+
+	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
 
 	check_sig = sig;
 
@@ -1160,8 +1162,11 @@ terminate_with_sig( int sig )
 	pid_t		my_pid;
 	struct sigaction act;
 
+	/* Note: If InRestart, avoid accessing any non-local data, as it
+	   may be corrupt.  This includes calling dprintf().  -Jim B. */
+
 		// Make sure all system calls handled "straight through"
-	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	if (!InRestart) SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 		// Make sure we have the default action in place for the sig
 	if( sig != SIGKILL && sig != SIGSTOP ) {
@@ -1177,7 +1182,10 @@ terminate_with_sig( int sig )
 
 		// Send ourself the signal
 	my_pid = getpid();
-	dprintf( D_ALWAYS, "About to send signal %d to process %d\n", sig, my_pid );
+	if (!InRestart) {
+		dprintf( D_ALWAYS, "About to send signal %d to process %d\n",
+				sig, my_pid );
+	}
 	if( kill(my_pid,sig) < 0 ) {
 		EXCEPT( "kill" );
 	}
