@@ -164,7 +164,7 @@ DBM		*QueueD = NULL, *OpenJobQueue();
 
 #include "user_log.h"
 USER_LOG	*ULog;
-USER_LOG *InitUserLog( PROC *p, const char *host );
+/* USER_LOG *InitUserLog( PROC *p, const char *host ); */
 void LogRusage( USER_LOG *lp, int which,
 							struct rusage *loc, struct rusage *rem );
 
@@ -261,7 +261,7 @@ char *envp[];
 	   is 1.  This is ugly, but we have 4K fd's so we won't miss these few */
 
 
-#if !defined(OSF1)
+#if !defined(OSF1) && !defined(Solaris)
 	close( 0 );
 	close( 1 );
 	close( 2 );
@@ -288,10 +288,11 @@ char *envp[];
 
 	set_fatal_uid_sets( 0 );
 
-#if defined(NFSFIX) && 0
+#if defined(USE_ROOT_RUID) && defined(NFSFIX)
 	/* Must be condor to write to log files. */
 	set_condor_euid(__FILE__,__LINE__);
 #endif NFSFIX
+
 
 	_EXCEPT_Cleanup = DoCleanup;
 	MyPid = getpid();
@@ -304,7 +305,7 @@ char *envp[];
 	{
 		config_from_server( config_file, argv[0], (CONTEXT *)0 );
 	}
-	
+
 	dprintf_config( "SHADOW", SHADOW_LOG );
 	DebugId = whoami;
 
@@ -315,6 +316,12 @@ char *envp[];
 	} else {
 		reserved_swap = atoi( tmp ) * 1024;	/* Value specified in megabytes */
 	}
+
+#if defined(USE_ROOT_TUID) && defined(NFSFIX)
+	if (getuid()==0) {
+		set_root_euid(__FILE__,__LINE__);
+	}
+#endif
 
 	free_swap = calc_virt_memory();
 	close_kmem(); /* only calc virt mem once, so close unneeded fs's */
@@ -327,11 +334,6 @@ char *envp[];
 	}
 
 
-#ifndef NFSFIX
-	if (getuid()==0) {
-		set_root_euid(__FILE__,__LINE__);
-	}
-#endif
 
 	dprintf(D_ALWAYS, "uid=%d, euid=%d, gid=%d, egid=%d\n",
 		getuid(), geteuid(), getgid(), getegid());
@@ -366,7 +368,9 @@ char *envp[];
 	LockFd = -1;
 #endif
 
-	ULog = InitUserLog( Proc, ExecutingHost );
+#ifdef USERLOG_WORKS
+	ULog = InitUserLog(Proc->owner, ExecutingHost, Proc->id.cluster, Proc->id.proc, 0);
+#endif
 
 	my_cell = get_host_cell();
 	if( my_cell ) {
@@ -624,19 +628,25 @@ char	*notification;
 		if( JobStatus.w_coredump && JobStatus.w_retcode == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
 			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
+#ifdef USERLOG_WORKS
 			PutUserLog( ULog, NOT_EXECUTABLE );
+#endif
 
 		} else if( JobStatus.w_coredump && JobStatus.w_retcode == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 5 Condor.\n" );
+#ifdef USERLOG_WORKS
 				PutUserLog( ULog, BAD_LINK );
+#endif
 				MainSymbolExists = FALSE;
 		} else {
 			(void)sprintf(notification, "exited with status %d.",
 					JobStatus.w_retcode );
 			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
 				JobStatus.w_retcode );
+#ifdef USERLOG_WORKS
 			PutUserLog( ULog, NORMAL_EXIT, JobStatus.w_retcode );
+#endif
 		}
 
 		Proc->status = COMPLETED;
@@ -644,12 +654,16 @@ char	*notification;
 		break;
 	 case SIGKILL:	/* Kicked off without a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
+#ifdef USERLOG_WORKS
 		PutUserLog(ULog, NOT_CHECKPOINTED );
+#endif
 		DoCleanup();
 		break;
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
+#ifdef USERLOG_WORKS
 		PutUserLog(ULog, CHECKPOINTED );
+#endif
 		if( strcmp(Proc->rootdir, "/") != 0 ) {
 			MvTmpCkpt();
 		}
@@ -667,24 +681,30 @@ char	*notification;
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
 					 JobStatus.w_termsig,
 						coredir, Proc->id.cluster, Proc->id.proc);
+#ifdef USERLOG_WORKS
 				PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig);
 				PutUserLog( ULog, CORE_NAME,
 					coredir, Proc->id.cluster, Proc->id.proc
 				);
+#endif
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
 						 JobStatus.w_termsig,
 						Proc->rootdir, coredir, Proc->id.cluster, Proc->id.proc);
+#ifdef USERLOG_WORKS
 					PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig );
 					PutUserLog( ULog, CORE_NAME,
 						Proc->rootdir, coredir, Proc->id.cluster, Proc->id.proc
 				   );
+#endif
 			}
 		} else {
 			(void)sprintf(notification,
 				"was killed by signal %d.", JobStatus.w_termsig);
+#ifdef USERLOG_WORKS
 			PutUserLog( ULog, ABNORMAL_EXIT, JobStatus.w_termsig );
+#endif
 		}
 		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
 

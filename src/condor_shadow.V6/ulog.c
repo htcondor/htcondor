@@ -62,6 +62,7 @@ static void put_time( USER_LOG *lp, int msg_num, int usr, int sys );
   which take a user log structure as an argument will do nothing when
   passed a null pointer.
 */
+#if 0	/* Now done in library */
 USER_LOG *
 InitUserLog ( PROC *p, const char *host )
 {
@@ -141,6 +142,7 @@ get_env_val( const char *str )
 
 	return answer;
 }
+#endif
 
 #define USR_TIME(x) x->ru_utime.tv_sec
 #define SYS_TIME(x) x->ru_stime.tv_sec

@@ -14,8 +14,8 @@ LDFLAGS = $(LIBDBM)
 RC_SRC = \
 	../condor_syscall_lib/extern_path.c \
 	FAKE_GETMNT_SRC 
-SRC =	$(RC_SRC) ops.c pseudo_ops.c perm_err.c shadow.c \
-		ulog.c ../condor_syscall_lib/receivers.c 
+SRC =	$(RC_SRC) ops.c pseudo_ops.c perm_err.c shadow.c ulog.c \
+		../condor_syscall_lib/receivers.c
 
 RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 
