@@ -144,10 +144,6 @@ void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
 
-extern "C" {
-	void dprintf_config( char *subsys, int logfd );
-}
-
 /*
   Main routine for condor_starter.  DEBUGGING can be turned on if we
   need to attach a debugger at run time.  Everything is driven by the
