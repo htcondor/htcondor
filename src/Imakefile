@@ -24,7 +24,7 @@ PVM_LIBRARY = pvmd
 #	define Programs \
 		scripts tools shadow.Alpha starter.Alpha startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
-		submit.v3  on off test_suite
+		submit.v3  on off test_suite_C.Alpha test_suite_F.Alpha
 #		define Libraries	c++_util util_lib xdr_lib ckpt syscall_lib
 #else
 #	define Programs \
@@ -39,6 +39,13 @@ PVM_LIBRARY = pvmd
 #define Directories release_dir release_dir/bin release_dir/lib
 all: makefiles Directories Libraries Programs
 release:: all
+
+#if IS_ALPHA_OSF1
+distrib: release
+	cd ../doc; make distrib
+	cd condor_test_suite_C.Alpha; make distrib
+	cd condor_test_suite_F.Alpha; make distrib
+#endif
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -58,7 +65,8 @@ object_target(tools)
 #if IS_ALPHA_OSF1
 	object_target(shadow.Alpha)
 	object_target(starter.Alpha)
-	object_target(test_suite)
+	object_target(test_suite_C.Alpha)
+	object_target(test_suite_F.Alpha)
 	object_target(ckpt)
 	object_target(syscall_lib)
 #else
