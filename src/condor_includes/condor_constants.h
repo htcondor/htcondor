@@ -43,13 +43,14 @@ typedef int BOOL_T;
 #define BOOLAN_TYPE_DEFINED
 #endif
 
+#ifndef _CONDOR_NO_TRUE_FALSE
 #if defined(TRUE)
 #	undef TRUE
 #	undef FALSE
 #endif
-
 static const int	TRUE = 1;
 static const int	FALSE = 0;
+#endif /* ifndef(_CONDOR_NO_TRUE_FALSE) */
 
 /*
 	Useful constants for turning seconds into larger units of time.  Since
