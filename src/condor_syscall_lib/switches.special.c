@@ -813,7 +813,7 @@ _sysconf(int name)
    so we can't override them.  Instead, we override the following three
    xstat definitions.  */
 
-#if defined(IRIX53) || (Solairs)
+#if defined(IRIX53) || defined(Solaris)
 
 #if defined(IRIX53)
 int _xstat(int ver, char *path, struct stat *buf)
