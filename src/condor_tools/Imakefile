@@ -1,6 +1,6 @@
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc \
-		view_collection condor_qedit
+		view_collection condor_qedit condor_advertise
 
 all_target( $(PROGRAMS) )
 
@@ -13,6 +13,12 @@ release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_preen,preen.o,$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target(condor_preen.pure,preen.o,$(LIB))
+
+c_plus_target(condor_advertise,advertise.o command_strings.o,$(LIB))
+release_target(condor_advertise,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_advertise,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_advertise,advertise.o command_strings.o,$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target(condor_advertise.pure,advertise.o command_strings.o,$(LIB))
 
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
