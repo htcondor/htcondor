@@ -29,7 +29,7 @@
 #include <string>
 #include "condor_io.h"
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 class ClassAdCollectionServer;
 class ExprTree;
