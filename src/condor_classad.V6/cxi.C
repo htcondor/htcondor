@@ -21,16 +21,12 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if !defined( STANDALONE )
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_classad.h"
-#else
-#include <ctype.h>
-#include "classad_package.h"
-#if defined WANT_NAMESPACES
+#include "classad_distribution.h"
+#include <iostream>
+
+using namespace std;
+#ifdef WANT_NAMESPACES
 using namespace classad;
-#endif
 #endif
 
 enum Commands {
@@ -46,9 +42,6 @@ enum Commands {
 	INSERT_ATTRIBUTE, 
 	NEW_TOPLEVEL, 
 	OUTPUT_TOPLEVEL, 
-#if !defined( STANDALONE )
-	PARAM,
-#endif
 	QUIT,
 	REMOVE_ATTRIBUTE, 
 	SET_MATCH_TOPLEVEL,
@@ -56,7 +49,8 @@ enum Commands {
 	_LAST_COMMAND_ 
 };
 
-char CommandWords[][32] = {
+string CommandWords[] = 
+{
 	"",
 
 	"clear_toplevel",
@@ -69,9 +63,6 @@ char CommandWords[][32] = {
 	"insert_attribute",
 	"new_toplevel",
 	"output_toplevel",
-#if !defined( STANDALONE )
-	"param",
-#endif
 	"quit",
 	"delete_attribute",
 	"set_match_toplevel",
@@ -80,60 +71,59 @@ char CommandWords[][32] = {
 };
 
 void help( void );
-int  findCommand( char* );
+int  findCommand( string cmdStr );
 
 int 
 main( void )
 {
 	ClassAd 		*ad, *adptr;
-	char 			cmdString[128],buffer1[20480],buffer2[20480],buffer3[20480];
-#if !defined( STANDALONE )
-	char			*paramStr, *attrName;
-#endif
+    string          cmdString;
 	ExprTree		*expr=NULL, *fexpr=NULL;
 	int 			command;
 	Value			value;
 	ClassAdParser	parser;
 	PrettyPrint		unparser;
-	string			output;
-
-#if !defined( STANDALONE )
-	config( 0 );
-#endif
+	string			output, buffer1, buffer2, buffer3;
 
 	ad = new ClassAd();
 
-	printf( "'h' for help\n# " );
+	cout << "'h' for help\n# ";
 	while( 1 ) {	
-		scanf( "%s", cmdString );
+	    cin >> cmdString;
+        if (cin.eof()) {
+            cout << "\nExiting.\n";
+            exit(0);
+        }
 		command = findCommand( cmdString );
 		switch( command ) {
 			case CLEAR_TOPLEVEL: 
 				ad->Clear();
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				break;
 
 			case DEEP_INSERT_ATTRIBUTE:
-				if( scanf( "%s", buffer1 ) != 1 ) {	// expr
-					printf( "Error reading primary expression\n" );
+                cin >> buffer1;
+				if( buffer1.length() < 1 ) {	// expr
+					cout << "Error reading primary expression\n";
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer1 );
+					cout << "Error parsing expression: " <<  buffer1 << endl;
 					break;
 				}
-				if( scanf( "%s", buffer2 ) != 1 ) {
-					printf( "Error reading attribute name\n" );
+                cin >> buffer2;
+				if( buffer2.length() < 1) {
+					cout << "Error reading attribute name\n";
 					break;
 				}	
-				fgets( buffer3, 2048, stdin );
+                getline(cin, buffer3, '\n');
 				if( !parser.ParseExpression( buffer3, fexpr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer3 );
+					cout << "Error parsing expression: " << buffer3 << endl;
 					break;
 				} 
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					printf( "Error evaluating expression: %s\n", buffer1 );
+					cout << "Error evaluating expression: " <<  buffer1 << endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -141,7 +131,7 @@ main( void )
 					break;
 				}
 				if( !value.IsClassAdValue( adptr ) ) {
-					printf( "Error:  Primary expression was not a classad\n" );
+					cout << "Error:  Primary expression was not a classad\n";
 					delete expr;
 					expr = NULL;
 					delete fexpr;
@@ -149,7 +139,7 @@ main( void )
 					break;
 				}	
 				if( !adptr->Insert( buffer2, fexpr ) ) {
-					printf( "Error Inserting expression: %s\n", buffer3 );
+					cout << "Error Inserting expression: " << buffer3 << endl;
 					delete fexpr;
 					delete expr;
 					fexpr = NULL;
@@ -161,63 +151,64 @@ main( void )
 				break;
 
 			case DEEP_DELETE_ATTRIBUTE:
-				if( scanf( "%s", buffer1 ) != 1 ) { // expr
-					printf( "Error reading primary expression\n" );
+                cin >> buffer1;
+				if( buffer1.length() < 1) {
+					cout << "Error reading primary expression\n";
 					break;
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer1 );
+					cout << "Error parsing expression: " << buffer1 << endl;
 					break;
 				}
-				fgets( buffer2, 2048, stdin ); // name
+                getline(cin, buffer2, '\n');
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					printf( "Error evaluating expression: %s\n", buffer1 );
+					cout << "Error evaluating expression: " <<  buffer1 << endl;
 					delete expr;
 					break;
 				}
 				if( !value.IsClassAdValue( adptr ) ) {
-					printf( "Error:  Primary expression was not a classad\n" );
+					cout << "Error:  Primary expression was not a classad\n";
 					delete expr;
 					expr = NULL;
 					break;
 				}
 				if( !adptr->Remove( buffer2 ) ) {
-					printf( "Warning:  Attribute %s not found\n", buffer2 );
+					cout << "Warning:  Attribute %s not found" << buffer2 << endl;
 				}
 				delete expr;
 				expr = NULL;
 				break;
 
 			case EVALUATE:
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer1 );
+					cout << "Error parsing expression: " << buffer1 << endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value ) ) {
-					printf( "Error evaluating expression: %s\n", buffer1 );
+					cout << "Error evaluating expression: " << buffer1 << endl;
 					delete expr;
 					expr = NULL;
 					break;
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				printf( "%s\n", output.c_str( ) );
+				cout << output << endl;
 				delete expr;
 				expr = NULL;
 				break;
 		
 			case EVALUATE_WITH_SIGNIFICANCE:
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer1 );
+					cout << "Error parsing expression: " <<  buffer1 << endl;
 					break;
 				}
 				expr->SetParentScope( ad );
 				if( !ad->EvaluateExpr( expr, value, fexpr ) ) {
-					printf( "Error evaluating expression: %s\n", buffer1 );
+					cout << "Error evaluating expression: " << buffer1 << endl;
 					delete expr;
 					delete fexpr;
 					expr = NULL;
@@ -226,10 +217,10 @@ main( void )
 				}
 				output = "";
 				unparser.Unparse( output, value );
-				printf( "%s\n", output.c_str( ) );
+				cout << output << endl;
 				output = "";
 				unparser.Unparse( output, fexpr );
-				printf( "%s\n", output.c_str( ) );
+				cout << output << endl;
 				delete expr;
 				expr = NULL;
 				delete fexpr;
@@ -237,9 +228,9 @@ main( void )
 				break;
 
 			case FLATTEN: 
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer1 );
+					cout << "Error parsing expression: " << buffer1 << endl;
 					break;
 				}
 				expr->SetParentScope( ad );
@@ -247,16 +238,16 @@ main( void )
 					if( fexpr ) {
 						output = "";
 						unparser.Unparse( output, fexpr );
-						printf( "%s\n", output.c_str( ) );
+						cout << output << endl;
 						delete fexpr;
 						fexpr = NULL;
 					} else {
 						output = "";
 						unparser.Unparse( output, value );
-						printf( "%s\n", output.c_str( ) );
+						cout << output << endl;
 					}
 				} else {	
-					printf( "Error flattening expression\n" );
+					cout << "Error flattening expression\n";
 				}
 				delete expr;
 				expr = NULL;
@@ -264,89 +255,70 @@ main( void )
 				
 			case HELP: 
 				help(); 
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				break;
 
 			case INSERT_ATTRIBUTE:
-				if( scanf( "%s", buffer1 ) != 1 ) {
-					printf( "Error reading attribute name\n" );
+                cin >> buffer1; 
+				if( buffer1.length() < 1) {
+					cout << "Error reading attribute name\n";
 					break;
 				}	
-				fgets( buffer2, 2048, stdin );
+                getline(cin, buffer2, '\n');
 				if( !parser.ParseExpression( buffer2, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer2 );
+					cout << "Error parsing expression: " <<  buffer2 << endl;
 					break;
 				} 
 				if( !ad->Insert( buffer1, expr ) ) {
-					printf( "Error Inserting expression\n" );
+					cout << "Error Inserting expression\n";
 				}
 				expr = NULL;
 				break;
 
 			case NEW_TOPLEVEL: 
 				ad->Clear();
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				if( !( ad = parser.ParseClassAd( buffer1, true ) ) ) {
-					printf( "Error parsing classad\n" );
+					cout << "Error parsing classad\n";
 				}
 				break;
 			
 			case OUTPUT_TOPLEVEL:
 				output = "";
 				unparser.Unparse( output, ad );
-				printf( "%s\n", output.c_str( ) );
-				fgets( buffer1, 2048, stdin );
+				cout << output << endl;
+                getline(cin, buffer1, '\n');
 				break;
 
-#if !defined( STANDALONE )
-			case PARAM:
-				fgets( buffer1, 2048, stdin );
-				attrName = strtok( buffer1, " \t\n" );
-				if( !( paramStr = param( attrName ) ) ) {
-					printf( "Did not find %s in config file\n", buffer1 );
-					break;
-				}
-				if( !parser.ParseExpression( paramStr, expr, true ) ) {
-					printf( "Error parsing expression: %s\n", paramStr );
-					free( paramStr );
-					break;
-				}
-				if( !ad->Insert( attrName, expr ) ) {
-					printf( "Error Inserting: %s = %s\n", buffer1, paramStr );
-				}
-				free( paramStr );
-				expr = NULL;
-				break;
-#endif
-				
 			case QUIT: 
-				printf( "Done\n\n" );
+				cout << "Exiting\n\n";
 				exit( 0 );
 
 			case REMOVE_ATTRIBUTE:
-				if( scanf( "%s", buffer1 ) != 1 ) {
-					printf( "Error reading attribute name\n" );
+                cin >> buffer1;
+				if( buffer1.length() < 1) {
+					cout << "Error reading attribute name\n";
 					break;
 				}
 				if( !ad->Remove( buffer1 ) ) {
-					printf( "Error removing attribute %s\n", buffer1 );
+					cout << "Error removing attribute " << buffer1 << endl;
 				}
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				break;
 
 			case SET_MATCH_TOPLEVEL: 
 				delete ad;
 				if( !( ad = MatchClassAd::MakeMatchClassAd( NULL, NULL ) ) ){
-					printf( "Error making classad\n" );
+					cout << "Error making classad\n" << endl;
 				}
-				fgets( buffer1, 2048, stdin );
+                getline(cin, buffer1, '\n');
 				break;
 
 			default:
-				fflush( stdin );
+                getline(cin, buffer1, '\n');
 		}
 
-		printf( "\n# " );
+		cout << "\n# ";
 	}
 
 	exit( 0 );
@@ -357,42 +329,39 @@ main( void )
 void 
 help( void )
 {
-	printf( "\nCommands are:\n" );
-	printf( "clear_toplevel\n\tClear toplevel ad\n\n" );
-	printf( "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
-		" classad <expr1>. (No inter-token spaces\n\tallowed in <expr1>.)\n\n");
-	printf( "deep_delete <expr> <name>\n\tDelete <name> from classad "
-		"<expr>. (No inter-token spaces allowed\n\tin <expr>.\n\n" );
-	printf( "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n\n" );	
-	printf( "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
-		"identify significant\n\tsubexpressions\n\n" );
-	printf( "flatten <expr>\n\tFlatten <expr> (in toplevel ad)\n\n" );
-	printf( "help\n\tHelp --- this screen\n\n" );
-	printf( "insert_attribute <name> <expr>\n\tInsert attribute (<name>,<expr>)"
-		"into toplevel\n\n" );
-	printf( "new_toplevel <classad>\n\tEnter new toplevel ad\n\n" );
-	printf( "output_toplevel\n\tOutput toplevel ad\n\n" );
-#if !defined( STANDALONE )
-	printf("param <name>\n\tParam from config file and insert in toplevel\n\n");
-#endif
-	printf( "quit\n\tQuit\n\n" );
-	printf( "delete_attribute <name>\n\tDelete attribute <name> from "
-		"toplevel\n\n" );
-	printf( "set_condor_toplevel\n\tSetup a toplevel ad for matching\n\n" );
-	printf( "\nA command may be specified by an unambiguous prefix\n\n" );
+	cout << "\nCommands are:\n";
+	cout << "clear_toplevel\n\tClear toplevel ad\n";
+	cout << "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
+		" classad <expr1>. (No inter-token spaces\n\tallowed in <expr1>.)\n";
+	cout << "deep_delete <expr> <name>\n\tDelete <name> from classad "
+		"<expr>. (No inter-token spaces allowed\n\tin <expr>.\n";
+	cout << "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n" ;
+	cout << "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
+		"identify significant\n\tsubexpressions\n";
+	cout << "flatten <expr>\n\tFlatten <expr> (in toplevel ad)\n";
+	cout << "help\n\tHelp --- this screen\n" ;
+	cout << "insert_attribute <name> <expr>\n\tInsert attribute (<name>,<expr>)"
+		"into toplevel\n";
+	cout << "new_toplevel <classad>\n\tEnter new toplevel ad\n";
+	cout << "output_toplevel\n\tOutput toplevel ad\n";
+	cout << "quit\n\tQuit\n";
+	cout << "delete_attribute <name>\n\tDelete attribute <name> from "
+		"toplevel\n";
+	cout << "set_match_toplevel\n\tSetup a toplevel ad for matching\n";
+	cout << "\nA command may be specified by an unambiguous prefix\n";
 }
 
 int
-findCommand( char *cmdStr )
+findCommand( string cmdStr )
 {
-	int cmd = 0, len = strlen( cmdStr );
+	int cmd = 0, len = cmdStr.length();
 
 	for( int i = 0 ; i < len ; i++ ) {
 		cmdStr[i] = tolower( cmdStr[i] );
 	}
 
 	for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_ ; i++ ) {
-		if( strncmp( cmdStr, CommandWords[i], len ) == 0 ) {
+		if( strncmp(CommandWords[i].c_str(), cmdStr.c_str(), len) == 0)  {
 			if( cmd == 0 ) {
 				cmd = i;
 			} else if( cmd > 0 ) {
@@ -401,18 +370,17 @@ findCommand( char *cmdStr )
 		}
 	}
 
-	if( cmd > 0 ) return cmd;
-
-	if( cmd == 0 ) {
-		printf( "\nUnknown command %s\n", cmdStr );
+    if (cmd < 0) {
+        cout <<  "\nAmbiguous command " << cmdStr << "; matches:\n";
+        for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_ ; i++ ) {
+            if( strncmp(CommandWords[i].c_str(), cmdStr.c_str(), len) == 0)  {
+                cout << "\t" << CommandWords[i] << "\n";
+            }
+        }
+    } else if( cmd == 0) {
+		cout << "\nUnknown command " << cmdStr <<" \n";
 		return -1;
 	}
 
-	printf( "\nAmbiguous command %s; matches\n", cmdStr );
-	for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_ ; i++ ) {
-		if( strncmp( cmdStr, CommandWords[i], len ) == 0 ) {
-			printf( "\t%s\n", CommandWords[i] );
-		}
-	}
-	return -1;
+	return cmd;
 }
