@@ -124,3 +124,11 @@
 7/3/94 V5_Alpha_Sparc_1
 	V5 code which compiles and works on both Dec Alpha and Sparc Sunos
 	platforms - clipped wing version only.  Tested very little.
+
+7/21/94 SparcSunos_a1
+	Limited Release to the world as "Condor_5.1a_SunOS".
+
+7/27/94 V5_a2
+	Released in department on Sun and Alpha.  Known bugs
+		1. Vanilla jobs run by users other than "condor" crash
+		2. Jobs which execute non-supported syscalls remain in queue forever
