@@ -247,8 +247,10 @@ char *filename;
 
 #if (defined(I386) && defined(DYNIX)) || (defined(I386) && defined(LINUX)) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX9) || defined(OSF1) || defined(Solaris) || defined(IRIX53)
 
-#if defined(AIX31) || defined(AIX32) || defined(Solaris) || defined(IRIX53)
+#if defined(AIX31) || defined(AIX32) || defined(IRIX53)
 #include <sys/statfs.h>
+#elif defined(Solaris)
+#include <sys/statvfs.h>
 #elif defined(OSF1)
 #include <sys/mount.h>
 #endif
@@ -262,13 +264,19 @@ int
 raw_free_fs_blocks(filename)
 char *filename;
 {
+#if defined(Solaris)
+	struct statvfs statfsbuf;
+#else
 	struct statfs statfsbuf;
+#endif
 	unsigned long free_kbytes;
 
-#if defined(IRIX331) || defined(Solaris) || defined(IRIX53)
+#if defined(IRIX331) || defined(IRIX53)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
 #elif defined(OSF1)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf) < 0) {
+#elif defined(Solaris)
+	if(statvfs(filename, &statfsbuf) < 0) {
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
