@@ -206,6 +206,7 @@ sin_to_string(struct sockaddr_in *sin)
 	return buf;
 }
 
+void
 display_from( from )
 struct sockaddr_in  *from;
 {
