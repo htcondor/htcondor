@@ -60,7 +60,7 @@ need these extra definitions...
 	typedef unsigned long   u_long;
 #endif
 
-#if defined(AIX32)
+#if defined(AIX32) || defined(OSF1)
 typedef unsigned short ushort;
 #endif
 
