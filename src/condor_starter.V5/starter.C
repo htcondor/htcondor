@@ -69,6 +69,7 @@ const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
+int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
 int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain=NULL;		// Machines we share UID space with
 
@@ -267,21 +268,6 @@ init_shadow_connections()
 }
 
 /*
-  Get relevant information from "condor_config" and "condor_config.local"
-  files.
-*/
-void
-read_config_files( void )
-{
-	config();
-
-		/* bring important parameters into global data items */
-	init_params();
-
-	dprintf( D_ALWAYS, "Done reading config files\n" );
-}
-
-/*
   Change directory to where we will run our user processes.
 */
 void
@@ -361,6 +347,26 @@ init_params()
 		// if the domain is "*", honor all UIDs - a dangerous idea
 	if( UidDomain[0] == '*' ) {
 		UidDomain[0] = '\0';
+	}
+
+	// We can configure how many times the starter wishes to attempt to
+	// pull over the initial checkpoint
+	if ( (tmp=param( "EXEC_TRANSFER_ATTEMPTS" )) == NULL)
+	{
+		ExecTransferAttempts = 3;
+	}
+	else
+	{
+		ExecTransferAttempts = atoi(tmp);
+		// This catches errors on atoi(), and if the user did something stupid
+		if (ExecTransferAttempts < 1)
+		{
+			dprintf( D_ALWAYS, "Please check your EXEC_TRANSFER_ATTEMPTS "
+			"macro. It must be a number greater than or equal to one. "
+			"Defaulting EXEC_TRANSFER_ATTEMPTS to 3.\n") ;
+			ExecTransferAttempts = 3;
+		}
+		free(tmp);
 	}
 }
 
