@@ -65,7 +65,7 @@ double Accountant::GetPriority(const MyString& CustomerName)
 {
   CustomerRecord* Customer;
   double Priority=0;
-  if (CustomerName==NiceUserName) return MAXFLOAT;
+  if (CustomerName==NiceUserName) return HUGE_VAL;
   if (Customers.lookup(CustomerName,Customer)==0) Priority=Customer->Priority;
   if (Priority<MinPriority) Priority=MinPriority;
   return Priority;
