@@ -29,6 +29,7 @@
 
 #if defined(GSS_AUTHENTICATION)
 #include "auth_sock.h"
+
 #else
 #define AuthSock ReliSock
 #endif
@@ -56,7 +57,10 @@ do_Q_request(AuthSock *syscall_sock)
 	int auth = 0;
 
 #if defined(GSS_AUTHENTICATION)
-	if ( CondorCertDir ) {
+//	if ( CondorCertDir ) {
+	//mju: added check for authenticate_user so don't bother doing any
+   //auth stuff if it's gonna fail later.
+	if ( CondorCertDir && syscall_sock->authenticate_user() ) {
 		auth = 1;
 	}
 #endif
@@ -82,6 +86,7 @@ do_Q_request(AuthSock *syscall_sock)
 		qmgmt_sock->end_of_message();
 #if defined(GSS_AUTHENTICATION)
 		if ( auth ) {
+			dprintf( D_ALWAYS, "Starting GSS handshake\n" );
 			int time = qmgmt_sock->timeout(60 * 5); //wait 5 min for user to type
       	assert( qmgmt_sock->authenticate() );
 			qmgmt_sock->timeout(time);
@@ -106,6 +111,8 @@ do_Q_request(AuthSock *syscall_sock)
 #else
 /* nothing for now */
 #endif
+		//this always occurs if not compiled for GSS_AUTHENTICATION
+		//or if compiled for GSS, but auth is not set above.
 		{
 			syscall_sock->decode();
 			assert( syscall_sock->code(owner) );

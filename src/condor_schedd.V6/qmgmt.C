@@ -65,7 +65,8 @@ extern "C" {
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, char*);
 static AuthSock *Q_SOCK;
-int GSSAuthenticated = 0; //DO NOT make this static!
+//mju took out GSSAuthenticated to use Q_SOCK->isAuthenticated() instead.
+//int GSSAuthenticated = 0;
 
 int		do_Q_request(AuthSock *);
 void	FindRunnableJob(int, int&);
@@ -351,7 +352,9 @@ ValidateRendevous()
 		return 0;
 	}
 
-	if (rendevous_file == 0 && !GSSAuthenticated) {
+//mju: changed logic to use Q_SOCK->isAuthenticated()
+//	if (rendevous_file == 0 && !GSSAuthenticated) {
+	if (rendevous_file == 0 && !Q_SOCK->isAuthenticated() ) {
 		UnauthenticatedConnection();
 		return 0;
 	}
@@ -359,7 +362,8 @@ ValidateRendevous()
 #if !defined(WIN32)
 	// note we do an lstat() instead of a stat() so we do _not_ follow
 	// a symbolic link.  this prevents a security attack via sym links.
-	if ( !GSSAuthenticated ) {
+//	if ( !GSSAuthenticated ) {
+	if ( !Q_SOCK->isAuthenticated() ) {
 		if (lstat(rendevous_file, &stat_buf) < 0) {
 			UnauthenticatedConnection();
 			return 0;
@@ -368,13 +372,15 @@ ValidateRendevous()
 	
 #endif
 
-	if ( !GSSAuthenticated ) {
+//	if ( !GSSAuthenticated ) {
+	if ( !Q_SOCK->isAuthenticated() ) {
 		unlink(rendevous_file);
 	}
 
 
 #if !defined(WIN32)
-	if ( !GSSAuthenticated ) {
+//	if ( !GSSAuthenticated ) {
+	if ( !Q_SOCK->isAuthenticated() ) {
 		// Authentication should fail if a) owner match fails, or b) the
 		// file is either a hard or soft link (no links allowed because they
 		// could spoof the owner match).  -Todd 3/98
@@ -421,11 +427,20 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
 		if( active_owner_uid == my_uid ) {
 			return 1;
-		} else {
+		} 
+		else {
+//			if ( GSSAuthenticated ) {
+			if ( Q_SOCK->isAuthenticated() ) {
+				dprintf( D_ALWAYS, "OwnerCheck authorized %s for remote submit\n",
+						test_owner );
+				return( 1 );
+			}
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
 			dprintf( D_FULLDEBUG, "OwnerCheck: reject %s non-super\n",test_owner );
+			dprintf( D_FULLDEBUG,"OwnerCheck: my_uid: %d, active_owner_uid: %d\n",
+					my_uid,active_owner_uid );
 			return 0;
 		}
 	}
@@ -473,7 +488,7 @@ CheckConnection()
 	if (connection_state == CONNECTION_CLOSED && rendevous_file != 0) {
 		return ValidateRendevous();
 	}
-	if ( GSSAuthenticated ) {
+	if ( Q_SOCK->isAuthenticated() ) {
 		return 0;
 	}
 	return -1;
@@ -527,7 +542,8 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 		free(new_file);
 	}
 	else {
-		GSSAuthenticated = 1;
+//mju took this out, should only be authorizing them DURING auth process!
+//		GSSAuthenticated = 1;
 	}
 
 	init_user_ids( owner );
@@ -545,8 +561,8 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 			tmp_file);
 	}
 	else {
-		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 (%s)\n",
-			"NO temp file, GSS authenticated" );
+		dprintf(D_FULLDEBUG, "QMGR InitializeConnection returning 0 "
+			"(NO temp file, GSS authenticated)\n" );
 	}
 	return 0;
 }
