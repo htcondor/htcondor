@@ -266,7 +266,7 @@ h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 makefiles:: h/Makefile
 
 h/Makefile: h h/Imakefile
-	cd h; imake IMAKE_FLAGS
+	cd h; ../condor_imake
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
 	cd h; make syscall_numbers.h
