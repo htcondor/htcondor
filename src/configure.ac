@@ -737,16 +737,39 @@ fi
 # now, make sure patch supports unified diffs
 AC_CACHE_CHECK([if patch supports unified diffs],_cv_unified_patch,
  [_cv_unified_patch="no" ;
-  ( patch --unified < /dev/null > /dev/null 2>&1 )
+  _cv_unified_patch="no"
+ cat > conftest_file1 << _EOF
+this
+is
+a test
+hello world
+_EOF
+ cat > conftest_patch << _EOF
+--- conftest_file1 Wed Nov 26 20:04:43 2003
++++ conftest_file2 Wed Nov 26 20:01:25 2003
+@@ -1,4 +1,4 @@
+ this
+ is
+-a test
++A TEST
+ hello world
+_EOF
+  patch < conftest_patch > /dev/null 2>&1
   _patch_status=$?
-  if test $_patch_status -ne 0 ; then
-    _cv_unified_patch="no";
-  else 
-    _cv_unified_patch="yes";
+  if test $_patch_status -eq 0 ; then
+    # patch didn't return failure, but it still might not have
+    # worked.  so, see if the change actually happened or not.
+    grep "TEST" conftest_file1 > /dev/null 2>&1
+    _grep_status=$?
+    if test $_grep_status -eq 0 ; then
+      _cv_unified_patch="yes";
+    fi
   fi
+  rm -f conftest_file1 conftest_patch
  ]
 )
 if test $_cv_unified_patch != "yes"; then
+   AC_MSG_NOTICE( [try installing GNU patch] )
    AC_MSG_ERROR( [patch must support unified diffs] )
 fi
 
