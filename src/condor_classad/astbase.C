@@ -229,28 +229,31 @@ AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Destructor
-// This used to be operator delete(), but no longer.
+// Destructors
 ////////////////////////////////////////////////////////////////////////////////
-ExprTree::~ExprTree()
+VariableBase::~VariableBase()
 {
-	// The cardinality is a (lame) way to indicate if it's a binary operator
-	if (cardinality > 0) {
-		if (LArg()) {
-			delete LArg();
-		}
-		if (RArg()) {
-			delete RArg();
-		}
+	/* When we merge into 6.3, this will need to be updated for the string space */
+	delete [] name;
+}
+
+StringBase::~StringBase()
+{
+	/* When we merge into 6.3, this will need to be updated for the string space */
+	delete value;
+}
+
+BinaryOpBase::~BinaryOpBase()
+{
+	if (lArg != NULL) {
+		delete lArg;
 	}
-	if (type == LX_VARIABLE) {
-		delete []((VariableBase*) this)->name;
-	}
-	if (type == LX_STRING) {
-		delete []((StringBase*) this)->value;
+	if (rArg != NULL) {
+		delete rArg;
 	}
 	return;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison operator                                                        //

@@ -765,9 +765,13 @@ printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 ExprTree*  
 Variable::DeepCopy(void) const
 {
+	char     *name_copy;
 	Variable *copy;
 
-	copy = new Variable(name);
+	/* This needs to be updated after the merge into 6.3 */
+	name_copy = new char[strlen(name)+1];
+	strcpy(name_copy, name);
+	copy = new Variable(name_copy);
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -809,9 +813,13 @@ Boolean::DeepCopy(void) const
 ExprTree*  
 String::DeepCopy(void) const
 {
+	char   *value_copy;
 	String *copy;
 
-	copy = new String(value);
+	/* This needs to be updated after the merge into 6.3 */
+	value_copy = new char[strlen(value)+1];
+	strcpy(value_copy, value);
+	copy = new String(value_copy);
 	CopyBaseExprTree(copy);
 	
 	return copy;
@@ -1020,7 +1028,7 @@ LeOp::DeepCopy(void) const
 	ExprTree  *copy_of_rarg;
 
 	copy_of_larg = lArg->DeepCopy();
-	copy_of_rarg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
 
 	copy = new LeOp(copy_of_larg, copy_of_rarg);
 	CopyBaseExprTree(copy);
