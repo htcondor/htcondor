@@ -1475,7 +1475,7 @@ You cannot change the definition of the different virtual machine
 types with a reconfig.  
 If you change them, you must restart the \Condor{startd} for the
 change to take effect (for example, using ``\condor{restart}
--startd''.
+-startd'').
 
 \begin{description}
 
@@ -1512,6 +1512,8 @@ change to take effect (for example, using ``\condor{restart}
   machine type settings described above are not being used, this
   macro controls how many virtual machines will be reported.  
   The default is one virtual machine for each CPU.
+  This setting can be used to reserve some CPUs on an SMP which would
+  not be reported to the Condor pool.
 
 \end{description}
 
