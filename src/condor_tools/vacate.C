@@ -35,10 +35,8 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "condor_debug.h"
 #include "condor_io.h"
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+#include "get_full_hostname.h"
 
 extern "C" char *get_startd_addr(const char *);
 
@@ -53,6 +51,7 @@ main( int argc, char *argv[] )
 	int			cmd;
 	int			i;
 	char		*startdAddr;
+	char		*fullname;
 
 	if( argc < 2 ) {
 		usage( argv[0] );
@@ -64,17 +63,22 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	if ((startdAddr = get_startd_addr(argv[1])) == NULL)
-	{
-		EXCEPT("Can't find startd address on %s\n", argv[1]);
-	}
-
 	for (i = 1; i < argc; i++) {
+
+		if( (fullname = get_full_hostname(argv[i])) == NULL ) {
+			fprintf( stderr, "%s: unknown host %s\n", argv[0], argv[i] );
+			continue;
+		}
+		if( (startdAddr = get_startd_addr(fullname)) == NULL ) {
+			fprintf( stderr, "%s: can't find address of startd on %s\n", 
+					 argv[0], argv[i] );
+			continue;
+		}
 
 		    /* Connect to the specified host */
 		ReliSock sock(startdAddr, START_PORT);
 		if(sock.get_file_desc() < 0) {
-			dprintf( D_ALWAYS, "Can't connect to condor startd (%s)\n",
+			fprintf( stderr, "Can't connect to condor startd (%s)\n",
 					startdAddr );
 			continue;
 		}
@@ -82,8 +86,8 @@ main( int argc, char *argv[] )
 		sock.encode();
 		cmd = VACATE_ALL_CLAIMS;
 		if (!sock.code(cmd) || !sock.eom()) {
-			dprintf(D_ALWAYS, "Can't send VACATE_ALL_CLAIMS command to "
-					"condor startd (%s)\n", startdAddr);
+			fprintf( stderr, "Can't send VACATE_ALL_CLAIMS command to "
+					 "condor startd (%s)\n", startdAddr);
 			continue;
 		}
 		
