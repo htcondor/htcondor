@@ -31,6 +31,242 @@
 #include "condor_cron.h"
 #include "condor_cronmgr.h"
 
+
+// Class to parse the job lists
+class JobListParser
+{
+public:
+	JobListParser( const char *s );
+	~JobListParser( );
+
+	bool nextJob( void );
+	const char *getName( void ) { return name; };
+	const char *getPrefix( void ) { return prefix; };
+	const char *getPath( void ) { return path; };
+	const char *getPeriod( void ) { return period; };
+	const char *getOption( void );
+	const char *getJobString( void ) { return curJobStart; };
+
+private:
+	char	*jobListString;
+	char	*curJobPointer;
+	char	*curJobStart;
+	char	*nextJobStart;
+
+	const char	*name;
+	const char	*prefix;
+	const char	*path;
+	const char	*period;
+
+	const char *nextField( void );
+	void skipJob( void );
+};
+
+// Job list parser constructor
+JobListParser::JobListParser( const char *s )
+{
+	jobListString = strdup( s );
+	nextJobStart = jobListString;
+	curJobPointer = NULL;
+
+	name = NULL;
+	path = NULL;
+	period = NULL;
+}
+
+// Job list parser destructor
+JobListParser::~JobListParser( void )
+{
+	if ( jobListString ) {
+		free( jobListString );
+	}
+}
+
+// Job list parser: Get the next job
+bool JobListParser::nextJob( void )
+{
+	// Keep looking til we find one or give up...
+	while( ( NULL != curJobPointer ) || ( NULL != nextJobStart ) ) {
+
+		// Skip to start of next job?
+		if ( NULL == curJobPointer ) {
+			curJobPointer = nextJobStart;
+			nextJobStart = NULL;			// None found yet!
+		}
+
+		// Skip whitespace
+		while( isspace( *curJobPointer ) ) {
+			curJobPointer++;
+		}
+
+		// End of string?  Done
+		if ( '\0' == *curJobPointer ) {
+			curJobPointer = NULL;
+			return false;
+		}
+
+		// Debug info...
+		curJobStart = curJobPointer;
+		dprintf( D_FULLDEBUG, "CronMgr: Trying to find a job in '%s'\n", curJobPointer );
+
+		// Now, try to parse it...
+
+		// Name: must exist, non-zero length
+		name = nextField( );
+		if (  ( NULL == name ) || ( '\0' == *name )  ){
+			dprintf( D_ALWAYS, "CronMgr: Job parse error: Can't find a name\n" );
+			skipJob( );
+			continue;
+		}
+
+		// Prefix: must exist, no whitespace
+		prefix = nextField( );
+		const char *tmp = prefix;
+		while( tmp && *tmp ) {
+			if ( isspace( *tmp ) ) {
+				dprintf( D_ALWAYS,
+						 "CronMgr: '%s': Invalid prefix '%s': contains space\n",
+						 name, prefix );
+				prefix = NULL;
+				break;
+			}
+			tmp++;
+		}
+		if ( NULL == prefix ) {
+			dprintf( D_ALWAYS, "CronMgr: '%s': parse error: Can't find a prefix\n", name );
+			skipJob( );
+			continue;
+		}
+
+		// Path: must exist, non-zero length
+		path = nextField( );
+		if (  ( NULL == path ) || ( '\0' == *path )  ){
+			dprintf( D_ALWAYS, "Cron: '%s': parse error: Can't find a path\n", name );
+			skipJob( );
+			continue;
+		}
+
+		// Period (not required)
+		period = nextField( );
+		return true;
+	}
+
+	// No valid jobs found
+	return false;
+}
+
+// Extract the next 'option'
+const char *JobListParser::getOption( void )
+{
+
+	// Parse out the next field
+	const char *option = nextField( );
+
+	// Handle special cases
+	if ( NULL == option ) {
+		skipJob( );
+	} else if ( '\0' == *option ) {
+		option = NULL;
+	}
+
+	// Done
+	return option;
+}
+
+// Skip to the end of this job
+void JobListParser::skipJob( void )
+{
+	const char	*label = curJobStart;
+
+	while(  ( NULL != curJobPointer ) &&
+			( '\0' != *curJobPointer ) &&
+			( ! isspace( *curJobPointer ) ) ) {
+		if ( NULL != label ) {
+			dprintf( D_FULLDEBUG, "Skipping job '%s'\n", label );
+			label = NULL;
+		}
+		nextField( );
+	}
+}
+
+// Look for a ":" separator, or whitespace; handle quotes.
+const char *JobListParser::nextField( void )
+{
+	char	quote = '\0';
+	char	*start;
+	char	*cur = curJobPointer;
+
+	// Make sure that curJobPointer is valid..
+	if ( NULL == curJobPointer ) {
+		return NULL;
+	}
+
+	// Look for an openning quote
+	if ( ( '\'' == *cur ) || ( '\"' == *cur ) ) {
+		quote = *cur;
+		cur++;
+	}
+
+	// Keep looking 'til end...
+	start = cur;
+	while( *cur ) {
+
+		// First, is this the end of a quoted chunk?
+		if ( '\0' != quote )
+		{
+			if ( *cur == quote ) {
+				char	next = *(cur+1);
+
+				// If next is end, ok...
+				if ( '\0' == next ) {
+					*cur = '\0';			// Kill the quote
+					curJobPointer = NULL;	// There is no next one
+					return start;			// Done
+				}
+				// Whitespace: new job
+				else if ( isspace( next ) ) {
+					*cur = '\0';			// Terminate the string
+					nextJobStart = cur + 2;	// Point at char *after* the separator
+					curJobPointer = NULL;
+					return start;
+				}
+				// Colon: Next field
+				else if ( ':' ==  next ) {
+					*cur = '\0';			// Terminate the string
+					curJobPointer = cur + 2;	// Point at char *after* the separator
+					return start;
+				}
+				// If next is not a space or :, badness 10000
+				return NULL;
+
+				// Ok, next is either a space or a :
+			} else {
+				cur++;
+			}
+		} else {
+			// Not quoted; separator?
+			if ( ':' == *cur ) {
+				*cur = '\0';
+				curJobPointer = cur + 1;
+				return start;
+			}
+			else if ( isspace( *cur ) )  {
+				*cur = '\0';
+				nextJobStart = cur + 1;
+				curJobPointer = NULL;
+				return start;
+			} else {
+				cur++;
+			}
+		}
+	}
+
+	// End of string
+	curJobPointer = NULL;
+	nextJobStart = NULL;
+	return NULL;
+}
+
 // Basic constructor
 CondorCronMgr::CondorCronMgr( const char *name )
 {
@@ -189,7 +425,6 @@ CondorCronMgr::GetParam( const char *paramName,
 
 	// Now, go read the actual parameter
 	char *paramBuf = param( nameBuf );
-	dprintf( D_ALWAYS, "Paraming for '%s'\n", nameBuf );
 	free( nameBuf );
 
 	// Done
@@ -200,8 +435,6 @@ CondorCronMgr::GetParam( const char *paramName,
 int
 CondorCronMgr::ParseJobList( const char *jobString )
 {
-	StringList	*jobList = new StringList( jobString, " \t\n," );
-
 	// Debug
 	dprintf( D_JOB, "CronMgr: Job string is '%s'\n", jobString );
 
@@ -209,75 +442,51 @@ CondorCronMgr::ParseJobList( const char *jobString )
 	Cron.ClearAllMarks( );
 
 	// Walk through the job list
-	jobList->rewind();
-	char	*jobDescr;
-	while (  ( jobDescr = jobList->next() ) != NULL ) {
+	JobListParser parser( jobString );
+	while ( parser.nextJob() ) {
 		unsigned	jobPeriod = 0;
 		CronJobMode	jobMode = CRON_PERIODIC;
 
-		// Debug
-		dprintf( D_FULLDEBUG, "Parsing job description '%s'\n", jobDescr );
-
-		// Make a temp copy of the job description that can get trashed
-		// by strtok_r()
-		char	*tmpDescr = strdup( jobDescr );
-		char	*tmp;
-
-		// Verify strdup()
-		if ( NULL == tmpDescr ) {
-			dprintf( D_ALWAYS, 
-					 "CronMgr: Failed to strdup() job description!" );
-			continue;
-		}
-
 		// Parse it out; format is name:path:period[hms]
-		const char *jobName = tmpDescr;
-		tmp = NextTok( tmpDescr, ":" );
-		if ( ( NULL == jobName ) || ( '\0' == *jobName )  ) {
+		const char *jobName = parser.getName( );
+		if ( NULL == jobName ) {
 			dprintf( D_ALWAYS, 
 					 "CronMgr: skipping invalid job description '%s'"
 					 " (No name)\n",
-					 jobDescr );
-			free( tmpDescr );
+					 parser.getJobString( ) );
 			continue;
 		}
 
 		// Parse out the prefix
-		const char *jobPrefix = tmp;
-		tmp = NextTok( tmp, ":" );
+		const char *jobPrefix = parser.getPrefix( );
 		if ( NULL == jobPrefix ) {
 			dprintf( D_ALWAYS,
 					 "CronMgr: skipping invalid job description '%s'"
 					 " (No prefix)\n",
-					 jobDescr );
-			free( tmpDescr );
+					 parser.getJobString( ) );
 			continue;
 		}
 
 		// Parse out the path
-		const char *jobPath = tmp;
-		tmp = NextTok( tmp, ":" );
-		if (  ( NULL == jobPath ) || ( '\0' == *jobPath )  )
+		const char *jobPath = parser.getPath( );
+		if ( NULL == jobPath )
 		{
 			dprintf( D_ALWAYS, 
 					 "CronMgr: skipping invalid job description '%s'"
 					 " (No path)\n",
-					 jobDescr );
-			free( tmpDescr );
+					 parser.getJobString( ) );
 			continue;
 		}
 
 		// Pull out the period
-		const char *jobPeriodStr = tmp;
-		tmp = NextTok( tmp, ":" );
+		const char *jobPeriodStr = parser.getPeriod( );
 		if ( NULL != jobPeriodStr ) {
 			char	modifier;
 			if ( sscanf( jobPeriodStr, "%d%c", &jobPeriod, &modifier ) < 1 ) {
 				dprintf( D_ALWAYS,
 						 "CronMgr: skipping invalid job description '%s'"
 						 " (Bad Period '%s')\n",
-						 jobDescr, tmp );
-				free( tmpDescr );
+						 parser.getJobString( ), jobPeriodStr );
 				continue;
 			}
 
@@ -291,33 +500,37 @@ CondorCronMgr::ParseJobList( const char *jobString )
 				jobPeriod *= ( 60 * 60 );
 			} else {
 				dprintf( D_ALWAYS,
-						 "CronMgr: Invalid period modifier '%c' "
-						 "(Job = '%s')\n", modifier, jobDescr );
+						 "CronMgr: '%s': Invalid period modifier '%c'\n",
+						 parser.getJobString( ), modifier );
+				continue;
 			}
 		}
 
 		// Parse any remaining options
 		bool	killMode = false;
 		while ( 1 ) {
-			const char	*option = tmp;
+			// Extract an option
+			const char *option = parser.getOption( );
 			if ( NULL == option ) {
 				break;
 			}
-			tmp = NextTok( tmp, ":" );
+
+			// And, parse it
 			if ( !strcasecmp( option, "kill" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': Kill option ok\n",
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': Kill option ok\n",
 						 jobName );
 				killMode = true;
 			} else if ( !strcasecmp( option, "nokill" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': NoKill option ok\n",
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoKill option ok\n",
 						 jobName );
 				killMode = false;
 			} else if ( !strcasecmp( option, "continuous" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': Continuous option ok\n",
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': Continuous option ok\n",
 						 jobName );
 				jobMode = CRON_CONTINUOUS;
 			} else {
-				dprintf( D_ALWAYS, "Job '%s': Ignoring unknown option '%s'\n",
+				dprintf( D_ALWAYS, "CronMgr: Job '%s':"
+						 " Ignoring unknown option '%s'\n",
 						 jobName, option );
 			}
 		}
@@ -338,7 +551,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		    dprintf( D_ALWAYS,
 			     "CronMgr: ERROR: Job '%s' not continuous, but "
 			     "period = 0; ignoring Job.\n", jobName );
-		    free( tmpDescr ); 
 		    continue; 
 		  }
 		}
@@ -350,7 +562,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			if ( NULL == job ) {
 				dprintf( D_ALWAYS, "Cron: Failed to allocate job '%s'\n",
 						 jobName );
-				free( tmpDescr );
 				return -1;
 			}
 
@@ -358,8 +569,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			if ( Cron.AddJob( jobName, job ) < 0 ) {
 				dprintf( D_ALWAYS, "CronMgr: Error creating job '%s'\n", 
 						 jobName );
-				free( tmpDescr );
-				return -1;
 			}
 		}
 
@@ -412,9 +621,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Debug info
 		dprintf( D_FULLDEBUG, "CronMgr: Done processing job '%s'\n", jobName );
-
-		// We're done with the temp copy of the job description; set it free
-		free( tmpDescr );
 
 		// Finally, have the job finish it's initialization
 		job->Initialize( );
