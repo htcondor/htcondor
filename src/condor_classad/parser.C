@@ -535,7 +535,7 @@ int Parse(const char* s, ExprTree*& tree)
     if(ParseAssignExpr(tmp, tree, count))
     {
 		delete nextToken;
-		delete str;
+		delete [] str;
 		return 0;
     }
 	delete nextToken;
