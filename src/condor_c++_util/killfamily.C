@@ -252,6 +252,7 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 #ifndef WIN32
 	// Not yet implemented on Unix.
 	EXCEPT("getPidFamilyByLogin not implemented");
+	return 0;
 #else
 	// Win32 version
 	ExtArray<pid_t> pids(256);
