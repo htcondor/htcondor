@@ -1,5 +1,11 @@
 #define Top 				$(TILDE)/CONDOR
+
+#if IS_MIPS_ULTRIX43A || IS_SPARC_SUNOS41
 #define InstallDir				/usr/psup/condor
+#else
+#define InstallDir				/usr/uw/condor
+#endif
+
 #define LocalDir			$(TILDE)
 #define TmpDir				/tmp
 
