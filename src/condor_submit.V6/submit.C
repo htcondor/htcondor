@@ -1533,7 +1533,7 @@ queue(int num)
 		SetStdFile( 0 );
 		SetStdFile( 1 );
 		SetStdFile( 2 );
-		SetFileRemaps();
+		SetFileOptions();
 		SetImageSize();
 		SetForcedAttributes();
 
