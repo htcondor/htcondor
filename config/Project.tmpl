@@ -194,6 +194,8 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
+GLOBUS_DIR = /p/condor/workspaces/globus/devel
+
 #if WANT_GLOBUS && HAS_GLOBUS
 
 # define GLOBUS_SUPPORT 1
@@ -202,7 +204,6 @@ DEBUG_FLAG = DebugFlag
 # undef GSS_AUTHENTICATION
 # define GSS_AUTHENTICATION 1
 
-  GLOBUS_DIR = /p/condor/workspaces/globus/devel
   LDAP_DIR = /unsup/OpenLDAP-1.2.7-G
 
   GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DLDAP_DEBUG -DLDAP_REFERRALS \
@@ -230,30 +231,55 @@ DEBUG_FLAG = DebugFlag
 # define IsCondorG 
 #endif /*HasGlobus && WantsGlobus */
 
-#if defined( GSS_AUTHENTICATION )
+/* X509 Authentication requires globus*/
+#if WANT_X509 && HAS_GLOBUS
 
-#  define GssAuthFlags -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
-          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include
+  X509_FLAGS = -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
+                   -I$(GLOBUS_DIR)/include -I$(OpenSSLIncludePath)
 
-  SSL_DIR = /unsup/SSLeay-0.9.0b
-  AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
-    $(GLOBUS_DIR)/lib/libglobus_gss.a \
-    $(GLOBUS_DIR)/lib/libglobus_gaa.a \
-    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a
-
+  X509_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
+            $(GLOBUS_DIR)/lib/libglobus_gss.a \
+            $(GLOBUS_DIR)/lib/libglobus_gaa.a \
+            $(OpenSSL_LIB)
+             /* OPENSSL_LIB is defined in site.def */
 #else
 
-#  define GssAuthFlags
+  X509_FLAGS =
+  X509_LIB   = 
 
-#endif /* !defined( GSS_AUTHENTICATION ) */
+#endif /* !defined( WANT_X509 && HAS_GLOBUS ) */
 
+/* Kerberos */
 #if HAS_KERBEROS && WANT_KERBEROS
-  KERBEROS_FLAG = -DCONDOR_3DES_ENCRYPTION -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE) -I$(SSL_DIR)/include
+  KERBEROS_FLAG = -DCONDOR_3DES_ENCRYPTION -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
 #else
   KERBEROS_FLAG = 
 #endif /* !defined(WANT_KERBEROS) */
 
-AUTH_FLAGS = GssAuthFlags
+/* Encryption */
+#if CONDOR_3DES_ENCRYPTION
+    CONDOR_3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
+    #define NEED_OPENSSL YES
+    #define CONDOR_ENCRYPTION YES
+#else 
+    CONDOR_3DES_FLAGS =
+#endif
+
+#if CONDOR_BLOWFISH
+    CONDOR_BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
+    #define NEED_OPENSSL YES
+    #define CONDOR_ENCRYPTION YES
+#else
+    CONDOR_BLOWFISH_FLAGS =
+#endif
+
+ENCRYPTION_FLAGS = $(CONDOR_3DES_FLAGS) $(CONDOR_BLOWFISH_FLAGS) -I$(OpenSSLIncludePath)
+
+#if NEED_OPENSSL
+  ENCRYPTION_LIB = $(OpenSSL_LIB_PATH)/libssl.a $(OpenSSL_LIB_PATH)/libcrypto.a
+#else
+  ENCRYPTION_LIB =
+#endif
 
 #if WANT_NETMAN
 NETMAN_LIB = ../condor_netman/libnetman.a
@@ -265,8 +291,8 @@ NETMAN_FLAGS =
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) \
-		 $(SITE_C_FLAGS) $(AUTH_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
+		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -323,7 +349,6 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(GLOBUS_LIB) \
-  $(AUTH2_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
@@ -335,6 +360,7 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
   $(CREDENTIAL_LIB) \
-  $(OPENSSL_LIB) \
-  $(AUTH2_LIB) 
+  $(X509_LIB) \
+  $(KERBEROS_LIB) \
+  $(ENCRYPTION_LIB)
 
