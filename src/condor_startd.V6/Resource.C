@@ -187,8 +187,61 @@ Resource::starter_exited()
 {
 	dprintf( D_ALWAYS, "Starter pid %d has exited.\n",
 			 r_starter->pid() );
+
+		// Let our starter object know it's starter has exited.
 	r_starter->exited();
-	change_state( idle_act );
+
+	State s = state();
+	switch( s ) {
+	case claimed_state:
+		change_state( idle_act );
+		break;
+	case preempting_state:
+		leave_preempting_state();
+		break;
+	default:
+		dprintf( D_ALWAYS, 
+				 "Warning: starter exited while in unexpected state %s",
+				 state_to_string(s) );
+		change_state( owner_state );
+		break;
+	}
+}
+
+
+/* 
+   This function is called whenever we're in the preempting state
+   without a starter.  This situation occurs b/c either the starter
+   has finally exited after being told to go away, or we preempted a
+   match that wasn't active with a starter in the first place.  In any
+   event, leave_preempting_state is the one place that does what needs
+   to be done to all the current and preempting matches we've got, and
+   decides which state we should enter.
+*/
+void
+Resource::leave_preempting_state()
+{
+	r_cur->vacate();	// Send a vacate to the client of the match
+	delete r_cur;		
+	r_cur = NULL;
+
+		// In english:  "If the machine is available and someone
+		// is waiting for it..." 
+	if( (r_reqexp->eval() != 0) &&
+		r_pre && r_pre->agentstream() ) {
+		r_cur = r_pre;
+		r_pre = NULL;
+			// STATE TRANSITION preempting -> claimed
+		accept_request_claim( this );
+	} else {
+			// STATE TRANSITION preempting -> owner
+		if( r_pre ) {
+			r_pre->vacate();
+			delete r_pre;
+			r_pre = NULL;
+		}
+		change_state( owner_state );
+	}
 }
 
 
@@ -197,7 +250,6 @@ Resource::init_classad()
 {
 	char 	tmp[1024];
 	char*	ptr;
-	int		needs_free = 0;
 
 	if( r_classad )	delete(r_classad);
 	r_classad 		= new ClassAd();
@@ -222,9 +274,9 @@ Resource::init_classad()
 			 daemonCore->InfoCommandSinfulString() );
 	r_classad->Insert( tmp );
 
-		// Arch and OpSys.  Note: these will always return something,
-		// since config() will insert values for these from uname() if
-		// we don't have them in the config file.  
+		// Arch, OpSys, FileSystemDomain and UidDomain.  Note: these
+		// will always return something, since config() will insert
+		// values for these if we don't have them in the config file.
 	ptr = param( "ARCH" );
 	sprintf( tmp, "%s = \"%s\"", ATTR_ARCH, ptr );
 	r_classad->Insert( tmp );
@@ -235,55 +287,23 @@ Resource::init_classad()
 	r_classad->Insert( tmp );
 	free( ptr );
 
+	ptr = param("UID_DOMAIN");
+	sprintf( tmp, "%s = \"%s\"", ATTR_UID_DOMAIN, ptr );
+	dprintf( D_ALWAYS, "%s\n", tmp );
+	r_classad->Insert( tmp );
+	free( ptr );
+
+	ptr = param("FILESYSTEM_DOMAIN");
+	sprintf( tmp, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, ptr );
+	dprintf( D_ALWAYS, "%s\n", tmp );
+	r_classad->Insert( tmp );
+	free( ptr );
+
 		// Insert state and activity attributes.
 	r_state->update( r_classad );
 
 		// Insert all resource attribute info.
 	r_attr->init( r_classad );
-
-		// If the UID domain is not set, use our hostname as the
-		// default.   
-	if( (ptr = param("UID_DOMAIN")) == NULL ) {
-		ptr = my_full_hostname();
-	} else {
-			// If the UID domain is defined as "*", accept uids from
-			// anyone.  
-		if( ptr[0] == '*' ) {
-			free( ptr );
-			ptr = "";
-		} else {
-			needs_free = 1;
-		}
-	}
-	sprintf( tmp, "%s = \"%s\"", ATTR_UID_DOMAIN, ptr );
-	dprintf( D_ALWAYS, "%s\n", tmp );
-	r_classad->Insert( tmp );
-	if( needs_free ) {
-		free( ptr );
-		needs_free = 0;
-	}
-
-		// If the file system domain is not set, use our hostname as
-		// the default. 
-	if( (ptr = param("FILESYSTEM_DOMAIN")) == NULL ) {
-		ptr = my_full_hostname();
-	} else {
-			// If the file system domain is defined as "*", assume we
-			// share files with everyone.
-		if( ptr[0] == '*' ) {
-			free( ptr );
-			ptr = "";
-		} else {
-			needs_free = 1;
-		}
-	}
-	sprintf( tmp, "%s = \"%s\"", ATTR_FILE_SYSTEM_DOMAIN, ptr );
-	dprintf( D_ALWAYS, "%s\n", tmp );
-	r_classad->Insert( tmp );
-	if( needs_free ) {
-		free( ptr );
-		needs_free = 0;
-	}
 
 		// Number of CPUs.  
 	sprintf( tmp, "%s = %d", ATTR_CPUS, calc_ncpus() );
