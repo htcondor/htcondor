@@ -188,6 +188,8 @@ class Scheduler : public Service
 	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
 #endif
 	
+	char*			uidDomain( void ) { return UidDomain; };
+
   private:
 	
 	// information about this scheduler
