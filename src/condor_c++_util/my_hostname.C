@@ -137,7 +137,13 @@ init_hostnames()
 		}
 	}
 
-#if !defined( WIN32 ) /* I'm not sure how to do this on NT */
+
+/* On Solaris, the resolver lib is so heavily patched that folks
+ * cannot deal with the below code.  And we cannot link in the resolver
+ * statically on Solaris, cuz stupid Sun only releases the resolver
+ * as a dynamic library.  So we skip the below on Solaris -Todd 5/98
+ */
+#if !defined( WIN32 ) && !defined(Solaris) 
 	if( ! full_hostname ) {
 			// We still haven't found it yet, try to use the
 			// resolver.  *sigh*
@@ -149,7 +155,7 @@ init_hostnames()
 			full_hostname = strdup( hostbuf );
 		}
 	}
-#endif /* WIN32 */
+#endif /* not WIN32 and not Solaris */
 	if( ! full_hostname ) {
 			// Still can't find it, just give up.
 		full_hostname = strdup( hostname );
