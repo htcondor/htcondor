@@ -138,6 +138,19 @@ public:
   const char* Value() const { return (Data ? Data : ""); }
   // operator const char*() const { return (Data ? Data : ""); }
     
+  MyString Substr(int pos1, int pos2) {
+    MyString S;
+    if (pos2>Len) pos2=Len;
+    if (pos1<0) pos1=0;
+    if (pos1>pos2) return S;
+    int len=pos2-pos1+1;
+    char tmp[len+1];
+    strncpy(tmp,Data+pos1,len);
+    tmp[len]='\0';
+    S=tmp;
+    return S;
+  }
+    
   friend ostream& operator<<(ostream& os, const MyString& S) {
     if (S.Data) os << S.Data;
     return os;
