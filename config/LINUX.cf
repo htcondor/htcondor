@@ -14,6 +14,10 @@
 #define IS_LINUX		YES
 #define ImakeOpsysFlag		-DIS_LINUX
 
+/* We want the binaries we release to the CS pool for Linux to be
+statically linked to avoid problems */
+#define RELEASE_IS_STATIC	YES
+
 #if defined( IS_GLIBC )
 #   undef IS_GLIBC
 #   define IS_GLIBC		YES
