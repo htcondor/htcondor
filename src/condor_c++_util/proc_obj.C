@@ -1349,7 +1349,7 @@ ProcObj::short_header()
   by this routine must match those defined by the short_header routine
   defined above.
 */
-inline void
+void
 short_print(
 	int cluster,
 	int proc,

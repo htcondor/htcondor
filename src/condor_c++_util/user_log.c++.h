@@ -30,12 +30,19 @@
 
 #include "condor_constants.h"
 #include "file_lock.h"
+#include "condor_event.h"
 
 class UserLog {
 public:
 	UserLog();
 	UserLog( const char *owner, const char *file, int clu, int proc, int subp );
 	~UserLog();
+
+	// use this function to access log (see condor_event.h)   --RR
+	int       writeEvent (ULogEvent *);
+	
+	// use of these functions is strongly discouraged   --RR
+	// (still here for backward compatibility)
 	void put( const char *fmt, ... );
 	void display();
 	void begin_block();
@@ -56,6 +63,24 @@ private:
 	FileLock	*lock;
 	int			in_block;
 };
+
+class ReadUserLog
+{
+	public:
+
+	ReadUserLog();
+	~ReadUserLog();
+
+	int 	initialize (const char *file);
+	int		readEvent (ULogEvent *&);
+	int		synchronize (void);
+
+	private:
+
+	int   fd;
+	FILE *fp;
+};
+
 #endif /* __cplusplus */
 
 typedef void LP;

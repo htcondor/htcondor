@@ -31,6 +31,7 @@
 #include <pwd.h>
 #include <stdarg.h>
 #include "user_log.h"
+#include "user_log.c++.h"
 #include <time.h>
 
 static char *_FileName_ = __FILE__;
@@ -40,6 +41,7 @@ extern "C" {
 	int setegid( gid_t );
 }
 
+static const char SynchDelimiter[] = "...\n";
 
 static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
@@ -119,6 +121,19 @@ UserLog::display()
 	dprintf( D_ALWAYS, "in_block = %s\n", in_block ? "TRUE" : "FALSE" );
 }
 
+int UserLog::
+writeEvent (ULogEvent *event)
+{
+	int retval;
+	lock->obtain (WRITE_LOCK);
+	fseek (fp, 0, SEEK_END);
+	retval = event->putEvent (fp);
+	if (!retval) fputc ('\n', fp);
+	if (fprintf (fp, SynchDelimiter) < 0) retval = 0;
+	lock->release ();
+	return retval;
+}
+	
 void
 UserLog::put( const char *fmt, ... )
 {
@@ -297,4 +312,105 @@ EndUserLogBlock( LP *lp )
 		return;
 	}
 	((UserLog *)lp) -> end_block();
+}
+
+
+// ReadUserLog class
+
+
+ReadUserLog::
+ReadUserLog ()
+{
+	fp = 0;
+	fd = -1;
+}
+
+
+ReadUserLog::
+~ReadUserLog ()
+{
+}
+
+
+int ReadUserLog::
+initialize (const char *file)
+{	
+	if ((fd = open (file, O_RDONLY, 0)) == -1)
+	{
+		EXCEPT ("open(%s)", file);
+	}
+
+	if ((fp = fdopen (fd, "r")) == NULL)
+	{
+		EXCEPT ("fdopen(%d)", fd);
+	}
+
+	return 1;
+}
+	
+
+int ReadUserLog::
+readEvent (ULogEvent *& event)
+{
+	fpos_t filepos;
+	int    eventnumber;
+	int    retval1, retval2, retval3;
+	
+	// store file position so that if we are unable to read the event, we can
+	// rewind to this location
+	if (!fp || fgetpos(fp, &filepos)) 
+		return 0;
+
+	retval1 = fscanf (fp, "%d", &eventnumber);
+	if (retval1 == 1)
+	{
+		// allocate event object; check if allocated successfully
+		event = instantiateEvent ((ULogEventNumber) eventnumber);
+		if (!event) return 0;
+
+		// read event from file; check for result
+		retval2 = event->getEvent (fp);
+	}
+	
+	// on error, reset file position
+	if (!retval1 || !retval2)
+	{
+		// reset file position
+		if (fsetpos (fp, &filepos))
+		{
+			EXCEPT ("fsetpos()");
+		}
+
+		return 0;
+	}
+	else
+	{
+		// synchronize the log
+		retval3 = synchronize ();
+
+		return retval3;
+	}
+
+	// will not reach here
+	return 0;
+}
+
+
+int ReadUserLog::
+synchronize (void)
+{
+	int retval = 0;
+	char buffer[32];
+	while (1)
+	{
+		if (fgets (buffer, 32, fp) == NULL) break;
+
+		if (strcmp (buffer, SynchDelimiter) == 0)
+		{
+			retval = 1;
+			break;
+		}
+	}
+
+	return retval;
 }

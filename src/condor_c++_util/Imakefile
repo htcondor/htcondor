@@ -11,7 +11,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
 #if IS_SPARC_SUNOS41
-SYSPARAM = sysparam_sun
+sYSPARAM = sysparam_sun
 #endif
 #if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
 SYSPARAM = sysparam_solaris
@@ -48,14 +48,16 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	NON_POSIX.set_prog_env.C alarm.C string_set.C proc_obj.C alloc.C \
 	filter.C directory.C my_hostname.C file_lock.C disk.C up_down.C \
 	user_log.C environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C \
-	carmi_context.C instantiate.C condor_query.C string_list.C $(URL_SRC)
+	carmi_context.C instantiate.C condor_query.C string_list.C \
+	condor_event.C generic_query.C $(URL_SRC)
 
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	NON_POSIX.set_prog_env.o alarm.o string_set.o proc_obj.o alloc.o \
 	filter.o directory.o my_hostname.o file_lock.o disk.o up_down.o \
-	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
-	carmi_context.o instantiate.o condor_query.o string_list.o $(URL_OBJ)
+	user_log.o environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
+	carmi_context.o instantiate.o condor_query.o string_list.o \
+	condor_event.o generic_query.o $(URL_OBJ)
 
 #if IS_R6000_AIX32
 TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
@@ -73,6 +75,9 @@ c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 c_plus_target(test_context, test_carmi_context.o, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
+
+c_plus_target(logwrite,testLogWrite.o,$(TEST_LIBS))
+c_plus_target(logread,testLogRead.o,$(TEST_LIBS))
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
@@ -102,4 +107,3 @@ release:
 
 foo.o: user_log.h
 test.o: user_log.h
-user_log.o: user_log.h
