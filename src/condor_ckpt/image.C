@@ -761,7 +761,7 @@ Image::Read()
 			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
 				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
 						 strerror(errno));
-				Suicide();
+				return -1;
 			}
 //		}		// don't use URL library -- Jim B.
 	}
@@ -1138,7 +1138,7 @@ restart( )
 {
 	InRestart = TRUE;
 
-	MyImage.Read();
+	if (MyImage.Read() < 0) Suicide();
 	MyImage.Restore();
 }
 
