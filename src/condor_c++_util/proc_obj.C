@@ -1,6 +1,9 @@
 #if defined(LINUX)
 #pragma implementation "proc_obj_tmpl.h"
 #endif
+
+#pragma implementation "proc_obj_tmpl.h"
+
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow
 ** 
