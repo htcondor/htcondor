@@ -1094,6 +1094,48 @@ consult or change the open file table.
 #ifdef REMOTE_SYSCALLS
 
 /*
+We really don't pretend to support signals or sleeping of any
+kind.  However, we are willing to go to a little effort to
+see sleep() at least delay for some amount of time if no
+checkpoint intervenes.  If a checkpoint interrupts a sleep,
+any timers that were set are lost, but sleep() will return
+EINTR after a checkpoint anyway, thus preventing an infinite loop.
+
+Except on HPUX.  HPUX relies on setitimer and getitimer to
+implement sleep.  We don't really want to support these, but
+they need to work correctly to at least prevent sleep() from
+looping infinitely.
+*/
+
+#if defined(HPUX)
+
+int setitimer( int which, const struct itimerval *value, struct itimerval *oval )
+{
+	int scm;
+	int result;
+
+	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	result = syscall( SYS_setitimer, which, value, oval );
+	SetSyscalls(scm);
+
+	return result;
+}
+
+int getitimer( int which, struct itimerval *value )
+{
+	int scm;
+	int result;
+
+	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+	result = syscall( SYS_getitimer, which, value );
+	SetSyscalls(scm);
+
+	return result;
+}
+
+#endif
+
+/*
 We don't handle readv directly in ANY case.  Split up the read
 and pass it through the regular read mechanism to take advantage
 of whatever magic is implemented there.  Notice that this works for

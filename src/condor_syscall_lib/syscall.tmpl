@@ -401,13 +401,14 @@ All of these calls manipulate the open file table.
 	/* on Linux, lseek64 just goes to llseek, I can't find an lseek64 on OSF1 */
 	#if !defined(LINUX) && !defined(OSF1)
 	off64_t lseek64( int fd, off64_t offset, int whence )
-		: file_table_name(lseek), remote_name(lseek),
+		: file_table_name(lseek), remote_name(lseek)
 		#if defined(IRIX)
 			/* all seek calls under IRIX call lseek, disassemble it and see. */
-			local_name(lseek);
-		#elif defined(Solaris) || defined(HPUX)
-			local_name(llseek);
+			,local_name(lseek)
+		#elif defined(Solaris)
+			,local_name(llseek)
 		#endif
+		;
 	#endif
 
 	int dup( int old_fd ) : file_table;
@@ -1555,13 +1556,16 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-	#if defined(LINUX) || defined(Solaris251) || defined(HPUX) || defined(IRIX65) || defined(OSF1)
-		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
-	#else
-		int setitimer( int which, struct itimerval *value, struct itimerval *oval );
-	#endif
+	/* get and set itimer are special switches on HPUX */
+	#if defined(HPUX) && !defined(SWITCH)
+		#if defined(LINUX) || defined(Solaris251) || defined(IRIX65) || defined(OSF1) || defined(HPUX)
+			int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
+		#else
+			int setitimer( int which, struct itimerval *value, struct itimerval *oval );
+		#endif
 
-	int getitimer( int which, struct itimerval *value );
+		int getitimer( int which, struct itimerval *value );
+	#endif
 
 }
 
