@@ -78,6 +78,14 @@ LIB32=link.exe -lib
 # Name "condor_cpp_util - Win32 Debug"
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\ad_printmask.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\ad_printmask.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\classad_hashtable.C"
 # End Source File
 # Begin Source File
