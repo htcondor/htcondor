@@ -449,7 +449,8 @@ int ReliSock::get_file_desc()
 	return _sock;
 }
 
-#if 0 // interface no longer supported
+#ifndef WIN32
+	// interface no longer supported
 int ReliSock::attach_to_file_desc(
 	int		fd
 	)

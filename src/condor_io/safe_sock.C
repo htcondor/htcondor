@@ -363,7 +363,8 @@ int SafeSock::get_file_desc()
 	return _sock;
 }
 
-#if 0 // interface no longer supported
+#ifndef WIN32
+	// interface no longer supported
 int SafeSock::attach_to_file_desc(
 	int		fd
 	)
