@@ -550,7 +550,11 @@ negotiationTime ()
 			scheddPrio = accountant.GetPriority ( scheddName );
 			scheddUsage = accountant.GetResourcesUsed ( scheddName );
 			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
-			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
+				scheddLimit = 500000;
+			} else {
+				scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			}
 			if( scheddLimit < 0 ) {
 				scheddLimit = 0;
 			}
