@@ -4,6 +4,8 @@
 # It is unlikely that anyone will want to use it. 
 # This script is renamed to something like build_classads-0.9.7
 
+cd $PACKAGE_BUILD_DIR/$PACKAGE_NAME/
+
 ##### Configure and Build ClassAds #####
 ./configure --enable-namespace --prefix $PACKAGE_INSTALL_DIR
 if [ $? -ne 0 ]
