@@ -205,6 +205,9 @@ SHADOW_LOCK	= $(LOCK)/ShadowLock
 COLLECTOR_HOST	= $(CONDOR_HOST)
 NEGOTIATOR_HOST	= $(CONDOR_HOST)
 
+##  What machine will be the condor_view server for this pool?
+#CONDOR_VIEW_HOST = full.hostname.domain
+
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
 SHUTDOWN_GRACEFUL_TIMEOUT	= 1800
@@ -240,6 +243,9 @@ SCHEDD				= $(SBIN)/condor_schedd
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the master.
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
+
+##  What name do you want to use for this master?
+#MASTER_NAME = username@$(FULL_HOSTNAME)
 
 ##  Where should the master find the condor_preen binary and how do
 ##  you want preen to behave?  The "-m" means you want email about
@@ -312,6 +318,9 @@ SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the schedd.
 SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
+
+##  What name do you want to use for this schedd?
+#SCHEDD_NAME = username@$(FULL_HOSTNAME)
 
 ##  How often should the schedd send an update to the central manager?
 ##  (5 minutes)
