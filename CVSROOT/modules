@@ -114,6 +114,10 @@ V6_6_SRC		-a \
 V6_7_MIRROR_SRC		-a V6_6_SRC \
 			src/condor_c-gahp
 
+V6_7_SRC		-a V6_6_SRC \
+			src/condor_c-gahp \
+			src/condor_drmaa
+
 V_TRUNK_SRC		-a \
 			V6_COMMON \
 			src/condor_chirp \
@@ -303,11 +307,9 @@ V6_6_ALL	-a DOC V6_6_CODE
 V6_6_BUILD	-a V6_6_ALL V6_6_EXT
 
 # For now, the 6.7 modules share the same source as 6.6.
-V6_7_UNIX_CODE	-a TOOLS V6_6_SRC src/condor_drmaa src/condor_c-gahp
-V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC src/condor_drmaa \
-		   src/condor_c-gahp
-V6_7_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC  src/condor_drmaa \
-		   src/condor_c-gahp
+V6_7_UNIX_CODE	-a TOOLS V6_7_SRC
+V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_SRC
+V6_7_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_SRC
 V6_7_ALL	-a DOC V6_7_CODE
 V6_7_BUILD	-a V6_7_ALL V6_7_EXT
 
