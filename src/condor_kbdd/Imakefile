@@ -9,8 +9,9 @@ SRC = kbdd.c
 OBJ = kbdd.o
 STD_LIB = ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a 
 X_LIB = XExtLibPath XLibPath
-LIB = $(STD_LIB) $(X_LIB) RpcLib SocketLib 
+LIB = $(STD_LIB) RpcLib SocketLib 
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
+LDFLAGS = $(X_LIB)
 
 all_target(condor_kbdd)
 tags_target($(SRC),$(LIBDIRS))

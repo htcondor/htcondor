@@ -29,14 +29,8 @@
 
 
 #include <stdio.h>
-#if defined(Solaris)
-#include </usr/X11R6/include/X11/Xlib.h>
-#include </usr/X11R6/include/X11/Xproto.h>
-#else
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
-#endif
-
 
 #include <netdb.h>
 #include <errno.h>
