@@ -57,11 +57,6 @@
 #include "condor_qmgr.h"
 #include "sig_install.h"
 
-#ifdef __GNUG__
-#pragma implementation "extArray.h"
-#pragma implementation "HashTable.h"
-#endif
-
 #include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -200,6 +195,11 @@ struct SubmitRec {
 
 ExtArray <SubmitRec> SubmitInfo(10);
 int CurrentSubmitInfo = -1;
+
+// explicit template instantiations
+template class HashTable<MyString, MyString>;
+template class HashBucket<MyString,MyString>;
+template class ExtArray<SubmitRec>;
 
 int
 main( int argc, char *argv[] )

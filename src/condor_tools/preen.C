@@ -32,10 +32,6 @@
 * and/or mail appropriate authorities about it.
 *********************************************************************/
 
-#if defined(IRIX53)
-#pragma implementation "list.h" 
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
@@ -53,12 +49,6 @@
 
 extern "C" char *get_startd_addr(const char *);
 State get_machine_state();
-
-#if defined(OSF1)
-#pragma define_template List<char>
-#pragma define_template Item<char>
-#endif
-
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 

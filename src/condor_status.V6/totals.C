@@ -3,16 +3,11 @@
 #include "condor_attributes.h"
 #include "MyString.h"
 #include "stdio.h"
-
-#ifdef __GNUG__
-#include "status_types.h"
-class ClassTotal;
-#pragma implementation "HashTable.h"
 #include "HashTable.h"
-typedef HashTable<MyString,ClassTotal*> _statusHashTable;
-#endif
-
 #include "totals.h"
+
+template class  HashTable<MyString,ClassTotal*>;
+template class  HashBucket<MyString,ClassTotal*>;
 
 int hashFunc (const MyString &key, int size)
 {
