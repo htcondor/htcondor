@@ -155,4 +155,32 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 	return rval;
 }
 
+
+int
+REMOTE_CONDOR_register_mpi_master_info( char* str )
+{
+	int		terrno=0;
+	int		rval=-1;
+	
+	dprintf ( D_SYSCALLS, "Doing CONDOR_register_mpi_master_info\n" );
+
+	CurrentSysCall = CONDOR_register_mpi_master_info;
+
+	syscall_sock->encode();
+	assert( syscall_sock->code(str) );
+	assert( syscall_sock->end_of_message() );
+
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	assert( syscall_sock->end_of_message() );
+	return rval;
+}
+
 } // extern "C"
