@@ -7,7 +7,7 @@
 #ifndef _PRIO_REC_H_
 #define _PRIO_REC_H_
 
-const 	int		INITIAL_MAX_PRIO_REC = 1024;
+const 	int		INITIAL_MAX_PRIO_REC = 2048;
 
 /* this record contains all the parameters required for
  * assigning priorities to all jobs */
