@@ -44,6 +44,8 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
+#include <time.h>
+#include "user_log.c++.h"
 #include "url_condor.h"
 #include "sched.h"
 #include "condor_classad.h"
@@ -54,7 +56,6 @@
 #include "files.h"
 #include <pwd.h>
 #include <sys/stat.h>
-#include <time.h>
 
 #include "condor_qmgr.h"
 
@@ -173,6 +174,7 @@ main( int argc, char *argv[] )
 	char	queue_name[_POSIX_PATH_MAX];
 	char	**ptr;
 	char	*cmd_file = NULL, *queue_file = NULL;
+	int dag_pause = 0;
 	
 	setbuf( stdout, NULL );
 
@@ -188,7 +190,15 @@ main( int argc, char *argv[] )
 		if( ptr[0][0] == '-' ) {
 			if( ptr[0][1] == 'q' ) {
 				Quiet++;
-			} else if ( ptr[0][1] == 'r' ) {
+			} else 
+			if( ptr[0][1] == 'p' ) {
+               // the -p option will cause condor_submit to pause for about
+               // 4 seconds upon completion.  this prevents 'Broken Pipe'
+               // messages when condor_submit is called from DagMan on
+               // platforms with crappy popen(), like IRIX - Todd T, 2/97
+               dag_pause = 1;
+			} else
+			if ( ptr[0][1] == 'r' ) {
 				Remote++;
 				ptr++;
 				queue_file = *ptr;
@@ -281,6 +291,9 @@ main( int argc, char *argv[] )
 		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
 	}
+
+	if (dag_pause)
+		sleep(4);
 
 	return 0;
 }
@@ -1291,7 +1304,6 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 #include "environ.h"
-#include "user_log.c++.h"
 
 void
 log_submit()
@@ -1327,10 +1339,6 @@ log_submit()
     if (!usr_log.writeEvent (&jobSubmit))
         dprintf (D_ALWAYS, "Error logging submit event.\n");
 }
-
-#define SECOND 1
-#define MINUTE (SECOND * 60)
-#define HOUR (MINUTE * 60)
 
 
 int
