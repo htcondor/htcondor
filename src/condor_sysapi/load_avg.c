@@ -552,27 +552,51 @@ sysapi_load_avg_raw(void)
 	static int threadID = -1;
 	time_t currentTime;
 	double totalLoad=0.0;
+	DWORD exitCode = 0;
+	BOOL createNewThread = FALSE;
 	int numSamples=0, i;
 
 	sysapi_internal_reconfig();
-
+	
 	if (threadHandle == NULL) {
 		ncpus = sysapi_ncpus();
 		InitializeCriticalSection(&cs);
+		createNewThread = TRUE;	
+	} else {
+		if ( ! GetExitCodeThread( threadHandle, &exitCode ) ) {
+			dprintf(D_ALWAYS, "GetExitCodeThread() failed. (err=%li)\n",
+				   	GetLastError());
+		} else {
+			if ( exitCode != STILL_ACTIVE ) {
+				// somehow the thread died, so we should get its
+				// return code, dprintf it and then start a new thread.
+				
+				dprintf(D_ALWAYS, "loadavg thread died, restarting. "
+						"(exit code=%li)\n", exitCode);
+				CloseHandle(threadHandle);
+				createNewThread = TRUE;
+			} else {
+				// thread is still alive and well. Go in peace.
+				createNewThread = FALSE;
+			}
+		}
+	}
+	
+	if ( createNewThread == TRUE ) {
 		threadHandle = CreateThread(NULL, 0, sample_load, 
-									NULL, 0, &threadID);
+			NULL, 0, &threadID);
 		if (threadHandle == NULL) {
 #ifndef TESTING
 			dprintf(D_ALWAYS, "failed to create loadavg thread, errno = %d\n",
-					GetLastError());
+				GetLastError());
 #endif
 			return 0.0;
 		}
 		Sleep(SAMPLE_INTERVAL*5);	/* wait for ~5 samples */
 	}
-
+	
 	currentTime = time(NULL);
-
+	
 	EnterCriticalSection(&cs);
 	for (i=0; i < NUM_SAMPLES; i++) {
 		/* if this sample occurred within the minute, then add to total */
