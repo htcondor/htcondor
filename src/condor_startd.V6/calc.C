@@ -332,7 +332,7 @@ all_pty_idle_time( time_t now )
 	return answer;
 }
 
-#ifdef LINUX
+#if defined(LINUX) || defined(HPUX)
 #include <sys/sysmacros.h>  /* needed for major() below */
 #elif ! defined( DUX )
 #include <sys/mkdev.h>
