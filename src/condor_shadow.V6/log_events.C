@@ -99,7 +99,7 @@ initializeUserLog ()
 		} else {
 			sprintf(logfilename, "%s/%s", Proc->iwd, tmp);
 		}
-		ULog.initialize (Proc->owner, logfilename,
+		ULog.initialize (Proc->owner, NULL, logfilename,
 						 Proc->id.cluster, Proc->id.proc, 0);
 		if (JobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
 			&& use_xml) {
