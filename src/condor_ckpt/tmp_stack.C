@@ -27,6 +27,7 @@
 */ 
 
 #include "image.h"
+#include <assert.h>
 /*
   Switch to a temporary stack area in the DATA segment, then execute the
   given function.  Note: we save the address of the function in a
@@ -41,7 +42,9 @@ static jmp_buf Env;
 // on the stack without any alignment problems.
 
 const int	TmpStackSize = sizeof(char)*4096/sizeof(double);
+static int boundschk1 = 0xabcabc;
 static double	TmpStack[ TmpStackSize ];
+static int boundschk2 = 0xabcabc;
 void
 ExecuteOnTmpStk( void (*func)() )
 {
@@ -62,5 +65,7 @@ ExecuteOnTmpStk( void (*func)() )
 	} else {
 			// Second time through - call the function
 		SaveFunc();
+		assert(boundschk1 == 0xabcabc);
+		assert(boundschk2 == 0xabcabc);
 	}
 }
