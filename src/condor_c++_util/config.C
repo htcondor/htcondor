@@ -36,7 +36,7 @@ extern "C" {
 int get_var( register char *value, register char **leftp, 
 			 register char **namep, register char **rightp, char *self=NULL );
 
-	
+char *getline_implementation( FILE *, int );
 
 int		ConfigLineNo;
 
@@ -76,7 +76,7 @@ int Read_config(char* config_file, ClassAd* classAd,
 	}
 
 	for(;;) {
-		name = getline(conf_fp);
+		name = getline_implementation(conf_fp,128);
 		if( name == NULL ) {
 			break;
 		}
@@ -286,6 +286,11 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 char *
 getline( FILE *fp )
 {
+	return getline_implementation(fp,_POSIX_ARG_MAX);
+}
+static char *
+getline_implementation( FILE *fp, int requested_bufsize )
+{
 	static char	*buf = NULL;
 	static unsigned int buflen = 0;
 	int		len;
@@ -305,10 +310,10 @@ getline( FILE *fp )
 		return NULL;
 	}
 
-	if ( buflen != 128 ) {
+	if ( buflen != requested_bufsize ) {
 		if ( buf ) free(buf);
-		buf = (char *)malloc(128);
-		buflen = 128;
+		buf = (char *)malloc(requested_bufsize);
+		buflen = requested_bufsize;
 	}
 	buf[0] = '\0';
 	read_buf = buf;
