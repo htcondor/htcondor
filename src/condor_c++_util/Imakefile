@@ -10,6 +10,8 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o
 
+DAEMON_CLIENT_OBJ = daemon.o daemon_types.o
+
 #if WANT_KERBEROS
 KERBEROS_OBJ = condor_cred_kerberos.o
 #endif
@@ -20,7 +22,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	email.o env.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o \
-	$(API_OBJ) \
+	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
@@ -69,6 +71,7 @@ foo: foo.o user_log.o
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, mkargv.o)
+import(../condor_daemon_client, $(DAEMON_CLIENT_OBJ))
 
 release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
 strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
