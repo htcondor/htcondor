@@ -25,12 +25,14 @@
 #include "daemon_types.h"
 
 static const char* daemonNames[] = {
+	"none",
 	"master",
 	"schedd",
 	"startd",
 	"collector",
 	"negotiator",
-	"kbdd"
+	"kbdd",
+	"dagman"
 };
 
 extern "C" {

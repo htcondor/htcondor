@@ -1,8 +1,9 @@
 #ifndef _CONDOR_DAEMON_TYPES_H
 #define _CONDOR_DAEMON_TYPES_H
 
-enum daemonType { DT_MASTER, DT_SCHEDD, DT_STARTD, DT_COLLECTOR, 
-				  DT_NEGOTIATOR, DT_KBDD };
+enum daemonType { DT_NONE, DT_MASTER, DT_SCHEDD, DT_STARTD,
+				  DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
+				  DT_DAGMAN };
 
 #ifdef __cplusplus
 extern "C" {
