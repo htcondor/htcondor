@@ -18,11 +18,10 @@ is allowed.
 
 class CondorFileSpecial : public CondorFileLocal {
 public:
-	CondorFileSpecial( char *kind );
+	CondorFileSpecial();
 	virtual ~CondorFileSpecial();
-	virtual char * get_kind();
-protected:
-	char *kind;	
+
+	virtual int attach( int fd );
 };
 
 #endif

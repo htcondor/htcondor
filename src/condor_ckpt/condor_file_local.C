@@ -50,8 +50,3 @@ int CondorFileLocal::local_access_hack()
 {
 	return 1;
 }
-
-char * CondorFileLocal::get_kind()
-{
-	return "local file";
-}

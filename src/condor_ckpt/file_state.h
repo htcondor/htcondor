@@ -210,11 +210,8 @@ public:
 	/** Return the approximate buffer block size to use */
 	int	get_buffer_block_size();
 
-	/** Perform a periodic checkpoint. */
+	/** Save the state of all open files */
 	void	checkpoint();
-
-	/** Suspend everything I know in preparation for a vacate and exit. */
-	void	suspend();
 
 	/** A checkpoint has resumed, so open everything up again. */
 	void	resume();
@@ -229,13 +226,20 @@ public:
 
 private:
 
-	int	install_special( char *kind, int real_fd );
-	int	find_name(const char *name);
+	int	resume( int fd );
+	int	install_special( int real_fd );
 	int	find_empty();
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
 	void	check_safety( CondorFilePointer *f );
-	CondorFileInfo	* find_info( char *name, char *kind );
+	void	lookup_url( char *logical_name, char *url );
+	int	find_url( char *url );
+	int	find_logical_name( char *logical_name );
+
+	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
+	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );
+	CondorFile * open_file_unique( char *logical_name, int flags, int mode, int allow_buffer );
+	CondorFileInfo	* make_info( char *logical_name );
 
 	CondorFilePointer	**pointers;
 	CondorFileInfo		*info_head;
@@ -247,7 +251,6 @@ private:
 	int	got_buffer_info;
 	int	flush_mode;
 	int	aggravate_mode;
-	int	resume_count;
 };
 
 

@@ -5,9 +5,8 @@
 #include "condor_syscall_mode.h"
 #include "signals_control.h"
 
-CondorFileSpecial::CondorFileSpecial(char *k)
+CondorFileSpecial::CondorFileSpecial() : CondorFileLocal()
 {
-	kind = k;
 	readable = writeable = 1;
 	_condor_ckpt_disable();
 }
@@ -17,7 +16,10 @@ CondorFileSpecial::~CondorFileSpecial()
 	_condor_ckpt_enable();
 }
 
-char * CondorFileSpecial::get_kind()
+int CondorFileSpecial::attach( int fd_in )
 {
-	return kind;
+	fd = fd_in;
+	readable = writeable = 1;
+	size = -1;
 }
+

@@ -24,7 +24,6 @@ public:
 	virtual int ftruncate( size_t length );
 
 	virtual int local_access_hack();
-	virtual char * get_kind();
 };
 
 #endif

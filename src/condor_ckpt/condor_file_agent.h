@@ -27,12 +27,8 @@ public:
 	CondorFileAgent( CondorFile *f );
 	virtual ~CondorFileAgent();
 
-	virtual int open( const char *path, int flags, int mode );
+	virtual int open( const char *url, int flags, int mode );
 	virtual int close();
-
-	virtual void checkpoint();
-	virtual void suspend();
-	virtual void resume( int count );
 
 private:
 	void open_temp();

@@ -1586,13 +1586,7 @@ Checkpoint( int sig, int code, void *scp )
 #endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save file state\n");
-		if( sig==SIGTSTP ) {
-			// Suspend all operations and save files
-			_condor_file_table_suspend();
-		} else {
-			// A periodic safety checkpoint
-			_condor_file_table_checkpoint();
-		}
+		_condor_file_table_checkpoint();
 		dprintf( D_ALWAYS, "Done saving file state\n");
 
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
@@ -1637,10 +1631,6 @@ Checkpoint( int sig, int code, void *scp )
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
 
-			dprintf( D_ALWAYS, "About to restore file state\n");
-			_condor_file_table_resume();
-
-			dprintf( D_ALWAYS, "Done restoring file state\n" );
 			int mode = get_ckpt_mode(0);
 			if (mode > 0) {
 				if (mode&CKPT_MODE_MSYNC) {
@@ -1656,6 +1646,10 @@ Checkpoint( int sig, int code, void *scp )
 		} else {
 			patch_registers( scp );
 		}
+
+       		dprintf( D_ALWAYS, "About to restore file state\n");
+	       	_condor_file_table_resume();
+		dprintf( D_ALWAYS, "Done restoring file state\n" );
 
 #ifdef HPUX10
 	/* TODD'S SCARY FIX TO THE HPUX10.X FORTRAN PROBLEM ------

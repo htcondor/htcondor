@@ -20,7 +20,6 @@ public:
 	virtual int write(int offset, char *data, int length);
 
 	virtual int local_access_hack();
-	virtual char * get_kind();
 };
 
 #endif

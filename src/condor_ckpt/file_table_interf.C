@@ -68,12 +68,6 @@ void _condor_file_table_checkpoint()
 	FileTab->checkpoint();
 }
 
-void _condor_file_table_suspend()
-{
-	_condor_file_table_init();
-	FileTab->suspend();
-}
-
 void _condor_file_table_resume()
 {
 	_condor_file_table_init();

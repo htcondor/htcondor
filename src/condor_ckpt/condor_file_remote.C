@@ -101,8 +101,3 @@ int CondorFileRemote::local_access_hack()
 {
 	return 0;
 }
-
-char * CondorFileRemote::get_kind()
-{
-	return "remote file";
-}

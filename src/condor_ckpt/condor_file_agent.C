@@ -19,14 +19,15 @@ CondorFileAgent::~CondorFileAgent()
 	delete original;
 }
 
-int CondorFileAgent::open( const char *path, int flags, int mode )
+int CondorFileAgent::open( const char *url_in, int flags, int mode )
 {
+	strcpy(url,url_in);
+
 	// Open the original file
-	int result = original->open(path,flags,mode);
+	int result = original->open(url,flags,mode);
 	if(result<0) return -1;
 
 	// Make my info match
-	strcpy(name,original->get_name());
 	readable = original->is_readable();
 	writeable = original->is_writeable();
 	size = original->get_size();
@@ -45,36 +46,14 @@ int CondorFileAgent::close()
 	return original->close();
 }
 
-void CondorFileAgent::checkpoint()
-{
-	push_data();
-	original->checkpoint();
-}
-
-void CondorFileAgent::suspend()
-{
-	push_data();
-	close_temp();
-	original->suspend();
-}
-
-void CondorFileAgent::resume( int count )
-{
-	if( resume_count==count ) return;
-	original->resume( count );
-	open_temp();
-	pull_data();
-	resume_count = count;
-}
-
 void CondorFileAgent::open_temp()
 {
 	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 	tmpnam(local_name);
 	SetSyscalls(scm);
 
-	dprintf(D_ALWAYS,"CondorFileAgent: %s is local copy of %s %s\n",
-		local_name, original->get_kind(), original->get_name() );
+	dprintf(D_ALWAYS,"CondorFileAgent: %s is local copy of %s\n",
+		local_name, original->get_url() );
 
 	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 	fd = ::open( local_name, O_RDWR|O_CREAT|O_TRUNC, 0700 );
@@ -97,8 +76,8 @@ void CondorFileAgent::pull_data()
 {
 	if(!original->is_readable()) return;
 
-	dprintf(D_ALWAYS,"CondorFileAgent: Loading %s with %s %s\n",
-		local_name, original->get_kind(), original->get_name() );
+	dprintf(D_ALWAYS,"CondorFileAgent: Loading %s with %s\n",
+		local_name, original->get_url() );
 
 	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 
@@ -106,7 +85,7 @@ void CondorFileAgent::pull_data()
 
 	do {
 		chunk = original->read(pos,buffer,TRANSFER_BLOCK_SIZE);
-		if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",name);
+		if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",original->get_url());
 
 		if(chunk==0) break;
 
@@ -123,8 +102,8 @@ void CondorFileAgent::push_data()
 {
 	if(!original->is_writeable()) return;
 
-	dprintf(D_ALWAYS,"CondorFileAgent: Putting %s back into %s %s.\n",
-		local_name, original->get_kind(), original->get_name());
+	dprintf(D_ALWAYS,"CondorFileAgent: Putting %s back into %s.\n",
+		local_name, original->get_url() );
 
 	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 
@@ -139,7 +118,7 @@ void CondorFileAgent::push_data()
 		if(chunk==0) break;
 
 		result = original->write(pos,buffer,chunk);
-		if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",name);
+		if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",original->get_url());
 			
 		pos += chunk;
 	} while(chunk==TRANSFER_BLOCK_SIZE);

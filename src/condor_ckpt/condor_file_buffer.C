@@ -166,10 +166,10 @@ CondorFileBuffer::~CondorFileBuffer()
 	delete original;
 }
 
-int CondorFileBuffer::open( const char *path, int flags, int mode )
+int CondorFileBuffer::open( const char *url, int flags, int mode )
 {
 	int result;
-	result = original->open(path,flags,mode);
+	result = original->open(url,flags,mode);
 	size = original->get_size();
 	return result;
 }
@@ -318,23 +318,6 @@ int CondorFileBuffer::fsync()
 	return original->fsync();
 }
 
-void CondorFileBuffer::checkpoint()
-{
-	flush(0);
-	original->checkpoint();
-}
-
-void CondorFileBuffer::suspend()
-{
-	flush(0);
-	original->suspend();
-}
-
-void CondorFileBuffer::resume( int count )
-{
-	original->resume( count );
-}
-
 int CondorFileBuffer::is_readable()
 {
 	return original->is_readable();
@@ -355,19 +338,9 @@ int CondorFileBuffer::get_size()
 	return size;
 }
 
-char * CondorFileBuffer::get_kind()
+char * CondorFileBuffer::get_url()
 {
-	return "buffered file";
-}
-
-char * CondorFileBuffer::get_name()
-{
-	return original->get_name();
-}
-
-int CondorFileBuffer::attach( int fd, char *name, int r, int w )
-{
-	return -1;
+	return original->get_url();
 }
 
 int CondorFileBuffer::map_fd_hack()
@@ -430,7 +403,7 @@ void CondorFileBuffer::clean( CondorChunk *c )
 {
 	if(c && c->dirty) {
 		int result = original->write(c->begin,c->data,c->size);
-		if(!result) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_name(),strerror(errno));
+		if(!result) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_url(),strerror(errno));
 		c->dirty = 0;
 	}
 }

@@ -17,9 +17,10 @@ CondorFile.
          |         |
          V         V
 CondorFileRemote  CondorFileLocal
-                   |        |
-                   V        V
-          CondorFileAgent CondorFileSpecial
+                 /        |       \
+                /         |        \
+  CondorFileAgent CondorFileSpecial CondorFileFD
+
 </pre>
 <p>
 The basic file operations - open, close, read, and write - are
@@ -41,7 +42,7 @@ public:
 	CondorFile();
 	virtual ~CondorFile();
 
-	virtual int open( const char *path, int flags, int mode )=0;
+	virtual int open( const char *url, int flags, int mode )=0;
 	virtual int close()=0;
 	virtual int read( int offset, char *data, int length )=0;
 	virtual int write( int offset, char *data, int length )=0;
@@ -51,24 +52,11 @@ public:
 	virtual int ftruncate( size_t length )=0; 
 	virtual int fsync()=0;
 
-	virtual void checkpoint()=0;
-	virtual void suspend()=0;
-	virtual void resume( int resume_count )=0;
-
 	virtual int	is_readable()=0;
 	virtual int	is_writeable()=0;
 	virtual void	set_size(size_t size)=0;
 	virtual int	get_size()=0;
-	virtual char	*get_kind()=0;
-	virtual char	*get_name()=0;
-
-	/**
-	Without performing an actual open, associate this
-	object with an existing fd, and mark it readable or writable
-	as indicated.
-	*/
-
-	virtual int attach( int fd, char *name, int readable, int writable )=0;
+	virtual char	*get_url()=0;
 
 	/**
 	Return the real fd associated with this file.

@@ -27,7 +27,7 @@ public:
 	CondorFileBuffer( CondorFile *original );
 	virtual ~CondorFileBuffer();
 
-	virtual int open(const char *path, int flags, int mode);
+	virtual int open(const char *url, int flags, int mode);
 	virtual int close();
 	virtual int read(int offset, char *data, int length);
 	virtual int write(int offset, char *data, int length);
@@ -37,18 +37,12 @@ public:
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
 
-	virtual void checkpoint();
-	virtual void suspend();
-	virtual void resume( int count );
-
 	virtual int	is_readable();
 	virtual int	is_writeable();
 	virtual void	set_size(size_t size);
 	virtual int	get_size();
-	virtual char	*get_kind();
-	virtual char	*get_name();
+	virtual char	*get_url();
 
-	virtual int attach( int fd, char *name, int readable, int writable );
 	virtual int map_fd_hack();
 	virtual int local_access_hack();
 
