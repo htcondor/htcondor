@@ -347,7 +347,8 @@ void dynuser::update_psid() {
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
-		EXCEPT("dynuser:Lookup Account Name %s failed!",accountname);
+		dprintf(D_ALWAYS,"dynuser::update_psid() LookupAccountName(%s) failed!\n", accountname);
+		// EXCEPT("dynuser:Lookup Account Name %s failed!",accountname);
 	}
 }
 
