@@ -22,9 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 
-#ifndef WIN32
 extern "C" void event_mgr (void);
-#endif	// of ifndef WIN32
 
 //-------------------------------------------------------------
 
@@ -730,10 +728,9 @@ housekeeper()
 
 	// add other ad types here ...
 
-#ifndef WIN32
+
 	// cron manager
 	event_mgr();
-#endif
 
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
 	return TRUE;
