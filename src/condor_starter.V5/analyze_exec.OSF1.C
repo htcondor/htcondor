@@ -60,9 +60,11 @@ typedef struct aouthdr  AOUT_HDR;
 #define FILE_HDR_SIZ    sizeof(FILE_HDR)
 #define AOUT_HDR_SIZ    sizeof(AOUT_HDR)
 
-extern "C" {
-	int nlist( char *FileName, struct nlist *N1);
-}
+#if !defined(__GNUC__)
+	extern "C" {
+		int nlist( char *FileName, struct nlist *N1);
+	}
+#endif
 
 int magic_check( char *a_out )
 {

@@ -28,7 +28,7 @@
 */ 
 
 
-#ifndef LINT
+#include <string.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 
@@ -36,7 +36,6 @@
 extern int	errno;
 #else
 int	errno;
-#endif
 
 int	sys_nerr;
 extern char *sys_errlist[];

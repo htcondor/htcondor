@@ -37,6 +37,8 @@
 #include "expr.h"
 #include "clib.h"
 
+#include <stdlib.h>
+
 #ifndef TRUE
 #define TRUE 1
 #endif

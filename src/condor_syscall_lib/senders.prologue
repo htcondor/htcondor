@@ -1,5 +1,9 @@
-#if !defined(OSF1)
+#if !defined(OSF1) || defined(__GNUC__)
 #	define _POSIX_SOURCE
+#endif
+
+#if defined(OSF1) && defined(__GNUC__)
+	typedef struct  _quad { int val[2]; } quad;
 #endif
 
 #include "condor_common.h"
@@ -14,6 +18,9 @@
 #include "condor_constants.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
+#if defined(OSF1) && defined(__GNUC__)
+#	include "condor_fdset.h"
+#endif
 #include "xdr_lib.h"
 
 #if defined(SUNOS41)
@@ -27,7 +34,12 @@
 #	include <sys/mount.h>
 #endif
 
-#if defined(OSF1) || defined(SUNOS41)
+#if defined(OSF1)
+#	define _AES_SOURCE
+#	include <sys/poll.h>
+#endif
+
+#if defined(SUNOS41)
 #	include <sys/poll.h>
 #endif
 

@@ -29,6 +29,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 
 #define to_lower(a) (((a)>='A'&&(a)<='Z')?((a)|040):(a))
 

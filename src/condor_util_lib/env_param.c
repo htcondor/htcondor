@@ -34,7 +34,7 @@ char *env_string;
 	char *ptr = env_string;
 	char name[BUFSIZ];
 	int i;
-	char tmp[BUFSIZ];
+	static char tmp[BUFSIZ];
 
 	while( TRUE ) {
 		/* skip until alphanumeric char */
@@ -46,7 +46,7 @@ char *env_string;
 		}
 
 		if( !*ptr ) {
-			dprintf( D_ALWAYS, "No matching param found\n");
+			dprintf( D_FULLDEBUG, "No matching param found\n");
 			return( NULL );
 		}
 		
@@ -77,7 +77,7 @@ char *env_string;
 				continue;
 			}
 		} else {
-			dprintf( D_ALWAYS, "No matching param found\n");
+			dprintf( D_FULLDEBUG, "No matching param found\n");
 			return( NULL );
 		}
 

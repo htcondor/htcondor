@@ -47,7 +47,7 @@
 
 #define _POSIX_SOURCE
 
-#if defined(OSF1)
+#if defined(OSF1) && !defined(__STDC__)
 #	define __STDC__
 #endif
 

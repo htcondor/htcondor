@@ -1335,7 +1335,6 @@ connect_to_port( int portnum )
 {
 	struct sockaddr_in		sin;
 	int		fd;
-	int		true = TRUE;
 	int		addr_len = sizeof(sin);
 
 	if( getpeername(RSC_SOCK,(struct sockaddr *)&sin,&addr_len) < 0 ) {
