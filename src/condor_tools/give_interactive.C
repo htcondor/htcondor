@@ -42,6 +42,7 @@
 
 // Globals
 
+template class HashBucket<HashKey, int>;
 template class HashTable<HashKey, int>;
 
 double priority = 0.00001;
@@ -385,10 +386,16 @@ findSubmittor( char *name )
 }
 
 void
-usage()
+usage(char *name)
 {
-	//TODO
-	printf("Usage: .. TODO ..\n");
+	printf("\nUsage: %s [-m] -[n number] [-c c_expr] [-r r_expr] [-p pool] \n", name);
+	printf(" -m: Return entire machine, not virtual machines\n");
+	printf(" -n num: Return num machines, where num is an integer "
+			"greater than zero\n");
+	printf(" -c c_expr: Use c_expr as the constraint expression\n");
+	printf(" -r r_expr: Use r_expr as the rank expression\n");
+	printf(" -p pool: Contact the Condor pool \"pool\"\n");
+	printf(" -h: this screen\n\n");
 	exit(1);
 }
 
@@ -457,7 +464,7 @@ main(int argc, char *argv[])
 				rank = *ptr;
 				break;
 			default:
-				usage();
+				usage(basename(argv[0]));
 			}		
 		}
 	}
@@ -580,10 +587,8 @@ main(int argc, char *argv[])
 		else
 			offer->LookupString(ATTR_NAME, remoteHost);
 
-		remoteUser[0] = '\0';
-		offer->LookupString(ATTR_REMOTE_USER, remoteUser);
 		if ( remoteHost[0] ) {
-			printf("%s (%s)\n", remoteHost, remoteUser);
+			printf("%s\n", remoteHost);
 		}
 
 		// remote this startd ad from our list 
