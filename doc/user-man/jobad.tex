@@ -16,10 +16,15 @@ checkpointed, this attribute is UNDEFINED.
 
 %%% ClassAd attribute: ClusterId
 \index{ClassAd job attribute!ClusterId}
+\index{ClusterId!job ClassAd attribute}
+\index{cluster!definition}
+\index{job ID!cluster identifier}
 \item[\AdAttr{ClusterId}] : Integer cluster identifier for this job.
-A ``cluster'' is a group of jobs that were submitted together.  Each
+A cluster is a group of jobs that were submitted together.  Each
 job has its own unique job identifier within the cluster, but shares a
 common cluster identifier.
+The value changes each time a job or set of jobs are queued for
+execution under Condor.
 
 %%% ClassAd attribute: Cmd
 \index{ClassAd job attribute!Cmd}
@@ -155,9 +160,17 @@ job.
 
 %%% ClassAd attribute: ProcId
 \index{ClassAd job attribute!ProcId}
-\item[\AdAttr{ProcId}] : Integer process identifier for this job.  In
-a cluster of many jobs, each job will have the same ClusterId but will
-have a unique ProcId.
+\index{ProcId!job ClassAd attribute}
+\index{process!definition for a submitted job}
+\index{job ID!process identifier}
+\item[\AdAttr{ProcId}] : Integer process identifier for this job.
+Within a cluster of many jobs,
+each job has the same \Attr{ClusterId}, but will have a unique \Attr{ProcId}.
+Within a cluster, assignment of a \Attr{ProcId} value will start
+with the value 0.
+The job (process) identifier described here is unrelated to operating
+system PIDs.
+
 
 %%% ClassAd attribute: RemoteIwd
 \index{ClassAd job attribute!RemoteIwd}

@@ -41,6 +41,9 @@ Multiple clusters may be specified within a single
 submit description file.
 Each cluster must specify a single executable.
 
+The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
+See section~\ref{user-man-jobad} for specifics on this attribute.
+
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow Condor to impersonate the user submitting
 the job.
@@ -1328,8 +1331,16 @@ Three pre-defined macros are supplied by the submit description file parser.
 The third of the pre-defined macros is only relevant to MPI universe
 jobs.
 The
-\MacroU{Cluster} macro supplies the number of the job cluster, and the
-\MacroU{Process} macro supplies the number of the job. These macros are
+\MacroU{Cluster} macro supplies the value of the
+\index{ClassAd job attribute!ClusterId}
+\index{ClusterId!job ClassAd attribute}
+\index{job ID!cluster identifier}
+\Attr{ClusterId} job
+ClassAd attribute, and the
+\MacroU{Process} macro supplies the value of the
+\Attr{ProcId} job
+ClassAd attribute.
+These macros are
 intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
