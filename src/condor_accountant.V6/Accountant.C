@@ -137,7 +137,7 @@ void Accountant::Initialize()
   if (!AcctLog) {
     struct stat statbuf;
     bool ConvertOldFile=false;
-    if (stat(OldLogFileName.Value(),&statbuf)==0 && stat(LogFileName.Value(),&statbuf)==-1) ConvertOldFile=true;
+    // if (stat(OldLogFileName.Value(),&statbuf)==0 && stat(LogFileName.Value(),&statbuf)==-1) ConvertOldFile=true;
     AcctLog=new ClassAdLog(LogFileName.Value());
     if (ConvertOldFile) LoadState(OldLogFileName);
     dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",LogFileName.Value());
