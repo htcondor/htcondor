@@ -33,6 +33,14 @@
 ##  files into either of those directories.
 POOL_HISTORY_DIR = /full/path/to/directory/for/historical/data
 
+##  If you're setting up a stand-alone view server, instead of turning
+##  an existing condor_collector into a view server, you should
+##  uncomment this line.  This setting tells the condor_master on this
+##  machine to spawn a view server daemon, in addition to any other
+##  daemons it is configured to run.
+#DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
+
+
 ######################################################################
 ######################################################################
 ##  Settings you should probably leave alone:
@@ -49,3 +57,8 @@ KEEP_POOL_HISTORY = True
 ##  The interval (in seconds) between samples for history logging.
 #POOL_HISTORY_SAMPLING_INTERVAL = 60
 
+##  Tell the condor_master what binary to use for the view server.  In
+##  general, you always want to use the same binary as your
+##  condor_collector.  The above configuration settings are what
+##  enables the storing of historical data, not a seperate binary.
+VIEW_SERVER = $(SBIN)/condor_collector
