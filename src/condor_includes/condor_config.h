@@ -23,8 +23,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "condor_expressions.h"
-
 #if defined(__cplusplus)
 #include "condor_classad.h"
 #endif
