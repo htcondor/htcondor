@@ -757,8 +757,12 @@ obtainAdsFromCollector (
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
+			if(!ad->LookupString(ATTR_NAME, remoteHost)) {
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				continue;
+			}
+
 			if( reevaluate_ad && newSequence != -1 ) {
-				ad->LookupString(ATTR_NAME, remoteHost);
 				oldAd = NULL;
 				oldAdEntry = NULL;
 				MyString rhost(remoteHost);
@@ -1600,7 +1604,7 @@ void Matchmaker::
 reeval(ClassAd *ad) 
 {
 	int cur_matches;
-	MapEntry *oldAdEntry;
+	MapEntry *oldAdEntry = NULL;
 	char    remoteHost[MAXHOSTNAMELEN];	
 	char    buffer[255];
 	
@@ -1614,8 +1618,10 @@ reeval(ClassAd *ad)
 	cur_matches++;
 	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
 	ad->InsertOrUpdate(buffer);
-	delete(oldAdEntry->oldAd);
-	oldAdEntry->oldAd = new ClassAd(*ad);
+	if(oldAdEntry) {
+		delete(oldAdEntry->oldAd);
+		oldAdEntry->oldAd = new ClassAd(*ad);
+	}
 }
 
 int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
