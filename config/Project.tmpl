@@ -61,6 +61,10 @@ SNPRINTF_FLAGS =
 #define PlatformGccFlags
 #endif
 
+#if !defined(PlatformGppFlags)
+#define PlatformGppFlags
+#endif
+
 #if !defined(PlatformLdFlags)
 #define PlatformLdFlags
 #endif
@@ -363,7 +367,7 @@ make the SDK.
 /* CC_PIC_FLAG = -fPIC */
 
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates PlatformGppFlags
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
