@@ -42,6 +42,7 @@
 #include "sig_install.h"
 #include "format_time.h"
 #include "daemon.h"
+#include "my_hostname.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -461,12 +462,28 @@ short_header (void)
 }
 
 static char *
-format_remote_host (char *sinful_string, AttrList *)
+format_remote_host (char *, AttrList *ad)
 {
+	static char result[20];
+	char sinful_string[24];
 	struct sockaddr_in sin;
-	if (string_to_sin(sinful_string, &sin) == 1) {
+	if (ad->LookupString(ATTR_REMOTE_HOST, sinful_string) == 1 &&
+		string_to_sin(sinful_string, &sin) == 1) {
 		return sin_to_hostname(&sin, NULL);
+	} else {
+		int universe = STANDARD;
+		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
+		if (universe == SCHED_UNIVERSE) {
+			return my_full_hostname();
+		} else if (universe == PVM) {
+			int current_hosts;
+			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
+				sprintf(result, "%d hosts", current_hosts);
+				return result;
+			}
+		}
 	}
+		
 	return "[????????????????]";
 }
 
@@ -578,7 +595,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			AttrListPrintMask mask;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
 					"SUBMITTED", "CPU_USAGE",
-					"REMOTE HOST" );
+					"HOST(S)" );
 			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
@@ -589,9 +606,13 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat(" ", "*bogus*", " ");  // force space
 			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
 								  ATTR_JOB_REMOTE_USER_CPU, "[??????????]");
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat(" ", "*bogus*", " "); // force space
+			// We send in ATTR_OWNER since we know it is always
+			// defined, and we need to make sure format_remote_host() is
+			// always called. We are actually displaying ATTR_REMOTE_HOST if
+			// defined, but we play some tricks if it isn't defined.
 			mask.registerFormat ( (StringCustomFmt) format_remote_host,
-								  ATTR_REMOTE_HOST, "[????????????????]");
+								  ATTR_OWNER, "[????????????????]");
 			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 			mask.display(stdout, &jobs);
 		} else {
