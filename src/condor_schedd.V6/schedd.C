@@ -3805,6 +3805,24 @@ add_shadow_birthdate(int cluster, int proc)
 		// this is the first time the job has ever run, so set JobStartDate
 		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
 	}
+
+	// Update the current start & last start times
+	if ( GetAttributeInt(cluster, proc,
+						  ATTR_JOB_CURRENT_START_DATE, 
+						 &job_start_date) >= 0 ) {
+		// It's been run before, so copy the current into last
+		SetAttributeInt(cluster, proc, ATTR_JOB_LAST_START_DATE, 
+						job_start_date);
+	}
+	// Update current
+	SetAttributeInt(cluster, proc, ATTR_JOB_CURRENT_START_DATE, current_time);
+
+	// Update the job run count
+	int count;
+	if ( GetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, &count ) < 0 ) {
+		count = 0;
+	}
+	SetAttributeInt(cluster, proc, ATTR_JOB_RUN_COUNT, ++count);
 }
 
 struct shadow_rec *
