@@ -44,7 +44,7 @@
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_addr.h"   // only for daemon names
 #include "daemon.h"
 #include "dc_collector.h"
 #include "daemon_types.h"
@@ -120,8 +120,8 @@ usage()
 }
 
 
-char* GetRemoteParam( char*, char*, char* );
-void  SetRemoteParam( char*, char*, char*, ModeType );
+char* GetRemoteParam( Daemon*, char* );
+void  SetRemoteParam( Daemon*, char*, ModeType );
 static void PrintConfigFiles(void);
 
 int
@@ -267,14 +267,19 @@ main( int argc, char* argv[] )
 		ask_a_daemon = true;
 	}
 
+	Daemon* target = NULL;
 	if( ask_a_daemon ) {
-		DCCollector col( pool );
-		if( ! col.addr() ) {
-			fprintf( stderr, "%s: %s\n", MyName, col.error() );
-			my_exit( 1 );
+		if( addr ) {
+			target = new Daemon( dt, addr, NULL );
+		} else {
+			DCCollector col( pool );
+			if( ! col.addr() ) {
+				fprintf( stderr, "%s: %s\n", MyName, col.error() );
+				my_exit( 1 );
+			}
+			target = new Daemon( dt, name, col.addr() );
 		}
-		addr = get_daemon_addr( dt, name, col.addr() );
-		if( ! addr ) {
+		if( ! target->locate() ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
 					 daemonString(dt) );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
@@ -291,10 +296,10 @@ main( int argc, char* argv[] )
 	while( (tmp = params.next()) ) {
 		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
 			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
-			SetRemoteParam( name, addr, tmp, mt );
+			SetRemoteParam( target, tmp, mt );
 		} else {
-			if( name || addr ) {
-				value = GetRemoteParam( name, addr, tmp );
+			if( target ) {
+				value = GetRemoteParam( target, tmp );
 			} else {
 				value = param( tmp );
 			}
@@ -328,12 +333,21 @@ main( int argc, char* argv[] )
 
 
 char*
-GetRemoteParam( char* name, char* addr, char* param_name ) 
+GetRemoteParam( Daemon* target, char* param_name ) 
 {
     ReliSock s;
 	s.timeout( 30 );
 	char	*val = NULL;
-	
+
+		// note: printing these things out in each dprintf() is
+		// stupid.  we should be using Daemon::idStr().  however,
+		// since this code didn't used to use a Daemon object at all,
+		// and since it's so hard for us to change the output of our
+		// tools for fear that someone's ASCII parser will break, i'm
+		// just cheating and being lazy here by replicating the old
+		// behavior...
+	char* addr = target->addr();
+	char* name = target->name();
 	if( !name ) {
 		name = "";
 	}
@@ -344,8 +358,7 @@ GetRemoteParam( char* name, char* addr, char* param_name )
 		my_exit(1);
 	}
 
-	Daemon d( DT_ANY, addr );
-	d.startCommand (CONFIG_VAL, &s, 30);
+	target->startCommand( CONFIG_VAL, &s, 30 );
 
 	s.encode();
 	if( !s.code(param_name) ) {
@@ -373,11 +386,24 @@ GetRemoteParam( char* name, char* addr, char* param_name )
 
 
 void
-SetRemoteParam( char* name, char* addr, char* param_value, ModeType mt )
+SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 {
 	int cmd, rval;
 	ReliSock s;
 	bool set = false;
+
+		// note: printing these things out in each dprintf() is
+		// stupid.  we should be using Daemon::idStr().  however,
+		// since this code didn't used to use a Daemon object at all,
+		// and since it's so hard for us to change the output of our
+		// tools for fear that someone's ASCII parser will break, i'm
+		// just cheating and being lazy here by replicating the old
+		// behavior...
+	char* addr = target->addr();
+	char* name = target->name();
+	if( !name ) {
+		name = "";
+	}
 
 		// We need to know two things: what command to send, and (for
 		// error messages) if we're setting or unsetting.  Since our
@@ -398,10 +424,6 @@ SetRemoteParam( char* name, char* addr, char* param_value, ModeType mt )
 	default:
 		fprintf( stderr, "Unknown command type %d\n", (int)mt );
 		my_exit( 1 );
-	}
-
-	if( !name ) {
-		name = "";
 	}
 
 		// Now, process our strings for sanity.
@@ -467,8 +489,7 @@ SetRemoteParam( char* name, char* addr, char* param_value, ModeType mt )
 		my_exit(1);
 	}
 
-	Daemon d( DT_ANY, addr );
-	d.startCommand (cmd, &s);
+	target->startCommand( cmd, &s );
 
 	s.encode();
 	if( !s.code(param_name) ) {
