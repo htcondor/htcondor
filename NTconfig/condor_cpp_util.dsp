@@ -202,6 +202,14 @@ SOURCE="..\src\condor_c++_util\simplelist.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\string_list.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\string_list.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\up_down.C"
 # End Source File
 # Begin Source File
