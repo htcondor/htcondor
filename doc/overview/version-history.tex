@@ -17,6 +17,45 @@ being added, many bugs fixed, etc.
 6.1.X should not be used for a production pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-6}Version 6.1.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Fixed a bug in \Condor{userprio} that was introduced in version
+6.1.5 that was preventing it from finding the address of the
+\Condor{negotiator} for your pool.
+
+\item Fixed a bug in \Condor{stats} that was introduced in version
+6.1.5 that was preventing it from finding the address of the
+\Condor{collector} for your pool.
+
+\item Fixed a bug in the way the \Opt{-pool} option was handled by
+many Condor tools that was introduced in version 6.1.5. 
+
+\item Added support for SMP Digital Unix (Alpha) machines.
+
+\item The \Condor{schedd} no longer forks a child process (a ``schedd
+agent'') to claim available \Condor{startd}s.  
+You should no longer see multiple \condor{schedd} processes running on
+your machine after a negotiation cycle.
+This is now accomplished in a non-blocking manner within the
+\Condor{schedd} itself.
+
+\item The startd now adds an \Attr{VirtualMachineID} attribute to
+each virtual machine classad it advertises.
+This is just an integer, starting at 1, and increasing for every
+different virtual machine the startd is representing.
+On regular hosts, this is the only ID you will ever see.
+On SMP hosts, you will see the ID climb up to the number of different
+virtual machines reported.
+This ID can be used to help write more complex policy expressions on
+SMP hosts, and to easily identify which hosts in your pool are in fact
+SMP machines.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-5}Version 6.1.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
