@@ -207,7 +207,7 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
       }
   }
 
-  ASSERT( duplicateKeyBehavior == acceptDuplicateKeys );
+  ASSERT( duplicateKeyBehavior == allowDuplicateKeys );
 
   // don't worry about whether a bucket already exists with this key,
   // just go ahead and insert another one...
