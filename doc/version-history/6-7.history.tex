@@ -35,6 +35,10 @@ attribute into classad of all Condor jobs it submits, containing the
 names of the job's parents in the DAG.  The list is in the form of a
 comma-delimited string.
 
+\item The relative priority of a user's own jobs in the local
+\condor{schedd} queue is no longer limited to the range -20 to +20,
+but can be integer value.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
