@@ -229,17 +229,7 @@ main_init( int argc, char* argv[] )
 			if( ! *ptr ) {
 				EXCEPT( "-n requires another arugment" );
 			}
-			tmp = strchr( *ptr, '@' );
-			if( tmp ) {
-					// name we were passed has an '@', strip off the
-					// rest of it so we're sure we're getting our
-					// correct full hostname.
-				*tmp = '\0';
-			}
-				// Now, build up the master name
-			size = 2 + strlen( my_full_hostname() ) + strlen( *ptr );
-			MasterName = (char*)malloc( size );
-			sprintf( MasterName, "%s@%s", *ptr, my_full_hostname() );
+			MasterName = strdup( build_valid_daemon_name(*ptr) );
 			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
 			break;
 		default:
@@ -334,7 +324,29 @@ void
 init_params()
 {
 	char	*tmp;
+	static	int	master_name_in_config = 0;
 
+	if( ! master_name_in_config ) {
+			// First time, or we know it's not in the config file. 
+		if( ! MasterName ) {
+				// Not set on command line
+			tmp = param( "MASTER_NAME" );
+			if( tmp ) {
+				MasterName = strdup( build_valid_daemon_name(tmp) );
+				master_name_in_config = 1;
+				free( tmp );
+			} 
+		}
+	} else {
+		free( MasterName );
+		tmp = param( "MASTER_NAME" );
+		MasterName = strdup( build_valid_daemon_name(tmp) );
+		free( tmp );
+	}
+	if( MasterName ) {
+		dprintf( D_FULLDEBUG, "Using name: %s\n", MasterName );
+	}
+			
 		// In general, for numeric values, we set our variable to 0,
 		// param for it, and if there's an entry, we call atoi() on
 		// the string to convert it to an int.  If the string doesn't
