@@ -547,7 +547,6 @@ template <class ObjType>
 bool
 List<ObjType>::Delete( ObjType* obj)
 {
-	assert( current != dummy );
 	Item<ObjType> *tmp = dummy->next;
 	while( tmp != dummy ) {
 		if( tmp->obj == obj ) {
