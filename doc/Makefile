@@ -1,7 +1,8 @@
 all:  ref.ps admin.ps user.ps man.ps admin.html user.html man.html
 #all:  man.ps
 
-ref.dvi: ref.tex admin.tex user.tex man.tex condor-macros.tex
+ref.dvi: ref.tex admin.tex user.tex man.tex condor-macros.tex $(ADMIN_FILES) \
+	$(MAN_PAGES)
 	latex ref.tex
 	latex ref.tex
 
