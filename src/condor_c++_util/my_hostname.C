@@ -115,7 +115,6 @@ void
 init_ipaddr( int config_done )
 {
 	char *network_interface, *tmp;
-	struct hostent * host_ptr;
 
     if( ! hostname ) {
 		init_hostnames();
@@ -172,15 +171,20 @@ init_hostnames()
     int i;
     hostbuf[0]='\0';
 #ifdef WIN32
-	// On Win32 we instantiate a bullshit SafeSock which we do not use.
-	// We do this because there are a couple tools in Condor, like
+	// There are a  tools in Condor, like
 	// condor_history, which do not use any CEDAR sockets but which call
 	// some socket helper functions like gethostbyname().  These helper
 	// functions will fail unless WINSOCK is initialized.  WINSOCK
 	// is initialized via a global constructor in CEDAR, so we must
 	// make certain we call at least one CEDAR function so the linker
-	// brings in the global constructor to initialize WINSOCK! -Todd T.
-	SafeSock bullshit;
+	// brings in the global constructor to initialize WINSOCK! 
+	// In addition, some global constructors end up calling
+	// init_hostnames(), and thus will fail if the global constructor
+	// in CEDAR is not called first.  Instead of relying upon a
+	// specified global constructor ordering (which we cannot), 
+	// we explicitly invoke SockInitializer::init() right here -Todd T.
+	SockInitializer startmeup;
+	startmeup.init();
 #endif
 
     if( hostname ) {
