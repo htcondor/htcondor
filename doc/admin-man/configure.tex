@@ -777,8 +777,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Section~\ref{sec:Host-Security} on Setting up
   IP/Host-Based Security in Condor for details on these
   macros and how to configure them.  
-  In particular, section~\ref{sec:Config-Val-Security}
-  on page~\pageref{sec:Config-Val-Security} contains details specific to
+  In particular, section~\ref{sec:Host-Security}
+  on page~\pageref{sec:Host-Security} contains details specific to
   these macros.
 
 \item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
@@ -792,39 +792,36 @@ server, shadow, and starter, none of which use DaemonCore yet).
   the identity of the user.  For instance, when a job is submitted with
   \Condor{submit}, Condor needs to authenticate the user so that the job
   goes into the queue and runs with the proper credentials.  The
-  \Macro{AUTHENTICATION\_METHODS} parameter should be a list of
-  permitted authentication methods.  The list should be ordered by
+  \Macro{AUTHENTICATION\_METHODS} parameter is a list of
+  permitted authentication methods.  The list is ordered by
   preference.  The actual authentication method used is the first method
   in this list that both the server and client are able to perform.
   Possible values are:
   \begin{itemize}
-		\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
-			\Note This is the default method used on Windows NT.
-		\item FS Use the filesystem to authenticate the user.  
-			The server requests the client to create a specified temporary
-			file, then the server verifies the ownership of that file. \Note
-			This is the default method used on Unix systems.
-		\item FS\_REMOTE Use a shared filesystem to authenticate the user.
-			This is useful for submitting jobs to a remote schedd.
-			Similar to FS authentication, except the temporary file to be
-			created by the user must be on a shared filesystem (AFS, NFS, etc.)
-			If the client's submit description file does not define the 
-			command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
-			as the default directory in which to create the temporary file.
-			\Note Normal AFS issues apply here: Condor must be able to write
-			to the directory used.
-		\item GSS Use Generic Security Services, which is implemented in Condor 
-			with X.509 certificates. See section~\ref{sec:X509-Authentication}.
-			These X.509 certificates are compatible with the Globus system from
-			Argonne National Labs.
-		\item CLAIMTOBE The server should simply trust the client.  
-			\Note You had better trust all users who have access to your Condor
-			pool if you enable CLAIMTOBE authentication.
+	\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
+	\Note This is the default method used on Windows NT.
+	\item FS Use the filesystem to authenticate the user.  
+		The server requests the client to create a specified temporary
+		file, then the server verifies the ownership of that file. \Note
+		This is the default method used on Unix systems.
+	\item FS\_REMOTE Use a shared filesystem to authenticate the user.
+		This is useful for submitting jobs to a remote schedd.
+		Similar to FS authentication, except the temporary file to be
+		created by the user must be on a shared filesystem (AFS, NFS, etc.)
+		If the client's submit description file does not define the 
+		command \Opt{rendezvousdir}, the \Opt{initialdir} value is used 
+		as the default directory in which to create the temporary file.
+		\Note Normal AFS issues apply here: Condor must be able to write
+		to the directory used.
+% commented out by Karen for 6.4.3
+%       \item GSS Use Generic Security Services, which is implemented in Condor 
+%		with X.509 certificates. See section~\ref{sec:X509-Authentication}.
+%		These X.509 certificates are compatible with the Globus system from
+%		Argonne National Labs.
+	\item CLAIMTOBE The server should simply trust the client.  
+		\Note You had better trust all users who have access to your Condor
+		pool if you enable CLAIMTOBE authentication.
   \end{itemize}
-
-\item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
-  \label{param:ShutdownGracefulTimeout} This entry determines how long
-  you are willing to let daemons try their graceful shutdown methods
 
 \item[\Macro{SUBSYS\_ADDRESS\_FILE}]
   \label{param:SubsysAddressFile} Every Condor daemon that uses
@@ -1119,7 +1116,7 @@ they will not be considered to have shared file systems.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Checkpoint-Server-Config-File-Entries}
+\subsection{\label{Checkpoint-Server-Config-File-Entries}
 Checkpoint Server Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2136,7 +2133,7 @@ jobs at your site use the following macros:
 \item[\Macro{APPEND\_REQ\_STANDARD}] \label{param:AppendReqStandard}
   Expression to be appended to standard job requirements.
 
-\item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReqStandard}
+\item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReq}
   Expression to be appended to any type of universe jobs. 
   However, if \Macro{APPEND\_REQ\_VANILLA} or \Macro{APPEND\_REQ\_STANDARD}
   is defined, then ignore the \Macro{APPEND\_REQUREMENTS} for those
@@ -2145,7 +2142,7 @@ jobs at your site use the following macros:
 \item[\Macro{APPEND\_RANK\_STANDARD}] \label{param:AppendRankStandard}
   Expression to be appended to standard job rank.
 
-\item[\Macro{APPEND\_RANK\_VANILLA}] \label{param:AppendRankStandard}
+\item[\Macro{APPEND\_RANK\_VANILLA}] \label{param:AppendRankVanilla}
   Expression to append to vanilla job rank.
 
 \end{description}
@@ -2497,3 +2494,5 @@ between each check for old shutdown configurations in the pool.  The default
 is one hour (3600 seconds).
 
 \end{description}
+
+\input{admin-man/root-config.tex}

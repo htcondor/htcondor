@@ -351,7 +351,7 @@ by Condor.
 
 \begin{description}
 
-\item[\DCPerm{READ}] \label{dcperm:read} This access level
+\item[\DCPerm{READ}] \label{sec-level-read} This access level
    access can obtain or read information about Condor.
    Examples that require only \DCPerm{READ} access are
    viewing the status of the pool, checking the job queue(s),
@@ -359,20 +359,20 @@ by Condor.
    \DCPerm{READ} access does not allow any
    changes, and it does not allow job submission.
 
-\item[\DCPerm{WRITE}] \label{dcperm:write} This access level
+\item[\DCPerm{WRITE}] \label{sec-level-write} This access level
    is required to send (write) information to Condor.
    Note that \DCPerm{WRITE} access does not include \DCPerm{READ} access.
    They are separate access levels.
    Job submission requires \DCPerm{WRITE} access.
 
-\item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} This
+\item[\DCPerm{ADMINISTRATOR}] \label{sec-level-administrator} This
    access level has additional Condor
    administrator rights to the pool.  It includes the ability to
    change user priorities (with the command \Condor{userprio -set}),
    and the ability to turn Condor on and off
    (as with the commands \Condor{on} and \Condor{off}).
 
-\item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
+\item[\DCPerm{CONFIG}] \label{sec-level-config} This access level is
    required to modify a daemon's configuration using
    the \Condor{config\_val} command.
    By default, this level of access can
@@ -380,7 +380,7 @@ by Condor.
    except those specified in
    the \File{condor\_config.root} configuration file.
 
-\item[\DCPerm{DAEMON}] \label{dcperm:config} 
+\item[\DCPerm{DAEMON}] \label{sec-level-daemon} 
    This access level is only used by Condor daemons for internal
    exchange of requests.
    An example is the message sent from the \Condor{startd} daemon
@@ -389,7 +389,7 @@ by Condor.
    daemons, implying that this level of access should be granted
    to the id under which the Condor daemons are run.
 
-\item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
+\item[\DCPerm{OWNER}] \label{sec-level-owner} This level of access is
    required for commands that the owner of a machine (any local user)
    should be able to use, in addition to the Condor administrators.
    An example that requires the \DCPerm{OWNER} access level is
@@ -399,7 +399,7 @@ by Condor.
    The owner of that machine should be able to cause the removal
    of a job running on the machine.
 
-\item[\DCPerm{NEGOTIATOR}] \label{dcperm:negotiator} This 
+\item[\DCPerm{NEGOTIATOR}] \label{sec-level-negotiator} This 
    access level is used specifically to verify that commands are
    sent by the \Condor{negotiator} daemon.
    The \Condor{negotiator} daemon runs on the central manager of
@@ -1459,13 +1459,11 @@ Condor can be registered with:
    extreme caution.
    By default, \DCPerm{CONFIG} access is denied for all hosts.
 
-   Starting with version 6.3.2, Condor provides a mechanism for more
-   fine-grained control over the configuration settings that can be
-   modified remotely with \Condor{config\_val}.  
-   Please see section~\ref{sec:Config-Val-Security} below on Host
-   Security for \Condor{config\_val}.
-
 \end{description}
+
+Starting with version 6.3.2, Condor provides a mechanism for more
+fine-grained control over the configuration settings that can be
+modified remotely with \Condor{config\_val}.  
 
 Host-based security access
 permissions are specified in configuration files.
