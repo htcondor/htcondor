@@ -17,7 +17,7 @@ being added, many bugs fixed, etc.
 6.1.X should not be used for a production pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-6-1-4}Version 6.1.4}
+\subsubsection{\label{sec:New-6-1-5}Version 6.1.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -28,6 +28,36 @@ checkpointing: \Macro{COMPRESS\_PERIODIC\_CKPT},
 \Macro{SLOW\_CKPT\_SPEED}.  See
 section~\ref{sec:Shadow-Config-File-Entries} on
 page~\pageref{sec:Shadow-Config-File-Entries} for more details.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-4}Version 6.1.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Fixed a bug in the socket communication library used by Condor
+that was causing daemons and tools to die on some platforms (notably,
+Digital Unix) with signal 8, SIGFPE (floating point exception).
+
+\item Fixed a bug in the usage message of many Condor tools that
+mentioned a \Opt{-all} option that isn't yet supported. 
+This option will be supported in future versions of Condor.
+
+\item Fixed a bug in the filesystem authentication code used to
+authenticate operations on the job queue that left empty temporary
+files in /tmp.  
+These files are now properly removed after they are used.
+
+\item Fixed a minor bug in the totals \Condor{status} displays when
+you use the \Opt{ckptsrvr} option.
+
+\item Fixed a minor syntax error in the \Condor{install} script that
+would cause warnings.
+
+\item the \File{Condor.pm} Perl module is now included in the
+\File{lib} directory of the main release directory.
 
 \end{itemize}
 
@@ -59,10 +89,13 @@ Now, both the totals, and the virtual machine-specific values are
 advertised.  
 
 \item Fixed a bug in the \Condor{starter} when it was trying to
-suspend vanilla jobs.
+suspend jobs.
 While we always killed all of the processes when we were trying to
-vacate, if the vanilla job forked, the starter would sometimes not
+vacate, if a vanilla job forked, the starter would sometimes not
 suspend some of the children processes.
+In addition, we could sometimes miss a standard universe job for
+suspending as well.
+This is all fixed.
 
 \item Fixed a bug in the SMP-Startd's load average computation that
 could cause processes spawned by Condor to not be associated w/ the
@@ -74,6 +107,10 @@ suspending and resuming a Condor job, instead of just letting it run.
 \item Fixed a bug in the SMP-Startd's load average computation that
 could cause certain rare exceptions to be treated as fatal, when in
 fact, the Startd could recover from them.
+
+\item Fixed a bug in the computation of the total physical memory in
+IRIX machines that was resulting in an overflow on machines with
+lots of ram (over 1 gigabyte).
 
 \item Fixed some bugs that could cause \Condor{starter} processes to
 be left as zombies underneath the \Condor{startd} under very rare
@@ -96,8 +133,9 @@ on DAGMan.
 
 \item Fixed bug in ClassAd printing when you tried to display an
 integer or float attribute that didn't exist in the given ClassAd. 
-This could show up in \Condor{status}, \Condor{q}, \Condor{history}, etc.
-  
+This could show up in \Condor{status}, \Condor{q}, \Condor{history},
+etc. 
+
 \item Various commands sent to the Condor daemons now have seperate
 debug levels associated with them.
 For example, commands such as ``keep-alives'', and the command sent
@@ -167,8 +205,10 @@ have the startd reconfigure itself.
 Similarly, \condor{off}, \condor{on} and \condor{restart} can now all 
 work on a single daemon, instead of machine-wide.
 See the man pages (secion~\ref{command-reference} on
-page~\pageref{command-reference}) or run any command with ``-help''
+page~\pageref{command-reference}) or run any command with \Opt{-help}
 for details. 
+\Note The usage message in 6.1.3 incorrectly reports \Opt{-all} as a
+valid option.
 
 \item Fixed a bug in the Condor tools that could cause a segmentation
 violation in certain rare error conditions.
@@ -194,7 +234,7 @@ page~\pageref{sec:DAGMan} for details) is now included in the
 development release by default.
 
 \item Fixed a bug in the computation of the total physical memory in
-HPUX machines that was resulting in an overflow with machines with
+HPUX machines that was resulting in an overflow on machines with
 lots of ram (over 1 gigabyte).
 Also, if you define ``MEMORY'' in your config file, that value will
 override whatever value Condor computes for your machine.
