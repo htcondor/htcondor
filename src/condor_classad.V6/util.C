@@ -191,5 +191,32 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 	return true;
 }
 
+bool putOldClassAdNoTypes ( Stream *sock, ClassAd& ad )
+{
+	ClassAdUnParser	unp;
+	string			buf;
+	ExprTree		*expr;
+
+	int numExprs=0;
+	ClassAdIterator itor(ad);
+
+	while( !itor.IsAfterLast( ) ) {
+		numExprs++;
+	}	
+
+	sock->encode( );
+	if( !sock->code( numExprs ) ) {
+		return false;
+	}
+		
+	for( itor.ToFirst(); !itor.IsAfterLast(); itor.NextAttribute(buf, (const ExprTree *) expr) ) {
+		itor.CurrentAttribute( buf, (const ExprTree *) expr );
+		buf += " = ";
+		unp.Unparse( buf, expr );
+		if (!sock->put((char*)buf.c_str())) return false;
+	}
+
+	return true;
+}
 
 END_NAMESPACE // classad
