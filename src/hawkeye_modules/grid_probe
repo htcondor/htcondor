@@ -34,6 +34,7 @@ my %Config = (
 	      NoExecute		=> 0,
 	      RemoveScript	=> 1,
 	      CleanLog		=> 0,
+	      TestInFile	=> "",
 	     );
 
 # Do it
@@ -61,6 +62,10 @@ sub Init (){
 	elsif ( $Arg =~ /^-c$/ )
 	{
 	    $Config{CleanLog} = 0;
+	}
+	elsif ( $Arg =~ /^-t=(.+)$/ )
+	{
+	    $Config{TestInFile} = $1;
 	}
 	else
 	{
@@ -256,11 +261,24 @@ sub RunIt ( )
     }
 
     # Run the script, and wade through its (wordy) output
-    if ( ! open( PROBE, "/bin/sh $File|" ) )
+    my $OpenFailed = 0;
+    if ( $Config{TestInFile} ne "" )
+    {
+	if ( ! open( PROBE, $Config{TestInFile} )  )
+	{
+	    print STDERR "Failed to open debug input '$Config{TestInFile}'\n";
+	    $OpenFailed = 1;
+	}
+	print STDERR "Reading log from '$Config{TestInFile}'\n";
+    }
+    elsif ( ! open( PROBE, "/bin/sh $File|" ) )
     {
 	print STDERR "Failed to run probe $File!\n";
+	$OpenFailed = 1;
     }
-    else
+
+    # If ok, then go ahead and read....
+    if ( ! $OpenFailed )
     {
 	while ( <PROBE> )
 	{
@@ -276,6 +294,8 @@ sub RunIt ( )
 		$Hawkeye->Store( $Test, $Status );
 		if ( ( defined $Description ) && ( $Description ne "" ) )
 		{
+		    $Description =~ s/^\"/\\\"/;
+		    $Description =~ s/([^\\])\"/$1\\\"/g;
 		    $Hawkeye->Store( $Test . "Text",
 				     $Description );
 		}
@@ -307,6 +327,9 @@ sub RunIt ( )
 		    next if ( $ContactString ne $Value );
 		    $Hawkeye->Store( $Test . "_" . $Contact, $Status );
 		    $Text = "none" if ( $Text eq "" );
+		    my $tmp = $Text;
+		    $Text =~ s/^\"/\\\"/;
+		    $Text =~ s/([^\\])\"/$1\\\"/g;
 		    $Hawkeye->Store( $Test . "Text" . "_" . $Contact, $Text );
 		    $GlobalFields{$Test} = $Test;
 		    $Matched = 1;
