@@ -709,6 +709,8 @@ UserProc::handle_termination( int exit_st )
 	}
 	pid = 0;
 
+	priv_state priv;
+
 	switch( state ) {
 
 	    case CHECKPOINTING:
@@ -717,6 +719,7 @@ UserProc::handle_termination( int exit_st )
 			break;
 
         case ABNORMAL_EXIT:
+			priv = set_root_priv();	// need to be root to access core file
 		    if( core_is_valid(core_name) ) {
 				dprintf( D_ALWAYS, "A core file was created\n" );
 				core_created = TRUE;
@@ -725,6 +728,7 @@ UserProc::handle_termination( int exit_st )
 				core_created = FALSE;
 				(void)unlink( core_name );	// remove any incomplete core
 			}
+			set_priv(priv);
 			break;
 
 		default:
@@ -853,13 +857,16 @@ UserProc::store_core()
 	char	virtual_working_dir[ _POSIX_PATH_MAX ];
 	char	new_name[ _POSIX_PATH_MAX ];
 	int		free_disk;
+	priv_state	priv;
 
 	if( !core_created ) {
 		dprintf( D_ALWAYS, "No core file to send - probably ran out of disk\n");
 		return;
 	}
 
+	priv = set_root_priv();
 	core_size = physical_file_size( core_name );
+	set_priv(priv);
 
 	if( coredump_limit_exists ) {
 		if( core_size > coredump_limit ) {
@@ -886,7 +893,9 @@ UserProc::store_core()
 		sprintf( new_name, "%s/core.%d.%d", virtual_working_dir, cluster, proc);
 		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name );
 		delay( 15 );
+		priv = set_root_priv();
 		send_file( core_name, new_name, REGULAR_FILE_MODE );
+		set_priv(priv);
 		core_transferred = TRUE;
 	} else {
 		dprintf( D_ALWAYS, "*NOT* Transferring core file\n" );
