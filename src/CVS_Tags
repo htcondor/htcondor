@@ -153,3 +153,8 @@
 12/22/94 V5_a5_1
 	Fixes bugs in chdir and keeping track of working directory across
 	checkpoints.  Installed on local DecStations and Suns this date.
+
+1/4/95	V5_a5_2
+	Fixes bug where recipt of a checkpoint signal during a restart
+	caused a damaged checkpoint file.  Now the process just exits,
+	as the checkpoint we already have is up to date.
