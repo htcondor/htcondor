@@ -2,8 +2,8 @@ SRC_DIR = $(SRC_TREE)/condor_startd.V6
 TARGET_SYSTEM = condor
 
 # Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -O2
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -O2 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -Wall -O3
 
 #if IS_R6000_AIX32
 #	define LOAD_AVG_SRC load_avg.AIX.c
@@ -32,8 +32,8 @@ PLATFORM_SPECIAL_OBJ = tty_idle.OSF1.o
 
 STARTD_SRC = Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C action.C calc.C command.C LOAD_AVG_SRC main.C util.C $(PLATFORM_SPECIAL_SRC) clinpack.c dhry21a.c dhry21b.c timers_b.c 
 
-STARTD_OBJ = Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o action.o calc.o command.o LOAD_AVG_OBJ main.o util.o $(PLATFORM_SPECIAL_SRC) clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
-
+STARTD_OBJ = Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o action.o calc.o command.o LOAD_AVG_OBJ main.o util.o $(PLATFORM_SPECIAL_OBJ) clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
+ 
 #if IS_SGI_IRIX62
 #undef MldLib
 #define MldLib /usr/lib/libelf.a
