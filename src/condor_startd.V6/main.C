@@ -94,9 +94,9 @@ main_init( int, char* [] )
 
 	resmgr = new ResMgr;
 	dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
-	resmgr->walk( Resource::force_benchmark );
+	resmgr->walk( &Resource::force_benchmark );
 	dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
-	resmgr->walk( Resource::init_classad );
+	resmgr->walk( &Resource::init_classad );
 
 		// Do a little sanity checking and cleanup
 	check_perms();
@@ -194,10 +194,10 @@ main_init( int, char* [] )
 
 		// Walk through all resources and start an update timer for
 		// each one.  
-	resmgr->walk( Resource::start_update_timer );
+	resmgr->walk( &Resource::start_update_timer );
 
 		// Evaluate the state of all resources and update CM
-	resmgr->walk( Resource::eval_and_update );
+	resmgr->walk( &Resource::eval_and_update );
 
 	return TRUE;
 }
@@ -207,12 +207,12 @@ int
 main_config()
 {
 		// Re-read config file, and rebuild ads for each resource.  
-	resmgr->walk( Resource::init_classad );  
+	resmgr->walk( &Resource::init_classad );  
 		// Re-read config file for startd-wide stuff.
 	init_params(0);
 	resmgr->init_socks();
 		// Re-evaluate and update the CM for each resource.
-	resmgr->walk( Resource::eval_and_update );
+	resmgr->walk( &Resource::eval_and_update );
 	return TRUE;
 }
 
@@ -375,7 +375,7 @@ main_shutdown_fast()
 								 "shutdown_sigchld" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( Resource::kill_claim );
+	resmgr->walk( &Resource::kill_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
@@ -396,7 +396,7 @@ main_shutdown_graceful()
 								 "shutdown_sigchld" );
 
 		// Release all claims, active or not
-	resmgr->walk( Resource::release_claim );
+	resmgr->walk( &Resource::release_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
