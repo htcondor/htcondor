@@ -118,6 +118,9 @@
 #define ATTEMPT_ACCESS		(SCHED_VERS+64) // schedd, test a file
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
 #define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given VM
+#define DAEMON_OFF			(SCHED_VERS+67)		// specific daemon, subsys follows 
+#define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
+#define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
 
 /************
 *** Command ids used by the collector 
@@ -218,5 +221,8 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 #define DC_CONFIG_PERSIST	(DC_BASE+2)
 #define DC_CONFIG_RUNTIME	(DC_BASE+3)
 #define DC_RECONFIG			(DC_BASE+4)
+#define DC_OFF_GRACEFUL		(DC_BASE+5)
+#define DC_OFF_FAST			(DC_BASE+6)
+#define DC_CONFIG_VAL		(DC_BASE+7)
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
