@@ -717,11 +717,12 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float stime = 0.0;
 
 	//new syntax, can use filesystem to authenticate
-	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
+	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ||
+		GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
+						&status) < 0) {
 		EXCEPT("Failed to connect to schedd!");
 	}
 	job_report_update_queue( Proc );
-	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 
 	if( status == REMOVED ) {
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
