@@ -36,7 +36,13 @@ if( $versarg ) {
 } else {
     # If we weren't told on the command line, try to run ident
     # directly on the condor_master binary.
-    $_=`ident strip_dir/sbin/condor_master`;
+    if( -f "strip_dir/sbin/condor_master" ) {
+        $_=`ident strip_dir/sbin/condor_master`;
+    } elsif ( -f "static_dir/sbin/condor_master" ) {
+        $_=`ident static_dir/sbin/condor_master`;
+    } else {
+	die "ERROR: can't find a condor_master, and no -v specified";
+    }
 }
 /.*\$CondorVersion: (\d*)\.(\d*)\.(\d*).*/;
 $majorv = $1;
