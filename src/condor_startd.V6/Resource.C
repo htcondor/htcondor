@@ -361,24 +361,6 @@ Resource::update_classad( void )
 
 
 int
-Resource::give_classad( Stream* stream )
-{
-	ClassAd ad;
-	this->publish( &ad, A_PUBLIC | A_ALL );
-	stream->encode();
-	if( ! ad.put(*stream) ) {
-		dprintf( D_ALWAYS, "In give_classad(): Can't send classad\n");
-		stream->end_of_message();
-		return FALSE;
-	}
-	if( ! stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "In give_classad(): Can't send end_of_message\n");
-		return FALSE;
-	}
-	return TRUE;
-}
-
-int
 Resource::force_benchmark( void )
 {
 		// Force this resource to run benchmarking.
@@ -893,7 +875,6 @@ Resource::resize_load_queue( void )
 	r_load_queue = new LoadQueue( size );
 	r_load_queue->setval( val );
 }
-	
 
 
 void
