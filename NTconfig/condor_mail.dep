@@ -1,29 +1,11 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_mail.mak
 
 ..\src\condor_mail\condor_email_main.cpp : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\shldisp.h"\
-	"..\..\program files\microsoft sdk\include\shobjidl.h"\
-	"..\..\program files\microsoft sdk\include\shtypes.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
 	"..\src\condor_mail\smtp.h"\
 	"..\src\condor_mail\StdAfx.h"\
 	
 
 ..\src\condor_mail\smtp.cpp : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\shldisp.h"\
-	"..\..\program files\microsoft sdk\include\shobjidl.h"\
-	"..\..\program files\microsoft sdk\include\shtypes.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
 	"..\src\condor_mail\smtp.h"\
 	"..\src\condor_mail\StdAfx.h"\
 	

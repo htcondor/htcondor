@@ -1,13 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_collector.mak
 
 ..\src\condor_collector.V6\collector.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -84,13 +77,6 @@
 	
 
 ..\src\condor_collector.V6\collector_engine.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -153,13 +139,6 @@
 	
 
 ..\src\condor_collector.V6\collector_main.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -226,13 +205,6 @@
 	
 
 ..\src\condor_collector.V6\collector_stats.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -291,13 +263,6 @@
 	
 
 ..\src\condor_collector.V6\forkwork.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -351,13 +316,6 @@
 	
 
 ..\src\condor_collector.V6\hashkey.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -388,13 +346,6 @@
 	
 
 ..\src\condor_status.V6\totals.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -430,13 +381,6 @@
 	
 
 ..\src\condor_collector.V6\view_server.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\

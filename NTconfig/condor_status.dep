@@ -33,13 +33,6 @@
 	
 
 ..\src\condor_status.V6\prettyPrint.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -85,13 +78,6 @@
 	
 
 ..\src\condor_status.V6\setflags.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -135,13 +121,6 @@
 	
 
 ..\src\condor_status.V6\status.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_api.h"\
@@ -220,13 +199,6 @@
 	
 
 ..\src\condor_status.V6\totals.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\

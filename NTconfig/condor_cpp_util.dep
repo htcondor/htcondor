@@ -44,7 +44,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -65,27 +65,35 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_includes\basename.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\
 	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_ckpt_name.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_getmnt.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_status.h"\
+	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\escapes.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\condor_types.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\startup.h"\
+	"..\src\h\util_lib_proto.h"\
 	
 
 "..\src\condor_c++_util\classad_collection.C" : \
@@ -161,7 +169,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -309,13 +317,6 @@
 	
 
 "..\src\condor_c++_util\condor_common.C" : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -560,7 +561,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -691,7 +692,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -747,7 +748,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -804,7 +805,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -875,7 +876,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -938,7 +939,7 @@
 	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1016,7 +1017,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1080,7 +1081,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1141,7 +1142,7 @@
 	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1205,7 +1206,7 @@
 	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1221,13 +1222,6 @@
 	
 
 ..\src\condor_daemon_client\dc_starter.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -1273,10 +1267,9 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1298,6 +1291,7 @@
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\status_string.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_includes\basename.h"\
@@ -1393,7 +1387,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1635,7 +1629,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\nullfile.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -1850,7 +1844,7 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
@@ -1899,7 +1893,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -2109,7 +2103,6 @@
 	
 
 "..\src\condor_c++_util\perm.C" : \
-	"..\..\program files\microsoft sdk\include\lmjoin.h"\
 	"..\src\condor_c++_util\domain_tools.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\perm.h"\
@@ -2182,6 +2175,40 @@
 	"..\src\h\file_lock.h"\
 	
 
+"..\src\condor_c++_util\status_string.C" : \
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_access.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_fix_sys_resource.h"\
+	"..\src\condor_includes\condor_fix_sys_stat.h"\
+	"..\src\condor_includes\condor_fix_sys_time.h"\
+	"..\src\condor_includes\condor_fix_sys_utsname.h"\
+	"..\src\condor_includes\condor_fix_unistd.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_hpux_64bit_types.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_snutils.h"\
+	"..\src\condor_includes\condor_sys_aix.h"\
+	"..\src\condor_includes\condor_sys_bsd.h"\
+	"..\src\condor_includes\condor_sys_dux.h"\
+	"..\src\condor_includes\condor_sys_hpux.h"\
+	"..\src\condor_includes\condor_sys_irix.h"\
+	"..\src\condor_includes\condor_sys_linux.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_solaris.h"\
+	"..\src\condor_includes\condor_sys_types.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	
+
 "..\src\condor_c++_util\store_cred.C" : \
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -2224,7 +2251,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
