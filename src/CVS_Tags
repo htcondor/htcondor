@@ -1,3 +1,7 @@
+01/05/05 V6_6-tests-branch
+   A new branch for adding a bunch of tests to Condor.
+   Created off V6_6-branch at V6_6-tests-root.  
+
 01/04/05 V6_6-merge-32
    The state of the V6_6-branch for yet another merge into the
    V6_7-branch.  This includes more NWO glue improvements and fixes,
