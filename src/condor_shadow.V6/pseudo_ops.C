@@ -246,7 +246,7 @@ int
 pseudo_getwd( char *path )
 {
 	strncpy(path,CurrentWorkingDir,_POSIX_PATH_MAX);
-	return 0;
+	return 1;
 }
 
 int
