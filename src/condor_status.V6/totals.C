@@ -87,7 +87,6 @@ displayTotals (int keyLength)
     	case PP_STARTD_RUN:
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
-    	case PP_MASTER_NORMAL:
     	case PP_CKPT_SRVR_NORMAL:
 			break;
 
@@ -349,32 +348,6 @@ displayInfo (int)
 }
 
 
-MasterNormalTotal::
-MasterNormalTotal()
-{
-	machines = 0;
-}
-
-int MasterNormalTotal::
-update (ClassAd *)
-{
-	machines++;
-	return 1;
-}
-
-void MasterNormalTotal::
-displayHeader()
-{
-	printf ("%-10.10s\n", "Machines");
-}
-
-void MasterNormalTotal::
-displayInfo (int tl)
-{
-	if (tl) printf ("%10d\n", machines);
-}
-
-
 CkptSrvrNormalTotal::
 CkptSrvrNormalTotal()
 {
@@ -425,7 +398,6 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_RUN:			ct = new StartdRunTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
-		case PP_MASTER_NORMAL:		ct = new MasterNormalTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
 
 		default:
@@ -459,7 +431,6 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 			return 1;
 
 		// all ads in the following categories hash to the same key for totals
-		case PP_MASTER_NORMAL:
 		case PP_CKPT_SRVR_NORMAL:
 		case PP_SCHEDD_NORMAL:
 			key = " ";
