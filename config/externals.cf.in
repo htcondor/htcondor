@@ -17,6 +17,7 @@ EXT_GPT_VERSION = gpt-3.0
 EXT_PVM_VERSION = pvm-3.4.2
 EXT_MAN_VERSION = man-current
 
+/* Select the approporiate external glibc package */
 #if IS_GLIBC && ! IS_CLIPPED
 #if IS_GLIBC_2_2_4
 EXT_GLIBC_VERSION = glibc-2.2.2
