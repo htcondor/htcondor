@@ -727,7 +727,7 @@ bool
 GlobusResource::SubmitMonitorJob()
 {
 	// return true if job submitted, else return false
-	GahpClient tmp_gahp;
+	GahpClient *tmp_gahp = NULL;
 	int now = time(NULL);
 	int rc;
 	char *monitor_executable;
@@ -798,8 +798,6 @@ GlobusResource::SubmitMonitorJob()
 		initialMonitorStart = false;
 	}
 
-	tmp_gahp.setMode( GahpClient::normal );
-
 	monitor_executable = param( "GRID_MONITOR" );
 	if ( monitor_executable == NULL ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
@@ -807,7 +805,20 @@ GlobusResource::SubmitMonitorJob()
 		return false;
 	}
 
-	const char *gassServerUrl = tmp_gahp.getGlobusGassServerUrl();
+	MyString gahp_name;
+	gahp_name.sprintf( "GLOBUS/%s", proxySubject );
+
+	tmp_gahp = new GahpClient( gahp_name.Value() );
+	if ( tmp_gahp->isInitialized() == false ) {
+		delete tmp_gahp;
+		dprintf( D_ALWAYS, "GAHP server not initialized yet, not submitting "
+				 "grid_monitor now\n" );
+		return false;
+	}
+
+	tmp_gahp->setMode( GahpClient::normal );
+
+	const char *gassServerUrl = tmp_gahp->getGlobusGassServerUrl();
 	RSL.sprintf( "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
 				 gassServerUrl, monitor_executable, gassServerUrl,
 				 monitorLogFile, gassServerUrl, monitorJobStatusFile );
@@ -816,18 +827,21 @@ GlobusResource::SubmitMonitorJob()
 
 	contact.sprintf( "%s/jobmanager-fork", resourceName );
 
-	rc = tmp_gahp.globus_gram_client_job_request( contact.Value(), RSL.Value(),
-												  0, NULL, NULL );
+	rc = tmp_gahp->globus_gram_client_job_request( contact.Value(),
+												   RSL.Value(), 0, NULL,
+												   NULL );
 
 	if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
 			"globus_gram_client_job_request() returned %d!\n",
 			 resourceName, rc );
+		delete tmp_gahp;
 		return false;
 	}
 
 	dprintf(D_ALWAYS, "Successfully started grid_monitor for %s\n", resourceName);
 	monitorActive = true;
+	delete tmp_gahp;
 	return true;
 }
 
