@@ -19,13 +19,26 @@ Much of this section refers to ClassAd expressions.  You probably want
 to read through section~\ref{classad-reference} on ClassAd expressions before 
 continuing with this. 
 
-First, we describe in some detail how the \Condor{startd} works, to
-give you an idea of what is possible.  Then, we'll describe all the
-expressions that are used by the \Condor{startd} and what they do.
-Finally, we offer two example policy settings.
+To define your policy, you basically set a bunch of expressions in the
+config file (see section~\ref{sec:Configuring-Condor} on ``Configuring
+Condor'' for an introduction to Condor's config files).  These
+expressions are evaluated in the context of the startd's ClassAd and
+the ClassAd of a potential resource request (a job that has been
+submitted to Condor).  The expressions can therefore reference
+attributes from either ClassAd.  First, we'll list all the attributes
+that are included in the Startd's ClassAd.  Then, we'll list all the
+attributes that are included in a job ClassAd.  Next, we'll explain
+the the \Expr{START} expression, which describes to Condor what
+conditions must be met for the machine to start a job.  Then, we'll
+describe the \Expr{RANK} expression, which allows you to specify which
+kinds of jobs a given machine prefers to run.  Then, we'll discuss in
+some detail how the \Condor{startd} works, in particular, the Startd's
+\Term{states} and \Term{activities}, to give you an idea of what is
+possible for your policy decisions.  Finally, we offer two example
+policy settings.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Startd Attributes}
+\subsection{Startd ClassAd Attributes}
 \label{sec:Startd-Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -38,9 +51,148 @@ what they represent are described below:
 
 \input{user-man/machad.tex}
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\condor{startd} States and Activities}
-\label{sec:States-and-Activites}
+\subsection{Job ClassAd Attributes}
+\label{sec:Job-Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\condor{startd} START expression}
+\label{sec:Start-Expr}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The most important expression in the startd (and possibly in all of
+Condor) is the startd's \Expr{START} expression.  This expression
+describes what conditions must be met for a given startd to start
+service a resource request (in other words, start someone's job).
+This expression (like any other expression) can reference attributes
+in the startd's ClassAd (such as \Attr{KeyboardIdle}, \Attr{LoadAvg},
+etc), or attributes in a potential requester's ClassAd (such as
+\Attr{Owner}, \Attr{Imagesize}, even \Attr{Cmd}, the name of the
+executable the requester wants to run).  What the \Expr{START}
+expression evaluates to plays a crucial role in determining what state
+and activity the startd is in.
+
+It is technically the \Expr{Requirements} expression that is used for
+matching with other jobs.  The startd just always defines the
+\Expr{Requirements} expression as the \Expr{START} expression.
+However, in situations where the startd wants to make itself
+unavailable for further matches, it sets its \Expr{Requirements}
+expression to False, not it's \Expr{START} expression.  When the
+\Expr{START} expression \Term{locally evaluates} to true, the startd
+advertises the \Expr{Requirements} expression as ``True'' and doesn't
+even publish the \Expr{START} expression.
+
+Normally, the expressions in the startd ClassAd are evaluated against
+certain request ClassAds in the \Condor{negotiator} to see if there is
+a match, or against whatever request ClassAd currently has claimed the
+startd.  However, by locally evaluating an expression, the startd only
+evaluates the expression against its own ClassAd.  If an expression
+cannot be locally evaluated (because it references other expressions
+that are only found in a request ad, such as \Attr{Owner} or
+\Attr{Imagesize}), the expression is (usually) undefined.  See the
+ClassAd appendix for specifics of how undefined terms are handled in
+ClassAd expression evaluation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\condor{startd} RANK expression}
+\label{sec:Rank-Expression}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A startd can be configured to prefer running certain jobs over other
+jobs.  This is done via the \Expr{RANK} expression.  This is an
+expression, just like any other in the startd's ClassAd.  It can
+reference any attribute found in either the startd ClassAd or a
+request ad (normally, in fact, it references things in the request
+ad).  Probably the most common use of this expression is to configure a
+machine to prefer to run jobs from the owner of that machine, or by
+extension, a group of machines to prefer jobs from the owners of those
+machines.  
+
+For example, imagine you have a small research group with 4 machines:
+``tenorsax'', ``piano'', ``bass'' and ``drums''.  These machines are
+owned by 4 users: ``coltrane'', ``tyner'', ``garrison'' and ``jones'',
+respectively.  
+
+Say there's a large Condor pool in your department, but you spent a
+lot of money on really fast machines for your group.  You want to make
+sure that if anyone in your group has Condor jobs, they have priority
+on your machines.  To achieve this, all you have to do is set the Rank
+expression on your machines to refer to the \Attr{Owner} attribute and
+prefer requests where that attribute matches one of the people in your
+group:
+
+\begin{verbatim}
+        RANK : Owner == "coltrane" || Owner == "tyner" \
+               || Owner == "garrison" || Owner == "jones"
+\end{verbatim}
+
+The \Expr{RANK} expression is evaluated as a floating point number.
+However, just link in C, boolean expressions evaluate to either 1 or 0
+depending on if they're true or false.  So, if this expression
+evaluated to 1 (because the remote job was owned by one of the blessed
+folks), that would be higher than anyone else (for whom the expression
+would evaluate to 0).
+
+If you wanted to get really fancy, you could still have the same basic
+setup, where anyone from your group has priority on your machines, but
+the actual machine owner has even more priority on their own machine.
+For example, you'd put the following entry in Jimmy Garrison's local
+config file \File{bass.local}:
+
+\begin{verbatim}
+        RANK : Owner == "coltrane" + Owner == "tyner" \
+               + (Owner == "garrison") * 10 + Owner == "jones"
+\end{verbatim}
+
+Notice, we're using ``+'' instead of ``\Bar\Bar'', since we want to be able
+to distinguish which terms matched and which ones didn't.  Now, if
+anyone who wasn't in the John Coltrane quartet was running a job on
+``bass'', the \Expr{RANK} would evaluate numerically to 0, since none
+of those boolean terms would evaluate to 1, and 0+0+0+0 is still 0.
+Now, suppose Elvin Jones submits a job.  His job would match this
+machine (assuming the \Expr{START} was true for him at that time) and
+the \Expr{RANK} would numerically evaluate to 1 (since one of the
+boolean terms would evaluate to 1), so Elvin would preempt whoever
+else was using the machine at the time.  After a while, say Jimmy
+decides to submit a job (maybe even from another machine, it doesn't
+matter, all that matters is that it's Jimmy's job).  Now, the
+\Expr{RANK} would evaluate to 10, since the boolean that matches him
+gets multiplied by 10.  So, Jimmy would preempt even Elvin, and his
+job would run on his machine.
+
+The \Expr{RANK} expression doesn't just have to refer to the
+\Attr{Owner} of the jobs.  Suppose you have a machine with a ton of
+memory, and others with not much at all.  You could configure your
+big-memory machine to prefer to run jobs with bigger memory
+requirements:
+
+\begin{verbatim}
+        RANK : ImageSize
+\end{verbatim}
+
+That's all there is to it.  The bigger the job, the more this machine
+wants to run it.  That's pretty altruistic of you, always servicing
+bigger and bigger jobs, even if they're not yours.  So, perhaps you
+still want to be a nice guy, all else being equal, but if you have
+jobs, you want to run them, regardless of everyone else's
+\Attr{Imagesize}:
+
+\begin{verbatim}
+        RANK : (Owner == "coltrane" * 1000000000000) + Imagesize
+\end{verbatim}
+
+This scheme would break down if someone submitted a job with an image
+size of more 10\Circum12 kbytes.  However, if they did, this Rank expression
+preferring their job over yours wouldn't be the only problem Condor had
+*grin* 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\condor{startd} States}
+\label{sec:States}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The \Condor{startd} could be in a number of different \Term{states},
@@ -69,13 +221,34 @@ The possible states are:
   back, the negotiator decided to preempt this match because another
   user with higher priority has jobs waiting to run, or the negotiator
   decided to preempt this match because it found another request that
-  this resource would rather serve (see the \Expr{Rank} expression
+  this resource would rather serve (see the \Expr{RANK} expression
   below).
 
 \end{description}
 
+The following figure shows the various states and the possible
+transitions between them.
+
+\begin{figure} \centering
+\includegraphics{admin-man/startd-states.eps}
+\caption{\label{startd-states}Startd States}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\condor{startd} Activities}
+\label{sec:Activities}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Within some of these states, there could be a number of different
-\Term{activities} the startd is in.
+\Term{activities} the startd is in.  The idea is that all the things
+that are true about a given state are true regardless of what activity
+you are in.  However, there are certain important differences between
+each activity, which is why they are seperated out from each other
+within a given state.  In general, you must specify both a state and
+an activity to describe what ``state'' the startd is in.  This will be
+denoted in this manual as ``state/activity'' pairs.  For example,
+``Claimed/Busy''.  The following list describes all the possible
+state/activity pairs:
 
 \begin{itemize}
 
@@ -150,24 +323,22 @@ startd is in the following activities, it is generating a load average
 of 1.0: busy, benchmarking, vacating, killing.  In all other
 activities (idle, suspended) it is not generating any load at all.
 
-In general, you must specify both a state and an activity to describe
-what ``state'' the startd is in.  This will be denoted in this manual
-as ``state/activity'' pairs.  For example, ``Claimed/Busy''
-
 The following figure gives the overall view of all startd states and
 activities, and shows all the possible transitions from one to another
-within the Condor system.
+within the Condor system.  This may seem pretty daunting, but it's
+actually easier to handle than it looks.  
 
-\begin{figure} \centering
-\includegraphics{admin-man/startd-states.eps}
-\caption{\label{startd-states}Startd States and Activities}
+\begin{figure}[h]
+\centering
+\includegraphics{admin-man/startd-activities.eps}
+\caption{\label{startd-activities}Startd States and Activities}
 \end{figure}
 
 Various expressions are used to determine when and if many of these
 state and activity transitions occur.  Other transitions are initiated
 by parts of the Condor protocol (such as when the \Condor{negotiator}
 matches a startd with a schedd).  The following section describes the
-conditions that lead to the various state and activity changes.
+conditions that lead to the various state and activity transitions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\condor{startd} State and Activity Transitions}
@@ -183,6 +354,8 @@ transitions occurred (for example, you might only enter the Killing
 activity if you've been in the Vacating activity longer than a given
 amount of time).
 
+<<<<<<< policy.tex
+=======
 The most important expression in the startd (and possibly in all of
 Condor) is the startd's \Expr{START} expression.  This expression
 describes what conditions must be met for a given startd to start
@@ -212,9 +385,9 @@ startd.  However, by locally evaluating an expression, the startd only
 evaluates the expression against its own ClassAd.  If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ad, such as \Attr{Owner} or
-\Attr{Imagesize}), the expression is (usually) undefined.  See 
-section~\ref{classad-reference} for specifics of how undefined terms are handled 
-in ClassAd expression evaluation.
+\Attr{Imagesize}), the expression is (usually) undefined.  See
+section~\ref{classad-reference} for specifics of how undefined terms
+are handled in ClassAd expression evaluation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Owner State}
@@ -446,7 +619,7 @@ combinations.
   Preempting/Vacating is if the \Condor{negotiator} matched the startd
   with a ``better'' match.  This better match could either be from the
   startd's perspective (see section~\ref{sec:Rank-Expression} on the
-  \Expr{Rank} Expression below) or from the negotiator's perspective
+  \Expr{RANK} Expression below) or from the negotiator's perspective
   (because a user with a better user priority has jobs that should be
   running on this startd).
   
@@ -544,101 +717,6 @@ the \Condor{starter} itself.  After this, the startd enters the Owner
 state.  
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{The Startd's Rank Expression}
-\label{sec:Rank-Expression}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-A startd can be configured to prefer running certain jobs over other
-jobs.  This is done via the \Expr{Rank} expression.  This is an
-expression, just like any other in the startd's ClassAd.  It can
-reference any attribute found in either the startd ClassAd or a
-request ad (normally, in fact, it references things in the request
-ad).  Probably the most common use of this expression is to configure a
-machine to prefer to run jobs from the owner of that machine, or by
-extension, a group of machines to prefer jobs from the owners of those
-machines.  
-
-For example, imagine you have a small research group with 4 machines:
-``tenorsax'', ``piano'', ``bass'' and ``drums''.  These machines are
-owned by 4 users: ``coltrane'', ``tyner'', ``garrison'' and ``jones'',
-respectively.  
-
-Say there's a large Condor pool in your department, but you spent a
-lot of money on really fast machines for your group.  You want to make
-sure that if anyone in your group has Condor jobs, they have priority
-on your machines.  To achieve this, all you have to do is set the Rank
-expression on your machines to refer to the \Attr{Owner} attribute and
-prefer requests where that attribute matches one of the people in your
-group:
-
-\begin{verbatim}
-        Rank: Owner == "coltrane" || Owner == "tyner" \
-              || Owner == "garrison" || Owner == "jones"
-\end{verbatim}
-
-The \Expr{Rank} expression is evaluated as a floating point number.
-However, just link in C, boolean expressions evaluate to either 1 or 0
-depending on if they're true or false.  So, if this expression
-evaluated to 1 (because the remote job was owned by one of the blessed
-folks), that would be higher than anyone else (for whom the expression
-would evaluate to 0).
-
-If you wanted to get really fancy, you could still have the same basic
-setup, where anyone from your group has priority on your machines, but
-the actual machine owner has even more priority on their own machine.
-For example, you'd put the following entry in Jimmy Garrison's local
-config file \File{bass.local}:
-
-\begin{verbatim}
-        Rank: Owner == "coltrane" + Owner == "tyner" \
-              + (Owner == "garrison") * 10 + Owner == "jones"
-\end{verbatim}
-
-Notice, we're using ``+'' instead of ``||'', since we want to be able
-to distinguish which terms matched and which ones didn't.  Now, if
-anyone who wasn't in the John Coltrane quartet was running a job on
-``bass'', the \Expr{Rank} would evaluate numerically to 0, since none
-of those boolean terms would evaluate to 1, and 0+0+0+0 is still 0.
-Now, suppose Elvin Jones submits a job.  His job would match this
-machine (assuming the \Expr{START} was true for him at that time) and
-the \Expr{Rank} would numerically evaluate to 1 (since one of the
-boolean terms would evaluate to 1), so Elvin would preempt Whoever
-else was using the machine at the time.  After a while, say Jimmy
-decides to submit a job (maybe even from another machine, it doesn't
-matter, all that matters is that it's Jimmy's job).  Now, the
-\Expr{Rank} would evaluate to 10, since the boolean that matches him
-gets multiplied by 10.  So, Jimmy would preempt even Elvin, and his
-job would run on his machine.
-
-The \Expr{Rank} expression doesn't just have to refer to the
-\Attr{Owner} of the jobs.  Suppose you have a machine with a ton of
-memory, and others with not much at all.  You could configure your
-big-memory machine to prefer to run jobs with bigger memory
-requirements:
-
-\begin{verbatim}
-        Rank: ImageSize
-\end{verbatim}
-
-That's all there is to it.  The bigger the job, the more this machine
-wants to run it.  That's pretty altruistic of you, always servicing
-bigger and bigger jobs, even if they're not yours.  So, perhaps you
-still want to be a nice guy, all else being equal, but if you have
-jobs, you want to run them, regardless of everyone else's
-\Attr{Imagesize}:
-
-\begin{verbatim}
-        Rank: (Owner == "coltrane" * 1000000000000) + Imagesize
-\end{verbatim}
-
-This scheme would break down if someone submitted a job with an image
-size of more 10\Circum12 kbytes.  However, if they did, this Rank expression
-preferring their job over yours wouldn't be the only problem Condor had
-*grin* 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\condor{startd} State/Activity Transition Expression Summary}
 \label{sec:State-Expression-Summary}
@@ -696,7 +774,7 @@ unclear here, please refer to the previous sections for clarification.
   Claimed/Busy state and \Expr{PERIODIC\_CHECKPOINT} is true, the
   startd will begin a periodic checkpoint.
   
-\item[\Expr{Rank}] If this expression evaluates to a higher number for
+\item[\Expr{RANK}] If this expression evaluates to a higher number for
   a pending resource request than it does for the current request, the
   startd will preempt the current request (enter the
   Preempting/Vacating state).  When the preemption is complete, the
