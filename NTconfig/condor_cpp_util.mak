@@ -30,10 +30,10 @@ RSC=rc.exe
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=.\..\Debug
-INTDIR=.\..\Debug
+OUTDIR=..\Debug
+INTDIR=..\Debug
 # Begin Custom Macros
-OutDir=.\..\Debug
+OutDir=..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -128,6 +128,7 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(INTDIR)\which.obj"
+	-@erase "$(INTDIR)\windows_firewall.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Debug\condor_common.obj"
 	-@erase "..\Debug\condor_common.pch"
@@ -145,6 +146,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_cpp_util.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
+	"$(INTDIR)\check_events.obj" \
+	"$(INTDIR)\check_log_files.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
@@ -228,8 +231,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\check_log_files.obj" \
-	"$(INTDIR)\check_events.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -238,10 +240,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=.\..\Release
-INTDIR=.\..\Release
+OUTDIR=..\Release
+INTDIR=..\Release
 # Begin Custom Macros
-OutDir=.\..\Release
+OutDir=..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -335,6 +337,7 @@ CLEAN :
 	-@erase "$(INTDIR)\utc_time.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\which.obj"
+	-@erase "$(INTDIR)\windows_firewall.obj"
 	-@erase "$(OUTDIR)\condor_cpp_util.lib"
 	-@erase "..\Release\condor_common.obj"
 	-@erase "..\Release\condor_common.pch"
@@ -352,6 +355,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_cpp_util.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
+	"$(INTDIR)\check_events.obj" \
+	"$(INTDIR)\check_log_files.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
@@ -435,8 +440,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\check_log_files.obj" \
-	"$(INTDIR)\check_events.obj"
+	"$(INTDIR)\windows_firewall.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -1059,6 +1063,12 @@ SOURCE="..\src\condor_c++_util\utc_time.C"
 SOURCE="..\src\condor_c++_util\which.C"
 
 "$(INTDIR)\which.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\windows_firewall.C"
+
+"$(INTDIR)\windows_firewall.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
