@@ -1,3 +1,8 @@
+4/3/01 V6_3-pre-bandwidth-branch-fix
+   The state of the V6_3-branch before I started doing all the
+   trickery to create the V6_3-bandwidth-branch, just in case we need
+   to back out of any mistakes I might make.  -Derek Wright
+
 3/30/01 V6_3-condor-g-release-2
    The release tag for the second CondorG client-distro. This release is
    from the mainline V6_3-branch, and not the V6_3-condor-g-branch, which is
