@@ -701,6 +701,11 @@ ReliSock::put_bytes(const void *data, int sz)
         if (get_encryption()) {
             if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
                 dprintf(D_SECURITY, "Encryption failed\n");
+				if (dta != NULL)
+				{
+					free(dta);
+					dta = NULL;
+				}
                 return -1;  // encryption failed!
             }
         }
@@ -715,6 +720,11 @@ ReliSock::put_bytes(const void *data, int sz)
 		
 		if (snd_msg.buf.full()) {
 			if (!snd_msg.snd_packet(_sock, FALSE, _timeout)) {
+				if (dta != NULL)
+				{
+					free(dta);
+					dta = NULL;
+				}
 				return FALSE;
 			}
 		}
@@ -724,7 +734,11 @@ ReliSock::put_bytes(const void *data, int sz)
 		}
 		
 		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-                    free(dta);
+					if (dta != NULL)
+					{
+                    	free(dta);
+						dta = NULL;
+					}
                     return -1;
 		}
 		
@@ -737,7 +751,12 @@ ReliSock::put_bytes(const void *data, int sz)
 		_bytes_sent += nw;
 	}
 
-        free(dta);
+	if (dta != NULL)
+	{
+    	free(dta);
+		dta = NULL;
+	}
+
 	return nw;
 }
 
