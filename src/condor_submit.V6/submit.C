@@ -506,11 +506,6 @@ void
 SetExecutable()
 {
   char	*ename;
-  static int exec_set = 0;
-
-  if( exec_set ) {
-	return;
-  }
 
   ename = condor_param(Executable);
 
@@ -568,8 +563,6 @@ SetExecutable()
 	if (SendSpoolFileBytes(ename) < 0) {
 		EXCEPT("failed to transfer executable file %s", ename);
 	}
-
-  exec_set = 1;
 }
 
 void
@@ -1400,6 +1393,7 @@ queue(int num)
 				exit(1);
 			}
 			ProcId = -1;
+			SetExecutable();
 		}
 
 		if ( ClusterId == -1 ) {
@@ -1419,7 +1413,6 @@ queue(int num)
 		(void)sprintf(tmp, "%d", ProcId);
 		set_condor_param(Process, tmp);
 
-		SetExecutable();
 		SetRootDir();
 		SetIWD();
 		SetPriority();
