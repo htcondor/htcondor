@@ -583,7 +583,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 					new_job->procID.cluster,new_job->procID.proc);
 
 			if ( new_job->start() == true ) {
-				dprintf(D_ALWAYS,"Submited job %d.%d\n",
+				dprintf(D_ALWAYS,"Submitted job %d.%d\n",
 						new_job->procID.cluster,new_job->procID.proc);
 			} else {
 				if ( new_job->errorCode ==
