@@ -184,15 +184,8 @@
 		rval =  -1;
 	}
 
-	/* Some problem with blocking and unblocking sigs on OSF1 */
-#if !defined(OSF1)
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		/* Restore previous signal mask - generally unblocks TSTP and USR1 */
-	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
-		EXCEPT( "sigprocmask" );
-	}
-	SetSyscalls( sigscm );
-#endif
+	/* defined in local_startup.c and remote_startup.c */
+	restore_condor_sigmask(omask);
 
 	SetSyscalls( scm );
 	return rval;
