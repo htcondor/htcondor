@@ -22,6 +22,12 @@ Condor 6.6.1, by default, publishes ``update statistics'' into the
 ClassAds as published by the \Condor{collector}.  This program parses
 this ouput and displays it to the user in a readable format.
 
+\item Changed the default \Condor{dagman} behavior so that it doesn't
+      check for cycles at startup, only at runtime, since the former
+      could be expensive for large DAGs.  Added a boolean
+      \Attr{DAGMAN\_STARTUP\_CYCLE\_DETECT} config attribute to
+      re-enable cycle-detection at startup.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -34,6 +40,9 @@ this ouput and displays it to the user in a readable format.
 assertion error if it encounters both a terminate and a abort event in
 the userlog for the same job; this can happen due to a bug in the
 \Condor{schedd}, which is not yet fixed.
+
+\item 
+
 
 \end{itemize}
 
