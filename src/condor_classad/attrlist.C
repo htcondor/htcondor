@@ -1023,12 +1023,15 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 	EvalResult val;
 
 	tree = Lookup(name);
-	if(!tree)
-	{
-		return 0;
+	if(!tree) {
+		if (target) {
+			tree = target->Lookup(name);
+		} else {
+			return 0;
+		}
 	}
 	
-	if (tree->EvalTree(this,target,&val) && val.type==LX_STRING && val.s)
+	if(tree && tree->EvalTree(this,target,&val) && val.type==LX_STRING && val.s)
 	{
 		strcpy (value, val.s);
 		return 1;
@@ -1042,8 +1045,16 @@ int AttrList::EvalInteger (const char *name, AttrList *target, int &value)
     ExprTree *tree;
     EvalResult val;   
 
-    tree = Lookup(name);   
-    if (tree->EvalTree (this, target, &val) && val.type == LX_INTEGER)
+	tree = Lookup(name);
+	if(!tree) {
+		if (target) {
+			tree = target->Lookup(name);
+		} else {
+			return 0;
+		}
+	}
+	
+    if (tree && tree->EvalTree (this, target, &val) && val.type == LX_INTEGER)
     {
 		value = val.i;
         return 1;
@@ -1058,7 +1069,16 @@ int AttrList::EvalFloat (const char *name, AttrList *target, float &value)
     EvalResult val;   
 
     tree = Lookup(name);   
-    if (tree->EvalTree (this, target, &val) && val.type == LX_FLOAT)
+
+    if(!tree) {
+        if (target) {
+            tree = target->Lookup(name);
+        } else {
+            return 0;
+        }
+    }
+
+    if (tree && tree->EvalTree (this, target, &val) && val.type == LX_FLOAT)
     {
         value = val.f;
         return 1;
@@ -1073,7 +1093,15 @@ int AttrList::EvalBool (const char *name, AttrList *target, int &value)
     EvalResult val;   
 
     tree = Lookup(name);   
-    if (tree->EvalTree (this, target, &val) && val.type == LX_BOOL)
+    if(!tree) {
+        if (target) {
+            tree = target->Lookup(name);
+        } else {
+            return 0;
+        }
+    }
+
+    if (tree && tree->EvalTree (this, target, &val) && val.type == LX_BOOL)
     {
         value = val.b;
         return 1;
