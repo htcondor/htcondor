@@ -41,8 +41,6 @@ VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc()
 	filetrans = NULL;
     JobAd = jobAd;
 	snapshot_tid = -1;
-	shadowupdate_tid = -1;
-	shadowsock = NULL;
 	TransferAtVacate = false;
 }
 
@@ -60,16 +58,6 @@ VanillaProc::~VanillaProc()
 		daemonCore->Cancel_Timer(snapshot_tid);
 		snapshot_tid = -1;
 	}
-
-	if ( shadowupdate_tid != -1 ) {
-		daemonCore->Cancel_Timer(shadowupdate_tid);
-		shadowupdate_tid = -1;
-	}
-
-	if ( shadowsock ) {
-		delete shadowsock;
-	}
-
 }
 
 int
@@ -145,12 +133,6 @@ VanillaProc::TransferCompleted(FileTransfer *ftrans)
 		snapshot_tid = daemonCore->Register_Timer(2, 15, 
 			(TimerHandlercpp)&ProcFamily::takesnapshot, 
 			"ProcFamily::takesnapshot", family);
-
-		// update the shadow every 20 minutes.  years of study say
-		// this is the optimal value. :^).
-		shadowupdate_tid = daemonCore->Register_Timer(8,(20*60)+6,
-			(TimerHandlercpp)&VanillaProc::UpdateShadow,
-			"VanillaProc::UpdateShadow", this);
 
 		return TRUE;
 	} else {
@@ -237,44 +219,6 @@ VanillaProc::StartJob()
 }
 
 
-int
-VanillaProc::UpdateShadow()
-{
-	ClassAd ad;
-
-	dprintf( D_FULLDEBUG, "Entering VanillaProc::UpdateShadow()\n" );
-
-	char* ShadowAddr = Starter->GetShadowAddr();
-	if ( ShadowAddr[0] == '\0' ) {
-		// we do not have an address for the shadow
-		dprintf( D_FULLDEBUG, "Leaving VanillaProc::UpdateShadow(): "
-				 "No ShadowAddr!\n" );
-		return FALSE;
-	}
-
-	if ( !shadowsock ) {
-		shadowsock = new SafeSock();
-		ASSERT( shadowsock );
-		shadowsock->connect( ShadowAddr );
-	}
-
-		// Publish all the info we care about into the ad.  This
-		// method is virtual, so we'll get all the goodies from
-		// derived classes, as well.
-	PublishUpdateAd( &ad );
-
-		// Send it to the shadow
-	shadowsock->snd_int( SHADOW_UPDATEINFO, FALSE );
-	ad.put( *shadowsock );
-	shadowsock->end_of_message();
-	
-	dprintf( D_FULLDEBUG, "Leaving VanillaProc::UpdateShadow(): success\n" );
-
-	return TRUE;
-}
-
-
-
 bool
 VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
@@ -328,12 +272,10 @@ VanillaProc::JobExit(int pid, int status)
 	// ok, the parent exited.  make certain all decendants are dead.
 	family->hardkill();
 
-	daemonCore->Cancel_Timer(snapshot_tid);
-	daemonCore->Cancel_Timer(shadowupdate_tid);
-	delete shadowsock;
+	if( snapshot_tid >= 0 ) {
+		daemonCore->Cancel_Timer(snapshot_tid);
+	}
 	snapshot_tid = -1;
-	shadowupdate_tid = -1;
-	shadowsock = NULL;
 
 	// transfer output files back if requested job really finished.
 	// may as well do this in the foreground, 

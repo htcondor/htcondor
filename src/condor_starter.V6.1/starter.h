@@ -112,6 +112,9 @@ private:
 		// Private Methods
 		// // // // // // // 
 
+		/** Send an update ClassAd to the shadow */
+	int UpdateShadow( void );
+
 		/** Initialize the priv_state code with the appropriate user
 			for this job.  This function deals with all the logic for
 			checking UID_DOMAIN compatibility, SOFT_UID_DOMAIN
@@ -170,6 +173,11 @@ private:
 	ClassAd* jobAd;
 	int jobUniverse;
 
+	// timer id for periodically sending info on job to Shadow
+	int shadowupdate_tid;
+
+	// UDP socket back to the shadow command port
+	SafeSock *shadowsock;
 };
 
 #endif

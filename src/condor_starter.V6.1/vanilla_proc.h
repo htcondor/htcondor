@@ -75,7 +75,6 @@ public:
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
 protected:
-	virtual int UpdateShadow();
 
 	int TransferCompleted(FileTransfer *);
 
@@ -85,12 +84,6 @@ private:
 
 	// timer id for periodically taking a ProcFamily snapshot
 	int snapshot_tid;
-
-	// timer id for periodically sending info on job to Shadow
-	int shadowupdate_tid;
-
-	// UDP socket back to the shadow command port
-	SafeSock *shadowsock;
 
 	// the real job executable name (after ATTR_JOB_CMD
 	// is switched to condor_exec).

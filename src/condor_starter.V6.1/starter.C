@@ -62,6 +62,8 @@ CStarter::CStarter()
 	ShadowAddr[0] = '\0';
 	jobAd = NULL;
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
+	shadowupdate_tid = -1;
+	shadowsock = NULL;
 }
 
 
@@ -88,7 +90,15 @@ CStarter::~CStarter()
 	if( jobAd ) {
 		delete jobAd;
 	}
+	if( shadowupdate_tid != -1 && daemonCore ) {
+		daemonCore->Cancel_Timer(shadowupdate_tid);
+		shadowupdate_tid = -1;
+	}
+	if( shadowsock ) {
+		delete shadowsock;
+	}
 }
+
 
 bool
 CStarter::Init( char peer[] )
@@ -464,6 +474,13 @@ CStarter::StartJob()
 
 	if (job->StartJob()) {
 		JobList.Append(job);		
+
+		// update the shadow every 20 minutes.  years of study say
+		// this is the optimal value. :^).
+		shadowupdate_tid = daemonCore->Register_Timer(8,(20*60)+6,
+			(TimerHandlercpp)&CStarter::UpdateShadow,
+			"CStarter::UpdateShadow", this);
+
 		return true;
 	} else {
 		delete job;
@@ -688,6 +705,13 @@ CStarter::Reaper(int pid, int exit_status)
 		dprintf(D_ALWAYS, "unhandled job exit: pid=%d, status=%d\n", pid,
 				exit_status);
 	}
+	if( all_jobs - handled_jobs == 0 ) {
+			// No more jobs, we can stop updating the shadow
+		if( shadowupdate_tid >= 0 ) {
+			daemonCore->Cancel_Timer(shadowupdate_tid);
+			shadowupdate_tid = -1;
+		}
+	}
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
 		dprintf(D_ALWAYS,"Last process exited, now Starter is exiting\n");
 		DC_Exit(0);
@@ -743,4 +767,52 @@ CStarter::SameUidDomain( void )
 			 "\t\tUidDomain, yet its hostname (%s) does not match\n",
 			 InitiatingHost );
 	return false;
+}
+
+
+int
+CStarter::UpdateShadow( void )
+{
+	ClassAd ad;
+
+	dprintf( D_FULLDEBUG, "Entering CStarter::UpdateShadow()\n" );
+
+	if ( ShadowAddr[0] == '\0' ) {
+		// we do not have an address for the shadow
+		dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): "
+				 "No ShadowAddr!\n" );
+		return FALSE;
+	}
+
+	if ( !shadowsock ) {
+		shadowsock = new SafeSock();
+		ASSERT( shadowsock );
+		shadowsock->connect( ShadowAddr );
+	}
+
+		// Publish all the info we care about into the ad.  This
+		// method is virtual, so we'll get all the goodies from
+		// derived classes, as well.
+	bool found_one = false;
+	UserProc *job;
+	JobList.Rewind();
+	while ((job = JobList.Next()) != NULL) {
+		if( job->PublishUpdateAd(&ad) ) {
+			found_one = true;
+		}
+	}
+
+	if( ! found_one ) {
+		dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): "
+				 "Didn't find any info to update!\n" );
+		return FALSE;
+	}
+
+		// Send it to the shadow
+	shadowsock->snd_int( SHADOW_UPDATEINFO, FALSE );
+	ad.put( *shadowsock );
+	shadowsock->end_of_message();
+	
+	dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): success\n" );
+	return TRUE;
 }
