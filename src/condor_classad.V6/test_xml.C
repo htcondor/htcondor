@@ -39,7 +39,8 @@ int main(int argc, char **argv)
 		          "<a n=\"C\"><b v=\"t\"/></a>"
 		          "<a n=\"D\"><l><n>10</n><un/><er/><n>14</n></l></a>"
 		          "<a n=\"E\"><c><a n=\"AA\"><n>4</n><a n=\"BB\"><s>x</s></a></c></a>"
-		          "<a n=\"F\"><e>(x >= 10)</e></a></c>";
+		          "<a n=\"F\"><e>(x >= 10)</e></a>"
+		          "<a n=\"G\"><s></s></a></c>";
 
 	classad = parser.ParseClassAd(xml);
 
