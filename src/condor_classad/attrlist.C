@@ -25,6 +25,7 @@ static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern 	"C" int _EXCEPT_(char*, ...);
 extern	"C"	void dprintf(int, char* fmt, ...);
 extern  "C" int  xdr_mywrapstring (XDR *, char **);
+extern  "C" int store_stmt (EXPR *, CONTEXT *);
 
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.
@@ -552,7 +553,7 @@ char *Print_elem(ELEM *elem, char *str)
   return tmpChar;
 }
 
-AttrList::AttrList(const CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 {
 	STACK		stack;
 	ELEM*		elem, *lElem, *rElem;
@@ -1060,6 +1061,32 @@ int AttrList::UpdateAgg(ExprTree* expr, int operation)
     }
     return TRUE;
 }
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Create a CONTEXT from an AttrList
+//////////////////////////////////////////////////////////////////////////////
+int
+AttrList::MakeContext (CONTEXT *c)
+{
+	char *line = new char [256];
+	AttrListElem *elem;
+	EXPR *expr;
+
+	for (elem = exprList; elem; elem = elem -> next)
+	{
+		line [0] = '\0';
+		elem->tree->PrintToStr (line);
+		expr = scan (line);
+		if (expr == NULL)
+			return FALSE;
+		store_stmt (expr, c);
+	}
+
+	delete [] line;
+	return TRUE;
+}
+
 
 AttrListList::AttrListList()
 {
