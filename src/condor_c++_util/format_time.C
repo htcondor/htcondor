@@ -32,9 +32,35 @@ format_date( time_t date )
     static char buf[ 12 ];
     struct tm   *tm;
 
+	if (date<0) {
+		strcpy(buf,"    ???    ");
+		return buf;
+	}
+
     tm = localtime( &date );
     sprintf( buf, "%2d/%-2d %02d:%02d",
         (tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
+    );
+    return buf;
+}
+
+/*
+  Format a date expressed in "UNIX time" into "month/day hour:minute".
+*/
+char *
+format_date_year( time_t date )
+{
+    static char buf[ 15 ];
+    struct tm   *tm;
+
+	if (date<0) {
+		strcpy(buf,"    ???    ");
+		return buf;
+	}
+
+    tm = localtime( &date );
+    sprintf( buf, "%2d/%02d/%-2d %02d:%02d",
+        (tm->tm_mon)+1, tm->tm_mday, tm->tm_year, tm->tm_hour, tm->tm_min
     );
     return buf;
 }
