@@ -16,14 +16,6 @@
 #	define Platform SPARC_SUNOS41
 #	define PlatformIncludeFile <SPARC_SUNOS41.cf>
 #	undef IS_SPARC_SUNOS41
-#elif defined(IS_SUN4M_SOLARIS) /* change by Dhaval */
-#	define Platform SUN4M_SOLARIS
-#	define PlatformIncludeFile <SUN4M_SOLARIS.cf>
-#	undef IS_SUN4M_SOLARIS
-#elif defined(IS_X86_SOLARIS) /* change by Dhaval */
-#	define Platform X86_SOLARIS
-#	define PlatformIncludeFile <X86_SOLARIS.cf>
-#	undef IS_X86_SOLARIS
 #endif
 
 /*************
@@ -156,5 +148,20 @@
 #define PlatformIncludeFile <ALPHA_OSF1.cf>
 #endif
 
+#if defined(sparc) && defined(sun)
+#	undef sparc
+#	undef sun
+#   define Platform SUN4M_SOLARIS
+#   define PlatformIncludeFile <SUN4M_SOLARIS.cf>
+#   undef IS_SUN4M_SOLARIS
+#endif
+
+#if defined(i386) && defined(sun)
+#	undef i386
+#   undef sun
+#   define Platform X86_SOLARIS
+#   define PlatformIncludeFile <X86_SOLARIS.cf>
+#   undef IS_X86_SOLARIS
+#endif
 
 #endif
