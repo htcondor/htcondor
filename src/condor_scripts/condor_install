@@ -34,31 +34,8 @@ $fs_domain="";
 $uid_domain="";
 $soft_uid="";
 
-###  Figure out who and where we are:
-@pwdent = getpwuid($<);
-$who=$pwdent[0];
-$tilde=$pwdent[7];
-chop($host=`hostname`);
-# Make sure $host is just hostname, with no domain.  Grab everything
-# upto the first ".".
-$host =~ s/(\w*)\..*/$1/;
-# Lookup the full hostname.
-$fullhost=(gethostbyname($host))[0];
-# Grab just the domain, so we have it.
-$fullhost =~ /\w*\.(.*)/;
-$domain = $1;
-
-###  Find condor's home directory, if it exists.
-@pwdent = getpwnam( "condor" );
-$condor_home=$pwdent[7];
-$condor_uid=$pwdent[2];
-
-###  Figure out who should own the files we create.
-$owner = &find_owner();
-
 # Print the opening remarks:
-print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-    "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+print "\n" x 50, 
     "Welcome to condor_install.  You are going to need to answer a few\n",
     "questions about how you want Condor configured on this machine, what\n",
     "pool(s) you want to join, and if this is machine is going to serve as\n",
@@ -78,6 +55,38 @@ print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
     "If you still have problems, send email to condor-admin\@cs.wisc.edu.\n\n",
     "Press enter to begin Condor installation\n";
 $_ = <STDIN>;
+
+###  Figure out who and where we are:
+@pwdent = getpwuid($<);
+$who=$pwdent[0];
+$tilde=$pwdent[7];
+chop($host=`hostname`);
+# Make sure $host is just hostname, with no domain.  Grab everything
+# upto the first ".".
+$host =~ s/(\w*)\..*/$1/;
+# Lookup the full hostname.
+$fullhost=(gethostbyname($host))[0];
+if( ! ($fullhost =~ /.*\..*/) ) {
+    # There's no "." in the hostname.  DNS/hosts/YP is probably
+    # misconfigured... try the other entry, that might be it.
+    $fullhost=(gethostbyname($host))[1];
+}
+if( ! ($fullhost =~ /.*\..*/) ) {
+    # There's still no "." in the hostname.  DNS/hosts/YP is totally 
+    # misconfigured... prompt the user;
+    $fullhost=&prompt_fullhost();
+}
+# Grab just the domain, so we have it.
+$fullhost =~ /\w*\.(.*)/;
+$domain = $1;
+
+###  Find condor's home directory, if it exists.
+@pwdent = getpwnam( "condor" );
+$condor_home=$pwdent[7];
+$condor_uid=$pwdent[2];
+
+###  Figure out who should own the files we create.
+$owner = &find_owner();
 
 ###  Figure out what we should do:
 print "\n***************************************************************************\n",
@@ -1769,3 +1778,23 @@ sub prompt_domain_settings {
     }
 }
 
+# Ask the user what their fully qualified hostname is.
+sub prompt_fullhost {
+    local $fh;
+    print "\nWARNING: I cannot determine a fully-qualified name for this machine.\n";
+    while( 1 ) {
+	print "\nPlease enter the full hostname, including your domain:\n";
+	chop($fh = <STDIN>);    
+	print "\nYou entered: $fh\n";
+	if( $fh =~ /.?\..?/ ) {
+	    print "Is that right? [no]";
+	    chop($_ = <STDIN>);    
+	    if( /^y$/i ) {
+		return $fh;
+	    }
+	} else {
+	    print "That doesn't contain any \".\" characters, so it can't be ",
+	    "fully-qualified.\nPlease try again.\n";
+	}
+    }
+}
