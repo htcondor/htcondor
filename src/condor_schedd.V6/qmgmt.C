@@ -1345,56 +1345,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	}
-	else if (stricmp(attr_name, ATTR_JOB_STATUS) == 0) {
-			// if we're setting the job status to a "finished state",
-			// namely COMPLETED, we want to add this job to a queue
-			// that needs to have the jobIsFinished() method called
-			// for each one...
-		long intval;
-		char* end;
-		intval = strtol( attr_value, &end, 10 );
-		if( end == attr_value ) {
-				// couldn't parse the number!
-			dprintf( D_ALWAYS, "SetAttribute() invalid value for %s: "
-					 "'%s' is not a number!\n", attr_name, attr_value );
-			return -1;
-		}			
-
-		int universe = CONDOR_UNIVERSE_STANDARD;
-		switch( intval ) {
-		case COMPLETED:
-			scheduler.enqueueFinishedJob( cluster_id, proc_id, 
-										  "status set to COMPLETED" );
-			break;
-
-		case REMOVED:
-				/*
-				  REMOVED is much more complicated.  unfortunately, we
-				  set the status to REMOVED before we send the signal
-				  to our job handler to clean things up.  so, we don't
-				  want to call the jobIsFinished() hook until the job
-				  handler finally exits.  therefore, we should *NOT*
-				  put the job into the queue just because we saw the
-				  SetAttribute(), we need to wait until the rest of
-				  the schedd code knows the job handler is gone,
-				  first. :( however, we still have to use this trick
-				  for grid universe jobs since we have no other way to
-				  know that the job has been removed. 
-				  derek <wright@cs.wisc.edu> 2005-03-31
-				*/
-			GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE,
-							 &universe );
-			if( universe == CONDOR_UNIVERSE_GLOBUS ) {
-				scheduler.enqueueFinishedJob( cluster_id, proc_id, 
-						"status set to REMOVED (grid universe)" );
-			}
-			break;
-
-		default:
-				// nothing to do
-			break;
-		}
-	}
 
 //	log = new LogSetAttribute(key, attr_name, attr_value);
 //	JobQueue->AppendLog(log);
