@@ -88,6 +88,18 @@ int UpDown::GetUserPriority(const char*  userName,int*  status)
 	return Error;
 }
 
+int UpDown::ChangeUserPriority(const char*  userName,int  newPriority)
+{
+	for ( int i =0; i < activeUsers; i++)
+	  if ( strncmp(table[i].name, userName,MaxUserNameSize-1) == 0 )
+		{
+			table[i].priority = newPriority;
+			return Success;
+		}
+	
+	return Error;
+}
+
 	
 void UpDown::UpdatePriority(void)	// updown algorithm
 {

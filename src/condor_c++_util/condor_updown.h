@@ -59,6 +59,7 @@ public  :
 	int GetNoOfActiveUsers(void);         // no of active users
 	void StartUserInfo(); // before GetNextUserInfo is called
 	int GetNextUserInfo(User & data);
+	int ChangeUserPriority(const char *name,int newPriority); 
 	int GetUserPriority(const char *name,int*  status); 
 				// get priority of user
 				// status = Error if user is unknown
