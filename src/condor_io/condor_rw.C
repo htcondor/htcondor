@@ -288,9 +288,19 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 				continue;
 			}
 
+#ifdef WIN32
+				// alas, apparently there's no version of strerror()
+				// that works on the codes you get back from
+				// WSAGetLastError(), so we need a seperate dprintf()
+				// that doesn't include a %s for error string.
 			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
 					 "timeout=%d, errno=%d.  Assuming failure.\n",
 					 nwo, timeout, the_error );
+#else
+			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
+					 "timeout=%d, errno=%d (%s).  Assuming failure.\n",
+					 nwo, timeout, the_error, strerror(the_error) );
+#endif
 			return -1;
 		}
 		
