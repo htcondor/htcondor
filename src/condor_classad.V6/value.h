@@ -25,23 +25,9 @@
 #define __VALUES_H__
 
 #include "stringSpace.h"
+#include "common.h"
 #include "list.h"
 #include "sink.h"
-
-/// The various kinds of values
-enum ValueType 
-{
-	/** The undefined value */			UNDEFINED_VALUE,
-	/** The error value */				ERROR_VALUE,
-	/** A boolean value (false, true)*/	BOOLEAN_VALUE,
-	/** An integer value */				INTEGER_VALUE,
-	/** A real value */					REAL_VALUE,
-	/** A string value */				STRING_VALUE,
-	/** An expression list value */		LIST_VALUE,
-	/** A classad value */				CLASSAD_VALUE,
-	/** An absolute time value */		ABSOLUTE_TIME_VALUE,
-	/** A relative time value */		RELATIVE_TIME_VALUE
-};
 
 class Value;
 class Literal;
