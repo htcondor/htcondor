@@ -6,7 +6,7 @@
 
 #ifndef _CLASSAD_UTIL_H
 #define _CLASSAD_UTIL_H
-#include "classad.h"
+#include "condor_classad.h"
 
 //
 // Given a ClassAd and a ClassAdList, a pointer to the first match in the 
