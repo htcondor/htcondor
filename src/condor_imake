@@ -1,14 +1,24 @@
 #!/bin/sh
 
+##################################################
+# Make sure that one does not build in a CVS workspace
+##################################################
+
 if [ -d CVS ]; then
 	echo "You probably don't want to do this in your source repository."
 	echo "Try doing it in a build directory instead."
 	exit 1
 fi
 
+##################################################
+# Initialize some global script variables
+##################################################
+
+# a boolean like variable I use elsewhere
+unkown="Unknown"
 
 ##################################################
-# Figure out the flags for imake to build Makefile
+# Initialize some variables about our arch/os environment
 ##################################################
 
 arch=`uname -m`
@@ -23,7 +33,21 @@ Opsys=""
 Other=""
 Other2=""
 
-# kerberos discovery
+# perform some irix specific initialization to determine ABI type
+if [ "$os" = "IRIX" ]; then
+	if [ "$osrelease" = "6.5" ]; then
+		# Let's default the build for 6.5 to mips3 and N32
+		IsMipsVersion=3
+		IsMipsABI=N32
+	else
+		IsMipsVersion=2
+		IsMipsABI=O32
+	fi
+fi
+
+##################################################
+# Kereberos Discovery
+##################################################
 if [ -f /p/condor/workspaces/kerberos/lib/libkrb5.a ] ; then
 	KerbPath="-DKERBEROS_PATH=/p/condor/workspaces/kerberos"
 	HasKerb="-DHAS_KERBEROS=YES"
@@ -33,7 +57,6 @@ if [ -f /p/condor/workspaces/kerberos/lib/libkrb5.a ] ; then
 		KerbK5="-DKERBEROS_K5=NO"
 	fi
 
-	KerbFlags="$KerbPath $HasKerb $KerbK5"
 elif [ -f /usr/kerberos/lib/libkrb5.a ] ; then
 	KerbPath="-DKERBEROS_PATH=/usr/kerberos"
 	HasKerb="-DHAS_KERBEROS=YES"
@@ -43,7 +66,6 @@ elif [ -f /usr/kerberos/lib/libkrb5.a ] ; then
 		KerbK5="-DKERBEROS_K5=NO"
 	fi
 
-	KerbFlags="$KerbPath $HasKerb $KerbK5"
 elif [ -f /usr/local/lib/libkrb5.a ] ; then
 	KerbPath="-DKERBEROS_PATH=/usr/local"
 	HasKerb="-DHAS_KERBEROS=YES"
@@ -53,12 +75,150 @@ elif [ -f /usr/local/lib/libkrb5.a ] ; then
 		KerbK5="-DKERBEROS_K5=NO"
 	fi
 
-	KerbFlags="$KerbPath $HasKerb $KerbK5"
 fi
+KerbFlags="$HasKerb $KerbK5 $KerbPath"
 
-# figure out where that annoying libgcc is... 
-LIBGCC=`gcc -print-libgcc-file-name`
-EgcsLib="-DLIB_GCC=$LIBGCC"
+##################################################
+# Determine compiler features and variousl compiler related libraries
+##################################################
+
+# Which gcc am I using?
+CompilerPath=`which gcc`
+
+# Find libgcc.a ( needed for all platforms )
+tmp=`gcc -print-libgcc-file-name`
+LibGcc="-DLIB_GCC=$tmp"
+
+# discover the version of gcc I have
+tmp=`((gcc -v) 2>&1) | tail -1 | cut -d' ' -f3`
+
+case "$tmp" in
+	"egcs-2.91.66" )
+		CompilerKind="-DIS_C_COMP_KIND_EGCS"
+		CompilerMajor="-DIS_C_COMP_MAJOR_EGCS_2"
+		CompilerMinor="-DIS_C_COMP_MINOR_EGCS_2_91"
+		CompilerPatch="-DIS_C_COMP_PATCH_EGCS_2_91_66"
+		;;
+	"2.95.3" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_95"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_95_3"
+		;;
+	"2.95.4" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_95"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_95_4"
+		;;
+	"2.96" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_96"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_96_0"
+		;;
+	"3.0" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_0"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_0_0"
+		;;
+	"3.1" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_1"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_1_0"
+		;;
+	"3.2" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_0"
+		;;
+	"3.2.1" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_1"
+		;;
+	"3.2.2" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_2"
+		;;
+	"3.3" )
+		CompilerKind="-DIS_C_COMP_KIND_GCC"
+		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
+		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_3"
+		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_3_0"
+		;;
+esac	
+
+CompilerID="$CompilerKind $CompilerMajor $CompilerMinor $CompilerPatch"
+
+# Find/define crt[01].o for each architecture we support
+case "$os" in 
+	"SunOS" | "Linux")
+		CRT_BEGIN=`gcc -print-file-name=crt1.o`
+		;;
+
+	"HP-UX" )
+		echo HP-UX
+		if [ $os = "HP-UX" -a "$osrelease" = "B.10.20" ] ; then
+			CRT_BEGIN=/lib/crt0.o
+		elif [ $os = "HP-UX" -a "$osversion" = "B.11.00" ] ; then
+			# we support only 64-bit compilations of condor on hpux 11.00
+			CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
+		fi
+		;;
+
+	"IRIX" )
+		case "$IsMipsABI" in
+			"N64" )
+				IrixBaseLibPath=/usr/lib64
+				;;
+			"N32" )
+				IrixBaseLibPath=/usr/lib32
+				;;
+			"O32" )
+				IrixBaseLibPath=/usr/lib32
+				;;
+		esac
+
+		case "$IsMipsVersion" in
+			"2" )
+				IrixLibPath=$IrixBaseLibPath
+				;;
+			"3" )
+				IrixLibPath="$IrixBaseLibPath/mips3"
+				;;
+			"4" )
+				IrixLibPath="$IrixBaseLibPath/mips4"
+				;;
+		esac
+
+		CRT_BEGIN="$IrixLibPath/crt1.o"
+		;;
+	
+	"OSF1" )
+		CRT_BEGIN=/usr/lib/cmplrs/cc/crt0.o
+		;;
+	
+	"AIX" )
+		CRT_BEGIN=/lib/crt0.o
+		;;
+esac
+CrtBegin="-DCRT_BEGIN=$CRT_BEGIN"
+
+# Find libstdc++.a, it is required we link with the archive version of this
+# library so the binaries can run on machines with no gcc install.
+tmp=`gcc --print-file-name=libstdc++.a`
+StdCpp="-DLIB_STDCPP=$tmp"
+
+##################################################
+# Determine operating system flavors
+##################################################
 
 Imakecppflags="gcc -E -w \$*"
 
@@ -69,6 +229,7 @@ elif [ $os = "HP-UX" -a "$osversion" = "B.11.00" ] ; then
 	Opsys="-DIS_HPUX11"
 
 elif [ $os = "OSF1" ] ; then
+		ArchFlag="-DIS_ALPHA"
         if [ $osrelease = "V4.0" ] ; then
                 Opsys="-DIS_DUX4"
         elif [ $osrelease = "V5.0" -o $osrelease = "V5.1" ] ; then
@@ -124,6 +285,7 @@ elif [ $os = "SunOS" ]; then
 	fi
 
 elif [ $os = "IRIX" ] ; then
+	ArchFlag="-DIS_MIPS"
 	if [ "$osrelease" = "6.5" ] ; then
 		Opsys="-DIS_IRIX65"
 	else
@@ -200,9 +362,80 @@ export IMAKECPP
 fi
 
 ##################################################
-# Finally, call imake with all the flags
+# Courtesy dump the various information so people know what they got
 ##################################################
 
-echo $IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
-$IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
+# set to zero or one to print nice output
+verbose_info=0
+
+if [ "X$verbose_info" = "X1" ]; then
+
+	echo "##################################################"
+	echo "Features found..."
+	echo "##################################################"
+	echo
+	echo "Operating system:"
+	echo "-----------------"
+	echo "$os"
+	echo
+	echo "Operating system release:"
+	echo "-------------------------"
+	echo "$osrelease"
+	echo
+	echo "Operating system version:"
+	echo "-------------------------"
+	echo "$osversion"
+	echo
+	echo "Architecture:"
+	echo "-------------"
+	echo "$arch"
+	echo
+	echo "Operating system(condor):"
+	echo "-------------------------"
+	echo "$Opsys"
+	echo
+	echo "Architecture(condor):"
+	echo "---------------------"
+	echo "$ArchFlag"
+	echo
+	case "$os" in
+		"Linux" | "AIX" )
+			echo "Additional Architecture info:"
+			echo "-----------------------------"
+			echo "$Other $Other2"
+			echo
+			;;
+	esac
+	echo "Kerberos:"
+	echo "---------"
+	echo "$KerbFlags"
+	echo
+	echo "Compiler Path:"
+	echo "--------------"
+	echo "$CompilerPath"
+	echo
+	echo "Compiler Identification:"
+	echo "------------------------"
+	echo "$CompilerID"
+	echo
+	echo "Libgcc:"
+	echo "-------"
+	echo "$LibGcc"
+	echo
+	echo "CrtBegin:"
+	echo "---------"
+	echo "$CrtBegin"
+	echo
+	echo "StdCpp:"
+	echo "---------"
+	echo "$StdCpp"
+	echo
+fi
+
+##################################################
+# Finally, call imake with all the flags
+##################################################
+echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+
 
