@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
-int string_to_sin(char *addr, struct sockaddr_in *sin);
+int string_to_sin(const char *addr, struct sockaddr_in *sin);
 
 char *sin_to_string(const struct sockaddr_in *sin);
 
@@ -58,6 +58,9 @@ unsigned int string_to_ip( const char* addr );
 /* Extract the ip_addr from a string of the form "<xx.xx.xx.xx:pppp>"
    and return a pointer to the ASCII version */
 char* string_to_ipstr( const char* addr );
+
+/* Convert a sinful string into a hostname. */
+char* string_to_hostname( const char* addr );
 
 char *sock_to_string(SOCKET sockd);
 
@@ -75,6 +78,8 @@ int same_host(const char *h1, const char *h2);
 char* calc_subnet_name( char* host );
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
+
+int is_valid_sinful( const char *sinful );
 
 /* Binds the given fd to any port on the correct local interface for
    this machine.   Returns 1 if successful, 0 on error. */
