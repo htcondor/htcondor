@@ -27,6 +27,7 @@ html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 IMPORT_LINKS = ../../config/import_links
 #import(../condor_syscall_lib,receivers.o)
 #import(../condor_syscall_lib,extern_path.o)
+
 #if NEEDS_FAKE_GETMNT
 import(../condor_util_lib,getmnt.o)
 #endif

@@ -22,24 +22,31 @@
 ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
-** Author:  Jim Basney
+** Author:  Jim Basney ( and Mike Yoder )
 **          University of Wisconsin, Computer Sciences Dept.
 ** 
 */ 
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "baseshadow.h"
 #include "shadow.h"
+#include "mpishadow.h"
 #include "exit.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
+#include "condor_qmgr.h"
 
-static CShadow ShadowObj;
-CShadow *Shadow = &ShadowObj;
+//static CShadow ShadowObj;
+//CShadow *Shadow = &ShadowObj;
+
+BaseShadow *Shadow;
 
 static void
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: condor_shadow schedd_addr host capability cluster proc\n" );
+	dprintf( D_ALWAYS, "Usage: condor_shadow schedd_addr host"
+			 "capability cluster proc\n" );
 	exit( JOB_SHADOW_USAGE );
 }
 
@@ -59,7 +66,59 @@ main_init(int argc, char *argv[])
 		usage();
 	}
 
-	Shadow->Init(argv[1], argv[2], argv[3], argv[4], argv[5]);
+	if (argv[1][0] != '<') {
+		EXCEPT("schedd_addr not specified with sinful string.");
+	}
+	
+	if (argv[2][0] != '<') {
+		EXCEPT("host not specified with sinful string.");
+	}
+
+		// We have to figure out what sort of shadow to make.
+		// That's why so much processing goes on here....
+
+		// Get the jobAd from the schedd:
+	ClassAd *jobAd;
+	char schedd_addr[128];
+	int cluster, proc;
+	strncpy ( schedd_addr, argv[1], 128 );
+	cluster = atoi(argv[4]);
+	proc = atoi(argv[5]);
+
+		// talk to the schedd to get job ad & set remote host:
+	ConnectQ(schedd_addr);
+	jobAd = ::GetJobAd(cluster, proc);
+		// Move the following somewhere else for MPI/PVM?
+	SetAttributeString(cluster,proc,ATTR_REMOTE_HOST,argv[2]);
+	DisconnectQ(NULL);
+	if (!jobAd) {
+		EXCEPT("Failed to get job ad from schedd.");
+	}
+
+	int universe;
+	if (jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
+			// change to standard when they work...
+		universe = VANILLA;
+	}
+	
+	switch ( universe ) {
+	case VANILLA:
+	case STANDARD:
+		Shadow = new UniShadow();
+		break;
+	case MPI:
+		EXCEPT( "MPI coming soon!" );
+//		Shadow = new MPIShadow();
+		break;
+	case PVM:
+		EXCEPT( "PVM...hopefully one day..." );
+//		Shadow = new PVMShadow();
+		break;
+	default:
+		EXCEPT( "Universe not supported" );
+	}
+
+	Shadow->init( jobAd, argv[1], argv[2], argv[3], argv[4], argv[5]);
 
 	return 0;
 }
@@ -67,14 +126,14 @@ main_init(int argc, char *argv[])
 int
 main_config()
 {
-	Shadow->Config();
+	Shadow->config();
 	return 0;
 }
 
 int
 main_shutdown_fast()
 {
-	Shadow->Shutdown(JOB_NOT_CKPTED);
+	Shadow->shutDown(JOB_NOT_CKPTED, 0);
 	return 0;
 }
 

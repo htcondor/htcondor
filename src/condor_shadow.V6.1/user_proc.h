@@ -30,13 +30,13 @@
 #if !defined(_CONDOR_USER_PROC_H)
 #define _CONDOR_USER_PROC_H
 
-class CShadow;
+class UniShadow;
 class ClassAd;
 
 class UserProc
 {
 public:
-	UserProc(CShadow *shadow);
+	UserProc(UniShadow *shadow);
 	virtual ~UserProc();
 private:
 }

@@ -41,7 +41,8 @@
 static char *_FileName_ = __FILE__;
 
 extern ReliSock *syscall_sock;
-extern CShadow *Shadow;
+extern BaseShadow *Shadow;
+extern RemoteResource *thisRemoteResource;
 
 int
 pseudo_register_machine_info(char *uiddomain, char *fsdomain)
@@ -52,15 +53,15 @@ pseudo_register_machine_info(char *uiddomain, char *fsdomain)
 int
 pseudo_get_job_info(ClassAd *&ad)
 {
-	ad = Shadow->GetJobAd();
+	ad = Shadow->getJobAd();
 	return 0;
 }
 
 int
 pseudo_get_executable(char *source)
 {
-	sprintf(source, "%s/cluster%d.ickpt.subproc0", Shadow->GetSpool(), 
-			Shadow->GetCluster());
+	sprintf(source, "%s/cluster%d.ickpt.subproc0", Shadow->getSpool(), 
+			Shadow->getCluster());
 	return 0;
 }
 
@@ -69,7 +70,10 @@ pseudo_job_exit(int status, int reason)
 {
 	dprintf(D_SYSCALLS,"in pseudo_job_exit: status=%d,reason=%d\n",status,
 		reason);
-	Shadow->SetExitStatus(status);
-	Shadow->SetExitReason(reason);
+	thisRemoteResource->setExitStatus(status);
+	thisRemoteResource->setExitReason(reason);
 	return 0;
 }
+
+
+
