@@ -1180,6 +1180,19 @@ using the submit description file command \Opt{transfer\_input\_files}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why is \Condor{master} failing to start with some error about\\
+   	"In StartServiceCtrlDispatcher, Error number: 1063"?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+On Condor for Windows, the master is started as a service. Therefore,
+starting the master as you would on Unix will not work. You must start
+Condor on Windows machines using:
+\begin{verbatim}
+	net start condor
+\end{verbatim}
+or start the Condor service from the Service Control Manager located in
+the Windows Control Panel.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Jobs submitted from NT give an error referring to a credential.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
