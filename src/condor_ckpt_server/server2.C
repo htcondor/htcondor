@@ -1166,7 +1166,8 @@ file_stream_progress_report(int bytes_moved)
 	if (!ManageBandwidth) return;
 
 	time_t current_time = time(0);
-	if (current_time < file_stream_info.last_update + NetworkHorizon) return;
+	if (current_time < file_stream_info.last_update + (NetworkHorizon/5))
+		return;
 
 	dprintf(D_ALWAYS, "Sending CkptServerUpdate: %d bytes to go.\n", 
 			file_stream_info.total_bytes-bytes_moved);

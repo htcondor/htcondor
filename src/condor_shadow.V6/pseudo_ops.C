@@ -1047,7 +1047,7 @@ file_stream_progress_report(int bytes_moved)
 	}
 	file_stream_info.bytes_so_far = bytes_moved;
 	time_t current_time = time(0);
-	if (current_time >= file_stream_info.last_update + NetworkHorizon) {
+	if (current_time >= file_stream_info.last_update + (NetworkHorizon/5)) {
 		RequestCkptBandwidth();
 	}
 }
