@@ -37,6 +37,7 @@
 #include "list.h"
 #include "user_proc.h"
 #include "sig_install.h"
+#include "../condor_sysapi/sysapi.h"
 
 #if !defined(X86)
 typedef List<UserProc> listuserproc; 
@@ -189,7 +190,7 @@ init()
 {
 	move_to_execute_directory();
 	init_environment_info();
-	set_resource_limits();
+	sysapi_set_resource_limits();
 	close_unused_file_descriptors();
 
 	return DEFAULT;
