@@ -1439,13 +1439,21 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		
 		// Now, deal with nice-user jobs.  If this user name has the
 		// nice-user prefix, strip it, and add it to our constraint.
+		// Otherwise, ad NiceUser == False to our constraint.
 		if ( strncmp(user,nice_user_prefix,nice_user_prefix_len) == 0 ) {
 			sprintf(constraint, "(%s == TRUE) && ", ATTR_NICE_USER);
 			constraint += strlen(constraintbuf);
 			user += nice_user_prefix_len;
+		} else {
+			sprintf(constraint, "(%s == FALSE) && ", ATTR_NICE_USER);
+			constraint += strlen(constraintbuf);
 		}
 
 		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, user);
+
+			// OK, we're finished building the constraint now, so set
+			// the constraint pointer to the head of the string.
+		constraint = constraintbuf;
 		
 		// Put the '@' back if we changed it
 		if ( the_at_sign ) {
