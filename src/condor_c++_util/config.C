@@ -350,8 +350,12 @@ expand_macro( char *value, BUCKET **table, int table_size )
 	while( get_var(tmp, &left, &name, &right) ) {
 		tvalue = lookup_macro( name, table, table_size );
 		if( tvalue == NULL ) {
-			FREE( tmp );
-			return( NULL );
+			// FREE( tmp );
+			// return( NULL );
+			// Returning NULL here is bad news.  If there is a macro
+			// not defined, we should EXCEPT so a human knows there is
+			// a faulty expression in the config file.
+			EXCEPT("Cannot expand macro %s!",name);
 		}
 
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
