@@ -168,8 +168,8 @@ $realskel="condor_release";
   "i386_linux2"   => "libc5",
   "i386_linux22"  => "glibc21",
   "i386_linux3"   => "glibc20",
-  "i386_rh61  "   => "glibc21",
-  "i386_rh62  "   => "glibc21",
+  "i386_rh61"   => "glibc21",
+  "i386_rh62"   => "glibc21",
   "alpha_linux3"  => "glibc20",
   "alpha_linux22" => "glibc21"
 );
