@@ -35,7 +35,6 @@ static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
 static bool parse_job(Dag *dag, char *filename, int lineNumber);
-static bool parse_dap(Dag *dag, char *filename, int lineNumber);
 static bool parse_script(char *line, Dag *dag, char *filename, int lineNumber);
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
 static bool parse_retry(Dag *dag, char *filename, int lineNumber);
@@ -48,11 +47,9 @@ void exampleSyntax (const char * example) {
 
 //-----------------------------------------------------------------------------
 bool isKeyWord (char *token) {
-
     static const char * keywords[] = {
-        "JOB", "DAP", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT", "DOT"
-    }; //--> DAP
-
+        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT", "DOT"
+    };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
 
@@ -107,14 +104,7 @@ bool parse (char *filename, Dag *dag) {
         if (strcasecmp(token, "JOB") == 0) {
 			parsed_line_successfully = parse_job(dag, filename, lineNumber);
 		}
-
-	// Handle a DaP spec
-        // Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
-        //
-        if (strcasecmp(token, "DAP") == 0) {
-	  parsed_line_successfully = parse_dap(dag, filename, lineNumber);
-	}
-
+      
         // Handle a SCRIPT spec
         // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
         else if ( strcasecmp(token, "SCRIPT") == 0 ) {
@@ -212,8 +202,6 @@ parse_job(
 	Job * job = new Job (jobName, cmd);
 	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
 	
-    	job->job_type = Job::CONDOR_JOB; //--> DAP
-	
 	// Check if the user has pre-definied a Job as being done
 	//
 	char *done = strtok(0, DELIMITERS);
@@ -231,82 +219,6 @@ parse_job(
 	}
 	return true;
 }
-
-//-----------------------------------------------------------------------------
-//
-// Function: parse_dap
-// Purpose:  parse a line of the format "DAP job-name submit-file [DONE]"
-//
-//-----------------------------------------------------------------------------
-static bool 
-parse_dap(
-	Dag  *dag, 
-	char *filename, 
-	int  lineNumber)
-{
-	const char * example = "DAP j1 j1.dapsubmit";
-
-	char *jobName = strtok(NULL, DELIMITERS);
-	if (jobName == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing job name\n", 
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be a keyword
-	//
-	if (isKeyWord(jobName)) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): JobName cannot be a keyword\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be an existing JobName
-	if( dag->NodeExists( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-			"ERROR: invalid DAG (%s:%d): node name \"%s\" "
-			"already used\n", filename, lineNumber, jobName );
-		return false;
-	}
-
-	// Next token is the condor command file
-	//
-	char *cmd = strtok(NULL, DELIMITERS);
-	if (cmd == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing condor cmd file\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	Job * job = new Job (jobName, cmd);
-	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
-	
-    	job->job_type = Job::DAP_JOB;  //--> DAP
-	
-	// Check if the user has pre-definied a Job as being done
-	//
-	char *done = strtok(0, DELIMITERS);
-	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-		job->_Status = Job::STATUS_DONE;
-	}
-	
-	if (!dag->Add (*job)) {
-		debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
-					  job->GetJobName() );
-		return false;
-	} else {
-		debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
-					  job->GetJobName() );
-	}
-	return true;
-}
-
 
 //-----------------------------------------------------------------------------
 //
