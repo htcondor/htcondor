@@ -23,16 +23,19 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "sysapi.h"
 
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
 
+/* If for some reason, the call fails, then -1 is returned */
+
 #if defined(WIN32)
 
 int
-sysapi_virt_memory_raw()
+sysapi_swap_space_raw()
 {
 	MEMORYSTATUS status;
 	sysapi_internal_reconfig();
@@ -44,25 +47,36 @@ sysapi_virt_memory_raw()
 
 /* On Linux, we just open /proc/meminfo and read the answer */
 int
-sysapi_virt_memory_raw()
+sysapi_swap_space_raw()
 {
 	FILE	*proc;
-	int	free_swap;
+	double	free_swap;
 	char	tmp_c[20];
 	int	tmp_i;
 
 	sysapi_internal_reconfig();
 	proc = fopen("/proc/meminfo", "r");
 	if(!proc)	{
+		dprintf(D_ALWAYS,
+			"sysapi_swap_space_raw(): Could not open /proc/meminfo\n");
 		return -1;
 	}
 	
-	fscanf(proc, "%s %s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c, &tmp_c);
+	fscanf(proc, "%s %s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
 	fscanf(proc, "%s %d %d %d %d %d %d", tmp_c, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i);
-	fscanf(proc, "%s %d %d %d", tmp_c, &tmp_i, &tmp_i, &free_swap);
+	fscanf(proc, "%s %d %d %lf", tmp_c, &tmp_i, &tmp_i, &free_swap);
 	fclose(proc);
 
-	return free_swap / 1024;
+	/* check for overflow of an int */
+
+	free_swap /= 1024.0;
+
+	if (free_swap > INT_MAX)
+	{
+		return INT_MAX;
+	}
+
+	return (int)free_swap;
 }
 
 #elif defined(HPUX)
@@ -93,10 +107,10 @@ sysapi_virt_memory_raw()
 #include <sys/pstat.h>
 
 int
-sysapi_virt_memory_raw ()
+sysapi_swap_space_raw ()
 {
   int pagesize;  /* in kB */
-  long virt_mem_size = 0;  /* the so-called virtual memory size we seek */
+  double virt_mem_size = 0;  /* the so-called virtual memory size we seek */
   struct pst_static s;
   struct pst_swapinfo pss[10];
   int count, i;
@@ -107,8 +121,9 @@ sysapi_virt_memory_raw ()
     pagesize = s.page_size / 1024;   /* it's right here.... */
   }
   else {
-    dprintf ( D_ALWAYS, "Error getting pagesize.  Errno = %d\n", errno );
-    return 100000;
+    dprintf ( D_ALWAYS,
+		"sysapi_swap_space_raw(): Error getting pagesize. Errno = %d\n",errno);
+    return -1;
   }
 
   /* loop until count == 0, will occur when we've got 'em all */
@@ -124,7 +139,7 @@ sysapi_virt_memory_raw ()
 	   Grrr.  It's here in case it works somewhere else. */
 	if (((pss[i].pss_flags & 2) == 2) || ((pss[i].pss_flags & 4) == 4)) {
           /* add free pages to total */
-          virt_mem_size += pss[i].pss_nfpgs * pagesize;
+          virt_mem_size += (double)pss[i].pss_nfpgs * (double)pagesize;
         }
       }
     }
@@ -133,14 +148,21 @@ sysapi_virt_memory_raw ()
   }
 
   if (count == -1)
-    dprintf ( D_ALWAYS, "Error in pstat_getswap().  Errno = %d\n", errno );
+    dprintf ( D_ALWAYS,
+		"sysapi_swap_space_raw(): Error in pstat_getswap().  Errno = %d\n",
+		errno );
 
-  if ( virt_mem_size != 0 )
-    return virt_mem_size;
-  else {
-    /* Print an error and guess.  :-) */
-    dprintf ( D_ALWAYS, "Error determining virt_mem_size.  Guessing 100MB.\n");
-    return 100000;
+	/* under HP-UX, it is considered an error if virt_mem_size == 0 */
+  if ( virt_mem_size != 0 ) {
+  	if (virt_mem_size > INT_MAX) {
+		return INT_MAX;
+	}
+    return (int)virt_mem_size;
+  } else {
+    /* Print an error */
+    dprintf ( D_ALWAYS, 
+		"sysapi_swapspace_raw(): Error virt_mem_size == 0.\n");
+    return -1;
   }
 }
 
@@ -148,19 +170,28 @@ sysapi_virt_memory_raw ()
 
 #include <sys/stat.h>
 #include <sys/swap.h>
+#incldue <sys/types.h>
 
 close_kmem() {}
 
 int
-sysapi_virt_memory_raw()
+sysapi_swap_space_raw()
 {
-	int freeswap;
+	off_t freeswap;
 	sysapi_internal_reconfig();
 	if( swapctl(SC_GETFREESWAP, &freeswap) == -1 ) {
+		dprintf(D_ALWAYS, 
+			"sysapi_swap_space_raw(): swapctl failed. Errno = %d\n", errno);
 		return -1;
 	}
-	/* freeswap is in 512 byte blocks, so convert it to 1K locks */
-	return( freeswap / 2 );
+	/* freeswap is in 512 byte blocks, so convert it to 1K blocks */
+	freeswap /= 2;
+
+	/* check it for overflow of an int */
+	if (freeswap > INT_MAX)
+		return INT_MAX;
+
+	return (int)freeswap;
 }
 
 #elif defined(OSF1)
@@ -170,14 +201,23 @@ sysapi_virt_memory_raw()
 #include <sys/table.h>
 
 int
-sysapi_virt_memory_raw()
+sysapi_swap_space_raw()
 {
 	struct tbl_swapinfo	swap;
+	double freeswap;
+
 	sysapi_internal_reconfig();
 	if( table(TBL_SWAPINFO,-1,(char *)&swap,1,sizeof(swap)) < 0 ) {
 		return -1;
 	}
-	return (swap.free * NBPG) / 1024;
+
+	/* hopefully, this shouldn't overflow a double */
+	freeswap = ((double)swap.free * (double)NBPG) / (double)1024;
+
+	if (freeswap > INT_MAX)
+		return INT_MAX;
+
+	return (int)freeswap;
 }
 
 #elif defined(Solaris)
@@ -186,46 +226,32 @@ sysapi_virt_memory_raw()
 #include <sys/stat.h>
 #include <sys/swap.h>
 
-static int ctok(int clicks);
-
-/*
- *  DEFAULT_SWAPSPACE
- *
- *  This constant is used when we can't get the available swap space through
- *  other means.  -- Ajitk
- */
-
-#define DEFAULT_SWAPSPACE       100000 /* ..dhaval 7/20 */
-
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
 int
-sysapi_virt_memory_raw()
+sysapi_swap_space_raw()
 {
 	struct anoninfo 	ai;
-	int avail;
+	double avail;
+	int factor;
 
 	sysapi_internal_reconfig();
+
+	factor = sysconf(_SC_PAGESIZE) >> 10;
+
 	memset( &ai, 0, sizeof(ai) );
 	if( swapctl(SC_AINFO, &ai) >= 0 ) {
-		avail = ctok( ai.ani_max - ai.ani_resv );
-		return avail;
+		avail = (double)(ai.ani_max - ai.ani_resv) * (double)factor;
+		if (avail > INT_MAX) {
+			return INT_MAX;
+		}
+		return (int)avail;
 	} else {
 		dprintf( D_FULLDEBUG, "swapctl call failed, errno = %d\n", errno );
-		return DEFAULT_SWAPSPACE;
+		return -1;
 	}
-}
-
-int
-ctok(int clicks)
-{
-	static int factor = -1;
-	if( factor == -1 ) {
-		factor = sysconf(_SC_PAGESIZE) >> 10;
-	}
-	return( clicks*factor );
 }
 
 #endif /* !defined(WIN32) */
@@ -233,11 +259,11 @@ ctok(int clicks)
 
 /* the cooked version of the function */
 int
-sysapi_virt_memory(void)
+sysapi_swap_space(void)
 {
 	sysapi_internal_reconfig();
 
-	return sysapi_virt_memory_raw();
+	return sysapi_swap_space_raw();
 }
 
 
