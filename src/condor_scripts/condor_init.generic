@@ -7,12 +7,20 @@ set PATH=/bin:/sbin:/usr/bin:/usr/sbin:/etc:$PATH
 rm -f ~condor/condor_config
 ln -s $RELEASEDIR/lib/condor_config ~condor/condor_config
 
+rm -f ~condor/condor_config.master
+ln -s $RELEASEDIR/lib/condor_config ~condor/condor_config.master
+
+set MASTER_CONFIG_FILE=`$CONFIG_VAL -master LOCAL_CONFIG_FILE`
 set LOCAL_CONFIG_FILE=`$CONFIG_VAL LOCAL_CONFIG_FILE`
-rm -f $LOCAL_CONFIG_FILE
-touch $LOCAL_CONFIG_FILE
-chmod 664 $LOCAL_CONFIG_FILE
+
+rm -f $LOCAL_CONFIG_FILE $MASTER_CONFIG_FILE
+touch $LOCAL_CONFIG_FILE $MASTER_CONFIG_FILE
+chmod 664 $LOCAL_CONFIG_FILE 
 chown condor $LOCAL_CONFIG_FILE
 chgrp condor $LOCAL_CONFIG_FILE
+chmod 644 $MASTER_CONFIG_FILE
+chown 0 $MASTER_CONFIG_FILE
+chgrp 0 $MASTER_CONFIG_FILE
 
 set LOG=`$CONFIG_VAL LOG`
 set EXECUTE=`$CONFIG_VAL EXECUTE` 
