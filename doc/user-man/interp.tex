@@ -1,0 +1,122 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:interp}Running Interpreted Programs in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{Interpreted languages}
+\index{Languages!interpreted}
+\index{Java}
+\index{Perl}
+\index{Python}
+
+Condor can manage programs that are interpreted, such as those written
+in Java, Perl, Python, or almost any other language.  The advantage of
+using interpreted languages is that they may run on any sort of machine,
+regardless of its CPU or operating system.  With some help from the local
+system administrator, Condor will find the correct path to the components
+needed to execute the user's program.
+
+Before getting started, the machines on which you wish to run must make it
+known what languages they support.  This must be done by the \emph{owners}
+of the machines you wish to run on.   This is done by setting the \Macro{INTERPRETERS}
+value in the local config file.  Because interpreted languages come in many
+versions and implementations, this config value must describe four very
+specific things about the available interpreters.  Each line must contain
+the language name, language version, vendor's name, vendor's version, and
+the path to the interpreter.
+
+For example, at our site, we advertise several versions of Java and Perl.
+(Please carefully note the backslashes at the end of the lines.)
+
+\begin{verbatim}
+INTERPRETERS = \
+        java 2 sun 1.2.2 /s/jdk/1.2.2/bin/java   \
+        java 1 sun 1.1.8 /s/jdk/1.1.8/bin/java   \
+        perl 5 perl 5.005 /usr/bin/perl          \
+        perl 5 perl 5.001 /usr/bin/old-perl
+\end{verbatim}
+
+With these values set, the user may execute interpreted programs
+in any of the available languages without knowing exactly where
+they are installed.  Below we will give examples using
+Java.  Other languages are possible by using the obvious substitutions.
+
+Let's suppose that you have written a simple Java program called Hello.
+First, you must compile the source into a class file:
+
+\begin{verbatim}
+ % javac Hello.java
+\end{verbatim}
+
+If you were to run the program at your workstation, you would
+execute this:
+
+\begin{verbatim}
+ % java Hello
+\end{verbatim}
+
+To instead submit Hello as a Condor job, write a submit file that selects the
+vanilla universe, specifies the Java language, and gives the class
+file as the executable:
+
+\begin{verbatim}
+universe = vanilla
+language = java
+executable = Hello.class
+arguments = Hello
+output = Hello.out
+\end{verbatim}
+
+When this program is submitted, Condor will choose a machine that has
+Java installed and will run the appropriate interpreter with ``Hello''
+in the arguments.  More precisely, it will select a machine that
+publishes the attribute \AdStr{javaInterpreter}.  You can list the
+machines that make a Java interpreter available like this:
+
+\index{javaInterpreter}
+\begin{verbatim}
+ % condor_status -constraint '(javaInterpreter!="")'
+\end{verbatim}
+
+Some programs are very sensitive to the exact interpreter used.
+For example, some programs may require version 2 of the Java
+language.  Some may even require a particular vendor's
+interpreter.
+
+If you simply specify \AdStr{language=java}, then your program
+will be executed on \emph{any} available interpreter of any version
+and any vendor.  If you require a particular version of the language,
+then give the language version in the submit file:
+
+\begin{verbatim}
+language = java2
+\end{verbatim}
+
+If you require a particular vendor's interpreter:
+
+\begin{verbatim}
+language = java2sun
+\end{verbatim}
+
+Or even an exact software version:
+
+\begin{verbatim}
+language = java2sun1.2.2
+\end{verbatim}
+
+Although these jobs technically execute in the Vanilla universe,
+they may be executed on machines that do not share a common file
+system.  Condor's file transfer mechanism (described in section
+\ref{sec:file-transfer}) may be used to move the necessary data
+files in and out.  For example:
+
+\index{File transfer}
+\index{transfer\_input\_files}
+\index{transfer\_output\_files}
+\begin{verbatim}
+requirements = (FileSystemDomain=="cs.wisc.edu") || (FileSystemDomain=="hep.wisc.edu")
+transfer_input_files = Hello.input Helper.class
+transfer_output_files = Hello.output
+\end{verbatim}
+
+
+
