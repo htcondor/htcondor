@@ -377,26 +377,42 @@ fi
 #########
 # figure out what linker flags put us in static-link mode
 #########
-if test $os = "SunOS" ; then
-  AC_MSG_CHECKING([what gcc flag forces the linker into static mode])
-  echo "main() { return 0; }" > static_test.c
-  gcc -c static_test.c > /dev/null 2>&1
-  gcc_static_ld_flag=""
-  for arg in "-Wl,-Bstatic" "-Wl,-B,static" ; do
-    gcc -o static_test static_test.o $arg  > /dev/null 2>&1
-    if test $? -eq 0 ; then
-      gcc_static_ld_flag="$arg"
-      break
-    fi
-  done
-  rm -f static_test.c static_test.o static_test > /dev/null 2>&1
-  if test "x$gcc_static_ld_flag" = "x" ; then
-    AC_MSG_RESULT([ERROR])
-    AC_MSG_ERROR([Can not find flags for this linker!])
-  else 
-    AC_MSG_RESULT([$gcc_static_ld_flag])
-    AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
+gcc_ld_prog=`gcc -print-prog-name=ld`
+AC_MSG_NOTICE([checking what gcc flag forces $gcc_ld_prog into static mode])
+echo "main() { return 0; }" > static_test.c
+gcc -c static_test.c > /dev/null 2>&1
+gcc_static_ld_flag=""
+#####
+# -Bstatic is GNU ld
+# -B,static is Solaris ld
+# -a,archive is HPUX ld
+# -no_so is DUX ld
+#####
+for arg in "-Bstatic" "-B,static" "-a,archive" "-no_so" ; do
+  # we always want to prepend "-Wl,"
+  arg="-Wl,$arg"
+  AC_MSG_CHECKING([$arg])    
+  _test_output=`gcc -o static_test $arg static_test.o 2>&1`
+  _test_status=$?
+  if test $_test_status -eq 0 && test "x$_test_output" = "x"; then 
+    gcc_static_ld_flag=$arg
+    AC_MSG_RESULT([yes])
+    break
+  else
+    AC_MSG_RESULT([no])
   fi
+done
+rm -f static_test.c static_test.o static_test > /dev/null 2>&1
+if test "x$gcc_static_ld_flag" = "x" ; then
+  msg="can not find appropriate flags for $gcc_ld_prog!"
+  if test $os = "SunOS" ; then
+    # on Solaris, this is fatal, since we depend on this info
+    AC_MSG_ERROR([$msg])
+  else
+    AC_MSG_WARN([$msg])
+  fi
+else 
+  AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
 fi
   
 
