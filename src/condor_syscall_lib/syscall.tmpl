@@ -576,7 +576,9 @@ version.
 
 	#if defined(HAS_64BIT_SYSCALLS)
 
-	#if defined(Solaris26)
+	#if defined(Solaris26) && !defined(IRIX)
+		/* when I can test this for sure, I'll remove the IRIX stuff from
+			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
 			#if defined(IRIX)
 			no_sys_chk,
