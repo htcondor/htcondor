@@ -44,6 +44,10 @@ are all consistently formatted.
 \item Fixed a bug in the Linux standard universe where \Cmd{calloc}{2}
 would not return zero filled memory.
 
+\item \Condor{rm}, \Condor{hold} and \Condor{release} will now return
+a non-zero exit status on failure, and only return 0 on success.
+Previously, they always returned status 0.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -53,7 +57,6 @@ would not return zero filled memory.
 \item None.
 
 \end{itemize}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-2-0}Version 6.2.0}
