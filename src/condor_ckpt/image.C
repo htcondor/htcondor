@@ -3,22 +3,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/vmparam.h>
 #include "image.h"
 #include "stubs.h"
-#include <setjmp.h>
 
-Image MyImage;
-jmp_buf Env;
+#ifndef SIG_DFL
+#include <signal.h>
+#endif
 
-#define DATA_ALIGN  0x2000
-#define ALIGN(x)    (((x)+DATA_ALIGN-1)/DATA_ALIGN*DATA_ALIGN)
-#define SETJMP _setjmp
-#define LONGJMP _longjmp
+
+static Image MyImage;
+static jmp_buf Env;
 
 Header::Header()
 {
@@ -131,13 +128,13 @@ Image::Save( int c, int p, const char *o )
 	head.Init( c, p, o );
 
 		// Set up data segment
-	data_start = ALIGN( (RAW_ADDR)&etext );
-	data_end = (RAW_ADDR)sbrk( 0 );
+	data_start = data_start_addr();
+	data_end = data_end_addr();
 	AddSegment( "DATA", data_start, data_end );
 
 		// Set up stack segment
-	stack_start = GetStackLimit();
-	stack_end = USRSTACK;
+	stack_start = stack_start_addr();
+	stack_end = stack_end_addr();
 	AddSegment( "STACK", stack_start, stack_end );
 
 		// Calculate positions of segments in ckpt file
@@ -207,22 +204,7 @@ SegMap::Contains( void *addr )
 	return ((RAW_ADDR)addr >= core_loc) && ((RAW_ADDR)addr < core_loc + len);
 }
 
-// extern "C" int	setjmp( jmp_buf );
-const int SP = 2;	// index of Stack Pointer in jmp_buf
 
-RAW_ADDR
-Image::GetStackLimit()
-{
-	RAW_ADDR	sp;
-	jmp_buf	env;
-
-	(void)SETJMP( env );
-	sp = env[SP];
-	return (sp / 1024L) * 1024L;	// round downward to 1 K boundary
-}
-
-const int TmpStackSize = 4096;
-char	TmpStack[ TmpStackSize ];
 
 void
 Image::Restore()
@@ -238,8 +220,11 @@ Image::Restore()
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
 
-	SwitchStack( TmpStack, TmpStackSize );
+	ExecuteOnTmpStk( RestoreStack );
+
+		// RestoreStack() also does the jump back to user code
 	fprintf( stderr, "Error, should never get here\n" );
+	exit( 1 );
 }
 
 void
@@ -261,36 +246,14 @@ Image::RestoreSeg( const char *seg_name )
 	exit( 1 );
 }
 
-void ReadStack();
+
+
 
 void
-Image::SwitchStack( char *base, size_t len )
+RestoreStack()
 {
-	jmp_buf	env;
-
-	if( SETJMP(env) == 0 ) {
-			// First time through - move SP
-		if( StackGrowsDown ) {
-			env[SP] = (RAW_ADDR)base + len;
-		} else {
-			env[SP] = (RAW_ADDR)base;
-		}
-		LONGJMP( env, 1 );
-	} else {
-			// Second time through - restore stack
-		MyImage.RestoreSeg( "STACK" );
-		fprintf( stderr, "About to longjmp back to restored stack\n" );
-		LONGJMP( Env, 1 );
-	}
-}
-
-void
-ReadStack()
-{
-	int		local;
-
-	DUMP( "", &local, 0x%X );
-	exit( 0 );
+	MyImage.RestoreSeg( "STACK" );
+	LONGJMP( Env, 1 );
 }
 
 int
@@ -385,6 +348,9 @@ SegMap::Read( int fd, ssize_t pos )
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 		exit( 1 );
+	}
+	if( strcmp(name,"DATA") == 0 ) {
+		brk( (char *)(core_loc + len) );
 	}
 	nbytes =  read(fd,core_loc,len);
 	if( nbytes < 0 ) {
