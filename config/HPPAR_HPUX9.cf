@@ -70,8 +70,8 @@
 
 #define PVM_ARCH			HPPA
 
-#define CCompiler gcc
-#define CPlusCompiler g++
+#define CCompiler /usr/psup/gcc-2.6.3/bin/gcc
+#define CPlusCompiler /usr/psup/gcc-2.6.3/bin/g++
 #define StaticFlag -static
 #define UnixName /hp-ux				/* pathname of the system executable */
 /* #define syscall_lib  */
