@@ -78,6 +78,7 @@ extern "C" {
 char *IpcFile;
 
 extern int ExitReason;
+extern int condor_rm_happend;
 extern int JobExitStatus;
 extern char    ICkptName[];
 extern char    CkptName[];

@@ -210,6 +210,7 @@ int		InitialJobStatus = -1;
 int JobStatus;
 struct rusage JobRusage;
 int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
+int check_static_policy = 1;			/* don't check if condor_rm'ed */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
@@ -553,7 +554,9 @@ main(int argc, char *argv[], char *envp[])
 		to exit. It modifies ExitReason approriately for job holding, or, get
 		this, just EXCEPTs if the jobs is supposed to go into idle state and
 		not leave. :) */
-	static_policy();
+	if (check_static_policy) {
+		static_policy();
+	}
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
 		ExitReason );
@@ -1459,6 +1462,7 @@ handle_sigusr1( void )
 {
 	dprintf( D_ALWAYS, 
 			 "Shadow received SIGUSR1 (rm command from schedd)\n" );
+	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
 }
 
@@ -1482,6 +1486,7 @@ handle_sigquit( void )
 #endif
 {
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
+	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
 }
 
