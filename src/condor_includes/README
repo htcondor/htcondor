@@ -90,6 +90,9 @@ Descriptions:
 		can be read by this function.  The return is coded as an integer,
 		and the codes are defined here.
 
+	condor_uid.h
+		Definitions for switching effective UID between "root" and "condor".
+
 
 =========================================================================
 
