@@ -97,7 +97,7 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 	listDirectoriesInPath.rewind();
 
 	const char *psDir;
-	while (psDir = listDirectoriesInPath.next())
+	while( (psDir = listDirectoriesInPath.next()) )
 	{
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
