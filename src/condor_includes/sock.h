@@ -125,6 +125,7 @@ public:
 
 	int set_async_handler( CedarHandler *handler );
 
+	
 	//	Socket services
 	//
 
@@ -148,7 +149,6 @@ public:
 	
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
-
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
         @param sec the number of seconds to wait before timing out
@@ -183,6 +183,10 @@ public:
 
 	/// is a non-blocking connect outstanding?
 	bool is_connect_pending() { return _state == sock_connect_pending; }
+	///
+	int condor_read(SOCKET fd, char *buf, int sz, int timeout);
+	///
+	int condor_write(SOCKET fd, char *buf, int sz, int timeout); 
 
     /// 
 	virtual ~Sock();
@@ -194,6 +198,7 @@ public:
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
+	
 
 
 	/*
@@ -230,6 +235,25 @@ protected:
 	char * serialize(char *);
 	char * serialize() const;
 
+	///
+	virtual int encrypt(bool);
+	///
+	virtual int hdr_encrypt();
+	///
+	virtual bool is_hdr_encrypt();
+    ///
+	virtual int authenticate();
+    ///
+	virtual int isAuthenticated();
+    ///
+	virtual void unAuthenticate();
+    ///
+	virtual bool is_encrypt();
+	///
+	virtual int wrap(char*,int,char*& ,int&);
+	///
+	virtual	int unwrap(char*,int,char*&, int&);
+
 #ifdef WIN32
 	int set_inheritable( int flag );
 #else
@@ -250,9 +274,10 @@ protected:
 	struct sockaddr_in _who;	// endpoint of "connection"
 
 private:
+	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
+	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high);
-
-		// Buffer to hold the string version of our endpoint's IP address. 
+	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
 
 		// struct to hold state info for do_connect() method

@@ -36,6 +36,7 @@ class Authentication;
 
 /** The ReliSock class implements the Sock interface with TCP. */
 
+
 class ReliSock : public Sock {
 	friend class Authentication;
 
@@ -130,19 +131,30 @@ public:
 	virtual int get_ptr(void *&, char);
     ///
 	virtual int peek(char &);
-
+    ///
+	void setOwner( const char * );
     ///
 	int authenticate();
+    ///
+	const char *getOwner();
     ///
 	int isAuthenticated();
     ///
 	void unAuthenticate();
-    ///
-	const char *getOwner();
-    ///
-	void setOwner( const char * );
-
-    ///
+	///
+	
+	int encrypt(bool);
+	///
+	bool is_encrypt();
+	///
+	int hdr_encrypt();
+	///
+	bool is_hdr_encrypt();
+	///
+	int  wrap(char* input, int input_len,char*& output,int& output_len);
+	///
+	int  unwrap(char* input,int input_len,char*& output, int& output_len);
+	///
 	int isClient() { return is_client; };
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
@@ -168,19 +180,33 @@ protected:
 	*/
 
 	class RcvMsg {
+		
+		ReliSock *p_sock; //preserve parent pointer to use for condor_read/write
+		
 	public:
+		
 		RcvMsg() : ready(0) {}
 		int rcv_packet(SOCKET, int);
-
+		void init_parent(ReliSock *tmp){ p_sock = tmp; } 
+		
 		ChainBuf	buf;
 		int			ready;
 	} rcv_msg;
 
 	class SndMsg {
+		ReliSock* p_sock;
 	public:
+		
+		Buf			buf;
 		int snd_packet(int, int, int);
 
-		Buf			buf;
+		//function to support the use of condor_read /write
+		
+		void init_parent(ReliSock *tmp){ 
+			p_sock = tmp; 
+			buf.init_parent(tmp);
+		} 
+
 	} snd_msg;
 
 	relisock_state	_special_state;

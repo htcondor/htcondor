@@ -24,7 +24,7 @@
 #define BUFFERS_H
 
 #define CONDOR_IO_BUF_SIZE 4096
-
+#include "sock.h"
 void sanity_check();
 
 #if !defined(WIN32)
@@ -34,8 +34,11 @@ void sanity_check();
 #endif /* not WIN32 */
 
 class Buf {
+	
 public:
 	Buf(int sz=CONDOR_IO_BUF_SIZE);
+	Buf(Sock* tmp, int sz=CONDOR_IO_BUF_SIZE);
+ 
 	~Buf();
 
 	inline void reset() { _dta_pt = _dta_sz = 0; }
@@ -68,6 +71,9 @@ public:
 	inline Buf *next() const { return _next; }
 	inline void set_next(Buf *b) { _next = b; }
 	inline void *get_ptr() const { return &_dta[num_touched()]; }
+	
+	///initialize socket handle.
+	void init_parent(Sock* tmp) { p_sock = tmp;}
 
 private:
 
@@ -76,6 +82,8 @@ private:
 	int		_dta_maxsz;
 	int		_dta_pt;
 	Buf		*_next;
+	Sock	*p_sock; //serves as a handle to invoke condor_read/write for 
+					 //any read/ write to sockets.
 };
 
 
