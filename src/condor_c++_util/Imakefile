@@ -12,7 +12,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o
 
-#if WANT_KERBEROS
+#if WANT_KERBEROS && HAS_KERBEROS
 KERBEROS_OBJ = condor_cred_kerberos.o
 #endif
 
