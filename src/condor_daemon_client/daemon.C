@@ -48,6 +48,7 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 	_addr = NULL;
 	_name = NULL;
 	_version = NULL;
+	_platform = NULL;
 	_error = NULL;
 	_id_str = NULL;
 	_hostname = NULL;
@@ -79,6 +80,7 @@ Daemon::~Daemon()
 	if( _hostname ) delete [] _hostname;
 	if( _full_hostname ) delete [] _full_hostname;
 	if( _version ) delete [] _version;
+	if( _platform ) { delete [] _platform; }
 }
 
 
@@ -113,6 +115,16 @@ Daemon::version( void )
 		locate();
 	}
 	return _version;
+}
+
+
+char*
+Daemon::platform( void )
+{
+	if( ! _platform ) {
+		locate();
+	}
+	return _platform;
 }
 
 
@@ -805,28 +817,41 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			if( (addr_fp = fopen(addr_file, "r")) ) {
 					// Read out the sinful string.
 				fgets( buf, 100, addr_fp );
-				fclose( addr_fp );
 					// chop off the newline
-				tmp = strchr( buf, '\n' );
-				if( tmp ) {
-					*tmp = '\0';
+				chomp( buf );
+				if( is_valid_sinful(buf) ) {
+					New_addr( strnewp(buf) );
 				}
+					// Let's see if this is new enough to also have a
+					// version string and platform string...
+				if( fgets(buf, 200, addr_fp) ) {
+						// chop off the newline
+					chomp( buf );
+					New_version( strnewp(buf) );
+					if( fgets(buf, 200, addr_fp) ) {
+							// chop off the newline
+						chomp( buf );
+						New_platform( strnewp(buf) );
+					}
+				}
+				fclose( addr_fp );
 			}
 			free( addr_file );
 		} 
-		if( is_valid_sinful(buf) ) {
-			New_addr( strnewp(buf) );
-		}
 
-		sprintf( buf, "%s", subsys );
-		char* exe_file = param( buf );
-		if( exe_file ) {
-			char ver[128];
-			CondorVersionInfo vi;
-			vi.get_version_from_file(exe_file, ver, 128);
-			New_version( strnewp(ver) );
+		if( ! _version ) { 
+				// If we didn't find the version string in the address
+				// file, try to ident the daemon's binary directly.
+			sprintf( buf, "%s", subsys );
+			char* exe_file = param( buf );
+			if( exe_file ) {
+				char ver[128];
+				CondorVersionInfo vi;
+				vi.get_version_from_file(exe_file, ver, 128);
+				New_version( strnewp(ver) );
+			}
+			free( exe_file );
 		}
-		free( exe_file );
 
 
 	}
@@ -887,9 +912,18 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			newError( buf );
 			return false;
 		}
-		dprintf (D_ALWAYS, "VERSION: %s\n", buf);
 		New_version( strnewp(buf) );
 
+		sprintf( tmpname, ATTR_PLATFORM );
+		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+					 tmpname, daemonString(_type), _name );
+			sprintf( buf, "Can't find %s in classad for %s %s",
+					 tmpname, daemonString(_type), _name );
+			newError( buf );
+			return false;
+		}
+		New_platform( strnewp(buf) );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
@@ -1085,6 +1119,7 @@ Daemon::New_addr( char* str )
 	return str;
 }
 
+
 char*
 Daemon::New_version ( char* ver )
 {
@@ -1093,6 +1128,17 @@ Daemon::New_version ( char* ver )
 	} 
 	_version = ver;
 	return ver;
+}
+
+
+char*
+Daemon::New_platform ( char* plat )
+{
+	if( _platform ) {
+		delete [] _platform;
+	} 
+	_platform = plat;
+	return plat;
 }
 
 
