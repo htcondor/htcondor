@@ -15,6 +15,11 @@
 struct timeval;
 #endif
 
+#if defined(LINUX)
+#       define idle _hide_idle
+#       define gethostname _hide_gethostname
+#endif
+
 #include <unistd.h>
 
 #if defined(SUNOS41)
@@ -27,6 +32,10 @@ struct timeval;
 	int execv(const char *path, char *const argv[]);
 #endif
 
+#if defined(LINUX)
+#       undef idle
+#       undef gethostname
+#endif
 
 /*
   For some reason the g++ include files on Ultrix 4.3 fail to provide
