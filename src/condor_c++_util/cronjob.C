@@ -509,6 +509,13 @@ CondorCronJob::RunProcess( void )
 	}
 
 	// Create the priv state for the process
+	priv_state priv;
+#ifdef WIN32
+	// WINDOWS
+	priv = PRIV_CONDOR;
+#else
+	// UNIX
+	priv = PRIV_USER_FINAL;
 	uid_t uid = get_condor_uid( );
 	if ( uid == (uid_t) -1 )
 	{
@@ -522,12 +529,13 @@ CondorCronJob::RunProcess( void )
 		return -1;
 	}
 	set_user_ids( uid, gid );
+#endif
 
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
 		path,				// Path to executable
 		argBuf,				// argv
-		PRIV_USER_FINAL,	// Priviledge level
+		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
 		env,				// Env to give to child
