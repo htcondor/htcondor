@@ -629,3 +629,10 @@ open_read_stream( const char *path )
 
 	return fd;
 }
+
+void
+report_image_size( int kbytes )
+{
+	dprintf( D_ALWAYS, "Sending Image Size Report of %d kilobytes\n", kbytes );
+	REMOTE_syscall( CONDOR_image_size, kbytes );
+}
