@@ -1312,6 +1312,7 @@ init_environment_info()
 		free(ckpt_server_host);
 	}
 
+#if !defined(CONTRIB)
 	arch = param( "ARCH" );
 	if (arch) {
 		REMOTE_syscall( CONDOR_register_arch, arch );
@@ -1323,4 +1324,5 @@ init_environment_info()
 		REMOTE_syscall( CONDOR_register_opsys, opsys);
 		free(opsys);
 	}
+#endif
 }

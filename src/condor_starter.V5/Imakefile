@@ -19,7 +19,7 @@ CLASS_LIB_OBJ = alarm.o
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
 	user_proc.C starter.toy.C tables.C starter_common.C 
 
-PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
+PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
 	user_proc.o tables.o starter_common.o \
 	../condor_syscall_lib/file_stream.o 
 
@@ -29,7 +29,8 @@ NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o analyze_exec.$(OS).o \
 	analyze_core.$(OS).o
 
 SRC = $(PORTABLE_SRC) $(NON_PORTABLE_SRC)
-OBJ = $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
+OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
+CONTRIB_OBJ = starter.contrib.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
 IO_LIB = ../condor_io/libcondor.a
 UTIL_LIB = ../condor_util_lib/util_lib.a
@@ -73,6 +74,13 @@ release_target(condor_starter,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_starter,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_starter,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 
+c_plus_target(condor_starter.contrib,$(CONTRIB_OBJ),$(LIB))
+strip_target(condor_starter.contrib,$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
+strip_link_target($(STRIP_CONTRIB)/sbin/condor_starter.contrib,$(STRIP_CONTRIB)/sbin, condor_starter)
+static_target(condor_starter.contrib,$(CONTRIB_OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
+static_link_target($(STATIC_CONTRIB)/sbin/condor_starter.contrib,$(STATIC_CONTRIB)/sbin, condor_starter)
+
+
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
 
 starter_state_diagram.dot: condor_starter
@@ -81,3 +89,6 @@ starter_state_diagram.dot: condor_starter
 starter_state_diagram.ps: starter_state_diagram.dot
 	dot -Tps -Gsize="10,9" -Gratio=.75 -Gorientation=landscape \
 	starter_state_diagram.dot > starter_state_diagram.ps
+
+starter.contrib.o: starter.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -DCONTRIB -c -o starter.contrib.o starter.C
