@@ -1,7 +1,7 @@
 NAME = condor_schedd
 all_target($(NAME) libqmgmt.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DWANT_DC_PM
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LDFLAGS = RpcLib SocketLib
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
@@ -21,5 +21,3 @@ purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
 c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
 html:
-
-
