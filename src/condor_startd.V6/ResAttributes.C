@@ -3,36 +3,86 @@ static char *_FileName_ = __FILE__;
 
 ResAttributes::ResAttributes( Resource* rip )
 {
-	this->rip = rip;
-	this->update();
-	this->timeout();
+#if !defined(WIN32)
+	r_afs_info = new AFS_Info();
+#endif
 	r_mips = -1;
 	r_kflops = -1;
+	this->rip = rip;
+	update( rip->r_classad );
+	timeout( rip->r_classad );
+}
+
+
+ResAttributes::~ResAttributes()
+{
+#if !defined(WIN32)
+	delete r_afs_info;
+#endif
 }
 
 
 void
-ResAttributes::update(void) 
+ResAttributes::update( ClassAd* cp) 
 {
+	char line[100];
+
 	r_virtmem = calc_virt_memory();
-	dprintf( D_FULLDEBUG, "Swap space: %d\n", r_virtmem );
+	dprintf( D_FULLDEBUG, "Swap space: %lu\n", r_virtmem );
+	sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, r_virtmem );
+ 	cp->Insert( line ); 
 
 	r_disk = calc_disk();
-	dprintf( D_FULLDEBUG, "Disk space: %d\n", r_disk );
+	dprintf( D_FULLDEBUG, "Disk space: %lu\n", r_disk );
+	sprintf( line, "%s=%lu", ATTR_DISK, r_disk );
+	cp->Insert( line ); 
+
+	// KFLOPS and MIPS are only conditionally computed; thus, only
+	// advertise them if we computed them.
+	if ( r_kflops > 0 ) {
+		sprintf( line, "%s=%d", ATTR_KFLOPS, r_kflops );
+		cp->Insert( line );
+	}
+	if ( r_mips > 0 ) {
+		sprintf( line, "%s=%d", ATTR_MIPS, r_mips );
+		cp->Insert( line );
+	}
 }
 
 
 void
-ResAttributes::timeout(void) 
+ResAttributes::timeout( ClassAd* cp ) 
 {
+	char line[100];
+	float tmp;
+
 	r_load = calc_load_avg();
-		// calc_load_avg already does a D_FULLDEBUG dprintf
-//	dprintf( D_FULLDEBUG, "Load average: %f\n", r_load );
+	sprintf( line, "%s=%f", ATTR_LOAD_AVG, r_load );
+	cp->Insert(line);
 
 	r_condor_load = rip->condor_load();
-	dprintf( D_FULLDEBUG, "Condor load: %f\n", r_condor_load );
+	sprintf( line, "%s=%f", ATTR_CONDOR_LOAD_AVG, r_condor_load );
+	cp->Insert(line);
+
+	tmp = r_load - r_condor_load;
+	if( tmp < 0 ) {
+		tmp = 0;
+	}
+	dprintf( D_LOAD, 
+			 "SystemLoad: %.3f\tCondorLoad: %.3f\tNonCondorLoad: %.3f\n", 
+			 r_load, r_condor_load, tmp );
 
 	calc_idle_time( r_idle, r_console_idle );
+
+	sprintf(line, "%s=%d", ATTR_KEYBOARD_IDLE, r_idle );
+	cp->Insert(line); 
+  
+	// ConsoleIdle cannot be determined on all platforms; thus, only
+	// advertise if it is not -1.
+	if( r_console_idle != -1 ) {
+		sprintf( line, "%s=%d", ATTR_CONSOLE_IDLE, r_console_idle );
+		cp->Insert(line); 
+	}
 }
 
 
@@ -82,6 +132,15 @@ ResAttributes::benchmark(void)
 
 	rip->change_state( idle_act );
 }
+
+
+#if !defined(WIN32)
+char*
+ResAttributes::afs_cell()
+{
+	return r_afs_info->my_cell();
+}
+#endif
 
 
 void
