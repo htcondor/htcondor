@@ -7,6 +7,18 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+04/07/03 V6_5-doc-pre-merge-V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5-branch just before merging
+	from V6_5_0-branch as tagged at V6_5_0-doc-merge-1.
+
+04/07/03 V6_5-doc-post-merge-V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5-branch just before merging
+	from V6_5_0-branch as tagged at V6_5_0-doc-merge-1.
+
+04/07/03 V6_5_0-doc-merge-1
+	The state of the doc directory in V6_5_0-branch before merging it
+	into the V6_5-branch.  This is the first merge from V6_5_0-branch
+	to the V6_5-branch, and probably the last.
 
 03/19/03 V6_5_0-doc-post-merge-V6_4-doc-merge-1
     The state of the doc directory of the V6_5_0-branch after the
