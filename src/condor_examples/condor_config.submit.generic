@@ -200,6 +200,11 @@ DAEMON_LIST			= MASTER, SCHEDD
 MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 
+##  When the master starts up, it can place it's address (ip and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the master.
+MASTER_ADDRESS_FILE = $(LOG)/.master_address
+
 ##  Where should the master find the condor_preen binary and how do
 ##  you want preen to behave?  The "-m" means you want email about
 ##  files preen finds that it thinks it should remove.  The "-r" means
@@ -267,8 +272,14 @@ MASTER_RECOVER_FACTOR           = 300
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.carmi
 
+##  When the schedd starts up, it can place it's address (ip and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the schedd.
+SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
+
 ##  How often should the schedd send an update to the central manager?
-SCHEDD_INTERVAL		= 300 (5 minutes)
+##  (5 minutes)
+SCHEDD_INTERVAL		= 300 
 
 ##  How long should the schedd wait between spawning each shadow?
 JOB_START_DELAY		= 2
@@ -341,5 +352,5 @@ PREEN_ADMIN		= $(CONDOR_ADMIN)
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
 ##  What files should condor_preen leave in the log directory?
-VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old
+VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, ULogLock, SchedLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
 
