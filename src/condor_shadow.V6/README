@@ -36,3 +36,10 @@ How to configure condor_shadow:
 							considered to be true. Otherwise it's considered
 							false. Default is false.
 		MAIL				Mail program to use. Default is /bin/mail.
+
+Differences between version 6 and previous version (5.6):
+
+	1.	No longer need to lock job queue: all job queue operations are done
+		through rpc calls to schedd.
+	2.	Added capability to command line argument. Uses capability when talking
+		to startd.
