@@ -66,7 +66,8 @@ cleanup_execute_dir(int pid)
 		// before removing subdir, remove any nobody-user account associtated
 		// with this starter pid.  this account might have been left around
 		// if the starter did not clean up completely.
-		sprintf(buf,"condor-run-dir_%d",pid);
+		//sprintf(buf,"condor-run-dir_%d",pid);
+		sprintf(buf,"condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
 		}

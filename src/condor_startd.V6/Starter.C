@@ -414,7 +414,8 @@ Starter::spawn( start_info_t* info, time_t now )
 #if WIN32
 		// we only support running jobs as user nobody for the first pass
 		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",s_pid);
+		//sprintf(nobody_login,"condor-run-dir_%d",s_pid);
+		sprintf(nobody_login,"condor-run-%d",s_pid);
 		// set ProcFamily to find decendants via a common login name
 		s_procfam->setFamilyLogin(nobody_login);
 #endif

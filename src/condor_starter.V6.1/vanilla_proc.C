@@ -135,7 +135,8 @@ VanillaProc::TransferCompleted(FileTransfer *ftrans)
 #ifdef WIN32
 		// we only support running jobs as user nobody for the first pass
 		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		//sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
 		// set ProcFamily to find decendants via a common login name
 		family->setFamilyLogin(nobody_login);
 #endif
@@ -199,7 +200,8 @@ VanillaProc::StartJob()
 	{	
 		// we only support running jobs as user nobody for the first pass
 		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
 		init_user_nobody_loginname(nobody_login);
 		init_user_ids("nobody");
 		{
