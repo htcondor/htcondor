@@ -66,7 +66,7 @@ void
 usage()
 {
 	fprintf( stderr,
-		"Usage: %s [-n schedd_name] { -a | -constraint <constraint> |  cluster | cluster.proc | user } ... \n",
+		"Usage: %s [-n schedd_name] [-a] { -constraint <constraint> |  cluster | cluster.proc | user } ... \n",
 		MyName
 	);
 	exit( 1 );
@@ -77,8 +77,8 @@ int
 main( int argc, char *argv[] )
 {
 	char	*arg;
-	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args of jobs to be deleted
-	int					nArgs = 0;				// number of args to be deleted
+	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args 
+	int					nArgs = 0;				// number of args 
 	int					i;
 	Qmgr_connection*	q;
 	char*	cmd_str;
@@ -93,6 +93,8 @@ main( int argc, char *argv[] )
 	cmd_str = strchr( MyName, '_');
 	if (cmd_str && strcmp(cmd_str, "_hold") == MATCH) {
 		mode = HELD;
+	} else if( cmd_str && strcmp( cmd_str, "_release" ) == MATCH ) {
+		mode = IDLE;
 	} else {
 		mode = REMOVED;
 	}
@@ -149,7 +151,7 @@ main( int argc, char *argv[] )
 	if( All ) {
 		handle_all();
 	} else {
-			// Set status of requested jobs to REMOVED/HELD
+			// Set status of requested jobs to REMOVED/HELD/RELEASED
 		for(i = 0; i < nArgs; i++) {
 			if( match_prefix( args[i], "-constraint" ) ) {
 				i++;
@@ -163,7 +165,8 @@ main( int argc, char *argv[] )
 	// Close job queue
 	DisconnectQ(q);
 
-	// Now tell the schedd what we did.  We send the schedd the
+	// If we did a condor_rm or a condor_hold, we need to tell the schedd what 
+	// we did.  We send the schedd the
 	// KILL_FRGN_JOB command.  We pass the number of jobs to
 	// remove/hold _unless_ one or more of the jobs are to be
 	// removed/held via cluster or via user name, in which case we say
@@ -173,7 +176,7 @@ main( int argc, char *argv[] )
 	// are via a cluster.proc, we then send the schedd all the
 	// cluster.proc numbers to save the schedd from having to scan the
 	// entire queue.
-	if ( nToProcess != 0 )
+	if ( mode != IDLE && nToProcess != 0 )
 		notify_schedd();
 
 #if defined(ALLOC_DEBUG)
@@ -233,7 +236,8 @@ notify_schedd()
 
 	if( !sock->code(nToProcess) ) {
 		fprintf( stderr,
-			"Warning: can't send num jobs to process to schedd (%d)\n",nToProcess );
+			"Warning: can't send num jobs to process to schedd (%d)\n",
+			nToProcess );
 		delete sock;
 		return;
 	}
@@ -267,7 +271,7 @@ void ProcArg(const char* arg)
 	PROC_ID *id;
 
 	if(isdigit(*arg))
-	// delete by cluster/proc #
+	// process by cluster/proc #
 	{
 		c = strtol(arg, &tmp, 10);
 		if(c <= 0)
@@ -278,17 +282,22 @@ void ProcArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			char constraint[250];
+			char constraint[ATTRLIST_MAX_EXPRESSION];
 
-			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
+			if( mode == IDLE ) {
+				sprintf( constraint, "%s==%d && %s==%d", ATTR_JOB_STATUS, HELD,
+					ATTR_CLUSTER_ID, c );
+			} else {
+				sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
+			}
 
 			if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode)<0)
 			{
-				fprintf( stderr, "Couldn't find/%s cluster %d.\n",
-						 (mode==REMOVED)?"remove":"hold", c);
+				fprintf( stderr, "Couldn't find/%s all jobs in cluster %d.\n",
+					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
 			} else {
 				fprintf(stderr, "Cluster %d %s.\n", c,
-						(mode==REMOVED)?"removed":"held");
+					(mode==REMOVED)?"removed":(mode==HELD)?"held":"released",c);
 				nToProcess = -1;
 			}
 			return;
@@ -302,16 +311,30 @@ void ProcArg(const char* arg)
 				return;
 			}
 			if(*tmp == '\0')
-			// delete a proc
+			// process a proc
 			{
+				if( mode==IDLE ) {
+					int status;
+					if( GetAttributeInt(c,p,ATTR_JOB_STATUS,&status) < 0 ) {
+						fprintf(stderr,"Couldn't access job queue for %d.%d\n", 
+							c, p );
+						return;
+					}
+					if( mode != HELD ) {
+						fprintf(stderr,"Job %d.%d not held to be released\n");
+						return;
+					}
+				}
+					
 				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, mode ) < 0)
 				{
 					fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-							 (mode==REMOVED)?"remove":"hold", c, p );
+					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
 				} else {
 					fprintf(stdout, "Job %d.%d %s.\n", c, p,
-							(mode==REMOVED)?"removed":"held");
-					if ( nToProcess != -1 ) {
+						(mode==REMOVED)?"removed":(mode==HELD)?"held":"released"
+						,c);
+					if ( mode != IDLE && nToProcess != -1 ) {
 						nToProcess++;
 						id = new PROC_ID;
 						id->proc = p;
@@ -327,18 +350,23 @@ void ProcArg(const char* arg)
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 	}
 	else if(isalpha(*arg))
-	// delete by user name
+	// process by user name
 	{
-		char	constraint[1000];
+		char	constraint[ATTRLIST_MAX_EXPRESSION];
 
-		sprintf(constraint, "Owner == \"%s\"", arg);
+		if( mode == IDLE ) {
+			sprintf( constraint, "%s==%d && %s==\"%s\"", ATTR_JOB_STATUS, HELD,
+				ATTR_OWNER, arg );
+		} else {
+			sprintf(constraint, "Owner == \"%s\"", arg);
+		}
 		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
 		{
-			fprintf( stderr, "Couldn't find/%s user %s's job(s).\n",
-					 (mode==REMOVED)?"remove":"hold", arg );
+			fprintf( stderr, "Couldn't find/%s all of user %s's job(s).\n",
+					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
 		} else {
 			fprintf(stdout, "User %s's job(s) %s.\n", arg,
-					(mode==REMOVED)?"removed":"held");
+					(mode==REMOVED)?"removed":(mode==HELD)?"held":"released",c);
 			nToProcess = -1;
 		}
 	}
@@ -351,12 +379,19 @@ void ProcArg(const char* arg)
 void
 handle_constraint( const char *constraint )
 {
+	char expr[ATTRLIST_MAX_EXPRESSION];
+	if( mode == IDLE ) {
+		sprintf( expr, "%s==%d && %s", ATTR_JOB_STATUS, HELD, constraint );
+	} else {
+		strcpy( expr, constraint );
+	}
 	if( SetAttributeIntByConstraint( constraint, ATTR_JOB_STATUS, mode ) < 0 ) {
-		fprintf( stderr, "Couldn't find/%s jobs matching constraint %s\n",
-			(mode==REMOVED)?"remove":"hold", constraint );
+		fprintf( stderr, "Couldn't find/%s all jobs matching constraint %s\n",
+				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
+				 constraint);
 	} else {
 		fprintf( stdout, "Jobs matching constraint %s %s\n", constraint,
-			(mode==REMOVED)?"removed":"held" );
+				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
 		nToProcess = -1;
 	}
 }
@@ -367,15 +402,23 @@ handle_all()
 {
 	char	constraint[1000];
 
-		// Remove/Hold all jobs... let queue management code decide
+		// Remove/Hold/Release all jobs... let queue management code decide
 		// which ones we can and can not remove.
-	sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
-	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0 ) {
-		fprintf( stdout, "%s all of your jobs.\n",
-				 (mode==REMOVED)?"Marked for removal":"Held" );
+	if( mode == IDLE ) {
+			// in the case of "release", make sure we only release HELD jobs
+		sprintf( constraint, "%s==%d && %s>=%d", ATTR_JOB_STATUS, HELD,
+			ATTR_CLUSTER_ID, 0 );
 	} else {
-		fprintf( stdout, "%s all jobs.\n",
-				 (mode==REMOVED)?"Marked for removal":"Held" );
+		sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
+	}
+	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0 ) {
+		fprintf( stdout, "Could not %s all jobs.\n",
+				 (mode==REMOVED)?"remove":
+				 (mode==HELD)?"hold":"release" );
+	} else {
+		fprintf( stdout, "All jobs %s.\n",
+				 (mode==REMOVED)?"marked for removal":
+				 (mode==HELD)?"held":"released" );
 	}
 	nToProcess = -1;
 }
