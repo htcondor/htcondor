@@ -2172,14 +2172,24 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 void GlobusJob::DeleteOutput()
 {
 	int rc;
+	struct stat fs;
+
+	mode_t old_umask = umask(0);
 
 	if ( streamOutput || stageOutput ) {
+		rc = stat( localOutput, &fs );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
+					 procID.cluster, procID.proc, localOutput );
+			fs.st_mode = S_IRWXU;
+		}
+		fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 		rc = unlink( localOutput );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
 					 procID.cluster, procID.proc, localOutput );
 		}
-		rc = creat( localOutput, S_IRWXU );
+		rc = creat( localOutput, fs.st_mode );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
 					 procID.cluster, procID.proc, localOutput );
@@ -2189,12 +2199,19 @@ void GlobusJob::DeleteOutput()
 	}
 
 	if ( streamError || stageOutput ) {
+		rc = stat( localError, &fs );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
+					 procID.cluster, procID.proc, localError );
+			fs.st_mode = S_IRWXU;
+		}
+		fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 		rc = unlink( localError );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
 					 procID.cluster, procID.proc, localError );
 		}
-		rc = creat( localError, S_IRWXU );
+		rc = creat( localError, fs.st_mode );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
 					 procID.cluster, procID.proc, localError );
@@ -2202,4 +2219,6 @@ void GlobusJob::DeleteOutput()
 			close( rc );
 		}
 	}
+
+	umask( old_umask );
 }
