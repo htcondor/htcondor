@@ -259,7 +259,13 @@ processCommandLineArguments (int argc, char *argv[])
 			if( pool ) {
 				delete [] pool;
 			}
-			pool = get_full_hostname((const char *)argv[++i]);
+			i++;
+			if( ! (argv[i] && *argv[i]) ) {
+				fprintf( stderr, 
+						 "Error: Argument -pool requires another parameter\n" );
+				exit(1);
+			}
+			pool = get_full_hostname((const char *)argv[i]);
 			if( ! pool ) {
 				fprintf( stderr, "%s: unknown host %s\n", 
 						 argv[0], argv[i] );
@@ -282,7 +288,8 @@ processCommandLineArguments (int argc, char *argv[])
 
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Argument -name requires another parameter\n");
+				fprintf( stderr, 
+						 "Error: Argument -name requires another parameter\n" );
 				exit(1);
 			}
 
@@ -314,7 +321,7 @@ processCommandLineArguments (int argc, char *argv[])
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Argument -submitter requires another "
+				fprintf( stderr, "Error: Argument -submitter requires another "
 							"parameter\n");
 				exit(1);
 			}
@@ -363,13 +370,13 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "constraint")) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Argument -constraint requires another "
-							"parameter\n");
+				fprintf( stderr, "Error: Argument -constraint requires "
+							"another parameter\n");
 				exit(1);
 			}
 
 			if (Q.addAND (argv[++i]) != Q_OK) {
-				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
+				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
 				exit (1);
 			}
 			summarize = 0;
@@ -386,7 +393,8 @@ processCommandLineArguments (int argc, char *argv[])
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr,
-					"Argument -address requires another parameter\n");
+						 "Error: Argument -address requires another "
+						 "parameter\n" );
 				exit(1);
 			}
 			if( ! is_valid_sinful(argv[i+1]) ) {
@@ -408,8 +416,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "format" ) ) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
-				fprintf( stderr, "Argument -format requires format and"
-					" attribute parameters\n" );
+				fprintf( stderr, "Error: Argument -format requires "
+						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
 			customFormat = true;
@@ -476,7 +484,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else {
 			// assume name of owner of job
 			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
-				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
+				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
 				exit (1);
 			}
 		}
@@ -871,7 +879,7 @@ usage (char *myName)
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
-		"\t\t-io\t\t\tShow information regarding I/O\n",
+		"\t\t-io\t\t\tShow information regarding I/O\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
