@@ -20,10 +20,18 @@ all_lists:: list_all
 * Test "Class" declarations
 ***************************************************/
 
-TESTCLASS_DECL(env)
+/* Every test must be in one, and only one, of the 
+  following time to run categories.  'quick' means less than 5 minutes
+  on a slow machine.
+*/
 TESTCLASS_DECL(quick)
-TESTCLASS_DECL(critical)
 TESTCLASS_DECL(long)
+
+/* In addition to one of the above time-to-run categories, each test
+   may be in zero or more of the below 'functional categories'
+*/
+TESTCLASS_DECL(env)
+TESTCLASS_DECL(critical)
 TESTCLASS_DECL(filexfer)
 TESTCLASS_DECL(dagman)
 TESTCLASS_DECL(performance)
