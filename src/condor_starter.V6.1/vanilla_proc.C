@@ -190,6 +190,25 @@ VanillaProc::StartJob()
 		TransferAtVacate = true;
 	} 
 
+	// taken from OsProc::StartJob for now, here we create the user and
+	// set the acls on the starter directory _before_ we start placing
+	// files in there.
+	{	
+		// we only support running jobs as user nobody for the first pass
+		char nobody_login[60];
+		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		init_user_nobody_loginname(nobody_login);
+		init_user_ids("nobody");
+		{
+			perm dirperm;
+			dirperm.init(nobody_login);
+			int ret_val = dirperm.set_acls(Starter->GetWorkingDir());
+			if ( ret_val < 0 ) {
+				EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+			}
+		}
+	}
+
 	// if requested in the jobad, transfer files over 
 	char TransSock[40];
 	if (JobAd->LookupString(ATTR_TRANSFER_SOCKET, TransSock) == 1) {

@@ -84,6 +84,8 @@ OsProc::StartJob()
 #else
 	// Win32
 
+	// note: this moved into VanillaProc::StartJob for now -Todd 11/11/99
+#if 0
 	// we only support running jobs as user nobody for the first pass
 	char nobody_login[60];
 	sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
@@ -97,6 +99,7 @@ OsProc::StartJob()
 			EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
 		}
 	}
+#endif
 #endif
 
 	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
