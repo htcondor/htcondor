@@ -94,7 +94,11 @@ void dprintf ();
 /*
 **	Important external variables
 */
-extern int	errno;
+extern int		errno;
+#if !( defined(LINUX) && defined(GLIBC) )
+extern int		sys_nerr;
+extern char		*sys_errlist[];
+#endif
 
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern char	*_EXCEPT_File;			/* File name of the exception      */
