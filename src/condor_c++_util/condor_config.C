@@ -694,6 +694,8 @@ find_file(const char *env_name, const char *file_name)
 				}
 			}
 		}
+
+		RegCloseKey(handle);
 	}
 # else
 #	error "Unknown O/S"
