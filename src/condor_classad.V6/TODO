@@ -1,5 +1,22 @@
 ===== Code =====
-* Figure out cxi. Document it, add it to the distribution.
+* Nick wanted ClassAd:InsertAttrTime()
+
+* Attributes with XML tags in them output correctly?
+
+  [
+    '<foo>' = 3;
+  ]
+
+* Verify that strings that are all whitespace or zero length can be 
+  parsed correctly from XML.
+
+* When calling ParseExpression with "Linux" and there isn't a space at
+  the end (the " is the last character) it fails. This can be seen in
+  cxi with:
+  
+  deep_insert adcr.ad arch3 "Linux" 
+
+* Document cxi.
 
 * Test printing values that are classads, lists, or times. 
 
@@ -16,11 +33,6 @@
 * Make a SWIG interface so people can use ClassAds from scripting
   languages. SWIG supports Java, TCL, Python, Perl, and a couple
   more. http://www.swig.org/
-
-* XML Output. Alain has plans for this.
-
-* Convert absolute time to use ISO8601 time. Figure out how to include
-  relative time in an appropriate way.
 
 * Write some cool XSL to display XML ClassAds.
 
