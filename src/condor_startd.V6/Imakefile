@@ -26,7 +26,8 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o \
-	clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
+	clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o \
+	startd_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
