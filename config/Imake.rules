@@ -2,6 +2,7 @@
 #define IMAKE_FLAGS	-I../../config -Dultrix43a -s Makefile
 #elif IS_SUN4M_SOLARIS
 #define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS -s Makefile
+PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
 #else
 #define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
@@ -386,7 +387,7 @@ release::																	@@\
 #if IS_V5
 #define text_target(targ,dir,dest)											@@\
 ##targ: targ##.generic														@@\
-	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
+	imake -I../../config -T Scripts.template $(PLATFORM_FLAG) -s targ##.tmp -f targ##.generic@@\
 	awk -f awk.prog targ##.tmp > targ										@@\
 	rm -f targ##.tmp														@@\
 clean:: 																	@@\
