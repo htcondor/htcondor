@@ -1,7 +1,13 @@
+#ifndef _SERVER_INTERFACE_H
+#define _SERVER_INTERFACE_H
+
 #include <sys/types.h>
 #include "typedefs2.h"
 #include "network2.h"
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 void StripPrefix(const char* pathname,
 		 char        filename[MAX_CONDOR_FILENAME_LENGTH]);
@@ -53,4 +59,9 @@ int RenameRemoteFile(const char* owner,
 					 const char* filename,
 					 const char* new_filename);
 
+#if defined(__cplusplus)
+}
+#endif
 
+
+#endif
