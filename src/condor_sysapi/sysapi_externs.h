@@ -39,7 +39,7 @@
    sysapi should include this, while everything outside of the sysapi
    only includes sysapi.h, which is merely function prototypes 
 
-   All of these variables are declared in config.C 
+   All of these variables are declared in reconfig.C 
 */
 
 /* needed by idle_time.C and last_x_event.c */
@@ -58,4 +58,7 @@ extern int _sysapi_startd_has_bad_utmp;
 /* needed by test.C */
 extern int _sysapi_config;
 
-#endif
+/* needed by ncpus.c */
+extern int _sysapi_ncpus;
+
+#endif /* SYSAPI_EXTERNS_H */

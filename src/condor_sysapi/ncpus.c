@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "sysapi.h"
+#include "sysapi_externs.h"
 
 /* Calculate how many cpus a machine has using the various method each OS
 	allows us */
@@ -120,7 +121,7 @@ wp              : yes
 flags           : fpu vme de pse tsc msr pae mce cx8 apic 11 mtrr pge mca cmov mmx
 bogomips        : 299.01
 */
-	// Count how many lines begin with the string "processor".
+	// Count how many lines begin with the string "bogomips".
 	while( fgets( buf, 256, proc) ) {
 		if( !strincmp( buf, "bogomips", 8 ) ) {
 			num_cpus++;
@@ -138,7 +139,11 @@ int
 sysapi_ncpus(void)
 {	
 	sysapi_internal_reconfig();
-	return sysapi_ncpus_raw();
+	if( _sysapi_ncpus ) {
+		return _sysapi_ncpus;
+	} else {
+		return sysapi_ncpus_raw();
+	}
 }
 
 

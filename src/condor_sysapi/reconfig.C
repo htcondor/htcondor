@@ -60,12 +60,16 @@ int _sysapi_startd_has_bad_utmp = FALSE;
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
 int _sysapi_config = 0;
 
+/* needed by ncpus.c */
+int _sysapi_ncpus = 0;
 
-/* the function that configures the above variables each time it is called.
-   This function is meant to be called outside of the library to configure it
-*/
+
 BEGIN_C_DECLS
 
+/*
+   The function that configures the above variables each time it is called.
+   This function is meant to be called outside of the library to configure it
+*/
 void
 sysapi_reconfig(void)
 {
@@ -100,12 +104,19 @@ sysapi_reconfig(void)
 		_sysapi_reserve_afs_cache = FALSE;
 	}
 	if (tmp) free(tmp);
-#endif
+#endif /* ! WIN32 */
 
 	_sysapi_reserve_disk = 0;
 	tmp = param( "RESERVED_DISK" );
 	if( tmp ) {
 		_sysapi_reserve_disk = atoi( tmp ) * 1024;    /* Parameter is in meg */
+		free( tmp );
+	}
+
+	_sysapi_ncpus = 0;
+	tmp = param( "NUM_CPUS" );
+	if( tmp ) {
+		_sysapi_ncpus = atoi( tmp );
 		free( tmp );
 	}
 
