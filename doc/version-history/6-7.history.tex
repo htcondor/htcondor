@@ -48,6 +48,16 @@ from one \condor{schedd} to another.
   (SOAP) interface to Condor.
   This bug has been fixed and COD support is now working again.
 
+\item In version 6.7.6, the \MacroNI{DAGParentNodeNames} attribute
+which \Condor{dagman} adds to all DAG job classads could grow too long
+and cause job submission to fail.  Now, if the
+\MacroNI{DAGParentNodeNames} value would be too long to add to the job
+classad, the attribute is instead left undefined and a warning is
+emitted in the DAGMan debugging log.  This behavior means that such a
+node can be reliably distinguished from a node with no parents, as the
+latter will have a \MacroNI{DAGParentNodeNames} attribute defined but
+empty.
+
 \item In version 6.7.3, the value of the X509UserProxySubject job attribute
 was changed in such a way that Condor-G jobs submitted by a newer
 \condor{submit} to an older \condor{schedd} could fail to run. Now,
