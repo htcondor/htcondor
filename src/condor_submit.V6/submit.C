@@ -1646,20 +1646,20 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 				// Handle "Never"
 				if( in_files_specified || out_files_specified ) {
 					MyString err_msg;
-					err_msg += "\nERROR: you specified '";
+					err_msg += "\nERROR: you specified \"";
 					err_msg += TransferFiles;
-					err_msg += " = Never' but listed files you want "
-						"transfered via '";
+					err_msg += " = Never\" but listed files you want "
+						"transfered via \"";
 					if( in_files_specified ) {
 						err_msg += "transfer_input_files";
 						if( out_files_specified ) {
-							err_msg += "' and 'transfer_output_files'.";
+							err_msg += "\" and \"transfer_output_files\".";
 						} else {
-							err_msg += "'.";
+							err_msg += "\".";
 						}
 					} else {
 						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files'.";
+						err_msg += "transfer_output_files\".";
 					}
 					err_msg += "  Please remove this contradiction from "
 						"your submit file and try again.";
@@ -1684,7 +1684,7 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 			default:
 				// Unrecognized
 				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter '%s'\n", TransferFiles );
+						 "parameter \"%s\"\n", TransferFiles );
 				DoCleanup(0,0,NULL);
 				exit( 1 );
 				break;
@@ -1700,24 +1700,24 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 		if( in_files_specified || out_files_specified ) {
 			MyString err_msg;
 			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via '";
+				"transfer via \"";
 			if( in_files_specified ) {
 				err_msg += "transfer_input_files";
 				if( out_files_specified ) {
-					err_msg += "' and 'transfer_output_files',";
+					err_msg += "\" and \"transfer_output_files\",";
 				} else {
-					err_msg += "',";
+					err_msg += "\",";
 				}
 			} else {
 				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files',";
+				err_msg += "transfer_output_files\",";
 			}
 			err_msg += " but you did not specify *when* you want Condor to "
 				"transfer the files.  Please put either \"";
 			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += "= ON_EXIT\" or \"";
+			err_msg += " = ON_EXIT\" or \"";
 			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += "= ON_EXIT_OR_EVICT\" in your submit file and "
+			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
 				"try again.";
 			print_wrapped_text( err_msg.Value(), stderr );
 			DoCleanup(0,0,NULL);
