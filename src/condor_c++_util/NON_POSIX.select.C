@@ -26,48 +26,15 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
-/* To remove warning in HPUX9 about implicit decl of select() ... */
-#if defined (HPUX9) && !defined (HPUX10)
-#include <sys/time.h>
-#endif
-
-/* On IRIX62, include condor_fdset.h early because condor_fdset.h fixes
- * the IRIX62 sys/select.h, so we want to make certain condor_fdset.h 
- * is the first to include sys/select.h.  -Todd, 1/31/97 */
-#if defined(IRIX62)
-#include "condor_fdset.h"
-#endif
-
-#include "_condor_fix_types.h"
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
-#include "condor_fix_timeval.h"
-
 #include "selector.h"
-
-/*
-   In HPUX9, the select call takes (int *) params, wheras SunOS, Solaris
-   take (fd_set *) params.  We define an intermediate type to handle
-   this.    -- Rajesh
-*/
-
-#if defined (HPUX9) && !defined(HPUX10)
-typedef int *SELECT_FDSET_PTR;
-#else
-typedef fd_set *SELECT_FDSET_PTR;
-#endif
 
 #if defined(IRIX53)
 #	include<bstring.h>
 #endif
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
-
-
-extern int errno;
 
 void display_fd_set( char *msg, fd_set *set, int max );
 
