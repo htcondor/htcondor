@@ -151,6 +151,14 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		return false;
 	}
 	
+	// this may be a submittor ad.  if so, we also want to append the schedd name to the
+	// hash.  this will fix problems were submittor ads will clobber one another
+	// if the more than one schedd runs on the same IP address submitting into the same pool.
+	// -Todd Tannenbaum <tannenba@cs.wisc.edu> 2/2005
+	if ( (tree = ad->Lookup(ATTR_SCHEDD_NAME)) ) {
+		hk.name += (((String *)tree->RArg())->Value());
+	}
+
 	// get the IP and port of the startd 
 	tree = ad->Lookup (ATTR_SCHEDD_IP_ADDR);
 	
