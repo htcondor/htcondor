@@ -32,9 +32,13 @@
     #include <ext/slist>
     using namespace __gnu_cxx;
   #endif
+#elif defined(WIN32)
+  #include <hash_map>
+  #include <slist>
 #else
   #include <hash_map>
 #endif
+	
 
 #ifdef __GNUC__
   #if (__GNUC__ == 3 && __GNUC_MINOR__ > 0)
@@ -44,6 +48,9 @@
     #define classad_hash_map std::hash_map 
     #define classad_slist    std::slist
   #endif
+#elif defined (WIN32)
+  #define classad_hash_map std::hash_map
+  #define classad_slist std::slist
 #else
   #define classad_hash_map std::hash_map 
   #define classad_slist    std::slist
