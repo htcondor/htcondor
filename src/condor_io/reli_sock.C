@@ -242,7 +242,7 @@ ReliSock::get_file(const char *destination)
 		return FALSE;
 	}
 
-	while (total < filesize &&
+	while (total < (int)filesize &&
 			(nbytes = get_bytes_nobuffer(buf, MIN(sizeof(buf),filesize-total),0)) > 0) {
 		dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
 		if ((written = ::write(fd, buf, nbytes)) < nbytes) {
@@ -264,7 +264,7 @@ ReliSock::get_file(const char *destination)
 		return FALSE;
 	}
 
-	if ( total < filesize ) {
+	if ( total < (int)filesize ) {
 		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
 			total, filesize);
 		unlink(destination);
@@ -325,7 +325,7 @@ ReliSock::put_file(const char *source)
 		return FALSE;
 	}
 
-	if (total < filesize) {
+	if (total < (int)filesize) {
 		dprintf(D_ALWAYS,"put_file(): ERROR, only sent %d bytes out of %d\n",
 			total, filesize);
 		return FALSE;
@@ -881,6 +881,7 @@ ReliSock::handshake()
 int
 ReliSock::authenticate()
 {
+#ifndef WIN32
 	char tmp[128];
 	//default to no authentication accomplished at all
 	sprintf( tmp, "%s = \"%s\"", USERAUTH_ADTYPE, "none" );
@@ -966,6 +967,9 @@ ReliSock::authenticate()
 	dprintf( D_FULLDEBUG, "ReliSock::auth returning %d (TRUE on success)\n",
 			retval );
 	return ( retval );
+#else
+	return FALSE;
+#endif
 }
 
 void 
@@ -1016,6 +1020,7 @@ int
 ReliSock::authenticate_filesystem()
 {
 
+#ifndef WIN32
 	if ( conn_type != CAUTH_CLIENT && conn_type != CAUTH_SERVER ) {
 		return 0;
 	}
@@ -1096,6 +1101,9 @@ init_user_ids( getOwner() );
 	end_of_message();
 	free( new_file );
 	return( retval == 0 );
+#else
+	return -1;
+#endif
 }
 
 #if defined(GSS_AUTHENTICATION)
