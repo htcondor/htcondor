@@ -20,7 +20,6 @@ STRIP_CONTRIB	=	../strip_contrib
 STATIC_DIR	=	../static_dir
 STATIC_CONTRIB	=	../static_contrib
 
-
 LIB_DIR =		$(RELEASE_DIR)/lib
 CONFIG_DIR =		$(TOP)/config
 SRC_TREE =		$(TOP)/src
@@ -119,34 +118,55 @@ DEBUG_FLAG = DebugFlag
 
 #if !defined( GSS_AUTHENTICATION )
 
-#	define GssAuthentication
-#	define ImakeGssFlag
+#  define GssAuthentication
+#  define ImakeGssFlag
 
 #else
 
-#	define GssAuthentication -DGSS_AUTHENTICATION \
-		-I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
+#  define GssAuthentication -DGSS_AUTHENTICATION \
+          I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
+#  define ImakeGssFlag -DGSS_AUTHENTICATION
 
-#	define ImakeGssFlag -DGSS_AUTHENTICATION
-
-SSL_DIR = /p/condor/workspaces/ssl
-GLOBUS_DIR = /p/condor/workspaces/globus
-AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
-	$(GLOBUS_DIR)/lib/libglobus_gss.a \
-	$(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
+  SSL_DIR = /p/condor/workspaces/ssl
+  GLOBUS_DIR = /p/condor/workspaces/globus
+  AUTH2_LIB = ../condor_io/libauth_io.a \
+    $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
+    $(GLOBUS_DIR)/lib/libglobus_gss.a \
+    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
 
 #endif /* !defined( GSS_AUTHENTICATION ) */
 
-
 AUTH_FLAGS = GssAuthentication
-
 
 #define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
-STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
- -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
- $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) $(AUTH_FLAGS)
+STD_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
+  $(DEBUG_FLAG) PlatformFlags $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
-STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
 
+CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
+QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
+CLASSAD_LIB = ../condor_classad/libclassad.a
+IO_LIB = ../condor_io/libcedar.a
+CUTIL_LIB = ../condor_util_lib/util_lib.a
+CPLUS_LIB = ../condor_c++_util/cplus_lib.a
+PROCAPI_LIB = ../condor_procapi/libprocapi.a
+ACCT_LIB    = ../condor_accountant.V6/libacct.a
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+
+STD_LIBS = \
+  $(CUTIL_LIB) \
+  $(CPLUS_LIB) \
+  $(DAEMONCORE_LIB) \
+  $(CKPT_SERV_LIB) \
+  $(QMGMT_LIB) \
+  $(ACCT_LIB) \
+  $(PROCAPI_LIB) \
+  $(CPLUS_LIB) \
+  $(CLASSAD_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB)
