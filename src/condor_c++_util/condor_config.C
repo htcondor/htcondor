@@ -1078,7 +1078,8 @@ set_runtime_config(char *admin, char *config)
 ** were defined, and -1 on error.  persistent configs are also processed
 ** by this function.
 */
-extern "C"
+extern "C" {
+
 static int
 process_runtime_configs()
 {
@@ -1157,5 +1158,7 @@ process_runtime_configs()
 
 	return (int)processed;
 }
+
+} // end of extern "C" 
 
 /* End code for runtime support for modifying a daemon's config file. */
