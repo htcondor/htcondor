@@ -55,6 +55,7 @@ Job::~Job() {
 
 //---------------------------------------------------------------------------
 Job::Job (const char *jobName, const char *cmdFile):
+	job_type (CONDOR_JOB),
     _scriptPre  (NULL),
     _scriptPost (NULL),
     _Status     (STATUS_READY),
