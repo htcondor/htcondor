@@ -21,6 +21,13 @@ A ``cluster'' is a group of jobs that were submitted together.  Each
 job has its own unique job identifier within the cluser, but shares a
 common cluster identifier.
 
+%%% ClassAd attribute: CompletionDate
+\index{ClassAd job attribute!CompletionDate}
+\item[\AdAttr{CompletionDate}] : The time when the job completed,
+or the value 0 if the job has not yet completed.
+Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
 %%% ClassAd attribute: CumulativeSuspensionTime
 \index{ClassAd job attribute!CumulativeSuspensionTime}
 \item[\AdAttr{CumulativeSuspensionTime}] : A running total of the number of
@@ -32,18 +39,35 @@ seconds the job has spent in suspension for the life of the job.
 
 %%% ClassAd attribute: ExitBySignal
 \index{ClassAd job attribute!ExitBySignal}
-\item[\AdAttr{ExitBySignal}] : When a user job exits, this is true if the
-job exited via a signal, and false otherwise. Currently this is available for use only in Standard and Vanilla universe jobs.
+\item[\AdAttr{ExitBySignal}] : An attribute that is True
+When a user job exits via a signal and false otherwise.
+It is available for use 
+in all universes except the globus universe.
 
 %%% ClassAd attribute: ExitCode
 \index{ClassAd job attribute!ExitCode}
 \item[\AdAttr{ExitCode}] : When a user job exits by means other than a signal,
-this is the exit return code of the user job. Currently this is available for use only in Standard and Vanilla universe jobs.
+this is the exit return code of the user job.
+It is available for use 
+in all universes except the globus universe.
 
 %%% ClassAd attribute: ExitSignal
 \index{ClassAd job attribute!ExitSignal}
 \item[\AdAttr{ExitSignal}] : When a user job exits by means of an unhandled 
-signal, this attribute takes on the numeric value of the signal. Currently this is available for use only in Standard and Vanilla universe jobs.
+signal, this attribute takes on the numeric value of the signal.
+It is available for use 
+in all universes except the globus universe.
+
+%%% ClassAd attribute: ExitStatus
+\index{ClassAd job attribute!ExitStatus}
+\item[\AdAttr{ExitStatus}] : The way that Condor previously dealt with
+a job's exit status.
+This attribute should no longer be used.
+It is not always accurate in
+heterogeneous pools, or if the job exited with a signal.
+Instead, see the attributes: \AdAttr{ExitBySignal},
+\AdAttr{ExitCode}, and
+\AdAttr{ExitSignal}.
 
 %%% ClassAd attribute: ImageSize
 \index{ClassAd job attribute!ImageSize}
@@ -130,6 +154,17 @@ job.
 \item[\AdAttr{ProcId}] : Integer process identifier for this job.  In
 a cluster of many jobs, each job will have the same ClusterId but will
 have a unique ProcId.
+
+%%% ClassAd attribute: RemoteSysCpu
+\index{ClassAd job attribute!RemoteSysCpu}
+\item[\AdAttr{RemoteSysCpu}] : The total number of seconds
+of system CPU time (the time spent at system calls) the job used
+on remote machines.
+
+%%% ClassAd attribute: RemoteUserCpu
+\index{ClassAd job attribute!RemoteUserCpu}
+\item[\AdAttr{RemoteUserCpu}] : The total number of seconds
+of user CPU time the job used on remote machines.
 
 %%% ClassAd attribute: RemoteWallClockTime
 \index{ClassAd job attribute!RemoteWallClockTime}
