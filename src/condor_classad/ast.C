@@ -293,7 +293,6 @@ int Variable::_EvalTree( AttrList* my_classad, AttrList* target_classad, EvalRes
 
 /*
 Split a variable name into scope.target 
-(For compatibility, also accept scope__target.)
 If there is no scope, evaluate it simply.
 Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
 */
@@ -309,9 +308,6 @@ int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* ta
 	if( !val || !name ) return FALSE;
 
 	fields = sscanf(name,"%[^.].%s",prefix,rest);
-	if(fields!=2) {
-		fields = sscanf(name,"%[^_]__%s",prefix,rest);
-	}
 
 	if(fields==2) {
 		/* already split */

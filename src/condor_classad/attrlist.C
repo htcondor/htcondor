@@ -2231,12 +2231,7 @@ bool AttrList::IsExternalReference(const char *name, char **simplified_name) con
 	prefix      = (char *) malloc(name_length + 1);
 	rest        = (char *) malloc(name_length + 1);
 
-	// There are two ways that prefixes could be listed: with . or
-	// with __. We'll check both. 
 	number_of_fields = sscanf(name, "%[^.].%s", prefix, rest);
-	if (number_of_fields != 2) {
-		number_of_fields = sscanf(name, "%[^_]__%s", prefix, rest);
-	}
 
 	// We have a prefix, so we examine it. 
 	if (number_of_fields == 2) {
