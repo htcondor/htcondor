@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#if defined(ULTRIX42)
+#if defined(ULTRIX42) || defined(ULTRIX43)
 #	include <sys/param.h>
 #	include <sys/mount.h>
 	typedef int ssize_t;
