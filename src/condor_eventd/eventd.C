@@ -109,7 +109,7 @@ EventDaemon::Config()
 	}
 
 	TimeoutTid = daemonCore->Register_Timer(0, EventInterval,
-											(Eventcpp)&Timeout,
+											(Eventcpp)&EventDaemon::Timeout,
 											"Timeout", this);
 
 	return 0;
