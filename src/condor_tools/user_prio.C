@@ -412,7 +412,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 {
-  char LastUsageStr[15];
+  char LastUsageStr[17];
   ExprTree* exp;
   ad->ResetExpr();
   exp=ad->NextExpr();
@@ -442,12 +442,12 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   if (DetailFlag==2) {
     printf(Fmt2,"         ","Accumulated","     Usage    ","     Last     ");
     printf(Fmt2,"User Name","Usage (hrs)","  Start Time  ","  Usage Time  ");
-    printf(Fmt2,"------------------------------","-----------","--------------","--------------");
+    printf(Fmt2,"------------------------------","-----------","----------------","----------------");
   }
   else {
-    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","     Usage    ","     Last     ");
-    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","  Start Time  ","  Usage Time  ");
-    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","--------------","--------------");
+    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","      Usage     ","      Last      ");
+    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","   Start Time   ","   Usage Time   ");
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------------","----------------");
   }
 
   int UserCount=0;
@@ -467,11 +467,11 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 
   strcpy(LastUsageStr,format_date_year(MinLastUsageTime));
   if (DetailFlag==2) {
-    printf(Fmt2,"------------------------------","-----------","--------------","--------------");
+    printf(Fmt2,"------------------------------","-----------","----------------","----------------");
     printf(Fmt3,NumElem,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
   else {
-    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","--------------","--------------");
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------------","----------------");
     printf(Fmt3,UserCount,"","","",Totals.Res,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
 
@@ -516,7 +516,7 @@ static void PrintResList(AttrList* ad)
 	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }
 
-  printf(Fmt,"-------------"," ----------"," ----------");
+  printf(Fmt,"-------------"," ------------"," ------------");
   printf("Number of Resources Used: %d\n",i-1);
 
   return;
@@ -527,6 +527,7 @@ static void PrintResList(AttrList* ad)
 int CalcTime(int month, int day, int year) {
   struct tm time_str;
   if (year>1900) year-=1900;
+  if (year<50) year +=100; // If I ask for 1 1 00, I want 1 1 2000, not 1 1 1900
   time_str.tm_year=year;  time_str.tm_mon=month-1;
   time_str.tm_mday=day;
   time_str.tm_hour=0;
