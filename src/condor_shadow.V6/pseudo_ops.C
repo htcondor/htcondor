@@ -47,6 +47,7 @@ extern "C"  void log_image_size (int);
 extern "C" int access_via_afs (const char *);
 extern "C" int access_via_nfs (const char *);
 extern "C" int use_local_access (const char *);
+extern "C" int use_special_access (const char *);
 
 extern int JobStatus;
 extern int ImageSize;
@@ -1295,6 +1296,8 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 
 	if(is_ckpt_file(full_path) || is_ickpt_file(full_path)) {
 		method = "remote";
+	} else if( use_special_access(full_path) ) {
+		method = "special";
 	} else if( use_local_access(full_path) ) {
 		method = "local";
 	} else if( access_via_afs(full_path) ) {
@@ -1512,6 +1515,18 @@ use_local_access( const char *file )
 {
 	return ((strcmp(file, "/dev/null") == MATCH) ||
 			(strcmp(file, "/dev/zero") == MATCH));
+}
+
+/* "special" access means open the file locally, and also protect it by preventing checkpointing while it is open.   This needs to be applied to sockets (not trapped here) and special files that take the place of sockets. */
+
+int
+use_special_access( const char *file )
+{
+	return
+		!strcmp(file,"/dev/tcp") ||
+		!strcmp(file,"/dev/udp") ||
+		!strcmp(file,"/dev/icmp") ||
+		!strcmp(file,"/dev/ip");	
 }
 
 access_via_afs( const char *file )
