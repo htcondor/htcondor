@@ -133,6 +133,7 @@ public:
 	~List();
 	void	Append( ObjType & obj );
 	void	Append( ObjType * obj );
+	void	Insert( ObjType & obj );    // insert an element before the current element
 	int		IsEmpty();
 	int		Number();
 
@@ -282,7 +283,19 @@ List<ObjType>::Append( ObjType * obj )
 	num_elem++;
 }
 
-
+/* Insert an element before the current element */
+template <class ObjType>
+void
+List<ObjType>::Insert( ObjType& obj )
+{
+	Item<ObjType>	*item;
+	item = new Item<ObjType>( &obj );
+	current->prev->next = item;
+	item->prev = current->prev;
+	current->prev = item;
+	item->next = current;
+	num_elem++;
+}
 
 /*
   Primitive display function.  Depends on the "<<" operator being defined
