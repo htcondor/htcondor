@@ -50,6 +50,7 @@
 #include "fcntl.h"
 #include <string.h>
 #include "condor_syscalls.h"
+#include "condor_fix_socket.h"
 #include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
@@ -94,6 +95,7 @@ static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
 static void calc_stack_to_save();
 extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
+extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 
 Image MyImage;
 static jmp_buf Env;
@@ -879,7 +881,7 @@ extern "C" {
 void
 Checkpoint( int sig, int code, void *scp )
 {
-	int		scm;
+	int		scm, p_scm;
 
 	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
 
@@ -961,7 +963,7 @@ Checkpoint( int sig, int code, void *scp )
 				struct rusage bsd_usage;
 				long clock_tick;
 
-				scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+				p_scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 				memset(&bsd_usage,0,sizeof(struct rusage));
 				times( &posix_usage );
 #if defined(OSF1)
@@ -977,9 +979,9 @@ Checkpoint( int sig, int code, void *scp )
 				(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
 				SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
 				(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
-				SetSyscalls( scm );
+				SetSyscalls( p_scm );
+				
 			}
-					
 			dprintf(D_ALWAYS, "Periodic Ckpt complete, doing a virtual restart...\n");
 			LONGJMP( Env, 1);
 		}
