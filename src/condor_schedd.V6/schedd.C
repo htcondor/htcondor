@@ -64,6 +64,7 @@
 #include "nullfile.h"
 #include "user_job_policy.h"
 #include "condor_holdcodes.h"
+#include "sig_name.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -1335,8 +1336,11 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			}
 			int kill_sig = -1;
 			switch( action ) {
+
 			case JA_HOLD_JOBS:
-					// for now, use the same as remove
+				kill_sig = findHoldKillSig( job_ad );
+				break;
+
 			case JA_REMOVE_JOBS:
 				kill_sig = findRmKillSig( job_ad );
 				break;
@@ -1364,9 +1368,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			if( kill_sig <= 0 ) {
 				kill_sig = SIGTERM;
 			}
-			dprintf( D_FULLDEBUG,
-					 "Sending remove signal (%d) to scheduler universe job"
-					 " pid=%d owner=%s\n", kill_sig, srec->pid, owner );
+			const char* sig_name = signalName( kill_sig );
+			if( ! sig_name ) {
+				sig_name = "UNKNOWN";
+			}
+			dprintf( D_FULLDEBUG, "Sending %s signal (%s, %d) to "
+					 "scheduler universe job pid=%d owner=%s\n",
+					 getJobActionString(action), sig_name, kill_sig,
+					 srec->pid, owner );
 			priv_state priv = set_user_priv();
 
 			if( daemonCore->Send_Signal(srec->pid, kill_sig) ) {
