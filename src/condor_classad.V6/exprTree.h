@@ -24,9 +24,9 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
+#include <hash_map>
 #include "common.h"
 #include "value.h"
-#include "HashTable.h"
 
 
 BEGIN_NAMESPACE( classad )
@@ -34,7 +34,9 @@ BEGIN_NAMESPACE( classad )
 // forward declarations
 class ExprTree;
 class ClassAd;
+class MatchClassAd;
 
+typedef hash_map< const ExprTree*, Value, ExprHash > EvalCache;
 
 class EvalState {
 	public:
@@ -44,9 +46,9 @@ class EvalState {
 		void SetRootScope( );
 		void SetScopes( const ClassAd* );
 
-		HashTable<const ExprTree*,Value> cache;
+		EvalCache		cache;
 		const ClassAd	*rootAd;
-		const ClassAd *curAd;
+		const ClassAd 	*curAd;
 };
 
 
