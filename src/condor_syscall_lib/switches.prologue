@@ -32,7 +32,6 @@
 #include <sys/utsname.h>
 
 #if defined(SUNOS41)
-#	include <sys/poll.h>
 #	include <signal.h>
 #endif
 
@@ -41,7 +40,6 @@
 #endif
 
 #if defined(OSF1)
-#	include <sys/poll.h>
 #	include <rpc/types.h>
 #	include <errno.h>
 #	include <sys/param.h>
