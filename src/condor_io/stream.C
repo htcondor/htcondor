@@ -43,9 +43,8 @@
 int putcount =0;
 int getcount = 0;
 
-static int shipcount =0;
-
 #if 0
+static int shipcount =0;
 #define NETWORK_TRACE(s) { shipcount++; nwdump << s << "|"; \
               if(shipcount % 4 == 0) nwdump  << endl; } 
 #endif
@@ -66,12 +65,15 @@ static int shipcount =0;
 */
 
 Stream :: Stream(stream_code c) : 
+		// I love individual coding style!
+		// You put _ in the front, I put in the
+		// back, very consistent, isn't it?	
+    crypto_(NULL),
+    mdMode_(MD_OFF),
+    mdKey_(0),
+    encrypt_(false),
     _code(c), 
-    _coding(stream_encode),
-    crypto_(NULL),                // I love individual coding style!
-    encrypt_(false),              // You put _ in the front, I put in the
-    mdMode_(MD_OFF),            // back, very consistent, isn't it?	
-    mdKey_(0)
+    _coding(stream_encode)
 {
 	allow_empty_message_flag = FALSE;
 }
