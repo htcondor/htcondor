@@ -25,6 +25,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 
+#include "globus_utils.h"
 
 #if defined(CONDOR_GSI)
 #   include "sslutils.h"
@@ -51,6 +52,8 @@ char *GlobusJobStatusName( int status )
 		return "SUSPENDED";
 	case 32:		// GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED
 		return "UNSUBMITTED";
+	case GLOBUS_JOB_STATE_UNKNOWN:
+		return "UNKNOWN";
 	default:
 		return "??????";
 	}

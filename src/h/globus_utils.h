@@ -32,6 +32,8 @@ BEGIN_C_DECLS
  */
 #define GLOBUS_JOB_UNSUBMITTED 32
 
+#define GLOBUS_JOB_STATE_UNKNOWN 0
+
 #define NULL_JOB_CONTACT	"X"
 
 char *GlobusJobStatusName( int status );
