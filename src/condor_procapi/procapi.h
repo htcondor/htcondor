@@ -29,6 +29,7 @@
 
 /* Here are the necessary #includes */
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "HashTable.h"
 
 #ifndef WIN32 // all the below is for UNIX

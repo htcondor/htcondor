@@ -25,6 +25,7 @@
 #include "procapi.h"
 #include "condor_debug.h"
 
+
 ProcAPI::ProcAPI() {
 
         // use condor's hashtable
@@ -82,6 +83,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
 	int fd;
 	int retval;
+	priv_state priv = set_root_priv();
 
 	initpi ( pi );
 
@@ -105,6 +107,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 			close( fd );
 			delete pi; 
 			pi = NULL;
+			set_priv( priv );
 			return -2;
 		}
 
@@ -132,6 +135,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 		close( fd );
 		delete pi; 
 		pi = NULL;
+		set_priv( priv );
 		return -2;
 	}
 	
@@ -211,6 +215,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 	  close( fd );
 	  delete pi;
 	  pi = NULL;
+	  set_priv( priv );
       return -2;
     }
     // close the /proc/pid file
@@ -222,9 +227,10 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     pi->pid = pid;
 	delete pi;
 	pi = NULL;
+	set_priv( priv );
     return -1;
   }
-
+  set_priv( priv );
   return retval;
 }
 #endif
@@ -237,7 +243,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   psinfo_t psinfo;
   pstatus_t pstatus;
   prusage_t prusage;
-
+  priv_state priv = set_root_priv();
   initpi ( pi );
 
   // pids, memory usage, and age can be found in 'psinfo':
@@ -252,7 +258,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       close( fd );
 	  delete pi; 
 	  pi = NULL;
-      return -2;
+	  set_priv( priv );
+	  return -2;
     }
   }
   else {
@@ -260,6 +267,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     pi->pid = pid;
 	delete pi; 
 	pi = NULL;
+	set_priv( priv );
     return -1;
   }
 
@@ -290,6 +298,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       close( fd );
 	  delete pi; 
 	  pi = NULL;
+	  set_priv( priv );
       return -2;
     }
   }
@@ -297,6 +306,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     dprintf (D_FULLDEBUG, "Problem opening %s.\n", path );
 	delete pi; 
 	pi = NULL;
+	set_priv( priv );
     return -1;
   }
 
@@ -358,7 +368,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   phn->oldminf  = nowminf;
   phn->oldmajf  = nowmajf;
   procHash->insert( pid, phn );
-
+  set_priv( priv );
   return 0;
 }
 #endif
@@ -379,6 +389,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   unsigned u;
   char c;
   char s[256], junk[16];
+
+  priv_state priv = set_root_priv();
 
   initpi ( pi );
 
@@ -406,6 +418,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     pi->pid = pid;
 	delete pi; 
 	pi = NULL;
+	set_priv( priv );
     return -1;
   }
 
@@ -437,6 +450,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       dprintf (D_FULLDEBUG, "Problem opening /proc/stat for btime.\n" );
 	  delete pi; 
 	  pi = NULL;
+	  set_priv( priv );
       return -1;
     }
   }
@@ -500,6 +514,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
   // done with %cpu hacking
  
+  set_priv( priv );
   return 0;
 }
 #endif
@@ -518,6 +533,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   int retval;
   long nowminf, nowmajf, oldminf, oldmajf;
 
+  priv_state priv = set_root_priv();
+
   initpi ( pi );
 
   retval = pstat_getproc ( &buf, sizeof( buf ), 0, pid );
@@ -525,6 +542,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   if ( retval < 0 ) {
 	delete pi; 
 	pi = NULL;
+	set_priv( priv );
 	return -1;
   }
 
@@ -607,6 +625,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   phn->oldmajf  = nowmajf;
   procHash->insert( pid, phn );
 
+  set_priv( priv );
   return 0;
 }
 #endif
@@ -619,6 +638,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
     DWORD dwStatus;  // return status of fn. calls
 
+	priv_state priv = set_root_priv();
+
     initpi ( pi );
 
         // '2' is the 'system' , '230' is 'process'  
@@ -627,12 +648,14 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
     if ( dwStatus != ERROR_SUCCESS ) {
         dprintf( D_ALWAYS, "ProcAPI::getProcInfo failed to get performance info.\n");
+		set_priv( priv );
         return -1;
     }
 
         // somehow we don't have the process data -> panic
     if ( pDataBlock == NULL ) {
         dprintf ( D_ALWAYS, "ProcAPI::getProcInfo failed to make pDataBlock.\n");
+		set_priv( priv );
         return -1;
     }
     
@@ -676,7 +699,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
     if ( !found ) {
         dprintf ( D_FULLDEBUG, "ERROR: pid # %d was not found!\n", pid );
-        return -1;
+        set_priv( priv );
+		return -1;
     }
 
     LARGE_INTEGER elt= (LARGE_INTEGER) 
@@ -733,6 +757,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     phn->oldusage = nowcpu;
     procHash->insert( pid, phn );
 
+	set_priv( priv );
     return 0;
 }
 #endif  // WIN32 getProcInfo
@@ -1332,6 +1357,7 @@ int ProcAPI::buildPidList() {
   struct dirent *direntp;
   pidlistPTR current;
   pidlistPTR temp;
+  priv_state priv = set_root_priv();
 
   // make a header node for the pidList:
   pidList = new pidlist;
@@ -1354,11 +1380,13 @@ int ProcAPI::buildPidList() {
     pidList = pidList->next;
     delete temp;           // remove header node.
 
+	set_priv( priv );
     return 0;
   }
   else {
     delete pidList;        // remove header node.
     pidList = NULL;
+	set_priv( priv );
     return -1;
   }
 }
