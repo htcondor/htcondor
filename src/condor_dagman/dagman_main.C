@@ -39,6 +39,9 @@ void ExitSuccess();
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
+// the name of the attr we insert in job ads, recording DAGMan's job id
+const char* DAGManJobIdAttrName = "DAGManJobID";
+
 bool run_post_on_failure = TRUE;
 
 char* lockFileName = NULL;

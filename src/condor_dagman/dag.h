@@ -37,6 +37,9 @@
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
 
+// the name of the attr we insert in job ads, recording DAGMan's job id
+extern const char* DAGManJobIdAttrName;
+
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
 

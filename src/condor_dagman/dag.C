@@ -960,24 +960,34 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 void Dag::RemoveRunningJobs () const {
     char cmd[ARG_MAX];
 
+		// first, remove all Condor jobs submitted by this DAGMan
+	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor jobs...\n",
+				  cmd );
+	snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
+			  DAGManJobIdAttrName, DAGManJobId );
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+	util_popen( cmd );
+		// TODO: we need to check for failures here
+
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-		// if the job has been submitted, remove it
-        if (job->GetStatus() == Job::STATUS_SUBMITTED) {
-			switch(job->job_type) {
-			case Job::CONDOR_JOB:
-				sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			case Job::DAP_JOB:
-				sprintf( cmd, "dap_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			}
+		ASSERT( job != NULL );
+			// if node has a Stork job that is presently submitted,
+			// remove it individually (this is necessary because
+			// DAGMan's job ID can't currently be inserted into the
+			// Stork job ad, and thus we can't do a "dap_rm -const..." 
+			// like we do with Condor; this should be fixed)
+		if( job->job_type == Job::DAP_JOB &&
+			job->GetStatus() == Job::STATUS_SUBMITTED ) {
+			snprintf( cmd, ARG_MAX, "dap_rm %d", job->_CondorID._cluster );
+			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+			util_popen( cmd );
+				// TODO: we need to check for failures here
         }
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
+			ASSERT( job->_scriptPre );
 			ASSERT( job->_scriptPre->_pid != 0 );
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
@@ -987,6 +997,7 @@ void Dag::RemoveRunningJobs () const {
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+			ASSERT( job->_scriptPost );
 			ASSERT( job->_scriptPost->_pid != 0 );
 			if(daemonCore->Shutdown_Fast(job->_scriptPost->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,

@@ -115,7 +115,7 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	prependLines = MyString(" -a ") + quote +
 		"dag_node_name = " + DAGNodeName + quote +
 		" -a " + quote +
-		"dagman_job_id = " + DAGManJobId + quote +
+		"+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
 		" -a " + quote +
 		"submit_event_notes = DAG Node: $(dag_node_name)" +
 		quote;
