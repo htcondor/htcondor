@@ -78,6 +78,7 @@ Daemon::~Daemon()
 	if( _id_str ) delete [] _id_str;
 	if( _hostname ) delete [] _hostname;
 	if( _full_hostname ) delete [] _full_hostname;
+	if( _version ) delete [] _version;
 }
 
 
