@@ -61,6 +61,8 @@ key_t				return grab( TYPE_NAME );
 open_flags_t		return grab( TYPE_NAME );
 fcntl_cmd_t			return grab( TYPE_NAME );
 signal_t			return grab( TYPE_NAME );
+socklen_t			return grab( TYPE_NAME );
+Psocklen_t			return grab( TYPE_NAME );
 fd_set				return grab( TYPE_NAME );
 PROC				return grab( TYPE_NAME );
 STARTUP_INFO		return grab( TYPE_NAME );
