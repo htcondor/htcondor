@@ -195,9 +195,8 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
 
-	dprintf( D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
+	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
 			 *user_idle, *console_idle );
-
 	return;
 }
 
@@ -258,8 +257,10 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		m_console_idle = now - _sysapi_last_x_event;
 	}
 
-	dprintf( D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
-			 (int)m_idle, (int)m_console_idle );
+	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
+				 (int)m_idle, (int)m_console_idle );
+	}
 	return;
 }
 
@@ -450,7 +451,7 @@ dev_idle_time( char *path, time_t now )
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
-        dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+        dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
 	}
 
 	return answer;
