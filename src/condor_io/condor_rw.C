@@ -124,7 +124,11 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 				// select() wakes up on a read fd, and then recv() 
 				// subsequently returns 0, that means that the
 				// socket has been closed by our peer.
-			if ( timeout > 0 && nro == 0 ) {
+				// If timeout == 0, then recv() should have 
+				// blocked until 1 or more bytes arrived.
+				// Thus no matter what, if nro==0, then the
+				// socket must be closed.
+			if ( nro == 0 ) {
 				dprintf( D_FULLDEBUG, "condor_read(): "
 						 "Socket closed when trying to read buffer\n" );
 				return -1;
