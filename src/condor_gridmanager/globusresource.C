@@ -5,9 +5,6 @@
 #include "globusresource.h"
 #include "gridmanager.h"
 
-// timer id values that indicates the timer is not registered
-#define TIMER_UNSET		-1
-
 template class List<GlobusJob>;
 template class Item<GlobusJob>;
 

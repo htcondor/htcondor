@@ -32,9 +32,6 @@
 #include "globusjob.h"
 
 
-// timer id values that indicates the timer is not registered
-#define TIMER_UNSET		-1
-
 // GridManager job states
 #define GM_INIT					0
 #define GM_REGISTER				1
@@ -181,9 +178,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 GlobusJob::~GlobusJob()
 {
-	if ( evaluateStateTid != TIMER_UNSET ) {
-		daemonCore->Cancel_Timer( evaluateStateTid );
-	}
 	if ( jobContact ) {
 		free( jobContact );
 	}
