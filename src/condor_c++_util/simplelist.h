@@ -51,6 +51,7 @@ class SimpleList
     // General
     bool Append (ObjType);
     inline bool IsEmpty() const { return (size == 0); }
+	inline int Number(void) { return size; }
 
     // Scans
     inline void    Rewind() { current = -1; }
