@@ -685,12 +685,15 @@ handle_q(Service *, int, Stream *sock)
 int
 InitializeConnection( const char *owner )
 {
+	
 	if ( owner ) {
+		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=%s)\n",owner);
 		init_user_ids( owner );
 	}
 	else {
 		//this is a relic, but better than setting to NULL!
 		//    init_user_ids( "nobody" );
+		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=NULL)\n");
 		return -1;
 	}
 
