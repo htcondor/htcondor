@@ -38,6 +38,12 @@ GNU_G77 = @_cv_gnu_g77@
 #define HAS_VENDOR_F77 @has_vendor_f77@
 VENDOR_F77 = @_cv_vendor_f77@ 
 
+#if HAS_GNU_G77 || HAS_VENDOR_F77
+#define HAS_FORTRAN YES
+#else
+#define HAS_FORTRAN NO
+#endif
+
 #define HAS_VENDOR_F90 @has_vendor_f90@
 VENDOR_F90 = @_cv_vendor_f90@ 
 

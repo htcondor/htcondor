@@ -78,7 +78,6 @@ statically linked to avoid problems */
 /*?????*/
 #define HAS_CP_PRESERVE			NO
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
