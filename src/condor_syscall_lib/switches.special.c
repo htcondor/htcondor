@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <unistd.h>
-#include <sys/types.h>
+#include "_condor_fix_types.h"
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/uio.h>
@@ -295,4 +295,28 @@ fake_writev( int fd, const struct iovec *iov, int iovcnt )
 	}
 
 	return rval;
+}
+
+#if defined(SUNOS41)
+#	include <sys/termio.h>
+#	include <sys/mtio.h>
+#endif
+
+int
+ioctl( int fd, int request, caddr_t arg )
+{
+	switch( request ) {
+#if defined(SUNOS41)
+	  case MTIOCGET:
+		fprintf( stderr, "Got mag tape request - reply -1\n" );
+		return -1;
+	  case TCGETA:
+		fprintf( stderr, "Got terminal IO request - reply -1\n" );
+		return -1;
+#endif
+	  default:
+		fprintf( stderr, "Got (unknown) ioctl 0x%x on fd %d - reply -1\n",
+															request, fd );
+		return -1;
+	}
 }
