@@ -156,6 +156,27 @@ The statically linked distributions of Condor now include a static gahp\_server.
 \item Fixed minor bug in parsing XML user log files that contain empty
   strings. 
 
+\item Fixed the messages written to the Condor daemon log files in
+  various error conditions to be more informative and clear.
+  \begin{itemize}
+  \item Certain serious error messages are now being written to the 
+    \Dflag{ALWAYS} debug level that used to only appear if other debug
+    levels were enabled.
+  \item Clarified log messages related to errors looking up user
+    information in the passwd database on UNIX and for creating
+    dynamic users on Windows.
+  \item Log messages related to keep-alives sent between the
+    \Condor{schedd} and \Condor{startd} (written to \Dflag{PROTOCOL})
+    now include the \Attr{ClaimId} on both sides, so that it is easier
+    to find potential problems and figure out which keep-alive
+    messages correspond to what resources.
+  \item Added more useful information to certain errors relating to 
+    security sessions and strong authentication.
+  \item Fixed the formatting of some messages to correctly include a
+    newline at the end of the message.
+  \end{itemize}
+
+
 \end{itemize}
 
 \noindent Known Bugs:
