@@ -746,9 +746,13 @@ UserProc::execute()
 			// so that if we get an exception during the restart process,
 			// we will get a core file to debug.
 		sigemptyset( &sigmask );
+		// for some reason if we block these, the user process is unable
+		// to unblock some or all of them.
+#if 0
 		sigaddset( &sigmask, SIGUSR1 );
 		sigaddset( &sigmask, SIGUSR2 );
 		sigaddset( &sigmask, SIGTSTP );
+#endif
 		sigprocmask( SIG_SETMASK, &sigmask, 0 );
 
 		if( chdir(local_dir) < 0 ) {
