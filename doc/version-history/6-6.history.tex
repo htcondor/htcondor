@@ -106,6 +106,9 @@ the userlog for the same job; this can happen due to a bug in the
       immediately remove all the jobs it had just submitted
       unnecessarily.
 
+\item Fixed keyboard idle reporting on Mac OS X. Previously, the code
+      would often return -1 on newer hardware. 
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -114,6 +117,9 @@ the userlog for the same job; this can happen due to a bug in the
 
 \item If a job terminates via SIGSEGV, the \Condor{schedd} logs both a
       terminate event and an abort event to the userlog.
+
+\item Keyboard activity is not reported for pseudo-ttys on Mac OS X, only
+      the physically connected keyboard
 
 \end{itemize}
 
