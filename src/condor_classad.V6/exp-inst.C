@@ -22,24 +22,32 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
-#include "extArray.h"
-#include "rectangle.h"
-#include "intervalTree.h"
+#include "queryProcessor.h"
+#include <list>
 
 BEGIN_NAMESPACE( classad )
 
     // experimental rectangle
 template class set<string, CaseIgnLTStr>;   // extern refs
-template class map< int, NumericInterval >;
-template class map< int, NumericInterval >::iterator;
+template class map<const ClassAd*, set<string, CaseIgnLTStr> >;
+template class map< int, Interval >;
+template class map< int, Interval >::iterator;
 template class map< string, OneDimension, CaseIgnLTStr >;
 template class map< string, OneDimension, CaseIgnLTStr >::iterator;
 template class ExtArray<unsigned int>;      // key set
 template class set< double >;               // end points set
 template class set< double >::iterator;
-template class map< string, IntervalTree*, CaseIgnLTStr >;
-template class map< string, IntervalTree*, CaseIgnLTStr >::iterator;
+template class set< int >;					// index entries
+template class set< int >::iterator;
+template class map< string, ClassAdIndex*, CaseIgnLTStr >;// indexes
+template class map< string, ClassAdIndex*, CaseIgnLTStr >::iterator;
+template class map< int, int >;
+template class map< int, int >::iterator;
+template class map< string, set<int>, CaseIgnLTStr >;
+template class map< string, set<int>, CaseIgnLTStr >::iterator;
+template class map< int, ExtArray<unsigned int> >;
 
 	// classad compression
 class ClassAdBin;
@@ -48,4 +56,3 @@ template class hash_map< string, ClassAdBin*, StringHash >::iterator;
 template class list<ClassAd*>;
 
 END_NAMESPACE
-
