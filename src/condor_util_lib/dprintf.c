@@ -172,6 +172,7 @@ va_dcl
 	sigdelset( &mask, SIGQUIT );
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
+	sigdelset( &mask, SIGCHLD );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
 		/* log files owned by condor system acct */
