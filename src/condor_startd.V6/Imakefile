@@ -1,7 +1,8 @@
 SRC_DIR = $(SRC_TREE)/condor_startd.V6
 TARGET_SYSTEM = condor
 
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+# Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -O2
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
 
 RESOURCE_SRC = resource.C
