@@ -80,7 +80,7 @@ MOUSE_DEVICE		= MouseDeviceName
 CMNT
 CMNT		PVM related Macros
 CMNT
-PVMD				= /net/cabrales/var/home/public/condor/bin/condor_pvmd
+PVMD				= $(BIN)/condor_pvmd
 
 
 
@@ -132,7 +132,7 @@ CMNT Starter Macros
 CMNT
 STARTER				= $(BIN)/condor_starter
 ALTERNATE_STARTER_0	= $(BIN)/condor_starter.pvm.mike
-ALTERNATE_STARTER_1	= /net/cabrales/var/home/public/condor/bin/condor_starter
+ALTERNATE_STARTER_1	= $(BIN)/condor_starter.jim
 ALTERNATE_STARTER_2 = $(BIN)/condor_starter.V5.mike
 STARTER_DEBUG		= D_NODATE
 MIN_CKPT_INTERVAL	= 1800
