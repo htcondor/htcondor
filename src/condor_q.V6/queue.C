@@ -1013,7 +1013,8 @@ format_owner (char *owner, ClassAd *ad)
 }
 
 static char *
-format_globusStatus( int globusStatus, AttrList *ad )
+//format_globusStatus( int globusStatus, AttrList *ad )
+format_globusStatus( int globusStatus, ClassAd *ad )
 {
 	static char result[64];
 
@@ -1023,7 +1024,8 @@ format_globusStatus( int globusStatus, AttrList *ad )
 }
 
 static char *
-format_globusHostAndJM( char  *globusResource, AttrList *ad )
+//format_globusHostAndJM( char  *globusResource, AttrList *ad )
+format_globusHostAndJM( char  *globusResource, ClassAd *ad )
 {
 	static char result[64];
 	char	host[80] = "[?????]";
