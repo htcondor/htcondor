@@ -103,6 +103,7 @@ init_full_hostname()
 	if( tmp ) {
 			// Found it, use it.
 		full_hostname = strdup( tmp );
+		delete [] tmp;
 	} else {
 			// Couldn't find it, just use what we've already got. 
 		full_hostname = strdup( hostname );
