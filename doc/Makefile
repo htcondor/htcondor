@@ -122,7 +122,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log 
+	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
