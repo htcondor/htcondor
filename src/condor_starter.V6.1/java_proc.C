@@ -50,20 +50,53 @@ int JavaProc::StartJob()
 	char java_cmd[_POSIX_PATH_MAX];
 	char java_args[_POSIX_ARG_MAX];
 	char jarfiles[ATTRLIST_MAX_EXPRESSION];
-	StringList *jarfiles_list=0;
 
 	ExprTree  *tree;
 	char	  *tmp_args;
 	char      *job_args;
 	int		  length;
 
+	// Construct the list of jar files for the command line
+	// If a jar file is transferred locally, use its local name
+	// (in the execute directory)
+	// otherwise use the original name
+
+
+	StringList jarfiles_final_list;
 	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
-		jarfiles_list = new StringList(jarfiles);
+		StringList * jarfiles_list = new StringList(jarfiles);
+		
+		char * jarfile_name;
+		char * base_name;
+		char local_name[_POSIX_ARG_MAX];
+		struct stat stat_buff;
+
+		jarfiles_list->rewind();
+		while ((jarfile_name = jarfiles_list->next())) {
+		  base_name = basename (jarfile_name);
+
+		  // Construct the local name
+		  sprintf (local_name, "%s%c%s",
+			   execute_dir,
+			   DIR_DELIM_CHAR,
+			   base_name);
+
+		  if (stat (local_name, &stat_buff) == 0) {
+		    // Jar file exists locally, use local name
+		    jarfiles_final_list.append (local_name);
+
+		  } else {
+		    // Use the original name
+		    jarfiles_final_list.append (jarfile_name);
+		  }
+		
+		} // elihw jarfiles_list
+		
+		delete jarfiles_list;
 	}
 
-	if(!java_config(java_cmd,java_args,jarfiles_list)) {
+	if(!java_config(java_cmd,java_args,&jarfiles_final_list)) {
 		dprintf(D_FAILURE|D_ALWAYS,"JavaProc: Java is not configured!\n");
-		if(jarfiles_list) delete jarfiles_list;
 		return 0;
 	}
 
