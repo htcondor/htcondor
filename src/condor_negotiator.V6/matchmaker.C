@@ -905,7 +905,7 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 	ClassAd 		*bestSoFar = NULL;	
 	double			bestRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
-	PreemptState	bestPreemptState = -1;
+	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
@@ -972,6 +972,7 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
 		//  3. preemption rank (if preempting)
 		newBestFound = false;
+		candidatePreemptRankValue = -(FLT_MAX);
 		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
 				( candidateRankValue==bestRankValue && 	// then by preempt state
 				candidatePreemptState > bestPreemptState ) ) {
@@ -980,21 +981,20 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 				candidatePreemptState==bestPreemptState && 
 				bestPreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
-			candidatePreemptRankValue = 0.0;
 			if( PreemptionRank &&
 			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
 					result.type == LX_FLOAT) {
 				candidatePreemptRankValue = result.f;
+			} else if( PreemptionRank ) {
+				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
+					"expression to a float.\n");
 			}
+				
 				// check if the preemption rank is better than the best
 			if( candidatePreemptRankValue > bestPreemptRankValue ) {
 				newBestFound = true;
 			}
-		} else if( PreemptionRank ) {
-			dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK expression "
-				"to a float.\n");
-		}
-
+		} 
 
 		if( newBestFound ) {
 			bestSoFar = candidate;
