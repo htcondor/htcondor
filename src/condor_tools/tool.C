@@ -113,6 +113,11 @@ usage( char *str )
 				 "causes the condor_schedd to update the central manager",
 				 "and initiate a new negotiation cycle." );
 		break;
+	case VACATE_CLAIM:
+		fprintf( stderr, "  %s %s\n  %s\n", str, 
+				 "causes the condor_startd to checkpoint the running job",
+				 "on specific (possibly virtual) machines." );
+		break;
 	case VACATE_ALL_CLAIMS:
 		fprintf( stderr, "  %s %s\n  %s\n", str, 
 				 "causes the condor_startd to checkpoint any running jobs",
@@ -151,6 +156,8 @@ cmd_to_str( int c )
 		return "RECONFIG";
 	case RESTART:
 		return "RESTART";
+	case VACATE_CLAIM:
+		return "VACATE_CLAIM";
 	case VACATE_ALL_CLAIMS:
 		return "VACATE_ALL_CLAIMS";
 	case PCKPT_ALL_JOBS:
@@ -234,7 +241,7 @@ main( int argc, char *argv[] )
 		cmd = RECONFIG;
 		dt = DT_SCHEDD;
 	} else if( !strcmp( cmd_str, "_vacate" ) ) {
-		cmd = VACATE_ALL_CLAIMS;
+		cmd = VACATE_CLAIM;
 		dt = DT_STARTD;
 	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_ALL_JOBS;
@@ -275,7 +282,19 @@ main( int argc, char *argv[] )
 					cmd = DAEMONS_OFF_FAST;
 					break;
 				default:
-					fprintf( stderr, "ERROR: -fast is not valid with %s", MyName );
+					fprintf( stderr, "ERROR: -fast is not valid with %s\n",
+							 MyName );
+					usage( MyName );
+				}
+				break;
+			case 'a':
+				switch( cmd ) {
+				case VACATE_CLAIM:
+					cmd = VACATE_ALL_CLAIMS;
+					break;
+				default:
+					fprintf( stderr, "ERROR: -all is not valid with %s\n",
+							 MyName );
 					usage( MyName );
 				}
 				break;
@@ -362,10 +381,26 @@ do_command( char *name )
 	}
 
 	sock.encode();
-	if( !sock.code(cmd) || !sock.eom() ) {
-		fprintf( stderr, "Can't send %s command to %s\n", 
-				 cmd_to_str(cmd), daemon_string(dt) );
-		return;
+	switch(cmd) {
+	case VACATE_CLAIM:
+		if( name && *name != '<' && strchr(name, '@')) {
+			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
+				fprintf( stderr, "Can't send %s %s command to %s\n", 
+						 cmd_to_str(cmd), name, daemon_string(dt) );
+				return;
+			}
+			break;
+		}
+		// if no name is specified, or if name is a sinful string, we
+		// must send VACATE_ALL_CLAIMS instead
+		cmd = VACATE_ALL_CLAIMS;
+		// no break: we fall through to the default case
+	default:
+		if( !sock.code(cmd) || !sock.eom() ) {
+			fprintf( stderr, "Can't send %s command to %s\n", 
+					 cmd_to_str(cmd), daemon_string(dt) );
+			return;
+		}
 	}
 
 	if( name ) {
