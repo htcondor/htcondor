@@ -186,6 +186,14 @@ e		*/
 			@param attrName The name of the attribute.
 			@param value The string attribute
 		*/
+		bool InsertAttr( const std::string &attrName, const char *value );
+
+		/** Inserts an attribute into the ClassAd.  The string value is
+				converted into a Literal expression, and then inserted into
+				the classad.
+			@param attrName The name of the attribute.
+			@param value The string attribute
+		*/
 		bool InsertAttr( const std::string &attrName, const std::string &value );
 
 		/** Inserts an attribute into a nested classad.  The scope expression
@@ -319,7 +327,7 @@ e		*/
 			@param expr The expression to be evaluated.
 			@param result The result of the evaluation.
 		*/
-		bool EvaluateExpr( ExprTree* expr, Value &result ) const;	// eval'n
+		bool EvaluateExpr( const ExprTree* expr, Value &result ) const;	// eval'n
 
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 
@@ -329,7 +337,7 @@ e		*/
 			@param result The result of the evaluation.
 			@param sig The significant subexpressions of the evaluation.
 		*/
-		bool EvaluateExpr( ExprTree* expr, Value &result, ExprTree *&sig) const;
+		bool EvaluateExpr( const ExprTree* expr, Value &result, ExprTree *&sig) const;
 
 		/** Evaluates an attribute to an integer.
 			@param attrName The name of the attribute.

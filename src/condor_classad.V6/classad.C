@@ -238,6 +238,16 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, bool value )
 
 // --- begin string attribute insertion
 bool ClassAd::
+InsertAttr( const string &name, const char *value )
+{
+	// We could do a cast and call InsertAttr() again, but
+	// we'll avoid a copy if avoid the cast.
+	Value val;
+	val.SetStringValue( value );
+	return( Insert( name, Literal::MakeLiteral( val ) ) );
+}
+
+bool ClassAd::
 InsertAttr( const string &name, const string &value )
 {
 	Value val;
@@ -745,7 +755,7 @@ EvaluateExpr( const string& buf, Value &result ) const
 
 
 bool ClassAd::
-EvaluateExpr( ExprTree *tree , Value &val ) const
+EvaluateExpr( const ExprTree *tree , Value &val ) const
 {
 	EvalState	state;
 
@@ -754,7 +764,7 @@ EvaluateExpr( ExprTree *tree , Value &val ) const
 }
 
 bool ClassAd::
-EvaluateExpr( ExprTree *tree , Value &val , ExprTree *&sig ) const
+EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
 {
 	EvalState	state;
 
