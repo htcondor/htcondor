@@ -24,6 +24,7 @@
 #define __SOURCE_H__
 
 #include <vector>
+#include <iostream>
 #include "lexer.h"
 
 BEGIN_NAMESPACE( classad )
@@ -52,7 +53,14 @@ class ClassAdParser
 			@return pointer to the ClassAd object if successful, or NULL 
 				otherwise
 		*/
-		ClassAd *ParseClassAd( const std::string &buffer, bool full=false );
+		ClassAd *ParseClassAd(const std::string &buffer, bool full=false);
+		ClassAd *ParseClassAd(const string &buffer, int *offset);
+		ClassAd *ParseClassAd(const char *buffer, bool full=false);
+		ClassAd *ParseClassAd(const char *buffer, int *offset);
+		ClassAd *ParseClassAd(FILE *file, bool full=false);
+		ClassAd *ParseClassAd(istream *stream, bool full=false);
+
+		ClassAd *ParseClassAd(LexerSource *lexer_source, bool full=false);
 
 		/** Parse a ClassAd 
 			@param buffer Buffer containing the string representation of the
@@ -63,7 +71,14 @@ class ClassAdParser
 				other tokens follow the ClassAd.
 			@return true on success, false on failure
 		*/
-		bool ParseClassAd( const std::string &buffer, ClassAd &ad, bool full=false );
+		bool ParseClassAd(const std::string &buffer, ClassAd &ad, bool full=false);
+		bool ParseClassAd(const string &buffer, ClassAd &classad, int *offset);
+		bool ParseClassAd(const char *buffer, ClassAd &classad, bool full=false);
+		bool ParseClassAd(const char *buffer, ClassAd &classad, int *offset);
+		bool ParseClassAd(FILE *file, ClassAd &classad, bool full=false);
+		bool ParseClassAd(istream *stream, ClassAd &classad, bool full=false);
+
+		bool ParseClassAd(LexerSource *lexer_source, ClassAd &ad, bool full=false);
 
 		/** Parse an expression 
 			@param expr Reference to a ExprTree pointer, which will be pointed
