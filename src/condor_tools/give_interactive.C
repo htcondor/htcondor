@@ -198,7 +198,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
-			PreemptionRank->SetParentScope( candidiate );
+			PreemptionRank->SetParentScope( candidate );
 			if( PreemptionRank &&									 	// NAC 
 				( !candidate->EvaluateExpr( PreemptionRank, result ) ||	// NAC
 				  !result.IsRealValue( candidatePreemptRankValue))){	// NAC
