@@ -7,8 +7,9 @@
 /*
   For some reason the g++ includes on Ultrix 4.3 fail to provide
   these prototypes, even though the Ultrix 4.2 includes did...
+  Same goes for OSF1  JCP
 */
-#if defined(ULTRIX43)
+#if defined(ULTRIX43) || defined(OSF1)
 
 #if defined(__cplusplus)
 extern "C" {
