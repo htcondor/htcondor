@@ -185,7 +185,7 @@ reinitialize ()
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
-	dprintf (D_ALWAYS,"NEGOTIATOR_TRAFFIC_LIMIT = %d kbytes\n",TrafficLimit);
+	dprintf (D_ALWAYS,"NEGOTIATOR_TRAFFIC_LIMIT = %f kbytes\n",TrafficLimit);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TRAFFIC_INTERVAL = %d sec\n",
 			 TrafficInterval);
 	dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", (tmp?tmp:"None"));
