@@ -242,7 +242,7 @@ uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
 #if DOES_CHECKPOINTING
-obj_extract($(EGCS_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
+obj_extract($(GCC_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
 #endif
 
 #if IS_GLIBC_LINUX
