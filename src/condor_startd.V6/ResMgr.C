@@ -444,8 +444,12 @@ ResMgr::assign_keyboard()
 	}
 
 		// Now, assign console activity to all CPUs that care.
+		// Notice, we should also assign keyboard here, since if
+		// there's console activity, there's (by definition) keyboard 
+		// activity as well.
 	for( i = 0; i < console_vms  && i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( console );
+		resources[i]->r_attr->set_keyboard( console );
 	}
 
 		// Finally, assign keyboard activity to all CPUS that care. 
