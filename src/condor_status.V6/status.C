@@ -356,7 +356,8 @@ usage ()
 		"\t-sort <attr>\t\tSort entries by named attribute\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n" 
-		"\t-expert\t\tDisplay shorter error messages\n" 
+		"\t-xml\t\t\tDisplay entire classads, but in XML\n" 
+		"\t-expert\t\t\tDisplay shorter error messages\n" 
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n",
@@ -460,6 +461,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i],"-long") || matchPrefix (argv[i],"-verbose")) {
 			setPPstyle (PP_VERBOSE, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i],"-xml")){
+			setPPstyle (PP_XML, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
