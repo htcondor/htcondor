@@ -257,6 +257,11 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 				 "attempting to re-read address file\n" );
 		if( readAddressFile(_subsys) ) {
 			_port = string_to_port( _addr );
+			tcp_collector_port = _port;
+			if( tcp_collector_addr ) {
+				delete [] tcp_collector_addr;
+			}
+			tcp_collector_addr = strnewp( _addr );
 			dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
 					 _port, _addr );
 		}
