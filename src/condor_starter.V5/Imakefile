@@ -84,9 +84,9 @@ REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(XDR_LIB)
 #if IS_MIPS_ULTRIX42
 LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
 #elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a KernLib SocketLib RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib SocketLib RpcLib MldLib 
 #else 
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a KernLib  RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib  RpcLib MldLib 
 #endif
 
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
