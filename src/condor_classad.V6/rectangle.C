@@ -522,10 +522,10 @@ AddUpperBound( const string &attr, Value &val, bool open, bool constraint,
 			// check for value consistency
 		Operation::Operate( Operation::LESS_THAN_OP, val, i.lower, result );
 		if( result.IsBooleanValue( b ) && b ) {
-			return( INCONSISTENT_VALUE );
+			return( RECT_INCONSISTENT_VALUE );
 		}
 	} else {
-		return( INCONSISTENT_TYPE );
+		return( RECT_INCONSISTENT_TYPE );
 	}
 
 	if( vtu==Value::UNDEFINED_VALUE ) {
@@ -548,7 +548,7 @@ AddUpperBound( const string &attr, Value &val, bool open, bool constraint,
 		(*allDim)[attr][rkey<0?rId:rkey] = i;
 	}
 
-	return( NO_ERROR );
+	return( RECT_NO_ERROR );
 }
 
 
@@ -584,10 +584,10 @@ AddLowerBound( const string &attr, Value &val, bool open, bool constraint,
 			// check for value consistency
 		Operation::Operate( Operation::GREATER_THAN_OP, val, i.upper, result );
 		if( result.IsBooleanValue( b ) && b ) {
-			return( INCONSISTENT_VALUE );
+			return( RECT_INCONSISTENT_VALUE );
 		}
 	} else {
-		return( INCONSISTENT_TYPE );
+		return( RECT_INCONSISTENT_TYPE );
 	}
 
 	if( vtl==Value::UNDEFINED_VALUE ) {
@@ -610,7 +610,7 @@ AddLowerBound( const string &attr, Value &val, bool open, bool constraint,
 		(*allDim)[attr][rkey<0?rId:rkey] = i;
 	}
 
-	return( NO_ERROR );
+	return( RECT_NO_ERROR );
 }
 
 bool Rectangles::
@@ -1091,10 +1091,10 @@ Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad,
 				}
 				if( ( !oitr->second.lower.IsUndefinedValue( ) && 
 						AddLowerBound(aitr->first,oitr->second.lower,
-							oitr->second.openLower, true, nRecId )!=NO_ERROR )||
+							oitr->second.openLower, true, nRecId )!=RECT_NO_ERROR )||
 					( !oitr->second.upper.IsUndefinedValue( ) &&
 						AddUpperBound(aitr->first,oitr->second.upper,
-							oitr->second.openUpper, true, nRecId )!= NO_ERROR)){
+							oitr->second.openUpper, true, nRecId )!= RECT_NO_ERROR)){
 					return( false );
 				}
 			}
@@ -1106,10 +1106,10 @@ Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad,
 				}
 				if( ( !oitr->second.lower.IsUndefinedValue( ) && 
 						AddLowerBound(aitr->first,oitr->second.lower,
-							oitr->second.openLower, false, nRecId )!=NO_ERROR)||
+							oitr->second.openLower, false, nRecId )!=RECT_NO_ERROR)||
 					( !oitr->second.upper.IsUndefinedValue( ) &&
 						AddUpperBound(aitr->first,oitr->second.upper,
-							oitr->second.openUpper, false, nRecId )!=NO_ERROR)){
+							oitr->second.openUpper, false, nRecId )!=RECT_NO_ERROR)){
 					return( false );
 				}
 			}
@@ -1153,10 +1153,10 @@ Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad,
 				}
 				if( ( !oitr->second.lower.IsUndefinedValue( ) && 
 						AddLowerBound( renamed, oitr->second.lower,
-							oitr->second.openLower, true, nRecId )!=NO_ERROR )||
+							oitr->second.openLower, true, nRecId )!=RECT_NO_ERROR )||
 					( !oitr->second.upper.IsUndefinedValue( ) &&
 						AddUpperBound( renamed, oitr->second.upper,
-							oitr->second.openUpper, true, nRecId )!= NO_ERROR)){
+							oitr->second.openUpper, true, nRecId )!= RECT_NO_ERROR)){
 					return( false );
 				}
 			}
