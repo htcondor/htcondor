@@ -109,6 +109,18 @@ sub do_submit() {
 		$GLOBUSENV .= "(_condor_VIRTUAL_MACHINE_TYPE_1 1/$vmcount)";
 		$GLOBUSENV .= "(_condor_NUM_VIRTUAL_MACHINES_TYPE_1 $vmcount)";
 	}
+
+		##Condor has trouble determining ARCH on some
+		##high-performance HP-UX machines because they have a
+		##minimal OS install.  So, set the ARCH here if we
+		##know it.
+	if ( $arch =~ /hppa2/ ) {
+	    $GLOBUSENV .= "(_condor_ARCH HPPA2 )";
+	}
+	elsif ( $arch =~ /hppa1/ ) {
+	    $GLOBUSENV .= "(_condor_ARCH HPPA1 )";
+	}
+
 	$GLOBUSENV .= ")";
 
 		##Escape '$' in submit file entries
