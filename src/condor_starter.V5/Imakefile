@@ -25,8 +25,7 @@ PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
 	user_proc.o tables.o starter_common.o \
 	../condor_syscall_lib/file_stream.o 
 
-NON_PORTABLE_OBJ = NON_POSIX.o \
-	analyze_exec.$(OS).o analyze_core.$(OS).o
+NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.$(OS).o
 
 OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
