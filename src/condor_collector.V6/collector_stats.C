@@ -172,7 +172,7 @@ CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 	}
 }
 
-// TODO
+// Get the history as a hex string
 char *
 CollectorBaseStats::getHistoryString ( char *buf )
 {
@@ -182,11 +182,18 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	int			offset = historyBitnum;	// History offset
 	int			loop;					// Loop variable
 
-	outoff = 0;
+	// If history's not enable, nothing to do..
+	if ( ( ! historyBuffer ) || ( ! historySize ) ) {
+		*buf = '\0';
+		return buf;
+	}
+
 	// Calculate the "last" offset
 	if ( --offset < 0 ) {
 		offset = historyMaxbit;
 	}
+
+	// And, the starting "word" and bit numbers
 	int		word_num = offset / historyWordBits;
 	int		bit_num = offset % historyWordBits;
 
@@ -221,11 +228,18 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	return buf;
 }
 
+// Get the history as a hex string
 char *
 CollectorBaseStats::getHistoryString ( void )
 {
-	char		*buf = new char[ getStringLen() ];
-	return getHistoryString( buf );
+
+	// If history is enabled, do it
+	if ( historyBuffer ) {
+		char		*buf = new char[ getStringLen() ];
+		return getHistoryString( buf );
+	} else {
+		return NULL;
+	}
 }
 
 
@@ -337,11 +351,15 @@ CollectorClassStatsList::publish( ClassAd *ad )
 		sprintf( line, "%s_%s = %d", ATTR_UPDATESTATS_LOST,
 				 name, classStats[classNum]->getDropped( ) );
 		ad->Insert(line);
+
+		// Get the history string & insert it if it's valid
 		char	*tmp = classStats[classNum]->getHistoryString( );
-		sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
-				 name, tmp );
-		ad->Insert(line);
-		delete tmp;
+		if ( tmp ) {
+			sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
+					 name, tmp );
+			ad->Insert(line);
+			delete tmp;
+		}
 	}
 	return 0;
 }
