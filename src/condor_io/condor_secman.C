@@ -440,7 +440,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
 			 SecMan::sec_req_rev[sec_negotiation] );
 	ad->Insert(buf);
-	dprintf (D_ALWAYS, "ad->Insert(%s)", buf);
+	dprintf (D_SECURITY, "ad->Insert(%s)\n", buf);
 
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
 			 SecMan::sec_req_rev[sec_authentication] ); 
