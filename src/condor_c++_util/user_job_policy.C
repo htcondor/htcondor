@@ -398,7 +398,7 @@ UserPolicy::AnalyzePolicy( int mode )
 		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
 	}
 
-	if( m_ad->LookupInteger(ATTR_JOB_STATE,state) ) {
+	if( !m_ad->LookupInteger(ATTR_JOB_STATUS,state) ) {
 		return UNDEFINED_EVAL;
 	}
 
