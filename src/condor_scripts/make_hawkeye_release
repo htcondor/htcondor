@@ -131,7 +131,7 @@ exit 0;
 sub CopyAll( $$$ )
 {
     my ( $SrcDir, $DestDir, $FilePat ) = @_;
-    print "Link '$FilePat' from '$SrcDir' to '$DestDir':\n";
+    print "Copy/Link '$FilePat' from '$SrcDir' to '$DestDir':\n";
     if ( ! -d $DestDir )
     {
 	die "Can't create $DestDir" if ( ! mkdir( "$DestDir", 0755 ) );
@@ -140,9 +140,20 @@ sub CopyAll( $$$ )
     foreach my $File ( @FileList )
     {
 	next if ( ! -f "$SrcDir/$File" );
-	print "   $SrcDir/$File -> $DestDir\n";
-	#system( "/bin/cp $SrcDir/$File $DestDir" );
-	link "$SrcDir/$File", "$DestDir/$File" || die "link: $!";
+	print "   $SrcDir/$File -> $DestDir:\n";
+
+	if ( ( -l $SrcDir ) || ( -l "$SrcDir/$File" ) )
+	{
+	    system( "/bin/cp $SrcDir/$File $DestDir" );
+	}
+	elsif ( -f "$SrcDir/$File" )
+	{
+	    link "$SrcDir/$File", "$DestDir/$File" || die "link: $!";
+	}
+	else
+	{
+	    die "Don't know how to handle '$SrcDir/$File'\n";
+	}
     }
     system "ls -li $DestDir";
 }
