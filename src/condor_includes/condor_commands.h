@@ -8,6 +8,7 @@
 */
 #define DC_BASE 60000
 #define DC_RAISESIGNAL (DC_BASE+0)
+#define DC_PROCESSEXIT (DC_BASE+1)
 
 /****
 ** Queue Manager Commands
