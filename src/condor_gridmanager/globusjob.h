@@ -64,6 +64,7 @@ class GlobusJob : public Service
 	int shadowBirthday;
 	char *holdReason;
 	int submitFailureCode;
+	int lastRestartReason;
 
 	GahpClient gahp;
 

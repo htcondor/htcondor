@@ -151,6 +151,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	shadowBirthday = 0;
 	holdReason = NULL;
 	submitFailureCode = 0;
+	lastRestartReason = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -298,10 +299,12 @@ int GlobusJob::doEvaluateState()
 					}
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 							rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 					gmState = GM_RESTART;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(0)", rc );
+					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 				}
 			}
@@ -374,6 +377,7 @@ int GlobusJob::doEvaluateState()
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_UPDATE)", rc );
+				globusError = rc;
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			}
@@ -527,6 +531,7 @@ int GlobusJob::doEvaluateState()
 						if ( rc != GLOBUS_SUCCESS ) {
 							// unhandled error
 							LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+							globusError = rc;
 							gmState = GM_STOP_AND_RESTART;
 							break;
 						}
@@ -568,10 +573,12 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_SUCCESS ) {
 					gmState = GM_DONE_SAVE;
 				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
+					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
+					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 				}
 			}
@@ -604,6 +611,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+					globusError = rc;
 					gmState = GM_STOP_AND_RESTART;
 					break;
 				}
@@ -630,6 +638,7 @@ int GlobusJob::doEvaluateState()
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STOP_MANAGER)", rc );
+				globusError = rc;
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_RESTART;
@@ -637,6 +646,11 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_RESTART:
 			if ( jobContact == NULL ) {
+				gmState = GM_CLEAR_REQUEST;
+			} else if ( globusError != 0 && globusError == lastRestartReason ) {
+				dprintf( D_FULLDEBUG, "Restarting jobmanager for same reason "
+						 "two times in a row: %d, aborting request\n",
+						 globusError );
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				char *job_contact;
@@ -701,6 +715,7 @@ int GlobusJob::doEvaluateState()
 						globusState = globusStateBeforeFailure;
 					}
 					globusStateErrorCode = 0;
+					lastRestartReason = globusError;
 					ClearCallbacks();
 					gmState = GM_RESTART_SAVE;
 				} else {
@@ -735,6 +750,7 @@ int GlobusJob::doEvaluateState()
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+				globusError = rc;
 				gmState = GM_STOP_AND_RESTART;
 			}
 			gmState = GM_SUBMITTED;
@@ -814,6 +830,7 @@ int GlobusJob::doEvaluateState()
 			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
 				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
 				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
+				globusError = 0;
 				gmState = GM_RESTART;
 			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_PROXY_EXPIRED;
@@ -838,6 +855,7 @@ int GlobusJob::doEvaluateState()
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+						globusError = rc;
 						gmState = GM_STOP_AND_RESTART;
 						break;
 					}
@@ -895,6 +913,8 @@ int GlobusJob::doEvaluateState()
 				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 			}
 			globusStateErrorCode = 0;
+			globusError = 0;
+			lastRestartReason = 0;
 			ClearCallbacks();
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
@@ -984,6 +1004,7 @@ int GlobusJob::doEvaluateState()
 			now = time(NULL);
 			if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
 				if ( jobContact ) {
+					globusError = 0;
 					gmState = GM_RESTART;
 				} else {
 					gmState = GM_UNSUBMITTED;
@@ -1047,6 +1068,7 @@ void GlobusJob::NotifyResourceUp()
 	}
 	resourceDown = false;
 	if ( jmUnreachable ) {
+		globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 		gmState = GM_RESTART;
 		enteredCurrentGmState = time(NULL);
 	}
