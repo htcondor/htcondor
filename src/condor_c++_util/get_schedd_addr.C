@@ -33,8 +33,7 @@
 
 #include "condor_query.h"
 
-#undef V5_COMPAT
-#if defined(V5_COMPAT)
+#if !defined(WANT_V6)
 extern "C"
 {
 char* get_schedd_addr(const char* name)
