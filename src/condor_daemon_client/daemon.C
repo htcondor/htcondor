@@ -1044,7 +1044,7 @@ Daemon::getCmInfo( const char* subsys )
 
 	if( ! host || !host[0]) {
 			// Final step before giving up: check for an address file.
-		if( _is_local && readAddressFile(subsys) ) {
+		if( readAddressFile(subsys) ) {
 				// if we got the address in the file, we still won't
 				// have a good full hostname, so use the local value.
 				// everything else (port, hostname, etc), will be
@@ -1077,7 +1077,7 @@ Daemon::getCmInfo( const char* subsys )
 	} else {
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 	}
-	if( _port == 0 && _is_local && readAddressFile(subsys) ) {
+	if( _port == 0 && readAddressFile(subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
 		New_name( strnewp(my_full_hostname()) );
