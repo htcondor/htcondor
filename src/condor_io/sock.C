@@ -237,8 +237,12 @@ int Sock::bind(
 	sin.sin_port = htons((u_short)port);
 
 	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
+#ifdef WIN32
 		int error = WSAGetLastError();
 		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
+#else
+		dprintf( D_ALWAYS, "bind failed: errno = %d\n", errno );
+#endif
 		return FALSE;
 	}
 
