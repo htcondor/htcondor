@@ -610,7 +610,8 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     dprintf(D_ALWAYS, "%s\n", error_message(code));
     // Abort
     mySock_->encode();
-    mySock_->code(KERBEROS_ABORT);
+    reply = KERBEROS_ABORT;
+    mySock_->code(reply);
     mySock_->end_of_message();
 
     rc = FALSE;
@@ -697,7 +698,8 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
         }
 
         mySock_->encode();
-        if (!mySock_->code(KERBEROS_MUTUAL) || !mySock_->end_of_message()) {
+	message = KERBEROS_MUTUAL;
+        if (!mySock_->code(message) || !mySock_->end_of_message()) {
             goto error;
         }
 
