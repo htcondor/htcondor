@@ -36,6 +36,8 @@
 #include "classad_log.h"
 #include "condor_debug.h"
 
+static char *_FileName_ = __FILE__;	/* Used by EXCEPT (See condor_debug.h) */
+
 ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {
 	log_filename[0] = '\0';
@@ -50,7 +52,7 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 
 	log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
 	if (log_fd < 0) {
-		return;
+		EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
 	}
 
 	// Read all of the log records
@@ -109,8 +111,12 @@ ClassAdLog::AppendLog(LogRecord *log)
 		}
 		active_transaction->AppendLog(log);
 	} else {
-		log->Write(log_fd);
-		fsync(log_fd);
+		if (log->Write(log_fd) < 0) {
+			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+		}
+		if (fsync(log_fd) < 0) {
+			EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+		}
 		log->Play((void *)&table);
 		delete log;
 	}
@@ -269,7 +275,9 @@ ClassAdLog::LogState(int fd)
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
 		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
-		log->Write(fd);
+		if (log->Write(fd) < 0) {
+			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+		}
 		delete log;
 		ad->ResetName();
 		attr_name = ad->NextName();
@@ -279,14 +287,19 @@ ClassAdLog::LogState(int fd)
 			if (expr) {
 				expr->RArg()->PrintToStr(attr_val);
 				log = new LogSetAttribute(key, attr_name, attr_val);
-				log->Write(fd);
+				if (log->Write(fd) < 0) {
+					EXCEPT("write to %s failed, errno = %d", log_filename,
+						   errno);
+				}
 				delete log;
 				delete [] attr_name;
 				attr_name = ad->NextName();
 			}
 		}
 	}
-	fsync(fd);
+	if (fsync(fd) < 0) {
+		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+	} 
 }
 
 LogNewClassAd::LogNewClassAd(const char *k, char *m, char *t)
