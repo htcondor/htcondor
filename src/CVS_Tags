@@ -1,3 +1,7 @@
+02/10/05 V6_6-merge-34
+   The state of the V6_6-branch for a merge into V6_7_4-branch. This merge
+   picks up two bug fixes and a bunch of tests.
+
 01/31/05 V6_6-merge-33
    The state of the V6_6-branch for yet another merge into the
    V6_7-branch.
