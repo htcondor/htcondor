@@ -874,6 +874,7 @@ sub ReadJobs( )
     {
 	printf FILE "%-60s %5d\n", $Job, $Jobs{$Job};
     }
+    print FILE "GRIDMONEOF\n";
     close( FILE );
     print "Wrote " . scalar( keys %Jobs ) . " entries to $TmpFile\n"
 	if ( $Config{Debug} );
