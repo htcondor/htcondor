@@ -8,10 +8,10 @@ $testname = 'Stat Test';
 $file = 'x_data.in';
 
 ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime,
-$mtime, $ctime, $blksize, $blocks) = ljob_rsc_stat_std($file);
+$mtime, $ctime, $blksize, $blocks) = lstat($file);
 $mode = $mode & 0777;
 $mode = sprintf("0%o", $mode);
-push( @CondorTest::expected_output, "Output from ljob_rsc_stat_std():" );
+push( @CondorTest::expected_output, "Output from lstat():" );
 push( @CondorTest::expected_output, "$file:" );
 push( @CondorTest::expected_output, "  st_mode = $mode" );
 push( @CondorTest::expected_output, "  st_ino = $ino" );
@@ -24,10 +24,10 @@ push( @CondorTest::expected_output, "  st_mtime = $mtime" );
 push( @CondorTest::expected_output, "  st_ctime = $ctime" );
 
 ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime,
-$mtime, $ctime, $blksize, $blocks) = job_rsc_stat_std($file);
+$mtime, $ctime, $blksize, $blocks) = stat($file);
 $mode = $mode & 0777;
 $mode = sprintf("0%o", $mode);
-push( @CondorTest::expected_output, "Output from job_rsc_stat_std():" );
+push( @CondorTest::expected_output, "Output from stat():" );
 push( @CondorTest::expected_output, "$file:" );
 push( @CondorTest::expected_output, "  st_mode = $mode" );
 push( @CondorTest::expected_output, "  st_ino = $ino" );
