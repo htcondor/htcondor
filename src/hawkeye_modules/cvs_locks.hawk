@@ -3,7 +3,7 @@ ModuleFiles: cvs_locks
 
 Description:
 Used to monitor CVS locks
-You should set the HAWKEYE_DF_REPOSITORIES parameter by hand
+You should set the REPOSITORIES parameter by hand
 
 Default: cvs
 options: kill
@@ -11,5 +11,6 @@ period: 30m
 prefix: cvslocks_
 
 # It's parameters
-parameter: HAWKEYE_CVS_REPOSITORIES = /dir/to/repository
+parameter: REPOSITORIES
+REPOSITORIES = /dir/to/repository
 Comma-separated List of repositories to monitor

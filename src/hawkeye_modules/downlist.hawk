@@ -13,8 +13,8 @@ period: 10m
 prefix: down_
 
 # It's parameters
-parameter: HAWKEYE_DOWN_MACHINES
+parameter: MACHINES
 Sets the list of machines that downlist will monitor
 
-parameter: HAWKEYE_DOWN_MACHINES_FILE
+parameter: MACHINES_FILE
 Sets the file which contains the list of machines to monitor

@@ -12,16 +12,16 @@ period: 1s
 prefix: top_
 
 # It's parameters
-parameter: Hawkeye_TOP_PERIOD = 30s
+parameter: PERIOD = 30s
 Sets the frequency with which top collects data (i.e. 30s, 5m)
 
-parameter: Hawkeye_TOP_SORT = :2 mem:2
+parameter: SORT = :2 mem:2
 Format: field:num [field:num] ...
 Causes top to sort by 'field' and dump the top 'num' of that sort
 Valid fields are:
    pid user priority nice size rss share state lib cpu mem time command
 
-parameter: Hawkeye_TOP_FIELDS = pid, user, cpu, mem, time, command
+parameter: FIELDS = pid, user, cpu, mem, time, command
 Format: field[,field]..
 List of fields to dump
 Valid fields are:

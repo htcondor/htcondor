@@ -58,14 +58,17 @@ sub Init()
     $Tmp = HawkeyeLib::ReadConfig( "_pathadd", "" );
     $ENV{PATH} = "$Tmp:$ENV{PATH}" if ( $Tmp ne "" );
 
-    $Tmp = HawkeyeLib::ReadConfig( "_pool_prog", "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_executable", "" );
     $Config{PoolProg} = $Tmp if ( $Tmp ne "" );
 
-    $Tmp = HawkeyeLib::ReadConfig( "_pool_dir", "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_dir", "" );
     push( @{$Config{Options}}, "--dir=$Tmp" ) if ( $Tmp ne "" );
 
-    $Tmp = HawkeyeLib::ReadConfig( "_pool_name", "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_name", "" );
     $Config{PoolName} = $Tmp if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_description", "" );
+    $Config{Description} = $Tmp if ( $Tmp ne "" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
     if ( $Tmp =~ /true/i )

@@ -11,5 +11,5 @@ period: 1s
 prefix: vmstat_
 
 # It's parameters
-parameter: HAWKEYE_VMSTAT_PERIOD = 30s
+parameter: PERIOD = 30s
 Sets the frequency with which vmstat collects data (i.e. 30s, 5m)
