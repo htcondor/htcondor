@@ -17,9 +17,9 @@ copy pdh.dll %1
 echo Stripping out debug symbols from files...
 pushd %1
 for %%f in (*.exe) do rebase -b 0x400000 -x . -a %%f
-for %%f in (master startd schedd collector negotiator) do move condor_%%f.dbg condor_%%f.save
+for %%f in (master startd schedd collector negotiator shadow starter) do move condor_%%f.dbg condor_%%f.save
 del *.dbg 
-for %%f in (master startd schedd collector negotiator) do move condor_%%f.save condor_%%f.dbg
+for %%f in (master startd schedd collector negotiator shadow starter) do move condor_%%f.save condor_%%f.dbg
 copy condor_rm.exe condor_hold.exe
 copy condor_rm.exe condor_release.exe
 copy condor.exe condor_off.exe
