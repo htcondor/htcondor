@@ -2354,11 +2354,41 @@ availability statistics in the startd.
   A boolean that determines if the startd computes resource
   availability statistics.  The default is False.
 
+If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the startd will
+define the following ClassAd attributes for resources:
+
+\begin{description}
+\item[\AdAttr{AvailTime}]
+\index{ClassAd machine attribute!AvailTime}
+  The proportion of the time (between 0.0 and 1.0)
+  that this resource has been in a state other than Owner.
+\item[\AdAttr{LastAvailInterval}]
+\index{ClassAd machine attribute!LastAvailInterval}
+  The duration (in seconds) of the last period between Owner states.
+\end{description}
+
+The following attributes will also be included if the resource is
+not in the Owner state:
+
+\begin{description}
+\item[\AdAttr{AvailSince}]
+\index{ClassAd machine attribute!AvailSince}
+  The time at which the resource last left the
+  Owner state.  Measured in the number of seconds since the
+  epoch (00:00:00 UTC, Jan 1, 1970).
+\item[\AdAttr{AvailTimeEstimate}]
+\index{ClassAd machine attribute!AvailTimeEstimate}
+  Based on past history, an estimate
+  of how long the current period between Owner states will last.
+\end{description}
+
 \item[\Macro{STARTD\_AVAIL\_CONFIDENCE}]
 \label{param:StartdAvailConfidence}
-  A floating point number that sets the confidence level of the
-  startd's AvailTime estimate.  By default, the estimate is based on
-  the 80th percentile of past values (i.e., the macro is set to 0.8).
+  A floating point number representing the confidence level of the
+  startd daemon's AvailTime estimate.
+  By default, the estimate is based on
+  the 80th percentile of past values
+  (that is, the value is initially set to 0.8).
 
 \item[\Macro{STARTD\_MAX\_AVAIL\_PERIOD\_SAMPLES}]
 \label{param:StartdMaxAvailPeriodSamples}
@@ -2368,33 +2398,6 @@ availability statistics in the startd.
   disk space.
 
 \end{description}
-
-If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the startd will
-define the following ClassAd attributes for resources:
-
-\begin{description}
-\item[\AdAttr{AvailTime}]
-  What proportion of the time (between 0.0 and 1.0)
-  has this resource been in a state other than ``Owner''?
-\item[\AdAttr{LastAvailInterval}]
-  What was the duration (in seconds) of the
-  last period between ``Owner'' states?
-\end{description}
-
-The following attributes will also be included if the resource is
-not in the ``Owner'' state:
-
-\begin{description}
-\item[\AdAttr{AvailSince}]
-  At what time did the resource last leave the
-  ``Owner'' state?  Measured in the number of seconds since the
-  epoch (00:00:00 UTC, Jan 1, 1970).
-\item[\AdAttr{AvailTimeEstimate}]
-  Based on past history, this is an estimate
-  of how long the current period between ``Owner'' states will
-  last.
-\end{description}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}
