@@ -6,8 +6,7 @@
 #define KernLib /usr/lib/libelf.a /* weiru */
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib /lib/libsocket.a  /lib/libnsl.a  /lib/libdl.so /lib/libintl.a /* ..dhaval 6/28 */
-/* #define SocketLib /lib/libsocket.a   ..dhaval 6/28 */
+#define SocketLib -lsocket -lnsl
 
 #define Crt0 /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o /* Checked all the files listed in cc -v for file 
                          containing the string "main" but could not find it */
