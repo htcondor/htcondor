@@ -75,15 +75,6 @@
 #define PVM_ARCH			ALPHA
 
 #define USE_GCC				YES
-#if USE_GCC
-#	define CCompiler gcc
-#	define CPlusCompiler g++
-#	define Demangler c++filt
-#else
-#	define CCompiler cc
-#	define CPlusCompiler cxx
-#	define Demangler demangle
-#endif
 
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */

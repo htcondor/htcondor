@@ -6,6 +6,7 @@
 #define CCompiler	/afs/engr.wisc.edu/src/gnu/gcc-2.7.2.3/bin/gcc
 #define CPlusCompiler	/afs/engr.wisc.edu/src/gnu/gcc-2.7.2.3/bin/g++
 #define PreProcessCmd	CCompiler -E -x c-header
+#define Demangler	/afs/engr.wisc.edu/src/gnu/gcc-2.7.2.3/bin/c++filt
 
 SITE_LDFLAGS = -L/afs/engr.wisc.edu/src/gnu/libg++-2.7.2/hp_ux102/lib
 SITE_C_FLAGS = -I/afs/engr.wisc.edu/src/gnu/libg++-2.7.2/hp_ux102/lib/g++-include

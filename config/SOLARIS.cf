@@ -38,26 +38,6 @@
 #define YpLib
 #endif
 
-#ifndef CCompiler
-#if HasGcc
-#define CCompiler gcc
-#else
-#define CCompiler /opt/SUNWspro/bin/cc
-#endif
-#endif
-
-#ifndef CPlusCompiler
-#ifdef HasGPlusPlus
-#define CPlusCompiler g++
-#else
-#define CPlusCompiler /opt/SUNWspro/bin/CC
-#endif
-#endif
-
-#ifndef Demangler
-#define Demangler c++filt
-#endif
-
 #ifndef CFlags
 #define CFlags
 #endif
@@ -71,14 +51,6 @@
 ** static version when you "make public_all".  -Derek 6/25/98
 */
 #define WantsStatic NO
-
-#ifndef PreProcessCmd
-#if HasGcc
-#define PreProcessCmd gcc -E -x c-header
-#else
-#define PreProcessCmd cc -E
-#endif
-#endif
 
 #define IS_V5					YES
 

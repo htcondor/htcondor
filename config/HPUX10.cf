@@ -18,7 +18,6 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 
-#define Demangler /usr/local/bin/c++filt
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 
 #define TypicalMemory 64
