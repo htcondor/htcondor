@@ -109,14 +109,14 @@ class StringSpace
      * count of the string. In any case, we return the index of the
      * string, and a reference to the string with an SSString. Using the 
      * SSString is preferred over using the index. */
-	int	getCanonical(const char* str, SSString& cannonical, 
+	int	getCanonical(char* &str, SSString& cannonical, 
 					 StringSpaceAdoptionMethod adopt=SS_DUP);
     /** Add a string to the StringSpace. If the string is already in
      * the StringSpace, it isn't added, but we increase the reference
      * count of the string. In any case, we return the index of the
      * string, and a reference to the string with an SSString. Using the 
      * SSString is preferred over using the index. */
-	int	getCanonical(const char* str, SSString*& cannonical,
+	int	getCanonical(char* &str, SSString*& cannonical,
 					 StringSpaceAdoptionMethod adopt=SS_DUP);
 
     /** Add a string to the StringSpace. If the string is already in
@@ -126,7 +126,7 @@ class StringSpace
      * [] operator. Using this index is preferred less than using
 	 * an SSString, which you could have gotten from one of the other 
 	 * getCanonical() methods. */
-    int getCanonical(const char*, 
+    int getCanonical(char* &str, 
 					 StringSpaceAdoptionMethod adopt=SS_DUP);
 
 	/** Check if a string is in the string space. If it is, we return
@@ -166,7 +166,7 @@ class StringSpace
     { 
 		bool        inUse;
 		int         refCount; 
-		const char  *string; 
+		char  *string; 
 		int         adoptMode; 
 	};
 

@@ -95,7 +95,7 @@ purge ()
 			{
 				case SS_DUP:
 				case SS_ADOPT_C_STRING:
-					free ((char *) strTable[i].string);
+					free (strTable[i].string);
 					did_delete = true;
 					break;
 
@@ -132,7 +132,7 @@ purge ()
 }
 
 int StringSpace::
-getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
+getCanonical (char* &str, StringSpaceAdoptionMethod adopt)
 {
 	int index;
 	MyString myStr(str);
@@ -153,10 +153,12 @@ getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 		switch (adopt)
         {
             case SS_ADOPT_C_STRING: 
-				free((char *) str);  
+				free(str);  
+				str = NULL;
 				break;
             case SS_ADOPT_CPLUS_STRING: 
 				delete [] (str);  
+				str = NULL;
 				break;
             case SS_DUP:
             default:
@@ -173,6 +175,7 @@ getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 		strTable[index].string  = strdup(str);
 	} else {
 		strTable[index].string  = str;
+		str = NULL;
 	}
 	strTable[index].inUse       = true;
     strTable[index].refCount    = 1;
@@ -202,7 +205,7 @@ getCanonical (const char *str, StringSpaceAdoptionMethod adopt)
 
 
 int StringSpace::
-getCanonical (const char *str, SSString &canonical, 
+getCanonical (char* &str, SSString &canonical, 
 			  StringSpaceAdoptionMethod adopt)
 {
 	canonical.context = ((canonical.index=getCanonical(str,adopt)) != -1) ?
@@ -212,7 +215,7 @@ getCanonical (const char *str, SSString &canonical,
 
 
 int StringSpace::
-getCanonical (const char *str, SSString *&canonical, 
+getCanonical (char* &str, SSString *&canonical, 
 			  StringSpaceAdoptionMethod adopt)
 {
 	if (!(canonical = new SSString)) return -1;
@@ -324,7 +327,7 @@ SSString::dispose ()
         {
             case SS_DUP: 
             case SS_ADOPT_C_STRING:
-                free ((char *) context->strTable[index].string);
+                free (context->strTable[index].string);
 				context->strTable[index].string = NULL;
 				context->strTable[index].inUse = false;
 				context->strTable[index].adoptMode = SS_INVALID;
