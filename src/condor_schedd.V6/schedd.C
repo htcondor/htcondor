@@ -3218,6 +3218,7 @@ Scheduler::StartJobHandler()
 	if(!jobAd) {
 		dprintf(D_ALWAYS,"Couldn't find ClassAd for job %d.%d\n",
 		        job_id->cluster, job_id->proc);
+		tryNextShadow();
 		return;
 	}
 
@@ -3275,6 +3276,15 @@ Scheduler::StartJobHandler()
 			dprintf( D_ALWAYS, "Trying to run a job on a Windows "
 					 "resource but you do not have a condor_shadow "
 					 "that will work, aborting.\n" );
+			mark_job_stopped(job_id);
+			RemoveShadowRecFromMrec(srec);
+			holdJob( job_id->cluster, job_id->proc, 
+					 "No condor_shadow installed at your submit machine "
+					 "that supports WIN32 jobs", 
+					 true, true, true, true );
+			delete srec;
+			srec = NULL;
+			tryNextShadow();
 			return;
 		}
 	}
@@ -3291,6 +3301,15 @@ Scheduler::StartJobHandler()
 				dprintf( D_ALWAYS, "Trying to run a STANDARD job but you "
 						 "do not have a condor_shadow that will work, "
 						 "aborting.\n" );
+				mark_job_stopped(job_id);
+				RemoveShadowRecFromMrec(srec);
+				holdJob( job_id->cluster, job_id->proc, 
+                         "No condor_shadow installed at your submit machine "
+						 "that supports standard universe jobs", 
+                         true, true, true, true );
+				delete srec;
+				srec = NULL;
+				tryNextShadow();
 				return;
 			}
 			break;
@@ -3301,6 +3320,11 @@ Scheduler::StartJobHandler()
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
 							 "pre-6.3.3 resource, but you do not have a "
 							 "condor_shadow that will work, aborting.\n" );
+					mark_job_stopped(job_id);
+					RemoveShadowRecFromMrec(srec);
+					delete srec;
+					srec = NULL;
+					tryNextShadow();
 					return;
 				}
 			} else {
@@ -3309,6 +3333,11 @@ Scheduler::StartJobHandler()
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
 							 "6.3.3 or later resource, but you do not have "
 							 "condor_shadow that will work, aborting.\n" );
+					mark_job_stopped(job_id);
+					RemoveShadowRecFromMrec(srec);
+					delete srec;
+					srec = NULL;
+					tryNextShadow();
 					return;
 				}
 			}
@@ -3319,6 +3348,15 @@ Scheduler::StartJobHandler()
 				dprintf( D_ALWAYS, "Trying to run a JAVA job but you "
 						 "do not have a condor_shadow that will work, "
 						 "aborting.\n" );
+				mark_job_stopped(job_id);
+				RemoveShadowRecFromMrec(srec);
+				holdJob( job_id->cluster, job_id->proc, 
+                         "No condor_shadow installed at your submit machine "
+						 "that supports JAVA jobs", 
+                         true, true, true, true );
+				delete srec;
+				srec = NULL;
+				tryNextShadow();
 				return;
 			}
 			break;
@@ -3415,21 +3453,32 @@ Scheduler::StartJobHandler()
 		srec->pid=pid;
 		add_shadow_rec(srec);
 	}
+	tryNextShadow();
+}
 
-	 // Re-set timer if there are any jobs left in the queue
-	 if (!RunnableJobQueue.IsEmpty()) {
-		 StartJobTimer = daemonCore->
-			 Register_Timer( JobStartDelay,
-							 (Eventcpp)&Scheduler::StartJobHandler,
-							 "start_job", this ); 
-	 } else {
-		// if there are no more jobs in the queue, this is a great time to
-		// update the central manager since things are pretty "stable".
-		// this way, "condor_status -sub" and other views such as 
-		// "condor_status -run" will be more likely to match
+
+void
+Scheduler::tryNextShadow( void )
+{
+		// Re-set timer if there are any jobs left in the queue
+	if( !RunnableJobQueue.IsEmpty() ) {
+		StartJobTimer = daemonCore->
+			Register_Timer( JobStartDelay,
+							(Eventcpp)&Scheduler::StartJobHandler,
+							"start_job", this ); 
+	} else {
+			/* 
+			   if there are no more jobs in the queue, this is a great
+			   time to update the central manager since things are
+			   pretty "stable".  this way, "condor_status -sub" and
+			   other views such as "condor_status -run" will be more
+			   likely to match
+			*/
 		timeout();
+		StartJobs();
 	}
 }
+
 
 shadow_rec*
 Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
@@ -3508,6 +3557,12 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		if( ! shadow_obj ) {
 			dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
 					 "can't spawn PVM jobs, aborting\n", ATTR_HAS_PVM );
+			RemoveShadowRecFromMrec(srp);
+			holdJob( job_id->cluster, job_id->proc, 
+					 "No condor_shadow installed at your submit machine "
+					 "that supports PVM jobs", 
+                     true, true, true, true );
+			delete srp;
 			return NULL;
 		}
 		shadow_path = shadow_obj->path();
