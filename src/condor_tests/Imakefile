@@ -92,7 +92,25 @@ TESTCLASS(lib_userlog,lib)
 **
 */
 
-/* Tests I am challenged on.... */
+
+DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
+RUN(job_core_killsignal_sched)
+DEPS(job_core_killsignal_sched,x_trapsig.exe)
+TESTCLASS(job_core_killsignal_sched,core)
+
+DESC(job_core_holdkillsig_sched,"Scheduler: Verify ability to control signal for holds and kills")
+RUN(job_core_holdkillsig_sched)
+DEPS(job_core_holdkillsig_sched,x_trapsig.exe)
+TESTCLASS(job_core_holdkillsig_sched,core)
+
+DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
+RUN(job_core_rmkillsig_sched)
+DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
+TESTCLASS(job_core_rmkillsig_sched,core)
+
+DESC(job_core_macros-dollardollar_van,"Vanilla: Did dollar dollar macros work?")
+RUN(job_core_macros-dollardollar_van)
+TESTCLASS(job_core_macros-dollardollar_van,core)
 
 /*
 **
@@ -170,9 +188,6 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 ** 
 ** Leave Off for now
 **
-**DESC(job_macros-dollardollar_van,"Vanilla: Did dollar dollar macros work?")
-**RUN(job_macros-dollardollar_van)
-**TESTCLASS(job_macros-dollardollar_van,core)
 **
 **DESC(job_core_plus_sched,"Scheduler: Verify +entries go to job ad")
 **RUN(job_core_plus_sched)
@@ -185,21 +200,6 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 /*
 ** 
 ** Leave Off for now
-**
-**DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
-**RUN(job_core_rmkillsig_sched)
-**DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
-**TESTCLASS(job_core_rmkillsig_sched,core)
-**
-**DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is used")
-**RUN(job_core_killsignal_sched)
-**DEPS(job_core_killsignal_sched,x_trapsig.exe)
-**TESTCLASS(job_core_killsignal_sched,core)
-**
-**DESC(job_core_holdkillsig_sched,"Scheduler: Verify ability to control signal for holds and kills")
-**RUN(job_core_holdkillsig_sched)
-**DEPS(job_core_holdkillsig_sched,x_trapsig.exe)
-**TESTCLASS(job_core_holdkillsig_sched,core)
 **
 **DESC(job_core_matchlist_van,"Vanilla: test that match_list_length is storing and rotating matches")
 **RUN(job_core_matchlist_van)
