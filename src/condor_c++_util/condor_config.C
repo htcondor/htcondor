@@ -288,7 +288,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 					char *tmp = (char *) malloc( strlen( varvalue ) 
 								+ strlen( "Owner == \"   \"" ) );
 					sprintf( tmp, "Owner == \"%s\"", varvalue );
-					insert( &(varname[8]), tmp, ConfigTab, TABLESIZE );
+					insert( "START", tmp, ConfigTab, TABLESIZE );
 					free( tmp );
 				}
 				else {
