@@ -1727,6 +1727,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 					// failed 6 and 5, but satisfies 4; so have priority
 					// but not better or equally preferred than current
 					// customer
+					// NOTE: In practice this often indicates some
+					// unknown problem.
 					fRankCond++;
 				}
 			} 
@@ -1748,7 +1750,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		 "  %5d are rejected by your job's requirements\n"
 		 "  %5d reject your job because of their own requirements\n"
 		 "  %5d match, but are serving users with a better priority in the pool%s\n"
-		 "  %5d match, but prefer another specific job despite its worse user-priority\n"
+		 "  %5d match, match, but reject the job for unknown reasons\n"
 		 "  %5d match, but will not currently preempt their existing job\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
