@@ -101,8 +101,6 @@ int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
 time_t lastContactSchedd = 0;
 
-List<Service> ObjectDeleteList;
-
 List<OrphanCallback_t> OrphanCallbackList;
 
 char *gramCallbackContact = NULL;
