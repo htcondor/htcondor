@@ -38,10 +38,15 @@
 #define TRUE 	1
 #define FALSE	0
 
+static init();
+static char * remote_part( char *mnt_pt, char *name );
+static char * xlate_link(  char *name );
+static char	* compress( char *path );
+
 extern int		errno;
 
-char	*index(), *xlate_link(), *remote_part();
-char	*getwd(), *compress(), *malloc(), *strcat(), *strcpy();
+char	*index();
+char	*getwd(), *malloc(), *strcat(), *strcpy();
 #if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX)
 char	*sprintf();
 #endif

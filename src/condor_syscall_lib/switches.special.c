@@ -15,8 +15,12 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/uio.h>
+
+static int fake_readv( int fd, struct iovec *iov, int iovcnt );
+static int fake_writev( int fd, struct iovec *iov, int iovcnt );
 
 /*
   The process should exit making the status value available to its parent
