@@ -39,6 +39,8 @@ Starter::Starter( Resource* rip )
 	s_procfam = NULL;
 	s_pidfamily = NULL;
 	s_family_size = 0;
+	s_type = -1;
+	s_is_dc = 0;
 }
 
 
@@ -54,13 +56,63 @@ Starter::~Starter()
 }
 
 
-void
-Starter::setname( char* name )
+int
+Starter::settype( int type )
 {
+	char buf[256], *tmp;
+	s_type = type;
+
 	if( s_name ) {
 		free( s_name );
+		s_name = NULL;
+	}		
+
+	if( type == 0 ) {
+		sprintf( buf, "STARTER" );
+		if( tmp = param(buf) ) {
+			s_name = tmp;
+		}
 	}
-	s_name = strdup( name );
+	if( ! s_name ) {
+		sprintf( buf, "STARTER_%d", type );
+		if( tmp = param(buf) ) {
+			s_name = tmp;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "ERROR: Can't find starter binary for type %d\n", type );
+			return FALSE;
+		}
+	}
+
+#if defined( WIN32 ) 
+	s_is_dc = TRUE;
+#else
+	s_is_dc = FALSE;
+#endif
+
+	sprintf( buf, "STARTER_%d_IS_DC", type );
+	if( tmp = param(buf) ) {
+		if( *tmp == 't' || *tmp == 'T' ) {
+			s_is_dc = TRUE;
+		}
+		free( tmp );
+	} else {
+#if ! defined( WIN32 ) 
+		dprintf( D_FULLDEBUG, 
+				 "%s not defined, defaulting to non-DaemonCore\n", buf );
+#endif
+	}
+	
+	if( s_is_dc ) {
+		dprintf( D_FULLDEBUG, 
+				 "Using DaemonCore starter type %d (%s)\n", type,
+				 s_name ); 
+	} else {
+		dprintf( D_FULLDEBUG, 
+				 "Using non-DaemonCore starter type %d (%s)\n", type,
+				 s_name ); 
+	}
+	return TRUE;
 }
 
 
@@ -128,32 +180,35 @@ Starter::reallykill( int signo, int type )
 	}
 
 #if !defined(WIN32)
-	switch( signo ) {
-	case DC_SIGSUSPEND:
-		sig = SIGUSR1;
-		break;
-	case DC_SIGQUIT:
-	case DC_SIGHARDKILL:
-		sig = SIGINT;
-		break;
-	case DC_SIGTERM:
-	case DC_SIGSOFTKILL:
-		sig = SIGTSTP;
-		break;
-	case DC_SIGPCKPT:
-		sig = SIGUSR2;
-		break;
-	case DC_SIGCONTINUE:
-		sig = SIGCONT;
-		break;
-	case DC_SIGHUP:
-		sig = SIGHUP;
-		break;
-	case DC_SIGKILL:
-		sig = SIGKILL;
-		break;
-	default:
-		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
+
+	if( !is_dc() ) {
+		switch( signo ) {
+		case DC_SIGSUSPEND:
+			sig = SIGUSR1;
+			break;
+		case DC_SIGQUIT:
+		case DC_SIGHARDKILL:
+			sig = SIGINT;
+			break;
+		case DC_SIGTERM:
+		case DC_SIGSOFTKILL:
+			sig = SIGTSTP;
+			break;
+		case DC_SIGPCKPT:
+			sig = SIGUSR2;
+			break;
+		case DC_SIGCONTINUE:
+			sig = SIGCONT;
+			break;
+		case DC_SIGHUP:
+			sig = SIGHUP;
+			break;
+		case DC_SIGKILL:
+			sig = SIGKILL;
+			break;
+		default:
+			EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
+		}
 	}
 
 
@@ -232,13 +287,14 @@ Starter::reallykill( int signo, int type )
 	}
 #endif	// if !defined(WIN32)
 
-#ifdef WIN32
-	// On Win32, fow now convert a request to kill a process group
-	// into a request to kill a pid family via ProcFamily
-	if ( type == 1 ) {
-		type = 2;
+	if( is_dc() ) {
+			// With DaemonCore, fow now convert a request to kill a
+			// process group into a request to kill a pid family via
+			// ProcFamily
+		if ( type == 1 ) {
+			type = 2;
+		}
 	}
-#endif
 
 	switch( type ) {
 	case 0:
@@ -262,26 +318,47 @@ Starter::reallykill( int signo, int type )
 	priv = set_root_priv();
 
 #ifndef WIN32
-		// ON UNIX...
-
-		// If we're just doing a plain kill, and the signal we're
-		// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the
-		// starter just for good measure.
-	if( sig != DC_SIGSTOP && sig != SIGCONT && sig != DC_SIGKILL ) {
-		if( type == 1 ) { 
-			ret = ::kill( -(s_pid), SIGCONT );
-		} else if( type == 0 ) {
-			ret = ::kill( (s_pid), SIGCONT );
+	if( ! is_dc() ) {
+			// If we're just doing a plain kill, and the signal we're
+			// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the 
+			// starter just for good measure.
+		if( sig != DC_SIGSTOP && sig != SIGCONT && sig != DC_SIGKILL ) {
+			if( type == 1 ) { 
+				ret = ::kill( -(s_pid), SIGCONT );
+			} else if( type == 0 ) {
+				ret = ::kill( (s_pid), SIGCONT );
+			}
 		}
 	}
+#endif /* ! WIN32 */
+
 		// Finally, do the deed.
 	switch( type ) {
 	case 0:
-		ret = ::kill( (s_pid), sig );
-		break;
+		if( is_dc() ) {		
+			ret = daemonCore->Send_Signal( (s_pid), signo );
+				// Translate Send_Signal's return code to Unix's kill()
+			if ( ret == FALSE ) {
+				ret = -1;
+			} else {
+				ret = 0;
+			}
+			break;
+		} 
+#ifndef WIN32
+		else {
+			ret = ::kill( (s_pid), sig );
+			break;
+		}
+#endif /* ! WIN32 */
+
 	case 1:
+#ifndef WIN32
+			// We already know we're not DaemonCore.
 		ret = ::kill( -(s_pid), sig );
 		break;
+#endif /* ! WIN32 */
+
 	case 2:
 		if( signo != DC_SIGKILL ) {
 			dprintf( D_ALWAYS, 
@@ -291,33 +368,8 @@ Starter::reallykill( int signo, int type )
 		s_procfam->hardkill();  // This really sends SIGKILL
 		break;
 	}
-#else
-	// ON WIN32...
-		// Finally, do the deed.
-	switch( type ) {
-	case 0:
-		ret = daemonCore->Send_Signal( (s_pid), signo );
-		// Translate Send_Signal's return code to Unix's kill()
-		if ( ret == FALSE ) {
-			ret = -1;
-		} else {
-			ret = 0;
-		}
-		break;
-	// note case 2 of switch on type is same on Unix & Win32
-	case 2:
-		if( signo != DC_SIGKILL ) {
-			dprintf( D_ALWAYS, 
-					 "In Starter::killkids() with %s\n", signame );
-			EXCEPT( "Starter::killkids() can only handle DC_SIGKILL!" );
-		}
-		s_procfam->hardkill();  // This really sends SIGKILL
-		break;
-	}
-#endif // of else of ifndef WIN32
 
 	set_priv(priv);
-
 
 	if( ret < 0 ) {
 		dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
@@ -331,16 +383,17 @@ Starter::reallykill( int signo, int type )
 int 
 Starter::spawn( start_info_t* info )
 {
-#ifndef WIN32
-	// Use old icky non-daemoncore starter and shadow
-	s_pid = exec_starter( s_name, info->ji_hname, 
-						  info->ji_sock1,
-						  info->ji_sock2 );
-#else
-	// Use spiffy new starter and shadow
-	s_pid = exec_starter( s_name, info->ji_hname, 
-						  info->shadowCommandSock);
-#endif
+
+	if( is_dc() ) {
+			// Use spiffy new starter.
+		s_pid = exec_starter( s_name, info->ji_hname, 
+							  info->shadowCommandSock);
+	} else {
+			// Use old icky non-daemoncore starter.
+		s_pid = exec_starter( s_name, info->ji_hname, 
+							  info->ji_sock1,
+							  info->ji_sock2 );
+	}
 
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );

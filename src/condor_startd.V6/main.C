@@ -45,11 +45,6 @@ char*	exec_path = NULL;
 StringList *console_devices = NULL;
 StringList *startd_job_exprs = NULL;
 
-// Starter paths
-char*	PrimaryStarter = NULL;
-char*	AlternateStarter[MAX_STARTERS];
-char*	RealStarter = NULL;
-
 // Hosts
 char*	negotiator_host = NULL;
 char*	collector_host = NULL;
@@ -382,23 +377,6 @@ init_params( int first_time)
 		EXCEPT( "STARTD_DEBUG not defined in config file" );
 	}
 	free( tmp );
-
-	if( PrimaryStarter ) {
-		free(PrimaryStarter);
-	}
-	PrimaryStarter = param( "STARTER" );
-	if( PrimaryStarter == NULL ) {
-		EXCEPT("No Starter file specified in config file\n");
-	}
-	RealStarter = PrimaryStarter;
-
-	for( i = 0; i < MAX_STARTERS; i++ ) {
-		sprintf( buf, "ALTERNATE_STARTER_%d", i );
-		if( ! first_time && AlternateStarter[i] ) { 
-			free( AlternateStarter[i] );
-		}
-		AlternateStarter[i] = param( buf );
-	}
 
 	if( accountant_host ) {
 		free( accountant_host );

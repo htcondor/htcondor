@@ -46,13 +46,14 @@ public:
 	void	dprintf( int, char* ... );
 
 	char*	name() {return s_name;};
-	void	setname(char*);
+	int		settype(int);
 	int		kill(int);
 	int		killpg(int);
 	void	killkids(int);
 	int		spawn(start_info_t*);
 	void	exited();
 	pid_t	pid() {return s_pid;};
+	int		is_dc() {return s_is_dc;};
 	bool	active();
 	pid_t*	pidfamily() {return s_pidfamily;};
 	int		pidfamily_size() {return s_family_size;};
@@ -68,6 +69,8 @@ private:
 	pid_t*	s_pidfamily;
 	int		s_family_size;
 	ProcFamily*	s_procfam;
+	int 	s_type;
+	int 	s_is_dc;
 };
 
 #endif _CONDOR_STARTD_STARTER_H

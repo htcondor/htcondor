@@ -88,11 +88,6 @@ extern	char*	exec_path;
 extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
 
-// Starter paths
-extern	char*	PrimaryStarter;
-extern	char*	AlternateStarter[10];
-extern	char*	RealStarter;
-
 // Hosts
 extern	char*	negotiator_host;
 extern	char*	collector_host;

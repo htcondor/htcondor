@@ -644,12 +644,6 @@ activate_claim( Resource* rip, Stream* stream )
 	int universe, job_cluster, job_proc, starter;
 	char* shadow_addr = strdup( sin_to_string( stream->endpoint() ));
 
-#ifdef WIN32
-	ji.shadowCommandSock = stream;
-#else
-	ji.shadowCommandSock = NULL;
-#endif
-
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
 		REFUSE;
@@ -662,32 +656,29 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Find out what version of the starter to use for the activation.
 	if( ! stream->code( starter ) ) {
-		rip->dprintf( D_ALWAYS, "Can't read starter command from %s\n",
+		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
 		REFUSE;
 		ABORT;
 	}
 	if( starter >= MAX_STARTERS ) {
-	    rip->dprintf( D_ALWAYS, "Requested alternate starter is out of range.\n" );
+	    rip->dprintf( D_ALWAYS, "Requested starter is out of range.\n" );
 		REFUSE;
 	    ABORT;
 	}
 
-	if( starter ) {
-		RealStarter = AlternateStarter[starter];
+	if( ! (rip->r_starter->settype(starter)) ) {
+	    rip->dprintf( D_ALWAYS, "Requested starter is invalid.\n" );
+		REFUSE;
+	    ABORT;
+	}
+
+	if( rip->r_starter->is_dc() ) {
+		ji.shadowCommandSock = stream;
 	} else {
-		RealStarter = PrimaryStarter;
+		ji.shadowCommandSock = NULL;
 	}
 
-	/* We could have been asked to run an alternate version of the
-	 * starter which is not listed in our config file.  If so, Starter
-	 * would show up as NULL here.  */
-	if( RealStarter == NULL ) {
-	    rip->dprintf( D_ALWAYS, "Alternate starter not found in config file\n" );
-		REFUSE;
-	    ABORT;
-	}
-	
 		// Grab request class ad 
 	req_classad = new ClassAd;
 	if( !req_classad->get(*stream) ) {
@@ -700,11 +691,6 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 	rip->dprintf( D_FULLDEBUG, "Read request ad and starter from shadow.\n" );
-	if( starter ) {
-		rip->dprintf( D_FULLDEBUG, "Using alternate starter #%d.\n", starter );
-	} else {
-		rip->dprintf( D_FULLDEBUG, "Using default starter.\n" );
-	}
 
 		// This recomputes all attributes and fills in the machine classad 
 	rip->update_classad();
@@ -754,84 +740,89 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 #ifndef WIN32
-		// Set up the two starter ports and send them to the shadow
-	stRec.version_num = VERSION_FOR_FLOCK;
-	stRec.ports.port1 = create_port(&sock_1);
-	stRec.ports.port2 = create_port(&sock_2);
-	
-	/* send name of server machine: dhruba */ 
-	if (get_machine_name(official_name) == -1) {
-		rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-		CLOSE;
-		ABORT;
-	}
-	/* fvdl XXX fails for machines with multiple interfaces */
-	stRec.server_name = (char *)strdup( official_name );
-	
-	/* send ip_address of server machine: dhruba */ 
-		// This is very whacky and wrong... needs fixing.
-	if( get_inet_address((in_addr*)&stRec.ip_addr) == -1) {
-		rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-		CLOSE;
-		ABORT;
-	}
-	
-	stream->encode();
-	if (!stream->code(stRec)) {
-		CLOSE;
-		ABORT;
-	}
 
-	if (!stream->eom()) {
-		CLOSE;
-		ABORT;
-	}
+	if( ! (rip->r_starter->is_dc()) ) {
 
-	/* now that we sent stRec, free stRec.server_name which we strduped */
-	free( stRec.server_name );
+			// Set up the two starter ports and send them to the shadow
+		stRec.version_num = VERSION_FOR_FLOCK;
+		stRec.ports.port1 = create_port(&sock_1);
+		stRec.ports.port2 = create_port(&sock_2);
+		
+			/* send name of server machine: dhruba */ 
+		if (get_machine_name(official_name) == -1) {
+			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
+			CLOSE;
+			ABORT;
+		}
+			/* fvdl XXX fails for machines with multiple interfaces */
+		stRec.server_name = (char *)strdup( official_name );
+	
+			/* send ip_address of server machine: dhruba */ 
+			// This is very whacky and wrong... needs fixing.
+		if( get_inet_address((in_addr*)&stRec.ip_addr) == -1) {
+			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
+			CLOSE;
+			ABORT;
+		}
+		
+		stream->encode();
+		if (!stream->code(stRec)) {
+			CLOSE;
+			ABORT;
+		}
 
-	/* Wait for connection to port1 */
-	len = sizeof frm;
-	memset( (char *)&frm,0, sizeof frm );
-	while( (fd_1=tcp_accept_timeout(sock_1, (struct sockaddr *)&frm,
-									&len, 150)) < 0 ) {
-		if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
-			if( fd_1 == -2 ) {
-				rip->dprintf( D_ALWAYS, "accept timed out\n" );
-				CLOSE;
-				ABORT;
-			} else {
-				rip->dprintf( D_ALWAYS, "tcp_accept_timeout returns %d, errno=%d\n",
-						 fd_1, errno );
-				CLOSE;
-				ABORT;
+		if (!stream->eom()) {
+			CLOSE;
+			ABORT;
+		}
+
+			/* now that we sent stRec, free stRec.server_name which we strduped */
+		free( stRec.server_name );
+
+			/* Wait for connection to port1 */
+		len = sizeof frm;
+		memset( (char *)&frm,0, sizeof frm );
+		while( (fd_1=tcp_accept_timeout(sock_1, (struct sockaddr *)&frm,
+										&len, 150)) < 0 ) {
+			if( fd_1 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
+				if( fd_1 == -2 ) {
+					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					CLOSE;
+					ABORT;
+				} else {
+					rip->dprintf( D_ALWAYS, 
+								  "tcp_accept_timeout returns %d, errno=%d\n",
+								  fd_1, errno );
+					CLOSE;
+					ABORT;
+				}
 			}
 		}
-	}
 	
-	/* Wait for connection to port2 */
-	len = sizeof frm;
-	memset( (char *)&frm,0,sizeof frm );
-	while( (fd_2 = tcp_accept_timeout(sock_2, (struct sockaddr *)&frm,
-									  &len, 150)) < 0 ) {
-		if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
-			if( fd_2 == -2 ) {
-				rip->dprintf( D_ALWAYS, "accept timed out\n" );
-				CLOSE;
-				ABORT;
-			} else {
-				rip->dprintf( D_ALWAYS, "tcp_accept_timeout returns %d, errno=%d\n",
-						 fd_2, errno );
-				CLOSE;
-				ABORT;
+			/* Wait for connection to port2 */
+		len = sizeof frm;
+		memset( (char *)&frm,0,sizeof frm );
+		while( (fd_2 = tcp_accept_timeout(sock_2, (struct sockaddr *)&frm,
+										  &len, 150)) < 0 ) {
+			if( fd_2 != -3 ) {  /* tcp_accept_timeout returns -3 on EINTR */
+				if( fd_2 == -2 ) {
+					rip->dprintf( D_ALWAYS, "accept timed out\n" );
+					CLOSE;
+					ABORT;
+				} else {
+					rip->dprintf( D_ALWAYS, 
+								  "tcp_accept_timeout returns %d, errno=%d\n",
+								  fd_2, errno );
+					CLOSE;
+					ABORT;
+				}
 			}
 		}
+		CLOSE;
+		ji.ji_sock1 = fd_1;
+		ji.ji_sock2 = fd_2;
 	}
-	CLOSE;
 
-
-	ji.ji_sock1 = fd_1;
-	ji.ji_sock2 = fd_2;
 #endif	// of ifndef WIN32
 
 	ji.ji_hname = rip->r_cur->client()->host();
@@ -866,7 +857,6 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->r_cur->setuniverse(universe);
 
 		// Actually spawn the starter
-	rip->r_starter->setname( RealStarter );
 	rip->r_starter->spawn( &ji );
 
 	int now = (int)time( NULL );
