@@ -320,6 +320,20 @@ $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 #endif /* release_copy_target */
 
 
+
+/*
+** Target is released by recursive copying
+*/
+#ifndef release_recursive_copy_target
+#define release_recursive_copy_target( src, dest )	@@\
+release:: $(RELEASE_DIR)/##dest	       			@@\
+							@@\
+$(RELEASE_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(RELEASE_DIR)/##dest		@@\
+	$(CP_CMD) src $(RELEASE_DIR)/##dest
+#endif /* release_recursive_copy_target */
+
+
 /***********************************************************************
 ** strip targets
 **
@@ -368,6 +382,19 @@ $(STRIP_DIR)/##dir##/##file: src			@@\
 	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
 stripped:: $(STRIP_DIR)/##dir##/##file
 #endif /* strip_copy_target */
+
+
+/*
+** Stripped target is released by recursive copying
+*/
+#ifndef strip_recursive_copy_target
+#define strip_recursive_copy_target( src, dest )	@@\
+stripped:: $(STRIP_DIR)/##dest	     			@@\
+							@@\
+$(STRIP_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(STRIP_DIR)/##dest			@@\
+	$(CP_CMD) src $(STRIP_DIR)/##dest
+#endif /* strip_recursive_copy_target */
 
 
 /*
@@ -473,6 +500,19 @@ $(STATIC_DIR)/##dir##/##file: src			@@\
 	chmod mode $(STATIC_DIR)/##dir##/##file		@@\
 static:: $(STATIC_DIR)/##dir##/##file
 #endif /* static_copy_target */
+
+
+/*
+** Static target is released by recursive copying
+*/
+#ifndef static_recursive_copy_target
+#define static_recursive_copy_target( src, dest )	@@\
+static:: $(STATIC_DIR)/##dest	      			@@\
+							@@\
+$(STATIC_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(STATIC_DIR)/##dest		@@\
+	$(CP_CMD) src $(STATIC_DIR)/##dest
+#endif /* static_recursive_copy_target */
 
 
 /*
