@@ -5,11 +5,11 @@ CFLAGS = -Wall $(STD_C_FLAGS)
 
 SRC = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
 		classad.C exprList.C value.C instantiations.C sink.C domain.C \
-		matchClassad.C classad_io.C cedar_io.C $(COLL_SRC)
+		matchClassad.C classad_io.C cedar_io.C util.C $(COLL_SRC)
 
 OBJ = lexer.o source.o operators.o attrrefs.o fnCall.o literals.o exprTree.o \
 		classad.o exprList.o value.o instantiations.o sink.o domain.o \
-		matchClassad.o classad_io.o cedar_io.o $(COLL_OBJ)
+		matchClassad.o classad_io.o cedar_io.o util.o $(COLL_OBJ)
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
