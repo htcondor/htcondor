@@ -355,7 +355,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		return false;
 	}
 
-	dprintf(D_ALWAYS, "sec_negotiation is %s.\n", sec_req_rev[sec_negotiation]);
+	dprintf(D_SECURITY, "sec_negotiation is %s.\n", sec_req_rev[sec_negotiation]);
 
 	// for those of you reading this code, a 'paramer'
 	// is a thing that param()s.
