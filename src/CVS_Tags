@@ -1,3 +1,11 @@
+5/24/02 V6_3-privnet-reliable-udp
+	The state of the V6_3-privnet-branch after sonny had finished
+	checking in all his reliable udp stuff, before he goes on to
+	do all the other private network stuff.  this way, we can
+	merge reliable udp support into the appropriate condor
+	mainline development branch without having to get all of the
+	private net stuff, too.
+
 5/15/02 V6_3-NMI-Condor-G-Beta1
 	The 6.3 branch that was released as the first NMI beta. It's a bit before
 	6.3.3, and is built with WANT_GLOBUS=TRUE and IS_CONDORG_RELEASE = Yes,
