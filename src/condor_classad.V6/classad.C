@@ -19,7 +19,7 @@
  * USA
  *
  *********************************************************************/
-#include "condor_common.h"
+
 #include "common.h"
 #include "classad.h"
 #include "classadItor.h"
