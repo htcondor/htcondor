@@ -55,9 +55,14 @@ enum Command
     cmd_Eval,
     cmd_Print,
     cmd_Same,
+    cmd_Sameeval,
     cmd_Diff,
+    cmd_Diffeval,
     cmd_Set,
     cmd_Show,
+    cmd_Writexml,
+    cmd_Readxml,
+    cmd_Echo,
     cmd_Help,
     cmd_Quit
 };
@@ -106,6 +111,8 @@ bool replace_variables(string &line, State &state, Parameters &parameters);
 Command get_command(string &line, Parameters &parameters);
 bool get_variable_name(string &line, bool swallow_equals, string &variable_name, 
                        State &state, Parameters &parameters);
+bool get_file_name(string &line, string &variable_name, State &state,
+                   Parameters &parameters);
 ExprTree *get_expr(string &line, State &state, Parameters &parameters);
 void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, 
                    State &state, Parameters &parameters);
@@ -117,9 +124,14 @@ bool handle_command(Command command, string &line, State &state,
 void handle_let(string &line, State &state, Parameters &parameters);
 void handle_eval(string &line, State &state, Parameters &parameters);
 void handle_same(string &line, State &state, Parameters &parameters);
+void handle_sameeval(string &line, State &state, Parameters &parameters);
 void handle_diff(string &line, State &state, Parameters &parameters);
+void handle_diffeval(string &line, State &state, Parameters &parameters);
 void handle_set(string &line, State &state, Parameters &parameters);
 void handle_show(string &line, State &state, Parameters &parameters);
+void handle_writexml(string &line, State &state, Parameters &parameters);
+void handle_readxml(string &line, State &state, Parameters &parameters);
+void handle_echo(string &line, State &state, Parameters &parameters);
 void handle_print(string &line, State &state, Parameters &parameters);
 void handle_help(void);
 void print_version(void);
@@ -127,6 +139,7 @@ void print_error_message(char *error, State &state);
 void print_error_message(string &error, State &state);
 void print_final_state(State &state);
 bool line_is_comment(string &line);
+bool expr_okay_for_xml_file(ExprTree *tree, State &state, Parameters &parameters);
 
 /*********************************************************************
  *
@@ -553,12 +566,22 @@ Command get_command(
         command = cmd_Print;
     } else if (command_name == "same") {
         command = cmd_Same;
+    } else if (command_name == "sameeval") {
+        command = cmd_Sameeval;
     } else if (command_name == "diff") {
         command = cmd_Diff;
+    } else if (command_name == "diffeval") {
+        command = cmd_Diffeval;
     } else if (command_name == "set") {
         command = cmd_Set;
     } else if (command_name == "show") {
         command = cmd_Show;
+    } else if (command_name == "writexml") {
+        command = cmd_Writexml;
+    } else if (command_name == "readxml") {
+        command = cmd_Readxml;
+    } else if (command_name == "echo") {
+        command = cmd_Echo;
     } else if (command_name == "help") {
         command = cmd_Help;
     } else if (command_name == "quit") {
@@ -589,7 +612,7 @@ bool handle_command(
         // Ignore. This isn't a problem.
         break;
     case cmd_InvalidCommand:
-        print_error_message("* Unknown command on line", state);
+        print_error_message("Unknown command on line", state);
         break;
     case cmd_Let:
         handle_let(line, state, parameters);
@@ -603,14 +626,29 @@ bool handle_command(
     case cmd_Same:
         handle_same(line, state, parameters);
         break;
+    case cmd_Sameeval:
+        handle_sameeval(line, state, parameters);
+        break;
     case cmd_Diff:
         handle_diff(line, state, parameters);
+        break;
+    case cmd_Diffeval:
+        handle_diffeval(line, state, parameters);
         break;
     case cmd_Set:
         handle_set(line, state, parameters);
         break;
     case cmd_Show:
         handle_show(line, state, parameters);
+        break;
+    case cmd_Writexml:
+        handle_writexml(line, state, parameters);
+        break;
+    case cmd_Readxml:
+        handle_readxml(line, state, parameters);
+        break;
+    case cmd_Echo:
+        handle_echo(line, state, parameters);
         break;
     case cmd_Help:
         handle_help();
@@ -719,7 +757,70 @@ void handle_same(
     get_two_exprs(line, tree, tree2, state, parameters);
     if (tree != NULL || tree2 != NULL) {
         if (!tree->SameAs(tree2)) {
-            print_error_message("* the expressions are different.", state);
+            print_error_message("the expressions are different.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_sameeval
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_sameeval(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+    Value     value1, value2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        if (parameters.debug) {
+            cout << "Sameeval has two trees: \n";
+            cout << " "; 
+            print_expr(tree, state, parameters); 
+            cout << endl;
+            cout << " "; 
+            print_expr(tree2, state, parameters);
+            cout << endl;
+        }
+        if (!evaluate_expr(tree, value1, parameters)) {
+            print_error_message("Couldn't evaluate first expression.\n", state);
+        } else if (!evaluate_expr(tree2, value2, parameters)) {
+            print_error_message("Couldn't evaluate second expressions.\n", state);
+        } else if (!value1.SameAs(value2)) {
+                print_error_message("the expressions are different.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_diffeval
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_diffeval(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+    Value     value1, value2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        if (!evaluate_expr(tree, value1, parameters)) {
+            print_error_message("Couldn't evaluate first expression.\n", state);
+        } else if (!evaluate_expr(tree2, value2, parameters)) {
+            print_error_message("Couldn't evaluate second expressions.\n", state);
+        } else if (value1.SameAs(value2)) {
+                print_error_message("the expressions are the same.", state);
         }
     }
     return;
@@ -741,7 +842,7 @@ void handle_diff(
     get_two_exprs(line, tree, tree2, state, parameters);
     if (tree != NULL || tree2 != NULL) {
         if (tree->SameAs(tree2)) {
-            print_error_message("* the expressions are the same.", state);
+            print_error_message("the expressions are the same.", state);
         }
     }
     return;
@@ -818,6 +919,136 @@ void handle_show(
         }
     }
 
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_writexml
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_writexml(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string    filename;
+    ExprTree  *expr;
+    ofstream  xml_file;
+
+    if (get_file_name(line, filename, state, parameters)) {
+        if ((expr = get_expr(line, state, parameters)) != NULL) {
+            if (expr_okay_for_xml_file(expr, state, parameters)) {
+                xml_file.open(filename.c_str());
+                if (xml_file.bad()) {
+                    string error_message;
+                    error_message = "Can't open ";
+                    error_message += filename;
+                    error_message += " for output";
+                    print_error_message(error_message, state);
+                } else {
+                    ClassAdXMLUnParser unparser;
+                    string             classad_text;
+
+                    xml_file << "<classads>\n";
+
+                    if (expr->GetKind() == ExprTree::CLASSAD_NODE) {
+                        unparser.Unparse(classad_text, expr);
+                        xml_file << classad_text;
+                    } else {
+                        ExprList *list = (ExprList*) expr;
+                        ExprList::iterator iter;
+                        for (iter = list->begin(); iter != list->end(); iter++) {
+                            ExprTree *classad;
+
+                            classad = *iter;
+                            classad_text = "";
+                            unparser.Unparse(classad_text, classad);
+                            xml_file << classad_text << endl;
+                        }
+                    }
+                    xml_file << "</classads>\n";
+                }
+            }
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_readxml
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_readxml(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string    variable_name;
+    string    file_name;
+    ofstream  xml_file;
+
+    if (get_variable_name(line, false, variable_name, state, parameters)) {
+        if (get_file_name(line, file_name, state, parameters)) {
+            ifstream xml_file(file_name.c_str());
+
+            if (xml_file.bad()) {
+                string error;
+                error = "Can't read file: ";
+                error += file_name;
+                print_error_message(error, state);
+            } else {
+                ExprList         *list;
+                ClassAd          *classad;
+                ClassAdXMLParser parser;
+                Variable         *variable;
+
+                list = new ExprList();
+                do {
+                    classad = parser.ParseClassAd(xml_file);
+                    if (classad != NULL) {
+                        list->push_back(classad);
+                    }
+                } while (classad != NULL);
+                variable = new Variable(variable_name, list);
+                variables[variable_name] = variable;
+                if (parameters.interactive) {
+                    print_expr(list, state, parameters);
+                }
+            }
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_echo
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_echo(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string new_line = "";
+    int    index;
+
+    index = 0;
+
+    while (index < (int) line.size() && isspace(line[index])) {
+        index++;
+    }
+    while (index < (int) line.size()) {
+        new_line += line[index];
+        index++;
+    }
+
+    cout << new_line << endl;
     return;
 }
 
@@ -909,6 +1140,54 @@ bool get_variable_name(
             cout << "# Got variable name: " << variable_name << endl;
         } else {
             cout << "# Bad variable name: " << variable_name << endl;
+        }
+    }
+
+    shorten_line(line, current_position);
+    return have_good_name;
+}
+
+/*********************************************************************
+ *
+ * Function: get_file_name
+ * Purpose:  
+ *
+ *********************************************************************/
+bool get_file_name(
+    string     &line, 
+    string     &variable_name, 
+    State      &state,
+    Parameters &parameters)
+{
+    int      current_position;
+    int      length;
+    bool     have_good_name;
+
+    current_position = 0;
+    length           = line.size();
+    variable_name    = "";
+    have_good_name   = false;
+
+    // Skip whitespace
+    while (current_position < length && isspace(line[current_position])) {
+        current_position++;
+    }
+    // Find file name
+    while (   current_position < length 
+              && (!isspace(line[current_position]))) {
+        have_good_name = true;
+        variable_name += line[current_position];
+        current_position++;
+    }
+    if (!have_good_name) {
+        print_error_message("Bad file name", state);
+    } 
+
+    if (parameters.debug) {
+        if (have_good_name) {
+            cout << "# Got file name: " << variable_name << endl;
+        } else {
+            cout << "# Bad file name: " << variable_name << endl;
         }
     }
 
@@ -1146,4 +1425,41 @@ bool line_is_comment(
         is_comment = false;
     }
     return is_comment;
+}
+
+bool expr_okay_for_xml_file(
+    ExprTree   *tree,
+    State      &state,
+    Parameters &parameters)
+{
+    bool is_okay;
+
+    if (tree->GetKind() == ExprTree::CLASSAD_NODE) {
+        is_okay = true;
+    } else if (tree->GetKind() != ExprTree::EXPR_LIST_NODE) {
+        is_okay = false;
+        cout << "We have " << (int) tree->GetKind() << endl;
+    } else {
+        ExprList *list = (ExprList *) tree;
+        ExprList::iterator  iter;
+
+        is_okay = true;
+        for (iter = list->begin(); iter != list->end(); iter++) {
+            ExprTree *element;
+
+            element = *iter;
+            if (element->GetKind() != ExprTree::CLASSAD_NODE) {
+                cout << "Inside list, we have " << (int) tree->GetKind() << endl;
+                is_okay = false;
+                break;
+            }
+        }
+    }
+
+    if (!is_okay) {
+        print_error_message(
+            "writexml requires a ClassAd or list of ClassAds as an argument.", 
+            state);
+    }
+    return is_okay;
 }
