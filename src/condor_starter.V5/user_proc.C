@@ -247,7 +247,7 @@ UserProc::expand_exec_name( int &on_this_host )
 		if( access(answer,X_OK) == 0 ) {
 			dprintf( D_ALWAYS, "Executable is located on this host\n" );
 		} else {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 				"Executable located on this host - but not executable\n"
 			);
 			on_this_host = FALSE;
@@ -271,7 +271,7 @@ UserProc::link_to_executable( char *src, int & error_code )
 	errno = 0;
 	status =  symlink( src, cur_ckpt );
 	if( status < 0 ) {
-		dprintf( D_ALWAYS,
+		dprintf( D_FAILURE|D_ALWAYS,
 			"Can't create sym link from \"%s\" to \"%s\", errno = %d\n",
 			src, cur_ckpt, errno
 		);
@@ -307,7 +307,7 @@ UserProc::transfer_executable( char *src, int &error_code )
 		attempts++;
 
 		if( status < 0 ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 				"Failed to fetch orig ckpt file \"%s\" into \"%s\", "
 				"attempt = %d, errno = %d\n", src, cur_ckpt, attempts, errno );
 		} else {
@@ -339,7 +339,7 @@ UserProc::linked_for_condor()
 
 	if( magic_check(cur_ckpt) < 0 ) {
 		state = BAD_MAGIC;
-		dprintf( D_ALWAYS, "magic_check() failed\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "magic_check() failed\n" );
 		return FALSE;
 	}
 
@@ -661,7 +661,7 @@ do_unlink( const char *name )
 {
 	while( unlink(name) < 0 ) {
 		if( errno != ETXTBSY ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 				"Can't unlink \"%s\" - errno = %d\n", name, errno
 			);
 			return;
@@ -678,7 +678,7 @@ UserProc::delete_files()
 	do_unlink( core_name );
 
 	if( rmdir(local_dir) < 0 ) {
-		dprintf( D_ALWAYS,
+		dprintf( D_FAILURE|D_ALWAYS,
 			"Can't remove directory \"%s\" - errno = %d\n", local_dir, errno
 		);
 	} else {
@@ -704,7 +704,7 @@ UserProc::handle_termination( int exit_st )
 			"Process %d exited with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
 		if( WEXITSTATUS(exit_status) == EXECFAILED ) {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 				"EXEC of user process failed, probably insufficient swap\n"
 			);
 			state = NON_RUNNABLE;
@@ -763,7 +763,7 @@ UserProc::handle_termination( int exit_st )
         case ABNORMAL_EXIT:
 			priv = set_root_priv();	// need to be root to access core file
 		    if( core_is_valid(core_name) ) {
-				dprintf( D_ALWAYS, "A core file was created\n" );
+				dprintf( D_FAILURE|D_ALWAYS, "A core file was created\n" );
 				core_created = TRUE;
 			} else {
 				dprintf( D_FULLDEBUG, "No core file was created\n" );
@@ -925,7 +925,7 @@ UserProc::store_core()
 	priv_state	priv;
 
 	if( !core_created ) {
-		dprintf( D_ALWAYS, "No core file to send - probably ran out of disk\n");
+		dprintf( D_FAILURE|D_ALWAYS, "No core file to send - probably ran out of disk\n");
 		return;
 	}
 
@@ -1258,7 +1258,7 @@ set_iwd()
 		int rval = -1;
 		for (int count = 0; count < 360 && rval == -1 &&
 				 (errno == ETIMEDOUT || errno == ENODEV); count++) {
-			dprintf(D_ALWAYS, "Connection timed out on chdir(%s), trying again"
+			dprintf(D_FAILURE|D_ALWAYS, "Connection timed out on chdir(%s), trying again"
 					" in 5 seconds\n", iwd);
 			sleep(5);
 			rval = chdir(iwd);
