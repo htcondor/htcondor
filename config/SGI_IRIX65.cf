@@ -6,10 +6,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	YES
 
-#define Platform		SGI-IRIX65
-SYSNAME = sgi_65
-#define IS_SGI_IRIX65		YES
-#define IS_IRIX65		YES
 #define VersionPlatformFlags	-DIRIX65=IRIX65
 
 #define IS_N32			YES

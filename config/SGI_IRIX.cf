@@ -10,9 +10,6 @@
 ** Shared IRIX Settings
 **************************************************************************/
 
-#define OperatingSystem		IRIX
-#define IS_IRIX			YES
-#define Architecture		SGI
 
 #define IS_V5				YES
 
