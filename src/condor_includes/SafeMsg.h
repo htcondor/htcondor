@@ -26,8 +26,6 @@
 struct _condorDEntry {
 	int             dLen;
 	char*           dGram;
-    unsigned char * md_;         // not very efficient at this time
-    unsigned char * header_;
 };
 
 struct _condorMsgID {
@@ -70,7 +68,6 @@ class _condorInMsg
 			const void* data,	// data of the packet
             const char * MD5KeyId, 
             const unsigned char * md, 
-            int   headerLen, // length of the header
             const char * EncKeyId, 
 			_condorInMsg* prev);	// pointer to the previous InMsg in the chain
 
@@ -80,9 +77,7 @@ class _condorInMsg
 		bool addPacket(const bool last,	// this packet is last or not
                        const int seq,		// seq. # of the packet
                        const int len,		// length of the packet
-                       const void* data,
-                       const unsigned char* MD,
-                       int   headerLen);	// data of the packet
+                       const void* data);
 
 		// get the next n bytes from the message
 		int getn(char *dta,	// output buffer
@@ -99,8 +94,6 @@ class _condorInMsg
         void resetEnc();
         void resetMD();
 
-        bool init_MD(KeyInfo * key = 0);
-		// Check if every data of the message has been read
 		bool consumed();
 #ifdef DEBUG
 		void dumpMsg();
@@ -108,7 +101,7 @@ class _condorInMsg
 
 	// next line should be uncommented after testing
 	private:
-        bool verifyMD(int packet);
+        bool verifyMD(Condor_MD_MAC * mdChecker);
 
 		_condorMsgID msgID;	// message ID of this message
 		long msgLen;		// length of this message
@@ -130,11 +123,12 @@ class _condorInMsg
 						 * from possibly multiple packets */
         char * incomingMD5KeyId_;
         char * incomingEncKeyId_;
-        Condor_MD_MAC  * mdChecker_;    // This is for outgoing data       
+        unsigned char * md_;
+        bool   verified_;
 };
 
 static const int SAFE_MSG_MAX_PACKET_SIZE = 60000;
-static const int SAFE_MSG_HEADER_SIZE = 31;      
+static const int SAFE_MSG_HEADER_SIZE = 25;      
 
 static const char* const SAFE_MSG_MAGIC = "MaGic6.0";
 
@@ -145,7 +139,6 @@ class _condorPacket
 
 	public:
 		_condorPacket();
-		_condorPacket(bool outPacket, KeyInfo * key, const char * keyID = 0);
         ~_condorPacket();
 
 		// get the contents of header
@@ -184,19 +177,18 @@ class _condorPacket
 		// check if empty
 		bool empty();
 
-		// fill the header part with given arguments
-		void makeHeader(bool last, int seqNo, _condorMsgID msgID);
-
-
-        bool init_MD(bool outPacket, KeyInfo * key = 0, const char * keyID = 0);
+		// fill the header part with given arguments, return length of the header
+		void makeHeader(bool last, int seqNo, _condorMsgID msgID, unsigned char * md = 0);
+        
+        const char * isDataMD5ed();
+        const char * isDataEncrypted();   
+        const unsigned char * md();
+        bool verifyMD(Condor_MD_MAC * mdChecker);
+        void addExtendedHeader(unsigned char * mac) ;
+        bool init_MD(const char * keyID = 0);
         bool set_encryption_id(const char * keyId);
         void addMD();
         
-        const char * isDataMD5ed();
-        const char * isDataEncrypted();
-        const unsigned char * md();  
-
-        bool verified();
 #ifdef DEBUG
 		// dump the contents of the packet
 		void dumpPacket();
@@ -205,10 +197,8 @@ class _condorPacket
 	// next line should be uncommented after testing
 	private:
         void init();
-        bool verifyMD();
-        void setVerified(bool);
         void addEID();       // Add encryption key id to the header
-        int checkHeader(int & len, void *& dta);
+        void checkHeader(int & len, void *& dta);
         void resetMD();
         void resetEnc();
         //------------------------------------------
@@ -223,15 +213,14 @@ class _condorPacket
 		                                * including header and data */
 		_condorPacket* next;	// next packet
 
-        Condor_MD_MAC  * mdChecker_;    // This is for outgoing data
         short            outgoingMdLen_;
         short            outgoingEidLen_;
         char *           incomingMD5KeyId_;     // Keyid as seen from the incoming packet
         char *           outgoingMD5KeyId_;     // Keeyid for outgoing packet
         char *           incomingEncKeyId_;     // Keyid as seen from the incoming packet
         char *           outgoingEncKeyId_;     // Keeyid for outgoing packet
-        unsigned char *  md_;    
-        bool             verified_;             // MD is verified
+        bool             verified_;
+        unsigned char *  md_;
 };
 
 
@@ -253,13 +242,14 @@ class _condorOutMsg
 		// send message to the recipient addressed by (sock, who)
 		int sendMsg(const int sock,
 		            const struct sockaddr* who,
-                    _condorMsgID msgID);
+                    _condorMsgID msgID,
+                    unsigned char * mac = 0);
 
 		void endOfMsg();
 
 		void clearMsg();
 
-        bool init_MD(KeyInfo * key = 0, const char * keyId = 0);
+        bool init_MD(const char * keyId = 0);
         bool set_encryption_id(const char * keyId);
 		unsigned long getAvgMsgSize();
 
@@ -274,7 +264,4 @@ class _condorOutMsg
 		_condorPacket* lastPacket;	// pointer to the last packet
 		unsigned long noMsgSent;
 		unsigned long avgMsgSize;
-        KeyInfo     * key_;
-        char *        MDKeyId_;
-        char *        EncKeyId_;
 };
