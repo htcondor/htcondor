@@ -1,4 +1,4 @@
-all_target(libsysapi.a condor_test_sysapi)
+all_target(condor_sysapi libsysapi.a)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 # use -O2 for the benchmark code, i.e clinpack & dhry*.c
@@ -14,7 +14,7 @@ TEST_OBJS = sysapi.t.o test.o
 
 library_target(libsysapi.a,$(OBJ))
 
-c_plus_target(condor_test_sysapi,$(TEST_OBJS),$(LIB))
+c_plus_target(condor_sysapi,$(TEST_OBJS),$(LIB))
 
 html:
 release:: all
