@@ -283,6 +283,53 @@ StringList::contains_withwildcard(const char *string, bool anycase)
 	return FALSE;
 }
 
+/* returns a malloc'ed string that contains a comma delimited list of
+the internals of the string list. */
+char*
+StringList::print_to_string(void)
+{
+	char *tmp;
+	int num, i;
+	int sum = 0;
+
+	strings.Rewind();
+	num = strings.Number();
+
+	/* no string at all if there isn't anything in it */
+	if(num == 0)
+	{
+		return NULL;
+	}
+
+	for (i = 0; i < num; i++)
+	{
+		sum += strlen(strings.Next());
+	}
+
+	/* get memory for all of the strings, plus the ',' character between them
+		and one more for the \0 */
+	tmp = (char*)calloc(sum + num + 1, 1);
+	if (tmp == NULL)
+	{
+		EXCEPT("Out of memory in StringList::print_to_string");
+	}
+	tmp[0] = '\0';
+
+	strings.Rewind();
+	for (i = 0; i < num; i++)
+	{
+		strcat(tmp, strings.Next());
+		
+		/* add commas until the last attr entry in the list */
+		if (i < (num - 1))
+		{
+			strcat(tmp, ",");
+		}
+	}
+
+	return tmp;
+}
+
 
 void
 StringList::deleteCurrent() {

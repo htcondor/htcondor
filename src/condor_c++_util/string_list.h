@@ -50,6 +50,13 @@ public:
 	void deleteCurrent();
 	int number (void) { return strings.Number(); };
 	bool isEmpty(void) { return strings.IsEmpty(); };
+
+	/* return a comma delimited list if the internals of the class. This will
+		rewind the string in order to construct this char array, and you
+		are responsible to release the memory allocated by this function 
+		with free() */
+	char* print_to_string(void);
+
 private:
 	BOOLEAN contains_withwildcard(const char *string, bool anycase);
 	List<char> strings;
