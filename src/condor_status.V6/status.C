@@ -69,8 +69,8 @@ void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *);
-int  lessThanFunc(AttrList*,AttrList*,void*);
-int  customLessThanFunc(AttrList*,AttrList*,void*);
+int  lessThanFunc(ClassAd*,ClassAd*,void*);
+int  customLessThanFunc(ClassAd*,ClassAd*,void*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -678,7 +678,7 @@ matchPrefix (const char *s1, const char *s2)
 
 
 int
-lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
+lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 {
 	char 	buf1[128];
 	char	buf2[128];
@@ -730,7 +730,7 @@ lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 }
 
 int
-customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
+customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 {
 
 //	EvalResult 	result;
