@@ -854,7 +854,7 @@ not_supported {
 	int sethostname( const char *address, size_t address_len );
 	int settimeofday( const struct timeval *tp, const struct timezone *tzp );
 	int setdomainname( const char *name, size_t namelen );
-	int swapon( const char *path );
+	int swapon( const char *path, int swapflags );
 #else
 
 #if defined(Solaris)
