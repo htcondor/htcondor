@@ -1826,6 +1826,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	mkargv(&argc, argv, job_args);
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER,
 						   owner) < 0) {
+		dprintf(D_FULLDEBUG,"Scheduler::start_sched_universe_job--setting owner"
+				" to \"nobody\"\n" );
 		sprintf(owner, "nobody");
 	}
 	if (strcmp(owner, "root") == MATCH) {
@@ -2031,8 +2033,12 @@ mark_job_stopped(PROC_ID* job_id)
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING) {
 
-		if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
+		if ( GetAttributeString(job_id->cluster, job_id->proc, 
+				ATTR_OWNER, owner) < 0 )
+		{
+			dprintf(D_FULLDEBUG,"mark_job_stopped: setting owner to \"nobody\"\n");
 			strcpy(owner,"nobody");
+		}
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
