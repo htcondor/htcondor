@@ -100,6 +100,7 @@ void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
+int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
 bool service_this_universe(int);
@@ -1254,6 +1255,7 @@ Scheduler::negotiate(int, Stream* s)
 	char*	capability = NULL;			// capability for each match made
 	char*	host = NULL;
 	char*	tmp;
+	char	temp[512];
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
 	int		start_limit_for_swap;
@@ -1601,11 +1603,6 @@ Scheduler::negotiate(int, Stream* s)
 
 					}					
 
-					// add User = "owner@uiddomain" to ad
-					char temp[512];
-					sprintf (temp, "%s = \"%s\"", ATTR_USER, owner);
-					ad->Insert (temp);
-
 					// request match diagnostics
 					sprintf (temp, "%s = True", ATTR_WANT_MATCH_DIAGNOSTICS);
 					ad->Insert (temp);
@@ -1910,11 +1907,6 @@ Scheduler::contactStartd( char* capability, char *user,
 				jobId->cluster, jobId->proc);
 		BAILOUT;
 	}
-
-	// add User = "owner@uiddomain" to ad
-    char temp[512];
-    sprintf (temp, "%s = \"%s\"", ATTR_USER, user);
-    jobAd->Insert (temp);
 
 	sock->timeout( STARTD_CONTACT_TIMEOUT );
 
@@ -2304,14 +2296,11 @@ void
 Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 {
 	ClassAd request;
-	char buf[100], owner[100], user[100], source[100], dest[100], *str;
-	int executablesize = 0, universe = VANILLA, nice_user = 0, vm=1;
+	char buf[256], source[100], dest[100], user[200], *str;
+	int executablesize = 0, universe = VANILLA, vm=1;
 
-	GetAttributeInt(cluster, proc, ATTR_NICE_USER, &nice_user);
-	GetAttributeString(cluster, proc, ATTR_OWNER, owner);
-	sprintf(user, "%s%s@%s", (nice_user) ? "nice-user." : "", owner,
-			UidDomain);
-	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
+	GetAttributeString( cluster, proc, ATTR_USER, user );
+	sprintf(buf, "%s = \"%s\"", ATTR_USER, user );
 	request.Insert(buf);
 	sprintf(buf, "%s = 1", ATTR_FORCE);
 	request.Insert(buf);
@@ -4520,8 +4509,25 @@ Scheduler::Init()
 
 		// UidDomain will always be defined, since config() will put
 		// in my_full_hostname() if it's not defined in the file.
-	if( UidDomain ) free( UidDomain );
+		// See if the value of this changes, since if so, we've got
+		// work to do...
+	char* oldUidDomain = UidDomain;
 	UidDomain = param( "UID_DOMAIN" );
+	if( oldUidDomain ) {
+			// We had an old version, so see if we have a new value
+		if( strcmp(UidDomain,oldUidDomain) ) {
+				// They're different!  So, now we've got to go through
+				// the whole job queue and replace ATTR_USER for all
+				// the ads with a new value that's got the new
+				// UidDomain in it.  Luckily, we shouldn't have to do
+				// this very often. :)
+			dprintf( D_FULLDEBUG, "UID_DOMAIN has changed.  "
+					 "Inserting new ATTR_USER into all classads." );
+			WalkJobQueue((int(*)(ClassAd *)) fixAttrUser );
+		}
+			// we're done with the old version, so don't leak memory 
+		free( oldUidDomain );
+	}
 
 		////////////////////////////////////////////////////////////////////
 		// Grab all the optional parameters from the config file.
@@ -5490,3 +5496,28 @@ int Scheduler::intoAd( ClassAd *ad, char *lhs, int rhs ) {
 
 	return TRUE;
 }
+
+
+int
+fixAttrUser( ClassAd *job )
+{
+	int nice_user = 0;
+	char owner[_POSIX_PATH_MAX];
+	char user[_POSIX_PATH_MAX];
+	owner[0] = '\0';
+	
+	if( ! job->LookupString(ATTR_OWNER, owner) ) {
+			// No ATTR_OWNER!
+		return 0;
+	}
+		// if it's not there, nice_user will remain 0
+	job->LookupInteger( ATTR_NICE_USER, nice_user );
+
+	sprintf( user, "%s = \"%s%s@%s\"", ATTR_USER, 
+			 (nice_user) ? "nice-user." : "", owner,
+			 scheduler.uidDomain() );  
+	job->Insert( user );
+	return 0;
+}
+
+
