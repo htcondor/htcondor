@@ -863,22 +863,21 @@ orphanCallbackHandler()
 	}
 	OrphanCallbackList.DeleteCurrent();
 
-	dprintf(D_ALWAYS,"orphanCallbackHandler: job %s, state %d\n", 
-		orphan->job_contact, orphan->state);
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( orphan->job_contact ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
-			"Can't find record for globus job with contact %s "
-			"on globus event %d, ignoring\n", orphan->job_contact,
-				 orphan->state );
+			"orphanCallbackHandler: Can't find record for globus job with "
+			"contact %s on globus event %d, ignoring\n", orphan->job_contact,
+			 orphan->state );
 		free( orphan->job_contact );
 		delete orphan;
 		return TRUE;
 	}
 
-	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
-			 this_job->procID.proc );
+	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+			 this_job->procID.cluster, this_job->procID.proc, orphan->state,
+			 orphan->errorcode );
 
 	this_job->UpdateGlobusState( orphan->state, orphan->errorcode );
 
@@ -897,14 +896,12 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 	int proc_id;
 	GlobusJob *this_job;
 
-	dprintf(D_ALWAYS,"gramCallbackHandler: job %s, state %d\n", 
-		job_contact, state);
 	// Find the right job object
 	rc = JobsByContact.lookup( HashKey( job_contact ), this_job );
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
-			"Can't find record for globus job with contact %s "
-			"on globus event %d, delaying\n", job_contact, state );
+			"gramCallbackHandler: Can't find record for globus job with "
+			"contact %s on globus event %d, delaying\n", job_contact, state );
 		OrphanCallback_t *new_orphan = new OrphanCallback_t;
 		new_orphan->job_contact = strdup( job_contact );
 		new_orphan->state = state;
@@ -915,8 +912,9 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 		return;
 	}
 
-	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
-			 this_job->procID.proc );
+	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %d, errorcode %d\n",
+			 this_job->procID.cluster, this_job->procID.proc, state,
+			 errorcode );
 
 	this_job->UpdateGlobusState( state, errorcode );
 }
