@@ -5,17 +5,11 @@
 #define IS_HPPAR		YES
 #define IS_HPPAR_HPUX		YES
 
-#define RpcLib /**/
-#define MldLib /**/
-#define KernLib /**/
-#define SocketLib /**/
-
-#define MallocLib /**/
+PLATFORM_LDFLAGS = 
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
 #define Crt0 /lib/crt0.o
-#define SyscallsExp /**/
 
 #define XLibPath /**/
 #define XExtLibPath /**/

@@ -13,14 +13,10 @@
 #define OperatingSystem		Solaris
 #define IS_SOLARIS		YES
 
-#define RpcLib /**/
-#define MldLib /**/
-#define KernLib -lkstat -lelf
+PLATFORM_LDFLAGS = -lkstat -lelf -lnsl -lsocket
+
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib -lnsl -lsocket
-
-#define SyscallsExp /**/
 
 #ifndef X11LibPath
 #define X11LibPath /opt/openwin/lib
@@ -101,7 +97,6 @@
 
 #define HAS_PVM				YES
 #define HAS_STATIC			NO
-
 
 #define UnixName /vmunix		/* pathname of the system executable */
 #define PsAllFlag ps -ax		/* "Ps" flag when you want everything */

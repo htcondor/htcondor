@@ -26,20 +26,14 @@
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define Tilde /home/condor
-#define RpcLib /**/
-#define SocketLib /**/
-#define MldLib /**/
-#define KernLib /**/
-#define MallocLib /**/
+PLATFORM_LDFLAGS = -lbfd -liberty
+
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
 #define Crt0 /usr/lib/crt1.o
-#define SyscallsExp /**/
 
 #define XLibPath /usr/X11R6/lib/libX11.a
 #define XExtLibPath /usr/X11R6/lib/libXext.a
-
 
 #define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
