@@ -1189,8 +1189,14 @@ get_job_info()
 					&proc_struct, a_out, target_file, orig_file, &soft_kill
 	);
 
+#define NOBODY -2
+#if 1
+	uid = NOBODY;
+	gid = NOBODY;
+#else
 	uid = REMOTE_syscall( CONDOR_geteuid );
 	gid = REMOTE_syscall( CONDOR_getegid );
+#endif
 
 	if( uid == 0 ) {
 		EXCEPT( "Attempt to start user process with root privileges" );
