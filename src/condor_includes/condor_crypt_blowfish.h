@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef CONDOR_CRYPTO_BLOWFISH
+#if defined(CONDOR_BLOWFISH_ENCRYPTION) && !defined(CONDOR_CRYPTO_BLOWFISH)
 #define CONDOR_CRYPTO_BLOWFISH
 
 #include "condor_crypt.h"          // base class
