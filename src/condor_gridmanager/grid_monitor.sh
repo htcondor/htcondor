@@ -1164,6 +1164,11 @@ sub GetJobState( $ )
     # Get the job's status
     my $JobStatus = $JobManager->poll( );
 
+	# Some versions of Globus return a scalar instead of a hash
+	if(ref $JobStatus eq '') {
+		$JobStatus = { JOB_STATE => $JobStatus };
+	}
+
     # If the state is defined, we can store it..
     if ( ( ref $JobStatus eq "HASH" ) && ( defined $JobStatus->{JOB_STATE} )  )
     {
