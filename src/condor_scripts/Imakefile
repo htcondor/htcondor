@@ -19,6 +19,12 @@ link_torelease_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
 
 #if IS_SGI_IRIX53 || IS_SGI_IRIX62
 link_torelease_target($(RELEASE_DIR)/lib/ld,lib,uld)
+symlink_torelease_target(/usr/lib/c++/c++filt,lib,c++filt)
+symlink_torelease_target(/usr/lib/c++/c++patch,lib,c++patch)
+symlink_torelease_target(/usr/lib/c++/cfront,lib,cfront)
+symlink_torelease_target(/usr/lib/c++/markc++,lib,markc++)
+symlink_torelease_target(/usr/lib/c++/ptcomp,lib,ptcomp)
+symlink_torelease_target(/usr/lib/c++/ptlink,lib,ptlink)
 #endif
 
 #if IS_SGI_IRIX62
