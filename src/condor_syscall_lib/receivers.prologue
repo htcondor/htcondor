@@ -88,6 +88,10 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 
 extern XDR *xdr_syscall;
 
+#if defined(SYSCALL_DEBUG)
+	extern char *SyscallLabel;
+#endif
+
 
 int CONDOR_NotSupported( int num, ... );
 int CONDOR_Ignored( int num, ... );
@@ -101,6 +105,10 @@ do_REMOTE_syscall()
 
 	ASSERT( xdrrec_skiprecord(xdr_syscall) );
 	ASSERT( xdr_int(xdr_syscall, &condor_sysnum) );
+
+#if defined(SYSCALL_DEBUG)
+	sprintf( SyscallLabel, "%-6d", condor_sysnum );
+#endif
 
 	dprintf(D_SYSCALLS,
 		"Got request for syscall %d <%s>\n",
