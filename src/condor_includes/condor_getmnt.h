@@ -5,8 +5,14 @@
 #include <sys/mount.h>
 #endif
 
-#if !defined(OSF1)
+#if !defined(OSF1) && !defined(AIX32)
 #include <mntent.h>
+#endif
+
+#if defined(AIX32)
+#	include <sys/mntctl.h>
+#	include <sys/vmount.h>
+#	include <sys/sysmacros.h>
 #endif
 
 #if !defined(NMOUNT)
