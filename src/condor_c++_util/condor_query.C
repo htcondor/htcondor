@@ -96,6 +96,16 @@ CondorQuery (AdTypes qType)
 		command = QUERY_SCHEDD_ADS;
 		break;
 
+	  case SUBMITTOR_AD:
+		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
+		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
+		query.setNumFloatCats  (SCHEDD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)ScheddIntegerKeywords);
+		query.setStringKwList  ((char **)ScheddStringKeywords);
+		query.setFloatKwList   ((char **)ScheddFloatKeywords);
+		command = QUERY_SUBMITTOR_ADS;
+		break;
+
 	  case MASTER_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -232,6 +242,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		break;
 
 	  case SCHEDD_AD:
+	  case SUBMITTOR_AD:
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
@@ -297,10 +308,12 @@ getQueryAd (ClassAd &queryAd)
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
 	  case STARTD_AD:
+	  case STARTD_PVT_AD:
 		queryAd.SetTargetTypeName (STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
+	  case SUBMITTOR_AD:
 		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
 		break;
 
