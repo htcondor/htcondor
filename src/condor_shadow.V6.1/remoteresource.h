@@ -31,6 +31,29 @@
 #include "baseshadow.h"
 #include "file_transfer.h"
 
+/** The states that a remote resource can be in.  If you add anything
+	here you must A) put it before _RR_STATE_THRESHOLD and B) add a
+	string to Resource_State_String in remoteresource.C */ 
+enum ResourceState {
+		/// Before the job begins execution
+	RR_PRE, 
+		/// While it's running (after requestIt() succeeds...)
+	RR_EXECUTING,
+		/** We've told the job to go away, but haven't received 
+			confirmation that it's really dead.  This state is 
+		    skipped if the job exits on its own. */
+	RR_PENDING_DEATH,
+		/// After it has stopped (for whatever reason...)
+	RR_FINISHED,
+		/// Suspended at the execution site
+	RR_SUSPENDED,
+		/// The threshold must be last!
+	_RR_STATE_THRESHOLD
+};
+
+	/** Return the string version of the given ResourceState */
+const char* rrStateToString( ResourceState s );
+
 /** This class represents one remotely running user job.  <p>
 
 	This class has a Socket to the remote job from which it can handle
@@ -85,14 +108,14 @@ class RemoteResource : public Service {
 			full machine name and (hopefully) an OK are returned.
 			@param starterVersion The version number of the starter wanted.
 			                  The default is 2.
-			@return 0 if everthing went ok, -1 if error.				  
+			@return true if everthing went ok, false if error.				  
 		 */ 
-	virtual int requestIt( int starterVersion = 2 );
+	virtual bool requestIt( int starterVersion = 2 );
 
 		/** Here we tell the remote starter to kill itself in a gentle manner.
-			@return 0 on success, -1 if a problem occurred.
+			@return true on success, false if a problem occurred.
 		*/
-	virtual int killStarter();
+	virtual bool killStarter();
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 
@@ -240,6 +263,35 @@ class RemoteResource : public Service {
 	int getDiskUsage( void ) { return disk_usage; };
 	struct rusage getRUsage( void ) { return remote_rusage; };
 
+		/** Return the state that this resource is in. */
+	ResourceState getResourceState() { return state; };
+
+		/** Change this resource's state */
+	void setResourceState( ResourceState s );
+
+		/** Record the fact that our starter suspended the job.  This
+			includes updating our in-memory job ad, logging an event
+			to the UserLog, etc.
+			@param update_ad ClassAd with update info from the starter
+			@return true on success, false on failure
+		*/
+	virtual bool recordSuspendEvent( ClassAd* update_ad );
+
+		/** Record the fact that our starter resumed the job.  This
+			includes updating our in-memory job ad, logging an event
+			to the UserLog, etc.
+			@param update_ad ClassAd with update info from the starter
+			@return true on success, false on failure
+		*/
+	virtual bool recordResumeEvent( ClassAd* update_ad );
+
+		/** Write the given event to the UserLog.  This is virtual so
+			each kind of RemoteResource can define its own version.
+			@param event Pointer to ULogEvent to write
+			@return true on success, false on failure
+		*/
+	virtual bool writeULogEvent( ULogEvent* event );
+
  protected:
 
 		/** Set the claimSock associated with this host.  
@@ -284,10 +336,19 @@ class RemoteResource : public Service {
 	int 			image_size;
 	int 			disk_usage;
 
+	ResourceState state;
+
  private:
 
 		// initialization done in both constructors.
 	void init ( BaseShadow *shad );
+
+		/** For debugging, print out the values of various statistics
+			related to our bookkeeping of suspend/resume activity for
+			the job.
+			@param debug_level What dprintf level to use
+		*/
+	void printSuspendStats( int debug_level );
 
 		// Making these private PREVENTS copying.
 	RemoteResource( const RemoteResource& );
