@@ -357,19 +357,29 @@ ValidateRendevous()
 		return 0;
 	}
 
-	if (stat(rendevous_file, &stat_buf) < 0) {
-		UnauthenticatedConnection();
-		return 0;
-	}
-
-	unlink(rendevous_file);
-
 #if !defined(WIN32)
-	if( stat_buf.st_uid != active_owner_uid ) {
+	// note we do an lstat() instead of a stat() so we do _not_ follow
+	// a symbolic link.  this prevents a security attack via sym links.
+	if (lstat(rendevous_file, &stat_buf) < 0) {
 		UnauthenticatedConnection();
 		return 0;
 	}
 #endif
+
+	unlink(rendevous_file);
+
+#if !defined(WIN32)
+	// Authentication should fail if a) owner match fails, or b) the
+	// file is either a hard or soft link (no links allowed because they
+	// could spoof the owner match).  -Todd 3/98
+	if ( (stat_buf.st_uid != active_owner_uid) ||
+		(stat_buf.st_nlink > 1) ||		// check for hard link
+		(S_ISLNK(stat_buf.st_mode)) ) {
+		UnauthenticatedConnection();
+		return 0;
+	}
+#endif
+
 	connection_state = CONNECTION_ACTIVE;
 	return 0;
 }
