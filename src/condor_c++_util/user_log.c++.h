@@ -58,6 +58,7 @@ public:
 
 	// to initialize if not initialized bt ctor
 	void initialize(const char *, const char *, int, int, int);
+	void initialize(int, int, int);
 
 	// use this function to access log (see condor_event.h)   --RR
 	int       writeEvent (ULogEvent *);
@@ -75,7 +76,6 @@ private:
 	int			cluster;
 	int			proc;
 	int			subproc;
-	int			fd;
 	FILE		*fp;
 	FileLock	*lock;
 	int			in_block;
