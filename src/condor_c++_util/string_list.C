@@ -92,7 +92,8 @@ StringList::print (void)
 		printf ("[%s]\n", x);
 }
 
-StringList::~StringList ()
+void
+StringList::clearAll()
 {
 	char *x;
 	strings.Rewind ();
@@ -100,6 +101,11 @@ StringList::~StringList ()
 	{
 		deleteCurrent();
 	}
+}
+
+StringList::~StringList ()
+{
+	clearAll();
 	if ( delimiters )
 		delete [] delimiters;
 }

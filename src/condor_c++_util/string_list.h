@@ -48,6 +48,7 @@ public:
 	void append (const char* str) { strings.Append( strdup(str) ); }
 	void insert (const char* str) { strings.Insert( strdup(str) ); }
 	void remove (const char* str);
+	void clearAll();
 	void remove_anycase (const char* str);
 	char *next (void) { return strings.Next(); }
 	void deleteCurrent();
