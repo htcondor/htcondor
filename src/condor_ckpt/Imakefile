@@ -39,7 +39,7 @@ PLATFORM_EXTRACT = MMAP.o SYSCALL.o SYSDEP.o PIPE.o
 #elif IS_LINUX
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o __PIPE.o
 #elif IS_SOLARIS
-PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
+PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o GETPAGESIZE.o
 #elif IS_ALPHA_OSF1
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 #elif IS_HPUX
@@ -183,6 +183,7 @@ uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
+uppercase_target($(SIMPLE_LIBC),getpagesize.o,GETPAGESIZE.o,getpagesize,GETPAGESIZE)
 #endif
 
 uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCMASK)
