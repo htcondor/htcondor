@@ -29,6 +29,7 @@
 #include "buffers.h"
 #include "sock.h"
 #include "reli_sock.h"
+#include "auth_sock.h"
 #include "safe_sock.h"
 #include "sockCache.h"
 
