@@ -90,9 +90,6 @@ int		GotQueueCommand;
 char	IckptName[_POSIX_PATH_MAX];	/* Pathname of spooled initial ckpt file */
 
 unsigned int TransferInputSize;	/* total size of files transfered to exec machine */
-char GlobusArgs[8192]; /* need to build large string */
-char GlobusEnv[2048]; 
-char GlobusExec[_POSIX_PATH_MAX];
 char	*MyName;
 int		Quiet = 1;
 int		DisableFileChecks = 0;
@@ -153,11 +150,9 @@ char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 
 char	*X509UserProxy	= "x509userproxy";
-char	*X509Directory	= "x509directory";
 char	*GlobusScheduler = "globusscheduler";
 char	*GlobusRSL = "globusrsl";
 char	*RendezvousDir	= "rendezvousdir";
-char	*SsleayConf	= "ssleayconf";
 
 char	*FileRemaps = "file_remaps";
 char	*BufferFiles = "buffer_files";
@@ -641,7 +636,6 @@ SetExecutable()
 	char	*copySpool = NULL;
 
 	ename = condor_param(Executable);
-
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -1399,10 +1393,6 @@ SetEnvironment()
 
 	sprintf(newenv, "%s = \"", ATTR_JOB_ENVIRONMENT);
 
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		strcat( newenv, GlobusEnv );
-	}
-
 	if (env) {
 		strcat(newenv, env);
 		envobject.add_string(env);
@@ -1769,7 +1759,6 @@ SetForcedAttributes()
 void
 SetGlobusParams()
 {
-	char rsl[8092];
 	char buff[2048];
 	char *globushost;
 	char *tmp;
@@ -1789,51 +1778,17 @@ SetGlobusParams()
 
 	free( globushost );
 
-	sprintf( buffer, "%s = \"%s\"", "GlobusContactString", "X" );
+	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING, "X" );
 	InsertJobExpr (buffer, false );
 
-	sprintf( buffer, "%s = %d", "GlobusQueryDelay", 30 );
+	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	InsertJobExpr (buffer, false );
-
-	sprintf( buffer, "%s = %d", "GlobusStatus", G_UNSUBMITTED );
-	InsertJobExpr (buffer, false );
-
-	strcpy( rsl, "GlobusRSL = \"" );
-
-	ASSERT( job->LookupString( ATTR_JOB_CMD, buff ) );
-	strcat( rsl, "&(executable=" );
-	strcat( rsl, buff );
-
-	if ( job->LookupString( ATTR_JOB_ARGUMENTS, buff ) && buff[0] != '\0' ) {
-		strcat( rsl, ")(arguments=" );
-		strcat( rsl, buff );
-	}
-
-	if ( job->LookupString( ATTR_JOB_INPUT, buff ) ) {
-		strcat( rsl, ")(stdin=" );
-		strcat( rsl, buff );
-	}
-
-	if ( job->LookupString( ATTR_JOB_OUTPUT, buff ) ) {
-		strcat( rsl, ")(stdout=" );
-		strcat( rsl, buff );
-	}
-
-	if ( job->LookupString( ATTR_JOB_ERROR, buff ) ) {
-		strcat( rsl, ")(stderr=" );
-		strcat( rsl, buff );
-	}
-
-	strcat( rsl, ")" );
 
 	if ( tmp = condor_param(GlobusRSL) ) {
-		strcat( rsl, tmp );
+		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
+		InsertJobExpr ( buff, false );
 	}
-
-	strcat( rsl, "\"" );
-
-	InsertJobExpr ( rsl, false );
 }
 
 #if !defined(WIN32)
@@ -2793,100 +2748,4 @@ setupAuthentication()
 		free( Rendezvous );
 	}
 
-#ifndef WIN32
-		//X509_USER_PROXY needed for Globus universe and glideins under condor
-	char *UserFile = NULL;
-	if ( UserFile = condor_param( X509UserProxy ) ) {
-		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserFile );
-		sprintf( buffer, "X509_USER_PROXY=%s", UserFile );
-		if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "X509_USER_PROXY = \"%s\"", UserFile );
-			InsertJobExpr( buffer );
-		}
-		else { 
-			putenv( strdup( buffer ) );
-		}
-		
-		free( UserFile );
-		UserFile = NULL;
-	}
-
-	char *ssleay = condor_param( SsleayConf );
-
-	if ( UserFile = condor_param( X509Directory ) ) {
-		dprintf( D_FULLDEBUG, "X509_DIRECTORY=%s\n", UserFile );
-
-			//if it's Globus universe, set all defaults, else just put in ENV
-		if ( JobUniverse != GLOBUS_UNIVERSE ) {
-				//put x509_directory in ENV for authentication code to use.
-			sprintf( buffer, "X509_DIRECTORY=%s", UserFile );
-			putenv( strdup( buffer ) );
-		}
-		else {
-			//set all the X509_* stuff to default names under this directory
-
-			sprintf( buffer, "X509_CERT_DIR=%s/certdir", UserFile );
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", UserFile );
-			InsertJobExpr( buffer );
-
-			sprintf( buffer, "X509_USER_CERT=%s/usercert.pem", UserFile );
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", UserFile );
-			InsertJobExpr( buffer );
-
-			sprintf( buffer, "X509_USER_KEY=%s/userkey.pem", UserFile );
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "X509_USER_KEY = \"%s/userkey.pem\"", UserFile );
-			InsertJobExpr( buffer );
-
-			char sslFile[_POSIX_PATH_MAX];
-			if ( ssleay ) {
-					//if specified, override condor default
-				strcpy( sslFile, ssleay );
-			}
-			else {
-					//use condor default
-				sprintf( sslFile, "%s/condor_ssl.cnf", UserFile );
-			}
-			sprintf( buffer, "SSLEAY_CONF=%s", sslFile );
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "SSLEAY_CONF = \"%s\"", sslFile );
-			InsertJobExpr( buffer );
-		}
-			
-		free( UserFile );
-		UserFile = NULL;
-	}
-	else if ( ssleay ) {
-		sprintf( buffer, "SSLEAY_CONF=%s", ssleay );
-		if ( JobUniverse == GLOBUS_UNIVERSE ) {
-			strcat( GlobusEnv, buffer );
-			strcat( GlobusEnv, env_delimiter );
-				//Put it in the ClassAd as well (per directive from 7th floor...)
-			sprintf( buffer, "SSLEAY_CONF = \"%s\"", ssleay );
-			InsertJobExpr( buffer );
-		}
-		else {
-			putenv( strdup( buffer ) );
-		}
-	}
-
-		//For condor_glidein to run under condor, either GLOBUS_INSTALL_PATH 
-		//or GLOBUS_DEPLOY_PATH, as well as HOME and the path to globus, condor 
-		//and /bin user programs must be in the users environment. I check
-		//that stuff in condor_glidein, but mention it here because it is
-		//apropososos.
-#endif // of ifndef WIN32
 }
