@@ -116,6 +116,22 @@ config_fill_ad( ClassAd* ad )
 		}	
 	}
 	
+	sprintf (buffer, "%s_ATTRS", mySubSystem);
+	tmp = param (buffer);
+	if( tmp ) {
+		reqdExprs.initializeFromString (tmp);	
+		free (tmp);
+
+		reqdExprs.rewind();
+		while ((tmp = reqdExprs.next())) {
+			expr = param(tmp);
+			if (expr == NULL) continue;
+			sprintf (buffer, "%s = %s", tmp, expr);
+			ad->Insert (buffer);
+			free (expr);
+		}	
+	}
+	
 	/* Insert the version into the ClassAd */
 	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
 	ad->Insert(buffer);
