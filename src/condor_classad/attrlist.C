@@ -181,7 +181,6 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
 			EXCEPT("Parse error in the input string");
 		}
 		Insert(tree);
-		delete tree;
 	    }
 	    if(c == EOF)
 	    {                                // end of input.
@@ -277,7 +276,6 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 			EXCEPT("Parse error in the input string");
 		}
 		Insert(tree);
-		delete tree;
 	    }
 	    delete []buffer;
 	    if(c == '\0')
@@ -711,6 +709,17 @@ AttrList::~AttrList()
 // assignment expression, FALSE is returned. Otherwise, it is inserted at the
 // end of the expression list.
 ////////////////////////////////////////////////////////////////////////////////
+int AttrList::Insert(char* str)
+{
+	ExprTree*	tree;
+
+	if(Parse(str, tree) != 0)
+	{
+		return FALSE;
+	}
+	return Insert(tree);
+}
+
 int AttrList::Insert(ExprTree* expr)
 {
     if(expr->MyType() != LX_ASSIGN)

@@ -95,9 +95,8 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
 	myType = NULL;
 	targetType = NULL;
 	val = new EvalResult;
-    Parse("MyType", tree);                   // set myType field by evaluation
-    tree->EvalTree(this, val);               // over itself.
-    if(!val || val->type!=LX_STRING)
+    tree = Lookup("MyType");
+	if(!tree)
     {
         myType = new AdType();               // undefined type.
         if(myType == NULL)
@@ -107,6 +106,7 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
     }
     else
     {
+		tree->EvalTree(this, val);
 		myType = new AdType(val->s);
 		if(myType == NULL)
 		{
@@ -115,10 +115,7 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
     }
     delete tree;
 
-    Parse("TargetType", tree);               // set targetType field by
-                                             // evaluation over itself.
-    tree->EvalTree(this, val);
-    if(!val || val->type!=LX_STRING)
+	if(!(tree = Lookup("TargetType")))
     {
         targetType = new AdType();           // undefined type.
 		if(targetType == NULL)
@@ -128,6 +125,7 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
     }
     else
     {
+		tree->EvalTree(this, val);
 		targetType = new AdType(val->s);
 		if(targetType == NULL)
 		{
