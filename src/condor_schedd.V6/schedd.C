@@ -4323,10 +4323,18 @@ send_vacate(match_rec* match,int cmd)
 		return;
 	}
 
-	if( cmd == CKPT_FRGN_JOB ) {
-		dprintf( D_ALWAYS, "Sent CKPT_FRGN_JOB to startd on %s\n", match->peer);
-	} else {
-		dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
+	switch(cmd) {
+		case CKPT_FRGN_JOB:
+			dprintf( D_ALWAYS, "Sent CKPT_FRGN_JOB to startd on %s\n", match->peer);
+			break;
+		case KILL_FRGN_JOB:
+			dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
+			break;
+		case RELEASE_CLAIM:
+			dprintf( D_ALWAYS, "Sent RELEASE_CLAIM to startd on %s\n", match->peer);
+			break;
+		default:
+			dprintf( D_ALWAYS, "Send %i to startd on %s\n", cmd, match->peer);
 	}
 }
 
@@ -5699,6 +5707,9 @@ Scheduler::DelMrec(char* id)
 			// Couldn't find it, return failure
 		return -1;
 	}
+
+	// release the claim on the startd
+	send_vacate(rec, RELEASE_CLAIM);
 
 	dprintf( D_ALWAYS, "Match record (%s, %d, %d) deleted\n",
 			 rec->peer, rec->cluster, rec->proc ); 
