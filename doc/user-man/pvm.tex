@@ -54,7 +54,7 @@ has disappeared, it puts the piece of work it assigned to that worker
 back into the pool of tasks, and sends it out again to the next
 available worker. If the master notices that the number of workers has
 dropped below an acceptable level, it could request for more workers
-(via \func{pvm\_addhosts()}. Or perhaps perhaps the master will request
+(via \func{pvm\_addhosts()}. Or perhaps the master will request
 a replacement node every single time it is notified that a worker has
 gone away. The point is that in this paradigm, the number of workers is
 not important (although more is better!) and changes in the size of
@@ -90,7 +90,7 @@ library functions under Condor maintain the same semantics as in
 PVM 3.3.11, including messaging operations, group operations, and 
 pvm\_catchout().
 
-We summarize the changes and new features of PVM under running in the Condor 
+We summarize the changes and new features of PVM under running in the
 Condor environment in the following list:
 
 \begin{itemize}
