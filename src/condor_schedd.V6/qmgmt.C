@@ -60,6 +60,7 @@ void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					 char * user);
 void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
+int		Runnable(ClassAd*);
 int		get_job_prio(ClassAd *ad);
 
 #if !defined(WIN32)
@@ -1599,6 +1600,29 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		return;
 	}
 
+
+	// BIOTECH
+	char *biotech = param("BIOTECH");
+	if (biotech) {
+		free(biotech);
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			if ( Runnable(ad) ) {
+				if ( (my_match_ad && 
+					     (*ad == ((ClassAd &)(*my_match_ad)))) 
+					 || (my_match_ad == NULL) ) 
+				{
+					ad->LookupInteger(ATTR_CLUSTER_ID, jobid.cluster);
+					ad->LookupInteger(ATTR_PROC_ID, jobid.proc);
+					break;
+				}
+			}
+			ad = GetNextJob(0);
+		}
+		return;
+	}
+
+
 	if ( nice_user_prefix_len == 0 ) {
 		strcpy(nice_user_prefix,NiceUserName);
 		strcat(nice_user_prefix,".");
@@ -1680,37 +1704,27 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	FindPrioJob(jobid);
 }
 
-int Runnable(PROC_ID* id)
+int Runnable(ClassAd *job)
 {
-	int		cur, max;					// current hosts and max hosts
-	int		status, universe;
-	
-	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
+	int status, universe, cur, max;
 
-	if(id->cluster < 1 || id->proc < 0)
-	{
-		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
-		return FALSE;
-	}
-	
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_STATUS, &status) < 0)
+	if ( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
 		return FALSE;
 	}
-	if(status == HELD)
+	if (status == HELD)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
 		return FALSE;
 	}
-	if(status == REMOVED)
+	if (status == REMOVED)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
 		return FALSE;
 	}
 
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE,
-					   &universe) < 0)
+	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_JOB_UNIVERSE);
@@ -1723,25 +1737,41 @@ int Runnable(PROC_ID* id)
 		return FALSE;
 	}
 
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_CURRENT_HOSTS, &cur) < 0)
+	if ( job->LookupInteger(ATTR_CURRENT_HOSTS, cur) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_CURRENT_HOSTS);
 		return FALSE; 
 	}
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_MAX_HOSTS, &max) < 0)
+	if ( job->LookupInteger(ATTR_MAX_HOSTS, max) == 0 )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
 				ATTR_MAX_HOSTS);
 		return FALSE; 
 	}
-	if(cur < max)
+	if (cur < max)
 	{
 		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
 		return TRUE;
 	}
+	
 	dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
 	return FALSE;
+}
+
+int Runnable(PROC_ID* id)
+{
+	ClassAd *jobad;
+	
+	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
+
+	if (id->cluster < 1 || id->proc < 0 || (jobad=GetJobAd(id->cluster,id->proc))==NULL )
+	{
+		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
+		return FALSE;
+	}
+
+	return Runnable(jobad);
 }
 
 // From the priority records, find the runnable job with the highest priority

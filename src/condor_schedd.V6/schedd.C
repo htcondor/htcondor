@@ -76,6 +76,7 @@ extern int get_job_prio(ClassAd *ad);
 extern void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad, 
 					 char * user);
 extern int Runnable(PROC_ID*);
+extern int Runnable(ClassAd*);
 extern bool	operator==( PROC_ID, PROC_ID );
 
 extern char* Spool;
@@ -1245,6 +1246,15 @@ Scheduler::negotiate(int, Stream* s)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
+	// BIOTECH
+	bool	biotech = false;
+	char *bio_param = param("BIOTECH");
+	if (bio_param) {
+		free(bio_param);
+		biotech = true;
+	}
+		
+
 	if (FlockNegotiators) {
 		// first, check if this is our local negotiator
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
@@ -1371,6 +1381,11 @@ Scheduler::negotiate(int, Stream* s)
 
 	/* Try jobs in priority order */
 	for( i=0; i < N_PrioRecs; i++ ) {
+	
+		// BIOTECH
+		if ( JobsRejected > 0 && biotech ) {
+			continue;
+		}
 
 		char tmpstr[200];
 		sprintf(tmpstr,"%s@%s",PrioRec[i].owner,UidDomain);
