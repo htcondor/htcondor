@@ -67,7 +67,10 @@ struct OwnerData {
   char* Name;
   int JobsRunning;
   int JobsIdle;
-  OwnerData() { Name=NULL; JobsRunning=JobsIdle=0; }
+  int FlockLevel;
+  int OldFlockLevel;
+  time_t NegotiationTimestamp;
+  OwnerData() { Name=NULL; JobsRunning=JobsIdle=FlockLevel=OldFlockLevel=0; }
 };
 
 struct match_rec
@@ -300,7 +303,6 @@ class Scheduler : public Service
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
 	StringList		*FlockHosts;
-	int				FlockLevel;
 	int				MaxFlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish

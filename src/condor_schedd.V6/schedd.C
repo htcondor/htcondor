@@ -177,7 +177,6 @@ Scheduler::Scheduler()
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
 	FlockHosts = NULL;
-	FlockLevel = 0;
 	MaxFlockLevel = 0;
 	StartJobTimer=-1;
 	timeoutid = -1;
@@ -292,19 +291,14 @@ Scheduler::timeout()
 int
 Scheduler::count_jobs()
 {
-	int		i;
+	int		i, j;
 	int		prio_compar();
 	char	tmp[512];
 
-	static int OldFlockLevel = 0;
-
 	 // copy owner data to old-owners table
 	 OwnerData OldOwners[MAX_NUM_OWNERS];
-
+	 memcpy(OldOwners, Owners, N_Owners*sizeof(OwnerData));
 	 int Old_N_Owners=N_Owners;
-	for ( i=0; i<N_Owners; i++) {
-		OldOwners[i].Name = Owners[i].Name;
-	}
 
 	N_Owners = 0;
 	JobsRunning = 0;
@@ -313,13 +307,41 @@ Scheduler::count_jobs()
 	SchedUniverseJobsRunning = 0;
 
 	// clear owner table contents
+	time_t current_time = time(0);
 	for ( i=0; i<MAX_NUM_OWNERS; i++) {
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
+		Owners[i].FlockLevel = 0;
+		Owners[i].OldFlockLevel = 0;
+		Owners[i].NegotiationTimestamp = current_time;
 	}
 
 	WalkJobQueue((int(*)(ClassAd *)) count );
+
+	// set FlockLevel for owners
+	if (FlockHosts) {
+		for ( i=0; i < N_Owners; i++) {
+			for ( j=0; j < Old_N_Owners; j++) {
+				if (!strcmp(OldOwners[j].Name,Owners[i].Name)) {
+					Owners[i].FlockLevel = OldOwners[j].FlockLevel;
+					Owners[i].OldFlockLevel = OldOwners[j].OldFlockLevel;
+					Owners[i].NegotiationTimestamp =
+						OldOwners[j].NegotiationTimestamp;
+				}
+			}
+			// if this owner hasn't received a negotiation in a long time,
+			// then we should flock -- we need this case if the negotiator
+			// is down or simply ignoring us because our priority is so low
+			if ((current_time - Owners[i].NegotiationTimestamp >
+				 SchedDInterval*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
+				Owners[i].FlockLevel++;
+				dprintf(D_ALWAYS,
+						"Increasing flock level for %s to %d.\n",
+						Owners[i].Name, Owners[i].FlockLevel);
+			}
+		}
+	}
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
 	dprintf( D_FULLDEBUG, "JobsIdle = %d\n", JobsIdle );
@@ -366,20 +388,11 @@ Scheduler::count_jobs()
 			 N_Owners );
 
 	// The per user queue ads should not have NumUsers in them --- only
-	// the schedd ad should.  In addition, they should not have TotalRunningJobs
-	// and TotalIdleJobs
+	// the schedd ad should.  In addition, they should not have
+	// TotalRunningJobs and TotalIdleJobs
 	ad->Delete (ATTR_NUM_USERS);
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
-
-	// when all jobs are finished, reset FlockLevel
-	if (N_Owners == 0) {
-		if (FlockLevel > 0) {
-			dprintf(D_ALWAYS,
-					"all jobs are finished; flock level reset to 0\n");
-			FlockLevel = 0;
-		}
-	}
 
 	for ( i=0; i<N_Owners; i++) {
 
@@ -417,11 +430,11 @@ Scheduler::count_jobs()
 	  }
 
 	  // Request matches from other pools if FlockLevel > 0
-	  if (FlockHosts && FlockLevel > 0) {
+	  if (FlockHosts && Owners[i].FlockLevel > 0) {
 		  char *host;
-		  int i;
-		  for (i=1, FlockHosts->rewind();
-				i <= FlockLevel && (host = FlockHosts->next()); i++) {
+		  for (j=1, FlockHosts->rewind();
+			   j <= Owners[i].FlockLevel && (host = FlockHosts->next());
+			   j++) {
 				  // Port doesn't matter, since we've got the sinful string. 
 			  update_central_mgr( UPDATE_SUBMITTOR_AD, host, 
 								  COLLECTOR_UDP_COMM_PORT );
@@ -429,21 +442,23 @@ Scheduler::count_jobs()
 	  }
 
 	  // Cancel requests when FlockLevel decreases
-	  if (OldFlockLevel > FlockLevel) {
+	  if (Owners[i].OldFlockLevel > Owners[i].FlockLevel) {
 		  char *host;
-		  int i;
 		  sprintf(tmp, "%s = 0", ATTR_RUNNING_JOBS);
 		  ad->InsertOrUpdate(tmp);
 		  sprintf(tmp, "%s = 0", ATTR_IDLE_JOBS);
 		  ad->InsertOrUpdate(tmp);
-		  for (i=1, FlockHosts->rewind();
-				i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
-			  if (i > FlockLevel) {
+		  for (j=1, FlockHosts->rewind();
+			   j <= Owners[i].OldFlockLevel && (host = FlockHosts->next());
+			   j++) {
+			  if (j > Owners[i].FlockLevel) {
 				  update_central_mgr( UPDATE_SUBMITTOR_AD, host,
 									  COLLECTOR_UDP_COMM_PORT );
 			  }
 		  }
 	  }
+
+	  Owners[i].OldFlockLevel = Owners[i].FlockLevel;
 	}
 
 	 // send info about deleted owners
@@ -489,14 +504,13 @@ Scheduler::count_jobs()
 	
 	  if (FlockHosts) {
 		 for (i=1, FlockHosts->rewind();
-			  i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+			  i <= OldOwners[i].OldFlockLevel &&
+				  (host = FlockHosts->next()); i++) {
 			 update_central_mgr( UPDATE_SUBMITTOR_AD, host,
 								 COLLECTOR_UDP_COMM_PORT);
 		 }
 	  }
 	}
-
-	OldFlockLevel = FlockLevel;
 
 	return 0;
 }
@@ -1065,6 +1079,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
 	int		serviced_other_commands = 0;	
+	int		owner_num;
 	Sock*	sock = (Sock*)s;
 	contactStartdArgs * args;
 	ClassAd* my_match_ad;
@@ -1112,12 +1127,6 @@ Scheduler::negotiate(int, Stream* s)
 					"Aborting negotiation.\n", sin_to_string(sock->endpoint()));
 			return (!(KEEP_STREAM));
 		}
-	}
-
-	if (which_negotiator > FlockLevel) {
-		dprintf( D_ALWAYS, "Aborting connection with negotiator %s due to "
-				 "insufficient flock level.\n", sin_to_string(sock->endpoint()));
-		return (!(KEEP_STREAM));
 	}
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
@@ -1178,6 +1187,23 @@ Scheduler::negotiate(int, Stream* s)
 	dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	//-----------------------------------------------
 
+	// find owner in the Owners array
+	char *at_sign = strchr(owner, '@');
+	if (at_sign) *at_sign = '\0';
+	for (owner_num = 0;
+		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
+		 owner_num++);
+	if (owner_num == N_Owners) {
+		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
+		N_PrioRecs = 0;
+	} else if (Owners[owner_num].FlockLevel < which_negotiator) {
+		dprintf(D_FULLDEBUG,
+				"This user is no longer flocking with this negotiator.\n");
+		N_PrioRecs = 0;
+	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
+		Owners[owner_num].NegotiationTimestamp = time(0);
+	}
+	if (at_sign) *at_sign = '@';
 
 	/* Try jobs in priority order */
 	for( i=0; i < N_PrioRecs; i++ ) {
@@ -1476,6 +1502,21 @@ Scheduler::negotiate(int, Stream* s)
 				case END_NEGOTIATE:
 					dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
 							JobsStarted );
+
+					// We are unsatisfied in this pool.  Flock with
+					// less desirable pools.  Note that the current
+					// negotiator may "spin the pie" and negotiate with
+					// us again shortly.  If that happens, and we end up
+					// starting all of our jobs in the local pool, then
+					// we'll set FlockLevel back to its original value below.
+					if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
+						Owners[owner_num].FlockLevel == which_negotiator) { 
+						Owners[owner_num].FlockLevel++;
+						dprintf(D_ALWAYS,
+								"Increasing flock level for %s to %d.\n",
+								owner, Owners[owner_num].FlockLevel);
+					}
+
 					return KEEP_STREAM;
 				default:
 					dprintf( D_ALWAYS, "Got unexpected request (%d)\n", op );
@@ -1511,25 +1552,25 @@ Scheduler::negotiate(int, Stream* s)
 		break;
 	}
 
-		/* Out of jobs */
 	if( JobsStarted < jobs ) {
 		dprintf( D_ALWAYS,
 		"Out of servers - %d jobs matched, %d jobs idle\n",
 							JobsStarted, jobs - JobsStarted );
 
 		// We are unsatisfied in this pool.  Flock with less desirable pools.
-		if (FlockLevel < MaxFlockLevel && FlockLevel == which_negotiator) { 
-			FlockLevel++;
-			dprintf(D_ALWAYS, "Increasing flock level to %d.\n",
-					FlockLevel);
+		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
+			Owners[owner_num].FlockLevel == which_negotiator) { 
+			Owners[owner_num].FlockLevel++;
+			dprintf(D_ALWAYS, "Increasing flock level for %s to %d.\n",
+					owner, Owners[owner_num].FlockLevel);
 		}
 	} else {
 		// We are out of jobs.  Stop flocking with less desirable pools.
-		FlockLevel = which_negotiator;
+		Owners[owner_num].FlockLevel = which_negotiator;
 
 		dprintf( D_ALWAYS,
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
-							JobsStarted, jobs - JobsStarted, FlockLevel );
+		 JobsStarted, jobs - JobsStarted, Owners[owner_num].FlockLevel );
 	}
 
 	return KEEP_STREAM;
@@ -4216,7 +4257,7 @@ Scheduler::schedd_exit()
 void
 Scheduler::invalidate_ads()
 {
-	int i;
+	int i, FlockLevel=0;
 	char *host;
 	char line[256];
 	GenericQuery query;
@@ -4233,13 +4274,6 @@ Scheduler::invalidate_ads()
              Name );
     ad->Insert( line );
 	update_central_mgr( INVALIDATE_SCHEDD_ADS, Collector->addr(), 0 );
-	if( FlockHosts && FlockLevel > 0 ) {
-		for( i=1, FlockHosts->rewind();
-			 i <= FlockLevel && (host = FlockHosts->next()); i++) {
-			update_central_mgr( INVALIDATE_SCHEDD_ADS, host, 
-								COLLECTOR_UDP_COMM_PORT );
-		}
-	}
 
 		// Now, we want to invalidate all the submittor ads.  So, go
 		// through each submittor and add their Name to a query.
@@ -4247,6 +4281,8 @@ Scheduler::invalidate_ads()
 		sprintf( line, "%s == \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 				 UidDomain ); 
 		query.addCustomOR( line );
+		if (Owners[i].FlockLevel > FlockLevel)
+			FlockLevel = Owners[i].FlockLevel;
 	}
 		// This will overwrite the Requirements expression in ad.
 	query.makeQuery( *ad );
@@ -4656,7 +4692,6 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "filename", filename );
 	intoAd ( ad, "AccountantName", AccountantName );
 	intoAd ( ad, "UidDomain", UidDomain );
-	intoAd ( ad, "FlockLevel", FlockLevel );
 	intoAd ( ad, "MaxFlockLevel", MaxFlockLevel );
 	intoAd ( ad, "aliveInterval", aliveInterval );
 	intoAd ( ad, "MaxExceptions", MaxExceptions );
