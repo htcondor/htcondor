@@ -101,14 +101,14 @@ static int	prev[N_ELEM];
 static int	now[N_ELEM];
 
 
-int schedule_event( int , int , int , int , int , FUNC_P );
-int event_mgr();
+void schedule_event( int , int , int , int , int , FUNC_P );
+void event_mgr();
 static int event_due( int pattern[], int prev[], int now[] );
 static int before( int t1[], int t2[] );
 static int next_rightmost( int pattern[], int i );
-static int get_moment( int cur[] );
-static int display_moment( int mom[] );
-static int check_schedule( int prev[], int now[] );
+static void get_moment( int cur[] );
+static void display_moment( int mom[] );
+static void check_schedule( int prev[], int now[] );
 
 
 
@@ -117,6 +117,7 @@ static int check_schedule( int prev[], int now[] );
 
 
 /* Exported function */
+void
 schedule_event( int month, int day, int hour, int minute, int second,
 															FUNC_P func )
 {
@@ -130,6 +131,7 @@ schedule_event( int month, int day, int hour, int minute, int second,
 }
 
 /* Exported function */
+void
 event_mgr()
 {
 
@@ -144,7 +146,7 @@ event_mgr()
 }
 
 
-static
+static void
 check_schedule( int prev[], int now[] )
 {
 	int		i;
@@ -242,7 +244,7 @@ next_rightmost( int pattern[], int i )
 /*
 ** Fill in a tuple with the current time.
 */
-static
+static void
 get_moment( int cur[] )
 {
 	struct tm	*tm;
@@ -260,7 +262,7 @@ get_moment( int cur[] )
 	*/
 }
 
-static
+static void
 display_moment( int mom[] )
 {
 	printf( "%02d/%02d %02d:%02d:%02d\n",
