@@ -27,7 +27,6 @@
 #include "util.h"
 
 using namespace std;
-extern DLL_IMPORT_MAGIC time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -177,11 +176,11 @@ Unparse( string &buffer, const Value &val )
                 buffer += "0.0";
             } else if (real == -0.0) {
                 buffer += "-0.0";
-            } else if (isnan(real)) {
+            } else if (classad_isnan(real)) {
                 buffer += "real(\"NaN\")";
-            } else if (isinf(real) == -1){
+            } else if (classad_isinf(real) == -1){
                 buffer += "real(\"-INF\")";
-            } else if (isinf(real) == 1) {
+            } else if (classad_isinf(real) == 1) {
                 buffer += "real(\"INF\")";
             } else {
                 sprintf(tempBuf, "%1.15E", real);
@@ -213,7 +212,7 @@ Unparse( string &buffer, const Value &val )
 
 			buffer += "absTime(\"";
 			tzsecs = asecs.offset;  
-			t = asecs.secs + timezone + tzsecs;
+			t = asecs.secs + timezone_offset() + tzsecs;
 			if (tzsecs > 0) { 
 				sign = '+';         // timezone offset's sign
 			} else {

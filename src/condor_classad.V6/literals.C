@@ -107,11 +107,11 @@ MakeAbsTime( abstime_t *tim )
 		time( &now );
 		tt = localtime(&now);
 		abst.secs = now;
-		abst.offset = -timezone;
+		abst.offset = -timezone_offset();
 		if (tt->tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
 			abst.offset += 3600;
 	  }	  
-		abst.secs -= abst.offset + timezone;
+		abst.secs -= abst.offset + timezone_offset();
 	}
 	else { //make a literal out of the passed value
 		abst = *tim;
@@ -203,9 +203,9 @@ findOffset(time_t epochsecs)
 		offset = -1;
 	}
 	if(abstm.tm_isdst > 0) {
-		offset = -timezone+3600;
+		offset = -timezone_offset()+3600;
 	} else {
-		offset = -timezone;
+		offset = -timezone_offset();
 	}
 	return offset;
 } 
@@ -325,7 +325,7 @@ MakeAbsTime(string timeStr )
 		abst.secs -= abst.offset;
 	}
 	
-	abst.secs -= timezone;
+	abst.secs -= timezone_offset();
 	
 	if(abst.offset == -1) { // corresponds to illegal offset
 		val.SetErrorValue( );

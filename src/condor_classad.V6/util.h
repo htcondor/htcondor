@@ -38,6 +38,8 @@ struct abstime_t
 	int    offset; // seconds east of Greenwich 
 };
 
+long timezone_offset(void);
+
 /* This converts a string so that sequences like \t
  * (two-characters, slash and t) are converted into the 
  * correct characters like tab. It also converts octal sequences. 
@@ -46,14 +48,8 @@ void convert_escapes(std::string &text, bool &validStr);
 
 void getLocalTime(time_t *now, struct tm *localtm);
 
-#ifdef WIN32
-int isinf(double x);
-#endif
-
-#if defined (__SVR4) && defined (__sun)
-int isinf(double x);
-#endif 
-
+int classad_isinf(double x);
+int classad_isnan(double x);
 
 END_NAMESPACE // classad
 

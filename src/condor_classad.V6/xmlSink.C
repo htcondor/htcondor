@@ -29,7 +29,6 @@
 #include "util.h"
 
 using namespace std;
-extern DLL_IMPORT_MAGIC time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -170,11 +169,11 @@ Unparse(
                 buffer += "0.0";
             } else if (real == -0.0) {
                 buffer += "-0.0";
-            } else if (isnan(real)) {
+            } else if (classad_isnan(real)) {
                 buffer += "NaN";
-            } else if (isinf(real) == -1){
+            } else if (classad_isinf(real) == -1){
                 buffer += "-INF";
-            } else if (isinf(real) == 1) {
+            } else if (classad_isinf(real) == 1) {
                 buffer += "INF";
             } else {
                 sprintf(tempBuf, "%1.15E", real);

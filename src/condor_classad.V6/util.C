@@ -28,6 +28,32 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+long timezone_offset(void)
+{
+#ifdef __APPLE_CC__
+    static long tz_offset = 0;
+    static bool have_tz_offset = false;
+
+    if (!have_tz_offset) {
+        struct tm  *tms;
+        time_t     clock;
+
+        time(&clock);
+        tms = localtime(&clock);
+        tz_offset = -tms->tm_gmtoff;
+        if (0 != tms->tm_isdst) {
+            tz_offset += 3600;
+        }
+    }
+    return tz_offset;
+#else
+
+    extern DLL_IMPORT_MAGIC long timezone;
+
+    return timezone;
+#endif
+}
+
 void convert_escapes(string &text, bool &validStr)
 {
 	char *copy;
@@ -42,7 +68,7 @@ void convert_escapes(string &text, bool &validStr)
 	// a terminating slash: it can't be an escape. 
 	dest = 0;
 	for (source = 0; source < length - 1; source++) {
-		if (text[source] != '\\') {
+		if (text[source] != '\\' || source == length - 1) {
 			copy[dest++]= text[source]; 
 		}
 		else {
@@ -149,9 +175,8 @@ getLocalTime(time_t *now, struct tm *localtm) {
 }
 
 #ifdef WIN32
-
-/* meant to reproduce the same function on unix */
-int isinf(double x) {
+int classad_isinf(double x) 
+{
 
 	int result;
 	result = _fpclass(x);
@@ -167,11 +192,9 @@ int isinf(double x) {
 		return 0;
 	}
 }
-#endif
-
-#if defined (__SVR4) && defined (__sun)
+#elif defined (__SVR4) && defined (__sun)
 #include <ieeefp.h>
-int isinf(double x) 
+int classad_isinf(double x) 
 { 
     if (finite(x) || x != x) {
         return 0;
@@ -180,7 +203,28 @@ int isinf(double x)
     } else {
         return -1;
     }
-} 
+}
+#else
+int classad_isinf(double x) 
+{
+    return isinf(x);
+}
 #endif 
+
+#ifdef  __APPLE_CC__
+int classad_isnan(double x)
+{
+    if (x != x) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+#else
+int classad_isnan(double x)
+{
+    return isnan(x);
+}
+#endif
 
 END_NAMESPACE // classad

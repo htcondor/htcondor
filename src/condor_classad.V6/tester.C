@@ -55,9 +55,10 @@ enum Command
     cmd_Eval,
     cmd_Print,
     cmd_Same,
-    cmd_Sameeval,
+    cmd_Sameq,
     cmd_Diff,
-    cmd_Diffeval,
+    cmd_Diffq,
+    cmd_SameRep,
     cmd_Set,
     cmd_Show,
     cmd_Writexml,
@@ -124,9 +125,10 @@ bool handle_command(Command command, string &line, State &state,
 void handle_let(string &line, State &state, Parameters &parameters);
 void handle_eval(string &line, State &state, Parameters &parameters);
 void handle_same(string &line, State &state, Parameters &parameters);
-void handle_sameeval(string &line, State &state, Parameters &parameters);
+void handle_sameq(string &line, State &state, Parameters &parameters);
 void handle_diff(string &line, State &state, Parameters &parameters);
-void handle_diffeval(string &line, State &state, Parameters &parameters);
+void handle_diffq(string &line, State &state, Parameters &parameters);
+void handle_samerep(string &line, State &state, Parameters &parameters);
 void handle_set(string &line, State &state, Parameters &parameters);
 void handle_show(string &line, State &state, Parameters &parameters);
 void handle_writexml(string &line, State &state, Parameters &parameters);
@@ -566,12 +568,14 @@ Command get_command(
         command = cmd_Print;
     } else if (command_name == "same") {
         command = cmd_Same;
-    } else if (command_name == "sameeval") {
-        command = cmd_Sameeval;
+    } else if (command_name == "sameq") {
+        command = cmd_Sameq;
     } else if (command_name == "diff") {
         command = cmd_Diff;
-    } else if (command_name == "diffeval") {
-        command = cmd_Diffeval;
+    } else if (command_name == "diffq") {
+        command = cmd_Diffq;
+    } else if (command_name == "samerep") {
+        command = cmd_SameRep;
     } else if (command_name == "set") {
         command = cmd_Set;
     } else if (command_name == "show") {
@@ -626,14 +630,17 @@ bool handle_command(
     case cmd_Same:
         handle_same(line, state, parameters);
         break;
-    case cmd_Sameeval:
-        handle_sameeval(line, state, parameters);
+    case cmd_Sameq:
+        handle_sameq(line, state, parameters);
         break;
     case cmd_Diff:
         handle_diff(line, state, parameters);
         break;
-    case cmd_Diffeval:
-        handle_diffeval(line, state, parameters);
+    case cmd_Diffq:
+        handle_diffq(line, state, parameters);
+        break;
+    case cmd_SameRep:
+        handle_samerep(line, state, parameters);
         break;
     case cmd_Set:
         handle_set(line, state, parameters);
@@ -753,28 +760,6 @@ void handle_same(
     Parameters &parameters)
 {
     ExprTree  *tree, *tree2;
-
-    get_two_exprs(line, tree, tree2, state, parameters);
-    if (tree != NULL || tree2 != NULL) {
-        if (!tree->SameAs(tree2)) {
-            print_error_message("the expressions are different.", state);
-        }
-    }
-    return;
-}
-
-/*********************************************************************
- *
- * Function: handle_sameeval
- * Purpose:  
- *
- *********************************************************************/
-void handle_sameeval(
-    string     &line, 
-    State      &state, 
-    Parameters &parameters)
-{
-    ExprTree  *tree, *tree2;
     Value     value1, value2;
 
     get_two_exprs(line, tree, tree2, state, parameters);
@@ -801,11 +786,33 @@ void handle_sameeval(
 
 /*********************************************************************
  *
- * Function: handle_diffeval
+ * Function: handle_sameq
  * Purpose:  
  *
  *********************************************************************/
-void handle_diffeval(
+void handle_sameq(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        if (!tree->SameAs(tree2)) {
+            print_error_message("the expressions are different.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_diff
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_diff(
     string     &line, 
     State      &state, 
     Parameters &parameters)
@@ -828,11 +835,11 @@ void handle_diffeval(
 
 /*********************************************************************
  *
- * Function: handle_diff
+ * Function: handle_diffq
  * Purpose:  
  *
  *********************************************************************/
-void handle_diff(
+void handle_diffq(
     string     &line, 
     State      &state, 
     Parameters &parameters)
@@ -843,6 +850,61 @@ void handle_diff(
     if (tree != NULL || tree2 != NULL) {
         if (tree->SameAs(tree2)) {
             print_error_message("the expressions are the same.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_samerep
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_samerep(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        Value value1, value2;
+
+        if (!evaluate_expr(tree, value1, parameters)) {
+            print_error_message("Couldn't evaluate first expression.\n", state);
+        } else if (!evaluate_expr(tree2, value2, parameters)) {
+            print_error_message("Couldn't evaluate second expressions.\n", state);
+        } else if (!value2.IsStringValue()) {
+            print_error_message("Second expression does not evaluate to a string.\n", state);
+        } else {
+            ClassAdUnParser unparser;
+            string rep1, rep2;
+            
+            unparser.Unparse(rep1, value1);
+            unparser.Unparse(rep2, value2);
+
+            if (!value1.IsStringValue()) {
+                bool is_valid;
+                // Surround it by quotes, like the string we have
+                rep1 = '"' + rep1 + '"';
+                rep2 += ' ';
+                // Change the string to get rid of \"
+                convert_escapes(rep2, is_valid);
+            }
+            
+            if (rep1 != rep2) {
+                string error;
+                error =  "The two expressions do not print identically.\n";
+                error += "    1: ";
+                error += rep1;
+                error += '\n';
+                error += "    2: ";
+                error += rep2;
+                error += '\n';
+            print_error_message(error, state);
+            }
         }
     }
     return;
@@ -1067,7 +1129,11 @@ void handle_help(void)
     cout << "let name = expr   Set a variable to an unevaluated expression.\n";
     cout << "eval name = expr  Set a variable to an evaluated expression.\n";
     cout << "same expr1 expr2  Prints a message only if expr1 and expr2 are different.\n";
+    cout << "sameq expr1 expr2 Prints a message only if expr1 and expr2 are different.\n";
+    cout <<"                   same evaluates its expressions first, sameq doesn't.\n";
     cout << "diff expr1 expr2  Prints a message only if expr1 and expr2 are the same.\n";
+    cout << "diffq expr1 expr2 Prints a message only if expr1 and expr2 are the same.\n";
+    cout <<"                   diff evaluates its expressions first, diffq doesn't.\n";
     cout << "set opt value     Sets an option to a particular value.\n";
     cout << "quit              Exit this program.\n";
     cout << "help              Print this message.\n";
