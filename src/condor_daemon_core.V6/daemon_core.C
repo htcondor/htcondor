@@ -2588,27 +2588,27 @@ int DaemonCore::HandleReq(int socki)
 			new_session = false;
 
 		} else {
-			// they did not request a cached session.  see if they want to start one.
-
-			// look at our security policy.
-			ClassAd *our_policy = sec_man->CreateSecurityPolicyAd(PermString(comTable[cmd_index].perm));
-			if (!our_policy) {
-				// our policy is invalid even without the other side getting involved.
-				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Our security policy is invalid!\n");
+				// they did not request a cached session.  see if they
+				// want to start one.  look at our security policy.
+			ClassAd our_policy;
+			if( ! sec_man->FillInSecurityPolicyAd( 
+				  PermString(comTable[cmd_index].perm), &our_policy) ) { 
+					// our policy is invalid even without the other
+					// side getting involved.
+				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+						 "Our security policy is invalid!\n" );
 				result = FALSE;
 				goto finalize;
 			}
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-				our_policy->dPrint(D_SECURITY);
+				our_policy.dPrint(D_SECURITY);
 			}
 			
 			// reconcile.  if unable, close socket.
-			the_policy = sec_man->ReconcileSecurityPolicyAds(auth_info, *our_policy);
-
-			// done with this now
-			delete our_policy;
+			the_policy = sec_man->ReconcileSecurityPolicyAds( auth_info,
+															  our_policy ); 
 
 			if (!the_policy) {
 				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
