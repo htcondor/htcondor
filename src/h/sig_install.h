@@ -32,7 +32,9 @@ extern "C" {
 typedef void (*SIG_HANDLER)();
 
 void install_sig_handler( int sig, SIG_HANDLER handler );
+#ifndef WIN32
 void install_sig_handler_with_mask( int sig, sigset_t* set, SIG_HANDLER handler );
+#endif
 void block_signal( int sig );
 void unblock_signal( int sig );
 
