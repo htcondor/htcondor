@@ -906,7 +906,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					// HACK!
 					retryStdioSize = true;
 					gmState = GM_DONE_SAVE;
-				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_STILL_STREAMING ) {
+					dprintf( D_FULLDEBUG, "(%d.%d) ERROR_STILL_STREAMING, will wait and retry\n", procID.cluster, procID.proc);
+					gmState = GM_OUTPUT_WAIT;
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
 					// HACK!
 					if ( retryStdioSize ) {
 						dprintf( D_FULLDEBUG, "(%d.%d) ERROR_STDIO_SIZE, will wait and retry\n", procID.cluster, procID.proc);
