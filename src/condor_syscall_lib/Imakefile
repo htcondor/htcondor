@@ -7,14 +7,19 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
 #if DOES_CHECKPOINTING
+#	if IS_SPARC_SUNOS41
+EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+		  MMAP.o PIPE.o
+#	else /* IS_SPARC_SUNOS41 */
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
-#else
-#if IS_HPPAR_HPUX9
+#	endif
+#else	/* DOES_CHECKPOINTING */
+#	if IS_HPPAR_HPUX9
 EXTRACT = GETEUID.o GETEGID.o
-#else
+#	else /* IS_HPPAR_HPUX9 */
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
-#endif
+#	endif
 #endif
 
 STUBS = switches.o switches.special.o
@@ -117,17 +122,17 @@ CPP = ansi_cpp
 #endif
 
 switches.c: syscall.tmpl switches.prologue stub_gen
-	$(CPP) -DSWITCH $(CLIP) < syscall.tmpl | \
+	$(CPP) -DSWITCH $(CLIP) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	$(CPP) -DSENDER $(CLIP) < syscall.tmpl | \
+	$(CPP) -DSENDER $(CLIP) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
 
 receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	$(CPP) -DRECEIVER $(CLIP) < syscall.tmpl | \
+	$(CPP) -DRECEIVER $(CLIP) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 
