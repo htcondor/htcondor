@@ -20,9 +20,8 @@
 #endif
 
 #include "condor_debug.h"
-#include "xdr_lib.h"
 #include "condor_rsc.h"
-#include "condor_xdr.h"
+#include "condor_io.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
 #include "condor_constants.h"
@@ -104,7 +103,7 @@
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 
-extern XDR *xdr_syscall;
+extern ReliSock *syscall_sock;
 
 #if defined(SYSCALL_DEBUG)
 	extern char *SyscallLabel;
@@ -121,10 +120,10 @@ do_REMOTE_syscall()
 {
 	int condor_sysnum;
 	int	rval;
-	xdr_syscall->x_op = XDR_DECODE;
 
-	ASSERT( xdrrec_skiprecord(xdr_syscall) );
-	ASSERT( xdr_int(xdr_syscall, &condor_sysnum) );
+	syscall_sock->decode();
+
+	ASSERT( syscall_sock->code(condor_sysnum) );
 
 #if defined(SYSCALL_DEBUG)
 	sprintf( SyscallLabel, "%-6d", condor_sysnum );
@@ -141,21 +140,17 @@ do_REMOTE_syscall()
 extern struct tagJobList	*JobList;
 
 int
-do_REMOTE_syscall(xdr, jobnum, process)
-XDR 	*xdr;
-int		jobnum;
-int		process;
+do_REMOTE_syscall(ReliSock *sock, int jobnum, int process)
 {
 	int condor_sysnum;
 	int rval;
 	int	read_ok;
 	extern int SyscallSockClosed;
 
-	xdr_syscall->x_op = XDR_DECODE;
+	syscall_sock->decode();
 
 	SyscallSockClosed = FALSE;
-	read_ok = xdrrec_skiprecord(xdr_syscall);
-	read_ok &= xdr_int(xdr_syscall, &condor_sysnum);
+	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
 		ASSERT( SyscallSockClosed );
@@ -171,60 +166,4 @@ int		process;
 			condor_sysnum, _condor_syscall_name(condor_sysnum) );
 
 	switch( condor_sysnum ) {
-#endif
-
-#if defined( IRIX53 )
-	case CONDOR_fstat:
-	  {
-		int fd;
-		struct stat *buf;
-		int terrno;
-
-		assert( xdr_int(xdr_syscall,&fd) );
-		buf = (struct stat *)malloc( (unsigned)STAT_SIZE );
-
-		errno = 0;
-		rval = fstat( fd, buf );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		xdr_syscall->x_op = XDR_ENCODE;
-		assert( xdr_int(xdr_syscall,&rval) );
-		if( rval < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
-		}
-		if( rval >= 0 ) {
-			assert( xdr_stat(xdr_syscall,buf) );
-		}
-		free( (char *)buf );
-		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
-		return 0;
-	}
-#endif
-
-#if defined( Solaris )
-	case CONDOR_ftruncate:
-	  {
-		int fd;
-		off_t length;
-		int terrno;
-
-		assert( xdr_int(xdr_syscall,&fd) );
-		dprintf( D_SYSCALLS, "	fd = %d\n", fd );
-		assert( xdr_off_t(xdr_syscall,&length) );
-		dprintf( D_SYSCALLS, "	length = %d\n", length );
-
-		errno = 0;
-		rval = ftruncate( fd, length );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
-		xdr_syscall->x_op = XDR_ENCODE;
-		assert( xdr_int(xdr_syscall,&rval) );
-		if( rval < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
-		}
-		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
-		return 0;
-	}
 #endif
