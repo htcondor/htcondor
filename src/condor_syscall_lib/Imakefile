@@ -14,7 +14,8 @@ SAVE_SIGSTATE = -DSAVE_SIGSTATE
 #if IS_SPARC_SUNOS41
 SIG_CKPT_OBJS = signals_support.o SIGVEC.o _SIGVEC.o
 #elif IS_ALPHA_OSF1
-SIG_CKPT_OBJS = signals_support.o SIGPROCMASK.o _SIGPROCMSK.o SIGSUSPEND.o
+SIG_CKPT_OBJS = signals_support.o SIGPROCMASK.o _SIGPROCMSK.o SIGSUSPEND.o \
+	SIGACTION.o
 #elif IS_MIPS_ULTRIX43
 SIG_CKPT_OBJS = signals_support.o SIGVEC.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
 #else
@@ -37,6 +38,9 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		MMAP.o PIPE.o \
 		__GETEUID.o __GETEGID.o __GETPPID.o __KILL.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o
+#	elif IS_ALPHA_OSF1
+EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+		  MMAP.o PIPE.o
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
@@ -144,7 +148,9 @@ uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
+#if !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
+#endif
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 
