@@ -91,8 +91,6 @@ SRC = \
 	remote_syscall.c \
 	senders.epilogue \
 	senders.prologue \
-	stub_gen_lex.l \
-	stub_gen_yacc.y \
 	switches.prologue \
 	switches.special.c \
 	syscall.tmpl \
@@ -229,11 +227,6 @@ receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 
-lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
-	lex stub_gen_lex.l
-
-y.tab.c: stub_gen_yacc.y scanner.h
-	yacc -d stub_gen_yacc.y
 
 
 #if IS_R6000_AIX32
@@ -289,7 +282,6 @@ clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
 
 depend_target($(SRC))
-program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
 
 
 IMPORT_LINKS = ../../config/import_links
@@ -297,3 +289,4 @@ import(../condor_xdr_lib,$(XDR_OBJ))
 import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_ckpt,$(CKPT_OBJ))
 import(../h,syscall_numbers.c)
+import(../condor_util_lib, stub_gen)
