@@ -224,6 +224,17 @@ private:
 		  we need to allocate.
 		*/
 	bool processAllocList( void );
+
+	int last_in_use;	// Timestamp of the last time we were in use.
+
+		/* 
+		   Function to deal with checking if we're in use, or, if not,
+		   if it's been too long since we've been used and if we need
+		   to "pull the plug" and exit (based on the
+		   STARTD_NOCLAIM_SHUTDOWN parameter).
+		*/
+	void check_use( void );
+
 };
 
 

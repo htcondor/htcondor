@@ -42,6 +42,7 @@ ResMgr::ResMgr()
 	type_nums = NULL;
 	new_type_nums = NULL;
 	is_shutting_down = false;
+	last_in_use = time(NULL);
 }
 
 
@@ -964,17 +965,15 @@ ResMgr::first_eval_and_update_all( void )
 	walk( &(Resource::eval_and_update) );
 	report_updates();
 	check_polling();
+	check_use();
 }
 
 
 void
 ResMgr::eval_and_update_all( void )
 {
-	num_updates = 0;
 	compute( A_TIMEOUT | A_UPDATE );
-	walk( &(Resource::eval_and_update) );
-	report_updates();
-	check_polling();
+	first_eval_and_update_all();
 }
 
 
@@ -1325,6 +1324,29 @@ ResMgr::processAllocList( void )
 	new_type_nums = NULL;
 
 	return true; 	// Since we're done allocating.
+}
+
+
+void
+ResMgr::check_use( void ) 
+{
+	int now = time(NULL);
+	if( in_use() ) {
+		last_in_use = now;
+	}
+	if( ! startd_noclaim_shutdown ) {
+			// Nothing to do.
+		return;
+	}
+	if( now - last_in_use > startd_noclaim_shutdown ) {
+			// We've been unused for too long, send a SIGTERM to our
+			// parent, the condor_master. 
+		dprintf( D_ALWAYS, 
+				 "No resources have been claimed for %d seconds\n", 
+				 startd_noclaim_shutdown );
+		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
+		daemonCore->Send_Signal( daemonCore->getppid(), DC_SIGTERM );
+	}
 }
 
 
