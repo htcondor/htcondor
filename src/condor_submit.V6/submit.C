@@ -1269,7 +1269,7 @@ SetTransferFiles()
 	char	 buffer[ATTRLIST_MAX_EXPRESSION];
 	char	 input_files[ATTRLIST_MAX_EXPRESSION];
 	char	 output_files[ATTRLIST_MAX_EXPRESSION];
-	StringList input_file_list;
+	StringList input_file_list(NULL, ",");
 
 	should_transfer = STF_YES;
 
