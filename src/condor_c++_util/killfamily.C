@@ -183,7 +183,7 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 
 		if ( pHnd == NULL ) {
 			dprintf(D_ALWAYS, "Procfamily: ERROR: Could not open pid %d "
-				"(err=%d)\n", inpid, GetLastError());
+				"(err=%d). Maybe it exited already?\n", inpid, GetLastError());
 		}
 
 			// note that it is important to call time() first, and
@@ -194,29 +194,40 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 			// -Todd Tannenbaum <tannenba@cs.wisc.edu> 10/04
 		time_t curr_time = time(NULL);
 
-		ProcAPI::getProcInfo(inpid, pi);
-
-		int birth = (curr_time - pi->age);
+		if ( ProcAPI::getProcInfo(inpid, pi) == 0 ) {
+		
+			int birth = (curr_time - pi->age);
 
 			// check if process birthday is atleast as old as the last
 			// snapshot's value
-		if ( !(birth <= pid->birthday) ) {
-			dprintf(D_ALWAYS, "Procfamily: Not killing pid %d "
-				"birthday (%li) not less than or equal to value from "
-				"last snapshot (%li)\n",
-				inpid, birth, pid->birthday);
+			if ( !(birth <= pid->birthday) ) {
+				dprintf(D_ALWAYS, "Procfamily: Not killing pid %d "
+					"birthday (%li) not less than or equal to value from "
+					"last snapshot (%li)\n",
+					inpid, birth, pid->birthday);
 
-		} else if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
-			dprintf(D_PROCFAMILY,
-				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
-				inpid,sig);
+			} else if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
+				dprintf(D_PROCFAMILY,
+					"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
+					inpid,sig);
+			}
+
+		} else {
+			
+			// Procapi didn't know anything about this pid, so
+			// we assume it has exited on its own.
+			
+			dprintf(D_PROCFAMILY, "Procfamily: getProcInfo() failed to "
+					"get info for pid %d, so it is presumed dead.\n", inpid);
 		}
 
 		if ( pi ) {
 			delete pi;
 		}
 		
-		CloseHandle(pHnd);
+		if ( pHnd) {
+		   	CloseHandle(pHnd);
+		}
 
 #else
 		if ( kill(inpid,sig) < 0 ) {
