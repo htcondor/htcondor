@@ -89,7 +89,6 @@ int float_to_rusage(float, float, struct rusage *);
 /* These are here for compatibility with old code which uses the PROC
    structure to ease porting.  Use of these functions is discouraged! */
 #if defined(NEW_PROC)
-int SaveProc(PROC *);
 int GetProc(int, int, PROC *);
 #endif
 
