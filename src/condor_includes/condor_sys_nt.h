@@ -64,6 +64,8 @@ typedef DWORD pid_t;
 #define execv _execv
 #define putenv _putenv
 #define itoa _itoa
+#define utime _utime
+#define utimbuf _utimbuf
 #define R_OK 4
 #define W_OK 2
 #define X_OK 4
