@@ -424,8 +424,9 @@ OsProc::StartJob()
 		}
 	}
 
-		// Grap the full environment back out of the Env object 
+		// Grab the full environment back out of the Env object 
 	env_str = job_env.getDelimitedString();
+	dprintf(D_FULLDEBUG, "Env = %s\n", env_str);
 
 	set_priv ( priv );
 
