@@ -57,7 +57,6 @@ CStarter::CStarter()
 	FSDomain = NULL;
 	Arch = NULL;
 	Opsys = NULL;
-	Key = get_random_int()%get_random_int();
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
 }
@@ -270,7 +269,7 @@ CStarter::RegisterStarterInfo( void )
 		char *mfhn = strnewp ( my_full_hostname() );
 		rval = REMOTE_CONDOR_register_machine_info( UIDDomain,
 			     FSDomain, daemonCore->InfoCommandSinfulString(), 
-				 mfhn, Key );
+				 mfhn, 0 );
 		delete [] mfhn;
 	}
 
