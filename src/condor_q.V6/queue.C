@@ -32,6 +32,7 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static	bool		localQueue 		= false;
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
@@ -60,7 +61,8 @@ int main (int argc, char **argv)
 
 	// make sure we are querying schedd's or submittors
 	if (!global && !querySchedds && !querySubmittors) {
-		char *host = my_full_hostname();
+		char *host = my_hostname();
+		localQueue = true;
 		querySchedds = true;
 		result = scheddQuery.addConstraint (SCHEDD_NAME, host);
 		if (result != Q_OK) {
@@ -69,6 +71,17 @@ int main (int argc, char **argv)
 		}
 	}
 
+	// if a global queue is required, query the schedds instead of submittors
+	if (global) {
+		querySchedds = true;
+		sprintf( constraint, "%s > 0 || %s > 0", ATTR_TOTAL_RUNNING_JOBS,
+				ATTR_TOTAL_IDLE_JOBS );
+		result = scheddQuery.addConstraint( constraint );
+		if( result != Q_OK ) {
+			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
+			exit( 1 );
+		}		
+	}
 
 	// get the list of ads from the collector
 	result = querySchedds ? scheddQuery.fetchAds(scheddList) : 
@@ -99,7 +112,7 @@ int main (int argc, char **argv)
 		jobs.Sort( (SortFunctionType)JobSort );
 
 		// display the jobs from this submittor
-		if (jobs.MyLength() != 0)
+		if (jobs.MyLength() != 0 || localQueue)
 		{
 			// print header
 			if (querySchedds) {
