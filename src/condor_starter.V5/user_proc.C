@@ -1029,6 +1029,11 @@ open_std_file( int which )
 		  case 1:
 		  case 2:
 			answer = open( name, O_WRONLY|O_TRUNC, 0 );
+				// Some things, like /dev/null, can't be truncated, so
+				// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
+			if( answer < 0 ) {
+				answer = open( name, O_WRONLY, 0 );
+			}
 			break;
 		}
 	}
