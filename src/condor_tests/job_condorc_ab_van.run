@@ -4,6 +4,7 @@ use CondorPersonal;
 
 $cmd_template = "job_condorc_ab_van.template";
 $testname = 'job_condorc_ab_van - Simple Condor-C A&B with Vanilla job';
+$corename = "job_condorc_ab_van";
 
 # where am I running
 $dummyhost = "gamgee.cs.wisc.edu";
@@ -13,7 +14,12 @@ chomp($currenthost);
 print "Dummyhost was $dummyhost and really running on $currenthost\n";
 
 $mypid = $$;
-$mysubmitnm = "job_condorc_ab_van" . $mypid . ".cmd";
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mycorenm = $corename . ".cmd";
+$mycorenmout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
 
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
@@ -47,7 +53,7 @@ while(<TPLATE>)
 	}
 	elsif( $line =~ /^\s*log\s*= .*$/)
 	{
-		my $lognm = "eraseme." . $mypid . ".log";
+		my $lognm = $mysubmitnmlog;
 		print "New log name: $lognm\n"; 
 		print CSUB "log = $lognm\n";
 	}
@@ -79,6 +85,28 @@ if( ! -e "job_condorc_xxx_van.in" )
 
 my $result = system("job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
+
+#$mysubmitnm = $corename . $mypid . ".cmd";
+#$mysubmitnmout = $corename . $mypid . ".cmd.out";
+#$mysubmitnmlog = $corename . $mypid . ".log";
+#$mycorenm = $corename . ".cmd";
+#$mycorenmout = $corename . ".cmd.out";
+#$mycorenmlog = $corename . ".log";
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenmout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenmlog");
+}
 
 sleep 20;
 print "sleeping............\n";

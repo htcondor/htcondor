@@ -3,7 +3,8 @@ use CondorTest;
 use CondorPersonal;
 
 $cmd_template = "job_condorc_abc_van.template";
-$testname = 'job_condorc_ab_van - Chained Condor-C A&B&C with Vanilla job';
+$testname = 'job_condorc_abc_van - Chained Condor-C A&B&C with Vanilla job';
+$corename = "job_condorc_abc_van";
 
 # where are we running
 $dummyhost = "gamgee.cs.wisc.edu";
@@ -12,7 +13,12 @@ chomp($currenthost);
 print "Running on $currenthost\n";
 
 $mypid = $$;
-$mysubmitnm = "job_condorc_abc_van" . $mypid . ".cmd";
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mycorenamecmd = $corename . ".cmd";
+$mycorenamecmdout = $corename . ".cmd.out";
+$mycorenamelog = $corename . ".log";
 
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
@@ -58,9 +64,14 @@ while(<TPLATE>)
 		print "found $dummyhost and subbing $currenthost\n"; 
 		print CSUB "$1$currenthost$2\n";
 	}
+	# do not leave the log file name alone
+	# because we are always cluster 1 as we
+	# are always a fresh personal condor and we
+	# do not want to trip on it if we fire the test
+	# locally a number of times.
 	elsif( $line =~ /^\s*log\s*= .*$/)
 	{
-		my $lognm = "eraseme." . $mypid . ".log";
+		my $lognm = $mysubmitnmlog;
 		print "New log name: $lognm\n"; 
 		print CSUB "log = $lognm\n";
 	}
@@ -92,6 +103,28 @@ if( ! -e "job_condorc_xxx_van.in" )
 
 my $result = system("job_condorc_ab_van.pl $mysubmitnm");
 print "Result of crafted Condor-C job is  $result\n";
+
+#$mysubmitnm = $corename . $mypid . ".cmd";
+#$mysubmitnmout = $corename . $mypid . ".cmd.out";
+#$mysubmitnmlog = $corename . $mypid . ".log";
+#$mycorenamecmd = $corename . ".cmd";
+#$mycorenamecmdout = $corename . ".cmd.out";
+#$mycorenamelog = $corename . ".log";
+
+if( -e "$mysubmitnm" )
+{
+	system("cp $mysubmitnm $mycorenamecmd");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	system("cp $mysubmitnmout $mycorenamecmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	system("cp $mysubmitnmlog $mycorenamelog");
+}
 
 sleep 20;
 print "sleeping............\n";
