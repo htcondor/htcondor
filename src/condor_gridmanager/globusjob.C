@@ -2218,20 +2218,21 @@ void GlobusJob::DeleteOutput()
 	if ( streamOutput ) {
 		rc = stat( localOutput, &fs );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
-					 procID.cluster, procID.proc, localOutput );
+			dprintf( D_ALWAYS, "(%d.%d) stat(%s) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localOutput, errno );
 			fs.st_mode = S_IRWXU;
 		}
 		fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 		rc = unlink( localOutput );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
-					 procID.cluster, procID.proc, localOutput );
+			dprintf( D_ALWAYS, "(%d.%d) unlink(%s) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localOutput, errno );
 		}
 		rc = creat( localOutput, fs.st_mode );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
-					 procID.cluster, procID.proc, localOutput );
+			dprintf( D_ALWAYS, "(%d.%d) creat(%s,%d) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localOutput, fs.st_mode,
+					 errno );
 		} else {
 			close( rc );
 		}
@@ -2240,20 +2241,21 @@ void GlobusJob::DeleteOutput()
 	if ( streamError ) {
 		rc = stat( localError, &fs );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to stat %s\n",
-					 procID.cluster, procID.proc, localError );
+			dprintf( D_ALWAYS, "(%d.%d) stat(%s) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localError, errno );
 			fs.st_mode = S_IRWXU;
 		}
 		fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 		rc = unlink( localError );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
-					 procID.cluster, procID.proc, localError );
+			dprintf( D_ALWAYS, "(%d.%d) unlink(%s) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localError, errno );
 		}
 		rc = creat( localError, fs.st_mode );
 		if ( rc < 0 ) {
-			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
-					 procID.cluster, procID.proc, localError );
+			dprintf( D_ALWAYS, "(%d.%d) creat(%s,%d) failed, errno=%d\n",
+					 procID.cluster, procID.proc, localError, fs.st_mode,
+					 errno );
 		} else {
 			close( rc );
 		}
