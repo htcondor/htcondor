@@ -147,6 +147,59 @@ the user's current working directory at the time \Condor{submit} was run
 as the value for \Opt{initialdir}. 
 
 %%%%%%%%%%%%%%%%%%%
+%% should_transfer_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
+\index{submit commands!should\_transfer\_files}
+The \Opt{should\_transfer\_files} setting is used to define if Condor
+should transfer files to and from the remote machine where your job
+runs.
+The file transfer mechanism is used to run jobs which are not in the
+Standard Universe (and can therefore use remote system calls for file
+access) on machines which do not have a shared file system with the
+submit machine.
+\Opt{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
+always transfer files for of your job.
+\Arg{NO} disables Condor's file transfer mechanism.
+\Arg{IF\_NEEDED} will not transfer files for your job if it is matched
+with a resource in the same \Attr{FileSystemDomain} as your submit
+machine (and therefore, on a machine with the same shared file
+system).
+If the job is matched with a remote resource in a different 
+\Attr{FileSystemDomain}, Condor will transfer the necessary files. 
+
+For more information about this and other settings related to
+transferring files, see section~\ref{sec:file-transfer} on
+page~\pageref{sec:file-transfer}.
+
+
+%%%%%%%%%%%%%%%%%%%
+%% when_to_transfer_output
+%%%%%%%%%%%%%%%%%%%
+
+\item[when\_to\_transfer\_output = $<$ ON\_EXIT \Bar\ ON\_EXIT\_OR\_EVICT $>$] 
+\index{submit commands!when\_to\_transfer\_output}
+
+Setting \Opt{when\_to\_transfer\_output} equal to \Arg{ON\_EXIT} will
+cause Condor to transfer the job's output files back to the submitting
+machine only when the job completes (exits on its own).
+
+The \Arg{ON\_EXIT\_OR\_EVICT} option is intended for fault tolerant
+jobs which periodically save their own state and can restart where
+they left off.
+In this case, files are transfered to the submit machine any time the
+job leaves a remote site, either because it exited on its own, or was
+evicted by the Condor system for any reason prior to job completion.
+Any output files transferred back to the submit machine are
+automatically sent back out again as input files if the job restarts.
+
+For more information about this and other settings related to
+transferring files, see section~\ref{sec:file-transfer} on
+page~\pageref{sec:file-transfer}.
+
+
+%%%%%%%%%%%%%%%%%%%
 %% transfer_input_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -154,36 +207,28 @@ as the value for \Opt{initialdir}.
 \index{submit commands!transfer\_input\_files}
 Lists all the files to be transferred into the 
 working directory for the job before the job is started.
-Separate multiple file names with a comma.
+You must separate multiple file names with a comma.
 By default, the file specified in the
 \Opt{executable} command and any file specified in the \Opt{input}
 command (for example, \File{stdin}) are transferred.
 
-To ensure
-that Condor picks a machine with enough local disk space for the job,
-add to the \Opt{Requirements}
-expression in the submit description file such that it includes
-the \AdAttr{Disk} attribute.
-A \Opt{requirements} example that specifies only the \AdAttr{Disk} attribute:
-\begin{verbatim}
-        # The machine which runs the job must have more than
-	# 10 Mbytes of free disk space.  The Disk attribute
-        # is expressed in kilobytes; 10 Mbytes is 10000 Kbytes.
-        requirements = Disk > 10000
-\end{verbatim}
-
 Only the transfer of files is available; the transfer of
 subdirectories is not supported.
+
+For more information about this and other settings related to
+transferring files, see section~\ref{sec:file-transfer} on
+page~\pageref{sec:file-transfer}.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_output_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_output\_files = $<$ file1, file2, file... $>$] This
+\item[transfer\_output\_files = $<$ file1, file2, file... $>$] 
 \index{submit commands!transfer\_output\_files}
-command forms an explicit list of output files to be transferred
-back from the
-temporary working directory on the execute machine to the submit machine.
+This command forms an explicit list of output files to be transferred
+back from the temporary working directory on the execute machine to
+the submit machine.
 Most of the time, there is no need to use this command.
 If \Opt{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
@@ -198,25 +243,9 @@ submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
 
-%%%%%%%%%%%%%%%%%%%
-%% transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS \Bar\ NEVER$>$] Setting
-\index{submit commands!transfer\_files}
-\Opt{transfer\_files} equal to \Arg{ONEXIT} will cause Condor to transfer the
-job's output files back to the submitting machine only when the job
-completes (exits).
-If not specified, \Arg{ONEXIT} is used as the default on NT machines.
-If not specified, \Arg{NEVER} is used as the default on Unix machines.
-Specifying \Arg{ALWAYS} forces Condor to transfer output files either when
-the job completes or when the job is preempted or killed
-prior to job completion.
-The \Arg{ALWAYS} option is intended
-for fault tolerant jobs which periodically save their own state and
-can restart where they left off.  Any output files transferred back to the
-submit machine are automatically sent back
-out again as input files when the job restarts.
+For more information about this and other settings related to
+transferring files, see section~\ref{sec:file-transfer} on
+page~\pageref{sec:file-transfer}.
 
 
 %%%%%%%%%%%%%%%%%%%
