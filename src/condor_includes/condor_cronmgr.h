@@ -38,19 +38,21 @@ class CondorCronMgr
 
   protected:
 	virtual CondorCronJob *NewJob( const char *name );
+	int SetName( const char *name, 
+				 const char *setParamBase = NULL,
+				 const char *setParamExt = NULL );
+	int SetParamBase( const char *base, const char *ext );
 
   private:
 	CondorCron	Cron;
-	const char	*Name;
+	const char	*Name;			// Logical name
+	const char	*ParamBase;		// Used for base of calls to param()
 	const char	*Args;
-	int			NameLen;
 
 	// Private member functions
 	int ParseJobList( const char *JobListString );
 	char *GetParam( const char *paramName, 
-					const char *paramSep = NULL,
-					const char *paramName2 = NULL,
-					const char *paramName3 = NULL );
+					const char *paramName2 = NULL );
 };
 
 #endif /* _CONDOR_CRONMGR_H */

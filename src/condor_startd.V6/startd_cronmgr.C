@@ -24,11 +24,17 @@
 #include "condor_common.h"
 #include "startd_cronmgr.h"
 #include "startd_cronjob.h"
+#include "condor_config.h"
 
 // Basic constructor
 StartdCronMgr::StartdCronMgr( void ) :
-		CondorCronMgr( "startd_" )
+		CondorCronMgr( "startd" )
 {
+	char *NewName = param( "STARTD_CRON_NAME" );
+	if ( NULL != NewName ) {
+		SetName( NewName, NewName );
+		free( NewName );
+	}
 }
 
 // Basic destructor

@@ -35,8 +35,13 @@
 CondorCronMgr::CondorCronMgr( const char *name )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Constructing '%s'\n", name );
-	Name = strdup( name );
-	NameLen = strlen( name );
+
+	// Make sure that SetName doesn't try to free Name or ParamBase...
+	Name = NULL;
+	ParamBase = NULL;
+
+	// Set 'em
+	SetName( name, name, "_cron" );
 }
 
 // Basic destructor
@@ -47,6 +52,69 @@ CondorCronMgr::~CondorCronMgr( )
 
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
+}
+
+// Set new name..
+int CondorCronMgr::SetName( const char *newName, 
+							const char *newParamBase,
+							const char *newParamExt )
+{
+	int		retval = 0;
+
+	// Debug...
+	dprintf( D_FULLDEBUG, "CronMgr: Setting name to '%s'\n", newName );
+	if ( NULL != Name ) {
+		free( (char *) Name );
+	}
+
+	// Copy it out..
+	Name = strdup( newName );
+	if ( NULL == Name ) {
+		retval = -1;
+	}
+
+	// Set the parameter base name
+	if ( NULL != newParamBase ) {
+		retval = SetParamBase( newParamBase, newParamExt );
+	}
+
+	// Done
+	return retval;
+}
+
+// Set new name..
+int CondorCronMgr::SetParamBase( const char *newParamBase,
+								 const char *newParamExt )
+{
+	dprintf( D_FULLDEBUG, "CronMgr: Setting parameter base to '%s'\n",
+			 newParamBase );
+
+	// Free the old one..
+	if ( NULL != ParamBase ) {
+		free( (void *) ParamBase );
+	}
+
+	// Default?
+	if ( NULL == newParamBase ) {
+		newParamBase = "CRON";
+	}
+	if ( NULL == newParamExt ) {
+		newParamExt = "";
+	}
+
+	// Calc length & allocate
+	int		len = strlen( newParamBase ) + strlen( newParamExt ) + 1;
+	char *tmp = (char * ) malloc( len );
+	if ( NULL == tmp ) {
+		return -1;
+	}
+
+	// Copy it out..
+	strcpy( tmp, newParamBase );
+	strcat( tmp, newParamExt );
+	ParamBase = tmp;
+
+	return 0;
 }
 
 // Kill all running jobs
@@ -64,7 +132,7 @@ CondorCronMgr::KillAll( )
 int
 CondorCronMgr::Reconfig( void )
 {
-	char *paramBuf = GetParam( "CRONJOBS" );
+	char *paramBuf = GetParam( "JOBS" );
 
 	// Find our environment variable, if it exits..
 	if( paramBuf == NULL ) {
@@ -85,35 +153,32 @@ CondorCronMgr::Reconfig( void )
 // Read a parameter
 char *
 CondorCronMgr::GetParam( const char *paramName, 
-		  const char *paramNameSep,
-		  const char *paramName2,
-		  const char *paramName3 )
+						 const char	*paramName2 )
 {
-	// Build the name of the parameter to read
-	int len = NameLen + strlen( paramName ) + 1;
-	if ( paramNameSep && paramName2 ) {
-		int		sepLen = strlen( paramNameSep );
-		len += ( strlen( paramName2 ) + sepLen );
-		if( paramName3 ) {
-			len += strlen( paramName3 ) + sepLen;
-		}
+
+	// Defaults...
+	if ( NULL == paramName2 ) {
+		paramName2 = "";
 	}
+
+	// Build the name of the parameter to read
+	int len = ( strlen( ParamBase ) + 
+				strlen( paramName ) +
+				1 +
+				strlen( paramName2 ) +
+				1 );
 	char *nameBuf = (char *) malloc( len );
 	if ( NULL == nameBuf ) {
 		return NULL;
 	}
-	strcpy( nameBuf, Name );
+	strcpy( nameBuf, ParamBase );
+	strcat( nameBuf, "_" );
 	strcat( nameBuf, paramName );
-	if ( paramNameSep && paramName2 ) {
-		strcat( nameBuf, paramNameSep );
-		strcat( nameBuf, paramName2 );
-		if( paramName3 ) {
-			strcat( nameBuf, paramName3 );
-		}
-	}
+	strcat( nameBuf, paramName2 );
 
 	// Now, go read the actual parameter
 	char *paramBuf = param( nameBuf );
+	dprintf( D_ALWAYS, "Paraming for '%s'\n", nameBuf );
 	free( nameBuf );
 
 	// Done
@@ -257,7 +322,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Are there arguments for it?
 		// Force the first arg to be the "Job Name"..
-		char *argBufTmp = GetParam( "CRON", "_", jobName, "ARGS" );
+		char *argBufTmp = GetParam( jobName, "_ARGS" );
 		char *argBuf;
 		if ( NULL == argBufTmp ) {
 			argBuf = strdup( jobName );
@@ -271,10 +336,10 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// Special environment vars?
-		char *envBuf = GetParam( "CRON", "_", jobName, "ENV" );
+		char *envBuf = GetParam( jobName, "_ENV" );
 
 		// CWD?
-		char *cwdBuf = GetParam( "CRON", "_", jobName, "CWD" );
+		char *cwdBuf = GetParam( jobName, "_CWD" );
 
 
 		// Mark the job so that it doesn't get deleted (below)

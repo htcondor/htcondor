@@ -168,7 +168,7 @@ sub DoConfig( $$ )
 	}
 
 	# Actual cronjob list
-	elsif ( /^STARTD_CRONJOBS\s+=/ )
+	elsif ( /^HAWKEYE_JOBS\s+=/ )
 	{
 	    if ( $#Modules < 0 )
 	    {

@@ -597,7 +597,7 @@ NUM_CPUS = 1
 ##    MODULE top:top_:top:0:continuous
 ##+	Monitors the top processes on the system, based on a number
 ##+	of attributes (based on the "top" program)
-##+	You may want set the Hawkeye_top parameters by hand
+##+	You may want set the top parameters by hand
 ##    MODULE uptime:uptime_:uptime:5m
 ##+	Monitors the uptime and load averages of the system
 ##+	(based on the "uptime" program)
@@ -610,23 +610,34 @@ NUM_CPUS = 1
 ##+	Monitors the status of GDMP for the US/CMS test bed
 ##    MODULE vmstat:vmstat_:vmstat:0:continuous
 ##+	Monitors the status of the Virtual Memory (VM) subsystem
+##+	You may want set the vmstat parameters by hand
 ##    MODULE condor_node:Condor_:codor_node:5m
 ##+	Monitors the status of an individual Condor pool node
+##+	You may want set the condor_node parameters by hand
+##+	In particular, the hawkeye_node_env PATH will most likely need
+##+	to be set
+##    MODULE condor_pool:pool_:condor_pool:5m
+##+	Monitors the status of a Condor pool
+##+	You may want set the condor_pool parameters by hand
+##+	In particular, the hawkeye_pool_env PATH will most likely need
+##+	to be set
 ##
 ##--------------------------------------------------------------------
 MODULES = $(HAWKEYE)/modules
-STARTD_CRONJOBS =
+HAWKEYE_JOBS =
+
 
 ## Define parameters for the TOP module
-## Valid fields are:
-##   pid user priority nice size rss share state lib cpu mem time command
+## HAWKEYE_TOP_PERIOD = collection period
+##  Sets the frequency with which top collects data (i.e. 30s, 5m)
 ## HAWKEYE_TOP_SORT = field:num [field:num] ...
 ##  Causes top to sort by 'field' and dump the top 'num' of that sort
 ## HAWKEYE_TOP_FIELDS = field[,field]..
 ##  List of fields to dump
-Hawkeye_top_time = 30
+## Valid fields are:
+##   pid user priority nice size rss share state lib cpu mem time command
+Hawkeye_top_period = 30s
 Hawkeye_top_sort = :2 mem:2
-Hawkeye_top_fields = pid, user, nice, size, rss, state, cpu, mem, time, command
 Hawkeye_top_fields = pid, user, cpu, mem, time, command
 
 ## Define parameters for the DF module
@@ -639,3 +650,28 @@ Hawkeye_df = /,/local,/usr,/tmp,/var
 
 ## Define parameters for the WHO module
 ##  None
+
+## Define parameters for the W module
+##  None
+
+## Define parameters for the GDMPHB module
+##  None
+
+## Define parameters for the VMSTAT module
+## HAWKEYE_VMSTAT_PERIOD = collection period
+##  Sets the frequency with which vmstat collects data (i.e. 30s, 5m)
+Hawkeye_vmstat_period = 30s
+
+## Condor node monitoring
+##  None
+Hawkeye_condor_env=PATH=/bin:/sbin:/usr/bin:/home/hawkeye/bin:/home/condor/bin:/home/condor/scripts
+
+## Condor pool monitoring
+Hawkeye_pool_absent = true
+Hawkeye_pool_cluster = true
+Hawkeye_pool_reserved = true
+Hawkeye_pool_summary = true
+Hawkeye_pool_run = true
+Hawkeye_pool_submit = true
+Hawkeye_pool_ckpt = true
+Hawkeye_pool_env=PATH=/bin:/sbin:/usr/bin:/home/hawkeye/bin:/home/condor/bin:/home/condor/scripts;CONDOR_ROSTER_DIR=/n/uscms_share/nleroy/etc
