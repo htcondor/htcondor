@@ -990,7 +990,7 @@ BaseShadow::startQueueUpdateTimer( void )
 		q_interval = 15 * 60;  // by default, update every 15 minutes 
 	}
 	q_update_tid = daemonCore->
-		Register_Timer( q_interval, q_interval
+		Register_Timer( q_interval, q_interval,
                         (TimerHandlercpp)&BaseShadow::periodicUpdateQ,
                         "periodicUpdateQ", this );
     if( q_update_tid < 0 ) {
