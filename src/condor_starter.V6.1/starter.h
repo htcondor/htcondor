@@ -115,6 +115,9 @@ public:
 		*/
 	void addToTransferOutputFiles( const char* filename );
 
+		/// Start a timer for the periodic update to the shadow
+	void startUpdateTimer( void );
+
 protected:
 	List<UserProc> JobList;
 	List<UserProc> CleanedUpJobList;

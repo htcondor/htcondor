@@ -604,12 +604,8 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 	if (job->StartJob()) {
 		JobList.Append(job);
 
-		// update the shadow every 20 minutes.  years of study say
-		// this is the optimal value. :^).
-		shadowupdate_tid = daemonCore->Register_Timer(8,(20*60)+6,
-			(TimerHandlercpp)&CStarter::PeriodicShadowUpdate,
-			"CStarter::PeriodicShadowUpdate", this);
-
+			// Start a timer to update the shadow
+		startUpdateTimer();
 		return TRUE;
 	} else {
 		delete job;
@@ -622,6 +618,44 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 }
 
 
+void
+CStarter::startUpdateTimer( void )
+{
+	if( shadowupdate_tid >= 0 ) {
+			// already registered the timer...
+		return;
+	}
+
+	char* tmp = param( "STARTER_UPDATE_INTERVAL" );
+	int update_interval = 0;
+		// years of careful study show: 20 minutes... :)
+	int def_update_interval = (20*60);
+	int initial_interval = 8;
+	if( tmp ) {
+		update_interval = atoi( tmp );
+		if( ! update_interval ) {
+			dprintf( D_ALWAYS, "Invalid STARTER_UPDATE_INTERVAL: "
+					 "\"%s\", using default value (%d) instead\n",
+					 tmp, def_update_interval );
+		}
+		free( tmp );
+	}
+	if( ! update_interval ) {
+		update_interval = def_update_interval;
+	}
+	if( update_interval < initial_interval ) {
+		initial_interval = update_interval;
+	}
+	shadowupdate_tid = daemonCore->
+		Register_Timer(initial_interval, update_interval,
+					   (TimerHandlercpp)&CStarter::PeriodicShadowUpdate,
+					   "CStarter::PeriodicShadowUpdate", this);
+	if( shadowupdate_tid < 0 ) {
+		EXCEPT( "Can't register DC Timer!" );
+	}
+}
+
+	
 void
 CStarter::addToTransferOutputFiles( const char* filename )
 {
