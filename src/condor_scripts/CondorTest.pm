@@ -168,6 +168,13 @@ sub RegisterTimed
 
     $test{$handle}{"RegisterTimed"} = $function_ref;
     $test{$handle}{"RegisterTimedWait"} = $alarm;
+
+	# relook at registration and re-register to allow a timer
+	# to be set after we are running. 
+	# Prior to this change timed callbacks were only regsitered
+	# when we call "runTest" and similar calls at the start.
+
+	CheckTimedRegistrations();
 }
 
 sub DefaultOutputTest
@@ -280,6 +287,22 @@ sub RunDagTest
 	if $wants_checkpoint && $checkpoints < 1;
 
     return $retval;
+}
+
+sub CheckTimedRegistrations
+{
+	# this one event should be possible from ANY state
+	# that the monitor reports to us. In this case which
+	# initiated the change I wished to start a timer from
+	# when the actual runtime was reached and not from
+	# when we started the test and submited it. This is the time 
+	# at all other regsitrations have to be registered by....
+
+    if( defined $test{$handle}{"RegisterTimed"} )
+    {
+		print "Found a timer to regsiter.......\n";
+		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
+    }
 }
 
 sub CheckRegistrations

@@ -35,6 +35,7 @@ BEGIN
     %submit_info;
 
 	$submit_time = 0;
+	$timer_time = 0;
 	$TimedCallbackWait = 0;
 
 }
@@ -47,6 +48,7 @@ sub Reset
     %submit_info = {};
 
 	$submit_time = 0;
+	$timer_time = 0;
 	$TimedCallbackWait = 0;
 
     undef $SubmitCallback;
@@ -428,6 +430,8 @@ sub RegisterTimed
     my $sub = shift || croak "missing callback argument";
     my $delta = shift || croak "missing time argument";
 
+	#print "timer set for $delta\n";
+	$timer_time = time;
     $TimedCallback = $sub;
 	$TimedCallbackWait = $delta;
 }
@@ -836,11 +840,12 @@ sub Monitor
 sub CheckTimedCallback
 {
 	my $diff = 0;
-	my $cluster = $info{"cluster"};
+	my $cluster = $submit_info{"cluster"};
 	my $timestamp = 0;
 
 	$timestamp = time; #get current time
-	$diff = $timestamp - $submit_time;
+	$diff = $timestamp - $timer_time;
+	#debug("Delta for timer is $diff\n");
 	if( $diff >= $TimedCallbackWait)
 	{
 		#call timed callback
