@@ -39,7 +39,7 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 //#include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "files.h"
@@ -3346,10 +3346,13 @@ log_submit()
 int
 SaveClassAd ()
 {
-	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
+//	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
 	char *lhstr, *rhstr;
 	int  retval = 0;
 	int myprocid = ProcId;
+	ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
+	string rhstring;
 
 	if ( ProcId > 0 ) {
 		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
@@ -3360,13 +3363,22 @@ SaveClassAd ()
 
 	
 
-	job->ResetExpr();
-	while( (tree = job->NextExpr()) ) {
+//	job->ResetExpr();
+//	while( (tree = job->NextExpr()) ) {
+	ClassAd::iterator adIter;
+	for( adIter = job->begin( ); adIter != job->end( ); adIter++ ) { 
 		lhstr = NULL;
 		rhstr = NULL;
-		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
-		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+//		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
+//		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
+//		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
+		lhstr = new char[adIter->first.length( )+1];
+		strcpy( lhstr, adIter->first.c_str( ) );
+		rhstring = "";
+		unp.Unparse( rhstring, adIter->second );
+		rhstr = new char[rhstring.length( )+1];
+		strcpy( rhstr, rhstring.c_str( ) );
+		if( !lhstr || !rhstr ) { retval = -1; }
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
 					 lhstr, rhstr, ClusterId, ProcId );
@@ -3393,6 +3405,9 @@ InsertJobExpr (const char *expr, bool clustercheck)
 	int unused = 0;
 
 	MyString hashkey(expr);
+	ClassAdParser parser;
+	ClassAd ad;
+	string adString;
 
 	if ( clustercheck && ProcId > 0 ) {
 		// We are inserting proc 1 or above.  So before we actually stick
@@ -3405,28 +3420,33 @@ InsertJobExpr (const char *expr, bool clustercheck)
 		}
 	}
 
-	int retval = Parse (expr, tree);
+//	int retval = Parse (expr, tree);
 
-	if (retval)
+//	if (retval)
+	adString = "[" + string( expr ) + "]";
+	if( !parser.ParseClassAd( adString , ad ) )
 	{
 		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
-		while (retval--) {
-			fputc( ' ', stderr );
-		}
-		fprintf (stderr, "^^^\n");
+//		while (retval--) {
+//			fputc( ' ', stderr );
+//		}
+//		fprintf (stderr, "^^^\n");
 		fprintf(stderr,"Error in submit file\n");
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	if( (lhs = tree->LArg()) ) {
-		lhs->PrintToStr (name);
-	} else {
-		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
-		fprintf(stderr,"Error in submit file\n");
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
+// This is now redundant.  If the "expression" is not an assignment it will
+// fail to parse as a ClassAd above. - NAC
+
+//  	if( (lhs = tree->LArg()) ) {
+//  		lhs->PrintToStr (name);
+//  	} else {
+//  		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
+//  		fprintf(stderr,"Error in submit file\n");
+//  		DoCleanup(0,0,NULL);
+//  		exit( 1 );
+//  	}
 	
 	if (!job->InsertOrUpdate (expr))
 	{	
