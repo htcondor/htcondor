@@ -23,8 +23,7 @@
 
 #include "condor_common.h"
 #include "internet.h"
-#include "except.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "dgram_io_handle.h"
 #include "condor_socket_types.h"
 

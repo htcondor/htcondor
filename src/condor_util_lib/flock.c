@@ -24,9 +24,7 @@
  
 
 #include "condor_common.h"
-
-#include "except.h"
-#include "debug.h"
+#include "condor_debug.h"
 
 extern int	errno;
 

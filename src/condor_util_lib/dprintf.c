@@ -42,7 +42,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "except.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
