@@ -29,6 +29,7 @@
 #include "condor_uid.h"
 #include "shadow.h"
 #include "pseudo_ops.h"
+#include "condor_config.h"
 #include "exit.h"
 #include "condor_version.h"
 
