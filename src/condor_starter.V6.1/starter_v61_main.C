@@ -87,7 +87,7 @@ printClassAd( void )
 		*/
 
 	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_CONFIG );
-
+	printf( "%s = True\n", ATTR_HAS_JIC_LOCAL_STDIN );
 
 		// Java stuff
 	config(true);
