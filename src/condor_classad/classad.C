@@ -495,7 +495,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
     Parse("MY.Requirements", tree);           // convention.
 
     tree->EvalTree(this, temp, val);         // match in one direction.
-    if(!val || val->type != LX_BOOL)
+    if(!val || val->type != LX_INTEGER)
     {
         delete tree;
 	delete val;
@@ -503,7 +503,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
     }
     else
     {
-      if(!val->b)
+      if(!val->i)
       {
 	  delete tree;
 	  delete val;
@@ -512,7 +512,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
     }
 
     tree->EvalTree(temp, this, val);         // match in the other direction.
-    if(!val || val->type != LX_BOOL)
+    if(!val || val->type != LX_INTEGER)
     {
         delete tree;
 	delete val;
@@ -520,7 +520,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
     }
     else
     {
-        if(!val->b)
+        if(!val->i)
 	{
 	    delete tree;
 	    delete val;
@@ -560,14 +560,14 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 
 	Parse ("MY.Requirements", tree);
 	tree -> EvalTree (&rhs, &lhs, val);
-	if (!val || val->type != LX_BOOL)
+	if (!val || val->type != LX_INTEGER)
 	{
 		delete tree;	
 		delete val;
 		return false;
 	}
 	else
-	if (!val->b)
+	if (!val->i)
 	{
 		delete tree;	
 		delete val;

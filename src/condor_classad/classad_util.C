@@ -125,7 +125,7 @@ int IsGT(ClassAd *ad1, ClassAd *ad2, char *constraint)
 	exit(1);
     }
     tree->EvalTree(ad1, ad2, val);           // evaluate the constraint.
-    if(!val || val->type != LX_BOOL)
+    if(!val || val->type != LX_INTEGER)
     {
         delete []buffer;
         delete tree;
@@ -134,7 +134,7 @@ int IsGT(ClassAd *ad1, ClassAd *ad2, char *constraint)
     }
     else
     {
-        if(!val->b)
+        if(!val->i)
         {
 	    delete []buffer;
             delete tree;

@@ -56,10 +56,6 @@ EvalResultToValue( EvalResult &er, Value &v )
 {
 	switch( er.type )
 	{
-		case LX_BOOL:	
-			v.setIntegerValue( er.b );	
-			break;
-
 		case LX_INTEGER:
 			v.setIntegerValue( er.i );
 			break;

@@ -1095,9 +1095,9 @@ int AttrList::EvalBool (const char *name, AttrList *target, int &value)
             tree = target->Lookup(name);
         } else {
 			evalFromEnvironment (name, &val);
-			if (val.type == LX_BOOL)
+			if (val.type == LX_INTEGER)
 			{
-				value = val.b;
+				value = (val.i ? 1 : 0);
 				return 1;
 			}
 			return 0;
@@ -1108,7 +1108,6 @@ int AttrList::EvalBool (const char *name, AttrList *target, int &value)
     {
  		switch (val.type)
 		{
-			case LX_BOOL: value = val.b; break;
 			case LX_INTEGER: value = (val.i ? 1 : 0); break;
 			case LX_FLOAT: value = (val.f ? 1 : 0); break;
 

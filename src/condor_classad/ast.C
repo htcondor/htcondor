@@ -36,11 +36,6 @@ void EvalResult::fPrintResult(FILE *f)
 	     fprintf(f, "%s", this->s);
 	     break;
 
-	case LX_BOOL :
-
-	     fprintf(f, this->b ? "TRUE" : "FALSE");
-	     break;
-
 	case LX_NULL :
 
 	     fprintf(f, "NULL");
@@ -481,8 +476,8 @@ int Boolean::_EvalTree(AttrList*, EvalResult* val)
     {
 	return FALSE;
     }
-    val->type = LX_BOOL;
-    val->b = value;
+    val->type = LX_INTEGER;
+    val->i = value;
     return TRUE;
 }
 
@@ -495,8 +490,8 @@ int Boolean::_EvalTree(AttrList*, AttrList*, EvalResult* val)
     {
 	return FALSE;
     }
-    val->type = LX_BOOL;
-    val->b = value;
+    val->type = LX_INTEGER;
+    val->i = value;
     return TRUE;
 }
 
