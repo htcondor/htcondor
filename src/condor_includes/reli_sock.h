@@ -62,12 +62,13 @@ public:
 	// Reliable socket services
 	//
 
-	ReliSock();             /* virgin ReliSock */
+	ReliSock();					/* virgin ReliSock		*/
 	ReliSock(int);				/* listen on port		*/
 	ReliSock(char *);			/* listen on serv 		*/
 	ReliSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
 	ReliSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
 	~ReliSock();
+	void init();				/* shared initialization method */
 
 	int listen();
 	inline int listen(int p) { if (!bind(p)) return FALSE; return listen(); }
@@ -111,10 +112,10 @@ public:
 	virtual int get_ptr(void *&, char);
 	virtual int peek(char &);
 
-   int authenticate();
+	int authenticate();
 	int isAuthenticated();
 	void unAuthenticate();
-   char *getOwner();
+	const char *getOwner();
 	void setOwner( char * );
 	void setGenericAuthentication();
 
@@ -128,7 +129,7 @@ protected:
 	**	Types
 	*/
 
-	enum relisock_state { relisock_listen };
+	enum relisock_state { relisock_none, relisock_listen };
 
 	/*
 	**	Methods
