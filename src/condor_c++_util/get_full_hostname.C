@@ -32,28 +32,12 @@ get_full_hostname( const char* host )
 {
 	static char full_host[MAXHOSTNAMELEN];
 	struct hostent *hostent_ptr;
-	int len;
 
-		// Check if we've got a '.' at the end of the name.  If so,
-		// we've already got a fully qualified hostname.
-	len = strlen( host );
-	if( host[len-1] == '.' ) {
-		return (char*)host;
-	}
-
-		// Since we don't have it, we need to ask the resolver.
 	if( (hostent_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
 		return NULL;
 	}
 
-		// Make sure we've got a trailing '.' to signify a fully
-		// qualified name.
 	strcpy( full_host, hostent_ptr->h_name );
-	len = strlen( full_host );
-	if( full_host[len-1] != '.' ) {
-		full_host[len] = '.';
-		full_host[len+1] = '\0';
-	}		
 	return full_host;
 }
