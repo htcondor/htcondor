@@ -21,3 +21,11 @@ When the local
 pool does not satisfy all job requests, the \Condor{schedd} will try
 the pools specified by \Macro{FLOCK\_HOSTS} in turn until all jobs are
 satisfied.
+
+\MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
+section~\ref{param:HostAllow}) must also be configured to allow
+negotiators from all of the \MacroU{FLOCK\_HOSTS} to contact the schedd.
+Please make sure the \MacroUNI{CONDOR\_HOST} is first in the 
+\MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.
+Similarly, the central managers of the remote pools must be configured
+to listen to requests from this schedd.
