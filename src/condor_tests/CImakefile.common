@@ -90,6 +90,12 @@ DEP_SYMLINK_EXT(job_rsc_stat_std,cmd)
 RUN(job_rsc_stat_std)
 TESTCLASS(job_rsc_stat_std,quick)
 
+DESC(job_rsc_zero-calloc_std,"Does calloc() allocated zero'ed-out memory?")
+CBUILD($(CC),job_rsc_zero-calloc_std,c)
+DEP_SYMLINK_EXT(job_rsc_zero-calloc_std,cmd)
+RUN(job_rsc_zero-calloc_std)
+TESTCLASS(job_rsc_zero-calloc_std,quick)
+
 
 /****************************
  * Checkpointing
