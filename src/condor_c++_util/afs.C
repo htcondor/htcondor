@@ -1,7 +1,7 @@
 #define _POSIX_SOURCE
 
-#include "afs.h"
 #include "condor_common.h"
+#include "afs.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
