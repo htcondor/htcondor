@@ -27,7 +27,7 @@ public class ChirpOutputStream extends java.io.OutputStream {
 		}
 		path = p;
 		if(append) {
-			fd = client.open(path,"wa",0777);
+			fd = client.open(path,"wac",0777);
 		} else {
 			fd = client.open(path,"wtc",0777);
 		}
@@ -69,7 +69,7 @@ public class ChirpOutputStream extends java.io.OutputStream {
 	@param p The file name.
 	@param append
 		<ul>
-		<li> If true - Open file for appending, fail if it does not exist.
+		<li> If true - Open or create file for appending.
 		<li> If false - Create and truncate file for writing.
 		</ul>
 	@throws IOException
