@@ -560,7 +560,7 @@ void Server::HandleRequest(int req_sd,
 			}
 			BlockSignals();
 			Log(req_ID, log_msg);
-			Log("Insufficient bandwidth for file transfer");
+			Log("Configured maximum number of active transfers exceeded");
 			UnblockSignals();
 			close(new_req_sd);
 			return;
