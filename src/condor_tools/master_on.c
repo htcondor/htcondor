@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <syslog.h>
 extern int errno;
 
 static char* master_path = "/unsup/condor/sbin/condor_master";
@@ -39,11 +40,17 @@ int
 main( int argc, char* argv[] ) 
 {
 	if( setuid(0) < 0 ) {
-		fprintf( stderr, "Error: can't set uid to root, errno: %d (%s)\n",
+		fprintf( stderr, "error: can't set uid to root, errno: %d (%s)\n",
 				 errno, strerror(errno) );
 		exit( 1 );
 	}
+
+	openlog( "condor_master_on", LOG_PID, LOG_AUTH );
+	syslog( LOG_INFO, "About to exec %s as root", master_path );
+	closelog();
+
 	execl( master_path, "condor_master", NULL );
+
 	fprintf( stderr, "Can't exec %s, errno: %d (%s)\n",
 			 master_path, errno, strerror(errno) );
 	exit( 1 );
