@@ -588,7 +588,7 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 	char	month[32];
 
 		// two or three arguments
-	if( argList.getlast( ) < 1 || argList.getLast( ) > 2 ) {
+	if( argList.getlast( ) < 1 || argList.getlast( ) > 2 ) {
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -605,17 +605,17 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 		val.SetErrorValue( );
 		return( false );
 	}
-	gmtime_r( &now, &tms );
+	gmtime_r( &clock, &tms );
 	
 		// evaluate optional third argument
-	if( argList.getLast( ) == 2 )
+	if( argList.getlast( ) == 2 ) {
 		if( !argList[2]->Evaluate( state, arg2 ) ) {
 			val.SetErrorValue( );
 			return( false );
 		}
 	} else {
-			// use the current year
-		arg2.SetIntegerValue( tms.year );
+			// use the current year (tm_year is years since 1900)
+		arg2.SetIntegerValue( tms.tm_year + 1900 );
 	}
 		
 		// check if any of the arguments are undefined
@@ -625,8 +625,8 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 		return( true );
 	}
 
-		// first and third arguments must be integers
-	if( !arg0.IsIntegerValue( dd ) || !arg2.IsIntegerValue( yy ) ) {
+		// first and third arguments must be integers (year should be >= 1970)
+	if( !arg0.IsIntegerValue( dd ) || !arg2.IsIntegerValue( yy ) || yy < 1970 ){
 		val.SetErrorValue( );
 		return( true );
 	}
@@ -651,7 +651,7 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 
 		// convert the struct tm->time_t->absolute time
 	clock = mktime( &tms );
-	val.SetAbsoluteTime( tms );
+	val.SetAbsoluteTimeValue( (int) clock );
 	return( true );
 }
 
