@@ -2,10 +2,7 @@ SRC_DIR = $(SRC_TREE)/condor_util_lib
 
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
-#if IS_ALPHA_OSF1
-VIRT_MEM_SRC = virt_mem.Alpha.c
-VIRT_MEM_OBJ = virt_mem.Alpha.o
-#elif IS_SOLARIS
+#if IS_SOLARIS
 VIRT_MEM_SRC = virt_mem.Solaris.c
 VIRT_MEM_OBJ = virt_mem.Solaris.o
 #else
