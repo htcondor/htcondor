@@ -1,6 +1,4 @@
-#include <iostream.h>
 #include "condor_common.h"
-#include "_condor_fix_resource.h"
 #include "condor_config.h"
 #include "condor_q.h"
 #include "condor_attributes.h"
@@ -19,8 +17,7 @@ static void shorten (char *, int);
 static int verbose = 0, summarize = 1;
 static int malformed, unexpanded, running, idle;
 
-extern	"C" BUCKET*		ConfigTab[];
-extern "C" extern int Termlog;
+extern 	"C"	int			Termlog;
 
 int main (int argc, char **argv)
 {
