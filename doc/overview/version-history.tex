@@ -24,6 +24,39 @@ When you upgrade to a new development release, make certain you upgrade all
 machines in your pool to the same version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-8}Version 6.1.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Fixed more bugs in the handling of the stat() system call
+and its relatives on Linux with glibc.
+This was causing problems mainly with Fortran I/O, though other I/O
+related problems on glibc Linux will probably be solved now.
+
+\item Fixed a bug in various Condor tools (\Condor{status},
+\Condor{user\_prio}, \Condor{config\_val}, and \Condor{stats}) that
+would cause them to seg fault on bad input to the \Opt{-pool} option. 
+
+\item Fixed a bug in the \Condor{schedd} where it would get into an
+infinite loop if the persistant log of the job queue got corrupted.  
+The \Condor{schedd} now correctly handles corrupted log files.
+
+\item The full release tar file now contains a \File{dagman}
+subdirectory in the \File{examples} directory.
+This subdirectory includes an example DAGMan job, including a README
+(in both ASCII and HTML), a Makefile, and so on.
+
+\item Worked around a bug in the StreamTokenizer Java class from Sun
+that we use in the CondorView client Java applet.
+The bug would cause errors if usernames or hostnames in your pool
+contained ``-'' or ``\_'' characters.
+The CondorView applet now gets around this and properly displays all
+data, including entries with the ``bad'' characters.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-7}Version 6.1.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
