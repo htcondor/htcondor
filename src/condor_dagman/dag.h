@@ -13,6 +13,9 @@
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
 
+// for the Condor job id of the DAGMan job
+extern char* DAGManJobId;
+
 // Termination Queue Item (TQI).
 class TQI {
   public:
