@@ -576,12 +576,16 @@ void
 SetImageSize()
 {
 	int		size;
+	int		executablesize;
 	char	*tmp;
 	char	*p;
 	char    buff[2048];
 	int		mem_req = 0;
 
 	tmp = condor_param(ImageSize);
+
+	ASSERT (job.LookupString ("Cmd", buff));
+	size = executablesize = calc_image_size( buff );
 
 	if( tmp ) {
 		size = atoi( tmp );
@@ -597,11 +601,7 @@ SetImageSize()
 		if( size < 1 ) {
 			EXCEPT( "Image Size must be positive" );
 		}
-	} else {
-		ASSERT (job.LookupString ("Cmd", buff));
-		size = calc_image_size( buff );
 	}
-
 
 	/* It's reasonable to expect the image size will be at least the
 	   physical memory requirement, so make sure it is. */
@@ -622,7 +622,7 @@ SetImageSize()
 	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE,
 				   mem_req > size ? mem_req : size);
 	InsertJobExpr (buffer);
-	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, size);
+	(void)sprintf (buffer, "%s = %d", ATTR_EXECUTABLE_SIZE, executablesize);
 	InsertJobExpr (buffer);
 }
 
