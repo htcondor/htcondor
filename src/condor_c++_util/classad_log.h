@@ -58,6 +58,7 @@ private:
 	char log_filename[_POSIX_PATH_MAX];
 	int log_fd;
 	Transaction *active_transaction;
+	bool EmptyTransaction;
 };
 
 class LogNewClassAd : public LogRecord {

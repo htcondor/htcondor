@@ -98,6 +98,11 @@ void
 ClassAdLog::AppendLog(LogRecord *log)
 {
 	if (active_transaction) {
+		if (EmptyTransaction) {
+			LogBeginTransaction *log = new LogBeginTransaction;
+			active_transaction->AppendLog(log);
+			EmptyTransaction = false;
+		}
 		active_transaction->AppendLog(log);
 	} else {
 		log->Write(log_fd);
@@ -145,8 +150,7 @@ ClassAdLog::BeginTransaction()
 {
 	assert(!active_transaction);
 	active_transaction = new Transaction();
-	LogBeginTransaction *log = new LogBeginTransaction;
-	active_transaction->AppendLog(log);
+	EmptyTransaction = true;
 }
 
 void
@@ -164,9 +168,11 @@ void
 ClassAdLog::CommitTransaction()
 {
 	assert(active_transaction);
-	LogEndTransaction *log = new LogEndTransaction;
-	active_transaction->AppendLog(log);
-	active_transaction->Commit(log_fd, (void *)&table);
+	if (!EmptyTransaction) {
+		LogEndTransaction *log = new LogEndTransaction;
+		active_transaction->AppendLog(log);
+		active_transaction->Commit(log_fd, (void *)&table);
+	}
 	delete active_transaction;
 	active_transaction = NULL;
 }
