@@ -76,7 +76,7 @@ SUSPEND		: $(MachineBusy)
 CONTINUE	: $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
 PREEMPT		: ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 		   (Activity == "Suspended") ) || \
-		  ( $(MachineBusy) && (WANT_SUSPEND == False) )
+		  ( SUSPEND && (WANT_SUSPEND == False) )
 KILL		: $(ActivityTimer) > $(MaxVacateTime) 
 
 ##  Only define vanilla versions of these if you want to make them
