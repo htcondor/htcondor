@@ -96,7 +96,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar AllFiles
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -109,7 +109,7 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar AllFiles
+	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)

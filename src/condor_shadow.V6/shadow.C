@@ -356,10 +356,6 @@ main(int argc, char *argv[], char *envp[])
 	// initialize the user log
 	initializeUserLog();
 
-	// by this time, the job has been sent and accepted to run, so
-	// log a ULOG_EXECUTE event
-	log_execute(host);
-
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
 		strcpy( My_Filesystem_Domain, my_fs_domain );

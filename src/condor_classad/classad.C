@@ -627,6 +627,34 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+// print the whole ClassAd to the given debug level. The expressions
+// are in infix notation.  
+////////////////////////////////////////////////////////////////////////////////
+void
+ClassAd::dPrint(int level)
+{
+	char* foo;
+	int flag = D_NOHEADER | level;
+	foo = GetMyTypeName();
+	if( foo ) {
+		dprintf( flag, "MyType = \"%s\"\n", foo );
+	} else {
+		dprintf( flag, "MyType = \"\"\n" );
+	}
+
+	foo = GetTargetTypeName();
+	if( foo ) {
+		dprintf( flag, "TargetType = \"%s\"\n", foo );
+	} else {
+		dprintf( flag, "TargetType = \"\"\n" );
+	}
+
+	AttrList::dPrint( level );
+}
+
+
 // shipping functions for ClassAd -- added by Lei Cao
 
 int ClassAd::put(Stream& s)

@@ -52,6 +52,7 @@ extern "C" {
 	int use_local_access (const char *);
 	int use_special_access (const char *);
 	void HoldJob( const char* buf );
+	void log_execute(char *);
 }
 
 extern int JobStatus;
@@ -604,6 +605,9 @@ pseudo_get_file_stream(
 	bool	ICkptFile = is_ickpt_file(file);
 	priv_state	priv;
 
+		// Should we log an execute event to the user log?  
+	static int NeedsExecuteLog = 1;	
+
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 
@@ -700,11 +704,16 @@ pseudo_get_file_stream(
 		dprintf( D_ALWAYS,
 				 "\tSTREAM FILE SENT OK (%d bytes)\n", status );
 #endif
+		if( NeedsExecuteLog ) {
+				// log a ULOG_EXECUTE event
+			log_execute(ExecutingHost);
+		}
 		exit( 0 );
 	default:	/* the parent */
 		close( file_fd );
 		close( connect_sock );
 		if (CkptFile || ICkptFile) set_priv(priv);
+		NeedsExecuteLog = 0;
 		return 0;
 	}
 

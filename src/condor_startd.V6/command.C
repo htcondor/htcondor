@@ -864,14 +864,12 @@ activate_claim( Resource* rip, Stream* stream )
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( DebugFlags & D_JOB ) {
-		req_classad->fPrint(stdout);
-		fprintf( stdout, "\n" );
+		req_classad->dPrint( D_JOB );
 	}
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
 	if( DebugFlags & D_MACHINE ) {
-		mach_classad->fPrint(stdout);
-		fprintf( stdout, "\n" );
+		mach_classad->dPrint( D_MACHINE );
 	}
 
 		// See if machine and job meet each other's requirements, if

@@ -57,7 +57,7 @@ foreach $file ( @contribfiles ) {
 
 # Actually make the tarball
 chdir( "$dir" );
-`tar -cvf $name $files $contribfiles`;
+`tar -cvf $name --owner=root --group=root $files $contribfiles`;
 chdir( ".." );
 
 # Do the cleanup

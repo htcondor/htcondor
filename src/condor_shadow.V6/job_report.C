@@ -206,23 +206,24 @@ void job_report_display_file_info( FILE *f, int total_time )
 		fprintf(f,"\t%s/s effective throughput\n",
 			metric_units((total.read_bytes+total.write_bytes)/total_time));
 	}
-	fprintf(f,"\t%lld files opened\n", total.open_count );
-	fprintf(f,"\t%lld reads totaling %s\n",
-		total.read_count, metric_units(total.read_bytes) );
-	fprintf(f,"\t%lld writes totaling %s\n",
-		total.write_count, metric_units(total.write_bytes) );
-	fprintf(f,"\t%lld seeks\n", total.seek_count );
+
+	fprintf(f,"\t%.0f files opened\n", (float)total.open_count );
+	fprintf(f,"\t%.0f reads totaling %s\n",
+		(float)total.read_count, metric_units(total.read_bytes) );
+	fprintf(f,"\t%.0f writes totaling %s\n",
+		(float)total.write_count, metric_units(total.write_bytes) );
+	fprintf(f,"\t%.0f seeks\n", (float)total.seek_count );
 
 	fprintf(f,"\nI/O by File:\n");
 
 	for( i=file_list; i; i=i->next ) {
 		fprintf(f,"\n %s\n",i->name);
-		fprintf(f,"\topened %lld times\n",i->open_count );
-		fprintf(f,"\t%lld reads totaling %s\n",
-			i->read_count, metric_units(i->read_bytes) );
-		fprintf(f,"\t%lld writes totaling %s\n",
-			i->write_count, metric_units(i->write_bytes) );
-		fprintf(f,"\t%lld seeks\n", i->seek_count );
+		fprintf(f,"\topened %.0f times\n",(float)i->open_count );
+		fprintf(f,"\t%.0f reads totaling %s\n",
+			(float)i->read_count, metric_units(i->read_bytes) );
+		fprintf(f,"\t%.0f writes totaling %s\n",
+			(float)i->write_count, metric_units(i->write_bytes) );
+		fprintf(f,"\t%.0f seeks\n", (float)i->seek_count );
 	}
 }
 

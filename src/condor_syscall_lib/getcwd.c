@@ -32,10 +32,41 @@ getwd( char *path )
 char *
 getcwd( char *path, size_t size )
 {
+	char tmpbuf[_POSIX_PATH_MAX];
+
 	if( LocalSysCalls() ) {
 		return GETCWD( path, size );
 	} else {
-		REMOTE_syscall( CONDOR_getwd, path );
+		if ( size == 0 ) {
+#ifdef EINVAL
+			errno = EINVAL;
+#endif
+			return NULL;
+		}
+		tmpbuf[0] = '\0';
+		REMOTE_syscall( CONDOR_getwd, tmpbuf );
+		if ( tmpbuf[0] == '\0' ) {
+			// our remote syscall failed somehow
+			return NULL;
+		}
+		if ( (strlen(tmpbuf) + 1) > size ) {
+			// the path will not fit into the user's buffer
+#ifdef ERANGE
+			errno = ERANGE;
+#endif
+			return NULL;
+		}
+
+    	if ( path == NULL ) {
+			if ( (path=(char *)malloc(size)) == NULL ) {
+				// Out of memory
+				return NULL;
+			}
+		}
+
+		// finally, copy from our tmpbuf into users buffer
+		strcpy(path,tmpbuf);
+
 		return path;
 	}
 }
@@ -71,8 +102,8 @@ _getcwd( char *path, size_t size )
 	if( LocalSysCalls() ) {
 		return (char *)_GETCWD( path, size );
 	} else {
-		REMOTE_syscall( CONDOR_getwd, path );
-		return path;
+		// in the remote case, we can just invoke getcwd above
+		return getcwd(path,size);
 	}
 }
 

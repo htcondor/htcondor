@@ -1272,6 +1272,38 @@ int AttrList::fPrint(FILE* f)
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
+// print the whole AttrList to the given debug level. The expressions
+// are in infix notation.  
+////////////////////////////////////////////////////////////////////////////////
+void
+AttrList::dPrint( int level )
+{
+    AttrListElem*	tmpElem;
+    char			tmpLine[10000] = "";
+	int				flag = D_NOHEADER | level;
+
+	// if this is a chained ad, print out chained attrs first. this is so
+	// if this ad is scanned in from a file, the chained attrs will get
+	// updated with attrs from this ad in case of duplicates.
+	if ( chainedAttrs ) {
+		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+		{
+			tmpElem->tree->PrintToStr(tmpLine);
+			dprintf( flag, "%s\n", tmpLine);
+			strcpy(tmpLine, "");
+		}
+	}
+
+    for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
+    {
+        tmpElem->tree->PrintToStr(tmpLine);
+		dprintf( flag, "%s\n", tmpLine);
+        strcpy(tmpLine, "");
+    }
+}
+
+
 #if 0 // don't use CONTEXTs anymore
 //////////////////////////////////////////////////////////////////////////////
 // Create a CONTEXT from an AttrList

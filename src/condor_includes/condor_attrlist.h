@@ -161,6 +161,7 @@ class AttrList : public AttrListAbstract
 		// output functions
 		int			fPrintExpr(FILE*, char*);	// print an expression
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+		void		dPrint( int );				// dprintf to given dprintf level
 
 		// conversion function
 //		int         MakeContext (CONTEXT *);    // create a context

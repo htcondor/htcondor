@@ -1,361 +1,532 @@
+# Condor.pm - a Perl API to Condor
+#
+# 19??-???-?? originally written by stanis (?)
+# 2000-Jun-02 Total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
+
+# NOTE: currently works with only one cluster at a time (i.e., you can
+# submit & monitor many clusters in series, but not in parallel).
+# This won't be hard to fix, but it's best done using Perl
+# quasi-objects and I'm not familiar enough with them to do it quickly
+# and have a roaring deadline to meet...sorry.  --pfc
 
 package Condor;
 
-$CONDOR_SUBMIT = 'condor_submit';
-$CONDOR_VACATE = 'condor_vacate';
-$CONDOR_RESCHD = 'condor_reschedule';
+require 5.0;
+use Carp;
+use FileHandle;
+use POSIX "sys_wait_h";
 
-BEGIN {
-    $DEBUG = 0;
+BEGIN
+{
+    $CONDOR_SUBMIT = 'condor_submit';
+    $CONDOR_VACATE = 'condor_vacate';
+    $CONDOR_RESCHD = 'condor_reschedule';
+
+    $DEBUG = 1;
+    $cluster = 0;
+    $num_active_jobs = 0;
+    $saw_submit = 0;
+    %submit_info;
 }
 
+sub Reset
+{
+    $cluster = 0;
+    $num_active_jobs = 0;
+    $saw_submit = 0;
+    %submit_info = {};
+    undef $SubmitCallback;
+    undef $ExecuteCallback;
+    undef $EvictedCallback;
+    undef $EvictedWithCheckpointCallback;
+    undef $EvictedWithoutCheckpointCallback;
+    undef $ExitedCallback;
+    undef $ExitedSuccessCallback;
+    undef $ExitedFailureCallback;
+    undef $ExitedAbnormalCallback;
+    undef $AbortCallback;
+    undef $JobErrCallback;
+}
 
+# submits job/s to condor, recording all variables from the submit
+# file in global %submit_info
+#
+# - takes the name of a submit file as an argument
+# - returns 0 upon failure, or cluster id upon success
 sub Submit
 {
-    local($cmd) = @_;
-    local($rtn, $cluster, @parts);
-    local($log, $out, $err, $in) = &ReadCmdFile($cmd);
+    my $cmd_file = shift || croak "missing submit file argument";
 
-    debug("Cleaning up old files: $log $out $err\n");
-    `rm -f $log $out $err`;
+    # reset global state
+    Reset();
 
-    # Since we handle many different programs running at once,
-    # we store everything in a hash table by name.
-    
-    open (SUBMIT, "$CONDOR_SUBMIT $cmd|") || die "Can't run $CONDOR_SUBMIT: $!\n";
-    $line = <SUBMIT>; $line = <SUBMIT>; $line = <SUBMIT>;  # want 3rd line
-    
-    close(SUBMIT);
+    # submit the file
+    runCommand( "$CONDOR_SUBMIT $cmd_file > $cmd_file.out 2>&1" )
+	|| return 0;
 
-    @parts = split(' ', $line);
-    $cluster = $parts[$#parts];
-    $cluster =~ s/\.//g; # strip off period.
+    # snarf the cluster id from condor_submit's output
+    unless( open( SUBMIT, "<$cmd_file.out" ) )
+    {
+	warn "error opening \"$cmd_file.out\": $!\n";
+	return 0;
+    }
+    while( <SUBMIT> )
+    {
+	if( /\d+ job\(s\) submitted to cluster (\d+)./ )
+	{
+	    $cluster = $1;
+	    last;
+	}
+    }
+    close SUBMIT;
+
+    # if for some reason we didn't find the cluster id 
+    unless( $cluster )
+    {
+	warn "error: couldn't find cluster id in condor_submit output\n";
+	return 0;
+    }
     
-    $LogFile{$cluster} = $log;
-    $OutFile{$cluster} = $out;
-    $ErrFile{$cluster} = $err;
-    $CmdFile{$cluster} = $cmd;
-    $InFile{$cluster} = $in;
+    # snarf info from the submit file and save for future reference
+    unless( ParseSubmitFile( $cmd_file ) )
+    {
+	print "error: couldn't correctly parse submit file $cmd_file\n";
+	return 0;
+    }
 
     return $cluster;
 }
 
 sub Vacate
 {
-    ($machine) = @_;
-    debug("Vacating $machine.\n");
-    `$CONDOR_VACATE $machine`;
+    my $machine = shift || croak "missing machine argument";
+    return runCommand( "$CONDOR_VACATE $machine" );
 }
 
 sub Reschedule
 {
-    ($machine) = @_;
-    debug("Recheduling $machine.\n");
-    `$CONDOR_RESCHD $machine`;
+    my $machine = shift;
+    return runCommand( "$CONDOR_RESCHD $machine" );
 }
 
-# Called with ( $cluster, $proc, $ckpt )    
-sub RegisterEvicted
+# runs a command string, returning 0 if anything went wrong or 1 upon success
+sub runCommand
 {
-    ($cluster, $sub) = @_;
-    $EvictedCallback{$cluster} = $sub;
-    return 0;
+    my $command_string = shift;
+    my ($command) = split /\s+/, $command_string;
+    
+    debug( "running $command_string\n" );
+    $retval = system( $command_string );
+
+    # did command die abormally?
+    if( ! WIFEXITED( $retval ) )
+    {
+        print "error: $command died abnormally\n";
+        return 0;
+    }
+
+    # did command exit w/an error?
+    if( WEXITSTATUS( $retval ) != 0 )
+    {
+	$exitval = WEXITSTATUS( $retval );
+        print "error: $command failed (returned $exitval)\n";
+        return 0;
+    }
+
+    return 1;
 }
 
-
-# Called with ( $cluster, $proc, $return_val, @output, @error )
-sub RegisterNormalTerm
-{
-    ($cluster, $sub) = @_;
-    $NormalTermCallback{$cluster} = $sub;
-}
-
-# Called with ( $cluster, $proc, $signal_val, $core, @output, @error )
-sub RegisterAbnormalTerm
-{
-    ($cluster, $sub) = @_;
-    $AbnormalTermCallback{$cluster} = $sub;
-}
-
-# Called with ( $cluster, $proc, $ip, $port )
-sub RegisterExecute
-{
-    ($cluster, $sub) = @_;
-    $ExecuteCallback{$cluster} = $sub;
-}
-
-# Called with ( $cluster, $proc, $ip, $port )
 sub RegisterSubmit
 {
-    ($cluster, $sub) = @_;
-    $SubmitCallback{$cluster} = $sub;
+    my $sub = shift || croak "missing argument";
+    $SubmitCallback = $sub;
+}
+
+sub RegisterExecute
+{
+    my $sub = shift || croak "missing argument";
+    $ExecuteCallback = $sub;
+}
+
+sub RegisterEvicted
+{
+    my $sub = shift || croak "missing argument";
+    $EvictedCallback = $sub;
+}
+
+sub RegisterEvictedWithCheckpoint
+{
+    my $sub = shift || croak "missing argument";
+    $EvictedWithCheckpointCallback = $sub;
+}
+
+sub RegisterEvictedWithoutCheckpoint
+{
+    my $sub = shift || croak "missing argument";
+    $EvictedWithoutCheckpointCallback = $sub;
+}
+
+sub RegisterExit
+{
+    my $sub = shift || croak "missing argument";
+    $ExitedCallback = $sub;
+}
+
+sub RegisterExitSuccess
+{
+    my $sub = shift || croak "missing argument";
+    $ExitedSuccessCallback = $sub;
+}    
+
+sub RegisterExitFailure
+{
+    my $sub = shift || croak "missing argument";
+    $ExitedFailureCallback = $sub;
+}    
+
+sub RegisterExitAbnormal
+{
+    my $sub = shift || croak "missing argument";
+    $ExitedAbnormalCallback = $sub;
+}
+sub RegisterAbort
+{
+    my $sub = shift || croak "missing argument";
+    $AbortCallback = $sub;
+}
+sub RegisterJobErr
+{
+    my $sub = shift || croak "missing argument";
+    $JobErrCallback = $sub;
 }
 
 sub Wait
 {
-    while(wait() != -1)
-    {
-    }
-    return;
+    while( wait() != -1 ) { };
+    return $?;
 }
 
+# spawn process to monitor the submit log file and execute callbacks
+# upon seeing registered events
 sub Monitor
 {
-    ($cluster) = @_;
+    my $timeout = shift;
+    my $linenum = 0;
+    my $line;
+    my %info;
+
+    debug( "Entering Monitor\n" );
+
+# commented out until we can do it right -- pfc
+
+#    # fork new process
+#    $pid = fork();
+#    die "error: fork() failed: $!\n" unless defined $pid;
+#    # if we're the parent, return
+#    return if $pid;
  
-    # fork off new monitor
-  FORK: {
-      if($pid = fork)
-      {
-	  return;   # parent returns
-      }
-      elsif(defined $pid)
-      {
-	  # child
-	  open(CLOG, "<$LogFile{$cluster}") || die "Can't open $LogFile{$cluster}\n";
-	      
-	  local($tcluster, $proc, $temp, @parts, $checkpointed);
-	  local($i);
-	  
-	  debug("Monitoring Cluster $cluster.\n");
-	  while(1)
-	  {
-	      $_ = <CLOG>;
-	      if($_ =~ /(.*)Job was evicted(.*)/)    # Job got evicted from a machine
-	      {
-		  
-		  @parts = split(' ', $_);
-		  $cluster_proc = $parts[1];
-		  ($tcluster, $proc) = getClusterProc($cluster_proc);
-		  
-		  &debug("Job $tcluster.$proc was evicted.\n");
-		  
-		  if($tcluster == $cluster)
-		  {
-		      $_ = <CLOG>;
-		      
-		      if($_ =~ /(.*)Job was checkpointed(.*)/)  
-		      {
-			  if( $DEBUG != 0 )
-			  {
-			      print "Job $tcluster.$proc was checkpointed.\n";
-			  }
-			  $checkpointed = 1;
-		      }
-		      else
-		      {
-			  $checkpointed = 0;
-		      }
-		      
-		      &debug("Job matches.\n");
-		      if( exists $EvictedCallback{$cluster} )
-		      {
-			  &debug("Calling Eviction handler.\n");
-			  $temp = $EvictedCallback{$cluster};
-			  &$temp($cluster, $proc, $checkpointed);
-		      }
-		  }
-	      }
-	      
-	      elsif( $_ =~ /(.*)Job terminated(.*)/ )
-	      {
-		  
-		  @parts = split(' ', $_);
-		  $cluster_proc = $parts[1];
-		  ($tcluster, $proc) = getClusterProc($cluster_proc);
-		  
-		  if( $DEBUG != 0 )
-		  {
-		      print "Job $tcluster.$proc terminated.\n";
-		  }
-		  
-		  
-		  if($tcluster == $cluster)
-		  {
-		      
-		      open(OUTPUT, "<$OutFile{$cluster}") || ( print "Can't open $OutFile{$cluster}: $!\n" );
-		      @out = <OUTPUT>;   # Sluurrrpp.
-		      close(OUTPUT);
-		      
-		      open(ERROR, "<$ErrFile{$cluster}") || ( print "Can't open $ErrFile{$cluster}: $!\n" );
-		      @err = <ERROR>;
-		      close(ERROR);
-		      
-		      $line = <CLOG>;
-		      if( $line =~ /(.*)Normal(.*)/ )
-		      {
-			  @parts = split(' ', $line);
-			  $return_val = $parts[5];
-			  $return_val =~ s/\)//g;
-			  if( exists $NormalTermCallback{$cluster} )
-			  {
-			      $temp = $NormalTermCallback{$cluster};
-			      &$temp($cluster, $proc, $return_val, @out, @err);
-			  }
-		      }
-		      else
-		      {
-			  @parts = split(' ', $line);
-			  $signal_val = $parts[4];
-			  $signal_val =~ s/\)//g;
-			  
-			  $line = <CLOG>;
-			  if( $line =~ /(.*)No core file(.*)/ )
-			  {
-			      $core = "";
-			  }
-			  else
-			  {
-			      @more_parts = split ' ', $line;
-			      $core = $more_parts[3];
-			  }
-			  
-			  if( exists $AbnormalTermCallback{$cluster} )
-			  {
-			      $temp = $AbnormalTermCallback{$cluster};
-			      &$temp($cluster, $proc, $signal_val, $core, @out, @err);
-			  }
-		      }  
-		  }
-	      }
-	      elsif( $_ =~ /(.*)Job executing on host(.*)/ )
-	      {
-		  
-		  @parts = split(' ', $_);
-		  $cluster_proc = $parts[1];
-		  ($tcluster, $proc) = getClusterProc($cluster_proc);
-		  
-		  debug("Job $tcluster.$proc executing.\n");
-		  
-		  if($tcluster == $cluster)
-		  {
-		      debug("tcluster matches cluster.\n");
-		      $sinful = $parts[$#parts];
-		      
-		      @ip_port = &strip_sinful($sinful);
-		      
-		      if( exists $ExecuteCallback{$cluster} )
-		      {
-			  debug("Calling execute handler.\n");
-			  $temp = $ExecuteCallback{$cluster};
-			  &$temp($cluster, $proc, $ip_port[0], $ip_port[1]);
-		      }
-		  }
-	      }
-	      elsif( $_ =~ /(.*)Job submitted from host(.*)/ )
-	      {
-		  @parts = split(' ', $_);
-		  $cluster_proc = $parts[1];
-		  ($tcluster, $proc) = getClusterProc($cluster_proc);
-		  
-		  if( $DEBUG != 0 )
-		  {
-		      print "Job $tcluster.$proc submitted.\n";
-		  }
-		  
-		  if($tcluster == $cluster)
-		  {
-		      
-		      $sinful = $parts[$#parts];
-		      @ip_port = &strip_sinful($sinful);
-		     
-			# Call the registered callback if it exists. 
-		      if( exists $SubmitCallback{$cluster} )
-		      {
-			  $temp = $SubmitCallback{$cluster};
-			  &$temp($cluster, $cluster, $proc, @ip_port);
-		      }
-		  }
-	      }
-	      sleep 1;
-	  }
-      }
-      elsif($! =~ /No more process/)
-      {
-	  sleep 5;
-	  redo FORK;
-      }
-      else
-      {
-	  die "Can't fork: $!\n";
-      }
-      return 0;
-  }
-}
+#    debug( "In Monitor child\n" );
 
-sub strip_sinful	
-{
-    ($sinful) = @_;
-    $sinful =~ s/<//g;
-    $sinful =~ s/>//g;
+    # open submit log
+    unless( open( SUBMIT_LOG, "<$submit_info{'log'}" ) )
+    {
+	warn "error opening $submit_info{'log'}: $!\n";
+	return 0;
+    }
 
-    @foo = split(/:/, $sinful);
-    return @foo;
-}
-	 
-sub getClusterProc
-{
-    ($cluster_proc) = @_;
-    local($cluster, $proc);
+  LINE:
+    while( 1 )
+    {
+	if( $saw_submit && $num_active_jobs == 0 )
+	{
+#	    debug( "num_active_jobs = $num_active_jobs -- monitor exiting\n" );
+#	    exit 0;
+	    debug( "num_active_jobs = $num_active_jobs -- monitor returning\n" );
+	    return 1;
+	}
 
-    $cluster_proc =~ s/\(//g;
-    $cluster_proc =~ s/\)//g;
-    ($cluster, $proc, $subproc) = split(/\./, $cluster_proc);
-    $cluster +=  0;   # Strip off leading zeros.
-    $proc +=  0;
-    return ($cluster, $proc);
+	# read line from log (if we're at EOF, wait and re-try)
+	$line = <SUBMIT_LOG>;
+	if( ! defined $line )
+	{
+#	    debug( "seeing nothing in $submit_info{'log'}, sleeping...\n" );
+	    sleep 1;
+	    next LINE;
+	}
+	chomp $line;
+	$linenum++;
+
+      PARSE:
+
+	# reset %info hash to clear details added for last event
+	%info = %submit_info;
+
+	# if this line is for another cluster, ignore
+	if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
+	{
+#	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" );
+	    next LINE;
+	}
+	
+	# 004: job evicted
+	if( $line =~ /^004\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw job evicted\n" );
+
+	    # execute callback if one is registered
+	    &$EvictedCallback( %info )
+		if defined $EvictedCallback;
+
+	    # read next line to see if job was checkpointed (but first
+	    # sleep for 5 seconds to give it a chance to appear)
+	    # [this should really loop like above, not sleep like this...]
+	    sleep 5;
+	    $line = <SUBMIT_LOG>;
+	    chomp $line;
+	    $linenum++;
+
+	    if( $line =~ /^\s+\(0\) Job was not checkpointed./ )
+	    {
+		debug( "job was evicted without ckpt\n" );
+		# execute callback if one is registered
+		&$EvictedWithoutCheckpointCallback( %info )
+		    if defined $EvictedWithoutCheckpointCallback;
+
+	    }
+	    elsif( $line =~ /^\s+\(1\) Job was checkpointed./ )
+	    {
+		debug( "job was evicted with ckpt\n" );
+		# execute callback if one is registered
+		&$EvictedWithCheckpointCallback( %info )
+		    if defined $EvictedWithCheckpointCallback;
+	    }
+	    else
+	    {
+		debug( "parse error on line $linenum of $info{'log'}:\n" .
+		       "   no checkpoint message found after eviction: " .
+		       "continuing...\n" );
+		# re-parse line so we don't miss whatever it said
+		goto PARSE;
+	    }
+	    next LINE;
+	}
+
+	# 005: job terminated
+	if( $line =~ /^005\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw job terminated\n" );
+
+	    # decrement # of queued jobs so we will know when to exit monitor
+	    $num_active_jobs--;
+
+	    # execute callback if one is registered
+	    &$ExitedCallback( %info )
+		if defined $ExitedCallback;
+
+	    # read next line to see how job terminated
+	    $line = <SUBMIT_LOG>;
+	    chomp $line;
+	    $linenum++;
+
+	    # terminated successfully
+	    if( $line =~ /^\s+\(1\) Normal termination \(return value 0\)/ )
+	    {
+		# execute callback if one is registered
+		&$ExitedSuccessCallback( %info )
+		    if defined $ExitedSuccessCallback;
+	    }
+	    # terminated w/error
+	    elsif( $line =~ 
+		   /^\s+\(1\) Normal termination \(return value (\d+)\)/ )
+	    {
+		$info{'retval'} = $1;
+		# execute callback if one is registered
+		&$ExitedFailureCallback( %info )
+		    if defined $ExitedFailureCallback;
+	    }
+	    # abnormal termination
+	    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
+	    {
+		$info{'signal'} = $1;
+
+		debug( "checking for core file...\n" );
+
+		# read next line to find core file
+		$line = <SUBMIT_LOG>;
+		chomp $line;
+		$linenum++;
+
+		if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
+		{
+		    $info{'core'} = $1;
+		}
+		elsif( $line =~ /^\s+\(0\) No core file/ )
+		{
+		    debug( "no core file found\n" );
+		    # not sure what to do here with $info{'core'}...
+		}
+		else
+		{
+		    die( "parse error on line $linenum of $info{'log'}:\n" .
+			   "   no core file message found after " .
+			   "abornal termination: continuing...\n" );
+		}
+		# execute callback if one is registered
+		&$ExitedAbnormalCallback( %info )
+		    if defined $ExitedAbnormalCallback;
+	    }
+	    else
+	    {
+		debug( "parse error on line $linenum of $info{'log'}:\n" .
+		       "   no termination status message found after " .
+		       "termination: continuing...\n" );
+		# re-parse line so we don't miss whatever it said
+		goto PARSE;
+	    }
+	    next LINE;
+	}
+
+	# 001: job executing
+	elsif( $line =~ 
+	       /^001\s+\(0*(\d+)\.0*(\d+).*<(\d+\.\d+\.\d+\.\d+):(\d+)>/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+	    $info{'host'} = $3;
+	    $info{'sinful'} = "<$3:$4>";
+	    
+	    debug( "Saw job executing\n" );
+
+	    # execute callback if one is registered
+	    &$ExecuteCallback( %info )
+		if defined $ExecuteCallback;
+
+	    next LINE;
+	}
+
+	# 000: job submitted
+	elsif( $line =~ 
+	       /^000\s+\(0*(\d+)\.0*(\d+).*<(\d+\.\d+\.\d+\.\d+):(\d+)>/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+	    $info{'host'} = $3;
+	    $info{'sinful'} = "<$3:$4>";
+
+	    debug( "Saw job submitted\n" );
+
+	    # mark that we've seen a submit so we can start watching # of jobs
+	    $saw_submit = 1;
+	    # increment # of queued jobs so we will know when to exit monitor
+	    $num_active_jobs++;
+
+	    # execute callback if one is registered
+	    &$SubmitCallback( %info )
+		if defined $SubmitCallback;
+
+	    next LINE;
+	}
+	# 009: job aborted by user
+	elsif( $line =~ /^009/ )
+	{
+	    # decrement # of queued jobs so we will know when to exit monitor
+	    $num_active_jobs--;
+	    
+	    # execute callback if one is registered
+	    &$AbortCallback( %info )
+		if defined $AbortCallback;
+	}
+#	002 (171.000.000) 06/15 14:49:45 (0) Job file not executable.
+	# 002: job not executable
+	elsif( $line =~ /^002/ )
+	{
+	    # decrement # of queued jobs so we will know when to exit monitor
+	    $num_active_jobs--;
+
+	    # execute callback if one is registered
+	    &$JobErrCallback( %info )
+		if defined $JobErrCallback;
+	}
+    }
+    return 1;
 }
 
 sub debug
 {
-    ($string) = @_;
-    if( $DEBUG != 0 )
-    {
-	print $string;
-    }
+    my $string = shift;
+    print( "DEBUG ", timestamp(), ": $string" ) if $DEBUG;
 }
 
-sub ReadCmdFile
+sub ParseSubmitFile
 {
-    local($cmd) = @_;
-    open(CMD, $cmd) || die "Can't open command file: $cmd: $!.\n";
-    local($log, $out, $err, $in);
+    my $submit_file = shift || croak "missing submit file argument";
+    my $line = 0;
 
-    while(<CMD>)
+    if( ! open( SUBMIT_FILE, $submit_file ) )
     {
-	if( $_ =~ /^#/) 
+	print "error opening \"$submit_file\": $!\n";
+	return 0;
+    }
+    
+    debug( "reading submit file...\n" );
+    while( <SUBMIT_FILE> )
+    {
+	chomp;
+	$line++;
+
+	# skip comments & blank lines
+	next if /^#/ || /^\s*$/;
+
+	# if this line is a variable assignment...
+	if( /^(\w+)\s*\=\s*(.*)$/ )
 	{
-	    next;
+	    $variable = lc $1;
+	    $value = $2;
+
+	    # if line ends with a continuation ('\')...
+	    while( $value =~ /\\\s*$/ )
+	    {
+		# remove the continuation
+		$value =~ s/\\\s*$//;
+
+		# read the next line and append it
+		<SUBMIT_FILE> || last;
+		$value .= $_;
+	    }
+
+	    # compress whitespace and remove trailing newline for readability
+	    $value =~ s/\s+/ /g;
+	    chomp $value;
+
+	    debug( "$variable = $value\n" );
+	    
+	    # save the variable/value pair
+	    $submit_info{$variable} = $value;
 	}
-	elsif( $_ =~ /(.*)=(.*)/)
+	else
 	{
-	    ($var, $val) = split('=', $_);
-	    if($var =~ /^error(.*)/i)
-	    {
-		$err = $val;
-	    }
-	    elsif($var =~ /^log(.*)/i)
-	    {
-		$log = $val;
-	    }
-	    elsif($var =~ /^out(.*)/i)
-	    {
-		$out = $val;
-	    }
-	    elsif($var =~ /^in(.*)/i)
-	    {
-		$in = $val;
-	    }
+#	    debug( "line $line of $submit_file not a variable assignment... " .
+#		   "skipping\n" );
 	}
     }
-	chomp $log;
-	chomp $out;
-	chomp $err;
-	chomp $in;
-    return ($log, $out, $err, $in);
+    return 1;
 }
 
 sub DebugOn
 {
     $DEBUG = 1;
+}
+sub DebugOff
+{
+    $DEBUG = 0;
+}
+
+sub timestamp {
+    return scalar localtime();
 }
