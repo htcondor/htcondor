@@ -602,7 +602,7 @@ class DaemonCore : public Service
                child.  0 < nice < 20, and greater numbers mean
                less priority.  This is an addition to the current
                nice value.
-        @return The pid of the newly created process.
+        @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
         char        *name,
