@@ -28,7 +28,22 @@ and known bugs of each version are described below in detail.
 
 \begin{itemize}
 
-\item None.
+\item Added new security feature to offer fine-grained control over
+what configuration values can be modified by \Condor{config\_val}
+using \Arg{-set} and related options.
+Pool administrators can now define lists of attributes that can be set
+by hosts that authenticate to the various permission levels of
+Condor's host based security (for example, \DCPerm{WRITE},
+\DCPerm{ADMINISTRATOR}, etc).
+These lists are defined by attributes with names like
+\Macro{SETTABLE\_ATTRS\_CONFIG} and
+\Macro{STARTD\_SETTABLE\_ATTRS\_OWNER}. 
+For more information about host-based security in Condor, see
+section~\ref{sec:Host-Security} on page~\pageref{sec:Host-Security}.
+For more information about how to configure the new settings, see the
+same section of the manual.
+In particular, see section~\ref{sec:Config-Val-Security} on
+page~\pageref{sec:Config-Val-Security}. 
 
 \end{itemize}
 
