@@ -179,8 +179,19 @@ sub buildCondorGPackages {
 	chdir("$GlobusDir");
 	if($native) {
 		System("gpt-pkg --rpmlicense=Condor -native -all");
+		System("gpt-bundle --native --bindir=./binaries/ \\
+        --output=condor-g-6.4-`uname | \\
+        tr \"A-Z\" \"a-z\"`-`uname -m`-`uname -r`-bundle.tar.gz  \\
+		condor_base condor_base_setup condor_base_libs condor_config \\
+		condor_submit condor_dagman ");
+
 	} else {
 		System("gpt-pkg --rpmlicense=Condor -all");
+		System("gpt-bundle --bindir=./binaries/ \\
+        --output=condor-g-6.4-`uname | \\
+        tr \"A-Z\" \"a-z\"`-`uname -m`-`uname -r`-bundle.tar.gz  \\
+		condor_base condor_base_setup condor_base_libs condor_config \\
+		condor_submit condor_dagman ");
 	}
 }
 
