@@ -28,6 +28,9 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	../condor_util_lib/chomp.o \
 	get_mysubsystem.o \
 	my_subsystem.o \
+	distribution.o \
+	my_distribution.o \
+	libcondorapi_stubs.o \
 	strnewp.o
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
@@ -52,7 +55,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o
+	RegExer.o my_distribution.o
 
 
 library_target( cplus_lib.a,$(OBJ))
