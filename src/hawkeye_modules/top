@@ -41,7 +41,7 @@ my %TopFields =
     (
      pid	=> { enabled => 0, type => "n", l => [ "PID", ], },
      user	=> { enabled => 0, type => "s", l => [ "USER", "USERNAME", ], },
-     priority	=> { enabled => 0, type => "n", l => [ "PRI", ], },
+     priority	=> { enabled => 0, type => "s", l => [ "PRI", ], },
      thread	=> { enabled => 0, type => "n", l => [ "THR", ], },
      nice	=> { enabled => 0, type => "n", l => [ "NI", "NICE", ], },
      size	=> { enabled => 0, type => "n", l => [ "SIZE", ] },
