@@ -7,10 +7,8 @@
 #define VendorFTestFlags -assume recursive 
 
 #define IS_EGCS_BUILD YES
-#define EgcsPath /s/egcs-1.1.2/alpha_dux40d/lib/gcc-lib/alpha-dec-osf4.0d/egcs-2.91.66
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /usr/lib/cmplrs/cc/crt0.o
 
 #define XLibPath /usr/lib/libX11.a /usr/lib/libdnet_stub.a
 #define XExtLibPath /usr/lib/libXext.a

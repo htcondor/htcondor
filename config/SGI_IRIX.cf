@@ -138,7 +138,6 @@
    actually care about.
 */
 #define LibC    	concat(LibPath,/libc.so.1)
-#define Crt0		concat(LibPath,/crt1.o)
 #define CrtN		concat(LibPath,/crtn.o)
 
 /* add certain flags which will only work with gnu gcc because

@@ -9,7 +9,6 @@
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /lib/crt0.o
 
 #define XLibPath /**/
 #define XExtLibPath /**/

@@ -12,8 +12,6 @@
 #define SimpleLibC /usr/lib/pa20_64/libc.a
 #undef LibC
 #define LibC SimpleLibC
-#undef Crt0
-#define Crt0 /usr/ccs/lib/pa20_64/crt0.o
 
 
 #define HAS_ADJTIME			YES

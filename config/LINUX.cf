@@ -57,7 +57,6 @@ statically linked to avoid problems */
 
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /usr/lib/crt1.o
 
 #define XLibPath /usr/X11R6/lib/libX11.a
 #define XExtLibPath /usr/X11R6/lib/libXext.a
