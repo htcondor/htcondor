@@ -98,17 +98,17 @@ sub CommandLine( @ )
 	    $Config{HawkeyeConfig} = $File;
 	}
 	# No config update
-	elsif ( $Arg =~ /^-n$/ )
+	elsif ( $Arg eq "-n")
 	{
 	    $Config{UpdateConfig} = 0;
 	}
 	# "Ask" mode
-	elsif ( $Arg =~ /^-a$/ )
+	elsif ( $Arg eq "-a" )
 	{
 	    $Config{InstallAll} = 0;
 	}
 	# Manual mode
-	elsif ( $Arg =~ /^-m$/ )
+	elsif ( $Arg eq "-m" )
 	{
 	    $Config{InstallAll} = 0;
 	    $Config{UseDefaults} = 0;

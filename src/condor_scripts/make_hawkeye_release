@@ -15,13 +15,14 @@ my $Install = "install";
 my $Examples = "condor_examples";
 my $CondorRel = "condor_release";
 my $Scripts = "condor_scripts";
-my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
+#my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
 my $ReleaseDir = "../Hawkeye-Release";
 my $TestMode = 0;
 
 # Script version, etc
 my $Version = "0.3";
-my $Usage = "$0 [-t|-T] version os cpu lib";
+my $Usage = "$0 [-t|-T] version os cpu lib\n".
+  "Example: $0 1.2.3 linux x86 glibc23-dynamic\n";
 
 # Env variable overrides the dirctory from the file...
 if ( exists $ENV{HAWKEYE_RELEASE_DIR} )
@@ -44,7 +45,7 @@ foreach my $Arg ( @ARGV )
 	    $Arg =~ /^-t$/ && do { $TestMode = 1; last SWITCH; };
 	    $Arg =~ /^-T$/ && do { $TestMode = 2; last SWITCH; };
 	    $Arg =~ /^-n=(\d+)$/ && do { $TempNum = $1; last SWITCH; };
-	    print STDERR "$Usage\n"; exit 1;
+	    print STDERR "$Usage"; exit 1;
 	}
     }
     else
@@ -59,7 +60,7 @@ my $Temp = "../tmp-$TempNum";
 # Pull the info from the commandline
  if ( $#RelOpts != 3 )
 {
-    print STDERR "$Usage\n"; exit 1;
+    print STDERR "$Usage"; exit 1;
 }
 $HawkeyeVersion = shift( @RelOpts );
 $HawkeyeOs = shift( @RelOpts );
@@ -146,7 +147,7 @@ my $BinTarBall = "release.tar";
 
 # Copy in the last minute pieces..
 CopyAll( $CondorRel, $AssembleDir, "*hawkeye*", undef );
-CopyAll( $ClassAdViewer, $AssembleDir, "h*tgz*", undef );
+#CopyAll( $ClassAdViewer, $AssembleDir, "h*tgz*", undef );
 
 # Create the install script
 {
