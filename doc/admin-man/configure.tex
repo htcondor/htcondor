@@ -597,6 +597,11 @@ you wish to control logging for.
   includes the amount of network bandwidth used for job placement and
   preemption.
 
+\item[\Dflag{NETWORK}] \label{dflag:network} When this flag is set,
+  all Condor daemons will log a message on every TCP accept, connect,
+  and close, and on every UDP send and receive.  This flag is not
+  yet fully supported in the \Condor{shadow}.
+
 \end{description}
 
 \end{description}
