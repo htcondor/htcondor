@@ -26,19 +26,13 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "util_lib_proto.h"
 #include <signal.h>
 #include <sys/wait.h>
-#include <errno.h>
-
-/* For test program, use printf() & exit in place of EXCEPT */
-#ifdef TEST_SPAWN
-#undef EXCEPT
-#define EXCEPT(__s__)	{ fprintf(stderr,"%s\n",__s__); exit(1); }
-#endif
 
 
-static pid_t	ChildPid = 0;
+extern int	errno;
+
+static pid_t	ChildPid;
 
 static int	READ_END = 0;
 static int	WRITE_END = 1;
@@ -65,16 +59,13 @@ static struct sigaction	OldAct;
   reap.
 */
 FILE *
-my_popen( const char *cmd, const char * mode )
+my_popen( cmd, mode )
+char *cmd;
+char *mode;
 {
 	int		pipe_d[2];
 	int		parent_reads;
 	struct sigaction act;
-
-		/* Use ChildPid as a simple semaphore-like lock */
-	if ( ChildPid ) {
-		return NULL;
-	}
 
 		/* Figure out who reads and who writes on the pipe */
 	parent_reads = mode[0] == 'r';
@@ -139,7 +130,8 @@ my_popen( const char *cmd, const char * mode )
 }
 		
 int
-my_pclose(FILE *fp)
+my_pclose(fp)
+FILE	*fp;
 {
 	int			status;
 
@@ -159,151 +151,6 @@ my_pclose(FILE *fp)
 	already have been restored. */
 
 		/* Now return status from child process */
-	return status;
-}
-
-
-/*
-  This is similar to the UNIX system(3) call, except it doesn't invoke
-  a shell.  This is much more of a fork/exec/wait call.  Perhaps you
-  should think of it as the "spawn" call on old MS-DOG systems.
-
-  It shares the child handling with my_popen(), which is why it's in
-  the same source file.  See the comments for it for more details.
-
-  Returns:
-    -1: failure
-    >0: Pid of child (wait == false)
-    0: Success (wait == true)
-*/
-#define MAXARGS	32
-int
-my_spawnl( const char* cmd, int wait_for_child, ... )
-{
-	int		rval;
-
-    va_list va;
-	const char * argv[MAXARGS + 1];
-
-	/* Convert the args list into an argv array */
-    va_start( va, wait_for_child );
-	int argno = 0;
-	for( argno = 0;  argno < MAXARGS;  argno++ ) {
-		const char	*p;
-		p = va_arg( va, const char * );
-		argv[argno] = p;
-		if ( ! p ) {
-			break;
-		}
-	}
-	argv[MAXARGS] = NULL;
-    va_end( va );
-
-	/* Invoke the real spawnl to do the work */
-	char *const *argvtmp = (char * const *)argv;
-    rval = my_spawnv( cmd, wait_for_child, argvtmp );
-
-	/* Done */
-	return rval;
-}
-
-/*
-  This is similar to the UNIX system(3) call, except it doesn't invoke
-  a shell.  This is much more of a fork/exec/wait call.  Perhaps you
-  should think of it as the "spawn" call on old MS-DOG systems.
-
-  It shares the child handling with my_popen(), which is why it's in
-  the same source file.  See the comments for it for more details.
-
-  Returns:
-    -1: failure
-    wait_for_child == true:
-	  >0 == Return status of child
-    wait_for_child == false:
-      0: Success (wait == true)
-	  >0 == PID of child
-*/
-int
-my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
-{
-	struct sigaction act;
-
-		/* Use ChildPid as a simple semaphore-like lock */
-	if ( ChildPid ) {
-		return -1;
-	}
-
-		/* Set up our own handler for SIGCHLD */
-	act.sa_handler = sigchld_eater;
-	sigemptyset( &act.sa_mask );
-	act.sa_flags = 0;
-	if( sigaction(SIGCHLD,&act,&OldAct) < 0 ) {
-		EXCEPT( "sigaction" );
-		exit( 1 );
-	}
-
-		/* Create a new process */
-	ChildPid = fork();
-	if( ChildPid < 0 ) {
-			/* Restore original handler for SIGCHLD */
-		if( sigaction(SIGCHLD,&OldAct,0) < 0 ) {
-			EXCEPT( "sigaction" );
-		}
-		ChildPid = 0;
-		return -1;
-	}
-
-		/* Child: create an ARGV array, exec the binary */
-	if( ChildPid == 0 ) {
-
-			/* The child */
-		execv( cmd, argv );
-		_exit( ENOEXEC );		/* This isn't safe ... */
-	}
-
-		/* Finally, the parent must wait for the child */
-	if( ! wait_for_child ) {
-			/* We're not waiting, so don't reset ChildPid! */
-		return( ChildPid );
-	}
-
-		/* Wait for child process to exit and get its status */
-	int		status;
-	while( waitpid(ChildPid,&status,0) < 0 ) {
-		if( errno != EINTR ) {
-			status = -1;
-			break;
-		}
-	}
-
-	/* Note: by the time waitpid() returns we should have already gotten
-	one occurrence of SIGCHLD, and the hanlder for that signal should
-	already have been restored. */
-
-		/* Now return status from child process */
-	ChildPid = 0;
-	return status;
-}
-		
-int
-my_spawn_wait( void )
-{
-	int			status;
-
-		/* Wait for child process to exit and get its status */
-	while( waitpid(ChildPid,&status,0) < 0 ) {
-		if( errno != EINTR ) {
-			status = -1;
-			break;
-		}
-	}
-
-	/* Note: by the time waitpid() returns we should have already gotten
-	one occurrence of SIGCHLD, and the hanlder for that signal should
-	already have been restored. */
-
-		/* Now return status from child process */
-	ChildPid = 0;
 	return status;
 }
 
