@@ -1,12 +1,11 @@
 #define Top 				$(TILDE)/CONDOR
 
 #if IS_MIPS_ULTRIX43A || IS_SPARC_SUNOS41
-#define InstallDir				/usr/psup/condor
+#	define InstallDir				/usr/psup/condor
 #else
-#define InstallDir				/usr/uw/condor
+#	define InstallDir				/usr/uw/condor
 #endif
 
-#define LocalDir			$(TILDE)
 #define TmpDir				/tmp
 
 #if MALLOC_DEBUG
@@ -15,7 +14,14 @@
 #define CFlags				/**/
 #endif
 
-#define CentralMgrHost		frigg.cs.wisc.edu
+#if IS_R6000_AIX32
+#	define CentralMgrHost		louie.cs.wisc.edu
+#	define LocalDir			$(TILDE)/$(HOSTNAME)
+#else
+#	define LocalDir			$(TILDE)
+#	define CentralMgrHost		frigg.cs.wisc.edu
+#endif
+
 #define CondorAdministrator	condor-admin
 #define YpLib
 
