@@ -161,11 +161,22 @@ fi
 # that alone for now...
 CHECK_PROG_IS_GNU(STRIP, strip)
 if test "$_cv_strip_is_gnu" = "no"; then
-   if test `uname -s` != "Darwin"; then
-      AC_MSG_ERROR( [GNU strip is required] )
-   else
-      AC_MSG_WARN( [GNU strip is prefered, but OSX doesn't have it] )
-   fi   
+   case `uname -s` in 
+   "Darwin" )
+      AC_MSG_WARN( [GNU strip is prefered, but OSX doesn't have it] ) ;;
+
+   "OSF1" ) 
+      if test `uname -r` != "V5.1" ; then
+         AC_MSG_ERROR( [GNU strip is required] )
+      fi ;; 
+
+   * )
+      AC_MSG_ERROR( [GNU strip is required] ) ;;
+   esac
+else
+   if test `uname -s` = "OSF1" && test `uname -r` = "V5.1" ; then
+      AC_MSG_ERROR( [GNU strip will not work on DUX 5.1] )
+   fi
 fi
 
 # We depend on some GNU-specific options to tar.  We also depend on
