@@ -4255,7 +4255,7 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if( (fd=open(strPathname.Value(),flags,0664)) < 0 ) {
+	if( (fd=open(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o\n",
 				 strPathname.Value(), flags );
 		DoCleanup(0,0,NULL);
