@@ -63,7 +63,7 @@ AuthSock::lookup_user( char *client_name ) {
 				client_name, filename );
 		return -1;
 	}
-	dprintf( D_FULLDEBUG,"lookup user %s successful\n", client_name );
+	dprintf( D_ALWAYS,"GSS authenticated %s\n", client_name );
 	return 0;
 }
 
@@ -214,7 +214,7 @@ AuthSock::auth_connection_client()
 
 	if (major_status != GSS_S_COMPLETE)
 	{
-		dprintf( D_ALWAYS, "failed auth connection:init security context:0x%x\n",
+		dprintf( D_ALWAYS, "failed auth connection client, gss status: 0x%x\n",
 								major_status );
 		return FALSE;
 	}
@@ -248,7 +248,7 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 
 	if ( !authenticate_user() ) {
 		dprintf( D_ALWAYS, 
-			"failure authenticating server from auth_connection_server\n" );
+			"failure authenticating self in auth_connection_server\n" );
 		return FALSE;
 	}
 	if ( authsock.GSSClientname ) 
@@ -273,11 +273,11 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 			( ( lookup_user( authsock.GSSClientname ) ) < 0 ) ) 
 	{
 		if (major_status != GSS_S_COMPLETE) {
-			dprintf(D_ALWAYS, "server: GSS authentication failure, status:0x%x\n",
-					major_status );
+			dprintf(D_ALWAYS, "server: GSS failure authenticating %s 0x%x\n",
+					"client, status: ", major_status );
 		}
 		else
-			dprintf( D_ALWAYS, "server: user lookup failure.\n:" );
+			dprintf( D_ALWAYS, "server: user lookup failure.\n" );
 		if ( authsock.GSSClientname ) {
 			free( authsock.GSSClientname );
 			authsock.GSSClientname = NULL;
