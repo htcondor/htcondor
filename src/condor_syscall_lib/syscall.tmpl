@@ -244,7 +244,7 @@ int rename( const char *from, const char *to ) {
 		alloc( kill_sig, INT_SIZE );
 	}
 
-#if !defined (SWITCH)
+#if !defined (SWITCH) && !defined(RECEIVER)
 	int pvm_info( const char *response, int mytid ) : pseudo {
 		SEND_PATH( response );
 		ALLOC_PATH( response );
