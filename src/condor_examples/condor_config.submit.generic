@@ -4,8 +4,8 @@
 ##
 ##  This is the global configuration file for condor.
 ##
-##  This version is for submit-only machines.  Please use another file
-##  if you have different needs by default.
+##  This version is for submit-only machines.  Please use another 
+##  file if you have different needs by default.
 ##
 ##  The file is divided into three main parts: settings you must
 ##  customize, settings you may want to customize, and settings you
@@ -15,6 +15,14 @@
 ##  Condor Administrator's Manual) for detailed explainations of the 
 ##  various settings in here and possible ways to configure your
 ##  pool. 
+##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
+##  Unless otherwise indicated, all settings which specify a time are
+##  defined in seconds.
 ##
 ######################################################################
 
@@ -51,6 +59,21 @@ CONDOR_ADMIN		= condor-admin@your.domain
 ##  Full path to a mail delivery program that understands that "-s"
 ##  means you want to specify a subject:
 MAIL			= /usr/bin/mail
+
+##--------------------------------------------------------------------
+##  Network domain parameters:
+##--------------------------------------------------------------------
+##  Internet domain of machines sharing a common UID space.  If your
+##  machines don't share a common UID space, use the second entry
+##  which specifies that each machine has its own UID space.
+UID_DOMAIN		= your.domain
+#UID_DOMAIN		= $(FULL_HOSTNAME)
+
+##  Internet domain of machines shareing a common file system.
+##  If your machines don't use a network file system, use the second
+##  entry which specifies that each machine has its own file system. 
+FILESYSTEM_DOMAIN	= your.domain
+#FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
 
 
 ######################################################################
@@ -112,49 +135,46 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
 ##--------------------------------------------------------------------
-##  If all the machines in your domain share a common file system,
-##  uncomment the following entry and set it to that domain.
-#FILESYSTEM_DOMAIN	= your.domain
-
 ##  Do you want to use NFS for file access instead of remote system
 ##  calls?
-USE_NFS			= False
+#USE_NFS		= False
 
 ##  Do your machines run AFS?
-HAS_AFS			= False
+#HAS_AFS		= False
 
 ##  Do you want to use AFS for file access instead of remote system
 ##  calls?
-USE_AFS			= False
+#USE_AFS		= False
 
-##  Pathnames to various AFS tools that condor needs:
-FS_PATHNAME		= /usr/afsws/bin/fs
-VOS_PATHNAME		= /usr/afsws/etc/vos
+##  Pathnames to various AFS tools that condor needs (must be defined
+##  if HAS_AFS is set to True).
+#FS_PATHNAME		= /usr/afsws/bin/fs
+#VOS_PATHNAME		= /usr/afsws/etc/vos
 
 ##--------------------------------------------------------------------
 ##  Checkpoint server:
 ##--------------------------------------------------------------------
 ##  Do you want to use a checkpoint server?
-USE_CKPT_SERVER		= False
+#USE_CKPT_SERVER	= False
 
 ##  If so, what's the hostname?
 #CKPT_SERVER_HOST	= checkpoint-server-hostname.your.domain
 
+##  Do you want the starter on the execute machine to choose the
+##  checkpoint server?  If False, the CKPT_SERVER_HOST set on
+##  the submit machine is used.  The default is false.
+#STARTER_CHOOSES_CKPT_SERVER = False
+
 ##--------------------------------------------------------------------
 ##  Miscellaneous:
 ##--------------------------------------------------------------------
-##  Internet domain of machines sharing a common UID space.  If your
-##  machines don't share a common UID space, leave this commented
-##  out.
-#UID_DOMAIN		= your.domain
-
 ##  Try to save this much swap space by not starting new shadows.  
 ##  Specified in megabytes.
-RESERVED_SWAP		= 15
+#RESERVED_SWAP		= 5
 
 ##  What's the maximum number of jobs you want a single submit machine
 ##  to spawn shadows for?
-MAX_JOBS_RUNNING	= 200
+#MAX_JOBS_RUNNING	= 200
 
 ##  Condor needs to create a few lock files to syncronize access to
 ##  various log files.  Because of problems we've had with network
@@ -190,7 +210,6 @@ LOCK		= $(LOCAL_DIR)/log
 ##  developers debug any problems you might be having.
 #CREATE_CORE_FILES	= True
 
-
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debuging output:
 ##--------------------------------------------------------------------
@@ -201,9 +220,9 @@ MAX_SHADOW_LOG		= 64000
 SHADOW_DEBUG		=
 
 MAX_MASTER_LOG		= 64000
-MASTER_DEBUG		=
+MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
-TRUNC_MASTER_LOG_ON_OPEN        = False
+#TRUNC_MASTER_LOG_ON_OPEN        = False
 
 
 ######################################################################
@@ -244,19 +263,19 @@ NEGOTIATOR_HOST	= $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
-SHUTDOWN_GRACEFUL_TIMEOUT	= 1800
+#SHUTDOWN_GRACEFUL_TIMEOUT	= 1800
 
 ##  How much disk space would you like reserved from Condor?  In
 ##  places where Condor is computing the free disk space on various
 ##  partitions, it subtracts the amount it really finds by this
-##  many megabytes.
+##  many megabytes.  (If undefined, defaults to 0).
 RESERVED_DISK		= 5
 
 ##  If your machine is running AFS and the AFS cache lives on the same
 ##  partition as the other Condor directories, and you want Condor to
 ##  reserve the space that your AFS cache is configured to use, set
 ##  this to true.
-RESERVE_AFS_CACHE	= False
+#RESERVE_AFS_CACHE	= False
 
 
 ######################################################################
@@ -275,7 +294,8 @@ SCHEDD				= $(SBIN)/condor_schedd
 
 ##  When the master starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
-##  need to query the central manager to find the master.
+##  need to query the central manager to find the master.  This
+##  feature can be turned off by commenting out this setting.
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
 ##  What name do you want to use for this master?
@@ -289,37 +309,37 @@ MASTER_ADDRESS_FILE = $(LOG)/.master_address
 PREEN				= $(SBIN)/condor_preen -m -r
 
 ##  How often should the master start up condor_preen? (once a day)
-PREEN_INTERVAL			= 86400
+#PREEN_INTERVAL			= 86400
 
 ##  If a daemon dies an unnatural death, do you want email about it?
-PUBLISH_OBITUARIES              = True
+#PUBLISH_OBITUARIES		= True
 
 ##  If you're getting obituaries, how many lines of the end of that
 ##  daemon's log file do you want included in the obituary?
-OBITUARY_LOG_LENGTH             = 20
+#OBITUARY_LOG_LENGTH		= 20
 
 ##  Should the master run?
-START_MASTER                    = True
+#START_MASTER			= True
 
 ##  Should the master start up the daemons you want it to?
-START_DAEMONS                   = True
+#START_DAEMONS			= True
 
 ##  How often do you want the master to send an update to the central
 ##  manager? 
-MASTER_UPDATE_INTERVAL          = 300
+#MASTER_UPDATE_INTERVAL		= 300
 
 ##  How often do you want the master to check the timestamps of the
 ##  daemons it's running?  If any daemons have been modified, the
 ##  master restarts them.
-MASTER_CHECK_NEW_EXEC_INTERVAL  = 300
+#MASTER_CHECK_NEW_EXEC_INTERVAL	= 300
 
 ##  Once you notice new binaries, how long should you wait before you
 ##  try to execute them?
-MASTER_NEW_BINARY_DELAY		= 30
+#MASTER_NEW_BINARY_DELAY	= 120
 
 ##  What's the maximum amount of time you're willing to give the
 ##  daemons to quickly shutdown before you just kill them outright?
-SHUTDOWN_FAST_TIMEOUT           = 120
+#SHUTDOWN_FAST_TIMEOUT		= 120
 
 ######
 ##  Exponential backoff settings:
@@ -328,17 +348,17 @@ SHUTDOWN_FAST_TIMEOUT           = 120
 ##  wait longer and longer before restarting it.  This is the base of
 ##  the exponent used to determine how long to wait before starting
 ##  the daemon again:
-MASTER_BACKOFF_FACTOR		= 2.0
+#MASTER_BACKOFF_FACTOR		= 2.0
 
 ##  What's the maximum amount of time you want the master to wait
 ##  between attempts to start a given daemon?  (With 2.0 as the
 ##  MASTER_BACKOFF_FACTOR, you'd hit 1 hour in 12 restarts...)
-MASTER_BACKOFF_CEILING          = 3600
+#MASTER_BACKOFF_CEILING		= 3600
 
 ##  How long should a daemon run without crashing before we consider
 ##  it "recovered".  Once a daemon has recovered, we reset the number
 ##  of restarts so the exponential backoff stuff goes back to normal. 
-MASTER_RECOVER_FACTOR           = 300
+#MASTER_RECOVER_FACTOR		= 300
 
 
 ##--------------------------------------------------------------------
@@ -350,50 +370,53 @@ SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 
 ##  When the schedd starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
-##  need to query the central manager to find the schedd.
+##  need to query the central manager to find the schedd.  This
+##  feature can be turned off by commenting out this setting.
 SCHEDD_ADDRESS_FILE	= $(LOG)/.schedd_address
 
 ##  What name do you want to use for this schedd?
 #SCHEDD_NAME = username@$(FULL_HOSTNAME)
 
 ##  How often should the schedd send an update to the central manager?
-##  (5 minutes)
-SCHEDD_INTERVAL		= 300 
+#SCHEDD_INTERVAL	= 300 
 
 ##  How long should the schedd wait between spawning each shadow?
-JOB_START_DELAY		= 2
+#JOB_START_DELAY		= 2
 
 ##  How often should the schedd send a keep alive message to any
 ##  startds it has claimed?  (5 minutes)
-ALIVE_INTERVAL		= 300
+#ALIVE_INTERVAL		= 300
 
 ##  This setting controls the maximum number of times that a
 ##  condor_shadow processes can have a fatal error (exception) before
 ##  the condor_schedd will simply relinquish the match associated with
 ##  the dying shadow.
-MAX_SHADOW_EXCEPTIONS = 5
+#MAX_SHADOW_EXCEPTIONS = 5
 
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
 SHADOW_SIZE_ESTIMATE	= 1800
 
 ##  The condor_schedd can renice the condor_shadow processes on your
-##  submit machines.  How how "nice" do you want the shadows? (0-20)
+##  submit machines.  How how "nice" do you want the shadows? (1-19).
+##  The higher the number, the lower priority the shadows have.
+##  This feature can be disabled entirely by commenting it out.
 SHADOW_RENICE_INCREMENT	= 10
 
 ######
 ## Queue management settings:
 ######
 ##  How often should the schedd truncate it's job queue transation
-##  log?  (once a day)
-QUEUE_CLEAN_INTERVAL	= 86400
+##  log?  (Specified in seconds, once a day is the default.)
+#QUEUE_CLEAN_INTERVAL	= 86400
 
 ##  Do you want to allow remote machines to be able to submit jobs to
 ##  this queue as user "nobody"?
-ALLOW_REMOTE_SUBMIT	= False
+#ALLOW_REMOTE_SUBMIT	= False
 
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 
+##  By default, this only includes root.
 QUEUE_SUPER_USERS	= root, condor
 
 
@@ -405,7 +428,7 @@ QUEUE_SUPER_USERS	= root, condor
 ##  more than MAX_DISCARDED_RUN_TIME seconds of CPU usage.  Otherwise,
 ##  the job is started from scratch.  Defaults to 1 hour.  This
 ##  setting is only used if USE_CKPT_SERVER (from above) is True.
-MAX_DISCARDED_RUN_TIME = 3600 
+#MAX_DISCARDED_RUN_TIME = 3600 
 
 
 ##--------------------------------------------------------------------
@@ -430,7 +453,8 @@ PVMGS			= $(SBIN)/condor_pvmgs
 #APPEND_RANK_VANILLA	= (expression to append to standard job rank)
 
 ##  These are default values for the rank expression that are used if
-##  none are specified in the submit file.
+##  none are specified in the submit file.  Comment these out to
+##  disable the feature.
 DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
 DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
 
@@ -449,11 +473,10 @@ DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
 ##  condor_preen 
 ##--------------------------------------------------------------------
 ##  Who should condor_preen send email to?
-PREEN_ADMIN		= $(CONDOR_ADMIN)
+#PREEN_ADMIN		= $(CONDOR_ADMIN)
 
 ##  What files should condor_preen leave in the spool directory?
 VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
 
-##  What files should condor_preen leave in the log directory?
-VALID_LOG_FILES		= MasterLog, MasterLog.old, NegotiatorLog, NegotiatorLog.old, CollectorLog, CollectorLog.old, SchedLog, SchedLog.old, ShadowLog, ShadowLog.old, StartLog, StartLog.old, StarterLog, StarterLog.old, KbdLog, KbdLog.old, ShadowLock, CkptServerLog, CkptServerLog.old, .startd_address, .schedd_address, .master_address
-
+##  What files should condor_preen remove from the log directory?
+INVALID_LOG_FILES	= core
