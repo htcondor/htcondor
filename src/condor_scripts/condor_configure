@@ -27,6 +27,8 @@ use Getopt::Long;
 my ($owner, $release_dir, $local_dir, $local_config_file, $config_file, $cm, $type);
 my ($who, $host, $fullhost, $domain);
 my $no_config_modify=0;
+my %comment_hash;
+my @allparams;
 
 &parse_command_line();
 
@@ -144,9 +146,10 @@ if (defined($opt_make_personal_condor) ||
     $local_config{START}="TRUE";
     $local_config{PREEMPT}="FALSE";
     $local_config{SUSPEND}="FALSE";
-    $local_config{VACATE}="FALSE";
+    $local_config{KILL}="FALSE";
+
     $cm=&set_central_manager($fullhost);
-    $local_config{COLLECTOR_NAME}="Collector at $host";
+    $local_config{COLLECTOR_NAME}="Personal Condor at $fullhost";
 }
 elsif (defined($opt_type)) {
 
@@ -156,7 +159,8 @@ elsif (defined($opt_type)) {
     $local_config{START}="";
     $local_config{PREEMPT}="";
     $local_config{SUSPEND}="";
-    $local_config{VACATE}="";
+    $local_config{KILL}="";
+    
     $local_config{COLLECTOR_NAME}="";
 
     foreach $type (@types) {
@@ -189,8 +193,9 @@ unless (defined($opt_install)) {
 
 # Write out values to local and global config files
 unless ($no_config_modify) {
-    &set_config_values (\%local_config, $local_config_file);
-    &set_config_values (\%global_config, $config_file);
+    read_config_file_comments();
+    &set_config_values (\%local_config, $local_config_file, 1);
+    &set_config_values (\%global_config, $config_file, 0);
 }
 
 
@@ -254,7 +259,7 @@ e.g. mymachine.mydomain.com \n";
 	    die "\nInvalid host name \"$host\". Please set the \
  environment variable \$HOSTNAME to the full name of this machine \
  e.g. mymachine.mydomain.com \n";
-       }
+	}
 
 	$fullhost=(gethostbyname($host))[0];
 	if( ! ($fullhost =~ /.*\..*/) ) {
@@ -326,7 +331,7 @@ sub parse_command_line() {
 sub print_usage() {
     print <<END_USAGE;
 
-Condor configuration
+Condor installation/configuration:
 
 --install[=<path/to/release.tar>]
 Perform installation of Condor files and initial configuration as a working personal Condor. (if type or "central manager" are not specified). 
@@ -358,7 +363,8 @@ Print more information.
 Prints out this screen and exits.
 
 END_USAGE
-																	    }
+
+}
 
 sub find_owner {
     my $param = shift(@_);
@@ -393,7 +399,7 @@ using the --owner option\n";
     if ((!$uid) || (!getpwuid($uid))) {
 	die "\nInvalid user: $param\n";
     }
-        
+    
     return $uid;
 }
 
@@ -416,7 +422,7 @@ sub find_local_config_file {
 
     $from_config=$files[$#files];
     if ($#files > 0) {
-	  
+	
 	print "\nWARNING: There are several local config files used: \
 $from_config \
 The script will modify the following file (it will be backed up):
@@ -520,8 +526,6 @@ sub install {
     # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
     #$local_config{CONDOR_HOST}=$host;
 
-    $local_config{COLLECTOR}="\$(SBIN)/condor_collector";
-    $local_config{NEGOTIATOR}="\$(SBIN)/condor_negotiator";
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
@@ -676,7 +680,7 @@ sub set_central_manager () {
 }
 
 sub set_config_values () {
-    my ($hashref, $file) = @_;
+    my ($hashref, $file, $is_local) = @_;
 
     my @keylist=keys (%$hashref);
 
@@ -715,9 +719,35 @@ sub set_config_values () {
       } # SWITCH
     }
 
+    # Print out the keys that are in @allparams
+    # so that we can group them together
+    foreach my $key (@allparams) {
+	my $value = $hashref->{$key};
+	if ($value) {
+	    &debug ("$key=$value");
+	    if ($is_local) {
+		my $comment = $comment_hash{$key};
+		if ($comment) {
+		    print TEMP "\n$comment\n";
+		}
+	    }
+	    print TEMP "$key = $value\n\n";
+	    delete $hashref->{$key};
+	}
+    }
+
+    # Print out all the remaining values
     while (my ($key, $value) = each %$hashref) {
-	&debug ("$key=$value");
-	print TEMP "$key = $value\n\n";
+	if ($value) {
+	    &debug ("$key=$value");
+	    if ($is_local) {
+		my $comment = $comment_hash{$key};
+		if ($comment) {
+		    print TEMP "\n$comment\n";
+		}
+	    }
+	    print TEMP "$key = $value\n\n";
+	}
     }
     
     close TEMP;
@@ -823,8 +853,36 @@ sub get_config_value() {
 
 sub debug() {
     my $str=shift;
-	
+    
     if (defined($opt_verbose)) {
-		print "$str\n";
+	print "$str\n";
     }
+}
+
+sub read_config_file_comments() {
+    my $param=shift;
+    open (CONFIG, "<$config_file");
+
+    while (<CONFIG>) {
+	if (/^## /) {
+	    $current_comment .= $_;
+	} elsif (/^#?(\w+)\W*=/) {
+		 $key=$1;
+		 $comment_hash{$key}=$current_comment;
+		 $found_param = 1;
+		 push (@allparams, $key);
+	     } elsif (/^$/) {
+		 if ($found_param) {
+		     $current_comment="";
+		     $found_param = 0;
+		 }
+	     } elsif (/^####/) {
+		      # skip header delimiters
+		      $current_comment="";
+		  }
+
+    
+    }
+
+    close (CONFIG);
 }
