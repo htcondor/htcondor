@@ -241,6 +241,12 @@ OperateInRecoveryMode( ClassAd *logRec )
 		tag ptr;
 		ClassAdStorage.FindInFile(key,ptr);
 		string oneentry= ClassAdStorage.GetClassadFromFile(key,ptr.offset);
+		if (oneentry == ""){
+                  delete(logRec);
+		  CondorErrno = ERR_CACHE_CLASSAD_ERROR;
+		  CondorErrMsg = "No classad " + key + " can be found from storage file";
+		  return( false );	     
+		}
 		ClassAd *cla=parser.ParseClassAd(oneentry,true);
 		ClassAd *content = (ClassAd*)(cla->Lookup("Ad"));
 		if( !viewTree.ClassAdInserted( this, key, content ) ) {
@@ -1483,6 +1489,11 @@ LogState( FILE *fp )
 	  sf_offset=ClassAdStorage.First(cla_key);
 	  while (sf_offset!=-1){
 	    cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
+	    if (cla_s == ""){
+	      CondorErrno = ERR_CACHE_CLASSAD_ERROR;
+	      CondorErrMsg = "No classad " + key + " can be found from storage file";
+	      return( false );	     
+	    }
 	    ClassAd *cla=parser.ParseClassAd(cla_s,true);
 	    if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )){
 	      CondorErrMsg += "; failed to log state";
