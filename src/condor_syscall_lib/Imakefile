@@ -133,7 +133,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
 
 #if DOES_CHECKPOINTING
-CKPT_OBJ =	$(FLOCK_OBJ) file_state.o image.o tmp_stack.o machdep.$(DEP_OS).o \
+CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(DEP_OS).o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
 	$(SGI_CKPT) $(SIG_CKPT_OBJS)
 #else
@@ -146,7 +146,7 @@ AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 
 SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
-UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
+UTIL_OBJ =  $(FLOCK_OBJ) dprintf.o dprintf_config.o except.o update_rusage.o \
 	condor_errlst.o internet.o $(HP_SPECIFIC_FILES) uids.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o
