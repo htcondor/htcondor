@@ -20,8 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
-#include <iostream.h>
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
@@ -317,6 +317,36 @@ processCommandLineArguments (int argc, char *argv[])
 				exit (1);
 			}
 			summarize = 0;
+		} 
+
+		else
+		if (match_prefix (arg, "address")) {
+
+			if (querySubmittors) {
+				// cannot query both schedd's and submittors
+				fprintf (stderr, "Cannot query both schedd's and submitters\n");
+				exit(1);
+			}
+
+			// make sure we have at least one more argument
+			if (argc <= i+1) {
+				fprintf( stderr, "Argument -address requires another parameter\n");
+				exit(1);
+			}
+			if( ! is_valid_sinful(argv[i+1]) ) {
+				fprintf( stderr, 
+						 "Address must be of the form: \"<ip.address:port>\"\n" );
+				exit(1);
+			}
+			sprintf (constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
+			result = scheddQuery.addConstraint (constraint);
+			if (result != Q_OK) {
+				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
+							getStrQueryResult(result));
+				exit (1);
+			}
+			i++;
+			querySchedds = true;
 		} 
 		else
 		if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
