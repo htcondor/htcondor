@@ -388,6 +388,10 @@ sub gen_main_config() {
 	STARTD = \$(SBIN)/condor_startd
 	STARTER = \$(SBIN)/condor_starter
 
+	STARTER_PVM = \$(SBIN)/condor_starter.pvm
+	STARTER_STD = \$(SBIN)/condor_starter.std
+	STARTER_LIST = STARTER, STARTER_STD, STARTER_PVM
+
 	ALTERNATE_STARTER_1 = \$(SBIN)/condor_starter.pvm
 	PVMD = \$(SBIN)/condor_pvmd
 
