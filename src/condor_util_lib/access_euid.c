@@ -33,17 +33,28 @@ access_euid(const char *path, int mode)
 {
 	FILE *f;
 	struct stat buf;
+	int already_stated = 0;
 
-	/* go through the valid flags that are available to access and see if 
-		they are all true */
+	/* are the arguments valid? */
+	if (path == NULL || (mode & ~(R_OK|W_OK|X_OK|F_OK)) != 0) {
+		errno = EINVAL;
+		return -1;
+	}
 
-	if (mode & F_OK) {
+	/* here we are going to sanity check the constants to make sure that we
+		use them correctly if they happen to be a zero value(WHICH USUALLY F_OK
+		IS). If it is zero, then by the semantics of the bitwise or of a zeroed
+		value against a number, which is idempotent, it automatically needs to
+		happen. */
+
+	if ((F_OK == 0) || (mode & F_OK)) {
 		if (stat(path, &buf) < 0) {
 			return -1;
 		}
+		already_stated = 1;
 	}
-	
-	if (mode & R_OK) {
+
+	if ((R_OK == 0) || (mode & R_OK)) {
 		f = fopen(path, "r");
 		if (f == NULL) {
 			return -1;
@@ -51,7 +62,7 @@ access_euid(const char *path, int mode)
 		fclose(f);
 	}
 
-	if (mode & W_OK) {
+	if ((W_OK == 0) || (mode & W_OK)) {
 		f = fopen(path, "a"); /* don't truncate the file! */
 		if (f == NULL) {
 			return -1;
@@ -59,9 +70,12 @@ access_euid(const char *path, int mode)
 		fclose(f);
 	}
 
-	if (mode & X_OK) {
-		if (stat(path, &buf) < 0) {
-			return -1;
+	if ((X_OK == 0) || (mode & X_OK)) {
+		if (!already_stated) {
+			/* stats are expensive, so only do it if I have to */
+			if (stat(path, &buf) < 0) {
+				return -1;
+			}
 		}
 		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
 			return -1;
@@ -70,5 +84,6 @@ access_euid(const char *path, int mode)
 
 	return 0;
 }
+
 
 
