@@ -30,47 +30,6 @@ and known bugs of each version are described below in detail.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-3-4}Version 6.3.4}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item If a job universe is not specified in a submit description file, 
-\Condor{submit}  will check the config file for \Macro{DEFAULT\_UNIVERSE}
-instead of always choosing the standard universe. 
-
-\item The \Macro{D\_SECONDS} debug flag is deprecated. Seconds are now always
-included in logfiles. 
-
-\item For each daemon listed in \Macro{DAEMON\_LIST}, you can now control the
-environment variables of the daemon with a config file setting of the form
-\Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of a
-daemon listed in \Macro{DAEMON\_LIST}. For more information, see
-section~\ref{sec:Master-Config-File-Entries}.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Fixed a bug in the new starter where if the submit file set no
-arguments, the job would receive one argument of zero length.
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-3-3}Version 6.3.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
