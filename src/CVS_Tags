@@ -1,3 +1,9 @@
+07/09/03 V6_5_4-COD-contrib-1
+    The state of the V6_5-branch used for a pre-release 6.5.4 COD
+    contrib module sent to Maarten at MIT (see [condor-admin #6613]).
+    "$CondorVersion: 6.5.4 Jul 9 2003 COD-PRE-RELEASE $" is the
+    version string I sent it with.
+
 06/24/03 V6_5_3-branch
     The 6.5.3 release branch, which came from the V6_5-branch, and is
     rooted at the spot tagged with "V6_5_3-root"
