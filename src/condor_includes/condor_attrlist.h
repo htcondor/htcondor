@@ -172,14 +172,14 @@ class AttrList : public AttrListAbstract
         ExprTree*	Lookup(const char*) const;	// look up an expression
 		ExprTree*	Lookup(const ExprTree*) const;
 		AttrListElem *LookupElem(const char *name) const;
-		int         LookupString(const char *, char *); 
-		int         LookupString(const char *, char *, int); //uses strncpy
-		int         LookupString (const char *name, char **value);
-		int         LookupTime(const char *name, char **value);
-		int         LookupTime(const char *name, struct tm *time, bool *is_utc);
-        int         LookupInteger(const char *, int &);
-        int         LookupFloat(const char *, float &);
-        int         LookupBool(const char *, int &);
+		int         LookupString(const char *, char *) const; 
+		int         LookupString(const char *, char *, int) const; //uses strncpy
+		int         LookupString (const char *name, char **value) const;
+		int         LookupTime(const char *name, char **value) const;
+		int         LookupTime(const char *name, struct tm *time, bool *is_utc) const;
+        int         LookupInteger(const char *, int &) const;
+        int         LookupFloat(const char *, float &) const;
+        int         LookupBool(const char *, int &) const;
 
 		// evaluate values in classads
 		int         EvalString (const char *, class AttrList *, char *);

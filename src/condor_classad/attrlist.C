@@ -1191,7 +1191,7 @@ ExprTree* AttrList::Lookup(const ExprTree* attr) const
 	return Lookup (((Variable*)attr)->Name());
 }
 
-int AttrList::LookupString (const char *name, char *value)
+int AttrList::LookupString (const char *name, char *value) const
 {
 	ExprTree *tree, *rhs;
 	char     *strVal;
@@ -1207,7 +1207,7 @@ int AttrList::LookupString (const char *name, char *value)
 	return 0;
 }
 
-int AttrList::LookupString (const char *name, char *value, int max_len)
+int AttrList::LookupString (const char *name, char *value, int max_len) const
 {
 	ExprTree *tree, *rhs;
 	char     *strVal;
@@ -1223,7 +1223,7 @@ int AttrList::LookupString (const char *name, char *value, int max_len)
 	return 0;
 }
 
-int AttrList::LookupString (const char *name, char **value)
+int AttrList::LookupString (const char *name, char **value) const
 {
 	ExprTree *tree, *rhs;
 	char     *strVal;
@@ -1249,7 +1249,7 @@ int AttrList::LookupString (const char *name, char **value)
 	return 0;
 }
 
-int AttrList::LookupTime (const char *name, char **value)
+int AttrList::LookupTime (const char *name, char **value) const
 {
 	ExprTree *tree, *rhs;
 	char     *strVal;
@@ -1273,7 +1273,7 @@ int AttrList::LookupTime (const char *name, char **value)
 	return 0;
 }
 
-int AttrList::LookupTime(const char *name, struct tm *time, bool *is_utc)
+int AttrList::LookupTime(const char *name, struct tm *time, bool *is_utc) const
 {
 	ExprTree *tree, *rhs;
 	char     *strVal;
@@ -1292,7 +1292,7 @@ int AttrList::LookupTime(const char *name, struct tm *time, bool *is_utc)
 	return succeeded;
 }
 
-int AttrList::LookupInteger (const char *name, int &value)
+int AttrList::LookupInteger (const char *name, int &value) const
 {
     ExprTree *tree, *rhs;
 
@@ -1311,7 +1311,7 @@ int AttrList::LookupInteger (const char *name, int &value)
     return 0;
 }
 
-int AttrList::LookupFloat (const char *name, float &value)
+int AttrList::LookupFloat (const char *name, float &value) const
 {
     ExprTree *tree, *rhs;   
 
@@ -1329,7 +1329,7 @@ int AttrList::LookupFloat (const char *name, float &value)
 	return 0;   
 }
 
-int AttrList::LookupBool (const char *name, int &value)  
+int AttrList::LookupBool (const char *name, int &value) const
 {   
     ExprTree *tree, *rhs;       
 
