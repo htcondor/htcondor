@@ -1166,7 +1166,7 @@ if test "$os" = "AIX" ; then
   AC_SUBST(ext_krb5_version,UNUSED)
   #CONDOR_EXTERNAL_VERSION([krb5],[1.3.1])
 else
-  CONDOR_EXTERNAL_VERSION([krb5],[1.2.7])
+  CONDOR_EXTERNAL_VERSION([krb5],[1.2.5])
 fi
 
 if test "$_cv_opsys_vers" = "DUX4"; then
