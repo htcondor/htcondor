@@ -77,10 +77,16 @@ class GlobusJob : public Service
 
 	GahpClient gahp;
 
-	char *buildRSL( ClassAd *classad );
+	char *buildSubmitRSL();
+	char *buildRestartRSL();
+	char *buildStdioUpdateRSL();
 
 	PROC_ID procID;
 	char *jobContact;
+		// If we're in the middle of a globus call that requires an RSL,
+		// the RSL is stored here (so that we don't have to reconstruct the
+		// RSL every time we test the call for completion). It should be
+		// freed and reset to NULL once the call completes.
 	char *RSL;
 	char *localOutput;
 	char *localError;
@@ -103,7 +109,7 @@ class GlobusJob : public Service
 
  protected:
 	bool callbackRegistered;
-	//Classad *ad;
+	ClassAd *ad;
 };
 
 #endif

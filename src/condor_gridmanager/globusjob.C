@@ -109,14 +109,16 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 
 GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 {
-	char buf[4096];
-	bool full_rsl_given = false;
+	int transfer;
+	char buff[4096];
+	char buff2[_POSIX_PATH_MAX];
+	char iwd[_POSIX_PATH_MAX];
 
+	RSL = NULL;
 	callbackRegistered = false;
 	classad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	classad->LookupInteger( ATTR_PROC_ID, procID.proc );
 	jobContact = NULL;
-	RSL = NULL;
 	localOutput = NULL;
 	localError = NULL;
 	userLogFile = NULL;
@@ -168,36 +170,65 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this );
 
-	buf[0] = '\0';
-	classad->LookupString( ATTR_GLOBUS_RSL, buf );
-	if ( buf[0] == '&' ) {
-		full_rsl_given = true;
-		RSL = strdup( buf );
+	ad = classad;
+
+	buff[0] = '\0';
+	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
+	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
+		rehashJobContact( this, jobContact, buff );
+		jobContact = strdup( buff );
 	}
 
-	buf[0] = '\0';
-	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
-	if ( buf[0] != '\0' && strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
-		rehashJobContact( this, jobContact, buf );
-		jobContact = strdup( buf );
-	}
-
-	classad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
-	classad->LookupInteger( ATTR_JOB_STATUS, condorState );
+	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
+	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	globusError = GLOBUS_SUCCESS;
 
-	buf[0] = '\0';
-	classad->LookupString( ATTR_ULOG_FILE, buf );
-	if ( buf[0] != '\0' ) {
-		userLogFile = strdup( buf );
+	buff[0] = '\0';
+	ad->LookupString( ATTR_ULOG_FILE, buff );
+	if ( buff[0] != '\0' ) {
+		userLogFile = strdup( buff );
 	}
 
-	classad->LookupInteger( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
-	classad->LookupInteger( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
+	ad->LookupInteger( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
+	ad->LookupInteger( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
 
-	if ( !full_rsl_given ) {
-		RSL = buildRSL( classad );
+	iwd[0] = '\0';
+	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
+		int len = strlen(iwd);
+		if ( len > 1 && iwd[len - 1] != '/' ) {
+			strcat( iwd, "/" );
+		}
+	} else {
+		strcpy( iwd, "/" );
+	}
+
+	buff[0] = '\0';
+	buff2[0] = '\0';
+	if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+		 strcmp( buff, NULL_FILE ) ) {
+		if ( !ad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
+			if ( buff[0] != '/' ) {
+				strcat( buff2, iwd );
+			}
+
+			strcat( buff2, buff );
+			localOutput = strdup( buff2 );
+		}
+	}
+
+	buff[0] = '\0';
+	buff2[0] = '\0';
+	if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+		 strcmp( buff, NULL_FILE ) ) {
+		if ( !ad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
+			if ( buff[0] != '/' ) {
+				strcat( buff2, iwd );
+			}
+
+			strcat( buff2, buff );
+			localError = strdup( buff2 );
+		}
 	}
 }
 
@@ -227,9 +258,9 @@ GlobusJob::~GlobusJob()
 	if (daemonCore) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
 	}
-//	if ( ad ) {
-//		delete ad;
-//	}
+	if ( ad ) {
+		delete ad;
+	}
 }
 
 void GlobusJob::SetEvaluateState()
@@ -358,32 +389,12 @@ int GlobusJob::doEvaluateState()
 		case GM_STDIO_UPDATE:
 			// Update an already-running jobmanager to send its I/O to us
 			// instead a previous incarnation.
-			char rsl[4096];
-			char buffer[1024];
-			struct stat file_status;
-
-			sprintf( rsl, "&(remote_io_url=%s)", gassServerUrl );
-			if ( localOutput ) {
-				rc = stat( localOutput, &file_status );
-				if ( rc < 0 ) {
-					file_status.st_size = 0;
-				}
-				sprintf( buffer, "(stdout=%s%s)(stdout_position=%d)",
-						 gassServerUrl, localOutput, file_status.st_size );
-				strcat( rsl, buffer );
-			}
-			if ( localError ) {
-				rc = stat( localError, &file_status );
-				if ( rc < 0 ) {
-					file_status.st_size = 0;
-				}
-				sprintf( buffer, "(stderr=%s%s)(stderr_position=%d)",
-						 gassServerUrl, localError, file_status.st_size );
-				strcat( rsl, buffer );
+			if ( RSL == NULL ) {
+				RSL = buildStdioUpdateRSL();
 			}
 			rc = gahp.globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE,
-								rsl, &status, &error );
+								RSL, &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -427,11 +438,16 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			now = time(NULL);
+			// After a submit, wait at least submitInterval before trying
+			// another one.
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				// Once RequestSubmit() is called at least once, you must
 				// CancelRequest() once you're done with the request call
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
+				}
+				if ( RSL == NULL ) {
+					RSL = buildSubmitRSL();
 				}
 				rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(), RSL,
@@ -707,41 +723,23 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 						 globusError );
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( now < lastRestartAttempt + restartInterval ) {
+				// After a restart, wait at least restartInterval before
+				// trying another one.
 				daemonCore->Reset_Timer( evaluateStateTid,
 								(lastRestartAttempt + restartInterval) - now );
 			} else {
 				char *job_contact;
-				char rsl[4096];
-				char buffer[1024];
-				struct stat file_status;
 
 				// Once RequestSubmit() is called at least once, you must
 				// CancelRequest() once you're done with the request call
 				if ( myResource->RequestSubmit(this) == false ) {
 					break;
 				}
-				sprintf( rsl, "&(restart=%s)(remote_io_url=%s)", jobContact,
-						 gassServerUrl );
-				if ( localOutput ) {
-					rc = stat( localOutput, &file_status );
-					if ( rc < 0 ) {
-						file_status.st_size = 0;
-					}
-					sprintf( buffer, "(stdout=%s%s)(stdout_position=%d)",
-							 gassServerUrl, localOutput, file_status.st_size );
-					strcat( rsl, buffer );
-				}
-				if ( localError ) {
-					rc = stat( localError, &file_status );
-					if ( rc < 0 ) {
-						file_status.st_size = 0;
-					}
-					sprintf( buffer, "(stderr=%s%s)(stderr_position=%d)",
-							 gassServerUrl, localError, file_status.st_size );
-					strcat( rsl, buffer );
+				if ( RSL == NULL ) {
+					RSL = buildRestartRSL();
 				}
 				rc = gahp.globus_gram_client_job_request(
-										myResource->ResourceName(), rsl,
+										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
 LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
@@ -1124,7 +1122,15 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 					procID.cluster, procID.proc, GMStateNames[old_gm_state],
 					GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
+			// If we were waiting for a pending globus call, we're not
+			// anymore so purge it.
 			gahp.purgePendingRequests();
+			// If we were calling a globus call that used RSL, we're done
+			// with it now, so free it.
+			if ( RSL ) {
+				free( RSL );
+				RSL = NULL;
+			}
 		}
 
 	} while ( reevaluate_state );
@@ -1162,6 +1168,10 @@ void GlobusJob::NotifyResourceUp()
 		globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 		gmState = GM_RESTART;
 		enteredCurrentGmState = time(NULL);
+		if ( RSL ) {
+			free( RSL );
+			RSL = NULL;
+		}
 	}
 	jmUnreachable = false;
 	SetEvaluateState();
@@ -1349,29 +1359,33 @@ int GlobusJob::syncIO()
 	return TRUE;
 }
 
-char *GlobusJob::buildRSL( ClassAd *classad )
+char *GlobusJob::buildSubmitRSL()
 {
 	int transfer;
 	char rsl[15000];
 	char buff[11000];
-	char buff2[1024]; // used to build localOutput and localError
-	char *iwd;
+	char iwd[_POSIX_PATH_MAX];
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_IWD, buff) && *buff ) {
-		int len = strlen(buff);
-		if ( len > 1 && buff[len - 1] != '/' ) {
-			strcat( buff, "/" );
+	ad->LookupString( ATTR_GLOBUS_RSL, buff );
+	if ( buff[0] == '&' ) {
+		return strdup( buff );
+	}
+
+	iwd[0] = '\0';
+	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
+		int len = strlen(iwd);
+		if ( len > 1 && iwd[len - 1] != '/' ) {
+			strcat( iwd, "/" );
 		}
-		iwd = strdup( buff );
 	} else {
-		iwd = strdup( "/" );
+		strcpy( iwd, "/" );
 	}
 
 	//We're assuming all job clasads have a command attribute
-	classad->LookupString( ATTR_JOB_CMD, buff );
+	ad->LookupString( ATTR_JOB_CMD, buff );
 	strcpy( rsl, "&(executable=" );
-	if ( !classad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
+	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
 		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' ) {
 			strcat( rsl, iwd );
@@ -1380,22 +1394,22 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	strcat( rsl, buff );
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_REMOTE_IWD, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, buff) && *buff ) {
 		strcat( rsl, ")(directory=" );
 		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_ARGUMENTS, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_ARGUMENTS, buff) && *buff ) {
 		strcat( rsl, ")(arguments=" );
-		strcat( rsl, buff );
+		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
+	if ( ad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdin=" );
-		if ( !classad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
+		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
 			strcat( rsl, gassServerUrl );
 			if ( buff[0] != '/' ) {
 				strcat( rsl, iwd );
@@ -1404,44 +1418,32 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		strcat( rsl, buff );
 	}
 
-	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
-		strcat( rsl, ")(stdout=" );
-		if ( !classad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
-			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
-				strcat( buff2, iwd );
-			}
-
-			strcat( buff2, buff );
-			localOutput = strdup( buff2 );
-		}
+	if ( localOutput != NULL ) {
+		sprintf( buff, ")(stdout=%s%s", gassServerUrl, localOutput );
 		strcat( rsl, buff );
+	} else {
+		buff[0] = '\0';
+		if ( ad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+			 strcmp( buff, NULL_FILE ) ) {
+			strcat( rsl, ")(stdout=" );
+			strcat( rsl, buff );
+		}
+	}
+
+	if ( localError != NULL ) {
+		sprintf( buff, ")(stderr=%s%s", gassServerUrl, localError );
+		strcat( rsl, buff );
+	} else {
+		buff[0] = '\0';
+		if ( ad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+			 strcmp( buff, NULL_FILE ) ) {
+			strcat( rsl, ")(stderr=" );
+			strcat( rsl, buff );
+		}
 	}
 
 	buff[0] = '\0';
-	buff2[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
-		 strcmp( buff, NULL_FILE ) ) {
-		strcat( rsl, ")(stderr=" );
-		if ( !classad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
-			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
-				strcat( buff2, iwd );
-			}
-
-			strcat( buff2, buff );
-			localError = strdup( buff2 );
-		}
-		strcat( rsl, buff );
-	}
-
-	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_ENVIRONMENT, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_JOB_ENVIRONMENT, buff) && *buff ) {
 		Environ env_obj;
 		env_obj.add_string(buff);
 		char **env_vec = env_obj.get_vector();
@@ -1467,15 +1469,70 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 			 JM_COMMIT_TIMEOUT, gassServerUrl );
 	strcat( rsl, buff );
 
-	if ( classad->LookupString(ATTR_GLOBUS_RSL, buff) && *buff ) {
+	if ( ad->LookupString(ATTR_GLOBUS_RSL, buff) && *buff ) {
 		strcat( rsl, buff );
-	}
-
-	if (iwd) {
-		free(iwd);
 	}
 
 	return strdup( rsl );
 }
 
+char *GlobusJob::buildRestartRSL()
+{
+	int rc;
+	char rsl[4096];
+	char buff[1024];
+	struct stat file_status;
 
+	sprintf( rsl, "&(restart=%s)(remote_io_url=%s)", jobContact,
+			 gassServerUrl );
+	if ( localOutput ) {
+		rc = stat( localOutput, &file_status );
+		if ( rc < 0 ) {
+			file_status.st_size = 0;
+		}
+		sprintf( buff, "(stdout=%s%s)(stdout_position=%d)",
+				 gassServerUrl, localOutput, file_status.st_size );
+		strcat( rsl, buff );
+	}
+	if ( localError ) {
+		rc = stat( localError, &file_status );
+		if ( rc < 0 ) {
+			file_status.st_size = 0;
+		}
+		sprintf( buff, "(stderr=%s%s)(stderr_position=%d)",
+				 gassServerUrl, localError, file_status.st_size );
+		strcat( rsl, buff );
+	}
+
+	return strdup( rsl );
+}
+
+char *GlobusJob::buildStdioUpdateRSL()
+{
+	int rc;
+	char rsl[4096];
+	char buff[1024];
+	struct stat file_status;
+
+	sprintf( rsl, "&(remote_io_url=%s)", gassServerUrl );
+	if ( localOutput ) {
+		rc = stat( localOutput, &file_status );
+		if ( rc < 0 ) {
+			file_status.st_size = 0;
+		}
+		sprintf( buff, "(stdout=%s%s)(stdout_position=%d)",
+				 gassServerUrl, localOutput, file_status.st_size );
+		strcat( rsl, buff );
+	}
+	if ( localError ) {
+		rc = stat( localError, &file_status );
+		if ( rc < 0 ) {
+			file_status.st_size = 0;
+		}
+		sprintf( buff, "(stderr=%s%s)(stderr_position=%d)",
+				 gassServerUrl, localError, file_status.st_size );
+		strcat( rsl, buff );
+	}
+
+	return strdup( rsl );
+}

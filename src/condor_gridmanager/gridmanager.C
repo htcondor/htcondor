@@ -795,6 +795,8 @@ doContactSchedd()
 							 procID.cluster, procID.proc );
 					// TODO: What do we do about this job? (put it on hold)
 
+					delete next_ad;
+
 				} else {
 
 					rc = ResourcesByName.lookup( HashKey( resource_name ),
@@ -822,9 +824,11 @@ doContactSchedd()
 
 				}
 
-			}
+			} else {
 
-			delete next_ad;
+				delete next_ad;
+
+			}
 
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}
