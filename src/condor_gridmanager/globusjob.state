@@ -12,7 +12,7 @@
 
 GM_INIT
   <no contact string>
-    gm_state = GM_UNSUBMITTED
+    gm_state = GM_CLEAR_REQUEST
   other
     signal(invalid signal type)
     if (QUERY_DENIAL or JOB_QUERY_DENIAL error)
@@ -128,7 +128,7 @@ GM_STOP_AND_RESTART
 
 GM_RESTART
   <no contact>
-    gm_state = GM_UNSUBMITTED
+    gm_state = GM_CLEAR_REQUEST
   other
     restart()
     if (JM_ALREADY_RUNNING error)
@@ -188,6 +188,7 @@ GM_DELETE
   kill_me()
 
 GM_CLEAR_REQUEST
+  // clear state of old submission, if any
   globus_state = UNSUBMITTED
-  update_schedd(remove contact string)
+  update_schedd(clear state of old submission, if any)
   gm_state = GM_UNSUBMITTED

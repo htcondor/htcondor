@@ -211,6 +211,7 @@ int GlobusJob::doEvaluateState()
 	int old_gm_state;
 	int old_globus_state;
 	bool reevaluate_state = true;
+	int schedd_actions = 0;
 
 	bool done;
 	int rc;
@@ -233,7 +234,7 @@ int GlobusJob::doEvaluateState()
 		switch ( gmState ) {
 		case GM_INIT:
 			if ( jobContact == NULL ) {
-				gmState = GM_UNSUBMITTED;
+				gmState = GM_CLEAR_REQUEST;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
@@ -565,7 +566,7 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_RESTART:
 			if ( jobContact == NULL ) {
-				gmState = GM_UNSUBMITTED;
+				gmState = GM_CLEAR_REQUEST;
 			} else {
 				char *job_contact;
 				char rsl[4096];
@@ -749,7 +750,7 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_DELETE:
-			int schedd_actions = UA_DELETE_FROM_SCHEDD;
+			schedd_actions = UA_DELETE_FROM_SCHEDD;
 			if ( condorState == REMOVED ) {
 				schedd_actions |= UA_LOG_ABORT_EVENT;
 			} else if ( condorState == COMPLETED ) {
@@ -763,14 +764,52 @@ int GlobusJob::doEvaluateState()
 			DeleteJob( this );
 			break;
 		case GM_CLEAR_REQUEST:
-			globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+			schedd_actions = 0;
+			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
+			}
 			globusStateErrorCode = 0;
-			free( jobContact );
-			jobContact = NULL;
-			done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+			if ( jobContact != NULL ) {
+				free( jobContact );
+				jobContact = NULL;
+				schedd_actions |= UA_UPDATE_CONTACT_STRING;
+			}
+			if ( condorState == RUNNING ) {
+				condorState = IDLE;
+				schedd_actions = UA_UPDATE_CONDOR_STATE;
+			}
+			if ( localOutput && syncedOutputSize > 0 ) {
+				syncedOutputSize = 0;
+				schedd_actions = UA_UPDATE_STDOUT_SIZE;
+			}
+			if ( localError && syncedErrorSize > 0 ) {
+				syncedErrorSize = 0;
+				schedd_actions = UA_UPDATE_STDERR_SIZE;
+			}
+			// If there are no updates to be done when we first enter this
+			// state, addScheddUpdateAction will return done immediately
+			// and not waste time with a needless connection to the
+			// schedd. If updates need to be made, they won't show up in
+			// schedd_actions after the first pass through this state
+			// because we modified our local variables the first time
+			// through. However, since we registered update events the
+			// first time, addScheddUpdateAction won't return done until
+			// they've been committed to the schedd.
+			done = addScheddUpdateAction( this, schedd_actions,
 										  GM_CLEAR_REQUEST );
 			if ( !done ) {
 				break;
+			}
+			if ( localOutput && truncate( localOutput, 0 ) < 0 ) {
+				dprintf(D_ALWAYS,
+						"truncate failed for job %d.%d's output file %s (errno=%d)\n",
+						procID.cluster, procID.proc, localOutput, errno );
+			}
+			if ( localError && truncate( localError, 0 ) < 0 ) {
+				dprintf(D_ALWAYS,
+						"truncate failed for job %d.%d's error file %s (errno=%d)\n",
+						procID.cluster, procID.proc, localError, errno );
 			}
 			gmState = GM_UNSUBMITTED;
 			break;

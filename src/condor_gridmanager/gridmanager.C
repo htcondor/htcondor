@@ -156,7 +156,8 @@ addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 		ASSERT( curr_action->job == job );
 
 		curr_action->actions |= actions;
-	} else {
+		curr_action->request_id = request_id;
+	} else if ( actions ) {
 		curr_action = new ScheddUpdateAction;
 		curr_action->job = job;
 		curr_action->actions = actions;
@@ -164,6 +165,11 @@ addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 
 		pendingScheddUpdates.insert( job->procID, curr_action );
 		RequestContactSchedd();
+	} else {
+		// If a new request comes in with no actions and there are no
+		// pending actions, just return true (since there's nothing to be
+		// committed to the schedd)
+		return true;
 	}
 
 	return false;
