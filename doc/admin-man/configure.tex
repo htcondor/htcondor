@@ -159,7 +159,6 @@ other macros or expressions.
 The first set are special entries whose values are determined at
 runtime and cannot be overridden.  These are inserted automatically by
 the library routine which parses the config files.
-
 \begin{description}
   
 \item[\Expr{CurrentTime}] \label{param:CurrentTime} This expression
@@ -188,7 +187,6 @@ the library routine which parses the config files.
 
 The final set are entries whose default values are determined
 automatically at runtime but which can be overridden.  
-
 \begin{description}
 
 \item[\MacroU{ARCH}] \label{param:Arch} This setting defines the string
@@ -224,7 +222,7 @@ automatically at runtime but which can be overridden.
 \end{description}
 
 Since \Macro{ARCH} and \Macro{OPSYS} will automatically be set to the
-right things, we recomend that you do not override them yourself.
+right things, we recommend that you do not override them yourself.
 Only do so if you know what you are doing.
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -260,7 +258,6 @@ Condor-wide Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This section describes settings which effect all parts of the Condor
 system. 
-
 \begin{description}
   
 \item[\Macro{CONDOR\_HOST}] \label{param:CondorHost} This macro is
@@ -373,12 +370,12 @@ system.
         LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 \end{verbatim}
   
-  Begining with Condor version 6.0.1, the \Macro{LOCAL\_CONFIG\_FILE}
+  Beginning with Condor version 6.0.1, the \Macro{LOCAL\_CONFIG\_FILE}
   is treated as a list of files, not a single file.  So, you can use
-  either a comma or space seperated list of files as its value.  This
+  either a comma or space separated list of files as its value.  This
   allows you to specify multiple files as the ``local config file''
   and each one will be processed in order (with parameters set in
-  later files overridding values from previous files).  This allows
+  later files overriding values from previous files).  This allows
   you use one global config file for multiple platforms in your pool,
   define a platform-specific config file for each platform, and
   finally use a local config file for each machine.  For more
@@ -480,7 +477,6 @@ These entries control how and where the Condor daemons write their log
 files.  All of these entries are named with the subsystem (as
 described in section~\ref{sec:Condor-Subsystem-Names} above) of the daemon
 you wish to control logging for.
-
 \begin{description}
  
 \item[\Macro{SUBSYS\_LOG}] \label{param:SubsysLog} This is the name of
@@ -511,7 +507,7 @@ you wish to control logging for.
   file.  By default this setting is turned off for all daemons. 
 
 \item[\Macro{SUBSYS\_LOCK}] \label{param:SubsysLock} This parameter
-  specifies the lock file used to synchonize append operations to the
+  specifies the lock file used to synchronize append operations to the
   log file for this subsystem.  It must be a separate file from the
   \Macro{SUBSYS\_LOG} file, since the \Macro{SUBSYS\_LOG} file may be
   rotated and you want to be able to synchronize access across log
@@ -531,7 +527,6 @@ you wish to control logging for.
   you have set here.  The other possible debug levels are:
 
 \begin{description}
-
 \label{list:debug-level-description}
   
 \item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug} Generally, turning on
@@ -599,7 +594,6 @@ you wish to control logging for.
 \end{description}
 
 Log files may optionally be specified per debug level as follows:
-
 \begin{description}
 
 \item[\Macro{SUBSYS\_LEVEL\_LOG}] \label{param:SubsysLevelLog} This is
@@ -632,7 +626,6 @@ Please read section~\ref{sec:DaemonCore} on ``DaemonCore'' for details
 about DaemonCore is.  There are certain config file settings that
 DaemonCore uses which affect all Condor daemons (except the checkpoint
 server, shadow, and starter, none of which use DaemonCore yet).
-
 \begin{description}
   
 \item[\Macro{HOSTALLOW\Dots}] \label{param:HostAllow} All of the
@@ -714,7 +707,6 @@ These entries control how Condor interacts with various shared and
 network filesystems.  If you are using AFS as your shared filesystem,
 be sure to read section~\ref{sec:Condor-AFS} on ``Using Condor with
 AFS''
-
 \begin{description}
 
 \item[\Macro{UID\_DOMAIN}] \label{param:UidDomain} Often times,
@@ -978,7 +970,6 @@ checkpoint server host (see below).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{master}.
-
 \begin{description}
   
 \item[\Macro{DAEMON\_LIST}] \label{param:DaemonList} This macro
@@ -1151,7 +1142,6 @@ seconds, not 1 hour.
 The moral of the story is that this is some relatively complicated
 stuff.  The defaults we have work quite well, and you probably 
 won't want to change them for any reason.
-
 \begin{description}
 
 \item[\Macro{MASTER\_EXPRS}] \label{param:MasterExprs} This setting is
@@ -1175,6 +1165,11 @@ won't want to change them for any reason.
 \condor{startd} Config File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Note If you are running Condor on a multi-CPU machine, be sure
+to also read section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP} which describes how to setup and
+configure Condor on SMP machines.
+
 These settings control general operation of the \Condor{startd}.
 Information on how to configure the \Condor{startd} to start, suspend,
 resume, vacate and kill remote Condor jobs can be found in a separate
@@ -1184,13 +1179,13 @@ information on the startd's \Term{states} and \Term{activities}.  If
 you see entries in the config file that are not described here, it is
 because they control state or activity transitions within the
 \Condor{startd} and are described in
-section`\ref{sec:Configuring-Policy}. 
-
+section~\ref{sec:Configuring-Policy}.
 \begin{description}
 
-\item[\Macro{STARTER}] \label{param:Starter}  This macro holds the full
-  path to the regular \Condor{starter} binary the startd should
-  spawn.  It is normally defined relative to \MacroU{SBIN}.
+\item[\Macro{STARTER}] \label{param:Starter}  This macro holds the
+  full path to the regular \Condor{starter} binary the startd should 
+  spawn.
+  It is normally defined relative to \MacroU{SBIN}.
   
 \item[\Macro{ALTERNATE\_STARTER\_1}] \label{param:AlternateStarter1}
   This macro holds the full path to the special \Condor{starter.pvm}
@@ -1275,9 +1270,9 @@ section`\ref{sec:Configuring-Policy}.
 
 These final settings only apply to the startd when it is running on an
 SMP machine. 
-See section~\ref{sec:Configuring-SMP} on ``Configuring The Startd for
+See section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP} on ``Configuring The Startd for 
 SMP Machines'' for more details.
-
 \input{admin-man/smp-params.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1286,7 +1281,6 @@ SMP Machines'' for more details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{schedd}.
-
 \begin{description}
 
 \item[\Macro{SHADOW}] \label{param:Shadow} This macro determines the
@@ -1431,7 +1425,6 @@ These settings control the \Condor{schedd}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This setting effects the \Condor{shadow}
-
 \begin{description}
 
 \item[\Macro{SHADOW\_LOCK}] \label{param:ShadowLock} This entry
@@ -1460,7 +1453,6 @@ These settings control the \Condor{shadow.pvm}, the special shadow
 that supports PVM jobs inside Condor.  See
 section~\ref{sec:Install-PVM-Condor} ``Installing PVM Support in
 Condor'' for details.
-
 \begin{description}
 
 \item[\Macro{PVMD}] \label{param:PvmD}  This macro holds the full path
@@ -1487,7 +1479,6 @@ Condor'' for details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This setting effects the \Condor{starter}.
-
 \begin{description}
 
 \item[\Macro{JOB\_RENICE\_INCREMENT}] \label{param:JobReniceIncrement}
@@ -1527,7 +1518,6 @@ This setting effects the \Condor{starter}.
 If you want \Condor{submit} to automatically append an expression to
 the Requirements expression or Rank expression of jobs at your site
 use the following entries:
-
 \begin{description}
   
 \item[\Macro{APPEND\_REQ\_VANILLA}] \label{param:AppendReqVanilla}
@@ -1609,7 +1599,6 @@ These settings control \Condor{preen}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{collector}.
-
 \begin{description}
   
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
@@ -1675,27 +1664,35 @@ These settings control the \Condor{collector}.
   by the appropriate parameters (see below).
 
 \item[\Macro{POOL\_HISTORY\_DIR}] \label{param:PoolHistoryDir}
-  This parameter sets the name of the directory where the history files (if history
-  logging is enabled) will reside. The default is the SPOOL directory.
+  This parameter sets the name of the directory where the history
+  files (if history logging is enabled) will reside.
+  The default is the SPOOL directory.
 
-\item[\Macro{POOL\_HISTORY\_MAX\_STORAGE}] \label{param:PoolHistoryMaxStorage}
+\item[\Macro{POOL\_HISTORY\_MAX\_STORAGE}]
+  \label{param:PoolHistoryMaxStorage} 
   This parameter sets the maximum combined size of the history files.
   When the size of the history files is close to this limit, the oldest
-  information will be discarded. Thus, the larger this parameter's value
-  is, the larger the time range for which history will be available.
-  The default value is 10000000 (10 Mb).
+  information will be discarded.
+  Thus, the larger this parameter's value is, the larger the time
+  range for which history will be available.  The default value is
+  10000000 (10 Mb).
 
-\item[\Macro{POOL\_HISTORY\_SAMPLING\_INTERVAL}] \label{param:PoolHistorySamplingInterval}
-  This parameter sets the interval, in seconds, between samples for history logging
-  purposes. When a sample is taken, the collector goes through the information it holds,
-  and summarizes it. The information is written to the history file only once in 4 samples.
-  The default (and recommended) value is 60 seconds. Setting this parameter's value too low
-  will increase the load on the collector, while setting it to high will produce less precise
-  statistical information.
+\item[\Macro{POOL\_HISTORY\_SAMPLING\_INTERVAL}]
+  \label{param:PoolHistorySamplingInterval}
+  This parameter sets the interval, in seconds, between samples for
+  history logging purposes. 
+  When a sample is taken, the collector goes through the information
+  it holds, and summarizes it.
+  The information is written to the history file only once in 4
+  samples.
+  The default (and recommended) value is 60 seconds. Setting this
+  parameter's value too low will increase the load on the collector,
+  while setting it to high will produce less precise statistical
+  information.
 
-\item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This setting
-  (and other settings related to debug logging in the collector) is
-  described above in section~\ref{param:SubsysDebug} as
+\item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This
+  setting (and other settings related to debug logging in the
+  collector) is described above in section~\ref{param:SubsysDebug} as
   \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
@@ -1706,7 +1703,6 @@ These settings control the \Condor{collector}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These settings control the \Condor{negotiator}.
-
 \begin{description}
   
 \item[\Macro{NEGOTIATOR\_INTERVAL}] \label{param:NegotiatorInterval}
@@ -1760,11 +1756,11 @@ These settings control the \Condor{negotiator}.
 
 \item[\Expr{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
   expression is used to rank machines which the job ranks the same.
-  For example, if the job has no preference, it is usually preferrable
+  For example, if the job has no preference, it is usually preferable
   to preempt a job with a small ImageSize instead of a job with a
-  large ImageSize.  The default is to rank all preemptible matches the
+  large ImageSize.  The default is to rank all preemptable matches the
   same.  However, the negotiator will always prefer to match the job
-  with an idle machine over a preemptible machine, if the job has no
+  with an idle machine over a preemptable machine, if the job has no
   preference between them.
 
 \item[\Expr{NEGOTIATOR\_TRAFFIC\_LIMIT}]
@@ -1793,4 +1789,3 @@ These settings control the \Condor{negotiator}.
   \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
-
