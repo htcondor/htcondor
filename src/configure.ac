@@ -1169,7 +1169,7 @@ AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
   _cv_globus_flavor=gcc64dbg
-elif test "$_cv_arch" = "SGI" -o "$_cv_arch" = "PPC" ; then
+elif test "$_cv_arch" = "SGI" -o "$os" = "AIX" ; then
   _cv_globus_flavor=vendorcc32dbg
 fi
 AC_MSG_RESULT([$_cv_globus_flavor])
