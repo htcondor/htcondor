@@ -98,12 +98,16 @@ command_main(xdrs, from, rid)
 	case X_EVENT_NOTIFICATION:
 		return command_x_event(xdrs, from, rid);
 	case MATCH_INFO:
+		dprintf (D_PROTOCOL, "## 4. Match information command\n");
 		return command_matchinfo(xdrs, from, rid);
 	case REQUEST_SERVICE:
+		dprintf (D_PROTOCOL, "## 5. Request service command\n");
 		return command_reqservice(xdrs, from, rid);
 	case RELINQUISH_SERVICE:
+		dprintf (D_PROTOCOL, "## 7. Relinquish service command\n");
 		return command_relservice(xdrs, from, rid);
 	case ALIVE:
+		dprintf (D_PROTOCOL, "## 6. Alive command\n");
 		return command_alive(xdrs, from, rid);
 	case REQ_NEW_PROC:
 	default:
@@ -518,7 +522,7 @@ command_matchinfo(xdrs, from, rid)
 	 * occur. Weiru
 	 */
 	if (rip->r_capab) {
-		dprintf(D_FULLDEBUG,
+		dprintf(D_PROTOCOL | D_FULLDEBUG,
 			"Capability (%s) has %d seconds before timing out",
 				rip->r_capab,
 				capab_timeout - (time(NULL) - rip->r_captime));
@@ -528,8 +532,7 @@ command_matchinfo(xdrs, from, rid)
 	}
 
 	if (rip->r_claimed == TRUE) {
-		dprintf(D_FULLDEBUG,
-			"Already claimed, ignore match (%s)\n", str);
+		dprintf(D_ALWAYS, "Already claimed, ignore match (%s)\n", str);
 		free(str);
 		return;
 	}
@@ -561,23 +564,22 @@ command_reqservice(xdrs, from, rid)
 		dprintf(D_ALWAYS, "Can't receive cap from schedd-agent\n");
 		return -1;
 	} else {
-		dprintf(D_FULLDEBUG,
+		dprintf(D_ALWAYS,
 		  "Received capability from schedd agent (%s)\n", check_string);
 		if (rip->r_capab != NULL && !strcmp(rip->r_capab, check_string))
 		{
 			rip->r_claimed = TRUE;
 			xdrs->x_op = XDR_ENCODE;
-			cmd = ACCEPTED;
+			cmd = OK;
 			dprintf(D_ALWAYS, "Request accepted.\n");
 		} else {
-			cmd = REJECTED;
-			if (rip->r_capab != NULL)
-				dprintf(D_ALWAYS,
-					"Request rejected, cap is (%s)\n",
+			cmd = NOT_OK;
+			if (rip->r_capab != NULL) {
+				dprintf(D_ALWAYS, "Request rejected, cap is (%s)\n",
 					rip->r_capab);
-			else
-				dprintf(D_ALWAYS,
-					"Request rejected, cap is (null)\n");
+			} else {
+				dprintf(D_ALWAYS, "Request rejected, cap is (null)\n");
+			}
 		}
 
 		if (!snd_int(xdrs, cmd, TRUE)) {
@@ -585,16 +587,14 @@ command_reqservice(xdrs, from, rid)
 			return -1;
 		}
 
-		if (cmd == ACCEPTED) {
+		if (cmd == OK) {
 			if (!rcv_string(xdrs,&rip->r_client,FALSE)) {
-				dprintf(D_ALWAYS,
-					"Can't receive schedd string.\n");
+				dprintf(D_ALWAYS, "Can't receive schedd string.\n");
 				return;
 			}
 
 			if (!rcv_int(xdrs,&rip->r_interval,TRUE)) {
-				dprintf(D_ALWAYS,
-					"Can't receive alive interval\n");
+				dprintf(D_ALWAYS, "Can't receive alive interval\n");
 				return;
 			}
 		}
@@ -618,7 +618,7 @@ command_relservice(xdrs, from, rid)
 	if (rip->r_claimed == TRUE) {
 		recv_string = (char *)malloc(SIZE_OF_CAPABILITY_STRING);
 		if (rcv_string(xdrs,&recv_string,TRUE)) {
-			dprintf(D_FULLDEBUG, "received %s, magic %s\n",
+			dprintf(D_ALWAYS, "received %s, magic %s\n",
 				recv_string, rip->r_capab);
 			if (rip->r_capab && !strcmp(rip->r_capab, recv_string)){
 				dprintf(D_ALWAYS, "Match %s terminated.\n",
