@@ -355,7 +355,7 @@ int so_socket( int a, int b, int c, int d, int e )
 
 	if(MappingFileDescriptors()) {
 		_condor_file_table_init();
-		result = FileTab->socket(a,b,c);
+		result = FileTab->cfile_socket(a,b,c);
 	} else {
 		if(LocalSysCalls()) {
 			result = syscall( SYS_so_socket, a, b, c, d, e );
@@ -1119,7 +1119,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->stat( path, &sbuf );	
+		rval = FileTab->cfile_stat( path, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert( version, &sbuf, buf );
 		}		
@@ -1157,7 +1157,7 @@ int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->stat( path, &sbuf );	
+		rval = FileTab->cfile_stat( path, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert64( version, &sbuf, buf );
 		}		
@@ -1191,7 +1191,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->fstat( fd, &sbuf );	
+		rval = FileTab->cfile_fstat( fd, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert( version, &sbuf, buf );
 		}		
@@ -1227,7 +1227,7 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->fstat( fd, &sbuf );	
+		rval = FileTab->cfile_fstat( fd, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert64( version, &sbuf, buf );
 		}		
@@ -1266,7 +1266,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->lstat( path, &sbuf );	
+		rval = FileTab->cfile_lstat( path, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert( version, &sbuf, buf );
 		}		
@@ -1304,7 +1304,7 @@ int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->lstat( path, &sbuf );	
+		rval = FileTab->cfile_lstat( path, &sbuf );	
 		if (rval == 0 ) {
 			_condor_s_stat_convert64( version, &sbuf, buf );
 		}		
@@ -1355,7 +1355,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->stat( path, buf );
+		rval = FileTab->cfile_stat( path, buf );
 	} else {
 		if( LocalSysCalls() || do_local ) {
 			rval = syscall( SYS_xstat, ver, path, buf );
@@ -1383,7 +1383,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->lstat( path, buf );
+		rval = FileTab->cfile_lstat( path, buf );
 	} else {
 		if( LocalSysCalls() || do_local ) {
 			rval = syscall( SYS_lxstat, ver, path, buf );
@@ -1406,7 +1406,7 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 
 	if( MappingFileDescriptors() ) {
 		_condor_file_table_init();
-		rval = FileTab->fstat( fd, buf );
+		rval = FileTab->cfile_fstat( fd, buf );
 	} else {
 		if( LocalSysCalls() ) {
 			rval = syscall( SYS_fxstat, ver, fd, buf );
@@ -1810,7 +1810,7 @@ sync( void )
 
 	/* Always flush buffered data from the file table */
 	_condor_file_table_init();
-	FileTab->flush();
+	FileTab->cfile_flush();
 
 	/* Always want to do a local sync() */
 	SYSCALL( SYS_sync );

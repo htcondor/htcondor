@@ -19,7 +19,7 @@ CondorFileBasic::~CondorFileBasic( )
 {
 }
 
-int CondorFileBasic::open(const char *url_in, int flags, int mode)
+int CondorFileBasic::cfile_open(const char *url_in, int flags, int mode)
 {
 	char junk[_POSIX_PATH_MAX];
 	char path[_POSIX_PATH_MAX];
@@ -76,7 +76,7 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 }
 
 
-int CondorFileBasic::close()
+int CondorFileBasic::cfile_close()
 {
        	int scm = SetSyscalls(syscall_mode);
 	int rval = ::close(fd);
@@ -85,7 +85,7 @@ int CondorFileBasic::close()
 	return rval;
 }
 
-int CondorFileBasic::ioctl( int cmd, int arg )
+int CondorFileBasic::cfile_ioctl( int cmd, int arg )
 {
 	int scm, result;
 
@@ -96,7 +96,7 @@ int CondorFileBasic::ioctl( int cmd, int arg )
 	return result;
 }
 
-int CondorFileBasic::fcntl( int cmd, int arg )
+int CondorFileBasic::cfile_fcntl( int cmd, int arg )
 {
 	int scm, result;
 
@@ -107,7 +107,7 @@ int CondorFileBasic::fcntl( int cmd, int arg )
 	return result;
 }
 
-int CondorFileBasic::ftruncate( size_t length )
+int CondorFileBasic::cfile_ftruncate( size_t length )
 {
 	int scm,result;
 
@@ -119,7 +119,7 @@ int CondorFileBasic::ftruncate( size_t length )
 	return result;
 }
 
-int CondorFileBasic::fstat(struct stat *buf)
+int CondorFileBasic::cfile_fstat(struct stat *buf)
 {
 	int scm,result;
 
@@ -130,7 +130,7 @@ int CondorFileBasic::fstat(struct stat *buf)
 	return result;
 }
 
-int CondorFileBasic::fsync()
+int CondorFileBasic::cfile_fsync()
 {
 	int scm,result;
 
@@ -141,7 +141,7 @@ int CondorFileBasic::fsync()
 	return result;
 }
 
-int CondorFileBasic::flush()
+int CondorFileBasic::cfile_flush()
 {
 	/* nothing to flush */
 	return 0;

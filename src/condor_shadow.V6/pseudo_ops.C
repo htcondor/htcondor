@@ -62,8 +62,10 @@ extern "C" {
 	int use_append( char *method, char *path );
 	void HoldJob( const char* buf );
 	void reaper();
-	#if defined(OSF1)
+	#if defined(DUX4)
 		int statfs(const char *, struct statfs*);
+	#elif defined(DUX5)
+		int _F64_statfs(char *, struct statfs*, ...);
 	#endif
 }
 
@@ -2488,6 +2490,8 @@ pseudo_statfs( const char *path, struct statfs *buf )
 {
 #if defined(Solaris) || defined(IRIX)
 	return statfs( path, buf, 0, 0);
+#elif defined DUX5
+	return _F64_statfs( (char *) path, buf );
 #else
 	return statfs( path, buf );
 #endif

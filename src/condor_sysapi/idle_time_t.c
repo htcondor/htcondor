@@ -28,7 +28,7 @@
 #include "stdio.h"
 #include "time.h"
 
-int idle_time_test(int trials, int interval, int tolerance, double perc_warn_ok) {
+int idle_time_test(int trials, int interval, int tolerance, double warn_ok_ratio) {
 	int		foo = 0;
 	int		foo2 = 0;
 	int		bar = 0;
@@ -141,12 +141,12 @@ int idle_time_test(int trials, int interval, int tolerance, double perc_warn_ok)
 		cook_t2 = cook_t4;
 	}
 
-	if (((double)num_warnings/(double)num_tests) >= perc_warn_ok) {
+	if (((double)num_warnings/(double)num_tests) >= warn_ok_ratio) {
 			// It is very common for the system idle time to decrease - this probably 
 			// shouldn't cause failure. Console time, maybe...
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f\% warnings > %2f\% "
 							"tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, 
-							perc_warn_ok*100);
+							warn_ok_ratio*100);
 			return_val = return_val || 1;
 	}
 	dprintf(D_ALWAYS, "return_val = %d\n", return_val);

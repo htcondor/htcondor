@@ -170,7 +170,7 @@ CondorFileBuffer::~CondorFileBuffer()
 	delete original;
 }
 
-int CondorFileBuffer::open( const char *url_in, int flags, int mode )
+int CondorFileBuffer::cfile_open( const char *url_in, int flags, int mode )
 {
 	char junk[_POSIX_PATH_MAX];
 	char sub_url[_POSIX_PATH_MAX];
@@ -217,15 +217,15 @@ int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 		strcpy(sub_url,path);
 	}
 
-	result = original->open( sub_url, flags, mode );
+	result = original->cfile_open( sub_url, flags, mode );
  	size = original->get_size();
 	return result;
 }
 
-int CondorFileBuffer::close()
+int CondorFileBuffer::cfile_close()
 {
-	flush(1);
-	return original->close();
+	cfile_flush(1);
+	return original->cfile_close();
 }
 
 /*
@@ -233,7 +233,7 @@ Read data from this buffer.  Attempt to satisfy from the data in memory,
 but resort to the original file object if necessary.
 */
 
-int CondorFileBuffer::read(int offset, char *data, int length)
+int CondorFileBuffer::cfile_read(int offset, char *data, int length)
 {
 	CondorChunk *c=0;
 	int piece=0;
@@ -298,7 +298,7 @@ int CondorFileBuffer::read(int offset, char *data, int length)
 		// Otherwise, make a new chunk.  Try to read a whole block
 
 		c = new CondorChunk(offset,buffer_block_size,buffer_block_size);
-		piece = original->read(offset,c->data,c->size);
+		piece = original->cfile_read(offset,c->data,c->size);
 		if(piece<0) {
 			delete c;
 			if(bytes_read==0) bytes_read=-1;
@@ -323,7 +323,7 @@ If the resulting list is larger than the required buffer size,
 select a block to write to disk.
 */
 
-int CondorFileBuffer::write(int offset, char *data, int length)
+int CondorFileBuffer::cfile_write(int offset, char *data, int length)
 {
 	CondorChunk *c=0;
 
@@ -343,40 +343,40 @@ int CondorFileBuffer::write(int offset, char *data, int length)
 	return length;
 }
 
-int CondorFileBuffer::fcntl( int cmd, int arg )
+int CondorFileBuffer::cfile_fcntl( int cmd, int arg )
 {
-	return original->fcntl(cmd,arg);
+	return original->cfile_fcntl(cmd,arg);
 }
 
-int CondorFileBuffer::ioctl( int cmd, int arg )
+int CondorFileBuffer::cfile_ioctl( int cmd, int arg )
 {
-	return original->ioctl(cmd,arg);
+	return original->cfile_ioctl(cmd,arg);
 }
 
-int CondorFileBuffer::ftruncate( size_t length )
+int CondorFileBuffer::cfile_ftruncate( size_t length )
 {
-	flush(1);
+	cfile_flush(1);
 	size = length;
-	return original->ftruncate(length);
+	return original->cfile_ftruncate(length);
 }
 
-int CondorFileBuffer::fsync()
+int CondorFileBuffer::cfile_fsync()
 {
-	flush();
-	return original->fsync();
+	cfile_flush();
+	return original->cfile_fsync();
 }
 
-int CondorFileBuffer::flush()
+int CondorFileBuffer::cfile_flush()
 {
-	flush(0);
+	cfile_flush(0);
 	return 0;
 }
 
-int CondorFileBuffer::fstat(struct stat *buf)
+int CondorFileBuffer::cfile_fstat(struct stat *buf)
 {
 	int ret;
 
-	ret = original->fstat(buf);
+	ret = original->cfile_fstat(buf);
 	if (ret != 0) {
 		return ret;
 	}
@@ -447,7 +447,7 @@ void CondorFileBuffer::trim()
 	}
 }
 
-void CondorFileBuffer::flush( int deallocate )
+void CondorFileBuffer::cfile_flush( int deallocate )
 {
 	CondorChunk *c,*n;
 
@@ -463,7 +463,7 @@ void CondorFileBuffer::flush( int deallocate )
 
 	if(deallocate) head=0;
 
-	original->flush();
+	original->cfile_flush();
 }
 
 /*
@@ -473,7 +473,7 @@ Clean this chunk by writing it out to disk.
 void CondorFileBuffer::clean( CondorChunk *c )
 {
 	if(c && c->dirty) {
-		int result = original->write(c->begin,c->data,c->size);
+		int result = original->cfile_write(c->begin,c->data,c->size);
 		if(result!=c->size) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_url(),strerror(errno));
 		c->dirty = 0;
 	}

@@ -20,7 +20,7 @@ CondorFileAgent::~CondorFileAgent()
 	delete original;
 }
 
-int CondorFileAgent::open( const char *url_in, int flags, int mode )
+int CondorFileAgent::cfile_open( const char *url_in, int flags, int mode )
 {
 	int pos=0, chunk=0, result=0;
 	int local_flags;
@@ -65,7 +65,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 
 	// Open the original file.
 
-	result = original->open(sub_url,flags,mode);
+	result = original->cfile_open(sub_url,flags,mode);
 	if(result<0) return -1;
 
 	// Choose where to store the file.
@@ -82,7 +82,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	// Open the local copy, with a private mode.
 
 	local_copy = new CondorFileLocal;
-	result = local_copy->open(local_url,local_flags,0700);
+	result = local_copy->cfile_open(local_url,local_flags,0700);
 	if(result<0) _condor_error_retry("Couldn't create temporary file '%s'!",local_url);
 
 	// Now, delete the file right away.
@@ -100,10 +100,10 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 
 	if( !(flags&O_APPEND) ){
 		do {
-			chunk = original->read(pos,buffer,TRANSFER_BLOCK_SIZE);
+			chunk = original->cfile_read(pos,buffer,TRANSFER_BLOCK_SIZE);
 			if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",original->get_url());
 
-			result = local_copy->write(pos,buffer,chunk);
+			result = local_copy->cfile_write(pos,buffer,chunk);
 			if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",local_url);
 		
 			pos += chunk;
@@ -115,7 +115,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	return 1;
 }
 
-int CondorFileAgent::close()
+int CondorFileAgent::cfile_close()
 {
 	int pos=0, chunk=0, result=0;
 
@@ -128,13 +128,13 @@ int CondorFileAgent::close()
 
 		dprintf(D_ALWAYS,"CondorFileAgent: Copying %s back into %s\n",local_copy->get_url(),original->get_url());
 
-		original->ftruncate(local_copy->get_size());
+		original->cfile_ftruncate(local_copy->get_size());
 
 		do {
-			chunk = local_copy->read(pos,buffer,TRANSFER_BLOCK_SIZE);
+			chunk = local_copy->cfile_read(pos,buffer,TRANSFER_BLOCK_SIZE);
 			if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",local_url);
 	
-			result = original->write(pos,buffer,chunk);
+			result = original->cfile_write(pos,buffer,chunk);
 			if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",original->get_url());
 				
 			pos += chunk;
@@ -145,74 +145,74 @@ int CondorFileAgent::close()
 	// local copy is closed, so that any failure can be reported
 	// before the local copy is lost.
 
-	result = original->close();
+	result = original->cfile_close();
 	if(result<0) return result;
 
 	// Finally, close and delete the local copy.
 	// There is nothing reasonable we can do if the local close fails.
 
-	result = local_copy->close();
+	result = local_copy->cfile_close();
 	delete local_copy;
 
 	return 0;
 }
 
-int CondorFileAgent::read( int offset, char *data, int length )
+int CondorFileAgent::cfile_read( int offset, char *data, int length )
 {
 	if( is_readable() ) {
-		return local_copy->read( offset, data, length );
+		return local_copy->cfile_read( offset, data, length );
 	} else {
 		errno = EINVAL;
 		return -1;
 	}
 }
 
-int CondorFileAgent::write( int offset, char *data, int length )
+int CondorFileAgent::cfile_write( int offset, char *data, int length )
 {
 	if( is_writeable() ) {
-		return local_copy->write( offset,data, length );
+		return local_copy->cfile_write( offset,data, length );
 	} else {
 		errno = EINVAL;
 		return -1;
 	}
 }
 
-int CondorFileAgent::fcntl( int cmd, int arg )
+int CondorFileAgent::cfile_fcntl( int cmd, int arg )
 {
-	return local_copy->fcntl(cmd,arg);
+	return local_copy->cfile_fcntl(cmd,arg);
 }
 
-int CondorFileAgent::ioctl( int cmd, int arg )
+int CondorFileAgent::cfile_ioctl( int cmd, int arg )
 {
-	return local_copy->ioctl(cmd,arg);
+	return local_copy->cfile_ioctl(cmd,arg);
 }
 
-int CondorFileAgent::ftruncate( size_t length )
+int CondorFileAgent::cfile_ftruncate( size_t length )
 {
-	return local_copy->ftruncate( length );
+	return local_copy->cfile_ftruncate( length );
 }
 
-int CondorFileAgent::fsync()
+int CondorFileAgent::cfile_fsync()
 {
-	return local_copy->fsync();
+	return local_copy->cfile_fsync();
 }
 
-int CondorFileAgent::flush()
+int CondorFileAgent::cfile_flush()
 {
-	return local_copy->flush();
+	return local_copy->cfile_flush();
 }
 
-int CondorFileAgent::fstat(struct stat *buf)
+int CondorFileAgent::cfile_fstat(struct stat *buf)
 {
 	struct stat local;
 	int ret, ret2;
 
-	ret = original->fstat(buf);
+	ret = original->cfile_fstat(buf);
 	if (ret != 0){
 		return ret;
 	}
 
-	ret2 = local_copy->fstat(&local);
+	ret2 = local_copy->cfile_fstat(&local);
 	if (ret2 != 0){
 		return ret2;
 	}

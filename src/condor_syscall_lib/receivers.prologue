@@ -47,9 +47,14 @@ extern "C" {
 
 #if defined(OSF1) 
 extern "C" {
+# if defined DUX4
 	int statfs( char*, struct statfs*, int );
-	int flock( int, int );
 	int fstatfs ( int fd, struct statfs *buf, int len );
+# elsif defined DUX5
+	int _F64_statfs( char*, struct statfs*, ... );
+	int fstatfs ( int fd, struct statfs *buf, ... );
+# endif
+	int flock( int, int );
 	int getdirentries ( int fd, struct dirent *buf, size_t nbytes, off_t *basep );
 	int getfsstat ( struct statfs buf[], long bufsize, int flags );
 	int table ( int id, int index, char *addr, int nel, unsigned int lel );

@@ -17,8 +17,8 @@ public:
 	CondorFileLocal();
 	virtual ~CondorFileLocal();
 
-	virtual int read(int offset, char *data, int length);
-	virtual int write(int offset, char *data, int length);
+	virtual int cfile_read(int offset, char *data, int length);
+	virtual int cfile_write(int offset, char *data, int length);
 
 	virtual int is_file_local();
 };

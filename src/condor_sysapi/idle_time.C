@@ -50,6 +50,7 @@ static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 
 // ThreadInteract allows the calling thread to access the visable,
 // interactive desktop in order to set a hook. 
+// Win32
 BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
 {      
 	HDESK   hdeskTest;
@@ -105,6 +106,7 @@ BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)
 }
 
 
+// Win32
 static DWORD WINAPI
 message_loop_thread(void *foo)
 {
@@ -151,6 +153,7 @@ message_loop_thread(void *foo)
 	return 0;
 }
 
+// Win32
 void
 calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
@@ -218,6 +221,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
  * on some platforms console_idle is always -1 because it cannot reliably
  * be determined.
  */
+// Unix
 void
 calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 {
@@ -301,6 +305,7 @@ static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
 #endif
 
+// Unix
 time_t
 utmp_pty_idle_time( time_t now )
 {
@@ -381,6 +386,7 @@ utmp_pty_idle_time( time_t now )
 
 #include "directory.h"
 
+// Unix
 time_t
 all_pty_idle_time( time_t now )
 {
@@ -479,6 +485,7 @@ all_pty_idle_time( time_t now )
 #include <sys/mkdev.h>
 #endif
 
+// Unix
 time_t
 dev_idle_time( char *path, time_t now )
 {

@@ -26,9 +26,15 @@
 /* We need to define _OSF_SOURCE so that type quad, and u_int and
    friends get defined.  We should leave it on since we'll need it
    later as well. */
-#define _OSF_SOURCE
-#define _XOPEN_SOURCE
-#define _XOPEN_SOURCE_EXTENDED
+#ifndef _OSF_SOUCE
+# define _OSF_SOURCE
+#endif
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE
+#endif
+#ifndef _XOPEN_SOURCE_EXTENDED
+# define _XOPEN_SOURCE_EXTENDED
+#endif
 
 #include <sys/types.h>
 /* The system include file defines this in terms of bzero(), but ANSI
@@ -86,10 +92,12 @@ int _Esigaction(int signum, const struct sigaction  *act, struct sigaction *olda
 #define sigaction(a,b,c) _Esigaction(a,b,c)
 
 /* Need these to get statfs and friends defined */
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
 
 #include <sys/wait.h>
+#include <sys/resource.h>
 
 #if !defined(_LIBC_POLLUTION_H_)
 #define _LIBC_POLLUTION_H_

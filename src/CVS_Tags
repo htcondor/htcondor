@@ -1,3 +1,6 @@
+05/23/03 V6_4-Tru64_51-1-branch-merge-1
+   The state of the V6_4-Tru64_51-1-branch before merging into v6.5.
+
 05/13/03 V6_5_2
    The 6.5.2 release, which lives on the V6_5-branch.
 
@@ -193,6 +196,9 @@
 01/09/03 V6_5-edg-branch-merge-1
         The V6_5-edg-branch, before we merged it into the V6_5-branch as
         tagged at V6_5-pre-merge-V6_5-edg-branch-1
+
+01/08/03 V6_4-Tru64_51-1-branch
+        This is a branch off V6_4-branch for the port to Tru64 v5.1
 
 12/19/02 V6_5-post-merge-V6_4-merge-2
 	The state of the V6_5-branch before merging in the V6_4-branch as

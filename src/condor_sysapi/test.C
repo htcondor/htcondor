@@ -28,17 +28,64 @@
 #include "string.h"
 #include "test.h"
 
-#define		ARCH			1
-#define		FREE_FS_BLOCKS	2
-#define		IDLE_TIME		4
-#define		KFLOPS			8
-#define		LAST_X_EVENT	16
-#define		LOAD_AVG		32
-#define		MIPS			64
-#define		NCPUS			128
-#define		PHYS_MEM		256
-#define		VIRT_MEM		512
-#define		DUMP			1024
+
+// Bit-map of tests to enable
+#define	ARCH			0x0001
+#define	FREE_FS_BLOCKS	0x0002
+#define	IDLE_TIME		0x0004
+#define	KFLOPS			0x0008
+#define	LAST_X_EVENT	0x0010
+#define	LOAD_AVG		0x0020
+#define	MIPS			0x0040
+#define	NCPUS			0x0080
+#define	PHYS_MEM		0x0100
+#define	VIRT_MEM		0x0200
+#define	DUMP			0x0400
+#define	TEST_ALL		0x07ff
+#define	TEST_NONE		0x0000
+
+// Default test limits
+
+// FS Free blocks
+const int		FREEBLOCKS_TRIALS			= 5;		// Total # of trials
+const double	FREEBLOCKS_TOLERANCE		= 0.10;		// Ratio: Max SD variation from mean
+const double	FREEBLOCKS_MAX_WARN_OK		= 0.10;		// Ratio: Max warnings to allow
+
+// KFLOPS
+const int		KFLOPS_TRIALS				= 5;		// Total # of trials
+const double	KFLOPS_MAX_SD_VAR			= 0.05;		// Ratio: Max SD variation from mean
+const double	KFLOPS_MAX_WARN_OK			= 0.2;		// Ratio: Max warnings to allow
+
+// MIPS
+const int		MIPS_TRIALS					= 5;		// Total # of trials
+const double	MIPS_MAX_SD_VAR				= 0.05;		// Ratio: Max SD variation from mean
+const double	MIPS_MAX_WARN_OK			= 0.2;		// Ratio: Max warnings to allow
+
+// Idle time
+const int		IDLETIME_TRIALS				= 5;		// Total # of trials
+const int		IDLETIME_INTERVAL			= 5;		// Interval time
+const int		IDLETIME_TOLERANCE			= 1;		// 
+const double	IDLETIME_MAX_WARN_OK		= 1.0;		// Ratio: Max warnings to allow
+
+// Load average test
+const int		LOADAVG_TRIALS				= 3;		// Total # of trials
+const int		LOADAVG_INTERVAL			= 5;		// Interval time
+const int		LOADAVG_CHILDREN			= 20;		// Number of children
+const double	LOADAVG_MAX_WARN_OK			= 1.0;		// Ratio: Max warnings to allow
+
+// # CPUs test
+const int		NCPUS_TRIALS				= 500;		// Total # of trials
+const double	NCPUS_MAX_WARN_OK			= 0.0;		// Ratio: Max warnings to allow
+
+// Physical memory test
+const int		PHYSMEM_TRIALS				= 500;		// Total # of trials
+const double	PHYSMEM_MAX_WARN_OK			= 0.0;		// Ratio: Max warnings to allow
+
+// Physical memory test
+const int		VIRTMEM_TESTBLOCK_SIZE		= 10;		// Total # of trials
+const double	VIRTMEM_MAX_SD_VAR			= 0.01;		// Ratio: Max SD variation from mean
+const double	VIRTMEM_MAX_FAIL_OK			= 0.05;		// Ratio: Max failures to allow
+
 
 /* this function will dump out the state of the _sysapi_* variables, then
    call sysapi_reconfig(), then dump out the stateof the variables again, 
@@ -136,12 +183,12 @@ sysapi_test_dump_all(int argc, char** argv)
 {
 	int foo;
 	int return_val = 0;
-	int	tests = 0;
+	int	tests = TEST_NONE;
 	int i;
 	int print_help = 0;
 
 	if (argc <= 1)
-		tests = 0xffff;
+		tests = TEST_ALL;
 	for (i=1; i<argc; i++) {
 		if (strcmp(argv[i], "--arch") == 0)
 			tests |= ARCH;
@@ -214,7 +261,9 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & FREE_FS_BLOCKS) == FREE_FS_BLOCKS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN FREE_FS_BLOCKS_TEST:\n");
 		foo = 0;
-		foo = free_fs_blocks_test(5, .10, .1);
+		foo = free_fs_blocks_test(FREEBLOCKS_TRIALS, 
+								  FREEBLOCKS_TOLERANCE,
+								  FREEBLOCKS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END FREE_FS_BLOCKS_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -227,7 +276,10 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & IDLE_TIME) == IDLE_TIME) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN IDLE_TIME_TEST:\n");
 		foo = 0;
-		foo = idle_time_test(5, 5, 1, 1);
+		foo = idle_time_test(IDLETIME_TRIALS,
+							 IDLETIME_INTERVAL,
+							 IDLETIME_TOLERANCE,
+							 IDLETIME_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END IDLE_TIME_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -240,7 +292,10 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & KFLOPS) == KFLOPS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN KFLOPS_TEST:\n");
 		foo = 0;
-		foo = kflops_test(5, .05, .2);
+		foo = kflops_test(KFLOPS_TRIALS,
+						  KFLOPS_MAX_SD_VAR,
+						  KFLOPS_MAX_WARN_OK
+						  );
 		dprintf(D_ALWAYS, "SysAPI: END KFLOPS_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -258,7 +313,10 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & LOAD_AVG) == LOAD_AVG) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN LOAD_AVG_TEST:\n");
 		foo = 0;
-		foo = load_avg_test(3, 5, 20, 1);
+		foo = load_avg_test(LOADAVG_TRIALS,
+							LOADAVG_INTERVAL,
+							LOADAVG_CHILDREN,
+							LOADAVG_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END LOAD_AVG_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -271,7 +329,9 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & MIPS) == MIPS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN MIPS_TEST:\n");
 		foo = 0;
-		foo = mips_test(5, .05, .2);
+		foo = mips_test(MIPS_TRIALS,
+						MIPS_MAX_SD_VAR,
+						MIPS_MAX_WARN_OK );
 		dprintf(D_ALWAYS, "SysAPI: END MIPS_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -284,7 +344,8 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & NCPUS) == NCPUS) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN NUMBER_CPUS_TEST:\n");
 		foo = 0;
-		foo = ncpus_test(500, 0);
+		foo = ncpus_test(NCPUS_TRIALS,
+						 NCPUS_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END NUMBER_CPUS_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -297,7 +358,7 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & PHYS_MEM) == PHYS_MEM) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN PHYSICAL_MEMORY_TEST:\n");
 		foo = 0;
-		foo = phys_memory_test(500, 0);
+		foo = phys_memory_test(PHYSMEM_TRIALS, PHYSMEM_MAX_WARN_OK);
 		dprintf(D_ALWAYS, "SysAPI: END PHYSICAL_MEMORY_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)
@@ -310,7 +371,9 @@ sysapi_test_dump_all(int argc, char** argv)
 	if ((tests & VIRT_MEM) == VIRT_MEM) {
 		dprintf(D_ALWAYS, "SysAPI: BEGIN VIRTUAL_MEMORY_TEST:\n");
 		foo = 0;
-		foo = virt_memory_test(10, .01, .05);
+		foo = virt_memory_test(VIRTMEM_TESTBLOCK_SIZE,
+							   VIRTMEM_MAX_SD_VAR,
+							   VIRTMEM_MAX_FAIL_OK);
 		dprintf(D_ALWAYS, "SysAPI: END VIRTUAL_MEMORY_TEST:\n");
 		return_val |= foo;
 		if (foo == 0)

@@ -17,12 +17,12 @@ public:
 	CondorFileRemote();
 	virtual ~CondorFileRemote();
 
-	virtual int read(int offset, char *data, int length);
-	virtual int write(int offset, char *data, int length);
+	virtual int cfile_read(int offset, char *data, int length);
+	virtual int cfile_write(int offset, char *data, int length);
 
-	virtual int fcntl( int cmd, int arg );
-	virtual int ioctl( int cmd, int arg );
-	virtual int ftruncate( size_t length );
+	virtual int cfile_fcntl( int cmd, int arg );
+	virtual int cfile_ioctl( int cmd, int arg );
+	virtual int cfile_ftruncate( size_t length );
 
 	virtual int is_file_local();
 };

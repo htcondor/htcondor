@@ -21,7 +21,7 @@ CondorFileLocal::~CondorFileLocal()
 
 /* Read requires a seek and a read.  This could be optimized to use pread on the platforms that support it. */
 
-int CondorFileLocal::read(int pos, char *data, int length) {
+int CondorFileLocal::cfile_read(int pos, char *data, int length) {
 	int result, scm;
 
 	scm = SetSyscalls(syscall_mode);
@@ -34,7 +34,7 @@ int CondorFileLocal::read(int pos, char *data, int length) {
 
 /* Write requires a seek and a write.  This could be optimized to use pwrite on the platforms that support it. */
 
-int CondorFileLocal::write(int pos, char *data, int length) {
+int CondorFileLocal::cfile_write(int pos, char *data, int length) {
 	int result, scm;
 
 	scm = SetSyscalls(syscall_mode);

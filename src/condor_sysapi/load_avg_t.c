@@ -29,7 +29,7 @@
 
 #define ITERATIONS_PER_SECOND 10000000
 
-int load_avg_test(int trials, int interval, int num_children, double perc_warn_ok) {
+int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio) {
 	int		foo = 0;
 	int		foo2 = 0;
 	int		bar = 0;
@@ -88,8 +88,8 @@ int load_avg_test(int trials, int interval, int num_children, double perc_warn_o
 		}
 	}
 	
-	if (((double)num_warnings/(double)num_tests) > perc_warn_ok) {
-			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f\% warnings > %2f\% tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, perc_warn_ok*100);
+	if (((double)num_warnings/(double)num_tests) > warn_ok_ratio) {
+			dprintf(D_ALWAYS, "SysAPI: ERROR! Warning tolerance exceeded (%2f\% warnings > %2f\% tolerance) .\n", ((double)num_warnings/(double)num_tests)*100, warn_ok_ratio*100);
 			return_val = return_val || 1;
 	}
 

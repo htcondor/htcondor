@@ -43,17 +43,17 @@ public:
 	CondorFile();
 	virtual ~CondorFile();
 
-	virtual int open( const char *url, int flags, int mode )=0;
-	virtual int close()=0;
-	virtual int read( int offset, char *data, int length )=0;
-	virtual int write( int offset, char *data, int length )=0;
+	virtual int cfile_open( const char *url, int flags, int mode )=0;
+	virtual int cfile_close()=0;
+	virtual int cfile_read( int offset, char *data, int length )=0;
+	virtual int cfile_write( int offset, char *data, int length )=0;
 
-	virtual int fcntl( int cmd, int arg )=0;
-	virtual int ioctl( int cmd, int arg )=0;
-	virtual int ftruncate( size_t length )=0; 
-	virtual int fsync()=0;
-	virtual int flush()=0;
-	virtual int fstat( struct stat *buf )=0;
+	virtual int cfile_fcntl( int cmd, int arg )=0;
+	virtual int cfile_ioctl( int cmd, int arg )=0;
+	virtual int cfile_ftruncate( size_t length )=0; 
+	virtual int cfile_fsync()=0;
+	virtual int cfile_flush()=0;
+	virtual int cfile_fstat( struct stat *buf )=0;
 
 	virtual int	is_readable()=0;
 	virtual int	is_writeable()=0;

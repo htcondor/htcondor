@@ -117,8 +117,12 @@ if [ $os = "HP-UX" -a "$osrelease" = "B.10.20" ] ; then
 elif [ $os = "HP-UX" -a "$osversion" = "B.11.00" ] ; then
 	Opsys="-DIS_HPUX11"
 
-elif [ $os = "OSF1" -a "$osrelease" = "V4.0" ] ; then
-	Opsys="-DIS_DUX4"
+elif [ $os = "OSF1" ] ; then
+	if [ $osrelease = "V4.0" ] ; then
+		Opsys="-DIS_DUX4"
+	elif [ $osrelease = "V5.0" -o $osrelease = "V5.1" ] ; then
+		Opsys="-DIS_DUX5"
+	fi
 
 elif [ $os = "Linux" ]; then
 	Opsys="-DIS_LINUX"
@@ -180,6 +184,9 @@ elif [ $os = "AIX" ] ; then
 
 	# add detection to this when ia64 is needed
 	ArchFlag="-DIS_PPC"
+else
+	echo "Unknown O/S: OS=\"$os\" Version=\"$osversion\""
+	exit 1
 fi
 
 ##################################################
@@ -188,4 +195,3 @@ fi
 
 echo $IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 $IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
-

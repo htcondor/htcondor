@@ -130,7 +130,7 @@ public:
 	void	init();
 
 	/** Write out any buffered data */
-	void	flush();
+	void	cfile_flush();
 
 	/** Report all cached I/O summaries */
 	void	report_all();
@@ -147,34 +147,34 @@ public:
 	/** If in LocalSyscalls, just perform a UNIX open.  If in
 	    RemoteSyscalls, ask the shadow for the appropriate 
 	    access method, and then use that method for the open. */
-	int	open( const char *path, int flags, int mode );
+	int	cfile_open( const char *path, int flags, int mode );
 
 	/** Pipe with UNIX semantics.
 	    While a pipe is open, checkpointing is disabled.  */
-	int	pipe(int fds[]);
+	int	cfile_pipe(int fds[]);
 
 	/** Socket with UNIX semantics.
 	    While a socket is open, checkpointing is disabled. */
-	int	socket( int domain, int type, int prototcol );
+	int	cfile_socket( int domain, int type, int prototcol );
 	
 	/** Close this file with UNIX semantics */
-	int	close( int fd );
+	int	cfile_close( int fd );
 
 	/** Read with UNIX semantics */
-	ssize_t	read( int fd, void *data, size_t length );
+	ssize_t	cfile_read( int fd, void *data, size_t length );
 
 	/** Write with UNIX semantics */
-	ssize_t	write( int fd, const void *data, size_t length );
+	ssize_t	cfile_write( int fd, const void *data, size_t length );
 
 	/** Seek with UNIX semantics */
-	off_t	lseek( int fd, off_t offset, int whence );
+	off_t	cfile_lseek( int fd, off_t offset, int whence );
 
 	/** Dup with UNIX semantics */
-	int	dup( int old );
+	int	cfile_dup( int old );
 
 	/** Dup2 with UNIX semantics, even if dup2 is not supported
 	    on this platform. */
-	int	dup2( int old, int nfd );
+	int	cfile_dup2( int old, int nfd );
 
 	/** Similar to dup2, but will dup to any free fd >= search */
 	int	search_dup2( int old, int search );
@@ -184,40 +184,40 @@ public:
 	int	fchdir( int fd );
 
 	/** Change the working directory with UNIX semantics. */
-	int	chdir( const char *path );
+	int	cfile_chdir( const char *path );
 
 	/** Handle known fcntl values by modifying the table, or passing
 	    the value to the appropriate file object.  Unknown fcntls
 	    or those with non-integer third arguments fail with a 
 	    warning message and EINVAL. */
-	int	fcntl( int fd, int cmd, int arg );
+	int	cfile_fcntl( int fd, int cmd, int arg );
 
 	/** See comments for fcntl. */
-	int	ioctl( int fd, int cmd, int arg );
+	int	cfile_ioctl( int fd, int cmd, int arg );
 
 	/** This poll() will only work on certain kinds of files.
 	    An error is caused if you poll on an unsupported kind. */
-	int	poll( struct pollfd fds[], int count, int timeout );
+	int	cfile_poll( struct pollfd fds[], int count, int timeout );
 
 	/** This select() will only work on certain kinds of files.
 	    An error is caused if you poll on an unsupported kind. */
-	int	select( int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout );
+	int	cfile_select( int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout );
 
 	/** Truncate with UNIX semantics */
-	int	ftruncate( int fd, size_t length );
+	int	cfile_ftruncate( int fd, size_t length );
 
 	/** Flush any Condor-buffered data on this file, then
 	    perform a UNIX fsync/fdsync/fdatasync as appropriate. */
-	int	fsync( int fd );
+	int	cfile_fsync( int fd );
 
 	/** Do a UNIX fstat() */
-	int fstat( int fd, struct stat *buf);
+	int cfile_fstat( int fd, struct stat *buf);
 
 	/** Do a UNIX stat() */
-	int stat( const char *name, struct stat *buf);
+	int cfile_stat( const char *name, struct stat *buf);
 
 	/** Do a UNIX lstat() */
-	int lstat( const char *name, struct stat *buf);
+	int cfile_lstat( const char *name, struct stat *buf);
 
 	/** Return the max number of bytes to buffer per file */
 	int	get_buffer_size();

@@ -17,7 +17,7 @@ CondorFileCompress::~CondorFileCompress()
 	delete original;
 }
 
-int CondorFileCompress::open( const char *url_in, int flags, int mode )
+int CondorFileCompress::cfile_open( const char *url_in, int flags, int mode )
 {
 	char junk[_POSIX_PATH_MAX];
 	char sub_url[_POSIX_PATH_MAX];
@@ -32,13 +32,13 @@ int CondorFileCompress::open( const char *url_in, int flags, int mode )
 	sscanf( url, "%[^:]:%[\x1-\xFF]", junk, sub_url );
 	#endif
 
-	return original->open( sub_url, flags, mode );
+	return original->cfile_open( sub_url, flags, mode );
 }
 
-int CondorFileCompress::close()
+int CondorFileCompress::cfile_close()
 {
 	end_compression();
-	return original->close();
+	return original->cfile_close();
 }
 
 /* Stop the current compression, whatever it may be, and go to NONE. */
@@ -59,7 +59,7 @@ void CondorFileCompress::end_compression()
 
 /* Set up the decompression stream to read from the desired offset, and then decompress. */
 
-int CondorFileCompress::read( int offset, char *data, int length )
+int CondorFileCompress::cfile_read( int offset, char *data, int length )
 {
 	if( offset>=voffset && last_action==READ ) {
 
@@ -165,7 +165,7 @@ int CondorFileCompress::read_data( char *data, int length )
 		if( stream.avail_out==0 ) {
 			break;
 		} else {
-			result = original->read( poffset, buffer, COMPRESS_BUFFER_SIZE );
+			result = original->cfile_read( poffset, buffer, COMPRESS_BUFFER_SIZE );
 			if( result>0 ) {
 				stream.avail_in = result;
 				stream.next_in = (Bytef*) buffer;
@@ -198,7 +198,7 @@ int CondorFileCompress::read_header()
 {
 	gzip_header header;
 
-	int result = original->read(poffset,(char*)&header,sizeof(header));
+	int result = original->cfile_read(poffset,(char*)&header,sizeof(header));
 	if( result!=sizeof(header) ) {
 		/* Silent warning here -- no need to spew errors for empty files. */
 		return 0;
@@ -255,7 +255,7 @@ int CondorFileCompress::read_int( int bytes )
 	int x=0;
 
 	for( int i=0; i<bytes; i++ ) {
-		original->read( poffset++, (char*)&b, 1 );		
+		original->cfile_read( poffset++, (char*)&b, 1 );		
 		x = x + (b<<(8*i));
 	}
 
@@ -270,14 +270,14 @@ void CondorFileCompress::read_string()
 	int rval;
 
 	while(1) {
-		rval = original->read( poffset++, &ch, 1 );
+		rval = original->cfile_read( poffset++, &ch, 1 );
 		if( rval!=1 || ch==0 ) return;
 	}
 }
 
 /* Set up the decompression stream to work from the given offset, and then compress. */
 
-int CondorFileCompress::write( int offset, char *data, int length )
+int CondorFileCompress::cfile_write( int offset, char *data, int length )
 {
 	if( offset==voffset && last_action==WRITE ) {
 
@@ -337,7 +337,7 @@ int CondorFileCompress::write_data( char *data, int length, int flush )
 			if( stream.avail_out==COMPRESS_BUFFER_SIZE ) break;
 		}
 
-		result = original->write( poffset, buffer, COMPRESS_BUFFER_SIZE-stream.avail_out );
+		result = original->cfile_write( poffset, buffer, COMPRESS_BUFFER_SIZE-stream.avail_out );
 		if( result>0 ) {
 			stream.avail_out = COMPRESS_BUFFER_SIZE;
 			stream.next_out = (Bytef*) buffer;
@@ -386,7 +386,7 @@ int CondorFileCompress::write_header()
 	header.method = GZIP_METHOD_DEFLATED;
 	header.system = GZIP_SYSTEM_UNIX;
 
-	int result = original->write( poffset, (char*) &header, sizeof(header));
+	int result = original->cfile_write( poffset, (char*) &header, sizeof(header));
 
 	if( result==sizeof(header) ) {
 		poffset += sizeof(header);
@@ -402,23 +402,23 @@ int CondorFileCompress::write_int( int bytes, int x )
 {
 	for( int i=0; i<bytes; i++ ) {
 		char b = x & 0xff;
-		original->write( poffset++, &b, 1 );
+		original->cfile_write( poffset++, &b, 1 );
 		x = x>>8;
 	}
 	return 0;
 }
 
-int CondorFileCompress::fcntl( int cmd, int arg )
+int CondorFileCompress::cfile_fcntl( int cmd, int arg )
 {
-	return original->fcntl(cmd,arg);
+	return original->cfile_fcntl(cmd,arg);
 }
 
-int CondorFileCompress::ioctl( int cmd, int arg )
+int CondorFileCompress::cfile_ioctl( int cmd, int arg )
 {
-	return original->ioctl(cmd,arg);
+	return original->cfile_ioctl(cmd,arg);
 }
 
-int CondorFileCompress::ftruncate( size_t length )
+int CondorFileCompress::cfile_ftruncate( size_t length )
 {
 	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't ftruncate() a compressed file (%s).",
 					 get_url() ); 
@@ -426,7 +426,7 @@ int CondorFileCompress::ftruncate( size_t length )
 	return -1;
 }
 
-int CondorFileCompress::fstat( struct stat* buf )
+int CondorFileCompress::cfile_fstat( struct stat* buf )
 {
 	_condor_warning(CONDOR_WARNING_KIND_BADURL, "You can't fstat() a compressed file (%s).", 
 					 get_url() );
@@ -434,20 +434,20 @@ int CondorFileCompress::fstat( struct stat* buf )
 	return -1;
 }
 
-int CondorFileCompress::fsync()
+int CondorFileCompress::cfile_fsync()
 {
-	flush();
-	return original->fsync();
+	cfile_flush();
+	return original->cfile_fsync();
 }
 
-int CondorFileCompress::flush()
+int CondorFileCompress::cfile_flush()
 {
 	// In order to really flush the data so the file can be read,
 	// we must force all the data out, including a trailer.
 	// The next write will give a new header.
 
 	end_compression();
-	return original->flush();
+	return original->cfile_flush();
 }
 
 

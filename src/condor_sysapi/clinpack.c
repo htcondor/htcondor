@@ -83,7 +83,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 static double st[8][6];
 
 int
-clinpack_kflops ()
+clinpack_kflops ( int ntimes_arg )
 {
    static REAL aa[200][200],a[200][201],b[200],x[200];
    REAL cray,ops,total,norma,normx;
@@ -215,7 +215,7 @@ clinpack_kflops ()
 	st[4][2] = 2.0e3/st[3][2];
 	st[5][2] = total/cray;
 
-	ntimes = NTIMES;
+	ntimes = ( ntimes_arg > 0 ) ? ntimes_arg : NTIMES;
 	tm2 = 0.0;
 	t1 = dtime();
 
@@ -326,7 +326,7 @@ clinpack_kflops ()
    st[4][6] = 2.0e3/st[3][6];
    st[5][6] = total/cray;
 
-   ntimes = NTIMES;
+   ntimes = ( ntimes_arg > 0 ) ? ntimes_arg : NTIMES;
    tm2 = 0;
    t1 = dtime();
    for (i = 0; i < ntimes; i++) {
@@ -1016,8 +1016,31 @@ function, references to m[i][j] are written m[ldm*i+j].  */
 
 int sysapi_kflops_raw(void)
 {
+	static int		kflops = -1;
+	int				quick_kflops = 0;
+
 	sysapi_internal_reconfig();
-	return clinpack_kflops();
+
+	// If we haven't run before, get a quick measurement
+	// For slow machines, we'll use that quick measurement
+	if ( kflops < 0 ) {
+		quick_kflops = clinpack_kflops( 0 );
+	} else if ( kflops < 100000 ) {
+		return ( kflops = clinpack_kflops( 0 ) );
+	} else {
+		quick_kflops = kflops;
+	}
+
+	// For faster machines, run with more loops.
+	if        ( quick_kflops >= 1000000 ) {
+		return ( kflops = clinpack_kflops( 5000 ) );
+	} else if ( quick_kflops >=  500000 ) {
+		return ( kflops = clinpack_kflops( 2000 ) );
+	} else if ( quick_kflops >=  100000 ) {
+		return ( kflops = clinpack_kflops( 1000 ) );	
+	} else {
+		return ( kflops = quick_kflops );
+	} 
 }
 
 /* if you need to modify kflops, do it here. */

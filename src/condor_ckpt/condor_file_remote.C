@@ -28,14 +28,14 @@ CondorFileRemote::~CondorFileRemote()
 
 /* A read results in a CONDOR_lseekread */
 
-int CondorFileRemote::read(int pos, char *data, int length) 
+int CondorFileRemote::cfile_read(int pos, char *data, int length) 
 {
 	return REMOTE_CONDOR_lseekread( fd, pos, SEEK_SET, data, length );
 }
 
 /* A write results in a CONDOR_lseekwrite */
 
-int CondorFileRemote::write(int pos, char *data, int length)
+int CondorFileRemote::cfile_write(int pos, char *data, int length)
 {
 	int result;
 	result = REMOTE_CONDOR_lseekwrite( fd, pos, SEEK_SET, data, length );
@@ -55,7 +55,7 @@ commands that have a single integer argument.  Others
 are a lost cause...
 */
 
-int CondorFileRemote::fcntl( int cmd, int arg )
+int CondorFileRemote::cfile_fcntl( int cmd, int arg )
 {
 	int result, scm;
 
@@ -88,7 +88,7 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 	}
 }
 
-int CondorFileRemote::ioctl( int cmd, int arg )
+int CondorFileRemote::cfile_ioctl( int cmd, int arg )
 {
 	_condor_warning(CONDOR_WARNING_KIND_UNSUP,"ioctl(%d,%d,...) is not supported for remote files.",fd,cmd);
 	errno = EINVAL;
@@ -101,7 +101,7 @@ implemented in terms of fcntl, which (see CondorFileTable) can arrive here, resu
 in an infinite loop.
 */
 
-int CondorFileRemote::ftruncate( size_t s )
+int CondorFileRemote::cfile_ftruncate( size_t s )
 {
 	size = s;
 	return REMOTE_CONDOR_ftruncate( fd, s );

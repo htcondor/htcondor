@@ -93,7 +93,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
-#ifndef OSF1
+#ifndef DUX4
 	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
@@ -131,8 +131,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		long nowminf, nowmajf;
 
     // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only - unsupported by osf/1
-#ifndef OSF1
+    // solaris 2.5.1 and Irix only - unsupported by osf/1 dux-4
+    // Now in DUX5, though...
+#ifndef DUX4
 		rval = ioctl( fd, PIOCUSAGE, &pru );
 		if( rval >= 0 ) {
 

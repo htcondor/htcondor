@@ -268,37 +268,38 @@ All of these calls manipulate the open file table.
 #if defined(FILE_TABLE) && !defined(CLIP)
 
 	int open( const char *path, OPEN_FLAGS_T flags, ... )
-		: file_table
+		: file_table, file_table_name(cfile_open)
 	{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
 
 	int open64( const char *path, OPEN_FLAGS_T flags, ... )
-		: sender_name(open), file_table_name(open), local_name(open);
+		: sender_name(open), file_table_name(cfile_open), local_name(open);
 
-	int close( int fd ) : file_table;
+	int close( int fd ) : file_table, file_table_name(cfile_close);
 
 	ssize_t read( int fd, void *buf, size_t len )
-		: file_table
+		: file_table, file_table_name(cfile_read)
 	{
 		out code_bytes_bool( buf, rval );
 		alloc( buf, len );
 	}
 	
         ssize_t write( int fd, const void *buf, size_t len )
-		: file_table
+		: file_table,file_table_name(cfile_write)
 	{
 		in code_bytes_bool( buf, len );
 		alloc( buf, len );
 	}
 
 	off_t lseek( int fd, off_t offset, int whence )
-		: file_table, also_implements(lseek64), also_implements(llseek); 
+		: file_table, also_implements(lseek64), also_implements(llseek),
+		  file_table_name(cfile_lseek); 
 
 	#if !defined(IRIX) && !defined(LINUX)
 		offset_t llseek( int fd, offset_t offset, int whence )
-			: file_table_name(lseek), remote_name(lseek);
+			: file_table_name(cfile_lseek), remote_name(lseek);
 	#elif defined(LINUX)
 
 	   /*
@@ -312,23 +313,24 @@ All of these calls manipulate the open file table.
 	   */
 		#if defined(GLIBC21) || defined(GLIBC22)
 			off64_t llseek( int fd, off64_t offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
+				: file_table_name(cfile_lseek), remote_name(lseek),
+				   no_sys_chk, 
 				local_name(lseek);
 		#elif defined(GLIBC20)
 			unsigned long llseek( int fd, unsigned long offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
+				: file_table_name(cfile_lseek), remote_name(lseek),
+				  no_sys_chk, local_name(lseek);
 		#else
 			long long llseek( int fd, long long offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
+				: file_table_name(cfile_lseek), remote_name(lseek),
+				  no_sys_chk, local_name(lseek);
 		#endif
 	#endif
 
 	/* on Linux, lseek64 just goes to llseek, I can't find an lseek64 on OSF1 */
 	#if !defined(LINUX) && !defined(OSF1)
 	off64_t lseek64( int fd, off64_t offset, int whence )
-		: file_table_name(lseek), remote_name(lseek)
+		: file_table_name(cfile_lseek), remote_name(lseek)
 		#if defined(IRIX)
 			/* all seek calls under IRIX call lseek, disassemble it and see. */
 			, local_name(lseek)
@@ -338,18 +340,21 @@ All of these calls manipulate the open file table.
 		;
 	#endif
 
-	int dup( int old_fd ) : file_table;
-	int dup2( int old_fd, int new_fd ) : file_table;
+	int dup( int old_fd ) : file_table, file_table_name(cfile_dup);
+	int dup2( int old_fd, int new_fd ) : file_table, file_table_name(cfile_dup2);
 
-	int fcntl( int fd, FCNTL_CMD_T cmd, ... ) : file_table;
+	int fcntl( int fd, FCNTL_CMD_T cmd, ... )
+		 : file_table, file_table_name(cfile_fcntl);
 
 	#if defined(LINUX) && defined(GLIBC)
-		int ioctl( int fd, unsigned long cmd, ... ) : file_table;
+		int ioctl( int fd, unsigned long cmd, ... )
+		 : file_table, file_table_name(cfile_ioctl);
 	#else
-		int ioctl( int fd, int cmd, ... ) : file_table;
+		int ioctl( int fd, int cmd, ... )
+		 : file_table, file_table_name(cfile_ioctl);
 	#endif
 
-	int pipe( int fd[] ) : EXTRACT, file_table;
+	int pipe( int fd[] ) : EXTRACT, file_table, file_table_name(cfile_pipe);
 
 	/*
 	fsync must go through the table to flush the buffer cache.
@@ -358,14 +363,14 @@ All of these calls manipulate the open file table.
 	*/
 
 	int fdsync( int fd, rdiscard(int flags) )
-		: file_table_name(fsync), sender_name(fsync);
+		: file_table_name(cfile_fsync), sender_name(fsync);
 	int fdatasync( int fd )
-		: file_table_name(fsync), sender_name(fsync);
+		: file_table_name(cfile_fsync), sender_name(fsync);
 	int fsync( int fd )
 		#if defined(SENDER)
-			: file_table, no_sys_chk;
+			: file_table, file_table_name(cfile_fsync), no_sys_chk;
 		#else
-			: file_table;
+			: file_table, file_table_name(cfile_fsync);
 		#endif
 
 	#if !defined(SWITCH)
@@ -387,14 +392,16 @@ All of these calls manipulate the open file table.
 			/* Sender needed, even if not a true syscall */
 			no_sys_chk,
 		#endif
-		file_table, also_implements(ftruncate64);
+		file_table, also_implements(ftruncate64), 
+		file_table_name(cfile_ftruncate);
 
 	int ftruncate64( int fd, off64_t length )
-		: file_table_name(ftruncate), remote_name(ftruncate);
+		: file_table_name(cfile_ftruncate), remote_name(ftruncate);
 	
 	int fchdir( int fd ) : file_table;
 
-	int chdir( const char *path ) : pseudo, file_table {
+	int chdir( const char *path )
+		: pseudo, file_table, file_table_name(cfile_chdir) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
@@ -410,11 +417,12 @@ All of these calls manipulate the open file table.
 
 	#if defined(SWITCH) || defined(SENDER)
 		#if defined(OSF1) || defined(HPUX10)
-			int poll( struct pollfd *fds, nfds_t nfds, int timeout ) : file_table;
-			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
+			int poll( struct pollfd *fds, nfds_t nfds, int timeout )
+			 : file_table, file_table_name(cfile_poll);
+			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table, file_table_name(cfile_select);
 		#else
-			int poll( struct pollfd *fds, unsigned long nfds, int timeout ) : file_table;
-			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table
+			int poll( struct pollfd *fds, unsigned long nfds, int timeout ) : file_table, file_table_name(cfile_poll);
+			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table, file_table_name(cfile_select)
 			#if defined(LINUX)
 				/* Linux has a new system call we should use because SYS_select
 					is deprecated and returns EINVAL now */
@@ -431,11 +439,11 @@ All of these calls manipulate the open file table.
 	#if defined(Solaris)
 		#if !defined(SWITCH)
 		int socket( int domain, int type, int protocol )
-			: file_table, no_sys_chk, INDIRECT;
+			: file_table, file_table_name(cfile_socket), no_sys_chk, INDIRECT;
 		#endif
 	#else
 		int socket( int domain, int type, int protocol )
-			: file_table, INDIRECT;
+			: file_table, file_table_name(cfile_socket), INDIRECT;
 	#endif
 
 
@@ -473,7 +481,7 @@ version.
 				no_sys_chk,
 			#endif
 				also_implements(fstat64),   /* for backwards compatibility */
-				file_table
+				file_table, file_table_name(cfile_fstat)
 		{
 			out code( buf );
 			alloc( buf, STAT_SIZE );
@@ -490,7 +498,7 @@ version.
 				no_sys_chk,
 			#endif
 				also_implements(stat64),   /* for backwards compatibility */
-				file_table
+				file_table, file_table_name(cfile_stat)
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );
@@ -509,7 +517,7 @@ version.
 				no_sys_chk,
 			#endif	
 				also_implements(lstat64),   /* for backwards compatibility */
-				file_table
+				file_table, file_table_name(cfile_lstat)
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );
@@ -533,6 +541,7 @@ version.
 			#if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
+			file_table_name(cfile_fstat),
 			#endif
 			remote_name(fstat)
 		{
@@ -545,6 +554,7 @@ version.
 			no_sys_chk,
 			dl_extract,
 			#endif
+			file_table_name(cfile_stat),
 			remote_name(stat) 
 		{ 
 			SEND_PATH( path );
@@ -558,6 +568,7 @@ version.
 			no_sys_chk,
 			dl_extract,
 			#endif
+			file_table_name(cfile_lstat),
 			remote_name(lstat) 
 		{ 
 			SEND_PATH( path );
@@ -572,12 +583,19 @@ version.
 	int fchmod( map(int fd), mode_t mode );
 
 	#if defined(Solaris) || defined(IRIX)
-		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
-	#elif defined(OSF1)
-		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
+		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) )
+		: pseudo
+	#elif defined(DUX4)
+		int statfs( char *path, struct statfs *buf, rdiscard(int len) )
+		: pseudo
+	#elif defined(DUX5)
+		int _F64_statfs( char *path, struct statfs *buf, ... )
+		: pseudo, remote_name(statfs), local_name(statfs)
 	#else
-		int statfs( const char *path, struct statfs *buf ) : pseudo {
+		int statfs( const char *path, struct statfs *buf )
+		: pseudo
 	#endif
+		{
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out code( buf );
@@ -585,12 +603,16 @@ version.
 		}
 
 	#if defined(IRIX) || defined(Solaris)
-		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
-	#elif defined(OSF1)
-		int fstatfs( map(int fd), struct statfs *buf, int len) {
+		int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp )
+	#elif defined(DUX4)
+		int fstatfs( map(int fd), struct statfs *buf, int len)
+	#elif defined(DUX5)
+		int _F64_fstatfs( map(int fd), struct statfs *buf, ... )
+		 : remote_name(fstatfs), local_name(fstatfs)
 	#else
-		int fstatfs( map(int fd), struct statfs *buf ) {
+		int fstatfs( map(int fd), struct statfs *buf )
 	#endif
+		{
 			out code( buf );
 			alloc( buf, STATFS_SIZE );
 		}
@@ -1433,8 +1455,11 @@ not_supported {
 		#if defined(Solaris)
 			int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
 			int acct( const char *path );
-		#elif defined(OSF1)
+		#elif defined(DUX4)
 			int mount( int type, char *mnt_path, int mnt_flag, char *data );
+			int acct( char *path );
+		#elif defined(DUX5)
+			int mount( int type, char *mnt_path, u_long mnt_flag, caddr_t data );
 			int acct( char *path );
 		#elif defined(HPUX10)
 			/* Need a better stub gen to trap mount */
@@ -1507,6 +1532,9 @@ not_supported {
 
 	#if defined(LINUX)
 		pid_t wait4( pid_t pid, void *status, int options, struct rusage *ru );
+	#elif defined(DUX5)
+		pid_t wait4( pid_t pid, union wait *status, int options, 
+			     struct rusage *ru );
 	#else
 		pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
 	#endif
