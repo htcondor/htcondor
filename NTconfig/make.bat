@@ -7,6 +7,12 @@ awk "{ gsub(/\.\\\.\.\\Debug/, \"..\\Debug\") } { gsub(/\.\\\.\.\\Release/, \"..
 del condor_cpp_util.mak
 ren ~temp.mak condor_cpp_util.mak
 
+REM This fixes some more wierdness in condor_util_lib.mak
+awk "{ gsub(/^InputDir=.*\\src\\h/, \"InputDir=..\\src\\h\") } { print }" condor_util_lib.mak > ~temp2.mak
+del condor_util_lib.mak
+ren ~temp2.mak condor_util_lib.mak
+
+
 if defined INCLUDE goto :compiler_ready
 call VCVARS32.BAT
 if defined INCLUDE goto :compiler_ready
