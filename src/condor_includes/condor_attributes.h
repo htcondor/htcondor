@@ -124,6 +124,7 @@ const char ATTR_TOTAL_IDLE_JOBS			 [] = "TotalIdleJobs";
 const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";
 const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_ULOG_FILE				 [] = "UserLog";
+const char ATTR_UPDATE_INTERVAL			 [] = "UpdateInterval";
 const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
 const char ATTR_USER					 [] = "User";
 const char ATTR_VACATE                   [] = "Vacate";
