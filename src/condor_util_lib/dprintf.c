@@ -77,6 +77,7 @@ int		LockFd = -1;
 #endif
 
 static	int DprintfBroken = 0;
+static	int DebugUnlockBroken = 0;
 
 static char _FileName_[] = __FILE__;
 
@@ -286,8 +287,16 @@ debug_lock(int debug_level)
 		if( LockFd < 0 ) {
 			LockFd = open(DebugLock[debug_level],O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-				fprintf( stderr, "Can't open \"%s\"\n",
-						 DebugLock[debug_level] );
+					/* 
+					   if( errno == ENOENT ) { ...
+
+					   We should try creating the parent directory,
+					   both as condor, and as root.  If we can only
+					   create it as root, we should set the ownership
+					   back to condor when we're done.
+					*/
+				fprintf( stderr, "Can't open \"%s\", errno: %d (%s)\n",
+						 DebugLock[debug_level], errno, strerror(errno) );
 				dprintf_exit();
 
 			}
@@ -339,6 +348,10 @@ debug_unlock(int debug_level)
 {
 	priv_state priv;
 
+	if( DebugUnlockBroken ) {
+		return;
+	}
+
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)fflush( DebugFP );
@@ -347,13 +360,15 @@ debug_unlock(int debug_level)
 			/* Don't forget to unlock the file */
 #if defined(WIN32)
 		if( CloseHandle(LockHandle) == 0) {
-				fprintf(DebugFP, "Can't release lock on \"%s\", errno = %d\n",
-					DebugLock[debug_level], GetLastError() );
+			fprintf( DebugFP, "Can't release lock on \"%s\", errno = %d\n",
+					 DebugLock[debug_level], GetLastError() );
+			DebugUnlockBroken = 1;
 		}
 #else
 		if( flock(LockFd,LOCK_UN) < 0 ) {
-			fprintf(DebugFP,"Can't release exclusive lock on \"%s\"\n",
-					DebugLock[debug_level] );
+			fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
+					 DebugLock[debug_level] );
+			DebugUnlockBroken = 1;
 			dprintf_exit();
 		}
 #endif
@@ -572,7 +587,7 @@ dprintf_exit()
 		   dprintf during the rest of this */
 	DprintfBroken = 1;
 
-		/* Don't forget to unlock the log file! */
+		/* Don't forget to unlock the log file, if possible! */
 	debug_unlock(0);
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
@@ -582,5 +597,6 @@ dprintf_exit()
 	}
 
 		/* Actually exit now */
+	fflush (stderr);
 	exit(1);
 }
