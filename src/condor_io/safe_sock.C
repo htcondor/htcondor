@@ -33,6 +33,12 @@
 #include "condor_socket_types.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
+unsigned long SafeSock::_noMsgs = 0;
+unsigned long SafeSock::_whole = 0;
+unsigned long SafeSock::_deleted = 0;
+unsigned long SafeSock::_avgSwhole = 0;
+unsigned long SafeSock::_avgSdeleted = 0;
+
 /* 
    NOTE: All SafeSock constructors initialize with this, so you can
    put any shared initialization code here.  -Derek Wright 3/12/99
@@ -53,9 +59,6 @@ void SafeSock::init()
 		_outMsgID.pid = (short)getpid();
 		_outMsgID.time = (unsigned long)time(NULL);
 		_outMsgID.msgNo = (unsigned long)get_random_int();
-
-		// initialize statistics
-		resetStat();
 	}
 }
 

@@ -139,11 +139,11 @@ protected:
 	int _tOutBtwPkts;
 
 	// statistics variables
-	unsigned long _noMsgs;
-	unsigned long _whole;;
-	unsigned long _deleted;
-	unsigned long _avgSwhole;
-	unsigned long _avgSdeleted;
+	static unsigned long _noMsgs;
+	static unsigned long _whole;;
+	static unsigned long _deleted;
+	static unsigned long _avgSwhole;
+	static unsigned long _avgSdeleted;
 };
 
 
