@@ -80,6 +80,7 @@ typedef DWORD pid_t;
 #define W_OK 2
 #define X_OK 4
 #define F_OK 0
+#define ssize_t SSIZE_T
 #define sleep(x) Sleep(x*1000)
 #define getpid _getpid
 #include <process.h>
