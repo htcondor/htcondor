@@ -78,6 +78,7 @@ bool passwd_cache::cache_groups(const char* user) {
 	gid_t user_gid;
 	int count;
    
+	group_cache_entry = NULL;
 	count = 0;
 	result = true;
 
@@ -85,14 +86,14 @@ bool passwd_cache::cache_groups(const char* user) {
 		return false;
 	} else { 
 
-		if ( group_table->lookup(user, group_cache_entry) < 0 ) {
-			init_group_entry(group_cache_entry);
-		}
-
 		if ( !get_user_gid(user, user_gid) ) {
 			dprintf(D_ALWAYS, "cache_groups(): get_user_gid() failed! "
 				   "errno=%s\n", strerror(errno));
 			return false;
+		}
+
+		if ( group_table->lookup(user, group_cache_entry) < 0 ) {
+			init_group_entry(group_cache_entry);
 		}
 
 		/* We need to get the primary and supplementary group info, so
@@ -113,6 +114,10 @@ bool passwd_cache::cache_groups(const char* user) {
 			result = false;
 		} else {
 			/* now get the group list */
+			if ( group_cache_entry->gidlist != NULL ) {
+				delete[] group_cache_entry->gidlist;
+				group_cache_entry->gidlist = NULL;
+			}
 	   		group_cache_entry->gidlist = new
 			  		 	gid_t[group_cache_entry->gidlist_sz];
 			if (getgroups( 	group_cache_entry->gidlist_sz,
@@ -373,7 +378,7 @@ passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
 			/* time to refresh the entry! */
 			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
 			cache_uid(user);
-			return uid_table->lookup(user, uce);
+			return (uid_table->lookup(user, uce) == 0);
 		} else {
 			/* entry is still considered valid, so just return */
 			return true;
