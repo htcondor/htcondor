@@ -30,7 +30,6 @@
 #include "condor_debug.h"
 #include <pwd.h>
 #include <stdarg.h>
-#include "user_log.h"
 #include "user_log.c++.h"
 #include <time.h>
 

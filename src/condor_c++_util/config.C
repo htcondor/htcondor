@@ -40,6 +40,7 @@
 #include "config.h"
 #include "clib.h"
 #include "condor_classad.h"
+#include "util_lib_proto.h"
 
 #if defined(__cplusplus)
 extern "C" {
