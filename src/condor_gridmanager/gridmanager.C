@@ -562,17 +562,25 @@ doContactSchedd()
 			WriteExecuteToUserLog( curr_job );
 			curr_job->executeLogged = true;
 		}
-		if ( curr_action->actions & UA_LOG_SUBMIT_FAILED_EVENT ) {
+		if ( curr_action->actions & UA_LOG_SUBMIT_FAILED_EVENT &&
+			 !curr_job->submitFailedLogged ) {
 			WriteGlobusSubmitFailedEventToUserLog( curr_job );
+			curr_job->submitFailedLogged = true;
 		}
-		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT ) {
+		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT &&
+			 !curr_job->terminateLogged ) {
 			WriteTerminateToUserLog( curr_job );
+			curr_job->terminateLogged = true;
 		}
-		if ( curr_action->actions & UA_LOG_ABORT_EVENT ) {
+		if ( curr_action->actions & UA_LOG_ABORT_EVENT &&
+			 !curr_job->abortLogged ) {
 			WriteAbortToUserLog( curr_job );
+			curr_job->abortLogged = true;
 		}
-		if ( curr_action->actions & UA_LOG_EVICT_EVENT ) {
+		if ( curr_action->actions & UA_LOG_EVICT_EVENT &&
+			 !curr_job->evictLogged ) {
 			WriteEvictToUserLog( curr_job );
+			curr_job->evictLogged = true;
 		}
 
 	}
@@ -1017,6 +1025,7 @@ WriteTerminateToUserLog( GlobusJob *job )
 			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	JobTerminatedEvent event;
+	event.coreFile[0] = '\0';
 	struct rusage r;
 	memset( &r, 0, sizeof( struct rusage ) );
 

@@ -75,6 +75,11 @@ class GlobusJob : public Service
 	int exitValue;
 	bool submitLogged;
 	bool executeLogged;
+	bool submitFailedLogged;
+	bool terminateLogged;
+	bool abortLogged;
+	bool evictLogged;
+
 	bool stateChanged;
 	bool newJM;		// This means a jobmanager that supports restart
 					// and two-phase commit

@@ -113,6 +113,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	exitValue = 0;
 	submitLogged = false;
 	executeLogged = false;
+	submitFailedLogged = false;
+	terminateLogged = false;
+	abortLogged = false;
+	evictLogged = false;
 	stateChanged = false;
 	newJM = false;
 	restartingJM = false;
@@ -807,6 +811,9 @@ int GlobusJob::doEvaluateState()
 				syncedErrorSize = 0;
 				schedd_actions |= UA_UPDATE_STDERR_SIZE;
 			}
+			if ( submitLogged ) {
+				schedd_actions |= UA_LOG_EVICT_EVENT;
+			}
 			// If there are no updates to be done when we first enter this
 			// state, addScheddUpdateAction will return done immediately
 			// and not waste time with a needless connection to the
@@ -831,6 +838,12 @@ int GlobusJob::doEvaluateState()
 						"(%d.%d) truncate failed for error file %s (errno=%d)\n",
 						procID.cluster, procID.proc, localError, errno );
 			}
+			submitLogged = false;
+			executeLogged = false;
+			submitFailedLogged = false;
+			terminateLogged = false;
+			abortLogged = false;
+			evictLogged = false;
 			gmState = GM_UNSUBMITTED;
 			break;
 		default:
@@ -859,6 +872,9 @@ int GlobusJob::doEvaluateState()
 	} while ( reevaluate_state );
 
 	if ( connect_failure && !jmUnreachable && !resourceDown ) {
+		dprintf(D_FULLDEBUG,
+			"(%d.%d) Connection failure, requesting a ping of the resource\n",
+			procID.cluster,procID.proc);
 		jmUnreachable = true;
 		myResource->RequestPing( this );
 	}
@@ -935,8 +951,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			update_actions |= UA_UPDATE_CONDOR_STATE;
 		}
 
-		if ( !submitLogged && new_state !=
-			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+		if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
+			 !submitLogged && !submitFailedLogged ) {
 			if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
