@@ -120,6 +120,46 @@ SOURCE=..\src\condor_starter.V6.1\java_proc.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\jic_local.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_local.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_local_config.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_local_config.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_shadow.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_shadow.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\job_info_communicator.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\job_info_communicator.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\local_user_log.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\local_user_log.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.C
 # End Source File
 # Begin Source File

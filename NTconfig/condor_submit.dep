@@ -3,6 +3,7 @@
 ..\src\condor_submit.V6\submit.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\access.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\environ.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -18,6 +19,7 @@
 	"..\src\condor_c++_util\store_cred.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\url_condor.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_c++_util\which.h"\

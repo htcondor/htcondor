@@ -86,14 +86,6 @@ LINK32=link.exe
 # Name "condor_tool - Win32 Release"
 # Begin Source File
 
-SOURCE=..\src\condor_tools\command_strings.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_tools\command_strings.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_tools\tool.C
 # End Source File
 # End Target

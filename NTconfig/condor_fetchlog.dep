@@ -2,6 +2,7 @@
 
 ..\src\condor_tools\fetch_log.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -10,6 +11,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -47,7 +49,6 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\condor_tools\command_strings.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\

@@ -2,6 +2,7 @@
 
 ..\src\condor_collector.V6\collector.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
@@ -13,6 +14,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_collector.V6\collector.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
 	"..\src\condor_collector.V6\hashkey.h"\
@@ -71,6 +73,7 @@
 
 ..\src\condor_collector.V6\collector_engine.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -79,6 +82,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
 	"..\src\condor_collector.V6\hashkey.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
@@ -129,6 +133,7 @@
 
 ..\src\condor_collector.V6\collector_main.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -138,6 +143,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_collector.V6\collector.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
 	"..\src\condor_collector.V6\hashkey.h"\
@@ -222,12 +228,14 @@
 
 ..\src\condor_status.V6\totals.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\enum_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\
@@ -257,6 +265,7 @@
 
 ..\src\condor_collector.V6\view_server.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -266,6 +275,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_collector.V6\collector.h"\
 	"..\src\condor_collector.V6\collector_engine.h"\
 	"..\src\condor_collector.V6\hashkey.h"\

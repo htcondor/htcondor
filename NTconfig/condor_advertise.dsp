@@ -88,9 +88,5 @@ LINK32=link.exe
 
 SOURCE=..\src\condor_tools\advertise.C
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_tools\command_strings.C
-# End Source File
 # End Target
 # End Project

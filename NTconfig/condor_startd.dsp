@@ -119,22 +119,6 @@ SOURCE=..\src\condor_startd.V6\command.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_startd.V6\CondorSystrayCommon.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\CondorSystrayNotifier.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\dhry.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_startd.V6\LoadQueue.C
 # End Source File
 # Begin Source File
@@ -208,10 +192,6 @@ SOURCE=..\src\condor_startd.V6\startd_cronmgr.C
 # Begin Source File
 
 SOURCE=..\src\condor_startd.V6\startd_cronmgr.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_startd.V6\startd_instantiate.C
 # End Source File
 # Begin Source File
 

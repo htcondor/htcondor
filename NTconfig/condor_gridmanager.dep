@@ -1,6 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_gridmanager.mak
 
 "..\src\condor_gridmanager\gahp-client.C" : \
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -9,6 +10,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
@@ -74,6 +76,7 @@
 
 ..\src\condor_gridmanager\globusjob.C : \
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\environ.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -85,6 +88,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -160,6 +164,7 @@
 
 ..\src\condor_gridmanager\globusresource.C : \
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -169,6 +174,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -236,6 +242,7 @@
 
 ..\src\condor_gridmanager\gridmanager.C : \
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\format_time.h"\
@@ -247,6 +254,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -324,6 +332,7 @@
 
 ..\src\condor_gridmanager\gridmanager_main.C : \
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -333,6 +342,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
@@ -389,7 +399,6 @@
 	"..\src\condor_includes\SafeMsg.h"\
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
-	"..\src\condor_includes\sslutils.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\fake_flock.h"\

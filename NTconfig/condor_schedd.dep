@@ -37,6 +37,7 @@
 ..\src\condor_schedd.V6\dedicated_scheduler.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -50,6 +51,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
@@ -113,6 +115,7 @@
 
 ..\src\condor_schedd.V6\grid_universe.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -121,6 +124,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
@@ -170,6 +174,7 @@
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\classad_log.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -182,6 +187,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
@@ -306,6 +312,7 @@
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\classad_helpers.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\directory.h"\
@@ -326,6 +333,7 @@
 	"..\src\condor_c++_util\store_cred.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_ckpt_server\constants2.h"\
 	"..\src\condor_ckpt_server\network2.h"\
@@ -403,6 +411,7 @@
 ..\src\condor_schedd.V6\schedd_main.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
@@ -413,6 +422,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\

@@ -25,6 +25,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
 OUTDIR=..\Debug
@@ -44,6 +47,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
+	-@erase "$(INTDIR)\command_strings.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
@@ -68,6 +72,7 @@ CLEAN :
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
 	-@erase "$(INTDIR)\email_cpp.obj"
+	-@erase "$(INTDIR)\enum_utils.obj"
 	-@erase "$(INTDIR)\env.obj"
 	-@erase "$(INTDIR)\environ.obj"
 	-@erase "$(INTDIR)\error_utils.obj"
@@ -104,6 +109,7 @@ CLEAN :
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
+	-@erase "$(INTDIR)\translation_utils.obj"
 	-@erase "$(INTDIR)\uids.obj"
 	-@erase "$(INTDIR)\usagemon.obj"
 	-@erase "$(INTDIR)\user_job_policy.obj"
@@ -118,40 +124,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /D "WIN32" /D "_DEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -166,6 +139,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
+	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Debug\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
@@ -191,6 +165,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\distribution.obj" \
 	"$(INTDIR)\dynuser.obj" \
 	"$(INTDIR)\email_cpp.obj" \
+	"$(INTDIR)\enum_utils.obj" \
 	"$(INTDIR)\env.obj" \
 	"$(INTDIR)\environ.obj" \
 	"$(INTDIR)\error_utils.obj" \
@@ -227,6 +202,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
 	"$(INTDIR)\token_cache.obj" \
+	"$(INTDIR)\translation_utils.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
@@ -257,6 +233,7 @@ CLEAN :
 	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
+	-@erase "$(INTDIR)\command_strings.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
@@ -281,6 +258,7 @@ CLEAN :
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
 	-@erase "$(INTDIR)\email_cpp.obj"
+	-@erase "$(INTDIR)\enum_utils.obj"
 	-@erase "$(INTDIR)\env.obj"
 	-@erase "$(INTDIR)\environ.obj"
 	-@erase "$(INTDIR)\error_utils.obj"
@@ -317,6 +295,7 @@ CLEAN :
 	-@erase "$(INTDIR)\stringSpace.obj"
 	-@erase "$(INTDIR)\strnewp.obj"
 	-@erase "$(INTDIR)\token_cache.obj"
+	-@erase "$(INTDIR)\translation_utils.obj"
 	-@erase "$(INTDIR)\uids.obj"
 	-@erase "$(INTDIR)\usagemon.obj"
 	-@erase "$(INTDIR)\user_job_policy.obj"
@@ -330,40 +309,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -378,6 +324,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
+	"$(INTDIR)\command_strings.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Release\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
@@ -403,6 +350,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\distribution.obj" \
 	"$(INTDIR)\dynuser.obj" \
 	"$(INTDIR)\email_cpp.obj" \
+	"$(INTDIR)\enum_utils.obj" \
 	"$(INTDIR)\env.obj" \
 	"$(INTDIR)\environ.obj" \
 	"$(INTDIR)\error_utils.obj" \
@@ -439,6 +387,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
 	"$(INTDIR)\token_cache.obj" \
+	"$(INTDIR)\translation_utils.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
@@ -451,6 +400,36 @@ LIB32_OBJS= \
 <<
 
 !ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -502,6 +481,12 @@ SOURCE="..\src\condor_c++_util\classad_log.C"
 SOURCE="..\src\condor_c++_util\classad_merge.C"
 
 "$(INTDIR)\classad_merge.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\command_strings.C"
+
+"$(INTDIR)\command_strings.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -688,6 +673,12 @@ SOURCE="..\src\condor_c++_util\dynuser.C"
 SOURCE="..\src\condor_c++_util\email_cpp.C"
 
 "$(INTDIR)\email_cpp.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\enum_utils.C"
+
+"$(INTDIR)\enum_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -922,6 +913,12 @@ SOURCE="..\src\condor_c++_util\strnewp.C"
 SOURCE="..\src\condor_c++_util\token_cache.C"
 
 "$(INTDIR)\token_cache.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\translation_utils.C"
+
+"$(INTDIR)\translation_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

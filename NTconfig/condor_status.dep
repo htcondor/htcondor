@@ -165,12 +165,14 @@
 
 ..\src\condor_status.V6\totals.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\enum_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
 	"..\src\condor_includes\condor_attributes.h"\

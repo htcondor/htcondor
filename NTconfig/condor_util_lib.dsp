@@ -177,6 +177,10 @@ SOURCE=..\src\condor_includes\fdprintf.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\filename_tools.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\get_port_range.c
 # End Source File
 # Begin Source File
@@ -250,7 +254,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=\home\tannenba\ws_v65-branch\src\h
+InputDir=\condor\v65\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -263,7 +267,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 # PROP BASE Ignore_Default_Tool 1
 # PROP Ignore_Default_Tool 1
 # Begin Custom Build
-InputDir=\home\tannenba\ws_v65-branch\src\h
+InputDir=\condor\v65\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"

@@ -143,6 +143,10 @@ SOURCE="..\src\condor_c++_util\command_strings.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\command_strings.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_attributes.C"
 # End Source File
 # Begin Source File
@@ -611,6 +615,10 @@ SOURCE="..\src\condor_c++_util\token_cache.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\translation_utils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\translation_utils.h"
 # End Source File
 # Begin Source File
 

@@ -2,6 +2,7 @@
 
 ..\src\condor_negotiator.V6\main.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -10,6 +11,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
@@ -55,6 +57,7 @@
 ..\src\condor_negotiator.V6\matchmaker.C : \
 	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
+	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_q.h"\
@@ -69,6 +72,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
