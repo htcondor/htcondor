@@ -8,10 +8,11 @@
 %token IN
 %token OUT
 %token BOTH
+%token ALLOC
 
 %type <node> stub_spec param_list param simple_param map_param
-%type <node> stub_body transfer_list 
-%type <node> xfer_param xfer_param_list xfer_func
+%type <node> stub_body action_func_list 
+%type <node> action_param action_param_list action_func xfer_func alloc_func
 %type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array opt_extract
 %type <bool> opt_reference
@@ -25,13 +26,14 @@
 extern int yyline;
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
-	int is_ptr, int extract, struct node *xfer_list );
+	int is_ptr, int extract, struct node *action_func_list );
 struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
 	int in, int out );
+struct node * mk_alloc_func( struct node *param_list );
 struct node * mk_param_node( char *type, char *name,
 	int is_const, int is_ptr, int is_const_ptr, int is_array,
 	int is_in, int is_out );
-struct node * mk_xfer_param_node( char *name, int is_ref );
+struct node * mk_action_param_node( char *name, int is_ref );
 struct node *set_map_attr( struct node * simple );
 struct node *insert_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
@@ -48,6 +50,8 @@ FILE * open_file( char *name );
 char * mk_upper();
 char * abbreviate( char *type_name );
 void Trace( char *msg );
+char * find_type_name( char *param_name, struct node *param_list );
+int has_out_params( struct node *action_func_list );
 
 #define MATCH 0 /* for strcmp() */
 
@@ -94,52 +98,71 @@ stub_body
 		Trace( "Empty stub body" );
 		$$ = mk_list();
 		}
-	| '{' transfer_list '}'
+	| '{' action_func_list '}'
 		{
 		Trace( "Non-Empty stub body" );
 		$$ = $2;
 		}
 	;
 
-transfer_list
+action_func_list
 	:	/* empty */
 		{
-		Trace( "Empty transfer_list" );
+		Trace( "Empty action_func_list" );
 		$$ = mk_list();
 		}
-	|	transfer_list xfer_func
+	|	action_func_list action_func
 		{
-		Trace( "added xfer_func to transfer_list" );
+		Trace( "added action_func to action_func_list" );
 		$$ = insert_node( $1, $2 );
 		}
 	;
 
-xfer_func
-	: use_type IDENTIFIER '(' xfer_param_list ')' ';'
+action_func
+	: xfer_func
 		{
-		Trace( "xfer_func" );
+		$$ = $1;
+		}
+	| alloc_func
+		{
+		$$ = $1;
+		}
+	;
+
+xfer_func
+	: use_type IDENTIFIER '(' action_param_list ')' ';'
+		{
+		Trace( "action_func" );
 		$$ = mk_xfer_func( $2.val, $4, $1.in, $1.out );
 		}
 	;
 
-xfer_param_list
-	: xfer_param
+alloc_func
+	: ALLOC '(' action_param_list ')' ';'
 		{
-		Trace( "xfer_param_list (1)" );
+		Trace( "alloc_func" );
+		$$ = mk_alloc_func( $3 );
+		}
+	;
+
+action_param_list
+	: action_param
+		{
+		Trace( "action_param_list (1)" );
 		$$ = insert_node( mk_list(), $1 );
 		}
-	| xfer_param_list ',' xfer_param
+	| action_param_list ',' action_param
 		{
-		Trace( "xfer_param_list (2)" );
+		Trace( "action_param_list (2)" );
 		$$ = append_node( $1, $3 );
 		}
 	;
 
-xfer_param
+action_param
 	: opt_reference IDENTIFIER
 		{
-		Trace( "xfer_param" );
-		$$ = mk_xfer_param_node( $2.val, $1 );
+		Trace( "action_param" );
+		$$ = mk_action_param_node( $2.val, $1 );
 		}
 	;
 
@@ -375,12 +398,12 @@ mk_param_node( char *type, char *name,
 }
 
 struct node *
-mk_xfer_param_node( char *name, int is_ref )
+mk_action_param_node( char *name, int is_ref )
 {
 	struct node	*answer;
 
 	answer = (struct node *)malloc( sizeof(struct node) );
-	answer->node_type = XFER_PARAM;
+	answer->node_type = ACTION_PARAM;
 	answer->id = name;
 	answer->is_ref = is_ref;
 
@@ -396,7 +419,7 @@ set_map_attr( struct node * simple )
 
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
-	int is_ptr, int extract, struct node *xfer_list )
+	int is_ptr, int extract, struct node *action_func_list )
 {
 	struct node	*answer;
 
@@ -407,7 +430,7 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	answer->is_ptr = is_ptr;
 	answer->extract = extract;
 	answer->param_list = p_list;
-	answer->xfer_list = xfer_list;
+	answer->action_func_list = action_func_list;
 
 	return answer;
 }
@@ -423,6 +446,18 @@ mk_xfer_func( char *xdr_func, struct node *param_list, int is_in, int is_out )
 	answer->param_list = param_list;
 	answer->in_param = is_in;
 	answer->out_param = is_out;
+
+	return answer;
+}
+
+struct node *
+mk_alloc_func( struct node *param_list )
+{
+	struct node	*answer;
+
+	answer = (struct node *)malloc( sizeof(struct node) );
+	answer->node_type = ALLOC_FUNC;
+	answer->param_list = param_list;
 
 	return answer;
 }
@@ -682,6 +717,7 @@ output_receiver( struct node *n )
 {
 	struct node *param_list = n->param_list;
 	struct node *p, *q;
+	struct node *var, *size;
 
 	assert( n->node_type == FUNC );
 
@@ -719,17 +755,32 @@ output_receiver( struct node *n )
 	}
 
 		/*
-		Receive other IN parameters - these are the ones with an
-		IN transfer function defined in the template file.
+		Allocate space for pointer type parameters.
 		*/
-	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
-		assert( p->node_type == XFER_FUNC );
-		if( !p->in_param ) {
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != ALLOC_FUNC ) {
+			continue;
+		}
+		var = p->param_list->next;
+		size = var->next;
+		printf( "\t\t%s = (%s)malloc( (unsigned)%s );\n",
+			var->id,
+			find_type_name( var->id, param_list ),
+			size->id
+		);
+	}
+
+		/*
+		Receive other IN parameters - these are the ones with an
+		IN action function defined in the template file.
+		*/
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != XFER_FUNC || p->in_param == FALSE ) {
 			continue;
 		}
 		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
-			assert( q->node_type == XFER_PARAM );
+			assert( q->node_type == ACTION_PARAM );
 			printf( "%s%s%s", 
 				q->is_ref ? "&" : "",
 				q->id,
@@ -754,39 +805,50 @@ output_receiver( struct node *n )
 	printf( "\n" );
 
 
-		/* Complete the XDR record, and flush */
+		/* Send system call return value, and errno if needed */
 	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
 	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
 	printf( "\t\tif( rval < 0 ) {\n" );
 	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
-	printf( "\t\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
-	printf( "\t\t\treturn rval;\n" );
 	printf( "\t\t}\n" );
 
 		/*
 		Send out results in any OUT parameters - these are the ones with an
-		OUT transfer function defined in the template file.
+		OUT action function defined in the template file.
 		*/
-	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
-		assert( p->node_type == XFER_FUNC );
-		if( !p->out_param ) {
+	if( has_out_params(n->action_func_list) ) {
+		printf( "\t\tif( rval >= 0 ) {\n" );
+		for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+			if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
+				continue;
+			}
+			printf( "\t\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+			for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+				assert( q->node_type == ACTION_PARAM );
+				printf( "%s%s%s", 
+					q->is_ref ? "&" : "",
+					q->id,
+					q->next->node_type == DUMMY ? "" : ", "
+				);
+			}
+			printf( ") );\n" );
+		}
+		printf( "\t\t}\n" );
+	}
+
+		/*
+		DeAllocate space for pointer type parameters.
+		*/
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != ALLOC_FUNC ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
-		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
-			assert( q->node_type == XFER_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
-				q->id,
-				q->next->node_type == DUMMY ? "" : ", "
-			);
-		}
-		printf( ") );\n" );
+		var = p->param_list->next;
+		printf( "\t\tfree( (char *)%s );\n", var->id );
 	}
 
 	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
 	printf( "\t\treturn rval;\n" );
-	printf( "\t\tbreak;\n" );
 
 
 	printf( "\t}\n" );
@@ -856,16 +918,15 @@ output_sender( struct node *n )
 
 		/*
 		Send other IN parameters - these are the ones with an
-		IN transfer function defined in the template file.
+		IN action function defined in the template file.
 		*/
-	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
-		assert( p->node_type == XFER_FUNC );
-		if( !p->in_param ) {
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != XFER_FUNC || p->in_param == FALSE ) {
 			continue;
 		}
 		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
-			assert( q->node_type == XFER_PARAM );
+			assert( q->node_type == ACTION_PARAM );
 			printf( "%s%s%s", 
 				q->is_ref ? "&" : "",
 				q->id,
@@ -889,16 +950,15 @@ output_sender( struct node *n )
 
 		/*
 		Gather up results in any OUT parameters - these are the ones with an
-		OUT transfer function defined in the template file.
+		OUT action function defined in the template file.
 		*/
-	for( p=n->xfer_list->next; p->node_type != DUMMY; p = p->next ) {
-		assert( p->node_type == XFER_FUNC );
-		if( !p->out_param ) {
+	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
 			continue;
 		}
 		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
-			assert( q->node_type == XFER_PARAM );
+			assert( q->node_type == ACTION_PARAM );
 			printf( "%s%s%s", 
 				q->is_ref ? "&" : "",
 				q->id,
@@ -1028,4 +1088,37 @@ Trace( char *msg )
 #elif TRACE == 2	/* intermix trace info with generated code */
 	printf( "Production: \"%s\"\n", msg );
 #endif
+}
+
+char *
+find_type_name( char *param_name, struct node *param_list )
+{
+	struct node	*p;
+	static char answer[1024];
+
+	for( p=param_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( strcmp(param_name,p->id) == MATCH ) {
+			if( p->is_ptr || p->is_array ) {
+				sprintf( answer, "%s *", p->type_name );
+			} else {
+				sprintf( answer, "%s", p->type_name );
+			}
+			return answer;
+		}
+	}
+	assert( FALSE );
+}
+
+
+int
+has_out_params( struct node *action_func_list )
+{
+	struct node	*p;
+
+	for( p=action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+		if( p->node_type == XFER_FUNC && p->out_param == TRUE ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
 }

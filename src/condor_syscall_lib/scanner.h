@@ -1,8 +1,9 @@
-#define DUMMY		0
-#define FUNC		1
-#define PARAM		2
-#define XFER_FUNC	3
-#define XFER_PARAM	4
+#define DUMMY			0
+#define FUNC			1
+#define PARAM			2
+#define XFER_FUNC		3
+#define ALLOC_FUNC		4
+#define ACTION_PARAM	5
 
 struct token {
 	int		tok_type;
@@ -25,7 +26,7 @@ struct node {
 	struct node	*next;
 	struct node *prev;
 	struct node *param_list;
-	struct node *xfer_list;
+	struct node *action_func_list;
 };
 
 #define XDR_FUNC id

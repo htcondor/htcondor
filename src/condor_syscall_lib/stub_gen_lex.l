@@ -75,6 +75,7 @@ fd_set				return grab( TYPE_NAME );
 map					return grab( MAP );
 in					return grab( IN );
 out					return grab( OUT );
+alloc				return grab( ALLOC );
 extract				return grab( EXTRACT );
 {STR}				return grab( IDENTIFIER );
 "{"					return grab( '{' );

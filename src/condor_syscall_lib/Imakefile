@@ -3,7 +3,7 @@ EXTRACT = FORK.o KILL.o SIGACTION.o
 STUBS = switches.o switches.special.o
 UTIL = syscall_mode.o remote_syscall.o debug_init.o senders.o
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL)
-all_target(condor_syscall_lib.a receivers.c)
+all_target(condor_syscall_lib.a receivers.o)
 
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
@@ -23,7 +23,7 @@ senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
 
 receivers.c: syscall.tmpl stub_gen
 	/usr/ucb/cpp -DRECEIVER < syscall.tmpl | \
-	stub_gen -mode receivers \
+	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
