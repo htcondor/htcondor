@@ -1,3 +1,5 @@
+#include "condor_common.h"
+
 #if !defined(WIN32)
 #pragma implementation "HashTable.h"
 #pragma implementation "Set.h"
@@ -10,7 +12,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_state.h"
-#include "condor_common.h"
 #include "condor_attributes.h"
 
 //------------------------------------------------------------------

@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "AcctDaemon.h"
 
 int Accountant::Init(DaemonCore* DC)
