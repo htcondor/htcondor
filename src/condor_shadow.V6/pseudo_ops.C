@@ -28,20 +28,14 @@
 
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
-#include <assert.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <signal.h>
 #include "condor_common.h"
+#include "condor_fix_assert.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
 #include "condor_io.h"
 #include "condor_file_info.h"
 #include "afs.h"
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
