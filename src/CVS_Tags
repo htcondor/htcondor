@@ -1,5 +1,7 @@
 03/15/05 V6_6_9
-   The official 6.6.9 release tag. This lives on V6_6_ALL and V6_6_9_EXT.
+   The official 6.6.9 release tag. This lives on V6_6_ALL and
+   V6_6_9_EXT. The official release version string for 6.6.9 is
+   $CondorVersion: 6.6.9 Mar 10 2005 $
 
 03/10/05 V6_6-merge-36
    The state of the V6_6-branch for a merge into V6_7-branch. This
