@@ -138,7 +138,6 @@
 #define syscall_lib syscall_lib_bsd /* ask Jim */
 #define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-#define CompatFlags /**/
 
 #ifndef Ctags
 #define Ctags ctags -t

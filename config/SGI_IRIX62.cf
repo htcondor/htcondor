@@ -78,7 +78,6 @@
 #define syscall_lib syscall_lib_irix
 #define PsAllFlag /sbin/ps -ef               /* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $2 }'    /* Pick out pid from "ps" output */
-#define CompatFlags -D_BSD_COMPAT
 
 #ifndef Ctags
 #define Ctags ctags -t
