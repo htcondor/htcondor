@@ -840,23 +840,33 @@ Scheduler::negotiate(int, Stream* s)
 	}
 
 		// We've broken out of our loops here because we're out of
-		// jobs.  The Negotiator has asked us for one more job... so
-		// we need to flush that request down the bit-bucket before we
-		// stash this socket for future use.  -Derek Wright 12/9/97
+		// jobs.  The Negotiator has either asked us for one more job
+		// or has told us to END_NEGOTIATE.  In either case, we need
+		// to pull this command off the wire and flush it down the
+		// bit-bucket before we stash this socket for future use.  If
+		// we got told SEND_JOB_INFO, we need to tell the negotiator
+		// we have NO_MORE_JOBS.   -Derek Wright 1/8/98
 	s->decode();
 	if( !s->code(op) || !s->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: Can't read command from negotiator.\n" );
+		return (!(KEEP_STREAM));
 	}		
-	if( op != SEND_JOB_INFO ) {
+	switch( op ) {
+	case SEND_JOB_INFO: 
+		if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
+			dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
+			return (!(KEEP_STREAM));
+		}
+		break;
+	case END_NEGOTIATE:
+		break;
+	default: 
 		dprintf( D_ALWAYS, 
 				 "Got unexpected command (%d) from negotiator.\n", op );
+		break;
 	}
 
 		/* Out of jobs */
-	if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-		dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
-		return (!(KEEP_STREAM));
-	}
 	if( JobsStarted < jobs ) {
 		dprintf( D_ALWAYS,
 		"Out of servers - %d jobs matched, %d jobs idle\n",
