@@ -55,6 +55,7 @@
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "condor_qmgr.h"
+#include "sig_install.h"
 
 #ifdef __GNUG__
 #pragma implementation "extArray.h"
@@ -218,7 +219,7 @@ main( int argc, char *argv[] )
 	DebugFlags |= D_EXPR;
 
 #if !defined(WIN32)
-	install_sig_handler(SIGPIPE, SIG_IGN );
+	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
