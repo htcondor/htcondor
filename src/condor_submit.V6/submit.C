@@ -686,7 +686,8 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
-	Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
+	//Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
+	DCSchedd my_schedd(ScheddAddr);
 
  	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
 		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
