@@ -1,5 +1,5 @@
-#ifndef _Time_H_
-#define _Time_H_
+#ifndef _TimeClass_H_
+#define _TimeClass_H_
 
 #include "condor_debug.h"
 #include <sys/time.h>

@@ -6,7 +6,7 @@
 #include "HashTable.h"
 #include "MyString.h"
 #include "Set.h"
-#include "Time.h"
+#include "TimeClass.h"
 
 class Accountant {
 
