@@ -444,8 +444,8 @@ suspending and resuming a Condor job, instead of just letting it run.
 could cause certain rare exceptions to be treated as fatal, when in
 fact, the Startd could recover from them.
 
-\item Fixed a bug in the computation of the total physical memory in
-IRIX machines that was resulting in an overflow on machines with
+\item Fixed a bug in the computation of the total physical memory on
+some platforms that was resulting in an overflow on machines with
 lots of ram (over 1 gigabyte).
 
 \item Fixed some bugs that could cause \Condor{starter} processes to
