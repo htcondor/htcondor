@@ -27,7 +27,6 @@ OpenSSLPath        = /unsup/globus-2.0-latest
 #define USE_GLOBUS_OPENSSL YES
 
 GlobusPath = /unsup/globus-2.0-latest
-GlobusFlavor = gcc32dbg
 
 /* Uncomment this line to enable the NeST I/O module */
 /* #define ENABLE_NEST */

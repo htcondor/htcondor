@@ -5,6 +5,8 @@
 #define HAS_GSI		NO
 #define HAS_OPENSSL	NO
 
+#define GLOBUS_FLAVOR gcc64dbg
+
 #define Platform	ALPHA-DUX4
 #define GccArch		alpha-dec-osf4.0
 
