@@ -250,14 +250,22 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
 
-	tree = ad->Lookup ("Machine");
+	if (!(tree = ad->Lookup ("Name")))
+	{
+		dprintf( D_FULLDEBUG, 
+				 "Warning: No 'Name' attribute; trying 'Machine'\n" );
+			// ... if name was not specified
+		tree = ad->Lookup ("Machine");
+	}
+
 	if (tree)
 	{
 		strcpy (hk.name, ((String *)tree->RArg())->Value ());
 	}
 	else
 	{
-		dprintf (D_ALWAYS, "Error: No 'Machine' attribute\n");
+		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
+		// neither Name nor Machine specified
 		return false;
 	}
 
