@@ -107,3 +107,9 @@ int RenameRemoteFile(const char* owner,
 					 const char* filename,
 					 const char* new_filename)
 { return -1; }
+
+
+int get_ckpt_server_count() { return 0; }
+
+
+int set_ckpt_server_number(int i) {}
