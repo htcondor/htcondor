@@ -23,7 +23,7 @@ sub DoConfig( )
     foreach my $Arg ( @ARGV )
     {
 	# Command line parameter value
-	if ( $Arg =~ /^--$ModuleName\_(\w+)=(.*)/ )
+	if ( $Arg =~ /^--($ModuleName\_\w+)=(.*)/ )
 	{
 	    $HardConfigs{$1} = $2;
 	}
@@ -137,6 +137,45 @@ sub ParseUptime( $$ )
     $HashRef->{Load01} = $Fields[9];
     $HashRef->{Load05} = $Fields[10];
     $HashRef->{Load15} = $Fields[11];
+}
+
+    # Check the config period string
+sub ParseSeconds( $$ )
+{
+    my $TimeString = shift;
+    my $Seconds = shift;
+
+    if ( $TimeString =~ /(\d+)([sSmMhHdD]?)/ )
+    {
+	$Seconds = $1;
+	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	{
+	    # Do nothing
+	}
+	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	{
+	    $Seconds *= 60;
+	}
+	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
+	{
+	    $Seconds *= (60 * 60);
+	}
+	elsif ( ( $2 eq "d" ) || ( $2 eq "D" ) )
+	{
+	    $Seconds *= (60 * 60 * 24);
+	}
+	else
+	{
+	    print STDERR "Uknown time modifier '$2'\n";
+	}
+    }
+    else
+    {
+	print STDERR "Bad time string '$TimeString'\n";
+    }
+
+    # Done; return it
+    $Seconds;
 }
 
 sub AddHash( $$$$ )
