@@ -33,6 +33,17 @@
 # endif
 #endif
 
+/* globus-2.4.3 on Redhat 7 appears to have a bug that does not notice the
+ * system has memmove().  It then tries to substitute bcopy(), which leads to
+ * compile errors.  See Gnats PR-255.  This bug can be encountered by including
+ * string.h.  Inform Globus this system does indeed have memmove()
+ */
+#if defined(GLIBC22)
+#	ifndef HAVE_MEMMOVE
+#		define HAVE_MEMMOVE
+#	endif
+#endif /* defined(GLIBC22) */
+
 #if defined(GLIBC23)
 /* the glibc in redhat 9, and the fortran compiler in particular use 
 	the 64 bit interfaces that we have to worry about */
