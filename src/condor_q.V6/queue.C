@@ -211,7 +211,7 @@ processCommandLineArguments (int argc, char *argv[])
 			if( pool ) {
 				delete [] pool;
 			}
-			pool = get_full_hostname(argv[++i]);
+			pool = get_full_hostname((const char *)argv[++i]);
 			if( ! pool ) {
 				fprintf( stderr, "%s: unknown host %s\n", 
 						 argv[0], argv[i] );

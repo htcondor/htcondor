@@ -588,7 +588,7 @@ accept_request_claim( Resource* rip )
 	client_host = strdup( tmp );
 
 		// Try to make sure we've got a fully-qualified hostname.
-	full_client_host = get_full_hostname( client_host );
+	full_client_host = get_full_hostname( (const char *) client_host );
 	if( ! full_client_host ) {
 		rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
 				 client_host );

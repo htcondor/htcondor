@@ -167,7 +167,7 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-pool" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				pool = get_full_hostname( argv[i] );
+				pool = get_full_hostname( (const char *) argv[i] );
 				if( ! pool ) {
 					fprintf( stderr, "%s: unknown host %s\n", MyName, 
 							 argv[i] );

@@ -272,7 +272,7 @@ firstPass (int argc, char *argv[])
 				free( pool );
 				had_pool_error = 1;
 			}
-			pool = get_full_hostname(argv[++i]);
+			pool = get_full_hostname( (const char *)argv[++i]);
 			if( !pool ) {
 				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
 				exit( 1 );

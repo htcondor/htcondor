@@ -321,7 +321,7 @@ main( int argc, char *argv[] )
 			case 'p':
 				tmp++;
 				if( tmp && *tmp ) {
-					if( (pool = get_full_hostname(*tmp)) == NULL ) {
+					if( (pool = get_full_hostname((const char *)(*tmp))) == NULL ) {
 						fprintf( stderr, "%s: unknown host %s\n", 
 								 MyName, *tmp );
 						exit( 1 );	
