@@ -76,10 +76,9 @@ init_config()
 #	define USER_NAME "condor"
 #endif
 
-config( a_out_name, context, fromServer )
+config( a_out_name, context )
 char	*a_out_name;
 CONTEXT	*context;
-int		fromServer;
 {
 	struct passwd	*pw, *getpwnam();
 	char			*ptr;
@@ -117,8 +116,6 @@ int		fromServer;
 
 	/* Different cases for default configuration or server configuration */
 	/* weiru */
-	if(fromServer == 0)
-	{
 	/* Test versions end in _t, prog name gets passed in */
 	for( ptr=a_out_name; *ptr; ptr++ );
 	if( strcmp("_t",ptr-2) == 0 ) {
@@ -158,19 +155,6 @@ int		fromServer;
 	(void) read_config( pw->pw_dir, config_file, context,
 						ConfigTab, TABLESIZE, EXPAND_LAZY );
 	free( config_file );
-	}
-	else
-	{
-		rval = read_config(".", SERVER_CONFIG, context, ConfigTab, TABLESIZE,
-						   EXPAND_LAZY);
-		if(rval < 0)
-		{
-			fprintf(stderr, "Configuration Error Line %d while processing config file %s/%s ", ConfigLineNo, pw->pw_dir, config_file);
-			perror("");
-			exit(1);
-		}
-	}
-	
 
 		/* Try to get a runtime value for our machine architecture,
 		   if we can't figure it out we default to value from config file */
@@ -189,6 +173,75 @@ int		fromServer;
 			insert_context( "OpSys", op_sys, context );
 		}
 	}
+}
+
+config_from_server( a_out_name, context )
+char    *a_out_name;
+CONTEXT *context;
+{
+    struct passwd   *pw, *getpwnam();
+    char            *ptr;
+    char            *config_file, *tilde;
+    int             testing, rval;
+    char            hostname[1024];
+    int             scm;
+    char            *arch, *op_sys;
+
+    /*
+    ** N.B. if we are using the yellow pages, system calls which are
+    ** not supported by either remote system calls or file descriptor
+    ** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
+    */
+    scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+    if( (pw=getpwnam(USER_NAME)) == NULL ) {
+        printf( "Can't find user \"%s\" in passwd file!\n", USER_NAME );
+        exit( 1 );
+    }
+    (void)endpwent();
+    (void)SetSyscalls( scm );
+
+    tilde = strdup( pw->pw_dir );
+    insert( "tilde", tilde, ConfigTab, TABLESIZE );
+    free( tilde );
+
+    if( gethostname(hostname,sizeof(hostname)) < 0 ) {
+        fprintf( stderr, "gethostname failed, errno = %d\n", errno );
+        exit( 1 );
+    }
+
+    if( ptr=(char *)strchr((const char *)hostname,'.') )
+        *ptr = '\0';
+    insert( "hostname", hostname, ConfigTab, TABLESIZE );
+
+    /* Different cases for default configuration or server configuration */
+    /* weiru */
+	rval = read_config(".", SERVER_CONFIG, context, ConfigTab, TABLESIZE,
+					   EXPAND_LAZY);
+	if(rval < 0)
+	{
+		fprintf(stderr, "Configuration Error Line %d while processing config
+file %s/%s ", ConfigLineNo, pw->pw_dir, config_file);
+		perror("");
+		exit(1);
+	}
+
+        /* Try to get a runtime value for our machine architecture,
+           if we can't figure it out we default to value from config file */
+    if( (arch = get_arch()) != NULL ) {
+        insert( "ARCH", arch, ConfigTab, TABLESIZE );
+        if( context ) {
+            insert_context( "Arch", arch, context );
+        }
+    }
+
+        /* Try to get a runtime value for our operating system,
+           if we can't figure it out we default to value from config file */
+    if( (op_sys = get_op_sys()) != NULL ) {
+        insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
+        if( context ) {
+            insert_context( "OpSys", op_sys, context );
+        }
+    }
 }
 
 /*
