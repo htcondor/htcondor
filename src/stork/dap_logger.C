@@ -298,7 +298,20 @@ int send_log_to_client_agent(const char *log)
 }
 
 //--------------------------------------------------------------------------
-void write_xml_user_log(char *logfilename,char *param1, char *value1, char *param2, char *value2, char *param3, char *value3, char *param4, char *value4, char *param5, char *value5, char *param6, char *value6, char *param7, char *value7,char *param8, char *value8)
+void
+write_xml_user_log(
+		char *logfilename,
+		char *param1, char *value1,
+		char *param2, char *value2,
+		char *param3, char *value3,
+		char *param4, char *value4,
+		char *param5, char *value5,
+		char *param6, char *value6,
+		char *param7, char *value7,
+		char *param8, char *value8,
+		char *param9, char *value9,
+		char *param10, char *value10
+)
 {
 
   classad::ClassAdParser parser;
@@ -349,6 +362,16 @@ void write_xml_user_log(char *logfilename,char *param1, char *value1, char *para
   if ((param8 != NULL) && (value8 != NULL)){
     if ( parser.ParseExpression(value8, expr) )
       classad->Insert(param8, expr);
+  }
+
+  if ((param9 != NULL) && (value9 != NULL)){
+    if ( parser.ParseExpression(value9, expr) )
+      classad->Insert(param9, expr);
+  }
+
+  if ((param10 != NULL) && (value10 != NULL)){
+    if ( parser.ParseExpression(value10, expr) )
+      classad->Insert(param10, expr);
   }
 
   //convert classad to XML

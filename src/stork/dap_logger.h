@@ -20,7 +20,13 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
 
 void write_xml_log(char *logfilename, classad::ClassAd *classad, const char *status);
 
-void write_xml_user_log(char *logfilename,char *param1, char *value1, char *param2 = NULL, char *value2 = NULL, char *param3 = NULL, char *value3 = NULL, char *param4 = NULL, char *value4 = NULL, char *param5 = NULL, char *value5 = NULL, char *param6 = NULL, char *value6 = NULL, char *param7 = NULL, char *value7 = NULL,char *param8 = NULL, char *value8 = NULL );
+void write_xml_user_log(char *logfilename,char *param1, char *value1, char
+		*param2 = NULL, char *value2 = NULL, char *param3 = NULL, char *value3
+		= NULL, char *param4 = NULL, char *value4 = NULL, char *param5 = NULL,
+		char *value5 = NULL, char *param6 = NULL, char *value6 = NULL, char
+		*param7 = NULL, char *value7 = NULL,char *param8 = NULL, char *value8 =
+		NULL,char *param9 = NULL, char *value9 = NULL,
+		char *param10 = NULL, char *value10 = NULL);
 
 #endif
 

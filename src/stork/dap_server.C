@@ -324,6 +324,22 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
 	// Create child process via daemoncore
+dprintf(D_ALWAYS, "DEBUG: src_url: %s\n", src_url);
+dprintf(D_ALWAYS, "DEBUG: dest_url: %s\n", dest_url);
+	MyString src_url_value, dest_url_value;
+	src_url_value.sprintf("\"%s\"", src_url);
+	dest_url_value.sprintf("\"%s\"", dest_url);
+	write_xml_user_log(userlogfilename, "MyType", "\"GenericEvent\"", 
+					   "EventTypeNumber", "8", 
+					   "Cluster", dap_id,
+					   "Proc", "-1",
+					   "Subproc", "-1",
+					   "Type", "transfer",
+					   "SrcUrl", (char *)src_url_value.Value(),
+					   "DestUrl", (char *)dest_url_value.Value(),
+					   "Arguments", arguments,
+					   "CredFile", cred_file_name);
+
 	pid =
 	daemonCore->Create_Process(
 		 command,						// command path
