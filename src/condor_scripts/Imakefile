@@ -115,12 +115,6 @@ all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
 all_symlink_target(/usr/lib/c++/ptlink,ptlink)
 #endif
 
-#if WANT_CONDOR_ANALYZE
-release_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.release,bin,condor_analyze,OBJECT_MODE)
-strip_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.stripped,bin,condor_analyze,OBJECT_MODE)
-static_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.static,bin,condor_analyze,OBJECT_MODE)
-#endif
-
 release_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 strip_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 static_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
