@@ -12,9 +12,12 @@ set host_name = $argv[2]
 rcp noenv ${host_name}:
 rcp $cmd_name ${host_name}:
 noenv $cmd_name
-foreach i ( 2  4  6  8  )
+
+while ( 1 )
 	rcp Ckpt.13.13 ${host_name}:
 	rsh $host_name noenv $cmd_name __restart__
+	if( $status == 13 ) break
 	rcp ${host_name}:Ckpt.13.13 .
-	noenv $cmd_name __restart__
+	noenv $cmd_name __restart__ 
+	if( $status == 13 ) break
 end
