@@ -1,0 +1,25 @@
+SRC_DIR = $(SRC_TREE)/condor_procapi
+
+#if IS_SGI_IRIX53 || IS_SGI_IRIX62
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+#else
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
+#endif
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+
+SRC = procapi.C procinterface.C instantiate.C
+
+OBJ = procapi.o procinterface.o instantiate.o
+
+all_target(libprocapi.a)
+
+library_target( libprocapi.a,$(OBJ))
+
+
+tags_target($(SRC),$(NULL))
+depend_target($(SRC))
+
+release:
+stripped:
+static: 
+
