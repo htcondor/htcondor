@@ -15,7 +15,7 @@ KERBEROS_OBJ = condor_cred_kerberos.o
 #endif
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-	alarm.o alloc.o user_job_policy.o \
+	alarm.o alloc.o user_job_policy.o classad_support.o \
 	directory.o my_hostname.o file_lock.o \
 	email.o env.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
@@ -38,7 +38,8 @@ library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
-c_plus_target(test_user_job_policy, test_user_job_policy.o user_job_policy.o, $(LIB))
+c_plus_target(test_user_job_policy, test_user_job_policy.o,$(LIB))
+c_plus_target(test_classad_support, test_classad_support.o,$(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a)
 c_plus_target(access.t, access.t.o, $(LIB))
