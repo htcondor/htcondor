@@ -21,7 +21,8 @@ void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printCustom    	(ClassAd *);
 
-char *formatElapsedTime( int );
+char *formatElapsedTime( int , AttrList* );
+char *formatRealTime( int , AttrList * );
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -98,7 +99,7 @@ printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
 	static AttrListPrintMask pm; 
-	static time_t now;
+	int    now;
 	int	   actvty;
 
 	if (ad)
@@ -119,14 +120,12 @@ printStartdNormal (ClassAd *ad)
 			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[????]  ");
 			pm.registerFormat("%-4d",  ATTR_MEMORY, "[????]  ");
 
-			(void) time( &now );
-
 			first = false;
 		}
 
 		pm.display (stdout, ad);
 		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
-			now != (time_t) -1 )
+			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
 		{
 			actvty = now - actvty;
 			printf( "%s\n", format_time( actvty ) );
@@ -366,16 +365,17 @@ printCustom (ClassAd *ad)
 
 
 char *
-formatElapsedTime( int t )
+formatElapsedTime( int t , AttrList *al )
 {
-	static time_t 	now;
-	static bool 	first = true;
+	int	now;
 
-	if( first ) {
-		(void) time( &now );
-		first = false;
-	}
-	
+	al->LookupInteger( ATTR_LAST_HEARD_FROM , now );	
 	t = now - t;
+	return format_time( t );
+}
+
+char *
+formatRealTime( int t , AttrList * )
+{
 	return format_time( t );
 }
