@@ -62,7 +62,7 @@ with ``Linux 2.0.x and 2.2.x (glibc 2.1)''.
 
 Red Hat version 7.x is fully supported in Condor \VersionNotice.
 \Condor{compile} works to link user jobs for the Standard universe
-with the versions of GCC and glibc that come with Red Hat 7.x.
+with the versions of GCC and glibc that comes with Red Hat 7.x.
 Both the statically linked and dynamically linked versions of the
 Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - Red Hat
 7.1, 7.2, 7.3'' will work with no additional effort.
@@ -73,22 +73,9 @@ Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - Red Hat
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Platforms !Red Hat 8.x}
 
-Red Hat version 8.x is supported in Condor \VersionNotice.
-  
-Unfortunately, \Condor{compile} does not yet work with GCC (gcc, g++
-or g77) version 3.0 or higher.
-Red Hat 8.0 uses GCC version 3.2.
-So, if you wish to run Standard universe jobs, you can not link them
-with Condor's checkpointing libraries on a Red Hat 8.x machine.
-However, if you have a Red Hat 7.x machine, you can run
-\Condor{compile} there, and the resulting binary can be submitted to
-run on Red Hat 8.x machines.
-We are planning to provide full support for Red Hat 8.x as soon as
-possible, but in the meantime, this is the best method for running
-Standard universe jobs.
-If you do not use \Condor{compile} and the Standard universe, the
-Red Hat 7.x binaries will probably work as-is for your site. 
-
+Red Hat version 8.x is fully supported in Condor \VersionNotice.
+\Condor{compile} works to link user jobs for the Standard universe
+with the versions of GCC and glibc that comes with Red Hat 8.x.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:platform-linux-rh9}Red Hat Version 9.x}
