@@ -49,7 +49,7 @@ int File::operator << (const UpDown & upDown)
 		   min(MaxUserNameSize-1,strlen(upDown.table[i].name)+1));
 		data[i].priority = upDown.table[i].priority;
 	}
-	fout.write((char*) data, sizeof (Data[header.activeUsers]));
+	fout.write((char*) data, sizeof (Data)*header.activeUsers);
 	delete data;
 	if ( fout.fail() )
 	{
@@ -83,7 +83,7 @@ int File::operator >> (UpDown & upDown)
 		upDown.AllocateSpaceMoreUsers(header.activeUsers);
 	
 	data = new Data[header.activeUsers];
-	fin.read((char*) data, sizeof (Data[header.activeUsers]));
+	fin.read((char*) data, sizeof(Data)*header.activeUsers);
 	if ( fin.fail() )
 	{
 		dprintf(D_FULLDEBUG, "Cannot read from file: %s\n", fileName);

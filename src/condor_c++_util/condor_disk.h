@@ -6,13 +6,13 @@
 
 class Header
 {
-protected:
+public:
 	int	activeUsers;
 };
 
 class Data : public Header
 {
-protected:
+public:
 	char	userName[MaxUserNameSize];
 	int	priority;
 };

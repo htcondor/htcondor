@@ -116,7 +116,7 @@ void UpDown::SetParameters(const int stepSize, const int heavyUserPrio)
 	step	   	  = stepSize;
 	heavyUserPriority = heavyUserPrio;
 }
-int UpDown::OppositeSigns(int a, int b, int operation)
+int UpDown::OppositeSigns(const int a,const int b,const int operation)
 {
 	int result;
 	switch (operation)
