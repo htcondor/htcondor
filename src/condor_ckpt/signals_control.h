@@ -11,19 +11,18 @@ critical sections where the Condor code cannot be interrupted
 for any reason.
 <p>
 _condor_ckpt_disable() and enable() control whether the checkpointing
-signals are allowed.  These can be used both by Condor code and
-by user code to control checkpointing but still allow other 
-signals to be handled.
+signal is enabled.  If disabled, the signal will be received, but the
+handler will set a flag and ignore the signal.  If ckpting is re-enabled,
+a ckpt will take place immediately.
+<p>
+Two functions are provided for the use of the checkpointer.
+_condor_ckpt_is_disabled() returns the current depth of disable calls.
+_condor_ckpt_defer() sets the state necessary to force a checkpoint
+at the next enable.
 <p>
 Both of these sets of functions occur in matched pairs.  For example, two calls
 to _condor_ckpt_disable() must be followed by two calls to
 enable() before signals are enabled again.
-<p>
-WARNING WARNING WARNING: This implementation is not yet complete.
-_condor_signals_disable() simply calls the ckpt version to disable 
-ckpting.  To do this correctly, two disable counts (one for ckpt, one for all
-signals) need to be kept and should be combined with the user's explicit signal
-mask to get the resulting correct signal mask.
 */
 
 #include "condor_common.h"
@@ -36,7 +35,20 @@ void	_condor_signals_enable();
 void	_condor_ckpt_disable();
 void	_condor_ckpt_enable();
 
+int	_condor_ckpt_is_disabled();
+void	_condor_ckpt_defer( int sig );
+
 END_C_DECLS
 
 #endif /* _CONDOR_SIGNALS_CONTROL_H */
+
+
+
+
+
+
+
+
+
+
 

@@ -1537,7 +1537,15 @@ Checkpoint( int sig, int code, void *scp )
 	int		write_result;
 
 		// First thing, make sure we don't do recursive checkpointing.
-	_condor_ckpt_disable();
+	_condor_signals_disable();
+
+		// If checkpointing is temporarily disabled, remember that and return
+	if( _condor_ckpt_is_disabled() ) {
+		dprintf(D_ALWAYS,"received ckpt signal %d, but deferred it for later\n",sig);
+		_condor_ckpt_defer( sig );
+		_condor_signals_enable();
+		return;
+	}
 
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
@@ -1737,8 +1745,8 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		_condor_restore_sigstates();
 
-			// match _condor_ckpt_disable() call at start of function
-		_condor_ckpt_enable();
+			// match _condor_signals_disable() call at start of function
+		_condor_signals_enable();
 
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
