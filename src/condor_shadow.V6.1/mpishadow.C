@@ -958,8 +958,6 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	char lhstr[128];
 	char final[ATTRLIST_MAX_EXPRESSION];
 	char node[9];
-	char *tmp;
-	int i;
 
 	sprintf( node, "%d", nodenum );
 
@@ -977,14 +975,13 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
 		}
-		if( (tmp=strstr(rhstr, "#MpInOdE#")) ) {
-			for( i=0 ; i<(int)strlen(node) ; i++ ) {
-				*(tmp++) = node[i];
-			}
-			*(tmp++) = '\0';
-			sprintf( final, "%s = %s%s", lhstr, rhstr,
-					 tmp+(8-strlen(node)) ); 
+
+		MyString strRh(rhstr);
+		if (strRh.replaceString("#MpInOdE#", node))
+		{
+			sprintf( final, "%s = %s", lhstr, strRh.GetCStr());
 			ad->InsertOrUpdate( final );
+			dprintf( D_ALWAYS, "Replaced using expr: %s\n", final);
 		}
 	}	
 }
