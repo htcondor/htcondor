@@ -144,6 +144,7 @@ typedef unsigned short u_short;
 #include <netinet/in.h>
 #include <netdb.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -202,7 +203,6 @@ static int open_tcp_stream( const char *hostname, unsigned short port );
 static int open_read_stream( const char *path );
 	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 
-
 int
 MAIN( int argc, char *argv[], char **envp )
 {
@@ -213,8 +213,13 @@ MAIN( int argc, char *argv[], char **envp )
 
 	_condor_prestart( SYS_REMOTE );
 
-	// init_syscall_connection( SYS_REMOTE | SYS_MAPPED, TRUE );
-	init_syscall_connection( SYS_LOCAL | SYS_UNMAPPED, TRUE );
+#define USE_PIPES 0
+
+#if USE_PIPES
+	init_syscall_connection( TRUE );
+#else
+	init_syscall_connection( FALSE );
+#endif
 
 #if 0
 	dprintf( D_ALWAYS, "User process started\n" );
@@ -414,7 +419,7 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 		dprintf( D_ALWAYS, "Unknown file opening mode (%s)\n", open_mode );
 		assert( FALSE );
 	}
-	dprintf( D_FULLDEBUG,
+	dprintf( D_ALWAYS,
 		"condor_fd: fd_number = %d, file = \"%s\",  mode = 0%o\n",
 		n, path, mode
 	);
@@ -438,8 +443,32 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 static BOOLEAN
 condor_ckpt( const char *path )
 {
-	dprintf( D_FULLDEBUG, "condor_ckpt: filename = \"%s\"\n", path );
+	sigset_t	sig_mask, o_mask;
+
+	dprintf( D_ALWAYS, "condor_ckpt: filename = \"%s\"\n", path );
 	init_image_with_file_name( path );
+
+		// unblock signals
+	sigfillset( &sig_mask );
+	if( sigprocmask(SIG_UNBLOCK,&sig_mask,0) < 0 ) {
+		perror( "sigprocmask" );
+		exit( 1 );
+	}
+
+#if 0
+	if( sigprocmask(SIG_SETMASK,0,&o_mask) < 0 ) {
+		perror( "sigprocmask" );
+		exit( 1 );
+	}
+
+	if( sigismember( &o_mask, SIGTSTP ) ) {
+		dprintf( D_ALWAYS, "Failed to unblock TSTP\n" );
+		exit( 1 );
+	}
+#endif
+
+	dprintf( D_ALWAYS, "Unblocked all signals\n" );
+
 	return TRUE;
 }
 
