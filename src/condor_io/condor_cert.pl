@@ -185,8 +185,8 @@ elsif ( /^-createca/i ) {
 	chmod 0644, "$SSLEAYLIB/cacert.pem";
 }
 else { #-help
-	print "usage: condor_cert {-user|-daemon|-createca} <directory path>\n";
-	print "   or: condor_cert -signcert -infile <infile> <output file>\n";
+	print "usage: condor_cert.pl {-user|-daemon|-createca} <directory path>\n";
+	print "   or: condor_cert.pl -signcert -infile <infile> <output file>\n";
 	exit 0;
 }
 
