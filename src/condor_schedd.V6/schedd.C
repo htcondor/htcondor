@@ -3218,7 +3218,7 @@ Scheduler::StartJobHandler()
 	if(!jobAd) {
 		dprintf(D_ALWAYS,"Couldn't find ClassAd for job %d.%d\n",
 		        job_id->cluster, job_id->proc);
-		tryNextShadow();
+		tryNextJob();
 		return;
 	}
 
@@ -3283,7 +3283,7 @@ Scheduler::StartJobHandler()
 					 true, true, true, true );
 			delete srec;
 			srec = NULL;
-			tryNextShadow();
+			tryNextJob();
 			return;
 		}
 	}
@@ -3308,7 +3308,7 @@ Scheduler::StartJobHandler()
                          true, true, true, true );
 				delete srec;
 				srec = NULL;
-				tryNextShadow();
+				tryNextJob();
 				return;
 			}
 			break;
@@ -3323,7 +3323,7 @@ Scheduler::StartJobHandler()
 					RemoveShadowRecFromMrec(srec);
 					delete srec;
 					srec = NULL;
-					tryNextShadow();
+					tryNextJob();
 					return;
 				}
 			} else {
@@ -3336,7 +3336,7 @@ Scheduler::StartJobHandler()
 					RemoveShadowRecFromMrec(srec);
 					delete srec;
 					srec = NULL;
-					tryNextShadow();
+					tryNextJob();
 					return;
 				}
 			}
@@ -3354,7 +3354,7 @@ Scheduler::StartJobHandler()
                          true, true, true, true );
 				delete srec;
 				srec = NULL;
-				tryNextShadow();
+				tryNextJob();
 				return;
 			}
 			break;
@@ -3451,12 +3451,12 @@ Scheduler::StartJobHandler()
 		srec->pid=pid;
 		add_shadow_rec(srec);
 	}
-	tryNextShadow();
+	tryNextJob();
 }
 
 
 void
-Scheduler::tryNextShadow( void )
+Scheduler::tryNextJob( void )
 {
 		// Re-set timer if there are any jobs left in the queue
 	if( !RunnableJobQueue.IsEmpty() ) {
