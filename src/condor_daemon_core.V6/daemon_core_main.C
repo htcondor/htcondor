@@ -292,12 +292,33 @@ int main( int argc, char** argv )
 			}
 			if ( command_port == -1 ) {
 				// choose any old port (dynamic port)
-				if ( !rsock->listen( 0 ) ) {
-					EXCEPT("Failed to post listen on command ReliSock");
+				if ( !rsock->bind() ) {
+					EXCEPT("Failed to bind to command ReliSock");
 				}
 				// now open a SafeSock _on the same port_ choosen above
 				if ( !ssock->bind(rsock->get_port()) ) {
-					EXCEPT("Failed to bind on SafeSock");
+					// failed to bind on the same port -- find free UDP port first
+					if ( !ssock->bind() ) {
+						EXCEPT("Failed to bind on SafeSock");
+					}
+					rsock->close();
+					if ( !rsock->bind(ssock->get_port()) ) {
+						// failed again -- keep trying
+						bool bind_succeeded = false;
+						for (int temp_port=1024; !bind_succeeded && temp_port < 4096; temp_port++) {
+							rsock->close();
+							ssock->close();
+							if ( rsock->bind(temp_port) && ssock->bind(temp_port) ) {
+								bind_succeeded = true;
+							}
+						}
+						if (!bind_succeeded) {
+							EXCEPT("Failed to find available port for command sockets");
+						}
+					}
+				}
+				if ( !rsock->listen() ) {
+					EXCEPT("Failed to post listen on command ReliSock");
 				}
 			} else {
 				// use well-known port specified by command_port
@@ -313,7 +334,7 @@ int main( int argc, char** argv )
 				
 				if ( (!rsock->listen(command_port)) ||
 					 (!ssock->bind(command_port)) ) {
-					EXCEPT("Failed to post listen on command socket(s)");
+					EXCEPT("Failed to bind to or post listen on command socket(s)");
 				}
 				
 			}
