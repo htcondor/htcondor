@@ -92,6 +92,7 @@ clean_files()
 
 // All daemons call this function when they want daemonCore to really
 // exit.  Put any daemon-wide shutdown code in here.   
+extern "C" {
 void
 DC_Exit( int status )
 {
@@ -105,7 +106,7 @@ DC_Exit( int status )
 		// Finally, exit with the status we were given.
 	exit( status );
 }
-
+} /* extern "C" */
 
 void
 drop_addr_file()
