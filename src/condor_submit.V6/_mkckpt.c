@@ -35,15 +35,19 @@
 
 #include <sys/file.h>
 #include "condor_sys.h"
+#include "condor_fix_stdio.h"
 #include "except.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
 
+
 #include "condor_qmgr.h"
 #include "_condor_fix_types.h"
 #include "condor_fix_socket.h"
+
+extern char *Spool;
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -104,6 +108,7 @@ char *ckptfile, *objfile;
 		}
 
 		if( write(ckptfd, buf, cc) != cc ) {
+			fprintf(stderr,"Error writing initial executable into queue\nPerhaps no more space available in directory %s ?\n",Spool);
 			EXCEPT("write %s: cc = %d, len = %d", ckptfile, cc, len);
 		}
 
