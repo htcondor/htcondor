@@ -296,6 +296,8 @@ Match::claim_timed_out()
 		m_client = NULL;
 	}
 		// Kill the claim.
+	dprintf(D_ALWAYS,
+			"CLAIM TIMED OUT! Is the condor_schedd gone? Killing job\n");
 	rip->kill_claim();
 	return TRUE;
 }
