@@ -59,6 +59,16 @@ ReliSock::ReliSock()
 	init();
 }
 
+ReliSock::ReliSock(const ReliSock & orig) : Sock(orig)
+{
+	init();
+	// now copy all cedar state info via the serialize() method
+	char *buf = NULL;
+	buf = orig.serialize();	// get state from orig sock
+	assert(buf);
+	serialize(buf);			// put the state into the new sock
+	delete [] buf;
+}
 
 ReliSock::~ReliSock()
 {
@@ -294,19 +304,19 @@ ReliSock::get_file(const char *destination)
 	if ( !get(filesize) || !end_of_message() ) {
 		dprintf(D_ALWAYS, 
 			"Failed to receive filesize in ReliSock::get_file\n");
-		return FALSE;
+		return -1;
 	}
-	dprintf(D_FULLDEBUG,"get_file(): filesize=%d\n",filesize);
+	// dprintf(D_FULLDEBUG,"get_file(): filesize=%d\n",filesize);
 
 #if defined(WIN32)
-	if ((fd = ::open(destination, O_WRONLY | O_CREAT | _O_BINARY, 0644)) < 0)
+	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC | _O_BINARY, 0644)) < 0)
 #else
-	if ((fd = ::open(destination, O_WRONLY | O_CREAT, 0644)) < 0)
+	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 #endif
 	{
 		dprintf(D_ALWAYS, 
 			"get_file(): Failed to open file %s, errno = %d.\n", destination, errno);
-		return FALSE;
+		return -1;
 	}
 
 	while (total < (int)filesize &&
@@ -317,25 +327,25 @@ ReliSock::get_file(const char *destination)
 					"(only wrote %d, errno=%d)\n", nbytes, written, errno);
 			::close(fd);
 			unlink(destination);
-			return FALSE;
+			return -1;
 		}
-		dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
+		// dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
 		total += written;
 	}
-	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	// dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	dprintf(D_FULLDEBUG, "wrote %d bytes to file %s\n",
 			total, destination);
 
 	if (::close(fd) < 0) {
 		dprintf(D_ALWAYS, "close failed in ReliSock::get_file\n");
-		return FALSE;
+		return -1;
 	}
 
 	if ( total < (int)filesize ) {
 		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
 			total, filesize);
 		unlink(destination);
-		return FALSE;
+		return -1;
 	}
 
 	return total;
@@ -357,20 +367,20 @@ ReliSock::put_file(const char *source)
 #endif
 	{
 		dprintf(D_ALWAYS, "Failed to open file %s, errno = %d.\n", source, errno);
-		return FALSE;
+		return -1;
 	}
 
 	if (::fstat(fd, &filestat) < 0) {
 		dprintf(D_ALWAYS, "fstat of %s failed\n", source);
 		::close(fd);
-		return FALSE;
+		return -1;
 	}
 
 	filesize = filestat.st_size;
 	if ( !put(filesize) || !end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to send filesize in ReliSock::put_file\n");
 		::close(fd);
-		return FALSE;
+		return -1;
 	}
 	
 #if defined(WIN32)
@@ -378,7 +388,7 @@ ReliSock::put_file(const char *source)
 	if ( !prepare_for_nobuffering(stream_encode) ) {
 		dprintf(D_ALWAYS,"Relisock::put_file() failed to drain buffers!\n");
 		::close(fd);
-		return FALSE;
+		return -1;
 	}
 
 	// Now transmit file using special optimized Winsock call
@@ -386,7 +396,8 @@ ReliSock::put_file(const char *source)
 			filesize,0,NULL,NULL,0) == FALSE ) {
 		dprintf(D_ALWAYS,"put_file: TransmitFile() failed, errno=%d\n",
 			GetLastError() );
-		total = 0;
+		::close(fd);
+		return -1;
 	} else {
 		total = filesize;
 	}
@@ -394,30 +405,30 @@ ReliSock::put_file(const char *source)
 	// On Unix, send file using put_bytes_nobuffer()
 	while (total < filestat.st_size &&
 		(nrd = ::read(fd, buf, sizeof(buf))) > 0) {
-		dprintf(D_FULLDEBUG, "read %d bytes\n", nrd);
+		// dprintf(D_FULLDEBUG, "read %d bytes\n", nrd);
 		if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
 			dprintf(D_ALWAYS, "failed to put %d bytes in ReliSock::put_file "
 				"(only wrote %d)\n", nrd, nbytes);
 			::close(fd);
-			return FALSE;
+			return -1;
 		}
 		// dprintf(D_FULLDEBUG, "wrote %d bytes\n", nbytes);
 		total += nbytes;
 	}
-	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	dprintf(D_FULLDEBUG, "done with transfer (errno = %d)\n", errno);
 #endif
 	
 	dprintf(D_FULLDEBUG, "sent file %s (%d bytes)\n", source, total);
 
 	if (::close(fd) < 0) {
 		dprintf(D_ALWAYS, "close failed in ReliSock::put_file, errno = %d\n", errno);
-		return FALSE;
+		return -1;
 	}
 
 	if (total < (int)filesize) {
 		dprintf(D_ALWAYS,"put_file(): ERROR, only sent %d bytes out of %d\n",
 			total, filesize);
-		return FALSE;
+		return -1;
 	}
 
 	return total;
@@ -679,28 +690,32 @@ ReliSock::type()
 }
 
 char * 
+ReliSock::serialize() const
+{
+	// here we want to save our state into a buffer
+
+	// first, get the state from our parent class
+	char * parent_state = Sock::serialize();
+	// now concatenate our state
+	char * outbuf = new char[50];
+	sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
+	strcat(parent_state,outbuf);
+	delete []outbuf;
+	return( parent_state );
+}
+
+char * 
 ReliSock::serialize(char *buf)
 {
 	char sinful_string[28];
 	char *ptmp;
-
-	if ( buf == NULL ) {
-		// here we want to save our state into a buffer
-
-		// first, get the state from our parent class
-		char * parent_state = Sock::do_serialize();
-		// now concatenate our state
-		char * outbuf = new char[50];
-		sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
-		strcat(parent_state,outbuf);
-		delete []outbuf;
-		return( parent_state );
-	}
+	
+	assert(buf);
 
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
-	ptmp = Sock::do_serialize(buf);
+	ptmp = Sock::serialize(buf);
 	assert( ptmp );
 	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
 	string_to_sin(sinful_string, &_who);
