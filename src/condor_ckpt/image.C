@@ -1368,7 +1368,6 @@ SegMap::Write( int fd, ssize_t pos )
 				 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
 				// note: bytes_to_go <= 65536 (bufsize)
 				rval = write(fd,ptr,bytes_to_go);
-				dprintf(D_ALWAYS, "wrote %d bytes\n", rval);
 				if (rval < 0) {
 					dprintf(D_ALWAYS, "write failed with errno %d in "
 							"SegMap::Write\n", errno);
@@ -1377,10 +1376,6 @@ SegMap::Write( int fd, ssize_t pos )
 			}
 			if (condor_slow_ckpt) {
 				// write condor_slow_ckpt KB per second
-				dprintf(D_ALWAYS, "wrote %d bytes, sleeping for %d seconds\n",
-						old_avail_in-zstr->avail_in,
-						((old_avail_in-zstr->avail_in)/
-						 (condor_slow_ckpt*KILO))+1);
 				sleep(((old_avail_in-zstr->avail_in)/
 					   (condor_slow_ckpt*KILO))+1);
 			}
