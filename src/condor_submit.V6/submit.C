@@ -58,12 +58,13 @@
 
 static int hashFunction( const MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)	 */
+HashTable<MyString,int> CheckFilesRead( 577, hashFunction ); 
+HashTable<MyString,int> CheckFilesWrite( 577, hashFunction ); 
+HashTable<MyString,int> ClusterAdAttrs( 31, hashFunction );
 
 char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
 
-ClassAd job;
+ClassAd  *job = NULL;
 char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
@@ -184,8 +185,8 @@ void 	compress( char *str );
 void 	magic_check();
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
-int	  SaveClassAd (ClassAd &);
-void	InsertJobExpr (char *expr);
+int	  SaveClassAd ();
+void	InsertJobExpr (char *expr, bool clustercheck = true);
 void	check_umask();
 
 char *owner = NULL;
@@ -207,15 +208,11 @@ struct SubmitRec {
 ExtArray <SubmitRec> SubmitInfo(10);
 int CurrentSubmitInfo = -1;
 
-// list of files to check for read and write access.
-ExtArray <char *> CheckFilesRead(4);
-ExtArray <char *> CheckFilesWrite(4);
-int NumCheckFilesRead = 0;
-int NumCheckFilesWrite = 0;
-
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString,MyString>;
+template class HashTable<MyString, int>;
+template class HashBucket<MyString,int>;
 template class ExtArray<SubmitRec>;
 
 void TestFilePermissions( char *scheddAddr = NULL )
@@ -228,26 +225,27 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	gid_t gid = getgid();
 	uid_t uid = getuid();
 #endif
-	int result, i;
+	int result, crap;
+	MyString name;
 
-	for(i = 0; i < NumCheckFilesRead; ++i)
+	CheckFilesRead.startIterations();
+	while( ( CheckFilesRead.iterate( name, crap ) ) )
 	{
-		result = attempt_access(CheckFilesRead[i], ACCESS_READ, uid, gid, scheddAddr);
+		result = attempt_access((char *)name.Value(), ACCESS_READ, uid, gid, scheddAddr);
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not readable by condor.\n", 
-					CheckFilesRead[i]);
+					name.Value());
 		}
-		free (CheckFilesRead[i]);
 	}
 
-	for(i = 0; i < NumCheckFilesWrite; ++i)
+	CheckFilesWrite.startIterations();
+	while( ( CheckFilesWrite.iterate( name, crap ) ) )
 	{
-		result = attempt_access(CheckFilesWrite[i], ACCESS_WRITE, uid, gid, scheddAddr );
+		result = attempt_access((char *)name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
 			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n", 
-					CheckFilesWrite[i]);
+					name.Value());
 		}
-		free (CheckFilesWrite[i]);
 	}
 }
 
@@ -341,8 +339,11 @@ main( int argc, char *argv[] )
 	}
 	
 	// set up types of the ad
-	job.SetMyTypeName (JOB_ADTYPE);
-	job.SetTargetTypeName (STARTD_ADTYPE);
+	if ( !job ) {
+		job = new ClassAd();
+		job->SetMyTypeName (JOB_ADTYPE);
+		job->SetTargetTypeName (STARTD_ADTYPE);
+	}
 
 	if( cmd_file == NULL ) {
 		usage();
@@ -433,14 +434,11 @@ main( int argc, char *argv[] )
 	InsertJobExpr (buffer);
 
 	//TODO:this should go away, and the owner name be placed in ad by schedd!
-	char* tmp = my_username();
-	if( tmp ) {
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, tmp);
-		free( tmp );
-	} 
-	else {
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, "unknown" );
+	owner = my_username();
+	if( !owner ) {
+		owner = "unknown";
 	}
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
@@ -458,7 +456,7 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
-	config_fill_ad( &job );
+	config_fill_ad( job );
 
 	if (Quiet) {
 		fprintf(stdout, "Submitting job(s)");
@@ -791,15 +789,21 @@ void
 SetImageSize()
 {
 	int		size;
-	int		executablesize;
+	static int executablesize;
 	char	*tmp;
 	char	*p;
 	char    buff[2048];
 
 	tmp = condor_param(ImageSize);
 
-	ASSERT (job.LookupString ("Cmd", buff));
-	size = executablesize = calc_image_size( buff );
+	// we should only call calc_image_size on the first
+	// proc in the cluster, since the executable cannot change.
+	if ( ProcId < 1 ) {
+		ASSERT (job->LookupString ("Cmd", buff));
+		executablesize = calc_image_size( buff );
+	}
+
+	size = executablesize;
 
 	if( tmp ) {
 		size = atoi( tmp );
@@ -985,7 +989,9 @@ SetPriority()
 	}
 	else
 	{
-		job.Delete( ATTR_NICE_USER );
+		sprintf( buffer, "%s = FALSE", ATTR_NICE_USER );
+		InsertJobExpr( buffer );
+
 	}
 }
 
@@ -1406,7 +1412,11 @@ SetForcedAttributes()
 			continue;
 		}
 		sprintf( buffer, "%s = %s", name.Value(), exValue );
-		InsertJobExpr( buffer );
+			// Call InserJobExpr with checkcluster set to false.
+			// This will result in forced attributes always going
+			// into the proc ad, not the cluster ad.  This allows
+			// us to easily remove attributes with the "-" command.
+		InsertJobExpr( buffer, false );
 
 		// free memory allocated by macro expansion module
 		free( exValue );
@@ -1508,7 +1518,7 @@ read_condor_file( FILE *fp, int stopBeforeQueuing )
 		else if (*name == '-') {
 			name++;
 			forcedAttributes.remove( MyString( name ) );
-			job.Delete( name );
+			job->Delete( name );
 			continue;
 		}
 
@@ -1706,7 +1716,7 @@ queue(int num)
 		SetForcedAttributes();
 		SetArguments(); //this needs to be last for Globus universe args
 
-		rval = SaveClassAd( job );
+		rval = SaveClassAd();
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -1722,7 +1732,7 @@ queue(int num)
 		if( !Quiet ) 
 			{
 				fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
-				job.fPrint (stdout);
+				job->fPrint (stdout);
 			}
 
 		logfile = condor_param(UserLogFile);
@@ -1740,6 +1750,9 @@ queue(int num)
 			}
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
+
+		delete job;
+		job = new ClassAd();
 
 		if (Quiet) {
 			fprintf(stdout, ".");
@@ -1895,14 +1908,22 @@ check_open( const char *name, int flags )
 	}
 	(void)close( fd );
 
-	// Queue files for testing access.
+	// Queue files for testing access if not already queued
+	MyString pathname_key(pathname);
+	int crap;
 	if( flags & O_WRONLY )
 	{
-		CheckFilesWrite[NumCheckFilesWrite++] = strdup(pathname);
+		if ( CheckFilesWrite.lookup(pathname_key,crap) < 0 ) {
+			// this file not found in our list; add it
+			CheckFilesWrite.insert(pathname_key,crap);
+		}
 	}
 	else
 	{
-		CheckFilesRead[NumCheckFilesRead++] = strdup(pathname);
+		if ( CheckFilesRead.lookup(pathname_key,crap) < 0 ) {
+			// this file not found in our list; add it
+			CheckFilesRead.insert(pathname_key,crap);
+		}
 	}
 }
 
@@ -2038,13 +2059,11 @@ log_submit()
 	 char	 *simple_name;
 	 char	 *path;
 	 char	 tmp[ _POSIX_PATH_MAX ];
-	char	 owner[64];
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
 
 	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
-	job.LookupString (ATTR_OWNER, owner);
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
 	for (int i=0; i <= CurrentSubmitInfo; i++) {
@@ -2076,27 +2095,39 @@ log_submit()
 
 
 int
-SaveClassAd (ClassAd &ad)
+SaveClassAd ()
 {
 	ExprTree *tree, *lhs, *rhs;
 	char lhstr[128], rhstr[ATTRLIST_MAX_EXPRESSION];
 	int  retval = 0;
+	int myprocid = ProcId;
 
-	SetAttributeInt (ClusterId, ProcId, "ClusterId", ClusterId);
-	SetAttributeInt (ClusterId, ProcId, "ProcId", ProcId);
+	if ( ProcId > 0 ) {
+		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
+	} else {
+		myprocid = -1;
+		SetAttributeInt (ClusterId, myprocid, ATTR_CLUSTER_ID, ClusterId);
+	}
 
-	job.ResetExpr();
-	while (tree = job.NextExpr())
+	
+
+	job->ResetExpr();
+	while (tree = job->NextExpr())
 	{
 		lhstr[0] = '\0';
 		rhstr[0] = '\0';
 		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
 		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
 		if (!lhs || !rhs) retval = -1;
-		if (SetAttribute (ClusterId, ProcId, lhstr, rhstr) == -1) {
-			fprintf(stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", lhstr, rhstr, ClusterId, ProcId);
+		if (SetAttribute (ClusterId, myprocid, lhstr, rhstr) == -1) {
+			fprintf(stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
+				lhstr, rhstr, ClusterId, ProcId);
 			retval = -1;
 		}
+	}
+
+	if ( ProcId == 0 ) {
+		SetAttributeInt (ClusterId, ProcId, ATTR_PROC_ID, ProcId);
 	}
 
 	return retval;
@@ -2104,11 +2135,25 @@ SaveClassAd (ClassAd &ad)
 
 
 void 
-InsertJobExpr (char *expr)
+InsertJobExpr (char *expr, bool clustercheck)
 {
 	ExprTree *tree, *lhs;
 	char      name[128];
 	name[0] = '\0';
+	int unused = 0;
+
+	MyString hashkey(expr);
+
+	if ( clustercheck && ProcId > 0 ) {
+		// We are inserting proc 1 or above.  So before we actually stick
+		// this into the job ad, make certain we did not already place it
+		// into the cluster ad.  We do this via a hashtable lookup.
+
+		if ( ClusterAdAttrs.lookup(hashkey,unused) == 0 ) {
+			// found it.  so it is already in the cluster ad; we're done.
+			return;
+		}
+	}
 
 	int retval = Parse (expr, tree);
 
@@ -2130,10 +2175,20 @@ InsertJobExpr (char *expr)
 		EXCEPT ("Error in submit file");
 	}
 	
-	if (!job.InsertOrUpdate (expr))
+	if (!job->InsertOrUpdate (expr))
 	{	
 		EXCEPT ("Unable to insert expression: %s\n", expr);
 	}
+
+	if ( clustercheck && ProcId < 1 ) {
+		// We are working on building the ad which will serve as our
+		// cluster ad.  Thus insert this expr into our hashtable.
+		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
+			EXCEPT("Unable to insert expression into hashtable\n", expr);
+		}
+	}
+
+
 	delete tree;
 }
 
