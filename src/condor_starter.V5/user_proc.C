@@ -479,7 +479,14 @@ UserProc::execute()
 		break;
 	}
 
-		// set up environment vector
+		// Set an environment variable that tells the job where it may put scratch data
+		// even if it moves to a different directory.
+
+	char scratch_env[_POSIX_PATH_MAX];
+	sprintf(scratch_env,"CONDOR_SCRATCH_DIR=%s/%s",Execute,local_dir);
+	env_obj.add_string(scratch_env);
+
+		// get the environment vector
 	envp = env_obj.get_vector();
 
 		// We may run more than one of these, so each needs its own
