@@ -97,6 +97,45 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 	extern void __cdecl _unlock_fhandle(int);
 #endif
 
+// We should only need to include the libTDP header once
+// the library is made portable. For now, the TDP process
+// control stuff is in here
+#define TDP 1
+#if defined( LINUX ) && defined( TDP )
+
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+
+int
+tdp_wait_stopped_child (pid_t pid)
+{
+
+    int wait_val;
+  
+    if (waitpid(pid, &wait_val, 0) == -1) {
+	dprintf(D_ALWAYS,"Wait for Stopped Child wait failed: %d (%s) \n", errno, strerror (errno)); 
+	return -1;
+    }
+
+    if(!WIFSTOPPED(wait_val)) {    
+	return -1;  /* Something went wrong with application exec. */
+    }
+
+    if (kill(pid, SIGSTOP) < 0) {
+	dprintf(D_ALWAYS, "Wait for Stopped Child kill failed: %d (%s) \n", errno, strerror(errno));
+	return -1;
+    }
+    
+    if (ptrace(PTRACE_DETACH, pid, 0, 0) < 0) {
+	dprintf(D_ALWAYS, "Wait for Stopped Child detach failed: %d (%s) \n", errno, strerror(errno));
+	return -1;
+    }
+
+    return 0;
+}
+
+#endif /* LINUX && TDP */
+
 #define SECURITY_HACK_ENABLE
 void zz2printf(KeyInfo *k) {
 	if (k) {
@@ -5362,7 +5401,16 @@ int DaemonCore::Create_Process(
 			sigemptyset( &emptySet );
 			sigprocmask( SIG_SETMASK, &emptySet, NULL );
 		}
-	
+		
+#if defined(LINUX) && defined(TDP)
+		if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(job_opt_mask) ) {
+			if(ptrace(PTRACE_TRACEME, 0, 0, 0) == -1) {
+			    write(errorpipe[1], &errno, sizeof(errno));
+			    exit (errno);
+			}
+		}
+#endif
+
 			// and ( finally ) exec:
 		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
 			exec_results =  execve(namebuf, unix_args, unix_env); 
@@ -5409,6 +5457,29 @@ int DaemonCore::Create_Process(
 		}
 		close(errorpipe[0]);
 		
+			// Now that we've seen if exec worked, if we are trying to
+			// create a paused process, we need to wait for the
+			// stopped child.
+		if( HAS_DCJOBOPT_SUSPEND_ON_EXEC(job_opt_mask) ) {
+#if defined(LINUX) && defined(TDP)
+				// NOTE: we need to be in user_priv to do this, since
+				// we're going to be sending signals and such
+			priv_state prev_priv;
+			prev_priv = set_user_priv();
+			int rval = tdp_wait_stopped_child( newpid );
+			set_priv( prev_priv );
+			if( rval == -1 ) {
+				return_errno = errno;
+				dprintf(D_ALWAYS, "Create_Process wait failed: %d (%s)\n", 
+					errno, strerror (errno) );
+				newpid = FALSE;
+				goto wrapup;
+			}
+#else
+			dprintf(D_ALWAYS, "DCJOBOPT_SUSPEND_ON_EXEC not implemented.\n");
+
+#endif /* LINUX && TDP */
+		}
 	}
 	else if( newpid < 0 )// Error condition
 	{
@@ -5950,6 +6021,18 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 			}
             break; // out of the for loop and do not post DC_SERVICEWAITPIDS
         }
+#if defined(LINUX) && defined(TDP)
+		if( WIFSIGNALED(status) && WTERMSIG(status) == SIGTRAP ) {
+				// This means the process has recieved a SIGTRAP to be
+				// stopped.  Oddly, on Linux, this generates a
+				// SIGCHLD.  So, we don't want to call the reaper for
+				// this process, since it hasn't really exited.  So,
+				// just call continue to ignore this particular pid.
+			dprintf( D_FULLDEBUG, "received SIGCHLD from stopped TDP process\n");
+			continue;
+		}
+#endif /* LINUX && TDP */
+
 		// HandleProcessExit(pid, status);
 		wait_entry.child_pid = pid;
 		wait_entry.exit_status = status;

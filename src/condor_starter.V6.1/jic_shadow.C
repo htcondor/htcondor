@@ -1137,9 +1137,8 @@ char*
 JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 {
 	char* tmp = NULL;
-	char* filename1 = NULL;
-	char filename[_POSIX_PATH_MAX];
-	filename[0] = '\0';
+	char* base = NULL;
+	MyString filename;
 
 	if(streamStdFile(attr_name)) {
 		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
@@ -1154,24 +1153,23 @@ JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 	if( !tmp ) {
 		job_ad->LookupString( attr_name, &tmp );
 	}
-	if( tmp ) {
-		if ( !nullFile(tmp) ) {
-			if( wants_file_transfer ) {
-				filename1 = basename( tmp );
-			} else {
-				filename1 = tmp;
-			}
-            if( ! fullpath(filename1) ) {	// prepend full path
-                sprintf( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                filename[0] = '\0';
-            }
-			strcat ( filename, filename1 );
-		}
-		free( tmp );
+	if( !tmp ) {
+		return NULL;
 	}
+	if ( !nullFile(tmp) ) {
+		if( wants_file_transfer ) {
+			base = basename( tmp );
+		} else {
+			base = tmp;
+		}
+		if( ! fullpath(base) ) {	// prepend full path
+			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+		}
+		filename += base;
+	}
+	free( tmp );
 	if( filename[0] ) { 
-		return strdup( filename );
+		return strdup( filename.Value() );
 	}
 	return NULL;
 }

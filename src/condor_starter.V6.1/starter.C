@@ -31,6 +31,7 @@
 #include "script_proc.h"
 #include "vanilla_proc.h"
 #include "java_proc.h"
+#include "tool_daemon_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
 #include "my_hostname.h"
@@ -486,6 +487,27 @@ CStarter::SpawnJob( void )
 
 	if (job->StartJob()) {
 		JobList.Append(job);
+
+		// Now, see if we also need to start up a ToolDaemon
+		// for this job.
+		char* tool_daemon_name = NULL;
+		jobAd->LookupString( ATTR_TOOL_DAEMON_CMD,
+							 &tool_daemon_name );
+		if( tool_daemon_name ) {
+				// we need to start a tool daemon for this job
+			ToolDaemonProc* tool_daemon_proc;
+			tool_daemon_proc = new ToolDaemonProc( jobAd, job->GetJobPid() );
+
+			if( tool_daemon_proc->StartJob() ) {
+				JobList.Append( tool_daemon_proc );
+				dprintf( D_FULLDEBUG, "ToolDaemonProc added to JobList\n");
+			} else {
+				dprintf( D_ALWAYS, "Failed to start ToolDaemonProc!\n");
+				delete tool_daemon_proc;
+			}
+			free( tool_daemon_name );
+		}
+
 			// let our JobInfoCommunicator know the job was started.
 		jic->allJobsSpawned();
 		return TRUE;

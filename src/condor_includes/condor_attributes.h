@@ -144,6 +144,7 @@ const char ATTR_HAS_OLD_VANILLA          [] = "HasOldVanilla";
 const char ATTR_HAS_PVM                  [] = "HasPVM";
 const char ATTR_HAS_RECONNECT            [] = "HasReconnect";
 const char ATTR_HAS_REMOTE_SYSCALLS      [] = "HasRemoteSyscalls";
+const char ATTR_HAS_TDP                  [] = "HasTDP";
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
 const char ATTR_HOLD_KILL_SIG            [] = "HoldKillSig";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
@@ -325,10 +326,18 @@ const char ATTR_STREAM_ERROR			 [] = "StreamErr";
 const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";
 const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
+const char ATTR_SUSPEND_JOB_AT_EXEC      [] = "SuspendJobAtExec";
 const char ATTR_TARGET_TYPE				 [] = "TargetType";
 const char ATTR_TOTAL_CLAIM_RUN_TIME     [] = "TotalClaimRunTime";
 const char ATTR_TOTAL_CLAIM_SUSPEND_TIME [] = "TotalClaimSuspendTime";
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
+
+const char ATTR_TOOL_DAEMON_ARGS         [] = "ToolDaemonArgs";
+const char ATTR_TOOL_DAEMON_CMD	         [] = "ToolDaemonCmd";
+const char ATTR_TOOL_DAEMON_ERROR        [] = "ToolDaemonError";
+const char ATTR_TOOL_DAEMON_INPUT        [] = "ToolDaemonInput";
+const char ATTR_TOOL_DAEMON_OUTPUT       [] = "ToolDaemonOutput";
+
 const char ATTR_TOTAL_CPUS				 [] = "TotalCpus";
 const char ATTR_TOTAL_DISK				 [] = "TotalDisk";
 const char ATTR_TOTAL_FLOCKED_JOBS		 [] = "TotalFlockedJobs";

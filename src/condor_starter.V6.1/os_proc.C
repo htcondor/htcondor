@@ -37,7 +37,6 @@
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
-#include "stream_handler.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -227,172 +226,36 @@ OsProc::StartJob()
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
-	fds[0] = -1; fds[1] = -1; fds[2] = -1;
-	bool failed_stdin = false;
-	bool failed_stdout = false;
-	bool failed_stderr = false;
+		// initialize these to -2 to mean they're not specified.
+		// -1 will be treated as an error.
+	fds[0] = -2; fds[1] = -2; fds[2] = -2;
 	bool starter_stdin = false;
 	bool starter_stdout = false;
 	bool starter_stderr = false;
-	const char* filename = NULL;
 
 		// in order to open these files we must have the user's privs:
 	priv_state priv;
 	priv = set_user_priv();
 
-	filename = Starter->jic->jobInputFilename();
-	if( filename ) {
-		if( filename[0] == '-' && ! filename[1] ) {
-				// special case, use the starter's stdin.
-			fds[0] = Starter->starterStdinFd();
-			starter_stdin = true;
-			dprintf( D_ALWAYS, "Input file: using STDIN of %s\n",
-					 mySubSystem );
-		} else if(Starter->jic->streamInput()) {
-			StreamHandler *handler = new StreamHandler;
-			if(!handler->Init(filename,"stdin",false)) {
-				Starter->jic->notifyStarterError("unable to establish standard input stream\n",true);
-			}
-			fds[0] = handler->GetJobPipe();
-			dprintf( D_ALWAYS, "Input file: streaming from remote file %s\n",filename);
-		} else {
-			if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
-				failed_stdin = 1;
-				char const *errno_str = strerror( errno );
-				MyString err_msg;
-				err_msg = "Failed to open standard input file '";
-				err_msg += filename;
-				err_msg += "': ";
-				err_msg += errno_str;
-				err_msg += " (errno ";
-				err_msg += errno;
-				err_msg += ')';
-				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-				Starter->jic->notifyStarterError( err_msg.Value(), true );
-			}
-			dprintf( D_ALWAYS, "Input file: %s\n", filename );
-		}
-	} else { 
-	#ifndef WIN32
-		if( (fds[0]=open("/dev/null", O_RDONLY) ) < 0 ) {
-			dprintf( D_ALWAYS,
-					 "failed to open stdin file /dev/null, errno %d\n",
-					 errno );
-			failed_stdin = 1;
-		}
-	#endif
-	}
+	fds[0] = openStdFile( SFT_IN, NULL, true, starter_stdin,
+						  "Input file", "standard input" );
 
-	filename = Starter->jic->jobOutputFilename();
-	if( filename ) {
-		if( filename[0] == '-' && ! filename[1] ) {
-				// special case, use the starter's stdout.
-			fds[1] = Starter->starterStdoutFd();
-			starter_stdout = true;
-			dprintf( D_ALWAYS, "Output file: using STDOUT of %s\n",
-					 mySubSystem );
-		} else if(Starter->jic->streamOutput()) {
-			StreamHandler *handler = new StreamHandler;
-			if(!handler->Init(filename,"stdout",true)) {
-				Starter->jic->notifyStarterError("unable to establish standard output stream\n",true);
-			}
-			fds[1] = handler->GetJobPipe();
-			dprintf( D_ALWAYS, "Output file: streaming to remote file %s\n",filename);
-		} else {
-			if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
-			{
-					// if failed, try again without O_TRUNC
-				if( (fds[1]=open( filename, O_WRONLY|O_CREAT, 0666)) < 0 ) {
-					failed_stdout = 1;
-					char const *errno_str = strerror( errno );
-					MyString err_msg;
-					err_msg = "Failed to open standard output file '";
-					err_msg += filename;
-					err_msg += "': ";
-					err_msg += errno_str;
-					err_msg += " (errno ";
-					err_msg += errno;
-					err_msg += ')';
-					dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-					Starter->jic->notifyStarterError( err_msg.Value(), true );
-				}
-			}
-			dprintf( D_ALWAYS, "Output file: %s\n", filename );
-		}
-	} else {
-    #ifndef WIN32
-		if( (fds[1]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-				// if failed, try again without O_TRUNC
-			if( (fds[1]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf( D_ALWAYS, 
-						 "failed to open stdout file /dev/null, errno %d\n", 
-						 errno );
-				failed_stdout = 1;
-			}
-		}
-    #endif
-	}
+	fds[1] = openStdFile( SFT_OUT, NULL, true, starter_stdout,
+						  "Output file", "standard output" );
 
-	filename = Starter->jic->jobErrorFilename();
-	if( filename ) {
-		if( filename[0] == '-' && ! filename[1] ) {
-				// special case, use the starter's stderr.
-			fds[2] = Starter->starterStderrFd();
-			starter_stderr = true;
-			dprintf( D_ALWAYS, "Error file: using STDERR of %s\n",
-					 mySubSystem );
-		} else if(Starter->jic->streamError()) {
-			StreamHandler *handler = new StreamHandler;
-			if(!handler->Init(filename,"stderr",true)) {
-				Starter->jic->notifyStarterError("unable to establish standard error stream\n",true);
-			}
-			fds[2] = handler->GetJobPipe();
-			dprintf( D_ALWAYS, "Error file: streaming to remote file %s\n",filename);
-		} else {
-			if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
-			{
-					// if failed, try again without O_TRUNC
-				if( (fds[2]=open(filename,O_WRONLY|O_CREAT, 0666)) < 0 ) {
-					failed_stderr = 1;
-					char const *errno_str = strerror( errno );
-					MyString err_msg;
-					err_msg = "Failed to open standard error file '";
-					err_msg += filename;
-					err_msg += "': ";
-					err_msg += errno_str;
-					err_msg += " (errno ";
-					err_msg += errno;
-					err_msg += ')';
-					dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-					Starter->jic->notifyStarterError( err_msg.Value(), true );
-				}
-			}
-			dprintf ( D_ALWAYS, "Error file: %s\n", filename );
-		}
-	} else {
-	#ifndef WIN32
-		if( (fds[2]=open("/dev/null",O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
-			// if failed, try again without O_TRUNC
-			if( (fds[2]=open( "/dev/null", O_WRONLY | O_CREAT, 0666)) < 0 ) {
-				dprintf( D_ALWAYS, 
-						 "failed to open stderr file /dev/null, errno %d\n", 
-						 errno );
-				failed_stderr = 1;
-			}
-		}
-	#endif
-	}
+	fds[2] = openStdFile( SFT_ERR, NULL, true, starter_stderr,
+						  "Error file", "standard error" );
 
 	/* Bail out if we couldn't open the std files correctly */
-	if ( failed_stdin || failed_stdout || failed_stderr ) {
-		/* only close ones that had been opened correctly */
-		if( fds[0] != -1 && !starter_stdin ) {
+	if( fds[0] == -1 || fds[1] == -1 || fds[2] == -1 ) {
+			/* only close ones that had been opened correctly */
+		if( fds[0] >= 0 && !starter_stdin ) {
 			close(fds[0]);
 		}
-		if( fds[1] != -1 && !starter_stdout ) {
+		if( fds[1] >= 0 && !starter_stdout ) {
 			close(fds[1]);
 		}
-		if( fds[2] != -1 && !starter_stderr ) {
+		if( fds[2] >= 0 && !starter_stderr ) {
 			close(fds[2]);
 		}
 		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
@@ -476,11 +339,23 @@ OsProc::StartJob()
 	env_str = job_env.getDelimitedString();
 	dprintf(D_FULLDEBUG, "Env = %s\n", env_str);
 
+
+	// Check to see if we need to start this process paused, and if
+	// so, pass the right flag to DC::Create_Process().
+	int job_opt_mask = DCJOBOPT_NO_ENV_INHERIT;
+	int suspend_job_at_exec = 0;
+	JobAd->LookupBool( ATTR_SUSPEND_JOB_AT_EXEC, suspend_job_at_exec);
+	if( suspend_job_at_exec ) {
+		dprintf( D_FULLDEBUG, "OsProc::StartJob(): "
+				 "Job wants to be suspended at exec\n" );
+		job_opt_mask |= DCJOBOPT_SUSPEND_ON_EXEC;
+	}
+
 	set_priv ( priv );
 
-	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, env_str, (char*)job_iwd, TRUE, NULL, fds, nice_inc,
-				   DCJOBOPT_NO_ENV_INHERIT );
+	JobPid = daemonCore->Create_Process( JobName, Args, PRIV_USER_FINAL,
+					     1, FALSE, env_str, job_iwd, TRUE,
+					     NULL, fds, nice_inc, job_opt_mask );
 
 	//NOTE: Create_Process() saves the errno for us if it is an
 	//"interesting" error.

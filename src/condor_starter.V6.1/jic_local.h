@@ -81,6 +81,20 @@ public:
 		*/
 	float bytesReceived( void );
 
+		/** Since the logic for getting the std filenames out of the
+			job ad and munging them are identical for all 3, just use
+			a helper to avoid duplicating code.  The only magic we do
+			here is to make sure we've got full paths, and if they're
+			not already, we prepend the job's iwd.
+			@param attr_name ClassAd attribute name to lookup
+			@param alt_name Alternate ClassAd attribute name
+			@return a strdup() allocated string for the filename we 
+			        care about, or NULL if it's not in the job ad or
+					points to /dev/null (or equiv).
+		*/
+	char* getJobStdFile( const char* attr_name,
+						 const char* alt_name = NULL );
+
 
 		// // // // // // // // // // // //
 		// Job execution and state changes
@@ -188,18 +202,6 @@ protected:
 			the classad.  If not there, use "1.0"
 		*/
 	void initJobId( void );
-
-		/** Since the logic for getting the std filenames out of the
-			job ad and munging them are identical for all 3, just use
-			a helper to avoid duplicating code.  The only magic we do
-			here is to make sure we've got full paths, and if they're
-			not already, we prepend the job's iwd.
-			@param attr_name ClassAd attribute name to lookup
-			@return a strdup() allocated string for the filename we 
-			        care about, or NULL if it's not in the job ad or
-					points to /dev/null (or equiv).
-		*/
-	char* getJobStdFile( const char* attr_name );
 
 		/** Make sure the JobUniverse attribute in our job ClassAd
 			(regardless of how we got it) is valid for a "local" job. 

@@ -72,6 +72,19 @@ public:
 		/// Total bytes received by this job 
 	float bytesReceived( void );
 
+		/** Since the logic for getting the std filenames out of the
+			job ad and munging them are identical for all 3, just use
+			a helper to avoid duplicating code.  If we're not
+			transfering files, we may need to use an alternate
+			attribute (see comment for initStdFiles() for more
+			details). 
+			@param attr_name The ClassAd attribute name to lookup
+			@param alt_name The alternate attribute name we might need
+			@return a strdup() allocated string for the filename we 
+			        care about, or NULL if it's not in the job ad.
+		*/
+	char* getJobStdFile( const char* attr_name,
+						 const char* alt_name = NULL );
 
 		// // // // // // // // // // // //
 		// Job execution and state changes
@@ -315,19 +328,6 @@ private:
 			@return at this time, this method always returns true
 		*/
 	bool initStdFiles( void );
-
-		/** Since the logic for getting the std filenames out of the
-			job ad and munging them are identical for all 3, just use
-			a helper to avoid duplicating code.  If we're not
-			transfering files, we may need to use an alternate
-			attribute (see comment above for initStdFiles() for more
-			details). 
-			@param attr_name The ClassAd attribute name to lookup
-			@param alt_name The alternate attribute name we might need
-			@return a strdup() allocated string for the filename we 
-			        care about, or NULL if it's not in the job ad.
-		*/
-	char* getJobStdFile( const char* attr_name, const char* alt_name );
 
 		/// If the job ad says so, initialize our IO proxy
 	bool initIOProxy( void );

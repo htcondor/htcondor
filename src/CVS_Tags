@@ -1,3 +1,8 @@
+08/04/04 V6_7-tdp_2-no_tracing-merge-1
+   The state of the V6_7-tdp_2-no_tracing-branch for it's first (and
+   only) merge into the V6_7-branch.  This is the first time the TDP
+   functionality will be merged into the main-line Condor source.
+
 08/04/04 V6_7-pre_merge-V6_7-tdp_2-no_tracing-merge-1
    The beginning of the merge of the V6_7-tdp_2-no_tracing-branch into
    the V6_7-branch.

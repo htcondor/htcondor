@@ -138,6 +138,14 @@ protected:
 	UtcTime job_start_time;
 	UtcTime job_exit_time;
 
+	enum std_file_type {
+		SFT_IN, SFT_OUT, SFT_ERR
+	};
+
+	int openStdFile( std_file_type type, const char* attr, 
+					 bool allow_dash, bool &used_starter_fd,
+					 const char* log_header, const char* phrase );
+
 private:
 
 	void initKillSigs( void );

@@ -406,28 +406,30 @@ JICLocal::initJobId( void )
 
 
 char* 
-JICLocal::getJobStdFile( const char* attr_name )
+JICLocal::getJobStdFile( const char* attr_name, const char* alt_name )
 {
 	char* tmp = NULL;
-	char filename[_POSIX_PATH_MAX];
-	filename[0] = '\0';
+	MyString filename;
 
 		// the only magic here is to make sure we have full paths for
 		// these, by prepending the job's iwd if the filename doesn't
 		// start with a '/'
-	if( job_ad->LookupString(attr_name, &tmp) ) {
-		if ( !nullFile(tmp) ) {
-			if( ! fullpath(tmp) ) { 
-                sprintf( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
-            } else {
-                filename[0] = '\0';
-            }
-			strcat( filename, tmp );
-		}
-		free( tmp );
+	job_ad->LookupString( attr_name, &tmp );
+	if( ! tmp && alt_name ) {
+		job_ad->LookupString( alt_name, &tmp );
 	}
+	if( ! tmp ) {
+		return NULL;
+	}
+	if ( !nullFile(tmp) ) {
+		if( ! fullpath(tmp) ) { 
+			filename.sprintf( "%s%c", job_iwd, DIR_DELIM_CHAR );
+		}
+		filename += tmp;
+	}
+	free( tmp );
 	if( filename[0] ) { 
-		return strdup( filename );
+		return strdup( filename.Value() );
 	}
 	return NULL;
 }
