@@ -62,7 +62,7 @@ _copy( CopyMode cm )
 
 
 void ExprList::
-setParentScope( ClassAd *parent )
+_setParentScope( ClassAd *parent )
 {
 	ExprTree *tree;
 	exprList.Rewind( );
@@ -116,17 +116,18 @@ appendExpression (ExprTree *tree)
 }
 
 
-void ExprList::
+bool ExprList::
 _evaluate (EvalState &, Value &val)
 {
 	val.setListValue (this);
+	return( true );
 }
 
-void ExprList::
+bool ExprList::
 _evaluate( EvalState &, Value &val, ExprTree *&sig )
 {
 	val.setListValue( this );
-	sig = copy( );
+	return( !( sig = copy( ) ) );
 }
 
 bool ExprList::
@@ -161,3 +162,163 @@ _flatten( EvalState &state, Value &, ExprTree *&tree, OpKind* )
 
 	return true;
 }
+
+
+// Iterator implementation
+ExprListIterator::
+ExprListIterator( )
+{
+}
+
+
+ExprListIterator::
+ExprListIterator( ExprList* l )
+{
+	initialize( l );
+}
+
+
+ExprListIterator::
+~ExprListIterator( )
+{
+}
+
+
+void ExprListIterator::
+initialize( const ExprList *l )
+{
+	// initialize eval state
+	state.cache.clear( );
+	state.curAd = l->parentScope;
+	state.setRootScope( );
+
+	// initialize list iterator
+	iter.initialize( l->exprList );
+}
+
+
+void ExprListIterator::
+toBeforeFirst( )
+{
+	iter.toBeforeFirst( );
+}
+
+
+void ExprListIterator::
+toAfterLast( )
+{
+	iter.toAfterLast( );
+}
+
+
+bool ExprListIterator::
+toNth( int n ) 
+{
+	toBeforeFirst( );
+	while( n-- ) {
+		iter.next( );
+	}
+	return( iter.next( ) != NULL );
+}
+
+
+ExprTree* ExprListIterator::
+nextExpr( )
+{
+	return( iter.next( ) );
+}
+
+
+ExprTree* ExprListIterator::
+currentExpr( )
+{
+	return( iter.current( ) );
+}
+
+
+ExprTree* ExprListIterator::
+prevExpr( )
+{
+	return( iter.prev( ) );
+}
+
+
+bool ExprListIterator::
+nextValue( Value& val, EvalState *es )
+{
+	ExprTree *tree = nextExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val );
+	return true;
+}
+
+
+bool ExprListIterator::
+currentValue( Value& val, EvalState *es )
+{
+	ExprTree *tree = currentExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val );
+	return true;
+}
+
+
+bool ExprListIterator::
+prevValue( Value& val, EvalState *es )
+{
+	ExprTree *tree = prevExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val );
+	return true;
+}
+
+
+bool ExprListIterator::
+nextValue( Value& val, ExprTree*& sig, EvalState *es )
+{
+	ExprTree *tree = nextExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val, sig );
+	return true;
+}
+
+
+bool ExprListIterator::
+currentValue( Value& val, ExprTree*& sig, EvalState *es )
+{
+	ExprTree *tree = currentExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val, sig );
+	return true;
+}
+
+
+bool ExprListIterator::
+prevValue( Value& val, ExprTree*& sig, EvalState *es )
+{
+	ExprTree *tree = prevExpr( );
+
+	if( !tree ) return false;
+	tree->evaluate( es?*es:state, val, sig );
+	return true;
+}
+
+
+bool ExprListIterator::
+isBeforeFirst( )
+{
+	return( iter.isBeforeFirst( ) );
+}
+
+
+bool ExprListIterator::
+isAfterLast( )
+{
+	return( iter.isAfterLast( ) );
+}
+
