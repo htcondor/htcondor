@@ -600,68 +600,29 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 
 //---------------------------------------------------------------------------
 void Dag::RemoveRunningJobs () const {
-    char rmCmd[ARG_MAX];
-	char killCmd[ARG_MAX];
-
-    unsigned int rmCmdLen = 0;	  // number of chars in rmCmd so far
-    unsigned int rmNum = 0;		  // number of jobs appended to rmCmd so far
-    unsigned int killCmdLen = 0;  // number of chars in killCmd so far
-    unsigned int killNum = 0;     // number of jobs appended to killCmd so far
+    char cmd[ARG_MAX];
 
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-        if( rmNum == 0 ) {
-            rmCmdLen = sprintf( rmCmd, "condor_rm" );
-        }
-        if( killNum == 0 ) {
-            killCmdLen = sprintf( killCmd, "kill -9" );
-        }
-
 		// if the job has been submitted, condor_rm it
         if (job->_Status == Job::STATUS_SUBMITTED) {
-            // Should be snprintf(), but doesn't exist on all platforms
-            rmCmdLen += sprintf( &rmCmd[rmCmdLen], " %d",
-								 job->_CondorID._cluster );
-            rmNum++;
-
-			if( rmCmdLen >= (ARG_MAX - 20) ) {
-				util_popen( rmCmd );
-				rmNum = 0;
-			}
+			sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
+			util_popen( cmd );
         }
-		// if job has its PRE script running, hard kill it
+		// if node is running a PRE script, hard kill it
         else if( job->_Status == Job::STATUS_PRERUN ) {
 			assert( job->_scriptPre->_pid != 0 );
-            killCmdLen += sprintf( &killCmd[killCmdLen], " %d",
-								   job->_scriptPre->_pid );
-            killNum++;
-
-			if( killCmdLen >= (ARG_MAX - 20) ) {
-				util_popen( killCmd );
-				killNum = 0;
-			}
+			sprintf( cmd, "kill -9 %d", job->_scriptPre->_pid );
+			util_popen( cmd );
         }
-		// if job has its POST script running, hard kill it
+		// if node is running a POST script, hard kill it
         else if( job->_Status == Job::STATUS_POSTRUN ) {
 			assert( job->_scriptPost->_pid != 0 );
-            killCmdLen += sprintf( &killCmd[killCmdLen], " %d",
-								   job->_scriptPost->_pid );
-            killNum++;
-
-			if( killCmdLen >= (ARG_MAX - 20) ) {
-				util_popen( killCmd );
-				killNum = 0;
-			}
+			sprintf( cmd, "kill -9 %d", job->_scriptPost->_pid );
+			util_popen( cmd );
         }
 	}
-
-    if( rmNum > 0) {
-        util_popen( rmCmd );
-    }
-    if( killNum > 0) {
-        util_popen( killCmd );
-    }
 	return;
 }
 
