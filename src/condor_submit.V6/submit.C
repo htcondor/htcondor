@@ -150,6 +150,7 @@ char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
+char	*SubUniverse	= "subuniverse";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
 char	*ExitRequirements = "exit_requirements";
@@ -982,15 +983,41 @@ SetUniverse()
 	};
 
 
-	if( univ && stricmp(univ,"globus") == MATCH ) {
+	if( univ && 
+		((stricmp(univ,"globus") == MATCH) || (stricmp(univ,"grid") == MATCH))) {
 		if ( (!Remote) && (have_condor_g() == 0) ) {
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}
 		JobUniverse = CONDOR_UNIVERSE_GLOBUS;
+		
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS);
 		InsertJobExpr (buffer);
 		free(univ);
+	
+		// Set SubUniverse (for Globus jobs)
+		univ = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
+		if( !univ ) {
+			univ = strdup("globus");
+		} else {
+			// Validate
+			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus
+			if ((stricmp (univ, "globus") == MATCH) ||
+				(stricmp (univ, "gt3") == MATCH) ||
+				(stricmp (univ, "nordugrid") == MATCH) ||
+				(stricmp (univ, "oracle") == MATCH)) {
+				// We're ok	
+				// Values are case-insensitive for gridmanager, so we don't need to change case			
+			} else {
+				fprintf( stderr, "\nERROR: Invalid value '%s' for SubUniverse\n", univ );
+				exit( 1 );
+			}
+		}			
+		
+		(void) sprintf (buffer, "%s = %s", ATTR_JOB_SUBUNIVERSE, univ);
+		InsertJobExpr (buffer);
+		free (univ);
+		
 		return;
 	};
 
@@ -1048,7 +1075,7 @@ SetUniverse()
 #endif
 
 	if(stricmp(univ,"standard")) {
-		fprintf( stderr, "\tERROR: I don't know about the '%s' universe.\n",univ);
+		fprintf( stderr, "\nERROR: I don't know about the '%s' universe.\n",univ);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
@@ -1059,6 +1086,8 @@ SetUniverse()
 	if ( univ ) {
 		free(univ);
 	}
+	
+	
 
 	return;
 }
@@ -2925,10 +2954,18 @@ SetGlobusParams()
 		return;
 
 	if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-		fprintf(stderr, "Globus universe jobs require a \"%s\" parameter\n",
-				GlobusScheduler );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
+		char * subuniverse = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
+		if ((subuniverse == NULL ||
+				(stricmp (subuniverse, "globus") == MATCH) ||
+				(stricmp (subuniverse, "gt3") == MATCH) ||
+				(stricmp (subuniverse, "nordugrid") == MATCH))) {
+			fprintf(stderr, "\nERROR: Globus/gt3 jobs require a \"%s\" parameter\n",
+					GlobusScheduler );
+			DoCleanup( 0, 0, NULL );
+			exit( 1 );
+		}
+		if (subuniverse != NULL)
+			free (subuniverse);
 	}
 
 	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
@@ -2994,25 +3031,25 @@ SetGlobusParams()
 
 
 	//ckireyev: MyProxy-related crap
-	if (tmp = condor_param (ATTR_MYPROXY_HOST_NAME)) {
+	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
 		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_HOST_NAME, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
 	}
 
-	if (tmp = condor_param (ATTR_MYPROXY_SERVER_DN)) {
+	if ((tmp = condor_param (ATTR_MYPROXY_SERVER_DN))) {
 		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_SERVER_DN, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
 	}
 
-	if (tmp = condor_param (ATTR_MYPROXY_PASSWORD)) {
+	if ((tmp = condor_param (ATTR_MYPROXY_PASSWORD))) {
 		if (myproxy_password == NULL) {
 			myproxy_password = tmp;
 		}
 	}
 
-	if (tmp = condor_param (ATTR_MYPROXY_CRED_NAME)) {
+	if ((tmp = condor_param (ATTR_MYPROXY_CRED_NAME))) {
 		sprintf (buff, "%s = \"%s\"", ATTR_MYPROXY_CRED_NAME, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
@@ -3023,13 +3060,13 @@ SetGlobusParams()
 		InsertJobExpr (buff);
 	}
 
-	if (tmp = condor_param (ATTR_MYPROXY_REFRESH_THRESHOLD)) {
+	if ((tmp = condor_param (ATTR_MYPROXY_REFRESH_THRESHOLD))) {
 		sprintf (buff, "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
 	}
 
-	if (tmp = condor_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME)) { 
+	if ((tmp = condor_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME))) { 
 		sprintf (buff, "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );
@@ -3430,22 +3467,33 @@ queue(int num)
 			SetExecutable();
 		}
 		SetMachineCount();
-		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+//		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
 			// Find the X509 user proxy
 			// First param for it in the submit file. If it's not there,
 			// then check the usual locations (as defined by GSI).
 
-			char *proxy_file = condor_param( X509UserProxy );
+		char *proxy_file = condor_param( X509UserProxy );
 
-			if ( proxy_file == NULL ) {
-				proxy_file = get_x509_proxy_filename();
-			}
+		if ( proxy_file == NULL ) {
+			proxy_file = get_x509_proxy_filename();
+		}
 
-			if ( proxy_file == NULL ) {
+		// Issue an error if (no proxy) && (universe=globus,gt3,nordugrid)
+		if ( proxy_file == NULL) {
+			char * subuniverse = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
+			if (JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
+				(subuniverse == NULL ||
+					(stricmp (subuniverse, "globus") == MATCH) ||
+					(stricmp (subuniverse, "gt3") == MATCH) ||
+					(stricmp (subuniverse, "nordugrid") == MATCH))) {
 				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-				exit( 1 );
+				fprintf( stderr, "x509 user proxy is required for globus, gt3 or nordugrid jobs\n");
+				exit (1);
 			}
+		}
+				
 
+		if (proxy_file != NULL) {
 #ifndef WIN32
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
@@ -3459,11 +3507,11 @@ queue(int num)
 				exit( 1 );
 			}
 			/* Dreadful hack: replace all the spaces in the cert subject
-			 * with underscores.... why?  because we need to pass this
-			 * as a command line argument to the gridmanager, and until
-			 * daemoncore handles command-line args w/ an argv array, spaces
-			 * will cause trouble.  
-			 */
+			* with underscores.... why?  because we need to pass this
+			* as a command line argument to the gridmanager, and until
+			* daemoncore handles command-line args w/ an argv array, spaces
+			* will cause trouble.  
+			*/
 			char *space_tmp;
 			do {
 				if ( (space_tmp = strchr(proxy_subject,' ')) ) {
@@ -3471,21 +3519,23 @@ queue(int num)
 				}
 			} while (space_tmp);
 			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-						   proxy_subject);
+						proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
 #endif
-			
+
+					
 			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   full_path(proxy_file));
+						full_path(proxy_file));
 			InsertJobExpr(buffer);	
 			free( proxy_file );
 		}
+	
 
-			/* For MPI only... we have to define $(NODE) to some string
-			   here so that we don't break the param parser.  In the
-			   MPI shadow, we'll convert the string into an integer
-			   corresponding to the mpi node's number. */
+		/* For MPI only... we have to define $(NODE) to some string
+		here so that we don't break the param parser.  In the
+		MPI shadow, we'll convert the string into an integer
+		corresponding to the mpi node's number. */
 		if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			set_condor_param ( "NODE", "#MpInOdE#" );
 		} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
