@@ -407,18 +407,8 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 int
 ReliSock::get_file(const char *destination, bool flush_buffers)
 {
-	int nbytes, written, fd;
-	char buf[65536];
-	unsigned int filesize;
-	unsigned int eom_num;
-	unsigned int total = 0;
-
-	if ( !get(filesize) || !end_of_message() ) {
-		dprintf(D_ALWAYS, 
-			"Failed to receive filesize in ReliSock::get_file\n");
-		return -1;
-	}
-	// dprintf(D_FULLDEBUG,"get_file(): filesize=%d\n",filesize);
+	int fd;
+	int result;
 
 #if defined(WIN32)
 	if ((fd = ::open(destination, O_WRONLY | O_CREAT | O_TRUNC | 
@@ -438,17 +428,40 @@ ReliSock::get_file(const char *destination, bool flush_buffers)
 		return -1;
 	}
 
+	result = get_file(fd,flush_buffers);
+
+	if(::close(fd)!=0) {
+		dprintf(D_ALWAYS, "close failed in ReliSock::get_file\n");
+		return -1;
+	}
+
+	if(result<0) unlink(destination);
+	
+	return result;
+}
+
+int
+ReliSock::get_file( int fd, bool flush_buffers )
+{
+	int nbytes, written;
+	char buf[65536];
+	unsigned int filesize;
+	unsigned int eom_num;
+	unsigned int total = 0;
+
+	if ( !get(filesize) || !end_of_message() ) {
+		dprintf(D_ALWAYS, 
+			"Failed to receive filesize in ReliSock::get_file\n");
+		return -1;
+	}
+
 	while ((filesize == -1 || total < (int)filesize) &&
 			(nbytes = get_bytes_nobuffer(buf, MIN(sizeof(buf),filesize-total),0)) > 0) {
-		// dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
 		if ((written = ::write(fd, buf, nbytes)) < nbytes) {
 			dprintf(D_ALWAYS, "failed to write %d bytes in ReliSock::get_file "
 					"(only wrote %d, errno=%d)\n", nbytes, written, errno);
-			::close(fd);
-			unlink(destination);
 			return -1;
 		}
-		// dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
 		total += written;
 	}
 
@@ -456,8 +469,6 @@ ReliSock::get_file(const char *destination, bool flush_buffers)
 		get(eom_num);
 		if ( eom_num != 666 ) {
 			dprintf(D_ALWAYS,"get_file: Zero-length file check failed!\n");
-			::close(fd);
-			unlink(destination);
 			return -1;
 		}			
 	}
@@ -466,18 +477,11 @@ ReliSock::get_file(const char *destination, bool flush_buffers)
 		fsync(fd);
 	}
 	
-	dprintf(D_FULLDEBUG, "wrote %d bytes to file %s\n",
-			total, destination);
-
-	if (::close(fd) < 0) {
-		dprintf(D_ALWAYS, "close failed in ReliSock::get_file\n");
-		return -1;
-	}
+	dprintf(D_FULLDEBUG, "wrote %d bytes\n",total);
 
 	if ( total < (int)filesize && filesize != -1 ) {
 		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
 			total, filesize);
-		unlink(destination);
 		return -1;
 	}
 
