@@ -312,9 +312,6 @@ CleanJobQueue()
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
 		JobQueue->TruncLog();
 		JobQueueDirty = false;
-	} else {
-		dprintf(D_ALWAYS,
-				"CleanJobQueue() doing nothing since !JobQueueDirty.\n");
 	}
 }
 
@@ -639,6 +636,21 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 	else {
 		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
+	}
+
+	int universe = STANDARD;
+	ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	if (universe == PVM) {
+			// PVM jobs take up a whole cluster.  If we've been ask to
+			// destroy any of the procs in a PVM job cluster, we
+			// should destroy the entire cluster.  This hack lets the
+			// schedd just destroy the proc associated with the shadow
+			// when a multi-class PVM job exits without leaving other
+			// procs in the cluster around.  It also ensures that the
+			// user doesn't delete only some of the procs in the PVM
+			// job cluster, since that's going to really confuse the
+			// PVM shadow.
+		return DestroyCluster(cluster_id);
 	}
 
     // Append to history file
