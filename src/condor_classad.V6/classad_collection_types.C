@@ -62,7 +62,7 @@ ExprTree *BaseCollection::
 GetRankExpr()
 {
     ClassAd *ad = rankCtx.GetLeftAd( );
-    return( ad ? ad->Lookup( ATTR_RANK ) : NULL );
+    return( ad ? ad->Lookup( ATTR_RANK ) : (ExprTree*)NULL );
 }
 
 double BaseCollection::
