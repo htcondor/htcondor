@@ -146,9 +146,11 @@ main( int argc, char *argv[] )
 	}
 
 	cmd_str = strchr( MyName, '_');
-	if (cmd_str && strcmp(cmd_str, "_hold") == MATCH) {
+	if (cmd_str && (stricmp(cmd_str, "_hold") == MATCH ||
+			stricmp(cmd_str, "_hold.exe") == MATCH)) { // added for Windows
 		mode = HELD;
-	} else if( cmd_str && strcmp( cmd_str, "_release" ) == MATCH ) {
+	} else if( cmd_str && (stricmp( cmd_str, "_release") == MATCH || 
+			stricmp(cmd_str, "_release.exe") == MATCH)) { // added for Windows
 		mode = IDLE;
 	} else {
 		mode = REMOVED;
