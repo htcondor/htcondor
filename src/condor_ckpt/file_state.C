@@ -2463,9 +2463,10 @@ fcntl(int fd, int cmd, ...)
         case F_GETFD:
         case F_GETFL:
                 if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, fd, cmd, arg );
+                        return syscall( SYS_fcntl, user_fd, cmd, arg );
 				} else {
-						return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+						return REMOTE_syscall( CONDOR_fcntl,
+											   user_fd, cmd, arg );
 				}
         case F_SETFD:
         case F_SETFL:
@@ -2476,9 +2477,9 @@ fcntl(int fd, int cmd, ...)
                 arg = va_arg( ap, int );
 #endif
                 if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, fd, cmd, arg );
+                        return syscall( SYS_fcntl, user_fd, cmd, arg );
 		} else {
-			return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+			return REMOTE_syscall( CONDOR_fcntl, user_fd, cmd, arg );
 		}
 
 	// These fcntl commands use a struct flock pointer for their
@@ -2493,13 +2494,15 @@ fcntl(int fd, int cmd, ...)
                 va_start( ap, cmd );
 		lockarg = va_arg ( ap, struct flock* );
                 if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, fd, cmd, lockarg );
+                        return syscall( SYS_fcntl, user_fd, cmd, lockarg );
 		} else {
-			EXCEPT( "Unsupported fcntl() command" );
+			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+			return -1;
 		}
 	default:
-		EXCEPT( "Unsupported fcntl() command" );
+		dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 	}
+	return -1;
 }
 /* _fcntl and __fcntl must have the same cases as fcntl so the correct
    third argument gets passed.  -Jim B. */
