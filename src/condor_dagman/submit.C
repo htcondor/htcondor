@@ -31,11 +31,14 @@
 #include "util.h"
 #include "debug.h"
 
-static bool submit_try (const char *exe,
-                        const char * command,
-                        CondorID & condorID) {
-
+static bool
+submit_try( const char *exe, const char *command, CondorID &condorID )
+{
   MyString  command_output("");
+
+  // this is dangerous ... we need to be much more careful about
+  // auditing what we're about to run via popen(), rather than
+  // accepting an arbitary command string...
   FILE * fp = popen(command, "r");
   if (fp == NULL) {
     debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
