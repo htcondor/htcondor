@@ -61,8 +61,8 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 	qmgmt_sock->encode();
 	assert( qmgmt_sock->code(CurrentSysCall) );
 
+	int shouldAuth = 0;
 	if ( auth ) {
-		int shouldAuth;
 
 		qmgmt_sock->end_of_message();
 		qmgmt_sock->decode();
@@ -77,8 +77,28 @@ InitializeConnection( char *owner, char *tmp_file, int auth=0 )
 		}
 		else {
 			fprintf( stderr, "Submits NOT AUTHENTICATED, server not prepared\n" );
+			qmgmt_sock->encode();
+			assert( qmgmt_sock->code(owner) );
+			assert( qmgmt_sock->end_of_message() );
 		}
-		qmgmt_sock->encode();
+
+//this is copied from below
+   qmgmt_sock->decode();
+   assert( qmgmt_sock->code(rval) );
+   if( rval < 0 ) {
+      assert( qmgmt_sock->code(terrno) );
+      assert( qmgmt_sock->end_of_message() );
+      errno = terrno;
+      return rval;
+   }
+
+	if ( !shouldAuth ) {
+	   assert( qmgmt_sock->code(tmp_file) );
+	}
+   assert( qmgmt_sock->end_of_message() );
+
+   return rval;
+
 	}
 
 	assert( qmgmt_sock->code(owner) );
