@@ -1069,12 +1069,14 @@ Daemons::FinalRestartMaster()
 		// exec cmd.exe (which is the NT Command interpreter, i.e. the
 		// default shell) and issue a "net stop" and "net start" command.
 		if ( NT_ServiceFlag == TRUE ) {
+#ifdef WIN32
 			char systemshell[MAX_PATH];
 
 			::GetSystemDirectory(systemshell,MAX_PATH);
 			strcat(systemshell,"\\cmd.exe");
 			(void)execl(systemshell, "/Q", "/C",
 				"net stop Condor & net start Condor", 0);
+#endif
 		} else {
 			if( MasterName ) {
 				(void)execl(daemon_ptr[master]->process_name, 
