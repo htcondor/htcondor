@@ -6,6 +6,12 @@
 #include "condor_attributes.h"
 
 /*
+ * The user_job_policy() function is deprecated and NOT to be used for
+ * new code. Pete Keller said so. :-)
+ * Use the UserPolicy class, marked as the "NEW INTERFACE" below.
+ *      -- jfrey, Nov 14, 2002
+ */
+/*
 This is a plain english description of the technical details of the use
 of the user_job_policy() function.
 
