@@ -53,15 +53,14 @@ EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o SYSCALL.o
-#	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
-		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
-		  SYSCONF.o	GETLOGIN.o
 #	elif (IS_X86_SOLARIS25)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o
-
+#	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  SYSCONF.o GETLOGIN.o
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
 #	else
@@ -187,9 +186,17 @@ uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
-#if !IS_ALPHA_OSF1
+
+#if (IS_X86_SOLARIS25)
+SIGACTION.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) sigaction.o
+	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
+	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
+	rm -f sigaction.tmp.o sigaction.o
+#elif !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
+
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
@@ -237,7 +244,18 @@ release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 strip_copy_target( condor_rt0.o, $(STRIP_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 #endif
 
-library_target(condor_syscall_lib.a,$(LIB_OBJ))
+#if (IS_X86_SOLARIS25)
+	library_target(libtmp.a,$(LIB_OBJ))
+
+condor_syscall_lib.a: libtmp.a ToUpper
+	ToUpper libtmp.a condor_syscall_lib.a __cerror __CERROR
+
+clean::
+	rm -f condor_syscall_lib.a
+
+#else 
+	library_target(condor_syscall_lib.a,$(LIB_OBJ))
+#endif
 
 #if (DOES_CHECKPOINTING) || (DOES_REMOTE_SYSCALLS)
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
