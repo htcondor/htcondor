@@ -27,7 +27,7 @@ my %Options =
      "[-c=file]"	=> "Specify Hawkeye config file",
      "[-n]"		=> "Don't update the config file",
      "[-m]"		=> "Manual mode; asks lots of questions",
-     "[-a]"		=> "Ask before installing each module)",
+     "[-a]"		=> "Ask before installing each module",
      "File [File..]"	=> "List of module files to install",
      #"[-v]"		=> "Verbose",
      "[-h]"		=> "Dump help",
