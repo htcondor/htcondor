@@ -5,7 +5,8 @@ LDFLAGS = $(LIBDBM)
 
 SRC =  \
 	config_val.c history.C preen.C reconfig_schedd.c reschedule.c status.c \
-	summary.C vacate.c print_status.c block_jobs.c custom.C custom_main.C
+	summary.C vacate.c print_status.c block_jobs.c custom.C custom_main.C \
+	jobQueueCheck.C
 
 LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib
 LIBDIRS =../condor_util_lib ../condor_xdr_lib ../condor_c++_util
@@ -13,7 +14,7 @@ LIBDIRS =../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 PROGRAMS =  \
 	config_val condor_history condor_preen condor_reconfig_schedd \
 	condor_reschedule condor_status condor_summary condor_vacate watch_status \
-	block_jobs condor_customize
+	block_jobs condor_customize condor_jobqueue
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -27,6 +28,9 @@ release_target(condor_history,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_preen,preen.o,$(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/bin,SET_GID_MODE)
+
+c_plus_target(condor_jobqueue,jobQueueCheck.o,$(LIB))
+release_target(condor_jobqueue,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_customize,custom.o custom_main.o,$(LIB))
 release_target(condor_customize,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
