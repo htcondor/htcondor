@@ -2455,9 +2455,11 @@ Scheduler::send_alive()
 			dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
 			j++;
 			sock = new SafeSock(rec[i]->peer, 0);
-            if(!sock->snd_int(ALIVE, TRUE))
-            {
-				// UDP transport out of buffer space!
+			sock->encode();
+			if( !sock->put(ALIVE) || 
+				!sock->code(rec[i]->id) || 
+				!sock->end_of_message() ) {
+					// UDP transport out of buffer space!
                 dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
                         rec[i]->peer);
 				delete sock;
