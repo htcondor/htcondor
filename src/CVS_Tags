@@ -1,3 +1,10 @@
+08/09/04 V6_6-merge-20
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges includes: mission-critical bug fix to
+   ReliSock::get_file(), the header file purge, Kent's dagman fixes to
+   check log events, and a few other minor things.  This will
+   hopefully be the last merge before the 6.7.1 code freeze.
+
 08/02/04 V6_6-merge-19
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This merges the fixes to ad_printmask.C for condor_q
