@@ -595,7 +595,7 @@ ScheduledShutdownEvent::GetStartdList()
 	if (StartdList) delete StartdList;
 	StartdList = new ClassAdList;
 
-	if (StartdQuery.addConstraint(constraint) != Q_OK) {
+	if (StartdQuery.addANDConstraint(constraint) != Q_OK) {
 		return -1;
 	}
 	if (StartdQuery.fetchAds(*StartdList) != Q_OK) {
@@ -706,7 +706,7 @@ CleanupShutdownModeConfigs()
 
 	ClassAdList StartdList;
 
-	if (StartdQuery.addConstraint(CleanupConstraint) != Q_OK) {
+	if (StartdQuery.addANDConstraint(CleanupConstraint) != Q_OK) {
 		return -1;
 	}
 	if (StartdQuery.fetchAds(StartdList) != Q_OK) {
