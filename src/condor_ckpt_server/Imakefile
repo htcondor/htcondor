@@ -14,20 +14,14 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 LIB = $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) 
 LDFLAGS = -lm SocketLib
 
-SERVER_STAT_OBJ = server_stat.o gen_lib.o network2.o
-
 SERVER_API_OBJ = network2.o server_interface.o
 
-all_target(condor_ckpt_server server_stat ckpt_server_api.a)
+all_target(condor_ckpt_server ckpt_server_api.a)
 
 c_plus_target(condor_ckpt_server,$(OBJ),$(LIB))
 pure_c_plus_target(condor_ckpt_server.pure,$(OBJ),$(LIB))
 
-c_plus_target(server_stat,$(SERVER_STAT_OBJ),$(LIB))
-
 library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
-
-program_target(condor_ckpt_server_cp, condor_ckpt_server_cp.o, ckpt_server_api.a $(LIB)) 
 
 release:
 stripped:
