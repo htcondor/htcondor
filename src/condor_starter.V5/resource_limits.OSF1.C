@@ -39,7 +39,7 @@ void set_resource_limits()
 		   I'm not sure why, so we'll try putting it in again... */
 	limit( RLIMIT_STACK, RLIM_INFINITY );
 
-	limit( RLIMIT_CORE, (calc_free_disk_blocks() - SLOP) * 1024 );
+	limit( RLIMIT_CORE, (sysapi_disk_space(".") - SLOP) * 1024 );
 
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }

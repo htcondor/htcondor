@@ -35,7 +35,7 @@
 void set_resource_limits()
 {
 	rlim_t lim;
-	int free_blocks = calc_free_disk_blocks();
+	int free_blocks = sysapi_disk_space( "." );
 	unsigned long core_lim = (free_blocks - SLOP) * 1024;
 	if( core_lim > MAXINT ) {
 		lim = MAXINT;

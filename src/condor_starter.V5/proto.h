@@ -87,7 +87,6 @@ void signal_user_job( pid_t pid, int sig );
 char *generate_ckpt_name( int cluster, int proc, char *ext );
 void delay( int sec );
 void waste_a_second();
-int calc_free_disk_blocks();
 void get_ckpt_file();
 int verify_ckpt_file();
 char *get_user_env_param( char * );

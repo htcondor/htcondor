@@ -1114,15 +1114,6 @@ exception_cleanup(int,int,char*)
 } /* extern "C" */
 
 
-/*
-  Find out how many 1024 byte "blocks" are free in the current file system.
-*/
-int
-calc_free_disk_blocks()
-{
-	return sysapi_disk_space( "." );
-}
-
 int	AvoidNFS = 0;
 
 char Condor_CWD[ _POSIX_PATH_MAX ];
