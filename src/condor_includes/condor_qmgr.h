@@ -137,6 +137,12 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
 int SetAttributeString(int cluster, int proc, const char *attr,
 					   const char *value);
 
+/** Set the password to the MyProxy server for specified cluster/proc. The
+	value should be a null-terminated string.
+	@return -1 on failure; 0 on success
+*/
+int SetMyProxyPassword (int cluster, int proc, const char * pwd);
+
 int CloseConnection();
 void BeginTransaction();
 
