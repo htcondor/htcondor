@@ -290,7 +290,7 @@ sub Monitor
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed./ )
 	    {
-		debug( "Saw job evicted without ckpt\n" );
+		debug( "job was evicted without ckpt\n" );
 		# execute callback if one is registered
 		&$EvictedWithoutCheckpointCallback( %info )
 		    if defined $EvictedWithoutCheckpointCallback;
@@ -298,7 +298,7 @@ sub Monitor
 	    }
 	    elsif( $line =~ /^\s+\(1\) Job was checkpointed./ )
 	    {
-		debug( "Saw job evicted with ckpt\n" );
+		debug( "job was evicted with ckpt\n" );
 		# execute callback if one is registered
 		&$EvictedWithCheckpointCallback( %info )
 		    if defined $EvictedWithCheckpointCallback;
@@ -511,8 +511,8 @@ sub ParseSubmitFile
 	}
 	else
 	{
-	    debug( "line $line of $submit_file not a variable assignment... " .
-		   "skipping\n" );
+#	    debug( "line $line of $submit_file not a variable assignment... " .
+#		   "skipping\n" );
 	}
     }
     return 1;
