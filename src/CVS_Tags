@@ -1,3 +1,7 @@
+02/14/05 V6_7_4
+  The 6.7.4 release tag. Sadly, it came from the V6_7_3-branch, becuase
+  the 6_7_4-branch was not ready for it. 
+
 02/09/05 V6_7_4-branch
   The path to the 6.7.4 release goes through this branch. It is from 
   the V6_7-branch, rooted at V6_7_4-root
