@@ -936,17 +936,28 @@ JobEvictedEvent::readEvent( FILE *file )
 		}
 	}
 		// finally, see if there's a reason.  this is optional.
-	if( !fgets(buffer, 128, file) ) {
+
+	// if we get a reason, fine. If we don't, we need to 
+	// rewind the file position.
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+    char reason_buf[BUFSIZ];
+    if( !fgets( reason_buf, BUFSIZ, file ) ||
+		strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
 		return 1;  // not considered failure
 	}
-	chomp( buffer );
+
+	chomp( reason_buf );
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
 		// we just check for it here and do the right thing...
-	if( buffer[0] == '\t' && buffer[1] ) {
-		setReason( &buffer[1] );
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		setReason( &reason_buf[1] );
 	} else {
-		setReason( buffer );
+		setReason( reason_buf );
 	}
 	return 1;
 }
