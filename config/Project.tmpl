@@ -276,6 +276,7 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 
 #if WANT_MD && HAS_OPENSSL
   #define NEEDS_OPENSSL YES
+  #define CONDOR_MD YES
   MD_FLAGS = -DCONDOR_MD
   MD_LIB =
 #else
