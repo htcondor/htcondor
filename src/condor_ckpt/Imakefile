@@ -83,7 +83,7 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 	release_library(libckpt.a,$(RELEASE_DIR)/lib)
 	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
 #else
-	all_target(syscall_mode.o)
+	all_target(syscall_mode.o ToUpper)
 release:: all
 #endif
 
