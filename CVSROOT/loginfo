@@ -16,4 +16,5 @@
 # in addition to the first matching regex or DEFAULT.
 #
 DEFAULT		(echo ""; echo $USER; date; cat) >> $CVSROOT/CVSROOT/commitlog
-ALL              $CVSROOT/CVSROOT/dolog.pl -r /p/condor/repository/CONDOR_SRC bonsai-checkin-daemon@raven.cs.wisc.edu -h raven.cs.wisc.edu
+# unfortunately, raven is dead for now, so this line isn't helping anyone
+#ALL              $CVSROOT/CVSROOT/dolog.pl -r /p/condor/repository/CONDOR_SRC bonsai-checkin-daemon@raven.cs.wisc.edu -h raven.cs.wisc.edu
