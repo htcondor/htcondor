@@ -132,17 +132,11 @@ CronJobErr::Output( const char *buf, int len )
 }
 
 // CronJob constructor
-CondorCronJob::CondorCronJob( const char *jobName )
+CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
 {
 	// Reset *everything*
-	path = NULL;
-	prefix = NULL;
-	name = NULL;
-	args = NULL;
-	env = NULL;
-	cwd = NULL;
 	period = UINT_MAX;
-	state = CRON_IDLE;
+	state = CRON_NOINIT;
 	mode = CRON_ILLEGAL;
 	optKill = false;
 	runTimer = -1;
@@ -177,7 +171,7 @@ CondorCronJob::CondorCronJob( const char *jobName )
 CondorCronJob::~CondorCronJob( )
 {
 	dprintf( D_FULLDEBUG, "Cron: Deleting timer '%s'; ID = %d, path = '%s'\n",
-			 name, runTimer, path );
+			 GetName(), runTimer, GetPath() );
 
 	// Delete the timer FIRST
 	if ( runTimer >= 0 ) {
@@ -187,61 +181,84 @@ CondorCronJob::~CondorCronJob( )
 	// Kill job if it's still running
 	KillJob( true );
 
-	// Free up the name and path buffers
-	if ( name ) free( name );
-	if ( prefix ) free( prefix );
-	if ( path ) free( path );
-	if ( args ) free( args );
-	if ( env ) free( env );
-	if ( cwd ) free( cwd );
-
 	// Close FDs
 	CleanAll( );
 }
 
-// Set job characteristics
+// Initialize
+int
+CondorCronJob::Initialize( )
+{
+	// Make sure we're not already initialized...
+	if ( state != CRON_NOINIT )	{
+		return -1;
+	}
+
+	// Update our state to idle..
+	state = CRON_IDLE;
+
+	// Schedule & see if we should run...
+	return Schedule( );
+}
+
+// Set job characteristics: Name
 int
 CondorCronJob::SetName( const char *newName )
 {
-	return SetVar( &name, newName, false );
+	if ( NULL == newName ) {
+		return -1;
+	}
+	name = newName;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: Prefix
 int
 CondorCronJob::SetPrefix( const char *newPrefix )
 {
-	return SetVar( &prefix, newPrefix, false );
+	if ( NULL == newPrefix ) {
+		return -1;
+	}
+	prefix = newPrefix;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: Path
 int
 CondorCronJob::SetPath( const char *newPath )
 {
-	return SetVar( &path, newPath, false );
+	if ( NULL == newPath ) {
+		return -1;
+	}
+	path = newPath;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: Command line args
 int
 CondorCronJob::SetArgs( const char *newArgs )
 {
-	return SetVar( &args, newArgs, true );
+	args = newArgs;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: Environment
 int
 CondorCronJob::SetEnv( const char *newEnv )
 {
-	return SetVar( &env, newEnv, true );
+	env = newEnv;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: CWD
 int
 CondorCronJob::SetCwd( const char *newCwd )
 {
-	return SetVar( &cwd, newCwd, true );
+	cwd = newCwd;
+	return 0;
 }
 
-// Set job characteristics
+// Set job characteristics: Kill option
 int
 CondorCronJob::SetKill( bool kill )
 {
@@ -249,33 +266,38 @@ CondorCronJob::SetKill( bool kill )
 	return 0;
 }
 
-// Set job characteristics
+// Add to the job's path
 int
-CondorCronJob::SetVar( char **var, const char *value, bool allowNull )
+CondorCronJob::AddPath( const char *newPath )
 {
-	// If path is already set, and hasn't changed, do nothing!
-	if (  ( NULL != *var ) && ( NULL != value ) &&
-		  ( 0 == strcmp( value, *var ) )  ) {
-		return 0;
-	} 
-
-	// Free up the existing value
-	if ( *var ) {
-		free( *var );
+	if ( path.Length() ) {
+		path += ":";
 	}
+	path =+ newPath;
+	return 0;
+}
 
-	// NULL Value to set to?
-	if ( NULL == value ) {
-		if ( ! allowNull ) {
-			return -1;
-		}
-		*var = NULL;
-		return 0;
+// Add to the job's arg list
+int
+CondorCronJob::AddArgs( const char *newArgs )
+{
+	if ( args.Length() ) {
+		args += " ";
 	}
+	args =+ newArgs;
+	return 0;
+}
 
-	// Allocate & copy in the new path
-	*var = strdup ( value );
-	return ( NULL == *var ) ? -1 : 0;
+// Add to the job's environment
+int
+CondorCronJob::AddEnv( const char *newEnv )
+{
+	if ( env.Length() ) {
+		env += ":";
+	}
+	env =+ newEnv;
+	dprintf( D_ALWAYS, "Env '%s' -> '%s'\n", newEnv, env.GetCStr() );
+	return 0;
 }
 
 // Set job died handler
@@ -302,12 +324,12 @@ CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 	// Verify that the mode seleted is valid
 	if (  ( CRON_CONTINUOUS != newMode ) && ( CRON_PERIODIC != newMode )  ) {
 		dprintf( D_ALWAYS, "Cron: illegal mode selected for job '%s'\n",
-				 name );
+				 GetName() );
 		return -1;
 	} else if (  ( CRON_PERIODIC == newMode ) && ( 0 == newPeriod )  ) {
 		dprintf( D_ALWAYS, 
 				 "Cron: Job '%s'; Periodic requires non-zero period\n",
-				 name );
+				 GetName() );
 		return -1;
 	}
 
@@ -326,6 +348,40 @@ CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 	mode = newMode;
 	period = newPeriod;
 
+	// Schedule a run..
+	return Schedule( );
+}
+
+// Reconfigure a running job
+int
+CondorCronJob::Reconfig( void )
+{
+	// Only do this to running continuous jobs
+	if (  ( CRON_CONTINUOUS != mode ) || ( CRON_RUNNING != state )  ) {
+		return 0;
+	}
+
+	// HUP it; if it dies it'll get the new config when it restarts
+	if ( pid )
+	{
+		dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n",
+				 GetName(), pid );
+		return daemonCore->Send_Signal( pid, SIGHUP );
+	}
+
+	// Otherwise, all ok
+	return 0;
+}
+
+// Schedule a run?
+int
+CondorCronJob::Schedule( void )
+{
+	// If we're not initialized yet, do nothing...
+	if ( CRON_NOINIT == state ) {
+		return 0;
+	}
+
 	// Now, schedule the job to run..
 	int	status = 0;
 
@@ -343,28 +399,8 @@ CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 		}
 	}
 
-	// Done
+	// Nothing to do for now
 	return status;
-}
-
-// Reconfigure a running job
-int
-CondorCronJob::Reconfig( void )
-{
-	// Only do this to running continuous jobs
-	if (  ( CRON_CONTINUOUS != mode ) || ( CRON_RUNNING != state )  ) {
-		return 0;
-	}
-
-	// HUP it; if it dies it'll get the new config when it restarts
-	if ( pid )
-	{
-		dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n", name, pid );
-		return daemonCore->Send_Signal( pid, SIGHUP );
-	}
-
-	// Otherwise, all ok
-	return 0;
 }
 
 // Schdedule the job to run
@@ -374,7 +410,7 @@ CondorCronJob::RunJob( void )
 
 	// Make sure that the job is idle!
 	if ( ( state != CRON_IDLE ) && ( state != CRON_DEAD ) ) {
-		dprintf( D_ALWAYS, "Cron: Job '%s' is still running!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%s' is still running!\n", GetName() );
 
 		// If we're not supposed to kill the process, just skip this timer
 		if ( optKill ) {
@@ -386,11 +422,12 @@ CondorCronJob::RunJob( void )
 
 	// Check output queue!
 	if ( stdOutBuf->FlushQueue( ) ) {
-		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", GetName() );
 	}
 
 	// Job not running, just start it
-	dprintf( D_JOB, "Cron: Running job '%s', path '%s'\n", name, path );
+	dprintf( D_JOB, "Cron: Running job '%s', path '%s'\n",
+			 GetName(), GetPath() );
 
 	// Start it up
 	return RunProcess( );
@@ -402,11 +439,11 @@ CondorCronJob::KillHandler( void )
 {
 
 	// Log that we're here
-	dprintf( D_ALWAYS, "Cron: KillHandler for job '%s'\n", name );
+	dprintf( D_ALWAYS, "Cron: KillHandler for job '%s'\n", GetName() );
 
 	// If we're idle, we shouldn't be here.
 	if ( CRON_IDLE == state ) {
-		dprintf( D_ALWAYS, "Cron: Job '%'s already idle '%s'!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%'s already idle '%s'!\n", GetName() );
 		return -1;
 	}
 
@@ -419,14 +456,15 @@ int
 CondorCronJob::StartJob( void )
 {
 	if ( CRON_IDLE != state ) {
-		dprintf( D_ALWAYS, "Cron: Job '%s' not idle!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%s' not idle!\n", GetName() );
 		return 0;
 	}
-	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n", name, path );
+	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n",
+			 GetName(), GetPath() );
 
 	// Check output queue!
 	if ( stdOutBuf->FlushQueue( ) ) {
-		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", name );
+		dprintf( D_ALWAYS, "Cron: Job '%s': Queue not empty!\n", GetName() );
 	}
 
 	// Run it
@@ -438,7 +476,7 @@ int
 CondorCronJob::Reaper( int exitPid, int exitStatus )
 {
 	dprintf( D_ALWAYS, "Cron: Job '%s' (pid %d) exit status=%d, state=%s\n",
-			 name, exitPid, exitStatus, StateString( ) );
+			 GetName(), exitPid, exitStatus, StateString( ) );
 
 	// What if the PIDs don't match?!
 	if ( exitPid != pid ) {
@@ -477,7 +515,7 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	case CRON_IDLE:
 	case CRON_DEAD:
 		dprintf( D_ALWAYS, "CronJob::Reaper:: Job %s in state %s: Huh?\n",
-				 name, StateString() );
+				 GetName(), StateString() );
 		break;							// Do nothing
 
 		// Waiting for it to die...
@@ -530,7 +568,8 @@ ProcessOutputQueue( void )
 
 	// If there's data, process it...
 	if ( linecount != 0 ) {
-		dprintf( D_FULLDEBUG, "%s: %d lines in Queue\n", name, linecount );
+		dprintf( D_FULLDEBUG, "%s: %d lines in Queue\n",
+				 GetName(), linecount );
 
 		// Read all of the data from the queue
 		char	*linebuf;
@@ -547,10 +586,10 @@ ProcessOutputQueue( void )
 		int		tmp = stdOutBuf->GetQueueSize( );
 		if ( 0 != linecount ) {
 			dprintf( D_ALWAYS, "%s: %d lines remain!!\n",
-					 name, linecount );
+					 GetName(), linecount );
 		} else if ( 0 != tmp ) {
 			dprintf( D_ALWAYS, "%s: Queue reports %d lines remain!\n",
-					 name, tmp );
+					 GetName(), tmp );
 		} else {
 			ProcessOutput( NULL );
 		}
@@ -574,27 +613,28 @@ int
 CondorCronJob::
 RunProcess( void )
 {
-	dprintf( D_ALWAYS, "Running '%s'\n", name );
+	dprintf( D_ALWAYS, "Running '%s'\n", GetName() );
 
 	// Create file descriptors
 	if ( OpenFds( ) < 0 ) {
-		dprintf( D_ALWAYS, "Cron: Error creating FDs for '%s'\n", name );
+		dprintf( D_ALWAYS, "Cron: Error creating FDs for '%s'\n",
+				 GetName() );
 		return -1;
 	}
 
 	// Are there arguments to pass it?
 	char *argBuf = NULL;
-	if ( NULL != args ) {
-		int		len = strlen( args ) + 1 + strlen( name ) + 1;
+	if ( args.Length() ) {
+		int		len = args.Length() + 1 + name.Length() + 1;
 		if ( NULL == ( argBuf = (char *) malloc( len ) )  ) {
 			dprintf( D_ALWAYS, 
 					 "Cron: Couldn't allocate arg buffer %d bytes\n",
 					 len );
 			return -1;
 		}
-		strcpy( argBuf, name );
+		strcpy( argBuf, name.GetCStr() );
 		strcat( argBuf, " " );
-		strcat( argBuf, args );
+		strcat( argBuf, args.GetCStr() );
 	}
 
 	// Create the priv state for the process
@@ -620,15 +660,24 @@ RunProcess( void )
 	set_user_ids( uid, gid );
 #endif
 
+	// Copy out the path; we won't need to do this when
+	// daeomon_core.C version 1.81.4.74.2.12 is merged into the 65 branch...
+	// Also, we won't need the (char *) casts of env & cwd
+	char	*pathCopy = NULL;	// TODO
+	if ( path.Length() ) {
+		pathCopy = strdup( path.GetCStr() );
+	}
+	dprintf( D_ALWAYS, "%s: Env = %s\n", GetName(), env.GetCStr() );
+
 	// Create the process, finally..
 	pid = daemonCore->Create_Process(
-		path,				// Path to executable
+		pathCopy,		// Path to executable TODO: should be path.GetCStr()
 		argBuf,				// argv
 		priv,				// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
-		env,				// Env to give to child
-		cwd,				// Starting CWD
+		(char *) env.GetCStr(),		// Env to give to child TODO: cast
+		(char *) cwd.GetCStr(),		// Starting CWD TODO: cast
 		FALSE,				// New process group?
 		NULL,				// Socket list
 		childFds,			// Stdin/stdout/stderr
@@ -644,7 +693,7 @@ RunProcess( void )
 
 	// Did it work?
 	if ( pid < 0 ) {
-		dprintf( D_ALWAYS, "Cron: Error running job '%s'\n", name );
+		dprintf( D_ALWAYS, "Cron: Error running job '%s'\n", GetName() );
 		if ( NULL != argBuf ) {
 			free( argBuf );
 		}
@@ -671,7 +720,7 @@ CondorCronJob::TodoWrite( void )
 	char	fname[1024];
 	FILE	*fp;
 	sprintf( fname, "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
-	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", name, fname );
+	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", GetName(), fname );
 
 	if ( ( fp = fopen( fname, "w" ) ) != NULL ) {
 		if ( TodoBufWrap ) {
@@ -705,7 +754,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 
 		// Zero means it closed
 		if ( bytes == 0 ) {
-			dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
+			dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", GetName() );
 			daemonCore->Close_Pipe( stdOut );
 			stdOut = -1;
 		}
@@ -748,7 +797,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 		else {
 			dprintf( D_ALWAYS,
 					 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
-					 name, errno, strerror( errno ) );
+					 GetName(), errno, strerror( errno ) );
 			return -1;
 		}
 	}
@@ -769,7 +818,7 @@ CondorCronJob::StderrHandler ( int pipe )
 	// Zero means it closed
 	if ( bytes == 0 )
 	{
-		dprintf( D_ALWAYS, "Cron: STDERR closed for '%s'\n", name );
+		dprintf( D_ALWAYS, "Cron: STDERR closed for '%s'\n", GetName() );
 		daemonCore->Close_Pipe( stdErr );
 		stdErr = -1;
 	}
@@ -789,7 +838,7 @@ CondorCronJob::StderrHandler ( int pipe )
 	{
 		dprintf( D_ALWAYS,
 				 "Cron: read STDERR failed for '%s' %d: '%s'\n",
-				 name, errno, strerror( errno ) );
+				 GetName(), errno, strerror( errno ) );
 		return -1;
 	}
 
@@ -888,22 +937,22 @@ CondorCronJob::KillJob( bool force )
 	// Kill the process *hard*?
 	if ( ( force ) || ( CRON_TERMSENT == state )  ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGKILL, pid = %d\n", 
-				 name, pid );
+				 GetName(), pid );
 		if ( daemonCore->Send_Signal( pid, SIGKILL ) == 0 ) {
 			dprintf( D_ALWAYS,
 					 "Cron: job '%s': Failed to send SIGKILL to %d\n",
-					 name, pid );
+					 GetName(), pid );
 		}
 		state = CRON_KILLSENT;
 		KillTimer( TIMER_NEVER );	// Cancel the timer
 		return 0;
 	} else if ( CRON_RUNNING == state ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGTERM, pid = %d\n", 
-				 name, pid );
+				 GetName(), pid );
 		if ( daemonCore->Send_Signal( pid, SIGTERM ) == 0 ) {
 			dprintf( D_ALWAYS,
 					 "Cron: job '%s': Failed to send SIGTERM to %d\n",
-					 name, pid );
+					 GetName(), pid );
 		}
 		state = CRON_TERMSENT;
 		KillTimer( 1 );				// Schedule hard kill in 1 sec
@@ -930,7 +979,7 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 	{
 		// Debug
 		dprintf( D_FULLDEBUG, 
-				 "Cron: Creating timer for job '%s'\n", name );
+				 "Cron: Creating timer for job '%s'\n", GetName() );
 		TimerHandlercpp handler =
 			(  ( CRON_CONTINUOUS == mode ) ? 
 			   (TimerHandlercpp)& CondorCronJob::StartJob :
@@ -958,7 +1007,8 @@ CondorCronJob::KillTimer( unsigned seconds )
 {
 	// Cancel request?
 	if ( TIMER_NEVER == seconds ) {
-		dprintf( D_FULLDEBUG, "Cron: Canceling kill timer for '%s'\n", name );
+		dprintf( D_FULLDEBUG, "Cron: Canceling kill timer for '%s'\n",
+				 GetName() );
 		if ( killTimer >= 0 ) {
 			return daemonCore->Reset_Timer( 
 				killTimer, TIMER_NEVER, TIMER_NEVER );
@@ -979,7 +1029,7 @@ CondorCronJob::KillTimer( unsigned seconds )
 	{
 		// Debug
 		dprintf( D_FULLDEBUG, "Cron: Creating kill timer for '%s'\n", 
-				 name );
+				 GetName() );
 		killTimer = daemonCore->Register_Timer(
 			seconds,
 			0,

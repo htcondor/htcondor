@@ -56,6 +56,7 @@ class CronJobErr : public LineBuffer
 
 // Job's state
 typedef enum {
+	CRON_NOINIT,
 	CRON_IDLE, 
 	CRON_RUNNING,
 	CRON_TERMSENT,
@@ -86,16 +87,19 @@ typedef int     (Service::*CronEventHandler)(CondorCronJob*,CondorCronEvent);
 class CondorCronJob : public Service
 {
   public:
-	CondorCronJob( const char *name );
+	CondorCronJob( const char *mgrName, const char *jobName );
 	virtual ~CondorCronJob( );
 
+	// Finish initialization
+	virtual int Initialize( void );
+
 	// Manipulate the job
-	const char *GetName( void ) { return name; };
-	const char *GetPrefix( void ) { return prefix; };
-	const char *GetPath( void ) { return path; };
-	const char *GetArgs( void ) { return args; };
-	const char *GetEnv( void ) { return env; };
-	const char *GetCwd( void ) { return cwd; };
+	const char *GetName( void ) { return name.GetCStr(); };
+	const char *GetPrefix( void ) { return prefix.GetCStr(); };
+	const char *GetPath( void ) { return path.GetCStr(); };
+	const char *GetArgs( void ) { return args.GetCStr(); };
+	const char *GetEnv( void ) { return env.GetCStr(); };
+	const char *GetCwd( void ) { return cwd.GetCStr(); };
 	unsigned GetPeriod( void ) { return period; };
 
 	// State information
@@ -120,6 +124,9 @@ class CondorCronJob : public Service
 	int SetCwd( const char *cwd );
 	int SetPeriod( CronJobMode mode, unsigned period );
 	int SetKill( bool );
+	int AddPath( const char *path );	
+	int AddArgs( const char *args );
+	int AddEnv( const char *env );
 
 	virtual int KillJob( bool );
 
@@ -133,12 +140,12 @@ class CondorCronJob : public Service
 	int SetEventHandler( CronEventHandler handler, Service *s );
 
   private:
-	char			*name;			// Logical name of the job
-	char			*prefix;		// Publishing prefix
-	char			*path;			// Path to the executable
-	char			*args;			// Arguments to pass it
-	char			*env;			// Environment variables
-	char			*cwd;			// Process's initial CWD
+	MyString		name;			// Logical name of the job
+	MyString		prefix;			// Publishing prefix
+	MyString		path;			// Path to the executable
+	MyString		args;			// Arguments to pass it
+	MyString		env;			// Environment variables
+	MyString		cwd;			// Process's initial CWD
 	unsigned		period;			// The configured period
 	int				runTimer;		// It's DaemonCore "run" timerID
 	CronJobMode		mode;			// Is is a periodic
@@ -161,6 +168,7 @@ class CondorCronJob : public Service
 	bool			optKill;		// Kill the job if before next run?
 
 	// Private methods; these can be replaced
+	virtual int Schedule( void );
 	virtual int RunJob( void );
 	virtual int StartJob( void );
 	virtual int KillHandler( void );
@@ -170,7 +178,6 @@ class CondorCronJob : public Service
 	virtual int RunProcess( void );
 
 	// No reason to replace these
-	int SetVar( char **var, const char *value, bool allowNull = false );
 	int OpenFds( void );
 	int TodoRead( int, int );
 	void CleanAll( void );

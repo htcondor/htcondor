@@ -196,7 +196,7 @@ CondorCronMgr::GetParam( const char *paramName,
 	return paramBuf;
 }
 
-// Basic constructor
+// Parse the "Job List"
 int
 CondorCronMgr::ParseJobList( const char *jobString )
 {
@@ -415,6 +415,9 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// We're done with the temp copy of the job description; set it free
 		free( tmpDescr );
+
+		// Finally, have the job finish it's initialization
+		job->Initialize( );
 	}
 
 	// Delete all jobs that didn't get marked
@@ -429,7 +432,7 @@ CondorCronJob *
 CondorCronMgr::NewJob( const char *name )
 {
 	dprintf( D_FULLDEBUG, "*** Creating a Condor job '%s' ***\n", name );
-	CondorCronJob *job = new CondorCronJob( name );
+	CondorCronJob *job = new CondorCronJob( GetName(), name );
 	return job;
 }
 

@@ -43,6 +43,7 @@ class CondorCronMgr : public Service
 				 const char *setParamBase = NULL,
 				 const char *setParamExt = NULL );
 	int SetParamBase( const char *base, const char *ext );
+	const char *GetName( void ) { return Name; };
 
   private:
 	CondorCron	Cron;
