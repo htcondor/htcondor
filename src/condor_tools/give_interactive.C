@@ -107,24 +107,35 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		// to store results of evaluations
 	char			remoteUser[128];
 	char			remoteHost[256];
-	EvalResult		result;
 	float			tmp;
-	
+	MatchClassAd mad;	// NAC
+	Value result;		// NAC
+	bool match;			// NAC
+	bool boolValue;		// NAC
 
-
+			// FOR BACK COMPATIBILITY
+			// Add the 'TARGET' keyword to any external references
+	mad.ReplaceLeftAd( request.AddExplicitTargetRefs( ) );	// NAC
 
 	// scan the offer ads
 
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
+			// FOR BACK COMPATIBILITY
+			// Add the 'TARGET' keyword to any external references
+		candidate = candidate->AddExplicitTargetRefs( );
+			// Add conditional operators to offer Rank expression if needed
+		ExprTree* rankExpr = candidate->Lookup( ATTR_RANK );
+		ExprTree* newRankExpr = NULL;
+		candidate->AddExplicitConditionals( rankExpr, newRankExpr );
+		if( newRankExpr != NULL ) {
+			candidate->Insert( ATTR_RANK, newRankExpr );
+		}
+		
 		// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
-				// they don't match; continue
-			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
-			//candidate->fPrint(stdout);
-			//printf("\nDEBUG: REQUEST:\n");
-			//request.fPrint(stdout);
+		mad.EvaluateAttr( "symmetricMatch", result );
+		if( result.IsBooleanValue( match ) && match == false ) {
 			continue;
 		}
 
@@ -132,8 +143,9 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		// if there is a remote user, consider preemption ....
 		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
 				// check if we are preempting for rank or priority
-			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
+			if( candidate->EvaluateExpr( rankCondStd, result ) &&	// NAC
+				result.IsBooleanValue( boolValue ) && 				// NAC
+				boolValue == true ) {								// NAC
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -144,16 +156,18 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 				candidatePreemptState = PRIO_PREEMPTION;
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
-				if (PreemptionReq && 
-						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
+				if( PreemptionReq &&									// NAC
+					candidate->EvaluateExpr( PreemptionReq, result ) &&	// NAC
+					result.IsBooleanValue( boolValue ) &&				// NAC
+					boolValue == true ) {								// NAC
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+				if( candidate->EvaluateExpr( rankCondPrioPreempt, result ) &&	// NAC
+					result.IsBooleanValue( boolValue ) &&	// NAC   
+					boolValue == true ) {					// NAC
 						// machine doesn't like this job as much -- find another
 					continue;
 				}
@@ -185,11 +199,9 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
-			if( PreemptionRank &&
-			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
-					result.type == LX_FLOAT) {
-				candidatePreemptRankValue = result.f;
-			} else if( PreemptionRank ) {
+			if( PreemptionRank &&									 	// NAC 
+				( !candidate->EvaluateExpr( PreemptionRank, result ) ||	// NAC
+				  !result.IsRealValue( candidatePreemptRankValue))){	// NAC
 				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
 					"expression to a float.\n");
 			}
@@ -347,7 +359,7 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 static void
 fetchSubmittorPrios()
 {
-	AttrList	al;
+	ClassAd ad;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
@@ -370,7 +382,7 @@ fetchSubmittorPrios()
 
 	sock->eom();
 	sock->decode();
-	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
+	if( !getOldClassAdNoTypes(sock, ad) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
@@ -384,8 +396,8 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-    	if( !al.LookupString( attrName, name ) || 
-			!al.LookupFloat( attrPrio, priority ) )
+    	if( !ad.LookupString( attrName, name ) || 
+			!ad.LookupFloat( attrPrio, priority ) )
             break;
 
 		prioTable[i-1].name = name;
@@ -445,6 +457,8 @@ main(int argc, char *argv[])
 	char buffer[1024];
 	HashTable<HashKey, int>	*virtualMachineCounts;
 
+	ClassAdParser parser;	// NAC
+
 	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	myDistro->Init( argc, argv );
@@ -503,15 +517,15 @@ main(int argc, char *argv[])
 
 	// initialize some global expressions
 	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondStd);
+	parser.ParseExpression( buffer, rankCondStd );	// NAC
 	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buffer, rankCondPrioPreempt);
+	parser.ParseExpression( buffer, rankCondPrioPreempt );	// NAC
 
 	// get PreemptionReq expression from config file
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+		if( !parser.ParseExpression( ( string )tmp, PreemptionReq ) ) {	// NAC
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -522,7 +536,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+		if( !parser.ParseExpression( ( string )tmp, PreemptionRank ) ) {// NAC
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);
