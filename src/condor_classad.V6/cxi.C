@@ -1,6 +1,11 @@
+#ifdef IN_CONDOR
+#include "condor_common.h"
 #include "condor_config.h"
+#include "condor_classad.h"
+#else
 #include "classad_package.h"
 #include <ctype.h>
+#endif
 
 enum Commands {
 	_NO_CMD_,
@@ -15,7 +20,9 @@ enum Commands {
 	INSERT_ATTRIBUTE, 
 	NEW_TOPLEVEL, 
 	OUTPUT_TOPLEVEL, 
+#ifdef IN_CONDOR
 	PARAM,
+#endif
 	QUIT,
 	REMOVE_ATTRIBUTE, 
 	SET_MATCH_TOPLEVEL,
@@ -36,7 +43,9 @@ char CommandWords[][32] = {
 	"insert_attribute",
 	"new_toplevel",
 	"output_toplevel",
+#ifdef IN_CONDOR
 	"param",
+#endif
 	"quit",
 	"delete_attribute",
 	"set_match_toplevel",
@@ -52,7 +61,9 @@ main( void )
 {
 	ClassAd 	*ad, *adptr;
 	char 		cmdString[128], buffer1[2048], buffer2[2048], buffer3[2048];
+#ifdef IN_CONDOR
 	char		*paramStr, *attrName;
+#endif
 	ExprTree	*expr=NULL, *fexpr=NULL;
 	int 		command;
 	Value		value;
@@ -68,7 +79,9 @@ main( void )
 	snk.SetSink( stdout );
 	snk.SetFormatOptions( &pp );
 
+#ifdef IN_CONDOR
 	config( 0 );
+#endif
 
 	ad = new ClassAd();
 
@@ -282,6 +295,7 @@ main( void )
 				fgets( buffer1, 2048, stdin );
 				break;
 
+#ifdef IN_CONDOR
 			case PARAM:
 				fgets( buffer1, 2048, stdin );
 				attrName = strtok( buffer1, " \t\n" );
@@ -301,6 +315,7 @@ main( void )
 				free( paramStr );
 				expr = NULL;
 				break;
+#endif
 				
 			case QUIT: 
 				printf( "Done\n\n" );
@@ -355,7 +370,9 @@ help( void )
 		"into toplevel\n\n" );
 	printf( "new_toplevel <classad>\n\tEnter new toplevel ad\n\n" );
 	printf( "output_toplevel\n\tOutput toplevel ad\n\n" );
+#ifdef IN_CONDOR
 	printf("param <name>\n\tParam from config file and insert in toplevel\n\n");
+#endif
 	printf( "quit\n\tQuit\n\n" );
 	printf( "delete_attribute <name>\n\tDelete attribute <name> from "
 		"toplevel\n\n" );
