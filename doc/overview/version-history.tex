@@ -31,6 +31,11 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
+\item Added \Macro{DEFAULT\_IO\_BUFFER\_SIZE} and
+\Macro{DEFAULT\_IO\_BUFFER\_BLOCK\_SIZE} to config parameters to allow
+the administrator to set the default file buffer sizes for user jobs
+in \Condor{submit}.
+
 \item There is no longer any difference in the configuration file
 syntax between ``macros'' (which were specified with an ``='' sign)
 and ``expressions'' (which were specified with a ``:'' sign).  
@@ -107,8 +112,28 @@ will remain relatively up-to-date.  This is controlled by the
 
 \begin{itemize}
 
+\item Fixed how we internally handle file names for user jobs. This
+fixes a nasty bug due to changing directories between checkpoints.
+
+\item Fixed a bug in our handling of the \Macro{Arguments} macro in
+the command file for a job. If the arguments were extremely long, or
+there were an extreme number of them, they would get corrupted when the
+job was spawned.
+
+\item Fixed DAGMan. It had not worked at all in the previous release.
+
+\item Fixed a nasty bug under Linux where file seeks did not work
+correctly when buffering was enabled.
+
+\item Fixed a bug where \Condor{shadow} would crash while sending job
+completion e-mail forcing a job to restart multiple times and the user
+to get multiple completion messages.
+
 \item Fixed a long standing bug where Fortran 90 would occasionally
 truncate its output files to random sizes and fill them with zeros.
+
+\item Fixed a bug where \Syscall{close} did not propogate its return
+value back to the user job correctly.
 
 \item If a SIGTERM was delivered to a \Condor{shadow}, it used to
 remove the job it was running from the job queue, as if \Condor{rm}
@@ -153,7 +178,7 @@ platforms.
 
 \item Fixed \Condor{q}'s output so that certain arguments are not ignored.
 
-\item Fixed a bug in \Condor{q} where issuging a \Opt{-global} with a
+\item Fixed a bug in \Condor{q} where issuing a \Opt{-global} with a
 fairly restrictive \Opt{-constraint} argument would cause garbage to be
 printed to the terminal sometimes.
 
@@ -179,8 +204,6 @@ Version 6.1.12 fixes a number of bugs from version 6.1.11.
 If you linked your ``standard'' jobs with version 6.1.11, you should
 upgrade to 6.1.12 and re-link your jobs (using \Condor{compile}) as soon as
 possible.
-Unless otherwise noted, all of the known bugs listed below should be fixed
-in version 6.1.13.  
 
 \noindent New Features:
 
@@ -198,7 +221,7 @@ in version 6.1.13.
 libraries in version 6.1.11 are now being caught and sent back to the
 submit machine.
 Not having these functions being executed as remote system calls prevented
-a number of programs from not working, in particular Fortran programs, and
+a number of programs from working, in particular Fortran programs, and
 many programs on IRIX and Solaris platforms.
 
 \item Sometimes submitted jobs report back as having no owner and have
