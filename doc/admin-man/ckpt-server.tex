@@ -350,7 +350,7 @@ server domain of each machine.
 To restrict jobs to one checkpoint server domain, we need to modify
 the jobs' \AdAttr{Requirements} expression as follows:
 \begin{verbatim}
-  Requirements = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+  Requirements = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 \end{verbatim}
 This \AdAttr{Requirements} expression uses the \AdAttr{LastCkptServer}
 attribute in the job's ClassAd, which specifies where the job last
@@ -368,7 +368,7 @@ server domains when there are no available machines in the current
 checkpoint server domain, we need to modify the jobs' \AdAttr{Rank} expression
 as follows:
 \begin{verbatim}
-  Rank = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+  Rank = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 \end{verbatim}
 This \AdAttr{Rank} expression will evaluate to 1 for machines in the
 job's checkpoint server domain and 0 for other machines.  So, the job
