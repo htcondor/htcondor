@@ -49,6 +49,26 @@ direct installation is desired instead of submitting a setup job to the
 remote gatekeeper.  (For example, this is useful when doing an installation
 onto AFS.)
 
+\item If \Attr{RemoteOwner} is exported via \Expr{STARTER\_VM\_EXPRS} into the
+ad of other virtual machines, the \Condor{negotiator} automatically inserts
+\Attr{RemoteUserPrio} into the ad as well, so policy expressions can now take
+into account the priority of jobs running on other virtual machines on the
+same host.
+
+\item Linux 2.6 kernels do not update the access time for console devices,
+so Condor was unable to detect if there has been activity at the keyboard
+or mouse. As a work-around, Condor now polls /proc/interrupts to detect
+if the keyboard has requested attention. This does not work for USB keyboards
+or pseudo TTYs, so \Attr{ConsoleIdle} on 2.6 kernels will be wrong for some
+devices. Future versions of Condor or Linux may correct this.
+
+\item \Condor{dagman} no longer removes the X509\_USER\_PROXY environment.
+This should allow users to set the environment variable before invoking 
+\Condor{submit\_dag} and have the jobs submitted by \Condor{dagman} correctly
+find the proxy file.
+
+variable.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
