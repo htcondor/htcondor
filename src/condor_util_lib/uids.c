@@ -224,7 +224,7 @@ init_user_ids(const char username[])
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 	if( (pwd=getpwnam(username)) == NULL ) {
-		dprintf(D_ALWAYS, "%s not in passwd file", username );
+		dprintf(D_ALWAYS, "%s not in passwd file\n", username );
 		return;
 	}
 	(void)endpwent();
@@ -379,8 +379,9 @@ get_user_uid()
 gid_t
 get_user_gid()
 {
-	if( !CondorIdsInited ) {
-		init_condor_ids();
+	if( !UserIdsInited ) {
+		dprintf(D_ALWAYS, "get_user_gid() called when UserIds not inited!\n");
+		return (gid_t)-1;
 	}
 
 	return UserGid;
