@@ -1,0 +1,421 @@
+/************************************************************************** 
+** There shouldn't be any platform-specific info in this.  By now, all
+** the platform, version and OS specific files have been included.
+**************************************************************************/
+
+LIBC = LibC
+SIMPLE_LIBC = SimpleLibC
+
+TOP = Top
+TMP_DIR = TmpDir
+PLATFORM = Platform
+
+PLATFORM_DIR	=	$(TOP)/$(PLATFORM)
+RELEASE_DIR	=	../release_dir
+STRIP_DIR	=	../strip_dir
+STRIP_CONTRIB	=	../strip_contrib
+STATIC_DIR	=	../static_dir
+STATIC_CONTRIB	=	../static_contrib
+PURE_DIR	=	pure_bin
+
+LIB_DIR =		$(RELEASE_DIR)/lib
+CONFIG_DIR =		$(TOP)/config
+SRC_TREE =		$(TOP)/src
+DOC_TREE =		$(TOP)/doc
+INCLUDE_DIR =		../h
+NEW_INCLUDE_DIR =	../condor_includes
+C_PLUS_INCLUDE =	../condor_c++_util
+DAEMONCLIENT_INCLUDE =	../condor_daemon_client
+
+#ifdef X11Include
+X11_INCLUDE = X11Include
+#else
+X11_INCLUDE = /usr/X11R6/include	
+#endif
+
+#ifdef GLOBUS_FLAVOR
+GlobusFlavor = GLOBUS_FLAVOR
+#else
+GlobusFlavor = gcc32dbg
+#endif
+
+#ifdef NEED_SNPRINTF
+SNPRINTF_FLAGS = -DNEED_SNPRINTF
+#else
+SNPRINTF_FLAGS = 
+#endif
+
+
+#if !defined( CLinker )
+#define CLinker CCompiler
+#endif
+
+#if !defined( CPlusLinker )
+#define CPlusLinker CPlusCompiler
+#endif
+
+#if !defined(PlatformGccFlags)
+#define PlatformGccFlags
+#endif
+
+#if !defined(PlatformGppFlags)
+#define PlatformGppFlags
+#endif
+
+#if !defined(PlatformLdFlags)
+#define PlatformLdFlags
+#endif
+
+#if !defined(TestPlatformLdFlags)
+#define TestPlatformLdFlags
+#endif
+
+#if !defined(PurifyPlatformLdFlags)
+#define PurifyPlatformLdFlags
+#endif
+
+#if !defined(Strip)
+#define Strip strip
+#endif
+
+/*
+   These next few lines are not supposed to be pre-processor
+   directives, but GNU-make understood directives.  They don't want a
+   # in front of them.  If you're having problems at these lines,
+   you're probably not using gmake.  -peter keller 9/8/2000
+*/
+ifdef DEBUG_BUILD
+CC =  $(DEBUG_BUILD) CCompiler
+CPlusPlus = $(DEBUG_BUILD) CPlusCompiler
+C_LINK = $(DEBUG_BUILD) CLinker
+CC_LINK = $(DEBUG_BUILD) CPlusLinker
+else
+CC = CCompiler
+CPlusPlus = CPlusCompiler
+C_LINK = CLinker
+CC_LINK = CPlusLinker
+endif
+
+JAVAC = JavaCompiler
+JAR = JarTool
+
+LIBX = XLibPath
+LIBXEXT = XExtLibPath
+STRIP = Strip
+STATIC	= StaticFlag
+MKDEPEND = MkDepend
+STAR	= *
+
+PLATFORM_LDFLAGS = PlatformLdFlags
+PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
+TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
+
+
+/*
+   These next few lines are not supposed to be pre-processor
+   directives, but GNU-make understood directives.  They don't want a
+   # in front of them.  If you're having problems at these lines,
+   you're probably not using gmake.  -Derek Wright 6/16/99
+*/
+ifdef SMP_NUM_JOBS
+SMP_FLAGS = -j $(SMP_NUM_JOBS)
+else
+SMP_FLAGS =
+endif
+
+#define UNIX_RT0	$(CRT0)
+#define UNIX_LIBC	$(LIBC)
+#define CKPT_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
+#define CONDOR_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
+#define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
+#define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a
+
+#define AR_DELETE(libname,objects) ar d libname objects
+#define AR_EXTRACT(libname,objects) ar x libname objects
+
+#if HAS_AR_S_OPTION
+#define AR_REPLACE(libname,objects) ar vrs libname objects
+#else
+#define AR_REPLACE(libname,objects) \
+	ar vr libname objects @@\
+	ranlib libname
+#endif
+
+
+#if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
+#	define COPY_LIBRARY(src,dst) cp -p src dst
+#	define RANLIB_TOUCH(lib)	/bin/true
+#else
+#	if HAS_RANLIB_TOUCH		/* cp lib changes modify time - ranlib -t */
+#		define COPY_LIBRARY(src,dst) cp src dst
+#		define RANLIB_TOUCH(libname) ranlib -t libname
+#	else						/* dumb cp and ranlib - do it the hard way */
+#		define COPY_LIBRARY(src,dst) cp src dst
+#		define RANLIB_TOUCH(libname) ranlib libname
+#	endif
+#endif
+
+#ifndef IS_CLIPPED
+#  define IS_CLIPPED NO
+#endif
+#if IS_CLIPPED
+#  undef DOES_CHECKPOINTING
+#  define DOES_CHECKPOINTING NO
+#  undef DOES_COMPRESS_CKPT
+#  define DOES_COMPRESS_CKPT NO
+#  undef DOES_REMOTE_SYSCALLS
+#  define DOES_REMOTE_SYSCALLS NO
+#endif /* IS_CLIPPED */
+
+#ifdef XIncludeFlag
+#define XInclude XIncludeFlag
+#else
+#define XInclude
+#endif
+
+#ifndef FORTRAN_HAS_RECURSION
+#define FORTRAN_HAS_RECURSION NO
+#endif
+
+#ifndef HAS_INET_NTOA
+#define HAS_INET_NTOA YES
+#endif
+
+#ifndef NEEDS_SPECIAL_STATIC_BUILD
+#define NEEDS_SPECIAL_STATIC_BUILD NO
+#endif
+
+OS_FLAG = OperatingSystem
+ARCH_FLAG = Architecture
+
+#if !defined( DebugFlag )
+#define DebugFlag -g -Wall
+#endif
+
+DEBUG_FLAG = DebugFlag
+
+#if !defined( IS_EGCS_BUILD )
+#define IS_EGCS_BUILD NO
+#endif
+
+#if !defined( YACC )
+#define YACC yacc
+#endif
+
+#if !defined( PlatformFlags ) 
+#define PlatformFlags
+#endif
+
+#if !defined( CCompilerId )
+#define CCompilerId
+#endif
+
+#if !defined( VendorCTestFlags )
+#define VendorCTestFlags
+#endif
+
+#if !defined( VendorCPPTestFlags )
+#define VendorCPPTestFlags
+#endif
+
+#if !defined( VendorFTestFlags )
+#define VendorFTestFlags
+#endif
+
+
+#if WANT_CLASSAD_FUNCTIONS && HAS_DLOPEN
+    #define CLASSAD_FUNCTIONS YES
+#endif
+
+#if WANT_DAGMAN_HELPER && HAS_DAGMAN_HELPER
+    #define DAGMAN_HELPER YES
+#endif 
+
+#if WANT_CONDOR_G && HAS_GLOBUS
+
+  #define NEEDS_GSI YES
+
+  CONDOR_G_FLAGS = -DCONDOR_G
+
+#else
+ CONDOR_G_FLAGS =
+#endif /*HasGlobus && WantCondorG */
+
+/* GSI Authentication requires globus*/
+#if WANT_GSI && HAS_GSI
+  #define NEEDS_GSI YES
+  GSI_AUTH_FLAGS = -DGSI_AUTHENTICATION
+  GSI_AUTH_LIB =
+#else
+  GSI_AUTH_FLAGS =
+  GSI_AUTH_LIB   = 
+#endif /* WANT_GSI && HAS_GSI */
+
+/* Kerberos */
+#if HAS_KERBEROS && WANT_KERBEROS
+  KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
+#else
+  KERBEROS_FLAG = 
+#endif /* !defined(WANT_KERBEROS) */
+
+/* Encryption */
+#if WANT_3DES && HAS_OPENSSL
+  #define CONDOR_3DES_ENCRYPTION YES
+  3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
+#else
+  3DES_FLAGS =
+#endif
+
+#if WANT_BLOWFISH && HAS_OPENSSL
+  #define CONDOR_BLOWFISH_ENCRYPTION YES
+  BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
+#else
+  BLOWFISH_FLAGS =
+#endif
+
+#if WANT_ENCRYPTION
+  #define CONDOR_ENCRYPTION YES
+  ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(3DES_FLAGS) $(BLOWFISH_FLAGS)
+  ENCRYPTION_LIB =
+#else
+  ENCRYPTION_FLAGS =
+  ENCRYPTION_LIB =
+#endif
+
+#if WANT_MD && HAS_OPENSSL
+  #define NEEDS_OPENSSL YES
+  #define CONDOR_MD YES
+  MD_FLAGS = -DCONDOR_MD
+  MD_LIB =
+#else
+  MD_FLAGS = 
+  MD_LIB =
+#endif
+
+#if NEEDS_GSI && HAS_GSI
+  /* Make sure that USE_GLOBUS_OPENSSL is set */
+  #define NEEDS_OPENSSL YES
+  GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
+  GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libssl_$(GlobusFlavor).a \
+   	      $(GlobusPath)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_openssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a 
+#else
+  GSI_FLAGS =
+  GSI_LIB   =
+#endif
+
+#if NEEDS_OPENSSL && HAS_OPENSSL
+  #if USE_GLOBUS_OPENSSL
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include/$(GlobusFlavor)
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl_$(GlobusFlavor).a \
+		  $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a 
+  #else
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl.a $(OpenSSLPath)/lib/libcrypto.a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto.a 
+  #endif
+#else
+  OPENSSL_FLAGS =
+  OPENSSL_LIB =
+  OPENSSL_MD_LIB =
+#endif
+
+/* Collect all the security-related variables into a single variable */
+SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
+SECURITY_LIB   = $(GSI_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
+
+#if WANT_NETMAN
+NETMAN_LIB = ../condor_netman/libnetman.a
+NETMAN_FLAGS = -DWANT_NETMAN
+#else
+NETMAN_LIB =
+NETMAN_FLAGS =
+#endif
+
+VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
+		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)\
+		 -I$(DAEMONCLIENT_INCLUDE)
+
+/*
+Generally, compile with -fPIC for position-independent code.
+However, leave it as a separate Make variable so that particular
+modules that cannot use it (i.e. checkpointing) can turn it off.
+
+This is commented out by default.
+This will only be activated for special builds done by hand to
+make the SDK.
+*/
+
+/* CC_PIC_FLAG = -fPIC */
+
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags CCompilerId
+STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates PlatformGppFlags 
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
+
+TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
+TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
+TESTSUITE_FLAGS_G77 =  $(STD_C_FLAGS)
+TESTSUITE_FLAGS_CC = -g $(VENDOR_C_FLAGS) VendorCTestFlags PlatformFlags
+TESTSUITE_FLAGS_CPP = -g $(VENDOR_C_FLAGS) VendorCPPTestFlags PlatformFlags
+TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) VendorFTestFlags PlatformFlags
+
+
+CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
+QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
+CLASSAD_LIB = ../condor_classad/libclassad.a
+IO_LIB = ../condor_io/libcedar.a
+CUTIL_LIB = ../condor_util_lib/util_lib.a
+CPLUS_LIB = ../condor_c++_util/cplus_lib.a
+PROCAPI_LIB = ../condor_procapi/libprocapi.a
+SYSAPI_LIB = ../condor_sysapi/libsysapi.a
+ACCT_LIB    = ../condor_accountant.V6/libacct.a
+DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+
+ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+PURIFY_LDFLAGS = -lm $(LDFLAGS) $(PURIFY_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+
+STD_LIBS = \
+  $(CUTIL_LIB) \
+  $(CPLUS_LIB) \
+  $(CKPT_SERV_LIB) \
+  $(QMGMT_LIB) \
+  $(ACCT_LIB) \
+  $(PROCAPI_LIB) \
+  $(SYSAPI_LIB) \
+  $(CPLUS_LIB) \
+  $(CLASSAD_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(SYSAPI_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(SYSAPI_LIB) \
+  $(CLASSAD_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(IO_LIB) \
+  $(CPLUS_LIB) \
+  $(CUTIL_LIB) \
+  $(SECURITY_LIB)
+

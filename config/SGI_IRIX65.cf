@@ -1,0 +1,20 @@
+/* Things that are specific to IRIX 6.5 */
+
+#define HAS_GLOBUS		YES
+#define HAS_GSI			YES
+#define HAS_OPENSSL		YES
+
+#define HAS_DYNAMIC_USER_JOBS	YES
+
+#define Platform		SGI-IRIX65
+#define IS_SGI_IRIX65		YES
+#define IS_IRIX65		YES
+#define VersionPlatformFlags	-DIRIX65=IRIX65
+
+#define IS_N32			YES
+#define MIPS_VERSION		3
+
+#define IS_EGCS_BUILD YES
+
+/* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
+#define HAS_INET_NTOA NO
