@@ -23,7 +23,7 @@
 
  
 
-// List of attributes used in ClassAd's  If you find yourself using anything
+// List of attributes used in ClassAds  If you find yourself using anything
 // other than ATTR_<blah> to add/lookup expressions/variables *STOP*, add the
 // new variable to this file and use the ATTR_<blah> symbolic constant.  --RR
 
@@ -38,6 +38,7 @@ const char ATTR_BUFFER_PREFETCH_SIZE	 [] = "BufferPrefetchSize";
 const char ATTR_BYTES_SENT				 [] = "BytesSent";
 const char ATTR_BYTES_RECVD				 [] = "BytesRecvd";
 const char ATTR_CAPABILITY				 [] = "Capability";
+const char ATTR_REQUESTED_CAPACITY		 [] = "RequestedCapacity";
 const char ATTR_CKPT_ARCH				 [] = "CkptArch";
 const char ATTR_CKPT_LAST_READ			 [] = "CkptLastRead";
 const char ATTR_CKPT_OPSYS				 [] = "CkptOpSys";
@@ -54,6 +55,7 @@ const char ATTR_CORE_SIZE				 [] = "CoreSize";
 const char ATTR_CPUS                     [] = "Cpus";
 const char ATTR_CURRENT_HOSTS			 [] = "CurrentHosts";
 const char ATTR_CURRENT_RANK			 [] = "CurrentRank";
+const char ATTR_DESTINATION				 [] = "Destination";
 const char ATTR_DISK                     [] = "Disk";
 const char ATTR_ENTERED_CURRENT_ACTIVITY [] = "EnteredCurrentActivity";
 const char ATTR_ENTERED_CURRENT_STATE	 [] = "EnteredCurrentState";
@@ -62,6 +64,7 @@ const char ATTR_FILE_NAME				 [] = "FileName";
 const char ATTR_FILE_SIZE				 [] = "FileSize";
 const char ATTR_FILE_REMAPS				 [] = "FileRemaps";
 const char ATTR_FILE_SYSTEM_DOMAIN       [] = "FileSystemDomain";
+const char ATTR_FORCE					 [] = "Force";
 const char ATTR_FLAVOR                   [] = "Flavor";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
 const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
@@ -138,6 +141,7 @@ const char ATTR_RUN_BENCHMARKS			 [] = "RunBenchmarks";
 const char ATTR_SHADOW_IP_ADDR			 [] = "ShadowIpAddr";
 const char ATTR_MY_ADDRESS               [] = "MyAddress";
 const char ATTR_SCHEDD_IP_ADDR           [] = "ScheddIpAddr";
+const char ATTR_SOURCE					 [] = "Source";
 const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
 const char ATTR_STATE                    [] = "State";
@@ -172,6 +176,7 @@ const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
 const char ATTR_VERSION					 [] = "CondorVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
+const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
 const char ATTR_TRANSFER_KEY			 [] = "TransferKey";
 const char ATTR_TRANSFER_INPUT_FILES	 [] = "TransferInput";
 const char ATTR_TRANSFER_OUTPUT_FILES	 [] = "TransferOutput";
