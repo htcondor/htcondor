@@ -26,9 +26,57 @@
 **
 */ 
 
+typedef struct {
+	int		num;
+	char	*fmt;
+} USR_MSG;
+
+enum {
+	THIS_RUN,
+	TOTAL
+};
+
+enum {
+	SUBMIT,
+	EXECUTE,
+	RUN_REMOTE_USAGE,
+	RUN_LOCAL_USAGE,
+	TOT_REMOTE_USAGE,
+	TOT_LOCAL_USAGE,
+	IMAGE_SIZE,
+	NOT_EXECUTABLE,
+	BAD_LINK,
+	NORMAL_EXIT,
+	ABNORMAL_EXIT,
+	CHECKPOINTED,
+	NOT_CHECKPOINTED,
+	CORE_NAME,
+};
+
+static char *MSG_HDR = "%3d (%d.%d.%d) %d/%d %02d:%02d:%02d ";
+
+static
+USR_MSG MsgCatalog[] = {
+ SUBMIT,			"Submitted from host \"%s\" GMT %+03d%02d",
+ EXECUTE,			"Executing on host \"%s\"",
+ RUN_REMOTE_USAGE,	"Run Rem: Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+ RUN_LOCAL_USAGE,	"Run Loc: Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+ TOT_REMOTE_USAGE,	"Tot Rem: Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+ TOT_LOCAL_USAGE,	"Tot Loc: Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+ IMAGE_SIZE,		"Set Image Size to %d kilobytes",
+ NOT_EXECUTABLE,	"Job file not executable",
+ BAD_LINK,			"Not properly linked for V5 execution",
+ NORMAL_EXIT,		"Exited normally with status %d",
+ ABNORMAL_EXIT,		"Killed by signal %d",
+ CHECKPOINTED,		"Job was checkpointed",
+ NOT_CHECKPOINTED,	"Kicked off without a checkpoint",
+ CORE_NAME,			"Core file is %s/core.%d.%d",
+ -1,				""
+};
+
 #include "condor_constants.h"
 
-struct UserLog {
+typedef struct {
 	char		*path;
 	uid_t		user_uid, saved_uid;
 	gid_t		user_gid, saved_gid;
@@ -39,12 +87,12 @@ struct UserLog {
 	FILE		*fp;
 	int			in_block;
 	int			locked;
-};
+} USER_LOG;
 
 
-struct UserLog *
+USER_LOG *
 	OpenUserLog( const char *own, const char *file, int c, int p, int s );
-void CloseUserLog( struct UserLog * lp );
-void PutUserLog( struct UserLog *lp,  const char *fmt, ... );
+void CloseUserLog( USER_LOG * lp );
+void PutUserLog( USER_LOG *lp,  int, ... );
 void BeginUserLogBlock();
 void EndUserLogBlock();
