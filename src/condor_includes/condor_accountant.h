@@ -41,19 +41,18 @@ public:
   
   Accountant(int MaxCustomers=1024, int MaxResources=1024);
                                                 
-protected:
+private:
 
   //--------------------------------------------------------
-  // Protected Methods
+  // Prvate methods Methods
   //--------------------------------------------------------
 
   void AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T); 
   void RemoveMatch(const MyString& ResourceName, const Time& T);
+  void UpdatePriorities(const Time& T);
 
   void LoadState(); // Save to file
   void SaveState(); // Read from file
-
-private:
 
   //--------------------------------------------------------
   // Configuration variables
@@ -62,8 +61,7 @@ private:
   double MinPriority;        // Minimum priority (if no resources used)
   double Epsilon;            // used to compare priority to zero
   double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
-  MyString PriorityFileName; // Name of priority file
-  MyString MatchFileName;    // Name of Match file
+  MyString LogFileName;      // Name of Log file
 
   //--------------------------------------------------------
   // Internal data types
@@ -92,6 +90,7 @@ private:
   HashTable<MyString, ResourceRecord*> Resources;
 
   Time LastUpdateTime;
+  int LogEnabled;
 
   //--------------------------------------------------------
   // Utility functions
@@ -99,8 +98,7 @@ private:
 
   static MyString GetResourceName(ClassAd* Resource);
   static int NotClaimed(ClassAd* ResourceAd);
-  static void WriteLogEntry(ofstream& os, int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T);
-  void LogAction(int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T);
+  void AppendLogEntry(const MyString& Action, const MyString& CustomerName, const MyString& ResourceName, double d);
 
 };
 
