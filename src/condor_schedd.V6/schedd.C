@@ -7005,13 +7005,13 @@ sendAlive( match_rec* mrec )
 	SafeSock	sock;
 	char		*id = NULL;
 	
-	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",mrec->peer);
-
     sock.timeout(STARTD_CONTACT_TIMEOUT);
 	sock.encode();
 
 	DCStartd d( mrec->peer );
 	id = mrec->id;
+
+	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", id);
 
 	if( !sock.connect(mrec->peer) || !d.startCommand ( ALIVE, &sock) ||
 	    !sock.code(id) || !sock.end_of_message()) {
