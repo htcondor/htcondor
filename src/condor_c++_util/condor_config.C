@@ -684,7 +684,19 @@ param( const char *name )
 	if( val == NULL || val[0] == '\0' ) {
 		return( NULL );
 	}
-	return( expand_macro(val, ConfigTab, TABLESIZE) );
+
+	// Ok, now expand it out...
+	val = expand_macro( val, ConfigTab, TABLESIZE );
+
+	// If it returned an empty string, free it before returning NULL
+	if( val == NULL ) {
+		return NULL;
+	} else if ( val[0] == '\0' ) {
+		free( val );
+		return( NULL );
+	} else {
+		return val;
+	}
 }
 
 /*
@@ -1134,6 +1146,7 @@ process_runtime_configs()
 					 fd, errno );
 			exit(1);
 		}
+		dprintf( D_ALWAYS, "Writing '%s'\n", rArray[i].config );
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
 			!= strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
