@@ -45,8 +45,94 @@ static const char SynchDelimiter[] = "...\n";
 
 static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
+extern "C" char *find_env (const char *, const char *);
+static char *get_env_val (const char *);
 
-UserLog::UserLog( const char *owner, const char *file, int c, int p, int s )
+UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
+{
+	initialize (owner, file, c, p, s);
+}
+
+void UserLog::
+initialize (PROC *p)
+{
+	char buf [_POSIX_PATH_MAX];
+	char *path = buf;
+	char *log_name;
+
+	log_name = find_env( "LOG", p->env );
+
+    if( !log_name ) {
+        return;
+    }
+
+    if( log_name[0] == '/' ) {
+        path = log_name;
+    } else {
+        sprintf( path, "%s/%s", p->iwd, log_name );
+    }
+
+	initialize (p->owner, path, p->id.cluster, p->id.proc, 0);
+}
+
+/* --- The following two functions are taken from the shadow's ulog.c --- */
+/*
+  Find the value of an environment value, given the condor style envrionment
+  string which may contain several variable definitions separated by 
+  semi-colons.
+*/
+char *
+find_env( const char * name, const char * env )
+{
+    const char  *ptr;
+
+    for( ptr=env; *ptr; ptr++ ) {
+        if( strncmp(name,ptr,strlen(name)) == 0 ) {
+            return get_env_val( ptr );
+        }
+    }
+    return NULL;
+}
+
+/*
+  Given a pointer to the a particular environment substring string
+  containing the desired value, pick out the value and return a
+  pointer to it.  N.B. this is copied into a static data area to
+  avoid introducing NULL's into the original environment string,
+  and a pointer into the static area is returned.
+*/
+static char *
+get_env_val( const char *str )
+{
+    const char  *src;
+    char *dst;
+    static char answer[512];
+
+        /* Find the '=' */
+    for( src=str; *src && *src != '='; src++ )
+        ;
+    if( *src != '=' ) {
+        EXCEPT( "Invalid environment string" );
+    }
+
+        /* Skip over any white space */
+    src += 1;
+    while( *src && isspace(*src) ) {
+        src++;
+    }
+
+        /* Now we are at beginning of result */
+    dst = answer;
+    while( *src && !isspace(*src) && *src != ';' ) {
+        *dst++ = *src++;
+    }
+    *dst = '\0';
+
+    return answer;
+}
+
+void UserLog::
+initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	struct passwd	*pwd;
 
@@ -124,7 +210,16 @@ UserLog::display()
 int UserLog::
 writeEvent (ULogEvent *event)
 {
+	// the the log is not initialized, don't bother --- just return OK
+	if (path == 0) return 1;
+
 	int retval;
+
+	// fill in event context
+	event->cluster = cluster;
+	event->proc = proc;
+	event->subproc = subproc;
+
 	lock->obtain (WRITE_LOCK);
 	fseek (fp, 0, SEEK_END);
 	retval = event->putEvent (fp);
@@ -349,50 +444,94 @@ initialize (const char *file)
 }
 	
 
-int ReadUserLog::
+ULogEventOutcome ReadUserLog::
 readEvent (ULogEvent *& event)
 {
-	fpos_t filepos;
+	long   filepos;
 	int    eventnumber;
 	int    retval1, retval2, retval3;
 	
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
-	if (!fp || fgetpos(fp, &filepos)) 
-		return 0;
+	if (!fp || ((filepos = ftell(fp)) == -1L))
+		return ULOG_UNK_ERROR;
 
 	retval1 = fscanf (fp, "%d", &eventnumber);
-	if (retval1 == 1)
-	{
-		// allocate event object; check if allocated successfully
-		event = instantiateEvent ((ULogEventNumber) eventnumber);
-		if (!event) return 0;
 
-		// read event from file; check for result
-		retval2 = event->getEvent (fp);
+	// so we don't dump core if the above fscanf failed
+	if (retval1 != 1) eventnumber = 1;
+
+	// allocate event object; check if allocated successfully
+	event = instantiateEvent ((ULogEventNumber) eventnumber);
+	if (!event) 
+	{
+		return ULOG_UNK_ERROR;
 	}
-	
-	// on error, reset file position
-	if (!retval1 || !retval2)
-	{
-		// reset file position
-		if (fsetpos (fp, &filepos))
-		{
-			EXCEPT ("fsetpos()");
-		}
 
-		return 0;
+	// read event from file; check for result
+	retval2 = event->getEvent (fp);
+		
+	// check if error in reading event
+	if (!retval1 || !retval2)
+	{	
+		// try to synchronize the log
+		if (synchronize())
+		{
+			// if synchronization was successful, reset file position and ...
+			if (fseek (fp, filepos, SEEK_SET))
+			{
+				EXCEPT ("fseek()");
+			}
+			
+			// ... attempt to read the event again
+			clearerr (fp);
+			retval1 = fscanf (fp, "%d", &eventnumber);
+			retval2 = event->getEvent (fp);
+
+			// if failed again, we have a parse error
+			if (!retval1 || !retval2)
+			{
+				delete event;
+				synchronize ();
+				return ULOG_RD_ERROR;
+			}
+			else
+			{
+				return ULOG_OK;
+			}
+		}
+		else
+		{
+			// if we could not synchronize the log, we don't have the full	
+			// event in the stream yet; restore file position and return
+			if (fseek (fp, filepos, SEEK_SET))
+			{
+				EXCEPT ("fseek()");
+			}
+			clearerr (fp);
+			delete event;
+			return ULOG_NO_EVENT;
+		}
 	}
 	else
 	{
-		// synchronize the log
-		retval3 = synchronize ();
-
-		return retval3;
+		// got the event successfully -- synchronize the log
+		if (synchronize ())
+		{
+			return ULOG_OK;
+		}
+		else
+		{
+			// got the event, but could not synchronize!!  treat as incomplete
+			// event
+			delete event;
+			clearerr (fp);
+			return ULOG_NO_EVENT;
+		}
 	}
 
 	// will not reach here
-	return 0;
+	return ULOG_UNK_ERROR;
 }
 
 

@@ -30,6 +30,9 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_JOB_TERMINATED:
 		return new JobTerminatedEvent;
 
+	  case ULOG_IMAGE_SIZE:
+		return new JobImageSizeEvent;
+
 	  default:
 		return 0;
 	}
@@ -46,7 +49,6 @@ ULogEvent()
 
 	eventNumber = (ULogEventNumber) - 1;
 	cluster = proc = subproc = -1;
-	errorNumber = ULOG_OK;
 
 	(void) time ((time_t *)&clock);
 	tm = localtime ((time_t *)&clock);
@@ -87,8 +89,6 @@ readHeader (FILE *file)
 {
 	int retval;
 	
-	errorNumber = ULOG_OK;
-
 	// read from file
 	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ", 
 					 &cluster, &proc, &subproc,
@@ -99,7 +99,7 @@ readHeader (FILE *file)
 	// check if all fields were successfully read
 	if (retval != 8)
 	{
-		ESCAPE;
+		return 0;
 	}
 
 	// recall that tm_mon+1 was written to log; decrement to compensate
@@ -125,7 +125,6 @@ writeHeader (FILE *file)
 	// check if all fields were sucessfully written
 	if (retval < 0) 
 	{
-		errorNumber = ULOG_UNK_ERROR;
 		return 0;
 	}
 
@@ -152,7 +151,6 @@ writeEvent (FILE *file)
 	int retval = fprintf (file, "Job submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
-		errorNumber = ULOG_UNK_ERROR;
 		return 0;
 	}
 	
@@ -165,7 +163,7 @@ readEvent (FILE *file)
 	int retval  = fscanf (file, "Job submitted from host: %s", submitHost);
 	if (retval != 1)
 	{
-		ESCAPE;
+		return 0;
 	}
 	return 1;
 }
@@ -191,7 +189,6 @@ writeEvent (FILE *file)
 	int retval = fprintf (file, "Job executing on host: %s\n", executeHost);
 	if (retval < 0)
 	{
-		errorNumber = ULOG_UNK_ERROR;
 		return 0;
 	}
 	return 1;
@@ -203,7 +200,7 @@ readEvent (FILE *file)
 	int retval  = fscanf (file, "Job executing on host: %s", executeHost);
 	if (retval != 1)
 	{
-		ESCAPE;
+		return 0;
 	}
 	return 1;
 }
@@ -241,10 +238,8 @@ writeEvent (FILE *file)
 	  default:
 		retval = fprintf (file, "(%d) [Bad error number.]\n", errType);
 	}
-	errorNumber = ULOG_UNK_ERROR;
 	if (retval < 0) return 0;
 
-	errorNumber = ULOG_OK;
 	return 1;
 }
 
@@ -259,13 +254,12 @@ readEvent (FILE *file)
 	retval = fscanf (file, "(%d)", &errType);
 	if (retval != 1) 
 	{ 
-		ESCAPE;
+		return 0;
 	}
 
 	// skip over the rest of the line
 	if (fgets (buffer, 128, file) == 0)
 	{
-		errorNumber = ULOG_UNK_ERROR;
 		return 0;
 	}
 
@@ -288,22 +282,25 @@ CheckpointedEvent::
 int CheckpointedEvent::
 writeEvent (FILE *file)
 {
-	errorNumber = ULOG_UNK_ERROR;
-	if (fprintf (file, "Job was checkpointed.\n") < 0) 
+	if (fprintf (file, "Job was checkpointed.\n") < 0  		||
+		(!writeRusage (file, run_remote_rusage)) 			||
+		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
+		(!writeRusage (file, run_local_rusage)) 			||
+		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
-	errorNumber = ULOG_OK;
 	return 1;
 }
 
 int CheckpointedEvent::
 readEvent (FILE *file)
 {
+	char buffer[128];
 	int retval = fscanf (file, "Job was checkpointed.");
-	if (retval == EOF)
-	{
-		ESCAPE;
-	}
-	errorNumber = ULOG_OK;
+	if (retval == EOF ||
+		!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
+		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
+		return 0;
+	
 	return 1;
 }
 		
@@ -311,10 +308,10 @@ readEvent (FILE *file)
 JobEvictedEvent::
 JobEvictedEvent ()
 {
+	eventNumber = ULOG_JOB_EVICTED;
 	checkpointed = false;
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
-	eventNumber = ULOG_JOB_EVICTED;
 }
 
 JobEvictedEvent::
@@ -329,7 +326,6 @@ readEvent (FILE *file)
 	int  ckpt;
 	char buffer [128];
 
-	errorNumber = ULOG_UNK_ERROR;
 	if (((retval1 = fscanf (file, "Job was evicted.")) == EOF)  ||
 		((retval2 = fscanf (file, "\n\t(%d) ", &ckpt)) != 1))
 		return 0;
@@ -340,7 +336,6 @@ readEvent (FILE *file)
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
 	
-	errorNumber = ULOG_OK;
 	return 1;
 }
 
@@ -349,7 +344,6 @@ writeEvent (FILE *file)
 {
 	int retval;
 
-	errorNumber = ULOG_UNK_ERROR;
 	if (fprintf (file, "Job was evicted.\n\t(%d) ", (int) checkpointed) < 0)
 		return 0;
 
@@ -365,7 +359,6 @@ writeEvent (FILE *file)
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
 
-	errorNumber = ULOG_OK;
 	return 1;
 }
 
@@ -374,11 +367,11 @@ writeEvent (FILE *file)
 JobTerminatedEvent::
 JobTerminatedEvent ()
 {
+	eventNumber = ULOG_JOB_TERMINATED;
 	coreFile[0] = '\0';
 	returnValue = signalNumber = -1;
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
-	eventNumber = ULOG_JOB_TERMINATED;
 }
 
 JobTerminatedEvent::
@@ -390,8 +383,6 @@ int JobTerminatedEvent::
 writeEvent (FILE *file)
 {
 	int retval;
-
-	errorNumber = ULOG_UNK_ERROR;
 
 	if (fprintf (file, "Job terminated.\n") < 0) return 0;
 	if (normal)
@@ -414,16 +405,15 @@ writeEvent (FILE *file)
 
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage))			||
-		(fprintf (file, "  -  Run Remote Usage\n") < 0) 	||
+		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
-		(fprintf (file, "  -  Run Local Usage\n") < 0)	||
+		(fprintf (file, "  -  Run Local Usage\n\t") < 0)   	||
 		(!writeRusage (file, total_remote_rusage))			||
-		(fprintf (file, "  -  Total Remote Usage\n") < 0)	||
+		(fprintf (file, "  -  Total Remote Usage\n\t") < 0)	||
 		(!writeRusage (file,  total_local_rusage))			||
 		(fprintf (file, "  -  Total Local Usage\n") < 0))
 		return 0;
 	
-	errorNumber = ULOG_OK;
 	return 1;
 }
 
@@ -438,40 +428,30 @@ readEvent (FILE *file)
 
 	if ((retval1 = (fscanf (file, "Job terminated.") == EOF)) 	||
 		(retval2 = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1)
-	{
-		ESCAPE;
-	}
+		return 0;
 
 	if (normalTerm)
 	{
 		normal = true;
 		if (fscanf(file,"Normal termination (return value %d)",&retval)!=1)
-		{
-			ESCAPE;
-		}
+			return 0;
 	}
 	else
 	{
 		normal = false;
 		if((fscanf(file,"Abnormal termination (signal %d)",&signalNumber)!=1)||
 		   (fscanf(file,"\n\t(%d) ", &gotCore) != 1))
-		{
-			ESCAPE;
-		}
+			return 0;
 
 		if (gotCore)
 		{
 			if (fscanf (file, "Corefile in: %s", coreFile) != 1) 
-			{ 
-				ESCAPE;
-			}
+				return 0;
 		}
 		else
 		{
 			if (fgets (buffer, 128, file) == 0) 
-			{		
-				ESCAPE;
-			}
+				return 0;
 		}
 	}
 
@@ -482,9 +462,42 @@ readEvent (FILE *file)
 		readRusage(file,total_local_rusage) && fgets(buffer, 128, file))
 		return 1;
 	
-	ESCAPE;
+	return 0;
 }
 
+
+JobImageSizeEvent::
+JobImageSizeEvent()
+{
+	eventNumber = ULOG_IMAGE_SIZE;
+	size = -1;
+}
+
+
+JobImageSizeEvent::
+~JobImageSizeEvent()
+{
+}
+
+
+int JobImageSizeEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Image size of job upated: %d\n", size) < 0)
+		return 0;
+
+	return 1;
+}
+
+
+int JobImageSizeEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Image size of job updated: %d", &size) != 1)
+		return 0;
+
+	return 1;
+}
 
 static const int seconds = 1;
 static const int minutes = 60 * seconds;
@@ -502,11 +515,11 @@ writeRusage (FILE *file, rusage &usage)
 
 	usr_days = usr_secs/days;  			usr_secs %= days;
 	usr_hours = usr_secs/hours;			usr_secs %= hours;
-	usr_minutes = usr_minutes/minutes;	usr_secs %= minutes;
+	usr_minutes = usr_secs/minutes;		usr_secs %= minutes;
  	
 	sys_days = sys_secs/days;  			sys_secs %= days;
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
-	sys_minutes = sys_minutes/minutes;	sys_secs %= minutes;
+	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  	
 	int retval;
 	retval = fprintf (file, "\tUsr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
@@ -530,7 +543,7 @@ readRusage (FILE *file, rusage &usage)
 
 	if (retval < 8)
 	{
-		ESCAPE;
+		return 0;
 	}
 
 	usage.ru_utime.tv_sec = usr_secs + usr_minutes*minutes + usr_hours*hours +

@@ -29,14 +29,19 @@
 #if defined(__cplusplus)
 
 #include "condor_constants.h"
+#include "proc.h"
 #include "file_lock.h"
 #include "condor_event.h"
 
 class UserLog {
 public:
 	UserLog();
-	UserLog( const char *owner, const char *file, int clu, int proc, int subp );
+	UserLog(const char *owner, const char *file, int clu, int proc, int subp );
 	~UserLog();
+
+	// to initialize if not initialized bt ctor
+	void initialize(PROC *);
+	void initialize(const char *, const char *, int, int, int);
 
 	// use this function to access log (see condor_event.h)   --RR
 	int       writeEvent (ULogEvent *);
@@ -71,9 +76,10 @@ class ReadUserLog
 	ReadUserLog();
 	~ReadUserLog();
 
-	int 	initialize (const char *file);
-	int		readEvent (ULogEvent *&);
-	int		synchronize (void);
+	int 			 initialize (const char *file);
+	ULogEventOutcome readEvent (ULogEvent *&);
+	int				 synchronize (void);
+	int              getfd() {return fd;}
 
 	private:
 

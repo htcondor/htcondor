@@ -11,7 +11,8 @@ enum ULogEventNumber
 	ULOG_EXECUTABLE_ERROR,			// Error in executable
 	ULOG_CHECKPOINTED,				// Job was checkpointed
 	ULOG_JOB_EVICTED,				// Job evicted from machine
-	ULOG_JOB_TERMINATED				// Job terminated
+	ULOG_JOB_TERMINATED,			// Job terminated
+	ULOG_IMAGE_SIZE					// Image size of job updated
 };
 
 
@@ -33,7 +34,6 @@ class ULogEvent
 	int getEvent (FILE *);			// get an event from the file
 	int putEvent (FILE *);			// put an event to the file
 	
-	ULogEventOutcome errorNumber;	// error number (when reading/writing)
 	ULogEventNumber	 eventNumber;   // which event
 	struct tm		 eventTime;	   	// time of occurrance
 	int 			 cluster;		// to which job
@@ -112,6 +112,9 @@ class CheckpointedEvent : public ULogEvent
 
 	virtual int readEvent (FILE *);
 	virtual int writeEvent (FILE *);
+
+	rusage	run_local_rusage;
+	rusage  run_remote_rusage;
 };
 
 
@@ -149,6 +152,20 @@ class JobTerminatedEvent : public ULogEvent
 	rusage  run_remote_rusage;
 	rusage	total_local_rusage;	// total local and remote rusage
 	rusage  total_remote_rusage;
+};
+
+
+// this event occurs when the image size of a job is updated
+class JobImageSizeEvent : public ULogEvent
+{
+  public:
+	JobImageSizeEvent();
+	~JobImageSizeEvent();
+
+	virtual int readEvent (FILE *);
+	virtual int writeEvent (FILE *);
+
+	int size;
 };
 
 #endif // __CONDOR_EVENT_H__
