@@ -18,4 +18,16 @@ all_symlink_target(../x_compute_bogokips.c,x_compute_bogokips.c)
 
 all_copy_target(../x_hello.in,x_hello.in)
 all_copy_target(../x_data.in,x_data.in)
+all_copy_target(../x_data.in,x_data-1.in)
+all_copy_target(../x_data.in,x_data-2.in)
+all_copy_target(../x_data.in,x_data-3.in)
+all_copy_target(../x_data.in,x_data-4.in)
+all_copy_target(../x_data.in,x_data-5.in)
+all_copy_target(../x_data.in,x_data-6.in)
+all_copy_target(../x_data.in,x_data-7.in)
+all_copy_target(../x_data.in,x_data-8.in)
+
+
+clean::
+	rm -rf dirtest testdir
 

@@ -7,7 +7,9 @@ CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR)
 all:: run_list
 
 clean::
-	rm -f core CkptFile *.out *.err *.log *.o *.exe*
+	rm -f *.o *.exe *.exe.*
+	rm -f core core.*.* *.out *.output *.err *.log
+	rm -f CkptFile ckpt_file *.ckpt
 
 x_waste_second.o: x_waste_second.c x_my_bogokips.h x_waste_second.h
 	$(CC) -c x_waste_second.c $(CFLAGS)
