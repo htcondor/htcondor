@@ -256,7 +256,19 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// Are there arguments for it?
-		char *argBuf = GetParam( "CRON", "_", jobName, "ARGS" );
+		// Force the first arg to be the "Job Name"..
+		char *argBufTmp = GetParam( "CRON", "_", jobName, "ARGS" );
+		char *argBuf;
+		if ( NULL == argBufTmp ) {
+			argBuf = strdup( jobName );
+		} else {
+			int		len = strlen( jobName ) + 1 + strlen( argBufTmp ) + 1;
+			argBuf = new char[len];
+			strcpy( argBuf, jobName );
+			strcat( argBuf, " " );
+			strcat( argBuf, argBufTmp );
+			free( argBufTmp );
+		}
 
 		// Special environment vars?
 		char *envBuf = GetParam( "CRON", "_", jobName, "ENV" );
@@ -275,6 +287,17 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		job->SetEnv( envBuf );
 		job->SetCwd( cwdBuf );
 		job->SetPeriod( jobMode, jobPeriod );
+
+		// Free up memory from param()
+		if ( argBuf ) {
+			free( argBuf );
+		}
+		if ( envBuf ) {
+			free( envBuf );
+		}
+		if ( cwdBuf ) {
+			free( cwdBuf );
+		}
 
 		// Debug info
 		dprintf( D_FULLDEBUG, "CronMgr: Done processing job '%s'\n", jobName );

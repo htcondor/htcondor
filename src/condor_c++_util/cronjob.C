@@ -497,7 +497,7 @@ CondorCronJob::RunProcess( void )
 	// Are there arguments to pass it?
 	char *argBuf = NULL;
 	if ( NULL != args ) {
-		int		len = strlen( args ) + strlen( name ) + 1;
+		int		len = strlen( args ) + 1 + strlen( name ) + 1;
 		if ( NULL == ( argBuf = (char *) malloc( len ) )  ) {
 			dprintf( D_ALWAYS, 
 					 "Cron: Couldn't allocate arg buffer %d bytes\n",
@@ -505,6 +505,7 @@ CondorCronJob::RunProcess( void )
 			return -1;
 		}
 		strcpy( argBuf, name );
+		strcat( argBuf, " " );
 		strcat( argBuf, args );
 	}
 
