@@ -225,7 +225,7 @@ NT_TOOLS	-a NTconfig
 
 # These are common to all branches
 EXT_COMMON	-a externals/.cvsignore \
-		   externals/build_external
+		   externals/build_external \
 		   externals/bundles/man/current
 
 # The externals needed for the V6_6_0 release.  Normally, we wouldn't
