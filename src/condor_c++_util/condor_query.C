@@ -196,9 +196,16 @@ clearFloatConstraints (const int i)
 
 
 void CondorQuery::
-clearCustomConstraints (void)
+clearORCustomConstraints (void)
 {
-	query.clearCustom ();
+	query.clearCustomOR ();
+}
+
+
+void CondorQuery::
+clearANDCustomConstraints (void)
+{
+	query.clearCustomAND ();
 }
 
 
@@ -228,9 +235,17 @@ addConstraint (const int cat, const float value)
 
 // add a custom constraint
 QueryResult CondorQuery::
-addConstraint (const char *value)
+addANDConstraint (const char *value)
 {
-	return (QueryResult) query.addCustom ((char *) value);
+	return (QueryResult) query.addCustomAND ((char *) value);
+}
+
+
+// add a custom constraint
+QueryResult CondorQuery::
+addORConstraint (const char *value)
+{
+	return (QueryResult) query.addCustomOR ((char *) value);
 }
 
 
@@ -238,7 +253,7 @@ addConstraint (const char *value)
 QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName)
 {
-    char        *pool;
+    const char  *pool;
     ReliSock    sock; 
 	int			more;
     QueryResult result;
@@ -296,7 +311,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	}
 
 	// contact collector
-	if (!sock.connect(pool, COLLECTOR_COMM_PORT)) {
+	if (!sock.connect((char*)pool, COLLECTOR_COMM_PORT)) {
         return Q_COMMUNICATION_ERROR;
     }
 

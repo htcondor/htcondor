@@ -95,9 +95,15 @@ add (CondorQFltCategories cat, float value)
 
 
 int CondorQ::
-add (char *value)
+addOR (char *value)
 {
-	return query.addCustom (value);
+	return query.addCustomOR (value);
+}
+
+int CondorQ::
+addAND (char *value)
+{
+	return query.addCustomAND (value);
 }
 
 int CondorQ::

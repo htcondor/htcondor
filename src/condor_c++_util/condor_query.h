@@ -115,13 +115,15 @@ class CondorQuery
 	QueryResult clearStringConstraints  (const int);
 	QueryResult clearIntegerConstraints (const int);
 	QueryResult clearFloatConstraints   (const int);
-	void 		clearCustomConstraints  (void);
+	void 		clearORCustomConstraints(void);
+	void 		clearANDCustomConstraints(void);
 
 	// add constraints
 	QueryResult addConstraint (const int, const char *); // string constraints
 	QueryResult addConstraint (const int, const int);	 // integer constraints
 	QueryResult addConstraint (const int, const float);	 // float constraints
-	QueryResult addConstraint (const char *);			 // custom constraints
+	QueryResult addORConstraint (const char *);			 // custom constraints
+	QueryResult addANDConstraint (const char *);		 // custom constraints
 
 	// fetch from collector
 	QueryResult fetchAds (ClassAdList &, const char [] = "");

@@ -66,7 +66,8 @@ class CondorQ
 	int add (CondorQIntCategories, int);
 	int add (CondorQStrCategories, char *);
 	int add (CondorQFltCategories, float);
-	int add (char *);  // custom
+	int addAND (char *);  // custom
+	int addOR (char *);  // custom
 
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
