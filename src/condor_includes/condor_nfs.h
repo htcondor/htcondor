@@ -33,11 +33,11 @@
     typedef struct fhandle fhandle_t;
 #elif !defined(IRIX)
 #	include <rpc/rpc.h>
-#if defined(CONDOR_DARWIN)
+#if defined(Darwin)
 #       include <nfs/rpcv2.h>
 #endif
 #	include <nfs/nfs.h>
-#if !defined(OSF1) && !defined(Solaris) && !defined(HPUX11) && !defined(CONDOR_DARWIN)
+#if !defined(OSF1) && !defined(Solaris) && !defined(HPUX11) && !defined(Darwin)
 #	include <nfs/export.h>
 #endif
 #endif

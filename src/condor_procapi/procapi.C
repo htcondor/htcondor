@@ -669,7 +669,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* HPUX */
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 
 
 	// First, let's get the BSD task info for this stucture. This
@@ -1165,7 +1165,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 }
 #endif /* HPUX */
 
-#if ( defined(CONDOR_DARWIN)  )
+#if ( defined(Darwin)  )
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	
@@ -1728,7 +1728,7 @@ ProcAPI::getAndRemNextPid () {
    to by pidList, a private data member of ProcAPI.  
  */
 
-#ifndef CONDOR_DARWIN
+#ifndef Darwin
 int
 ProcAPI::buildPidList() {
 
@@ -1775,7 +1775,7 @@ ProcAPI::buildPidList() {
    FreeBSD as well, but FreeBSD does have a /proc that it could look at
  */
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 int
 ProcAPI::buildPidList() {
 

@@ -27,7 +27,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDLib.h>
@@ -45,7 +45,7 @@ extern int WINAPI KBShutdown(void);
 extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
-#ifndef CONDOR_DARWIN
+#ifndef Darwin
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
@@ -230,7 +230,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	return;
 }
 
-#elif !defined(CONDOR_DARWIN) /* !defined(WIN32) -- all UNIX platforms but OS X*/
+#elif !defined(Darwin) /* !defined(WIN32) -- all UNIX platforms but OS X*/
 
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
@@ -494,7 +494,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 ) || defined(CONDOR_DARWIN)
+#elif defined( OSF1 ) || defined(Darwin)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
@@ -938,7 +938,7 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 
 	sysapi_internal_reconfig();
 
-#if( !defined( WIN32 ) && !defined( CONDOR_DARWIN ) )
+#if( !defined( WIN32 ) && !defined( Darwin ) )
 	time_t m_i, m_c;
 
 	/* here calc_idle_time_cpp expects a reference, so let's give it one */

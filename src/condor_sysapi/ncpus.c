@@ -37,7 +37,7 @@
 #include <sys/pstat.h>
 #endif
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 #include <sys/sysctl.h>
 #endif
 
@@ -167,7 +167,7 @@ bogomips        : 299.01
 #elif defined(AIX)
 	sysapi_internal_reconfig();
 	return sysconf(_SC_NPROCESSORS_ONLN);
-#elif defined(CONDOR_DARWIN)
+#elif defined(Darwin)
 	sysapi_internal_reconfig();
 	int mib[2], maxproc;
 	size_t len;

@@ -62,7 +62,7 @@
 #	include "condor_sys_solaris.h"
 #elif defined(OSF1)
 #	include "condor_sys_dux.h"
-#elif defined(CONDOR_DARWIN)
+#elif defined(Darwin)
 #	include "condor_sys_bsd.h"
 #elif defined(AIX)
 #	include "condor_sys_aix.h"
@@ -166,12 +166,12 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <rpc/types.h>
-#if !defined(CONDOR_DARWIN)
+#if !defined(Darwin)
 #include <values.h>
 #endif
 #include <math.h>
 #include <utime.h>
-#if !defined(CONDOR_DARWIN)
+#if !defined(Darwin)
 #include <sys/poll.h>
 #endif
 

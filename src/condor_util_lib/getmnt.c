@@ -41,7 +41,7 @@ char			*strdup(), *malloc();
 
 	/* Nothing needed on ULTRIX systems - getmnt() is native*/
 
-#elif defined(OSF1) || defined(CONDOR_DARWIN)
+#elif defined(OSF1) || defined(Darwin)
 
 	/* BEGIN OSF1 version - use getmntinfo() */
 
