@@ -149,7 +149,7 @@ XferSummary::time_out(time_t now)
 	info.Insert(line);
 	sprintf(line, "NumSends = %d", num_sends);
 	info.Insert(line);
-	sprintf(line, "BytesSent = %d", bytes_sent);
+	sprintf(line, "BytesSent = %d", (int) bytes_sent);
 	info.Insert(line);
 	sprintf(line, "TimeSending = %d", time_sending);
 	info.Insert(line);
@@ -158,7 +158,7 @@ XferSummary::time_out(time_t now)
 	info.Insert(line);
 	sprintf(line, "NumRecvs = %d", num_recvs);
 	info.Insert(line);
-	sprintf(line, "BytesReceived = %d", bytes_recv);
+	sprintf(line, "BytesReceived = %d", (int) bytes_recv);
 	info.Insert(line);
 	sprintf(line, "TimeReceiving = %d", time_recving);
 	info.Insert(line);
@@ -227,7 +227,7 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
 			(tinfo->status == RECV ? "R" : "S"),
 			(success_flag ? "S" : "F"),
 			xfer_size,
-			now - tinfo->start_time,
+			(int) (now - tinfo->start_time),
 			peer_IP,
 			tinfo->owner,
 			inet_ntoa(tinfo->shadow_addr));
