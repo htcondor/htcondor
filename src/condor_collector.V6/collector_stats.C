@@ -48,7 +48,8 @@ static int hashFunction (const StatsHashKey &key, int numBuckets)
 
 bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
 {
-    return ( ( lhs.name == rhs.name) && ( lhs.ip_addr == rhs.ip_addr) );
+    return ( ( lhs.name == rhs.name) && ( lhs.ip_addr == rhs.ip_addr) &&
+			 ( lhs.type == rhs.type) );
 }
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>

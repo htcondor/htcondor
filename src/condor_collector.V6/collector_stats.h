@@ -95,7 +95,7 @@ class StatsHashKey
 	MyString type;
     MyString name;
     MyString ip_addr;
-    friend bool operator== (const HashKey &, const HashKey &);
+    friend bool operator== (const StatsHashKey &, const StatsHashKey &);
 	void getstr( MyString & );
   private:
 };
