@@ -88,6 +88,7 @@ struct parameters
 	bool test_classads;
 	bool test_references;
 	bool test_xml;
+	bool test_dirty;
 };
 
 class TestResults
@@ -175,6 +176,8 @@ void test_in_references(char *name,	StringList &references,
     int line_number, TestResults *results);
 void test_not_in_references(char *name,	StringList &references,
     int line_number, TestResults *results);
+void test_dirty_attribute(
+    TestResults *results);
 void print_truncated_string(const char *s, int max_characters);
 static void make_big_string(int length, char **string,
     char **quoted_string);
@@ -381,6 +384,10 @@ main(
 		delete internal_references;
 		delete external_references;
 	}
+
+	if (parameters.test_dirty) {
+		test_dirty_attribute(&test_results);
+	}
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
 	/*
 	for (int i = 0; i < LARGE_NUMBER_OF_CLASSADS; i++) {
@@ -431,6 +438,7 @@ parse_command_line(
 	parameters->test_classads         = false;
 	parameters->test_references       = false;
 	parameters->test_xml              = false;
+	parameters->test_dirty            = false;
 
 	argument_index = 1;
 
@@ -451,6 +459,7 @@ parse_command_line(
 			parameters->test_classads         = true;
 			parameters->test_references       = true;
 			parameters->test_xml              = true;
+			parameters->test_dirty            = true;
 		} else if (!strcmp(argv[argument_index], "-s")
 		    || !strcmp(argv[argument_index], "-scanner")) {
 			parameters->test_scanner          = true;
@@ -471,6 +480,9 @@ parse_command_line(
 		} else if (!strcmp(argv[argument_index], "-x")
 		    || !strcmp(argv[argument_index], "-xml")) {
 			parameters->test_xml              = true;
+		} else if (!strcmp(argv[argument_index], "-d")
+		    || !strcmp(argv[argument_index], "-dirty")) {
+			parameters->test_dirty            = true;
 		} else {
 			fprintf(stderr, "Unknown argument: %s\n", 
 					argv[argument_index]);
@@ -492,11 +504,13 @@ parse_command_line(
 		&& parameters->test_copy_constructor == false
 		&& parameters->test_assignment       == false
 		&& parameters->test_classads         == false
-		&& parameters->test_references       == false) {
+		&& parameters->test_references       == false
+		&& parameters->test_dirty            == false) {
 		parameters->test_scanner          = true;
 		parameters->test_copy_constructor = true;
 		parameters->test_classads         = true;
 		parameters->test_references       = true;
+		parameters->test_dirty            = true;
 	}
 	return;
 }
@@ -1111,6 +1125,116 @@ test_not_in_references(
 			   name, line_number);
 		results->AddResult(false);
 	}
+	return;
+}
+
+void 
+test_dirty_attribute(
+	TestResults  *results)     // OUT: Modified to reflect result of test
+{
+	ClassAd  *classad;
+	char     *name;
+
+	classad = new ClassAd("A = 1, B = 2", ',');
+
+	// First of all, we should have zero dirty attributes. 
+	classad->ResetName(); 
+	name = classad->NextDirtyName();
+	if (name) {
+		delete name;
+		printf("Failed: new ClassAd has dirty attributes in line %d\n",
+			   __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Passed: new ClassAd is clean in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	// Add an attribute
+	classad->Insert("C = 3");
+
+	// Now we should have exactly one dirty attribute, C.
+	classad->ResetName();
+	name = classad->NextDirtyName();
+	if (!name) {
+		printf("Failed: C isn't dirty in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (strcmp(name, "C")) {
+		printf("Failed: %s is dirty, not C in line %d\n", name, __LINE__);
+		results->AddResult(false);
+		delete name;
+	} else {
+		printf("Passed: C is dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+		delete name;
+	}
+	name = classad->NextName();
+	if (name) {
+		printf("Failed: more than one dirty attribute in line %d\n", __LINE__);
+		results->AddResult(false);
+		delete name;
+	} else {
+		printf("Passed: not more than one dirty attribute in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	// Add an attribute
+	classad->Insert("D = 4");
+
+	// Now we should have two dirty attributes, C & D
+	classad->ResetName();
+	name = classad->NextDirtyName();
+	if (!name) {
+		printf("Failed: C isn't dirty in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (strcmp(name, "C")) {
+		printf("Failed: %s is dirty, not C in line %d\n", name, __LINE__);
+		results->AddResult(false);
+		delete name;
+	} else {
+		printf("Passed: C is dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+		delete name;
+	}
+	name = classad->NextDirtyName();
+	if (!name) {
+		printf("Failed: D isn't dirty in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (strcmp(name, "D")) {
+		printf("Failed: %s is dirty, not D in line %d\n", name, __LINE__);
+		results->AddResult(false);
+		delete name;
+	} else {
+		printf("Passed: D is dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+		delete name;
+	}
+	name = classad->NextName();
+	if (name) {
+		printf("Failed: more than two dirty attributes in line %d\n", __LINE__);
+		results->AddResult(false);
+		delete name;
+	} else {
+		printf("Passed: not more than two dirty attributes in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	// Clear the dirty flags, and there should be no dirty attributes
+	classad->ClearAllDirtyFlags();
+	classad->ResetName(); 
+	name = classad->NextDirtyName();
+	if (name) {
+		delete name;
+		printf("Failed: ClassAd has dirty attributes in line %d\n",
+			   __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Passed: new ClassAd is clean in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	delete classad;
+
 	return;
 }
 
