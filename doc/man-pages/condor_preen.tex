@@ -1,0 +1,34 @@
+\begin{ManPage}{\Condor{preen}}{1}{remove extraneous files from Condor directories}
+\label{man-condor-preen}
+\Synopsis \SynProg{\Condor{preen}}
+\oOpt{-mail}
+\oOpt{-remove}
+\oOpt{-verbose}
+
+\Description 
+
+\Condor{preen} examines the directories belonging to Condor, 
+and removes extraneous files and directories which may be left over from
+Condor processes which terminated abnormally either due to internal errors or
+a system crash. The directories checked are the LOG, EXECUTE, and SPOOL
+directories as defined in the Condor configuration files. \Condor{preen} is
+intended to be run as user root (or user condor) periodically as a backup
+method to ensure reasonable file system cleanliness in the face of
+errors. This is done automatically by default by the \Condor{master}. 
+It may also be explicitly invoked on an as needed basis.
+
+\begin{Options}
+
+	\OptItem{\Opt{-mail}}{Send mail to the CONDOR\_ADMINISTRATORS as
+	defined in the Condor configuration files instead of writing to the
+	standard output}
+
+	\OptItem{\Opt{-remove}}{Remove the offending files and directories
+	rather than just reporting on them}
+
+	\OptItem{\Opt{-verbose}}{List all files found in the Condor
+	directories, even those which are not considered extraneous}
+
+\end{Options}
+
+\end{ManPage}
