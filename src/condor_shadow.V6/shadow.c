@@ -317,7 +317,7 @@ char *envp[];
 		reserved_swap = atoi( tmp ) * 1024;	/* Value specified in megabytes */
 	}
 
-#if defined(USE_ROOT_TUID) && defined(NFSFIX)
+#if defined(USE_ROOT_RUID) && defined(NFSFIX)
 	if (getuid()==0) {
 		set_root_euid(__FILE__,__LINE__);
 	}
