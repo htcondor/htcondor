@@ -198,7 +198,29 @@ per machine basis.
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
-		format \emph{fmt}.  Attributes must be from the job ClassAd. }
+		format \emph{fmt}.
+		To display the attribute the format must contain a single
+		{\texttt{printf(3)}} style conversion specifier.
+		Attributes must be from the job ClassAd.  If the
+		attribute is not present in a given ClassAd then the
+		format option will be silently skipped.
+		The conversion specifier must match the type of the
+		attribute.   \%s is suitable for strings like Owner, \%d
+		for integers like ClusterId, and \%f for floating point
+		numbers like RemoteWallClockTime.  An incorrect format
+		will result in undefined behavior.
+		Do not use more than one conversion specifier in a given
+		format.  More than one conversion specifier will result
+		in undefined behavior.  To output multiple attributes
+		repeat the \Opt{-format} option once for each desired
+		attribute.
+		Like {\texttt{printf(3)}} style formats you can include other
+		text that will be reproduced directly.   You can specify
+		a format without any conversion specifiers but you must
+		still give attribute.
+		You can include \Bs n to add specify a line break.
+		There are some examples of using \Opt{-format} in the
+		Examples section below.  }
 	\OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
 		display remote CPU time accumulated by the job to date in days,
 		hours, minutes, and seconds.  (If the job is currently running, time
@@ -252,16 +274,15 @@ jdoe 16386 3600 ProcId = 4
 jdoe 16386 4200 ProcId = 7
 \end{verbatim}
 
-If only the cluster and process ID of Jane Doe's job's are to
-be listed, the following example works well.
+To display on the JobID's of Jane Doe's jobs you can use the following.
 \begin{verbatim}
-%condor_q -submitter jdoe -format "%d ." ClusterId -format " %d\n" ProcId
-27 . 0
-27 . 1
-27 . 2
-27 . 3
-27 . 4
-27 . 7
+%condor_q -submitter jdoe -format "%d." ClusterId -format "%d\n" ProcId
+27.0
+27.1
+27.2
+27.3
+27.4
+27.7
 \end{verbatim}
 
 An example that shows the difference (first set of output)

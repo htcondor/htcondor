@@ -75,10 +75,30 @@ options} may be specified.
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
 		expression.  See section~\ref{sec:classadref} for
 		details on writing expressions.}
-    \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Register display 
-		format and attribute name.  The \Arg{fmt} string has the same format as 
-		\texttt{printf(3)}, and \Arg{attr} is the name of the attribute that 
-		should be displayed in the specified format.}
+	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
+		format \emph{fmt}.
+		To display the attribute the format must contain a single
+		{\texttt{printf(3)}} style conversion specifier.
+		Attributes must be from the resource ClassAd.  If the
+		attribute is not present in a given ClassAd then the
+		format option will be silently skipped.
+		The conversion specifier must match the type of the
+		attribute.   \%s is suitable for strings like Name, \%d
+		for integers like LastHeardFrom, and \%f for floating point
+		numbers like LoadAvg.  An incorrect format
+		will result in undefined behavior.
+		Do not use more than one conversion specifier in a given
+		format.  More than one conversion specifier will result
+		in undefined behavior.  To output multiple attributes
+		repeat the \Opt{-format} option once for each desired
+		attribute.
+		Like {\texttt{printf(3)}} style formats you can include other
+		text that will be reproduced directly.   You can specify
+		a format without any conversion specifiers but you must
+		still give attribute.
+		You can include \Bs n to add specify a line break.
+		There are some examples of using \Opt{-format} in the
+		Examples section below. }
 \end{Options}
 
 \GenRem
