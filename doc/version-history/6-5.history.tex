@@ -6,6 +6,37 @@ This is the development release series of Condor,
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-5-5}Version 6.5.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added initial support for the \Condor{gridshell}.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{starter} no longer seg-faults when attempting to run
+  a job as nobody on HPUX.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-5-4}Version 6.5.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -56,15 +87,12 @@ The details of each version are described below.
   if the IP address of the \Condor{shadow} cannot be resolved, the
   \Condor{startd} used to refuse the request.
   Now, the \Condor{startd} accepts the request and uses the IP address
-  of the \Condor{shadow} in the all log messages, tool output, and the
+  of the \Condor{shadow} in all log messages, tool output, and the
   \Attr{ClientMachine} ClassAd attribute that are normally set to the
   hostname.
 
 \item Process handles would intermittantly be lost on Windows, causing
   the \Condor{startd} and other daemons to EXCEPT(). This has been fixed.
-
-\item The \Condor{starter} no longer seg-faults when attempting to run
-  a job as nobody on HPUX.
 
 \end{itemize}
 
