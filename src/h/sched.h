@@ -175,13 +175,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define	RELINQUISH_SERVICE	(SCHED_VERS+43)
 #define	VACATE_SERVICE		(SCHED_VERS+44)
 
-#define SCHED_PORT		9605
-#define START_PORT		9611
-#define COLLECTOR_PORT		9612
-#define COLLECTOR_UDP_PORT	9613
-#define NEGOTIATOR_PORT		9614
-#define START_UDP_PORT		9615
-#define ACCOUNTANT_PORT		9616
+#include "condor_network.h"	/* for port numbers */
 
 #define XDR_BLOCKSIZ (1024*4)
 #define DEFAULT_MEMORY 3
