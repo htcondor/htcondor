@@ -1,7 +1,7 @@
 #include "HashTable.h"
 #include "extArray.h"
 #include "list.h"
-#include "exprTree.h"
+#include "condor_classad.h"
 
 template class HashTable<MyString,FunctionCall::ClassAdFunc>;
 template class HashBucket<MyString,FunctionCall::ClassAdFunc>;
@@ -20,6 +20,22 @@ template class HashTable<ExprTree*, bool>;
 template class HashBucket<ExprTree*, bool>;
 
 template class ListIterator<ExprTree>;
+
+template class HashTable<int, BaseCollection*>;
+template class HashBucket<int, BaseCollection*>;
+template class HashTable<MyString, ClassAd *>;
+template class HashBucket<MyString, ClassAd *>;
+template class Set<MyString>;
+template class SetElem<MyString>;
+template class SetIterator<MyString>;
+template class Set<int>;
+template class SetElem<int>;
+template class SetIterator<int>;
+template class Set<RankedClassAd>;
+template class SetElem<RankedClassAd>;
+template class SetIterator<RankedClassAd>;
+template class ExtArray<CollChildIterator*>;
+template class ExtArray<CollContentIterator*>;
 
 class _ClassAdInit 
 {
