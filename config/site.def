@@ -21,7 +21,7 @@
 #define WANT_JAVA       YES
 #define WANT_PVM		YES
 #define WANT_CONDOR_G	YES
-#define WANT_NETMAN		YES
+#define WANT_NETMAN	NO
 #define WANT_GSI		YES
 #define WANT_X509       YES
 #define WANT_KERBEROS   YES

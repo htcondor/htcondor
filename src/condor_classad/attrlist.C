@@ -1392,6 +1392,47 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 	return 0;
 }
 
+// Unlike the other lame version of this function call, we ensure that
+// we allocate the value, to ensure that we have sufficient space.
+int AttrList::EvalString (const char *name, AttrList *target, char **value)
+{
+	ExprTree *tree;
+	EvalResult val;
+
+	tree = Lookup(name);
+	if(!tree) {
+		if (target) {
+			tree = target->Lookup(name);
+		} else {
+			evalFromEnvironment (name, &val);
+			if (val.type == LX_STRING && val.s)
+			{
+                *value = (char *) malloc(strlen(val.s) + 1);
+                if (*value != NULL) {
+                    strcpy(*value, val.s);
+                    return 1;
+                } else {
+                    return 0;
+                }
+			}
+			return 0;
+		}
+	}
+	
+	if(tree && tree->EvalTree(this,target,&val) && val.type==LX_STRING && val.s)
+	{
+		*value = (char *) malloc(strlen(val.s) + 1);
+		if (*value != NULL) {
+			strcpy(*value, val.s);
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	return 0;
+}
+
 int AttrList::EvalInteger (const char *name, AttrList *target, int &value) 
 {
     ExprTree *tree;

@@ -452,28 +452,24 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-ReadMultipleUserLogs::getParamFromSubmitLine(MyString submitLine,
+ReadMultipleUserLogs::getParamFromSubmitLine(MyString &submitLine,
 		const char *paramName)
 {
 	MyString	paramValue("");
 
-		// We need to copy the string here because strtok modifies its
-		// argument...
-	char *		lineBuf = strnewp(submitLine.Value());
 	const char *DELIM = " \t";
 
-	char *		token = strtok(lineBuf, DELIM);
+	submitLine.Tokenize();
+	const char *	token = submitLine.GetNextToken(DELIM, true);
 	if ( token && !strcasecmp(token, paramName) ) {
-		token = strtok(NULL, DELIM);
+		token = submitLine.GetNextToken(DELIM, true);
 		if ( token && !strcasecmp(token, "=") ) {
-			token = strtok(NULL, DELIM);
+			token = submitLine.GetNextToken(DELIM, true);
 			if ( token ) {
 				paramValue = token;
 			}
 		}
 	}
-
-	delete [] lineBuf;
 
 	return paramValue;
 }

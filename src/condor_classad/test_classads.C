@@ -879,7 +879,7 @@ test_string_value(
     TestResults *results)        // OUT: Modified to reflect result of test
 {
 	int         found_string;
-	char        *actual_value;
+	char        *actual_value=NULL;
 
 	found_string = classad->LookupString(attribute_name, &actual_value);
 	if (found_string && !strcmp(expected_value, actual_value)) {
@@ -902,7 +902,9 @@ test_string_value(
 		printf("\" in line %d\n", line_number);
 		results->AddResult(false);
 	}
-	free(actual_value);
+    if (actual_value != NULL){
+        free(actual_value);
+    }
 	return;
 }
 

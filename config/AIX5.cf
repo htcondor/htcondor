@@ -17,9 +17,9 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define HAS_GLOBUS			NO
-#define HAS_GSI				NO
-#define HAS_OPENSSL			NO
+#define HAS_GLOBUS			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 #define HAS_DLOPEN			NO
 #define HAS_DAGMAN_HELPER   YES
 #undef WANT_PVM
@@ -27,20 +27,8 @@
 
 #undef WANT_JAVA
 #define WANT_JAVA       YES
-#undef WANT_CONDOR_G
-#define WANT_CONDOR_G  	NO
-#undef WANT_NETMAN
-#define WANT_NETMAN     YES
-#undef WANT_X509
-#define WANT_X509       NO
 #undef WANT_KERBEROS
 #define WANT_KERBEROS   NO
-#undef WANT_MD
-#define WANT_MD         NO
-#undef WANT_3DES
-#define WANT_3DES       NO
-#undef WANT_BLOWFISH
-#define WANT_BLOWFISH   NO
 
 #undef WANT_CLASSAD_FUNCTIONS
 #define WANT_CLASSAD_FUNCTIONS NO
