@@ -227,6 +227,18 @@ Env::Put( const char *nameValueExpr )
 
 	// fail if either name or delim is missing
 	if( expr == delim || delim == NULL ) {
+		if(generate_parse_messages) {
+			MyString msg;
+			if(delim == NULL) {
+				msg.sprintf(
+				  "ERROR: Missing '=' after environment variable '%s'.",
+				  nameValueExpr);
+			}
+			else {
+				msg.sprintf("ERROR: missing variable in '%s'.",expr);
+			}
+			AddParseMessage(msg.Value());
+		}
 		delete[] expr;
 		return false;
 	}

@@ -2395,7 +2395,7 @@ SetEnvironment()
 	envobject.GenerateParseMessages();
 	if(!envobject.Merge(env)) {
 		char const *err_msg = envobject.GetParseMessages();
-		if(!err_msg) err_msg = "ERROR parsing environment.";
+		if(!err_msg || !*err_msg) err_msg = "ERROR parsing environment.";
 		fprintf(stderr,
 		  "\n%s\nThe environment you specified was: '%s'\n",err_msg,env);
 		exit(1);
