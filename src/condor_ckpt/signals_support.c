@@ -407,6 +407,23 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 }
 #endif
 
+/* On OSF1 there is a sigprocmask.o and a _sigprocmsk.o.  We extract the
+   former and upcase SIGPROCMASK, but we can no longer extract the
+   latter, because it results in a redefinition of _user_signal_mask.
+   sigprocmask (in sigprocmask.o) calls _sigprocmask (in _sigprocmsk.o).
+   In the upcase versions, SIGPROCMASK wants to call _SIGPROCMASK.  Since
+   we do not trap _sigprocmask in remote syscalls, we just define
+   _SIGPROCMASK in terms of _sigprocmask, and the _user_signal_mask
+   data structure is kept in synch whether SIGPROCMASK or sigprocmask is
+   called.  -Jim B. */
+#if defined(OSF1)
+int
+_SIGPROCMASK( int how, const sigset_t *set, sigset_t *oset)
+{
+	_sigprocmask( how, set, oset );
+}
+#endif
+
 #if defined(SYS_sigprocmask)
 #if defined(LINUX)
 sigprocmask( int how, sigset_t *set, sigset_t *oset)
