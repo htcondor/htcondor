@@ -178,7 +178,7 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
 	rm -f sigaction.tmp.o sigaction.o
 #elif IS_ALPHA_OSF1
-uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP_TMP.o,mmap,MMAP)
+uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #else
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
