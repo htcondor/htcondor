@@ -198,6 +198,14 @@ class Job {
         @return address of a string describing the node's current status
     */
 	const char* GetStatusName() const;
+
+	bool HasChild( Job* child );
+	bool HasParent( Job* child );
+
+	bool RemoveChild( Job* child, MyString &whynot );
+	bool RemoveParent( Job* parent, MyString &whynot );
+	bool RemoveDependency( queue_t queue, JobID_t job );
+	bool RemoveDependency( queue_t queue, JobID_t job, MyString &whynot );
  
     /** Dump the contents of this Job to stdout for debugging purposes.
         @param level Only do the dump if the current debug level is >= level

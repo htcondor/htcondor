@@ -319,3 +319,65 @@ Job::GetStatusName() const
 {
 	return status_t_names[_Status];
 }
+
+
+bool
+Job::HasChild( Job* child ) {
+	if( !child ) {
+		return false;
+	}
+	return _queues[Q_CHILDREN].IsMember( child->GetJobID() );
+}
+
+bool
+Job::HasParent( Job* parent ) {
+	if( !parent ) {
+		return false;
+	}
+	return _queues[Q_PARENTS].IsMember( parent->GetJobID() );
+}
+
+
+bool
+Job::RemoveChild( Job* child, MyString &whynot )
+{
+	if( !child ) {
+		whynot = "child == NULL";
+		return false;
+	}
+	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
+}
+
+bool
+Job::RemoveParent( Job* parent, MyString &whynot )
+{
+	if( !parent ) {
+		whynot = "parent == NULL";
+		return false;
+	}
+	return RemoveDependency( Q_PARENTS, parent->GetJobID(), whynot );
+}
+
+bool
+Job::RemoveDependency( queue_t queue, JobID_t job )
+{
+	MyString whynot;
+	return RemoveDependency( queue, job, whynot );
+}
+
+bool
+Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
+{
+	JobID_t candidate;
+    _queues[queue].Rewind();
+    while( _queues[queue].Next( candidate ) ) {
+        if( candidate == job ) {
+            _queues[queue].DeleteCurrent();
+			ASSERT( _queues[queue].IsMember( job ) == false );
+			whynot = "n/a";
+			return true;
+        }
+    }
+	whynot = "no such dependency";
+	return false;
+}
