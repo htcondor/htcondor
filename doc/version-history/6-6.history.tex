@@ -12,7 +12,16 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-6-9}Version 6.6.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% \noindent Release Notes:
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Most of the fixes included in this release were also included in
+  version 6.7.5.
+  However, at the end of this section, a few fixes that were added to
+  6.6.9 after 6.7.5 was released are mentioned separately.
+
+\end{itemize}
 
 \noindent New Features:
 
@@ -26,10 +35,6 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a memory management bug introduced in version 6.6.8 that
-could result in deallocated memory being referenced after a child
-process forked from a Condor daemon exits.
-
 \item Fixed a security bug in the \Condor{schedd} that could enable a
 maliciously modified \Condor{submit} tool to overwrite files in the Condor
 \Macro{SPOOL} subdirectory, including the job queue.
@@ -38,6 +43,14 @@ maliciously modified \Condor{submit} tool to overwrite files in the Condor
 conditions with a standard universe job, there would be a cycle of an
 execute event followed by a termination event in the user log when the
 job had not actually ran.
+
+\noindent Bugs fixed that are not included in version 6.7.5:
+
+\begin{itemize}
+
+\item Fixed a memory management bug introduced in version 6.6.8 that
+  could result in deallocated memory being referenced after a child
+  process forked from a Condor daemon exits.
 
 \item Fixed bugs in some Condor tools that failed to locate
   \Condor{startd} daemons that contained multiple \verb%@% signs in
@@ -78,7 +91,7 @@ job had not actually ran.
 
 \item Most of the fixes included in this release were also included in
   version 6.7.3.
-  However, at the end of this section, a few fixes there were added to
+  However, at the end of this section, a few fixes that were added to
   6.6.8 after 6.7.3 was released are mentioned separately.
 
 \end{itemize}
