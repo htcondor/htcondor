@@ -55,7 +55,12 @@ extern "C" int errno;
 	#define GETPPID  __GETPPID
 	#define GETEUID  __GETEUID
 
-	/* These constants are needed for indirect socket calls.  They live in /usr/include/linux/net.h.  We can't just include things in /usr/include/linux, because they tend to conflict in general with things in /usr/include/sys.  Bleh! Hopefully, in the name of binary compatibility, they will not change in future versions.  */
+	/* These constants are needed for indirect socket calls.  They
+		live in /usr/include/linux/net.h.  We can't just include things
+		in /usr/include/linux, because they tend to conflict in general
+		with things in /usr/include/sys.  Bleh! Hopefully, in the name of
+		binary compatibility, they will not change in future versions.
+	*/
 
 	#define SYS_SOCKET      1
 	#define SYS_BIND        2
