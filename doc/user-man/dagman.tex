@@ -126,6 +126,7 @@ completed programs.
 
 \subsubsection{SCRIPT}
 
+\index{DAGMan!PRE and POST scripts}
 The second type of item in a DAGMan input file enumerates
 processing that is done either before a program within
 the DAG is submitted to Condor for execution
@@ -268,6 +269,7 @@ produces four dependencies:
 
 \subsubsection{RETRY}
 
+\index{DAGMan!RETRY of failed nodes}
 The fourth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
@@ -300,7 +302,7 @@ the program, the existence and return value of a POST script.
 
 \subsubsection{VARS}
 
-\index{DAGMan!VARS}
+\index{DAGMan!VARS (macro for submit file)}
 \index{VARS}
 The fifth type of item in the DAG input file provides a
 method of defining a macro to be placed into the submit description
@@ -326,9 +328,10 @@ To add the backslash character itself, use two backslashes (\verb@\\@).
 
 \subsubsection{ABORT-DAG-ON}
 
+\index{DAGMan!ABORT-DAG-ON}
 The sixth type of item in the DAG input file provides a way
 to abort the entire DAG if a given node returns a specific exit
-code.  The syntax for ABORT-DAG-ON is:
+code.  The syntax for ABORT-DAG-ON:
 
 \Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
 
@@ -340,22 +343,28 @@ removing nodes that are currently running.  In the case of a node
 failure, the DAG will continue to run until no more progress can
 be made because of the DAG dependencies.
 
-PRE and POST scripts:
+An abort of a DAG is based on exit values from
+within a node, 
+where the node can contain
+a PRE script, the job itself, and a POST script.
 If a node has a PRE script and the PRE
-script returns the abort exit value, the DAG is aborted.  If the
-node has no POST script, or \Arg{-NoPostFail} was passed to
-\Condor{submit\_dag}, and the
-job returns the abort exit value, the DAG is aborted.  If the
-node has a POST script and \Arg{-NoPostFail} was not passed
-to \Condor{submit\_dag}, the POST
-script is run, and the DAG is aborted if the POST script returns
+script returns the abort exit value, the DAG is aborted.
+If the node has no POST script, or \Arg{-NoPostFail} was passed to
+\Condor{submit\_dag},
+and the job returns the abort exit value,
+the DAG is aborted.
+If the node has a POST script and \Arg{-NoPostFail} was \emph{not} passed
+to \Condor{submit\_dag},
+the POST script is run,
+and the DAG is aborted if the POST script returns
 the abort exit value.
 
-An abort overrides node retries -- if a
-node returns the abort exit value, the DAG is aborted, even if
-the node has retries specified.
+An abort overrides node retries. 
+If a node returns the abort exit value,
+the DAG is aborted,
+even if the node has retries specified.
 
-Zero is not allowed as an abort exit value.
+The value zero is not allowed as an abort exit value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Submit Description File}
