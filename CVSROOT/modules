@@ -233,3 +233,11 @@ TRUNK_SRC	-a V6_7_SRC
 TRUNK_CODE	-a V6_7_CODE
 TRUNK_NT_CODE	-a V6_7_NT_CODE
 TRUNK_ALL	-a V6_7_ALL
+
+JAVA_SRC	-a \
+		src_java/Makefile \
+		src_java/README \
+		src_java/config.make \
+		src_java/byacc \
+		src_java/condor
+
