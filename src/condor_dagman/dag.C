@@ -975,18 +975,18 @@ void Dag::RemoveRunningJobs () const {
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre->_pid != 0 );
-			if(kill(job->_scriptPre->_pid,SIGKILL)) {
+			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
-				             "WARNING: failed to kill process %d: %s",
+				             "WARNING: shutdown_fast() failed on pid %d: %s",
 				             job->_scriptPre->_pid, strerror(errno));
 			}
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 			ASSERT( job->_scriptPost->_pid != 0 );
-			if(kill(job->_scriptPre->_pid,SIGKILL)) {
+			if(daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
-				             "WARNING: failed to kill process %d: %s",
+				             "WARNING: shutdown_fast() failed on pid %d: %s",
 				             job->_scriptPre->_pid, strerror(errno));
 			}
         }
