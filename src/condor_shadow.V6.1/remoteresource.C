@@ -253,8 +253,6 @@ RemoteResource::printExit( FILE *fp )
 	int got_exception = jobAd->LookupString(ATTR_EXCEPTION_NAME,ename);
 	char* reason_str = NULL;
 	jobAd->LookupString( ATTR_EXIT_REASON, &reason_str );
-	int had_core = FALSE;
-	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 
 	switch ( exit_reason ) {
 	case JOB_COREDUMPED:
@@ -283,9 +281,6 @@ RemoteResource::printExit( FILE *fp )
 				fprintf( fp, "exited normally with status %d.\n", 
 						 exit_value );
 			}
-		}
-		if( had_core ) {
-			fprintf( fp, "Core file is: %s\n", shadow->getCoreName() );
 		}
 		break;
 	}

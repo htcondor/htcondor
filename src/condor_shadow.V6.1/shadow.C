@@ -207,6 +207,9 @@ UniShadow::emailTerminateEvent( int exitReason )
 	Args[0] = '\0';
 	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
 	
+	int had_core = FALSE;
+	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+
 	int q_date = 0;
 	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
 	
@@ -242,6 +245,10 @@ UniShadow::emailTerminateEvent( int exitReason )
 	fprintf(mailer,"has ");
 	remRes->printExit( mailer );
 	
+	if( had_core ) {
+		fprintf( mailer, "Core file is: %s\n", getCoreName() );
+	}
+
 	arch_time = q_date;
 	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
