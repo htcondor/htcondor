@@ -27,6 +27,8 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 
+using namespace std;
+
 // AttrList methods
 
 
@@ -128,7 +130,7 @@ Insert( const char *str )
 //  Lookup(const char*) const{}
 
 int ClassAd::
-LookupString( const char *name, char *value )
+LookupString( const char *name, char *value ) const 
 {
 	string strVal;
 	if( !EvaluateAttrString( string( name ), strVal ) ) {
@@ -139,7 +141,7 @@ LookupString( const char *name, char *value )
 } 
 
 int ClassAd::
-LookupString(const char *name, char *value, int max_len)
+LookupString(const char *name, char *value, int max_len) const
 {
 	string strVal;
 	if( !EvaluateAttrString( string( name ), strVal ) ) {
@@ -150,7 +152,7 @@ LookupString(const char *name, char *value, int max_len)
 }
 
 int ClassAd::
-LookupString (const char *name, char **value)
+LookupString (const char *name, char **value) const 
 {
 	string strVal;
 	if( !EvaluateAttrString( string( name ), strVal ) ) {
@@ -167,7 +169,7 @@ LookupString (const char *name, char **value)
 }
 
 int ClassAd::
-LookupInteger( const char *name, int &value )
+LookupInteger( const char *name, int &value ) const 
 {
 	bool    boolVal;
 	int     haveInteger;
@@ -186,7 +188,7 @@ LookupInteger( const char *name, int &value )
 }
 
 int ClassAd::
-LookupFloat( const char *name, float &value )
+LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
 	int     intVal;
@@ -205,7 +207,7 @@ LookupFloat( const char *name, float &value )
 }
 
 int ClassAd::
-LookupBool( const char *name, int &value )
+LookupBool( const char *name, int &value ) const
 {
 	int   intVal;
 	bool  boolVal;
@@ -228,7 +230,7 @@ LookupBool( const char *name, int &value )
 }
 
 int ClassAd::
-LookupBool( const char *name, bool &value )
+LookupBool( const char *name, bool &value ) const
 {
 	int   intVal;
 	bool  boolVal;
@@ -276,7 +278,8 @@ EvalString( const char *name, class ClassAd *target, char *value )
 }
 
 int ClassAd::
-EvalInteger (const char *name, class ClassAd *target, int &value) {
+EvalInteger (const char *name, class ClassAd *target, int &value)
+{
 	if( strcmp( name, "CurrentTime" ) == 0 ) {
 		time_t	now = time (NULL);
 		if (now == (time_t) -1) {
