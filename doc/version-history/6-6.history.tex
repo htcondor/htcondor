@@ -32,6 +32,9 @@ The details of each version are described below.
 \item Enabled the ``update statistics'' in the \Condor{collector} by
       default in both the executable and in the default configuration.
 
+\item Command-line arguments to \Condor{dagman} are now handled
+      case-insensitively.
+
 % commented out since i'm not sure we want to make a big deal of this
 % new config file knob. -derek 1/12/04
 % \item Added a new configuration macro
@@ -94,7 +97,7 @@ function to track mouse activity that does not have a tendancy to fail.
 
 \item Fixed a rare bug affecting \Condor{dagman} when job-throttling
       was enabled: if \Condor{dagman} was removed from the queue
-      together with some of its own jobs (e.g., via \verb@condor_rm -a@,
+      together with some of its own jobs (e.g., via \verb@condor_rm -a@),
       it would quickly submit new jobs to replace them before
       recognizing that it needs to exit.  It now shuts down
       immediately without submitting and then removing these
@@ -130,7 +133,7 @@ The statically linked distributions of Condor now include a static gahp\_server.
 \begin{itemize}
 
 \item Submission of MPI jobs from a Unix machine to run on Windows
-machines (or vice versa) failes for machine\_count > 1.  This is
+machines (or vice versa) fails for machine\_count > 1.  This is
 not a new bug.  Cross-platform submission of MPI jobs between
 Unix and Windows has always had this problem.
 
