@@ -1143,4 +1143,9 @@ get_real_username( void )
 	return RealUserName;
 }
 
+/* return the login of whomever you get when you call set_user_priv() */
+const char*
+get_user_loginname() {
+	return UserName;
+}
 #endif  /* #if defined(WIN32) */
