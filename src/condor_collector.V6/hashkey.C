@@ -91,7 +91,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_STARTD_IP_ADDR);
+	tree = ad->Lookup ("STARTD_IP_ADDR");
 	if (tree)
 	{
 		strcpy (buffer, ((String *)tree->RArg())->Value());
@@ -102,7 +102,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		strcpy (buffer, sin_to_string (from));	
 
 		// since we have done the work ...
-		sprintf (buf2, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, buffer);
+		sprintf (buf2, "%s = \"%s\"", "STARTD_IP_ADDR", buffer);
 		ad->Insert(buf2);
 	}
 
@@ -139,7 +139,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_SCHEDD_IP_ADDR);
+	tree = ad->Lookup ("SCHEDD_IP_ADDR");
 	if (tree)
 	{
 		strcpy (buffer, ((String *)tree->RArg())->Value());
@@ -150,7 +150,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		strcpy (buffer, sin_to_string (from));
 
         // since we have done the work ...
-        sprintf (buf2, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, buffer);
+        sprintf (buf2, "%s = \"%s\"", "SCHEDD_IP_ADDR", buffer);
         ad->Insert(buf2);
 	}
 
