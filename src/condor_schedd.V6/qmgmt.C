@@ -810,6 +810,27 @@ int DestroyProc(int cluster_id, int proc_id)
 		return -1;
 	}
 
+	// Take care of ATTR_COMPLETION_DATE
+	int job_status = -1;
+	ad->LookupInteger(ATTR_JOB_STATUS, job_status);	
+	if ( job_status == COMPLETED ) {
+			// if job completed, insert completion time if not already there
+		int completion_time = 0;
+		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
+		if ( !completion_time ) {
+			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
+														(int)time(NULL));
+		}
+	}
+
+		// should we leave the job in the queue?
+	int leave_job_in_q = 0;
+	ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+	if ( leave_job_in_q ) {
+		return -2;
+	}
+
+ 
 	// Remove checkpoint files
 	if ( !Q_SOCK ) {
 		//if socket is dead, have cleanup lookup ad owner
@@ -884,6 +905,27 @@ int DestroyCluster(int cluster_id)
 				// Only the owner can delete a cluster
 				if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 					return -1;
+				}
+
+				// Take care of ATTR_COMPLETION_DATE
+				int job_status = -1;
+				ad->LookupInteger(ATTR_JOB_STATUS, job_status);	
+				if ( job_status == COMPLETED ) {
+						// if job completed, insert completion time if not already there
+					int completion_time = 0;
+					ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
+					if ( !completion_time ) {
+						SetAttributeInt(cluster_id,proc_id,
+							ATTR_COMPLETION_DATE,(int)time(NULL));
+					}
+				}
+
+					// should we leave the job in the queue?
+				int leave_job_in_q = 0;
+				ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+				if ( leave_job_in_q ) {
+						// leave it in the queue.... move on to the next one
+					continue;
 				}
 
 				// Apend to history file
@@ -1229,6 +1271,7 @@ CloseConnection()
 			}	
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
+	old_cluster_num = next_cluster_num;
 					
 	return 0;
 }
@@ -1868,6 +1911,8 @@ SendSpoolFile(char *filename)
 		return -1;
 	}
 
+	chmod(path,755);
+
 	// Q_SOCK->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;
@@ -1922,7 +1967,8 @@ int get_job_prio(ClassAd *job)
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD || 
-		   !service_this_universe(universe,job)) 
+			job_status==REMOVED || job_status==COMPLETED ||
+			!service_this_universe(universe,job)) 
 	{
         return cur_hosts;
 	}
@@ -2213,6 +2259,12 @@ int Runnable(ClassAd *job)
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
 		return FALSE;
 	}
+	if (status == COMPLETED)
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
+		return FALSE;
+	}
+
 
 	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
 	{
@@ -2320,11 +2372,6 @@ static void AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
-  // insert completion time
-  char tmp[512];
-  sprintf(tmp,"%s = %d",ATTR_COMPLETION_DATE,(int)time(NULL));
-  ad->InsertOrUpdate(tmp);
- 
   // save job ad to the log
   FILE* LogFile=fopen(JobHistoryFileName,"a");
   if ( !LogFile ) {
