@@ -130,6 +130,7 @@ class FileTransfer {
 	StringList* OutputFiles;
 	StringList* IntermediateFiles;
 	StringList* FilesToSend;
+	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* TransSock;
 	char* TransKey;
