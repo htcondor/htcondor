@@ -1401,6 +1401,15 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 	static char			nice_user_prefix[50];	// static since no need to recompute
 	static int			nice_user_prefix_len = 0;
 
+		// First, see if jobid points to a runnable job.  If it does,
+		// there's no need to build up a PrioRec array, since we
+		// requested matches in priority order in the first place.
+		// And, we'd like to start the job we used to get the match if
+		// possible, just to keep things simple.
+	if (jobid.proc >= 0 && Runnable(&jobid)) {
+		return;
+	}
+
 	if ( nice_user_prefix_len == 0 ) {
 		strcpy(nice_user_prefix,NiceUserName);
 		strcat(nice_user_prefix,".");
