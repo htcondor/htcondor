@@ -176,70 +176,33 @@ virtual int ReliSock::close()
 
 virtual int ReliSock::handle_incoming_packet()
 {
-	Buf		*tmp;
-	char	hdr[5];
-	int		end;
-	int		len;
-	int		len_t;
-	int		i;
-
 	/* if socket is listening, and packet is there, it is ready for accept */
 	if (_state == sock_special && _special_state == relisock_listen)
-		return 1;
+		return TRUE;
 
 	/* do not queue up more than one message at a time on reliable sockets */
 	/* but return 1, because old message can still be read.	               */
-	if (rcv_msg.ready) return 1;
+	if (rcv_msg.ready) return TRUE;
 
-	if (read(_sock, hdr, 5) != 5){
-		return -1;
-	}
-	end = (int) ((char *)hdr)[0];
-	memcpy(&len_t,  &hdr[1], 4);
-	len = (int) ntohl(len_t);
+	if (!rcv_msg.rcv_packet(_sock)) return FALSE;
 
-	if (!(tmp = new Buf)) return -1;
-	if (len > tmp->max_size()){ delete tmp; return -1; }
-
-	if ((i = tmp->read_frm_fd(_sock, len)) != len){
-		fprintf(stderr, "Read %d, was supp to read %d\n", i, len);
-	}
-
-	if (!rcv_msg.buf.put(tmp)) { delete tmp; return -1; }
-
-	if (end) rcv_msg.ready = 1;
-
-	return rcv_msg.ready;
+	return TRUE;
 }
 
 
 
 virtual int ReliSock::end_of_message()
 {
-	char	hdr[5];
-	int		tmp;
-	int		end;
-	int		len_t;
-	int		len;
-
 	switch(_coding){
 		case stream_encode:
-
-			hdr[0] = 1;
-			tmp = htonl( snd_msg.buf.num_used()-5 );
-			memcpy(&hdr[1], &tmp, 4);
-			if ((len = snd_msg.buf.flush_to_fd(_sock, hdr, 5)) < 0){
-				break;
+			if (!snd_msg.buf.empty()){
+				return snd_msg.snd_packet(_sock, TRUE);
 			}
-			end = (int) *( (char *) &hdr[0] );
-			memcpy(&len_t,  &hdr[1], 4);
-			len = (int) ntohl(len_t);
-			return TRUE;
+			break;
 
 		case stream_decode:
-			if (!rcv_msg.ready) break;
-			if (rcv_msg.buf.consumed()){
-				rcv_msg.ready = 0;
+			if (rcv_msg.ready && rcv_msg.buf.consumed()){
+				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
 				return TRUE;
 			}
@@ -271,27 +234,13 @@ virtual int ReliSock::put_bytes(
 {
 	int		tw;
 	int		nw;
-	char	hdr[5];
-	int		tmp;
-	int		end;
-	int		len_t;
-	int		len;
 
 	if (!valid()) return -1;
 
 	for(nw=0;;){
 
 		if (snd_msg.buf.full()){
-			hdr[0] = 0;
-			tmp = htonl( snd_msg.buf.num_used()-5 );
-			memcpy(&hdr[1], &tmp, 4);
-
-			if ((len = snd_msg.buf.flush_to_fd(_sock, hdr, 5)) < 0){
-				return FALSE;
-			}
-			end = (int) *( (char *) &hdr[0] );
-			memcpy(&len_t,  &hdr[1], 4);
-			len = (int) ntohl(len_t);
+			if (!snd_msg.snd_packet(_sock, FALSE)) return FALSE;
 		}
 		if (snd_msg.buf.empty()){
 			snd_msg.buf.seek(5);
@@ -314,7 +263,12 @@ virtual int ReliSock::get_bytes(
 {
 	if (!valid()) return -1;
 
-	while (!rcv_msg.ready) handle_incoming_packet();
+	while (!rcv_msg.ready) {
+		if (!handle_incoming_packet()){
+			fprintf(stderr, "HANDLE_INCOMING FAILED\n");
+			return FALSE;
+		}
+	}
 
 	return rcv_msg.buf.get(dta, max_sz);
 }
@@ -327,7 +281,9 @@ virtual int ReliSock::get_ptr(
 {
 	if (!valid()) return -1;
 
-	while (!rcv_msg.ready) handle_incoming_packet();
+	while (!rcv_msg.ready){
+		if (!handle_incoming_packet()) return FALSE;
+	}
 
 	return rcv_msg.buf.get_tmp(ptr, delim);
 }
@@ -339,7 +295,110 @@ virtual int ReliSock::peek(
 {
 	if (!valid()) return -1;
 
-	while (!rcv_msg.ready) handle_incoming_packet();
+	while (!rcv_msg.ready) {
+		if (!handle_incoming_packet()) return FALSE;
+	}
 
 	return rcv_msg.buf.peek(c);
+}
+
+
+
+int ReliSock::RcvMsg::rcv_packet(
+	int	_sock
+	)
+{
+	Buf		*tmp;
+	char	hdr[5];
+	int		end;
+	int		len, len_t;
+	int		tmp_len;
+
+	if (read(_sock, hdr, 5) != 5){
+		fprintf(stderr, "READ FAILES\n");
+		return FALSE;
+	}
+	end = (int) ((char *)hdr)[0];
+	memcpy(&len_t,  &hdr[1], 4);
+	len = (int) ntohl(len_t);
+
+	if (!(tmp = new Buf)){
+		fprintf(stderr, "Out of memory\n");
+		return FALSE;
+	}
+	if (len > tmp->max_size()){
+		delete tmp;
+		fprintf(stderr, "Incoming packet is too big\n");
+		return FALSE;
+	}
+	if ((tmp_len = tmp->read_frm_fd(_sock, len)) != len){
+		delete tmp;
+		fprintf(stderr, "Packet read failed: read %d of %d\n", tmp_len, len);
+		return FALSE;
+	}
+	if (!buf.put(tmp)) {
+		delete tmp;
+		fprintf(stderr, "Packet storing failed\n");
+		return FALSE;
+	}
+
+	if (end) ready = TRUE;
+
+	return TRUE;
+}
+
+
+int ReliSock::SndMsg::snd_packet(
+	int		_sock,
+	int		end
+	)
+{
+	char	hdr[5];
+	int		len;
+	int		ns;
+
+
+	hdr[0] = (char) end;
+	ns = buf.num_used()-5;
+	len = (int) htonl(ns);
+
+	memcpy(&hdr[1], &len, 4);
+	if (buf.flush_to_fd(_sock, hdr, 5) != (ns+5)){
+		return FALSE;
+	}
+
+
+	return TRUE;
+}
+
+
+
+int ReliSock::get_port()
+{
+	sockaddr_in	addr;
+	int			addr_len;
+
+	addr_len = sizeof(sockaddr_in);
+
+	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
+
+	return (int) ntohs(addr.sin_port);
+}
+
+
+int ReliSock::get_file_desc()
+{
+	return _sock;
+}
+
+
+int ReliSock::attach_to_file_desc(
+	int		fd
+	)
+{
+	if (_state != sock_virgin) return FALSE;
+
+	_sock = fd;
+	_state = sock_connect;
+	return TRUE;
 }
