@@ -225,9 +225,10 @@ int main (int argc, char **argv)
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
-		sprintf( constraint, "%s > 0 || %s > 0 || %s > 0 || %s > 0", 
+		sprintf( constraint, "%s > 0 || %s > 0 || %s > 0 || %s > 0 || %s > 0", 
 			ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS,
-			ATTR_TOTAL_HELD_JOBS, ATTR_TOTAL_REMOVED_JOBS );
+			ATTR_TOTAL_HELD_JOBS, ATTR_TOTAL_REMOVED_JOBS,
+			ATTR_TOTAL_JOB_ADS );
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
 			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);

@@ -318,6 +318,7 @@ class Scheduler : public Service
 	int				JobsIdle; 
 	int				JobsRunning;
 	int				JobsHeld;
+	int				JobsTotalAds;
 	int				JobsFlocked;
 	int				JobsRemoved;
 	int				SchedUniverseJobsIdle;

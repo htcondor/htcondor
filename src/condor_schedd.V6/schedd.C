@@ -244,6 +244,7 @@ Scheduler::Scheduler()
 	JobsIdle = 0;
 	JobsRunning = 0;
 	JobsHeld = 0;
+	JobsTotalAds = 0;
 	JobsFlocked = 0;
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
@@ -425,6 +426,7 @@ Scheduler::count_jobs()
 	JobsRunning = 0;
 	JobsIdle = 0;
 	JobsHeld = 0;
+	JobsTotalAds = 0;
 	JobsFlocked = 0;
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
@@ -554,6 +556,8 @@ Scheduler::count_jobs()
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
+	sprintf(tmp, "%s = %d", ATTR_TOTAL_JOB_ADS, JobsTotalAds);
+	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_HELD_JOBS, JobsHeld);
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_FLOCKED_JOBS, JobsFlocked);
@@ -589,6 +593,7 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_NUM_USERS);
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
+	ad->Delete (ATTR_TOTAL_JOB_ADS);
 	ad->Delete (ATTR_TOTAL_HELD_JOBS);
 	ad->Delete (ATTR_TOTAL_FLOCKED_JOBS);
 	ad->Delete (ATTR_TOTAL_REMOVED_JOBS);
@@ -873,6 +878,9 @@ count( ClassAd *job )
 		strcat(buf2,owner);
 		owner=buf2;		
 	}
+
+	// increment our count of the number of job ads in the queue
+	scheduler.JobsTotalAds++;
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
