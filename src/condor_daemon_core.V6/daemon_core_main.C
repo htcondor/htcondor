@@ -970,6 +970,33 @@ int main( int argc, char** argv )
 			}
 		}
 
+		// If we are the collector, increase the socket buffer size.  This
+		// helps minimize the number of updates (UDP packets) the collector
+		// drops on the floor.
+		if ( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
+			int desired_size;
+			char *tmp;
+
+			if ( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
+				desired_size = atoi(tmp);
+				free(tmp);
+			} else {
+				// default to 1 meg of buffers.  Gulp!  
+				desired_size = 1024000;
+			}		
+			
+			// set the UDP (ssock) read size to be large, so we do not
+			// drop incoming updates.
+			int final_size = ssock->set_os_buffers(desired_size);
+
+			// and also set the outgoing TCP write size to be large so the
+			// collector is not blocked on the network when answering queries
+			rsock->set_os_buffers(desired_size, true);				
+
+			dprintf(D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
+				final_size / 1024 );
+		}
+
 		// now register these new command sockets.
 		// Note: In other parts of the code, we assume that the
 		// first command socket registered is TCP, so we must
@@ -1027,11 +1054,11 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, ADMINISTRATOR );
+								  "handle_config_val()", 0, READ );
 		// Deprecated name for it.
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
-								  "handle_config_val()", 0, ADMINISTRATOR );
+								  "handle_config_val()", 0, READ );
 
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  (CommandHandler)handle_config,
