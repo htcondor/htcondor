@@ -333,7 +333,6 @@ PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-DAEMONCLIENT_LIB = ../condor_daemon_client/libdaemonclient.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
@@ -344,7 +343,6 @@ CONDOR_CRED_LIB =
 STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
-  $(DAEMONCLIENT_LIB) \
   $(CKPT_SERV_LIB) \
   $(QMGMT_LIB) \
   $(ACCT_LIB) \
@@ -363,7 +361,6 @@ STD_LIBS = \
   $(CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
-  $(DAEMONCLIENT_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
