@@ -145,7 +145,7 @@ static CLUSTER_LIST * grow_cluster_list( CLUSTER_LIST *list, int incr );
 static CLUSTER_LIST	* make_cluster_list( int len );
 static CLUSTER_LIST * add_new_cluster( CLUSTER_LIST *list );
 static CLUSTER_LIST * copy_cluster_list( CLUSTER_LIST *list );
-void terminate( PROC *p );
+void terminate_proc( PROC *p );
 void check_empty_cluster( PROC *p );
 void delete_cluster( DBM *Q, int cluster );
 void data_too_big( int size );
@@ -338,7 +338,7 @@ TerminateCluster( DBM *Q, int cluster, int status )
 	CurHistory = OpenHistory( param("HISTORY"), &xdr, &fd );
 	(void)LockHistory( CurHistory, WRITER );
 
-	ScanCluster( Q, cluster, terminate );
+	ScanCluster( Q, cluster, terminate_proc );
 
 	CloseHistory( CurHistory );
 	delete_cluster( Q, cluster );
@@ -556,7 +556,7 @@ copy_cluster_list( CLUSTER_LIST *list )
 
 
 void
-terminate( PROC *p )
+terminate_proc( PROC *p )
 {
 	datum	key;
 	V2_PROC	*v2_ptr = (V2_PROC *)p;
