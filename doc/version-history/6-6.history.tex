@@ -34,6 +34,13 @@ The details of each version are described below.
    configuring the two phase commit timeout in Globus.  This maps to the
    two\_phase setting in the Globus RSL.
 
+\item Added a new configuration variable,
+      \Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}, that controls how many
+      times in a row \Condor{dagman} will attempt to execute
+      \Condor{submit} before giving up.  It cannot be set to less than
+      1 attempt, or more than 10; if left undefined, it defaults to 6.
+
+
 \end{itemize}
 
 
