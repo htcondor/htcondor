@@ -2702,6 +2702,7 @@ Scheduler::Agent(char* server, char* capability,
 				 char* name, char *user, int aliveInterval, ClassAd* jobAd) 
 {
     int     	reply;                              /* reply from the startd */
+	ReliSock 	sock;
 
 
 	// add User = "owner@uiddomain" to ad
@@ -2711,8 +2712,11 @@ Scheduler::Agent(char* server, char* capability,
 		jobAd->Insert (temp);
 	}	
 
-	ReliSock sock(server, 0);
-		
+	if ( !sock.connect(server, 0) ) {
+		dprintf( D_ALWAYS, "Couldn't connect to startd.\n" );
+		exit(EXITSTATUS_NOTOK);
+	}
+
 	dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
 	sock.encode();
 
