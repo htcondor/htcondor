@@ -10,54 +10,72 @@ while(1)
     }
 
     ($var, $value) = split (/=/, $cmd);
+    # What is the central manager of the pool for this node.  Doesn't apply
+    # for central managers.
     if( $var eq "cm" )
     {
 	$cm = $value;
     }
+    # Where is the generic config file from which I can build the specific
+    # config file.  This should be somewhere in the distribution
     elsif( $var eq "generic" )
     {
 	$generic_file = $value;
     }
+    # Where should the outputed config file be written to.
     elsif( $var eq "config" )
     {
 	$config_file = $value;
     }
+    # What is the local directory for log, spool, execute on every machine
     elsif( $var eq "local_dir" )
     {
 	$local_dir_str = $value;
     }
+    # Where are the machine specific local config files going to go?
     elsif( $var eq "local_config" )
     {
 	$local_config_str = $value;
     }
+    # What directory should be used for lock files.  Should be on a local
+    # disk
     elsif( $var eq "lock" )
     {
 	$lock = $value;
     }
+    # What is the name of the schedd and master.  Only usefull for submit
+    # only installs that must coexist with normal installs.
     elsif( $var eq "name" )
     {
 	$name = $value;
     }
+    # What is the path to the mail program
     elsif( $var eq "mail_path" )
     {
 	$mail_path = $value;
     }
+    # Whether we want a soft uid domain or not (True or False)
     elsif( $var eq "soft_uid")
     {
 	$soft_uid = $value;
     }
+    # The uid domain for this machine
     elsif( $var eq "uid_domain")
     {
 	$uid_domain = $value;
     }
+    # The filesystem domain
     elsif( $var eq "fs_domain")
     {
 	$fs_domain = $value;
     }
+    # The person who gets email.
     elsif( $var eq "condor_admin")
     {
 	$condor_admin = $value;
     }
+    # The place where binaries and libraries are install.  Known to GNU people
+    # as prefix
     elsif( $var eq "release_dir")
     {
 	$release_dir = $value;
