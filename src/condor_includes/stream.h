@@ -269,6 +269,9 @@ public:
 	int code(open_flags_t &);
     ///
 	int code(struct stat &);
+    ///
+	int code(condor_errno_t &);
+
 #if !defined(WIN32)
     ///
 	int code(condor_signal_t &);
@@ -336,6 +339,9 @@ public:
 	int code(struct stat *x)		{ return code(*x); }
     ///
 	int code(open_flags_t *x)		{ return code(*x); }
+    ///
+	int code(condor_errno_t *x)		{ return code(*x); }
+
 #if !defined(WIN32)
     ///
 	int code(condor_signal_t *x)			{ return code(*x); }
