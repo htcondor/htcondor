@@ -773,7 +773,15 @@ if test $_cv_unified_patch != "yes"; then
    AC_MSG_ERROR( [patch must support unified diffs] )
 fi
 
-AC_PROG_LEX
+if test $os = "OSF1" ; then
+  AC_CHECK_PROG(LEX,lex,lex,no)
+else  
+  AC_PROG_LEX
+fi
+if test "$LEX" = "no" ; then
+    AC_MSG_ERROR( [lex is required] )
+fi
+
 
 # We don't want to do the default AC_PROG_YACC, since it selects
 # "bison -y" if it can find it, and that doesn't work for the yacc
