@@ -4765,6 +4765,21 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	WriteExecuteToUserLog( *job_id );
+
+		/* this is somewhat evil.  these values are absolutely
+		   essential to have accurate when we're trying to shutdown
+		   (see Scheduler::preempt()).  however, we only set them
+		   correctly inside count_jobs(), and there's no guarantee
+		   we'll call that before we next try to shutdown.  so, we
+		   manually update them here, to keep them accurate until the
+		   next time we call count_jobs().
+		   -derek <wright@cs.wisc.edu> 2005-04-01
+		*/
+	if( SchedUniverseJobsIdle > 0 ) {
+		SchedUniverseJobsIdle--;
+	}
+	SchedUniverseJobsRunning++;
+
 	return add_shadow_rec(pid, job_id, NULL, -1);
 }
 
@@ -5705,6 +5720,11 @@ Scheduler::child_exit(int pid, int status)
 			}
 		}
 		delete_shadow_rec( pid );
+			// even though this will get set correctly in
+			// count_jobs(), try to keep it accurate here, too.  
+		if( SchedUniverseJobsRunning > 0 ) {
+			SchedUniverseJobsRunning--;
+		}
 	} else if (srec) {
 		// A real shadow
 		if ( daemonCore->Was_Not_Responding(pid) ) {
