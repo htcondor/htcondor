@@ -31,7 +31,6 @@ Reqexp::eval()
 {
 	ExprTree *tree;
 	ClassAd ad;
-	int tmp;
 	EvalResult res;
 
 	Parse( origreqexp, tree );
