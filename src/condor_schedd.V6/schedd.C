@@ -139,7 +139,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	origcluster = cluster = id->cluster;
 	proc = id->proc;
 	status = M_UNCLAIMED;
-	entered_current_status = time(NULL);
+	entered_current_status = time( 0 );
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
