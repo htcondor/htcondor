@@ -234,8 +234,7 @@
 	}
 #endif 
 
-	/* defined in local_startup.c and remote_startup.c */
-	restore_condor_sigmask(omask);
+	condor_restore_sigmask(omask);
 
 	SetSyscalls( scm );
 	return rval;
