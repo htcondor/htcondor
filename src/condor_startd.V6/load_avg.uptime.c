@@ -79,7 +79,6 @@ float
 lookup_load_avg_via_uptime()
 {
 	
-	extern int      HasSigchldHandler;
 	float    loadavg;
 	FILE *output_fp;
 	int counter;
