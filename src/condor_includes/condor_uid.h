@@ -67,12 +67,16 @@ typedef enum {
 
 void init_condor_ids();
 void init_user_ids(const char username[]);
+#if !defined(WIN32)
 void set_user_ids(uid_t uid, gid_t gid);
+#endif
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
+#if !defined(WIN32)
 uid_t get_condor_uid();
 gid_t get_condor_gid();
 uid_t get_user_uid();
 gid_t get_user_gid();
+#endif
 void display_priv_log();
 
 #if defined(__cplusplus)
