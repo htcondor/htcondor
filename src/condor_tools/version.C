@@ -32,7 +32,7 @@
 void
 usage(char name[])
 {
-	fprintf(stderr, "Usage: %s [-syscall] [-arch] -[opsys] [-libc]\n", name);
+	fprintf(stderr, "Usage: %s [-syscall] [-arch] -[opsys]\n", name);
 	exit(1);
 }
 
@@ -71,17 +71,6 @@ main(int argc, char *argv[])
 			}
 
 		}
-		if (argv[i][0] == '-' && argv[i][1] == 'l') {
-			char *libc;
-			libc = version->getLibcVer();
-
-			if(libc){
-				printf("%s\n", libc );
-			} else {
-				printf("LIBC is not defined on this platform\n"); 
-			}
-		}
-
 		if (argv[i][0] == '-' && argv[i][1] == 'a') {
 			printf("%s\n", version->getArchVer() );
 		}
