@@ -516,6 +516,18 @@ UserProc::execute()
 			// renice
 		renice_self( "JOB_RENICE_INCREMENT" );
 
+			// make certain the syscall sockets which are being passed
+			// to the user job are setup to be blocking sockets.  this
+			// is done by calling timeout(0) CEDAR method.
+			// we must do this because the syscall lib does _not_ 
+			// expect to see any failures due to errno EAGAIN...
+		if ( SyscallStream ) {
+			SyscallStream->timeout(0);
+		}
+		if ( new_reli ) {
+			new_reli->timeout(0);
+		}
+
 			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.  
 			// It'd be nice to check for errors here, but

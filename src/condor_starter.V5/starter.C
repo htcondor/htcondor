@@ -66,7 +66,7 @@ char* mySubSystem = "STARTER";
 	// Constants
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
-ReliSock	*SyscallStream;		// stream to shadow for remote system calls
+ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		DoDelays;				// Insert artificial delays for testing
