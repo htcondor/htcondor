@@ -2984,6 +2984,10 @@ int DaemonCore::HandleReq(int socki)
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
 
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
+						pa_ad.dPrint( D_SECURITY );
+					}
 
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
@@ -3005,6 +3009,10 @@ int DaemonCore::HandleReq(int socki)
 					KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
+					if (DebugFlags & D_FULLDEBUG) {
+						the_policy->dPrint(D_SECURITY);
+					}
+
 					free( dur );
 					dur = NULL;
 				}
