@@ -387,9 +387,10 @@ Resource::update( void )
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
-	rval = resmgr->send_update( &public_ad, &private_ad );
+	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
+								&private_ad ); 
 	if( rval ) {
-		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval );
+		dprintf( D_FULLDEBUG, "Sent update to %d collector(s)\n", rval ); 
 	} else {
 		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
 	}
@@ -403,10 +404,19 @@ Resource::update( void )
 void
 Resource::final_update( void ) 
 {
-	ClassAd public_ad;
-	r_reqexp->unavail();
-	this->publish( &public_ad, A_PUBLIC | A_ALL ); 
-	resmgr->send_update( &public_ad, NULL );
+	ClassAd invalidate_ad;
+	char line[256];
+
+		// Set the correct types
+	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
+	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
+
+		// We only want to invalidate this VM.
+	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
+			 r_name );
+	invalidate_ad.Insert( line );
+
+	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL );
 }
 
 
