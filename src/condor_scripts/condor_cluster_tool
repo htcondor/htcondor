@@ -321,8 +321,8 @@ sub check_condor {
 			if($what eq "returned")
 			{
 				if( ${$nodes{$which}}[2] ne "given" ) {
-					print "$who returning $which at $date",
-					", which was never checked out! \n";
+					#print "$who returning $which at $date",
+					#", which was never checked out! \n";
 				}
 
 				${$nodes{$which}}[0] = "";
@@ -332,10 +332,10 @@ sub check_condor {
 			if($what eq "given")
 			{
 				if( ${$nodes{$which}}[2] ne "returned") {
-					print "$who checked out $which at $date,",
-					" which was already checked out by",
-					" ${$nodes{$which}}[1] at",
-					" ${$nodes{$which}}[0]\n";
+					#print "$who checked out $which at $date,",
+					#" which was already checked out by",
+					#" ${$nodes{$which}}[1] at",
+					#" ${$nodes{$which}}[0]\n";
 
 				}
 
