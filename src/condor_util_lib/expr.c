@@ -1317,6 +1317,10 @@ CONTEXT	*context;
 		return FALSE;
 	}
 	name = expr->data[0]->s_val;
+	if(!name)
+	{
+		return TRUE;
+	}
 
 	for( i=0; i<context->len; i++ ) {
 		if( context->data[i]->data[0]->type != NAME ) {
