@@ -30,12 +30,26 @@ BEGIN_NAMESPACE( classad )
 ClassAdCollection::
 ClassAdCollection( ) : viewTree( NULL )
 {
+  Setup(false);
+}
+
+ClassAdCollection::
+ClassAdCollection(bool CacheOn) : viewTree( NULL ) 
+{
+  Setup(CacheOn);
+  return;
+}
+void ClassAdCollection::
+Setup(bool CacheOn)
+{
+        Cache = CacheOn;
+        test_checkpoint=0;
 		// create "root" view
 	viewTree.SetViewName( "root" );
 	RegisterView( "root", &viewTree );
 	log_fp = NULL;
+	return;
 }
-
 
 ClassAdCollection::
 ~ClassAdCollection( )
@@ -60,8 +74,32 @@ ClassAdCollection::
 
 
 bool ClassAdCollection::
-InitializeFromLog( const string &filename )
+InitializeFromLog( const string &filename, const string storagefile, const string checkpointfile )
 {
+        int     storagefd;
+	string  StorageFileName=storagefile;
+        CheckFileName=checkpointfile; 
+	// open the file
+	if (Cache==true){
+          //Read all the ClassAd from storage file and build up the index
+	  if( ( storagefd = open( StorageFileName.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {	    
+	    CondorErrno = ERR_CACHE_FILE_ERROR;
+	    char buf[10];
+	    sprintf( buf, "%d", errno );
+	    CondorErrMsg = "failed to open storage file " + StorageFileName + " errno=" +string(buf);
+	    return( false );
+	  };
+	  
+	  ClassAdStorage.Init(storagefd);
+	  int offset;
+	  string key;
+	  
+	  //scan the storage file to create the index on the classad, 
+	  while (ReadStorageEntry(storagefd,offset,key)>1){
+	    ClassAdStorage.UpdateIndex(key,offset);
+	  };
+	  Max_Classad=0; 
+	}
 		// clear out log file related info
 	if( log_fp ) {
 		fclose( log_fp );
@@ -103,7 +141,10 @@ InitializeFromLog( const string &filename )
 		return( false );
 	}
 	
-				
+	//Check the whether there is a checkpoint, if so we recover from the latest checkpoint
+	if (Cache==true){
+          ReadCheckPointFile();	 
+	}		
 		// load info from new log file
 	logFileName = filename;
 	if( !filename.empty( ) ) {
@@ -115,6 +156,55 @@ InitializeFromLog( const string &filename )
 	return( true );
 }
 
+bool ClassAdCollection::
+ReadCheckPointFile(){
+          CheckPoint=0;     	
+	  int fd_check;
+	  if( ( fd_check = open( CheckFileName.c_str(), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
+            CondorErrno = ERR_CACHE_FILE_ERROR;
+	    CondorErrMsg = "internal error:  unable to open checkpoint file";
+	  }
+	  string buffer;
+	  int fempty=lseek(fd_check,0,SEEK_END);
+	  if (fempty!=0){
+	    lseek(fd_check,0,SEEK_SET);
+	    char  k[1];
+	    string OneLine="";
+	    int l;
+	    
+	    while ((l=read(fd_check,k,1))>0){
+	      string n(k,1);
+	      if (n=="\n"){
+		break; 
+	      }else{
+		OneLine=OneLine+n;
+	      }           
+	    }	
+	    
+	    if (OneLine!=""){
+	      string buf;
+	      ClassAdParser parser;
+	      ClassAd* cla=parser.ParseClassAd(OneLine,true);;
+	      string name="Time";
+	      cla->EvaluateAttrString(name,buf);
+	      
+	      int i_p=buf.find(".");
+	      string sec=buf.substr(0,i_p);
+	      string usec=buf.substr(i_p+1,buf.size()-i_p);
+	      
+	      LatestCheckpoint.tv_sec=atol(sec.c_str());
+	      LatestCheckpoint.tv_usec=atol(usec.c_str());
+	      delete(cla);  
+	    }else{
+	      LatestCheckpoint.tv_sec=0;
+	      LatestCheckpoint.tv_usec=0;
+	    }
+	  }else{
+	    CheckPoint=1;
+	  }
+	close(fd_check);
+	return true;
+}
 
 //------------------------------------------------------------------------------
 // Recovery mode interface
@@ -126,12 +216,51 @@ OperateInRecoveryMode( ClassAd *logRec )
 	int 	opType=0;
 
 	logRec->EvaluateAttrInt( ATTR_OP_TYPE, opType );
-
+	if (Cache==true){
+          //If the current entry is checkpoint, we check it with the latest checkpoint.
+          //we only recover after the latest checkpoint
+	  if (opType == ClassAdCollOp_CheckPoint) {
+	    string buf;
+	    logRec->EvaluateAttrString("Time",buf);
+	    
+	    int i_p=buf.find(".");
+	    string sec=buf.substr(0,i_p);
+	    string usec=buf.substr(i_p+1,buf.size()-i_p);
+	    long temp_sec=atol(sec.c_str());
+	    long temp_usec=atol(usec.c_str());
+	    if ((temp_sec<LatestCheckpoint.tv_sec)||((temp_sec==LatestCheckpoint.tv_sec)&&(temp_usec<LatestCheckpoint.tv_usec))){
+	    }else{
+	      CheckPoint=1;             
+	   //in order to recover views, we should re-insert all the classads in the storage into views
+            string key;
+	    ClassAdParser parser;
+	    if ((ClassAdStorage.First(key))<0){
+	      
+	    }else{
+	      do {
+		tag ptr;
+		ClassAdStorage.FindInFile(key,ptr);
+		string oneentry= ClassAdStorage.GetClassadFromFile(key,ptr.offset);
+		ClassAd *cla=parser.ParseClassAd(oneentry,true);
+		ClassAd *content = (ClassAd*)(cla->Lookup("Ad"));
+		if( !viewTree.ClassAdInserted( this, key, content ) ) {
+		  CondorErrMsg += "; could not insert classad";
+		  return( false );
+		}
+                delete cla;
+	      }while((ClassAdStorage.Next(key))!=0);
+	    } 	                
+	    }
+	    delete(logRec);
+	    return (true);          
+	  };
+	}
 	switch( opType ) {
 		case ClassAdCollOp_OpenTransaction:
 		case ClassAdCollOp_AbortTransaction:
 		case ClassAdCollOp_CommitTransaction:
 		case ClassAdCollOp_ForgetTransaction: {
+		  if ((Cache==false)||(CheckPoint==1)){
 			string				xactionName;
 			ServerTransaction	*xaction;
 				// xaction ops require a transaction name
@@ -162,6 +291,10 @@ OperateInRecoveryMode( ClassAd *logRec )
 
 				// other ops already taken care of by PlayXactionOp
 			return( true );
+		  }else{
+		    delete logRec;
+                    return (true);
+		  };
 		}
 
 		case ClassAdCollOp_CreateSubView:
@@ -177,6 +310,7 @@ OperateInRecoveryMode( ClassAd *logRec )
 		case ClassAdCollOp_UpdateClassAd:
 		case ClassAdCollOp_ModifyClassAd:
 		case ClassAdCollOp_RemoveClassAd: {
+		  if ((Cache==false)||(CheckPoint==1)){
 			string	xactionName, key;
 
 			if( !logRec->EvaluateAttrString( ATTR_KEY, key ) ) {
@@ -203,6 +337,10 @@ OperateInRecoveryMode( ClassAd *logRec )
 			xaction = itr->second;
 			xaction->AppendRecord( opType, key, logRec );
 			return( true );
+		 }else{
+		    delete logRec;
+                    return (true);
+		  };
 		}
 	}
 	EXCEPT( "illegal operation in log:  should not reach here" );
@@ -467,20 +605,61 @@ PlayClassAdOp( int opType, ClassAd *rec )
 			newAd->SetParentScope( NULL );
 
 				// check if an ad is already present
-			if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
+			if (( itr = classadTable.find( key ) ) != classadTable.end( )) {
 					// delete old ad
 				ad = itr->second.ad;
 				viewTree.ClassAdDeleted( this, key, ad );
 				classadTable.erase( itr );
 				delete ad;
+				if (Cache==true){
+				  Max_Classad--;
+				}
+			}
+		        else{
+                                //if it is not in cache but in file, delete it from file            
+                          if (Cache==true){      
+			    tag ptr;
+			    if (ClassAdStorage.FindInFile( key,ptr )){
+			      ClassAdStorage.DeleteFromStorageFile(key);
+			    };
+			  }
+			}  
+			if (Cache==true){
+			  //If the cache in memory is full, we have to swap out a ClassAd
+			  if ( Max_Classad ==  MaxCacheSize){
+			    string write_back_key;
+			    if (!ReplaceClassad(write_back_key)){
+			      CondorErrno = ERR_CANNOT_REPLACE;
+			      CondorErrMsg = "failed in replacing classad in cache";
+			    };
+			    if (CheckDirty(write_back_key)){
+			      string WriteBackClassad;
+			      
+			      if (!GetStringClassAd(write_back_key,WriteBackClassad)){
+				CondorErrMsg = "failed in get classad from cache";
+			      };
+			      
+			      ClassAdStorage.WriteBack(write_back_key,WriteBackClassad);
+			      ClearDirty(write_back_key);
+			    };          
+			    itr=classadTable.find(write_back_key);
+			    ad=itr->second.ad;
+			    delete ad;                                          
+			    classadTable.erase(write_back_key);
+			    Max_Classad--;
+			  }
 			}
 				// insert new ad
 			if( !viewTree.ClassAdInserted( this, key, newAd ) ) {
-				CondorErrMsg += "; could not insert classad";
-				return( false );
+			  CondorErrMsg += "; could not insert classad";
+			  return( false );
 			}
 			proxy.ad = newAd;
 			classadTable[key] = proxy;
+			if ( Cache==true){
+			  SetDirty(key);
+			  Max_Classad++;	
+			}
 			return( true );
 		}
 
@@ -501,10 +680,27 @@ PlayClassAdOp( int opType, ClassAd *rec )
 				return( false );
 			}
 			itr = classadTable.find( key );
-			if( itr == classadTable.end( ) ) {
-				CondorErrno = ERR_NO_SUCH_CLASSAD;
-				CondorErrMsg = "no classad " + key + " to update";
+			if ( Cache==true){
+			  if (itr==classadTable.end()){
+			    tag ptr;
+			    if (ClassAdStorage.FindInFile( key,ptr )){
+			      if (!SwitchInClassAd(key)){
+				CondorErrMsg = "can not switch in classad";
 				return( false );
+			      }
+			    }else{
+			      CondorErrno = ERR_NO_SUCH_CLASSAD;
+			      CondorErrMsg = "no classad " + key + " to update";
+			      return( false );
+			    };
+			  }			
+			  itr = classadTable.find( key );
+			}else{
+			  if( itr == classadTable.end( ) ) {
+			    CondorErrno = ERR_NO_SUCH_CLASSAD;
+			    CondorErrMsg = "no classad " + key + " to update";
+			    return( false );
+			  }
 			}
 			ad = itr->second.ad;
 			viewTree.ClassAdPreModify( this, ad );
@@ -525,27 +721,44 @@ PlayClassAdOp( int opType, ClassAd *rec )
 
 			if( !rec->EvaluateAttrString( "Key", key ) ) {
 				CondorErrno = ERR_NO_KEY;
-                CondorErrMsg = "bad or missing 'key' attribute";
-                return( false );
+				CondorErrMsg = "bad or missing 'key' attribute";
+				return( false );
 			}
 			if( !rec->EvaluateAttr( "Ad", cv ) || !cv.IsClassAdValue(update) ) {
-                CondorErrno = ERR_BAD_CLASSAD;
-                CondorErrMsg = "bad or missing 'ad' attribute";
-                return( false );                
+			  CondorErrno = ERR_BAD_CLASSAD;
+			  CondorErrMsg = "bad or missing 'ad' attribute";
+			  return( false );                
 			}
 			itr = classadTable.find( key );
-			if( itr == classadTable.end( ) ) {
-                CondorErrno = ERR_NO_SUCH_CLASSAD;
-                CondorErrMsg = "no classad " + key + " to modify";
-                return( false );
+			if ( Cache==true){
+			  if (itr==classadTable.end()){
+			    tag ptr;
+			    if (ClassAdStorage.FindInFile( key,ptr )){
+			      if (!SwitchInClassAd(key)){
+				CondorErrMsg = "can not switch in classad";
+				return( false );
+			      }
+			    }else{
+			      CondorErrno = ERR_NO_SUCH_CLASSAD;
+			      CondorErrMsg = "no classad " + key + " to modify";
+			      return( false );
+			    };
+			  }
+			}else{
+			  itr = classadTable.find( key );
+			  if( itr == classadTable.end( ) ) {
+			    CondorErrno = ERR_NO_SUCH_CLASSAD;
+			    CondorErrMsg = "no classad " + key + " to modify";
+			    return( false );
+			  }
 			}
 			ad = itr->second.ad;
 			viewTree.ClassAdPreModify( this, ad );
-
+			
 			ad->Modify( *update );
 			if( !viewTree.ClassAdModified( this, key, ad ) ) {
-                CondorErrMsg += "; failed when modifying classad";
-                return( false );
+			  CondorErrMsg += "; failed when modifying classad";
+			  return( false );
 			}
 			return( true );
 		}
@@ -557,27 +770,52 @@ PlayClassAdOp( int opType, ClassAd *rec )
 			Value		cv;
 
 			if( !rec->EvaluateAttrString( "Key", key ) ) {
-                CondorErrno = ERR_NO_KEY;
-                CondorErrMsg = "bad or missing 'key' attribute";
-                return( false );
+			  CondorErrno = ERR_NO_KEY;
+			  CondorErrMsg = "bad or missing 'key' attribute";
+			  return( false );
 			}
 			itr = classadTable.find( key );
-			if( itr == classadTable.end( ) ) {
-                CondorErrno = ERR_NO_SUCH_CLASSAD;
-                CondorErrMsg = "no classad " + key + " to modify";
-                return( false );
+			if ( Cache==true){
+			  tag ptr;
+			  int deleted=0;
+			  if (ClassAdStorage.FindInFile(key,ptr)){
+			    ClassAdStorage.DeleteFromStorageFile(key);
+			    deleted=1;
+			  }
+			  
+			  if( itr == classadTable.end( )){
+			    if(deleted==0){ 
+			      CondorErrno = ERR_NO_SUCH_CLASSAD;
+			      CondorErrMsg = "no classad " + key + " to remove";
+			      return( false );
+			    }else{
+			      return (true);
+			    }
+			  }else{
+			    Max_Classad--;
+			    ad = itr->second.ad;
+			    classadTable.erase( itr );
+			    viewTree.ClassAdDeleted( this, key, ad );
+			    delete ad;
+			    return( true );
+			  }
+			}else{
+			  if( itr == classadTable.end( ) ) {
+			    CondorErrno = ERR_NO_SUCH_CLASSAD;
+			    CondorErrMsg = "no classad " + key + " to remove";
+			    return( false );
+			  }
+			  ad = itr->second.ad;
+			  classadTable.erase( itr );
+			  viewTree.ClassAdDeleted( this, key, ad );
+			  delete ad;
+			  return( true );
 			}
-			ad = itr->second.ad;
-			classadTable.erase( itr );
-			viewTree.ClassAdDeleted( this, key, ad );
-			delete ad;
-			return( true );
-		}
-
-		default:
-			break;
+		}	
+	default:
+	  break;
 	}
-
+	
 	EXCEPT( "internal error:  Should not reach here" );
 	return( false );
 }
@@ -737,13 +975,51 @@ AddClassAd( const string &key, ClassAd *newAd )
 			viewTree.ClassAdDeleted( this, key, ad );
 			delete ad;
 			classadTable.erase( itr );
+			if (Cache==true) {
+			  Max_Classad--;
+			}
 		}
 
+		else{
+		  if ( Cache== true){
+		        tag ptr;				
+		        if (ClassAdStorage.FindInFile( key,ptr )){
+		           ClassAdStorage.DeleteFromStorageFile(key);
+		        };
+		  }
+		}
 		if( !viewTree.ClassAdInserted( this, key, newAd ) ) {
 			delete newAd;
 			return( false );
 		}
 
+		if ( Cache==true ) {
+		  if ( Max_Classad ==  MaxCacheSize){
+		    string write_back_key;
+		    if (!ReplaceClassad(write_back_key)){
+		      CondorErrno = ERR_CANNOT_REPLACE;
+		      CondorErrMsg = "failed in replacing classad in cache";
+		    };
+
+		    if (CheckDirty(write_back_key)){
+		      string WriteBackClassad;
+		      
+		      if (!GetStringClassAd(write_back_key,WriteBackClassad)){
+			CondorErrMsg = "failed in get classad from cache";
+		      };
+		      
+		      ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
+		      ClearDirty(write_back_key);
+		    };          
+		    itr=classadTable.find(write_back_key);
+		    ad=itr->second.ad;
+		    delete ad;                                          
+		    classadTable.erase(write_back_key);
+		    Max_Classad--;
+		  }
+		  SetDirty(key);
+		  Max_Classad++;
+		}
 		proxy.ad = newAd;
 		classadTable[key] = proxy;
 			// log if possible
@@ -784,13 +1060,29 @@ UpdateClassAd( const string &key, ClassAd *updAd )
 	} else {
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
-
-		if( itr == classadTable.end( ) ) {
-			CondorErrno = ERR_NO_SUCH_CLASSAD;
-			CondorErrMsg = "classad " + key + " doesn't exist to update";
-			delete updAd;
+		if ( Cache==true){
+		  if (itr==classadTable.end()){
+		    tag ptr;
+		    if (ClassAdStorage.FindInFile( key,ptr )){
+		      if (!SwitchInClassAd(key)){
+			CondorErrMsg = "can not switch in classad";
 			return( false );
+		      }
+		    }else{
+		      CondorErrno = ERR_NO_SUCH_CLASSAD;
+		      CondorErrMsg = "no classad " + key + " to update";
+		      return( false );
+		    };
+		  }			
+		  itr = classadTable.find( key );
+		}else{
+		  if( itr == classadTable.end( ) ) {
+		    CondorErrno = ERR_NO_SUCH_CLASSAD;
+		    CondorErrMsg = "no classad " + key + " to update";
+		    return( false );
+		  }
 		}
+
 		ad = itr->second.ad;
 		viewTree.ClassAdPreModify( this, ad );
 		ad->Update( *updAd );
@@ -799,6 +1091,9 @@ UpdateClassAd( const string &key, ClassAd *updAd )
 			return( false );
 		}
 
+		if (Cache==true){
+		  SetDirty(key); 
+		}
 			// log if possible 
 		if( log_fp ) {
 			ClassAd *rec = _UpdateClassAd( "", key, updAd );
@@ -835,32 +1130,55 @@ ModifyClassAd( const string &key, ClassAd *modAd )
 	} else {
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
-		if( itr == classadTable.end( ) ) {
-			CondorErrno = ERR_NO_SUCH_CLASSAD;
-			CondorErrMsg = "classad " + key + " doesn't exist to modify";
-			delete modAd;
+		if ( Cache==true){
+ 		  if (itr==classadTable.end()){
+	 	    tag ptr;
+		    if (ClassAdStorage.FindInFile( key,ptr )){
+		      
+		      if (!SwitchInClassAd(key)){
+			CondorErrMsg = "can not switch in classad";
 			return( false );
+		      }
+		      
+		    }else{
+		      CondorErrno = ERR_NO_SUCH_CLASSAD;
+		      CondorErrMsg = "no classad " + key + " to update";
+		      delete modAd;
+		      return( false );
+		    };
+		    itr = classadTable.find( key );		  
+		  }else{
+		    if( itr == classadTable.end( ) ) {
+		    CondorErrno = ERR_NO_SUCH_CLASSAD;
+		    CondorErrMsg = "classad " + key + " doesn't exist to modify";
+		    delete modAd;
+		    return( false );
+		    }
+		  }
 		}
+		
 		ad = itr->second.ad;
 		viewTree.ClassAdPreModify( this, ad );
 		ad->Modify( *modAd );
 		if( !viewTree.ClassAdModified( this, key, ad ) ) {
-			delete modAd;
-			return( false );
+		  delete modAd;
+		  return( false );
 		}
-
-			// log if possible
+		if (Cache==true){
+		  SetDirty(key);
+		}
+		// log if possible
 		if( log_fp ) {
-			ClassAd *rec = _ModifyClassAd( "", key, modAd );
-			if( !WriteLogEntry( log_fp, rec ) ) {
-				delete rec;
-				CondorErrMsg += "; failed to log modify classad";
-				return( false );
-			}
-			delete rec;
+		  ClassAd *rec = _ModifyClassAd( "", key, modAd );
+		  if( !WriteLogEntry( log_fp, rec , true) ) {
+		    delete rec;
+		    CondorErrMsg += "; failed to log modify classad";
+		    return( false );
+		  }
+		  delete rec;
 		}
 	}
-
+	
 	return( true );
 }
 
@@ -885,17 +1203,38 @@ RemoveClassAd( const string &key )
 	} else {
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
-
-		if( itr == classadTable.end( ) ) return( true );
-		ad = itr->second.ad;
-		viewTree.ClassAdDeleted( this, key, ad );
-		delete ad;
-		classadTable.erase( itr );
-
+		if (Cache==true){
+		  tag ptr;
+		  int deleted=0;
+		  if (ClassAdStorage.FindInFile(key,ptr)){
+		    ClassAdStorage.DeleteFromStorageFile(key);
+		    deleted=1;
+		  }
+		  
+		  if( itr == classadTable.end( ) ){
+		    if (deleted==0){
+		    }else{
+		      return( true );
+		    }
+		    
+		  }else{
+		    Max_Classad--;
+		    ad = itr->second.ad;
+		    viewTree.ClassAdDeleted( this, key, ad );
+		    delete ad;
+		    classadTable.erase( itr );
+		  }
+		}else{
+		  if( itr == classadTable.end( ) ) return( true );
+		  ad = itr->second.ad;
+		  viewTree.ClassAdDeleted( this, key, ad );
+		  delete ad;
+		  classadTable.erase( itr );
+		}
 			// log if possible
 		if( log_fp ) {
 			ClassAd *rec = _RemoveClassAd( "", key );
-			if( !WriteLogEntry( log_fp, rec ) ) {
+			if( !WriteLogEntry( log_fp, rec,true ) ) {
 				delete rec;
 				CondorErrMsg += "; failed to log modify classad";
 				return( false );
@@ -912,11 +1251,29 @@ ClassAd *ClassAdCollection::
 GetClassAd( const string &key )
 {
 	ClassAdTable::iterator	itr = classadTable.find( key );
-	if( itr == classadTable.end( ) ) {
-		CondorErrno = ERR_NO_SUCH_CLASSAD;
-		CondorErrMsg = "classad " + key + " not found";
+	
+	if (Cache==true){
+	  tag ptr;
+	  if (itr==classadTable.end()){
+	    if (ClassAdStorage.FindInFile( key,ptr )){
+	      if (!SwitchInClassAd(key)){
+		CondorErrMsg = "can not switch in classad";
 		return( NULL );
-	} 
+	      }	      
+	    }else{
+	      CondorErrno = ERR_NO_SUCH_CLASSAD;
+	      CondorErrMsg = "no classad " + key + " to update";
+	      return( NULL );
+	    };
+	  }
+	  itr=classadTable.find( key );
+	}else{
+	  if( itr == classadTable.end( ) ) {
+	    CondorErrno = ERR_NO_SUCH_CLASSAD;
+	    CondorErrMsg = "classad " + key + " not found";
+	    return( NULL );
+	  } 
+	}
 	itr->second.ad->SetParentScope( NULL );
 	return( itr->second.ad );
 }
@@ -1112,55 +1469,74 @@ LogState( FILE *fp )
 		return( false );
 	}
 
-		// log classads
-	ClassAdTable::iterator	itr;
-	ClassAd		logRec;
-	ClassAd					*ad;
+	if (Cache==true){
+	  ClassAd		logRec;
+	  //ClassAd	        *ad;
+	  int sf_offset;
+	  string cla_key;
+	  string cla_s;
+	  //First write dirty ClassAds into storagefile, make it a consistant state          
+          WriteCheckPoint();
 
-	if( !logRec.InsertAttr( "OpType", ClassAdCollOp_AddClassAd ) ) {
-		CondorErrMsg += "; failed to log state";
-		return( false );
-	}
-
-	for( itr = classadTable.begin( ); itr != classadTable.end( ); itr++ ) {
-           ClassAd *tmp;
-           string dd(itr->first);
-           tmp = GetClassAd(dd);//GetClassAd( itr->first );
-           string buff;
-           ClassAdUnParser unparser;
-           unparser.Unparse(buff,tmp);
-         
+	  ClassAdParser parser;
+	  //dump all the ClassAd into new log file
+	  sf_offset=ClassAdStorage.First(cla_key);
+	  while (sf_offset!=-1){
+	    cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
+	    ClassAd *cla=parser.ParseClassAd(cla_s,true);
+	    if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )){
+	      CondorErrMsg += "; failed to log state";
+	      return( false );
+	    };   
+	    if (!WriteLogEntry(fp,cla,true)){
+	      CondorErrMsg += "; failed to log ad, could not log state";   
+	    }   
+	    sf_offset=ClassAdStorage.Next(cla_key);
+	    delete(cla);                 
+	  }
+	}else{
+	  // log classads
+	  ClassAdTable::iterator	itr;
+	  ClassAd		logRec;
+	  ClassAd					*ad;
+	  
+	  if( !logRec.InsertAttr( "OpType", ClassAdCollOp_AddClassAd ) ) {
+	    CondorErrMsg += "; failed to log state";
+	    return( false );
+	  }
+	  
+	  for( itr = classadTable.begin( ); itr != classadTable.end( ); itr++ ) {
+	    ClassAd *tmp;
+	    string dd(itr->first);
+	    tmp = GetClassAd(dd);
+	    string buff;
+	    ClassAdUnParser unparser;
+	    unparser.Unparse(buff,tmp);
+	    
             
-           logRec.InsertAttr( "Key", itr->first );
-           ad = GetClassAd( itr->first );
-           logRec.Insert( "Ad", ad );
-                
-	   //if( !logRec.InsertAttr( "Key", itr->first.c_str( ) )||
-	   //			!( ad = GetClassAd( itr->first ) )			||
-	   //		!logRec.InsertAttr( "Ad", ad ) 				||
-           
-           buff="";
-           unparser.Unparse(buff,&logRec);
-
-		if(		!WriteLogEntry( fp, &logRec, false ) ) {
-			CondorErrMsg += "; failed to log ad, could not log state";
-			logRec.Remove( "Ad" );
-			return( false );
-		}
-                buff="";
-            
-                unparser.Unparse(buff,&logRec);
-
-
-		logRec.Remove( "Ad" );
+	    logRec.InsertAttr( "Key", itr->first );
+	    ad = GetClassAd( itr->first );
+	    logRec.Insert( "Ad", ad );
+	    
+	    buff="";
+	    unparser.Unparse(buff,&logRec);
+	    
+	    if( !WriteLogEntry( fp, &logRec, true ) ) {
+	      CondorErrMsg += "; failed to log ad, could not log state";
+	      logRec.Remove( "Ad" );
+	      return( false );
+	    }
+	    buff="";            
+	    unparser.Unparse(buff,&logRec);
+	    logRec.Remove( "Ad" );
+	  }
 	}
-
 	if( fsync( fileno( log_fp ) ) < 0 ) {
-		CondorErrno = ERR_FILE_WRITE_FAILED;
-		CondorErrMsg = "fsync() failed when logging state";
-		return( false );
+	  CondorErrno = ERR_FILE_WRITE_FAILED;
+	  CondorErrMsg = "fsync() failed when logging state";
+	  return( false );
 	}
-
+	
 	return( true );
 }
 	
@@ -1206,5 +1582,225 @@ LogViews( FILE *fp, View *view, bool subView )
 	return( true );
 }
 
+bool ClassAdCollection::
+SwitchInClassAd(string key){
+  ClassAdTable::iterator itr;
+  tag ptr;
+  if (Max_Classad==MaxCacheSize){
+    //pick up a classad, write it back to storage file
+           string write_back_key;
+	   if (!ReplaceClassad(write_back_key)){
+	          CondorErrno = ERR_CANNOT_REPLACE;
+		  CondorErrMsg = "failed in replacing classad in cache";
+	   };
+	   
+	   if (CheckDirty(write_back_key)){
+	          string WriteBackClassad;
+	     
+		  if (!GetStringClassAd(write_back_key,WriteBackClassad )){
+		    CondorErrMsg = "failed in get classad from cache";
+		  };
+		  
+		  ClassAdStorage.WriteBack(write_back_key,WriteBackClassad );
+		  ClearDirty(write_back_key);
+	   };     
+	   ClassAd *ad;     
+	   itr=classadTable.find(write_back_key);
+	   ad=itr->second.ad;
+	   delete ad;                                          
+	   classadTable.erase(write_back_key);
+	   Max_Classad--;
+  }
+  //bring the classad which will be updated into cache
+  if (!ClassAdStorage.FindInFile( key,ptr )){
+           CondorErrno = ERR_CACHE_SWITCH_ERROR;
+	   CondorErrMsg = "internal error:  unable to find the classad in storage file";
+           return (false);
+  };
+  string theclassad=ClassAdStorage.GetClassadFromFile(key,ptr.offset);
+  if (theclassad!=""){
+           ClassAdParser parser;
+	   ClassAd *storage_cla=parser.ParseClassAd(theclassad,true);
+	   if (storage_cla == NULL){
+	          CondorErrno = ERR_PARSE_ERROR;
+	          CondorErrMsg = "internal error:  unable to parse the classad";
+		  return false;
+	   }; 
+	   ClassAd *back_cla=(ClassAd*)(storage_cla->Lookup("Ad"));
+	   if ( back_cla == NULL){
+	          CondorErrno = ERR_PARSE_ERROR;
+	          CondorErrMsg = "internal error:  unable to parse the classad";
+		  return false;
+	   };
+	   string back_key;
+	   
+	   storage_cla->EvaluateAttrString( "Key",back_key);
+	   if (back_key==key){
+	          ClassAdProxy proxy;
+		  proxy.ad=back_cla;
+		  classadTable[key]=proxy;
+		  Max_Classad++;;
+	   }else{
+             CondorErrno = ERR_CACHE_SWITCH_ERROR;
+	     CondorErrMsg = "No classad " + key + " to update";
+	     return( false );
+	   }
+  }else{
+           CondorErrno = ERR_CACHE_SWITCH_ERROR;
+           CondorErrMsg = "No classad " + key + " to update";
+	   return( false );
+  }
+  return (true);
+}
+
+
+int ClassAdCollection::
+WriteCheckPoint(){
+  //get the latest time mark
+          timeval ctime;
+	  gettimeofday(&ctime,NULL);
+	  LatestCheckpoint.tv_sec=ctime.tv_sec;
+	  LatestCheckpoint.tv_usec=ctime.tv_usec;
+	  char arr[20];
+	  sprintf(arr,"%ld.%ld",ctime.tv_sec,ctime.tv_usec);
+	  string arr_s=arr;
+	  ClassAd cla;
+	  //Dump all the dirty ClassAd into storagefile
+	  map<string,int>::iterator itr=DirtyClassad.begin();
+	  while (itr!=DirtyClassad.end()){
+	    if (itr->second==1){
+	           string ad;
+		   GetStringClassAd(itr->first,ad);	      
+		   ClassAdStorage.WriteBack(itr->first,ad);
+	    }
+	           ClearDirty(itr->first);
+		   itr++; 
+	  };
+	  
+	  cla.InsertAttr( ATTR_OP_TYPE, ClassAdCollOp_CheckPoint );
+	  cla.InsertAttr( "Time",arr_s);   
+	  
+	  if (!WriteLogEntry(log_fp,&cla,true)){
+	           return false;
+	  };
+	  int fd_check;
+	  if( ( fd_check = open( CheckFileName.c_str(), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
+                   CondorErrno = ERR_CACHE_FILE_ERROR;
+		   char buf[10];
+		   sprintf( buf, "%d", errno );
+		   CondorErrMsg = "failed to open checkpoint file " + CheckFileName + " errno=" +string(buf);
+		   return( false );
+	  }
+	  string buffer;
+	  unparser.Unparse( buffer, &cla );
+	  buffer=buffer+"\n";
+	  write(fd_check,(void*)(buffer.c_str()),buffer.size());
+	  fsync(fd_check);
+	  close(fd_check);
+	  return true;
+	  
+}
+//Given a offset, we read the key for the classad out
+int ClassAdCollection::
+ReadStorageEntry(int sfiled, int &offset,string &ckey){
+         string OneLine;  
+	 do{
+	        offset=lseek(sfiled,0,SEEK_CUR);
+		char  OneCharactor[1];
+		OneLine = "";
+		int l;
+		while ((l=read(sfiled,OneCharactor,1))>0){
+		  string n(OneCharactor ,1);
+		  if (n=="\n"){
+		    break; 
+		  }else{
+		    OneLine=OneLine+n;
+		  }           
+		}
+		if (OneLine=="") break;
+	 }while(OneLine[0]=='*');
+	 
+	 if (OneLine=="") {
+	        return 1; //end of file
+	 }else{
+	   
+	        ClassAdParser parser;
+		ClassAd *cla=parser.ParseClassAd(OneLine ,true);
+		
+		cla->EvaluateAttrString("Key",ckey);  
+		delete cla;    
+		return 2; //good	   
+	 }
+}
+
+bool ClassAdCollection::
+ReplaceClassad(string &key){
+         int      i=(int)((classadTable.size())*rand() /(RAND_MAX+1.0));
+	 ClassAdTable::iterator m=classadTable.begin();
+	 int count = 0;
+	 while (count!=i){ m++;count++;};	 
+	 key=(m->first);
+	 return true;
+}
+
+bool ClassAdCollection::
+SetDirty(string key){
+         DirtyClassad[key]=1;
+	 return true;
+}
+
+bool ClassAdCollection::
+ClearDirty(string key){
+         DirtyClassad.erase(key);
+	 return true;
+}
+
+bool ClassAdCollection::
+CheckDirty(string key){
+         map<string,int>::iterator m=DirtyClassad.find(key);
+	 if ((m!=DirtyClassad.end())&&(m->second>0)){
+	   return true;
+	 }else{
+	   return false;
+	 }
+}
+
+bool ClassAdCollection::
+GetStringClassAd(string key, string &ad){ 
+         ClassAdTable::iterator	itr;
+	 ClassAd classad;
+	 ClassAd *newad;
+	 ClassAdUnParser unparser;
+	 
+	 classad.InsertAttr( "Key", key );
+	 if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
+	   newad=((itr->second).ad)->Copy();
+	   classad.Insert("Ad", newad);
+	 }else{
+	   return false;
+	 };
+	 unparser.Unparse(ad,&classad);
+	 //delete newad;
+	 return true;
+}
+
+bool ClassAdCollection::
+TruncateStorageFile(){
+         bool result;
+	 if ((result=ClassAdStorage.TruncateStorageFile())==true){
+	   return true;
+	 }else{
+	   return false;
+	 }
+}
+
+bool ClassAdCollection::
+dump_collection(){
+         ClassAdTable::iterator	itr;
+	 for (itr= classadTable.begin();itr!=classadTable.end();itr++){
+	   cout << "dump_collection key= " << itr->first << endl;
+	 }
+	 return true;
+}
 
 END_NAMESPACE

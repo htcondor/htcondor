@@ -44,6 +44,11 @@ template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
 template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
     StringHash>;
     // main classad table
+template class map<string, int>;
+template class hash_map<string,int,StringHash>;
+template class hash_map<string,int,StringHash>::iterator;
+
+
 template class hash_map<string, ClassAdProxy, StringHash>;
 template class hash_map<string, ClassAdProxy, StringHash>::iterator;
     // transaction registry

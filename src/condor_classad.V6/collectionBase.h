@@ -25,6 +25,14 @@
 
 #include "collection.h"
 
+//#ifdef ADDCACHE
+  #include "indexfile.h"
+  #include <string>
+  #include <sys/time.h>
+  #include <unistd.h>
+//#endif
+#define MaxCacheSize 5
+
 BEGIN_NAMESPACE( classad );
 
 class ServerTransaction;
@@ -46,13 +54,13 @@ class ClassAdCollection : public ClassAdCollectionInterface {
 public:
 	ClassAdCollection( );
 	virtual ~ClassAdCollection( );
-
+        ClassAdCollection(bool CacheOn);
 	// Logfile control
-	virtual bool InitializeFromLog( const string &filename );
+	virtual bool InitializeFromLog( const string &filename,const string storagefile, const string checkpointfile  );
 
 
 	// View creation/deletion/interrogation
-    virtual bool CreateSubView( const ViewName &viewName,
+        virtual bool CreateSubView( const ViewName &viewName,
 				const ViewName &parentViewName,
 				const string &constraint, const string &rank,
 				const string &partitionExprs );
@@ -99,6 +107,14 @@ public:
 	// Debugging function
 	bool DisplayView( const ViewName &viewName, FILE * );
 
+//#ifdef  ADDCACHE
+        bool dump_collection();
+        IndexFile ClassAdStorage;
+	int  WriteCheckPoint();
+	bool TruncateStorageFile();
+//#endif
+
+
 protected:
 	virtual bool OperateInRecoveryMode( ClassAd * );
 	virtual bool LogState( FILE * );
@@ -125,6 +141,25 @@ protected:
 	XactionTable	xactionTable;
 
 	bool LogViews( FILE *log, View *view, bool subView );
+        void Setup(bool CacheOn);
+        bool Cache;
+//#ifdef  ADDCACHE
+        bool ReplaceClassad(string &key);
+	bool SetDirty(string key);
+        bool ClearDirty(string key);
+	bool CheckDirty(string key);
+        bool GetStringClassAd(string key,string &WriteBackClassad);       
+        bool SwitchInClassAd(string key);
+        int  ReadStorageEntry(int sfiled, int &offset,string &ckey);        
+        bool ReadCheckPointFile();
+	int Max_Classad;
+        int CheckPoint;      
+	map<string,int> DirtyClassad;
+        timeval LatestCheckpoint;
+        string CheckFileName;
+        int test_checkpoint;
+//#endif
+
 };
 
 END_NAMESPACE

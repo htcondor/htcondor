@@ -20,11 +20,11 @@ CLASSAD_OBJ_0 		= lexer.o source.o operators.o attrrefs.o fnCall.o \
 /* Are collections required? */
 #if defined(COLLECTIONS)
 CLASSAD_SRC_1		= $(CLASSAD_SRC_0) view.C collection.C collectionBase.C collectionServer.C\
-						collectionClient.C transaction.C query.C remoteQuery.C\
+						collectionClient.C transaction.C query.C remoteQuery.C indexfile.C\
 						coll-comm-inst.C coll-serv-inst.C coll-client-inst.C
 CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0) view.o collection.o collectionBase.o collectionServer.o\
 						collectionClient.o transaction.o query.o remoteQuery.o\
-						coll-comm-inst.o coll-serv-inst.o coll-client-inst.o
+						coll-comm-inst.o coll-serv-inst.o coll-client-inst.o indexfile.o
 #else
 CLASSAD_SRC_1		= $(CLASSAD_SRC_0)
 CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0)
@@ -87,7 +87,7 @@ classadItor.h debug.C debug.h exprList.C exprList.h exprTree.C \
 exprTree.h fnCall.C fnCall.h instantiations.C lexer.C lexer.h \
 literals.C literals.h matchClassad.C matchClassad.h operators.C \
 operators.h query.C query.h sample.C sink.C sink.h source.C source.h \
-test_classads.C tests.txt transaction.C transaction.h value.C value.h \
+test_classads.C man_cache_test.C tests.txt transaction.C transaction.h value.C value.h \
 view.C view.h xmlSink.h xmlSink.C classad_distribution.h LICENSE README \
 CHANGELOG configure
 
@@ -112,5 +112,6 @@ clean::
 /* The Classad eXpression Interpreter */
 c_plus_target (cxi, cxi.o, $(LIB))
 c_plus_target (test_classads, test_classads.o, $(LIB))
+c_plus_target (man_cache_test, man_cache_test.o, $(LIB))
 pure_c_plus_target (test_classads.pure, test_classads.o, $(LIB))
 

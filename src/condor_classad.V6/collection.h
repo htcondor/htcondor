@@ -81,7 +81,8 @@ public:
 		ClassAdCollOp_Connect               = __ClassAdCollOp_MiscOps_Begin__,
 		ClassAdCollOp_QueryView             ,
 		ClassAdCollOp_Disconnect            ,
-		__ClassAdCollOp_MiscOps_End__       = ClassAdCollOp_Disconnect
+	    __ClassAdCollOp_MiscOps_End__       = ClassAdCollOp_Disconnect,
+                ClassAdCollOp_CheckPoint
 	};
 
 	static const char * const CollOpStrings[];
@@ -92,7 +93,7 @@ public:
 	enum { XACTION_ABORTED, XACTION_COMMITTED, XACTION_UNKNOWN };
 
         // Logfile control
-	virtual bool InitializeFromLog( const string &filename ) = 0;
+	virtual bool InitializeFromLog( const string &filename,const string storagefile, const string checkpointfile  ) = 0;
 	bool TruncateLog( );
 
 
@@ -192,6 +193,8 @@ protected:
 	ClassAdUnParser	unparser;
 	FILE			*log_fp;
 
+        string                  StorageFileName;
+        int                     sfiled;
 		// override for client and server
 	virtual bool LogState( FILE * ) = 0;
 };

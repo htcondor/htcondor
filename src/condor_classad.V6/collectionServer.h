@@ -28,6 +28,7 @@
 #include "collectionBase.h"
 #include "condor_io.h"
 
+
 BEGIN_NAMESPACE( classad )
 
 class ClassAdCollectionServer : public ClassAdCollection {
@@ -36,6 +37,8 @@ public:
 	virtual ~ClassAdCollectionServer( );
 
 	int HandleClientRequest( int command, Sock *clientSock );
+
+
 
 protected:
 	virtual bool OperateInNetworkMode( int, ClassAd *, Sock * );
