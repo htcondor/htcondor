@@ -37,21 +37,21 @@
 #include "internet.h"
 
 
-SafeSock::SafeSock(					/* listen on port		*/
+SafeSock::SafeSock(					/* bind on port		*/
 	int		port
 	)
 	: Sock()
 {
-	listen(port);
+	bind(port);
 }
 
 
-SafeSock::SafeSock(					/* listen on serv		*/
+SafeSock::SafeSock(					/* bind on serv		*/
 	char	*serv
 	)
 	: Sock()
 {
-	listen(serv);
+	bind(serv);
 }
 
 
@@ -86,20 +86,6 @@ SafeSock::~SafeSock()
 	close();
 }
 
-
-
-int SafeSock::listen()
-{
-	if (!valid()) return FALSE;
-
-	if (_state != sock_bound) return FALSE;
-	if (::listen(_sock, 5) < 0) return FALSE;
-
-	_state = sock_special;
-	_special_state = safesock_listen;
-
-	return TRUE;
-}
 
 
 int SafeSock::handle_incoming_packet()
