@@ -169,7 +169,9 @@ echo "*** ALL UNDERSCORE SYSTEM CALLS FOUND IN LIBC"
 if [ $UNAME = "IRIX" ]; then
 # We've got to use /bin/nm on IRIX since libc is really a dynamic
 # library and the /usr/gnu/bin/nm doesn't handle those.
-	/bin/nm -pv /lib/libc.so.1 | cut -f 7 -d\| | sort | uniq > /tmp/asc5.$$
+# Also, for /bin/nm, we want to use -v to get the easily parse-able
+# output, and we need the third column, which has the symbol names.
+	/bin/nm -v /lib/libc.so.1 | awk '{print $3}' | sort | uniq > /tmp/asc5.$$
 else 
 	$NM $LIBC | awk '{print $1}' -  | sort | uniq > /tmp/asc5.$$
 fi
