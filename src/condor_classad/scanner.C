@@ -192,7 +192,11 @@ void Scanner(char*& s, Token& t)
 		t.length++;
         while(*s != '"' && *s != '\0')
 		{
-			if(*s == '\\')
+			// note: short-circuit evaluation will prevent SEGV if we're 
+			// at the end of the string in below conditional.
+			// make certain s+2 != \0 so that on NT we can have strings
+			// that are pathnames that end with a '\'.
+			if(*s == '\\' && *(s+1) == '"' && *(s+2) != '\0')
 			{
 				s++;
 				t.length++; 
