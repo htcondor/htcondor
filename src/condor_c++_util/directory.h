@@ -50,7 +50,9 @@
 	remove files, and/or
 	report file access/modify/create times.  Also reports if
 	the filename represents another subdirectory or not.  
-	<p><b>Note:</b> This class does not recurse down into subdirectories.
+	<p><b>Note:</b> This class does not recurse down into subdirectories
+	except when calling the Remove_Current_File() or Remove_Entire_Directory()
+	methods.
 */
 class Directory
 {
@@ -110,7 +112,8 @@ public:
 	*/
 	bool IsDirectory() { return curr_isdirectory; }
 
-	/** Remove the current file.
+	/** Remove the current file.  If the current file is a subdirectory,
+	   then the subdirectory (and all files beneath it) are removed.
 		@return true on successful removal, otherwise false
 	*/
 	bool Remove_Current_File();
