@@ -16,7 +16,7 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
-#define MpiFiles sbin/condor_shadow.v61 sbin/condor_starter.v61 sbin/rsh
+#define MpiFiles sbin/condor_starter.v61 sbin/rsh
 
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
