@@ -159,7 +159,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 char *targ;
                 char *orig;
                 condor_signal_t *kill_sig;
-                int terrno;
+                condor_errno_t terrno;
 
                 kill_sig = (condor_signal_t *)malloc( (unsigned)INT_SIZE );
                 orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
@@ -170,13 +170,13 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 
                 errno = 0;
                 rval = pseudo_work_request( ad, a_out, targ, orig, (int *)kill_sig );
-                terrno = errno;
-                dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno);
+                terrno = (condor_errno_t)errno;
+                dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno);
 
                 syscall_sock->encode();
                 assert( syscall_sock->code(rval) );
                 if( rval < 0 ) {
-                        assert( syscall_sock->code((condor_errno_t)terrno) );
+                        assert( syscall_sock->code(terrno) );
                 }
                 if( rval >= 0 ) {
                         assert( syscall_sock->code(kill_sig) );
@@ -197,7 +197,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	case CONDOR_startup_info_request:
 	  {
 		STARTUP_INFO *s;
-		int terrno;
+		condor_errno_t terrno;
 
 		s = (STARTUP_INFO *)malloc( (unsigned)STARTUP_INFO_SIZE );
 		memset( s, 0, (unsigned)STARTUP_INFO_SIZE );
@@ -205,13 +205,12 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 
 		errno = 0;
 		rval = pseudo_startup_info_request( s );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code((condor_errno_t)terrno) );
+			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
 			assert( syscall_sock->code(s) );

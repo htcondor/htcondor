@@ -12,7 +12,7 @@ REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
 {
 	int scm;
 	int rval;
-	int terrno;
+	condor_errno_t terrno;
 	sigset_t    omask;
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
@@ -27,11 +27,11 @@ REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code((condor_errno_t)terrno) );
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
-		errno = terrno;
+		errno = (int)terrno;
 		return rval;
 	}
 	assert( syscall_sock->code(kill_sig) );
@@ -58,7 +58,7 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	int		file_size;
 	int scm;
 	int rval;
-	int terrno;
+	condor_errno_t terrno;
 	sigset_t    omask;
 
 
@@ -86,12 +86,12 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code((condor_errno_t)terrno) );
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
-		errno = terrno;
+		errno = (int)terrno;
 		return rval;
 	}
 	assert( syscall_sock->end_of_message() );
@@ -119,12 +119,12 @@ REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(write_status) );
 	if( write_status < 0 ) {
-		assert( syscall_sock->code((condor_errno_t)terrno) );
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = write_status;
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
-		errno = terrno;
+		errno = (int)terrno;
 		return rval;
 	}
 	assert( syscall_sock->end_of_message() );
@@ -163,7 +163,7 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	int		close_status;
 	int		rval;
 	sigset_t	omask;
-	int terrno;
+	condor_errno_t	terrno;
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	omask = _condor_signals_disable();
@@ -189,12 +189,12 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	syscall_sock->decode();
 	assert( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code((condor_errno_t)terrno) );
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
-		errno = terrno;
+		errno = (int)terrno;
 		return rval;
 	}
 
@@ -221,12 +221,12 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 		/* Get status from remote reads */
 	assert( syscall_sock->code(read_status) );
 	if( read_status < 0 ) {
-		assert( syscall_sock->code((condor_errno_t)terrno) );
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
 		rval = -1;
 		_condor_signals_enable( omask );
 		SetSyscalls( scm );
-		errno = terrno;
+		errno = (int)terrno;
 		return rval;
 	}
 	assert( syscall_sock->end_of_message() );
