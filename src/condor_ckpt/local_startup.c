@@ -138,6 +138,7 @@ MAIN( int argc, char *argv[], char **envp )
 		sprintf( buf, "%s.ckpt", argv[0] );
 		init_image_with_file_name( buf );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		InRestart = FALSE;
 #if defined(HPUX9)
 		return(_start( argc, argv, envp ));
 #else
