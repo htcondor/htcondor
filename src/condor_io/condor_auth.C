@@ -23,7 +23,6 @@
 
 #include "condor_auth.h"
 #include "condor_string.h"
-#include "config_util.h"
 
 static const char root[] = "root";
 

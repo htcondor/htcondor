@@ -27,7 +27,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
-#include "config_util.h"
 #include "my_hostname.h"
 
 extern "C" {
