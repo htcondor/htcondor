@@ -57,7 +57,10 @@ CronJobOut::Output( const char *buf, int len )
 
 	// Build up the string
 	const char	*prefix = job->GetPrefix( );
-	int		fulllen = len + strlen( prefix );
+	int		fulllen = len;
+	if ( prefix ) {
+		fulllen += strlen( prefix );
+	}
 	char	*line = (char *) malloc( fulllen + 1 );
 	if ( NULL == line ) {
 		dprintf( D_ALWAYS,
@@ -65,7 +68,11 @@ CronJobOut::Output( const char *buf, int len )
 				 fulllen );
 		return -1;
 	}
-	strcpy( line, prefix );
+	if ( prefix ) {
+		strcpy( line, prefix );
+	} else {
+		*line = '\0';
+	}
 	strcat( line, buf );
 
 	// Queue it up, get out
