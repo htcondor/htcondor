@@ -25,7 +25,7 @@ UpDown::~UpDown()
 {
 	for ( int i =0; i < activeUsers; i++)
 		delete table[i].name;
-	delete table;
+	delete [] table;
 }
 
 void UpDown::ClearUserInfo(void)
