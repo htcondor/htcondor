@@ -1257,7 +1257,7 @@ process_buffer_line( ClassAd *job )
 		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
 			tempCPS->dagman_proc_id = atoi(proc_string_start);
 		} else {
-			tempCPS->dagman_proc_id = tempCPS->proc;
+			tempCPS->dagman_proc_id = 0;
 		}
 		free(dagman_job_string);
 	}
