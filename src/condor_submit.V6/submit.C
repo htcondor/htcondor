@@ -48,6 +48,7 @@
 #include "get_daemon_addr.h"
 #include "condor_qmgr.h"
 #include "sig_install.h"
+#include "access.h"
 
 #if defined(GSS_AUTHENTICATION)
 #include "auth_sock.h"
@@ -62,7 +63,7 @@
 static int hashFunction( MyString&, int );
 HashTable<MyString,MyString> forcedAttributes( 64, hashFunction ); 
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)	  */
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)	 */
 
 char* mySubSystem = "SUBMIT";	/* Used for SUBMIT_EXPRS */
 
@@ -198,10 +199,44 @@ struct SubmitRec {
 ExtArray <SubmitRec> SubmitInfo(10);
 int CurrentSubmitInfo = -1;
 
+// list of files to check for read and write access.
+ExtArray <char *> CheckFilesRead(4);
+ExtArray <char *> CheckFilesWrite(4);
+int NumCheckFilesRead = 0;
+int NumCheckFilesWrite = 0;
+
 // explicit template instantiations
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString,MyString>;
 template class ExtArray<SubmitRec>;
+
+void TestFilePermissions()
+{
+	gid_t gid = getgid();
+	uid_t uid = getuid();
+	int result;
+
+	for(int i = 0; i < NumCheckFilesRead; ++i)
+	{
+		result = attempt_access(CheckFilesRead[i], ACCESS_READ, uid, gid);
+		if( result == FALSE ) {
+			fprintf(stderr, "WARNING: File %s is not readable by condor.\n", 
+					CheckFilesRead[i]);
+		}
+		free (CheckFilesRead[i]);
+	}
+
+	for(int i = 0; i < NumCheckFilesWrite; ++i)
+	{
+		result = attempt_access(CheckFilesWrite[i], ACCESS_WRITE, uid, gid);
+		if( result == FALSE ) {
+			fprintf(stderr, "WARNING: File %s is not writeable by condor.\n", 
+					CheckFilesWrite[i]);
+		}
+		free (CheckFilesWrite[i]);
+	}
+}
+
 
 int
 main( int argc, char *argv[] )
@@ -211,7 +246,6 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
 	char	*scheddname;
-	char	*tmp_pointer;
 
 	if (getuid() == 0 || getgid() == 0) {
 		fprintf(stderr, "Submitting jobs as user/group 0 (root) is not "
@@ -304,7 +338,7 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
-	if( !(tmp_pointer = get_schedd_addr(ScheddName)) ) {
+	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Can't find address of schedd %s\n", ScheddName );
 		} else {
@@ -313,18 +347,9 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	// get_schedd_addr uses a static buffer, so strdup into ScheddAddr
-	ScheddAddr = strdup(tmp_pointer);
-
 	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
 		fprintf( stderr, "ERROR: Failed to open command file\n");
-		exit(1);
-	}
-
-	//  Parse the file, stopping at "queue" command
-	if( read_condor_file( fp, 1 ) < 0 ) {
-		fprintf(stderr, "ERROR: Failed to parse command file.\n");
 		exit(1);
 	}
 
@@ -390,9 +415,6 @@ main( int argc, char *argv[] )
 	if (ConnectQ(ScheddAddr, useAuth ) == 0) {
 #else
 	if (ConnectQ(ScheddAddr, 0 ) == 0) {
-#endif
-#if 0
-} //balancing paren
 #endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
@@ -486,10 +508,11 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
+	TestFilePermissions();
+
 	if (dag_pause)
 		sleep(4);
 
-	free(ScheddAddr);
 
 	return 0;
 }
@@ -1654,6 +1677,16 @@ check_open( char *name, int flags )
 		EXCEPT( "Can't open \"%s\"  with flags 0%o", pathname, flags );
 	}
 	(void)close( fd );
+
+	// Queue files for testing access.
+	if( flags & O_WRONLY )
+	{
+		CheckFilesWrite[NumCheckFilesWrite++] = strdup(pathname);
+	}
+	else
+	{
+		CheckFilesRead[NumCheckFilesRead++] = strdup(pathname);
+	}
 }
 
 
