@@ -28,6 +28,7 @@
 #include "xfer_summary.h"
 #include "string_list.h"
 #include "internet.h"
+#include "my_hostname.h"
 
 #include "server2.h"
 #include "gen_lib.h"
@@ -49,30 +50,11 @@ ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
 
 Server::Server()
 {
-	char*          temp;
-	struct in_addr temp_addr;
-	
 	more = 1;
 	req_ID = 0;
-	temp = gethostaddr();
-	if (temp == NULL) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: unable to obtain host's IP address" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
-		exit(HOSTNAME_ERROR);
-    }
-	memcpy((char*) &server_addr, temp, sizeof(struct in_addr));
-	memcpy((char*) &temp_addr, temp, sizeof(struct in_addr));
-	if (memcmp(&server_addr, &temp_addr, sizeof(struct in_addr)) != 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: checkpoint server running on illegal server" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
-		exit(ILLEGAL_SERVER);
-    }
+		// We can't initialize this until Server::Init(), after
+		// config() has been called, so we get NETWORK_INTERFACE. 
+	server_addr.s_addr = 0;
 	store_req_sd = -1;
 	restore_req_sd = -1;
 	service_req_sd = -1;
@@ -122,6 +104,10 @@ void Server::Init(int max_new_xfers,
 
 	config( 0 );
 	dprintf_config( "CKPT_SERVER", 2 );
+
+		// We have to do this after we call config, not in the Server
+		// constructor, or we won't have NETWORK_INTERFACE yet.
+	server_addr.s_addr = htonl( my_ip_addr() );
 
 	ckpt_server_dir = param( "CKPT_SERVER_DIR" );
 	if( ckpt_server_dir ) {
@@ -954,6 +940,11 @@ void Server::Replicate()
 			if ((server_sd = I_socket()) < 0) {
 				exit(server_sd);
 			}
+			if( ! _condor_local_bind(server_sd) ) {
+				close( server_sd );
+				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				exit(1);
+			}
 			ret_code = net_write(server_sd, (char *)&req, sizeof(req));
 			if (ret_code != sizeof(req))
 				exit(CHILDTERM_CANNOT_WRITE);
@@ -978,6 +969,11 @@ void Server::Replicate()
 			close(server_sd);
 			if ((server_sd = I_socket()) < 0) {
 				exit(server_sd);
+			}
+			if( ! _condor_local_bind(server_sd) ) {
+				close( server_sd );
+				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				exit(1);
 			}
 			memset((char*) &server_sa, 0, sizeof(server_sa));
 			server_sa.sin_family = AF_INET;
@@ -1014,6 +1010,11 @@ void Server::Replicate()
 			stat(pathname, &chkpt_file_status);
 			if ((server_sd = I_socket()) < 0) {
 				exit(server_sd);
+			}
+			if( ! _condor_local_bind(server_sd) ) {
+				close( server_sd );
+				fprintf(stderr, "ERROR: unable to bind new socket to local interface\n");
+				exit(1);
 			}
 			server_sa.sin_port = htons(CKPT_SVR_SERVICE_REQ_PORT);
 			if (connect(server_sd, (struct sockaddr*) &server_sa,
