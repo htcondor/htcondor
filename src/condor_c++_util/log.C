@@ -44,39 +44,41 @@ LogRecord::~LogRecord()
 int
 LogRecord::readword(int fd, char * &str)
 {
-	char	buf[1000];
-	int		i;
-	int		rval;
+	int		i, rval, bufsize = 1024;
+	char	*buf = (char *)malloc(bufsize);
 
 	// ignore leading whitespace
 	do {
 		rval = read(fd, &(buf[0]), 1);
 		if (rval <= 0) {
+			free(buf);
 			return -1;
 		}
 	} while (isspace(buf[0]));
 
 	// read until whitespace
-	for (i = 1; i < sizeof(buf) - 1; i++) {
+	for (i = 1; rval > 0 && !isspace(buf[i-1]) && buf[i-1] != '\0'; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			bufsize *= 2;
+		} 
 		rval = read(fd, &(buf[i]), 1);
 		if (rval < 0) {
+			free(buf);
 			return rval;
 		}
-		if (rval == 0) break;
-		if (isspace(buf[i])) break;
-		if (buf[i] == '\0') break;	// shouldn't get '\0'
 	}
-	buf[i] = '\0';
+	buf[i-1] = '\0';
 	str = strdup(buf);
+	free(buf);
 	return i;
 }
 
 int
 LogRecord::readline(int fd, char * &str)
 {
-	char	buf[1000];
-	int		i;
-	int		rval;
+	int		i, rval, bufsize = 1024;
+	char	*buf = (char *)malloc(bufsize);
 
 	// ignore leading whitespace
 	do {
@@ -87,17 +89,19 @@ LogRecord::readline(int fd, char * &str)
 	} while (isspace(buf[0]));
 
 	// read until newline
-	for (i = 1; i < sizeof(buf) - 1; i++) {
+	for (i = 1; rval > 0 && buf[i-1] != '\n' && buf[i-1] != '\0'; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			bufsize *= 2;
+		}
 		rval = read(fd, &(buf[i]), 1);
 		if (rval < 0) {
 			return rval;
 		}
-		if (rval == 0) break;
-		if (buf[i] == '\n') break;
-		if (buf[i] == '\0') break;	// shouldn't get '\0'
 	}
-	buf[i] = '\0';
+	buf[i-1] = '\0';
 	str = strdup(buf);
+	free(buf);
 	return i;
 }
 
