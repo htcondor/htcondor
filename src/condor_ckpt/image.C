@@ -30,6 +30,10 @@
 #define _POSIX_SOURCE
 #endif
 
+#if defined(IRIX62)
+typedef struct fd_set fd_set;
+#endif 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -638,7 +642,12 @@ Image::Write( const char *ckpt_file )
 		// Open the tmp file
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	tmp_name[0] = '\0';
-	if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
+	/* For now we comment out the open_url() call because we are currently
+	 * inside of a signal handler.  POSIX says malloc() is not safe to call
+	 * in a signal handler; open_url calls malloc() and this messes up
+	 * checkpointing on SGI IRIX6 bigtime!!  so it is commented out for
+	 * now until we get rid of all mallocs in open_url() -Todd T, 2/97 */
+	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
@@ -653,7 +662,7 @@ Image::Write( const char *ckpt_file )
 				exit( 1 );
 			}
 		}	
-	}
+	// }  // this is the matching brace to the open_url; see comment above
 
 		// Write out the checkpoint
 	if( Write(fd) < 0 ) {
@@ -1002,6 +1011,12 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "Got SIGUSR2\n" );
 	}
 
+#undef WAIT_FOR_DEBUGGER
+#if defined(WAIT_FOR_DEBUGGER)
+	int		wait_up = 1;
+	while( wait_up )
+		;
+#endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		InRestart = TRUE;	// not strictly true, but needed in our saved data
@@ -1009,12 +1024,6 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to save signal state\n" );
 		condor_save_sigstates();
 		dprintf( D_ALWAYS, "Done saving signal state\n" );
-#endif
-#undef WAIT_FOR_DEBUGGER
-#if defined(WAIT_FOR_DEBUGGER)
-	int		wait_up = 1;
-	while( wait_up )
-		;
 #endif
 		SaveFileState();
 		MyImage.Save();
@@ -1069,6 +1078,12 @@ Checkpoint( int sig, int code, void *scp )
 			LONGJMP( Env, 1);
 		}
 	} else {					// Restart
+#undef WAIT_FOR_DEBUGGER
+#if defined(WAIT_FOR_DEBUGGER)
+	int		wait_up = 1;
+	while( wait_up )
+		;
+#endif
 		if ( do_full_restart ) {
 			scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 			patch_registers( scp );
@@ -1080,18 +1095,18 @@ Checkpoint( int sig, int code, void *scp )
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
 			RestoreFileState();
-			syscall( SYS_write, 1, "Done restoring files state\n", 27 );
+			dprintf( D_ALWAYS, "Done restoring files state\n" );
 		} else {
 			patch_registers( scp );
 		}
 #ifdef SAVE_SIGSTATE
-		syscall( SYS_write, 1, "About to restore signal state\n", 30 );
+		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		condor_restore_sigstates();
-		syscall( SYS_write, 1, "Done restoring signal state\n", 28 );
+		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
 		SetSyscalls( scm );
 		InRestart = FALSE;
-		syscall( SYS_write, 1, "About to return to user code\n", 29 );
+		dprintf( D_ALWAYS, "About to return to user code\n" );
 		return;
 	}
 }
@@ -1136,8 +1151,9 @@ ckpt()
 	int		scm;
 
 	dprintf( D_ALWAYS, "About to send CHECKPOINT signal to SELF\n" );
-	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	kill( getpid(), SIGTSTP );
+	SetSyscalls( scm );
 }
 
 /*
