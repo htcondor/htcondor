@@ -27,7 +27,7 @@ release_target(condor_summary,$(RELEASE_DIR)/bin,SET_GID_MODE)
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
-c_plus_target(condor_preen,preen.o,../condor_schedd/libqmgmt.a ../condor_classad/expr_lib.a $(LIB))
+c_plus_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a ../condor_classad/expr_lib.a $(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
 c_plus_target(condor_jobqueue,jobQueueCheck.o,$(LIB))
