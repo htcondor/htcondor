@@ -367,7 +367,7 @@ Directory::do_remove( const char* path, bool is_curr )
 		// the shell to do the dirty work.
 		// TODO: we should really look return val from system()!
 #ifdef WIN32
-		sprintf( buf,"rmdir /s /q %s", path );
+		sprintf( buf,"rmdir /s /q \"%s\"", path );
 #else
 		sprintf( buf,"/bin/rm -rf %s", path );
 #endif
