@@ -86,11 +86,13 @@ _Evaluate (EvalState &state, Value &val)
 			return false;
 
 		case EVAL_ERROR:
+		case PROP_ERROR:
 			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
+		case PROP_UNDEF:
 			val.SetUndefinedValue();
 			state.curAd = curAd;
 			return true;
@@ -109,34 +111,42 @@ _Evaluate (EvalState &state, Value &val)
 bool AttributeReference::
 _Evaluate (EvalState &state, Value &val, ExprTree *&sig )
 {
-	ExprTree	*tree;
+	ExprTree	*tree, *exprSig;
 	ClassAd		*curAd;
 	bool		rval;
 
-	// find the expression and the evalstate
 	curAd = state.curAd;
-	switch( FindExpr( state , tree , sig , true ) ) {
+	exprSig = NULL;
+	rval 	= true;
+
+	switch( FindExpr( state , tree , exprSig , true ) ) {
 		case EVAL_FAIL:
-			return false;
+			rval = false;
+			break;
 
 		case EVAL_ERROR:
-			val.SetErrorValue();
-			state.curAd = curAd;
-			return true;
+		case PROP_ERROR:
+			val.SetErrorValue( );
+			break;
 
 		case EVAL_UNDEF:
-			val.SetUndefinedValue();
-			state.curAd = curAd;
-			return true;
+		case PROP_UNDEF:
+			val.SetUndefinedValue( );
+			break;
 
 		case EVAL_OK:
-			rval = tree->Evaluate( state , val );
-			state.curAd = curAd;
-			return rval;
+			rval = tree->Evaluate( state, val );
+			break;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
 	}
-	return false;
+	if(!rval || !(sig=new AttributeReference(exprSig,attributeStr,absolute))){
+		delete exprSig;
+		sig = NULL;
+		return( false );
+	}
+	state.curAd = curAd;
+	return rval;
 }
 
 
@@ -166,7 +176,6 @@ int AttributeReference::
 FindExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 {
 	ClassAd 	*current=NULL;
-	ExprTree	*sigXpr = NULL;
 	Value		val;
 	bool		rval;
 
@@ -178,27 +187,20 @@ FindExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 		current = absolute ? state.rootAd : state.curAd;
 	} else {
 		// "expr.attr"
-		rval=wantSig?expr->Evaluate(state,val,sigXpr):expr->Evaluate(state,val);
+		rval=wantSig?expr->Evaluate(state,val,sig):expr->Evaluate(state,val);
 		if( !rval ) {
 			return( EVAL_FAIL );
 		}
 
 		if( val.IsUndefinedValue( ) ) {
-			sig = sigXpr;
-			return( EVAL_UNDEF );
+			return( PROP_UNDEF );
+		} else if( val.IsErrorValue( ) ) {
+			return( PROP_ERROR );
 		}
+
 		if( !val.IsClassAdValue( current ) ) {
-			if( wantSig ) {
-				if(!(sig=new AttributeReference(sigXpr,attributeStr,absolute))){
-					return( EVAL_FAIL );
-				}
-			}
 			return( EVAL_ERROR );
 		}
-	}
-
-	if( wantSig ) {
-		sig = new AttributeReference( sigXpr, attributeStr, absolute );
 	}
 
 	// lookup with scope; this may side-affect state
