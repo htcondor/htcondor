@@ -1389,6 +1389,30 @@ control state or activity transitions within the
   section~\ref{param:SubsysAddressFile} as
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
+\item[\Macro{NUM\_CPUS}] \label{param:NumCpus}
+  This macro can be used to ``lie'' to the startd about how many CPUs
+  your machine has.
+  If you set this, it will override Condor's automatic computation of
+  the number of CPUs in your machine, and Condor will use whatever
+  integer you specify here. 
+  In this way, you can allow multiple Condor jobs to run on a
+  single-CPU machine by having that machine treated like an SMP
+  machine with multiple CPUs, which could have different Condor jobs
+  running on each one.
+  Or, you can have an SMP machine advertise more virtual machines than
+  it has CPUs.
+  However, using this parameter will hurt the performance of the jobs,
+  since you would now have multiple jobs running on the same CPU,
+  competing with each other.
+  The option is only meant for people who specifically want this
+  behavior and know what they are doing.  
+  It is disabled by default.
+
+  \Note This setting cannot be changed with a simple reconfig (either
+  by sending a SIGHUP or using \Condor{reconfig}.
+  If you change this, you must restart the \Condor{startd} for the
+  change to take effect.
+
 \end{description}
 
 These macros only apply to the startd when it is running on an
