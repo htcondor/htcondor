@@ -1636,9 +1636,10 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-	if ( !stricmp( method, "GSS_AUTHENTICATION" ) ||
-		 !stricmp( method, "X509" ) ) {
-		return CAUTH_X509;
+	if (!stricmp( method, "GSI" ) || 
+        !stricmp( method, "GSS_AUTHENTICATION" ) ||
+        !stricmp( method, "X509" ) ) {// For backward compatibility reason
+		return CAUTH_GSI;
 	} else if ( !stricmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
 	} else if ( !stricmp( method, "FS" ) ) {
