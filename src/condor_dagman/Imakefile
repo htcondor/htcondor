@@ -5,9 +5,18 @@ all_target($(NAME) t_helper condor_submit_dag)
 HELPER_FLAGS = -DBUILD_HELPER
 #endif
 
+/* AJR: Somehow, the old flags here prevented us from finding the ClassAd
+        include files. I am not sure why, but this works well.
+        The ClassAd include files are not directly needed by DAGMan, but 
+        get pulled in from something else.
+*/
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_daemon_core.V6 \
+	-Wall $(HELPER_FLAGS)
+/*
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-I../condor_daemon_core.V6 \
 	-I../condor_includes -I- -Wall $(HELPER_FLAGS)
+*/
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 TOOL_LIB = $(STD_LIBS)
