@@ -93,7 +93,11 @@ int TerminateCluster ( DBM *Q, int cluster, int status );
 int TerminateProc ( DBM *Q, PROC_ID *pid, int status );
 CLUSTER_LIST * fetch_cluster_list ( DBM *Q );
 int data_too_big ( int size );
+#if defined(LINUX)
+DBM * dbm_open ( const char *file, int flags, int mode );
+#else
 DBM * dbm_open ( char *file, int flags, int mode );
+#endif
 int dbm_store ( DBM *Q, datum key, datum data, int flags );
 datum dbm_fetch ( DBM *Q, datum key );
 int dbm_delete ( DBM *Q, datum key );
