@@ -45,6 +45,8 @@ PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
 	cd condor_##obj_name; make $(SMP_FLAGS)						@@\
 release:: condor_##obj_name								@@\
 	cd condor_##obj_name; make release					@@\
+stripped:: condor_##obj_name								@@\
+	cd condor_##obj_name; make stripped					@@\
 clean:: condor_##obj_name								@@\
 	cd condor_##obj_name; make clean					@@\
 tags:: condor_##obj_name								@@\
@@ -177,6 +179,33 @@ clean:: 															@@\
 ##release##:: dir##/##lib
 #endif
 
+#if IS_V5 || IS_V6
+#define strip_target(file, dir, mode )								@@\
+##dir##/##file##: file												@@\
+	/bin/rm -f dir##/##file											@@\
+	cp file dir												@@\
+	strip dir##/##file											@@\
+	chmod mode dir##/##file											@@\
+##stripped##:: dir##/##file
+#endif
+
+#if IS_V5 || IS_V6
+#define strip_copy_target(src, dir, file, mode )						@@\
+##dir##/##file##: src												@@\
+	/bin/rm -f dir##/##file											@@\
+	cp src dir##/##file											@@\
+	chmod mode dir##/##file											@@\
+##stripped##:: dir##/##file
+#endif
+
+#if IS_V5 || IS_V6
+#define strip_library(lib, dir )									@@\
+##dir##/##lib##: lib												@@\
+	COPY_LIBRARY( lib, dir##/##lib )								@@\
+	RANLIB_TOUCH( dir##/##lib )										@@\
+##stripped##:: dir##/##lib
+#endif
+
 
 #if IS_SPARC_SUNOS41
 #define	pure_c_plus_target(program, objlist, libs)	@@\
@@ -268,6 +297,32 @@ $(RELEASE_DIR)/##dir##/##dest##: src				@@\
 	cp src $(RELEASE_DIR)/##dir##/##dest			@@\
 	chmod mode $(RELEASE_DIR)/##dir##/##dest
 #endif
+
+/*
+** Stripped target is released by creating a hard link to another. 
+*/
+#ifndef link_tostrip_target
+#define link_tostrip_target(src,dir,dest)	@@\
+stripped:: $(STRIP_DIR)/##dir##/##dest##			@@\
+													@@\
+$(STRIP_DIR)/##dir##/##dest##: src				@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
+	ln src $(STRIP_DIR)/##dir##/##dest		
+#endif
+
+
+/*
+** Stripped target is released by creating a symbolic link to another.
+*/
+#ifndef symlink_tostrip_target
+#define symlink_tostrip_target(src,dir,dest)	@@\
+stripped:: $(STRIP_DIR)/##dir##/##dest##			@@\
+													@@\
+$(STRIP_DIR)/##dir##/##dest##: src				@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
+	ln -s src $(STRIP_DIR)/##dir##/##dest			
+#endif
+
 
 /*
 ** Build a tags file for a source directory.
