@@ -27,32 +27,78 @@ machines in your pool to the same version.
 \subsubsection{\label{sec:New-6-1-8}Version 6.1.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+New Features:
+
 \begin{itemize}
 
-\item Added \OptArg{-r}{minutes}} option to daemonCore to have the
-daemon gracefully shut down after <minutes> minutes.
+\item Added full support for Linux 2.0.x and 2.2.x kernels using
+libc5, glibc20 and glibc21.
+This includes support for RedHat 6.0, Debian 2.1 and other popular
+Linux distributions.
+Whereas the Linux machines had once been fragmented across libc5 and
+glibc, they have now been reunified.
+This means there is no longer any need for the ``LINUX-GLIBC'' OpSys
+setting in your pool: all machines will now show up as ``LINUX''.
+Part of this reunification process was the removal of dynamically
+linked user jobs on Linux.
+\Condor{compile} now forces static linking of your Standard Universe
+Condor jobs. 
+Also, please use \Condor{compile} on the same machine on which you
+compiled your object files.
 
-\item Added full support for Linux 2.0.x and 2.2.x kernels using libc5,
-glibc20 and glibc21. Whereas the linux machines had once been fragmented
-across libc5 and glibc, they have been reunified again. Part of this
-reunification process was the removal of shared library support from
-Linux. Also, please use \Condor{compile} on the same machine on which
-you compiled your object files.
+\item Added \Condor{qedit} utility to allow users to modify job
+attributes after submission.  See the new manual page on
+page~\pageref{man-condor-qedit}.
 
-\item Fixed a bug in \Condor{shadow} that would send incorrect job
-completion mail under Linux.
+\item Added \OptArg{-runfor}{minutes}} option to daemonCore to have
+the daemon gracefully shut down after the given number of minutes.
 
 \item Added support for statfs(2) and fstatfs(2) in user jobs. We support 
 only the fields
 \textit{f\_bsize, f\_blocks, f\_bfree, f\_bavail, f\_files, f\_ffree} from
 the structure statfs.
 
+\item Added the \Opt{-direct} option to \Condor{status}.
+After you give \Opt{-direct}, you supply a hostname, and
+\Condor{status} will query the \Condor{startd} on the specified host
+and display information directly from there, instead of querying the
+\Condor{collector}.
+See the manual page on page~\pageref{man-condor-submit} for details. 
+
+\item Users can now define \Macro{NUM\_CPUS} to override the automatic
+computation of the number of CPUs in your machine.
+Using this config setting can cause unexpected results, and is not
+recommended. 
+This feature is only provided for sites that specifically want this
+behavior and know what they are doing.
+
+\item The \Opt{-set} and \Opt{-rset} options to \Condor{config\_val}
+have been changed to allow administrators to set both macros and
+expressions.
+Previously, \Condor{config\_val} assumed you wanted to set
+expressions.
+Now, these two options each take a single argument, the string
+containing exactly what you would put into the config file, so you can
+specify you want to create a macro by including an ``='' sign, or an
+expression by including a ``:''.
+See section~\ref{sec:Intro-to-Config-Files} on
+page~\pageref{sec:Intro-to-Config-Files} for details on macros
+vs. expressions.
+See the \Condor{config\_val} man page on
+page~\pageref{man:condor-config-val} for details on
+\Condor{config\_val}.  
+
+\end{itemize}
+
+Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in \Condor{shadow} that would send incorrect job
+completion email under Linux.
+
 \item Fixed a bug in the remote system call of fchdir(2) that caused
 a garbage file descriptor to be used in Standard Universe jobs.
-
-\item Added \Condor{qedit} utility to allow users to modify job
-attributes after submission.  See the new manual page on
-page~\pageref{man-condor-qedit}.
 
 \item Fixed a bug in the \Condor{shadow} which was causing \Condor{q}
 \Opt{-goodput} to display incorrect values for some jobs.
@@ -64,12 +110,8 @@ handling for the answers of a few different questions.
 In addition, we now avoid one installation step in cases were it is
 not needed. 
 
-\item Added the \Opt{-direct} option to \Condor{status}.
-After you give \Opt{-direct}, you supply a hostname, and
-\Condor{status} will query the \Condor{startd} on the specified host
-and display information directly from there, instead of querying the
-\Condor{collector}.
-See the manual page on page~\pageref{man-condor-submit} for details. 
+\item Fixed a rare race condition that could delay the completion of
+large clusters of short running jobs. 
 
 \item Added more checking to the various arguments that might be
 passed to \Condor{status}, so that in the case of bad input,
@@ -78,15 +120,15 @@ performing a segmentation fault.
 Also, when you use the \Opt{-sort} option, \Condor{status} will only
 display ClassAds where the attributes you use to sort are defined.
 
-\item Users can now define \Macro{NUM\_CPUS} to override the automatic
-computation of the number of CPUs in your machine.
-Using this config setting can cause unexpected results, and is not
-recommended. 
-This feature is only provided for sites that specifically want this
-behavior and know what they are doing.
+\item Fixed a bug in the handling of the config files created by
+using the \Opt{-set} or \Opt{-rset} options to \Condor{config\_val}.
+Previously, if you manually deleted the files that were created, you
+could cause the affected Condor daemon to have a segmentation fault.
+Now, the daemons simply exit with a fatal error but still have a
+chance to clean up.
 
-\item Fixed a rare race condition that could delay the completion of
-large clusters of short running jobs. 
+\item Fixed a bug in the \Opt{-negotiator} option for most Condor
+tools that was causing it to get the wrong address.
 
 \end{itemize}
 
