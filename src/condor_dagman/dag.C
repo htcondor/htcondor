@@ -524,7 +524,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
             fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
                      job->_scriptPre->GetCmd());
         }
-        if (job->_scriptPre != NULL) {
+        if (job->_scriptPost != NULL) {
             fprintf (fp, "SCRIPT POST %s %s\n", job->GetJobName(),
                      job->_scriptPost->GetCmd());
         }
