@@ -175,6 +175,18 @@ public:
   */
   int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
 
+  /** Create a partition collection, as a child of another collection.
+      A partiton collection defines a partition based on a set of attributes. For
+      each distinct set of values (corresponding to these attributes), a new
+      child collection will be created, which will contain all the class-ads from the
+      parent collection that have these values. The partition collection itself doesn't
+      hold any class-ads, only its children do (the iteration methods for getting
+      child collections can be used to retrieve them).
+      @param ParentCoID The ID of the parent collection.
+      @param Rank The rank expression. Determines how the ads will be ordered in the child collections.
+      @param AttrList The set of attribute names used to define the partition.
+      @return the ID of the new collection, or -1 in case of failure.
+  */
   int CreatePartition(int ParentCoID, const MyString& Rank, StringSet& AttrList);
 
   /** Deletes a collection and all of its descendants from the collection tree.
