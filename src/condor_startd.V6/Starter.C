@@ -69,18 +69,18 @@ Starter::settype( int type )
 
 	if( type == 0 ) {
 		sprintf( buf, "STARTER" );
-		if( tmp = param(buf) ) {
+		if( (tmp = param(buf)) ) {
 			s_name = tmp;
 		}
 	}
 	if( ! s_name ) {
 		sprintf( buf, "STARTER_%d", type );
-		if( tmp = param(buf) ) {
+		if( (tmp = param(buf)) ) {
 			s_name = tmp;
 		} else {
 				// Try to be backwards compatible.
 			sprintf( buf, "ALTERNATE_STARTER_%d", type );
-			if( tmp = param(buf) ) {
+			if( (tmp = param(buf)) ) {
 				s_name = tmp;
 			}
 		}
@@ -98,7 +98,7 @@ Starter::settype( int type )
 #endif
 
 	sprintf( buf, "STARTER_%d_IS_DC", type );
-	if( tmp = param(buf) ) {
+	if( (tmp = param(buf)) ) {
 		if( *tmp == 't' || *tmp == 'T' ) {
 			s_is_dc = TRUE;
 		}
