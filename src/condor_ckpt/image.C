@@ -52,7 +52,7 @@ extern "C" void condor_restore_sigstates();
 #if defined(OSF1)
 	extern "C" unsigned int htonl( unsigned int );
 	extern "C" unsigned int ntohl( unsigned int );
-#elif defined(HPUX9)
+#elif defined(HPUX)
 #	include <netinet/in.h>
 #elif defined(Solaris) && defined(sun4m)
     #define htonl(x)        (x)
