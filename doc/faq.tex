@@ -95,7 +95,7 @@ that have the right packages installed?}
 
 This is a two-step process.
 First, you need to tell the machines to report that they have special
-software instaled, and second, you need to tell the jobs to require
+software installed, and second, you need to tell the jobs to require
 machines that have that software.
 
 To tell the machines to report the presence of special software, first
@@ -106,7 +106,7 @@ add a parameter to their configuration files like so:
 And then, if there are already STARTD\_EXPRS defined in that file, add
 HAS\_MY\_SOFTWARE to them, or, if not, add the line:
 
-\begin{verbatim}STARTD_EXPRS = HAS_MY_SOFTWARE\end{verbatim}
+\begin{verbatim}STARTD_EXPRS = HAS_MY_SOFTWARE, $(STARTD_EXPRS)\end{verbatim}
 
 \Note For these changes to take effect, each \Condor{startd} you update
 needs to be reconfigured with \Condor{reconfig} -startd.
@@ -234,6 +234,33 @@ and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
+\subsection{Why do my vanilla jobs keep cycling between suspended and
+unsuspended?}
+\index{vanilla jobs!cycling between suspended and unsuspended}
+
+This is a load sampling error that Condor performs when starting a many
+process vanilla job with heavy initial load.
+Condor mistakenly decides that the load on the machine has gotten too
+high while the job is in the initialization phase and kicks the job off
+the machine.
+
+What is needed is a way for Condor to check to see if the load of the machine
+has been high over a certain period of time. There is a startd attribute,
+\AdAttr{CpuBusyTime} that can be used for this purpose. This macro
+returns the time \MacroUNI{CpuBusy}(usually defined in the default
+config file) has been true. \MacroUNI{CpuBusy} is defined in terms of
+non-Condor load.
+
+To take advantage of this macro, you can use it in your \Macro{SUSPEND}\ macro.
+Here is an example:
+\begin{verbatim}
+SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
+\end{verbatim}
+
+The above policy says to only suspend the job if the cpu has been busy
+with non-Condor load at least three minutes and it has been at least 90
+seconds since the start of the job.
+
 \section{Condor on Windows NT / Windows 2000}
 
 \subsection{Will Condor work on a network of mixed Unix and NT machines?}
@@ -311,6 +338,16 @@ again.
 Nothing special needs to be done after the central manager is brought
 back online.
 
+\subsection{When I ssh/telnet to a machine to check particulars of how
+Condor is doing something, it is always vacating or unclaimed when I
+know a job had been running there!}
+
+Depending on how your policy is set up, Condor will track \emph{any} tty
+on the machine for the purpose of determining if a job is to be vacated
+or suspended on the machine. It could be the case that after you ssh
+there, Condor notices activity on the tty allocated to your connection
+and then vacates the job.
+
 \index{crashes|)}
 \index{recovery from crashes|)}
 
@@ -359,6 +396,24 @@ to \Email{condor-admin@cs.wisc.edu} and we can provide you with more
 information.
 
 \index{Globus|)}
+
+\subsection{What is the process for upgrading from 6.0 to 6.2?}
+\index{upgrading!6.0 to 6.2}
+
+The usual process for upgrading is to copy the original 6.0 binaries
+to $<$name$>$.old versions and then copy the 6.2 binaries over the 6.0
+binaries. The \Condor{master} will automatically(in about 5 minutes)
+notice that new binaries have been installed and exec them. Please be sure
+to upgrade the config files to match the 6.2 version and pay attention
+to copying over your site's specific policy to the new config file. Some
+macros and their meanings have changed and need to be addressed in the
+upgrade, you may find them in section~\ref{sec:V60-Policy-diffs} of the
+manual.
+
+One special note: You must relink your 6.0 standard universe jobs with
+the 6.2 supplied libraries. Backwards compatibility to 6.0 from 6.2 had
+been intentionally broken because of an evolution of features that the
+standard universe now supports.
 
 \subsection{My question isn't in the FAQ!}
 
