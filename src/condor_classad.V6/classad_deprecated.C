@@ -32,6 +32,8 @@
 ClassAd::
 ClassAd( FILE *file, char *delimitor, int &isEOF, int&error, int &empty )
 {
+	nodeKind = CLASSAD_NODE;
+
 	char		buffer[ATTRLIST_MAX_EXPRESSION];
 	int			delimLen = strlen( delimitor );
 
@@ -383,11 +385,11 @@ fPrint( FILE *f )
 void ClassAd::
 dPrint( int level )
 {
-	PrettyPrint pp;
-	pp.SetOldClassAd( true );
+	ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
 	string buffer;
 
-	pp.Unparse( buffer, this );
+	unp.Unparse( buffer, this );
 	dprintf( level, "%s", buffer.c_str( ) );
 
 	return;
