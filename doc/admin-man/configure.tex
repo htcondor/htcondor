@@ -1215,7 +1215,21 @@ These macros control the \Condor{master}.
         SCHEDD          = $(SBIN)/condor_schedd
 \end{verbatim}
   These are most often defined relative to the \MacroU{SBIN} macro.
-  
+
+\item[\Macro{DAEMONNAME\_ENVIRONMENT}] \label{param:DaemonNameEnvironment}
+  For each subsystem defined in \Macro{DAEMON\_LIST}, you may specify
+  changes to the environment that daemon is started with by setting
+  \Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of
+  a daemon listed in \Macro{DAEMON\_LIST}. It should be set to a semicolon
+  delimited list of name=value pairs. For example, if you wish to redefine the
+  \Env{TMP} and \Env{CONDOR\_CONFIG} environment variables seen by the
+  \Condor{schedd}, you could place the following in the config file:
+\begin{verbatim}
+        SCHEDD_ENVIRONMENT = TMP=/new/value;CONDOR_CONFIG=/special/config
+\end{verbatim}
+  When the \Condor{schedd} was started by the \Condor{master}, it would
+  see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
+
 \item[\Macro{SUBSYS\_ARGS}] \label{param:SubsysArgs} This macro
   allows the specification of additional command line arguments for any
   process spawned by the \Condor{master}.
