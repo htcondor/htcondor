@@ -31,12 +31,60 @@ specify them properly.
 
 \noindent Bugs Fixed:
 \begin{itemize}
+
 \item The \MacroNI{FILESYSTEM\_DOMAIN} and \MacroNI{UID\_DOMAIN} settings were
-not being automatically appened to the requriements of a Vanilla-universe job,
-possibly causing it to run on machines where it will not sucessfully run. This
+not being automatically append to the requirements of a Vanilla-universe job,
+possibly causing it to run on machines where it will not successfully run. This
 has been fixed.
+
 \item The getdirentries call was not being trapped, causing a few applications
 to fail running inside of Condor.
+
+\item When the NT shadow and the Unix shadow were used in conjunction with each
+other during the submission of heterogeneous jobs, they conflicted in where 
+they should store their Condor internal files. This would cause extremely
+long hangs where the job was listed as running but no job actually started.
+This has been fixed and now you can mix the NT shadow and Unix shadow
+together just fine during heterogeneous submits.
+
+\item Numerous additions/clarifications to sections of the manual to bring
+the manual up to date with the source base.
+
+\item Fixed a bug where if you set \Macro{MAX\_JOBS\_RUNNING} to zero in the
+config files, the schedd would fail with a floating point error.
+
+\item PVM support for Solaris 2.8 was mistakenly turned off in 6.2.1,
+it has been turned back on again.
+
+\item Added exit status of Condor tools and daemons to the manual.
+
+\item Fixed a bug in the schedd where it would segfault if it manipulated
+class ads in a certain way.
+
+\item Fixed \Syscall{stat} and \Syscall{lstat} to ask the shadow where the
+file was that it was trying to locate instead of assuming it was always going
+to be remote I/O.
+
+\item Fixed a bug where Condor would incorrectly inform you that it
+didn't have read/write permission on a file located in NFS when you
+actually did have permission to read/write it.
+
+\item Removed mention of \Condor{master\_off} since it was deprecated a
+long time ago and is not available anymore.
+
+\item Removed mention of \Condor{reconfig\_schedd} since it was deprecated a
+long time ago and is not available anymore.
+
+\item Fixed a bug where the schedd would occasionally EXCEPT with an
+``\Macro{ATTR\_JOB\_STATUS} not found'' error soon after a \Condor{rm}
+command had been invoked.
+
+\item Fixed a bug in the Negotiator and the Schedd where it would segfault
+during reading of a corrupted log file.
+
+\item Fixed a bug where we used to EXCEPT if we couldn't email the
+administrator of the pool. We now do not EXCEPT anymore.
+
 \end{itemize}
 
 \noindent Known Bugs:
