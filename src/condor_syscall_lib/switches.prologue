@@ -197,8 +197,11 @@
 
 #if defined(OSF1) || defined(AIX32)
 #	define semctl __hide_semctl
+#	define semop __hide_semop
 #	include <sys/sem.h>
 #	undef semctl
+#	undef semop
+	int semop(int, struct sembuf *, unsigned int );
 	int semctl(int , int , int , void *);
 #endif
 
