@@ -41,6 +41,7 @@ public:
 	BOOLEAN contains_anycase( const char * );
 	BOOLEAN contains_withwildcard( const char *str );				
 	BOOLEAN contains_anycase_withwildcard( const char * );
+	const char *  string_withnetwork( const char * );
     const char *  string_anycase_withwildcard( const char *);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
