@@ -765,6 +765,9 @@ Daemon::locate( void )
 	case DT_CREDD:
 	  rval = getDaemonInfo( "CREDD", ANY_AD, false );
 	  break;
+	case DT_STORK:
+	  rval = getDaemonInfo( "STORK", ANY_AD, false );
+	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
@@ -839,7 +842,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 					 buf.Value(), specified_host );
 			free(specified_host);
 		}
-	} else {
+	}
+	if( _name ) {
 		// See if daemon name containts a port specification
 		_port = getPortFromAddr( _name );
 		if ( _port >= 0 ) {
