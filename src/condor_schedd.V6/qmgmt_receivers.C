@@ -55,8 +55,9 @@ do_Q_request(AuthSock *syscall_sock)
 	int	rval;
 	int auth = 1;
 
-	if ( !CondorCertDir ) 
+	if ( !CondorCertDir ) {
 		auth = 0;
+	}
 
 	syscall_sock->decode();
 
@@ -68,6 +69,11 @@ do_Q_request(AuthSock *syscall_sock)
 
 	case CONDOR_InitializeConnectionAuth:
 	{
+		char *owner=NULL;
+		// XXX: shouldn't need a fixed size here -- at least keep
+		// it off the stack to avoid overflow attacks
+		char *tmp_file=(char *)malloc(_POSIX_PATH_MAX);
+
 		qmgmt_sock->end_of_message();
 		qmgmt_sock->encode();
 		qmgmt_sock->code( auth ); 
@@ -76,9 +82,51 @@ do_Q_request(AuthSock *syscall_sock)
 			int time = qmgmt_sock->timeout(60 * 5); //wait 5 min for user to type
       	assert( qmgmt_sock->authenticate() );
 			qmgmt_sock->timeout(time);
+
+			//lazy alloc-- owner can't be longer than clientname
+			assert( qmgmt_sock->GSSClientname != NULL );
+			owner = strdup( qmgmt_sock->GSSClientname );
+			char *tmp;
+			tmp = strchr( qmgmt_sock->GSSClientname, '=' );
+			if ( tmp ) {
+			   tmp++;
+			   sprintf( owner, "%*.*s", strcspn( tmp, "@" ), 
+						strcspn( tmp, "@" ), tmp );
+			}
+			else {
+			   strcpy( owner, qmgmt_sock->GSSClientname );
+			}
+			dprintf( D_FULLDEBUG,"accepted GSS connection for %s\n", 
+					qmgmt_sock->GSSClientname );
 		}
-		syscall_sock->decode();
-		//allow code to fall thru to CONDOR_InitializeConnection!!
+		else {
+			syscall_sock->decode();
+			assert( syscall_sock->code(owner) );
+			assert( syscall_sock->end_of_message() );
+		}
+
+		//this is similar to CONDOR_InitializeConnection, could combine??
+		int terrno;
+
+		errno = 0;
+		rval = InitializeConnection( owner, tmp_file, auth );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			if ( !auth ) {
+				assert( syscall_sock->code(tmp_file) );
+			}
+		}
+		free( (char *)tmp_file );
+		free( (char *)owner );
+		assert( syscall_sock->end_of_message() );
+		return 0;
 	}
 
 	case CONDOR_InitializeConnection:
@@ -102,12 +150,12 @@ do_Q_request(AuthSock *syscall_sock)
 		if( rval < 0 ) {
 			assert( syscall_sock->code(terrno) );
 		}
-		if( rval >= 0 ) {
+		if( rval >= 0  ) {
 			assert( syscall_sock->code(tmp_file) );
 		}
 		free( (char *)tmp_file );
 		free( (char *)owner );
-		assert( syscall_sock->end_of_message() );;
+		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
 
