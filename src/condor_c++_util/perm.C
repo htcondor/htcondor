@@ -524,20 +524,24 @@ bool perm::init( const char *accountname, char *domain )
 	{
 		Domain_name = new char[ strlen(domain) +1 ];
 		strcpy( Domain_name, domain );
-	} else {
-		Domain_name = NULL;
-	}
-
-	// now concatenate our domain and account name for LookupAccountName()
-	// so that we have domain\username
-	if ( 0 > snprintf(qualified_account, 1023, "%s\\%s",
+	
+		// now concatenate our domain and account name for LookupAccountName()
+		// so that we have domain\username
+		if ( 0 > snprintf(qualified_account, 1023, "%s\\%s",
 			   	domain, accountname) ) {
 		
-		dprintf(D_ALWAYS, "Perm object: domain\\account (%s\\%s) "
+			dprintf(D_ALWAYS, "Perm object: domain\\account (%s\\%s) "
 				"string too long!\n", domain, accountname );
-		return false;
+			return false;
+		}
+
+	} else {
+
+		// no domain specified, so just copy the accountname.
+		Domain_name = NULL;
+		strncpy(qualified_account, accountname, 1023);
 	}
-	
+
 	if ( !LookupAccountName( NULL,			// System
 		qualified_account,					// Account name
 		psid, &sidBufferSize,				// Sid
