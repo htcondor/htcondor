@@ -757,8 +757,6 @@ static void async_handler( int s )
 			}
 		}
 	}
-
-	signal( SIGIO, async_handler );
 }
 
 /*
@@ -775,12 +773,10 @@ static void make_fd_async( int fd )
 
 	#if defined(FIOSSAIOOWN)
 		ioctl( fd, FIOSSAIOOWN, &pid );
-		fprintf(stderr,"FIOSSAIOOWN\n");
 	#endif
 
 	#if defined(F_SETOWN)
 		fcntl( fd, F_SETOWN, pid);
-		fprintf(stderr,"F_SETOWN\n");
 	#endif
 
 	/* make the fd asynchronous -- signal when ready */
@@ -788,13 +784,11 @@ static void make_fd_async( int fd )
 	#if defined(O_ASYNC)
 		bits = fcntl( fd, F_GETFL, 0 );
 		fcntl( fd, F_SETFL, bits | O_ASYNC );
-		fprintf(stderr,"O_ASYNC\n");
 	#endif
 
 	#if defined(FASYNC)
 		bits = fcntl( fd, F_GETFL, 0 );
 		fcntl( fd, F_SETFL, bits | FASYNC );
-		fprintf(stderr,"FASYNC\n");
 	#endif
 
 	#if defined(FIOASYNC) && !defined(linux)
@@ -802,12 +796,10 @@ static void make_fd_async( int fd )
 		   _synchronous_ I/O.  Bug!  Fortunately, FASYNC
 		   is defined in these cases. */
 		ioctl( fd, FIOASYNC, &on );
-		fprintf(stderr,"FIOASYNC\n");
 	#endif
 
 	#if defined(FIOSSAIOSTAT)
 		ioctl( fd, FIOSSAIOSTAT, &on );
-		fprintf(stderr,"FIOSSASIOSTAT\n");
 	#endif
 }
 
@@ -837,6 +829,7 @@ This function adds a new entry to the handler table and marks the fd as asynchro
 static int install_async_handler( int fd, CedarHandler *handler, Stream *stream )
 {
 	int i;
+	struct sigaction act;
 
 	if( !handler_table ) {
 		table_size = sysconf(_SC_OPEN_MAX);
@@ -853,7 +846,11 @@ static int install_async_handler( int fd, CedarHandler *handler, Stream *stream 
 			stream_table[i] = 0;
 		}
 
-		signal( SIGIO, async_handler );
+		act.sa_handler = async_handler;
+		sigfillset(&act.sa_mask);
+		act.sa_flags = 0;
+
+		sigaction( SIGIO, &act, 0 );
 	}
 
 	handler_table[fd] = handler;
