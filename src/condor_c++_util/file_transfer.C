@@ -348,7 +348,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	// Set OutputFiles to be ATTR_TRANSFER_OUTPUT_FILES if specified.
 	// If not specified, set it to send whatever files have changed.
-	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR.
+	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR, if we're not
+	// streaming them, and if we're using a fixed list of output
+	// files.
 	dynamic_buf = NULL;
 	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &dynamic_buf) == 1) {
 		OutputFiles = new StringList(dynamic_buf,",");
@@ -359,24 +361,38 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		upload_changed_files = true;
 	}
 	// and now check stdout/err
-	if (Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1) {
-		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf) ) {
-			if ( OutputFiles ) {
-				if ( !OutputFiles->file_contains(buf) )
-					OutputFiles->append(buf);
-			} else
+	int streaming = 0;
+	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1 ) {
+		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
+		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
+				// not streaming it, add it to our list if we're not
+				// just going to transfer anything that was changed.
+				// only add to list if not NULL_FILE (i.e. /dev/null)
+			if( OutputFiles ) {
+				if( !OutputFiles->file_contains(buf) ) {
+					OutputFiles->append( buf );
+				}
+			} else {
 				OutputFiles = new StringList(buf,",");
+			}
 		}
 	}
-	if (Ad->LookupString(ATTR_JOB_ERROR, buf) == 1) {
-		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(buf) ) {
-			if ( OutputFiles ) {
-				if ( !OutputFiles->file_contains(buf) )
-					OutputFiles->append(buf);
-			} else
+		// re-initialize this flag so we don't use stale info from
+		// ATTR_STREAM_OUTPUT if ATTR_STREAM_ERROR isn't defined
+	streaming = 0;
+	if( Ad->LookupString(ATTR_JOB_ERROR, buf) == 1 ) {
+		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
+		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
+				// not streaming it, add it to our list if we're not
+				// just going to transfer anything that was changed.
+				// only add to list if not NULL_FILE (i.e. /dev/null)
+			if( OutputFiles ) {
+				if( !OutputFiles->file_contains(buf) ) {
+					OutputFiles->append( buf );
+				}
+			} else {
 				OutputFiles = new StringList(buf,",");
+			}
 		}
 	}
 
