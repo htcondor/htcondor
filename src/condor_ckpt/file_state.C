@@ -850,7 +850,7 @@ OpenFileTable::Restore()
 
 			  
 			  if( pos != f->offset ) {
-			    dprintf( D_ALWAYS,  "ioserver lseek: %s", strerror(errno) );
+			    dprintf( D_ALWAYS,  "ioserver lseek: %s\n", strerror(errno) );
 				Suicide();
 			  }
 			}
@@ -2075,7 +2075,7 @@ open( const char *path, int flags, ... )
 	} else {
 		status = REMOTE_syscall( CONDOR_file_info, path, &pipe_fd, local_path );
 		if( status < 0 ) {
-			dprintf( D_ALWAYS, "CONDOR_file_info failed" );
+			dprintf( D_ALWAYS, "CONDOR_file_info failed\n" );
 			Suicide();
 		}
 		switch( status ) {
