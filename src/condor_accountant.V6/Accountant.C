@@ -31,6 +31,7 @@
 #include "condor_config.h"
 #include "condor_state.h"
 #include "condor_attributes.h"
+#include "enum_utils.h"
 #include "classad_log.h"
 #include "string_list.h"
 
@@ -60,6 +61,7 @@ Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
+  DiscountSuspendedResources = false;
   GroupNamesList = NULL;
 }
 
@@ -161,6 +163,9 @@ void Accountant::Initialize()
   } else {
 	  EXCEPT( "SPOOL not defined!" );
   }
+
+  DiscountSuspendedResources = param_boolean(
+                             "NEGOTIATOR_DISCOUNT_SUSPENDED_RESOURCES",false);
 
   dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
   dprintf(D_ACCOUNTANT,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
@@ -876,7 +881,17 @@ int Accountant::IsClaimed(ClassAd* ResourceAd, MyString& CustomerName) {
 		return 0;
 	  }
   }
-
+  if(DiscountSuspendedResources) {
+    char RemoteActivity[512];
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+       dprintf(D_ALWAYS, "Could not lookup remote activity\n");
+       return 0;
+    }
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+       dprintf(D_ACCOUNTANT, "Machine is claimed but suspended\n");
+       return 0;
+    }
+  }
   CustomerName=RemoteUser;
   return 1;
 
@@ -914,6 +929,18 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
     return 0;
   }
 
+  if(DiscountSuspendedResources) {
+    char RemoteActivity[512];
+    if(!ResourceAd->LookupString(ATTR_ACTIVITY, RemoteActivity)) {
+        dprintf(D_ALWAYS, "Could not lookup remote activity\n");
+        return 0;
+    }
+    if (!stricmp(getClaimStateString(CLAIM_SUSPENDED), RemoteActivity)) { 
+       dprintf(D_ACCOUNTANT, "Machine claimed by %s but suspended\n", 
+       RemoteUser);
+       return 0;
+    }
+  }
   return 1;
 
 }
