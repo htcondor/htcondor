@@ -180,7 +180,10 @@ update (ClassAd *ad)
 {
 	char state[32];
 
-	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+//	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+	if ( !ad->EvaluateAttrString( ATTR_STATE, state, 32 ) ) {	//NAC
+		return 0;												//NAC
+	}															//NAC
 	switch (string_to_state (state))
 	{
 		case owner_state: 		owner++; 		break;
@@ -233,13 +236,32 @@ update (ClassAd *ad)
 	State s;
 
 	// if ATTR_STATE is not found, abort this ad
-	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+//	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+	if( !ad->EvaluateAttrString( ATTR_STATE, state, 32 ) ) {// NAC
+		return 0;											// NAC
+	}														// NAC
 
 	// for the other attributes, assume zero if absent
-	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
-	if (!ad->LookupInteger(ATTR_DISK,  attrDisk)){ badAd = true; attrDisk = 0;}
-	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
-	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
+//	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
+	if( !ad->EvaluateAttrInt( ATTR_MEMORY, attrMem ) ) {	// NAC
+		badAd = true;										// NAC
+		attrMem = 0;										// NAC
+	}														// NAC
+//	if (!ad->LookupInteger(ATTR_DISK,  attrDisk)){ badAd = true; attrDisk = 0;}
+	if( !ad->EvaluateAttrInt( ATTR_DISK, attrDisk ) ) {		// NAC
+		badAd = true;										// NAC
+		attrDisk = 0;										// NAC
+	}														// NAC		
+//	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
+	if( !ad->EvaluateAttrInt( ATTR_MIPS, attrMips ) ) {		// NAC
+		badAd = true;										// NAC
+		attrMips = 0;										// NAC
+	}														// NAC
+//	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
+	if( !ad->EvaluateAttrInt( ATTR_KFLOPS, attrKflops ) ) {	// NAC
+		badAd = true;										// NAC
+		attrKflops = 0;										// NAC
+	}														// NAC
 
 	s = string_to_state(state);
 	if (s == claimed_state || s == unclaimed_state)
@@ -290,11 +312,25 @@ update (ClassAd *ad)
 	int attrMips, attrKflops;
 	float attrLoadAvg;
 	bool badAd = false;
+	double attrLoadAvgD;	// NAC
 
-	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
-	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
-	if (!ad->LookupFloat(ATTR_LOAD_AVG,attrLoadAvg)){badAd=true;attrLoadAvg=0;}
-
+//	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
+	if( !ad->EvaluateAttrInt( ATTR_MIPS, attrMips ) ) {		// NAC
+		badAd = true;										// NAC
+		attrMips = 0;										// NAC
+	}														// NAC
+//	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
+	if( !ad->EvaluateAttrInt( ATTR_KFLOPS, attrKflops ) ) {	// NAC
+		badAd = true;										// NAC
+		attrKflops = 0;										// NAC
+	}														// NAC
+//	if (!ad->LookupFloat(ATTR_LOAD_AVG,attrLoadAvg)){badAd=true;attrLoadAvg=0;}
+	if( !ad->EvaluateAttrReal( ATTR_LOAD_AVG, attrLoadAvgD ) ) {	// NAC
+		badAd = true;												// NAC
+		attrLoadAvg = 0;											// NAC
+	} else {														// NAC
+		attrLoadAvg = (float)attrLoadAvgD;							// NAC
+	}																// NAC
 	condor_mips += attrMips;
 	kflops += attrKflops;
 	loadavg += attrLoadAvg;	
@@ -342,7 +378,10 @@ update( ClassAd *ad )
 
 	machines ++;
 
-	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
+//	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
+	if( !ad->EvaluateAttrString( ATTR_STATE, stateStr, 32 ) ) {	// NAC
+		return false;										// NAC
+	}														// NAC
 	state = string_to_state( stateStr );
 	switch( state ) {
 		case owner_state	:	owner++;		break;
@@ -388,17 +427,20 @@ update (ClassAd *ad)
 	int attrRunning, attrIdle, attrHeld;;
 	bool badAd = false;
 
-	if (ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	) {
+//	if (ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	) {
+	if( ad->EvaluateAttrInt( ATTR_TOTAL_RUNNING_JOBS, attrRunning ) ) {	// NAC
 		runningJobs += attrRunning;
 	} else {
 		badAd = true;
 	}
-	if( ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle) ) {
+//	if( ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle) ) {
+	if( ad->EvaluateAttrInt( ATTR_TOTAL_IDLE_JOBS, attrIdle ) ) {	// NAC
 		idleJobs += attrIdle;
 	} else {
 		badAd = true;
 	}
-	if( ad->LookupInteger(ATTR_TOTAL_HELD_JOBS, attrHeld) ) {
+//	if( ad->LookupInteger(ATTR_TOTAL_HELD_JOBS, attrHeld) ) {
+	if( ad->EvaluateAttrInt( ATTR_TOTAL_HELD_JOBS, attrHeld ) ) {	// NAC
 		heldJobs += attrHeld;
 	} else {
 		badAd = true;
@@ -439,17 +481,20 @@ update (ClassAd *ad)
 	int attrRunning=0, attrIdle=0, attrHeld=0;
 	bool badAd = false;
 
-	if( ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning) ) {
+//	if( ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning) ) {
+	if( ad->EvaluateAttrInt( ATTR_RUNNING_JOBS, attrRunning ) ) {	// NAC
 		runningJobs += attrRunning;	
 	} else {
 		badAd = true;
 	}
-	if( ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle) ) {
+//	if( ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle) ) {
+	if( ad->EvaluateAttrInt( ATTR_IDLE_JOBS, attrIdle ) ) {	// NAC
 		idleJobs += attrIdle;
 	} else {
 		badAd = true;
 	}
-	if( ad->LookupInteger(ATTR_HELD_JOBS, attrHeld) ) {
+//	if( ad->LookupInteger(ATTR_HELD_JOBS, attrHeld) ) {
+	if( ad->EvaluateAttrInt( ATTR_HELD_JOBS, attrHeld ) ) {	// NAC
 		heldJobs += attrHeld;
 	} else {
 		badAd = true;
@@ -487,9 +532,11 @@ update (ClassAd *ad)
 
 	numServers++;
 
-	if (!ad->LookupInteger(ATTR_DISK, attrDisk))
-		return 0;
-
+//	if (!ad->LookupInteger(ATTR_DISK, attrDisk))
+//		return 0;
+	if( !ad->EvaluateAttrInt( ATTR_DISK, attrDisk ) ) {	// NAC
+		return 0;										// NAC
+	}													// NAC
 	disk += attrDisk;
 
 	return 1;
@@ -553,22 +600,32 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 		case PP_STARTD_NORMAL:
 		case PP_STARTD_RUN:
 		case PP_STARTD_SERVER:
-			if (!ad->LookupString(ATTR_ARCH, p1) || 
-				!ad->LookupString(ATTR_OPSYS, p2))
-					return 0;
+//			if (!ad->LookupString(ATTR_ARCH, p1) || 
+//				!ad->LookupString(ATTR_OPSYS, p2))
+//					return 0;
+			if( !ad->EvaluateAttrString( ATTR_ARCH, p1, 256 ) ||	// NAC	
+				!ad->EvaluateAttrString( ATTR_OPSYS, p2, 256 ) ) {	// NAC
+				return 0;											// NAC
+			}														// NAC
 			sprintf(buf, "%s/%s", p1, p2);
 			key = buf;
 			return 1;
 
 		case PP_STARTD_STATE:
-			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
-				return 0;
+//			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
+//				return 0;
+			if( !ad->EvaluateAttrString( ATTR_ACTIVITY, p1, 256 ) ) {	// NAC
+				return 0;												// NAC
+			}															// NAC
 			sprintf( buf, "%s", p1 );
 			key = buf;
 			return 1;
 
 		case PP_SCHEDD_SUBMITTORS:
-			if (!ad->LookupString(ATTR_NAME, p1)) return 0;
+//			if (!ad->LookupString(ATTR_NAME, p1)) return 0;
+			if( !ad->EvaluateAttrString( ATTR_NAME, p1, 256 ) ) {	// NAC
+				return 0;								// NAC
+			}											// NAC
 			key = p1;
 			return 1;
 

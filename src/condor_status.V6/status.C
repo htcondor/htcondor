@@ -24,6 +24,9 @@
 #include "condor_config.h"
 #include "condor_state.h"
 #include "condor_api.h"
+//#include "condor_query.h"	// NAC
+//#include "ad_printmask.h"	// NAC
+//#include "classadList.h"	// NAC
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_addr.h"
@@ -34,7 +37,7 @@
 #include "string_list.h"
 
 // global variables
-AttrListPrintMask pm;
+ClassAdPrintMask pm;
 char		*DEFAULT= "<default>";
 char 		*pool 	= NULL;
 AdTypes		type 	= (AdTypes) -1;
@@ -178,6 +181,8 @@ main (int argc, char *argv[])
 	// if diagnose was requested, just print the query ad
 	if (diagnose) {
 		ClassAd 	queryAd;
+		string 		buffer;		// NAC
+		PrettyPrint pp;			// NAC
 
 		// print diagnostic information about inferred internal state
 		setMode ((Mode) 0, 0, NULL);
@@ -186,7 +191,9 @@ main (int argc, char *argv[])
 		printf ("----------\n");
 
 		q = query->getQueryAd (queryAd);
-		queryAd.fPrint (stdout);
+//		queryAd.fPrint (stdout);
+		pp.Unparse( buffer, &queryAd );		// NAC
+		cout << buffer << endl; 			// NAC
 
 		printf ("----------\n");
 		fprintf (stderr, "Result of making query ad was:  %d\n", q);
@@ -228,6 +235,8 @@ main (int argc, char *argv[])
 			}
 		}
 	}
+		//debug NAC
+//	printf("addr = %s\n", addr);
 
 	if ((q = query->fetchAds (result, addr)) != Q_OK) {
 		fprintf (stderr, "Error:  Could not fetch ads --- error %s\n", 
@@ -240,11 +249,11 @@ main (int argc, char *argv[])
 		result.Sort((SortFunctionType) customLessThanFunc );
 	} else {
 		result.Sort ((SortFunctionType)lessThanFunc);
-	}
+	}	
 
 	// output result
 	prettyPrint (result, &totals);
-	
+
 	// be nice ...
 	{
 		int last = sortLessThanExprs.getlast();
@@ -399,15 +408,18 @@ firstPass (int argc, char *argv[])
 			}
 			char	exprString[1024];
 			ExprTree	*sortExpr;
+			ClassAdParser 	parser;	// NAC
 			exprString[0] = '\0';
 			sprintf( exprString, "MY.%s < TARGET.%s", argv[i], argv[i] );
-			if( Parse( exprString, sortExpr ) ) {
+//			if( Parse( exprString, sortExpr ) ) {
+			if( !parser.ParseExpression( exprString, sortExpr ) ) {	// NAC
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
 			sortLessThanExprs[sortLessThanExprs.getlast()+1] = sortExpr;
 			sprintf( exprString, "MY.%s == TARGET.%s", argv[i], argv[i] );
-			if( Parse( exprString, sortExpr ) ) {
+//			if( Parse( exprString, sortExpr ) ) {
+			if( !parser.ParseExpression( exprString, sortExpr ) ) {	// NAC
 				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
@@ -552,8 +564,10 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 	char	buf2[128];
 	int		val;
 
-	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
-		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
+//	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
+//		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
+	if( !ad1->EvaluateAttrString( ATTR_OPSYS, buf1, 128 ) ||	// NAC
+		!ad2->EvaluateAttrString( ATTR_OPSYS, buf2, 128 ) ) {	// NAC
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -562,8 +576,10 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
-		!ad2->LookupString(ATTR_ARCH, buf2) ) {
+//	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
+//		!ad2->LookupString(ATTR_ARCH, buf2) ) {
+	if( !ad1->EvaluateAttrString( ATTR_ARCH, buf1, 128 ) ||	// NAC
+		!ad2->EvaluateAttrString( ATTR_ARCH, buf2, 128 ) ) {	// NAC
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -572,8 +588,10 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
-		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
+//	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
+//		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
+	if( !ad1->EvaluateAttrString( ATTR_MACHINE, buf1, 128 ) ||	// NAC
+		!ad2->EvaluateAttrString( ATTR_MACHINE, buf2, 128 ) ) {	// NAC
 		buf1[0] = '\0';
 		buf2[0] = '\0';
 	}
@@ -582,32 +600,71 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 		return (val < 0);
 	} 
 
-	if (!ad1->LookupString(ATTR_NAME, buf1) ||
-		!ad2->LookupString(ATTR_NAME, buf2))
+//	if (!ad1->LookupString(ATTR_NAME, buf1) ||
+//		!ad2->LookupString(ATTR_NAME, buf2))
+	if( !ad1->EvaluateAttrString( ATTR_NAME, buf1, 128 ) ||	// NAC
+		!ad2->EvaluateAttrString( ATTR_NAME, buf2, 128 ) ) {	// NAC
 		return 0;
+	} // NAC
 	return ( strcmp( buf1, buf2 ) < 0 );
 }
 
 int
 customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 {
-	EvalResult 	result;
+
+//	EvalResult 	result;
+	Value 		result;			   // NAC
 	int			last = sortLessThanExprs.getlast();
 
+	ExprTree 	*currentTree;
+//	int 		intValue;
+	bool		boolValue = false;		// NAC
+	
+	MatchClassAd mad;			// NAC
+	mad.ReplaceLeftAd( ad1 );	// NAC
+	mad.ReplaceRightAd( ad2 );	// NAC
+
 	for( int i = 0 ; i <= last ; i++ ) {
-		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
-		if( result.type == LX_INTEGER ) {
-			if( result.i ) {
+//		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
+//		if( result.type == LX_INTEGER ) {
+//			if( result.i ) {
+//				return 1;
+//			} else {
+//				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
+//				if( result.type != LX_INTEGER || !result.i )
+//					return 0;
+//			}
+//		} else {
+//			return 0;
+//		}
+		currentTree = sortLessThanExprs[i];			// NAC	
+		currentTree->SetParentScope( ad1 );			//  |
+		ad1->EvaluateExpr( currentTree, result ); 	//  |	
+		if( result.IsBooleanValue( boolValue ) ) {	// \|/
+			if( boolValue) {	
+				mad.RemoveLeftAd();
+				mad.RemoveRightAd();
 				return 1;
 			} else {
-				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
-				if( result.type != LX_INTEGER || !result.i )
-					return 0;
+				currentTree = sortEqualExprs[i];
+				currentTree->SetParentScope( ad1 );
+				ad1->EvaluateExpr( currentTree, result );
+				if( result.IsBooleanValue( boolValue ) ) {
+					if( !boolValue ) {
+						mad.RemoveLeftAd();
+						mad.RemoveRightAd();
+						return 0;
+					}
+				}
 			}
 		} else {
+			mad.RemoveLeftAd();
+			mad.RemoveRightAd();
 			return 0;
 		}
 	}
-
+	mad.RemoveLeftAd();
+	mad.RemoveRightAd();							// END NAC
 	return 0;
 }

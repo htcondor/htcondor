@@ -22,12 +22,15 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_api.h"
+//#include "condor_query.h"	// NAC
+//#include "ad_printmask.h"	// NAC
+//#include "classadList.h"	// NAC
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
 
 extern ppOption				ppStyle;
-extern AttrListPrintMask 	pm;
+extern ClassAdPrintMask 	pm;
 extern int					wantOnlyTotals;
 
 extern char *format_time( int );
@@ -44,8 +47,8 @@ void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printCustom    	(ClassAd *);
 
-char *formatElapsedTime( int , AttrList* );
-char *formatRealTime( int , AttrList * );
+char *formatElapsedTime( int , ClassAd* );
+char *formatRealTime( int , ClassAd * );
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -125,7 +128,7 @@ void
 printStartdNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 	int    now;
 	int	   actvty;
 
@@ -151,8 +154,10 @@ printStartdNormal (ClassAd *ad)
 		}
 
 		pm.display (stdout, ad);
-		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
-			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
+//		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY , actvty ) &&
+//			ad->LookupInteger( ATTR_LAST_HEARD_FROM , now ) )
+		if( ad->EvaluateAttrInt( ATTR_ENTERED_CURRENT_ACTIVITY, actvty ) &&
+			ad->EvaluateAttrInt( ATTR_LAST_HEARD_FROM, now ) )
 		{
 			actvty = now - actvty;
 			printf( "%s\n", format_time( actvty ) );
@@ -169,7 +174,7 @@ void
 printServer (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -201,7 +206,7 @@ void
 printState (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -243,7 +248,7 @@ void
 printRun (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -275,7 +280,7 @@ void
 printScheddNormal (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -308,7 +313,7 @@ void
 printScheddSubmittors (ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -338,7 +343,7 @@ void
 printCollectorNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm; 
+	static ClassAdPrintMask pm; 
 
 	if (ad)
 	{
@@ -368,7 +373,7 @@ void
 printMasterNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static ClassAdPrintMask pm;
 
 	if (ad)
 	{
@@ -388,7 +393,7 @@ void
 printCkptSrvrNormal(ClassAd *ad)
 {
 	static bool first = true;
-	static AttrListPrintMask pm;
+	static ClassAdPrintMask pm;
 
 	if (ad)
 	{
@@ -411,8 +416,14 @@ printCkptSrvrNormal(ClassAd *ad)
 void
 printVerbose (ClassAd *ad)
 {
-	ad->fPrint (stdout);
-	fputc ('\n', stdout);	
+//	ad->fPrint (stdout);
+	string 		buffer;		// NAC
+	PrettyPrint pp;			// NAC
+
+	pp.Unparse( buffer, ad );	// NAC
+	cout << buffer << endl;			// NAC
+
+//	fputc ('\n', stdout);	
 }
 
 
@@ -424,17 +435,21 @@ printCustom (ClassAd *ad)
 
 
 char *
-formatElapsedTime( int t , AttrList *al )
+formatElapsedTime( int t , ClassAd *ad )
 {
 	int	now;
 
-	al->LookupInteger( ATTR_LAST_HEARD_FROM , now );	
+//	ad->LookupInteger( ATTR_LAST_HEARD_FROM , now );	
+	ad->EvaluateAttrInt( ATTR_LAST_HEARD_FROM , now );	// NAC
 	t = now - t;
 	return format_time( t );
 }
 
 char *
-formatRealTime( int t , AttrList * )
+formatRealTime( int t , ClassAd * )
 {
 	return format_time( t );
 }
+
+
+
