@@ -1,7 +1,9 @@
 \begin{ManPage}{\label{man-condor-reconfig}\Condor{reconfig}}{1}
 {Reconfigure condor daemons}
 \Synopsis \SynProg{\Condor{reconfig}}
-\ToolArgs
+\ToolArgsBase
+\oOptnm{-full}
+\ToolArgsLocate
 
 \index{Condor commands!condor\_reconfig}
 \index{condor\_reconfig command}
@@ -10,15 +12,28 @@
 
 \Condor{reconfig} reconfigures all of the condor daemons in accordance with 
 the current
-status of the condor configuration file(s).  Once reconfiguration is complete,
-the daemons will behave according to the policies stated in the configuration
-file(s).  The only exception is with the DAEMON\_LIST variable, which will only be
-updated if the \Condor{restart} command is used.  In general,
-\Condor{reconfig} should be used when making changes to the configuration
-files, since it is faster and more efficient then restarting the daemons.
+status of the condor configuration file(s).  
+Once reconfiguration is complete, the daemons will behave according to
+the policies stated in the configuration file(s).
+The main exception is with the DAEMON\_LIST variable, which will only be
+updated if the \Condor{restart} command is used.  
+There are a few other configuration settings that can only be changed
+if the Condor daemons are restarted.
+Whenever this is the case, it will be mentioned in
+section~\ref{sec:Configuring-Condor} on
+page~\pageref{sec:Configuring-Condor} which lists all of the settings
+used to configure Condor. 
+In general, \Condor{reconfig} should be used when making changes to
+the configuration files, since it is faster and more efficient than
+restarting the daemons.
 
 \begin{Options}
-	\ToolArgsDesc
+    \ToolArgsBaseDesc
+    \OptItem{\Opt{-full}}{Perform a full reconfig.  In addition to
+    re-reading the configuration files, a full reconfig will clear
+    cached DNS information in the daemons.  It should only be used if
+    you need this functionality.}
+    \ToolArgsLocateDesc
 \end{Options}
 
 \ExitStatus
