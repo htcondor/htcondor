@@ -3,6 +3,7 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "JavaInfo.h"
+#include "java_config.h"
 
 extern int finish_main_config(void);
 
@@ -83,44 +84,15 @@ happened later.
 
 void JavaInfo::query_create()
 {
-	char args[_POSIX_ARG_MAX];
-	char *java=0;
-	char *classpath_argument=0;
-	char *classpath_separator=0;
-	char *classpath_default=0;
-	char classpath[ATTRLIST_MAX_EXPRESSION];
+	char java[_POSIX_PATH_MAX];
+	char java_args[_POSIX_ARG_MAX];
 	int output_fd=-1, error_fd=-1;
 	int fds[3];
-	char *tmp;
-	StringList classpath_list;
 
-	java = param("JAVA");
-	if(!java) {
-		dprintf(D_FULLDEBUG,"JavaInfo: JAVA is not defined.\n");
+	if(!java_config(java,java_args,0)) {
+		dprintf(D_FULLDEBUG,"JavaInfo: JAVA is not configured.\n");
 		state = JAVA_INFO_STATE_DONE;
 		goto cleanup;
-	}
-
-	classpath_argument = param("JAVA_CLASSPATH_ARGUMENT");
-	if(!classpath_argument) classpath_argument = strdup("-classpath");
-	if(!classpath_argument) goto cleanup;
-
-	classpath_separator = param("JAVA_CLASSPATH_SEPARATOR");
-	if(!classpath_separator) classpath_separator = strdup(":");
-	if(!classpath_separator) goto cleanup;
-
-	classpath_default = param("JAVA_CLASSPATH_DEFAULT");
-	if(!classpath_default) classpath_default = strdup(".");
-	if(!classpath_default) goto cleanup;
-
-	classpath_list.initializeFromString(classpath_default);
-	classpath_list.rewind();
-
-	classpath[0] = 0;
-
-	while((tmp=classpath_list.next())) {
-		if(classpath[0]) strcat(classpath,classpath_separator);
-		strcat(classpath,tmp);
 	}
 
 	tmpnam(output_file);
@@ -136,7 +108,6 @@ void JavaInfo::query_create()
 	if(error_fd<0) {
 		dprintf( D_ALWAYS, "JavaInfo: couldn't open %s: %s\n", 
 				 error_file, strerror(errno) );
-		unlink(error_file);
 		goto cleanup;
 	}
 
@@ -149,8 +120,6 @@ void JavaInfo::query_create()
 
 		if(reaper_id==FALSE) {
 			dprintf( D_ALWAYS, "JavaInfo: Unable to register reaper!\n" );
-			unlink(output_file);
-			unlink(error_file);
 			goto cleanup;
 		}
 	}
@@ -175,8 +144,6 @@ void JavaInfo::query_create()
 		FALSE,NULL,NULL,FALSE,NULL,fds);
 	if(query_pid==FALSE) {
 		dprintf( D_ALWAYS, "JavaInfo: Unable to create query process!\n" );
-		unlink(output_file);
-		unlink(error_file);
 		goto cleanup;
 	}
 
@@ -185,12 +152,14 @@ void JavaInfo::query_create()
 	state = JAVA_INFO_STATE_RUNNING;
 
 	cleanup:
-	if(java) free(java);
-	if(classpath_argument) free(classpath_argument);
-	if(classpath_separator) free(classpath_separator);
-	if(classpath_default) free(classpath_default);
-	if(output_fd>=0) close(output_fd);
-	if(error_fd>=0) close(error_fd);
+	if(output_fd>=0) {
+		close(output_fd);
+		unlink(output_file);
+	}
+	if(error_fd>=0) {
+		close(error_fd);
+		unlink(error_file);
+	}
 }
 
 /*

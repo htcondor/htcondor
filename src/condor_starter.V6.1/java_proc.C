@@ -4,6 +4,7 @@
 #include "condor_config.h"
 
 #include "java_proc.h"
+#include "java_config.h"
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -20,83 +21,48 @@ JavaProc::~JavaProc()
 int JavaProc::StartJob()
 {
 	char tmp[ATTRLIST_MAX_EXPRESSION];
-	char oldcmd[ATTRLIST_MAX_EXPRESSION];
-	char args[ATTRLIST_MAX_EXPRESSION];
-	char classpath[ATTRLIST_MAX_EXPRESSION];
+	char job_args[ATTRLIST_MAX_EXPRESSION];
+
+	char java_cmd[_POSIX_PATH_MAX];
+	char java_args[_POSIX_ARG_MAX];
 	char jarfiles[ATTRLIST_MAX_EXPRESSION];
-	char *java, *item;
-	char *classpath_argument, *classpath_separator, *classpath_default;
-
-	if( JobAd->LookupString( ATTR_JOB_CMD, oldcmd ) != 1 ) {
-		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_CMD);
-		return 0;
-	}
-
-	if( JobAd->LookupString( ATTR_JOB_ARGUMENTS, args ) != 1 ) {
-		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
-		return 0;
-	}
-
-	java = param("JAVA");
-	if(!java) {
-		dprintf(D_ALWAYS,"JavaProc: JAVA is not defined!\n");
-		return 0;
-	}
-
-	classpath_argument = param("JAVA_CLASSPATH_ARGUMENT");
-	if(!classpath_argument) classpath_argument = strdup("-classpath");
-
-	classpath_separator = param("JAVA_CLASSPATH_SEPARATOR");
-	if(!classpath_separator) classpath_separator = strdup(":");
-
-	classpath_default = param("JAVA_CLASSPATH_DEFAULT");
-	if(!classpath_default) classpath_default = strdup(".");
-
-	classpath[0] = 0;
-
-	StringList classpath_list(classpath_default);
-	classpath_list.rewind();
-
-	while(item=classpath_list.next()) {
-		if(classpath[0]) strcat(classpath,classpath_separator);
-		strcat(classpath,item);
-	}
+	StringList *jarfiles_list=0;
 
 	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
-		StringList jarfiles_list(jarfiles);
-		jarfiles_list.rewind();
-		while(item=jarfiles_list.next()) {
-			strcat(classpath,classpath_separator);
-			strcat(classpath,item);
-		}
+		jarfiles_list = new StringList(jarfiles);
 	}
 
-	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,java);
+	if(!java_config(java_cmd,java_args,jarfiles_list)) {
+		dprintf(D_ALWAYS,"JavaProc: Java is not configured!\n");
+		if(jarfiles_list) delete jarfiles_list;
+		return 0;
+	}
+
+	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,java_cmd);
 	JobAd->InsertOrUpdate(tmp);
 
 	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
 	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
+	if( JobAd->LookupString( ATTR_JOB_ARGUMENTS, job_args ) != 1 ) {
+		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
+		return 0;
+	}
+
 	sprintf(tmp,
-		"%s=\"%s %s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
+		"%s=\"%s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
 		ATTR_JOB_ARGUMENTS,
-		classpath_argument,
-		classpath,
+		java_args,
 		execute_dir,
 		DIR_DELIM_CHAR,
 		startfile,
 		endfile,
-		args);
+		job_args);
 
 	JobAd->InsertOrUpdate(tmp);
 
-	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java);
+	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
 	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",tmp);
-
-	free(java);
-	free(classpath_argument);
-	free(classpath_separator);
-	free(classpath_default);
 
 	return VanillaProc::StartJob();
 }
