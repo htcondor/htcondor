@@ -529,6 +529,7 @@ return write(fd,buf,size);
 /* These are similar additions as above.  This problem cropped up for 
    FORTRAN programs on Solaris 2.4.  -Jim B. */
 
+#if !defined(HPUX9)
 #if defined( SYS_write )
 _write( int fd, const void *buf, size_t len )
 {
@@ -549,4 +550,5 @@ _lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
+#endif
 #endif
