@@ -37,7 +37,12 @@ and known bugs of each version are described below in detail.
 
 \begin{itemize}
 
-\item None.
+\item If a job universe is not specified in a submit description file, 
+\Condor{submit}  will check the config file for \Macro{DEFAULT\_UNIVERSE}
+instead of always choosing the standard universe. 
+
+\item The \Macro{D\_SECONDS} debug flag is deprecated. Seconds are now always
+included in logfiles. 
 
 \end{itemize}
 
