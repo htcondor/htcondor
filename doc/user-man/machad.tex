@@ -51,9 +51,13 @@ console keyboard or console mouse has last been detected.
 CPUs, etc.
 %
 \index{ClassAd machine attribute!CurrentRank}
-\item[\AdAttr{CurrentRank}] : A float which represents this machine owner's affinity
+\item[\AdAttr{CurrentRank}] : A float which represents this machine
+owner's affinity
 for running the Condor job which it is currently hosting.  If not
-currently hosting a Condor job, \AdAttr{CurrentRank} is -1.0.
+currently hosting a Condor job, \AdAttr{CurrentRank} is 0.0.
+When a machine is claimed,
+the attribute's value is evaluated with respect to the current
+job's ClassAd.
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}] : The amount of disk space on this machine available for
@@ -209,18 +213,6 @@ Claimed state:
 \index{ClassAd machine attribute (in Claimed State)!ClientMachine}
 \item[\AdAttr{ClientMachine}] : The hostname of the machine that has
 claimed this resource
-
-\index{ClassAd machine attribute (in Claimed State)!CurrentRank}
-\item[\AdAttr{CurrentRank}] : The value of the \Expr{RANK} expression
-when evaluated against the ClassAd of the ``current'' job using this
-machine.
-If the resource has been claimed but no job is running, the
-``current'' job ClassAd is the one that was used when claiming the
-resource.
-If a job is currently running, that job's ClassAd is the ``current''
-one.  
-If the resource is between jobs, the ClassAd of the last job that was
-run is used for \AdAttr{CurrentRank}.
 
 \index{ClassAd machine attribute (in Claimed State)!RemoteOwner}
 \item[\AdAttr{RemoteOwner}] : The name of the user who originally
