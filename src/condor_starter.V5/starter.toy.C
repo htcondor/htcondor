@@ -26,16 +26,11 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
 #include "condor_jobqueue.h"
 #include "condor_uid.h"
-#include "condor_expressions.h"
 #include "condor_config.h"
-#include <signal.h>
 #include "proto.h"
 #include "condor_sys.h"
 #include "name_tab.h"

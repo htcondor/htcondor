@@ -26,24 +26,13 @@
 **
 */ 
 
-
-#define _POSIX_SOURCE
-
-#if defined(Solaris) && !defined(Solaris251)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
 #include "condor_common.h"
-#include "condor_expressions.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
 #include "condor_jobqueue.h"
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "condor_io.h"
-#include <signal.h>
-#include <sys/wait.h>
+
 #include "proto.h"
 #include "condor_sys.h"
 #include "name_tab.h"
@@ -65,15 +54,12 @@
 typedef List<UserProc> listuserproc; 
 #endif 
 
-#include <sys/stat.h>
-#include <pwd.h>
 
 #if defined(AIX32)
 #	include <sys/id.h>
 #endif
 
 extern "C" {
-#include <sys/utsname.h>
 int free_fs_blocks(const char *);
 void display_startup_info( const STARTUP_INFO *s, int flags );
 }
