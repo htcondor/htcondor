@@ -45,3 +45,6 @@ library_target(libckpt.a,$(OBJ),release)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,$(UTIL_OBJ))
+
+release:: c_plus_alloc.o
+	cp c_plus_alloc.o $(RELEASE_DIR)/lib/c_plus_alloc.o
