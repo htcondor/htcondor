@@ -76,8 +76,8 @@ else {
 my $cwd = &getcwd();
 my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
 
-mkdir($workspace) || die "Can't create workspace $workspace\n";
-chdir($workspace) || die "Can't change workspace $workspace\n";
+mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 if ( defined($opt_tag) or defined($opt_module) ) {
     print "Sorry --tag and --module not supported yet.\n";
@@ -133,14 +133,15 @@ sub generate_cmdfile() {
     CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # generate the runid input file
-    open(RUNIDFILE, ">$runidfile") || die "Can't open $runidfile for writing.";
+    open(RUNIDFILE, ">$runidfile") || 
+	die "Can't open $runidfile for writing: $!\n";
     print RUNIDFILE "method = nmi\n";
     print RUNIDFILE "input_runids = $id\n";
     print RUNIDFILE "untar_results = false\n";     
     close RUNIDFILE;
 
     # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
+    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
     
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
 
@@ -176,17 +177,18 @@ sub get_nightlyids() {
 
     my %ids;
 
-    open(IDS, "<", "$NIGHTLY_IDS_FILE") || die "Can't read nightly ids file $NIGHTLY_IDS_FILE\n";
+    open(IDS, "<", "$NIGHTLY_IDS_FILE") ||
+	die "Can't read nightly ids file $NIGHTLY_IDS_FILE: $!\n";
     while (<IDS>) {
         chomp($_);
         my @id = split /\s/, $_;
         $ids{$id[0]} = "$id[1]" . " " . "$id[2]"; 
     }
     # truncate file
-    #seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE\n"; 
-    #print IDS "" || die "can't print to $NIGHTLY_IDS_FILE\n";
-    #truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE\n";  
-    close(IDS) || die "can't close $NIGHTLY_IDS_FILE\n";
+    #seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE: $!\n"; 
+    #print IDS "" || die "can't print to $NIGHTLY_IDS_FILE: $!\n";
+    #truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE: $!\n";
+    close(IDS) || die "can't close $NIGHTLY_IDS_FILE: $!\n";
 
     return %ids;
 }

@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.3 2004-12-31 06:15:21 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.4 2004-12-31 06:28:50 wright Exp $
 #
 ######################################################################
 
@@ -102,7 +102,7 @@ sub writeRunidForBuild {
     print "BUILD_INFO_FILE = $BUILD_INFO_FILE\n";
     if ($runid) {
         open (INFO_FILE, ">>$BUILD_INFO_FILE") ||
-            die "Unable to open $BUILD_INFO_FILE for writing $!";
+            die "Unable to open $BUILD_INFO_FILE for writing: $!\n";
         print INFO_FILE "$runid $tag $module\n";
         close INFO_FILE;
     }
@@ -171,7 +171,8 @@ sub getNightlyTags
 
     my %tags;
 
-    open(TAGS, $tag_file) || die "Can't read nightly tag file $tag_file\n";
+    open(TAGS, $tag_file) || 
+	die "Can't read nightly tag file $tag_file: $!\n";
     while (<TAGS>) {
         chomp($_);
         my @tag = split /\s/, $_;
@@ -209,7 +210,7 @@ sub makeFetchFile
 {
     my ( $file, $tag, $module ) = @_;
 
-    open( FILE, ">$srcsfile" ) || die "Can't open $file for writing.";
+    open( FILE, ">$srcsfile" ) || die "Can't open $file for writing: $!\n";
     print FILE "method = cvs\n";
     print FILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
     print FILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";

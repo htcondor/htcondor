@@ -81,8 +81,8 @@ else {
 
 
 my $cwd = &getcwd();
-mkdir($workspace) || die "Can't create workspace $workspace\n";
-chdir($workspace) || die "Can't change workspace $workspace\n";
+mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 while ( my($tag, $module) = each(%tags) ) {
     my $cmdfile = &generate_cmdfile($tag, $module);
@@ -116,7 +116,7 @@ sub generate_cmdfile() {
     CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
+    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
 
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
     print CMDFILE "run_type = build\n";
