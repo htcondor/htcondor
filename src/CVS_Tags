@@ -1,3 +1,9 @@
+01/16/04 V6_6-merge-3
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This gets some important build system changes and various 6.6.1 bug
+   fixes discovered via the CDF work that we want in the V6_7-branch
+   before we make V6_7-core-2-branch
+
 01/14/04 V6_6-post_merge-V6_6-full_redhat9_port-merge-1
 	This is state of the V6_6-branch AFTER I had merged in the
 	V6_6-full_redhat9_port-branch into V6_6-branch as tagged at
