@@ -1,4 +1,4 @@
-#if IS_MIPS_ULTRIX42
+#if IS_MIPS_ULTRIX42 || IS_SPARC_SUNOS41
 CC = gcc
 #endif
 
