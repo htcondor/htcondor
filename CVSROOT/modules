@@ -67,4 +67,7 @@ AIX_CODE	-a Distfile GENERIC config \
 			src/condor_tools \
 			src/condor_util_lib \
 			src/condor_xdr_lib \
-			src/h
+			src/h \
+			src/release_dir \
+			src/release_dir/bin \
+			src/release_dir/lib
