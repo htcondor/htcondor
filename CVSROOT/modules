@@ -105,6 +105,10 @@ V6_5_SRC		-a \
 			src/condor_test_suite_pvm \
 			V6_4_SRC
 
+V6_6_SRC		-a \
+			src/configure.in \
+			V6_5_SRC
+
 V_TRUNK_SRC		-a \
 			V6_COMMON \
 			src/condor_chirp \
@@ -230,10 +234,9 @@ V6_4_ALL	-a DOC TOOLS NT_TOOLS V6_4_SRC
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
-# V6_6 shares the same directories as V6_5
-V6_6_CODE	-a TOOLS V6_5_SRC
-V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
-V6_6_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
+V6_6_CODE	-a TOOLS V6_6_SRC
+V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC
+V6_6_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
 # For now, V6_7 also shares the same directories as V6_5.
 # This might change, but until then, we leave it like this.
 V6_7_CODE	-a TOOLS V6_5_SRC
