@@ -1089,24 +1089,35 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int ReliSock::authenticate(KeyInfo *& key, int clientFlags)
 {
-    if ( !authob ) {
-        authob = new Authentication( this );
+    if (!isAuthenticated()) {
+        if ( !authob ) {
+            authob = new Authentication( this );
+        }
+        if ( authob ) {
+            return( authob->authenticate( hostAddr, key, clientFlags ) );
+        }
+        return( 0 );  
     }
-	if ( authob ) {
-		return( authob->authenticate( hostAddr, key, clientFlags ) );
-	}
-	return( 0 );  
+    else {
+        return 1;
+    }
 }
 
 int 
-ReliSock::authenticate(int clientFlags ) {
-	if ( !authob ) {
-		authob = new Authentication( this );
-	}
-	if ( authob ) {
-		return( authob->authenticate( hostAddr, clientFlags ) );
-	}
-	return( 0 );
+ReliSock::authenticate(int clientFlags ) 
+{
+    if ( !isAuthenticated() ) {
+        if ( !authob ) {
+            authob = new Authentication( this );
+        }
+        if ( authob ) {
+            return( authob->authenticate( hostAddr, clientFlags ) );
+        }
+        return 0;
+    }
+    else {
+        return 1;
+    }
 }
 
 void
@@ -1158,7 +1169,6 @@ ReliSock::isAuthenticated()
 		return 0;
 	}
 	return( authob->isAuthenticated() );
-	return 0;
 }
 
 void
