@@ -1532,6 +1532,57 @@ change to take effect (for example, using ``\condor{restart}
 
 \end{description}
 
+The following macros control the optional computation of resource
+availability statistics in the startd.
+
+\begin{description}
+
+\item[\Macro{STARTD\_COMPUTE\_AVAIL\_STATS}]
+\label{param:StartdComputeAvailStats}
+  A boolean that determines if the startd computes resource
+  availability statistics.  The default is False.
+
+\item[\Macro{STARTD\_AVAIL\_CONFIDENCE}]
+\label{param:StartdAvailConfidence}
+  A floating point number that sets the confidence level of the
+  startd's AvailTime estimate.  By default, the estimate is based on
+  the 80th percentile of past values (i.e., the macro is set to 0.8).
+
+\item[\Macro{STARTD\_MAX\_AVAIL\_PERIOD\_SAMPLES}]
+\label{param:StartdMaxAvailPeriodSamples}
+  An integer that limits the number of samples of past available
+  intervals stored by the startd to limit memory and disk consumption.
+  Each sample requires 4 bytes of memory and approximately 10 bytes of
+  disk space.
+
+\end{description}
+
+If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the startd will
+define the following ClassAd attributes for resources:
+
+\begin{description}
+\item[\AdAttr{AvailTime}]
+  What proportion of the time (between 0.0 and 1.0)
+  has this resource been in a state other than ``Owner''?
+\item[\AdAttr{LastAvailInterval}]
+  What was the duration (in seconds) of the
+  last period between ``Owner'' states?
+\end{description}
+
+The following attributes will also be included if the resource is
+not in the ``Owner'' state:
+
+\begin{description}
+\item[\AdAttr{AvailSince}]
+  At what time did the resource last leave the
+  ``Owner'' state?  Measured in the number of seconds since the
+  epoch (00:00:00 UTC, Jan 1, 1970).
+\item[\AdAttr{AvailTimeEstimate}]
+  Based on past history, this is an estimate
+  of how long the current period between ``Owner'' states will
+  last.
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}
