@@ -1,7 +1,7 @@
 7/6/00 V6_2-branch
 	The branch for all of Condor version 6.2.X.  In addition, the
 	last few 6.1.X releases (hopefully, just 6.1.15), will live on
-	this branch.  config, src, *and* doc are all branched.
+	this branch.  config, src, doc, and NTconfig are all branched.
 
 7/6/00 trunk-post-merge-V6_1_14
 	The state of the trunk aftering merging with V6_1_13-branch as 
