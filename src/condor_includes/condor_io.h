@@ -4,12 +4,14 @@
 
 #include "condor_common.h"
 #include "condor_constants.h"
+
+#if !defined(WIN32)
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-
+#endif
 
 #if defined(OSF1) && defined(__cplusplus)
 
