@@ -49,10 +49,6 @@ DESC(job_filexfer_sandbox-empty_van,"Are job sandboxes with bad permissions clea
 RUN(job_filexfer_sandbox-empty_van)
 TESTCLASS(job_filexfer_sandbox-empty_van,quick)
 
-DESC(job_core_macros-dollardollar_van,"Do $$ macros work?")
-RUN(job_core_macros-dollardollar_van)
-TESTCLASS(job_core_macros-dollardollar_van,quick)
-
 DESC(job_core_sh-loop_van,"Simple vanilla job that loops for N seconds")
 RUN(job_core_sh-loop_van)
 TESTCLASS(job_core_sh-loop_van,quick)
@@ -75,9 +71,11 @@ TESTCLASS(job_core_bigenv_sched,env)
    starter/shadow behave when we drop a core file
 */
 CBUILD($(CC),job_core_coredump,c)
+#if ! IS_CLIPPED
 DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
 DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
 RUN(job_core_coredump_std)
+#endif /* ! IS_CLIPPED */
 TESTCLASS(job_core_coredump_std,quick)
 DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
 DEPS(job_core_coredump_van,job_core_coredump.exe)
@@ -127,6 +125,11 @@ C_COMPILER_TARGET(cc,$(VENDOR_CC),TESTSUITE_FLAGS_CC)
 #if HAS_VENDOR_CPLUS
 CPP_COMPILER_TARGET($(VENDOR_CPLUS_NAME),$(VENDOR_CPLUS),TESTSUITE_FLAGS_CPP)
 #endif
+
+#else /* IS_CLIPPED */
+
+compiler_list:
+	touch compiler_list
 
 #endif /* ! IS_CLIPPED */
 

@@ -1,3 +1,9 @@
+01/04/05 V6_6-merge-32
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.  This includes more NWO glue improvements and fixes,
+   more OSX build changes, cleanup in Condor.pm and condor_tests, and
+   a condor_configure fix to give more useful output in some failures.
+
 01/04/05 V6_7-pre_merge-V6_6-merge-32
    The state of the V6_7-branch before another merge from V6_6-branch.
 

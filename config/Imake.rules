@@ -1003,7 +1003,7 @@ XCOMM End translation of func(CLINK)
 XCOMM Begin translation of func(CLINK)		@@\
 all:: name.cndr.exe				@@\
 name:: name.cndr.exe				@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.cndr.exe: obj				@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
@@ -1023,7 +1023,7 @@ XCOMM End translation of func(CLINK)
 XCOMM Begin translation of func(CLINK_NOSTD)	@@\
 all:: name.exe					@@\
 name:: name.exe					@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.exe: obj x_fake_ckpt.o			@@\
 	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)	@@\
 clean::						@@\
@@ -1041,7 +1041,7 @@ XCOMM End translation of func(CLINK_NOSTD)
 XCOMM Begin translation of func(LINK)		@@\
 all:: name.exe					@@\
 name:: name.exe					@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.exe: obj					@@\
 	compiler -o name.exe obj $(TEST_LDFLAGS)  @@\
 clean::						@@\
@@ -1069,7 +1069,7 @@ XCOMM End translation of func(RLINK)
 XCOMM Begin translation of func(RLINK)		@@\
 all:: name.remote				@@\
 name:: name.remote				@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.remote: obj				@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.remote obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) name.remote		@@\
@@ -1089,7 +1089,7 @@ XCOMM End translation of func(RLINK)
 XCOMM Begin translation of func(VLINK)		@@\
 all:: name.vanilla				@@\
 name:: name.vanilla				@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.vanilla: obj fake_ckpt.o			@@\
 	compiler -o name.vanilla obj fake_ckpt.o $(TEST_LDFLAGS)	@@\
 clean::						@@\
@@ -1242,7 +1242,7 @@ XCOMM End translation of func(CBUILD_DEP)
 #define DEP_SYMLINK(name,file)		@@\
 XCOMM Begin translation of func(DEP_SYMLINK) @@\
 name:: file				@@\
-       @/bin/true			@@\
+       @$(TRUE)				@@\
 all:: file				@@\
 file::					@@\
 	/bin/rm -f file 		@@\
@@ -1269,7 +1269,7 @@ XCOMM End translation of func(DEP_SYMLINK_EXT)
 XCOMM Begin translation of func(DEPS)		@@\
 all:: deps					@@\
 name:: deps					@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 XCOMM End translation of func(DEPS)
 #endif /* DEPS */
 
@@ -1308,7 +1308,7 @@ XCOMM End translation of func(RUN)
 XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
 TESTCLASS_DECL_BASE(classname)			@@\
 classname::					@@\
-	@/bin/true				@@\
+	@$(TRUE)				@@\
 XCOMM End translation of func(TESTCLASS_DECL)
 #else /* ! FLAGS_MACRO_NAME */
 #define TESTCLASS_DECL(classname)		@@\
@@ -1392,7 +1392,7 @@ XCOMM End translation of func(TESTCLASS)
 #define DESC(name,description)	@@\
 XCOMM Begin translation of func(DESC)		@@\
 desc:: Concat(name,_desc)			@@\
-	@true					@@\
+	@$(TRUE)				@@\
 Concat(name,_desc):				@@\
 	@echo description > name.desc		@@\
 XCOMM End translation of func(DESC)
@@ -1435,7 +1435,7 @@ XCOMM End translation of func(OWO_RBUILD)
 #define OWO_BUILD_FILES(name,ext)		@@\
 XCOMM Begin translation of func(OWO_BUILD_FILES) @@\
 name:: name.ext					@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 all:: name.ext					@@\
 name.ext:					@@\
 	ln -s ../name.ext .			@@\
@@ -1450,7 +1450,7 @@ XCOMM End translation of func(OWO_BUILD_FILES)
 XCOMM Begin translation of func(OWO_RUN)	@@\
 all:: name.run name.cmd				@@\
 name:: name.run name.cmd			@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 name.run: Condor.pm CondorTest.pm		@@\
 	rm -f name.run				@@\
 	ln -s ../name.run .			@@\
@@ -1471,7 +1471,7 @@ XCOMM End translation of func(OWO_RUN)
 XCOMM Begin translation of func(OWO_BUILD_DEPS)	@@\
 all:: deps					@@\
 name:: deps					@@\
-       @/bin/true				@@\
+       @$(TRUE)					@@\
 clean::						@@\
 	rm -f deps				@@\
 XCOMM End translation of func(OWO_BUILD_DEPS)

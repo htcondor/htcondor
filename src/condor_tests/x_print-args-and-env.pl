@@ -14,7 +14,7 @@ while($thisarg <= $argcnt)
 	print "$arg\n";
 }
 
-foreach my $EnvVar ( keys % ENV )
+foreach my $EnvVar ( sort keys % ENV )
 {
 	print  "$EnvVar = $ENV{$EnvVar}\n";
 }
