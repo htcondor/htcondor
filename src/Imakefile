@@ -273,13 +273,13 @@ reallyclean: really-clean
 htmldocs: html docs
 	cd html; ./build_doc++_index
 
-pure_target( condor_startd.V6, condor_startd.pure );
-pure_target( condor_schedd.V6, condor_schedd.pure );
-pure_target( condor_master.V6, condor_master.pure );
-pure_target( condor_shadow.V6, condor_shadow.pure );
-pure_target( condor_starter.V5, condor_starter.pure );
-pure_target( condor_collector.V6, condor_collector.pure );
-pure_target( condor_negotiator.V6, condor_negotiator.pure );
+pure_target( condor_startd.V6, condor_startd.pure )
+pure_target( condor_schedd.V6, condor_schedd.pure )
+pure_target( condor_master.V6, condor_master.pure )
+pure_target( condor_shadow.V6, condor_shadow.pure )
+pure_target( condor_starter.V5, condor_starter.pure )
+pure_target( condor_collector.V6, condor_collector.pure )
+pure_target( condor_negotiator.V6, condor_negotiator.pure )
 
 clean::
 	rm -rf $(PURE_DIR)
