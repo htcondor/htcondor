@@ -324,9 +324,10 @@ void Server::Execute()
 	time_t         start_interval_time;
 	struct timeval poll;
 	
-	start_interval_time = time(NULL);
+	current_time = start_interval_time = time(NULL);
 	while (more) {                          // Continues until SIGUSR2 signal
-		poll.tv_sec = reclaim_interval;
+		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
+										  (unsigned int)start_interval_time);
 		poll.tv_usec = 0;
 		errno = 0;
 		FD_ZERO(&req_sds);
@@ -372,7 +373,7 @@ void Server::Execute()
 			BlockSignals();
 			transfers.Reclaim(current_time);
 			UnblockSignals();
-			start_interval_time = time(NULL);
+			start_interval_time = current_time;
 			if (replication_level)
 				Replicate();
 			Log("Sending ckpt server ad to collector...");
