@@ -49,21 +49,6 @@ private:
 	char * Account_name;
 	char * Domain_name;
 	
-	bool domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 );
-
-		// takes string of the form <DOMAIN_NAME>\<ACCOUNT_NAME> and chops it into two strings
-	void getDomainAndName( char* namestr, char* &domain, char* &name ) {
-		char* nameptr = strrchr ( namestr, '\\' ); 
-		if ( nameptr != NULL ) {
-			domain = namestr;
-			*nameptr = '\0';
-			name = nameptr+1;
-		} else {
-			name = namestr;
-			domain = NULL;
-		}
-	};
-	
 	int userInLocalGroup( const char *account, const char *domain, const char* group_name );
 	int userInGlobalGroup( const char *account, const char *domain, const char* group_name, const char* group_domain );
 	

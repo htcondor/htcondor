@@ -23,6 +23,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "perm.h"
+#include "domain_tools.h"
 #include "Lm.h"
 
 //
@@ -187,19 +188,6 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 	return 1;
 }
 
-//
-// returns true if account1 and account2 match
-// and domain1 is null, empty, or domain1 and domain2
-// match. That is, return a match if the accounts match
-// and the domains match or are unspecified
-//
-bool perm::domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 ) {
-	
-	return ( ( stricmp ( account1, account2 ) == 0 ) && 
-		( domain1 == NULL || domain1 == "" || 
-		stricmp ( domain1, domain2 ) == 0 ) );
-
-}
 
 //
 // Determines if user is a member of the local group group_name
