@@ -31,7 +31,6 @@ template class SimpleList<NamedClassAd*>;
 
 ResMgr::ResMgr()
 {
-	startTime = time( NULL );
 	totals_classad = NULL;
 	config_classad = NULL;
 	up_tid = -1;
@@ -45,8 +44,7 @@ ResMgr::ResMgr()
 	type_nums = NULL;
 	new_type_nums = NULL;
 	is_shutting_down = false;
-	last_in_use = startTime;
-	cur_time = startTime;
+	cur_time = last_in_use = time( NULL );
 }
 
 
@@ -1135,11 +1133,6 @@ int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
-
-	// Publish our "epoch" time
-	char	tmp [80];
-	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
-	public_ad->InsertOrUpdate( tmp );
 
 	if( Collector ) {
 		if( Collector->sendUpdate(cmd, public_ad, private_ad) ) {
