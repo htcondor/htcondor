@@ -102,6 +102,14 @@ function to track mouse activity that does not have a tendancy to fail.
   unless the administrators actively disable this check by defining 
   \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} to be FALSE.
 
+\item Fixed a bug on Windows that would cause the \Condor{startd} to
+EXCEPT() if the \Condor{starter} exited and left orphaned processes to
+be cleaned up. This bug first appeared in 6.5.0.
+
+\item Fixed a bug on Windows that would cause graceful shutdowns on
+Windows (such as when \verb@condor_vacate@  is called) to fail to
+complete.
+
 \end{itemize}
 
 \noindent Known Bugs:
