@@ -169,6 +169,13 @@ RemoteResource::requestIt( int starterVersion )
 bool
 RemoteResource::killStarter()
 {
+	static bool already_killed_starter = false;
+
+	if( already_killed_starter ) {
+			// we've already sent this command to the startd.  we can
+			// just return true right away
+		return true;
+	}
 
 	ReliSock sock;
 
@@ -201,6 +208,7 @@ RemoteResource::killStarter()
 	if( state != RR_FINISHED ) {
 		setResourceState( RR_PENDING_DEATH );
 	}
+	already_killed_starter = true;
 	return true;
 }
 
@@ -676,6 +684,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// has state "Exited", we'll see all that in a second,
 				// and we don't want to log any events here. 
 		}
+		free( job_state );
+		if( state == RR_PENDING_DEATH ) {
+				// we're trying to shutdown, so don't bother recording
+				// what we just heard from the starter.  we're done
+				// dealing with this update.
+			return;
+		}
 		if( new_state != state ) {
 				// State change!  Let's log the appropriate event to
 				// the UserLog and keep track of suspend/resume
@@ -694,7 +709,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// record the new state
 			setResourceState( new_state );
 		}
-		free( job_state );
 	}
 }
 
