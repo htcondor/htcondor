@@ -156,14 +156,22 @@ bool Dag::Bootstrap (bool recovery) {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::AddDependency (Job * parent, Job * child) {
-    ASSERT( parent != NULL );
-    ASSERT( child  != NULL );
-    
+bool
+Dag::AddDependency( Job* parent, Job* child )
+{
+	if( !parent || !child ) {
+		return false;
+	}
 	if( !parent->AddChild( child ) ) {
 		return false;
 	}
 	if( !child->AddParent( parent ) ) {
+			// reverse earlier successful AddChild() so we don't end
+			// up with asymetric dependencies
+		if( !parent->RemoveChild( child ) ) {
+				// the DAG state is FUBAR, so we should bail...
+			ASSERT( false );
+		}
 		return false;
 	}
     return true;
