@@ -155,7 +155,11 @@ store_working_directory()
 	char	*status;
 
 		/* Get the information */
+#if defined(Solaris)
+	status = getcwd( tbuf, _POSIX_PATH_MAX);
+#else
 	status = getwd( tbuf );
+#endif
 
 		/* This routine returns 0 on error! */
 	if( !status ) {
