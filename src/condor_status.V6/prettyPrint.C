@@ -442,7 +442,9 @@ printStorageNormal(ClassAd *ad)
 }
 
 /*
-We can't use the AttrListPrintMask here, because the AttrList does not actually contain the MyType and TargetType fields that we want to display.  These are actually contained in the ClassAd.
+We can't use the AttrListPrintMask here, because the AttrList does not actually contain 
+the MyType and TargetType fields that we want to display.  
+These are actually contained in the ClassAd.
 */
 
 void
@@ -450,7 +452,7 @@ printAnyNormal(ClassAd *ad)
 {
 	static bool first = true;
 	char name[ATTRLIST_MAX_EXPRESSION];
-	char *my_type, *target_type;
+	const char *my_type, *target_type;
 
 	if (ad)
 	{
