@@ -1,11 +1,23 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_success.pl,v 1.1.2.5 2004-06-25 02:35:59 wright Exp $
+# $Id: remote_post_success.pl,v 1.1.2.6 2004-06-25 03:04:47 wright Exp $
 # post script for a successful Condor testsuite run   
 ######################################################################
 
 my $BaseDir = $ENV{BASE_DIR};
+
+
+######################################################################
+# make sure there are results to save
+######################################################################
+
+if( -z "tasklist.nmi" ) {
+    # our tasklist is empty, so don't do any real work
+    print "No tasks in tasklist.nmi, nothing to do\n";
+    exit 0;
+}
+
 
 ######################################################################
 # tar up test results
