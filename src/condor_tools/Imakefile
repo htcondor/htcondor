@@ -110,7 +110,7 @@ condor_master_on: master_on.c
 	gcc -o condor_master_on master_on.c
 
 condor_kill: kill.C
-	g++ -o condor_kill kill.C -I../condor_c++_util
+	g++ -o condor_kill kill.C -I../condor_c++_util -I../condor_includes
 
 clean::
 	rm -f condor_kill condor_master_on *.o
