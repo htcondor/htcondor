@@ -29,3 +29,5 @@ library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 program_target(condor_ckpt_server_cp, condor_ckpt_server_cp.o, ckpt_server_api.a $(LIB)) 
 
 release:
+
+depend_target($(SRC))
