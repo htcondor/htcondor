@@ -594,6 +594,11 @@ init_classad()
 			daemonCore->InfoCommandSinfulString() );
 	ad->Insert(line);
 
+#if !defined(WIN32)
+	sprintf(line, "%s = %d", ATTR_REAL_UID, getuid() );
+	ad->Insert(line);
+#endif
+
 		// In case MASTER_EXPRS is set, fill in our ClassAd with those
 		// expressions. 
 	config_fill_ad( ad, mySubSystem ); 	
