@@ -168,7 +168,7 @@ int Sock::do_connect(
 		string_to_sin(host, &sin);
 	}
 	/* try to get a decimal notation 	 			*/
-	else if ((inaddr = inet_addr(host)) != -1){
+	else if ((inaddr = inet_addr(host)) != (unsigned int)-1){
 		memcpy((char *)&sin.sin_addr, &inaddr, sizeof(inaddr));
 	}
 	/* if dotted notation fails, try host database	*/

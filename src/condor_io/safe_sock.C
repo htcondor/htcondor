@@ -155,8 +155,8 @@ int SafeSock::connect(
 	int		port
 	)
 {
-	hostent			*hostp;
-	unsigned long	inaddr;
+	struct hostent	*hostp = NULL;
+	unsigned long	inaddr = 0;
 
 	if (!valid()) return FALSE;
 	if (!host || port < 0) return FALSE;
@@ -172,13 +172,19 @@ int SafeSock::connect(
 	_who.sin_port = htons((u_short)port);
 
 	/* try to get a decimal notation first 			*/
-	if ((inaddr = inet_addr(host)) != -1){
+
+	inaddr = inet_addr(host);
+
+	if( inaddr != (unsigned int)(-1) ) {
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
-	}
-	/* if dotted notation fails, try host database	*/
-	else{
-		if ((hostp = gethostbyname(host)) == (hostent *)0) return FALSE;
-		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
+	} else {
+			/* if dotted notation fails, try host database	*/
+		hostp = gethostbyname(host);
+		if( hostp == (struct hostent *)0 ) {
+			return FALSE;
+		} else {
+			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
+		}
 	}
 
 	_state = sock_connect;
