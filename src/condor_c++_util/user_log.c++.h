@@ -31,9 +31,16 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
+#ifndef BOOLEAN_TYPE_DEFINED
 typedef int BOOLEAN;
-static const int TRUE = 1;
-static const int FALSE = 0;
+typedef int BOOL_T;
+#define BOOLAN_TYPE_DEFINED
+#endif
+
+#if !defined(TRUE)
+#	define TRUE 1
+#	define FALSE 0
+#endif
 
 #if defined(NEW_PROC)
 #include "proc.h"
