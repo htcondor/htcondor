@@ -176,23 +176,19 @@ XInterface::XInterface(int id)
     // We may need access to other user's home directories, so we must run
     // as root.
     
-    
+    set_root_priv();
+
     if(geteuid() != 0)
     {
 	dprintf(D_FULLDEBUG, "NOTE: Daemon can't use Xauthority if not"
 		" running as root.\n");
     }
-    else
-    {
-	set_root_priv();
-    }
-    _tried_root = false;
-    g_connected = false;
     
-    while(!Connect())
-    {
-	return;
-    }
+    set_condor_priv();
+
+    g_connected = false;
+
+    Connect();
 }
 
 XInterface::~XInterface()
@@ -206,9 +202,12 @@ XInterface::Connect()
     Window root;
     int s;
 
+    set_root_priv();
+
     setutent(); // Reset utmp file to beginning.
 
     _tried_root = false;
+
     while(!(_display = XOpenDisplay("localhost:0.0") ))
     {
 	err = NextEntry();
@@ -220,6 +219,7 @@ XInterface::Connect()
 	    dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
 
 	    g_connected = false;
+	    set_condor_priv();
 	    return false;
 	}
 	
@@ -227,6 +227,7 @@ XInterface::Connect()
     }
     dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
     g_connected = true;
+
     dprintf(D_FULLDEBUG, "Reset timer: %d\n", _daemon_core_timer);
     daemonCore->Reset_Timer( _daemon_core_timer, 5 ,5 );
     
@@ -249,6 +250,7 @@ XInterface::Connect()
     _pointer_prev_y = -1;
     _pointer_prev_mask = 0;
 
+    set_condor_priv();
     return true;
 }
 
