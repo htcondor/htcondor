@@ -24,7 +24,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed bug whereby \Condor{dagman}, if removed from the queue via
+      \Condor{rm}, could fail to remove all of its submitted jobs if
+      any of their submit events had not yet appeared in the userlog.
 
 \end{itemize}
 
