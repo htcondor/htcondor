@@ -645,6 +645,8 @@ Checkpoint( int sig, int code, void *scp )
 {
 	int		scm;
 
+	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
+
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
 	if( InRestart ) {
@@ -663,7 +665,9 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		InRestart = TRUE;	// not strictly true, but needed in our saved data
 #ifdef SAVE_SIGSTATE
+		dprintf( D_ALWAYS, "About to save signal state\n" );
 		condor_save_sigstates();
+		dprintf( D_ALWAYS, "Done saving signal state\n" );
 #endif
 		SaveFileState();
 		MyImage.Save();
@@ -684,9 +688,9 @@ Checkpoint( int sig, int code, void *scp )
 		RestoreFileState();
 		syscall( SYS_write, 1, "Done restoring files state\n", 27 );
 #ifdef SAVE_SIGSTATE
-		syscall( SYS_write, 1, "About to restore signal state\n", 30 );
+		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		condor_restore_sigstates();
-		syscall( SYS_write, 1, "Done restoring signal state\n", 28 );
+		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
 		SetSyscalls( scm );
 		InRestart = FALSE;
