@@ -32,6 +32,7 @@
 #include "condor_config.h"
 #include "my_hostname.h"
 #include "get_full_hostname.h"
+#include "daemon_types.h"
 
 extern "C" {
 
@@ -153,9 +154,10 @@ my_daemon_name( const char* subsys )
 
 
 char*
-get_daemon_addr( const char* constraint_attr, 
+real_get_daemon_addr( const char* constraint_attr, 
 				 const char* name, AdTypes adtype,
-				 const char* attribute, const char* subsys )
+				 const char* attribute, const char* subsys, 
+				 const char* pool )
 {
 
 	static char			daemonAddr[100];
@@ -206,7 +208,7 @@ get_daemon_addr( const char* constraint_attr,
 
 	sprintf(constraint, "%s == \"%s\"", constraint_attr, fullname ); 
 	query.addConstraint(constraint);
-	query.fetchAds(ads);
+	query.fetchAds(ads, pool);
 	ads.Open();
 	scan = ads.Next();
 	if(!scan)
@@ -222,26 +224,26 @@ get_daemon_addr( const char* constraint_attr,
 
 
 char*
-get_schedd_addr(const char* name)
+get_schedd_addr(const char* name, const char* pool)
 {
-	return get_daemon_addr( ATTR_NAME, name, SCHEDD_AD, 
-							ATTR_SCHEDD_IP_ADDR, "SCHEDD" );
+	return real_get_daemon_addr( ATTR_NAME, name, SCHEDD_AD, 
+								 ATTR_SCHEDD_IP_ADDR, "SCHEDD", pool );
 } 
 
 
 char*
-get_startd_addr(const char* name)
+get_startd_addr(const char* name, const char* pool)
 {
-	return get_daemon_addr( ATTR_MACHINE, name, STARTD_AD, 
-							ATTR_STARTD_IP_ADDR, "STARTD" );
+	return real_get_daemon_addr( ATTR_MACHINE, name, STARTD_AD, 
+								 ATTR_STARTD_IP_ADDR, "STARTD", pool );
 } 
 
 
 char*
-get_master_addr(const char* name)
+get_master_addr(const char* name, const char* pool)
 {
-	return get_daemon_addr( ATTR_NAME, name, MASTER_AD, 
-							ATTR_MASTER_IP_ADDR, "MASTER" );
+	return real_get_daemon_addr( ATTR_NAME, name, MASTER_AD, 
+								 ATTR_MASTER_IP_ADDR, "MASTER", pool );
 } 
 
 
@@ -283,6 +285,27 @@ char*
 get_collector_addr(const char* name)
 {
 	return get_cm_addr( name, "COLLECTOR_HOST", COLLECTOR_PORT );
+}
+
+
+char*
+get_daemon_addr( daemonType dt, const char* name, const char* pool )
+{
+	switch( dt ) {
+	case MASTER:
+		return get_master_addr( name, pool );
+	case STARTD:
+		return get_startd_addr( name, pool );
+	case SCHEDD:
+		return get_schedd_addr( name, pool );
+	case NEGOTIATOR:
+		return get_negotiator_addr( name );
+	case COLLECTOR:
+		return get_collector_addr( name );
+	default:
+		return NULL;
+	}
+	return NULL;
 }
 
 

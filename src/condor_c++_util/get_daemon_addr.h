@@ -23,13 +23,17 @@
 #ifndef CONDOR_GET_DAEMON_ADDR_H
 #define CONDOR_GET_DAEMON_ADDR_H
 
+#include "daemon_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern char* get_schedd_addr(const char* name = NULL);
-extern char* get_startd_addr(const char* name = NULL);
-extern char* get_master_addr(const char* name = NULL);
+extern char* get_daemon_addr( daemonType dt = MASTER, 
+							  const char* name = NULL, const char* pool = NULL);
+extern char* get_schedd_addr(const char* name = NULL, const char* pool = NULL);
+extern char* get_startd_addr(const char* name = NULL, const char* pool = NULL);
+extern char* get_master_addr(const char* name = NULL, const char* pool = NULL);
 extern char* get_negotiator_addr(const char* name = NULL);
 extern char* get_collector_addr(const char* name = NULL);
 extern char* get_daemon_name(const char* name);
