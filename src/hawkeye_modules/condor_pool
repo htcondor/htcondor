@@ -324,6 +324,9 @@ sub RunCheckPoint(  )
 	return;
     }
 
+    # Checkpoint server hash
+    my %Servers;
+
     # Parse the output...
     while ( <CKPT> )
     {
@@ -337,16 +340,45 @@ sub RunCheckPoint(  )
 	# Total line
 	if ( $Values[0] eq "Total" )
 	{
-	    $Hash->Add( "Ckpt_TotalServers", "n", $Values[1] );
-	    $Hash->Add( "Ckpt_TotalAvailDisk", "n", $Values[2] );
+	    $Hash->Add( "Ckpt_Total_Servers", "n", $Values[1] );
+	    $Hash->Add( "Ckpt_Total_AvailDisk", "n", $Values[2] );
 	}
 	# Server line
 	elsif ( $Values[1] =~ /^\d+$/ )
 	{
-	    $Hash->Add( "Ckpt_" . $Values[0] . "AvailDisk", "n", $Values[1] );
-	    $Hash->Add( "Ckpt_" . $Values[0] . "Subnet", "s", $Values[2] );
+	    my $Fqdn = $Values[0];
+	    my $Name = $Fqdn;
+
+	    # Build the logical name, check for conflicts..
+	    $Name =~ s/^(\w+).*/$1/;
+	    $Name = $Fqdn if ( exists ( $Servers{$Name} ) );
+	    while ( exists ( $Servers{$Name} ) )
+	    {
+		$Name .= "_";
+	    }
+
+	    # Stuff it in the hash...
+	    $Servers{$Name}{FullName} = $Fqdn;
+	    $Servers{$Name}{AvailDisk} = $Values[1];
+	    $Servers{$Name}{Subnet} = $Values[2];
 	}
     }
+
+    # Publish it all...
+    my %Types = ( FullName => "s", AvailDisk => "n", Subnet => "s", );
+    foreach my $Server ( keys %Servers )
+    {
+	foreach my $Field ( keys %{$Servers{$Server}} )
+	{
+	    my $Type = "s";
+	    $Type = $Types{$Field} if ( exists $Types{$Field} );
+	    $Hash->Add( "Ckpt_" . $Server . "_" . $Field, $Type,
+			$Servers{$Server}{$Field} );
+	}
+    }
+
+    # And, the server list
+    $Hash->Add( "Ckpt_Servers", "s", join( " ", keys %Servers  ) );
 
     # Done
     close( CKPT );
