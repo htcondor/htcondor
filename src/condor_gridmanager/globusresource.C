@@ -587,10 +587,10 @@ GlobusResource::SubmitMonitorJob()
 				 monitorJobStatusFile, errno );
 		return false;
 	}
-	rc = creat( monitorJobStatusFile, S_IRUSR|S_IWUSR );
+	rc = creat( monitorJobStatusFile, S_IREAD|S_IWRITE);
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "creat(%s,%d) failed, errno=%d\n",
-				 monitorJobStatusFile, S_IRUSR|S_IWUSR, errno );
+				 monitorJobStatusFile, S_IREAD|S_IWRITE, errno );
 		return false;
 	} else {
 		close( rc );
@@ -602,10 +602,10 @@ GlobusResource::SubmitMonitorJob()
 				 monitorLogFile, errno );
 		return false;
 	}
-	rc = creat( monitorLogFile, S_IRUSR|S_IWUSR );
+	rc = creat( monitorLogFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "creat(%s,%d) failed, errno=%d\n",
-				 monitorLogFile, S_IRUSR|S_IWUSR, errno );
+				 monitorLogFile, S_IREAD|S_IWRITE, errno );
 		return false;
 	} else {
 		close( rc );
