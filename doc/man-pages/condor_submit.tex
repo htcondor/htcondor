@@ -243,7 +243,8 @@ Condor does not create a log for this cluster.
 %% universe
 %%%%%%%%%%%%%%%%%%%
 
-\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler \Bar\ globus$>$] 
+\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
+\Bar\ globus \Bar\ mpi$>$] 
 Specifies which Condor Universe to use when running this job.  The Condor 
 Universe specifies a Condor execution environment.  The \Arg{standard} 
 Universe is the default, and tells Condor that this job has been re-linked 
@@ -252,10 +253,11 @@ checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
 Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
 submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
-parallel job written with PVM 3.3. The \Arg{scheduler} is for a job that
+parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
 should act as a metascheduler. The \Arg{globus} universe translates the
 submit description file to a Globus RSL string and passes it to 
-the \Prog{globusrun} program for execution. 
+the \Prog{globusrun} program for execution.  The \Arg{mpi} universe is
+for running mpi jobs made with the MPICH package.
 See the Condor User's Manual for more information about using Universe.
 
 %%%%%%%%%%%%%%%%%%%
@@ -279,16 +281,18 @@ an image size of 8 megabytes, use a \Arg{size} of 8000.
 %% machine_count
 %%%%%%%%%%%%%%%%%%%
 
-\item[machine\_count = $<$min..max$>$] If \Opt{machine\_count} is
+\item[machine\_count = $<$min..max$>$ \Bar\ $<$max$>$] 
+If \Opt{machine\_count} is
 specified, Condor will not start the job until it can simultaneously
-supply the job with \Arg{min} machines.  Condor will continue to try to provide up
+supply the job with \Arg{min} machines.  Condor will continue to try 
+to provide up
 to \Arg{max} machines, but will not delay starting of the job to do so.
 If the job is started with fewer than \Arg{max} machines, the job
 will be notified via a usual PvmHostAdd notification as additional
 hosts come on line.
 \textbf{Important:} only use \Opt{machine\_count} if an only if
-submitting into the PVM Universe.  At this time, \Opt{machine\_count}
-must be used only with a parallel PVM application.
+submitting into the PVM or MPI Universes.  Use min..max for the PVM
+universe, and just max for the MPI universe.
 
 %%%%%%%%%%%%%%%%%%%
 %% coresize
