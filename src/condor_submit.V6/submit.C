@@ -3305,7 +3305,7 @@ SetGlobusParams()
 	char * jobmanager_type;
 	jobmanager_type = condor_param ( GlobusJobmanagerType );
 	if (jobmanager_type) {
-		if (stricmp (jobmanager_type, "gt4") != MATCH ) {
+		if (stricmp (JobGridType, "gt4") != MATCH ) {
 			fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
 		}
 		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE, jobmanager_type );
