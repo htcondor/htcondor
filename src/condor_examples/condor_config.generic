@@ -327,7 +327,7 @@ KILL		: $(ActivityTimer) > $(MaxVacateTime)
 #CONTINUE_VANILLA	: $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
 #PREEMPT_VANILLA	: ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 			   (Activity == "Suspended") ) || \
-			  ( $(MachineBusy) && (Activity != "Suspended") )
+			  ( SUSPEND_VANILLA && (Activity != "Suspended") )
 #KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 
 ##  The RANK expression controls which jobs this machine prefers to
