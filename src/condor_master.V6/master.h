@@ -81,6 +81,7 @@ private:
 	int		runs_on_this_host();
 	void	Recover();
 	void	DoStart();
+	void	DoConfig( bool init );
 
 	int		start_tid;
 	int		recover_tid;

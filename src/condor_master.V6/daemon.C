@@ -109,41 +109,15 @@ daemon::daemon(char *name, bool is_daemon_core)
 			daemon_name = NULL;
 		}
 	} 
-	
+
+	// Handle configuration
+	DoConfig( true );
+
+	// Default log file name...
 	sprintf(buf, "%s_LOG", name);
 	log_filename_in_config_file = strdup(buf);
-	sprintf(buf, "%s_FLAG", name);
-	flag_in_config_file = param(buf);
 
-	// get env settings from config file if present
-	sprintf(buf, "%s_ENVIRONMENT", name);
-	env = param(buf);
-	Env envStrParser;
-	// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
-	// Env::Merge(null) will always return true, so the warning will not be
-	// printed in this case.
-	if( !envStrParser.Merge(env) ) {
-		// this is an invalid env string
-		dprintf(D_ALWAYS, "Warning! Configuration file variable `%s_ENVIRONME"
-				"NT' has invalid value `%s'; ignoring.\n", name, env);
-		env = NULL;
-	}
-
-	// Weiru
-	// In the case that we have several for example schedds running on the
-	// same machine, we specify SCHEDD__1, SCHEDD_2, ... in the config file.
-	// We want to be able to specify only one executable for them as well as
-	// different executables, or one flag for all of them as well as
-	// different flags for each. So we instead of specifying in config file
-	// SCHEDD__1 = /unsup/condor/bin/condor_schedd, SCHEDD__2 = /unsup/condor/
-	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
-	if(!flag_in_config_file && daemon_name)
-	{
-		*(daemon_name - 2) = '\0';
-		sprintf(buf, "%s_FLAG", name_in_config_file);
-		flag_in_config_file = param(buf);
-		*(daemon_name - 2) = '_';
-	} 
+	// Check the process name (is it me?)
 	process_name = NULL;
 	log_name = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
@@ -176,7 +150,6 @@ daemon::daemon(char *name, bool is_daemon_core)
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
-
 
 int
 daemon::runs_on_this_host()
@@ -334,6 +307,99 @@ daemon::DoStart()
 	Start();
 }
 
+
+// This function handles all of the configuration stuff; at startup and
+// at reconfig time.
+void
+daemon::DoConfig( bool init )
+{
+	char	*tmp;
+	char	buf[1000];
+
+	// Initialize some variables the first time through
+	if ( init ) {
+		flag_in_config_file = NULL;
+		env = NULL;
+	}
+
+	// Check for the _FLAG parameter
+	sprintf(buf, "%s_FLAG", name_in_config_file );
+	tmp = param(buf);
+
+	// Previously defind?
+	if ( NULL != flag_in_config_file ) {
+		// Has it changed?
+		if ( strcmp( flag_in_config_file, tmp ) ) {
+			free( flag_in_config_file );
+			flag_in_config_file = tmp;
+		} else if ( NULL != tmp ) {
+			// Unchanged, just free up tmp
+			free( tmp );
+		} else {
+			// Do nothing
+		}
+	} else {
+		// Not previously defined; just use tmp whatever it is
+		flag_in_config_file = tmp;
+	}
+
+	// get env settings from config file if present
+	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
+	tmp = param( buf );
+	bool	envModified = false;
+
+	// Previously defind?
+	if ( NULL != env ) {
+		// Has it changed?
+		if ( strcmp( env, tmp ) ) {
+			free( env );
+			env = tmp;
+			envModified = true;
+		} else if ( NULL != tmp ) {
+			// Unchanged, just free up tmp
+			free( tmp );
+		} else {
+			// Do nothing
+		}
+	} else {
+		// Not previously defined; just use tmp whatever it is
+		env = tmp;
+		envModified = true;
+	}
+
+	// Check the new & improved ENV.
+	if ( ( envModified ) && ( NULL != env ) ) {
+		Env envStrParser;
+		// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
+		// Env::Merge(null) will always return true, so the warning will not be
+		// printed in this case.
+		if( !envStrParser.Merge(env) ) {
+			// this is an invalid env string
+			dprintf(D_ALWAYS, "Warning! Configuration file variable "
+					"`%s_ENVIRONMENT' has invalid value `%s'; ignoring.\n",
+					name_in_config_file, env);
+			free( env );
+			env = NULL;
+		}
+	}
+
+
+	// Weiru
+	// In the case that we have several for example schedds running on the
+	// same machine, we specify SCHEDD__1, SCHEDD_2, ... in the config file.
+	// We want to be able to specify only one executable for them as well as
+	// different executables, or one flag for all of them as well as
+	// different flags for each. So we instead of specifying in config file
+	// SCHEDD__1 = /unsup/condor/bin/condor_schedd, SCHEDD__2 = /unsup/condor/
+	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
+	if( ( NULL == flag_in_config_file ) && ( NULL != daemon_name ) ) {
+		*(daemon_name - 2) = '\0';
+		sprintf(buf, "%s_FLAG", name_in_config_file);
+		flag_in_config_file = param(buf);
+		*(daemon_name - 2) = '_';
+	} 
+
+}
 
 int
 daemon::Start()
@@ -778,6 +844,7 @@ daemon::Reconfig()
 			// there's no need to reconfig it.
 		return;
 	}
+	DoConfig( false );
 	Kill( SIGHUP );
 }
 
