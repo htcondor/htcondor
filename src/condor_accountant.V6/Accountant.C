@@ -1,4 +1,6 @@
 #pragma implementation "HashTable.h"
+#pragma implementation "Set.h"
+
 #include "Accountant.h"
 #include "condor_debug.h"
 #include "condor_config.h"

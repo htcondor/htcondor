@@ -74,6 +74,8 @@ public:
   }
 
   char* Value() { return Data; }
+
+  operator char*() { return Data; }
     
 private:
 

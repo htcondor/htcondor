@@ -5,8 +5,8 @@
 #include "HashTable.h"
 
 #include "MyString.h"
-#include "StringSet.h"
 #include "SysCalls.h"
+#include "Set.h"
 
 class Accountant {
 
@@ -45,6 +45,7 @@ private:
   // Data structures & members
   //---------------------------------------------
 
+  typedef Set<MyString> StringSet;
   struct CustomerRecord {
     double Priority;
     StringSet ResourceNames;
