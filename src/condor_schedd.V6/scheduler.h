@@ -125,6 +125,15 @@ enum MrecStatus {
 };
 
 	
+typedef enum {
+	NO_SHADOW_STD,
+	NO_SHADOW_JAVA,
+	NO_SHADOW_WIN32,
+	NO_SHADOW_DC_VANILLA,
+	NO_SHADOW_OLD_VANILLA,
+} NoShadowFailure_t;
+
+
 // These are the args to contactStartd that get stored in the queue.
 class ContactStartdArgs
 {
@@ -364,6 +373,8 @@ class Scheduler : public Service
 	void			preempt_one_job();
 	void			refuse( Stream* s );
 	void			tryNextJob( void );
+	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
+
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
 			startd.  We push the capability and the jobAd, then register

@@ -3276,13 +3276,7 @@ Scheduler::StartJobHandler()
 			dprintf( D_ALWAYS, "Trying to run a job on a Windows "
 					 "resource but you do not have a condor_shadow "
 					 "that will work, aborting.\n" );
-			mark_job_stopped(job_id);
-			RemoveShadowRecFromMrec(srec);
-			holdJob( job_id->cluster, job_id->proc, 
-					 "No condor_shadow installed that supports WIN32 jobs", 
-					 true, true, true, true );
-			delete srec;
-			srec = NULL;
+			noShadowForJob( srec, NO_SHADOW_WIN32 );
 			tryNextJob();
 			return;
 		}
@@ -3300,13 +3294,7 @@ Scheduler::StartJobHandler()
 				dprintf( D_ALWAYS, "Trying to run a STANDARD job but you "
 						 "do not have a condor_shadow that will work, "
 						 "aborting.\n" );
-				mark_job_stopped(job_id);
-				RemoveShadowRecFromMrec(srec);
-				holdJob( job_id->cluster, job_id->proc, 
-                         "No condor_shadow installed that supports "
-						 "standard universe jobs", 
-                         true, true, true, true );
-				delete srec;
+				noShadowForJob( srec, NO_SHADOW_STD );
 				srec = NULL;
 				tryNextJob();
 				return;
@@ -3319,10 +3307,7 @@ Scheduler::StartJobHandler()
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
 							 "pre-6.3.3 resource, but you do not have a "
 							 "condor_shadow that will work, aborting.\n" );
-					mark_job_stopped(job_id);
-					RemoveShadowRecFromMrec(srec);
-					delete srec;
-					srec = NULL;
+					noShadowForJob( srec, NO_SHADOW_OLD_VANILLA );
 					tryNextJob();
 					return;
 				}
@@ -3332,10 +3317,7 @@ Scheduler::StartJobHandler()
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
 							 "6.3.3 or later resource, but you do not have "
 							 "condor_shadow that will work, aborting.\n" );
-					mark_job_stopped(job_id);
-					RemoveShadowRecFromMrec(srec);
-					delete srec;
-					srec = NULL;
+					noShadowForJob( srec, NO_SHADOW_DC_VANILLA );
 					tryNextJob();
 					return;
 				}
@@ -3347,13 +3329,7 @@ Scheduler::StartJobHandler()
 				dprintf( D_ALWAYS, "Trying to run a JAVA job but you "
 						 "do not have a condor_shadow that will work, "
 						 "aborting.\n" );
-				mark_job_stopped(job_id);
-				RemoveShadowRecFromMrec(srec);
-				holdJob( job_id->cluster, job_id->proc, 
-                         "No condor_shadow installed that supports JAVA jobs",
-                         true, true, true, true );
-				delete srec;
-				srec = NULL;
+				noShadowForJob( srec, NO_SHADOW_JAVA );
 				tryNextJob();
 				return;
 			}
@@ -3475,6 +3451,77 @@ Scheduler::tryNextJob( void )
 		timeout();
 		StartJobs();
 	}
+}
+
+
+void
+Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
+{
+	static bool notify_std = true;
+	static bool notify_java = true;
+	static bool notify_win32 = true;
+	static bool notify_dc_vanilla = true;
+	static bool notify_old_vanilla = true;
+
+	static char std_reason [] = 
+		"No condor_shadow installed that supports standard universe jobs";
+	static char java_reason [] = 
+		"No condor_shadow installed that supports JAVA jobs";
+	static char win32_reason [] = 
+		"No condor_shadow installed that supports WIN32 jobs";
+	static char dc_vanilla_reason [] = 
+		"No condor_shadow installed that supports new VANILLA jobs";
+	static char old_vanilla_reason [] = 
+		"No condor_shadow installed that supports old VANILLA jobs";
+
+	PROC_ID job_id;
+	char* hold_reason;
+	bool* notify_admin;
+
+	if( ! srec ) {
+		dprintf( D_ALWAYS, "ERROR: Called noShadowForJob with NULL srec!\n" );
+		return;
+	}
+	job_id = srec->job_id;
+
+	switch( why ) {
+	case NO_SHADOW_STD:
+		hold_reason = std_reason;
+		notify_admin = &notify_std;
+		break;
+	case NO_SHADOW_JAVA:
+		hold_reason = java_reason;
+		notify_admin = &notify_java;
+		break;
+	case NO_SHADOW_WIN32:
+		hold_reason = win32_reason;
+		notify_admin = &notify_win32;
+		break;
+	case NO_SHADOW_DC_VANILLA:
+		hold_reason = dc_vanilla_reason;
+		notify_admin = &notify_dc_vanilla;
+		break;
+	case NO_SHADOW_OLD_VANILLA:
+		hold_reason = old_vanilla_reason;
+		notify_admin = &notify_old_vanilla;
+		break;
+	default:
+		EXCEPT( "Unknown reason (%d) in Scheduler::noShadowForJob",
+				(int)why );
+	}
+
+		// real work begins
+
+	mark_job_stopped( &job_id );
+
+	RemoveShadowRecFromMrec( srec );
+
+	holdJob( job_id.cluster, job_id.proc, hold_reason, 
+			 true, true, true, *notify_admin );
+
+	delete srec;
+
+	*notify_admin = false;
 }
 
 
