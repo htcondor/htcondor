@@ -122,6 +122,7 @@ class match_rec
 
 enum MrecStatus {
     M_UNCLAIMED,
+	M_CONNECTING,
 	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
 	M_CLAIMED,
     M_ACTIVE
@@ -142,40 +143,18 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char* the_claim_id, char* the_owner, char*
-					   the_sinful, PROC_ID the_id, ClassAd* match,
-					   char* the_pool, bool is_dedicated );
+	ContactStartdArgs( char* the_claim_id, char* sinful, bool is_dedicated );
 	~ContactStartdArgs();
 
-	char*		sinful( void )		{ return csa_sinful; };
 	char*		claimId( void )		{ return csa_claim_id; };
-	char*		owner( void )		{ return csa_owner; };
-	char*		pool( void )		{ return csa_pool; };
-	ClassAd*	matchAd( void )		{ return csa_match_ad; };
-	bool		isDedicated( void )	{ return csa_is_dedicated; };
-	int			cluster( void ) 	{ return csa_id.cluster; };
-	int			proc( void )		{ return csa_id.proc; };
+	char*		sinful( void )		{ return csa_sinful; }
+	bool		isDedicated()		{ return csa_is_dedicated; }
 
 private:
 	char *csa_claim_id;
-	char *csa_owner;
 	char *csa_sinful;
-	PROC_ID csa_id;
-	ClassAd *csa_match_ad;
-	char *csa_pool;	
 	bool csa_is_dedicated;
 };
-
-
-// SC2000 This struct holds the state in ContactStartdArgs.  We register
-// a pointer to this state so we can restore it after a non-blocking connect.
-struct contactStartdState {
-    match_rec* mrec;
-    char* claim_id;
-    char* server;
-    ClassAd *jobAd;
-};
-
 
 class Scheduler : public Service
 {
@@ -268,7 +247,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueStartdContact( ContactStartdArgs* args );
 
-		/** Registered in contactStartd, this function is called when
+		/** Registered in contactStartdConnected, this function is called when
 			the startd replies to our request.  If it replies in the 
 			positive, the mrec->status is set to M_ACTIVE, else the 
 			mrec gets deleted.  The 'sock' is de-registered and deleted
@@ -277,6 +256,13 @@ class Scheduler : public Service
 			@return FALSE on denial/problems, TRUE on success
 		*/
 	int             startdContactSockHandler( Stream *sock );
+
+		/** Registered in contactStartd, this function is called when
+			the non-blocking connection is opened.
+			@param sock The sock with the connection to the startd.
+			@return FALSE on denial/problems, KEEP_STREAM on success
+		*/
+	int startdContactConnectHandler( Stream *sock );
 
 		/** Used to enqueue another disconnected job that we need to
 			spawn a shadow to attempt to reconnect to.
@@ -425,14 +411,16 @@ private:
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 
 
-		/** We add a match record (AddMrec), then open a ReliSock to the
-			startd.  We push the ClaimId and the jobAd, then register
+		/** We begin the process of opening a non-blocking ReliSock
+			connection to the startd.
+
+			We push the ClaimId and the jobAd, then register
 			the Socket with startdContactSockHandler and put the new mrec
 			into the daemonCore data pointer.  
 			@param args An object that holds all the info we care about 
 			@return false on failure and true on success
 		 */
-	bool	contactStartd( ContactStartdArgs* args );
+	void	contactStartd( ContactStartdArgs* args );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
@@ -488,6 +476,7 @@ private:
 // Other prototypes
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
+extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  

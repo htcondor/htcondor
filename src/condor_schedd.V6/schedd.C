@@ -212,26 +212,10 @@ match_rec::setStatus( int stat )
 }
 
 
-ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* the_owner,  
-									  char* the_sinful, PROC_ID the_id, 
-									  ClassAd* match, char* the_pool, 
-									  bool is_dedicated ) 
+ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* sinful, bool is_dedicated ) 
 {
 	csa_claim_id = strdup( the_claim_id );
-	csa_owner = strdup( the_owner );
-	csa_sinful = strdup( the_sinful );
-	csa_id.cluster = the_id.cluster;
-	csa_id.proc = the_id.proc;
-	if( match ) {
-		csa_match_ad = new ClassAd( *match );
-	} else {
-		csa_match_ad = NULL;
-	}
-	if( the_pool ) {
-		csa_pool = strdup( the_pool );
-	} else {
-		csa_pool = NULL;
-	}
+	csa_sinful = strdup( sinful );
 	csa_is_dedicated = is_dedicated;
 }
 
@@ -239,16 +223,8 @@ ContactStartdArgs::ContactStartdArgs( char* the_claim_id, char* the_owner,
 ContactStartdArgs::~ContactStartdArgs()
 {
 	free( csa_claim_id );
-	free( csa_owner );
 	free( csa_sinful );
-	if( csa_pool ) {
-		free( csa_pool );
-	}
-	if( csa_match_ad ) {
-		delete( csa_match_ad );
-	}
 }
-
 
 Scheduler::Scheduler()
 {
@@ -3303,6 +3279,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
 	ContactStartdArgs * args;
+	match_rec *mrec;
 	ClassAd* my_match_ad;
 	ClassAd* ad;
 	char buffer[1024];
@@ -3835,6 +3812,8 @@ Scheduler::negotiate(int, Stream* s)
 						// sinful should now point to the sinful string
 						// of the startd we were matched with.
 
+					mrec = AddMrec( claim_id, sinful, &id, my_match_ad, owner, negotiator_name );
+
 					/* Here we don't want to call contactStartd directly
 					   because we do not want to block the negotiator for 
 					   this, and because we want to minimize the possibility
@@ -3843,11 +3822,7 @@ Scheduler::negotiate(int, Stream* s)
 					   the claim protocol.  So...we enqueue the
 					   args for a later call.  (The later call will be
 					   made from the startdContactSockHandler) */
-					args = new ContactStartdArgs( claim_id, owner,
-												  sinful, id,
-												  my_match_ad,
-												  negotiator_name, 
-												  false );
+					args = new ContactStartdArgs( claim_id, sinful, false );
 
 						// Now that the info is stored in the above
 						// object, we can deallocate all of our
@@ -3860,7 +3835,7 @@ Scheduler::negotiate(int, Stream* s)
 						delete my_match_ad;
 						my_match_ad = NULL;
 					}
-					
+
 					if( enqueueStartdContact(args) ) {
 						perm_rval = 1;	// happiness
 					} else {
@@ -3996,68 +3971,103 @@ Scheduler::vacate_service(int, Stream *sock)
 }
 
 
-bool
+void
 Scheduler::contactStartd( ContactStartdArgs* args ) 
 {
 	if( args->isDedicated() ) {
 			// If this was a match for the dedicated scheduler, let it
-			// handle it from here, since we don't want to generate a
-			// match_rec for it or anything like that.
-		return dedicated_scheduler.contactStartd( args );
+			// handle it from here.
+		dedicated_scheduler.contactStartd( args );
+		return;
 	}
 
 	dprintf( D_FULLDEBUG, "In Scheduler::contactStartd()\n" );
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", args->claimId(), 
-			 args->owner(), args->sinful(), args->cluster(),
-			 args->proc() ); 
+	HashKey mrec_key(args->claimId());
+	match_rec *mrec = NULL;
+	matches->lookup(mrec_key,mrec);
 
-	match_rec* mrec;   // match record pointer
-	PROC_ID id;
-
-	id.cluster = args->cluster();
-	id.proc = args->proc();
-
-	mrec = AddMrec( args->claimId(), args->sinful(), &id,
-					args->matchAd(), args->owner(), args->pool() ); 
-	if( ! mrec ) {
-        return false;
+	if(!mrec) {
+		// The match must have gotten deleted during the time this
+		// operation was queued.
+		dprintf( D_FULLDEBUG, "no match record found for %s", args->claimId() );
+		return;
 	}
-	ClassAd *jobAd = GetJobAd( id.cluster, id.proc );
+
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->id, 
+			 mrec->user, mrec->peer, mrec->cluster,
+			 mrec->proc ); 
+
+	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc );
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "failed to find job %d.%d\n", id.cluster,
-				 id.proc ); 
+		dprintf( D_ALWAYS, "failed to find job %d.%d\n", mrec->cluster,
+				 mrec->proc ); 
 		DelMrec( mrec );
-		return false;
+		return;
 	}
 
 	if( ! claimStartd(mrec, jobAd, false) ) {
 		DelMrec( mrec );
-		return false;
+		return;
 	}
-	return true;
 }
 
-
-#ifdef BAILOUT   /* this is kinda hack-like, but we need to do it a LOT. */
-#undef BAILOUT
-#endif
-#define BAILOUT       \
-        delete sock;  \
-        return false;
 
 bool
 claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 {
-
 	DCStartd matched_startd ( mrec->peer, NULL );
 	Sock* sock = NULL;
 
 	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
 			 mrec->peer ); 
 
-	if (!(sock = matched_startd.startCommand(REQUEST_CLAIM, Stream::reli_sock,
-                                             STARTD_CONTACT_TIMEOUT ))) {
+	if (!(sock = matched_startd.reliSock( STARTD_CONTACT_TIMEOUT, NULL, true ))) {
+		dprintf( D_FAILURE|D_ALWAYS, "Couldn't initiate connection to %s\n",
+		         mrec->peer );
+		return false;
+	}
+
+	mrec->setStatus( M_CONNECTING );
+
+	char to_startd[256];
+	sprintf ( to_startd, "to startd %s", mrec->peer );
+
+	if( is_dedicated ) {
+		daemonCore->
+			Register_Socket( sock, "<Startd Contact Socket>",
+			  (SocketHandlercpp)&DedicatedScheduler::startdContactConnectHandler,
+			  to_startd, &dedicated_scheduler, ALLOW );
+	} else {
+		daemonCore->
+			Register_Socket( sock, "<Startd Contact Socket>",
+			  (SocketHandlercpp)&Scheduler::startdContactConnectHandler,
+			  to_startd, &scheduler, ALLOW );
+	}
+	daemonCore->Register_DataPtr( strdup(mrec->id) );
+
+	return true;
+}
+
+
+bool
+claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
+{
+	DCStartd matched_startd ( mrec->peer, NULL );
+
+	if (!sock) {
+		dprintf( D_FAILURE|D_ALWAYS, "NULL sock when connecting to startd %s\n",
+				 mrec->peer );
+		return false;
+	}
+	if (!sock->is_connected()) {
+		dprintf( D_FAILURE|D_ALWAYS, "Failed to connect to startd %s\n",
+				 mrec->peer );
+		return false;
+	}
+
+	if (!matched_startd.startCommand(REQUEST_CLAIM, sock,
+	                                 STARTD_CONTACT_TIMEOUT )) {
 		dprintf( D_FAILURE|D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
 				 mrec->peer );
 		return false;
@@ -4067,12 +4077,12 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 
 	if( !sock->put( mrec->id ) ) {
 		dprintf( D_ALWAYS, "Couldn't send ClaimId to startd.\n" );	
-		BAILOUT;
+		return false;
 	}
 
 	if( !job_ad->put( *sock ) ) {
 		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
-		BAILOUT;
+		return false;
 	}	
 
 	char startd_version[150];
@@ -4088,11 +4098,11 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 				// post 6.1.11 change to the claim protocol.
 			if( !sock->put( scheduler.dcSockSinful() ) ) {
 				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" ); 
-				BAILOUT;
+				return false;
 			}
 			if( !sock->snd_int(scheduler.aliveInterval(), FALSE) ) {
 				dprintf(D_ALWAYS, "Couldn't send alive_interval to startd.\n");
-				BAILOUT;
+				return false;
 			}
 			mrec->sent_alive_interval = true;
 		}
@@ -4104,7 +4114,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 
 	if( !sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
-		BAILOUT;
+		return false;
 	}
 
 	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
@@ -4112,6 +4122,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", mrec->peer );
 
+	daemonCore->Cancel_Socket( sock ); //Allow us to re-register this socket.
 	if( is_dedicated ) {
 		daemonCore->
 			Register_Socket( sock, "<Startd Contact Socket>",
@@ -4131,8 +4142,51 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 
 	return true;
 }
-#undef BAILOUT
 
+int
+Scheduler::startdContactConnectHandler( Stream *sock )
+{
+	dprintf ( D_FULLDEBUG, "In Scheduler::startdContactConnectHandler\n" );
+
+		// fetch the match record.  the daemon core DataPtr specifies
+		// the id of the match (a.k.a. the ClaimId).  use this id to
+		// pull out the actual mrec from our hashtable.
+	char *id = (char *) daemonCore->GetDataPtr();
+	match_rec *mrec = NULL;
+	if ( id ) {
+		HashKey key(id);
+		matches->lookup(key, mrec);
+		free(id); 	// it was allocated with strdup() when
+					// Register_DataPtr was called   
+	}
+
+	if ( !mrec ) {
+		// The match record must have been deleted.  Nothing left to do, close
+		// up shop.
+		dprintf ( D_FULLDEBUG, "startdContactConnectHandler(): mrec not found\n" );
+		checkContactQueue();
+		return FALSE;
+	}
+
+	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
+
+	ClassAd *jobAd = GetJobAd( mrec->cluster, mrec->proc );
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "failed to find job %d.%d\n", mrec->cluster,
+				 mrec->proc ); 
+		DelMrec( mrec );
+		return FALSE;
+	}
+
+	if(!claimStartdConnected( dynamic_cast<Sock *>(sock), mrec, jobAd, false )) {
+		DelMrec( mrec );
+		return FALSE;
+	}
+
+	// The stream will be closed when we get a callback
+	// in startdContactSockHandler.  Keep it open for now.
+	return KEEP_STREAM;
+}
 
 /* note new BAILOUT def:
    before each bad return we check to see if there's a pending call
@@ -4651,19 +4705,28 @@ Scheduler::StartJobs()
 	startJobsDelayBit = FALSE;
 	matches->startIterations();
 	while(matches->iterate(rec) == 1) {
-		if( rec->status == M_UNCLAIMED ) {
+		switch(rec->status) {
+		case M_UNCLAIMED:
 			dprintf(D_FULLDEBUG, "match (%s) unclaimed\n", rec->id);
 			continue;
-		}
-		if ( rec->status == M_STARTD_CONTACT_LIMBO ) {
+		case M_CONNECTING:
+			dprintf(D_FULLDEBUG, "match (%s) waiting for connection\n", rec->id);
+			continue;
+		case M_STARTD_CONTACT_LIMBO:
 			dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
 					  rec->id );
 			continue;
-		}
-		if ( rec->shadowRec ) {
-			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-					rec->id);
-			continue;
+		case M_ACTIVE:
+		case M_CLAIMED:
+			if ( rec->shadowRec ) {
+				dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
+						rec->id);
+				continue;
+			}
+			// Go ahead and start a shadow.
+			break;
+		default:
+			EXCEPT( "Unknown status in match rec (%d)", rec->status );
 		}
 
 		// This is the case we want to try and start a job.

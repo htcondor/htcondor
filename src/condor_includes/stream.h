@@ -481,6 +481,9 @@ public:
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) = 0;
 
+	/// get timeout time for pending connect operation;
+	virtual time_t connect_timeout_time() = 0;
+
 	/** Get this stream's type.
         @return the type of this stream
     */

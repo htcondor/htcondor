@@ -362,7 +362,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec, CondorError* errstack )
+Daemon::reliSock( int sec, CondorError* errstack, bool non_blocking )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -373,7 +373,8 @@ Daemon::reliSock( int sec, CondorError* errstack )
 	if( sec ) {
 		reli->timeout( sec );
 	}
-	if( reli->connect(_addr, 0) ) {
+	int rc = reli->connect(_addr, 0, non_blocking);
+	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return reli;
 	} else {
 		if (errstack) {
@@ -387,7 +388,7 @@ Daemon::reliSock( int sec, CondorError* errstack )
 
 
 SafeSock*
-Daemon::safeSock( int sec, CondorError* errstack )
+Daemon::safeSock( int sec, CondorError* errstack, bool non_blocking )
 {
 	if( !checkAddr() ) {
 			// this already deals w/ _error for us...
@@ -398,7 +399,8 @@ Daemon::safeSock( int sec, CondorError* errstack )
 	if( sec ) {
 		safe->timeout( sec );
 	}
-	if( safe->connect(_addr, 0) ) {
+	int rc = safe->connect(_addr, 0, non_blocking);
+	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return safe;
 	} else {
 		if (errstack) {

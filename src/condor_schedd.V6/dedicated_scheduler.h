@@ -196,8 +196,9 @@ class DedicatedScheduler : public Service {
 	void listDedicatedResources( int debug_level, ClassAdList* resources );
 
 		// Used for claiming/releasing startds we control
-	bool contactStartd( ContactStartdArgs* args );
+	void contactStartd( ContactStartdArgs* args );
 	bool requestClaim( ClassAd* r );
+	int startdContactConnectHandler( Stream *sock );
 	int	startdContactSockHandler( Stream* sock );
 	bool releaseClaim( match_rec* m_rec, bool use_tcp = true );
 	bool deactivateClaim( match_rec* m_rec );

@@ -565,6 +565,12 @@ int Sock::do_connect(
 
 		if ( non_blocking_flag && !connect_state.connect_failed) {
 			_state = sock_connect_pending;
+			if( DebugFlags & D_NETWORK ) {
+				char* dst = strdup( sin_to_string(&_who) );
+				dprintf(D_NETWORK,"non-blocking CONNECT started fd=%d dst=%s\n",
+				         _sock, dst );
+				free( dst );
+			}
 			return CEDAR_EWOULDBLOCK; 
 		}
 
@@ -643,7 +649,7 @@ bool Sock::do_connect_finish()
 
 	if ( connect_state.non_blocking_flag ) {
 
-		if ((time(NULL) < connect_state.timeout_time))
+		if (time(NULL) < connect_state.timeout_time)
 		{
 				// we don't want to busyloop on connect, so sleep for a second
 				// before we try again
@@ -756,6 +762,11 @@ bool Sock::do_connect_tryit()
 #endif /* end of unix code */
 
 	return false;
+}
+
+time_t Sock::connect_timeout_time()
+{
+	return _state == sock_connect_pending ? connect_state.timeout_time : 0;
 }
 
 bool Sock::test_connection()

@@ -250,7 +250,8 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0 );
+	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0,
+	                    bool non_blocking = false );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
@@ -259,7 +260,8 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0 );
+	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0,
+	                    bool non_blocking = false );
 
 public:
 		/** Send the given command to the daemon.  The caller gives

@@ -1748,6 +1748,7 @@ void DaemonCore::Driver()
 	struct timeval *ptimer;
 	int temp;
 	int result;
+	time_t connect_timeout, min_connect_timeout;
 
 #ifndef WIN32
 	sigset_t fullset, emptyset;
@@ -1832,6 +1833,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&readfds);
 		FD_ZERO(&writefds);
 		FD_ZERO(&exceptfds);
+		min_connect_timeout = 0;
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 					// Setup our fdsets
@@ -1842,6 +1844,21 @@ void DaemonCore::Driver()
 						// on success, or the exceptfd set on failure.
 					FD_SET( (*sockTable)[i].sockd,&writefds);
 					FD_SET( (*sockTable)[i].sockd,&exceptfds);
+
+					// If this connection attempt times out sooner than
+					// our select timeout, adjust the select timeout.
+					connect_timeout = (*sockTable)[i].iosock->connect_timeout_time();
+					if(connect_timeout) { // If non-zero, there is a timeout.
+						if(min_connect_timeout == 0 || \
+						   min_connect_timeout > connect_timeout) {
+							min_connect_timeout = connect_timeout;
+						}
+						connect_timeout -= time(NULL);
+						if(connect_timeout < timer.tv_sec) {
+							if(connect_timeout < 0) connect_timeout = 0;
+							timer.tv_sec = connect_timeout;
+						}
+					}
 				} else {
 						// we want to be woken when there is something
 						// to read.
@@ -1922,7 +1939,12 @@ void DaemonCore::Driver()
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
 #endif
-		
+
+		if(rv==0 && min_connect_timeout && min_connect_timeout < time(NULL)) {
+			// No socket activity has happened, but a connection attempt
+			// has timed out, so do enter the following section.
+			rv = 1;
+		}
 		if (rv > 0) {	// connection requested
 
 			bool recheck_status = false;
@@ -1935,11 +1957,19 @@ void DaemonCore::Driver()
 					// writefds and excepfds.  otherwise, check readfds.
 					(*sockTable)[i].call_handler = false;	
 					if ( (*sockTable)[i].is_connect_pending ) {					
+
+						connect_timeout =
+							(*sockTable)[i].iosock->connect_timeout_time();
+						bool connect_timed_out = 
+							connect_timeout != 0 && connect_timeout < time(NULL);
+
 						if ( (FD_ISSET((*sockTable)[i].sockd, &writefds)) ||
-							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ) 
+							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ||
+							 connect_timed_out )
 						{
-							// a connection pending socket has been set.
-							// only call the handler if CEDAR confirms the
+							// A connection pending socket has been
+							// set or the connection attempt has timed out.
+							// Only call handler if CEDAR confirms the
 							// connect algorithm has completed.
 							if ( ((Sock *)(*sockTable)[i].iosock)->
 											do_connect_finish() )

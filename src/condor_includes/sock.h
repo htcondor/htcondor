@@ -190,6 +190,9 @@ public:
 	/// is a non-blocking connect outstanding?
 	bool is_connect_pending() { return _state == sock_connect_pending; }
 
+	/// is the socket connected?
+	bool is_connected() { return _state == sock_connect; }
+
     /// 
 	virtual ~Sock();
 
@@ -269,6 +272,8 @@ protected:
 
     ///
 	bool test_connection();
+	///
+	time_t connect_timeout_time();
 
 	/*
 	**	Data structures

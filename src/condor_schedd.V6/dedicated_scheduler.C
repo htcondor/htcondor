@@ -904,13 +904,15 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 	char	*claim_id = NULL;	// ClaimId for each match made
 	char	*tmp;
 	char	*sinful;
+	char	*machine_name;
 	int		perm_rval;
 	int		op;
 	PROC_ID	id;
+	match_rec *mrec;
 
 		// TODO: Can we do anything smarter w/ cluster and proc with
 		// all of this stuff?
-	id.cluster = id.proc = 0;
+	id.cluster = id.proc = -1;
 
 	ContactStartdArgs *args;
 	ClassAd *my_match_ad;
@@ -1081,6 +1083,26 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// sinful should now point to the sinful string of the
 				// startd we were matched with.
 			
+                // Now, create a match_rec for this resource
+				// Note, we want to claim this startd as the
+				// "DedicatedScheduler" owner, which is why we call
+				// owner() here...
+			mrec = new match_rec( claim_id, sinful, &id,
+			                       my_match_ad, owner(), negotiator_name );
+
+			machine_name = NULL;
+			if( ! mrec->my_match_ad->LookupString(ATTR_NAME, &machine_name) ) {
+				dprintf( D_ALWAYS, "ERROR: No %s in resource ad: "
+						 "Aborting dedicated scheduler claim\n", ATTR_NAME );
+				delete mrec;
+				break;
+			}
+
+			// Next, insert this match_rec into our hashtables
+			all_matches->insert( HashKey(machine_name), mrec );
+			all_matches_by_id->insert( HashKey(mrec->id), mrec );
+			num_matches++;
+
 				/* 
 				   Here we don't want to call contactStartd directly
 				   because we do not want to block the negotiator for
@@ -1092,12 +1114,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				   made from the startdContactSockHandler)
 				*/
 
-				// Note, we want to claim this startd as the
-				// "DedicatedScheduler" owner, which is why we call
-				// owner() here...
-			args = new ContactStartdArgs( claim_id, owner(),
-										  sinful, id, my_match_ad,	
-										  negotiator_name, true );
+			args = new ContactStartdArgs( claim_id, sinful, true );
 
 				// Now that the info is stored in the above
 				// object, we can deallocate all of our strings
@@ -1111,6 +1128,8 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				delete my_match_ad;
 				my_match_ad = NULL;
 			}
+			free(machine_name);
+			machine_name = NULL;
 				
 			if( scheduler.enqueueStartdContact(args) ) {
 				perm_rval = 1;	// happiness
@@ -1156,50 +1175,69 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
   that in our table, then calls claimStartd() to actually do the
   work of the claiming protocol.
 */
-bool
+void
 DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 {
+	HashKey mrec_key(args->claimId());
+	match_rec *mrec = NULL;
+	all_matches_by_id->lookup(mrec_key, mrec);
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::contactStartd()\n" );
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", args->claimId(), 
-			 args->owner(), args->sinful(), args->cluster(),
-			 args->proc() ); 
-
-	match_rec* m_rec;
-	PROC_ID id;
-
-		// Dummy values for now
-	id.cluster = -1;
-	id.proc = -1;
-
-		// Now, create a match_rec for this resource
-	m_rec = new match_rec( args->claimId(), args->sinful(), &id,
-						   args->matchAd(), args->owner(),
-						   args->pool() );  
-
-	char buf[256];
-	buf[0] = '\0';
-	if( ! m_rec->my_match_ad->LookupString(ATTR_NAME, buf) ) {
-		dprintf( D_ALWAYS, "ERROR: No %s in resource ad: "
-				 "Aborting contactStartd()\n", ATTR_NAME );
-		delete m_rec;
-		return false;
+	if(!mrec) {
+		// The match must have gotten deleted during the time this
+		// operation was queued.
+		dprintf( D_FULLDEBUG, "no match record found for %s", args->claimId() );
+		return;
 	}
 
-		// Next, insert this match_rec into our hashtables
-	all_matches->insert( HashKey(buf), m_rec );
-	all_matches_by_id->insert( HashKey(m_rec->id), m_rec );
-	num_matches++;
 
-	if( claimStartd(m_rec, &dummy_job, true) ) {
-		return true;
-	} else {
-		m_rec->setStatus( M_UNCLAIMED );
-		return false;
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", mrec->id, 
+			 mrec->user, mrec->peer, mrec->cluster,
+			 mrec->proc ); 
+
+	if( !claimStartd(mrec, &dummy_job, true) ) {
+		mrec->setStatus( M_UNCLAIMED );
 	}
 }
 
+
+int
+DedicatedScheduler::startdContactConnectHandler( Stream *sock )
+{
+	dprintf ( D_FULLDEBUG, "In DedicatedScheduler::startdContactConnectHandler\n" );
+
+		// fetch the match record.  the daemon core DataPtr specifies
+		// the id of the match (a.k.a. the ClaimId).  use this id to
+		// pull out the actual mrec from our hashtable.
+	char *id = (char *) daemonCore->GetDataPtr();
+	match_rec *mrec = NULL;
+	if ( id ) {
+		HashKey key(id);
+		all_matches_by_id->lookup(key, mrec);
+		free(id); 	// it was allocated with strdup() when
+					// Register_DataPtr was called   
+	}
+
+	if ( !mrec ) {
+		// The match record must have been deleted.  Nothing left to do, close
+		// up shop.
+		dprintf ( D_FULLDEBUG, "startdContactConnectHandler(): mrec not found\n" );
+		scheduler.checkContactQueue();
+		return FALSE;
+	}
+
+	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
+
+	if(!claimStartdConnected( dynamic_cast<Sock *>(sock), mrec, &dummy_job, true )) {
+		mrec->setStatus( M_UNCLAIMED );
+		return FALSE;
+	}
+
+	// The stream will be closed when we get a callback
+	// in startdContactSockHandler.  Keep it open for now.
+	return KEEP_STREAM;
+}
 
 // Before each bad return we check to see if there's a pending call in
 // the contact queue.
@@ -1211,11 +1249,10 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 int
 DedicatedScheduler::startdContactSockHandler( Stream *sock )
 {
+	int reply;
 		// all return values are non - KEEP_STREAM.  
 		// Therefore, DaemonCore will cancel this socket at the
 		// end of this function, which is exactly what we want!
-
-	int reply;
 
 	dprintf( D_FULLDEBUG, "In Scheduler::startdContactSockHandler\n" );
 
@@ -3449,6 +3486,7 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 	}
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
+	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
     case M_ACTIVE:
 		return 0;
@@ -3639,6 +3677,7 @@ findAvailTime( match_rec* mrec )
 		// First, switch on the status of the mrec
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
+	case M_CONNECTING:
 	case M_STARTD_CONTACT_LIMBO:
 			// Not yet claimed, so not yet available. 
 			// TODO: Be smarter here.
