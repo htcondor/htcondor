@@ -103,7 +103,11 @@ bool _condorPacket :: set_encryption_id(const char * keyId)
     if (keyId) {
         outgoingEncKeyId_ = strdup(keyId);
         outgoingEidLen_   = strlen(outgoingEncKeyId_);
-        dprintf(D_ALWAYS, "seeting key length %d\n", outgoingEidLen_);
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_SECURITY, 
+					 "set_encryption_id: setting key length %d\n", 
+					 outgoingEidLen_ );  
+		}
         if ( curIndex == 0 ) {
             curIndex += 10;
         }
