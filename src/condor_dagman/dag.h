@@ -111,6 +111,10 @@ class Dag {
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
 
+    /** @return the number of jobs ready to submit to Condor
+     */
+    inline int NumJobsReady() const { return _readyQ->Number(); }
+
     /** @return the number of PRE/POST scripts currently running
      */
     inline int NumScriptsRunning() const
