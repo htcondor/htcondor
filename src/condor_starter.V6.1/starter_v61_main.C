@@ -141,7 +141,12 @@ main_pre_dc_init( int argc, char* argv[] )
 		int i, len;
 		for( i=1; i<argc; i++ ) {
 			len = strlen(argv[i]);
-			if( strincmp(argv[i], "-gridshell", len) == MATCH ) {
+			if( len < 3 ) {
+					// ambiguous, bail out, since we don't want to get
+					// confused with just "-" or something
+				continue;
+			}
+			if( strincmp(argv[i], "-gridshell", MIN(len,10)) == MATCH ) {
 				mySubSystem = "GRIDSHELL";
 				is_gridshell = true;
 				break;
