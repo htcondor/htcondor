@@ -24,7 +24,7 @@
 #ifndef CONDOR_SUBMIT_H
 #define CONDOR_SUBMIT_H
 
-#include "types.h"
+#include "condor_id.h"
 
 /** Submits a job to condor using popen().  This is a very primitive method
     to submitting a job, and SHOULD be replacable by a Condor Submit API.

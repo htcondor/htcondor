@@ -432,6 +432,17 @@ Directory::Remove_Entire_Directory( void )
 	return_and_resetpriv(ret_value);
 }
 
+#if ! defined(WIN32)
+bool
+Directory::Recursive_Chown(uid_t src_uid, uid_t dst_uid, gid_t dst_gid,
+		bool non_root_okay /*= true*/)
+{
+	return recursive_chown(GetDirectoryPath(),
+		src_uid, dst_uid, dst_gid, non_root_okay);
+}
+#endif /* ! defined(WIN32) */
+
+
 bool 
 Directory::Remove_Entry( const char* name )
 {
@@ -1162,3 +1173,129 @@ create_temp_file() {
 
 	return filename;
 }
+
+
+
+#if ! defined(WIN32)
+
+static bool recursive_chown_impl(const char * path, 
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid);
+
+/** Helper function. See recursive_chown.
+
+This implements "fast" chowning of a file or directory.
+That is, it assumes that it has permission and just uses "chown()"
+*/
+static bool recursive_chown_impl_fast(const char * path,
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid)
+{
+	StatInfo si(path);
+	if(si.Error() != SIGood) {
+		if(si.Error() == SINoFile) {
+			dprintf(D_ALWAYS, "Attempting to chown '%s', "
+				"but it doesn't appear to exist.\n", path); 
+		} else {
+			dprintf(D_ALWAYS, "Attempting to chown '%s', "
+				"but encountered an error inspecting it (errno %d)\n",
+				path, si.Errno()); 
+		}
+		return false;
+	}
+
+	uid_t real_uid = si.GetOwner();
+	if(real_uid != src_uid && real_uid != dst_uid) {
+		dprintf(D_ALWAYS, "Attempting to chown '%s' from %d to %d.%d,"
+			" but the path was unexpectedly owned by %d\n", 
+			path, (int)src_uid, (int)dst_uid, (int)dst_gid, 
+			(int)real_uid);
+		return false;
+	}
+
+	if( IsDirectory(path) ) {
+		Directory dir(path);
+		const char * filename = 0;
+		while( (filename = dir.Next()) ) {
+				// Directory skips . and .. for us.  Keen.
+			//if(strcmp(filename, ".") == 0) { continue; }
+			//if(strcmp(filename, "..") == 0) { continue; }
+			filename = dir.GetFullPath();
+			if( ! recursive_chown_impl(filename, src_uid,
+					dst_uid, dst_gid) ) {
+				return false;
+			}
+		}
+	}
+
+	// We specifically do the path itself last.  This way
+	// we can take the optional risky optimization: if the
+	// root level is already correctly owned, skip it.  In this
+	// case we'll do the right thing if we redo the chown
+	// after crashing mid-way through.
+	if( chown(path, dst_uid, dst_gid) != 0 ) {
+		return false;
+	}
+	return true;
+}
+
+
+/// Helper function. See recursive_chown.
+static bool recursive_chown_impl(const char * path, 
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid)
+{
+	ASSERT(get_priv() == PRIV_ROOT);
+	
+	if( recursive_chown_impl_fast(path, src_uid, dst_uid, dst_gid) ) {
+		return true;
+	}
+	// No luck with the fast (chown()-based) implementation.  Try
+	// the slow (copy-based) implementation
+	/* // TODO
+		// Disabled.  The slow implemention opened all sorts of
+		// hairy issues, especially regarding recovery
+	if( recursive_chown_impl_slow(const char * path, uid_t uid, gid_t gid) ) {
+		return true;
+	}
+	*/
+
+	// Still no luck.
+	dprintf(D_ALWAYS, "Error: Unable to chown '%s' from %d to %d.%d\n",
+		path, (int)src_uid, (int)dst_uid, (int)dst_gid);
+	return false;
+}
+
+/* TODO?: Optional speed hack: If the caller turns this option one,
+pass it to recursive_chown_impl.  recursive_chown_impl will check
+the existing ownership of the file.  If it's already correct, it will
+immediately return.
+*/
+bool recursive_chown(const char * path,
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid, 
+	bool non_root_okay /* = true */)
+{
+	// Quick check if the chown is even possible
+	if( ! can_switch_ids()) {
+
+		// We're not root, we're doomed.
+		if( non_root_okay) {
+			// But it's okay!
+			dprintf(D_FULLDEBUG, "Unable to chown %s from %d to %d.%d.  Process lacks the ability to change UIDs (probably isn't root).  This is probably harmless.  Skipping chown attempt.\n", path, src_uid, dst_uid, dst_gid);
+			return true;
+
+		} else {
+			// Oops, we expected to be root.
+			dprintf(D_ALWAYS, "Error: Unable to chown %s to from %d %d.%d; we're not root.\n", path, src_uid, dst_uid, dst_gid);
+			return false;
+
+		}
+	}
+
+	// Lower levels of the implementation assume we're
+	// root, which is reasonable since we have no hope of doing
+	// a chown if we're not root.
+	priv_state previous = set_priv(PRIV_ROOT);
+	bool ret = recursive_chown_impl(path,src_uid,dst_uid,dst_gid);
+	set_priv(previous);
+	return ret;
+}
+
+#endif /* ! defined(WIN32) */

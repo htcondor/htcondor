@@ -228,6 +228,14 @@ SOURCE="..\src\condor_c++_util\condor_event.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_id.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_id.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_md.C"
 # End Source File
 # Begin Source File

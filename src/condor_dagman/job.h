@@ -29,15 +29,17 @@
 #include "simplelist.h"         /* from condor_c++_util/ directory */
 #include "MyString.h"
 #include "list.h"
+#include "condor_id.h"
 
 //
 // Local DAGMan includes
 //
-#include "types.h"
 #include "debug.h"
 #include "script.h"
 
 #define JOB_ERROR_TEXT_MAXLEN 128
+
+typedef int JobID_t;
 
 /**  The job class represents a job in the DAG and it's state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The

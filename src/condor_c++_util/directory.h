@@ -365,7 +365,42 @@ public:
 	*/
 	bool Remove_Entire_Directory( void );
 
+
 #ifndef WIN32
+
+	/** Recursively change ownership of this directory and kids
+
+	Implemented in terms of recursive_chown, see that for most
+	up to date details.
+
+	@see recursive_chown
+
+	Changes ownership of path to the UID dst_uid, and GID dst_gid
+	from the UID src_uid.  The directory and all files and
+	directories within it are changed.  If a file is encountered
+	that is not owned by src_uid or dst_uid, it is considered an
+	error.
+
+	On an error, a message is reported to dprintf(D_ALWAYS) and false
+	is returned.  Otherwise true is returned.
+
+	@param src_uid UID who is allowed to already own the file
+
+	@param dst_uid UID to change the file's ownership to.  (Will
+	silently skip a file already downed by this user)
+
+	@param dst_gid GID to change the file's ownership to.
+
+	@param non_root_okay Should we silently skip chown attempt and
+	report success if this process isn't root?  chown only works if
+	this process has root permissions.  If this process isn't root
+	and non_root_okay is true (the default), this function will
+	silently return true.  If this process isn't root and
+	non_root_okay is false, this function will fail.
+	*/
+	bool Recursive_Chown(uid_t src_uid, uid_t dst_uid, gid_t dst_gid,
+		bool non_root_okay = true);
+
 
 		/** Recursively walk through the directory tree and chmod()
 			any real directories (ignoring symlinks) to the given
@@ -377,6 +412,7 @@ public:
 	bool chmodDirectories( mode_t mode );
 
 #endif /* ! WIN32 */
+
 
 private:
 	char *curr_dir;
@@ -430,6 +466,40 @@ char* dircat( const char* dirpath, const char* filename );
   @return The pointer returned must be de-allocated by the caller w/ free()
 */
 char* temp_dir_path();
+
+#if ! defined(WIN32)
+/** Recursively change ownership of a file or directory tree
+
+Changes ownership of path to the UID dst_uid, and GID dst_gid
+from the UID src_uid.  If path is a directory, the directory and
+all files and directories within it are also changed.  If a file
+is encountered that is not owned by src_uid or dst_uid, it is
+considered an error.
+
+On an error, a message is reported to dprintf(D_ALWAYS) and false
+is returned.  Otherwise true is returned.
+
+@param path File or directory to chown
+
+@param src_uid UID who is allowed to already own the file
+
+@param dst_uid UID to change the file's ownership to.  (Will
+silently skip a file already downed by this user)
+
+@param dst_gid GID to change the file's ownership to.
+
+@param non_root_okay Should we silently skip chown attempt and
+report success if this process isn't root?  chown only works if
+this process has root permissions.  If this process isn't root
+and non_root_okay is true (the default), this function will
+silently return true.  If this process isn't root and
+non_root_okay is false, this function will fail.
+*/
+bool recursive_chown(const char * path,
+	uid_t src_uid, uid_t dst_uid, gid_t dst_gid, bool
+	non_root_okay = true);
+
+#endif /* ! defined(WIN32) */
 
 
 char * create_temp_file();

@@ -34,6 +34,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
+#include "condor_id.h"
 
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;

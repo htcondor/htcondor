@@ -1,3 +1,7 @@
+03/30/05 V6_7-spool_owner-merge-1
+  The state of the V6_7-spool_owner-branch for the first (and
+  hopefully only) merge back into V6_7-branch.
+
 03/23/05 V6_7-parallel-2-branch
    A new branch off V6_7 for parallel universe support.  Created from
    V6_7-parallel-2-root on the entire V6_7_CODE module.  The old

@@ -88,6 +88,8 @@ CondorResource::CondorResource( const char *resource_name, const char *pool_name
 {
 	if ( proxy_subject != NULL ) {
 		proxySubject = strdup( proxy_subject );
+	} else {
+		proxySubject = 0;
 	}
 	scheddPollTid = TIMER_UNSET;
 	registeredJobs = new List<CondorJob>;

@@ -22,16 +22,16 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "types.h"
+#include "condor_id.h"
 #include "condor_string.h"
 
-//---------------------------------------------------------------------------
+
 int compare(int a, int b) {
   if (a == b) return 0;
   return (a > b ? 1 : -1);
 }
 
-//---------------------------------------------------------------------------
+
 int CondorID::Compare (const CondorID condorID) const {
   int result = compare (_cluster, condorID._cluster);
   if (result == 0) result = compare (_proc, condorID._proc);

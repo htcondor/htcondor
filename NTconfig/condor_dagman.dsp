@@ -195,14 +195,6 @@ SOURCE=..\src\condor_dagman\submit.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_dagman\types.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_dagman\types.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_dagman\util.h
 # End Source File
 # End Target

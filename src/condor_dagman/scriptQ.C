@@ -26,7 +26,6 @@
 #include "script.h"
 #include "util.h"
 #include "job.h"
-#include "types.h"
 
 #include "dag.h"
 

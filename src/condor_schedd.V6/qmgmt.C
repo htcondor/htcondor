@@ -1329,6 +1329,33 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	}
+	else if (stricmp(attr_name, ATTR_JOB_STATUS) == 0) {
+			// if we're setting the job status to a "finished state",
+			// namely removed or completed, we want to add this job to
+			// a queue that needs to have the jobIsFinished() method
+			// called for each one...
+		long intval;
+		char* end;
+		intval = strtol( attr_value, &end, 10 );
+		if( end == attr_value ) {
+				// couldn't parse the number!
+			dprintf( D_ALWAYS, "SetAttribute() invalid value for %s: "
+					 "'%s' is not a number!\n", attr_name, attr_value );
+			return -1;
+		}			
+		switch( intval ) {
+		case COMPLETED:
+		case REMOVED:
+			dprintf( D_FULLDEBUG,
+					 "Job %d.%d is finished (entering job status %s)\n",
+					 cluster_id, proc_id, getJobStatusString(intval) );
+			scheduler.enqueueFinishedJob( cluster_id, proc_id );
+			break;
+		default:
+				// nothing to do
+			break;
+		}
+	}
 
 //	log = new LogSetAttribute(key, attr_name, attr_value);
 //	JobQueue->AppendLog(log);

@@ -25,7 +25,6 @@
 
 /*
 #include "condor_common.h"
-#include "types.h"
 #include "debug.h"
 #include "script.h"
 */

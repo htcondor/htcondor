@@ -1261,6 +1261,20 @@ int AttrList::LookupString (const char *name, char **value) const
 	return 0;
 }
 
+/* This is just a thin wrapper to the mallocing version to simplify
+usage.  Having client code need to remember to free memory sucks.
+Indeed, it's telling that lots of client code just does LookupString on 
+a fixed length buffer, hoping that it will be big enough.
+*/
+int AttrList::LookupString (const char *name, MyString & value) const
+{
+	char * results = 0;
+	int success = LookupString(name, &results);
+	if( success ) value = results;
+	free(results);
+	return success;
+}
+
 int AttrList::LookupTime (const char *name, char **value) const
 {
 	ExprTree *tree, *rhs;

@@ -48,6 +48,7 @@
 #include "autocluster.h"
 #include "shadow_mgr.h"
 #include "enum_utils.h"
+#include "self_draining_queue.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 extern  int         STARTD_CONTACT_TIMEOUT;
@@ -156,6 +157,7 @@ private:
 	bool csa_is_dedicated;
 };
 
+
 class Scheduler : public Service
 {
   public:
@@ -204,7 +206,6 @@ class Scheduler : public Service
 	int				transferJobFilesReaper(int,int);
 	void			PeriodicExprHandler( void );
 
-
 	// match managing
     match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
     int         	DelMrec(char*);
@@ -221,6 +222,7 @@ class Scheduler : public Service
 	void			addRunnableJob( shadow_rec* );
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
+	bool			isStillRunnable( int cluster, int proc, int &status ); 
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
 	bool			WriteHoldToUserLog( PROC_ID job_id );
@@ -271,6 +273,10 @@ class Scheduler : public Service
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( void );
 	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+
+	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
+	bool 	enqueueFinishedJob( int cluster, int proc );
+
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
@@ -380,6 +386,9 @@ private:
 	SimpleList<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
+	SelfDrainingQueue job_is_finished_queue;
+	int jobIsFinishedHandler( ServiceData* job_id );
+
 	// useful names
 	char*			CondorAdministrator;
 	char*			Mail;
@@ -428,10 +437,10 @@ private:
 	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	shadow_rec*		start_local_universe_job(PROC_ID*);
-	bool			spawnJobHandler( shadow_rec* srec, const char* path,
-									 const char* args, const char* env, 
-									 const char* name, bool is_dc,
-									 bool wants_pipe );
+	bool			spawnJobHandlerRaw( shadow_rec* srec, const char* path,
+										const char* args, const char* env, 
+										const char* name, bool is_dc,
+										bool wants_pipe );
 	void			Relinquish(match_rec*);
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
@@ -495,4 +504,49 @@ extern bool releaseJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,
 					 bool write_to_user_log = true);
+
+
+/** Hook to call whenever we're going to give a job to a "job
+	handler", be that a shadow, starter (local univ), or gridmanager.
+	it takes the optional shadow record as a void* so this can be
+	seamlessly used for Create_Thread_With_Data().  In fact, we don't
+	need the srec at all for the function itself, but we'll need it as
+	our data pointer in the reaper (so we can actually spawn the right
+	handler), so we ignore it here, but will need it later...
+*/
+int aboutToSpawnJobHandler( int cluster, int proc, void* srec=NULL );
+
+
+/** For use as a reaper with Create_Thread_With_Data(), or to call
+	directly after aboutToSpawnJobHandler() if there's no thread. 
+*/
+int aboutToSpawnJobHandlerDone( int cluster, int proc, void* srec=NULL,
+								int exit_status = 0 );
+
+
+/** A helper function that wraps the call to jobPrepNeedsThread() and
+	invokes aboutToSpawnJobHandler() as appropriate, either in its own
+	thread using Create_Thread_Qith_Wata(), or calling it and then
+	aboutToSpawnJobHandlerDone() directly.
+*/
+void callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec );
+
+
+/** Hook to call whenever a job enters a "finished" state, something
+	it can never get out of (namely, COMPLETED or REMOVED).  Like the
+	aboutToSpawnJobHandler() hook above, this might be expensive, so
+	if jobPrepNeedsThread() returns TRUE for this job, we should call
+	this hook within a seperate thread.  Therefore, it takes the
+	optional void* so it can be used for Create_Thread_With_Data().
+*/
+int jobIsFinished( int cluster, int proc, void* vptr = NULL );
+
+
+/** For use as a reaper with Create_Thread_With_Data(), or to call
+	directly after jobIsFinished() if there's no thread. 
+*/
+int jobIsFinishedDone( int cluster, int proc, void* vptr = NULL,
+					   int exit_status = 0 );
+
+
 #endif /* _CONDOR_SCHED_H_ */

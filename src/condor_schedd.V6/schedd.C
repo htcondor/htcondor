@@ -22,7 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -68,6 +68,8 @@
 #include "../condor_procapi/procapi.h"
 #include "condor_distribution.h"
 #include "util_lib_proto.h"
+#include "status_string.h"
+#include "condor_id.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -127,6 +129,9 @@ int fixAttrUser( ClassAd *job );
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec( int, PROC_ID*, int, match_rec*, int );
 bool service_this_universe(int, ClassAd*);
+bool jobIsSandboxed( ClassAd* ad );
+bool getSandbox( int cluster, int proc, MyString & path );
+bool jobPrepNeedsThread( int cluster, int proc );
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
@@ -227,7 +232,9 @@ ContactStartdArgs::~ContactStartdArgs()
 	free( csa_sinful );
 }
 
-Scheduler::Scheduler()
+
+Scheduler::Scheduler() :
+	job_is_finished_queue( "job_is_finished_queue", 0 )
 {
 	ad = NULL;
 	MySockName = NULL;
@@ -303,6 +310,11 @@ Scheduler::Scheduler()
 #endif
 	checkContactQueue_tid = -1;
 	checkReconnectQueue_tid = -1;
+
+	job_is_finished_queue.
+		registerHandlercpp( (ServiceDataHandlercpp)
+							&Scheduler::jobIsFinishedHandler, this );
+
 	sent_shadow_failure_email = FALSE;
 	ManageBandwidth = false;
 	RejectedClusters.setFiller(0);
@@ -1544,7 +1556,17 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		if( !scheduler.WriteAbortToUserLog(job_id) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
 		}
-		DestroyProc( job_id.cluster, job_id.proc );
+			/*
+			  we used to call DestroyProc() right here, but we no
+			  longer want to do that.  we'll have just called
+			  SetAttribute() on ATTR_JOB_STATUS to put it into a
+			  "finished" job state (REMOVED), and therefore, we've got
+			  to wait for our jobIsFinished() thread to run and
+			  complete before we can call DestroyProc().  so, we'll
+			  just allow that code to work its magic, and once the
+			  jobIsFinished() thread completes, it'll call
+			  DestroyProc() for us.  -- derek 2005-03-28
+			*/
 	}
 	if( mode == HELD ) {
 		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
@@ -1727,6 +1749,360 @@ Scheduler::PeriodicExprHandler( void )
 {
 	WalkJobQueue(PeriodicExprEval);
 }
+
+
+static bool get_user_uid_gid(const char * owner, const char * domain,
+	uid_t * uid, gid_t * gid)
+{
+#ifndef WIN32
+
+	// TODO: Definately want someone more familiar with
+	// uid management in Condor to verify that this isn't insane. 
+	if( ! init_user_ids(owner, domain) )
+	{
+		return false;
+	}
+	if(uid) { *uid = get_user_uid(); }
+	if(gid) { *gid = get_user_gid(); }
+	uninit_user_ids();
+	return true;
+#else
+	// Windows doesn't do uid/gids
+	return false;
+#endif
+}
+
+
+bool
+jobPrepNeedsThread( int cluster, int proc )
+{
+		// for now, all we care about is if the job has a sandbox
+	bool rval = false;
+	ClassAd * job_ad = GetJobAd( cluster, proc );
+	if( ! job_ad ) {
+			// job is already gone, guess we don't need a thread. ;)
+		return false;
+	}
+	if( jobIsSandboxed(job_ad) ) {
+		rval = true;
+	}
+	FreeJobAd(job_ad);
+	job_ad = NULL;
+	return rval;
+}
+
+
+/*
+  we want to be a little bit careful about this.  we don't want to go
+  messing with the sandbox if a) we've got a partial (messed up)
+  sandbox that hasn't finished being transfered yet or if b)
+  condor_submit (or the SOAP submit interface, whatever) initializes
+  these variables to 0.  we want a real value for stage_in_finish, and
+  we want to make sure it's later than stage_in_start.  todd gets the
+  credit for making this smarter, even though derek made the changes.
+
+  however, todd gets the blame for breaking the grid universe case,
+  since these values are being checked in the job spooling thread
+  *BEFORE* stage_in_finish is ever initialized.  :)  so, we're going
+  to ignore the "partially transfered" sandbox logic and just make
+  sure we've got a real value for stage_in_start (which we do, even in
+  grid universe, since the parent sets that before spawning the job
+  spooling thread).  --derek 2005-03-30 
+*/
+bool
+jobIsSandboxed( ClassAd * ad )
+{
+	ASSERT(ad);
+	int stage_in_start = 0;
+	ad->LookupInteger( ATTR_STAGE_IN_START, stage_in_start );
+	if( stage_in_start > 0 ) {
+		return true;
+	}
+	return false;
+}
+
+
+bool
+getSandbox( int cluster, int proc, MyString & path )
+{
+	char *Spool = param("SPOOL");
+	if( ! Spool ) {
+		return false;
+	}
+	const char * sandbox = gen_ckpt_name(Spool, cluster, proc, 0);
+	free(Spool);
+	if( ! sandbox ) {
+		return false;
+	}
+	path = sandbox;
+	return true;
+}
+
+
+/** Last chance to prep a job before it (potentially) starts
+
+This is a last chance to do any final work before starting a
+job handler (starting condor_shadow, handing off to condor_gridmanager,
+etc).  May block for a long time, so you'll probably want to do this is
+a thread.
+
+What do we do here?  At the moment if the job has a "sandbox" directory
+("condor_submit -s", Condor-C, or the SOAP interface) we chown it from
+condor to the user.  In the future we might allocate a dynamic account here.
+*/
+int
+aboutToSpawnJobHandler( int cluster, int proc, void* )
+{
+	ASSERT(cluster > 0);
+	ASSERT(proc >= 0);
+
+	// claim dynamic accounts here
+	// NOTE: we only want to claim a dynamic account once, however,
+	// this function is called *every* time we're about to spawn a job
+	// handler.  so, this is the spot to be careful about this issue.
+
+#ifndef WIN32
+	ClassAd * job_ad = GetJobAd( cluster, proc );
+	ASSERT(job_ad); // No job ad?
+	if( jobIsSandboxed(job_ad) ) {
+		MyString sandbox;
+		if( getSandbox(cluster, proc, sandbox) ) {
+			MyString owner, domain;
+			job_ad->LookupString(ATTR_OWNER, owner);
+			job_ad->LookupString(ATTR_NT_DOMAIN, domain);
+
+			uid_t src_uid = get_condor_uid();
+			uid_t dst_uid;
+			gid_t dst_gid;
+
+			if( get_user_uid_gid(owner.Value(), domain.Value(), &dst_uid, & dst_gid) )
+			{
+				if( ! recursive_chown(sandbox.Value(), src_uid, dst_uid, dst_gid, true) )
+				{
+					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.  Job may run into permissions problems when it starts.\n", cluster, proc, sandbox.Value(), src_uid, dst_uid, dst_gid);
+				}
+			}
+			else // Failed to get uid/gid
+			{
+				dprintf( D_ALWAYS, "(%d.%d) Failed to identify associated UID and GID for user %s.  Cannot chown %s to user.  Job may run into permissions problems when it starts.\n", cluster, proc, owner.Value(), sandbox.Value());
+			}
+		}
+		else 
+		{
+				dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this job  Cannot chown sandbox to user.  Job may run into permissions problems when it starts.\n", cluster, proc);
+
+		}
+
+	}
+	FreeJobAd(job_ad);
+	job_ad = 0;
+#else	/* WIN32 */
+
+// #    error "directory chowning on Win32.  Do we need it?"
+
+#endif
+	return 0;
+}
+
+
+int
+aboutToSpawnJobHandlerDone( int cluster, int proc, 
+							void* shadow_record, int )
+{
+	shadow_rec* srec = (shadow_rec*)shadow_record;
+	dprintf( D_FULLDEBUG, 
+			 "aboutToSpawnJobHandler() completed for job %d.%d%s\n",
+			 cluster, proc, 
+			 srec ? ", attempting to spawn job handler" : "" );
+
+		// just to be safe, check one more time to make sure the job
+		// is still runnable.
+	int status;
+	if( ! scheduler.isStillRunnable(cluster, proc, status) ) {
+		if( status != -1 ) {  
+			PROC_ID job_id;
+			job_id.cluster = cluster;
+			job_id.proc = proc;
+			mark_job_stopped( &job_id );
+		}
+		if( srec ) {
+			scheduler.RemoveShadowRecFromMrec(srec);
+			delete srec;
+		}
+		return FALSE;
+	}
+
+
+	return (int)scheduler.spawnJobHandler( cluster, proc, srec );
+}
+
+
+void
+callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
+{
+	if( jobPrepNeedsThread(cluster, proc) ) {
+		dprintf( D_FULLDEBUG, "Job prep for %d.%d will block, "
+				 "calling aboutToSpawnJobHandler() in a thread\n",
+				 cluster, proc );
+		Create_Thread_With_Data( aboutToSpawnJobHandler,
+								 aboutToSpawnJobHandlerDone,
+								 cluster, proc, srec );
+	} else {
+		dprintf( D_FULLDEBUG, "Job prep for %d.%d will not block, "
+				 "calling aboutToSpawnJobHandler() directly\n",
+				 cluster, proc );
+		aboutToSpawnJobHandler( cluster, proc, srec );
+		aboutToSpawnJobHandlerDone( cluster, proc, srec, 0 );
+	}
+}
+
+
+bool
+Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
+{
+	int universe;
+	if( srec ) {
+		universe = srec->universe;
+	} else {
+		GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
+	}
+	PROC_ID job_id;
+	job_id.cluster = cluster;
+	job_id.proc = proc;
+
+	switch( universe ) {
+
+	case CONDOR_UNIVERSE_SCHEDULER:
+			// there's no handler in this case, we just spawn directly
+		ASSERT( srec == NULL );
+		return( start_sched_universe_job(&job_id) != NULL );
+		break;
+
+	case CONDOR_UNIVERSE_LOCAL:
+		scheduler.spawnLocalStarter( srec );
+		return true;
+		break;
+
+	case CONDOR_UNIVERSE_GLOBUS:
+			// grid universe is special, since we handle spawning
+			// gridmanagers in a different way, and don't need to do
+			// anything here.
+		ASSERT( srec == NULL );
+		return true;
+		break;
+		
+	default:
+		break;
+	}
+
+		// if we're still here, make sure we have a match since we
+		// have to spawn a shadow...
+	if( srec->match ) {
+		scheduler.spawnShadow( srec );
+		return true;
+	}
+
+			// no match: complain and then try the next job...
+	dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
+			 "forking a shadow\n", srec->job_id.cluster, 
+			 srec->job_id.proc );
+	mark_job_stopped( &(srec->job_id) );
+	RemoveShadowRecFromMrec( srec );
+	delete srec;
+	return false;
+}
+
+
+int
+jobIsFinished( int cluster, int proc, void* )
+{
+		// this is (roughly) the inverse of aboutToSpawnHandler().
+		// this method gets called whenever the job enters a finished
+		// job state (REMOVED or COMPLETED) and the job handler has
+		// finally exited.  this is where we should do any clean-up we
+		// want now that the job is never going to leave this state...
+
+	ASSERT( cluster > 0 );
+	ASSERT( proc >= 0 );
+
+	ClassAd * job_ad = GetJobAd( cluster, proc );
+	if( ! job_ad ) {
+			/*
+			  evil, someone managed to call DestroyProc() before we
+			  had a chance to work our magic.  for whatever reason,
+			  that call succeeded (though it shouldn't in the usual
+			  sandbox case), and now we've got nothing to work with.
+			  in this case, we've just got to bail out.
+			*/
+		dprintf( D_FULLDEBUG, 
+				 "jobIsFinished(): %d.%d already left job queue\n",
+				 cluster, proc );
+		return 0;
+	}
+
+#ifndef WIN32
+
+	if( jobIsSandboxed(job_ad) ) {
+		MyString sandbox;
+		if( getSandbox(cluster, proc, sandbox) ) {
+			uid_t src_uid = 0;
+			uid_t dst_uid = get_condor_uid();
+			gid_t dst_gid = get_condor_gid();
+
+			MyString owner, domain;
+			job_ad->LookupString( ATTR_OWNER, owner );
+			job_ad->LookupString( ATTR_NT_DOMAIN, domain );
+			if( get_user_uid_gid(owner.Value(), domain.Value(),
+								 &src_uid, NULL) )
+			{
+				if( ! recursive_chown(sandbox.Value(), src_uid,
+									  dst_uid, dst_gid, true) )
+				{
+					dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from "
+							 "%d to %d.%d.  User may run into permissions "
+							 "problems when fetching sandbox.\n", 
+							 cluster, proc, sandbox.Value(),
+							 src_uid, dst_uid, dst_gid );
+				}
+			} else {
+				dprintf( D_ALWAYS, "(%d.%d) Failed to identify associated "
+						 "UID and GID for user %s.  Cannot chown \"%s\".  "
+						 "User may run into permissions problems when "
+						 "fetching job sandbox.\n", cluster, proc,
+						 owner.Value(), sandbox.Value() );
+			}
+		} else {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to find sandbox for this "
+					 "job.  Cannot chown sandbox to user.  User may run "
+					 "into permissions problems when fetching sandbox.\n",
+					 cluster, proc );
+		}
+	}
+
+#else	/* WIN32 */
+
+// #    error "directory chowning on Win32.  Do we need it?"
+
+#endif
+
+	// release dynamic accounts here
+
+	FreeJobAd( job_ad );
+	job_ad = NULL;
+
+	return 0;
+}
+
+
+int
+jobIsFinishedDone( int cluster, int proc, void*, int )
+{
+	dprintf( D_FULLDEBUG,
+			 "jobIsFinished() completed, calling DestroyProc(%d.%d)\n",
+			 cluster, proc );
+	return DestroyProc( cluster, proc );
+}
+
 
 // Initialize a UserLog object for a given job and return a pointer to
 // the UserLog object created.  This object can then be used to write
@@ -2368,6 +2744,32 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 	rsock->code(answer);
 	rsock->eom();
 	s->timeout(old_timeout);
+
+	/* for grid universe jobs there isn't a clear point
+	at which we're "about to start the job".  So we just
+	hand the sandbox directory over to the end user right now.
+	*/
+	if ( mode == SPOOL_JOB_FILES ) {
+		for (i=0; i<JobAdsArrayLen; i++) {
+
+			cluster = (*jobs)[i].cluster;
+			proc = (*jobs)[i].proc;
+			ClassAd * ad = GetJobAd( cluster, proc );
+
+			if ( ! ad ) {
+				dprintf(D_ALWAYS, "(%d.%d) Job ad disappeared after spooling but before the sandbox directory could (potentially) be chowned to the user.  Skipping sandbox.  The job may encounter permissions problems.\n", cluster, proc);
+				continue;
+			}
+
+			int universe = CONDOR_UNIVERSE_STANDARD;
+			ad->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+			FreeJobAd(ad);
+
+			if(universe == CONDOR_UNIVERSE_GLOBUS) {
+				aboutToSpawnJobHandler( cluster, proc, NULL );
+			}
+		}
+	}
 
 	if (answer == OK ) {
 		return TRUE;
@@ -4805,7 +5207,16 @@ find_idle_local_jobs( ClassAd *job )
 			dprintf( D_FULLDEBUG,
 					 "Found idle scheduler universe job %d.%d\n",
 					 id.cluster, id.proc );
-			scheduler.start_sched_universe_job( &id );
+				/*
+				  we've decided to spawn a scheduler universe job.
+				  instead of doing that directly, we'll go through our
+				  aboutToSpawnJobHandler() hook isntead.  inside
+				  aboutToSpawnJobHandlerDone(), if the job is a
+				  scheduler universe job, we'll spawn it then.  this
+				  wrapper handles all the logic for if we want to
+				  invoke the hook in its own thread or not, etc.
+				*/
+			callAboutToSpawnJobHandler( id.cluster, id.proc, NULL );
 		}
 	}
 	return 0;
@@ -5076,7 +5487,7 @@ Scheduler::StartJobHandler()
 {
 	shadow_rec* srec;
 	PROC_ID* job_id=NULL;
-	ClassAd* job = NULL;
+	int cluster, proc;
 	int status;
 
 		// clear out our timer id since the hander just went off
@@ -5097,89 +5508,93 @@ Scheduler::StartJobHandler()
 		// Check to see if job ad is still around; it may have been
 		// removed while we were waiting in RunnableJobQueue
 		job_id=&srec->job_id;
-		job = GetJobAd(job_id->cluster,job_id->proc,false);
-		if( ! job ) {
-				// job ad disappeared, just go to the next thing in
-				// the queue
-			dprintf( D_FULLDEBUG,
-					 "Job %d.%d was deleted while waiting to start\n",
-					 job_id->cluster, job_id->proc );
+		cluster = job_id->cluster;
+		proc = job_id->proc;
+		if( ! isStillRunnable(cluster, proc, status) ) {
+			if( status != -1 ) {  
+					/*
+					  the job still exists, it's just been removed or
+					  held.  NOTE: it's ok to call mark_job_stopped(),
+					  since we want to clear out ATTR_CURRENT_HOSTS,
+					  the shadow birthday, etc.  mark_job_stopped()
+					  won't touch ATTR_JOB_STATUS unless it's
+					  currently "RUNNING", so we won't clobber it...
+					*/
+				mark_job_stopped( job_id );
+			}
+				/*
+				  no matter what, if we're not able to start this job,
+				  we need to delete the shadow record, remove it from
+				  whatever match record it's associated with, and try
+				  the next job.
+				*/
 			RemoveShadowRecFromMrec(srec);
 			delete srec;
 			continue;
 		}
 
-		if( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 ) {
-			EXCEPT( "Job %d.%d has no %s while waiting to start!",
-					job_id->cluster, job_id->proc, ATTR_JOB_STATUS );
-		}
-		switch( status ) {
-		case UNEXPANDED:
-		case IDLE:
-		case RUNNING:
-				// these are the cases we expect.  if it's local
-				// universe, it'll still be IDLE.  if it's not local,
-				// it'll already be marked as RUNNING...  just break
-				// out of the switch and carry on.
-			break;
+			// if we got this far, we're definitely starting the job,
+			// so deal with the aboutToSpawnJobHandler hook...
+		callAboutToSpawnJobHandler( cluster, proc, srec );
 
-		case REMOVED:
-		case HELD:
-			dprintf( D_FULLDEBUG,
-					 "Job %d.%d was %s while waiting to start\n",
-					 job_id->cluster, job_id->proc,
-					 getJobStatusString(status) );
-				// NOTE: it's ok to call mark_job_stopped(), since we
-				// want to clear out ATTR_CURRENT_HOSTS, the shadow
-				// birthday, etc. luckily, mark_job_stopped() won't
-				// touch ATTR_JOB_STATUS unless it's currently
-				// "RUNNING", so we won't clobber it...
-			mark_job_stopped( job_id );
-			RemoveShadowRecFromMrec( srec );
-			delete srec;
-			continue;
-			break;
-
-		case COMPLETED:
-		case SUBMISSION_ERR:
-			EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
-					"but we're trying to start a shadow for it!", 
-					job_id->cluster, job_id->proc,
-					getJobStatusString(status) );
-			break;
-
-		default:
-			EXCEPT( "StartJobHandler: Unknown status (%d) for job %d.%d\n",
-					status, job_id->cluster, job_id->proc ); 
-			break;
-		}
-
-		if( srec->universe == CONDOR_UNIVERSE_LOCAL ) {
-				/*
-				  Local universe is special in that we never have to
-				  worry about the match being deleted, since there is
-				  no match.  so, in this case, we can just spawn the
-				  local universe starter and return.
-				*/
-			spawnLocalStarter( srec );
-			tryNextJob();
-			return;
-		}
-
-			// if we're still here, make sure we have a match...
-		if( srec->match ) {
-			spawnShadow( srec );
-			tryNextJob();
-			return;
-		}
-
-			// no match: complain and then try the next job...
-		dprintf( D_ALWAYS, "match for job %d.%d was deleted - not "
-				 "forking a shadow\n", job_id->cluster, job_id->proc );
-		mark_job_stopped(job_id);
-		RemoveShadowRecFromMrec(srec);
-		delete srec;
+			// we're done trying to spawn a job at this time.  call
+			// tryNextJob() to let our timer logic handle the rest.
+		tryNextJob();
+		return;
 	}
+}
+
+
+bool
+Scheduler::isStillRunnable( int cluster, int proc, int &status )
+{
+	ClassAd* job = GetJobAd( cluster, proc, false );
+	if( ! job ) {
+			// job ad disappeared, definitely not still runnable.
+		dprintf( D_FULLDEBUG,
+				 "Job %d.%d was deleted while waiting to start\n",
+				 cluster, proc );
+			// let our caller know the job is totally gone
+		status = -1;
+		return false;
+	}
+
+	if( job->LookupInteger(ATTR_JOB_STATUS, status) == 0 ) {
+		EXCEPT( "Job %d.%d has no %s while waiting to start!",
+				cluster, proc, ATTR_JOB_STATUS );
+	}
+	switch( status ) {
+	case UNEXPANDED:
+	case IDLE:
+	case RUNNING:
+			// these are the cases we expect.  if it's local
+			// universe, it'll still be IDLE.  if it's not local,
+			// it'll already be marked as RUNNING...  just break
+			// out of the switch and carry on.
+		return true;
+		break;
+
+	case REMOVED:
+	case HELD:
+		dprintf( D_FULLDEBUG,
+				 "Job %d.%d was %s while waiting to start\n",
+				 cluster, proc, getJobStatusString(status) );
+		return false;
+		break;
+
+	case COMPLETED:
+	case SUBMISSION_ERR:
+		EXCEPT( "IMPOSSIBLE: status for job %d.%d is %s "
+				"but we're trying to start a shadow for it!", 
+				cluster, proc, getJobStatusString(status) );
+		break;
+
+	default:
+		EXCEPT( "StartJobHandler: Unknown status (%d) for job %d.%d\n",
+				status, cluster, proc ); 
+		break;
+	}
+	return false;
 }
 
 
@@ -5354,8 +5769,8 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		}
 	}
 
-	rval = spawnJobHandler( srec, shadow_path, args, NULL, "shadow",
-							sh_is_dc, sh_reads_file );
+	rval = spawnJobHandlerRaw( srec, shadow_path, args, NULL, "shadow",
+							   sh_is_dc, sh_reads_file );
 
 	free( shadow_path );
 
@@ -5422,9 +5837,9 @@ Scheduler::tryNextJob( void )
 
 
 bool
-Scheduler::spawnJobHandler( shadow_rec* srec, const char* path, 
-							const char* args, const char* env, 
-							const char* name, bool is_dc, bool wants_pipe )
+Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path, 
+							   const char* args, const char* env, 
+							   const char* name, bool is_dc, bool wants_pipe )
 {
 	int pid = -1;
 	PROC_ID* job_id = &srec->job_id;
@@ -5473,7 +5888,7 @@ Scheduler::spawnJobHandler( shadow_rec* srec, const char* path,
 									  std_fds_p, niceness );
 
 	if( pid == FALSE ) {
-		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandler: "
+		dprintf( D_FAILURE|D_ALWAYS, "spawnJobHandlerRaw: "
 				 "CreateProcess(%s, %s) failed\n", path, args );
 		if( wants_pipe ) {
 			for( int i = 0; i < 2; i++ ) {
@@ -5857,8 +6272,8 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_env.sprintf( "_%s_EXECUTE=%s", myDistro->Get(),
 						 LocalUnivExecuteDir );
 	
-	rval = spawnJobHandler( srec, starter_path, starter_args.Value(),
-							starter_env.Value(), "starter", true, true );
+	rval = spawnJobHandlerRaw( srec, starter_path, starter_args.Value(),
+							   starter_env.Value(), "starter", true, true );
 
 	free( starter_path );
 	starter_path = NULL;
@@ -7519,7 +7934,17 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		handle_mirror_job_notification(
 					GetJobAd(job_id->cluster,job_id->proc),
 					status, *job_id);
-		DestroyProc( job_id->cluster, job_id->proc );
+			/*
+			  we used to call DestroyProc() right here, but we no
+			  longer want to do that.  we'll have just called
+			  SetAttribute() on ATTR_JOB_STATUS to put it into one of
+			  these two "finished" job states, and therefore, we've
+			  got to wait for our jobIsFinished() thread to run and
+			  complete before we can call DestroyProc().  so, we'll
+			  just allow that code to work its magic, and once the
+			  jobIsFinished() thread completes, it'll call
+			  DestroyProc() for us.  -- derek 2005-03-24
+			*/
 		break;
 	default:
 		break;
@@ -9511,3 +9936,42 @@ Scheduler::jobThrottle( void )
 	return delay;
 }
 
+
+int
+Scheduler::jobIsFinishedHandler( ServiceData* data )
+{
+	CondorID* job_id = (CondorID*)data;
+	if( ! job_id ) {
+		return FALSE;
+	}
+	int cluster = job_id->_cluster;
+	int proc = job_id->_proc;
+	delete job_id;
+	job_id = NULL; 
+
+	if( jobPrepNeedsThread(cluster, proc) ) {
+		dprintf( D_FULLDEBUG, "Job prep for %d.%d will block, "
+				 "calling jobIsFinished() in a thread\n", cluster, proc );
+		Create_Thread_With_Data( jobIsFinished, jobIsFinishedDone,
+								 cluster, proc, NULL );
+	} else {
+			// don't need a thread, just call the blocking version
+			// (which will return right away), and the reaper (which
+			// will call DestroyProc()) 
+		dprintf( D_FULLDEBUG, "Job prep for %d.%d will not block, "
+				 "calling jobIsFinished() directly\n", cluster, proc );
+
+		jobIsFinished( cluster, proc );
+		jobIsFinishedDone( cluster, proc );
+	}
+
+	return TRUE;
+}
+
+
+bool
+Scheduler::enqueueFinishedJob( int cluster, int proc )
+{
+	CondorID* id = new CondorID( cluster, proc, -1 );
+	return job_is_finished_queue.enqueue( id );
+}

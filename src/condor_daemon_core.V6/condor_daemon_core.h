@@ -37,6 +37,7 @@
 #include "condor_common.h"
 #include "condor_uid.h"
 #include "condor_io.h"
+#include "dc_service.h"
 #include "condor_timer_manager.h"
 #include "condor_ipverify.h"
 #include "condor_commands.h"
@@ -96,6 +97,17 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 
 ///
 typedef int		(*ThreadStartFunc)(void *,Stream*);
+
+/** Does work in thread.  For Create_Thread_With_Data.
+	@see Create_Thread_With_Data
+*/
+
+typedef int	(*DataThreadWorkerFunc)(int data_n1, int data_n2, void * data_vp);
+
+/** Reports to parent when thread finishes.  For Create_Thread_With_Data.
+	@see Create_Thread_With_Data
+*/
+typedef int	(*DataThreadReaperFunc)(int data_n1, int data_n2, void * data_vp, int exit_status);
 //@}
 
 typedef enum { 
@@ -1201,6 +1213,48 @@ extern void DC_Skip_Auth_Init();
 */
 extern DaemonCore* daemonCore;
 #endif
+
+
+/**
+	Spawn a thread (process on Unix) to do some work.  "Worker"
+	is the function called in the seperate thread/process.  When
+	it exits, "Reaper" will be called in the parent
+	thread/process.  Both the Worker and Reaper functions will be
+	passed three optional opaque data variables, two integers and
+	a void *.  The Reaper is also optional.
+
+	@param Worker   Called in seperate thread or process.  Passed
+		data_n1, data_n2, and data_vp.  Must be a valid function
+		pointer.
+
+	@param Reaper   Called in parent thread or process after the
+		Worker exists.  Passed data_n1, data_n2, data_vp and the
+		return code of Worker.  Also passed is the "exit status".
+		The exit status if false (0) or true (any non-0 result) based
+		on if the result from Worker is false or true.  If the result
+		is true (non 0), the specific value is undefined beyond "not
+		0".  You do not necessarily get the exact value returned by
+		the worker.  If you don't want this notification, pass in
+		NULL (0).
+
+	@param data_n1   (also data_n2) Opaque values passed to
+		worker and reaper.  Useful place to store a cluster and proc,
+		but this code doesn't look at the values in any way.
+
+	@param data_n2   see data_n1
+
+	@param data_vp   Opaque value passed to Worker and Reaper.
+		For safety this should be in the heap (malloc/new) or a
+		pointer to a static data member.  You cannot assume that this
+		memory space is shared by the parent and child, it may or may
+		not be copied for the child.  If it's heap memory, be sure to
+		release it somewhere in the parent, probably in Reaper.
+
+	@return   TID, thread id, as returned by DaemonCore::Create_Thread.
+*/
+
+int Create_Thread_With_Data(DataThreadWorkerFunc Worker, DataThreadReaperFunc Reaper, 
+	int data_n1 = 0, int data_n2 = 0, void * data_vp = 0);
 
 #define MAX_INHERIT_SOCKS 10
 

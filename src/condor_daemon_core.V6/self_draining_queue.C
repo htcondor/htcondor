@@ -1,0 +1,194 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_daemon_core.h"
+#include "MyString.h"
+#include "self_draining_queue.h"
+
+
+SelfDrainingQueue::SelfDrainingQueue( const char* queue_name, int period )
+{
+	if( queue_name ) {
+		name = strdup( queue_name );
+	} else {
+		name = strdup( "(unnamed)" );
+	}
+	MyString t_name;
+	t_name.sprintf( "SelfDrainingQueue::timerHandler[%s]", name );
+	timer_name = strdup( t_name.Value() );
+
+	handler_fn = NULL;
+	handlercpp_fn = NULL;
+	service_ptr = NULL;
+
+	this->period = period;
+	tid = -1;
+}
+
+
+SelfDrainingQueue::~SelfDrainingQueue()
+{
+	cancelTimer();
+
+	if( name ) {
+		free( name );
+		name = NULL;
+	}
+	if( timer_name ) {
+		free( timer_name );
+		timer_name = NULL;
+	}
+}
+
+
+bool
+SelfDrainingQueue::registerHandler( ServiceDataHandler handler_fn )
+{
+	if( handlercpp_fn ) {
+		handlercpp_fn = NULL;
+	}
+	if( service_ptr ) {
+		service_ptr = NULL;
+	}
+	this->handler_fn = handler_fn;
+	return true;
+}
+
+
+bool
+SelfDrainingQueue::registerHandlercpp( ServiceDataHandlercpp 
+									   handlercpp_fn, 
+									   Service* service_ptr )
+{
+	if( handler_fn ) {
+		handler_fn = NULL;
+	}
+	this->handlercpp_fn = handlercpp_fn;
+	this->service_ptr = service_ptr;
+	return true;
+}
+
+
+bool
+SelfDrainingQueue::enqueue( ServiceData* data )
+{
+	queue.enqueue(data);
+	dprintf( D_FULLDEBUG,
+			 "Added data to SelfDrainingQueue %s, now has %d element(s)\n",
+			 name, queue.Length() );
+	registerTimer();
+	return true;
+}
+
+
+int
+SelfDrainingQueue::timerHandler( void )
+{
+	dprintf( D_FULLDEBUG,
+			 "Inside SelfDrainingQueue::timerHandler() for %s\n", name );
+	ServiceData* d;
+	if( queue.IsEmpty() ) {
+		dprintf( D_FULLDEBUG, "SelfDrainingQueue %s is empty, "
+				 "timerHandler() has nothing to do\n", name );
+		cancelTimer();
+		return TRUE;
+	}
+	queue.dequeue(d);
+	if( handler_fn ) {
+		handler_fn( d );
+	} else if( handlercpp_fn && service_ptr ) {
+		(service_ptr->*handlercpp_fn)( d );
+	}
+
+	if( queue.IsEmpty() ) {
+		dprintf( D_FULLDEBUG,
+				 "SelfDrainingQueue %s is empty, not resetting timer\n",
+				 name );
+		cancelTimer();
+	} else {
+			// if there's anything left in the queue, reset our timer
+		dprintf( D_FULLDEBUG,
+				 "SelfDrainingQueue %s still has %d element(s), "
+				 "resetting timer\n", name, queue.Length() );
+		resetTimer();
+	}
+	return TRUE;
+}
+
+
+void
+SelfDrainingQueue::registerTimer( void )
+{
+	if( !handler_fn && !(service_ptr && handlercpp_fn) ) {
+		EXCEPT( "Programmer error: trying to register timer for "
+				"SelfDrainingQueue %s without having a handler function", 
+				name );
+	}
+
+		// if we've already got a timer id and we're trying to
+		// re-register, we just want to return, since we know the
+		// timer's going to go off on its own whenever it needs to 
+	if( tid != -1 ) {
+		dprintf( D_FULLDEBUG, "Timer for SelfDrainingQueue %s is already "
+				 "registered (id: %d)\n", name, tid );
+		return;
+	}
+
+	tid = daemonCore->
+		Register_Timer( period, 
+						(TimerHandlercpp)&SelfDrainingQueue::timerHandler,
+						timer_name, this );
+    if( tid == -1 ) {
+            // Error registering timer!
+        EXCEPT( "Can't register daemonCore timer for SelfDrainingQueue %s",
+				name );
+    }
+	dprintf( D_FULLDEBUG, "Registered timer for SelfDrainingQueue %s, "
+			 "period: %d (id: %d)\n", name, period, tid );
+}
+
+
+void
+SelfDrainingQueue::cancelTimer( void )
+{
+	if( tid != -1 ) {
+		dprintf( D_FULLDEBUG, "Canceling timer for SelfDrainingQueue %s "
+				 "(timer id: %d)\n", name, tid );
+		daemonCore->Cancel_Timer( tid );
+		tid = -1;
+	}
+}
+
+
+void
+SelfDrainingQueue::resetTimer( void )
+{
+	if( tid == -1 ) {
+		EXCEPT( "Programmer error: resetting a timer that doesn't exist" );
+	}
+	daemonCore->Reset_Timer( tid, period, 0 );
+	dprintf( D_FULLDEBUG, "Reset timer for SelfDrainingQueue %s, "
+			 "period: %d (id: %d)\n", name, period, tid );
+}

@@ -27,7 +27,7 @@
 #include "script.h"
 #include "util.h"
 #include "job.h"
-#include "types.h"
+#include "condor_id.h"
 
 #include "HashTable.h"
 #include "env.h"

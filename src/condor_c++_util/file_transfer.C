@@ -1475,7 +1475,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
         	_set_priv(saved_priv,__FILE__,__LINE__,1);
 		}
 		// look at the filename to see if it starts with the SPOOL dir
-		if (strncmp(Spool, filename, strlen(Spool)) == 0) {
+		// but not the sandbox (SpoolSpace)
+		MyString sandbox = SpoolSpace;
+		sandbox += DIR_DELIM_CHAR;
+		if (strncmp(Spool, filename, strlen(Spool)) == 0 &&
+			( (SpoolSpace == NULL) || (strncmp(sandbox.Value(),filename,sandbox.Length()) != 0))
+			) {
 			saved_priv = set_condor_priv();
 		} else {
 			saved_priv = PRIV_UNKNOWN;

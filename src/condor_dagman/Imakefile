@@ -15,7 +15,7 @@ TOOL_LIB = $(STD_LIBS)
 
 soapobjs(dagman)
 
-OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
+OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o \
 	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o \
 	$(SOAP_OBJS)
 

@@ -55,6 +55,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
+	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_parameters.obj"
 	-@erase "$(INTDIR)\condor_q.obj"
@@ -221,6 +222,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
+	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
 	"$(INTDIR)\stat_wrapper.obj" \
 	"$(INTDIR)\status_string.obj" \
@@ -237,7 +239,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\setenv.obj"
+	"$(INTDIR)\condor_id.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -271,6 +273,7 @@ CLEAN :
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
 	-@erase "$(INTDIR)\condor_event.obj"
+	-@erase "$(INTDIR)\condor_id.obj"
 	-@erase "$(INTDIR)\condor_md.obj"
 	-@erase "$(INTDIR)\condor_parameters.obj"
 	-@erase "$(INTDIR)\condor_q.obj"
@@ -436,6 +439,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\perm.obj" \
 	"$(INTDIR)\print_wrapped_text.obj" \
 	"$(INTDIR)\read_multiple_logs.obj" \
+	"$(INTDIR)\setenv.obj" \
 	"$(INTDIR)\sig_name.obj" \
 	"$(INTDIR)\stat_wrapper.obj" \
 	"$(INTDIR)\status_string.obj" \
@@ -452,7 +456,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
 	"$(INTDIR)\windows_firewall.obj" \
-	"$(INTDIR)\setenv.obj"
+	"$(INTDIR)\condor_id.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -613,6 +617,12 @@ SOURCE="..\src\condor_c++_util\condor_environ.C"
 SOURCE="..\src\condor_c++_util\condor_event.C"
 
 "$(INTDIR)\condor_event.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\condor_id.C"
+
+"$(INTDIR)\condor_id.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
