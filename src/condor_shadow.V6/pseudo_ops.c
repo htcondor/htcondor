@@ -47,11 +47,14 @@
 #include <netdb.h>
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
+#include "ios_common.h"
 
 static char *_FileName_ = __FILE__;
 
 #include "user_log.h"
 extern USER_LOG	*ULog;
+
+int access_via_ioserver (const char *);
 
 extern int ClientUid;
 extern int ClientGid;
@@ -893,7 +896,10 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	dprintf( D_SYSCALLS, "\textern_path = \"%s\"\n", extern_path );
 	dprintf( D_SYSCALLS, "\tSpool = \"%s\"\n", Spool );
 
-	if(strlen(Spool) < strlen(full_path) &&
+	if ( access_via_ioserver(full_path) ) {
+		answer = IS_IOSERVER ;
+		dprintf( D_SYSCALLS, "\tanswer = IS_IOSERVER\n" );
+	} else if(strlen(Spool) < strlen(full_path) &&
 	   strncmp(Spool, full_path, strlen(Spool)) == MATCH) {
 		answer = IS_RSC;
 		dprintf( D_SYSCALLS, "\tanswer = IS_RSC\n" );
@@ -1098,6 +1104,15 @@ access_via_nfs( const char *file )
 	return TRUE;
 }
 
+access_via_ioserver( const char *file )
+{
+	dprintf( D_SYSCALLS, "\tentering access_via_ioserver()\n" );
+  
+	dprintf( D_SYSCALLS, "\taccess_via_ioserver() returning FALSE\n" );
+	return FALSE;
+}
+
+
 int
 has_ckpt_file()
 {
@@ -1159,6 +1174,56 @@ pseudo_get_username( char *uname )
 }
 #endif
 
+int pseudo_get_IOServerAddr(const int *reqtype, const char *filename, char *host, int *port )
+{
+
+	/* Should query the collector or look in the config file for server
+	   names.  Always return -1 until this can be fixed.  -Jim B. */
+
+#if 0
+  int i;
+  char *servers[5] = 
+  {
+    "vega15", 
+    "vega15", 
+    "vega15", 
+    "vega15", 
+    "vega15"
+  };
+
+  int ports[5] = 
+  {
+    5078, 5083, 5087, 5042, 5047
+  };
+
+  
+  dprintf(D_SYSCALLS,"in pseudo_get_IOserver .. req_type = %s\n", (*reqtype==OPEN_REQ)?"open_req":"server_down");
+  
+  switch (*reqtype)
+    {
+    case OPEN_REQ:
+      strcpy(host,servers[0]);
+      *port = ports[0];
+      dprintf(D_SYSCALLS,"server = %s, port = %d\n",host,*port); 
+      return 0;
+    case SERVER_DOWN:
+      for(i=0;i<5;i++)
+	{
+	  if ((strcmp(host, servers[i]) == 0) && (*port == ports[i])) 
+	    break;
+	}
+      if (i<4) 
+	{
+	  strcpy(host,servers[i+1]);
+	  *port = ports[i+1];
+	  return 0;
+	}
+      return -1;
+    }
+#endif
+
+  return -1;
+}
 
 void
 simp_log( const char *msg )
