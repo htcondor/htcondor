@@ -113,6 +113,12 @@ DEP_SYMLINK_EXT(job_ckpt_floats_std,cmd)
 RUN(job_ckpt_floats_std)
 TESTCLASS(job_ckpt_floats_std,quick)
 
+DESC(job_ckpt_floats-async_std,"checks floating point ops with async ckpts")
+CBUILD($(CC),job_ckpt_floats-async_std,c)
+DEP_SYMLINK_EXT(job_ckpt_floats-async_std,cmd)
+RUN(job_ckpt_floats-async_std)
+TESTCLASS(job_ckpt_floats-async_std,quick)
+
 DESC(job_ckpt_integers_std,"ckpt/restore integer registers")
 CBUILD($(CC),job_ckpt_integers_std,c)
 DEP_SYMLINK_EXT(job_ckpt_integers_std,cmd)
