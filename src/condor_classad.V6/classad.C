@@ -829,12 +829,18 @@ EvaluateAttrString( const string &attr, string &buf ) const
 	return( EvaluateAttr( attr, val ) && val.IsStringValue( buf ) );
 }
 
-
 bool ClassAd::
 EvaluateAttrBool( const string &attr, bool &b ) const
 {
 	Value val;
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
+}
+
+bool ClassAd::
+EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
 }
 
 #if defined( EXPERIMENTAL )

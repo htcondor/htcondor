@@ -406,6 +406,16 @@ e		*/
 				otherwise.
 		*/
 		bool EvaluateAttrBool( const std::string &attrName, bool& boolValue ) const;
+
+		/** Evaluates an attribute to a boolean.  A pointer to the ClassAd is 
+				returned. You do not own the ClassAd--do not free it.
+			@param attrName The name of the attribute.
+			@param boolValue The value of the attribute.
+			@return true if attrName evaluated to a boolean value, false 
+				otherwise.
+		*/
+        bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
+
 		//@}
 
 		/**@name STL-like Iterators */
