@@ -90,7 +90,7 @@ GETMNT_OBJ = getmnt.o
 
 #define SourceFiles \
 	blankline.c ctrace.c do_connect.c \
-	dprintf.c dprintf_config.c except.c \
+	dprintf.c dprintf_config.c except.c killkids.c \
 	ltrunc.c mkargv.c proc.c signames.c strdup.c \
 	stricmp.c expr.c perror.c condor_errlst.c detach.c \
 	update_rusage.c uids.c cronos.c phys_mem.c match_prefix.c \
@@ -107,7 +107,7 @@ GETMNT_OBJ = getmnt.o
 
 #define ObjectFiles \
 	blankline.o do_connect.o dprintf.o dprintf_config.o except.o \
-	ltrunc.o mkargv.o proc.o signames.o \
+	ltrunc.o mkargv.o proc.o signames.o killkids.o \
 	strdup.o stricmp.o expr.o perror.o condor_errlst.o \
 	ctrace.o detach.o update_rusage.o uids.o cronos.o \
 	$(VIRT_MEM_OBJ) phys_mem.o free_fs_blocks.o $(FLOCK_OBJ) \
