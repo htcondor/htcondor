@@ -220,10 +220,11 @@ log_execute (char *host)
 }
 	
 extern "C" void
-log_except (void)
+log_except (char *msg)
 {
 	// log shadow exception event
 	ShadowExceptionEvent event;
+	sprintf(event.message, msg);
 	if (!ULog.writeEvent (&event))
 	{
 		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");

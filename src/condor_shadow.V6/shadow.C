@@ -135,7 +135,7 @@ GENERIC_PROC GenProc;
 extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
 extern "C"  void log_execute(char *);
-extern "C"  void log_except();
+extern "C"  void log_except(char *);
 
 char	*Spool;
 char	*ExecutingHost;
@@ -1054,9 +1054,9 @@ start_job( char *cluster_id, char *proc_id )
 
 extern "C" {
 int
-ExceptCleanup()
+ExceptCleanup(int line, int errno, char *buf)
 {
-  log_except();
+  log_except(buf);
   return DoCleanup();
 }
 } /* extern "C" */
