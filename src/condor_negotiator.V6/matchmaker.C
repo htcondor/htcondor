@@ -468,7 +468,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
-			result = matchmakingProtocol (request, offer, startdPvtAds, sock);
+			result = matchmakingProtocol (request, offer, startdPvtAds, sock, scheddName);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -604,7 +604,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock)
+						ClassAdList &startdPvtAds, Sock *sock, char* scheddName)
 {
 	int  cluster, proc;
 	char startdAddr[32];
@@ -669,11 +669,8 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
     // 4. notifiy the accountant
-	char scheddName[64];
-    if (request.LookupString (ATTR_NAME, scheddName))
-		accountant.AddMatch(scheddName, offer);
-    else
-		dprintf(D_ALWAYS, "\t\t\tCould not lookup %s in schedd ad\n",ATTR_NAME);
+	dprintf(D_FULLDEBUG,"\t\t\tNotifying the accountant\n");
+	accountant.AddMatch(scheddName, offer);
 
 	// done
 	dprintf (D_ALWAYS, "\t\t\tSuccessfully matched with %s\n", startdName);
