@@ -125,6 +125,7 @@ int  PeriodicSync;
 int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
+int  ShadowBDate = -1;
 int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 								// or completed a periodic ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
@@ -278,7 +279,7 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-	LastRestartTime = time(0);
+	ShadowBDate = LastRestartTime = time(0);
 
 	/* Start up with condor.condor privileges. */
 	set_condor_priv();

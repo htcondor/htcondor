@@ -80,6 +80,7 @@ extern char    TmpCkptName[];
 extern int             MyPid;
 extern char    *Spool;
 extern char    RCkptName[];
+extern int ShadowBDate;
 extern int LastRestartTime;
 extern int CommittedTime;
 extern int NumCkpts;
@@ -198,7 +199,7 @@ NotifyUser( char *buf, PROC *proc )
 				if (JobAd) {
 					JobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK, run_time);
 				}
-				run_time += proc->completion_date - LastRestartTime;
+				run_time += proc->completion_date - ShadowBDate;
 				
 				fprintf(mailer, "\tRun Time:            %s\n",
 						d_format_time(run_time));
