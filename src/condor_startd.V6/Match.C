@@ -216,7 +216,23 @@ Match::match_timed_out()
 
 	if( rip->r_cur->cap()->matches( capab() ) ) {
 		if( rip->state() != matched_state ) {
-			EXCEPT( "Current match timed out but not in matched state." );
+				/* 
+				   This used to be an EXCEPT(), since it really
+				   shouldn't ever happen.  However, it kept happening,
+				   and we couldn't figure out why.  For now, just log
+				   it and silently ignore it, since there's no real
+				   harm done, anyway.  We use D_FULLDEBUG, since we
+				   don't want people to worry about it if they see it
+				   in D_ALWAYS in the 6.2.X stable series.  However,
+				   in the 6.3 series, we should probably try to figure 
+				   out what's going on with this, for example, by
+				   sending email at this point with the last 300 lines
+				   of the log file or something.  -Derek 10/9/00
+				*/
+			dprintf( D_FULLDEBUG, 
+					 "WARNING: Current match timed out but in %s state.",
+					 state_to_string(rip->state()) );
+			return FALSE;
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
