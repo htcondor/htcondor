@@ -38,6 +38,8 @@ struct abstime_t
 	int    offset; // seconds east of Greenwich 
 };
 
+int get_random_integer(void);
+
 long timezone_offset(void);
 
 /* This converts a string so that sequences like \t

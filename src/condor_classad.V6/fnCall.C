@@ -130,6 +130,7 @@ FunctionCall( )
 		functionTable["ceil"		] =	(void*)doMath;
 		functionTable["ceiling"		] =	(void*)doMath;
 		functionTable["round"		] =	(void*)doMath;
+        functionTable["random"      ] = (void*)random;
 
 		initialized = true;
 	}
@@ -2138,6 +2139,37 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
                 result.SetErrorValue( );
             }
         }
+    }
+    return true;
+}
+
+bool FunctionCall::
+random( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg;
+    Value   integerValue;
+    int     random_number;
+
+    // takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
+    random_number = get_random_integer();
+
+    if (!convertValueToIntegerValue(arg, integerValue)) {
+        result.SetErrorValue();
+    } else {
+        int max;
+        integerValue.IsIntegerValue(max);
+        random_number = random_number % max;
+        result.SetIntegerValue(random_number);
     }
     return true;
 }

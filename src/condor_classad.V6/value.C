@@ -446,4 +446,69 @@ bool convertValueToRealValue(const Value value, Value &realValue)
     return could_convert;
 }
 
+bool convertValueToIntegerValue(const Value value, Value &integerValue)
+{
+    bool                could_convert;
+	string	            buf;
+	int		            ivalue;
+	time_t	            rtvalue;
+	abstime_t           atvalue;
+	bool	            bvalue;
+	double	            rvalue;
+
+	switch(value.GetType()) {
+		case Value::UNDEFINED_VALUE:
+			integerValue.SetUndefinedValue();
+			could_convert = false;
+            break;
+
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+			integerValue.SetErrorValue();
+			could_convert = false;
+            break;
+
+		case Value::STRING_VALUE:
+			value.IsStringValue(buf);
+			ivalue = atoi(buf.c_str());
+            could_convert = true;
+            integerValue.SetIntegerValue(ivalue);
+            break;
+
+		case Value::BOOLEAN_VALUE:
+			value.IsBooleanValue(bvalue);
+			integerValue.SetIntegerValue(bvalue ? 1 : 0);
+			could_convert = true;
+            break;
+
+		case Value::INTEGER_VALUE:
+            integerValue.CopyFrom(value);
+			could_convert = true;
+            break;
+
+		case Value::REAL_VALUE:
+            value.IsRealValue(rvalue);
+            integerValue.SetIntegerValue((int) rvalue);
+				could_convert = true;
+            break;
+
+		case Value::ABSOLUTE_TIME_VALUE:
+			value.IsAbsoluteTimeValue(atvalue);
+			integerValue.SetIntegerValue(atvalue.secs);
+			could_convert = true;
+            break;
+
+		case Value::RELATIVE_TIME_VALUE:
+			value.IsRelativeTimeValue(rtvalue);
+			integerValue.SetIntegerValue((int) rtvalue);
+			could_convert = true;
+            break;
+
+		default:
+			EXCEPT( "Should not reach here" );
+    }
+    return could_convert;
+}
+
 END_NAMESPACE // classad

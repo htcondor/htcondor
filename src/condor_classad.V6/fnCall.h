@@ -196,6 +196,7 @@ class FunctionCall : public ExprTree
 	
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
+	static bool random(const char*,const ArgumentList&,EvalState&,Value&);
 	
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };

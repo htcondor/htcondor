@@ -28,6 +28,33 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+#ifdef WIN32
+int get_random_integer(void)
+{
+    static char initialized = 0;
+
+	if (!initialized) {
+        int seed = time(NULL);
+        srand(seed);
+        initialized = 1;
+	}
+
+	return rand();
+}
+#else
+int get_random_integer(void)
+{
+    static char initialized = 0;
+
+	if (!initialized) {
+        int seed = time(NULL);
+        srand48(seed);
+        initialized = 1;
+	}
+	return (int) (lrand48() & MAXINT);
+}
+#endif
+
 long timezone_offset(void)
 {
 #ifdef __APPLE_CC__

@@ -296,6 +296,7 @@ class Value
 };
 
 bool convertValueToRealValue(const Value value, Value &realValue);
+bool convertValueToIntegerValue(const Value value, Value &integerValue);
 
 // implementations of the inlined functions
 inline bool Value::
