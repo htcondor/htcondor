@@ -116,7 +116,7 @@ class ExprTree
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
 		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
 		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE) {};
-		virtual ~ExprTree();
+		virtual ~ExprTree() {};
 
     protected :
 		virtual void        CopyBaseExprTree(class ExprTree *const recipient) const;
@@ -135,6 +135,7 @@ class VariableBase : public ExprTree
     public :
   
 	  	VariableBase(char*);
+	    virtual ~VariableBase();
 
 		virtual int	    operator ==(ExprTree&);
 
@@ -199,6 +200,7 @@ class StringBase : public ExprTree
     public :
 
 	StringBase(char*);
+	virtual ~StringBase();
 
 	virtual int	    operator ==(ExprTree&);
 
@@ -217,7 +219,7 @@ class StringBase : public ExprTree
 class BooleanBase : public ExprTree
 {
     public :
-
+	  
   	BooleanBase(int);
 	virtual int	    operator ==(ExprTree&);
 
@@ -237,7 +239,6 @@ class UndefinedBase : public ExprTree
     public :
 
   	UndefinedBase();
-
 	virtual void        Display();
 
     protected :
@@ -262,6 +263,7 @@ class BinaryOpBase : public ExprTree
 {
     public :
 
+		virtual ~BinaryOpBase();
 		virtual int		      operator ==(ExprTree&);
 		
 		virtual ExprTree*     LArg()   { return lArg; }
