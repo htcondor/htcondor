@@ -340,6 +340,9 @@ static void process_classad(ifstream &input_file, const string &line,
 			string token = extract_token(&token_start, classad_line);
 			if (token.compare("end-classad")) {
 				classad_string += classad_line;
+                // If we don't add newlines, then comments will
+                // be misunderstood.
+                classad_string += '\n'; 
 			}
 			else {
 				classad_done = true;
