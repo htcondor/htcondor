@@ -99,6 +99,9 @@ END_C_DECLS
 #endif
 
 typedef void* MMAP_T;
-typedef int socklen_t;
+
+#if defined(Solaris26)
+	typedef int socklen_t;
+#endif
 
 #endif /* CONDOR_SYS_SOLARIS_H */
