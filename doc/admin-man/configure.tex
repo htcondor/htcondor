@@ -3488,8 +3488,14 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INTERVAL}] \label{param:NegotiatorInterval}
   Sets how often the negotiator starts a negotiation cycle.  It is defined
   in seconds and defaults to 300 (5 minutes).
-  The minimum accepted value is 20. Values lower than 20 are treated as 20.
   
+\item[\Macro{NEGOTIATOR\_CYCLE\_DELAY}] \label{param:NegotiatorCycleDelay}
+  An integer value that represents the mininum number of seconds
+  that must pass before a new negotiation cycle may start.
+  The default value is 20.
+  \MacroNI{NEGOTIATOR\_CYCLE\_DELAY} is intended only for use by
+  Condor experts.
+
 \item[\Macro{NEGOTIATOR\_TIMEOUT}] \label{param:NegotiatorTimeout}
   Sets the timeout that the negotiator uses on its network connections
   to the schedds and startds.  It is defined in seconds and defaults to 30.
