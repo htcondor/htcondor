@@ -435,14 +435,15 @@ int main_init (int argc, char ** const argv) {
 		}
 
 		G.condorLogFiles.append(condorLogName);
-	 }
-
-
-	if( G.condorLogFiles.number() > 0 ) {
-		G.condorLogFiles.rewind();
-		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s, etc.\n",
-					  G.condorLogFiles.next() );
 	}
+
+	debug_printf( DEBUG_VERBOSE, "All DAG node user log files:\n");
+	G.condorLogFiles.rewind();
+	const char *logfile;
+	while( (logfile = G.condorLogFiles.next()) ) {
+		debug_printf( DEBUG_VERBOSE, "  %s\n", logfile);
+	}
+	G.condorLogFiles.rewind();
 
 	if( dapLogName ) {
 		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
