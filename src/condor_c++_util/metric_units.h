@@ -12,7 +12,7 @@ Returns a pointer to a static buffer.
 
 BEGIN_C_DECLS
 
-char * metric_units( int bytes );
+char * metric_units( double bytes );
 
 END_C_DECLS
 

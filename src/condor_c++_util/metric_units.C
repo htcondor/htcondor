@@ -5,13 +5,13 @@
 #define METRIC_UNITS_BUFFER_SIZE 80
 #define METRIC_POWER_COUNT 5
 
-extern "C" char *metric_units( int bytes )
+extern "C" char *metric_units( double bytes )
 {
 	static char buffer[METRIC_UNITS_BUFFER_SIZE];
 	static char *suffix[METRIC_POWER_COUNT] =
 		{ "B ", "KB", "MB", "GB", "TB" };
 
-	float value=0;
+	double value=0;
 	int power=0;
 
 	value = bytes;

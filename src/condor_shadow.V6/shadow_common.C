@@ -240,8 +240,8 @@ NotifyUser( char *buf, PROC *proc )
 		// perspective, and we want to display the stats from the job's
 		// perspective.
 		fprintf(mailer,"\nNetwork:\n");
-		fprintf(mailer,"\t%s read\n",metric_units((int)TotalBytesSent));
-		fprintf(mailer,"\t%s written\n",metric_units((int)TotalBytesRecvd));
+		fprintf(mailer,"\t%s read\n",metric_units(TotalBytesSent));
+		fprintf(mailer,"\t%s written\n",metric_units(TotalBytesRecvd));
 	}
 
 	if (JobIsStandard()) {
