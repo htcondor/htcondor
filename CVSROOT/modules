@@ -356,8 +356,11 @@ V6_7_SOAP_3_EXT	-a V6_7_COMMON_EXT \
 # Externals needed for V6_7_2 (same as V6_7_1)
 V6_7_2_EXT	-a V6_7_1_EXT
 
+# Externals needed for V6_7_3 (same as V6_7_2)
+V6_7_3_EXT	-a V6_7_2_EXT
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_2_EXT
+V6_7_EXT	-a V6_7_3_EXT
 
 ######################################################################
 # end of externals
