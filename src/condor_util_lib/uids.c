@@ -85,6 +85,18 @@ init_condor_uid()
 	CondorUidInited = TRUE;
 }
 
+
+int
+get_condor_uid()
+{
+	if( !CondorUidInited ) {
+		init_condor_uid();
+	}
+
+	return CondorUid;
+}
+
+
 set_condor_euid()
 {
 	if( !CondorUidInited ) {
