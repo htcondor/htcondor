@@ -1,0 +1,183 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'job_filexfer_output-withvacate_van.cmd';
+$testname = 'file transfer - look for two sets of output files with a vacate test - vanilla U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+
+my $spool = `condor_config_val SPOOL`;
+chomp($spool);
+print "Spool is in --$spool--\n";
+
+my $job = $$;
+
+my $baseoutfile;
+my $oute;
+my $outf;
+my $outg;
+my $outh;
+my $outi;
+my $outj;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	$baseoutfile = $spool . "/cluster" . $cluster . ".proc0.subproc0/" . "submit_filetrans_output" . "$job";
+	$oute = "$baseoutfile"."e.txt";
+	$outf = "$baseoutfile"."f.txt";
+	$outg = "$baseoutfile"."g.txt";
+	$outh = "$baseoutfile"."h.txt";
+	$outi = "$baseoutfile"."i.txt";
+	$outj = "$baseoutfile"."j.txt";
+
+	print "Looking for $oute, $outf, $outg ...\n";
+
+	print "Vacate $cluster Now\n";
+	sleep 4; # let output files get created
+	system("condor_vacate_job $cluster");
+
+};
+
+$aborted = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Aborted job expected from condor_rm, ok.\n";
+};
+
+$evicted = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	sleep(4);
+
+	if(!-f "$oute")
+	{ 
+		die "$oute failed to arrive\n"; 
+		print "removing $cluster\n";
+		system("condor_rm $cluster");
+		exit(1)
+	};
+	if(!-f "$outf")
+	{ 
+		die "$outf failed to arrive\n"; 
+		print "removing $cluster\n";
+		system("condor_rm $cluster");
+		exit(1)
+	};
+	if(!-f "$outg")
+	{ 
+		die "$outg failed to arrive\n"; 
+		print "removing $cluster\n";
+		system("condor_rm $cluster");
+		exit(1)
+	};
+
+	# Cool getting to here means the files all arrived!
+	print "All files arrived as expected.....\n";
+	system("condor_rm $cluster");
+};
+
+$success = sub
+{
+	print "Base file transfer job!\n";
+	if(!-f "$oute"){ die "$oute failed to arrive\n"; exit(1)};
+	if(!-f "$outf"){ die "$outf failed to arrive\n"; exit(1)};
+	if(!-f "$outg"){ die "$outg failed to arrive\n"; exit(1)};
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+$shadow = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $error = $args{"shadowerror"};
+
+	print "Shadow Error: Cluster $cluster: $error\n";
+	system("condor_rm $cluster");
+	sleep 3;
+	print "$testname: SUCCESS\n";
+	exit(0);
+};
+
+
+
+# make some needed files. All 0 sized and xxxxxx.txt for
+# easy cleanup
+
+my $job = $$;
+print "Process Id for this script is  $job\n";
+my $basefile = "submit_filetrans_input" . "$job";
+my $in = "$basefile".".txt";
+my $ina = "$basefile"."a.txt";
+my $inb = "$basefile"."b.txt";
+my $inc = "$basefile"."c.txt";
+
+my $inputdir = "job_"."$job"."_dir";
+
+my $line = "";
+my $args = "--job=$job --long ";
+
+# pass pid for output file production
+# open submitfile and fix
+open(CMD,"<$cmd") || die "Can not open command file: $!\n";
+open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
+while(<CMD>)
+{
+	chomp;
+	print "$_\n";
+	$line = $_;
+	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)
+	{
+		my $input = "$1"."$job".".txt";
+		print "Input file was $1\n";
+		print NEWCMD "input = $inputdir/$input\n"
+	}
+	elsif( $line =~ /^\s*transfer_input_files\s*=\s*.*$/ )
+	{
+		print NEWCMD "transfer_input_files = $inputdir/$ina,$inputdir/$inb,$inputdir/$inc\n";
+	}
+	#elsif( $line =~ /^\s*transfer_output_files\s*=\s*.*$/ )
+	#{
+		#print NEWCMD "transfer_output_files = $oute,$outf,$outg\n";
+	#}
+	elsif( $line =~ /^\s*arguments\s*=\s*.*$/)
+	{
+		print NEWCMD "arguments = $args\n";
+	}
+	else
+	{
+		print NEWCMD "$line\n";
+	}
+
+}
+close(CMD);
+close(NEWCMD);
+system("mv $cmd.new $cmd");
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterShadow($testname, $shadow);
+CondorTest::RegisterEvicted($testname, $evicted);
+CondorTest::RegisterAbort($testname, $aborted);
+CondorTest::RegisterExitedSuccess($testname, $success);
+CondorTest::RegisterTimed($testname, $timed, 900);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

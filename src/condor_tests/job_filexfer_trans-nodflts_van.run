@@ -1,0 +1,67 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'job_filexfer_trans-nodflts_van.cmd';
+$testname = ' testing of file transfer with no default values used. - vanilla U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Running $cluster\n";
+
+};
+
+$abort = sub {
+	print "Job is gone now, cool.\n";
+};
+
+$release = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+};
+
+$shadow = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	my $error = $args{"shadowerror"};
+
+	print "Shadow Error: Cluster $cluster: $error\n";
+	system("condor_rm $cluster");
+	sleep 3;
+	print "$testname: SUCCESS\n";
+};
+
+$success = sub
+{
+	die "Base file transfer job can not run!\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file transfer broken!\n";
+};
+
+CondorTest::RegisterShadow($testname, $shadow);
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterExitedSuccess($testname, $success);
+CondorTest::RegisterTimed($testname, $timed, 900);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
