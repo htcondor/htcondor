@@ -14,7 +14,7 @@ This is the first development release.
 You should only install it if you really know what you are doing.
 Development releases will come out quickly, with lots of new features
 being added, many bugs fixed, etc.  
-It should not be used for a production pool.
+6.1.X should not be used for a production pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-4}Version 6.1.4}
@@ -35,20 +35,64 @@ page~\pageref{sec:Shadow-Config-File-Entries} for more details.
 \subsubsection{\label{sec:New-6-1-3}Version 6.1.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Note There are a lot of new, unstable features in 6.1.3.  
+PLEASE do not install all of 6.1.3 on a production pool.
+Almost all of the bug fixes in 6.1.3 are in the \Condor{startd} or
+\Condor{starter}, so, unless you really know what you're doing, we
+recomend you just upgrade SMP-Startd contrib module, not the entire
+6.1.3 release. 
+
 \begin{itemize}
 
 \item Owners can now specify how the SMP-Startd partitions the system
 resources into the different types and numbers of virtual machines,
 specifying the number of CPUs, megs of RAM, megs of swap space, etc.,
-in each.  
-The number of virtual machines reporting of any given type can also be
-changed dynamically through the \Condor{smp\_admin} tool.  
+in each.
+Previously, each virtual machine reported to Condor from an SMP
+machine always had one CPU, and all shared system resources were
+evenly divided among the virtual machines.
 
 \item Fixed a bug in the reporting of virtual memory and disk space on
 SMP machines where each virtual machine represented was advertising
 the total in the system for itself, instead of its own share.
 Now, both the totals, and the virtual machine-specific values are
 advertised.  
+
+\item Fixed a bug in the \Condor{starter} when it was trying to
+suspend vanilla jobs.
+While we always killed all of the processes when we were trying to
+vacate, if the vanilla job forked, the starter would sometimes not
+suspend some of the children processes.
+
+\item Fixed a bug in the SMP-Startd's load average computation that
+could cause processes spawned by Condor to not be associated w/ the
+Condor load average.
+This would cause the startd to over-estimate the owner's load average,
+and under-estimate the Condor load, which would cause a cycle of
+suspending and resuming a Condor job, instead of just letting it run.
+
+\item Fixed a bug in the SMP-Startd's load average computation that
+could cause certain rare exceptions to be treated as fatal, when in
+fact, the Startd could recover from them.
+
+\item Fixed some bugs that could cause \Condor{starter} processes to
+be left as zombies underneath the \Condor{startd} under very rare
+conditions.  
+
+\item For sites using AFS, if there are problems in the
+\Condor{startd} computing the AFS cell of the machine it's running on,
+the startd will exit with an error message at start-up time.
+
+\item Fixed a minor bug in \Condor{install} that would lead to a
+syntax error in your config file given a certain set of installation
+options.  
+
+\item Added the \Opt{-maxjobs} option to the \Condor{submit\_dag}
+script that can be used to specify the maximum number of jobs Condor
+will run from a DAG at any given time.
+Also, \Condor{submit\_dag} automatically creates a ``rescue DAG''.
+See section~\ref{sec:DAGMan} on page~\pageref{sec:DAGMan} for details
+on DAGMan.
 
 \item Fixed bug in ClassAd printing when you tried to display an
 integer or float attribute that didn't exist in the given ClassAd. 
@@ -74,6 +118,11 @@ debug levels in Condor.
 \begin{itemize}
 \item \Dflag{NETWORK}, used by various daemons in Condor to report
 various network statistics about the Condor daemons. 
+\item \Dflag{PROCFAMILY}, used to report information about various
+families of processes that are monitored by Condor.
+For example, this is used in the \Condor{startd} when monitoring the
+family of processes spawned by a given user job for the purposes of
+computing the Condor load average.
 \item \Dflag{KEYBOARD}, used by the \Condor{startd} to print out
 statistics about remote tty and console idle times in the
 \Condor{startd}.
@@ -81,10 +130,6 @@ This information used to be logged at \Dflag{FULLDEBUG}, along with
 everything else, so now, you can see just the idle times, and/or have
 the information stored to a seperate file.
 \end{itemize}
-
-\item Fixed up bug in the SMP-Startd's load average computation that
-could cause certain rare exceptions to be treated as fatal, when in
-fact, the Startd could recover from them.
 
 \item Added a \Opt{-run} option to \Condor{q}, which diplays
 information for running jobs, including the remote host where each job
@@ -103,6 +148,30 @@ evict, terminate, and shadow exception events indicate the number of
 bytes sent and received by the job for the specific run.  
 The terminate event additionally indicates totals for the life of the
 job.
+
+\item \Macro{STARTER\_CHOOSES\_CKPT\_SERVER} now defaults to true.
+See section~\ref{param:StarterChoosesCkptServer} on
+page~\pageref{param:StarterChoosesCkptServer} for more details.
+
+\item The infrastructure for authentication within Condor has been
+overhauled, allowing for much greater flexibility in supporting new
+forms of authentication in the future.
+This means that the 6.1.3 schedd and queue management tools (like
+\Condor{q}, \Condor{submit}, \Condor{rm} and so on) are incompatible
+with previous versions of Condor.
+
+\item Many of the Condor administration tools have been improved to
+allow you to specify the ``subsystem'' you want them to effect.  
+For example, you can now use ``\condor{reconfig} -startd'' to just
+have the startd reconfigure itself.
+Similarly, \condor{off}, \condor{on} and \condor{restart} can now all 
+work on a single daemon, instead of machine-wide.
+See the man pages (secion~\ref{command-reference} on
+page~\pageref{command-reference}) or run any command with ``-help''
+for details. 
+
+\item Fixed a bug in the Condor tools that could cause a segmentation
+violation in certain rare error conditions.
 
 \end{itemize}
 
