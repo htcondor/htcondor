@@ -22,7 +22,6 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "condor_fdset.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_ckpt_name.h"

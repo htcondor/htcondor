@@ -35,7 +35,6 @@
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "environ.h"
-// #include "url_condor.h"
 #include "condor_updown.h"
 #include "condor_uid.h"
 #include "my_hostname.h"

@@ -21,19 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
 #include "condor_io.h"
 #include "string_list.h"
-
-#include <sys/stat.h>
-#include "condor_fix_socket.h"
-#if !defined(WIN32)
-#include <netinet/in.h>
-#include <sys/param.h>
-#endif
-
 #include "condor_debug.h"
 #include "condor_config.h"
 

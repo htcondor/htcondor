@@ -32,7 +32,6 @@
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
 
-#include "_condor_fix_types.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
