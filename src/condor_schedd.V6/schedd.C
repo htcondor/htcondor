@@ -6271,6 +6271,8 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
 					 old_attr, job_id.cluster, job_id.proc );
 		}
+			// how evil, this allocates me a string, even if it failed...
+		free( value );
 		return false;
 	}
 	
