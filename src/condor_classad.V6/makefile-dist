@@ -1,15 +1,15 @@
-INSTALL_DIR = /usr/include
+DESTDIR = /usr/include
 
-# This include will redefine INSTALL_DIR, if Makefile.config exists
+# This include will redefine DESTDIR, if Makefile.config exists
 include Makefile.config
 
 LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -lclassad
 
-all:: libclassad.a test_classads extra_tests test_xml sample
+all:: libclassad.a test_classads cxi extra_tests test_xml sample
 
-LIB_INSTALL = $(INSTALL_DIR)/lib
-BIN_INSTALL = $(INSTALL_DIR)/bin
-INCLUDE_INSTALL = $(INSTALL_DIR)/include
+LIB_INSTALL = $(DESTDIR)/lib
+BIN_INSTALL = $(DESTDIR)/bin
+INCLUDE_INSTALL = $(DESTDIR)/include
 
 CPlusPlus = g++
 C_PLUS_FLAGS = $(EXTRA_C_PLUS_FLAGS) -Wall -g -DCLASSAD_DISTRIBUTION 
@@ -34,6 +34,9 @@ libclassad.a:  $(LIB_OBJ)
 
 instantiations.o:   instantiations.C
 	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -c instantiations.C -o instantiations.o
+
+cxi: cxi.o libclassad.a
+	$(CPlusPlus) -o cxi cxi.o $(LD_FLAGS)
 
 test_classads: test_classads.o libclassad.a
 	$(CPlusPlus) -o test_classads test_classads.o $(LD_FLAGS)
@@ -65,7 +68,7 @@ install:: libclassad.a test_classads
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy
-	rm -f test_classads test_classads.pure test_xml sample libclassad.a
+	rm -f test_classads test_classads.pure test_xml cxi sample libclassad.a
 tidy:
 	rm -f *.o *~ *.bak
 
