@@ -1851,14 +1851,23 @@ pseudo_sync()
 }
 
 /*
-   Specify checkpoint server host.
+   Allow the starter to specify our checkpoint server.  We only use
+   the starter's recommendation if the user didn't explicitly tell us
+   not to by setting USE_CKPT_SERVER = False or
+   STARTER_CHOOSES_CKPT_SERVER = False.
 */
 int
 pseudo_register_ckpt_server(const char *host)
 {
 	if (StarterChoosesCkptServer) {
-		if (CkptServerHost) free(CkptServerHost);
-		CkptServerHost = strdup(host);
+		char *use_ckpt_server = param( "USE_CKPT_SERVER" );
+		if (!use_ckpt_server ||
+			(use_ckpt_server[0] != 'F' && use_ckpt_server[0] != 'f')) {
+			if (CkptServerHost) free(CkptServerHost);
+			CkptServerHost = strdup(host);
+			UseCkptServer = TRUE;
+		}
+		if (use_ckpt_server) free(use_ckpt_server);
 	}
 
 	return 0;
