@@ -57,7 +57,6 @@ ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
 	return false;
 }
 
-
 ClassAd *ClassAdXMLParser::
 ParseClassAd( const string &buffer)
 {
@@ -78,6 +77,29 @@ ParseClassAd( const string &buffer, int &offset)
 
 	return classad;
 }
+
+ClassAd *ClassAdXMLParser::
+ParseClassAd(FILE *file)
+{
+	ClassAd *classad;
+	FileLexerSource lexer_source(file);
+	
+	lexer.SetLexerSource(&lexer_source);
+	classad = ParseClassAd();
+	return classad;
+}
+
+ClassAd *ClassAdXMLParser::
+ParseClassAd( istream& stream)
+{
+	ClassAd *classad;
+	InputStreamLexerSource lexer_source(stream);
+	
+	lexer.SetLexerSource(&lexer_source);
+	classad = ParseClassAd();
+	return classad;
+}
+
 
 ClassAd *ClassAdXMLParser::
 ParseClassAd(void)
