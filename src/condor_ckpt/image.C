@@ -41,7 +41,7 @@
 #include <sys/time.h>
 #include <values.h>
 #endif
-#elif defined(Solaris)
+#if defined(Solaris)
 #if !defined(Solaris251)
 #include </usr/ucbinclude/sys/rusage.h>	// for rusage
 #endif
