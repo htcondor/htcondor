@@ -28,6 +28,7 @@
 #include "sock.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
+#include "condor_system.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
 
 /*
@@ -37,20 +38,6 @@
 class Authentication;
 class Condor_MD_MAC;
 /** The ReliSock class implements the Sock interface with TCP. */
-
-// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
-#if defined HAS_INT64_T
-  typedef int64_t filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#elif defined HAS___INT64_T
-  typedef __int64 filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
-#else
-  typedef long filesize_t;
-# define FILESIZE_T_FORMAT "%l"
-#endif
 
 class ReliSock : public Sock {
 	friend class Authentication;

@@ -233,4 +233,18 @@ typedef fd_set *SELECT_FDSET_PTR;
 # define PRIu64 "llu"
 #endif
 
+// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
+#if defined HAS_INT64_T
+  typedef int64_t filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
+
+#elif defined HAS___INT64_T
+  typedef __int64 filesize_t;
+# define FILESIZE_T_FORMAT "%" PRId64
+
+#else
+  typedef long filesize_t;
+# define FILESIZE_T_FORMAT "%l"
+#endif
+
 #endif /* CONDOR_SYSTEM_H */
