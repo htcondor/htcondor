@@ -239,7 +239,7 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		if( $opsys =~ /.*linux.*/ ) {
+		if( $libc =~ /.*glibc22.*/ ) {	
 			`cp -rL $src $skel/$release/$dest`;
 		} else {
 			`cp -r $src $skel/$release/$dest`;
