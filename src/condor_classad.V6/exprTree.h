@@ -29,7 +29,7 @@
 #include "value.h"
 
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 // forward declarations
 class ExprTree;
@@ -59,6 +59,22 @@ class EvalState {
 class ExprTree 
 {
   	public:
+			/// The kinds of nodes in expression trees
+		enum NodeKind {
+	    	/// Literal node (string, integer, real, boolean, undefined, error)
+	    	LITERAL_NODE,
+			/// Attribute reference node (attr, .attr, expr.attr) 
+			ATTRREF_NODE,
+			/// Expression operation node (unary, binary, ternary)/
+			OP_NODE,
+			/// Function call node 
+	   		FN_CALL_NODE,
+			/// ClassAd node 
+			CLASSAD_NODE,
+			/// Expression list node 
+			EXPR_LIST_NODE
+		};
+
 		/// Virtual destructor
 		virtual ~ExprTree ();
 
@@ -91,45 +107,33 @@ class ExprTree
 		NodeKind GetKind (void) const { return nodeKind; }
 
 
-		/** Evaluates the expression.
-			@param v The value of the expression.
-			@return true if the operation succeeded, and false otherwise.
-		*/
-		bool Evaluate( Value& v ) const;
 
-		/** Evaluates the expression and identifies significant sub-expressions
-				that determined the value of the expression.
-			@param v The value of the expression.
-			@param t The expression composed of the significant sub-expressions.
-			@return true if the operation succeeded, and false otherwise.
-		*/
-		bool Evaluate( Value& v, ExprTree*& t ) const;
-
-		/** Performs a ``partial evaluation'' of the expression.  This method 
-				evaluates as much of the expression as possible without 
-				resolving ``external references.''  It is roughly equivalent 
-				to expression simplification by constant propagation and 
-				folding.
-			@param val Contains the value of the expression if it could be 
-				completely folded.  The value of this object is valid if and
-				only if tree is NULL.
-			@param tree Contains the flattened expression tree if the expression
-				could not be fully flattened to a value, and NULL otherwise.
-			@return true if the flattening was successful, and false otherwise.
-		*/
-		bool Flatten( Value& val, ExprTree*& tree) const;
-
+		/// A debugging method; send expression to stdout
 		void Puke( ) const;
 		
   	protected:
 		ExprTree ();
 
-		bool Flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL ) const;
+		bool Evaluate( Value& v ) const;
+		bool Evaluate( Value& v, ExprTree*& t ) const;
+		bool Flatten( Value& val, ExprTree*& tree) const;
+
+		bool Flatten( EvalState&, Value&, ExprTree*&, int* = NULL ) const;
 		bool Evaluate( EvalState &, Value & ) const; 
 		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
 
 		const ClassAd	*parentScope;
 		NodeKind		nodeKind;
+
+		enum {
+			EVAL_FAIL,
+			EVAL_OK,
+			EVAL_UNDEF,
+			PROP_UNDEF,
+			EVAL_ERROR,
+			PROP_ERROR
+		};
+
 
   	private:
 		friend class Operation;
@@ -143,7 +147,7 @@ class ExprTree
 		virtual void _SetParentScope( const ClassAd* )=0;
 		virtual bool _Evaluate( EvalState&, Value& ) const=0;
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const=0;
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* )const=0;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* )const=0;
 };
 
 END_NAMESPACE // classad
