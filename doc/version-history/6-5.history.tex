@@ -43,9 +43,10 @@ various bug fixes and improvements.
 \noindent Bugs Fixed:
 \begin{itemize}
 
-\item 
-
-\item 
+\item Hawkeye will no longer busy-loop if a ``continuous mode''
+module with a period of 0 fails to execute for some reason.  (Now, for
+continuous mode modules, a period of 0 is automatically reset to be 1, and
+a warning appears in the log.)
 
 \end{itemize}
 
