@@ -178,7 +178,7 @@ reply( Stream* s, int cmd )
 }
 
 
-int
+bool
 caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 {
 	char buf[4096];
@@ -198,16 +198,56 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 					 "caInsert: Can't find %s in source classad.\n", 
 					 attr );
 		}
-		return FALSE;
+		return false;
 	}
 	tree->PrintToStr( buf );
 
 	if( ! target->Insert( buf ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
-		return FALSE;
+		return false;
 	}		
-	return TRUE;
+	return true;
+}
+
+
+/*
+  This method takes a pointer to a classad, the name of an attribute
+  in the config file, and a flag that says if that attribute isn't
+  there, if it should be a fatal error or not.  If the attribute is
+  defined, we insert "attribute = value" into the given classad and
+  return true.  If the attribute wasn't defined, we return false, and
+  if the is_fatal flag is set, we EXCEPT
+  -Derek Wright <wright@cs.wisc.edu> 4/12/00
+*/
+bool
+configInsert( ClassAd* ad, const char* attr, bool is_fatal )
+{
+	char* val = param( attr );
+	char* tmp;
+	if( ! val ) {
+		if( is_fatal ) {
+			EXCEPT( "Required attribute \"%s\" is not defined", attr );
+		}
+		return false;
+	}
+
+	int size = 0;
+	size += strlen( val );
+	size += strlen( attr );
+	size += 4;
+	
+	tmp = (char*) malloc( size * sizeof(char) );
+	if( ! tmp ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( tmp, "%s = %s", attr, val );
+
+	ad->Insert( tmp );
+
+	free( tmp );
+	free( val );
+	return true;
 }
 
 
@@ -247,8 +287,7 @@ send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA, ClassAd*
    This function reads of a capability string and an eom from the
    given stream.  It looks up that capability in the resmgr to find
    the corresponding Resource*.  If such a Resource is found, we
-   return the pointer to it, otherwise, we return NULL.
-*/
+   return the pointer to it, otherwise, we return NULL.  */
 Resource*
 stream_to_rip( Stream* stream )
 {
