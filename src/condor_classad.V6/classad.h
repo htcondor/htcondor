@@ -23,6 +23,7 @@
 #ifndef __CLASSAD_H__
 #define __CLASSAD_H__
 
+
 #include <set>
 #include <map>
 #include <vector>
@@ -551,7 +552,7 @@ e		*/
 					EvalState &, References& );
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, PortReferences& );
-		bool _MakeRectangles(const ExprTree*,const string&,Rectangles&, bool);
+		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );
 #endif
 
@@ -559,7 +560,7 @@ e		*/
 		void evalFromEnvironment( const char *name, Value val );
 		ExprTree *AddExplicitConditionals( ExprTree * );
 		ExprTree *AddExplicitTargetRefs( ExprTree *,
-										 set< string, CaseIgnLTStr > & );
+			std::set < std::string, CaseIgnLTStr > & );
 #endif
 
 		ClassAd *_GetDeepScope( const std::string& ) const;
