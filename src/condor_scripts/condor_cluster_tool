@@ -103,8 +103,13 @@ if( $cmd =~ /^ch/ )
 	{
 	    push @args, "c$n";
 	}
+	$print_summary = 1;
     }
+    $on_total = 0;
+    $off_total = 0;
     check_condor( @args );
+    print "$on_total nodes running Condor, $off_total not running Condor\n"
+	if $print_summary;
 }
 elsif( $cmd eq "on" )
 {
@@ -352,6 +357,7 @@ sub check_host
     if( $up == 1 )
     {
 	$status = "Condor is on ";
+	$on_total++;
     }
     elsif( $up == -1 )
     {
@@ -360,6 +366,7 @@ sub check_host
     else
     {
 	$status = "Condor is off";
+	$off_total++;
     }
     return $status;
 }
