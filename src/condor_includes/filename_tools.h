@@ -7,6 +7,17 @@
 BEGIN_C_DECLS
 
 /**
+Take any pathname -- simple, relative, or complete -- and split it
+into a directory and a file name.   Always succeeds, but return
+code gives some information about the path actually present.
+Returns true if there was a directory component to split off.
+Returns false if there was no directory component, but in this case,
+still fills "dir" with "."
+*/
+
+int filename_split( char *path, char *dir, char *file );
+
+/**
 Take an input string in URL form, and split it into its components.
 URLs are of the form "method://server:port/filename".  Any component
 that is missing will be recorded as the string with one null character.

@@ -147,3 +147,22 @@ int filename_remap_find( char *input, char *filename, char *output )
 	free(buffer);
 	return 0;
 }
+
+int filename_split( char *path, char *dir, char *file )
+{
+	char *last_slash;
+
+	last_slash = strrchr(path,'/');
+	if(last_slash) {
+		strncpy(dir,path,(last_slash-path));
+		dir[(last_slash-path)] = 0;
+       		last_slash++;
+		strcpy(file,last_slash);
+		return 1;
+	} else {
+		strcpy(file,path);
+		strcpy(dir,".");
+		return 0;
+	}
+}
+

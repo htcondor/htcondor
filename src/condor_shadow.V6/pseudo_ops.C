@@ -75,7 +75,8 @@ extern char *ExecutingHost;
 
 int		LastCkptSig = 0;
 
-char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
+/* Until the cwd is actually set, use "dot" */
+char CurrentWorkingDir[ _POSIX_PATH_MAX ]=".";
 
 extern "C" {
 
@@ -1231,27 +1232,48 @@ int
 pseudo_get_file_info( const char *logical_name, char *actual_url )
 {
 	char	remap_list[ATTRLIST_MAX_EXPRESSION];
+	char	split_dir[_POSIX_PATH_MAX];
+	char	split_file[_POSIX_PATH_MAX];
 	char	full_path[_POSIX_PATH_MAX];
+	char	remap[_POSIX_PATH_MAX];
 	char	*method;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
 
-	/* First check to see if the logical name matches a
-	   filename that is remapped by the job ad. */
+	/* The incoming logical name might be a simple, relative, or complete path */
+	/* We need to examine both the full path and the simple name. */
 
-	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list)) {
-		if(filename_remap_find(remap_list,(char*)logical_name,actual_url)) {
-			dprintf(D_SYSCALLS,"\tremapped to: %s\n",actual_url);
-			return 1;
+	filename_split( logical_name, split_dir, split_file );
+	complete_path( logical_name, full_path );
+
+	/* Any name comparisons must check the logical name, the simple name, and the full path */
+
+	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list) &&
+	  (filename_remap_find( remap_list, logical_name, remap ) ||
+	   filename_remap_find( remap_list, split_file, remap ) ||
+	   filename_remap_find( remap_list, full_path, remap ))) {
+
+		dprintf(D_SYSCALLS,"\tremapped to: %s\n",remap);
+
+		/* If the remap is a full URL, return right away */
+		/* Otherwise, continue processing */
+
+		if(strchr(remap,':')) {
+			dprintf(D_SYSCALLS,"\tremap is complete url\n");
+			strcpy(actual_url,remap);
+			return 0;
+		} else {
+			dprintf(D_SYSCALLS,"\tremap is simple file\n");
+			complete_path( remap, full_path );
 		}
+	} else {
+		dprintf(D_SYSCALLS,"\tnot remapped\n");
 	}
 
-	dprintf( D_SYSCALLS, "\tnot remapped.\n");
+	dprintf( D_SYSCALLS,"\tfull_path = \"%s\"\n", full_path );
 
-	/* No special remap was specified by the user, so decide what
-	   method is to be used, based on the complete path. */
-
-	complete_path(logical_name,full_path);
+	/* Now, we have a full pathname. */
+	/* Figure out what url modifiers to slap on it. */
 
 #ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
