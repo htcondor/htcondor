@@ -25,18 +25,12 @@
 #ifndef __XINTERFACE_H__
 #define __XINTERFACE_H__
 
+#include "condor_common.h"
+#include "condor_debug.h"
 #include <ctype.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
-
-#include <time.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include "condor_debug.h"
 
 class XInterface
 {
