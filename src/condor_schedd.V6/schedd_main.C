@@ -194,6 +194,7 @@ int
 main_config()
 {
 	scheduler.reconfig();
+	return 0;
 }
 
 
@@ -201,6 +202,7 @@ int
 main_shutdown_fast()
 {
 	scheduler.shutdown_fast();
+	return 0;
 }
 
 
@@ -208,5 +210,6 @@ int
 main_shutdown_graceful()
 {
 	scheduler.shutdown_graceful();
+	return 0;
 }
 
