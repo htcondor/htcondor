@@ -75,33 +75,32 @@ public:
 	// returns 1 and sets val if corresponding SetAttribute found
 	// returns 0 if no SetAttribute found
 	// return -1 if DeleteAttribute or DestroyClassAd found
-	int LookupInTransaction(const char *key, const char *name, char *&val);
+	int LookupInTransaction(const char *key, const char *name, ExprTree *&expr);
 
 	ClassAdHashTable table;
+
 private:
-	void LogState(int fd);
-	char log_filename[_POSIX_PATH_MAX];
-	int log_fd;
+	void 	LogState(FILE *fp);
+	char 	log_filename[_POSIX_PATH_MAX];
+	FILE 	*log_fp;
+	Source	src;
+	Sink	snk;
+	bool 	EmptyTransaction;
 	Transaction *active_transaction;
-	bool EmptyTransaction;
 };
 
 class LogNewClassAd : public LogRecord {
 public:
-	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
+	LogNewClassAd(const char *key);
 	~LogNewClassAd();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
-	char *get_mytype() { return strdup(mytype); }
-	char *get_targettype() { return strdup(targettype); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE*);
+	virtual int ReadBody(FILE*);
 
 	char *key;
-	char *mytype;
-	char *targettype;
 };
 
 
@@ -113,8 +112,8 @@ public:
 	char *get_key() { return strdup(key); }
 
 private:
-	virtual int WriteBody(int fd) { return write(fd, key, strlen(key)); }
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *fp) { return fwrite(key, 1, strlen(key), fp); }
+	virtual int ReadBody(FILE *);
 
 	char *key;
 };
@@ -122,20 +121,20 @@ private:
 
 class LogSetAttribute : public LogRecord {
 public:
-	LogSetAttribute(const char *key, const char *name, const char *value);
+	LogSetAttribute(const char *key, const char *name, ExprTree *expr);
 	~LogSetAttribute();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_name() { return strdup(name); }
-	char *get_value() { return strdup(value); }
+	ExprTree *get_expr() { return (expr ? expr->Copy( ) : NULL) ; }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *);
+	virtual int ReadBody(FILE *);
 
 	char *key;
 	char *name;
-	char *value;
+	ExprTree *expr;
 };
 
 class LogDeleteAttribute : public LogRecord {
@@ -147,8 +146,8 @@ public:
 	char *get_name() { return strdup(name); }
 
 private:
-	virtual int WriteBody(int fd);
-	virtual int ReadBody(int fd);
+	virtual int WriteBody(FILE *);
+	virtual int ReadBody(FILE *);
 
 	char *key;
 	char *name;
@@ -158,17 +157,17 @@ class LogBeginTransaction : public LogRecord {
 public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd) { return 0; }
+	virtual int WriteBody(FILE *) { return 0; }
+	virtual int ReadBody(FILE *) { return 0; }
 };
 
 class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 private:
-	virtual int WriteBody(int fd) { return 0; }
-	virtual int ReadBody(int fd) { return 0; }
+	virtual int WriteBody(FILE *) { return 0; }
+	virtual int ReadBody(FILE *) { return 0; }
 };
 
-LogRecord *InstantiateLogEntry(int fd, int type);
+LogRecord *InstantiateLogEntry(FILE *fp, int type);
 #endif

@@ -39,43 +39,52 @@ ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {
 	log_filename[0] = '\0';
 	active_transaction = NULL;
-	log_fd = -1;
+	log_fp = NULL;
 }
 
 ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 {
+	int fd;
+
 	strcpy(log_filename, filename);
 	active_transaction = NULL;
 
-	log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
-	if (log_fd < 0) {
+		// open the file with open to get the permissions right (in case the
+		// the file is being created)  then wrap a FILE  around it
+	if( ( fd = open(log_filename, O_RDWR | O_CREAT, 0600) ) < 0 ) {
 		EXCEPT("failed to open log %s, errno = %d", log_filename, errno);
 	}
+	if( ( log_fp = fdopen( fd, "r+" ) ) == NULL ) {
+		EXCEPT( "failed to fdopen() log %s, errno = %d", log_filename, errno );
+	}
 
-	// Read all of the log records
-	LogRecord		*log_rec;
-	while ((log_rec = ReadLogEntry(log_fd, InstantiateLogEntry)) != 0) {
+		// Read all of the log records
+	LogRecord	*log_rec;
+	while ((log_rec = ReadLogEntry(log_fp, InstantiateLogEntry)) != 0) {
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_BeginTransaction:
 			if (active_transaction) {
-				dprintf(D_ALWAYS, "Warning: Encountered nested transactions in %s, "
-						"log may be bogus...", filename);
+				dprintf(D_ALWAYS, "Warning: Encountered nested transactions "
+					"in %s, log may be bogus...", filename);
 			} else {
 				active_transaction = new Transaction();
 			}
 			delete log_rec;
 			break;
+
 		case CondorLogOp_EndTransaction:
 			if (!active_transaction) {
-				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
-						"log may be bogus...", filename);
+				dprintf(D_ALWAYS, "Warning: Encountered unmatched end "
+					"transaction in %s, log may be bogus...", filename);
 			} else {
-				active_transaction->Commit(-1, (void *)&table); // commit in memory only
+					// commit in memory only
+				active_transaction->Commit(-1, (void *)&table); 
 				delete active_transaction;
 				active_transaction = NULL;
 			}
 			delete log_rec;
 			break;
+
 		default:
 			if (active_transaction) {
 				active_transaction->AppendLog(log_rec);
@@ -117,11 +126,12 @@ ClassAdLog::AppendLog(LogRecord *log)
 		}
 		active_transaction->AppendLog(log);
 	} else {
-		if (log_fd>=0) {
-			if (log->Write(log_fd) < 0) {
+		if( log_fp ) {
+			if (log->Write(log_fp) < 0) {
 				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 			}
-			if (fsync(log_fd) < 0) {
+			fflush( log_fp );
+			if (fsync( fileno( log_fp ) ) < 0) {
 				EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
 			}
 		}
@@ -134,33 +144,42 @@ void
 ClassAdLog::TruncLog()
 {
 	char	tmp_log_filename[_POSIX_PATH_MAX];
-	int new_log_fd;
+	int 	new_log_fd;
+	FILE	*new_log_fp;
 
 	sprintf(tmp_log_filename, "%s.tmp", log_filename);
-	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
+	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT | O_TRUNC , 0600);
 	if (new_log_fd < 0) {
 		dprintf(D_ALWAYS, "failed to truncate log: open(%s) returns %d\n",
 				tmp_log_filename, new_log_fd);
 		return;
 	}
-	LogState(new_log_fd);
-	close(log_fd);
-#if defined(WIN32)
-	close(new_log_fd);	// avoid sharing violation on move
-	if (MoveFileEx(tmp_log_filename, log_filename, MOVEFILE_REPLACE_EXISTING) == 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: MoveFileEx failed with error %d\n",
-			GetLastError());
+	if( ( new_log_fp = fdopen( new_log_fd, "r+" ) ) == NULL ) {
+		dprintf( D_ALWAYS, "failed to truncate log: fdopen(%s) failed, "
+			"errno = %d\n", tmp_log_filename, errno );
 		return;
 	}
-	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
+
+	LogState(new_log_fp);
+	fclose(log_fp);
+	fclose(new_log_fp);
+#if defined(WIN32)
+	if (MoveFileEx(tmp_log_filename, log_filename, MOVEFILE_REPLACE_EXISTING) 
+			== 0) {
+		dprintf(D_ALWAYS, "failed to truncate log: MoveFileEx failed with "
+			"error %d\n", GetLastError());
+		return;
+	}
 #else
-	log_fd = new_log_fd;
 	if (rename(tmp_log_filename, log_filename) < 0) {
-		dprintf(D_ALWAYS, "failed to truncate log: rename(%s, %s) returns errno %d\n",
-				tmp_log_filename, log_filename, errno);
+		dprintf(D_ALWAYS, "failed to truncate log: rename(%s, %s) returns "
+				"errno %d", tmp_log_filename, log_filename, errno);
 		return;
 	}
 #endif
+	if( ( log_fp = fopen( log_filename, "a+" ) ) == NULL ) {
+		EXCEPT( "Failed to reopen %s, errno = %d", log_filename, errno );
+	}
 }
 
 void
@@ -189,16 +208,17 @@ ClassAdLog::CommitTransaction()
 	if (!EmptyTransaction) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
-		active_transaction->Commit(log_fd, (void *)&table);
+		active_transaction->Commit(log_fp, (void *)&table);
 	}
 	delete active_transaction;
 	active_transaction = NULL;
 }
 
 int
-ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
+ClassAdLog::LookupInTransaction(const char *key, const char *name, 
+	ExprTree *&expr)
 {
-	bool AdDeleted=false, ValDeleted=false, ValFound=false;
+	bool AdDeleted=false, ExprDeleted=false, ExprFound=false;
 
 	if (!active_transaction) return 0;
 
@@ -229,12 +249,12 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogSetAttribute *)log)->get_name();
 				if (strcmp(lname, name) == 0) {
-					if (ValFound) {
-						free(val);
+					if (ExprFound) {
+						if( expr ) delete expr;
 					}
-					val = ((LogSetAttribute *)log)->get_value();
-					ValFound = true;
-					ValDeleted = false;
+					expr = ((LogSetAttribute *)log)->get_expr();
+					ExprFound = true;
+					ExprDeleted = false;
 				}
 				free(lname);
 			}
@@ -246,11 +266,11 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogDeleteAttribute *)log)->get_name();
 				if (strcmp(lname, name) == 0) {
-					if (ValFound) {
-						free(val);
+					if (ExprFound) {
+						if( expr ) delete expr;
 					}
-					ValFound = false;
-					ValDeleted = true;
+					ExprFound = false;
+					ExprDeleted = true;
 				}
 				free(lname);
 			}
@@ -262,13 +282,13 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 		}
 	}
 
-	if (AdDeleted || ValDeleted) return -1;
-	if (ValFound) return 1;
+	if (AdDeleted || ExprDeleted) return -1;
+	if (ExprFound) return 1;
 	return 0;
 }
 
 void
-ClassAdLog::LogState(int fd)
+ClassAdLog::LogState( FILE *fp )
 {
 	LogRecord	*log=NULL;
 	ClassAd		*ad=NULL;
@@ -276,53 +296,40 @@ ClassAdLog::LogState(int fd)
 	HashKey		hashval;
 	char		key[_POSIX_PATH_MAX];
 	char		*attr_name = NULL;
-	char		attr_val[ATTRLIST_MAX_EXPRESSION];
+	ClassAdIterator	itor;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
-		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
-		if (log->Write(fd) < 0) {
+		log = new LogNewClassAd(key);
+		if (log->Write(fp) < 0) {
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
-		ad->ResetName();
-		attr_name = ad->NextName();
-		while (attr_name) {
-			attr_val[0] = 0;
-			expr = ad->Lookup(attr_name);
-			if (expr) {
-				expr->RArg()->PrintToStr(attr_val);
-				log = new LogSetAttribute(key, attr_name, attr_val);
-				if (log->Write(fd) < 0) {
-					EXCEPT("write to %s failed, errno = %d", log_filename,
-						   errno);
-				}
-				delete log;
-				delete [] attr_name;
-				attr_name = ad->NextName();
+		itor.Initialize( *ad );
+		while( itor.NextAttribute( attr_name, expr ) ) {
+			log = new LogSetAttribute(key, attr_name, expr);
+			if (log->Write(fp) < 0) {
+				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 			}
+			delete log;
 		}
 	}
-	if (fsync(fd) < 0) {
+	if (fsync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
 	} 
 }
 
-LogNewClassAd::LogNewClassAd(const char *k, const char *m, const char *t)
+LogNewClassAd::LogNewClassAd(const char *k)
 {
 	op_type = CondorLogOp_NewClassAd;
 	key = strdup(k);
-	mytype = strdup(m);
-	targettype = strdup(t);
 }
 
 LogNewClassAd::~LogNewClassAd()
 {
 	free(key);
-	free(mytype);
-	free(targettype);
 }
 
 int
@@ -330,48 +337,22 @@ LogNewClassAd::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
-	ad->SetMyTypeName(mytype);
-	ad->SetTargetTypeName(targettype);
 	return table->insert(HashKey(key), ad);
 }
 
 
 int
-LogNewClassAd::ReadBody(int fd)
+LogNewClassAd::ReadBody(FILE *fp)
 {
-	int rval, rval1;
 	free(key);
-	rval = readword(fd, key);
-	if (rval < 0) return rval;
-	free(mytype);
-	rval1 = readword(fd, mytype);
-	if (rval1 < 0) return rval1;
-	rval += rval1;
-	free(targettype);
-	rval1 = readword(fd, targettype);
-	if (rval1 < 0) return rval1;
-	return rval + rval1;
+	return( readword(fp, key) );
 }
 
 
 int
-LogNewClassAd::WriteBody(int fd)
+LogNewClassAd::WriteBody(FILE *fp)
 {
-	int rval, rval1;
-	rval = write(fd, key, strlen(key));
-	if (rval < 0) return rval;
-	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) return rval1;
-	rval += rval1;
-	rval1 = write(fd, mytype, strlen(mytype));
-	if (rval1 < 0) return rval1;
-	rval += rval1;
-	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) return rval1;
-	rval += rval1;
-	rval1 = write(fd, targettype, strlen(targettype));
-	if (rval1 < 0) return rval1;
-	return rval + rval1;
+	return( fprintf(fp, "%s", key) );
 }
 
 LogDestroyClassAd::LogDestroyClassAd(const char *k)
@@ -402,19 +383,19 @@ LogDestroyClassAd::Play(void *data_structure)
 
 
 int
-LogDestroyClassAd::ReadBody(int fd)
+LogDestroyClassAd::ReadBody(FILE *fp)
 {
 	free(key);
-	return readword(fd, key);
+	return readword(fp, key);
 }
 
 
-LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val)
+LogSetAttribute::LogSetAttribute(const char *k, const char *n, ExprTree *tree)
 {
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
 	name = strdup(n);
-	value = strdup(val);
+	expr = tree ? tree->Copy( ) : NULL;
 }
 
 
@@ -422,7 +403,7 @@ LogSetAttribute::~LogSetAttribute()
 {
 	free(key);
 	free(name);
-	free(value);
+	if( expr ) delete expr;
 }
 
 
@@ -430,74 +411,57 @@ int
 LogSetAttribute::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	int rval;
 	ClassAd *ad;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
-	sprintf(tmp_expr, "%s = %s", name, value);
-	rval = ad->Insert(tmp_expr);
-	delete [] tmp_expr;
-	return rval;
+	return( ad->Insert(name, expr->Copy( ) ) ? 1 : -1 );
 }
 
 
 int
-LogSetAttribute::WriteBody(int fd)
+LogSetAttribute::WriteBody(FILE *fp)
 {
-	int		rval, rval1;
+	int		rval;
 
-	rval = write(fd, key, strlen(key));
-	if (rval < 0) {
-		return rval;
-	}
-	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) {
-		return rval1;
-	}
-	rval1 += rval;
-	rval = write(fd, name, strlen(name));
-	if (rval < 0) {
-		return rval;
-	}
-	rval1 += rval;
-	rval = write(fd, " ", 1);
-	if (rval < 0) {
-		return rval;
-	}
-	rval1 += rval;
-	rval = write(fd, value, strlen(value));
-	if (rval < 0) {
-		return rval;
-	}
-	return rval1 + rval;
+	if( ( rval = fprintf( fp, "%s %s ", key, name ) ) < 0 ) return rval; 
+
+		// the expression goes on the rest of the line; WriteTail puts \n
+	Sink sink;
+	sink.SetSink( fp );
+	sink.SetTerminalChar( ' ' );
+	if( !expr->ToSink( sink ) ) return -1; 
+	sink.FlushSink( );
+
+	return( rval + 1 );
 }
 
 
 int
-LogSetAttribute::ReadBody(int fd)
+LogSetAttribute::ReadBody(FILE *fp)
 {
 	int rval, rval1;
 
 	free(key);
-	rval1 = readword(fd, key);
+	rval1 = readword(fp, key);
 	if (rval1 < 0) {
 		return rval1;
 	}
 
 	free(name);
-	rval = readword(fd, name);
+	rval = readword(fp, name);
 	if (rval < 0) {
 		return rval;
 	}
 	rval1 += rval;
 
-	free(value);
-	rval = readline(fd, value);
-	if (rval < 0) {
-		return rval;
-	}
-	return rval + rval1;
+		// the rest of the line is an expression
+	if( expr ) delete expr;
+	Source src;
+	src.SetSource( fp );
+	src.SetSentinelChar( '\n' );
+	if( !src.ParseExpression( expr ) ) return -1;
+
+	return( rval1 + 1 );
 }
 
 
@@ -523,45 +487,30 @@ LogDeleteAttribute::Play(void *data_structure)
 	ClassAd *ad;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-	return ad->Delete(name);
+	return( ad->Delete(name) );
 }
 
 
 int
-LogDeleteAttribute::WriteBody(int fd)
+LogDeleteAttribute::WriteBody(FILE *fp)
 {
-	int		rval, rval1;
-
-	rval = write(fd, key, strlen(key));
-	if (rval < 0) {
-		return rval;
-	}
-	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) {
-		return rval1;
-	}
-	rval1 += rval;
-	rval = write(fd, name, strlen(name));
-	if (rval < 0) {
-		return rval;
-	}
-	return rval1 + rval;
+	return( fprintf( fp, "%s %s", key, name ) );
 }
 
 
 int
-LogDeleteAttribute::ReadBody(int fd)
+LogDeleteAttribute::ReadBody(FILE *fp)
 {
 	int rval, rval1;
 
 	free(key);
-	rval1 = readword(fd, key);
+	rval1 = readword(fp, key);
 	if (rval1 < 0) {
 		return rval1;
 	}
 
 	free(name);
-	rval = readword(fd, name);
+	rval = readword(fp, name);
 	if (rval < 0) {
 		return rval;
 	}
@@ -570,19 +519,19 @@ LogDeleteAttribute::ReadBody(int fd)
 
 
 LogRecord	*
-InstantiateLogEntry(int fd, int type)
+InstantiateLogEntry(FILE *fp, int type)
 {
 	LogRecord	*log_rec;
 
 	switch(type) {
 	    case CondorLogOp_NewClassAd:
-		    log_rec = new LogNewClassAd("", "", "");
+		    log_rec = new LogNewClassAd("");
 			break;
 	    case CondorLogOp_DestroyClassAd:
 		    log_rec = new LogDestroyClassAd("");
 			break;
 	    case CondorLogOp_SetAttribute:
-		    log_rec = new LogSetAttribute("", "", "");
+		    log_rec = new LogSetAttribute("", "", NULL);
 			break;
 	    case CondorLogOp_DeleteAttribute:
 		    log_rec = new LogDeleteAttribute("", "");
@@ -597,6 +546,6 @@ InstantiateLogEntry(int fd, int type)
 		    return 0;
 			break;
 	}
-	log_rec->ReadBody(fd);
+	log_rec->ReadBody(fp);
 	return log_rec;
 }
