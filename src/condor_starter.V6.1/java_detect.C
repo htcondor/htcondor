@@ -10,7 +10,10 @@ ClassAd * java_detect()
 	char path[ATTRLIST_MAX_EXPRESSION];
 	char args[ATTRLIST_MAX_EXPRESSION];
 	char command[_POSIX_ARG_MAX];
+
+#ifndef WIN32
 	sigset_t mask;
+#endif
 
 	if(!java_config(path,args,0)) return 0;
 	int benchmark_time = param_integer("JAVA_BENCHMARK_TIME",0);

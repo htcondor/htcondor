@@ -115,6 +115,14 @@ SOURCE="..\src\condor_c++_util\classad_hashtable.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_helpers.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_helpers.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\classad_log.C"
 # End Source File
 # Begin Source File
@@ -128,14 +136,6 @@ SOURCE="..\src\condor_c++_util\classad_merge.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\classad_merge.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\classad_util.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\classad_util.h"
 # End Source File
 # Begin Source File
 
@@ -462,6 +462,10 @@ SOURCE="..\src\condor_c++_util\metric_units.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\misc_utils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\my_distribution.C"
 # End Source File
 # Begin Source File
 

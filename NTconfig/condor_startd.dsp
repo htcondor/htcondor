@@ -119,6 +119,14 @@ SOURCE=..\src\condor_startd.V6\Match.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_startd.V6\mds.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\mds.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_startd.V6\Reqexp.C
 # End Source File
 # Begin Source File
