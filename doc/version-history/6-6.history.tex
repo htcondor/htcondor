@@ -110,6 +110,13 @@ job log.  Addtionally, the schedd would exit with an error status.
 startd to occasionally abort operation.  This has been in Condor since
 version 6.1.1.
 
+\item The Condor daemons will no longer overwhelm NIS servers
+when large numbers of daemons are running. Condor now caches
+uid and group information internally, and refreshes the
+cache entries on a specified interval (which defaults to 5
+minutes). See section~\ref{param:PasswdCacheRefresh} on
+page~\pageref{param:PasswdCacheRefresh} for more details.
+
 \end{itemize}
 
 \noindent Known Bugs:
