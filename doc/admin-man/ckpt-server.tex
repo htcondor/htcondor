@@ -2,14 +2,17 @@
 \subsection{\label{sec:Ckpt-Server}
 Installing a Checkpoint Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The Checkpoint Server is a daemon that can be installed on a server to
-handle all of the checkpoints that a Condor pool will create.
-This machine should have a large amount of disk space available, and
-should have a fast connection to your machines.
+The Checkpoint Server is a repository for checkpoint files.
+Using checkpoint servers reduces the disk requirements of submitting
+machines in the pool since they no longer need to store checkpoint
+files locally.
+Checkpoint server machines should have a large amount of disk space
+available, and should have a fast connection to machines in the Condor
+pool.
 
-\Note It is a good idea to pick a very stable machine for your checkpoint
-server.
-If the checkpoint server crashes, the Condor system will continue to
+\Note It is a good idea to pick very stable machines for your checkpoint
+servers.
+If the checkpoint servers crash, the Condor system will continue to
 operate, though poorly.  
 While the Condor system will recover from a checkpoint server crash
 as best it can, there are two problems that can (and will) occur:
@@ -22,17 +25,17 @@ off exponentially in the time they wait between attempts.
 Normally, jobs only have a limited time to checkpoint before they are
 kicked off the machine.
 So, if the server is down for a long period of time, chances are that
-you'll loose a lot of work by jobs being killed without writing a
+you'll lose a lot of work by jobs being killed without writing a
 checkpoint. 
 
-\item When the jobs wish to start, if they cannot be retrieved from
+\item When the jobs wish to start, if their checkpoints cannot be
+retrieved from 
 the checkpoint server, they will either have to be restarted from
-scratch, or the job will sit there, waiting for the server to come
-back on-line.
+scratch, or the job will wait for the server to come back on-line.
 You can control this behavior with the
 \Macro{MAX\_DISCARDED\_RUN\_TIME} parameter in your config file (see
-section~\ref{param:MaxDiscardedRunTime} on
-page~\pageref{param:MaxDiscardedRunTime} for details).
+section~\ref{sec:Checkpoint-Server-Config-File-Entries} on
+page~\pageref{sec:Checkpoint-Server-Config-File-Entries} for details).
 Basically, this represents the maximum amount of CPU time you're
 willing to discard by starting a job over from scratch if the
 checkpoint server isn't responding to requests.
@@ -51,14 +54,20 @@ server.
 See section~\ref{sec:Pool-Management} on
 page~\pageref{sec:Pool-Management} for details on how to do that. 
 
-If you are installing a checkpoint server for the first time,
-you must make sure there are no jobs in your pool before you start.
+When modifying the checkpoint server configuration of a submission
+machine, you must make sure there are no jobs currently in the queue
+on that machine.
 If you have jobs in your queues, with checkpoint files on the local
 spool directories of your submit machines, those jobs will never run
 if your submit machines are configured to use a checkpoint server and
 the checkpoint files cannot be found on the server.  
-You can either remove jobs from your queues, or let them complete
-before you begin the installation of the checkpoint server.
+You can either remove jobs from your queues or let them complete
+before you configure those submission machines with non-empty job
+queues.
+However, you may proceed and install the checkpoint server,
+configuring only those submission machines with empty queues and
+postponing the configuration of submission machines with non-empty job
+queues until the queues are empty.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Install-Ckpt-Server-Module}
@@ -66,8 +75,8 @@ Installing the Checkpoint Server Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To install a checkpoint server, download the appropriate binary
-contrib module for the platform your server will run on.
-When you uncompress and untar that file, you'll have a directory that
+contrib module for the platform(s) your server will run on.
+When you uncompress and untar the file, you'll have a directory that
 contains a \File{README}, \File{ckpt\_server.tar}, and so on.
 The \File{ckpt\_server.tar} acts much like the \File{release.tar} file
 from a main release.
@@ -172,7 +181,7 @@ Configuring your Pool to Use the Checkpoint Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Once the checkpoint server is installed and running, you just have to
-change a few settings in your global config file to let your pool know
+change a few settings in your config files to let your pool know
 about your new server:
 \begin{description}
 
@@ -185,8 +194,82 @@ server.
 
 \end{description}
 
+It most convenient to set these parameters in your global config file
+so they are in effect for all submission machines.
+However, you may configure each submission machine separately (using
+local config files) if you do not want all of your submission machines
+to use a checkpoint server at this time.
+If \Macro{USE\_CKPT\_SERVER} is set to ``False'' or is undefined, the
+submission machine will not use a checkpoint server.
+
 Once these settings are in place, you simply have to send a
 \Condor{reconfig} to all machines in your pool so the changes take
 effect.
 This is described in section~\ref{sec:Reconfigure-Pool} on
 page~\pageref{sec:Reconfigure-Pool}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Multiple-Ckpt-Server} 
+Configuring your Pool to Use Multiple Checkpoint Servers}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+It is possible to configure a Condor pool to use multiple checkpoint
+servers.
+This enables the administrator to deploy checkpoint servers across the
+network to improve checkpointing performance.
+In this case, Condor machines are configured to checkpoint to the
+``nearest'' checkpoint server.
+There are two main benefits to deploying multiple checkpoint
+servers:
+\begin{itemize}
+\item Checkpoint-related network traffic may be localized by
+intelligent placement of checkpoint servers.
+\item Faster checkpointing means that jobs spend less time
+checkpointing (and more time doing useful work), jobs have a better
+chance of checkpointing successfully when vacated, and workstation
+owners see Condor jobs vacate their machines more quickly.
+\end{itemize}
+
+Once you have multiple checkpoint servers running in your pool, the
+following configuration changes are required to make them active.
+
+First, \Macro{USE\_CKPT\_SERVER} should be set to ``True'' on all
+submission machines whose jobs should use a checkpoint server.
+Additionally, \Macro{STARTER\_CHOOSES\_CKPT\_SERVER} should be set to
+``True'' on these submission machines.
+When true, this parameter specifies that the checkpoint server
+specified by the execution machine should be used instead of the
+checkpoint server specified by the submission machine.
+(See section~\ref{sec:Checkpoint-Server-Config-File-Entries} on
+page~\pageref{sec:Checkpoint-Server-Config-File-Entries} for more
+details.)
+This allows the job to use the checkpoint server closest to the
+machine on which it is running, instead of the server closest to the
+submission machine.
+For convenience, we suggest that you set these parameters in the
+global config file.
+
+Next, you must set \Macro{CKPT\_SERVER\_HOST} on each machine.
+As described above, this should be set to the full hostname of the
+checkpoint server machine.
+In the case of multiple checkpoint servers, you will want to set this
+to be the hostname of the nearest server for each machine in the local
+config file.
+
+Finally, once these settings are in place, you simply have to send a
+\Condor{reconfig} to all machines in your pool so the changes take
+effect.
+This is described in section~\ref{sec:Reconfigure-Pool} on
+page~\pageref{sec:Reconfigure-Pool}.
+
+Now, the jobs in your pool will checkpoint to the nearest checkpoint
+server.
+On restart, the job will remember where its checkpoint was
+stored and read it from the appropriate server.
+After a job successfully writes a checkpoint to a new server, it will
+remove any previous checkpoints left on other servers.
+
+\Note If the configured checkpoint server is unavailable, the job will
+keep trying to contact that server as described above.
+It will not use alternate checkpoint servers.
+This may change in future versions of Condor.
