@@ -48,13 +48,9 @@
 #define HAS_GETPGRP2			NO
 #define HAS_KILLPG			YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREGID			YES
-#define HAS_SETREUID			YES
 #define HAS_UTIMES			YES
 #define HAS_UTIME			NO
 #define HAS_VHANGUP			YES
-#define HAS_SETRESUID			NO
-#define HAS_SETRESGID			NO
 #define HAS_SETEGID			YES
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES

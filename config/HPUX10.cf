@@ -12,7 +12,6 @@
 #define HAS_GETPGRP			YES
 #define HAS_KILLPG			YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREUID			YES
 #define HAS_UTIMES			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
