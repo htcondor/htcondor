@@ -59,9 +59,22 @@ and GID.
 This ensures that as the job executes,
 it can access only files that its owner could access if the job
 were running locally, without Condor.
+
 On the machine where the job executes, the 
-job runs as user nobody, to help ensure that the job cannot access
-local resources or do harm.  
+job runs either as the submitting user or as user nobody,
+to help ensure that the job cannot access local resources or do harm.  
+If the \Macro{UID\_DOMAIN} matches,
+and the user exists as the same UID in password files
+on both the submitting machine and on the execute machine,
+the job will run as the submitting user.
+However, if the user does not exist in the execute machine's
+password file and \Macro{SOFT\_UID\_DOMAIN} is True,
+then Condor will choose the submitting user's UID on the
+execute machine.
+If \MacroNI{SOFT\_UID\_DOMAIN} is False,
+and \MacroNI{UID\_DOMAIN} matches,
+and the user is not in the execute machine's password file,
+then the job will run as user nobody.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:norootaccess}What if Condor is not run as root?}
@@ -906,6 +919,7 @@ Kerberos authentication, or GSI authentication.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication!GSI}
 The Globus GSI (Grid Security Infrastructure) protocol provides
 an avenue for Condor to do
 PKI-based authentication using X.509 certificates.
@@ -914,11 +928,13 @@ Several steps are required to enable this authentication.
 \begin{description}
 \item[X.509 Certificates]
 
+\index{certificate}
 PKI-based authentication between Condor daemons
 requires
 a valid X.509 certificate from a trusted
 CA (Certification Authority).
 The certificate may be a single host certificate,
+\index{host certificate}
 and all Condor daemons on the same machine may share the same certificate.
 The directory where the certificate resides, along with
 other related files such as one containing the private key,
@@ -939,6 +955,7 @@ These users must also
 have valid X.509 certificates signed by a trusted CA.
 For use when submitting jobs,
 the certificate is used to generate a proxy:
+\index{proxy}
 a combination of certificate and password that is valid only
 for a specific (and usually short) time period.
 A proxy is used so that the user does  
@@ -1189,6 +1206,7 @@ for testing purposes only.
 \subsection{\label{sec:Security-Authorization} Authorization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!authorization}
+\index{authorization!for security}
 
 Authorization protects resource usage by granting or denying
 access requests made to the resources.

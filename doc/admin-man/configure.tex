@@ -117,9 +117,9 @@ evaluate.
 
 \Note Condor used to distinguish between ``macros'' and ``expressions''
 in its config files.
-Begining with Condor version 6.1.13, this distinction has been
+Beginning with Condor version 6.1.13, this distinction has been
 removed.
-For backwards compatibility, you can still use ``:'' instead of ``=''
+For backward compatibility, you can still use ``:'' instead of ``=''
 in your config files, and these attributes will just be treated as
 macros.
 
@@ -351,7 +351,7 @@ system.
   shared among all machines in your pool, you might use the
   \MacroUNI{HOSTNAME} macro and have a directory with many
   subdirectories, one for each machine in your pool, each named by
-  hostnames.  For example:
+  host names.  For example:
 \begin{verbatim}
         LOCAL_DIR = $(tilde)/hosts/$(hostname)      
 \end{verbatim}
@@ -841,7 +841,7 @@ server, shadow, and starter, none of which use DaemonCore yet).
   in this list that both the server and client are able to perform.
   Possible values are:
   \begin{itemize}
-	\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
+	\item NTSSPI Use NT's standard LAN-MANAGER challenge-response protocol.
 	\Note This is the default method used on Windows NT.
 	\item FS Use the filesystem to authenticate the user.  
 		The server requests the client to create a specified temporary
@@ -937,7 +937,7 @@ Shared File System Configuration File Macros}
 \index{configuration!shared file system configuration variables}
 
 These macros control how Condor interacts with various shared and
-network filesystems.  If you are using AFS as your shared filesystem,
+network file systems.  If you are using AFS as your shared filesystem,
 be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
 \begin{description}
@@ -1381,7 +1381,7 @@ These macros control the \Condor{master}.
 
 \item[\Macro{MASTER\_BACKOFF\_FACTOR}]
   \label{param:MasterBackoffFactor} If a daemon keeps crashing, an
-  exponential backoff waits longer and longer before
+  exponential back off waits longer and longer before
   restarting it.  At the end of this section, there is an example that
   shows how all these settings work.  This setting is the base of the
   exponent used to determine how long to wait before starting the
@@ -1399,14 +1399,14 @@ These macros control the \Condor{master}.
   needs to run without crashing before it is considered \emph{recovered}.
   Once a
   daemon has recovered, the number of restarts is reset, so the
-  exponential backoff stuff returns to its initial state.  
+  exponential back off stuff returns to its initial state.  
   The macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
 
 \end{description}
 
 For clarity, the following is an example of the workings of
-the exponential backoff settings.  The example is worked out assuming
+the exponential back off settings.  The example is worked out assuming
 the default settings.
 
 When a daemon crashes, it is restarted in 10 seconds.  If it keeps
@@ -1464,7 +1464,7 @@ will not want to change them for any reason.
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
 \item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
-  \label{param:SecondaryCollectorList} This macro lists the hostnames
+  \label{param:SecondaryCollectorList} This macro lists the host names
   of secondary collectors.  A secondary collector is a machine
   running a \Condor{collector} daemon that is not the central manager.
   A secondary collector makes it possible to execute administrative
@@ -1481,7 +1481,7 @@ will not want to change them for any reason.
   Defines the name of a file for the \Condor{master} daemon
   to lock in order to prevent multiple \Condor{master}s
   from starting.
-  This is useful when using shared filesystems like NFS which do
+  This is useful when using shared file systems like NFS which do
   not technically support locking in the case where the lock files
   reside on a local disk.
   If this macro is not defined, the default file name will be
@@ -1700,7 +1700,7 @@ SMP Machines for details.
 The following settings control the number of virtual machines reported
 for a given SMP host, and what attributes each one has.  
 They are only needed if you do not want to have an SMP machine report
-to Condor with a seperate virtual machine for each CPU, with all
+to Condor with a separate virtual machine for each CPU, with all
 shared system resources evenly divided among them.
 Please read section~\ref{sec:SMP-Divide} on
 page~\pageref{sec:SMP-Divide} for details on how to properly configure
@@ -1724,7 +1724,7 @@ change to take effect (for example, using ``\condor{restart}
   actual virtual machines.
   Defaults to 10.  
   (You should only need to change this setting if you define more than
-  10 seperate virtual machine types, which would be pretty rare.)
+  10 separate virtual machine types, which would be pretty rare.)
 
 \item[\Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}]
 \label{param:VirtualMachineTypeN}
@@ -1821,9 +1821,9 @@ is incorporated into the machine ClassAd generated by the \Condor{startd}.
    of these options for one module does not make sense.  If this happens,
    the last one in the list is followed.
 
-	\MacroNI{continuous} is used to specify a module which runs in continous
+	\MacroNI{continuous} is used to specify a module which runs in continuous
 	mode (as described above).
-	In continous mode, the \Condor{startd} daemon will
+	In continuous mode, the \Condor{startd} daemon will
 	attempt to keep the module running continuously;
 	this is used for modules that do not normally exit.
 	If the period is non-zero, Condor uses the period field as
@@ -1836,7 +1836,7 @@ is incorporated into the machine ClassAd generated by the \Condor{startd}.
 	and it is time to start the module again.
 	This option causes the module to be killed and restarted.
 
-	\MacroNI{nokill} 
+	\MacroNI{no kill} 
 	For a noncontinuous mode of module execution,
 	the module may still be running when the period is up
 	and it is time to start the module again.
@@ -2070,8 +2070,8 @@ These macros control the \Condor{schedd}.
   \Condor{preen} uses as well.
 
 \item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This macro is
-  described in section~\ref{param:SubsysExprs} as
-  \MacroNI{SUBSYS\_EXPRS}.
+  correctly used as \MacroNI{SUBMIT\_EXPRS}, as described in
+  section~\ref{param:SubsysExprs} on \MacroNI{SUBSYS\_EXPRS}.
 
 \item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This macro
   (and other settings related to debug logging in the schedd) is
@@ -2084,7 +2084,7 @@ These macros control the \Condor{schedd}.
   \MacroNI{SUBSYS\_ADDRESS\_FILE}. 
 
 \item[\Macro{FLOCK\_NEGOTIATOR\_HOSTS}] \label{param:FlockNegotiatorHosts} 
-  This macro defines a list of negotiator hostnames (not including the
+  This macro defines a list of negotiator host names (not including the
   local \MacroUNI{NEGOTIATOR\_HOST} machine) for pools in which the
   schedd should attempt to run jobs.  Hosts in the list should be in
   order of preference.  The schedd will only send a request to a
@@ -2100,7 +2100,7 @@ These macros control the \Condor{schedd}.
   requests from this schedd.
 
 \item[\Macro{FLOCK\_COLLECTOR\_HOSTS}] \label{param:FLockCollectorHosts}
-  This macro defines a list of collector hostnames for pools in which
+  This macro defines a list of collector host names for pools in which
   the schedd should attempt to run jobs.  The
   collectors must be specified in order, corresponding to the
   \MacroUNI{FLOCK\_NEGOTIATOR\_HOSTS} list.  In the typical case, where each pool
@@ -2142,7 +2142,7 @@ These macros control the \Condor{schedd}.
 
 \item[\Macro{PERIODIC\_EXPR\_INTERVAL}]
   \label{param:PeriodicExprInterval}
-  This macro determines the period, in seconds, betwen evaluation
+  This macro determines the period, in seconds, between evaluation
   of periodic job control expressions, such as periodic\_hold,
   periodic\_release, and periodic\_remove, given by the user in
   a Condor submit file. By default, this value is sixty seconds.
@@ -2247,23 +2247,36 @@ These settings affect the \Condor{starter}.
   \Note: This parameter does not exist in the NT starter.
 
 \item[\Macro{JOB\_RENICE\_INCREMENT}] \label{param:JobReniceIncrement}
-  When the starter spawns a Condor job, it can do so with a
-  \Term{nice-level}.  
+  When the \Condor{starter} spawns a Condor job, it can do so with a
+  \Term{nice-level}.
   A nice-level is a
   Unix mechanism that allows users to assign their own processes a lower 
-  priority so that the processes do not interfere with interactive use of the
-  machine.
+  priority, such that these processes do not interfere with interactive
+  use of the machine.
   If you have machines with lots
-  of real memory and swap space so the only scarce resource is CPU
-  time, you may use this macro in conjunction with a policy that
-  always allowed Condor to start jobs on your machines so that Condor
-  jobs would always run, but interactive response on your machines
-  would never suffer.  You most likely will not notice Condor is
+  of real memory and swap space, so that the only scarce resource is CPU time,
+  you may use this macro in conjunction with a policy that
+  allows Condor to always start jobs on the machines. 
+  Condor jobs would always run,
+  but interactive response on your machines would never suffer.
+  You most likely will not notice Condor is
   running jobs.  See section~\ref{sec:Configuring-Policy} on
   Configuring The Startd Policy for more details on setting up a
-  policy for starting and stopping jobs on a given machine.  The entry
-  can be any integer between 0 and 20, with a value of 19 being
-  the lowest priority.  It is commented out by default.
+  policy for starting and stopping jobs on a given machine.
+
+  The value is an arbitrary ClassAd expression,
+  evaluated by the \Condor{starter} daemon for each job just before the
+  job runs, and the expression can refer to any attribute in the job ClassAd.
+  The range of allowable values are integers in the range of 0 to 19
+  (inclusive),
+  with a value of 19 being the lowest priority.  
+  If the expression evaluates to a value outside this range,
+  then on a Unix machine, a value greater than 19 is auto-decreased to 19;
+  a value less than 0 is treated as 0.
+  For values outside this range, a Windows machine ignores the value
+  and uses the default instead.
+  The default value is 10, which maps to the idle priority class on
+  a Windows machine.
 
 \item[\Macro{STARTER\_LOCAL\_LOGGING}]
   \label{param:StarterLocalLogging} This macro determines whether the
@@ -2321,10 +2334,10 @@ jobs at your site use the following macros:
 \item[\Macro{APPEND\_REQ\_STANDARD}] \label{param:AppendReqStandard}
   Expression to be appended to standard job requirements.
 
-\item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReq}
+\item[\Macro{APPEND\_REQUIREMENTS}] \label{param:AppendReq}
   Expression to be appended to any type of universe jobs. 
   However, if \MacroNI{APPEND\_REQ\_VANILLA} or \MacroNI{APPEND\_REQ\_STANDARD}
-  is defined, then ignore the \MacroNI{APPEND\_REQUREMENTS} for those
+  is defined, then ignore the \MacroNI{APPEND\_REQUIREMENTS} for those
   universes.
 
 \item[\Macro{APPEND\_RANK}] \label{param:AppendRank}
@@ -2345,7 +2358,7 @@ jobs at your site use the following macros:
 \Macro{APPEND\_PREF\_VANILLA} in previous versions of Condor.
 
 In addition, you may provide default \AdAttr{Rank} expressions if your users
-do nt specify their own with:
+do not specify their own with:
 
 \begin{description}
 
@@ -2587,9 +2600,9 @@ These macros affect the \Condor{collector}.
 
   If this has a non-zero value, the Collector will insert
   ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
-  above).  ``UpdatesHistory'' is a hexidecimal string which reresents
+  above).  ``UpdatesHistory'' is a hexadecimal string which represents
   a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
-  updates.  The most significant bit (MSB) of the bitmap reresents the
+  updates.  The most significant bit (MSB) of the bitmap represents the
   most recent update, and the least significant bit (LSB) represents
   the least recent.  A value of zero means that the update was not
   lost, and a value of 1 indicates that the update was detected as
@@ -2610,9 +2623,9 @@ These macros affect the \Condor{collector}.
   ``UpdatesClassHistory'' into the Collector ClassAd (similar to
   ``UpdatesHistory'' above).  These are added ``per class'' of
   ClassAd, however.  The classes refer to the ``type'' of ClassAds
-  (i.e. ``Start'').  Addionally, there is a ``Total'' class created
-  wich represents the history of all ClassAds that this Collector
-  recieves.
+  (i.e. ``Start'').  Additionally, there is a ``Total'' class created
+  which represents the history of all ClassAds that this Collector
+  receives.
 
   Note that the collector always publishes Lost, Total and Sequenced
   counts for all ClassAd ``classes''.  This is similar to the
@@ -2621,7 +2634,7 @@ These macros affect the \Condor{collector}.
  \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
   \label{param:CollectorQueryWorkers} This macro sets the maximum
   number of ``worker'' processes that the Collector can have.  When
-  recieving a query request, the UNIX Collector will ``fork'' a new
+  receiving a query request, the UNIX Collector will ``fork'' a new
   process to handle the query, freeing the main process to handle
   other requests.  When the number of outstanding ``worker'' processes
   reaches this maximum, the request is handled by the main process.

@@ -287,7 +287,10 @@ Condor's other services are still available for these commercial packages.
 \end{description}
 
 \section{\label{sec:Availability}Availability}
-\index{Condor!availability}
+\index{Condor!platforms available}
+\index{available platforms}
+\index{supported platforms}
+\index{platforms supported}
 Condor is currently available as a free download from the Internet via the World Wide Web at  
 URL \URL{http://www.cs.wisc.edu/condor/downloads}.
 Binary distributions of Condor version 6.x are available for the platforms 
@@ -308,26 +311,32 @@ The Condor source code is no longer available for public download from the Inter
 desire the Condor source code, please contact the Condor Team in order to discuss it further 
 (see Section~\ref{contact-info}, on page~\pageref{contact-info}).
 
+% Karen's table
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
-Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6, 2.7, 2.8, 2.9 \\ \hline
-Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.5 \\ \hline
-Intel x86 & RedHat Linux 6.x, 7.x \\
-% & Solaris 2.5.x, 2.6, 2.7 \\ 
- & Windows NT 4.0 (``clipped'') \\ \hline
- & Windows NT 2000 (``clipped'') \\ \hline
- & Windows NT XP (``clipped'') \\ \hline
-Digital ALPHA & OSF/1 (Digital Unix) 4.x to 5.0a \\
-% & Linux 2.2.x \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
+Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 \\ \hline
+Intel x86 & RedHat Linux 6.2, 7.2 \\
+ & RedHat Linux 8 (clipped) \\ \hline
+ & RedHat Linux 9 (clipped) \\ \hline
+ & Windows NT 4.0 (clipped) \\ \hline
+ & Windows NT 2000 (clipped) \\ \hline
+ & Windows NT XP (clipped) \\ \hline
+ALPHA & Digital Unix 4.0 \\
+ & RedHat Linux 7.2 (clipped) \\ \hline
+ & Tru64 5.1 (clipped) \\ \hline
+PowerPC & Macintosh OS X (clipped) \\
+Itanium & RedHat Linux 7.2 (clipped) \\
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
 \end{center}
 
-\Note Other Linux distributions (Debian, etc.) may work, but are not tested
+
+\Note Other Linux distributions (Debian, etc.) likely work, but are not tested
 or supported.
 
 For more platform-specific information about Condor's support for

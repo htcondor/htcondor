@@ -234,6 +234,8 @@ your pool.  These are
 three are subdirectories of a single machine specific directory called
 the local directory (specified by the \Macro{LOCAL\_DIR} macro
 in the configuration file).
+Each should be owned by the user that Condor is to be run as.
+\index{owner!of directories}
 
 If you have a Unix user named condor with a local home directory on each
 machine, the \MacroNI{LOCAL\_DIR} could just be user condor's home
@@ -244,7 +246,8 @@ pool, you would want to create a directory for each host (named by
 host name) for the local directory (for example, \MacroNI{LOCAL\_DIR} =
 \MacroUNI{TILDE}/hosts/\MacroUNI{HOSTNAME}).  If you do not
 have a condor account on your machines, you can put these directories
-wherever you'd like.  However, where to place them will require some
+wherever you'd like.
+However, where to place them will require some
 thought, as each one has its own resource needs:
 
 \begin{description}
@@ -312,8 +315,8 @@ Because of problems encountered with file locking and network
 file systems (particularly NFS), these lock files should be placed on a
 local partition on each machine.  By default, they are placed in
 the \File{log} directory.  If you place your \File{log}
-directory on a network
-file system partition, specify a local partition for the
+directory on a network file system partition,
+specify a local partition for the
 lock files with the \Macro{LOCK} parameter in the configuration file (such as
 \File{/var/lock/condor}).
 
@@ -485,7 +488,7 @@ section~\ref{sec:Condor-AFS} on page~\pageref{sec:Condor-AFS} in the
 manual.
 Condor does not currently have a way to authenticate itself to AFS.
 A solution is not ready for
-\VersionNotice{}.
+\VersionNotice.
 This implies that you are probably not going to want
 to have the \Macro{LOCAL\_DIR} for Condor on AFS.
 However, you can

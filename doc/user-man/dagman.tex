@@ -1,4 +1,6 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:DAGMan}DAGMan Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan|(}
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
@@ -30,10 +32,12 @@ for the set of programs submitted to Condor.
 
 The following sections specify the use of DAGMan.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Input File describing the DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies four items:
+The input file used by DAGMan specifies five items:
 \begin{enumerate}
 \item
 A list of the programs in the DAG. This serves to name each program
@@ -46,6 +50,8 @@ of any program in the DAG.
 Description of the dependencies in the DAG.
 \item
 Number of times to retry if a node within the DAG fails.
+\item
+The definition of macros associated with a node.
 \end{enumerate}
 
 Comments may be placed in the input file that describes the DAG.
@@ -90,7 +96,7 @@ all the programs that appear in the DAG.
 Each program is described by a single line called a Job Entry.
 The syntax used for each Job Entry is
 
-\Arg{JOB} \Arg{JobName} \Arg{CondorSubmitDescriptionFile} \oArg{DONE}
+\Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
 A Job Entry maps a \Arg{JobName} to a Condor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
@@ -98,7 +104,7 @@ DAGMan input file and within output messages.
 
 The keyword \Arg{JOB} and the \Arg{JobName} are not case sensitive.
 A \Arg{JobName} of \Arg{joba} is equivalent to \Arg{JobA}.
-The \Arg{CondorSubmitDescriptionFile} is case sensitive, since
+The \Arg{SubmitDescriptionFileName} is case sensitive, since
 the UNIX file system is case sensitive.
 The \Arg{JobName} can be any string that contains no white space.
 
@@ -251,7 +257,7 @@ The fourth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
 
-\Arg{Retry} \Arg{JobName} \Arg{NumberOfRetries}
+\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries}
 
 where the \Arg{JobName} is the same as the name given in
 a Job Entry line, and \Arg{NumberOfRetries} is an integer,
@@ -268,10 +274,45 @@ the PRE script.
 Failure of the node is then determined by the return value of
 the program, the existence and return value of a POST script.
 
+The fifth type of item in the DAG input file provides a
+method of defining a macro to be placed into the submit description
+file.
+These macros are defined on a per-node basis, using the
+following format.
+
+\Arg{VARS} \Arg{JobName} \Arg{macroname="string"\Dots}
+
+The definition of the macro is available to use within the
+submit description file, as the submission for the node's
+executable is of the form
+\begin{verbatim}
+condor_submit SubmitDescriptionFileName -a "+macroname=\"string\""
+\end{verbatim}
+Job submission with the "+" attribute not only adds the attribute
+to the ClassAd of the job,
+but also allows dereferencing of the attribute through the macro
+usage in the submit description file.
+% the string must be enclosed in double quotes. To add a double quote inside
+% the string, you can escape it with \. To add the '\' itself, you can use \\.
+
+There may be more than one macro defined for each \Arg{JobName}.
+The space character delimits the list of macros.
+
+Correct syntax requires that the \verb@string@ must be
+enclosed in double quotes.
+To use a double quote inside \verb@string@,
+escape it with the backslash character (\verb@\@).
+To add the backslash character itself, use two backslashes (\verb@\\@).
+
+% for version 6.5.3, the VARS are not propogated into rescue dags.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Submit Description File}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
-Each node in a DAG may be a unique executable, each with a unique
+Each node in a DAG may be a unique executable, and each may have a unique
 Condor submit description file.
 Each program may be submitted to a different universe
 within Condor, for example standard,
@@ -279,11 +320,11 @@ vanilla, or DAGMan.
 
 One limitation exists:
 each Condor submit description file must submit only one job.
-There may not be multiple \verb@queue@ lines, or DAGMan will fail.
+There may not be multiple \verb@queue@ commands, or DAGMan will fail.
 DAGMan no longer requires that all jobs specify the same log file.
-However, if your DAG contains a very large number of jobs, each
+However, if the DAG contains a very large number of jobs, each
 specifying its own log file, performance may suffer.  Therefore,
-if your DAG contains a large number of jobs, it is best to have
+if the DAG contains a large number of jobs, it is best to have
 all of the jobs use the same log file.
 DAGMan enforces the dependencies within a DAG
 using the events recorded in the
@@ -320,7 +361,45 @@ submitted to Condor.
 For DAGs with many nodes, this is recommended
 to reduce or eliminate excessive numbers of e-mails.
 
+A separate example shows an intended use of a \Arg{Vars} entry
+in the DAG.
+It can be used to dramatically reduce the number of submit description
+files needed for a DAG.
+In the case where the submit description file for each node
+varies only in file naming, the use of a substitution macro
+within the submit description file allows the use of 
+a single submit description file.
+
+The example uses a single submit description file in the DAG input
+file, and uses the \Arg{Vars} entry to name output files.
+
+\begin{verbatim}
+	# submit description file called:  theonefile.sub
+	executable   = progX
+	output       = $(outfilename)
+	error        = error.$(outfilename)
+	universe     = standard
+	queue
+\end{verbatim}
+
+The relevant portion of the DAG input file appears as 
+\begin{verbatim}
+JOB A theonefile.sub
+JOB B theonefile.sub
+JOB C theonefile.sub
+
+VARS A outfilename="A"
+VARS B outfilename="B"
+VARS C outfilename="C"
+\end{verbatim}
+
+For a DAG like this one with thousands of nodes,
+being able to write and maintain a single submit description file 
+and a single, yet more complex, DAG input file is preferable.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{dagman:submitdag}Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A DAG is submitted using the program \Condor{submit\_dag}.
 See the manual
@@ -382,15 +461,18 @@ scripts that may be running at one time,
 while the optional \Arg{-maxpost} argument limits the number of POST
 scripts that may be running at one time.
 
-% DONE TO HERE WITH UPDATES.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 After submission, the progress of the DAG can be monitored
 by looking at the log file(s),
 observing the e-mail that program submission to Condor causes,
 or by using \Condor{q} \Arg{-dag}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Failure and Job Removal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Condor{submit\_dag} attempts to check the DAG input file.
 If a problem is detected,
@@ -439,7 +521,9 @@ DAGMan will clean up memory and exit.
 However, it will leave any submitted jobs
 in Condor's queue.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Recovery:  The Rescue DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!rescue DAG}
 DAGMan can help with the resubmission of uncompleted
@@ -471,7 +555,9 @@ then the Rescue DAG file will also contain Retry entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{DAGMan!dot}
 \index{dot}
 \index{DAGMan!visualizing DAGs}

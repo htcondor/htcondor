@@ -138,25 +138,23 @@ that are only found in a request ad, such as \Attr{Owner} or
 See section~\ref{classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
-\Note If you have machines with lots of real memory and swap space so
-  the only scarce resource is CPU time, you could use
-  \Macro{JOB\_RENICE\_INCREMENT} (see
-  section~\ref{sec:Starter-Config-File-Entries} on \condor{starter}
-  Configuration File Macros for details) so that Condor starts jobs on
-  your machine with low priority.
-  Then, set up your machines with:
+\Note If you have machines with lots of real memory and swap space such
+that the only scarce resource is CPU time, consider using
+defining \Macro{JOB\_RENICE\_INCREMENT} 
+so that Condor starts jobs on the machine with low priority.
+Then, further configure to set up the machines with:
 \begin{verbatim}
         START = True
         SUSPEND = False
         PREEMPT = False
         KILL = False
 \end{verbatim}
-  In this way, Condor jobs always run and never be kicked off. 
-  However, because they would run with ``nice priority'', interactive 
-  response on your machines will not suffer.
-  You probably would not notice Condor was running the jobs, 
-  assuming you had enough free memory for the Condor jobs that there
-  was little swapping.
+In this way, Condor jobs always run and can never be kicked off. 
+However, because they would run with ``nice priority'', interactive 
+response on the machines will not suffer.
+You probably would not notice Condor was running the jobs, 
+assuming you had enough free memory for the Condor jobs that there
+was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Rank-Expression}
@@ -456,11 +454,11 @@ Owner State}
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
 The machine remains in the Owner state while the
-expression \Expr{IS\_OWNER} is TRUE.
-If the \Expr{IS\_OWNER} expression is FALSE,
+expression \Expr{IsOwner} is TRUE.
+If the \Expr{IsOwner} expression is FALSE,
 then the machine transitions to the Unclaimed state.
 The default value for the 
-\Expr{IS\_OWNER} expression is 
+\Expr{IsOwner} expression is 
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}
@@ -485,12 +483,12 @@ Owner or Unclaimed state.
 The only differences between the two states are how the resource shows
 up in \Condor{status} and other reporting tools, and the fact that
 Condor will not run benchmarking on a resource in the Owner state.
-As long as the \Expr{IS\_OWNER} expression is TRUE, the machine is
+As long as the \Expr{IsOwner} expression is TRUE, the machine is
 in the Owner State.
-When the \Expr{IS\_OWNER} expression is FALSE, the machine goes into
+When the \Expr{IsOwner} expression is FALSE, the machine goes into
 the Unclaimed State.
 
-Here is an example that assumes that an \Expr{IS\_OWNER}
+Here is an example that assumes that an \Expr{IsOwner}
 expression is not present in the configuration.
 If the \Expr{START} expression is
 \begin{verbatim}
@@ -543,12 +541,12 @@ if there is a job running that needs preempting.
 \subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If the \Expr{IS\_OWNER} expression becomes TRUE, then the machine returns
+If the \Expr{IsOwner} expression becomes TRUE, then the machine returns
 to the Owner state.
-If the \Expr{IS\_OWNER} expression becomes FALSE, then the machine remains
+If the \Expr{IsOwner} expression becomes FALSE, then the machine remains
 in the Unclaimed state.
-If the \Expr{IS\_OWNER} expression is not present in the configuration files,
-then the default value for the \Expr{IS\_OWNER} expression is 
+If the \Expr{IsOwner} expression is not present in the configuration files,
+then the default value for the \Expr{IsOwner} expression is 
 \begin{verbatim}
 START =?= FALSE
 \end{verbatim}

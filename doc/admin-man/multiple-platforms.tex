@@ -113,7 +113,7 @@ The only settings that are truly platform-specific are:
   because on Alphas running Digital Unix and SGIs running IRIX, you
   must use the \Condor{kbdd}, which is not needed on other platforms.
   See section~\ref{sec:Master-Config-File-Entries} on
-  ``\condor{master} Config File Entries'' for details.
+  for details.
 
 \end{description}
 
@@ -136,7 +136,7 @@ For example, if you have installed a mail program that understands the
 ``-s'' option in \File{/usr/local/bin/mail} on all your platforms, you
 could just set \Macro{MAIL} to that in your global file and not define
 it anywhere else.  If you've only got Digital Unix and IRIX machines,
-the \Macro{DAEMON\_LIST} will be the same for each, so there's no
+the \MacroNI{DAEMON\_LIST} will be the same for each, so there's no
 reason not to put that in the global config file (or, if you have no
 IRIX or Digital Unix machines, \MacroNI{DAEMON\_LIST} won't have to be
 platform-specific either).

@@ -55,6 +55,30 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-5-3}Version 6.5.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Karen's table
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|ll|} \hline
+\emph{Architecture} & \emph{Operating System} \\ \hline \hline
+Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
+Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 \\ \hline
+Intel x86 & RedHat Linux 6.2, 7.2 \\
+ & RedHat Linux 8 (clipped) \\ \hline
+ & RedHat Linux 9 (clipped) \\ \hline
+ & Windows NT 4.0 (clipped) \\ \hline
+ & Windows NT 2000 (clipped) \\ \hline
+ & Windows NT XP (clipped) \\ \hline
+ALPHA & Digital Unix 4.0 \\
+ & RedHat Linux 7.2 (clipped) \\ \hline
+ & Tru64 5.1 (clipped) \\ \hline
+PowerPC & Macintosh OS X (clipped) \\
+Itanium & RedHat Linux 7.2 (clipped) \\
+\end{tabular}
+\caption{\label{vers-hist-sup-plat}Condor 6.5.3 supported platforms}
+\end{table}
+\end{center}
+
 \noindent New Features:
 
 \begin{itemize}
@@ -143,6 +167,10 @@ The details of each version are described below.
 
 \item Added new option \Opt{-dagman} to \Condor{submit\_dag} which allows 
 specification of an alternate \Condor{dagman} executable. 
+
+\item Added new entry in a DAG input file that adds a macro (using the
+"+" syntax) for use in the submit description file.  The new entry
+is called VARS.
 
 \item Improved \Opt{-config} option to \Condor{config\_val} to print
       descriptive lines to stderr and filenames to stdout, so that its
@@ -239,13 +267,14 @@ use 3 more file descriptors.
 
 \begin{itemize}
 
-\item None.
+\item The VARS entry within a DAG input file is not propagated
+to the rescue DAG.
 
 \end{itemize}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-5-3}Version 6.5.2}
+\subsection{\label{sec:New-6-5-2}Version 6.5.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Known Bugs:

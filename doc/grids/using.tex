@@ -19,6 +19,7 @@ These protocols allow Condor to utilize grid machines for
 the execution of jobs.
 \begin{description}
 \item[GSI]
+\index{GSI (Grid Security Infrastructure)}
 The Globus Toolkit's Grid Security Infrastructure (GSI) provides essential
 \index{Condor-G!GSI}
 building blocks for other Grid protocols and Condor-G.
@@ -32,6 +33,7 @@ apply at each site.
 \item[GRAM]
 The Grid Resource Allocation and Management (GRAM) protocol supports remote
 \index{Condor-G!GRAM}
+\index{GRAM (Grid Resource Allocation and Management)}
 submission of a computational request (for example, to run program P)
 to a remote computational resource,
 and it supports subsequent monitoring and control of the resulting
@@ -41,6 +43,7 @@ GRAM is the Globus protocol that Condor-G uses to talk to remote Globus
 \item[GASS]
 The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
+\index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
 Condor-G uses GASS to transfer the executable, 
 \File{stdin}, 
@@ -231,6 +234,8 @@ gridmanager.
 %section.)
 
 Condor-G periodically checks for an updated proxy at
+\index{Condor-G!proxy}
+\index{proxy}
 an interval given by the configuration variable
 \AdAttr{GRIDMANAGER\_CHECKPROXY\_INTERVAL}.
 The value is defined in terms of seconds.
@@ -271,8 +276,11 @@ run and manage jobs under the globus universe.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job submission}
 
+\index{Condor-G!proxy}
+\index{proxy}
 Under Condor, successful job submission to the Globus universe requires
 credentials.
+\index{Condor-G!X.509 certificate}
 An X.509 certificate is used to create a proxy,
 and an account, authorization, or allocation to use a grid resource
 is required.
@@ -576,6 +584,66 @@ globusrsl = (project=Test_Project)
 \end{verbatim}
 This example's attribute name for the additional RSL is
 \verb@project@, and the value assigned is \verb@Test_Project@.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:CondorG-Submit-Args}Arguments to a Globus Universe Job}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor-G!job arguments}
+
+Condor requires space characters to delimit the arguments
+in an submit description file such as
+\begin{verbatim}
+arguments = 13 argument2 argument3
+\end{verbatim}
+This example results in the 3 arguments:
+\begin{verbatim}
+argv[1] = 13
+argv[2] = argument2
+argv[3] = argument3
+\end{verbatim}
+
+With Condor-G, arguments are passed through using RSL.
+Therefore, arguments are parsed in a way that allows space characters
+to be delimiters or to be parts of arguments.
+The single quote character delimits some or all arguments such that
+\begin{verbatim}
+arguments = '%s' 'argument with spaces' '+%d'
+\end{verbatim}
+results in
+\begin{verbatim}
+argv[1] = %s
+argv[2] = argument with spaces
+argv[3] = +%d
+\end{verbatim}
+
+Should the arguments themselves contain the single quote character,
+an escaped double quote character may be used.
+The example
+% % what it is supposed to appear as:
+% % arguments = \"don't\" \"mess with\" \"quoting rules\"
+\begin{verbatim}
+arguments = \"don't\" \"mess with\" \"quoting rules\"
+\end{verbatim}
+results in 
+\begin{verbatim}
+argv[1] = don't
+argv[2] = mess with
+argv[3] = quoting rules
+\end{verbatim}
+
+And, if the job arguments have both single and double quotes,
+the appearance of the quote character twice in a
+row is converted to a single instance of the character and the literal
+continues until the next solo quote character.
+For example
+\begin{verbatim}
+arguments = 'don''t yell \"blah!\"' '+%s'
+\end{verbatim}
+results in
+\begin{verbatim}
+argv[1] = don't yell "blah!"
+argv[2] = +%s
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}

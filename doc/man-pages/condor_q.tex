@@ -8,6 +8,7 @@
 \oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-analyze}
 \oOpt{-run}
+\oOpt{-hold}
 \oOpt{-goodput}
 \oOpt{-io}
 \oOpt{-dag}
@@ -157,6 +158,9 @@ per machine basis.
 	\OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
 		many resources are available to run the requested jobs}
 	\OptItem{\Opt{-run}}{Get information about running jobs.}
+	\OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
+	        Also displays the time the job was placed into the hold state
+		and the reason why the job was placed in the hold state.}
 	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
 	\OptItem{\Opt{-io}}{Display job input/output summaries.}
 	\OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
@@ -164,14 +168,14 @@ per machine basis.
 	\OptItem{\Opt{-long}}{Display job ads in long format}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
 		format \emph{fmt}.  Attributes must be from the job ClassAd. }
-	\OptItem{\Opt{-cputime}} Instead of wall-clock allocation time (RUN\_TIME), 
+	\OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
 		display remote CPU time accumulated by the job to date in days,
 		hours, minutes, and seconds.  (If the job is currently running, time
-		accumulated during the current run is \emph{not} shown.)
-	\OptItem{\Opt{-currentrun}} Normally, RUN\_TIME contains all the time
+		accumulated during the current run is \emph{not} shown.)}
+	\OptItem{\Opt{-currentrun}} {Normally, RUN\_TIME contains all the time
 		accumulated during the current run plus all previous runs.  If this
 		option is specified, RUN\_TIME only displays the time accumulated so
-		far on this current run.
+		far on this current run.}
 	\OptItem{Restriction list}{The restriction list may have zero or more items,
 		each of which may be:
 		\begin{description}

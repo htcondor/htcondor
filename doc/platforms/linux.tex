@@ -51,7 +51,7 @@ we still provide binaries that support it.
 RedHat 6.2 uses the 2.2.x Linux kernel series, glibc version 2.1.x,
 and GCC version egcs-1.1.2.
 To run Condor on this platform and be able to use \Condor{compile},
-you should download the Condor \VersionNotice  binaries listed for use
+you should download the Condor \VersionNotice\  binaries listed for use
 with ``Linux 2.0.x and 2.2.x (glibc 2.1)''.
 
 
@@ -73,12 +73,8 @@ Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - RedHat
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Platforms !RedHat 8.x}
 
-RedHat version 8.x is not officially supported in Condor
-\VersionNotice.
-We have had reports that the Condor binaries built for RedHat 7.x
-(either the statically or dynamically linked versions) work with
-RedHat 8.x. 
-
+RedHat version 8.x is supported in Condor \VersionNotice.
+  
 Unfortunately, \Condor{compile} does not yet work with GCC (gcc, g++
 or g77) version 3.0 or higher.
 RedHat 8.0 uses GCC version 3.2.
@@ -99,18 +95,9 @@ RedHat 7.x binaries will probably work as-is for your site.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Platforms !RedHat 9.x}
 
-Condor \VersionNotice  does not yet work with RedHat version 9.x at
-all.
-The statically linked Condor binaries for RedHat 7.x crash right away
-when they are executed on a RedHat 9.x machine due to incompatible
-versions of various system libraries, including glibc.
-RedHat 9.x uses glibc 2.3.x, and Condor has not yet been ported to
-this version of the C library.
-However, we have heard reports that the dynamically linked version of
-the Condor binaries will run on RedHat 9.x machines.
+RedHat version 9.x is supported in Condor \VersionNotice as a clipped 
+platform.
+
 \Condor{compile} does not yet work with RedHat 9.x, and we are not
 sure if a job linked with the Condor libraries on a RedHat 7.x machine
 will run on a RedHat 9.x machine.  
-If you are planning on using Condor, we do NOT recommend upgrading
-your machines to RedHat 9.x at this time. 
-

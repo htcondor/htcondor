@@ -133,6 +133,11 @@ List of arguments to be supplied
 to the program on the command line.   In the Java Universe, the first
 argument must be the name of the class containing \Code{main}.
 Arguments are delimited (separated) by space characters.
+Jobs submitted for the globus universe will parse arguments
+differently 
+due to the differences between the ClassAd representation in Condor and 
+the Resource Specification Language (RSL) used in Globus.
+See section~\ref{sec:CondorG-Submit-Args} for further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% initialdir
@@ -373,9 +378,10 @@ of the job exiting, it will leave the queue as it normally would have done.
 
 If left unspecified, this will default to \Expr{True}.
 
-periodic\_$*$ expressions(defined elsewhere in this man page) take
-precedent over on\_exit\_$*$ expressions and a $*$\_hold expression takes
-precedent over a $*$\_remove expression.
+\AdAttr{periodic\_*} expressions take
+precedence over \AdAttr{on\_exit\_*} expressions,
+and \AdAttr{*\_hold} expressions take
+precedence over a \AdAttr{*\_remove} expressions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
@@ -392,21 +398,23 @@ then nothing happens and the \AdAttr{on\_exit\_remove} expression is
 checked to determine if that needs to be applied.
 
 For example:
-Suppose you have a job that you know will run for an hour minimum. If
-the job exits after less than an hour, you would like it to be placed on
-hold and notified by e-mail instead of being allowed to leave the queue.
+Suppose a job is known to run for a minimum of an hour.
+If the job exits after less than an hour, the job should be placed on
+hold and an e-mail notification sent,
+instead of being allowed to leave the queue.
 
 \begin{verbatim}
 	on_exit_hold = (CurrentTime - JobStartDate) > (60 * $(MINUTE))
 \end{verbatim}
 
-The above expression will place the job on hold if it exits for any reason
+This expression places the job on hold if it exits for any reason
 before running for an hour. An e-mail will be sent to the user explaining
 that the job was placed on hold because this expression became \Expr{True}.
 
-periodic\_$*$ expressions(defined elsewhere in this manual page) take
-precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
-precedent over a $*$\_remove expression.
+\AdAttr{periodic\_*} expressions take
+precedence over \AdAttr{on\_exit\_*} expressions,
+and \AdAttr{*\_hold} expressions take
+precedence over a \AdAttr{*\_remove} expressions.
 
 If left unspecified, this will default to \Expr{False}.
 
@@ -420,34 +428,20 @@ for the standard universe.
 
 \item[periodic\_remove = $<$ClassAd Boolean Expression$>$]
 \index{submit commands!periodic\_remove}
-This expression is checked every 20 seconds(non-configurable,
-but might be in future) and if it becomes true, the job will
-leave the queue. \AdAttr{periodic\_remove} takes precedent over
-\AdAttr{on\_exit\_remove} if the two describe conflicting states.
+This expression is checked every 20 seconds (currently non-configurable),
+and if it becomes \Expr{True}, the job is removed from the queue.
+If unspecified, the default value is \Expr{False}.
 
-For example:
-Suppose you would like your job removed if the total suspension time of the
-job is more than half of the run time of the job.
+See the Examples section for an example of a \AdAttr{periodic\_*}
+expression. 
 
-\begin{verbatim}
-	periodic_remove = CumulativeSuspensionTime > (RemoteWallClockTime / 2.0)
-\end{verbatim}
-
-The above expression will remove the job once the conditions have become true.
-
-\emph{Note:}Currently, this option will force a ``terminate'' event in the user
-log of the job and it will report a successful termination of the job. This
-reporting of this event will be changed in a future version of Condor to
-be a ``job aborted event'' with descriptions of who initiated the event. As
-it stands now, someone looking at the user log termination event wouldn't be
-able to tell the difference between a job that legitimately ended successfully
-and a job where the \AdAttr{periodic\_remove} expression had become true. 
-
-periodic\_$*$ expressions(defined elsewhere in this man page) take
-precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
-precedent over a $*$\_remove expression.
-
-If left unspecified, this will default to \Expr{False}.
+\AdAttr{periodic\_*} expressions take
+precedence over \AdAttr{on\_exit\_*} expressions,
+and \AdAttr{*\_hold} expressions take
+precedence over a \AdAttr{*\_remove} expressions.
+So, the \AdAttr{periodic\_remove} expression takes precedent over
+the \AdAttr{on\_exit\_remove} expression,
+if the two describe conflicting actions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
@@ -459,27 +453,17 @@ for the standard universe.
 
 \item[periodic\_hold = $<$ClassAd Boolean Expression$>$] This expression
 \index{submit commands!periodic\_hold}
-is checked every 20 seconds(non-configurable, but might be in future) and
-if it becomes true, the job will be placed on hold.
+is checked every 20 seconds(currently non-configurable),
+and if it becomes true, the job will be placed on hold.
+If unspecified, the default value is \Expr{False}.
 
-For example:
-Suppose you would like your job held if the total suspension time of the
-job is more than half of the total run time of the job.
+See the Examples section for an example of a \AdAttr{periodic\_*}
+expression. 
 
-\begin{verbatim}
-	periodic_hold = CumulativeSuspensionTime > (RemoteWallClockTime / 2.0)
-\end{verbatim}
-
-The above expression will place the job on hold if it suspends longer
-than half the amount of time it has totally run.  An e-mail will be
-sent to the user explaining that the job was placed on hold because this
-expression became true.
-
-If left unspecified, this will default to \Expr{False}.
-
-periodic\_$*$ expressions(defined elsewhere in this man page) take
-precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
-precedent over a $*$\_remove expression.
+\AdAttr{periodic\_*} expressions take
+precedence over \AdAttr{on\_exit\_*} expressions,
+and \AdAttr{*\_hold} expressions take
+precedence over a \AdAttr{*\_remove} expressions.
 
 This expression is available for the vanilla and java universes.
 It is additionally available, when submitted from a Unix machine,
@@ -491,9 +475,9 @@ for the standard universe.
 
 \item[periodic\_release = $<$ClassAd Boolean Expression$>$] This expression
 \index{submit commands!periodic\_release}
-is reevaluated every 20 seconds(non-configurable, but might be in future)
-when the job is in the Hold state.
-If the expression becomes \Expr{True}, the job will be placed on released.
+is reevaluated every 20 seconds(currently non-configurable)
+while the job is in the Hold state.
+If the expression becomes \Expr{True}, the job will be released.
 
 % The expression is evaluated:
 %- every time there is a condor_reconfig
@@ -857,9 +841,11 @@ file_remaps = "very.big = local:/bigdisk/bigfile"
 \end{verbatim}
 \item[Example Three:]
 Several remaps can be applied at once by separating each with a semicolon.
+\footnotesize
 \begin{verbatim}
 file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 \end{verbatim}
+\normalsize
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%
@@ -920,16 +906,16 @@ directory.
 %%%%%%%%%%%%%%%%%%%
 %% x509directory
 %%%%%%%%%%%%%%%%%%%
-
-\item[x509directory = $<$directory-path$>$] Used to specify the directory 
-\index{submit commands!x509directory}
-which contains the certificate, private key, and trusted certificate directory
-for GSS authentication.
-If this attribute is set, the environment variables 
-X509\_USER\_KEY, X509\_USER\_CERT, and X509\_CERT\_DIR are exported with 
-default values.
+% 
+% \item[x509directory = $<$directory-path$>$] Used to specify the directory 
+% \index{submit commands!x509directory}
+% which contains the certificate, private key, and trusted certificate directory
+% for GSS authentication.
+% If this attribute is set, the environment variables 
+% X509\_USER\_KEY, X509\_USER\_CERT, and X509\_CERT\_DIR are exported with 
+% default values.
 %Commented out by Karen for 6.4.3.
-%See section~\ref{sec:X509-Authentication} for more info.
+%See section~\ref{sec:X509-Authentication} for more information.
 
 %%%%%%%%%%%%%%%%%%%
 %% x509userproxy
@@ -1469,11 +1455,28 @@ in this cluster will be written into file \File{foo.log}.
 \Opt{-a} option to add two commands before the job(s) is queued.
 A log file and an error log file are specified.
 The submit description file is unchanged.
+\footnotesize
+\normalsize
 \begin{verbatim}
 condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
 \end{verbatim}
 Note that each of the added commands is contained within quote marks
 because there are space characters within the command.
+
+\item{\AdAttr{periodic\_remove} example:}
+A job should be removed from the queue,
+if the total suspension time of the job
+is more than half of the run time of the job.
+
+Including the command
+\footnotesize
+\begin{verbatim}
+   periodic_remove = CumulativeSuspensionTime > 
+                     ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
+\end{verbatim}
+\normalsize
+in the submit description file causes this to happen.
+
 \end{itemize} 
 
 

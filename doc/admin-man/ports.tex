@@ -2,34 +2,91 @@
 \subsection{\label{sec:Port-Details}Port Usage in Special Evironments }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Todo
 \index{port usage}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-NonStandard}Non Standard Ports for Central Managers}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!nonstandard ports for central managers}
+By default,
+Condor uses port 9618 for the \Condor{collector} daemon
+and 9614 for the \Condor{negotiator} daemon.
+To use non standard port numbers for these daemons,
+the configuration variables that tell Condor these communication
+details are modified.
+Instead of
+\begin{verbatim}
+CONDOR_HOST = machX.cs.wisc.edu
+COLLECTOR_HOST = $(CONDOR_HOST)
+NEGOTIATOR_HOST = $(CONDOR_HOST)
+\end{verbatim}
+the configuration might be
+\begin{verbatim}
+CONDOR_HOST = machX.cs.wisc.edu
+COLLECTOR_HOST = $(CONDOR_HOST):9650
+NEGOTIATOR_HOST = $(CONDOR_HOST):9651
+\end{verbatim}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-Firewalls}Firewalls}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{port usage!firewalls}
-The configuration variables
-\Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting the range
-of ports that Condor will use.
-This may be useful if behind a firewall.
-By default,
-Condor uses port 9618 for the \Condor{collector},
-9614 for the \Condor{negotiator},
-and system-assigned (apparently random) ports for everything else.
-\MacroNI{HIGHPORT} and \MacroNI{LOWPORT} only affect these
-system-assigned ports, but will restrict them to the range specified here.
+If a Condor pool is completely behind a firewall,
+then no special consideration is needed.
+However, if there is a firewall between the machines within
+a Condor pool, then
+configuration variables may be set to force the usage of
+specific ports and to utilize a specific range of ports.
 
+By default,
+Condor uses port 9618 for the \Condor{collector} daemon,
+9614 for the \Condor{negotiator} daemon,
+and system-assigned (apparently random) ports for everything else.
+See section~\ref{sec:Ports-NonStandard},
+if non standard ports are to be used for the
+\Condor{collector} \Condor{negotiator} daemons.
+
+The configuration variables
+\Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting a restricted
+range of ports that Condor will use.
+This may be useful if behind a firewall.
+The configuration macros
+\MacroNI{HIGHPORT} and \MacroNI{LOWPORT} only affect these
+system-assigned ports, but will restrict them to the range specified.
+These configuration variables are fully defined
+in section~\ref{sec:Condor-wide-Config-File-Entries}.
 Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at least 1024.
 
+% From Alain, Karen is awaiting confirmation on 7/7/03
+% If a machine is an execution machine, it needs several ports. By default,
+% you can have one job per CPU on your machine (this can be changed by
+% defining virtual CPUs). Someone will need to estimate this better than me,
+% but you need something like:
+% 
+% 1 port per job that can run (condor_starter)
+% 1 port for condor_master
+% 1 port for condor_startd (advertises machine)
+%
+% It possible that we need more than that.
+% 
+% If a machine is an submission machine, you'll need:
+% 
+% 1 port for condor_master
+% 1 port for schedd
+% 1 port per active job that you have
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-MultipleCollectors}Multiple Collectors}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!multiple collectors}
+\Todo
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-Conflicts}Port Conflicts}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!conflicts}
+\Todo
 
