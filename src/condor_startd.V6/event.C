@@ -3,6 +3,7 @@
 
 #include "condor_debug.h"
 #include "condor_types.h"
+#include "condor_attributes.h"
 #include "condor_expressions.h"
 #include "condor_mach_status.h"
 #include "sched.h"
@@ -54,7 +55,7 @@ static int eval_state(resource_info_t* rip)
     resmgr_changestate(rip->r_rid, NO_JOB);
   if (rip->r_state == NO_JOB)
   {
-    (rip->r_context)->EvalBool("START",template_ClassAd,start);
+    (rip->r_context)->EvalBool(ATTR_REQUIREMENTS,template_ClassAd,start);
     if(CondorPendingJobs::AreTherePendingJobs(rip->r_rid))
     {
       dprintf(D_ALWAYS,"Identified a pending job\n");
@@ -249,8 +250,11 @@ event_sigchld(int sig)
 		else
 			dprintf(D_ALWAYS, "pid %d exitex with status %d\n",
 				pid, WEXITSTATUS(status));
+#if 0
+		// ??? Why update RemoteUser here?  rip->r_user could be NULL!
 		sprintf(tmp,"RemoteUser=%s",(rip->r_user));
 		(rip->r_context)->Insert(tmp);
+#endif
 		resmgr_changestate(rip->r_rid, NO_JOB);
 		event_exited(rip->r_rid, NO_JID, NO_TID);
 	}
