@@ -484,7 +484,7 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 			sprintf( buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, 
 					 WTERMSIG(exit_status) );
 			ad->Insert( buf );
-			sprintf( buf, "%s = \"%s\"", ATTR_EXIT_REASON,
+			sprintf( buf, "%s = \"killed by %s\"", ATTR_EXIT_REASON,
 					 daemonCore->GetExceptionString(WTERMSIG(exit_status)) );
 			ad->Insert( buf );
 		} else {
