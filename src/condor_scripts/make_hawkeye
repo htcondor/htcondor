@@ -33,6 +33,9 @@ my @KillList = (
 		"condor_schedd",
 		"condor_q",
 		"condor_qedit",
+		"condor_glidein",
+		"condor_gridmanager",
+		"condor_eventd",
 		"gahp_server",
 		"rsh",
 	       );
