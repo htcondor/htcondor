@@ -334,7 +334,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#else
+#elif ! defined( DUX )
 #include <sys/mkdev.h>
 #endif
 
