@@ -360,7 +360,7 @@ LOCK		= $(LOCAL_DIR)/log
 ##  The University of Wisconsin. If you don't want to use the UW
 ##  server, you can set up your own (it needs to be running a gsiftp
 ##  daemon) and change the following values to point to it, instead.
-GLIDEIN_SERVER_NAME = vulture.cs.wisc.edu
+GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
 ##--------------------------------------------------------------------
