@@ -77,7 +77,7 @@ class MpiResource : public RemoteResource {
 	virtual int killStarter();
 
 		/** Overridden so you can set the state to FINISHED */
-	virtual void setExitReason( int reason );
+	virtual void setExitStatus( int status );
 
 		/** Add state... */
 	virtual void dprintfSelf( int debugLevel);

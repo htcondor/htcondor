@@ -81,9 +81,10 @@ MpiResource::setResourceState( Resource_State s ) {
 	state = s;
 }
 
-void
-MpiResource::setExitReason( int reason ) {
-		/* If you're setting the exit reason, you must be done! */
-	RemoteResource::setExitReason( reason );
+void 
+MpiResource::setExitStatus( int status ) {
+		/* If you're setting the exit status, you must be done! */
+	RemoteResource::setExitStatus( status );
 	setResourceState( FINISHED );
 }
+
