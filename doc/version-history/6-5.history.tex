@@ -61,6 +61,16 @@ Improved the error messages generated when there are problems
 initializing the user log to include string descriptions of the
 errors, not just the error number (errno).
 
+\item The default value in the config files for \Macro{LOCK} is now
+defined in terms of \Macro{LOG}, instead of using \Macro{LOCAL\_DIR}
+and appending ``log''.
+This is a very minor correction, but in the rare cases where the log
+directory is being redefined for some reason, we usually want that to
+apply to the lock files, as well.
+Of course, if the log directory is on NFS, \Macro{LOCK} should still
+be customized to point to a directoy on a local file system.
+
+
 \end{itemize}
 
 \noindent Known Bugs:
