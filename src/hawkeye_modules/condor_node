@@ -158,41 +158,70 @@ sub RunIt {
     # Now, run condor_status and gather some more info...
     if ( $CondorInfo{NumStartds} )
     {
-	if ( open( CSTAT, "condor_status -direct $ENV{HOST} |" ) )
+	my %Interesting =
+	    ( Name =>			{ PerVm => 0, Type => "s", },
+	      Arch =>			{ PerVm => 0, Type => "s", },
+	      OpSys =>			{ PerVm => 0, Type => "s", },
+	      State =>			{ PerVm => 1, Type => "s", },
+	      EnteredCurrentState =>	{ PerVm => 1, Type => "n", },
+	      Activity =>		{ PerVm => 1, Type => "s", },
+	      EnteredCurrentActivity =>	{ PerVm => 1, Type => "n", },
+	      LoadAvg =>		{ PerVm => 1, Type => "n", },
+	      Memory =>			{ PerVm => 1, Type => "n", },
+	      LastHeardFrom =>		{ PerVm => 1, Type => "n", },
+	      StarterAbilityList =>	{ PerVm => 1, Type => "s", },
+	    );
+	if ( open( CSTAT, "condor_status -l -direct $ENV{HOST} |" ) )
 	{
+	    my @Vms;
+	    my %AdInfo;
+	  READLINE:
 	    while ( <CSTAT> )
 	    {
 		chomp;
 
-		# Skip the 'uniteresting' lines
-		next if ( /^Name\s+OpSys/ );
-		next if ( /^\s/ );
-		next if ( $_ eq "" );
+		# Empty line between ads...
+		if ( ! /\S+/ )
+		{
+		    # Verify that we have all the interesting stuff
+		    foreach my $Key ( keys %Interesting )
+		    {
+			next READLINE if ( ! exists $AdInfo{$Key} );
+		    }
 
-		my $Vm = "";
-		my ( $Host, $OpSys, $Arch, $State, $Act, $Load, $Mem, $Time )
-		    = split;
-		if ( $Host =~ /(.*)@(.*)/ )
-		{
-		    $Vm = "_$1";
-		    $CondorInfo{Vms} = $CondorInfo{Vms} . "$1 ";
-		}
-		$CondorInfo{OpSys} = $OpSys;
-		$CondorInfo{Arch} = $Arch;
-		$CondorInfo{"State$Vm"} = $State;
-		$CondorInfo{"Activity$Vm"} = $Act;
-		$CondorInfo{"LoadAv$Vm"} = $Load;
-		$CondorInfo{"Mem$Vm"} = $Mem;
-		if ( $Time =~ /(\d+)+(\d+):(\d+):(\d+)/ )
-		{
+		    # Ok, now pull  it apart..
+		    my $Vm = "";
+		    if ( $AdInfo{Name} =~ /(vm\d+)@(.*)/ )
+		    {
+			$Vm = $1;
+			push( @Vms, $Vm );
+		    }
+		    $CondorInfo{OpSys} = $AdInfo{OpSys};
+		    $CondorInfo{Arch} = $AdInfo{Arch};
+		    $CondorInfo{StarterAbilityList} = $AdInfo{StarterAbilityList};
+		    $CondorInfo{"State$Vm"} = $AdInfo{State};
+		    $CondorInfo{"Activity$Vm"} = $AdInfo{Activity};
+		    $CondorInfo{"LoadAv$Vm"} = $AdInfo{LoadAvg};
+		    $CondorInfo{"Mem$Vm"} = $AdInfo{Memory};
 		    $CondorInfo{"ActivityTime$Vm"} =
-			( ( $4 ) +
-			  ( $3 * 60) +
-			  ( $2 * 60 * 60 ) +
-			  ( $1 * 60 * 60 * 24 ) );
+			( $AdInfo{LastHeardFrom} - $AdInfo{EnteredCurrentActivity} );
+		    %AdInfo = ( );
+		    next;
 		}
+
+		# Skip the 'uniteresting' lines
+		my ( $Attr, $Value ) = split( / = /, $_, 2 );
+		if ( $Value =~ /^\"(.*)\"$/ )
+		{
+		    $Value = $1;
+		}
+
+		# De we care about it??
+		next if ( ! exists $Interesting{$Attr} );
+		$AdInfo{$Attr} = $Value;
 	    }
 	    close( CSTAT );
+	    $CondorInfo{Vms} = join( " ", @Vms );
 	}
 	else
 	{
