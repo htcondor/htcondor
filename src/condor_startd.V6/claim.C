@@ -557,6 +557,7 @@ Claim::claim_timed_out()
 void
 Claim::alive()
 {
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", id() );
 		// Process a keep alive command
 	daemonCore->Reset_Timer( c_claim_tid,
 							 (max_claim_alives_missed * c_aliveint), 0 );
