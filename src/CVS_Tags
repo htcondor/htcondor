@@ -5,3 +5,9 @@
 	checkpointing or access to files within the AFS file tree.
 01/10/94	Sparc_Sunos4_1:A
 	Installed on both instructional and research suns.
+01/11/94	Sparc_Sunos4_1:A
+	Installed on both instructional and research suns.  Purpose to fix
+	bug caused by calling popen() to run "fs" command when reserving
+	file space for the AFS cache.  Replaced popen() with my_popen()
+	which is more careful to only reap the one child process it starts,
+	and to eat up one instance of SIGCHLD for the child it starts.
