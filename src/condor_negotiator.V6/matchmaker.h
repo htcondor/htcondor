@@ -75,7 +75,7 @@ class Matchmaker : public Service
 		char *getCapability (char *, char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 
-		friend int comparisonFunction (AttrList *, AttrList *,
+		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 
 		// configuration information
@@ -113,6 +113,12 @@ class Matchmaker : public Service
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
 		bool GotRescheduleCmd;
+
+		// ClassAd parser
+		ClassAdParser parser;
+
+		// MatchClassAd for matchmaking
+		MatchClassAd mad;
 };
 
 

@@ -37,7 +37,7 @@
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
 
-static int comparisonFunction (AttrList *, AttrList *, void *);
+static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 // possible outcomes of negotiating with a schedd
@@ -46,7 +46,7 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
-typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
+typedef int (*lessThanFunc)(ClassAd*, ClassAd*, void*);
 
 Matchmaker::
 Matchmaker ()
@@ -59,10 +59,12 @@ Matchmaker ()
 	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondStd);
-
+//	Parse (buf, rankCondStd);
+	parser.ParseExpression( string( buf ), rankCondStd );
+	
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondPrioPreempt);
+//	Parse (buf, rankCondPrioPreempt);
+	parser.ParseExpression( string( buf ), rankCondPrioPreempt );
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
@@ -165,7 +167,8 @@ reinitialize ()
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionReq) ) {
+//		if( Parse(tmp, PreemptionReq) ) {
+		if( !parser.ParseExpression( string( tmp ), PreemptionReq ) ) {
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
@@ -183,7 +186,8 @@ reinitialize ()
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( Parse(tmp, PreemptionRank) ) {
+//		if( Parse(tmp, PreemptionRank) ) {
+		if( !parser.ParseExpression( string( tmp ), PreemptionRank ) ) {
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
@@ -321,10 +325,10 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	AttrList* ad=accountant.ReportState();
+	ClassAd* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->put(*strm) ||
+	if (!putOldClassAdNoTypes( strm, *ad ) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
@@ -357,10 +361,10 @@ GET_RESLIST_commandHandler (int, Stream *strm)
     dprintf (D_ALWAYS,"Getting resource list of %s\n",scheddName);
 
 	// get the priority
-	AttrList* ad=accountant.ReportState(scheddName);
+	ClassAd* ad=accountant.ReportState(scheddName);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->put(*strm) ||
+	if (!putOldClassAdNoTypes( strm, *ad ) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send resource list\n");
@@ -392,15 +396,21 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 	ClassAdList *list = (ClassAdList*) arg;
 	ClassAd *ad;
 	ClassAd queryAd;
+	MatchClassAd mad;
+	bool boolValue;
 
 	CondorQuery query(ANY_AD);
 	query.addANDConstraint(constraint);
 	query.getQueryAd(queryAd);
 	queryAd.SetTargetTypeName (ANY_ADTYPE);
 
+	mad.ReplaceLeftAd( &queryAd );
 	list->Open();
 	while( (ad = list->Next()) ) {
-		if(queryAd <= *ad) {
+//		if(queryAd <= *ad) {
+		mad.ReplaceRightAd( ad );
+		if( mad.EvaluateAttrBool( "rightMatchesLeft", boolValue ) &&
+			boolValue ) {
 			return new ClassAd(*ad);
 		}
 	}
@@ -477,7 +487,7 @@ negotiationTime ()
 
 	// Register a lookup function that passes through the list of all ads.
 
-	ClassAdLookupRegister( lookup_global, &allAds );
+//	ClassAdLookupRegister( lookup_global, &allAds );
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -658,7 +668,7 @@ negotiationTime ()
 
 
 static int
-comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
+comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 {
 	char	scheddName1[64];
 	char	scheddName2[64];
@@ -1034,7 +1044,10 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[256];
-	EvalResult		result;
+//	EvalResult		result;
+	Value			result;
+	bool			boolValue;
+	int				intValue;
 	float			tmp;
 
 #ifdef WANT_NETMAN
@@ -1093,12 +1106,20 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	rejPreemptForPolicy = false;
 	rejPreemptForRank = false;
 
+	// set up MatchClassAd
+	mad.ReplaceLeftAd( &request );
+
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
 			// the candidate offer and request must match
-		if( !( *candidate == request ) ) {
+//		if( !( *candidate == request ) ) {
+		mad.RemoveRightAd( );
+		mad.ReplaceRightAd( candidate );
+		if( !mad.EvaluateAttr( "symmetricMatch", result ) ||
+			!result.IsBooleanValue( boolValue ) ||
+			!boolValue ) {
 				// they don't match; continue
 			continue;
 		}
@@ -1121,8 +1142,15 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 					// So try the next offer...
 				continue;
 			}
-			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE) ) {
+//			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
+//					result.type == LX_INTEGER && result.i == TRUE) ) {
+			rankCondStd->SetParentScope( candidate );
+			if( ( candidate->EvaluateExpr( rankCondStd, result ) &&
+				  result.IsBooleanValue( boolValue ) &&
+				  boolValue ) ||
+				( candidate->EvaluateExpr( rankCondStd, result ) &&
+				  result.IsIntegerValue( intValue ) &&
+				  intValue ) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 				continue;
@@ -1138,8 +1166,15 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		//       tested above for the only condition we care about.
 		if ( (remoteUser[0] != '\0') &&
 			 (!only_for_startdrank) ) {
-			if( rankCondStd->EvalTree(candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
+//			if( rankCondStd->EvalTree(candidate, &request, &result) && 
+//					result.type == LX_INTEGER && result.i == TRUE ) {
+			rankCondStd->SetParentScope( candidate );
+			if( ( candidate->EvaluateExpr( rankCondStd, result ) &&
+				  result.IsBooleanValue( boolValue ) &&
+				  boolValue ) ||
+				( candidate->EvaluateExpr( rankCondStd, result ) &&
+				  result.IsIntegerValue( intValue ) &&
+				  intValue ) ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
 				candidatePreemptState = RANK_PREEMPTION;
@@ -1151,18 +1186,34 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 				candidatePreemptState = PRIO_PREEMPTION;
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
-				if (PreemptionReq && 
-						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
-						result.type == LX_INTEGER && result.i == TRUE) ) {
-					rejPreemptForPolicy = true;
-					continue;
+				if( PreemptionReq ) {
+//						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+//						result.type == LX_INTEGER && result.i == TRUE) ) {
+					PreemptionReq->SetParentScope( candidate );
+					if( ( candidate->EvaluateExpr( PreemptionReq, result ) &&
+						  result.IsBooleanValue( boolValue )&&
+						  boolValue ) ||
+						( candidate->EvaluateExpr( PreemptionReq, result ) &&
+						  result.IsIntegerValue( intValue ) &&
+						  intValue ) ) {
+						rejPreemptForPolicy = true;
+						continue;
+					}
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
-						result.type == LX_INTEGER && result.i == TRUE ) ) {
+//				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+//						result.type == LX_INTEGER && result.i == TRUE ) ) {
+
 						// machine doesn't like this job as much -- find another
+				rankCondPrioPreempt->SetParentScope( candidate );
+				if( ( candidate->EvaluateExpr( rankCondPrioPreempt, result ) &&
+					  result.IsBooleanValue( boolValue ) &&
+					  boolValue ) ||
+					( candidate->EvaluateExpr( rankCondPrioPreempt, result ) &&
+					  result.IsIntegerValue( intValue) &&
+					  intValue ) ) {
 					rejPreemptForRank = true;
 					continue;
 				}
@@ -1208,15 +1259,22 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		candidatePreemptRankValue = -(FLT_MAX);
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
-			if( PreemptionRank &&
-			   		PreemptionRank->EvalTree(candidate,&request,&result) ) {
-				if( result.type == LX_FLOAT ) {
-					candidatePreemptRankValue = result.f;
-				} else if( result.type == LX_INTEGER ) {
-					candidatePreemptRankValue = result.i;
-				} else {
-					dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-							"expression to a float.\n");
+			if( PreemptionRank ) {
+//			   		PreemptionRank->EvalTree(candidate,&request,&result) ) {
+//				if( result.type == LX_FLOAT ) {
+//					candidatePreemptRankValue = result.f;
+//				} else if( result.type == LX_INTEGER ) {
+//					candidatePreemptRankValue = result.i;
+				PreemptionRank->SetParentScope( candidate );
+				candidate->EvaluateExpr( PreemptionRank, result );
+				if( !result.IsRealValue( candidatePreemptRankValue ) ) {
+					if( result.IsIntegerValue( intValue ) ) {
+						candidatePreemptRankValue = intValue;
+					}
+					else {
+						dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
+								"expression to a float.\n");
+					}
 				}
 			} else if( PreemptionRank ) {
 				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
@@ -1244,6 +1302,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		}
 	}
 	startdAds.Close ();
+	mad.RemoveLeftAd( );
 
 #if WANT_NETMAN
 	if (bestSoFar) {
