@@ -67,12 +67,20 @@ sub RunIt
     # Compute the rates for the past hour
     if ( exists $Last{SendHour} )
     {
-	$Last{SendHour}{Rate} =
-	    ( $Last{SendHour}{Bytes} / $Last{SendHour}{Seconds} );
+	$Last{SendHour}{Rate} = -1;		# Unknown
+	if ( $Last{SendHour}{Seconds} )
+	{
+	    $Last{SendHour}{Rate} =
+		( $Last{SendHour}{Bytes} / $Last{SendHour}{Seconds} );
+	}
     }
     if ( exists $Last{RecvHour} )
     {
-	my $Rate = ( $Last{RecvHour}{Bytes} / $Last{RecvHour}{Seconds} );
+	my $Rate = -1;				# Unknown
+	if ( $Last{RecvHour}{Seconds} )
+	{
+	    $Rate = ( $Last{RecvHour}{Bytes} / $Last{RecvHour}{Seconds} );
+	}
 	$Last{RecvHour}{Rate} = sprintf "%.2f", $Rate;
     }
 
