@@ -318,7 +318,11 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
            For some reason on AIX if you set this here, the connect()
            fails.  In that case errno doesn't get set either... */
 #if !defined(AIX31) && !defined(AIX32)
+#if defined(Solaris)
 	if( ioctl(sockfd,(int *)FIONBIO,(char *)&on) < 0 ) /* int casting to make it Solaris compatible */{
+#else
+	if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
+#endif
 		EXCEPT( "ioctl" );
 	}
 #endif
