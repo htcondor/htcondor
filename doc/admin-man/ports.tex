@@ -60,6 +60,14 @@ COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 NEGOTIATOR_ADDRESS_FILE = $(LOG)/.negotiator_address
 \end{verbatim}
 
+\Note Using a port of 0 for the \Condor{collector} and
+\Condor{negotiator} and specifying a
+\MacroNI{COLLECTOR\_ADDRESS\_FILE} or
+\MacroNI{NEGOTIATOR\_ADDRESS\_FILE} 
+only works in Condor version 6.6.8 or later in the 6.6 stable series,
+and in version 6.7.4 or later in the 6.7 development series.
+Do not attempt to use these settings with older versions of Condor.
+
 For more information about the \MacroNI{COLLECTOR\_ADDRESS\_FILE}
 setting, see section~\ref{param:SubsysAddressFile} on
 page~\pageref{param:SubsysAddressFile}.
