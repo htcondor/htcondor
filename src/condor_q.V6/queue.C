@@ -147,7 +147,8 @@ static  ExtArray<PrioEntry> prioTable;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
 #endif
-	
+
+int buffer_size = 8192;	
 char return_buff[4096];
 
 extern 	"C"	int		Termlog;
@@ -1612,7 +1613,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 	int 	intValue;  		// NAC
 	Value	val;	   		// NAC
 
-	return_buff[0]='\0';
+	char *big_return_buff = new char[16384];
+	big_return_buff[0]='\0';
 
 	mad.ReplaceLeftAd( request );	// NAC
 
@@ -1633,22 +1635,22 @@ doRunAnalysisToBuffer( ClassAd *request )
 	request->EvaluateAttrInt( ATTR_JOB_STATUS, jobState );
 
 	if( jobState == RUNNING ) {
-		sprintf( return_buff,
+		sprintf( big_return_buff,
 			"---\n%03d.%03d:  Job is being serviced\n\n", cluster, 
 			proc );
-		return return_buff;
+		return big_return_buff;
 	}
 	if( jobState == HELD ) {
-		sprintf( return_buff,
+		sprintf( big_return_buff,
 			"---\n%03d.%03d:  Job is held.\n\n", cluster, 
 			proc );
-		return return_buff;
+		return big_return_buff;
 	}
 	if( jobState == REMOVED ) {
-		sprintf( return_buff,
+		sprintf( big_return_buff,
 			"---\n%03d.%03d:  Job is removed.\n\n", cluster, 
 			proc );
-		return return_buff;
+		return big_return_buff;
 	}
 
   	startdAds.Open();
@@ -1665,7 +1667,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		remoteUser[0] = '\0';
 		totalMachines++;
 		offer->EvaluateAttrString( ATTR_NAME, buffer, 128 );		// NAC
-		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
+		if( verbose ) sprintf( big_return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
 		mad.RemoveRightAd( );		// NAC
@@ -1674,9 +1676,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 		if( !mad.EvaluateAttr( "rightMatchesLeft", val ) ) {     	// NAC
               // there was a problem with the match					// NAC
 			if( verbose ) {											// NAC
-				sprintf( return_buff,								// NAC 
+				sprintf( big_return_buff,								// NAC 
 						 "%sError in matchmaking\n",				// NAC
-						 return_buff );								// NAC
+						 big_return_buff );								// NAC
 			}														// NAC
 			continue;												// NAC
 		}															// NAC
@@ -1685,9 +1687,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
 
 			if( verbose ) {
-				sprintf( return_buff,
+				sprintf( big_return_buff,
 						 "%sFailed job constraint\n",
-						 return_buff );
+						 big_return_buff );
 
 			}
 			fReqConstraint++;
@@ -1698,9 +1700,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 		if( !mad.EvaluateAttr( "leftMatchesRight", val ) ) {		// NAC
                 // there was a problem with the match				// NAC
   			if( verbose ) {											// NAC
-				sprintf( return_buff,								// NAC 
+				sprintf( big_return_buff,								// NAC 
 						 "%sError in matchmaking\n",				// NAC
-						 return_buff );								// NAC
+						 big_return_buff );								// NAC
 			}														// NAC
 			continue;												// NAC
 		}															// NAC
@@ -1709,7 +1711,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
 			
   			if( verbose ) { 
-				strcat( return_buff, "Failed machine constraint\n");
+				strcat( big_return_buff, "Failed machine constraint\n");
 			}  
 			fOffConstraint++;
 			continue;
@@ -1721,8 +1723,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
 				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
 					// both sides satisfied and no remote user
-				if( verbose ) sprintf( return_buff, "%sAvailable\n",
-									   return_buff );
+				if( verbose ) sprintf( big_return_buff, "%sAvailable\n",
+									   big_return_buff );
 				available++;	
 				continue;
 			} else {
@@ -1730,9 +1732,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 				fRankCond++;
 				if( verbose ) {
-					sprintf( return_buff,
+					sprintf( big_return_buff,
 							 "%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
-							 return_buff);
+							 big_return_buff);
 				}
 				continue;
 			}
@@ -1748,7 +1750,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
 				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
 				if( verbose ) {
-					sprintf( return_buff, "%sAvailable\n", return_buff );
+					sprintf( big_return_buff, "%sAvailable\n", big_return_buff );
 				}
 				available++;
 				continue;
@@ -1767,19 +1769,19 @@ doRunAnalysisToBuffer( ClassAd *request )
 						  && intValue == FALSE ) ) { 					// NAC
 						fPreemptReqTest++;
 						if( verbose ) {
-							sprintf( return_buff,
+							sprintf( big_return_buff,
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
-									return_buff,
+									big_return_buff,
 									remoteUser);
 						}
 						continue;
 					} else {
 						// not held
 						if( verbose ) {
-							sprintf( return_buff,
+							sprintf( big_return_buff,
 								"%sAvailable (can preempt %s)\n",
-								return_buff, remoteUser);
+								big_return_buff, remoteUser);
 						}
 						available++;
 					}
@@ -1794,9 +1796,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 			// failed 4
 			fPreemptPrioCond++;
 			if( verbose ) {
-				sprintf( return_buff,
+				sprintf( big_return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
-					return_buff, remoteUser );
+					big_return_buff, remoteUser );
 			}
 			continue;
 		}
@@ -1805,20 +1807,20 @@ doRunAnalysisToBuffer( ClassAd *request )
 	mad.RemoveRightAd( );	// NAC
 	startdAds.Close();
 
-	sprintf( return_buff,
+	sprintf( big_return_buff,
 			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n" 
 			 "\t%5d were rejected by the job's requirements\n",
-			 return_buff, cluster, proc, totalMachines,
+			 big_return_buff, cluster, proc, totalMachines,
 			 fReqConstraint );
 	
 	if( fReqConstraint < totalMachines ) {
-		sprintf( return_buff,
+		sprintf( big_return_buff,
 				 "%s\t%5d rejected the job\n"
 				 "\t%5d are serving equal or higher priority customers%s\n" 
 				 "\t%5d do not prefer this job\n"
 				 "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
 				 "\t%5d are available to service your job\n",
-				 return_buff,
+				 big_return_buff,
 				 fOffConstraint,
 				 fPreemptPrioCond, niceUser ? "(*)" : "",
 				 fRankCond,
@@ -1831,61 +1833,61 @@ doRunAnalysisToBuffer( ClassAd *request )
 	request->EvaluateAttrInt(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
-		sprintf( return_buff, "%s\tLast successful match: %s",
-				 return_buff, ctime(&t) );
+		sprintf( big_return_buff, "%s\tLast successful match: %s",
+				 big_return_buff, ctime(&t) );
 	} else if (last_rej_match_time) {
-		strcat( return_buff, "\tNo successful match recorded.\n" );
+		strcat( big_return_buff, "\tNo successful match recorded.\n" );
 	}
 	if (last_rej_match_time > last_match_time) {
 		time_t t = (time_t)last_rej_match_time;
-		sprintf( return_buff, "%s\tLast failed match: %s",
-				 return_buff, ctime(&t) );
+		sprintf( big_return_buff, "%s\tLast failed match: %s",
+				 big_return_buff, ctime(&t) );
         string buf;
 		request->EvaluateAttrString( ATTR_LAST_REJ_MATCH_REASON, buf);
 		if (buf.length() > 0) {
-			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
-					 return_buff, buf.data() );
+			sprintf( big_return_buff, "%s\tReason for last match failure: %s\n",
+					 big_return_buff, buf.data() );
 		}
 	}
 
 	if( niceUser ) {
-		sprintf( return_buff, 
+		sprintf( big_return_buff, 
 				 "%s\n\t(*)  Since this is a \"nice-user\" job, this job "
 				 "has a\n\t     very low priority and is unlikely to preempt other "
-				 "jobs.\n", return_buff );
+				 "jobs.\n", big_return_buff );
 	}
 			
 
 	if( fReqConstraint == totalMachines ) {
-		strcat( return_buff, "\nWARNING:  Be advised:\n");
-		strcat( return_buff, "   No machines matched job's requirements\n");
-		strcat( return_buff, "\n" ); 	// NAC
+		strcat( big_return_buff, "\nWARNING:  Be advised:\n");
+		strcat( big_return_buff, "   No machines matched job's requirements\n");
+		strcat( big_return_buff, "\n" ); 	// NAC
 	}
 
 	string buffer_string = "";			// NAC
-	char ana_buffer[2048];				// NAC
+	char ana_buffer[buffer_size];				// NAC
 
 	if( fReqConstraint > 0 ) {
 		analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
 			// NAC
-		strncpy( ana_buffer, buffer_string.c_str( ), 2048 );			// NAC
-		strcat( return_buff, ana_buffer );	// NAC
+		strncpy( ana_buffer, buffer_string.c_str( ), buffer_size );	// NAC
+		strcat( big_return_buff, ana_buffer );	// NAC
 	}
 
 	if( fOffConstraint == totalMachines ) {
-		sprintf( return_buff, "%s\nWARNING:  Be advised:", return_buff );
-		sprintf( return_buff, "%s   Job %d.%d did not match any"
-			"machine's requirements\n\n", return_buff, cluster, proc);
+		sprintf( big_return_buff, "%s\nWARNING:  Be advised:", big_return_buff );
+		sprintf( big_return_buff, "%s   Job %d.%d did not match any"
+			"machine's requirements\n\n", big_return_buff, cluster, proc);
 	}
 
 	if( fOffConstraint > 0 ) { 			// NAC
 		buffer_string = "";
 		analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
 		strncpy( ana_buffer, buffer_string.c_str( ), 2048 );			// NAC
-		strcat( return_buff, ana_buffer );	// NAC
+		strcat( big_return_buff, ana_buffer );	// NAC
 	}									// NAC
 
-	return return_buff;
+	return big_return_buff;
 }
 
 
