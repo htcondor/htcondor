@@ -37,11 +37,13 @@
 #endif
 
 
+#if !defined(LINUX)
 struct qelem {
 	struct qelem *q_forw;
 	struct qelem *q_back;
 	char	q_data[1];
 };
+#endif
 
 typedef struct {
 	int		type;
