@@ -92,6 +92,8 @@ class FunctionCall : public ExprTree
 	static bool RegisterSharedLibraryFunctions(const char *shared_library_path);
 #endif
 
+	static void getLocalTime(time_t *now, struct tm *localtm);
+
  protected:
 	/// Constructor
 	FunctionCall ();
