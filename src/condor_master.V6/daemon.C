@@ -848,7 +848,6 @@ Daemons::CheckForNewExecutable()
 		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
 				 daemon_ptr[master]->process_name );
 		daemon_ptr[master]->newExec = TRUE;
-		immediate_restart_master = immediate_restart;
 			// Begin the master restart procedure.
         RestartMaster();
 		return;
@@ -989,6 +988,7 @@ Daemons::RestartMaster()
 #ifdef WANT_DC_PM
 	dprintf(D_ALWAYS, "Restarting master not yet supported with WANT_DC_PM\n");
 #else
+	immediate_restart_master = immediate_restart;
 	if( NumberOfChildren() == 0 ) {
 		FinishRestartMaster();
 	}
