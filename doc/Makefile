@@ -22,7 +22,7 @@ ref.pdf: clean
 	makeindex ref
 	latex ref.tex -interaction=batchmode
 	rm -f ref.ps
-	dvips ref.dvi
+	dvips ref.dvi -o ref.ps
 	rm -f ref.pdf
 	gs -sDEVICE=pdfwrite -sOutputFile=ref.pdf -dNOPAUSE -dBATCH ref.ps
 	rm -f ref.dvi
@@ -49,7 +49,7 @@ ref.dvi: clean
 	latex ref.tex -interaction=batchmode
 
 ref.ps: ref.dvi
-	dvips ref.dvi
+	dvips ref.dvi -o ref.ps
 
 release-ps: ref.ps $(TARGETDIR)
 	cp ref.ps $(TARGETDIR)/ref.ps
