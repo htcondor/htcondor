@@ -119,6 +119,8 @@ bool InitializeProxyManager( const char *proxy_dir )
 												   (TimerHandler)&CheckProxies,
 												   "CheckProxies", NULL );
 
+	ReconfigProxyManager();
+
 	proxymanager_initialized = true;
 
 	return true;
@@ -447,6 +449,8 @@ int CheckProxies()
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
 	ProxySubject *curr_subject;
+
+	dprintf( D_FULLDEBUG, "Checking proxies\n" );
 
 	SubjectsByName.startIterations();
 

@@ -195,6 +195,7 @@ class Scheduler : public Service
 	friend  int		find_idle_local_jobs(ClassAd *);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	int				updateGSICred(int, Stream* s);
 	int				spoolJobFiles(int, Stream *);
 	static int		spoolJobFilesWorkerThread(void *, Stream *);
 	static int		transferJobFilesWorkerThread(void *, Stream *);

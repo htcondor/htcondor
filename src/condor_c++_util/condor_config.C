@@ -494,6 +494,36 @@ init_tilde()
 	if( (pw=getpwnam( myDistro->Get() )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
+# else
+	// On Windows, we'll just look in the registry for TILDE. 
+	HKEY	handle;
+	char regKey[1024];
+
+	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
+		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
+
+		// got the reg key open; now we just need to see if
+		// we can open the TILDE string value.
+
+		char the_path[_POSIX_PATH_MAX];
+		DWORD valType;
+		DWORD valSize = _POSIX_PATH_MAX - 2;
+
+		the_path[0] = '\0';
+
+		if ( RegQueryValueEx(handle, "TILDE", 0, 
+			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
+
+			if ( valType == REG_SZ && the_path[0] ) {
+				// got it! 
+				tilde = strdup(the_path);
+			}
+		}
+		RegCloseKey(handle);
+	} 
+	
 # endif
 }
 

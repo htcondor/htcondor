@@ -160,6 +160,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	lastPollTime = 0;
 	pollNow = false;
 	gahp = NULL;
+	jobProxy = NULL;
+	remoteProxyExpireTime = 0;
 
 	// This is a BaseJob variable. At no time do we want BaseJob mucking
 	// around with job runtime attributes, so set it to false and leave it
@@ -192,6 +194,16 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
+	buff[0] = '\0';
+	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	if ( buff[0] != '\0' ) {
+		jobProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( jobProxy == NULL ) {
+			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
+					 procID.cluster, procID.proc );
+		}
+	}
+
 	return;
 
  error_exit:
@@ -206,6 +218,9 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 
 INFNBatchJob::~INFNBatchJob()
 {
+	if ( jobProxy != NULL ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
+	}
 	if ( remoteJobId != NULL ) {
 		INFNBatchJobsById.remove( HashKey( remoteJobId ) );
 		free( remoteJobId );
@@ -328,6 +343,7 @@ int INFNBatchJob::doEvaluateState()
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					SetRemoteJobId( job_id_string );
+					remoteProxyExpireTime = jobProxy->expiration_time;
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -367,10 +383,14 @@ int INFNBatchJob::doEvaluateState()
 			// The job has been submitted. Wait for completion or failure,
 			// and poll the remote schedd occassionally to let it know
 			// we're still alive.
+			// The resetting of the evaluateStateTid timer should be the
+			// last thing we do, after checking everything of interest.
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else if ( remoteState == COMPLETED ) {
 				gmState = GM_DONE_SAVE;
+			} else if ( remoteProxyExpireTime < jobProxy->expiration_time ) {
+					gmState = GM_REFRESH_PROXY;
 			} else {
 				now = time(NULL);
 				if ( lastPollTime < enteredCurrentGmState ) {
@@ -411,6 +431,29 @@ int INFNBatchJob::doEvaluateState()
 			lastPollTime = time(NULL);
 			gmState = GM_SUBMITTED;
 			} break;
+		case GM_REFRESH_PROXY: {
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_SUBMITTED;
+			} else {
+				rc = gahp->blah_job_refresh_proxy( remoteJobId,
+												   jobProxy->proxy_filename );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					dprintf( D_ALWAYS,
+							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
+							 procID.cluster, procID.proc, gahp->getErrorString() );
+					errorString = gahp->getErrorString();
+					gmState = GM_CANCEL;
+					break;
+				}
+				remoteProxyExpireTime = jobProxy->expiration_time;
+				gmState = GM_SUBMITTED;
+			}
+		} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
 			JobTerminated();
@@ -502,6 +545,7 @@ int INFNBatchJob::doEvaluateState()
 			if ( !done ) {
 				break;
 			}
+			remoteProxyExpireTime = 0;
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;

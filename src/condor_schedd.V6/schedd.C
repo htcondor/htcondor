@@ -67,6 +67,7 @@
 #include "sig_name.h"
 #include "../condor_procapi/procapi.h"
 #include "condor_distribution.h"
+#include "util_lib_proto.h"
 
 
 #define DEFAULT_SHADOW_SIZE 125
@@ -2563,6 +2564,139 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 }
 
 int
+Scheduler::updateGSICred(int, Stream* s)
+{
+	ReliSock* rsock = (ReliSock*)s;
+	PROC_ID jobid;
+	ClassAd *jobad;
+	int reply;
+
+		// make sure this connection is authenticated, and we know who
+		// the user is.  also, set a timeout, since we don't want to
+		// block long trying to read from our client.   
+	rsock->timeout( 10 );  
+	rsock->decode();
+
+	if( ! rsock->isAuthenticated() ) {
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
+		MyString methods;
+		if (p) {
+			methods = p;
+			free (p);
+		} else {
+			methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		CondorError errstack;
+		if( ! rsock->authenticate(methods.Value(), &errstack) ) {
+				// we failed to authenticate, we should bail out now
+				// since we don't know what user is trying to perform
+				// this action.
+				// TODO: it'd be nice to print out what failed, but we
+				// need better error propagation for that...
+			errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
+					"Failure to update GSI cred - Authentication failed" );
+			dprintf( D_ALWAYS, "updateGSICred() aborting: %s\n",
+					 errstack.getFullText() );
+			refuse( s );
+			return FALSE;
+		}
+	}	
+
+
+		// read the job id from the client
+	rsock->decode();
+	if ( !rsock->code(jobid) || !rsock->eom() ) {
+			dprintf( D_ALWAYS, "updateGSICred(): "
+					 "failed to read job id\n" );
+			refuse(s);
+			return FALSE;
+	}
+	dprintf(D_FULLDEBUG,"updateGSICred(): read job id %d.%d\n",
+		jobid.cluster,jobid.proc);
+	jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if ( !jobad ) {
+		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+				 "job %d.%d not found\n", jobid.cluster, jobid.proc );
+		refuse(s);
+		return FALSE;
+	}
+
+		// Make certain this user is authorized to do this,
+		// cuz only the owner of a job (or queue super user) is allowed
+		// to transfer data to/from a job.
+	bool authorized = false;
+	setQSock(rsock);	// so OwnerCheck() will work
+	if (OwnerCheck(jobid.cluster,jobid.proc)) {
+		authorized = true;
+	}
+	unsetQSock();
+	if ( !authorized ) {
+		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+				 "user %s not authorized to edit job %d.%d\n", 
+				 rsock->getFullyQualifiedUser(),jobid.cluster, jobid.proc );
+		refuse(s);
+		return FALSE;
+	}
+
+		// Make certain this job has a x509 proxy, and that this 
+		// proxy is sitting in the SPOOL directory
+	Spool = param("SPOOL");
+	ASSERT(Spool);
+	char* SpoolSpace = strdup(gen_ckpt_name(Spool,jobid.cluster,jobid.proc,0));
+	ASSERT(SpoolSpace);
+	free(Spool);
+	char *proxy_path = NULL;
+	jobad->LookupString(ATTR_X509_USER_PROXY,&proxy_path);
+	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
+		dprintf( D_ALWAYS, "updateGSICred(): failed, "
+			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
+			 jobid.cluster, jobid.proc );
+		refuse(s);
+		free(SpoolSpace);
+		if (proxy_path) free(proxy_path);
+		return FALSE;
+	}
+	free(SpoolSpace);
+	MyString final_proxy_path(proxy_path);
+	MyString temp_proxy_path(final_proxy_path);
+	temp_proxy_path += ".tmp";
+	free(proxy_path);
+
+		// Decode the proxy off the wire, and store into the
+		// file temp_proxy_path, which is known to be in the SPOOL dir
+	rsock->decode();
+	filesize_t size = 0;
+	if ( rsock->get_file(&size,temp_proxy_path.Value()) < 0 ) {
+			// transfer failed
+		reply = 0;	// reply of 0 means failure
+	} else {
+			// transfer worked, now rename the file to final_proxy_path
+		if ( rotate_file(temp_proxy_path.Value(),
+						 final_proxy_path.Value()) < 0 ) 
+		{
+				// the rename failed!!?!?!
+			dprintf( D_ALWAYS, "updateGSICred(): failed, "
+				 "job %d.%d  - could not rename file\n",
+				 jobid.cluster,jobid.proc);
+			reply = 0;
+		} else {
+			reply = 1;	// reply of 1 means success
+		}
+	}
+
+		// Send our reply back to the client
+	rsock->encode();
+	rsock->code(reply);
+	rsock->eom();
+
+	dprintf(D_ALWAYS,"Refresh GSI cred for job %d.%d %s\n",
+		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
+	
+	return TRUE;
+}
+
+
+int
 Scheduler::actOnJobs(int, Stream* s)
 {
 	ClassAd command_ad;
@@ -4186,13 +4320,7 @@ Scheduler::startdContactConnectHandler( Stream *sock )
 		return FALSE;
 	}
 
-#ifndef WIN32
 	if(!claimStartdConnected( dynamic_cast<Sock *>(sock), mrec, jobAd, false )) {
-#else 
-		/* dynamic_cast on Windows was causing segfaults, so
-		 * we do a regular cast instead */
-	if(!claimStartdConnected( (Sock*)sock, mrec, jobAd, false )) {
-#endif
 		DelMrec( mrec );
 		return FALSE;
 	}
@@ -7965,6 +8093,9 @@ Scheduler::Register()
 	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE);
+	 daemonCore->Register_Command(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
+			(CommandHandlercpp)&Scheduler::updateGSICred,
+			"updateGSICred", this, WRITE);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.

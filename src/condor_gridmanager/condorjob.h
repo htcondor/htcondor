@@ -84,6 +84,8 @@ class CondorJob : public BaseJob
 	char *submitterId;
 
 	Proxy *jobProxy;
+	time_t remoteProxyExpireTime;
+	time_t lastProxyRefreshAttempt;
 	CondorResource *myResource;
 	GahpClient *gahp;
 

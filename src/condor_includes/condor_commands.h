@@ -141,6 +141,7 @@
 #define DAEMONS_OFF_PEACEFUL (SCHED_VERS+84)
 #define RESTART_PEACEFUL     (SCHED_VERS+85)
 #define TRANSFER_DATA		(SCHED_VERS+86) // send all job files back via filetransfer object
+#define UPDATE_GSI_CRED		(SCHED_VERS+87) // send refreshed gsi proxy file
 
 
 /*

@@ -82,6 +82,9 @@ class INFNBatchJob : public BaseJob
 	int lastPollTime;
 	bool pollNow;
 
+	Proxy *jobProxy;
+	time_t remoteProxyExpireTime;
+
 	GahpClient *gahp;
 
 	void ProcessRemoteAd( ClassAd *remote_ad );

@@ -80,6 +80,11 @@ public:
 													 const int cluster_id,
 													 const int proc_id);
 
+	static SchedDRequest * createRefreshProxyRequest (const int request_id,
+													  const int cluster_id,
+													  const int proc_id,
+													  const char * proxy_file);
+
 													
 	~SchedDRequest() {
 		if (classad)
@@ -88,6 +93,8 @@ public:
 			free (constraint);
 		if (reason)
 			free (reason);
+		if (proxy_file)
+			free (proxy_file);
 	}
 
 	ClassAd * classad;
@@ -98,6 +105,7 @@ public:
 	int request_id;
 
 	char * reason;	// For release, remove, update
+	char * proxy_file;	// For refresh_proxy
 
 	// Status of the command
 	enum {
@@ -121,6 +129,7 @@ typedef enum {
 		SDC_UPDATE_JOB,
 		SDC_JOB_STAGE_IN,
 		SDC_JOB_STAGE_OUT,
+		SDC_JOB_REFRESH_PROXY,
 } schedd_command_type;
 	
 	schedd_command_type command;
@@ -132,6 +141,7 @@ protected:
 		cluster_id = -1;
 		proc_id = -1;
 		reason = NULL;
+		proxy_file = NULL;
 		request_id = -1;
 	}
 

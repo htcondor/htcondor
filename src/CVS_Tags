@@ -1,3 +1,18 @@
+03/06/05 V6_7_4-merge-2
+   The state of the V6_7_4-branch for another merge into the
+   V6_7-branch.  This picks up a bunch of gridmanager changes that
+   todd and jamie made, and a bugfix to condor_config_val -pool.
+   This should be the final V6_7_4 merge, and we're now abandoning
+   the V6_7_4-branch.
+
+02/28/05 V6_7_5
+    The 6.7.5 release tag, which lives on the V6_7_4-branch
+
+02/24/05 V6_7_4-merge-1
+	The state of the V6_7_4-branch for a merge into the
+	V6_7-branch. This merge picks up a number of bug fixes, and
+	patches to make the Windows build work.
+
 02/18/05 V6_7-spooldir-branch
   Work on revamping SPOOL usage for per-job files.  Notably will allow schedd
   to run as root when sandboxing jobs via Condor-C, SOAP, or condor_submit -r

@@ -150,6 +150,7 @@ io_loop(void * arg, Stream * sock) {
 							GAHP_COMMAND_JOB_RELEASE,
 							GAHP_COMMAND_JOB_STAGE_IN,
 							GAHP_COMMAND_JOB_STAGE_OUT,
+							GAHP_COMMAND_JOB_REFRESH_PROXY,
 							GAHP_COMMAND_ASYNC_MODE_ON,
 							GAHP_COMMAND_ASYNC_MODE_OFF,
 							GAHP_COMMAND_RESULTS,
@@ -276,6 +277,13 @@ verify_gahp_command(char ** argv, int argc) {
 				verify_job_id (argv[3]);
 
 		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY) == 0) {
+		// Expecting:GAHP_COMMAND_JOB_REFRESH_PROXY <req_id> <schedd_name> <job_id> <proxy file>
+		return verify_number_args (argc, 5) &&
+				verify_request_id (argv[1]) &&
+				verify_schedd_name (argv[2]) &&
+				verify_job_id (argv[3]);
+
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_VERSION) == 0 ||
 				strcasecmp (argv[0], GAHP_COMMAND_COMMANDS) == 0 ||

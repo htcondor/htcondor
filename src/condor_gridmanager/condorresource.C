@@ -181,7 +181,8 @@ int CondorResource::DoScheddPoll()
 	if ( scheddStatusActive == false ) {
 
 			// start schedd status command
-dprintf(D_FULLDEBUG,"***starting schedd-status\n");
+		dprintf( D_FULLDEBUG, "Starting collective poll: %s\n",
+				 scheddName );
 		MyString constraint;
 
 		constraint.sprintf( "(%s)", submitter_constraint.Value() );
@@ -191,8 +192,9 @@ dprintf(D_FULLDEBUG,"***starting schedd-status\n");
 												  NULL, NULL );
 
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
-			dprintf( D_ALWAYS, "gahp->condor_job_status_constrained returned %d\n",
-					 rc );
+			dprintf( D_ALWAYS,
+					 "gahp->condor_job_status_constrained returned %d for remote schedd: %s\n",
+					 rc, scheddName );
 			EXCEPT( "condor_job_status_constrained failed!" );
 		}
 		scheddStatusActive = true;
@@ -200,7 +202,6 @@ dprintf(D_FULLDEBUG,"***starting schedd-status\n");
 	} else {
 
 			// finish schedd status command
-dprintf(D_FULLDEBUG,"***finishing(hopefully) schedd-status\n");
 		int num_status_ads;
 		ClassAd **status_ads = NULL;
 
@@ -209,11 +210,11 @@ dprintf(D_FULLDEBUG,"***finishing(hopefully) schedd-status\n");
 												  &status_ads );
 
 		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-dprintf(D_FULLDEBUG,"***schedd-status still pending\n");
 			return 0;
 		} else if ( rc != 0 ) {
-			dprintf( D_ALWAYS, "gahp->condor_job_status_constrained returned %d\n",
-					 rc );
+			dprintf( D_ALWAYS,
+					 "gahp->condor_job_status_constrained returned %d for remote schedd %s\n",
+					 rc, scheddName );
 		}
 
 		if ( rc == 0 ) {
@@ -245,7 +246,8 @@ dprintf(D_FULLDEBUG,"***schedd-status still pending\n");
 
 		scheddStatusActive = false;
 
-dprintf(D_FULLDEBUG,"***schedd-status complete\n");
+		dprintf( D_FULLDEBUG, "Collective poll complete: %s\n", scheddName );
+
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 	}
 

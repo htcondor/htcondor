@@ -297,7 +297,8 @@ doContactSchedd()
 		// Analyze the result ad
 		if (!result_ad) {
 			error = TRUE;
-			sprintf (error_msg, "Error connecting to schedd %s", ScheddAddr);
+			sprintf (error_msg, "Error connecting to schedd %s %s: %s",
+					 ScheddAddr, dc_schedd.addr(), errstack.getFullText() );
 		}
 		else {
 			result_ad->dPrint (D_FULLDEBUG);
@@ -407,7 +408,6 @@ doContactSchedd()
 		while (stage_in_batch.Next(current_command)) {
 			array[i++] = current_command->classad;
 		}
-dprintf(D_ALWAYS,"*** spooling %d job ads\n",stage_in_batch.Number());
 
 		error = FALSE;
 
@@ -496,6 +496,47 @@ dprintf(D_ALWAYS,"*** spooling %d job ads\n",stage_in_batch.Number());
 			}
 		} // elihw (command_queue)
 	} // fi has STAGE_OUT requests
+
+
+	dprintf (D_FULLDEBUG, "Processing JOB_REFRESH_PROXY requests\n");
+
+	// JOB_REFRESH_PROXY
+	command_queue.Rewind();
+	while (command_queue.Next(current_command)) {
+
+		if (current_command->status != SchedDRequest::SDCS_NEW)
+			continue;
+
+		if (current_command->command != SchedDRequest::SDC_JOB_REFRESH_PROXY)
+			continue;
+
+		bool result;
+
+		result = dc_schedd.updateGSIcredential (current_command->cluster_id,
+												current_command->proc_id,
+												current_command->proxy_file,
+												&errstack);
+
+		current_command->status = SchedDRequest::SDCS_COMPLETED;
+
+		if (result == false) {
+			sprintf (error_msg, "Error refreshing proxy to schedd %s: %s",
+					 ScheddAddr, errstack.getFullText() );
+			dprintf (D_ALWAYS, "%s\n", error_msg);
+
+			const char * result[] = {
+				GAHP_RESULT_FAILURE,
+				error_msg };
+			enqueue_result (current_command->request_id, result, 2);
+
+		} else {
+			const char * result[] = {
+				GAHP_RESULT_SUCCESS,
+				NULL };
+			enqueue_result (current_command->request_id, result, 2);
+		}
+
+	}
 
 
 	// Now do all the QMGMT transactions
@@ -996,6 +1037,25 @@ handle_gahp_command(char ** argv, int argc) {
 				cluster_id,
 				proc_id));
 
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_REFRESH_PROXY)==0) {
+		int req_id = 0;
+		int cluster_id, proc_id;
+
+		if (!(argc == 5 &&
+			get_int (argv[1], &req_id) &&
+			get_job_id (argv[3], &cluster_id, &proc_id))) {
+
+			dprintf (D_ALWAYS, "Invalid args to %s\n", argv[0]);
+			return FALSE;
+		}
+
+		enqueue_command (
+			SchedDRequest::createRefreshProxyRequest(
+				req_id,
+				cluster_id,
+				proc_id,
+				argv[4]));
 		return TRUE;
 	}
 
