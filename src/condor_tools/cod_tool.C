@@ -35,6 +35,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_version.h"
+#include "condor_string.h"
 #include "get_daemon_name.h"
 #include "internet.h"
 #include "daemon.h"
@@ -55,7 +56,9 @@ char* claim_id = NULL;
 char* classad_path = NULL;
 char* requirements = NULL;
 char* job_keyword = NULL;
+char* jobad_path = NULL;
 FILE* CA_PATH = NULL;
+FILE* JOBAD_PATH = NULL;
 int cluster_id = -1;
 int proc_id = -1;
 int timeout = -1;
@@ -76,6 +79,7 @@ int getCommandFromArgv( int argc, char* argv[] );
 void printOutput( ClassAd* reply, DCStartd* startd );
 void fillRequestAd( ClassAd* );
 void fillActivateAd( ClassAd* );
+bool dumpAdIntoRequest( ClassAd* );
 char* getAddrFromId( const char* id );
 
 /*********************************************************************
@@ -221,7 +225,11 @@ void
 fillRequirements( ClassAd* req )
 {
 	MyString jic_req;
-	jic_req = ATTR_HAS_JIC_LOCAL_CONFIG;
+	if( jobad_path ) {
+		jic_req = ATTR_HAS_JIC_LOCAL_STDIN;
+	} else {
+		jic_req = ATTR_HAS_JIC_LOCAL_CONFIG;
+	}
 	jic_req += "==TRUE";
 
 	MyString require;
@@ -288,6 +296,31 @@ fillActivateAd( ClassAd* req )
 		line += '"';
 		req->Insert( line.Value() );
 	}
+	if( jobad_path ) {
+		line = ATTR_HAS_JOB_AD;
+		line += '=';
+		line += "TRUE";
+		req->Insert( line.Value() );
+		dumpAdIntoRequest( req );
+	}
+}
+
+
+bool
+dumpAdIntoRequest( ClassAd* req )
+{
+	bool read_something = false;
+    char buf[1024];
+	while( fgets(buf, 1024, JOBAD_PATH) ) {
+        read_something = true;
+		chomp( buf );
+        if( ! req->Insert(buf) ) {
+            fprintf( stderr, "Failed to insert \"%s\" into ClassAd, "
+                     "ignoring this line\n", buf );
+        }
+    }
+	fclose( JOBAD_PATH );
+	return read_something;
 }
 
 
@@ -665,6 +698,20 @@ parseArgv( int argc, char* argv[] )
 			claim_id = strdup( *tmp );
 			break;
 
+		case 'j':
+			if( cmd != CA_ACTIVATE_CLAIM ) {
+				invalid( *tmp );
+			}
+			if( strncmp("-jobad", *tmp, strlen(*tmp)) ) {
+				invalid( *tmp );
+			} 
+			tmp++;
+			if( ! (tmp && *tmp) ) {
+				another( "-jobad" );
+			}
+			jobad_path = strdup( *tmp );
+			break;
+
 		case 'k':
 			if( cmd != CA_ACTIVATE_CLAIM ) {
 				invalid( *tmp );
@@ -746,12 +793,25 @@ parseArgv( int argc, char* argv[] )
 		}
 	}
 
-	if( cmd == CA_ACTIVATE_CLAIM && ! job_keyword ) { 
+	if( cmd == CA_ACTIVATE_CLAIM && ! (job_keyword || jobad_path) ) { 
 		fprintf( stderr,
-				 "ERROR: You must specify -keyword for %s\n",
+				 "ERROR: You must specify -keyword or -jobad for %s\n",
 				 my_name );
 		usage( my_name );
-		
+	}
+
+	if( jobad_path ) {
+		if( ! strcmp(jobad_path, "-") ) {
+			JOBAD_PATH = stdin;
+		} else {
+			JOBAD_PATH = fopen( jobad_path, "r" );
+			if( !JOBAD_PATH ) {
+				fprintf( stderr,
+						 "ERROR: failed to open '%s': errno %d (%s)\n",
+						 jobad_path, errno, strerror(errno) );
+				exit( 1 );
+			}
+		}
 	}
 
 	if( classad_path ) { 
