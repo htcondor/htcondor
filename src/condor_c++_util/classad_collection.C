@@ -10,7 +10,7 @@
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::ClassAdCollection(const char* filename) 
-  : Collections(97, HashFunc), ClassAdLog(filename)
+  : ClassAdLog(filename), Collections(97, HashFunc)
 {
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
@@ -32,7 +32,7 @@ ClassAdCollection::ClassAdCollection(const char* filename)
 //----------------------------------------------------------------------------------
 
 ClassAdCollection::ClassAdCollection() 
-  : Collections(97, HashFunc), ClassAdLog()
+  : ClassAdLog(), Collections(97, HashFunc)
 {
   LastCoID=0;
   Collections.insert(LastCoID,new ExplicitCollection("",true));
@@ -81,10 +81,10 @@ bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
   ad->ResetExpr();
   while ((expr=ad->NextExpr())!=NULL) {
     strcpy(name,"");
-    strcpy(value,"");
     L_expr=expr->LArg();
     L_expr->PrintToStr(name);
     R_expr=expr->RArg();
+	value = NULL;
     R_expr->PrintToNewStr(&value);
     LogRecord* log=new LogSetAttribute(key,name,value);
 	free(value);
@@ -304,7 +304,7 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
     
   // Insert into chldren
   int ChildCoID;
-  BaseCollection* ChildColl;
+  /*BaseCollection* ChildColl;*/
   Coll->Children.StartIterations();
   while (Coll->Children.Iterate(ChildCoID)) AddClassAd(ChildCoID,OID,Ad);
 
@@ -396,7 +396,7 @@ bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
     
   // remove from children
   int ChildCoID;
-  BaseCollection* ChildColl;
+  /*BaseCollection* ChildColl;*/
   Coll->Children.StartIterations();
   while (Coll->Children.Iterate(ChildCoID)) RemoveClassAd(ChildCoID,OID);
 
