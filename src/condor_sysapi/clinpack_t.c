@@ -28,7 +28,8 @@
 #include "stdio.h"
 #include "math.h"
 
-int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_failed_test_blocks_ok)
+int kflops_test(int test_blocksize, double perc_sd_variation_ok, 
+	double perc_failed_test_blocks_ok)
 {
 	int foo,  bar;
 	int	return_val = 0;
@@ -41,15 +42,23 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 	double testblocks_sd[test_blocksize], raw_testblocks_sd[test_blocksize];
 	double testblocks_mean[test_blocksize], raw_testblocks_mean[test_blocksize];
 
-	dprintf(D_ALWAYS, "SysAPI: Running kflops_test.\n");
-	dprintf(D_ALWAYS, "        I will test sysapi_kflops (and sysapi_kflops_raw) in blocks of %d "
-					"tests, and take the standard\n", test_blocksize);
-	dprintf(D_ALWAYS, "        deviation of those test blocks. If the standard deviation is above "
-					"%d%% of the average,\n", perc_sd_variation_ok);
-	dprintf(D_ALWAYS, "        the kflops reported are erratic and the test block is considered "
-					"a failure. I will run %d test blocks, and if\n");
-	dprintf(D_ALWAYS, "        more than %d%% of those blocks fail, this entire test fails.\n", 
-					test_blocksize, perc_failed_test_blocks_ok*100);
+	dprintf(D_ALWAYS, 
+		"SysAPI: Running kflops_test.\n");
+	dprintf(D_ALWAYS, 
+		"\tI will test sysapi_kflops (and sysapi_kflops_raw)\n");
+	dprintf(D_ALWAYS, 
+		"\tin blocks of %d tests, and take the standard\n", test_blocksize);
+	dprintf(D_ALWAYS, 
+		"\tdeviation of those test blocks. If the standard deviation\n");
+	dprintf(D_ALWAYS, 
+		"\tis above %3.2f%% of the average,\n", perc_sd_variation_ok*100.0);
+	dprintf(D_ALWAYS, 
+		"\tthe kflops reported are erratic and the test block is considered\n");
+	dprintf(D_ALWAYS, 
+		"\ta failure. I will run %d test blocks, and if\n", test_blocksize);
+	dprintf(D_ALWAYS, 
+		"\tmore than %3.2f%% of those blocks fail, this entire test fails.\n",
+		perc_failed_test_blocks_ok*100.0);
 
 	foo = sysapi_kflops_raw();
 	dprintf(D_ALWAYS, "SysAPI: Initial sysapi_kflops_raw -> %d\n", foo);
@@ -65,32 +74,42 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 
 			raw_mean += raw_test[j];
 
-			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: Raw kflops: %d\n", i, j, raw_test[j]);
+			dprintf(D_ALWAYS, "SysAPI: Testblock %d, test %d: Raw kflops: %d\n",
+				i, j, raw_test[j]);
 
 			if (raw_test[j] <= 0) {
-				dprintf(D_ALWAYS, "SysAPI: ERROR! Raw kflops (%d) is negative!\n", bar);
+				dprintf(D_ALWAYS, 
+					"SysAPI: ERROR! Raw kflops (%d) is negative!\n", bar);
 				return_val = 1;
 			}
 		}
 
-		raw_mean /= test_blocksize;
+		raw_mean /= (double)test_blocksize;
 		raw_testblocks_mean[i] = raw_mean;
 
-		/* Test if there were any unusually large jumps in the means of the testblocks */
+		/* Test if there were any unusually large jumps in the means of the 
+			testblocks */
 		num_tests++;
 		if (i > 0) {
-			if (perc_sd_variation_ok < fabs((raw_testblocks_mean[i]/raw_testblocks_mean[i-1])-1)) {
-				dprintf(D_ALWAYS, "SysAPI: WARNING: Raw testblock %d's value was more than "
-								"%2.2f%% different from the previous testblock - something "
-								"changed dramatically.\n", i, perc_sd_variation_ok*100);
+			if (perc_sd_variation_ok < 
+				fabs((raw_testblocks_mean[i]/raw_testblocks_mean[i-1])-1)) {
+
+				dprintf(D_ALWAYS, 
+					"SysAPI: WARNING: Raw testblock %d's value was more than\n",
+					i);
+				dprintf(D_ALWAYS,
+					"\t%2.2f%% different from the previous testblock - \n",
+					perc_sd_variation_ok*100);
+				dprintf(D_ALWAYS,
+					"\tsomething changed dramatically.\n");
 				num_warnings++;
 			}
 		}
 
 		for (j=0; j<test_blocksize; j++) {
-			raw_variance += (raw_test[j] - raw_mean)*(raw_test[j] - raw_mean);
+			raw_variance += (raw_test[j] - raw_mean)*(double)(raw_test[j] - raw_mean);
 		}
-		raw_variance /= test_blocksize;
+		raw_variance /= (double)test_blocksize;
 
 		raw_testblocks_sd[i] = sqrt(raw_variance);
 
@@ -101,7 +120,7 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 		if (raw_testblocks_sd[i] > perc_sd_variation_ok*mean) {
 			dprintf(D_ALWAYS, "SysAPI: WARNING: Raw testblock %d had a standard deviation of %d, "
 							"which is more than %2.2f%% of the mean.\n", i, 
-							(int)raw_testblocks_sd[i], perc_sd_variation_ok*100);
+							(int)raw_testblocks_sd[i], perc_sd_variation_ok*100.0);
 			num_warnings++;
 		}
 	}
@@ -111,7 +130,7 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Failing because %d of the raw
 							testblocks failed, which is more than %d
 							(%2.2f%%).\n", num_warnings, perc_sd_variation_ok*test_blocksize,
-							perc_sd_variation_ok*100);
+							perc_sd_variation_ok*100.0);
 			return_val = return_val | 1;
 	}
 	
@@ -134,13 +153,13 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 			}
 		}
 
-		mean /= test_blocksize;
+		mean /= (double)test_blocksize;
 		testblocks_mean[i] = mean;
 
 		/* Test if there were any unusually large jumps in the means of the testblocks */
 		num_tests++;
 		if (i > 0) {
-			if (perc_sd_variation_ok < fabs((testblocks_mean[i]/testblocks_mean[i-1])-1)) {
+			if (perc_sd_variation_ok < fabs((testblocks_mean[i]/(double)testblocks_mean[i-1])-1)) {
 				dprintf(D_ALWAYS, "SysAPI: WARNING: Cooked testblock %d's value was more than "
 								"%2.2f%% different from the previous testblock - something "
 								"changed dramatically.\n", i, perc_sd_variation_ok*100);
@@ -151,7 +170,7 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 		for (j=0; j<test_blocksize; j++) {
 			variance += (test[j] - mean)*(test[j] - mean);
 		}
-		variance /= test_blocksize;
+		variance /= (double)test_blocksize;
 
 		testblocks_sd[i] = sqrt(variance);
 
@@ -162,7 +181,7 @@ int kflops_test(int test_blocksize, double perc_sd_variation_ok, double perc_fai
 		if (testblocks_sd[i] > perc_sd_variation_ok*mean) {
 			dprintf(D_ALWAYS, "SysAPI: WARNING: Testblock %d had a standard deviation of %d, "
 							"which is more than %2.2f%% of the mean.\n", i, 
-							(int)testblocks_sd[i], perc_sd_variation_ok*100);
+							(int)testblocks_sd[i], perc_sd_variation_ok*100.0);
 			num_warnings++;
 		}
 	}
