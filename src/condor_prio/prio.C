@@ -26,6 +26,11 @@
 **
 */ 
 
+#if defined(Solaris)
+#include "condor_fix_timeval.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
