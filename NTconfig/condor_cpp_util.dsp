@@ -139,6 +139,10 @@ SOURCE="..\src\condor_c++_util\classad_merge.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\command_strings.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_attributes.C"
 # End Source File
 # Begin Source File
@@ -318,6 +322,14 @@ SOURCE="..\src\condor_c++_util\dynuser.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\email_cpp.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\enum_utils.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\enum_utils.h"
 # End Source File
 # Begin Source File
 
@@ -595,6 +607,10 @@ SOURCE="..\src\condor_c++_util\token_cache.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\token_cache.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\translation_utils.C"
 # End Source File
 # Begin Source File
 
