@@ -46,6 +46,6 @@ basename(const char *path)
 		}
 	}
 	if ( name == NULL )
-		name = path;
+		name = (char*)path;
 	return name;
 }
