@@ -314,6 +314,7 @@ check_globus_rm_contacts(char* resource)
 #if !defined(GLOBUS_SUPPORT)
 	fprintf( stderr, "This is not a Globus-enabled version of Condor!\n" );
 	exit( 1 );
+	return 0;
 #else
 
 	int rc;
