@@ -38,6 +38,10 @@ int REMOTE_syscall( int syscall_num, ... );
 #endif
 #endif
 
+#if defined(OSF1)
+	int syscall( int, ... );
+#endif
+
 
 #if defined(__cplusplus)
 }
