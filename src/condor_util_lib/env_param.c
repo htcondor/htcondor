@@ -1,24 +1,7 @@
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-
-#if defined(ULTRIX42) || defined(ULTRIX43)
-typedef char * caddr_t;
-typedef unsigned int u_int;
-#endif
-
-#include <stdio.h>
-#include <sys/types.h>
-
-#if defined(SUNOS41) || defined(AIX32) || defined(OSF1)
-typedef unsigned int u_int;
-#endif
-
 #include "condor_types.h"
-
 #include "debug.h"
 
-#define MATCH 0
 #define EQUAL '='		/* chars looked for during parsing */
 #define SPACE ' '
 #define TAB '\t'
@@ -29,8 +12,8 @@ typedef unsigned int u_int;
   value of the desired parameter.
 */
 char *
-GetEnvParam( param, env_string )
-char *param;
+GetEnvParam( parameter, env_string )
+char *parameter;
 char *env_string;
 {
 	char *ptr = env_string;
@@ -65,7 +48,7 @@ char *env_string;
 		}
 
 		if( i > 0 ) {
-			if( strcmp(name,param) != MATCH ) {
+			if( strcmp(name,parameter) != MATCH ) {
 				/* No match - move to parameter delimiter ';' */
 				while( *ptr ) {
 					if( *ptr == ';' )
