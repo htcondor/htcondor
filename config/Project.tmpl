@@ -61,6 +61,12 @@ SNPRINTF_FLAGS =
 #define PurifyPlatformLdFlags
 #endif
 
+#if HAS_RPM
+MakeRPMs = perl condor_scripts/make_public_rpms
+#else
+MakeRPMs =
+#endif
+
 /*
    These next few lines are not supposed to be pre-processor
    directives, but GNU-make understood directives.  They don't want a
