@@ -282,11 +282,8 @@ getline_implementation( FILE *fp, int requested_bufsize )
 {
 	static char	*buf = NULL;
 	static unsigned int buflen = 0;
-	int		len;
-	char	*read_buf;
-	char	*line = NULL;
-	char	*ptr;
-	char	*tmp_ptr;
+	char	*read_ptr;		// Pointer to read into next read
+	char	*parse_ptr;		// Pointer to where to start parsing from
 
 	if( feof(fp) ) {
 			// We're at the end of the file, clean up our buffers and
@@ -305,15 +302,18 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		buflen = requested_bufsize;
 	}
 	buf[0] = '\0';
-	read_buf = buf;
+	read_ptr = buf;
+	parse_ptr = buf;
 
+	// Loop 'til we're done reading a whole line, including continutations
 	for(;;) {
-		len = buflen - (read_buf - buf);
+		int		len = buflen - (read_ptr - buf);
 		if( len <= 5 ) {
 			// we need a larger buffer -- grow buffer by 4kbytes
-			char *newbuf = (char *)realloc(buf,4096 + buflen);
+			char *newbuf = (char *)realloc(buf, 4096 + buflen);
 			if ( newbuf ) {
-				read_buf = (read_buf - buf) + newbuf;
+				read_ptr = (read_ptr - buf) + newbuf;
+				parse_ptr = (parse_ptr - buf) + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
 				len += 4096;
@@ -323,7 +323,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 			}
 		}
 
-		if( fgets(read_buf,len,fp) == NULL ) {
+		if( fgets(read_ptr,len,fp) == NULL ) {
 			if( buf[0] == '\0' ) {
 				return NULL;
 			} else {
@@ -332,41 +332,34 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		}
 
 		// See if fgets read an entire line, or simply ran out of buffer space
-		if ( *read_buf == '\0' ) {
+		if ( *read_ptr == '\0' ) {
 			continue;
 		}
-		if( strrchr((const char *)read_buf,'\n') == NULL ) {
+		if( strrchr(read_ptr, '\n') == NULL ) {
 			// if we made it here, fgets() ran out of buffer space.
-			// move our read_buf pointer forward so we concatenate the
+			// move our read_ptr pointer forward so we concatenate the
 			// rest on after we realloc our buffer above.
-			read_buf += strlen(read_buf);
+			read_ptr += strlen(read_ptr);
 			continue;	// since we are not finished reading this line
 		}
 
 		ConfigLineNo++;
 
 			/* See if a continuation is indicated */
-		line = ltrunc( read_buf );
-		if( line != read_buf ) {
-			(void)memmove( read_buf, line, strlen(line)+1 );
+		char	*ptr;			// Temp pointer
+		ptr = ltrunc( parse_ptr );
+		if( ptr != parse_ptr ) {
+			(void)memmove( parse_ptr, ptr, strlen(ptr)+1 );
 		}
-			/* Start the strrchr() search one character back from
-			 * the beginning of the line, if possible, because it is possible
-			 * that our "\" character and the newline character spanned across
-			 * a buffer boundary. -Todd T, 1/2000
-			 */
-		if ( line > buf ) {
-			tmp_ptr = line - 1;
-		} else {
-			tmp_ptr = line;
-		}
-		if( (ptr = (char *)strrchr((const char *)tmp_ptr,'\\')) == NULL )
+
+		ptr = (char *) strrchr( parse_ptr, '\\' );
+		if( ptr == NULL )
 			return buf;
 		if( *(ptr+1) != '\0' )
 			return buf;
 
 			/* Ok read the continuation and concatenate it on */
-		read_buf = ptr;
+		parse_ptr = read_ptr = ptr;
 	}
 }
 
