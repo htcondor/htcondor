@@ -1386,15 +1386,18 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	}
 
 	//We're assuming all job clasads have a command attribute
+	buff2[0] = '\0';
 	classad->LookupString( ATTR_JOB_CMD, buff );
 	strcpy( rsl, "&(executable=" );
 	if ( !classad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
-		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' ) {
-			strcat( rsl, iwd );
+			strcat( buff2, iwd );
 		}
+		strcat( buff2, buff );
+
+		sprintf( buff, "%s%s", gassServerUrl, buff2 );
 	}
-	strcat( rsl, buff );
+	strcat( rsl, rsl_stringify( buff ) );
 
 	buff[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_REMOTE_IWD, buff) && *buff ) {
@@ -1409,16 +1412,19 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
+	buff2[0] = '\0';
 	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
 		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdin=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
 			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
+				strcat( buff2, iwd );
 			}
+			strcat( buff2, buff );
+
+			sprintf( buff, "%s%s", gassServerUrl, buff2 );
 		}
-		strcat( rsl, buff );
+		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	buff[0] = '\0';
@@ -1427,16 +1433,16 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdout=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
 			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
 				strcat( buff2, iwd );
 			}
 
 			strcat( buff2, buff );
 			localOutput = strdup( buff2 );
+
+			sprintf( buff, "%s%s", gassServerUrl, buff2 );
 		}
-		strcat( rsl, buff );
+		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	buff[0] = '\0';
@@ -1445,16 +1451,16 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stderr=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
-			strcat( rsl, gassServerUrl );
 			if ( buff[0] != '/' ) {
-				strcat( rsl, iwd );
 				strcat( buff2, iwd );
 			}
 
 			strcat( buff2, buff );
 			localError = strdup( buff2 );
+
+			sprintf( buff, "%s%s", gassServerUrl, buff2 );
 		}
-		strcat( rsl, buff );
+		strcat( rsl, rsl_stringify( buff ) );
 	}
 
 	buff[0] = '\0';
