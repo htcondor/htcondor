@@ -35,26 +35,27 @@ c_plus_target(condor_userprio,user_prio.o,$(LIB))
 release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(condor,tool.o,$(LIB))
-copy_torelease_target(condor,sbin,condor_on,EXECUTABLE_MODE)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_off)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_checkpoint)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_vacate)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_restart)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_reconfig)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_reconfig_schedd)
-link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_reschedule)
+copy_torelease_target(condor,sbin,condor,EXECUTABLE_MODE)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_on)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_off)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_checkpoint)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_vacate)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_restart)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reconfig)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reschedule)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 stripped: condor
-	cp -f condor $(RELEASE_DIR)/sbin/condor_on
-	cd $(RELEASE_DIR)/sbin; strip condor_on
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_off
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_checkpoint
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_vacate
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_restart
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reconfig
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reconfig_schedd
-	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reschedule
-
+	cp -f condor $(RELEASE_DIR)/sbin/condor
+	cd $(RELEASE_DIR)/sbin; strip condor; \
+		rm -f condor_on; ln condor condor_on; \
+		rm -f condor_off; ln condor condor_off; \
+		rm -f condor_checkpoint; ln condor condor_checkpoint; \
+		rm -f condor_vacate; ln condor condor_vacate; \
+		rm -f condor_restart; ln condor condor_restart; \
+		rm -f condor_reconfig; ln condor condor_reconfig; \
+		rm -f condor_reschedule; ln condor condor_reschedule; \
+		rm -f condor_reconfig_schedd; ln condor condor_reconfig_schedd
