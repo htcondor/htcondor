@@ -26,6 +26,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The checkpoint server has moved from contrib module status to being
+	a normal part of Condor.
+
 \item When the first start running, all Condor daemons will now try to
   print to their log file the full path to the binary they are
   executing. 
@@ -36,6 +39,17 @@ The details of each version are described below.
   This new feature was added to aid in debugging problems where sites
   were not running the version of the Condor daemons they thought they
   were due to problems in custom-built startup scripts.
+ 
+\item \Condor{wait} is now available in the Windows port.
+
+\item Added a fix to the accountant that allows users to specify user 
+	priorities with \Condor{userprio} before any jobs have been submitted. 
+
+\item Added support for running batch files under Windows when using the
+	\Macro{STARTD\_CRON} or \Macro{USER\_JOB\_WRAPPER} attributes.
+
+\item Moved from Globus 2.2.2 to Globus 2.2.4 for Condor-G, except for 
+	the DUX 4.0f platform.
 
 \end{itemize}
 
@@ -43,8 +57,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a memory leak in the \Condor{gridmanager}.
+
+\item Added the \Opt{-Storklog} argument to \Condor{submit\_dag} to make it
+	compatible with the older perl script of the same name.
+
+\item Removed support for the \Opt{-libc} option for \Condor{version}.
+
+\item Fixed a DAGMan bug where DAGMan failed to monitor Stork job logs.
+
+\item Fixed a bug under Windows which could cause Condor to kill processes that
+	aren't related to Condor or the job it was running at the time.
+
+\item Added a fix to \Condor{compile} where if our internal \Prog{ld} managed
+	to not be invoked during linking of a standard universe executable, 
+	a warning is emitted.
+
+\item Fixed a segfaulting condition under Windows when the daemons or tools
+	looked up information about processes running on the system.
+
+\item Fixed a bug where the daemons could crash if \Macro{COLLECTOR\_HOST}
+	or \Macro{NEGOTIATOR\_HOST} was defined to be something bogus.
+
 \item Fixed a bug that would crash the \Condor{collector} when
-  COLLECTOR\_NAME was too long.
+  \Macro{COLLECTOR\_NAME} was too long.
 
 \item Fixed a minor bug in file transfer.  Specifically, if your VANILLA
   job had \Expr{when\_to\_transfer\_output} set to ON\_EXIT\_OR\_EVICT, wrote
@@ -60,9 +96,16 @@ The details of each version are described below.
 \item Fixed a bug where the environment of jobs in any universe could be
 	corrupted.
 
-\item The kerberos map file now tolerates spaces on either side of the equals sign instead of generating a parse error.
+\item Fixed a bug which would result in the segfaulting of a daemon while it
+	was writing to its logfile.
 
-\item The -analyze option to \Condor{q} is only meaningful for certain
+\item Fixed a bug in the checkpoint server related to signal handling which
+	caused the daemon to wedge sometimes.
+
+\item The kerberos map file now tolerates spaces on either side of the
+	equals sign instead of generating a parse error.
+
+\item The \Opt{-analyze} option to \Condor{q} is only meaningful for certain
   universes.  \Condor{q} now warns if the output might not be meaningful. 
 
 \item Java universe: when jar files are transferred to the execute
@@ -94,6 +137,9 @@ The details of each version are described below.
 
 \item The \Attr{image\_size} attribute of a job on Mac OS X is much closer
 to the values that ps returns. Previously it would be highly inflated.
+
+\item If a node submit file doesn't specify a log file, the warning message
+	now gets printed out in the the DAGMan log file.
 
 \end{itemize}
 
