@@ -149,9 +149,7 @@ class Job {
         @param queue The queue to add the job to
         @return true: success, false: failure (lack of memory)
     */
-    inline bool Add (const queue_t queue, const JobID_t jobID) {
-        return _queues[queue].Append(jobID);
-    }
+    bool Add( const queue_t queue, const JobID_t jobID );
 
     /** Returns true if this job is ready for submittion.
         @return true if job is submitable, false if not
@@ -175,6 +173,9 @@ class Job {
     inline bool IsEmpty (const queue_t queue) const {
         return _queues[queue].IsEmpty();
     }
+
+		// returns the node's current status
+	status_t GetStatus() const;
  
     /** Dump the contents of this Job to stdout for debugging purposes.
         @param level Only do the dump if the current debug level is >= level
@@ -186,6 +187,16 @@ class Job {
      */
     void Print (bool condorID = false) const;
   
+		// double-check internal data structures for consistency
+	bool SanityCheck() const;
+
+	bool AddParent( Job* parent );
+	bool AddChild( Job* child );
+
+		// should be called when the job terminates
+	bool TerminateSuccess();
+	bool TerminateFailure();
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -204,6 +215,8 @@ class Job {
 	int _dfsOrder; 
   private:
   
+	bool AddDependency( Job* parent, Job* child );
+
     // filename of condor submit file
     char * _cmdFile;
   
@@ -227,6 +240,10 @@ class Job {
         by one for every Job object that is constructed
     */
     static JobID_t _jobID_counter;
+
+		// the number of my parents that have yet to complete
+		// successfully
+	int _waitingCount;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

@@ -56,7 +56,8 @@ Job::~Job() {
 Job::Job (const char *jobName, const char *cmdFile):
     _scriptPre  (NULL),
     _scriptPost (NULL),
-    _Status     (STATUS_READY)
+    _Status     (STATUS_READY),
+	_waitingCount (0)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -155,4 +156,90 @@ Job::GetPostScriptName() const
 		return NULL;
 	}
 	return _scriptPost->GetCmd();
+}
+
+bool
+Job::SanityCheck() const
+{
+	bool result = true;
+
+	if( _waitingCount < 0 ) {
+		dprintf( D_ALWAYS, "BADNESS 10000: _waitingCount = %d\n",
+				 _waitingCount );
+		result = false;
+	}
+
+		// TODO:
+		//
+		// - make sure # of parents whose state != done+success is
+		// equal to waitingCount
+		//
+		// - make sure no job appear twice in the DAG
+		// 
+		// - verify parent/child symmetry across entire DAG
+
+	return result;
+}
+
+Job::status_t
+Job::GetStatus() const
+{
+	return _Status;
+}
+
+bool
+Job::AddParent( Job* parent )
+{
+	ASSERT( parent != NULL );
+
+		// we don't currently allow a new parent to be added to a
+		// child that has already been started -- but this restriction
+		// might be lifted in the future once we figure out the right
+		// way for the DAG to respond...
+	assert( _Status == Job::STATUS_READY );
+
+	if( !Add( Job::Q_PARENTS, parent->GetJobID() ) ) {
+		return false;
+	}
+    if( !Add( Job::Q_WAITING, parent->GetJobID() ) ) {
+		return false;
+	}
+	_waitingCount++;
+    return true;
+}
+
+bool
+Job::AddChild( Job* child )
+{
+    ASSERT( child  != NULL );
+    if( !Add( Job::Q_CHILDREN, child->GetJobID() ) ) {
+		return false;
+	}
+	return true;
+}
+
+bool
+Job::TerminateSuccess()
+{
+	_Status = STATUS_DONE;
+	return true;
+} 
+
+bool
+Job::TerminateFailure()
+{
+	_Status = STATUS_ERROR;
+	return true;
+} 
+
+bool
+Job::Add( const queue_t queue, const JobID_t jobID )
+{
+	if( _queues[queue].IsMember( jobID ) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: can't add Job ID %d to DAG: already present!",
+				 jobID );
+		return false;
+	}
+	return _queues[queue].Append(jobID);
 }
