@@ -363,6 +363,17 @@ int Sock::do_connect(
 		}
 	}
 
+	// test the connection -- on OSF1, select returns 1 even if
+	// the connect fails!
+
+	struct sockaddr_in test_addr;
+	memset((char *) &test_addr, 0, sizeof(test_addr));
+	test_addr.sin_family = AF_INET;
+	int nbytes = sizeof(test_addr);
+	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
+		return FALSE;
+	}
+
 	_state = sock_connect;
 	return TRUE;
 }
