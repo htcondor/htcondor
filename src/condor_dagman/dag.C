@@ -721,10 +721,14 @@ Dag::SubmitReadyJobs()
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
+
+	int numSubmitsThisCycle = 0;
+	while( numSubmitsThisCycle < G.max_submits_per_interval ) {
+
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
-        return 0;
+        return numSubmitsThisCycle;
     }
     // max jobs already submitted
     if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
@@ -733,7 +737,7 @@ Dag::SubmitReadyJobs()
 					  "deferring submission of %d ready job%s.\n",
                       _maxJobsSubmitted, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
-        return 0;
+        return numSubmitsThisCycle;
     }
 
 	// remove & submit first job from ready queue
@@ -799,7 +803,7 @@ Dag::SubmitReadyJobs()
 	free( helper );
 	helper = NULL;
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
       debug_printf( DEBUG_VERBOSE,
 		    "  using new submit file (%s) from helper\n",
@@ -818,7 +822,7 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     } //job ==  condor_job
     
@@ -830,7 +834,7 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     }
 
@@ -851,8 +855,10 @@ Dag::SubmitReadyJobs()
       debug_printf( DEBUG_VERBOSE, "\tassigned DaP ID (%d)\n",
 		    condorID._cluster);
     }
-    
-    return SubmitReadyJobs() + 1;
+
+    numSubmitsThisCycle++;
+	}
+	return numSubmitsThisCycle;
 }
 
 //---------------------------------------------------------------------------

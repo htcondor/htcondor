@@ -111,6 +111,8 @@ Global::Config()
 		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 10 );
 	G.startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
+	G.max_submits_per_interval =
+		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	return true;
 }
 
@@ -566,7 +568,7 @@ void condor_event_timer () {
     //------------------------------------------------------------------------
 
 	if( G.paused == true ) {
-		debug_printf( DEBUG_VERBOSE, "(DAGMan paused)\n" );
+		debug_printf( DEBUG_DEBUG_1, "(DAGMan paused)\n" );
 		return;
 	}
 
@@ -579,9 +581,10 @@ void condor_event_timer () {
 
 	int justSubmitted;
 	justSubmitted = G.dag->SubmitReadyJobs();
-	debug_printf( DEBUG_DEBUG_1, "Just submitted %d jobs this cycle...\n",
-				  justSubmitted );
-
+	if( justSubmitted ) {
+		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
+					  justSubmitted, justSubmitted == 1 ? "" : "s" );
+	}
 
     // If the log has grown
     if (G.dag->DetectCondorLogGrowth()) {              //-->DAP

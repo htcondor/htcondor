@@ -41,6 +41,9 @@ class Global {
 		// number of times in a row to attempt to execute
 		// condor_submit (or dap_submit) before giving up
     int max_submit_attempts;
+		// maximum number of jobs to submit in a single periodic timer
+		// interval
+    int max_submits_per_interval;
     char *datafile;
 	StringList condorLogFiles;
 		// whether to peform expensive cycle-detection at startup
