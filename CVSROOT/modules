@@ -39,3 +39,34 @@ editinfo	-i mkmodules CVSROOT editinfo
 # Add other modules here...
 code	-a Distfile GENERIC Imakefile config src
 doc		-a config doc
+AIX_SRC		src \
+			condor_c++_util \
+			condor_collector \
+			condor_globalq \
+			condor_includes \
+			condor_kbdd \
+			condor_master \
+			condor_negotiator \
+			condor_off \
+			condor_on \
+			condor_prio \
+			condor_q \
+			condor_rm \
+			condor_schedd \
+			condor_schedd.fsa.C++ \
+			condor_scripts \
+			condor_shadow \
+			condor_standalone \
+			condor_startd \
+			condor_starter \
+			condor_submit \
+			condor_submit.v2 \
+			condor_submit.v3 \
+			condor_syscall_lib_aix \
+			condor_test_suite_C \
+			condor_test_suite_F \
+			condor_tools \
+			condor_util_lib \
+			condor_xdr_lib \
+			h
+AIX_CODE	-a Distfile GENERIC Imakefile config AIX_SRC
