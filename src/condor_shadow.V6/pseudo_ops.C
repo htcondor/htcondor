@@ -1232,6 +1232,7 @@ add the necessary transformations.
 */
 
 int do_get_file_info( char *logical_name, char *url, int allow_complex );
+void append_buffer_info( char *url, char *method, char *path );
 
 int
 pseudo_get_file_info_new( const char *logical_name, char *actual_url )
@@ -1322,9 +1323,9 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 		if( use_compress(method,full_path) ) {
 			strcat(actual_url,"compress:");
 		}
-		if( use_buffer(method,full_path) ) {
-			strcat(actual_url,"buffer:");
-		}
+
+		append_buffer_info(actual_url,method,full_path);
+
 		if( use_append(method,full_path) ) {
 			strcat(actual_url,"append:");
 		}
@@ -1339,16 +1340,43 @@ do_get_file_info( char *logical_name, char *actual_url, int allow_complex )
 	return 0;
 }
 
-int use_buffer( char *method, char *path )
+void append_buffer_info( char *url, char *method, char *path )
 {
+	char buffer_list[ATTRLIST_MAX_EXPRESSION];
+	char buffer_string[ATTRLIST_MAX_EXPRESSION];
+	char dir[_POSIX_PATH_MAX];
+	char file[_POSIX_PATH_MAX];
 	int s,bs,ps;
+	int result;
 
+	filename_split(path,dir,file);
+
+	/* Get the default buffer setting */
 	pseudo_get_buffer_info( &s, &bs, &ps );
 
-	if( !strcmp(method,"remote") && s  && bs ) {
-		return 1;
-	} else {
-		return 0;
+	/* Now check for individual file overrides */
+	/* These lines have the same syntax as a remap list */
+
+	if(JobAd->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
+		if( filename_remap_find(buffer_list,path,buffer_string) ||
+		    filename_remap_find(buffer_list,file,buffer_string) ) {
+
+			/* If the file is merely mentioned, turn on the default buffer */
+			strcat(url,"buffer:");
+
+			/* If there is also a size setting, use that */
+			result = sscanf(buffer_string,"(%d,%d)",&s,&bs);
+			if( result==2 ) strcat(url,buffer_string);
+
+			return;
+		}
+	}
+
+	/* Turn on buffering if the value is set and is not special or local */
+	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
+
+	if( s>0 && bs>0 && strcmp(method,"local") && strcmp(method,"special")  ) {
+		strcat(url,"buffer:");
 	}
 }
 

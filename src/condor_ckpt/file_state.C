@@ -377,7 +377,6 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 			got_buffer_info = 1;
 		}
 	}
-
 }
 
 /*
@@ -389,10 +388,27 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 {
 	char method[_POSIX_PATH_MAX];
 	char rest[_POSIX_PATH_MAX];
+	char *next;
 	CondorFile *f;
 
 	int fields = sscanf( url, "%[^:]:%s", method, rest );
 	if( fields!=2 ) return 0;
+
+	/* Options interpreted by each layer go in () following the : */
+	/* If we encounter that here, skip it. */
+
+	next = rest;
+	if( *next=='(' ) {
+		while(*next) {
+			next++;
+			if(*next==')') {
+				next++;
+				break;
+			}
+		}
+	}
+
+	/* Now examine the method. */
 
 	if( !strcmp( method, "local" ) ) {
 		return new CondorFileLocal;
@@ -403,19 +419,19 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 	} else if( !strcmp( method, "remote" ) ) {
 		return new CondorFileRemote;
 	} else if( !strcmp( method, "buffer" ) ) {
-		f = create_url_chain( rest );
-		if(f) return new CondorFileBuffer( f );
+		f = create_url_chain( next );
+		if(f) return new CondorFileBuffer( f, buffer_size, buffer_block_size );
 		else return 0;
 	} else if( !strcmp( method, "fetch" ) ) {
-		f = create_url_chain( rest );
+		f = create_url_chain( next );
 		if(f) return new CondorFileAgent( f );
 		else return 0;
 	} else if( !strcmp( method, "compress" ) ) {
-		f = create_url_chain( rest );
+		f = create_url_chain( next );
 		if(f) return new CondorFileCompress( f );
 		else return 0;
 	} else if( !strcmp( method, "append" ) ) {
-		f = create_url_chain( rest );
+		f = create_url_chain( next );
 		if(f) return new CondorFileAppend( f );
 		else return 0;
 	} else {
@@ -1200,16 +1216,6 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	}
 
 	return result;
-}
-
-int CondorFileTable::get_buffer_size()
-{
-	return buffer_size;
-}
-
-int CondorFileTable::get_buffer_block_size()
-{
-	return buffer_block_size;
 }
 
 /*

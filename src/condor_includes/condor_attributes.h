@@ -40,6 +40,7 @@ const char ATTR_BANDWIDTH_TO_SUBMIT_MACHINE[] = "BandwidthToSubmitMachine";
 const char ATTR_BANDWIDTH_TO_LAST_CKPT_SERVER[] = "BandwidthToLastCkptServer";
 const char ATTR_BANDWIDTH_TO_CKPT_SERVER [] = "BandwidthToCkptServer";
 const char ATTR_BUFFER_SIZE				 [] = "BufferSize";
+const char ATTR_BUFFER_FILES				 [] = "BufferFiles";
 const char ATTR_BUFFER_BLOCK_SIZE		 [] = "BufferBlockSize";
 const char ATTR_BUFFER_BLOCKS_USED	 [] = "BufferBlocksUsed";
 const char ATTR_BUFFER_PREFETCH_SIZE	 [] = "BufferPrefetchSize";

@@ -162,6 +162,7 @@ char	*RendezvousDir	= "rendezvousdir";
 char	*SsleayConf	= "ssleayconf";
 
 char	*FileRemaps = "file_remaps";
+char	*BufferFiles = "buffer_files";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
 
@@ -947,6 +948,13 @@ void SetFileOptions()
 	tmp = condor_param(FileRemaps);
 	if(tmp) {
 		sprintf(buffer,"%s = %s",ATTR_FILE_REMAPS,tmp);
+		InsertJobExpr(buffer);
+		free(tmp);
+	}
+
+	tmp = condor_param(BufferFiles);
+	if(tmp) {
+		sprintf(buffer,"%s = %s",ATTR_BUFFER_FILES,tmp);
 		InsertJobExpr(buffer);
 		free(tmp);
 	}
