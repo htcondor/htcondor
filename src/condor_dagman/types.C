@@ -39,3 +39,12 @@ int CondorID::Compare (const CondorID condorID) const {
   return result;
 }
 
+
+int
+CondorID::SetFromString( const char* s )
+{
+    if( !s ) {
+        return 0;
+    }
+    return sscanf( s, "%d.%d.%d", &_cluster, &_proc, &_subproc );
+}

@@ -63,7 +63,14 @@ class CondorID {
         @return zero if they match
     */
     int Compare (const CondorID condorID) const;
-    
+
+	/** Parses provided string of the form "cluster[.proc][.subproc]",
+		and updates this object's values accordingly.
+		@param s the string to parse
+		@return 0-3, corresponding to the number of elements found & set
+	*/
+	int SetFromString( const char* s );
+
     /** Test for equality between two CondorID's.
         @param the other CondorID object
         @return true if equal, false if not
@@ -71,7 +78,7 @@ class CondorID {
     inline bool operator == (const CondorID condorID) const {
         return Compare (condorID) == 0;
     }
-    
+
     /// The job cluster
     int _cluster;
 
