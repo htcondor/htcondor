@@ -26,9 +26,15 @@
 #include "../condor_classad.V6/common.h"
 #include "../condor_classad.V6/exprTree.h"
 #include "../condor_classad.V6/matchClassad.h"
+
+#if defined( COLLECTIONS )
 #include "../condor_classad.V6/collectionServer.h"
 #include "../condor_classad.V6/collectionClient.h"
 #include "../condor_classad.V6/query.h"
+#else
+#include "../condor_classad.V6/noCollections.h"
+#endif
+
 
 // The following code is only temporary, and should be removed after the
 // rest of condor code starts explicitly using namespaces such as classad::
