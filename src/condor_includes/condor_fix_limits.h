@@ -27,7 +27,20 @@
 #   define select _hide_select
 #endif
 
+#if defined(IRIX53) && !defined(_SGIAPI)
+#	define _SGIAPI
+#	define CONDOR_SGIAPI
+#endif
+
+
 #include <limits.h>
+
+
+#if defined(IRIX53) && defined(CONDOR_SGIAPI)
+#	undef _SGIAPI
+#	undef CONDOR_SGIAPI
+#endif
+
 
 #if defined(HPUX9)
 #   undef select
