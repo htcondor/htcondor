@@ -142,6 +142,8 @@ static struct tag_name tag_names[] =
 	{tag_ClassAds,  "classads", },
 	{tag_ClassAd,   "c",   },
 	{tag_Attribute, "a",   },
+	// tag_Number is only for backwards compatibility--it's never generated
+	{tag_Number,    "n",   }, 
 	{tag_Integer,   "i",   },
 	{tag_Real,      "r",   },
 	{tag_String,    "s",   },
@@ -331,6 +333,8 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 					// itself. 
 					add_to_classad = false;
 					break;
+					// tag_Number is only for backwards compatibility--it's never generated
+				case tag_Number:
 				case tag_Integer:
 				case tag_Expr:
 					to_insert += token_text;
@@ -425,6 +429,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				classad->Insert(to_insert.Value());
 			}
 			break;
+		case tag_Number:
 		case tag_Integer:
 		case tag_Real:
 		case tag_String:
@@ -1304,6 +1309,7 @@ static void debug_check(void)
 	ASSERT(NUMBER_OF_TAG_NAME_ENUMS    == NUMBER_OF_TAG_NAMES);
 	ASSERT(tag_names[tag_ClassAd].id   == tag_ClassAd);
 	ASSERT(tag_names[tag_Attribute].id == tag_Attribute);
+	ASSERT(tag_names[tag_Number].id    == tag_Number);
 	ASSERT(tag_names[tag_Integer].id   == tag_Integer);
 	ASSERT(tag_names[tag_Real].id      == tag_Real);
 	ASSERT(tag_names[tag_String].id    == tag_String);

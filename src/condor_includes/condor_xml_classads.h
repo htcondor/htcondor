@@ -31,6 +31,7 @@ enum TagName
 	tag_ClassAds,
 	tag_ClassAd,
 	tag_Attribute,
+	tag_Number, // no longer used, just for backwards compatibility
 	tag_Integer,
 	tag_Real,
 	tag_String,
