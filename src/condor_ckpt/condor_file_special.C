@@ -9,12 +9,12 @@ CondorFileSpecial::CondorFileSpecial(char *k)
 {
 	kind = k;
 	readable = writeable = 1;
-	_condor_signals_disable();
+	_condor_ckpt_disable();
 }
 
 CondorFileSpecial::~CondorFileSpecial()
 {
-	_condor_signals_enable();
+	_condor_ckpt_enable();
 }
 
 char * CondorFileSpecial::get_kind()
