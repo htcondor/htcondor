@@ -207,12 +207,15 @@ OpenFileTable::DoOpen(
 	int     rval;
 	char	buf[ _POSIX_PATH_MAX ];
 
+	dprintf(D_FULLDEBUG, "Entering DoOpen\n");
+
 	if (MyImage.GetMode() == STANDALONE) {
 		user_fd = real_fd;
 	} else {
 		// find an unused fd
 		if( (user_fd = find_avail(0)) < 0 ) {
 			errno = EMFILE;
+			dprintf(D_FULLDEBUG, "Leaving DoOpen\n");
 			return -1;
 		}
 	}
@@ -235,6 +238,9 @@ OpenFileTable::DoOpen(
 		fprintf( stderr, "Opened file in unknown mode\n" );
 		abort();
 	}
+
+	dprintf(D_FULLDEBUG, 
+		"file[%d(%d)].open being set to TRUE\n", user_fd, real_fd);
 
 	file[user_fd].open = TRUE;
 	file[user_fd].duplicate = FALSE;
@@ -297,6 +303,7 @@ OpenFileTable::DoOpen(
 		BufferGlueOpenHook( &file[user_fd] );
 	}
 
+	dprintf(D_FULLDEBUG, "Leaving DoOpen\n");
 	return user_fd;
 }
 
@@ -310,8 +317,22 @@ OpenFileTable::DoClose( int fd )
 	int		i;
 	int		rval;
 
+	dprintf(D_FULLDEBUG, "Entering DoClose: fd = %d\n", fd);
+
 	if( !file[fd].isOpen() || file[fd].isShadowSock() ) {
 		errno = EBADF;
+		if (!file[fd].isOpen())
+		{
+			dprintf(D_FULLDEBUG, 
+				"Leaving DoClose(): Tried to close already closed fd = %d\n",
+				fd);
+		}
+		else if (file[fd].isShadowSock)
+		{
+			dprintf(D_FULLDEBUG, 
+				"Leaving DoClose(): Tried to close shadow socket fd = %d\n",
+				fd);
+		}
 		return -1;
 	}
 	
@@ -322,6 +343,9 @@ OpenFileTable::DoClose( int fd )
 		// See if this file is a dup of another
 	if( file[fd].isDup() ) {
 		file[fd].open = FALSE;
+		dprintf(D_FULLDEBUG, 
+			"Leaving DoClose: set fd=%d to false cause of dup\n",
+			fd);
 		return 0;
 	}
 
@@ -346,10 +370,12 @@ OpenFileTable::DoClose( int fd )
 		} else {
 			rval = syscall( SYS_close, file[fd].real_fd );
 		}
+		dprintf(D_FULLDEBUG, "file[%d].open is closing normally\n", fd);
 		file[fd].open = FALSE;
 		delete [] file[fd].pathname;
 		file[fd].pathname = NULL;
 		restore_condor_sigmask(omask);
+		dprintf(D_FULLDEBUG, "Leaving DoClose: fd = %d is closed\n", fd);
 		return rval;
 	}
 
@@ -367,6 +393,7 @@ OpenFileTable::DoClose( int fd )
 		// Mark the original fd as closed.  Careful
 		// don't really close it or delete the pathname -
 		// those are in use by duplicates.
+	dprintf(D_FULLDEBUG, "file[%d].open closing due to dup: 2\n", fd);
 	file[fd].open = FALSE;
 
 	// If in standalone mode, close this fd.  The dup is an actual dup.
@@ -375,6 +402,7 @@ OpenFileTable::DoClose( int fd )
 		return syscall( SYS_close, fd );
 	}
 
+	dprintf(D_FULLDEBUG, "Leaving DoClose\n", fd);
 	return 0;
 }
 
@@ -413,7 +441,7 @@ OpenFileTable::find_avail( int start )
 {
 	int		i;
 
-	for( i=start; i<_POSIX_PATH_MAX; i++ ) {
+	for( i=start; i<MaxOpenFiles; i++ ) {
 		if( !file[i].isOpen() ) {
 			return i;
 		}
@@ -568,8 +596,8 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 		// this interface may change in the future so that this
 		// code may need adjustment! - Greger
 		real_fd = syscall( SYS_socketcall, SYS_SOCKET, socket_args );
-		fprintf(stderr, "Socketcall returned %d, errno=%d\n",
-			real_fd, errno);
+/*		fprintf(stderr, "Socketcall returned %d, errno=%d\n",*/
+/*			real_fd, errno);*/
 #elif defined(Solaris)
 		real_fd = socket( addr_family, type, protocol );
 #else
@@ -679,7 +707,7 @@ OpenFileTable::Save()
 		f = &file[i];
 /*		printf("fd[%d] is %s\n", i, f->isOpen()?"OPEN":"CLOSED");*/
 		if( f->isOpen() && !f->isDup() ) {
-			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
+/*			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);*/
 			if ( f->isIOServerAccess() ) {
 				scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED);
 				pos = ioserver_lseek( i, (off_t)0, SEEK_CUR);
@@ -766,6 +794,8 @@ OpenFileTable::Restore()
 	File	*f;
 	mode_t	mode;
 	int		scm, init_scm;
+
+	dprintf(D_FULLDEBUG, "Restoring file table.\n");
 	
 	// restoring state of IOserver files..
 	for(i=0;i<MaxOpenFiles;i++)
@@ -803,7 +833,7 @@ OpenFileTable::Restore()
 		  continue;
 		
 		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {
-			dprintf(D_ALWAYS,"Current restoring file is %d\n",i);
+/*			dprintf(D_ALWAYS,"Current restoring file is %d\n",i);*/
 			if( f->isWriteable() && f->isReadable() ) {
 				mode = O_RDWR;
 			} else if( f->isWriteable() ) {
@@ -867,6 +897,7 @@ OpenFileTable::Restore()
 #else
 			  dup2(f->real_fd, i);
 #endif
+			  dprintf(D_FULLDEBUG, "Copied fd: %d -> %d\n", f->real_fd, i);
 			  syscall( SYS_close, f->real_fd );
 			  f->real_fd = i;
 			}
@@ -909,6 +940,8 @@ OpenFileTable::Restore()
 		// SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		SetSyscalls( init_scm);
 	}
+
+	dprintf(D_FULLDEBUG, "Exiting restore function.\n");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1331,6 +1364,12 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	int		is_remote = FALSE;
 	sigset_t omask;
 
+	/* we don't want to be interrupted by a checkpoint between when
+	   we open this file and we mark it opened in our local data
+	   structure */
+	omask = block_condor_signals();
+	dprintf(D_FULLDEBUG, "Entering _condor_open()\n");
+
 	if ( FileTab == NULL )
 		InitFileState();
 
@@ -1338,12 +1377,9 @@ int	_condor_open( const char *path, int flags, va_list ap )
 		creat_mode = va_arg( ap, int );
 	}
 
-	/* we don't want to be interrupted by a checkpoint between when
-	   we open this file and we mark it opened in our local data
-	   structure */
-	omask = block_condor_signals();
 	if( LocalSysCalls() ) {
 		fd = syscall( SYS_open, path, flags, creat_mode );
+		dprintf(D_FULLDEBUG, "_condor_open_1: fd=%d(%s)\n", fd, path);
 		strcpy( local_path, path );
 	} else {
 
@@ -1397,10 +1433,13 @@ int	_condor_open( const char *path, int flags, va_list ap )
 		return -1;
 	}
 
+	dprintf(D_FULLDEBUG, "Beginning test for DoOpen call\n");
 	if( MappingFileDescriptors() && status != IS_IOSERVER) {
 		fd = FileTab->DoOpen( local_path, flags, fd, is_remote );
 	}
+	dprintf(D_FULLDEBUG, "Ending test for DoOpen call\n");
 
+	dprintf(D_FULLDEBUG, "Leaving _condor_open()\n");
 	restore_condor_sigmask(omask);
 	return fd;
 }
@@ -1485,6 +1524,7 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
+	dprintf(D_FULLDEBUG, "Entering close(): fd=%d\n", fd);
 	if ( FileTab == NULL )
 		InitFileState();
 
@@ -1506,11 +1546,17 @@ close( int fd )
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
 			return syscall( SYS_close, fd );
 		}
+		dprintf(D_FULLDEBUG, "standalone close: fd=%d, rval = %d\n", fd, rval);
+		dprintf(D_FULLDEBUG, "Leaving close(): closing fd  = %d\n", fd);
 		return rval;
 	} else {
 		if( LocalSysCalls() ) {
+			dprintf(D_FULLDEBUG, 
+				"Leaving close(): closing fd  = %d\n", fd);
 			return syscall( SYS_close, fd );
 		} else {
+			dprintf(D_FULLDEBUG, 
+				"Leaving close(): remote closing fd  = %d\n", fd);
 			return REMOTE_syscall( CONDOR_close, fd );
 		}
 	}
