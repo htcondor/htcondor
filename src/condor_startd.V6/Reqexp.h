@@ -31,20 +31,16 @@
 #ifndef _REQEXP_H
 #define _REQEXP_H
 
-enum reqexp_state { AVAIL, UNAVAIL, ORIG };
+enum reqexp_state { UNAVAIL, ORIG };
 
 class Reqexp
 {
 public:
 	Reqexp( Resource* rip );
 	~Reqexp();
-	void	restore();		// Restore the original requirements
+
+	bool	restore();		// Restore the original requirements
 	void	unavail();		// Set requirements to False
-	void	avail();		// Set requirements to True
-	int		eval();			// Evaluate the original requirements  
-							// (-1 = undef, 1 = true, 0 = false)
-	int		pub();			// Evaluates orig reqexp and sets classad
-							// appropriately, returns 1 if change.
 
 	void 	publish( ClassAd*, amask_t );
 	void	compute( amask_t );
