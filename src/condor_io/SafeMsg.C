@@ -347,8 +347,7 @@ int _condorOutMsg::sendMsg(const int sock,
 		if( D_FULLDEBUG & DebugFlags )
 			dprintf(D_NETWORK, "SafeMsg: Packet[%d] sent\n", sent);
 		if(sent != tempPkt->length + SAFE_MSG_HEADER_SIZE) {
-			dprintf(D_NETWORK, "sendMsg:sendto failed.
-			                    errno: %d\n", errno);
+			dprintf(D_NETWORK, "sendMsg:sendto failed - errno: %d\n", errno);
 			headPacket = tempPkt;
 			clearMsg();
 			return -1;

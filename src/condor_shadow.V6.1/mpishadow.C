@@ -461,7 +461,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 	// Does this go here, or should it go earlier
 	// does killing the starter
 	MpiResource *r;
-    for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
+    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
 		char *tmp = NULL;
 		r->getExecutingHost( tmp );
