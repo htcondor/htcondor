@@ -35,10 +35,10 @@
 /** The states that a remote resource can be in.  If you add anything
 	here you must A) put it before _RR_STATE_THRESHOLD and B) add a
 	string to Resource_State_String in remoteresource.C */ 
-enum ResourceState {
-		/// Before the job begins execution
+typedef enum {
+		/// Before the starter has been spawned
 	RR_PRE, 
-		/// While it's running (after activateClaim() succeeds...)
+		/// While it's running
 	RR_EXECUTING,
 		/** We've told the job to go away, but haven't received 
 			confirmation that it's really dead.  This state is 
@@ -48,9 +48,11 @@ enum ResourceState {
 	RR_FINISHED,
 		/// Suspended at the execution site
 	RR_SUSPENDED,
+		/// Starter exists, but the job is not executing yet 
+	RR_STARTUP,
 		/// The threshold must be last!
 	_RR_STATE_THRESHOLD
-};
+} ResourceState;
 
 	/** Return the string version of the given ResourceState */
 const char* rrStateToString( ResourceState s );
@@ -103,7 +105,7 @@ class RemoteResource : public Service {
                    wanted. The default is 2.
 			@return true on success, false on failure
 		 */ 
-	virtual bool activateClaim( int starterVersion = 2 );
+	bool activateClaim( int starterVersion = 2 );
 
 		/** Tell the remote starter to kill itself.
 			@param graceful Should we do a graceful or fast shutdown?
@@ -294,6 +296,12 @@ class RemoteResource : public Service {
 			exit code.  If it was killed by a signal, return -1. */ 
 	int exitCode( void );
 
+		/** This method is called when the job at the remote resource
+			has finally started to execute.  We use this to log the
+			appropriate user log event(s), start various timers, etc. 
+		*/
+	virtual void beginExecution( void );
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -335,7 +343,9 @@ class RemoteResource : public Service {
 
 	ResourceState state;
 
- private:
+	bool began_execution;
+
+private:
 
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for
