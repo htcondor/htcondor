@@ -120,8 +120,9 @@ Collector's ClassAd as a hex string.
 completion based on the notification setting in the submit file.
 
 \item When submitting a Globus universe job to Condor-G the
-input, output, and error files can now optionally be any URL
-usable by globus-url-copy.
+input, output, and error files can now optionally be an http,
+https, ftp, or gsiftp URL.  (The actual file transfer is handled
+by globus-url-copy on the remote site.)
 
 \end{itemize}
 
