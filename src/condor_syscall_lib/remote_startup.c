@@ -207,6 +207,8 @@ static int open_read_stream( const char *path );
 	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 void unblock_signals();
 
+int _Ckpt_Via_TCP_Stream;
+
 int
 MAIN( int argc, char *argv[], char **envp )
 {
@@ -605,6 +607,7 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 
 	if( (fd=try_via_afs(ckpt_file,O_CREAT|O_WRONLY,0664)) >= 0 ) {
 		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
+		_Ckpt_Via_TCP_Stream = FALSE;
 		return fd;
 	}
 
@@ -618,10 +621,13 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 
 		/* Connect to the specified party */
 	fd = open_tcp_stream( hostname, port );
+	_Ckpt_Via_TCP_Stream = TRUE;
 	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
 
 	return fd;
 }
+
+char	Hello[] = "Hello World\n";
 
 int
 try_via_afs( remote, mode, perm )
@@ -631,6 +637,8 @@ int perm;
 {
 	int		fd;
 	int		scm;
+	int		nbytes;
+	int		i;
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
@@ -648,7 +656,39 @@ int perm;
 		return -1;
 	}
 
-	dprintf( D_ALWAYS, "Opened \"%s\" via AFS\n", remote );
+	dprintf( D_ALWAYS, "Opened \"%s\" via AFS - fd = %d\n", remote, fd );
+
+
+#if 1
+			/* for debugging, we try writing to file right away */
+	if( mode & O_WRONLY ) {
+
+			/* write something to the file */
+		if( (nbytes=write(fd,Hello,strlen(Hello))) < 0 ) {
+			EXCEPT( "Can't write to AFS ckpt file\n" );
+		}
+		dprintf( D_ALWAYS, "Wrote %d bytes to AFS ckpt file\n", nbytes );
+		delay();
+
+			/* try closing - write() doesn't mean much without close in AFS */
+		if( close(fd) < 0 ) {
+			EXCEPT( "Can't close AFS ckpt file\n" );
+		}
+		dprintf( D_ALWAYS, "Closed AFS ckpt file OK\n" );
+		delay();
+
+			/* open it again so we can actually use it */
+		if( (fd = open(remote,mode,perm)) < 0 ) {
+			dprintf( D_ALWAYS, "\"%s\" is AFS file, but open failed\n", remote);
+			SetSyscalls( scm );
+			return -1;
+		}
+		dprintf( D_ALWAYS, "Re-Opened \"%s\" via AFS - fd = %d\n", remote, fd );
+	}
+
+#endif
+
+
 	SetSyscalls( scm );
 	return fd;
 }
