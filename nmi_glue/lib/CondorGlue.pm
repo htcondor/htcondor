@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.7 2005-01-02 18:17:51 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.8 2005-01-05 10:23:57 wright Exp $
 #
 ######################################################################
 
@@ -183,14 +183,17 @@ This screen
 --nightly (default)
 This pulls the nightly tags file from http://www.cs.wisc.edu/condor/nwo-build-tags and submits builds for all the tags
 
---tag (not supported yet)
+--tag
 condor source code tag to be fetched from cvs
 
---module (not supported yet)
+--module
 condor source code module to be fetched from cvs
 
 --notify
 List of users to be notified about the results
+
+--platforms
+List of platforms to build (default: all currently known-working)
 
 END_USAGE
 }
