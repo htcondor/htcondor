@@ -347,7 +347,7 @@ int
 init_params( int first_time)
 {
 	char *tmp;
-	char *old_collector = NULL;
+    Daemon *new_collector = NULL;
 
 	resmgr->init_config_classad();
 
@@ -370,20 +370,20 @@ init_params( int first_time)
 #endif
 
 	if( Collector ) {
-			// See if we changed collectors, and if so, invalidate our
-			// ads at the old one, and initialize a new Collector
-			// object to use.
-		old_collector = strdup( Collector->fullHostname() );
-		tmp = param( "COLLECTOR_HOST" );
-		if( tmp ) {
-			if( strcmp(tmp, old_collector) != MATCH ) {
-				resmgr->final_update();
-				delete Collector;
-				Collector = new Daemon( DT_COLLECTOR );
-			}
-			free( tmp );
+			// See if we changed collectors.  If so, invalidate our
+			// ads at the old one, and start using the new info.
+		new_collector = new Daemon( DT_COLLECTOR );
+		if( strcmp(new_collector->addr(), 
+				   Collector->addr()) != MATCH ) {
+				// The addresses are different, so we must really have
+				// a new collector...
+			resmgr->final_update();
+			delete Collector;
+			Collector = new_collector;
+		} else {
+				// They're the same, just flush the new object.
+			delete new_collector;
 		}
-		free( old_collector );
 	} else {
 			// No Collector yet, there's nothing to do except create a
 			// new object.
