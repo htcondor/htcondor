@@ -3,7 +3,8 @@
 # Script to set/check whether Condor is running on compute cluster nodes.
 #
 # 14-Jan-2000 Derek Wright <wright@cs.wisc.edu>
-# 21-Jan-2000 Peter Couvares <pfc@cs.wisc.edu>
+# 21-Jan-2000 Peter Couvares <pfc@cs.wisc.edu> many fixes/improvements
+# 25-Feb-2000 Peter Couvares <pfc@cs.wisc.edu> added logging
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
@@ -22,6 +23,8 @@
 #     prints the status of Condor on all nodes by default, or on only
 #     the given hosts if specified
 
+use English;
+use FileHandle;
 
 ### Config variables
 
@@ -30,6 +33,7 @@
          $STARTNODE = 2;
          $CONDOR_CM = "condor.cs.wisc.edu";
 $CLUSTER_CONSTRAINT = "-const 'IsComputeCluster == True'";
+           $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
 
 
 ### Global variables (not user-servicable)
@@ -47,6 +51,17 @@ if( $#ARGV < 0 ) {   # $#ARGV is 1 less than the # of args...
     usage();
     exit 1;
 }
+
+$datetime = scalar localtime();
+$user = scalar getpwuid( $UID );
+open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
+LOG->autoflush();
+print LOG "$datetime $user";
+foreach $arg ( @ARGV ) {
+    print LOG " $arg";
+}
+print LOG "\n";
+
 $cmd = shift;
 @args = @ARGV;
 if( $cmd eq "on" ) {
@@ -76,6 +91,7 @@ if( $cmd eq "on" ) {
     exit 1;
 }
 
+close LOG || warn "$0: error closing $LOGFILE: $!\n";
 exit 0;
 
 
@@ -111,6 +127,7 @@ sub start_condor {
 		$host = "c$host";
 	    }
 	}
+	print LOG "$datetime $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
     }
 }
@@ -141,6 +158,7 @@ sub stop_condor {
 	    parse_cluster_status();
 	}
 	print $host, "\n";
+	print LOG "$datetime $user    (given $host)\n";
     }
 }
 
@@ -200,7 +218,17 @@ sub kill_condor {
 
 sub check_condor {
     my( @hosts ) = @_;
+
     foreach $host ( @hosts ) {
+	# if the user just specifies a number, prepend the "cXX" node name
+	if( $host =~ /^\d+$/ ) {
+	    if( $host < 10 ) {
+		$host = "c0$host";
+	    }
+	    else {
+		$host = "c$host";
+	    }
+	}
 	$status = check_host( $host );
 	print "$host: $status\n";
     }
