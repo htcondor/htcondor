@@ -883,6 +883,8 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 	output_buffer->setFiller( (char *) NULL );
 
+		// initialize counters
+	unexpanded = idle = running = held = malformed = 0;
 
 	// fetch queue from schedd and stash it in output_buffer.
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
@@ -1089,9 +1091,11 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 					idle,running,held);
 			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
 			if (malformed>0) printf( ", %d malformed",malformed);
+
             printf("\n");
 		}
 	}
+
 	return true;
 }
 
