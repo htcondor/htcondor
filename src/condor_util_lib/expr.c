@@ -1331,7 +1331,7 @@ int		op;
 	/* NOTREACHED */
 }
 
-
+void
 free_elem( elem )
 ELEM	*elem;
 {
@@ -1376,6 +1376,7 @@ create_elem()
 	return answer;
 }
 
+int
 store_stmt( expr, context )
 EXPR	*expr;
 CONTEXT	*context;
@@ -1421,6 +1422,7 @@ create_context()
 	return answer;
 }
 
+void
 free_context( context )
 CONTEXT	*context;
 {
