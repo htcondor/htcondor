@@ -1,3 +1,7 @@
+4/16/01 V6_3-pre-merge-V6_2-merge-4
+   The state of the V6_3-branch before merging the still-slightly-
+   post-6.2.0 V6_2 branch in preparation for releasing 6.3.0.  (Phew.)
+
 4/9/01 V6_3-umn-branch  (take two)
    This is a new branch (with the same name) for UMN folks who want to
    hack DAGMan.  Since the old umn branch was created before the big
