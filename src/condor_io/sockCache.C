@@ -177,5 +177,5 @@ getCacheSlot()
 	sockCache[oldest].sock->close();
 	delete sockCache[oldest].sock;
 
-	return i;
+	return oldest;
 }
