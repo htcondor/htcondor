@@ -25,10 +25,10 @@ tests you add to the given testclass will be built.  To add a test to
 a given class, you add a "TESTCLASS()" imake rule for that test and
 class to the appropriate Imakefile.  For help with imake files and
 rules, see "README.imake".  The Condor imake build system is smart
-enough to generate a file called "<classname>_list" that contains all
+enough to generate a file called "list_<classname>" that contains all
 the testnames that belong to the given classname.  Additionally, it
-generates a file called "class_list", which contains the names of all
-the valid test classes currently in use.
+generates a file called "list_testclass", which contains the names of
+all the valid test classes currently in use.
 
 
 ----------------------------------------------------------------------
