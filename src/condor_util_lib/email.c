@@ -45,6 +45,7 @@ email_open( const char *email_addr, const char *subject )
 	char RelayHost[150];
 	const char *FinalSubject = "\0";
 	char final_command[2000];
+	int prev_umask;
 
 	RelayHost[0] = '\0';
 
@@ -109,8 +110,17 @@ email_open( const char *email_addr, const char *subject )
 	/* Want the letter to come from "condor" if possible */
 	priv = set_condor_priv();
 
+
 	/* finally, open up pipe to the mailer */
+
+	/* there are some oddities with how popen can open a pipe. In some
+		arches, popen will create temp files for locking and they need to
+		be of the correct perms in order to be deleted. So the umask is
+		set to something useable for the open operation. -pete 9/11/99
+	*/
+	prev_umask = umask(022);
 	mailerstream = popen(final_command,EMAIL_POPEN_FLAGS);
+	umask(prev_umask);
 
 	/* Set priv state back */
 	set_priv(priv);
@@ -212,6 +222,7 @@ void
 email_close(FILE *mailer)
 {
 	char *temp;
+	int prev_umask;
 
 	if ( mailer == NULL ) {
 		return;
@@ -226,7 +237,13 @@ email_close(FILE *mailer)
 		fprintf(mailer,"The Official Condor Homepage is http://www.cs.wisc.edu/condor\n");
 		free(temp);
 	}
-	
+
+	/* there are some oddities with how pclose can close a file. In some
+		arches, pclose will create temp files for locking and they need to
+		be of the correct perms in order to be deleted. So the umask is
+		set to something useable for the close operation. -pete 9/11/99
+	*/
+	prev_umask = umask(022);
 	/* 
 	** On many Unix platforms, we cannot use
 	** 'pclose()' here: it does its own wait, and messes
@@ -258,4 +275,9 @@ email_close(FILE *mailer)
 #else
 	(void)fclose( mailer );
 #endif
+	umask(prev_umask);
 }
+
+
+
+

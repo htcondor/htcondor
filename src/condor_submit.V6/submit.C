@@ -1357,6 +1357,9 @@ ComputeIWD()
 	char	iwd[ _POSIX_PATH_MAX ];
 	char	cwd[ _POSIX_PATH_MAX ];
 
+	memset(iwd, 0, sizeof(iwd));
+	memset(cwd, 0, sizeof(cwd));
+
 	shortname = condor_param( InitialDir );
 
 #if !defined(WIN32)
@@ -2198,7 +2201,7 @@ log_submit()
 int
 SaveClassAd ()
 {
-	ExprTree *tree, *lhs, *rhs;
+	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
 	char lhstr[128], rhstr[ATTRLIST_MAX_EXPRESSION];
 	int  retval = 0;
 	int myprocid = ProcId;
@@ -2238,7 +2241,7 @@ SaveClassAd ()
 void 
 InsertJobExpr (char *expr, bool clustercheck)
 {
-	ExprTree *tree, *lhs;
+	ExprTree *tree = NULL, *lhs = NULL;
 	char      name[128];
 	name[0] = '\0';
 	int unused = 0;

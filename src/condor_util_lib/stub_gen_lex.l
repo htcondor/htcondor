@@ -73,6 +73,7 @@ STARTUP_INFO		return grab( TYPE_NAME );
 {STRUCT}sigaction	return grab( TYPE_NAME );
 {STRUCT}itimerval	return grab( TYPE_NAME );
 {STRUCT}timeval		return grab( TYPE_NAME );
+{STRUCT}utimbuf		return grab( TYPE_NAME );
 {STRUCT}timezone	return grab( TYPE_NAME );
 {STRUCT}pollfd		return grab( TYPE_NAME );
 {STRUCT}sockaddr	return grab( TYPE_NAME );

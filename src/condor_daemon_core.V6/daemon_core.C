@@ -2727,8 +2727,9 @@ int DaemonCore::Create_Process(
 	// First, check to see that the specified executable exists.
 	if( access(name,F_OK | X_OK) < 0 ) {
 		dprintf(D_ALWAYS, 
-				"Create_Process: File %s is not executable or non-existant.\n",
-				name);	   
+				"Create_Process: Specified executable %s cannot be found. "
+				"errno = %d (%s).\n",
+				name, errno, strerror(errno));	   
 		return FALSE;
 	}
 

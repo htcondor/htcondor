@@ -155,6 +155,7 @@ typedef fd_set *SELECT_FDSET_PTR;
 #include <rpc/types.h>
 #include <values.h>
 #include <math.h>
+#include <utime.h>
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */

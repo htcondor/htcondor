@@ -30,6 +30,7 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
+#include "condor_email.h"
 #include "../condor_ckpt_server/server_interface.h"
 
 #include "sched.h"
@@ -121,7 +122,7 @@ void
 NotifyUser( char *buf, PROC *proc, char *email_addr )
 {
         FILE *mailer;
-        char cmd[ BUFSIZ ];
+        char subject[ BUFSIZ ];	
         double rutime, rstime, lutime, lstime;  /* remote/local user/sys times */
         double trtime, tltime;  /* Total remote/local time */
         double  real_time;
@@ -134,8 +135,6 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 
         dprintf(D_FULLDEBUG, "NotifyUser() called.\n");
 
-                /* Want the letter to come from "condor" */
-        set_condor_priv();
 
         /* If user loaded program incorrectly, always send a message. */
         if( MainSymbolExists == TRUE ) {
@@ -162,30 +161,17 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
                 }
         }
 
-        if ( strchr(email_addr,'@') == NULL )
-        {
-                /* No host name specified; add uid domain */
-                /* Note that if uid domain was set by the admin to "none", then */
-                /* earlier we have already set it to be the submit machine's name */
-                sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s@%s\n",
-                               MailerPgm, proc->id.cluster, proc->id.proc, email_addr,
-                               My_UID_Domain
-                               );
-        }
-        else
-        {
-            /* host name specified; don't add uid domain */
-            sprintf(cmd, "%s -s \"Condor Job %d.%d\" %s\n",
-                        MailerPgm, proc->id.cluster, proc->id.proc, email_addr);
-        }
+		sprintf(subject, "Condor Job %d.%d\n", 
+				proc->id.cluster, proc->id.proc);
 
-        dprintf( D_FULLDEBUG, "Notify user using cmd: %s",cmd);
+        dprintf( D_FULLDEBUG, "Notify user using address: %s, subject: %s",
+			email_addr, subject);
 
-        mailer = popen( cmd, "w" );
+		mailer = email_open(email_addr, subject);
         if( mailer == NULL ) {
                 EXCEPT(
-                        "Shadow: Cannot do execute_program( %s, %s, %s )\n",
-                        cmd, proc->owner, "w"
+                        "Shadow: Cannot notify user( %s, %s, %s )\n",
+                        subject, proc->owner, "w"
                 );
         }
 
@@ -249,7 +235,7 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
         }
         fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n", proc->image_size);
 
-        (void)pclose( mailer );
+		email_close(mailer);
 }
 
 

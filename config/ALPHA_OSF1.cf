@@ -72,6 +72,8 @@
 #define USE_GCC				YES
 #define HAS_STATIC			YES
 
+#define HAS_DYNAMIC_USER_JOBS	NO
+
 #define StaticFlag -static
 #define UnixName /vmunix		/* pathname of the system executable */
 #define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */

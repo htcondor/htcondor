@@ -174,11 +174,7 @@ init_arch()
 
 		// Get OPSYS
 	if( !strcmp(buf.sysname, "Linux") ) {
-		if( access("/lib/libc.so.6", R_OK) != 0 ) {
-			sprintf( tmp, "LINUX" );
-		} else { 
-			sprintf( tmp, "LINUX-GLIBC" );
-		}
+		sprintf( tmp, "LINUX" );
 	} else if( !strcmp(buf.sysname, "SunOS") ) {
 		if( !strcmp(buf.release, "5.6") ) {
 			sprintf( tmp, "SOLARIS26" );

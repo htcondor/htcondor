@@ -47,6 +47,7 @@
 #define U_SHORT_SIZE sizeof(u_short)
 #define U_INT_SIZE sizeof(u_int)
 #define NEG_ONE -1
+#define UTIMBUF_SIZE sizeof(struct utimbuf)
 
 #if defined( HAS_64BIT_STRUCTS )
 #define STAT64_SIZE sizeof(struct stat64)

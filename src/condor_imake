@@ -26,6 +26,7 @@ os=`uname -s | sed 's/IRIX.*/IRIX/'`
 ArchFlag=""
 Opsys=""
 Other=""
+Other2=""
 IrixAbi=""
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
@@ -38,6 +39,11 @@ elif [ $os = "Linux" ]; then
 	Opsys="-DIS_LINUX"
 	if [ -f /lib/libc.so.6* ] ; then
 		Other="-DIS_GLIBC"
+	fi
+	if [ -f /lib/libc-2.0.* ]; then
+		Other2="-DIS_GLIBC20"
+	elif [ -f /lib/libc-2.1.* ]; then
+		Other2="-DIS_GLIBC21"
 	fi
 	if [ $arch = "i686" -o $arch = "i586" -o $arch = "i486" ] ; then
 		ArchFlag="-DIS_I386"
@@ -87,5 +93,5 @@ if [ $gss = "Y" ]; then
 	fi
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other $GssAuth -I../config -I../../config \
+imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth -I../config -I../../config \
 $IrixAbi

@@ -26,8 +26,9 @@
 
 #include <sys/mman.h>
 
+
 #if defined(LINUX)
-#	if defined(GLIBC) 
+#	if defined(GLIBC20) 
 #		define MMAP_T char*
 #	else
 #		define MMAP_T void*

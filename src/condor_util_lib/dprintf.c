@@ -56,7 +56,7 @@ void dprintf_exit();
 extern int	errno;
 
 int		DebugFlags = D_ALWAYS;
-FILE	*DebugFP = stderr;
+FILE	*DebugFP = NULL;
 
 /*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
@@ -290,6 +290,10 @@ debug_lock(int debug_level)
 {
 	int			length;
 	priv_state	priv;
+
+	if ( DebugFP == NULL ) {
+		DebugFP = stderr;
+	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 

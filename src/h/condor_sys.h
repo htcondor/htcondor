@@ -43,6 +43,37 @@
 #include <syscall.h> 
 #endif
 
+#if defined (LINUX) && !defined(SYS_sigsetmask)
+/* SYS_sigsetmask is undefined in glibc header files, however it is a valid
+	system call in linux kernels so to write portable(stop laughing) code
+	we want it to be defined in both cases */
+#define SYS_sigsetmask __NR_ssetmask
+#endif
+
+#if defined (LINUX)
+/* Under 2.2 kernels SYS_chown isn't the same as SYS_chown on a 2.0 kernel.
+	From the man page for chown...
+
+       In versions of Linux prior to 2.1.81  (and  distinct  from
+       2.1.46), chown did not follow symbolic links.  Since Linux
+       2.1.81, chown does follow symbolic links, and there  is  a
+       new  system  call  lchown  that  does  not follow symbolic
+       links.  Since Linux 2.1.86, this new call  (that  has  the
+       same  semantics as the old chown) has got the same syscall
+       number, and chown got the newly introduced number.
+
+	So what we are going to do is to make SYS_chown act like SYS_lchown
+	so that programs compiled under a 2.2 kernel headerfile system can
+	still run under a 2.0 machine.
+
+	-pete 8/15/99
+*/
+#	if defined(SYS_lchown)
+#		undef SYS_chown
+#		define SYS_chown SYS_lchown
+#	endif
+#endif
+
 #if defined(AIX31) || defined(AIX32)
 extern int	CondorErrno;
 #define SET_ERRNO errno = CondorErrno

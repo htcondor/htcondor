@@ -209,9 +209,11 @@ MAIN( int argc, char *argv[], char **envp )
 	
 #undef WAIT_FOR_DEBUGGER
 #if defined(WAIT_FOR_DEBUGGER)
+	{
 	int		do_wait = 1;
 	while( do_wait )
 		;
+	}
 #endif
 
 	/* Some platforms have very picky strcmp()'s which like

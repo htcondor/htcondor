@@ -6,6 +6,7 @@
 
 # --------------------------------------------------
 
+
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
@@ -18,6 +19,18 @@ CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 CONDOR_LD_DIR=$CONDOR_LIBDIR
 CONDOR_SPECIAL_CLIB=/not-there-bull
+
+# if I am on a linux box, determine where I should be looking
+LINUX_LIB=
+if [ `uname` = "Linux" ]; then
+	if [ -f /lib/libc-2.1* ]; then
+		LINUX_LIB="glibc21"
+	elif [ -f /lib/libc-2.0* ]; then
+		LINUX_LIB="glibc20"
+	else
+		LINUX_LIB="libc5"
+	fi
+fi
 
 # --------------------------------------------------
 
@@ -85,6 +98,26 @@ do
 	break
 done
 
+# if these files exist, then keep them, otherwise append the correct lib dir
+# this is so a developer using make release can still use the libs
+if [ `uname` = "Linux" ]; then
+	if [ ! -f "$CONDOR_CLIB" ]; then
+		CONDOR_CLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorsyscall.a
+	fi
+
+	if [ ! -f "$CONDOR_ZCLIB" ]; then
+		CONDOR_ZCLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorzsyscall.a
+	fi
+
+	if [ ! -f "$CONDOR_RT0" ]; then
+		CONDOR_RT0=$CONDOR_LIBDIR/$LINUX_LIB/condor_rt0.o
+	fi
+
+	if [ ! -f "$CONDOR_CPLUS" ]; then
+		CONDOR_CPLUS=$CONDOR_LIBDIR/$LINUX_LIB/libcondorc++support.a
+	fi
+fi
+
 if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
 	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
 fi
@@ -92,7 +125,7 @@ fi
 if [ -r $CONDOR_SPECIAL_CLIB ]; then
 	CONDOR_CLIB="$CONDOR_SPECIAL_CLIB"
 fi
-
+	
 # Export these so our special "ld" script can find them
 export CONDOR_LIBDIR
 export CONDOR_CLIB

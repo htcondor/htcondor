@@ -592,37 +592,82 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #if !defined( CLIP )
 
-#if defined(LINUX) && !defined(GLIBC)
+#if defined(LINUX)
+#	if defined(GLIBC20) || defined(GLIBC21)
+#		if	defined(RECEIVER) || defined(SENDER)
+			int fstat( map(int fd), struct stat *buf ) {
+					out code( buf );
+					alloc( buf, STAT_SIZE );
+				}
+#		endif
+#	else /* must be libc5 */
 	int fstat( map(int fd), struct stat *buf ) : extract {
+			out code( buf );
+			alloc( buf, STAT_SIZE );
+		}
+#	endif
 #else
 	int fstat( map(int fd), struct stat *buf ) {
-#endif
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#endif
 
 
-#if defined(LINUX) && !defined(GLIBC)
+#if defined(LINUX)
+#	if defined(GLIBC20) || defined(GLIBC21)
+#		if defined(RECEIVER) || defined(SENDER)
+    		int stat( const char *path, struct stat *buf ) {
+					SEND_PATH( path );
+					ALLOC_PATH( path );
+					out code( buf );
+					alloc( buf, STAT_SIZE );
+				}
+#		endif
+#	else /* must be libc 5 */
     int stat( const char *path, struct stat *buf ) : extract {
+			SEND_PATH( path );
+			ALLOC_PATH( path );
+			out code( buf );
+			alloc( buf, STAT_SIZE );
+		}
+#	endif
 #else
     int stat( const char *path, struct stat *buf ) {
-#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#endif
 
-#if defined(LINUX) && !defined(GLIBC)
-    int lstat( const char *path, struct stat *buf ) : extract {
+#if defined(LINUX)
+#	if defined(GLIBC21) || defined(GLIBC20)
+#		if defined(RECEIVER) || defined(SENDER)
+   	 	int lstat( const char *path, struct stat *buf ) {
+					SEND_PATH( path );
+					ALLOC_PATH( path );
+					out code( buf );
+					alloc( buf, STAT_SIZE );
+				}
+#		endif
+#	else  /* must be libc5 */
+    	int lstat( const char *path, struct stat *buf ) : extract {
+				SEND_PATH( path );
+				ALLOC_PATH( path );
+				out code( buf );
+				alloc( buf, STAT_SIZE );
+			}
+#	endif
 #else
     int lstat( const char *path, struct stat *buf ) {
-#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#endif
+
 
 #if HAS_64BIT_SYSCALLS
 		/* 64-bit versions of various syscalls.  
@@ -681,15 +726,8 @@ int rename( const char *from, const char *to ) : pseudo {
 #else	
 	int flock( map(int fd), int op );
 #endif
-#if defined(Solaris)
-not_supported{
-	int fstatfs( map(int fd), struct statfs *buf ) {
-		out code( buf );
-		alloc( buf, STATFS_SIZE );
-	}
-	}
-#else 
-#if defined(IRIX)
+
+#if defined(IRIX) || defined(Solaris)
 	int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
 #else
 	int fstatfs( map(int fd), struct statfs *buf ) {
@@ -697,7 +735,18 @@ not_supported{
 	out code( buf );
 	alloc( buf, STATFS_SIZE );
 	}
-#endif /* defined(Solaris) */
+
+#if defined(IRIX) || defined(Solaris)
+	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
+#else
+	int statfs( const char *path, struct statfs *buf ) {
+#endif
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	out code( buf );
+	alloc( buf, STATFS_SIZE );
+	}
+
 
 	int fsync( map(int fd) );
 
@@ -742,9 +791,10 @@ not_supported{
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) {
-		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
-		alloc( grouplist, gidsetsize * GID_T_SIZE );
+		out code_array( grouplist, gidsetsize );
+		alloc(grouplist, gidsetsize * GID_T_SIZE);
 	}
+
 #	if defined(Solaris) || defined(IRIX)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
@@ -851,12 +901,25 @@ not_supported{
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-	int utimes( const char *path, struct timeval times[] ) {
+
+#	if defined( LINUX )
+	int utimes( char *path, struct timeval *times ) {
+#	else
+	int utimes( const char *path, struct timeval *times ) {
+#	endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		in code_bytes_bool( times, TIMEVAL_ARRAY_SIZE );
-		alloc( times, TIMEVAL_ARRAY_SIZE );
+/*		in code_bytes_bool( times, TIMEVAL_SIZE );*/
+		alloc( times, TIMEVAL_SIZE );
 	}
+	int utime( const char *path, const struct utimbuf *buf) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+/*		in code_bytes_bool( buf, UTIMBUF_SIZE );*/
+		alloc( buf, UTIMBUF_SIZE );
+	}
+
+
 #if defined(HPUX10) || defined(OSF1)
 	long gethostid();
 #else
@@ -886,39 +949,6 @@ not_supported{
 	}
 #endif
 
-#if defined(HPUX)
-	int statfs( char *path, struct statfs *buf ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out code( buf );
-		alloc( buf, STATFS_SIZE );
-	}
-#elif defined(LINUX)
-	int statfs( const char *path, struct statfs *buf ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out code( buf );
-		alloc( buf, STATFS_SIZE );
-	}
-#elif defined(Solaris)
-	not_supported {
-		int statfs( char *path, struct statfs *buf, int len );
-	}
-#elif defined(IRIX)
-	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out code( buf );
-		alloc( buf, STATFS_SIZE );
-	}
-#else
-	int statfs( char *path, struct statfs *buf, int len ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out code( buf );
-		alloc( buf, STATFS_SIZE );
-	}
-#endif
 	int getdomainname( char *name, int namelen ) {
 		out code( name, namelen );
 		alloc( name, namelen );

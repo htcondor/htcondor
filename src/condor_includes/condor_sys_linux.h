@@ -145,7 +145,20 @@ END_C_DECLS
 #define __getrlimit __hide__getrlimit
 #define setrlimit __hide_setrlimit
 #endif /* GLIBC */
+
+/* on a glibc 2.1 machine r_lim_t is defined so hide the definition */
+#if defined(LINUX) && defined(GLIBC21)
+#	define rlim_t _hide_rlim_t
+#endif
+
 #include <sys/resource.h>
+
+/* on a glibc 2.1 machine r_lim_t is defined, so we undef it and let the typdef
+	through */
+#if defined(LINUX) && defined(GLIBC21)
+#	undef rlim_t
+#endif
+
 #if defined(GLIBC)
 #undef getpriority
 #undef getrlimit

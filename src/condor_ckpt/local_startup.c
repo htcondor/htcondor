@@ -228,3 +228,28 @@ ioserver_close(int filedes)
 {
 	return -1;
 }
+
+#if !defined( HAS_DYNAMIC_USER_JOBS )
+
+
+/* static ckpting needs to have these always fail so no dynamic segments
+	get created */
+int
+__mmap()
+{
+	return -1;
+}
+
+int
+_mmap()
+{
+	return -1;
+}
+
+int
+mmap()
+{
+	return -1;
+}
+
+#endif

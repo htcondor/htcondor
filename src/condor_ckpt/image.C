@@ -35,11 +35,17 @@
 #include "file_table_interf.h"
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
+
+/* XXX hack! */
+/*#define dprintf mydprintf*/
+
 static char *_FileName_ = __FILE__;
 
 extern int _condor_in_file_stream;
 
 const int KILO = 1024;
+
+extern "C" void mydprintf(int foo, const char *fmt, ...);
 
 extern "C" void report_image_size( int );
 extern "C"	int	SYSCALL(int ...);
@@ -477,7 +483,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 void
 Image::Save()
 {
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX)
+#if !defined(HAS_DYNAMIC_USER_JOBS)
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
@@ -497,15 +503,19 @@ Image::Save()
 	head.AltHeap(alt_heap);
 #endif
 
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX)
+#if !defined(HAS_DYNAMIC_USER_JOBS)
 
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
+	dprintf(D_ALWAYS, "Adding a DATA segment: start[0x%x], end [0x%x]\n",
+		data_start, data_end);
 	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
+	dprintf(D_ALWAYS, "Adding a STACK segment: start[0x%x], end [0x%x]\n",
+		stack_start, stack_end);
 	AddSegment( "STACK", stack_start, stack_end, 0 );
 
 #else
@@ -526,7 +536,7 @@ Image::Save()
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	dprintf( D_ALWAYS, "data start = 0x%lx, data end = 0x%lx\n",
+	printf( "Data start = 0x%lx, data end = 0x%lx\n",
 			data_start, data_end );
 	AddSegment( "DATA", data_start, data_end, 0 );
 
@@ -558,9 +568,6 @@ Image::Save()
 			break;
 		case 0:
 			if (addr_start != head.AltHeap()) {	// don't ckpt alt heap
-#if defined(LINUX)
-				addr_end=find_correct_vm_addr(addr_start, addr_end, prot);
-#endif
 				AddSegment( "SHARED LIB", addr_start, addr_end, prot);
 			}
 			break;
@@ -755,9 +762,15 @@ Image::Restore()
 extern "C" {
 void *memcpy(void *s1, const void *s2, size_t n)
 {
+	char *cs1 = NULL;
+	char *cs2 = NULL;
 	void *r = s1;
+
+	cs1 = (char*)s1;
+	cs2 = (char*)s2;
+
 	while (n > 0) {
-		*((char *)s1)++ = *((char *)s2)++;
+		*cs1++ = *cs2++;
 		n--;
 	}
 	return r;
@@ -825,7 +838,6 @@ void Image::RestoreAllSegsExceptStack()
 		}
 		fd = save_fd;
 	}
-
 }
 
 
@@ -1076,6 +1088,7 @@ Image::Write( int fd )
 
 		// Write out the Segments
 	for( i=0; i<head.N_Segs(); i++ ) {
+/*		map[i].Display();*/
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
 			dprintf( D_ALWAYS, "Write() of segment %d failed\n", i );
 			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
@@ -1192,6 +1205,7 @@ Image::Read()
 		if( (nbytes=net_read(fd,&map[i],sizeof(SegMap))) < 0 ) {
 			return -1;
 		}
+/*		map[i].Display();*/
 		pos += nbytes;
 		dprintf( D_ALWAYS, "Read SegMap[%d] OK\n", i );
 	}
@@ -1236,9 +1250,12 @@ SegMap::Read( int fd, ssize_t pos )
 			brk( (char *)(core_loc + len) );
 		}
 		cur_brk = (char *)sbrk(0);
+		dprintf(D_ALWAYS, 
+			"Found a DATA block, increasing heap from 0x%x to 0x%x\n", 
+			orig_brk, cur_brk);
 	}
 
-#if defined(Solaris) || defined(IRIX) || defined(LINUX)
+#if defined(HAS_DYNAMIC_USER_JOBS)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
@@ -1305,6 +1322,9 @@ SegMap::Read( int fd, ssize_t pos )
 	bytes_to_go = saved_len;
 	ptr = (char *)saved_core_loc;
 
+	dprintf(D_ALWAYS, 
+		"About to overwrite 0x%x bytes starting at 0x%x\n", bytes_to_go, ptr);
+
 #if defined(COMPRESS_CKPT)
 	if (zstr) {
 		struct z_stream *saved_zstr = zstr;
@@ -1340,7 +1360,7 @@ SegMap::Read( int fd, ssize_t pos )
 
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 65536 ? 65536 : bytes_to_go;
-#if defined(Solaris) || defined(IRIX) || defined(LINUX)
+#if defined(HAS_DYNAMIC_USER_JOBS)
 		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
@@ -1348,7 +1368,8 @@ SegMap::Read( int fd, ssize_t pos )
 		if( nbytes < 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			dprintf(D_ALWAYS, "Error=%d, core_loc=%x\n", errno, core_loc);
+			dprintf(D_ALWAYS, "Error=%d, core_loc=%x, nbytes=%d\n",
+				errno, core_loc, nbytes);
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -1551,6 +1572,7 @@ Checkpoint( int sig, int code, void *scp )
 			if ( write_result == 0 ) {
 				terminate_with_sig( SIGUSR2 );
 			} else {
+				dprintf(D_ALWAYS, "Write failed with [%d]\n", write_result);
 				Suicide();
 			}
 			/* should never get here */
@@ -1871,5 +1893,17 @@ __CERROR64()
 }
 #endif
 
+void mydprintf(int foo, const char *fmt, ...)
+{
+        va_list args;
+
+        va_start(args, fmt);
+        vfprintf(stdout, fmt, args);
+        va_end(args);
+		fflush(0);
+
+		foo = foo;
+}
 
 } /* extern "C" */
+

@@ -3,10 +3,57 @@
 #define HasGcc		YES
 #define HasGPlusPlus	YES
 
-#define CCompiler	/s/ogcc/bin/gcc 
-#define CPlusCompiler	/s/ogcc/bin/g++
+/* ----------Various Build Rules---------- */
+
+/* for Solaris and most arches in cs afs land */
+/*#define CCompiler	/s/ogcc/bin/gcc */
+/*#define CPlusCompiler	/s/ogcc/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/s/ogcc/bin/c++filt*/
+
+/* for finch with local compiler */
+/*#define CCompiler	/usr/local/bin/gcc*/
+/*#define CPlusCompiler	/usr/local/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/usr/local/bin/c++filt*/
+
+/* for raven with egcs 1.1.2 compiler */
+/*#define CCompiler	/usr/local/bin/gcc*/
+/*#define CPlusCompiler	/usr/local/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/usr/local/bin/c++filt*/
+
+/* for duck with local compiler 2.7.2.1 libc5 */
+/*#define CCompiler	/usr/bin/gcc*/
+/*#define CPlusCompiler	/usr/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/usr/bin/c++filt*/
+
+/* for irix in MAF land */
+/*#define CCompiler	/usr/gnu/bin/gcc*/
+/*#define CPlusCompiler	/usr/gnu/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/usr/gnu/bin/c++filt*/
+
+/* for alpha osf1 in cs afs land */
+/*#define CCompiler	/s/ogcc/bin/gcc*/
+/*#define CPlusCompiler	/s/ogcc/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/s/gcc/alpha_dux40/bin/c++filt*/
+
+/* for phoenix an alpha with egcs */
+#define CCompiler	/usr/local/egcs1.1.2/bin/gcc
+#define CPlusCompiler	/usr/local/egcs1.1.2/bin/g++
 #define PreProcessCmd	CCompiler -E -x c-header
-#define Demangler	/s/ogcc/bin/c++filt
+#define Demangler	/usr/local/egcs1.1.2/bin/c++filt
+
+/* for HPUX in MAF land */
+/*#define CCompiler	/afs/engr.wisc.edu/src/gnu/gcc-2.7.2/bin/gcc*/
+/*#define CPlusCompiler	/afs/engr.wisc.edu/src/gnu/gcc-2.7.2/bin/g++*/
+/*#define PreProcessCmd	CCompiler -E -x c-header*/
+/*#define Demangler	/afs/engr.wisc.edu/src/gnu/std/bin/c++filt*/
+
+/* --------------------------------------- */
 
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include
@@ -25,7 +72,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top           /p/condor/workspaces/wright/V6
+#define Top /home/psilord/merge-arena
 
 #define TmpDir		/tmp
 

@@ -18,6 +18,8 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 
+#define HAS_DYNAMIC_USER_JOBS	NO
+
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 
 #define TypicalMemory 64

@@ -41,7 +41,7 @@ REMAP_TWO( fchmod, _fchmod, int , int , unsigned long )
 REMAP_THREE( fchown, _fchown, int , int , uid_t , gid_t )
 REMAP_ZERO( fork, _fork, pid_t )
 REMAP_ZERO( fork1, _fork1, pid_t )
-REMAP_TWO( fstatfs, _fstatfs, int , int , struct statfs *)
+REMAP_FOUR( fstatfs, _fstatfs, int , int , struct statfs *, int, int)
 REMAP_THREE( getdents, _getdents, int , int , char *, int )
 REMAP_ZERO( getgid, _getgid, gid_t )
 /* REMAP_TWO( getgroups, _getgroups, int , int , gid_t []) */
@@ -81,7 +81,7 @@ REMAP_THREE( sigaction, _sigaction, int, int, const struct sigaction *, struct s
 /* REMAP_TWO( signal, _signal, void (*func)(), int, void (*func)() ) */
 REMAP_THREE( sigprocmask, _sigprocmask, int, int, const sigset_t *, sigset_t * )
 REMAP_ONE( sigsuspend, _sigsuspend, int, const sigset_t * )
-REMAP_THREE( statfs, _statfs, int , char *, struct statfs *, int )
+REMAP_FOUR( statfs, _statfs, int , char *, struct statfs *, int, int )
 REMAP_TWO( symlink, _symlink, int , const char *, const char *)
 REMAP_ZERO( sync, _sync, void )
 REMAP_ONE( umask, _umask, unsigned long , unsigned long )

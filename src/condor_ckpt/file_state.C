@@ -47,11 +47,17 @@
 #include "buffer_glue.h"
 
 #if defined(LINUX)
-#include <sys/socketcall.h>
-#	if defined(GLIBC)
+#	if defined(GLIBC21)
+#		include <linux/net.h>
+#	else
+#		include <sys/socketcall.h>
+#	endif
+#	if defined(GLIBC20)
 #		define SYS_SOCKET SOCKOP_socket
 #	endif
 #endif
+
+/*#define dprintf mydprintf*/
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -235,12 +241,16 @@ OpenFileTable::DoOpen(
 	file[user_fd].open = TRUE;
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = FALSE;
-	file[user_fd].remote_access = is_remote;
 	file[user_fd].ioserver_access = FALSE;
 	file[user_fd].ioserversocket = -1;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
+#ifdef LINUX
+	file[user_fd].bufferable = TRUE;
+#else
 	file[user_fd].bufferable = is_remote;
+#endif
+	file[user_fd].remote_access = is_remote;
 
 	file[user_fd].real_fd = real_fd;
 	if( path[0] == '/' ) {
@@ -669,12 +679,13 @@ OpenFileTable::Save()
 
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
+/*		printf("fd[%d] is %s\n", i, f->isOpen()?"OPEN":"CLOSED");*/
 		if( f->isOpen() && !f->isDup() ) {
-//			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
+			dprintf(D_ALWAYS,"**** Current file entry is %d\n",i);
 			if ( f->isIOServerAccess() ) {
 				scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED);
 				pos = ioserver_lseek( i, (off_t)0, SEEK_CUR);
-//				dprintf(D_ALWAYS,">>>>> IO server seek returns %d\n",pos);
+/*				dprintf(D_ALWAYS,">>>>> IO server seek returns %d\n",pos);*/
 				SetSyscalls( scm );
 			}
 			else if( f->isRemoteAccess() ) {
@@ -764,7 +775,8 @@ OpenFileTable::Restore()
 	    f = &file[i];
 	    if (f->isOpen())
 	      {
-//		dprintf(D_ALWAYS,"%d : pathname = %s, isopen = %d",i,file[i].pathname, f->isOpen());
+/*		dprintf(D_ALWAYS,"%d : pathname = %s, isopen = %d\n",i,
+			file[i].pathname, f->isOpen());*/
 	      }
 	    
 	    
@@ -786,14 +798,14 @@ OpenFileTable::Restore()
 
 
 	chdir( cwd );
-//	Display();
+/*	Display();*/
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if ( (f->pathname) && (!strcmp(f->pathname,"/IO_Socket") ))
 		  continue;
 		
 		if( f->isOpen() && !f->isDup() && !f->isPreOpened() ) {
-//			dprintf(D_ALWAYS,"Current restoring file is %d\n",i);
+			dprintf(D_ALWAYS,"Current restoring file is %d\n",i);
 			if( f->isWriteable() && f->isReadable() ) {
 				mode = O_RDWR;
 			} else if( f->isWriteable() ) {
@@ -813,15 +825,15 @@ OpenFileTable::Restore()
 
 			    SetSyscalls(scm);
 			    
-//			    dprintf(D_ALWAYS,"before duping... \n");
-//			    printft();
+/*			    dprintf(D_ALWAYS,"before duping... \n");*/
+/*				printft();*/
 			    
 			    file[i] = file[temp];
 			    file[i].duplicate = TRUE;
 			    file[i].dup_of = temp;
 
-//			    dprintf(D_ALWAYS,"after duping... \n");
-//			    printft();
+/*			    dprintf(D_ALWAYS,"after duping... \n");*/
+/*			    printft();*/
 
 //			    dprintf(D_ALWAYS,"---  table printed done \n");
 //			    FileTab->DoClose( temp );

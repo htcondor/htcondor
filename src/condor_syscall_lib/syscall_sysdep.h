@@ -3,12 +3,27 @@
 
 #if defined(LINUX)
 #   if defined(GLIBC) 
-#	define MMAP_T char*
-#	define GLIBC_CONST 
+#		if defined(GLIBC20)
+#			define MMAP_T char*
+#			define GLIBC_CONST 
+#		else
+#			define MMAP_T void*
+			/* The man page on a glibc21 machine is wrong, there is no const */
+#			define GLIBC_CONST 
+#		endif
 #   else
-#	define MMAP_T void*
-#	define GLIBC_CONST const
+#		define MMAP_T void*
+#		define GLIBC_CONST const
 #   endif
+#endif
+
+/* this is used for ftruncate */
+#if defined(LINUX)
+#	if defined(GLIBC21)
+#		define LENGTH_TYPE off_t
+#	else
+#		define LENGTH_TYPE size_t
+#	endif
 #endif
 
 #if defined(OSF1)

@@ -223,8 +223,8 @@
 
 	  default:
 		SetSyscalls( scm );
-		fprintf(
-			stderr,
+		dprintf(
+			D_ALWAYS,
 			"Don't know how to do system call %d <%s> remotely - yet\n",
 			syscall_num, _condor_syscall_name( syscall_num )
 		);

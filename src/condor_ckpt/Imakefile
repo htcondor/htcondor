@@ -44,13 +44,19 @@ COMPRESS_FLAGS = -DCOMPRESS_CKPT -I/s/zlib/include
 COMPRESS_LIB = libcondorzckpt.a
 #endif
 
+#if HAS_DYNAMIC_USER_JOBS
+DYNAMIC_FLAGS = -DHAS_DYNAMIC_USER_JOBS
+#else
+DYNAMIC_FLAGS =
+#endif
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) \
-	$(PVM_CHECKPOINT) -DIN_CKPT_LIB
+	$(PVM_CHECKPOINT) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
 
 #if IS_HPUX10
-CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB
+CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
 #else
-CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB
+CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
 #endif
 
 #if IS_IRIX62
@@ -172,7 +178,7 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
 	rm -f sigaction.tmp.o sigaction.o
 #elif IS_ALPHA_OSF1
-uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
+uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP_TMP.o,mmap,MMAP)
 #else
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
@@ -197,7 +203,8 @@ SIGACTION.o : $(SIMPLE_LIBC) ToUpper
 	./ToUpper $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o sigaction SIGACTION
 	./ToUpper $(TMP_DIR)/SIGACTION.o SIGACTION.o _sigtramp _SIGTRAMP
 	rm -f $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o
-#elif IS_GLIBC_LINUX
+
+#elif IS_GLIBC_LINUX && IS_GLIBC20
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND_TMP.o,sigsuspend,SIGSUSPEND)
 
 SIGSUSPEND.o: SIGSUSPEND_TMP.o ToUpper
@@ -205,6 +212,7 @@ SIGSUSPEND.o: SIGSUSPEND_TMP.o ToUpper
 
 clean::
 	rm -f SIGSUSPEND_TMP.o
+
 #else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
@@ -225,11 +233,15 @@ obj_extract($(EGCS_LIBC),frame.o)
 #endif
 
 #if IS_GLIBC_LINUX
-uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP.o,__syscall_error,__SYSCALL_ERROR)
+uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP_TMP.o,__syscall_error,__SYSCALL_ERROR)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 
 SYSCALL.o: SYSCALL_TMP.o ToUpper
 	./ToUpper SYSCALL_TMP.o SYSCALL.o __SYSCALL_error __syscall_error
+
+SYSDEP.o: SYSDEP_TMP.o ToUpper
+	./ToUpper SYSDEP_TMP.o SYSDEP_TMP2.o errno ERRNO
+	./ToUpper SYSDEP_TMP2.o SYSDEP.o _ERRNO_location _errno_location
 
 clean::
 	rm -f SYSCALL_TMP.o
@@ -288,6 +300,12 @@ clean::
 #elif  IS_X86_SOLARIS
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 condor_rt0.o main  MAIN
+clean::
+	rm -f condor_rt0.o
+#elif IS_GLIBC_LINUX && IS_GLIBC21
+condor_rt0.o: Crt0 ToUpper
+	./ToUpper Crt0 tmp1 main  MAIN
+	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main
 clean::
 	rm -f condor_rt0.o
 #else

@@ -532,7 +532,25 @@ Stream::code(struct rlimit64 &rl)
 int 
 Stream::code(struct statfs &s)
 {
-	return FALSE;
+	if (_coding == stream_decode)
+	{
+		/* zero out the fields noone cares about */
+		memset(&s, 0, sizeof(struct statfs));
+	}
+
+	STREAM_ASSERT(code(s.f_bsize));
+	STREAM_ASSERT(code(s.f_blocks));
+	STREAM_ASSERT(code(s.f_bfree));
+	STREAM_ASSERT(code(s.f_files));
+	STREAM_ASSERT(code(s.f_ffree));
+
+#if defined(Solaris) || defined(IRIX)
+	STREAM_ASSERT(code(s.f_bfree));
+#else
+	STREAM_ASSERT(code(s.f_bavail));
+#endif
+
+	return TRUE;
 }
 
 int 
@@ -551,6 +569,14 @@ Stream::code(struct timeval &tv)
 	STREAM_ASSERT(code(tv.tv_usec));
 
 	return TRUE;
+} 
+
+Stream::code(struct utimbuf &ut)
+{
+	STREAM_ASSERT(code(ut.actime));
+	STREAM_ASSERT(code(ut.modtime));
+
+	return TRUE;
 }
 
 int 
@@ -558,6 +584,43 @@ Stream::code(struct rlimit &rl)
 {
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
+
+	return TRUE;
+}
+
+/* send a gid_t array element by element. This is done because gid_t can be
+	different sizes on different machines. Basically, let cedar take care of
+	it :) If you need to send other types of arrays, then follow this
+	convention.
+*/
+int
+Stream::code_array(gid_t *&array, int &len)
+{
+	int i;
+
+	if (_coding == stream_encode)
+	{
+		if (len > 0 && array == NULL)
+		{
+			return FALSE;
+		}
+	}
+
+	STREAM_ASSERT(code(len));
+
+	if (len > 0)
+	{
+		if (!array)
+		{
+			array = (gid_t*)malloc(sizeof(gid_t) * len);
+		}
+
+		/* send each element by itself */
+		for (i = 0; i < len; i++)
+		{
+			STREAM_ASSERT(code(array[i]));
+		}
+	}
 
 	return TRUE;
 }

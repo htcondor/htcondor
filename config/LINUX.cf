@@ -18,8 +18,20 @@
 #   undef IS_GLIBC
 #   define IS_GLIBC		YES
 #   define IS_GLIBC_LINUX	YES
-#   define GlibCFlag		-DGLIBC
-#   define ImakeOtherFlag	-DIS_GLIBC
+
+/* Yes, we actually need to know the difference between glibc 2.0 and 2.1 */
+#if defined( IS_GLIBC20 )
+#   undef IS_GLIBC20
+#	define IS_GLIBC20	YES
+#   define GlibCFlag		-DGLIBC -DGLIBC20
+#   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC20
+#elif defined( IS_GLIBC21 )
+#	undef IS_GLIBC21
+#	define IS_GLIBC21	YES
+#   define GlibCFlag		-DGLIBC -DGLIBC21
+#   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC21
+#endif
+
 #   define IS_EGCS_BUILD	YES
 #else
 #   define GlibCFlag
@@ -82,7 +94,7 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-#define HAS_PVM				YES
+#define HAS_PVM				NO
 #define PVM_ARCH			LINUX
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO

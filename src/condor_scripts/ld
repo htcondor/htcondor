@@ -172,7 +172,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
 	Linux )
 				oscrt0="crt1.o"
-				ldargs="" 
+				ldargs="-Bstatic" 
 	;;
 
 	IRIX )		

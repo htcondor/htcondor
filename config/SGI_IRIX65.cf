@@ -1,5 +1,7 @@
 /* Things that are specific to IRIX 6.5 */
 
+#define HAS_DYNAMIC_USER_JOBS	YES
+
 #define Platform		SGI_IRIX65
 #define ImakeOpsysFlag		-DIS_IRIX65
 #define PlatformFlags		-DIRIX65

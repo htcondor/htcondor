@@ -31,6 +31,8 @@
 #include "syscall_macros.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
+#include "condor_sys.h"
+
 
 #if defined(HPUX)
 #	define _XPG4_EXTENDED
@@ -194,6 +196,8 @@ struct stat;
 #if defined(LINUX)
 #	include <signal.h>
 #	include <sys/vfs.h>
+#	include <sys/types.h>
+#	include <utime.h>
 #if !defined(GLIBC)
 #	include <linux/ipc.h>
 #endif /* GLIBC */
@@ -314,6 +318,4 @@ struct module;
 #	define GETPPID(x)  (__GETPPID(x))
 #	define GETEUID(x)  (__GETEUID(x))
 #endif /* LINUX */
-
-
 
