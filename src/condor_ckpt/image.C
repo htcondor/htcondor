@@ -1318,4 +1318,13 @@ _condor_save_stack_location()
 {
 	SavedStackLoc = stack_start_addr();
 }
+
+#if defined( X86 ) && defined( Solaris ) 
+int
+__CERROR() 
+{
+	return errno;
 }
+#endif
+
+} /* extern "C" */
