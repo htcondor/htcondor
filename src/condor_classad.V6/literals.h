@@ -64,6 +64,7 @@ class Literal : public ExprTree
 
 		static Literal*MakeLiteral( const Value&, NumberFactor f=NO_FACTOR );
 		void GetComponents( Value&, NumberFactor &f ) const;
+		void GetValue( Value& ) const;
 
   	private:
 		friend FunctionCall;

@@ -118,6 +118,27 @@ MakeLiteral( const Value& val, NumberFactor f )
 
 
 void Literal::
+GetValue( Value &val ) const 
+{
+	int		i;
+	double	r;
+
+	val.CopyFrom( value );
+
+	// if integer or real, multiply by the factor
+	if (val.IsIntegerValue(i)) {
+		if( factor != NO_FACTOR ) {
+			val.SetRealValue( ((double)i)*factor );
+		} else {
+			val.SetIntegerValue (i*factor);
+		}
+	} else if (val.IsRealValue(r)) {
+		val.SetRealValue (r*(double)factor);
+	}
+}
+
+
+void Literal::
 GetComponents( Value &val, NumberFactor &f ) const
 {
 	val = value;
