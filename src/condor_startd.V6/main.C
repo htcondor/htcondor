@@ -46,8 +46,7 @@ StringList *console_devices = NULL;
 StringList *startd_job_exprs = NULL;
 
 // Hosts
-char*	negotiator_host = NULL;
-char*	collector_host = NULL;
+Daemon*	Collector = NULL;
 char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
@@ -331,27 +330,10 @@ init_params( int first_time)
 	}
 #endif
 
-	// make sure we have the canonical name for the negotiator host
-	tmp = param( "NEGOTIATOR_HOST" );
-	if( tmp == NULL ) {
-		EXCEPT("No Negotiator host specified in config file");
+	if( Collector ) {
+		delete( Collector );
 	}
-	if( (hp = gethostbyname(tmp)) == NULL ) {
-		EXCEPT( "gethostbyname failed for negotiator host" );
-	}
-	free( tmp );
-	if( negotiator_host ) {
-		free( negotiator_host );
-	}
-	negotiator_host = strdup( hp->h_name );
-
-	if( collector_host ) {
-		free( collector_host );
-	}
-	collector_host = param( "COLLECTOR_HOST" );
-	if( collector_host == NULL ) {
-		EXCEPT( "No Collector host specified in config file" );
-	}
+	Collector = new Daemon( DT_COLLECTOR );
 
 	if( condor_view_host ) {
 		free( condor_view_host );
