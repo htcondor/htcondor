@@ -368,7 +368,7 @@ CStarter::InitUserPriv( ClassAd* jobAd )
 		return false;
 	}
 
-	if( SameUidDomain() ) {
+	if( SameUidDomain(jobAd) ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
 			// init_user_ids, since if we're dealing with a
@@ -479,13 +479,15 @@ CStarter::InitUserPriv( ClassAd* jobAd )
 					 owner );
 		}
 	} else {
-			// We're in the wrong UID domain, use "nobody".
+		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
 		if( ! init_user_ids("nobody") ) { 
-			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
+			dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 					 "as \"nobody\"\n" );
 			free( owner );
 			return false;
-		}
+		} else {
+			dprintf( D_FULLDEBUG, "Initialized user_priv as \"nobody\"\n" );
+		}			
 	}
 		// deallocate owner string so we don't leak memory.
 	free( owner );
@@ -588,16 +590,50 @@ int CStarter::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
 
 
 bool
-CStarter::SameUidDomain( void ) 
+CStarter::SameUidDomain( ClassAd* jobAd ) 
 {
+	char* job_uid_domain = NULL;
+	bool same_domain = false;
+
 	if( ! UIDDomain ) {
 		EXCEPT( "CStarter::SameUidDomain called with NULL UIDDomain!" );
 	}
 	if( ! InitiatingHost ) {
 		EXCEPT( "CStarter::SameUidDomain called with NULL InitiatingHost!" );
 	}
+	if( jobAd->LookupString( ATTR_UID_DOMAIN, &job_uid_domain ) != 1 ) {
+			// No UidDomain in the job ad, what should we do?
+			// For now, we'll just have to assume that we're not in
+			// the same UidDomain...
+		dprintf( D_FULLDEBUG, "SameUidDomain(): Job ClassAd does not "
+				 "contain %s, returning false\n", ATTR_UID_DOMAIN );
+		return false;
+	}
+
+	dprintf( D_FULLDEBUG, "Submit UidDomain: \"%s\"\n",
+			 job_uid_domain );
+	dprintf( D_FULLDEBUG, " Local UidDomain: \"%s\"\n",
+			 UIDDomain );
+
+	if( strcmp(job_uid_domain, UIDDomain) == MATCH ) {
+		same_domain = true;
+	}
+
+	free( job_uid_domain );
+
+	if( ! same_domain ) {
+		return false;
+	}
+
+		// finally, for "security", make sure that the submitting host
+		// contains our UidDomain as a substring of its hostname.
+		// this way, we know someone's not just lying to us about what
+		// UidDomain they're in.
 	if( host_in_domain(InitiatingHost, UIDDomain) ) {
 		return true;
 	}
+	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our\n"
+			 "\t\tUidDomain, yet its hostname (%s) does not match\n",
+			 InitiatingHost );
 	return false;
 }
