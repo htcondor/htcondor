@@ -94,7 +94,7 @@ lookup_load_avg_via_uptime()
 	 */
 	if (uptime_path != NULL) {
 		if ((output_fp = popen(uptime_path, "r")) == NULL) {
-			dprintf(D_ALWAYS, "popen(\"uptime\")");
+//			dprintf(D_ALWAYS, "popen(\"uptime\")");
 			return DEFAULT_LOADAVG;
 		}
 		
@@ -104,7 +104,7 @@ lookup_load_avg_via_uptime()
 				pclose(output_fp);
 				return DEFAULT_LOADAVG;
 			}
-			dprintf(D_FULLDEBUG, "%s ", word);
+//			dprintf(D_FULLDEBUG, "%s ", word);
 			
 			if (strcmp(word, "average:") == 0) {
 				/*
@@ -117,7 +117,7 @@ lookup_load_avg_via_uptime()
 					pclose(output_fp);
 					return DEFAULT_LOADAVG;
 				} else {
-					dprintf(D_FULLDEBUG,"The loadavg is %f\n",loadavg);
+//					dprintf(D_FULLDEBUG,"The loadavg is %f\n",loadavg);
 				}
 				
 				/*
@@ -127,7 +127,7 @@ lookup_load_avg_via_uptime()
 				 *  -- Ajitk
 				 */
 				pclose(output_fp);
-				dprintf(D_FULLDEBUG, "\n");
+//				dprintf(D_FULLDEBUG, "\n");
 				return loadavg;
 			}
 		} while (!feof(output_fp)); 
