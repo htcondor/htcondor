@@ -78,7 +78,8 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel data_manager nest cluster_tool
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel data_manager \
+		cluster_tool
 
 #define Libraries \
 		util_lib daemon_client c++_util condor_procapi/libprocapi.a \
@@ -249,7 +250,6 @@ object_target(schedd.V6)
 object_target(status.V6)
 object_target(dagman)
 object_target(data_manager)
-object_target(nest)
 object_target(userlog)
 object_target(cluster_tool)
 #if NEEDS_KBDD
