@@ -230,6 +230,7 @@ written earlier.  However, a more typical DAG file would have unique
 This DAG file will be the input file for the \Condor{dagman} program.
 
 \subsubsection{Submitting the DAG to Condor}
+\label{dagman:submitdag}
 
 In order to guarantee recoverability, the DAGMan program itself is run as a
 Condor job.  However, DAGMan is not submitted as a standard universe or
@@ -285,7 +286,13 @@ not loose it.
 DAGMan makes the same guarantee about the DAG as a whole.  If the machine
 running DAGMan goes down or crashes, upon restart DAGMan will be restarted,
 and the state of the DAG jobs will be recovered from the log file
-(\File{diamond.dag.condor.log} from our example before).
+(\File{diamond.dag.condor.log} from our example before).  DAGMan knows to
+recover a DAG (as apposed to starting a new one) because it will detect the
+existance of a lock file that was not removed from the last run.  If DAGMan
+successfully finishes a DAG, the lock file is removed, so that the next run
+will not go into recover mode.  The lock file is specified via command-line
+argument to DAGMan in the \textit{CondorCommandFile}.  Refer to
+section~\ref{dagman:submitdag}.
 
 \subsection{Essentials}
 \label{dagman:essentials}
@@ -308,7 +315,8 @@ details on how to prepare jobs.
 section~\ref{dagman:writedag} to learn about writing a DAG file.
 
 \item[Submit the DAG] Finally, you submit the DAG written in the previous step
-using the \Condor{submit\_dag} script.
+using the \Condor{submit\_dag} script.  Refer to
+section~\ref{dagman:submitdag}.
 
 \end{description}
 
