@@ -390,11 +390,11 @@ case $os in
 	
 	OSF1 )
 		if [ $myname = "cc" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "cxx" ]; then
@@ -402,19 +402,19 @@ case $os in
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 	
 		if [ $myname = "f90" ]; then	
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 
 		if [ $myname = "KCC" ]; then	
-			exec $ARGS --backend -tul --backend \
+			exec $ARGS --backend -tl --backend \
 			-h$CONDOR_LD_DIR --backend -B
 		fi 
 
