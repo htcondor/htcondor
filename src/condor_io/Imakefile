@@ -5,16 +5,17 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -DHEADER_DES_LOCL_H
 LIB = libcedar.a $(STD_LIBS)
 
 #if CONDOR_ENCRYPTION
-ENC_BASE_OBJ = condor_crypt.o
-#endif
 
 #if CONDOR_3DES_ENCRYPTION
 DES_ENC_OBJ = condor_crypt_3des.o
 #endif 
 
-#if CONDOR_BLOWFISH
+#if CONDOR_BLOWFISH_ENCRYPTION
 BLOWFISH_OBJ = condor_crypt_blowfish.o
 #endif 
+
+ENC_BASE_OBJ = condor_crypt.o
+#endif
 
 #if WANT_KERBEROS && HAS_KERBEROS
 KERB_OBJ = condor_auth_kerberos.o

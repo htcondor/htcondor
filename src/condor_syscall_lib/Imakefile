@@ -229,23 +229,23 @@ CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 IO_OBJ = stream.o sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o reli_sock.o SafeMsg.o ../condor_util_lib/get_random_num.o 
 
-#if CONDOR_3DES_ENCRYPTION
-   CONDOR_DES_OBJ = condor_crypt_3des.o
-   CONDOR_DES_SRC = condor_crypt_3des.C
-#endif
-
-#if CONDOR_BLOWFISH_ENCRYPTION
-   CONDOR_DES_OBJ = condor_crypt_blowfish.o
-   CONDOR_DES_SRC = condor_crypt_blowfish.C
-#endif
-
 #if CONDOR_ENCRYPTION
+
+	#if CONDOR_3DES_ENCRYPTION
+	   CONDOR_DES_OBJ = condor_crypt_3des.o
+	   CONDOR_DES_SRC = condor_crypt_3des.C
+	#endif
+
+	#if CONDOR_BLOWFISH_ENCRYPTION
+	   CONDOR_BLOWFISH_OBJ = condor_crypt_blowfish.o
+	   CONDOR_BLOWFISH_SRC = condor_crypt_blowfish.C
+	#endif
+
    CONDOR_CRYPT_OBJ = condor_crypt.o $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
    CONDOR_CRYPT_SRC = condor_crypt.C $(CONDOR_DES_SRC) $(CONDOR_BLOWFISH_SRC)
 #endif
 
 SPECIAL_IO_OBJ = authentication.o CryptKey.o $(CONDOR_CRYPT_OBJ)
-# condor_crypt_3des.o condor_crypt_blowfish.o
 
 SPECIAL_IO_SRC = authentication.C CryptKey.C $(CONDOR_CRYPT_SRC)
 
