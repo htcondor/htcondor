@@ -12,7 +12,8 @@ enum ULogEventNumber
 	ULOG_CHECKPOINTED,				// Job was checkpointed
 	ULOG_JOB_EVICTED,				// Job evicted from machine
 	ULOG_JOB_TERMINATED,			// Job terminated
-	ULOG_IMAGE_SIZE					// Image size of job updated
+	ULOG_IMAGE_SIZE,				// Image size of job updated
+	ULOG_SHADOW_EXCEPTION			// Shadow threw an exception
 };
 
 
@@ -168,4 +169,15 @@ class JobImageSizeEvent : public ULogEvent
 	int size;
 };
 
+// if the shadow throws an exception and quits, this event is logged
+class ShadowExceptionEvent : public ULogEvent
+{
+  public:
+	ShadowExceptionEvent ();
+	~ShadowExceptionEvent ();
+
+	virtual int readEvent (FILE *);
+	virtual int writeEvent (FILE *);
+};
+	
 #endif // __CONDOR_EVENT_H__

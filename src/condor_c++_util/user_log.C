@@ -428,6 +428,7 @@ ReadUserLog ()
 ReadUserLog::
 ~ReadUserLog ()
 {
+	close (fd);
 }
 
 

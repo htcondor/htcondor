@@ -499,6 +499,35 @@ readEvent (FILE *file)
 	return 1;
 }
 
+ShadowExceptionEvent::
+ShadowExceptionEvent ()
+{
+	eventNumber = ULOG_SHADOW_EXCEPTION;
+}
+
+ShadowExceptionEvent::
+~ShadowExceptionEvent ()
+{
+}
+
+int ShadowExceptionEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Shadow exception!") == EOF)
+		return 0;
+
+	return 1;
+}
+
+int ShadowExceptionEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Shadow exception!") < 0)
+		return 0;
+
+	return 1;
+}
+
 static const int seconds = 1;
 static const int minutes = 60 * seconds;
 static const int hours = 60 * minutes;
@@ -554,5 +583,3 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
-
-
