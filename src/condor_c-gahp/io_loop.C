@@ -328,7 +328,8 @@ verify_job_id (const char * s) {
     unsigned int i;
     for (i=0; i<strlen (s); i++) {
 		if (s[i] == '.') {
-			if ((dot_count++) || (i==0) || (s[i+1] == '\0')) {
+			dot_count++;
+			if ((dot_count > 1) || (i==0) || (s[i+1] == '\0')) {
 				ok = FALSE;
 				break;
 			}
@@ -338,10 +339,12 @@ verify_job_id (const char * s) {
 		}
 	}
 
-	if (!ok)
+	if ((!ok) || (dot_count != 1)) {
 		dprintf (D_ALWAYS, "Bad job id %s\n", s);
+		return FALSE;
+	}
 
-	return ok;
+	return TRUE;
 }
 
 

@@ -220,7 +220,7 @@ doContactSchedd()
 		SchedDRequest::SDC_RELEASE_JOB };
 
 	const char * command_titles [] = {
-		"removing", "putting on hold", "releasing" };
+		"REMOVE_JOB", "HOLD_JOB", "RELEASE_JOB" };
 
 	// REMOVE
 	// HOLD
@@ -350,7 +350,7 @@ doContactSchedd()
 			} // fi error == FALSE
 
 			if (error) {
-				dprintf (D_ALWAYS, "Error %s %d,%d: %s\n",
+				dprintf (D_ALWAYS, "Error (operation: %s) %d.%d: %s\n",
 						this_action,
 						current_command->cluster_id,
 						current_command->proc_id,
@@ -362,7 +362,7 @@ doContactSchedd()
 
 				enqueue_result (current_command->request_id, result, 2);
 			} else {
-				dprintf (D_ALWAYS, "Succeess %s %d,%d\n",
+				dprintf (D_ALWAYS, "Succeess (operation: %s) %d.%d\n",
 						this_action,
 						current_command->cluster_id,
 						current_command->proc_id);
@@ -522,18 +522,18 @@ update_report_result:
 				GAHP_RESULT_FAILURE,
 				error_msg };
 
-			AbortTransaction();
+
 			//CloseConnection();
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			AbortTransaction();
 		} else {
 			const char * result[] = {
 				GAHP_RESULT_SUCCESS,
 				NULL };
-			CloseConnection();
-
 			enqueue_result (current_command->request_id, result, 2);
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
+			CloseConnection();
 		} // fi
 
 	} // elihw
