@@ -95,7 +95,7 @@ cleanup_execute_dir(int pid)
 #else /* UNIX */
 
 	// Instantiate a directory object pointing at the execute directory
-	Directory execute_dir( exec_path, PRIV_CONDOR );
+	Directory execute_dir( exec_path, PRIV_ROOT );
 
 	if( pid ) {
 		char	pid_dir[_POSIX_PATH_MAX];
