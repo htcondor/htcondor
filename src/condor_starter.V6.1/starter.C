@@ -348,6 +348,19 @@ CStarter::StartJob()
 		return false;
 	}
 
+		// For debugging, see if there's a special attribute in the
+		// job ad that sends us into an infinite loop, waiting for
+		// someone to attach with a debugger
+	int starter_should_wait = 0;
+	jobAd->LookupInteger( ATTR_STARTER_WAIT_FOR_DEBUG,
+						  starter_should_wait );
+	if( starter_should_wait ) {
+		dprintf( D_ALWAYS, "Job requested starter should wait for "
+				 "debugger with %s=%d, going into infinite loop\n",
+				 ATTR_STARTER_WAIT_FOR_DEBUG, starter_should_wait );
+		while( starter_should_wait );
+	}
+
 	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) < 1 ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
