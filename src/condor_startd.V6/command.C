@@ -589,18 +589,31 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = 0;
 	}
-	if( req_classad->EvalBool( ATTR_REQUIREMENTS, 
-							   mach_classad, req_requirements ) == 0 ) {
+
+	Starter* tmp_starter;
+	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
+												   mach_classad );
+	if( ! tmp_starter ) {
 		req_requirements = 0;
+	} else {
+		delete( tmp_starter );
+		req_requirements = 1;
 	}
+
 	if( !mach_requirements || !req_requirements ) {
 	    rip->dprintf( D_ALWAYS, "Request to claim resource refused.\n" );
 		if( !mach_requirements ) {
-			rip->dprintf( D_FAILURE|D_ALWAYS, "Machine requirements not satisfied.\n" );
+			rip->dprintf( D_FAILURE|D_ALWAYS, 
+						  "Machine requirements not satisfied.\n" );
 		}
 		if( !req_requirements ) {
-			rip->dprintf( D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n" );
+			rip->dprintf( D_FAILURE|D_ALWAYS, 
+						  "Job requirements not satisfied.\n" );
 		}
+		refuse( stream );
+		ABORT;
+	}
+
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( DebugFlags & D_JOB ) {
@@ -610,10 +623,6 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
 	if( DebugFlags & D_MACHINE ) {
 		mach_classad->dPrint( D_MACHINE );
-	}
-
-		refuse( stream );
-		ABORT;
 	}
 
 		// Now, make sure it's got a high enough rank to preempt us.
@@ -828,7 +837,7 @@ int
 activate_claim( Resource* rip, Stream* stream ) 
 {
 		// Formerly known as "startjob"
-	int mach_requirements = 1, req_requirements = 1;
+	int mach_requirements = 1;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 
 	int sock_1, sock_2;
@@ -864,18 +873,6 @@ activate_claim( Resource* rip, Stream* stream )
 	    rip->dprintf( D_ALWAYS, "Requested starter is out of range.\n" );
 		refuse( stream );
 	    ABORT;
-	}
-
-	if( ! (rip->r_starter->settype(starter)) ) {
-	    rip->dprintf( D_ALWAYS, "Requested starter is invalid.\n" );
-		refuse( stream );
-	    ABORT;
-	}
-
-	if( rip->r_starter->is_dc() ) {
-		ji.shadowCommandSock = stream;
-	} else {
-		ji.shadowCommandSock = NULL;
 	}
 
 		// Grab request class ad 
@@ -916,18 +913,24 @@ activate_claim( Resource* rip, Stream* stream )
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = 0;
 	}
-	if( req_classad->EvalBool( ATTR_REQUIREMENTS, 
-							   mach_classad, req_requirements ) == 0 ) {
-		req_requirements = 0;
-	}
-	if( !mach_requirements || !req_requirements ) {
-	    rip->dprintf( D_ALWAYS, "Requirements check failed! "
-					  "resource = %d, request = %d\n",
-					  mach_requirements, req_requirements );
+	if( !mach_requirements ) {
+		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
 		refuse( stream );
 	    ABORT;
 	}
 
+		// now, try to satisfy the job.  while we're at it, we'll
+		// figure out what starter they want to use
+	Starter* tmp_starter;
+	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
+												   mach_classad,
+												   starter );
+	if( ! tmp_starter ) {
+		rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
+		refuse( stream );
+	    ABORT;
+	}
+	
 		// Make sure the classad we got includes an ATTR_USER field,
 		// so we know who to charge for our services.  If it's not
 		// there, refuse to run the job.
@@ -957,9 +960,16 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
+		// now that we've gotten this far, we're really going to try
+		// to spawn the starter.  set it in our Resource object. 
+	rip->setStarter( tmp_starter );
+
 #ifndef WIN32
 
-	if( ! (rip->r_starter->is_dc()) ) {
+	if( rip->r_starter->is_dc() ) {
+		ji.shadowCommandSock = stream;
+	} else {
+		ji.shadowCommandSock = NULL;
 
 			// Set up the two starter ports and send them to the shadow
 		stRec.version_num = VERSION_FOR_FLOCK;
