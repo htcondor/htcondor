@@ -713,20 +713,18 @@ STARTER_LOG	= $(LOG)/StarterLog
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
 
-##  In most cases, your condor_collector and condor_negotiator are 
-##  going to run on the same machine.  If for some reason, this isn't 
-##  the case, here's where you'd change it. Also, you can change the
-##  port that the collector and negotiator run on. By default, the
-##  collector uses port 9618 and the negotiator uses port 9614, but
-##  you can set the port with a ":port", such as:
+##  This setting primarily allows you to change the port that the
+##  collector is listening on.  By default, the collector uses port
+##  9618, but you can set the port with a ":port", such as:
 ##  COLLECTOR_HOST = $(CONDOR_HOST):1234
 COLLECTOR_HOST  = $(CONDOR_HOST)
 
-##
-## The NEGOTIATOR_HOST parameter has been deprecated
-## The negotiator's address is obtained from the collector, just like
-## for all lthe other daemons
-##
+## The NEGOTIATOR_HOST parameter has been deprecated.  The port where
+## the negotiator is listening is now dynamically allocated and the IP
+## and port are now obtained from the collector, just like all the
+## other daemons.  However, if your pool contains any machines that
+## are running version 6.7.3 or earlier, you can uncomment this
+## setting to go back to the old fixed-port (9614) for the negotiator.
 #NEGOTIATOR_HOST = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful

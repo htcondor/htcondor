@@ -221,11 +221,11 @@ HOSTALLOW_WRITE = $(FULL_HOSTNAME), $(GLIDEIN_SITES)
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
+HOSTALLOW_NEGOTIATOR = $(CONDOR_HOST)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+HOSTALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations except those specified in
