@@ -363,6 +363,7 @@ GT3Job::GT3Job( ClassAd *classad )
 	myProxy = NULL;
 	gassServerUrl = NULL;
 	gramCallbackContact = NULL;
+	gahp = NULL;
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -500,6 +501,8 @@ GT3Job::GT3Job( ClassAd *classad )
 	return;
 
  error_exit:
+		// We must ensure that the code-path from GM_HOLD doesn't depend
+		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
 		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
@@ -573,14 +576,16 @@ int GT3Job::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
+	if ( gahp ) {
 		// We don't include jmDown here because we don't want it to block
 		// connections to the gatekeeper (particularly restarts) and any
 		// state that contacts to the jobmanager should be jumping to
 		// GM_RESTART instead.
-	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
-		gahp->setMode( GahpClient::results_only );
-	} else {
-		gahp->setMode( GahpClient::normal );
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
 	}
 
 	do {
@@ -1236,7 +1241,9 @@ rc=0;
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending globus call, we're not
 			// anymore so purge it.
-			gahp->purgePendingRequests();
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
 			// If we were calling a globus call that used RSL, we're done
 			// with it now, so free it.
 			if ( RSL ) {
