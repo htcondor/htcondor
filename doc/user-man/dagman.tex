@@ -2,13 +2,15 @@
 \index{DAGMan|(}
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
+\index{condor_submit_dag}
+\index{job!dependecies}
 
 A directed acyclic graph (DAG) can be used to represent a set of programs
 where the input, output, or execution of one or more programs
 is dependent on one or more other programs.
 The programs are nodes (vertices) in the graph,
 and the edges (arcs) identify the dependencies.
-Condor alone finds machines for the execution of programs, but it
+Condor finds machines for the execution of programs, but it
 does not schedule programs (jobs) based on dependencies.
 The Directed Acyclic Graph Manager (DAGMan) is a meta-scheduler for Condor
 jobs. 
@@ -36,14 +38,11 @@ A list of the programs in the DAG. This serves to name each program
 and specify each program's Condor submit description file.
 \item
 Processing that takes place before submission of
-any programs in the DAG to Condor or after Condor has completed execution
+any program in the DAG to Condor or after Condor has completed execution
 of any program in the DAG.
 \item
 Description of the dependencies in the DAG.
 \end{enumerate}
-
-These three items are placed in the input file for DAGMan
-in the order listed.
 
 Comments may be placed in the input file that describes the DAG.
 The pound character (\verb@#@) as the first character on a
@@ -167,15 +166,16 @@ An exit value not equal to 0 indicates program failure.
 It is therefore important that the program returns the exit
 value 0 to indicate the program did not fail.
 
-The POST script is run regardless of the job's return value.
 If the POST script fails (exit value != 0), then the node is marked as
-failed.
+failed.  By default, the POST script is run regardless of the job's
+return value.  To prevent POST scripts from running after failed jobs,
+pass the \Arg{-NoPostFail} argument to \Condor{submit\_dag}.
 
-A node not mark as failed at any point is successful.
+A node not marked as failed at any point is successful.
 
 Two variables are available to ease script writing.
 The \Env{\$JOB} variable evaluates to \Arg{JobName}.
-The \Env{\$RETURN} variable evaluates to the return value of the program.
+For POST scripts, the \Env{\$RETURN} variable evaluates to the return value of the program.
 The variables may be
 placed anywhere within the arguments.
 
@@ -241,7 +241,7 @@ First, each Condor submit description file must submit only one job.
 There may not be multiple \verb@queue@ lines, or DAGMan will fail.
 The second limitation is that
 the submit description file for all jobs within the DAG
-must use the same log.
+must specify the same log.
 DAGMan enforces the dependencies within a DAG
 using the events recorded in the
 log file produced by job submission to Condor.
@@ -273,7 +273,7 @@ so this provides unique names for the output files.
 The notification is set to \verb@NEVER@ in this example.
 This tells Condor not to send e-mail about the completion of a program
 submitted to Condor.
-For DAGs with many nodes, this becomes the method used
+For DAGs with many nodes, this is recommended
 to reduce or eliminate excessive numbers of e-mails.
 
 \subsection{\label{dagman:submitdag}Job Submission}
@@ -294,7 +294,7 @@ condor_submit_dag diamond.dag
 In order to guarantee recoverability, the DAGMan program itself
 is run as a Condor job.
 As such, it needs a submit description file.
-DAGMan produces the needed file,
+\Condor{submit\_dag} produces the needed file,
 naming it by appending the \Arg{DAGInputFileName} with
 \File{.condor.sub}.
 This submit description file may be editted if the DAG is
@@ -303,7 +303,7 @@ submitted with
 \begin{verbatim}
 condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
-causing DAGMan to generate the submit description file,
+causing \Condor{submit\_dag} to generate the submit description file,
 but not submit DAGMan to Condor.
 To submit the DAG, once the submit description file is editted,
 use
@@ -321,23 +321,19 @@ As a specific example, consider a case where each job will
 require 4 Mbytes of input files,
 and the jobs will run in a directory with a volume of 100 MB of free space.
 Using the argument \Arg{-maxjobs 25} guarantees that a maximum
-of 25 jobs can be submitted to Condor at one time.
+of 25 jobs will be submitted to Condor at one time.
+
+Similarly, the \Arg{maxscripts} argument is used to specify the
+maximum number of PRE and POST scripts running at one time.
 
 \subsection{Job Monitoring}
 
 After submission, the progress of the DAG can be monitored
 by looking at the common log file,
 observing the e-mail that program submission to Condor causes,
-or by using \Condor{q}.
+or by using \Condor{q} \Arg{-dag}.
 
 \subsection{Job Failure and Job Removal}
-
-A DAG can fail in one of two ways.
-Either DAGMan itself fails,
-or a node within the DAG fails.
-If DAGMan fails, no Condor jobs will remain.
-Currently, if a node within the DAG fails, DAGMan continues
-running as a Condor job.
 
 \Condor{submit\_dag} attempts to check the DAG input file
 to verify that all the nodes in the DAG
@@ -385,8 +381,6 @@ However, in will leave any submitted jobs
 in Condor's queue.
 
 \subsection{Job Recovery:  The Rescue DAG}
-
-\Note{The Rescue DAG feature is not implemented.}
 
 DAGMan does not support job resubmission on failure.
 If any node in the DAG fails,

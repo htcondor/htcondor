@@ -2157,6 +2157,16 @@ These macros affect the \Condor{negotiator}.
   to the local UID\_DOMAIN. If it is not defined, all users are considered
   local.
 
+\item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
+  \label{param:MaxAccountantDatabaseSize}
+  This macro defines the maximum size (in bytes) that the accountant
+  database log file can reach before it is truncated (which re-writes
+  the file in a more compact format).
+  If, after truncating, the file is larger than one half the maximum
+  size specified with this macro, the maximum size will be
+  automatically expanded.
+  The default is 1 megabyte (1000000).
+
 \item[\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}]
   \label{param:NegotiatorSocketCacheSize} This macro defines the
   maximum number of sockets that the negotiator keeps in its

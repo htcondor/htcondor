@@ -25,7 +25,63 @@ and known bugs of each version are described below in detail.
 
 \begin{itemize}
 
-\item Added a -dag flag to \Condor{q} to format and sort DAG jobs
+\item
+Many Condor DAGMan improvements and bug fixes:
+
+\begin{itemize}
+
+\item
+PRE and POST scripts now run asynchronously, rather than synchronously
+as in the past.  As a result, DAGMan now supports a -MaxScripts option
+to limit the number of simultaneously running PRE and POST scripts.
+
+\item
+Whether or not POST scripts are always executed after failed jobs is
+now configurable with the \Arg{-NoPostFail} argument.
+
+\item
+Added a \Arg{-r} flag to \Condor{submit\_dag} to submit DAGMan to a
+remote \Condor{schedd}.
+
+\item
+Made the arguments to \Condor{submit\_dag} case-insensitive.
+
+\item
+Fixed a variety of bugs in DAGMan's event handling, so DAGMan should
+no longer hang indefinitely after failed jobs, or mistake one job's
+userlog events for those of another.
+
+\item
+DAGMan's error handling and logging output have been substantially
+clarified and improved.  For example, DAGMan now prints a list of
+failed jobs when it exits, rather than just saying ``some jobs
+failed''.
+
+\item
+Jobs submitted by a \Condor{dagman} job now have \AdAttr{DAGManJobId}
+and \AdAttr{DAGNodeName} in the job classad.
+
+\item
+Fixed a \Condor{submit\_dag} bug preventing the submission of DAGMan
+Rescue files.
+
+\item
+Improved the handling of userlog errors (less crashing, more coping).
+
+\item
+Fixed a bug when recovering from the userlog after a crash or reboot.
+
+\item
+Fixed bugs in the handling of \Arg{-MaxJobs}.
+
+\end{itemize}
+
+\item
+Added a \Arg{-a line} argument to \Condor{submit} to add a line to the
+submit file before processing (overriding the submit file).
+
+\item
+Added a \Arg{-dag} flag to \Condor{q} to format and sort DAG jobs
 sensibly under their DAGMan master job.
 
 \end{itemize}
