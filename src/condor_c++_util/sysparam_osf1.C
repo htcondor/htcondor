@@ -64,7 +64,7 @@ Osf1::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		strcat( buffer, buf1.release );
 		break;
 
-	case LoadAvg:						// lookup_load_avg()
+	case LoadAvg: {						// lookup_load_avg()
 		LoadVector MyLoad;
 		int temp = MyLoad.Update();
 		if ( temp == -1 )
@@ -78,6 +78,7 @@ Osf1::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		buffer = (char *)new float[1];
 		*(float *)buffer = MyLoad.Long();
 		break;
+	}
 	
 	case SwapSpace:  					// calc_virt_memory()
 		//
