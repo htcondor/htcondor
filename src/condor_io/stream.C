@@ -339,7 +339,9 @@ int Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.uid));
 	STREAM_ASSERT(code(start.gid));
 	STREAM_ASSERT(code(start.virt_pid));
-	STREAM_ASSERT(code((signal_t &)start.soft_kill_sig));
+	signal_t temp = (signal_t)start.soft_kill_sig;
+	STREAM_ASSERT(code(temp));
+	start.soft_kill_sig = (int)temp;
 #endif
 	STREAM_ASSERT(code(start.cmd));
 	STREAM_ASSERT(code(start.args));
