@@ -984,7 +984,16 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 	initpi ( pi );
 	piPTR temp = NULL;
 	int rval = 0, val = 0;
-	priv_state priv = set_root_priv();
+	priv_state priv;
+
+	if( numpids <= 0 || pids == NULL ) {
+			// We were passed nothing, so there's no work to do and we
+			// should return immediately before we dereference
+			// something we shouldn't be touching.
+		return 0;
+	}
+
+	priv = set_root_priv();
 
 	for( int i=0; i<numpids; i++ ) {
 		val = getProcInfo( pids[i], temp );
@@ -1017,7 +1026,10 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 			break;
 		}
 	}
-	delete temp;
+
+	if( temp ) { 
+		delete temp;
+	}
 	set_priv( priv );
 	return rval;
 }
@@ -1028,6 +1040,15 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 // of all processes at once anyway...
 int
 ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
+
+    initpi( pi );
+
+	if( numpids <= 0 || pids == NULL ) {
+			// We were passed nothing, so there's no work to do and we
+			// should return immediately before we dereference
+			// something we shouldn't be touching.
+		return 0;
+	}
 
 	DWORD dwStatus;  // return status of fn. calls
 
@@ -1053,7 +1074,6 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
     if( !offsets ) {	// If we haven't yet gotten the offsets, grab 'em.
         grabOffsets( pThisObject );
     }
-    initpi( pi );
 
         // create local copy of pids.
 	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
