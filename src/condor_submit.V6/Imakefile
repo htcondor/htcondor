@@ -3,7 +3,7 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -I../condor_c++_util
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -I../condor_c++_util -DALLOC_DEBUG
 
-LDFLAGS = $(LIBDBM)
+LDFLAGS =
 
 SRC = submit.C _mkckpt.c
 OBJ = submit.o _mkckpt.o
