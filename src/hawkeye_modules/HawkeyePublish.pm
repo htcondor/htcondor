@@ -64,11 +64,11 @@ sub StoreValue {
     # Auto; let's guess
     if ( $Type == HawkeyePublish::TypeAuto )
     {
-	if ( ( $Value =~ /^\d+$/ ) || ( $Value =~ /^\d*\.\d+$/ ) )
+	if ( $Value =~ /(^\d+(\.\d+)?$)|(^\.\d+$)/ )
 	{
 	    $Type = HawkeyePublish::TypeNumber;
 	}
-	elsif ( ( $Value =~ /^(\d+)\%$/ ) || ( $Value =~ /^(\d*\.\d+)\%$/ ) )
+	elsif ( $Value =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ )
 	{
 	    $Value = $1 * 0.01;
 	    $Type = HawkeyePublish::TypePercent;
@@ -80,6 +80,24 @@ sub StoreValue {
 	else
 	{
 	    $Type = HawkeyePublish::TypeString;
+	}
+    }
+    elsif ( $Type == HawkeyePublish::TypeNumber )
+    {
+	if ( ! ( $Value =~ /(^\d+(\.\d+)?$)|(^\.\d+$)/ ) )
+	{
+	    print STDERR "Attempting to store non-number: ".
+		"'$Attr = $Value'\n";
+	    Carp::confess( "Store: Bad number" );
+	}
+    }
+    elsif ( $Type == HawkeyePublish::TypePercent )
+    {
+	if ( ! ( $Value =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ ) )
+	{
+	    print STDERR "Attempting to store non-number percent: ".
+		"'$Attr = $Value'\n";
+	    Carp::confess( "Store: Bad percent number" );
 	}
     }
 
@@ -224,11 +242,21 @@ sub Publish {
 	}
 	elsif ( $Rec->{Type} == HawkeyePublish::TypeNumber )
 	{
+	    if ( ! ( $Rec->{Value} =~ /(^\d+(\.\d+)?$)|(^\.\d+$)/ ) )
+	    {
+		print STDERR "Attempting to publish non-number: ".
+		    "'$Attr = $Rec->{Value}'\n";
+	    }
 	    $Value = $Rec->{Value} * 1.0;
 	    print "$Attr = $Value\n";
 	}
 	elsif ( $Rec->{Type} == HawkeyePublish::TypePercent )
 	{
+	    if ( ! ( $Rec->{Value} =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ ) )
+	    {
+		print STDERR "Attempting to publish non-number as percent: ".
+		    "'$Attr = $Rec->{Value}'\n";
+	    }
 	    $Value = $Rec->{Value} * 100.0;
 	    print "$Attr = \"$Value%\"\n";
 	}
