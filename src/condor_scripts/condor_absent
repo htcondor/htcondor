@@ -27,6 +27,7 @@ my %Config = (
 	      DoClusterCheck	=> 0,
 	      DoDownCluster	=> 0,
 	      DoDownNodes	=> 0,
+	      DoSetupReq	=> 0,
 	      DoScriptOut	=> 0,
 	      RosterDir		=> "/p/condor/home/admin",
 	      RosterFile	=> "",
@@ -64,6 +65,10 @@ foreach my $Arg ( @ARGV )
     {
 	$Config{DoDownCluster} = 1;
 	$Config{DoDownNodes} = 1;
+    }
+    elsif ( $Arg =~ /^-setup$/ )
+    {
+	$Config{DoSetupReq} = 1;
     }
     elsif ( $Arg =~ /^-script$/ )
     {
@@ -126,6 +131,9 @@ my %PersonalCondorLists = (
 			   Full 	=> [ "NEVER-MATCH-ME" ],
 		      );
 
+# List of machiens that require some setup work b4 Condor can run on them...
+my %SetupRequired;
+
 # Read the state; all we really need is the "ClusterNodes" list
 my %ClusterNodes;
 my $ClusterCount = 0;
@@ -172,6 +180,10 @@ while ( <IN> )
     {
 	push @DownList, $1;
     }
+    elsif ( /NotSetup\s+=\s+\"(.+?)\"/i )
+    {
+	$SetupRequired{$1} = $1;
+    }
     elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
     {
 	push( @{$PersonalCondorLists{$1}}, $2 );
@@ -211,10 +223,13 @@ while ( <IN> )
 close( IN );
 
 # Initialize the absent list to be the full roster
+# Exclude machines that are down or need setup
 my %Absent;
 foreach my $Host ( keys %FullRoster )
 {
-    $Absent{$Host} = $Host if ( ! exists $RosterDown{$Host} );
+    next if ( exists $RosterDown{$Host} );
+    next if ( exists $SetupRequired{$Host} );
+    $Absent{$Host} = $Host;
 }
 
 
@@ -298,7 +313,7 @@ if ( $Config{DoPing} )
     my %PingOk;
 
     # Build up a temp absent list
-    my @TempAbsent = ( keys %Absent, keys %RosterDown );
+    my @TempAbsent = ( keys %Absent, keys %RosterDown, keys %SetupRequired );
     while( $#TempAbsent >= 0 )
     {
 	my $PingCmd = "pingfilt";
@@ -384,7 +399,7 @@ if ( ( $Config{DoPingOk} ) && ( $#NotDown >= 0 ) )
 	if ( ! $Config{DoScriptOut} );
     foreach my $Host ( sort @NotDown )
     {
-	print "Host down, but ping ok: '$Host'\n";
+	print "Host marked down, but ping ok: '$Host'\n";
     }
 }
 
@@ -443,6 +458,17 @@ if ( ( $Config{DoDownNodes} ) && ( $#KnownNodeDown >= 0 ) )
     foreach my $Host ( @KnownNodeDown )
     {
 	print "Node known to be down: '$Host'\n";
+    }
+}
+
+# Report nodes that are in the "setup required" state
+if ( ( $Config{DoSetupReq} ) && ( scalar keys %SetupRequired > 0 ) )
+{
+    my $Num = scalar keys %SetupRequired;
+    print "\n# Nodes requiring setup ($Num):\n" if ( ! $Config{DoScriptOut} );
+    foreach my $Host ( sort keys %SetupRequired )
+    {
+	print "Node requring setup: '$Host'\n";
     }
 }
 

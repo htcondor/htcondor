@@ -136,6 +136,10 @@ while ( <IN> )
     {
 	$DownHosts{$1} = $1;
     }
+    elsif ( /NotSetup\s+=\s+\"(.+?)\"/i )
+    {
+	# Do nothing
+    }
     elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
     {
 	# Do nothing
