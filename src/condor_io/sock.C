@@ -304,7 +304,7 @@ int Sock::assign(SOCKET sockd)
 
 	// If we called timeout() previously on this object, then called close() on the
 	// socket, we are now left with _timeout set to some positive value __BUT__ the
-	// socket itself has never been set to non-blocking mode with some ioctl or whatever.
+	// socket itself has never been set to non-blocking mode with some fcntl or whatever.
 	// SO, we check here for this situation and rectify by calling timeout() again. -Todd 10/97.
 	if ( _timeout > 0 )
 		timeout( _timeout );
@@ -734,13 +734,31 @@ int Sock::timeout(int sec)
 	}
 
 	if (_timeout == 0) {
+#ifdef WIN32
 		unsigned long mode = 0;	// reset blocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
 			return -1;
+#else
+		int fcntl_flags;
+		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags &= ~O_NONBLOCK;	// reset blocking mode
+		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+			return -1;
+#endif
 	} else {
+#ifdef WIN32
 		unsigned long mode = 1;	// nonblocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
 			return -1;
+#else
+		int fcntl_flags;
+		if ( (fcntl_flags=fcntl(_sock, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags |= O_NONBLOCK;	// set nonblocking mode
+		if ( fcntl(_sock,F_SETFL,fcntl_flags) == -1 )
+			return -1;
+#endif
 	}
 
 	return t;
