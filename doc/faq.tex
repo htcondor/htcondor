@@ -774,32 +774,41 @@ Here is a list:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{When I use \Condor{compile} to produce a job, I get an error that says, "Internal ld was not invoked!". What does this mean?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{condor\_compile}
+\index{condor\_compile@\Condor{compile}}
 
-\Condor{compile} enforces certain behavior in the compilers/linkers that
-it supports(gcc, g77, cc, CC, ld, etc.) where a special linker script
+\Condor{compile} enforces a specific behavior in the compilers and
+linkers that it supports
+(for example \Prog{gcc}, \Prog{g77}, \Prog{cc}, \Prog{CC}, \Prog{ld})
+where a special linker script
 provided by Condor must be invoked during the final linking stages of
-the supplied compiler/linker.
+the supplied compiler or linker.
 
-In some rare cases, as in gcc compiled with
-\Opt{--with-as} or \Opt{--with-ld}, the enforcement mechanism
-we rely upon to have gcc choose our supplied linker script is not honored
+In some rare cases,
+as with \Prog{gcc} compiled with
+the options \Opt{--with-as} or \Opt{--with-ld},
+the enforcement mechanism
+we rely upon to have \Prog{gcc}
+choose our supplied linker script is not honored
 by the compiler.
-
-When this happens, an executable is produced, but it is devoid of the
+When this happens, an executable is produced,
+but the executable is devoid of the
 Condor libraries which both identify it as a Condor executable linked
-for the Standard Universe and implement the feature sets of remote I/O
+for the standard universe and implement the feature sets of remote I/O
 and transparent process checkpointing and migration.
 
-Often the only fix, in order to use the compiler desired, is to
-reconfigure and recompile the compiler such that it does not use those
-configure flags mentioned above. 
+Often, the only fix in order to use the compiler desired,
+is to reconfigure and recompile the compiler itself,
+such that it does not use the errant options mentioned. 
 
-With Condor's standard universe, we highly recommend that all of your
-source files for your project are compiled with the recommended compiler
-for your architecture. Under the Linux platform, specifically, you must
-simply use the default compiler that came with the distribution, which
-is often found in /usr/bin.
+With Condor's standard universe,
+we highly recommend that your source files
+are compiled with the supported compiler for your platform.
+See
+section~\ref{sec:Availability}
+for the list of supported compilers.
+For a Linux platform, the supported compiler
+is the default compiler that came with the distribution.
+It is often found in the directory \File{/usr/bin}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}
