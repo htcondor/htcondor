@@ -29,7 +29,7 @@ CONFIG_SERVER = config_server
 #	define Programs \
 		accountant.V6 ckpt_server collector.V6 $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 off on schedd.V6 prio q.V6 rm.V6 \
-		scripts shadow.V6 startd.V6 starter.V5 submit.V6 \
+		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd
 
 #define Libraries \
@@ -100,6 +100,7 @@ object_target(tools)
 	object_target(starter.V5)
 	object_target(startd.V6)
 	object_target(schedd.V6)
+	object_target(status.V6)
 #if HAS_X
 	object_target(kbdd)
 #endif
