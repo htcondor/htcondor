@@ -306,6 +306,9 @@ HoldJob( const char* buf )
 	if( ! mailer ) {
 			// User didn't want email, so just exit now with the right
 			// value so the schedd actually puts the job on hold.
+		dprintf( D_ALWAYS, "Job going into Hold state.\n");
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_SHOULD_HOLD);
 		exit( JOB_SHOULD_HOLD );
 	}
 
@@ -320,6 +323,9 @@ HoldJob( const char* buf )
 	email_close(mailer);
 
 		// Now that the user knows why, exit with the right code. 
+	dprintf( D_ALWAYS, "Job going into Hold state.\n");
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		JOB_SHOULD_HOLD);
 	exit( JOB_SHOULD_HOLD );
 }
 
@@ -415,10 +421,13 @@ void
 handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
+	char buf[4096];
 	int status = *jobstatus;
 	struct stat st_buf;
 	char my_coredir[_POSIX_PATH_MAX];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
+
+	ASSERT (JobAd != NULL );
 
 	switch( WTERMSIG(status) ) {
 	 case -1: /* On Digital Unix, WTERMSIG returns -1 if we weren't
@@ -444,6 +453,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
+
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = %d", ATTR_ON_EXIT_CODE, WEXITSTATUS(status));
+		JobAd->Insert(buf);
+
 		break;
 
 	 case SIGKILL:	/* Kicked off without a checkpoint */
@@ -457,12 +472,27 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			ExitReason = JOB_NO_CKPT_FILE;
 		}
 #endif
+		/* in here, we disregard what the user wanted.
+			Otherwise doing a condor_rm will result in the
+			wanting to be resubmitted or held by the shadow. */
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		JobAd->Insert(buf);
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
 		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
 		proc->status = IDLE;
 		ExitReason = JOB_CKPTED;
+
+		/* in here, we disregard what the user wanted.
+			Otherwise doing a condor_vacate will result in the
+			wanting to be resubmitted or held by the shadow. */
+		sprintf(buf, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK);
+		JobAd->Insert(buf);
 		break;
 
 	 default:	/* Job exited abnormally */
@@ -496,6 +526,12 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 
 		proc->status = COMPLETED;
 		proc->completion_date = time( (time_t *)0 );
+
+		sprintf(buf, "%s = TRUE", ATTR_ON_EXIT_BY_SIGNAL);
+		JobAd->Insert(buf);
+		sprintf(buf, "%s = %d", ATTR_ON_EXIT_SIGNAL, WTERMSIG(status));
+		JobAd->Insert(buf);
+
 		break;
 	}
 }
