@@ -250,6 +250,16 @@ const int QUERY_ANY_ADS = 48;
 #define DC_FETCH_LOG            (DC_BASE+13)
 
 /*
+*** Result codes given by DC_FETCH_LOG.
+*** These are not interpreted directly by DaemonCore,
+*** so it's ok that they start at zero.
+*/
+
+#define DC_FETCH_LOG_SUCCESS   0
+#define DC_FETCH_LOG_NO_NAME   1
+#define DC_FETCH_LOG_CANT_OPEN 2
+
+/*
 *** Commands used by the FileTransfer object
 */
 #define FILETRANSFER_BASE 61000

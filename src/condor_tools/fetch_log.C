@@ -138,15 +138,39 @@ int main( int argc, char *argv[] )
 	sock->put( log_name );
 	sock->end_of_message();
 
+	int result = -1;
+	int exitcode = 1;
+	char *reason=0;
+
 	sock->decode();
-	int result = sock->get_file(1,0);
-	
-	if(result<=0) {
-		fprintf(stderr,"Unable to fetch log.\n");
-		fprintf(stderr,"There might not be a log file named '%s'.\n",log_name);
-		fprintf(stderr,"Or, '%s' may not authorize you to view it.\n",machine_name);
-		return 1;
-	} else {
-		return 0;
+	sock->code(result);
+
+	switch(result) {
+		case -1:
+			reason = "permission denied";
+			break;
+		case DC_FETCH_LOG_SUCCESS:
+			result = sock->get_file(1,0);
+			if(result>=0) {
+				exitcode = 0;
+			} else {
+				reason = "connection lost";
+			}
+			break;
+		case DC_FETCH_LOG_NO_NAME:
+			reason = "no log file by that name";
+			break;
+		case DC_FETCH_LOG_CANT_OPEN:
+			reason = "server was unable to access it";
+			break;
+		default:
+			reason = "unknown error";
+			break;
 	}
+
+	if(exitcode!=0) {
+		fprintf(stderr,"Couldn't fetch log: %s.\n",reason);
+	}
+
+	return exitcode;
 }

@@ -30,7 +30,6 @@
 #include "limit.h"
 #include "condor_email.h"
 #include "sig_install.h"
-
 #include "condor_debug.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
@@ -487,34 +486,56 @@ int
 handle_fetch_log( Service *service, int cmd, Stream *s )
 {
 	char *name = NULL;
-	char *pname = NULL;
-	char *filename = NULL;
 	ReliSock *stream = (ReliSock*) s;
 	int  total_bytes = 0;
+	int result;
 
 	if( ! stream->code(name) ||
 		! stream->end_of_message()) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log can't read log name\n" );
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't read log name\n" );
 		free( name );
 		return FALSE;
 	}
 
-	pname = (char*)malloc (strlen(name) + 5);
+	char *pname = (char*)malloc (strlen(name) + 5);
 	strcpy (pname, name);
 	strcat (pname, "_LOG");
 
-	filename = param(pname);
+	stream->encode();
 
-	if(filename) {
-		stream->encode();
-		total_bytes = stream->put_file(filename);
-		free (filename);
-	} else {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log can't param for log name\n" );
+	char *filename = param(pname);
+	if(!filename) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: no parameter named %s\n",pname);
+		result = DC_FETCH_LOG_NO_NAME;
+		stream->code(result);
+		stream->end_of_message();
+		return FALSE;
 	}
 
-	free (pname);
-	free (name);
+	int fd = open(filename,O_RDONLY);
+	if(fd<0) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",filename);
+		result = DC_FETCH_LOG_CANT_OPEN;
+		stream->code(result);
+		stream->end_of_message();
+		return FALSE;
+	}
+
+	result = DC_FETCH_LOG_SUCCESS;
+	stream->code(result);
+
+	total_bytes = stream->put_file(fd);
+
+	stream->end_of_message();
+
+	if(total_bytes<0) {
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: couldn't send all data!\n");
+	}
+
+	close(fd);
+	free(filename);
+	free(pname);
+	free(name);
 
 	return total_bytes>=0;
 }
