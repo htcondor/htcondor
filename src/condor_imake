@@ -41,13 +41,13 @@ LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
 
 # advertise Java only if we have all the necessary tools
-`which java >& /dev/null`
+`which java 2>&1 > /dev/null`
 HasJava=$?
 
-`which javac >& /dev/null`
+`which javac 2>&1 > /dev/null`
 HasJavac=$?
 
-`which jar >& /dev/null`
+`which jar 2>&1 > /dev/null`
 HasJar=$?
 
 if [ $HasJava -eq 0 -a $HasJavac -eq 0 -a $HasJar -eq 0 ]
