@@ -74,11 +74,9 @@ help screen being printed.
 	a Personal Condor, i.e a complete one-machine pool.  If used as an 
 	upgrade within an existing installation directory, existing 
 	configuration files and local directory are preserved.}
-	\OptItem{\Opt{---install-dir=$<$path$>$}} {Provides the path to the
-	directory for the installation.  The default is the current
-	working directory.  When \Condor{configure} is not used to
-	install Condor, this command-line argument provides the path
-	to the directory containing the configuration files.}
+	\OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
+	where Condor should be installed (or the path where it already is
+	installed). The default is the current working directory.}
 	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
 	location of the local directory, which is the directory that generally 
 	contains the local (machine-specific) configuration file as well as the
@@ -87,7 +85,9 @@ help screen being printed.
 	setting in the configuration file. 
 	When installing (i.e. if ---install is specified) \Condor{configure} 
 	will properly create the local directory in the location specified. If
-	none is specified, the default value is \$(RELEASE\_DIR)/condor\_home.\$(HOSTNAME).
+	none is specified, the default value is 
+\Arg{\$(RELEASE\_DIR)/local.\$(HOSTNAME)}.
+
 	During subsequent invocations of \Condor{configure} (i.e. w/o the 
 	---install option), if the ---local-dir is specified, the new directory
 	will be created and the \File{log}, \File{spoool} and \File{execute} 
@@ -109,7 +109,9 @@ help screen being printed.
 	\OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
 	such that Condor daemons will be executed as the given owner. This modifies the 
 	ownership on the \File{log}, \File{spool} and \File{execute} directories and sets
-	\MacroNI{CONDOR\_IDS} value in the config file.
+	\MacroNI{CONDOR\_IDS} value in the config file, to ensure that Condor daemons start up as the specified effective user. See section~\ref{sec:uids} on
+UIDs in Condor on page~\pageref{sec:uids} in the Administrator's
+Manual for details.
 	This is only applicable when \Condor{configure} is run by root.
 	If not run as root, the owner is the user running the \Condor{configure} 
 	command.
@@ -124,33 +126,26 @@ help screen being printed.
 and it will exit with a nonzero value upon failure.
 
 \Examples
-To install Condor on the machine that is to be the pool's central manager:
+To install Condor on the machine  (e.g. \Arg{machine1@cs.wisc.edu}) that is to be the pool's central manager, do (on \Arg{machine1}, from the directory where you've unzipped the Condor distribution .tar.gz file):
 \begin{verbatim}
-% condor_configure --install --type = submit, execute, manager
+% condor_configure --install --type=submit,execute,manager
 \end{verbatim}
-This assumes that the current working directory contains the
-file \File{release.tar}, and it also assumes that this machine
-may be used to both submit and execute Condor jobs.
+This will alow the machine to submit and execute Condor jobs (in addition to being the central manager of the pool).
 
 
-To set up a central manager on machine \Arg{host\_machine@cs.wisc.edu} do (on \Arg{host\_machine}):
+To make an execute-only machine (i.e. dedicate computing node) join a pool with central manager on \Arg{machine1@cs.wisc.edu}, do (on that machine from the directory where Condor is installed):
 \begin{verbatim}
-% condor_configure --type=manager
+% condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 \end{verbatim}
 
-
-To make another machine join a pool with central manager on \Arg{host\_machine@cs.wisc.edu}, do (on that machine):
-\begin{verbatim}
-% condor_configure --central-manager=host_machine@cs.wisc.edu --type=submit,execute
-\end{verbatim}
 
 
 To change the location of the \MacroNI{LOCAL\_DIR} directory
-in the configuration file, use the following format for
-the \Condor{configure} command:
+in the configuration file, do (from the directory where Condor is installed):
 \begin{verbatim}
-% condor_configure --local-dir = /path/to/local/directory
+% condor_configure --local-dir=/path/to/new/local/directory
 \end{verbatim}
+This will move the \File{log},\File{spool},\File{execute} directories to \File{/path/to/new/local/directory} from the current local directory.
 
 
 
