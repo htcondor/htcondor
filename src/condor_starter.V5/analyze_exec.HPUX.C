@@ -17,7 +17,11 @@
 #include <string.h>
 
 extern "C" {
+#ifdef HPUX10
+	int nlist( const char *FileName, struct nlist *N1 );
+#else
 	int nlist( char *FileName, struct nlist *N1 );
+#endif
 }
 
 int magic_check( char *a_out )
