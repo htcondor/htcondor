@@ -317,52 +317,66 @@ system.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
   hostname of the machine where the \Condor{collector} is running for
-  your pool.  Normally it is defined with the
-  \MacroUNI{CONDOR\_HOST} macro described above.
+  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
+  macro described above.  There is no default value for this macro;
+  \Macro{COLLECTOR\_HOST} must be defined for your pool to work
+  properly.
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
   hostname of the machine where the \Condor{negotiator} is running for
-  your pool.  Normally it is defined with the
-  \MacroUNI{CONDOR\_HOST} macro described above.
+  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
+  macro described above.  There is no default value for this macro;
+  \Macro{NEGOTIATOR\_HOST} must be defined for your pool to work
+  properly.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
   This service is optional, and requires additional configuration if
-  you want to enable it.
+  you want to enable it.  There is no default value for
+  \Macro{CONDOR\_VIEW\_HOST}.  If \Macro{CONDOR\_VIEW\_HOST} is not
+  defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
   page~\pageref{sec:Contrib-CondorView-Install} for more details.
 
 \item[\Macro{SCHEDD\_HOST}] \label{param:ScheddHost} The
   hostname of the machine where the \Condor{schedd} is running for
-  your pool.
+  your pool.  This is the host that queues submitted jobs.  Note that,
+  in most condor installations, there is a \Condor{schedd} running on
+  each host from which jobs are submitted.  The default value of
+  \Macro{SCHEDD\_HOST} is the current host.  For most pools, this
+  macro is not defined.
 
 \item[\Macro{RELEASE\_DIR}] \label{param:ReleaseDir} The full path to
-  the Condor release directory, which holds the \File{bin}, \File{etc},
-  \File{lib}, and \File{sbin} directories.
-  Other macros are defined relative to this one.
+  the Condor release directory, which holds the \File{bin},
+  \File{etc}, \File{lib}, and \File{sbin} directories.  Other macros
+  are defined relative to this one.  There is no default value for
+  \Macro{RELEASE\_DIR}.
 
 \item[\Macro{BIN}] \label{param:Bin} This directory points to the
-  Condor directory where user-level programs are installed.  It
-  is usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
+  Condor directory where user-level programs are installed.  It is
+  usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
+  There is no default value for \Macro{BIN}.
   
 \item[\Macro{LIB}] \label{param:Lib} This directory points to the
   Condor directory where libraries used to link jobs for Condor's
   standard universe are stored.  The \Condor{compile} program uses
-  this macro to find these libraries, so it must be defined.
-  \MacroUNI{LIB} is usually defined relative to the
-  \MacroUNI{RELEASE\_DIR} macro.
+  this macro to find these libraries, so it must be defined for
+  \Condor{compile} to function.  \MacroUNI{LIB} is usually defined
+  relative to the \MacroUNI{RELEASE\_DIR} macro, and has no default
+  value.
 
 \item[\Macro{SBIN}] \label{param:Sbin} This directory points to the
   Condor directory where Condor's system binaries (such as the
   binaries for the Condor daemons) and administrative tools are
   installed.  Whatever directory \MacroU{SBIN} points to ought
   to be in the \Env{PATH} of users acting as Condor
-  administrators.
+  administrators.  \Macro{SBIN} has no default value.
 
 \item[\Macro{LOCAL\_DIR}] \label{param:LocalDir} The location of the
   local Condor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which may be
-  specified with \MacroUNI{TILDE}.  For example:
+  specified with \MacroUNI{TILDE}.  There is no default value for
+  \Macro{LOCAL\_DIR}.  For example:
 \begin{verbatim}
         LOCAL_DIR = $(tilde)
 \end{verbatim}
@@ -387,9 +401,9 @@ system.
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the Condor daemons as the run, so
   if one of them should produce a core file for any reason, it would
-  be placed
-  in the directory defined by this macro.  Normally, \MacroUNI{LOG} is
-  defined in terms of \MacroUNI{LOCAL\_DIR}.
+  be placed in the directory defined by this macro.  \Macro{LOG} is
+  required to be defined.  Normally, \MacroUNI{LOG} is defined in
+  terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{SPOOL}] \label{param:Spool} The spool directory is where
   certain files used by the \Condor{schedd} are stored, such as the
@@ -401,15 +415,18 @@ system.
   directory is located on a partition with enough disk space.  If a
   given machine is only set up to execute Condor jobs and not submit
   them, it would not need a spool directory (or this macro defined).
-  Normally, \MacroUNI{SPOOL} is defined in terms of
-  \MacroUNI{LOCAL\_DIR}.
+  There is no default value for \Macro{SPOOL}, and the \Condor{schedd}
+  will not function without it \Macro{SPOOL} defined.  Normally,
+  \MacroUNI{SPOOL} is defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{EXECUTE}] \label{param:Execute} This directory acts as
   the current working directory of any Condor job that is executing on
   the local machine.  If a given machine is only set up to only submit
   jobs and not execute them, it would not need an execute directory
-  (or this macro defined).  Normally, \MacroUNI{EXECUTE} is defined
-  in terms of \MacroUNI{LOCAL\_DIR}.
+  (or this macro defined).  There is no default value for
+  \Macro{EXECUTE}, and the \Condor{startd} will not function if
+  \Macro{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
+  defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile} The
   location of the local, machine-specific configuration
@@ -430,19 +447,20 @@ system.
         LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 \end{verbatim}
   
-  Beginning with Condor version 6.0.1, the \MacroUNI{LOCAL\_CONFIG\_FILE}
-  is treated as a list of files, not a single file.  You can use
-  either a comma or space separated list of files as its value.  This
-  allows you to specify multiple files as the local configuration file
-  and each one will be processed in the order given (with parameters set in
-  later files overriding values from previous files).  This allows
-  you to use one global configuration file for multiple platforms
-  in your pool,
-  define a platform-specific configuration file for each platform, and
-  use a local configuration file for each machine.  For more
-  information on this, see section~\ref{sec:Multiple-Platforms} about
-  Configuring Condor for Multiple Platforms on
-  page~\pageref{sec:Multiple-Platforms}.
+  Beginning with Condor version 6.0.1, the
+  \MacroUNI{LOCAL\_CONFIG\_FILE} is treated as a list of files, not a
+  single file.  You can use either a comma or space separated list of
+  files as its value.  This allows you to specify multiple files as
+  the local configuration file and each one will be processed in the
+  order given (with parameters set in later files overriding values
+  from previous files).  This allows you to use one global
+  configuration file for multiple platforms in your pool, define a
+  platform-specific configuration file for each platform, and use a
+  local configuration file for each machine.  If
+  \Macro{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
+  files are processed.  For more information on this, see
+  section~\ref{sec:Multiple-Platforms} about Configuring Condor for
+  Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
   Beginning in Condor 6.5.5, it is permissiable for the files listed as the
@@ -476,7 +494,8 @@ system.
   your pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
-  signal or exit status that daemon exited with.
+  signal or exit status that daemon exited with.  There is no default
+  value for \Macro{CONDOR\_ADMIN}.
   
 \item[\Macro{CONDOR\_SUPPORT\_EMAIL}] \label{param:CondorSupportEmail}
   The email address to be included at the bottom of all email Condor
@@ -488,25 +507,27 @@ system.
   specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
 \item[\Macro{MAIL}] \label{param:Mail} The full path to a mail
-  sending program that uses \Opt{-s} to
-  specify a subject for the message.  On all platforms,
-  the default shipped with Condor should work.  Only if you
-  installed things in a non-standard location on your system would you
-  need to change this setting.
-  
+  sending program that uses \Opt{-s} to specify a subject for the
+  message.  On all platforms, the default shipped with Condor should
+  work.  Only if you installed things in a non-standard location on
+  your system would you need to change this setting.  There is no
+  default value for \Macro{MAIL}, and the \Condor{schedd} will not
+  function unless \Macro{MAIL} is defined.
+
 \item[\Macro{RESERVED\_SWAP}] \label{param:ReservedSwap} Determines
-  how much swap space you want to reserve for your own
-  machine.  Condor will not start up more \Condor{shadow} processes if
-  the amount of free swap space on your machine falls below this
-  level. 
+  how much swap space you want to reserve for your own machine.
+  Condor will not start up more \Condor{shadow} processes if the
+  amount of free swap space on your machine falls below this level.
+  \Macro{RESERVED\_SWAP} is specified in megabytes.  The default value
+  of \Macro{RESERVED\_SWAP} is 5 magabytes.
 
 \item[\Macro{RESERVED\_DISK}] \label{param:ReservedDisk} Determines
-  how much disk space you want to reserve for your own
-  machine.  When Condor is reporting the amount of free disk space in
-  a given partition on your machine, it will always subtract this
-  amount.  An example is the \Condor{startd}, which
-  advertises the amount of
-  free space in the \MacroUNI{EXECUTE} directory.
+  how much disk space you want to reserve for your own machine.  When
+  Condor is reporting the amount of free disk space in a given
+  partition on your machine, it will always subtract this amount.  An
+  example is the \Condor{startd}, which advertises the amount of free
+  space in the \MacroUNI{EXECUTE} directory.  The default value of
+  \Macro{RESERVED\_DISK} is zero.
   
 \item[\Macro{LOCK}] \label{param:Lock} Condor needs to create
   lock files to synchronize access to various log files.  Because of
@@ -514,7 +535,9 @@ system.
   the years, we \emph{highly} recommend that you put these lock
   files on a local partition on each machine.  If you do not have your
   \MacroUNI{LOCAL\_DIR} on a local partition, be sure to change this
-  entry.  Whatever user or group Condor is running as needs to have
+  entry.
+
+  Whatever user or group Condor is running as needs to have
   write access to this directory.  If you are not running as root, this
   is whatever user you started up the \Condor{master} as.  If you are
   running as root, and there is a condor account, it is most
@@ -525,6 +548,12 @@ system.
   environment variable, or whatever you define in the
   \Macro{CONDOR\_IDS} setting in the Condor config files.
   See section~\ref{sec:uids} on UIDs in Condor for details.
+
+  If no value for \Macro{LOCK} is provided, the value of \Macro{LOG}
+  is used.
+
+% Default value check end here: NRL 11 Dec 2003
+
 
 \item[\Macro{HISTORY}] \label{param:History} Defines the
   location of the Condor history file, which stores information about
