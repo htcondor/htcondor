@@ -47,8 +47,8 @@ UsageMonitor::Request(double units)
 		dprintf(D_FULLDEBUG, "usagemon: %.0f > %.0f (units > max_units) "
 				"special case\n", units, max_units);
 		// wait until our history clears
-		if (first) {
-			int wait_time = first->timestamp + interval - current_time;
+		if (last) {
+			int wait_time = last->timestamp + interval - current_time;
 			dprintf(D_FULLDEBUG, "usagemon: request for %.0f must wait %d "
 					"seconds\n", units, wait_time);
 			return wait_time;
