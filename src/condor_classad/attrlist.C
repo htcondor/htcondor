@@ -793,12 +793,17 @@ AttrList& AttrList::operator=(const AttrList& other)
 int AttrList::Insert(const char* str)
 {
 	ExprTree*	tree = NULL;
+	int result = FALSE;
 
 	if(Parse(str, tree) != 0)
 	{
 		return FALSE;
 	}
-	return Insert(tree);
+	result = Insert(tree);
+	if ( result == FALSE ) {
+		delete tree;
+	}
+	return result;
 }
 
 int AttrList::Insert(ExprTree* expr)
