@@ -284,6 +284,19 @@ DeepInsert( ExprTree *scopeExpr, const string &name, ExprTree *tree )
 }
 // --- end expression insertion
 
+// --- begin STL-like functions
+ClassAd::iterator ClassAd::
+find(string const& attrName)
+{
+    return attrList.find(attrName);
+}
+ 
+ClassAd::const_iterator ClassAd::
+find(string const& attrName) const
+{
+    return attrList.find(attrName);
+}
+// --- end STL-like functions
 
 // --- begin lookup methods
 ExprTree *ClassAd::

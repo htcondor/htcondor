@@ -391,7 +391,7 @@ e		*/
 		bool EvaluateAttrBool( const std::string &attrName, bool& boolValue ) const;
 		//@}
 
-		/**@name Iterators */
+		/**@name STL-like Iterators */
 		//@{
 
 		/** Define an iterator we can use on a ClassAd */
@@ -416,6 +416,10 @@ e		*/
 			attribute/value pairs in the ClassAd */
 		const_iterator end() const { return attrList.end(); }
 		//@}
+
+		// STL-like functions
+		iterator find(std::string const& attrName);
+		const_iterator find(std::string const& attrName) const;
 
 		/**@name Miscellaneous */
 		//@{
