@@ -89,6 +89,22 @@ they see a clean interface to the library and not a bunch of crap.
 
 Also, comment the sysapi.h header file nicely.
 
+WHAT IS THE sysapi_reconfig() FUNCTION?
+
+When this is called by the program using the sysapi library, it will
+re-read the config files and re-param() the internally cached variables
+in the sysapi library. This is something that a daemon would call if it
+got a HUP.
+
+WHAT IS THE sysapi_internal_reconfig() FUNCTION?
+
+If the program linked with the sysapi lib has not loaded the configuration
+file yet, then this call(only used internally in the syscall lib) will
+load the config file and set the internal parameters needed from the
+config file when sysapi_* functions are called.  This call will work ONCE
+the first time it is used by any sysapi_*() call. Any other invocation
+after that results in a NOOP. It must be called first in all cooked, raw,
+and utility functions.
 
 PUT EACH FUNCTION INTO ONE FILE
 
