@@ -33,6 +33,7 @@
 #define __getrlimit __hide__getrlimit
 #define setrlimit __hide_setrlimit
 #define getrusage __hide_getrusage
+#define __getrusage __hide___getrusage
 
 #endif /* LINUX && GLIBC */
 
@@ -51,6 +52,7 @@ extern "C" {
 #undef __getrlimit
 #undef setrlimit
 #undef getrusage
+#undef __getrusage
 
 int getrlimit(int, struct rlimit *);
 int __getrlimit(int, struct rlimit *);
@@ -58,17 +60,17 @@ int setrlimit(int, const struct rlimit *);
 int getpriority(int, int);
 int setpriority(int, int, int);
 int getrusage(int, struct rusage * );
+int __getrusage(int, struct rusage * );
 #endif /* LINUX && GLIBC */
 
 /* on a glibc 2.1 machine r_lim_t is defined, so we undef it and let the typdef
 	through */
 #if defined(LINUX) && defined(GLIBC21)
 #	undef rlim_t
-#endif
-
-#if defined(LINUX) && !defined(GLIBC)
+#else
 	typedef long rlim_t;
 #endif
+
 
 #if defined(__cplusplus)
 }

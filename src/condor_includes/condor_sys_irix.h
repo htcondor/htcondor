@@ -83,6 +83,7 @@ int pclose(FILE *stream);
 #undef _SGIAPI
 #define _SGIAPI 1
 #include <signal.h>
+#include <sys/signal.h>
 /* We also want _NO_ANSIMODE and _SGIAPI defined to 1 for sys/wait.h,
    math.h and limits.h */  
 #include <sys/wait.h>    

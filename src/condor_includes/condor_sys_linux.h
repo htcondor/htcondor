@@ -78,15 +78,21 @@
    though the man page (and our code) says it should be size_t. 
    -Derek Wright 4/17/98 */
 #define readv __hide_readv
+#define __readv ____hide_readv
 #define writev __hide_writev
+#define __writev ____hide_writev
 #endif /* GLIBC */
 #include <sys/uio.h>
 #if defined(GLIBC)
 #undef readv
+#undef __readv
 #undef writev
+#undef __writev
 BEGIN_C_DECLS
 int readv(int, const struct iovec *, size_t);
+int __readv(int, const struct iovec *, size_t);
 int writev(int, const struct iovec *, size_t);
+int __writev(int, const struct iovec *, size_t);
 END_C_DECLS
 #endif /* GLIBC */
 
@@ -98,9 +104,6 @@ END_C_DECLS
 
 /* swapon and swapoff prototypes */
 #include <linux/swap.h>
-
-/* SYS_ defns for indirect socket calls */
-#include <linux/net.h>
 
 /****************************************
 ** Condor-specific system definitions
