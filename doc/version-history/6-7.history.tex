@@ -51,6 +51,17 @@ submitted by ``older'' DAGs will start before jobs submitted by
 
 \begin{itemize}
 
+\item Added support for libc's \Syscall(system) function for standard
+	universe executables. This call is not checkpoint-safe in that
+	the standard universe job could call it twice or more times
+	in the event of a resumption from an earlier checkpoint. The
+	invocation of this call by the shadow on behalf of the user
+	job is controlled by a configuration file parameter called
+	\Attr{SHADOW\_ALLOW\_UNSAFE\_REMOTE\_EXEC} and is off by default.
+	The full environment of the user job is preserved during the
+	invocation of \Syscall(system) and this might cause problems in 
+	heterogenous submission contexts of the user is not careful.
+
 \item Added a new \MacroNI{SCHED\_UNIV\_RENICE\_INCREMENT}
 configuration variable used by the \Condor{schedd} for scheduler
 universe jobs, analogous to the existing
