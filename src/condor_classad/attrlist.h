@@ -8,7 +8,7 @@
 #ifndef _ATTRLIST_H
 #define _ATTRLIST_H
 
-#include <fstream.h>
+#include <stdio.h>
 
 #include "proc_obj.h"
 #include "condor_expressions.h"
