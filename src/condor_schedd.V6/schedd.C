@@ -3960,15 +3960,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 							   server) == 0) {
 			SetCkptServerHost(server);
 		} else {
-			tmp = param("USE_CKPT_SERVER");
-			if ( tmp && (*tmp=='T' || *tmp=='t') ) {
-				free(tmp);
-				tmp = param("CKPT_SERVER_HOST");
-				if (tmp) {
-					SetCkptServerHost(tmp);
-					free(tmp);
-				}
-			}
+			SetCkptServerHost(NULL); // no ckpt on ckpt server
 		}
 	}
 
