@@ -579,7 +579,7 @@ version.
 	#endif
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int stat( const char *name, struct stat *buf ) :
+		int stat( map_name(const char *name), struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
 				extract,
 			#endif
@@ -597,7 +597,7 @@ version.
 	#endif
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int lstat( const char *name, struct stat *buf ) :
+		int lstat( map_name(const char *name), struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
 				extract,
 			#endif
@@ -635,7 +635,7 @@ version.
 			alloc( buf, STAT64_SIZE );
 		}
 	
-		int stat64( const char *path, struct stat64 *buf ) : 
+		int stat64( map_name(const char *path), struct stat64 *buf ) : 
 			#if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
@@ -648,7 +648,7 @@ version.
 			alloc( buf, STAT64_SIZE );
 		}
 	
-		int lstat64( const char *path, struct stat64 *buf ) : 
+		int lstat64( map_name(const char *path), struct stat64 *buf ) : 
 			#if defined(IRIX)
 			no_sys_chk,
 			dl_extract,
