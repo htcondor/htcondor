@@ -9,6 +9,7 @@ class ClassAd;
 extern "C" {
 	int REMOTE_CONDOR_register_machine_info( char *uiddomain, char *fsdomain, char *address, char *fullHostname, int key );
 	int REMOTE_CONDOR_get_job_info( ClassAd *ad );
+	int REMOTE_CONDOR_get_user_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_executable( char *destination );
 	int REMOTE_CONDOR_job_exit( int status, int reason, ClassAd *ad );
 	int REMOTE_CONDOR_open( char *path, open_flags_t flags, int mode );
