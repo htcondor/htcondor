@@ -3,7 +3,7 @@
 
 #define Tilde /**/
 #define RpcLib /**/
-#define MldLib /usr/lib/libmld.a
+#define MldLib -lmld
 #define KernLib /**/
 #define MallocLib /**/
 #define SimpleLibC /lib/libc.a
