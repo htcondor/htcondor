@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
 
