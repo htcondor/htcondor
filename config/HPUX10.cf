@@ -1,9 +1,5 @@
 /* HPUX 10 Specific stuff */
 
-#define IS_HPUX10			YES
-#define IS_HPPAR_HPUX10			YES
-#define Platform			HPPA-HPUX10
-SYSNAME = hp_ux102
 #define PlatformFlags			-DHPUX10=HPUX10
 
 #define HAS_ADJTIME			YES

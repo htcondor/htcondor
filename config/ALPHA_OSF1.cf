@@ -1,6 +1,3 @@
-#define OperatingSystem	OSF1
-#define Architecture	ALPHA
-
 #define PlatformLdFlags -lmld
 #define VendorFTestFlags -assume recursive 
 

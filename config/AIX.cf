@@ -1,6 +1,3 @@
-#define OperatingSystem		AIX
-#define Architecture		PPC
-
 #define PlatformLdFlags /**/
 
 #define SimpleLibC /lib/libc.a

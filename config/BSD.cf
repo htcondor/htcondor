@@ -1,13 +1,6 @@
-
-
 #ifdef IS_DARWIN
 /* DARWIN Specific stuff */
-#define Platform			PPC-DARWIN
-SYSNAME = ppc_macosx
-#define ImakeOpsysFlag			-DIS_BSD -DIS_DARWIN
 #define PlatformFlags			-DCONDOR_DARWIN=CONDOR_DARWIN 
-#define Architecture			PPC
-#define OperatingSystem			Darwin
 #define PlatformLdFlags			-framework IOKit -framework Carbon
 #undef WANT_KERBEROS
 #define	WANT_KERBEROS			NO
