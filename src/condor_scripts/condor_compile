@@ -3,17 +3,15 @@
 #	Author Todd Tannenbaum, 6/97
 #	Copyright 1997 by the Condor Team, All Rights Reserved.
 #	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
-
 # --------------------------------------------------
-
-
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
 # correct for most installations, however.
+
 CONDOR_LIBDIR=`condor_config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
-STATIC_ZLIB=/usr/lib/libz.a
+STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
