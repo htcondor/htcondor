@@ -1,8 +1,8 @@
 /* Things that are specific to IRIX 6.5 */
 
-#define HAS_GLOBUS		NO
-#define HAS_GSI			NO
-#define HAS_OPENSSL		NO
+#define HAS_GLOBUS		YES
+#define HAS_GSI			YES
+#define HAS_OPENSSL		YES
 
 #define HAS_DYNAMIC_USER_JOBS	YES
 
