@@ -52,7 +52,12 @@ char* daemonNames[] = {
 void
 usage( char *str )
 {
-	fprintf( stderr, "Usage: %s [-help] [hostnames]\n", str );
+	char* tmp = strchr( str, '_' );
+	if( !tmp ) {
+		fprintf( stderr, "Usage: %s [command] [-help] [hostnames]\n", str );
+	} else {
+		fprintf( stderr, "Usage: %s [-help] [hostnames]\n", str );
+	}
 	fprintf( stderr, "  -help gives this usage information.\n" );
 	fprintf( stderr, "  The given command is sent to all hosts specified.\n" ); 
 	fprintf( stderr, 
@@ -67,6 +72,11 @@ usage( char *str )
 	case DAEMONS_OFF:
 		fprintf( stderr, "  %s turns off any currently running condor daemons.\n", 
 				 str );
+		break;
+	case MASTER_OFF:
+		fprintf( stderr, "  %s %s\n  %s\n", str, 
+				 "shuts down any currently running condor daemons ",
+				 "and causes the condor_master to exit." );
 		break;
 	case RESTART:
 		fprintf( stderr, "  %s causes the condor_master to restart itself.\n", str );
@@ -101,7 +111,12 @@ usage( char *str )
 				 "they are done checkpointing." );
 		break;
 	default:
-		fprintf( stderr, "  Error: Unknown command %s\n", str);
+		fprintf( stderr, "  Valid commands are:\n%s%s",
+				 "\toff, on, restart, master_off, reconfig, reschedule,\n",
+				 "\treconfig_schedd, vacate, checkpoint\n\n" );
+		fprintf( stderr, "  Use \"%s [command] -help\" for more information %s\n", 
+				 str, "on a given command." );
+		break;
 	}
 	fprintf(stderr, "\n" );
 	exit( 1 );
@@ -125,6 +140,8 @@ cmd_to_str( int c )
 		return "PCKPT_ALL_JOBS";
 	case RESCHEDULE:
 		return "RESCHEDULE";
+	case MASTER_OFF:
+		return "MASTER_OFF";
 	}
 }
 	
@@ -143,9 +160,17 @@ main( int argc, char *argv[] )
 	} else {
 		MyName++;
 	}
+		// See if there's an '-' in our name, if not, append argv[1]. 
 	cmd_str = strchr( MyName, '_');
 	if( !cmd_str ) {
-		size = sizeof( argv[1] );
+
+			// If there's no argv[1], print usage.
+		if( ! argv[1] ) { usage( MyName ); }
+
+			// If argv[1] begins with '-', print usage, don't append.
+		if( argv[1][0] == '-' ) { usage( MyName ); }
+
+		size = strlen( argv[1] );
 		MyName = (char*)malloc( size + 8 );
 		sprintf( MyName, "condor_%s", argv[1] );
 		cmd_str = MyName+6;
@@ -166,6 +191,10 @@ main( int argc, char *argv[] )
 		daemonName = daemonNames[0];
 	} else if( !strcmp( cmd_str, "_off" ) ) {
 		cmd = DAEMONS_OFF;
+		dt = MASTER;
+		daemonName = daemonNames[0];
+	} else if( !strcmp( cmd_str, "_master_off" ) ) {
+		cmd = MASTER_OFF;
 		dt = MASTER;
 		daemonName = daemonNames[0];
 	} else if( !strcmp( cmd_str, "_reschedule" ) ) {
@@ -284,3 +313,4 @@ do_command( char *name )
 }
 
 extern "C" int SetSyscalls(){}
+
