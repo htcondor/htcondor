@@ -224,7 +224,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_SIGPCKPT		104	// periodic checkpoint
 
 /*
-*** Daemon Core Commands
+*** Daemon Core Commands and Signals
 */
 #define DC_BASE	60000
 #define DC_RAISESIGNAL		(DC_BASE+0)
@@ -236,6 +236,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_OFF_FAST			(DC_BASE+6)
 #define DC_CONFIG_VAL		(DC_BASE+7)
 #define DC_CHILDALIVE		(DC_BASE+8)
+#define DC_SERVICEWAITPIDS	(DC_BASE+9) 
 
 /*
 *** Commands used by the FileTransfer object
