@@ -909,6 +909,7 @@ count( ClassAd *job )
 	if (job->LookupString(ATTR_OWNER, buf) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_OWNER);
+		free(x509userproxy);
 		return 0;
 	}
 	owner = buf;
@@ -931,6 +932,7 @@ count( ClassAd *job )
 	scheduler.JobsTotalAds++;
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
+	// this function makes its own copies of the memory passed in 
 	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
 
 	if ( (universe != CONDOR_UNIVERSE_GLOBUS) &&	// handle Globus below...
@@ -956,6 +958,7 @@ count( ClassAd *job )
 
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
+		free(x509userproxy);
 		return 0;
 	} 
 
@@ -1017,6 +1020,7 @@ count( ClassAd *job )
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
 		if (!want_service) {
+			free(x509userproxy);
 			return 0;
 		}
 		status = real_status;	// set status back for below logic...
@@ -1035,6 +1039,7 @@ count( ClassAd *job )
 		scheduler.JobsRemoved++;
 	}
 
+	free(x509userproxy);
 	return 0;
 }
 
@@ -1086,6 +1091,7 @@ Scheduler::insert_owner(char* owner, char *x509proxy)
 				return i; //We both have an X509
 		}
 	}
+
 	Owners[i].Name = strdup( owner );
 	if(x509proxy) 
 		Owners[i].X509 = strdup( x509proxy); 
