@@ -1024,6 +1024,44 @@ fi
 
 # checks for system services
 
+# checks for platform-specific settings we don't yet auto-detect
+
+AC_MSG_CHECKING([if Condor can also build a statically linked release])
+case "$os" in
+  "HP-UX" )
+    if test "x$_cv_opsys_vers" = "xHPUX11" ; then
+    # Grrr.... libxnet.so (the XOpen interface) does NOT have a .a version
+      _cv_has_static=no
+    else
+      _cv_has_static=yes
+    fi
+    ;;
+  "OSF1" )
+    _cv_has_static=yes
+    ;;
+  "Linux" )
+    _cv_has_static=yes
+    ;;
+  "SunOS" )
+    _cv_has_static=no
+    ;;
+  "IRIX" )
+    _cv_has_static=no
+    ;;
+  "Darwin" )
+    _cv_has_static=no
+    ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+esac
+AC_MSG_RESULT([$_cv_has_static])
+if test "$_cv_has_status" = "yes" ; then	
+  AC_SUBST(_cv_has_static,YES)
+else
+  AC_SUBST(_cv_has_static,NO)
+fi
+
 
 ############################################################
 # Configure-generated output
