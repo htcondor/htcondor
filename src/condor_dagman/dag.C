@@ -37,6 +37,10 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
 	_scriptQ = new ScriptQ( this );
 	_submitQ = new Queue<Job*>;
 
+	debug_printf( DEBUG_DEBUG_4,
+				  "_maxJobsSubmitted = %d, _maxScriptsRunning = %d\n",
+				  _maxJobsSubmitted, _maxScriptsRunning );
+
 	if( _scriptQ == NULL || _submitQ == NULL ) {
 		EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
 				__FUNCTION__, __FILE__, __LINE__ );
@@ -488,7 +492,16 @@ Dag::SubmitCondor( Job* job )
 		return false;
 	}
 
-	debug_printf( DEBUG_NORMAL, "Submitting Job %s", job->GetJobName() );
+    // if we've already submitted max jobs, return
+    if( _maxJobsSubmitted != 0 && _numJobsSubmitted >= _maxJobsSubmitted ) {
+        assert( _numJobsSubmitted <= _maxJobsSubmitted );
+        debug_printf( DEBUG_DEBUG_1,
+                      "%s(): max scripts (%d) already running\n",
+                      __FUNCTION__, _maxJobsSubmitted );
+        return true;
+    }
+
+	debug_printf( DEBUG_NORMAL, "Submitting Job %s ...", job->GetJobName() );
   
     CondorID condorID(0,0,0);
     if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
