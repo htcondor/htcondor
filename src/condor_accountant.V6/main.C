@@ -64,7 +64,11 @@ int main_init(int argc, char *argv[])
   // accountant.DisplayMatches();
 
   AttrList* AL=accountant.ReportState();
-  // AL->fPrint(stdout);
+  AL->fPrint(stdout);
+
+  accountant.AddMatch("Yuval",Ad5);
+  AL=accountant.ReportState("Yuval");
+  AL->fPrint(stdout);
 
   exit(0);
 

@@ -467,6 +467,46 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 }
 
 //------------------------------------------------------------------
+// Report the list of Matches for a customer
+//------------------------------------------------------------------
+
+AttrList* Accountant::ReportState(const MyString& CustomerName) {
+
+  dprintf(D_FULLDEBUG,"Reporting State for customer %s\n",CustomerName.Value());
+
+  HashKey HK;
+  char key[200];
+  ClassAd* ResourceAd;
+  MyString ResourceName;
+  int StartTime;
+
+  AttrList* ad=new AttrList();
+  char tmp[512];
+
+  int ResourceNum=1;
+  AcctLog->table.startIterations();
+  while (AcctLog->table.iterate(HK,ResourceAd)) {
+    HK.sprint(key);
+    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
+
+    if (ResourceAd->LookupString(RemoteUserAttr.Value(),tmp)==0) continue;
+    if (CustomerName!=MyString(tmp)) continue;
+
+    ResourceName=key+ResourceRecord.Length();
+    sprintf(tmp,"Name%d = \"%s\"",ResourceNum,ResourceName.Value());
+    ad->Insert(tmp);
+
+    if (ResourceAd->LookupInteger(StartTimeAttr.Value(),StartTime)==0) StartTime=0;
+    sprintf(tmp,"StartTime%d = %d",ResourceNum,StartTime);
+    ad->Insert(tmp);
+
+    ResourceNum++;
+  }
+
+  return ad;
+}
+
+//------------------------------------------------------------------
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
