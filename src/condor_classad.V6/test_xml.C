@@ -26,31 +26,58 @@ int main(int argc, char **argv)
 {
 	ClassAdXMLParser  parser;
 	ClassAd  *classad;
-	int offset = 0;
+
 	string  xml = "<?xml version=\"1.0\"?>< c >"
                   "<a n=\"A\"><s> Alain &quot;Aslag&quot; Roy</s></a>"
                   "<a n=\"B\"><n> 3 </n></a>"
 		          "<a n=\"C\"><b v=\"t\"/></a>"
 		          "<a n=\"D\"><l><n>10</n><un/><er/><n>14</n></l></a>"
 		          "<a n=\"E\"><c><a n=\"AA\"><n>4</n><a n=\"BB\"><s>x</s></a></c></a>"
-		          "<a n=\"F\"><e>(x >= 10)</e></a>";
+		          "<a n=\"F\"><e>(x >= 10)</e></a></c>";
 
-	classad = parser.ParseClassAd(xml, offset);
+	classad = parser.ParseClassAd(xml);
 
 	PrettyPrint  printer;
 	string       printed_classad;
 
 	printer.Unparse(printed_classad, classad);
-	cout << printed_classad << endl;
+	cout << "ClassAd as parsed from XML:\n" << printed_classad << endl;
 
 	printed_classad = "";
 	ClassAdXMLUnParser  unparser;
 	unparser.SetCompactSpacing(false);
 	unparser.Unparse(printed_classad, classad);
-	cout << printed_classad << endl;
+	cout << "ClassAd converted back to XML:\n" << printed_classad << endl;
 
-	classad = parser.ParseClassAd(printed_classad, offset);
+	classad = parser.ParseClassAd(printed_classad);
 
+	printed_classad = "";
 	printer.Unparse(printed_classad, classad);
-	cout << printed_classad << endl;
+	cout << "ClassAd re-read from generated XML:\n" << printed_classad << endl;
+
+	// We should be able to read two classads from this string
+	string xml2 = "<?xml version=\"1.0\"?>"
+                  "<classads>"
+		          "< c >"
+                  "<a n=\"A\"><s> Alain &quot;Aslag&quot; Roy</s></a>"
+                  "</c><c>"
+                  "<a n=\"B\"><n> 3 </n></a>"
+		          "</c></classads>";
+	int offset = 0;
+	ClassAd *classad2;
+
+	classad = parser.ParseClassAd(xml2, offset);
+	classad2 = parser.ParseClassAd(xml2, offset);
+
+
+	printed_classad = "";
+	printer.Unparse(printed_classad, classad);
+	cout << "First ClassAd as parsed from XML:\n" 
+		 << printed_classad << endl;
+
+	printed_classad = "";
+	printer.Unparse(printed_classad, classad2);
+	cout << "Second ClassAd as parsed from XML:\n" 
+		 << printed_classad << endl;
+
 }
