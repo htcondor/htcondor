@@ -873,7 +873,7 @@ doCommand( char *name )
 	}
 
 	if( !done ) {
-		if( !d.sendCommand(cmd) ) {
+		if( !d.sendCommand(cmd, &sock) ) {
 			namePrintf( stderr, name, "Can't send %s command to", 
 						 cmdToStr(cmd) );
 			RESTORE;
