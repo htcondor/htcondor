@@ -502,7 +502,7 @@ ioctl( int fd, int request, caddr_t arg )
 }
 #endif
 
-#if defined(AIX32) || defined(Solaris)
+#if defined(AIX32)
 	char *
 	getwd( char *path )
 	{
@@ -512,7 +512,28 @@ ioctl( int fd, int request, caddr_t arg )
 			return (char *)REMOTE_syscall( CONDOR_getwd, path );
 		}
 	}
+#endif
 
+#if defined(Solaris)
+char *
+	getwd( char *path )
+	{
+		if( LocalSysCalls() ) {
+			return (char *)GETCWD( path, _POSIX_PATH_MAX );
+		} else {
+			return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		}
+	}
+
+	char *
+	getcwd( char *path, size_t size )
+	{
+		if( LocalSysCalls() ) {
+			return (char *)GETCWD( path, size );
+		} else {
+			return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		}
+	}
 #endif
 
 #if defined(AIX32)
