@@ -476,19 +476,14 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
-			// goodput, cputime and show_io all require the same
-			// column real-estate, so they're mutually exclusive
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			goodput = true;
-			cputime = false;
 			show_io = false;
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
-			// goodput, cputime and show_io all require the same
-			// column real-estate, so they're mutually exclusive
 			cputime = true;
-			goodput = false;
-			show_io = false;
 			JOB_TIME = "CPU_TIME";
 		}
 		else
@@ -502,11 +497,10 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix(arg,"io")) {
-			// goodput, cputime and show_io all require the same
-			// column real-estate, so they're mutually exclusive
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			show_io = true;
 			goodput = false;
-			cputime = false;
 		}   
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
