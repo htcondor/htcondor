@@ -100,6 +100,7 @@ void mark_job_stopped(PROC_ID*);
 void mark_job_running(PROC_ID*);
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
+bool service_this_universe(int);
 
 int	WallClockCkptInterval = 0;
 
@@ -334,6 +335,7 @@ Scheduler::count_jobs()
 		Owners[i].JobsHeld = 0;
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
+		Owners[i].GlobusJobs = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 	}
 
@@ -668,48 +670,74 @@ count( ClassAd *job )
 		universe = STANDARD;
 	}
 	
-	if (universe == SCHED_UNIVERSE) {
-		// don't count REMOVED or HELD jobs
-		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
-			scheduler.SchedUniverseJobsRunning += cur_hosts;
-			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-		}
-	} else {
-		// calculate owner for per submittor information.
-		if (job->LookupString(ATTR_OWNER, buf) < 0) {
-			dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
-					ATTR_OWNER);
-			return 0;
-		}
-		owner = buf;
-		// With NiceUsers, the number of owners is
-		// not the same as the number of submittors.  So, we first
-		// check if this job is being submitted by a NiceUser, and
-		// if so, insert it as a new entry in the "Owner" table
-		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-			strcpy(buf2,NiceUserName);
-			strcat(buf2,".");
-			strcat(buf2,owner);
-			owner=buf2;		
-		}
-
-		// insert owner even if REMOVED or HELD for condor_q -{global|sub}
-		int OwnerNum = scheduler.insert_owner( owner );
-
-		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
-			scheduler.JobsRunning += cur_hosts;
-			scheduler.JobsIdle += (max_hosts - cur_hosts);
-			scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
-				// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
-				// We do it in Scheduler::count_jobs().
-		} else if (status == HELD) {
-			scheduler.JobsHeld++;
-			scheduler.Owners[OwnerNum].JobsHeld++;
-		} else if (status == REMOVED) {
-			scheduler.JobsRemoved++;
-		}
+	// calculate owner for per submittor information.
+	if (job->LookupString(ATTR_OWNER, buf) < 0) {
+		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+				ATTR_OWNER);
+		return 0;
 	}
+	owner = buf;
+	// With NiceUsers, the number of owners is
+	// not the same as the number of submittors.  So, we first
+	// check if this job is being submitted by a NiceUser, and
+	// if so, insert it as a new entry in the "Owner" table
+	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+		strcpy(buf2,NiceUserName);
+		strcat(buf2,".");
+		strcat(buf2,owner);
+		owner=buf2;		
+	}
+
+	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
+	int OwnerNum = scheduler.insert_owner( owner );
+
+	if ( !service_this_universe(universe)  ) 
+	{
+		if ( universe == SCHED_UNIVERSE ) {
+			// don't count REMOVED or HELD jobs
+			if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+				scheduler.SchedUniverseJobsRunning += cur_hosts;
+				scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+			}
+		}
+		if ( universe == GLOBUS_UNIVERSE ) {
+			// for Globus, count jobs in any state by owner.
+			// later we make certain there is a grid manager daemon
+			// per owner.
+			scheduler.Owners[OwnerNum].GlobusJobs++;
+		}
+		// bailout now, since all the crud below is only for jobs
+		// which the schedd needs to service
+		return 0;
+	} 
+
+	if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+		scheduler.JobsRunning += cur_hosts;
+		scheduler.JobsIdle += (max_hosts - cur_hosts);
+		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
+			// We do it in Scheduler::count_jobs().
+	} else if (status == HELD) {
+		scheduler.JobsHeld++;
+		scheduler.Owners[OwnerNum].JobsHeld++;
+	} else if (status == REMOVED) {
+		scheduler.JobsRemoved++;
+	}
+
 	return 0;
+}
+
+bool
+service_this_universe(int universe)
+{
+	switch (universe) {
+		case GLOBUS_UNIVERSE:
+		case MPI:
+		case SCHED_UNIVERSE:
+			return false;
+		default:
+			return true;
+	}
 }
 
 int
@@ -781,7 +809,11 @@ abort_job_myself(PROC_ID job_id)
 	if (job_universe == PVM) {
 		job_id.proc = 0;		// PVM shadow is always associated with proc 0
 	}
-
+	if (job_universe == GLOBUS_UNIVERSE) {
+		// tell grid manager about the jobs removal, then return.
+		// TODO
+		return;
+	}
 
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
 
@@ -3673,7 +3705,7 @@ Scheduler::shadow_prio_recs_consistent()
 			if (status != RUNNING && universe!=PVM && universe!=MPI) {
 				// display_shadow_recs();
 				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
-				dprintf( D_ALWAYS, "Found a consistency problem!!!\n" );
+				dprintf( D_ALWAYS, "ERROR: Found a consistency problem!!!\n" );
 				return FALSE;
 			}
 		}

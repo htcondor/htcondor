@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#define INCLUDE_UNIVERSE_NAME_ARRAY		// for JobUniverseNames[]
 #include "condor_io.h"
 #include "string_list.h"
 #include "condor_debug.h"
@@ -51,6 +52,7 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
+extern	bool	service_this_universe(int);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
@@ -1446,36 +1448,42 @@ int get_job_prio(ClassAd *job)
     int     cur_hosts;
     int     max_hosts;
 	int 	niceUser;
+	int		universe;
 
 	buf[0] = '\0';
 	owner[0] = '\0';
 
-    job->LookupInteger(ATTR_JOB_STATUS, job_status);
-    job->LookupInteger(ATTR_JOB_PRIO, job_prio);
-    job->LookupInteger(ATTR_Q_DATE, q_date);
-
-	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-		strcpy(owner,NiceUserName);
-		strcat(owner,".");
-	}
-
-    job->LookupString(ATTR_OWNER, buf);
-	strcat(owner,buf);
-
-	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
-	job->LookupInteger(ATTR_PROC_ID, id.proc);
+	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
         cur_hosts = ((job_status == RUNNING) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
-
-	
+	// Figure out if we should contine and put this job into the PrioRec array
+	// or not.
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts>=max_hosts || job_status==HELD)
+    if (cur_hosts>=max_hosts || job_status==HELD || 
+		   !service_this_universe(universe)) 
+	{
         return cur_hosts;
+	}
+
+
+	// --- Insert this job into the PrioRec array ---
+
+    job->LookupInteger(ATTR_JOB_PRIO, job_prio);
+    job->LookupInteger(ATTR_Q_DATE, q_date);
+	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+		strcpy(owner,NiceUserName);
+		strcat(owner,".");
+	}
+    job->LookupString(ATTR_OWNER, buf);
+	strcat(owner,buf);
+	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
@@ -1708,12 +1716,13 @@ int Runnable(PROC_ID* id)
 				ATTR_JOB_UNIVERSE);
 		return FALSE;
 	}
-	if(universe == SCHED_UNIVERSE)
+	if( !service_this_universe(universe) )
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (SCHED_UNIVERSE)\n");
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
+			JobUniverseNames[universe]);
 		return FALSE;
 	}
-	
+
 	if(GetAttributeInt(id->cluster, id->proc, ATTR_CURRENT_HOSTS, &cur) < 0)
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
