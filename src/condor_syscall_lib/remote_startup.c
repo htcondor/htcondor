@@ -595,10 +595,6 @@ _condor_find_cmd( const char *str )
 static BOOLEAN
 condor_iwd( const char *path )
 {
-#if 0
-	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
-	delay();
-#endif
 	/* Just use the regular chdir -- it will fill in the the file table correctly. */
 	int scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
 	chdir( path );
@@ -761,42 +757,11 @@ _set_priv()
 	return 0;
 }
 
-#define UNIT 10000
 
-#if defined(ALPHA)
-#	define LIM (2000 * UNIT)
-#elif defined(AIX32)
-#	define LIM (225 * UNIT)
-#elif defined(SPARC)
-#	define LIM (260 * UNIT)
-#elif defined(ULTRIX43)
-#	define LIM (170 * UNIT)
-#elif defined(HPPAR)
-#	define LIM (260 * UNIT)
-#elif defined(LINUX)
-#	define LIM (200 * UNIT)
-#elif defined(Solaris)
-#	define LIM (260 * UNIT)
-#elif defined(SGI)
-#	define LIM (200 * UNIT)
-#endif
-
-#if 1
-	delay()
-	{
-		int		i;
-
-		for( i=0; i<LIM; i++ )
-			;
-	}
-#else
-	delay(){}
-#endif
 #define B_NET(x) (((long)(x)&IN_CLASSB_NET)>>IN_CLASSB_NSHIFT)
 #define B_HOST(x) ((long)(x)&IN_CLASSB_HOST)
 #define HI(x) (((long)(x)&0xff00)>>8)
 #define LO(x) ((long)(x)&0xff)
-
 
 void
 display_ip_addr( unsigned int addr )
