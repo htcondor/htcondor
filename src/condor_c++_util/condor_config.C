@@ -57,6 +57,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
+#include "condor_scanner.h"		// for MAXVARNAME, etc
 
 extern "C" {
 	
@@ -87,6 +88,8 @@ extern char* mySubSystem;
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
+extern char **environ;
+
 
 // Function implementations
 
@@ -251,6 +254,38 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 		// all the files in the order they are listed.
 	process_locals( "LOCAL_CONFIG_FILE", host, classAd );
 			
+		// Re-insert the special macros.  We don't want the user to 
+		// override them, since it's not going to work.
+	reinsert_specials( host );
+
+		// Now, insert any macros defined in the environment.  Note we do
+		// this before the root config file!
+	{
+		char varname[MAXVARNAME];
+		char *thisvar;
+		int i,j;
+		char *varvalue;
+
+		for (i=0; environ[i]; i++) {
+		
+			if (strncmp(environ[i],"_condor_",8)!=0) 
+				continue;
+
+			thisvar = environ[i];
+
+			varname[8] = '\0';
+			for (j=0; thisvar[j] && thisvar[j] != '='; j++) {
+				varname[j] = thisvar[j];
+			}
+			varname[j] = '\0';
+			
+			if ( varname[8] && (varvalue=getenv(varname)) ) {
+				//dprintf(D_ALWAYS,"TODD at line %d insert var %s val %s\n",__LINE__,&(varname[8]), varvalue);
+				insert( &(varname[8]), varvalue, ConfigTab, TABLESIZE );
+			}
+		}
+	}
+
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
