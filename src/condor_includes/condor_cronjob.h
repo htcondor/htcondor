@@ -31,26 +31,24 @@
 class CronJobOut : public LineBuffer
 {
   public:
-	CronJobOut( const char *prefix = NULL );
+	CronJobOut( class CondorCronJob *job );
 	virtual ~CronJobOut( void ) {};
-	int SetPrefix( const char *prefix );
 	virtual int Output( char *buf, int len );
 	MyString *GetString( void );
   private:
-	const char	*prefix;
-	MyString	stringBuf;
+	MyString			stringBuf;
+	class CondorCronJob	*job;
 };
 
 // Cron's StdErr Line Buffer
 class CronJobErr : public LineBuffer
 {
   public:
-	CronJobErr( const char *prefix = NULL );
+	CronJobErr( class CondorCronJob *job );
 	virtual ~CronJobErr( void ) {};
-	int SetPrefix( const char *prefix );
 	virtual int Output( char *buf, int len );
   private:
-	const char	*prefix;
+	class CondorCronJob	*job;
 };
 
 // Job's state

@@ -33,29 +33,10 @@
 #define READBUF_SIZE	1024
 
 // Cron's Line StdOut Buffer constructor
-CronJobOut::CronJobOut( const char *prefix) :
+CronJobOut::CronJobOut( class CondorCronJob *job ) :
 		LineBuffer( 1024 )
 {
-	this->prefix = NULL;
-	SetPrefix( prefix );
-}
-
-// Set output name prefix
-int
-CronJobOut::SetPrefix( const char *prefix )
-{
-	if ( this->prefix ) { 
-		free( (void*)this->prefix ); 
-	}
-	if ( prefix ) {
-		this->prefix = strdup( prefix );
-		if ( NULL == prefix ) {
-			return -1;
-		}
-	} else {
-		this->prefix = NULL;
-	}
-	return 0;
+	this->job = job;
 }
 
 // Output function
@@ -76,7 +57,7 @@ CronJobOut::Output( char *buf, int len )
 	if ( stringBuf.Length() ) {
 		stringBuf += ",";
 	}
-	stringBuf += prefix;
+	stringBuf += job->GetPrefix( );
 	stringBuf += buf;
 
 	// Done
@@ -84,29 +65,10 @@ CronJobOut::Output( char *buf, int len )
 }
 
 // Cron's Line StdErr Buffer constructor
-CronJobErr::CronJobErr( const char *prefix) :
+CronJobErr::CronJobErr( class CondorCronJob *job ) :
 		LineBuffer( 128 )
 {
-	this->prefix = NULL;
-	SetPrefix( prefix );
-}
-
-// Set stderr name prefix
-int
-CronJobErr::SetPrefix( const char *prefix )
-{
-	if ( this->prefix ) { 
-		free( (void*)this->prefix ); 
-	}
-	if ( prefix ) {
-		this->prefix = strdup( prefix );
-		if ( NULL == prefix ) {
-			return -1;
-		}
-	} else {
-		this->prefix = NULL;
-	}
-	return 0;
+	this->job = job;
 }
 
 // StdErr Output function
@@ -118,7 +80,7 @@ CronJobErr::Output( char *buf, int len )
 		buf[len] = '\0';
 	}
 
-	dprintf( D_ALWAYS, "%s: %s\n", prefix, buf );
+	dprintf( D_ALWAYS, "%s: %s\n", job->GetName( ), buf );
 
 	// Done
 	return 0;
@@ -157,8 +119,8 @@ CondorCronJob::CondorCronJob( const char *jobName )
 	stdOut = stdErr = -1;
 
 	// Build my output buffers
-	stdOutBuf = new CronJobOut( );
-	stdErrBuf = new CronJobErr( );
+	stdOutBuf = new CronJobOut( this );
+	stdErrBuf = new CronJobErr( this );
 
 	// Store the name, etc.
 	SetName( jobName );
@@ -208,8 +170,6 @@ CondorCronJob::SetName( const char *newName )
 int
 CondorCronJob::SetPrefix( const char *newPrefix )
 {
-	stdOutBuf->SetPrefix( newPrefix );
-	stdErrBuf->SetPrefix( newPrefix );
 	return SetVar( &prefix, newPrefix, false );
 }
 
