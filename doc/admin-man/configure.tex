@@ -436,6 +436,22 @@ system.
   for \Macro{HOSTNAME} and \Macro{FULL\_HOSTNAME} and inserts them
   into its configuration table.
 
+\item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
+  Condor can be told whether or not you want the Condor daemons to
+  create a core file if something really bad happens.  This just sets
+  the resource limit for the size of a core file.  By default, we
+  don't do anything, and leave in place whatever limit was in effect
+  when you started the Condor daemons (normally the condor_master).
+  If this parameter is set and "True", we increase the limit to as
+  large as it gets.  If it's set to "False", we set the limit at 0
+  (which means that no core files are even created).  Core files
+  greatly help the Condor developers debug any problems you might be
+  having.  By using the parameter, you don't have to worry about
+  tracking down where in your boot scripts you need to set the core
+  limit before starting Condor, etc.  You can just set the parameter
+  to whatever behavior you want Condor to enforce.  This parameter has
+  no default value, and is commented out in the default config file. 
+
 \end{description}
 
 
