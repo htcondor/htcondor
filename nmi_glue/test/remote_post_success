@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# $Id: remote_post_success,v 1.1.2.2 2004-06-24 00:58:02 wright Exp $
+
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
 # corresponding perl script for a given stage of the test.
