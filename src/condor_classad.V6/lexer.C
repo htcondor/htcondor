@@ -174,7 +174,7 @@ PeekToken (TokenValue *lvalp)
 			wind( );
 			if( ch == '/' ) {
 				// a c++ style comment
-				while( ch && ch != '\n' ) {
+				while( ch > 0 && ch != '\n' ) {
 					wind( );
 				}
 			} else if( ch == '*' ) {
