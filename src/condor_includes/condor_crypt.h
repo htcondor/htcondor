@@ -61,6 +61,8 @@ class Condor_Crypt_Base {
     // RETURNS: protocol
     //------------------------------------------
 
+    const KeyInfo& get_key() { return keyInfo_; }
+
     virtual void resetState() = 0;
     //------------------------------------------
     // PURPOSE: Reset encryption state. This is 
