@@ -132,7 +132,10 @@ int main( int argc, char *argv[] )
 	int cluster=ANY_NUMBER;
 	int process=ANY_NUMBER;
 	int subproc=ANY_NUMBER;
-	int matches=0;
+
+	int submitted=0;
+	int aborted=0;
+	int completed=0;
 
 	if( job_name ) {
 		int fields = sscanf(job_name,"%d.%d.%d",&cluster,&process,&subproc);
@@ -162,21 +165,24 @@ int main( int argc, char *argv[] )
 					if(event->eventNumber==ULOG_SUBMIT) {
 						dprintf(D_FULLDEBUG,"%s submitted\n",key);
 						table.insert(str,str);
-						matches++;
+						submitted++;
 					} else if(event->eventNumber==ULOG_JOB_TERMINATED) {
 						dprintf(D_FULLDEBUG,"%s completed\n",key);
 						table.remove(str);
+						completed++;
 					} else if(event->eventNumber==ULOG_JOB_ABORTED) {
 						dprintf(D_FULLDEBUG,"%s aborted\n",key);
 						table.remove(str);
+						aborted++;
 					} else {
 						/* nothing to do */
 					}
 				}
 				delete event;
 			} else {
+				dprintf(D_FULLDEBUG,"%d submitted %d completed %d aborted %d remaining\n",submitted,completed,aborted,submitted-completed-aborted);
 				if(table.getNumElements()==0) {
-					if(matches) {
+					if(submitted>0) {
 						printf("All jobs done.\n");
 						EXIT_SUCCESS;
 					} else {
