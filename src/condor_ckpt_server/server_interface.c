@@ -70,6 +70,11 @@ int ConnectToServer(request_type type)
 	struct sockaddr_in server_sa;
 	char			   *server_IP;
 	
+	server_IP = getserveraddr();
+	if (server_IP == 0) {
+		return -1;
+	}
+
 	conn_req_sd = I_socket();
 	if (conn_req_sd == INSUFFICIENT_RESOURCES) {
 		fprintf(stderr, "ERROR:\n");
@@ -89,11 +94,6 @@ int ConnectToServer(request_type type)
     }
 	memset((char*) &server_sa, 0, (int) sizeof(server_sa));
 	server_sa.sin_family = AF_INET;
-	server_IP = getserveraddr();
-	if (server_IP == 0) {
-		close(conn_req_sd);
-		return -1;
-	}
 	memcpy((char*) &server_sa.sin_addr.s_addr, (char*) server_IP, 
 		   sizeof(struct in_addr));
 	switch (type) {
@@ -129,14 +129,19 @@ int IsLocal(const char* path)
 
 int FileExists(const char *filename, const char *owner)
 {
+	int rval;
+
 	if (IsLocal(filename) == LOCAL) {
 		return TRUE;
 	}
-	
-	if (FileOnServer(owner, filename) == 0) {
+
+	rval = FileOnServer(owner, filename);
+	if (rval == 0) {
 		return TRUE;
-	} else {
+	} else if (rval == DOES_NOT_EXIST) {
 		return FALSE;
+	} else {
+		return -1;
 	}
 }
 
@@ -155,6 +160,9 @@ int RequestStore(const char*     owner,
 	int             bytes_recvd=0;
 	int             ret_code;
 	
+	server_sd = ConnectToServer(STORE_REQ);
+	if (server_sd < 0)
+		return server_sd;
 	key = getpid();
 	memset((void *)&req, 0, sizeof(req));
 	req.file_size = htonl(len);
@@ -164,9 +172,6 @@ int RequestStore(const char*     owner,
 	req.key = htonl(key);
 	strncpy(req.owner, owner, MAX_NAME_LENGTH);
 	StripPrefix(filename, req.filename);
-	server_sd = ConnectToServer(STORE_REQ);
-	if (server_sd < 0)
-		return server_sd;
 	ret_code = net_write(server_sd, (char*) &req, sizeof(req));
 	if (ret_code != sizeof(req)) {
 		close(server_sd);
@@ -213,10 +218,10 @@ int RequestRestore(const char*     owner,
 	int               bytes_read;
 	int               bytes_recvd=0;
 	
-	key = getpid();
 	server_sd = ConnectToServer(RESTORE_REQ);
 	if (server_sd < 0)
 		return server_sd;
+	key = getpid();
 	memset((void *)&req, 0, sizeof(req));
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.priority = htonl(0);
@@ -272,10 +277,10 @@ int RequestService(const char*     owner,
 	int               bytes_read;
 	int               bytes_recvd=0;
 	
-	key = getpid();
 	server_sd = ConnectToServer(SERVICE_REQ);
 	if (server_sd < 0)
 		return server_sd;
+	key = getpid();
 	memset((void *)&req, 0, sizeof(req));
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.key = htonl(key);
