@@ -74,7 +74,7 @@ class Dag {
     bool Bootstrap (bool recovery);
 
     /// Add a job to the collection of jobs managed by this Dag.
-    inline bool Add (Job & job) { return _jobs.Append(job); }
+    bool Add( Job& job );
   
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
