@@ -1001,14 +1001,6 @@ abort_job_myself(PROC_ID job_id)
         return;
     }
 
-		// If we're here, the user called condor_rm, so we should set
-		// ATTR_REMOVE_REASON appropriately.
-	if( mode == REMOVED ) {
-		SetAttributeString( job_id.cluster, job_id.proc, 
-							ATTR_REMOVE_REASON, 
-							"Job removed by condor_rm" );
-	}
-
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
 					&job_universe);
