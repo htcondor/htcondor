@@ -836,3 +836,77 @@ FORK()
 }
 
 #endif
+
+/* On Solaris, if an application uses sysconf() to query whether mmap()
+   support is enabled, override and return 0 (FALSE).  Condor does not
+   currently support mmap().  */
+
+#if defined(Solaris)
+long
+sysconf(int name)
+{
+	if (name == _SC_MAPPED_FILES) return 0;
+	return SYSCONF(name);
+}
+
+long
+_sysconf(int name)
+{
+	if (name == _SC_MAPPED_FILES) return 0;
+	return SYSCONF(name);
+}
+#endif
+
+/* On Solaris, stat, lstat, and fstat are statically defined in stat.h,
+   so we can't override them.  Instead, we override the following three
+   xstat definitions.  */
+
+#if defined(Solaris)
+int _xstat(int ver, char *path, struct stat *buf)
+{
+	int	rval;
+
+	if( LocalSysCalls() ) {
+		rval = syscall( SYS_xstat, ver, path, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_stat, path, buf );
+	}
+
+	return rval;
+}
+
+int _lxstat(int ver, char *path, struct stat *buf)
+{
+	int	rval;
+
+	if( LocalSysCalls() ) {
+		rval = syscall( SYS_lxstat, ver, path, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_lstat, path, buf );
+	}
+
+	return rval;
+}
+
+int _fxstat(int ver, int fd, struct stat *buf)
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+
+	if( LocalSysCalls() || use_local_access ) {
+		rval = syscall( SYS_fxstat, ver, user_fd, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
+	}
+
+	return rval;
+}
+#endif
