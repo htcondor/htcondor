@@ -41,7 +41,7 @@
 
 #if defined(WIN32)
 
-char *
+const char *
 sysapi_condor_arch()
 {
 	static char answer[1024];	
@@ -70,14 +70,21 @@ sysapi_condor_arch()
 }
 
 
-char *
+const char *
 sysapi_uname_arch() 
 {
 	return sysapi_condor_arch();
 }
 
 
-char *
+const char *
+sysapi_uname_opsys() 
+{
+	return sysapi_opsys();
+}
+
+
+const char *
 sysapi_opsys()
 {
 	static char answer[1024];
@@ -111,6 +118,7 @@ static int arch_inited = FALSE;
 static char* arch = NULL;
 static char* uname_arch = NULL;
 static char* opsys = NULL;
+static char* uname_opsys = NULL;
 
 #ifdef HPUX
 char* get_hpux_arch( struct utsname* );
@@ -127,6 +135,11 @@ init_arch()
 
 	uname_arch = strdup( buf.machine );
 	if( !uname_arch ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	uname_opsys = strdup( buf.sysname );
+	if( !uname_opsys ) {
 		EXCEPT( "Out of memory!" );
 	}
 
@@ -291,7 +304,7 @@ sysapi_translate_opsys( char *sysname, char *release )
 }
 
 
-char *
+const char *
 sysapi_condor_arch()
 {
 	if( ! arch_inited ) {
@@ -301,7 +314,7 @@ sysapi_condor_arch()
 }
 
 
-char *
+const char *
 sysapi_opsys()
 {
 	if( ! arch_inited ) {
@@ -311,13 +324,23 @@ sysapi_opsys()
 }
 
 
-char *
+const char *
 sysapi_uname_arch()
 {
 	if( ! arch_inited ) {
 		init_arch();
 	}
 	return uname_arch;
+}
+
+
+const char *
+sysapi_uname_opsys()
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return uname_opsys;
 }
 
 

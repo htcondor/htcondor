@@ -70,9 +70,10 @@ float sysapi_load_avg(void);
 /* return information about the arch and operating system.
 	The pointer returned points to a static buffer defined in the library,
 	do not free it */
-char* sysapi_condor_arch(void);
-char* sysapi_uname_arch(void);
-char* sysapi_opsys(void);
+const char* sysapi_condor_arch(void);
+const char* sysapi_uname_arch(void);
+const char* sysapi_opsys(void);
+const char* sysapi_uname_opsys(void);
 
 /* return information about how many 1K blocks of swap space there are.
 	If there are more 1K blocks than INT_MAX, then INT_MAX is returned */
