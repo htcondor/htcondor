@@ -520,6 +520,7 @@ part_send_job(
   PORTS ports;
   bool done = false;
   int retry_delay = 3;
+  int num_retries = 0;
 
   cmd = ACTIVATE_CLAIM; // new protocol in V6 startd
 
@@ -587,11 +588,17 @@ part_send_job(
 		  break;
 
 	  case TRY_AGAIN:
+		  num_retries++;
+		  delete sock;
 		  dprintf( D_ALWAYS,
 				   "Shadow: Request to run a job was TEMPORARILY REFUSED\n" );
+		  if( num_retries > 20 ) {
+			  dprintf( D_ALWAYS, "Shadow: Too many retries, giving up.\n" );
+			  reason = JOB_NOT_STARTED;
+			  return -1;
+		  }			  
 		  dprintf( D_ALWAYS,
 				   "Shadow: will try again in %d seconds\n", retry_delay );
-		  delete sock;
 		  sleep( retry_delay );
 		  break;
 
