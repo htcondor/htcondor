@@ -234,7 +234,9 @@ protected:
 	char * serialize() const;
     char * serializeCryptoInfo(char * buf);
     char * serializeCryptoInfo() const;
-
+    char * serializeMdInfo(char * buf);
+    char * serializeMdInfo() const;
+        
 	virtual void setFullyQualifiedUser(char * u);
 	///
 	virtual const char * getFullyQualifiedUser();

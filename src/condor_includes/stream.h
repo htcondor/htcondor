@@ -542,7 +542,7 @@ public:
         // RETURNS: true -- success; false -- false
         //------------------------------------------
 
-        bool isOutgoing_MD5_on() { return (mdMode_ == MD_ALWAYS_ON); }
+        bool isOutgoing_MD5_on() const { return (mdMode_ == MD_ALWAYS_ON); }
         //------------------------------------------
         // PURPOSE: whether MD is turned on or not
         // REQUIRE: None
@@ -576,6 +576,7 @@ protected:
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
         virtual bool set_encryption_id(const char * keyId) = 0;
         const KeyInfo& get_crypto_key() const;
+        const KeyInfo& get_md_key() const;
       
         void resetCrypto();
 
