@@ -48,7 +48,7 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
     
     if ( mySock_->isClient() ) {
         mySock_->encode();
-        if ( tmpOwner = my_username() ) {
+        if( (tmpOwner = my_username()) ) {
             //send 1 and then username
             retval = 1;
             if (!mySock_->code( retval ) || 
