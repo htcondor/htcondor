@@ -329,9 +329,10 @@ char *envp[];
 	}
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
-		cluster = argv[2];
-		proc = argv[3];
-		pipe_setup( cluster, proc );
+		capability = argv[2];
+		cluster = argv[3];
+		proc = argv[4];
+		pipe_setup( cluster, proc, capability );
 	} else {
 		host = argv[1];
 		capability = argv[2];
@@ -1567,9 +1568,10 @@ char *capability;
 }
 
 void
-pipe_setup( cluster, proc )
+pipe_setup( cluster, proc, capability )
 char *cluster;
 char *proc;
+char *capability;
 {
 	static char	buf[1024];
 
