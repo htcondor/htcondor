@@ -59,7 +59,8 @@ void dc_reconfig( bool is_full );
 void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
 // Globals
 int		Foreground = 0;		// run in background by default
-char*	myName;				// set to argv[0]
+static char*	myName;			// set to basename(argv[0])
+static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
 static int is_master = 0;
 char*	logDir = NULL;
@@ -1120,6 +1121,19 @@ int main( int argc, char** argv )
 
 	// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
+	myFullName = getExecPath();
+	if( ! myFullName ) {
+			// if getExecPath() didn't work, the best we can do is try
+			// saving argv[0] and hope for the best...
+		if( argv[0][0] == '/' ) {
+				// great, it's already a full path
+			myFullName = strdup(argv[0]);
+		} else {
+				// we don't have anything reliable, so forget it.  
+			myFullName = NULL;
+		}
+	}
+
 	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
 		exit( 1 );
@@ -1440,6 +1454,11 @@ int main( int argc, char** argv )
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
 			myName,myDistro->GetUc(),mySubSystem);
+	if( myFullName ) {
+		dprintf( D_ALWAYS, "** %s\n", myFullName );
+		free( myFullName );
+		myFullName = NULL;
+	}
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
