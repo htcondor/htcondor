@@ -33,12 +33,14 @@ void lower_case ( char *str );
 int blankline ( const char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
+char * basename( const char * );
 #else
 int mkargv();
 void lower_case();
 int blankline();
 char * getline();
 char * ltrunc ();
+char * basename ();
 #endif
 
 #if defined(__cplusplus)
