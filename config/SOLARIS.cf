@@ -13,8 +13,6 @@
 #define OperatingSystem		Solaris
 #define IS_SOLARIS		YES
 
-#define PlatformLdFlags -lkstat -lelf -lnsl -lsocket
-
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 
@@ -119,6 +117,7 @@
 
 #ifdef ArchIncludeFile
 #include ArchIncludeFile
+
 #endif
 
 #ifdef OSVersionIncludeFile
