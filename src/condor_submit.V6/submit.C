@@ -89,6 +89,8 @@ int     ProcId;
 int     JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
+int		ActiveQueueConnection = FALSE;
+char	*queue_file = NULL;
 
 #define PROCVARSIZE	32
 BUCKET *ProcVars[ PROCVARSIZE ];
@@ -175,7 +177,7 @@ main( int argc, char *argv[] )
 {
 	FILE	*fp;
 	char	**ptr;
-	char	*cmd_file = NULL, *queue_file = NULL;
+	char	*cmd_file = NULL;
 	int dag_pause = 0;
 	
 	setbuf( stdout, NULL );
@@ -242,6 +244,8 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
+	ActiveQueueConnection = TRUE;
+
 	// in case things go awry ...
 	_EXCEPT_Cleanup = DoCleanup;
 
@@ -284,6 +288,8 @@ main( int argc, char *argv[] )
 	}
 
 	DisconnectQ(0);
+
+	ActiveQueueConnection = FALSE; 
 
 	if(ProcId != -1 ) 
 	{
@@ -1064,7 +1070,8 @@ queue()
 		case 1:
 			break;
 		default:		/* Failed for some other reason... */
-			EXCEPT( "Failed to queue" );
+			fprintf( stderr, "Failed to queue job.\n" );
+			exit(1);
 	}
 
 	ClusterCreated = TRUE;
@@ -1205,7 +1212,13 @@ DoCleanup()
 		// TerminateCluster() may call EXCEPT() which in turn calls 
 		// DoCleanup().  This lead to infinite recursion which is bad.
 		ClusterCreated = 0;
-		DestroyCluster( ClusterId );
+		if (!ActiveQueueConnection) {
+			ActiveQueueConnection = (ConnectQ(queue_file) != 0);
+		}
+		if (ActiveQueueConnection) {
+			DestroyCluster( ClusterId );
+			DisconnectQ(0);
+		}
 	}
 	if( IckptName[0] ) 
 	{
@@ -1353,7 +1366,7 @@ log_submit()
 	job.LookupString ("Owner", owner);
     usr_log.initialize ( owner, path, ClusterId, ProcId, 0 );
     if (!usr_log.writeEvent (&jobSubmit))
-        dprintf (D_ALWAYS, "Error logging submit event.\n");
+        fprintf (stderr, "Error logging submit event.\n");
 }
 
 
@@ -1375,8 +1388,10 @@ SaveClassAd (ClassAd &ad)
 		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
 		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
 		if (!lhs || !rhs) retval = -1;
-		if (SetAttribute (ClusterId, ProcId, lhstr, rhstr) == -1)
+		if (SetAttribute (ClusterId, ProcId, lhstr, rhstr) == -1) {
+			fprintf(stderr, "Failed to set %s=%s for job %d.%d\n", lhstr, rhstr, ClusterId, ProcId);
 			retval = -1;
+		}
 	}
 
 	return retval;
