@@ -10,14 +10,12 @@ CFLAGS = $(STD_C_FLAGS)
 #endif
 
 #if !DOES_CHECKPOINTING
-#define standalone
-#define test_suite_C
+#	define standalone
 #endif
 
 #if WANT_PVM && HAS_PVM
 PVM_LIBRARY = pvmd
 #endif
-
 
 
 #if IS_ALPHA_OSF1
@@ -77,12 +75,12 @@ makefiles:: ../doc/Makefile
 	object_target(starter)
 	object_target(submit.v2)
 	object_target($(SYSCALL_LIB))
+	object_target(test_suite_C)
+#	if HAS_FORTRAN
+		object_target(test_suite_F)
+#	endif
 #	if DOES_CHECKPOINTING
 		object_target(standalone)
-		object_target(test_suite_C)
-#		if HAS_FORTRAN
-			object_target(test_suite_F)
-#		endif
 #	endif
 #endif
 
