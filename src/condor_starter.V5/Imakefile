@@ -16,7 +16,10 @@ CKPT_FLAG = -DNO_CKPT
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
 	$(PVM_FLAG) $(STATIC)
+
+#if IS_ALPHA_OSF1
 LDFLAGS = -lmld
+#endif
 
 /*
   The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
@@ -29,12 +32,12 @@ OS = ULTRIX42
 OS = OperatingSystem
 #endif
 
-#if !IS_ALPHA_OSF1
-CLASS_LIB_SRC = alarm.C state_machine_driver.C name_tab.C 
-CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o 
-#else
+#if IS_V5
 CLASS_LIB_SRC = alarm.C
 CLASS_LIB_OBJ = alarm.o
+#else
+CLASS_LIB_SRC = alarm.C state_machine_driver.C name_tab.C 
+CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o 
 #endif
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
@@ -55,7 +58,7 @@ UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
 
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/senders.o \
 	../condor_syscall_lib/syscall_mode.o \
@@ -88,7 +91,7 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
 
-all_target(condor_starter test_it hound)
+all_target(condor_starter.pvm.mike test_it hound)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 c_plus_target(test_it,test_it.o,$(NULL))
@@ -96,13 +99,13 @@ c_plus_target(hound,hound.o,$(NULL))
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
-condor_starter: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
+condor_starter.pvm.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(G++_DIR)/ld \
 	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
 	-L/usr/gnu/lib \
 	-L$(RELEASE_DIR)/lib \
 	-L$(INSTALL_DIR)/lib \
-	-o condor_starter \
+	-o condor_starter.pvm.mike \
 	/lib/crt0.o \
 	$(PORTABLE_OBJ) \
 	$(NON_PORTABLE_OBJ) \
@@ -112,12 +115,12 @@ condor_starter: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(RELEASE_DIR)/lib/syscall.shr.o \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
-	rm -f condor_starter $(OBJ)
+	rm -f condor_starter.pvm.mike $(OBJ)
 release::
- 	cp condor_starter $(RELEASE_DIR)/bin
+ 	cp condor_starter.pvm.mike $(RELEASE_DIR)/bin
 #else
-c_plus_target(condor_starter,$(OBJ),$(LIB))
-release_target(condor_starter,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+c_plus_target(condor_starter.pvm.mike,$(OBJ),$(LIB))
+release_target(condor_starter.pvm.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 #endif
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
