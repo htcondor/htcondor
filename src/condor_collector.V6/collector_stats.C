@@ -28,6 +28,7 @@
 #include "condor_attributes.h"
 #include "extArray.h"
 #include "collector_stats.h"
+#include "collector_engine.h"
 
 
 // Instantiate things
@@ -181,6 +182,7 @@ CollectorBaseStats::getHistoryString ( char *buf )
 	int			offset = historyBitnum;	// History offset
 	int			loop;					// Loop variable
 
+	outoff = 0;
 	// Calculate the "last" offset
 	if ( --offset < 0 ) {
 		offset = historyMaxbit;
@@ -390,7 +392,7 @@ CollectorStats::update( const char *className, ClassAd *oldAd, ClassAd *newAd )
 {
 
 	// No old ad is trivial; handle it & get out
-	if ( ! oldAd ) {
+	if (  oldAd < CollectorEngine::THRESHOLD ) {
 		classList->updateStats( className, false, 0 );
 		global.updateStats( false, 0 );
 		return 0;
