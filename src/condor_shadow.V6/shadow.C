@@ -693,6 +693,27 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 	}
 #endif // CARMI_OPS
 
+	/*
+	The user job might exit while there is still unread data in the log.
+	So, select with a timeout of zero, and flush everything from the log.
+	*/
+
+	while(1) {
+		struct timeval tv;
+
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
+
+		cnt = select(nfds, &readfds, 0, 0, &tv );
+		if( cnt<=0 ) break;
+
+		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
+			if( HandleLog()<0 ) break;
+		} else {
+			break;
+		}
+	}
+	
 		/* Take back normal condor privileges */
 	set_condor_priv();
 
