@@ -42,6 +42,7 @@ GetOptions (
     'platforms=s'     => $opt_platforms,
     'buildid=s'       => $opt_buildid,
     'test-src=s'      => $opt_test_src,
+    'nmi-glue=s'      => $opt_nmi_glue,
 );
 
 
@@ -141,7 +142,23 @@ sub generate_cmdfile() {
     my $src_file = "test_src.src";
 
     # generate the test glue file - may be symlinked eventually
-    CondorGlue::makeFetchFile( $gluefile, "nmi_glue/test", $tag );
+    if (defined $opt_nmi_glue) {
+        # SCP the glue from different location
+        if ( not -d "$opt_nmi_glue/test" ) {
+            print "You should have glue in directory $opt_nmi_glue/test\n";
+            die "This doesnot seem to exist or --nmi-glue not in standard format\n";
+        }
+        open(GLUEFILE, ">$gluefile") || 
+	    die "Can't open $gluefile for writing: $!\n";
+        print GLUEFILE "method = scp\n";
+        print GLUEFILE "scp_file = $opt_nmi_glue\n";
+        print GLUEFILE "recursive = true\n";     
+        close GLUEFILE;
+    }
+    else {
+        # Checkout the glue from the tag
+        CondorGlue::makeFetchFile( $gluefile, "nmi_glue/test", $tag );
+    }
 
     # generate the runid input file
     open(RUNIDFILE, ">$runidfile") || 
@@ -295,6 +312,8 @@ List of users to be notified about the results
 
 --test-src
 Source to test against
+
+--nmi_glue=<nmi_glue directory for condor containing customised glue>
 
 END_USAGE
 }
