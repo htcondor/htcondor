@@ -9,12 +9,12 @@
 #include <string.h>
 #include <errno.h>
 
-
+#if defined(OSF1)
 extern "C" { unsigned int htonl(unsigned int); }
 extern "C" { unsigned short int htons(unsigned short int); }
 extern "C" { unsigned int ntohl(unsigned int); }
 extern "C" { unsigned short int ntohs(unsigned short int); }
-
+#endif
 
 ServerStat::ServerStat()
 {
