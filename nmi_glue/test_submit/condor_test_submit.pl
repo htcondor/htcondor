@@ -147,7 +147,7 @@ sub generate_cmdfile() {
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
-    print CMDFILE "description = nightly condor $versions[0].$versions[1] test run\n";
+    print CMDFILE "description = TEST: $tag\n";
     print CMDFILE "run_type = test\n";
     print CMDFILE "project = condor\n";
     print CMDFILE "project_release = $versions[0], $versions[1], x\n";
