@@ -193,6 +193,9 @@ int
 ReliSock::connect( char	*host, int port )
 {
 	is_client = 1;
+	if( ! host ) {
+		return FALSE;
+	}
 	hostAddr = strdup( host );
 	return do_connect( host, port );
 }
