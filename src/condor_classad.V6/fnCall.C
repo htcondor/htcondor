@@ -40,7 +40,6 @@ extern DLL_IMPORT_MAGIC long timezone;
 
 BEGIN_NAMESPACE( classad )
 
-FunctionCall::FuncTable FunctionCall::functionTable;
 bool FunctionCall::initialized = false;
 
 // start up with an argument list of size 4
@@ -51,6 +50,8 @@ FunctionCall( )
 	function = NULL;
 
 	if( !initialized ) {
+        FuncTable &functionTable = getFunctionTable();
+
 		// load up the function dispatch table
 			// type predicates
 		functionTable["isundefined"	] = (void*)isType;
@@ -110,6 +111,8 @@ FunctionCall( )
 		functionTable["toupper"		] =	(void*)changeCase;
 		functionTable["tolower"		] =	(void*)changeCase;
 		functionTable["substr"		] =	(void*)subString;
+        functionTable["strcmp"      ] = (void*)compareString;
+        functionTable["stricmp"     ] = (void*)compareString;
 
 			// pattern matching (regular expressions) 
 		functionTable["regexp"		] =	(void*)matchPattern;
@@ -125,9 +128,8 @@ FunctionCall( )
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doMath;
 		functionTable["ceil"		] =	(void*)doMath;
+		functionTable["ceiling"		] =	(void*)doMath;
 		functionTable["round"		] =	(void*)doMath;
-
-		functionTable["real"        ] = (void *)doReal;
 
 		initialized = true;
 	}
@@ -157,11 +159,7 @@ operator=(FunctionCall &functioncall)
     return *this;
 }
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-FunctionCall *FunctionCall::
-#else
 ExprTree *FunctionCall::
-#endif
 Copy( ) const
 {
 	FunctionCall *newTree = new FunctionCall;
@@ -182,8 +180,8 @@ CopyFrom(const FunctionCall &functioncall)
 	ExprTree *newArg;
 
     success      = true;
+    ExprTree::CopyFrom(functioncall);
     functionName = functioncall.functionName;
-	parentScope  = functioncall.parentScope;
 	function     = functioncall.function;
 
 	for (ArgumentList::const_iterator i = functioncall.arguments.begin(); 
@@ -240,10 +238,19 @@ bool operator==(const FunctionCall &fn1, const FunctionCall &fn2)
     return fn1.SameAs(&fn2);
 }
 
+FunctionCall::FuncTable& FunctionCall::
+getFunctionTable(void)
+{
+    static FuncTable functionTable;
+    return functionTable;
+}
+
 void FunctionCall::RegisterFunction(
 	string &functionName, 
 	ClassAdFunc function)
 {
+    FuncTable &functionTable = getFunctionTable();
+
 	if (functionTable.find(functionName) == functionTable.end()) {
 		functionTable[functionName] = (void *) function;
 	}
@@ -342,7 +349,9 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 		return( NULL );
 	}
 
+    FuncTable &functionTable = getFunctionTable();
 	FuncTable::iterator	itr = functionTable.find( str );
+
 	if( itr != functionTable.end( ) ) {
 		fc->function = (ClassAdFunc)itr->second;
 	} else {
@@ -1553,6 +1562,58 @@ subString( const char*, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
+compareString( const char*name, const ArgumentList &argList, EvalState &state, 
+	Value &result )
+{
+	Value 	arg0, arg1;
+    Value   arg0_s, arg1_s;
+
+    // Must have two arguments
+	if(argList.size() != 2) {
+		result.SetErrorValue( );
+		return( false );
+	}
+
+    // Evaluate both arguments
+	if(!argList[0]->Evaluate(state, arg0) ||
+       !argList[1]->Evaluate(state, arg1)) {
+		result.SetErrorValue();
+		return false;
+	}
+
+    // If either argument is undefined, then the result is
+    // undefined.
+	if(arg0.IsUndefinedValue() || arg1.IsUndefinedValue()) {
+		result.SetUndefinedValue( );
+		return false;
+    }
+
+    string  s0, s1;
+    if (   valueToString(arg0, arg0_s)
+        && valueToString(arg1, arg1_s)
+        && arg0_s.IsStringValue(s0)
+        && arg1_s.IsStringValue(s1)) {
+
+        int  order;
+        
+        if (strcmp(name, "strcmp") == 0) {
+            order = strcmp(s0.c_str(), s1.c_str());
+            if (order < 0) order = -1;
+            else if (order > 0) order = 1;
+        } else {
+            order = strcasecmp(s0.c_str(), s1.c_str());
+            if (order < 0) order = -1;
+            else if (order > 0) order = 1;
+        }
+        result.SetIntegerValue(order);
+    } else {
+        result.SetErrorValue();
+    }
+
+	return( true );
+}
+
+bool FunctionCall::
 convInt( const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
@@ -1645,17 +1706,9 @@ bool FunctionCall::
 convReal( const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
-	Value	arg;
-	string	buf;
-	char	*end;
-	int		ivalue;
-	time_t	rtvalue;
-	abstime_t atvalue;
-	bool	bvalue;
-	double	rvalue;
-	Value::NumberFactor nf;
+	Value  arg;
 
-		// takes exactly one argument
+    // takes exactly one argument
 	if( argList.size() != 1 ) {
 		result.SetErrorValue( );
 		return( true );
@@ -1665,67 +1718,8 @@ convReal( const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-	switch( arg.GetType( ) ) {
-		case Value::UNDEFINED_VALUE:
-			result.SetUndefinedValue( );
-			return( true );
-
-		case Value::ERROR_VALUE:
-		case Value::CLASSAD_VALUE:
-		case Value::LIST_VALUE:
-			result.SetErrorValue( );
-			return( true );
-
-		case Value::STRING_VALUE:
-			arg.IsStringValue( buf );
-			rvalue = strtod( buf.c_str( ), (char**) &end );
-			if( end == buf && rvalue == 0.0 ) {
-				// strtod() returned an error
-				result.SetErrorValue( );
-				return( true );
-			}
-			switch( toupper( *end ) ) {
-				case 'B': nf = Value::B_FACTOR; break;
-				case 'K': nf = Value::K_FACTOR; break;
-				case 'M': nf = Value::M_FACTOR; break;
-				case 'G': nf = Value::G_FACTOR; break;
-				case 'T': nf = Value::T_FACTOR; break;
-				case '\0': nf = Value::NO_FACTOR; break;
-				default:
-					result.SetErrorValue( );
-					return( true );
-			}
-			result.SetRealValue(rvalue*Value::ScaleFactor[nf] );
-			return( true );
-
-		case Value::BOOLEAN_VALUE:
-			arg.IsBooleanValue( bvalue );
-			result.SetRealValue( bvalue ? 1.0 : 0.0 );
-			return( true );
-
-		case Value::INTEGER_VALUE:
-			arg.IsIntegerValue( ivalue );
-			result.SetRealValue( (double)ivalue );
-			return( true );
-
-		case Value::REAL_VALUE:
-			result.CopyFrom( arg );
-			return( true );
-
-		case Value::ABSOLUTE_TIME_VALUE:
-			arg.IsAbsoluteTimeValue( atvalue );
-			result.SetRealValue( atvalue.secs );
-			return( true );
-
-		case Value::RELATIVE_TIME_VALUE:
-			arg.IsRelativeTimeValue( rtvalue );
-			result.SetRealValue( rtvalue );
-			return( true );
-
-		default:
-			EXCEPT( "Should not reach here" );
-	}
-	return( false );
+    convertValueToRealValue(arg, result);
+    return true;
 }
 
 bool FunctionCall::
@@ -1744,7 +1738,14 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 		return( false );
 	}
 
-	switch( arg.GetType( ) ) {
+    return valueToString(arg, result);
+}
+
+bool FunctionCall::valueToString(
+    Value &value,
+    Value &result)
+{
+	switch( value.GetType( ) ) {
 		case Value::UNDEFINED_VALUE:
 			result.SetUndefinedValue( );
 			return( true );
@@ -1754,7 +1755,7 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 			return( true );
 
 	        case Value::STRING_VALUE:
-			result.CopyFrom( arg );
+			result.CopyFrom( value );
 			return( true );
 
 		case Value::CLASSAD_VALUE:
@@ -1765,7 +1766,7 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 			{
 				ClassAdUnParser	unp;
 				string			svalue;
-				unp.Unparse( svalue, arg );
+				unp.Unparse( svalue, value );
 				result.SetStringValue( svalue );
 				return( true );
 			}
@@ -1775,7 +1776,7 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 			{
 				ClassAdUnParser	unp;
 				string			svalue;
-				unp.Unparse( svalue, arg );
+				unp.Unparse( svalue, value );
 				result.SetStringValue( svalue.substr(1,svalue.size()-2) );
 				return( true );
 			}
@@ -2024,6 +2025,7 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;
+    Value   realValue;
 
 		// takes exactly one argument
 	if( argList.size() != 1 ) {
@@ -2035,48 +2037,27 @@ doMath( const char* name,const ArgumentList &argList,EvalState &state,
 		return( false );
 	}
 
-	switch( arg.GetType( ) ) {
-		case Value::UNDEFINED_VALUE:
-			result.SetUndefinedValue( );
-			return( true );
-
-		case Value::ERROR_VALUE:
-		case Value::CLASSAD_VALUE:
-		case Value::LIST_VALUE:
-		case Value::STRING_VALUE:
-		case Value::ABSOLUTE_TIME_VALUE:
-		case Value::RELATIVE_TIME_VALUE:
-		case Value::BOOLEAN_VALUE:
-			result.SetErrorValue( );
-			return( true );
-
-		case Value::INTEGER_VALUE:
-				// floor, ceil and round are identity ops for integers
-			result.CopyFrom( arg );
-			return( true );
-
-		case Value::REAL_VALUE:
-			{
-				double rvalue;
-				arg.IsRealValue( rvalue );
-				if( strcasecmp( "floor", name ) == 0 ) {
-					result.SetIntegerValue( (int)floor( rvalue ) );
-				} else if( strcasecmp( "ceil", name ) == 0 ) {
-					result.SetIntegerValue( (int)ceil( rvalue ) );
-				} else if( strcasecmp( "round", name ) == 0 ) {
-					result.SetIntegerValue( (int)rint( rvalue ) );
-				} else {
-					result.SetErrorValue( );
-					return( true );
-				}
-				return( true );
-			}
-		
-		default:
-			EXCEPT( "Should not get here" );
-			return( false );
-	}
-	return( false );
+    if (arg.GetType() == Value::INTEGER_VALUE) {
+        result.CopyFrom(arg);
+    } else {
+        if (!convertValueToRealValue(arg, realValue)) {
+            result.SetErrorValue();
+        } else {
+            double rvalue;
+            realValue.IsRealValue(rvalue);
+            if (strcasecmp("floor", name) == 0) {
+                result.SetIntegerValue((int) floor(rvalue));
+            } else if (   strcasecmp("ceil", name)    == 0 
+                       || strcasecmp("ceiling", name) == 0) {
+                result.SetIntegerValue((int) ceil(rvalue));
+            } else if( strcasecmp("round", name) == 0) {
+                result.SetIntegerValue((int) rint(rvalue));
+            } else {
+                result.SetErrorValue( );
+            }
+        }
+    }
+    return true;
 }
 
 #ifndef WIN32
@@ -2148,39 +2129,5 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 }
 
 #endif
-
-bool FunctionCall::
-doReal( const char*,const ArgumentList &argList,EvalState &state,
-	Value &result )
-{
-  	Value	arg;
-
-	// takes exactly one argument
-	if( argList.size() != 1 ) {
-		result.SetErrorValue( );
-		return( true );
-	}
-	if( !argList[0]->Evaluate( state, arg ) ) {
-		result.SetErrorValue( );
-		return( false );
-	}
-	
-	string number;
-	// has to be a string argument
-	if(!arg.IsStringValue(number)) {
-		result.SetErrorValue( );
-		return( false );
-	} 
-
-	double real;
-    char   *end;
-    real = strtod(number.c_str(), &end);
-    if (end == number.c_str() && real == 0.0) {
-		result.SetErrorValue();
-    } else {
-		result.SetRealValue(real);
-	}
-	return(true);	
-}
 
 END_NAMESPACE // classad

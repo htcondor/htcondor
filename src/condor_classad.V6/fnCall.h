@@ -88,11 +88,7 @@ class FunctionCall : public ExprTree
 	void GetComponents( std::string &, std::vector<ExprTree*> &) const;
 	
 	/// Make a deep copy of the expression
-#ifdef USE_COVARIANT_RETURN_TYPES
-	virtual FunctionCall* Copy( ) const;
-#else
 	virtual ExprTree* Copy( ) const;
-#endif
 	
     bool CopyFrom(const FunctionCall &functioncall);
 
@@ -119,15 +115,18 @@ class FunctionCall : public ExprTree
 	virtual bool _Evaluate( EvalState &, Value &, ExprTree *& ) const;
 	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
-	// information common to all function calls
-	// a mapping from function names (char*) to static methods
-	static FuncTable functionTable;
+	// information common to all function calls a mapping from
+	// function names (char*) to static methods We have a function to
+	// return the object--it's static, and we want to make sure that
+	// it's constructor has been called whenever we need to use it.
+    static FuncTable &getFunctionTable(void);
 	static bool		 initialized;
 	
 	// function call specific information
 	std::string		functionName;
 	ClassAdFunc		function;
 	ArgumentList	arguments;
+
 	
 	// function implementations
 	// type predicates
@@ -177,6 +176,8 @@ class FunctionCall : public ExprTree
 						   Value&);
 	static bool subString(const char*,const ArgumentList&,EvalState&,
 						  Value&);
+	static bool compareString(const char*,const ArgumentList&,EvalState&,
+						  Value&);
 	
 	// pattern matching
 	static bool matchPattern(const char*,const ArgumentList&,EvalState&,
@@ -187,13 +188,15 @@ class FunctionCall : public ExprTree
 	static bool convReal(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convString(const char*,const ArgumentList&,EvalState&,
 						   Value&);
+    static bool valueToString(Value &value, Value &result);
+
 	static bool convBool(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);
 	
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	
- 	static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
+ 	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 
 END_NAMESPACE // classad
