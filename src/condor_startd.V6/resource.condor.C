@@ -329,11 +329,10 @@ resource_free(resource_id_t rid)
 		rip->r_jobclassad = NULL;
 	}
 
-	/* free r_user, which was created with strdup */
-	free(rip->r_user);
-	/* XXX boundary crossing */
-	free(rip->r_clientmachine);
-	rip->r_clientmachine = NULL;
+	if (rip->r_pid != NO_PID && rip->r_pid != getpid()) {
+		kill_starter( rip->r_pid, SIGTSTP );
+		resmgr_changestate(rip->r_rid, CHECKPOINTING);
+	}
 	
 	rip->r_claimed = FALSE;
 
@@ -642,7 +641,6 @@ int
 event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 {
 	resource_info_t *rip;
-	int rval;
 
 	dprintf(D_ALWAYS, "Called vacate_order()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -650,19 +648,11 @@ event_vacate(resource_id_t rid, job_id_t jid,task_id_t tid)
 		return -1;
 	}
 
-	if (rip->r_claimed)
-		vacate_client(rip->r_rid);
-
-	if (rip->r_pid == NO_PID || rip->r_pid == getpid()) {
-		dprintf(D_FULLDEBUG, "vacate: resource not allocated.\n");
-		return -1;
-	}
-
-	rval = kill_starter(rip->r_pid, SIGTSTP);
-	if ( rval == 0 ) {
-		resmgr_changestate(rid, CHECKPOINTING);
-	}
-	return rval;
+		// Send VACATE_SERVICE to the schedd and accountant.
+	vacate_client( rip->r_rid );
+		// Relinquish the match, checkpoint the job, set claimed to false. 
+	resource_free( rip->r_rid );
+	return 0;
 }
 
 int
@@ -823,25 +813,37 @@ event_killall(resource_id_t rid, job_id_t jid, task_id_t tid)
 
 	priv = set_root_priv();
 
-	if( kill( -rip->r_pid, SIGKILL ) < 0 ) {
+	if( kill( -(rip->r_pid), SIGKILL ) < 0 ) {
 		EXCEPT("kill( starter_process_group ) euid = %d\n", geteuid());
 	}
 
 	set_priv( priv );
 }
 
+/* The starter has exited.  Careful, you're inside a signal handler! */
 int
 event_exited(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
-		// We don't want to free the resource here, because we're
-		// still claimed.  We should only free the resource when the
-		// match is relinquished.  -Derek 9/10/97
-      //  	resource_free(rid);
+	resource_info_t *rip;
 
-	/* TODO: change states to CLAIMED ? */
+	if( !(rip = resmgr_getbyrid(rid)) ) {
+		dprintf(D_ALWAYS, "event_exited: could not find resource.\n");
+		return -1;
+	}
+
+		// We know the starter exited, so we can finally get rid of r_pid
+	rip->r_pid = NO_PID;
+
+	if( rip->r_claimed == FALSE ) {
+		resmgr_changestate(rip->r_rid, NO_JOB);
+	} else {
+			/* resmgr_changestate(rip->r_rid, CLAIMED); */
+	}
 
 	cleanup_execute_dir();
-	event_timeout();
+
+	// We're in a signal handler, this is not safe!!! -Derek 9/11/97 
+    // event_timeout();
 }
 
 static int
