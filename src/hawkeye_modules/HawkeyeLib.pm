@@ -5,6 +5,7 @@ use HawkeyePublish;
 # Hard config from the command line
 my %HardConfigs;
 my $ModuleName = $0;
+my $ConfigQuery = 1;
 if ( $ModuleName =~ /\/([^\/]+)$/ )
 {
     $ModuleName = $1;
@@ -16,6 +17,32 @@ sub DoConfig( )
 {
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
 
+    # Parameters like --module_name=value are used for configs on cmdline
+    # Process these here...
+    my @NewArgv;
+    foreach my $Arg ( @ARGV )
+    {
+	# Command line parameter value
+	if ( $Arg =~ /^--$ModuleName\_(\w+)=(.*)/ )
+	{
+	    $HardConfigs{$1} = $2;
+	}
+	# Don't queury the config from the startd _at all_
+	elsif ( $Arg =~ /^--noconfig/ )
+	{
+	    $ConfigQuery = 0;
+	}
+	# Normal param, just keep going..
+	elsif ( $Arg ne "" )
+	{
+	    push @NewArgv, $Arg;
+	}
+    }
+
+    # Install the new argv...
+    @ARGV = @NewArgv;
+
+    # Setup some default stuff...
     chop( $ENV{OS_TYPE} = `uname -s` );
     chop( $ENV{OS_REV} = `uname -r` );
     chop( $ENV{HOST} = `hostname` );
@@ -47,10 +74,10 @@ sub ReadConfig( $$ )
 
     # Get the config
     my $Label = "$ModuleName$Ext";
-    my $String;
+    my $String = "not defined";
     if ( exists( $HardConfigs{$Label} )  ) {
 	$String = $HardConfigs{$Label};
-    } else {
+    } elsif ( $ConfigQuery ) {
 	$String = `hawkeye_config_val -startd hawkeye_$ModuleName$Ext`;
 	$String = "not defined" if ( -1 == $? );
     }
