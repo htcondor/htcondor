@@ -32,13 +32,27 @@ int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
 
+int		condor_debug_output = 0;
+
 void
-dprintf(int flags, ... )
+dprintf(int flags, char *fmt, ...)
 {
+	if (condor_debug_output) {
+		va_list args;
+		va_start( args, fmt );
+		vfprintf( stderr, fmt, args );
+		va_end( args );
+	}
 }
 
 void
 _EXCEPT_(char* fmt, ...)
 {
+	if (condor_debug_output) {
+		va_list args;
+		va_start( args, fmt );
+		vfprintf( stderr, fmt, args );
+		va_end( args );
+	}
 	abort();
 }
