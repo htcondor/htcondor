@@ -80,9 +80,6 @@ Matchmaker::
 void Matchmaker::
 initialize ()
 {
-    // Initialize accountant params
-    accountant.Initialize();
-
 	// read in params
 	reinitialize ();
 
@@ -123,6 +120,9 @@ reinitialize ()
 	char *tmp;
 	int TrafficInterval=0;
 	double TrafficLimit = 0.0;
+
+    // Initialize accountant params
+    accountant.Initialize();
 
 	// get timeout values
 
