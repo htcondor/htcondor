@@ -620,10 +620,8 @@ of the subsystem corresponding to the daemon.
   defined in \Macro{SCHEDD\_DEBUG} there will be verbose logging of all
   queue management operations the \Condor{schedd} performs.  
 
-\item[\Dflag{BANDWIDTH}] \label{dflag:bandwidth} When this flag is
-  set, the negotiator logs a message for every match. It 
-  includes the amount of network bandwidth used for job placement and
-  preemption.
+\item[\Dflag{MATCH}] \label{dflag:match} When this flag is
+  set, the negotiator logs a message for every match.
 
 \item[\Dflag{NETWORK}] \label{dflag:network} When this flag is set,
   all Condor daemons will log a message on every TCP accept, connect,
@@ -2174,26 +2172,6 @@ These macros affect the \Condor{negotiator}.
   with an idle machine over a preemptable machine, if the job has no
   preference between them.
 
-\item[\Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}]
-  \label{param:NegotiatorTrafficLimit} This macro specifies the
-  maximum amount of network traffic (in Kbytes) that the negotiator may
-  initiate per \Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL} for job placement
-  and preemption.  The negotiator uses the job \AdAttr{ImageSize} and
-  \AdAttr{ExecutableSize} parameters to track network usage.  The negotiator
-  will try to use bandwidth up to the limit, so if starting a large
-  \AdAttr{ImageSize} job would put the negotiator over the limit, it will try
-  to start a small \AdAttr{ImageSize} job in its place.  Thus, using traffic
-  limits penalizes large \AdAttr{ImageSize} jobs for the load they place on the
-  network.  This parameter defaults to 0, which disables network usage
-  management in the negotiator.
-
-\item[\Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL}]
-  \label{param:NegotiatorTrafficInterval} This macro specifies the
-  interval (in seconds) to be used in maintaining the
-  \Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}.  This macro defaults to 0,
-  which disables network usage management in the negotiator.  It is
-  common to set this macro equal to \Macro{NEGOTIATOR\_INTERVAL}.
-  
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
   described in section~\ref{param:SubsysDebug} as \Macro{SUBSYS\_DEBUG}.
