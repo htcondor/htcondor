@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #define INCLUDE_STATUS_NAME_ARRAY
 
 #include "condor_common.h"
@@ -36,6 +34,8 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "my_hostname.h"
+#include "../condor_ckpt_server/server_interface.h"
+#include "sig_install.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
@@ -63,9 +63,7 @@ int	UsePipes;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-typedef void (*SIG_HANDLER)();
 extern "C" {
-	void install_sig_handler( int sig, SIG_HANDLER handler );
 	void reaper();
 	void rm();
 	void condor_rm();
@@ -90,6 +88,8 @@ extern "C" {
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();
+	int unlink_local_or_ckpt_server( char* );
+	int update_rusage( struct rusage*, struct rusage* );
 }
 
 extern int part_send_job( int test_starter, char *host, int &reason,
@@ -164,7 +164,7 @@ int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 int JobExitStatus = 0;                 /* the job's exit status */
 
-int ExceptCleanup();
+extern "C" int ExceptCleanup();
 int Termlog;
 
 ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
@@ -990,12 +990,14 @@ start_job( char *cluster_id, char *proc_id )
 #endif
 }
 
+extern "C" {
 int
 ExceptCleanup()
 {
   log_except();
   return DoCleanup();
 }
+} /* extern "C" */
 
 int
 DoCleanup()
