@@ -179,8 +179,12 @@ void CondorResource::UnregisterJob( CondorJob *job )
 {
 	registeredJobs->Delete( job );
 
-		// TODO: if this is last job, arrange to delete
-		//   this object
+	if ( IsEmpty() ) {
+		ResourcesByName.remove( HashKey( HashName( resourceName,
+												   poolName,
+												   proxySubject ) ) );
+		delete this;
+	}
 }
 
 int CondorResource::DoScheddPoll()
