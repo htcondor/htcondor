@@ -89,10 +89,10 @@ private:
 class InputStreamLexerSource : public LexerSource
 {
 public:
-	InputStreamLexerSource(istream *stream);
+	InputStreamLexerSource(istream &stream);
 	virtual ~InputStreamLexerSource();
 
-	virtual void SetNewSource(istream *stream);
+	virtual void SetNewSource(istream &stream);
 	
 	virtual int ReadCharacter(void);
 	virtual void UnreadCharacter(void);

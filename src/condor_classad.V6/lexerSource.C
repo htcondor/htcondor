@@ -87,7 +87,7 @@ FileLexerSource::AtEnd(void) const
  *
  *-------------------------------------------------------------------*/
 
-InputStreamLexerSource::InputStreamLexerSource(istream *stream)
+InputStreamLexerSource::InputStreamLexerSource(istream &stream) 
 {
 	SetNewSource(stream);
 	return;
@@ -95,13 +95,12 @@ InputStreamLexerSource::InputStreamLexerSource(istream *stream)
 
 InputStreamLexerSource::~InputStreamLexerSource()
 {
-	_stream = NULL;
 	return;
 }
 
-void InputStreamLexerSource::SetNewSource(istream *stream)
+void InputStreamLexerSource::SetNewSource(istream &stream)
 {
-	_stream = stream;
+	_stream = &stream;
 	return;
 }
 
