@@ -46,7 +46,7 @@ struct xml_tag_mapping tag_mappings[] =
 
 struct entity
 {
-	char *entity;
+	char *name;
 	char *replacement_text;
 	int length;
 };
@@ -362,7 +362,7 @@ GrabText(void)
 			bool replaced_entity = false;
 
 			for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
-				if (!strncmp(entity, entities[i].entity, entities[i].length)) {
+				if (!strncmp(entity, entities[i].name, entities[i].length)) {
 					current_token.text += entities[i].replacement_text;
 					inc = entities[i].length;
 					replaced_entity = true;
