@@ -123,5 +123,7 @@ const char ATTR_ACTIVITY				 [] = "Activity";
 const char ATTR_ENTERED_CURRENT_ACTIVITY [] = "EnteredCurrentActivity";
 const char ATTR_AFS_CELL				 [] = "AFSCell";
 const char ATTR_CAPABILITY				 [] = "Capability";
+const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";
+const char ATTR_TOTAL_IDLE_JOBS			 [] = "TotalIdleJobs";
 
 #endif
