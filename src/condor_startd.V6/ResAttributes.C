@@ -43,6 +43,30 @@ MachAttributes::MachAttributes()
 		// instantiation and initialization, we need to have a real
 		// value for this as soon as the MachAttributes object exists.
 	m_num_cpus = calc_ncpus();
+
+		// The same is true of physical memory.  First, try to param
+		// for it.  If it's defined, use what they say.  If not, try
+		// to figure it out for ourselves.  If we had an error in
+		// calc_phys_mem(), we can't param() (since we'd only call
+		// calc_phys_mem() if param() returned NULL), so we need to
+		// just EXCEPT with a message telling the user to define
+		// MEMORY manually.  Derek Wright 1/8/99
+	char* ptr;
+	if( (ptr = param("MEMORY")) != NULL ) {
+		m_phys_mem = atoi(ptr);
+		free(ptr);
+	} else {
+		m_phys_mem = calc_phys_memory();
+		if( m_phys_mem <= 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Error computing physical memory with calc_phys_mem().\n" );
+			dprintf( D_ALWAYS | D_NOHEADER, 
+					 "\t\tMEMORY parameter not defined in config file.\n" );
+			dprintf( D_ALWAYS | D_NOHEADER, 
+					 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n" );
+			EXCEPT( "Can't compute physical memory." );
+		}
+	}
 }
 
 
@@ -71,30 +95,10 @@ MachAttributes::compute( amask_t how_much )
 {
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
-			// Physical memory
-			// Try to param for it.  If it's defined, use what they
-			// say.  If not, try to figure it out for ourselves. 
-			// If we had an error in calc_phys_mem(), we can't param()
-			// (since we'd only call calc_phys_mem() if param()
-			// returned NULL, so we need to just EXCEPT with a message
-			// telling the user to define MEMORY manually.
-			// Derek Wright 1/8/99
-		char* ptr;
-		if( (ptr = param("MEMORY")) != NULL ) {
-			m_phys_mem = atoi(ptr);
-			free(ptr);
-		} else {
-			m_phys_mem = calc_phys_memory();
-			if( m_phys_mem <= 0 ) {
-				dprintf( D_ALWAYS, 
-						 "Error computing physical memory with calc_phys_mem().\n" );
-				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\t\tMEMORY parameter not defined in config file.\n" );
-				dprintf( D_ALWAYS | D_NOHEADER, 
-						 "\t\tTry setting MEMORY to the number of megabytes of RAM.\n" );
-				EXCEPT( "Can't compute physical memory." );
-			}
-		}
+			// Since we need real values for them as soon as a
+			// MachAttributes object is instantiated, we handle number
+			// of CPUs and physical memory in the constructor, not
+			// here.  -Derek Wright 2/5/99 
 
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 			// AFS cell
@@ -321,34 +325,17 @@ deal_with_benchmarks( Resource* rip )
 }
 
 
-CpuAttributes::CpuAttributes( MachAttributes* map, int num_cpus, 
-							  float phys_mem_percent,
-							  float virt_mem_percent,
-							  float disk_percent )
-{
-	init( map, num_cpus, virt_mem_percent, disk_percent );
-	c_phys_mem_percent = phys_mem_percent;
-}
-
-
-CpuAttributes::CpuAttributes( MachAttributes* map, int num_cpus, 
+CpuAttributes::CpuAttributes( MachAttributes* map, 
+							  int vm_type,
+							  int num_cpus, 
 							  int num_phys_mem,
 							  float virt_mem_percent,
 							  float disk_percent )
 {
-	init( map, num_cpus, virt_mem_percent, disk_percent );
-	c_phys_mem = num_phys_mem;
-	c_phys_mem_percent = 0;		// We don't have this percentage.
-}
-
-
-void
-CpuAttributes::init( MachAttributes* map, int num_cpus, 
-					 float virt_mem_percent,
-					 float disk_percent )
-{
 	this->map = map;
+	c_type = vm_type;
 	c_num_cpus = num_cpus;
+	c_phys_mem = num_phys_mem;
 	c_virt_mem_percent = virt_mem_percent;
 	c_disk_percent = disk_percent;
 	c_idle = -1;
@@ -413,17 +400,6 @@ CpuAttributes::compute( amask_t how_much )
 {
 	float val;
 
-	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
-
-			// Physical memory.  If we want a percentage share, that
-			// takes precedence.  If not, we just use the number of
-			// megs we were given initially.
-		if( c_phys_mem_percent ) {
-			val = map->phys_mem() * c_phys_mem_percent;
-			c_phys_mem = (int)floor( val );
-		} 
-	}
-
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {
 
 			// Shared attributes that we only get a percentage of
@@ -460,6 +436,17 @@ CpuAttributes::display( amask_t how_much )
 }
 
 
+
+void
+CpuAttributes::show_totals( int dflag )
+{
+	::dprintf( dflag | D_NOHEADER, 
+			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%\n",
+			 c_num_cpus, c_phys_mem, 100*c_virt_mem_percent, 
+			 100*c_disk_percent );
+}
+
+
 void
 CpuAttributes::dprintf( int flags, char* fmt, ... )
 {
@@ -469,3 +456,45 @@ CpuAttributes::dprintf( int flags, char* fmt, ... )
 	va_end( args );
 }
 
+
+AvailAttributes::AvailAttributes( MachAttributes* map )
+{
+	a_num_cpus = map->num_cpus();
+	a_phys_mem = map->phys_mem();
+	a_virt_mem_percent = 1.0;
+	a_disk_percent = 1.0;
+}
+
+
+bool
+AvailAttributes::decrement( CpuAttributes* cap ) 
+{
+	int new_cpus, new_phys_mem;
+	float new_virt_mem, new_disk;
+
+	new_cpus = a_num_cpus - cap->c_num_cpus;
+	new_phys_mem = a_phys_mem - cap->c_phys_mem;
+	new_virt_mem = a_virt_mem_percent - cap->c_virt_mem_percent;
+	new_disk = a_disk_percent - cap->c_disk_percent;
+
+	if( new_cpus < 0 || new_phys_mem < 0 || 
+		new_virt_mem < 0 || new_disk < 0 ) {
+		return false;
+	} else {
+		a_num_cpus = new_cpus;
+		a_phys_mem = new_phys_mem;
+		a_virt_mem_percent = new_virt_mem;
+		a_disk_percent = new_disk;
+	}
+	return true;
+}
+
+
+void
+AvailAttributes::show_totals( int dflag )
+{
+	::dprintf( dflag | D_NOHEADER, 
+			 "Cpus: %d, Memory: %d, Swap: %.2f%%, Disk: %.2f%%\n",
+			 a_num_cpus, a_phys_mem, 100*a_virt_mem_percent, 
+			 100*a_disk_percent );
+}
