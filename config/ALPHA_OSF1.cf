@@ -11,12 +11,12 @@
 #define Crt0 /usr/lib/cmplrs/cc/crt0.o
 #define SyscallsExp /**/
 
-#define XLibPath DONT_KNOW
-#define XExtLibPath DONT_KNOW
+#define XLibPath /usr/lib/libX11.a /usr/lib/libdnet_stub.a
+#define XExtLibPath /usr/lib/libXext.a
 #define DbmLibrary
 
 #define IS_ALPHA_OSF1			YES
-#define HAS_X					NO
+#define HAS_X					YES
 #define HAS_X_EXTENSIONS		NO
 #define HAS_NDBM				YES
 #define HAS_FSTATFS				NO
@@ -53,13 +53,13 @@
 #define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define HAS_SETLINEBUF			YES
-#define HAS_PVM					YES
+#define HAS_PVM					NO
 
 #define CCompiler cc
 #define CPlusCompiler cxx
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
-#define syscall_lib syscall_lib_ultrix
+#define syscall_lib syscall_lib
 #define PsAllFlag -ef				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
 #define CompatFlags /**/
