@@ -386,6 +386,17 @@ Reconfig()
 		syncJobIO_interval = 5 * 60; // default interval = 5 minutes
 	}
 
+	int max_requests = 50;
+	tmp = param("GRIDMANAGER_MAX_PENDING_REQUESTS");
+	if ( tmp ) {
+		max_requests = atoi(tmp);
+		free(tmp);
+		if ( max_requests < 1 ) {
+			max_requests = 50;
+		}
+	}
+	GahpMain.setMaxPendingRequests(max_requests);
+
 	// Always check the proxy on a reconfig.
 	checkProxy();
 

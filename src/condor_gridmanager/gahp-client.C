@@ -38,6 +38,8 @@ char GahpClient::m_gahp_version[150];
 StringList* GahpClient::m_commands_supported = NULL;
 unsigned int GahpClient::m_pollInterval = 5;
 int GahpClient::poll_tid = -1;
+int GahpClient::max_pending_requests = 50;
+int GahpClient::num_pending_requests = 0;
 char* GahpClient::m_callback_contact = NULL;
 void* GahpClient::m_user_callback_arg = NULL;
 globus_gram_client_callback_func_t GahpClient::m_callback_func = NULL;
@@ -45,6 +47,7 @@ int GahpClient::m_callback_reqid = 0;
 bool GahpClient::poll_pending = false;
 bool Gahp_Args::skip_next_r = false;
 HashTable<int,GahpClient*> * GahpClient::requestTable = NULL;
+Queue<int> GahpClient::waitingToSubmit;
 
 
 #ifndef WIN32
@@ -66,6 +69,7 @@ GahpClient::GahpClient()
 	pending_result = NULL;
 	pending_timeout = 0;
 	pending_timeout_tid = -1;
+	pending_submitted_to_gahp = false;
 	user_timerid = -1;
 	if ( requestTable == NULL ) {
 		requestTable = new HashTable<int,GahpClient*>( 300, &hashFuncInt );
@@ -283,7 +287,7 @@ GahpClient::new_reqid()
 	
 	next_reqid++;
 	while (starting_reqid != next_reqid) {
-		if ( next_reqid > 99000000 ) {
+		if ( next_reqid > 990000000 ) {
 			next_reqid = 1;
 			had_to_rotate = true;
 		}
@@ -702,15 +706,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -781,15 +777,7 @@ GahpClient::globus_gram_client_job_request(
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -846,15 +834,7 @@ GahpClient::globus_gram_client_job_cancel(char * job_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -909,15 +889,7 @@ GahpClient::globus_gram_client_job_status(char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -984,15 +956,7 @@ GahpClient::globus_gram_client_job_signal(char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -1059,15 +1023,7 @@ GahpClient::globus_gram_client_job_callback_register(char * job_contact,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -1125,15 +1081,7 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		int reqid = new_reqid();
-		write_line(command,reqid,buf);
-		Gahp_Args return_line;
-		char **argv = return_line.read_argv(m_gahp_readfd);
-		if ( argv[0] == NULL || argv[0][0] != 'S' ) {
-			// Badness !
-			EXCEPT("Bad %s Request",command);
-		}
-		now_pending(command,reqid,buf);
+		now_pending(command,buf);
 	}
 
 		// If we made it here, command is pending.
@@ -1177,8 +1125,15 @@ void
 GahpClient::clear_pending()
 {
 	if ( pending_reqid ) {
-		// remove from hashtable
-		requestTable->remove(pending_reqid);
+			// remove from hashtable
+		if (requestTable->remove(pending_reqid) == 0) {
+				// entry was still in the hashtable, which means
+				// that this reqid is still with the gahp server or
+				// still in our waitingToSubmit queue.
+				// so re-insert an entry with this pending_reqid
+				// with a NULL data field so we do not reuse this reqid.
+			requestTable->insert(pending_reqid,NULL);
+		}
 	}
 	pending_reqid = 0;
 	if (pending_result) delete pending_result;
@@ -1187,6 +1142,10 @@ GahpClient::clear_pending()
 	if (pending_args) free(pending_args);
 	pending_args = NULL;
 	pending_timeout = 0;
+	if (pending_submitted_to_gahp) {
+		num_pending_requests--;
+	}
+	pending_submitted_to_gahp = false;
 	if ( pending_timeout_tid != -1 ) {
 		daemonCore->Cancel_Timer(pending_timeout_tid);
 		pending_timeout_tid = -1;
@@ -1218,26 +1177,52 @@ GahpClient::reset_user_timer(int tid)
 }
 
 void
-GahpClient::now_pending(const char *command,int reqid,const char *buf)
+GahpClient::now_pending(const char *command,const char *buf)
 {
 
-		// First, carefully clear out the previous pending request.
-	clear_pending();
-
-		// Now stash our new pending request
-	strcpy(pending_command,command);
-	pending_reqid = reqid;
-		// add new reqid to hashtable
-	requestTable->insert(pending_reqid,this);
-
-	if (buf) {
-		pending_args = strdup(buf);
+		// First, if command is not NULL we have a new pending request.
+		// If so, carefully clear out the previous pending request
+		// and stash our new pending request.  If command is NULL,
+		// we have a request which is pending, but not yet submitted
+		// to the GAHP.
+	if ( command ) {
+		clear_pending();
+		strcpy(pending_command,command);
+		pending_reqid = new_reqid();
+		if (buf) {
+			pending_args = strdup(buf);
+		}
+		if (m_timeout) {
+			pending_timeout = m_timeout;
+		}
+			// add new reqid to hashtable
+		requestTable->insert(pending_reqid,this);
 	}
-	if (m_timeout) {
-		pending_timeout = time(NULL) + m_timeout;
-		pending_timeout_tid = daemonCore->Register_Timer(m_timeout + 1,
+
+	if ( num_pending_requests >= max_pending_requests ) {
+			// We have too many requests outstanding.  Queue up
+			// this request for later.
+		waitingToSubmit.enqueue(pending_reqid);
+		return;
+	}
+
+		// Write the command out to the gahp server.
+	write_line(pending_command,pending_reqid,pending_args);
+	Gahp_Args return_line;
+	char **argv = return_line.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		// Badness !
+		EXCEPT("Bad %s Request",command);
+	}
+
+	pending_submitted_to_gahp = true;
+	num_pending_requests++;
+
+	if (pending_timeout) {
+		pending_timeout_tid = daemonCore->Register_Timer(pending_timeout + 1,
 			(TimerHandlercpp)&GahpClient::reset_user_timer,
 			"GahpClient::reset_user_timer",this);
+		pending_timeout += time(NULL);
 	}
 }
 
@@ -1360,14 +1345,48 @@ GahpClient::poll()
 			result = NULL;
 				// mark pending request completed by setting reqid to 0
 			entry->pending_reqid = 0;
-				// clear entry from our hashtable so we can reuse the reqid
-			requestTable->remove(result_reqid);
 				// and reset the user's timer if requested
 			entry->reset_user_timer(-1);				
+				// and decrement our counter
+			num_pending_requests--;
+				// and reset our flag
+			ASSERT(entry->pending_submitted_to_gahp);
+			entry->pending_submitted_to_gahp = false;
 		}
+			// clear entry from our hashtable so we can reuse the reqid
+		requestTable->remove(result_reqid);
+
 	}	// end of looping through each result line
 
 	if ( result ) delete result;
+
+
+		// Ok, at this point we may have handled a bunch of results.  So
+		// that means that some gahp requests languishing in the 
+		// waitingToSubmit queue may be good to go.
+	ASSERT(num_pending_requests >= 0);
+	int waiting_reqid = -1;
+	while ( (waitingToSubmit.Length() > 0) &&
+			(num_pending_requests < max_pending_requests) ) 
+	{
+		waitingToSubmit.dequeue(waiting_reqid);
+		entry = NULL;
+		requestTable->lookup(waiting_reqid,entry);
+		if ( entry ) {
+			ASSERT(entry->pending_reqid == waiting_reqid);
+				// Try to send this request to the gahp.
+			entry->now_pending(NULL,NULL);
+		} else {
+				// this pending entry had been cleared long ago, and
+				// has been just sitting around in the hash table
+				// to make certain the reqid is not re-used until
+				// it is dequeued from the waitingToSubmit queue.
+				// So now remove the entry from the hash table
+				// so the reqid can be reused.
+			requestTable->remove(result_reqid);
+		}
+	}
+
 
 	return num_results;
 }

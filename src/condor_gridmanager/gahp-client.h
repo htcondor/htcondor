@@ -79,6 +79,12 @@ class GahpClient : public Service {
 		///
 		void purgePendingRequests() { clear_pending(); }
 
+		///
+		void setMaxPendingRequests(int max) { max_pending_requests = max; }
+
+		///
+		int getMaxPendingRequests() { return max_pending_requests; }
+
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
 		 */
@@ -271,7 +277,7 @@ class GahpClient : public Service {
 		int new_reqid();
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
-		void now_pending(const char *command,int reqid,const char *buf);
+		void now_pending(const char *command,const char *buf);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
@@ -293,10 +299,12 @@ class GahpClient : public Service {
 		Gahp_Args* pending_result;
 		time_t pending_timeout;
 		int pending_timeout_tid;
+		bool pending_submitted_to_gahp;
 		static HashTable<int,GahpClient*> *requestTable;
+		static Queue<int> waitingToSubmit;
 		int user_timerid;
 
-			// These data members all deal with spawning of the GAHP
+			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP
 			// server, all the below data members are static.
 		static int m_gahp_pid;
@@ -315,6 +323,8 @@ class GahpClient : public Service {
 		static void* m_user_callback_arg;
 		static globus_gram_client_callback_func_t m_callback_func;
 		static int m_callback_reqid;
+		static int max_pending_requests;
+		static int num_pending_requests;
 
 };	// end of class GahpClient
 
