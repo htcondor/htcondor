@@ -1,4 +1,4 @@
-all_target(condor_sysapi libsysapi.a)
+all_target(libsysapi.a condor_sysapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 # use -O2 for the benchmark code, i.e clinpack & dhry*.c
