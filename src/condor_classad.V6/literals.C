@@ -6,12 +6,14 @@ Literal ()
 {
 	nodeKind = LITERAL_NODE;
 	factor = NO_FACTOR;
+	string = NULL;
 }
 
 
 Literal::
 ~Literal ()
 {
+	if( string ) free( string );
 }
 
 
@@ -24,7 +26,10 @@ _copy( CopyMode cm )
 		if (newTree == 0) return 0;
 		newTree->value.copyFrom (value);
 		newTree->nodeKind = nodeKind;
-
+		if( ( newTree->string = strdup( string ) ) == NULL ) {
+			delete newTree;
+			return 0;
+		}
 		return newTree;
 	} else if( cm == EXPR_REF_COUNT ) {
 		// ref count already updated by ExprTree::copy()
@@ -54,20 +59,26 @@ toSink (Sink &s)
 Literal* Literal::
 makeLiteral( Value& val ) 
 {
+	char *s;
+
 	Literal* lit = new Literal();
 	if( !lit ) return NULL;
-	lit->value.copyFrom( val, VALUE_HANDOVER );
+	lit->value.copyFrom( val );
+	if( val.isStringValue( s ) ) {
+		lit->string = s;
+	}
+
 	return lit;
 }
 
 
-void Literal::
+bool Literal::
 _evaluate (EvalState &, Value &val)
 {
 	int		i;
 	double	r;
 
-	val.copyFrom( value, VALUE_COPY );
+	val.copyFrom( value );
 
 	// if integer or real, multiply by the factor
 	if (val.isIntegerValue(i)) {
@@ -75,22 +86,24 @@ _evaluate (EvalState &, Value &val)
 	} else if (val.isRealValue(r)) {
 		val.setRealValue (r*(double)factor);
 	}
+
+	return( true );
 }
 
 
-void Literal::
+bool Literal::
 _evaluate( EvalState &state, Value &val, ExprTree *&tree )
 {
 	_evaluate( state, val );
-	tree = copy();
+	return( !( tree = copy() ) );
 }
+
 
 bool Literal::
 _flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*)
 {
 	tree = NULL;
-	_evaluate( state, val );
-	return true;
+	return( _evaluate( state, val ) );
 }
 
 
@@ -98,6 +111,10 @@ void Literal::
 setBooleanValue( bool b )
 {
 	value.setBooleanValue( b );
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = NO_FACTOR;
 }
 
@@ -106,6 +123,10 @@ void Literal::
 setIntegerValue (int i, NumberFactor f)
 {
 	value.setIntegerValue (i);
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = f;
 }
 
@@ -114,6 +135,10 @@ void Literal::
 setRealValue (double d, NumberFactor f)
 {
 	value.setRealValue (d);
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = f;
 }
 
@@ -122,6 +147,10 @@ void Literal::
 adoptStringValue (char *str)
 {
 	value.adoptStringValue (str, SS_ADOPT_C_STRING);
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = NO_FACTOR;
 }
 
@@ -129,7 +158,12 @@ adoptStringValue (char *str)
 void Literal::
 setStringValue (char *str)
 {
-	value.setStringValue (str);
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
+	string = strdup( str );
+	value.setStringValue( string );
 	factor = NO_FACTOR;
 }
 
@@ -137,7 +171,11 @@ setStringValue (char *str)
 void Literal::
 setUndefinedValue (void)
 {
-	value.setUndefinedValue ();
+	value.setUndefinedValue( );
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = NO_FACTOR;
 }
 
@@ -145,6 +183,10 @@ setUndefinedValue (void)
 void Literal::
 setErrorValue (void)
 {
-	value.setErrorValue ();
+	value.setErrorValue( );
+	if( string ) { 
+		free( string );
+		string = NULL;
+	}
 	factor = NO_FACTOR;
 }
