@@ -149,3 +149,7 @@
 
 12/12/94 bp_V5_a5
 	Branch point for V5_a5
+
+12/22/94 V5_a5.1
+	Fixes bugs in chdir and keeping track of working directory across
+	checkpoints.  Installed on local DecStations and Suns this date.
