@@ -44,8 +44,8 @@ extern "C" {
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	void config( ClassAd* classAd=NULL, char *mySubsystem=NULL );
-	void config_host( ClassAd* classAd=NULL, char *mySubsystem=NULL, char* host=NULL );
+	void config( ClassAd* classAd=NULL );
+	void config_host( ClassAd* classAd=NULL, char* host=NULL );
 	int	 config_from_server(char*, char*, CONTEXT*);
 	char * get_tilde();
 	char * param ( char *name );
@@ -56,7 +56,7 @@ extern "C" {
 	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
 	void clear_config ( void );
-	void config_fill_ad( ClassAd*, char* );
+	void config_fill_ad( ClassAd* );
 	void set_debug_flags( char * );
 	void config_insert( char*, char* );
 #else
