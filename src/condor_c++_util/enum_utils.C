@@ -70,7 +70,8 @@ struct Translation FileTransferOutputTranslation[] = {
 	{ "ALWAYS", FTO_ON_EXIT_OR_EVICT },
 	{ "ON_EXIT", FTO_ON_EXIT },
 	{ "ONEXIT", FTO_ON_EXIT },
-	{ "NULL", 0 }
+	{ "NONE", FTO_NONE },
+	{ "NULL", FTO_NONE }
 };
 
 
