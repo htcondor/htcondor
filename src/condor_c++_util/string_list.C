@@ -129,7 +129,7 @@ StringList::contains_anycase( const char *st )
 
 
 void
-StringList::remove(char *str)
+StringList::remove(const char *str)
 {
 	char *x;
 
@@ -141,6 +141,18 @@ StringList::remove(char *str)
 	}
 }
 
+void
+StringList::remove_anycase(const char *str)
+{
+	char *x;
+
+	strings.Rewind();
+	while (x = strings.Next()) {
+		if (stricmp(str, x) == MATCH) {
+			deleteCurrent();
+		}
+	}
+}
 
 BOOLEAN
 StringList::substring( const char *st )
