@@ -783,6 +783,14 @@ abort_job_myself(PROC_ID job_id)
         return;
     }
 
+	int job_universe = STANDARD;
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
+					&job_universe);
+	if (job_universe == PVM) {
+		job_id.proc = 0;		// PVM shadow is always associated with proc 0
+	}
+
+
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
 
 		// if we have already preempted this shadow, we're done.
@@ -1398,7 +1406,8 @@ Scheduler::negotiate(int, Stream* s)
 			switch( op ) {
 				 case REJECTED:
 					job_universe = 0;
-					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
+					GetAttributeInt(id.cluster, id.proc, ATTR_JOB_UNIVERSE,
+									&job_universe);
 						// Always negotiate for all PVM job classes! 
 					if ( job_universe != PVM && !NegotiateAllJobsInCluster ) {
 						mark_cluster_rejected( cur_cluster );
