@@ -1,3 +1,13 @@
+10/06/04 V6_6-krb5_1_3-branch + V6_6-krb5_1_3-root
+   This is a new branch off the end of the V6_6-branch for changes to
+   get Condor to link with and use Kerberos5 version 1.3.x.  The
+   Kerberos API changed between 1.2.x and 1.3.x, and there are a
+   number of security enhancements and portability fixes that are
+   driving us to want to switch to krb5-1.3.x.  So, we've got this
+   branch so that we can isolate the changes, do builds on all our
+   platforms, and heavily test the new kerberos before we merge it
+   back into the stable code-base.
+
 09/23/04 V6_6-merge-22
    The state of the V6_6-branch for yet another merge into
    V6_7-branch. This merge includes fixes to the Windows build system.
