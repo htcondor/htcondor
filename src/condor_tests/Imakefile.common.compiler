@@ -16,6 +16,8 @@ all_symlink_target(../x_waste_second.c,x_waste_second.c)
 all_symlink_target(../x_waste_second.h,x_waste_second.h)
 all_symlink_target(../x_compute_bogokips.c,x_compute_bogokips.c)
 
+CBUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
+
 all_copy_target(../x_hello.in,x_hello.in)
 all_copy_target(../x_data.in,x_data.in)
 all_copy_target(../x_data.in,x_data-1.in)
