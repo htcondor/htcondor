@@ -94,7 +94,8 @@ int	XferCkpts = TRUE;		// Transfer ckpt files before exiting
 int	Running_PVMD = FALSE;	// True if we are running a pvm job
 
 	// Constants
-const int	VacateTimer = 60;	// How long to wait for proc requested to exit
+const int	CkptLimit = 300;	// How long to wait for proc to ckpt and exit
+const int	VacateLimit = 60;	// How long to wait for proc to exit
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
 XDR		*SyscallStream;			// XDR stream to shadow for remote system calls
@@ -383,7 +384,7 @@ init_logging()
 	if( pval ) {
 		set_debug_flags( pval );
 	}
-	DebugFlags |= D_NOHEADER;
+	// DebugFlags |= D_NOHEADER;
 
 }
 
@@ -565,7 +566,7 @@ req_vacate()
 		// In V5 ckpt so fast, we can do it here
 	req_ckpt_exit_all();
 
-	MyAlarm.set( VacateTimer );
+	MyAlarm.set( CkptLimit );
 }
 
 /*
@@ -577,7 +578,7 @@ void
 req_die()
 {
 	req_exit_all();
-	MyAlarm.set( VacateTimer );
+	MyAlarm.set( VacateLimit );
 	XferCkpts = FALSE;
 }
 
