@@ -63,6 +63,10 @@ the Condor Account, instead of root or Super User.
 to the queue in the hold state.  Held jobs will not run until released
 with \Condor{release}.
 
+\item It is now possible to use checkpoint servers in remote pools
+when flocking even if the local pool doesn't use a checkpoint server.
+This is now the default behavior (see the next item).
+
 \item \Macro{USE\_CKPT\_SERVER} now defaults to True if a checkpoint
 server is available.  It is usually more efficient to use a checkpoint
 server near the execution site instead of storing the checkpoint back
@@ -83,6 +87,22 @@ hostnames or addresses, the new flags are not required.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug which caused restarts from a checkpoint to fail on
+some releases of Irix 6.5.
+
+\item Fixed a bug in the implementation of the \Syscall{stat} family
+of remote system calls on Irix 6.5 which caused file opens in Fortran
+programs to sometimes fail.
+
+\item Fixed a number of problems with the statistics reported in the
+job completion email and by \Condor{q} \Opt{-goodput}, including the
+number of checkpoints and total network usage.  Correct values will be
+computed for all new jobs after upgrading.
+
+\item Changes in \Macro{USE\_CKPT\_SERVER} and
+\Macro{CKPT\_SERVER\_HOST} no longer cause problems for jobs in the
+queue which have already checkpointed.
 
 \item Many of the Condor administration tools had a bug where they
 would perform a segmentation violation if you specified a \Opt{-pool} 
