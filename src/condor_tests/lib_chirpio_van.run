@@ -1,0 +1,28 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'lib_chirpio_van.cmd';
+$testname = 'chirp io tests - vanilla U';
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+
+	# Pull out requested environment values
+	my $environ   = $info{"environment"};
+};
+
+
+# make test data
+system("x_chirpio_mkdata.pl --message='Testing message'");
+# before the test let's throw some weird crap into the environment
+
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
