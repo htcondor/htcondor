@@ -520,7 +520,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
     int     i;		// hash value
     int     j;		// for linear probing
     
-    if( handler == NULL && handlercpp == NULL ) {
+    if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
@@ -538,7 +538,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
     }
 
 	// See if our hash landed on an empty bucket...
-    if ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) {
+    if ( (comTable[i].handler) || (comTable[i].handlercpp) ) {
 		// occupied
         if(comTable[i].num == command) {
 			// by the same signal
@@ -547,8 +547,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxCommand; j != i; j = (j + 1) % maxCommand) {
-            if ((comTable[j].handler == NULL) && 
-							(comTable[j].handlercpp == NULL))
+            if( (comTable[j].handler == 0) && (comTable[j].handlercpp == 0) )
             {
 				i = j;
 				break;
@@ -653,7 +652,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
     int     j;		// for linear probing
     
     
-    if( handler == NULL && handlercpp == NULL) {
+    if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
 		return -1;
     }
@@ -689,7 +688,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
 	// See if our hash landed on an empty bucket...  We identify an empty 
 	// bucket by checking of there is a handler (or a c++ handler) defined; 
 	// if there is no handler, then it is an empty entry.
-    if ( (sigTable[i].handler != NULL) || (sigTable[i].handlercpp != NULL) ) {
+    if( sigTable[i].handler || sigTable[i].handlercpp ) {
 		// occupied...
         if(sigTable[i].num == sig) {
 			// by the same signal
@@ -698,8 +697,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxSig; j != i; j = (j + 1) % maxSig) {
-            if ((sigTable[j].handler == NULL) && 
-							(sigTable[j].handlercpp == NULL))
+            if( (sigTable[j].handler == 0) && (sigTable[j].handlercpp == 0) )
             {
 				i = j;
 				break;
@@ -884,7 +882,7 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 
 	// If this is the first command sock, set initial_command_sock
 	// NOTE: When we remove sockets, the intial_command_sock can change!
-	if ( initial_command_sock == -1 && handler == NULL && handlercpp == NULL )
+	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 )
 		initial_command_sock = i;
 
 	// Update curr_regdataptr for SetDataPtr()
@@ -1421,8 +1419,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || 
-						(comTable[i].handlercpp != NULL)) 
+		if( comTable[i].handler || comTable[i].handlercpp ) 
 		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -1444,8 +1441,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	char tbuf[16];
 
 	for (i = 0; i < maxCommand; i++) {
-		if ( ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) &&
-			 ( comTable[i].perm == perm ) )
+		if( (comTable[i].handler || comTable[i].handlercpp) &&
+			(comTable[i].perm == perm) )
 		{
 
 			sprintf (tbuf, "%i", comTable[i].num);
@@ -1480,8 +1477,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxReap; i++) {
-		if ((reapTable[i].handler != NULL) || 
-						(reapTable[i].handlercpp != NULL)) {
+		if( reapTable[i].handler || reapTable[i].handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
@@ -1515,9 +1511,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxSig; i++) {
-		if ( (sigTable[i].handler != NULL) || 
-						(sigTable[i].handlercpp != NULL) ) 
-		{
+		if( sigTable[i].handler || sigTable[i].handlercpp ) { 
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( sigTable[i].sig_descrip )
@@ -6140,8 +6134,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		i = pidentry->reaper_id - 1;
 
 		// Invoke the reaper handler if there is one registered
-		if ( (i >= 0) && ((reapTable[i].handler != NULL) || 
-			 (reapTable[i].handlercpp != NULL)) ) {
+		if( (i >= 0) && (reapTable[i].handler || reapTable[i].handlercpp) ) {
 			// Set curr_dataptr for Get/SetDataPtr()
 			curr_dataptr = &(reapTable[i].data_ptr);
 
