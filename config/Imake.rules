@@ -137,6 +137,19 @@ objfile: srcfile                                        @@\
 	 $(CPlusPlus) $(INST_C_PLUS_FLAGS) -c srcfile -o objfile
 #endif /* template_inst_obj */
 
+/*
+** Build a Java class from a .java file.
+**
+*/
+
+#ifndef java_target
+#define java_target( classfile, sourcefile, cpath )        @@\
+classfile: sourcefile                                      @@\
+	$(JAVAC) $(JAVACFLAGS) -classpath cpath sourcefile @@\
+clean::                                                    @@\
+	rm -f classfile
+#endif
+
 
 /***********************************************************************
 ** release targets

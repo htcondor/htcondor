@@ -8,6 +8,8 @@
 #define PreProcessCmd	CCompiler -E -x c-header
 #define Demangler	c++filt
 
+#define JavaCompiler    javac
+
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include
 
@@ -65,14 +67,16 @@ the soft links.  The links will point back to Top/src/... */
 #define CondorAdministrator	condor-admin
 #define YpLib
 
+#define WANT_JAVA       YES
+
 #define WANT_PVM	YES
 
 #define WANT_GLOBUS	NO
 
 #define WANT_NETMAN	YES
 
-#define WANT_KERBEROS   YES
-#define CONDOR_3DES_ENCRYPTION YES
+#define WANT_KERBEROS   YES 
+#define CONDOR_3DES_ENCRYPTION  YES
 #define CONDOR_BLOWFISH YES
 
 #define WANT_X509       YES
