@@ -47,16 +47,6 @@ int standard_sigchld(Service *,int);
 int all_reaper_sigchld(Service *,int);
 #endif
 
-#define MAX_LINES 100
-
-typedef struct {
-	long	data[MAX_LINES + 1];
-	int		first;
-	int		last;
-	int		size;
-	int		n_elem;
-} QUEUE;
-
 #ifdef WIN32
 extern void register_service();
 extern void terminate(DWORD);
@@ -75,12 +65,6 @@ extern "C"
 void	init_params();
 void	init_daemon_list();
 void	init_classad();
-void 	tail_log( FILE* output, char* file, int lines );
-void 	display_line( long loc, FILE* input, FILE* output );
-void 	init_queue( QUEUE* queue, int size );
-void 	insert_queue( QUEUE        *queue, long    elem);
-long	delete_queue(QUEUE* );
-int		empty_queue(QUEUE* );
 void	get_lock(char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -101,7 +85,6 @@ char*			configServer;
 
 // Global variables
 ClassAd	*ad = NULL;				// ClassAd to send to collector
-char	*MailerPgm = NULL;
 int		MasterLockFD;
 int		update_interval;
 int		check_new_exec_interval;
@@ -115,7 +98,6 @@ float	e_factor = 2.0;								// exponential factor
 int		r_factor = 300;								// recover factor
 char*	config_location;						// config file from server
 int		doConfigFromServer = FALSE; 
-char	*CondorAdministrator = NULL;
 char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
@@ -146,8 +128,9 @@ int
 master_exit(int retval)
 {
 #ifdef WIN32
-	if ( NT_ServiceFlag == TRUE )
+	if ( NT_ServiceFlag == TRUE ) {
 		terminate(retval);
+	}
 #endif
 
 	DC_Exit(retval);
@@ -188,6 +171,7 @@ DoCleanup()
 	}
 }
 
+
 int
 main_init( int argc, char* argv[] )
 {
@@ -197,6 +181,7 @@ main_init( int argc, char* argv[] )
 	// Daemon Core will call main_init with argc -1 if need to register
 	// as a WinNT Service.
 	if ( argc == -1 ) {
+		NT_ServiceFlag = TRUE;
 		register_service();
 		return TRUE;
 	}
@@ -206,7 +191,8 @@ main_init( int argc, char* argv[] )
 		usage( argv[0] );
 	}
 	
-	for( ptr=argv+1; *ptr; ptr++ ) {
+	int argc_count = 1;
+	for( ptr=argv+1, argc_count = 1; argc_count<argc && *ptr; ptr++,argc_count++) {
 		if( ptr[0][0] != '-' ) {
 			usage( argv[0] );
 		}
@@ -377,20 +363,6 @@ init_params()
 		EXCEPT( "COLLECTOR_HOST not specified in config file" );
 	}
 	
-	if( CondorAdministrator ) {
-		free( CondorAdministrator );
-	}
-	if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
-		EXCEPT( "CONDOR_ADMIN not specified in config file" );
-	}
-
-	if( MailerPgm ) {
-		free( MailerPgm );
-	}
-	if( (MailerPgm = param("MAIL")) == NULL ) {
-		EXCEPT( "MAIL not specified in config file" ); 
-	}
-
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
 	if( tmp ) {
@@ -611,97 +583,6 @@ init_classad()
 		// expressions. 
 	config_fill_ad( ad ); 	
 }
-
-
-void
-tail_log( FILE* output, char* file, int lines )
-{
-	FILE	*input;
-	int		ch, last_ch;
-	long	loc;
-	QUEUE	queue, *q = &queue;
-
-	if( !file ) {
-		return;
-	}		
-
-	if( (input=fopen(file,"r")) == NULL ) {
-		fprintf( stderr, "Can't open %s\n", file );
-		return;
-	}
-
-	init_queue( q, lines );
-	last_ch = '\n';
-
-	while( (ch=getc(input)) != EOF ) {
-		if( last_ch == '\n' && ch != '\n' ) {
-			insert_queue( q, ftell(input) - 1 );
-		}
-		last_ch = ch;
-	}
-
-
-	while( !empty_queue( q ) ) {
-		loc = delete_queue( q );
-		display_line( loc, input, output );
-	}
-	(void)fclose( input );
-}
-
-void
-display_line( long loc, FILE* input, FILE* output )
-{
-	int		ch;
-
-	(void)fseek( input, loc, 0 );
-
-	for(;;) {
-		ch = getc(input);
-		(void)putc( ch, output );
-		if( ch == EOF || ch == '\n' ) {
-			return;
-		}
-	}
-}
-
-void
-init_queue( QUEUE* queue, int size )
-{
-	queue->first = 0;
-	queue->last = 0;
-	queue->size = size;
-	queue->n_elem = 0;
-}
-
-void
-insert_queue( QUEUE	*queue, long	elem)
-{
-	if( queue->n_elem == queue->size ) {
-		queue->first = (queue->first + 1) % (queue->size + 1);
-	} else {
-		queue->n_elem += 1;
-	}
-	queue->data[queue->last] = elem;
-	queue->last = (queue->last + 1) % (queue->size + 1);
-}
-
-long
-delete_queue( QUEUE	*queue)
-{
-	long	answer;
-
-	queue->n_elem -= 1;
-	answer = queue->data[ queue->first ];
-	queue->first = (queue->first + 1) % (queue->size + 1);
-	return answer;
-}
-
-int
-empty_queue( QUEUE	*queue)
-{
-	return queue->first == queue->last;
-}
-
 
 FileLock *MasterLock;
 
