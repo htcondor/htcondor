@@ -25,6 +25,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "scheduler.h"
 #include "proc.h"
+#include "dedicated_scheduler.h"
 #include "grid_universe.h"
 
 template class HashTable<int, int>;
@@ -47,8 +48,15 @@ template class ExtArray<int>;
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
 
 // for MPI use:
-template class ExtArray <match_rec*>;
-template class HashTable <int, ExtArray<match_rec*>*>;
+template class ExtArray<match_rec*>;
+template class ExtArray<MRecArray*>;
+template class ExtArray<ClassAd*>;
+template class HashTable<int,AllocationNode*>;
+template class HashBucket<int,AllocationNode*>;
+template class List<ResTimeNode>;
+template class Item<ResTimeNode>;
+template class List<ClassAd>;
+template class Item<ClassAd>;
 
 bool operator==(const PROC_ID a, const PROC_ID b)
 {
