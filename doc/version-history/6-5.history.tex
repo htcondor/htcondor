@@ -19,8 +19,13 @@ The details of each version are described below.
   This is mainly useful for sites that are having trouble getting
   Condor to work with their DNS or NIS installation.
 
-\item Simplified the interface to the \Condor{cod} command-line tool
-  for managing Computing On Demand claims in Condor.
+\item Minor improvements for Computing On Demand (COD) support: 
+  Simplified the interface to the \Condor{cod} command-line tool
+  for managing COD claims.
+  Also, \verb@condor_status -cod -long@ now provides the ClaimID
+  string for any COD claims in your pool. 
+  This is useful in case you misplace or do not save the ClaimID
+  returned to you from \Condor{cod\_request}.
 
 \end{itemize}
 
