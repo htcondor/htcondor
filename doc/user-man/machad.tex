@@ -229,7 +229,7 @@ the name of the entity that claimed the resource.
 
 \end{description}
 
-Finally, there are a few attributes that are only inserted into the
+There are a few attributes that are only inserted into the
 machine ClassAd if a job is currently executing.  
 If the resource is claimed but no job are running, none of these
 attributes will be defined.
@@ -255,3 +255,11 @@ not be defined.
 
 \end{description}
 
+Finally, the single attribute, 
+\Attr{CurrentTime}, is defined by the ClassAd
+environment.
+\begin{description}
+\index{ClassAd attribute!CurrentTime}
+\item[\AdAttr{CurrentTime}] : Evaluates to the 
+the number of seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+\end{description}
