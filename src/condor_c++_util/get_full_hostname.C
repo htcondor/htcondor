@@ -27,6 +27,9 @@
 #include "condor_config.h"
 
 
+char* get_full_hostname_from_hostent( struct hostent* host_ptr,
+									  const char* host );
+
 // Returns the full hostname of the given host in a newly allocated
 // string, which should be de-allocated with delete [].  If the
 // optional 2nd arg is non-NULL, set it to point to the hostent we get
@@ -35,10 +38,8 @@
 char*
 get_full_hostname( const char* host, struct in_addr* sin_addrp ) 
 {
-	char* full_host;
-	char* tmp;
 	struct hostent *host_ptr;
-	int h, i;
+	char* tmp;
 
 	dprintf( D_HOSTNAME, "Trying to find full hostname %sfor \"%s\"\n", 
 			 sin_addrp ? "and IP addr " : "", host );
@@ -47,8 +48,7 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 			// has a dot.  That's as good as we're going to do, so we
 			// should just exit w/o calling gethostbyname().
 		dprintf( D_HOSTNAME, "Given name is fully qualified, done\n" );
-		full_host = strnewp( host );
-		return full_host;
+		return strnewp( host );
 	}
 
 	dprintf( D_HOSTNAME, "Calling gethostbyname(%s)\n", host );
@@ -65,18 +65,46 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 		*sin_addrp = *(struct in_addr*)(host_ptr->h_addr_list[0]);
 	}
 
+		// now that we have a hostent, call our helper to find the
+		// right fully qualified name out of it (this is shared with
+		// a method in the Daemon object, too...)
+	return get_full_hostname_from_hostent( host_ptr, host );
+}
+
+
+// Returns the full hostname out of the given hostent in a newly
+// allocated string, which should be de-allocated with delete [] the
+// optional 2nd arg is non-NULL, set it to point to the hostent we get
+// back.  WARNING: This method is _not_ thread-safe.
+char*
+get_full_hostname_from_hostent( struct hostent* host_ptr,
+								const char* host )
+{
+	const char* tmp_host;
+	char* full_host;
+	char* tmp;
+	int h, i;
+
+	if( ! host_ptr ) {
+		dprintf( D_ALWAYS, "get_full_hostname_from_hostent() called with "
+				 "no hostent!\n" );
+		return NULL;
+	}
+
+	dprintf( D_HOSTNAME, "Trying to find full hostname from hostent\n" );
+
 		// See if it's correct in the hostent we've got.
 	if( host_ptr->h_name && 
 		(tmp = strchr(host_ptr->h_name, '.')) ) { 
 			// There's a '.' in the "name", use that as full.
-		dprintf( D_HOSTNAME, "Main hostent \"%s\" is fully qualified\n", 
-				 host_ptr->h_name );
-		full_host = strnewp( host_ptr->h_name );
-		return full_host;
+		dprintf( D_HOSTNAME, "Main name in hostent \"%s\" is fully "
+				 "qualified\n", host_ptr->h_name );
+		return strnewp( host_ptr->h_name );
 	}
 
-	dprintf( D_HOSTNAME, "Main hostent \"%s\" contains no '.', checking "
-			 "aliases\n", host_ptr->h_name ? host_ptr->h_name : "(NULL)" );
+	dprintf( D_HOSTNAME, "Main name in hostent \"%s\" contains no '.', "
+			 "checking aliases\n", 
+			 host_ptr->h_name ? host_ptr->h_name : "NULL" );
 
 		// We still haven't found it yet, try all the aliases
 		// until we find one with a '.'
@@ -85,37 +113,44 @@ get_full_hostname( const char* host, struct in_addr* sin_addrp )
 				 host_ptr->h_aliases[i] );
 		if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
 			dprintf( D_HOSTNAME, "Alias \"%s\" is fully qualified\n" );
-			full_host = strnewp( host_ptr->h_aliases[i] );
-			return full_host;
+			return strnewp( host_ptr->h_aliases[i] );
 		}
 	}
 
 	dprintf( D_HOSTNAME, "No host alias is fully qualified, looking for "
 			 "DEFAULT_DOMAIN_NAME\n" );
 
+	if( host ) {
+		tmp_host = host;
+	} else {
+		tmp_host = host_ptr->h_name;
+	}
+
 		// Still haven't found it, try to param for the domain.
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		dprintf( D_HOSTNAME, "DEFAULT_DOMAIN_NAME is defined: \"%s\"\n", tmp );
-		h = strlen( host );
+		h = strlen( tmp_host );
 		i = strlen( tmp );
 		if( tmp[0] == '.' ) {
 			full_host = new char[h+i+1];
-			sprintf( full_host, "%s%s", host, tmp );
+			sprintf( full_host, "%s%s", tmp_host, tmp );
 		} else {
 			full_host = new char[h+i+2];
-			sprintf( full_host, "%s.%s", host, tmp );
+			sprintf( full_host, "%s.%s", tmp_host, tmp );
 		}
 		free( tmp );
-		dprintf( D_HOSTNAME, "Full hostname for \"%s\" is \"%s\"\n", host,
-				 full_host );
+		dprintf( D_HOSTNAME, "Full hostname for \"%s\" is \"%s\"\n", 
+				 tmp_host, full_host );
 		return full_host;
 	}
 
 	dprintf( D_HOSTNAME, "DEFAULT_DOMAIN_NAME not defined\n" );
 
 		// Still can't find it, just give up.
-	full_host = strnewp( host );
+	full_host = strnewp( tmp_host );
 	dprintf( D_HOSTNAME, "Failed to find full hostname for \"%s\", "
-			 "returning \"%s\"\n", host, full_host );
+			 "returning \"%s\"\n", tmp_host, full_host );
 	return full_host;
 }
+
+  
