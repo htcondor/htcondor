@@ -30,6 +30,11 @@
 #	include <signal.h>
 	typedef void (*SIG_HANDLER)( __harg );
 
+#elif defined(AIX32)
+
+	extern "C" int brk( void * );
+	extern "C" void *sbrk( int );
+	typedef void (*SIG_HANDLER)( int );
 
 #else
 
