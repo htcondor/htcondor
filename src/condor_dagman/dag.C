@@ -274,417 +274,143 @@ bool Dag::DetectDaPLogGrowth () {
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 
- if (logsource == CONDORLOG){
-    if (!_condorLogInitialized) {
-      _condorLogInitialized = _condorLog.initialize(_condorLogFiles);
-    }
-  }
-  else if (logsource == DAPLOG){
-    if (!_dapLogInitialized) {
-      _dapLogInitialized = _dapLog.initialize(_dapLogName);
-    }
-  }
-
- 
- bool done = false;  // Keep scanning until ULOG_NO_EVENT
- bool result = true;
- static int log_unk_count = 0;
- static int ulog_rd_error_count = 0;
-
- while (!done) {
-
-        ULogEvent* e = NULL;
-        ULogEventOutcome outcome;
-
-	if (logsource == CONDORLOG){
-	  outcome = _condorLog.readEvent(e);
-	}
-	else if (logsource == DAPLOG){
-	  outcome = _dapLog.readEvent(e);
+	if ( logsource == CONDORLOG ) {
+		if ( !_condorLogInitialized ) {
+			_condorLogInitialized = _condorLog.initialize(_condorLogFiles);
+		}
+	} else if ( logsource == DAPLOG ) {
+		if ( !_dapLogInitialized ) {
+			_dapLogInitialized = _dapLog.initialize(_dapLogName);
+		}
 	}
 
-	Job* job = NULL;
-	const char* eventName = NULL;
-        
-        CondorID condorID;
-        if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
-        
-        debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
-                      ULogEventOutcomeNames[outcome] );
-        
-        if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
+	bool done = false;  // Keep scanning until ULOG_NO_EVENT
+	bool result = true;
 
-        switch (outcome) {
+	while (!done) {
+
+		ULogEvent* e = NULL;
+		ULogEventOutcome outcome;
+
+		if ( logsource == CONDORLOG ) {
+			outcome = _condorLog.readEvent(e);
+		} else if ( logsource == DAPLOG ){
+			outcome = _dapLog.readEvent(e);
+		}
+
+		bool tmpResult = ProcessOneEvent( outcome, e, recovery,
+					dm.doEventChecks, done );
+		result = result && tmpResult;
+
+		if( e != NULL ) {
+			// event allocated earlier by _condorLog.readEvent()
+			delete e;
+		}
+	}
+
+	if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
+		debug_printf( DEBUG_QUIET, "    -----------------------\n");
+		debug_printf( DEBUG_QUIET, "       Recovery Complete\n");
+		debug_printf( DEBUG_QUIET, "    -----------------------\n");
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+// Developer's Note: returning false tells main_timer to abort the DAG
+bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
+		bool recovery, bool doEventChecks, bool &done) {
+
+	bool result = true;
+
+	static int log_unk_count = 0;
+	static int ulog_rd_error_count = 0;
+	
+	debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
+				ULogEventOutcomeNames[outcome] );
+        
+	if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
+
+	switch (outcome) {
             
-            //----------------------------------------------------------------
-          case ULOG_NO_EVENT:     
-	    
-            done = true;
-            break;
-            //----------------------------------------------------------------
-          case ULOG_RD_ERROR:
-			if( ++ulog_rd_error_count >= 10 ) {
-				debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) failures to "
-							  "read job log; quitting...\n",
-							  ulog_rd_error_count );
-				result = false;
-			}
-			else {
-				debug_printf( DEBUG_NORMAL, "ERROR: failure to read job log\n"
-							  "\tA log event may be corrupt.  DAGMan will "
-							  "skip the event and try to\n\tcontinue, but "
-							  "information may have been lost.  If DAGMan "
-							  "exits\n\tunfinished, but reports no failed "
-							  "jobs, re-submit the rescue file\n\tto complete "
-							  "the DAG.\n" );
-			}
-			done = true;
-            break;
-            //----------------------------------------------------------------
-          case ULOG_UNK_ERROR:
-            log_unk_count++;
-            if (recovery || log_unk_count >= 5) {
-				debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) unknown log "
-							  "errors; quitting...\n", log_unk_count );
-                result = false;
-            }
-			debug_printf( DEBUG_NORMAL, "ERROR: unknown log error\n" );
-            done   = true;
-            break;
-            //----------------------------------------------------------------
-          case ULOG_OK:
-            
-			ASSERT( e != NULL );
+		//----------------------------------------------------------------
+	case ULOG_NO_EVENT:     
+		done = true;
+		break;
 
-			job = GetJob( condorID );
-			eventName = ULogEventNumberNames[e->eventNumber];
+		//----------------------------------------------------------------
+	case ULOG_RD_ERROR:
+		if ( ++ulog_rd_error_count >= 10 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) failures to "
+						"read job log; quitting...\n",
+						ulog_rd_error_count );
+			result = false;
+		} else {
+			debug_printf( DEBUG_NORMAL, "ERROR: failure to read job log\n"
+						"\tA log event may be corrupt.  DAGMan will "
+						"skip the event and try to\n\tcontinue, but "
+						"information may have been lost.  If DAGMan "
+						"exits\n\tunfinished, but reports no failed "
+						"jobs, re-submit the rescue file\n\tto complete "
+						"the DAG.\n" );
+		}
+		done = true;
+		break;
 
-			if( e->eventNumber != ULOG_SUBMIT ) {
-				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
-			}
+		//----------------------------------------------------------------
+	case ULOG_UNK_ERROR:
+		log_unk_count++;
+		if (recovery || log_unk_count >= 5) {
+			debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) unknown log "
+						  "errors; quitting...\n", log_unk_count );
+			result = false;
+		}
+		debug_printf( DEBUG_NORMAL, "ERROR: unknown log error\n" );
+		done   = true;
+		break;
+
+		//----------------------------------------------------------------
+	case ULOG_OK:
+		{
+			ASSERT( event != NULL );
+
+			CondorID condorID;
+			if (event != NULL) condorID = CondorID( event->cluster,
+						event->proc, event->subproc );
+			Job *job = GetJob( condorID );
+			const char *eventName = ULogEventNumberNames[event->eventNumber];
+
 				// submit events are printed specially below, since we
 				// want to match them with their DAG nodes first...
+			if ( event->eventNumber != ULOG_SUBMIT ) {
+				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
+			}
 
 				// This variable is used to turn off the new event checking
 				// code for duplicate terminate/abort events.  DAGMan
 				// tolerates them, but the CheckEvents class does not.
 			bool	checkThisEvent = true;
 
-            switch(e->eventNumber) {
+			switch(event->eventNumber) {
 
-              case ULOG_EXECUTABLE_ERROR:
-              case ULOG_JOB_ABORTED:
-
-				  if( !job ) {
-					  break;
-				  }
-
-				  if( job->_Status == Job::STATUS_ERROR ) {
-						  // sometimes condor prints *both* a
-						  // termination and an abort event for a job;
-						  // in such cases, we need to make sure not
-						  // to process both...
-					  debug_printf( DEBUG_NORMAL,
-									"WARNING: Job %s already marked %s; "
-									"ignoring job aborted event...\n",
-									job->GetJobName(), job->GetStatusName() );
-					  checkThisEvent = false;
-					  break;
-				  }
-
-                  _numJobsSubmitted--;
-                  ASSERT( _numJobsSubmitted >= 0 );
-
-				  job->_Status = Job::STATUS_ERROR;
-
-				  if( job->GetRetries() < job->GetRetryMax() ) {
-					  RestartNode( job, recovery );
-					  break;
-				  }
-
-				  sprintf( job->error_text, "Condor reported %s event",
-						   ULogEventNumberNames[e->eventNumber] );
-				  if( job->GetRetryMax() > 0 ) {
-					  // add # of retries to error_text
-					  char *tmp = strnewp( job->error_text );
-					  sprintf( job->error_text, "%s (after %d node retries)",
-							   tmp, job->GetRetries() );
-					  delete tmp;
-				  }
- 				  if( job->_scriptPost == NULL || 
-					  run_post_on_failure == FALSE ) {
-					  _numJobsFailed++;
-					  break;
-				  }
-				  // a POST script is specified for the job, so run it
-				  job->_Status = Job::STATUS_POSTRUN;
-				  // there's no easy way to represent these errors as
-				  // return values or signals, so just say SIGABRT
-				  job->_scriptPost->_retValJob = -6;
-				  if( !recovery ) {
-					  _postScriptQ->Run( job->_scriptPost );
-				  }
-
-				  break;
+			case ULOG_EXECUTABLE_ERROR:
+			case ULOG_JOB_ABORTED:
+				ProcessAbortEvent(event, job, recovery, checkThisEvent);
+				break;
               
-              case ULOG_JOB_TERMINATED:
-			  {	
-                  if( !job ) {
-                      break;
-                  }
-
-				  _numJobsSubmitted--;
-				  ASSERT( _numJobsSubmitted >= 0 );
-
-                  JobTerminatedEvent * termEvent = (JobTerminatedEvent*) e;
-
-                  if( !(termEvent->normal && termEvent->returnValue == 0) ) {
-					  // job failed or was killed by a signal
-					  if( termEvent->normal ) {
-						  job->retval = termEvent->returnValue;
-						  sprintf( job->error_text, "Job failed with "
-								   "status %d", termEvent->returnValue );
-						  debug_printf( DEBUG_QUIET, "Job %s failed with "
-										"status %d.\n", job->GetJobName(),
-										termEvent->returnValue );
-					  }
-					  else {
-						  job->retval = (0 - termEvent->signalNumber);
-						  sprintf( job->error_text, "Job failed with "
-								   "signal %d", termEvent->signalNumber );
-						  debug_printf( DEBUG_QUIET, "Job %s failed with "
-										"signal %d.\n", job->GetJobName(),
-										termEvent->signalNumber );
-					  }
-
-                      job->_Status = Job::STATUS_ERROR;
-
-					  if( job->GetRetries() < job->GetRetryMax() ) {
-						  RestartNode( job, recovery );
-						  break;
-					  }
-					  else {
-						  // no more retries -- job failed
-						  if( job->GetRetryMax() > 0 ) {
-							  // add # of retries to error_text
-							  char *tmp = strnewp( job->error_text );
-							  sprintf( job->error_text,
-									   "%s (after %d node retries)", tmp,
-									   job->GetRetries() );
-							  delete tmp;   
-						  }
-						  if( job->_scriptPost == NULL ||
-							  run_post_on_failure == FALSE ) {
-							  _numJobsFailed++;
-							  break;
-						  }
-					  }
-                  }
-				  else {
-					  // job succeeded
-					  ASSERT( termEvent->returnValue == 0 );
-					  job->retval = 0;
-					  debug_printf( DEBUG_NORMAL,
-									"Job %s completed successfully.\n",
-									job->GetJobName() );
-				  }
-
-                  // if a POST script is specified for the job, run it
-                  if (job->_scriptPost != NULL) {
-					  job->_Status = Job::STATUS_POSTRUN;
-					  // let the script know the job's exit status
-					  job->_scriptPost->_retValJob = termEvent->normal
-						  ? termEvent->returnValue : -1;
-					  if( !recovery ) {
-						  _postScriptQ->Run( job->_scriptPost );
-					  }
-				  }
-				  // no POST script was specified, so update DAG with
-				  // job's successful completion
-				  else {
-					  TerminateJob( job, recovery );
-				  }
-				  PrintReadyQ( DEBUG_DEBUG_2 );
-
-				  break;
-			  }
+			case ULOG_JOB_TERMINATED:
+				ProcessTerminatedEvent(event, job, recovery);
+				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
-			{
-				if( !job ) {
-					break;
-				}
-				ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
-
-				PostScriptTerminatedEvent *termEvent =
-					(PostScriptTerminatedEvent*) e;
-					
-				debug_printf( DEBUG_NORMAL, "POST Script of Job %s ",
-							  job->GetJobName() );
-
-				if( !termEvent->normal ) {
-					// POST script failed due to a signal
-					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
-								   "died on signal %d\n",
-								   termEvent->signalNumber );
-
-                    job->_Status = Job::STATUS_ERROR;
-
-					if( job->GetRetries() < job->GetRetryMax() ) {
-						RestartNode( job, recovery );
-                    }
-                    else {
-						// no more retries -- node failed
-						_numJobsFailed++;
-						if( job->retval == 0 ) {
-							// job had succeeded but POST failed
-							sprintf( job->error_text,
-									 "POST Script died on signal %d",
-									 termEvent->signalNumber );
-						}
-						else {
-							// job failed prior to POST failing
-                            sprintf( job->error_text, 
-                                     "Job failed with status %d and "
-									 "POST Script died on signal %d",
-									 job->retval, termEvent->signalNumber );
-						}
-						if( job->GetRetryMax() > 0 ) {
-							// add # of retries to error_text
-							char *tmp = strnewp( job->error_text );
-							sprintf( job->error_text,
-									 "%s (after %d node retries)", tmp,
-									 job->GetRetries() );
-							delete tmp;   
-						}
-					}
-				}
-				else if( termEvent->returnValue != 0 ) {
-					// POST script returned non-zero
-					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
-								   "failed with status %d\n",
-								   termEvent->returnValue );
-
-                    job->_Status = Job::STATUS_ERROR;
-
-					if( job->GetRetries() < job->GetRetryMax() ) {
-						RestartNode( job, recovery );
-					}
-					else {
-						// no more retries -- node failed
-						_numJobsFailed++;
-						if( job->retval == 0 ) {
-					   		// job had succeeded but POST failed
-							sprintf( job->error_text,
-									 "POST Script failed with status %d",
-									 termEvent->returnValue );
-						}
-						else {
-						   	// job failed prior to POST failing
-							sprintf( job->error_text,
-                                     "Job failed with status %d and "
-									 "POST Script failed with status %d",
-									 job->retval, termEvent->returnValue );
-						}
-						if( job->GetRetryMax() > 0 ) {
-							// add # of retries to error_text
-                            char *tmp = strnewp( job->error_text );
-                            sprintf( job->error_text,
-                                     "%s (after %d node retries)", tmp,
-                                     job->GetRetries() );
-							delete tmp;
-						}
-					}
-				}
-				else {
-					// POST script succeeded
-					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
-								   "completed successfully.\n" );
-					TerminateJob( job, recovery );
-				}
-				PrintReadyQ( DEBUG_DEBUG_4 );
+				ProcessPostTermEvent(event, job, recovery);
 				break;
-			}
-              case ULOG_SUBMIT:
-			  {
-				SubmitEvent* submit_event = (SubmitEvent*) e;
-				if( submit_event->submitEventLogNotes ) {
-					char job_name[1024] = "";
-					if( sscanf( submit_event->submitEventLogNotes,
-								"DAG Node: %1023s", job_name ) == 1 ) {
-						job = GetJob( job_name );	// from submit cmd
-						if( job ) {
-							if( !recovery ) {
-									// as a sanity-check, compare the
-									// job ID in the userlog with the
-									// one that appeared earlier in
-									// the submit command's stdout
-                                if( condorID.Compare( job->_CondorID ) != 0 ) {
-                                    debug_printf( DEBUG_QUIET,
-												  "ERROR: job %s: job ID in userlog submit event (%d.%d) doesn't match ID reported earlier by submit command (%d.%d)!  Trusting the userlog for now., but this is scary!\n",
-                                                  job_name,
-												  // userlog job id
-                                                  condorID._cluster,
-                                                  condorID._proc,
-												  // submit cmd job id
-                                                  job->_CondorID._cluster,
-                                                  job->_CondorID._proc );
-                                }
-							}
-							job->_CondorID = condorID;
-						}
-					}
-				}
-				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
-				if( !job ) {
-					break;
-				}
 
-				if( recovery ) {
-					job->_Status = Job::STATUS_SUBMITTED;
-					_numJobsSubmitted++;
-					break;
-				}
+			case ULOG_SUBMIT:
+				ProcessSubmitEvent(event, eventName, job, condorID, recovery);
+				break;
 
-				// if we only have one log, compare
-				// the order of submit events in the
-				// log to the order in which we
-				// submitted the jobs -- but if we
-				// have >1 userlog we can't count on
-				// any order, so we can't sanity-check
-				// in this way
-
-				if( _condorLogFiles.number() == 1 ) {
-
-					// as a sanity check, compare the job from the
-					// submit event to the job we expected to see from
-					// our submit queue
- 					Job* expectedJob = NULL;
-					if( _submitQ->dequeue( expectedJob ) == -1 ) {
-						debug_printf( DEBUG_QUIET,
-									  "Unrecognized submit event (for job "
-									  "\"%s\") found in log (none expected)\n",
-									  job->GetJobName() );
-						break;
-					}
-					else if( job != expectedJob ) {
-						ASSERT( expectedJob != NULL );
-						debug_printf( DEBUG_QUIET,
-                                      "Unexpected submit event (for job "
-                                      "\"%s\") found in log; job \"%s\" "
-									  "was expected.\n",
-									  job->GetJobName(),
-									  expectedJob->GetJobName() );
-						// put expectedJob back onto submit queue
-						_submitQ->enqueue( expectedJob );
-
-						break;
-					}
-				}
-
-					PrintReadyQ( DEBUG_DEBUG_2 );
-					break;
-			  }
 			case ULOG_CHECKPOINTED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_IMAGE_SIZE:
@@ -698,31 +424,345 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 			case ULOG_GENERIC:
 			case ULOG_EXECUTE:
 			default:
-                break;
+				break;
 			}
 
-			if ( dm.doEventChecks && checkThisEvent ) {
+			if ( doEventChecks && checkThisEvent ) {
 				MyString	eventError;
-				if ( !_ce.CheckAnEvent(e, eventError) ) {
-    				debug_printf( DEBUG_VERBOSE, "%s\n",
-							eventError.Value() );
+				if ( !_ce.CheckAnEvent(event, eventError) ) {
+					debug_printf( DEBUG_VERBOSE, "%s\n",
+								eventError.Value() );
 					result = false;
 				} else {
-    				debug_printf( DEBUG_DEBUG_1, "Event okay\n");
+					debug_printf( DEBUG_DEBUG_1, "Event okay\n");
 				}
 			}
-        }
-		if( e != NULL ) {
-			// event allocated earlier by _condorLog.readEvent()
-			delete e;
 		}
-    }
-    if (DEBUG_LEVEL(DEBUG_VERBOSE) && recovery) {
-        debug_printf( DEBUG_QUIET, "    -----------------------\n");
-        debug_printf( DEBUG_QUIET, "       Recovery Complete\n");
-        debug_printf( DEBUG_QUIET, "    -----------------------\n");
-    }
-    return result;
+		break;
+
+	default:
+		debug_printf( DEBUG_QUIET, "ERROR: illegal ULogEventOutcome "
+					"value (%d)!!!\n", outcome);
+		break;
+	}
+
+	return result;
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
+		bool recovery, bool &checkThisEvent) {
+
+	if ( job ) {
+
+		if( job->_Status == Job::STATUS_ERROR ) {
+				// sometimes condor prints *both* a
+				// termination and an abort event for a job;
+				// in such cases, we need to make sure not
+				// to process both...
+			debug_printf( DEBUG_NORMAL,
+							"WARNING: Job %s already marked %s; "
+							"ignoring job aborted event...\n",
+							job->GetJobName(), job->GetStatusName() );
+			checkThisEvent = false;
+			return;
+		}
+
+		_numJobsSubmitted--;
+		ASSERT( _numJobsSubmitted >= 0 );
+
+		job->_Status = Job::STATUS_ERROR;
+
+		if( job->GetRetries() < job->GetRetryMax() ) {
+			RestartNode( job, recovery );
+			return;
+		}
+
+		sprintf( job->error_text, "Condor reported %s event",
+				ULogEventNumberNames[event->eventNumber] );
+		if( job->GetRetryMax() > 0 ) {
+				// add # of retries to error_text
+			char *tmp = strnewp( job->error_text );
+			sprintf( job->error_text, "%s (after %d node retries)",
+					tmp, job->GetRetries() );
+			delete tmp;
+		}
+		if( job->_scriptPost == NULL || 
+			run_post_on_failure == FALSE ) {
+			_numJobsFailed++;
+			return;
+		}
+
+			// a POST script is specified for the job, so run it
+		job->_Status = Job::STATUS_POSTRUN;
+
+			// there's no easy way to represent these errors as
+			// return values or signals, so just say SIGABRT
+		job->_scriptPost->_retValJob = -6;
+		if( !recovery ) {
+			_postScriptQ->Run( job->_scriptPost );
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
+		bool recovery) {
+
+	if( job ) {
+		_numJobsSubmitted--;
+		ASSERT( _numJobsSubmitted >= 0 );
+
+		JobTerminatedEvent * termEvent = (JobTerminatedEvent*) event;
+
+		if( !(termEvent->normal && termEvent->returnValue == 0) ) {
+				// job failed or was killed by a signal
+			if( termEvent->normal ) {
+				job->retval = termEvent->returnValue;
+				sprintf( job->error_text, "Job failed with "
+						"status %d", termEvent->returnValue );
+				debug_printf( DEBUG_QUIET, "Job %s failed with "
+						"status %d.\n", job->GetJobName(),
+						termEvent->returnValue );
+			} else {
+				job->retval = (0 - termEvent->signalNumber);
+				sprintf( job->error_text, "Job failed with "
+						"signal %d", termEvent->signalNumber );
+				debug_printf( DEBUG_QUIET, "Job %s failed with "
+						"signal %d.\n", job->GetJobName(),
+						termEvent->signalNumber );
+			}
+
+			job->_Status = Job::STATUS_ERROR;
+
+			if( job->GetRetries() < job->GetRetryMax() ) {
+				RestartNode( job, recovery );
+				return;
+			} else {
+					// no more retries -- job failed
+				if( job->GetRetryMax() > 0 ) {
+						// add # of retries to error_text
+					char *tmp = strnewp( job->error_text );
+					sprintf( job->error_text,
+							"%s (after %d node retries)", tmp,
+							job->GetRetries() );
+					delete tmp;   
+				}
+
+				if( job->_scriptPost == NULL ||
+					run_post_on_failure == FALSE ) {
+					_numJobsFailed++;
+					return;
+				}
+			}
+		} else {
+			// job succeeded
+			ASSERT( termEvent->returnValue == 0 );
+			job->retval = 0;
+			debug_printf( DEBUG_NORMAL,
+							"Job %s completed successfully.\n",
+							job->GetJobName() );
+		}
+
+			// if a POST script is specified for the job, run it
+		if (job->_scriptPost != NULL) {
+			job->_Status = Job::STATUS_POSTRUN;
+			// let the script know the job's exit status
+			job->_scriptPost->_retValJob = termEvent->normal
+				? termEvent->returnValue : -1;
+			if( !recovery ) {
+				_postScriptQ->Run( job->_scriptPost );
+			}
+		}
+			// no POST script was specified, so update DAG with
+			// job's successful completion
+		else {
+			TerminateJob( job, recovery );
+		}
+		PrintReadyQ( DEBUG_DEBUG_2 );
+
+		return;
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
+		bool recovery) {
+
+	if( job ) {
+		ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
+
+		PostScriptTerminatedEvent *termEvent =
+			(PostScriptTerminatedEvent*) event;
+
+		debug_printf( DEBUG_NORMAL, "POST Script of Job %s ",
+				job->GetJobName() );
+
+		if( !termEvent->normal ) {
+				// POST script failed due to a signal
+			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
+						"died on signal %d\n",
+						termEvent->signalNumber );
+
+			job->_Status = Job::STATUS_ERROR;
+
+			if( job->GetRetries() < job->GetRetryMax() ) {
+				RestartNode( job, recovery );
+			} else {
+					// no more retries -- node failed
+				_numJobsFailed++;
+				if( job->retval == 0 ) {
+						// job had succeeded but POST failed
+					sprintf( job->error_text,
+							"POST Script died on signal %d",
+							termEvent->signalNumber );
+				} else {
+						// job failed prior to POST failing
+					sprintf( job->error_text, "Job failed with status %d and "
+							"POST Script died on signal %d",
+							job->retval, termEvent->signalNumber );
+				}
+
+				if( job->GetRetryMax() > 0 ) {
+						// add # of retries to error_text
+					char *tmp = strnewp( job->error_text );
+					sprintf( job->error_text, "%s (after %d node retries)",
+							tmp, job->GetRetries() );
+					delete tmp;   
+				}
+			}
+		} else if( termEvent->returnValue != 0 ) {
+				// POST script returned non-zero
+			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
+						"failed with status %d\n",
+						termEvent->returnValue );
+
+			job->_Status = Job::STATUS_ERROR;
+
+			if( job->GetRetries() < job->GetRetryMax() ) {
+				RestartNode( job, recovery );
+			} else {
+					// no more retries -- node failed
+				_numJobsFailed++;
+				if( job->retval == 0 ) {
+						// job had succeeded but POST failed
+					sprintf( job->error_text,
+							"POST Script failed with status %d",
+							termEvent->returnValue );
+				} else {
+						// job failed prior to POST failing
+					sprintf( job->error_text, "Job failed with status %d and "
+							"POST Script failed with status %d",
+							job->retval, termEvent->returnValue );
+				}
+				if ( job->GetRetryMax() > 0 ) {
+						// add # of retries to error_text
+					char *tmp = strnewp( job->error_text );
+					sprintf( job->error_text, "%s (after %d node retries)",
+							tmp, job->GetRetries() );
+					delete tmp;
+				}
+			}
+		} else {
+				// POST script succeeded
+			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
+						   "completed successfully.\n" );
+			TerminateJob( job, recovery );
+		}
+
+		PrintReadyQ( DEBUG_DEBUG_4 );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dag::ProcessSubmitEvent(const ULogEvent *event, const char *eventName,
+		Job *job, const CondorID &condorID, bool recovery) {
+
+	SubmitEvent* submit_event = (SubmitEvent*) event;
+	if ( submit_event->submitEventLogNotes ) {
+		char job_name[1024] = "";
+		if ( sscanf( submit_event->submitEventLogNotes,
+					"DAG Node: %1023s", job_name ) == 1 ) {
+			job = GetJob( job_name );	// from submit cmd
+			if ( job ) {
+				if ( !recovery ) {
+						// as a sanity-check, compare the
+						// job ID in the userlog with the
+						// one that appeared earlier in
+						// the submit command's stdout
+					if ( condorID.Compare( job->_CondorID ) != 0 ) {
+						debug_printf( DEBUG_QUIET,
+								"ERROR: job %s: job ID in userlog submit "
+								"event (%d.%d) doesn't match ID reported "
+								"earlier by submit command (%d.%d)!  "
+								"Trusting the userlog for now., but this "
+								"is scary!\n",
+								job_name,
+									// userlog job id
+								condorID._cluster,
+								condorID._proc,
+									// submit cmd job id
+								job->_CondorID._cluster,
+								job->_CondorID._proc );
+					}
+				}
+				job->_CondorID = condorID;
+			}
+		}
+	}
+
+	PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
+
+	if ( !job ) {
+		return;
+	}
+
+	if ( recovery ) {
+		job->_Status = Job::STATUS_SUBMITTED;
+		_numJobsSubmitted++;
+		return;
+	}
+
+		// if we only have one log, compare
+		// the order of submit events in the
+		// log to the order in which we
+		// submitted the jobs -- but if we
+		// have >1 userlog we can't count on
+		// any order, so we can't sanity-check
+		// in this way
+
+	if ( _condorLogFiles.number() == 1 ) {
+
+			// as a sanity check, compare the job from the
+			// submit event to the job we expected to see from
+			// our submit queue
+ 		Job* expectedJob = NULL;
+		if ( _submitQ->dequeue( expectedJob ) == -1 ) {
+			debug_printf( DEBUG_QUIET,
+						"Unrecognized submit event (for job "
+						"\"%s\") found in log (none expected)\n",
+						job->GetJobName() );
+			return;
+		} else if ( job != expectedJob ) {
+			ASSERT( expectedJob != NULL );
+			debug_printf( DEBUG_QUIET,
+						"Unexpected submit event (for job "
+						"\"%s\") found in log; job \"%s\" "
+						"was expected.\n",
+						job->GetJobName(),
+						expectedJob->GetJobName() );
+				// put expectedJob back onto submit queue
+			_submitQ->enqueue( expectedJob );
+
+			return;
+		}
+	}
+
+	PrintReadyQ( DEBUG_DEBUG_2 );
 }
 
 //---------------------------------------------------------------------------

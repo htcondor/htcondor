@@ -119,7 +119,59 @@ class Dag {
     */
     //    bool ProcessLogEvents (bool recover = false);
 
-    bool ProcessLogEvents (const Dagman &dm, int logsource, bool recovery = false); //<--DAP
+    bool ProcessLogEvents (const Dagman &dm, int logsource,
+			bool recovery = false); //<--DAP
+
+	/** Process a single event.  Note that this is called every time
+			we attempt to read the user log, so we may or may not have
+			a valid event here.
+		@param The outcome from the attempt to read the user log.
+	    @param The event.
+		@param Whether we're in recovery mode.
+		@param Whether to do event checks.
+		@param Whether we're done trying to read events (set by this
+			function).
+		@return True if the DAG should continue, false if we should abort.
+	*/
+	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
+			bool recovery, bool doEventChecks, bool &done);
+
+
+	/** Process an abort or executable error event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+		@param Whether this event should be checked for consistency
+			(set by this function).
+	*/
+	void ProcessAbortEvent(const ULogEvent *event, Job *job,
+			bool recovery, bool &checkThisEvent);
+
+	/** Process a terminated event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessTerminatedEvent(const ULogEvent *event, Job *job,
+			bool recovery);
+
+	/** Process a post script terminated event.
+	    @param The event.
+		@param The job corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessPostTermEvent(const ULogEvent *event, Job *job,
+			bool recovery);
+
+	/** Process a submit event.
+	    @param The event.
+		@param The event name.
+		@param The job corresponding to this event.
+		@param The Condor ID corresponding to this event.
+		@param Whether we're in recovery mode.
+	*/
+	void ProcessSubmitEvent(const ULogEvent *event, const char *eventName,
+			Job *job, const CondorID &condorID, bool recovery);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
