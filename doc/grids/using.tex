@@ -40,8 +40,13 @@ computation.
 The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
-Condor-G uses GASS to transfer the executable, stdin, stdout, and stderr
-between the submission machine and the remote resource.
+Condor-G uses GASS to transfer the executable, 
+\File{stdin}, 
+\File{stdout}, and 
+\File{stderr}
+between the machine where a job is submitted and the remote resource.
+\item[RSL]
+RSL is the language GRAM accepts to specify job information.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -169,9 +174,9 @@ gridmanager.
 \subsubsection{\label{sec:Condor-G-Credentials}Credential Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-(Reword this section to talk more about credential management and less
-about specific config values. Also, probably move it out of the setup
-section.)
+%(Reword this section to talk more about credential management and less
+%about specific config values. Also, probably move it out of the setup
+%section.)
 
 Condor-G periodically checks for an updated proxy at
 an interval given by the configuration variable
@@ -190,7 +195,7 @@ seconds before the proxy expires,
 the Condor-G grid manager daemon exits.
 Since the grid manager daemon keeps track of all jobs
 associated with a proxy, its tasks
-(such as authentication, file transfer, job log maintainance)
+(such as authentication, file transfer, job log maintenance)
 will not occur.
 So, if
 \AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
@@ -259,6 +264,11 @@ The \AdAttr{globusscheduler} command is dependent on the
 scheduling software available on remote resource.
 This required command will change based on the Grid resource
 intended for execution of the job.
+A jobmanager is the Globus service that is spawned at a remote site to
+submit, keep track of, and manage Grid I/O for jobs running on the local
+batch system there.
+There is a specific jobmanager for each type of
+batch system supported by Globus (examples are Condor, LSF, and PBS).
 
 All Condor-G jobs (intended for execution on Globus-controlled
 resources) are submitted to the globus universe.
@@ -437,11 +447,10 @@ the machine where the job is running.
 It is therefore important that all accesses to
 the remote GASS server check this file for the latest location.
 
-The following Perl script will use the GASS server in Condor-G
+The following example is a Perl script that uses the GASS server in Condor-G
 to copy input files to the execute machine.
-(In our case, our remote job
-is just going to count the number of lines in a file.
-Hopefully, your job will be a bit more productive.)
+In this example, the remote job
+counts the number of lines in a file.
 
 \footnotesize
 \begin{verbatim}
@@ -470,7 +479,8 @@ exit 0;
 \end{verbatim}
 \normalsize
 
-Our submit file looks like this:
+The submit description file used to submit the Perl script as
+a Condor job appears as:
 
 \footnotesize
 \begin{verbatim}
@@ -508,7 +518,7 @@ The format of the \AdAttr{globusrsl} command is
 \begin{verbatim}
 globusrsl = (name=value)(name=value)
 \end{verbatim}
-An example of this command in a submit description file
+Here is an example of this command from a submit description file:
 \begin{verbatim}
 globusrsl = (project=Test_Project)
 \end{verbatim}
