@@ -647,8 +647,7 @@ version.
 #	endif
 
 #	if defined(Solaris) || defined(IRIX) || ( defined(LINUX) && !defined(SWITCH) )
-		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
-			also_implements(getdents64)
+		int getdents( map(int fd), struct dirent *buf, size_t nbytes )
 		{
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
@@ -656,7 +655,6 @@ version.
 #	endif
 
 	int getdents64( map(int fd), struct dirent64 *buf, size_t nbytes )
-		: remote_name(getdents)
 	{
 		out code_bytes_bool( buf, nbytes );
 		alloc( buf, nbytes );
