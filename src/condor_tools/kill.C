@@ -158,6 +158,11 @@ find_condor_pids() {
     pid_t pid;
     CondorPid *cpid;
 
+    if( ! (condor_pids = new List<CondorPid>) ) {
+        fprintf( stderr, "error: out of memory!\n" );
+        my_exit( 1 );
+    }
+
     if( ! (proc_root = opendir( "/proc" )) ) {
         fprintf( stderr, "error: can't open /proc (%s)\n", strerror( errno ) );
 		my_exit( 1 );
