@@ -7,8 +7,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <syscall.h>
 #include "image.h"
 #include "stubs.h"
+#include "file_table_interf.h"
+#include "condor_syscalls.h"
+
+extern "C" syscall( int, ... );
 
 #ifndef SIG_DFL
 #include <signal.h>
@@ -341,6 +346,16 @@ Image::Read( int fd )
 	return 0;
 }
 
+void
+Image::Close()
+{
+	if( fd < 0 ) {
+		fprintf( stderr, "Image::Close - file not open\n" );
+		abort();
+	}
+	close( fd );
+}
+
 ssize_t
 SegMap::Read( int fd, ssize_t pos )
 {
@@ -378,13 +393,17 @@ Checkpoint( int sig, int code, void *scp )
 	printf( "Got SIGTSTP\n" );
 	if( SETJMP(Env) == 0 ) {
 		printf( "About to save MyImage\n" );
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		SaveFileState();
 		MyImage.Save();
 		MyImage.Write( "Ckpt.13.13" );
 		printf( "Ckpt exit\n" );
 		exit( 0 );
 	} else {
 		patch_registers( scp );
-		printf( "About to return to user code\n" );
+		MyImage.Close();
+		RestoreFileState();
+		syscall( SYS_write, 1, "About to return to user code\n", 29 );
 		return;
 	}
 }
@@ -394,6 +413,7 @@ Checkpoint( int sig, int code, void *scp )
 void
 restart()
 {
+	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	MyImage.Read( "Ckpt.13.13" );
 	MyImage.Restore();
 }

@@ -1,3 +1,6 @@
+#ifndef _IMAGE_H
+#define _IMAGE_H
+
 #include <sys/types.h>
 #include "machdep.h"
 
@@ -61,6 +64,7 @@ public:
 	int Write( const char *name );
 	int Read( int fd );
 	int Read( const char *name );
+	void Close();
 	void Restore();
 	char *FindSeg( void *addr );
 	void Display();
@@ -112,3 +116,4 @@ void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
 
 #	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])
+#endif
