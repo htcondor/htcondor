@@ -267,6 +267,25 @@ sub ParseBytes( $$ )
     $Bytes;
 }
 
+# Detect the running O/S
+sub DetectOs( $ )
+{
+    my $OsRef = shift;
+    my $Os = undef;
+    foreach my $OsNum ( 0 .. $#{$OsRef} )
+    {
+	my $OsType = @{$OsRef}[$OsNum]->{ostype};
+	my $OsRev = @{$OsRef}[$OsNum]->{osrev};
+	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
+	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
+	{
+	    $Os = @{$OsRef}[$OsNum];
+	    last;
+	}
+    }
+    return $Os;
+}
+
 sub AddHash( $$$$ )
 {
     my $HashRef = shift;

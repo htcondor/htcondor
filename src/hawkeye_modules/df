@@ -123,20 +123,10 @@ sub Init
     $Hawkeye->AutoIndexSet( 0 );
 
     # Learn about our O/S
-    foreach my $OsNum ( 0 .. $#OsInfo )
-    {
-	my $OsType = $OsInfo[$OsNum]{ostype};
-	my $OsRev = $OsInfo[$OsNum]{osrev};
-	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
-	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
-	{
-	    $OS = $OsInfo[$OsNum];
-	    last;
-	}
-    }
+    $OS = HawkeyeLib::DetectOs( \@OsInfo );
 
     # Did we find a match?
-    if ( ! defined( $OS->{df} ) )
+    if ( ! $OS )
     {
 	die "O/S Not defined\n";
     }
