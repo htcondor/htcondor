@@ -796,7 +796,6 @@ check_and_universalize_path(MyString &path, char *lhs)
 		} else {
 			uni = (UNIVERSAL_NAME_INFO*)&name_info_buf;
 			path = uni->lpUniversalName;
-			printf("Universal path is: '%s'\n", path.Value());
 			retval = 1; // signal that we changed somthing
 		}
 	}
