@@ -557,7 +557,7 @@ e		*/
 		ClassAd       *chained_parent_ad;
 };
 
-std::ostream& operator<<(std::ostream &os, ClassAd &ad);
+std::ostream& operator<<(std::ostream &os, const ClassAd &ad);
 
 END_NAMESPACE // classad
 

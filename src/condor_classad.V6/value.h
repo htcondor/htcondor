@@ -200,7 +200,12 @@ class Value
 			@param c The ClassAd if the value is a ClassAd.
 			@return true iff the value is a ClassAd.
 		*/
-		inline bool IsClassAdValue(ClassAd *&c) const; 
+		inline bool IsClassAdValue(const ClassAd *&c) const; 
+		/** Checks if the value is a ClassAd.
+			@param c The ClassAd if the value is a ClassAd.
+			@return true iff the value is a ClassAd.
+		*/
+		inline bool IsClassAdValue(ClassAd *&c); 
 		/** Checks if the value is a ClassAd.
 			@return true iff the value is a ClassAd value.
 		*/
@@ -370,7 +375,18 @@ IsStringValue( std::string &s ) const
 }
 
 inline bool Value::
-IsClassAdValue(ClassAd *&ad) const
+IsClassAdValue(const ClassAd *&ad) const
+{
+	if ( valueType == CLASSAD_VALUE ) {
+		ad = classadValue;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+inline bool Value::
+IsClassAdValue(ClassAd *&ad)
 {
 	if ( valueType == CLASSAD_VALUE ) {
 		ad = classadValue;

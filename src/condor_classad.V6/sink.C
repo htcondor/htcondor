@@ -221,7 +221,7 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::CLASSAD_VALUE: {
-			ClassAd *ad;
+			const ClassAd *ad;
 			vector< pair<string,ExprTree*> > attrs;
 			val.IsClassAdValue( ad );
 			ad->GetComponents( attrs );

@@ -1388,7 +1388,7 @@ bool ClassAd::IsAttributeDirty(const string &name)
 }
 
 
-ostream& operator<<(ostream &stream, ClassAd &ad)
+ostream& operator<<(ostream &stream, const ClassAd &ad)
 {
 	PrettyPrint unparser;
 	string      string_representation;
