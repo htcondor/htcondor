@@ -480,7 +480,42 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 #ifdef WIN32
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
-   on all the processes, but that's not preventable. */
+   on all the processes, but that's not preventable using only
+   documented interfaces.  
+   So, becase getProcInfo is so expensive on Win32, we cheat a little
+   and try to determine if the pid is still
+   around before we drudge through all this code. */
+
+	// So first see if this pid is still alive
+	// on Win32, open a handle to the pid and call GetExitStatus
+	int status = FALSE;
+	HANDLE pidHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pid);
+	if (pidHandle) {
+		DWORD exitstatus;
+		if ( ::GetExitCodeProcess(pidHandle,&exitstatus) ) {
+			if ( exitstatus == STILL_ACTIVE )
+				status = TRUE;
+		}
+		::CloseHandle(pidHandle);
+	} else {
+		// OpenProcess() may have failed
+		// due to permissions, or because all handles to that pid are gone.
+		if ( ::GetLastError() == 5 ) {
+			// failure due to permissions.  this means the process object must
+			// still exist, although we have no idea if the process itself still
+			// does or not.  error on the safe side; return TRUE.
+			status = TRUE;
+		} else {
+			// process object no longer exists, so process must be gone.
+			status = FALSE;	
+		}
+	}
+    if ( status == FALSE ) {
+        dprintf( D_FULLDEBUG, "ProcAPI: pid # %d was not found\n", pid );
+		return -1;
+    }
+	
+	// pid appears to still be around, so get the stats on it
 
     DWORD dwStatus;  // return status of fn. calls
 
@@ -541,7 +576,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
     }
 
     if( !found ) {
-        dprintf( D_FULLDEBUG, "ProcAPI: Error: pid # %d was not found!\n", pid );
+        dprintf( D_FULLDEBUG, "ProcAPI: pid # %d was not found\n", pid );
         set_priv( priv );
 		return -1;
     }
@@ -1776,11 +1811,12 @@ void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
     offsets->faults = pThisCounter->CounterOffset;   // page faults
     
     pThisCounter = nextCounter(pThisCounter);
-    pThisCounter = nextCounter(pThisCounter);
+    offsets->rssize = pThisCounter->CounterOffset;   // working set peak 
 //    printcounter ( stdout, pThisCounter );
-    offsets->rssize = pThisCounter->CounterOffset;   // working set
+	pThisCounter = nextCounter(pThisCounter);		 // working set
+	pThisCounter = nextCounter(pThisCounter);
+
     
-    pThisCounter = nextCounter(pThisCounter);
     pThisCounter = nextCounter(pThisCounter);
     pThisCounter = nextCounter(pThisCounter);
     pThisCounter = nextCounter(pThisCounter);
