@@ -520,10 +520,14 @@ int		line;
 char	*file;
 {
 	priv_state	priv;
+	int i;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	(void)close( 0 );
+/* Just to be extra paranoid, let's nuke a bunch of fds. */
+	for ( i=0 ; i<50 ; i++ ) {
+		(void)close( i );
+	}
 	if( DebugFile[0] ) {
 		DebugFP = fopen(DebugFile[0], "a");
 	}
