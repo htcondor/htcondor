@@ -253,6 +253,8 @@ class Value
 		*/
 		bool IsRelativeTimeValue( time_t& secs ) const;
 
+		friend ostream& operator<<(ostream &stream, Value &value);
+
 	private:
 		friend class Literal;
 		friend class ClassAd;

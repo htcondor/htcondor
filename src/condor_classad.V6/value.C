@@ -239,4 +239,50 @@ SetAbsoluteTimeValue( time_t asecs )
 }	
 
 
+ostream& operator<<(ostream &stream, Value &value)
+{
+	switch (value.valueType) {
+	case Value::NULL_VALUE:
+		stream << "(null)";
+		break;
+	case Value::ERROR_VALUE:
+		stream << "error";
+		break;
+	case Value::UNDEFINED_VALUE:
+		stream << "undefined";
+		break;
+	case Value::BOOLEAN_VALUE:
+		if (value.booleanValue) {
+			stream << "true";
+		} else {
+			stream << "false";
+		}
+		break;
+	case Value::INTEGER_VALUE:
+		stream << value.integerValue;
+		break;
+	case Value::REAL_VALUE:
+		printf("%18f", value.realValue);
+		break;
+	case Value::RELATIVE_TIME_VALUE:
+		stream << "time value";
+		break;
+	case Value::ABSOLUTE_TIME_VALUE:
+		stream << "time value";
+		break;
+	case Value::STRING_VALUE:
+		stream << value.strValue;
+		break;
+	case Value::CLASSAD_VALUE:
+		stream << "classad value";
+		break;
+	case Value::LIST_VALUE:
+		stream << "list value";
+		break;
+	}
+
+	return stream;
+}
+
+
 END_NAMESPACE // classad
