@@ -54,6 +54,7 @@ CStarter::CStarter()
 	FSDomain = NULL;
 	Key = get_random_int()%get_random_int();
 	ShuttingDown = FALSE;
+	ShadowVersion = NULL;
 }
 
 CStarter::~CStarter()
@@ -61,6 +62,7 @@ CStarter::~CStarter()
 	if (Execute) free(Execute);
 	if (UIDDomain) free(UIDDomain);
 	if (FSDomain) free(FSDomain);
+	if (ShadowVersion) free(ShadowVersion);
 }
 
 bool
@@ -197,6 +199,15 @@ CStarter::StartJob()
 		dprintf( D_ALWAYS, "Job doesn't specify universe, assuming STANDARD\n" );
 	}
 
+		// Grab the version of the Shadow from the job ad
+
+	jobAd->LookupString(ATTR_SHADOW_VERSION,&ShadowVersion);
+	if ( !ShadowVersion ) {
+		dprintf(D_FULLDEBUG,"Version of Shadow unknown (pre v6.3.2)\n");
+	} else {
+		dprintf(D_FULLDEBUG,"Version of Shadow is %s\n",ShadowVersion);
+	}
+
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
 
@@ -217,7 +228,8 @@ CStarter::StartJob()
 	// user and initialize user_priv.
 	// we only support running jobs as user nobody for the first pass
 	char nobody_login[60];
-	sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
 	init_user_nobody_loginname(nobody_login);
 	init_user_ids("nobody");
 #endif
@@ -269,7 +281,8 @@ CStarter::StartJob()
 		dprintf(D_ALWAYS,"StartJob: Job does not define %s\n",ATTR_WANT_IO_PROXY);
 		want_io_proxy = 0;
 	} else {
-		dprintf(D_ALWAYS,"StartJob: Job has %s=%s\n",ATTR_WANT_IO_PROXY,want_io_proxy?"true":"false");
+		dprintf(D_ALWAYS,"StartJob: Job has %s=%s\n",ATTR_WANT_IO_PROXY,
+			want_io_proxy?"true":"false");
 	}
 
 	if( want_io_proxy || universe==CONDOR_UNIVERSE_JAVA ) {

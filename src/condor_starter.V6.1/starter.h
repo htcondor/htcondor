@@ -102,11 +102,16 @@ public:
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir; }
 
+		/** Return the version string of the Shadow */
+	const char *GetShadowVersion() const { return ShadowVersion; }
+
 protected:
 	List<UserProc> JobList;
 
 private:
 	char *InitiatingHost;
+		/** The version string of the shadow if known; otherwise NULL */
+	char *ShadowVersion;
 	char *Execute;
 	char *UIDDomain;
 	char *FSDomain;
