@@ -26,6 +26,7 @@
 #include "sched.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
+#include "config_util.h"
 #include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
@@ -957,22 +958,24 @@ Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
 		return;
 	}
 
-	Daemon d(host, port);
-	SafeSock* sock = (SafeSock*)d.startCommand(command, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT);
-
-	if (!sock) {
+    SafeSock sock;
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
+	sock.encode();
+	if( !sock.connect(host, port)) {
 		dprintf( D_ALWAYS, "failed to connect to central manager (%s)!\n",
 				 host );
 		return;
 	}
 
-	sock->encode();
-	if( !ca->put(*sock) ||
-		!sock->end_of_message() ) {
+	Daemon d(host, port);
+
+	d.startCommand(command, &sock);
+
+	sock.encode();
+	if( !ca->put(sock) || !sock.end_of_message() ) {
 		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
 				 host );
 	}
-	delete sock;
 }
 
 static int IsSchedulerUniverse(shadow_rec* srec);
@@ -3061,14 +3064,15 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	}
 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm);
 	request.Insert(buf);
-
-	SafeSock* sock = (SafeSock*)Negotiator->startCommand(REQUEST_NETWORK, 
-                                                         Stream::safe_sock, 
-                                                         NEGOTIATOR_CONTACT_TIMEOUT);
-	if (!sock) {
-		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+    
+    SafeSock sock;
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
+	if (!sock.connect(Negotiator->addr())) {
+		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
+
+	Negotiator->startCommand(REQUEST_NETWORK, &sock);
 
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 	float cputime = 1.0;
@@ -3086,7 +3090,6 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 			if (!hp) {
 				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
 						ATTR_LAST_CKPT_SERVER, source);
-                delete sock;
 				return;
 			}
 			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
@@ -3098,10 +3101,10 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
 		request.Insert(buf);
 		request.Insert(buf);
-		sock->put(2);
-		request.put(*sock);
+		sock.put(2);
+		request.put(sock);
 	} else {
-		sock->put(1);
+		sock.put(1);
 	}
 
 	sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
@@ -3111,9 +3114,8 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
 	request.Insert(buf);
-	request.put(*sock);
-	sock->end_of_message();
-	delete sock;
+	request.put(sock);
+	sock.end_of_message();
 }
 #endif
 
@@ -4297,28 +4299,28 @@ Scheduler::preempt(int n)
 void
 send_vacate(match_rec* match,int cmd)
 {
+    SafeSock	sock;
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
-	 
+
+	sock.timeout(STARTD_CONTACT_TIMEOUT);
+	if (!sock.connect(match->peer,START_PORT)) {
+		dprintf( D_FAILURE|D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
+		return;
+	}
+ 
 	Daemon d (match->peer, START_PORT);
-	SafeSock *sock = (SafeSock*)d.startCommand(cmd, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
+	d.startCommand(cmd, &sock);
 
-	if (!sock) {
-		dprintf(D_ALWAYS,"Can't connect to startd at %s\n",match->peer);
-		return;
-	}
-	
-	sock->encode();
+	sock.encode();
 
-	if( !sock->put(match->id) ) {
+	if( !sock.put(match->id) ) {
 		dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
-		delete sock;
 		return;
 	}
 
-	if( !sock->eom() ) {
+	if( !sock.eom() ) {
 		dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
-		delete sock;
 		return;
 	}
 
@@ -4327,8 +4329,6 @@ send_vacate(match_rec* match,int cmd)
 	} else {
 		dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
 	}
-
-	delete sock;
 }
 
 void
@@ -5034,7 +5034,7 @@ Scheduler::Init()
 		// See if the value of this changes, since if so, we've got
 		// work to do...
 	char* oldUidDomain = UidDomain;
-	UidDomain = param( "UID_DOMAIN" );
+	UidDomain = get_uid_domain();
 	if( oldUidDomain ) {
 			// We had an old version, so see if we have a new value
 		if( strcmp(UidDomain,oldUidDomain) ) {
@@ -5900,27 +5900,22 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	SafeSock	*sock;
+	SafeSock	sock;
 	char		*id = NULL;
 	
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",mrec->peer);
 
+    sock.timeout(STARTD_CONTACT_TIMEOUT);
+	sock.encode();
+
 	Daemon d (mrec->peer);
-	sock = (SafeSock*)d.startCommand ( ALIVE, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
-
-	if (!sock) {
-		dprintf(D_ALWAYS, "\t(Can't contact %s)\n", mrec->peer);
-		return false;
-	}
-
-	sock->encode();
 	id = mrec->id;
-	if( !sock->code(id) || 
-		!sock->end_of_message() ) {
+
+	if( !sock.connect(mrec->peer) || !d.startCommand ( ALIVE, &sock) ||
+	    !sock.code(id) || !sock.end_of_message()) {
 			// UDP transport out of buffer space!
 		dprintf(D_ALWAYS, "\t(Can't send alive message to %s)\n",
 				mrec->peer);
-		delete sock;
 		return false;
 	}
 		/* TODO: Someday, espcially once the accountant is done, 
@@ -5931,7 +5926,6 @@ sendAlive( match_rec* mrec )
 		   not done and we are in fire mode, leave this 
 		   for V6.1.  :^) -Todd 9/97
 		*/
-    delete sock;
 	return true;
 }
 

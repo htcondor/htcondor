@@ -474,7 +474,8 @@ int
 FileTransfer::DownloadFiles(bool blocking)
 {
 	int ret_value;
-	
+	ReliSock sock;
+
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
 
 	if (ActiveTransferTid >= 0) {
@@ -494,21 +495,20 @@ FileTransfer::DownloadFiles(bool blocking)
 
 	Daemon d(TransSock);
 
-	ReliSock* sock = (ReliSock*)(d.startCommand(FILETRANS_UPLOAD, Stream::reli_sock, 0));
+    if ( !sock.connect(TransSock,0) ) {
+        EXCEPT("Unable to connect to server %s\n", TransSock);
+    }
 
-	if ( !sock ) {
+    d.startCommand(FILETRANS_UPLOAD, &sock, 0);
+
+	sock.encode();
+
+	if ( !sock.code(TransKey) ||
+		!sock.end_of_message() ) {
 		return 0;
 	}
 
-	sock->encode();
-
-	if ( !sock->code(TransKey) ||
-		!sock->end_of_message() ) {
-		delete sock;
-		return 0;
-	}
-
-	ret_value = Download(sock,blocking);
+	ret_value = Download(&sock,blocking);
 
 	// If Download was successful (it returns 1 on success) and
 	// upload_changed_files is true, then we must record the current
@@ -524,13 +524,14 @@ FileTransfer::DownloadFiles(bool blocking)
 		sleep(1);
 	}
 
-	delete sock;
 	return ret_value;
 }
 
 int
 FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
+    ReliSock sock;
+
 	StringList changed_files(NULL,",");
 
 	dprintf(D_FULLDEBUG,
@@ -623,24 +624,23 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 	Daemon d(TransSock);
 
-	ReliSock* sock = (ReliSock*)(d.startCommand(FILETRANS_DOWNLOAD, Stream::reli_sock, 0));
-	if( !sock ) {
-		return 0;
-	}
+    if ( !sock.connect(TransSock,0) ) {
+        EXCEPT("Unable to connect to server %s\n", TransSock);
+    }
 
-	sock->encode();
+	d.startCommand(FILETRANS_DOWNLOAD, &sock);
 
-	if ( !sock->code(TransKey) ||
-		!sock->end_of_message() ) {
-		delete sock;
+	sock.encode();
+
+	if ( !sock.code(TransKey) ||
+		!sock.end_of_message() ) {
 		return 0;
 	}
 
 	dprintf( D_FULLDEBUG,
 			 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
-	int retval = Upload(sock,blocking);
+	int retval = Upload(&sock,blocking);
 
-	delete sock;
 	return( retval );
 }
 

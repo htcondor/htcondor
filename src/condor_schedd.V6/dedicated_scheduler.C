@@ -1184,15 +1184,21 @@ bool
 DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 {
 	Sock *sock;
+    ReliSock rsock;
+	SafeSock ssock;
 
 	Daemon d(m_rec->peer);
 
-	if( use_tcp ) {
-		sock = d.startCommand( RELEASE_CLAIM, Stream::reli_sock, 2);
+    if( use_tcp ) {
+		sock = &rsock;
 	} else {
-		sock = d.startCommand( RELEASE_CLAIM, Stream::safe_sock, 2);
+		sock = &ssock;
 	}
+
+    sock->timeout(2);
+	sock->connect( m_rec->peer );
 	sock->encode();
+    d.startCommand( RELEASE_CLAIM, sock);
 	sock->put( m_rec->id );
 	sock->end_of_message();
 
@@ -1205,8 +1211,6 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	}
 
 	DelMrec( m_rec );
-
-	delete sock;
 	return true;
 }
 
@@ -1214,37 +1218,36 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 bool
 DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 {
-	ReliSock* sock;
+	ReliSock sock;
 
 	if( ! m_rec ) {
         dprintf( D_ALWAYS, "ERROR in deactivateClaim(): NULL m_rec\n" ); 
 		return false;
 	}
 
-	Daemon d(m_rec->peer);
-	sock = (ReliSock*)d.startCommand(DEACTIVATE_CLAIM, Stream::reli_sock, STARTD_CONTACT_TIMEOUT);
+    sock.timeout( STARTD_CONTACT_TIMEOUT );
 
-	if( !sock ) {
+	if( !sock.connect(m_rec->peer, 0) ) {
         dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Couldn't connect to startd.\n" );
 		return false;
 	}
 
-	sock->encode();
+	Daemon d(m_rec->peer);
+	d.startCommand(DEACTIVATE_CLAIM, &sock);
 
-	if( !sock->put(m_rec->id) ) {
+	sock.encode();
+
+	if( !sock.put(m_rec->id) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Can't code capability (%s)\n", m_rec->id );
-		delete sock;
 		return false;
 	}
-	if( !sock->end_of_message() ) {
+	if( !sock.end_of_message() ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
 				 "Can't send EOM\n" );
-		delete sock;
 		return false;
 	}
-	delete sock;
 	
 		// Clear out this match rec, since it's no longer allocated to
 		// a given MPI job.

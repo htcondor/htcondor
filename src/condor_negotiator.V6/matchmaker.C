@@ -1270,6 +1270,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char startdName[64];
 	char remoteUser[128];
 	char *capability;
+	SafeSock startdSock;
 	bool send_failed;
 
 	// these will succeed
@@ -1296,28 +1297,28 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// 1.  contact the startd 
 	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
 				startdName, startdAddr); 
-	Daemon startd (startdAddr, 0);
-	SafeSock* startdSock = (SafeSock*)(startd.startCommand (MATCH_INFO, Stream::safe_sock, NegotiatorTimeout));
 
-	if (!startdSock) {
+    startdSock.timeout (NegotiatorTimeout);
+	if (!startdSock.connect (startdAddr, 0))
+	{
 		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
 		return MM_BAD_MATCH;
 	}
 
+	Daemon startd (startdAddr, 0);
+	startd.startCommand (MATCH_INFO, &startdSock);
+
 	// 2.  pass the startd MATCH_INFO and capability string
 	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
 	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
-	startdSock->encode();
-	if ( !startdSock->put (capability) || 
-		!startdSock->end_of_message())
+	startdSock.encode();
+	if ( !startdSock.put (capability) || !startdSock.end_of_message())
 	{
 		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
 					startdName );
 		dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
-		delete startdSock;
 		return MM_BAD_MATCH;
 	}
-	delete startdSock;
 
 	// 3.  send the match and capability to the schedd
 	sock->encode();

@@ -4939,9 +4939,18 @@ pidWatcherThread( void* arg )
 			// Can no longer use localhost (127.0.0.1) here because we may
 			// only have our command socket bound to a specific address. -Todd
 			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
-	
+            SafeSock sock;
 			Daemon d(daemonCore->InfoCommandSinfulString());
-			SafeSock* sock = d.startCommand(DC_PROCESSEXIT, Stream::safe_sock, 0);
+            if (!sock.connect(daemonCore->InfoCommandSinfulString())) {
+                dprintf(D_ALWAYS, "Unable to connect to remote host %s\n", 
+                        daemonCore->InfoCommandSinfulString());
+                return FALSE;
+            }
+
+			if (!d.startCommand(DC_PROCESSEXIT, &sock, 0)) {
+                dprintf(D_ALWAYS, "Unable to send DC_PROCESSEXIT command\n");
+                return FALSE;
+            }
 		
 			if ( !sock ||
 				 !sock.code(exited_pid) ||
@@ -4950,10 +4959,6 @@ pidWatcherThread( void* arg )
 				// we'll log a message, wait a bit, and try again
 				dprintf(D_ALWAYS,
 						"PidWatcher thread couldn't notify main thread\n");
-
-				if (sock) {
-					delete sock;
-				}
 
 				::Sleep(500);	// sleep for a half a second (500 ms)
 			} else {
@@ -5367,6 +5372,7 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 
 int DaemonCore::SendAliveToParent()
 {
+    SafeSock sock;
 	char *parent_sinful_string;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
@@ -5374,22 +5380,24 @@ int DaemonCore::SendAliveToParent()
 	if (!parent_sinful_string ) {
 		return FALSE;
 	}
-	
+
+	if (!sock.connect(parent_sinful_string)) {
+		return FALSE;
+	}
+
 	Daemon d(parent_sinful_string);
-	SafeSock* sock = (SafeSock*)d.startCommand(DC_CHILDALIVE, Stream::safe_sock, 0);
-	if (!sock) {
+	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
 		return FALSE;
 	}
 	
 	dprintf( D_DAEMONCORE, "DaemonCore: Sending alive to %s\n",
 			 parent_sinful_string );
 
-	sock->encode();
-	sock->code(mypid);
-	sock->code(max_hang_time);
-	sock->end_of_message();
+	sock.encode();
+	sock.code(mypid);
+	sock.code(max_hang_time);
+	sock.end_of_message();
 
-	delete sock;
 	return TRUE;
 }
 	
