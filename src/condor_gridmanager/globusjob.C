@@ -225,8 +225,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	enteredCurrentGlobusState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
-	syncedOutputSize = 0;
-	syncedErrorSize = 0;
 	submitFailureCode = 0;
 	lastRestartReason = 0;
 	lastRestartAttempt = 0;
@@ -272,9 +270,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
 
 	globusError = GLOBUS_SUCCESS;
-
-	ad->LookupInteger( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
-	ad->LookupInteger( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
 
 	iwd[0] = '\0';
 	if ( ad->LookupString(ATTR_JOB_IWD, iwd) && *iwd ) {
@@ -742,7 +737,6 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 			// jobmanager). Wait for completion or failure, and probe the
 			// jobmanager occassionally to make it's still alive.
 			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
-				syncIO();
 				if ( jmVersion >= GRAM_V_1_5 ) {
 					gmState = GM_CHECK_OUTPUT;
 				} else {
@@ -852,8 +846,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					gmState = GM_DONE_SAVE;
 					break;
 				}
-				int output_size = localOutput ? syncedOutputSize : -1;
-				int error_size = localError ? syncedErrorSize : -1;
+				int output_size = -1;
+				int error_size = -1;
+				GetOutputSize( output_size, error_size );
 				sprintf( size_str, "%d %d", output_size, error_size );
 				rc = gahp.globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
@@ -911,52 +906,33 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 			now = time(NULL);
 			if ( outputWaitLastGrowth == 0 ) {
 				outputWaitLastGrowth = now;
-				outputWaitOutputSize = syncedOutputSize;
-				outputWaitErrorSize = syncedErrorSize;
+				outputWaitOutputSize = 0;
+				outputWaitErrorSize = 0;
+				GetOutputSize( outputWaitOutputSize, outputWaitErrorSize );
 				ClearCallbacks();
 			} else {
-				struct stat file_status;
+				int new_output_size, new_error_size;
 
-				if ( localOutput != NULL ) {
-					rc = stat( localOutput, &file_status );
-					if ( rc < 0 ) {
-						dprintf( D_ALWAYS,
-								 "(%d.%d) stat failed for output file %s (errno=%d)\n",
-								 procID.cluster, procID.proc, localOutput,
-								 errno );
-						file_status.st_size = outputWaitOutputSize;
-					}
-					if ( file_status.st_size > outputWaitOutputSize ) {
-dprintf(D_FULLDEBUG,"(%d.%d) saw new output size %d\n",procID.cluster,procID.proc,file_status.st_size);
-						outputWaitOutputSize = file_status.st_size;
-						outputWaitLastGrowth = now;
-					}
+				GetOutputSize( new_output_size, new_error_size );
+
+				if ( new_output_size > outputWaitOutputSize ) {
+dprintf(D_FULLDEBUG,"(%d.%d) saw new output size %d\n",procID.cluster,procID.proc,new_output_size);
+					outputWaitOutputSize = new_output_size;
+					outputWaitLastGrowth = now;
 				}
 
-				if ( localError != NULL ) {
-					rc = stat( localError, &file_status );
-					if ( rc < 0 ) {
-						dprintf( D_ALWAYS,
-								 "(%d.%d) stat failed for error file %s (errno=%d)\n",
-								 procID.cluster, procID.proc, localError,
-								 errno );
-						file_status.st_size = outputWaitErrorSize;
-					}
-					if ( file_status.st_size > outputWaitErrorSize ) {
-dprintf(D_FULLDEBUG,"(%d.%d) saw new error size %d\n",procID.cluster,procID.proc,file_status.st_size);
-						outputWaitErrorSize = file_status.st_size;
-						outputWaitLastGrowth = now;
-					}
+				if ( new_error_size > outputWaitErrorSize ) {
+dprintf(D_FULLDEBUG,"(%d.%d) saw new error size %d\n",procID.cluster,procID.proc,new_error_size);
+					outputWaitErrorSize = new_error_size;
+					outputWaitLastGrowth = now;
 				}
 			}
 			if ( now > outputWaitLastGrowth + outputWaitGrowthTimeout ) {
 dprintf(D_FULLDEBUG,"(%d.%d) no new output/error for %d seconds, retrying STDIO_SIZE\n",procID.cluster,procID.proc,outputWaitGrowthTimeout);
-				syncIO();
 				outputWaitLastGrowth = 0;
 				gmState = GM_CHECK_OUTPUT;
 			} else if ( GetCallbacks() ) {
 dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.cluster,procID.proc);
-				syncIO();
 				outputWaitLastGrowth = 0;
 				gmState = GM_CHECK_OUTPUT;
 			} else {
@@ -1453,16 +1429,6 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
 				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
-			if ( localOutput && syncedOutputSize > 0 ) {
-				syncedOutputSize = 0;
-				UpdateJobAdInt( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
-				schedd_actions |= UA_UPDATE_JOB_AD;
-			}
-			if ( localError && syncedErrorSize > 0 ) {
-				syncedErrorSize = 0;
-				UpdateJobAdInt( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
-				schedd_actions |= UA_UPDATE_JOB_AD;
-			}
 			if ( submitLogged ) {
 				schedd_actions |= UA_LOG_EVICT_EVENT;
 			}
@@ -1783,85 +1749,6 @@ GlobusResource *GlobusJob::GetResource()
 	return myResource;
 }
 
-int GlobusJob::syncIO()
-{
-	int rc;
-	int fd;
-	struct stat file_status;
-
-	if ( localOutput != NULL ) {
-		rc = stat( localOutput, &file_status );
-		if ( rc < 0 ) {
-			dprintf( D_ALWAYS,
-				"(%d.%d) stat failed for output file %s (errno=%d)\n",
-				procID.cluster, procID.proc, localOutput, errno );
-			file_status.st_size = 0;
-		}
-
-		if ( file_status.st_size > syncedOutputSize ) {
-			errno = 0;
-			fd = open( localOutput, O_WRONLY );
-			if ( fd < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) open failed for output file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localOutput, errno );
-			}
-			if ( fd >= 0 && fsync( fd ) < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) fsync failed for output file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localOutput, errno );
-			}
-			if ( fd >= 0 && close( fd ) < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) close failed for output file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localOutput, errno );
-			}
-			if ( errno == 0 ) {
-				syncedOutputSize = file_status.st_size;
-				UpdateJobAdInt( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
-				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
-			}
-		}
-	}
-
-	if ( localError != NULL ) {
-		rc = stat( localError, &file_status );
-		if ( rc < 0 ) {
-			dprintf( D_ALWAYS,
-				"(%d.%d) stat failed for error file %s (errno=%d)\n",
-				procID.cluster, procID.proc, localError, errno );
-			file_status.st_size = 0;
-		}
-
-		if ( file_status.st_size > syncedErrorSize ) {
-			errno = 0;
-			fd = open( localError, O_WRONLY );
-			if ( fd < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) open failed for error file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localError, errno );
-			}
-			if ( fd >= 0 && fsync( fd ) < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) fsync failed for error file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localError, errno );
-			}
-			if ( fd >= 0 && close( fd ) < 0 ) {
-				dprintf( D_ALWAYS,
-						 "(%d.%d) close failed for error file %s (errno=%d)\n",
-						 procID.cluster, procID.proc, localError, errno );
-			}
-			if ( errno == 0 ) {
-				syncedErrorSize = file_status.st_size;
-				UpdateJobAdInt( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
-				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
-			}
-		}
-	}
-
-	return TRUE;
-}
-
 MyString *GlobusJob::buildSubmitRSL()
 {
 	int transfer;
@@ -2138,35 +2025,25 @@ MyString *GlobusJob::buildSubmitRSL()
 
 MyString *GlobusJob::buildRestartRSL()
 {
-	int rc;
 	MyString *rsl = new MyString;
 	MyString buff;
-	struct stat file_status;
+
+	DeleteOutput();
 
 	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
 				  jobContact );
 	if ( localOutput ) {
-		rc = stat( localOutput, &file_status );
-		if ( rc < 0 ) {
-			file_status.st_size = 0;
-		}
 		*rsl += "(stdout=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
-		buff.sprintf( ")(stdout_position=%lu)", file_status.st_size );
-		*rsl += buff;
+		*rsl += ")(stdout_position=0)";
 	}
 	if ( localError ) {
-		rc = stat( localError, &file_status );
-		if ( rc < 0 ) {
-			file_status.st_size = 0;
-		}
 		*rsl += "(stderr=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
-		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
-		*rsl += buff;
+		*rsl += ")(stderr_position=0)";
 	}
 
 	return rsl;
@@ -2174,34 +2051,24 @@ MyString *GlobusJob::buildRestartRSL()
 
 MyString *GlobusJob::buildStdioUpdateRSL()
 {
-	int rc;
 	MyString *rsl = new MyString;
 	MyString buff;
 	char *attr_value;
-	struct stat file_status;
+
+	DeleteOutput();
 
 	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
 	if ( localOutput ) {
-		rc = stat( localOutput, &file_status );
-		if ( rc < 0 ) {
-			file_status.st_size = 0;
-		}
 		*rsl += "(stdout=";
 		buff.sprintf( "%s%s", gassServerUrl, localOutput );
 		*rsl += rsl_stringify( buff.Value() );
-		buff.sprintf( ")(stdout_position=%lu)", file_status.st_size );
-		*rsl += buff;
+		*rsl += ")(stdout_position=0)";
 	}
 	if ( localError ) {
-		rc = stat( localError, &file_status );
-		if ( rc < 0 ) {
-			file_status.st_size = 0;
-		}
 		*rsl += "(stderr=";
 		buff.sprintf( "%s%s", gassServerUrl, localError );
 		*rsl += rsl_stringify( buff.Value() );
-		buff.sprintf( ")(stderr_position=%lu)", file_status.st_size );
-		*rsl += buff;
+		*rsl += ")(stderr_position=0)";
 	}
 
 	if ( ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) &&
@@ -2229,4 +2096,74 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 	}
 
 	return rsl;
+}
+
+bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
+{
+	int rc;
+	struct stat file_status;
+	bool retval = true;
+
+	if ( localOutput ) {
+		rc = stat( localOutput, &file_status );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS,
+					 "(%d.%d) stat failed for output file %s (errno=%d)\n",
+					 procID.cluster, procID.proc, localOutput, errno );
+			output_size = 0;
+			retval = false;
+		} else {
+			output_size = file_status.st_size;
+		}
+	}
+
+	if ( localError ) {
+		rc = stat( localError, &file_status );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS,
+					 "(%d.%d) stat failed for error file %s (errno=%d)\n",
+					 procID.cluster, procID.proc, localError, errno );
+			error_size = 0;
+			retval = false;
+		} else {
+			error_size = file_status.st_size;
+		}
+	}
+
+	return retval;
+}
+
+void GlobusJob::DeleteOutput()
+{
+	int rc;
+
+	if ( localOutput ) {
+		rc = unlink( localOutput );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
+					 procID.cluster, procID.proc, localOutput );
+		}
+		rc = creat( localOutput, S_IRWXU );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
+					 procID.cluster, procID.proc, localOutput );
+		} else {
+			close( rc );
+		}
+	}
+
+	if ( localError ) {
+		rc = unlink( localError );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
+					 procID.cluster, procID.proc, localError );
+		}
+		rc = creat( localError, S_IRWXU );
+		if ( rc < 0 ) {
+			dprintf( D_ALWAYS, "(%d.%d) Failed to create %s\n",
+					 procID.cluster, procID.proc, localError );
+		} else {
+			close( rc );
+		}
+	}
 }

@@ -33,7 +33,6 @@ class GlobusJob : public Service
 	bool GetCallbacks();
 	void ClearCallbacks();
 	GlobusResource *GetResource();
-	int syncIO();
 
 	static int probeInterval;
 	static int submitInterval;
@@ -72,8 +71,6 @@ class GlobusJob : public Service
 	time_t enteredCurrentGlobusState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
-	int syncedOutputSize;
-	int syncedErrorSize;
 	int submitFailureCode;
 	int lastRestartReason;
 	time_t lastRestartAttempt;
@@ -91,6 +88,8 @@ class GlobusJob : public Service
 	MyString *buildSubmitRSL();
 	MyString *buildRestartRSL();
 	MyString *buildStdioUpdateRSL();
+	bool GetOutputSize( int& output, int& error );
+	void DeleteOutput();
 
 	void UpdateJobAd( const char *name, const char *value );
 	void UpdateJobAdInt( const char *name, int value );

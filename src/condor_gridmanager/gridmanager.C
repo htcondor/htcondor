@@ -126,9 +126,6 @@ int minProxy_time;
 
 time_t Proxy_Expiration_Time = 0;
 
-int syncJobIO_tid = TIMER_UNSET;
-int syncJobIO_interval;
-
 int checkResources_tid = TIMER_UNSET;
 
 GahpClient GahpMain;
@@ -141,7 +138,6 @@ int checkResources();
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
 int checkProxy();
-int syncJobIO();
 
 
 // return value of true means requested update has been committed to schedd.
@@ -380,16 +376,6 @@ dprintf(D_FULLDEBUG,"reconfig called!!!!\n");
 		minProxy_time = 3 * 60 ; // default = 3 minutes
 	}
 
-	syncJobIO_interval = -1;
-	tmp = param("GRIDMANAGER_SYNC_JOB_IO_INTERVAL");
-	if ( tmp ) {
-		syncJobIO_interval = atoi(tmp);
-		free(tmp);
-	}
-	if ( syncJobIO_interval < 0 ) {
-		syncJobIO_interval = 5 * 60; // default interval = 5 minutes
-	}
-
 	int max_requests = 50;
 	tmp = param("GRIDMANAGER_MAX_PENDING_REQUESTS");
 	if ( tmp ) {
@@ -424,9 +410,6 @@ dprintf(D_FULLDEBUG,"reconfig called!!!!\n");
 
 	// Always check the proxy on a reconfig.
 	checkProxy();
-
-	// Always sync IO on a reconfig
-	syncJobIO();
 }
 
 int
@@ -534,37 +517,6 @@ checkProxy()
 		if (checkProxy_tid != TIMER_UNSET ) {
 			daemonCore->Cancel_Timer(checkProxy_tid);
 			checkProxy_tid = TIMER_UNSET;
-		}
-	}
-
-	return TRUE;
-}
-
-int
-syncJobIO()
-{
-	GlobusJob *next_job;
-
-	JobsByProcID.startIterations();
-
-	while ( JobsByProcID.iterate( next_job ) != 0 ) {
-		daemonCore->Register_Timer( 0, (TimerHandlercpp)&GlobusJob::syncIO,
-									"syncIO", (Service *)next_job );
-	}
-
-	if ( syncJobIO_interval ) {
-		if ( syncJobIO_tid != TIMER_UNSET ) {
-			daemonCore->Reset_Timer( syncJobIO_tid, syncJobIO_interval);
-		} else {
-			syncJobIO_tid = daemonCore->Register_Timer( syncJobIO_interval,
-												(TimerHandler)&syncJobIO,
-												"syncJobIO", NULL );
-		}
-	} else {
-		// syncJobIO_interval is 0, cancel any timer if we have one
-		if (syncJobIO_tid != TIMER_UNSET ) {
-			daemonCore->Cancel_Timer(syncJobIO_tid);
-			syncJobIO_tid = TIMER_UNSET;
 		}
 	}
 
