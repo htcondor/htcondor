@@ -133,12 +133,6 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 	log_transfer(now, tinfo, success_flag, peer, bytes_transferred);
 }
 
-extern "C" {
-	CONTEXT *create_context();
-	EXPR *build_expr();
-	int store_stmt(EXPR *, CONTEXT *);
-	void free_context( CONTEXT *);
-}
 
 void
 XferSummary::time_out(time_t now)
