@@ -97,9 +97,11 @@ OpenFileTable::Init()
 	file = new File[ MaxOpenFiles ];
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		file[i].Init();
+#if 0
 		if (i > 2) {
 			syscall( SYS_close, i );
 		}
+#endif
 	}
 
 	// getcwd( Condor_CWD, sizeof(Condor_CWD) );
