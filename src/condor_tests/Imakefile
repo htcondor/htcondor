@@ -22,9 +22,6 @@ all_lists:: compiler_list
    and that deal with the testing build framework itself.
 ************************************************************************/
 
-/* Location of the pre-built condor release directory */
-PRE_BUILT_RELEASE = ../release_dir
-
 LD_DIR = -condor_ld_dir $(PRE_BUILT_RELEASE)/lib
 LIB_DIR = -condor_lib $(PRE_BUILT_RELEASE)/lib
 INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I../condor_includes -I../h -I../condor_c++_util

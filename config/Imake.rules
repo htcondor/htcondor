@@ -933,9 +933,11 @@ XCOMM End translation of func(quantify_c_plus_target)
 #ifdef FLAGS_MACRO_NAME
 CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
+PRE_BUILT_RELEASE = ../../release_dir
 #else
 CONDOR_COMPILE = ../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../condor_scripts/condor_arch_link
+PRE_BUILT_RELEASE = ../release_dir
 #endif
 
 /*
