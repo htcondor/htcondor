@@ -283,8 +283,8 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		if (tag_id == XMLLexer::tagID_Number) {
 			if (strchr(token.text.c_str(), '.')) {
 				// This is a floating point number
-				float number;
-				sscanf(token.text.c_str(), "%g", &number);
+				double number;
+				number = strtod(token.text.c_str(), NULL);
 				value.SetRealValue(number);
 			} else {
 				// This is an integer.
