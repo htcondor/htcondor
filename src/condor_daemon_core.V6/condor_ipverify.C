@@ -342,7 +342,7 @@ main()
 	SafeSock ssock;
 	IpVerify* ipverify;
 
-	config(NULL);
+	config();
 
 #ifdef WIN32
 	_CrtMemCheckpoint( &s1 );
@@ -360,7 +360,7 @@ main()
 		if ( strncmp(buf,"exit",4) == 0 )
 			break;
 		if ( strncmp(buf,"reinit",6) == 0 ) {
-			config(NULL);
+			config();
 			ipverify->Init();
 			continue;
 		}

@@ -400,7 +400,7 @@ main(int argc, char *argv[])
 	int i;
 	char buffer[1024];
 
-	config( 0 );
+	config();
 
 	// parse command line args
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {

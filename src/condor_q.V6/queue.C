@@ -124,7 +124,7 @@ int main (int argc, char **argv)
 	char		scheddMachine[64];
 	
 	// load up configuration file
-	config( 0 );
+	config();
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );

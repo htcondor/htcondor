@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 	int nextarg = 1, cluster, proc;
 	bool UseConstraint = false;
 
-	config(0);
+	config();
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );

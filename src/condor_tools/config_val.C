@@ -238,9 +238,9 @@ main( int argc, char* argv[] )
 		// remote daemon, since if there's no -pool option, we need to
 		// param() for the COLLECTOR_HOST to contact.
 	if( host ) {
-		config_host( 0, host );
+		config_host( host );
 	} else {
-		config( 0 );
+		config();
 	}
 
 	if( name || pool || mt != CONDOR_QUERY || dt != DT_MASTER ) {

@@ -274,7 +274,7 @@ init_shadow_connections()
 void
 read_config_files( void )
 {
-	config( 0 );
+	config();
 
 		/* bring important parameters into global data items */
 	init_params();

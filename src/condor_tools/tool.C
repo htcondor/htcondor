@@ -259,7 +259,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	config( 0 );
+	config();
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
 	if( !MyName ) {

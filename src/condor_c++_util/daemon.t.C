@@ -333,7 +333,7 @@ testAPI( char* my_name, bool do_socks )
 
 main(int argc, char* argv) 
 {
-	config(0);
+	config();
 	bool do_socks = false;
 
 	if( argc > 1 ) {

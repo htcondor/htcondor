@@ -143,7 +143,7 @@ main(int argc, char* argv[])
   if( ! pool ) {
 		  // If we haven't been told our pool, we're going to need to
 		  // param() to find the local negotiator...
-	  config( 0 );
+	  config();
   }
 
 	  // Get info on our negotiator

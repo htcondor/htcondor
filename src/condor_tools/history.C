@@ -99,7 +99,7 @@ main(int argc, char* argv[])
 
 if (constraint) puts(constraint);
 
-  config( 0 );
+  config();
   if (!JobHistoryFileName) {
     JobHistoryFileName=param("HISTORY");
   }

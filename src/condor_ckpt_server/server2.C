@@ -98,7 +98,7 @@ void Server::Init()
 	num_restore_xfers = 0;
 	num_replicate_xfers = 0;
 
-	config( 0 );
+	config();
 	dprintf_config( "CKPT_SERVER", 2 );
 
 		// We have to do this after we call config, not in the Server

@@ -104,7 +104,7 @@ main( int argc, char *argv[] )
 
 		// Initialize things
 	MyName = argv[0];
-	config( 0 );
+	config();
 	init_params();
 	BadFiles = new StringList;
 

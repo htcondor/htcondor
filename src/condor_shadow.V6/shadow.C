@@ -279,7 +279,7 @@ main(int argc, char *argv[], char *envp[])
 
 	MyPid = getpid();
 	
-	config( 0 );
+	config();
 	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 

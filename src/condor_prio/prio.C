@@ -75,7 +75,7 @@ main( int argc, char *argv[] )
 
 	MyName = argv[0];
 
-	config( 0 );
+	config();
 
 	if( argc < 2 ) {
 		usage();

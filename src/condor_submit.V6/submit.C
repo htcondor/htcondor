@@ -378,7 +378,7 @@ main( int argc, char *argv[] )
 	}
 
 	MyName = basename(argv[0]);
-	config( 0 );
+	config();
 	init_params();
 
 		// If our effective and real gids are different (b/c the

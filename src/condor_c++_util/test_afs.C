@@ -43,7 +43,7 @@ AFS_Info *Info;
 main( int argc, char *argv[] )
 {
 
-	config( argv[0], (CONTEXT *)0 );
+	config();
 	Info = new AFS_Info();
 
 	printf( "My cell is \"%s\"\n", Info->my_cell() );

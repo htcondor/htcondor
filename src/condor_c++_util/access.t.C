@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 	}
 	filename = argv[1];
 
-	config(0);
+	config();
 
 	printf("Attempting to ask schedd about read access to %s\n", filename);	
 	result = attempt_access(argv[1], ACCESS_READ, getuid(), getgid());

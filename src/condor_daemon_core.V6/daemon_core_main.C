@@ -614,7 +614,7 @@ handle_dc_sighup( Service*, int )
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
-	config(NULL);
+	config();
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
@@ -950,7 +950,7 @@ int main( int argc, char** argv )
 	}
 
 		// call config so we can call param.  
-	config(NULL, wantsQuiet);
+	config( wantsQuiet );
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
