@@ -24,6 +24,9 @@
 #include "condor_common.h"
 #include "startd.h"
 
+/* XXX fix me */
+#include "../condor_sysapi/sysapi.h"
+
 int
 command_handler( Service*, int cmd, Stream* stream )
 {
@@ -127,7 +130,9 @@ int
 command_x_event( Service*, int, Stream* s ) 
 {
 	dprintf( D_FULLDEBUG, "command_x_event() called.\n" );
-	last_x_event = (int)time( NULL );
+
+	sysapi_last_xevent();
+
 	if( s ) {
 		s->end_of_message();
 	}
