@@ -625,6 +625,7 @@ void AddOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)lArg)->PrintToStr(str);
 				break;
 
@@ -649,6 +650,7 @@ void AddOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)rArg)->PrintToStr(str);
 				break;
 
@@ -677,6 +679,7 @@ void SubOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)lArg)->PrintToStr(str);
 				break;
 
@@ -697,6 +700,7 @@ void SubOp::PrintToStr(char* str)
 		{
 			switch (rt)
 			{
+				case LX_VARIABLE:
 				case LX_INTEGER:
 				case LX_FLOAT:
 				case LX_STRING:
@@ -712,7 +716,7 @@ void SubOp::PrintToStr(char* str)
 			}
 		}
 
-  		switch(rArg->MyType())
+  		switch(rt)
 		{
 			case LX_ADD:
 			case LX_SUB:
@@ -724,6 +728,7 @@ void SubOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)rArg)->PrintToStr(str);
 				break;
 
@@ -751,6 +756,7 @@ void MultOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)lArg)->PrintToStr(str);
 				break;
 
@@ -773,6 +779,7 @@ void MultOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)rArg)->PrintToStr(str);
 				break;
 
@@ -799,6 +806,7 @@ void DivOp::PrintToStr(char* str)
 			case LX_FLOAT:
 			case LX_UNDEFINED:
 			case LX_ERROR:
+			case LX_STRING:
 				((ExprTree*)lArg)->PrintToStr(str);
 				break;
 
@@ -820,6 +828,7 @@ void DivOp::PrintToStr(char* str)
 			case LX_INTEGER:
 			case LX_FLOAT:
 			case LX_UNDEFINED:
+			case LX_STRING:
 			case LX_ERROR:
 				((ExprTree*)rArg)->PrintToStr(str);
 				break;
@@ -877,8 +886,7 @@ void AndOp::PrintToStr(char* str)
 {
     if(lArg)
   	switch(lArg->MyType()) {
-		case LX_META_EQ:
-		case LX_META_NEQ:
+		case LX_VARIABLE:
 	    case LX_AND :
 		case LX_OR:
 	    case LX_INTEGER :
@@ -895,8 +903,7 @@ void AndOp::PrintToStr(char* str)
     strcat(str, " && ");
     if(rArg)
   	switch(rArg->MyType()) {
-		case LX_META_EQ:
-		case LX_META_NEQ:
+		case LX_VARIABLE:
 	    case LX_AND :
 		case LX_OR:
 	    case LX_INTEGER :
@@ -916,8 +923,7 @@ void OrOp::PrintToStr(char* str)
 {
     if(lArg)
   	switch(lArg->MyType()) {
-		case LX_META_EQ:
-		case LX_META_NEQ:
+		case LX_VARIABLE:
 	    case LX_AND :
 		case LX_OR:
 	    case LX_INTEGER :
@@ -934,8 +940,7 @@ void OrOp::PrintToStr(char* str)
     strcat(str, " || ");
     if(rArg)
   	switch(rArg->MyType()) {
-		case LX_META_EQ:
-		case LX_META_NEQ:
+		case LX_VARIABLE:
 	    case LX_AND :
 		case LX_OR:
 	    case LX_INTEGER :
