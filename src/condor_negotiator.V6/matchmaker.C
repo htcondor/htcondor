@@ -513,6 +513,21 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 					result = MM_NO_MATCH;
 					continue;
 				}
+				else
+				{
+					char 	remoteUser[128];
+					double	remotePriority;
+
+					offer->LookupString(ATTR_REMOTE_USER, remoteUser);
+					remotePriority = accountant.GetPriority (remoteUser);
+
+					// got a candidate preemption --- print a helpful message
+					dprintf( D_ALWAYS, "\t\t\tAttempting preemption of %s "
+								"(who has a priority of %f)\n", remoteUser,
+								remotePriority);
+					dprintf( D_ALWAYS, "\t\t\t(schedd's priority is %f)\n", 
+								priority);
+				}
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
