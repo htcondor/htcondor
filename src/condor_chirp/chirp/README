@@ -24,4 +24,5 @@ classes, or add this path to your CLASSPATH environment variable.
 
 
 For information on using Chirp in Condor, see doc/Condor.
-
+For C API documentation, see include/chirp_client.h.
+For Java API documentation, see java/client/ChirpClient.java.

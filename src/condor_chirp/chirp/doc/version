@@ -1,4 +1,4 @@
-This is Chirp release 1.1.
+This is Chirp release 1.2.
 
 To make contributions or check for updates to the software,
 go to http://www.cs.wisc.edu/condor/chirp.
@@ -6,5 +6,9 @@ go to http://www.cs.wisc.edu/condor/chirp.
 
 Version history:
 
+v1.2  Oct 15, 2004
+  -- Added C API documentation in chirp_client.h
+  -- Added chirp_client_constrain(), chirp_client_get_job_attr(),
+     and chirp_client_set_job_attr().
 v1.1  Jan 3, 2003
 
