@@ -340,6 +340,20 @@ AC_SUBST(_cv_libc_majmin,$_cv_libc_majmin)
 AC_SUBST(_cv_libc_is_kind,$_cv_libc_is_kind)
 
 
+#########
+# See what directory we're being run in, since we need this info for
+# various other things.  however, instead of using "`pwd`/..", we use
+# AS_DIRNAME to strip off the "src" part of `/bin/pwd`.  This should
+# get things right, even if there are weird symlinks going on.
+#########
+_src_dir=`/bin/pwd`
+_root_dir=`AS_DIRNAME(["$_src_dir"])`
+
+CONDOR_VERIFY_CONFIG_DIR([$_root_dir/config],
+                         [config directory is not valid])
+AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh") 
+
+
 ############################################################
 # Check for command-line arguments and environment variables
 ############################################################
@@ -355,16 +369,8 @@ AC_ARG_WITH(externals,
     [directory specified with --with-externals ($withval) is not valid])
  ],
  [
-  # nothing specified, try ../externals.  however, instead of using
-  # "`pwd`/../externals", we use AS_DIRNAME to strip off the "src"
-  # part of `pwd` and then tack on "/externals".  This doesn't get
-  # things right if there are weird symlinks going on, but it wouldn't
-  # work if we were using "../externals", either.  In the general case
-  # where there's a real parent directory holding src, config and
-  # externals, everything works great, and using this as a default
+  # nothing specified, try ../externals.  using this as a default
   # makes it possible to just run "./configure" most of the time.
-  _cur_pwd=`pwd`
-  _root_dir=`AS_DIRNAME(["$_cur_pwd"])`
   _local_ext_dir="$_root_dir/externals"
   if test -d $_local_ext_dir ; then 
     CONDOR_VERIFY_EXTERNALS_DIR([$_local_ext_dir],
@@ -1066,7 +1072,8 @@ fi
 ############################################################
 # Configure-generated output
 ############################################################
-AC_CONFIG_FILES(../config/configure.cf ../config/externals.cf)
+AC_CONFIG_FILES( ../config/configure.cf ../config/externals.cf
+                 ../config/config.sh )
 AC_OUTPUT
 
 # Finally, call Condor's imake script to generate Makefile using imake
