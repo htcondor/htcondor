@@ -2423,3 +2423,47 @@ void AttrList::RestoreChain(void* old_value)
 	chainedAttrs = (AttrListElem**) old_value;
 }
 
+int AttrList::
+Assign(char const *variable,char const *value)
+{
+	MyString buf;
+
+	buf += variable;
+
+	if(!value) {
+		buf += " = UNDEFINED";
+	}
+	else {
+		buf += " = \"";
+		while(*value) {
+			size_t len = strcspn(value,"\"\\");
+
+			buf.sprintf_cat("%.*s",len,value);
+			value += len;
+
+			if(*value) {
+				//escape special characters
+				buf += '\\';
+				buf += *(value++);
+			}
+		}
+		buf += '\"';
+	}
+
+	return Insert(buf.GetCStr());
+}
+int AttrList::
+Assign(char const *variable,int value)
+{
+	MyString buf;
+	buf.sprintf("%s = %d",variable,value);
+	return Insert(buf.GetCStr());
+}
+int AttrList::
+Assign(char const *variable,float value)
+{
+	MyString buf;
+	buf.sprintf("%s = %f",variable,value);
+	return Insert(buf.GetCStr());
+}
+

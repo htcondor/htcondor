@@ -136,6 +136,13 @@ class AttrList : public AttrListAbstract
         int        	Insert(ExprTree*);		// insert at the tail
 		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
+		// The Assign() functions are equivalent to Insert("variable = value"),
+		// with string values getting wrapped in quotes.  Strings that happen
+		// to contain quotes are handled correctly, as an added plus.
+		int Assign(char const *variable,char const *value);
+		int Assign(char const *variable,int value);
+		int Assign(char const *variable,float value);
+
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 
