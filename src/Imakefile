@@ -17,7 +17,7 @@ TEST_SUITE_C = test_suite_C.V5
 TEST_SUITE_BASE = test_suite_base
 
 #if !(NEEDS_KBDD)
-#   define kbdd
+#   define KbddProgs
 #endif
 
 #if !DOES_CHECKPOINTING
@@ -62,7 +62,7 @@ TEST_SUITE_BASE = test_suite_base
 #endif
 
 #if WANT_STORK
-#define StorkProgs stork
+#define StorkProgs Stork
 #else
 #define StorkProgs
 #endif
@@ -71,9 +71,9 @@ TEST_SUITE_BASE = test_suite_base
 		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
+		tools KbddProgs collector.V6 PvmProgs dagman userlog Eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp \
-		CreddProgs
+		CreddProgs StorkProgs
 
 #define Libraries \
 		util_lib daemon_core.V6 daemon_client classad c++_util	\
@@ -182,67 +182,67 @@ simple_dir_target(static_contrib/include)
 simple_dir_target(static_contrib/src)
 #endif /* HAS_STATIC */
 
-object_target(util_lib)
-object_target(c++_util)
-object_target(procapi)
-object_target(sysapi)
-object_target(tools)
-object_target(examples)
+condor_object_target(util_lib)
+condor_object_target(c++_util)
+condor_object_target(procapi)
+condor_object_target(sysapi)
+condor_object_target(tools)
+condor_object_target(examples)
 #if WANT_NETMAN
-object_target(eventd)
+condor_object_target(eventd)
 #endif
-object_target(accountant.V6)
-object_target(ckpt_server)
+condor_object_target(accountant.V6)
+condor_object_target(ckpt_server)
 
-object_target(shadow.V6)
-object_target(starter.V5)
+condor_object_target(shadow.V6)
+condor_object_target(starter.V5)
 
-object_target(startd.V6)
-object_target(schedd.V6)
-object_target(status.V6)
-object_target(dagman)
-object_target(userlog)
+condor_object_target(startd.V6)
+condor_object_target(schedd.V6)
+condor_object_target(status.V6)
+condor_object_target(dagman)
+condor_object_target(userlog)
 #if NEEDS_KBDD
-   object_target(kbdd)
+   condor_object_target(kbdd)
 #endif
-object_target(negotiator.V6)
-object_target(collector.V6)
-object_target(master.V6)
-object_target(q.V6)
-object_target(rm.V6)
-object_target(submit.V6)
+condor_object_target(negotiator.V6)
+condor_object_target(collector.V6)
+condor_object_target(master.V6)
+condor_object_target(q.V6)
+condor_object_target(rm.V6)
+condor_object_target(submit.V6)
 
-object_target(ckpt)
-object_target(syscall_lib)
+condor_object_target(ckpt)
+condor_object_target(syscall_lib)
 
 #if WANT_NETMAN
-object_target(netman)
+condor_object_target(netman)
 #endif
-object_target(io)
-object_target(classad)
-object_target(daemon_core.V6)
-object_target(daemon_client)
+condor_object_target(io)
+condor_object_target(classad)
+condor_object_target(daemon_core.V6)
+condor_object_target(daemon_client)
 #if WANT_PVM
-   object_target(starter.jim)
-   object_target(shadow.jim)
+   condor_object_target(starter.jim)
+   condor_object_target(shadow.jim)
 #endif
-object_target(prio)
-object_target(scripts)
+condor_object_target(prio)
+condor_object_target(scripts)
 #if WANT_CONDOR_G && HAS_GLOBUS
-    object_target(gridmanager)
-	object_target(globus)
+    condor_object_target(gridmanager)
+	condor_object_target(globus)
 #endif
 #if WANT_NEW_CLASSADS && HAS_GLOBUS
-	object_target(credd)
+	condor_object_target(credd)
 #endif
-object_target(starter.V6.1)
-object_target(shadow.V6.1)
-object_target(c-gahp)
-object_target(dcskel)
+condor_object_target(starter.V6.1)
+condor_object_target(shadow.V6.1)
+condor_object_target(c-gahp)
+condor_object_target(dcskel)
 #if WANT_DRMAA
-object_target(drmaa)
+condor_object_target(drmaa)
 #endif
-object_target(chirp)
+condor_object_target(chirp)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
@@ -251,8 +251,7 @@ object_dir_target(html)
 object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
 #if WANT_STORK
-/* Just create the Stork directory for now. */
-object_dir_target(stork)
+object_target(Stork,stork)
 #endif
 
 single_target(condor_procapi,libprocapi.a)
@@ -261,19 +260,19 @@ single_target(condor_schedd.V6,libqmgmt.a)
 single_target(condor_accountant.V6,libacct.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
 
-object_target(tests)
-object_target(test_suite_C.V5)
-object_target(test_suite_base)
+condor_object_target(tests)
+condor_object_target(test_suite_C.V5)
+condor_object_target(test_suite_base)
 
 
 #if HAS_FORTRAN
-   object_target($(TEST_SUITE_F))
+   condor_object_target($(TEST_SUITE_F))
 #endif
 #if WANT_JAVA
-   object_target($(TEST_SUITE_JAVA))
+   condor_object_target($(TEST_SUITE_JAVA))
 #endif
 #if WANT_PVM
-/*   object_target($(TEST_SUITE_PVM))*/
+/*   condor_object_target($(TEST_SUITE_PVM))*/
 #endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o

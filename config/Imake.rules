@@ -61,9 +61,40 @@ DEMANGLE = 2>&1 | Demangler
 /*
 ** Set up to make all the objects in a particular directory.
 */
+
+/* Create an object target */
 #ifndef object_target
-#define object_target(obj_name)					@@\
+#define object_target(_name,obj_name)					@@\
 XCOMM Begin translation of func(object_target) @@\
+_name: obj_name					@@\
+	cd obj_name; make $(SMP_FLAGS)			@@\
+release:: obj_name					@@\
+	cd obj_name; make release			@@\
+stripped:: obj_name					@@\
+	cd obj_name; make stripped			@@\
+static:: obj_name					@@\
+	cd obj_name; make static			@@\
+depend:: obj_name					@@\
+	cd obj_name; make depend			@@\
+clean:: obj_name					@@\
+	cd obj_name; make clean			@@\
+docs:: obj_name					@@\
+	cd obj_name; make html				@@\
+makefiles:: obj_name obj_name/Makefile	@@\
+obj_name/Makefile:					@@\
+	cd obj_name; ../condor_imake 	@@\
+object_dir_target(obj_name)		@@\
+XCOMM End translation of func(object_target) 
+#endif /* object_target */
+
+/* Create an object target under the condor_* namespace.
+ * Don't be tempted to redefine this rule in terms of the above
+ * object_target() macro.  CPP does not allow directives inside a
+ * macro argument.
+ */
+#ifndef condor_object_target
+#define condor_object_target(obj_name)					@@\
+XCOMM Begin translation of func(condor_object_target) @@\
 obj_name: precon(obj_name)					@@\
 	cd precon(obj_name); make $(SMP_FLAGS)			@@\
 release:: precon(obj_name)					@@\
@@ -82,8 +113,8 @@ makefiles:: precon(obj_name) precon(obj_name)/Makefile	@@\
 precon(obj_name)/Makefile:					@@\
 	cd precon(obj_name); ../condor_imake 	@@\
 object_dir_target(precon(obj_name))		@@\
-XCOMM End translation of func(object_target) 
-#endif /* object_target */
+XCOMM End translation of func(condor_object_target) 
+#endif /* condor_object_target */
 
 /*
 ** List everything which should be built in this object tree.
@@ -1018,6 +1049,23 @@ XCOMM End translation of func(quantify_c_plus_target)
 #endif /* quantify_c_plus_target */
 
 #endif	/* HAS_PURIFY */
+
+/* Build public super target.
+ * Build a program from C++ source, as well as the most common
+ * dependent public release targets.
+ */
+#ifndef c_plus_public_target
+#define c_plus_public_target(program,dir,objlist,libs) @@\
+XCOMM Begin translation of func(c_plus_public_target) @@\
+all_target(program) @@\
+c_plus_target(program,objlist,libs) @@\
+release_target(program,dir,EXECUTABLE_MODE) @@\
+strip_target(program,dir,EXECUTABLE_MODE) @@\
+static_target(program,objlist,libs,$(STATIC_DIR)/dir) @@\
+pure_c_plus_target(program,objlist,libs) @@\
+purecov_c_plus_target(program,objlist,libs) @@\
+XCOMM End translation of func(c_plus_public_target)
+#endif /* c_plus_public_target */
 
 
 /***********************************************************************
