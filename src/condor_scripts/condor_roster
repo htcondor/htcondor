@@ -7,7 +7,7 @@ use strict;
 my $Debug = 0;
 
 # Dirs & files
-my $RosterDir = "/p/condor/home/admin";
+my $RosterDir = "/unsup/condor/etc";
 if ( defined( $ENV{CONDOR_ROSTER_DIR} ) )
 {
     $RosterDir = $ENV{CONDOR_ROSTER_DIR};
