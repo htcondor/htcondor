@@ -1,3 +1,8 @@
+01/14/04 V6_6-pre_merge-V6_6-full_redhat9_port-merge-1
+	This is the premerge tag on the V6_6-branch which is BEFORE I checked
+	in the merge arena of V6_6-full_redhat9_port-branch into V6_6-branch 
+	workspace.
+
 12/23/03 V6_6-full_redhat9_port-branch 
    A new branch off the end of the V6_6-branch for the redhat 9 full port.
    Created from the V6_6-full_redhat9_port-root tag.  Includes the
