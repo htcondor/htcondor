@@ -472,21 +472,20 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		ALLOC_PATH( path1 );
 		ALLOC_PATH( path2 );
 	}
+
 #if defined(LINUX)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out xdr_bytes( &buf, buf_size, buf_size );
-		alloc( buf, buf_size );
-	}
+#elif defined(OSF1)
+	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-		out xdr_bytes( &buf, buf_size, buf_size );
-		alloc( buf, buf_size );
-	}
 #endif
+	SEND_PATH( path );
+    ALLOC_PATH( path );
+    out xdr_bytes( &buf, buf_size, buf_size );
+    alloc( buf, buf_size );
+    }
+
 	pid_t getpgrp();
 	MODE_T umask( MODE_T cmask );
 	int getpagesize();
