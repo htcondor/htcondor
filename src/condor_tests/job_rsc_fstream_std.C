@@ -33,7 +33,7 @@ int main() {
       return 1;
     }
 
-	fstream fout("fstream.output", ios::out);
+	fstream fout("job_rsc_fstream_std.output", ios::out);
     if (!fout) {
       cerr << "Open for writing failed." << endl;
       return 1;
@@ -43,6 +43,6 @@ int main() {
 	while (fin.get(c))
 		fout << c;
 	cout << "To determine success of test, do a diff on x_data.in and" << endl;
-	cout << "fstream.output.  There should be no difference." << endl;
+	cout << "job_rsc_fstream_std.output.  There should be no difference." << endl;
 	return 0;
 }
