@@ -114,6 +114,10 @@ SOURCE=..\src\condor_util_lib\free_fs_blocks.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\get_random_num.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\internet.c
 # End Source File
 # Begin Source File

@@ -341,6 +341,21 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_io
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_startd_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_startd_lib"=.\condor_startd_lib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################
