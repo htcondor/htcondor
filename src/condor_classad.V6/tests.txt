@@ -58,9 +58,6 @@ test-lexer-one-token ( LEX_OPEN_PAREN
 test-lexer-one-token ) LEX_CLOSE_PAREN
 test-lexer-one-token { LEX_OPEN_BRACE
 test-lexer-one-token } LEX_CLOSE_BRACE
-test-lexer-one-token 'Wed Nov 11 13:11:47 1998 (CST) +6:00' LEX_ABSOLUTE_TIME_VALUE
-test-lexer-one-token '+6:00:00' LEX_RELATIVE_TIME_VALUE
-test-lexer-one-token '-6d6:00' LEX_RELATIVE_TIME_VALUE
 
 # I think this should evaluate to LEX_BACKSLASH. Apparently
 # it's not actually used anywhere, so it's an error instead. 
@@ -137,8 +134,66 @@ begin-classad Misc
   B = true;
   C = !A;
   D = !B;
+  R1 = regexp(".*\.cs\.uchicago\.edu",  "gargoyle.cs1uchicago.edu");
+  R2 = regexp(".*\.cs\.wisc\.edu",     "beak.cs.wisc.edu");
+  R3 = regexp(".*\.cs\.uchicago\.edu", "beak.cs.wisc.edu");
+  R4 = regexp(".*\.cs\.wisc\.edu",     "gargoyle.cs.uchicago.edu");
+  R5 = regexp(".*\.cs\.wisc\.edu|.*\.cs\.uchicago\.edu",     
+              "gargoyle\.cs\.uchicago.edu");
+  R6 = regexp(".*\.cs\.wisc\.edu|.*\.cs\.uchicago\.edu",     
+              "beak.cs.wisc\.edu");
+
 ]
 end-classad
+
+begin-classad Motherboard
+[
+  have_match =    machine_enclosure.machine.Requirements 
+              && job_enclosure.job.Requirements
+              && storage_enclosure.storage.Requirements;
+
+  machine_enclosure = 
+  [ 
+    job = job_enclosure.job;
+	storage = storage_enclosure.storage;
+    machine = [
+                Type="Machine"; 
+                RAM=6000;
+                Requirements = (job.MemoryNeeded <= RAM);
+              ];
+  ];
+
+  job_enclosure = 
+  [
+    machine = machine_enclosure.machine;
+	storage = storage_enclosure.storage;
+    job = [
+            Type="Job";
+            MemoryNeeded = 6000;
+            DiskSpaceNeeded = 8000;
+            Requirements = (machine.RAM >= MemoryNeeded
+                         && storage.FreeDiskSpace > DiskSpaceNeeded)
+          ];
+  ];
+
+  storage_enclosure = 
+  [
+    job = job_enclosure.job;
+    machine = machine_enclosure.machine;
+    storage = [
+         Type = "Storage";
+         FreeDiskSpace = 10000;
+         Requirements = job.DiskSpaceNeeded < FreeDiskSpace;
+         ];
+
+  ];
+]
+end-classad
+
+evaluate Motherboard job_enclosure.job.Requirements
+evaluate Motherboard machine_enclosure.job.Requirements
+evaluate Motherboard storage_enclosure.storage.Requirements
+evaluate Motherboard have_match
 
 ######################################################################
 #
@@ -169,6 +224,12 @@ evaluate Misc SizeSet;
 evaluate Misc SizeZero;
 evaluate Misc SizeOne;
 evaluate Misc SizeTwo;
+evaluate Misc R1;
+evaluate Misc R2;
+evaluate Misc R3;
+evaluate Misc R4;
+evaluate Misc R5;
+evaluate Misc R6;
 
 ######################################################################
 #
@@ -201,6 +262,8 @@ check-in-view Machines BigMachine-View Machine-1 ExpectNotIn
 check-in-view Machines BigMachine-View Machine-2 ExpectNotIn
 check-in-view Machines BigMachine-View Machine-3 ExpectIn
 
+#truncate-log Machines
+
 begin-classad Group-1
 [
   Type = "Group";
@@ -219,3 +282,84 @@ end-classad
 make-collection Groups groups-log
 add-to-collection Groups Group-1
 add-to-collection Groups Group-2
+
+begin-classad List-Eval
+[ a = { x }; x = 1 ]
+end-classad
+
+evaluate Misc SizeOne;
+evaluate Misc SizeTwo;
+evaluate List-Eval a[0]
+
+begin-classad Lexer-Fault
+[ a=!b; b=true; ]
+end-classad
+evaluate Lexer-Fault b
+evaluate Lexer-Fault a
+
+begin-classad Octal
+[ a = "\101\044\44\1"; /* Should be A(( */ ]
+end-classad
+evaluate Octal a
+
+begin-classad Floats
+[a = 0.7 * 4.5; ]
+end-classad
+
+begin-classad Quoted-Names
+[
+  'a' = 4;
+  'b.##$%' = 5;
+]
+end-classad
+
+begin-classad Times
+[
+  Abs1 = absTime("2003-09-03T");
+  Rel1 = relTime("2+25:14:16.123");
+]
+end-classad
+
+begin-classad Numbers
+[
+  X = 4.3;
+  Y = real("4.3");
+  Not = real("NaN");
+  Infinite = real("INF");
+  Negative_Infinite = real("-INF");
+]
+end-classad
+
+print-classad Floats
+print-classad Quoted-Names
+print-classad Times
+print-classad Numbers
+print-classad-xml Numbers
+
+begin-classad Loop
+[
+  attr = a//b
+]
+end-classad 
+
+#begin-classad Crash
+#[
+#  attr = a<b>
+#]
+#end-classad 
+
+begin-classad policy
+[
+  type = 'machine';
+  access_times = 
+    [
+        globus = [start = 1900; end = 2100;];
+        condor = [start = 100; end = 500;];
+    ]
+]
+end-classad
+
+evaluate policy access_times
+evaluate policy access_times["globus"]
+evaluate policy access_times["globus"].start
+
