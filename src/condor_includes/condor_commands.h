@@ -298,6 +298,7 @@ const int QUERY_ANY_ADS = 48;
 #define STORK_SUBMIT (STORK_BASE+0)
 #define STORK_REMOVE (STORK_BASE+1)
 #define STORK_STATUS (STORK_BASE+2)
+#define STORK_LIST 	 (STORK_BASE+3)
 
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
