@@ -139,6 +139,8 @@ int
 ResState::change( State new_state )
 {
 	if( new_state == preempting_state ) {
+			// wants_vacate dprintf's about what it decides and the
+			// implications on state changes...
 		if( rip->wants_vacate() ) {
 			return change( new_state, vacating_act );
 		} else {
@@ -165,18 +167,21 @@ ResState::eval( void )
 		if( ((r_act == busy_act) && (!want_suspend)) ||
 			(r_act == suspended_act) ) {
 			if( rip->eval_preempt() ) {
+				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
 				return change( preempting_state ); 
 			}
 		}
 		if( (r_act == busy_act) && want_suspend ) {
 			if( rip->eval_suspend() ) {
 				// STATE TRANSITION #12
+				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
 				return change( suspended_act );
 			}
 		}
 		if( r_act == suspended_act ) {
 			if( rip->eval_continue() ) {
 				// STATE TRANSITION #13
+				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
 				return change( busy_act );
 			}
 		}
@@ -187,6 +192,7 @@ ResState::eval( void )
 				// job attributes and well-placed meta-operators, b/c
 				// we're in the claimed state, so we'll have a job ad
 				// to evaluate against.
+			dprintf( D_ALWAYS, "State change: START is false\n" );
 			return change( preempting_state ); 
 		}
 		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
@@ -201,6 +207,7 @@ ResState::eval( void )
 	case preempting_state:
 		if( r_act == vacating_act ) {
 			if( rip->eval_kill() ) {
+				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 					// STATE TRANSITION #18
 				return change( killing_act );
 			}
@@ -210,6 +217,7 @@ ResState::eval( void )
 	case unclaimed_state:
 		// See if we should be owner or unclaimed
 		if( rip->eval_is_owner() ) {
+			dprintf( D_ALWAYS, "State change: IS_OWNER is TRUE\n" );
 			return change( owner_state );
 		}
 			// Check to see if we should run benchmarks
@@ -224,6 +232,7 @@ ResState::eval( void )
 
 	case owner_state:
 		if( ! rip->eval_is_owner() ) {
+			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			change( unclaimed_state );
 		}
 		break;	
@@ -301,6 +310,8 @@ ResState::leave_action( State s, Activity a,
 					// know about it.  Send SIGKILL to the process
 					// group and go to the owner state.
 				rip->r_starter->killpg( DC_SIGKILL );
+				dprintf( D_ALWAYS,
+						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
 			}
 		}
@@ -334,6 +345,7 @@ ResState::enter_action( State s, Activity a,
 			// See if we should be in owner or unclaimed state
 		if( ! rip->eval_is_owner() ) {
 				// Really want to be in unclaimed.
+			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			return change( unclaimed_state );
 		}
 		rip->r_reqexp->restore();		
@@ -351,6 +363,8 @@ ResState::enter_action( State s, Activity a,
 		if( a == suspended_act ) {
 			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
 				rip->r_starter->killpg( DC_SIGKILL );
+				dprintf( D_ALWAYS,
+						 "State change: Error sending signals to starter\n" );
 				return change( owner_state );
 			}
 		}
@@ -376,6 +390,8 @@ ResState::enter_action( State s, Activity a,
 						// hardkill_starter returns FALSE if there was
 						// an error in kill and we had to send SIGKILL
 						// to the starter's process group.
+					dprintf( D_ALWAYS,
+							 "State change: Error sending signals to starter\n" );
 					return change( owner_state );
 				}
 			} else {
@@ -388,6 +404,8 @@ ResState::enter_action( State s, Activity a,
 			if( rip->r_starter->active() ) {
 				if( rip->r_starter->kill( DC_SIGSOFTKILL ) < 0 ) {
 					rip->r_starter->killpg( DC_SIGKILL );
+					dprintf( D_ALWAYS,
+							 "State change: Error sending signals to starter\n" );
 					return change( owner_state );
 				}
 			} else {

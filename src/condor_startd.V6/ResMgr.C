@@ -298,6 +298,8 @@ ResMgr::reconfig_resources( void )
 		// See if there's anything to destroy, and if so, do it. 
 	destroy_list.Rewind();
 	while( destroy_list.Next(rip) ) {
+		rip->dprintf( D_ALWAYS,
+					  "State change: resource no longer needed by configuration\n" );
 		rip->set_destination_state( delete_state );
 	}
 
@@ -1306,6 +1308,9 @@ ResMgr::deleteResource( Resource* rip )
 
 		// Tell the collector this Resource is gone.
 	rip->final_update();
+
+		// Log a message that we're going away
+	rip->dprintf( D_ALWAYS, "Resource no longer needed, deleting\n" );
 
 		// At last, we can delete the object itself.
 	delete rip;

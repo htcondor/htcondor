@@ -236,6 +236,7 @@ Match::match_timed_out()
 		}
 		delete rip->r_cur;
 		rip->r_cur = new Match( rip );
+		dprintf( D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting match.
@@ -295,9 +296,10 @@ Match::claim_timed_out()
 		delete m_client;
 		m_client = NULL;
 	}
+
+	dprintf( D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
+
 		// Kill the claim.
-	dprintf(D_ALWAYS,
-			"CLAIM TIMED OUT! Is the condor_schedd gone? Killing job\n");
 	rip->kill_claim();
 	return TRUE;
 }
