@@ -8,6 +8,8 @@ LIB = libcedar.a $(STD_LIBS)
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
+		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
+		condor_auth_kerberos.o condor_auth_fs.o condor_auth_sspi.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
 		SafeMsg.o
 #		autoTest.o manTest.o

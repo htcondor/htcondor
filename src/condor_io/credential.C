@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "authentication.h"
+#include "condor_auth_x509.h"
 #include "environ.h"
 
 #if !defined(SKIP_AUTHENTICATION)
