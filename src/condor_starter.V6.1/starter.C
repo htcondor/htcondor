@@ -33,10 +33,9 @@
 #include "syscall_numbers.h"
 #include "my_hostname.h"
 #include "condor_string.h"  // for strnewp
+#include "condor_random_num.h"
 
 static char *_FileName_ = __FILE__; /* Used by EXCEPT (see except.h)    */
-
-extern "C" int get_random_int();
 
 /* CStarter class implementation */
 
