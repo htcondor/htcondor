@@ -49,8 +49,8 @@ extern "C" void report_image_size( int );
 extern "C"	int	SYSCALL(int ...);
 
 #ifdef SAVE_SIGSTATE
-extern "C" void condor_save_sigstates();
-extern "C" void condor_restore_sigstates();
+extern "C" void _condor_save_sigstates();
+extern "C" void _condor_restore_sigstates();
 #endif
 
 #if defined(COMPRESS_CKPT)
@@ -689,6 +689,7 @@ Image::Restore()
 	int		save_fd = fd;
 	char	user_data[USER_DATA_SIZE];
 
+
 #if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
 #endif
@@ -733,24 +734,7 @@ Image::Restore()
 		// Overwrite our data segment with the one saved at checkpoint
 		// time *and* restore any saved shared libraries.
 
-	/* XXX We used to be able to get killed in the middle of a restart by the
-		user comming back during a long restart, and that is
-		correct behaviour. This stops that until I can add in
-		all of the code needed to do it safely. What happens is
-		that on some machines(like IRIX) when we receive a
-		signal, trampoline code in libc gets called before our signal
-		handler does. This creates a race condition that if we get a signal
-		just as we have mmap'ed /dev/zero over libc, we will segfault.
-
-		So, until that code gets into place, the restart will complete before
-		being trashed when the signal is unblocked.
-
-		-pete 01/18/00
-	*/
-
-	_condor_signals_disable();
 	RestoreAllSegsExceptStack();
-	_condor_signals_enable();
 
 		// We have just overwritten our data segment, so the image
 		// we are working with has been overwritten too.  Fortunately,
@@ -1505,40 +1489,36 @@ Checkpoint( int sig, int code, void *scp )
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
 
-	/***** WARNING!!! DON'T PUT ANY CODE HERE!!  Read the below
-	 * comments carefully.  Then put new code down below after
-	 * we check the InRestart flag and after we call condor_block_signals().
+	/*
+		WARNING: Do not put any code here.  This check prevents a race condition.
+		The Checkpoint signal could arrive before we block the signal, thus
+		causing a checkpoint within a checkpoint.  We _could_ prevent this race
+		condition by using sigaction to automatically set the signal mask, but
+		then the user's mask would not be available to be saved by
+		_condor_save_sigstate.
 	*/
 
-		// No sense trying to do a checkpoint in the middle of a
-		// restart, just quit leaving the current ckpt entact.
-		// *** WARNING: This test should be done before any other code in
-		// the signal handler.
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
 			Suicide();		// if we're supposed to vacate, kill ourselves
 		else {
 			return;			// if periodic ckpt or we're currently ckpting
 		}
+	} else {
+		InRestart = TRUE;
 	}
-		
-		// We don't want to be interrupted by a signal during the
-		// checkpoint operation.
-		// NOTE: We *must* do this _before_ we set the InRestart flag
-		// to true.
-		// NOTE: We first check InRestart and call Suicide() if InRestart is
-		// true *before* we call condor_block_signals().  Why?  because we have
-		// been very careful to make certain that Suicide() is 
-		// fully self-contained.
-		// But condor_block_signals() could call library functions which may not
-		// yet be mapped in if we received the checkpoint signal during restart.
-		// -Todd, 12/99
-	_condor_signals_disable();
 
-	InRestart = TRUE;	// not strictly true, but needed in our saved data
+	/*
+		WARNING: Do not put any code here either.  _condor_save_sigstate() will
+		save the user's signal mask, block all signals, and then save all the
+		other associated signal state.  This must be the first action in
+		Checkpoint after the race condition check above.
+	*/
+
+	_condor_save_sigstates();
+	dprintf( D_ALWAYS, "Saved signal state.\n");
+
 	check_sig = sig;
-
-	dprintf( D_ALWAYS, "Entering Checkpoint()\n" );
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
@@ -1604,13 +1584,7 @@ Checkpoint( int sig, int code, void *scp )
 		;
 #endif
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
-		dprintf( D_ALWAYS, "About to save MyImage\n" );
-#ifdef SAVE_SIGSTATE
-		dprintf( D_ALWAYS, "About to save signal state\n" );
-		condor_save_sigstates();
-		dprintf( D_ALWAYS, "Done saving signal state\n" );
-#endif
-
+		dprintf( D_ALWAYS, "About to save file state\n");
 		if( sig==SIGTSTP ) {
 			// Suspend all operations and save files
 			_condor_file_table_suspend();
@@ -1618,7 +1592,9 @@ Checkpoint( int sig, int code, void *scp )
 			// A periodic safety checkpoint
 			_condor_file_table_checkpoint();
 		}
+		dprintf( D_ALWAYS, "Done saving file state\n");
 
+		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		MyImage.Save();
 		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
@@ -1649,12 +1625,6 @@ Checkpoint( int sig, int code, void *scp )
 			LONGJMP( Env, 1);
 		}
 	} else {					// Restart
-#undef WAIT_FOR_DEBUGGER
-#if defined(WAIT_FOR_DEBUGGER)
-	int		wait_up = 1;
-	while( wait_up )
-		;
-#endif
 		if ( do_full_restart ) {
 			scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 			patch_registers( scp );
@@ -1666,9 +1636,10 @@ Checkpoint( int sig, int code, void *scp )
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
 
+			dprintf( D_ALWAYS, "About to restore file state\n");
 			_condor_file_table_resume();
 
-			dprintf( D_ALWAYS, "Done restoring files state\n" );
+			dprintf( D_ALWAYS, "Done restoring file state\n" );
 			int mode = get_ckpt_mode(0);
 			if (mode > 0) {
 				if (mode&CKPT_MODE_MSYNC) {
@@ -1700,12 +1671,6 @@ Checkpoint( int sig, int code, void *scp )
 		*((unsigned int *)( ((unsigned int) &sig)+16 )) = (unsigned int) _sigreturn;
 #endif
 
-#ifdef SAVE_SIGSTATE
-		dprintf( D_ALWAYS, "About to restore signal state\n" );
-		condor_restore_sigstates();
-		dprintf( D_ALWAYS, "Done restoring signal state\n" );
-#endif
-
 		// Here we check if we received checkpoint&exit signal
 		// while all this was going on.  
 		SetSyscalls(SYS_LOCAL | SYS_UNRECORDED);
@@ -1730,12 +1695,22 @@ Checkpoint( int sig, int code, void *scp )
 				terminate_with_sig(SIGUSR2);
 			}
 		}
-
 		_condor_numrestarts++;
 		SetSyscalls( scm );
+
+		/*
+			WARNING: The restoring of signal states must be the last
+			thing that happens in a checkpoint restart.  Once this 
+			function returns, the user's signal handlers are installed
+			and the saved signal state is replaced, so nothing that
+			is signal-unsafe can follow this restore.
+		*/
+
+		dprintf( D_ALWAYS, "About to restore signal state\n" );
+		_condor_restore_sigstates();
+
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
-		_condor_signals_enable();
 		return;
 	}
 }
@@ -1756,12 +1731,17 @@ init_image_with_file_descriptor( int fd )
 /*
   Effect a restart by reading in an "image" containing checkpointing
   information and then overwriting our process with that image.
+  All signals are disabled while this is in progress.
 */
 void
 restart( )
 {
-	InRestart = TRUE;
+	sigset_t mask;
 
+	sigfillset( &mask );
+	sigprocmask( SIG_SETMASK, &mask, 0 );
+
+	InRestart = TRUE;
 	if (MyImage.Read() < 0) Suicide();
 	MyImage.Restore();
 }

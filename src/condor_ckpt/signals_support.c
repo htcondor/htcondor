@@ -80,13 +80,25 @@ static struct signal_states_struct signal_states;
 /* Here we save the signal state of the user process.  This is called
  * when we are checkpointing.  */
 void
-condor_save_sigstates()
+_condor_save_sigstates()
 {
 	sigset_t mask;
 	int scm;
 	int sig;
 
-    scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+	/* First, save the user's signal mask.  This must happen before we modify it in any way. */
+	sigprocmask(0,0,&signal_states.user_mask);
+
+	/* Disable handing of user-mode signal handlers. This prevents any signal handlers from getting called in local unmapped mode. */
+	sigfillset(&mask);
+	sigprocmask(SIG_SETMASK,&mask,0);
+
+	/* Switch to local unmapped mode.  This msut happen _after_ blocking user signal handlers */
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+
+	/* Now, disable signal handling _again_.  This prevents checkpointing signals from interrupting us while checkpointing */
+	sigfillset(&mask);
+	sigprocmask(SIG_SETMASK,&mask,0);
 
 	/* Save pending signal information */
 	sigpending( &(signal_states.pending) );
@@ -123,7 +135,7 @@ condor_save_sigstates()
 	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
 #endif
 
-    (void) SetSyscalls( scm );
+	(void) SetSyscalls( scm );
 }
 
 /* Here we restore the signal state of the user process.  This is called
@@ -131,7 +143,7 @@ condor_save_sigstates()
  * restored _before_ calling this function (all signal state info is saved
  * in the static structure signal_states) */
 void
-condor_restore_sigstates()
+_condor_restore_sigstates()
 {
 	int scm;
 	int sig;
@@ -174,6 +186,7 @@ condor_restore_sigstates()
 #endif
 
 	/* Restore pending signals, again ignoring special Condor sigs */
+	/* This code assumes that all signals are blocked. */
 	mypid = getpid();
 	for ( sig=1; sig < signal_states.nsigs; sig++ ) {
 		switch (sig) {
@@ -192,6 +205,10 @@ condor_restore_sigstates()
 	}
 
 	(void) SetSyscalls( scm );
+
+	/* Finally, put the user's signal mask back. This must happen _after_ SetSyscalls so that any pending unblocked signals are handled in remote, mapped mode. */
+
+	sigprocmask(SIG_SETMASK,&signal_states.user_mask,0);
 }
 
 
@@ -395,7 +412,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris)
+#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris) || defined(LINUX)
 	return SIGACTION( sig, my_act, oact);
 #elif defined(IRIX)
 	return syscall(SYS_ksigaction, sig, my_act, oact);
