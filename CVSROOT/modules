@@ -230,16 +230,27 @@ V6_4_ALL	-a DOC TOOLS NT_TOOLS V6_4_SRC
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
-V6_7_CODE	-a TOOLS V_TRUNK_SRC
-V6_7_NT_CODE	-a NT_TOOLS V_TRUNK_SRC
-V6_7_ALL	-a DOC TOOLS NT_TOOLS V_TRUNK_SRC
+# V6_6 shares the same directories as V6_5
+V6_6_CODE	-a TOOLS V6_5_SRC
+V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
+V6_6_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
+# For now, V6_7 also shares the same directories as V6_5.
+# This might change, but until then, we leave it like this.
+V6_7_CODE	-a TOOLS V6_5_SRC
+V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
+V6_7_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
 
 
 # Point these to whatever version is living on the trunk.
-TRUNK_SRC	-a V6_7_SRC
-TRUNK_CODE	-a V6_7_CODE
-TRUNK_NT_CODE	-a V6_7_NT_CODE
-TRUNK_ALL	-a V6_7_ALL
+# For now, they're just called "TRUNK", since it's not obvious what
+# actual version is on the trunk these days...
+#TRUNK_CODE	-a V6_7_CODE
+#TRUNK_NT_CODE	-a V6_7_NT_CODE
+#TRUNK_ALL	-a V6_7_ALL
+TRUNK_SRC	-a V_TRUNK_SRC
+TRUNK_CODE	-a TOOLS V_TRUNK_SRC
+TRUNK_NT_CODE	-a NT_TOOLS V_TRUNK_SRC
+TRUNK_ALL	-a DOC TOOLS NT_TOOLS V_TRUNK_SRC
 
 JAVA_SRC	-a \
 		src_java/Makefile \
