@@ -5,18 +5,20 @@
 \oOpt{hostname ...}
 
 \Description
-\Condor{vacate} causes the startd to checkpoint any running jobs
-and make them vacate the machine. The job remains in
+\Condor{vacate} causes the condor startd to checkpoint any running jobs
+and make them vacate the machine. The job remains 
 the submitting machine's job queue, however. 
 
-If the job on the specified host is running in the Standard Universe, then the job is first checkpointed and then killed (and will
-then restart someplace else where it left off). If the job on the specified host is running in the Vanilla Universe, then the job is
-not checkpointed but is simply killed (and will then restart someplace else from the beginning). If there is currently no
-Condor job running on that host, then \Condor{vacate} has no effect. 
-
-Normally there is no need for the user or administrator to explicitly run \Condor{vacate}. Vacating a running condor job off of a
-machine is handled automatically by Condor by following the policies stated in Condor's configuration files. 
-
+If the job on the specified host is running in the Standard Universe, then the
+job is first checkpointed and then killed (and will then restart somewhere
+else where it left off). If the job on the specified host is running in the
+Vanilla Universe, then the job is not checkpointed but is simply killed (and
+will then restart somewhere else from the beginning). If there is currently
+no Condor job running on that host, then \Condor{vacate} has no effect. 
+ Normally there is no need for the user or administrator to explicitly run
+\Condor{vacate}. Vacating a running condor job off of a machine is handled
+automatically by Condor by following the policies stated in Condor's
+configuration files.   
 \begin{Options}
     \OptItem{\Opt{-help}}{Display usage information}
 \end{Options}

@@ -4,14 +4,25 @@
 \oOpt{-res}
 \oOptArg{-set}{username priority}
 
-\Description
-\Condor{userprio} with no arguments, lists the priorities of all the users that have a priority value larger than the minimum (The minimum priority value is 0.5, and it corresponds to the highest possible priority). The -set option is used to change a user's priority, and requires special privilage.
+\Description 
+\Condor{userprio} with no arguments, lists the priorities of all
+the users that have a priority value larger than the minimum (The minimum
+priority value is 0.5, and it corresponds to the highest possible
+priority). The -set option is used to change a user's priority, and requires
+special privilage.
 
-A user's priority changes according to his usage of resources. The central manager uses this value during the negotiation phase to decide how many resources to allocate to each user.
+A user's priority changes according to his usage of resources. The central
+manager uses this value during the negotiation phase to decide how many
+resources to allocate to each user.
 
 \begin{Options}
-    \OptItem{\Opt{-res}}{Also display the number of resources used by each user. Note that this value reflects the number of resources used at the end of the last negotiation cycle.}
-    \OptItem{\OptArg{-set}{username priority}}{Change priority of the specified user}
+
+\OptItem{\Opt{-res}}{Also display the number of resources used by each
+    user. Note that this value reflects the number of resources used at the
+    end of the last negotiation cycle.}
+
+\OptItem{\OptArg{-set}{username priority}}
+	{Change priority of the specified user}
 \end{Options}
 
 \end{ManPage}
