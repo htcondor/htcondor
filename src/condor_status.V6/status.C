@@ -5,6 +5,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "my_hostname.h"
+#include "get_full_hostname.h"
 
 // global variables
 AttrListPrintMask pm;

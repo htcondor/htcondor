@@ -8,6 +8,7 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "my_hostname.h"
+#include "get_full_hostname.h"
 #include "files.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
