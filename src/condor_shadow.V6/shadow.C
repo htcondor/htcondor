@@ -221,7 +221,6 @@ main(int argc, char *argv[], char *envp[])
 	char	*host, *cluster, *proc;
 	char	*my_cell, *my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
 	char	*use_ckpt_server;
-	char	*max_discarded_run_time;
 	char	*capability;
 	int		i;
 
@@ -391,6 +390,7 @@ main(int argc, char *argv[], char *envp[])
 		} else {
 			UseCkptServer = FALSE;
 		}
+		if (use_ckpt_server) free(use_ckpt_server);
 		tmp = param( "STARTER_CHOOSES_CKPT_SERVER" );
 		if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 			StarterChoosesCkptServer = TRUE;
@@ -400,9 +400,10 @@ main(int argc, char *argv[], char *envp[])
 		if (tmp) free(tmp);
 	}
 
-	max_discarded_run_time = param( "MAX_DISCARDED_RUN_TIME" );
-	if (max_discarded_run_time) {
-		MaxDiscardedRunTime = atoi(max_discarded_run_time);
+	tmp = param( "MAX_DISCARDED_RUN_TIME" );
+	if (tmp) {
+		MaxDiscardedRunTime = atoi(tmp);
+		free(tmp);
 	} else {
 		MaxDiscardedRunTime = 3600;
 	}
