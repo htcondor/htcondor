@@ -32,6 +32,7 @@
   global data location - referencing a value on the stack after the SP
   is moved would be an error.
 */
+
 static void (*SaveFunc)();
 static jmp_buf Env;
 
@@ -41,7 +42,11 @@ static jmp_buf Env;
 
 const int	TmpStackSize = sizeof(char)*131072/sizeof(double);
 
-static double	TmpStack[ TmpStackSize ];
+#ifdef COMPRESS_CKPT
+static double	*TmpStack;
+#else
+static double	TmpStack[TmpStackSize];
+#endif
 
 /*
 Suppose we use up all the stack space while in ExecuteOnTmpStk.
@@ -70,6 +75,17 @@ void ExecuteOnTmpStk( void (*func)() )
 	jmp_buf	env;
 	SaveFunc = func;
 
+	/*
+	condor_malloc gives us memory that is not saved across
+	checkpoint/restart -- the mechanism is always present,
+	but only properly initialized when compression is enabled.
+	*/
+
+	#ifdef COMPRESS_CKPT
+	TmpStack = (double *)condor_malloc(TmpStackSize*sizeof(double));
+	if(!TmpStack) EXCEPT("Unable to allocate temporary stack!");
+	#endif
+
 	*(GetOverrunPos()) = OverrunFlag;
 
 	if( SETJMP(env) == 0 ) {
@@ -87,6 +103,12 @@ void ExecuteOnTmpStk( void (*func)() )
 			// Second time through - call the function
 		SaveFunc();
 	}
+
+	// Will we ever get here?
+
+	#ifdef COMPRESS_CKPT
+	condor_free(TmpStack);
+	#endif
 
 	if( *(GetOverrunPos()) != OverrunFlag ) {
 		EXCEPT("Stack overrun in ExecuteOnTmpStack.");
