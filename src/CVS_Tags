@@ -1,3 +1,8 @@
+02/01/04 V6_6-merge-4
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   Some final 6.6.1 bug fixes and other things we need before we make
+   the V6_7-mirror-2-branch to send to CORE.
+
 01/16/04 V6_6-merge-3
    The state of the V6_6-branch for another merge into V6_7-branch.
    This gets some important build system changes and various 6.6.1 bug
