@@ -102,6 +102,8 @@ MAIN( int argc, char *argv[], char **envp )
 		init_image_with_file_name( argv[2] );
 		fprintf(stderr, "Checkpointing to file %s\n", argv[2]);
 		fflush(stderr);
+
+		
 #if 0
 		if (access( argv[2], R_OK ) == 0) {
 			restart();
@@ -125,6 +127,7 @@ MAIN( int argc, char *argv[], char **envp )
 		then we effect a restart from the given file name
 		*/
 	if( argc >= 3 && strcmp("-_condor_restart",argv[1]) == MATCH ) {
+
 		init_image_with_file_name( argv[2] );
 		restart();
 	}
@@ -140,6 +143,9 @@ MAIN( int argc, char *argv[], char **envp )
 		init_image_with_file_name( buf );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
+
+		/* a user pvm job should connect back to pvmd here */
+		initpvm();
 #if defined(HPUX9)
 		return(_start( argc, argv, envp ));
 #else
