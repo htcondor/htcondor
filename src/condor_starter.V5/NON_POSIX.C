@@ -48,6 +48,10 @@ typedef char *  caddr_t;
 #include "condor_sys.h"
 #include <signal.h>
 #include <sys/stat.h>
+#if defined(LINUX)
+#include <unistd.h>
+typedef long	rlim_t;
+#endif
 
 extern "C" {
 	int SetSyscalls( int );
@@ -132,7 +136,7 @@ physical_file_size( char *name )
 	       defined, and appears to be in 512 byte blocks. */
 	return buf.st_blocks / 2;
 
-#elif defined(HPUX9)
+#elif defined(HPUX9) || defined(LINUX)
 
 	/*  On this systems struct stat member st_blocks is
 	   defined, and appears to be in 1024 byte blocks. */
@@ -171,6 +175,10 @@ physical_file_size( char *name )
 #elif defined(HPUX9)
 #	undef _POSIX_SOURCE
 #	define _BSD
+#	include <sys/wait.h>
+#elif defined(LINUX)
+#	undef _POSIX_SOURCE
+#	define __USE_BSD
 #	include <sys/wait.h>
 #endif
 
