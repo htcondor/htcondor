@@ -906,23 +906,22 @@ When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
 attribute of the job's classad.
 The value of this attribute can be specified by
-the user at submit time by placing the \Arg{kill\_sig} command in the
-\Condor{submit} submit-description command file.  
+the user at submit time by placing the \Opt{kill\_sig} option in the
+Condor submit description file.  
 
-If a program wanted to do some special work each time
-it needed to vacate a machine, it may set up a
+If a program wanted to do some special work when required
+to vacate a machine, the program may set up a
 signal handler to use a trappable signal as an indication
 to clean up.
 When submitting this job, this clean up signal is specified to be used with
-\Arg{kill\_sig}.
-Note that whatever clean up work the job does had better be quick
---- if the job takes too long to go away, Condor
+\Opt{kill\_sig}.
+Note that the clean up work needs to be quick.
+If the job takes too long to go away, Condor
 follows up with a SIGKILL signal which immediately terminates the
 process.
 
-A job that is linked with the Condor libraries with the \Condor{compile}
-command
 \index{Condor commands!condor\_compile}
+A job that is linked using \Condor{compile}
 and is subsequently submitted into the standard universe, 
 will checkpoint and exit upon receipt of a SIGTSTP signal.
 Thus, SIGTSTP is
@@ -931,14 +930,14 @@ universe.
 The user's code may still checkpoint itself at any time
 by calling one of the following functions exported by the Condor libraries:
 \begin{description}
-\item[ckpt()] Performs a checkpoint and then returns.
-\item[ckpt\_and\_exit()] Checkpoints and exits; Condor will then
+\item[\func{ckpt()}] Performs a checkpoint and then returns.
+\item[\func{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
 restart the process again later, potentially on a different machine.
 \end{description}
 
 For jobs submitted into the vanilla universe, the default value for
 \AdAttr{KillSig} is SIGTERM,
-which is the usual method to nicely terminate a Unix program.
+the usual method to nicely terminate a Unix program.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
