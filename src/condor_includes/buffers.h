@@ -60,7 +60,7 @@ private:
 class ChainBuf {
 public:
 	ChainBuf() : _head(0), _tail(0), _curr(0),_tmp(0) {}
-	~ChainBuf() { if (_tmp) delete [] _tmp; }
+	~ChainBuf() { reset(); }
 
 
 	inline int consumed() { return !_tail || (_tail && _tail->consumed()); }
