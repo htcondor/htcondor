@@ -110,4 +110,4 @@ clean::
 	rm -rf Makefile */Makefile release_dir
 
 h: ALWAYS
-	cd h; imake -I../../config; make all
+	cd h; imake IMAKE_FLAGS; make all
