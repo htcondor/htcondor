@@ -46,8 +46,6 @@ extern struct rusage AccumRusage;
 
 extern int UsePipes;
 
-extern int free_fs_blocks();
-
 extern V2_PROC *Proc;
 
 /* XDR xdr_RSC, *xdr_syscall = &xdr_RSC; */
