@@ -2979,6 +2979,8 @@ int DaemonCore::HandleReq(int socki)
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SERVER_COMMAND_SOCK );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_PARENT_UNIQUE_ID );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SERVER_PID );
 					// it matters if the version is empty, so we must explicitly delete it
 					the_policy->Delete( ATTR_SEC_REMOTE_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_REMOTE_VERSION );
@@ -7146,6 +7148,14 @@ SecMan* DaemonCore :: getSecMan()
 
 void DaemonCore :: clearSession(pid_t pid)
 {
+	// this will clear any incoming sessions associated with the PID, even
+	// if it isn't a daemoncore child (like the stupid old shadow) and
+	// therefor has no command sock.
+	if(sec_man) {
+		sec_man->invalidateByParentAndPid(sec_man->my_unique_id(), pid);
+	}
+
+	// we also need to clear any outgoing sessions associated w/ this pid.
     PidEntry * pidentry = NULL;
 
     if ( pidTable->lookup(pid,pidentry) != -1 ) {

@@ -1648,6 +1648,25 @@ int main( int argc, char** argv )
 	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
 
+	// zmiller
+	// look in the env for ENV_PARENT_ID
+	const char* envName = EnvGetName ( ENV_PARENT_ID );
+#ifdef WIN32
+	char value[_POSIX_PATH_MAX];
+	value[0] = '\0';
+	GetEnvironmentVariable( envName, value, sizeof(value) );
+#else
+	char * value = getenv( envName );
+#endif
+	// send it to the SecMan object so it can include it in any
+	// classads it sends.  if this is NULL, it will not include
+	// the attribute.
+	daemonCore->sec_man->set_parent_unique_id(value);
+
+	// now re-set the identity so that any children we spawn will have it
+	// in their environment
+	daemonCore->SetEnv( envName, daemonCore->sec_man->my_unique_id() );
+
 
 		// Initialize the StringLists that contain the attributes we
 		// will allow people to set with condor_config_val from
