@@ -1,4 +1,4 @@
-Changes for version 0.9.5: (not yet released)
+Changes for version 0.9.5: 
 * Fixed a bug in printing parenthesized expressions with minimal
   parentheses. (It used to print garbage in some cases.)
 
@@ -45,12 +45,15 @@ underscore and be followed by alpanumeric characters or underscores.
      infinity          = real("INF");
      negative_infinity = real("-INF");
 
-* We now compile on gcc 3.2.x, in addition to other versions of gcc.
+* We now compile on gcc 3.2.x and 3.3.x, in addition to other versions
+  of gcc.
 
 * Various bug fixes, particularly in the XML output.
 
 * ClassAd::MakeClassAd is now static (it's a factory method) and now
   works. It didn't work before. 
+
+* Miscellaneous bug fixes.
 
 Changes for version 0.9.4: (release 21-Nov-2002)
 * Added user-defined functions
