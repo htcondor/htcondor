@@ -409,6 +409,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	ClassAd				*ad = NULL;
 	LogDestroyClassAd	*log;
 	PROC_ID				job_id;
+	int					c, p;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -437,6 +438,25 @@ int DestroyProc(int cluster_id, int proc_id)
 	(void)unlink( ckpt_file_name );
 	/* Also, try to get rid of it from the checkpoint server */
 	RemoveRemoteFile(active_owner, ckpt_file_name);
+
+	/* If this is the last job in the cluster, then remove the initial
+	   checkpoint file. */
+	bool lastjob = true;
+	JobQueue->table.startIterations();
+	while(JobQueue->table.iterate(ad) == 1 && lastjob) {
+		ad->LookupInteger(ATTR_CLUSTER_ID, c);
+		if (c == cluster_id) {
+			ad->LookupInteger(ATTR_PROC_ID, p);
+			if (p != proc_id) {
+				lastjob = false;
+			}
+		}
+	}
+	if (lastjob) {
+		ckpt_file_name =
+			gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
+		(void)unlink( ckpt_file_name );
+	}
 
 	return 0;
 }
@@ -1144,7 +1164,7 @@ void FindRunnableJob(int c, int& rp)
 	ClassAdList			joblist;
 	ClassAd				*ad;
 
-	sprintf(constraint, "%s = %d", ATTR_CLUSTER_ID, c);
+	sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
 	
 	if (GetJobList(constraint, joblist) < 0) {
 		rp = -1;
