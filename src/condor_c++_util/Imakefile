@@ -10,6 +10,10 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o
 
+#if WANT_KERBEROS
+KERBEROS_OBJ = condor_cred_kerberos.o
+#endif
+
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
 	directory.o my_hostname.o file_lock.o \
@@ -21,7 +25,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	daemon.o uids.o metric_units.o condor_ver_info.o HashTable.o
+	daemon.o uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
+        $(KERBEROS_OBJ)  condor_credential.o HashTable.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
