@@ -6,7 +6,7 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 STUBS = switches.o switches.special.o
 UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
-NAME_TAB = ../h/syscall_numbers.o
+NAME_TAB = syscall_numbers.o
 
 SRC = \
 	ToUpper.c \
@@ -22,7 +22,8 @@ SRC = \
 	switches.prologue \
 	switches.special.c \
 	syscall.tmpl \
-	syscall_connect.c
+	syscall_connect.c \
+	syscall_numbers.c
 
 XDR_OBJ = \
  	xdr_rusage.o \
@@ -102,3 +103,4 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_xdr_lib,$(XDR_OBJ))
 import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_ckpt,$(CKPT_OBJ))
+import(../h,syscall_numbers.c)
