@@ -548,7 +548,8 @@ class ClassAd : public ExprTree
 			@return false if the ClassAd could not be successfully updated.
 		*/
 		void Update( const ClassAd& ad );	
-		bool Modify( ClassAd& ad );
+
+		void Modify( ClassAd& ad );
 
 		bool CopyFrom( ClassAd &ad );
 

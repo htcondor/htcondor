@@ -592,7 +592,7 @@ ExprTree *ClassAd::
 DeepRemove( const char *scopeExpr, const char *name )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
-	return( ad ? ad->Remove( name ) : NULL );
+	return( ad ? ad->Remove( name ) : (ExprTree*)NULL );
 }
 
 
@@ -600,7 +600,7 @@ ExprTree *ClassAd::
 DeepRemove( ExprTree *scopeExpr, const char *name )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
-	return( ad ? ad->Remove( name ) : NULL );
+	return( ad ? ad->Remove( name ) : (ExprTree*)NULL );
 }
 
 
@@ -700,7 +700,7 @@ Update( const ClassAd& ad )
 }
 
 
-bool ClassAd::
+void ClassAd::
 Modify( ClassAd& mod )
 {
 	ClassAd		*ctx;
@@ -710,7 +710,7 @@ Modify( ClassAd& mod )
 		// Step 0:  Determine Context
 	if( ( expr = mod.Lookup( ATTR_CONTEXT ) ) != NULL ) {
 		if( ( ctx = _GetDeepScope( expr ) ) == NULL ) {
-			return( false );
+			return;
 		}
 	} else {
 		ctx = this;
@@ -719,21 +719,18 @@ Modify( ClassAd& mod )
 		// Step 1:  Process Replace attribute
 	if( ( expr = mod.Lookup( ATTR_REPLACE ) ) != NULL ) {
 		ClassAd	*ad;
-		if( !expr->Evaluate( val ) || !val.IsClassAdValue( ad ) ) {
-			return( false );
+		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
+			ctx->Clear( );
+			ctx->Update( *ad );
 		}
-		ctx->Clear( );
-		ctx->Update( *ad );
-		return( true );
 	}
 
 		// Step 2:  Process Updates attribute
 	if( ( expr = mod.Lookup( ATTR_UPDATES ) ) != NULL ) {
 		ClassAd *ad;
-		if( !expr->Evaluate( val ) || !val.IsClassAdValue( ad ) ) {
-			return( false );
+		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
+			ctx->Update( *ad );
 		}
-		ctx->Update( *ad );
 	}
 
 		// Step 3:  Process Deletes attribute
@@ -742,18 +739,27 @@ Modify( ClassAd& mod )
 		ExprListIterator	itor;
 		char				*attrName;
 
+			// make a first pass to check that it is a list of strings ...
 		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
-			return( false );
+			return;
 		}
 		itor.Initialize( list );
 		while( ( expr = itor.NextExpr( ) ) ) {
 			if( !expr->Evaluate( val ) || !val.IsStringValue( attrName ) ) {
-				return( false );
+				return;
 			}
-			ctx->Delete( attrName );
+		}
+
+			// now go through and delete all the named attributes ...
+		itor.Initialize( list );
+		while( ( expr = itor.NextExpr( ) ) ) {
+			if( expr->Evaluate( val ) && val.IsStringValue( attrName ) ) {
+				ctx->Delete( attrName );
+			}
 		}
 	}
 
+	/*
 		// Step 4:  Process DeepModifications attribute
 	if( ( expr = mod.Lookup( ATTR_DEEP_MODS ) ) != NULL ) {
 		ExprList			*list;
@@ -773,8 +779,7 @@ Modify( ClassAd& mod )
 		}
 	}
 
-
-	return( true );
+	*/
 }
 
 
