@@ -1,4 +1,8 @@
-/* XXX There shouldn't be any platform-specific info in this. - Frank */
+/************************************************************************** 
+** There shouldn't be any platform-specific info in this.  By now, all
+** the platform, version and OS specific files have been included.
+**************************************************************************/
+
 TILDE = Tilde
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
@@ -98,25 +102,38 @@ SYSCALL_LIB = syscall_lib
 OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
 
-#if IS_ALPHA_OSF1
-DEBUG_FLAG = -ggdb
-#else
-DEBUG_FLAG = -g
+#if !defined( DebugFlag )
+#define DebugFlag -g
 #endif
 
-#if IS_GLIBC
-#define GlibCFlag -DGLIBC
-#else
-#define GlibCFlag
+DEBUG_FLAG = DebugFlag
+
+#if !defined( YACC )
+#define YACC yacc
 #endif
 
-#if IS_I386_LINUX
-#define PlatformFlags -m486 GlibCFlag
-#elif (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
-#define PlatformFlags -DSolaris251
-#else
+#if !defined( PlatformFlags ) 
 #define PlatformFlags
 #endif
+
+#if !defined( WantsStatic ) 
+#define WantsStatic YES
+#endif
+
+#if !defined( ImakeArchFlag )
+#define ImakeArchFlag
+#endif
+
+#if !defined( ImakeOpsysFlag )
+#define ImakeOpsysFlag
+#endif
+
+#if !defined( ImakeOtherFlag )
+#define ImakeOtherFlag
+#endif
+
+#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag
+#define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
@@ -124,12 +141,3 @@ STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 
-#ifndef TypicalMemory
-#define TypicalMemory 12
-#endif
-
-#if IS_I386_LINUX
-#define YACC byacc
-#else
-#define YACC yacc
-#endif
