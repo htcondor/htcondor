@@ -290,7 +290,7 @@ int main_init (int argc, char **argv) {
 
         debug_println (DEBUG_VERBOSE, "Bootstrapping...");
         if (!G.dag->Bootstrap (recovery)) {
-            if (DEBUG_LEVEL(DEBUG_DEBUG_1)) G.dag->Print_TermQ();
+            G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error (1, DEBUG_QUIET, "ERROR while bootstrapping");
         }
     }
@@ -321,7 +321,7 @@ void main_timer () {
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
         if (G.dag->ProcessLogEvents() == false) {
-            if (DEBUG_LEVEL(DEBUG_DEBUG_1)) G.dag->Print_TermQ();
+			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_println (DEBUG_QUIET, "Aborting DAG..."
                            "removing running jobs");
             G.dag->RemoveRunningJobs();
@@ -339,7 +339,7 @@ void main_timer () {
     //
     if( G.dag->Done() ) {
         assert (G.dag->NumJobsSubmitted() == 0);
-        debug_println (DEBUG_NORMAL, "All jobs Completed!");
+        debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		G.CleanUp();
 		DC_Exit( 0 );
     }
