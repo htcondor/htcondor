@@ -700,7 +700,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
 
-	if(X509Proxy) {
+	if(useDefaultProxy == false) {
 		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
 				ATTR_X509_USER_PROXY, X509Proxy);
 	} else {
