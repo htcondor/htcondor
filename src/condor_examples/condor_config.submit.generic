@@ -184,12 +184,17 @@ NEGOTIATOR_HOST	= $(CONDOR_HOST)
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
 SHUTDOWN_GRACEFUL_TIMEOUT	= 1800
 
-##  ??
-#RESERVE_AFS_CACHE	= False
+##  How much disk space would you like reserved from Condor?  In
+##  places where Condor is computing the free disk space on various
+##  partitions, it subtracts the amount it really finds by this
+##  many megabytes.
+RESERVED_DISK		= 5
 
-##  ??
-##  Specified in megabytes
-#RESERVED_DISK		= 5
+##  If your machine is running AFS and the AFS cache lives on the same
+##  partition as the other Condor directories, and you want Condor to
+##  reserve the space that your AFS cache is configured to use, set
+##  this to true.
+RESERVE_AFS_CACHE	= False
 
 
 ######################################################################
@@ -276,7 +281,7 @@ MASTER_RECOVER_FACTOR           = 300
 ##--------------------------------------------------------------------
 ##  Where are the various shadow binaries installed?
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.carmi
+SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 
 ##  When the schedd starts up, it can place it's address (ip and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -319,16 +324,13 @@ QUEUE_SUPER_USERS	= root, condor
 
 
 ##--------------------------------------------------------------------
-##  condor_shadow.carmi
+##  condor_shadow.pvm
 ##--------------------------------------------------------------------
 ##  Where is the condor pvm daemon installed?
 PVMD			= $(SBIN)/condor_pvmd
 
-## ??
-PROC_TIMEOUT		= 180
-
-## ??
-HOST_TIMEOUT		= 180
+##  Where is the condor pvm group server daemon installed?
+PVMGS			= $(SBIN)/condor_pvmgs
 
 
 ##--------------------------------------------------------------------
