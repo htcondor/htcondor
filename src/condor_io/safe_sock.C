@@ -33,8 +33,6 @@
 #include "condor_debug.h"
 #include "internet.h"
 
-extern char *mySubSystem;
-
 SafeSock::SafeSock(					/* bind on port		*/
 	int		port
 	)
@@ -297,7 +295,7 @@ int SafeSock::rcv_packet(
 						(struct sockaddr *)&_who,&fromlen)) < 0) {
 		return FALSE;
 	}
-	dprintf( D_NETWORK, "%s RECV %s ", mySubSystem, sock_to_string(_sock) );
+	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	if (!rcv_msg.buf.put_max(tmp, len)) {
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
@@ -324,7 +322,7 @@ int SafeSock::snd_packet(
 			   sizeof(struct sockaddr_in)) < 0) {
 		return FALSE;
 	}
-	dprintf( D_NETWORK, "%s SEND %s ", mySubSystem, sock_to_string(_sock) );
+	dprintf( D_NETWORK, "SEND %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	snd_msg.buf.reset();
 

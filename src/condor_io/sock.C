@@ -34,8 +34,6 @@
 #include "internet.h"
 #include "condor_debug.h"
 
-extern char *mySubSystem;
-
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
@@ -439,8 +437,7 @@ int Sock::close()
 	if (_state == sock_virgin) return FALSE;
 
 	if (type() == Stream::reli_sock) {
-		dprintf( D_NETWORK, "%s CLOSE %s\n", mySubSystem,
-				 sock_to_string(_sock) );
+		dprintf( D_NETWORK, "CLOSE %s\n", sock_to_string(_sock) );
 	}
 
 	if (::closesocket(_sock) < 0) return FALSE;

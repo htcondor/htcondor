@@ -36,7 +36,6 @@
 #include "condor_rw.h"
 
 static char _FileName_[] = __FILE__;
-extern char *mySubSystem;
 
 /**************************************************************/
 
@@ -153,7 +152,7 @@ ReliSock::listen()
 	if (_state != sock_bound) return FALSE;
 	if (::listen(_sock, 5) < 0) return FALSE;
 
-	dprintf( D_NETWORK, "%s LISTEN %s\n", mySubSystem, sock_to_string(_sock) );
+	dprintf( D_NETWORK, "LISTEN %s\n", sock_to_string(_sock) );
 
 	_state = sock_special;
 	_special_state = relisock_listen;
@@ -216,7 +215,7 @@ ReliSock::accept( ReliSock	&c )
 		c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 	}
 
-	dprintf( D_NETWORK, "%s ACCEPT %s ", mySubSystem, sock_to_string(_sock) );
+	dprintf( D_NETWORK, "ACCEPT %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(c.endpoint()) );
 	
 	return TRUE;
