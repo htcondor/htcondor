@@ -142,8 +142,12 @@ typedef struct {        /* record sent by startd to shadow */
 #define REJECTED 0
 #endif
 
-#define OK		TRUE
-#define NOT_OK	FALSE
+#ifndef NOT_OK 
+#define NOT_OK	0
+#endif
+#ifndef OK
+#define OK		1
+#endif
 
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
