@@ -320,49 +320,68 @@ int Sock::do_connect(
 		memcpy(&sin.sin_addr, hostp->h_addr, hostp->h_length);
 	}
 
-	if (::connect(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
+	time_t timeout_time = time(NULL) + CONNECT_TIMEOUT;
+	bool connect_failed;
+
+	do {
+		connect_failed = false;
+
+		if (::connect(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0) {
+			_state = sock_connect;
+			return TRUE;
+		}
+
 #if defined(WIN32)
 		if (WSAGetLastError() != WSAEALREADY) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 				host, port, WSAGetLastError() );
-			return FALSE;
+			connect_failed = true;
 		}
 #else
 		if (errno != EINPROGRESS) {
 			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
 				host, port, errno );
+			connect_failed = true;
 		}
 #endif
-	}
 
-	if (_timeout > 0) {
-		struct timeval	timer;
-		fd_set			writefds;
-		int				nfds=0, nfound;
-		timer.tv_sec = _timeout;
-		timer.tv_usec = 0;
+		if (_timeout > 0 && !connect_failed) {
+			struct timeval	timer;
+			fd_set			writefds;
+			int				nfds=0, nfound;
+			timer.tv_sec = _timeout;
+			timer.tv_usec = 0;
 #if !defined(WIN32) // nfds is ignored on WIN32
-		nfds = _sock + 1;
+			nfds = _sock + 1;
 #endif
-		FD_ZERO( &writefds );
-		FD_SET( _sock, &writefds );
+			FD_ZERO( &writefds );
+			FD_SET( _sock, &writefds );
 
-		nfound = select( nfds, 0, &writefds, 0, &timer );
+			nfound = ::select( nfds, 0, &writefds, 0, &timer );
 
-		switch(nfound) {
-		case 0:
-			return FALSE;
-			break;
-		case 1:
-			break;
-		default:
-			dprintf( D_ALWAYS, "select returns %d, connect failed\n",
-				nfound );
-			return FALSE;
-			break;
+			switch(nfound) {
+			case 1:
+				if (test_connection()) {
+					_state = sock_connect;
+					return TRUE;
+				}
+				break;
+			default:
+				dprintf( D_ALWAYS, "select returns %d, connect failed\n",
+					nfound );
+				break;
+			}
 		}
-	}
 
+	} while (time(NULL) < timeout_time);
+
+	dprintf( D_ALWAYS, "Connect failed for %d seconds; returning FALSE\n",
+			 CONNECT_TIMEOUT );
+	return FALSE;
+}
+
+bool Sock::test_connection()
+{
 	// test the connection -- on OSF1, select returns 1 even if
 	// the connect fails!
 
@@ -371,11 +390,11 @@ int Sock::do_connect(
 	test_addr.sin_family = AF_INET;
 	int nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-		return FALSE;
+		dprintf( D_ALWAYS, 
+				 "getpeername failed so connect must have failed\n" );
+		return false;
 	}
-
-	_state = sock_connect;
-	return TRUE;
+	return true;
 }
 
 

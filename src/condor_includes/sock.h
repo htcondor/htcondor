@@ -32,6 +32,9 @@
 
 #include "stream.h"
 
+// retry failed connects for CONNECT_TIMEOUT seconds
+#define CONNECT_TIMEOUT 10
+
 #if !defined(WIN32)
 typedef int SOCKET;
 #define INVALID_SOCKET -1
@@ -116,6 +119,8 @@ protected:
 	// On unix, sockets are always inheritable
 	inline int set_inheritable( int ) { return TRUE; }
 #endif
+
+	bool test_connection();
 
 	/*
 	**	Data structures
