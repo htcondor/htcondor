@@ -8,25 +8,22 @@ PATH & CONDOR_CONFIG will most likely need to be set.
 
 Default: pool
 options: kill
-period: 1h
+period: 10m
 prefix: pool_
 
 
-# It's parameters
-parameter: NAME
-Specify the logical name of the pool to monitor
-
-parmeter: CONDOR
+parameter: CONDOR
+flags: REQUIRED
 Speicifies the home directory of the Condor installation on the system
 
-parameter: ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts:CONDOR_CONFIG=$(CONDOR)/etc/condor_config
+parameter: ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts;CONDOR_CONFIG=$(CONDOR)/etc/condor_config
 Sets the PATH & CONDOR_CONFIG used by the condor 
 
 parameter: EXECUTABLE = condor_pool
 EXECUTABLE = /path/to/condor_pool
 Specifies the name of the 'condor_pool' program
 
-parmeter: DIR
+parameter: DIR
 Speicifies the directory where the condor "pool" files are stored.
 
 parameter: ABSENT = true
