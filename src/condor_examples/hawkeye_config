@@ -611,7 +611,7 @@ NUM_CPUS = 1
 ##    MODULE vmstat:vmstat_:vmstat:0:continuous
 ##+	Monitors the status of the Virtual Memory (VM) subsystem
 ##+	You may want set the vmstat parameters by hand
-##    MODULE condor_node:Condor_:codor_node:5m
+##    MODULE condor_node:Condor_:condor_node:5m
 ##+	Monitors the status of an individual Condor pool node
 ##+	You may want set the condor_node parameters by hand
 ##+	In particular, the hawkeye_node_env PATH will most likely need
