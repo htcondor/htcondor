@@ -1,17 +1,21 @@
 # CondorTest.pm - a Perl module for automated testing of Condor
 #
 # 19??-???-?? originally written by Tom Stanis (?)
-# 2000-Jun-02 Total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
-
+# 2000-Jun-02 total overhaul by pfc@cs.wisc.edu and wright@cs.wisc.edu
 
 package CondorTest;
 
 require 5.0;
 use Carp;
 use Condor;
+use FileHandle;
 
 BEGIN
 {
+    # disable command buffering so output is flushed immediately
+    STDOUT->autoflush();
+    STDERR->autoflush();
+
     $MAX_CHECKPOINTS = 2;
     $MAX_VACATES = 3;
 
@@ -227,13 +231,10 @@ sub RunTest
     }
 
     # if evicted, call condor_resched so job runs again quickly
-    # (we're passing a sub to call it instead of registering it
-    # directly so it doesn't get passed the %info hash)
-    Condor::RegisterEvicted( sub { Condor::Reschedule } );
+    Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
     
     # monitor the cluster and return its exit status
     $retval = Condor::Monitor();
-    # $retval = Condor::Wait();
 
     die "$handle: FAILURE (job never checkpointed)\n"
 	if $wants_checkpoint && $checkpoints < 1;
@@ -268,7 +269,7 @@ sub CompareText
 	$expectline = shift @$aref;
 	if( ! defined $expectline )
 	{
-	    die "FAILURE: $file contains more text than expected\n";
+	    die "$file contains more text than expected\n";
 	}
 	chomp $expectline;
 
@@ -278,21 +279,22 @@ sub CompareText
 	next if $expectline eq $line;
 
 	# otherwise barf
-	warn "FAILURE: $file line $linenum doesn't match expected output:\n" .
-	    "actual: $line\nexpect: $expectline\n";
+	warn "$file line $linenum doesn't match expected output:\n";
+	warn "actual: $line\n";
+	warn "expect: $expectline\n";
 	return 0;
     }
 
     # barf if we're still expecting text but the file has ended
     ($expectline = shift @$aref ) && 
-        die "FAILURE: $file incomplete, expecting:\n$expectline\n";
+        die "$file incomplete, expecting:\n$expectline\n";
 
     # barf if there are skiplines we haven't hit yet
     foreach $num ( @skiplines )
     {
 	if( $num > $linenum )
 	{
-	    warn "FAILURE: skipline $num > # of lines in $file ($linenum)\n";
+	    warn "skipline $num > # of lines in $file ($linenum)\n";
 	    return 0;
 	}
 	croak "invalid skipline argument ($num)" if $num < 1;
