@@ -40,8 +40,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
-	access.t.o
+	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o
+
 
 CEDAR_LIBS = ../condor_io/libcondor.a
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
