@@ -680,7 +680,16 @@ class DaemonCore : public Service
     int Was_Not_Responding(pid_t pid);
 
 	static const char *GetExceptionString(int signal);
-    
+
+		/** Register the Priv state this Daemon wants to be in, every time
+		    DaemonCore is returned to the Handler DaemonCore will check to see
+			that this is the current priv state.
+			@param priv_state The new priv state you want to be in. DaemonCore
+			initializes this to be CONDOR_PRIV.
+			@return The priv state you were in before.
+		*/
+	priv_state Register_Priv_State( priv_state priv );
+	
   private:      
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);
@@ -888,6 +897,8 @@ class DaemonCore : public Service
 #else
     static char **ParseEnvArgsString(char *env, bool env);
 #endif
+
+	priv_state Default_Priv_State;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

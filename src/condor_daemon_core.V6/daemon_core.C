@@ -147,6 +147,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
+	
+	Default_Priv_State = PRIV_CONDOR;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -1241,10 +1243,10 @@ DaemonCore::CheckPrivState( void )
 {
 		// We should always be Condor, so set to it here.  If we were
 		// already in Condor priv, this is just a no-op.
-	priv_state old_priv = set_condor_priv();
+	priv_state old_priv = set_priv( Default_Priv_State );
 
 		// See if our old state was something else.
-	if( old_priv != PRIV_CONDOR ) {
+	if( old_priv != Default_Priv_State ) {
 		dprintf( D_ALWAYS, 
 				 "DaemonCore ERROR: Handler returned with priv state %d\n", 
 				 old_priv );
@@ -4186,3 +4188,11 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 	return status;
 }
 
+
+priv_state
+DaemonCore::Register_Priv_State( priv_state priv )
+{
+	priv_state old_priv = Default_Priv_State;
+	Default_Priv_State = priv;
+	return old_priv;
+}
