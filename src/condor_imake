@@ -55,7 +55,7 @@ elif [ $os = "IRIX" ] ; then
 
 fi
 
-GssAuthentication=""
+GssAuth=""
 if [ -f /p/condor/workspaces/globus/lib/libglobus_gss.a ] ; then
 	GssAuth="-DGSS_AUTHENTICATION"
 fi
