@@ -86,6 +86,7 @@ main_config( bool is_full )
 	return 0;
 }
 
+// this is called by DC when the schedd is shutdown fast
 int
 main_shutdown_fast()
 {
@@ -93,7 +94,15 @@ main_shutdown_fast()
     return FALSE;
 }
 
+// this can be called by other functions, or by DC when the schedd is
+// shutdown gracefully
 int main_shutdown_graceful() {
+    G.CleanUp();
+	DC_Exit( 1 );
+    return FALSE;
+}
+
+int main_shutdown_rescue() {
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( G.dag ) {
 		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
@@ -104,19 +113,21 @@ int main_shutdown_graceful() {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		if( G.dag->NumJobsSubmitted() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing running jobs...\n" );
+			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
 			G.dag->RemoveRunningJobs();
 		}
 	}
 	unlink( lockFileName ); 
-    G.CleanUp();
-	DC_Exit( 1 );
-    return FALSE;
+	main_shutdown_graceful();
+	return false;
 }
 
+// this gets called by DC when DAGMan receives a SIGUSR1 -- which,
+// assuming the DAGMan submit file was properly written, is the signal
+// the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_NORMAL, "Received SIGUSR1\n" );
-	main_shutdown_graceful();
+	main_shutdown_rescue();
 	return false;
 }
 
@@ -150,7 +161,7 @@ int main_init (int argc, char ** const argv) {
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	int wait_for_debug = 0;
-		
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
@@ -532,7 +543,7 @@ void condor_event_timer () {
     if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
       if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_graceful();
+			main_shutdown_rescue();
 			return;
         }
     }
@@ -590,7 +601,7 @@ void condor_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		main_shutdown_graceful();
+		main_shutdown_rescue();
 		return;
     }
 }
@@ -621,7 +632,7 @@ void dap_event_timer () {
 
       if (G.dag->ProcessLogEvents(DAPLOG) == false) {
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_graceful();
+			main_shutdown_rescue();
 			return;
         }
     }
@@ -675,7 +686,7 @@ void dap_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		main_shutdown_graceful();
+		main_shutdown_rescue();
 		return;
     }
 }
