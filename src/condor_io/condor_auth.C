@@ -163,15 +163,24 @@ const char * Condor_Auth_Base :: getRemoteDomain() const
 const char * Condor_Auth_Base :: getRemoteFQU()
 {
     if (fqu_ == NULL) {
-        if (remoteUser_ && remoteDomain_) {
-            int userlen = strlen(remoteUser_);
-            int domlen  = strlen(remoteDomain_);
-            int len = userlen + domlen;
+        int len = 0, userlen = 0, domlen = 0;
+        if (remoteUser_) {
+            userlen = strlen(remoteUser_);
+            len += userlen;
+        }
+        if (remoteDomain_) {
+            domlen  = strlen(remoteDomain_);
+            len += domlen;
+        }
+        if ((len > 0) && remoteUser_) {
             fqu_ = (char *) malloc(len + 2);
+            memset(fqu_, 0, len + 2);
             memcpy(fqu_, remoteUser_, userlen);
-            fqu_[userlen] = '@';
-            memcpy(fqu_+userlen+1, remoteDomain_, domlen);
-            fqu_[len+1] = 0;
+            if (remoteDomain_) {
+                fqu_[userlen] = '@';
+                memcpy(fqu_+userlen+1, remoteDomain_, domlen);
+                fqu_[len+1] = 0;
+            }
         }
     }
 
