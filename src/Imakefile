@@ -15,6 +15,8 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
+#define MpiFiles sbin/condor_shadow.v61 sbin/condor_starter.v61 sbin/rsh
+
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
 
@@ -55,7 +57,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		globus
+		globus starter.V6.1 shadow.V6.1
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
@@ -74,7 +76,7 @@
 #endif
 
 #define Directories \
-	condor_shadow.V6.1 condor_starter.V6.1 html condor_release \
+	html condor_release \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	release_dir/include pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
@@ -134,10 +136,12 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar 
+contrib_tarball( mpi.tar, MpiFiles )
+
+all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
 
 afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar
+	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
 
 public:: all_tarballs
 
@@ -234,15 +238,14 @@ object_target(daemon_core.V6)
 object_target(prio)
 object_target(scripts)
 object_target(globus)
+object_target(starter.V6.1)
+object_target(shadow.V6.1)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
 object_dir_target(condor_release)
-object_dir_target(condor_starter.V6.1)
-object_dir_target(condor_shadow.V6.1)
 object_dir_target(html)
 object_dir_target(condor_bypass)
-
 
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
