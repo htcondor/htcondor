@@ -482,12 +482,23 @@ int main_init (int argc, char ** const argv) {
 
 void
 print_status() {
-	debug_printf( DEBUG_VERBOSE, "%d/%d done, %d failed, %d submitted, "
-				  "%d ready, %d pre, %d post\n", G.dag->NumJobsDone(),
-				  G.dag->NumJobs(), G.dag->NumJobsFailed(),
-				  G.dag->NumJobsSubmitted(), G.dag->NumJobsReady(),
-				  G.dag->NumPreScriptsRunning(),
-				  G.dag->NumPostScriptsRunning() );
+	int total = G.dag->NumJobs();
+	int done = G.dag->NumJobsDone();
+	int pre = G.dag->NumPreScriptsRunning();
+	int submitted = G.dag->NumJobsSubmitted();
+	int post = G.dag->NumPostScriptsRunning();
+	int ready =  G.dag->NumJobsReady();
+	int failed = G.dag->NumJobsFailed();
+	int unready = total - (done + pre + submitted + post + ready + failed );
+
+	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
+
+	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed\n" );
+
+	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===\n" );
+
+	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
+				  done, pre, submitted, post, ready, unready, failed );
 }
 
 void condor_event_timer () {
