@@ -581,7 +581,7 @@ int CondorFileTable::pipe(int fds[])
 	int real_fds[2];
 
 	int scm = SetSyscalls( SYS_LOCAL|SYS_UNMAPPED );
-	int result = pipe(real_fds);
+	int result = ::pipe(real_fds);
 	SetSyscalls(scm);
 
 	if(result<0) return -1;
@@ -990,7 +990,7 @@ int CondorFileTable::fcntl( int fd, int cmd, int arg )
 int CondorFileTable::fsync( int fd )
 {
 	if( resume(fd)<0 ) return -1;
-	pointers[fd]->file->fsync();
+	return pointers[fd]->file->fsync();
 }
 
 /*
