@@ -29,9 +29,10 @@ BEGIN_C_DECLS
 
 #define NULL_JOB_CONTACT	"X"
 
+/* Keep old GRAM_V entries so we can detect old classads with them */
 #define GRAM_V_UNKNOWN		0
-#define GRAM_V_1_0			1
-#define GRAM_V_1_5			2
+#define GRAM_V_1_0			1 /* No longer supported */
+#define GRAM_V_1_5			2 /* No longer supported */
 #define GRAM_V_1_6			3
 
 // Keep these in synch with the values defined in the Globus header files.
