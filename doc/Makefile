@@ -5,8 +5,7 @@ TARGETDIR = $(MANDIR).new
 all:  ref.dvi
 #all:  man.ps
 
-ref.pdf:
-	rm -f timesfont.tex
+ref.pdf: clean
 	echo "\usepackage{times}" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
@@ -14,7 +13,6 @@ ref.pdf:
 	ln -s regularfont.tex fontsize.tex
 	ln -s symbol-postscript.tex symbol.tex
 	ln -s figuresizing-latex.tex figuresizing.tex
-	make clean
 	make figures
 	latex ref.tex
 	latex ref.tex -interaction=batchmode
@@ -33,8 +31,7 @@ ref.pdf:
 release-pdf: ref.pdf $(TARGETDIR)
 	cp ref.pdf $(TARGETDIR)/condor-$(SUBVER)-Manual.pdf
 
-ref.dvi: 
-	rm -f timesfont.tex
+ref.dvi: clean
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
@@ -42,7 +39,6 @@ ref.dvi:
 	ln -s smallfont.tex fontsize.tex
 	ln -s symbol-postscript.tex symbol.tex
 	ln -s figuresizing-latex.tex figuresizing.tex
-	make clean
 	make figures
 	latex ref.tex 
 	latex ref.tex -interaction=batchmode
@@ -63,8 +59,7 @@ release-ps: ref.ps $(TARGETDIR)
 	gzip $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
 	mv $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
 
-ref.html: $(TARGETDIR)
-	rm -f timesfont.tex
+ref.html: clean $(TARGETDIR)
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
@@ -72,7 +67,6 @@ ref.html: $(TARGETDIR)
 	ln -s regularfont.tex fontsize.tex
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
-	make clean
 	make figures
 	latex ref.tex
 	latex ref.tex -interaction=batchmode
@@ -98,8 +92,7 @@ ref.html: $(TARGETDIR)
 	rmdir ref.new
 	touch ref.html
 
-local.html:
-	rm -f timesfont.tex
+local.html: clean
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
 	rm -f symbol.tex
@@ -107,7 +100,6 @@ local.html:
 	ln -s regularfont.tex fontsize.tex
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
-	make clean
 	make figures
 	latex ref.tex
 	latex ref.tex -interaction=batchmode
