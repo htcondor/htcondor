@@ -18,16 +18,16 @@ containing the AFS cell name.
 one of the following: 
 	\begin{description}
 	\item[``INTEL''] : Intel CPU (Pentium, Pentium II, etc).
-	\item[``ALPHA''] : Digital ALPHA CPU
+	\item[``ALPHA''] : Digital Alpha CPU
 	\item[``SGI''] : Silicon Graphics MIPS CPU
-	\item[``SUN4u''] : Sun ULTRASPARC CPU
-	\item[``SUN4x''] : A Sun SPARC CPU other than an ULTRASPARC, i.e.
-sun4m or sun4c CPU found in older SPARC workstations such as the Sparc\~10, 
-Sparc\~20, IPC, IPX, etc.
+	\item[``SUN4u''] : Sun UltraSparc CPU
+	\item[``SUN4x''] : A Sun Sparc CPU other than an UltraSparc, i.e.
+sun4m or sun4c CPU found in older Sparc workstations such as the Sparc~10, 
+Sparc~20, IPC, IPX, etc.
 	\item[``HPPA1''] :  Hewlett Packard PA-RISC 1.x CPU (i.e. PA-RISC    
-                      7000 series CPU) based-workstation
+                      7000 series CPU) based workstation
 	\item[``HPPA2''] :  Hewlett Packard PA-RISC 2.x CPU (i.e. PA-RISC    
-                      8000 series CPU) based-workstation
+                      8000 series CPU) based workstation
 	\end{description}
 %
 \item[ClockDay] : The day of the week, where 0 = Sunday, 1 = Monday, \Dots, 6 = Saturday. 
@@ -47,11 +47,11 @@ CPUs, etc.
 for running the Condor job which it is currently hosting.  If not
 currently hosting a Condor job, CurrentRank is -1.0.
 %
-\item[Disk] : The amount of disk space on this machine available for the
-job in kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this is
-amount of disk space available in the directory specified in the Condor 
-configuration files by the macro \Macro{EXECUTE}, minus any space reserved
-with the macro \Macro{RESERVED\_DISK}.
+\item[Disk] : The amount of disk space on this machine available for
+the job in kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
+is the amount of disk space available in the directory specified in
+the Condor configuration files by the \Macro{EXECUTE} macro, minus any
+space reserved with the \Macro{RESERVED\_DISK} macro.
 %
 \item[EnteredCurrentActivity] : Time at which the machine entered the 
 current Activity (see \AdAttr{Activity} entry above).  Measured in the
@@ -73,8 +73,13 @@ less than \AdAttr{ConsoleIdle}.
 linpack benchmark.
 %
 \item[LastHeardForm] : Time when the Condor Central Manager last
-received a status update from this machine.  Expressed as seconds since
-the epoch.
+received a status update from this machine.  
+Expressed as seconds since the epoch (integer value).
+Note: This attribute is only inserted by the Central Manager once it
+receives the ClassAd.
+It is not present in the startd's copy of the ClassAd.
+Therefore, you couldn't use this attribute in defining startd
+expressions (which you wouldn't want to, anyway).
 %
 \item[LoadAvg] : A floating point number with the machine's current load
 average.
@@ -89,14 +94,21 @@ benchmark.
 \item[MyType] : The ClassAd type; always set to the literal string ``Machine''.
 %
 \item[Name] : The name of this resource; typically the same value as
-the \AdAttr{Machine} attribute, but could be customized by the site administrator.
+the \AdAttr{Machine} attribute, but could be customized by the site
+administrator.
+On SMP machines, the startd will divide the CPUs up into seperate
+virtual machines, each with with a unique name.
+These names will be of the form ``vm\#@full.hostname'', for example,
+``vm1@vulture.cs.wisc.edu'', which signifies virtual machine 1 from
+vulture.cs.wisc.edu. 
 %
 \item[OpSys] : String describing the operating system running on this
 machine.  For Condor \VersionNotice\ typically one of the following:
 	\begin{description}
 	\item ``HPUX10'' (for HPUX 10.20)
 	\item ``IRIX6''  (for IRIX 6.2, 6.3, or 6.4)
-	\item ``LINUX''  (for LINUX 2.x kernel systems)
+	\item ``LINUX''  (for LINUX 2.0.x kernel systems)
+	\item ``LINUX-GLIBC''  (for LINUX systems, using GNU's libc)
 	\item ``OSF1''	 (for Digital Unix 4.x)
 	\item ``SOLARIS251''
 	\item ``SOLARIS26''
