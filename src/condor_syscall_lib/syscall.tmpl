@@ -187,12 +187,12 @@
 	off_t lseek( map(int fd), off_t offset, int whence );
 
 	#if HAS_64BIT_SYSCALLS
-		#if defined(Solaris26)
+		#if defined(Solaris26) || defined(Solaris27)
 			offset_t llseek( map(int fd), offset_t offset, int whence );
 			off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract;
 		#else
 			off64_t	lseek64( map(int fd), off64_t offset, int whence );
-		#endif /* Solaris 2.6 */
+		#endif /* Solaris 2.6 or 2.7 */
 	#endif /* HAS_64BIT_SYSCALLS */
 
 
@@ -777,7 +777,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		ALLOC_PATH( path2 );
 	}
 
-#if defined(LINUX) || defined(Solaris26)
+#if defined(LINUX) || (defined(Solaris26) || defined(Solaris27))
 	int readlink( const char *path, char *buf, size_t buf_size ) {
 #elif defined(IRIX) || defined(OSF1)
 	int readlink( const char *path, char *buf, int buf_size ) {
@@ -908,6 +908,8 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #	if defined( LINUX )
 	int utimes( char *path, struct timeval *times ) {
+#	elif defined( Solaris27 )
+	int utimes( const char *path, const struct timeval *times ) {
 #	else
 	int utimes( const char *path, struct timeval *times ) {
 #	endif
@@ -1227,38 +1229,77 @@ not_supported {
 
 	/* Calls relating to sockets - implies multiple communicating processes */
 not_supported {
-	int recvmsg( int socket, struct msghdr *message, int flags );
-#if defined(Solaris26)
+	int recvmsg( int socket, struct msghdr *message, int flags ); 
+#if defined(Solaris26) || defined(Solaris27)
 	int sendmsg( int socket, const struct msghdr *msg, int flags);
 #else
 	int sendmsg( int socket, struct msghdr *message, int flags );
 #endif
+
+#if defined(Solaris27) 
+    /* 
+        There are more differences than just SOCKLEN_PTR could solve
+	for Solaris 2.7, so we actually need seperate cases
+	here. -Derek Wright <wright@cs.wisc.edu> 11/15/99
+    */
+	int recvfrom( int socket, void *buffer, size_t length, int flags,
+		      struct sockaddr *address, Psocklen_t addr_len );
+#else
 	int recvfrom( int socket, SYSCALL_PTR *buffer, int length, int flags,
-				  struct sockaddr *address, int *addr_len );
-	int accept( int socket, struct sockaddr *address, int *addr_len );
-	int getpeername( int socket, struct sockaddr *address, int *addr_len );
-	int getsockname( int socket, struct sockaddr *address, int *addr_len );
-#ifdef Solaris26
+		      struct sockaddr *address, int* addr_len );
+#endif
+#if 0
+		out code_bytes_bool( buffer, length );
+		alloc( buffer, length );
+		out code_bytes_bool( address, addr_len );
+		alloc( address, addr_len );
+		out code( addr_len );
+		alloc( addr_len, INT_SIZE );
+	}
+#endif /* 0 */
+
+	int accept( int socket, struct sockaddr *address, 
+		    SOCKLEN_PTR addr_len );
+	int getpeername( int socket, struct sockaddr *address,
+			 SOCKLEN_PTR addr_len );
+	int getsockname( int socket, struct sockaddr *address,
+			 SOCKLEN_PTR addr_len );
+
+#if defined(Solaris26)
 	int connect( int sock, struct sockaddr *address, int namelen);
 #else
-	int connect( int sock, NEED_CONST struct sockaddr *address, int 
-				addr_len );
+	int connect( int sock, NEED_CONST struct sockaddr *address, 
+		     SOCKLEN_T addr_len );
 #endif
 
 #if !defined(SWITCH) /* moved into separate .c file to avoid a name conflict */
 	int send( int socket, char *msg, int length, int flags );
 #endif
+
+#if defined(Solaris27)
+	int recv( int socket, void *msg, size_t length, int flags );
+#else
 	int recv( int socket, char *msg, int length, int flags );
-	int bind( int socket, NEED_CONST struct sockaddr *address, int addr_len );
+#endif
+
+	int bind( int socket, NEED_CONST struct sockaddr *address, 
+		  SOCKLEN_T addr_len );
+
 	int listen( int socket, int backlog );
+#if defined(Solaris27)
+	int sendto( int sock, const void *msg, size_t msg_len, int flags,
+		    const struct sockaddr *dest, socklen_t dest_len );
+#else
 	int sendto( int sock, NEED_CONST SYSCALL_PTR *msg, int msg_len, int flags,
-				NEED_CONST struct sockaddr *dest, int dest_len );
+		    NEED_CONST struct sockaddr *dest, int dest_len );
+#endif
+
 	int shutdown( int socket, int how );
 	int socketpair( int domain, int type, int protocol, int sock_vector[] );
 	int getsockopt( int sock, int level, int opt_name, SYSCALL_PTR *opt_val,
-					int *opt_len );
+					SOCKLEN_PTR opt_len );
 	int setsockopt( int sock, int level, int opt_name, 
-				   NEED_CONST SYSCALL_PTR *opt_val, int opt_len );
+			NEED_CONST SYSCALL_PTR *opt_val, SOCKLEN_T opt_len );
 	int nfssvc( int sock, int mask, int match );
 }
 
