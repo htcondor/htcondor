@@ -2,28 +2,23 @@
 {Query or set a given Condor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
 \oArg{options}
-\Opt{variable}
-\oOpt{variable \Dots}
+\Arg{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-set}{string}
-\oOpt{string \Dots}
+\OptArg{-set}{string\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-rset}{string}
-\oOpt{string \Dots}
+\OptArg{-rset}{string\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-unset}{variable}
-\oOpt{variable \Dots}
+\OptArg{-unset}{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
-\OptArg{-runset}{variable}
-\oOpt{variable \Dots}
+\OptArg{-runset}{variable\Dots}
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
@@ -32,6 +27,10 @@
 \SynProg{\Condor{config\_val}}
 \oArg{options}
 \Opt{-owner}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-verbose}{variable\Dots}
 
 \index{Condor commands!condor\_config\_val}
 \index{condor\_config\_val command}
@@ -83,24 +82,26 @@ cause all the Condor daemons in your pool to exit.
 	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
 	-collector \Bar -negotiator}}{The daemon to query (if not
 	specified, master is default). }
-	\OptItem{\OptArg{-set}{string}} { Set a persistent
+	\OptItem{\OptArg{-set}{string\Dots}} { Set a persistent
 	config file entry.
 	The string must be a single argument, so you should enclose it
 	in double quotes.
 	The string must be of the form ``variable = value''. }
-	\OptItem{\OptArg{-rset}{string}} { Set a runtime
+	\OptItem{\OptArg{-rset}{string\Dots}} { Set a runtime
 	config file entry.
 	See the description for \Opt{-set} for details about the
 	string to use. } 
-	\OptItem{\OptArg{-unset}{variable}} { Unset a persistent
+	\OptItem{\OptArg{-unset}{variable\Dots}} { Unset a persistent
 	config file variable. }
-	\OptItem{\OptArg{-runset}{variable}} { Unset a runtime
+	\OptItem{\OptArg{-runset}{variable\Dots}} { Unset a runtime
 	config file variable. }
 	\OptItem{\Opt{-tilde}}{ Return the path to the Condor home
 	directory. }
 	\OptItem{\Opt{-owner}}{ Return the owner of the
 	\Condor{config\_val} process. }
-	\OptItem{\Opt{variable \Dots}}{The variables to query. }
+	\OptItem{\OptArg{-verbose}{variable\Dots}}{ Returns the configuration
+	file name and line number where a configuration variable is defined.}
+	\OptItem{\Opt{variable\Dots}}{The variables to query. }
 \end{Options}
 
 \ExitStatus
