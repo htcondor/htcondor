@@ -122,11 +122,6 @@ ConnectQ(char *qmgr_location, int auth=0 )
 	cmd = QMGMT_CMD;
 	qmgmt_sock->code(cmd);
 	
-	/* No end of message here.  Send InitializeConnection info in the same packet.
-	qmgmt_sock->end_of_message();
-	*/
-
-
 
 #if defined(WIN32)
 	char username[UNLEN+1];
@@ -150,6 +145,7 @@ ConnectQ(char *qmgr_location, int auth=0 )
 	}
 #endif
 
+	tmp_file[0] = '\0';
 	if( username && *username ) {
 			rval = InitializeConnection(username, tmp_file, auth );
 	} 
@@ -161,10 +157,15 @@ ConnectQ(char *qmgr_location, int auth=0 )
 		free(connection);
 		return 0;
 	}
-	fd = open(tmp_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
-	close(fd);
+	//if tmp_file is NULL, GSS authentication was sucessful, so don't do
+	//rendevous_file stuff. 
+	//TODO: make this less of a hack
+	if ( tmp_file ) { 
+		fd = open(tmp_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
+		close(fd);
+		connection->rendevous_file = strdup(tmp_file);
+	}
 	connection->count = 1;
-	connection->rendevous_file = strdup(tmp_file);
 	return connection;
 }
 
