@@ -46,7 +46,10 @@ ClassAd* user_job_policy(ClassAd *jad)
 	int on_exit_hold = 0, on_exit_remove = 0;
 	int cdate = 0;
 	
-	ASSERT(jad != NULL);
+	if (jad == NULL)
+	{
+		EXCEPT( "Could not evaluate user policy due to job ad being NULL!\n" );
+	}
 
 	/* Set up the default response of do nothing. The caller should
 		just check for this attribute and ATTR_USER_POLICY_ERROR and
