@@ -111,12 +111,19 @@ Condor can be registered with:
 
 \item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
    required to modify a daemon's configuration using
-   \Condor{config\_val}.  Hosts with this level of access will be able
+   \Condor{config\_val}.  By default, hosts with this level of access
+   will be able 
    to change any configuration parameters, except those specified in
    the \File{condor\_config.root} configuration file.  Therefore, this
    level of host-wide access should only be granted with extreme
    caution.  By default, \DCPerm{CONFIG} access is denied from all
    hosts.
+
+   Starting with version 6.3.2, Condor provides a mechanism for more
+   fine-grained control over what configuration settings can be
+   modified remotely with \Condor{config\_val}.  
+   Please see section~\ref{sec:Config-Val-Security} below on Host
+   Security for \Condor{config\_val}.
 
 \end{description}
 
@@ -359,6 +366,133 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 \end{verbatim}
 
 \end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Val-Security} Host Security for
+\Condor{config\_val}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes a new security feature that was introduced in
+Condor version 6.3.2 to enable more fine-grained control over what
+configuration settings can be modified remotely with
+\Condor{config\_val}.
+Please see the man page for \Condor{config\_val} on
+page~\pageref{man-condor-config-val} for details on how to use 
+\Condor{config\_val} to modify configuration settings remotely. 
+Since certain configuration attributes can have a large impact on the 
+functioning of the Condor system and the security of the machines in a
+Condor pool, it is very important to restrict access to who can change
+the attributes remotely.
+
+The basic idea is that for each security access level described above
+(see section~\ref{sec:Security-Access-Levels}), the Condor
+administrator can define which configuration settings a host at that
+access level is allowed to change.
+Optionally, the administrator can define seperate lists of ``settable
+attributes'' for each Condor daemon, or they can define one list that
+is used by all daemons.
+
+For each request to change a configuration setting that comes in,
+Condor will go through all the different possible security access
+levels and see which, if any, the request satisfies.
+(Some hosts can qualify for multiple access levels, for example, any
+host with \DCPerm{ADMINISTRATOR} permission probably has
+\DCPerm{WRITE} permission, too).
+For each level that the request qualifies for, Condor will see if
+there is a list of attributes that access level is allowed to change.
+If the request is to modify a setting that is included in that list,
+the request will be granted.
+If no access level is found that lists the setting the request is
+trying to modify, the request will be refused.
+
+The default values for the control lists  shipped with Condor are very
+restrictive, such that Condor users or administrators cannot set
+configuration values from remote hosts with \Condor{config\_val}.
+If you wish to enable this feature, you will have to change the
+settings described below in your configuration file.
+Please use this security feature carefully.
+Only grant access for attributes which you need to be able to modify
+in this manner, and only grant that access to the most restrictive
+security level you can.
+
+The most secure use of this feature is to allow Condor users to set
+attributes in the configuration file which are not used by Condor
+directly, but are ``custom attributes'' published by various Condor
+daemons with the \Macro{SUBSYS\_EXPRS} setting described in
+section~\ref{param:SubsysExprs} on page~\pageref{param:SubsysExprs}.
+By only granting access to modify attributes that are used by Condor
+to publish information (as opposed to granting access to modify
+settings used to control the behavior of Condor), you ensure that no
+one can use the power to change configuration attributes to compromise 
+the security of your Condor pool.
+
+The control lists are defined by configuration settings that contain 
+\Macro{SETTABLE\_ATTRS} in their name.
+The name of the control lists have the following form: 
+
+\begin{verbatim}
+SUBSYS_SETTABLE_ATTRS_PERMISSION-LEVEL
+\end{verbatim}
+
+There are two parts of this name that can vary, the
+``PERMISSION-LEVEL'' and the ``SUBSYS''.
+The ``PERMISSON-LEVEL'' can be any of the security access levels
+described in section~\ref{sec:Security-Access-Levels} above.
+Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, \DCPerm{CONFIG}, and
+so on.
+
+The ``SUBSYS'' is an optional part of the name, and can be used to
+define seperate rules for which configuration attributes can be set
+for each kind of Condor daemon (for example, STARTD, SCHEDD, MASTER).
+There are many configuration settings that can be defined differently
+for each daemon that use this ``SUBSYS'' naming convention.
+See section~\ref{sec:Condor-Subsystem-Names} on
+page~\pageref{sec:Condor-Subsystem-Names} for more details about
+this.  
+If there is no daemon-specific value for a given daemon, Condor will
+look for \Macro{SETTABLE\_ATTRS\_PERMISSION-LEVEL}.
+
+Each control list is defined by a comma-seperated list of attribute
+names which should be allowed to be modified.
+The lists can contain wildcards (use ``*'' as the wildcard
+character). 
+
+Below are some examples of valid definitions of control lists with
+explainations of what they do:
+
+\begin{itemize}
+
+\item \begin{verbatim}SETTABLE_ATTRS_CONFIG = *\end{verbatim}
+This would grant unlimited access to modify configuration attributes
+to any request that came from a machine in the \DCPerm{CONFIG} access
+level. 
+This was the default behavior before Condor version 6.3.2.
+
+\item \begin{verbatim}SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG\end{verbatim} 
+This would grant access to change any configuration setting that ended
+with ``\_DEBUG'' (for example, \Macro{STARTD\_DEBUG}) and any
+attrbiute that matched ``MAX\_*\_LOG'' (for example,
+\Macro{MAX\_SCHEDD\_LOG}) to any host with \DCPerm{ADMINISTRATOR}
+access. 
+
+\item \begin{verbatim}STARTD_SETTABLE_ATTRS_OWNER = HasDataSet\end{verbatim}
+This would allow any request to modify the \Macro{HasDataSet} 
+attribute that came from a host with \DCPerm{OWNER} access.
+By default, \DCPerm{OWNER} covers any request originating from the
+local host, plus any machines listed in the \DCPerm{ADMINISTRATOR}
+level.
+Therefore, any Condor job would qualify for OWNER access to the
+machine where it is running. 
+So, this setting would allow any process running on a given host,
+including a Condor job, to modify the \Macro{HasDataSet} variable for
+that host. 
+\Macro{HasDataSet} is not used by Condor, it is a made-up attribute
+that would be included in the \Macro{STARTD\_EXPRS} setting for this
+example to make sense.
+
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:X509-Authentication}Using X.509 Certificates for
