@@ -137,9 +137,6 @@ class GahpServer : public Service {
 
 	void poll_real_soon();
 
-	int poll_err();
-	void poll_err_real_soon();
-
 
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
@@ -176,9 +173,6 @@ class GahpServer : public Service {
 	unsigned int m_pollInterval;
 	int poll_tid;
 	bool poll_pending;
-
-	int poll_err_tid;
-	bool poll_err_pending;
 
 	int max_pending_requests;
 	int num_pending_requests;
