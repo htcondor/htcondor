@@ -274,7 +274,7 @@ With \Condor{submit} you tell Condor
 information about the run, such as what executable to run, what
 filenames to use for keyboard and screen (stdin and stdout) data,
 on what type of platform to run your program, and
-where to send email when the job completes. You can also tell Condor how
+where to send e-mail when the job completes. You can also tell Condor how
 many times to run a program; many users may want to run the same program
 multiple times with multiple data sets.
 
@@ -288,7 +288,7 @@ You may modify the order in which Condor will run your jobs with
 is checkpointed and/or migrated to a different machine. 
 
 \item[Job Completion.]When your program completes, Condor will tell you
-(by email, if preferred) the exit status of your program and various
+(by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
 You can remove a job from the
 queue prematurely with \Condor{rm}. 
@@ -793,16 +793,16 @@ priorities and \Term{user} priorities.
 
 \index{job!priority}
 \index{priority!of a job}
-Job priorities allow you to assign a priority level to each of your jobs in order to
-control their order of execution.  To do this, use the \Condor{prio}
-command
+Job priorities allow the assignment of a priority level to
+each submitted Condor job in order to
+control order of execution.
+To set a job priority, use the \Condor{prio} command
 \index{Condor commands!condor\_prio}
 --- see the example in section~\ref{sec:job-prio}, or the
-command reference page on page~\pageref{man-condor-prio}.  Job
-priorities, however, do not impact user priorities in any fashion.  No matter what you
-set a job's priority to be, it will not alter your user priority in
-relation to other users.  Job priorities range from -20 to +20, with +20
-being the best and -20 the worst.  
+command reference page on page~\pageref{man-condor-prio}.
+Job priorities do not impact user priorities in any fashion.
+Job priorities range from -20 to +20,
+with -20 being the worst and with +20 being the best.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:user-priority-explained}User priority}
@@ -810,31 +810,38 @@ being the best and -20 the worst.
 
 \index{user!priority}
 \index{priority!of a user}
-Machines are allocated to users based upon that user's priority. User
-priorities in Condor can be examined with the \Condor{userprio}
-command (see page~\pageref{man-condor-userprio}),
+Machines are allocated to users based upon a user's priority.
+A lower numerical value for user priority means higher priority,
+so a user with priority 5 will get more resources than
+a user with priority 50.
+User priorities in Condor can be examined with the \Condor{userprio}
+command (see page~\pageref{man-condor-userprio}).
 \index{Condor commands!condor\_userprio}
-and Condor administrators can set and edit individual user priorities
-with the same utility. A lower numerical user priority value means
-higher priority, so a user with priority 5 will get more resources than
-a user with priority 50.  
+Condor administrators can set and change individual user priorities
+with the same utility.
 
 Condor continuously calculates the share of available machines that each
 user should be allocated.    This share is inversely related to the ratio
-between user priorities; for example, a user with a priority of 10 will
-get twice as many machines as a user with a priority of 20. The priority
-of each individual user changes according to the number of resources he
-is using. Each user starts out with a priority of .5 (the best
-priority allowed).  If the number of machines a user currently has is greater than his
-priority, the priority will numerically increase (worsen) over time, and if it is less then
-the priority, the priority will numerically decrease (improve) over time. 
-The long-term result is fair-share access across all users.  The speed
-at which Condor adjusts the priorities is controlled via an exponential
-half-life value (parameter \Macro{PRIORITY\_HALFLIFE} which can be adjusted
-by the site administrator) which has a
-default of one day.  So if a user with a user priority of 100 is
-utilizing 100 machines and then deletes all his/her jobs, one day later that user's
-priority will  50, two days later the priority will be 25, etc. 
+between user priorities.
+For example, a user with a priority of 10 will get twice as many
+machines as a user with a priority of 20.
+The priority of each individual user changes according to
+the number of resources the individual is using.
+Each user starts out with the best possible priority: 0.5.
+If the number of machines a user currently has is greater than 
+the user priority,
+the user priority will worsen by numerically increasing over time.
+If the number of machines is less then the priority,
+the priority will improve by numerically decreasing over time. 
+The long-term result is fair-share access across all users.
+The speed at which Condor adjusts the priorities is
+controlled with the configuration macro \Macro{PRIORITY\_HALFLIFE},
+an exponential half-life value.
+The default is one day.
+If a user that has user priority of 100 and is
+utilizing 100 machines removes all his/her jobs,
+one day later that user's
+priority will be 50, and two days later the priority will be 25.
 
 Condor enforces that each user gets his/her fair share of machines
 according to user priority both when allocating machines which become
@@ -855,19 +862,23 @@ could take up to a maximum of one hour until the higher priority user
 receives his fair share of machines. 
 
 User priorities are keyed on ``username@domain'', for example
-``johndoe@cs.wisc.edu''. (The domain name to use, if any, is also configured by
-the Condor site administrator).  Thus, user priority and therefore resource
+``johndoe@cs.wisc.edu''. The domain name to use, if any, is configured by
+the Condor site administrator.  Thus, user priority and therefore resource
 allocation is not impacted by which machine the user submits from or
 even if the user submits jobs from multiple machines.
 
-Finally, any job submitted to Condor can be specified as a ``nice'' job at 
-the time the job is submitted (see page~\pageref{man-condor-submit-nice}).
-Nice jobs will artificially have their numerical priority boosted by
-over one million. This effectively means that nice jobs will only run on
-machines that no other Condor job (i.e. non-niced job) wants. Similarly,
-the Condor administrators could set the numerical priority of any
-individual Condor user, such as a guest account, so that these guest
-accounts would only use cycles not wanted by other users of the system.
+\index{nice job}
+\index{priority!nice job}
+An extra feature is the ability to submit a job as
+a ``nice'' job (see page~\pageref{man-condor-submit-nice}).
+Nice jobs artificially boost the user priority 
+by one million just for the nice job.
+This effectively means that nice jobs will only run on
+machines that no other Condor job (that is, non-niced job) wants.
+In a similar fashion, a Condor administrator could set
+the user priority of any specific Condor user very high.
+If done, for example, with a guest account,
+the guest could only use cycles not wanted by other users of the system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
@@ -982,7 +993,7 @@ dynamic mount point as the job's initial current working directory, and
 this mount point could become automatically unmounted by the
 automounter.
 
-There is a simple workaround: When submitting your job, use the 
+There is a simple work around: When submitting your job, use the 
 \Arg{initialdir} command in your submit description file to point to
 the stable access point.
 For example,
@@ -1012,7 +1023,7 @@ Once the CA is set up, the \Condor{ca} script is used to generate
 certificates for the Condor daemons (e.g., \Condor{schedd}) and to sign
 user and daemon certificates. Users can generate certificate requests
 and other needed files with the \Condor{cert} program.
-An X509 certificate directory pointed to by the submit description file 
+An X.509 certificate directory pointed to by the submit description file 
 variable \Arg{x509CertDir} indicates a client program which can use GSS
 authentication as a possible authentication method. Alternately, the
 environment variables \Env{X509\_CERT\_DIR}, \Env{X509\_USER\_CERT},
@@ -1023,16 +1034,16 @@ the value 'GSS' for GSS authentication to be attempted.
 
 \item[Submitting to the Globus Universe] \index{Globus!Globus universe}
 \index{universe!Globus}
-requires Globus version 1.1, as well as a valid Globus X509 certificate. 
+requires Globus version 1.1, as well as a valid Globus X.509 certificate. 
 The default location for the necessary files is \$HOME/.globus, but they 
-can be overridden by setting the X509\_* variables in your enviroment 
+can be overridden by setting the X509\_* variables in your environment 
 or the submit description file.
 \Note AFS issues apply here, so you may have to copy your certificate,
 trusted certificates directory, private key, and proxy to a local
 filesystem disk.
 
 \item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
-Globus X509 certificate, and the PATH to the \Prog{globusrun} program 
+Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
 must be in your environment.
 \Note to allow a globus resource to join your Condor pool, your 
 administrator must add the hostname(s) to the HOSTALLOW\_WRITE and
