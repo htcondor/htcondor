@@ -4,7 +4,7 @@ CFLAGS = $(STD_C_FLAGS)
 SRC =
 
 TARGETS = \
-	condor_config config_on config_off condor_throttle daemons_off condor_init
+	condor_config config_on config_off condor_throttle daemons_off condor_init 
 
 all_target($(TARGETS))
 depend_target($(SRC))
@@ -17,6 +17,19 @@ text_target(config_off,lib,config_off.generic)
 text_target(daemons_off,lib,daemons_off)
 script_target(condor_throttle,bin,condor_throttle.generic,SET_GID_MODE)
 script_target(condor_init,bin,condor_init.generic,EXECUTABLE_MODE)
+
+copy_torelease_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
+copy_torelease_target(ld,lib,ld,EXECUTABLE_MODE)
+link_torelease_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
+
+#if IS_SGI_IRIX53 || IS_SGI_IRIX62
+link_torelease_target($(RELEASE_DIR)/lib/ld,lib,uld)
+#endif
+
+#if IS_SGI_IRIX62
+link_torelease_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
+#endif
+
 #else
 text_target(condor_config,lib)
 text_target(config_on,lib)
