@@ -14,7 +14,7 @@
 #include "condor_network.h"
 #include "condor_io.h"
 #include "proc_obj.h"
-
+#include "condor_attributes.h"
 #include "collector_engine.h"
 
 static char *_FileName_ = __FILE__;
@@ -373,7 +373,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	time_t   now;
 
 	// timestamp the ad
-	if (tree = ad->Lookup ("LastHeardFrom"))
+	if (tree = ad->Lookup (ATTR_LAST_HEARD_FROM))
 	{
 		delete tree;
 	}	
@@ -382,7 +382,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	{
 		EXCEPT ("Error reading system time!");
 	}	
-	sprintf (buf, "LastHeardFrom = %d", now);
+	sprintf (buf, "%s = %d", ATTR_LAST_HEARD_FROM, now);
 	ad->Insert (buf);
 
 	// this time stamped ad is the new ad
@@ -461,7 +461,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	while (hashTable.iterate (ad))
 	{
 		// Read the timestamp of the ad
-		if ((tree = ad->Lookup ("LastHeardFrom")) == NULL)
+		if ((tree = ad->Lookup (ATTR_LAST_HEARD_FROM)) == NULL)
 		{
 			dprintf (D_ALWAYS, "\t\tError looking up time stamp on ad\n");
 			continue;
