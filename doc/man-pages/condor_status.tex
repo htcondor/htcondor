@@ -113,6 +113,16 @@ options} may be specified.
 	If you want to query information directly from multiple hosts,
 	you must run \Condor{status} multiple times.
 
+	\item Unless you use the local hostname with \Opt{-direct},
+	\Condor{status} will still have to contact a collector to find
+	the address where the specified daemon is listening.
+	So, using a \Opt{-pool} option in conjunction with
+	\Opt{-direct} just tells \Condor{status} which collector to
+	query to find the address of the daemon you want.
+	The information actually displayed will still be retrieved
+	directly from the daemon you specified as the argument to
+	\Opt{-direct}.
+
 \end{itemize}
 
 \Examples
