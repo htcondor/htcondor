@@ -262,7 +262,8 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = BeginTransaction( );
+		rval = 0;	// BeginTransaction returns void (sigh), so always success
+		BeginTransaction( );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
