@@ -20,28 +20,56 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef CONDOR_FIX_MATH_H
-#define CONDOR_FIX_MATH_H
+#ifndef CONDOR_SYS_SOLARIS_H
+#define CONDOR_SYS_SOLARIS_H
 
-#if defined(IRIX62)
-#	define _save_ansimode _NO_ANSIMODE
-#	undef _NO_ANSIMODE
-#	define _NO_ANSIMODE 1
-#	define _save_xopen _XOPEN4UX
-#	undef _XOPEN4UX
-#	define _XOPEN4UX 1
+#define __EXTENSIONS__
+
+#if defined(Solaris26)
+#	define _LARGEFILE64_SOURCE
 #endif
 
-#include <math.h>
+#include <sys/types.h>
+#define HAS_U_TYPES
 
-#if defined(IRIX62)
-#	undef _NO_ANSIMODE
-#	define _NO_ANSIMODE _save_ansimode
-#	undef _save_ansimode
-#	undef _XOPEN4UX
-#	define _XOPEN4UX _save_xopen
-#	undef _save_xopen
+#include <unistd.h>
+/* These are all functions that unistd.h is supposed to prototype that
+   for whatever reason, are not defined on Solaris. */
+BEGIN_C_DECLS
+int gethostname( char *, int );
+long gethostid();
+int getpagesize();
+int getdtablesize();
+int getpriority( int, id_t );
+int setpriority( int, id_t, int );
+int utimes( const char*, struct timeval* );
+int getdomainname( char*, size_t );
+END_C_DECLS
+
+/* Want stdarg.h before stdio.h so we get GNU's va_list defined */
+#include <stdarg.h>
+#include <stdio.h>
+#include <signal.h>
+#include <sys/select.h>
+
+#define BSD_COMP
+#include <sys/ioctl.h>
+#undef BSD_COMP
+
+#include <sys/stat.h>
+#include <sys/statfs.h>
+
+#if defined(_POSIX_C_SOURCE)
+#	define HOLD_POSIX_C_SOURCE _POSIX_C_SOURCE
+#	undef _POSIX_C_SOURCE
+#endif
+#include <sys/wait.h>
+#if defined(HOLD_POSIX_C_SOURCE)
+#	define _POSIX_C_SOURCE HOLD_POSIX_C_SOURCE 
+#	undef HOLD_POSIX_C_SOURCE 
 #endif
 
+#include <sys/uio.h>
+#include <sys/socket.h>
 
-#endif CONDOR_FIX_MATH_H
+#endif /* CONDOR_SYS_SOLARIS_H */

@@ -20,34 +20,63 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _UTSNAME_H
-#define _UTSNAME_H
+#ifndef CONDOR_SYS_NT_H
+#define CONDOR_SYS_NT_H
 
-#if defined( __cplusplus )
-extern "C" {
+#define NOGDI
+#define NOUSER
+#define NOSOUND
+#include <winsock2.h>
+#include <windows.h>
+
+#include <io.h>
+#include <fcntl.h>
+#include <direct.h>		// for _chdir , etc
+#define lseek _lseek
+#define O_RDONLY _O_RDONLY
+#define O_WRONLY _O_WRONLY
+#define O_RDWR _O_RDWR
+#define O_CREAT _O_CREAT
+#define O_APPEND _O_APPEND
+#include <sys/stat.h>
+typedef unsigned short mode_t;
+#define stat _stat
+#define fstat _fstat
+#define MAXPATHLEN 1024
+#define MAXHOSTNAMELEN 64
+#define	_POSIX_PATH_MAX 255
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define strincmp _strnicmp
+#define strdup _strdup
+#define chdir _chdir
+#define fsync _commit
+#define access _access
+#define R_OK 4
+#define W_OK 2
+#define X_OK 4
+#define F_OK 0
+#define sleep(x) Sleep(x*1000)
+#define getpid _getpid
+#include <process.h>
+#include <time.h>
+#include <lmcons.h> // for UNLEN
+#if !defined(_POSIX_)
+#	define _POSIX_
+#	define _CONDOR_DEFINED_POSIX_
+#endif
+#include <limits.h>
+#if defined(_CONDOR_DEFINED_POSIX_)
+#	undef _POSIX_
+#	undef _CONDOR_DEFINED_POSIX_
 #endif
 
-/*
-  The Sun include file only provides a non-ANSI prototype for the
-  uname() function, so we have to cover it up here.
-*/
-#if defined(SUNOS41) && ( defined(__STDC__) || defined(__cplusplus) )
-#define uname hide_uname
-#endif
+#include <stdlib.h>
+#include <stdio.h>
+#include <limits.h>
+#include <math.h>
+#include <errno.h>
+#include "condor_file_lock.h"
 
-#include <sys/utsname.h>
+#endif /* CONDOR_SYS_NT_H */
 
-/*
-  Here we proivde the ANSI style prototype for the uname() function
-  which SUN omitted.
-*/
-#if defined(SUNOS41) && ( defined(__STDC__) || defined(__cplusplus) )
-#undef uname
-int uname( struct utsname * );
-#endif
-
-#if defined( __cplusplus )
-}
-#endif
-
-#endif

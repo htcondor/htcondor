@@ -20,47 +20,74 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef CONDOR_FIX_SIGNAL_H
-#define CONDOR_FIX_SIGNAL_H
+#ifndef CONDOR_SYS_IRIX_H
+#define CONDOR_SYS_IRIX_H
 
-#if defined(LINUX)
-#	define SignalHandler _hide_SignalHandler
-#endif
 
-#if defined(IRIX62)
+#define _XOPEN_SOURCE
+
+/* While we want _BSD_TYPES defined, we can't just define it ourself,
+   since we include rpc/types.h later, and that defines _BSD_TYPES
+   itself without any checks.  So, instead, we'll just include
+   <rpc/types.h> as our first header, to make sure we get BSD_TYPES.
+   This also includes <sys/types.h>, so we don't need to include that
+   ourselves anymore. */
+#include <rpc/types.h>
+
+#define HAS_U_TYPES
+
+/******************************
+** unistd.h
+******************************/
+#define __vfork fork
+#define _save_BSD_COMPAT _BSD_COMPAT
+#undef _BSD_COMPAT
+#include <unistd.h>
+#undef __vfork
+#define _BSD_COMPAT _save_BSD_COMPAT
+#undef _save_BSD_COMPAT
+
+/* Want stdarg.h before stdio.h so we get GNU's va_list defined */
+#include <stdarg.h>
+
+/******************************
+** stdio.h
+******************************/
+#include <stdio.h>
+/* These aren't defined if _POSIX_SOURCE is defined. */
+FILE *popen (const char *command, const char *type);
+int pclose(FILE *stream);
+
+
+/******************************
+** signal.h
+******************************/
 #define SIGTRAP 5
 #define SIGBUS 10
 #define _save_NO_ANSIMODE _NO_ANSIMODE
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE 1
-#define _save_XOPEN4UX _XOPEN4UX
-#undef _XOPEN4UX
-#define _XOPEN4UX 1
-#define _save_SGIAPI _SGIAPI
 #undef _SGIAPI
 #define _SGIAPI 1
-#endif
-
 #include <signal.h>
-
-#if defined(LINUX)
-#undef SignalHandler
-#endif
-
-#if defined(IRIX62)
+/* We also want _NO_ANSIMODE and _SGIAPI defined to 1 for sys/wait.h,
+   math.h and limits.h */  
+#include <sys/wait.h>    
+#include <math.h>
+#include <limits.h>
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE _save_NO_ANSIMODE
-#undef _XOPEN4UX
-#define _XOPEN4UX _save_XOPEN4UX
+#undef _save_NO_ANSIMODE
 #undef _SGIAPI
 #define _SGIAPI _save_SGIAPI
-#undef _save_NO_ANSIMODE
-#undef _save_XOPEN4UX
 #undef _save_SGIAPI
-#endif
 
-#if defined(OSF1) && !defined(NSIG) && defined(SIGMAX)
-#define NSIG (SIGMAX+1)
-#endif
+#include <sys/select.h>
 
-#endif CONDOR_FIX_SIGNAL_H
+#include <sys/stat.h>
+#include <sys/statfs.h>
+
+#include <sys/uio.h>
+#include <sys/socket.h>
+
+#endif /* CONDOR_SYS_IRIX_H */

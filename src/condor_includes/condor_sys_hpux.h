@@ -20,39 +20,32 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef CONDOR_SYS_STAT_H
-#define CONDOR_SYS_STAT_H
+#ifndef CONDOR_SYS_HPUX_H
+#define CONDOR_SYS_HPUX_H
 
-#ifdef IRIX53
-#define _save_XOPEN4UX _XOPEN4UX
-#undef _XOPEN4UX
-#define _XOPEN4UX 1
-#endif
+#define _XPG4_EXTENDED
 
+#include <sys/types.h>
+#define HAS_U_TYPES
+#include <unistd.h>
+/* Want stdarg.h before stdio.h so we get GNU's va_list defined */
+#include <stdarg.h>
+#include <stdio.h>
 
+/* There is no <sys/select.h> on HPUX, select() and friends are 
+   defined in <sys/time.h> */
+#include <sys/time.h>
+
+/* Need these to get statfs and friends defined */
 #include <sys/stat.h>
-
-
-#ifdef IRIX53
-#undef _XOPEN4UX
-#define _XOPEN4UX _save_XOPEN4UX
-#undef _save_XOPEN4UX
-#endif
-
-/**********************************************************************
-**  Include whatever we need to get statfs and friends.
-**********************************************************************/
-#if defined(OSF1)
-#  include <sys/mount.h>
-#elif defined(LINUX) || defined(HPUX9)
-#  include <sys/vfs.h>
-#else
-#  include <sys/statfs.h>
-#endif
-
-#if defined(HPUX9)
+#include <sys/vfs.h>
 #include <sys/ustat.h>
-#endif
 
-#endif CONDOR_SYS_STAT_H
+/* Since both <sys/param.h> and <values.h> define MAXINT without
+   checking, and we want to include both, we include them, but undef
+   MAXINT inbetween. */
+#include <sys/param.h>
+#undef MAXINT
+#include <values.h>
 
+#endif /* CONDOR_SYS_HPUX_H */
