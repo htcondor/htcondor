@@ -71,7 +71,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
-	condor_universe.o
+	condor_universe.o proc_id.o
 
 test.o: test.c
 	$(CC) $(CFLAGS) -c test.c
