@@ -3,32 +3,6 @@ SRC_DIR = $(SRC_TREE)/condor_classad
 C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
 CFLAGS = -Wall $(STD_C_FLAGS)
 
-#if IS_SPARC_SUNOS41
-SYSPARAM = sysparam_sun
-#endif
-#if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
-SYSPARAM = sysparam_solaris
-#endif
-#if IS_X86_SOLARIS
-SYSPARAM = sysparam_solaris
-#endif
-#if IS_ALPHA_OSF1
-SYSPARAM = sysparam_osf1
-#endif
-#if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43
-SYSPARAM = sysparam_ultrix
-#endif
-#if IS_R6000_AIX32
-SYSPARAM=sysparam_aix
-#endif
-#if IS_HPPAR_HPUX9
-SYSPARAM = sysparam_hpux
-#endif
-#if IS_I386_LINUX
-SYSPARAM = sysparam_linux
-#endif
-
-
 IO_OBJ = stream.o buffers.o reli_sock.o safe_sock.o sock.o sig_num.o \
          proc.o open_flags.o fcntl_cmd.o
 
@@ -45,6 +19,7 @@ all_target(expr_lib.a)
 library_target( expr_lib.a,$(OBJ))
 
 c_plus_target(test, test.o, expr_lib.a ../condor_util_lib/util_lib.a SocketLib)
+pure_c_plus_target(test.pure, test.o, expr_lib.a ../condor_util_lib/util_lib.a SocketLib)
 
 clean::
 	rm -f *.o expr_lib.a
