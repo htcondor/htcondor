@@ -21,7 +21,7 @@ Causes top to sort by 'field' and dump the top 'num' of that sort
 Valid fields are:
    pid user priority nice size rss share state lib cpu mem time command
 
-parameter: Hawkeye_TOP_FIELDS = pid, user, cpu, mem, time, command,
+parameter: Hawkeye_TOP_FIELDS = pid, user, cpu, mem, time, command
 Format: field[,field]..
 List of fields to dump
 Valid fields are:
