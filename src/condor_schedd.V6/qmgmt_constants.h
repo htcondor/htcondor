@@ -41,3 +41,4 @@
 #define CONDOR_GetJobByConstraint	10019
 #define CONDOR_GetNextJobByConstraint	10020
 #define	CONDOR_SetAttributeByConstraint	10021		/* Todd */
+#define	CONDOR_InitializeConnectionAuth	10022
