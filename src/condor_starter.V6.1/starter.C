@@ -59,6 +59,7 @@ CStarter::CStarter()
 	Opsys = NULL;
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
+	ShadowAddr[0] = '\0';
 	jobAd = NULL;
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
 }
@@ -205,7 +206,7 @@ CStarter::ShutdownFast(int)
 
 
 void
-CStarter::InitShadowVersion( void )
+CStarter::InitShadowInfo( void )
 {
 	if( ! jobAd ) {
 		EXCEPT( "InitShadowVersion called with NULL jobAd" );
@@ -223,6 +224,16 @@ CStarter::InitShadowVersion( void )
 		ShadowVersion = new CondorVersionInfo( tmp, "SHADOW" );
 	} else {
 		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.2)\n" ); 
+	}
+
+	// get sinfullstring of our shadow, if shadow told us
+	jobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
+
+	if( ShadowAddr[0] ) {
+		dprintf( D_FULLDEBUG, "Shadow Address: %s\n", ShadowAddr );
+	} else {
+		dprintf( D_ALWAYS, "WARNING: Can't find %s in job ad!\n",
+				 ATTR_MY_ADDRESS );
 	}
 }
 
@@ -323,7 +334,7 @@ CStarter::StartJob()
 	}
 
 		// Grab the version of the Shadow from the job ad
-	InitShadowVersion();
+	InitShadowInfo();
 
 		// Now that we know what version of the shadow we're talking
 		// to, we can register information about ourselves with the

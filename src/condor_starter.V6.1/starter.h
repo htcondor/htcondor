@@ -101,6 +101,8 @@ public:
 		/** Return a pointer to the version object for the Shadow  */
 	CondorVersionInfo* GetShadowVersion() const { return ShadowVersion; }
 
+	char* GetShadowAddr() { return &ShadowAddr[0]; };
+
 protected:
 	List<UserProc> JobList;
 
@@ -118,14 +120,16 @@ private:
 		*/
 	bool InitUserPriv( void );
 
-		/** Initialize our ShadowVersion object with the version of
-			the shadow we get out of the job ad.  If there's no shadow
-			version, we leave our ShadowVersion NULL.  If we know the
-			version, we instantiate a CondorVersionInfo object so we
-			can perform checks on the version in the various places in
-			the starter where we need to know this for compatibility.
+		/** Initialize information about the Shadow from the job ad.
+			Grab the shadow's sinful string and store that in
+			ShadowAddr.  Also, try to initialize our ShadowVersion
+			object.  If there's no shadow version, we leave our
+			ShadowVersion NULL.  If we know the version, we
+			instantiate a CondorVersionInfo object so we can perform
+			checks on the version in the various places in the starter
+			where we need to know this for compatibility.
 		*/
-	void InitShadowVersion( void );
+	void InitShadowInfo( void );
 
 		/** Compare our own UIDDomain vs. the submitting host.  We
 			check in the given job ClassAd for ATTR_UID_DOMAIN.
@@ -149,6 +153,9 @@ private:
 
 		/** The version of the shadow if known; otherwise NULL */
 	CondorVersionInfo* ShadowVersion;
+
+		/// sinful string of our shadow
+	char ShadowAddr[35];
 
 	char *Execute;
 	char *UIDDomain;
