@@ -416,10 +416,13 @@ calc_virt_memory()
 	 * wait() and will interfere with the other handler.
 	 * Fix #3 from U of Wisc. 
 	 */
+#if !defined(Solaris)
 	if ( HasSigchldHandler  ) {
 		fclose(fp);
 	}
-	else {
+	else 
+#endif
+	{
 		pclose(fp);
 	}
 
