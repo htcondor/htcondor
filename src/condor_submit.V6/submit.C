@@ -205,6 +205,12 @@ main( int argc, char *argv[] )
 	int dag_pause = 0;
 	char	*scheddname;
 	char	*tmp_pointer;
+
+	if (getuid() == 0 || getgid() == 0) {
+		fprintf(stderr, "Submitting jobs as user/group 0 (root) is not "
+				"allowed for security reasons.\n");
+		exit(1);
+	}
 	
 	setbuf( stdout, NULL );
 
@@ -906,6 +912,7 @@ SetRequirements()
 	tmp = check_requirements( JobRequirements );
 	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, tmp);
 	strcpy (JobRequirements, tmp);
+	fprintf(stderr, "%s\n", buffer);
 
 	InsertJobExpr (buffer);
 }
