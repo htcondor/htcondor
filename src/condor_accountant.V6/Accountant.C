@@ -81,7 +81,7 @@ void Accountant::Initialize()
   char* tmp;
   NiceUserPriorityFactor=10000000;
   RemoteUserPriorityFactor=10000;
-  HalfLifePeriod=600;
+  HalfLifePeriod=86400;
 
   // get half life period
   
