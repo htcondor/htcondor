@@ -519,6 +519,7 @@ part_send_job(
   StartdRec stRec;
   PORTS ports;
   bool done = false;
+  int retry_delay = 3;
 
   cmd = ACTIVATE_CLAIM; // new protocol in V6 startd
 
@@ -586,10 +587,12 @@ part_send_job(
 		  break;
 
 	  case TRY_AGAIN:
-		  dprintf(D_ALWAYS,"Shadow: Request to run a job was TEMPORARILY REFUSED\n");
-		  dprintf(D_ALWAYS,"Shadow: will try again in 10 seconds\n");
+		  dprintf( D_ALWAYS,
+				   "Shadow: Request to run a job was TEMPORARILY REFUSED\n" );
+		  dprintf( D_ALWAYS,
+				   "Shadow: will try again in %d seconds\n", retry_delay );
 		  delete sock;
-		  sleep( 3 );
+		  sleep( retry_delay );
 		  break;
 
 	  default:
