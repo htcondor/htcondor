@@ -351,6 +351,10 @@ init_shadow_connections()
 		(void) dup2( 1, RSC_SOCK );
 		(void) dup2( 2, CLIENT_LOG );
 		SyscallStream = init_syscall_connection( FALSE);
+		/* Set a timeout on remote system calls.  This is needed in case
+		   the user job exits in the middle of a remote system call, leaving
+		   the shadow blocked.  -Jim B. */
+		SyscallStream->timeout(300);
 	}
 
 }
