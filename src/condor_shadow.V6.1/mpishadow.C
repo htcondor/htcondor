@@ -109,7 +109,6 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		// for now, set this to the sinful string.  when the starter
 		// spawns, it'll do an RSC to register a real hostname...
 	rr->setMachineName( host );
-
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
     sprintf ( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
@@ -700,16 +699,10 @@ void
 MPIShadow::spawnNode( MpiResource* rr )
 {
 		// First, contact the startd to spawn the job
-    if( ! rr->requestIt() ) {
+    if( rr->activateClaim() != OK ) {
         shutDown( JOB_NOT_STARTED, 0 );
     }
 
-		// Register the remote instance's claimSock for remote
-		// system calls.  It's a bit funky, but works.
-	daemonCore->Register_Socket( rr->getClaimSock(), "RSC Socket", 
-       (SocketHandlercpp)&RemoteResource::handleSysCalls,
-       "HandleSyscalls", rr );
-    
     dprintf ( D_PROTOCOL, "Just requested resource for node %d\n",
 			  nextResourceToStart );
 
