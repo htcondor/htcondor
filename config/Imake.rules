@@ -626,11 +626,7 @@ clean::						@@\
 #ifndef object_dir_target
 #define object_dir_target(dir_name)					@@\
 ##dir_name##:								@@\
-	rm -rf dir_name							@@\
-	mkdir dir_name							@@\
-	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
-		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
-	rm -f dir_name##/CVS						@@\
+	perl $(SRC_TREE)/condor_scripts/make_dir_tree dir_name $(SRC_TREE) @@\
 really-clean::								@@\
 	rm -rf dir_name
 #endif /* object_dir_target */
