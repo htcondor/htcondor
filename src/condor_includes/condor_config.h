@@ -58,6 +58,7 @@ extern "C" {
 	void clear_config ( void );
 	void config_fill_ad( ClassAd*, char* );
 	void set_debug_flags( char * );
+	void config_insert( char*, char* );
 #else
 	void config();
 	void config_host();
@@ -73,6 +74,7 @@ extern "C" {
 	void clear_config ();
 	void config_fill_ad ();
 	void set_debug_flags ();
+	void config_insert ();
 #endif
 
 #if defined(__cplusplus)
