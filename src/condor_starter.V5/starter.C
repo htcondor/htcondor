@@ -29,7 +29,7 @@
 
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
+#if defined(Solaris) && !defined(Solaris251)
 #include "_condor_fix_types.h"
 #include </usr/ucbinclude/sys/rusage.h>
 #endif
