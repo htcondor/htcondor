@@ -29,6 +29,7 @@
 #include "condor_debug.h"
 #include "condor_ast.h"
 #include "condor_attrlist.h"
+#include "condor_attributes.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -88,6 +89,8 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
 	seq = 0;
     exprList = NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -103,6 +106,8 @@ AttrList::AttrList(AttrListList* associatedList) :
 {
 	seq = 0;
     exprList = NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
     tail = NULL;
     ptrExpr = NULL;
     ptrName = NULL;
@@ -135,6 +140,8 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 
 	seq 			= 0;
     exprList 		= NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
     associatedList 	= NULL;
     tail 			= NULL;
     ptrExpr 		= NULL;
@@ -197,6 +204,8 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 
 	seq = 0;
     exprList = NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
     associatedList = NULL;
     tail = NULL;
     ptrExpr = NULL;
@@ -290,6 +299,8 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 
 	seq = 0;
 	exprList = NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
 	associatedList = NULL;
 	tail = NULL;
 	ptrExpr = NULL;
@@ -536,6 +547,8 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 	ptrExpr = NULL;
 	ptrName = NULL;
 	exprList = NULL;
+	inside_insert = false;
+	chainedAttrs = NULL;
 
 	for(i = 0; i < context->len; i++)
 	{
@@ -632,7 +645,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
 	    tmpThis->next = new AttrListElem(*tmpOld);
 	    tmpThis = tmpThis->next;
         }
-	tmpThis->next = NULL;
+		tmpThis->next = NULL;
         this->tail = tmpThis;
     }
     else
@@ -640,6 +653,8 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
         this->exprList = NULL;
         this->tail = NULL;
     }
+	this->chainedAttrs = old.chainedAttrs;
+	this->inside_insert = false;
     this->ptrExpr = NULL;
     this->ptrName = NULL;
     this->associatedList = old.associatedList;
@@ -662,6 +677,9 @@ AttrList::~AttrList()
         exprList = exprList->next;
         delete tmp;
     }
+	exprList = NULL;
+	tail = NULL;
+
     if(associatedList)
     {
 		associatedList->associatedAttrLists->Delete(this);
@@ -692,10 +710,13 @@ int AttrList::Insert(ExprTree* expr)
 		return FALSE;
     }
 
+	inside_insert = true;
+
 	if(Lookup(expr->LArg()))
 	{
 		Delete(((Variable*)expr->LArg())->Name());
 	}
+
 
     AttrListElem* newNode = new AttrListElem(expr);
 
@@ -709,6 +730,8 @@ int AttrList::Insert(ExprTree* expr)
     }
     tail = newNode;
 
+	inside_insert = false;
+
     return TRUE;
 }
 
@@ -716,6 +739,8 @@ int AttrList::Insert(ExprTree* expr)
 // If the attribute is already in the list, replace it with the new one.
 // Otherwise just insert it.
 ////////////////////////////////////////////////////////////////////////////////
+// No more InsertOrUpdate implementation -- we just call Insert()
+#if 0
 int AttrList::InsertOrUpdate(char* attr)
 {
 	ExprTree*	tree;
@@ -734,6 +759,7 @@ int AttrList::InsertOrUpdate(char* attr)
 	}
 	return TRUE;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Delete an expression with the name "name" from this AttrList. Return TRUE if
@@ -743,6 +769,7 @@ int AttrList::Delete(const char* name)
 {
     AttrListElem*	prev = exprList;
     AttrListElem*	cur = exprList;
+	int found = FALSE;
 
     while(cur)
     {
@@ -779,7 +806,8 @@ int AttrList::Delete(const char* name)
 			}
 
 			delete cur;
-			return TRUE;
+			found = TRUE;
+			break;
 		}
 		else
 		// expression to be deleted not found, continue search
@@ -789,7 +817,25 @@ int AttrList::Delete(const char* name)
 		}
     }	// end of while loop to search the expression to be deleted
 
-    return FALSE; // expression not found
+	// see this attr exists in our chained
+	// ad; if so, must insert the attr into this ad as UNDEFINED.
+	if ( chainedAttrs && !inside_insert) {
+		for (cur = *chainedAttrs; cur; cur = cur->next ) {
+			if(!strcasecmp(name, cur->name))
+			// expression to be deleted is found
+			{
+				char buf[400];
+
+				sprintf(buf,"%s=UNDEFINED",name);
+				Insert(buf);
+				found = TRUE;
+				break;
+			}
+		}
+	}
+
+
+    return found; 
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -810,6 +856,7 @@ void AttrList::ResetFlags()
 ////////////////////////////////////////////////////////////////////////////////
 // Find an attibute and replace its value with a new value.
 ////////////////////////////////////////////////////////////////////////////////
+#if 0
 int AttrList::UpdateExpr(char* name, ExprTree* tree)
 {
     ExprTree*	tmpTree;	// the expression to be updated
@@ -819,6 +866,8 @@ int AttrList::UpdateExpr(char* name, ExprTree* tree)
 		return FALSE;
     }
 
+	inside_insert = true;
+
     if(!(tmpTree = Lookup(name)))
     {
 		return FALSE;
@@ -827,6 +876,9 @@ int AttrList::UpdateExpr(char* name, ExprTree* tree)
     tree->Copy();
 	delete tmpTree->RArg();
 	((BinaryOp*)tmpTree)->rArg = tree;
+
+	inside_insert = false;
+
     return TRUE;
 }
 
@@ -838,6 +890,7 @@ int AttrList::UpdateExpr(ExprTree* attr)
 	}
 	return UpdateExpr(((Variable*)attr->LArg())->Name(), attr->RArg());
 }
+#endif
 
 ExprTree* AttrList::NextExpr()
 {
@@ -890,6 +943,19 @@ ExprTree* AttrList::Lookup(const char* name)
             return(tmpNode->tree);
         }
     }
+
+	// did not find it; check in our chained ad
+	if ( chainedAttrs && !inside_insert ) {
+		for(tmpNode = *chainedAttrs; tmpNode; tmpNode = tmpNode->next)
+		{
+			tmpChar = ((Variable*)tmpNode->tree->LArg())->Name();
+			if(!strcasecmp(tmpChar, name))
+			{
+				return(tmpNode->tree);
+			}
+		}
+	}
+
     return NULL;
 }
 
@@ -1180,6 +1246,18 @@ int AttrList::fPrint(FILE* f)
     {
 		return FALSE;
     }
+
+	// if this is a chained ad, print out chained attrs first. this is so
+	// if this ad is scanned in from a file, the chained attrs will get
+	// updated with attrs from this ad in case of duplicates.
+	if ( chainedAttrs ) {
+		for(tmpElem = *chainedAttrs; tmpElem; tmpElem = tmpElem->next)
+		{
+			tmpElem->tree->PrintToStr(tmpLine);
+			fprintf(f, "%s\n", tmpLine);
+			strcpy(tmpLine, "");
+		}
+	}
 
     for(tmpElem = exprList; tmpElem; tmpElem = tmpElem->next)
     {
@@ -1572,72 +1650,88 @@ void AttrListList::fPrintAttrListList(FILE* f)
 
 
 // shipping functions for AttrList -- added by Lei Cao
-
 int AttrList::put(Stream& s)
 {
     AttrListElem*   elem;
-    char*           line;
     int             numExprs = 0;
 
     //get the number of expressions
     for(elem = exprList; elem; elem = elem->next)
         numExprs++;
 
+	if ( chainedAttrs ) {
+		// first add one for the ATTR_SERVER_TIME expr
+		numExprs++;
+
+		// now count up all the chained ad attrs
+		for(elem = *chainedAttrs; elem; elem = elem->next)
+			numExprs++;
+	}
+
     s.encode();
 
     if(!s.code(numExprs))
         return 0;
 
-    line = new char[ATTRLIST_MAX_EXPRESSION];
+    char linebuf[ATTRLIST_MAX_EXPRESSION];
+	char *line = linebuf;
+	// copy chained attrs first, so if there are duplicates, the get()
+	// method will overide the attrs from the chained ad with attrs
+	// from this ad.
+	if ( chainedAttrs ) {
+		for(elem = *chainedAttrs; elem; elem = elem->next) {
+			line[0] = '\0';
+			elem->tree->PrintToStr(line);
+			if(!s.code(line)) {
+				return 0;
+			}
+		}
+		// insert in the current time from the server's (schedd)
+		// point of view.  this is used so condor_q can compute some
+		// time values based upon other attribute values without 
+		// worrying about the clocks being different on the condor_schedd
+		// machine -vs- the condor_q machine.
+		sprintf(line,"%s = %ld",ATTR_SERVER_TIME,time(NULL));
+		if(!s.code(line)) {
+			return 0;
+		}
+	}
     for(elem = exprList; elem; elem = elem->next) {
-        strcpy(line, "");
+        line[0] = '\0';
         elem->tree->PrintToStr(line);
         if(!s.code(line)) {
-            delete [] line;
             return 0;
         }
     }
-    delete [] line;
 
     return 1;
 }
+
 
 int AttrList::get(Stream& s)
 {
-    ExprTree*       tree;
-    char*           line;
-    int             numExprs;
+    char linebuf[ATTRLIST_MAX_EXPRESSION];
+	char *line = linebuf;
+    int numExprs;
 
     s.decode();
 
-    if(!s.code(numExprs))
+    if(!s.code(numExprs)) 
         return 0;
     
-    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(int i = 0; i < numExprs; i++) {
         if(!s.code(line)) {
-            delete [] line;
             return 0;
         }
         
-        if(!Parse(line, tree)) {
-            if(tree->MyType() == LX_ERROR) {
-                delete [] line;
-				return 0;
-            }
-        }
-        else {
-			delete [] line;
+		if (!Insert(line)) {
 			return 0;
-        }
-        
-        Insert(tree);
-        strcpy(line, "");
+		}
     }
-    delete [] line;
 
     return 1;
 }
+
 
 #if defined(USE_XDR)
 // xdr shipping code
@@ -1728,4 +1822,14 @@ int AttrList::code(Stream& s)
         return put(s);
     else
         return get(s);
+}
+
+
+void AttrList::ChainToAd(AttrList *ad)
+{
+	if (!ad) {
+		return;
+	}
+
+	chainedAttrs = &( ad->exprList );
 }
