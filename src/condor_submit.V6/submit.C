@@ -129,7 +129,7 @@ char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 char	*X509CertDir	= "x509certdir";
-char	*RendezvousDirectory	= "rendezvousdirectory";
+char	*RendezvousDir	= "rendezvousdir";
 char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
@@ -152,11 +152,13 @@ void 	SetNotifyUser ();
 void 	SetArguments();
 void 	SetEnvironment();
 #if !defined(WIN32)
+void 	ComputeRootDir();
 void 	SetRootDir();
 #endif
 void 	SetRequirements();
 void	SetRank();
 void 	SetIWD();
+void 	ComputeIWD();
 void	SetUserLog();
 void	SetCoreSize();
 void	SetFileOptions();
@@ -371,26 +373,38 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	//if defined in file, set up to use x509certdir
+		//need IWD early, might need it for RendezvousDir if not defined.
+	ComputeIWD();
+
+
+		//RendezvousDir can be specified in submit-description file,
+		//else use InitialDir as specified or default InitialDir.
+	char *Rendezvous = NULL;
+	if ( !(Rendezvous = condor_param( RendezvousDir ) ) )
+	{
+			//RendezvousDir defaults to InitialDir if not defined
+		Rendezvous = strdup( JobIwd );
+	}
+	dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
+			Rendezvous );
+	char tmpstring[1024];
+	sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
+		//putenv because Authentication::authenticate() expects them there.
+	putenv( strdup( tmpstring ) );
+	if ( Rendezvous )
+		free( Rendezvous );
+
+
+		//if defined in file, set up to use x509certdir
 	char *CertDir;
 	if ( CertDir = condor_param( X509CertDir ) ) {
 		dprintf( D_FULLDEBUG, "setting env X509_CERT_DIR=%s from submit file\n",
 				CertDir );
 		char tmpstring[1024];
 		sprintf( tmpstring, "X509_CERT_DIR=%s/", CertDir );
+			//putenv because Authentication::authenticate() expects them there.
 		putenv( strdup( tmpstring ) );
 		free( CertDir );
-	}
-
-	//if defined in file, set up to use RendevousDirectory
-	char *Rendezvous;
-	if ( Rendezvous = condor_param( RendezvousDirectory ) ) {
-		dprintf( D_FULLDEBUG,"setting RENDEXVOUS_DIRECTORY=%s from submit file\n",
-				Rendezvous );
-		char tmpstring[1024];
-		sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
-		putenv( strdup( tmpstring ) );
-		free( Rendezvous );
 	}
 
 	if (ConnectQ(ScheddAddr) == 0) {
@@ -1020,13 +1034,12 @@ SetEnvironment()
 
 #if !defined(WIN32)
 void
-SetRootDir()
+ComputeRootDir()
 {
 	char *rootdir = condor_param(RootDir);
 
 	if( rootdir == NULL ) 
 	{
-		InsertJobExpr ("Rootdir = \"/\"");
 		(void) strcpy (JobRootdir, "/");
 	} 
 	else 
@@ -1036,11 +1049,16 @@ SetRootDir()
 		}
 
 		check_path_length(rootdir, RootDir);
-
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ROOT_DIR, rootdir);
-		InsertJobExpr (buffer);
 		(void) strcpy (JobRootdir, rootdir);
 	}
+}
+
+void
+SetRootDir()
+{
+	ComputeRootDir();
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ROOT_DIR, JobRootdir);
+	InsertJobExpr (buffer);
 }
 #endif
 
@@ -1137,7 +1155,7 @@ SetRank()
 }
 
 void
-SetIWD()
+ComputeIWD()
 {
 	char	*shortname;
 	char	iwd[ _POSIX_PATH_MAX ];
@@ -1146,40 +1164,50 @@ SetIWD()
 	shortname = condor_param( InitialDir );
 
 #if !defined(WIN32)
+	ComputeRootDir();
 	if( strcmp(JobRootdir,"/") != MATCH )	{	/* Rootdir specified */
 		if( shortname ) {
 			(void)strcpy( iwd, shortname );
-		} else {
+		} 
+		else {
 			(void)strcpy( iwd, "/" );
 		}
-	} else {
+	} 
+	else 
 #endif
+	{  //for WIN32, this is a block to make {}'s match. For unix, else block.
 		if( shortname  ) {
 #if defined(WIN32)
 			// if a drive letter or share is specified, we have a full pathname
-			if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) {
+			if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) 
 #else
-			if( shortname[0] == '/' ) {
+			if( shortname[0] == '/' ) 
 #endif
+			{
 				(void)strcpy( iwd, shortname );
-			} else {
+			} 
+			else {
 				(void)getcwd( cwd, sizeof cwd );
 				(void)sprintf( iwd, "%s%c%s", cwd, DIR_DELIM_CHAR, shortname );
 			}
-		} else {
+		} 
+		else {
 			(void)getcwd( iwd, sizeof iwd );
 		}
-#if !defined(WIN32)
 	}
-#endif
 
 	compress( iwd );
 	check_path_length(iwd, InitialDir);
 	check_iwd( iwd );
-
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_IWD, iwd);
-	InsertJobExpr (buffer);
 	strcpy (JobIwd, iwd);
+}
+
+void
+SetIWD()
+{
+	ComputeIWD();
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_IWD, JobIwd);
+	InsertJobExpr (buffer);
 }
 
 void
