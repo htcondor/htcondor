@@ -119,7 +119,6 @@ Env::Env()
 
 Env::~Env()
 {
-	ASSERT( _envTable );
 	delete _envTable;
 }
 
