@@ -306,6 +306,9 @@ Gahp_Args::~Gahp_Args()
 	reset();
 }
 	
+/* Restore the object to its fresh, clean state. This means that argv is
+ * completely freed and argc and argv_size are set to zero.
+ */
 void
 Gahp_Args::reset()
 {
@@ -324,9 +327,17 @@ Gahp_Args::reset()
 	argc = 0;
 }
 
+/* Add an argument to the end of the args array. argv is extended
+ * automatically if required. The string passed in becomes the property
+ * of the Gahp_Args object, which will deallocate it with free(). Thus,
+ * you would typically give add_arg() a strdup()ed string.
+ */
 void
 Gahp_Args::add_arg( char *new_arg )
 {
+	if ( new_arg == NULL ) {
+		return;
+	}
 	if ( argc >= argv_size ) {
 		argv_size += 60;
 		argv = (char **)realloc( argv, argv_size * sizeof(char *) );
@@ -417,7 +428,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 			// check for our prefix if using one.
 			trash_this_line = false;
 			if ( use_prefix ) {
-				if ( g_args.argv[0] && 
+				if ( g_args.argc > 0 && 
 					 strncmp(GAHP_PREFIX,g_args.argv[0],GAHP_PREFIX_LEN)==0)
 				{
 					// Prefix is good.
@@ -432,7 +443,7 @@ GahpServer::read_argv(Gahp_Args &g_args)
 
 			// check for a single "R".  This means we should check
 			// for results in gahp async mode.  
-			if ( trash_this_line==false && g_args.argv[0] &&
+			if ( trash_this_line==false && g_args.argc == 1 &&
 				 g_args.argv[0][0] == 'R' ) {
 				if ( skip_next_r ) {
 					// we should not poll this time --- apparently we saw
@@ -788,9 +799,9 @@ GahpServer::command_cache_proxy_from_file( GahpProxyInfo *new_proxy )
 	write_line(buf);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		char *reason;
-		if ( result.argv[1] ) {
+		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
 			reason = "Unspecified error";
@@ -818,9 +829,9 @@ GahpServer::uncacheProxy( GahpProxyInfo *gahp_proxy )
 	write_line(buf);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		char *reason;
-		if ( result.argv[1] ) {
+		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
 			reason = "Unspecified error";
@@ -892,9 +903,9 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 	write_line(buf);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		char *reason;
-		if ( result.argv[1] ) {
+		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
 			reason = "Unspecified error";
@@ -1145,9 +1156,9 @@ GahpServer::command_initialize_from_file(const char *proxy_path,
 	write_line(buf);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		char *reason;
-		if ( result.argv[1] ) {
+		if ( result.argc > 1 ) {
 			reason = result.argv[1];
 		} else {
 			reason = "Unspecified error";
@@ -1175,7 +1186,7 @@ GahpServer::command_response_prefix(const char *prefix)
 	write_line(buf);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
 		return false;
 	}
@@ -1195,7 +1206,7 @@ GahpServer::command_async_mode_on()
 	write_line(command);
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
 		return false;
 	}
@@ -1210,7 +1221,7 @@ GahpServer::command_commands()
 	write_line("COMMANDS");
 	Gahp_Args result;
 	read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ) {
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
 		dprintf(D_ALWAYS,"GAHP command 'COMMANDS' failed\n");
 		return false;
 	}
@@ -1280,8 +1291,7 @@ GahpClient::globus_gram_client_error_string(int error_code)
 	server->write_line(buf);
 	Gahp_Args result;
 	server->read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ||
-		 result.argv[1] == NULL ) {
+	if ( result.argc < 2 || result.argv[0][0] != 'S' ) {
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: error_code=%d\n",
 						command,error_code);
 		return NULL;
@@ -1335,7 +1345,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			*gass_url = strdup(result->argv[2]);
 			server->globus_gass_server_url = strdup(result->argv[2]);
 		}
@@ -1405,7 +1415,7 @@ GahpClient::globus_gram_client_job_request(
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			*job_contact = strdup(result->argv[2]);
 		}
 		delete result;
@@ -1947,7 +1957,6 @@ int
 GahpServer::poll()
 {
 	Gahp_Args* result = NULL;
-	char **argv;
 	int num_results = 0;
 	int i, result_reqid;
 	GahpClient* entry;
@@ -1993,11 +2002,10 @@ GahpServer::poll()
 	for (i=0; i < num_results; i++) {
 		if ( result ) delete result;
 		result = result_lines[i];
-		argv = result->argv;
 
 		result_reqid = 0;
-		if ( argv[0] ) {
-			result_reqid = atoi(argv[0]);
+		if ( result->argc > 0 ) {
+			result_reqid = atoi(result->argv[0]);
 		}
 		if ( result_reqid == 0 ) {
 			// something is very weird; log it and move on...
@@ -2008,9 +2016,9 @@ GahpServer::poll()
 			// Check and see if this is a gram_client_callback.  If so,
 			// deal with it here and now.
 		if ( result_reqid == globus_gt2_gram_callback_reqid ) {
-			if ( argv[1] && argv[2] && argv[3] ) {
-				(*globus_gt2_gram_callback_func)( globus_gt2_gram_user_callback_arg, argv[1], 
-								atoi(argv[2]), atoi(argv[3]) );
+			if ( result->argc == 4 ) {
+				(*globus_gt2_gram_callback_func)( globus_gt2_gram_user_callback_arg, result->argv[1], 
+								atoi(result->argv[2]), atoi(result->argv[3]) );
 			} else {
 				dprintf(D_FULLDEBUG,
 					"GAHP - Bad client_callback results line\n");
@@ -2021,9 +2029,9 @@ GahpServer::poll()
 			// Check and see if this is a gt3 gram_client_callback.  If so,
 			// deal with it here and now.
 		if ( result_reqid == globus_gt3_gram_callback_reqid ) {
-			if ( argv[1] && argv[2] ) {
-				(*globus_gt3_gram_callback_func)( globus_gt3_gram_user_callback_arg, argv[1], 
-								atoi(argv[2]), 0 );
+			if ( result->argc == 3 ) {
+				(*globus_gt3_gram_callback_func)( globus_gt3_gram_user_callback_arg, result->argv[1], 
+								atoi(result->argv[2]), 0 );
 			} else {
 				dprintf(D_FULLDEBUG,
 					"GAHP - Bad client_callback results line\n");
@@ -2158,11 +2166,10 @@ GahpClient::globus_gram_client_callback_allow(
 	server->write_line(buf);
 	Gahp_Args result;
 	server->read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ||
-		 result.argv[1] == NULL ) {
+	if ( result.argc != 2 || result.argv[0][0] != 'S' ) {
 			// Badness !
-		int ec = result.argv[1] ? atoi(result.argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-		const char *es = result.argv[2] ? result.argv[2] : "???";
+		int ec = result.argc >= 2 ? atoi(result.argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+		const char *es = result.argc >= 3 ? result.argv[2] : "???";
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s error_code=%d\n",
 						es,ec);
 		return ec;
@@ -2227,16 +2234,12 @@ GahpClient::gt3_gram_client_callback_allow(
 	server->write_line(buf);
 	Gahp_Args result;
 	server->read_argv(result);
-	if ( result.argv[0] == NULL || result.argv[0][0] != 'S' ||
-		 result.argv[1] == NULL ) {
+	if ( result.argc != 2 || result.argv[0][0] != 'S' ) {
 			// Badness !
-//		int ec = result.argv[1] ? atoi(result.argv[1]) : GAHPCLIENT_COMMAND_NOT_SUPPORTED;
-//		const char *es = result.argv[2] ? result.argv[2] : "???";
-int ec=1;
-const char *es="";
-		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s error_code=%d\n",
-						es,ec);
-		return ec;
+		const char *es = result.argc >= 3 ? result.argv[2] : "???";
+		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",
+						es);
+		return 1;
 	} 
 
 		// Goodness !
@@ -2302,7 +2305,7 @@ GahpClient::gt3_gram_client_job_create(
 			EXCEPT("Bad %s Result",command);
 		}
 		int rc = atoi(result->argv[1]);
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			*job_contact = strdup(result->argv[2]);
 		}
 		delete result;
@@ -2701,7 +2704,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 		if ( result->argv[1][0] == 'S' ) {
 			rc = 0;
 		}
-		if ( result->argv[2] && strcasecmp(result->argv[2], NULLSTRING) ) {
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
 			*job_id = strdup(result->argv[2]);
 		}
 		if ( strcasecmp(result->argv[3], NULLSTRING) ) {
