@@ -343,11 +343,11 @@ find_file(const char *env_name, const char *file_name)
 		config_file[0] = '\0';
 		strcat( config_file, "/etc/condor/" );
 		strcat( config_file, file_name );
-		if( (fd = open( config_file, O_RDONLY )) > 0 ) {
-			close( fd );
-		} else {
+		if( (fd = open( config_file, O_RDONLY )) < 0 ) {
 			free( config_file );
 			config_file = NULL;
+		} else {
+			close( fd );
 		}
 	}
 	if( ! config_file && tilde ) {
