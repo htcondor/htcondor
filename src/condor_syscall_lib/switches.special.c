@@ -1036,3 +1036,44 @@ sync( void )
 	return 0;
 #endif
 }
+
+/* Solaris has a library entry fsync() which calls the system call fdsync. */
+
+#ifdef SYS_fdsync
+int fdsync( int fd )
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+
+	if( LocalSysCalls() || use_local_access ) {
+		rval = syscall( SYS_fdsync, user_fd );
+	} else {
+		rval = REMOTE_syscall( CONDOR_fsync, user_fd );
+	}
+
+	return rval;
+}
+
+int _fdsync( int fd )
+{
+	fdsync(fd);
+}
+
+int __fdsync( int fd )
+{
+	fdsync(fd);
+}
+
+int ___fdsync( int fd )
+{
+	fdsync(fd);
+}
+#endif
