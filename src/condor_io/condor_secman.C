@@ -366,7 +366,6 @@ SecMan::CreateSecurityPolicyAd(const char *auth_level, bool other_side_can_negot
 	// is a thing that param()s.
 	char *paramer;
 
-
 	// auth methods
 	sprintf(buf, "SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	paramer = param(buf);
@@ -766,14 +765,14 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	cli_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 	if (dur) {
 		cli_duration = atoi(dur);
-		delete dur;
+		free(dur);
 	}
 
 	dur = NULL;
 	srv_ad.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 	if (dur) {
 		srv_duration = atoi(dur);
-		delete dur;
+		free(dur);
 	}
 
 	sprintf (buf, "%s=\"%i\"", ATTR_SEC_SESSION_DURATION,
@@ -908,6 +907,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		// make a note that this command was done old-style.  perhaps it is time
 		// to get some decent error propagation up in here...
 
+        // I think there is a memory leak, hence the code below. Hao
+        if (auth_info) {
+            delete auth_info;
+        }
 		return true;
 	}
 
@@ -1050,8 +1053,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		//   MyEndpoint
 	}
 	*/
-
-
 
 
 	bool retval = true;
@@ -1240,6 +1241,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad\n");
 			auth_info->dPrint( D_SECURITY );
+            
+            // There might be a memory leak with auth_info, hence the code below. Hao.
+            delete auth_info;
 			return false;
 		}
 
@@ -1264,6 +1268,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			if (!auth_method) {
 				// there's no auth method.
 				dprintf ( D_SECURITY, "SECMAN: no auth method!, failing.\n");
+                // Make sure auth_info is deleted
+                delete auth_info;
 				return false;
 			}
 
@@ -1271,6 +1277,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				dprintf ( D_SECURITY, "SECMAN: authenticate failed!\n");
 				retval = false;
 			}
+            if (auth_method) {  
+                free(auth_method);
+            }
 		} else {
 			// !new_session is equivilant to use_session in this client.
 			if (!new_session) {
@@ -1288,6 +1297,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			if (!ki) {
 				dprintf ( D_SECURITY, "SECMAN: enable_mac has no key to use, failing...\n");
+                delete auth_info;
 				return false;
 			}
 
@@ -1372,9 +1382,12 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			int expiration_time = time(0) + atoi(dur);
 
+            if (dur) {
+                free(dur);
+            }
 
 			KeyCacheEntry tmp_key( sid, sock->endpoint(), ki, auth_info, expiration_time);
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %i seconds.\n", sid, atoi(dur));
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %i seconds.\n", sid, expiration_time);
 
 			// stick the key in the cache
 			session_cache->insert(tmp_key);
@@ -1431,8 +1444,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				}
 			}
 			
-			delete sid;
-			delete cmd_list;
+			free( sid );
+            free( cmd_list );
 
 			retval = true;
 
