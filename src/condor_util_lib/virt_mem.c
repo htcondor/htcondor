@@ -119,8 +119,8 @@ calc_virt_memory()
 		return 0;
 	}
 	
-	fscanf(proc, "%s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
-	fscanf(proc, "%s %d %d %d %d %d", tmp_c, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i);
+	fscanf(proc, "%s %s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c, &tmp_c);
+	fscanf(proc, "%s %d %d %d %d %d %d", tmp_c, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i);
 	fscanf(proc, "%s %d %d %d", tmp_c, &tmp_i, &tmp_i, &free_swap);
 	fclose(proc);
 

@@ -72,8 +72,13 @@ void CloseHistory ( XDR *H );
 void AppendHistory ( XDR *H, PROC *p );
 int ScanHistory ( XDR *H, void (*func)(PROC *) );
 int LockHistory ( XDR *H, int op );
+#if defined(LINUX)
+void insque ( struct qelem *elem, struct qelem *pred );
+void remque ( struct qelem *elem );
+#else
 int insque ( struct qelem *elem, struct qelem *pred );
 int remque ( struct qelem *elem );
+#endif
 DBM * OpenJobQueue ( char *path, int flags, int mode );
 int CloseJobQueue ( DBM *Q );
 int LockJobQueue ( DBM *Q, int op );
@@ -114,6 +119,9 @@ int display_v2_proc_long ( PROC *proc );
 #if defined(Solaris)
 int setegid ( long int egid );
 int seteuid ( long int euid );
+#elif defined (LINUX)
+int setegid ( short unsigned int egid );
+int seteuid ( short unsigned int euid );
 #else
 int setegid ( int egid );
 int seteuid ( int euid );
@@ -124,8 +132,13 @@ int seteuid ( int euid );
 int setlinebuf ( FILE *fp );
 #endif
 
+#if defined(LINUX)
+int setregid ( short unsigned int rgid, short unsigned int egid );
+int setreuid ( short unsigned int ruid, short unsigned int euid );
+#else
 int setregid ( int rgid, int egid );
 int setreuid ( int ruid, int euid );
+#endif
 int setrgid ( int rgid );
 int display_status_line ( STATUS_LINE *line, FILE *fp );
 char * shorten ( char *state );
