@@ -1,3 +1,9 @@
+10/28/04 V6_7-local_univ-branch
+   Branch for "local universe" development, which is basically the
+   scheduler universe but with a starter under the schedd.  Created
+   from the V6_7-local_univ-root tag.  Uses same externals as are in
+   the V6_7_2_EXT module.  
+
 10/26/04 V6_7-post_merge-V6_6-merge-24
    The state of the V6_7-branch after yet another merge from V6_6-branch.
 
