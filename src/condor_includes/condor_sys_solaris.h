@@ -34,6 +34,11 @@
 
 #include <sys/types.h>
 
+/* used for calculating console and mouse idle times */
+#if defined(Solaris28) || defined(Solaris29)
+#include <kstat.h>
+#endif
+
 #include <unistd.h>
 /* These are all functions that unistd.h is supposed to prototype that
    for whatever reason, are not defined on Solaris. */
