@@ -128,7 +128,7 @@ bool operator==(const PROC_ID a, const PROC_ID b)
 int
 dc_reconfig()
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 	return TRUE;
 }
 
@@ -1056,7 +1056,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
                         job_id.cluster, job_id.proc);
             }
         
-			if ( daemonCore->Send_Signal(srec->pid,DC_SIGUSR1)==FALSE) {
+			if ( daemonCore->Send_Signal(srec->pid,SIGUSR1)==FALSE ) {
 				dprintf(D_ALWAYS,
 						"Error in sending SIGUSR1 to pid %d errno=%d\n",
 						srec->pid, errno);            
@@ -1077,7 +1077,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 			init_user_ids(owner);
-			int kill_sig = DC_SIGTERM;
+			int kill_sig = SIGTERM;
 				// First, try ATTR_REMOVE_KILL_SIG
 			if( GetAttributeInt(job_id.cluster, job_id.proc,
 								ATTR_REMOVE_KILL_SIG, &kill_sig) < 0 ) {
@@ -1090,16 +1090,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 					 " pid=%d owner=%s\n", kill_sig, srec->pid, owner );
 			priv_state priv = set_user_priv();
 
-				// TODO!!!!
-				// This is really broken, since DC::Send_Signal()
-				// assumes you're giving it a DC_SIGXXX brand of
-				// signal number.  So, what users define in their
-				// submit files isn't what they're really going to
-				// get!  This is evil.  We need to either do the
-				// appropriate translation, store everything as
-				// strings, or come up with a better solution. 
-				// -Derek Wright 3/23/01
-			if ( daemonCore->Send_Signal( srec->pid, kill_sig ) == TRUE ) {
+			if( daemonCore->Send_Signal(srec->pid, kill_sig) ) {
 				// successfully sent signal
 				srec->preempted = TRUE;
 			}
@@ -4231,7 +4222,7 @@ Scheduler::preempt(int n)
 							ATTR_JOB_UNIVERSE,&universe);
 			if (universe == CONDOR_UNIVERSE_PVM) {
 				if ( !rec->preempted ) {
-					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
+					daemonCore->Send_Signal( rec->pid, SIGTERM );
 				} else {
 					if ( ExitWhenDone ) {
 						n++;
@@ -4260,7 +4251,7 @@ Scheduler::preempt(int n)
 					// beceause it could also be a shadow for which the
 					// claim was relinquished (by the startd).
 					if (IsSchedulerUniverse(rec)) {
-						int kill_sig = DC_SIGTERM;
+						int kill_sig = SIGTERM;
 						GetAttributeInt(rec->job_id.cluster, rec->job_id.proc, 
 										ATTR_KILL_SIG,&kill_sig);
 						daemonCore->Send_Signal( rec->pid, kill_sig );
@@ -5462,7 +5453,7 @@ Scheduler::shutdown_fast()
 	shadow_rec *rec;
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1) {
-		daemonCore->Send_Signal( rec->pid, DC_SIGKILL );
+		daemonCore->Send_Signal( rec->pid, SIGKILL );
 		rec->preempted = TRUE;
 	}
 
