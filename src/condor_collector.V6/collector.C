@@ -141,8 +141,6 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 
-	// set up so that private ads from startds are collected as well
-	collector.wantStartdPrivateAds (true);
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)

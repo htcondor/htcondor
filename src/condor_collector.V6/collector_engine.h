@@ -49,9 +49,6 @@ class CollectorEngine : public Service
 	// want collector to log messages?  Default: yes
 	void toggleLogging (void);
 
-	// want startd private ads?  Default: no
-	void wantStartdPrivateAds (bool);
-
 	// perform the collect operation of the given command
 	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
@@ -87,9 +84,6 @@ class CollectorEngine : public Service
 
 	// should we log?
 	bool log;
-
-	// do we want private ads?
-	bool pvtAds;
 
 	void checkMasterStatus (ClassAd *);
 	int  masterCheck ();

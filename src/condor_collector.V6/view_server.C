@@ -129,9 +129,6 @@ void ViewServer::Init()
 	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
-	// set up so that private ads from startds are collected as well
-	collector.wantStartdPrivateAds(false);
-
 	return;
 }
 
@@ -234,7 +231,6 @@ int ViewServer::HashFunc(const MyString& Key, int TableSize) {
 
 int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
 {
-  
 	dprintf(D_ALWAYS,"Got history query %d\n",command);
 
 	int FromDate, ToDate, Options;
@@ -258,7 +254,9 @@ int ViewServer::ReceiveHistoryQuery(Service* s, int command, Stream* sock)
 	// Reply to query
 
 	sock->encode();
+
 	HandleQuery(sock,command,FromDate,ToDate,Options,LinePtr);
+
 	strcpy(Line,""); // Send an empty line to signal end of data
 	if (!sock->code(LinePtr) ||
 	    !sock->end_of_message()) {

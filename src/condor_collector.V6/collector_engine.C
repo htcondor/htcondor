@@ -79,7 +79,6 @@ CollectorEngine () :
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
-	pvtAds = false;
 }
 
 
@@ -215,13 +214,6 @@ toggleLogging (void)
 }
 
 
-void CollectorEngine::
-wantStartdPrivateAds (bool flag)
-{
-	pvtAds = flag;
-}
-
-
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 {
@@ -342,31 +334,28 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  hashString, insert);
 
 		// if we want to store private ads
-		if (pvtAds)
+		if (!sock)
 		{
-			if (!sock)
+			dprintf (D_ALWAYS, "Want private ads, but no socket given!\n");
+			break;
+		}
+		else
+		{
+			if (!(pvtAd = new ClassAd))
 			{
-				dprintf (D_ALWAYS, "Want private ads, but no socket given!\n");
+				EXCEPT ("Memory error!");
+			}
+			if (!pvtAd->get(*sock))
+			{
+				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
+				delete pvtAd;
 				break;
 			}
-			else
-			{
-				if (!(pvtAd = new ClassAd))
-				{
-					EXCEPT ("Memory error!");
-				}
-				if (!pvtAd->get(*sock))
-				{
-					dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
-					delete pvtAd;
-					break;
-				}
-				
-				// insert the private ad into its hashtable --- use the same
-				// hash key as the public ad
-				(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ", pvtAd,
-										hk, hashString, insPvt);
-			}
+			
+			// insert the private ad into its hashtable --- use the same
+			// hash key as the public ad
+			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ", pvtAd,
+									hk, hashString, insPvt);
 		}
 		break;
 
@@ -668,11 +657,8 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StartdAds ...\n");
 	cleanHashTable (StartdAds, now, makeStartdAdHashKey);
 
-	if (pvtAds)
-	{
-		dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
-		cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
-	}
+	dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
+	cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
@@ -699,7 +685,6 @@ housekeeper()
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
 	return TRUE;
 }
-
 
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, 
