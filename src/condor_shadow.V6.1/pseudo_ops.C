@@ -694,7 +694,6 @@ pseudo_get_job_attr( const char *name, char *expr )
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_get_job_attr(%s) failed\n",name);
-		errno = ENOENT;
 		return -1;
 	}
 }
@@ -711,7 +710,6 @@ pseudo_set_job_attr( const char *name, const char *expr )
 		return 0;
 	} else {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) failed\n",name,expr);
-		errno = ENOENT;
 		return -1;
 	}
 }
