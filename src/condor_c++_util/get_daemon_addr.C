@@ -160,8 +160,12 @@ get_schedd_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_SCHEDD, name, pool );
-	sprintf( addr, "%s", d.addr() );
-	return addr;
+	if( d.addr() ) {
+		sprintf( addr, "%s", d.addr() );
+		return addr;
+	} else {
+		return NULL;
+	}
 } 
 
 
@@ -170,8 +174,12 @@ get_startd_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_STARTD, name, pool );
-	sprintf( addr, "%s", d.addr() );
-	return addr;
+	if( d.addr() ) {
+		sprintf( addr, "%s", d.addr() );
+		return addr;
+	} else {
+		return NULL;
+	}
 } 
 
 
@@ -180,8 +188,12 @@ get_master_addr(const char* name, const char* pool)
 {
 	static char addr[100];
 	Daemon d( DT_MASTER, name, pool );
-	sprintf( addr, "%s", d.addr() );
-	return addr;
+	if( d.addr() ) {
+		sprintf( addr, "%s", d.addr() );
+		return addr;
+	} else {
+		return NULL;
+	}
 } 
 
 char*
@@ -189,8 +201,12 @@ get_negotiator_addr(const char* name)
 {
 	static char addr[100];
 	Daemon d( DT_COLLECTOR, name );
-	sprintf( addr, "%s", d.addr() );
-	return addr;
+	if( d.addr() ) {
+		sprintf( addr, "%s", d.addr() );
+		return addr;
+	} else {
+		return NULL;
+	}
 }
 
 
@@ -199,8 +215,12 @@ get_collector_addr(const char* name)
 {
 	static char addr[100];
 	Daemon d( DT_COLLECTOR, name );
-	sprintf( addr, "%s", d.addr() );
-	return addr;
+	if( d.addr() ) {
+		sprintf( addr, "%s", d.addr() );
+		return addr;
+	} else {
+		return NULL;
+	}
 }
 
 
