@@ -1323,6 +1323,8 @@ init_environment_info()
 	char		*my_cell;
 	char 		*my_fs_domain;
 	char		*my_uid_domain;
+	char		*ckpt_server_host;
+	char		*arch, *opsys;
 
 	my_cell = info.my_cell();
 	if( my_cell ) {
@@ -1332,10 +1334,30 @@ init_environment_info()
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
 		REMOTE_syscall( CONDOR_register_fs_domain, my_fs_domain );
+		free(my_fs_domain);
 	}
 
 	my_uid_domain = param( "UID_DOMAIN" );
 	if( my_uid_domain ) {
 		REMOTE_syscall( CONDOR_register_uid_domain, my_uid_domain );
+		free(my_uid_domain);
+	}
+
+	ckpt_server_host = param( "CKPT_SERVER_HOST" );
+	if( ckpt_server_host ) {
+		REMOTE_syscall( CONDOR_choose_ckpt_server, ckpt_server_host );
+		free(ckpt_server_host);
+	}
+
+	arch = param( "ARCH" );
+	if (arch) {
+		REMOTE_syscall( CONDOR_register_arch, arch );
+		free(arch);
+	}
+
+	opsys = param( "OPSYS" );
+	if (opsys) {
+		REMOTE_syscall( CONDOR_register_opsys, opsys);
+		free(opsys);
 	}
 }
