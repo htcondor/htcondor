@@ -1668,10 +1668,6 @@ int     operator;
 	}
 	elem->type = operator;
 
-	dprintf(D_ALWAYS," Displaying expr before :");
-	display_expr(exp1);
-	display_expr(exp2);
-
 	for ( i=1; i < exp2->len-2; i++)
 		add_elem_before_last( exp2->data[i], exp1);
 	add_elem_before_last( elem, exp1);
