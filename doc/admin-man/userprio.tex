@@ -63,13 +63,18 @@ be useful:
 	therefore equivalent to ``background jobs'' which use resources not used 
 	by other users of Condor.
 
-	\item[Remote Users]  The flocking feature of Condor (see 
-	section~\ref{sec:Flocking}) allows the \Condor{schedd} to submit to more
-	than one pool.  In such situations, one may have submitters from other
-	domains submitting into the local pool.  It is often desirable to have
-	Condor treat local users preferentially over such remote users.  If
-	configured, Condor will boost the RUPs of remote users by 
-	\Macro{REMOTE\_PRIO\_FACTOR}, specified in the configuration file.
+	\item[Remote Users] The flocking feature of Condor (see
+	section~\ref{sec:Flocking}) allows the \Condor{schedd} to
+	submit to more than one pool.
+	In addition, the Submit-Only feature allows a user to run a
+	\Condor{schedd} that is submitting jobs into another pool.
+	In such situations, one may have submitters from other domains
+	submitting into the local pool.
+	It is often desirable to have Condor treat local users
+	preferentially over such remote users.
+	If configured, Condor will boost the RUPs of remote users by
+	\Macro{REMOTE\_PRIO\_FACTOR}, specified in the configuration
+	file.
 \end{description}
 
 The priority boost factors for individual users can be set with the 
