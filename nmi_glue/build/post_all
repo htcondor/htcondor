@@ -1,0 +1,45 @@
+#!/usr/bin/env perl
+
+# $Id: post_all,v 1.1.2.1 2004-06-25 23:44:59 wright Exp $
+
+######################################################################
+# Submit-side NMI build system infrastructure to save results after
+# all the platform-specific jobs have completed
+######################################################################
+
+use Cwd;
+
+# autoflush our STDOUT
+$| = 1;
+
+my $BaseDir = getcwd();
+my $CommonDir = "$BaseDir/common";
+my $vers_file = "CONDOR-VERSION";
+my $result = "results.tar.gz";
+my $src_file;
+
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+
+open( VERS, "$vers_file" ) || die "Can't open $vers_file: $!\n";
+while( <VERS> ) {
+    $vers = $_;
+}
+close( VERS );
+$src_file = "condor-$vers.tar.gz";
+-f $src_file || die "$src_file does not exist!\n";
+
+# All we want to do is tar the files in common into
+# common/results.tar.gz so that we can save them.
+print "Tarring up contents of common to save for later\n";
+open( TAR, "tar -zcvf $result $vers_file $src_file|" ) ||
+    die "Can't open(tar -zcvf $result $vers_file $src_file): $!\n";
+while( <TAR> ) {
+    print $_;
+}
+close( TAR );
+if( $? ) {
+    die "Tar failed with status $?\n";
+}
+
+print "tar completed successfully\n";
+exit 0;
