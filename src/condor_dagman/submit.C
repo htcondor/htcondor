@@ -87,8 +87,11 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
     }
   }
 
-  if (1 == sscanf(buffer, "1 job(s) submitted to cluster %d",
-                  & condorID._cluster)) {
+  if( 1 != sscanf( buffer, "1 job(s) submitted to cluster %d",
+				   &condorID._cluster) ) {
+	  debug_printf( DEBUG_QUIET, "ERROR: condor_submit failed:\n\t%s\n",
+					buffer );
+	  return false;
   }
   
   return true;
