@@ -62,7 +62,7 @@ extern "C" { unsigned short int htons(unsigned short int); }
 #endif
 extern "C" { void bzero(char*, int); }
 extern "C" { pid_t getpid(void); }
-extern "C" { int gethostname(const char*, int); }
+/* extern "C" { int gethostname(const char*, int); } */
 extern "C" { int close(int); }
 extern "C" { pid_t fork(void); }
 extern "C" { int select(int, fd_set*, fd_set*, fd_set*, struct timeval*); }
