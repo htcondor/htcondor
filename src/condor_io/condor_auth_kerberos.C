@@ -52,7 +52,6 @@ Condor_Auth_Kerberos :: Condor_Auth_Kerberos( ReliSock * sock )
       auth_context_    ( NULL ),
       krb_principal_   ( NULL ),
       ccname_          ( NULL ),
-      defaultCondor_   ( NULL ),
       defaultStash_    ( NULL ),
       keytabName_      ( NULL ),
       sessionKey_      ( NULL ),
@@ -84,11 +83,6 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
         krb5_free_context(krb_context_);
     }
     
-    if (defaultCondor_) {
-        free(defaultCondor_);
-        defaultCondor_ = NULL;
-    }
-    
     if (defaultStash_) {
         free(defaultStash_);
         defaultStash_ = NULL;
@@ -112,49 +106,49 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
     //------------------------------------------
     // First, initialize the context if necessary
     //------------------------------------------
-    init_kerberos_context();
+    if (init_kerberos_context() && init_server_info()) {
     
-    if ( mySock_->isClient() ) {
-        initialize_client_data();
-        
-        if (isDaemon()) {
-            status = init_daemon();
-        }
-        else {
-            status = init_user();
-        }
-
-        int message = (status == TRUE? KERBEROS_PROCEED : KERBEROS_ABORT);
-
-        mySock_->encode();
-        mySock_->code(message);
-        mySock_->end_of_message();
-        
-        if (message == KERBEROS_PROCEED) {
-            // We are ready to go
-            status = authenticate_client_kerberos();
-        }
-        else {
-            status = FALSE;
-        }
-    }
-    else {
-        int ready;
-        mySock_->decode();
-        if (!mySock_->code(ready) || !mySock_->end_of_message()) {
-            status = FALSE;
-        }
-        else {
-            if (ready == KERBEROS_PROCEED) {
-                dprintf(D_SECURITY,"About to authenticate client using Kerberos\n" );
-                status = authenticate_server_kerberos();
+        if ( mySock_->isClient() ) {
+            
+            if (isDaemon()) {
+                status = init_daemon();
+            }
+            else {
+                status = init_user();
+            }
+            
+            int message = (status == TRUE? KERBEROS_PROCEED : KERBEROS_ABORT);
+            
+            mySock_->encode();
+            mySock_->code(message);
+            mySock_->end_of_message();
+            
+            if (message == KERBEROS_PROCEED) {
+                // We are ready to go
+                status = authenticate_client_kerberos();
             }
             else {
                 status = FALSE;
             }
         }
+        else {
+            int ready;
+            mySock_->decode();
+            if (!mySock_->code(ready) || !mySock_->end_of_message()) {
+                status = FALSE;
+            }
+            else {
+                if (ready == KERBEROS_PROCEED) {
+                    dprintf(D_SECURITY,"About to authenticate client using Kerberos\n" );
+                    status = authenticate_server_kerberos();
+                }
+                else {
+                    status = FALSE;
+                }
+            }
+        }
     }
-    
+
     mySock_->timeout(time); //put it back to what it was before
     
     return( status );
@@ -176,11 +170,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     in_data.data = (char *) malloc(input_len);
     memcpy(in_data.data, input, input_len);
     
-    if (code = krb5_encrypt_data(krb_context_, 
-                                 sessionKey_, 
-                                 0, 
-                                 &in_data, 
-                                 &out_data)) {
+    if (code = krb5_encrypt_data(krb_context_, sessionKey_, 0, &in_data, &out_data)) {
         output_len = 0;
         goto error;
     }
@@ -199,8 +189,6 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     memcpy(output + index, &(out_data.ciphertext.length), sizeof(out_data.ciphertext.length));
     index += sizeof(out_data.ciphertext.length);
     memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
-    
-    //fprintf(stderr, "Origional text: %s, encrypted text: %24s\n", input, out_data.ciphertext.data);
     
     if (in_data.data) {
         free(in_data.data);
@@ -268,26 +256,11 @@ int Condor_Auth_Kerberos :: init_daemon()
     int            code, rc = TRUE;
     priv_state     priv;
     krb5_keytab    keytab = 0;
-    char * name;
 
     creds_ = (krb5_creds *) malloc(sizeof(krb5_creds));
     memset(creds_, 0, sizeof(krb5_creds));
 
     keytabName_ = param(STR_CONDOR_SERVER_KEYTAB);
-    
-    if (krb_principal_ == NULL) {
-        if ((code = krb5_sname_to_principal(krb_context_, 
-                                            NULL, 
-                                            defaultCondor_,
-                                            KRB5_NT_SRV_HST, 
-                                            &krb_principal_))) {
-            goto error;
-        }
-    }
-    
-    krb5_unparse_name(krb_context_, krb_principal_, &name);
-    dprintf(D_SECURITY, "Acquired credential for daemon principal %s\n", name);
-    free(name);
     
     //------------------------------------------
     // Copy the principal information 
@@ -523,47 +496,13 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     krb5_keytab       keytab = 0;
     int               time, message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
-    const char * principal;
     char *       name;  
 
     request.data = 0;
     reply.data   = 0;
     
-    dprintf(D_SECURITY, "Building principal info for server\n");
-    
     keytabName_ = param(STR_CONDOR_SERVER_KEYTAB);
-    principal = param(STR_CONDOR_SERVER_PRINCIPAL);
-    
-    if (principal == NULL) {
-        principal = STR_DEFAULT_CONDOR_SERVICE;
-    }
-    //------------------------------------------
-    // First, find out the principal mapping
-    //------------------------------------------
-    if ((code = krb5_sname_to_principal(krb_context_, 
-                                        NULL, 
-                                        principal,
-                                        KRB5_NT_SRV_HST, 
-                                        &krb_principal_))) {
-        dprintf(D_SECURITY, "Failed to acquire server principal\n");
-        goto error;
-    }
 
-    //------------------------------------------
-    // Now, accept the connection
-    //------------------------------------------
-    krb5_unparse_name(krb_context_, krb_principal_, &name);
-    dprintf(D_SECURITY, "Accepting connection for server %s\n", name);
-    free(name);
-    
-    //------------------------------------------
-    // Get te KRB_AP_REQ message
-    //------------------------------------------
-    if(read_request(&request) == FALSE) {
-        dprintf(D_ALWAYS, "Server is unable to read request\n");
-        goto error;
-    }
-    
     //------------------------------------------
     // Getting keytab info
     //------------------------------------------
@@ -575,6 +514,14 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
     
     if (code) {
+        goto error;
+    }
+    
+    //------------------------------------------
+    // Get te KRB_AP_REQ message
+    //------------------------------------------
+    if(read_request(&request) == FALSE) {
+        dprintf(D_ALWAYS, "Server is unable to read request\n");
         goto error;
     }
     
@@ -896,7 +843,7 @@ int Condor_Auth_Kerberos :: send_request(krb5_data * request)
     return reply;
 }
 
-void Condor_Auth_Kerberos :: initialize_client_data()
+int Condor_Auth_Kerberos :: init_server_info()
 {
     // First, where to find cache
     //if (defaultStash_) {
@@ -907,40 +854,54 @@ void Condor_Auth_Kerberos :: initialize_client_data()
     // Exception!
     //  dprintf(D_ALWAYS, "Unable to stash ticket -- STASH directory is not defined!\n");
     //}
-    
-    struct hostent * hp;
-    char * name;
 
-    dprintf(D_SECURITY, "Getting server info\n");
-    //------------------------------------------
-    // Form the info for server
-    //------------------------------------------
+    int  size;
+    char *name = 0, *instance = 0;
+    const char * serverPrincipal = param(STR_CONDOR_SERVER_PRINCIPAL);
+    krb5_principal * server = &krb_principal_; // by default
     
-    hp = gethostbyaddr((char *) &(mySock_->endpoint())->sin_addr, 
-                       sizeof (struct in_addr),
-                       mySock_->endpoint()->sin_family);
+    if (serverPrincipal == NULL) {
+        serverPrincipal = STR_DEFAULT_CONDOR_SERVICE;
+    }
 
-    // Now, lets find out the default condor daemon user
-    defaultCondor_ = param(STR_CONDOR_SERVER_PRINCIPAL);
-    
-    // If default is not set in configuration file
-    if (defaultCondor_ == NULL) {
-        //defaultCondor_ = strdup(STR_DEFAULT_CONDOR_USER);
-        defaultCondor_ = strdup(STR_DEFAULT_CONDOR_SERVICE);
+    size = strlen(serverPrincipal);
+
+    if ((instance = strchr( serverPrincipal, '/')) != NULL) {
+        size = instance - serverPrincipal;
+        instance += 1;
+    }
+
+    name = (char *) malloc(size + 1);
+    memset(name, 0, size + 1);
+    strncpy(name, serverPrincipal, size);
+
+    if (mySock_->isClient()) {
+        server = &server_;
+        if (instance == 0) {
+            struct hostent * hp;
+            hp = gethostbyaddr((char *) &(mySock_->endpoint())->sin_addr, 
+                               sizeof (struct in_addr),
+                               mySock_->endpoint()->sin_family);
+            instance = hp->h_name;
+        }
     }
 
     //------------------------------------------
-    // Setup the host server information
+    // First, find out the principal mapping
     //------------------------------------------
-    krb5_sname_to_principal(krb_context_, 
-                            hp->h_name, 
-                            defaultCondor_,
-                            KRB5_NT_SRV_HST, 
-                            &server_);
+    if (krb5_sname_to_principal(krb_context_,instance,name,KRB5_NT_SRV_HST,server)) {
+        dprintf(D_SECURITY, "Failed to build server principal\n");
+        free(name);
+        return -1;
+    }
 
-    krb5_unparse_name(krb_context_, server_, &name);
-    dprintf(D_SECURITY, "Server principal is %s\n", name);
     free(name);
+    krb5_unparse_name(krb_context_, *server, &name);
+    dprintf(D_SECURITY, "Server principal is %s\n", name);
+
+    free(name);
+
+    return 1;
 }
 
 int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
@@ -1188,7 +1149,7 @@ int Condor_Auth_Kerberos :: isValid() const
 {
     return auth_context_ != NULL;  // This is incorrect!
 }
-    
+
 #endif
 
 
