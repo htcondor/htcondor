@@ -202,7 +202,6 @@ CondorCronMgr::ParseJobList( const char *jobString )
 	jobList->rewind();
 	char	*jobDescr;
 	while (  ( jobDescr = jobList->next() ) != NULL ) {
-		char		*jobName, *jobPath, *jobPrefix, *tmp, modifier = '\0';
 		unsigned	jobPeriod = 0;
 		CronJobMode	jobMode = CRON_PERIODIC;
 
@@ -212,10 +211,17 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		// Make a temp copy of the job description that can get trashed
 		// by strtok_r()
 		char	*tmpDescr = strdup( jobDescr );
-		char	*tokptr;
+		char	*tmp;
+
+		// Verify strdup()
+		if ( NULL == tmpDescr ) {
+			dprintf( D_ALWAYS, "CronMgr: Failed to strdup() job description!" );
+			continue;
+		}
 
 		// Parse it out; format is name:path:period[hms]
-		jobName = strtok_r( tmpDescr, ":", &tokptr );
+		const char *jobName = tmpDescr;
+		tmp = NextTok( tmpDescr, ":" );
 		if ( ( NULL == jobName ) || ( '\0' == *jobName )  ) {
 			dprintf( D_ALWAYS, 
 					 "CronMgr: skipping invalid job description '%s'"
@@ -226,22 +232,20 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// Parse out the prefix
-		if ( ':' == *tokptr ) {
-			jobPrefix = "";
-		} else {
-			jobPrefix = strtok_r( NULL, ":", &tokptr );
-			if ( NULL == jobPrefix ) {
-				dprintf( D_ALWAYS,
-						 "CronMgr: skipping invalid job description '%s'"
-						 " (No prefix)\n",
-						 jobDescr );
-				free( tmpDescr );
-				continue;
-			}
+		const char *jobPrefix = tmp;
+		tmp = NextTok( tmp, ":" );
+		if ( NULL == jobPrefix ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: skipping invalid job description '%s'"
+					 " (No prefix)\n",
+					 jobDescr );
+			free( tmpDescr );
+			continue;
 		}
 
 		// Parse out the path
-		jobPath = strtok_r( NULL, ":", &tokptr );
+		const char *jobPath = tmp;
+		tmp = NextTok( tmp, ":" );
 		if (  ( NULL == jobPath ) || ( '\0' == *jobPath )  )
 		{
 			dprintf( D_ALWAYS, 
@@ -253,9 +257,11 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// Pull out the period
-		tmp = strtok_r( NULL, ":", &tokptr );
-		if ( NULL !=  tmp ) {
-			if ( sscanf( tmp, "%d%c", &jobPeriod, &modifier ) < 1 ) {
+		const char *jobPeriodStr = tmp;
+		tmp = NextTok( tmp, ":" );
+		if ( NULL != jobPeriodStr ) {
+			char	modifier;
+			if ( sscanf( jobPeriodStr, "%d%c", &jobPeriod, &modifier ) < 1 ) {
 				dprintf( D_ALWAYS,
 						 "CronMgr: skipping invalid job description '%s'"
 						 " (Bad Period '%s')\n",
@@ -281,22 +287,27 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Parse any remaining options
 		bool	killMode = false;
-		while (  NULL != ( tmp = strtok_r( NULL, ":", &tokptr ) ) ) {
-			if ( !strcasecmp( tmp, "kill" ) ) {
+		while ( 1 ) {
+			const char	*option = tmp;
+			if ( NULL == option ) {
+				break;
+			}
+			tmp = NextTok( tmp, ":" );
+			if ( !strcasecmp( option, "kill" ) ) {
 				dprintf( D_FULLDEBUG, "Cron: '%s': Kill option ok\n",
 						 jobName );
 				killMode = true;
-			} else if ( !strcasecmp( tmp, "nokill" ) ) {
+			} else if ( !strcasecmp( option, "nokill" ) ) {
 				dprintf( D_FULLDEBUG, "Cron: '%s': NoKill option ok\n",
 						 jobName );
 				killMode = false;
-			} else if ( !strcasecmp( tmp, "continuous" ) ) {
+			} else if ( !strcasecmp( option, "continuous" ) ) {
 				dprintf( D_FULLDEBUG, "Cron: '%s': Continuous option ok\n",
 						 jobName );
 				jobMode = CRON_CONTINUOUS;
 			} else {
 				dprintf( D_ALWAYS, "Job '%s': Ignoring unknown option '%s'\n",
-						 jobName, tmp );
+						 jobName, option );
 			}
 		}
 
@@ -397,4 +408,22 @@ CondorCronMgr::NewJob( const char *name )
 	dprintf( D_FULLDEBUG, "*** Creating a Condor job '%s' ***\n", name );
 	CondorCronJob *job = new CondorCronJob( name );
 	return job;
+}
+
+// Parse the next tokenized 'chunk', sorta like strtok()
+// Returns pointer to the next one..
+char *
+CondorCronMgr::NextTok( char *cur, const char *tok )
+{
+	// Look for the _next_ occurance
+	char	*tmp = strstr( cur, tok );
+	if ( NULL != tmp ) {
+		*tmp++ = '\0';
+		if ( '\0' == *tmp ) {
+			tmp = NULL;
+		}
+	}
+
+	// Done
+	return tmp;
 }
