@@ -40,6 +40,7 @@
 #include "string_list.h"
 #include "get_daemon_addr.h"
 #include "daemon_types.h"
+#include "daemon_list.h"
 #include "strupr.h"
 
 #ifdef WIN32
@@ -91,7 +92,7 @@ int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
 DCCollector	*Collector = NULL;
-StringList *secondary_collectors = NULL;
+DaemonList* secondary_collectors = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -659,12 +660,17 @@ init_params()
 
 	tmp = param( "SECONDARY_COLLECTOR_LIST" );
 	if( tmp ) {
-		if (secondary_collectors) delete secondary_collectors;
-		secondary_collectors = new StringList(tmp);
+		if( secondary_collectors ) {
+			delete secondary_collectors;
+		}
+		secondary_collectors = new DaemonList();
+		secondary_collectors->init( DT_COLLECTOR, tmp );
 		free(tmp);
 	} else {
-		if (secondary_collectors) delete secondary_collectors;
-		secondary_collectors = NULL;
+		if( secondary_collectors ) {
+			delete secondary_collectors;
+			secondary_collectors = NULL;
+		}
 	}
 }
 

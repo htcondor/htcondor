@@ -33,7 +33,7 @@
 #include "condor_email.h"
 #include "condor_environ.h"
 #include "condor_parameters.h"
-#include "string_list.h"
+#include "daemon_list.h"
 #include "sig_name.h"
 #include "env.h"
 
@@ -51,7 +51,7 @@ extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
 extern DCCollector*	Collector;
-extern StringList *secondary_collectors;
+extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -1576,19 +1576,14 @@ Daemons::UpdateCollector()
 
 	if (secondary_collectors) {
 		secondary_collectors->rewind();
-		char *collector;
-		while ((collector = secondary_collectors->next()) != NULL) {
-			SafeSock s;
-			s.timeout(2);
-			s.encode();
-			DCCollector col(collector);
-			int collector_port = param_get_collector_port();
-			if (!s.connect(collector, collector_port)     || 
-                !col.startCommand(UPDATE_MASTER_AD, &s)   ||
-                !ad->put(s) || !s.end_of_message()) {
-				dprintf( D_ALWAYS,
-						 "Failed to send update to secondary collector %s\n",
-						 collector);
+		Daemon* d;
+		DCCollector* col;
+		while( secondary_collectors->next(d) ) {
+			col = (DCCollector*)d;
+			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+				dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to "
+						 "collector %s: %s\n", 
+						 col->updateDestination(), col->error() );
 			}
 		}
 	}
