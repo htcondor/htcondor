@@ -35,9 +35,10 @@ package CondorConfigMacros;
 # ******************************************************
 # Constructor
 # ******************************************************
-sub new( $ )
+sub new( $$ )
 {
     my $class = shift;
+    my $Distribution = shift;
     my $self = {};
 
     $self->{Macros} = ();
@@ -58,6 +59,15 @@ sub new( $ )
     $self->Set( "HOSTNAME", $Host );
     $self->Set( "TILDE", $ENV{HOME} );
 
+    # Query condor_config_val for some others...
+    $self->{ConfigProg} = $Distribution . "_config_val";
+    $self->SetFromConfig( "ARCH" );
+    $self->SetFromConfig( "OPSYS" );
+    $self->SetFromConfig( "FILESYSTEM_DOMAIN" );
+    $self->SetFromConfig( "UID_DOMAIN" );
+    $self->SetFromConfig( "IP_ADDRESS" );
+
+    # Done
     return $self;
 
 } # new()
@@ -106,6 +116,38 @@ sub Set( $$$ )
     $self->{Macros}{$Macro}{Line} = -1;
 
 } # Set()
+# ******************************************************
+
+# ******************************************************
+# Set a macro's value using condor_config_val
+# ******************************************************
+sub SetFromConfig( $$ )
+{
+    my $self = shift;
+    my $Var = shift;
+
+    # Run condor_config_val...
+    my $Cmd = $self->{ConfigProg} . " $Var";
+    open( CONFIG, "$Cmd 2>&1 |" ) or warn "Can't run $Cmd";
+    my $Value = "";
+    while( <CONFIG> )
+    {
+	chomp;
+	if ( ! /(^Not defined:)|(^ERROR: Can't)/ )
+	{
+	    $Value .= $_;
+	}
+    }
+    close( CONFIG );
+    if ( $Value ne "" )
+    {
+	$self->Set( $Var, $Value );
+	return 1;
+    }
+
+    return 0;
+
+} # SetFromConfig()
 # ******************************************************
 
 # ******************************************************
@@ -556,11 +598,11 @@ sub ProcessConfigLine( $$$$ )
     return 0 if ( $Line eq "" ) ;
 
     # MACRO = value
-    if ( $Line =~ /^(\S+)\s*=\s*(.+)/ )
+    if ( $Line =~ /^(\w+)\s*=\s*(.+)/ )
     {
 	$self->{Macros}->SetWithFile( $File, $Num, $1, $2 );
     }
-    elsif ( $Line =~ /^(\S+)\s*=$/ )
+    elsif ( $Line =~ /^(\w+)\s*=$/ )
     {
 	$self->{Macros}->SetWithFile( $File, $Num, $1, "" );
     }

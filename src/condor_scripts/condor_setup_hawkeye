@@ -117,16 +117,51 @@ sub main( )
     $#ARGV = -1;
     $| = 1;
 
+    # Make sure that we can run 'condor_config_val'
+    if ( ! open( CCV, "condor_config_val daemon_list|" ) )
+    {
+	print STDERR "Can't run condor_config_val\n";
+	print STDERR "make sure the condor bin directory is in your path";
+	print STDERR "and try again\n";
+	exit 1;
+    }
+    # And, drain the output of condor_config_val ...
+    while( <CCV> ) { }
+    close( CCV );
+
+    # Verify the source directory exists
+    if ( ! -d $Config{SourceDir} )
+    {
+	print STDERR
+	    "Source directory \"$Config{SourceDir}\" does not exist!";
+	print STDERR
+	    "Please specify a valid source directory via \"--source=<dir>\"\n";
+	exit 1;
+    }
+
     # Find the release tarball
     if ( ! -f "$Config{SourceDir}/release.tar" )
     {
-	print STDERR "\nUnable to access 'release.tar' in $Config{SourceDir}\n";
-	print STDERR "You may need to specify --source=<dir>\n";
+	print STDERR
+	    "\nUnable to access 'release.tar' in $Config{SourceDir}\n";
+	print STDERR
+	    "You may need to specify --source=<dir>\n";
 	die "No release tarball found\n";
     }
 
+    # If it's relative, make it absolute
+    if ( ! ( $Config{SourceDir} =~ /^\// ) )
+    {
+	my $OldCwd = $ENV{PWD};
+	chdir( $Config{SourceDir} )
+	    or die "Can't chdir to $Config{SourceDir}: $!";
+	my $Cwd = `pwd`; chomp $Cwd;
+	$Config{SourceDir} = $Cwd;
+	chdir( $OldCwd );
+    }
+
     # Create the config macro & file handlers
-    $ConfigMacros = CondorConfigMacros->new( );
+    $ConfigMacros = CondorConfigMacros->new( $Distribution );
 
     # Construct the config file object
     $ConfigFiles = CondorConfigFiles->new( $ConfigMacros );

@@ -134,21 +134,7 @@ sub main( )
     $| = 1;
 
     # Create the config macro & file handlers
-    $ConfigMacros = CondorConfigMacros->new( );
-
-    # Pre-define some things:
-    if ( ! exists $ENV{HOSTNAME} )
-    {
-	$ENV{HOSTNAME} = `/bin/hostname`;
-	chomp $ENV{HOSTNAME};
-    }
-
-    # Setup some basic things
-    my $Host = $ENV{HOSTNAME};
-    $ConfigMacros->Set( "FULL_HOSTNAME", $Host );
-    $Host =~ s/\..*$//;
-    $ConfigMacros->Set( "HOSTNAME", $Host );
-    $ConfigMacros->Set( "TILDE", $ENV{HOME} );
+    $ConfigMacros = CondorConfigMacros->new( $Distribution );
 
     # Construct the config file object
     $ConfigFiles = CondorConfigFiles->new( $ConfigMacros );
@@ -302,6 +288,7 @@ sub FindConfigFile( )
     my $Base = $ConfigFiles->FindConfig( $ConfigEnv,
 					 $Config{ConfigFile}{Base},
 					 $Distribution );
+
     # Finally, let's go check the config
     if ( ! $Base )
     {
