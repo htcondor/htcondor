@@ -339,6 +339,19 @@ Scheduler::count_jobs()
 
 	WalkJobQueue((int(*)(ClassAd *)) count );
 
+		// set JobsRunning for owners
+	matches->startIterations();
+	match_rec *rec;
+	while(matches->iterate(rec) == 1) {
+		if (rec->shadowRec && !rec->pool) {
+			char *at_sign = strchr(rec->user, '@');
+			if (at_sign) *at_sign = '\0';
+			int OwnerNum = insert_owner( rec->user );
+			if (at_sign) *at_sign = '@';
+			Owners[OwnerNum].JobsRunning++;
+		}
+	}
+
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
 		for ( i=0; i < N_Owners; i++) {
@@ -505,28 +518,16 @@ Scheduler::count_jobs()
 			for (i=0; i < N_Owners; i++) {
 				Owners[i].JobsRunning = 0;
 			}
-			char constraint[100];
-			sprintf(constraint, "%s =?= \"%s\"", ATTR_REMOTE_POOL,
-					flock_negotiator);
-			// compute JobsRunning for each owner for this pool
-			for (ClassAd *jobAd = GetNextJobByConstraint(constraint, true);
-				 jobAd; jobAd = GetNextJobByConstraint(constraint, false)) {
-				int currHosts;
-				char ownerbuf[100], *owner = ownerbuf;
-				int niceUser;
-				if (jobAd->LookupInteger(ATTR_CURRENT_HOSTS, currHosts) &&
-					currHosts > 0 &&
-					jobAd->LookupString(ATTR_OWNER, owner) &&
-					jobAd->LookupInteger(ATTR_NICE_USER, niceUser)) {
-					if (niceUser) {
-						char niceuserbuf[100];
-						strcpy(niceuserbuf, NiceUserName);
-						strcat(niceuserbuf, ".");
-						strcat(niceuserbuf, owner);
-						owner = niceuserbuf;
-					}
-					int OwnerNum = insert_owner( owner );
-					Owners[OwnerNum].JobsRunning += currHosts;
+			matches->startIterations();
+			match_rec *rec;
+			while(matches->iterate(rec) == 1) {
+				if (rec->shadowRec && rec->pool &&
+					!strcmp(rec->pool, flock_negotiator)) {
+					char *at_sign = strchr(rec->user, '@');
+					if (at_sign) *at_sign = '\0';
+					int OwnerNum = insert_owner( rec->user );
+					if (at_sign) *at_sign = '@';
+					Owners[OwnerNum].JobsRunning++;
 				}
 			}
 			// update submitter ad in this pool for each owner
@@ -699,17 +700,8 @@ count( ClassAd *job )
 			scheduler.JobsRunning += cur_hosts;
 			scheduler.JobsIdle += (max_hosts - cur_hosts);
 			scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
-
-			// We are building up totals for our local pool submitter ad,
-			// so we only want to count jobs which are running in our local
-			// pool (i.e., ATTR_REMOTE_POOL is undefined).
-			if (!job->LookupString(ATTR_REMOTE_POOL, buf)) {
-				scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
-			}
-			// We've reused buf, so it no longer contains the owner --
-			// We set owner pointer to NULL to be safe, so someone doesn't
-			// add new code below which uses owner.
-			owner = NULL;
+				// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
+				// We do it in Scheduler::count_jobs().
 		} else if (status == HELD) {
 			scheduler.JobsHeld++;
 			scheduler.Owners[OwnerNum].JobsHeld++;
@@ -1313,7 +1305,12 @@ Scheduler::negotiate(int, Stream* s)
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
 		return (!(KEEP_STREAM));
 	}
-	dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
+	if (negotiator_name) {
+		dprintf (D_ALWAYS, "Negotiating with %s for owner: %s\n",
+				 negotiator_name, owner);
+	} else {
+		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
+	}
 	//-----------------------------------------------
 
 	// find owner in the Owners array
