@@ -87,6 +87,9 @@ release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)
 strip_copy_target(Condor.pm,$(STRIP_DIR)/lib,Condor.pm,OBJECT_MODE)
 static_copy_target(Condor.pm,$(STATIC_DIR)/lib,Condor.pm,OBJECT_MODE)
 
+release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
+strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
+static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
 clean::
 html:
