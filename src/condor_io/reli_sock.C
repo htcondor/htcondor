@@ -1155,7 +1155,7 @@ ReliSock::isAuthenticated()
 {
 	if ( !authob ) {
 		dprintf(D_FULLDEBUG, "authentication not called prev, auth'ing TRUE\n" );
-		return 1;
+		return 0;
 	}
 	return( authob->isAuthenticated() );
 	return 0;
