@@ -181,6 +181,8 @@ writeEvent (ULogEvent *event)
 {
 	// the the log is not initialized, don't bother --- just return OK
 	if (path == 0) return 1;
+	if (!lock) return 0;
+	if (!event) return 0;
 
 	int retval;
 	priv_state priv = set_user_priv();
