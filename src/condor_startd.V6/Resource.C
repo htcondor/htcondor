@@ -255,7 +255,7 @@ Resource::starter_exited()
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "Warning: starter exited while in unexpected state %s",
+				 "Warning: starter exited while in unexpected state %s\n",
 				 state_to_string(s) );
 		change_state( owner_state );
 		break;
