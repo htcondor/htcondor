@@ -566,7 +566,10 @@ condor_iwd( const char *path )
 	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
 	delay();
 #endif
-	REMOTE_syscall( CONDOR_chdir, path );
+	/* Just use the regular chdir -- it will fill in the the file table correctly. */
+	int scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
+	chdir( path );
+	SetSyscalls(scm);
 	return TRUE;
 }
 
@@ -813,17 +816,22 @@ void
 _condor_set_iwd()
 {
 	char	iwd[ _POSIX_PATH_MAX ];
-	char	buf[ _POSIX_PATH_MAX + 50 ];
 	int	scm;
+	int	result;
 
 	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
 		_condor_error_fatal( "Can't determine initial working directory" );
 	}
+
+	/* Just use the regular chdir -- it will fill in the the file table correctly. */
+
 	scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
-	if( chdir(iwd) < 0 ) {
+	result = chdir( iwd );
+	SetSyscalls(scm);
+
+	if( result < 0 ) {
 		_condor_error_retry( "Can't move to directory %s", iwd );
 	}
-	SetSyscalls(scm);
 }
 
 void
