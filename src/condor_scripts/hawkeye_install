@@ -107,14 +107,16 @@ sub Main( )
 
     # Create a simple script to run Hawkeye for the user
     {
-	print "Creating setup / start scripts...\n";
+	print "\nCreating setup / start scripts...\n";
 
 	my $Script = "$TargetDir/StartHawkeye";
 	if ( open( OUT, ">$Script" ) )
 	{
-	    print OUT "#! /bin/bash\n";
-	    print OUT "export HAWKEYE_CONFIG=\"$ConfigOut\"\n";
-	    print OUT "export PATH=\"$PathBin:$PathSbin:\$PATH\"\n";
+	    print OUT "#! /bin/sh\n";
+	    print OUT "HAWKEYE_CONFIG=\"$ConfigOut\"\n";
+	    print OUT "export HAWKEYE_CONFIG\n";
+	    print OUT "PATH=\"$PathBin:$PathSbin:\$PATH\"\n";
+	    print OUT "export PATH\n";
 	    print OUT "$TargetDir/sbin/hawkeye_master\n";
 	    close( OUT );
 	    chmod( 0750, $Script);
