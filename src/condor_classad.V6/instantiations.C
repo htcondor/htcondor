@@ -3,7 +3,7 @@
 #include "extArray.h"
 #include "list.h"
 #include "exprTree.h"
-#include "classad_collection.h"
+#include "collection.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -25,21 +25,26 @@ template class HashBucket<ExprTree*, bool>;
 
 template class ListIterator<ExprTree>;
 
-template class HashTable<int, BaseCollection*>;
-template class HashBucket<int, BaseCollection*>;
-template class HashTable<MyString, ClassAd *>;
-template class HashBucket<MyString, ClassAd *>;
-template class Set<MyString>;
-template class SetElem<MyString>;
-template class SetIterator<MyString>;
-template class Set<int>;
-template class SetElem<int>;
-template class SetIterator<int>;
-template class Set<RankedClassAd>;
-template class SetElem<RankedClassAd>;
-template class SetIterator<RankedClassAd>;
-template class ExtArray<CollChildIterator*>;
-template class ExtArray<CollContentIterator*>;
+
+template class multiset<ViewMember, ViewMemberLT>;
+template class multiset<ViewMember, ViewMemberLT>::iterator;
+template class slist<View*>;
+template class hash_map<string,View*,hash<const string &> >;
+template class hash_map<string,View*,hash<const string &> >::iterator;
+
+template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+	hash<const string &> >::iterator;
+template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+	hash<const string &> >;
+
+template class hash_map<string, ClassAdProxy, hash<const string &> >;
+template class hash_map<string, ClassAdProxy, hash<const string &> >::
+	iterator;
+template class hash_map<string, Transaction*, hash<const string & > >;
+template class hash_map<string, Transaction*, hash<const string & > >
+	::iterator;
+template class vector<string>;
+
 
 class _ClassAdInit 
 {
