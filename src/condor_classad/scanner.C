@@ -244,8 +244,12 @@ static void scan_string(
 
 	// First count the length of the string. 
 	while (*s != '"' && *s != '\0') {
-		// Anything preceded by a backslash is one character.
-		if(*s == '\\' ) {
+		// These quoting rules are basically wrong.
+		// However, they are required for backwards compatibility.
+		// A quote may be escaped with a backslash.
+		// Backslash does not escape any other character.
+		// Exception: \" at the end of a string or a line is a backslash, not a quote.
+		if(*s == '\\' && *(s+1) == '"' && *(s+2) != '\0' && *(s+2) != '\n' && *(s+2) != '\r' ) {
 			s++;
 			if(!*s) break;
 		}
@@ -271,9 +275,8 @@ static void scan_string(
 		dest = token.strVal;
         while(*input != '"' && *input != '\0')
 		{
-			// Anything preceded by a blackslash is one character
-			if(*input == '\\' )
-			{
+			// See explanation above.
+	                if(*input == '\\' && *(input+1) == '"' && *(input+2) != '\0' && *(input+2) != '\n' && *(input+2) != '\r' ) {
 				input++;
 				token.length++; 
 			} 

@@ -14,10 +14,10 @@ depend_cplus_objects_target(OBJ)
 
 library_target(libclassad.a,$(OBJ))
 
-c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
+c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB))
 c_plus_target(test_classads, test_classads.o, $(LIB))
 pure_c_plus_target(test_classads.pure, test_classads.o, $(LIB))
-pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
+pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB))
 
 clean::
 	rm -f *.o libclassad.a
