@@ -572,6 +572,13 @@ RemoteResource::setExitStatus( int status )
 	shadow->dprintf ( D_FULLDEBUG, "setting exit status on %s to %d\n", 
 					  machineName ? machineName : "???", status );
 	exitStatus = status;
+
+		// In addition, we insert the status into our job ClassAd so
+		// that all the user policy stuff can refer to it.
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	sprintf( buf, "%s=%d", ATTR_JOB_EXIT_STATUS, exitStatus );
+	jobAd->InsertOrUpdate( buf );
+
 	setResourceState( RR_FINISHED );
 }
 
