@@ -138,6 +138,9 @@ config_fill_ad( ClassAd* ad )
 	/* Insert the version into the ClassAd */
 	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
 	ad->Insert(buffer);
+
+	sprintf(buffer,"%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
+	ad->Insert(buffer);
 }
 
 
