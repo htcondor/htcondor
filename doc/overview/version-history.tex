@@ -31,7 +31,17 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
-\item None.
+\item The \DCPerm{CONFIG} security access level now controls the
+modification of daemon configurations using \Condor{config\_val}.  For
+more information about security access levels, see
+section~\ref{sec:Security-Access-Levels} on
+page~\pageref{sec:Security-Access-Levels}.
+
+\item The \Macro{DC\_DAEMON\_LIST} macro now indicates to the
+\Condor{master} which processes in the \Macro{DAEMON\_LIST} use
+Condor's DaemonCore inter-process communication mechanisms.  This
+allows the \Condor{master} to monitor both processes developed with or
+without the Condor DaemonCore library.
 
 \end{itemize}
 
@@ -39,7 +49,16 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{master} can now correctly shutdown and restart the
+\Condor{checkpoint\_server}.
+
+\item The \Condor{checkpoint\_server} now correctly reconfigures when
+a \Condor{reconfig} command is received by the \Condor{master}.
+
+\item Fixed a bug with how the \Condor{schedd} associates jobs with
+machines (claimed resources) which would, under certain circumstances,
+cause some jobs to remain idle until other jobs in the queue complete
+or are preempted.
 
 \end{itemize}
 
