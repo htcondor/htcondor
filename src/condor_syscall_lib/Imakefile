@@ -6,8 +6,13 @@ OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
+#if DOES_CHECKPOINTING
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
+#else
+EXTRACT = GETEUID.o GETEGID.o GETWD.o
+#endif
+
 STUBS = switches.o switches.special.o
 UTIL =	remote_syscall.o syscall_connect.o senders.o remote_startup.o
 NAME_TAB = syscall_numbers.o
@@ -29,15 +34,24 @@ SRC = \
 	syscall_connect.c \
 	syscall_numbers.c
 
+#if IS_ALPHA_OSF1
+XDR_STATFS_OBJ = xdr_statfs.OSF1.o
+#else
+XDR_STATFS_OBJ = xdr_statfs.GEN.o
+#endif
+
 XDR_OBJ = \
  	xdr_rusage.o \
  	xdr_proc.o \
 	xdr_stat.o \
- 	xdr_statfs.OSF1.o \
+ 	$(XDR_STATFS_OBJ) \
  	xdr_timeval.o \
  	xdr_timezone.o \
- 	xdr_rlimit.o \
+ 	xdr_rlimit.o
+
+#if 0
  	xdr_utsname.o
+#endif
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ = file_state.o image.o tmp_stack.o machdep.$(OS).o syscall_mode.o
@@ -82,18 +96,24 @@ release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
 program_target(ToUpper,ToUpper.o,$(NULL))
 release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
+#if IS_ALPHA_OSF1
+CPP = /usr/ucb/cpp
+#else
+CPP = ansi_cpp
+#endif
+
 switches.c: syscall.tmpl switches.prologue stub_gen
-	/usr/ucb/cpp -DSWITCH $(CLIP) < syscall.tmpl | \
+	$(CPP) -DSWITCH $(CLIP) < syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	/usr/ucb/cpp -DSENDER $(CLIP) < syscall.tmpl | \
+	$(CPP) -DSENDER $(CLIP) < syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
 
 receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	/usr/ucb/cpp -DRECEIVER $(CLIP) < syscall.tmpl | \
+	$(CPP) -DRECEIVER $(CLIP) < syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 
