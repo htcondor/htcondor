@@ -161,9 +161,13 @@ will be back on its way.
 
 If you change a global config file setting and want to have all your
 machines start to use the new setting, you must send a
-\Condor{reconfig} command to each host.  The easiest way to do this
-is: 
+\Condor{reconfig} command to each host.
+You can do this with one command, so long as you run it from a blessed
+administrator machine:
 \begin{verbatim}
         % condor_reconfig `condor_status -master`
 \end{verbatim}
 
+\Note If your global config file is not shared among all your machines
+(using a shared filesystem), you will need to make the change to each
+copy of your global config file before sending the \Condor{reconfig}.
