@@ -742,6 +742,11 @@ displayJobShort (ClassAd *ad)
 static char *
 bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
+
+	char encoded_status;
+	int last_susp_time;
+	char *tmp = NULL;
+
 	float utime  = 0.0;
 	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
 	char buffer[ATTRLIST_MAX_EXPRESSION];
@@ -767,6 +772,32 @@ bufferJobShort( ClassAd *ad ) {
 	}
 	utime = job_time(utime,ad);
 
+	encoded_status = encode_status( status );
+
+	/* The suspension of a job is a second class citizen and is not a true
+		status that can exist as a job status ad and is instead
+		inferred, so therefore the processing and display of
+		said suspension is also second class. */
+	tmp = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( tmp != NULL ) {
+		if ( strcasecmp(tmp, "true") == MATCH ) {	
+			if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
+			{
+				last_susp_time = 0;
+			}
+			/* sanity check the last_susp_time against if the job is running
+				or not in case the schedd hasn't synchronized the
+				last suspension time attribute correctly to job running
+				boundaries. */
+			if ( status == RUNNING && last_susp_time != 0 )
+			{
+				encoded_status = 'S';
+			}
+		}
+		free(tmp);
+		tmp = NULL;
+	}
+
 	sprintf( return_buff,
 			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
 			 cluster,
@@ -782,7 +813,7 @@ bufferJobShort( ClassAd *ad ) {
 				float to an int legally. Apparently, that isn't happening here.
 				-psilord 09/06/01 */
 			 format_time( (int)utime ),
-			 encode_status( status ),
+			 encoded_status,
 			 prio,
 			 (image_size / 1024.0),
 			 buffer );
@@ -1925,3 +1956,4 @@ fixSubmittorName( char *name, int niceUser )
 
 	return NULL;
 }
+
