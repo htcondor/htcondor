@@ -568,7 +568,6 @@ format_goodput (float wall_clock, AttrList *ad)
 {
 	static char result[9];
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
-	int last_vacate = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
@@ -581,6 +580,19 @@ format_goodput (float wall_clock, AttrList *ad)
 	if (goodput > 100.0) goodput = 100.0;
 	else if (goodput < 0.0) return " [?????]";
 	sprintf(result, " %6.1f%%", goodput);
+	return result;
+}
+
+static char *
+format_mbps (float wall_clock, AttrList *ad)
+{
+	static char result[10];
+	float bytes_sent=0.0, bytes_recvd=0.0, total_mbits;
+	ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent);
+	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
+	total_mbits = (bytes_sent+bytes_recvd)/131072.0;
+	if (total_mbits <= 0) return " [????]";
+	sprintf(result, " %6.2f", total_mbits/wall_clock);
 	return result;
 }
 
@@ -707,7 +719,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			AttrListPrintMask mask;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
 					"SUBMITTED", JOB_TIME,
-					run ? "HOST(S)" : "GOODPUT CPU_UTIL" );
+					run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
 			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
@@ -732,6 +744,8 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									  ATTR_JOB_REMOTE_WALL_CLOCK, " [?????]");
 				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
 									  ATTR_JOB_REMOTE_USER_CPU, " [??????]");
+				mask.registerFormat ( (FloatCustomFmt) format_mbps,
+									  ATTR_JOB_REMOTE_WALL_CLOCK, " [????]");
 			}
 			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 			mask.display(stdout, &jobs);
@@ -829,7 +843,6 @@ static void
 fetchSubmittorPrios()
 {
 	AttrList	al;
-	int		numSub;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
@@ -1087,7 +1100,6 @@ fixSubmittorName( char *name, int niceUser )
 	static 	bool initialized = false;
 	static	char uid_domain[64];
 	static	char buffer[128];
-			char *at;
 
 	if( !initialized ) {
 		char *tmp = param( "UID_DOMAIN" );
