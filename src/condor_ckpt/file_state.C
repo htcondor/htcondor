@@ -90,6 +90,8 @@ extern off_t ioserver_lseek(int filedes, off_t offset, int whence);
 extern ssize_t ioserver_read(int filedes, char *buf, unsigned int size);
 
 extern ssize_t ioserver_write(int filedes, const char *buf, unsigned int size);
+
+int IOServerAccess( int user_fd );
 }
 
 
@@ -1410,7 +1412,7 @@ OpenFileTable::getMode( int user_fd )
 {
         if( !file[user_fd].isOpen() ) {
 		errno = EBADF;
-		return -1;
+		return 0;				// can't return -1, mode_t can be unsigned
 	}
 
 	return file[user_fd].mode  ;
