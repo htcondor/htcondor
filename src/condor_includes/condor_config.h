@@ -23,6 +23,7 @@ extern "C" {
 
 #if defined(__STDC__) || defined(__cplusplus)
 	void config( ClassAd* classAd=NULL, char *mySubsystem=NULL );
+	void config_host( ClassAd* classAd=NULL, char *mySubsystem=NULL, char* host=NULL );
 	int	 config_from_server(char*, char*, CONTEXT*);
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
@@ -36,6 +37,7 @@ extern "C" {
 	void set_debug_flags( char * );
 #else
 	void config();
+	void config_host();
 	int	 config_from_server();
 	char * param ();
 	insert();
