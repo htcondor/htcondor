@@ -96,7 +96,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	executeLogged = false;
 	exitLogged = false;
 	stateChanged = false;
-	newJM = false;
+	newJM = true;
 	restartingJM = false;
 	restartWhen = 0;
 	durocRequest = false;
