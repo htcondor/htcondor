@@ -480,14 +480,9 @@ accept_request_claim( Resource* rip )
 		dprintf( D_FULLDEBUG, "gethostbyaddr failed. errno= %d\n", errno );
 		EXCEPT("Can't find host name");
 	}
-		// Add a trailing '.' to signify a fully qualified name
-	sprintf( tmp, "%s.", hp->h_name );
-	rip->r_cur->client()->sethost( tmp );
-	sprintf( tmp, "%s=\"%s\"", ATTR_CLIENT_MACHINE, rip->r_cur->client()->host() );
-	(rip->r_classad)->Insert( tmp );
+	rip->r_cur->client()->sethost( hp->h_name );
 
-		// Get the owner of this claim out of the request classad and
-		// put it into our resource ad.
+		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
 		EvalString( ATTR_USER, rip->r_cur->ad(), RemoteUser ) == 0 ) { 
 		dprintf( D_ALWAYS, 
@@ -497,19 +492,12 @@ accept_request_claim( Resource* rip )
 	}
 	if( RemoteUser ) {
 		rip->r_cur->client()->setname( RemoteUser );
-		sprintf(tmp, "%s=\"%s\"", ATTR_REMOTE_USER, RemoteUser );
-		(rip->r_classad)->Insert( tmp );
 		dprintf( D_ALWAYS, "Remote user is %s\n", RemoteUser );
 	} else {
 		dprintf( D_ALWAYS, "Remote user is NULL\n" );
 			// What else should we do here???
 	}		
-
-		// Generate a preempting match object
-	rip->r_pre = new Match;
-
 	rip->change_state( claimed_state );
-
 	return TRUE;
 }
 #undef ABORT
