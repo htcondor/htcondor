@@ -289,6 +289,7 @@ print STDERR "	Valid options:\n"
 . "   -genconfig              Generate condor_config.glidein\n"
 . "   -useconfig <file>       Use the specifed config file\n"
 . "   -gensubmit              Generate submit.glidein\n"
+. "   -edg                    Use EDG MDS schema to query GRIS\n"
 . "   -help                   Print this usage, see documentation for info\n";
 }
 
@@ -325,6 +326,7 @@ sub parse_command_line() {
 		"genconfig" => \$gen_config,
 		"useconfig=s" => \$use_config,
 		"gensubmit" => \$gen_submit,
+		"edg" => \$edg_mds_schema,
 		"help" => \$help );
 	if ( !$RESULT ) {
 		usage();
@@ -474,89 +476,159 @@ sub host_info()
 	$UID_DOMAIN = $GLOBUSHOST;
 	$UID_DOMAIN =~ s/[^\.]*\.//;
 
-	#Query the GRIS server on the globus machine. We're looking for two
-	#things: which jobmanager/queue will run jobs immediately (for
-	#setup), and the architecture of the jobmanager the user wants to
-	#run on (not necessarily the same as the machine we're talking to).
-	open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 '(|(objectclass=MdsServiceGram)(objectclass=MdsGramJobQueue))' Mds-Software-deployment Mds-Gram-Job-Queue-dispatchtype Mds-Computer-isa Mds-Computer-manufacturer Mds-Os-name Mds-Os-release|" );
-	@QUERY = <QUERY>;
-	if ( !close( QUERY ) ) {
-	    print STDERR "Error querying GRIS on $GLOBUSHOST\n";
-	    return( 1 );
-	}
+	if ( $edg_mds_schema ) {
 
-	#Search the query results for an "Immediate" jobmanager/queue
-	@SEARCH1 = grep( /^dn: Mds-Job-Queue-name=/, @QUERY );
-	@SEARCH2 = grep( /^Mds-Gram-Job-Queue-dispatchtype:/, @QUERY );
-	my $queue = "";
-	my $service = "";
-	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
-		if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
-			chomp( $queue = $SEARCH1[$i] );
-			$queue =~ s/^dn: Mds-Job-Queue-name=([^,]*),.*$/\1/;
-			chomp( $service = $SEARCH1[$i] );
-			$service =~ s/^.*Mds-Software-deployment=([^,]*),.*$/\1/;
-			last;
+		#The remote machine is an EDG Compute Element. Use the EDG MDS
+		#schema to query the GRIS server there. We're looking for the
+		#architecture of the Compute Element.
+		open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 -b 'mds-vo-name=local,o=grid' '(objectclass=MdsComputer)' Mds-Cpu-vendor Mds-Computer-platform Mds-Os-name Mds-Os-release|" );
+		@QUERY = <QUERY>;
+		if ( !close( QUERY ) ) {
+			print STDERR "Error querying GRIS on $GLOBUSHOST\n";
+			return( 1 );
 		}
-	}
 
-	if ( $queue eq "" || $service eq "" ) {
-		print STDERR "Can't find immediate jobmanager on $GLOBUSHOST\n";
-		return( 1 );
-	}
+		#Currently, the EDG MDS schema doesn't advertise anything that lets
+		#us find a jobmanager service & queue that'll run immediately for
+		#the setup phase, so we'll just try "jobmanager-fork".
+		$CONTACT_SETUP_QUEUE = "unknown";
+		$CONTACT_SETUP = $CONTACT;
+		if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
+			$CONTACT_SETUP =~ s|/[^:]*|/jobmanager-fork|;
+		} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
+			$CONTACT_SETUP .= "/jobmanager-fork";
+		} else {
+			$CONTACT_SETUP =~ s|(:[^:]*)|\1/jobmanager-fork|;
+		}
 
-	$CONTACT_SETUP_QUEUE = $queue;
-	$CONTACT_SETUP = $CONTACT;
-	if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
-		$CONTACT_SETUP =~ s|/[^:]*|/$service|;
-	} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
-		$CONTACT_SETUP .= "/$service";
-	} else {
-		$CONTACT_SETUP =~ s|(:[^:]*)|\1/$service|;
-	}
-
-	#Search the query results for the architecture of the jobmanager
-	#the user wants to glidein to.
-	my $jobmanager;
-	if ( grep( /jobmanager/, $CONTACT ) ) {
-		$jobmanager = $CONTACT;
-		$jobmanager =~ s|^[^/]*/([^:]*).*|\1|;
-	} else {
-		$jobmanager = "jobmanager";
-	}
-	@SEARCH1 = grep( /^Mds-Software-deployment:/, @QUERY );
-	@SEARCH2 = grep( /^Mds-Computer-isa:/, @QUERY );
-	@SEARCH3 = grep( /^Mds-Computer-manufacturer:/, @QUERY );
-	@SEARCH4 = grep( /^Mds-Os-name:/, @QUERY );
-	@SEARCH5 = grep( /^Mds-Os-release:/, @QUERY );
-	my $cputype = "";
-	my $manufacturer = "";
-	my $osname = "";
-	my $osversion = "";
-	for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
-		if ( grep( /$jobmanager/, $SEARCH1[$i] ) > 0 ) {
-			chomp( $cputype = $SEARCH2[$i] );
-			$cputype =~ s/Mds-Computer-isa: //;
-			chomp( $manufacturer = $SEARCH3[$i] );
-			$manufacturer =~ s/Mds-Computer-manufacturer: //;
-			chomp( $osname = $SEARCH4[$i] );
+		#Search the query results for the architecture of the resource the
+		#user wants to glidein to. In EDG land, there's only one
+		#architecture for a given Compute Element (a front-end machine
+		#running Globus and all it's associated back-end nodes).
+		@SEARCH1 = grep( /^Mds-Computer-platform:/, @QUERY );
+		@SEARCH2 = grep( /^Mds-Cpu-vendor:/, @QUERY );
+		@SEARCH3 = grep( /^Mds-Os-name:/, @QUERY );
+		@SEARCH4 = grep( /^Mds-Os-release:/, @QUERY );
+		my $cputype = "";
+		my $manufacturer = "";
+		my $osname = "";
+		my $osversion = "";
+		if ( $#SEARCH1 >= 0 ) {
+			chomp( $cputype = $SEARCH1[0] );
+			$cputype =~ s/Mds-Computer-platform: //;
+			chomp( $manufacturer = $SEARCH2[0] );
+			$manufacturer =~ s/Mds-Cpu-vendor: //;
+			chomp( $osname = $SEARCH3[0] );
 			$osname =~ s/Mds-Os-name: //;
-			chomp( $osversion = $SEARCH5[$i] );
+			chomp( $osversion = $SEARCH4[0] );
 			$osversion =~ s/Mds-Os-release: //;
 			if ( $osname =~ /[Ll]inux/ ) {
 				$osversion =~ s/(\d+\.\d+)\..*/\1/;
 			}
-			last;
+			if ( $manufacturer =~ /GenuineIntel/ ) {
+				$manufacturer = "pc";
+			}
+			if ( $manufacturer =~ /AuthenticAMD/ ) {
+				$manufacturer = "pc";
+			}
 		}
-	}
 
-	if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
-	     $osversion eq "" ) {
-		print STDERR "Can't find jobmanager info on $GLOBUSHOST\n";
-		return( 1 );
-	}
+		if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
+			 $osversion eq "" ) {
+			print STDERR "Can't find architecture info on $GLOBUSHOST\n";
+			return( 1 );
+		}
 
-	$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
+		$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
+
+	} else {
+
+		#Query the GRIS server on the globus machine using the Globus MDS
+		#schema. We're looking for two
+		#things: which jobmanager/queue will run jobs immediately (for
+		#setup), and the architecture of the jobmanager the user wants to
+		#run on (not necessarily the same as the machine we're talking to).
+		open( QUERY, "$G_SEARCH -x -h $GLOBUSHOST -p 2135 -b 'mds-vo-name=local,o=grid' '(|(objectclass=MdsServiceGram)(objectclass=MdsGramJobQueue))' Mds-Software-deployment Mds-Gram-Job-Queue-dispatchtype Mds-Computer-isa Mds-Computer-manufacturer Mds-Os-name Mds-Os-release|" );
+		@QUERY = <QUERY>;
+		if ( !close( QUERY ) ) {
+			print STDERR "Error querying GRIS on $GLOBUSHOST\n";
+			return( 1 );
+		}
+
+		#Search the query results for an "Immediate" jobmanager/queue
+		@SEARCH1 = grep( /^dn: Mds-Job-Queue-name=/, @QUERY );
+		@SEARCH2 = grep( /^Mds-Gram-Job-Queue-dispatchtype:/, @QUERY );
+		my $queue = "";
+		my $service = "";
+		for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+			if ( grep( /Immediate/, $SEARCH2[$i] ) > 0 ) {
+				chomp( $queue = $SEARCH1[$i] );
+				$queue =~ s/^dn: Mds-Job-Queue-name=([^,]*),.*$/\1/;
+				chomp( $service = $SEARCH1[$i] );
+				$service =~ s/^.*Mds-Software-deployment=([^,]*),.*$/\1/;
+				last;
+			}
+		}
+
+		if ( $queue eq "" || $service eq "" ) {
+			print STDERR "Can't find immediate jobmanager on $GLOBUSHOST\n";
+			return( 1 );
+		}
+
+		$CONTACT_SETUP_QUEUE = $queue;
+		$CONTACT_SETUP = $CONTACT;
+		if ( grep( /jobmanager/, $CONTACT_SETUP ) ) {
+			$CONTACT_SETUP =~ s|/[^:]*|/$service|;
+		} elsif ( grep( /:/, $CONTACT_SETUP ) < 2 ) {
+			$CONTACT_SETUP .= "/$service";
+		} else {
+			$CONTACT_SETUP =~ s|(:[^:]*)|\1/$service|;
+		}
+
+		#Search the query results for the architecture of the jobmanager
+		#the user wants to glidein to.
+		my $jobmanager;
+		if ( grep( /jobmanager/, $CONTACT ) ) {
+			$jobmanager = $CONTACT;
+			$jobmanager =~ s|^[^/]*/([^:]*).*|\1|;
+		} else {
+			$jobmanager = "jobmanager";
+		}
+		@SEARCH1 = grep( /^Mds-Software-deployment:/, @QUERY );
+		@SEARCH2 = grep( /^Mds-Computer-isa:/, @QUERY );
+		@SEARCH3 = grep( /^Mds-Computer-manufacturer:/, @QUERY );
+		@SEARCH4 = grep( /^Mds-Os-name:/, @QUERY );
+		@SEARCH5 = grep( /^Mds-Os-release:/, @QUERY );
+		my $cputype = "";
+		my $manufacturer = "";
+		my $osname = "";
+		my $osversion = "";
+		for ( $i = 0; $i <= $#SEARCH1; $i++ ) {
+			if ( grep( /$jobmanager/, $SEARCH1[$i] ) > 0 ) {
+				chomp( $cputype = $SEARCH2[$i] );
+				$cputype =~ s/Mds-Computer-isa: //;
+				chomp( $manufacturer = $SEARCH3[$i] );
+				$manufacturer =~ s/Mds-Computer-manufacturer: //;
+				chomp( $osname = $SEARCH4[$i] );
+				$osname =~ s/Mds-Os-name: //;
+				chomp( $osversion = $SEARCH5[$i] );
+				$osversion =~ s/Mds-Os-release: //;
+				if ( $osname =~ /[Ll]inux/ ) {
+					$osversion =~ s/(\d+\.\d+)\..*/\1/;
+				}
+				last;
+			}
+		}
+
+		if ( $cputype eq "" || $manufacturer eq "" || $osname eq "" ||
+			 $osversion eq "" ) {
+			print STDERR "Can't find jobmanager info on $GLOBUSHOST\n";
+			return( 1 );
+		}
+
+		$arch = "${CONDOR_VERSION}-${cputype}-${manufacturer}-${osname}-${osversion}";
+
+	}
 
 	if ( $? != 0 || $arch eq "" ) {
 		print STDERR "Error contacting resource $CONTACT_SETUP\n";
@@ -567,6 +639,8 @@ sub host_info()
 		$archdir = "$basedir/$arch";
 	}
 
+print "$CONTACT_SETUP\n$CONTACT_SETUP_QUEUE\n$arch\n";
+exit(1);
 	return( 0 );
 }
 
