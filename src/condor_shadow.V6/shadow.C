@@ -1027,18 +1027,7 @@ DoCleanup()
 			return 0;
 		}
 			
-		if( Proc->universe != STANDARD ||
-			!FileExists(CkptName, Proc->owner) ) {
-			status = UNEXPANDED;
-			dprintf(D_ALWAYS,
-					"Shadow: no ckpt %s found, resetting to UNEXPANDED\n",
-					CkptName);
-		} else {
-			dprintf( D_FULLDEBUG,
-					"Shadow: ckpt found ok, setting status to IDLE\n");
-			status = IDLE;
-		}
-		dprintf(D_FULLDEBUG, "Shadow: setting CurrentHosts back to 0\n");
+		// dprintf(D_FULLDEBUG, "Shadow: setting CurrentHosts back to 0\n");
 		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS,0);
 		Proc->image_size = ImageSize;
 		Proc->status = status;
