@@ -88,6 +88,18 @@ clean::								@@\
 	rm -f program objlist
 #endif  program_target
 
+/*
+** Build a C program from .o files and libraries supplying the compile time
+** and link time flags. For building utilitoes with special flags.
+*/
+#ifndef program_target_complex
+#define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
+program: objlist libs						@@\
+	$(C_LINK) comflags -o program objlist libs linkflags	@@\
+clean::								@@\
+	rm -f program objlist
+#endif  program_target_complex
+
 
 /*
 ** Build a C++ program from .o files and libraries.
@@ -101,6 +113,18 @@ clean::								@@\
 	rm -f program objlist
 #endif  c_plus_target
 
+/*
+** Build a C++ program from .o files and libraries supplying the compile and
+** link flags. For building utility programs with special flags.
+*/
+#ifndef c_plus_target_complex
+#define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
+program: objlist libs						@@\
+	$(CC_LINK) comflags -o program objlist libs \
+		linkflags $(DEMANGLE)			@@\
+clean::								@@\
+	rm -f program objlist
+#endif  c_plus_target_complex
 
 /*
 ** Build a template instantiation object
