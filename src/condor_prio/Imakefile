@@ -18,9 +18,9 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 SRC = prio.C
 OBJ = prio.o
 #if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
-LIB = $(QMGMT_LIB) ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib SocketLib KernLib
+LIB = $(QMGMT_LIB) ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib SocketLib KernLib
 #else
-LIB = $(QMGMT_LIB) ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib 
+LIB = $(QMGMT_LIB) ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib 
 #endif
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 

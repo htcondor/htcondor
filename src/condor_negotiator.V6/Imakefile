@@ -6,7 +6,7 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 
 SRC = negotiator.c
 OBJ = negotiator.o
-LIB = $(CLASSAD_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib SocketLib KernLib
+LIB = $(CLASSAD_LIB) ../condor_c++_util/libapi.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib SocketLib KernLib
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
 
 all_target(condor_negotiator)

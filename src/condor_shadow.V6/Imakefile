@@ -30,6 +30,7 @@ OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o receivers.o ulog.o \
 LIB =   $(CKPT_SERV_LIB) \
 		$(QMGMT_LIB) \
 		../condor_c++_util/cplus_lib.a \
+		../condor_c++_util/libapi.a \
 		$(CLASSAD_LIB) \
 		$(UTIL_LIB) \
 		../condor_xdr_lib/xdr_lib.a \
