@@ -124,7 +124,6 @@ config_host( ClassAd* classAd, char* mySubsystem, char* host )
 void
 real_config(ClassAd *classAd, char *mySubsystem, char* host)
 {
-	char	hostname[1024];
 	char	*config_file;
 	int		scm, rval;
 
