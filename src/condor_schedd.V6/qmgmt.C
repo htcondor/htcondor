@@ -24,14 +24,14 @@
 ** 
 ** Author:  Jim Pruyne
 ** 	        University of Wisconsin, Computer Sciences Dept.
-**
+** 
+** Cleaned up for V6 by Derek Wright 7/3/97
 ** 
 */ 
 
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
-#include "condor_xdr.h"
 #include "condor_io.h"
 #include <sys/stat.h>
 #include "_condor_fix_types.h"
@@ -86,7 +86,7 @@ uid_t	active_owner_uid = 0;
 char	*active_owner = 0;
 char	*rendevous_file = 0;
 
-Transaction *tr = 0;
+Transaction *trans = 0;
 
 void
 InvalidateConnection()
@@ -183,6 +183,7 @@ CheckConnection()
 
 static int log_fd;
 
+void
 LogState(int fd)
 {
 	Cluster		*cl;
@@ -229,6 +230,7 @@ LogState(int fd)
 
 extern "C" {
 
+int
 TruncLog(char *log_name)
 {
 	char	tmp_log_name[_POSIX_PATH_MAX];
@@ -245,9 +247,11 @@ TruncLog(char *log_name)
 	if (rename(tmp_log_name, log_name) < 0) {
 		return -1;
 	}
+	return 0;
 }
 
 
+int
 ReadLog(char *log_name)
 {
 	LogRecord		*log_rec;
@@ -262,6 +266,7 @@ ReadLog(char *log_name)
 		delete log_rec;
 	}
 	TruncLog(log_name);
+	return 0;
 }
 
 } /* extern "C" */
@@ -273,10 +278,10 @@ AppendLog(LogRecord *log, Job *job, Cluster *cl)
 	  // If a transaction is active, we log to the transaction, and mark
 	  // the job and cluster dirty.  Otherwise, we log directly to the
 	  // file and commit the transaction.
-	if (tr != 0) {
-		tr->AppendLog(log);
-		tr->DirtyJob(job);
-		tr->DirtyCluster(cl);
+	if (trans != 0) {
+		trans->AppendLog(log);
+		trans->DirtyJob(job);
+		trans->DirtyCluster(cl);
 	} else {
 		log->Write(log_fd);
 		if (job != 0) {
@@ -300,7 +305,7 @@ handle_q(ReliSock *sock, struct sockaddr_in* = NULL)
 {
 	int	rval;
 
-	tr = new Transaction;
+	trans = new Transaction;
 	Q_SOCK = sock;
 
 	InvalidateConnection();
@@ -312,10 +317,10 @@ handle_q(ReliSock *sock, struct sockaddr_in* = NULL)
 
 	// tr should be free'd in CloseConnection(), if it wasn't, we must
 	// rollback
-	if (tr != 0) {
-		tr->Rollback();
-		delete tr;
-		tr = 0;
+	if (trans != 0) {
+		trans->Rollback();
+		delete trans;
+		trans = 0;
 	}
 	dprintf(D_ALWAYS, "Connection closed, Q is:\n");
 	if (rendevous_file != 0) {
@@ -398,7 +403,6 @@ NewProc(int cluster_id)
 
 int DestroyProc(int cluster_id, int proc_id)
 {
-	int		rval;
 	Job		*job;
 	LogDestroyProc	*log;
 	PROC_ID		job_id;
@@ -433,7 +437,6 @@ int DestroyProc(int cluster_id, int proc_id)
 int DestroyCluster(int cluster_id)
 {
 	LogDestroyCluster	*log;
-	int					rval;
 	Cluster				*cl;
 	Job					*job;
 	PROC_ID		job_id;
@@ -535,10 +538,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 int
 CloseConnection()
 {
-	if (tr != 0) {
-		tr->Commit(log_fd);
-		delete tr;
-		tr = 0;
+	if (trans != 0) {
+		trans->Commit(log_fd);
+		delete trans;
+		trans = 0;
 	}
 	/* Just force the clean-up code to happen */
 	return -1;
@@ -853,7 +856,6 @@ Job::Job(Cluster *cl, int pr)
 
 Job::~Job()
 {
-	Job		*head_job;
 	char	*ckpt_file_name;
 	char	owner[_POSIX_PATH_MAX];
 
@@ -921,15 +923,15 @@ Job::SetAttribute(const char *name, char *value)
 	Parse(tmp_expr, expr_tree);
 		
 	delete tmp_expr;
-		
+
 	ad->Insert(expr_tree);
+	return 0;
 }
 
 
 int
 Job::DeleteAttribute(const char *name)
 {
-	char *tmp_expr;
 	ExprTree *expr_tree;
 
 	if (!OwnerCheck(active_owner)) {
@@ -948,6 +950,7 @@ Job::DeleteAttribute(const char *name)
 	} else {
 		return -1;
 	}
+	return 0;
 }
 
 
@@ -1492,97 +1495,12 @@ PrintQ()
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }
 
-#if DBM_QUEUE
-PROC GlobalqEndMarker;
-#endif
-XDR *Proc_XDRS;
-
-#if DBM_QUEUE
-send_proc(PROC* proc )
-#else
-send_proc(int cluster, int proc)
-#endif
-{
-    XDR *xdrs = Proc_XDRS;  /* Can't pass this routine an arg, so use global */
-    PROC    p;
-    int     rval;
-
-#if DBM_QUEUE
-    if( !xdr_proc( xdrs, proc ) ) {
-        return FALSE;
-    }
-#else
-#if 0
-    GetProc(cluster, proc, &p);
-    rval = xdr_proc(xdrs, p);
-    /* GetProc allocates all these things, so we must free them.  Did I miss
-       anything?  I haven't really checked yet. */
-    FREE( p.cmd[0] );
-    FREE( p.args[0] );
-    FREE( p.in[0] );
-    FREE( p.out[0] );
-    FREE( p.err[0] );
-    FREE( p.cmd );
-    FREE( p.args );
-    FREE( p.in );
-    FREE( p.out );
-    FREE( p.err );
-    FREE( p.exit_status );
-    FREE( p.remote_usage );
-    FREE( p.rootdir );
-    FREE( p.iwd );
-    FREE( p.requirements );
-    FREE( p.preferences );
-#else
-    return FALSE;
-#endif
-#endif
-}
-
-PROC	GlobalqEndMarker;
-
-#if DBM_QUEUE
-int send_all_jobs(XDR* xdrs)
-{
-    DBM *q = NULL;
-	PROC*	end = &GlobalqEndMarker;
-
-    dprintf( D_FULLDEBUG, "Schedd received SEND_ALL_JOBS request\n");
-
-    WalkJobQueue( send_proc );
-
-#if defined(NEW_PROC)
-	end->n_cmds = 0;
-	end->n_pipes = 0;
-
-	end->owner = end->env = end->rootdir = end->iwd =
-	end->requirements = end->preferences = "";
-	end->version_num = PROC_VERSION;
-#else
-    end->owner = end->cmd = end->args = end->env = end->in =
-        end->out = end->err = end->rootdir = end->iwd =
-        end->requirements = end->preferences = "";
-    end->version_num = PROC_VERSION;
-#endif
-
-    if( !xdr_proc( xdrs, end ) ) {
-        dprintf( D_ALWAYS, "Couldn't send end marker for SEND_ALL_JOBS\n");
-        return FALSE;
-    }
-
-    if( !xdrrec_endofrecord(xdrs,TRUE) ) {
-        dprintf( D_ALWAYS, "Couldn't send end of record for SEND_ALL_JOBS\n");
-        return FALSE;
-    }
-
-    dprintf( D_FULLDEBUG, "Finished SEND_ALL_JOBS\n");
-	return TRUE;
-}
-#endif
 
 prio_rec	PrioRec[MAX_PRIO_REC];
 int			N_PrioRecs = 0;
-
+// Returns cur_hosts so that another function in the scheduler can
+// update JobsRunning and keep the scheduler and queue manager
+// seperate. 
 int get_job_prio(int cluster, int proc)
 {
     int prio;
@@ -1610,11 +1528,6 @@ int get_job_prio(int cluster, int proc)
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
 
-	// this is changed by return cur_hosts and have another function do the
-	// incrementation of sched->JobsRunning. This is to keep the queue manager
-	// separated from the scheduler.
-    // sched->JobsRunning += cur_hosts;
-
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts >= max_hosts) {
@@ -1623,35 +1536,22 @@ int get_job_prio(int cluster, int proc)
         return cur_hosts;
     }
 
-    /* No longer do this since a shadow can be running, and still want more
-       machines. */
-#if 0
-    if( (srp=find_shadow_rec(&id)) ) {
-        dprintf( D_ALWAYS,
-            "Job %d.%d marked UNEXPANDED or IDLE, but shadow %d not exited\n",
-            id.cluster, id.proc, srp->pid
-        );
-        return;
-    }
-#endif
-
     prio = upDown_GetUserPriority(owner,&status); /* UPDOWN */
     if ( status  == Error )
     {
         dprintf(D_UPDOWN,"GetUserPriority returned error\n");
         dprintf(D_UPDOWN,"ERROR : ERROR \n");
-/*      EXCEPT("Can't evaluate \"PRIO\""); */
         dprintf( D_ALWAYS,
                 "job_prio: Can't find user priority for %s, assuming 0\n",
                 owner );
         prio = 0;
     }
 
-    PrioRec[N_PrioRecs].id      = id;
-    PrioRec[N_PrioRecs].prio    = prio;
-    PrioRec[N_PrioRecs].job_prio    = job_prio;
-    PrioRec[N_PrioRecs].status  = job_status;
-    PrioRec[N_PrioRecs].qdate   = q_date;
+    PrioRec[N_PrioRecs].id       = id;
+    PrioRec[N_PrioRecs].prio     = prio;
+    PrioRec[N_PrioRecs].job_prio = job_prio;
+    PrioRec[N_PrioRecs].status   = job_status;
+    PrioRec[N_PrioRecs].qdate    = q_date;
     if ( DebugFlags & D_UPDOWN )
     {
         PrioRec[N_PrioRecs].owner= (char *)malloc(strlen(owner) + 1 );
@@ -1665,11 +1565,8 @@ int get_job_prio(int cluster, int proc)
 ** This is different from "job_prio()" because we want to send all jobs
 ** regardless of the state they are in.
 */
-#if DBM_QUEUE
-all_job_prio(PROC* proc)        /* UPDOWN */
-#else
+
 all_job_prio(int cluster, int proc)
-#endif
 {
     int prio;
     int status;
@@ -1678,14 +1575,6 @@ all_job_prio(int cluster, int proc)
     PROC_ID job_id;
     int job_q_date;
     char    own_buf[100], *owner;
-
-#if DBM_QUEUE
-    job_prio = proc->prio;
-    job_status = proc->status;
-    owner = proc->owner;
-    job_q_date = proc->q_date;
-    job_id = proc->id;
-#else
     GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &job_prio);
     GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &job_status);
     GetAttributeInt(cluster, proc, ATTR_Q_DATE, &job_q_date);
@@ -1693,81 +1582,19 @@ all_job_prio(int cluster, int proc)
     owner = own_buf;
     job_id.cluster = cluster;
     job_id.proc = proc;
-#endif
     prio = upDown_GetUserPriority(owner, &status);
     if ( status == Error ) {
         dprintf( D_ALWAYS,
                 "all_job_prio: Can't find user priority for %s, assuming 0\n",
                 owner );
-/*      EXCEPT( "Can't evaluate \"PRIO\"" ); */
         prio = 0;
     }
-
     PrioRec[N_PrioRecs].id = job_id;
     PrioRec[N_PrioRecs].prio = prio;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status = job_status;
     PrioRec[N_PrioRecs].qdate = job_q_date;
     N_PrioRecs += 1;
-
-}
-
-send_all_jobs_prioritized(XDR* xdrs)
-{
-#if defined(NEW_PROC)
-    GENERIC_PROC    buf;
-    PROC            *proc  = (PROC *)&buf;
-#else
-    char            buf[1024];
-    PROC            *proc  = (PROC *)buf;
-#endif
-    int     i;
-
-    dprintf( D_FULLDEBUG, "\n" );
-    dprintf( D_FULLDEBUG, "Entered send_all_jobs_prioritized\n" );
-
-    N_PrioRecs = 0;
-
-    WalkJobQueue( all_job_prio );
-
-    qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]), (int(*)(const void*, const void*))prio_compar );
-
-    /*
-    ** for( i=0; i<N_PrioRecs; i++ ) {
-    **  dprintf( D_FULLDEBUG, "PrioRec[%d] = %d.%d %3.10f\n",
-    **      i, PrioRec[i].id.cluster, PrioRec[i].id.proc, PrioRec[i].prio );
-    ** }
-    */
-    xdrs->x_op = XDR_ENCODE;
-
-#if	DBM_QUEUE
-#if defined(NEW_PROC)
-    end->n_cmds = 0;
-    end->n_pipes = 0;
-
-    end->owner = end->env = end->rootdir = end->iwd =
-        end->requirements = end->preferences = "";
-    end->version_num = PROC_VERSION;
-#else
-    end->owner = end->cmd = end->args = end->env = end->in =
-        end->out = end->err = end->rootdir = end->iwd =
-        end->requirements = end->preferences = "";
-    end->version_num = PROC_VERSION;
-#endif
-
-
-    if( !xdr_proc( xdrs, end ) ) {
-        dprintf( D_ALWAYS, "Couldn't send end marker for SEND_ALL_JOBS\n");
-        return FALSE;
-    }
-#endif
-
-    if( !xdrrec_endofrecord(xdrs,TRUE) ) {
-        dprintf( D_ALWAYS, "Couldn't send end of record for SEND_ALL_JOBS\n");
-        return FALSE;
-    }
-
-    dprintf( D_FULLDEBUG, "Finished send_all_jobs_prioritized\n");
 }
 
 int mark_idle(int cluster, int proc)
@@ -1782,12 +1609,7 @@ int mark_idle(int cluster, int proc)
         return -1;
     }
 
-#if defined(V2)
-    (void)sprintf( ckpt_name, "%s/job%06d.ckpt.%d",
-                                Spool, proc->id.cluster, proc->id.proc  );
-#else
     strcpy(ckpt_name, gen_ckpt_name(Spool, cluster, proc,0) );
-#endif
 
     GetAttributeString(cluster, proc, ATTR_OWNER, owner);
 
@@ -1810,9 +1632,7 @@ int mark_idle(int cluster, int proc)
 void mark_jobs_idle()
 {
     char    queue[MAXPATHLEN];
-
-    WalkJobQueue(mark_idle );
-
+    WalkJobQueue( mark_idle );
 }
 
 /*
