@@ -26,6 +26,7 @@
 #include "debug.h"
 #include "expr.h"
 #include "clib.h"
+#include "condor_random_num.h"
 
 #ifndef TRUE
 #define TRUE 1
