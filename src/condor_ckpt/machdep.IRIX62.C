@@ -28,6 +28,8 @@
 
 #include "condor_common.h"
 #include "image.h"
+#include <stdio.h>
+#include "condor_fix_signal.h"
 #include <sys/procfs.h>		// for /proc calls
 #include <sys/mman.h>		// for mmap() test
 #include <sys/immu.h>
