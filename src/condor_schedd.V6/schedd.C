@@ -213,6 +213,8 @@ Scheduler::Scheduler()
                                                   ( 5, mpiHashFunc );
 	sent_shadow_failure_email = FALSE;
 	ManageBandwidth = false;
+	RejectedClusters.setFiller(0);
+	RejectedClusters.resize(MAX_REJECTED_CLUSTERS);
 }
 
 Scheduler::~Scheduler()

@@ -206,7 +206,8 @@ class Scheduler : public Service
 	int				SchedUniverseJobsRunning;
 	int				BadCluster;
 	int				BadProc;
-	int				RejectedClusters[MAX_REJECTED_CLUSTERS];
+	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
+	ExtArray<int>   RejectedClusters;
 	int				N_RejectedClusters;
     OwnerData			Owners[MAX_NUM_OWNERS];
 	int				N_Owners;

@@ -40,6 +40,7 @@ template class List<shadow_rec*>;
 template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
+template class ExtArray<int>;
 // for MPI use:
 template class ExtArray <match_rec*>;
 template class HashTable <int, ExtArray<match_rec*>*>;
