@@ -46,6 +46,7 @@ float				return grab( TYPE_NAME );
 {UNSIGNED}long		return grab( TYPE_NAME );
 {UNSIGNED}short		return grab( TYPE_NAME );
 long{WHITE}int		return grab( TYPE_NAME );
+long{WHITE}long		return grab( TYPE_NAME );
 u_short				return grab( TYPE_NAME );
 ulong_t				return grab( TYPE_NAME );
 size_t				return grab( TYPE_NAME );
