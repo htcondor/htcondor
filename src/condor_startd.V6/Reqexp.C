@@ -38,6 +38,7 @@ Reqexp::Reqexp( Resource* rip )
 	char* start;
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
+	origstart = NULL;
 	rstate = UNAVAIL;
 }
 
@@ -50,6 +51,9 @@ Reqexp::compute( amask_t how_much )
 		if( !start ) {
 			EXCEPT( "START expression not defined!" );
 		}
+		if( origstart ) {
+			free( origstart );
+		}
 		origstart = (char*)malloc( (strlen(start) + strlen(ATTR_START)
 									+ 4) * sizeof(char) );
 		sprintf( origstart, "%s = %s", ATTR_START, start );
@@ -60,8 +64,8 @@ Reqexp::compute( amask_t how_much )
 
 Reqexp::~Reqexp()
 {
-	free( origreqexp );
-	free( origstart );
+	if( origreqexp ) free( origreqexp );
+	if( origstart ) free( origstart );
 }
 
 
