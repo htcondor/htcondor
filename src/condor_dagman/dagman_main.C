@@ -28,6 +28,7 @@
 #include "dag.h"
 #include "debug.h"
 #include "parse.h"
+#include "my_username.h"
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
@@ -125,6 +126,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void main_timer();
+void print_status();
 
 
 //---------------------------------------------------------------------------
@@ -151,7 +153,7 @@ int main_init (int argc, char **argv) {
 	// get dagman job id from environment
 	DAGManJobId = getenv( "CONDOR_ID" );
 	if( DAGManJobId == NULL ) {
-		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3.1)" );
+		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
 	}
   
     //
@@ -253,9 +255,15 @@ int main_init (int argc, char **argv) {
         char *temp;
         debug_println (DEBUG_DEBUG_1,"Current path is %s",
                        (temp=getcwd(NULL, _POSIX_PATH_MAX)) ? temp : "<null>");
-        free(temp);
-        debug_println (DEBUG_DEBUG_1,"Current user is %s",
-                       (temp=getenv("USER")) ? temp : "<null>");
+		if( temp ) {
+			free( temp );
+		}
+		temp = my_username();
+		debug_println( DEBUG_DEBUG_1, "Current user is %s",
+					   temp ? temp : "<null>" );
+		if( temp ) {
+			free( temp );
+		}
     }
   
     //
@@ -321,8 +329,26 @@ int main_init (int argc, char **argv) {
         }
     }
 
-    daemonCore->Register_Timer (2, 2, (TimerHandler) main_timer, "main_timer");
+    daemonCore->Register_Timer( 1, 5, (TimerHandler)main_timer,
+								"main_timer" );
     return 0;
+}
+
+void
+print_status() {
+    time_t clock;
+    struct tm *tm;
+
+    (void)time( (time_t*)&clock );
+    tm = localtime( (time_t*)&clock );
+	debug_printf( DEBUG_VERBOSE, "%02d/%02d %02d:%02d:%02d: %d/%d done, "
+				  "%d failed, %d submitted, %d ready, %d script%s\n",
+				  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
+				  tm->tm_sec, G.dag->NumJobsDone(), G.dag->NumJobs(),
+				  G.dag->NumJobsFailed(), G.dag->NumJobsSubmitted(),
+				  G.dag->NumJobsReady(), G.dag->NumScriptsRunning(),
+				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
+	return;
 }
 
 void main_timer () {
@@ -337,15 +363,14 @@ void main_timer () {
     // If recovery was needed, the log file has been completely read and
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
-    
-    debug_printf( DEBUG_DEBUG_1,
-				  "%d Jobs Total / %d Done / %d Submitted / %d Ready / "
-				  "%d Failed / %d Script%s Running\n", G.dag->NumJobs(),
-				  G.dag->NumJobsDone(), G.dag->NumJobsSubmitted(),
-				  G.dag->NumJobsReady(), G.dag->NumJobsFailed(), 
-				  G.dag->NumScriptsRunning(),
-				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
-    
+
+    static int prevJobsDone = 0;
+    static int prevJobs = 0;
+    static int prevJobsFailed = 0;
+    static int prevJobsSubmitted = 0;
+    static int prevJobsReady = 0;
+    static int prevScriptsRunning = 0;
+
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
         if (G.dag->ProcessLogEvents() == false) {
@@ -360,6 +385,23 @@ void main_timer () {
         }
     }
   
+    // print status if anything's changed (or we're in a high debug level)
+    if( prevJobsDone != G.dag->NumJobsDone()
+        || prevJobs != G.dag->NumJobs()
+        || prevJobsFailed != G.dag->NumJobsFailed()
+        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
+        || prevJobsReady != G.dag->NumJobsReady()
+        || prevScriptsRunning != G.dag->NumScriptsRunning()
+		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
+		print_status();
+        prevJobsDone = G.dag->NumJobsDone();
+        prevJobs = G.dag->NumJobs();
+        prevJobsFailed = G.dag->NumJobsFailed();
+        prevJobsSubmitted = G.dag->NumJobsSubmitted();
+        prevJobsReady = G.dag->NumJobsReady();
+        prevScriptsRunning = G.dag->NumScriptsRunning();
+	}
+
     assert (G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs());
 
     //
