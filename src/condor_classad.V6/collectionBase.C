@@ -25,6 +25,8 @@
 #include "collectionBase.h"
 #include "transaction.h"
 
+#include "sink.h"
+
 BEGIN_NAMESPACE( classad )
 
 ClassAdCollection::
@@ -620,17 +622,16 @@ PlayClassAdOp( int opType, ClassAd *rec )
 				if (Cache==true){
 				  Max_Classad--;
 				}
-			}
-		        else{
-                                //if it is not in cache but in file, delete it from file            
-                          if (Cache==true){      
-			    tag ptr;
-			    if (ClassAdStorage.FindInFile( key,ptr )){
-			      ClassAdStorage.DeleteFromStorageFile(key);
-			    };
-			  }
+			} else {
+				//if it is not in cache but in file, delete it from file
+				if (Cache==true) {      
+					tag ptr;
+					if (ClassAdStorage.FindInFile( key,ptr )){
+						ClassAdStorage.DeleteFromStorageFile(key);
+					};
+				}
 			}  
-			if (Cache==true){
+			if (Cache == true){
 			  //If the cache in memory is full, we have to swap out a ClassAd
 			  if ( Max_Classad ==  MaxCacheSize){
 			    string write_back_key;
@@ -1470,82 +1471,83 @@ bool ClassAdCollection::
 LogState( FILE *fp )
 {
 		// write log records for all the views
-	if( !LogViews( fp, &viewTree, true ) ) {
+	if (!LogViews( fp, &viewTree, true)) {
 		CondorErrMsg += "; failed to log state";
 		return( false );
 	}
 
-	if (Cache==true){
-	  ClassAd		logRec;
-	  //ClassAd	        *ad;
-	  int sf_offset;
-	  string cla_key;
-	  string cla_s;
-	  //First write dirty ClassAds into storagefile, make it a consistant state          
-          WriteCheckPoint();
+	if (Cache == true) {
+		ClassAd		logRec;
+		int         sf_offset;
+		string      cla_key;
+		string      cla_s;
 
-	  ClassAdParser parser;
-	  //dump all the ClassAd into new log file
-	  sf_offset=ClassAdStorage.First(cla_key);
-	  while (sf_offset!=-1){
-	    cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
-	    if (cla_s == ""){
-	      CondorErrno = ERR_CACHE_CLASSAD_ERROR;
-	      CondorErrMsg = "No classad " + cla_key + " can be found from storage file";
-	      return( false );	     
-	    }
-	    ClassAd *cla=parser.ParseClassAd(cla_s,true);
-	    if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )){
-	      CondorErrMsg += "; failed to log state";
-	      return( false );
-	    };   
-	    if (!WriteLogEntry(fp,cla,true)){
-	      CondorErrMsg += "; failed to log ad, could not log state";   
-	    }   
-	    sf_offset=ClassAdStorage.Next(cla_key);
-	    delete(cla);                 
-	  }
-	}else{
-	  // log classads
-	  ClassAdTable::iterator	itr;
-	  ClassAd		logRec;
-	  ClassAd					*ad;
+		// First write dirty ClassAds into storagefile, make it a
+		// consistant state
+		WriteCheckPoint();
+
+		//dump all the ClassAd into new log file
+		ClassAdParser parser;
+		sf_offset=ClassAdStorage.First(cla_key);
+		while (sf_offset !=- 1) {
+			cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
+			if (cla_s == "") {
+				CondorErrno = ERR_CACHE_CLASSAD_ERROR;
+				CondorErrMsg = "No classad " + cla_key 
+					+ " can be found from storage file";
+				return( false );	     
+			}
+			ClassAd *cla=parser.ParseClassAd(cla_s,true);
+			if (!cla->InsertAttr("OpType", ClassAdCollOp_AddClassAd )) {
+				CondorErrMsg += "; failed to log state";
+				return( false );
+			}
+			if (!WriteLogEntry(fp,cla,true)) {
+				CondorErrMsg += "; failed to log ad, could not log state";   
+			}   
+			sf_offset=ClassAdStorage.Next(cla_key);
+			delete(cla);                 
+		}
+	} else {
+		// log classads
+		ClassAdTable::iterator	itr;
+		ClassAd	                logRec;
+		ClassAd                 *ad;
+		
+		if ( !logRec.InsertAttr( "OpType", ClassAdCollOp_AddClassAd ) ) {
+			CondorErrMsg += "; failed to log state";
+			return( false );
+		}
 	  
-	  if( !logRec.InsertAttr( "OpType", ClassAdCollOp_AddClassAd ) ) {
-	    CondorErrMsg += "; failed to log state";
-	    return( false );
-	  }
-	  
-	  for( itr = classadTable.begin( ); itr != classadTable.end( ); itr++ ) {
-	    ClassAd *tmp;
-	    string dd(itr->first);
-	    tmp = GetClassAd(dd);
-	    string buff;
-	    ClassAdUnParser unparser;
-	    unparser.Unparse(buff,tmp);
-	    
-            
-	    logRec.InsertAttr( "Key", itr->first );
-	    ad = GetClassAd( itr->first );
-	    logRec.Insert( "Ad", ad );
-	    
-	    buff="";
-	    unparser.Unparse(buff,&logRec);
-	    
-	    if( !WriteLogEntry( fp, &logRec, true ) ) {
-	      CondorErrMsg += "; failed to log ad, could not log state";
-	      logRec.Remove( "Ad" );
-	      return( false );
-	    }
-	    buff="";            
-	    unparser.Unparse(buff,&logRec);
-	    logRec.Remove( "Ad" );
+	  for ( itr = classadTable.begin( ); itr != classadTable.end( ); itr++ ) {
+		  ClassAd *tmp;
+		  string dd(itr->first);
+		  tmp = GetClassAd(dd);
+		  string buff;
+		  ClassAdUnParser unparser;
+		  unparser.Unparse(buff,tmp);
+		  
+		  logRec.InsertAttr( "Key", itr->first );
+		  ad = GetClassAd( itr->first );
+		  logRec.Insert( "Ad", ad );
+		  
+		  buff="";
+		  unparser.Unparse(buff, &logRec);
+		  
+		  if(!WriteLogEntry(fp, &logRec, true)) {
+			  CondorErrMsg += "; failed to log ad, could not log state";
+			  logRec.Remove( "Ad" );
+			  return( false );
+		  }
+		  buff = "";            
+		  unparser.Unparse(buff,&logRec);
+		  logRec.Remove( "Ad" );
 	  }
 	}
-	if( fsync( fileno( log_fp ) ) < 0 ) {
-	  CondorErrno = ERR_FILE_WRITE_FAILED;
-	  CondorErrMsg = "fsync() failed when logging state";
-	  return( false );
+	if( fsync( fileno( fp ) ) < 0 ) {
+		CondorErrno = ERR_FILE_WRITE_FAILED;
+		CondorErrMsg = "fsync() failed when logging state";
+		return( false );
 	}
 	
 	return( true );
@@ -1555,39 +1557,47 @@ LogState( FILE *fp )
 bool ClassAdCollection::
 LogViews( FILE *fp, View *view, bool subView )
 {
-		// first log the current view ...
-	{
+	// first log the current view ...
+	ViewName  view_name;
+
+	view_name = view->GetViewName();
+	if (view_name != "root") {
 		ClassAd	logRec;
 		ClassAd	*ad = view->GetViewInfo( );
 
-			// insert operation type and view info
-		if( !ad || !ad->InsertAttr( "OpType", subView ?
-				ClassAdCollOp_CreateSubView:ClassAdCollOp_CreatePartition ) ) {
-			if( ad ) delete ad;
+		// insert operation type and view info
+		if (!ad || !ad->InsertAttr( "OpType", subView ?
+				ClassAdCollOp_CreateSubView:ClassAdCollOp_CreatePartition)) {
+			if (ad) delete ad;
 			CondorErrMsg += "; failed to log views";
 			return( false );
 		}
-			// dump view info into log record 
-		logRec.Update( *ad );
+
+		// dump view info into log record 
+		logRec.Update(*ad);
 		delete ad;
-		if( !WriteLogEntry( fp, &logRec, false ) ) {
+		if (!WriteLogEntry(fp, &logRec, true)) {
 			CondorErrMsg += "; failed to log views";
 			return( false );
 		}
 	}
 
-		// next log subordinate child views ...
+	// next log subordinate child views ...
 	SubordinateViews::iterator	xi;
-	for( xi=view->subordinateViews.begin( ); xi!=view->subordinateViews.end( ); 
-			xi++ ) {
-		if( !LogViews( log_fp, *xi, true ) ) return( false );
+	for (xi=view->subordinateViews.begin( ); xi!=view->subordinateViews.end( ); 
+			xi++) {
+		if (!LogViews(fp, *xi, true)) {
+			return (false);
+		}
 	}
 
-		// ... and partition child views
+	// ... and partition child views
 	PartitionedViews::iterator	mi;
-	for( mi=view->partitionedViews.begin( ); mi!=view->partitionedViews.end( ); 
-			mi++ ) {
-		if( !LogViews( log_fp, mi->second, false ) ) return( false );
+	for(mi=view->partitionedViews.begin( ); mi!=view->partitionedViews.end( ); 
+			mi++) {
+		if (!LogViews(fp, mi->second, false)) {
+			return( false );
+		}
 	}
 
 	return( true );
