@@ -107,15 +107,14 @@ MAIN( int argc, char *argv[], char **envp )
 			restart();
 		}
 #endif
-		Set_CWD( init_working_dir2 );
 		argc -= 2;
 		argv += 2;
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
 #if defined(HPUX)
-		return(_start( argc, argv, envp ));
+		exit(_start( argc, argv, envp ));
 #else
-		return main( argc, argv, envp );
+		exit( main( argc, argv, envp ) );
 #endif
 	}
 
@@ -141,9 +140,9 @@ MAIN( int argc, char *argv[], char **envp )
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
 #if defined(HPUX)
-		return(_start( argc, argv, envp ));
+		exit(_start( argc, argv, envp ));
 #else
-		return main( argc, argv, envp );
+		exit( main( argc, argv, envp ) );
 #endif
 	}
 
@@ -210,21 +209,3 @@ void restore_condor_sigmask(sigset_t omask)
 		EXCEPT( "sigprocmask" );
 	}
 }	
-
-int
-ioserver_open(const char *path, int oflag, mode_t mode)
-{
-	return -1;
-}
-
-off_t
-ioserver_lseek(int filedes, off_t offset, int whence)
-{
-	return -1;
-}
-
-int
-ioserver_close(int filedes)
-{
-	return -1;
-}
