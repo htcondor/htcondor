@@ -294,10 +294,10 @@ void BaseShadow::endingUserLog( int exitStatus, int exitReason,
 	// fill in remote rusage
 	float float_value = 0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU,float_value);
-	run_remote_rusage.ru_stime.tv_sec = float_value;
+	run_remote_rusage.ru_stime.tv_sec = (int) float_value;
 	float_value = 0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,float_value);
-	run_remote_rusage.ru_utime.tv_sec = float_value;
+	run_remote_rusage.ru_utime.tv_sec = (int) float_value;
 
 
 	switch( exitReason ) {
