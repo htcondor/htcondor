@@ -202,7 +202,7 @@ $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 $(STRIP_DIR)/##dir##/##file##: file			@@\
 	/bin/rm -f $(STRIP_DIR)/##dir##/##file		@@\
 	cp file $(STRIP_DIR)/##dir			@@\
-	strip $(STRIP_DIR)/##dir##/##file		@@\
+	$(STRIP) $(STRIP_DIR)/##dir##/##file		@@\
 	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
 stripped:: $(STRIP_DIR)/##dir##/##file
 #endif  strip_target
@@ -282,7 +282,7 @@ dir##/##program: program##.static				@@\
 	/bin/rm -f dir##/##program				@@\
 	cp program##.static dir##/##program			@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
-	strip dir##/##program					@@\
+	$(STRIP) dir##/##program				@@\
 program##.static: objlist libs					@@\
 	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 clean:: 							@@\
