@@ -107,6 +107,13 @@
 #define PlatformIncludeFile <VAX_ULTRIX42.cf>
 #endif
 
+#if defined(i386) && defined(linux)
+#undef i386
+#undef linux
+#define Platform I386_LINUX
+#define PlatformIncludeFile <I386_LINUX.cf>
+#endif
+
 #if defined(i386) && defined(sequent)
 #undef i386
 #undef sequent
