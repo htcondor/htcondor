@@ -1,3 +1,15 @@
+09/26/02 V6_4-branch-pre-V6_3-doc-merge-1
+	The V6_4-branch right before merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_4-branch-post-V6_3-doc-merge-1
+	The V6_4-branch right after merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_3-doc-merge-1
+	Some changes to the manual were accidentally checked into the V6_3-branch
+	after it was abandonded.  This is a tag on V6_3-branch, only on doc/.
+
 08/18/02 V6_4_2
 	The 6.4.2 release, which was only a relink of the Globus libraries to
     fix OpenSSL security problems. It came from the 6_4-branch 
