@@ -79,7 +79,9 @@ static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
 static	ExprTree	*preemptionHold;
 static  ExtArray<PrioEntry> prioTable;
+#ifndef WIN32
 template class ExtArray<PrioEntry>;
+#endif
 
 extern 	"C"	int		Termlog;
 
@@ -548,9 +550,9 @@ setupAnalysis()
 
 	// fetch startd ads
 	if( pool ) {
-		rval = query.fetchAds( startdAds );
-	} else {
 		rval = query.fetchAds( startdAds , pool );
+	} else {
+		rval = query.fetchAds( startdAds );
 	}
 	if( rval != Q_OK ) {
 		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
@@ -620,7 +622,12 @@ fetchSubmittorPrios()
 	}
 
 	// connect to negotiator
-	ReliSock sock(negotiator, NEGOTIATOR_PORT);
+	ReliSock sock;
+	if ( pool ) {
+		sock.connect(pool, NEGOTIATOR_PORT);
+	} else {
+		sock.connect(negotiator, NEGOTIATOR_PORT);
+	}
 	sock.encode();
 	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
 		fprintf( stderr, "Error:  Could not get priorities from negotiator\n" );
