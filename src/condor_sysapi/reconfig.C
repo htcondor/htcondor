@@ -56,6 +56,13 @@ int _sysapi_reserve_disk = 0;
 /* needed by idle_time.C */
 #ifndef WIN32
 int _sysapi_startd_has_bad_utmp = FALSE;
+
+/* This defaults to true since I'm assuming modern solaris OSes
+	(from the time I write this: 10/09/03) will need to use the
+	kstat interface to get the console/mouse time.	If it causes
+	errors during detection of the idle times on older solaris machines, 
+	then turn it off in the config file. -psilord */
+int _sysapi_use_sol_kstat_cons_ms = TRUE;
 #endif
 
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
@@ -100,7 +107,7 @@ sysapi_reconfig(void)
 	if( _sysapi_console_devices ) {
  	        char *devname = NULL;
 		const char* striptxt = "/dev/";
-		const int striplen = strlen( striptxt );
+		const unsigned int striplen = strlen( striptxt );
 		_sysapi_console_devices->rewind();
 		while( (devname = _sysapi_console_devices->next()) ) {
 		  if( strncmp( devname, striptxt, striplen ) == 0 &&
@@ -115,6 +122,17 @@ sysapi_reconfig(void)
 
         free( tmp );
     }
+
+	/* This particular param is not dependant on whether or not I'm compiling
+		with solaris(as an OS) or not. So even though many of the places where
+		this variable is used is #ifdef'ed, the discovery of it is not. */
+	tmp = param( "USE_SOL_KSTAT_CONS_MS");
+	if( tmp && (*tmp == 'F' || *tmp =='f') ) {
+		_sysapi_use_sol_kstat_cons_ms = FALSE;
+	} else {
+		_sysapi_use_sol_kstat_cons_ms = TRUE;
+	}
+	if (tmp) free(tmp);
 
 	tmp = param( "STARTD_HAS_BAD_UTMP" );
 	if( tmp && (*tmp == 'T' || *tmp =='t') ) {
