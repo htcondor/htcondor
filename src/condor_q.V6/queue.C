@@ -530,7 +530,7 @@ processCommandLineArguments (int argc, char *argv[])
 static float
 job_time(float cpu_time,ClassAd *ad)
 {
-	if ( cputime ) {
+	if ( cputime  > 0.0) {
 		return cpu_time;
 	}
 
@@ -635,7 +635,7 @@ displayJobShort (ClassAd *ad)
 static char *
 bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
-	float utime;
+	float utime  = 0.0;
 	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 
@@ -676,7 +676,15 @@ bufferJobShort( ClassAd *ad ) {
 			 proc,
 			 format_owner( owner, ad ),
 			 format_date( (time_t)date ),
-			 format_time( utime ),
+			 /* In the next line of code there is an (int) typecast. This
+			 	has to be there otherwise the compiler produces incorrect code
+				here and performs a structural typecast from the float to an
+				int(like how a union works) and passes a garbage number to the
+				format_time function. The compiler is *supposed* to do a
+				functional typecast, meaning generate code that changes the
+				float to an int legally. Apparently, that isn't happening here.
+				-psilord 09/06/01 */
+			 format_time( (int)utime ),
 			 encode_status( status ),
 			 prio,
 			 (image_size / 1024.0),
