@@ -44,6 +44,7 @@
 #include <pwd.h>
 #include <netdb.h>
 #include <stdlib.h>
+#include <string.h>
 #include "trace.h"
 #include "expr.h"
 #include "files.h"
@@ -54,8 +55,7 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-char	*strdup(), *getline(), *expand_macro(), *ltrunc(),
-		*strchr(), *strrchr(), *lookup_macro();
+char	*getline(), *expand_macro(), *ltrunc(), *lookup_macro();
 
 int		ConfigLineNo;
 
@@ -307,7 +307,7 @@ FILE	*fp;
 		if( line != read_buf ) {
 			(void)strcpy( read_buf, line );
 		}
-		if( (ptr = strrchr(line,'\\')) == NULL )
+		if( (ptr = (char *)strrchr((const char *)line,'\\')) == NULL )
 			return buf;
 		if( *(ptr+1) != '\0' )
 			return buf;
@@ -384,7 +384,7 @@ register char *value, **leftp, **namep, **rightp;
 
 	for(;;) {
 tryagain:
-		value = strchr( tvalue, '$' );
+		value = (char *)strchr( (const char *)tvalue, '$' );
 		if( value == NULL ) {
 			return( 0 );
 		}
