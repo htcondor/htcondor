@@ -104,7 +104,6 @@ static void process_create_subview(
 static void process_check_in_view(
 	const string &line, int token_start, int line_number, 
 	const Parameters &parameters, ErrorCount *errors);
-static void cleanup(void);
 static string extract_token(int *token_start, const string &line);
 static bool empty_line(const string &line);
 
@@ -140,7 +139,6 @@ main(int argc, char **argv)
 		input_file.flags(0);
 		process_file(input_file, parameters, &errors);
 		errors.PrintErrors();
-		cleanup();
 	}
 
 	return 0;
@@ -791,28 +789,6 @@ static void process_check_in_view(const string &line,
 			}
 		}
 	}
-	return;
-}
-
-static void cleanup(void)
-{
-	ClassAdMapIterator     classad_iterator;
-	CollectionMapIterator  collection_iterator;
-
-	for (collection_iterator  = collections.begin();
-		 collection_iterator != collections.end();
-		 collection_iterator++) {
-		delete collection_iterator->second;
-	}
-
-	/*
-	for (classad_iterator  = classads.begin(); 
-		 classad_iterator != classads.end();
-		 classad_iterator++) {
-		delete classad_iterator->second;
-	}
-	*/
- 
 	return;
 }
 
