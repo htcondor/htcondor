@@ -11,7 +11,7 @@ LDFLAGS = RpcLib SocketLib
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 
-SRC = config_val.C preen.C user_prio.C history.C tool.C stats.C
+SRC = config_val.C preen.C user_prio.C history.C tool.C stats.C release.C
 
 LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a $(AUTH2_LIB)
 LIBDIRS =../condor_util_lib ../condor_c++_util
@@ -26,6 +26,11 @@ c_plus_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB),$(STATIC_DIR)/sbin)
+
+c_plus_target(condor_release,release.o,../condor_schedd.V6/libqmgmt.a $(LIB))
+release_target(condor_release,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target(condor_release,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_release,release.o,../condor_schedd.V6/libqmgmt.a $(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
