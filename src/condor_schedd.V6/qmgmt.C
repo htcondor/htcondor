@@ -1927,8 +1927,20 @@ int get_job_prio(ClassAd *job)
 	int 	niceUser;
 	int		universe;
 
+	ASSERT(job);
+
 	buf[0] = '\0';
 	owner[0] = '\0';
+
+		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
+		// return from this function before we call getAutoClusterid(), so call
+		// it early on (before any returns) right now.  The reason for this is
+		// getAutoClusterid() performs a mark/sweep algorithm to garbage collect
+		// old autocluster information.  If we fail to call getAutoClusterid, the
+		// autocluster information for this job will be removed, causing the schedd
+		// to ASSERT later on in the autocluster code. 
+		// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
@@ -1976,7 +1988,6 @@ int get_job_prio(ClassAd *job)
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
-	int auto_id = scheduler.autocluster.getAutoClusterid(job);
 	if ( auto_id == -1 ) {
 		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
 	} else {
