@@ -40,6 +40,7 @@ extern char*	InitiatingHost;
 extern char*	mySubSystem;
 extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 extern char*	UidDomain;				// Machines we share UID space with
+extern bool		TrustUidDomain;	// Should we trust what the submit side claims?
 
 char VirtualMachineName[25];
 
@@ -322,7 +323,9 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		
 		// if the submitting machine is in our shared UID domain, honor
 		// the request
-	if( host_in_domain(InitiatingHost, UidDomain) ) {
+		// alternatively, if the site has "TRUST_UID_DOMAIN = True" in
+		// their config file, we don't do the DNS check 
+	if( TrustUidDomain || host_in_domain(InitiatingHost, UidDomain) ) {
 
 		/* check to see if there is an entry in the passwd file for this uid */
 		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {

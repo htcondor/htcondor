@@ -357,6 +357,7 @@ private:
 
 	char* uid_domain;
 	char* fs_domain;
+	bool trust_uid_domain;
 
 };
 

@@ -54,6 +54,7 @@ JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
 	filetrans = NULL;
 	shadowupdate_tid = -1;
 	
+	trust_uid_domain = false;
 	uid_domain = NULL;
 	fs_domain = NULL;
 
@@ -195,6 +196,15 @@ JICShadow::config( void )
 		free( fs_domain );
 	}
 	fs_domain = param( "FILESYSTEM_DOMAIN" );  
+	
+	trust_uid_domain = false;
+	char* tmp = param( "TRUST_UID_DOMAIN" );
+	if( tmp ) {
+		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
+			trust_uid_domain = true;
+		}			
+		free( tmp );
+	}
 }
 
 
@@ -1001,12 +1011,28 @@ JICShadow::sameUidDomain( void )
 		// contains our UidDomain as a substring of its hostname.
 		// this way, we know someone's not just lying to us about what
 		// UidDomain they're in.
+		// However, if the site defines "TRUST_UID_DOMAIN = True" in
+		// their config file, don't perform this check, so sites can
+		// use UID domains that aren't substrings of DNS names if they
+		// have to.
+	if( trust_uid_domain ) {
+		dprintf( D_FULLDEBUG, "TRUST_UID_DOMAIN is 'True' in the config "
+				 "file, not comparing shadow's UidDomain (%s) against its "
+				 "hostname (%s)\n", uid_domain, shadow->name() );
+		return true;
+	}
 	if( host_in_domain(shadow->name(), uid_domain) ) {
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our "
 			 "UidDomain (%s), yet its hostname (%s) does not match\n",
 			 uid_domain, shadow->name() );
+
+		// TODO: maybe we should be more harsh in this case than just
+		// running their job as nobody... perhaps we should EXCEPT()
+		// in this case and force the user/admins to get it right
+		// before we agree to run *any* jobs from a shadow like this? 
+
 	return false;
 }
 
