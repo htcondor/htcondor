@@ -73,6 +73,9 @@ main(int argc, char* argv[])
 
   for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }
   accountant.AddMatch("Yoram",Ad1);
+  accountant.AddMatch("Shlomo",Ad6);
+  accountant.AddMatch("Shlomo",Ad1);
+  accountant.AddMatch("Yoram",Ad2);
   for (int i=0;i<30;i++) { accountant.UpdatePriorities(); sleep(1); }  
 
   dprintf(D_ALWAYS,"End.");
