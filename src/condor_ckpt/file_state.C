@@ -279,6 +279,15 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 
 	CondorFile	*f;
 
+	// Find a fresh file descriptor
+	// This has to come first so we know if this is stderr
+
+	fd = find_empty();
+	if(fd<0) {
+		errno = EMFILE;
+		return -1;
+	}
+
 	// Decide how to access the file.
 	// In local syscalls, always use local.
 	// In remote, ask the shadow for a complete url.
@@ -350,16 +359,6 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 				}
 			}
 		}
-	}
-
-	// Find a fresh file descriptor
-
-	fd = find_empty();
-	if(fd<0) {
-		errno = EMFILE;
-		f->close();
-		delete f;
-		return -1;
 	}
 
 	// Look up the info block for this file.
