@@ -630,6 +630,16 @@ get_ckpt_mode( int sig )
 	return REMOTE_syscall( CONDOR_get_ckpt_mode, sig );
 }
 
+/*
+  If the shadow tells us to checkpoint slowly in get_ckpt_mode(), we need
+  to ask for a speed.  The return value is in KB/s.
+*/
+int
+get_ckpt_speed()
+{
+	return REMOTE_syscall( CONDOR_get_ckpt_speed );
+}
+
 void
 unblock_signals()
 {
