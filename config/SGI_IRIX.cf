@@ -138,6 +138,12 @@
 #define Crt0		concat(LibPath,/crt1.o)
 #define CrtN		concat(LibPath,/crtn.o)
 
-#define PlatformFlags VersionPlatformFlags AbiFlags MipsFlags
+/* add certain flags which will only work with gnu gcc because
+PlatformFlags is used by the vendor compiler in the test suite */
+#define PlatformGccFlags AbiFlags
+
+#define PlatformFlags VersionPlatformFlags MipsFlags
 
 #define PlatformLdFlags -lelf
+
+
