@@ -30,6 +30,54 @@ AC_PREREQ(2.57)
 AC_INIT
 
 
+# first, if we notice we're being run at UW-Madison CS on a
+# CSL-supported machine, and the PATH doesn't include
+# /p/condor/workspaces/build/bin before /s/std/bin, print an error
+# message and exit, since there's no way we're going to find the first
+# versions of everything we need, and it's easier to just tell the
+# user right at the start what they need to do to fix it, instead of
+# having the rest of the tests in here fail...
+my_domain=`echo $ac_hostname | cut -f2- -d.`
+_bad_path_dirs="/s/std/bin /usr/local/bin /usr/bin /bin"
+_found_bad_dir=no
+_which_bad_dir=""
+_found_s_std_bin=no
+_found_p_build_bin=no
+_p_build_bin="/p/condor/workspaces/build/bin"
+if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
+  AC_MSG_CHECKING([if PATH on CSL-supported machine is ok]) 
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+  for as_dir in $PATH
+  do
+    IFS=$as_save_IFS
+    for test_dir in $_bad_path_dirs
+    do
+      if test $as_dir = $test_dir ; then
+        _found_bad_dir=yes
+	if test "x$_which_bad_dir" = "x" ; then 
+          _which_bad_dir="$test_dir"
+	else
+          _which_bad_dir="$_which_bad_dir, $test_dir"
+	fi  
+      fi
+    done  
+    if test $as_dir = $_p_build_bin ; then
+      if test $_found_bad_dir = "yes" ; then
+        AC_MSG_RESULT([no]) 
+        AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* near the front of your PATH.  This configure script will not be able to find the right versions of the programs it needs to build Condor.  Please fix your PATH by putting $_p_build_bin *BEFORE* any of these directories in your PATH: $_which_bad_dir])
+      fi
+      _found_p_build_bin=yes
+      break
+    fi
+  done
+  if test $_found_p_build_bin = "no" ; then
+    AC_MSG_RESULT([no]) 
+    AC_MSG_ERROR([You are compiling on a UW-Madison CSL-supported machine and $_p_build_bin is *NOT* in your PATH.  This configure script will not be able to find the right versions of programs it needs to build Condor.  Please fix your PATH by adding $_p_build_bin (it must be before any of these directories: $_bad_path_dirs) and re-run configure])
+  fi
+  AC_MSG_RESULT([yes])
+fi   
+
+
 ############################################################
 # Check for command-line arguments and environment variables
 ############################################################
