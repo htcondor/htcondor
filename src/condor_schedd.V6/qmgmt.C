@@ -791,7 +791,7 @@ GetJobAd(int cluster_id, int proc_id)
 	ClassAd	*ad;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	if (JobQueue->table.lookup(HashKey(key), ad) == 1)
+	if (JobQueue->table.lookup(HashKey(key), ad) == 0)
 		return ad;
 	else
 		return NULL;
