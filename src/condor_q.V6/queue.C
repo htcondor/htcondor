@@ -165,7 +165,6 @@ int main (int argc, char **argv)
 			} else {
 				sprintf( scheddMachine, "Unknown" );
 			}
-			//if ( verbose || run || show_io || goodput ) {
 			if ( verbose ) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
@@ -217,7 +216,6 @@ int main (int argc, char **argv)
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		//if ( verbose || run || show_io || goodput ) {
 		if ( verbose ) {
 			show_queue( scheddAddr, scheddName, scheddMachine );
 		} else {
@@ -1010,8 +1008,10 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		return false;
 	}
 
-	// Print the jobs if we have any
-	if (!output_buffer_empty) {
+	// If this is a global, don't print anything if this schedd is empty.
+	// If this is NOT global, print out the header and footer to show that we
+	//    did something.
+	if (!global || !output_buffer_empty) {
 		the_output = &(*output_buffer)[0];
 		qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
 			output_sorter);
@@ -1028,9 +1028,11 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			short_header();
 		}
 
-		for (int i=0;i<=output_buffer->getlast(); i++) {
-			if ((*output_buffer)[i])
-				printf("%s",((*output_buffer)[i])->string);
+		if (!output_buffer_empty) {
+			for (int i=0;i<=output_buffer->getlast(); i++) {
+				if ((*output_buffer)[i])
+					printf("%s",((*output_buffer)[i])->string);
+			}
 		}
 
 		// If we want to summarize, do that too.
