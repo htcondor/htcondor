@@ -20,6 +20,7 @@ extern const char *StartdStringKeywords	[];
 extern const char *StartdIntegerKeywords[];
 extern const char *StartdFloatKeywords	[];
 
+char *getStrQueryResult(QueryResult);
 
 enum ScheddStringCategory
 {
