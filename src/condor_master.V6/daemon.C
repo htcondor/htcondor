@@ -34,6 +34,7 @@
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include <math.h>
+#include "max_fd.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -375,7 +376,7 @@ int daemon::StartDaemon()
 {
 	char	*shortname;
 	int command_port = TRUE;
-	int i;
+	int i, max_fds = max_fd();
 	char argbuf[150];
 
 	if( (shortname = strrchr(process_name,'/')) ) {
@@ -439,7 +440,7 @@ int daemon::StartDaemon()
 		}
 
 		// Close all inherited sockets and fds
-		for (i=0;i < _NFILE; i++)
+		for (i=0;i < max_fds; i++)
 			close(i);
 
 		if( command_port != TRUE ) {
@@ -504,7 +505,7 @@ void Daemons::Restart(int pid)
 void Daemons::RestartMaster()
 {
 	int			index = GetIndex("MASTER");
-	int 		i;
+	int 		i, max_fds = max_fd();
 
 	if ( index == -1 ) {
 		dprintf(D_ALWAYS, "Restart Master:MASTER not specified\n");
@@ -548,7 +549,7 @@ void Daemons::RestartMaster()
 
 	// Now close all sockets and fds so our new invocation of condor_master
 	// does not inherit them.
-	for (i=0; i < _NFILE; i++) 
+	for (i=0; i < max_fds; i++) 
 		close(i);
 
 	(void)execl(daemon_ptr[index]->process_name, "condor_master", 0);
