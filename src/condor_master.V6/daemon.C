@@ -588,7 +588,8 @@ daemon::Exited( int status )
 	char buf2[256];
 	sprintf( buf1, "The %s (pid %d) ", name_in_config_file, pid );
 	if( WIFSIGNALED(status) ) {
-		sprintf( buf2, "died with signal %d", WTERMSIG(status) );
+		sprintf( buf2, "died due to %s", 
+			daemonCore->GetExceptionString(status) );
 	} else {
 		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
 	}
@@ -664,7 +665,8 @@ daemon::Obituary( int status )
 		fprintf( mailer, "was killed because\nit was no longer responding.\n");
 	} else {
 		if( WIFSIGNALED(status) ) {
-			fprintf( mailer, "died due to signal %d.\n",WTERMSIG(status) );
+			fprintf( mailer, "died due to %s.\n",
+				daemonCore->GetExceptionString(status) );
 		} else {
 			fprintf( mailer,"exited with status %d.\n",WEXITSTATUS(status) );
 		}
