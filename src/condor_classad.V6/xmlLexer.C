@@ -140,6 +140,7 @@ XMLLexer::
 XMLLexer ()
 {
 	lexer_source = NULL;
+    token_is_valid = false;
 	return;
 }
 
@@ -216,11 +217,12 @@ GrabToken(void)
 	int  character;
 
 	current_token.ClearToken();
-
+	have_character = false;
+    have_token     = false;
+    character      = -1;
 	// Find first non-whitespace character, to decide if we 
 	// are getting a tag or some text. If we get text, we preserve
 	// whitespace, because we keep whitespace in strings.
-	have_character = false;
 	while (!lexer_source->AtEnd()) {
 		character = lexer_source->ReadCharacter();
 		if (!isspace(character)) {
