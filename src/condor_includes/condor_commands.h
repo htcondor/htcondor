@@ -125,6 +125,9 @@
 #define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad
 #define PERMISSION_AND_AD	(SCHED_VERS+72) // negotiator is sending startad to schedd
 #define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt
+#define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
+#define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
+
 
 /************
 *** Command ids used by the collector 
