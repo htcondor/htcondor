@@ -224,7 +224,27 @@ The following list of attributes are required for a COD application:
    quotation marks (\verb@"@).
    There is no default.
 
+ \item[\Attr{Owner}] If the \Condor{startd} is executing as root on
+   the resource where a COD application will run, the user must also
+   define \Attr{Owner} to specify what user name the application will
+   run as.
+   (On Windows, the \Condor{startd} always runs as an Administrator
+   service, which is equivalent to running as root on UNIX platforms).
+   If the user specifies any COD application attributes with the
+   \Condor{cod\_activate} command-line tool, the \Attr{Owner}
+   attribute will be filled in with the user name that ran
+   \Condor{cod\_activate}.
+   However, if the user defines all attributes of their COD
+   application in the Condor configuration files, and does not define
+   any attributes with the \Condor{cod\_activate} command-line tool
+   (both methods are described below in more detail), there is no
+   default and \Attr{Owner} must be specified in the configuration
+   file.
+   \Attr{Owner} is a string attribute, and must contain a valid user
+   name on the given COD resource. 
+
 \end{description}
+
 
 \index{Computing On Demand!Defining Applications!Optional attributes}
 
@@ -322,6 +342,9 @@ The following list of attributes are optional:
 \Attr{Out},\Attr{Err}, \Attr{StarterUserLog}) is not a full path name,
 Condor automatically prepends the value of \Attr{IWD}.
 
+
+\index{Computing On Demand!Defining Applications!Job ID}
+
 The final set of attributes define a COD application's \Term{job ID}.
 The job ID is made up of both the \Attr{ClusterId} and \Attr{ProcId}
 attributes (described below).
@@ -413,9 +436,8 @@ they invoked \Condor{cod\_activate} (described below).
 \Note If a user is defining all attributes of their COD application in
 the Condor configuration files, and the \Condor{startd} on the COD
 resource they are using is running as root, the user must also define
-\Attr{Owner} to be the user that the COD application should run as.
-This attribute should be a string and should contain a valid username
-on the given COD resource.
+\Attr{Owner} to be the user that the COD application should run as (as
+described above).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
