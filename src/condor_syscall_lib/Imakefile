@@ -32,7 +32,7 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 /* Don't extract anything */
 #	elif IS_HPPAR_HPUX9
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
-		  MMAP.o PIPE.o
+		  MMAP.o PIPE.o GETWD.o
 #	elif IS_I386_LINUX
 EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o
@@ -315,13 +315,11 @@ library_target(libfort.a,C_getenv.o)
 release_library(libfort.a,$(RELEASE_DIR)/lib)
 #endif /* AIX */
 
-#if IS_HPPAR_HPUX9
-uppercase_target(../condor_util_lib/util_lib.a,getwd.o,GETWD.o,getwd,GETWD)
-#else
+#if HAS_GETWD
 uppercase_target($(SIMPLE_LIBC),getwd.o,GETWD.o,getwd,GETWD)
+#else
+uppercase_target(../condor_util_lib/util_lib.a,getwd.o,GETWD.o,getwd,GETWD)
 #endif
-
-
 
 clean::
 	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
