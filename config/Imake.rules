@@ -165,6 +165,18 @@ $(RELEASE_DIR)/##dir##/##dest##: 			@@\
 	ln -s src $(RELEASE_DIR)/##dir##/##dest			
 #endif /* release_symlink_target */
 
+/*
+** Just create a symlink. We need this for the test suite 
+*/
+#ifndef release_plain_symlink_target
+#define release_plain_symlink_target( src, dest )		@@\
+release:: dest					@@\
+dest: 						@@\
+	/bin/rm -f dest				@@\
+	ln -s src dest				@@\
+clean::						@@\
+	/bin/rm -f dest
+#endif /* release_plain_symlink_target */
 
 /*
 ** Target is released by creating a hard link to another.
@@ -385,6 +397,7 @@ dest: src					@@\
 clean::						@@\
 	/bin/rm -f dest
 #endif /* all_symlink_target */
+
 
 
 /***********************************************************************
@@ -673,7 +686,6 @@ name##.run:					@@\
 	ln -s ../##name##.run .			@@\
 clean::						@@\
 	rm -f name##.##ext name##.cmd name##.run
-
 
 /***********************************************************************
 ** Doc++ rules  

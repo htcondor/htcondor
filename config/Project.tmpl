@@ -57,13 +57,27 @@ X11_INCLUDE =           /usr/X11R6/include
 #define Strip strip
 #endif
 
+/*
+   These next few lines are not supposed to be pre-processor
+   directives, but GNU-make understood directives.  They don't want a
+   # in front of them.  If you're having problems at these lines,
+   you're probably not using gmake.  -peter keller 9/8/2000
+*/
+ifdef DEBUG_BUILD
+CC =  $(DEBUG_BUILD) CCompiler
+CPlusPlus = $(DEBUG_BUILD) CPlusCompiler
+C_LINK = $(DEBUG_BUILD) CLinker
+CC_LINK = $(DEBUG_BUILD) CPlusLinker
+else
+CC = CCompiler
+CPlusPlus = CPlusCompiler
+C_LINK = CLinker
+CC_LINK = CPlusLinker
+endif
+
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
-CC = CCompiler
-C_LINK = CLinker
-CPlusPlus = CPlusCompiler
 STRIP = Strip
-CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
@@ -134,7 +148,7 @@ endif
 #endif
 
 #ifndef FORTRAN_HAS_RECURSION
-#define FORTRAN_HAS_RECURSION YES
+#define FORTRAN_HAS_RECURSION NO
 #endif
 
 #ifndef HAS_INET_NTOA
