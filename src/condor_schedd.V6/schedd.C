@@ -86,7 +86,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern char *gen_ckpt_name();
 extern void	Init();
-extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 #include "condor_qmgr.h"
 
@@ -99,11 +99,6 @@ extern "C"
 	int	 	getdtablesize();
 	char* 	gen_ckpt_name(char*, int, int, int);
 	int	 	do_connect(const char*, const char*, u_int);
-#if defined(HPUX9)
-	int	 	gethostname(char*, unsigned int);
-#else
-	int	 	gethostname(char*, int);
-#endif
 	int	 	boolean(char*, char*);
 	int	 	param_in_pattern(char*, char*);
 	char*	param(char*);
@@ -117,7 +112,7 @@ extern "C"
 	int		prio_compar(prio_rec*, prio_rec*);
 }
 
-extern	int		get_job_prio(int, int);
+extern	int		get_job_prio(ClassAd *ad);
 extern	void	FindRunnableJob(int, int&);
 extern	int		Runnable(PROC_ID*);
 
@@ -210,7 +205,9 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
+#if !defined(WIN32)
 	block_signal(SIGCHLD);
+#endif
 #if 0
 	/* the step size in the UPDOWN algo depends on the time */
 	/* interval of sampling			                */
@@ -259,7 +256,7 @@ Scheduler::count_jobs()
 		Owners[i].JobsIdle = 0;
 	}
 
-	WalkJobQueue((int(*)(int, int)) count );
+	WalkJobQueue((int(*)(ClassAd *)) count );
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
 	dprintf( D_FULLDEBUG, "JobsIdle = %d\n", JobsIdle );
@@ -311,7 +308,7 @@ Scheduler::count_jobs()
 }
 
 int
-count( int cluster, int proc )
+count( ClassAd *job )
 {
 	int		status;
 	char 	buf[100];
@@ -320,16 +317,16 @@ count( int cluster, int proc )
 	int		max_hosts;
 	int		universe;
 
-	GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
-	GetAttributeString(cluster, proc, ATTR_OWNER, buf);
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	job->LookupString(ATTR_OWNER, buf);
 	owner = buf;
-	if (GetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
+	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
-	if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
+	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) < 0) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
-	if (GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe) < 0) {
+	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = STANDARD;
 	}
 	
@@ -436,12 +433,13 @@ Scheduler::abort_job(int, Stream* s)
 	abort_job_myself(job_id);
 }
 
+#if defined(WIN32)
+#define RETURN return
+#else
 #define RETURN \
-	/* if( context ) { \
-	 	free_context( context ); \
-	 }*/  \
 	unblock_signal(SIGCHLD); \
 	return
+#endif
 
 /*
 ** The negotiator wants to give us permission to run a job on some
@@ -475,7 +473,7 @@ Scheduler::negotiate(int, Stream* s)
 
 	N_PrioRecs = 0;
 
-	WalkJobQueue( (int(*)(int, int))job_prio );
+	WalkJobQueue( (int(*)(ClassAd *))job_prio );
 
 	if( !shadow_prio_recs_consistent() ) {
 		mail_problem_message();
@@ -500,9 +498,9 @@ Scheduler::negotiate(int, Stream* s)
 	//-----------------------------------------------
 	// Get Owner name from negotiator
 	//-----------------------------------------------
-	char owner[200];
+	char owner[200], *ownerptr = owner;
 	s->decode();
-	if (!s->code(owner)) {
+	if (!s->code(ownerptr)) {
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
 		RETURN;
 	}
@@ -895,7 +893,7 @@ Scheduler::StartSchedUniverseJobs()
 {
 	int i;
 
-	WalkJobQueue( (int(*)(int, int))find_idle_sched_universe_jobs );
+	WalkJobQueue( (int(*)(ClassAd *))find_idle_sched_universe_jobs );
 	for (i = 0; i < NSchedUniverseJobIDs; i++) {
 		start_sched_universe_job(IdleSchedUniverseJobIDs+i);
 	}
@@ -2545,9 +2543,9 @@ Scheduler::send_alive()
 }
 
 void
-job_prio(int cluster, int proc)
+job_prio(ClassAd *ad)
 {
-	sched->JobsRunning += get_job_prio(cluster, proc);
+	sched->JobsRunning += get_job_prio(ad);
 }
 
 void

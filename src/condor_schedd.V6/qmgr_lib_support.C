@@ -11,6 +11,7 @@
 #include "condor_qmgr.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "condor_classad.h"
 
 int open_url(char *, int, int);
 #if !defined(WIN32)
@@ -24,9 +25,7 @@ extern "C" char*	get_schedd_addr(const char*);
 
 static char *_FileName_ = __FILE__;
 
-/*
-XDR *xdr_qmgmt = 0;
-*/
+
 ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
@@ -219,28 +218,19 @@ SendSpoolFileBytes(char *filename)
 void
 WalkJobQueue(scan_func func)
 {
-	int	cluster, proc;
-	int next_cluster, next_proc;
-	int disconn_when_done = 0;
+	ClassAd *ad = new ClassAd();
 	int rval;
 
-	cluster = -1;
-	proc = -1;
-
-	do {
-		rval = GetNextJob(cluster, proc, &next_cluster, &next_proc);
+	rval = GetNextJob(ad, 1);
+	while (rval != -1) {
+		rval = func(ad);
 		if (rval >= 0) {
-			cluster = next_cluster;
-			proc = next_proc;
-			rval = func(cluster, proc);
-		} else {
-			cluster = -1;
+			delete ad;
+			ad = new ClassAd;
+			rval = GetNextJob(ad, 0);
 		}
-	} while (rval != -1);
-
-	if (disconn_when_done) {
-		DisconnectQ(connection);
-	}
+	} 
+	delete ad;
 }
 
 

@@ -1,6 +1,7 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
 #include "condor_io.h"
+#include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 

@@ -10,10 +10,8 @@ LDFLAGS = $(LIBDBM)
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
-QMGMT_SRC = qmgmt.C qmgmt_receivers.C qmgmt_transaction.C log.C \
-	qmgmt_log.C qmgr_lib_support.C
-QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_transaction.o log.o \
-	qmgmt_log.o qmgr_lib_support.o
+QMGMT_SRC = qmgmt.C qmgmt_receivers.C 
+QMGMT_OBJ = qmgmt.o qmgmt_receivers.o 
 
 HISTORY_SRC = get_history.57.c
 SRC = stub.C schedd.C schedd_main.C $(QMGMT_SRC) stub.57.C event.c $(HISTORY_SRC) schedd.c

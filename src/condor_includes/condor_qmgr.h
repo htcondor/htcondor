@@ -2,7 +2,8 @@
 #define _LIBQMGR_H
 
 #include "proc.h"
-
+class ClassAd;
+class ClassAdList;
 
 
 typedef struct {
@@ -10,7 +11,7 @@ typedef struct {
 	char	*rendevous_file;
 } Qmgr_connection;
 
-typedef int (*scan_func)(int, int);
+typedef int (*scan_func)(ClassAd *ad);
 
 
 #if defined(__cplusplus)
@@ -32,9 +33,11 @@ int GetAttributeString(int, int, const char *, char *);
 int GetAttributeExpr(int, int, const char *, char *);
 int DeleteAttribute(int, int, const char *);
 
-int GetNextJob(int, int, int *, int *);
-int FirstAttribute(int, int, char *);
-int NextAttribute(int, int, char *);
+int GetJobAd(int cluster_id, int proc_id, ClassAd *&ad);
+int GetJobByConstraint(const char *constraint, ClassAd *&ad);
+int GetNextJob(ClassAd *&ad, int initScan);
+int GetNextJobByConstraint(const char *constraint, ClassAd *&ad, int initScan);
+int GetJobList(const char *constraint, ClassAdList &list);
 
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
@@ -42,6 +45,8 @@ int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 Qmgr_connection *ConnectQ(char *qmgr_location);
 void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
+
+void InitJobQueue(const char *job_queue_name);
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);

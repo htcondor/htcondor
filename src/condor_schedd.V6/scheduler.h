@@ -97,8 +97,8 @@ class Scheduler : public Service
 	void			abort_job(int, Stream *);
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
-	friend	int		count(int, int);
-	friend	void	job_prio(int, int);
+	friend	int		count(ClassAd *);
+	friend	void	job_prio(ClassAd *);
 	void			display_shadow_recs();
 
 	// match managing

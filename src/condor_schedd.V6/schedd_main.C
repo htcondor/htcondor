@@ -166,7 +166,7 @@ main_init(int argc, char* argv[])
 	}
 
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
-	ReadLog(job_queue_name);
+	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
 	// initialize all the modules

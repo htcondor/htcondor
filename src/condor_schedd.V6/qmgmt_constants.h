@@ -15,3 +15,6 @@
 #define CONDOR_NextAttribute		10015
 #define	CONDOR_DestroyClusterByConstraint	10016		/* weiru */
 #define CONDOR_SendSpoolFile		10017
+#define CONDOR_GetJobAd				10018
+#define CONDOR_GetJobByConstraint	10019
+#define CONDOR_GetNextJobByConstraint	10020
