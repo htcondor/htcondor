@@ -24,6 +24,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_version.h"
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;  // used by EXCEPT 
@@ -287,6 +288,10 @@ int main( int argc, char** argv )
 				putenv(ptmp1);
 			}
 			break;
+		  case 'v':		// display version info and exit
+			printf( "%s\n", CondorVersion() );
+			exit(0);
+			break;
 		  default:
 			done = TRUE;
 			break;	
@@ -308,6 +313,7 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
+	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 
 	// we want argv[] stripped of daemoncore options
 	ptmp = argv[0];			// save a temp pointer to argv[0]
