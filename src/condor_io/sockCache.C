@@ -90,7 +90,9 @@ getReliSock (Sock *&sock, char *addr, int cmd, int timeOut)
 		{
 			sock = sockCache[i].sock;
 			sock->timeout(timeOut);
-            schedd.startCommand(cmd, sock, timeOut);
+            if (!sock->put(cmd)) {
+                return false;
+            }
 			return true;
 		}
 	}
