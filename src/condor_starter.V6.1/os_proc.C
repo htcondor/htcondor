@@ -254,6 +254,7 @@ OsProc::StartJob()
 				Starter->jic->notifyStarterError("unable to establish standard input stream\n",true);
 			}
 			fds[0] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Input file: streaming from remote file %s\n",filename);
 		} else {
 			if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
 				failed_stdin = 1;
@@ -296,6 +297,7 @@ OsProc::StartJob()
 				Starter->jic->notifyStarterError("unable to establish standard output stream\n",true);
 			}
 			fds[1] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Output file: streaming to remote file %s\n",filename);
 		} else {
 			if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{
@@ -345,6 +347,7 @@ OsProc::StartJob()
 				Starter->jic->notifyStarterError("unable to establish standard error stream\n",true);
 			}
 			fds[2] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Error file: streaming to remote file %s\n",filename);
 		} else {
 			if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{
