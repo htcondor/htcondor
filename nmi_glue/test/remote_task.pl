@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.12 2004-06-25 02:35:59 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.13 2004-10-15 00:05:53 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -28,37 +28,34 @@ if( ! $fulltestname ) {
 
 my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
 my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
-
+my $testdir = "condor_tests";
 
 ######################################################################
 # get the testname and group
 ######################################################################
 
 @testinfo = split(/\./, $fulltestname);
-my $compiler = @testinfo[0];
-my $testname = @testinfo[1];
-if( ! $compiler || ! $testname ) {
-    c_die("Invalid input for compiler/testname\n");
-}
-print "compiler is $compiler\n";
-print "testname is $testname\n";
+my $testname = @testinfo[0];
+my $compiler = @testinfo[1];
 
-if( ($compiler =~ m/gcc/) || ($compiler =~ m/g\+\+/) || 
-    ($compiler =~ /cc/) || ($compiler =~ /CC/) ) {
-    $testdir = "condor_test_suite_C.V5";
-} elsif ( ($compiler =~ /g77/) || ($compiler =~ /f77/) || 
-	  ($compiler =~ /f90/) ) {
-    $testdir = "condor_test_suite_F.V5";
-} else {
-    c_die("compiler $compiler is not valid\n");
+if( ! $testname ) {
+    c_die("Invalid input for testname\n");
 }
+print "testname is $testname\n";
+if( $compiler ) {
+    print "compiler is $compiler\n";
+    $targetdir = "$SrcDir/$testdir/$compiler";
+} else {
+    $compiler = ".";
+    $targetdir = "$SrcDir/$testdir";
+}
+
 
 ######################################################################
 # build the test
 ######################################################################
 
-chdir( "$SrcDir/$testdir/$compiler" ) || 
-    c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
+chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
 open( TESTBUILD, "make $testname 2>&1 |" ) || 
     c_die("Can't run make $testname\n");
@@ -78,7 +75,7 @@ if( $buildstatus != 0 ) {
 # run the test using batch_test.pl
 ######################################################################
 
-print "RUNNING $compiler.$testname\n";
+print "RUNNING $testinfo\n";
 chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
 system( "make batch_test.pl" );
@@ -118,22 +115,25 @@ if( ! -d "$BaseDir/results" ) {
     mkdir( "$BaseDir/results" ) || 
 	c_die("Can't mkdir($BaseDir/results): $!\n");
 }
-if( ! -d "$BaseDir/results/$compiler" ) {
-    mkdir( "$BaseDir/results/$compiler" ) || 
-	c_die("Can't mkdir($BaseDir/results/$compiler): $!\n");
+if( $compiler eq "." ) {
+    $resultdir = "$BaseDir/results/base";
+} else {
+    $resultdir = "$BaseDir/results/$compiler";
+}
+if( ! -d "$resultdir" ) {
+    mkdir( "$resultdir" ) || c_die("Can't mkdir($resultdir): $!\n");
 }
 chdir( "$SrcDir/$testdir/$compiler" ) || 
     c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
 
 $copy_failure = 0;
 
-safe_copy( "$testname.out*", "$BaseDir/results/$compiler" );
-safe_copy( "$testname.err*", "$BaseDir/results/$compiler" );
-safe_copy( "$testname.log", "$BaseDir/results/$compiler" );
-safe_copy( "$testname.run.out", "$BaseDir/results/$compiler" );
-safe_copy( "$testname.cmd.out", "$BaseDir/results/$compiler" );
+safe_copy( "$testname.out*", $resultdir );
+safe_copy( "$testname.err*", $resultdir  );
+safe_copy( "$testname.log", $resultdir  );
+safe_copy( "$testname.run.out", $resultdir  );
+safe_copy( "$testname.cmd.out", $resultdir  );
 
-    
 if( $copy_failure ) {
     if( $teststatus == 0 ) {
         # if the test passed but we failed to copy something, we
