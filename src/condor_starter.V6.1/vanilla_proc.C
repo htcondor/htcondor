@@ -31,18 +31,19 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
+#include "directory.h"
 
 extern CStarter *Starter;
 
 VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc()
 {
-    dprintf ( D_FULLDEBUG, "Constructor of MPIVanillaProc::MPIVanillaProc\n" );
 	family = NULL;
 	filetrans = NULL;
     JobAd = jobAd;
 	snapshot_tid = -1;
 	shadowupdate_tid = -1;
 	shadowsock = NULL;
+	TransferAtVacate = false;
 }
 
 VanillaProc::~VanillaProc()
@@ -72,32 +73,16 @@ VanillaProc::~VanillaProc()
 }
 
 int
-VanillaProc::StartJob()
+VanillaProc::TransferCompleted(FileTransfer *ftrans)
 {
 	char tmp[_POSIX_ARG_MAX];
-	char jobtmp[_POSIX_PATH_MAX];
 
-	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
-
-	// for now, stash the executable in jobtmp, and switch the ad to 
-	// say the executable is condor_exec
-	jobtmp[0] = '\0';
-	JobAd->LookupString(ATTR_JOB_CMD,jobtmp);
-	sprintf(tmp,"%s=\"condor_exec\"",ATTR_JOB_CMD);
-	JobAd->InsertOrUpdate(tmp);		
-
-	// if requested in the jobad, transfer files over 
-	char TransSock[40];
-	if (JobAd->LookupString(ATTR_TRANSFER_SOCKET, TransSock) == 1) {
-		char buf[ATTRLIST_MAX_EXPRESSION];
-
-		// reset iwd of job to the starter directory
-		sprintf(buf,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
-		JobAd->InsertOrUpdate(buf);		
-
-		filetrans = new FileTransfer();
-		ASSERT( filetrans->Init(JobAd) );
-		ASSERT( filetrans->DownloadFiles() );
+	// Make certain the file transfer succeeded.  It is 
+	// completely wrong to ASSERT here if it failed since
+	// we are a _multi_ starter -- it is just a quick hack
+	// to get WinNT out the door.
+	if ( ftrans ) {
+		ASSERT( (ftrans->GetInfo()).success );
 	}
 
 	// vanilla jobs, unlike standard jobs, are allowed to run 
@@ -109,8 +94,10 @@ VanillaProc::StartJob()
 	char systemshell[_POSIX_PATH_MAX];
 
 	int joblen = strlen(jobtmp);
-	if ( joblen > 5 && stricmp(".bat",&(jobtmp[joblen-4])) == 0 ) {
-		// executable name ends in .bat
+	if ( joblen > 5 && 
+			( (stricmp(".bat",&(jobtmp[joblen-4])) == 0) || 
+			  (stricmp(".cmd",&(jobtmp[joblen-4])) == 0) ) ) {
+		// executable name ends in .bat or .cmd
 
 		// first change executable to be cmd.exe
 		::GetSystemDirectory(systemshell,MAX_PATH);
@@ -129,7 +116,7 @@ VanillaProc::StartJob()
 		JobAd->InsertOrUpdate(tmp);		
 
 		// finally we must rename file condor_exec to condor_exec.bat
-		rename("condor_exec","condor_exec.bat");
+		rename(CONDOR_EXEC,"condor_exec.bat");
 
 		dprintf(D_FULLDEBUG,
 			"Executable is .bat, so running %s\\cmd.exe %s\n",
@@ -145,6 +132,14 @@ VanillaProc::StartJob()
 		family = new ProcFamily(JobPid,PRIV_USER);
 		ASSERT(family);
 
+#ifdef WIN32
+		// we only support running jobs as user nobody for the first pass
+		char nobody_login[60];
+		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		// set ProcFamily to find decendants via a common login name
+		family->setFamilyLogin(nobody_login);
+#endif
+
 		// take a snapshot of the family every 15 seconds
 		snapshot_tid = daemonCore->Register_Timer(2, 15, 
 			(TimerHandlercpp)&ProcFamily::takesnapshot, 
@@ -159,8 +154,62 @@ VanillaProc::StartJob()
 		return TRUE;
 	} else {
 		// failure
-		return FALSE;
+		// return FALSE;
+
+		// DREADFUL HACK:  for now, if we fail to start the job,
+		// do an EXCEPT.  Of course this is wrong for a multi-starter,
+		// this is just a quick hack to get the first pass at WinNT
+		// Condor out the door.
+		EXCEPT("Failed to start job");
+
+	}	
+
+	return FALSE;
+}
+
+int
+VanillaProc::StartJob()
+{
+	int ret_value;
+	char tmp[_POSIX_ARG_MAX];
+
+	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
+
+	// for now, stash the executable in jobtmp, and switch the ad to 
+	// say the executable is condor_exec
+	jobtmp[0] = '\0';
+	JobAd->LookupString(ATTR_JOB_CMD,jobtmp);
+	sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
+	JobAd->InsertOrUpdate(tmp);		
+
+	// setup value for TransferAtVacate
+	tmp[0] = '\0';
+	JobAd->LookupString(ATTR_TRANSFER_FILES,tmp);
+		// if set to "ALWAYS", then set TransferAtVacate to true
+	if ( tmp[0]=='a' || tmp[0]=='A' ) {
+		TransferAtVacate = true;
+	} 
+
+	// if requested in the jobad, transfer files over 
+	char TransSock[40];
+	if (JobAd->LookupString(ATTR_TRANSFER_SOCKET, TransSock) == 1) {
+		char buf[ATTRLIST_MAX_EXPRESSION];
+
+		// reset iwd of job to the starter directory
+		sprintf(buf,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
+		JobAd->InsertOrUpdate(buf);		
+
+		filetrans = new FileTransfer();
+		ASSERT( filetrans->Init(JobAd) );
+		filetrans->RegisterCallback(
+			(FileTransferHandler)&VanillaProc::TransferCompleted,this);
+		ret_value = filetrans->DownloadFiles(false); // do not block
+	} else {
+		// no file transfer desired, thus the file transfer is "done"
+		ret_value = TransferCompleted(NULL);
 	}
+
+	return ret_value;
 }
 
 int
@@ -168,11 +217,17 @@ VanillaProc::UpdateShadow()
 {
 	unsigned long max_image;
 	long sys_time, user_time;
+	unsigned int execsz = 0;
 	ClassAd ad;
 	char buf[200];
 
 	if ( ShadowAddr[0] == '\0' ) {
 		// we do not have an address for the shadow
+		return FALSE;
+	}
+
+	if ( !family ) {
+		// we do not have a job family beneath us 
 		return FALSE;
 	}
 
@@ -191,12 +246,24 @@ VanillaProc::UpdateShadow()
 	ad.InsertOrUpdate(buf);
 	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_USER_CPU,user_time);
 	ad.InsertOrUpdate(buf);
-	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_SYS_CPU,max_image);
+	sprintf(buf,"%s=%lu",ATTR_IMAGE_SIZE,max_image);
 	ad.InsertOrUpdate(buf);
 
+	// if there is a filetrans object, then let's send the current
+	// size of the starter execute directory back to the shadow.  this
+	// way the ATTR_DISK_USAGE will be updated, and we won't end
+	// up on a machine without enough local disk space.
+	if ( filetrans ) {
+		Directory starter_dir(Starter->GetWorkingDir(),PRIV_USER);
+		execsz = starter_dir.GetDirectorySize();
+		sprintf(buf,"%s=%u",ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
+		ad.InsertOrUpdate(buf);
+	}
+
 	// send it to the shadow
-	dprintf(D_FULLDEBUG,"Sending shadow update, user_time=%lu, image=%lu\n",
-		user_time,max_image);
+	dprintf(D_FULLDEBUG,
+		"Sending shadow update, user_time=%lu, image=%lu, execsz=%u\n",
+		user_time,max_image,execsz);
 	shadowsock->snd_int(SHADOW_UPDATEINFO,FALSE);
 	ad.put(*shadowsock);
 	shadowsock->end_of_message();
@@ -209,14 +276,32 @@ VanillaProc::JobExit(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::JobExit()\n");
 
-	// transfer output files back if requested job really finished
-	if ( filetrans && Requested_Exit != TRUE ) {
-		ASSERT( filetrans->UploadFiles() );
+	// ok, the parent exited.  make certain all decendants are dead.
+	family->hardkill();
+
+	// update the shadow one last time, then cancel timers & close sockets
+	UpdateShadow();
+	daemonCore->Cancel_Timer(snapshot_tid);
+	daemonCore->Cancel_Timer(shadowupdate_tid);
+	delete shadowsock;
+	snapshot_tid = -1;
+	shadowupdate_tid = -1;
+	shadowsock = NULL;
+
+	// transfer output files back if requested job really finished.
+	// may as well do this in the foreground, 
+	// since we do not want to be interrupted by anything short of a hardkill.
+	if ( filetrans && 
+		((Requested_Exit != TRUE) || TransferAtVacate) ) {
+		// The user job may have created files only readable by the user,
+		// so set_user_priv here.
+		bool final_transfer = (Requested_Exit != TRUE);	// true if job exited on its own
+		priv_state saved_priv = set_user_priv();
+		ASSERT( filetrans->UploadFiles(true, final_transfer) );	// this will block
+		set_priv(saved_priv);
 	}
 
 	if ( OsProc::JobExit(pid,status) ) {
-		// ok, the parent exited.  make certain all decendants are dead.
-		family->hardkill();
 		return 1;
 	}
 
@@ -234,7 +319,9 @@ VanillaProc::Suspend()
 	}
 
 	// suspend the user job
-	family->suspend();
+	if ( family ) {
+		family->suspend();
+	}
 
 	// set our flag
 	job_suspended = TRUE;
@@ -251,16 +338,26 @@ VanillaProc::Continue()
 	}
 
 	// resume user job
-	family->resume();
+	if ( family ) {
+		family->resume();
+	}
 
 	// set our flag
 	job_suspended = FALSE;
 }
 
-void
+bool
 VanillaProc::ShutdownGraceful()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::ShutdownGraceful()\n");
+
+	if ( !family ) {
+		// there is no process family yet, probably because we are still
+		// transferring files.  just return true to say we're all done,
+		// and that way the starter class will simply delete us and the
+		// FileTransfer destructor will clean up.
+		return true;
+	}
 
 	// take a snapshot before we softkill the parent job process.
 	// this helps ensure that if the parent exits without killing
@@ -269,20 +366,34 @@ VanillaProc::ShutdownGraceful()
 
 	// now softkill the parent job process.  this is exactly what
 	// OsProc::ShutdownGraceful does, so call it.
-	OsProc::ShutdownGraceful();
-	
+	return OsProc::ShutdownGraceful();	
 }
 
-void
+bool
 VanillaProc::ShutdownFast()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::ShutdownFast()\n");
 
+	if ( !family ) {
+		// there is no process family yet, probably because we are still
+		// transferring files.  just return true to say we're all done,
+		// and that way the starter class will simply delete us and the
+		// FileTransfer destructor will clean up.
+		return true;
+	}
+
 	// We purposely do not do a SIGCONT here, since there is no sense
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
+
+
+	// Despite what the user wants, do not transfer back any files 
+	// on a ShutdownFast.
+	TransferAtVacate = false;	
+	
 	Requested_Exit = TRUE;
 	family->hardkill();
+	return false;	// shutdown is pending, so return false
 }
 
 
