@@ -3378,7 +3378,7 @@ void String::PrintToStr(char* str)
 	ptr2++;
   }
   *ptr2 = '"';
-  *ptr2 = '\0';
+  *(ptr2 + 1) = '\0';
 }
 
 void Boolean::PrintToStr(char* str)
