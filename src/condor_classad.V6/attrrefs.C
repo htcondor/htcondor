@@ -316,23 +316,22 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 
 	if( val.IsListValue( ) ) {
 		vector< ExprTree *> eVector;
-		ExprTree *currExpr = NULL;
+		const ExprTree *currExpr;
 			// iterate through exprList and apply attribute reference
 			// to each exprTree
 		for(ExprListIterator itr(adList);!itr.IsAfterLast( );itr.NextExpr( )){
- 			currExpr = itr.CurrentExpr( )->Copy( );
+ 			currExpr = itr.CurrentExpr( );
 			if( currExpr == NULL ) {
 				return( EVAL_FAIL );
 			} else {
 				AttributeReference *attrRef = NULL;
-				attrRef = MakeAttributeReference( currExpr,
+				attrRef = MakeAttributeReference( currExpr->Copy( ),
 												  attributeStr,
 												  false );
 				attrRef->SetParentScope( currExpr->GetParentScope( ) );
 				val.Clear( );
 				rval = wantSig ? attrRef->Evaluate( state, val, sig )
 					: attrRef->Evaluate( state, val );
-				delete attrRef;
 				if( !rval ) {
 					return( EVAL_FAIL );
 				}
