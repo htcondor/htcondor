@@ -26,8 +26,9 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
+#ifdef WIN32
 #include "perm.h"
-
+#endif
 
 class FileTransfer;	// forward declatation
 
@@ -142,8 +143,9 @@ class FileTransfer {
 	FileTransferHandler ClientCallback;
 	Service* ClientCallbackClass;
 	FileTransferInfo Info;
+#ifdef WIN32
 	perm* perm_obj;
-		
+#endif		
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
 	static int CommandsRegistered;
