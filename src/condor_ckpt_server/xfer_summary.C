@@ -1,23 +1,17 @@
-#include <fcntl.h>
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_classad.h"
+#include "condor_io.h"
 #include "condor_debug.h"
 #include "expr.h"
 #include "dgram_io_handle.h"
 #include "xferstat2.h"
 #include "xfer_summary.h"
-#include "safe_sock.h"
 #include "condor_network.h"
-#include "condor_classad.h"
 #include "condor_collector.h"
 
 extern "C" {
-	char *param();
-#if defined(LINUX) || defined(HPUX9)	
-	int gethostname(char *name, unsigned int namelen);
-#else
-	int gethostname(char *name, int namelen);
-#endif
 	char *calc_subnet_name();
-	char *getwd(char *path);
 }
 
 

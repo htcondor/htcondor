@@ -5,7 +5,7 @@
 //
 //******************************************************************************
 
-#include <string.h>
+#include "condor_common.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_classad.h"

@@ -1,14 +1,6 @@
 #include "condor_common.h"
-#include "_condor_fix_resource.h"
-#include <iostream.h>
-#include <stdio.h>
 
 #ifndef WIN32
-#include <unistd.h>
-#include <signal.h>
-#include <time.h>
-#include <netinet/in.h>
-
 extern "C" void event_mgr (void);
 #endif	// of ifndef WIN32
 

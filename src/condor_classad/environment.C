@@ -1,6 +1,5 @@
 #include "condor_common.h"
 #include "condor_ast.h"
-#include <time.h>
 
 void
 evalFromEnvironment (const char *name, EvalResult *val)

@@ -6,12 +6,9 @@
 //   Written by Wei Chen & Taxiao Wang, Fall 1995
 //
 
-#include <string.h>
-#include <assert.h>
-#include <except.h>
-#include <stdlib.h>	// for realloc
-#include "condor_registration.h"
 #include "condor_common.h"
+#include "condor_registration.h"
+#include "condor_debug.h"
 
 static  char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 

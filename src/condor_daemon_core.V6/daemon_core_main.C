@@ -1,18 +1,16 @@
 /* Copyright Condor Team, 1997 */
 
 #include "condor_common.h"
+static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #ifndef WIN32
 #include <std.h>
 #if defined(Solaris251)
 #include <strings.h>
 #endif
-#include "_condor_fix_types.h"
 #include <sys/socket.h>
-#include "condor_fix_signal.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
 #endif   /* ifndef WIN32 */
 
 #include "condor_debug.h"
@@ -20,12 +18,10 @@
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 
-static char *_FileName_ = __FILE__;  // used by EXCEPT 
+
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
-extern "C" int Termlog;
-extern int DebugFlags;
 
 // External protos
 extern int main_init(int argc, char *argv[]);	// old main()

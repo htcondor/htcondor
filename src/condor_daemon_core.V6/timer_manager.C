@@ -27,27 +27,13 @@
 ** 
 */ 
 
-#ifdef WIN32
 #include "condor_common.h"
-#else
-#include <unistd.h>
-#include <std.h>
-#include <time.h>	// for select()
-#include "condor_fix_signal.h"
-#endif
-
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
+static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 static char* DEFAULT_INDENT = "DaemonCore--> ";
 
-extern	"C"
-{
-	void	dprintf(int, char*...);
-}
-
-static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 static	TimerManager*	_t = NULL;
 
 TimerManager::TimerManager()

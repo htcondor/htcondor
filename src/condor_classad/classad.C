@@ -5,11 +5,9 @@
 //
 //******************************************************************************
 
-# include <ctype.h>
-# include <assert.h>
-# include <string.h>
+#include "condor_common.h"
 
-# include "except.h"
+# include "condor_debug.h"
 # include "condor_ast.h"
 # include "condor_registration.h"
 # include "condor_attrlist.h"

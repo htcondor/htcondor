@@ -1,9 +1,6 @@
-#include <string.h>
-#include <assert.h>
-#include <iostream.h>
+#include "condor_common.h"
 #include "condor_ast.h"
 #include "condor_classad_util.h" 
-#include "_condor_fix_resource.h"
 
 //
 // Given a ClassAd and a ClassAdList, a pointer to the first match in the 

@@ -2,9 +2,7 @@
  * Abstract data type for StatTable, which is a data structure which holds 
  * statistical information about a pool of machines.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "condor_common.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_buildtable.h"

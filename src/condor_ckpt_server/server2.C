@@ -1,5 +1,3 @@
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -31,8 +29,6 @@ Alarm  rt_alarm;
 
 extern "C" {
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
-long random( void );
-int srandom( unsigned seed );
 }
 
 

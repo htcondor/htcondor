@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_classad.h"

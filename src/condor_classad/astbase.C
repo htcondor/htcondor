@@ -5,14 +5,13 @@
 //                                                                            //
 //****************************************************************************//
 
-#include <string.h>
-#include "debug.h"    // required by dprintf
+#include "condor_common.h"
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
+#include "condor_debug.h"
 
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
-extern  "C"	void dprintf(int, char *fmt, ...);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //

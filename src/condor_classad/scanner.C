@@ -6,13 +6,9 @@
 // 
 //******************************************************************************
 
-#include <stdlib.h> 
-#include <stdio.h> 
-#include <string.h>
-#include <ctype.h> 
+#include "condor_common.h"
 #include "condor_exprtype.h"
 #include "condor_scanner.h" 
-#include "condor_common.h"
 
 static const int 	MAXVARNAME = 256;
 

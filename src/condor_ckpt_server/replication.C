@@ -1,5 +1,5 @@
+#include "condor_common.h"
 #include "replication.h"
-#include "condor_fix_string.h"
 #include "condor_debug.h"
 
 ReplicationEvent::ReplicationEvent()

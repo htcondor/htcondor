@@ -7,11 +7,7 @@
 //     int Parse(const char*, ExprTree*&)
 //
 //******************************************************************************
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include "condor_common.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_scanner.h"

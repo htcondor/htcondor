@@ -1,12 +1,4 @@
 #include "condor_common.h"
-#include "_condor_fix_resource.h"
-#include <iostream.h>
-#include <time.h>
-
-#ifndef WIN32
-#include <netinet/in.h>
-#include <sys/param.h>
-#endif  // ifndef WIN32
 
 #include "condor_classad.h"
 #include "condor_parser.h"

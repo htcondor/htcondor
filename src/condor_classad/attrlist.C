@@ -5,24 +5,13 @@
 //
 //******************************************************************************
 
-# include <ctype.h>
-# include <assert.h>
-# include <string.h>
-# if !defined(WIN32)
-# include <sys/time.h>
-#endif
-# include <iomanip.h>
+#include "condor_common.h"
+#include "condor_debug.h"
+static 	char *_FileName_ = __FILE__;
 
-# include "except.h"
-# include "debug.h"
-# include "condor_ast.h"
-# include "condor_attrlist.h"
+#include "condor_ast.h"
+#include "condor_attrlist.h"
 
-static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
-extern	"C"	void dprintf(int, char* fmt, ...);
-#if defined(USE_XDR)
-extern  "C" int  xdr_mywrapstring (XDR *, char **);
-#endif
 extern void evalFromEnvironment (const char *, EvalResult *);
 
 ////////////////////////////////////////////////////////////////////////////////
