@@ -95,6 +95,14 @@ class ExprTree
 
 		char                unit;         // unit of the expression
 
+		// I added a contructor for this base class to initialize
+		// unit to something.  later we check to see if unit is "k"
+		// and without the contructor, we're doing that from unitialized
+		// memory which (belive it!) on HPUX happened to be 'k', and
+		// really bad things happened!  Yes, this bug was a pain 
+		// in the #*&@! to find!  -Todd, 7/97
+		ExprTree::ExprTree():unit('\0') {};
+
     protected :
 
 		int                 ref;          // number of ptrs to this expr
