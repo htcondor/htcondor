@@ -65,7 +65,7 @@ MAIL			= /usr/bin/mail
 ##  If you would like to run your jobs in other pools, add the central
 ##  manager hosts for those pools here.  You must also add
 ##  $(FLOCK_HOSTS) to HOSTALLOW_NEGOTIATOR_SCHEDD below.
-# FLOCK_HOSTS = condor.friendly.domain, condor.cs.wisc.edu
+#FLOCK_HOSTS = condor.friendly.domain, condor.cs.wisc.edu
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
