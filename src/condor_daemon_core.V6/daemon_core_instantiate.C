@@ -32,5 +32,6 @@ template class HashTable<pid_t, DaemonCore::PidEntry*>;
 template class HashTable<struct in_addr, int>;
 template class HashTable<struct in_addr, HashTable<MyString, int> *>;
 template class ExtArray<DaemonCore::SockEnt>;
+template class ExtArray<DaemonCore::PipeEnt>;
 template class Queue<DaemonCore::WaitpidEntry>;
 template class HashTable<MyString, StringList *>;
