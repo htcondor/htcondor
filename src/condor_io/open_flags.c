@@ -50,6 +50,8 @@ static struct {
 	{O_APPEND, CONDOR_O_APPEND}
 };
 
+extern "C" {
+
 int open_flags_encode(int old_flags)
 {
 	int i;
@@ -78,3 +80,5 @@ int open_flags_decode(int old_flags)
 #endif
 	return new_flags;
 }
+
+}  /* end of extern "C" */
