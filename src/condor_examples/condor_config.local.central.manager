@@ -136,7 +136,7 @@ NEGOTIATOR	= $(SBIN)/condor_negotiator
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
-##  of the running job.  This expression defaults to false.  
+##  of the running job.  This expression defaults to true.  
 PREEMPTION_REQUIREMENTS : $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
 
 ##  The PREEMPTION_RANK expression is used to rank machines which the
