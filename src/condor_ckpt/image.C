@@ -775,7 +775,7 @@ Image::Restore()
 	Suicide();
 }
 
-#if defined(COMPRESS_CKPT)
+#if defined(COMPRESS_CKPT) && defined(HAS_DYNAMIC_USER_JOBS)
 /* zlib uses memcpy, but we can't assume that libc.so is in a good state,
    so we provide our own version... - Jim B. */
 extern "C" {
