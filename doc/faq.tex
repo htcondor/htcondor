@@ -1,0 +1,140 @@
+\index{Condor!FAQ|(}
+\index{Condor!Frequently Asked Questions|(}
+\index{FAQ|(}
+\index{Frequently Asked Questions|(}
+This section is the where you can find quick answers to some commonly
+asked questions that are asked about Condor.
+\index{Condor!FAQ|)}
+\index{Condor!Frequently Asked Questions|)}
+\index{FAQ|)}
+\index{Frequently Asked Questions|)}
+
+\section{Obtaining Condor Distributions}
+
+\begin{enumerate}
+\item Where can I download Condor?
+
+Condor can be downloaded from \Url{http://www.cs.wisc.edu/downloads/} or from
+\Url{http://www.bo.infn.it/condor-mirr/downloads/}.
+
+\item If I try to download Condor, it sends me back to the downloads page!
+
+If you are try to download Condor with a "junk-busting" web-proxy, try disabling it.
+We follow the path you take through our download menus, and sometimes these proxies strip off necessary information.
+
+\item Do you have any website mirrors?
+
+Yes.  We have our main site at \Url{http://www.cs.wisc.edu/condor/}
+which is located in Madison, Wisconsin, USA.  We also operate a mirror
+site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy
+at \Url{http://www.bo.infn.it/condor-mirr/}.  Currently we have the 
+binary distrubations of Condor and the Condor Manual available on the
+mirror site.
+
+\item What platforms do you support?
+
+See Section~\ref{sec:Availability}, on page~\pageref{sec:Availability}.
+
+\item Do you distribute source code?
+
+At this time we do \Bold{not} distribute source code.
+Even so, if you need the source code, email us at \Email{condor-admin@cs.wisc.edu} and tell us why.
+
+\item What is Personal Condor?
+
+Personal Condor is a term used for a specific style of installing Condor.
+A Personal Condor is a one-machine pool.  When you use flocking to bind
+them together, its simular to a normal Condor pool, except that you are restricted
+to "standard" jobs, and you are running additional \condor{collector} and \condor{negotiator} 
+daemons.
+
+\item Do you support submitting to Globus?
+
+Yes, we do.  At this time, however, we have not released it (yet!)
+
+\end{enumerate}
+
+
+\section{Setting up Condor}
+
+\begin{enumerate}
+
+\item How do I get more than one job to run on my SMP machine?
+
+Starting with Condor version 6.1, Condor will recognize a SMP machine and advertise each CPU of the
+machine seperately.  For more details, see section~\ref{sec:Configuring-SMP} on page~\pageref{sec:Configuring-SMP}.
+
+Support for SMP machines in Condor Version 6.0 is available as a contrib module from the download site.
+
+\item How do I configure Condor to only run my jobs at certain times of the day?
+
+
+\end{enumerate}
+
+\section{Running Condor Jobs}
+
+\begin{enumerate}
+
+\item{I'm at the University of Wisconsin -- Madison, Computer Science department, and I am having problems!}
+
+First, please read the webpage \Url{http://www.cs.wisc.edu/condor/uwcs.html} before proceeding!
+Specifically, your home directory is in AFS, which causes Condor some specific problems.
+The above URL will contain the way to fix things here at UWCS.
+
+\item{I'm getting a lot of email from Condor, should I just delete all of it?}
+
+Generally you shouldn't ignore all of the mail Condor sends.  Often, Condor will
+be sending legitimate email.  To reduce the email that a job will send you, see
+
+\Todo
+
+
+\item Why do my vanilla jobs only run on the machine where I submitted them from?
+
+\Todo
+
+\item How do I configure my pool to run vanilla jobs or to use a "clipped" port of Condor?
+
+\Todo
+
+\item Why won't my jobs run at all?
+
+\Todo
+
+\end{enumerate}
+
+\section{Troubleshooting}
+
+\begin{enumerate}
+
+\item{What happens if the central manager crashes?} 
+
+If the central manager crashes, all running jobs will continue to
+run. All queued jobs will simply remain in the queues until the central
+manager comes up and begins matchmaking again.  Nothing special needs
+to be done when the cenrtal manager is brought back online. 
+
+\end{enumerate}
+
+\section{Other questions}
+
+\begin{enumerate}
+
+\item Is Condor Y2K compliant?
+
+Yes.
+
+\item Is there a Condor mailing list?
+
+Yes.  We run an extremely low traffic mailing list that announces new versions of Condor.
+To subscribe email
+\Email{majordomo@cs.wisc.edu}
+with the message body of
+\begin{verbatim}
+subscribe condor-world
+\end{verbatim}
+
+\item My question isn't in the FAQ!
+
+If you have any questions that are not listed here in the FAQ, feel free to contact us at \Email{condor-admin@cs.wisc.edu}.
+\end{enumerate}
