@@ -33,6 +33,7 @@
 # include "condor_attrlist.h"
 # include "condor_attributes.h"
 # include "condor_classad.h"
+# include "condor_adtypes.h"
 
 static Registration regi;                   // this is the registration for 
                                             // the AttrList type names. It 
@@ -498,11 +499,17 @@ int ClassAd::IsAMatch(ClassAd* temp)
     {
         return 0;
     }
-  
-    if((GetMyTypeNumber() != temp->GetTargetTypeNumber()) ||
-       (GetTargetTypeNumber() !=  temp->GetMyTypeNumber()))
-    { 
-        return 0;                            // types don't match.
+
+    if( (GetTargetTypeNumber()==temp->GetMyTypeNumber()) || !strcmp(GetTargetTypeName(),ANY_ADTYPE) ) {
+        /* MY.TargetType matches TARGET.MyType */
+    } else {
+        return 0;
+    }
+
+    if( (GetMyTypeNumber()==temp->GetTargetTypeNumber()) || !strcmp(temp->GetTargetTypeName(),ANY_ADTYPE) ) {
+        /* TARGET.TargetType matches MY.MyType */
+    } else {
+        return 0;
     }
 
     val = new EvalResult;
@@ -569,8 +576,11 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 	ExprTree *tree;
 	EvalResult *val;	
 	
-	if (lhs.GetMyTypeNumber() != rhs.GetTargetTypeNumber())
+	if( (lhs.GetMyTypeNumber()!=rhs.GetTargetTypeNumber()) &&
+	    strcmp(rhs.GetTargetTypeName(),ANY_ADTYPE) )
+	{
 		return false;
+	}
 
 	if ((val = new EvalResult) == NULL)
 	{
@@ -926,3 +936,4 @@ ClassAd* ClassAd::FindNext()
 {
 	return (ClassAd*)next;
 }
+

@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
+#include "condor_classad_lookup.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
@@ -387,14 +388,36 @@ REQUEST_NETWORK_commandHandler (int, Stream *stream)
 }
 #endif
 
+/*
+Look for an ad with Name==name in the table given by arg.
+Return a duplicate.
+*/
+
+static ClassAd * lookup_by_name( const char *name, void *arg )
+{
+	MatchmakerTable *table = ( MatchmakerTable * ) arg;
+	MyString string(name);
+	ClassAd *ad;
+
+	dprintf(D_ALWAYS,"Looking for ad named %s\n",name);
+
+	if(table->lookup(string,ad)!=-1) {
+		return new ClassAd(*ad);
+	} else {
+		return 0;
+	}
+}
 
 int Matchmaker::
 negotiationTime ()
 {
-	ClassAdList startdAds;			// 1. get from collector
-	ClassAdList startdPvtAds;		// 2. get from collector
-	ClassAdList scheddAds;			// 3. get from collector
-	ClassAdList ClaimedStartdAds;   // 4. get from collector
+	ClassAdList startdAds;
+	ClassAdList startdPvtAds;
+	ClassAdList scheddAds;
+	ClassAdList ClaimedStartdAds;
+
+	ClassAdList allAds;
+	MatchmakerTable allAdsTable;
 
 	ClassAd		*schedd;
 	char		scheddName[80];
@@ -446,13 +469,18 @@ negotiationTime ()
 
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds, 
-		ClaimedStartdAds ) )
+	if( !obtainAdsFromCollector( allAds, allAdsTable, startdAds, scheddAds,
+		startdPvtAds, ClaimedStartdAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
 		return FALSE;
 	}
+
+	// Register a lookup function so that reference-by-name looks
+	// through the allAds hash table.
+
+	ClassAdLookupRegister( lookup_by_name, &allAdsTable );
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -652,70 +680,70 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 	return (prio1 < prio2);
 }
 
-
-
 bool Matchmaker::
-obtainAdsFromCollector (ClassAdList &startdAds, 
+obtainAdsFromCollector (
+						ClassAdList &allAds,
+						MatchmakerTable &allAdsTable,
+						ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
 						ClassAdList &startdPvtAds,
-						ClassAdList &ClaimedStartdAds)
+						ClassAdList &ClaimedStartdAds )
 {
-	CondorQuery startdQuery    (STARTD_AD);
-	CondorQuery scheddQuery    (SUBMITTOR_AD);
-	CondorQuery startdPvtQuery (STARTD_PVT_AD);
-	CondorQuery ClaimedStartdQuery    (STARTD_AD);
+	CondorQuery publicQuery(ANY_AD);
+	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
-	char buffer[1024];
+	ClassAd *ad;
+	char name[ATTRLIST_MAX_EXPRESSION];
+	char state[ATTRLIST_MAX_EXPRESSION];
 
-	// set the constraints on the various queries
-	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
-	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	if( (result = startdQuery.fetchAds(startdAds)) != Q_OK )
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd ads ... aborting\n",
-			getStrQueryResult(result));
+	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
+	result = publicQuery.fetchAds(allAds);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
 	}
 
-	// 2.  Only obtain schedd ads that have idle jobs
-	dprintf (D_ALWAYS, "  Getting schedd ads ...\n");
-	sprintf (buffer, "%s > 0", ATTR_IDLE_JOBS);
-	if (((result = scheddQuery.addANDConstraint (buffer)) != Q_OK) ||
-		((result = scheddQuery.fetchAds(scheddAds))    != Q_OK))
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch schedd ads ... aborting\n",
-			getStrQueryResult(result));
+	dprintf(D_ALWAYS, "  Sorting %d ads ...\n",allAds.MyLength());
+
+	allAds.Open();
+	while( ad=allAds.Next() ) {
+
+		// Insert a ptr into the name table.
+		// The hash does not destruct its elements.
+
+		if( ad->LookupString(ATTR_NAME,name) ) {
+			MyString string(name);
+			allAdsTable.insert(string,ad);
+		}
+
+		// Insert a *copy* into the appropriate list.
+		// The lists *do* destruct their elements.
+
+		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
+			startdAds.Insert(new ClassAd(*ad));
+			if( ad->LookupString(ATTR_STATE,state) ) {
+				if( !strcmp(state,"Claimed") ) {
+					ClaimedStartdAds.Insert(new ClassAd(*ad));
+				}
+			}
+		} else if( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) ) {
+			scheddAds.Insert(new ClassAd (*ad));
+		}
+	}
+	allAds.Close();
+
+	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
+	result = privateQuery.fetchAds(startdPvtAds);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
 	}
 
-	// 3. (no constraint on private ads)	
-	dprintf (D_ALWAYS, "  Getting startd private ads ...\n");
-	if	((result = startdPvtQuery.fetchAds(startdPvtAds)) != Q_OK)
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd private ads ... aborting\n",
-			getStrQueryResult(result));
-		return false;
-	}
+	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
+	        allAds.MyLength(),startdPvtAds.MyLength());
 
-	// set the constraints on the various queries
-	// 4.  Fetch ads of startds that are CLAIMED
-	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	sprintf (buffer,"(%s == \"%s\")",ATTR_STATE,state_to_string(claimed_state));
-	if (((result = ClaimedStartdQuery.addANDConstraint(buffer))	!= Q_OK) ||
-		((result = ClaimedStartdQuery.fetchAds(ClaimedStartdAds))!= Q_OK))
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd ads ... aborting\n",
-			getStrQueryResult(result));
-		return false;
-	}
-
-	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private ; "
-		"%d claimed startd\n", startdAds.MyLength(), scheddAds.MyLength(), 
-		startdPvtAds.MyLength(),ClaimedStartdAds.MyLength());
+	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd, %d claimed startd\n",
+		startdAds.MyLength(), scheddAds.MyLength(), ClaimedStartdAds.MyLength() );
 
 	return true;
 }

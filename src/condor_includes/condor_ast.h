@@ -94,15 +94,17 @@ class EvalResult
 
 class Variable : public VariableBase
 {
-    public :
+	public :
   
-  	Variable(char*name) : VariableBase(name) {}
-    virtual void        PrintToStr(char*);
+		Variable(char*name) : VariableBase(name) {}
+		virtual void        PrintToStr(char*);
 
 	protected:
 
-  	virtual int         _EvalTree(class AttrList*, EvalResult*);
-    virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
+		virtual int         _EvalTree(class AttrList*, EvalResult*);
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
+		virtual int         _EvalTreeRecursive(char *name, AttrList*, AttrList*, EvalResult*);
+		virtual int         _EvalTreeSimple(char *name, AttrList*, AttrList*, EvalResult*);
 };
 
 class Integer : public IntegerBase

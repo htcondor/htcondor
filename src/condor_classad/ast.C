@@ -32,6 +32,7 @@
 #include "condor_ast.h"
 #include "condor_classad.h"
 #include "condor_buildtable.h"
+#include "condor_classad_lookup.h"
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 static void printComparisonOpToStr (char *, ExprTree *, ExprTree *, char *);
@@ -283,104 +284,88 @@ int Variable::_EvalTree(AttrList* classad, EvalResult* val)
     return tmp->EvalTree(classad, val);
 }
 
-
-//------tw-----------------
-
-int Variable::
-_EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
+int Variable::_EvalTree( AttrList* my_classad, AttrList* target_classad, EvalResult* val)
 {
-    ExprTree* tmp = NULL;
-    
-	// sanity check: fail evaluation if no variable exists
-    if(!val) return FALSE;
+	return _EvalTreeRecursive( name, my_classad, target_classad, val );
+}
 
-    char * myNamePrefix = "MY.";
-    char * reqNamePrefix = "TARGET.";
-	char * envNamePrefix = "ENV.";
+/*
+Split a variable name into scope.target 
+(For compatibility, also accept scope__target.)
+If there is no scope, evaluate it simply.
+Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
+*/
 
-    if (name == NULL)
-    {
-        cout << "no name provided!!"<< endl;
-        exit(1);                  
-    }
-   
-	// check for scope of the variable.  semantics state that if a variable's
-  	// scope is not defined, first look in the MY scope.  If the variable is
-	// not found in the MY scope, look in the TARGET scope.  If not found in
-	// target scope, lookup environment scope.  If not found in all three, 
-	// return LX_UNDEFINED    --RR
-	char *realName = new char [strlen (name) + 1];
-	bool myScope, targetScope, envScope;
+int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* target_classad, EvalResult* val)
+{
+	ClassAd *other_classad;
+	char prefix[ATTRLIST_MAX_EXPRESSION];
+	char rest[ATTRLIST_MAX_EXPRESSION];
+	char other_name[ATTRLIST_MAX_EXPRESSION];
+	int fields;
+	int result;
 
-	if (strncmp(name, myNamePrefix, 3) == 0)
-	{
-		myScope = true;
-		targetScope = false;
-		envScope = false;
-		strcpy (realName, name+3);
-	}
-	else
-	if (strncmp (name, reqNamePrefix, 7) == 0)
-	{	
-		targetScope = true;
-		myScope = false;
-		envScope = false;
-		strcpy (realName, name+7);
-	}
-	else
-	if (strncmp (name, envNamePrefix, 4) == 0)
-	{
-		envScope = true;
-		targetScope = false;
-		myScope = false;
-	}
-	else
-	{
-		// not prefixed by MY, TARGET or ENV; must lookup all scopes
-		myScope = true;
-		targetScope = true;
-		envScope = true;
-		strcpy (realName, name);
+	if( !val || !name ) return FALSE;
+
+	fields = sscanf(name,"%[^.].%s",prefix,rest);
+	if(fields!=2) {
+		fields = sscanf(name,"%[^_]__%s",prefix,rest);
 	}
 
-   	if (myScope && my_classad)
-   	{
-		// lookup my scope
-       	tmp = my_classad->Lookup(realName);
-		if (tmp)
-		{
-			delete [] realName;
-			return (tmp->EvalTree(my_classad, req_classad, val));
+	if(fields==2) {
+		/* already split */
+	} else {
+		prefix[0] = 0;
+		strcpy(rest,name);
+	}
+
+	if(prefix[0]) {	
+		if(!strcmp(prefix,"MY") ) {
+			return _EvalTreeRecursive(rest,my_classad,target_classad,val);
+		} else if(!strcmp(prefix,"TARGET")) {
+			return _EvalTreeRecursive(rest,target_classad,my_classad,val);
+		} else {
+			if(target_classad->LookupString(prefix,other_name)) {
+				other_classad = ClassAdLookupByName(other_name);
+				if(other_classad) {
+					result = _EvalTreeRecursive(rest,other_classad,other_classad,val);
+					delete other_classad;
+					return result;
+				}
+			}
 		}
+	} else {
+		return this->_EvalTreeSimple(rest,my_classad,target_classad,val);
 	}
 
-	if (targetScope && req_classad)
-	{
-		// lookup target scope
-		tmp = req_classad->Lookup(realName);
-		if (tmp)
-        {
-			delete [] realName;
-        	return (tmp->EvalTree(req_classad, my_classad, val));
-		}
-	}
-
-	if (envScope)
-	{
-		// lookup environment scope
-		evalFromEnvironment (realName, val);
-		delete [] realName;
-		return TRUE;	
-	}
-
-	// should never reach here  [But it seems that we do. -Derek 11/21/97]
 	val->type = LX_UNDEFINED;	
-	delete [] realName;
 	return TRUE;
 }
 
+/*
+Once it has been reduced to a simple name, resolve the variable by
+looking it up first in MY, then TARGET, and finally, the environment.
+*/
 
-//---------------------------
+int Variable::_EvalTreeSimple( char *name, AttrList *my_classad, AttrList *target_classad, EvalResult *val )
+{
+	ExprTree *tmp;
+
+	if(my_classad)
+	{
+		tmp = my_classad->Lookup(name);
+		if(tmp) return (tmp->EvalTree(my_classad, target_classad, val));
+	}
+
+	if(target_classad)
+	{
+		tmp = target_classad->Lookup(name);
+		if(tmp) return (tmp->EvalTree(target_classad, my_classad, val));
+	}
+
+	evalFromEnvironment(name,val);
+	return TRUE;
+}
 
 int Integer::_EvalTree(AttrList*, EvalResult* val)
 {

@@ -70,7 +70,7 @@ void Scanner(char*& s, Token& t)
 
 	tmp = str;
 
-    if(isalpha(*s) || *s == '_') 
+    if(isalpha(*s) || *s == '_' || *s=='.' ) 
 	{
 		// first check for keywords
 
@@ -99,18 +99,6 @@ void Scanner(char*& s, Token& t)
 			break;
 
 		case 'T':
-			if(!strncmp(s, "TARGET.", 7) && (isalpha(*(s+7)) || *(s+7) == '_'))
-			{
-				for(int i=0; i<7; i++)
-				{
-					*tmp = *s;
-					s++;
-					tmp++;
-					t.length++;
-				}
-			}
-			// NOTE: no break, so we fall thru to 't' case.
-
 		case 't':
 			if(!strncasecmp(s, "TRUE", 4) && !isalpha(*(s+4)) && *(s+4) != '_')
 			// TRUE
@@ -153,25 +141,10 @@ void Scanner(char*& s, Token& t)
 				return;
 			}
 			break;
-
-		case 'M':
-			// prefix, if any.
-			if(!strncmp(s, "MY.", 3) && (isalpha(*(s+3)) || *(s+3) == '_'))
-			{
-				for(int i=0; i<3; i++)
-				{
-					*tmp = *s;
-					s++;
-					tmp++;
-					t.length++;
-				}
-			}
-			break;
-
 		}	// end of switch on first letter
 
 		// read in the rest of the variable.
-        while(isalnum(*s) || *s == '_')
+        while(isalnum(*s) || *s == '_' || *s == '.' )
 		{ 
 			*tmp = *s;
 			s++;
