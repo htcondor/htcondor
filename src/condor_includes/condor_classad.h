@@ -128,11 +128,14 @@ class ClassAdList : public AttrListList
 	ClassAd*	Lookup(const char* name);
 
 	// User supplied function should define the "<" relation and the list
-	// is sorted in ascending order
-	void   Sort(int(*)(AttrListAbstract*,AttrListAbstract*,void*),void* =NULL);
+	// is sorted in ascending order.  User supplied function should
+	// return a "1" if relationship is less-than, else 0.
+	// NOTE: Sort() is _not_ thread safe!
+	void   Sort(SortFunctionType,void* =NULL);
 
   private:
-	void	Sort(int(*)(AttrListAbstract*,AttrListAbstract*,void*),void*,AttrListAbstract*&);
+	void	Sort(SortFunctionType,void*,AttrListAbstract*&);
+	static int SortCompare(const void*, const void*);
 };
 
 #endif

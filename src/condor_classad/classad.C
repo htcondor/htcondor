@@ -38,6 +38,10 @@ static Registration regi;                   // this is the registration for
                                             // the AttrList type names. It 
                                             // should be defined in the calling
                                             // procedure.
+
+static	SortFunctionType SortSmallerThan;
+static	void* SortInfo;
+
 #if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
 #endif
@@ -853,51 +857,69 @@ Sort(int(*SmallerThan)(AttrListAbstract*, AttrListAbstract*, void*), void* info)
 
 }
 
-void ClassAdList::
-Sort( int(*SmallerThan)(AttrListAbstract*,AttrListAbstract*,void*), 
-		void* info, 
-		AttrListAbstract*& head)
+int ClassAdList::
+SortCompare(const void* v1, const void* v2)
 {
-	AttrListAbstract*	adPrev;
-	AttrListAbstract*	ad;
-	AttrListAbstract*	smallestPrev;
-	AttrListAbstract*	smallest;
-
-	if(head == NULL || head->next == NULL) return;
-	
-	// find the smallest ad
-	smallestPrev = NULL;
-	smallest	 = head;
-	adPrev		 = head;
-	ad 			 = head->next;
-	
-	while (ad)
-	{
-		if ((ad!=smallest) && SmallerThan(ad,smallest,info)) 
-		{
-			smallestPrev = adPrev;
-			smallest = ad;
-		}
-		adPrev = ad;
-		ad = ad->next;
-	}
-
-	// place the smallest at the head of the list
-	if (smallestPrev != NULL)
-	{
-		if (smallest==tail) tail=smallestPrev;
-		else smallest->next->prev=smallestPrev;
-		smallestPrev->next = smallest->next;
-		smallest->next = head;
-		head = smallest;
-	}
+	AttrListAbstract** a = (AttrListAbstract**)v1;
+	AttrListAbstract** b = (AttrListAbstract**)v2;
 
 
-	// recursively sort the rest of the list
-	Sort(SmallerThan, info, head->next);
-	if (head->next) head->next->prev=head;
+	// The user supplied SortSmallerThan() func returns a 1
+	// if a is smaller than b.  qsort() wants a -1 for smaller.
+	if ( SortSmallerThan(*a,*b,SortInfo) == 1 )
+		return -1;
+	else 
+		return 1;
 }
 
+void ClassAdList::
+Sort( SortFunctionType UserSmallerThan, void* UserInfo, 
+		AttrListAbstract*& head)
+{
+	AttrListAbstract* ad;
+	int i;
+	int len = MyLength();
+
+	if ( len < 2 ) {
+		// the list is either empty or has only one element,
+		// thus it is already sorted.
+		return;
+	}
+
+	// what we have is a linked list we want to sort quickly.
+	// so we stash pointers to all the elements into an array and qsort.
+	// then we fixup all the head/tail/next/prev pointers.
+
+	// so first create our array
+	AttrListAbstract** array = new AttrListAbstract*[len];
+	ad = head;
+	i = 0;
+	while (ad) {
+		array[i++] = ad;
+		ad = ad->next;
+	}
+	ASSERT(i == len);
+
+	// now sort it.  Note: since we must use static members, Sort() is
+	// _NOT_ thread safe!!!
+	SortSmallerThan = UserSmallerThan;	
+	SortInfo = UserInfo;
+	qsort(array,len,sizeof(AttrListAbstract*),SortCompare);
+
+	// and finally fixup the order of the double linked list
+	head = ad = array[0];
+	ad->prev = NULL;
+	for (i=1;i<len;i++) {
+		ad->next = array[i];
+		array[i]->prev = ad;
+		ad = array[i];
+	}
+	tail = ad;
+	tail->next = NULL;
+
+	// and delete our array
+	delete [] array;
+}
 
 ClassAd* ClassAd::FindNext()
 {
