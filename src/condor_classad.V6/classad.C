@@ -503,6 +503,26 @@ ToSink( Sink &s )
 }
 
 
+void ClassAd::
+Update( ClassAd& ad )
+{
+	const char *attrName;
+
+	for (int index = 0; index < ad.last; index++) {
+		if (ad.attrList[index].valid && ad.attrList[index].attrName && 
+			ad.attrList[index].expression)
+		{
+			attrName=ad.schema ? ad.attrList[index].canonicalAttrName.getCharString()
+							: ad.attrList[index].attrName;
+
+			// insert attrname, ad.attrlist[index].expression
+			Insert(attrName,ad.attrList[index].expression->Copy());
+		}
+	}
+
+}
+
+
 ClassAd* ClassAd::
 Copy( )
 {
