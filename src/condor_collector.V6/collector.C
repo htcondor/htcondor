@@ -30,6 +30,8 @@
 //----------------------------------------------------------------
 
 extern char* mySubSystem;
+extern "C" char* CondorVersion( void );
+extern "C" char* CondorPlatform( void );
 
 CollectorEngine CollectorDaemon::collector;
 int CollectorDaemon::ClientTimeout;
@@ -476,6 +478,10 @@ void CollectorDaemon::reportToDevelopers (void)
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
 		return;
 	}
+
+	fprintf( mailer , "This Collector has the following IDs:\n");
+	fprintf( mailer , "    %s\n", CondorVersion() );
+	fprintf( mailer , "    %s\n\n", CondorPlatform() );
 
 	normalTotals = &totals;
 	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
