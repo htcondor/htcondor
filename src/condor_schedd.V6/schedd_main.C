@@ -114,9 +114,9 @@ main_init(int argc, char* argv[])
 int
 main_config()
 {
-	dedicated_scheduler.reconfig();
 	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
+	dedicated_scheduler.reconfig();
 	return 0;
 }
 
