@@ -119,7 +119,7 @@ int filename_remap_find( char *input, char *filename, char *output )
 
 	/* First make a copy of the input in canonical form */
 
-	buffer = malloc(strlen(input));
+	buffer = malloc(strlen(input)+1);
 	if(!buffer) return 0;
 	eat_space(input,buffer);
 
