@@ -182,9 +182,11 @@ sub RunAbsent()
     my @ClusterDown;
     my @ClusterKnownDown;
     my @Absent;
+    my @NotDown;
 
     # Now, run condor_status and gather some more info...
-    my $Cmd = "condor_absent -ping -script" . $Config{Cluster} . $Config{Reserved};
+    my $Cmd = "condor_absent -ping -pingok -script" .
+	$Config{Cluster} . $Config{Reserved};
     print STDERR "Running '$Cmd'\n";
     if ( ! open( ABSENT, "$Cmd|" ) )
     {
@@ -253,8 +255,14 @@ sub RunAbsent()
 	    push @ClusterKnownDown, $1;
 	}
 
+	# Cluster nodes "known" to be down
+	elsif ( /Host down, but ping ok: '(.*)'/ )
+	{
+	    push @NotDown, $1;
+	}
+
 	# Absent machines
-	else
+	elsif ( /^(\S+)$/ )
 	{
 	    push( @Absent, $_ );
 	}
@@ -262,23 +270,33 @@ sub RunAbsent()
     close( ABSENT );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_AbsentList", "s", join( " ", @ClusterAbsent ) );
+    $Hash->Add( "Cluster_AbsentList", "s",
+		join( " ", sort @ClusterAbsent ) );
     $Hawkeye->StoreIndex( "Cluster_AbsentList" );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_DownList", "s", join( " ", @ClusterDown ) );
+    $Hash->Add( "Cluster_DownList", "s",
+		join( " ", sort @ClusterDown ) );
     $Hawkeye->StoreIndex( "Cluster_DownList" );
 
     # Cluster Down list
     $Hash->Add( "Cluster_KnownDownList", "s",
-		join( " ", @ClusterKnownDown ) );
+		join( " ", sort @ClusterKnownDown ) );
     $Hawkeye->StoreIndex( "Cluster_KnownDownList" );
     $Hash->Add( "Cluster_KnownDownCount", "n", $#ClusterKnownDown + 1 );
     $Hawkeye->StoreIndex( "Cluster_KnownDownCount" );
 
     # Absent list
-    $Hash->Add( "Absent_List", "s", join( " ", @Absent ) );
+    $Hash->Add( "Absent_List", "s",
+		join( " ", sort @Absent ) );
     $Hawkeye->StoreIndex( "Absent_List" );
+
+    # Number of nodes listed as down, but ping ok
+    $Hash->Add( "Down_PingOkCount", "n", $#NotDown + 1 );
+    $Hawkeye->StoreIndex( "Down_PingOkCount" );
+    $Hash->Add( "Down_PingOkList", "s",
+		join( " ", sort @NotDown ) );
+    $Hawkeye->StoreIndex( "Down_PingOkList" );
 }
 
 
