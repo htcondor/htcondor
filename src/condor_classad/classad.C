@@ -638,10 +638,29 @@ int ClassAd::put(Stream& s)
     }
     delete [] line;
 
-    if(!s.code(myType->name))
-        return 0;
-    if(!s.code(targetType->name))
-        return 0;
+
+	// send the types; if a type does not exist, send "(unknown type)" instead
+	{
+		char *type = "(unknown type)";
+    	if(myType && myType->name)
+		{
+			if (!s.code(myType->name))
+				return 0;
+		}
+		else
+		if (!s.code (type))
+			return 0;
+
+		if(targetType && targetType->name)
+		{
+    		if(!s.code(targetType->name))
+        		return 0;
+		}
+		else
+		if (!s.code(type))
+			return 0;
+	}
+
 
     return 1;
 }
