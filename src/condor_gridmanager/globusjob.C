@@ -1319,20 +1319,25 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					break;
 				}
 			}
+				// Clear the contact string here because it may not get
+				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
+				// And even if we decide to go to GM_DELETE, that may
+				// not actually remove the job from the queue if 
+				// leave_job_in_queue attribute evals to TRUE --- and then
+				// the job will errantly go on hold when the user
+				// subsequently does a condor_rm.
+			if ( jobContact != NULL ) {
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				myResource->CancelSubmit( this );
+				jobContact = NULL;
+				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
+				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else {
-				// Clear the contact string here because it may not get
-				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				if ( jobContact != NULL ) {
-					rehashJobContact( this, jobContact, NULL );
-					free( jobContact );
-					myResource->CancelSubmit( this );
-					jobContact = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
-					addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
-				}
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
