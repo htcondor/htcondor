@@ -107,7 +107,7 @@ enum fcntl_cmd_t { __fcntl_cmd_t_dummy_value = INT_MAX };
 	<h3> PROTOCOL </h3>
 
 	The Stream base class defines the private protocol for all Streams.
-	This protocol consists of 10 virtual functions:
+	This protocol consists of 9 virtual functions:
 
     <pre>
  	1) Destructor()
@@ -137,21 +137,14 @@ enum fcntl_cmd_t { __fcntl_cmd_t_dummy_value = INT_MAX };
 		- gets the next character in the stream without consuming it.
 		  returns 1 on success, 0 on error.
 
-	7) struct sockaddr_in *endpoint();
-		- get the sockaddr_in structure which defines the connections
-		peer address/port 
-
-	8) int get_port()
-		- get the IP port of the underlying socket
-
-	9) int timeout()
+	7) int timeout()
 		- set a timeout value for all connects/accepts/reads/writes of socket
 
-	10) int end_of_message()
+	8) int end_of_message()
 		- on encode, flush stream and send record delimiter.  on decode, discard
 		data up until the next record delimiter.
 
-	11) char * serialize()
+	9) char * serialize()
 		- save/restore object state
     </pre>
 
@@ -458,12 +451,6 @@ public:
     */
 	virtual int end_of_message() { assert(0); return 0; }
 //	int eom() { return end_of_message(); }
-
-	/// peer information operations (virtually defined by each stream)
-	virtual struct sockaddr_in *endpoint() { assert(0); return (struct sockaddr_in *)0; }
-
-	/// local port information (virtually defined by each stream)
-	virtual int get_port() { assert(0); return 0; }
 
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) { assert(0); return 0; }
