@@ -90,7 +90,7 @@ static	int old_polling_interval;
 void usage( char* );
 int main_init( int argc, char* argv[] );
 int init_params(int);
-int main_config();
+int main_config( bool is_full );
 int finish_main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
@@ -324,7 +324,7 @@ main_init( int, char* argv[] )
 
 
 int
-main_config()
+main_config( bool is_full )
 {
 	bool done_allocating;
 

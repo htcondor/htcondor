@@ -89,7 +89,7 @@ main_init(int argc, char *argv[])
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
 	Starter->Config();
 	return 0;

@@ -89,7 +89,7 @@ main_shutdown_fast()
 }
 
 int 
-main_config()
+main_config( bool is_full )
 {
     return TRUE;
 }

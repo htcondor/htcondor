@@ -40,7 +40,7 @@ main_init(int, char *[])
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
 	EventD->Config();
 	return TRUE;

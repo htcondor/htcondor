@@ -68,7 +68,7 @@ int		run_preen(Service*);
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
-int		main_config();
+int		main_config( bool is_full );
 int		agent_starter(ReliSock *);
 int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
@@ -809,7 +809,7 @@ get_lock( char* file_name )
  ** them to do so also.
  */
 int
-main_config()
+main_config( bool is_full )
 {
 		// Re-read the config files and create a new classad
 	init_classad(); 
