@@ -80,7 +80,12 @@ init_hostnames()
 			*tmp = '\0';
 		}
 	} else {
-		EXCEPT( "gethostname failed, errno = %d", errno );
+		EXCEPT( "gethostname failed, errno = %d", 
+#ifndef WIN32
+			errno );
+#else
+			WSAGetLastError() );
+#endif
 	}
 
 		// Look up our official host information
