@@ -668,14 +668,14 @@ Log files may optionally be specified per debug level as follows:
   system call debug messages.
 
 \item[\Macro{MAX\_SUBSYS\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
-  Similar to \MacroU{MAX\_SUBSYS\_LOG}.
+  Similar to \Macro{MAX\_SUBSYS\_LOG}.
 
 \item[\Macro{TRUNC\_SUBSYS\_LEVEL\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLevelLogOnOpen} Similar to
-  \MacroU{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}.
+  \Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}.
 
 \item[\Macro{SUBSYS\_LEVEL\_LOCK}] \label{param:SubsysLevelLock}
-  Similar to \MacroU{SUBSYS\_LOCK}.
+  Similar to \Macro{SUBSYS\_LOCK}.
   
 \end{description}
 
@@ -1382,16 +1382,14 @@ SMP Machines for details.
 
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}] 
 \label{param:VirtualMachinesConnectedToConsole}
-  This should be an integer which indicates how many of the virtual
+  An integer which indicates how many of the virtual
   machines the startd is representing should be "connected" to the
   console (in other words, notice when there's console activity).
   This defaults to all virtual machines (N in a machine with N CPUs).
-  This must be an integer ("N" isn't a valid setting, that's just used
-  to represent the default).
 
 \item[\Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}]
 \label{param:VirtualMachinesConnectedToKeyboard}
-  This should be an integer which indicates how many of the virtual
+  An integer which indicates how many of the virtual
   machines the startd is representing should be "connected" to the
   keyboard (for remote tty activity, as well as console activity).
   Defaults to 1.
@@ -1400,17 +1398,17 @@ SMP Machines for details.
 \label{param:DisconnectedKeyboardIdleBoost}
   If there are virtual machines not connected to either the keyboard
   or the console, the corresponding idle time reported will be the
-  time since the startd was spawned, plus the value of this parameter.
+  time since the startd was spawned, plus the value of this macro.
   It defaults to 1200 seconds (20 minutes). 
   We do this because if the virtual machine is configured not to care
   about keyboard activity, we want it to be available to Condor jobs
   as soon as the startd starts up, instead of having to wait for 15
   minutes or more (which is the default time a machine must be idle
   before Condor will start a job).
-  If you don't want this boost, just set the value to 0.  
+  If you do not want this boost, set the value to 0.  
   If you change your START expression to require more than 15 minutes
   before a job starts, but you still want jobs to start right away on
-  some of your SMP nodes, just increase this parameter.
+  some of your SMP nodes, increase this macro's value.
 
 \end{description}
 
@@ -1437,7 +1435,7 @@ change to take effect (for example, using ``\condor{restart}
 \item[\Macro{MAX\_VIRTUAL\_MACHINE\_TYPES}]
 \label{param:MaxVirtualMachineTypes}
   The maximum number of different virtual machine types.  
-  Note: this is the maximum number of different \Bold{types} not of
+  Note: this is the maximum number of different \emph{types}, not of
   actual virtual machines.
   Defaults to 10.  
   (You should only need to change this setting if you define more than
@@ -1448,8 +1446,8 @@ change to take effect (for example, using ``\condor{restart}
   This setting defines a given virtual machine type, by specifying
   what part of each shared system resource (like RAM, swap space, etc)
   this kind of virtual machine gets.
-  The ``<N>'' can be any integer from 1 to the value of
-  \Macro{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
+  N can be any integer from 1 to the value of
+  \MacroU{MAX\_VIRTUAL\_MACHINE\_TYPES}, such as
   \Macro{VIRTUAL\_MACHINE\_TYPE\_1}. 
   The format of this entry can be somewhat complex, so please refer to
   section~\ref{sec:SMP-Divide} on page~\pageref{sec:SMP-Divide} for
@@ -1457,15 +1455,15 @@ change to take effect (for example, using ``\condor{restart}
 
 \item[\Macro{NUM\_VIRUAL\_MACHINES\_TYPE\_<N>}]
 \label{param:NumVirtualMachinesTypeN}
-  This setting controls how many of a given virtual machine type
-  (defined above) are actually reported to Condor.
+  This macro controls how many of a given virtual machine type
+  are actually reported to Condor.
   There is no default.
 
 \item[\Macro{NUM\_VIRUAL\_MACHINES}]
 \label{param:NumVirtualMachines}
-  If you your SMP machine is being evenly divided, and the virtual
+  If your SMP machine is being evenly divided, and the virtual
   machine type settings described above are not being used, this
-  setting controls how many virtual machines will be reported.  
+  macro controls how many virtual machines will be reported.  
   The default is one virtual machine for each CPU.
 
 \end{description}
