@@ -1,8 +1,8 @@
-Changes for version 0.9.6: 
+Changes for version 0.9.6:  (released 07-Oct-2004)
 * Can optionally use PCRE for the regexp() ClassAd function. On Unix,
   specify --use-pcre <dir>. We have tested with PCRE 4.5 and 5.0. 
 
-* Added new ClassAd functions: splitTime(), formatTime(), and random()
+* Added ClassAd functions: splitTime(), formatTime(), and random()
 
 * Added ClassAd functions strcmp() and stricmp().
 
@@ -11,11 +11,13 @@ Changes for version 0.9.6:
 * Fixed bugs in the internal representation of times.
 
 * Added classad_functional_tester, which is a significantly better
-  than the old test_classads. Soon this will replace test_classads,
-  which will be removed completely.
+  than the old test_classads. 
 
 * Added classad_unit_tester, which does lower-level tests than
-  classad_functional_tester.
+  classad_functional_tester. This test program is incomplete, but well
+  on its way. 
+
+* Remove test_classads.
 
 * Added classad_version program, which reports the version. 
 

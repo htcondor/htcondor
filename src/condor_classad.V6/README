@@ -1,5 +1,5 @@
 This is version 0.9.6 of the Condor Classad library, released on
-10-Aug-2004.
+07-Oct-2004.
 
 ===== What is it? =====
 
@@ -43,7 +43,7 @@ everyday use and experience with the original code provided much of the
 guidance and inspiration for this version.
 
 ===== Status ===== 
-Version 0.9.5 is an early release. We hope to release version 1.0 in
+Version 0.9.6 is an early release. We hope to release version 1.0 in
 the near future. Version 1.0 will be more thoroughly tested and will
 have better documentation. Please be aware that some of the public
 interfaces may change before version 1.0 is released.
