@@ -98,6 +98,7 @@ struct match_rec
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
 	int				num_exceptions;
+	int				entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
