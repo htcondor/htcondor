@@ -92,39 +92,37 @@
 	ensure that each generator sees only the prototypes for which it
 	should generate code.
 */
+#define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
+#define GET_PATH(name) out xdr_string(&name,_POSIX_PATH_MAX)
+#define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
 
-	// Switches for these implemented in "condor_ckpt/file_state.C"
+	// These calls must interact closely with the open files table,
+	// therefore their switches are implemented in "condor_ckpt/file_state.C",
+	// but still need to generate senders and receivers for them here.
 #if !defined (SWITCH)
-int open( const char *path, int flags, int mode ) {
-	in xdr_string( &path, _POSIX_PATH_MAX );
-	alloc( path, _POSIX_PATH_MAX );
-}
-int close( int fd );
-int dup( int old_fd );
-int dup2( int old_fd, int new_fd );
+	int open( const char *path, int flags, int mode ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+	int close( int fd );
+	int dup( int old_fd );
+	int dup2( int old_fd, int new_fd );
+	int fchdir( map(int fd) );
+	int chdir( const char *path ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
 #endif
 
-pid_t fork() : extract {
-	not_supported();
-}
-
-pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru ) {
-	out xdr_int( &status );
-	alloc( status, INT_SIZE );
-	out xdr_rusage( &ru );
-	alloc( ru, RUSAGE_SIZE );
-	not_supported();
-}
-
 int link( const char *p1, const char *p2 ) {
-	in xdr_string( &p1, _POSIX_PATH_MAX );
-	in xdr_string( &p2, _POSIX_PATH_MAX );
-	alloc( p1, _POSIX_PATH_MAX );
-	alloc( p2, _POSIX_PATH_MAX );
+	SEND_PATH( p1 );
+	SEND_PATH( p2 );
+	ALLOC_PATH( p1 );
+	ALLOC_PATH( p2 );
 }
 int unlink( const char *path ) {
-	in xdr_string( &path, _POSIX_PATH_MAX );
-	alloc( path, _POSIX_PATH_MAX );
+	SEND_PATH( path );
+	ALLOC_PATH( path );
 }
 ssize_t read( map(int fd), void *buf, size_t len ) {
 	out xdr_bytes( &buf, &len, len );
@@ -135,142 +133,395 @@ ssize_t write( map(int fd), const void *buf, size_t len ) {
 	alloc( buf, len );
 }
 off_t lseek( map(int fd), off_t offset, int whence );
-pid_t getpid();
-
-int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
-int setuid( uid_t uid );
-uid_t getuid();
-int ptrace( long req, long int process, ulong_t *address, ulong_t data );
-int recvmsg( int socket, struct msghdr *message, int flags );
-int sendmsg( int socket, struct msghdr *message, int flags );
-int recvfrom( int socket, char *buffer, int length, int flags,
-			  struct sockaddr *address, int addr_len );
-int accept( int socket, struct sockaddr *address, int addr_len );
-int getpeername( int socket, struct sockaddr *address, int addr_len );
-int getsockname( int socket, struct sockaddr *address, int addr_len );
-int access( const char *path, int access_mode );
+int access( const char *path, int access_mode ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
 void sync();
-int kill( pid_t pid, int sig ) : extract;
-int setpgid( pid_t process_id, pid_t gid );
-int pipe( int fd[] );
-void profil( short *buf, unsigned int buf_size, unsigned int offset,
-			 unsigned int scale );
-int sigaction( int sig, const struct sigaction *act, struct sigaction *o_act ) : extract;
-gid_t getgid();
-int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
-char *getlogin();
-int setlogin( char *name );
-int acct( char *path );
-int sigpending( sigset_t *set );
-int fstat( map(int fd), struct stat *buf );
-int fchdir( int fd );
-int mknod( const char *path, int mode, dev_t device );
-int chmod( const char *path, mode_t mode );
-int chown( const char *path, uid_t owner, gid_t group );
-int getfsstat( struct statfs *buf[], long bufsize, int flags );
+
+	// These get special treatment by the shadow, but should work normally
+	// in local mode.
+uid_t geteuid() : extract, pseudo;
+pid_t getppid() : extract, pseudo;
+pid_t getpid()  : pseudo;
+uid_t getuid()  : pseudo;
+gid_t getgid()  : pseudo;
+gid_t getegid() : extract, pseudo;
+
+	// These are speical operations performed by the shadow, but have
+	// no meaning in local mode.
+#if !defined( SWITCH )
+	int extern_name( const char *path, char *buf, int bufsize ) : pseudo {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_bytes( &buf, &bufsize, bufsize );
+		alloc( buf, bufsize );
+	}
+	int free_fs_blocks( const char *pathname ) : pseudo {
+		SEND_PATH( pathname );
+		ALLOC_PATH( pathname );
+	}
+	int reallyexit( int status, struct rusage *use_p ) : pseudo {
+		in xdr_rusage( use_p );
+		alloc( use_p, RUSAGE_SIZE );
+	}
+	int image_size( int megs ) : pseudo;
+	int send_rusage( struct rusage *use_p ) : pseudo {
+		in xdr_rusage( use_p );
+		alloc( use_p, RUSAGE_SIZE );
+	}
+	int perm_error( const char *msg ) : pseudo {
+		in xdr_string( &msg, MAX_STRING );
+		alloc( msg, MAX_STRING );
+	}
+	int work_request( PROC *p, char *targ, char *orig, int *kill_sig ): pseudo {
+		out xdr_proc( p );
+		alloc( p, PROC_SIZE );
+		GET_PATH( targ );
+		ALLOC_PATH( targ );
+		GET_PATH( orig );
+		ALLOC_PATH( orig );
+		out xdr_int( kill_sig );
+		alloc( kill_sig, INT_SIZE );
+	}
+		// These two functions implement protocols for sending and fetching
+		// whole files at a time.  Since there is a more complex protocol
+		// involved, it's easier to just code the senders by hand.
+		// They are implemented in "senders.epilogue".
+#	if !defined( SENDER )
+	int send_file( const char *name, mode_t mode ) : pseudo {
+		SEND_PATH( name );
+		ALLOC_PATH( name );
+	}
+	int get_file( const char *name ) : pseudo {
+		SEND_PATH( name );
+		ALLOC_PATH( name );
+	}
+#	endif
+#endif
+
+
+int fstat( map(int fd), struct stat *buf ) {
+	out xdr_stat( buf );
+	alloc( buf, STAT_SIZE );
+}
+int stat( const char *path, struct stat *buf ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	out xdr_stat( buf );
+	alloc( buf, STAT_SIZE );
+}
+int lstat( const char *path, struct stat *buf ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	out xdr_stat( buf );
+	alloc( buf, STAT_SIZE );
+}
+
+int mknod( const char *path, int mode, dev_t device ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+int chmod( const char *path, mode_t mode ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+int getfsstat( struct statfs buf[], long bufsize, int flags ) {
+	out xdr_opaque( buf, STATFS_ARRAY_SIZE );
+	alloc( buf, bufsize );
+}
 int flock( map(int fd), int op );
-int fstatfs( map(int fd), struct statfs *buf );
+int fstatfs( map(int fd), struct statfs *buf ) {
+	out xdr_statfs( buf );
+	alloc( buf, STATFS_SIZE );
+}
 int fsync( map(int fd) );
-int ioctl( map(int fd), unsigned long request, char *argp );
-void reboot( int howto );
-int revoke( char *path );
-int symlink( const char *path1, const char *path2 );
-int readlink( const char *path, char *buf, int buf_size );
-int execve( const char *path, char * const argv[], char * const envp [] );
-			mode_t umask( mode_t mask );
-int execv( const char *path, char * const argv[] );
-int exec_with_loader( int flags, const char *loader, const char *file,
-					  char * const argv[], char * const envp[] );
-int chroot( const char *path );
+
+int symlink( const char *path1, const char *path2 ) {
+	SEND_PATH( path1 );
+	SEND_PATH( path2 );
+	ALLOC_PATH( path1 );
+	ALLOC_PATH( path2 );
+}
+int readlink( const char *path, char *buf, int buf_size ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	out xdr_bytes( &buf, buf_size, buf_size );
+	alloc( buf, buf_size );
+}
 pid_t getpgrp();
+mode_t umask( mode_t cmask );
 int getpagesize();
-pid_t vfork();
-int stat( const char *path, struct stat *buf );
-int lstat( const char *path, struct stat *buf );
 int fcntl( map(int fd), int req, int arg );
-char * mmap( char * a, size_t l, int p, int f, map(int fd), off_t o );
-int munmap( char * addr, size_t len );
-int mprotect( char * addr, size_t len, int prot );
-int madvise( char * addr, size_t len, int behav );
-int getgroups( int gidsetsize, gid_t grouplist[] );
-int setgroups( int gidsetsize, gid_t grouplist[] );
+
+int getgroups( int gidsetsize, gid_t grouplist[] ) {
+	out xdr_bytes( &grouplist, gidsetsize * GID_T_SIZE, gidsetsize * GID_T_SIZE );
+	alloc( grouplist, gidsetsize * GID_T_SIZE );
+}
 int setpgrp( int pid, int pgrp );
-int setitimer( int which, struct itimerval *value, struct itimerval *oval );
-int getitimer( int which, struct itimerval *value );
-int getdirentries( map(int fd), char *buf, int nbytes, long *basep );
-int table( int id, int index, char *addr, int nel, unsigned int lel );
-int gethostname( char *address, int address_len );
-int sethostname( char *address, int address_len );
+int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
+	out xdr_bytes( &buf, &rval, rval );
+	in xdr_opaque( basep, EIGHT );
+	out xdr_opaque( basep, EIGHT );
+	alloc( buf, nbytes );
+	alloc( basep, LONG_SIZE );
+}
+int table( int id, int index, char *addr, int nel, unsigned int lel ) {
+	out xdr_bytes( &addr, nel * lel, nel * lel );
+	alloc( addr, nel * lel );
+}
+
+int gethostname( char *address, int address_len ) {
+	out xdr_bytes( &address, &address_len, address_len );
+	alloc( address, address_len );
+}
 int getdtablesize();
+
 int select( int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds,
-			struct timeval *timeout );
-int poll( struct pollfd filedes[], unsigned int nfds, int timeout );
+			struct timeval *timeout ) {
+	in xdr_bytes( &readfds,  FD_SET_SIZE, FD_SET_SIZE );
+	out xdr_bytes( &readfds,  FD_SET_SIZE, FD_SET_SIZE );
+	alloc( readfds, FD_SET_SIZE );
+	in xdr_bytes( &writefds,  FD_SET_SIZE, FD_SET_SIZE  );
+	out xdr_bytes( &writefds,  FD_SET_SIZE, FD_SET_SIZE  );
+	alloc( writefds, FD_SET_SIZE );
+	in xdr_bytes( &exceptfds,  FD_SET_SIZE, FD_SET_SIZE  );
+	out xdr_bytes( &exceptfds,  FD_SET_SIZE, FD_SET_SIZE  );
+	alloc( exceptfds, FD_SET_SIZE );
+	in xdr_timeval( &timeout );
+	alloc( timeout, TIMEVAL_SIZE );
+}
+int poll( struct pollfd filedes[], unsigned int nfds, int timeout ) {
+	in xdr_bytes( &filedes, POLLFD_SIZE * nfds, POLLFD_SIZE * nfds );
+	out xdr_bytes( &filedes, POLLFD_SIZE * nfds, POLLFD_SIZE * nfds );
+	alloc( filedes, POLLFD_SIZE * nfds );
+}
 int setpriority( int which, int who, int priority );
 int getpriority( int which, int who );
-int socket( int addr_family, int type, int protocol );
-int connect( int sock, struct sockaddr *address, int addr_len );
-int send( int socket, char *msg, int length, int flags );
-int recv( int socket, char *msg, int length, int flags );
-int sigreturn( struct sigcontext *scp );
-int bind( int socket, struct sockaddr *address, int addr_len );
-int listen( int socket, int backlog );
-int plock( int op );
-int sigsuspend( const sigset_t *mask );
-int sigstack( struct sigstack *instack, struct sigstack *outstack );
-int gettimeofday( struct timeval *tp, struct timezone *tzp );
-int settimeofday( struct timeval *tp, struct timezone *tzp );
-int getsockopt( int sock, int level, int opt_name, char *opt_val, int opt_len );
-int setsockopt( int sock, int level, int opt_name, char *opt_val, int opt_len );
+int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
+	out xdr_timeval( tp );
+	out xdr_timezone( tp );
+	alloc( tp, TIMEVAL_SIZE );
+	alloc( tzp, TIMEZONE_SIZE );
+}
 int fchown( map(int fd), uid_t owner, gid_t group );
+int lchown( const char *path, uid_t owner, gid_t group ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+int chown( const char *path, uid_t owner, gid_t group ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+
 int fchmod( map(int fd), mode_t mode );
 int setreuid( int ruid, int euid );
 int setregid( int rgid, int egid );
-int rename( const char *from, const char *to );
-int truncate( const char *path, off_t length );
+int rename( const char *from, const char *to ) {
+	SEND_PATH( from );
+	SEND_PATH( to );
+	ALLOC_PATH( from );
+	ALLOC_PATH( to );
+}
+int truncate( const char *path, off_t length ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
 int ftruncate( map(int fd), off_t length );
 int setgid( gid_t gid );
-int sendto( int sock, char *msg, int msg_len, int flags, struct sockaddr *dest,
-			int dest_len );
-int shutdown( int socket, int how );
-int socketpair( int domain, int type, int protocol, int sock_vector[] );
-int mkdir( const char *path, mode_t mode );
-int rmdir( const char *path );
-int utimes( const char *path, struct timeval times[] );
-int adjtime( struct timeval *delta, struct timeval *old_delta );
+int mkdir( const char *path, mode_t mode ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+int rmdir( const char *path ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+}
+int utimes( const char *path, struct timeval times[] ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	in xdr_bytes( &times, TIMEVAL_ARRAY_SIZE, TIMEVAL_ARRAY_SIZE );
+	alloc( times, TIMEVAL_ARRAY_SIZE );
+}
 int gethostid();
-int sethostid( int host_id );
-int setrlimit( int resource, struct rlimit *rlp );
-int getrlimit( int resource, struct rlimit *rlp );
+int setrlimit( int resource, struct rlimit *rlp ) {
+	in xdr_rlimit( rlp );
+	alloc( rlp, RLIMIT_SIZE );
+}
+int getrlimit( int resource, struct rlimit *rlp ) {
+	in xdr_rlimit( rlp );
+	alloc( rlp, RLIMIT_SIZE );
+}
 pid_t setsid();
-int quotackl( char *path, int cmd, int id, char *addr );
-int nfssvc( int sock, int mask, int match );
-int statfs( char *path, struct statfs *buf, int len );
-int async_daemon();
-int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
-int getdomainname( char *name, int namelen );
-int setdomainname( char *name, int namelen );
-int exportfs( int access, int *record, struct exportfsdata *exdata );
+int statfs( char *path, struct statfs *buf, int len ) {
+	SEND_PATH( path );
+	ALLOC_PATH( path );
+	out xdr_statfs( buf );
+	alloc( buf, STATFS_SIZE );
+}
+int getdomainname( char *name, int namelen ) {
+	out xdr_string( &name, namelen, namelen );
+	alloc( name, namelen );
+}
 int lockf( map(int fd), int request, off_t size );
-int swapon( char *path, int flags, int lo_water, int hi_water );
-int msgctl( int msgid, int cmd, struct msqid_ds *buf );
-int msgget( key_t key, int msgflg );
-int msgrcv(int qid, void *msgp, size_t msgsz, long msgtyp, int msgflg );
-int msgsnd( int msqid, void *msgp, size_t msgsz, int msgflg );
-int semctl( int semid, int semnum, int cmd, void *arg );
-int semget( key_t key, int nsems, int semflag );
-int semop( int semid, struct sembuf *sops, unsigned int nsops );
-int lchown( const char *path, uid_t owner, gid_t group );
-int uname( struct utsname *name );
-char * shmat( int shmid, char * shmaddr, int shmflg );
-int shmctl( int shmid, int cmd, struct shmid_ds *buf );
-int shmdt( char * addr );
-int shmget( key_t key, unsigned int size, unsigned int flags );
-int mvalid( char * addr, size_t len, int prot );
-int getaddressconf( struct addressconf *buf, size_t length );
-int msync( char * addr, size_t len, int flags );
+
+
+int uname( struct utsname *name ) {
+	out xdr_utsname( name );
+	alloc( name, UTSNAME_SIZE );
+}
+
+
+int mvalid( char * addr, size_t len, int prot ) {
+	out xdr_bytes( &addr, &len, len );
+	alloc( addr, len );
+}
+
+int getaddressconf( struct addressconf *buf, size_t length ) {
+	out xdr_bytes( &buf, &length, length );
+	alloc( buf, length );
+}
+
 pid_t getpgid( pid_t pid );
 int uswitch( int cmd, int value );
-int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
-				int *start, char *arg );
-int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
-				char * arg, unsigned long flag );
+
+	// Speical (PSEUDO) operations provided by the shadow.  These look
+	// like remote system calls, but aren't really system calls.
+char *
+getwd( char *path_name ) : pseudo, extract {
+	GET_PATH( path_name );
+	ALLOC_PATH( path_name );
+}
+
+	// Things having to do with signals - we may support these
+	// one day soon.
+not_supported {
+	int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
+	int sigaction( int sig, const struct sigaction *act,
+					struct sigaction *o_act ) : extract;
+	int sigpending( sigset_t *set );
+	int sigreturn( struct sigcontext *scp );
+	int setitimer( int which, struct itimerval *value, struct itimerval *oval );
+	int getitimer( int which, struct itimerval *value );
+	int sigsuspend( const sigset_t *mask );
+	int sigstack( struct sigstack *instack, struct sigstack *outstack );
+	int kill( pid_t pid, int sig ) : extract;
+}
+
+#if 0
+	// Things having to do with memory mapped files - we may support these
+	// one day soon.
+not_supported {
+	char * mmap( char * a, size_t l, int p, int f, map(int fd),
+														off_t o ) : extract;
+	int munmap( char * addr, size_t len );
+	int mprotect( char * addr, size_t len, int prot );
+	int madvise( char * addr, size_t len, int behav );
+	int msync( char * addr, size_t len, int flags );
+}
+#endif
+	// Calls intended only for the super user or system managers
+not_supported {
+	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
+	int setuid( uid_t uid );
+	int setlogin( char *name );
+	int acct( char *path );
+	void reboot( int howto );
+	int revoke( char *path );
+	int chroot( const char *path );
+	int setgroups( int gidsetsize, gid_t grouplist[] );
+	int sethostname( char *address, int address_len );
+	int plock( int op );
+	int settimeofday( struct timeval *tp, struct timezone *tzp );
+	int adjtime( struct timeval *delta, struct timeval *old_delta );
+	int sethostid( int host_id );
+	int async_daemon();
+	int getfh( map(int fd), fhandle_t *fhp, int exp_fd );
+	int setdomainname( char *name, int namelen );
+	int exportfs( int access, int *record, struct exportfsdata *exdata );
+	int swapon( char *path, int flags, int lo_water, int hi_water );
+}
+
+	// Calls having to do with multiple process jobs
+not_supported {
+	pid_t fork() : extract;
+	pid_t vfork();
+	int execve( const char *path, char * const argv[], char * const envp [] );
+	int execv( const char *path, char * const argv[] );
+	int exec_with_loader( int flags, const char *loader, const char *file,
+					  char * const argv[], char * const envp[] );
+	pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
+	int ptrace( long req, long int process, ulong_t *address, ulong_t data );
+	int setpgid( pid_t process_id, pid_t gid );
+	int pipe( int fd[] ) : extract;
+}
+
+	// Calls relating to sockets - implies multiple communicating processes
+not_supported {
+	int recvmsg( int socket, struct msghdr *message, int flags );
+	int sendmsg( int socket, struct msghdr *message, int flags );
+	int recvfrom( int socket, char *buffer, int length, int flags,
+				  struct sockaddr *address, int addr_len );
+	int accept( int socket, struct sockaddr *address, int addr_len );
+	int getpeername( int socket, struct sockaddr *address, int addr_len );
+	int getsockname( int socket, struct sockaddr *address, int addr_len );
+	int socket( int addr_family, int type, int protocol );
+	int connect( int sock, struct sockaddr *address, int addr_len );
+	int send( int socket, char *msg, int length, int flags );
+	int recv( int socket, char *msg, int length, int flags );
+	int bind( int socket, struct sockaddr *address, int addr_len );
+	int listen( int socket, int backlog );
+	int sendto( int sock, char *msg, int msg_len, int flags,
+				struct sockaddr *dest, int dest_len );
+	int shutdown( int socket, int how );
+	int socketpair( int domain, int type, int protocol, int sock_vector[] );
+	int getsockopt( int sock, int level, int opt_name, char *opt_val,
+					int opt_len );
+	int setsockopt( int sock, int level, int opt_name, char *opt_val,
+					int opt_len );
+	int nfssvc( int sock, int mask, int match );
+}
+
+
+	// Things we perhaps ought to support, but aren't in the
+	// current implementation
+not_supported {
+	void profil( short *buf, unsigned int buf_size, unsigned int offset,
+				 unsigned int scale );
+	int ioctl( map(int fd), unsigned long request, char *argp );
+	int quotactl( char *path, int cmd, int id, char *addr );
+	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes,
+					int *start, char *arg );
+	int setsysinfo( unsigned long op, char *buffer, unsigned long nbytes,
+					char * arg, unsigned long flag );
+}
+
+
+	// Returns a pointer to a static buffer - our generator is not
+	// yet sophisticated enough to generate correct stubs for this.
+not_supported char *getlogin();
+
+	// Stuff having to do with message queues.  Probably won't support
+	// these unless they become a standard across all the platforms.
+not_supported {
+	int msgctl( int msgid, int cmd, struct msqid_ds *buf );
+	int msgget( key_t key, int msgflg );
+	int msgrcv(int qid, void *msgp, size_t msgsz, long msgtyp, int msgflg );
+	int msgsnd( int msqid, void *msgp, size_t msgsz, int msgflg );
+}
+
+	// Stuff having to do with semaphores.  Probably won't support
+	// these unless they become a standard across all the platforms.
+not_supported {
+	int semctl( int semid, int semnum, int cmd, void *arg );
+	int semget( key_t key, int nsems, int semflag );
+	int semop( int semid, struct sembuf *sops, unsigned int nsops );
+}
+
+	// Stuff having to do with shared memory.
+not_supported {
+	int shmctl( int shmid, int cmd, struct shmid_ds *buf );
+	int shmdt( char * addr );
+	int shmget( key_t key, unsigned int size, unsigned int flags );
+	char * shmat( int shmid, char * shmaddr, int shmflg );
+}
