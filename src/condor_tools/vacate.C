@@ -78,14 +78,14 @@ main( int argc, char *argv[] )
 		}
 
 		sock.encode();
-		cmd = CKPT_FRGN_JOB;
+		cmd = VACATE_ALL_CLAIMS;
 		if (!sock.code(cmd) || !sock.eom()) {
-			dprintf(D_ALWAYS, "Can't send CKPT_FRGN_JOB command to "
+			dprintf(D_ALWAYS, "Can't send VACATE_ALL_CLAIMS command to "
 					"condor startd (%s)\n", startdAddr);
 			continue;
 		}
 		
-		printf( "Sent CKPT_FRGN_JOB command to startd on %s\n", argv[i] );
+		printf( "Sent VACATE_ALL_CLAIMS command to startd on %s\n", argv[i] );
 
 	}
 
