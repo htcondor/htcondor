@@ -53,7 +53,7 @@
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			NO
 #define DO_BENCHMARKING			YES
-#define HAS_PVM				NO
+#define HAS_PVM				YES
 #define PVM_ARCH			HPPA
 #define HAS_STATIC			YES
 
