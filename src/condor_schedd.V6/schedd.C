@@ -3119,11 +3119,13 @@ prio_compar(prio_rec* a, prio_rec* b)
 		  return 1;
 	 }
 
-	/* finally, go in order of the proc id 
-	 * we already are likely in "cluster" order because of the qdate comparison 
-	 * above, but all procs in a cluster have the same qdate, thus the
-	 * comparison on proc id here. 
-	 */
+	 /* go in order of cluster id */
+	if ( a->id.cluster < b->id.cluster )
+		return -1;
+	if ( a->id.cluster > b->id.cluster )
+		return 1;
+
+	/* finally, go in order of the proc id */
 	if ( a->id.proc < b->id.proc )
 		return -1;
 	if ( a->id.proc > b->id.proc )
