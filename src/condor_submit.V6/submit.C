@@ -1143,19 +1143,7 @@ SetTransferFiles()
 		free(macro_value);		// condor_param() calls malloc; free it!
 	} else {
 		// User did not explicitly specify TransferFiles; choose a default
-		if ( files_specified ) {
-			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-		} else {
-			// MPI currently relies on not transfering the files, and staying
-			// in the submit directory. Otherwise, we should copy the
-			// executable over. 
-			if(JobUniverse == MPI) { 
-				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
-				never_transfer = true;
-			} else {
-				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-			}
-		}
+		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
 	}
 
 	// Insert what we want for ATTR_TRANSFER_FILES
@@ -1171,6 +1159,13 @@ SetTransferFiles()
 			InsertJobExpr (output_files);
 		}
 	}
+
+#ifndef WIN32
+	// On Unix, now set never_transfer to be true before this function exits.
+	// This way, restrictions on file system domain are set.
+	never_transfer = true;
+#endif
+
 }
 
 void
@@ -2518,9 +2513,9 @@ check_requirements( char *orig )
 			}
 		}
 		if ( !has_fsdomain && never_transfer) {
-			(void)strcat( answer, " && (FileSystemDomain == \"" );
+			(void)strcat( answer, " && ((OpSys == \"WINNT40\" || OpSys == \"WINNT50\") || (OpSys != \"WINNT40\" && OpSys != \"WINNT50\" && FileSystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
-			(void)strcat( answer, "\")" );
+			(void)strcat( answer, "\"))" );
 		} 
 
 	}
