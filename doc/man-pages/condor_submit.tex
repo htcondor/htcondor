@@ -210,7 +210,7 @@ page~\pageref{sec:file-transfer}.
 %% transfer_input_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_input\_files = $<$ file1, file2, file... $>$] 
+\item[transfer\_input\_files = $<$ file1,file2,file... $>$] 
 \index{submit commands!transfer\_input\_files}
 Lists all the files to be transferred into the 
 working directory for the job before the job is started.
@@ -231,7 +231,7 @@ page~\pageref{sec:file-transfer}.
 %% transfer_output_files
 %%%%%%%%%%%%%%%%%%%
 
-\item[transfer\_output\_files = $<$ file1, file2, file... $>$] 
+\item[transfer\_output\_files = $<$ file1,file2,file... $>$] 
 \index{submit commands!transfer\_output\_files}
 This command forms an explicit list of output files to be transferred
 back from the temporary working directory on the execute machine to
@@ -245,6 +245,7 @@ This is usually the desired behavior.
 Explicitly listing output files is typically only done when the job creates
 many files, and the user wants to keep a subset of
 those files. 
+If there are multiple files, they must be delimited with commas.
 \Warn Do not specify \Opt{transfer\_output\_files} in the
 submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what

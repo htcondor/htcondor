@@ -1181,9 +1181,9 @@ is run on a remote machine.
 If the job requires any other input files,
 the submit description file should utilize the
 \verb@transfer_input_files@ command.
-This list specifies any other files that Condor is to transfer to a
-remote site to set up the execution environment for the job before it
-is run.
+This comma-seperated list specifies any other files that Condor is to
+transfer to a remote site to set up the execution environment for the
+job before it is run.
 These files are placed in the same temporary working directory
 as the job's executable.
 At this time, directories can not be transferred in this way.
@@ -1199,6 +1199,7 @@ to the machine from which the job was submitted.
 Most of the time, this is the best option.
 To restrict the files that are transferred,
 specify the exact list with \verb@transfer_output_files@.
+Again, filenames are delimited with a comma.
 When this list is defined and any of the files do not exist as the
 job exits, Condor considers this an error, and re-runs the job.
 For example:
