@@ -263,9 +263,6 @@ CStarter::RegisterStarterInfo( void )
 		starter_info->Insert( tmp );
 		free( tmp );
 
-		dprintf( D_ALWAYS, "starter_info classad:\n" );
-		starter_info->dPrint( D_ALWAYS );
-
 		rval = REMOTE_CONDOR_register_starter_info( starter_info );
 		
 	} else {

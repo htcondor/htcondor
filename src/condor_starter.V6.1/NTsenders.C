@@ -86,9 +86,6 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 		return -1;
 	}
 
-	dprintf( D_ALWAYS, "in CONDOR_register_starter_info:\n" );
-	ad->dPrint( D_ALWAYS );
-
 	syscall_sock->encode();
 	assert( syscall_sock->code(CurrentSysCall) );
 	assert( ad->put(*syscall_sock) );
