@@ -147,7 +147,7 @@ ReliSock::accept( ReliSock	&c )
 	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0) {
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
-			fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
+			_condor_fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
 		}
 #endif
 		return FALSE;
@@ -330,7 +330,7 @@ ReliSock::get_file(const char *destination)
 	{
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
-			fd_panic( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
+			_condor_fd_panic( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
 		}
 #endif
 		dprintf(D_ALWAYS, "get_file(): Failed to open file %s, errno = %d.\n",
