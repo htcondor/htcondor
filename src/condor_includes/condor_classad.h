@@ -128,6 +128,8 @@ class ClassAdList : public AttrListList
 	ClassAdList() : AttrListList() {}
 
 	ClassAd*	Next() { return (ClassAd*)AttrListList::Next(); }
+	void		Rewind() { AttrListList::Open(); }
+	int			Length() { return AttrListList::MyLength(); }
 	void		Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
 	int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
 	ClassAd*	Lookup(const char* name);
