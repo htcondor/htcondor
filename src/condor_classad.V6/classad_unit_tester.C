@@ -24,14 +24,14 @@
 /*--------------------------------------------------------------------
  *
  * To Do:
- *  - Write test_classad()
- *    Make sure to test GetExternalReferences()
  *  - Write test_value()
  *  - Write test_literal()
  *  - Write test_match()
  *  - Write test_operator()
  *  - Extend test_collection() to test much more of the interface
- *  - Test xml: roll in test_xml.C?
+ *  - Extend test_classad() to test much more of the interface
+ *  - Test xml: roll in test_xml.C
+ *  - Get stuff from extra_tests.C
  *
  *-------------------------------------------------------------------*/
 
@@ -97,9 +97,10 @@ private:
  *
  *--------------------------------------------------------------------*/
 
+static void test_classad(const Parameters &parameters, Results &results);
+static void test_exprlist(const Parameters &parameters, Results &results);
 static void test_collection(const Parameters &parameters, Results &results);
 static bool check_in_view(ClassAdCollection *collection, string view_name, string classad_name);
-static void test_exprlist(const Parameters &parameters, Results &results);
 static void print_version(void);
 
 /*********************************************************************
@@ -266,6 +267,7 @@ int main(
 
     /* ----- Run tests ----- */
     if (parameters.check_all || parameters.check_classad) {
+        test_classad(parameters, results);
     }
     if (parameters.check_all || parameters.check_exprlist) {
         test_exprlist(parameters, results);
@@ -296,6 +298,116 @@ int main(
         cout << "    " << number_of_tests << " tests\n";
     }
     return success;
+}
+
+/*********************************************************************
+ *
+ * Function: test_classad
+ * Purpose:  Test the ClassAd class.
+ *
+ *********************************************************************/
+static void test_classad(const Parameters &parameters, Results &results)
+{
+    ClassAdParser parser;
+    bool have_attribute;
+    bool success;
+
+    cout << "Testing the ClassAd class...\n";
+
+    string input_basic = "[ A = 3; B = 4.0; C = \"babyzilla\"; D = true; E = {1}; F = [ AA = 3; ];]";
+    ClassAd *basic;
+    int i;
+    bool b;
+    double r;
+    string s;
+    ClassAd *c;
+    ExprList *l;
+    
+    basic = parser.ParseClassAd(input_basic);
+
+    /* ----- Test EvaluateAttr* ----- */
+    have_attribute = basic->EvaluateAttrInt("A", i);
+    TEST("Have attribute A", (have_attribute == true));
+    TEST("A is 3", (i == 3));
+
+    have_attribute = basic->EvaluateAttrReal("B", r);
+    TEST("Have attribute B", (have_attribute == true));
+    TEST("B is 4.0", (r == 4.0));
+
+    have_attribute = basic->EvaluateAttrString("C", s);
+    TEST("Have attribute C", (have_attribute == true));
+    TEST("C is 'babyzilla'", (s.compare("babyzilla") == 0));
+
+    have_attribute = basic->EvaluateAttrBool("D", b);
+    TEST("Have attribute D", (have_attribute == true));
+    TEST("D is true", (b == true));
+
+    have_attribute = basic->EvaluateAttrList("E", l);
+    TEST("Have attribute E", (have_attribute == true));
+    TEST("E is list of size ", (l->size() == 1));
+
+    have_attribute = basic->EvaluateAttrClassAd("F", c);
+    TEST("Have attribute F", (have_attribute == true));
+    have_attribute = c->EvaluateAttrInt("AA", i);
+    TEST("F looks correct", (i == 3));
+
+    /* ----- Test basic insert and delete ----- */
+    success = basic->InsertAttr("new", 4);
+    TEST("InsertAttr claims to have worked", (success == true));
+    have_attribute = basic->EvaluateAttrInt("new", i);
+    TEST("Have new attribute", (have_attribute == true));
+    TEST("new attribute is 4", i == 4);
+
+    success = basic->Delete("new");
+    TEST("Delete claims to have worked", (success == true));
+    have_attribute = basic->EvaluateAttrInt("new", i);
+    TEST("New attribute was deleted", (have_attribute == false));
+
+    /* ----- Test GetExternalReferences ----- */
+    string input_ref = "[ Rank=Member(\"LCG-2_1_0\",other.Environment) ? other.Time/seconds : other.Time/minutes; minutes=60; ]";
+    References            refs;
+    References::iterator  iter;
+    ExprTree              *rank;
+
+    c = parser.ParseClassAd(input_ref);
+    TEST("Made classad_ref", (c != NULL));
+    if (c != NULL) {
+        rank = c->Lookup("Rank");
+        TEST("Rank exists", (rank != NULL));
+        
+        if (rank != NULL) {
+            bool have_references;
+            if (have_references = c->GetExternalReferences(rank, refs, true)) {
+                TEST("have_references", (have_references == true));
+
+                if (have_references) {
+                    bool have_environment;
+                    bool have_time;
+                    bool have_seconds;
+                    bool have_other;
+                    have_environment = false;
+                    have_time = false;
+                    have_seconds = false;
+                    have_other = false;
+                    for (iter = refs.begin(); iter != refs.end(); iter++) {
+                        if ((*iter).compare("other.Environment") == 0) {
+                            have_environment = true;
+                        } else if ((*iter).compare("other.Time") == 0) {
+                            have_time = true;
+                        } else if ((*iter).compare("seconds") == 0) {
+                            have_seconds = true;
+                        } else {
+                            have_other = true;
+                        }
+                    }
+                    TEST("Have external reference to Environment", (have_environment == true));
+                    TEST("Have external reference to Time", (have_time == true));
+                    TEST("Have external reference to seconds", (have_seconds == true));
+                    TEST("Have no other external references", (have_other != true));
+                }
+            }
+        }
+    }
 }
 
 /*********************************************************************
