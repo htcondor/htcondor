@@ -1757,6 +1757,30 @@ to restart the Condor daemons and effect the change.
 %Restart Condor after making this change.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Does \MacroNI{USER\_JOB\_WRAPPER} work on Windows machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The \Macro{USER\_JOB\_WRAPPER} configuration variable
+does work on Windows machines.
+The wrapper must be either a
+batch script with a file extension of \File{.bat} or \File{.cmd},
+or an
+executable with a file extension of \File{.exe} or \File{.com}.
+
+An example of a batch script sets environment variables:
+\footnotesize
+\begin{verbatim}
+REM set some environment variables
+set LICENSE_SERVER=192.168.1.202:5012
+set MY_PARAMS=2
+
+REM Run the actual job now
+%*
+\end{verbatim}
+\normalsize
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

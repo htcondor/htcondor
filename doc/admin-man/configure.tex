@@ -2794,16 +2794,19 @@ The amount of time (in seconds) between ClassAd updates that the
 \Condor{starter} daemon sends to the \Condor{shadow} daemon.
 Defaults to 1200 (20 minutes).
 
-\item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} This macro
-  allows the administrator to specify a ``wrapper'' script to handle the
+\item[\Macro{USER\_JOB\_WRAPPER}] \label{param:UserJobWrapper} 
+  The full path to an executable or script.
+  This macro
+  allows an administrator to specify a wrapper script to handle the
   execution of all user jobs.  
-  If specified, Condor will never directly execute a job but instead will
-  invoke the program specified by this macro.
+  If specified, Condor never directly executes a job, but instead
+  invokes the program specified by this macro.
   The command-line arguments passed to this program will include the
   full-path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
   This wrapper program must ultimately replace its image with the user job;
-  in other words, it must \Term{exec()} the user job, not \Term{fork()} it.
+  in other words,
+  it must \Procedure{exec} the user job, not \Procedure{fork} it.
   For instance, if the wrapper program is a C/Korn shell script, the
   last line of execution should be:
 \begin{verbatim}
@@ -2818,6 +2821,10 @@ Defaults to 1200 (20 minutes).
 \begin{verbatim}
            exec "$@"
 \end{verbatim}
+
+  For Windows machines, the wrapper will either be
+  a batch script (with a file extension of \File{.bat} or \File{.cmd})
+  or an executable (with a file extension of \File{.exe} or \File{.com}).
 
 \end{description}
 
