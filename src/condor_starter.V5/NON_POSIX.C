@@ -173,14 +173,8 @@ extern "C" {
 /*
  * macros for setting stat
  */
-
-#if !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)
-
 #define SETCOREDUMP(stat, flag)         ((int)((flag) ? ((stat) | WCOREFLG) \
                                                 : ((stat) & (~(WCOREFLG)))))
-
-#endif /* !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE) */
-
 #define SETEXITSTATUS(stat, flag)       ((int)(((stat) & 0xFFFF00FF) | \
                                                 ((flag) << 8)))
 #define SETTERMSIG(stat, flag)          ((int)(((stat) & 0xFFFFFF80) | \
