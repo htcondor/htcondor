@@ -40,28 +40,30 @@
 #define GM_REGISTER				1
 #define GM_STDIO_UPDATE			2
 #define GM_UNSUBMITTED			3
-#define GM_SUBMIT_SAVE			4
-#define GM_SUBMIT_COMMIT		5
-#define GM_SUBMITTED			6
-#define GM_CHECK_OUTPUT			7
-#define GM_DONE_SAVE			8
-#define GM_DONE_COMMIT			9
-#define GM_STOP_AND_RESTART		10
-#define GM_RESTART				11
-#define GM_RESTART_SAVE			12
-#define GM_RESTART_COMMIT		13
-#define GM_CANCEL				14
-#define GM_CANCEL_WAIT			15
-#define GM_FAILED				16
-#define GM_DELETE				17
-#define GM_CLEAR_REQUEST		18
-#define GM_HOLD					19
+#define GM_SUBMIT				4
+#define GM_SUBMIT_SAVE			5
+#define GM_SUBMIT_COMMIT		6
+#define GM_SUBMITTED			7
+#define GM_CHECK_OUTPUT			8
+#define GM_DONE_SAVE			9
+#define GM_DONE_COMMIT			10
+#define GM_STOP_AND_RESTART		11
+#define GM_RESTART				12
+#define GM_RESTART_SAVE			13
+#define GM_RESTART_COMMIT		14
+#define GM_CANCEL				15
+#define GM_CANCEL_WAIT			16
+#define GM_FAILED				17
+#define GM_DELETE				18
+#define GM_CLEAR_REQUEST		19
+#define GM_HOLD					20
 
 char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_REGISTER",
 	"GM_STDIO_UPDATE",
 	"GM_UNSUBMITTED",
+	"GM_SUBMIT",
 	"GM_SUBMIT_SAVE",
 	"GM_SUBMIT_COMMIT",
 	"GM_SUBMITTED",
@@ -360,43 +362,46 @@ int GlobusJob::doEvaluateState()
 			} else if ( condorState == HELD ) {
 				DeleteJob( this );
 			} else {
-				char *job_contact;
-				rc = gahp.globus_gram_client_job_request( 
+				gmState = GM_SUBMIT;
+			}
+			break;
+		case GM_SUBMIT:
+			char *job_contact;
+			rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
-					connect_failure = true;
-					break;
-				}
-				numSubmitAttempts++;
-				if ( rc == GLOBUS_SUCCESS ) {
-					newJM = false;
-					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-					jobContact = strdup( job_contact );
-					gahp.globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_SAVE;
-				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					newJM = true;
-					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-					jobContact = strdup( job_contact );
-					gahp.globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_SAVE;
-				} else {
-					// unhandled error
-					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
-					globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( this );
-					gmState = GM_UNSUBMITTED;
-					reevaluate_state = true;
-				}
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
+				connect_failure = true;
+				break;
+			}
+			numSubmitAttempts++;
+			if ( rc == GLOBUS_SUCCESS ) {
+				newJM = false;
+				callbackRegistered = true;
+				rehashJobContact( this, jobContact, job_contact );
+				jobContact = strdup( job_contact );
+				gahp.globus_gram_client_job_contact_free( job_contact );
+				gmState = GM_SUBMIT_SAVE;
+			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+				newJM = true;
+				callbackRegistered = true;
+				rehashJobContact( this, jobContact, job_contact );
+				jobContact = strdup( job_contact );
+				gahp.globus_gram_client_job_contact_free( job_contact );
+				gmState = GM_SUBMIT_SAVE;
+			} else {
+				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+				dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
+				globusError = rc;
+				WriteGlobusSubmitFailedEventToUserLog( this );
+				gmState = GM_UNSUBMITTED;
+				reevaluate_state = true;
 			}
 			break;
 		case GM_SUBMIT_SAVE:
