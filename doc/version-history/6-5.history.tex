@@ -44,6 +44,12 @@ Configuration files they are using, right after the startup banner.
       \Condor{starter} for each job just before it runs, and can refer
       to any attribute in the job ClassAd.
 
+\item You no longer need to define \Macro{FLOCK\_VIEW\_SERVERS} in
+  your config file if you have configured a \Condor{schedd} to flock
+  to other pools.
+  This is now handled automatically, so you only have to define the
+  \Macro{FLOCK\_HOSTS}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
