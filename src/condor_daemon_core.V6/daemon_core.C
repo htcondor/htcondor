@@ -38,7 +38,6 @@ static const int DEFAULT_PIDBUCKETS = 11;
 static const int ERRNO_EXEC_AS_ROOT = 666666;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
-
 #include "authentication.h"
 #include "daemon.h"
 #include "reli_sock.h"
@@ -2495,18 +2494,16 @@ int DaemonCore::HandleReq(int socki)
 
 		ClassAd auth_info;
 
-        /* Need work Hao
-		if( !auth_info.initFromStream(*sock)) {
+		if( !getOldClassAd(sock, auth_info) ) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "receive auth_info!\n");
-			result = FALSE;	
+					 "receive auth_info!\n");
+			result = FALSE;
 			goto finalize;
 		}
-        */
-		
-		if ( is_tcp && !sock->end_of_message()) {
+
+		if( is_tcp && !sock->end_of_message() ) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE is TCP, unable to "
-					   "receive eom!\n");
+					 "receive eom!\n");
 			result = FALSE;	
 			goto finalize;
 		}
@@ -2751,14 +2748,14 @@ int DaemonCore::HandleReq(int socki)
 					dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n%s\n", buf.data());
 				}
 				sock->encode();
-                /* Need work Hao
-				if (!the_policy->put(*sock) ||
-					!sock->eom()) {
-					dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+
+				if( !putOldClassAd(sock, *the_policy) || !sock->eom() ) {
+					dprintf (D_ALWAYS, "SECMAN: Error sending response "
+							 "classad!\n");
 					result = FALSE;
 					goto finalize;
 				}
-                */
+
 				sock->decode();
 			} else {
 				dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
@@ -2878,19 +2875,19 @@ int DaemonCore::HandleReq(int socki)
 				ClassAd pa_ad;
 
 				// session user
-				sprintf (buf, "\"%s\"", ((ReliSock*)sock)->getFullyQualifiedUser());
+				sprintf(buf, "%s", ((ReliSock*)sock)->getFullyQualifiedUser());
                 v.Clear();
                 v.SetStringValue(buf);
 				pa_ad.Insert(string(ATTR_SEC_USER), Literal::MakeLiteral(v));
 
 				// session id
-				sprintf (buf, "\"%s\"", the_sid);
+				sprintf (buf, "%s", the_sid);
                 v.Clear();
                 v.SetStringValue(buf);
 				pa_ad.Insert(string(ATTR_SEC_SID), Literal::MakeLiteral(v));
 
 				// other commands this session is good for
-				sprintf (buf, "\"%s\"", GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+				sprintf (buf, "%s", GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
                 v.Clear();
                 v.SetStringValue(buf);
 				pa_ad.Insert(string(ATTR_SEC_VALID_COMMANDS), Literal::MakeLiteral(v));
@@ -2903,33 +2900,21 @@ int DaemonCore::HandleReq(int socki)
 
 				sock->encode();
 
-                // Need work Hao
-				//pa_ad.put(*sock);
+				putOldClassAd(sock, pa_ad);
 				sock->eom();
 
-/* here is the old code-
-				if (! pa_ad.put(*sock) ||
-					! sock->eom() ) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
-				} else {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
-					}
-				}
-*/
-
 				// extract the session duration
-				string dur;
-				int expiration_time = time(0);
-				
-                if (the_policy->EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur)) {
-                    expiration_time += atoi(dur.data());
-                }
+				int expiration_time = 0;
+				the_policy->EvaluateAttrInt(ATTR_SEC_SESSION_DURATION,
+											expiration_time);
+				expiration_time += time(0);
 
 				// add the key to the cache
-				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
+				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key,
+									  the_policy, expiration_time);
 				sec_man->session_cache->insert(tmp_key);
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur.data());
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to"
+						 " cache for %d seconds!\n", the_sid, expiration_time);
 			}
 		}
 

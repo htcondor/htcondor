@@ -43,6 +43,8 @@
 extern char* mySubSystem;
 extern char* global_dc_sinful();
 
+ClassAdUnParser unp;
+
 #define SECURITY_HACK_ENABLE
 void zz1printf(KeyInfo *k) {
 	if (k) {
@@ -407,7 +409,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 	if (paramer) {
-		sprintf(buf, "\"%s\"", paramer);
+		sprintf(buf, "%s", paramer);
 		free(paramer);
         v.Clear();
         v.SetStringValue(buf);
@@ -446,7 +448,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 	if (paramer) {
-		sprintf(buf, "\"%s\"", ATTR_SEC_CRYPTO_METHODS, paramer);
+		sprintf(buf, "%s", ATTR_SEC_CRYPTO_METHODS, paramer);
 		free(paramer);
         v.Clear();
         v.SetStringValue(buf);
@@ -474,52 +476,52 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
  		 sec_is_negotiable(sec_encryption) || 
  		 sec_is_negotiable(sec_integrity) ) {
 
-		sprintf (buf, "\"%s\"", SecMan::sec_req_rev[sec_negotiation]);
+		sprintf (buf, "%s", SecMan::sec_req_rev[sec_negotiation]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_NEGOTIATION), Literal::MakeLiteral(v));
 
-		sprintf (buf, "\"%s\"", SecMan::sec_req_rev[sec_authentication]);
+		sprintf (buf, "%s", SecMan::sec_req_rev[sec_authentication]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));
 
-		sprintf (buf, "\"%s\"", SecMan::sec_req_rev[sec_encryption]);
+		sprintf (buf, "%s", SecMan::sec_req_rev[sec_encryption]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
 
-		sprintf (buf, "\"%s\"", SecMan::sec_req_rev[sec_integrity]);
+		sprintf (buf, "%s", SecMan::sec_req_rev[sec_integrity]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));	
 
-		sprintf (buf, "\"%s\"", "NO");
+		sprintf (buf, "%s", "NO");
 		v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));	
 	} else {
-		sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
+		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_NEGOTIATION), Literal::MakeLiteral(v));	
 
-		sprintf (buf, "\"%s\"",SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]);
+		sprintf (buf, "%s",SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));	
 
-		sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]);
+		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
 
-		sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]);
+		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]);
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));
 		
-		sprintf (buf, "\"%s\"", "YES");
+		sprintf (buf, "%s", "YES");
         v.Clear();
         v.SetStringValue(buf);
 		ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));
@@ -527,7 +529,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 
 	// subsystem
-	sprintf(buf, "\"%s\"", mySubSystem);
+	sprintf(buf, "%s", mySubSystem);
     v.Clear();
     v.SetStringValue(buf);
 	ad->Insert(string(ATTR_SEC_SUBSYSTEM), Literal::MakeLiteral(v));
@@ -542,20 +544,22 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		paramer = param("SEC_DEFAULT_SESSION_DURATION");
 	}
 
+	int sessdur;
 	if (paramer) {
-		sprintf(buf, "\"%s\"", paramer);
+		sessdur = atoi(paramer);
         free( paramer );
 		paramer = NULL;
 	} else {
 		// default: 4 hours
-		sprintf(buf, "%s=\"14400\"", ATTR_SEC_SESSION_DURATION);
+		sessdur = 14400;
 	}
     v.Clear();
-    v.SetStringValue(buf);
+	v.SetIntegerValue(sessdur);
     ad->Insert(string(ATTR_SEC_SESSION_DURATION), Literal::MakeLiteral(v));
 
 	if (DebugFlags & D_FULLDEBUG ) {
-    	dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
+    	dprintf ( D_SECURITY, "SECMAN: inserted '%s = %d'\n",
+				  ATTR_SEC_SESSION_DURATION, sessdur);
 	}
 
 	return true;
@@ -758,17 +762,17 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 	char buf[128];
 
-	sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[authentication_action]);
+	sprintf (buf, "%s", SecMan::sec_feat_act_rev[authentication_action]);
     v.Clear();
     v.SetStringValue(buf);
 	action_ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));
 
-	sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[encryption_action]);
+	sprintf (buf, "%s", SecMan::sec_feat_act_rev[encryption_action]);
 	v.Clear();
     v.SetStringValue(buf);
 	action_ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
 
-	sprintf (buf, "\"%s\"", SecMan::sec_feat_act_rev[integrity_action]);
+	sprintf (buf, "%s", SecMan::sec_feat_act_rev[integrity_action]);
 	v.Clear();
     v.SetStringValue(buf);
 	action_ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));
@@ -780,7 +784,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 		char* the_method = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
 		if (the_method) {
-			sprintf (buf, "\"%s\"", the_method);
+			sprintf (buf, "%s", the_method);
 			v.Clear();
             v.SetStringValue(buf);
             action_ad->Insert(string(ATTR_SEC_AUTHENTICATION_METHODS), Literal::MakeLiteral(v));
@@ -793,7 +797,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 		char *the_method = ReconcileMethodLists( (char*)cli_methods.data(), (char*)srv_methods.data() );
 		if (the_method) {
-			sprintf (buf, "\"%s\"", the_method);
+			sprintf (buf, "%s", the_method);
 			v.Clear();
             v.SetStringValue(buf);
             action_ad->Insert(string(ATTR_SEC_CRYPTO_METHODS), Literal::MakeLiteral(v));
@@ -807,25 +811,18 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	int cli_duration = 0;
 	int srv_duration = 0;
 
-	string dur;
-	cli_ad.EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur);
-	if (dur.length() > 0) {
-		cli_duration = atoi(dur.data());
-	}
+	cli_ad.EvaluateAttrInt(ATTR_SEC_SESSION_DURATION, cli_duration);
+	srv_ad.EvaluateAttrInt(ATTR_SEC_SESSION_DURATION, srv_duration);
 
-	srv_ad.EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur);
-	if (dur.length() > 0) {
-		srv_duration = atoi(dur.data());
-	}
-
-	sprintf (buf, "\"%i\"", (cli_duration < srv_duration) ? cli_duration : srv_duration );
 	v.Clear();
-    v.SetStringValue(buf);
-    action_ad->Insert(string(ATTR_SEC_SESSION_DURATION), Literal::MakeLiteral(v));
+    v.SetIntegerValue(cli_duration < srv_duration ?
+					  cli_duration : srv_duration);
+    action_ad->Insert(string(ATTR_SEC_SESSION_DURATION),
+					  Literal::MakeLiteral(v));
 
 
 	v.Clear();
-    v.SetStringValue("\"YES\"");
+    v.SetStringValue("YES");
     action_ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));
 
 	return action_ad;
@@ -885,7 +882,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		enc_key = NULL;
 	}
 
-
 	// this classad will hold our security policy
 	ClassAd auth_info;
 
@@ -893,7 +889,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	// was decided on when the key was issued.
 	// otherwise, get our security policy and work it out with the server.
 	if (have_session) {
-		MergeClassAds( &auth_info, enc_key->policy(), true );
+
+		auth_info.Update(*(enc_key->policy()));
+		//MergeClassAds( &auth_info, enc_key->policy(), true );
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
@@ -901,7 +899,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 #ifdef SECURITY_HACK_ENABLE
 			zz1printf(enc_key->key());
 #endif
-			//auth_info.dPrint( D_SECURITY );
 		}
 
 		new_session = false;
@@ -923,7 +920,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			// for now, always open a session for tcp.
 			new_session = true;
 			v.Clear();
-            v.SetStringValue("\"YES\"");
+            v.SetStringValue("YES");
             auth_info.Insert(string(ATTR_SEC_NEW_SESSION), Literal::MakeLiteral(v));
 		}
 	}
@@ -931,7 +928,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	
 	if (DebugFlags & D_FULLDEBUG) {
 		dprintf (D_SECURITY, "SECMAN: Security Policy:\n");
-		//auth_info.dPrint( D_SECURITY );
+		string adstring;
+		unp.Unparse(adstring, &auth_info);
+		dprintf(D_SECURITY, "%s\n", adstring.c_str());
 	}
 
 
@@ -941,6 +940,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		negotiation = SEC_REQ_OPTIONAL;
 		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming OPTIONAL.\n");
 	}
+
 
 	sec_feat_act negotiate = sec_req_to_feat_act(negotiation);
 	if (negotiate == SEC_FEAT_ACT_NO) {
@@ -1094,7 +1094,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
     v.Clear();  
     v.SetIntegerValue(cmd);
     auth_info.Insert(string(ATTR_SEC_COMMAND), Literal::MakeLiteral(v));
-	dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
+	dprintf(D_SECURITY, "SECMAN: inserted '%s = %d'\n", ATTR_SEC_COMMAND, cmd);
 
 
 	if (cmd == DC_AUTHENTICATE) {
@@ -1150,7 +1150,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			// suck.
 
 			dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
-			//auth_info.dPrint( D_SECURITY );
 			return false;
 		}
 
@@ -1243,17 +1242,17 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 	if (DebugFlags & D_FULLDEBUG) {
 		dprintf ( D_SECURITY, "SECMAN: sending following classad:\n");
-		//auth_info.dPrint ( D_SECURITY );
+		string adstring;
+		unp.Unparse(adstring, &auth_info);
+		dprintf(D_SECURITY, "%s\n", adstring.c_str());
 	}
+	
 
 	// send the classad
-
-    /* Needs work Hao
-	if (! auth_info.put(*sock)) {
-		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
+	if( !putOldClassAd(sock, auth_info) ) {
+		dprintf(D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		return false;
 	}
-    */
 
 	if (is_tcp) {
 
@@ -1269,18 +1268,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			ClassAd auth_response;
 			sock->decode();
-            /* Needs work
-			if (!auth_response.initFromStream(*sock) ||
-				!sock->end_of_message() ) {
 
-				dprintf ( D_ALWAYS, "SECMAN: server did not respond, failing\n");
+
+			if( !getOldClassAd(sock, auth_response) || !sock->eom() ) {
+				dprintf(D_ALWAYS, "SECMAN: server did not respond, failing\n");
 				return false;
 			}
-            */
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf ( D_SECURITY, "SECMAN: server responded with:\n");
-				//auth_response.dPrint( D_SECURITY );
+				string adstring;
+				unp.Unparse(adstring, &auth_response);
+				dprintf(D_SECURITY, "%s\n", adstring.c_str());
 			}
 
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
@@ -1297,7 +1296,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			auth_info.Delete(ATTR_SEC_NEW_SESSION);
 
             v.Clear();
-            v.SetStringValue("\"YES\"");
+            v.SetStringValue("YES");
 			auth_info.Insert(string(ATTR_SEC_USE_SESSION), Literal::MakeLiteral(v));
 
 			sock->encode();
@@ -1318,12 +1317,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			// missing some essential info.
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
-			//auth_info.dPrint( D_SECURITY );
 			return false;
 		}
 
 		
-
 		// at this point, we know exactly what needs to happen.  if we asked
 		// the other side, their choice is in will_authenticate.  if we
 		// didn't ask, then our choice is in will_authenticate.
@@ -1341,8 +1338,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
 			string auth_method;
-			if (auth_info.EvaluateAttrString( ATTR_SEC_AUTHENTICATION_METHODS, auth_method ) &&
-                (auth_method.length() > 0)) {
+			if ( !auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS,
+											  auth_method ) ||
+                 auth_method.length() <= 0 ) {
 				// there's no auth method.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				return false;
@@ -1415,17 +1413,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			ClassAd post_auth_info;
 			sock->decode();
-            /* Needs work Hao
-			if (!post_auth_info.initFromStream(*sock) || !sock->eom()) {
-				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
+
+			if( !getOldClassAd(sock, post_auth_info) || !sock->eom() ) {
+				dprintf (D_ALWAYS, "SECMAN: could not receive session info, "
+						 "failing!\n");
 				return false;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "SECMAN: received post-auth classad:\n");
+					dprintf(D_SECURITY, "SECMAN: received post-auth "
+							"classad:\n");
 					//post_auth_info.dPrint (D_SECURITY);
 				}
 			}
-            */
 
 			// bring in the session ID
 			sec_copy_attribute( auth_info, post_auth_info, ATTR_SEC_SID );
@@ -1436,38 +1435,40 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
-				//auth_info.dPrint(D_SECURITY);
+				string adstring;
+				unp.Unparse(adstring, &auth_info);
+				dprintf(D_SECURITY, "%s\n", adstring.c_str());
 			}
 
             string sid;
-			if (auth_info.EvaluateAttrString(ATTR_SEC_SID, sid) &&
-                (sid.length() > 0)) {
+			if ( !auth_info.EvaluateAttrString(ATTR_SEC_SID, sid) ||
+                 sid.length() <= 0 ) {
 				return FALSE;
 			}
 
 			string cmd_list;
-			if (auth_info.EvaluateAttrString(ATTR_SEC_VALID_COMMANDS, cmd_list) &&
-                (cmd_list.length () > 0)) {
+			if ( !auth_info.EvaluateAttrString(ATTR_SEC_VALID_COMMANDS,
+											   cmd_list) ||
+				 cmd_list.length() <= 0 ) {
 				return FALSE;
 			}
-
 
 			ASSERT (enc_key == NULL);
 
 
 			// extract the session duration
-			string dur;
+			int sessdur = 0;
             int expiration_time = time(0);
-			if (auth_info.EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur) &&
-                (dur.length() > 0)) {
-                expiration_time += atoi((char*)dur.data());
-            }
+			auth_info.EvaluateAttrInt(ATTR_SEC_SESSION_DURATION,
+									  sessdur);
+			expiration_time += sessdur;
+
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
 			KeyCacheEntry tmp_key( (char*)sid.data(), sock->endpoint(), ki,
 								   &auth_info, expiration_time ); 
-			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %i seconds.\n", sid.data(), dur.data());
+			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %d seconds.\n", sid.data(), sessdur);
 
 			// stick the key in the cache
 			session_cache->insert(tmp_key);
