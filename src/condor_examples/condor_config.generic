@@ -1431,6 +1431,24 @@ GT3_GAHP = $(SBIN)/gt3_gahp
 ##
 GT3_LOCATION = $(LIB)/gt3
 
+##
+## The location of the wrapper for invoking
+## GT4 GAHP server
+##
+GT4_GAHP = $(SBIN)/gt4_gahp
+
+##
+## The location of GT4 files. This should normally be lib/gt4
+##
+GT4_LOCATION = $(LIB)/gt4
+
+##
+## gt4-gahp requires gridftp server. This should be the address of gridftp
+## server to use
+##
+
+GRIDFTP_URL_BASE = gsiftp://$(FULL_HOSTNAME)
+
 ## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
 ## about to expire.
 #MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
