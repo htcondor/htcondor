@@ -55,7 +55,7 @@ class AttrListElem
         ~AttrListElem() { delete tree; }	// destructor
 
         friend class AttrList;
-        friend class ClassAd;
+        //friend class ClassAd;
         friend class AttrListList;
   
     private :
@@ -63,7 +63,7 @@ class AttrListElem
         ExprTree*		tree;	// the tree pointed to by this element
 		int				dirty;	// has this tree been changed?
 		char*			name;	// the name of the tree
-        AttrListElem*	next;	// next element in the list
+        class AttrListElem*	next;	// next element in the list
 };
 
 class AttrListAbstract
@@ -74,7 +74,7 @@ class AttrListAbstract
 
 		friend	class		AttrList;
 		friend	class		AttrListList;
-		friend	class		ClassAd;
+		//friend	class		ClassAd;
 		friend	class		ClassAdList;
 
     protected :
@@ -84,8 +84,8 @@ class AttrListAbstract
 
 		int					type;		// type of this AttrList
 		class AttrListList*	inList;		// I'm in this AttrList list
-		AttrListAbstract*	next;		// next AttrList in the list
-		AttrListAbstract*	prev;		// previous AttrList in the list
+		class AttrListAbstract*	next;		// next AttrList in the list
+		class AttrListAbstract*	prev;		// previous AttrList in the list
 };
 
 class AttrListRep: public AttrListAbstract
@@ -151,10 +151,10 @@ class AttrList : public AttrListAbstract
         int         LookupBool(const char *, int &);
 
 		// evaluate values in classads
-		int         EvalString (const char *, AttrList *, char *);
-		int         EvalInteger (const char *, AttrList *, int &);
-		int         EvalFloat (const char *, AttrList *, float &);
-		int         EvalBool  (const char *, AttrList *, int &);
+		int         EvalString (const char *, class AttrList *, char *);
+		int         EvalInteger (const char *, class AttrList *, int &);
+		int         EvalFloat (const char *, class AttrList *, float &);
+		int         EvalBool  (const char *, class AttrList *, int &);
 
 		int			IsInList(AttrListList*);	// am I in this AttrList list?
 
@@ -177,7 +177,7 @@ class AttrList : public AttrListAbstract
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
-		friend	class	ClassAd;
+		//friend	class	ClassAd;
 
     protected :
 	    AttrListElem**	chainedAttrs;
@@ -220,7 +220,7 @@ class AttrListList
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 
       	friend	  	class		AttrList;
-      	friend	  	class		ClassAd;
+      	//friend	  	class		ClassAd;
   
     protected:
 
@@ -230,7 +230,7 @@ class AttrListList
         AttrListAbstract*	head;			// head of the list
         AttrListAbstract*	tail;			// tail of the list
         AttrListAbstract*	ptr;			// used by NextAttrList
-        AttrListList*		associatedAttrLists;	// associated AttrLists
+        class AttrListList*		associatedAttrLists;	// associated AttrLists
         int					length;			// length of the list
 };
 

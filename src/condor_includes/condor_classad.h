@@ -89,10 +89,10 @@ class ClassAd : public AttrList
 		int			GetSequenceNumber(void);
 
 		// Matching operations
-        int			IsAMatch(ClassAd*);			  // tests symmetric match
-		friend bool operator==(ClassAd&,ClassAd&);// same as symmetric match
-		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
-		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
+        int			IsAMatch(class ClassAd*);			  // tests symmetric match
+		friend bool operator==(class ClassAd&,class ClassAd&);// same as symmetric match
+		friend bool operator>=(class ClassAd&,class ClassAd&);// lhs satisfies rhs
+		friend bool operator<=(class ClassAd&,class ClassAd&);// rhs satisifes lhs
 
         // shipping functions -- added by Lei Cao
         int put(Stream& s);
@@ -106,11 +106,11 @@ class ClassAd : public AttrList
 #endif
 
 		// misc
-		ClassAd*	FindNext();
+		class ClassAd*	FindNext();
         virtual int	fPrint(FILE*);				// print the AttrList to a file
 
 		// poor man's update function until ClassAd Update Protocol  --RR
-		 void ExchangeExpressions (ClassAd *);
+		 void ExchangeExpressions (class ClassAd *);
 
     private :
 
