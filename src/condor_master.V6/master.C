@@ -391,6 +391,7 @@ init_params()
 		EXCEPT( "MAIL not specified in config file" ); 
 	}
 
+	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
 	if( tmp ) {
 		if( *tmp == 'f' || *tmp == 'F' ) {
@@ -400,19 +401,14 @@ init_params()
 			StartDaemons = FALSE;
 		}
 		free( tmp );
-	} else {
-		dprintf( D_ALWAYS, 
-				 "START_DAEMONS flag was not set.  Not starting daemons.\n" );
-		StartDaemons = FALSE;
-	}
+	} 
 
+	PublishObituaries = TRUE;
 	tmp = param("PUBLISH_OBITUARIES");
-	if( tmp && (*tmp == 't' || *tmp == 'T') ) {
-		PublishObituaries = TRUE;
-	} else {
-		PublishObituaries = FALSE;
-	}
 	if( tmp ) {
+		if( (*tmp == 'f' || *tmp == 'F') ) {
+			PublishObituaries = FALSE;
+		}
 		free( tmp );
 	}
 
