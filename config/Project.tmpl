@@ -33,10 +33,20 @@ X11_INCLUDE = X11Include
 X11_INCLUDE =           /usr/X11R6/include	
 #endif
 
+#if !defined( CLinker )
+#define CLinker CCompiler
+#endif
+
+#if !defined( CPlusLinker )
+#define CPlusLinker CPlusCompiler
+#endif
+
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
 CC = CCompiler
+C_LINK = CLinker
 CPlusPlus = CPlusCompiler
+CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *

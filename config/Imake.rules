@@ -83,7 +83,7 @@ clean::							@@\
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
 program: objlist libs						@@\
-	$(CC) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	$(C_LINK) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::								@@\
 	rm -f program objlist
 #endif  program_target
@@ -95,7 +95,7 @@ clean::								@@\
 #ifndef c_plus_target
 #define	c_plus_target( program, objlist, libs )			@@\
 program: objlist libs						@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs \
+	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
 clean::								@@\
 	rm -f program objlist
@@ -271,7 +271,7 @@ $(STRIP_DIR)/##dir##/##dest##: src			@@\
 #ifndef	static_target
 #define	static_target( program, objlist, libs, dir )		@@\
 dir##/##program: objlist libs					@@\
-	$(CPlusPlus) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 	strip program##.static					@@\
 	/bin/rm -f dir##/##program				@@\
 	cp program##.static dir##/##program			@@\
@@ -450,20 +450,20 @@ static_dir/##name##: static					@@\
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purecov -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
+	purecov -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs						@@\
-	quantify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
+	quantify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
 clean::		 						@@\
 	rm -f program objlist
 
