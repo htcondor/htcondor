@@ -32,22 +32,35 @@
 
 #define MAIL_PROG "/bin/mail"
 
+#if defined(NEW_PROC)
+extern "C" char *param(char *);
+#endif
+
 static
 int condor_open_mailto_url( const char *name, int flags, 
 									   size_t n_bytes )
 {
-	char	*mail_prog;
+	char	*mail_prog = 0;
 	char	filter_url[1000];
 
 	if( flags != O_WRONLY ) {
 		return -1;
 	} 
 
-#if !defined(MAIL_PROG)
+#if defined(NEW_PROC)	/* Detect compilation for Condor */
 	mail_prog = param("MAIL");
-#else
-	mail_prog = MAIL_PROG;
 #endif
+
+#if defined(MAIL_PROG)
+	if (mail_prog == 0) {
+		mail_prog = MAIL_PROG;
+	}
+#endif
+
+	if (mail_prog == 0) {
+		return -1;
+	}
+
 	sprintf(filter_url, "filter:%s %s", mail_prog, name);
 	return open_url(filter_url, flags, n_bytes);
 }
