@@ -797,15 +797,15 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( condorState == RUNNING ) {
 				condorState = IDLE;
-				schedd_actions = UA_UPDATE_CONDOR_STATE;
+				schedd_actions |= UA_UPDATE_CONDOR_STATE;
 			}
 			if ( localOutput && syncedOutputSize > 0 ) {
 				syncedOutputSize = 0;
-				schedd_actions = UA_UPDATE_STDOUT_SIZE;
+				schedd_actions |= UA_UPDATE_STDOUT_SIZE;
 			}
 			if ( localError && syncedErrorSize > 0 ) {
 				syncedErrorSize = 0;
-				schedd_actions = UA_UPDATE_STDERR_SIZE;
+				schedd_actions |= UA_UPDATE_STDERR_SIZE;
 			}
 			// If there are no updates to be done when we first enter this
 			// state, addScheddUpdateAction will return done immediately
