@@ -35,6 +35,11 @@ CBUILD($(CC),job_rsc_fcntl_std,c)
 RUN(job_rsc_fcntl_std)
 TESTCLASS(job_rsc_fcntl_std,quick)
 
+DESC(job_rsc_truncate_std,"Can we truncate files with open() remotely?")
+CBUILD($(CC),job_rsc_truncate_std,c)
+RUN(job_rsc_truncate_std)
+TESTCLASS(job_rsc_truncate_std,quick)
+
 #if HAS_GETDIRENTRIES && ! IS_HPUX
 /* even though HPUX has getdirentries(), our test program doesn't
    build a valid test for it and the code is all #ifdef'ed out.  so,
