@@ -973,36 +973,30 @@ which is the usual method to nicely terminate a Unix program.
 \index{AFS!interaction with}
 The Condor daemons do not run authenticated to AFS; they do not possess
 AFS tokens.
-Therefore, no child process of Condor will be AFS
-authenticated.
-The implication of this is
-that you must set file permissions so
+Therefore, no child process of Condor will be AFS authenticated.
+The implication of this is that you must set file permissions so
 that your job can access any necessary files residing on an AFS volume
 without relying on having your AFS permissions.
 
 If a job you submit to Condor needs to access files residing in AFS,
 you have the following choices:
 \begin{enumerate}
-\item Copy the needed files from AFS to either a local hard disk where Condor 
-can access them using remote system calls (if
+\item Copy the needed files from AFS to either a local hard disk where 
+Condor can access them using remote system calls (if
 this is a standard universe job), or copy them to an NFS volume.
 \item If you must keep the files on AFS, then set a host ACL
 (using the AFS \Prog{fs setacl} command) on the subdirectory to
 serve as the current working directory for the job.
 If a standard universe job, then the host ACL needs
-to give read/write permission
-to any process on the submit machine.
-If vanilla universe job,
-then you need to set the ACL such that any host in the pool can
-access the files without being authenticated.
-If you do not know how to
-use an AFS host ACL, ask ther person at your site responsible for the
-AFS configuration.
+to give read/write permission to any process on the submit machine.
+If vanilla universe job, then you need to set the ACL such that any host 
+in the pool can access the files without being authenticated.
+If you do not know how to use an AFS host ACL, ask ther person at your 
+site responsible for the AFS configuration.
 \end{enumerate}
 
-The Condor Team hopes to improve upon
-how Condor deals with AFS authentication
-in a subsequent release.
+The Condor Team hopes to improve upon how Condor deals with AFS 
+authentication in a subsequent release.
 
 Please see section~\ref{sec:Condor-AFS-Users} on
 page~\pageref{sec:Condor-AFS-Users} in the Administrators Manual for
@@ -1034,6 +1028,49 @@ submit description file solves the problem.
 \begin{verbatim}
         initialdir = /home/johndoe
 \end{verbatim}
+
+\subsection{Using Globus software with Condor}
+\index{universe!Globus}
+\index{Globus!Interaction considerations}
+Use of the Globus project software \Url{http://www.globus.org} with
+Condor affects these issues:
+
+\item[GSS Authentication] Is an option only in special versions of Condor,
+available by request only, due to cryptographic software export controls
+and Condor distribution policy.
+Sites running the Condor software distributed with GSS-Authentication can 
+set up their own Certification Authority (CA) by running the 
+\Prog{create_ca} script. 
+Once the CA is set up, the \Condor{ca} script is used to generate 
+certificates for the Condor daemons (e.g., \Condor{schedd}) and to sign
+user and daemon certificates. Users can generate certificate requests
+and other needed files with the \Condor{cert} program.
+An X509 certificate directory pointed to by the submit description file 
+variable \Arg{x509CertDir} indicates a client program which can use GSS
+authentication as a possible authentication method. Alternately, the
+environment variables \Env{X509_CERT_DIR}, \Env{X509_USER_CERT},
+\Env{X509_USER_KEY} can be used to override the default filenames and 
+locations.
+\Note{the AUTHENTICATION_METHOD configuration value list must contain 
+the value 'GSS' for GSS authentication to be attempted.}
+
+\item[Submitting to the Globus Universe] \index{Globus!Globus universe}
+\index{universe!Globus}
+requires Globus version 1.1, as well as a valid Globus X509 certificate. 
+The default location for the necessary files is $HOME/.globus, but they 
+can be overridden by setting the X509_* variables in your enviroment 
+or the submit description file.
+\Note{AFS issues apply here, so you may have to copy your certificate,
+trusted certificates directory, private key, and proxy to a local
+filesystem disk.}
+
+\item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
+Globus X509 certificate, and the PATH to the \Prog{globusrun} program 
+must be in your environment.
+\Note{to allow a globus resource to join your Condor pool, your 
+administrator must add the hostname(s) to the HOSTALLOW_WRITE and
+HOSTALLOW_READ configuration values.}
+
 
 \subsection{Condor Daemons That Do Not Run as root}
 
