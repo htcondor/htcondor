@@ -49,16 +49,8 @@ Various non-POSIX conforming files which depend on sys/types.h will
 need these extra definitions...
 */
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53)
 #	define HAS_U_TYPES
-#endif
-
-#if defined(LINUX)
-#	define HAS_U_TYPES
-#endif
-
-#if defined(Solaris)
-#       define HAS_U_TYPES
 #endif
 
 #if !defined(HAS_U_TYPES)  /*  || defined(Solaris)   */
