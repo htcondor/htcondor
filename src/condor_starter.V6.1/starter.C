@@ -574,7 +574,6 @@ CStarter::Reaper(int pid, int exit_status)
 				// so, we can directly call allJobsDone() to do final
 				// cleanup.
 			allJobsDone();
-			return TRUE;
 		}
 	}
 
