@@ -46,6 +46,7 @@
 #elif defined(HPUX9)
 #	undef _DEFINE_FD_SET
 #elif defined(LINUX)
+#	include <sys/time.h>		/* for struct timeval */
 #	undef _DEFINE_FD_SET
 #elif defined( AIX32 )
 #	include <sys/select.h>
