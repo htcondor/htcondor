@@ -241,16 +241,16 @@ main_init( int argc, char* argv[] )
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
 								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler" );
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler" );
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_OFF, "DAEMONS_OFF",
 								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler" );
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
 								  (CommandHandler)admin_command_handler, 
-								  "admin_command_handler" );
+								  "admin_command_handler", 0, ADMINISTRATOR );
 
 	_EXCEPT_Cleanup = DoCleanup;
 
