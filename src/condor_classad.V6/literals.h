@@ -58,7 +58,7 @@ class Literal : public ExprTree
 		 * system's current time will be used.
 		 * @return The literal expression of the relative time (t1 - t2).
 		 */
-		static Literal* MakeRelTime( time_t t1=-1, time_t t2=-1 );
+		static Literal* MakeRelTime( time_t t1, time_t t2 );
 
 		virtual Literal* Copy( ) const;
 
