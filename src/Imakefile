@@ -99,7 +99,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 
 ALL_TEST_SUITE = $(TEST_SUITE_C) $(TEST_SUITE_F) $(TEST_SUITE_JAVA) $(TEST_SUITE_BASE)
 
-test_suite: all $(ALL_TEST_SUITE)
+test_suite: $(ALL_TEST_SUITE)
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
