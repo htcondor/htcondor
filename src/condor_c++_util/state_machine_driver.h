@@ -15,8 +15,8 @@
 /* pointer to function taking no args and returning an integer */
 typedef int (*STATE_FUNC)();
 
-/* pointer to function taking no args and returning void */
-typedef void (*TRANS_FUNC)();
+/* pointer to function taking no args and returning int */
+typedef int (*TRANS_FUNC)();
 
 class State {
 public:

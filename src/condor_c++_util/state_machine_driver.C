@@ -157,7 +157,11 @@ fsa_sig_handler( int event )
 	if( transition->func ) {
 		dprintf( D_ALWAYS, "\t*FSM* Executing transition function \"%s\"\n",
 					TransFuncNames.get_name((long)transition->func) );
-		transition->func();
+		if ( transition->func() == -2 ) {
+			dprintf( D_ALWAYS,"\t*FSM* Aborting transition function \"%s\"\n",
+					TransFuncNames.get_name((long)transition->func) );
+			return;
+		}
 	}
 	if( transition->to ) {
 		siglongjmp( JmpBuf, transition->to );
