@@ -191,6 +191,8 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	bool wants_stream = false;
 	const char* name = NULL;
 	bool is_output = true;
+	bool is_null_file = false;
+
 
 		///////////////////////////////////////////////////////
 		// Figure out what we're trying to open, if anything
@@ -228,42 +230,17 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		}
 	}
 
-
-		///////////////////////////////////////////////////////
-		// Deal with the "nothing-specified" case
-		///////////////////////////////////////////////////////
-
 	if( ! filename ) {
-		switch( type ) {
-		case SFT_IN:
-			fd = open( NULL_FILE, O_RDONLY );
-			break;
-		case SFT_OUT:
-		case SFT_ERR:
-			fd = open( NULL_FILE, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-			if( fd < 0 ) {
-				// if failed, try again without O_TRUNC
-				fd = open( NULL_FILE, O_WRONLY|O_CREAT, 0666 );
-			}
-			break;
-		}
-		if( fd < 0 ) {
-			char const *errno_str = strerror( errno );
-			MyString err_msg;
-			err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
-							 NULL_FILE, phrase, errno_str, errno );
-			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-			Starter->jic->notifyStarterError( err_msg.Value(), true );
-			return -1;
-		}
-			// if we're here, we successfully opened the NULL file, so
-			// we can safely return the fd
-		return fd;
+			// If there's nothing specified, we always want to open
+			// the system-appropriate NULL file (/dev/null or NUL).
+			// Otherwise, we can treat this just there's a filename.
+		filename = NULL_FILE;
+		is_null_file = true;
 	}
 
 
 		///////////////////////////////////////////////////////
-		// Deal with other special cases
+		// Deal with special cases
 		///////////////////////////////////////////////////////
 
 		////////////////////////////////////
@@ -295,7 +272,7 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		//////////////////////
 		// Use streaming I/O
 		//////////////////////
-	if( wants_stream ) {
+	if( wants_stream && ! is_null_file ) {
 		StreamHandler *handler = new StreamHandler;
 		if( !handler->Init(filename, name, is_output) ) {
 			MyString err_msg;
@@ -326,13 +303,14 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	if( fd < 0 ) {
 		char const *errno_str = strerror( errno );
 		MyString err_msg;
-		err_msg.sprintf( "Failed to open %s file '%s': %s (errno %d)",
-						 phrase, filename, errno_str, errno );
+		err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
+						 filename, phrase, errno_str, errno );
 		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 		Starter->jic->notifyStarterError( err_msg.Value(), true );
 		return -1;
 	}
-	dprintf( D_ALWAYS, "%s: %s\n", log_header, filename );
+	dprintf( is_null_file ? D_FULLDEBUG : D_ALWAYS,
+			 "%s: %s\n", log_header, filename );
 	return fd;
 }
 
