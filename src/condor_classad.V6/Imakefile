@@ -72,7 +72,7 @@ LIB = $(LIB_BASE)
 #endif
 
 /* the main condor library target */
-all_target(libclassad.a classad_functional_tester classad_unit_tester classad_version test_classads test_xml extra_tests)
+all_target(libclassad.a classad_functional_tester classad_unit_tester classad_version test_xml extra_tests)
 library_target(libclassad.a,$(OBJ))
 
 release:: all

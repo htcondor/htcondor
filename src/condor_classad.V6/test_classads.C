@@ -21,6 +21,18 @@
  *
  *********************************************************************/
 
+/*--------------------------------------------------------------------
+ *
+ * test_classads.C is now deprecated and unused. 
+ * It has been replaced by two other test programs:
+ *    classad_functional_tester
+ *    classad_unit_tester
+ * For now, I'm leaving this program accessible in CVS, but it will
+ * not be compiled by default, and it will no longer be distributed
+ * as part of the ClassAd distribution. 
+ *
+ *--------------------------------------------------------------------*/
+
 #if defined( CLASSAD_DISTRIBUTION )
 #include "classad_distribution.h"
 #else
