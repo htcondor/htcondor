@@ -161,7 +161,7 @@ reserve_for_fs()
 	char	*str;
 
 	if( answer < 0 ) {
-		dprintf( D_ALWAYS, "Looking up RESERVED_DISK parameter\n" );
+		dprintf( D_FULLDEBUG, "Looking up RESERVED_DISK parameter\n" );
 		str = param( "RESERVED_DISK" );
 		if( str ) {
 			answer = atoi( str ) * 1024;	/* Parameter is in meg */
@@ -273,8 +273,8 @@ char *filename;
 #include <sys/mount.h>
 #endif
 
-
-#if defined(IRIX331) || defined(Solaris) || defined(IRIX53)
+#if defined(IRIX331) || defined(IRIX53)
+/* There is no f_bavail on IRIX */
 #define f_bavail f_bfree
 #endif
 
@@ -307,10 +307,18 @@ char *filename;
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
 	/* fix the overflow problem. weiru */
+
+#if defined(Solaris)
+		/* On Solaris, we need to use f_frsize, the "fundamental
+		   filesystem block size", not f_bsize, the "preferred file
+		   system block size".  3/25/98  Derek Wright */
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / (float)1024 );
+#else
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
+#endif
+
 	free_kbytes = (unsigned long)statfsbuf.f_bavail * kbytes_per_block; 
-	if(free_kbytes > 0x7fffffff)
-	{
+	if(free_kbytes > 0x7fffffff) {
 		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
 		return(LOTS_OF_FREE);
 	}
