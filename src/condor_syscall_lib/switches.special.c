@@ -363,10 +363,11 @@ of whatever magic is implemented there.
 
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
-ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
-#else
+#elif defined(Solaris251)
 int readv( int fd, struct iovec *iov, int iovcnt )
+#else
+/* Confirmed for IRIX, OSF1, HPUX10, Solaris26, Solaris27 */
+ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #endif
 {
 	int i, rval = 0, cc;
