@@ -31,8 +31,8 @@
 #endif
 
 #if defined( IS_HPUX10 )
-#	define PlatformIncludeFile <HPPAR_HPUX.cf>
-#	define OSVersionIncludeFile <HPPAR_HPUX10.cf>
+#	define PlatformIncludeFile <HPUX.cf>
+#	define OSVersionIncludeFile <HPUX10.cf>
 #	undef IS_HPUX10
 #endif
 
