@@ -265,7 +265,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 						ClassAdList &startdPvtAds)
 {
 	CondorQuery startdQuery    (STARTD_AD);
-	CondorQuery scheddQuery    (SCHEDD_AD);
+	CondorQuery scheddQuery    (SUBMITTOR_AD);
 	CondorQuery startdPvtQuery (STARTD_PVT_AD);
 	QueryResult result;
 	char buffer[1024];
