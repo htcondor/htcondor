@@ -168,9 +168,6 @@ init_user_ids(const char username[], const char domain[])
 {
 	int retval = 0;
 
-	dprintf(D_ALWAYS,
-		"entering init_user_ids()...watch out.\n");
-	
 	if (!username || !domain) {
 		dprintf(D_ALWAYS, "WARNING: init_user_ids() called with"
 			   " NULL arguments!");
