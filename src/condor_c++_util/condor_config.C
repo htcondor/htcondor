@@ -65,7 +65,7 @@ int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
 int SetSyscalls(int);
-#if defined(LINUX)
+#if defined(LINUX) || defined(HPUX9)
     int gethostname(char*, unsigned int);
 #else
     int gethostname(char*, int);
