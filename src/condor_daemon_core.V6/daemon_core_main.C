@@ -24,8 +24,10 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "basename.h"
 #include "condor_version.h"
 #include "limit.h"
+#include "sig_install.h"
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;  // used by EXCEPT 
@@ -143,7 +145,7 @@ drop_pid_file()
 	}
 
 	if( (PID_FILE = fopen(pidFile, "w")) ) {
-		fprintf( PID_FILE, "%d\n", daemonCore->getpid() );
+		fprintf( PID_FILE, "%lu\n", daemonCore->getpid() );
 		fclose( PID_FILE );
 	} else {
 		dprintf( D_ALWAYS,
@@ -158,7 +160,7 @@ do_kill()
 {
 #ifndef WIN32
 	FILE	*PID_FILE;
-	int 	pid = 0;
+	pid_t 	pid = 0;
 	char	*log, *tmp;
 
 	if( !pidFile ) {
@@ -177,7 +179,7 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = fopen(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%d", &pid ); 
+		fscanf( PID_FILE, "%lu", &pid ); 
 		fclose( PID_FILE );
 	} else {
 		fprintf( stderr, 
@@ -189,7 +191,7 @@ do_kill()
 			// We have a valid pid, try to kill it.
 		if( kill(pid, SIGTERM) < 0 ) {
 			fprintf( stderr, 
-					 "DaemonCore: ERROR: can't send SIGTERM to pid (%d)\n",  
+					 "DaemonCore: ERROR: can't send SIGTERM to pid (%lu)\n",  
 					 pid );
 			fprintf( stderr, 
 					 "\terrno: %d (%s)\n", errno, strerror(errno) );
@@ -205,7 +207,7 @@ do_kill()
 		exit( 0 );
 	} else {  	// Invalid pid
 		fprintf( stderr, 
-				 "DaemonCore: ERROR: pid (%d) in pid file (%s) is invalid.\n",
+				 "DaemonCore: ERROR: pid (%lu) in pid file (%s) is invalid.\n",
 				 pid, pidFile );	
 		exit( 1 );
 	}
@@ -505,12 +507,7 @@ int main( int argc, char** argv )
 	}
 
 		// set myName to be argv[0] with the path stripped off
-	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
-		ptmp=strrchr(argv[0],'\\');
-	if ( ptmp )
-		myName = ++ptmp;
-	else
-		myName = argv[0];
+	myName = basename(argv[0]);
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
@@ -761,30 +758,8 @@ int main( int argc, char** argv )
 			}
 			if ( command_port == -1 ) {
 				// choose any old port (dynamic port)
-				if ( !rsock->bind() ) {
-					EXCEPT("Failed to bind to command AuthSock");
-				}
-				// now open a SafeSock _on the same port_ choosen above
-				if ( !ssock->bind(rsock->get_port()) ) {
-					// failed to bind on the same port -- find free UDP port first
-					if ( !ssock->bind() ) {
-						EXCEPT("Failed to bind on SafeSock");
-					}
-					rsock->close();
-					if ( !rsock->bind(ssock->get_port()) ) {
-						// failed again -- keep trying
-						bool bind_succeeded = false;
-						for (int temp_port=1024; !bind_succeeded && temp_port < 4096; temp_port++) {
-							rsock->close();
-							ssock->close();
-							if ( rsock->bind(temp_port) && ssock->bind(temp_port) ) {
-								bind_succeeded = true;
-							}
-						}
-						if (!bind_succeeded) {
-							EXCEPT("Failed to find available port for command sockets");
-						}
-					}
+				if (!BindAnyCommandPort(rsock, ssock)) {
+					EXCEPT("BindAnyCommandPort failed");
 				}
 				if ( !rsock->listen() ) {
 					EXCEPT("Failed to post listen on command AuthSock");
@@ -809,7 +784,10 @@ int main( int argc, char** argv )
 			}
 		}
 
-		// now register these new command sockets
+		// now register these new command sockets.
+		// Note: In other parts of the code, we assume that the
+		// first command socket registered is TCP, so we must
+		// register the rsock socket first.
 		daemonCore->Register_Command_Socket( (Stream*)rsock );
 		daemonCore->Register_Command_Socket( (Stream*)ssock );		
 
@@ -845,6 +823,11 @@ int main( int argc, char** argv )
 	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm" );
+#ifndef WIN32
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
+								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
+								 "HandleDC_SIGCHLD",daemonCore,IMMEDIATE_FAMILY);
+#endif
 
 		// Install handler for the CONFIG_VAL 
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
