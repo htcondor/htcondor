@@ -73,7 +73,7 @@ va_dcl
 
 #define MAX_ERROR 512
 static char	*Error[MAX_ERROR];
-static int	N_Errors;
+static int	N_Errors=0;
 
 void
 add_error_string( const char *str )
@@ -90,7 +90,8 @@ display_errors( FILE *fp )
 	int		i;
 
 	for( i=0; i<N_Errors; i++ ) {
-		fprintf( fp, Error[i] );
+		if (Error[i] != NULL)
+			fprintf( fp, Error[i] );
 	}
 	if( N_Errors > 0 ) {
 		fprintf( fp, "\n" );
