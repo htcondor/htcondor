@@ -182,7 +182,7 @@ get_time()
 	if( gettimeofday( &tv, 0 ) < 0 ) {
 		dprintf( D_ALWAYS, "gettimeofday failed in get_time(): %s\n",
 				 strerror(errno) );
-		Suicide();
+		return 0.0;
 	}
 
 	return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;
