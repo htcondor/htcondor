@@ -36,7 +36,7 @@ enum TagName
 	tag_Bool,
 	tag_Undefined,
 	tag_Error,
-	tag_Time, // invalid for old ClassAds, but we should recognize it.
+	tag_Time,
 	tag_List, // invalid for old ClassAds, but we should recognize it.
 	tag_Expr,
 	tag_NoTag,
