@@ -12,7 +12,7 @@ if ( $ModuleName =~ /\/([^\/]+)$/ )
 }
 
 # Config stuff
-sub DoConfig( );
+# sub DoConfig( );
 sub DoConfig( )
 {
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );

@@ -67,7 +67,7 @@ $SIG{TERM} = sub {
 };
 $SIG{CHLD} = sub {
     my $Pid = wait ();
-    if ( $Pid == $TopPid ) {
+    if ( ( $Pid > 0 ) && ( $Pid == $TopPid ) ) {
 	print STDERR "\"top\" process $Pid died\n";
     }
 };
@@ -111,6 +111,7 @@ Init();
 
 sub Init {
 
+    # Do the initial configuration stuff
     HawkeyeLib::DoConfig( );
 
     # Parse command line args
@@ -131,7 +132,7 @@ sub Init {
     $Hawkeye->AutoIndexSet( 0 );
 
     # Pull out the top 'header' info
-    $_ =`/bin/top -b -n 1 |grep COMMAND`;
+    $_ =`top -b -n 1 |grep COMMAND`;
     chomp;
     s/^\s+//;
     @TopHeader = split ( /\s+/, $_ );
@@ -475,6 +476,8 @@ sub ProcessData
 		#    return (  ( @{$ProcessHash{$b}}[$SortOffset] ) <=>
 		#	      ( @{$ProcessHash{$a}}[$SortOffset] )  );
 		#};
+	    die "Sort order undefined" if ( ! defined $SO );
+	    die "Bad sort order '$SO'" if ( $SO =~ /^\D/ );
 	    my @Keys = keys %{$ProcessHash};
 	    @SortedProcs = sort
 	    { @{$ProcessHash->{$a}}[$SO] <=> @{$ProcessHash->{$b}}[$SO] }
