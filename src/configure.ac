@@ -371,15 +371,18 @@ AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh")
 # Check for command-line arguments and environment variables
 ############################################################
 
+ac_cv_has_externals=YES
+ac_cv_externals=none
 AC_ARG_WITH(externals,
  AC_HELP_STRING([--with-externals=DIR],
    [Root of directory tree for external programs needed for building Condor (default is to search in ../externals)]),
  [if test $withval = no; then
-    AC_MSG_WARN([You can not use --without-externals or use "no"])
-    AC_MSG_ERROR([--with-externals must define a directory (see --help)])
+    AC_MSG_WARN([By not using --with-externals, most of Condor will not build])
+    ac_cv_has_externals=NO
+  else
+    CONDOR_VERIFY_EXTERNALS_DIR([$withval],
+      [directory specified with --with-externals ($withval) is not valid])
   fi
-  CONDOR_VERIFY_EXTERNALS_DIR([$withval],
-    [directory specified with --with-externals ($withval) is not valid])
  ],
  [
   # nothing specified, try ../externals.  using this as a default
@@ -396,6 +399,7 @@ AC_ARG_WITH(externals,
   fi
  ]
 )
+AC_SUBST(has_externals,$ac_cv_has_externals)
 AC_SUBST(ext_root,$ac_cv_externals)
 
 # Now, try to find condor_analyze binaries.  In any directory we're
@@ -431,7 +435,9 @@ AC_ARG_WITH(condor_analyze,
   fi
  ],
  [
-  CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  if test $ac_cv_has_externals = "YES" ; then
+    CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  fi
   if test $ac_has_condor_analyze = "NO" ; then
     CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
   fi
@@ -1110,8 +1116,8 @@ fi
 ############################################################
 # What versions of what externals do we need
 ############################################################
+if test $ac_cv_has_externals = "YES" ; then
 AC_MSG_NOTICE([determining versions of external packages])
-
 
 # For now, we hardcode that non-i386 platforms are clipped and don't
 # need an external glibc for anything...
@@ -1199,6 +1205,13 @@ _cv_ext_pvm_version="pvm-3.4.2"
 AC_MSG_RESULT([$_cv_ext_pvm_version])
 AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
 
+else
+# if there's no externals at all, we still need to define these to
+# avoid imake troubles...
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+# end of if $ac_cv_has_externals = "YES" 
 
 ############################################################
 # Configure-generated output
