@@ -22,34 +22,49 @@
 ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
-** Author:  Mike Litzkow
+** Author:  Derek Wright
 **
 */ 
 
 #include "condor_common.h"
+
 #if !defined(WIN32)
-#define _POSIX_SOURCE
-#include "condor_fix_utsname.h"
+#include <netdb.h>
 #endif
 
-/*
-  Return our hostname in a static data buffer.
-*/
+
+// Return our hostname in a static data buffer.
 char *
 my_hostname()
 {
-#if defined(WIN32)
 	static char hostname[1024];
-	if (gethostname(hostname, sizeof(hostname)) == 0)
+	if( gethostname(hostname, sizeof(hostname)) == 0 ) {
 		return hostname;
-	else
-		return 0;
-#else
-	static struct utsname	uname_buf;
-
-	if( uname(&uname_buf) < 0 ) {
-		return 0;
+	} else {
+		return NULL;
 	}
-	return uname_buf.nodename;
-#endif
+}
+
+
+// Return our full hostname (with domain) in a static data buffer.
+char*
+my_full_hostname()
+{
+	static char hostname[1024];
+	char this_host[1024];
+	struct hostent *host_ptr;
+
+		// determine our own host name 
+	if( gethostname(this_host, sizeof(this_host)) < 0 ) {
+		return NULL;
+	}
+
+	/* Look up out official host information */
+	if( (host_ptr = gethostbyname(this_host)) == NULL ) {
+		return NULL;
+	}
+
+	/* copy out the official hostname */
+	strcpy(hostname, host_ptr->h_name);
+	return hostname;
 }
