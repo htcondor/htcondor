@@ -77,6 +77,8 @@ const mode_t LOCAL_DIR_MODE =
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+extern char	*Execute;			// Name of directory where user procs execute
+
 extern "C" {
 	void _updateckpt( char *, char *, char * );
 	int free_fs_blocks(char *filename);
@@ -86,7 +88,7 @@ extern "C" {
   With bytestream checkpointing, there is no updating of checkpoints - the
   user process does everything on its own.
 */
-#if defined(OSF1)
+#if defined(OSF1) && !defined(NO_CKPT)
 extern "C" {
 void
 _updateckpt( char *a, char *b, char *c )
@@ -633,6 +635,7 @@ UserProc::execute()
 	long	arg_max;
 	char	*tmp;
 	char	a_out_name[ _POSIX_PATH_MAX ];
+	char	shortname[ _POSIX_PATH_MAX ];
 	int		user_syscall_fd;
 #if defined(OSF1)
 	const	int READ_END = 0;
@@ -642,13 +645,10 @@ UserProc::execute()
 	FILE	*cmd_fp;
 	char	buf[128];
 	int		wait_for = TRUE;
+	int		fd;
 
-	dprintf( D_ALWAYS, "Entering UserProc::execute() - OSF1 defined\n" );
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
-	dprintf( D_ALWAYS, "Orig pipe_fds[%d,%d]\n", pipe_fds[0], pipe_fds[1] );
-#else
-	dprintf( D_ALWAYS, "Entering UserProc::execute() - OSF1 NOT defined\n" );
 #endif
 
 		// We will use mkargv() which modifies its arguments in place
@@ -659,7 +659,8 @@ UserProc::execute()
 	tmp = new char [arg_max];
 	strncpy( tmp, args, arg_max );
 
-	sprintf( a_out_name, "condor_exec.%d.%d", cluster, proc );
+	sprintf( shortname, "condor_exec.%d.%d", cluster, proc );
+	sprintf( a_out_name, "%s/%s/%s", Execute, local_dir, shortname );
 
 		// Set up arg vector according to class of job
 	switch( job_class ) {
@@ -671,7 +672,6 @@ UserProc::execute()
 			EXCEPT( "pipe()" );
 			dprintf( D_ALWAYS, "Pipe built\n" );
 		}
-#if 1
 			// The user process should not try to read commands from
 			// 0, 1, or 2 since we'll be using the commands to redirect
 			// those.
@@ -680,17 +680,16 @@ UserProc::execute()
 			close( pipe_fds[READ_END] );
 			pipe_fds[READ_END] = 14;
 		}
-#endif
 		dprintf( D_ALWAYS, "New pipe_fds[%d,%d]\n", pipe_fds[0], pipe_fds[1] );
 		sprintf( buf, "%d", pipe_fds[READ_END] );
 		dprintf( D_ALWAYS, "cmd_fd = %s\n", buf );
 
-		argv[0] = a_out_name;
+		argv[0] = shortname;
 		argv[1] = "-_condor_cmd_fd";
 		argv[2] = buf;
 		mkargv( &argc, &argv[3], tmp );
 #else
-		argv[0] = a_out_name;
+		argv[0] = shortname;
 		argv[1] = in;
 		argv[2] = out;
 		argv[3] = err;
@@ -699,7 +698,7 @@ UserProc::execute()
 		break;
 
 	  case PVM:
-		argv[0] = a_out_name;
+		argv[0] = shortname;
 		argv[1] = "-1";
 		argv[2] = in;
 		argv[3] = out;
@@ -708,7 +707,7 @@ UserProc::execute()
 		break;
 
 	  case VANILLA:
-		argv[0] = a_out_name;
+		argv[0] = shortname;
 		mkargv( &argc, &argv[1], tmp );
 		break;
 	}
@@ -755,9 +754,6 @@ UserProc::execute()
 #endif
 		sigprocmask( SIG_SETMASK, &sigmask, 0 );
 
-		if( chdir(local_dir) < 0 ) {
-			EXCEPT( "chdir(%s)", local_dir );
-		}
 
 			// Posix says that a privileged process executing setuid()
 			// will change real, effective, and saved uid's.  Thus the
@@ -771,15 +767,36 @@ UserProc::execute()
 		  
 		  case PVM:
 		  case PIPE:
-#if defined(OSF1)
+			if( chdir(local_dir) < 0 ) {
+				EXCEPT( "chdir(%s)", local_dir );
+			}
 			close( pipe_fds[WRITE_END] );
-#endif
 			dup2( user_syscall_fd, RSC_SOCK );
 			break;
 
 		  case VANILLA:
+			if( chdir(iwd) < 0 ) {
+				EXCEPT( "chdir(%s)", local_dir );
+			}
+			dprintf( D_ALWAYS, "Changed to directory \"%s\"\n", iwd );
 			(void)close( RSC_SOCK );
 			close_unused_file_descriptors();	// shouldn't need this
+
+			if( (fd = open(in,O_RDONLY)) < 0 ) {
+				EXCEPT( "open(%s)", in );
+			}
+			dup2( fd, 0 );
+
+			if( (fd = open(out,O_WRONLY)) < 0 ) {
+				EXCEPT( "open(%s)", out );
+			}
+			dup2( fd, 1 );
+
+			if( (fd = open(err,O_WRONLY)) < 0 ) {
+				EXCEPT( "open(%s)", err );
+			}
+			dup2( fd, 2 );
+
 			break;
 		}
 
@@ -801,31 +818,33 @@ UserProc::execute()
 		// The parent
 	dprintf( D_ALWAYS, "Started user job - PID = %d\n", pid );
 #if defined(OSF1)
-		// Send the user process its startup environment conditions
-	close( pipe_fds[READ_END] );
-	cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
-	dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
+	if( job_class != VANILLA ) {
+			// Send the user process its startup environment conditions
+		close( pipe_fds[READ_END] );
+		cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
+		dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
 
-	if( is_restart() ) {
-		fprintf( cmd_fp, "restart %s\n", target_ckpt );
-		dprintf( D_ALWAYS, "restart %s\n", target_ckpt );
-		fprintf( cmd_fp, "end\n" );
-		dprintf( D_ALWAYS, "end\n" );
-	} else {
-		fprintf( cmd_fp, "iwd %s\n", iwd );
-		dprintf( D_ALWAYS, "iwd %s\n", iwd );
-		fprintf( cmd_fp, "fd 0 %s O_RDONLY\n", in );
-		dprintf( D_ALWAYS, "fd 0 %s O_RDONLY\n", in );
-		fprintf( cmd_fp, "fd 1 %s O_WRONLY\n", out );
-		dprintf( D_ALWAYS, "fd 1 %s O_WRONLY\n", out );
-		fprintf( cmd_fp, "fd 2 %s O_WRONLY\n", err );
-		dprintf( D_ALWAYS, "fd 2 %s O_WRONLY\n", err );
-		fprintf( cmd_fp, "ckpt %s\n", target_ckpt );
-		dprintf( D_ALWAYS, "ckpt %s\n", target_ckpt );
-		fprintf( cmd_fp, "end\n" );
-		dprintf( D_ALWAYS, "end\n" );
+		if( is_restart() ) {
+			fprintf( cmd_fp, "restart %s\n", target_ckpt );
+			dprintf( D_ALWAYS, "restart %s\n", target_ckpt );
+			fprintf( cmd_fp, "end\n" );
+			dprintf( D_ALWAYS, "end\n" );
+		} else {
+			fprintf( cmd_fp, "iwd %s\n", iwd );
+			dprintf( D_ALWAYS, "iwd %s\n", iwd );
+			fprintf( cmd_fp, "fd 0 %s O_RDONLY\n", in );
+			dprintf( D_ALWAYS, "fd 0 %s O_RDONLY\n", in );
+			fprintf( cmd_fp, "fd 1 %s O_WRONLY\n", out );
+			dprintf( D_ALWAYS, "fd 1 %s O_WRONLY\n", out );
+			fprintf( cmd_fp, "fd 2 %s O_WRONLY\n", err );
+			dprintf( D_ALWAYS, "fd 2 %s O_WRONLY\n", err );
+			fprintf( cmd_fp, "ckpt %s\n", target_ckpt );
+			dprintf( D_ALWAYS, "ckpt %s\n", target_ckpt );
+			fprintf( cmd_fp, "end\n" );
+			dprintf( D_ALWAYS, "end\n" );
+		}
+		fclose( cmd_fp );
 	}
-	fclose( cmd_fp );
 #endif
 	delete [] tmp;
 	state = EXECUTING;
@@ -900,6 +919,14 @@ UserProc::handle_termination( int exit_st )
 		  case SIGQUIT:			// exited for a checkpoint
 			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
 			state = CHECKPOINTING;
+#if defined(OSF1)
+			/*
+			  For bytestream checkpointing:  the only way the process exits
+			  with signal SIGQUIT is if haS transferred a checkpoint
+			  successfully.
+			*/
+			ckpt_transferred = TRUE;
+#endif
 			break;
 		  case SIGUSR1:
 		  case SIGKILL:				// exited by request - no ckpt
