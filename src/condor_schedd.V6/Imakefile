@@ -9,7 +9,7 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o
 QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o
 OBJ = schedd.o schedd_main.o $(QMGMT_OBJ) schedd_instantiate.o \
-	grid_universe.o
+	dedicated_scheduler.o grid_universe.o
 
 $(QMGMT_LIB) : libqmgmt.a
 
