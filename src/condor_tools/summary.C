@@ -42,6 +42,7 @@
 #include "proc_obj.h"
 #include "alloc.h"
 
+
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern "C" char * format_time ( float fp_secs );
 
@@ -62,6 +63,11 @@ private:
 	float	local_cpu;
 	float	remote_cpu;
 };
+
+#if defined(OSF1)
+#pragma define_template List<UserRec>
+#pragma define_template Item<UserRec>
+#endif
 
 List<UserRec>	*UserList;
 UserRec			*Totals = new UserRec( "TOTAL" );
@@ -169,7 +175,7 @@ main( int argc, char *argv[] )
 	print_alloc_stats();
 #endif
 
-	exit( 0 );
+	return 0;
 
 }
 
@@ -180,8 +186,6 @@ main( int argc, char *argv[] )
 void
 init_params()
 {
-	char	*param();
-
 	Spool = param("SPOOL");
 	if( Spool == NULL ) {
 		EXCEPT( "SPOOL not specified in config file\n" );
