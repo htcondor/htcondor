@@ -216,8 +216,9 @@ release_library(libfort.a,$(RELEASE_DIR)/lib)
 #endif /* AIX */
 
 #if IS_HPPAR_HPUX9
-GETWD.o: ../condor_util_lib/getwd.o
-	ToUpper ../condor_util_lib/getwd.o GETWD.o getwd GETWD
+uppercase_target(../condor_util_lib/util_lib.a,getwd.o,GETWD.o,getwd,GETWD)
+#else
+uppercase_target($(SIMPLE_LIBC),getwd.o,GETWD.o,getwd,GETWD)
 #endif
 
 
