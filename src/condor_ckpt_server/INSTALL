@@ -3,8 +3,13 @@
 1. Install Condor on your checkpoint server machine.  (See NOTE #1
 below.)
 
-2. Move the condor_ckpt_server binary to your Condor SBIN directory
-(i.e., the directory where the condor_master binary is located).
+2. Untar the release.tar file into your release directory (i.e., the
+directory that contains the sbin, bin, lib, and etc directories for
+your main Condor installation).  This will create the following files:
+
+    sbin/condor_ckpt_server
+    sbin/condor_cleanckpts
+    etc/examples/condor_config.local.ckpt.server
 
 3. Create a directory where the checkpoint server will store the
 checkpoint files.
@@ -44,3 +49,4 @@ machine in your pool to the hostname of the checkpoint server to be
 used for jobs submitted from that machine.  Each machine may not use
 more than one checkpoint server, however.  We hope to overcome this
 limitation soon.
+
