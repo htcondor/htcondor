@@ -61,6 +61,8 @@ daemonType dt = DT_MASTER;
 #endif
 
 enum PrintType {CONDOR_OWNER, CONDOR_TILDE, CONDOR_NONE};
+enum ModeType {CONDOR_QUERY, CONDOR_SET, CONDOR_UNSET,
+			   CONDOR_RUNTIME_SET, CONDOR_RUNTIME_UNSET};
 
 
 // On some systems, the output from config_val sometimes doesn't show
@@ -78,21 +80,40 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
-	fprintf( stderr, "   Valid options are:\n" );
+	fprintf( stderr, "   or: %s [options] -set variable value ...\n",
+			 MyName );
+	fprintf( stderr, "   or: %s [options] -rset variable value ...\n",
+			 MyName );
+	fprintf( stderr, "   or: %s [options] -unset variable ...\n",
+			 MyName );
+	fprintf( stderr, "   or: %s [options] -runset variable ...\n",
+			 MyName );
+	fprintf( stderr, "   or: %s [options] -tilde\n", MyName );
+	fprintf( stderr, "   or: %s [options] -owner\n", MyName );
+	fprintf( stderr, "\n   Valid options are:\n" );
 	fprintf( stderr, "   -name daemon_name\t(query the specified daemon for its configuration)\n" );
 	fprintf( stderr, "   -pool hostname\t(use the given central manager to find daemons)\n" );
 	fprintf( stderr, "   -address <ip:port>\t(connect to the given ip/port)\n" );
+	fprintf( stderr, "   -host hostname\t(connect to the given hostname)\n" );
+	fprintf( stderr, "   -set\t\t\t(set a persistent config file expression)\n" );
+	fprintf( stderr, "   -rset\t\t(set a runtime config file expression\n" );
+
+	fprintf( stderr, "   -unset\t\t(unset a persistent config file expression)\n" );
+	fprintf( stderr, "   -runset\t\t(unset a runtime config file expression)\n" );
 
 	fprintf( stderr, "   -master\t\t(query the master [default])\n" );
 	fprintf( stderr, "   -schedd\t\t(query the schedd)\n" );
 	fprintf( stderr, "   -startd\t\t(query the startd)\n" );
 	fprintf( stderr, "   -collector\t\t(query the collector)\n" );
 	fprintf( stderr, "   -negotiator\t\t(query the negotiator)\n" );
+	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
+	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
 	my_exit( 1 );
 }
 
 
 char* GetRemoteParam( char*, char*, char*, char* );
+void  SetRemoteParam( char*, char*, char*, char*, char*, ModeType );
 
 main( int argc, char* argv[] )
 {
@@ -101,6 +122,7 @@ main( int argc, char* argv[] )
 	int		i;
 	
 	PrintType pt = CONDOR_NONE;
+	ModeType mt = CONDOR_QUERY;
 
 	MyName = argv[0];
 
@@ -167,6 +189,14 @@ main( int argc, char* argv[] )
 			dt = DT_COLLECTOR;
 		} else if( match_prefix( argv[i], "-negotiator" ) ) {
 			dt = DT_NEGOTIATOR;
+		} else if( match_prefix( argv[i], "-set" ) ) {
+			mt = CONDOR_SET;
+		} else if( match_prefix( argv[i], "-unset" ) ) {
+			mt = CONDOR_UNSET;
+		} else if( match_prefix( argv[i], "-rset" ) ) {
+			mt = CONDOR_RUNTIME_SET;
+		} else if( match_prefix( argv[i], "-runset" ) ) {
+			mt = CONDOR_RUNTIME_UNSET;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -189,7 +219,7 @@ main( int argc, char* argv[] )
 		config( 0 );
 	}
 
-	if( name || pool ) {
+	if( name || pool || mt != CONDOR_QUERY ) {
 		addr = get_daemon_addr( dt, name, pool );
 		if( ! addr ) {
 			fprintf( stderr, "Can't find address for %s %s\n", 
@@ -223,17 +253,24 @@ main( int argc, char* argv[] )
 	}
 
 	while( (tmp = params.next()) ) {
-		if( name || pool || addr ) {
-			value = GetRemoteParam( name, addr, pool, tmp );
+		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ) {
+			value = params.next();
+			SetRemoteParam( name, addr, pool, tmp, value, mt );
+		} else if( mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
+			SetRemoteParam( name, addr, pool, tmp, "", mt );
 		} else {
-			value = param( tmp );
-		}
-		if( value == NULL ) {
-			fprintf(stderr, "Not defined: %s\n", tmp);
-			my_exit( 1 );
-		} else {
-			printf("%s\n", value);
-			free( value );
+			if( name || pool || addr ) {
+				value = GetRemoteParam( name, addr, pool, tmp );
+			} else {
+				value = param( tmp );
+			}
+			if( value == NULL ) {
+				fprintf(stderr, "Not defined: %s\n", tmp);
+				my_exit( 1 );
+			} else {
+				printf("%s\n", value);
+				free( value );
+			}
 		}
 	}
 	my_exit( 0 );
@@ -283,4 +320,106 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 		return NULL;
 	}
 	return val;
+}
+
+
+void
+SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
+				char* param_value, ModeType mt )
+{
+	int cmd, rval;
+	ReliSock s;
+
+	s.timeout( 30 );
+
+	switch (mt) {
+	case CONDOR_SET:
+	case CONDOR_UNSET:
+		cmd = DC_CONFIG_PERSIST;
+		break;
+	case CONDOR_RUNTIME_SET:
+	case CONDOR_RUNTIME_UNSET:
+		cmd = DC_CONFIG_RUNTIME;
+		break;
+	default:
+		fprintf( stderr, "Unknown command type %d\n", (int)mt );
+		my_exit( 1 );
+	}
+
+	if( !name ) {
+		name = "";
+	}
+
+	if( ! s.connect( addr, 0 ) ) {
+		fprintf( stderr, "Can't connect to %s on %s %s\n", 
+				 daemon_string(dt), name, addr );
+		my_exit(1);
+	}
+
+	s.encode();
+	if( !s.code(cmd) ) {
+		fprintf( stderr, "Can't send DC_CONFIG command (%d)\n", cmd );
+		my_exit(1);
+	}
+	if( !s.code(param_name) ) {
+		fprintf( stderr, "Can't send param name (%s)\n", param_name );
+		my_exit(1);
+	}
+	char *buf = NULL;
+	if (param_value && param_value[0]) {
+		buf = (char *)malloc(strlen(param_name)+strlen(param_value)+5);
+		sprintf(buf, "%s : %s\n", param_name, param_value);
+		if( !s.code(buf) ) {
+			fprintf( stderr, "Can't send config setting (%s)\n", buf );
+			free(buf);
+			my_exit(1);
+		}
+	} else {
+		if( !s.put("") ) {
+			fprintf( stderr, "Can't send config setting\n" );
+			my_exit(1);
+		}
+	}
+	if( !s.end_of_message() ) {
+		fprintf( stderr, "Can't send end of message\n" );
+		if (buf) free(buf);
+		my_exit(1);
+	}
+
+	s.decode();
+	if( !s.code(rval) ) {
+		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
+				 daemon_string(dt), name, addr );
+		if (buf) free(buf);
+		my_exit(1);
+	}
+	if( !s.end_of_message() ) {
+		fprintf( stderr, "Can't receive end of message\n" );
+		if (buf) free(buf);
+		my_exit(1);
+	}
+	if (buf) buf[strlen(buf)-1] = '\0';	// remove newline
+	if (rval < 0) {
+		if (buf) {
+			fprintf( stderr, "Attempt to set configuration \"%s\" on %s %s "
+					 "%s failed.\n",
+					 buf, daemon_string(dt), name, addr );
+			free(buf);
+		} else {
+			fprintf( stderr, "Attempt to unset configuration \"%s\" on %s %s "
+					 "%s failed.\n",
+					 param_name, daemon_string(dt), name, addr );
+		}
+		my_exit(1);
+	}
+	if (buf) {
+		fprintf( stderr, "Successfully set configuration \"%s\" on %s %s "
+				 "%s.\n",
+				 buf, daemon_string(dt), name, addr );
+		free(buf);
+	} else {
+		fprintf( stderr, "Successfully unset configuration \"%s\" on %s %s "
+				 "%s.\n",
+				 param_name, daemon_string(dt), name, addr );
+	}
 }
