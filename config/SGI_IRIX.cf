@@ -41,8 +41,9 @@
 #define LibC RpcLib SimpleLibC
 #define Crt0 concat(BaseLibPath,/crt1.o)
 #define CrtN concat(BaseLibPath,/crtn.o)
+#define RealMldLib concat(BaseLibPath,/libmld.a)
 
-PLATFORM_LDFLAGS = MldLib /usr/lib/libmld.a RpcLib
+PLATFORM_LDFLAGS = MldLib RealMldLib RpcLib
 #define SyscallsExp /**/
 #define SocketLib /**/
 
