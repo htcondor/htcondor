@@ -745,6 +745,12 @@ static bool parse_vars(Dag *dag, char *filename, int lineNumber) {
 					i--; // on the next pass it will be filled in appropriately
 					escaped = true;
 					continue;
+				} else if(*str == '\'') { // these would mess the command line up 
+				                          // later on
+					debug_printf(DEBUG_QUIET,
+						"%s (line %d): sinqle quotes are not allowed in values.\n",
+						filename, lineNumber);
+					return false;
 				}
 			} else {
 				if(*str != '\\' && *str != '"') {
