@@ -52,6 +52,7 @@ V6_COMMON    		-a \
 			src/condor_io \
 			src/condor_kbdd \
 			src/condor_master.V6 \
+			src/condor_mail \
 			src/condor_negotiator.V6 \
 			src/condor_prio \
 			src/condor_procapi \
