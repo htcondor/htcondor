@@ -323,7 +323,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   # link line.
   ldargs=`echo $ldargs $CONDOR_CPLUS`
 
-  echo "LINKING FOR CONDOR ($brokenbase): $osld $ldargs"
+  echo "LINKING FOR CONDOR : $osld $ldargs"
 fi
 
 # We always run the code below this point, whether called from condor_compile
