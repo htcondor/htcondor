@@ -134,6 +134,8 @@ class Dag {
     inline int NumScriptsRunning() const
 		{ return _scriptQ->NumScriptsRunning(); }
 
+	inline bool Done() const { return NumJobsDone() == NumJobs(); }
+
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
