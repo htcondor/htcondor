@@ -1957,15 +1957,13 @@ Scheduler::mail_problem_message()
 
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
 
-	(void)sprintf( cmd, "%s %s", Mail, CondorAdministrator );
+	(void)sprintf( cmd, "%s -s \"CONDOR Problem\" %s", Mail, 
+				   CondorAdministrator );
 	if( (mailer=popen(cmd,"w")) == NULL ) {
 		EXCEPT( "popen(\"%s\",\"w\")", cmd );
 	}
 
-	fprintf( mailer, "To: %s\n", CondorAdministrator );
-	fprintf( mailer, "Subject: Condor Problem\n" );
-	fprintf( mailer, "\n" );
-
+	fprintf( mailer, "Problem with condor_schedd %s\n", Name );
 	fprintf( mailer, "Job %d.%d is in the runnable job table,\n",
 												BadCluster, BadProc );
 	fprintf( mailer, "but we already have a shadow record for it.\n" );
