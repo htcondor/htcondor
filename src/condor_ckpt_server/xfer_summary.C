@@ -104,7 +104,8 @@ XferSummary::init()
 }
 
 
-XferSummary::Result(transferinfo *tinfo)
+XferSummary::Result(transferinfo *tinfo, bool success_flag,
+					struct in_addr peer)
 {
 	time_t	now;
 	int		xfer_len;
@@ -137,7 +138,7 @@ XferSummary::Result(transferinfo *tinfo)
 	dprintf(D_ALWAYS | D_NOHEADER,
 			"transferred %d bytes in %d seconds (%d bytes / sec)\n", 
 			xfer_size, xfer_len, xfer_bandwidth);
-	log_transfer(now, tinfo);
+	log_transfer(now, tinfo, success_flag, peer);
 }
 
 extern "C" {
@@ -215,10 +216,11 @@ XferSummary::time_out(time_t now)
 }
 
 void
-XferSummary::log_transfer(time_t now, transferinfo *tinfo)
+XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
+						  struct in_addr peer)
 {
 	struct tm *tm;
-
+	char peer_IP[20];
 
 	if (log_file == 0) {
 		log_file = fopen("TransferLog", "a");
@@ -228,12 +230,17 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo)
 	}
 
 	tm = localtime( &now );
+	// make local copy of peer address to avoid calling inet_ntoa twice in
+	// fprintf below
+	strcpy(peer_IP, inet_ntoa(peer));
 	fprintf( log_file, "%d/%d %02d:%02d ", tm->tm_mon + 1, tm->tm_mday,
 			tm->tm_hour, tm->tm_min );
-	fprintf( log_file, "%s %u bytes in %d secs. for %s@%s\n",
-			(tinfo->status == RECV ? "RECV" : "SENT"),
+	fprintf( log_file, "%s %s %u bytes %d sec %s %s@%s\n",
+			(tinfo->status == RECV ? "R" : "S"),
+			(success_flag ? "S" : "F"),
 			tinfo->file_size,
 			now - tinfo->start_time,
+			peer_IP,
 			tinfo->owner,
 			inet_ntoa(tinfo->shadow_addr));
 	fflush( log_file );

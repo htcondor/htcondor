@@ -1225,6 +1225,8 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	int				   bytes_recvd=0;
 	int                buf_size=DATA_BUFFER_SIZE;
 	int				   file_fd;
+	int				   peer_info_fd;
+	char			   peer_info_filename[100];
 	
 #if 1
 	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
@@ -1265,6 +1267,16 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	close(xfer_sd);
 	fsync( file_fd );
 	close(file_fd);
+
+	// Write peer address to a temporary file which is read by the
+	// parent.  The peer address is very important for logging purposes.
+	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
+	peer_info_fd = open(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
+	if (peer_info_fd >= 0) {
+		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+			  sizeof(struct in_addr));
+		close(peer_info_fd);
+	}
 }
 
 
@@ -1464,6 +1476,8 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	int                temp;
 	int                buf_size=DATA_BUFFER_SIZE;
 	int					file_fd;
+	int				   peer_info_fd;
+	char			   peer_info_filename[100];
 	
 	file_fd = open(pathname, O_RDONLY);
 	if (file_fd < 0) {
@@ -1499,6 +1513,17 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 
 	close(xfer_sd);
 	close(file_fd);
+
+	// Write peer address to a temporary file which is read by the
+	// parent.  The peer address is very important for logging purposes.
+	sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", getpid());
+	peer_info_fd = open(peer_info_filename, O_WRONLY|O_CREAT|O_TRUNC, 0664);
+	if (peer_info_fd >= 0) {
+		write(peer_info_fd, (char *)&(chkpt_addr.sin_addr),
+			  sizeof(struct in_addr));
+		close(peer_info_fd);
+	}
+
 	if (bytes_sent != file_size) {
 		exit(CHILDTERM_BAD_FILE_SIZE);
 	}
@@ -1507,6 +1532,9 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 
 void Server::ChildComplete()
 {
+	struct in_addr peer_addr;
+	int			  peer_info_fd;
+	char		  peer_info_filename[100];
 	int           child_pid;
 	int           exit_status;
 	int           exit_code;
@@ -1515,6 +1543,9 @@ void Server::ChildComplete()
 	char          pathname[MAX_PATHNAME_LENGTH];
 	char          log_msg[256];
 	int           temp;
+	bool	      success_flag = false;
+
+	memset((char *) &peer_addr, 0, sizeof(peer_addr));
 	
 	BlockSignals();
 	while ((child_pid=waitpid(-1, &exit_status, WNOHANG)) > 0) {
@@ -1552,13 +1583,16 @@ void Server::ChildComplete()
 		switch (xfer_type) {
 		    case RECV:
 			    num_store_xfers--;
-				if (exit_code == CHILDTERM_SUCCESS)
+				if (exit_code == CHILDTERM_SUCCESS) {
+					success_flag = true;
 					Log(ptr->req_id, "File successfully received");
-				else if ((exit_code == CHILDTERM_KILLED) && 
+				} else if ((exit_code == CHILDTERM_KILLED) && 
 						 (ptr->override == OVERRIDE)) {
+					success_flag = true;
 					Log(ptr->req_id, "File successfully received; kill signal");
 					Log("overridden");
 				} else {
+					success_flag = false;
 					if (exit_code == CHILDTERM_SIGNALLED) {
 						sprintf(log_msg, 
 								"File transfer terminated due to signal #%d",
@@ -1597,14 +1631,17 @@ void Server::ChildComplete()
 				break;
 			case XMIT:
 				num_restore_xfers--;
-				if (exit_code == CHILDTERM_SUCCESS)
+				if (exit_code == CHILDTERM_SUCCESS) {
+					success_flag = true;
 					Log(ptr->req_id, "File successfully transmitted");
-				else if ((exit_code == CHILDTERM_KILLED) && 
+				} else if ((exit_code == CHILDTERM_KILLED) && 
 						 (ptr->override == OVERRIDE)) {
+					success_flag = true;
 					Log(ptr->req_id,
 						"File successfully transmitted; kill signal");
 					Log("overridden");
 				} else if (exit_code == CHILDTERM_SIGNALLED) {
+					success_flag = false;
 					sprintf(log_msg, 
 							"File transfer terminated due to signal #%d",
 							WTERMSIG(exit_status));
@@ -1614,10 +1651,12 @@ void Server::ChildComplete()
 					else if (WTERMSIG(exit_status) == SIGKILL)
 						Log("User killed the peer process");
 				} else if (exit_code == CHILDTERM_KILLED) {
+					success_flag = false;
 					Log(ptr->req_id, 
 						"File transmission terminated by reclamation");
 					Log("process");
 				} else {
+					success_flag = false;
 					sprintf(log_msg, 
 							"File transmission self-terminated; error #%d", 
 							exit_code);
@@ -1686,7 +1725,15 @@ void Server::ChildComplete()
 				cerr << "ERROR:" << endl << endl;
 				exit(BAD_RETURN_CODE);	  
 			}
-		transfers.Delete(child_pid);
+		// Try to read the info file for this child to get the peer address.
+		sprintf(peer_info_filename, "/tmp/condor_ckpt_server.%d", child_pid);
+		peer_info_fd = open(peer_info_filename, O_RDONLY);
+		if (peer_info_fd >= 0) {
+			read(peer_info_fd, (char *)&peer_addr, sizeof(struct in_addr));
+			close(peer_info_fd);
+			unlink(peer_info_filename);
+		}
+		transfers.Delete(child_pid, success_flag, peer_addr);
     }
 	UnblockSignals();
 }

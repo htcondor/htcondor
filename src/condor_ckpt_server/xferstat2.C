@@ -345,7 +345,8 @@ void TransferState::Insert(int            child_pid,
 ******************************************************************************/
 
 
-int TransferState::Delete(int child_pid)
+int TransferState::Delete(int child_pid, bool success_flag,
+						  struct in_addr peer)
 {
 	transferinfo* ptr;
 	extern XferSummary	xfer_summary;
@@ -373,7 +374,7 @@ int TransferState::Delete(int child_pid)
 		if (ptr->file_size == -1) {
 			ptr->file_size = get_file_size(ptr->filename);
 		}
-		xfer_summary.Result(ptr);
+		xfer_summary.Result(ptr, success_flag, peer);
 		delete ptr;
 		num_transfers--;
 		return CKPT_OK;

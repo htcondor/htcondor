@@ -32,7 +32,7 @@ public:
 	XferSummary();
 	~XferSummary();
 	init();
-	Result(transferinfo *);
+	Result(transferinfo *, bool success_flag, struct in_addr peer);
 	void time_out(time_t);
 
 private:
@@ -54,7 +54,8 @@ private:
 
 	char* CondorViewHost;
 
-	void log_transfer(time_t, transferinfo *);
+	void log_transfer(time_t, transferinfo *, bool success_flag,
+					  struct in_addr peer);
 };
 
 #define XFER_SUMMARY_INTERVAL 60 * 60 /* Really, an hour */
