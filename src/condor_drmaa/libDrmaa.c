@@ -943,7 +943,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 }
 
 int 
-drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout, 
+drmaa_synchronize(const char* job_ids[], signed long timeout, 
 		  int dispose, char* error_diagnosis, size_t error_diag_len)
 {
     int result;
@@ -961,18 +961,18 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	snprintf(error_diagnosis, error_diag_len, "Invalid wait quantity");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     } 
-    else if (jobids == NULL || jobids->size < 1){
-	snprintf(error_diagnosis, error_diag_len, "Jobids is NULL or empty");
+    else if (job_ids == NULL || job_ids[0] == NULL){
+	snprintf(error_diagnosis, error_diag_len, "job_ids is NULL or empty");
 	return DRMAA_ERRNO_INVALID_ARGUMENT;
     }   
-    for (i = 0; i < jobids->size; i++){
-	if (strcmp(jobids->values[i], DRMAA_JOB_IDS_SESSION_ANY) == 0){
+    for (i = 0; job_ids[i] != NULL; i++){
+	if (strcmp(job_ids[i], DRMAA_JOB_IDS_SESSION_ANY) == 0){
 	    sync_all_jobs = 1;
 	    break;
 	}
-	else if (!is_valid_job_id(jobids->values[i])){
+	else if (!is_valid_job_id(job_ids[i])){
 	    snprintf(error_diagnosis, error_diag_len, "Invalid job id: %s",
-		     jobids->values[i]);
+		     job_ids[i]);
 	    return DRMAA_ERRNO_INVALID_ARGUMENT;
 	}
     }
@@ -1034,13 +1034,13 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 #endif
 	    // A. Verify no sync-desired jobs are on reserved list	    
 	    i = 0;		    
-	    while (i < jobids->size){
+	    while (job_ids[i] != NULL){
 		cur_res = reserved_job_list;
 		while (cur_res != NULL){
-		    if (strcmp(jobids->values[i], cur_res->id) == 0){
+		    if (strcmp(job_ids[i], cur_res->id) == 0){
 			snprintf(error_diagnosis, error_diag_len, 
 				 "Job Id %s is not in a sychronizable state.",
-				 jobids->values[i]);
+				 job_ids[i]);
 			return rel_locks(DRMAA_ERRNO_TRY_LATER);
 		    }
 		    cur_res = cur_res->next;
@@ -1051,10 +1051,10 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	    // B. Verify all synch-desired jobids are on job_info list
 	    i = 0;
 	    proceed = 0;
-	    while (i < jobids->size){
+	    while (job_ids[i] != NULL){
 		cur_info = job_info_list;
 		while (cur_info != NULL){
-		    if (strcmp(jobids->values[i], cur_info->id) == 0){
+		    if (strcmp(job_ids[i], cur_info->id) == 0){
 			proceed = 1;
 			break;
 		    }
@@ -1064,7 +1064,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 
 		if (!proceed){
 		    snprintf(error_diagnosis, error_diag_len, "Job Id %s is " \
-			     "not a valid job id", jobids->values[i]);
+			     "not a valid job id", job_ids[i]);
 		    return rel_locks(DRMAA_ERRNO_INVALID_JOB);		    
 		}
 		else 
@@ -1073,11 +1073,11 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 
 	    // C. Move all jobs from job_info to reserved list
 	    i = 0;
-	    while (i < jobids->size){
+	    while (job_ids[i] != NULL){
 		cur_info = job_info_list;
 		last = cur_info;
 		while (cur_info != NULL){
-		    if (strcmp(jobids->values[i], cur_info->id) == 0){
+		    if (strcmp(job_ids[i], cur_info->id) == 0){
 			// lock condor_drmaa_job_info_t - prevents sync-ing a job
 			//  being control()ed
 #ifdef WIN32
@@ -1101,9 +1101,9 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 			}
 			else {
 			    // undo all other condor_drmaa_job_info_t*'s moved
-			    mv_jobs_res_to_info(jobids);
+			    mv_jobs_res_to_info(job_ids);
 			    snprintf(error_diagnosis, error_diag_len, 
-				     "Unable to lock job %s", jobids->values[i]);
+				     "Unable to lock job %s", job_ids[i]);
 			    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 			}
 #endif
@@ -1134,8 +1134,8 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     else {
 	i = 0;
 	start = time(NULL);
-	while (i < jobids->size){
-	    result = wait_job(jobids->values[i], dispose, 0, NULL, timeout,
+	while (job_ids[i] != NULL){
+	    result = wait_job(job_ids[i], dispose, 0, NULL, timeout,
 			      start, NULL, error_diagnosis, error_diag_len);
 
 	    if (result != DRMAA_ERRNO_SUCCESS) {		
@@ -1150,7 +1150,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 		    pthread_mutex_lock(&info_list_lock) == 0){
 #endif
 #endif
-		    mv_jobs_res_to_info(jobids);
+		    mv_jobs_res_to_info(job_ids);
 		    return rel_locks(result);
 #if (!defined(WIN32) && HAS_PTHREADS)
 		}
@@ -1166,10 +1166,10 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	    else {
 		if (dispose)
 		    // remove job_id from reserved list on job-by-job basis
-		    rm_reslist(jobids->values[i]);
+		    rm_reslist(job_ids[i]);
 		else 
 		    // set job status to FINISHED - moved to info list later
-		    mark_res_job_finished(jobids->values[i]);
+		    mark_res_job_finished(job_ids[i]);
 
 		i++;
 	    }
@@ -1177,7 +1177,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     }
 
     // 4. Move all waited jobs back to info list
-    mv_jobs_res_to_info(jobids);
+    mv_jobs_res_to_info(job_ids);
 
     return result;
 }

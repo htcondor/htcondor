@@ -250,7 +250,7 @@ static drmaa_attr_values_t* create_dav(int size);
     is ignored and the function continues.
     @return true or false (upon success or failure, respectively)
 */
-static int mv_jobs_res_to_info(const drmaa_job_ids_t* jobids);    
+static int mv_jobs_res_to_info(const char* job_ids[]);    
 
 /** Moves the given valid jobid from the job_reserved list to the job_info
     list.  This method acquires and releases locks to both lists appropriately.
@@ -1243,16 +1243,16 @@ create_dav(int size)
 }
 
 static int 
-mv_jobs_res_to_info(const drmaa_job_ids_t* jobids)
+mv_jobs_res_to_info(const char *job_ids[])
 {
     int i = 0;
     condor_drmaa_job_info_t* cur_res, *last;
 
-    while (i < jobids->size){
+    while (job_ids[i] != NULL){
 	cur_res = reserved_job_list;
 	last = cur_res;
 	while (cur_res != NULL){
-	    if (strcmp(cur_res->id, jobids->values[i]) == 0){
+	    if (strcmp(cur_res->id, job_ids[i]) == 0){
 		if (last == cur_res)
 		    reserved_job_list = cur_res->next;
 		else

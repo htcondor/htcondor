@@ -368,7 +368,7 @@ int drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	    DRMAA_ERRNO_EXIT_TIMEOUT
 	    DRMAA_ERRNO_INVALID_JOB
  */
-int drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout, 
+int drmaa_synchronize(const char* job_ids[], signed long timeout, 
 		      int dispose, char* error_diagnosis, 
 		      size_t error_diag_len);
 
