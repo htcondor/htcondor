@@ -2087,7 +2087,7 @@ SetRank()
 	}
 				
 	if( rank[0] == '\0' ) {
-		(void)sprintf( buffer, "%s = 0", ATTR_RANK );
+		(void)sprintf( buffer, "%s = 0.0", ATTR_RANK );
 		InsertJobExpr( buffer );
 	} else {
 		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
