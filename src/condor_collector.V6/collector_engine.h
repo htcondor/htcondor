@@ -29,6 +29,7 @@
 #include "condor_collector.h"
 #include "HashTable.h"
 #include "hashkey.h"
+#include "MyString.h"
 
 class CollectorEngine : public Service
 {
@@ -71,6 +72,7 @@ class CollectorEngine : public Service
 	CollectorHashTable SubmittorAds;
 	CollectorHashTable LicenseAds;
 	CollectorHashTable MasterAds;
+	CollectorHashTable NestAds;
 
 	// the lesser tables
 	enum {LESSER_TABLE_SIZE = 32};
@@ -78,7 +80,7 @@ class CollectorEngine : public Service
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
 
-	// relevent variables from the config file
+	// relevant variables from the config file
 	int	clientTimeout; 
 	int	machineUpdateInterval;
 	int	masterCheckInterval;
@@ -93,6 +95,8 @@ class CollectorEngine : public Service
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
 				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
+	ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
+	                       char*, int & );
 
   public:
 	// pointer values for representing master states

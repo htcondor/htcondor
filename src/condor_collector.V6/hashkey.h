@@ -61,6 +61,7 @@ bool makeLicenseAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeMasterAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
+bool makeNestAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 
 #endif __COLLHASH_H__
 

@@ -304,6 +304,20 @@ makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
+bool
+makeNestAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	if (!ad->LookupString ("Name", hk.name))
+	{
+		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
+		return false;
+	}
+
+	hk.ip_addr[0] = '\0';
+
+	return true;
+}
+
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 void 
 parseIpPort (char *ip_port_pair, char *ip_addr)

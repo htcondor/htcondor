@@ -11,6 +11,7 @@
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
+#include "condor_classad_lookup.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
@@ -55,6 +56,9 @@ int CollectorDaemon::machinesOwner;
 ClassAd* CollectorDaemon::ad;
 SafeSock CollectorDaemon::updateSock;
 int CollectorDaemon::UpdateTimerId;
+
+ClassAd *CollectorDaemon::query_any_result;
+char    *CollectorDaemon::query_any_name;
 
 //---------------------------------------------------------
 
@@ -103,6 +107,10 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
+	daemonCore->Register_Command(QUERY_NEST_ADS,"QUERY_NEST_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
@@ -123,6 +131,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,ALLOW);
+	daemonCore->Register_Command(INVALIDATE_NEST_ADS,
+		"INVALIDATE_NEST_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,WRITE);
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -139,7 +150,11 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
+	daemonCore->Register_Command(UPDATE_NEST_AD,"UPDATE_NEST_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 
+	// ClassAd evaluations use this function to resolve names
+	ClassAdLookupRegister( process_query_by_name, this );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -202,6 +217,16 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 	  case QUERY_COLLECTOR_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_COLLECTOR_ADS\n");
 		whichAds = COLLECTOR_AD;
+		break;
+
+	  case QUERY_NEST_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_NEST_ADS\n");
+		whichAds = NEST_AD;
+		break;
+
+	  case QUERY_ANY_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
+		whichAds = ANY_AD;
 		break;
 
 	  default:
@@ -271,6 +296,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	  case INVALIDATE_COLLECTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_COLLECTOR_ADS\n");
 		whichAds = COLLECTOR_AD;
+		break;
+
+	  case INVALIDATE_NEST_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_NEST_ADS\n");
+		whichAds = NEST_AD;
 		break;
 
 	  default:
@@ -346,6 +376,40 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
     return 1;
 }
 
+/* This filter examines the given ad, looking for Name==query_any_name */
+/* Returning 1 causes the scan to continue. */
+/* Returning 0 causes the scan to stop. */
+
+int CollectorDaemon::select_by_name( ClassAd *ad )
+{
+	char name[ATTRLIST_MAX_EXPRESSION];
+
+	if(ad<CollectorEngine::THRESHOLD) {
+		return 1;
+	}
+
+	if( ad->LookupString("Name",name) && !strcmp(name,query_any_name) ) {
+		query_any_result = ad;
+		return 0;
+	}
+	return 1;
+}
+
+/* Scan over all ads, using the select-by-name filter */
+/* If walk returns zero, the scan was stopped by a match. */
+
+ClassAd * CollectorDaemon::process_query_by_name( const char *name, void *arg )
+{
+	query_any_name = (char*) name;
+	query_any_result = 0;
+
+	if(!collector.walkHashTable(ANY_AD,select_by_name)) {
+		return new ClassAd(*query_any_result);
+	} else {
+		return 0;
+	}
+}
+
 void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
 	int		more;
@@ -358,6 +422,7 @@ void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *s
 	__numAds__ = 0;
 	__sock__ = sock;
 	sock->encode();
+
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
 	{
 		dprintf (D_ALWAYS, "Error sending query response\n");

@@ -51,20 +51,20 @@ ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
 ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
 
 static void killHashTable (CollectorHashTable &);
-static ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
-							  char*, int &);
+
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 char	*strStatus (ClassAd *);
 
 CollectorEngine::
 CollectorEngine () : 
-    StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
+	StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
 	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
 	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
 	LicenseAds    (GREATER_TABLE_SIZE, &hashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
+	NestAds       (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
 	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction)
@@ -86,6 +86,7 @@ CollectorEngine::
 	killHashTable (SubmittorAds);
 	killHashTable (LicenseAds);
 	killHashTable (MasterAds);
+	killHashTable (NestAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
 }
@@ -171,6 +172,10 @@ invokeHousekeeper (AdTypes adtype)
 			cleanHashTable (LicenseAds, now, makeLicenseAdHashKey);
 			break;
 
+		case NEST_AD:
+			cleanHashTable (NestAds, now, makeNestAdHashKey);
+			break;
+
 		default:
 			return 0;
 	}
@@ -215,7 +220,6 @@ toggleLogging (void)
 	log = !log;
 }
 
-
 int CollectorEngine::
 walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 {
@@ -258,6 +262,19 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &CollectorAds;
 		break;
 
+	  case NEST_AD:
+		table = &NestAds;
+		break;
+
+	  case ANY_AD:
+		return
+			NestAds.walk(scanFunction) &&
+			CkptServerAds.walk(scanFunction) &&
+			LicenseAds.walk(scanFunction) &&
+			StartdAds.walk(scanFunction) &&
+			ScheddAds.walk(scanFunction) &&
+			MasterAds.walk(scanFunction) &&
+			SubmittorAds.walk(scanFunction);
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -463,6 +480,18 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  hashString, insert);
 		break;
 
+	  case UPDATE_NEST_AD:
+		if (!makeNestAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			retVal = 0;
+			break;
+		}
+		sprintf (hashString, "< %s >", hk.name);
+		retVal=updateClassAd (NestAds, "NestAd  ", clientAd, hk, 
+							  hashString, insert);
+		break;
+
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
@@ -541,6 +570,11 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case NEST_AD:
+			if (NestAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -578,19 +612,22 @@ remove (AdTypes adType, HashKey &hk)
 		case COLLECTOR_AD:
 			return !CollectorAds.remove (hk);
 
+		case NEST_AD:
+			return !NestAds.remove (hk);
+
 		default:
 			return 0;
 	}
 }
 	
 				
-static ClassAd *
+ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable, 
 			   char *adType, 
 			   ClassAd *ad, 
 			   HashKey &hk,
 			   char *hashString,
-			   int  &insert)
+			   int  &insert )
 {
 	ClassAd  *old_ad, *new_ad;
 	ExprTree *tree;
@@ -725,6 +762,9 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning CollectorAds ...\n");
 	cleanHashTable (CollectorAds, now, makeCollectorAdHashKey);
 
+	dprintf (D_ALWAYS, "\tCleaning NestAds ...\n");
+	cleanHashTable (NestAds, now, makeNestAdHashKey);
+
 	// add other ad types here ...
 
 
@@ -737,7 +777,7 @@ housekeeper()
 
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, 
-				bool (*makeKey) (HashKey &, ClassAd *, sockaddr_in *))
+				bool (*makeKey) (HashKey &, ClassAd *, sockaddr_in *) )
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
@@ -768,6 +808,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		// check if it has expired
 		if (timeDiff > (double) updateInterval )
 		{
+			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint (hkString);
 			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: %s\n", hkString);
