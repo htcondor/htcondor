@@ -807,7 +807,6 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 		// If JobManaged is undefined, equate it with false.
 		// If Matched is undefined, equate it with true.
 		if ( firstScheddContact ) {
-//			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
 			sprintf( expr_buf, 
 				"(%s) && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
 					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
@@ -815,7 +814,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		} else {
 			sprintf( expr_buf, 
-				"%s && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
+				"(%s) && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
 					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
 					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
