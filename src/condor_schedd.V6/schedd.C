@@ -303,7 +303,7 @@ Scheduler::count_jobs()
 	  // the nice-owner is not per uid domain, so don't decorate it with
 	  // the "@uidDomain"
 	  if( strcmp( Owners[i].Name, NiceUserName ) == 0 ) {
-		sprintf( tmp, "%s = \"%s\"", ATTR_NAME, NiceUserName );
+		sprintf( tmp, "%s = \"%s.%s@%s\"", ATTR_NAME, NiceUserName, Owners[i].Name, UidDomain);
 	  } else {
 	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
 	  }
@@ -328,7 +328,7 @@ Scheduler::count_jobs()
 	  // the nice-owner is not per uid domain, so don't decorate it with
 	  // the "@uidDomain"
 	  if( strcmp( OldOwners[i].Name, NiceUserName ) == 0 ) {
-		sprintf( tmp, "%s = \"%s\"", ATTR_NAME, NiceUserName );
+		sprintf( tmp, "%s = \"%s.%s@%s\"", ATTR_NAME, NiceUserName, Owners[i].Name, UidDomain);
 	  } else {
 	  	sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, OldOwners[i].Name, UidDomain);
 	  }
@@ -391,6 +391,7 @@ count( ClassAd *job )
 	int		status;
 	int		niceUser;
 	char 	buf[100];
+	char 	buf2[100];
 	char*	owner;
 	int		cur_hosts;
 	int		max_hosts;
@@ -422,7 +423,10 @@ count( ClassAd *job )
 		// we first check if this job is being submitted by a NiceUser, and
 		// if so, insert it as a new entry in the "Owner" table
 		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-			owner = (char *)NiceUserName;
+			strcpy(buf2,NiceUserName);
+			strcat(buf2,".");
+			strcat(buf2,owner);
+			owner=buf2;		
 		}
 
 		int OwnerNum = scheduler.insert_owner( owner );
