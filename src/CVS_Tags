@@ -1,3 +1,8 @@
+4/12/04 trunk-merge-V6_7-branch-1
+   A branch created off the trunk for the purpose of merging V6_7
+   branch to the trunk.  We will merge from the V6_6_ROOT tag to 
+   V6_7-merge-1.
+
 2/10/04 trunk-post-merge-t-m-V6_5-b-1-m-1
 	The state of the trunk after merging in the trunk-merge-V6_5-branch-1
 	as tagged at trunk-merge-V6_5-branch-1-merge-1.
