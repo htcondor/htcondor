@@ -137,7 +137,7 @@ display (FILE *file, AttrList *al)
 				// get the expression tree of the attribute
 				if (!(tree = al->Lookup (attr)))
 				{
-					if (alt) fprintf (file, fmt->printfFmt, alt);
+					if (alt) fprintf (file, "%s", alt);
 					continue;
 				}
 
