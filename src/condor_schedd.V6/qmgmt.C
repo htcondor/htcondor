@@ -1057,6 +1057,7 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%f", val);
+		free( attr_val );
 		return 1;
 	}
 
@@ -1080,6 +1081,7 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		sscanf(attr_val, "%d", val);
+		free( attr_val );
 		return 1;
 	}
 
@@ -1104,6 +1106,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
+		free( attr_val );
 		return 1;
 	}
 
@@ -1128,6 +1131,7 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
 		strcpy(val, attr_val);
+		free( attr_val );
 		return 1;
 	}
 
@@ -1153,7 +1157,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 	ClassAd				*ad;
 	char				key[_POSIX_PATH_MAX];
 //	LogDeleteAttribute	*log;
-	char				*attr_val;
+	char				*attr_val = NULL;
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 
@@ -1163,6 +1167,14 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		}
 	}
 
+		// If we found it in the transaction, we need to free attr_val
+		// so we don't leak memory.  We don't use the value, we just
+		// wanted to make sure we could find the attribute so we know
+		// to return failure if needed.
+	if( attr_val ) {
+		free( attr_val );
+	}
+	
 	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
