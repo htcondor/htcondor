@@ -1001,7 +1001,10 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi ) {
 	for( int i=0 ; i<numpids ; i++ ) {
 		localpids[i] = pids[i];
 	}
+	
 	multiInfo( localpids, numpids, pi );
+
+	free(localpids);
 
 	return 0;
 }
