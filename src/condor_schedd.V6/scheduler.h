@@ -89,7 +89,9 @@ class Scheduler : public Service
 	void			shutdown_graceful();
 	
 	// negotiation
-	void			negotiate(int, Stream *);
+	int				doNegotiate(int, Stream *);
+	int				negotiatorSocketHandler(Stream *);
+	int				negotiate(int, Stream *);
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
 
@@ -123,6 +125,9 @@ class Scheduler : public Service
 	Scheduler*		myself;
 	u_short			port;
 	
+	// information for utilizing cached negotiator socket
+	bool			alreadyStashed;
+
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
 	int				MaxJobStarts;
@@ -130,7 +135,7 @@ class Scheduler : public Service
 	int				JobsStarted; // # of jobs started last negotiating session
 	int				SwapSpace;	 // available at beginning of last session
 	int				ShadowSizeEstimate;	// Estimate of swap needed to run a job
-	int				SwapSpaceExhausted;	// True if a job had died due to lack of swap space
+	int				SwapSpaceExhausted;	// True if job died due to lack of swap space
 	int				ReservedSwap;		// for non-condor users
 	int				JobsIdle; 
 	int				JobsRunning;
@@ -140,7 +145,7 @@ class Scheduler : public Service
 	int				BadProc;
 	int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	int				N_RejectedClusters;
-        OwnerData			Owners[MAX_NUM_OWNERS];
+    OwnerData			Owners[MAX_NUM_OWNERS];
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
@@ -159,7 +164,7 @@ class Scheduler : public Service
 	char*			Mail;
 	char*			filename;					// save UpDown object
 	char*			AccountantName;
-        char*                   UidDomain;
+    char*                   UidDomain;
 
 	// connection variables
 	struct sockaddr_in	From;
@@ -172,7 +177,7 @@ class Scheduler : public Service
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
 	void			update_central_mgr();
-	int			insert_owner(char*);
+	int				insert_owner(char*);
 	void			reaper(int, int, struct sigcontext*);
 	void			clean_shadow_recs();
 	void			preempt(int);

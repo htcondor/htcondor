@@ -53,6 +53,7 @@
 
 #include "sched.h"
 #include "condor_config.h"
+#include "condor_fix_unistd.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "proc.h"
@@ -161,6 +162,7 @@ Scheduler::Scheduler()
     JobsStarted = 0;
     JobsRunning = 0;
     ReservedSwap = 0;
+	alreadyStashed = false;
 
     ShadowSizeEstimate = 0;
     ScheddScalingFactor = 0;	// ??
@@ -440,13 +442,63 @@ Scheduler::abort_job(int, Stream* s)
 	return
 #endif
 
+
+int
+Scheduler::negotiatorSocketHandler (Stream *stream)
+{
+	int command;
+	int rval;
+
+	dprintf (D_ALWAYS, "Activity on stashed negotiator socket\n");
+
+	// attempt to read a command off the stream
+	stream->decode();
+	if (!stream->code(command))
+	{
+		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
+		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
+		return (!KEEP_STREAM);
+	}
+
+	// since this is the socket from the negotiator, the only command that can
+	// come in at this point is NEGOTIATE.  If we get something else, something
+	// goofy in going on.
+	if (command != NEGOTIATE)
+	{
+		dprintf(D_ALWAYS,"Negotiator command was not NEGOTIATE --- aborting\n");
+		alreadyStashed = false;
+		return (!(KEEP_STREAM));
+	}
+
+	rval = negotiate(NEGOTIATE, stream);
+	if (rval != KEEP_STREAM) alreadyStashed = false;
+	return rval;	
+}
+
+
+int
+Scheduler::doNegotiate (int i, Stream *s)
+{
+	int rval = negotiate(i, s);
+	if (rval == KEEP_STREAM && !alreadyStashed)
+	{
+		dprintf (D_ALWAYS, "Stashing socket to negotiator for future reuse\n");
+		daemonCore->Register_Socket(s, "<Negotiator Socket>", 
+			(SocketHandlercpp) negotiatorSocketHandler, "<Negotiator Command>",
+			this, ALLOW);
+		alreadyStashed = true;
+	}
+	return rval;
+}
+
+
 /*
 ** The negotiator wants to give us permission to run a job on some
 ** server.  We must negotiate to try and match one of our jobs with a
 ** server which is capable of running it.  NOTE: We must keep job queue
 ** locked during this operation.
 */
-void
+int
 Scheduler::negotiate(int, Stream* s)
 {
 	int		i;
@@ -502,11 +554,11 @@ Scheduler::negotiate(int, Stream* s)
 	s->decode();
 	if (!s->code(ownerptr)) {
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		RETURN;
+		RETURN (!(KEEP_STREAM));
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		RETURN;
+		RETURN (!(KEEP_STREAM));
 	}
 	dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
 	//-----------------------------------------------
@@ -552,7 +604,7 @@ Scheduler::negotiate(int, Stream* s)
 			s->decode();
 			if( !s->code(op) ) {
 				dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-				return;
+				return (!(KEEP_STREAM));
 			}
 			if( op != PERMISSION ) {
 				if( !s->end_of_message() ) {
@@ -570,12 +622,12 @@ Scheduler::negotiate(int, Stream* s)
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS,
 									"Can't send NO_MORE_JOBS to mgr\n" );
-							return;
+							return (!(KEEP_STREAM));
 						}
 						dprintf( D_ALWAYS,
 					"Reached MAX_JOB_STARTS - %d jobs matched, %d jobs idle\n",
 								JobsStarted, jobs - JobsStarted );
-						return;
+						return KEEP_STREAM;
 					}
 					/* Really, we're trying to make sure we don't have too
 					   many shadows running, so compare here against
@@ -584,59 +636,59 @@ Scheduler::negotiate(int, Stream* s)
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
-							return;
+							return (!(KEEP_STREAM));
 						}
 						dprintf( D_ALWAYS,
 				"Reached MAX_JOBS_RUNNING, %d jobs matched, %d jobs idle\n",
 								JobsStarted, jobs - JobsStarted );
-						return;
+						return KEEP_STREAM;
 					}
 					if( SwapSpaceExhausted ) {
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
-							return;
+							return (!(KEEP_STREAM));
 						}
 						dprintf( D_ALWAYS,
 					"Swap Space Exhausted, %d jobs matched, %d jobs idle\n",
 								JobsStarted, jobs - JobsStarted );
-						return;
+						return KEEP_STREAM;
 					}
 					if( ShadowSizeEstimate && JobsStarted >= start_limit_for_swap ) { 
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
-							return;
+							return (!(KEEP_STREAM));
 						}
 						dprintf( D_ALWAYS,
 				"Swap Space Estimate Reached, %d jobs matched, %d jobs idle\n",
 								JobsStarted, jobs - JobsStarted );
-						return;
+						return (KEEP_STREAM);
 					}
 					
 					/* Send a job description */
 					if( !s->snd_int(JOB_INFO,FALSE) ) {
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
-						return;
+						return (!(KEEP_STREAM));
 					}
 					ClassAd *ad;
 					ad = GetJobAd( id.cluster, id.proc );
 					if (!ad) {
 						dprintf( D_ALWAYS, "Can't get job ad %d.%d\n",
 								 id.cluster, id.proc );
-						return;
+						return (!(KEEP_STREAM));
 					}
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
 						FreeJobAd(ad);
-						return;
+						return (!(KEEP_STREAM));
 					}
 					FreeJobAd(ad);
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
-						return;
+						return (!(KEEP_STREAM));
 					}
 					dprintf( D_FULLDEBUG,
 							"Sent job %d.%d\n", id.cluster, id.proc );
@@ -657,12 +709,12 @@ Scheduler::negotiate(int, Stream* s)
 					if( !s->get(capability) ) {
 						dprintf( D_ALWAYS,
 								"Can't receive capability from mgr\n" );
-						return;
+						return (!(KEEP_STREAM));
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't receive eom from mgr\n" );
-						return;
+						return (!(KEEP_STREAM));
 					}
 						// capability is in the form
 						// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
@@ -699,10 +751,10 @@ Scheduler::negotiate(int, Stream* s)
 				case END_NEGOTIATE:
 					dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
 							JobsStarted );
-					return;
+					return KEEP_STREAM;
 				default:
 					dprintf( D_ALWAYS, "Got unexpected request (%d)\n", op );
-					return;
+					return (!(KEEP_STREAM));
 			}
 		}
 	}
@@ -710,7 +762,7 @@ Scheduler::negotiate(int, Stream* s)
 		/* Out of jobs */
 	if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 		dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
-		return;
+		return (!(KEEP_STREAM));
 	}
 	if( JobsStarted < jobs ) {
 		dprintf( D_ALWAYS,
@@ -721,7 +773,7 @@ Scheduler::negotiate(int, Stream* s)
 		"Out of jobs - %d jobs matched, %d jobs idle\n",
 							JobsStarted, jobs - JobsStarted );
 	}
-	return;
+	return KEEP_STREAM;
 }
 
 
@@ -2075,26 +2127,33 @@ Scheduler::Init()
 void
 Scheduler::Register(DaemonCore* core)
 {
-        // message handlers for schedd commands
-        core->Register_Command(NEGOTIATE, "NEGOTIATE", (CommandHandlercpp)negotiate, "negotiate", this, NEGOTIATOR);
-        core->Register_Command(RESCHEDULE, "RESCHEDULE", (CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
-                                                   this, ALLOW);
-        core->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", (CommandHandlercpp)vacate_service, "vacate_service", 
-                                                   this, WRITE);
-        core->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", (CommandHandlercpp)abort_job, "abort_job", this, WRITE);
+    // message handlers for schedd commands
+    core->Register_Command(NEGOTIATE, "NEGOTIATE", 
+			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR);
+    core->Register_Command(RESCHEDULE, "RESCHEDULE", 
+			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
+                               this, ALLOW);
+    core->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
+			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
+    core->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
+			(CommandHandlercpp)abort_job, "abort_job", this, WRITE);
 
-        // handler for queue management commands
-        // Note: This could either be a READ or a WRITE command.  Too bad we have to lump both together here.
-        core->Register_Command(QMGMT_CMD, "QMGMT_CMD", (CommandHandler)handle_q, "handle_q", NULL, WRITE);
+    // handler for queue management commands
+    // Note: This could either be a READ or a WRITE command.  Too bad we have 
+	// to lump both together here.
+    core->Register_Command(QMGMT_CMD, "QMGMT_CMD", (CommandHandler)handle_q, 
+			"handle_q", NULL, WRITE);
 
-        // timer handler
-        core->Register_Timer(10, SchedDInterval, (Eventcpp)timeout, "timeout", this);
-        core->Register_Timer(10, SchedDInterval, (Eventcpp)StartJobs, "StartJobs", this);
-        core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, "send_alive", this);
+    // timer handler
+    core->Register_Timer(10,SchedDInterval,(Eventcpp)timeout,"timeout",this);
+   core->Register_Timer(10,SchedDInterval,(Eventcpp)StartJobs,"StartJobs",this);
+    core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, 
+			"send_alive", this);
 
 #if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
-        // signal handlers
-        core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, "reaper", this );
+    // signal handlers
+    core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, 
+			"reaper", this );
 #endif
 
 }
@@ -2548,6 +2607,7 @@ Scheduler::send_alive()
 {
 	SafeSock	*sock;
     int     	i, j;
+	int			alive = ALIVE;
 
 	{
 		return;
@@ -2562,7 +2622,7 @@ Scheduler::send_alive()
 		j++;
 		sock = new SafeSock(rec[i]->peer, 0);
 		sock->encode();
-		if( !sock->put(ALIVE) || 
+		if( !sock->put(alive) || 
 			!sock->code((char *&)(rec[i]->id)) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
