@@ -354,8 +354,16 @@ is \verb@SIGTERM@ which is the standard way to terminate a program in UNIX.
 
 If your job attempts to access any of the files mentioned in this list,
 Condor will automatically compress them (if writing) or decompress them (if reading).
-The compress format is the same as used by GNU gzip.  The files given in this
-list must be complete pathnames, but may be abbreviated by using $*$ as a wildcard.
+The compress format is the same as used by GNU gzip.
+
+The files given in this list may be simple filenames or complete paths and may
+include $*$ as a wildcard.  For example, this list causes the file /tmp/data.gz,
+any file named event.gz, and any file ending in .gzip to be automatically
+compressed or decompressed as needed:
+
+\begin{verbatim}
+compress_files = /tmp/data.gz, event.gz, *.gzip
+\end{verbatim}
 
 Due to the nature of the compression format, compressed files must only
 be accessed sequentially.  Random access reading is allowed but is very slow,
@@ -373,8 +381,26 @@ machine, but is compressed for transfer to its original location.
 If your job attempts to access a file mentioned in this list,
 Condor will automatically copy the whole file to the executing machine,
 where it can be accessed quickly.  When your job closes the file,
-it will be copied back to its original location.  The files given in this list must be
-complete pathnames, but may be abbreviated by using $*$ as a wildcard.
+it will be copied back to its original location.
+This list uses the same syntax as compress\_files, shown above.
+
+%%%%%%%%%%%%%%%%%%%
+%% append_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[append\_files = file1, file2, ...]
+
+If your job attempts to access a file mentioned in this list,
+Condor will force all writes to that file to be appended to the end.
+Furthermore, condor\_submit will not truncate it.
+This list uses the same syntax as compress\_files, shown above.
+
+This option may yield some surprising results.  If several
+jobs attempt to write to the same file, their output may be intermixed.
+If a job is evicted from one or more machines during the course of its
+lifetime, such an output file might contain several copies of the results.
+This option should be only be used when you wish a certain file to be
+treated as a running log instead of a precise result.
 
 %%%%%%%%%%%%%%%%%%%
 %% buffer_size
