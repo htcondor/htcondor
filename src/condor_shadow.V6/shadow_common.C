@@ -100,7 +100,8 @@ extern char    *MailerPgm;
 extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
-extern char *schedd;
+extern char *schedd, *scheddName;
+extern "C" extern bool JobPreCkptServerScheddNameChange();
 
 void
 NotifyUser( char *buf, PROC *proc )
@@ -337,9 +338,14 @@ unlink_local_or_ckpt_server( char *file )
                    should do that anyway??? */
 				/* We only need to check the server for standard universe 
 				   jobs. -Jim B. */
-                dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
-                                RemoveRemoteFile(Proc->owner, file));
+			rval = RemoveRemoteFile(Proc->owner, scheddName, file);
+			if (JobPreCkptServerScheddNameChange()) {
+				rval = RemoveRemoteFile(Proc->owner, NULL, file);
+			}
+			dprintf( D_FULLDEBUG, "Remove from ckpt server returns %d\n",
+					 rval );
         }
+		return rval;
 }
 
 
