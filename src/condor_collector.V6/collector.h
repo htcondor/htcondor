@@ -49,7 +49,6 @@ protected:
 
 	static int ClientTimeout;
 	static int QueryTimeout;
-	static char* CondorDevelopers;
 	static char* CollectorName;
 
 	static ClassAd* __query__;
