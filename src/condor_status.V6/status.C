@@ -187,6 +187,7 @@ usage ()
 		"\t[-schedd]\t\tDisplay attributes of schedds\n"
 		"\t[-server]\t\tDisplay important attributes of resources\n"
 		"\t[-startd]\t\tDisplay resource attributes\n"
+		"\t[-state]\t\tDisplay state of resources\n"
 		"\t[-submittors]\tDisplay information about request submittors\n"
 		"\t[-total]\t\tDisplay totals only\n"
 		"\t[-verbose]\t\tSame as -long\n", 
