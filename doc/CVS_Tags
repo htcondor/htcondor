@@ -8,6 +8,11 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+12/08/03 V6_7-core-branch
+   A new branch off V6_7-branch for features we're adding for CORE. 
+   Created from the V6_7-core-root tag.  We'll need to document
+   the changes somewhere... ;)
+
 9/11/03 V6_7-branch
    A new branch off the end of the V6_5-branch for the 6.7.x
    development series.  Created from the V6_6-root tag.  Includes the
