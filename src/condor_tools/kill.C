@@ -172,6 +172,7 @@ find_condor_pids() {
 
         // if this a numerically-named directory (i.e., a process)
         if( isaNum( proc_dir->d_name ) ) {
+	    char	*cmdptr;
 
             // construct the filename to open (/proc/[pid]/cmdline)
             strncpy( tmp_name, "/proc/", PATH_MAX );
@@ -184,18 +185,25 @@ find_condor_pids() {
             if( ! (fp = fopen( tmp_name, "r" )) ) {
                 fprintf( stderr, "error: can't open %s (%s)\n", tmp_name,
                          strerror( errno ) );
-				my_exit( 1 );
+		my_exit( 1 );
             }
             fgets( cmdline, 64, fp );
             fclose( fp );
 
-			// if the command begins with "condor_", save the pid
-			if( strstr( cmdline, "condor_" ) == cmdline ) {
-				pid = atoi( proc_dir->d_name );
-				cpid = new CondorPid( pid, cmdline );
-				condor_pids->Append( cpid );
-			}
-		}
+	    // Grab the 'program name' portion of the command line
+	    if (  ( cmdptr = strrchr( cmdline, '/' ) ) != NULL ) {
+		cmdptr++;		// Point to the fist char after the /
+	    } else {
+		cmdptr = cmdline;	// No slash -- no path in cmdline
+	    }
+
+	    // if the command begins with "condor_", save the pid
+	    if( strstr( cmdptr, "condor_" ) == cmdptr ) {
+		pid = atoi( proc_dir->d_name );
+		cpid = new CondorPid( pid, cmdline );
+		condor_pids->Append( cpid );
+	    }
+	}
     }
 
     closedir( proc_root );
