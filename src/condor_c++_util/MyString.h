@@ -91,7 +91,16 @@ public:
     return 0;
   }
 
+  friend int operator==(const MyString& S1, const char *S2) {
+    if (!S1.Data && !S2) return 1;
+    if (!S1.Data || !S2) return 0;
+    if (strcmp(S1.Data,S2)==0) return 1;
+    return 0;
+  }
+
   friend int operator!=(const MyString& S1, const MyString& S2) { return ((S1==S2) ? 0 : 1); }
+
+  friend int operator!=(const MyString& S1, const char *S2) { return ((S1==S2) ? 0 : 1); }
 
   friend int operator<(const MyString& S1, const MyString& S2) {
     if (!S1.Data && !S2.Data) return 0;
