@@ -173,6 +173,7 @@ void Accountant::Initialize()
 	  HashKey HK;
 	  char key[_POSIX_PATH_MAX];
 	  ClassAd* ad;
+	  AttrList *unused;
 	  StringList users;
 	  char *next_user;
 	  MyString user;
@@ -193,11 +194,17 @@ void Accountant::Initialize()
 		// compare what the customer record claims for usage -vs- actual
 		// number of resources
 	  users.rewind();
-	  while( next_user=users.next() ) 
+	  while( (next_user=users.next()) ) 
 	  {
 		  user = next_user;
 		  resources_used = GetResourcesUsed(user);
-		  ReportState(user,&resources_used_really);
+
+		  /* It appears here that only the second variable is of interest to
+		  	this part of the code, however, this function returns new'ed memory
+			so keep track of it and delete it so we don't leak memory. */
+		  unused = ReportState(user,&resources_used_really);
+		  delete unused;
+
 		  if ( resources_used == resources_used_really ) {
 			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
 				  resources_used);
@@ -818,8 +825,6 @@ bool Accountant::DeleteClassAd(const MyString& Key)
 
 void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue)
 {
-  ClassAd* ad;
-  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
   if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
@@ -836,8 +841,6 @@ void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, 
 
 void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName, float AttrValue)
 {
-  ClassAd* ad;
-  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
   if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
@@ -855,8 +858,6 @@ void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName
 
 void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrName, const MyString& AttrValue)
 {
-  ClassAd* ad;
-  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
   if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
