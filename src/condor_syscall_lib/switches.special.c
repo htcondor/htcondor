@@ -263,6 +263,9 @@ isatty( int filedes )
 #if defined(HPUX9) || defined(LINUX)
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
+#elif defined(OSF1)
+ssize_t
+readv( int fd, struct iovec *iov, int iovcnt )
 #else
 int
 readv( int fd, struct iovec *iov, int iovcnt )
@@ -350,6 +353,9 @@ writev( int fd, const struct iovec *iov, size_t iovcnt )
 #elif defined(Solaris)
 ssize_t
 writev( int fd, const struct iovec *iov, int iovcnt )
+#elif defined(OSF1)
+ssize_t
+writev( int fd, struct iovec *iov, int iovcnt )
 #else
 int
 writev( int fd, struct iovec *iov, int iovcnt )
