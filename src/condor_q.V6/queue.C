@@ -892,7 +892,8 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 	// Print the jobs
 	for (int i=0;i<=output_buffer->getlast(); i++) {
-		printf("%s",(*output_buffer)[i]);
+		if ((*output_buffer)[i])
+			printf("%s",(*output_buffer)[i]);
 	}
 
 	// If we want to summarize, do that too.
