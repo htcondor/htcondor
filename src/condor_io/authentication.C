@@ -518,6 +518,10 @@ Authentication::authenticate_nt()
 	CredHandle cred;
 	CtxtHandle theCtx;
 
+	cred.dwLower = 0L;
+	cred.dwUpper = 0L;
+	theCtx.dwLower = 0L;
+	theCtx.dwUpper = 0L;
 
 	if ( pf == NULL ) {
 		PSecurityFunctionTable (*pSFT)( void );
@@ -547,8 +551,10 @@ Authentication::authenticate_nt()
 	}
 
 	// clean up
-	(pf->DeleteSecurityContext)( &theCtx );
-	(pf->FreeCredentialHandle)( &cred );
+	if ( theCtx.dwLower != 0L || theCtx.dwUpper != 0L )
+		(pf->DeleteSecurityContext)( &theCtx );
+	if ( cred.dwLower != 0L || cred.dwUpper != 0L )
+		(pf->FreeCredentialHandle)( &cred );
 
 	//return 1 for success, 0 for failure. Server should send sucess/failure
 	//back to client so client can know what to return.
