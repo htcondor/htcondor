@@ -204,6 +204,12 @@ Scheduler::Scheduler()
 	numRegContacts = 0;
 #ifndef WIN32
 	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
+		// Just in case getdtablesize() returns <= 20, we've got to
+		// let the schedd try at least 1 connection at a time.
+		// Derek, Todd, Pete K. 1/19/01
+	if( MAX_STARTD_CONTACTS < 1 ) {
+		MAX_STARTD_CONTACTS = 1;
+	}
 #else
 	// on Windows NT, it appears you can open up zillions of sockets
 	MAX_STARTD_CONTACTS = 2000;
