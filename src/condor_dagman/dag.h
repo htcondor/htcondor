@@ -400,6 +400,15 @@ class Dag {
 	void ChooseDotFileName(MyString &dot_file_name);
 
 	CheckEvents	_ce;
+
+		// The next time we're allowed to try submitting a job -- 0 means
+		// go ahead and submit right away.
+	time_t		_nextSubmitTime;
+
+		// The delay we use the next time a submit fails -- _nextSubmitTime
+		// becomes the current time plus _nextSubmitDelay (this is in
+		// seconds).
+	int			_nextSubmitDelay;
 };
 
 #endif /* #ifndef DAG_H */

@@ -82,6 +82,8 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 	_update_dot_file       = false;
 	_overwrite_dot_file    = true;
 	_dot_file_name_suffix  = 0;
+	_nextSubmitTime = 0;
+	_nextSubmitDelay = 1;
 
 	return;
 }
@@ -878,15 +880,25 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
-	bool submit_success;
+
+		// Check whether we have to wait longer before submitting again
+		// (if a previous submit attempt failed).
+	if ( _nextSubmitTime && time(NULL) < _nextSubmitTime) {
+		sleep(1);
+        return 0;
+	}
+
+
 	int numSubmitsThisCycle = 0;
 	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
 //	PrintReadyQ( DEBUG_DEBUG_4 );
+
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
         return numSubmitsThisCycle;
     }
+
     // max jobs already submitted
     if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
         debug_printf( DEBUG_DEBUG_1,
@@ -932,7 +944,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
 				  job->JobTypeString(), job->GetJobName() );
 
-    CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
 
 #if defined(BUILD_HELPER)
@@ -975,37 +986,82 @@ Dag::SubmitReadyJobs(const Dagman &dm)
     }
 #endif //BUILD_HELPER
 
+	bool submit_success;
+    CondorID condorID(0,0,0);
+
     if( job->JobType() == Job::TYPE_CONDOR ) {
+	  job->_submitTries++;
       submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 				      job->GetJobName(), job->varNamesFromDag,
 				      job->varValsFromDag );
     } else if( job->JobType() == Job::TYPE_STORK ) {
+	  job->_submitTries++;
       submit_success = dap_submit( dm, cmd_file.Value(), condorID,
 				   job->GetJobName() );
-    }
+    } else {
+	    debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", job->JobType() );
+		ASSERT(false);
+	}
+
 
     if( !submit_success ) {
-      sprintf( job->error_text, "Job submit failed" );
 
-      // NOTE: this failure short-circuits the "retry" feature
-      job->retries = job->GetRetryMax();
+	  	// Set the times to wait twice as long as last time.
+	  int thisSubmitDelay = _nextSubmitDelay;
+	  _nextSubmitTime = time(NULL) + thisSubmitDelay;
+	  _nextSubmitDelay *= 2;
 
-      if( job->_scriptPost && run_post_on_failure ) {
-	// a POST script is specified for the job, so run it
-	job->_Status = Job::STATUS_POSTRUN;
-	// there's no easy way to represent condor_submit errors as
-	// return values or signals, so just say SIGUSR1
-	job->_scriptPost->_retValJob = -10;
-	_postScriptQ->Run( job->_scriptPost );
-      } else {
-	job->_Status = Job::STATUS_ERROR;
-	_numJobsFailed++;
-      }
+	  if ( job->_submitTries >= dm.max_submit_attempts ) {
+		// We're out of submit attempts, treat this as a submit failure.
 
-      // the problem might be specific to that job, so keep submitting...
-      continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
+			// To match the existing behavior, we're resetting the times
+			// here.
+		_nextSubmitTime = 0;
+		_nextSubmitDelay = 1;
+
+		debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
+				job->_submitTries, job->_submitTries == 1 ? "y" : "ies" );
+
+        sprintf( job->error_text, "Job submit failed" );
+
+        // NOTE: this failure short-circuits the "retry" feature
+        job->retries = job->GetRetryMax();
+
+        if( job->_scriptPost && run_post_on_failure ) {
+	      // a POST script is specified for the job, so run it
+	      job->_Status = Job::STATUS_POSTRUN;
+	      // there's no easy way to represent condor_submit errors as
+	      // return values or signals, so just say SIGUSR1
+	      job->_scriptPost->_retValJob = -10;
+	      _postScriptQ->Run( job->_scriptPost );
+        } else {
+	      job->_Status = Job::STATUS_ERROR;
+	      _numJobsFailed++;
+        }
+
+	  } else {
+	      // We have more submit attempts left, put this job back into the
+		  // ready queue.
+		debug_printf( DEBUG_NORMAL, "Job submit try %d/%d failed, "
+				"will try again in >= %d second%s.\n", job->_submitTries,
+				dm.max_submit_attempts, thisSubmitDelay,
+				thisSubmitDelay == 1 ? "" : "s" );
+
+		if ( dm.retrySubmitFirst ) {
+		  _readyQ->Prepend(job);
+		} else {
+		  _readyQ->Append(job);
+		}
+	  }
+
+	  return numSubmitsThisCycle;
     }
     
+	  // Set the times to *not* wait before trying another submit, since
+	  // the most recent submit worked.
+	_nextSubmitTime = 0;
+	_nextSubmitDelay = 1;
+
     // append job to the submit queue so we can match it with its
     // submit event once the latter appears in the Condor job log
     if( _submitQ->enqueue( job ) == -1 ) {

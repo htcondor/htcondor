@@ -107,6 +107,7 @@ Init( const char* jobName, const char* cmdFile )
 
     retry_max = 0;
     retries = 0;
+    _submitTries = 0;
     have_retry_abort_val = false;
     retry_abort_val = 0xdeadbeef;
 	_visited = false;

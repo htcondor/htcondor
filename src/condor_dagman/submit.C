@@ -91,7 +91,7 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 	submitExec = "stork_submit";
 
   } else {
-	debug_printf(DEBUG_QUIET, "Illegal job type: %d\n", type);
+	debug_printf( DEBUG_QUIET, "Illegal job type: %d\n", type );
 	ASSERT(false);
   }
   
@@ -139,21 +139,11 @@ do_submit( const Dagman &dm, const char *command, CondorID &condorID,
   
 	bool success = false;
 	const int tries = dm.max_submit_attempts;
-	int wait = 1;
 
 	success = submit_try( command, condorID, jobType );
-	for (int i = 1 ; i < tries && !success ; i++) {
-		debug_printf( DEBUG_NORMAL, "%s try %d/%d failed, "
-			"will try again in %d second%s\n", exe, i, tries, wait,
-			wait == 1 ? "" : "s" );
-		sleep( wait );
-		success = submit_try( command, condorID, jobType );
-		wait = wait * 2;
-	}
 
 	if( !success ) {
-	    debug_printf( DEBUG_QUIET, "%s failed after %d tr%s.\n", exe,
-			      tries, tries == 1 ? "y" : "ies" );
+	    debug_printf( DEBUG_QUIET, "%s try failed\n", exe );
 		debug_printf( DEBUG_QUIET, "submit command was: %s\n",
 			      command );
 	}

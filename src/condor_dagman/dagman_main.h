@@ -63,6 +63,11 @@ class Dagman {
 		// a fatal error.  (Default is false.)
 	bool allowExtraRuns;
 
+		// If this is true, nodes for which a submit fails are retried
+		// before any other ready nodes; otherwise a submit failure puts
+		// a node at the back of the ready queue.  (Default is true.)
+	bool retrySubmitFirst;
+
     bool Config();
 };
 

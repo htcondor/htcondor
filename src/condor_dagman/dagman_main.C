@@ -119,6 +119,7 @@ Dagman::Config()
 	stork_server = param( "STORK_SERVER" );
 	allowExtraRuns = param_boolean(
 			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
+	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
 	return true;
 }
 

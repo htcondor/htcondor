@@ -272,6 +272,9 @@ class Job {
     // number of retries so far
     int retries;
 
+	// Number of submit tries so far.
+	int _submitTries;
+
     // the return code of the job
     int retval;
 	
