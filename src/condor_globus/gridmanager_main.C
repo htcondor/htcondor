@@ -7,9 +7,15 @@
 // Globus include files
 #include "globus_common.h"
 #include "globus_gram_client.h"
+#include "globus_gass_server_ez.h"
 
+#include "gm_common.h"
 #include "gridmanager.h"
 
+
+char *gramCallbackContact = NULL;
+char *gassServerUrl = NULL;
+globus_gass_transfer_listener_t gassServerListener;
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
 
@@ -54,25 +60,41 @@ main_init( int argc, char **argv )
 		i++;
 	}
 
-	err = globus_module_activate( GLOBUS_COMMON_MODULE );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error initializing globus, err=%d\n", err );
-	}
-
 	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
 	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error initializing globus GRAM, err=%d\n", err );
+		dprintf( D_ALWAYS, "Error initializing GRAM, err=%d\n", err );
 		DC_Exit( 1 );
 	}
 
 	err = globus_gram_client_callback_allow( GridManager::gramCallbackHandler,
 											 &gridmanager,
-											 &gridmanager.gramCallbackContact );
+											 &gramCallbackContact );
 	if ( err != GLOBUS_SUCCESS ) {
 		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d\n", err );
 		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
 		DC_Exit( 1 );
 	}
+
+	err = globus_module_activate( GLOBUS_GASS_SERVER_EZ_MODULE );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error initializing GASS server, err=%d\n", err );
+		globus_gram_client_callback_disallow( gramCallbackContact );
+		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
+		DC_Exit( 1 );
+	}
+
+	err = globus_gass_server_ez_init( &gassServerListener, NULL, NULL, NULL,
+									  GLOBUS_GASS_SERVER_EZ_READ_ENABLE |
+									  GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
+									  NULL );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
+		globus_gram_client_callback_disallow( gramCallbackContact );
+		globus_module_deactivate_all();
+		DC_Exit( 1 );
+	}
+
+	gassServerUrl = globus_gass_transfer_listener_get_base_url(gassServerListener);
 
 	gridmanager.Init();
 	gridmanager.Register();
@@ -95,6 +117,9 @@ main_config()
 int
 main_shutdown_fast()
 {
+	globus_gram_client_callback_disallow( gramCallbackContact );
+	globus_gass_server_ez_shutdown( gassServerListener );
+	globus_module_deactivate_all();
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -102,6 +127,9 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	globus_gram_client_callback_disallow( gramCallbackContact );
+	globus_gass_server_ez_shutdown( gassServerListener );
+	globus_module_deactivate_all();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }

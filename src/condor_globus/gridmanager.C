@@ -9,6 +9,7 @@
 
 #include "globus_gram_client.h"
 
+#include "gm_common.h"
 #include "gridmanager.h"
 
 
@@ -19,6 +20,9 @@
 #define UPDATE_SCHEDD_DELAY		5
 
 #define HASH_TABLE_SIZE			500
+
+
+List<JobUpdateEvent> JobUpdateEventQueue;
 
 // For developmental testing
 int test_mode = 0;
@@ -40,6 +44,19 @@ template class HashTable<PROC_ID, GlobusJob *>;
 template class HashBucket<PROC_ID, GlobusJob *>;
 template class List<GlobusJob *>;
 template class Item<GlobusJob *>;
+template class List<JobUpdateEvent>;
+template class Item<JobUpdateEvent>;
+
+
+void addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
+{
+	JobUpdateEvent *new_event = new JobUpdateEvent;
+	new_event->job = job;
+	new_event->event = event;
+	new_event->subtype = subtype;
+
+	JobUpdateEventQueue.Append( new_event );
+}
 
 
 GridManager::GridManager()
@@ -48,7 +65,6 @@ GridManager::GridManager()
 	updateScheddTimerSet = false;
 	Owner = NULL;
 	ScheddAddr = NULL;
-	gramCallbackContact = NULL;
 
 	JobsByContact = new HashTable <HashKey, GlobusJob *>( HASH_TABLE_SIZE,
 														  hashFunction );
@@ -65,10 +81,6 @@ GridManager::~GridManager()
 	if ( ScheddAddr ) {
 		free( ScheddAddr );
 		ScheddAddr = NULL;
-	}
-	if ( gramCallbackContact ) {
-		free( gramCallbackContact );
-		gramCallbackContact = NULL;
 	}
 
 	if ( JobsByContact != NULL ) {
@@ -110,17 +122,6 @@ GridManager::Init()
 	Owner = my_username();
 	if ( Owner == NULL ) {
 		EXCEPT( "Can't determine username" );
-	}
-
-	rc = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
-	if ( rc != GLOBUS_SUCCESS ) {
-		EXCEPT( "Failed to activate globus" );
-	}
-
-	rc = globus_gram_client_callback_allow( GridManager::gramCallbackHandler,
-											this, &gramCallbackContact );
-	if ( rc != GLOBUS_SUCCESS ) {
-		EXCEPT( "Failed to activate globus callbacks" );
 	}
 }
 
@@ -196,13 +197,11 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 
 		if ( new_job->jobState == G_UNSUBMITTED ) {
 
-			if ( new_job->submit( gramCallbackContact ) == true ) {
+			if ( new_job->start() == true ) {
 
 				JobsByContact->insert( HashKey( new_job->jobContact ), new_job );
 
 			}
-
-			needsUpdate( new_job, JOB_STATE | JOB_CONTACT );
 
 		}
 
@@ -210,6 +209,8 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 		FreeJobAd( next_ad );
 
 	}
+
+	setUpdate();
 
 	return TRUE;
 }
@@ -270,7 +271,8 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 			if ( curr_job->jobContact != NULL )
 				JobsByContact->remove( HashKey( curr_job->jobContact ) );
 			JobsByProcID->remove( curr_procid );
-			needsUpdate( curr_job, JOB_REMOVED );
+			addJobUpdateEvent( curr_job, JOB_REMOVED );
+			setUpdate();
 
 		}
 
@@ -290,6 +292,7 @@ GridManager::updateSchedd()
 	int proc_id;
 	char buf[1024];
 	Qmgr_connection *schedd;
+	JobUpdateEvent *curr_event;
 	GlobusJob *curr_job;
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
@@ -302,12 +305,14 @@ GridManager::updateSchedd()
 		return TRUE;
 	}
 
-	JobsToUpdate.Rewind();
+	JobUpdateEventQueue.Rewind();
 
-	while ( JobsToUpdate.Next( curr_job ) ) {
+	while ( JobUpdateEventQueue.Next( curr_event ) ) {
 
-		if ( curr_job->updateFlags & JOB_STATE ) {
+		curr_job = curr_event->job;
 
+		switch ( curr_event->event) {
+		case JOB_UE_UPDATE_STATE:
 			SetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
 							 ATTR_GLOBUS_STATUS, curr_job->jobState );
@@ -345,38 +350,56 @@ GridManager::updateSchedd()
 				break;
 			}
 
-		}
-
-		if ( curr_job->updateFlags & JOB_CONTACT ) {
-
+			break;
+		case JOB_UE_UPDATE_CONTACT:
 			SetAttributeString( curr_job->procID.cluster,
 								curr_job->procID.proc,
 								ATTR_GLOBUS_CONTACT_STRING,
 								curr_job->jobContact );
 
-		}
-
-		if ( curr_job->updateFlags & JOB_REMOVED ) {
-
+			break;
+		case JOB_UE_REMOVE_JOB:
 			// Send "removed" command
 
 			delete curr_job;
 
-			// Since we just deleted the current job, skip the stuff
-			// at the loop bottom that references it.
-			JobsToUpdate.DeleteCurrent();
-			continue;
+			break;
+		case JOB_UE_HOLD_JOB:
+			// put job on hold
 
+			break;
 		}
-
-		curr_job->updateFlags = 0;
-
-		JobsToUpdate.DeleteCurrent();
 	}
 
 	DisconnectQ( schedd );
 
 	updateScheddTimerSet = false;
+
+	JobUpdateEventQueue.Rewind();
+
+	while ( JobUpdateEventQueue.Next( curr_event ) ) {
+
+		curr_job = curr_event->job;
+
+		switch ( curr_event->event) {
+		case JOB_UE_ULOG_EXECUTE:
+			WriteExecuteToUserLog( curr_job );
+
+			break;
+		case JOB_UE_ULOG_TERMINATE:
+			WriteTerminateToUserLog( curr_job );
+
+			break;
+		case JOB_UE_EMAIL:
+			break;
+		case JOB_UE_CALLBACK:
+			curr_job->callback();
+
+			break;
+		}
+
+		JobUpdateEventQueue.DeleteCurrent();
+	}
 
 	return TRUE;
 }
@@ -437,87 +460,28 @@ fprintf(stderr,"callback: job %s, state %d\n", job_contact, state);
 		return;
 	}
 
-	if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_PENDING ) {
-		if ( this_job->jobState != G_PENDING ) {
-			this_job->jobState = G_PENDING;
+	this_job->callback( state, errorcode );
 
-			this_->needsUpdate( this_job, JOB_STATE );
-		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_ACTIVE ) {
-		if ( this_job->jobState != G_ACTIVE ) {
-			this_job->jobState = G_ACTIVE;
-
-			this_->needsUpdate( this_job, JOB_STATE );
-
-			// put this in updateSchedd?
-			this_->WriteExecuteToUserLog( this_job );
-		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED ) {
-		// Not sure what the right thing to do on a FAILED message from
-		// globus. For now, we treat it like a completed job.
-
-		// JobsByContact with a state of FAILED shouldn't be in the hash table,
-		// but we'll check anyway.
-		if ( this_job->jobState != G_FAILED ) {
-			this_job->jobState = G_FAILED;
-
-			this_->needsUpdate( this_job, JOB_STATE );
-
-			// put the following stuff in updateSchedd?
-
-			// userlog entry (what type of event is this?)
-
-			// email saying that the job failed?
-
-			this_->JobsByContact->remove( HashKey( this_job->jobContact ) );
-		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_DONE ) {
-		// JobsByContact with a state of DONE shouldn't be in the hash table,
-		// but we'll check anyway.
-		if ( this_job->jobState != G_DONE ) {
-			this_job->jobState = G_DONE;
-
-			this_->needsUpdate( this_job, JOB_STATE );
-
-			// put the following in updateSchedd?
-
-			this_->WriteTerminateToUserLog( this_job );
-
-			// email saying the job is done?
-
-			this_->JobsByContact->remove( HashKey( this_job->jobContact ) );
-		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_SUSPENDED ) {
-		if ( this_job->jobState != G_SUSPENDED ) {
-			this_job->jobState = G_SUSPENDED;
-
-			this_->needsUpdate( this_job, JOB_STATE );
-		}
-	} else {
-		dprintf( D_ALWAYS, "Unknown globus job state %d for job %d.%d\n",
-				 state, this_job->procID.cluster, this_job->procID.proc );
+	if ( this_job->jobContact == NULL ) {
+		this_->JobsByContact->remove( HashKey( this_job->jobContact ) );
+	} else if ( !strcmp( this_job->jobContact, job_contact ) ) {
+		this_->JobsByContact->remove( HashKey( job_contact ) );
+		this_->JobsByContact->insert( HashKey( this_job->jobContact ),
+									  this_job );
 	}
 
 fprintf(stderr,"callback returning\n");
 }
 
 void
-GridManager::needsUpdate( GlobusJob *job, unsigned int flags )
+GridManager::setUpdate()
 {
-    if ( !flags )
-	return;
-
-    if ( !job->updateFlags )
-	JobsToUpdate.Append( job );
-
-    job->updateFlags |= flags;
-
-    if ( updateScheddTimerSet == false ) {
-	daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
-		    (TimerHandlercpp)&GridManager::updateSchedd,
-		    "updateSchedd", (Service*)this );
-	updateScheddTimerSet = true;
-    }
+	if ( updateScheddTimerSet == false && !JobUpdateEventQueue.IsEmpty() ) {
+		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
+					(TimerHandlercpp)&GridManager::updateSchedd,
+					"updateSchedd", (Service*)this );
+		updateScheddTimerSet = true;
+	}
 }
 
 // Initialize a UserLog object for a given job and return a pointer to

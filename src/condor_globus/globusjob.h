@@ -16,11 +16,14 @@ class GlobusJob
 
 	~GlobusJob();
 
-	bool submit( const char *callback_contact );
+	bool start();
+	bool callback( int state = 0, int error = 0 );
 	bool cancel();
 	bool probe();
 
 	const char *errorString();
+
+	char *buildRSL( ClassAd *classad );
 
 	PROC_ID procID;
 	char *jobContact;
@@ -29,7 +32,6 @@ class GlobusJob
 	char *rmContact;
 	int errorCode;
 	char *userLogFile;
-	unsigned int updateFlags;
 };
 
 #endif

@@ -1,9 +1,12 @@
 
+#include "condor_common.h"
 #include "condor_attributes.h"
+#include "condor_debug.h"
 
 #include "globus_gram_client.h"
 #include "globus_gram_error.h"
 
+#include "gm_common.h"
 #include "globusjob.h"
 
 
@@ -16,7 +19,6 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	rmContact = (copy.rmContact == NULL) ? NULL : strdup( copy.rmContact );
 	errorCode = copy.errorCode;
 	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
-	updateFlags = copy.updateFlags;
 }
 
 GlobusJob::GlobusJob( ClassAd *classad )
@@ -31,10 +33,6 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		jobContact = strdup( buf );
 	classad->LookupInteger( ATTR_GLOBUS_STATUS, jobState );
 	buf[0] = '\0';
-	classad->LookupString( ATTR_GLOBUS_RSL, buf );
-	if ( buf[0] != '\0' )
-		RSL = strdup( buf );
-	buf[0] = '\0';
 	classad->LookupString( ATTR_GLOBUS_RESOURCE, buf );
 	if ( buf[0] != '\0' )
 		rmContact = strdup( buf );
@@ -43,7 +41,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	classad->LookupString( ATTR_ULOG_FILE, buf );
 	if ( buf[0] != '\0' )
 		userLogFile = strdup( buf );
-	updateFlags = 0;
+	RSL = buildRSL( classad );
 }
 
 GlobusJob::~GlobusJob()
@@ -58,13 +56,13 @@ GlobusJob::~GlobusJob()
 		free( userLogFile );
 }
 
-bool GlobusJob::submit( const char *callback_contact )
+bool GlobusJob::start()
 {
 	int rc;
 	char *job_contact = NULL;
 
     rc = globus_gram_client_job_request( rmContact, RSL,
-        GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, callback_contact,
+        GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
         &job_contact );
 
     if ( rc == GLOBUS_SUCCESS ) {
@@ -72,11 +70,78 @@ bool GlobusJob::submit( const char *callback_contact )
 		globus_gram_client_job_contact_free( job_contact );
 		jobState = G_PENDING;
 
+		addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+		addJobUpdateEvent( this, JOB_UE_UPDATE_CONTACT );
+
 		return true;
 	} else {
 		errorCode = rc;
 		return false;
 	}
+}
+
+bool GlobusJob::callback( int state = 0, int error = 0 )
+{
+	if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_PENDING ) {
+		if ( jobState != G_PENDING ) {
+			jobState = G_PENDING;
+
+			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+		}
+	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_ACTIVE ) {
+		if ( jobState != G_ACTIVE ) {
+			jobState = G_ACTIVE;
+
+			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+			addJobUpdateEvent( this, JOB_UE_ULOG_EXECUTE );
+		}
+	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED ) {
+		// Not sure what the right thing to do on a FAILED message from
+		// globus. For now, we treat it like a completed job.
+
+		// JobsByContact with a state of FAILED shouldn't be in the hash table,
+		// but we'll check anyway.
+		if ( jobState != G_FAILED ) {
+			jobState = G_FAILED;
+
+			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+			addJobUpdateEvent( this, JOB_UE_REMOVE_JOB );
+			// put on hold instead? (for certain errors)
+
+			// userlog entry (what type of event is this?)
+
+			// email saying that the job failed?
+
+			free( jobContact );
+			jobContact = NULL;
+		}
+	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_DONE ) {
+		// JobsByContact with a state of DONE shouldn't be in the hash table,
+		// but we'll check anyway.
+		if ( jobState != G_DONE ) {
+			jobState = G_DONE;
+
+			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+			addJobUpdateEvent( this, JOB_UE_REMOVE_JOB );
+			addJobUpdateEvent( this, JOB_UE_ULOG_TERMINATE );
+
+			// email saying the job is done?
+
+			free( jobContact );
+			jobContact = NULL;
+		}
+	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_SUSPENDED ) {
+		if ( jobState != G_SUSPENDED ) {
+			jobState = G_SUSPENDED;
+
+			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+		}
+	} else {
+		dprintf( D_ALWAYS, "Unknown globus job state %d for job %d.%d\n",
+				 state, procID.cluster, procID.proc );
+	}
+
+	return true;
 }
 
 bool GlobusJob::cancel()
@@ -113,4 +178,65 @@ const char *GlobusJob::errorString()
 {
 	return globus_gram_client_error_string( errorCode );
 }
+
+
+char *GlobusJob::buildRSL( ClassAd *classad )
+{
+	char rsl[8092];
+	char buff[2048];
+	char *iwd;
+
+	if ( classad->LookupString( ATTR_JOB_IWD, buff ) ) {
+		strcat( buff, "/" );
+		iwd = strdup( buff );
+	} else {
+		iwd = strdup( "/" );
+	}
+
+	//We're assuming all job clasads have a command attribute
+	classad->LookupString( ATTR_JOB_CMD, buff );
+	strcpy( rsl, "&(executable=" );
+	strcat( rsl, gassServerUrl );
+	if ( buff[0] != '/' )
+		strcat( rsl, iwd );
+	strcat( rsl, buff );
+
+	if ( classad->LookupString( ATTR_JOB_ARGUMENTS, buff ) ) {
+		strcat( rsl, ")(arguments=" );
+		strcat( rsl, buff );
+	}
+
+	if ( classad->LookupString( ATTR_JOB_INPUT, buff ) ) {
+		strcat( rsl, ")(stdin=" );
+		strcat( rsl, gassServerUrl );
+		if ( buff[0] != '/' )
+			strcat( rsl, iwd );
+		strcat( rsl, buff );
+	}
+
+	if ( classad->LookupString( ATTR_JOB_OUTPUT, buff ) ) {
+		strcat( rsl, ")(stdout=" );
+		strcat( rsl, gassServerUrl );
+		if ( buff[0] != '/' )
+			strcat( rsl, iwd );
+		strcat( rsl, buff );
+	}
+
+	if ( classad->LookupString( ATTR_JOB_ERROR, buff ) ) {
+		strcat( rsl, ")(stderr=" );
+		strcat( rsl, gassServerUrl );
+		if ( buff[0] != '/' )
+			strcat( rsl, iwd );
+		strcat( rsl, buff );
+	}
+
+	strcat( rsl, ")" );
+
+	if ( classad->LookupString( ATTR_GLOBUS_RSL, buff ) ) {
+		strcat( rsl, buff );
+	}
+
+	return strdup( rsl );
+}
+
 

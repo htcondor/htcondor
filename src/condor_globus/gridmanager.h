@@ -6,6 +6,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "user_log.c++.h"
 #include "classad_hashtable.h"
+#include "list.h"
 
 #include "globusjob.h"
 
@@ -15,11 +16,6 @@ extern int test_mode;
 // These are temporary.
 #define ADD_JOBS	42
 #define REMOVE_JOBS	43
-
-// Job attributes that need to be updated on the schedd
-#define JOB_STATE		1
-#define JOB_CONTACT		2
-#define JOB_REMOVED		4
 
 
 class GridManager : public Service
@@ -45,7 +41,7 @@ class GridManager : public Service
 
 	static void gramCallbackHandler( void *, char *, int, int );
 
-	void needsUpdate( GlobusJob *, unsigned int );
+	void setUpdate();
 
 	UserLog *InitializeUserLog( GlobusJob * );
 	bool WriteExecuteToUserLog( GlobusJob * );
