@@ -11,6 +11,38 @@ New features will be added and tested in the 6.3 development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-2-1}Version 6.2.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in the \Condor{startd} that would cause the daemon
+to crash if you set the \Macro{POLLING\_INTERVAL} macro to a value
+greater than 60.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-2-0}Version 6.2.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -25,7 +57,7 @@ machines.
 \noindent New Features Over the Last Development Series: 6.1.17
 \begin{itemize}
 
-\item if \Attr{CkptArch} isn't specified in the job submission file's
+\item If \Attr{CkptArch} isn't specified in the job submission file's
 \Attr{Requirements} attribute, then automatically add this expression:
 
 \begin{verbatim}
@@ -43,9 +75,10 @@ appended to the beginning of the expressions before Condor adds internal
 default expressions.  This allows the sysadmin to override any default
 policy that Condor enforces.
 
-\item There is now a single \Macro{APPEND\_REQUIREMENTS} attribute that will get
-appended to all universe's \Attr{Requirements} expressions unless a specific
-\Macro{APPEND\_REQ\_STANDARD} or \Macro{APPEND\_REQ\_VANILLA} expression.
+\item There is now a single \Macro{APPEND\_REQUIREMENTS} attribute
+that will get appended to all universe's \Attr{Requirements}
+expressions unless a specific \Macro{APPEND\_REQ\_STANDARD} or
+\Macro{APPEND\_REQ\_VANILLA} expression is defined.
 
 \item Increased certain networking parameters to help alleviate the 
 \Condor{shadow}'s inability to contact the \Condor{schedd} during heavy load
