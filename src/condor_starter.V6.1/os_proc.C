@@ -52,10 +52,15 @@ OsProc::OsProc()
 	requested_exit = false;
 	job_suspended = FALSE;
 	num_pids = 0;
+	dumped_core = false;
+	job_iwd = NULL;
 }
 
 OsProc::~OsProc()
 {
+	if( job_iwd ) {
+		free( job_iwd );
+	}
 }
 
 int
@@ -200,8 +205,7 @@ OsProc::StartJob()
 		// Standard Files
 		// // // // // // 
 
-	char Cwd[_POSIX_PATH_MAX];
-	if (JobAd->LookupString(ATTR_JOB_IWD, Cwd) != 1) {
+	if (JobAd->LookupString(ATTR_JOB_IWD, &job_iwd) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  "
 				"Aborting DC_StartCondorJob.\n", ATTR_JOB_IWD);
 		return 0;
@@ -222,7 +226,7 @@ OsProc::StartJob()
 	if (JobAd->LookupString(ATTR_JOB_INPUT, filename) == 1) {
 		if ( strcmp(filename,"NUL") != 0 ) {
             if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( infile, "%s%c", Cwd, DIR_DELIM_CHAR );
+                sprintf( infile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
                 infile[0] = '\0';
             }
@@ -238,7 +242,7 @@ OsProc::StartJob()
 	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename) == 1) {
 		if ( strcmp(filename,"NUL") != 0 ) {
             if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( outfile, "%s%c", Cwd, DIR_DELIM_CHAR );
+                sprintf( outfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
                 outfile[0] = '\0';
             }
@@ -258,7 +262,7 @@ OsProc::StartJob()
 	if (JobAd->LookupString(ATTR_JOB_ERROR, filename) == 1) {
 		if ( strcmp(filename,"NUL") != 0 ) {
             if ( filename[0] != '/' ) {  // prepend full path
-                sprintf( errfile, "%s%c", Cwd, DIR_DELIM_CHAR );
+                sprintf( errfile, "%s%c", job_iwd, DIR_DELIM_CHAR );
             } else {
                 errfile[0] = '\0';
             }
@@ -307,7 +311,7 @@ OsProc::StartJob()
 	set_priv ( priv );
 
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, env_str, Cwd, TRUE, NULL, fds, nice_inc );
+				   FALSE, env_str, job_iwd, TRUE, NULL, fds, nice_inc );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
@@ -340,14 +344,26 @@ OsProc::JobCleanup( int pid, int status )
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobCleanup()\n" );
 
-		// There's nothing special for us to do here, except save the
-		// exit status for future use.
-	if (JobPid == pid) {		
-		exit_status = status;
-		return 1;
+	if( JobPid != pid ) {		
+		return 0;
 	}
+
+		// save the exit status for future use.
+	exit_status = status;
+
+		// clear out num_pids... everything under this process should
+		// now be gone
 	num_pids = 0;
-	return 0;
+
+		// check to see if the job dropped a core file.  if so, we
+		// want to rename that file so that it won't clobber other
+		// core files back at the submit site.  
+	if( WCOREDUMP(status) ) {
+		dumped_core = true;
+		renameCoreFile();
+	}
+
+	return 1;
 }
 
 
@@ -361,6 +377,8 @@ OsProc::JobExit( void )
 
 	if ( requested_exit == true ) {
 		reason = JOB_NOT_CKPTED;
+	} else if( dumped_core ) {
+		reason = JOB_COREDUMPED;
 	} else {
 		reason = JOB_EXITED;
 	}
@@ -407,6 +425,53 @@ OsProc::JobExit( void )
 		return false;
 	}
 	return true;
+}
+
+
+bool
+OsProc::renameCoreFile( void )
+{
+	bool rval = true;
+
+#if ! defined( WIN32 )
+
+	priv_state old_priv;
+	char buf[64];
+	sprintf( buf, "core.%d.%d", Cluster, Proc );
+	int size = strlen(job_iwd) + 1;
+	char* old_name = (char*) malloc( (size+5) * sizeof(char) );
+	if( ! old_name ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( old_name, "%s%c%s", job_iwd, DIR_DELIM_CHAR, "core" );
+
+	size += strlen(buf);
+	char* new_name = (char*) malloc( size * sizeof(char) );
+	if( ! new_name ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( new_name, "%s%c%s", job_iwd, DIR_DELIM_CHAR, buf );
+
+		// we need to do this rename as the user...
+	old_priv = set_user_priv();
+	if( rename(old_name, new_name) < 0 ) {
+		rval = false;
+	}
+	set_priv( old_priv );
+
+	if( rval ) {
+		dprintf( D_FULLDEBUG, "Renamed core file to %s\n", buf );
+	} else {
+		dprintf( D_FULLDEBUG, "Failed to rename core file: "
+				 "errno %d (%s)\n", errno, strerror(errno) );
+	}
+
+	free( old_name );
+	free( new_name );
+
+#endif /* ! WIN32 */
+
+	return rval;
 }
 
 
@@ -491,6 +556,10 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 					 WEXITSTATUS(exit_status) );
 			ad->Insert( buf );
 		}
+		if( WCOREDUMP(exit_status) ) {
+			sprintf( buf, "%s = True", ATTR_JOB_CORE_DUMPED );
+			ad->Insert( buf );
+		} 
 	}
 	return true;
 }
