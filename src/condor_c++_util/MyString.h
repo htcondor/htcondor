@@ -59,6 +59,7 @@ public:
 
   MyString(const MyString& S) {
     Data=NULL;
+	capacity = 0;
     *this=S;
   }
   
@@ -115,6 +116,7 @@ public:
       Len=S.Len;
       Data=new char[Len+1];
       strcpy(Data,S.Data);
+	  capacity = Len;
     }
     return *this;
   }
