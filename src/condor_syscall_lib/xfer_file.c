@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_sys.h"
-#include "ckpt_file.h"
 #include "debug.h"
 
 #include "condor_macros.h"
