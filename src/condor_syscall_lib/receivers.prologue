@@ -7,14 +7,15 @@
 #endif
 
 #if defined(Solaris)
-#include "_condor_fix_types.h"
+#	include "_condor_fix_types.h"
+#       include <sys/statfs.h>
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(Solaris)
 #	define sync		__hide_sync
 #endif
 #include "condor_common.h"
-#if	defined(HPUX9)
+#if	defined(HPUX9) || defined(Solaris)
 #	undef sync
 #endif
 

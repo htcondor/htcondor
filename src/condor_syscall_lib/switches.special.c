@@ -52,7 +52,9 @@
 #	undef _PROTOTYPES
 #	endif
 #endif
+
 #include <unistd.h>
+
 #include "_condor_fix_types.h"
 #include "condor_fix_timeval.h"
 #include <sys/resource.h>
@@ -177,6 +179,7 @@ store_working_directory()
   current machine, and the usages it accumulated on all the machines
   where it has run in the past.
 */
+#if !defined(Solaris)
 int
 getrusage( int who, struct rusage *rusage )
 {
@@ -205,6 +208,7 @@ getrusage( int who, struct rusage *rusage )
 
 	return( rval );
 }
+#endif
 
 /*
   This routine which is normally provided in the C library determines
@@ -322,9 +326,12 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
   We don't handle writev directly in remote system calls.  Instead we
   break the writev up into a series of individual writes.
 */
-#if defined(HPUX9) || defined(LINUX)
+#if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
+#elif defined(Solaris)
+ssize_t
+writev( int fd, const struct iovec *iov, int iovcnt )
 #else
 int
 writev( int fd, struct iovec *iov, int iovcnt )
@@ -406,8 +413,13 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #	include <sys/mtio.h>
 #endif
 
+#if defined(Solaris)
+int
+ioctl( int fd, int request, ...)
+#else
 int
 ioctl( int fd, int request, caddr_t arg )
+#endif
 {
 	switch( request ) {
 #if defined(SUNOS41)
