@@ -109,6 +109,7 @@ dist: $(DIST_FILES)
 	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
 	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
 	cp $(WIN32_FILES) $(DISTRIBUTION_DIR)/win32
+	unix2dos $(DISTRIBUTION_DIR)/win32/classad_dist*
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
 
