@@ -45,6 +45,7 @@ static int command_unblock(Sock *, struct sockaddr_in *, resource_id_t);
 static int command_suspend(Sock *, struct sockaddr_in *, resource_id_t);
 static int command_continue(Sock *, struct sockaddr_in *, resource_id_t);
 static int command_kill(Sock *, struct sockaddr_in *, resource_id_t);
+static int command_new_proc_order(Sock *, struct sockaddr_in *, resource_id_t);
 static int command_vacate(Sock *, struct sockaddr_in *, resource_id_t);
 static int command_matchinfo(Sock *, struct sockaddr_in *, resource_id_t);
 int command_reqservice(Sock *, struct sockaddr_in *, resource_id_t);
@@ -111,6 +112,12 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		dprintf (D_PROTOCOL, "## 6. Alive command\n");
 		return command_alive(sock, from, rid);
 	case REQ_NEW_PROC:
+		/*
+		Request from multi_shadow to run a 2nd or more process here.
+		This involves sending a SIGHUP to the condor_starter.carmi,
+		which then gets a new process fromm multi_shadow
+		*/
+		return command_new_proc_order(sock, from, rid);
 	default:
 		dprintf(D_ALWAYS, "Can't handle command %d.\n", cmd);
 	}
@@ -582,6 +589,13 @@ command_kill(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 {
 	dprintf(D_ALWAYS, "command_kill called.\n");
 	return event_killjob(rid, NO_JID, NO_TID);
+}
+
+static int
+command_new_proc_order(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
+{
+	dprintf(D_ALWAYS, "command_new_proc_order called.\n");
+	return event_new_proc_order(rid, NO_JID, NO_TID);
 }
 
 static int
