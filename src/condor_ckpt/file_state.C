@@ -2494,15 +2494,69 @@ fcntl(int fd, int cmd, ...)
 		EXCEPT( "Unsupported fcntl() command" );
 	}
 }
+/* _fcntl and __fcntl must have the same cases as fcntl so the correct
+   third argument gets passed.  -Jim B. */
 int
-_fcntl(int fd, int cmd, int arg)
+_fcntl(int fd, int cmd, ...)
 {
-	return fcntl(fd,cmd,arg);
+	va_list ap;
+	int arg = 0;
+	struct flock *lockarg = NULL;
+	switch (cmd) {
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+		va_start( ap, cmd );
+#if defined(LINUX)
+		arg = (int) va_arg( ap, long );
+#else
+		arg = va_arg( ap, int );
+#endif
+		return fcntl(fd,cmd,arg);
+	case F_GETFD:
+	case F_GETFL:
+		return fcntl(fd,cmd);
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		va_start( ap, cmd );
+		lockarg = va_arg( ap, struct flock * );
+		return fcntl(fd,cmd,lockarg);
+	default:
+		break;
+	}
+	return fcntl(fd,cmd);
 }
 int
-__fcntl(int fd, int cmd, int arg)
+__fcntl(int fd, int cmd, ...)
 {
-	return fcntl(fd,cmd,arg);
+	va_list ap;
+	int arg = 0;
+	struct flock *lockarg = NULL;
+	switch (cmd) {
+	case F_DUPFD:
+	case F_SETFD:
+	case F_SETFL:
+		va_start( ap, cmd );
+#if defined(LINUX)
+		arg = (int) va_arg( ap, long );
+#else
+		arg = va_arg( ap, int );
+#endif
+		return fcntl(fd,cmd,arg);
+	case F_GETFD:
+	case F_GETFL:
+		return fcntl(fd,cmd);
+	case F_GETLK:
+	case F_SETLK:
+	case F_SETLKW:
+		va_start( ap, cmd );
+		lockarg = va_arg( ap, struct flock * );
+		return fcntl(fd,cmd,lockarg);
+	default:
+		break;
+	}
+	return fcntl(fd,cmd);
 }
 #endif
 
