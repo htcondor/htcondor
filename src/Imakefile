@@ -223,10 +223,6 @@ object_target(master.V6)
 object_target(q.V6)
 object_target(rm.V6)
 object_target(submit.V6)
-object_target(test_suite_C.V5)
-#if HAS_FORTRAN
-   object_target($(TEST_SUITE_F))
-#endif
 object_target(ckpt)
 object_target(syscall_lib)
 object_target(io)
@@ -251,6 +247,11 @@ object_dir_target(condor_bypass)
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
 single_target(condor_ckpt_server, ckpt_server_api.a)
+
+object_target(test_suite_C.V5)
+#if HAS_FORTRAN
+   object_target($(TEST_SUITE_F))
+#endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
