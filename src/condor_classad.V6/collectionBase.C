@@ -544,7 +544,7 @@ PlayViewOp( int opType, ClassAd *logRec )
             }
 
             parentView->DeleteChildView( this, viewName );
-			delete logRec;
+			//delete logRec;
 			return( true );
         }
 
