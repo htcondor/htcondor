@@ -5,6 +5,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_addr.h"
+#include "sig_install.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -37,6 +38,10 @@ extern	void setMode 	(Mode, int, char *);
 int 
 main (int argc, char *argv[])
 {
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
+#endif
+
 	// initialize to read from config file
 	myName = argv[0];
 	config ((ClassAd*)NULL);
