@@ -64,7 +64,8 @@ javac Hello.java
 \end{verbatim}
 
 Submission to Condor requires a submit description file.
-This is a simple one that works:
+This is a simple one that works (if you're submitting from
+a shared file system):
 
 \begin{verbatim}
   ####################
@@ -81,6 +82,32 @@ This is a simple one that works:
   error          = Hello.error
   queue
 \end{verbatim}
+
+
+If you are not running on a shared file system, you
+will have to use file transfer, like this:
+
+\begin{verbatim}
+  ####################
+  #
+  # Example 1
+  # Execute a single Java class,
+  # not on a shared file system
+  #
+  ####################
+
+  universe       = java
+  executable     = Hello.class
+  arguments      = Hello
+  output         = Hello.output
+  error          = Hello.error
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+  queue
+\end{verbatim}
+
+For more information about using file transfer, see
+section~\ref{sec:file-transfer}.
 
 The Java universe must be explicitly selected.
 
