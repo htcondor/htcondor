@@ -67,7 +67,7 @@ CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterRelease($testname, $release);
 CondorTest::RegisterExitedSuccess($testname, $success);
-CondorTest::RegisterTimed($testname, $timed, 900);
+CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";

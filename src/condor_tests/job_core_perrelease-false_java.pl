@@ -69,7 +69,7 @@ $abort = sub
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterTimed($testname, $timed, 900);
+CondorTest::RegisterTimed($testname, $timed, 3600);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

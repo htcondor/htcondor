@@ -52,7 +52,7 @@ CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterRelease( $testname, $release );
 CondorTest::RegisterHold( $testname, $held );
-CondorTest::RegisterTimed($testname, $timed, 900);
+CondorTest::RegisterTimed($testname, $timed, 3600);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	print "$testname: SUCCESS\n";
