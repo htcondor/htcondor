@@ -31,7 +31,6 @@ extern  "C" int store_stmt (EXPR *, CONTEXT *);
 ////////////////////////////////////////////////////////////////////////////////
 AttrListElem::AttrListElem(ExprTree* expr)
 {
-    expr->Copy();
     tree = expr;
     dirty = FALSE;
     name = ((Variable*)expr->LArg())->Name();
