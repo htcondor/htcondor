@@ -31,8 +31,12 @@
 #include "syscall.aix.h"
 #endif
 
-#if defined(IRIX331) || defined(IRIX53)
+#if defined(IRIX331)
 #include <sys.s>
+#elif defined(IRIX53)
+#	undef SYSVoffset
+#	undef __SYS_S__
+#	include <sys.s>
 #endif
 
 /* Solaris specific change ..dhaval 6/23
