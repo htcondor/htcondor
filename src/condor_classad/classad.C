@@ -35,8 +35,7 @@ AdType::AdType(char *tempName)
         name = new char[strlen("") + 1];
 	if(!name)
         {
-            cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	    exit(1);
+	    	EXCEPT("Out of memory!");
         }
 	strcpy(name, "");
 	number = -1;
@@ -46,8 +45,7 @@ AdType::AdType(char *tempName)
         name = new char[strlen(tempName) + 1];
 	if(!name)
         {
-            cerr << "Warning : you ran out of memory -- quitting !" << endl;
-	    exit(1);
+            EXCEPT("Warning : you ran out of memory -- quitting !");
         }
 	strcpy(name, tempName);
 	number = regi.RegisterType(tempName);
@@ -149,8 +147,7 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
     val = new EvalResult;
     if(val == NULL)
     {
-        cerr << "Warning : you ran out of space -- quitting !" << endl;
-        exit(1);
+        EXCEPT("Warning : you ran out of space -- quitting !");
     }
 
     Parse("MyType", tree);                   // set myType field by evaluation
@@ -268,8 +265,7 @@ void ClassAd::SetMyTypeName(char *tempName)
     myType = new AdType(tempName);
     if(!myType)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-        exit(1);
+        EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 }
 
@@ -310,8 +306,7 @@ void ClassAd::SetTargetTypeName(char *tempName)
     targetType = new AdType(tempName);
     if(!targetType)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-        exit(1);
+        EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 }
 
@@ -383,8 +378,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
     val = new EvalResult;
     if(val == NULL)
     {
-        cerr << "Warning : you ran out of memory -- quitting !" << endl;
-        exit(1);
+        EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 
     Parse("MY.Requirement", tree);           // convention.
@@ -450,8 +444,7 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 
 	if ((val = new EvalResult) == NULL)
 	{
-		cerr << "Out of memory -- quitting" << endl;
-		exit (1);
+		EXCEPT("Out of memory -- quitting");
 	}
 
 	Parse ("MY.Requirement", tree);
