@@ -761,3 +761,314 @@ printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 		((ExprTree*)rArg)->PrintToStr(str);
     }
 }
+
+Variable*  
+Variable::DeepCopy(void) const
+{
+	Variable *copy;
+
+	copy = new Variable(name);
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+Integer*  
+Integer::DeepCopy(void) const
+{
+	Integer *copy;
+
+	copy = new Integer(value);
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+Float*  
+Float::DeepCopy(void) const
+{
+	Float *copy;
+
+	copy = new Float(value);
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+Boolean*  
+Boolean::DeepCopy(void) const
+{
+	Boolean *copy;
+
+	copy = new Boolean(value);
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+String*  
+String::DeepCopy(void) const
+{
+	String *copy;
+
+	copy = new String(value);
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+Undefined*  
+Undefined::DeepCopy(void) const
+{
+	Undefined *copy;
+
+	copy = new Undefined();
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+Error*  
+Error::DeepCopy(void) const
+{
+	Error *copy;
+
+	copy = new Error();
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+AddOp*
+AddOp::DeepCopy(void) const
+{
+	AddOp     *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	/* We have to be careful with the AddOp, because it is overloaded to be used
+	 * as the parenthesis grouping.
+	 */
+	copy_of_larg = copy_of_rarg = NULL;
+	if (lArg != NULL) {
+		copy_of_larg = lArg->DeepCopy();
+	}
+	if (rArg != NULL) {
+		copy_of_rarg = rArg->DeepCopy();
+	}
+
+	copy = new AddOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+SubOp*
+SubOp::DeepCopy(void) const
+{
+	SubOp  *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new SubOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+MultOp*
+MultOp::DeepCopy(void) const
+{
+	MultOp    *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new MultOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+DivOp*
+DivOp::DeepCopy(void) const
+{
+	DivOp     *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new DivOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+MetaEqOp*
+MetaEqOp::DeepCopy(void) const
+{
+	MetaEqOp  *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new MetaEqOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+MetaNeqOp*
+MetaNeqOp::DeepCopy(void) const
+{
+	MetaNeqOp *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new MetaNeqOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+EqOp*
+EqOp::DeepCopy(void) const
+{
+	EqOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new EqOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+NeqOp*
+NeqOp::DeepCopy(void) const
+{
+	NeqOp     *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new NeqOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+GtOp*
+GtOp::DeepCopy(void) const
+{
+	GtOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new GtOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+GeOp*
+GeOp::DeepCopy(void) const
+{
+	GeOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new GeOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+LtOp*
+LtOp::DeepCopy(void) const
+{
+	LtOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new LtOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+LeOp*
+LeOp::DeepCopy(void) const
+{
+	LeOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = lArg->DeepCopy();
+
+	copy = new LeOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+AndOp*
+AndOp::DeepCopy(void) const
+{
+	AndOp     *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new AndOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+OrOp*
+OrOp::DeepCopy(void) const
+{
+	OrOp      *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new OrOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
+AssignOp*
+AssignOp::DeepCopy(void) const
+{
+	AssignOp  *copy;
+	ExprTree  *copy_of_larg;
+	ExprTree  *copy_of_rarg;
+
+	copy_of_larg = lArg->DeepCopy();
+	copy_of_rarg = rArg->DeepCopy();
+
+	copy = new AssignOp(copy_of_larg, copy_of_rarg);
+	CopyBaseExprTree(copy);
+	return copy;
+}
+
