@@ -1,9 +1,10 @@
 03/10/05 V6_6-merge-36
    The state of the V6_6-branch for a merge into V6_7-branch. This
    merge picks up a crucial bugfix in DaemonCore's session clearing
-   code, bug fixes in the passwd_cache code, a bug fix to
-   SUBSYS_EXPRS, some minor condor_tests changes.  This is hopefully
-   the final 6.6.9 -> V6_7 merge.
+   code, bug fixes in the passwd_cache code, the bug fixes to tools
+   that freaked out if a startd name had multiple '@' signs, a bug fix
+   to SUBSYS_EXPRS, some minor condor_tests changes.  This is
+   hopefully the final 6.6.9 -> V6_7 merge.
 
 03/07/05 V6_6-merge-35
    The state of the V6_6-branch for a merge into V6_7-branch. This
