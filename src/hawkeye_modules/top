@@ -165,6 +165,7 @@ my $AllDone = 0;
 my $AlarmPending = 0;
 my $TopPid = -1;
 my @TopHeader;
+my $TopVersion = "";
 
 # Initialize signal handlers
 $SIG{HUP} = sub {
@@ -304,6 +305,7 @@ sub Init( )
     {
 	$_ = <TOP>; chomp;
 	print STDERR "Top version string: '$_'\n";
+	$TopVersion = $_;
 	if ( /procps/ )
 	{
 	    $Config{TopOpt}{Batch} = "-b ";
@@ -521,6 +523,9 @@ sub RunIt( )
 
 	# Hash of the summary info
 	my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
+	$Summary->Add( "TOP_VERSION",
+		       HawkeyePublish::TypeString,
+		       $TopVersion );
 
 	# Read the header
       READHEADER:
@@ -633,7 +638,8 @@ sub RunIt( )
 		    my $Value = $Stuff[$i];
 		    my $Type = FixString( \$Value );
 		    my $Var = $Stuff[$i+1];
-		    my $Name = $Cpu . "_" . $TopTypes{$Type}{prefix} . $Var;
+		    my $Name = "CPU_" . $Cpu . "_" .
+			$TopTypes{$Type}{prefix} . $Var;
 		    $Summary->Add( $Name,
 				   $TopTypes{$Type}{pubtype},
 				   $Value );
