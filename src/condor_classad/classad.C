@@ -42,6 +42,7 @@ static Registration regi;                   // this is the registration for
 
 static	SortFunctionType SortSmallerThan;
 static	void* SortInfo;
+static  const char *empty_string = "";
 
 #if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
@@ -56,7 +57,7 @@ FILE *__stderr__ = stderr;
 //
 // AdType Constructor.
 //
-AdType::AdType(char *tempName)
+AdType::AdType(const char *tempName)
 {
     if(tempName == NULL)
     {                                       // if empty.
@@ -346,7 +347,7 @@ ClassAd& ClassAd::operator=(const ClassAd& other)
 //
 // This member function of class AttrList sets myType name.
 //
-void ClassAd::SetMyTypeName(char *tempName)
+void ClassAd::SetMyTypeName(const char *tempName)
 {
 	if(!tempName)
 	{
@@ -375,8 +376,7 @@ const char *ClassAd::GetMyTypeName()
 {
     if(!myType)
     {
-        char *temp = "";                      // undefined type.
-        return temp;
+		return empty_string;
     }
     else
     {
@@ -406,7 +406,7 @@ const char *ClassAd::GetMyTypeName()
 //
 // This member function of class AttrList sets targetType name.
 //
-void ClassAd::SetTargetTypeName(char *tempName)
+void ClassAd::SetTargetTypeName(const char *tempName)
 {
 	if(!tempName)
 	{
@@ -431,12 +431,11 @@ void ClassAd::SetTargetTypeName(char *tempName)
 //
 // This member function of class AttrList returns targetType name.
 //
-char *ClassAd::GetTargetTypeName()
+const char *ClassAd::GetTargetTypeName()
 {
     if(!targetType)
     {
-        char *temp = "";                      // undefined.
-	return temp;
+        return empty_string;
     }
     else
     {
@@ -711,6 +710,25 @@ int ClassAd::fPrint(FILE* f)
 	return AttrList::fPrint(f);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Append a ClassAd to a string.
+////////////////////////////////////////////////////////////////////////////////
+int ClassAd::sPrint(MyString &output)
+{
+	output += "MyType = \"";
+	if(GetMyTypeName())
+	{
+		output += GetMyTypeName();
+	}
+	output += "\"\nTargetType = \"";
+	if(GetMyTypeName())
+	{
+		output += GetTargetTypeName();
+	}
+	output += "\"\n";
+	
+	return AttrList::sPrint(output);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // print the whole ClassAd to the given debug level. The expressions
