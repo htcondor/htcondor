@@ -97,7 +97,6 @@ usage()
 	fprintf( stderr, "   -name daemon_name\t(query the specified daemon for its configuration)\n" );
 	fprintf( stderr, "   -pool hostname\t(use the given central manager to find daemons)\n" );
 	fprintf( stderr, "   -address <ip:port>\t(connect to the given ip/port)\n" );
-	fprintf( stderr, "   -host hostname\t(connect to the given hostname)\n" );
 	fprintf( stderr, "   -set\t\t\t(set a persistent config file expression)\n" );
 	fprintf( stderr, "   -rset\t\t(set a runtime config file expression\n" );
 
