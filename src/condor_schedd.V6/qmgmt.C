@@ -26,9 +26,7 @@
 #include "string_list.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-
-
-static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #include "qmgmt.h"
 #include "condor_qmgr.h"
@@ -271,6 +269,17 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// a QMGMT command internally which is allowed.
 	if (test_owner == NULL) {
 		dprintf(D_ALWAYS,"QMGT command failed: anonymous user not permitted\n" );
+		return 0;
+	}
+
+	// check if the IP address of the peer has daemon core write permission
+	// to the schedd.  we have to explicitly check here because all queue
+	// management commands come in via one sole daemon core command which
+	// has just READ permission.
+	if ( daemonCore->Verify(WRITE, Q_SOCK->endpoint()) == FALSE ) {
+		// this machine does not have write permission; return failure
+		dprintf(D_ALWAYS,"QMGT command failed: no WRITE permission for %s\n",
+			Q_SOCK->endpoint_ip_str() );
 		return 0;
 	}
 
@@ -917,9 +926,17 @@ GetJobAd(int cluster_id, int proc_id)
 	ClassAd	*ad;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	if (JobQueue->LookupClassAd(key, ad))
+	if (JobQueue->LookupClassAd(key, ad)) {
+		// insert in the current time from the server's (schedd)
+		// point of view.  this is used so condor_q can compute some
+		// time values based upon other attribute values without 
+		// worrying about the clocks being different on the condor_schedd
+		// machine -vs- the condor_q machine.
+		char buf[80];
+		sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
+		ad->InsertOrUpdate(buf);
 		return ad;
-	else
+	} else
 		return NULL;
 }
 
@@ -934,7 +951,10 @@ GetJobByConstraint(const char *constraint)
 	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			EvalBool(ad, constraint)) {
-			return ad;
+				char buf[80];
+				sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
+				ad->InsertOrUpdate(buf);
+				return ad;
 		}
 	}
 	return NULL;
@@ -961,6 +981,9 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
+			char buf[80];
+			sprintf(buf,"%s=%ld",ATTR_SERVER_TIME,time(NULL));
+			ad->InsertOrUpdate(buf);
 			return ad;
 		}
 	}
@@ -1021,7 +1044,7 @@ SendSpoolFile(char *filename)
 
 	/* Read file size from client. */
 	Q_SOCK->decode();
-	if (!Q_SOCK->get_file(path)) {
+	if (Q_SOCK->get_file(path) < 0) {
 		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->eom();
 		return -1;
