@@ -55,11 +55,13 @@ extern "C" int open_write_stream( const char * ckpt_file, size_t n_bytes );
 extern "C" void report_image_size( int );
 
 #if defined(OSF1)
-extern "C" unsigned int htonl( unsigned int );
-extern "C" unsigned int ntohl( unsigned int );
+	extern "C" unsigned int htonl( unsigned int );
+	extern "C" unsigned int ntohl( unsigned int );
+#elif defined(AIX32)
+#	include <net/nh.h>
 #else
-extern "C" unsigned long htonl( unsigned long );
-extern "C" unsigned long ntohl( unsigned long );
+	extern "C" unsigned long htonl( unsigned long );
+	extern "C" unsigned long ntohl( unsigned long );
 #endif
 
 void terminate_with_sig( int sig );
