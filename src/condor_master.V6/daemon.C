@@ -66,7 +66,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 typedef void (*SIGNAL_HANDLER)();
-void install_sig_handler( int, SIGNAL_HANDLER );
+extern "C" void install_sig_handler( int, SIGNAL_HANDLER );
 
 // these are defined in master.C
 extern int		NotFlag;

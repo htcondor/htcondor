@@ -81,12 +81,17 @@ extern "C" {
 
 #ifndef WIN32
 #include <sys/wait.h>
+void unix_sigusr1(int);
+#endif
+
+#ifndef WANT_DC_PM
+int sigchld_handler(Service *,int);
 #endif
 
 #define MAX_LINES 100
 
 typedef void (*SIGNAL_HANDLER)();
-void install_sig_handler( int, SIGNAL_HANDLER );
+extern "C" void install_sig_handler( int, SIGNAL_HANDLER );
 
 typedef struct {
 	long	data[MAX_LINES + 1];
@@ -187,7 +192,7 @@ int		sigusr1_handler(Service *,int);
 int		master_reaper(Service *, int, int);
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-int	DoCleanup();
+extern "C" int	DoCleanup();
 
 #define MINUTE	60
 #define HOUR	60 * MINUTE
@@ -283,12 +288,14 @@ main_init( int argc, char* argv[] )
 	char			**ptr, *startem;
 	int i;
 
+#ifdef WIN32
 	// Daemon Core will call main_init with argc -1 if need to register
-	// as a service.
+	// as a WinNT Service.
 	if ( argc == -1 ) {
 		register_service();
 		return TRUE;
 	}
+#endif
 
 	if ( argc > 2 ) {
 		usage( argv[0] );
@@ -322,7 +329,7 @@ main_init( int argc, char* argv[] )
 	// install_sig_handler( SIGILL, dump_core );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
-	install_sig_handler( SIGUSR1, unix_sigusr1 );
+	install_sig_handler( SIGUSR1, (void(*)()) unix_sigusr1 );
 #endif
 
 #ifdef WANT_DC_PM

@@ -11,7 +11,7 @@ SRC = master.C path.c daemon.C
 OBJ = master.o path.o daemon.o
 UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 #if defined(USE_CONFIG_SERVER)
 CCTP_LIB = ../condor_config_server/cctp_lib.a
