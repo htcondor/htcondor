@@ -202,6 +202,9 @@ char	*OnExitHoldCheck = "on_exit_hold";
 char	*OnExitRemoveCheck = "on_exit_remove";
 
 char	*GlobusResubmit = "globus_resubmit";
+char	*GlobusRematch = "globus_rematch";
+
+char	*LastMatchListLength = "match_list_length";
 
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
@@ -274,6 +277,7 @@ void	SetPeriodicRemoveCheck(void);
 void	SetExitHoldCheck(void);
 void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
+void SetMatchListLen();
 void SetDAGManJobId();
 void SetLogNotes();
 void SetUserNotes();
@@ -1915,6 +1919,19 @@ SetNotifyUser()
 }
 
 void
+SetMatchListLen()
+{
+	int len = 0;
+	char* tmp = condor_param( LastMatchListLength, ATTR_LAST_MATCH_LIST_LENGTH );
+	if( tmp ) {
+		len = atoi(tmp);
+		(void) sprintf( buffer, "%s = %d", ATTR_LAST_MATCH_LIST_LENGTH, len );
+		InsertJobExpr( buffer );
+		free( tmp );
+	}
+}
+
+void
 SetDAGNodeName()
 {
 	char* name = condor_param( DAGNodeName );
@@ -2514,6 +2531,12 @@ SetGlobusParams()
 		InsertJobExpr (buff, false );
 	}
 
+	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
+		sprintf( buff, "%s = %s", ATTR_REMATCH_CHECK, tmp );
+		free(tmp);
+		InsertJobExpr (buff, false );
+	} 
+
 	if( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
@@ -2978,6 +3001,7 @@ queue(int num)
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
 		SetGlobusParams();
+		SetMatchListLen();
 		SetDAGNodeName();
 		SetDAGManJobId();
 		SetJarFiles();
