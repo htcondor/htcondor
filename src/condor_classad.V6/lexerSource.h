@@ -1,22 +1,23 @@
 /*********************************************************************
  *
  * Condor ClassAd library
- * Copyright (C) 1990-2002, CONDOR Team, Computer Sciences Department,
- * University of Wisconsin-Madison, WI, and Rajesh Raman.
+ * Copyright (C) 1990-2003, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI and Rajesh Raman.
  *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of version 2.1 of the GNU Lesser General
- * Public License as published by the Free Software Foundation.
+ * This source code is covered by the Condor Public License, which can
+ * be found in the accompanying LICENSE file, or online at
+ * www.condorproject.org.
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
- * USA
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+ * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+ * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+ * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+ * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+ * RIGHT.
  *
  *********************************************************************/
 
