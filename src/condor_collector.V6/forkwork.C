@@ -58,6 +58,12 @@ ForkWorker::Fork( void )
 		dprintf( D_ALWAYS, "ForkWorker::Fork: Fork failed\n" );
 		return FORK_FAILED;
 	} else if ( 0 == pid ) {
+			// We should really be using DC::Create_Thread() for this.
+			// However, since we're not, we need to call this method
+			// to tell DC we're a forked child and that we want to
+			// exit via exec(), not using exit(), so that destructors
+			// don't get called...
+		daemonCore->Forked_Child_Wants_Exit_By_Exec( true );
 		parent = getppid( );
 		pid = -1;
 		return FORK_CHILD;
