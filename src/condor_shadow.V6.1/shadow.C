@@ -232,6 +232,7 @@ UniShadow::emailTerminateEvent( int exitReason )
 						   a real time_t variable, then using ctime()
 						   to convert it to a string */
 	
+	time_t now = time(NULL);
 	
 	fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
 	if ( JobName[0] ) {
@@ -245,13 +246,15 @@ UniShadow::emailTerminateEvent( int exitReason )
 	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
 	if( exitReason == JOB_EXITED ) {
-		double real_time = time(NULL) - q_date;
-		arch_time = time(NULL);
+		double real_time = now - q_date;
+		arch_time = now;
 		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
 		
 		fprintf(mailer, "Real Time:           %s\n", 
 				d_format_time(real_time));
-        }	
+	}	
+
+
 	fprintf( mailer, "\n" );
 	
 	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
@@ -259,7 +262,7 @@ UniShadow::emailTerminateEvent( int exitReason )
 	double rutime = remote_user_cpu;
 	double rstime = remote_sys_cpu;
 	double trtime = rutime + rstime;
-	double wall_time = time(NULL) - shadow_bday;
+	double wall_time = now - shadow_bday;
 	fprintf(mailer, "Statistics from last run:\n");
 	fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
 	fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
