@@ -39,6 +39,7 @@ void read_config_files();
 void init_logging();
 void usage( char *my_name );
 ReliSock* NewConnection( int id );
+void support_job_wrapper(char *a_out_name,int *argc, char *argv[]);
 
 extern "C" int exception_cleanup();
 

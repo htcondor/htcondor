@@ -476,6 +476,9 @@ UserProc::execute()
 		user_syscall_fd = new_reli->get_file_desc();
 	}
 
+		// take care of USER_JOB_WRAPPER
+	support_job_wrapper(a_out_name,&argc,argv);
+
 		// print out arguments to execve
 	dprintf( D_ALWAYS, "Calling execve( \"%s\"", a_out_name );
 	for( argp = argv; *argp; argp++ ) {							// argv

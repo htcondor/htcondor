@@ -30,6 +30,7 @@
 
 #include "condor_common.h"
 #include "starter_common.h"
+#include "basename.h"
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -224,4 +225,65 @@ NewConnection( int id )
 	return reli;
 }
 
+/*
+	Support USER_JOB_WRAPPER parameter; this function will twiddle
+	the a_out_name and argv as appropiate.
+	This uses a static buffer, thus is not thread safe.
+*/
+void
+support_job_wrapper(char *a_out_name, int *argc, char *argv[])
+{
+	char *wrapper = NULL;
+	char **argp;
+	char static firstargbuf[_POSIX_PATH_MAX];
+
+	ASSERT(a_out_name);
+	ASSERT(argc);
+	ASSERT(argv);
+
+	if ( (wrapper=param("USER_JOB_WRAPPER")) == NULL ) {
+			// no wrapper desired, we have nothing to do.
+		return;
+	}
+
+		// make certain this wrapper program exists and is executable
+	if ( access(wrapper,X_OK) < 0 ) {
+		EXCEPT("Cannot find/execute USER_JOB_WRAPPER file %s",wrapper);
+	}
+
+		// twiddle argc
+	int x = *argc;
+	x++;
+	*argc = x;
+
+		// make space at front of argv array
+	char *temp = NULL;
+	char *temp1 = NULL;
+	bool done = false;
+	argp = argv;
+	do {
+		temp1 = *argp;
+		if ( temp ) {
+			*argp = temp;
+		}
+		temp = temp1;
+		argp++;
+	} while (temp);	// last argv better be NULL
+	// stick a NULL at end of newly expanded argv
+	*argp = NULL;
+
+		// twiddle argv[1] - must store old exec name in our static buf
+		// we want to reset argv[1] to the full path to the job executable.
+	strcpy(firstargbuf,a_out_name);		// use a_out_name to get full path
+	argv[1] = firstargbuf;
+
+		// now reset a_out_name and argv[0]
+	strcpy(a_out_name,wrapper);
+	argv[0] = basename(a_out_name);
+	
+		// and finally free wrapper, which was malloced by param()
+	free(wrapper);
+
+	return;
+}
 
