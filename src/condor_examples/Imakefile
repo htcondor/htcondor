@@ -8,5 +8,6 @@ release:
 
 stripped:
 	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
+	/bin/cp -f condor_config.local.ckpt.server ../strip_ckpt_server/etc/examples
 	perl ./customize
 
