@@ -444,7 +444,6 @@ extern "C" {
 #define TRIM_FASTBINS  0
 #endif
 
-
 /*
   USE_DL_PREFIX will prefix all public routines with the string 'dl'.
   This is necessary when you only want to use this malloc in one part 
@@ -481,12 +480,24 @@ extern "C" {
 /* #define USE_PUBLIC_MALLOC_WRAPPERS */
 #endif
 
+/*
+  The MALLOC_SYMBOL macro determines how to form the public entry
+  point of each of the necessary functions.  This is a more general
+  form than the USE_DL_PREFIX mechanism.
+*/
+
+#ifdef USE_DL_PREFIX
+#define MALLOC_SYMBOL(x) dl##x
+#endif
+
+#ifndef MALLOC_SYMBOL
+#define MALLOC_SYMBOL(x) x
+#endif
 
 /* 
    Two-phase name translation.
    All of the actual routines are given mangled names.
    When wrappers are used, they become the public callable versions.
-   When DL_PREFIX is used, the callable names are prefixed.
 */
 
 #ifndef USE_PUBLIC_MALLOC_WRAPPERS
@@ -507,39 +518,28 @@ extern "C" {
 #define iCOMALLOc   public_iCOMALLOc
 #endif
 
-#ifdef USE_DL_PREFIX
-#define public_cALLOc    dlcalloc
-#define public_fREe      dlfree
-#define public_cFREe     dlcfree
-#define public_mALLOc    dlmalloc
-#define public_mEMALIGn  dlmemalign
-#define public_rEALLOc   dlrealloc
-#define public_vALLOc    dlvalloc
-#define public_pVALLOc   dlpvalloc
-#define public_mALLINFo  dlmallinfo
-#define public_mALLOPt   dlmallopt
-#define public_mTRIm     dlmalloc_trim
-#define public_mSTATs    dlmalloc_stats
-#define public_mUSABLe   dlmalloc_usable_size
-#define public_iCALLOc   dlindependent_calloc
-#define public_iCOMALLOc dlindependent_comalloc
-#else /* USE_DL_PREFIX */
-#define public_cALLOc    calloc
-#define public_fREe      free
-#define public_cFREe     cfree
-#define public_mALLOc    malloc
-#define public_mEMALIGn  memalign
-#define public_rEALLOc   realloc
-#define public_vALLOc    valloc
-#define public_pVALLOc   pvalloc
-#define public_mALLINFo  mallinfo
-#define public_mALLOPt   mallopt
-#define public_mTRIm     malloc_trim
-#define public_mSTATs    malloc_stats
-#define public_mUSABLe   malloc_usable_size
-#define public_iCALLOc   independent_calloc
-#define public_iCOMALLOc independent_comalloc
-#endif /* USE_DL_PREFIX */
+#define public_cALLOc    MALLOC_SYMBOL(calloc)
+#define public_fREe      MALLOC_SYMBOL(free)
+#define public_cFREe     MALLOC_SYMBOL(cfree)
+#define public_mALLOc    MALLOC_SYMBOL(malloc)
+#define public_mEMALIGn  MALLOC_SYMBOL(memalign)
+#define public_rEALLOc   MALLOC_SYMBOL(realloc)
+#define public_vALLOc    MALLOC_SYMBOL(valloc)
+#define public_pVALLOc   MALLOC_SYMBOL(pvalloc)
+#define public_mALLINFo  MALLOC_SYMBOL(mallinfo)
+#define public_mALLOPt   MALLOC_SYMBOL(mallopt)
+#define public_mTRIm     MALLOC_SYMBOL(malloc_trim)
+#define public_mSTATs    MALLOC_SYMBOL(malloc_stats)
+#define public_mUSABLe   MALLOC_SYMBOL(malloc_usable_size)
+#define public_iCALLOc   MALLOC_SYMBOL(independent_calloc)
+#define public_iCOMALLOc MALLOC_SYMBOL(independent_comalloc)
+
+/*
+  No need to wrap initialization code.
+*/
+
+#define mALLOC_INIT_SIZe MALLOC_SYMBOL(malloc_init_size)
+#define mALLOC_INIt      MALLOC_SYMBOL(malloc_init)
 
 
 /*
@@ -1537,8 +1537,13 @@ static pthread_mutex_t mALLOC_MUTEx = PTHREAD_MUTEX_INITIALIZER;
 
 /* Substitute anything you like for these */
 
+#ifndef MALLOC_PREACTION
 #define MALLOC_PREACTION   (0)
+#endif
+
+#ifndef MALLOC_POSTACTION
 #define MALLOC_POSTACTION  (0)
+#endif
 
 #endif
 
@@ -2354,6 +2359,32 @@ typedef struct malloc_state *mstate;
 static struct malloc_state av_;  /* never directly referenced */
 
 /*
+   A pointer to the static state given above.  This level of indirection
+   allows us to store the malloc state elsewhere if requested.
+*/
+
+static struct malloc_state *avptr_ = &av_;
+
+/*
+   Return the size of the malloc private data structure in bytes.
+*/
+
+int mALLOC_INIT_SIZe()
+{
+	return sizeof(struct malloc_state);
+}
+
+/*
+   Initialize this malloc to use the pointed-to data area.
+*/
+
+void mALLOC_INIt( void *ptr )
+{
+	avptr_ = ptr;
+	memset(ptr,0,mALLOC_INIT_SIZe());
+}
+
+/*
    All uses of av_ are via get_malloc_state().
    At most one "call" to get_malloc_state is made per invocation of
    the public versions of malloc and free, but other routines
@@ -2361,7 +2392,7 @@ static struct malloc_state av_;  /* never directly referenced */
    Also, it is called in check* routines if DEBUG is set.
 */
 
-#define get_malloc_state() (&(av_))
+#define get_malloc_state() (avptr_)
 
 /*
   Initialize a malloc_state struct.
