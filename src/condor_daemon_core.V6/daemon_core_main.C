@@ -177,7 +177,8 @@ drop_pid_file()
 	}
 
 	if( (PID_FILE = fopen(pidFile, "w")) ) {
-		fprintf( PID_FILE, "%lu\n", daemonCore->getpid() );
+		fprintf( PID_FILE, "%lu\n", 
+				 (unsigned long)daemonCore->getpid() ); 
 		fclose( PID_FILE );
 	} else {
 		dprintf( D_ALWAYS,
@@ -193,6 +194,7 @@ do_kill()
 #ifndef WIN32
 	FILE	*PID_FILE;
 	pid_t 	pid = 0;
+	unsigned long tmp_ul_int = 0;
 	char	*log, *tmp;
 
 	if( !pidFile ) {
@@ -211,7 +213,8 @@ do_kill()
 		}
 	}
 	if( (PID_FILE = fopen(pidFile, "r")) ) {
-		fscanf( PID_FILE, "%lu", &pid ); 
+		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
+		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
 	} else {
 		fprintf( stderr, 
@@ -224,7 +227,7 @@ do_kill()
 		if( kill(pid, SIGTERM) < 0 ) {
 			fprintf( stderr, 
 					 "DaemonCore: ERROR: can't send SIGTERM to pid (%lu)\n",  
-					 pid );
+					 (unsigned long)pid );
 			fprintf( stderr, 
 					 "\terrno: %d (%s)\n", errno, strerror(errno) );
 			exit( 1 );
@@ -240,7 +243,7 @@ do_kill()
 	} else {  	// Invalid pid
 		fprintf( stderr, 
 				 "DaemonCore: ERROR: pid (%lu) in pid file (%s) is invalid.\n",
-				 pid, pidFile );	
+				 (unsigned long)pid, pidFile );	
 		exit( 1 );
 	}
 #endif  // of ifndef WIN32
