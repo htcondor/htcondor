@@ -220,34 +220,28 @@ release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 library_target(condor_syscall_lib.a,$(LIB_OBJ))
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
 
-#if IS_ALPHA_OSF1
-CPP = /usr/ucb/cpp
-#elif IS_I386_LINUX
-CPP = /lib/cpp
-#else
-CPP = ansi_cpp -
-#endif
+CPP = PreProcessCmd
 
 
 #if IS_I386_LINUX
 switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 #elif IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS25
 switches.c: syscall.tmpl switches.prologue stub_gen
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 < \
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 \
 	syscall.tmpl | stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 #else
 switches.c: syscall.tmpl switches.prologue stub_gen
-	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode switches  -p switches.prologue \
 	> switches.c
 #endif
 
 senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
+	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
 
@@ -260,7 +254,7 @@ senders.o: senders.c
 #endif
 
 receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
-	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
+	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
 

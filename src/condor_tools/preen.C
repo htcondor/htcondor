@@ -34,7 +34,7 @@
 *********************************************************************/
 
 
-#pragma implementation "list.h"
+/* #pragma implementation "list.h" */
 
 #define _POSIX_SOURCE
 
