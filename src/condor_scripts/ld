@@ -230,6 +230,8 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
      -lc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lc`
+				elif [ $os = "OSF1" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lm -lc`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lc`
 				fi
