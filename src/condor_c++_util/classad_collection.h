@@ -15,7 +15,7 @@
 
 typedef HashTable<int,BaseCollection*> CollectionHashTable;
 
-///--------------------------------------------------------------------------
+//--------------------------------------------------------------------------
 
 //@author Adiel Yoaz
 //@include: classad_collection_types.h
