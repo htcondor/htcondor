@@ -27,7 +27,7 @@ extern "C" void event_mgr (void);
 //-------------------------------------------------------------
 
 #include "condor_classad.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -674,7 +674,8 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 		else
 		{
-			old_ad->ExchangeExpressions (new_ad);
+//			old_ad->ExchangeExpressions (new_ad);
+			old_ad = new_ad->Copy( );
 			delete new_ad;
 		}
 
