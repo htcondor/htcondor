@@ -2846,6 +2846,19 @@ as:
   This can significantly decrease the amount of time required to submit
   a large group of jobs.
   The default value is False.
+
+\item[\Macro{SUBMIT\_SEND\_RESCHEDULE}] \label{param:SubmitSendReschedule}
+  A boolean expression that when False, prevents \Condor{submit} from
+  automatically sending a \Condor{reschedule} command as it completes.
+  The \Condor{reschedule} command caused the \Condor{schedd} daemon
+  to start searching for machines with which to match the submitted
+  jobs.  When True, this step always occurs.
+  In the case that the machine where the job(s) are submitted is
+  managing a huge number of jobs (thousands or tens of thousands),
+  this step would hurt performance in such a way that it became
+  an obstacle to scalability.
+  The default value is True.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
