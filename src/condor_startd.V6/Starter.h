@@ -8,6 +8,10 @@
 #ifndef _CONDOR_STARTD_STARTER_H
 #define _CONDOR_STARTD_STARTER_H
 
+#if !defined( WIN32 )
+    extern "C" void killkids( pid_t, int );
+#endif
+
 typedef struct jobstartinfo {
 	char *ji_hname;
 	int ji_sock1;
@@ -23,6 +27,7 @@ public:
 	void	setname(char*);
 	int		kill(int);
 	int		killpg(int);
+	void	killkids(int);
 	int		spawn(start_info_t*);
 	void	exited();
 	int		pid() {return s_pid;};

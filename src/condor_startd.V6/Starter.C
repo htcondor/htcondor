@@ -35,24 +35,31 @@ Starter::setname( char* name )
 int
 Starter::kill( int signo )
 {
-	return this->reallykill( signo, 0 );
+	return reallykill( signo, 0 );
 }
 
 
 int
 Starter::killpg( int signo )
 {
-	return this->reallykill( signo, 1 );
+	return reallykill( signo, 1 );
+}
+
+
+void
+Starter::killkids( int signo ) 
+{
+	reallykill( signo, 2 );
 }
 
 
 int
-Starter::reallykill( int signo, int pg )
+Starter::reallykill( int signo, int type )
 {
 	struct stat st;
 	int 		ret = 0, sig = 0;
 	priv_state	priv;
-	char	signame[1024];
+	char	signame[32];
 	signame[0]='\0';
 
 	if ( s_pid <= 0 ) {
@@ -91,7 +98,7 @@ Starter::reallykill( int signo, int pg )
 		sprintf( signame, "SIGKILL" );
 		break;
 	default:
-		EXCEPT( "Unknown signal (%d) in Starter::kill", signo );
+		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
 	}
 #endif
 
@@ -154,34 +161,57 @@ Starter::reallykill( int signo, int pg )
 		}
 	}
 
-	if( pg ) {
-		dprintf( D_FULLDEBUG, 
-				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
-				 s_pid, signo, signame );
-	} else {
+
+	switch( type ) {
+	case 0:
 		dprintf( D_FULLDEBUG, 
 				 "In Starter::kill() with pid %d, sig %d (%s)\n", 
 				 s_pid, signo, signame );
+		break;
+	case 1:
+		dprintf( D_FULLDEBUG, 
+				 "In Starter::killpg() with pid %d, sig %d (%s)\n", 
+				 s_pid, signo, signame );
+	case 2:
+		dprintf( D_FULLDEBUG, 
+				 "In Starter::kill_kids() with pid %d, sig %d (%s)\n", 
+				 s_pid, signo, signame );
+		break;
+	default:
+		EXCEPT( "Unknown type (%d) in Starter::reallykill\n" );
 	}
+
+
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 
 	priv = set_root_priv();
 
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
+		// If we're just doing a plain kill, and the signal we're
+		// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the
+		// starter just for good measure.
 	if (sig != SIGSTOP && sig != SIGCONT) {
-		if( pg ) {
+		if( type == 1 ) { 
 			ret = ::kill( -(s_pid), SIGCONT );
-		} else {
+		} else if( type == 0 ) {
 			ret = ::kill( (s_pid), SIGCONT );
 		}
 	}
-	if( pg ) {
-		ret = ::kill( -(s_pid), sig );
-	} else {
+		// Finally, do the deed.
+	switch( type ) {
+	case 0:
 		ret = ::kill( (s_pid), sig );
+		break;
+	case 1:
+		ret = ::kill( -(s_pid), sig );
+		break;
+	case 2:
+		::killkids( s_pid, sig );
+		break;
 	}
-#endif
 
 	set_priv(priv);
+
+#endif /* WIN32 */
 
 	if( ret < 0 ) {
 		dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
