@@ -369,6 +369,7 @@ V6_7_EXT	-a V6_7_3_EXT
 STORK_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+		   externals/bundles/globus/2.4.3.data \
 		   externals/bundles/gpt/3.0 \
 		   externals/bundles/krb5/1.2.5 \
 		   externals/bundles/zlib/1.1.3 \
