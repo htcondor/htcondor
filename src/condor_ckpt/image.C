@@ -1533,18 +1533,23 @@ Checkpoint( int sig, int code, void *scp )
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
+	sigset_t	mask;
+
+		// Block ckpt signals while we are ckpting
+	mask = _condor_signals_disable();
 
 		// If checkpointing is temporarily disabled, remember that and return
-	if( _condor_ckpt_is_disabled() ) {
-		dprintf(D_ALWAYS,"received ckpt signal %d, but deferred it for later\n",sig);
-		_condor_ckpt_defer( sig );
+	if( _condor_ckpt_is_disabled() )  {
+		_condor_ckpt_defer(sig);
+		_condor_signals_enable(mask);
 		return;
 	}
 
 	if( InRestart ) {
-		if ( sig == SIGTSTP )
+		if ( sig == SIGTSTP ) {
 			Suicide();		// if we're supposed to vacate, kill ourselves
-		else {
+		} else {
+			_condor_signals_enable(mask);
 			return;			// if periodic ckpt or we're currently ckpting
 		}
 	} else {
@@ -1741,6 +1746,7 @@ Checkpoint( int sig, int code, void *scp )
 
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
+		_condor_signals_enable(mask);
 		return;
 	}
 }

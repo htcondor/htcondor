@@ -45,6 +45,7 @@ void _condor_ckpt_defer( int s )
 {
 	ckpt_deferred = 1;
 	ckpt_deferred_signal = s;
+	dprintf(D_ALWAYS,"received ckpt signal %d, but deferred it for later\n",s);
 }
 
 sigset_t _condor_signals_disable()
