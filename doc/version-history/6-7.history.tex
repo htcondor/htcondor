@@ -61,11 +61,11 @@ The details of each version are described below.
   running on another VM could immediately be suspended.
   This is accomplished by using the new configuration setting
   \Macro{STARTD\_VM\_EXPRS}, which is a list of ClassAd attribute
-  names that should be shared across all VMs on the machine machine. 
-  For each VM on the machine, ever attribute in this list is looked
-  up in the VM ClassAd, the attribute name is given a prefix
-  indicating what VM it came from, and then inserted into the ClassAds
-  of all the other VMs.
+  names that should be shared across all VMs on the machine.
+  For each VM on the machine, every attribute in this list is looked
+  up in the VM-specific machine ClassAd, the attribute name is given a
+  prefix indicating what VM it came from, and then inserted into the
+  machine ClassAds of all the other VMs.
 
 \item The \Condor{startd} publishes four new attributes into the
   machine ClassAds it generates when it is in the Claimed state:
