@@ -17,12 +17,12 @@ ref.pdf:
 	make clean
 	make figures
 	latex ref.tex
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
 	makeindex ref
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
 	rm -f ref.ps
 	dvips ref.dvi
 	rm -f ref.pdf
@@ -45,12 +45,12 @@ ref.dvi:
 	make clean
 	make figures
 	latex ref.tex 
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
 	makeindex ref
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
 
 ref.ps: ref.dvi
 	dvips ref.dvi
@@ -75,12 +75,12 @@ ref.html: $(TARGETDIR)
 	make clean
 	make figures
 	latex ref.tex
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
+	latex ref.tex -interaction=batchmode
 	makeindex ref
-	latex ref.tex > /dev/null
+	latex ref.tex -interaction=batchmode
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -f ref.dvi
 	mv ref condor-$(SUBVER)-Manual
