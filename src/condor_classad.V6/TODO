@@ -1,4 +1,16 @@
 ===== Code =====
+* Figure out cxi. Document it, add it to the distribution.
+
+* Test printing values that are classads, lists, or times. 
+
+* Test time representation
+
+* There is a memory leak when using the . operator on lists. I fixed
+  the memory leak (search for "need_delete" in and attrefs.C and look
+  at the EvalState destructor in exprTree.C), but it causes some freed
+  memory to be referenced, and I can't figure out why. Until I do, I
+  would rather have a leak than to access freed memory. This should be fixed.
+
 * Write or restrict copy constructors and assignment operators. 
 
 * Make a SWIG interface so people can use ClassAds from scripting
