@@ -85,27 +85,17 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 		dprintf( D_FULLDEBUG, "Assertion Ok on (%s)\n", #cond ); \
 	}
 
-	// Global flags
-int	QuitNow = FALSE;		// Quit after completing current checkpoint
-int	XferCkpts = TRUE;		// Transfer ckpt files before exiting
-int	Running_PVMD = FALSE;	// True if we are running a pvm job
-
 	// Constants
-int	CkptLimit = 300;	// How long to wait for proc to ckpt and exit
-const int	VacateLimit = 60;	// How long to wait for proc to exit
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
 ReliSock	*SyscallStream;		// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 //listuserproc	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
-int		MinCkptInterval;		// Use this ckpt interval to start
-int		MaxCkptInterval;		// Don't increase ckpt interval beyond this
 int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain;				// Machines we share UID space with
 
 Alarm		MyAlarm;			// Don't block forever on user process exits
-CkptTimer	*MyTimer;			// Timer for periodic checkpointing
 char	*InitiatingHost;		// Machine where shadow is running
 char	*ThisHost;				// Machine where we are running
 
@@ -148,6 +138,10 @@ main( int argc, char *argv[] )
 	wait_for_debugger( TRUE );
 #else
 	wait_for_debugger( FALSE );
+#endif
+
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
 	if (argc == 2 && strcmp(argv[1], "-dot") == MATCH) {
@@ -286,7 +280,6 @@ init()
 	init_environment_info();
 	set_resource_limits();
 	close_unused_file_descriptors();
-	MyTimer = new CkptTimer( MinCkptInterval, MaxCkptInterval );
 
 	return DEFAULT;
 }
@@ -474,22 +467,6 @@ init_params()
 		EXCEPT( "Execute directory not specified in config file" );
 	}
 
-	if( (tmp=param("MIN_CKPT_INTERVAL")) == NULL ) {
-		MinCkptInterval = 30 * MINUTE;
-	} else {
-		MinCkptInterval = atoi( tmp );
-	}
-
-	if( (tmp=param("MAX_CKPT_INTERVAL")) == NULL ) {
-		MaxCkptInterval = 2 * HOUR;
-	} else {
-		MaxCkptInterval = atoi( tmp );
-	}
-
-	if( (tmp=param("CKPT_TIMEOUT")) != NULL ) {
-		CkptLimit = atoi( tmp );
-	}
-
 	if( (tmp=param("STARTER_DELAYS")) == NULL ) {
 		DoDelays = FALSE;
 	} else {
@@ -565,9 +542,7 @@ handle_vacate_req()
 {
 	// dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
 
-	MyTimer->clear();		// clear ckpt timer
 	stop_all();				// stop any running user procs
-	QuitNow = TRUE;			// set flag so other routines know we have to leave
 	return(0);
 }
 
@@ -586,8 +561,6 @@ req_vacate()
 		// In V5 ckpt so fast, we can do it here
 	req_ckpt_exit_all();
 
-	MyAlarm.set( CkptLimit );
-
 	return(0);
 }
 
@@ -601,8 +574,6 @@ req_die()
 {
 	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
 	req_exit_all();
-	MyAlarm.set( VacateLimit );
-	XferCkpts = FALSE;
 
 	return(0);
 }
@@ -620,28 +591,16 @@ req_ckpt_exit_all()
 		// Request all the processes to ckpt and then exit
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() != PVMD ) {
-			dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
-					proc->get_id(),	ProcStates.get_name(proc->get_state())
-					);
-			if( proc->is_running() || proc->is_suspended() ) {
-				dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
-						proc->get_id());
-				if( proc->get_class() == VANILLA ) {
-					proc->kill_forcibly();
-				} else {
-					proc->request_ckpt();
-				}
-
-			}
-		}
-	}
-
-	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() == PVMD ) {
-			if( proc->is_running() || proc->is_suspended() ) {
+		dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
+				 proc->get_id(),	ProcStates.get_name(proc->get_state())
+				 );
+		if( proc->is_running() || proc->is_suspended() ) {
+			dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
+					 proc->get_id());
+			if( proc->get_class() == VANILLA ) {
 				proc->request_exit();
+			} else {
+				proc->request_ckpt();
 			}
 		}
 	}
@@ -665,16 +624,8 @@ req_exit_all()
 			if( proc->is_running() || proc->is_suspended() ) {
 				dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
 						proc->get_id());
-				proc->request_exit();
-			}
-		}
-	}
-
-	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() == PVMD ) {
-			if( proc->is_running() || proc->is_suspended() ) {
-				proc->request_exit();
+//				proc->request_exit();
+				proc->kill_forcibly();
 			}
 		}
 	}
@@ -707,15 +658,7 @@ terminate_all()
 		// Cancel alarm
 	MyAlarm.cancel();
 
-#if 0
-	if( XferCkpts ) {
-		return DO_XFER;
-	} else {
-		return DONT_XFER;
-	}
-#else
 	return DEFAULT;
-#endif
 }
 
 /*
@@ -844,21 +787,9 @@ int
 susp_ckpt_timer()
 {
 	MyAlarm.cancel();	// Cancel supervise test_connection() alarm
-	MyTimer->suspend();
 	return(0);
 }
 
-/*
-  Set a global flags which says we may not transfer any checkpoints back
-  to the initiating machine.
-*/
-int
-unset_xfer()
-{
-	// dprintf( D_ALWAYS, "Setting XferCkpts to FALSE\n" );
-	XferCkpts = FALSE;
-	return(0);
-}
 
 /*
   Suspend all user processes and ourself - wait for a SIGCONT.
@@ -866,13 +797,11 @@ unset_xfer()
 int
 susp_all()
 {
-	MyTimer->suspend();
 	stop_all();
 
 	susp_self();
 
 	resume_all();
-	MyTimer->resume();
 
 	return(0);
 }
@@ -886,7 +815,6 @@ set_quit()
 {
 	// dprintf( D_ALWAYS, "Entering function set_quit()\n" );
 
-	QuitNow = TRUE;
 	return(0);
 }
 
@@ -955,7 +883,7 @@ periodic_ckpt_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->ckpt_enabled() && proc->get_class() != PVMD ) {
+		if( proc->ckpt_enabled() ) {
 			proc->request_periodic_ckpt();
 			dprintf( D_ALWAYS, "\tRequested user job to do a periodic checkpoint\n" );
 		}
@@ -1043,29 +971,12 @@ supervise_all()
 		}
 	}
 
-#if defined(LINK_PVM)
-	if( Running_PVMD ) {
-		//	Check for a queued PVM message, and get ready to handle it if
-		//	ready.
-		for(;;) {
-			bufid = pvm_recv(-1, -1);
-			pvm_bufinfo(bufid, NULL, &tag, &src);
-			dprintf( D_ALWAYS, "supervise: received msg %s from t%x\n",
-					PvmMsgNames.get_name(tag), src
-				   );
-			return PVM_MSG;
-		}
-	}
-#endif
-
-#if 1
 	if (tr == 0) {
 		tr = condor_starter_ptr->find_transition( ALARM );
 		if ( tr ) {
 			condor_starter_ptr->dont_print_transition( tr );
 		}
 	}
-#endif
 
 	for(;;) {
 		// Set an ALARM so we regularly test_connection every 5 minutes
@@ -1165,40 +1076,6 @@ int send_core()
 	return DEFAULT;
 }
 
-/*
-  Update checkpoint files for every process which wants checkpointing.
-  At this point, every user process should be stopped or already exited
-  with a core file for checkpointing.
-*/
-int
-update_all()
-{
-	UserProc	*proc;
-
-	MyTimer->clear();
-	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
-		switch( proc->get_state() ) {
-		  
-		  case CHECKPOINTING:			// already exited with a core
-			return UPDATE_ONE;
-
-		  case SUSPENDED:				// request checkpoint now
-			if( proc->ckpt_enabled() ) {
-				proc->request_ckpt();
-				return DO_WAIT;
-				break;
-			}
-		}
-	}
-
-	if( QuitNow ) {
-		return DO_QUIT;
-	} else {
-		MyTimer->update_interval();
-		return SUCCESS;
-	}
-}
 
 /*
   Wait for some asynchronous event.  We do the pause in a loop becuase it
@@ -1215,45 +1092,6 @@ asynch_wait()
 	return NO_EVENT;
 }
 
-
-/*
-  Update the checkpoint file for the process which just exited.  It's
-  possible the process has just exited for some other reason, so we
-  must handle the other cases here too.
-*/
-int
-update_one()
-{
-	UserProc	*proc;
-	PROC_STATE	state;
-
-		// Grab a pointer to proc which just exited
-	proc = UProcList.Current();
-
-	switch( state = proc->get_state() ) {
-
-	  case CHECKPOINTING:
-		if( proc->update_ckpt() == FALSE ) {
-			return FAILURE;
-		}
-		proc->commit_ckpt();
-		return SUCCESS;
-
-	  case ABNORMAL_EXIT:
-		proc->store_core();
-		return EXITED;
-
-	  case NON_RUNNABLE:
-	  case NORMAL_EXIT:
-		return EXITED;
-
-	  default:
-		EXCEPT( "Unexpected proc state (%d)\n", state );
-	}
-
-		// Can never get here
-	return SUCCESS;
-}
 
 /*
   User process has just been checkpointed.  Update the shadow with its
@@ -1282,23 +1120,6 @@ update_cpu()
 
 
 /*
-  Send all checkpoint files back to the submitting machine.
-*/
-int
-send_ckpt_all()
-{
-	UserProc	*proc;
-
-	// dprintf( D_ALWAYS, "Entering function send_ckpt_all()\n" );
-
-	UProcList.Rewind();
-	while( proc = UProcList.Next() ) {
-		proc->store_ckpt();
-	}
-	return DEFAULT;
-}
-
-/*
   Get information regarding one user process from the shadow.  Our
   protocal with the shadow calls for RPC's with us as the client and
   the shadow as the server, so we do the asking.
@@ -1313,6 +1134,9 @@ get_job_info()
 	int wait_for_debugger = 1;
 
 	while ( wait_for_debugger ) ; */
+
+	// make sure startup info struct is initialized to zero pointers
+	memset((char *)&s, 0, sizeof(STARTUP_INFO));
 
 	dprintf( D_ALWAYS, "Entering get_job_info()\n" );
 
