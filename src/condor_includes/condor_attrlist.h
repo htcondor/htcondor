@@ -138,9 +138,12 @@ class AttrList : public AttrListAbstract
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 
-		// to update expression trees
+		// Set or clear the dirty flag for each expression.
+		void        SetDirtyFlag(const char *name, bool dirty);
+		void        GetDirtyFlag(const char *name, bool *exists, bool *dirty);
 		void		ClearAllDirtyFlags();
 #if 0
+		// to update expression trees
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 		int			UpdateExpr(ExprTree*);
 #endif
@@ -160,6 +163,7 @@ class AttrList : public AttrListAbstract
 		ExprTree*   Lookup(char *) const;  		// for convenience
         ExprTree*	Lookup(const char*) const;	// look up an expression
 		ExprTree*	Lookup(const ExprTree*) const;
+		AttrListElem *LookupElem(const char *name) const;
 		int         LookupString(const char *, char *); 
 		int         LookupString(const char *, char *, int); //uses strncpy
 		int         LookupString (const char *name, char **value);
