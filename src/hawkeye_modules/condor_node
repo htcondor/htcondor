@@ -38,6 +38,7 @@ sub RunIt {
 		      "NumExecs"	=> 0,
 		      "NumShadows"	=> 0,
 		      "NumRunaway"	=> 0,
+		      "Vms"		=> "",
 		     );
     # Table to translate "ps-command" regex to $CondorInfo key..
     my %CondorCmdTable = (
@@ -94,38 +95,51 @@ sub RunIt {
     {
 	if ( open( CSTAT, "condor_status -direct $ENV{HOST} |" ) )
 	{
-	    my $ShortHost = substr( $ENV{HOST}, 0, 14 );
 	    while ( <CSTAT> )
 	    {
 		chomp;
 
-		# Normal "machine" line
-		next if ( ! /^$ShortHost/ );
+		# Skip the 'uniteresting' lines
+		next if ( /^Name\s+OpSys/ );
+		next if ( /^\s/ );
+		next if ( $_ eq "" );
 
+		my $Vm = "";
 		my ( $Host, $OpSys, $Arch, $State, $Act, $Load, $Mem, $Time )
 		    = split;
+		if ( $Host =~ /(.*)@(.*)/ )
+		{
+		    $Vm = "_$1";
+		    $CondorInfo{Vms} = $CondorInfo{Vms} . "$1 ";
+		}
 		$CondorInfo{OpSys} = $OpSys;
 		$CondorInfo{Arch} = $Arch;
-		$CondorInfo{State} = $State;
-		$CondorInfo{Activity} = $Act;
-		$CondorInfo{LoadAv} = $Load;
-		$CondorInfo{Mem} = $Mem;
+		$CondorInfo{"State$Vm"} = $State;
+		$CondorInfo{"Activity$Vm"} = $Act;
+		$CondorInfo{"LoadAv$Vm"} = $Load;
+		$CondorInfo{"Mem$Vm"} = $Mem;
 		if ( $Time =~ /(\d+)+(\d+):(\d+):(\d+)/ )
 		{
-		    $CondorInfo{ActivityTime} = ( ( $4 ) +
-						  ( $3 * 60) +
-						  ( $2 * 60 * 60 ) +
-						  ( $1 * 60 * 60 * 24 ) );
+		    $CondorInfo{"ActivityTime$Vm"} =
+			( ( $4 ) +
+			  ( $3 * 60) +
+			  ( $2 * 60 * 60 ) +
+			  ( $1 * 60 * 60 * 24 ) );
 		}
 	    }
+	    close( CSTAT );
 	}
-	close( CSTAT );
+	else
+	{
+	    print STDERR "Can't query startd\n";
+	}
     }
 
     # Publish 'em all
     foreach my $Key ( keys %CondorInfo )
     {
-	if ( $CondorInfo{$Key} =~ /[a-zA-Z]/ )
+	if (  ( $CondorInfo{$Key} =~ /[a-zA-Z]/ ) ||
+	      ( $CondorInfo{$Key} eq "" )   )
 	{
 	    $Hawkeye->Store( $Key, $CondorInfo{$Key} );
 	}
