@@ -3268,6 +3268,11 @@ Scheduler::child_exit(int pid, int status)
 					}
 				}
 				break;
+			case DPRINTF_ERROR:
+				dprintf( D_ALWAYS, 
+						 "ERROR: Shadow had fatal error writing to its log file.\n" );
+					// We don't want to break, we want to fall through 
+					// and treat this like a shadow exception for now.
 			case JOB_EXCEPTION:
 					// some exception happened in this job --  
 					// record that we had one.  This function will
