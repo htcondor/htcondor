@@ -4444,7 +4444,7 @@ int DaemonCore::Create_Process(
 		}
 
 			// now, add in the inherit buf
-		job_environ.Put("CONDOR_INHERIT", inheritbuf);
+		job_environ.Put( EnvGetName( ENV_INHERIT ), inheritbuf);
 
 			// and finally, get it all back as a NULL delimited string.
 			// remember to deallocate this with delete [] since it will
@@ -4454,9 +4454,9 @@ int DaemonCore::Create_Process(
 	} else {
 	
 		newenv = NULL;
-		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
-			dprintf(D_ALWAYS, "Create_Process: Failed to set "
-					"CONDOR_INHERIT env.\n");
+		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
+			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
+					EnvGetName( ENV_INHERIT ) );
 			return FALSE;
 		}
 	
@@ -4766,9 +4766,10 @@ int DaemonCore::Create_Process(
 
 			// Place inheritbuf into the environment as 
 			// env variable CONDOR_INHERIT
-		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
-			dprintf(D_ALWAYS, "Create_Process: Failed to set "
-					"CONDOR_INHERIT env.\n");
+		char	*env = strdup( EnvGetName( ENV_INHERIT ) );
+		if( !SetEnv( env, inheritbuf) ) {
+			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
+					EnvGetName( ENV_INHERIT ) );
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
 			write(errorpipe[1], &errno, sizeof(errno));

@@ -31,6 +31,7 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "condor_email.h"
+#include "condor_environ.h"
 #include "string_list.h"
 
 // these are defined in master.C
@@ -1100,7 +1101,9 @@ Daemons::FinalRestartMaster()
 		// is a daemon core process.  but, its parent is gone ( we are doing
 		// an exec, so we disappear), thus we must blank out the 
 		// CONDOR_INHERIT env variable.
-	putenv("CONDOR_INHERIT=");
+	char	tmps[256];
+	sprintf( tmps, "%=", EnvGetName( ENV_INHERIT ) );
+	putenv( tmps );
 
 		// Make sure the exec() of the master works.  If it fails,
 		// we'll fall past the execl() call, and hit the exponential
