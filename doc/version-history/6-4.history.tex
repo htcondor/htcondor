@@ -50,6 +50,10 @@ and \Condor{status} will always treat this variable as a float.
 \item Fixed a misleading error message in \Condor{q} that was
 displayed in very rare circumstances.
 
+\item Fixed a process family managment bug in the \Condor{startd} on 
+Windows. This bug was preventing the \Condor{startd} from detecting
+the \Condor{starter} as a member of its process family.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
