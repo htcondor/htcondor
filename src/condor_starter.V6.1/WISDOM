@@ -1,0 +1,13 @@
+----------------------------------------------------------------------
+DEBUGGING
+----------------------------------------------------------------------
+
+For debugging the starter, you can put: "StarterWaitForDebug = 1" in
+your job ad.  If the starter sees this attribute in the job ad, it
+will put itself into an infinite loop as soon as possible after
+getting the job ad from the shadow.  Then, you can attach with a
+debugger, set "starter_should_wait" to 0, and continue.  
+
+NOTE: if you also use "ShadowWaitForDebug=1", you must attach to the
+shadow and continue that for the starter to even be spawned.
+
