@@ -541,7 +541,7 @@ bool _condorPacket::empty()
  */
 void _condorPacket::makeHeader(bool last, int seqNo, _condorMsgID msgID)
 {
-	int stemp;
+	unsigned short stemp;
 	long ltemp;
 
 	memcpy(dataGram, SAFE_MSG_MAGIC, 8);
