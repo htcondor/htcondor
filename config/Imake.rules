@@ -528,7 +528,7 @@ static_##type##/##name##: static			@@\
 ##name##:: strip_dir/##name					@@\
 								@@\
 strip_dir/##name##: stripped					@@\
-	perl condor_scripts/make_both_tarball strip##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" strip##, name##, files##, contribfiles
 #endif /* strip_both_tarball */
 
 #ifndef static_both_tarball
@@ -537,7 +537,7 @@ strip_dir/##name##: stripped					@@\
 ##name##:: static_dir/##name					@@\
 								@@\
 static_dir/##name##: static					@@\
-	perl condor_scripts/make_both_tarball static##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" static##, name##, files##, contribfiles
 #else 
 #define static_both_tarball( name, files, contribfiles ) /* NULL MACRO */
 #endif /* HAS_STATIC */
