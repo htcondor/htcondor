@@ -1,3 +1,9 @@
+01/26/04 V6_7-dagman-branch
+   A new branch off of V6_7-branch for improvements to dagman.  the
+   improvements are to make dagman speedier, especially on startup
+   when there are many thousand nodes in the dag.  Created from the
+   V6_7-dagman-root tag.
+
 01/21/4 V6_7-mirror-branch
    A new branch off of V6_7-branch for adding the job mirroring stuff
    for CORE.  This is the gridmanager/Condor-C method of doing it.
