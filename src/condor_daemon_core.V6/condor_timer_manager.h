@@ -45,40 +45,41 @@ const   int     STAR = -1;
 
 //-----------------------------------------------------------------------------
 /** The Service class is an abstract base class for all classes that have
-    callback event handler meathods.  Because C++ classes do not have a
+    callback event handler methods.  Because C++ classes do not have a
     common base class, there is no way to refer to an generic object pointer.
-    In Java, one would use the Object class, because all classes implicitely
+    In Java, one would use the Object class, because all classes implicitly
     inherit from it.  The <tt>void*</tt> type of C is not adequate for this
-    purpose, because a Daemon Core service register meathod would not know
+    purpose, because a Daemon Core service register method would not know
     the class the <tt>void*</tt> object to cast to.<p>
 
-    So whenever you wish to have a callback meathod (as apposed to a callback
-    function), the class of that meathod must subclass Service, so that
-    you can pass your object containing the callback meathod to Daemon Core
-    register meathods that expect a <tt>Service*</tt> parameter.
+    So whenever you wish to have a callback method (as opposed to a callback
+    function), the class of that method must subclass Service, so that
+    you can pass your object containing the callback method to Daemon Core
+    register methods that expect a <tt>Service*</tt> parameter.
  */
 class Service {
   public:
     /** The destructor is virtual because the Service class requires one
         virtual function so that a vtable is made for this class.  If it
         isn't, daemonCore is horribly broken when it attempts to call
-        object meathods whose class may or may not have a vtable.<p>
+        object methods whose class may or may not have a vtable.<p>
 
         A really neat idea would be to have this destructor remove any
-        Daemon Core callbacks registered to meathods in the object.  Thus,
+        Daemon Core callbacks registered to methods in the object.  Thus,
         by deleting your service object, you are automatically unregistering
         callbacks.  Right now, if you forget to unregister a callback before
-        you delete an object containing callback meathods, nasty trouble
-        will result when Daemon Core attempts to call meathods that no longer
+        you delete an object containing callback methods, nasty trouble
+        will result when Daemon Core attempts to call methods that no longer
         exist in memory.
     */
     virtual ~Service() { };
 
-  protected:
-    /** Since Service is an abstract class, we'll make its constructor
-        protected to prevent outsiders from instantiating Service objects.
+    /** Constructor.  Since Service is an abstract class, we'll make
+	  its constructor a protected method to prevent outsiders from
+	  instantiating Service objects.
     */
-    Service();
+  protected:
+    Service() {};
 };
 
 //-----------------------------------------------------------------------------
@@ -90,7 +91,7 @@ class Service {
 */
 typedef int     (*Event)(Service*);
 
-/// Service Meathod that returns an int (C++ Version).
+/// Service Method that returns an int (C++ Version).
 typedef int     (Service::*Eventcpp)();
 //@}
 
