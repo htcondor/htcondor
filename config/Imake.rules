@@ -411,7 +411,7 @@ all:: standalonetarg
 ** Link a program to run normally (no condor at all)
 */
 #define VLINK( compiler, vanillatarg, obj )			@@\
-vanillatarg: obj						@@\
+vanillatarg: obj fake_ckpt.o					@@\
 	compiler -o vanillatarg obj fake_ckpt.o			@@\
 								@@\
 clean::								@@\
