@@ -351,10 +351,10 @@ handle_all()
 	sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
 	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0 ) {
 		fprintf( stdout, "%s all of your jobs.\n",
-				 (mode==REMOVED)?"Removed":"Held" );
+				 (mode==REMOVED)?"Marked for removal":"Held" );
 	} else {
 		fprintf( stdout, "%s all jobs.\n",
-				 (mode==REMOVED)?"Removed":"Held" );
+				 (mode==REMOVED)?"Marked for removal":"Held" );
 	}
 	nToProcess = -1;
 }
