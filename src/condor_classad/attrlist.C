@@ -902,6 +902,40 @@ int AttrList::Delete(const char* name)
     return found; 
 }
 
+void AttrList::SetDirtyFlag(const char *name, bool dirty)
+{
+	AttrListElem *element;
+
+	element = LookupElem(name);
+	if (element != NULL) {
+		element->SetDirty(dirty);
+	}
+	return;
+}
+
+void AttrList::GetDirtyFlag(const char *name, bool *exists, bool *dirty)
+{
+	AttrListElem *element;
+	bool  _exists, _dirty;
+
+	element = LookupElem(name);
+	if (element == NULL) {
+		_exists = false;
+		_dirty = false;
+	} else {
+		_exists = true;
+		_dirty = element->IsDirty();
+	}
+
+	if (exists) {
+		*exists = _exists;
+	}
+	if (dirty) {
+		*dirty = _dirty;
+	}
+	return;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Reset the dirty flags for each expression tree in the AttrList.
 ///////////////////////////////////////////////////////////////////////////////
@@ -1073,6 +1107,37 @@ ExprTree* AttrList::Lookup(const char* name) const
 	}
 
     return NULL;
+}
+
+AttrListElem *AttrList::LookupElem(const char *name) const
+{
+    AttrListElem  *currentElem, *theElem;
+    char          *nodeName;
+
+	theElem = NULL;
+    for (currentElem = exprList; currentElem; currentElem = currentElem->next){
+		nodeName = ((Variable*)currentElem->tree->LArg())->Name();
+        if(!strcasecmp(nodeName, name)) {
+            theElem = currentElem;
+			break;
+        }
+    }
+
+	// did not find it; check in our chained ad
+	if (theElem == NULL && chainedAttrs && !inside_insert ) {
+		for (currentElem = *chainedAttrs; 
+			 currentElem; 
+			 currentElem = currentElem->next) {
+
+			nodeName = ((Variable*)currentElem->tree->LArg())->Name();
+			if(!strcasecmp(nodeName, name)){
+				theElem = currentElem;
+				break;
+			}
+		}
+	}
+
+    return theElem;
 }
 
 ExprTree* AttrList::Lookup(const ExprTree* attr) const
