@@ -107,10 +107,9 @@ main_init(int argc, char *argv[])
     // install signal handlers
 	daemonCore->Register_Signal(DC_SIGINT,"SIGINT",(SignalHandler)sigint_handler,"sigint_handler()");
 	daemonCore->Register_Signal(DC_SIGHUP,"SIGHUP",(SignalHandler)sighup_handler,"sighup_handler()");
+
 #ifndef WIN32
-	install_sig_handler (SIGPIPE, sigpipe_handler);
 	install_sig_handler (SIGINT, unixsigint_handler);
-	install_sig_handler (SIGHUP, unixsighup_handler);
 #endif	// of ifndef WIN32
 
 #ifndef WIN32
@@ -394,21 +393,27 @@ unixsigint_handler ()
 	return;	// never will get here; just to satisfy c++
 }
 
-
-void
-unixsighup_handler ()
-{
-    dprintf (D_ALWAYS, "Got SIGHUP; re-reading config file ...\n");
-    initializeParams();
-	return;
-}
-
-
-void
-sigpipe_handler ()
-{
-	dprintf(D_FULLDEBUG,"Got SIGPIPE\n");
-	return;
-}
 #endif	// of ifndef WIN32
+
+
+
+int
+main_config()
+{
+	return TRUE;
+}
+
+
+int
+main_shutdown_fast()
+{
+	return TRUE;
+}
+
+
+int
+main_shutdown_graceful()
+{
+	return TRUE;
+}
 
