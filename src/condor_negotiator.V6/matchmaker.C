@@ -104,6 +104,9 @@ initialize ()
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
             (CommandHandlercpp) &GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
+    daemonCore->Register_Command (GET_RESLIST, "GetResList",
+            (CommandHandlercpp) &GET_RESLIST_commandHandler, 
+			"GET_RESLIST_commandHandler", this, READ);
 
 	// Set a timer to renigotiate.  This timer gets reset to 
 	// Negotiator interval after each negotiation.
@@ -310,6 +313,42 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
+		delete ad;
+		return FALSE;
+	}
+
+	delete ad;
+
+	return TRUE;
+}
+
+
+int Matchmaker::
+GET_RESLIST_commandHandler (int, Stream *strm)
+{
+    char    scheddName[64];
+    char    *sn = scheddName;
+    int     len = 64;
+
+    // read the required data off the wire
+    if (!strm->get(sn, len)     ||
+        !strm->end_of_message())
+    {
+        dprintf (D_ALWAYS, "Could not read schedd name\n");
+        return FALSE;
+    }
+
+    // reset usage
+    dprintf (D_ALWAYS,"Getting resource list of %s\n",scheddName);
+
+	// get the priority
+	AttrList* ad=accountant.ReportState(scheddName);
+	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	
+	if (!ad->put(*strm) ||
+	    !strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not send resource list\n");
 		delete ad;
 		return FALSE;
 	}

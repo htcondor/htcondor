@@ -48,6 +48,7 @@ class Matchmaker : public Service
 		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
+		int GET_RESLIST_commandHandler(int, Stream*);
 
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
