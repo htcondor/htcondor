@@ -351,16 +351,14 @@ makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 void 
 parseIpPort (char *ip_port_pair, char *ip_addr)
 {
-    char *ip_port = ip_port_pair + 1;
-    char *ip = ip_addr;
-    while (*ip_port != ':')
+	int i = 0;
+    while ( ip_port_pair[i+2] != ':')
     {
-        *ip = *ip_port;
-        ip++;
-        ip_port++;
+        ip_addr[i] = ip_port_pair[i+2];
+        i++;
     }
 
-    *ip = '\0';
+    ip_addr[i] = '\0';
 
 	// don't care about port number
 }
