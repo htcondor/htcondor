@@ -41,8 +41,6 @@ class GridManager : public Service
 
 	static void gramCallbackHandler( void *, char *, int, int );
 
-	void setUpdate();
-
 	UserLog *InitializeUserLog( GlobusJob * );
 	bool WriteExecuteToUserLog( GlobusJob * );
 	bool WriteTerminateToUserLog( GlobusJob * );
@@ -55,13 +53,11 @@ class GridManager : public Service
  private:
 
 	bool grabAllJobs;
-	bool updateScheddTimerSet;
 
 	char *Owner;
 
 	HashTable <HashKey, GlobusJob *> *JobsByContact;
 	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;
-	List <GlobusJob *> JobsToUpdate;
 
 };
 
