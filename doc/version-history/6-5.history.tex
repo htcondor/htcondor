@@ -65,6 +65,9 @@ Configuration files they are using, right after the startup banner.
       ``log'' statements, it now correctly recognizes lines with
       leading whitespace.
 
+\item Fixed a minor bug whereby DAGMan was not removing its lock file
+      after successful completion.
+
 \item The \Condor{master} used to always pass a \Opt{-f} on the
   command line to all daemons defined in the \Macro{DAEMON\_LIST}
   config file setting.
