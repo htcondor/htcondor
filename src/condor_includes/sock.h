@@ -33,7 +33,7 @@
 #include "stream.h"
 
 #if !defined(WIN32)
-typedef int SOCKET
+typedef int SOCKET;
 #define INVALID_SOCKET -1
 #endif
 
