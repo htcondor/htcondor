@@ -56,9 +56,8 @@ Starter::reallykill( int signo, int pg )
 	signame[0]='\0';
 
 	if ( s_pid <= 0 ) {
-		dprintf( D_ALWAYS, "Invalid pid (%d) in Starter::kill(), returning.\n",  
-				 s_pid );
-		return -1;
+			// If there's no starter, just return.  We've done our task.
+		return TRUE;
 	}
 
 #if !defined(WIN32)
@@ -118,8 +117,8 @@ Starter::reallykill( int signo, int pg )
 		     every 15 seconds until the stat succeeds or fails with
 		     a known errno and dprintf to let the world know.
 			 
-		   Added comments, polling, check for known errnos and 
-		   removed EXCEPT  -Derek Wright, 1/2/98
+		   Added comments, polling, and check for known errnos
+		     -Derek Wright, 1/2/98
 		 */
 	int needs_stat = TRUE, first_time = TRUE;
 	while( needs_stat ) {
