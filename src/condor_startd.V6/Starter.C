@@ -634,11 +634,11 @@ Starter::dprintf( int flags, char* fmt, ... )
 
 
 void
-Starter::recompute_pidfamily( time_t now = 0 ) 
+Starter::recompute_pidfamily( time_t now ) 
 {
 	if( !s_procfam ) {
 		dprintf( D_PROCFAMILY, 
-				 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
+		 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
 		return;
 	}
 	dprintf( D_PROCFAMILY, "Recomputing pid family\n" );
@@ -649,7 +649,8 @@ Starter::recompute_pidfamily( time_t now = 0 )
 	}
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
 	if( ! s_family_size ) {
-		dprintf( D_ALWAYS, "WARNING: No processes found in starter's family\n" );
+		dprintf( D_ALWAYS, 
+			"WARNING: No processes found in starter's family\n" );
 	}
 	if( now ) {
 		s_last_snapshot = now;

@@ -31,7 +31,11 @@ check_perms()
 {
 	struct stat st;
 	mode_t mode;
+#ifdef WIN32
+	mode_t desired_mode = _S_IREAD | _S_IWRITE;
+#else
 	mode_t desired_mode = (0777 | S_ISVTX);
+#endif
 		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
