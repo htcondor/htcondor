@@ -408,9 +408,11 @@ ParallelShadow::runParallelStartupScript( char* rshargs )
 	while( !isspace(*stepper) && *stepper ) stepper++;
 	*stepper = 0;
 
+	dprintf(D_FULLDEBUG, "about to run parallel script: %s\n", scriptargs);
+
 		// run shadow side script
 	int scriptpid = daemonCore->Create_Process(binary, scriptargs,
-											   PRIV_UNKNOWN, postScript_rid);
+											   PRIV_USER_FINAL,postScript_rid);
 
 	free(binary);
 	free(scriptargs);
@@ -427,6 +429,8 @@ ParallelShadow::runParallelStartupScript( char* rshargs )
 int
 ParallelShadow::postScript(int pid, int exit_status)
 {
+	dprintf(D_FULLDEBUG, "script exited with status %d\n", exit_status);
+
 	FILE* scriptobit;
 	char obitfile[_POSIX_PATH_MAX];
 	snprintf(obitfile, _POSIX_PATH_MAX, "%s/scriptobit.%d",
