@@ -29,6 +29,11 @@ my %Config =
      Debug	=> 0,
      TopPeriod	=> 30,
      RunOnce	=> 0,
+     TopOpt	=> {
+		    Batch => "-b ",
+		    Delay => "-d ",
+		    BlankSep => 0,
+		   },
     );
 
 # Valid field list:
@@ -181,6 +186,27 @@ sub Init( )
     chomp;
     s/^\s+//;
     @TopHeader = split ( /\s+/, $_ );
+
+    # Run top, and look at it's version...
+    my $Cmd = "top -v";
+    if ( open( TOP, "$Cmd 2>&1 |" ) )
+    {
+	$_ = <TOP>; chomp;
+	print STDERR "Top version string: '$_'\n";
+	if ( /procps/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b ";
+	    $Config{TopOpt}{Delay} = "-d ";
+	    $Config{TopOpt}{BlankSep} = 0;
+	}
+	elsif ( /version 3\.5/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b -d999999";
+	    $Config{TopOpt}{Delay} = "-s";
+	    $Config{TopOpt}{BlankSep} = 1;
+	}
+	close( TOP );
+    }
 
     # Do an initial configuration
     Configure( );
@@ -338,7 +364,8 @@ sub RunIt( $ )
 
     # Build the command & start it
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
-    my $Cmd = "nice -20 top -b -d $Config{TopPeriod}";
+    my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
+	$Config{TopOpt}{Delay} . "$Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
@@ -349,7 +376,7 @@ sub RunIt( $ )
     # Flag to skip the first input line
     my $SkipFirst = 0;
 
-    # Are we done yet (yes if in 'run once' mode
+    # Are we done yet (yes if in 'run once' mode)
     my $Done = 0;
 
     # Timing info
@@ -371,6 +398,7 @@ sub RunIt( $ )
 
 	# Read the header
       READHEADER:
+	my @Buffer;
 	while ( <TOP> ) {
 	    # Uptime display?
 	    if ( /.*up.*load/ ) {
@@ -410,7 +438,7 @@ sub RunIt( $ )
 			my $Var = $2;
 			$Var =~ s/^\s+//;
 			my $Type = FixString( \$Value );
-			my $What = 
+			my $What =
 			    $Name . "_" . $TopTypes{$Type}{prefix} . $Var;
 			$Summary->Add( $What,
 				       $TopTypes{$Type}{pubtype},
@@ -421,6 +449,13 @@ sub RunIt( $ )
 
 	    # Header line?
 	    elsif ( /\s+PID\s+USER/ ) {
+		while( <TOP> )
+		{
+		    chomp;
+		    next if ( ! /\s*\d+/ );
+		    push( @Buffer, $_ );
+		    last;
+		}
 		last;
 	    }
 	}
@@ -434,9 +469,10 @@ sub RunIt( $ )
 	my $Proc = 0;
 	my %Processes;
       READPROC:
-	while ( <TOP> ) {
+	while ( ( $_ = shift @Buffer ) || ( $_ = <TOP> ) ) {
+	    chomp;
 
-	    #last if ( ! /^\s*$/ );
+	    last if ( $Config{TopOpt}{BlankSep} && ( /^\s*$/ ) );
 
 	    # Verify that we start with a process ID type thingy,
 	    # then parse it..
@@ -494,8 +530,11 @@ sub RunIt( $ )
     }
 
     # All done reading!
-    print STDERR "Killing top (PID = $TopPid )\n";
-    kill( "TERM", $TopPid ) if ( $TopPid >= 0 );
+    sleep( 1 );
+    if ( $TopPid >= 0 ) {
+	print STDERR "Killing top (PID = $TopPid )\n";
+	kill( "TERM", $TopPid )
+    }
     close( TOP );
 }
 
