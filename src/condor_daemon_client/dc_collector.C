@@ -108,6 +108,11 @@ DCCollector::reconfig( void )
 
 	if( ! _addr ) {
 		locate();
+		if( ! _is_configured ) {
+			dprintf( D_FULLDEBUG, "COLLECTOR address not defined in "
+					 "config file, not doing updates\n" );
+			return;
+		}
 	}
 
 	switch( up_type ) {
@@ -184,6 +189,11 @@ DCCollector::parseTCPInfo( void )
 bool
 DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 ) 
 {
+	if( ! _is_configured ) {
+			// nothing to do, treat it as success...
+		return true;
+	}
+
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
 			// we *never* want to use TCP to send pool updates to the
 			// developer collector.  so, regardless of what the config
