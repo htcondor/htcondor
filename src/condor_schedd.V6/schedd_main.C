@@ -33,6 +33,7 @@
 #include "exit.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "util_lib_proto.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "dedicated_scheduler.h"
@@ -100,6 +101,29 @@ main_init(int argc, char* argv[])
 
 		// Initialize the job queue
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
+
+		// Make a backup of the job queue?
+	char	*tmp;
+	tmp = param( "SCHEDD_BACKUP_SPOOL" );
+	if ( tmp ) {
+		if ( (*tmp == 't') || (*tmp == 'T') ) {
+			char	hostname[128];
+			if ( gethostname( hostname, sizeof( hostname ) ) ) {
+				strcpy( hostname, "" );
+			}
+			char		job_queue_backup[_POSIX_PATH_MAX];
+			sprintf(job_queue_backup, "%s/job_queue.bak.%s",
+					Spool, hostname );
+			if ( copy_file( job_queue_name, job_queue_backup ) ) {
+				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
+						 job_queue_backup );
+			} else {
+				dprintf( D_FULLDEBUG, "Spool backed up to '%s'\n",
+						 job_queue_backup );
+			}
+		}
+		free( tmp );
+	}
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
