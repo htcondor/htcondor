@@ -47,10 +47,11 @@ extern "C" {
 	void config( ClassAd* classAd=NULL, int wantsQuiet=0 );
 	void config_host( ClassAd* classAd=NULL, char* host=NULL );
 	void config_fill_ad( ClassAd* );
+	int  set_persistent_config(char *admin, char *config);
+	int  set_runtime_config(char *admin, char *config);
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	int	 config_from_server(char*, char*, CONTEXT*);
 	char * get_tilde();
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
@@ -65,7 +66,6 @@ extern "C" {
 #else
 	void config();
 	void config_host();
-	int	 config_from_server();
 	char * get_tilde();
 	char * param ();
 	insert();
