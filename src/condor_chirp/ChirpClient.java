@@ -3,6 +3,7 @@ package edu.wisc.cs.condor.chirp;
 
 import java.io.*;
 import java.net.*;
+import java.util.regex.*;
 
 /*
 XXX XXX XXX
@@ -81,7 +82,7 @@ public class ChirpClient {
 	*/
 
 	public void cookie( String c ) throws IOException {
-		simple_command("cookie "+c+"\n");	
+		simple_command("cookie "+ChirpWord(c)+"\n");	
 	}
 
 	/**
@@ -102,7 +103,7 @@ public class ChirpClient {
 	*/
 
 	public int open( String path, String flags, int mode ) throws IOException {
-		return simple_command("open "+path+" "+flags+" "+mode+"\n");
+		return simple_command("open "+ChirpWord(path)+" "+flags+" "+mode+"\n");
 	}
 
 	/**
@@ -208,7 +209,7 @@ public class ChirpClient {
 	*/
 
 	public void unlink( String name ) throws IOException {
-		simple_command("unlink "+name+"\n");
+		simple_command("unlink "+ChirpWord(name)+"\n");
 	}
 
 	/**	
@@ -219,7 +220,7 @@ public class ChirpClient {
 	*/
 
 	public void rename( String name, String newname ) throws IOException {
-		simple_command("rename "+name+" "+newname+"\n");
+		simple_command("rename "+ChirpWord(name)+" "+ChirpWord(newname)+"\n");
 	}
 
 
@@ -231,7 +232,7 @@ public class ChirpClient {
 	*/
 
 	public void mkdir( String name, int mode ) throws IOException {
-		simple_command("mkdir "+name+" "+mode+"\n");
+		simple_command("mkdir "+ChirpWord(name)+" "+mode+"\n");
 	}
 
 	/**	
@@ -252,7 +253,7 @@ public class ChirpClient {
 	*/
 
 	public void rmdir( String name ) throws IOException {
-		simple_command("rmdir "+name+"\n");
+		simple_command("rmdir "+ChirpWord(name)+"\n");
 	}
 
 	/**
@@ -278,6 +279,11 @@ public class ChirpClient {
 		}
 		return returnOrThrow(response);
 	}
+
+	static Pattern escaper = Pattern.compile("([ \\\\])");
+	public String ChirpWord( String cmd ) {
+		return escaper.matcher(cmd).replaceAll("\\\\$1");
+        }
 
 	private int returnOrThrow( int code ) throws IOException {
 		if(code>=0) {

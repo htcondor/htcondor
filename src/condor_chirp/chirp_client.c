@@ -22,10 +22,116 @@ static int get_result( FILE *s );
 static int convert_result( int response );
 static int simple_command(struct chirp_client *c,char const *fmt,...);
 static void vsprintf_chirp(char *command,char const *fmt,va_list args);
+static char const *read_url_param(char const *url,char *buffer,size_t length);
+
 
 struct chirp_client {
 	FILE *stream;
 };
+
+/*
+  chirp_client_connect_url()
+
+  Sets path_part to the position of the start of the path information
+  in the URL and connects to the specified Chirp server.
+
+  URL format:
+    chirp:host.name:port/path   (absolute path)
+    chirp:host.name:port./path  (relative path)
+    chirp:/path                 (absolute path)
+    chirp:./path                (relative path)
+    chirp:path                  (sloppy relative path)
+
+  Note that the initial part of a sloppy relative path can be confused
+  for a host:port specification if it happens to look like one.  Example:
+  'chirp:strange:1/file'.  For this reason, it is better to use one of
+  the non-sloppy formats.
+
+  In all of the above URL formats, any number of extra connection
+  parameters may be inserted before the path part (including  the leading
+  '/' or '.').  These are of the form ";parameter=value" where parameter
+  and value are encoded using the standard Mime type
+  application/x-www-form-url encoded, just like the parameters in a typical
+  HTTP GET CGI request, but using ';' instead of '&' as the delimiter.
+
+  At this time, no connection parameters are defined, and any that
+  are supplied are simply ignored.
+
+*/
+
+struct chirp_client *
+chirp_client_connect_url( const char *url, const char **path_part)
+{
+	struct chirp_client *client;
+	char const *str;
+	char *host = NULL;
+	int port = 0;
+
+	if(strncmp(url,"chirp:",6)) {
+		//bare file name
+		*path_part = url;
+		return chirp_client_connect_default();
+	}
+
+	url += 6; // "chirp:"
+
+	if(*url != '/' && *url != '\\' && *url != ';' && *url != '.' \
+	   && (str = strchr(url,':')))
+	{
+		char *end;
+		port = strtol(str+1,&end,10);
+		if(port && end > str+1 && 
+		   (*end == '\0' || *end == '/' || *end == '\\' ||
+		    *end == '.' || *end == ';'))
+		{
+			//URL form chirp:host.name:port...
+			//Note that we try to avoid getting here on a "sloppy"
+			//relative path that happens to contain a ':' but
+			//which is not followed by a valid port/path.
+
+			host = (char *)malloc(str-url+1);
+			strncpy(host,url,str-url);
+			host[str-url] = '\0';
+
+			url = end;
+		}
+	}
+
+	while(*url == ';') { //parse connection parameters
+		char param[CHIRP_LINE_MAX];
+		char value[CHIRP_LINE_MAX];
+
+		url = read_url_param(++url,param,sizeof(param));
+		if(!url) {
+			errno = EINVAL;
+			return NULL;
+		}
+
+		if(*url == '=') {
+			url = read_url_param(++url,value,sizeof(value));
+			if(!url) {
+				errno = EINVAL;
+				return NULL;
+			}
+		}
+		else *value = '\0';
+
+		//No connection parameters are defined at this time!
+		//Handle them here when they are defined.
+	}
+
+	*path_part = url;
+
+	if(!host) { //URL must be in form 'chirp:path'
+		client = chirp_client_connect_default();
+	}
+	else {
+		client = chirp_client_connect(host,port);
+	}
+
+	free(host);
+	return client;
+}
 
 struct chirp_client *
 chirp_client_connect_default()
@@ -255,6 +361,10 @@ get_result( FILE *s )
 	fields = sscanf(line,"%d",&result);
 	if(fields!=1) chirp_fatal_response();
 
+#ifdef CHIRP_DEBUG
+	fprintf(stderr,"chirp received: %s\n",line);
+#endif
+
 	return result;
 }
 
@@ -367,6 +477,10 @@ simple_command(struct chirp_client *c,char const *fmt,...)
 	vsprintf_chirp(command,fmt,args);
 	va_end(args);
 
+#ifdef DEBUG_CHIRP
+	fprintf(stderr,"chirp sending: %s",command);
+#endif
+
 	result = fputs(command,c->stream);
 
 
@@ -378,4 +492,54 @@ simple_command(struct chirp_client *c,char const *fmt,...)
 
 	return convert_result(get_result(c->stream));
 }
+
+char const *
+read_url_param(char const *url,char *buffer,size_t length)
+{
+	size_t bufpos = 0;
+
+	while(*url != '\0' && *url != '.' && *url != '/'
+	      && *url != '=' && *url != ';' && *url != '\\')
+	{
+		if(bufpos >= length) return NULL;	
+
+		switch(*url) {
+		case '+':
+			buffer[bufpos++] = ' ';
+			break;
+		case '%': { //form-url-encoded escape sequence
+			//following two characters are hex digits
+			char d = tolower(*(++url));
+
+			if(d >= '0' && d <= '9') d -= '0';
+			else if(d >= 'a' && d <= 'f') d = d - 'a' + 0xA;
+			else return NULL; //invalid hex digit
+
+			buffer[bufpos] = d<<4;
+
+			d = tolower(*(++url));
+
+			if(d >= '0' && d <= '9') d -= '0';
+			else if(d >= 'a' && d <= 'f') d = d - 'a' + 0xA;
+			else return NULL; //invalid hex digit
+
+			buffer[bufpos++] |= d;
+
+			break;
+		}
+		default:
+			buffer[bufpos++] = *url;
+			break;
+		}
+
+		url++;
+	}
+
+	if(bufpos >= length) return NULL;
+	buffer[bufpos] = '\0';
+
+	return url;
+}
+
+
 

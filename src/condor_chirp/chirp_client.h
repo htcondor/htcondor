@@ -8,6 +8,8 @@ extern "C" {
 
 struct chirp_client * chirp_client_connect_default();
 struct chirp_client * chirp_client_connect( const char *host, int port );
+struct chirp_client * chirp_client_connect_url( const char *url, const char **path_part);
+
 void chirp_client_disconnect( struct chirp_client *c );
 
 int chirp_client_cookie( struct chirp_client *c, const char *cookie );
