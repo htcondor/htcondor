@@ -30,10 +30,10 @@
 a local Condor pool.
 The addition is accomplished by installing and executing some of the Condor
 daemons on the Globus resource.
-A condor\_shadow.globus job appears in the queue of the local
+A condor\_master job appears in the queue of the local
 Condor pool for each glidein request.
 To remove the Globus resource from the local Condor pool,
-use \Condor{rm} to remove the condor\_shadow.globus job from
+use \Condor{rm} to remove the condor\_master job from
 the job queue.
 
 You must have an X.509 certificate and access
@@ -56,17 +56,13 @@ During set up, a configuration file and the Condor daemons
 master, startd and starter are installed on the Globus
 resource.
 Binaries for the correct architecture are copied from a central server.
-To obtain access to the server,
-send
-e-mail to \Email{condor-admin@cs.wisc.edu} with your X.509
-certificate name.
 Set up need only be done once per machine and version of Condor.
 The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
 By default, all files placed on the remote machine are placed in
 \File{\MacroUNI{HOME}/Condor\_glidein}.
-Each use of \Condor{glidein} will generate spool and log
+Each instance of \Condor{glidein} will generate spool and log
 files on the Globus resource.
 These files should be occasionally removed.
 
@@ -113,6 +109,16 @@ These files should be occasionally removed.
 	resource.
         If any of the files are missing, exits with an error code.
         This option cannot be run simultaneously with \Opt{-setuponly} }
+    \OptItem{\OptArg{-setup\_jobmanager}{jobmanager-fork}}{
+        Jobmanager to use for running Glidein setup process.  If a
+	readonable default can be discovered through MDS, this is optional. }
+    \OptItem{\OptArg{-arch}{architecture}}{
+        Identifies the glidein tarball to download and install.  If a
+	readonable default can be discovered through MDS, this is
+	optional.  A list of possible values may be found here:
+	\URL{http://www.cs.wisc.edu/condor/glidein/binaries}.  For
+	example: 6.6.5-i686-pc-Linux-2.4 }
+
     \OptItem{\OptArg{-scheduler}{name}}{
 	Selects the Globus job scheduler type.
 	Defaults to \Arg{fork}.
@@ -187,6 +193,8 @@ These files should be occasionally removed.
 	on the Globus resource.
 	The file is called \File{\condor{config.glidein}}.
         }
+    \OptItem{\Opt{-suffix}{X}}{
+        Suffix to use when generating files.  Default is process id. }
     \OptItem{\OptArg{-useconfig}{filename}}{
 	Install \Arg{filename} as the configuration file on the Globus resource
 	instead of the default configuration file during the set up phase.
@@ -210,5 +218,41 @@ The status value will be 3 (three) if
 there was an error in remote submission.
 The status value will be -1 (negative one) if 
 no resource was specified in the command line.
+
+Common problems are listed below.  Many of these are best discovered by
+looking in the remove StartLog in the glidein ``localdir''.
+
+\begin{description}
+
+\item[WARNING: The file xxx is not writable by condor]  This happens if you
+run \Condor{glidein} from a directory that does not have the right
+permissions for Condor to access files.  If you are in an AFS directory,
+keep in mind that Condor does not have your AFS ACLs.
+
+\item[NFS file locking problems]  If you have the \Opt{-localdir}
+configured to be on NFS (not recommended, but sometimes convenient
+for testing), the Condor daemons may have trouble manipulating file
+locks.  You may insert the following into the Glidein config file:
+
+\begin{verbatim}
+IGNORE_NFS_LOCK_ERRORS = True
+\end{verbatim}
+
+\item[The startd cannot connect to the negotiator] This may be caused
+by several things.  One is a firewall.  Another is when the compute
+nodes do not have even outgoing network access.  Configuring Glidein
+to work without full network access to and from the compute nodes is
+still in the experimental stages, so for now, the short answer is that
+you must at least have a range of open (bi-directional) ports and set
+up the glidein config file as described on
+page~\pageref{param:HighPort}..  (Use \Opt{-genconfig}, edit the file,
+and then use \Opt{-useconfig}.)
+
+Yet another cause of connectivity problems may be the use of UDP by
+the \Condor{startd} to register itself with the collector.  You can
+force it to use TCP as described on
+page~\pageref{param:UpdateCollectorWithTcp}.
+
+\end{description}
 
 \end{ManPage}
