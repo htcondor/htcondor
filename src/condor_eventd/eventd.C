@@ -30,8 +30,8 @@
 
 EventDaemon _EventD, *EventD = &_EventD;
 
-EventDaemon::EventDaemon() : EventInterval(-1), TimeoutTid(-1),
-	EventList(NULL), NumEvents(-1)
+EventDaemon::EventDaemon() : EventInterval(-1), MaxEventPreparation(0),
+	TimeoutTid(-1),	EventList(NULL), NumEvents(-1)
 {
 }
 
@@ -60,6 +60,7 @@ EventDaemon::Config()
 	if (!tmp || tmp[0] == '\0') {
 		dprintf(D_ALWAYS, "EVENT_LIST is empty or not defined.  "
 				"EventDaemon will do nothing.\n");
+		if (tmp) free(tmp);
 		return 0;
 	}
 	StringList event_list(tmp);
@@ -87,9 +88,19 @@ EventDaemon::Config()
 		EventInterval = atoi(tmp);
 		free(tmp);
 	} else {
-		EventInterval = 900;
+		EventInterval = 300;
 	}
-	dprintf(D_FULLDEBUG, "Event interval set to %d seconds\n", EventInterval);
+	dprintf(D_FULLDEBUG, "Event interval set to %d seconds.\n", EventInterval);
+
+	tmp = param("EVENTD_MAX_PREPARATION");
+	if (tmp) {
+		MaxEventPreparation = atoi(tmp);
+		free(tmp);
+	} else {
+		MaxEventPreparation = 0;
+	}
+	dprintf(D_FULLDEBUG, "Max event preparation set to %d seconds.\n",
+			MaxEventPreparation);
 
 	if (TimeoutTid >= 0) {
 		daemonCore->Cancel_Timer(TimeoutTid);
@@ -108,14 +119,20 @@ EventDaemon::Timeout()
 	for (int ev=0; ev < NumEvents; ev++) {
 		if (EventList[ev] &&
 			EventList[ev]->IsValid() && !EventList[ev]->IsActive()) {
-			int TimeNeeded = EventList[ev]->TimeNeeded();
 			int TimeToEvent = EventList[ev]->TimeToEvent();
-			dprintf(D_FULLDEBUG, "%s: TimeNeeded=%d, TimeToEvent=%d\n",
-					EventList[ev]->Name(), TimeNeeded, TimeToEvent);
-			if (TimeNeeded + EventInterval >= TimeToEvent) {
-				dprintf(D_ALWAYS, "%s: Activating\n",
-						EventList[ev]->Name());
-				EventList[ev]->ActivateEvent();
+			if (MaxEventPreparation == 0 ||
+				TimeToEvent <= MaxEventPreparation) {
+				int TimeNeeded = EventList[ev]->TimeNeeded();
+				dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d, TimeNeeded=%d\n",
+						EventList[ev]->Name(), TimeToEvent, TimeNeeded);
+				if (TimeNeeded + EventInterval >= TimeToEvent) {
+					dprintf(D_ALWAYS, "%s: Activating...\n",
+							EventList[ev]->Name());
+					EventList[ev]->ActivateEvent();
+				}
+			} else {
+				dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d\n",
+						EventList[ev]->Name(), TimeToEvent);
 			}
 		}
 	}
@@ -128,6 +145,6 @@ EventDaemon::NewEvent(const char name[], const char record[])
 		return new ScheduledShutdownEvent(name, record+8);
 	}
 
-	dprintf(D_ALWAYS, "Unknown event type in event %s\n", name);
+	dprintf(D_ALWAYS, "Unknown event type in event %s.\n", name);
 	return NULL;
 }

@@ -32,6 +32,7 @@ public:
 private:
 	ScheduledEvent *NewEvent(const char name[], const char record[]);
 	int	EventInterval;
+	int MaxEventPreparation;
 	int TimeoutTid;
 	ScheduledEvent **EventList;
 	int NumEvents;
