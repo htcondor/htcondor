@@ -6,6 +6,58 @@ if [ -d CVS ]; then
 	exit 1
 fi
 
+
+##################################################
+# Find imake.  
+# If it doesn't yet exist, build it.
+##################################################
+
+if [ -d ../imake ] ; then
+    IMAKEROOT="../imake"
+elif [ -d ../../imake ] ; then
+    IMAKEROOT="../../imake"
+elif [ -d ../../../imake ] ; then
+    IMAKEROOT="../../../imake"
+else
+	echo "Can't find the root directory for imake!"
+	echo "You need a copy of imake build Condor."
+	echo "Please make sure your version of the Condor source"
+	echo "contains a directory called \"imake\" that is at the"
+	echo "top-level of your source tree (next to \"src\", \"config\")"
+	exit 1
+fi
+
+IMAKE="$IMAKEROOT/imake"
+if [ ! -x $IMAKE ] ; then
+    echo "Attemping to build imake from source"
+    pwd=`pwd`
+    cd $IMAKEROOT
+    make
+    cd $pwd
+fi
+if [ ! -x $IMAKE ] ; then
+    # if it's not here yet, fatal error
+    echo "Failed to build imake!"
+p   exit 1
+fi
+
+# Now, find an appropriate cpp to use
+IMAKECPP="$IMAKEROOT/imake_cpp"
+if [ ! -x $IMAKECPP ] ; then
+    if [ -f $IMAKECPP ] ; then
+        rm -f $IMAKECPP
+    fi	 
+    echo '#!/bin/sh' > $IMAKECPP
+    echo 'gcc -E -w $*' >> $IMAKECPP
+    chmod 755 $IMAKECPP
+fi
+export IMAKECPP
+
+
+##################################################
+# Figure out the flags for imake to build Makefile
+##################################################
+
 arch=`uname -m`
 osversion=`uname -r`
 # Make sure if we get back something that begins with "IRIX" that we
@@ -107,7 +159,9 @@ elif [ $os = "IRIX" ] ; then
 	fi
 fi
 
-#echo imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
+##################################################
+# Finally, call imake with all the flags
+##################################################
 
-imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
+$IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 
