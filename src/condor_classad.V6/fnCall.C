@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "common.h"
 #include "exprTree.h"
 #include "source.h"
@@ -396,7 +397,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
     // check for membership
 	arg0.IsListValue( el );
 	ExprListIterator itr( el );
-	while( ( tree = itr.NextExpr( ) ) ) {
+	while( ( tree = itr.CurrentExpr( ) ) ) {
 		if( !tree->Evaluate( state, cArg ) ) {
 			val.SetErrorValue( );
 			return( false );
@@ -406,6 +407,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 		if( val.IsBooleanValue( b ) && b ) {
 			return true;
 		}
+		itr.NextExpr( );
 	}
 	val.SetBooleanValue( false );	
 
