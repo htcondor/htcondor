@@ -61,7 +61,7 @@ StarterMgr::init( void )
 {
 	static bool did_warning = false;
 	StringList starter_list;
-	StringList existing_starter_list;
+	StringList checked_starter_list;
 	Starter* tmp_starter;
 	starters.Rewind();
 	while( starters.Next(tmp_starter) ) {
@@ -102,7 +102,7 @@ StarterMgr::init( void )
 			}
 			continue;
 		}
-		if( existing_starter_list.contains(starter_path) ) {
+		if( checked_starter_list.contains(starter_path) ) {
 			if( new_config ) {
 				dprintf( D_ALWAYS, "Starter pointed to by \"%s\" (%s) is "
 						 "in STARTER_LIST more than once, ignoring.\n", 
@@ -118,8 +118,10 @@ StarterMgr::init( void )
 		tmp_starter = makeStarter( starter_path );
 		if( tmp_starter ) {
 			starters.Append( tmp_starter );
-			existing_starter_list.append( starter_path );
 		}
+			// record the fact that we've already considered this
+			// starter, even if it failed to give us a classad. 
+		checked_starter_list.append( starter_path );
 		free( starter_path );
 	}
 	if( ! new_config ) {
