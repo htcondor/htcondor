@@ -705,11 +705,13 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
- 	if ( ! MySchedd->sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
-		fprintf( stderr,
-				 "Can't send RESCHEDULE command to condor scheduler\n" );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+	if ( param_boolean("SUBMIT_SEND_RESCHEDULE",true) ) {
+		if ( ! MySchedd->sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
+			fprintf( stderr,
+					 "Can't send RESCHEDULE command to condor scheduler\n" );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 }
 
