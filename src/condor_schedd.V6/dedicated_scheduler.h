@@ -184,6 +184,9 @@ class DedicatedScheduler : public Service {
 		/// Add the given cluster to our set of idle dedicated jobs.
 	void addDedicatedCluster( int cluster );
 
+		/// Returns true if there are idle dedicated clusters.
+	bool hasDedicatedClusters( void );
+
  private:
 
 	/** Used to handle the negotiation protocol for a given
@@ -248,8 +251,6 @@ class DedicatedScheduler : public Service {
 		// // // // // // 
 
 		// Stuff for interacting w/ DaemonCore
-	int		scheduling_interval;		// How often do we schedule?
-	int		scheduling_tid;				// DC timer id
 	int		hdjt_tid;					// DC timer id
 	int		rid;						// DC reaper id
 
