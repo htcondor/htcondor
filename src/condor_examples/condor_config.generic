@@ -1013,16 +1013,26 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  If you want condor_submit to automatically append an expression to
 ##  the Requirements expression or Rank expression of jobs at your
 ##  site, uncomment these entries.
+#APPEND_REQUIREMENTS	= (expression to append job requirements)
+#APPEND_RANK		= (expression to append job rank)
+
+##  If you want expressions only appended for either standard or
+##  vanilla universe jobs, you can uncomment these entries.  If any of
+##  them are defined, they are used for the given universe, instead of
+##  the generic entries above.
 #APPEND_REQ_VANILLA	= (expression to append to vanilla job requirements)
 #APPEND_REQ_STANDARD	= (expression to append to standard job requirements)
 #APPEND_RANK_STANDARD	= (expression to append to vanilla job rank)
 #APPEND_RANK_VANILLA	= (expression to append to standard job rank)
 
-##  These are default values for the rank expression that are used if
-##  none are specified in the submit file.  Comment these out to
-##  disable the feature.
-DEFAULT_RANK_VANILLA	= ((Memory*1024) > ImageSize)
-DEFAULT_RANK_STANDARD	= ((Memory*1024) > ImageSize)
+##  This can be used to define a default value for the rank expression
+##  if one is not specified in the submit file.
+#DEFAULT_RANK	        = (default rank expression for all jobs)
+
+##  If you want universe-specific defaults, you can use the following
+##  entries:
+#DEFAULT_RANK_VANILLA	= (default rank expression for vanilla jobs)
+#DEFAULT_RANK_STANDARD	= (default rank expression for standard jobs)
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
