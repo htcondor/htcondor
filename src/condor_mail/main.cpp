@@ -1,8 +1,15 @@
 #include "stdafx.h"
 #include "smtp.h"
-#include <iostream>
+#include <iostream.h>
 
-using namespace std;
+// These things cause condor_mail 
+// to hang indefinitely when you pipe
+// in a file for the mail content (as
+// we do in a lot of places), so for
+// now I'm breaking .NET build until
+// we figure it out. --stolley
+//#include <iostream>
+//using namespace std;
 
 
 
