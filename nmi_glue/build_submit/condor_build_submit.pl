@@ -42,7 +42,7 @@ GetOptions (
 
 my $NMIDIR = "/nmi/run";
 
-my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2, ppc_macosx_7.5.0";
+my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2, ppc_macosx";
 
 my $notify;
 my %tags;
