@@ -24,8 +24,7 @@ sub get_platform_defaults {
     chop($mach = `uname -m`);
     chop($os = `uname`);
     chop($rel = `uname -r`);
-    $mouse_dev="";
-    $kbd_dev="";
+    $console_devs="";
     $_ = $os;
   SWITCH: {
       if(/^Linux/) { 
@@ -33,7 +32,7 @@ sub get_platform_defaults {
 	  $os_name="LINUX";
 	  $arch_name="INTEL";
 	  $ps_path="/bin/ps -auwx";
-	  $mouse_dev="mouse";
+	  $console_devs="mouse, console";
 	  last SWITCH;
       }
       if(/^SunOS/) {
@@ -51,21 +50,19 @@ sub get_platform_defaults {
 
 	  $_ = $mach;
 	  if( /^i86pc/ ) {
-	      $mouse_dev="kdmouse";
-	      $kbd_dev="vt00";
+	      $console_devs="kdmouse, vt00, tty00";
 	      $arch_name="INTEL";
 	  } elsif( /^sun4u/ ) {
-	      $mouse_dev="mouse";
-	      $kbd_dev="kbd";
+	      $console_devs="mouse, kbd";
 	      $arch_name="SUN4u";
 	  } else {
-	      $mouse_dev="mouse";
-	      $kbd_dev="kbd";
+	      $console_devs="mouse, kbd";
 	      $arch_name="SUN4x";
 	  }
 	  last SWITCH;
       }
       if(/^HP-UX/) {
+	  $console_devs="ps2mouse, ps2kbd, hil1, hil2, hil3, hil4, hil5, hil6, hil7";
 	  $mail_path="/bin/mailx";
 	  last SWITCH;
       }
@@ -101,25 +98,13 @@ sub customize_config_file {
 	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
 	  if( /^ARCH.*$/ ) { $_ = "ARCH\t\t= $arch_name\n"; last SWITCH; }
 	  if( /^OPSYS.*$/ ) { $_ = "OPSYS\t\t= $os_name\n"; last SWITCH; }
-	  if( /^#KBD_DEVICE.*$/ ) {
-	     if( $kbd_dev || $mouse_dev ) {
-		 print TARGET "##  These entries allow the startd to monitor keyboard and mouse\n",
-		 "##  activity by checking the modification times on special files in\n",
-		 "##  /dev.  Activity on these files shows up as \"ConsoleIdle\" time.\n",
-		 "##  Just list the file name, without the \"/dev/\" part of the path.\n";
-	     }
-	     if( $kbd_dev ) {
-		 print TARGET "KBD_DEVICE\t= $kbd_dev\n";
-	     } else { 
-		 print TARGET "#KBD_DEVICE\t= \n";		 
-	     }
-	     if( $mouse_dev ) {
-		 print TARGET "MOUSE_DEVICE\t= $mouse_dev\n";
-	     } else {
-		 print TARGET "#MOUSE_DEVICE\t= \n";
+	  if( /^#CONSOLE_DEVICES.*$/ ) {
+	     if( $console_devs ) {
+		 print TARGET "CONSOLE_DEVICES\t= $console_devs\n";
 	     }
 	     next LINE;
 	 }
+
       }
 	print TARGET "$_";
     }
