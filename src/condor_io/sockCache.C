@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sockCache.h"
-#include <limits.h> // for INT_MAX
 
 static char _FileName_[] = __FILE__;
 
@@ -67,6 +66,7 @@ getReliSock (Sock *&sock, char *addr, int timeOut)
         if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
 		{
 			sock = sockCache[i].sock;
+			sock->timeout(timeOut);
 			return true;
 		}
 	}
@@ -111,6 +111,7 @@ getSafeSock (Sock *&sock, char *addr, int timeOut)
         if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
 		{
 			sock = sockCache[i].sock;
+			sock->timeout(timeOut);
 			return true;
 		}
 	}
