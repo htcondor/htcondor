@@ -7,7 +7,7 @@
 #define	ArchOptimizeFlag	-m486
 
 #if defined( IS_GLIBC23 )
-#   define HAS_GLOBUS	NO
+#   define HAS_GLOBUS	YES
 #   define Platform		INTEL-LINUX-GLIBC23
 #   define PublicTargetName	intel_linux2-glibc23
 #   define LIB_NAME		glibc23
