@@ -152,4 +152,22 @@ enum OpKind
 
 char* strnewp( const char* );
 
+const char ATTR_COLLECTION_HINTS[] 	= "CollectionHints";
+const char ATTR_CONTEXT			[] 	= "Context";
+const char ATTR_DEEP_MODS		[] 	= "DeepMods";
+const char ATTR_DELETE_AD		[] 	= "DeleteAd";
+const char ATTR_DELETES			[] 	= "Deletes";
+const char ATTR_KEY				[]	= "Key";
+const char ATTR_NEW_AD			[]	= "NewAd";
+const char ATTR_PROJECT_THROUGH	[]	= "ProjectThrough";
+const char ATTR_RANK			[]	= "Rank";
+const char ATTR_RANK_HINTS		[] 	= "RankHints";
+const char ATTR_REPLACE			[] 	= "Replace";
+const char ATTR_REQUIREMENTS	[]	= "Requirements";
+const char ATTR_UPDATES			[] 	= "Updates";
+const char ATTR_WANT_LIST		[]	= "WantList";
+const char ATTR_WANT_PRELUDE	[]	= "WantPrelude";
+const char ATTR_WANT_RESULTS	[]	= "WantResults";
+const char ATTR_WANT_SUMMARY	[]	= "WantSummary";
+
 #endif//__COMMON_H__
