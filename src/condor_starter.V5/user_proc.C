@@ -35,6 +35,7 @@
 #include "startup.h"
 #include "fileno.h"
 #include "condor_rsc.h"
+#include "renice_self.h"
 
 #if defined(AIX32)
 #	include <sys/id.h>
@@ -502,6 +503,8 @@ UserProc::execute()
 #endif
 		sigprocmask( SIG_SETMASK, &sigmask, 0 );
 
+			// renice
+		renice_self( "JOB_RENICE_INCREMENT" );
 
 			// child process should have only it's submitting uid, and cannot
 			// switch back to root or some other uid.
