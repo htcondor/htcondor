@@ -18,7 +18,6 @@
 
 /* For now, try a "clipped" version */
 #define IS_CLIPPED YES
-#define HAS_DYNAMIC_USER_JOBS	NO
 
 #undef HAS_PVM
 #define HAS_PVM NO

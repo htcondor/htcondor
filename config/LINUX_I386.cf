@@ -18,5 +18,3 @@
 #else
 #   define Platform		I386_LINUX
 #endif
-
-#define HAS_DYNAMIC_USER_JOBS	NO
