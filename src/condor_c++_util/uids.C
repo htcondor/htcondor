@@ -27,15 +27,25 @@
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
+THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
+static int SwitchIds = TRUE;
+
+/* must be listed in the same order as enum priv_state in condor_uid.h */
+static char *priv_state_name[] = {
+	"PRIV_UNKNOWN",
+	"PRIV_ROOT",
+	"PRIV_CONDOR",
+	"PRIV_USER",
+	"PRIV_USER_FINAL"
+};
+
 
 #if defined(WIN32)
 
 #include "dynuser.h"
 
 // Lots of functions just stubs on Win NT for now....
-priv_state _set_priv(priv_state s, char file[], int line, int dologging) { return s; }
 void init_condor_ids() {}
-void uninit_user_ids() {}
 void set_user_ids(uid_t uid, gid_t gid) {}
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
@@ -47,6 +57,11 @@ uid_t getuid() { return get_my_uid(); }
 static dynuser DynUser;		// object to create a dynamic nobody user
 static HANDLE CurrUserHandle = NULL;
 static char *NobodyLoginName = NULL;
+
+void uninit_user_ids() 
+{
+	CurrUserHandle = NULL;
+}
 
 HANDLE priv_state_get_handle()
 {
@@ -92,6 +107,62 @@ void init_user_ids(const char username[])
 	// we created a new user, now just stash the token
 	CurrUserHandle = DynUser.get_token();
 }
+
+priv_state
+_set_priv(priv_state s, char file[], int line, int dologging)
+{
+	priv_state PrevPrivState = CurrentPrivState;
+
+	// On NT, PRIV_CONDOR = PRIV_ROOT.
+	if ( s == PRIV_CONDOR ) {
+		s = PRIV_ROOT;
+	}
+
+	if (s == CurrentPrivState) {
+		goto logandreturn;
+	}
+
+	if (CurrentPrivState == PRIV_USER_FINAL) {
+		dprintf(D_ALWAYS,
+				"warning: attempted switch out of PRIV_USER_FINAL\n");
+		return PRIV_USER_FINAL;
+	}
+
+	CurrentPrivState = s;
+	if (SwitchIds) {
+		switch (s) {
+		case PRIV_ROOT:
+		case PRIV_CONDOR:
+			RevertToSelf();
+			break;
+		case PRIV_USER:
+		case PRIV_USER_FINAL:
+			if ( CurrUserHandle ) {
+				if ( PrevPrivState == PRIV_UNKNOWN ) {
+					// make certain we're back to 'condor' before impersonating
+					RevertToSelf();
+				}
+				ImpersonateLoggedOnUser(CurrUserHandle);
+			}
+
+			break;
+		case PRIV_UNKNOWN:		/* silently ignore */
+			break;
+		default:
+			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+		}
+	}
+
+logandreturn:
+	if (dologging) {
+		dprintf(D_PRIV, "%s --> %s at %s:%d\n",	
+			priv_state_name[PrevPrivState], 
+			priv_state_name[CurrentPrivState], 
+			file, line);
+	}
+	return PrevPrivState;
+}	
+
 
 // This implementation of get_condor_username() for WinNT really 
 // returns the username of the current user.  Until we finish porting
@@ -159,7 +230,6 @@ char* get_condor_username()
 
 #include "debug.h"
 #include "condor_sys.h"
-#include "condor_uid.h"
 
 
 #ifndef FALSE
@@ -178,8 +248,6 @@ static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
-static int SwitchIds = TRUE;
-static priv_state CurrentPrivState = PRIV_UNKNOWN;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -211,7 +279,6 @@ static int ph_head=0, ph_count=0;
 
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
-
 
 void
 _condor_disable_uid_switching()
@@ -317,6 +384,35 @@ init_condor_ids()
 	CondorIdsInited = TRUE;
 }
 
+static void
+set_user_ids_implementation(uid_t uid, gid_t gid, const char *username)
+{
+	if (UserIdsInited && UserUid != uid) {
+		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
+				uid, UserUid);
+	}
+	UserUid = uid;
+	UserGid = gid;
+	UserIdsInited = TRUE;
+
+	// find the user login name for this uid.  note we should not
+	// EXCEPT or log an error if we do not find it; it is OK for the
+	// user not to be in the passwd file for a so-called SOFT_UID_DOMAIN.
+	if ( !username ) {
+		struct passwd *	pwd = getpwuid( CondorUid );
+		if( pwd ) {
+			username = pwd->pw_name;
+		}
+	}
+
+	// now if we have a username, call initgroups with it so the 
+	// user can access files belonging to any group he is a member of.
+	// if we did not call initgroups here, the user could only access
+	// files belonging to his/her default group.
+	if ( username ) {
+		initgroups(username, UserGid);
+	}
+}
 
 void
 init_user_ids(const char username[])
@@ -337,21 +433,14 @@ init_user_ids(const char username[])
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-	set_user_ids(pwd->pw_uid, pwd->pw_gid);
-	initgroups(username, UserGid);
+	set_user_ids_implementation(pwd->pw_uid, pwd->pw_gid,username);
 }
 
 
 void
 set_user_ids(uid_t uid, gid_t gid)
 {
-	if (UserIdsInited && UserUid != uid) {
-		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
-				uid, UserUid);
-	}
-	UserUid = uid;
-	UserGid = gid;
-	UserIdsInited = TRUE;
+	set_user_ids_implementation(uid,gid,NULL);
 }
 
 
