@@ -38,7 +38,7 @@ extern	ReliSock* syscall_sock;
 extern "C" {
 
 extern	int		DebugFlags;
-extern 	FILE*	_condor_DebugFP;
+int		_condor_DebugFD = 0;
 
 
 /*
@@ -65,7 +65,7 @@ void
 _condor_dprintf_va( int flags, char* fmt, va_list args )
 {
 	int scm;
-	int no_fp = FALSE;
+	int no_fd = FALSE;
 
 		/* See if this is one of the messages we are logging */
 	if( !(flags&DebugFlags) ) {
@@ -73,9 +73,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	}
 
 		/* If dprintf() isn't initialized, don't seg fault */
-	if( ! _condor_DebugFP ) {
-		_condor_DebugFP = stderr;
-		no_fp = TRUE;
+	if( ! _condor_DebugFD ) {
+		_condor_DebugFD = 2; /* stderr */
+		no_fd = TRUE;
 	}
 
 		/*
@@ -87,14 +87,32 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 		/* Actually print the message */
-	vfprintf( _condor_DebugFP, fmt, args );
+	_condor_vfprintf_va( _condor_DebugFD, fmt, args );
 	
 		/* Restore our syscall mode */
 	(void) SetSyscalls( scm );
 
-	if( no_fp ) {
-		_condor_DebugFP = NULL;
+	if( no_fd ) {
+		_condor_DebugFD = 0;
 	}
+}
+
+
+/* 
+   Our special version of vfprintf() that doesn't use the clib and
+   doesn't call malloc(), etc.
+*/
+int
+_condor_vfprintf_va( int fd, char* fmt, va_list args )
+{
+		/* 
+		   This is totally wrong.  It's just a stub that accomplishes
+		   the old functionality until this function is replaced by a
+		   real version that accomplishes the new goal. -Derek
+		*/
+	FILE* fp;
+	fp = fdopen( fd, "a" );
+	vfprintf( fp, fmt, args );
 }
 
 
@@ -125,13 +143,9 @@ _condor_dprintf_exit( void )
 void
 _condor_fd_panic( int line, char* file )
 {
-	int scm;
 	dprintf( D_ALWAYS,
 			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", 
 			 line, file );
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	(void)fflush( _condor_DebugFP );
-	(void) SetSyscalls( scm );
 	Suicide();
 }
 #endif /* ! LOOSE32 */
