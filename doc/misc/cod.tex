@@ -1,0 +1,419 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:cod}Computing On Demand (COD)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand}
+\index{COD}
+
+This section describes how to execute short-running interactive
+applications on batch resources controlled by Condor.
+This functionality is known as \Term{Computing on Demand} or
+\Term{COD}.
+Support for Computing On Demand was added to Condor in version 6.5.2.   
+
+In the following sections, we will describe the concept and what kinds
+of applications it is meant to be used for, give an overview of how it
+works and interacts with Condor, describe how to configure Condor
+resources to provide this service, explain how to use various tools
+included with Condor to manage COD applications, and explore some
+current limitations in Condor's support for COD.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-intro}
+Introduction to COD}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Introduction} 
+
+The basic motivation behind COD is to enable people to use Condor to
+manage interactive, yet compute-intensive jobs.
+These are jobs that take lots of compute power over a relatively short
+period of time.
+They want computing power \Term{on demand}, but they want to use their
+existing batch computing resources to provide the cycles.
+The applications they are trying to run cannot use the batch
+scheduling functionality of Condor, since they require
+\Term{interactive} response-time.
+Many of the applications that are well-suited for COD involve a cycle:
+application blocked on user input, computation burst to compute
+results, block for more user input, computation burst, etc.
+When the resources are not being used for the bursts of computation to
+service the interactive application, they should continue to execute
+long-running batch jobs.
+
+Here are some example applications to consider:
+
+\begin{itemize}
+
+\item A giant spreadsheet with a large number of highly complex
+  formulas which take a lot of compute power to recalculate.
+  The user's spreadsheet application would claim a number of
+  compute-server helper nodes.
+  When the user presses a \verb@recalculate@ button, these worker
+  nodes would work on a subset of the computation and send the results
+  back to the master application providing the user interface and
+  displaying the data.
+  Ideally, while the user is entering new data or modifying formulas,
+  these worker nodes should not tie up the batch resources where they
+  are running.
+
+\item Some kind of graphics rendering application that waits for user
+  input to select an image to render, that then requires a huge burst
+  of computation to produce the image.
+  For example: various Computer-Aided Design (CAD) tools, fractal
+  rendering programs, ray-tracing tools, etc.
+ 
+\item Visualization tools for data mining.
+
+\end{itemize}
+
+The way Condor helps these kinds of applications is to provide an
+infrastructure to use Condor batch resources for the types of compute
+nodes described above.
+Condor does \emph{NOT} provide tools to parallelize existing GUI
+applications.
+The COD functionality is an interface to allow these compute nodes to
+interact with long-running Condor batch jobs.
+The user must provide both the compute node applications, and the
+interactive master application that controls them.
+Condor only provides a mechanism to allow these interactive (and often
+parallelized) applications to seamlessly interact with the Condor
+batch system.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-overview}
+Overview of How COD Works}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Overview of how it works}
+
+%
+% TODO!
+% 
+
+% (Text from condor-week 2003 presentation)
+% When a high-priority COD job appears, the lower-priority batch job is
+% suspended
+% The COD job can run right away, while the batch job is suspended
+% Batch jobs (even those that can not checkpoint) can resume instantly
+% once there are no more active COD jobs
+%
+% The interactive COD application starts up, and goes out to claim some
+% compute nodes
+% Once the helper applications are in place and ready, these COD claims
+% are suspended, allowing batch jobs to run
+% When the interactive application has work, it can instantly suspend
+% the batch jobs and resume the COD applications to perform the
+% computations
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-authorizing}
+Authorizing Users to Create and Manage COD Claims}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Authorizing Users}
+
+Once a user has a COD claim on a resource that they can suspend and
+resume at will, that user therefore has the power to suspend and
+resume whatever batch job might be running on that resource, even if
+it is owned by another user.
+Because of this, it is essential that users of COD resources can be
+trusted not to abuse this power.
+As a result, users must be authorized to have access to the privilege
+of creating and using a COD claim on a machine.
+This privilege is granted when the Condor administrator places a given
+username in the \Macro{VALID\_COD\_USERS} list in the condor
+configuration for the machine (usually in a local config file).
+
+In addition, the tools to request and manage COD claims (described
+below) all require that the user issuing the commands be
+authenticated. 
+This requires more than host-based authorization in Condor described
+in section~\ref{sec:Host-Security} ``Setting Up IP/Host-Based
+Security in Condor'' on page~\pageref{sec:Host-Security}.
+If your site is not using the strong authentication methods described
+in section~\ref{sec:Config-Security} ``Security Configuration'' on
+page~\pageref{sec:Config-Security}, then to request a COD claim on a
+given machine, you must log in directly to that machine and issue the
+command locally.
+This way, Condor can rely on the local file system to authenticate the
+user.
+This is analogous to commands that submit or remove jobs from the job
+queue managed by a given \Condor{schedd}.
+Unless some form of strong authentication such as GSI or Kerberos is
+enabled at your Condor pool, you must issue \Condor{submit} and
+\Condor{rm} commands from the same machine where the \Condor{schedd}
+is running.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-setup}
+Setting Up a Machine to Run a Given COD Application}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Setting up machines}
+\index{Computing On Demand!Defining an application}
+
+%
+% TODO!
+% 
+
+In addition to configuing a machine to authorize a given user to
+create and use COD claims, an administrator must configure
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-managing-claims}
+Managing COD Resource Claims}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Managing claims}
+
+There are a number of commands provided by Condor which manage COD
+claims on batch resources.
+Once created, each COD claim has a unique identifying string, the
+\Term{claim ID}.
+Most commands require a claim ID to specify which claim you wish to
+act on. 
+These commands are the means by which COD applications interact with
+the rest of the Condor system
+They should be issued by the controller application to manage its
+compute nodes.
+Briefly, the commands are:
+
+\begin{description}
+
+\item [Request] Create a new COD claim on a given resource.
+
+\item [Activate] Spawn a specific application on a given COD claim.
+
+\item [Suspend] Suspend a running application on a given COD claim.
+
+\item [Resume] Resume a suspended application on a given COD claim.
+
+\item [Deactivate] Shutdown an application but hold onto the COD claim
+  for future use.
+
+\item [Release] Destroy a given COD claim and shutdown any job that is
+  currently running on it.
+
+\end{description}
+
+To issue these commands, a user or application would invoke the 
+\Condor{cod} tool.
+Each command can be specified as the first argument to this tool, or
+the \Condor{cod} tool can be installed in such a way that the same
+binary is used for a set of names, for example: \Condor{cod\_request},
+\Condor{cod\_release} and so on.
+
+In addition, there is now a \Opt{-cod} option to \Condor{status}.
+
+Each command and its use is described in greater detail in the
+following sections.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-request}Request}
+\index{Computing On Demand!Managing claims!Request}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+As described above, a given user must be granted access to create COD
+claims at a certain machine.
+In addition, if the user wishes to use these COD claims, the
+application they wish to run must be pre-installed on the machine and
+defined in the \File{condor\_config} file (or a local config file). 
+Therefore, a user cannot simply request a COD claim at random.
+
+When a user wants to create a new COD claim, they must specify exactly
+what resource they want to create it on.
+The user normally does this by specifying the name of the
+\Condor{startd} that they wish to use by invoking
+\Condor{cod\_request} with the \Opt{-name} option and supplying a
+hostname.  For example:
+\begin{verbatim}
+condor_cod_request -name c02.cs.wisc.edu
+\end{verbatim}
+If the \Condor{startd} you wish to use belongs to a different Condor
+pool than the one where you are executing the COD commands, you can
+use the \Opt{-pool} option to provide the name of the central manager
+machine of the other pool.  For example:
+\begin{verbatim}
+condor_cod_request -name c02.cs.wisc.edu -pool condor.cs.wisc.edu
+\end{verbatim}
+
+Another option is use \Opt{-addr} to provide the IP address and port
+number where the \Condor{startd} is listening.
+This information can be found in the \Condor{startd} ClassAd as the
+attribute \Attr{StartdIpAddr} or by reading the log file when the
+\Condor{startd} first starts up.
+For example:
+\begin{verbatim}
+condor_cod_request -addr "<128.105.146.102:40967>"
+\end{verbatim}
+  
+If neither \Opt{-name} or \Opt{-addr} are specified,
+\Condor{cod\_request} tries to connect to the \Condor{startd} running
+on the local machine where you executed the command to request the COD
+claim.
+
+If the \Condor{startd} you want to use for your COD claim is an SMP
+machine and has multiple virtual machines, you can specify which
+resource on the machine you wish to use for COD by providing a
+\Opt{-requirements} option.  For example:
+
+\begin{verbatim}
+condor_cod_request -requirements 'VirtualMachineId==3'
+\end{verbatim}
+or
+\begin{verbatim}
+\verb@condor_cod_request -requirements 'State!="Claimed"'@  
+\end{verbatim}
+
+In general, you should be careful with shell quoting issues, so that
+your shell is not confused by the ClassAd expression syntax (in
+particular if the expression includes a string).
+The safest method is to enclose any requirement expression you provide
+within single quote marks (as shown above).
+ 
+Once a given \Condor{startd} has been contacted to request a new COD
+claim, the startd authorizes the user issuing the command as described
+above in section~\ref{sec:cod-authorization} to ensure that the user
+should be allowed to have a COD claim.
+If the user is authorized and the \Condor{startd} could find a
+resource that matches any given requirements, the \Condor{startd}
+creates a new COD claim gives it a unique identifier, the \Term{claim
+ID}.
+This ID is used to identify COD claims for all the other commands.
+If \Condor{cod\_request} succeeds, the ID for the new claim is printed
+out to the screen.
+All other commands to manage this claim require the Claim ID to be
+provided as a command-line option.
+
+When the \Condor{startd} gives out a COD claim on a given resource,
+the ClassAd describing the resource is returned to the user that
+requested the claim. 
+This ClassAd is basically a snap-shot of what you would see by looking
+at the output from \verb@condor_status -long@ for the given machine.
+If \Condor{cod\_request} is invoked with the \Opt{-classad} option
+(which takes a filename as an argument), this ClassAd will be printed
+out to the given file.
+Otherwise, the ClassAd will be printed to the screen.
+The only essential piece of information in this ClassAd is the Claim
+ID, so that is printed to the screen, even if the whole ClassAd is
+also being written to a file.
+
+\Note Once a COD claim is created, there is no persistent record of it
+kept at the \Condor{startd}.
+So, if the \Condor{startd} is restarted for any reason, all existing
+COD claims will be destroyed and the new \Condor{startd} will not
+recognize any attempts to use the old claims.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-activate}Activate}
+\index{Computing On Demand!Managing claims!Activate}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-suspend}Suspend}
+\index{Computing On Demand!Managing claims!Suspend}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-resume}Resume}
+\index{Computing On Demand!Managing claims!Resume}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-deactivate}Deactivate}
+\index{Computing On Demand!Managing claims!Deactivate}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-release}Release}
+\index{Computing On Demand!Managing claims!Release}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-claim-release}condor\_status -cod}
+\index{Computing On Demand!condor\_status -cod}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Opt{-cod} option to \Condor{status} can be used to view any COD
+claims in a given Condor pool.  
+
+\begin{verbatim}
+Name        ID    ClaimState  TimeInState  RemoteUser   JobId Keyword 
+astro.cs.wi COD1  Idle         0+00:00:04  wright                     
+chopin.cs.w COD1  Running      0+00:02:05  wright       3.0   fractgen
+chopin.cs.w COD2  Suspended    0+00:10:21  wright       4.0   fractgen
+
+                    Total  Idle  Running  Suspended  Vacating  Killing
+      INTEL/LINUX       3     1        1          1         0        0
+            Total       3     1        1          1         0        0
+\end{verbatim}
+
+%
+% TODO: describe what this information means
+%
+
+Please see the man page for \Condor{status} on
+page~\pageref{man-condor-status} for more details about using
+\Condor{status} and its other options.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:cod-limitations}
+Limitations of COD Support in Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Computing On Demand!Limitations}
+
+In this section we describe some of the current limitations of
+Condor's support for COD.
+
+The following items are all limitations we plan to remove in future
+releases of Condor:
+
+%
+% TODO: Complete this list and give a little more detail in the
+% explanations.  
+%
+
+\begin{itemize}
+
+\item Applications have to be pre-installed and pre-staged at a given
+  machine. 
+
+\item Attributes of the job are static in the configuration file (for
+  example, you cannot specify different arguments for each instance of
+  the application when you activate them).
+
+\item There is no way to define limits for how long a given COD claim
+  can be active, how often it is run, and so on.
+
+\item There is no accounting done for applications run under COD
+  claims.
+  Therefore, if you use a lot of COD resources in a given Condor pool,
+  it does not aversely effect your user priority.
+
+\end{itemize}
+
+None of the above items are fundamentally difficult to add and we hope
+to address them relatively quickly.
+If you run into one of these limitations and it is a barrier to you
+using COD, please contact \Email{condor-admin@cs.wisc.edu} with the
+subject ``COD limitation'' and we will help you as quickly as we can.
+
+The following items are more fundamental limitations that we do not
+plan to address:
+
+\begin{itemize}
+
+\item COD claims are not persistent on a given \Condor{startd}
+
+\item Condor does not provide a mechanism to parallelize a graphic
+  application to take advantage of COD.  
+  The Condor Team is not in the business of developing applications,
+  we just provide mechanisms to execute them.
+
+\end{itemize}
