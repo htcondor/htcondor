@@ -711,11 +711,24 @@ int
 init_nobody_ids( int is_quiet )
 {
 	bool result;
-	int nobody_uid = -1;
-	int nobody_gid = -1;
 
-	result = ( 	pcache.get_user_uid("nobody", (uid_t)nobody_uid) &&
-	   			pcache.get_user_gid("nobody", (gid_t)nobody_gid) );
+	/* WARNING: We're initializing the nobody uid/gid's to 0!
+	   That's a big no-no, so make sure that if we somehow don't
+	   manage to find a valid nobody uid/gid, that we immediately
+	   return FALSE and fail out. 
+
+	   Unfortunately, there is no value you can set a uid_t/gid_t
+	   to that indicates an uninitialized or invalid value. In the
+	   case of this function however, we know that no matter what,
+	   the nobody user should NEVER be 0, so it serves well for
+	   this purpose.
+	 */
+
+	uid_t nobody_uid = 0;
+	gid_t nobody_gid = 0;
+
+	result = ( 	pcache.get_user_uid("nobody", nobody_uid) &&
+	   			pcache.get_user_gid("nobody", nobody_gid) );
 
 	if (! result ) {
 
@@ -740,10 +753,10 @@ init_nobody_ids( int is_quiet )
 	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
 	// patch here, we will generate an EXCEPT later when we try a
 	// setgid().  -Todd Tannenbaum, 3/95
-	if( (nobody_uid > 59999) || (nobody_uid < 0) ) {
+	if( (nobody_uid > 59999) || (nobody_uid <= 0) ) {
 		nobody_uid = 59999;
 	}
-	if( (nobody_gid > 59999) || (nobody_gid < 0) ) {
+	if( (nobody_gid > 59999) || (nobody_gid <= 0) ) {
 		nobody_gid = 59999;
 	}
 #endif
@@ -751,13 +764,22 @@ init_nobody_ids( int is_quiet )
 #ifdef IRIX
 		// Same weirdness on IRIX.  60001 is the default uid for
 		// nobody, lets hope that works.
-	if( (nobody_uid >= UID_MAX ) || (nobody_uid < 0) ) {
+	if( (nobody_uid >= UID_MAX ) || (nobody_uid <= 0) ) {
 		nobody_uid = 60001;
 	}
-	if( (nobody_gid >= UID_MAX) || (nobody_gid < 0) ) {
+	if( (nobody_gid >= UID_MAX) || (nobody_gid <= 0) ) {
 		nobody_gid = 60001;
 	}
 #endif
+
+	/* WARNING: At the top of this function, we initialized 
+	   nobody_uid and nobody_gid to 0, so if for some terrible 
+	   reason we haven't set them to a valid nobody uid/gid
+	   by this point, we need to fail immediately. */
+
+	if ( nobody_uid == 0 || nobody_gid == 0 ) {
+		return FALSE;
+	}
 
 		// Now we know what the uid/gid for nobody should *really* be,
 		// so we can actually initialize this as the "user" priv.
