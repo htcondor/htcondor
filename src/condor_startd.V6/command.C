@@ -990,37 +990,43 @@ activate_claim( Resource* rip, Stream* stream )
 
 	ji.ji_hname = rip->r_cur->client()->host();
 
+		// Actually spawn the starter
+	if( ! rip->r_starter->spawn(&ji) ) {
+			// Error spawning starter!
+		ABORT;
+	}
+
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in the machine ad and cur Match object
 
 	req_classad->EvalInteger( ATTR_CLUSTER_ID, req_classad, job_cluster );
 	req_classad->EvalInteger( ATTR_PROC_ID, req_classad, job_proc );
-	rip->r_cur->setproc( job_proc );
-	rip->r_cur->setcluster( job_cluster );
-	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster, job_proc );
 
-	rip->r_cur->setad( req_classad );
+	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster,
+				  job_proc );
 
-	if( !rip->r_cur->ad() ||
-		((rip->r_cur->ad())->EvalInteger( ATTR_JOB_UNIVERSE,
-										  rip->r_classad,universe)==0) ) {
+	if( req_classad->EvalInteger(ATTR_JOB_UNIVERSE,
+								 rip->r_classad, universe) == 0 ) {
 		universe = STANDARD;
 		rip->dprintf( D_ALWAYS,
-				 "Default universe (%d) since not in classad \n", 
-				 universe );
+					  "Default universe (%d) since not in classad \n", 
+					  universe );
 	} else {
 		rip->dprintf( D_ALWAYS, "Got universe (%d) from request classad\n",
-				 universe );
+					  universe );
 	}
 	if( universe == VANILLA ) {
-		rip->dprintf( D_ALWAYS, "Startd using *_VANILLA control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using *_VANILLA control expressions.\n" );
 	} else {
-		rip->dprintf( D_ALWAYS, "Startd using standard control expressions.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Startd using standard control expressions.\n" );
 	}
-	rip->r_cur->setuniverse(universe);
 
-		// Actually spawn the starter
-	rip->r_starter->spawn( &ji );
+	rip->r_cur->setproc( job_proc );
+	rip->r_cur->setcluster( job_cluster );
+	rip->r_cur->setad( req_classad );
+	rip->r_cur->setuniverse(universe);
 
 	int now = (int)time( NULL );
 	rip->r_cur->setjobstart(now);	
@@ -1029,7 +1035,8 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_ALWAYS, "State change: claim-activation protocol successful\n" );
+	rip->dprintf( D_ALWAYS, 
+				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
 	free( shadow_addr );
