@@ -4133,9 +4133,28 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 	// on Unix, just try to send pid signal 0.  if sucess, pid lives.
 	// first set priv_state to root, to make certain kill() does not fail
 	// due to permissions.
+	// News Flash!  This doesn't work in things like DAGMan, which are
+	// running as USER_PRIV_FINAL.  So, we need to do more trickery.
 	priv_state priv = set_root_priv();
+
+	errno = 0;
 	if ( ::kill(pid,0) == 0 ) {
 		status = TRUE;	
+	} else {
+		// Now, if errno == EPERM, that means that if we had the
+		// right permissions we could kill it... and that its there!
+		// and we should return TRUE.
+		// If its ESRCH then the PID wasn't there, and then status
+		// should be false.
+		if ( errno == EPERM ) {
+			dprintf(D_FULLDEBUG, "DaemonCore::IsPidAlive(): kill returned "
+				"EPERM, assuming pid %d is alive.\n", pid);
+			status = TRUE;
+		} else {
+			dprintf(D_FULLDEBUG, "DaemonCore::IsPidAlive(): kill returned "
+				"errno %d, assuming pid %d is dead.\n", errno, pid);
+			status = FALSE; // Just for consistancy.
+		}
 	}
 	set_priv(priv);
 #else
