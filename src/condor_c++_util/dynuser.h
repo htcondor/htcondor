@@ -1,6 +1,8 @@
 #ifndef __dynuser_H
 #define __dynuser_H
 
+#ifdef WIN32
+
 #include <aclapi.h>
 #include "ntsecapi.h"
 
@@ -55,5 +57,6 @@ private:
 	HANDLE logon_token;
 };
 
+#endif  // of ifdef WIN32
 
-#endif
+#endif  
