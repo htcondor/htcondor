@@ -522,7 +522,7 @@ or from the command line.
 A program that opens a static filename every time
 will need to use a separate subdirectory for the output of each run.
 
-The \Condor{submit} manual page in the 
+The \Condor{submit} manual page 
 is on page~\pageref{man-condor-submit} and
 contains a complete and full description of how to use \Condor{submit}.
 
@@ -626,24 +626,24 @@ about when and where Condor runs, checkpoints, and migrates processes for
 the 150 queued programs
 will be written into file \File{foo.log}.
 \begin{verbatim}
-      ####################                                                    
-      #                                                                       
-      # Example 3: Show off some fancy features including                            
-      # use of pre-defined macros and logging.                                
-      #                                                                       
-      ####################                                                    
-                                                                          
-      Executable     = foo                                                    
-      Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
-      Rank		     = Memory >= 64
-      Image_Size     = 28 Meg                                                 
-                                                                          
-      Error   = err.$(Process)                                                
-      Input   = in.$(Process)                                                 
-      Output  = out.$(Process)                                                
-      Log = foo.log                                                                       
-                                                                          
-      Queue 150
+  ####################                    
+  #
+  # Example 3: Show off some fancy features including
+  # use of pre-defined macros and logging.
+  #
+  ####################                                                    
+
+  Executable     = foo                                                    
+  Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
+  Rank		 = Memory >= 64
+  Image_Size     = 28 Meg                                                 
+
+  Error   = err.$(Process)                                                
+  Input   = in.$(Process)                                                 
+  Output  = out.$(Process)                                                
+  Log = foo.log
+
+  Queue 150
 \end{verbatim}
 
 \index{submit description file!examples|)}
@@ -705,8 +705,11 @@ descriptions follow for the attributes which will be common to every
 machine ClassAd. Remember that because ClassAds are flexible, the
 machine ads in your pool may include additional attributes specific
 to your site's installation and policies. 
-\label{user-man-machad}
+\subsubsection{\label{user-man-machad}ClassAd Machine Attributes}
 \input{user-man/machad.tex}
+\subsubsection{\label{user-man-machad}ClassAd Job Attributes}
+\input{user-man/jobad.tex}
+
 
 
 %%%%%%%%%%%% 
@@ -738,11 +741,64 @@ will use its default architecture,
 the type of machine you are submitting from.
 An example of the\AdAttr{requirements} command is
 \begin{verbatim}
-        requirements = Arch == "SUN4x" && OpSys == "SOLARIS251"
+  requirements = Arch == "SUN4x" && OpSys == "SOLARIS251"
 \end{verbatim}
 To see the architecture and operating systems of the machines
 in your pool,
 run \Condor{status}.
+
+%%%%%%%%%%%% 
+\subsection{Submitting to Multiple Architectures or Operating Systems} 
+%%%%%%%%%%%%
+
+\index{running a job!on multiple architectures}
+\index{running a job!on multiple operating systems}
+\index{heterogeneous pool!submitting a job to}
+
+Some jobs are able to run on multiple architectures or operating
+systems.  For example, a shell script may be able to run on any
+machine in your pool.  Or, a SPARC binary may be able to run on either
+``SUN4x'' or ``SUN4u'' machines.
+
+You can use the 
+\AdAttr{requirements} command in
+the submit description file to
+specify the target architectures and operating systems.
+For example, if your shell script will run on either SPARC Solaris
+machines or Intel LINUX machines, you can specify
+\begin{verbatim}
+  requirements = (Arch == "SUN4x" && OpSys == "SOLARIS26") || \
+                 (Arch == "INTEL" && OpSys == "LINUX"
+\end{verbatim}
+Or, if your executable can run on any SPARC Solaris machine, you can
+specify
+\begin{verbatim}
+  requirements = (Arch == "SUN4x" || Arch == "SUN4u") && \
+                 (OpSys == "SOLARIS251" || OpSys == "SOLARIS26")
+\end{verbatim}
+
+Note that Condor checkpoints can not be transferred across
+architectures.  Once a job has checkpointed, it must run only on
+machines of the exact same architecture and operating system.  This
+can be enforced with a more complex \AdAttr{requirements} expression.  For
+example, if your job will run on any SPARC Solaris machine, you can
+specify
+\begin{verbatim}
+  +CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
+                      ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
+  Requirements = (OpSys == "SOLARIS251" || OpSys == "SOLARIS26") && \
+                 (Arch == "SUN4x" || Arch == "SUN4u") && CkptRequirements
+\end{verbatim}
+The \AdAttr{Requirements} expression in this example includes a
+reference to a \AdAttr{CkptRequirements} expression.  The \AdAttr{CkptRequirements}
+expression ensures that the job will run on a machine only if the job
+has not yet checkpointed (i.e., \AdAttr{CkptArch} and \AdAttr{CkptOpSys} are both
+UNDEFINED) or the machine has \AdAttr{Arch} and \AdAttr{OpSys} attributes which match
+the job's \AdAttr{CkptArch} and \AdAttr{CkptOpSys} values.
+This example uses the ``+'' syntax to add expressions to the Job
+ClassAd.  See the \Condor{submit} manual page on
+page~\pageref{man-condor-submit} for details.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
