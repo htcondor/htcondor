@@ -119,19 +119,19 @@ release-html: ref.html $(TARGETDIR)
 
 admin-man/machine-states.eps: admin-man/machine-states.fig
 	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
+	fig2dev -L eps -m .6 $< > $@
 
 admin-man/machine-activities.eps: admin-man/machine-activities.fig
 	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
+	fig2dev -L eps -m .6 $< > $@
 
 admin-man/pool-arch.eps: admin-man/pool-arch.fig
 	rm -f $@
-	fig2dev -L ps -m .4 $< > $@
+	fig2dev -L eps -m .4 $< > $@
 
 user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 	rm -f $@
-	fig2dev -L ps -m .6 $< > $@
+	fig2dev -L eps -m .6 $< > $@
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps
 
@@ -159,7 +159,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps admin-man/machine-activities.eps admin-man/machine-states.eps
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
