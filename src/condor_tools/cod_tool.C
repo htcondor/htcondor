@@ -41,6 +41,7 @@
 #include "dc_startd.h"
 #include "dc_collector.h"
 #include "sig_install.h"
+#include "basename.h"
 
 
 // Global variables
