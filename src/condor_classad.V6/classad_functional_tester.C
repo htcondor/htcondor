@@ -83,7 +83,9 @@ public:
     bool      verbose;
     bool      interactive;
     ifstream  *input_file;
-	
+
+	Parameters() { input_file = NULL; }
+    ~Parameters() { if (input_file) delete input_file; }
 	void ParseCommandLine(int argc, char **argv);
 };
 
@@ -782,8 +784,19 @@ void handle_same(
         } else if (!evaluate_expr(tree2, value2, parameters)) {
             print_error_message("Couldn't evaluate second expressions.\n", state);
         } else if (!value1.SameAs(value2)) {
-                print_error_message("the expressions are different.", state);
+            if (parameters.debug) {
+                cout << "They evaluated to: \n";
+                cout << " " << value1 << endl;
+                cout << " " << value2 << endl;
+            }
+            print_error_message("the expressions are different.", state);
         }
+    }
+    if (tree != NULL) {
+        delete tree;
+    } 
+    if (tree2 != NULL) {
+        delete tree2;
     }
     return;
 }
@@ -806,6 +819,12 @@ void handle_sameq(
         if (!tree->SameAs(tree2)) {
             print_error_message("the expressions are different.", state);
         }
+    }
+    if (tree != NULL) {
+        delete tree;
+    }
+    if (tree2 != NULL) {
+        delete tree2;
     }
     return;
 }
@@ -834,6 +853,12 @@ void handle_diff(
                 print_error_message("the expressions are the same.", state);
         }
     }
+    if (tree != NULL) {
+        delete tree;
+    }
+    if (tree2 != NULL) {
+        delete tree2;
+    }
     return;
 }
 
@@ -855,6 +880,12 @@ void handle_diffq(
         if (tree->SameAs(tree2)) {
             print_error_message("the expressions are the same.", state);
         }
+    }
+    if (tree != NULL) {
+        delete tree;
+    }
+    if (tree2 != NULL) {
+        delete tree2;
     }
     return;
 }
@@ -910,6 +941,12 @@ void handle_samerep(
             print_error_message(error, state);
             }
         }
+    }
+    if (tree != NULL) {
+        delete tree;
+    }
+    if (tree2 != NULL) {
+        delete tree2;
     }
     return;
 }
@@ -1003,6 +1040,7 @@ void handle_writexml(
     ExprTree  *expr;
     ofstream  xml_file;
 
+    expr = NULL;
     if (get_file_name(line, filename, state, parameters)) {
         if ((expr = get_expr(line, state, parameters)) != NULL) {
             if (expr_okay_for_xml_file(expr, state, parameters)) {
@@ -1038,6 +1076,9 @@ void handle_writexml(
                 }
             }
         }
+    }
+    if (expr) {
+        delete expr;
     }
     return;
 }
@@ -1336,6 +1377,8 @@ void get_two_exprs(
             } else if (parameters.debug){
                 cout << "# Tree2: "; 
                 print_expr(tree2, state, parameters); 
+                cout << "# Tree1: "; 
+                print_expr(tree1, state, parameters); 
                 cout << endl;
             }
         }
