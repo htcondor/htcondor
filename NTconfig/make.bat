@@ -20,7 +20,7 @@ echo *** Visual C++ bin directory not in the path, or compiler not installed.
 goto failure
 :check_sdk
 if defined MSSDK goto :compiler_ready
-call setenv.bat" /2000 /RETAIL
+call setenv.bat /2000 /RETAIL
 if defined MSSDK goto :compiler_ready
 echo *** Microsoft SDK directory not in the path, or not installed.
 goto failure
