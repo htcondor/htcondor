@@ -175,7 +175,6 @@ void ViewServer::Config()
 	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,tmp);
 
 	char Name[200];
-	FILE* fp;
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
@@ -512,7 +511,6 @@ void ViewServer::WriteHistory()
 {
 	MyString Key;
 	GeneralRecord* GenRec;
-	int Samples;
 	FILE* DataFile;
 	struct stat statbuf;
 	char OutLine[200];
