@@ -67,8 +67,6 @@ class GlobusJob : public Service
 	int numSubmitAttempts;
 	int syncedOutputSize;
 	int syncedErrorSize;
-	int shadowBirthday;
-	char *holdReason;
 	int submitFailureCode;
 	int lastRestartReason;
 	time_t lastRestartAttempt;
@@ -80,6 +78,12 @@ class GlobusJob : public Service
 	char *buildSubmitRSL();
 	char *buildRestartRSL();
 	char *buildStdioUpdateRSL();
+
+	void UpdateJobAd( const char *name, const char *value );
+	void UpdateJobAdInt( const char *name, int value );
+	void UpdateJobAdFloat( const char *name, float value );
+	void UpdateJobAdBool( const char *name, int value );
+	void UpdateJobAdString( const char *name, const char *value );
 
 	PROC_ID procID;
 	char *jobContact;
@@ -106,9 +110,10 @@ class GlobusJob : public Service
 	bool restartingJM;
 	time_t restartWhen;
 
+	ClassAd *ad;
+
  protected:
 	bool callbackRegistered;
-	ClassAd *ad;
 };
 
 #endif

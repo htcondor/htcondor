@@ -621,112 +621,85 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
-		if ( (curr_action->actions & UA_UPDATE_CONDOR_STATE) ||
-			 (curr_action->actions & UA_HOLD_JOB) ) {
-			int curr_status;
-			GetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_STATUS, &curr_status );
+		// Check the job status on the schedd to see if the job's been
+		// held or removed. We don't want to blindly update the status.
+		int job_status_schedd;
+		GetAttributeInt( curr_job->procID.cluster,
+						 curr_job->procID.proc,
+						 ATTR_JOB_STATUS, &job_status_schedd );
 
-			// If the job is marked as REMOVED or HELD on the schedd, don't
-			// change it. Instead, modify our state to match it.
-			if ( curr_status == REMOVED || curr_status == HELD ) {
-				curr_job->UpdateCondorState( curr_status );
-			} else if ( curr_action->actions & UA_HOLD_JOB ) {
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, curr_job->condorState );
-				SetAttributeString( curr_job->procID.cluster,
-									curr_job->procID.proc,
-									ATTR_HOLD_REASON, curr_job->holdReason );
-				DeleteAttribute(curr_job->procID.cluster,
-								curr_job->procID.proc,
-								ATTR_RELEASE_REASON );
-			} else {	// UA_UPDATE_CONDOR_STATE && !UA_HOLD_JOB
-				// If we have a
-				// job marked as HELD, it's because of an earlier hold
-				// (either by us or the user). In this case, we don't want
-				// to undo a subsequent unhold done on the schedd. Instead,
-				// we keep our HELD state, kill the job, forget about it,
-				// then relearn about it later (this makes it easier to
-				// ensure that we pick up changed job attributes).
-				if ( curr_job->condorState != HELD ) {
-					SetAttributeInt( curr_job->procID.cluster,
-									 curr_job->procID.proc,
-									 ATTR_JOB_STATUS, curr_job->condorState );
-				}
+		// If the job is marked as REMOVED or HELD on the schedd, don't
+		// change it. Instead, modify our state to match it.
+		if ( job_status_schedd == REMOVED || job_status_schedd == HELD ) {
+			curr_job->UpdateCondorState( job_status_schedd );
+			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
+			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
+		} else if ( curr_action->actions & UA_HOLD_JOB ) {
+			DeleteAttribute(curr_job->procID.cluster,
+							curr_job->procID.proc,
+							ATTR_RELEASE_REASON );
+		} else {	// !UA_HOLD_JOB
+			// If we have a
+			// job marked as HELD, it's because of an earlier hold
+			// (either by us or the user). In this case, we don't want
+			// to undo a subsequent unhold done on the schedd. Instead,
+			// we keep our HELD state, kill the job, forget about it,
+			// then relearn about it later (this makes it easier to
+			// ensure that we pick up changed job attributes).
+			if ( curr_job->condorState == HELD ) {
+				curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
+				curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
 			}
 		}
 
 		// Adjust run time for condor_q
+		int shadowBirthdate = 0;
+		curr_job->ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadowBirthdate );
 		if ( curr_job->condorState == RUNNING &&
-			 curr_job->shadowBirthday == 0 ) {
+			 shadowBirthdate == 0 ) {
 
 			// The job has started a new interval of running
 			int current_time = (int)time(NULL);
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_SHADOW_BIRTHDATE, current_time );
-			curr_job->shadowBirthday = current_time;
+			// ATTR_SHADOW_BIRTHDATE on the schedd will be updated below
+			curr_job->UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, current_time );
 
 		} else if ( curr_job->condorState != RUNNING &&
-					curr_job->shadowBirthday != 0 ) {
+					shadowBirthdate != 0 ) {
 
 			// The job has stopped an interval of running, add the current
 			// interval to the accumulated total run time
 			float accum_time = 0;
 			GetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
 							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-			accum_time += (float)( time(NULL) - curr_job->shadowBirthday );
+			accum_time += (float)( time(NULL) - shadowBirthdate );
 			SetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
 							  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 			DeleteAttribute(curr_job->procID.cluster, curr_job->procID.proc,
 							ATTR_JOB_WALL_CLOCK_CKPT);
-			SetAttributeInt(curr_job->procID.cluster, curr_job->procID.proc,
-							ATTR_SHADOW_BIRTHDATE, 0);
-			curr_job->shadowBirthday = 0;
+			// ATTR_SHADOW_BIRTHDATE on the schedd will be updated below
+			curr_job->UpdateJobAdInt( ATTR_SHADOW_BIRTHDATE, 0 );
 
 		}
 
-		if ( curr_action->actions & UA_UPDATE_GLOBUS_STATE ) {
-			if ( curr_job->globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_GLOBUS_STATUS,
-								 curr_job->globusStateBeforeFailure );
-			} else {
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_GLOBUS_STATUS,
-								 curr_job->globusState );
-			}
+dprintf(D_FULLDEBUG,"Updating classad values:\n");
+		char attr_name[1024];
+		char attr_value[1024];
+		ExprTree *expr;
+		curr_job->ad->ResetExpr();
+		while ( (expr = curr_job->ad->NextDirtyExpr()) != NULL ) {
+			attr_name[0] = '\0';
+			attr_value[0] = '\0';
+			expr->LArg()->PrintToStr(attr_name);
+			expr->RArg()->PrintToStr(attr_value);
+
+dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
+			SetAttribute( curr_job->procID.cluster,
+						  curr_job->procID.proc,
+						  attr_name,
+						  attr_value);
 		}
 
-		if ( curr_action->actions & UA_UPDATE_CONTACT_STRING ) {
-			SetAttributeString( curr_job->procID.cluster,
-								curr_job->procID.proc,
-								ATTR_GLOBUS_CONTACT_STRING,
-								curr_job->jobContact ? curr_job->jobContact :
-								NULL_JOB_CONTACT );
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_GLOBUS_GRAM_VERSION,
-							 curr_job->jmVersion );
-		}
-
-		if ( curr_action->actions & UA_UPDATE_STDOUT_SIZE ) {
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_OUTPUT_SIZE,
-							 curr_job->syncedOutputSize );
-		}
-
-		if ( curr_action->actions & UA_UPDATE_STDERR_SIZE ) {
-			SetAttributeInt( curr_job->procID.cluster,
-							 curr_job->procID.proc,
-							 ATTR_JOB_ERROR_SIZE,
-							 curr_job->syncedErrorSize );
-		}
+		curr_job->ad->ClearAllDirtyFlags();
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
 			SetAttribute( curr_job->procID.cluster,
@@ -741,7 +714,6 @@ doContactSchedd()
 			DestroyProc(curr_job->procID.cluster,
 						curr_job->procID.proc);
 		}
-
 	}
 
 
@@ -1204,7 +1176,12 @@ WriteHoldEventToUserLog( GlobusJob *job )
 
 	JobHeldEvent event;
 
-	event.setReason( job->holdReason );
+	char *holdReason;
+	job->ad->LookupString( ATTR_HOLD_REASON, &holdReason );
+
+	event.setReason( holdReason );
+
+	free( holdReason );
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

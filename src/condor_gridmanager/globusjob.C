@@ -148,8 +148,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	numSubmitAttempts = 0;
 	syncedOutputSize = 0;
 	syncedErrorSize = 0;
-	shadowBirthday = 0;
-	holdReason = NULL;
 	submitFailureCode = 0;
 	lastRestartReason = 0;
 	lastRestartAttempt = 0;
@@ -235,6 +233,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 			localError = strdup( buff2 );
 		}
 	}
+
+	ad->ClearAllDirtyFlags();
 }
 
 GlobusJob::~GlobusJob()
@@ -257,15 +257,49 @@ GlobusJob::~GlobusJob()
 	if ( userLogFile ) {
 		free( userLogFile );
 	}
-	if ( holdReason ) {
-		free( holdReason );
-	}
 	if (daemonCore) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
 	}
 	if ( ad ) {
 		delete ad;
 	}
+}
+
+void GlobusJob::UpdateJobAd( const char *name, const char *value )
+{
+	char buff[1024];
+	sprintf( buff, "%s = %s", name, value );
+	ad->InsertOrUpdate( buff );
+}
+
+void GlobusJob::UpdateJobAdInt( const char *name, int value )
+{
+	char buff[16];
+	sprintf( buff, "%d", value );
+	UpdateJobAd( name, buff );
+}
+
+void GlobusJob::UpdateJobAdFloat( const char *name, float value )
+{
+	char buff[16];
+	sprintf( buff, "%f", value );
+	UpdateJobAd( name, buff );
+}
+
+void GlobusJob::UpdateJobAdBool( const char *name, int value )
+{
+	if ( value ) {
+		UpdateJobAd( name, "TRUE" );
+	} else {
+		UpdateJobAd( name, "FALSE" );
+	}
+}
+
+void GlobusJob::UpdateJobAdString( const char *name, const char *value )
+{
+	char buff[1024];
+	sprintf( buff, "\"%s\"", value );
+	UpdateJobAd( name, buff );
 }
 
 void GlobusJob::SetEvaluateState()
@@ -461,16 +495,22 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				numSubmitAttempts++;
 				if ( rc == GLOBUS_SUCCESS ) {
 					jmVersion = GRAM_V_1_0;
+					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_0 );
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
+					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmVersion = GRAM_V_1_5;
+					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_5 );
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
+					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
@@ -497,7 +537,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+				done = addScheddUpdateAction( this, UA_UPDATE_JOB_AD,
 											GM_SUBMIT_SAVE );
 				if ( !done ) {
 					break;
@@ -638,9 +678,12 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 		case GM_DONE_SAVE:
 			// Report job completion to the schedd.
 			if ( condorState != HELD && condorState != REMOVED ) {
-				condorState = COMPLETED;
-				done = addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE,
-											GM_DONE_SAVE );
+				if ( condorState != COMPLETED ) {
+					condorState = COMPLETED;
+					UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
+				}
+				done = addScheddUpdateAction( this, UA_UPDATE_JOB_AD,
+											  GM_DONE_SAVE );
 				if ( !done ) {
 					break;
 				}
@@ -764,6 +807,8 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
+					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
@@ -782,7 +827,7 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			break;
 		case GM_RESTART_SAVE:
 			// Save the restarted jobmanager's contact string on the schedd.
-			done = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
+			done = addScheddUpdateAction( this, UA_UPDATE_JOB_AD,
 										GM_RESTART_SAVE );
 			if ( !done ) {
 				break;
@@ -936,8 +981,12 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				jobContact = NULL;
+				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
 				jmVersion = GRAM_V_UNKNOWN;
-				addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING, 0 );
+				UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION,
+								jmVersion );
+				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
 
 				// TODO: Evaluate if the failure is permanent or temporary
 				//   if it's temporary, try a restart, but put a limit so
@@ -981,7 +1030,8 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
-				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
+				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
+				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
 			globusStateErrorCode = 0;
 			globusError = 0;
@@ -993,19 +1043,24 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				jobContact = NULL;
-				schedd_actions |= UA_UPDATE_CONTACT_STRING;
+				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
+								   NULL_JOB_CONTACT );
+				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
 			if ( condorState == RUNNING ) {
 				condorState = IDLE;
-				schedd_actions |= UA_UPDATE_CONDOR_STATE;
+				UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
+				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
 			if ( localOutput && syncedOutputSize > 0 ) {
 				syncedOutputSize = 0;
-				schedd_actions |= UA_UPDATE_STDOUT_SIZE;
+				UpdateJobAdInt( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
+				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
 			if ( localError && syncedErrorSize > 0 ) {
 				syncedErrorSize = 0;
-				schedd_actions |= UA_UPDATE_STDERR_SIZE;
+				UpdateJobAdInt( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
+				schedd_actions |= UA_UPDATE_JOB_AD;
 			}
 			if ( submitLogged ) {
 				schedd_actions |= UA_LOG_EVICT_EVENT;
@@ -1046,31 +1101,34 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			// Put the job on hold in the schedd.
 			// TODO: what happens if we learn here that the job is removed?
 			condorState = HELD;
-			schedd_actions = UA_HOLD_JOB | UA_FORGET_JOB;
+			UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
+			schedd_actions = UA_HOLD_JOB | UA_FORGET_JOB | UA_UPDATE_JOB_AD;
 			if ( jobContact &&
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
+				UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			// Set the hold reason as best we can
 			// TODO: set the hold reason in a more robust way.
-			if ( holdReason == NULL && globusStateErrorCode != 0 ) {
-				char buf[1024];
-				snprintf( buf, 1024, "Globus error %d: %s",
+			char holdReason[1024];
+			holdReason[0] = '\0';
+			holdReason[sizeof(holdReason)-1] = '\0';
+			ad->LookupString( ATTR_HOLD_REASON, holdReason,
+							  sizeof(holdReason) - 1 );
+			if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
+				snprintf( holdReason, 1024, "Globus error %d: %s",
 						  globusStateErrorCode,
 						  gahp.globus_gram_client_error_string( globusStateErrorCode ) );
-				holdReason = strdup( buf );
 			}
-			if ( holdReason == NULL && globusError != 0 ) {
-				char buf[1024];
-				snprintf( buf, 1024, "Globus error %d: %s", globusError,
+			if ( holdReason[0] == '\0' && globusError != 0 ) {
+				snprintf( holdReason, 1024, "Globus error %d: %s", globusError,
 						gahp.globus_gram_client_error_string( globusError ) );
-				holdReason = strdup( buf );
 			}
-			if ( holdReason == NULL ) {
-				holdReason = strdup( "Unspecified gridmanager error" );
+			if ( holdReason[0] == '\0' ) {
+				strcpy( holdReason, "Unspecified gridmanager error" );
 			}
+			UpdateJobAdString( ATTR_HOLD_REASON, holdReason );
 			addScheddUpdateAction( this, schedd_actions, GM_HOLD );
 			// This object will be deleted when the update occurs
 			break;
@@ -1170,8 +1228,11 @@ void GlobusJob::NotifyResourceUp()
 // are coming from the schedd, so we don't need to update it.
 void GlobusJob::UpdateCondorState( int new_state )
 {
-	condorState = new_state;
-	SetEvaluateState();
+	if ( new_state != condorState ) {
+		condorState = new_state;
+		UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
+		SetEvaluateState();
+	}
 }
 
 void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
@@ -1192,7 +1253,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
-		int update_actions = UA_UPDATE_GLOBUS_STATE;
+		int update_actions = UA_UPDATE_JOB_AD;
 
 		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
 				procID.cluster, procID.proc,
@@ -1202,13 +1263,13 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE &&
 			 condorState == IDLE ) {
 			condorState = RUNNING;
-			update_actions |= UA_UPDATE_CONDOR_STATE;
+			UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
 		}
 
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED &&
 			 condorState == RUNNING ) {
 			condorState = IDLE;
-			update_actions |= UA_UPDATE_CONDOR_STATE;
+			UpdateJobAdInt( ATTR_JOB_STATUS, condorState );
 		}
 
 		if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
@@ -1231,6 +1292,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 		if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 			globusStateBeforeFailure = globusState;
+		} else {
+			UpdateJobAdInt( ATTR_GLOBUS_STATUS, new_state );
 		}
 
 		globusState = new_state;
@@ -1306,7 +1369,8 @@ int GlobusJob::syncIO()
 			}
 			if ( errno == 0 ) {
 				syncedOutputSize = file_status.st_size;
-				addScheddUpdateAction( this, UA_UPDATE_STDOUT_SIZE, 0 );
+				UpdateJobAdInt( ATTR_JOB_OUTPUT_SIZE, syncedOutputSize );
+				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
 			}
 		}
 	}
@@ -1340,7 +1404,8 @@ int GlobusJob::syncIO()
 			}
 			if ( errno == 0 ) {
 				syncedErrorSize = file_status.st_size;
-				addScheddUpdateAction( this, UA_UPDATE_STDERR_SIZE, 0 );
+				UpdateJobAdInt( ATTR_JOB_ERROR_SIZE, syncedErrorSize );
+				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
 			}
 		}
 	}
