@@ -538,6 +538,16 @@ int GlobusJob::doEvaluateState()
 				connect_failure = true;
 				break;
 			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
+				// the job completed or failed while we were not around -- now
+				// the jobmanager is sitting in a state where all it will permit
+				// is a status query or a commit to exit.  switch into 
+				// GM_SUBMITTED state and do an immediate probe to figure out
+				// if the state is done or failed, and move on from there.
+				probeNow = true;
+				gmState = GM_SUBMITTED;
+				break;
+			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_UPDATE)", rc );
