@@ -30,10 +30,10 @@
 a local Condor pool.
 The addition is accomplished by installing and executing some of the Condor
 daemons on the Globus resource.
-A condor\_master job appears in the queue of the local
+A glidein\_startup job appears in the queue of the local
 Condor pool for each glidein request.
 To remove the Globus resource from the local Condor pool,
-use \Condor{rm} to remove the condor\_master job from
+use \Condor{rm} to remove the glidein\_startup job from
 the job queue.
 
 You must have an X.509 certificate and access
@@ -52,7 +52,7 @@ See the Globus home page, \URL{http://www.globus.org/} for more
 information about Globus.
 
 \Condor{glidein} works in two steps: set up and execution.
-During set up, a configuration file and the Condor daemons
+During set up, a configuration file, startup file, and the Condor daemons
 master, startd and starter are installed on the Globus
 resource.
 Binaries for the correct architecture are copied from a central server.
@@ -61,7 +61,11 @@ The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
 By default, all files placed on the remote machine are placed in
-\File{\MacroUNI{HOME}/Condor\_glidein}.
+\File{\MacroUNI{HOME}/Condor\_glidein}.  You are encouraged
+to change this (with \Opt{-localdir}) to make it write to local
+scratch space on the execution machine.  However, for debugging
+initial problems, it may be convenient to have the log files
+in a more accessible place.
 Each instance of \Condor{glidein} will generate spool and log
 files on the Globus resource.
 These files should be occasionally removed.
@@ -92,7 +96,9 @@ These files should be occasionally removed.
 	If limited disk quota in the home or base directory
 	on the Globus resource is a problem,
 	set \Opt{-localdir} to a large temporary space,
-	such as \File{/tmp} or \File{/scratch}
+	such as \File{/tmp} or \File{/scratch}.  If the batchsystem
+        makes glidein start up in a temporary scratch directory,
+        you can use `.' for \Opt{-localdir}.
 	}
     \OptItem{\OptArg{-contactfile}{filename}}{
 	Allows the use of a file of Globus contact strings,
@@ -191,14 +197,27 @@ These files should be occasionally removed.
     \OptItem{\Opt{-genconfig}}{
 	This option creates a local copy of the configuration file used
 	on the Globus resource.
-	The file is called \File{\condor{config.glidein}}.
+	The file is called \File{glidein\_condor\_config}\{\emph{suffix}\}.
+        You may edit this file and use \Opt{-useconfig} to install your
+        modified config.
+        }
+    \OptItem{\OptArg{-useconfig}{config\_file}}{
+        This option makes the setup process copy the config file
+        you specify, rather than generating one from scratch.
+        }
+    \OptItem{\Opt{-genstartup}}{
+	This option creates a local copy of the startup script used
+	on the Globus resource when glidein runs.
+	The file is called \File{glidein\_startup}\{\emph{suffix}\}.
+        You may edit this file and use \Opt{-usestartup} to install your
+        modified config.
+        }
+    \OptItem{\OptArg{-usestartup}{startup\_file}}{
+        This option makes the setup process copy the startup script
+        you specify, rather than generating one from scratch.
         }
     \OptItem{\Opt{-suffix}{X}}{
         Suffix to use when generating files.  Default is process id. }
-    \OptItem{\OptArg{-useconfig}{filename}}{
-	Install \Arg{filename} as the configuration file on the Globus resource
-	instead of the default configuration file during the set up phase.
-	}
 
 \end{Options}
 
