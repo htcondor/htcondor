@@ -37,17 +37,10 @@
 #include <time.h>
 #include <signal.h>
 #include "condor_common.h"
-#include <sys/stat.h>
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include "condor_config.h"
 #include "condor_jobqueue.h"
-#include "condor_mach_status.h"
-#include "condor_uid.h"
-#include "proc_obj.h"
-#include "directory.h"
-#include "alloc.h"
-
 
 char *my_hostname();
 
@@ -55,18 +48,11 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 	// Define this to check for memory leaks
 
-int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
-char		*Execute;			// dir for execution of condor jobs
-char		*Log;				// dir for condor program logs
 char		*CondorAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char		*Mail;              // mailer to use
 BOOLEAN		MailFlag;			// true if we should send mail about problems
-BOOLEAN		VerboseFlag;		// true if we should produce verbose output
-BOOLEAN		RmFlag;				// true if we should remove extraneous files
-List<ProcObj>	*ProcList;		// all processes in current job queue
-List<char>	*BadFiles;			// list of files which don't belong
 
 
 	// prototypes of local interest
@@ -134,9 +120,9 @@ main( int argc, char *argv[] )
 
 	// set alarm for 5 minutes
 	install_sig_handler(SIGALRM, produce_output);
-	alarm(1*60);
+	alarm(5*60);
 
-		// Do the jobQueue checking
+	// Do the jobQueue checking
 	check_spool_dir(op);
 
 	// cancel alarm 
@@ -146,10 +132,7 @@ main( int argc, char *argv[] )
 }
 
 /*
-  As the program runs, we create a list of messages regarding the status
-  of file in the list BadFiles.  Now we use that to produce all output.
-  If MailFlag is set, we send the output to the condor administrators
-  via mail, otherwise we just print it on stdout.
+	This function sends mail to condor-admin 
 */
 void
 produce_output()
@@ -195,11 +178,11 @@ check_spool_dir(int op)
 
 		/* Open and lock the job queue */
 	(void)sprintf( queue_name, "%s/job_queue", Spool );
-	if( (q=OpenJobQueue(queue_name,O_RDONLY,0)) == NULL ) {
+	if( (q=OpenJobQueue(queue_name,O_RDWR,0)) == NULL ) {
 		EXCEPT( "OpenJobQueue(%s)", queue_name );
 	}
     if( LockJobQueue(q,op) < 0 ) {
-		EXCEPT( "Can't lock job queue for WRITER\n" );
+		EXCEPT( "Can't lock job queue : operation = %d\n",op );
 	}
 
 		// Clean up
@@ -218,21 +201,9 @@ check_spool_dir(int op)
 void
 init_params()
 {
-	char	*tmp;
-
 	Spool = param("SPOOL");
     if( Spool == NULL ) {
         EXCEPT( "SPOOL not specified in config file\n" );
-    }
-
-	Log = param("LOG");
-    if( Log == NULL ) {
-        EXCEPT( "LOG not specified in config file\n" );
-    }
-
-	Execute = param("EXECUTE");
-    if( Execute == NULL ) {
-        EXCEPT( "EXECUTE not specified in config file\n" );
     }
 
     if( (CondorAdmin = param("CONDOR_ADMIN")) == NULL ) {
