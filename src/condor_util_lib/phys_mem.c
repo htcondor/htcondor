@@ -23,70 +23,7 @@
 
  
 
-#if defined(SUNOS41)
-
-#include <stdio.h>
-#include <nlist.h>
-#include <sys/types.h>
-#include <sys/file.h>
-#include <kvm.h>
-
-#include "debug.h"
-#include "except.h"
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
-
-/*
- * Get the amount of installed RAM memory in megabytes
- *
-*/
-int
-calc_phys_memory()
-{
-        unsigned int physmem;
-        char *namelist = 0;
-        char *corefile = 0;
-        kvm_t   *kvm_des;
-        struct nlist mynl[2];
- 
-        mynl[0].n_name = "_physmem";
-        mynl[1].n_name = "";
-        kvm_des = kvm_open(namelist,corefile, (char *)NULL, O_RDONLY, NULL);
-        if (kvm_des == NULL) {
-		/* The most likely reason for this error to occur is 
-		 * we cannot read /dev/kmem.  We should either be root or
-		 * in the group kmem (and permissions on /dev/kmem should be
-		 * correct!) */
-                return(-1);
-        }
- 
-        if (kvm_nlist(kvm_des, mynl) < 0) {
-                return(-1);
-        }
- 
-        if ( mynl[0].n_value == 0 ) {
-                return(-1);
-        }
-
-        if ( kvm_read(kvm_des, (u_long) mynl[0].n_value, &physmem, sizeof(physmem)) < 0 ) {
-                return(-1);
-        }
- 
-        kvm_close(kvm_des);
- 
-        physmem *= getpagesize();
- 
-        physmem += 300000;      /* add about 300K to offset for RAM that the
-				   Sun PROM program gobbles at boot time (at 
-				   least I think that's where its going).  If
-				   we fail to do this the integer divide we do
-				   next will incorrectly round down one meg. */
- 
-        physmem /= 1048576;     /* convert from bytes to megabytes */
- 
- 	return(physmem);
-}
-#elif defined(HPUX9) || defined(IRIX53) 
+#if defined(HPUX9)
 
 #include "condor_uid.h"
 #include <stdio.h>
@@ -98,13 +35,6 @@ struct nlist memnl[] = {
 	{ "physmem",0,0 },
     { NULL }
 };
-
-#if defined(IRIX62)
-struct nlist64 memnl64[] = {
-	{ "physmem",0,0 },
-    { NULL }
-};
-#endif  /* IRIX62 */
 
 calc_phys_memory()
 {
@@ -122,48 +52,50 @@ calc_phys_memory()
   if ((nlist("/stand/vmunix",memnl) <0) || (memnl[0].n_type ==0)) return(-1);
 #endif
 
-/* for IRIX62, we assume that the kernel is a 32 or 64-bit ELF binary, and
- * for IRIX53, we assume the kernel is a 32-bit COFF.  Todd 2/97 */
-#if defined(IRIX62)
-  if (_libelf_nlist("/unix",memnl) == -1)
-     if (_libelf_nlist64("/unix",memnl64) == -1)
-         return(-1);
-#elif defined(IRIX53)
-  if ((nlist("/unix",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
-#endif
-
   /*
    *   Open kernel memory and read variables.
   */
   if ((kmem=open("/dev/kmem",0)) <0) return (-1);
 
-#if defined(IRIX62)
-  /* if IRIX62, figure out if we grabbed a 32- or 64-bit address */
-  if ( memnl[0].n_type ) {
-  	if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
-  } else {
-  	if (-1==lseek(kmem,(long) memnl64[0].n_value,0)) return (-1);
-  }
-#else
-  if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
-#endif
 
+  if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
   if (read(kmem,(char *) &physmem, sizeof(int)) <0) return (-1);
-  
   close(kmem);
 
   /*
    *  convert to megabytes
   */
-
-#if defined(HPUX9)
   physmem/=256; /* *4 /1024 */
-#elif defined(IRIX53)
-  physmem = physmem<<2;			/* assumes that a page is 4K */
-  physmem /= 1024;				/* convert from kbytes to mbytes */
-#endif
+
   set_priv(priv);
   return(physmem);
+}
+
+#elif defined(IRIX62)
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/sysmp.h>
+
+int
+calc_phys_memory()
+{
+	struct rminfo rmstruct;
+	long pages;
+	long pagesz = sysconf( _SC_PAGESIZE );
+	
+	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
+		(pagesz < 0) ) { 
+		return -1;
+	}
+		/* Correct what appears to be some kind of rounding error */
+	if( rmstruct.physmem % 2 ) {
+		pages = rmstruct.physmem + 1;
+	} else {
+		pages = rmstruct.physmem;
+	}
+		/* Return the answer in megs */
+	return( ((pages * pagesz) >> 20) );
 }
 
 #elif defined(Solaris) 
@@ -263,10 +195,7 @@ calc_phys_memory()
 
 #include "condor_common.h"
 #include "condor_uid.h"
-#include <unistd.h>
 #include <paths.h>
-#include <sys/types.h>
-#include <sys/param.h>
 #include <fcntl.h>
 #include <nlist.h>
 
