@@ -177,21 +177,12 @@ clean::                                               @@\
 ** Copy the given file to the specified directory, with the given mode.
 */
 #ifndef release_target
-#if RELEASE_IS_STATIC
-#define release_target( file, dir, mode )		@@\
-$(RELEASE_DIR)/##dir##/##file: file##.static		@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
-	cp file##.static $(RELEASE_DIR)/##dir##/##file	@@\
-	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
-release:: $(RELEASE_DIR)/##dir##/##file
-#else /* ! RELEASE_IS_STATIC */
 #define release_target( file, dir, mode )		@@\
 $(RELEASE_DIR)/##dir##/##file: file			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
 	cp file $(RELEASE_DIR)/##dir			@@\
 	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
 release:: $(RELEASE_DIR)/##dir##/##file
-#endif   /* ! RELEASE_IS_STATIC */
 #endif /* release_target */
 
 /*

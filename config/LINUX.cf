@@ -10,12 +10,7 @@
 ** Shared Linux Settings
 **************************************************************************/
 
-
-/* We want the binaries we release to the CS pool for Linux to be
-statically linked to avoid problems */
-#define RELEASE_IS_STATIC	YES
 #define HAS_DAGMAN_HELPER YES
-
 
 #if defined( IS_GLIBC )
 #  if defined( IS_GLIBC22 )
