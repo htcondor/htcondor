@@ -50,10 +50,6 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 // #include "dgram_io_handle.h"
 #include "condor_io.h"
 
-#ifndef WIN32
-void unix_sigusr1(int);
-#endif
-
 #ifndef WANT_DC_PM
 int sigchld_handler(Service *,int);
 #endif
@@ -116,9 +112,9 @@ int		GetConfig(char*, char*);
 void	StartConfigServer();
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
-int		sigusr1_handler(Service *,int);
+int		main_config();
 int		master_reaper(Service *, int, int);
-
+int		admin_command_handler(Service *, int, Stream *);
 
 extern "C" int	DoCleanup();
 
@@ -143,6 +139,7 @@ int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 int		NotFlag;
 int		PublishObituaries;
 int		Lines;
+int		AllowAdminCommands = FALSE;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -251,7 +248,6 @@ main_init( int argc, char* argv[] )
 	// install_sig_handler( SIGILL, dump_core );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
-	install_sig_handler( SIGUSR1, (void(*)()) unix_sigusr1 );
 #endif
 
 #ifdef WANT_DC_PM
@@ -263,12 +259,15 @@ main_init( int argc, char* argv[] )
 		(SignalHandler)sigchld_handler,"sigchld_handler");
 #endif
 	
-
-	daemonCore->Register_Signal(DC_SIGUSR1,"DC_SIGUSR1",
-		(SignalHandler)sigusr1_handler,"RestartMaster");
-
-
 	init_params();
+
+		// Register admin commands
+	daemonCore->Register_Command( RECONFIG, "RECONFIG",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler" );
+	daemonCore->Register_Command( RESTART, "RESTART",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler" );
 
 	_EXCEPT_Cleanup = DoCleanup;
 
@@ -313,20 +312,30 @@ main_init( int argc, char* argv[] )
 	return TRUE;
 }
 
+
 int
-sigusr1_handler(Service *,int)
+admin_command_handler(Service *, int cmd, Stream *)
 {
-	RestartMaster();
-	return TRUE;
+	if(! AllowAdminCommands ) {
+		dprintf( D_FULLDEBUG, 
+				 "Got admin command (%d) while not allowed. Ignoring.\n",
+				 cmd );
+		return FALSE;
+	}
+	dprintf( D_FULLDEBUG, 
+			 "Got admin command (%d) and allowing it.\n", cmd );
+	switch( cmd ) {
+	case RECONFIG:
+		return main_config();
+	case RESTART:
+		RestartMaster();
+		return TRUE;
+	default: 
+		EXCEPT( "Unknown admin command in handle_admin_commands" );
+	}
+	return FALSE;
 }
 
-#ifndef WIN32
-void
-unix_sigusr1(int) 
-{
-	daemonCore->Send_Signal(daemonCore->getpid(),DC_SIGUSR1);
-}
-#endif
 
 int
 master_reaper(Service *, int pid, int status)
@@ -455,8 +464,24 @@ init_params()
         interval = 300;
     }
 
+	AllowAdminCommands = FALSE;
+	tmp = param( "ALLOW_ADMIN_COMMANDS" );
+	if( tmp ) {
+		if( *tmp == 'T' || *tmp == 't' ) {
+			AllowAdminCommands = TRUE;
+		}
+		free( tmp );	
+	}
+
 	char line[100];
 	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	ad.Insert(line);
+
+	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_hostname() );
+	ad.Insert(line);
+
+	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
+			daemonCore->InfoCommandSinfulString() );
 	ad.Insert(line);
 
 	ad.SetMyTypeName(MASTER_ADTYPE);
@@ -974,8 +999,8 @@ void StartConfigServer()
 	sleep(5); 
 }
 
+
 void siggeneric_handler(int sig)
 {
 	EXCEPT("signal (%d) received", sig);
 }
-
