@@ -10,7 +10,7 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-6-6}Version 6.6.6}
+\subsection{\label{sec:New-6-6-7}Version 6.6.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -18,6 +18,89 @@ The details of each version are described below.
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed an important bug in the low-level code that Condor uses to
+  transfer files across a network.
+  There were certain temporary failure cases that were being treated
+  as permanent, fatal errors.
+  This resulted in file transfers that aborted prematurely, causing
+  jobs to needlessly re-run.
+  The code now gracefully recovers from these temporary errors.
+  This should significantly help throughput for some sites,
+  particularly ones that transfer very large files as output from
+  their jobs.
+
+\item Fixed a number of bugs in the \Opt{-format} option to \Condor{q}
+  and \Condor{status}.
+  Now, these tools will properly handle printing boolean expressions
+  in all cases.
+  Previously, depending on how the boolean evaluated, either the
+  expression was printed, or the tool could crash.
+  Furthermore, the tools do a better job of handling the different 
+  types of format conversion strings and printing out the appropriate
+  value.
+  For example, if a user tries to print out a boolean attribute with
+  \verb@condor_status -format "%d\n" HasFileTransfer@, the
+  \Condor{status} tool will evalute \Attr{HasFiletransfer} and print
+  either a 0 or a 1 (FALSE or TRUE).
+  If, on the other hand, a user tries to print out a boolean attribute
+  with \verb@condor_status -format "%s\n" HasFileTransfer@, the
+  \Condor{status} tool will print out the string ``FALSE'' or ``TRUE''
+  as appropriate.
+
+\item The ClassAd attribute scope resolution prefixes, \texttt{MY.} and
+\texttt{TARGET.}, are no longer case sensitive.
+
+\item \Condor{dagman} now generates a fatal error if any node submit
+files are missing the log file attribute.  This behavior can be
+overridden with the \Opt{-AllowLogError} command-line option.
+
+\item \Condor{dagman} now does better checking for inconsistent events
+(such as getting multiple terminate events for a single job).  This
+checking can be disabled with the \Opt{-NoEventChecks} command-line
+option.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-6}Version 6.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item A \Condor{dagman} job will fail and report a cycle in the Dag
+when XML logs are used in a single or multiple log format. The Post
+Script  completion event does not get converted to XML and Dagman
+never sees them complete or fail because of the format of the event.
+
+\item If you are using Solaris 9 with LDAP as a name lookup service,
+Condor will not function, at least in some cases.  We don't yet know
+if this bug affects other Solaris revisions.
 
 \end{itemize}
 
@@ -65,6 +148,22 @@ The details of each version are described below.
   \item Fixed a problem that could cause daemons or tools to crash
     when they looked up information about processes running on the
     system.
+
+  \item Fixed a problem with the collector dropping TCP updates with
+    pools larger than roughly 20 machines. This issue only occurs with
+    \Macro{UPDATE\_COLLECTOR\_WITH\_TCP} enabled.
+
+  \item Fixed an issue with \Condor{store\_cred} reporting success when
+   in fact under certain circumstances the store command actually failed.
+
+  \item Removed \Condor{kbdd\_dll}. It is no longer used.
+
+  \item Fixed an issue with \Condor{birdwatcher} that caused it to
+    leak resource handles.
+
+  \item Fixed an issue with the Windows port of \Condor{dagman} that
+    would cause it to crash when POST scripts were used.
+
 \end{itemize}
 
 \item Fixed a bug where the environment of jobs in any universe could
@@ -72,6 +171,11 @@ The details of each version are described below.
 
 \item The \Condor{startd} now properly cleans up execute directories on
   root-squashed NFS mounts.
+
+\item Fixed a problem where the \Condor{starter} could crash if the
+  job it was running used Condor's file transfer mechanism and the
+  full path names to the job's files became longer than a few hundred
+  characters.
 
 \item The \Attr{image\_size} attribute of a job on Mac OS X is much
   closer to the values that \Prog{ps} returns.
@@ -106,6 +210,11 @@ The details of each version are described below.
 
   \item If a node submit file doesn't specify a log file, the warning
 	message now gets printed out in the the DAGMan log file.
+
+  \item Fixed a bug that caused \Condor{dagman} to fail if first node
+        submit file has continuation in log file line.
+
+
 \end{itemize}
 
 \item Bugs related to configuration
@@ -121,6 +230,7 @@ The details of each version are described below.
     longer \Macro{SPOOL}.
     Using the spool directory would result in history files being
     obliterated by \Condor{preen}.
+
 \end{itemize}
 
 \item Fixed a bug which could result in a daemon crashing while it was
@@ -154,6 +264,8 @@ The details of each version are described below.
   Now, both actions are taken together atomically.
   If a job is succesfully removed, it will always have a
   \Attr{RemoveReason} attribute.
+
+\item Fixed a memory leak in the \Condor{collector}.
 
 \end{itemize}
 

@@ -84,19 +84,12 @@ specification as given by an argument.
     a specified group to provide information about a group of machines
     based on their platform (operating system and architecture).
     The architecture is defined by the machine ClassAd \AdAttr{Arch},
-    and the operating system is is defined by the machine ClassAd
+    and the operating system is defined by the machine ClassAd
     \AdAttr{OpSys}.
     The string ``Total'' ask for information about all platforms.
     
-    The information displayed includes the total number of machines, and
-    the state of the machines where }
-\begin{verbatim}
-    unclaimed state  = 1
-    matched state    = 2
-    claimed state    = 3
-    preempting state = 4
-    owner state      = 5
-\end{verbatim}
+    The columns displayed are the number of machines that are
+    unclaimed, matched, claimed, preempting, and in the owner state.}
 
     \OptItem{\Opt{-resgrouplist}}{Queries for a list of 
     all the group names for which the \Condor{collector} has
