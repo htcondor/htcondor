@@ -109,6 +109,7 @@ private:
   static MyString ResourcesUsedAttr;
   static MyString AccumulatedUsageAttr;
   static MyString BeginUsageTimeAttr;
+  static MyString LastUsageTimeAttr;
   static MyString PriorityFactorAttr;
 
   static MyString LastUpdateTimeAttr;
