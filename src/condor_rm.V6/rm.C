@@ -27,15 +27,13 @@
 */ 
 
 #include "condor_common.h"
-#include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
 #include "alloc.h"
 #include "my_hostname.h"
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+#include "get_full_hostname.h"
 
 extern "C" char *get_schedd_addr(const char *);
 
@@ -73,6 +71,7 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args to be deleted
 	int					i;
 	Qmgr_connection*	q;
+	char*	fullname;
 
 	MyName = argv[0];
 
@@ -103,7 +102,12 @@ main( int argc, char *argv[] )
 			if ( arg[0] == '-' && arg[1] == 'r' ) {
 				// use the given name as the host name to connect to
 				argv++;
-				strcpy (hostname, *argv);	
+				if( !(fullname = get_full_hostname(*argv)) ) { 
+					fprintf( stderr, "%s: unknown host %s\n", 
+							 MyName, *argv );
+					exit(1);
+				}
+				strcpy( hostname, fullname );
 			} else {
 				args[nArgs] = arg;
 				nArgs++;
@@ -115,12 +119,12 @@ main( int argc, char *argv[] )
 	if (hostname[0] == '\0')
 	{
 		// hostname was not set at command line; obtain from system
-		strcpy( hostname, my_hostname() );
-
+		strcpy( hostname, my_full_hostname() );
 	}
 	if((q = ConnectQ(hostname)) == 0)
 	{
-		EXCEPT("Failed to connect to qmgr on host %s", hostname);
+		fprintf( stderr, "Failed to connect to qmgr on host %s\n", hostname );
+		exit(1);
 	}
 	for(i = 0; i < nArgs; i++)
 	{
@@ -150,22 +154,22 @@ notify_schedd( int cluster, int proc )
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	if (hostname[0] == '\0')
-	{
+	if (hostname[0] == '\0') {
 		// if the hostname was not set at command line, obtain from system
-		strcpy( hostname, my_hostname() );
+		strcpy( hostname, my_full_hostname() );
 	}
 
 	if ((scheddAddr = get_schedd_addr(hostname)) == NULL)
 	{
-		EXCEPT("Can't find schedd address on %s\n", hostname);
+		fprintf( stderr, "Can't find schedd address on %s\n", hostname);
+		exit(1);
 	}
 
 		/* Connect to the schedd */
 	sock = new ReliSock(scheddAddr, SCHED_PORT);
 	if(sock->get_file_desc() < 0) {
 		if( !TroubleReported ) {
-			dprintf( D_ALWAYS, "Warning: can't connect to condor scheduler\n" );
+			fprintf( stderr, "Warning: can't connect to condor scheduler\n" );
 			TroubleReported = 1;
 		}
 		delete sock;
@@ -176,27 +180,27 @@ notify_schedd( int cluster, int proc )
 
 	cmd = KILL_FRGN_JOB;
 	if( !sock->code(cmd) ) {
-		dprintf( D_ALWAYS,
+		fprintf( stderr,
 			"Warning: can't send KILL_JOB command to condor scheduler\n" );
 		delete sock;
 		return;
 	}
 
 	if( !sock->code(job_id) ) {
-		dprintf( D_ALWAYS,
+		fprintf( stderr,
 			"Warning: can't send proc_id to condor scheduler\n" );
 		delete sock;
 		return;
 	}
 
 	if( !sock->end_of_message() ) {
-		dprintf( D_ALWAYS,
-			"Warning: can't send endofrecord to condor scheduler\n" );
+		fprintf( stderr,
+			"Warning: can't send end of message to condor scheduler\n" );
 		delete sock;
 		return;
 	}
 
-	dprintf( D_FULLDEBUG, "Sent KILL_FRGN_JOB command to condor scheduler\n" );
+	fprintf( stdout, "Sent KILL_FRGN_JOB command to condor scheduler\n" );
 	delete sock;
 }
 
@@ -220,9 +224,9 @@ void ProcArg(const char* arg)
 		{
 			if(DestroyCluster(c) < 0)
 			{
-				fprintf(stderr, "Couldn't find/delete cluster %d.\n", c);
+				fprintf( stderr, "Couldn't find/delete cluster %d.\n", c);
 			} else {
-			fprintf(stderr, "Cluster %d removed.\n", c);
+				fprintf( stderr, "Cluster %d removed.\n", c);
 			}
 			return;
 		}
@@ -231,7 +235,7 @@ void ProcArg(const char* arg)
 			p = strtol(tmp + 1, &tmp, 10);
 			if(p < 0)
 			{
-				fprintf(stderr, "Invalid proc # from %s.\n", arg);
+				fprintf( stderr, "Invalid proc # from %s.\n", arg);
 				return;
 			}
 			if(*tmp == '\0')
@@ -239,16 +243,16 @@ void ProcArg(const char* arg)
 			{
 				if(DestroyProc(c, p) < 0)
 				{
-					fprintf(stderr, "Couldn't find/delete job %d.%d.\n", c, p);
+					fprintf( stderr, "Couldn't find/delete job %d.%d.\n", c, p );
 				} else {
-					fprintf(stderr, "Job %d.%d removed.\n", c, p);
+					fprintf( stdout, "Job %d.%d removed.\n", c, p );
 				}
 				return;
 			}
-			fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
+			fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 			return;
 		}
-		fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
+		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 	}
 	else if(isalpha(*arg))
 	// delete by user name
@@ -258,13 +262,13 @@ void ProcArg(const char* arg)
 		sprintf(constraint, "Owner == \"%s\"", arg);
 		if(DestroyClusterByConstraint(constraint) < 0)
 		{
-			fprintf(stderr, "Couldn't find/delete user %s's job(s).\n", arg);
+			fprintf( stderr, "Couldn't find/delete user %s's job(s).\n", arg );
 		} else {
-			fprintf(stderr, "User %s's job(s) removed.\n", arg);
+			fprintf( stdout, "User %s's job(s) removed.\n", arg );
 		}
 	}
 	else
 	{
-		fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
+		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 	}
 }
