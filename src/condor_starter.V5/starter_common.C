@@ -31,6 +31,7 @@
 #include "condor_common.h"
 #include "starter_common.h"
 #include "basename.h"
+#include "internet.h"
 
 
 extern int		EventSigs[];
@@ -295,24 +296,6 @@ support_job_wrapper(char *a_out_name, int *argc, char *argv[])
 	free(wrapper);
 
 	return;
-}
-
-/*
-  Return true if the given domain contains the given hostname.  For
-  example the domain "cs.wisc.edu" constain the host "padauk.cs.wisc.edu".
-*/
-int
-host_in_domain( const char *domain, const char *hostname )
-{
-	const char	*ptr;
-
-	for( ptr=hostname; *ptr; ptr++ ) {
-		if( strcmp(ptr,domain) == MATCH ) {
-			return TRUE;
-		}
-	}
-
-	return FALSE;
 }
 
 /*
