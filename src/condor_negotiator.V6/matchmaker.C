@@ -39,7 +39,7 @@ static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 // possible outcomes of negotiating with a schedd
-enum { MM_ERROR, MM_DONE, MM_RESUME, MM_BANDWIDTH };
+enum { MM_ERROR, MM_DONE, MM_RESUME };
 
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
@@ -338,7 +338,6 @@ negotiationTime ()
 	int			scheddUsage;
 	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
-	bool		ReachedBandwidthLimit = false;
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
@@ -375,7 +374,7 @@ negotiationTime ()
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
 		scheddAds.Open();
-		while( !ReachedBandwidthLimit && (schedd = scheddAds.Next()) )
+		while( (schedd = scheddAds.Next()) )
 		{
 			// get the name and address of the schedd
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
@@ -424,10 +423,6 @@ negotiationTime ()
 					dprintf(D_FULLDEBUG,"  This schedd got all it wants; removing it.\n");
 					scheddAds.Delete( schedd);
 					break;
-				case MM_BANDWIDTH:
-					// We have reached our bandwidth limit.  Stop negotiating.
-					ReachedBandwidthLimit = true;
-					break;
 				case MM_ERROR:
 				default:
 					dprintf( D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
@@ -435,8 +430,7 @@ negotiationTime ()
 			}
 		}
 		scheddAds.Close();
-	} while ( hit_schedd_prio_limit == TRUE && MaxscheddLimit>0 &&
-			  !ReachedBandwidthLimit);
+	} while ( hit_schedd_prio_limit == TRUE && MaxscheddLimit>0 );
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -696,25 +690,19 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			dprintf( D_FULLDEBUG, "    Requesting %d kbytes of bandwidth\n",
 					 bandwidth );
 			bw_request = NetUsage.Request(bandwidth);
-			if (bw_request > 0) { // abort negotiation -- reached bw limit
+			if (bw_request > 0) { // reject match -- over bw limit
 				dprintf( D_ALWAYS, "    Not enough bandwidth for this job ---"
-						 " aborting.\n" );
+						 " rejecting.\n" );
 				sock->encode();
 				if (!sock->put(REJECTED) || !sock->end_of_message())
 				{
 					dprintf (D_ALWAYS, "      Could not send rejection\n");
 					sock->end_of_message ();
 					sockCache.invalidateSock(scheddAddr);
-					return MM_BANDWIDTH;
+					return MM_ERROR;
 				}
-				sock->encode();
-				if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
-				{
-					dprintf (D_ALWAYS,
-							 "    Could not send END_NEGOTIATE/eom\n");
-					sockCache.invalidateSock(scheddAddr);
-				}
-				return MM_BANDWIDTH;
+				result = MM_NO_MATCH;
+				continue;
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
