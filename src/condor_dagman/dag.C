@@ -329,6 +329,9 @@ bool Dag::ProcessLogEvents (bool recovery) {
                     break;
                 } else {
                     job->_CondorID = condorID;
+					_numJobsRunning++;
+					assert (_numJobsRunningMax >= 0 ||
+							_numJobsRunning <= _numJobsRunningMax);
                     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
                         job_print (job, true);
                         putchar ('\n');
@@ -405,8 +408,6 @@ bool Dag::Submit (Job * job) {
     }
 
     job->_Status = Job::STATUS_SUBMITTED;
-    _numJobsRunning++;
-    assert (_numJobsRunningMax >= 0 || _numJobsRunning <= _numJobsRunningMax);
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf (", ");
