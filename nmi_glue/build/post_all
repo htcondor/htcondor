@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.2.8 2004-10-18 23:01:28 wright Exp $
+# $Id: post_all,v 1.1.2.9 2004-10-22 21:55:45 parag Exp $
 # Submit-side NMI build system infrastructure to save results after
 # all the platform-specific jobs have completed.  In this case, we've
 # already saved everything we care about during pre_all.  So, the only
@@ -14,7 +14,8 @@ $| = 1;
 
 print "Submitting test jobs ...\n";
 system( "nmi_glue/test_submit/condor_test_submit.pl --nightly" );
-if( $? ) {
+my $status = $?;
+if( $status ) {
     die "condor_test_submit.pl failed with status $status\n";
 }
 
