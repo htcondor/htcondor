@@ -315,7 +315,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		
 		// if the submitting machine is in our shared UID domain, honor
 		// the request
-	if( host_in_domain(UidDomain,InitiatingHost) ) {
+	if( host_in_domain(InitiatingHost, UidDomain) ) {
 
 		/* check to see if there is an entry in the passwd file for this uid */
 		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
