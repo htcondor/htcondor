@@ -48,39 +48,60 @@ int Buf::write(
 	)
 {
 	int	nw;
+	int nwo;
+	unsigned int start_time, curr_time;
 
 	if (sz < 0 || sz > num_untouched()) sz = num_untouched();
 
-	if (timeout > 0) {
-		struct timeval	timer;
-		fd_set			writefds;
-		int				nfds=0, nfound;
-		timer.tv_sec = timeout;
-		timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-		nfds = sockd + 1;
-#endif
-		FD_ZERO( &writefds );
-		FD_SET( sockd, &writefds );
-
-		nfound = select( nfds, 0, &writefds, 0, &timer );
-
-		switch(nfound) {
-		case 0:
-			return -1;
-			break;
-		case 1:
-			break;
-		default:
-			dprintf( D_ALWAYS, "select returns %d, send failed\n",
-				nfound );
-			return -1;
-			break;
-		}
+	if ( timeout > 0 ) {
+		start_time = time(NULL);
+		curr_time = start_time;
 	}
 
-	nw = send(sockd, &_dta[num_touched()], sz, 0);
-	if (nw <= 0) return -1;
+	for(nw=0;nw < sz;) {
+		if (timeout > 0) {
+			struct timeval	timer;
+			fd_set			writefds;
+			int				nfds=0, nfound;
+
+			if ( curr_time == 0 )
+				curr_time = time(NULL);
+			if ( start_time + timeout > curr_time ) {
+				timer.tv_sec = (start_time + timeout) - curr_time;
+			} else {
+				dprintf(D_ALWAYS,"timeout reading in Buf::read()\n");
+				return -1;
+			}
+			curr_time = 0;	// so we call time() next time around
+			timer.tv_usec = 0;
+	#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = sockd + 1;
+	#endif
+			FD_ZERO( &writefds );
+			FD_SET( sockd, &writefds );
+
+			nfound = select( nfds, 0, &writefds, 0, &timer );
+
+			switch(nfound) {
+			case 0:
+				dprintf(D_ALWAYS,"select timed out in Buf::write()\n");
+				return -1;
+				break;
+			case 1:
+				break;
+			default:
+				dprintf( D_ALWAYS, "select returns %d, send failed\n",
+					nfound );
+				return -1;
+				break;
+			}
+		}
+
+		nwo = send(sockd, &_dta[num_touched()], sz-nw, 0);
+		if (nwo <= 0) return -1;
+
+		nw += nwo;
+	}
 
 	_dta_pt += nw;
 	return nw;
@@ -134,11 +155,17 @@ int Buf::read(
 {
 	int	nr;
 	int nro;
+	unsigned int start_time, curr_time;
 
 	if (sz < 0 || sz > num_free()){
 		dprintf(D_ALWAYS, "IO: Buffer too small\n");
 		return -1;
 		/* sz = num_free(); */
+	}
+
+	if ( timeout > 0 ) {
+		start_time = time(NULL);
+		curr_time = start_time;
 	}
 
 	for(nr=0;nr <sz;){
@@ -147,7 +174,16 @@ int Buf::read(
 			struct timeval	timer;
 			fd_set			readfds;
 			int				nfds=0, nfound;
-			timer.tv_sec = timeout;
+
+			if ( curr_time == 0 )
+				curr_time = time(NULL);
+			if ( start_time + timeout > curr_time ) {
+				timer.tv_sec = (start_time + timeout) - curr_time;
+			} else {
+				dprintf(D_ALWAYS,"timeout reading in Buf::read()\n");
+				return -1;
+			}
+			curr_time = 0;	// so we call time() next time around
 			timer.tv_usec = 0;
 #if !defined(WIN32) // nfds is ignored on WIN32
 			nfds = sockd + 1;
