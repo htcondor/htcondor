@@ -33,36 +33,40 @@
 #include "condor_io.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "daemon_types.h"
 
 extern "C" int strincmp( char*, char*, int );
 
 void do_command( char *name );
 void version();
 
-enum daemonType {MASTER, SCHEDD, STARTD};
-
 // Global variables
 int cmd = 0;
 daemonType dt;
-char* daemonName;
-char* daemonNames[] = {
-	"master",
-	"schedd",
-	"startd"
-};
+char* pool = NULL;
+
+
+// The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
+// stuff to stderr, which is where we normally put our error
+// messages.  To enable condor.test to produce easily readable
+// output, even with pure-tools, we just write everything to stdout.  
+#if defined( PURE_DEBUG ) 
+#	define stderr stdout
+#endif
 
 void
 usage( char *str )
 {
 	char* tmp = strchr( str, '_' );
 	if( !tmp ) {
-		fprintf( stderr, "Usage: %s [command] [-help] [-version] [hostnames]\n", str );
+		fprintf( stderr, "Usage: %s [command] [-help] [-version] [-pool hostname] [hostnames]\n", str );
 	} else {
-		fprintf( stderr, "Usage: %s [-help] [version] [hostnames]\n", str );
+		fprintf( stderr, "Usage: %s [-help] [-version] [-pool hostname] [hostnames]\n", str );
 	}
-	fprintf( stderr, "  -help gives this usage information.\n" );
-	fprintf( stderr, "  -version prints the version.\n" );
-	fprintf( stderr, "  The given command is sent to all hosts specified.\n" ); 
+	fprintf( stderr, "  -help\t\tgives this usage information\n" );
+	fprintf( stderr, "  -version\t\tprints the version\n" );
+	fprintf( stderr, "  -pool hostname\tuse the given central manager to find daemons\n" );
+	fprintf( stderr, "\n  The given command is sent to all hosts specified.\n" ); 
 	fprintf( stderr, 
 			 "  (if no hostname is specified, the local host is used).\n\n" );
 
@@ -85,7 +89,7 @@ usage( char *str )
 		fprintf( stderr, "  %s causes the condor_master to restart itself.\n", str );
 		break;
 	case RECONFIG:
-		if( dt == MASTER ) {
+		if( dt == DT_MASTER ) {
 			fprintf( stderr, 
 					 "  %s causes all condor daemons to reconfigure themselves.\n", 
 					 str );
@@ -146,13 +150,14 @@ cmd_to_str( int c )
 	case MASTER_OFF:
 		return "MASTER_OFF";
 	}
+	return "UNKNOWN";
 }
 	
 int
 main( int argc, char *argv[] )
 {
-	char *daemonname, *daemonaddr, *MyName = argv[0];
-	char *cmd_str, **tmp;
+	char *daemonname, *MyName = argv[0];
+	char *cmd_str, **tmp, *foo;
 	int size, did_one = FALSE;
 
 	config( 0 );
@@ -187,40 +192,31 @@ main( int argc, char *argv[] )
 		// Figure out what kind of tool we are.
 	if( !strcmp( cmd_str, "_reconfig" ) ) {
 		cmd = RECONFIG;
-		dt = MASTER;
-		daemonName = daemonNames[0];
+		dt = DT_MASTER;
 	} else if( !strcmp( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
-		dt = MASTER;
-		daemonName = daemonNames[0];
+		dt = DT_MASTER;
 	} else if( !strcmp( cmd_str, "_on" ) ) {
 		cmd = DAEMONS_ON;
-		dt = MASTER;
-		daemonName = daemonNames[0];
+		dt = DT_MASTER;
 	} else if( !strcmp( cmd_str, "_off" ) ) {
 		cmd = DAEMONS_OFF;
-		dt = MASTER;
-		daemonName = daemonNames[0];
+		dt = DT_MASTER;
 	} else if( !strcmp( cmd_str, "_master_off" ) ) {
 		cmd = MASTER_OFF;
-		dt = MASTER;
-		daemonName = daemonNames[0];
+		dt = DT_MASTER;
 	} else if( !strcmp( cmd_str, "_reschedule" ) ) {
 		cmd = RESCHEDULE;
-		dt = SCHEDD;
-		daemonName = daemonNames[1];
+		dt = DT_SCHEDD;
 	} else if( !strcmp( cmd_str, "_reconfig_schedd" ) ) {
 		cmd = RECONFIG;
-		dt = SCHEDD;
-		daemonName = daemonNames[1];
+		dt = DT_SCHEDD;
 	} else if( !strcmp( cmd_str, "_vacate" ) ) {
 		cmd = VACATE_ALL_CLAIMS;
-		dt = STARTD;
-		daemonName = daemonNames[2];
+		dt = DT_STARTD;
 	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_ALL_JOBS;
-		dt = STARTD;
-		daemonName = daemonNames[2];
+		dt = DT_STARTD;
 	} else {
 		fprintf( stderr, "Error: unknown command %s\n", MyName );
 		usage( "condor" );
@@ -230,9 +226,24 @@ main( int argc, char *argv[] )
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] == '-' ) {
-			if( (*tmp)[1] == 'v' ) {
+			switch( (*tmp)[1] ) {
+			case 'v':
 				version();
-			} else {
+				break;
+			case 'p':
+				tmp++;
+				if( tmp && *tmp ) {
+					if( (foo = get_daemon_name(*tmp)) == NULL ) {
+						fprintf( stderr, "%s: unknown host %s\n", MyName, 
+								 get_host_part(*tmp) );
+						exit( 1 );	
+					}
+					pool = strdup( foo );
+				} else {
+					usage( MyName );
+				}
+				break;
+			default:
 				usage( MyName );
 			}
 		}
@@ -243,6 +254,10 @@ main( int argc, char *argv[] )
 		switch( (*argv)[0] ) {
 		case '-':
 				// Some command-line arg we already dealt with
+			if( (*argv)[1] == 'p' ) {
+					// If it's -pool, we want to skip the next arg, too. 
+				argv++;
+			}
 			continue;
 		case '<':
 				// This is probably a sinful string, use it
@@ -285,70 +300,48 @@ do_command( char *name )
 			// We were passed a sinful string, use it directly.
 		daemonAddr = name;
 	} else {
-		switch( dt ) {
-		case MASTER:
-			if ((daemonAddr = get_master_addr(name)) == NULL) {
-				if( name ) {
-					fprintf( stderr, "Can't find address of master %s\n", name );
-				} else {
-					fprintf( stderr, "Can't find address of local master\n" );
-				}
-				return;
-			}
-			break;
-		case SCHEDD:
-			if ((daemonAddr = get_schedd_addr(name)) == NULL) {
-				if( name ) {
-					fprintf( stderr, "Can't find address of schedd %s\n", name );
-				} else {
-					fprintf( stderr, "Can't find address of local schedd\n" );
-				}
-				return;
-			}
-			break;
-		case STARTD:
-			if( name ) {
-				if( (daemonAddr = get_startd_addr(get_host_part(name))) == NULL ) {
-					fprintf( stderr, "Can't find startd address on %s\n", 
-							 get_host_part(name) );
-					return;
-				} 
-			} else {
-				if( (daemonAddr = get_startd_addr(NULL)) == NULL ) {
-					fprintf( stderr, "Can't find address of local startd\n" );
-					return;
-				}
-			}
-			break;
+		daemonAddr = get_daemon_addr( dt, name, pool );
+	}
+
+	if( ! daemonAddr ) {
+		if( name ) {
+			fprintf( stderr, "Can't find address for %s %s\n", 
+					 daemon_string(dt), name );
+			fprintf( stderr, 
+					 "Perhaps you need to query another pool.\n" );
+		} else {
+			fprintf( stderr, "Can't find address of local %s\n",
+					 daemon_string(dt) );
 		}
+		return;
 	}
 
 		/* Connect to the daemon */
 	ReliSock sock(daemonAddr, 0);
 	if(sock.get_file_desc() < 0) {
-		fprintf( stderr, "Can't connect to %s (%s)\n", daemonName, 
-				 daemonAddr );
+		fprintf( stderr, "Can't connect to %s on %s (%s)\n", 
+				 daemon_string(dt), name, daemonAddr );
 		return;
 	}
 
 	sock.encode();
 	if( !sock.code(cmd) || !sock.eom() ) {
-		fprintf( stderr, "Can't send %s command to %s\n", cmd_to_str(cmd), 
-				 daemonName );
+		fprintf( stderr, "Can't send %s command to %s\n", 
+				 cmd_to_str(cmd), daemon_string(dt) );
 		return;
 	}
 
 	if( name ) {
-		if( dt == STARTD ) {
+		if( dt == DT_STARTD ) {
 			printf( "Sent %s command to %s on %s\n", cmd_to_str(cmd), 
-					daemonName, get_host_part(name) );
+					daemon_string(dt), get_host_part(name) );
 		} else {
 			printf( "Sent %s command to %s %s\n", cmd_to_str(cmd), 
-					daemonName, name );
+					daemon_string(dt), name );
 		}
 	} else {
 		printf( "Sent %s command to local %s\n", cmd_to_str(cmd), 
-				daemonName );
+				daemon_string(dt) );
 	}
 }
 
@@ -360,6 +353,6 @@ version()
 	exit(0);
 }
 
-extern "C" int SetSyscalls(){}
+extern "C" int SetSyscalls() {return 0;}
 
 
