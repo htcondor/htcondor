@@ -104,6 +104,14 @@ SOURCE=..\src\condor_starter.V6.1\io_proxy_handler.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\java_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\java_proc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\mpi_comrade_proc.C
 # End Source File
 # Begin Source File
