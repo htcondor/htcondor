@@ -1205,7 +1205,7 @@ int ReliSock::handleAlloc()
 
     dprintf(D_FULLDEBUG, "\tmax bytes allowed: %ld\n", bytes);
     dprintf(D_FULLDEBUG, "\twindow: %d(sec)\n", sec);
-    dprintf(D_FULLDEBUG, "\tbackOff rate: %d(%)\n", percent);
+    dprintf(D_FULLDEBUG, "\tbackOff rate: %f(%)\n", percent);
     // Call setLimit
     return setLimit(sec, bytes, percent);
 }
@@ -1408,10 +1408,6 @@ void ReliSock::calculateAllowance()
     }
     printf("\n");
     */
-    //printf("\tavg sending time: %ld\n", timeTaken/sending);
-    //printf("\tmax sending time: %ld\n", maxDelta);
-    //timeTaken = sending = maxDelta = 0;
-
 
     /* Adjust _l[i]'s
      *
@@ -1425,9 +1421,11 @@ void ReliSock::calculateAllowance()
      */
     dprintf(D_FULLDEBUG, "# of packets sent: %ld :: blocked: %ld\n", _numSends, _shortReached);
     //cout << "short: " << _shortReached << "  numSends: " <<  _numSends << endl;
-    if(_shortReached * 200 > _numSends /* 0.5% */) { // congested during the last WIN
+    if (_allowance > _deltaS + 65536 &&
+		_shortReached * 200 > _numSends /* 0.5% */ ||
+		_shortReached * 50 > _numSends /* 2% */ ) { // congested during the last WIN
         dprintf(D_FULLDEBUG, "_congested: %d\n", _congested+1);
-        _resolved = -7;
+        _resolved = -10;
         if(++_congested >= 2) {
             _bndCtl_state = backOff;
             _beenBackedOff = true;
@@ -1435,14 +1433,17 @@ void ReliSock::calculateAllowance()
             _shortReached = _numSends = _congested = 0;
             _deltaS = 0;
             return;
-        }
+        } else if (_bndCtl_state == scouting) {
+            _bndCtl_state = backOff;
+		}
+
     }
     else {
         _congested = 0;
         if(_bndCtl_state != normal) { // if not congested and in backOff or scouting state
             dprintf(D_FULLDEBUG, "_resolved: %d\n", _resolved+1);
             //cout << "_resolved: " << _resolved+1 << endl;
-            if(++_resolved >= 4) {
+            if(++_resolved >= 2) {
                 dprintf(D_FULLDEBUG, "\tadvance wall by 1.3 times\n");
                 //cout << "\tadvance wall by 1.3\n";
                 advanceWall();

@@ -34,11 +34,13 @@
 #include <mswsock.h>    // For TransmitFile()
 #endif
 
+int pollingRate = 0;
+
 NetMnger *mnger = NULL;
 
 void alarmHandler(int signo)
 {
-    //cout << "timer goes off\n";
+    cout << "timer goes off\n";
     mnger->sendPolling();
 }
 
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
                 break;
             case 'w':
                 window = atoi(optarg);
+				pollingRate = window * 100;
                 if(window <= 0) {
                     usage();
                     cerr << endl << "window should be greater than 0\n";
@@ -125,9 +128,11 @@ int main(int argc, char *argv[])
     //  - the same signal will be blocked while the handler is executing
     if ( sigaction(SIGALRM, &act, &oact) < 0 ) {
         dprintf(D_ALWAYS, "sigaction failed: %s\n", strerror(errno));
+        printf("sigaction failed: %s\n", strerror(errno));
         exit(-1);
     }
     dprintf(D_NETWORK, "NetMnger::doMainLoop - alarm handler registered\n");
+    printf("NetMnger::doMainLoop - alarm handler registered\n");
     /* end of signal handler registration */
 
     mnger->mainLoop();
@@ -153,6 +158,7 @@ NetMnger::NetMnger(int port, long initBand, int window, int backOffRate)
     _listenSock = socket(AF_INET, SOCK_STREAM, 0);
     if(_listenSock <= 0) {
         dprintf(D_ALWAYS, "NetMnger::NetMnger - socket creation failed\n");
+        printf("NetMnger::NetMnger - socket creation failed\n");
         exit(-1);
     }
 
@@ -162,6 +168,7 @@ NetMnger::NetMnger(int port, long initBand, int window, int backOffRate)
         _mngSockTbl[i].halfConn = NULL;
     }
     dprintf(D_NETWORK, "NetMnger created\n");
+    printf("NetMnger created\n");
 }
 
 
@@ -169,7 +176,7 @@ void NetMnger::mainLoop()
 {
     struct sockaddr_in myAddr, peerAddr;
     unsigned int addrLen = sizeof(myAddr);
-    struct fd_set rdfds;
+    fd_set rdfds;
     int maxfd = _listenSock+1;
 
     // Bind the listen socket to a local port
@@ -179,17 +186,19 @@ void NetMnger::mainLoop()
     myAddr.sin_port = htons((u_short)_port);
     if(bind(_listenSock, (struct sockaddr *)&myAddr, addrLen)) {
         dprintf(D_ALWAYS, "NetMnger::doMainLoop - bind failed, errno = %d\n", errno);
+        printf("NetMnger::doMainLoop - bind failed, errno = %d\n", errno);
         return;
     }
 
     // Change the listen socket to a passive one
     if(::listen(_listenSock, 5)) {
         dprintf(D_ALWAYS, "NetMnger::doMainLoop - listen failed, errno = %d\n", errno);
+        printf("NetMnger::doMainLoop - listen failed, errno = %d\n", errno);
         return;
     }
 
     // Start timer
-    alarm(180);
+    alarm(pollingRate);
 
     while(true) {
         int result = -1;
@@ -210,6 +219,7 @@ void NetMnger::mainLoop()
                 continue;
                 else {
                     dprintf(D_ALWAYS, "NetMnger::mainLoop - select failed: %s\n", strerror(errno));
+                    printf("NetMnger::mainLoop - select failed: %s\n", strerror(errno));
                     exit(-1);
                 }
             }
@@ -253,14 +263,18 @@ void NetMnger::handleMngPacket(const int fd)
     if(condor_read(fd, &opCode, 1, 0) != 1) {
         dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
                            condor_read fail: errono = %d\n", errno);
+        printf("NetMnger::handleMngPacket -\
+                           condor_read fail: errono = %d\n", errno);
         return;
     }
 
     switch(opCode) {
         case BND_CONN_RPT:
-            //printf("Connection: (fd = %d)\n", fd);
+            printf("Connection: (fd = %d)\n", fd);
             if(condor_read(fd, buffer, BND_SZ_CONN - 1, 0) != BND_SZ_CONN-1) {
                 dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
+                                   connRpt read fail: errono = %d\n", errno);
+                printf("NetMnger::handleMngPacket -\
                                    connRpt read fail: errono = %d\n", errno);
                 return;
             }
@@ -285,13 +299,15 @@ void NetMnger::handleMngPacket(const int fd)
             return;
 
         case BND_CLOSE_RPT:
-            //printf("Close: (fd = %d)\n", fd);
+            printf("Close: (fd = %d)\n", fd);
             handleClose(fd);
             return;
 
         case BND_BAND_RPT:
             if(condor_read(fd, buffer, BND_SZ_BAND - 1, 0) != BND_SZ_BAND-1) {
                 dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
+                                   bandRpt read fail: errono = %d\n", errno);
+                printf("NetMnger::handleMngPacket -\
                                    bandRpt read fail: errono = %d\n", errno);
                 return;
             }
@@ -305,6 +321,8 @@ void NetMnger::handleMngPacket(const int fd)
 
         default:
             dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
+                               invalid op-code\n");
+            printf("NetMnger::handleMngPacket -\
                                invalid op-code\n");
             return;
     }
@@ -327,6 +345,9 @@ void NetMnger::handleConnRpt(const int fd,
        _mngSockTbl[fd].halfConn != (HalfConn *)-1)
     { // staled somehow
         dprintf(D_ALWAYS, "NetMnger::handleConnRpt -\
+                           _mngSockTbl[%d] is not in the correct status\n\
+                           mngSock %d will be closed\n", fd, fd);
+        printf("NetMnger::handleConnRpt -\
                            _mngSockTbl[%d] is not in the correct status\n\
                            mngSock %d will be closed\n", fd, fd);
         close(fd);
@@ -375,7 +396,8 @@ void NetMnger::handleConnRpt(const int fd,
     while(ptr) {
         ptr->maxBytes -= chipOff;
         if(ptr->curUse > ptr->maxBytes) {
-            ptr->realloc = true;
+			ptr->sendAlloc();
+            //ptr->realloc = false;
             //printf("allocation(fd=%d) is updated from %ld to %ld\n", ptr->mngSock, ptr->curUse, ptr->maxBytes);
         }
         ptr = ptr->next;
@@ -412,6 +434,10 @@ void NetMnger::handleClose(int fd)
                 \t_mngSockTbl[%d] is not in the correct status\n\
                 \t_mngSockTbl[%d] will be reset and\n\
                 \t_mngSock %d will be closed\n", fd, fd, fd);
+        printf("NetMnger::handleClose -\n\
+                \t_mngSockTbl[%d] is not in the correct status\n\
+                \t_mngSockTbl[%d] will be reset and\n\
+                \t_mngSock %d will be closed\n", fd, fd, fd);
         _mngSockTbl[fd].bandInfo = NULL;
         _mngSockTbl[fd].halfConn = NULL;
         close(fd);
@@ -444,6 +470,7 @@ void NetMnger::handleClose(int fd)
             ptr = ptr->next;
         } else {
             ptr->maxBytes += aportion;
+			ptr->sendAlloc();
             // advance both of ptr and prev
             prev = ptr;
             ptr = ptr->next;
@@ -474,7 +501,7 @@ void NetMnger::handleBandRpt(const int fd,
     else
         printf("\t(NOT congested, ");
     printf("\tusage = %ld)\n", curUsage);
-    printf("\allocated: %ld\n", connPtr->maxBytes);
+    printf("\tallocated: %ld\n", connPtr->maxBytes);
     /* end testing */
 
 
@@ -532,7 +559,7 @@ void NetMnger::sendPolling()
 
     //printf("sent Polling to %d ReliSocks and collecting bandwidth report...\n", total);
     // Restart timer
-    alarm(180);
+    alarm(pollingRate);
 }
 
 
@@ -541,20 +568,22 @@ void BandInfo::reallocate()
     HalfConn *connPtr = halfConn;
     HalfConn *ptr;
 
-    if(spillOut > 0) {
-        //printf("SpillOut = %ld\n", spillOut);
-        fullUsage = -2;
+    if (spillOut > 0) {
+        printf("SpillOut = %ld\n", spillOut);
+        fullUsage = 0;
         long chipIn = spillOut / noConn;
-        capacity = 0;
+		allocated = 0;
+        //capacity = 0;
         while(connPtr) {
             connPtr->maxBytes -= chipIn;
-            connPtr->maxBytes *= BACKOFF_RATE;
-            capacity += connPtr->maxBytes;
+            connPtr->maxBytes = connPtr->maxBytes * (connPtr->maxPercent/100.0);
+            //capacity += connPtr->maxBytes;
+            allocated += connPtr->maxBytes;
             connPtr->realloc = true;
             connPtr = connPtr->next;
         }
-    } else if(room > EPSILONE * noConn) {
-        //printf("Room = %ld\n", room);
+    } else if (room > EPSILONE * noConn) {
+        printf("Room = %ld\n", room);
         fullUsage = 0;
         long aportion = room/noConn;
         while(connPtr) {
@@ -562,11 +591,13 @@ void BandInfo::reallocate()
             connPtr->realloc = true;
             connPtr = connPtr->next;
         }
-    } else if(++fullUsage > FULL_USAGE_LIMIT) {
-        capacity *= ADVANCE_RATE;
+    } else if (++fullUsage >= FULL_USAGE_LIMIT && capacity > allocated) {
+		cout << "fullUsage = " << fullUsage << endl;
         fullUsage = 0;
+        //capacity *= ADVANCE_RATE;
+		allocated = capacity;
         while(connPtr) {
-            connPtr->maxBytes *= ADVANCE_RATE;
+            connPtr->maxBytes = capacity/noConn;
             connPtr->realloc = true;
             connPtr = connPtr->next;
         }

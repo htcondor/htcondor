@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 	ReliSock *socket;
 	int op, result, port;
     int interval;
+	int iterations;
 
 	char *charString = (char *) malloc(200000);
 	int len;
@@ -72,7 +73,7 @@ int main(int argc, char *argv[])
                 exit(0);
             }
 			cout << "connected to a client" << endl;
-            socket->timeout(5);
+            //socket->timeout(5);
 			while(true) {
 				socket->decode();
 				socket->code(charString);
@@ -97,14 +98,22 @@ int main(int argc, char *argv[])
 			cin >> port;
             cout << "pause between sends(msec): ";
             cin >> interval;
+			cout << "number of iteration: ";
+			cin >> iterations;
 			result = clientSock.connect(serverName, port);
 			if(result != TRUE) {
 				cout << "Connection failed\n";
 				exit(-1);
 			}
 			cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
-            clientSock.timeout(5);
-			while(true) {
+			cout << "====================================\n";
+			cout << "iterations: " << iterations << endl;
+			cout << "====================================\n";
+            //clientSock.timeout(5);
+            (void) time(&prev);
+			for (int i=0; i<iterations; i++) {
+			for (int j=0; j<iterations; j++) {
+			for (int k=0; k<iterations; k++) {
                 struct timeval timer;
 
 				clientSock.encode();
@@ -117,14 +126,14 @@ int main(int argc, char *argv[])
                     timer.tv_usec = interval*1000;
                     (void) select( 5, NULL, NULL, NULL, &timer );
                 }
-                //(void) time(&cur);
-                //elapsed = cur - prev;
-                //if(elapsed >= 5) {
-                    //cerr << cur << " " << total << endl;
-                    //prev += 5;
-                    //total = 0;
-                //}
-			}
+                (void) time(&cur);
+                elapsed = cur - prev;
+                if(elapsed >= 5) {
+                    cerr << cur << " " << total << endl;
+                    prev += 5;
+                    total = 0;
+                }
+			}}}
             break;
 
 		case 9:
