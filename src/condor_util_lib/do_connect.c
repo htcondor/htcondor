@@ -143,7 +143,7 @@ int		timeout;
 	if( status == 0 ) {
 		return fd;
 	} else {
-		dprintf( D_FULLDEBUG, "connect returns %d, errno = %d\n", status, errno );
+		dprintf( D_ALWAYS, "connect returns %d, errno = %d\n", status, errno );
 		(void)close( fd );
 		return -1;
 	}

@@ -252,7 +252,7 @@ calc_subnet_name(char* host)
 	memcpy((char *) &in,(char *)hostp->h_addr, hostp->h_length);
 	host_addr_string = inet_ntoa( in );
 	if( host_addr_string ) {
-		subnet_ptr = (char *) rindex(host_addr_string, '.');
+		subnet_ptr = (char *) strrchr(host_addr_string, '.');
 		if(subnet_ptr == NULL) {
 			return strdup("");
 		}
