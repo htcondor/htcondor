@@ -718,6 +718,25 @@ also under Windows XP.
 Personal Condor also works.
 
 
+\item[Jobs submitted from NT give an error referring to a credential.]
+
+Jobs submitted from an NT machine require a stashed password in order
+for Condor to run the jobs as the user submitting the jobs.
+The command which stashes a password for a user is \Condor{store\_cred}.
+See the manual page on
+on page~\pageref{man-condor-store-cred}
+for usage details.
+\index{job!credential error on NT}
+
+The error message that Condor gives if a user has not stashed a
+password is of the form:
+\begin{verbatim}
+ERROR: No credential stored for username@machinename
+
+        Correct this by running:
+	        condor_store_cred add
+\end{verbatim}
+
 \item[Job submitted from Unix to execute on NT do not work properly.]
 
 A difficulty with defaults causes jobs submitted from Unix for execution
