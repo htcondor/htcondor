@@ -406,7 +406,7 @@ static void
 d_date( const char *name, int val )
 {
 	do_indent();
-	printf( "%s: %s", name, ctime((time_t*)&val) );
+	printf( "%s: %s", name, ctime((time_t *)&val) );
 }
 
 /*
