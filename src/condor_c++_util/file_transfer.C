@@ -1137,7 +1137,12 @@ FileTransfer::DoDownload(ReliSock *s)
 		total_bytes += bytes;
 	}
 
+#ifdef WIN32
+		// unsigned __int64 to float is not implemented on Win32
+	bytesRcvd += (float)(signed __int64)total_bytes;
+#else
 	bytesRcvd += total_bytes;
+#endif
 
 	if ( !final_transfer && IsServer() ) {
 		char buf[ATTRLIST_MAX_EXPRESSION];
@@ -1397,7 +1402,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 
+#ifdef WIN32
+		// unsigned __int64 to float not implemented on Win32
+	bytesSent += (float)(signed __int64)*total_bytes;
+#else 
 	bytesSent += *total_bytes;
+#endif
 
 	return_and_resetpriv( 0 );
 }
