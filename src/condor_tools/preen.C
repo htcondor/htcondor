@@ -153,6 +153,10 @@ char *ValidLogFiles[] = {
 	"CondorViewLog",
 	"CkptServerLog",
 	"CkptServerLog.old",
+	"W_Start_Log",
+	"W_Sched_Log",
+	"W_Start_Log.old",
+	"W_Sched_Log.old",
 	"OldFiles",		// AFS backup directory
 	0
 };
