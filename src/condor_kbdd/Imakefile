@@ -4,12 +4,7 @@ all_target($(NAME))
 CFLAGS = $(STD_C_FLAGS) -Wall 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
-#if IS_SGI_IRIX65 || IS_SGI_IRIX62
-X_LIB = -lX11 -lXext
-#else
-X_LIB = XExtLibPath XLibPath
-#endif
-LDFLAGS = $(X_LIB)
+LDFLAGS = -lX11
 
 OBJ = kbdd.o XInterface.o
 
