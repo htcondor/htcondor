@@ -65,7 +65,6 @@ int open_http( const char *name, int flags, size_t n_bytes )
 	int		port_num = HTTP_PORT;
 	struct hostent *he;
 	char	http_cmd[1024];
-	int		read_count;
 	
 	/* We can only read via http */
 	if (flags & O_WRONLY) {
@@ -125,8 +124,11 @@ int open_http( const char *name, int flags, size_t n_bytes )
 	}
 
 	name = end_of_addr;
-	sprintf(http_cmd, HTTP_GET_FORMAT, name, ASCII_CR, ASCII_LF, ASCII_CR, 
-			ASCII_LF);
+	// We used to pass CR/LF CR/LF to the sprintf, but the format
+	// string can't accept them (It just has %s), so I removed
+	// them. Should they be there though? -Alain 30-Dec-2001
+	sprintf(http_cmd, HTTP_GET_FORMAT, name);//, ASCII_CR, ASCII_LF, ASCII_CR, 
+	//ASCII_LF);
 	write(sock_fd, http_cmd, strlen(http_cmd));
 
 	/* Skip the header part */
