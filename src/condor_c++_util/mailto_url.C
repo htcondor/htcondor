@@ -32,9 +32,11 @@
 
 #define MAIL_PROG "/bin/mail"
 
-#if defined(NEW_PROC)
+#if defined(CONDOR)
 extern "C" char *param(char *);
 #endif
+
+extern char *getenv( const char * );
 
 static
 int condor_open_mailto_url( const char *name, int flags, 
@@ -47,8 +49,12 @@ int condor_open_mailto_url( const char *name, int flags,
 		return -1;
 	} 
 
-#if defined(NEW_PROC)	/* Detect compilation for Condor */
-	mail_prog = param("MAIL");
+	mail_prog = getenv("MAIL");
+
+#if defined(CONDOR)	/* Detect compilation for Condor */
+	if (mail_prog == 0) {
+		mail_prog = param("MAIL");
+	}
 #endif
 
 #if defined(MAIL_PROG)

@@ -32,9 +32,11 @@
 
 #define GZIP_PROG "/s/std/bin/gzip"
 
-#if defined(NEW_PROC)
+#if defined(CONDOR)
 extern "C" char *param(char *);
 #endif
+
+extern char *getenv( const char *);
 
 static
 int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
@@ -51,8 +53,12 @@ int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
 		return -1;
 	}
 
-#if defined(NEW_PROC)	/* Detect compilation for Condor */
-	gzip_prog = param("GZIP");
+	gzip_prog = getenv("GZIP");
+
+#if defined(CONDOR)	/* Detect compilation for Condor */
+	if (gzip_prog == 0) {
+		gzip_prog = param("GZIP");
+	}
 #endif
 
 #if defined(GZIP_PROG)
