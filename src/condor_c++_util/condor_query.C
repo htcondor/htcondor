@@ -143,6 +143,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_CKPT_SRVR_ADS;
 		break;
 
+	  case COLLECTOR_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_COLLECTOR_ADS;
+		break;
+
 	  default:
 		command = -1;
 		queryType = (AdTypes) -1;
@@ -277,6 +284,10 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
 		break;
 
+	  case COLLECTOR_AD:
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
 	  default:
 		return Q_INVALID_QUERY;
 	}
@@ -347,6 +358,10 @@ getQueryAd (ClassAd &queryAd)
 
 	  case CKPT_SRVR_AD:
 		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
+		break;
+
+	  case COLLECTOR_AD:
+		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
 		break;
 
 	  default:
