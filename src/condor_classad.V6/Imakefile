@@ -1,6 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_classad.V6
 
-C_PLUS_FLAGS=-Wall -I./ $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DIN_CONDOR
+C_PLUS_FLAGS=-Wall -I./ $(STD_C_PLUS_FLAGS) -DIN_CONDOR
 CFLAGS = -Wall $(STD_C_FLAGS)
 
 SRC = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
@@ -12,7 +12,7 @@ OBJ = lexer.o source.o operators.o attrrefs.o fnCall.o literals.o exprTree.o \
 		matchClassad.o classad_io.o cedar_io.o util.o $(COLL_OBJ)
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
-      ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
+      ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
       RpcLib SocketLib
 
 COLL_SRC = classad_collection.C classad_collection_ops.C \
@@ -25,12 +25,18 @@ COLL_OBJ = classad_collection.o classad_collection_ops.o \
 /* The S_* files are for standalone classads */
 S_OBJ = $(S_UTL_OBJ) $(S_CPP_OBJ) $(S_LCL_OBJ)
 #if !HAS_FLOCK
-S_UTL_OBJ = except.o dprintf.o uids.o condor_errlst.o escapes.o flock.o
+S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
+			../condor_util_lib/uids.o ../condor_util_lib/condor_errlst.o \
+			../condor_util_lib/escapes.o ../condor_util_lib/flock.o
 #else
-S_UTL_OBJ = except.o dprintf.o uids.o condor_errlst.o escapes.o 
+S_UTL_OBJ = ../condor_util_lib/except.o ../condor_util_lib/dprintf.o \
+			../condor_util_lib/uids.o ../condor_util_lib/condor_errlst.o \
+			../condor_util_lib/escapes.o 
 #endif
-S_CPP_OBJ = stringSpace.o instantiate.o log.o strnewp.o log_transaction.o
-S_LCL_OBJ = stand_alone.o
+S_CPP_OBJ = ../condor_c++_util/stringSpace.o ../condor_c++_util/instantiate.o \
+			../condor_c++_util/log.o ../condor_c++_util/strnewp.o \
+			../condor_c++_util/log_transaction.o
+S_LCL_OBJ = ./stand_alone.o
 
 
 /* the main condor library target */
@@ -42,6 +48,8 @@ library_target(libclassad.a,$(OBJ))
 standalone: libclassads.a
 library_target(libclassads.a,$(OBJ) $(S_OBJ))
 
+
+template_inst( instantiations.C )
 
 /* Headers required for standalone classad tarball */
 CONDOR_HEADERS = ../condor_c++_util/list.h ../condor_c++_util/stringSpace.h \
@@ -69,6 +77,7 @@ tarball: libclassads.a html
 /* Rule to make documentation */
 doc: html
 
+
 /* Also depends on several header files, but I'm ignoring that for now */
 html: documentation 
 	doc++ -d html documentation
@@ -77,11 +86,6 @@ html: documentation
 clean::
 	rm -f -r *.o *.gz html
 
-
+/* The Classad eXpression Interpreter */
 c_plus_target (cxi, cxi.o, $(LIB))
 pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
-
-
-IMPORT_LINKS = ../../config/import_links
-import( ../condor_util_lib/ , $(S_UTL_OBJ) )
-import( ../condor_c++_util/ , $(S_CPP_OBJ) )
