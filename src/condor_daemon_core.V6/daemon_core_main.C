@@ -796,7 +796,14 @@ dc_reconfig( bool is_full )
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
-	config();
+
+		/* purify flags this as a stack bounds array read violation when 
+			we're expecting to use the default argument. However, due to
+			_craziness_ in the header file that declares this function
+			as an extern "C" linkage with a default argument(WTF!?) while
+			being called in a C++ context, something goes wrong. So, we'll
+			just supply the errant argument. */
+	config(0);
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
