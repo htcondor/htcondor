@@ -205,6 +205,12 @@ public:
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
+		/** Request the schedd to initiate a negoitation cycle.
+			The request is sent via a SafeSock (UDP datagram).
+			@return true on success, false on failure.
+		*/
+	bool reschedule();
+
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[]);
 
 private:

@@ -192,6 +192,12 @@ DCSchedd::forceAuthentication(ReliSock & rsock)
 	}
 }
 
+bool
+DCSchedd::reschedule()
+{
+	return sendCommand(RESCHEDULE, Stream::safe_sock, 0);
+}
+
 bool 
 DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 {
