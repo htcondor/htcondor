@@ -828,7 +828,13 @@ format_remote_host (char *, AttrList *ad)
 			}
 			return result;
 		}
+	} else if (universe == CONDOR_UNIVERSE_GLOBUS) {
+		if (ad->LookupString(ATTR_GLOBUS_RESOURCE,result) == 1 )
+			return result;
+		else
+			return unknownHost;
 	}
+
 	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
@@ -981,7 +987,7 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 {
 	static char result[64];
 	char	host[80] = "[?????]";
-	char	jm[80] = "[?????]";
+	char	jm[80] = "fork";
 	char	*tmp;
 	int	p;
 
@@ -1139,7 +1145,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
 								 format_globusHostAndJM,
-								 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+								 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
 			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
@@ -1324,7 +1330,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
 									 format_globusHostAndJM,
-									 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
 				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
