@@ -308,9 +308,16 @@ bool GlobusJob::commit()
 	int status;
 	int failure_code;
 
-	rc = globus_gram_client_job_signal( jobContact,
-								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT, NULL,
-								&status, &failure_code );
+	if ( restartingJM || jobState == G_UNSUBMITTED ) {
+		rc = globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT_REQUEST,
+								NULL, &status, &failure_code );
+	} else {
+		rc = globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT_END,
+								NULL, &status, &failure_code );
+	}
+
 	if ( rc == GLOBUS_SUCCESS ) {
 		if ( restartingJM ) {
 			restartingJM = false;
