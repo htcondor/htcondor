@@ -74,6 +74,12 @@ static const int ERR_CANNOT_REPLACE             =292;
 static const int ERR_CACHE_SWITCH_ERROR         =293;
 static const int ERR_CACHE_FILE_ERROR           =294;
 static const int ERR_CACHE_CLASSAD_ERROR           =295;
+
+static const int ERR_CANT_LOAD_DYNAMIC_LIBRARY = 296;
 END_NAMESPACE //classad
 
 #endif
+
+
+
+
