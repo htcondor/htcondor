@@ -129,6 +129,7 @@ $realskel="condor_release";
   "i386_linux22"  => "linux",
   "i386_linux3"   => "linux",
   "alpha_linux3"  => "linux",
+  "alpha_linux22" => "linux",
   "alpha_dux40"   => "dux40",
   "alpha_dux40f"  => "dux40",
   "sgi_62"        => "irix6",
@@ -150,6 +151,7 @@ $realskel="condor_release";
   "i386_linux22"  => "x86",
   "i386_linux3"   => "x86",
   "alpha_linux3"  => "Alpha",
+  "alpha_linux22"  => "Alpha",
   "alpha_dux40"   => "Alpha",
   "alpha_dux40f"  => "Alpha",
   "sgi_62"        => "SGI",
@@ -166,6 +168,7 @@ $realskel="condor_release";
   "i386_linux3"   => "glibc20",
   "i386_rh61  "   => "glibc21",
   "alpha_linux3"  => "glibc20"
+  "alpha_linux22" => "glibc20"
 );
 
 
