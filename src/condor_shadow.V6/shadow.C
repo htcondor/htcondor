@@ -43,6 +43,7 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 
 #include <signal.h>
 #include <pwd.h>
