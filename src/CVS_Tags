@@ -1,3 +1,8 @@
+07/27/04 V6_6-merge-18
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges the Directory object bug dealing with
+   removing as PRIV_USER, which the schedd does w/ Condor-G.
+
 07/25/04 V6_6-merge-17
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This gets the bug fixes in the startd when it
