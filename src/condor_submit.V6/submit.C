@@ -2260,38 +2260,44 @@ check_requirements( char *orig )
 	static char	answer[4096];
 
 	if( strlen(orig) ) {
-		(void)sprintf( answer, "(%s)", orig );
+		(void) sprintf( answer, "(%s)", orig );
 	} else {
 		answer[0] = '\0';
 	}
 
-	if ( JobUniverse == VANILLA ) {
-		ptr = param("APPEND_REQ_VANILLA");
-		if ( ptr != NULL ) {
-			if( answer[0] ) {
-				(void) strcat( answer," && (" );
-			} else {
-				(void) strcat( answer,"(" );
-			}
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-			free( ptr );
-		}
+	switch( JobUniverse ) {
+	case VANILLA:
+		ptr = param( "APPEND_REQ_VANILLA" );
+		break;
+	case STANDARD:
+		ptr = param( "APPEND_REQ_STANDARD" );
+		break;
+	default:
+		ptr = NULL;
+		break;
+	} 
+	if( ptr == NULL ) {
+			// Didn't find a per-universe version, try the generic,
+			// non-universe specific one:
+		ptr = param( "APPEND_REQUIREMENTS" );
 	}
 
-	if ( JobUniverse == STANDARD ) {
-		ptr = param("APPEND_REQ_STANDARD");
-		if ( ptr != NULL ) {
-			if( answer[0] ) {
-				(void) strcat( answer," && (" );
-			} else {
-				(void) strcat( answer,"(" );
-			}
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-			free( ptr );
+	if( ptr != NULL ) {
+			// We found something to append.  
+		if( answer[0] ) {
+				// We've already got something in requirements, so we
+				// need to append an AND clause.
+			(void) strcat( answer, " && (" );
+		} else {
+				// This is the first thing in requirements, so just
+				// put this as the first clause.
+			(void) strcat( answer, "(" );
 		}
+		(void) strcat( answer, ptr );
+		(void) strcat( answer, ")" );
+		free( ptr );
 	}
+
 				
 	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_ARCH,ptr,4) == MATCH ) {
