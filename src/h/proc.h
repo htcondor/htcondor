@@ -27,7 +27,7 @@
 #define CONDOR_PROC_INCLUDED
 
 #if !defined(WIN32)
-#include "_condor_fix_resource.h"  /* dhaval */
+#include "condor_fix_sys_resource.h"
 #endif
 
 typedef struct {
