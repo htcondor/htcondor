@@ -44,6 +44,8 @@ could not be expanded.
 \item On Windows, the system-wide TEMP variable is included in the
 execute environment if it is not specified in the submit file.
 
+\item Fixed a rarely-occuring bug when  the child process forked by the schedd gets stuck in an infinite loop when the user does ``condor_submit -s''. This should also fix problems when the child process forked by the collector would sometimes get stuck in an infinite loop when COLLECTOR_QUERY_WORKERS > 0 in the config file.
+
 \end{itemize}
 
 \noindent Known Bugs:
