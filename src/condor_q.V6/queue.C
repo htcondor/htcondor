@@ -47,8 +47,7 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
-
-#include "../condor_classad_analysis/analysis.h"
+#include "condor_classad_analysis.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
