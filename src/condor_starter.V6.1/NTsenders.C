@@ -226,6 +226,35 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 	return rval;
 }
 
+
+int
+REMOTE_CONDOR_begin_execution( void )
+{
+	condor_errno_t		terrno;
+	int		rval=-1;
+	
+	dprintf ( D_SYSCALLS, "Doing CONDOR_begin_execution\n" );
+
+	CurrentSysCall = CONDOR_begin_execution;
+
+	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
+	assert( syscall_sock->end_of_message() );
+
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	assert( syscall_sock->end_of_message() );
+	return rval;
+}
+
+
 int
 REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
 {
