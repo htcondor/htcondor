@@ -1590,6 +1590,7 @@ with -20 being the worst and with +20 being the best.
 \subsection{\label{sec:user-priority-explained}User priority}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{preemption!priority}
 \index{user!priority}
 \index{priority!of a user}
 Machines are allocated to users based upon a user's priority.
@@ -1686,6 +1687,7 @@ Details About How Condor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
+\index{preemption!vacate}
 When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
 attribute of the job's ClassAd.
