@@ -32,6 +32,8 @@
 #include "starter.h"
 #include "syscall_numbers.h"
 #include "dynuser.h"
+#include "condor_config.h"
+#include "domain_tools.h"
 
 #ifdef WIN32
 extern dynuser* myDynuser;
@@ -138,16 +140,23 @@ VanillaProc::StartJob()
 		ASSERT(family);
 
 #ifdef WIN32
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[100];
 
-		// we should be able to get the accountname, but in case it fails, just use
-		// the prefix.
-		strcpy(nobody_login, (myDynuser->get_accountname()) ? myDynuser->get_accountname() : 
-			myDynuser->account_prefix());
+		// we support running the job as other users if the user
+		// is specifed in the config file, and the account's password
+		// is properly stored in our credential stash.
 
-		// set ProcFamily to find decendants via a common login name
-		family->setFamilyLogin(nobody_login);
+		char *run_jobs_as = param("RUN_JOBS_AS");
+		if (run_jobs_as) {
+			char *domain, *name;
+			// set ProcFamily to find decendants via a common login name
+			getDomainAndName(run_jobs_as, domain, name);
+			family->setFamilyLogin(name);
+			free(run_jobs_as);
+		} else {
+			
+			// set ProcFamily to find decendants via a common login name
+			family->setFamilyLogin(myDynuser->get_accountname());
+		}
 #endif
 
 		// take a snapshot of the family every 15 seconds

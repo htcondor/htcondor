@@ -25,6 +25,8 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "job_info_communicator.h"
+#include "condor_config.h"
+#include "domain_tools.h"
 
 
 JobInfoCommunicator::JobInfoCommunicator()
@@ -194,17 +196,37 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	// Win32
 	// taken origionally from OsProc::StartJob.  Here we create the
 	// user and initialize user_priv.
-	// we only support running jobs as user nobody for the first pass
+	
+	// we support running the job as other users if the user
+	// is specifed in the config file, and the account's password
+	// is properly stored in our credential stash.
 
-	// just init a new nobody user; dynuser handles the rest.
-	// the "." means Local Machine to LogonUser
-	if( ! init_user_ids("nobody", ".") ) {
+	bool init_priv_succeeded = true;
+	char *run_jobs_as = param("RUN_JOBS_AS");
+	if (run_jobs_as) {
+		char *domain, *name;
+		getDomainAndName(run_jobs_as, domain, name);
+
+		if (!init_user_ids(name, domain)) {
+
+			dprintf(D_ALWAYS, "Could not initialize user_priv as \"%s\\%s\".\n"
+				"\tMake sure this account's password is securely stored "
+				"with condor_store_cred on this machine.\n", domain, name );
+			init_priv_succeeded = false;			
+		} 
+		free(run_jobs_as);		
+	} else if( ! init_user_ids("nobody", ".") ) {
+		
+		// just init a new nobody user; dynuser handles the rest.
+		// the "." means Local Machine to LogonUser
+	
 		dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
 				 "as \"nobody\"\n" );
-		return false;
+		init_priv_succeeded = false;
 	}
-	user_priv_is_initialized = true;
-	return true;
+
+	user_priv_is_initialized = init_priv_succeeded;
+	return init_priv_succeeded;
 }
 
 
