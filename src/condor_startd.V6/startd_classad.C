@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 
 #include "condor_classad.h"
-#include "proc_obj.h"
 #include "dgram_io_handle.h"
 #include "condor_attributes.h"
 #include "condor_expressions.h"
@@ -15,18 +14,17 @@
 extern "C" {
 
 int
-send_classad_to_machine(char *host, int port, int sd, CONTEXT *cp)
+send_classad_to_machine(char *host, int port, int sd, ClassAd* ad)
 {
-	ClassAd ad(cp);
 	SafeSock sock(host, port);
 
-	ad.SetMyTypeName (STARTD_ADTYPE);
-	ad.SetTargetTypeName (JOB_ADTYPE);
+	ad->SetMyTypeName (STARTD_ADTYPE);
+	ad->SetTargetTypeName (JOB_ADTYPE);
 	
 	sock.attach_to_file_desc(sd);
 	sock.encode();
 	sock.put(UPDATE_STARTD_AD);
-	ad.put(sock);
+	ad->put(sock);
 	sock.end_of_message();
 	
 	return 0;
