@@ -271,7 +271,7 @@ main( int argc, char *argv[] )
 
 	DisconnectQ(0);
 
-	if(ProcId == 0 ) 
+	if(ProcId != -1 ) 
 	{
 		reschedule();
 	}
