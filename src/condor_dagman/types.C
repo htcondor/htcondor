@@ -3,7 +3,7 @@
 #include "condor_string.h"
 
 //---------------------------------------------------------------------------
-template<class TYPE> int compare(TYPE a, TYPE b) {
+int compare(int a, int b) {
   if (a == b) return 0;
   return (a > b ? 1 : -1);
 }

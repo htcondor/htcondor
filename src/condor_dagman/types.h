@@ -14,10 +14,6 @@ typedef int bool;
 typedef int JobID_t;
 
 //---------------------------------------------------------------------------
-///
-template<class TYPE> int compare (TYPE a, TYPE b);
-
-//---------------------------------------------------------------------------
 /** Condor uses three integers to identify jobs. This structure 
     will be used to store those three numbers.  
 */
