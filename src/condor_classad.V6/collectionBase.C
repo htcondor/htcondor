@@ -911,6 +911,20 @@ GetViewInfo( const ViewName &viewName, ClassAd *&info )
 	return( true );
 }
 
+bool ClassAdCollection::
+ViewExists( const ViewName &viewName)
+{
+    bool                    view_exists;
+	ViewRegistry::iterator  i;
+
+	i = viewRegistry.find(viewName);
+	if (i == viewRegistry.end()){
+        view_exists = false;
+    } else {
+        view_exists = true;
+    }
+    return view_exists;
+}
 
 bool ClassAdCollection::
 GetSubordinateViewNames( const ViewName &viewName, vector<string>& views )
