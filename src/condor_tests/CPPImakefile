@@ -18,6 +18,16 @@ C_PLUS_FLAGS = $(CFLAGS)
  Next, define tests that are specific to C++
 ************************************************************************/
 
+
+/****************************
+ * Remote System Calls
+ ***************************/
+
+
+/****************************
+ * Checkpointing
+ ***************************/
+
 DESC(job_ckpt_constructor_std,"Test C++ global and local constructors")
 CBUILD($(CC),job_ckpt_constructor_std,C)
 RUN(job_ckpt_constructor_std)
