@@ -471,6 +471,7 @@ int main( int argc, char** argv )
 	AuthSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
+	char	*logAppend = NULL;
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
@@ -625,6 +626,18 @@ int main( int argc, char** argv )
 			wantsQuiet = TRUE;
 			dcargs++;
 			break;			
+		case 'a':
+			ptr++;
+			if( ptr && *ptr ) {
+				logAppend = *ptr;
+			} else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -append needs another argument.\n" );
+				fprintf( stderr, 
+					 "   Please specify a string to append to our log's filename.\n" );
+				exit( 1 );
+			}
+			break;
 		default:
 			done = TRUE;
 			break;	
@@ -647,6 +660,29 @@ int main( int argc, char** argv )
 		// setup logging.  Note: we also have to do this in reconfig.
 	if( logDir ) {
 		set_log_dir();
+	}
+
+		// If we're told on the command-line to append something to
+		// the name of our log file, we do that here, so that when we
+		// setup logging, we get the right filename.  -Derek Wright
+		// 11/20/98
+
+	if( logAppend ) {
+		char *tmp1, *tmp2;
+		char buf[100];
+		sprintf( buf, "%s_LOG", mySubSystem );
+		if( !(tmp1 = param(buf)) ) { 
+			EXCEPT( "%s not defined!", buf );
+		}
+		tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2) *
+							  sizeof(char) );
+		if( !tmp2 ) {
+			EXCEPT( "Out of memory!" );
+		}
+		sprintf( tmp2, "%s.%s", tmp1, logAppend );
+		config_insert( buf, tmp2 );
+		free( tmp1 );
+		free( tmp2 );
 	}
 
 		// See if we're supposed to be allowing core files or not
