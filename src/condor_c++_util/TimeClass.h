@@ -65,8 +65,12 @@ public:
   operator double() const { return Sec; }
 
   const char* Asc() const {
-    long l=(long) Sec;
-    return asctime(localtime(&l));
+#if defined(OSF1)
+	  int l=(int)Sec;
+#else
+	  long l=(long) Sec;
+#endif
+	  return asctime(localtime(&l));
   } 
 
 };
