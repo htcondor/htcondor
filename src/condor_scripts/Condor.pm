@@ -267,7 +267,9 @@ sub Monitor
 	    &$EvictedCallback( %info )
 		if defined $EvictedCallback;
 
-	    # read next line to see if job was checkpointed
+	    # read next line to see if job was checkpointed (but first
+	    # sleep for 5 seconds to give it a chance to appear)
+	    sleep 5;
 	    $line = <SUBMIT_LOG>;
 	    chomp $line;
 	    $linenum++;
