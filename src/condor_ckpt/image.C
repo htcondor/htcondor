@@ -97,6 +97,8 @@ extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" int get_ckpt_mode( int sig );
 extern "C" int get_ckpt_speed( );
+extern "C" sigset_t condor_block_signals();
+extern "C" void condor_restore_sigmask(sigset_t);
 
 Image MyImage;
 static jmp_buf Env;
@@ -1464,6 +1466,10 @@ Checkpoint( int sig, int code, void *scp )
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
 
+		// We don't want to be interrupted by a signal during the
+		// checkpoint operation.
+	sigset_t omask = condor_block_signals();
+
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
 		// WARNING: This test should be done before any other code in
@@ -1471,8 +1477,10 @@ Checkpoint( int sig, int code, void *scp )
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
 			Suicide();		// if we're supposed to vacate, kill ourselves
-		else
+		else {
+			condor_restore_sigmask(omask);
 			return;			// if periodic ckpt or we're currently ckpting
+		}
 	}
 	InRestart = TRUE;	// not strictly true, but needed in our saved data
 	check_sig = sig;
@@ -1637,6 +1645,7 @@ Checkpoint( int sig, int code, void *scp )
 		SetSyscalls( scm );
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
+		condor_restore_sigmask(omask);
 		return;
 	}
 }
@@ -1773,6 +1782,23 @@ terminate_with_sig( int sig )
 		dprintf( D_ALWAYS, "About to send signal %d to process %d\n",
 				sig, my_pid );
 	}
+
+	// Sleep for 1 second to allow our debug socket to drain.  This is
+	// very important for debugging when Suicide() is called, because if
+	// our debug message doesn't arrive at the shadow, we won't know why
+	// the job died.  Note that we don't necessarily have access to any
+	// libc functions here, so we must use SYSCALL(SYS_something, ...).
+#if defined(SYS_sleep)
+	SYSCALL(SYS_sleep, 1);
+#elif defined(SYS_nanosleep)
+	struct timespec t;
+	t.tv_sec = 1;
+	t.tv_nsec = 0;
+	SYSCALL(SYS_nanosleep, &t, NULL);
+#else
+#error "Please port me!  I need a sleep system call."
+#endif
+
 	if( SYSCALL(SYS_kill, my_pid, sig) < 0 ) {
 		EXCEPT( "kill" );
 	}
