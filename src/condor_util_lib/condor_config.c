@@ -373,8 +373,6 @@ void Config(const char* MyName)
 	}
 	else
 	{
-   		// Check to see if this is the configuration server host. If it is,
-   		// start configuration server immediately.
    		config_location = param("CONFIG_FILE_LOCATION");
    		if(!config_location)
    		{
