@@ -84,6 +84,9 @@ Matchmaker ()
 
 	want_simple_matching = false;
 	want_matchlist_caching = false;
+	ConsiderPreemption = true;
+
+	completedLastCycleTime = (time_t) 0;
 }
 
 
@@ -152,7 +155,6 @@ initialize ()
 			"Time to negotiate", this);
 
 }
-
 
 int Matchmaker::
 reinitialize ()
@@ -260,6 +262,7 @@ reinitialize ()
 
 	want_simple_matching = param_boolean("NEGOTIATOR_SIMPLE_MATCHING",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",false);
+	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
 
 	// done
 	return TRUE;
@@ -506,29 +509,6 @@ negotiationTime ()
 	ClassAdList scheddAds;
 	ClassAdList allAds;
 
-	ClassAd		*schedd;
-	char		scheddName[80];
-	char		scheddAddr[32];
-	int			result;
-	int			numStartdAds;
-	double		maxPrioValue;
-	double		maxAbsPrioValue;
-	double		normalFactor;
-	double		normalAbsFactor;
-	double		scheddPrio;
-	double		scheddPrioFactor;
-	double		scheddShare;
-	double		scheddAbsShare;
-	int			scheddLimit;
-	int			scheddUsage;
-	int			MaxscheddLimit;
-	int			hit_schedd_prio_limit;
-	int			hit_network_prio_limit;
-	int 		send_ad_to_schedd;	
-	static time_t completedLastCycleTime = 0;
-	bool ignore_schedd_limit;
-	int			num_idle_jobs;
-
 	// Check if we just finished a cycle less than 20 seconds ago.
 	// If we did, reset our timer so at least 20 seconds will elapse
 	// between cycles.  We do this to help ensure all the startds have
@@ -565,18 +545,202 @@ negotiationTime ()
 		return FALSE;
 	}
 
-	// Register a lookup function that passes through the list of all ads.
-
-	
+	// Register a lookup function that passes through the list of all ads.	
 	ClassAdLookupRegister( lookup_global, &allAds );
 	
-
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
-	// for ads which have RemoteUser set, add RemoteUserPrio
-	addRemoteUserPrios( startdAds ); 
+	// if don't care about preemption, we can trim out all non Unclaimed ads now.
+	// note: we cannot trim out the Unclaimed ads before we call CheckMatches,
+	// otherwise CheckMatches will do the wrong thing (because it will not see
+	// any of the claimed machines!).
+	int num_trimmed = trimStartdAds(startdAds);
+	if ( num_trimmed > 0 ) {
+		dprintf(D_FULLDEBUG,
+			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
+	} else {
+		// for ads which have RemoteUser set, add RemoteUserPrio
+		addRemoteUserPrios( startdAds ); 
+	}
+
+	char *groups = param("GROUP_NAMES");
+	if ( groups ) {
+
+		// HANDLE GROUPS (as desired by CDF)
+
+		// Populate the groupArray, which contains an entry for
+		// each group.
+		SimpleGroupEntry* groupArray;
+		int i;
+		StringList groupList;		
+		strlwr(groups); // the accountant will want lower case!!!
+		groupList.initializeFromString(groups);
+		free(groups);		
+		groupArray = new SimpleGroupEntry[ groupList.number() ];
+		ASSERT(groupArray);
+
+		MyString tmpstr;
+		i = 0;
+		groupList.rewind();
+		while ((groups = groupList.next ()))
+		{
+			tmpstr.sprintf("GROUP_QUOTA_%s",groups);
+			int quota = param_integer(tmpstr.Value(),0);
+			if ( !quota ) {
+				dprintf(D_ALWAYS,
+					"ERROR - no quota specified for group %s, ignoring\n",
+					groups);
+				continue;
+			}
+			int usage  = accountant.GetResourcesUsed(groups);
+			groupArray[i].groupName = groups;  // don't free this! (in groupList)
+			groupArray[i].maxAllowed = quota;
+			groupArray[i].usage = usage;
+				// the 'prio' field is used to sort the group array, i.e. to
+				// decide which groups get to negotiate first.  
+				// we sort groups based upon the percentage of their quota
+				// currently being used, so that groups using the least 
+				// percentage amount of their quota get to negotiate first.
+			groupArray[i].prio = ( 100 * usage ) / quota;
+			dprintf(D_FULLDEBUG,
+				"Group Table : group %s quota %d usage %d prio %2.2f\n",
+				groups,quota,usage,groupArray[i].prio);
+			i++;
+		}
+		int groupArrayLen = i;
+
+			// pull out the submitter ads that specify a group from the
+			// scheddAds list, and insert them into a list specific to 
+			// the specified group.
+		ClassAd *ad = NULL;
+		char scheddName[80];
+		scheddAds.Open();
+		while( (ad=scheddAds.Next()) ) {
+			if (!ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
+				continue;
+			}
+			scheddName[79] = '\0'; // make certain we have a terminating NULL
+			char *sep = strchr(scheddName,'.');	// is there a group seperator?
+			if ( !sep ) {
+				continue;
+			}
+			*sep = '\0';
+			for (i=0; i<groupArrayLen; i++) {
+				if ( strcasecmp(scheddName,groupArray[i].groupName)==0 ) {
+					groupArray[i].submitterAds.Insert(ad);
+					scheddAds.Delete(ad);
+					break;
+				}
+			}
+		}
+
+			// now sort the group array
+		qsort(groupArray,groupArrayLen,sizeof(SimpleGroupEntry),groupSortCompare);		
+
+			// and negotiate for each group
+		for (i=0;i<groupArrayLen;i++) {
+			if ( groupArray[i].submitterAds.MyLength() == 0 ) {
+				dprintf(D_ALWAYS,
+					"Group %s - skipping, no submitters\n",
+					groupArray[i].groupName);
+				continue;
+			}
+			if ( groupArray[i].usage >= groupArray[i].maxAllowed  &&
+				 !ConsiderPreemption ) 
+			{
+				dprintf(D_ALWAYS,
+					"Group %s - skipping, at or over quota (usage=%d)\n",
+					groupArray[i].groupName,groupArray[i].usage);
+				continue;
+			}
+			dprintf(D_ALWAYS,"Group %s - negotiating\n",
+				groupArray[i].groupName);
+			negotiateWithGroup( startdAds, 
+				startdPvtAds, groupArray[i].submitterAds, 
+				groupArray[i].maxAllowed, groupArray[i].groupName);
+		}
+
+			// if GROUP_AUTOREGROUP is set to true, then for any submitter
+			// assigned to a group that did match, insert the submitter
+			// ad back into the main scheddAds list.  this way, we will
+			// try to match it again below .
+		if ( param_boolean("GROUP_AUTOREGROUP",false) )  {
+			for (i=0; i<groupArrayLen; i++) {
+				ad = NULL;
+				dprintf(D_ALWAYS,
+					"Group %s - autoregroup inserting %d submitters\n",
+					groupArray[i].groupName,
+					groupArray[i].submitterAds.MyLength());
+				groupArray[i].submitterAds.Open();
+				while( (ad=groupArray[i].submitterAds.Next()) ) {
+					scheddAds.Insert(ad);				
+				}
+			}
+		}
+
+			// finally, cleanup 
+		delete []  groupArray;
+		groupArray = NULL;
+
+			// print out a message stating we are about to negotiate below w/
+			// all users who did not specify a group
+		dprintf(D_ALWAYS,"Group *none* - negotiating\n");
+
+	} // if (groups)
+	
+		// negotiate w/ all users who do not belong to a group.
+	negotiateWithGroup(startdAds, startdPvtAds, scheddAds);
+	
+	// ----- Done with the negotiation cycle
+	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
+
+	completedLastCycleTime = time(NULL);
+
+	return TRUE;
+}
+
+Matchmaker::SimpleGroupEntry::
+SimpleGroupEntry()
+{
+	groupName = NULL;
+	prio = 0;
+	maxAllowed = INT_MAX;
+}
+
+Matchmaker::SimpleGroupEntry::
+~SimpleGroupEntry()
+{
+	// Note: don't free groupName!  See comment above.
+}
+
+int Matchmaker::
+negotiateWithGroup ( ClassAdList& startdAds, ClassAdList& startdPvtAds, 
+					 ClassAdList& scheddAds, 
+					 int groupQuota, const char* groupAccountingName)
+{
+	ClassAd		*schedd;
+	char		scheddName[80];
+	char		scheddAddr[32];
+	int			result;
+	int			numStartdAds;
+	double		maxPrioValue;
+	double		maxAbsPrioValue;
+	double		normalFactor;
+	double		normalAbsFactor;
+	double		scheddPrio;
+	double		scheddPrioFactor;
+	double		scheddShare;
+	double		scheddAbsShare;
+	int			scheddLimit;
+	int			scheddUsage;
+	int			MaxscheddLimit;
+	int			hit_schedd_prio_limit;
+	int			hit_network_prio_limit;
+	int 		send_ad_to_schedd;	
+	bool ignore_schedd_limit;
+	int			num_idle_jobs;
 
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
@@ -603,6 +767,12 @@ negotiationTime ()
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
 		numStartdAds = startdAds.MyLength();
+			// If operating on a group with a quota, consider the size of 
+			// the "pie" to be limited to the groupQuota, so each user in 
+			// the group gets a reasonable sized slice.
+		if ( numStartdAds > groupQuota ) {
+			numStartdAds = groupQuota;
+		}
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
@@ -610,6 +780,7 @@ negotiationTime ()
 		dprintf (D_FULLDEBUG, "    NumStartdAds = %d\n", numStartdAds);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
+		dprintf (D_FULLDEBUG, "    NumScheddAds = %d\n", scheddAds.MyLength());
 		scheddAds.Open();
 		while( (schedd = scheddAds.Next()) )
 		{
@@ -647,6 +818,13 @@ negotiationTime ()
 			}
 			if( scheddLimit < 0 ) {
 				scheddLimit = 0;
+			}
+			if ( groupAccountingName ) {
+				int maxAllowed = groupQuota - accountant.GetResourcesUsed(groupAccountingName);
+				if ( maxAllowed < 0 ) maxAllowed = 0;
+				if ( scheddLimit > maxAllowed ) {
+					scheddLimit = maxAllowed;
+				}
 			}
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
@@ -692,12 +870,15 @@ negotiationTime ()
 			// function to ignore the scheddLimit w/ respect to jobs which
 			// are strictly preferred by resource offers (via startd rank).
 			if ( num_idle_jobs == 0 ) {
+				dprintf(D_FULLDEBUG,
+					"  Negotiating with %s skipped because no idle jobs\n",
+					scheddName);
 				result = MM_DONE;
 			} else {
 				if ( scheddLimit < 1 && spin_pie > 1 ) {
 					result = MM_RESUME;
 				} else {
-					if ( spin_pie == 1 ) {
+					if ( spin_pie == 1 && ConsiderPreemption ) {
 						ignore_schedd_limit = true;
 					} else {
 						ignore_schedd_limit = false;
@@ -744,11 +925,6 @@ negotiationTime ()
 		scheddAds.Close();
 	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
 			 && (MaxscheddLimit > 0) && (startdAds.MyLength() > 0) );
-
-	// ----- Done with the negotiation cycle
-	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
-
-	completedLastCycleTime = time(NULL);
 
 	return TRUE;
 }
@@ -807,6 +983,38 @@ comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 	}
 
 	return (prio1 < prio2);
+}
+
+int Matchmaker::
+trimStartdAds(ClassAdList &startdAds)
+{
+	int removed = 0;
+	ClassAd *ad = NULL;
+	char curState[80];
+	char *unclaimed = state_to_string(unclaimed_state);
+	ASSERT(unclaimed);
+
+		// If we are not considering preemption, we can save time
+		// (and also make the spinning pie algorithm more correct) by
+		// getting rid of ads that are not in the Unclaimed state.
+	
+	if ( ConsiderPreemption ) {
+			// we need to keep all the ads.
+		return 0;
+	}
+
+	startdAds.Open();
+	while( (ad=startdAds.Next()) ) {
+		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
+			if ( strcmp(curState,unclaimed) ) {
+				startdAds.Delete(ad);
+				removed++;
+			}
+		}
+	}
+	startdAds.Close();
+
+	return removed;
 }
 
 bool Matchmaker::
@@ -876,17 +1084,18 @@ obtainAdsFromCollector (
 		// got something for this one.		
 		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
 
+			if(!ad->LookupString(ATTR_NAME, remoteHost)) {
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				continue;
+			}
+
+
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
 			reevaluate_ad = false; 
 			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
-
-			if(!ad->LookupString(ATTR_NAME, remoteHost)) {
-				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
-				continue;
-			}
 
 			if( reevaluate_ad && newSequence != -1 ) {
 				oldAd = NULL;
@@ -1954,6 +2163,22 @@ add_candidate(ClassAd * candidate,
 	AdListArray[adListLen].PreemptStateValue = candidatePreemptState;
 
 	adListLen++;
+}
+
+
+int Matchmaker::
+groupSortCompare(const void* elem1, const void* elem2)
+{
+	SimpleGroupEntry* Elem1 = (SimpleGroupEntry*) elem1;
+	SimpleGroupEntry* Elem2 = (SimpleGroupEntry*) elem2;
+
+	if ( Elem1->prio < Elem2->prio ) {
+		return -1;
+	} 
+	if ( Elem1->prio == Elem2->prio ) {
+		return 0;
+	} 
+	return 1;
 }
 
 int Matchmaker::MatchListType::

@@ -77,8 +77,34 @@ class Matchmaker : public Service
 
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
-		int  negotiate(char *, char *, double, double, int,
-			ClassAdList &, ClassAdList &, int, bool );
+		
+		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
+			@param scheddName Name attribute from the submitter ad.
+			@param scheddAddr Sinful string of schedd for this submitter.
+			@param priority Priority of this user from the accountant.
+			@param share Priority w/o up-down (just relative prio factor).
+			@param scheddLimit Give away this many matches max
+			@param startdAds
+			@param startdPvtAdss
+			@param send_ad_to_schedd
+			@param ignore_schedd_limit After hit scheddLimit, keep 
+					negotiating but only consider startd rank.
+			@return MM_RESUME if schedd hits its resource limit before
+					negotiation finished,
+					MM_DONE if schedd got all the resources it wanted,
+					MM_ERROR if problem negotiating w/ this schedd.
+		**/
+		int negotiate( char *scheddName, char *scheddAddr, 
+		   double priority, double share,
+		   int scheddLimit,
+		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
+		   int send_ad_to_schedd, bool ignore_schedd_limit);
+
+		int negotiateWithGroup ( ClassAdList& startdAds, 
+			ClassAdList& startdPvtAds, ClassAdList& scheddAds, 
+			int groupQuota=INT_MAX, const char* groupAccountingName=NULL);
+
+		
 		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
 									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
@@ -97,6 +123,9 @@ class Matchmaker : public Service
 		float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
 
+			// If we are not considering preemption, this function will
+			// trim out startd ads that are not in the Unclaimed state.
+		int trimStartdAds(ClassAdList &startdAds);
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
@@ -107,6 +136,7 @@ class Matchmaker : public Service
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
+		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 
 		CollectorList* Collectors;
 
@@ -134,6 +164,9 @@ class Matchmaker : public Service
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
 		bool GotRescheduleCmd;
+
+		// Epoch time when we finished most rescent negotiation cycle
+		time_t completedLastCycleTime;
 
 		// diagnostics
 		// did we reject the last match b/c of...
@@ -220,6 +253,22 @@ class Matchmaker : public Service
 		int cachedAutoCluster;
 		char* cachedName;
 		char* cachedAddr;
+
+		//
+		class SimpleGroupEntry
+		{
+		public:
+			SimpleGroupEntry();
+			~SimpleGroupEntry();
+			char *groupName;
+			float prio;
+			int maxAllowed;
+			int usage;
+			ClassAdList submitterAds;			
+		};
+		static int groupSortCompare(const void*, const void*);
+		
+		
 		
 };
 
