@@ -108,12 +108,42 @@ command_activate_claim( Service*, int, Stream* stream )
 
 	State s = rip->state();
 	Activity a = rip->activity();
-	if( s != claimed_state || a != idle_act ) {
+
+	if( s != claimed_state ) {
+			// If we're not already claimed, any kind of
+			// ACTIVATE_CLAIM is invalid.
 		rip->log_ignore( ACTIVATE_CLAIM, s );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
 	}
+
+	if( rip->is_deactivating() ) { 
+			// We're in the middle of deactivating another claim, so
+			// tell the shadow to try again.  Any shadow before 6.1.9
+			// will just treat this like a "NOT_OK", which is what
+			// we'd expect.  However, a 6.1.9 or later shadow will
+			// honor the try again, sleep a little while, and try to
+			// initiate a new ACTIVATE_CLAIM protocol.
+		rip->dprintf( D_ALWAYS, 
+					  "Got activate claim while starter is still alive.\n" );
+		rip->dprintf( D_ALWAYS, 
+					  "Telling shadow to try again later.\n" );
+		stream->end_of_message();
+		reply( stream, TRY_AGAIN );
+		return FALSE;
+	}
+	
+		// If we got this far and we're not in claimed/idle, there
+		// really is a problem activating the claim.
+	if( a != idle_act ) {
+		rip->log_ignore( ACTIVATE_CLAIM, s );
+		stream->end_of_message();
+		reply( stream, NOT_OK );
+		return FALSE;
+	}
+
+		// If we got to here, everything's cool.  Do the work. 
 	return activate_claim( rip, stream );
 }
 
