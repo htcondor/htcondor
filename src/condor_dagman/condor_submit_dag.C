@@ -28,6 +28,12 @@
 #include "env.h"
 #include "read_multiple_logs.h"
 
+#ifdef WIN32
+const char* dagman_exe = "condor_dagman.exe";
+#else
+const char* dagman_exe = "condor_dagman";
+#endif
+
 // Just so we can link in the ReadMultipleUserLogs class.
 MULTI_LOG_HASH_INSTANCE;
 
@@ -83,7 +89,7 @@ struct SubmitDagOptions
 
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
-void submitDag(SubmitDagOptions &opts);
+int submitDag( SubmitDagOptions &opts );
 bool readFileToString(const MyString &strFilename, MyString &strFileData);
 
 int main(int argc, char *argv[])
@@ -96,7 +102,7 @@ int main(int argc, char *argv[])
 	
 	if (opts.strDagFile == "")
 	{
-		printf("No dag file specified.\n");
+		fprintf( stderr, "ERROR: no dag file specified; aborting.\n" );
 		printUsage();
 	}
 
@@ -106,29 +112,25 @@ int main(int argc, char *argv[])
 	opts.strSubFile = opts.strDagFile + ".condor.sub";
 	opts.strRescueFile = opts.strDagFile + ".rescue";
 
-	submitDag(opts);
-	
-	return 0;
+	return submitDag( opts );
 }
 
 // utility fcns for submitDag
 void ensureOutputFilesExist(const SubmitDagOptions &opts);
 void writeSubmitFile(const SubmitDagOptions &opts);
 
-void submitDag(SubmitDagOptions &opts)
+int
+submitDag( SubmitDagOptions &opts )
 {
 	if (opts.strDagmanPath == "" ) {
-#ifdef WIN32
-		opts.strDagmanPath = which("condor_dagman.exe");
-#else
-		opts.strDagmanPath = which("condor_dagman");
-#endif
+		opts.strDagmanPath = which( dagman_exe );
 	}
 
 	if (opts.strDagmanPath == "")
 	{
-		printf("Can't find condor_dagman in your path, aborting.\n");
-		exit(2);
+		fprintf( stderr, "ERROR: can't find %s in PATH, aborting.\n",
+				 dagman_exe );
+		return 1;
 	}
 		
 	ensureOutputFilesExist(opts);
@@ -146,12 +148,12 @@ void submitDag(SubmitDagOptions &opts)
 		MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 				opts.strDagFile, "job", logFiles);
 		if ( msg != "" ) {
-			printf("Error getting job log files: %s; job not submitted\n",
-					msg.Value());
-			return;
+			fprintf( stderr, "ERROR: failed to locate job log files: %s\n"
+					 "Aborting.\n", msg.Value() );
+			return 1;
 		} else if ( logFiles.number() < 1 ) {
-			printf("No job log files found; job not submitted\n");
-			return;
+			fprintf( stderr, "ERROR: no job log files found; aborting.\n" );
+			return 1;
 		}
 		logFiles.rewind();
 		opts.strJobLog = logFiles.next();
@@ -181,7 +183,11 @@ void submitDag(SubmitDagOptions &opts)
 	if (opts.bSubmit)
 	{
 		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd + " " + opts.strSubFile;
-		system(strCmdLine.Value());
+		int retval = system(strCmdLine.Value());
+		if( retval != 0 ) {
+			fprintf( stderr, "ERROR: condor_submit failed; aborting.\n" );
+			return 1;
+		}
 	}
 	else
 	{
@@ -189,6 +195,8 @@ void submitDag(SubmitDagOptions &opts)
 		printf("\"condor_submit %s\"\n", opts.strSubFile.Value());
 	}
 	printf("-----------------------------------------------------------------------\n");
+
+	return 0;
 }
 
 MyString makeString(int iValue)
@@ -244,42 +252,49 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 	bool bHadError = false;
 	if (fileExists(opts.strSubFile))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strSubFile.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strSubFile.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strLibLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strLibLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strLibLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strDebugLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strDebugLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strDebugLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strSchedLog))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strSchedLog.Value());
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strSchedLog.Value() );
 		bHadError = true;
 	}
 	if (fileExists(opts.strRescueFile))
 	{
-		printf("ERROR: \"%s\" already exists.\n", opts.strRescueFile.Value());
-	    printf("  You may want to resubmit your DAG using that file, instead of ");
-	    printf("\"%s\"\n", opts.strDagFile.Value());
-	    printf("  Look at the Condor manual for details about DAG rescue files.\n");
-	    printf("  Please investigate and either remove \"%s\",\n", opts.strRescueFile.Value());
-	    printf("  or use that as the input to condor_submit_dag.\n");
-
+		fprintf( stderr, "ERROR: \"%s\" already exists.\n",
+				 opts.strRescueFile.Value() );
+	    fprintf( stderr, "  You may want to resubmit your DAG using that "
+				 "file, instead of \"%s\"\n", opts.strDagFile.Value());
+	    fprintf( stderr, "  Look at the Condor manual for details about DAG "
+				 "rescue files.\n" );
+	    fprintf( stderr, "  Please investigate and either remove \"%s\",\n",
+				 opts.strRescueFile.Value() );
+	    fprintf( stderr, "  or use it as the input to condor_submit_dag.\n" );
 		bHadError = true;
 	}
 
 	if (bHadError) 
 	{
-	    printf("\nSome file(s) needed by condor_submit_dag already exist.  ");
-	    printf("Either rename them,\nor use the \"-f\" option to force them ");
-	    printf("to be overwritten.\n");
-	    exit(3);
+	    fprintf( stderr, "\nSome file(s) needed by %s already exist.  ",
+				 dagman_exe );
+	    fprintf( stderr, "Either rename them,\nor use the \"-f\" option to "
+				 "force them to be overwritten.\n" );
+	    exit( 1 );
 	}
 }
 
@@ -288,8 +303,9 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 	FILE *pSubFile = fopen(opts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
-		printf("ERROR: unable to create submit file %s\n", opts.strSubFile.Value());
-		exit(1);
+		fprintf( stderr, "ERROR: unable to create submit file %s\n",
+				 opts.strSubFile.Value() );
+		exit( 1 );
 	}
 
     fprintf(pSubFile, "# Filename: %s\n", opts.strSubFile.Value());
@@ -444,7 +460,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 		}
 		else
 		{
-			printf("Unknown option %s\n", strArg.Value());
+			fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
 			printUsage();
 		}
 	}
