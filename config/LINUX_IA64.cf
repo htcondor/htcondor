@@ -10,5 +10,4 @@
 
 #define WANT_PVM	NO
 
-#defined WANT_GT3GAHP	YES
 
