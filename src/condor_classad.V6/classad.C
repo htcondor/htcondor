@@ -292,13 +292,10 @@ LookupInScope( const string &name, const ClassAd *&finalScope ) const
 
 
 int ClassAd::
-LookupInScope(const string &name, const ExprTree*& expr, EvalState &state)const
+LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 {
 	extern int exprHash( const ExprTree* const&, int );
-	HashTable<const ExprTree*,bool> superChase( 17, &exprHash );
-	const ClassAd 	*current = this, *superScope;
-	ExprTree		*super;
-	bool			visited = false;
+	ClassAd 		*current = (ClassAd*)this, *superScope;
 	Value			val;
 
 	expr = NULL;
@@ -307,43 +304,13 @@ LookupInScope(const string &name, const ExprTree*& expr, EvalState &state)const
 		// lookups/eval's being done in the 'current' ad
 		state.curAd = current;
 
-		// have we already visited this scope?
-		if( superChase.lookup( current, visited ) < 0 ) {
-			// not yet visited until now --- mark as visited
-			if( superChase.insert( current, true ) < 0 ) {
-				return( EVAL_ERROR );
-			}
-		} else if( visited ) {
-			// have already visited this scope
-			return( EVAL_UNDEF );
-		}
-
 		// lookup in current scope
 		if( ( expr = current->Lookup( name ) ) ) {
 			return( EVAL_OK );
 		}
 
-		// not in current scope; try superScope
-		if( !( super = current->Lookup( "super" ) ) ) {
-			// no explicit super attribute; get lexical parent
-			superScope = current->parentScope;
-		} else {
-			// explicit super attribute
-			if( !super->Evaluate( state, val ) ) {
-				return( EVAL_FAIL );
-			}
-
-			if( !val.IsClassAdValue( superScope ) ) {
-				return( val.IsUndefinedValue( ) ? EVAL_UNDEF : EVAL_ERROR );
-			}
-		}
-
-		// Case insensitive to "reserved keywords"
-		if( strcasecmp( name.c_str( ), "super" ) == 0 ) {
-			// if the "super" attribute was requested ...
-			expr = superScope;
-			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if(strcasecmp(name.c_str( ),"toplevel")==0 || 
+		superScope = (ClassAd*)current->parentScope;
+		if(strcasecmp(name.c_str( ),"toplevel")==0 || 
 				strcasecmp(name.c_str( ),"root")==0){
 			// if the "toplevel" attribute was requested ...
 			expr = state.rootAd;
@@ -354,7 +321,7 @@ LookupInScope(const string &name, const ExprTree*& expr, EvalState &state)const
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), "parent" ) == 0 ) {
 			// the lexical parent
-			expr = state.curAd->parentScope;
+			expr = (ClassAd*)state.curAd->parentScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else {
 			// continue searching from the superScope ...
@@ -453,7 +420,7 @@ Modify( ClassAd& mod )
 
 		// Step 1:  Process Replace attribute
 	if( ( expr = mod.Lookup( ATTR_REPLACE ) ) != NULL ) {
-		ClassAd	*ad;
+		const ClassAd	*ad;
 		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Clear( );
 			ctx->Update( *ad );
@@ -462,7 +429,7 @@ Modify( ClassAd& mod )
 
 		// Step 2:  Process Updates attribute
 	if( ( expr = mod.Lookup( ATTR_UPDATES ) ) != NULL ) {
-		ClassAd *ad;
+		const ClassAd *ad;
 		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Update( *ad );
 		}
@@ -470,9 +437,9 @@ Modify( ClassAd& mod )
 
 		// Step 3:  Process Deletes attribute
 	if( ( expr = mod.Lookup( ATTR_DELETES ) ) != NULL ) {
-		ExprList 			*list;
+		const ExprList 		*list;
 		ExprListIterator	itor;
-		char				*attrName;
+		const char			*attrName;
 
 			// make a first pass to check that it is a list of strings ...
 		if( !expr->Evaluate( val ) || !val.IsListValue( list ) ) {
@@ -559,16 +526,16 @@ _Evaluate( EvalState&, Value &val, ExprTree *&tree ) const
 
 
 bool ClassAd::
-_Flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )  const
+_Flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* ) const
 {
-	ClassAd 		*newAd = new ClassAd();
-	Value			eval;
-	ExprTree		*etree;
-	const ClassAd	*oldAd;
+	ClassAd 	*newAd = new ClassAd();
+	Value		eval;
+	ExprTree	*etree;
+	ClassAd		*oldAd;
 	AttrList::const_iterator	itr;
 
 	oldAd = state.curAd;
-	state.curAd = this;
+	state.curAd = (ClassAd*)this;
 
 	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		// flatten expression
@@ -604,15 +571,15 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )  const
 ClassAd *ClassAd::
 _GetDeepScope( ExprTree *tree ) const
 {
-	ClassAd	*scope;
-	Value	val;
+	const ClassAd	*scope;
+	Value			val;
 
 	if( !tree ) return( NULL );
 	tree->SetParentScope( this );
 	if( !tree->Evaluate( val ) || !val.IsClassAdValue( scope ) ) {
 		return( NULL );
 	}
-	return( scope );
+	return( (ClassAd*)scope );
 }
 
 
@@ -705,6 +672,298 @@ EvaluateAttrBool( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
 }
 
+#if defined( EXPERIMENTAL )
+bool ClassAd::
+GetExternalReferences( const ExprTree *tree, References &refs )
+{
+    EvalState       state;
+
+    state.rootAd = this; 
+    state.curAd = (ClassAd*)tree->GetParentScope( );
+	if( !state.curAd ) state.curAd = this;
+	
+    return( _GetExternalReferences( tree, this, state, refs ) );
+}
+
+bool ClassAd::
+_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
+	EvalState &state, References& refs )
+{
+    switch( expr->GetKind( ) ) {
+        case LITERAL_NODE:
+                // no external references here
+            return( true );
+
+        case ATTRREF_NODE: {
+            const ClassAd   *start;
+            ExprTree        *tree, *result;
+            string          attr;
+            Value           val;
+            bool            abs;
+
+            ((AttributeReference*)expr)->GetComponents( tree, attr, abs );
+                // establish starting point for attribute search
+            if( tree==NULL ) {
+                start = abs ? state.rootAd : state.curAd;
+            } else {
+                if( !tree->Evaluate( state, val ) ) return( false );
+
+                    // if the tree evals to undefined, the external references
+                    // are in the tree part
+                if( val.IsUndefinedValue( ) ) {
+                    return( _GetExternalReferences( tree, ad, state, refs ));
+                }
+                    // otherwise, if the tree didn't evaluate to a classad,
+                    // we have a problem
+                if( !val.IsClassAdValue( start ) ) return( false );
+            }
+                // lookup for attribute
+			ClassAd *curAd = state.curAd;
+            switch( start->LookupInScope( attr, result, state ) ) {
+                case EVAL_ERROR:
+                        // some error
+                    return( false );
+
+                case EVAL_UNDEF:
+                        // attr is external
+                    refs.insert( attr );
+					state.curAd = curAd;
+                    return( true );
+
+                case EVAL_OK: {
+                        // attr is internal; find external refs in result
+					bool rval=_GetExternalReferences(result,ad,state,refs);
+					state.curAd = curAd;
+					return( rval );
+				}
+
+                default:    
+                        // enh??
+                    return( false );
+            }
+        }
+            
+        case OP_NODE: {
+                // recurse on subtrees
+            OpKind      op;
+            ExprTree    *t1, *t2, *t3;
+            ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
+            if( t1 && !_GetExternalReferences( t1, ad, state, refs ) ) {
+                return( false );
+            }
+            if( t2 && !_GetExternalReferences( t2, ad, state, refs ) ) {
+                return( false );
+            }
+            if( t3 && !_GetExternalReferences( t3, ad, state, refs ) ) {
+                return( false );
+            }
+            return( true );
+        }
+
+        case FN_CALL_NODE: {
+                // recurse on subtrees
+            string                      fnName;
+            vector<ExprTree*>           args;
+            vector<ExprTree*>::iterator itr;
+
+            ((FunctionCall*)expr)->GetComponents( fnName, args );
+            for( itr = args.begin( ); itr != args.end( ); itr++ ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        case CLASSAD_NODE: {
+                // recurse on subtrees
+            vector< pair<string, ExprTree*> >           attrs;
+            vector< pair<string, ExprTree*> >::iterator itr;
+
+            ((ClassAd*)expr)->GetComponents( attrs );
+            for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
+                if( !_GetExternalReferences( itr->second, ad, state, refs )) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        case EXPR_LIST_NODE: {
+                // recurse on subtrees
+            vector<ExprTree*>           exprs;
+            vector<ExprTree*>::iterator itr;
+
+            ((ExprList*)expr)->GetComponents( exprs );
+            for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        default:
+            return false;
+    }
+}
+
+
+bool ClassAd::
+AddRectangle( int &rkey, Rectangles &r, const References &irefs )
+{
+	MatchClassAd	mad;
+	ExprTree		*tree, *ftree;
+	bool			rval;
+	Value			val;
+	double			realVal;
+
+		// project imported attributes
+	for( References::iterator itr=irefs.begin( );itr!=irefs.end( ); itr++ ) {
+		if( !(tree=Lookup(*itr) ) ) {
+			continue;
+		} else if( tree->GetKind() != LITERAL_NODE ) {
+			return( false );
+		}
+		((Literal*)tree)->GetValue( val );
+		if( !val.IsNumber( realVal ) ) {
+			return( false );
+		}
+		if( !r.AddUpperBound( rkey, *itr, realVal, false ) || 
+				!r.AddLowerBound( rkey, *itr, realVal, false ) ) {
+			return( false );
+		}
+	}
+
+
+	mad.ReplaceRightAd( this );
+	tree = Lookup( ATTR_REQUIREMENTS );
+	if( !Flatten( tree, val, ftree ) ) {
+		return( false );
+	}
+	rval = _MakeRectangle( rkey, ftree, r, true );
+	delete ftree;
+	mad.RemoveRightAd( );
+	if( !rval ) {
+		return( false );
+	}
+
+
+	return( true );
+}
+
+
+bool ClassAd::
+_MakeRectangle( int &rkey, const ExprTree *tree, Rectangles &r, bool ORmode )
+{
+    if( tree->GetKind( ) != OP_NODE ) return( false );
+
+    OpKind  		op;
+    ExprTree 		*t1, *t2, *lit, *attr;
+
+    ((Operation*)tree)->GetComponents( op, t1, t2, lit );
+	lit = NULL;
+
+	if( op == PARENTHESES_OP ) {
+		return( _MakeRectangle( rkey, t1, r, ORmode ) );
+	}
+
+		// let only ||, &&, <=, <, ==, is, >, >= through
+	if( ( op != LOGICAL_AND_OP && op != LOGICAL_OR_OP ) && 
+			( op < __COMPARISON_START__ || op > __COMPARISON_END__ ||
+			op == NOT_EQUAL_OP || op == ISNT_OP ) ) {
+		return( false );
+	}
+
+	if( ORmode ) {
+		if( op == LOGICAL_OR_OP ) {
+				// continue recursively in OR mode
+			return( _MakeRectangle( rkey, t1, r, ORmode ) &&
+					_MakeRectangle( rkey, t2, r, ORmode ) );
+		} else {
+				// switch to AND mode
+			ORmode = false;
+		}
+	}
+
+		// ASSERT:  In AND mode now (i.e., ORmode is false)
+	if( op == LOGICAL_AND_OP ) {
+		bool rval = _MakeRectangle( rkey, t1, r, ORmode );
+		if( !rval ) return( false );
+		rkey++; // next rectangle
+		return( rval && _MakeRectangle( rkey, t2, r, ORmode ) );
+	} else if( op == LOGICAL_OR_OP ) {
+			// something wrong
+		printf( "Error:  Found || when making rectangles in AND mode\n" );
+		return( false );
+	}
+
+	if( t1->GetKind( )==ATTRREF_NODE && t2->GetKind( )==LITERAL_NODE ) {
+			// ref <op> lit
+		attr = t1;
+		lit  = t2;
+	} else if(t2->GetKind()==ATTRREF_NODE && t1->GetKind()==LITERAL_NODE){
+			// lit <op> ref
+		attr = t2;
+		lit  = t1;
+		switch( op ) {
+			case LESS_THAN_OP: op = GREATER_THAN_OP; break;
+			case GREATER_THAN_OP: op = LESS_THAN_OP; break;
+			case LESS_OR_EQUAL_OP: op = GREATER_OR_EQUAL_OP; break;
+			case GREATER_OR_EQUAL_OP: op = LESS_OR_EQUAL_OP; break;
+			default:
+				break;
+		}
+	} else {
+			// unrecognizable form
+		return( false );
+	}
+
+		// literal must be a comparable value 
+	Value	val;
+	double	real;
+	((Literal*)lit)->GetValue( val );
+	if( !val.IsNumber( real ) ) {
+		return( false );
+	}
+
+		// get the dimension name; assume already flattened
+	string			attrName;
+	ExprTree		*expr;
+	bool			absolute;
+	((AttributeReference*)attr)->GetComponents( expr, attrName, absolute );
+		
+    switch( op ) {
+        case LESS_THAN_OP:
+			return( r.AddUpperBound( rkey, attrName, real, true ) );  // open
+
+        case LESS_OR_EQUAL_OP:
+			return( r.AddUpperBound( rkey, attrName, real, false ) ); // closed
+
+        case EQUAL_OP:
+        case IS_OP:
+			return( r.AddUpperBound( rkey, attrName, real, false ) && // closed
+					r.AddLowerBound( rkey, attrName, real, false ) ); // closed
+
+		case GREATER_THAN_OP:
+			return( r.AddLowerBound( rkey, attrName, real, true ) );  // open
+
+        case GREATER_OR_EQUAL_OP:
+			return( r.AddLowerBound( rkey, attrName, real, false ) ); // closed
+
+        default:
+            return( false );
+    }
+
+    return( false );
+}
+
+#endif  // EXPERIMENTAL
+
+
 bool ClassAd::
 Flatten( ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 {
@@ -724,21 +983,6 @@ NextAttribute( string &attr, const ExprTree *&expr )
 	if( itr==ad->attrList.end( ) ) return( false );
 	itr++;
 	if( itr==ad->attrList.end( ) ) return( false );
-	attr = itr->first;
-	expr = itr->second;
-	return( true );
-}
-
-
-bool ClassAdIterator::
-PreviousAttribute( string &attr, const ExprTree *&expr )
-{
-	if (!ad) return false;
-
-	attr = "";
-	expr = NULL;
-	if( itr == ad->attrList.begin( ) ) return( false );
-	itr--;
 	attr = itr->first;
 	expr = itr->second;
 	return( true );
