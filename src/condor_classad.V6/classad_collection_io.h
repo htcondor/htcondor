@@ -64,10 +64,10 @@ class CollectionIO {
         @return true if successful.  The GetError{ID,Msg} meathods reveal
         why false was returned.
     */
-    virtual bool CreateConstraint (ViewID            & viewID,
-                                   const ViewID      & parentViewID,
-                                   const std::string & rank,
-                                   const std::string & constraint) = 0;
+    virtual bool CreateConstraintView (ViewID            & viewID,
+                                       const ViewID      & parentViewID,
+                                       const std::string & rank,
+                                       const std::string & constraint) = 0;
 
     /** Create a partition parent view, as a child of another view. A
         partiton view defines a partition based on a set of
@@ -87,11 +87,12 @@ class CollectionIO {
         partition.
         @return true if successful.  The GetError{ID,Msg} meathods reveal
         why false was returned.  */
-    virtual bool CreatePartition  (ViewID             & viewID,
-                                   const ViewID       & parentViewID,
-                                   const std::string  & rank,
-                                   const std::vector<std::string> & attribs) =0;
-
+    virtual bool CreatePartitionView (
+        ViewID             & viewID,
+        const ViewID       & parentViewID,
+        const std::string  & rank,
+        const std::vector<std::string> & attribs) =0;
+    
     /** Find the partition of a class-ad.  Returns (by reference) the ID of
         the child partition that would contain the specified class-ad.
 
@@ -103,10 +104,10 @@ class CollectionIO {
         @return true if successful.  The GetError{ID,Msg} meathods reveal
         why false was returned.
     */
-    virtual bool FindPartition (ViewID         & viewID,
-                                const ViewID   & parentViewID,
-                                const ClassAd  * representative) const = 0;
-        
+    virtual bool FindPartitionView (ViewID         & viewID,
+                                    const ViewID   & parentViewID,
+                                    const ClassAd  * representative) const = 0;
+    
     /** Deletes a view and all of its descendants from the collection tree.
 
         @param viewID The ID of the view to be deleted.
@@ -135,18 +136,18 @@ class CollectionIO {
         @return true if successful.  The GetError{ID,Msg} meathods reveal
         why false was returned.
     */
-    virtual bool      ClassAd_Add    (const std::string & key,
+    virtual bool      AddClassAd   (const std::string & key,
                                       const ClassAd * ad) = 0;
 
     ///
-    virtual bool      ClassAd_Modify (const std::string & key,
+    virtual bool      ModifyClassAd (const std::string & key,
                                       const ClassAd * ad) = 0;
 
     ///
-    virtual bool      ClassAd_Remove (const std::string & key) = 0;
+    virtual bool      RemoveClassAd (const std::string & key) = 0;
 
     ///
-    virtual ClassAd * ClassAd_Get    (const std::string & key) = 0;
+    virtual ClassAd * GetClassAd    (const std::string & key) = 0;
 
     //@}
 
@@ -157,10 +158,10 @@ class CollectionIO {
     //@{
 
     ///
-    virtual bool TransactionOpen ();
+    virtual bool OpenTransaction ();
 
     ///
-    virtual bool TransactionClose();
+    virtual bool CloseTransaction();
 
     //@}
 
@@ -318,27 +319,27 @@ class CollectionIOServer : public CollectionIO {
     //@{
 
     ///
-    virtual bool TransactionOpen ();
+    virtual bool OpenTransaction();
 
     ///
-    virtual bool TransactionClose();
+    virtual bool CloseTransaction();
 
     ///
     void   TransactionSetName (const std::string & name);
 
     ///
-    std::string TransactionGetName () const;
+    std::string GetTransactionName () const;
 
     /// Wrapper Function
-    inline bool TransactionOpen (const std::string & name) {
+    inline bool OpenTransaction (const std::string & name) {
         TransactionSetName(name);
-        return TransactionOpen();
+        return OpenTransaction();
     }
 
     /// Wrapper Function
-    inline bool TransactionClose (const std::string & name) {
+    inline bool CloseTransaction (const std::string & name) {
         TransactionSetName(name);
-        return TransactionClose();
+        return CloseTransaction();
     }
 
     //@}
