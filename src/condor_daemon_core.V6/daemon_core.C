@@ -1226,6 +1226,9 @@ int DaemonCore::HandleReq(int socki)
 			result = 0;	// make result != to KEEP_STREAM, so we blow away this socket below
 			dprintf(D_ALWAYS,"DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
 				sin_to_string(stream->endpoint()),req,comTable[index].command_descrip);
+			// if UDP, consume the rest of this message to try to stay "in-sync"
+			if ( !is_tcp)
+				stream->end_of_message();
 		} else {
 			dprintf(D_COMMAND, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
