@@ -79,10 +79,7 @@ private:
 
 #ifdef WIN32
 	CSysinfo sysinfo;
-	ExtArray<HANDLE> familyHandles;
 #endif
-
-	void closeFamilyHandles();
 
 	class a_pid {
 		public:
@@ -116,7 +113,6 @@ private:
 
 	unsigned long max_image_size;
 
-	int getPidFamilyByLogin(pid_t *pidFamily);
 	char *searchLogin;
 };
 
