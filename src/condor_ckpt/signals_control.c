@@ -21,14 +21,10 @@ void _condor_ckpt_disable()
 
 	disable_count++;
 
-       	/* Block signals requesting an exit or checkpoint for duration of
-	   system call. */
-
 	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
 	sigemptyset( &mask );
 	sigaddset( &mask, SIGTSTP );
-	sigaddset( &mask, SIGUSR1 );
 	sigaddset( &mask, SIGUSR2 );
 
 	if( sigprocmask(SIG_BLOCK,&mask,0) < 0 ) {
@@ -52,7 +48,6 @@ void _condor_ckpt_enable()
 
 		sigemptyset( &mask );
 		sigaddset( &mask, SIGTSTP );
-		sigaddset( &mask, SIGUSR1 );
 		sigaddset( &mask, SIGUSR2 );
 
 		if( sigprocmask(SIG_UNBLOCK,&mask,0) < 0 )
