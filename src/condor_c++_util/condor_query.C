@@ -300,7 +300,7 @@ makeQueryAd (ClassAd &ad)
 
 	// construct query requirement expression
 	bool firstCategory = true;
-	sprintf (req, "%s = ", ATTR_REQUIREMENT);
+	sprintf (req, "%s = ", ATTR_REQUIREMENTS);
 
 	// add string constraints
 	for (i = 0; i < stringThreshold; i++)
