@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include "condor_common.h"
-#include "exprTree.h"
+/*
+#include "condor_config.h"
+*/
+#include "classad_package.h"
 
 void help( void );
 
 int 
 main( void )
 {
-	ClassAd 	ad;
+	ClassAd 	ad, *adptr;
 	char 		buffer1[2048], buffer2[2048];
+//	char		*tmp;
 	ExprTree	*expr=NULL, *fexpr=NULL;
 	int 		command;
 	Value		value;
@@ -16,7 +20,9 @@ main( void )
 	Sink		snk;
 
 	snk.setSink( stdout );
-
+/*
+	config( 0 );
+*/
 	printf( "'h' for help\n# " );
 	while( 1 ) {	
 		command = tolower( getchar() );
@@ -26,13 +32,36 @@ main( void )
 				break;
 
 			case 'd':
+				if( scanf( "%s", buffer1 ) != 1 ) {	// expr
+					printf( "Error reading primary expression\n" );
+					break;
+				}
+				src.setSource( buffer1, 2048 );
+				if( !src.parseExpression( expr ) ) {
+					printf( "Error parsing expression: %s\n", buffer1 );
+					break;
+				}
 				if( scanf( "%s", buffer1 ) != 1 ) {
 					printf( "Error reading attribute name\n" );
 					break;
+				}	
+				fgets( buffer2, 2048, stdin );
+				src.setSource( buffer2, 2048 );
+				if( !src.parseExpression( fexpr ) ) {
+					printf( "Error parsing expression: %s\n", buffer2 );
+					break;
+				} 
+				ad.evaluate( expr, value );
+				if( !value.isClassAdValue( adptr ) ) {
+					printf( "Error:  Primary expression was not a classad\n" );
+					break;
+				}	
+				if( !adptr->insert( buffer1, fexpr ) ) {
+					printf( "Error inserting expression\n" );
 				}
-				if( !ad.remove( buffer1 ) ) {
-					printf( "Error removing attribute %s\n", buffer1 );
-				}
+				delete expr;
+				adptr = NULL;
+				expr  = NULL;
 				break;
 
 			case 'e':
@@ -75,18 +104,20 @@ main( void )
 				break;
 
 			case 'i':
-				if( scanf( "%s", buffer1 ) != 1 ) {	// name
+				if( scanf( "%s", buffer1 ) != 1 ) {
 					printf( "Error reading attribute name\n" );
 					break;
-				}
-				fgets( buffer2, 2048, stdin );		// expr
+				}	
+				fgets( buffer2, 2048, stdin );
 				src.setSource( buffer2, 2048 );
-				if( !src.parseExpression( expr ) ) {
+				if( !src.parseExpression( fexpr ) ) {
 					printf( "Error parsing expression: %s\n", buffer2 );
+					break;
 				} 
-				if( !ad.insert( buffer1, expr ) ) {
+				if( ad.insert( buffer1, expr ) ) {
 					printf( "Error inserting expression\n" );
 				}
+				expr  = NULL;
 				break;
 
 			case 'n': 
@@ -98,14 +129,45 @@ main( void )
 				}
 				break;
 			
-			case 'p':
+			case 'o':
 				ad.toSink( snk );
 				snk.flushSink();
 				break;
 
+/*
+			case 'p':
+				fgets( buffer1, 2048, stdin );
+				if( !( tmp = param( buffer1 ) ) ) {
+					printf( "Did not find %s in config file\n", buffer1 );
+					break;
+				}
+				src.setSource( tmp, strlen( tmp ) );
+				if( !src.parseExpression( expr ) ) {
+					printf( "Error parsing expression: %s\n", tmp );
+					free( tmp );
+					break;
+				}
+				if( !ad.insert( buffer1, expr ) ) {
+					printf( "Error inserting: %s = %s\n", buffer1, tmp );
+				}
+				delete tmp;
+				expr = NULL;
+				break;
+*/
+				
 			case 'q': 
 				printf( "Done\n\n" );
 				exit( 0 );
+
+			case 'r':
+				if( scanf( "%s", buffer1 ) != 1 ) {
+					printf( "Error reading attribute name\n" );
+					break;
+				}
+				if( !ad.remove( buffer1 ) ) {
+					printf( "Error removing attribute %s\n", buffer1 );
+				}
+				break;
 
 			case 's': 
 				ad.clear();
@@ -137,13 +199,16 @@ help( void )
 {
 	printf( "\nCommands are:\n" );
 	printf( "\tc\t\t- (C)lear toplevel ad\n" );
-	printf( "\td <name>\t- (D)elete expression from ad\n" );
+	printf( "\td <e1><name><e2>- (D)eep insert e2 into classad e1\n");
 	printf( "\te <expr>\t- (E)valuate expression (in toplevel ad)\n" );	
 	printf( "\tf <expr>\t- (F)latten expression (in toplevel ad)\n" );
 	printf( "\th\t\t- (H)elp; This screen\n" );
-	printf( "\ti <name> <expr>\t- (I)nsert expression into toplevel ad\n" );
+	printf( "\ti <name><expr>\t- (I)nsert expression into toplevel ad\n" );
 	printf( "\tn <classad>\t- Enter (n)ew toplevel ad\n" );
-	printf( "\to\t\t- Output toplevel ad\n" );
+	printf( "\to\t\t- (O)utput toplevel ad\n" );
+/*
+	printf( "\tp <name>\t- (P)aram from config file and insert in toplevel\n" );
+*/
 	printf( "\tq\t\t- (Q)uit\n" );
 	printf( "\ts\t\t- (S)etup Condor toplevel ad\n" );
 }	
