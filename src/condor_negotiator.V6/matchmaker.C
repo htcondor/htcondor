@@ -747,7 +747,7 @@ obtainAdsFromCollector (
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
 			reevaluate_ad = false; 
-			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad) 
+			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
