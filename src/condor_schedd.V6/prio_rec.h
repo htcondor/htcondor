@@ -14,7 +14,11 @@ const 	int		INITIAL_MAX_PRIO_REC = 1024;
 typedef struct rec
 {
     PROC_ID     id;
+
+#ifdef 0
     int         prio;                           /* UPDOWN */
+#endif
+
     int         job_prio;
     int         status;
     int         qdate;

@@ -110,7 +110,7 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByPid(int);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
-	void			Agent(char*, char*, char*, int, PROC_ID*);
+	void			Agent(char*, char*, char*, char*, int, PROC_ID*);
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
@@ -176,7 +176,7 @@ class Scheduler : public Service
 	void			reaper(int, int, struct sigcontext*);
 	void			clean_shadow_recs();
 	void			preempt(int);
-	int				permission(char*, char*, PROC_ID*);
+	int				permission(char*, char*, char*, PROC_ID*);
 	shadow_rec*		StartJob(Mrec*, PROC_ID*);
 	shadow_rec*		start_std(Mrec*, PROC_ID*);
 	shadow_rec*		start_pvm(Mrec*, PROC_ID*);
