@@ -38,7 +38,7 @@ docs:: condor_##obj_name					@@\
 	cd condor_##obj_name; make html				@@\
 makefiles:: condor_##obj_name condor_##obj_name##/Makefile	@@\
 condor_##obj_name##/Makefile:					@@\
-	cd condor_##obj_name ; imake IMAKE_FLAGS		@@\
+	cd condor_##obj_name ; ../condor_imake 	@@\
 object_dir_target(condor_##obj_name)		
 #endif /* object_target */
 
@@ -615,7 +615,7 @@ compiledir##/Imakefile:	CImakefile				@@\
 	cd compiledir; ln -s ../CImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DC_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
@@ -635,7 +635,7 @@ compiledir##/Imakefile: CPPImakefile				@@\
 	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DCPP_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
@@ -655,7 +655,7 @@ compiledir##/Imakefile: FImakefile				@@\
 	cd compiledir; ln -s ../FImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 		-DFORTRAN_HAS_RECURSION=##has_recursion \	@@\
 		-DF_COMPILER=##compiler	\			@@\
 		-DFLAGS_MACRO_NAME=##flags_macro_name		@@\
@@ -803,7 +803,7 @@ really-clean::								@@\
 platform.init: platform ALWAYS				@@\
 	cp GENERIC/CheckPlatformType.c platform		@@\
 	cp Imakefile.platform_skel platform/Imakefile	@@\
-	cd platform ; imake IMAKE_FLAGS			@@\
+	cd platform ; ../condor_imake 		@@\
 	cd platform ; make directories; make depend	@@\
 platform: 						@@\
 	mkdir platform
