@@ -20,13 +20,11 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-
  
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_classad.h"
 #include "condor_string.h"
 
 #if defined(__cplusplus)
@@ -59,8 +57,8 @@ condor_isalnum(int c)
 
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
 
-int Read_config(char* config_file, ClassAd* classAd,
-		BUCKET** table, int table_size, int expand_flag)
+int Read_config( char* config_file, BUCKET** table, 
+				 int table_size, int expand_flag )
 {
   	FILE	*conf_fp;
 	char	*name, *value, *rhs;
@@ -168,41 +166,13 @@ int Read_config(char* config_file, ClassAd* classAd,
 			}
 		}  
 
-		if( op == ':' ) {
-			if( classAd != NULL ) {
-				char *evalue;
-				char *line;
-
-				if( expand_flag == EXPAND_IMMEDIATE ) {
-					evalue = strdup( value );
-				} else {
-					evalue = expand_macro( value, table, table_size );
-					if( evalue == NULL ) {
-						(void)fclose( conf_fp );
-						return( -1 );
-					}
-				}
-
-				line = (char*)MALLOC( (unsigned)(strlen(name) + strlen(evalue) + 4) );
-
-				if( line == NULL ) {
-					EXCEPT("Out of memory" );
-				}
-
-				(void)sprintf(line, "%s = %s", name, evalue);
-				FREE( evalue );
-
-				if(!(classAd->Insert(line))) {
-				  EXCEPT("Expression syntax error in <%s> line %d",
-					 config_file, ConfigLineNo );
-				}
-
-				FREE( line );
-			}
-			
-			/* insert expressions into the Configuration Table as well */
-			insert( name, value, table, table_size );
-		} else if( op == '=' ) {
+		if( op == ':' || op == '=' ) {
+				/*
+				  Yee haw!!! We can treat "expressions" and "macros"
+				  the same way: just insert them into the config hash
+				  table.  Everything now behaves like macros used to
+				  Derek Wright <wright@cs.wisc.edu> 4/11/00
+				*/
 			lower_case( name );
 
 			/* Put the value in the Configuration Table */
