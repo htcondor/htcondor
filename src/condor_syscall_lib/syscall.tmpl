@@ -1556,17 +1556,15 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-	/* get and set itimer are special switches on HPUX */
-	#if defined(HPUX) && !defined(SWITCH)
-		#if defined(LINUX) || defined(Solaris251) || defined(IRIX65) || defined(OSF1) || defined(HPUX)
-			int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
-		#else
-			int setitimer( int which, struct itimerval *value, struct itimerval *oval );
-		#endif
-
+	#if defined(LINUX) || defined(Solaris251) || defined(IRIX65) || defined(OSF1)
+		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
+		int getitimer( int which, struct itimerval *value );
+	#elif defined(HPUX)
+		/* get/set itimer are special on HPUX */
+	#else
+		int setitimer( int which, struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 	#endif
-
 }
 
 /* SYSV messages, semaphores, and shared memory */
