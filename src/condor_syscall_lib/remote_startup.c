@@ -192,6 +192,8 @@ extern volatile int InRestart;
 extern void InitFileState();
 void _condor_setup_dprintf();
 
+extern int	_condor_DebugFD;
+
 int
 #if defined(HPUX)
 _START( int argc, char *argv[], char **envp )
@@ -869,7 +871,7 @@ _condor_setup_dprintf()
 		DebugFlags = D_ALWAYS | D_NOHEADER;
 	}
 
-		// Now, initialize what FP we print to.  If we got to this
+		// Now, initialize what FD we print to.  If we got to this
 		// function, we want to use the socket back to the shadow. 
-	_condor_dprintf_init( CLIENT_LOG );
+	_condor_DebugFD = CLIENT_LOG;
 }
