@@ -1008,12 +1008,14 @@ Image::Write( const char *ckpt_file )
 								 len)) < 0)  {
 #endif
 			dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
+			SetSyscalls(scm);
 			return -1;
 		}
 	// }  // this is the matching brace to the open_url; see comment above
 
 		// Write out the checkpoint
 	if( Write(fd) < 0 ) {
+		SetSyscalls(scm);
 		return -1;
 	}
 
@@ -1021,6 +1023,7 @@ Image::Write( const char *ckpt_file )
 	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", fd );
 	if( close(fd) < 0 ) {
 		dprintf( D_ALWAYS, "Close failed!\n" );
+		SetSyscalls(scm);
 		return -1;
 	}
 	dprintf( D_ALWAYS, "Closed OK\n" );

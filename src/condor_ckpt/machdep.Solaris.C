@@ -178,6 +178,7 @@ num_segments( )
 	sprintf(buf, "/proc/%d", SYSCALL(SYS_getpid));
 	fd = SYSCALL(SYS_open, buf, O_RDWR, 0);
 	if (fd < 0) {
+		SetSyscalls(scm);
 		return -1;
 	}
 	SYSCALL(SYS_ioctl, fd, PIOCNMAP, &prmap_count);
