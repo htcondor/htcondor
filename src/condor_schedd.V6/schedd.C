@@ -126,7 +126,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 {
 	strcpy(this->id, i);
 	strcpy(peer, p);
-	cluster = id->cluster;
+	origcluster = cluster = id->cluster;
 	proc = id->proc;
 	status = M_INACTIVE;
 	shadowRec = NULL;
@@ -1697,8 +1697,10 @@ Scheduler::negotiate(int, Stream* s)
 		}
 	} else {
 		// We are out of jobs.  Stop flocking with less desirable pools.
-		Owners[owner_num].FlockLevel = which_negotiator;
-		Owners[owner_num].NegotiationTimestamp = time(0);
+		if (Owners[owner_num].FlockLevel >= which_negotiator) {
+			Owners[owner_num].FlockLevel = which_negotiator;
+			Owners[owner_num].NegotiationTimestamp = time(0);
+		}
 
 		dprintf( D_ALWAYS,
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
@@ -2145,6 +2147,11 @@ Scheduler::StartJobs()
 		}
 		dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
 				id.proc);
+			// If we're reusing a match to start another job, then cluster
+			// and proc may have changed, so we keep them up-to-date here.
+			// This is important for Scheduler::AlreadyMatched().
+		rec->cluster = id.cluster;
+		rec->proc = id.proc;
 	}
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -4890,6 +4897,8 @@ Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 	while (matches->iterate(rec) == 1) {
 		if(rec->shadowRec == shadow) {
 			rec->shadowRec = NULL;
+				// re-associate match with the original job cluster
+			rec->cluster = rec->origcluster; 
 			rec->proc = -1;
 			found = true;
 		}
