@@ -89,6 +89,9 @@ protected:
 
 	// flag to TRUE is job suspended, else FALSE
 	int job_suspended;
+	
+		/// Number of pids under this OsProc
+	int num_pids;
 };
 
 #endif
