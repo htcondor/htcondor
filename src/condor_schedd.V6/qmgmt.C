@@ -1164,7 +1164,7 @@ int mark_idle(ClassAd *job)
     job->LookupInteger(ATTR_JOB_STATUS, status);
 
     if( status != RUNNING ) {
-        return -1;
+        return 0;
     }
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -1174,7 +1174,7 @@ int mark_idle(ClassAd *job)
 
 	mark_job_stopped(&job_id);
 
-	return 0;
+	return 1;
 }
 
 void
