@@ -243,4 +243,45 @@ get_master_addr(const char* name)
 } 
 
 
+char*
+get_cm_addr( const char* name, char* config_name, int port )
+{
+	static char addr[30];
+	struct hostent* hostp;
+	char* tmp = NULL;
+
+	if( name && *name ) {
+		tmp = strdup( name );
+	} else {
+		tmp = param( config_name );
+	}
+	if( ! tmp ) {
+		return NULL;
+	} 
+	hostp = gethostbyname( tmp );
+	free( tmp );
+	if( ! hostp ) {
+		return NULL;
+	}
+	sprintf( addr, "<%s:%d>",
+			 inet_ntoa( *(struct in_addr*)(hostp->h_addr_list[0]) ),
+			 port );
+	return addr;
+}
+
+
+char*
+get_negotiator_addr(const char* name)
+{
+	return get_cm_addr( name, "NEGOTIATOR_HOST", NEGOTIATOR_PORT );
+}
+
+
+char*
+get_collector_addr(const char* name)
+{
+	return get_cm_addr( name, "COLLECTOR_HOST", COLLECTOR_PORT );
+}
+
+
 } /* extern "C" */
