@@ -79,6 +79,7 @@
 #include <sys/param.h>
 #include <values.h>
 #include <math.h>
+#include <stdarg.h>
 
 
 #endif /* System specific stuff */
