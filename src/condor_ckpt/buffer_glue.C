@@ -3,8 +3,8 @@
 #include "image.h"
 
 static BufferCache *Buffer=0;
-static BufferIsConfigured=0;
-static BufferPrefetchSize=0;
+static int BufferIsConfigured=0;
+static int BufferPrefetchSize=0;
 
 /** This shuts down buffering as the program exits */
 
