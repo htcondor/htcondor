@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id $
+# $Id: remote_pre,v 1.1.2.9 2004-06-25 01:39:40 wright Exp $
 
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
