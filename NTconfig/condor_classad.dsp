@@ -83,15 +83,7 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\src\condor_classad.V6\classad.C
-
-!IF  "$(CFG)" == "condor_classad - Win32 Debug"
-
 # SUBTRACT CPP /YX /Yc /Yu
-
-!ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
