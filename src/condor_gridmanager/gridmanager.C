@@ -51,6 +51,12 @@ struct ScheddUpdateAction {
 	int request_id;
 };
 
+struct OrphanCallback_t {
+	char *job_contact;
+	int state;
+	int errorcode;
+};
+
 // Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
@@ -78,6 +84,8 @@ template class List<char *>;
 template class Item<char *>;
 template class List<Service>;
 template class Item<Service>;
+template class List<OrphanCallback_t>;
+template class Item<OrphanCallback_t>;
 
 HashTable <PROC_ID, ScheddUpdateAction *> pendingScheddUpdates( HASH_TABLE_SIZE,
 																procIDHash );
@@ -89,6 +97,8 @@ int contactScheddTid = TIMER_UNSET;
 int contactScheddDelay;
 
 List<Service> ObjectDeleteList;
+
+List<OrphanCallback_t> OrphanCallbackList;
 
 char *gramCallbackContact = NULL;
 char *gassServerUrl = NULL;
@@ -827,6 +837,48 @@ dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
 }
 
+int
+orphanCallbackHandler()
+{
+	int rc;
+	int cluster_id;
+	int proc_id;
+	GlobusJob *this_job;
+	OrphanCallback_t *orphan;
+
+	// Remove the first element in the list
+	OrphanCallbackList.Rewind();
+	if ( OrphanCallbackList.Next( orphan ) == false ) {
+		// Empty list
+		return TRUE;
+	}
+	OrphanCallbackList.DeleteCurrent();
+
+	dprintf(D_ALWAYS,"orphanCallbackHandler: job %s, state %d\n", 
+		orphan->job_contact, orphan->state);
+	// Find the right job object
+	rc = JobsByContact.lookup( HashKey( orphan->job_contact ), this_job );
+	if ( rc != 0 || this_job == NULL ) {
+		dprintf( D_ALWAYS, 
+			"Can't find record for globus job with contact %s "
+			"on globus event %d, ignoring\n", orphan->job_contact,
+				 orphan->state );
+		free( orphan->job_contact );
+		delete orphan;
+		return TRUE;
+	}
+
+	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
+			 this_job->procID.proc );
+
+	this_job->UpdateGlobusState( orphan->state, orphan->errorcode );
+
+	free( orphan->job_contact );
+	delete orphan;
+
+	return TRUE;
+}
+
 void
 gramCallbackHandler( void *user_arg, char *job_contact, int state,
 					 int errorcode )
@@ -843,7 +895,14 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"Can't find record for globus job with contact %s "
-			"on globus event %d, ignoring\n", job_contact, state );
+			"on globus event %d, delaying\n", job_contact, state );
+		OrphanCallback_t *new_orphan = new OrphanCallback_t;
+		new_orphan->job_contact = strdup( job_contact );
+		new_orphan->state = state;
+		new_orphan->errorcode = errorcode;
+		OrphanCallbackList.Append( new_orphan );
+		daemonCore->Register_Timer( 1, (TimerHandler)&orphanCallbackHandler,
+									"orphanCallbackHandler", NULL );
 		return;
 	}
 
@@ -851,8 +910,6 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 			 this_job->procID.proc );
 
 	this_job->UpdateGlobusState( state, errorcode );
-
-	dprintf(D_FULLDEBUG,"gramCallbackHandler() returning\n");
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
