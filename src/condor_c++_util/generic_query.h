@@ -24,80 +24,60 @@
 #define __GENERIC_QUERY_H__
 
 #include "condor_classad.h"
-#include "list.h"
-#include "simplelist.h"
 #include "query_result_type.h"	
 
 class GenericQuery
 {
   public:
-	// ctor/dtor
-	GenericQuery ();
-	GenericQuery (const GenericQuery &);
-	~GenericQuery ();
-
-	// set number of categories
-	int setNumIntegerCats (const int);
-	int setNumStringCats (const int);
-	int setNumFloatCats (const int);
+		// ctor/dtor
+	GenericQuery( );
+	GenericQuery( const GenericQuery & );
+	virtual ~GenericQuery( );
 	
-	// add constraints
-	int addInteger (const int, int);
-	int addString (const int, char *);
-	int addFloat (const int, float);
-	int addCustom (char *);
+		// constraints
+	void clearConstraint( );
+	int  addConstraint( const char *expr, OpKind op=LOGICAL_OR_OP );
+	int  addConstraint( ExprTree *expr, OpKind op=LOGICAL_OR_OP );
+	void setConstraint( ExprTree *expr );
 
-	// clear constraints
-	int clearInteger (const int);
-	int clearString (const int);
-	int clearFloat (const int);
-	int clearCustom (void);
+		// projection attributes
+	void clearProjectionAttrs( );
+	void addProjectionAttr( const char* );
+	void setProjectionAttrs( ExprList * );
 
-	// set keyword lists
-	void setIntegerKwList (char **);
-	void setStringKwList (char **);
-	void setFloatKwList (char **);
-	
-	// make the query Attrlist (N.B. types *not* set)
-	int makeQuery (ClassAd &);
+		// hints for collection identification
+	void clearCollIdentHints( );
+	void addCollIdentHint( const char*, ExprTree* );
+	void addCollIdentHint( const char*, int );
+	void addCollIdentHint( const char*, double );
+	void addCollIdentHint( const char*, const char* );
+	void addCollIdentHint( const char*, bool );
+	void setCollIdentHints( ClassAd* );
 
-	// overloaded operators
-    // friend ostream &operator<< (ostream &, GenericQuery &);  // display
-    // GenericQuery   &operator=  (GenericQuery &);             // assignment
+		// hints for ranking
+	void clearRankHints( );
+	void addRankHint( const char* );
+	void setRankHints( ExprList * );
+
+		// required results
+	void wantPreamble( bool=true );
+	void wantResults( bool=true );
+	void wantSummary( bool=true );
+
+		// create the query ad
+	ClassAd *makeQueryAd( );
+	bool makeQueryAd( ClassAd& );
+
+  protected:
+	ExprTree *constraint;
+	ExprList *project;
+	ClassAd  *collIdentHints;
+	ExprList *rankHints;
+	bool	 preamble, results, summary;
+	Source	 src;
 
   private:
-	// to store the number of categories of each type
-	int integerThreshold;
-	int stringThreshold;
-	int floatThreshold;
-
-	// keyword lists
-	char **integerKeywordList;
-	char **stringKeywordList;
-	char **floatKeywordList;
-
-	// pointers to store the arrays of Lists neessary to store the constraints
-	SimpleList<int>   *integerConstraints;
-	SimpleList<float> *floatConstraints;
-	List<char> 		  *stringConstraints;
-	List<char> 		  customConstraints;
-
-	// helper functions
-	void clearQueryObject     (void);
-    void clearStringCategory  (List<char> &);
-    void clearIntegerCategory (SimpleList<int> &);
-    void clearFloatCategory   (SimpleList<float> &);
-    void copyQueryObject      (GenericQuery &);
-    void copyStringCategory   (List<char> &, List<char> &);
-    void copyIntegerCategory  (SimpleList<int> &, SimpleList<int> &);
-    void copyFloatCategory    (SimpleList<float>&, SimpleList<float>&);
+	bool 	collIdHints;
 };
 
 #endif
-
-
-
-
-
-
-
