@@ -479,8 +479,10 @@ GetJobAd( int cluster_id, int proc_id )
 			errno = terrno;
 			return NULL;
 		}
-		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+//		ClassAd *ad = new ClassAd;
+//		assert( ad->get(*qmgmt_sock) );
+		ClassAd *ad;								// NAC
+		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -507,8 +509,10 @@ GetJobByConstraint( char *constraint )
 			errno = terrno;
 			return NULL;
 		}
-		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+//		ClassAd *ad = new ClassAd;
+//		assert( ad->get(*qmgmt_sock) );
+		ClassAd *ad;								// NAC
+		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -536,8 +540,10 @@ GetNextJob( int initScan )
 			return NULL;
 		}
 		
-		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+//		ClassAd *ad = new ClassAd;
+//		assert( ad->get(*qmgmt_sock) );
+		ClassAd *ad;								// NAC
+		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -566,8 +572,10 @@ GetNextJobByConstraint( char *constraint, int initScan )
 			return NULL;
 		}
 
-		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+//		ClassAd *ad = new ClassAd;
+//		assert( ad->get(*qmgmt_sock) );
+		ClassAd *ad;								// NAC
+		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
