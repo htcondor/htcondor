@@ -232,6 +232,7 @@ sub usage {
     print "Usage: condor_submit_dag [options] filename\n";
     print "  where filename is the name of your DAG input file\n";
     print "  and where [options] is one or more of:\n";
+    print "    -dagman             (Use an alternate condor_dagman executable)\n";
     print "    -no_submit          (DAG is not submitted to Condor)\n";
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
