@@ -161,7 +161,7 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="UNKNOWN"
+       _cv_linux_distro="RH-UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
@@ -173,7 +173,7 @@ elif test $os = "Linux" ; then
      * )
        AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-       _cv_linux_distro="UNKNOWN"
+       _cv_linux_distro="SuSE-UNKNOWN"
        ;;
     esac
   else
