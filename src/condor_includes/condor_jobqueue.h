@@ -2,7 +2,6 @@
 #define _JOB_QUEUE_H
 
 
-#include "condor_fix_timeval.h"
 #include "_condor_fix_resource.h"
 #include "condor_xdr.h"
 #include <ndbm.h>
