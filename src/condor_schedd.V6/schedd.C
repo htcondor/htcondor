@@ -186,6 +186,7 @@ Scheduler::Scheduler()
     storedMatches = new HashTable < int, ExtArray<match_rec*> *> 
                                                   ( 5, mpiHashFunc );
 	sent_shadow_failure_email = FALSE;
+	ManageBandwidth = false;
 }
 
 Scheduler::~Scheduler()
@@ -1618,7 +1619,6 @@ find_idle_sched_universe_jobs( ClassAd *job )
 	int	max_hosts;
 	int	universe;
 	PROC_ID id;
-	bool already_found = false;
 
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
@@ -1669,6 +1669,7 @@ Scheduler::StartJobs()
 {
 	PROC_ID id;
 	match_rec *rec;
+	bool ReactivatingMatch;
     
         /* Todd also added this; watch for conflict! */
     startJobsDelayBit = FALSE;
@@ -1704,6 +1705,7 @@ Scheduler::StartJobs()
 		// This is the case we want to try and start a job.
 		id.cluster = rec->cluster;
 		id.proc = rec->proc; 
+		ReactivatingMatch = (id.proc == -1);
 		if(!Runnable(&id))
 		// find the job in the cluster with the highest priority
 		{
@@ -1718,6 +1720,10 @@ Scheduler::StartJobs()
 			Relinquish(rec);
 			DelMrec(rec);
 			continue;
+		}
+
+		if (ManageBandwidth && ReactivatingMatch) {
+			RequestBandwidth(id.cluster, id.proc, rec);
 		}
 
 		if(!(rec->shadowRec = StartJob(rec, &id)))
@@ -1775,6 +1781,81 @@ Scheduler::StartJobs()
 	daemonCore->Reset_Timer(startjobsid,SchedDInterval);
 
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
+}
+
+
+void
+Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
+{
+	ClassAd request;
+	char buf[100], owner[100], user[100], source[100], dest[100], *str;
+	int executablesize = 0, universe = VANILLA, nice_user = 0;
+
+	sprintf(buf, "%s = \"ReactivateClaim\"", ATTR_TRANSFER_TYPE);
+	request.Insert(buf);
+	GetAttributeInt(cluster, proc, ATTR_NICE_USER, &nice_user);
+	GetAttributeString(cluster, proc, ATTR_OWNER, owner);
+	sprintf(user, "%s%s@%s", (nice_user) ? "nice-user." : "", owner,
+			UidDomain);
+	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
+	request.Insert(buf);
+	sprintf(buf, "%s = 1", ATTR_FORCE);
+	request.Insert(buf);
+	strcpy(dest, rec->peer+1);
+	str = strchr(dest, ':');
+	*str = '\0';
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, dest);
+	request.Insert(buf);
+	GetAttributeInt(cluster, proc, ATTR_EXECUTABLE_SIZE, &executablesize);
+	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, rec->peer);
+	request.Insert(buf);
+
+	SafeSock sock;
+	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
+	if (!sock.connect(Negotiator->addr())) {
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		return;
+	}
+	sock.put(REQUEST_NETWORK);
+
+	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
+	float cputime = 1.0;
+	GetAttributeFloat(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, &cputime);
+	if (universe == STANDARD && cputime > 0.0) {
+		int ckptsize;
+		GetAttributeInt(cluster, proc, ATTR_IMAGE_SIZE, &ckptsize);
+		ckptsize -= executablesize;	// imagesize = ckptsize + executablesize
+		sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
+				(float)ckptsize*1024.0);
+		request.Insert(buf);
+		if ((GetAttributeString(cluster, proc,
+							 ATTR_LAST_CKPT_SERVER, source)) == 0) {
+			struct hostent *hp = gethostbyname(source);
+			if (!hp) {
+				dprintf(D_ALWAYS, "DNS lookup for %s %s failed!\n",
+						ATTR_LAST_CKPT_SERVER, source);
+				return;
+			}
+			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
+					inet_ntoa(*((struct in_addr *)hp->h_addr)));
+		} else {
+			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
+					inet_ntoa(*(my_sin_addr())));
+		}
+		request.Insert(buf);
+		sock.put(2);
+		request.put(sock);
+	} else {
+		sock.put(1);
+	}
+
+	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
+			(float)executablesize*1024.0);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*(my_sin_addr())));
+	request.Insert(buf);
+	request.put(sock);
+	sock.end_of_message();
 }
 
 void
@@ -1842,10 +1923,7 @@ void Scheduler::StartJobHandler() {
 	// Actually fork the shadow
 	//-------------------------------
 
-	char	*argv[7];
-	char	cluster[10], proc[10];
 	int		pid;
-	int		lim;
 
 #ifdef CARMI_OPS
 	struct shadow_rec *srp;
@@ -2046,10 +2124,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	char			args[128];
 	char			cluster[10], proc_str[10];
 	int				pid;
-	int				i, lim;
 	int				shadow_fd;
 	char			out_buf[80];
-	char			**ptr;
 	struct shadow_rec *srp;
 	int	 c;     	// current hosts
 	int	 old_proc;  // the class in the cluster.  
@@ -2519,12 +2595,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
 							env) < 0) {
-		sprintf(env, "");
+		env[0] = '\0';
 	}
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
 							args) < 0) {
-		sprintf(args, "");
+		args[0] = '\0';
 	}
 	sprintf(job_args, "%s %s", a_out_name, args);
 
@@ -3043,8 +3119,8 @@ void
 Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 #if !defined(WIN32)
-	int fd, notification;
-	char owner[20], url[25], buf[80];
+	int notification;
+	char owner[20], buf[80];
 	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
@@ -3322,7 +3398,7 @@ Scheduler::child_exit(int pid, int status)
 }
 
 void
-Scheduler::kill_zombie(int pid, PROC_ID* job_id )
+Scheduler::kill_zombie(int, PROC_ID* job_id )
 {
 #if 0
 		// This always happens now, no need for a dprintf() 
@@ -3609,6 +3685,18 @@ Scheduler::Init()
 		  MaxExceptions = atoi(tmp);
 		  free(tmp);
 	}
+
+	 tmp = param("MANAGE_BANDWIDTH");
+	 if (!tmp) {
+		 ManageBandwidth = false;
+	 } else {
+		 if (tmp[0] == 'T' || tmp[0] == 't') {
+			 ManageBandwidth = true;
+		 } else {
+			 ManageBandwidth = false;
+		 }
+		 free(tmp);
+	 }
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code

@@ -150,6 +150,7 @@ class Scheduler : public Service
 	void			send_alive();
 	void			StartJobHandler();
 	bool			WriteAbortToUserLog(PROC_ID job_id);
+	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
 	
   private:
 	
@@ -292,6 +293,7 @@ class Scheduler : public Service
 	int				MaxFlockLevel;
     int         	aliveInterval;             // how often to broadcast alive
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
+	bool			ManageBandwidth;
 
         // Used to push matches at the mpi shadow:
     int pushMPIMatches( char * shadow, ExtArray<match_rec*> *MpiMatches, 
