@@ -228,6 +228,29 @@ LookupBool( const char *name, int &value )
 }
 
 int ClassAd::
+LookupBool( const char *name, bool &value )
+{
+	int   intVal;
+	bool  boolVal;
+	int haveBool;
+	string sName;
+
+	sName = string(name);
+
+	if (EvaluateAttrBool(name, boolVal)) {
+		haveBool = true;
+		value = boolVal ? true : false;
+	} else if (EvaluateAttrInt(name, intVal)) {
+		haveBool = true;
+		value = (intVal != 0) ? true : false;
+	} else {
+		haveBool = false;
+		value = false;
+	}
+	return haveBool;
+}
+
+int ClassAd::
 EvalString( const char *name, class ClassAd *target, char *value )
 {
 	string strVal;

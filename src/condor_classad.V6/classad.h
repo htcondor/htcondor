@@ -496,6 +496,7 @@ e		*/
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
         int         LookupBool(const char *, int &);
+        int         LookupBool(const char *, bool &);
 
 		// evaluate values in classads
 		int         EvalString (const char *, class ClassAd *, char *);
