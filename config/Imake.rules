@@ -1,5 +1,7 @@
 #if IS_MIPS_ULTRIX43
 #define IMAKE_FLAGS	-I../../config -Dultrix43a -s Makefile
+#elif IS_SUN4M_SOLARIS
+#define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS -s Makefile
 #else
 #define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
