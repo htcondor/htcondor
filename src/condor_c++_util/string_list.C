@@ -90,3 +90,20 @@ StringList::contains( const char *st )
 	}
 	return FALSE;
 }
+
+
+BOOLEAN
+StringList::substring( const char *st )
+{
+	char    *x;
+	int len;
+	
+	strings.Rewind ();
+	while( x = strings.Next() ) {
+		len = strlen(x);
+		if( strncmp(st, x, len) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}

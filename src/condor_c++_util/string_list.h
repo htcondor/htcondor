@@ -39,6 +39,7 @@ public:
 	~StringList ();
 	void initializeFromString (char *);
 	BOOLEAN contains( const char * );
+	BOOLEAN substring( const char * );
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	char *next (void) { return strings.Next(); }
