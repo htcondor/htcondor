@@ -1414,7 +1414,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		} // if (will_enable_enc)
 
 		
-		if (new_session) {
+		if (new_session && retval) {
 			// receive a classAd containing info such as: well, nothing yet
 			sock->encode();
 			sock->eom();
