@@ -228,8 +228,7 @@ bool parse (char *filename, Dag *dag) {
 					new Script( post, rest, job );
 				if( job->_scriptPost == NULL ) {
 					debug_error( 1, DEBUG_SILENT,
-								 "ERROR: out of memory (%s() in %s:%d)!\n",
-								 __FUNCTION__, __FILE__, __LINE__ );
+								 "ERROR: out of memory\n");
 				}
 			}
             else {
@@ -237,8 +236,7 @@ bool parse (char *filename, Dag *dag) {
 					new Script( post, rest, job );
 				if( job->_scriptPre == NULL ) {
 					debug_error( 1, DEBUG_SILENT,
-								 "ERROR: out of memory (%s() in %s:%d)!\n",
-								 __FUNCTION__, __FILE__, __LINE__ );
+								 "ERROR: out of memory\n");
 				}
 			}
         }

@@ -39,8 +39,7 @@ ScriptQ::ScriptQ( Dag* dag )
     _waitingQueue = new Queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
-        EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
-                __FUNCTION__, __FILE__, __LINE__ );
+        EXCEPT( "ERROR: out of memory!\n");
     }
 
  	// register daemonCore reaper for PRE/POST script completion
