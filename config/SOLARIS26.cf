@@ -1,5 +1,8 @@
 /* Things that are specific to Solaris 2.6 */
 
+#define NEEDS_64BIT_SYSCALLS    YES
+#define NEEDS_64BIT_STRUCTS YES
+
 #define		IS_SOLARIS26		YES
 #define		ImakeOpsysFlag		-DIS_SOLARIS26
 

@@ -1,5 +1,9 @@
 /* Things that are specific to Solaris 2.5.1 */
 
+#define NEEDS_64BIT_SYSCALLS    NO
+#define NEEDS_64BIT_STRUCTS NO
+
+
 #define		IS_SOLARIS251		YES
 #define		ImakeOpsysFlag		-DIS_SOLARIS251
 
