@@ -148,7 +148,7 @@ int Stream::code(
 	return FALSE;	/* will never get here	*/
 }
 
-
+#ifndef WIN32		// MS VC++ does not understand long long's
 int Stream::code(
 	long long	&l
 	)
@@ -163,7 +163,6 @@ int Stream::code(
 	return FALSE;	/* will never get here	*/
 }
 
-
 int Stream::code(
 	unsigned long long	&l
 	)
@@ -177,7 +176,7 @@ int Stream::code(
 
 	return FALSE;	/* will never get here	*/
 }
-
+#endif
 
 int Stream::code(
 	short	&s
@@ -712,6 +711,7 @@ static unsigned long ntohL(unsigned long netint)
 }
 
 // no hton function is provided for ints > 4 bytes by any OS.
+#ifndef WIN32		// MS VC++ does not understand long long's
 static unsigned long long htonLL(unsigned long long hostint)
 {
 	unsigned long long netint;
@@ -736,6 +736,7 @@ static unsigned long long ntohLL(unsigned long long netint)
 	}
 	return hostint;
 }
+#endif
 
 int Stream::put(
 	long	l
@@ -813,6 +814,7 @@ int Stream::put(
 	return TRUE;
 }
 
+#ifndef WIN32		// MS VC++ does not understand long long's
 int Stream::put(
 	long long	l
 	)
@@ -888,7 +890,7 @@ int Stream::put(
 
 	return TRUE;
 }
-
+#endif
 
 
 int Stream::put(
@@ -1273,6 +1275,7 @@ int Stream::get(
 	return TRUE;
 }
 
+#ifndef WIN32		// MS VC++ does not understand long long's
 int Stream::get(
 	long long	&l
 	)
@@ -1363,7 +1366,7 @@ int Stream::get(
     NETWORK_TRACE("get long long " << l);
 	return TRUE;
 }
-
+#endif
 
 
 int Stream::get(
