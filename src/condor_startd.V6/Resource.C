@@ -449,13 +449,6 @@ Resource::init_classad( void )
 
 
 void
-Resource::timeout_classad( void )
-{
-	publish( r_classad, A_PUBLIC | A_TIMEOUT );
-}
-
-
-void
 Resource::refresh_classad( amask_t mask )
 {
 	if( ! r_classad ) {
