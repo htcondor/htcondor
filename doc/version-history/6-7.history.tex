@@ -37,6 +37,8 @@ numerics and underscores.
 if it encounters a double run of the same node job (set the
 \Expr{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} parameter to true to do this).
 
+\item Added Condor-C: the "condor" grid\_type.  Condor-C allows jobs to be handed from one \Condor{schedd} to another \Condor{schedd}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -56,6 +58,9 @@ when aborting a DAG.
   Now, if either \Attr{stream\_output} or \Attr{stream\_error} are set
   to true in the job submit description file, Condor will transfer any
   other output but will not attempt to transfer back STDOUT or STDERR.
+
+\item The Condor user log library (libcondorapi) now correctly handles
+  execute events that lack a hostname.
 
 \end{itemize}
 
