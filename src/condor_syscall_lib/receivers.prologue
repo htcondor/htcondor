@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/resource.h>
+#include "_condor_fix_resource.h"
 #include <sys/utsname.h>
 
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
