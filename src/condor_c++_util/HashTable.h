@@ -30,6 +30,7 @@ class HashTable {
 
   int insert(const Index &index, const Value &value);
   int lookup(const Index &index, Value &value);
+  int lookup(const Index &index, Value* &value);
   int getNext(Index &index, void *current, Value &value,
 	      void *&next);
   int remove(const Index &index);  
@@ -114,6 +115,34 @@ int HashTable<Index,Value>::lookup(const Index &index, Value &value)
 #endif
     if (bucket->index == index) {
       value = bucket->value;
+      return 0;
+    }
+    bucket = bucket->next;
+  }
+
+#ifdef DEBUGHASH
+  dump();
+#endif
+
+  return -1;
+}
+
+// This lookup() is the same as above, but it expects (and returns) a
+// _pointer_ reference to the value.  
+
+template <class Index, class Value>
+int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
+{
+  int idx = hashfcn(index, tableSize);
+
+  HashBucket<Index, Value> *bucket = ht[idx];
+  while(bucket) {
+#ifdef DEBUGHASH
+    cerr << "%%  Comparing " << *(long *)&bucket->index
+         << " vs. " << *(long *)index << endl;
+#endif
+    if (bucket->index == index) {
+      value = (Value *) &(bucket->value);
       return 0;
     }
     bucket = bucket->next;
