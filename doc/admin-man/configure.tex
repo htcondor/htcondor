@@ -1474,6 +1474,30 @@ These settings affect the \Condor{shadow}
   described above in section~\ref{param:SubsysDebug} as
   \Macro{SUBSYS\_DEBUG}.
 
+\item[\Macro{COMPRESS\_PERIODIC\_CKPT}]
+  \label{param:CompressPeriodicCkpt} This boolean parameter specifies
+  whether the shadow should instruct applications to compress periodic
+  checkpoints (when possible).  The default is false;
+
+\item[\Macro{COMPRESS\_VACATE\_CKPT}]
+  \label{param:CompressVacateCkpt} This boolean parameter specifies
+  whether the shadow should instruct applications to compress vacate
+  checkpoints (when possible).  The default is false;
+
+\item[\Macro{PERIODIC\_MEMORY\_SYNC}] \label{param:PeriodicMemorySync}
+  This boolean parameter specifies whether the shadow should instruct
+  applications to commit dirty memory pages to swap space during a
+  periodic checkpoint.  The default is false.  This potentially
+  reduces the number of dirty memory pages at vacate time, thereby
+  reducing swapping activity on the remote machine.
+
+\item[\Macro{SLOW\_CKPT\_SPEED}] \label{param:SlowCkptSpeed}  This
+  parameter specifies the speed at which vacate checkpoints should be
+  written, in kilobytes per second.  If zero (the default), vacate
+  checkpoints are written as fast as possible.  Writing vacate
+  checkpoints slowly can avoid overwhelming the remote machine with
+  swapping activity.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
