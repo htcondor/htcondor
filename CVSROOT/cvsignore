@@ -1,0 +1,14 @@
+Makefile
+*.lib
+*.pch
+*.idb
+*.sbr
+*.bsc
+*.ncb
+*.opt
+*.plg
+*.pdb
+*.ilk
+*.eps
+html
+*.html
