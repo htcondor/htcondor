@@ -1,3 +1,10 @@
+2/28/01 V6_3-condor-g-branch
+	A branch for Condor-G development in anticipation of a release
+	in the near future.  Branched from the end of the V6_3-branch
+	at 5:45pm on 2/28/01.  Only Condor-G development should go on
+	on this branch, and it should be merged back into the regular
+	V6_3-branch at the appropriate time.
+
 12/22/00 V6_3-post-merge-V6_2-merge-2
 	The state of the V6_3-branch after merging in the V6_2-branch
 	as tagged at V6_2-merge-2.
