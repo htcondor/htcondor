@@ -195,7 +195,7 @@ gt4GramCallbackHandler( void *user_arg, const char *job_contact,
 
 	dprintf( D_ALWAYS, "(%d.%d) gram callback: state %s, failure %s\n",
 			 this_job->procID.cluster, this_job->procID.proc, state,
-			 failure ? failure : NULL );
+			 failure ? failure : "(null)" );
 
 	this_job->GramCallback( state, failure );
 }
