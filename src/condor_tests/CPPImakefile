@@ -28,6 +28,11 @@ CBUILD($(CC),job_core-cpp_exception_std,C)
 RUN(job_core-cpp_exception_std)
 TESTCLASS(job_core-cpp_exception_std,quick)
 
+DESC(job_core-cpp_mem-alloc_std,"Memory allocation and constructors")
+CBUILD($(CC),job_core-cpp_mem-alloc_std,C)
+RUN(job_core-cpp_mem-alloc_std)
+TESTCLASS(job_core-cpp_mem-alloc_std,quick)
+
 
 /****************************
  * Remote System Calls
