@@ -721,7 +721,7 @@ Dag::SubmitReadyJobs()
 
         // Sleep for one second here, so we can be sure that this submit
 		// event is unambiguously later than the termination event of the
-		// previous job, given that the jogs only have a resolution of
+		// previous job, given that the logs only have a resolution of
 		// one second.  (Because of the new feature of allowing separate
 		// logs for each job, we can't just rely on the physical order
 		// in a single log file.)  wenger 2003-04-12.
@@ -735,7 +735,6 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	//--> DAP
 	if (job->job_type == Job::CONDOR_JOB){
 	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
 			job->GetJobName() );
@@ -744,7 +743,6 @@ Dag::SubmitReadyJobs()
 	  debug_printf( DEBUG_VERBOSE, "Submitting DaP Job %s ...\n",
 			job->GetJobName() );
 	}
-	//<-- DAP
 
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
@@ -777,11 +775,10 @@ Dag::SubmitReadyJobs()
       helper = NULL;
     }
 #endif //BUILD_HELPER
-    //--> DAP
+
     if (job->job_type == Job::CONDOR_JOB){
       if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName(),
                            job->varNamesFromDag, job->varValsFromDag ) ) {
-	// if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
 	job->_Status = Job::STATUS_ERROR;
@@ -794,7 +791,6 @@ Dag::SubmitReadyJobs()
     
     else if (job->job_type == Job::DAP_JOB) {
       if( ! dap_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
-      //if( ! dap_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
 	job->_Status = Job::STATUS_ERROR;
@@ -803,17 +799,17 @@ Dag::SubmitReadyJobs()
 	// the problem might be specific to that job, so keep submitting...
 	return SubmitReadyJobs();
       }
-    }//<-- DAP
-
+    }
 
     // append job to the submit queue so we can match it with its
     // submit event once the latter appears in the Condor job log
-    _submitQ->enqueue( job );
+    if( _submitQ->enqueue( job ) == -1 ) {
+		debug_printf( DEBUG_QUIET, "ERROR: _submitQ->enqueue() failed!\n" );
+	}
 
     job->_Status = Job::STATUS_SUBMITTED;
     _numJobsSubmitted++;
     
-    //--> DAP
     if (job->job_type == Job::CONDOR_JOB){
 	debug_printf( DEBUG_VERBOSE, "\tassigned Condor ID (%d.%d.%d)\n",
 		      condorID._cluster, condorID._proc, condorID._subproc );
@@ -822,8 +818,6 @@ Dag::SubmitReadyJobs()
       debug_printf( DEBUG_VERBOSE, "\tassigned DaP ID (%d)\n",
 		    condorID._cluster);
     }
-    //<-- DAP
-
     
     return SubmitReadyJobs() + 1;
 }
