@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.2.5 2004-12-23 21:50:59 wright Exp $
+# $Id: remote_pre.pl,v 1.1.2.6 2005-01-04 19:27:34 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -79,8 +79,21 @@ mkdir( "$BaseDir/local" ) || die "Can't mkdir $BaseDir/local: $!\n";
 mkdir( "$BaseDir/condor" ) || die "Can't mkdir $BaseDir/condor: $!\n";
 
 print "RUNNING condor_configure\n";
-$conf = &verbose_system("$configure --make-personal-condor --local-dir=$BaseDir/local --install=$reltar --install-dir=$BaseDir/condor");
-($conf == 0) || die "Problem installing Personal Condor. Return val $conf\n";
+
+$configure_cmd="$configure --make-personal-condor --local-dir=$BaseDir/local --install=$reltar --install-dir=$BaseDir/condor --verbose";
+open( CONF, "$configure_cmd|" ) || 
+    die "Can't open $configure as a pipe: $!\n";
+while( <CONF> ) {
+    print;
+}
+close( CONF );
+if( $? ) {
+    die "Problem installing Personal Condor: condor_configured returned $?\n";
+}
+print "condor_configure completed successfully\n";
+
+
+print "Modifying local config file\n";
 
 rename( "$BaseDir/local/condor_config.local",
 	"$BaseDir/local/condor_config.local.orig" )
@@ -192,36 +205,3 @@ close PIDFILE;
 # Give the master time to start before jobs are submitted.
 print "Sleeping for 30 seconds to give the master time to start.\n";
 sleep 30;
-
-
-sub verbose_system {
-
-  my @args = @_;
-  my $rc = 0xffff & system @args;
-
-  printf "system(%s) returned %#04x: ", @args, $rc;
-
-  if ($rc == 0) {
-   print "ran with normal exit\n";
-   return $rc;
-  }
-  elsif ($rc == 0xff00) {
-   print "command failed: $!\n";
-   return $rc;
-  }
-  elsif (($rc & 0xff) == 0) {
-   $rc >>= 8;
-   print "ran with non-zero exit status $rc\n";
-   return $rc;
-  }
-  else {
-   print "ran with ";
-   if ($rc &   0x80) {
-       $rc &= ~0x80;
-       print "coredump from ";
-   return $rc;
-   }
-   print "signal $rc\n"
-  }
-}
-
