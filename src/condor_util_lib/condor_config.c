@@ -51,7 +51,6 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif LINT
 
-#define TABLESIZE 113
 BUCKET	*ConfigTab[TABLESIZE];
 
 char	*expand_macro(), *lookup_macro(), *param();

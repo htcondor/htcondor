@@ -14,6 +14,7 @@ typedef struct bucket {
 */
 #define EXPAND_LAZY         1
 #define EXPAND_IMMEDIATE    2
+#define TABLESIZE 113
 
 #if defined(__cplusplus)
 extern "C" {
