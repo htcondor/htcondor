@@ -94,4 +94,4 @@ condor_kill: kill.C
 	g++ -o condor_kill kill.C -I../condor_c++_util
 
 clean::
-	rm -f condor_kill condor_master_on
+	rm -f condor_kill condor_master_on *.o
