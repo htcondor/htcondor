@@ -7,6 +7,63 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+3/16/04 V6_7-pre-merge-V6_6-doc-merge-3
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-3.
+
+3/16/04 V6_6-doc-merge-3
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  Previous merge which could
+    have used V6_6-doc-merge-2 did NOT happen.  More files have
+    been changed, so assigning a new tag, to be used if we ever
+    merge V6_6-branch into V6_7-branch again.
+
+3/9/04 V6_6-doc-merge-2
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.
+
+3/3/04 V6_6-post-merge-V6_6_1-doc-merge-1
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_1-branch as tagged V6_6_1-doc-merge-1.
+
+3/3/04 V6_6-pre-merge-V6_6_1-doc-merge-1
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_1-branch as tagged V6_6_1-doc-merge-1.
+
+3/3/04 V6_6_1-doc-merge-1
+    The state of the doc directory in V6_6_1-branch before a 
+    merge into the V6_6-branch.
+
+02/16/04 V6_6-cdf-branch
+   A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
+   This will hold various changed made for CDF, some of which are new
+   features.
+
+2/13/04 V6_6_1-branch
+    A release branch for the 6.6.1 manual.  Created from the
+    V6_6_1-root tag.  Any changes to the 6.6.1 manual should be done
+    here, and the V6_6-branch can be used for 6.6.2 and future work. 
+
+1/22/04 V6_6-post-merge-V6_6_0-doc-merge-2
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_0-branch as tagged V6_6_0-doc-merge-2.
+
+1/22/04 V6_6-pre-merge-V6_6_0-doc-merge-2
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_0-branch as tagged V6_6_0-doc-merge-2.
+
+1/22/04  V6_6_0-doc-merge-2
+    The state of the doc directory in V6_6_0-branch before a hopefully,
+    last merge into the V6_6-branch.
+
+12/23/03 V6_6-full_redhat9_port-branch 
+   A new branch off the end of the V6_6-branch for the redhat 9 full port.
+   Created from the V6_6-full_redhat9_port-root tag.  Includes the
+   doc directory.
+
+12/23/03 V6_6-full_redhat9_port-root
+    The state of the V6_6-branch on 12/23/03. This is the root tag
+    for the V6_6-full_redhat9_port-branch tag and subsequent branch.
 
 12/19/03 V6_7-post-merge-V6_6-doc-merge-1
     The state of the doc directory in V6_7-branch after merging
@@ -29,6 +86,11 @@
     changes from the V6_6_0-branch as tagged V6_6_0-doc-merge-1.
     Note naming change from previous tags in this file, so this
     tag correctly follows our conventions.
+
+12/17/03 V6_6_0-doc-merge-1
+    The state of the doc directory in V6_6_0-branch before merging
+    into the V6_6-branch.  Also a tag to the re-re-release of the
+    6.6.0 manual.
 
 12/17/03 V6_6_0-doc-merge-1
     The state of the doc directory in V6_6_0-branch before merging
