@@ -351,8 +351,6 @@ ReadUserLog::
 int ReadUserLog::
 initialize (const char *file)
 {	
-	int fd;
-
 	if ((fd = open (file, O_RDONLY, 0)) == -1)
 	{
 		EXCEPT ("open(%s)", file);
