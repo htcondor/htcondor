@@ -3,7 +3,7 @@
 #include "my_username.h"
 
 char *
-my_username( int uuid = 0 ) {
+my_username( int uuid ) {
 #if defined(WIN32)
    char username[UNLEN+1];
    unsigned long usernamelen = UNLEN+1;
