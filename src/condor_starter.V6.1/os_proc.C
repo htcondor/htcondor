@@ -33,6 +33,7 @@
 #include "condor_attributes.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
+#include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "condor_distribution.h"
@@ -44,10 +45,10 @@ extern CStarter *Starter;
 
 /* OsProc class implementation */
 
-OsProc::OsProc()
+OsProc::OsProc( ClassAd* ad )
 {
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
-	JobAd = NULL;
+	JobAd = ad;
 	JobPid = Cluster = Proc = -1;
 	exit_status = -1;
 	requested_exit = false;
@@ -63,6 +64,7 @@ OsProc::~OsProc()
 		free( job_iwd );
 	}
 }
+
 
 int
 OsProc::StartJob()
@@ -96,6 +98,8 @@ OsProc::StartJob()
 				 ATTR_JOB_CMD );
 		return 0;
 	}
+
+	initKillSigs();
 
 		// // // // // // 
 		// Arguments
@@ -347,6 +351,70 @@ OsProc::StartJob()
 }
 
 
+void
+OsProc::initKillSigs( void )
+{
+	int sig;
+
+	sig = findKillSig( ATTR_KILL_SIG );
+	if( sig > 0 ) {
+		soft_kill_sig = sig;
+	} else {
+		soft_kill_sig = SIGTERM;
+	}
+
+	sig = findKillSig( ATTR_REMOVE_KILL_SIG );
+	if( sig > 0 ) {
+		rm_kill_sig = sig;
+	} else {
+		rm_kill_sig = SIGTERM;
+	}
+
+	const char* tmp = signalName( soft_kill_sig );
+	dprintf( D_FULLDEBUG, "KillSignal: %d (%s)\n", soft_kill_sig, 
+			 tmp ? tmp : "Unknown" );
+
+	tmp = signalName( rm_kill_sig );
+	dprintf( D_FULLDEBUG, "RmKillSignal: %d (%s)\n", rm_kill_sig, 
+			 tmp ? tmp : "Unknown" );
+}
+
+
+int
+OsProc::findKillSig( const char* attr_name )
+{
+	if( ! JobAd ) {
+		return -1;
+	}
+	char* name = NULL;
+
+	ExprTree *tree, *rhs;
+	tree = JobAd->Lookup( attr_name );
+	if(  tree ) {
+		rhs = tree->RArg();
+		if( ! rhs ) {
+				// invalid!
+			return -1;
+		}
+		switch( rhs->MyType() ) {
+		case LX_STRING:
+				// if the ad has a string version, translate it to the 
+				// local number we'll need to use.
+			name = ((String *)rhs)->Value();
+			return signalNumber( name );
+			break;
+		case LX_INTEGER:
+			return ((Integer *)rhs)->Value();
+			break;
+		default:
+			EXCEPT( "Unknown type of ClassAd expression in findKillSig!" );
+			break;
+		}
+	}
+	return -1;
+}
+
+
 int
 OsProc::JobCleanup( int pid, int status )
 {
@@ -497,7 +565,7 @@ OsProc::ShutdownGraceful()
 		Continue();
 
 	requested_exit = true;
-	daemonCore->Send_Signal(JobPid, SIGTERM);
+	daemonCore->Send_Signal(JobPid, soft_kill_sig);
 	return false;	// return false says shutdown is pending	
 }
 

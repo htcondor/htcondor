@@ -34,7 +34,7 @@ class OsProc : public UserProc
 {
 public:
 		/// Constructor
-	OsProc();
+	OsProc( ClassAd* jobAd );
 
 		/// Destructor
 	virtual ~OsProc();
@@ -98,6 +98,12 @@ protected:
 
 	bool dumped_core;
 	char* job_iwd;
+
+	void initKillSigs( void );
+	int findKillSig( const char* attr_name );
+
+	int soft_kill_sig;
+	int rm_kill_sig;
 };
 
 #endif
