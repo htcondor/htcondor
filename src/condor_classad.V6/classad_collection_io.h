@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 //----------------------------------------------------------------------
 /// A handle to a Collection View
@@ -382,6 +382,6 @@ class CollectionIOServer : public CollectionIO {
     
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif // CLASSAD_COLLECTION_IO
