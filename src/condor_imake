@@ -40,6 +40,22 @@ fi
 LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
 
+# advertise Java only if we have all the necessary tools
+`which java >& /dev/null`
+HasJava=$?
+
+`which javac >& /dev/null`
+HasJavac=$?
+
+`which jar >& /dev/null`
+HasJar=$?
+
+if [ $HasJava -eq 0 -a $HasJavac -eq 0 -a $HasJar -eq 0 ]
+then
+	JavaFlags="-DHAS_JAVA=YES"
+else
+	JavaFlags="-DHAS_JAVA=NO"
+fi
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
@@ -97,4 +113,5 @@ if [ $gss = "Y" ]; then
 	fi
 fi
 
-imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth $EgcsLib $KerbFlags -I../config -I../../config $*
+imake -s Makefile $ArchFlag $Opsys $Other $Other2 $GssAuth $EgcsLib $KerbFlags $JavaFlags -I../config -I../../config $*
+

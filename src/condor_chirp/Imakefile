@@ -2,7 +2,7 @@
 NAME=Chirp.jar
 SOURCES=ChirpClient.java ChirpConfig.java ChirpInputStream.java ChirpOutputStream.java
 
-#if WANT_JAVA
+#if HAS_JAVA && WANT_JAVA
 
 all_target( $(NAME) )
 jar_target( $(NAME), $(SOURCES), edu )
@@ -18,6 +18,6 @@ stripped::
 static::
 clean::
 
-#endif /* WANT_JAVA */
+#endif
 
 html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )
