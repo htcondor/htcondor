@@ -1149,7 +1149,7 @@ test_dirty_attribute(
 	classad->ResetName(); 
 	name = classad->NextDirtyName();
 	if (name) {
-		delete name;
+		delete [] name;
 		printf("Failed: new ClassAd has dirty attributes in line %d\n",
 			   __LINE__);
 		results->AddResult(false);
@@ -1170,17 +1170,17 @@ test_dirty_attribute(
 	} else if (strcmp(name, "C")) {
 		printf("Failed: %s is dirty, not C in line %d\n", name, __LINE__);
 		results->AddResult(false);
-		delete name;
+		delete [] name;
 	} else {
 		printf("Passed: C is dirty in line %d\n", __LINE__);
 		results->AddResult(true);
-		delete name;
+		delete [] name;
 	}
 	name = classad->NextName();
 	if (name) {
 		printf("Failed: more than one dirty attribute in line %d\n", __LINE__);
 		results->AddResult(false);
-		delete name;
+		delete [] name;
 	} else {
 		printf("Passed: not more than one dirty attribute in line %d\n", __LINE__);
 		results->AddResult(true);
@@ -1198,11 +1198,11 @@ test_dirty_attribute(
 	} else if (strcmp(name, "C")) {
 		printf("Failed: %s is dirty, not C in line %d\n", name, __LINE__);
 		results->AddResult(false);
-		delete name;
+		delete [] name;
 	} else {
 		printf("Passed: C is dirty in line %d\n", __LINE__);
 		results->AddResult(true);
-		delete name;
+		delete [] name;
 	}
 	name = classad->NextDirtyName();
 	if (!name) {
@@ -1211,17 +1211,17 @@ test_dirty_attribute(
 	} else if (strcmp(name, "D")) {
 		printf("Failed: %s is dirty, not D in line %d\n", name, __LINE__);
 		results->AddResult(false);
-		delete name;
+		delete [] name;
 	} else {
 		printf("Passed: D is dirty in line %d\n", __LINE__);
 		results->AddResult(true);
-		delete name;
+		delete [] name;
 	}
 	name = classad->NextName();
 	if (name) {
 		printf("Failed: more than two dirty attributes in line %d\n", __LINE__);
 		results->AddResult(false);
-		delete name;
+		delete [] name;
 	} else {
 		printf("Passed: not more than two dirty attributes in line %d\n", __LINE__);
 		results->AddResult(true);
@@ -1232,7 +1232,7 @@ test_dirty_attribute(
 	classad->ResetName(); 
 	name = classad->NextDirtyName();
 	if (name) {
-		delete name;
+		delete [] name;
 		printf("Failed: ClassAd has dirty attributes in line %d\n",
 			   __LINE__);
 		results->AddResult(false);
