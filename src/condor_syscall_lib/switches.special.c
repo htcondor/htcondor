@@ -34,7 +34,9 @@
 
 #if defined(Solaris)
 #include "../condor_includes/_condor_fix_types.h"
+#if !defined(Solaris251)
 #include </usr/ucbinclude/sys/rusage.h>
+#endif
 #endif 
 
 
