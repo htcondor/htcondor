@@ -1,0 +1,130 @@
+\begin{ManPage}{\label{man-condor-run}\Condor{run}}{1}
+{Submit a shell command-line as a Condor job.}
+\Synopsis \SynProg{\Condor{run}}
+\Arg{``shell-cmd''}
+
+\index{Condor commands!condor\_run}
+\index{condor\_run command}
+
+\Description
+\Condor{run} is a simple front-end to the \Condor{submit} command for
+submitting a shell command-line as a vanilla universe Condor job.  The
+\Condor{run} command waits for the Condor job to complete, writes the
+job's output to the terminal, and exits with the exit status of the
+Condor job.  No output will appear until the job completes.  The shell
+command-line should be enclosed in quotes so it is passed directly to
+\Condor{run} without modification by the invoking shell.
+
+\Condor{run} will not read any input from the terminal while the job
+executes.  If the shell command-line requires input, you must
+explicitly redirect the input from a file to the command, as
+illustrated in the example.
+
+You can specify where \Condor{run} should execute the shell
+command-line with three environment variables:
+
+\begin{description}
+\item[CONDOR\_ARCH] Specifies the architecture of the execution
+machine (from the ``Arch'' field in the output of \Condor{status}).
+\item[CONDOR\_OPSYS] Specifies the operating system of the execution
+machine (from the ``OpSys'' field in the output of \Condor{status}).
+\item[CONDOR\_REQUIREMENTS] Specifies any additional requirements for
+the Condor job (as described in manual page for \Condor{submit} on
+page~\pageref{man-condor-submit}).  It is recommended that
+\Macro{CONDOR\_REQUIREMENTS} always be enclosed in parenthesis.
+\end{description}
+
+If one or more of these environment variables is specified, the job is
+submitted with:
+
+\begin{verbatim}
+  requirements = $CONDOR_REQUIREMENTS && Arch == $CONDOR_ARCH && \
+                 OpSys == $CONDOR_OPSYS
+\end{verbatim}
+
+Otherwise, the job receives the default requirements expression, which
+requests a machine of the same architecture and operating system of
+the machine on which \Condor{run} is executed.
+
+All environment variables set when \Condor{run} is executed will be
+included in the environment of the Condor job.
+
+\Condor{run} will remove the Condor job from the Condor queue and
+delete its temporary files if it is killed before the Condor job
+finishes.
+
+\Examples
+
+\Condor{run} can be used to compile jobs on architectures and
+operating systems to which the user doesn't have login access.  For example:
+
+\begin{verbatim}
+$ setenv CONDOR_ARCH "SGI"
+$ setenv CONDOR_OPSYS "IRIX65"
+$ condor_run "f77 -O -o myprog myprog.f"
+$ condor_run "make"
+$ condor_run "condor_compile cc -o myprog.condor myprog.c"
+\end{verbatim}
+
+Since \Condor{run} does not read input from the terminal, you must
+explicitly redirect input from a file to the shell command.  For
+example:
+
+\begin{verbatim}
+$ condor_run "cat input.dat | myprog > output.dat"
+\end{verbatim}
+
+\Files
+
+\Condor{run} creates the following temporary files in the user's
+working directory (replacing ``pid'' with \Condor{run}'s process id):
+\begin{description}
+\item[.condor\_run.pid] This is the shell script containing the shell
+command-line which is submitted to Condor.
+\item[.condor\_submit.pid] This is the submit file passed to
+\Condor{submit}. 
+\item[.condor\_log.pid] This is the Condor log file monitored by
+\Condor{run} to determine when the job exits.
+\item[.condor\_out.pid] This file contains the output of the Condor
+job (before it is copied to the terminal).
+\item[.condor\_error.pid] This file contains any error messages for the Condor
+job (before they are copied to the terminal).
+\end{description}
+The script removes these files when the job completes.  However, if
+the script fails, it is possible that these files will remain in the
+user's working directory and the Condor job will remain in the queue.
+
+\GenRem
+
+\Condor{run} is intended for submitting simple shell command-lines to
+Condor.  It does not provide the full functionality of
+\Condor{submit}.  We have attempted to make \Condor{run} as robust as
+possible, but it is possible that it will not correctly handle some
+possible \Condor{submit} errors or system failures.
+
+\Condor{run} jobs have the same restrictions as other vanilla universe
+jobs.  Specifically, the current working directory of the job must be
+accessible on the machine where the job runs.  This typically means
+that the job must be submitted from a network file system such as NFS
+or AFS.  Also, since Condor does not manage AFS credentials,
+permissions must be set to allow unauthenticated processes to access
+any AFS directories used by the Condor job.
+
+All processes on the command-line will be executed on the machine
+where Condor runs the job.  Condor will not distribute multiple
+processes of a command-line pipe across multiple machines.
+
+\Condor{run} will use the shell specified in the \Macro{SHELL} environment
+variable, if one exists.  Otherwise, it will use \Cmd{/bin/sh} to execute
+the shell command-line.
+
+By default, \Condor{run} expects perl to be installed in
+\File{/usr/bin/perl}.  If perl is installed in another path, you can
+ask your Condor administrator to edit the path in the \Condor{run}
+script or explicitly call perl from the command line:
+
+\begin{verbatim}
+$ perl [path-to-condor]/bin/condor_run "shell-cmd"
+\end{verbatim}
+
+\end{ManPage}
