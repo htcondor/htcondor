@@ -43,6 +43,7 @@ public:
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	char *next (void) { return strings.Next(); }
+	int number (void) { return strings.Number(); }
 private:
 	List<char> strings;
 };
