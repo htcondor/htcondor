@@ -69,13 +69,13 @@ public:
 	static int sec_man_ref_count;
 
 
-	SecMan(int numbuckets = 209);
+	SecMan(int numbuckets = 209);  // years of careful research... HA HA HA HA
 	SecMan(const SecMan &);
 	~SecMan();
 	const SecMan & operator=(const SecMan &);
 
 
-	bool 					startCommand( int cmd, Sock* sock, bool can_neg = true, int subcmd = 0);
+	bool 					startCommand( int cmd, Sock* sock, bool &can_neg, int subcmd = 0);
 
     //------------------------------------------
     // invalidate cache
@@ -95,6 +95,7 @@ public:
 	static	int 			getAuthBitmask ( const char * methods );
 	static	char* 			getSecSetting( const char* fmt, const char* authorization_level );
 	static	MyString 		getDefaultAuthenticationMethods();
+	static	MyString 		getDefaultCryptoMethods();
 	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
 	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
 	static	SecMan::sec_req 		sec_lookup_req( ClassAd &ad, const char* pname );

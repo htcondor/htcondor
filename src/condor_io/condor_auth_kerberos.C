@@ -848,23 +848,28 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     if (RealmMap) {
         MyString from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
+					from, to);
+			}
             setRemoteDomain(to.Value());
             return TRUE;
-        }
+        } else {
+			// if the map exists, they must be listed.  and they're NOT!
+			return FALSE;
+		}
     }
 
-    // Maybe the domain is the same as our local domain?
-    localDomain = getLocalDomain();
-    if (localDomain && !strcmp(localDomain, domain)) {
-        // we are in the same domain, 
-        setRemoteDomain(localDomain);
-    }
-    else {
-        // No idea how to map the domain, exception!
-        dprintf(D_SECURITY, "Unable to map domain %s\n", domain);
-        rc = FALSE;
-    }
-    return rc;
+    // if there is no map, we just allow realm -> domain.
+	if (DebugFlags & D_FULLDEBUG) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
+				domain, domain);
+            setRemoteDomain(domain);
+		}
+	}
+	return TRUE;
+
 }
 
 static int compute_string_hash(const MyString& str, int numBuckets)
@@ -882,42 +887,46 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 
     if (RealmMap) {
         delete RealmMap;
+		RealmMap = NULL;
     }
 
     if ( !(fd = fopen(  filename, "r" ) ) ) {
         dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
                  filename, errno );
 		free(filename);
-        return FALSE;
-    }
+        RealmMap = NULL;
+		return FALSE;
+    } else {
     
-    while (buffer = getline(fd)) {
-        char * token;
-        token = strtok(buffer, "==");
-        if(token) {
-            from.append(token);
-        }
-        token = strtok(NULL, "==");
-        if(token) {
-            to.append(token);
-        }
-        lc++;
-    }
+    	while (buffer = getline(fd)) {
+        	char * token;
+        	token = strtok(buffer, "==");
+        	if(token) {
+            	from.append(token);
+        	}
+        	token = strtok(NULL, "==");
+        	if(token) {
+            	to.append(token);
+        	}
+        	lc++;
+    	}
 
-    RealmMap = new Realm_Map_t(lc, compute_string_hash);
-	from.rewind();
-    to.rewind();
-    char *f, * t;
-	while ( (f = from.next()) ) {
-        t = to.next();
-        RealmMap->insert(MyString(f), MyString(t));
-        from.deleteCurrent();
-        to.deleteCurrent();
-    }
-    fclose(fd);
+		assert (RealmMap == NULL);
+		RealmMap = new Realm_Map_t(lc, compute_string_hash);
+		from.rewind();
+		to.rewind();
+		char *f, * t;
+		while ( (f = from.next()) ) {
+			t = to.next();
+			RealmMap->insert(MyString(f), MyString(t));
+			from.deleteCurrent();
+			to.deleteCurrent();
+		}
+		fclose(fd);
 
-	free(filename);
-    return TRUE;
+		free(filename);
+		return TRUE;
+	}
 }
    
 int Condor_Auth_Kerberos :: send_request(krb5_data * request)
