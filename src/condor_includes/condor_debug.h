@@ -99,12 +99,12 @@ void _condor_fd_panic( int line, char *file );
 	_EXCEPT_
 
 /*
-**	Important external variables
+**	Important external variables in libc
 */
-extern int		errno;
+extern DLL_IMPORT_MAGIC int		errno;
 #if !( defined(LINUX) && defined(GLIBC) )
-extern int		sys_nerr;
-extern char		*sys_errlist[];
+extern DLL_IMPORT_MAGIC int		sys_nerr;
+extern DLL_IMPORT_MAGIC char		*sys_errlist[];
 #endif
 
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
@@ -117,20 +117,13 @@ extern void _EXCEPT_(char*, ...);
 }
 #endif
 
-/* On Win32, define assert() to really do an ASSERT(), which does EXCEPT */
-#ifdef WIN32
-#	ifdef assert
-#		undef assert
-#	endif
-#	ifdef ASSERT
-#		undef ASSERT
-#	endif
-#	define assert(cond) ASSERT(cond)
-#endif	/* of ifdef WIN32 */
+#ifndef CONDOR_ASSERT
+#define CONDOR_ASSERT(cond) \
+	if( !(cond) ) { EXCEPT("Assertion ERROR on (%s)",#cond); }
+#endif /* CONDOR_ASSERT */
 
 #ifndef ASSERT
-#define ASSERT(cond) \
-	if( !(cond) ) { EXCEPT("Assertion ERROR on (%s)",#cond); }
+#	define ASSERT(cond) CONDOR_ASSERT(cond)
 #endif /* ASSERT */
 
 #ifndef TRACE
@@ -160,3 +153,19 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 
 #endif /* CONDOR_DEBUG_H */
 
+/* 
+ * On Win32, define assert() to really do an Condor ASSERT(), which does EXCEPT.
+ * NOTE THIS MUST BE PLACED AFTER THE #endif TO CONDOR_DEBUG_H because
+ * this redefinition needs to be done more than once (because the WinNT header
+ * files could redefine assert more than once... sigh).
+*/
+#ifdef WIN32
+#	ifdef assert
+#		undef assert
+#	endif
+#	ifdef ASSERT
+#		undef ASSERT
+#	endif
+#	define ASSERT(cond) CONDOR_ASSERT(cond)
+#	define assert(cond) CONDOR_ASSERT(cond)
+#endif	/* of ifdef WIN32 */
