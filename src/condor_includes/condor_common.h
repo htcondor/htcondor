@@ -33,7 +33,6 @@
 #if defined(WIN32)
 
 #define NOGDI
-#define NOUSER
 #define NOSOUND
 #include <winsock2.h>
 #include <windows.h>
