@@ -445,9 +445,10 @@ const char* get_condor_username()
 
 	length = strlen(szAccountName) + strlen(szDomainName) + 4;
 	CondorUserName = (char *) malloc(length);
-	if ( CondorUserName ) {
-		sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
+	if (CondorUserName == NULL) {
+		EXCEPT("Out of memory. Aborting.");
 	}
+	sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
 
 	if ( hProcess )
 		CloseHandle(hProcess);
@@ -601,10 +602,6 @@ init_condor_ids()
 	MyUid = getuid();
 	MyGid = getgid();
 	
-	if( CondorUserName ) {
-		free( CondorUserName );
-	}
-
 		/* if either of the following get_user_*() functions fail,
 		 * the default is MAXINT */
 	RealCondorUid = MAXINT;
@@ -627,6 +624,10 @@ init_condor_ids()
 			fprintf( stderr, "the '.' seperated uid, gid pair that\n" );
 			fprintf( stderr, "should be used by %s.\n", myDistro->Get() );
 			exit(1);
+		}
+		if( CondorUserName != NULL ) {
+			free( CondorUserName );
+			CondorUserName = NULL;
 		}
 		result = pcache.get_user_name( envCondorUid, CondorUserName );
 
@@ -663,7 +664,14 @@ init_condor_ids()
 			if( RealCondorUid != MAXINT ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
+				if( CondorUserName != NULL ) {
+					free( CondorUserName );
+					CondorUserName = NULL;
+				}
 				CondorUserName = strdup( myDistro->Get() );
+				if (CondorUserName == NULL) {
+					EXCEPT("Out of memory. Aborting.");
+				}
 			} else {
 				fprintf( stderr,
 						 "Can't find \"%s\" in the password file and "
@@ -683,10 +691,17 @@ init_condor_ids()
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = MyUid;
 		CondorGid = MyGid;
+		if( CondorUserName != NULL ) {
+			free( CondorUserName );
+			CondorUserName = NULL;
+		}
 		result = pcache.get_user_name( CondorUid, CondorUserName );
 		if( !result ) {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
+			if (CondorUserName == NULL) {
+				EXCEPT("Out of memory. Aborting.");
+			}
 		}
 
 		/* If CONDOR_IDS environment variable is set, and set to the same uid

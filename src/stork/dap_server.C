@@ -294,6 +294,7 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	dprintf (D_FULLDEBUG, "Using user credential %s\n", cred_file_name);
 	MyString newenv_buff;
 
+	// child process will need additional environments
 	newenv_buff="X509_USER_PROXY=";
 	newenv_buff+=cred_file_name;
 	myEnv.Put (newenv_buff.Value());
@@ -312,16 +313,26 @@ int transfer_dap(char *dap_id, char *src_url, char *dest_url, char *arguments, c
 	myEnv.Put (newenv.Value());
 
 	myEnv.Put (ld_library_path.Value());
+	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
-	pid = daemonCore->Create_Process(
-									 command,	// exec
-									 argument_str,  // argv
-									 PRIV_USER_FINAL,
-									 transfer_dap_reaper_id,          //reaper 
-									 FALSE,myEnv.getDelimitedString(),LOG_DIR.Value(),FALSE,NULL,
-									 daemon_std             //std.file ids 
-									 );
+	// Create child process via daemoncore
+	pid =
+	daemonCore->Create_Process(
+		 command,						// command path
+		 argument_str,					// args string
+		 PRIV_USER_FINAL,				// privilege state
+		 transfer_dap_reaper_id,		// reaper id
+		 FALSE,							// do not want a command port
+		 env_string,                	// colon seperated environment string
+		 LOG_DIR.Value(),				// current working directory
+		 FALSE,							// do not create a new process group
+		 NULL,							// list of socks to inherit
+		 daemon_std						// child stdio file descriptors
+		 								// nice increment = 0
+		 								// job_opt_mask = 0
+	);
 
+	if (env_string) delete []env_string;// delete string from "new"
 	if (pid > 0) {
 		dap_queue.insert(dap_id, pid);
 		return DAP_SUCCESS;
@@ -353,24 +364,34 @@ void reserve_dap(char *dap_id, char *reserve_id, char *reserve_size, char *durat
 	snprintf(argument_str ,MAXSTR, "%s %s %s %s %s", 
 			 commandbody, dest_host, output_file, reserve_size, duration);
 
-	Env myEnv;
+	// Add STORK_CONFIG_FILE, LD_LIBRARY_PATH to child process environment
 	MyString newenv;
 	newenv += "STORK_CONFIG_FILE=";
 	newenv += STORK_CONFIG_FILE;
+
+	Env myEnv;
 	myEnv.Put (newenv.Value());
-
 	myEnv.Put (ld_library_path.Value());
+	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
-	pid = daemonCore->Create_Process(
-									 command,	// exec
-									 argument_str,  // argv
-									 PRIV_USER_FINAL,
-									 reserve_dap_reaper_id,          //reaper 
-									 FALSE,myEnv.getDelimitedString(),LOG_DIR.Value(),FALSE,NULL,
-									 daemon_std             //std.file ids 
-									 );
-  
+	// Create child process via daemoncore
+	pid =
+	daemonCore->Create_Process(
+		 command,						// command path
+		 argument_str,					// args string
+		 PRIV_USER_FINAL,				// privilege state
+		 reserve_dap_reaper_id,			// reaper id
+		 FALSE,							// do not want a command port
+		 env_string,                	// colon seperated environment string
+		 LOG_DIR.Value(),				// current working directory
+		 FALSE,							// do not create a new process group
+		 NULL,							// list of socks to inherit
+		 daemon_std						// child stdio file descriptors
+		 								// nice increment = 0
+		 								// job_opt_mask = 0
+	);
 
+	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 }
 
@@ -433,6 +454,7 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	snprintf(argument_str ,MAXSTR, "%s %s %s", 
 			 commandbody, dest_host, lot_id);
 
+	// child process will need additional environments
 	Env myEnv;
 	MyString newenv;
 	newenv += "STORK_CONFIG_FILE=";
@@ -440,16 +462,26 @@ void release_dap(char *dap_id, char *reserve_id, char *dest_url)
 	myEnv.Put (newenv.Value());
 
 	myEnv.Put (ld_library_path.Value());
+	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
-	pid = daemonCore->Create_Process(
-									 command,	// exec
-									 argument_str,  // argv
-									 PRIV_USER_FINAL,
-									 release_dap_reaper_id,       //reaper 
-									 FALSE,myEnv.getDelimitedString(),LOG_DIR.Value(),FALSE,NULL,
-									 daemon_std             //std.file ids 
-									 );
+	// Create child process via daemoncore
+	pid =
+	daemonCore->Create_Process(
+		 command,						// command path
+		 argument_str,					// args string
+		 PRIV_USER_FINAL,				// privilege state
+		 release_dap_reaper_id,			// reaper id
+		 FALSE,							// do not want a command port
+		 env_string,                	// colon seperated environment string
+		 LOG_DIR.Value(),				// current working directory
+		 FALSE,							// do not create a new process group
+		 NULL,							// list of socks to inherit
+		 daemon_std						// child stdio file descriptors
+		 								// nice increment = 0
+		 								// job_opt_mask = 0
+	);
 
+	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 	if (constraint_tree != NULL) delete constraint_tree;
 }
@@ -477,6 +509,7 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	snprintf(argument_str ,MAXSTR, "%s %s %s", 
 			 commandbody, src_host, dest_host);
 
+	// child process will need additional environments
 	Env myEnv;
 	MyString newenv;
 	newenv += "STORK_CONFIG_FILE=";
@@ -484,17 +517,26 @@ void requestpath_dap(char *dap_id, char *src_url, char *dest_url)
 	myEnv.Put (newenv.Value());
 
 	myEnv.Put (ld_library_path.Value());
+	char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
-	pid = daemonCore->Create_Process(
-									 command,	// exec
-									 argument_str,  // argv
-									 PRIV_USER_FINAL,
-									 requestpath_dap_reaper_id,   //reaper 
-									 FALSE,myEnv.getDelimitedString(),LOG_DIR.Value(),FALSE,NULL,
-									 daemon_std             //std.file ids 
-									 );
-  
+	// Create child process via daemoncore
+	pid =
+	daemonCore->Create_Process(
+		 command,						// command path
+		 argument_str,					// args string
+		 PRIV_USER_FINAL,				// privilege state
+		 requestpath_dap_reaper_id,		// reaper id
+		 FALSE,							// do not want a command port
+		 env_string,                	// colon seperated environment string
+		 LOG_DIR.Value(),				// current working directory
+		 FALSE,							// do not create a new process group
+		 NULL,							// list of socks to inherit
+		 daemon_std						// child stdio file descriptors
+		 								// nice increment = 0
+		 								// job_opt_mask = 0
+	);
 
+	if (env_string) delete []env_string;// delete string from "new"
 	dap_queue.insert(dap_id, pid);
 }
 
@@ -1418,6 +1460,7 @@ int list_queue(ReliSock * sock)
 			}
 		} while (query.Next(key));
 	}
+	if (constraint_tree != NULL) delete constraint_tree;
 
 	int result_size = result_list.number();
 
@@ -1530,23 +1573,26 @@ int send_dap_status_to_client(ReliSock * sock)
 				dap_id, 
 				adbuffer.c_str());    
 	}
+	if (dap_id) free (dap_id);
     
     sock->encode();
 
     char * pstr = strdup(adbuffer.c_str());
+	if (pstr == NULL) {
+		EXCEPT("Out of memory. Aborting.");
+	}
     if (!(sock->code(rc) && sock->code (pstr))) {
 		dprintf( D_ALWAYS,
 				"%s:%d: Server: send error)!: (%d)%s\n",
 				__FILE__, __LINE__,
 				errno, strerror(errno)
 		);
+		if (pstr) free (pstr);
 		return FALSE;
     }
-    free (pstr);
     sock->eom();
-
+	if (pstr) free (pstr);
     return TRUE;
-
 }
 
 /* ============================================================================
@@ -1651,12 +1697,16 @@ int remove_requests_from_queue(ReliSock * sock)
 		adbuffer += dap_id;
 		rc = 0;
     }
+	if (dap_id) free (dap_id);
     
 		//send response to the client
     sock->encode();
     char * pstr = strdup(adbuffer.c_str());
+	if (pstr == NULL) {
+		EXCEPT("Out of memory. Aborting.");
+	}
     if (!(sock->code(rc) && sock->code (pstr))) {
-		free (pstr);
+		if (pstr) free (pstr);
 		dprintf( D_ALWAYS,
 				"%s:%d: Server: send error)!: (%d)%s\n",
 				__FILE__, __LINE__,
@@ -1664,7 +1714,7 @@ int remove_requests_from_queue(ReliSock * sock)
 		);
 		return FALSE;
     }
-    free (pstr);
+    if (pstr) free (pstr);
     
 	return TRUE;
 }

@@ -146,6 +146,7 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
 {
   //log the new status of the request
   classad::ClassAdParser parser;
+  bool status;
   std::string key;
   key = "key = ";
   key += dap_id;
@@ -155,7 +156,19 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
   partial_s += " ]";
   
   classad::ClassAd* partialAd = parser.ParseClassAd(partial_s, true);
-  partialAd->Insert("timestamp",classad::Literal::MakeAbsTime());
+  if (partialAd == NULL) {
+	dprintf(D_ALWAYS, "ParseClassAd partial %s failed! dap_id:%s\n",
+		partial_s.c_str(), dap_id);
+	return;
+  }
+  status = partialAd->Insert("timestamp",classad::Literal::MakeAbsTime());
+  if (status == false) {
+	  	delete partialAd;
+		dprintf(D_ALWAYS,
+			"ParseClassAd partial %s insert timestamp failed! dap_id:%s\n",
+			partial_s.c_str(), dap_id);
+	  return;
+  }
     
   classad::PrettyPrint unparser;
   std::string adbuffer = "";
@@ -166,13 +179,23 @@ void write_collection_log(classad::ClassAdCollection *dapcollection, char *dap_i
   modify_s += " ]";
   
   classad::ClassAd* tmpad = parser.ParseClassAd(modify_s, true);
-
-  if (!dapcollection->ModifyClassAd(key, tmpad)){
-    dprintf(D_ALWAYS, "ModifyClassAd failed! dap_id:%s\n", dap_id);
-    return;
+  if (tmpad == NULL) {
+	  delete partialAd;
+	  dprintf(D_ALWAYS, "ParseClassAd modify %s failed! dap_id:%s\n",
+			partial_s.c_str(), dap_id);
+	  return;
   }
 
-  //  printf("ClassAd modified! dap_id:%s\n", dap_id);
+  unparser.Unparse(adbuffer, tmpad);
+		  
+
+  if (!dapcollection->ModifyClassAd(key, tmpad)){ // deletes ModifyClassAd()
+    dprintf(D_ALWAYS, "ModifyClassAd failed! dap_id:%s\n", dap_id);
+  }
+
+  delete partialAd;
+  //delete tmpad;	// delete'ed by ModifyClassAd()
+  return;
 }
 //--------------------------------------------------------------------------
 

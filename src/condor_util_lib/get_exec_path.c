@@ -65,6 +65,13 @@ linux_getExecPath()
 	char path_buf[MAXPATHLEN];
 	rval = readlink( "/proc/self/exe", path_buf, MAXPATHLEN );
 	if( rval < 0 ) {
+
+		/*
+		   This error will occur when running a program from the valgrind
+		   memory debugger.  For this case, compiling with valgrind.h and
+		   testing RUNNING_ON_VALGRIND can prevent this error message.  But
+		   this remedy is too much overhead for now.
+		*/
 		dprintf( D_ALWAYS,"getExecPath: "
 				 "readlink(\"/proc/self/exe\") failed: errno %d (%s)\n",
 				 errno, strerror(errno) );
