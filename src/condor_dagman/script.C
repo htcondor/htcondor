@@ -36,31 +36,39 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, const char* cmd, const char* nodeName ) :
+Script::Script( bool post, const char* cmd, const Job* node ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
 	_pid		  (0),
 	_done         (FALSE),
-	_nodeName     (nodeName)
+	_node         (node)
 {
 	ASSERT( cmd != NULL );
-	ASSERT( nodeName != NULL );
     _cmd = strnewp (cmd);
-    _nodeName = strnewp( nodeName );
+    return;
 }
 
 //-----------------------------------------------------------------------------
 Script::~Script () {
     delete [] _cmd;
-	delete [] (char*) _nodeName;
+    return;
+}
+
+const char *Script::GetNodeName()
+{
+    return _node->GetJobName();
 }
 
 //-----------------------------------------------------------------------------
 int
 Script::BackgroundRun( int reaperId )
 {
-	// construct command line
+	// Construct the command line, replacing some tokens with
+    // information about the job.  All of these values would probably
+    // be better inserted into the environment, rather than passed on
+    // the command-line... some should be in the job's env as well...
+
     const char *delimiters = " \t";
     char * token;
     MyString send;
@@ -68,8 +76,16 @@ Script::BackgroundRun( int reaperId )
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
 		if( !strcasecmp( token, "$JOB" ) ) {
-			send += _nodeName;
-		}
+			send += _node->GetJobName();
+		} 
+        else if ( !strcasecmp( token, "$RETRY" ) ) {
+            send += _node->retries;
+        }
+        else if ( _post && !strcasecmp( token, "$JOBID" ) ) {
+            send += _node->_CondorID._cluster;
+            send += '.';
+            send += _node->_CondorID._proc;
+        }
         else if (!strcasecmp(token, "$RETURN")) send += _retValJob;
         else                                    send += token;
 
