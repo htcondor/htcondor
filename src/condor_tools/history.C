@@ -69,7 +69,7 @@ main(int argc, char* argv[])
 
   config( 0 );
   if (!JobHistoryFileName) {
-    JobHistoryFileName=param("JOB_HISTORY_FILE");
+    JobHistoryFileName=param("HISTORY");
   }
 
   FILE* LogFile=fopen(JobHistoryFileName,"r");
