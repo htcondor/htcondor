@@ -21,7 +21,7 @@ static void chirp_fatal_response();
 static int get_result( FILE *s );
 static int convert_result( int response );
 static int simple_command(struct chirp_client *c,char const *fmt,...);
-static void vsprintf_command(char *command,char const *fmt,va_list args);
+static void vsprintf_chirp(char *command,char const *fmt,va_list args);
 
 struct chirp_client {
 	FILE *stream;
