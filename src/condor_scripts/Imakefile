@@ -4,23 +4,40 @@ CFLAGS = $(STD_C_FLAGS)
 
 release_target(condor_install,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 release_target(condor_init,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+#if IS_CLIPPED
+release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
+#else 
 release_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
 release_copy_target(ld,lib,ld,EXECUTABLE_MODE)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
+#endif /* IS_CLIPPED */
 
 strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MODE)
 strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
+strip_copy_target(condor_cleanckpts,$(STRIP_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+#if IS_CLIPPED
+strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin, \
+		condor_compile,EXECUTABLE_MODE)
+#else 
 strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
 strip_link_target($(STRIP_DIR)/lib/ld,lib,real-ld)
-strip_copy_target(condor_cleanckpts,$(STRIP_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+#endif /* IS_CLIPPED */
 
 static_copy_target(condor_install,$(STATIC_DIR)/sbin,condor_install,EXECUTABLE_MODE)
 static_copy_target(condor_init,$(STATIC_DIR)/sbin,condor_init,EXECUTABLE_MODE)
-static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
+static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+#if IS_CLIPPED
+static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin, \
+		condor_compile,EXECUTABLE_MODE)
+#else 
+static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile, \
+		EXECUTABLE_MODE)
 static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
-static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+#endif /* IS_CLIPPED */
+
+
 
 #if IS_SGI_IRIX53 || IS_SGI_IRIX62
 release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
