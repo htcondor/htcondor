@@ -182,11 +182,16 @@ struct rusage {
 #define WEXITSTATUS(stat) ((int)(stat))
 #define WTERMSIG(stat) ((int)(stat))
 #define WIFSTOPPED(stat) ((int)(0))
+
+
+BEGIN_C_DECLS
 // these two are usually macros, but in fact, we implement our own
 // C versions of them...  
-BEGIN_C_DECLS
 int WIFEXITED(DWORD stat);
 int WIFSIGNALED(DWORD stat);
+
+char* index(const char *s, int c);
+
 END_C_DECLS
 
 /* Some Win32 specifics */
