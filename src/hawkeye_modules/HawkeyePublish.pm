@@ -127,12 +127,15 @@ sub Publish {
     my $Key;
 
     # Add the prefix list to the publish list...
-    print "INDEX = \"";
-    foreach $Key ( keys %{$self->{Index}} )
+    if ( scalar %{$self->{Index}} )
     {
-	print "$Key ";
+	print "INDEX = \"";
+	foreach $Key ( keys %{$self->{Index}} )
+	{
+	    print "$Key ";
+	}
+	print "\"\n";
     }
-    print "\"\n";
 
     # Walk through the publish hash, build a command line from hell..
     foreach $Key ( sort keys %{$self->{Publish}} )
