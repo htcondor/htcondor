@@ -1496,6 +1496,14 @@ These macros control the \Condor{master}.
 
   There is no default value for \Macro{HA\_LOCK\_URL}.
 
+\item[\Macro{HA\_name\_LOCK\_URL}]
+  \label{param:HAnameLockURL} This macro controls the ``High
+  Availability'' lock URL for a specific daemon ``name'' and
+  overrides the system wide lock URL specified by
+  \Macro{HA\_LOCK\_URL}.  If not defined for each daemon,
+  \Macro{HA\_name\_LOCK\_URL} is ignored, and the value of
+  \Macro{HA\_LOCK\_URL} is used.
+
 \item[\Macro{HA\_LOCK\_HOLD\_TIME}] \label{param:HALockHoldTime} This macro
   specifies the length of time that the \Condor{master} will hold the
   lock for each ``High Availability'' daemon.  Upon gaining the shared
