@@ -2,7 +2,8 @@
 #include "HashTable.h"
 #include "extArray.h"
 #include "list.h"
-#include "condor_classad.h"
+#include "exprTree.h"
+#include "classad_collection.h"
 
 template class HashTable<MyString,FunctionCall::ClassAdFunc>;
 template class HashBucket<MyString,FunctionCall::ClassAdFunc>;
