@@ -37,6 +37,8 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 /*
   Transfer a whole file from the "src_fd" to the "dst_fd".  Return
@@ -51,6 +53,13 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 	ssize_t		bytes_moved = 0;
 	size_t		bytes_to_go = n_bytes;
 	size_t		read_size;
+	int			dont_know_file_size;
+
+	if (n_bytes == -1) {
+		dont_know_file_size = 1;
+	} else {
+		dont_know_file_size = 0;
+	}
 
 	for(;;) {
 
@@ -58,7 +67,11 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 		read_size = sizeof(buf) < bytes_to_go ? sizeof(buf) : bytes_to_go;
 		bytes_read = read( src_fd, buf, read_size );
 		if( bytes_read <= 0 ) {
-			return -1;
+			if (dont_know_file_size) {
+				return bytes_moved;
+			} else {
+				return -1;
+			}
 		}
 
 			/* Send it */
@@ -78,4 +91,37 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			return bytes_moved;
 		}
 	}
+}
+
+
+int
+create_socket(sin, listen_count)
+struct sockaddr_in *sin;
+int             listen_count;
+{
+	int             socket_fd;
+	int             len;
+	
+	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (socket_fd < 0) {
+		fprintf(stderr, "condor_exec: unable to create socket\n");
+		return -1;
+	}
+	
+	bzero((char *) sin, sizeof(*sin));
+	sin->sin_family = AF_INET;
+	sin->sin_port = 0;
+	
+	if ( bind(socket_fd, (struct sockaddr *) sin, sizeof(*sin)) < 0) {
+		fprintf(stderr, "condor_exec: bind failed\n");
+		return -1;
+	}
+	
+	listen(socket_fd, listen_count);
+	
+	len = sizeof(*sin);
+	getsockname(socket_fd, (struct sockaddr *) sin, &len);
+	get_inet_address(&(sin->sin_addr));  /* from internet.c */
+	
+	return socket_fd;
 }
