@@ -202,13 +202,11 @@ file:
 where ``full.hostname'' is the full hostname of the machine where you
 are running your CondorView collector.
 
-Once this setting is in place, you must send a \Condor{reconfig} to
-your entire pool.  The easiest way to do this is:
-\begin{verbatim}
-        % condor_reconfig `condor_status -master`
-\end{verbatim}
-Again, this command must be run from a trusted ``administrator''
-machine for it to work.  
+Once these settings are in place, you simply have to send a
+\Condor{reconfig} to all machines in your pool so the changes take
+effect.
+This is described in section~\ref{sec:Reconfigure-Pool} on
+page~\pageref{sec:Reconfigure-Pool}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:CondorView-Client-Install}
