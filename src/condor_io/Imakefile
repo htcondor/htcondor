@@ -3,8 +3,11 @@ SRC_DIR = $(SRC_TREE)/condor_io.new
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DCLIENT
 
-SRC = stream.C sock.C reli_sock.C safe_sock.C buffers.C  
-OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o 
+CONDOR_TYPE_SRC = sig_num.c proc.C
+CONDOR_TYPE_OBJ = sig_num.o proc.o
+
+SRC = stream.C sock.C reli_sock.C safe_sock.C buffers.C $(CONDOR_TYPE_SRC)
+OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
 all_target(libcondor.a)
 

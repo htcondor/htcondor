@@ -33,6 +33,7 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_debug.h"
 
 
 
@@ -42,7 +43,8 @@ ReliSock::ReliSock(					/* listen on port		*/
 	)
 	: Sock()
 {
-	listen(port);
+	if (!listen(port))
+		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
 }
 
 
@@ -51,7 +53,8 @@ ReliSock::ReliSock(					/* listen on serv		*/
 	)
 	: Sock()
 {
-	listen(serv);
+	if (!listen(serv))
+		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
 }
 
 
@@ -61,7 +64,8 @@ ReliSock::ReliSock(
 	)
 	: Sock()
 {
-	connect(host, port);
+	if (!connect(host, port))
+		dprintf(D_ALWAYS, "failed to connect to %s:%d!\n", host, port);
 }
 
 
@@ -72,7 +76,8 @@ ReliSock::ReliSock(
 	)
 	: Sock()
 {
-	Sock::connect(host, serv);
+	if (!Sock::connect(host, serv))
+		dprintf(D_ALWAYS, "failed to connect to %s:%s!\n", host, serv);
 }
 
 
@@ -265,7 +270,6 @@ int ReliSock::get_bytes(
 
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()){
-			fprintf(stderr, "HANDLE_INCOMING FAILED\n");
 			return FALSE;
 		}
 	}
@@ -302,7 +306,43 @@ int ReliSock::peek(
 	return rcv_msg.buf.peek(c);
 }
 
+int ReliSock::snd_int(
+	int val, 
+	int end_of_record
+	)
+{
+	encode();
+	if (!code(val)) {
+		return FALSE;
+	}
 
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+int ReliSock::rcv_int(
+	int &val,
+	int end_of_record
+	)
+{
+	decode();
+	if (!code(val)) {
+		return FALSE;
+	}
+
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
 
 int ReliSock::RcvMsg::rcv_packet(
 	int	_sock
@@ -315,7 +355,6 @@ int ReliSock::RcvMsg::rcv_packet(
 	int		tmp_len;
 
 	if (read(_sock, hdr, 5) != 5){
-		fprintf(stderr, "READ FAILES\n");
 		return FALSE;
 	}
 	end = (int) ((char *)hdr)[0];
@@ -323,22 +362,23 @@ int ReliSock::RcvMsg::rcv_packet(
 	len = (int) ntohl(len_t);
 
 	if (!(tmp = new Buf)){
-		fprintf(stderr, "Out of memory\n");
+		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
 	if (len > tmp->max_size()){
 		delete tmp;
-		fprintf(stderr, "Incoming packet is too big\n");
+		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
 	if ((tmp_len = tmp->read_frm_fd(_sock, len)) != len){
 		delete tmp;
-		fprintf(stderr, "Packet read failed: read %d of %d\n", tmp_len, len);
+		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
+				tmp_len, len);
 		return FALSE;
 	}
 	if (!buf.put(tmp)) {
 		delete tmp;
-		fprintf(stderr, "Packet storing failed\n");
+		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;
 	}
 

@@ -33,6 +33,7 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_debug.h"
 
 
 
@@ -225,7 +226,6 @@ int SafeSock::get_bytes(
 
 	while (!rcv_msg.ready) {
 		if (!handle_incoming_packet()){
-			fprintf(stderr, "HANDLE_INCOMING FAILED\n");
 			return FALSE;
 		}
 	}
@@ -271,6 +271,43 @@ int SafeSock::peek(
 	return rcv_msg.buf.peek(c);
 }
 
+int SafeSock::snd_int(
+	int val, 
+	int end_of_record
+	)
+{
+	encode();
+	if (!code(val)) {
+		return FALSE;
+	}
+
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+int SafeSock::rcv_int(
+	int &val,
+	int end_of_record
+	)
+{
+	decode();
+	if (!code(val)) {
+		return FALSE;
+	}
+
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
 
 
 int SafeSock::rcv_packet(
@@ -286,7 +323,7 @@ int SafeSock::rcv_packet(
 		return FALSE;
 	}
 	if (!rcv_msg.buf.put_max(tmp, len)) {
-		fprintf(stderr, "Packet storing failed\n");
+		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;
 	}
 

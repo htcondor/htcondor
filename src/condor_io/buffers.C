@@ -3,6 +3,7 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_debug.h"
 
 
 unsigned long num_created = 0;
@@ -13,9 +14,9 @@ unsigned long num_deleted = 0;
 void
 sanity_check()
 {
-	fprintf(stderr, "Buffer management:\n");
-	fprintf(stderr, "    created: %d\n", num_created);
-	fprintf(stderr, "    deleted: %d\n\n", num_deleted);
+	dprintf(D_ALWAYS, "IO: Buffer management:\n");
+	dprintf(D_ALWAYS, "IO:     created: %d\n", num_created);
+	dprintf(D_ALWAYS, "IO:     deleted: %d\n\n", num_deleted);
 }
 
 
@@ -75,11 +76,11 @@ int Buf::flush_to_fd(
 
 /* DEBUG SESSION
 	if ((dbg_fd = open("trace.snd", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
-		fprintf(stderr, "Error opening trace file\n");
+		dprintf(D_ALWAYS, "IO: Error opening trace file\n");
 		exit(1);
 	}
 	if (write(dbg_fd, _dta, _dta_maxsz) != _dta_maxsz){
-		fprintf(stderr, "ERROR LOGGING\n");
+		dprintf(D_ALWAYS, "IO: ERROR LOGGING\n");
 		return FALSE;
 	}
 	::close(dbg_fd);
@@ -102,7 +103,7 @@ int Buf::read_frm_fd(
 	int nro;
 
 	if (sz < 0 || sz > num_free()){
-		fprintf(stderr, "Buffer too small\n");
+		dprintf(D_ALWAYS, "IO: Buffer too small\n");
 		return -1;
 		/* sz = num_free(); */
 	}
@@ -121,11 +122,11 @@ int Buf::read_frm_fd(
 
 /* DEBUG SESSION
 	if ((dbg_fd = open("trace.rcv", O_WRONLY|O_APPEND|O_CREAT, 0700)) < 0){
-		fprintf(stderr, "Error opening trace file\n");
+		dprintf(D_ALWAYS, "IO: Error opening trace file\n");
 		exit(1);
 	}
 	if (write(dbg_fd, _dta, _dta_maxsz) != _dta_maxsz){
-		fprintf(stderr, "ERROR LOGGING\n");
+		dprintf(D_ALWAYS, "IO: ERROR LOGGING\n");
 		return FALSE;
 	}
 	::close(dbg_fd);

@@ -32,6 +32,8 @@
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
+#include "condor_network.h"
+#include "internet.h"
 
 
 
@@ -161,8 +163,12 @@ int Sock::do_connect(
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons((u_short)port);
 
-	/* try to get a decimal notation first 			*/
-	if ((inaddr = inet_addr(host)) != -1){
+	/* might be in <x.x.x.x:x> notation				*/
+	if (host[0] == '<') {
+		string_to_sin(host, &sin);
+	}
+	/* try to get a decimal notation 	 			*/
+	else if ((inaddr = inet_addr(host)) != -1){
 		memcpy((char *)&sin.sin_addr, &inaddr, sizeof(inaddr));
 	}
 	/* if dotted notation fails, try host database	*/
