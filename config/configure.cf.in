@@ -41,6 +41,9 @@ C_COMP_PATCH = -DC_COMP_PATCH_@CompilerKind@_@CompilerMajor@_@CompilerMinor@_@Co
 CCOMPILER_ID = $(C_COMP_KIND) $(C_COMP_MAJOR) $(C_COMP_MINOR) $(C_COMP_PATCH)
 /* compiler related libraries and .o files we need */
 LIB_STDCPP = @lib_std_cpp@
+#if IS_C_COMP_KIND_GCC && IS_C_COMP_MAJOR_GCC_3
+LIB_GCC_EH = @lib_gcc_eh@
+#endif
 GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
