@@ -57,7 +57,7 @@ char	*sprintf();
 #endif
 #endif
 
-#if !defined( OSF1 ) && !defined(WIN32)
+#if !defined( OSF1 ) && !defined(WIN32) && !( defined(LINUX) && defined(GLIBC) )
 #ifndef htons
 u_short	htons();
 #endif htons
