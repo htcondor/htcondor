@@ -530,7 +530,7 @@ processCommandLineArguments (int argc, char *argv[])
 static float
 job_time(float cpu_time,ClassAd *ad)
 {
-	if ( cputime  > 0.0) {
+	if ( cputime ) {
 		return cpu_time;
 	}
 
