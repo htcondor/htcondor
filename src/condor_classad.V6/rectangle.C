@@ -77,7 +77,7 @@ void KeySet::
 Clear( )
 {
 	universal = false;
-	for( int i = 0; i < kset.size(); i++ ) {
+	for( unsigned int i = 0; i < kset.size(); i++ ) {
 		kset[i] = 0;
 	}
 }
@@ -138,7 +138,7 @@ Intersect( KeySet& ks )
 {
 	if( ks.universal ) return;
 	if( universal ) {
-		int i;
+		unsigned int i;
 
 		if( ks.universal ) return;
 		universal = false;
@@ -151,9 +151,9 @@ Intersect( KeySet& ks )
 		return;
 	}
 
-	int size = kset.size( );
+	unsigned int size = kset.size( );
 	if( size < ks.kset.size( ) ) size = ks.kset.size( );
-	for( int i = 0 ; i < size ; i++ ) {
+	for( unsigned int i = 0 ; i < size ; i++ ) {
 		kset[i] &= ks.kset[i];
 	}
 }
@@ -165,18 +165,18 @@ IntersectWithUnionOf( KeySet &ks1, KeySet &ks2 )
 		return;
 	} else if( universal ) {
 		universal = false;
-		int size = ks1.kset.size( );
+		unsigned int size = ks1.kset.size( );
 		if( size < ks2.kset.size( ) ) size = ks2.kset.size( );
-		for( int i = 0 ; i < size ; i++ ) {
+		for( unsigned int i = 0 ; i < size ; i++ ) {
 			kset[i] = ks1.kset[i] | ks2.kset[i];
 		}
 		return;
 	}
 
-	int size = kset.size();
+	unsigned int size = kset.size();
 	if( size < ks1.kset.size( ) ) size = ks1.kset.size( );
 	if( size < ks2.kset.size( ) ) size = ks2.kset.size( );
-	for( int i = 0 ; i < size ; i++ ) {
+	for( unsigned int i = 0 ; i < size ; i++ ) {
 		kset[i] = kset[i] & ( ks1.kset[i] | ks2.kset[i] );
 	}
 }
@@ -188,20 +188,20 @@ IntersectWithUnionOf( KeySet &ks1, KeySet &ks2, KeySet &ks3 )
 		return;
 	} else if( universal ) {
 		universal = false;
-		int size = ks1.kset.size( );
+		unsigned int size = ks1.kset.size( );
 		if( size < ks2.kset.size( ) ) size = ks2.kset.size( );
 		if( size < ks3.kset.size( ) ) size = ks3.kset.size( );
-		for( int i = 0 ; i < size ; i++ ) {
+		for( unsigned int i = 0 ; i < size ; i++ ) {
 			kset[i] = ks1.kset[i] | ks2.kset[i] | ks3.kset[i];
 		}
 		return;
 	}
 
-	int size = kset.size();
+	unsigned int size = kset.size();
 	if( size < ks1.kset.size( ) ) size = ks1.kset.size( );
 	if( size < ks2.kset.size( ) ) size = ks2.kset.size( );
 	if( size < ks3.kset.size( ) ) size = ks3.kset.size( );
-	for( int i = 0 ; i < size ; i++ ) {
+	for( unsigned int i = 0 ; i < size ; i++ ) {
 		kset[i] = kset[i] & ( ks1.kset[i] | ks2.kset[i] | ks3.kset[i] );
 	}
 }
@@ -213,9 +213,9 @@ Unify( KeySet &ks )
 		universal = true;
 		return;
 	}
-	int size = kset.size( );
+	unsigned int size = kset.size( );
 	if( size < ks.kset.size( ) ) size = ks.kset.size( );
-	for( int i = 0 ; i < size ; i++ ) {
+	for( unsigned int i = 0 ; i < size ; i++ ) {
 		kset[i] |= ks.kset[i];
 	}
 }
@@ -225,14 +225,14 @@ Subtract( KeySet &ks )
 {
 	if( ks.universal ) {
 		universal = false;
-		for( int i = 0; i < kset.size(); i++ ) {
+		for( unsigned int i = 0; i < kset.size(); i++ ) {
 			kset[i] = 0;
 		}
 		return;
 	}
-	int size = kset.size( );
+	unsigned int size = kset.size( );
 	if( size < ks.kset.size( ) ) size = ks.kset.size( );
-	for( int i = 0 ; i < size ; i++ ) {
+	for( unsigned int i = 0 ; i < size ; i++ ) {
 		kset[i] &= ~ks.kset[i];
 	}
 }
@@ -255,7 +255,7 @@ Initialize( KeySet &s )
 {
 	ks = &s;
 	index = offset = -1;
-	last = ks->universal ? -1 : ks->kset.size( ) - 1;
+	last = ks->universal ? -1 : (int)ks->kset.size( ) - 1;
 }
 
 bool KeySet::iterator::
@@ -790,7 +790,8 @@ bool Rectangles::
 NormalizeInterval( Interval &i, char prefix )
 {
 	double	dl, du;
-	long	il, iu;
+	abstime_t	al, au;
+	time_t	tl, tu;
 	string	s1, s2;
 	bool	bl, bu;
 	
@@ -803,15 +804,15 @@ NormalizeInterval( Interval &i, char prefix )
 			return( true );
 
 		case 't':
-			dl = i.lower.IsAbsoluteTimeValue(il) ? (double)il : -(FLT_MAX);
-			du = i.lower.IsAbsoluteTimeValue(iu) ? (double)iu : FLT_MAX;
+			dl = i.lower.IsAbsoluteTimeValue(al) ? (double)al.secs: -(FLT_MAX);
+			du = i.lower.IsAbsoluteTimeValue(au) ? (double)au.secs: FLT_MAX;
 			i.lower.SetRealValue( dl );
 			i.upper.SetRealValue( du );
 			return( true );
 
 		case 'i':
-			dl = i.lower.IsRelativeTimeValue(il) ? (double)il : -(FLT_MAX);
-			du = i.lower.IsRelativeTimeValue(iu) ? (double)iu : FLT_MAX;
+			dl = i.lower.IsRelativeTimeValue(tl) ? (double)tl : -(FLT_MAX);
+			du = i.lower.IsRelativeTimeValue(tu) ? (double)tu : FLT_MAX;
 			i.lower.SetRealValue( dl );
 			i.upper.SetRealValue( du );
 			return( true );
