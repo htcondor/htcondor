@@ -174,10 +174,10 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 char *a_out;
                 char *targ;
                 char *orig;
-                int *kill_sig;
+                signal_t *kill_sig;
                 int terrno;
 
-                kill_sig = (int *)malloc( (unsigned)INT_SIZE );
+                kill_sig = (signal_t *)malloc( (unsigned)INT_SIZE );
                 orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 targ = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 a_out = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
@@ -185,7 +185,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 assert( syscall_sock->end_of_message() );;
 
                 errno = 0;
-                rval = pseudo_work_request( ad, a_out, targ, orig, kill_sig );
+                rval = pseudo_work_request( ad, a_out, targ, orig, (int *)kill_sig );
                 terrno = errno;
                 dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno);
 
@@ -195,7 +195,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                         assert( syscall_sock->code(terrno) );
                 }
                 if( rval >= 0 ) {
-                        assert( syscall_sock->signal(kill_sig) );
+                        assert( syscall_sock->code(kill_sig) );
                         assert( syscall_sock->code(orig) );
                         assert( syscall_sock->code(targ) );
                         assert( syscall_sock->code(a_out) );
