@@ -139,7 +139,7 @@ sub ParseUptime( $$ )
     $HashRef->{Load15} = $Fields[11];
 }
 
-    # Check the config period string
+# Parse a seconds expression (i.e. 1s or 5m)
 sub ParseSeconds( $$ )
 {
     my $TimeString = shift;
@@ -149,10 +149,11 @@ sub ParseSeconds( $$ )
     {
 	# Do nothing
     }
-    elsif ( $TimeString =~ /(\d+)([sSmMhHdD]?)/ )
+    # We handle s=seconds, m=minutes, h=hours, d=days
+    elsif ( $TimeString =~ /([\d\.]+)([sSmMhHdD]?)/ )
     {
 	$Seconds = $1;
-	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	if ( ( $2 eq "" ) || ( $2 eq "s" ) || ( $2 eq "S" ) )
 	{
 	    # Do nothing
 	}
@@ -180,6 +181,50 @@ sub ParseSeconds( $$ )
 
     # Done; return it
     $Seconds;
+}
+
+# Parse a byte count expression (i.e. 1b or 5m or 10g)
+sub ParseBytes( $$ )
+{
+    my $ByteString = shift;
+    my $Bytes = shift;
+
+    if ( $ByteString eq "" )
+    {
+	# Do nothing
+    }
+    # We handle b=bytes, k=kilo, m=mega, g=giga
+    elsif ( $ByteString =~ /([\d\.]+)([bBmkKMgG]?)/ )
+    {
+	if ( ( $2 eq "" ) || ( $2 eq "b" ) || ( $2 eq "B" ) )
+	{
+	    $Bytes = $1;
+	}
+	elsif ( ( $2 eq "k" ) || ( $2 eq "K" ) )
+	{
+	    $Bytes = $1 * 1024;
+	}
+	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	{
+	    $Bytes = $1 * 1024 * 1024;
+	}
+	elsif ( ( $2 eq "g" ) || ( $2 eq "G" ) )
+	{
+	    $Bytes = $1 * 1024 * 1024 * 1024;
+	}
+	else
+	{
+	    $Bytes = $1;
+	    print STDERR "Uknown byte modifier '$2'\n";
+	}
+    }
+    else
+    {
+	print STDERR "Bad byte string '$ByteString'\n";
+    }
+
+    # Done; return it
+    $Bytes;
 }
 
 sub AddHash( $$$$ )
