@@ -31,7 +31,7 @@
   we have to hide that definition here and provide our own.  -- mike
 */
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(__USE_GNU)
 #define __USE_GNU
 #endif
 
