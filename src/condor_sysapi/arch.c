@@ -332,13 +332,16 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 	} 
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
 		if( !strcmp( release, "7.4.0" ) ) {
-			sprintf( tmp, "OSX10_3");
+			sprintf( tmp, "OSX10_3" );
 		}
-		else if( !strcmp( release, "6.4" ) ) {
-			sprintf( tmp, "OSX10_2");
+		else if( !strcmp( release, "7.0.0" ) ) {
+			sprintf( tmp, "OSX10_3" );
+		}
+		else if( !strcmp( release, "6.8" ) ) {
+			sprintf( tmp, "OSX10_2" );
 		}
 		else {
-			sprintf( tmp, "OSX");
+			sprintf( tmp, "OSX_UNK" );
 		}
 	}
 	else if ( !strncmp(sysname, "AIX", 3) ) {
