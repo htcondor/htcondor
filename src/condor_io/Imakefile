@@ -4,14 +4,21 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -DHEADER_DES_LOCL_H
 LIB = libcedar.a $(STD_LIBS)
 
+#if CONDOR_3DES_ENCRYPTION
+DES_ENC_OBJ = condor_crypt_3des.o
+#endif 
+
+#if WANT_KERBEROS && HAS_KERBEROS
+KERB_OBJ = condor_auth_kerberos.o
+#endif
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
-		condor_auth_kerberos.o condor_auth_fs.o condor_auth_sspi.o \
+		condor_auth_fs.o condor_auth_sspi.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
-		SafeMsg.o condor_crypt.o CryptKey.o condor_crypt_3des.o
+		SafeMsg.o condor_crypt.o CryptKey.o $(DES_ENC_OBJ) $(KERB_OBJ)
 #       condor_crypt_blowfish.o condor_crypt_3des.o 
 #		autoTest.o manTest.o
 
