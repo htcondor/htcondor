@@ -137,7 +137,6 @@ bool JobListParser::nextJob( void )
 			skipJob( );
 			continue;
 		}
-		dprintf( D_ALWAYS, "prefix = '%s'\n", prefix );
 
 		// Path: must exist, non-zero length
 		path = nextField( );
