@@ -96,10 +96,11 @@ GetComponents( ExprTree *&tree, string &attr, bool &abs ) const
 bool AttributeReference::
 _Evaluate (EvalState &state, Value &val) const
 {
-	ExprTree			*tree, *dummy;
-	Value				cv;
-	const ClassAd		*curAd;
-	bool				rval;
+	ExprTree	*tree; 
+	ExprTree	*dummy;
+	ClassAd		*curAd;
+	bool		rval;
+	Value		cv;
 	EvalCache::iterator	itr;
 
 	// find the expression and the evalstate
@@ -139,10 +140,8 @@ _Evaluate (EvalState &state, Value &val) const
 			rval = tree->Evaluate( state , val );
 
 			// replace cached undef with actual evaluation
-			// *** if Evaluate() just returned false, is this still ok? ***
 			state.cache[ tree ] = val;
 
-			// *** if Evaluate() just returned false, is this still ok? ***
 			state.curAd = curAd;
 			return rval;
 
@@ -155,10 +154,11 @@ _Evaluate (EvalState &state, Value &val) const
 bool AttributeReference::
 _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	ExprTree			*tree, *exprSig;
-	Value 				cv;
-	const ClassAd		*curAd;
-	bool				rval;
+	ExprTree	*tree;
+	ExprTree	*exprSig;
+	ClassAd		*curAd;
+	bool		rval;
+	Value 		cv;
 	EvalCache::iterator	itr;
 
 	curAd = state.curAd;
@@ -223,10 +223,11 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 bool AttributeReference::
 _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 {
-	ExprTree		*tree, *dummy;
-	Value			cv;
-	const ClassAd	*curAd;
-	bool			rval;
+	ExprTree	*tree;
+	ExprTree	*dummy;
+	ClassAd		*curAd;
+	bool		rval;
+	Value		cv;
 
 		// find the expression and the evalstate
 	curAd = state.curAd;
@@ -282,9 +283,9 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 int AttributeReference::
 FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
-	const ClassAd 	*current=NULL;
-	Value			val;
-	bool			rval;
+	ClassAd	*current=NULL;
+	Value	val;
+	bool	rval;
 
 	sig = NULL;
 
