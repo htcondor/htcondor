@@ -326,15 +326,13 @@ desire the Condor source code, please contact the Condor Team in order to discus
 %Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
-Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
- & Red Hat Linux 9 \\
- & Red Hat Enterprise Linux 3 \\
- & Debian Linux 3.1 (sarge) \\
+Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0, 9, Enterprise Linux 3,
+Debian Linux 3.1 (sarge) \\
+ & Fedora Core 1, 2, 3 \\
  & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0), 
 Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
-%ALPHA & Digital Unix 4.0 \\
-% & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
-ALPHA & Tru64 5.1 (clipped) \\ \hline
+ALPHA & Tru64 5.1 (clipped) \\ 
+ & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
  & AIX 5.2 (clipped) \\ \hline
 Itanium (IA64) & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ 
@@ -392,6 +390,12 @@ Red Hat Linux, version 9 on x86 \\
 Red Hat Enterprise Linux 3 on x86 \\
 & gcc & version 3.2.3 \\ 
 \hline
+Red Hat Debian Linux 3.1 (sarge) on x86 \\
+%& compiler here & notes here \\ 
+\hline
+Fedora Core 1, 2, and 3 on x86 \\
+%& compiler here & notes here \\ 
+\hline
 % HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
 % & gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
 % & cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
@@ -423,17 +427,15 @@ supported, the support is automatic.
 % Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) with IRIX 6.5 &  Yes \\ \hline
-Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9 & Yes \\ \hline
-Intel x86 with Red Hat Enterprise Linux 3 & Yes \\ \hline
-Intel x86 with Debian Linux 3.1 (sarge) & Yes \\ \hline
-Intel x86 with Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) & Yes \\ \hline 
-Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline
+Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9, Enterprise Linux 3, Debian Linux 3.1 (sarge) & Yes \\ 
+Intel x86 with Fedora Core 1, 2, 3 & Yes \\
+Intel x86 with Windows 2000 Professional and Server, 2003 Server (Win NT 5.0), Windows XP Professional (Win NT 5.1) & Yes \\ \hline
 % ALPHA with Digital Unix 4.0 & No \\ \hline
-% ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
-ALPHA with  Tru64 5.1  & No \\ \hline
-PowerPC with Macintosh OS X  & No \\ \hline
+ALPHA with  Tru64 5.1  & No \\ 
+ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
+PowerPC with Macintosh OS X  & No \\
 PowerPC with AIX 5.2  & Yes \\ \hline
-Itanium with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
+Itanium with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\
 Itanium with SuSE Linux Enterprise 8.1 & Yes \\ \hline
 \end{tabular}
 \caption{\label{large-file-support}Supported platforms for large file transfer of vanilla universe job files}
