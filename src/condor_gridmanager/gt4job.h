@@ -127,6 +127,7 @@ class GT4Job : public BaseJob
 	Proxy *jobProxy;
 	GahpClient *gahp;
 
+	void SetJobContact( const char *job_contact );
 	MyString *buildSubmitRSL();
 	void DeleteOutput();
 

@@ -163,19 +163,6 @@ gt4JobId( const char *contact )
 	return contact;
 }
 
-static
-void
-rehashJobContact( GT4Job *job, const char *old_contact,
-				  const char *new_contact )
-{
-	if ( old_contact ) {
-		GT4JobsByContact.remove(HashKey(gt4JobId(old_contact)));
-	}
-	if ( new_contact ) {
-		GT4JobsByContact.insert(HashKey(gt4JobId(new_contact)), job);
-	}
-}
-
 void
 gt4GramCallbackHandler( void *user_arg, const char *job_contact,
 						const char *state, const char *failure )
@@ -435,15 +422,14 @@ GT4Job::GT4Job( ClassAd *classad )
 
 	resourceDown = false;
 	resourceStateKnown = false;
-//	myResource = resource;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this, job_already_submitted );
 
 	buff[0] = '\0';
 	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
-		rehashJobContact( this, jobContact, buff );
-		jobContact = strdup( buff );
+		SetJobContact( buff );
+		ad->SetDirtyFlag( ATTR_GLOBUS_CONTACT_STRING, false );
 		job_already_submitted = true;
 	}
 
@@ -537,7 +523,7 @@ GT4Job::~GT4Job()
 		free( resourceManagerString );
 	}
 	if ( jobContact ) {
-		rehashJobContact( this, jobContact, NULL );
+		GT4JobsByContact.remove( HashKey( gt4JobId(jobContact) ) );
 		free( jobContact );
 	}
 	if ( RSL ) {
@@ -890,12 +876,8 @@ gmState=GM_SUBMIT;
 				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-						// job_contact was strdup()ed for us. Now we take
-						// responsibility for free()ing it.
-					jobContact = job_contact;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
+					SetJobContact( job_contact );
+					free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
@@ -1080,12 +1062,8 @@ gmState=GM_SUBMIT;
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
 				if ( jobContact != NULL ) {
-					rehashJobContact( this, jobContact, NULL );
-					free( jobContact );
+					SetJobContact( NULL );
 					myResource->CancelSubmit( this );
-					jobContact = NULL;
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   NULL_JOB_CONTACT );
 					globusState = GT4_JOB_STATE_UNSUBMITTED;
 					UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 					requestScheddUpdate( this );
@@ -1140,13 +1118,9 @@ gmState=GM_SUBMIT;
 				break;
 			}
 
-			rehashJobContact( this, jobContact, NULL );
-			free( jobContact );
+			SetJobContact( NULL );
 			myResource->CancelSubmit( this );
-			jobContact = NULL;
 			jmDown = false;
-			UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-							   NULL_JOB_CONTACT );
 			globusState = GT4_JOB_STATE_UNSUBMITTED;
 			UpdateJobAdInt( ATTR_GLOBUS_STATUS, globusState );
 			requestScheddUpdate( this );
@@ -1214,13 +1188,9 @@ gmState=GM_SUBMIT;
 			// HACK!
 			retryStdioSize = true;
 			if ( jobContact != NULL ) {
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
+				SetJobContact( NULL );
 				myResource->CancelSubmit( this );
-				jobContact = NULL;
 				jmDown = false;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
 			}
 			JobIdle();
 			if ( submitLogged ) {
@@ -1392,6 +1362,26 @@ gmState=GM_SUBMIT;
 	}
 
 	return TRUE;
+}
+
+void GT4Job::SetJobContact( const char *job_contact )
+{
+	if ( jobContact != NULL && job_contact != NULL &&
+		 strcmp( jobContact, job_contact ) == 0 ) {
+		return;
+	}
+	if ( jobContact != NULL ) {
+		GT4JobsByContact.remove( HashKey( gt4JobId(jobContact) ) );
+		free( jobContact );
+		jobContact = NULL;
+		UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING, NULL_JOB_CONTACT );
+	}
+	if ( job_contact != NULL ) {
+		jobContact = strdup( job_contact );
+		GT4JobsByContact.insert( HashKey( gt4JobId(jobContact) ), this );
+		UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING, jobContact );
+	}
+	requestScheddUpdate( this );
 }
 
 void GT4Job::NotifyResourceDown()
