@@ -188,3 +188,31 @@ AC_DEFUN([CONDOR_SET_ANALYZE],
    AC_SUBST([condor_analyze_[$2]],$[$1])
  fi
 ])
+
+
+#######################################################################
+# GET_GCC_VALUE by Derek Wright <wright@cs.wisc.edu> 
+# We need to find out a few things from our gcc installation, like the
+# full paths to some of the support libraries, etc.  This macro just
+# invokes gcc with a given option, saves the value into a variable, and
+# if it worked, it substitutes the discovered value.
+# Arguments: 
+#  $1 the "checking for" message to print
+#  $2 the gcc option to envoke
+#  $3 the variable name (used for storing in cache with "_cv_"
+#     prepended to the front, and for substitution in the output)
+#######################################################################
+AC_DEFUN([GET_GCC_VALUE],
+[AC_CACHE_CHECK( [for $1], [_cv_[$3]],
+ [[_cv_$3]=`gcc $2 2>/dev/null`
+  _gcc_status=$?
+  if test $_gcc_status -ne 0; then
+    [_cv_$3]="no";
+  fi
+ ])
+ if test $[_cv_[$3]] = "no"; then
+   AC_MSG_ERROR([Can not find $1: gcc $2 failed!])
+ else
+   AC_SUBST($3,$[_cv_[$3]])
+ fi
+])
