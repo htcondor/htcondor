@@ -44,6 +44,10 @@ given above.
 \begin{enumerate}
 \item Use Globus v1.1 or better.
 
+\item Have gsincftp installed. This is an ftp client modified to use Globus
+  X.509 authentication. More information ca be found at
+  \Url{http://www.globus.org/datagrid/deliverables/gsiftp-tools.html}.
+
 \item Be an authorized user of the local Condor pool.
 
 \item The local Condor pool configuration file(s) must 
@@ -64,9 +68,6 @@ given above.
   directory \File{/bin}, globus tools, and the Condor user program
   directory.
 
-\item Have the environment variable \Env{X509\_USER\_PROXY} set,
-  pointing to a valid user proxy.
-
 \end{enumerate}
 
 \subsection{What \Condor{glidein} Does}
@@ -79,6 +80,8 @@ presence of the necessary configuration files and Condor executables.
 If the executables are not present for the machine architecture,
 operating system version, and Condor version required, a
 server running at UW is contacted to transfer the needed executables.
+To gain access to the server, send email to \Email{condor-admin@cs.wisc.edu}
+that includes the name of your X.509 certificate.
 
 When the files are correctly in place,
 Condor daemons are started.
