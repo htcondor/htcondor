@@ -212,6 +212,7 @@ stripped:: dir##/##file
 dir##/##lib: lib					@@\
 	COPY_LIBRARY( lib, dir##/##lib )		@@\
 	RANLIB_TOUCH( dir##/##lib )			@@\
+	chmod OBJECT_MODE dir##/##lib			@@\
 stripped:: dir##/##lib
 #endif  strip_library
 
@@ -293,6 +294,7 @@ static:: dir##/##program
 dir##/##lib: lib					@@\
 	COPY_LIBRARY( lib, dir##/##lib )		@@\
 	RANLIB_TOUCH( dir##/##lib )			@@\
+	chmod OBJECT_MODE dir##/##lib			@@\
 static:: dir##/##lib
 #endif  static_library
 
