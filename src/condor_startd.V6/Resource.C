@@ -77,6 +77,10 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
 
+		// Initialize our procInfo structure so we don't use any
+		// values until we've actually computed them.
+	memset( (void*)&r_pinfo, 0, (size_t)sizeof(r_pinfo) );
+
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
 				 r_attr->type() );
