@@ -30,6 +30,8 @@
 #include "parse.h"
 #include "my_username.h"
 #include "condor_environ.h"
+#include "dagman_main.h"
+#include "dagman_commands.h"
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
@@ -42,26 +44,7 @@ char* DAGManJobId;
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
 
-class Global {
-  public:
-    inline Global ():
-        dag          (NULL),
-        maxJobs      (0),
-        maxPreScripts (0),
-        maxPostScripts (0),
-        rescue_file  (NULL),
-        datafile     (NULL) {}
-    inline void CleanUp () { delete dag; }
-    Dag * dag;
-    int maxJobs;  // Maximum number of Jobs to run at once
-    int maxPreScripts;  // max. number of PRE scripts to run at once
-    int maxPostScripts;  // max. number of POST scripts to run at once
-    char *rescue_file;
-    char *datafile;
-};
-
 Global G;
-
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -128,6 +111,17 @@ int main_shutdown_remove(Service *, int) {
 void main_timer();
 void print_status();
 
+/****** FOR TESTING *******
+int main_testing_stub( Service *, int ) {
+	if( G.paused ) {
+		ResumeDag();
+	}
+	else {
+		PauseDag();
+	}
+	return true;
+}
+****** FOR TESTING ********/
 
 //---------------------------------------------------------------------------
 int main_init (int argc, char ** const argv) {
@@ -143,7 +137,13 @@ int main_init (int argc, char ** const argv) {
                                  (SignalHandler) main_shutdown_remove,
                                  "main_shutdown_remove", NULL,
                                  IMMEDIATE_FAMILY);
-		
+
+/****** FOR TESTING *******
+    daemonCore->Register_Signal( SIGUSR2, "SIGUSR2",
+                                 (SignalHandler) main_testing_stub,
+                                 "main_testing_stub", NULL,
+                                 IMMEDIATE_FAMILY );
+****** FOR TESTING ********/
     debug_progname = basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
@@ -386,6 +386,8 @@ print_status() {
 
 void main_timer () {
 
+	ASSERT( G.dag != NULL );
+
     //------------------------------------------------------------------------
     // Proceed with normal operation
     //
@@ -396,6 +398,11 @@ void main_timer () {
     // If recovery was needed, the log file has been completely read and
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
+
+	if( G.paused == true ) {
+		debug_printf( DEBUG_VERBOSE, "(DAGMan paused)\n" );
+		return;
+	}
 
     static int prevJobsDone = 0;
     static int prevJobs = 0;

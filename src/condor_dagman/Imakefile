@@ -12,7 +12,7 @@ CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
-	script.o scriptQ.o helper.o dagman_instantiate.o
+	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)

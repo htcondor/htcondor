@@ -1,3 +1,7 @@
+? what happens if DAGMan is paused and someone or the schedd tries to
+shut it down?  will ignoring it lead to trouble (i.e. hard kill)?  can
+it be handled in mid-pause?  think...
+
 - dagman doesn't dump pre/post script arguments to recovery DAGs!
 
 - if condor_submit hangs (which it can), DAGMan hangs -- we need a timeout
