@@ -104,6 +104,9 @@ int main (int argc, char **argv)
 		printf ("Error connecting to job queue\n");
 		exit (1);
 	}
+
+	// sort queue by cluster.proc
+	jobs.Sort((int(*)(AttrListAbstract *, AttrListAbstract *, void *))JobSort);
 	
 	// initialize counters
 	malformed = 0; idle = 0; running = 0; unexpanded = 0;
