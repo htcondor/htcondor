@@ -420,7 +420,7 @@ sub RunIt( $ )
 	    }
 
 	    # Header line?
-	    elsif ( /\s+PID\s+USER\s+PRI/ ) {
+	    elsif ( /\s+PID\s+USER/ ) {
 		last;
 	    }
 	}
@@ -436,7 +436,9 @@ sub RunIt( $ )
       READPROC:
 	while ( <TOP> ) {
 
-	    # Verify that we start with a process ID type thingy, 
+	    #last if ( ! /^\s*$/ );
+
+	    # Verify that we start with a process ID type thingy,
 	    # then parse it..
 	    next if ( ! /\s*\d+/ );
 	    my @Process = split;

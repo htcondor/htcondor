@@ -104,7 +104,7 @@ sub RunIt {
 	if ( $Config{MasterOwnerList} ne "" );
 
     # Run a 'ps' and gather some info...
-    if ( open( PS, "/bin/ps -eo user,pid,ppid,command|" ) )
+    if ( open( PS, "/bin/ps -eo user,pid,ppid,comm,args|" ) )
     {
 	while ( <PS> )
 	{

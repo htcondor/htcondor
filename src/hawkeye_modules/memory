@@ -1,9 +1,11 @@
-#! /usr/bin/perl -w
+#! /usr/bin/env perl
+use warnings;
 use strict;
 
 # Prototypes
 sub GatherMeminfo( $$ );
 sub GatherFree( $$ );
+sub GatherSolaris( $$ );
 sub GatherError( $$ );
 
 # Update the module include path
@@ -26,6 +28,7 @@ my @GatherMethods =
 (
  { Description => "Linux /proc/meminfo", Function => \&GatherMeminfo, },
  { Description => "Linux free", Function => \&GatherFree, },
+ { Description => "Solaris", Function => \&GatherSolaris, },
  { Description => "Error", Function => \&GatherError, },
 );
 
@@ -221,6 +224,73 @@ sub GatherFree( $$ )
     }
 
     return 1;
+}
+
+# Gather data via the "free" program (Linux)
+sub GatherSolaris( $$ )
+{
+    my $Hash = shift;
+    my $Error = shift;
+    my $Cmd;
+
+    # Run 'swap -s'
+
+    # Run it, parse it
+    my $Program = "/usr/sbin/swap";
+    return 0 if ( ! -x $Program );
+
+    my $SwapOk = 0;
+    $Cmd = "$Program -s";
+    Carp::confess( "Can't run free '$Cmd'" ) if ( ! open ( SWAP, "$Cmd|" ) );
+  SWAP:
+    while( <SWAP> )
+    {
+	chomp;
+	if ( /total:\s+(.*)/ )
+	{
+	    my @Strings = split( /\s*[=,+]\s*/, $1 );
+	    foreach my $Str ( @Strings )
+	    {
+	       if ( $Str =~ /^(\d+)([kmg]?)\s+(.*)/ )
+		{
+		    my $Value = $1;
+		    if ( defined $2 )
+		    {
+			if ( $2 eq "k" )
+			{
+			    $Value *= 1024;
+			}
+			elsif ( $2 eq "m" )
+			{
+			    $Value *= 1024 * 1024;
+			}
+			elsif ( $2 eq "g" )
+			{
+			    $Value *= 1024 * 1024 * 1024;
+			}
+			else
+			{
+			    print STDERR "swap: can't parse '$Str'\n";
+			    next;
+			}
+		    }
+		    my $Label = $3;
+		    $Label =~ s/\s+/_/g;
+		    $Hash->Add( "swap_" . $Label, "n", $Value );
+		    $SwapOk = 1;
+		}
+		else
+		{
+		    print STDERR "swap: can't parse '$Str'\n";
+		    next;
+		}
+		
+	    }
+	}
+	last if ( $SwapOk );
+    }
+
+    return $SwapOk;
 }
 
 sub GatherError( $$ )
