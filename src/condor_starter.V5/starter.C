@@ -471,11 +471,7 @@ req_ckpt_exit_all()
 		if( proc->is_running() || proc->is_suspended() ) {
 			dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
 					 proc->get_id());
-			if( proc->get_class() == VANILLA ) {
-				proc->request_exit();
-			} else {
-				proc->request_ckpt();
-			}
+			proc->request_exit();
 		}
 	}
 }
@@ -498,7 +494,6 @@ req_exit_all()
 			if( proc->is_running() || proc->is_suspended() ) {
 				dprintf( D_ALWAYS, "Requesting Exit on proc #%d\n",
 						proc->get_id());
-//				proc->request_exit();
 				proc->kill_forcibly();
 			}
 		}
