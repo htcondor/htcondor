@@ -292,6 +292,7 @@ SYSCALL_NAME SyscallNameTab[] = {
 	256, "CONDOR_uswitch",
 	257, "CONDOR_getsysinfo",
 	258, "CONDOR_setsysinfo",
+	259, "CONDOR_getdents",
 };
 
 char *

@@ -285,3 +285,4 @@ This file is generated automatically by an awk script - DO NOT EDIT
 #define CONDOR_uswitch 256
 #define CONDOR_getsysinfo 257
 #define CONDOR_setsysinfo 258
+#define CONDOR_getdents 259
