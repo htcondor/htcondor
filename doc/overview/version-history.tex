@@ -36,6 +36,20 @@ page~\pageref{man-condor-qedit}.
 \item Fixed a bug in the \Condor{shadow} which was causing \Condor{q}
 \Opt{-goodput} to display incorrect values for some jobs.
 
+\item Fixed some minor bugs and made some minor enhancements in the
+\Condor{install} script.
+The bugs included a typo in one of the questions asked, and incorrect
+handling for the answers of a few different questions.
+In addition, we now avoid one installation step in cases were it is
+not needed. 
+
+\item Added more checking to the various arguments that might be
+passed to \Condor{status}, so that in the case of bad input,
+\Condor{status} will print an error message and exit, instead of
+performing a segmentation fault.
+Also, when you use the \Opt{-sort} option, \Condor{status} will only
+display ClassAds where the attributes you use to sort are defined.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
