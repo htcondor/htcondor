@@ -347,12 +347,40 @@ Client::vacate(char* cap)
 char*
 new_capability_string()
 {
-	char cap[256];
+	char cap[128];
 	char tmp[128];
-	sprintf( tmp, "%d", get_random_int() );
+	char randbuf[12];
+	randbuf[0] = '\0';
+	int i, len;
+
+		// Create a really mangled 10 digit random number: The first 6
+		// digits are generated as follows: for the ith digit, pull
+		// the ith digit off a new random int.  So our 1st slot comes
+		// from the 1st digit of 1 random int, the 2nd from the 2nd
+		// digit of a 2nd random it, etc...  If we're trying to get a
+		// digit from a number that's too small to have that many, we
+		// just use the last digit.  The last 4 digits of our number
+		// come from the first 4 digits of the current time multiplied
+		// by a final random int.  That should keep 'em guessing. :)
+		// -Derek Wright 1/8/98
+	for( i=0; i<6; i++ ) {
+		sprintf( tmp, "%d", get_random_int() );
+		len = strlen(tmp);
+		if( i < len ) {
+			tmp[i+1] = '\0';
+			strcat( randbuf, tmp+i );
+		} else {
+			strcat( randbuf, tmp+(len-1) );
+		}
+	}
+	sprintf( tmp, "%f", (double)((float)time(NULL) * (float)get_random_int()) );
+	tmp[4]='\0';
+	strcat( randbuf, tmp );
+
+		// Capability string is "<ip:port>#random_number"
 	strcpy( cap, daemonCore->InfoCommandSinfulString() );
 	strcat( cap, "#" );
-	strcat( cap, tmp );
+	strcat( cap, randbuf );
 	return strdup( cap );
 }
 
