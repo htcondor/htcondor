@@ -93,10 +93,26 @@ sub main( @ )
     }
     close( MODULES );
 
+    # Env variable overrides the dirctory from the file...
+    if ( exists $ENV{HAWKEYE_RELEASE_DIR} )
+    {
+	$DefaultDir = "$ENV{HAWKEYE_RELEASE_DIR}/modules";
+    }
+    if ( exists $ENV{HAWKEYE_MODULES_DIR} )
+    {
+	$DefaultDir = $ENV{HAWKEYE_MODULES_DIR};
+    }
+
     # Dir logic
     if ( $TargetDir eq "" )
     {
 	$TargetDir = $DefaultDir;
+    }
+
+    # Create the directory?
+    if ( ! -d $TargetDir )
+    {
+	mkdir $TargetDir || die "Can't create modoles dir $TargetDir";
     }
 
     # Any valid targets?

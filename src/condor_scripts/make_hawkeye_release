@@ -18,9 +18,16 @@ my $TarBallPat = "Hawkeye-%s.tar";
 my $RelTarBallPat = "Hawkeye-%s.tar.gz";
 
 # Script version, etc
-my $Version = "0.1";
+my $Version = "0.2";
 my $Usage = "$0 version";
 
+# Env variable overrides the dirctory from the file...
+if ( exists $ENV{HAWKEYE_RELEASE_DIR} )
+{
+    $ReleaseDir = $ENV{HAWKEYE_RELEASE_DIR};
+}
+
+# Prototypes
 sub CopyAll( $$$ );
 
 # Process command line..
