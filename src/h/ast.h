@@ -13,6 +13,7 @@ class Expression
   virtual ~Expression() {};
   virtual void Display() = 0;
   virtual void EvalTree(class Context *, class Context *, class Max_factor *) = 0;
+  char unit;
 };
 
 
