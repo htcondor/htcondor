@@ -959,7 +959,10 @@ void SetFileOptions()
 
 	tmp = condor_param(BufferSize);
 	if(!tmp) {
-		tmp = strdup("524288");
+		tmp = param("DEFAULT_IO_BUFFER_SIZE");
+		if (!tmp) {
+			tmp = strdup("524288");
+		}
 	}
 	sprintf(buffer,"%s = %s",ATTR_BUFFER_SIZE,tmp);
 	InsertJobExpr(buffer);
@@ -969,7 +972,10 @@ void SetFileOptions()
 
 	tmp = condor_param(BufferBlockSize);
 	if(!tmp) {
-		tmp = strdup("32768");
+		tmp = param("DEFAULT_IO_BUFFER_BLOCK_SIZE");
+		if (!tmp) {
+			tmp = strdup("32768");
+		}
 	}
 	sprintf(buffer,"%s = %s",ATTR_BUFFER_BLOCK_SIZE,tmp);
 	InsertJobExpr(buffer);

@@ -803,6 +803,16 @@ DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
 #MACHINE = "$(FULL_HOSTNAME)"
 #SUBMIT_EXPRS = MACHINE
 
+## Condor keeps a buffer of recently-used data for each file an
+## application opens.  This macro specifies the default maximum number
+## of bytes to be buffered for each open file at the executing
+## machine.
+#DEFAULT_IO_BUFFER_SIZE = 524288
+
+## Condor will attempt to consolidate small read and write operations
+## into large blocks.  This macro specifies the default block size
+## Condor will use.
+#DEFAULT_IO_BUFFER_BLOCK_SIZE = 32768
 
 ##--------------------------------------------------------------------
 ##  condor_preen 
