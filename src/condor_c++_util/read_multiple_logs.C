@@ -274,7 +274,8 @@ MyString getJobLogsFromSubmitFiles(StringList &listLogFilenames, const MyString 
 		MyString strFirstThree = strLine.Substr(0, 2);
 		bool bFoundNonWhitespace = false;
 		int iEndOfSubFileName = strLine.Length()-1;
-		if (!stricmp(strFirstThree.Value(), "job"))
+		if (!stricmp(strFirstThree.Value(), "job") ||
+				!stricmp(strFirstThree.Value(), "dap"))
 		{
 			int iLastWhitespace = strLine.Length();
 			int iPos;
