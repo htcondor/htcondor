@@ -68,6 +68,7 @@ class HashTable {
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
 
+
   /*
   Walk the table, calling walkfunc() on every member.
   If walkfunc() ever returns zero, the walk is stopped.
@@ -75,8 +76,8 @@ class HashTable {
   if stopped. Walk() is provided so that multiple walks
   can be done even if a startIterations() is in progress.
   */
-
   int walk( int (*walkfunc) ( Value value ) );
+
 
  private:
 #ifdef DEBUGHASH
@@ -167,14 +168,6 @@ HashTable<Index,Value>::HashTable( int tableSz,
 template <class Index, class Value>
 int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
-	// if rejectDuplicateKeys is set and index already exists in the
-	// table, return -1
-	Value *tempVal;
-	if( duplicateKeyBehavior == rejectDuplicateKeys 
-		&& lookup( index, tempVal ) == 0 ) {
-		return -1;
-	}
-
   int temp;
   int idx = hashfcn(index, tableSize);
   // do sanity check on return value from hash func
@@ -185,6 +178,20 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   }
 
   HashBucket<Index, Value> *bucket;
+
+  // if rejectDuplicateKeys is set and index already exists in the
+  // table, return -1
+  if ( duplicateKeyBehavior == rejectDuplicateKeys ) {
+	  bucket = ht[idx];
+	  while (bucket) {
+		  if (bucket->index == index) {
+			  // found!  return error because rejectDuplicateKeys is set
+			  return -1;
+		  }
+		  bucket = bucket->next;
+	  }
+  }
+
   if (!(bucket = new HashBucket<Index, Value>)) {
     cerr << "Insufficient memory" << endl;
     return -1;
@@ -528,6 +535,7 @@ iterate (Index &index, Value &v)
 		return 1;
 	}
 }
+
 
 template <class Index, class Value>
 int HashTable<Index,Value>::walk( int (*walkfunc) ( Value value ) )
