@@ -72,6 +72,7 @@ extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
 extern bool ManageBandwidth;
 extern char *ExecutingHost;
+extern char *scheddName;
 
 int		LastCkptSig = 0;
 
@@ -113,6 +114,8 @@ extern float BytesSent, BytesRecvd;
 
 const int MaxRetryWait = 3600;
 static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
+static bool RestoreCkptWithNoScheddName = false; // compat with old naming
+static Daemon Negotiator(DT_NEGOTIATOR);
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -536,7 +539,10 @@ pseudo_rename(char *from, char *to)
 					// a checkpoint server, if any.
 				if (LastCkptServer) {
 					SetCkptServerHost(LastCkptServer);
-					RemoveRemoteFile(p->owner, to);
+					RemoveRemoteFile(p->owner, scheddName, to);
+					if (JobPreCkptServerScheddNameChange()) {
+						RemoveRemoteFile(p->owner, NULL, to);
+					}
 					free(LastCkptServer);
 					LastCkptServer = NULL; // stored ckpt file on local disk
 				}
@@ -547,7 +553,7 @@ pseudo_rename(char *from, char *to)
 
 	} else {
 
-		if (RenameRemoteFile(p->owner, from, to) < 0)
+		if (RenameRemoteFile(p->owner, scheddName, from, to) < 0)
 			return -1;
 			// if we just wrote a checkpoint to a new checkpoint server,
 			// we should remove any previous checkpoints we left around.
@@ -563,7 +569,10 @@ pseudo_rename(char *from, char *to)
 				   same_host(LastCkptServer, CkptServerHost) == FALSE) {
 				// previous checkpoint is on a different ckpt server
 			SetCkptServerHost(LastCkptServer);
-			RemoveRemoteFile(p->owner, to);
+			RemoveRemoteFile(p->owner, scheddName, to);
+			if (JobPreCkptServerScheddNameChange()) {
+				RemoveRemoteFile(p->owner, NULL, to);
+			}
 			SetCkptServerHost(CkptServerHost);
 		}
 		if (LastCkptServer) free(LastCkptServer);
@@ -610,7 +619,10 @@ pseudo_get_file_stream(
 		SetCkptServerHost(LastCkptServer);
 		retry_wait = 5;
 		do {
-			rval = RequestRestore(p->owner,file,len,
+			rval = RequestRestore(p->owner,
+								  (RestoreCkptWithNoScheddName) ? NULL :
+								  								  scheddName,
+								  file,len,
 								  (struct in_addr*)ip_addr,port);
 			if (rval) { // network error, try again
 				dprintf(D_ALWAYS, "ckpt server restore failed, trying again"
@@ -723,7 +735,7 @@ pseudo_put_file_stream(
 	if (CkptFile && UseCkptServer) {
 		SetCkptServerHost(CkptServerHost);
 		do {
-			rval = RequestStore(p->owner, file, len,
+			rval = RequestStore(p->owner, scheddName, file, len,
 								(struct in_addr*)ip_addr, port);
 			if (rval) {	/* request denied or network error, try again */
 				dprintf(D_ALWAYS, "store request to ckpt server failed, "
@@ -854,7 +866,6 @@ RequestCkptBandwidth(unsigned int ip_addr)
 	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
 			(float)(ImageSize-executable_size)*1024.0);
 	request.Insert(buf);
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
@@ -901,7 +912,6 @@ RequestRSCBandwidth()
 	// don't bother allocating anything under 1KB
 	if (send_estimate < 1024.0 && recv_estimate < 1024.0) return;
 
-	Daemon Negotiator(DT_NEGOTIATOR);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
@@ -1636,6 +1646,27 @@ access_via_nfs( const char *file )
 	return TRUE;
 }
 
+/*
+**  Starting with version 6.2.0, we store checkpoints on the checkpoint
+**  server using "owner@scheddName" instead of just "owner".  If the job
+**  was submitted before this change, we need to check to see if its
+**  checkpoint was stored using the old naming scheme.
+*/
+bool
+JobPreCkptServerScheddNameChange()
+{
+	char job_version[150];
+	job_version[0] = '\0';
+	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version)) {
+		CondorVersionInfo ver(job_version, "JOB");
+		if (ver.built_since_version(6,2,0) &&
+			ver.built_since_date(11,16,2000)) {
+			return false;
+		}
+	}
+	return true;				// default to version compat. mode
+}
+
 int
 has_ckpt_file()
 {
@@ -1651,7 +1682,13 @@ has_ckpt_file()
 	priv = set_condor_priv();
 	do {
 		SetCkptServerHost(LastCkptServer);
-		rval = FileExists(RCkptName, p->owner);
+		rval = FileExists(RCkptName, p->owner, scheddName);
+		if (rval == 0 && JobPreCkptServerScheddNameChange()) {
+			rval = FileExists(RCkptName, p->owner, NULL);
+			if (rval == 1) {
+				RestoreCkptWithNoScheddName = true;
+			}
+		}
 		if(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime) {
 			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
 					" in %d seconds\n", retry_wait);
