@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 #if defined(ULTRIX43)
-	#include <time.h>
+#	include <time.h>
 #endif
 
 #if defined(SUNOS41)
