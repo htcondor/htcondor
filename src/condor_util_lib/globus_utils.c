@@ -86,12 +86,10 @@ get_x509_proxy_filename()
 	return proxy_file;
 }
 
-/* Return the number of seconds until the supplied proxy
- * file will expire.  
- * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+/* Return the time at which the proxy expires. On error, return -1.
  */
-int
-x509_proxy_seconds_until_expire( char *proxy_file )
+time_t
+x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
@@ -99,12 +97,9 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 #else
 
 	proxy_cred_desc *pcd = NULL;
-	time_t time_after;
-	time_t time_now;
-	time_t time_diff;
+	time_t expiration_time;
 	ASN1_UTCTIME *asn1_time = NULL;
 	struct stat stx;
-	int result;
 	int must_free_proxy_file = FALSE;
 
 	/* initialize SSLeay and the error strings */
@@ -143,32 +138,59 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 		return -1;
 	}
 
-	/* validity: set time_diff to time to expiration (in seconds) */
+	/* validity: set expiration_time to time at which proxy expires */
 	asn1_time = ASN1_UTCTIME_new();
 	X509_gmtime_adj(asn1_time,0);
-	time_now = ASN1_UTCTIME_mktime(asn1_time);
-	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
-	time_diff = time_after - time_now ;
+	expiration_time = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
 	ASN1_UTCTIME_free( asn1_time );
+
+	if ( must_free_proxy_file ) {
+		free(proxy_file);
+	}
+    
+    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
+
+	return expiration_time;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+/* Return the number of seconds until the supplied proxy
+ * file will expire.  
+ * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+ */
+int
+x509_proxy_seconds_until_expire( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+#else
+
+	time_t time_now;
+	time_t time_expire;
+	time_t time_diff;
+
+	time_now = time(NULL);
+	time_expire = x509_proxy_expiration_time( proxy_file );
+
+	if ( time_expire == -1 ) {
+		return -1;
+	}
+
+	time_diff = time_expire - time_now;
 
 	if ( time_diff < 0 ) {
 		time_diff = 0;
 	}
 
-
-	result = (int) time_diff;
-
-	if ( must_free_proxy_file ) free(proxy_file);
-    
-    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
-
-	return result;
+	return (int)time_diff;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
 int
-check_x509_proxy( char *proxy_file )
+check_x509_proxy( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
