@@ -29,9 +29,10 @@
 #include "vanilla_proc.h"
 
 /** Mostly, this class is a wrapper around VanillaProc, with the
-	exception that Suspends really cause the job to exit.  The notion
-	for this class is that all the mpi nodes are "comrades"  (none
-	of this master-slave stuff...).  */
+	exception that Suspends really cause the job to exit, and that we
+	have to keep track of the MPI Node (a.k.a. "MPI Rank") of this
+	task.  The notion for this class is that all the mpi nodes are
+	"comrades" (none of this master-slave stuff...). */
 
 class MPIComradeProc : public VanillaProc
 {
@@ -40,27 +41,21 @@ class MPIComradeProc : public VanillaProc
     MPIComradeProc( ClassAd * jobAd );
     virtual ~MPIComradeProc();
 
+		/** Pull the MPI Node out of the job ClassAd and save it.
+			Then, just call VanillaProc::StartJob() to do the real
+			work. */
     virtual int StartJob();
 
-    virtual int JobExit( int pid, int status );
-
+		/** MPI tasks shouldn't be suspended.  So, if we get a
+			suspend, instead of sending the MPI task a SIGSTOP, we
+			tell it to shutdown, instead. */
     virtual void Suspend();
 
+		/** This is here just so we can print out a log message, since
+			we don't expect this will ever get called. */
     virtual void Continue();
 
-    virtual bool ShutDownGraceful();
-
-    virtual bool ShutdownFast();
-
-		/** Publish all attributes we care about for updating the
-			shadow into the given ClassAd.  This function is just
-			virtual, not pure virtual, since OsProc and any derived
-			classes should implement a version of this that publishes
-			any info contained in each class, and each derived version
-			should also call it's parent's version, too.
-			@param ad pointer to the classad to publish into
-			@return true if success, false if failure
-		*/
+		/** Publish our MPI Node. */
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
  protected:
