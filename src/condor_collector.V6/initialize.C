@@ -5,6 +5,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_network.h"
+#include "collector_engine.h"
 #include "condor_io.h"
 #include "sched.h"
 
@@ -18,45 +19,24 @@ extern "C" int schedule_event( int , int , int , int , int , void (*)(void));
 #endif
 
 // variables from the config file
-extern char *Log;
-extern char *CollectorLog;
 extern char *CondorAdministrator;
 extern char *CondorDevelopers;
-extern int   MaxCollectorLog;
-extern int   ClientTimeout; 
+extern int   ClientTimeout;
 extern int   QueryTimeout;
-extern int   MachineUpdateInterval;
-extern int   MasterCheckInterval;
 
+extern CollectorEngine collector;
 
 void
 initializeParams()
 {
     char *tmp;
+	int		MachineUpdateInterval;
+	int		MasterCheckInterval;
 
-	Log = param ("LOG");
-	if (Log == NULL) 
-	{
-		EXCEPT ("Variable 'LOG' not found in config file.");
-    }
-
-    CollectorLog = param ("COLLECTOR_LOG");
-	if (CollectorLog == NULL) 
-	{
-		EXCEPT ("Variable 'COLLECTOR_LOG' not found in config file.");
-	}
-		
+	if (CondorAdministrator) free (CondorAdministrator);
     if ((CondorAdministrator = param ("CONDOR_ADMIN")) == NULL)
 	{
 		EXCEPT ("Variable 'CONDOR_ADMIN' not found in condfig file.");
-	}
-
-	tmp = param ("MAX_COLLECTOR_LOG");
-	if( tmp ) {
-		MaxCollectorLog = atoi( tmp );
-		free( tmp );
-	} else {
-		MaxCollectorLog = 64000;
 	}
 
 	tmp = param ("CLIENT_TIMEOUT");
@@ -69,41 +49,45 @@ initializeParams()
 
 	tmp = param ("QUERY_TIMEOUT");
 	if( tmp ) {
-		ClientTimeout = atoi( tmp );
+		QueryTimeout = atoi( tmp );
 		free( tmp );
 	} else {
-		ClientTimeout = 60;
+		QueryTimeout = 60;
 	}
 
 	tmp = param ("MACHINE_UPDATE_INTERVAL");
 	if( tmp ) {
-		ClientTimeout = atoi( tmp );
+		MachineUpdateInterval = atoi( tmp );
 		free( tmp );
 	} else {
-		ClientTimeout = 300;
+		MachineUpdateInterval = 300;
 	}
 
 	tmp = param ("MASTER_CHECK_INTERVAL");
 	if( tmp ) {
-		ClientTimeout = atoi( tmp );
+		MasterCheckInterval = atoi( tmp );
 		free( tmp );
 	} else {
-		ClientTimeout = 10800; 	// three hours
+		MasterCheckInterval = 10800; 	// three hours
 	}
 
+	if (CondorDevelopers) free (CondorDevelopers);
 	tmp = param ("CONDOR_DEVELOPERS");
 	if (tmp == NULL) {
-		CondorDevelopers = strdup("condor-admin@cs.wisc.edu");
-	} else {
-		if( strcmp(tmp, "NONE") == 0 ) {
-			CondorDevelopers = NULL;
-			free( tmp );
-		} else {
-			CondorDevelopers = tmp;
-		}
+		tmp = strdup("condor-admin@cs.wisc.edu");
+	} else
+	if (strcmp (tmp, "NONE") == 0) {
+		free (tmp);
+		tmp = NULL;
 	}
-}
+	CondorDevelopers = tmp;
 
+
+	// set the appropriate parameters in the collector engine
+	collector.setClientTimeout (ClientTimeout);
+	collector.scheduleHousekeeper (MachineUpdateInterval);
+	collector.scheduleDownMasterCheck(MasterCheckInterval);
+}
 
 #ifndef WIN32
 void

@@ -35,15 +35,10 @@ static char *_FileName_ = __FILE__;		// used by EXCEPT
 char* mySubSystem = "COLLECTOR";		// used by Daemon Core
 
 // variables from the config file
-char *Log;
-char *CollectorLog;
 char *CondorAdministrator;
 char *CondorDevelopers;
-int   MaxCollectorLog;
-int   ClientTimeout; 
+int   ClientTimeout;
 int   QueryTimeout;
-int   MachineUpdateInterval;
-int	  MasterCheckInterval;
 
 // the heart of the collector ...
 CollectorEngine collector;
@@ -137,18 +132,6 @@ main_init(int argc, char *argv[])
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
-
-	// set up housekeeper
-	if (!collector.scheduleHousekeeper(MachineUpdateInterval))
-	{
-		EXCEPT ("Could not initialize housekeeper");
-	}
-
-	// set up routine to check on masters
-	if (!collector.scheduleDownMasterCheck (MasterCheckInterval))
-	{
-		EXCEPT ("Could not initialize master check routine");
-	}
 
 	// set up so that private ads from startds are collected as well
 	collector.wantStartdPrivateAds (true);
