@@ -173,6 +173,11 @@ ResState::eval( void )
 		// anything.  
 	rip->hackLoadForCOD();
 
+		// also, since we might be an SMP where other VMs just changed
+		// their state, we also want to re-publish the shared VM
+		// attributes so that other VMs can see those results.
+	rip->refreshVmAttrs();
+
 	switch( r_state ) {
 
 	case claimed_state:
