@@ -1403,13 +1403,6 @@ fetchSubmittorPrios()
 		exit( 1 );
 	}
 
-	if (!sock->end_of_message() ) {
-		fprintf( stderr, 
-				 "Error:  Could not end message to %s.\n",
-				 negotiator.fullHostname() );
-		exit( 1 );
-	}
-
 	sock->decode();
 	if( !al.get(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

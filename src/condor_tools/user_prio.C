@@ -312,8 +312,7 @@ main(int argc, char* argv[])
 
     Sock* sock;
 
-    if (!(sock = my_negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0)) ||
-        !sock->end_of_message()) {
+    if (!(sock = my_negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
       fprintf( stderr, "failed to send GET_PRIORITY command to negotiator\n" );
       exit(1);
     }

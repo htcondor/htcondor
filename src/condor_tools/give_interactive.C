@@ -358,8 +358,7 @@ fetchSubmittorPrios()
 
 	Sock* sock;
 
-	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0)) ||
-	    !(sock->end_of_message())) {
+	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
