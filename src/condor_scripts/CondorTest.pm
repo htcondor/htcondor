@@ -540,13 +540,13 @@ sub MergeOutputFiles
 	foreach my $m ( 0 .. $#{$Testhash->{extensions}} )
 	{
 		my $newlog = $basename . $Testhash->{extensions}[$m];
-		print "Creating core log $newlog\n";
+		#print "Creating core log $newlog\n";
 		open(LOG,">$newlog") || return "1";
 		print LOG "***************************** Merge Sublogs ***************************\n";
 		foreach my $n ( 0 .. $#{$Testhash->{tests}} )
 		{
 			# get file if it exists
-			print "Add logs for test $Testhash->{tests}[$n]\n";
+			#print "Add logs for test $Testhash->{tests}[$n]\n";
 			my $sublog = $Testhash->{tests}[$n] . $Testhash->{extensions}[$m];
 			if( -e "$sublog" )
 			{
@@ -560,7 +560,7 @@ sub MergeOutputFiles
 			}
 			else
 			{
-				print "Can not find $sublog\n";
+				#print "Can not find $sublog\n";
 			}
 			#print "$n = $Testhash->{tests}[$n]\n";
 			#print "$m = $Testhash->{extensions}[$m]\n";
