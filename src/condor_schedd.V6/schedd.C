@@ -141,19 +141,73 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
-	my_match_ad = match;
-	user = the_user;
-	pool = my_pool;
+	if( match ) {
+		my_match_ad = new ClassAd( *match );
+	} else {
+		my_match_ad = NULL;
+	}
+	user = strdup( the_user );
+	if( my_pool ) {
+		pool = strdup( my_pool );
+	} else {
+		pool = NULL;
+	}
 	sent_alive_interval = false;
 	allocated = false;
 }
 
+
 match_rec::~match_rec()
 {
-	if (my_match_ad) delete my_match_ad;
-	if (user) free(user);
-	if (pool) free(pool);
+	if( my_match_ad ) {
+		delete my_match_ad;
+	}
+	if( user ) {
+		free(user);
+	}
+	if( pool ) {
+		free(pool);
+	}
 }
+
+
+ContactStartdArgs::ContactStartdArgs( char* the_capab, char* the_owner,  
+									  char* the_sinful, PROC_ID the_id, 
+									  ClassAd* match, char* the_pool, 
+									  bool is_dedicated ) 
+{
+	csa_capability = strdup( the_capab );
+	csa_owner = strdup( the_owner );
+	csa_sinful = strdup( the_sinful );
+	csa_id.cluster = the_id.cluster;
+	csa_id.proc = the_id.proc;
+	if( match ) {
+		csa_match_ad = new ClassAd( *match );
+	} else {
+		csa_match_ad = NULL;
+	}
+	if( the_pool ) {
+		csa_pool = strdup( the_pool );
+	} else {
+		csa_pool = NULL;
+	}
+	csa_is_dedicated = is_dedicated;
+}
+
+
+ContactStartdArgs::~ContactStartdArgs()
+{
+	free( csa_capability );
+	free( csa_owner );
+	free( csa_sinful );
+	if( csa_pool ) {
+		free( csa_pool );
+	}
+	if( csa_match_ad ) {
+		delete( csa_match_ad );
+	}
+}
+
 
 Scheduler::Scheduler()
 {
@@ -221,6 +275,7 @@ Scheduler::Scheduler()
 	_gridlogic = NULL;
 }
 
+
 Scheduler::~Scheduler()
 {
 	delete ad;
@@ -281,6 +336,12 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
+	int i;
+	for( i=0; i<N_Owners; i++) {
+		if( Owners[i].Name ) { 
+			free( Owners[i].Name );
+		}
+	}
 
 	if (_gridlogic)
 		delete _gridlogic;
@@ -459,7 +520,7 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 		// Port doesn't matter, since we've got the sinful string. 
-	update_central_mgr( UPDATE_SCHEDD_AD, Collector->addr(), 0 );
+	updateCentralMgr( UPDATE_SCHEDD_AD, ad, Collector->addr(), 0 ); 
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to central mgr: Number of submittors=%d\n",
 			 N_Owners );
@@ -470,8 +531,8 @@ Scheduler::count_jobs()
 		FlockCollectors->rewind();
 		char *host = FlockCollectors->next();
 		for (i=0; host && i < FlockLevel; i++) {
-			update_central_mgr( UPDATE_SCHEDD_AD, host,
-								COLLECTOR_UDP_COMM_PORT );
+			updateCentralMgr( UPDATE_SCHEDD_AD, ad, host,
+							  COLLECTOR_UDP_COMM_PORT );
 			host = FlockCollectors->next();
 		}
 	}
@@ -510,7 +571,7 @@ Scheduler::count_jobs()
 	  ad->InsertOrUpdate(tmp);
 
 		  // Port doesn't matter, since we've got the sinful string. 
-	  update_central_mgr( UPDATE_SUBMITTOR_AD, Collector->addr(), 0 );
+	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 				Owners[i].Name, UidDomain );
@@ -524,8 +585,8 @@ Scheduler::count_jobs()
 		  // fault if we assume it's defined and use it.  
 		  // -Derek Wright 11/4/98 
 	  if( CondorViewHost && CondorViewHost[0] != '\0' ) {
-		  update_central_mgr( UPDATE_SUBMITTOR_AD, CondorViewHost,
-							  CONDOR_VIEW_PORT );
+		  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, CondorViewHost, 
+							CONDOR_VIEW_PORT );
 	  }
 	}
 
@@ -589,11 +650,13 @@ Scheduler::count_jobs()
 				sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 						UidDomain);
 				ad->InsertOrUpdate(tmp);
-				update_central_mgr( UPDATE_SUBMITTOR_AD, flock_collector,
-									COLLECTOR_UDP_COMM_PORT );
+				updateCentralMgr( UPDATE_SUBMITTOR_AD, ad,
+								  flock_collector,
+								  COLLECTOR_UDP_COMM_PORT ); 
 				if (flock_view_server && flock_view_server[0] != '\0') {
-					update_central_mgr( UPDATE_SUBMITTOR_AD, flock_view_server,
-										CONDOR_VIEW_PORT );
+					updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, 
+									  flock_view_server,
+									  CONDOR_VIEW_PORT );
 				}
 			}
 		}
@@ -647,7 +710,7 @@ Scheduler::count_jobs()
 
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
 		  // Port doesn't matter, since we've got the sinful string. 
-	  update_central_mgr( UPDATE_SUBMITTOR_AD, Collector->addr(), 0 );
+	  updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, Collector->addr(), 0 ); 
 
 	  // also update all of the flock hosts
 	  char *host;
@@ -657,8 +720,8 @@ Scheduler::count_jobs()
 		 for (i=1, FlockCollectors->rewind();
 			  i <= OldOwners[i].OldFlockLevel &&
 				  (host = FlockCollectors->next()); i++) {
-			 update_central_mgr( UPDATE_SUBMITTOR_AD, host,
-								 COLLECTOR_UDP_COMM_PORT);
+			 updateCentralMgr( UPDATE_SUBMITTOR_AD, ad, host,
+							   COLLECTOR_UDP_COMM_PORT );
 		 }
 	  }
 	}
@@ -808,18 +871,24 @@ Scheduler::insert_owner(char* owner)
 }
 
 void
-Scheduler::update_central_mgr( int command, char *host, int port )
+Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
+							 int port ) 
 {
 	// If the host we're given is NULL, just return, don't seg fault. 
 	if( !host ) {
 		return;
 	}
+	// If the ClassAd we're given is NULL, just return, don't seg fault. 
+	if( !ca ) {
+		return;
+	}
+
 	SafeSock sock;
 	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
 	sock.encode();
 	if( !sock.connect(host, port) ||
 		!sock.put(command) ||
-		!ad->put(sock) ||
+		!ca->put(sock) ||
 		!sock.end_of_message() ) {
 		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
 				 host );
@@ -1255,11 +1324,69 @@ Scheduler::doNegotiate (int i, Stream *s)
 }
 
 
+/* 
+   Helper function used by both DedicatedScheduler::negotiate() and
+   Scheduler::negotiate().  This checks all the various reasons why we
+   might not be able to or want to start another shadow
+   (MAX_JOBS_RUNNING, swap space problems, etc), and returns true if
+   we can proceed or false if we can't start another shadow.
+*/
+bool
+Scheduler::canSpawnShadow( int started_jobs, int total_jobs )
+{
+	int idle_jobs = total_jobs - started_jobs;
+
+		// First, check if we have reached our maximum # of shadows 
+	if( CurNumActiveShadows >= MaxJobsRunning ) {
+		dprintf( D_ALWAYS, "Reached MAX_JOBS_RUNNING, %d jobs matched, "
+				 "%d jobs idle\n", started_jobs, idle_jobs ); 
+		return false;
+	}
+
+	if( ReservedSwap == 0 ) {
+			// We're not supposed to care about swap space at all, so
+			// none of the rest of the checks matter at all.
+		return true;
+	}
+
+		// Now, see if we ran out of swap space already.
+	if( SwapSpaceExhausted ) {
+		dprintf( D_ALWAYS, "Swap Space Exhausted, %d jobs matched, "
+				 "%d jobs idle\n", started_jobs, idle_jobs ); 
+		return false;
+	}
+
+	if( ShadowSizeEstimate && started_jobs >= MaxShadowsForSwap ) {
+		dprintf( D_ALWAYS, "Swap Space Estimate Reached, %d jobs "
+				 "matched, %d jobs idle\n", started_jobs, idle_jobs ); 
+		return false;
+	}
+	
+		// We made it.  Everything's cool.
+	return true;
+}
+
+
 /*
 ** The negotiator wants to give us permission to run a job on some
 ** server.  We must negotiate to try and match one of our jobs with a
 ** server which is capable of running it.  NOTE: We must keep job queue
 ** locked during this operation.
+*/
+
+/*
+  There's also a DedicatedScheduler::negotiate() method, which is
+  called if the negotiator wants to run jobs for the
+  "DedicatedScheduler" user.  That's called from this method, and has
+  to implement a lot of the same negotiation protocol that we
+  implement here.  SO, if anyone finds bugs in here, PLEASE be sure to
+  check that the same bug doesn't exist in dedicated_scheduler.C.
+  Also, changes the the protocol, new commands, etc, should be added
+  in BOTH PLACES.  Thanks!  Yes, that's evil, but the forms of
+  negotiation are radically different between the DedicatedScheduler
+  and here (we're not even negotiating for specific jobs over there),
+  so trying to fit it all into this function wasn't practical.  
+     -Derek 2/7/01
 */
 int
 Scheduler::negotiate(int, Stream* s)
@@ -1269,16 +1396,15 @@ Scheduler::negotiate(int, Stream* s)
 	PROC_ID	id;
 	char*	capability = NULL;			// capability for each match made
 	char*	host = NULL;
+	char*	sinful = NULL;
 	char*	tmp;
 	char	temp[512];
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		cur_cluster = -1;
-	int		start_limit_for_swap;
 	int		cur_hosts;
 	int		max_hosts;
 	int		host_cnt;
 	int		perm_rval;
-	int		curr_num_active_shadows;
 	int		shadow_num_increment;
 	int		job_universe;
 	int		which_negotiator = 0; 		// >0 implies flocking
@@ -1287,7 +1413,7 @@ Scheduler::negotiate(int, Stream* s)
 	int		owner_num;
 	int		JobsRejected = 0;
 	Sock*	sock = (Sock*)s;
-	contactStartdArgs * args;
+	ContactStartdArgs * args;
 	ClassAd* my_match_ad;
 
 	dprintf( D_FULLDEBUG, "\n" );
@@ -1328,7 +1454,6 @@ Scheduler::negotiate(int, Stream* s)
 		}
 		// if it isn't our local negotiator, check the FlockNegotiators list.
 		if (!match) {
-			char *host;
 			int n;
 			for (n=1, FlockNegotiators->rewind();
 				 !match && (host = FlockNegotiators->next());
@@ -1369,7 +1494,57 @@ Scheduler::negotiate(int, Stream* s)
 	// figure out the number of active shadows. we do this by
 	// adding the number of existing shadows + the number of shadows
 	// queued up to run in the future.
-	curr_num_active_shadows = numShadows + RunnableJobQueue.Length();
+	CurNumActiveShadows = numShadows + RunnableJobQueue.Length();
+
+	SwapSpaceExhausted = FALSE;
+	if( ShadowSizeEstimate ) {
+		MaxShadowsForSwap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
+		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
+		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
+		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",
+				 ShadowSizeEstimate );
+		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
+				 MaxShadowsForSwap );
+		dprintf( D_FULLDEBUG, "*** Current num of active shadows = %d\n",
+				 CurNumActiveShadows );
+	}
+
+		// We want to read the owner off the wire ASAP, since if we're
+		// negotiating for the dedicated scheduler, we don't want to
+		// do anything expensive like scanning the job queue, creating
+		// a prio rec array, etc.
+
+	//-----------------------------------------------
+	// Get Owner name from negotiator
+	//-----------------------------------------------
+	char owner[200], *ownerptr = owner;
+	s->decode();
+	if (!s->code(ownerptr)) {
+		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		return (!(KEEP_STREAM));
+	}
+	if (!s->end_of_message()) {
+		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+		return (!(KEEP_STREAM));
+	}
+	if (negotiator_name) {
+		dprintf (D_ALWAYS, "Negotiating with %s for owner: %s\n",
+				 negotiator_name, owner);
+	} else {
+		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
+	}
+	//-----------------------------------------------
+
+		// See if the negotiator wants to talk to the dedicated
+		// scheduler
+
+	if( ! strcmp(owner, dedicated_scheduler.name()) ) {
+			// Just let the DedicatedScheduler class do its thing. 
+		return dedicated_scheduler.negotiate( s, negotiator_name );
+	}
+
+		// If we got this far, we're negotiating for a regular user,
+		// so go ahead and do our expensive setup operations.
 
 	N_PrioRecs = 0;
 
@@ -1392,39 +1567,7 @@ Scheduler::negotiate(int, Stream* s)
 	jobs = N_PrioRecs;
 
 	N_RejectedClusters = 0;
-	SwapSpaceExhausted = FALSE;
 	JobsStarted = 0;
-	if( ShadowSizeEstimate ) {
-		start_limit_for_swap = (SwapSpace - ReservedSwap) / ShadowSizeEstimate;
-		dprintf( D_FULLDEBUG, "*** SwapSpace = %d\n", SwapSpace );
-		dprintf( D_FULLDEBUG, "*** ReservedSwap = %d\n", ReservedSwap );
-		dprintf( D_FULLDEBUG, "*** Shadow Size Estimate = %d\n",ShadowSizeEstimate);
-		dprintf( D_FULLDEBUG, "*** Start Limit For Swap = %d\n",
-				 									start_limit_for_swap);
-		dprintf( D_FULLDEBUG, "*** Current num of active shadows = %d\n",
-													curr_num_active_shadows);
-	}
-
-	//-----------------------------------------------
-	// Get Owner name from negotiator
-	//-----------------------------------------------
-	char owner[200], *ownerptr = owner;
-	s->decode();
-	if (!s->code(ownerptr)) {
-		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		return (!(KEEP_STREAM));
-	}
-	if (!s->end_of_message()) {
-		dprintf( D_ALWAYS, "Can't receive request from manager\n" );
-		return (!(KEEP_STREAM));
-	}
-	if (negotiator_name) {
-		dprintf (D_ALWAYS, "Negotiating with %s for owner: %s\n",
-				 negotiator_name, owner);
-	} else {
-		dprintf (D_ALWAYS, "Negotiating for owner: %s\n", owner);
-	}
-	//-----------------------------------------------
 
 	// find owner in the Owners array
 	char *at_sign = strchr(owner, '@');
@@ -1549,47 +1692,27 @@ Scheduler::negotiate(int, Stream* s)
 									ATTR_LAST_REJ_MATCH_TIME, (int)time(0));
 					break;
 				case SEND_JOB_INFO: {
-					/* Really, we're trying to make sure we don't have too
-						many shadows running, so compare here against
-						curr_num_active_shadows rather than JobsRunning 
-						as in the past.  Furthermore, we do not want to use
-						just numShadows, because this does not take into account
-						the shadows which have been enqueued (slow shadow start) 
-					 */
-					if( curr_num_active_shadows >= MaxJobsRunning ) {
+						// The Negotiator wants us to send it a job. 
+						// First, make sure we could start another
+						// shadow without violating some limit.
+					if( ! canSpawnShadow(JobsStarted, jobs) ) {
+							// We can't start another shadow.  Tell
+							// the negotiator we're done.
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
+								// We failed to talk to the CM, so
+								// close the connection.
 							dprintf( D_ALWAYS, 
-									"Can't send NO_MORE_JOBS to mgr\n" );
-							return (!(KEEP_STREAM));
+									 "Can't send NO_MORE_JOBS to mgr\n" ); 
+							return( !(KEEP_STREAM) );
+						} else {
+								// Communication worked, keep the
+								// connection stashed for later.
+							return KEEP_STREAM;
 						}
-						dprintf( D_ALWAYS,
-				"Reached MAX_JOBS_RUNNING, %d jobs matched, %d jobs idle\n",
-								JobsStarted, jobs - JobsStarted );
-						return KEEP_STREAM;
 					}
-					if( SwapSpaceExhausted && (ReservedSwap != 0) ) {
-						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-							dprintf( D_ALWAYS, 
-									"Can't send NO_MORE_JOBS to mgr\n" );
-							return (!(KEEP_STREAM));
-						}
-						dprintf( D_ALWAYS,
-					"Swap Space Exhausted, %d jobs matched, %d jobs idle\n",
-								JobsStarted, jobs - JobsStarted );
-						return KEEP_STREAM;
-					}
-					if( ShadowSizeEstimate && JobsStarted >= start_limit_for_swap && ReservedSwap != 0) { 
-						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
-							dprintf( D_ALWAYS, 
-									"Can't send NO_MORE_JOBS to mgr\n" );
-							return (!(KEEP_STREAM));
-						}
-						dprintf( D_ALWAYS,
-				"Swap Space Estimate Reached, %d jobs matched, %d jobs idle\n",
-								JobsStarted, jobs - JobsStarted );
-						return (KEEP_STREAM);
-					}
-					
+						// If we got this far, we can spawn another
+						// shadow, so keep going w/ our regular work. 
+
 					/* Send a job description */
 					s->encode();
 					if( !s->put(JOB_INFO) ) {
@@ -1610,7 +1733,7 @@ Scheduler::negotiate(int, Stream* s)
 					shadow_num_increment = 1;
 					job_universe = 0;
 					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
-					if ( ( job_universe == PVM ) || ( job_universe == MPI) ) {
+					if( job_universe == PVM ) {
 						PROC_ID temp_id;
 
 						// For PVM jobs, the shadow record is keyed based
@@ -1697,22 +1820,23 @@ Scheduler::negotiate(int, Stream* s)
 					}
 
 						// Pull out the sinful string.
-					host = strdup( capability );
-					tmp = strchr( host, '#');
+					sinful = strdup( capability );
+					tmp = strchr( sinful, '#');
 					if( tmp ) {
 						*tmp = '\0';
 					} else {
 						dprintf( D_ALWAYS, "Can't find '#' in capability!\n" );
 							// What else should we do here?
-						FREE( host );
+						FREE( sinful );
 						FREE( capability );
-						host = NULL;
+						sinful = NULL;
 						capability = NULL;
-						if (my_match_ad)
+						if( my_match_ad ) {
 							delete my_match_ad;
+						}
 						break;
 					}
-						// host should now point to the sinful string
+						// sinful should now point to the sinful string
 						// of the startd we were matched with.
 
 					// CLAIMING LOGIC
@@ -1725,54 +1849,35 @@ Scheduler::negotiate(int, Stream* s)
 					   the claim protocol.  So...we enqueue the
 					   args for a later call.  (The later call will be
 					   made from the startdContactSockHandler) */
-					args = 	new contactStartdArgs;
-					dprintf (D_FULLDEBUG, "Queuing contactStartd args=%x, "
-							 "startd=%s\n", args, host );
+					args = new ContactStartdArgs( capability, owner,
+												  sinful, id,
+												  my_match_ad,
+												  negotiator_name, 
+												  false );
 
-					args->capability = capability;
-					args->owner = strdup( owner );
-					args->host = host;
-					args->id.cluster = id.cluster;
-					args->id.proc = id.proc;
-					args->my_match_ad = my_match_ad;
-					if (negotiator_name) {
-						args->pool = strdup(negotiator_name);
-					} else {
-						args->pool = NULL;
+						// Now that the info is stored in the above
+						// object, we can deallocate all of our
+						// strings and other memory.
+					free( sinful );
+					sinful = NULL;
+					free( capability );
+					capability = NULL;
+					if( my_match_ad ) {
+						delete my_match_ad;
+						my_match_ad = NULL;
 					}
-					if ( startdContactQueue.enqueue( args ) < 0 ) {
-						perm_rval = 0;	// failure
-						dprintf(D_ALWAYS,"Failed to enqueue contactStartd "
-							"args=%x, startd=%s\n", args, host);
-						FREE( host );
-						FREE( capability );
-						FREE( args->owner );
-						if (my_match_ad)
-							delete my_match_ad;
-						delete args;
-					} else {
+					
+					if( enqueueStartdContact(args) ) {
 						perm_rval = 1;	// happiness
-						// if we havn't already done so, register a timer
-						// to go off in zero seconds to call checkContactQueue.
-						// this will start the process of claiming the startds
-						// _after_ we have completed negotiating.
-						if ( checkContactQueue_tid == -1 ) {
-							checkContactQueue_tid = 
-								daemonCore->Register_Timer(
-									0,
-									(TimerHandlercpp)&Scheduler::checkContactQueue,
-									"checkContactQueue",
-									this);
-						}
+					} else {
+						perm_rval = 0;	// failure
+						delete( args );
 					}
 
 					JobsStarted += perm_rval;
-					curr_num_active_shadows += 
-						(perm_rval * shadow_num_increment);
+					addActiveShadows( perm_rval * shadow_num_increment ); 
 					host_cnt++;
 
-					host = NULL;
-					capability = NULL;
 					break;
 
 				case END_NEGOTIATE:
@@ -1893,44 +1998,46 @@ Scheduler::vacate_service(int, Stream *sock)
 }
 
 
-int
-Scheduler::contactStartd( char* capability, char *user, 
-						  char* server, PROC_ID* jobId, ClassAd *my_match_ad,
-						  char* pool=NULL)
+bool
+Scheduler::contactStartd( ContactStartdArgs* args ) 
 {
+	if( args->isDedicated() ) {
+			// If this was a match for the dedicated scheduler, let it
+			// handle it from here, since we don't want to generate a
+			// match_rec for it or anything like that.
+		return dedicated_scheduler.contactStartd( args );
+	}
+
+	dprintf( D_FULLDEBUG, "In Scheduler::contactStartd()\n" );
+
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", args->capability(), 
+			 args->owner(), args->sinful(), args->cluster(),
+			 args->proc() ); 
+
 	match_rec* mrec;   // match record pointer
+	PROC_ID id;
 
-	dprintf ( D_FULLDEBUG, "In Scheduler::contactStartd.\n" );
+	id.cluster = args->cluster();
+	id.proc = args->proc();
 
-    dprintf ( D_FULLDEBUG, "%s %s %s %d.%d\n", capability, user, server, 
-              jobId->cluster, jobId->proc );
-
-		// Note: my_match_ad and user are deleted/free-ed by the
-		// match record destructor.  Thus we should only free them
-		// in the function _if_ AddMrec fails.
-	mrec = AddMrec(capability, server, jobId, my_match_ad, user, pool);
-	free( capability );
-	free( server );
-	if(!mrec) {
-        free( user );
-		if (pool) free( pool );
-		if (my_match_ad) delete my_match_ad;
-        return 0;
+	mrec = AddMrec( args->capability(), args->sinful(), &id,
+					args->matchAd(), args->owner(), args->pool() ); 
+	if( ! mrec ) {
+        return false;
 	}
-	ClassAd *jobAd = GetJobAd(jobId->cluster, jobId->proc);
-	if (!jobAd) {
-		dprintf(D_ALWAYS, "failed to find job %d.%d\n", 
-				jobId->cluster, jobId->proc);
+	ClassAd *jobAd = GetJobAd( id.cluster, id.proc );
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "failed to find job %d.%d\n", id.cluster,
+				 id.proc ); 
 		DelMrec( mrec );
-		return 0;
+		return false;
 	}
 
-	if( claimStartd(mrec, jobAd, false) ) {
-		return 1;
-	} else {
+	if( ! claimStartd(mrec, jobAd, false) ) {
 		DelMrec( mrec );
-		return 0;
+		return false;
 	}
+	return true;
 }
 
 
@@ -2130,10 +2237,41 @@ Scheduler::startdContactSockHandler( Stream *sock )
 }
 #undef BAILOUT
 
+
+bool
+Scheduler::enqueueStartdContact( ContactStartdArgs* args )
+{
+	 if( startdContactQueue.enqueue(args) < 0 ) {
+		 dprintf( D_ALWAYS, "Failed to enqueue contactStartd "
+				  "startd=%s\n", args->sinful() );
+		 return false;
+	 }
+	 dprintf( D_FULLDEBUG, "Enqueued contactStartd startd=%s\n",
+			  args->sinful() );  
+
+		 /*
+		   If we haven't already done so, register a timer to go off
+           in zero seconds to call checkContactQueue().  This will
+		   start the process of claiming the startds *after* we have
+           completed negotiating and returned control to daemonCore. 
+		 */
+	if( checkContactQueue_tid == -1 ) {
+		checkContactQueue_tid = daemonCore->Register_Timer( 0,
+			(TimerHandlercpp)&Scheduler::checkContactQueue,
+			"checkContactQueue", this );
+	}
+	if( checkContactQueue_tid == -1 ) {
+			// Error registering timer!
+		EXCEPT( "Can't register daemonCore timer!" );
+	}
+	return true;
+}
+
+
 void
 Scheduler::checkContactQueue() 
 {
-	struct contactStartdArgs * args;
+	ContactStartdArgs *args;
 
 		// clear out the timer tid, since we made it here.
 	checkContactQueue_tid = -1;
@@ -2141,19 +2279,18 @@ Scheduler::checkContactQueue()
 		// Contact startds as long as (a) there are still entries in our
 		// queue, and (b) we have not exceeded MAX_STARTD_CONTACTS, which
 		// ensures we do not run ourselves out of socket descriptors.
-	while ( (num_reg_contacts < MAX_STARTD_CONTACTS) &&
-			(!startdContactQueue.IsEmpty()) ) {
+	while( (num_reg_contacts < MAX_STARTD_CONTACTS) &&
+		   (!startdContactQueue.IsEmpty()) ) {
 			// there's a pending registration in the queue:
 
 		startdContactQueue.dequeue ( args );
-		dprintf ( D_FULLDEBUG, "In checkContactQueue(), args = %x, host=%s\n", 
-				  args, args->host );
-		contactStartd( args->capability, args->owner,
-					   args->host, &(args->id), args->my_match_ad,
-					   args->pool);	
+		dprintf( D_FULLDEBUG, "In checkContactQueue(), args = %x, "
+				 "host=%s\n", args, args->sinful() ); 
+		contactStartd( args );
 		delete args;
 	}
 }
+
 
 int
 find_idle_sched_universe_jobs( ClassAd *job )
@@ -4715,7 +4852,7 @@ Scheduler::invalidate_ads()
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, 
              Name );
     ad->Insert( line );
-	update_central_mgr( INVALIDATE_SCHEDD_ADS, Collector->addr(), 0 );
+	updateCentralMgr( INVALIDATE_SCHEDD_ADS, ad, Collector->addr(), 0 );
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
@@ -4723,12 +4860,12 @@ Scheduler::invalidate_ads()
 	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
 			 Name );
     ad->InsertOrUpdate( line );
-	update_central_mgr( INVALIDATE_SUBMITTOR_ADS, Collector->addr(), 0 );
+	updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, Collector->addr(), 0 );
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
 			 i <= FlockLevel && (host = FlockCollectors->next()); i++ ) {
-			update_central_mgr( INVALIDATE_SUBMITTOR_ADS, host, 
-								COLLECTOR_UDP_COMM_PORT );
+			updateCentralMgr( INVALIDATE_SUBMITTOR_ADS, ad, host, 
+							  COLLECTOR_UDP_COMM_PORT );
 		}
 	}
 }
