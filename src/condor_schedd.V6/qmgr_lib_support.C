@@ -145,7 +145,6 @@ ConnectQ(char *qmgr_location )
 	qmgmt_sock->authenticate();
 
 	connection->count = 1;
-	free ( username );
 	return connection;
 }
 
