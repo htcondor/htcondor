@@ -759,17 +759,16 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 					// if job_universe is STANDARD (checkpointing is
 					// enabled) and cpu_time > 0.0 (job has committed
 					// some work), then the job will need to read a
-					// checkpoint to restart, so we include image size
-					// in the placement cost
-					int image_size;
-					if (request.LookupInteger (ATTR_IMAGE_SIZE, image_size)) {
-						placement_bw += image_size;
-					}
+					// checkpoint to restart, so we set the placement
+					// cost to be the image size, which includes the
+					// executable size.
+					request.LookupInteger (ATTR_IMAGE_SIZE, placement_bw);
 				}
 			}
 			if (!offer->LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
 				job_universe = STANDARD; // err on the safe side
 			}
+			preempt_bw = 0;
 			if (job_universe == STANDARD) {
 				// if preempted job is a STANDARD universe job, it will
 				// need to write a checkpoint, so we include image size
