@@ -168,13 +168,29 @@ const char *GetEnv( const char *env_var )
 	assert( env_var );
 
 #ifdef WIN32
-	static char value[2048];
-	int rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
+	DWORD rc;
+	static char *value = NULL;
+	if ( value == NULL ) {
+		value = (char *)malloc( 1024 );
+	}
+	rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
 	if ( rc > sizeof(value) - 1 ) {
-		dprintf( D_ALWAYS, "GetEnv(): environment variable too big: %d\n",
-				 rc );
+			// environment variable value is too large,
+			// reallocate our string and try again
+		free( value );
+		value = (char *)malloc( rc );
+		rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
+	}
+	if ( rc > sizeof(value) - 1 ) {
+		dprintf( D_ALWAYS, "GetEnv(): environment variable still too large: %d\n", rc );
 		return NULL;
 	} else if ( rc == 0 ) {
+		DWORD error = GetLastError();
+		if ( error != ERROR_ENVVAR_NOT_FOUND ) {
+			dprintf( D_ALWAYS,
+					 "GetEnv(): GetEnvironmentVariable() failed, error=%d\n",
+					 error );
+		}
 		return NULL;
 	} else {
 		return value;
