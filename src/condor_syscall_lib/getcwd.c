@@ -24,7 +24,8 @@ getwd( char *path )
 	if( LocalSysCalls() ) {
 		return GETCWD( path, _POSIX_PATH_MAX );
 	} else {
-		return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		REMOTE_syscall( CONDOR_getwd, path );
+		return path;
 	}
 }
 
@@ -34,7 +35,8 @@ getcwd( char *path, size_t size )
 	if( LocalSysCalls() ) {
 		return GETCWD( path, size );
 	} else {
-		return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		REMOTE_syscall( CONDOR_getwd, path );
+		return path;
 	}
 }
 
@@ -69,7 +71,8 @@ _getcwd( char *path, size_t size )
 	if( LocalSysCalls() ) {
 		return (char *)_GETCWD( path, size );
 	} else {
-		return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		REMOTE_syscall( CONDOR_getwd, path );
+		return path;
 	}
 }
 
