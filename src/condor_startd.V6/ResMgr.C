@@ -102,6 +102,18 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "WANT_SUSPEND_VANILLA", false );
 	configInsert( config_classad, "WANT_VACATE_VANILLA", false );
 
+		// Next, try the IS_OWNER expression.  If it's not there, give
+		// them a resonable default, instead of leaving it undefined. 
+	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
+		char* tmp = (char*) malloc( strlen(ATTR_IS_OWNER) + 21 ); 
+		if( ! tmp ) {
+			EXCEPT( "Out of memory!" );
+		}
+		sprintf( tmp, "%s = (START =?= False)", ATTR_IS_OWNER );
+		config_classad->Insert( tmp );
+		free( tmp );
+	}
+
 		// Now, bring in anything the user has said to include
 	config_fill_ad( config_classad );
 }
