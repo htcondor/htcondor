@@ -365,7 +365,7 @@ class BaseShadow : public Service
 			@param The ExprTree you want to update in the job queue 
 			@return success or failure to set the attribute
 		 */
-	bool updateExprTree( ExprTree* tree );
+	bool updateExprTree( char* name, ExprTree* tree );
 
 		/** See if the job is a) vanilla, b) unix and c) submitted
 			with a 6.3.1 or earlier condor_submit.  if so, it'll have
