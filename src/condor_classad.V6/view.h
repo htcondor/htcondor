@@ -1,25 +1,24 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
 #if !defined( VIEW_H )
 #define VIEW_H
@@ -39,6 +38,7 @@ BEGIN_NAMESPACE( classad );
 class ExprTree;
 class ClassAd;
 class View;
+class ClassAdCollection;
 class ClassAdCollectionServer;
 
 
@@ -81,16 +81,16 @@ public:
 
 		// view control
 	bool SetViewName( const ViewName &viewName );
-	bool SetConstraintExpr( ClassAdCollectionServer *coll,
+	bool SetConstraintExpr( ClassAdCollection *coll,
 			const string &constraint );
-	bool SetConstraintExpr( ClassAdCollectionServer *coll,
+	bool SetConstraintExpr( ClassAdCollection *coll,
 			ExprTree *constraint );
-	bool SetRankExpr( ClassAdCollectionServer *coll, const string &expr );
-	bool SetRankExpr( ClassAdCollectionServer *coll, ExprTree *tree );
-	bool SetPartitionExprs( ClassAdCollectionServer *coll, 
+	bool SetRankExpr( ClassAdCollection *coll, const string &expr );
+	bool SetRankExpr( ClassAdCollection *coll, ExprTree *tree );
+	bool SetPartitionExprs( ClassAdCollection *coll, 
 			const string &exprList );
-	bool SetPartitionExprs( ClassAdCollectionServer *coll, ExprList *el );
-	bool SetViewInfo( ClassAdCollectionServer *coll, ClassAd *viewInfo );
+	bool SetPartitionExprs( ClassAdCollection *coll, ExprList *el );
+	bool SetViewInfo( ClassAdCollection *coll, ClassAd *viewInfo );
 
 		// view interrogation
 	inline ViewName GetViewName( ) const { return( viewName ); }
@@ -106,36 +106,37 @@ public:
 	bool		FindPartition( ClassAd *rep, ViewName &partition );
 
 		// child view manipulation
-	bool InsertSubordinateView( ClassAdCollectionServer *coll, ClassAd *vInfo );
-	bool InsertPartitionedView( ClassAdCollectionServer *coll, ClassAd *vInfo, 
+	bool InsertSubordinateView( ClassAdCollection *coll, ClassAd *vInfo );
+	bool InsertPartitionedView( ClassAdCollection *coll, ClassAd *vInfo, 
 			ClassAd *rep );
-	bool DeleteChildView( ClassAdCollectionServer *coll,
+	bool DeleteChildView( ClassAdCollection *coll,
 			const ViewName &viewName );
-	bool DeleteSubordinateView( ClassAdCollectionServer *coll,
+	bool DeleteSubordinateView( ClassAdCollection *coll,
 			const ViewName &viewName );
-	bool DeletePartitionedView( ClassAdCollectionServer *coll,
+	bool DeletePartitionedView( ClassAdCollection *coll,
 			const ViewName &viewName );
-	bool DeletePartitionedView( ClassAdCollectionServer *coll, ClassAd *rep );
+	bool DeletePartitionedView( ClassAdCollection *coll, ClassAd *rep );
 			
 		// classad manipulation
-	bool ClassAdInserted ( ClassAdCollectionServer *coll, 
+	bool ClassAdInserted ( ClassAdCollection *coll, 
 			const string &key, ClassAd *ad );
-	void ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad );
-	bool ClassAdModified ( ClassAdCollectionServer *coll, 
+	void ClassAdPreModify( ClassAdCollection *coll, ClassAd *ad );
+	bool ClassAdModified ( ClassAdCollection *coll, 
 			const string &key, ClassAd *ad );
-	void ClassAdDeleted  ( ClassAdCollectionServer *coll, 
+	void ClassAdDeleted  ( ClassAdCollection *coll, 
 			const string &key, ClassAd *ad );
 
 		// misc
 	bool Display( FILE * );
 
 private:
+	friend class ClassAdCollection;
 	friend class ClassAdCollectionServer;
 	friend class LocalCollectionQuery;
 
 		// private helper function
 	string 	makePartitionSignature( ClassAd *ad );
-	void	DeleteView( ClassAdCollectionServer * );
+	void	DeleteView( ClassAdCollection * );
 
 	ViewName			viewName;			// name of the view
 	View				*parent;			// pointer to parent view

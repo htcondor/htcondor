@@ -15,15 +15,15 @@ CLASSAD_SRC_0 		= lexer.C source.C operators.C attrrefs.C fnCall.C \
 CLASSAD_OBJ_0 		= lexer.o source.o operators.o attrrefs.o fnCall.o \
 						literals.o exprTree.o classad.o exprList.o value.o \
 						instantiations.o sink.o matchClassad.o util.o 
-						
+
 
 /* Are collections required? */
 #if defined(COLLECTIONS)
-CLASSAD_SRC_1		= $(CLASSAD_SRC_0) view.C collection.C collectionServer.C\
-						collectionClient.C transaction.C query.C \
+CLASSAD_SRC_1		= $(CLASSAD_SRC_0) view.C collection.C collectionBase.C collectionServer.C\
+						collectionClient.C transaction.C query.C remoteQuery.C\
 						coll-comm-inst.C coll-serv-inst.C coll-client-inst.C
-CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0) view.o collection.o collectionServer.o\
-						collectionClient.o transaction.o query.o \
+CLASSAD_OBJ_1		= $(CLASSAD_OBJ_0) view.o collection.o collectionBase.o collectionServer.o\
+						collectionClient.o transaction.o query.o remoteQuery.o\
 						coll-comm-inst.o coll-serv-inst.o coll-client-inst.o
 #else
 CLASSAD_SRC_1		= $(CLASSAD_SRC_0)
@@ -78,41 +78,37 @@ template_inst( coll-serv-inst.C, coll-serv-inst.o ) 	/* collection server  */
 template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
 template_inst( exp-inst.C, exp-inst.o )					/* experimental */
 
-
-
-/* Standalone classad library; (need some condor headers: see below) */
-standalone: libclassads.a
-library_target(libclassads.a,$(OBJ) $(S_OBJ))
-
-
-/* Headers required for standalone classad tarball */
-CONDOR_HEADERS = ../condor_includes/condor_debug.h ../condor_c++_util/extArray.h
-
-
 /* Standalone distribution of classads/collections */
-tarball: libclassads.a ../condor_release/LICENSE.TXT
-	rm -rf classads *.gz
-	mkdir -p classads/include classads/lib classads/example
-	strip --strip-debug libclassads.a
-	cp libclassads.a classads/lib
-	cp cxi.C classads/example
-	cp distrib/Makefile classads/example
-	cp $(CONDOR_HEADERS) classads/include
-	cp *.h classads/include
-	cp ../condor_release/LICENSE.TXT classads
-	cp distrib/README classads
+DISTRIBUTION_DIR = classads_0.9
 
+DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h collection.C \
+collection.h collectionBase.C collectionBase.h common.h classadErrno.h \
+classadItor.h debug.C debug.h exprList.C exprList.h exprTree.C \
+exprTree.h fnCall.C fnCall.h instantiations.C lexer.C lexer.h \
+literals.C literals.h matchClassad.C matchClassad.h operators.C \
+operators.h query.C query.h sample.C sink.C sink.h source.C source.h \
+test_classads.C tests.txt transaction.C transaction.h value.C value.h \
+view.C view.h classad_distribution.h LICENSE README
+
+dist: $(DIST_FILES)
+	rm -rf $(DISTRIBUTION_DIR) *.gz
+	mkdir $(DISTRIBUTION_DIR)
+	cp $(DIST_FILES) $(DISTRIBUTION_DIR)
+	cp makefile-dist $(DISTRIBUTION_DIR)/Makefile
+	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
+	gzip $(DISTRIBUTION_DIR).tar
 
 /* Rule to make documentation */
 doc: html
 
 
-/* Also depends on several header files, but I'm ignoring that for now */
+/* Also depends on several header files, but I am ignoring that for now */
 html_target( documentation )
-
 
 clean::
 	rm -f -r *.o *.gz html
 
 /* The Classad eXpression Interpreter */
 c_plus_target (cxi, cxi.o, $(LIB))
+c_plus_target (test_classads, test_classads.o, $(LIB))
+

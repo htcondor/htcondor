@@ -1,27 +1,25 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
-#include "condor_common.h"
 #include "common.h"
 #include "exprTree.h"
 #include "sink.h"
@@ -172,11 +170,8 @@ Unparse( string &buffer, Value &val )
 
 				// get the asctime()-like segment; but remove \n
 			localtime_r( &asecs, &tms );
-#if defined( LINUX )
 			asctime_r( &tms, ascTimeBuf );
-#else
-			asctime_r( &tms, ascTimeBuf, 31 );
-#endif
+			//asctime_r( &tms, ascTimeBuf, 31 );
 			ascTimeBuf[24] = '\0';
 			buffer += "'";
 			buffer += ascTimeBuf;
@@ -241,7 +236,7 @@ Unparse( string &buffer, Value &val )
 			return;
 		}
 		case Value::LIST_VALUE: {
-			ExprList *el;
+			const ExprList *el;
 			vector<ExprTree*> exprs;
 			val.IsListValue( el );
 			el->GetComponents( exprs );

@@ -1,32 +1,32 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
-
-#include "condor_common.h"
 #include "common.h"
 #include "collection.h"
+#include <fcntl.h>
+
+static bool string_is_empty(const string &text);
  
-static const char *const ClassAdCollectionInterface::CollOpStrings[] = {
+const char *const ClassAdCollectionInterface::CollOpStrings[] = {
     "no op",
 
     "create sub view",
@@ -96,9 +96,17 @@ _CreateSubView( const ViewName &viewName, const ViewName &parentViewName,
 	buffer += "\" ; Requirements = ";
 	buffer += constraint=="" ? "true" : constraint;
 	buffer += " ; PartitionExprs = ";
-	buffer += partitionExprs=="" ? "{}" : partitionExprs;
+	if (string_is_empty(partitionExprs)) {
+		buffer += "{}";
+	} else {
+		buffer += partitionExprs;
+	}
 	buffer += " ; Rank = ";
-	buffer += rank=="" ? "undefined" : rank;	
+	if (string_is_empty(rank)) {
+		buffer += "undefined";
+	} else {
+		buffer += rank;	
+	}
 	buffer += " ] ]";
 
 	if( !( rec = parser.ParseClassAd( buffer ) ) ) {
@@ -124,9 +132,17 @@ _CreatePartition( const ViewName &viewName, const ViewName &parentViewName,
 	buffer += "\" ; Requirements = ";
 	buffer += constraint=="" ? "true" : constraint;
 	buffer += " ; PartitionExprs = ";
-	buffer += partitionExprs=="" ? "{}" : partitionExprs;
+	if (string_is_empty(partitionExprs)) {
+		buffer += "{}";
+	} else {
+		buffer += partitionExprs;
+	}
 	buffer += " ; Rank = ";
-	buffer += rank=="" ? "undefined" : rank;	
+	if (string_is_empty(rank)) {
+		buffer += "undefied";
+	} else {
+		buffer += rank;
+	}
 	buffer += " ] ]";
 
 	if( !( rec = parser.ParseClassAd( buffer ) ) ) {
@@ -169,9 +185,17 @@ _SetViewInfo( const ViewName &viewName, const string &constraint,
 	buffer += "\" ; ViewInfo = [ Requirements = ";
 	buffer += constraint=="" ? "true" : constraint;
 	buffer += " ; PartitionExprs = ";
-	buffer += partitionExprs=="" ? "{}" : partitionExprs;
+	if (string_is_empty(partitionExprs)) {
+		buffer += "{}";
+	} else {
+		buffer += partitionExprs;
+	}
 	buffer += " ; Rank = ";
-	buffer += rank=="" ? "undefined" : rank;	
+	if (string_is_empty(rank)) {
+		buffer += "undefined";
+	} else {
+		buffer += rank;
+	}
 	buffer += " ] ]";
 
     if( !( rec = parser.ParseClassAd( buffer ) ) ) {
@@ -323,16 +347,29 @@ ReadLogEntry( FILE *fp )
 bool ClassAdCollectionInterface::
 WriteLogEntry( FILE *fp, ClassAd *rec, bool synch )
 {
-   		// not loggable --- no error
-	if( !fp ) return( true );
-	string buffer;
-	unparser.Unparse( buffer, rec );
-	if(fprintf(fp,"%s\n",buffer.c_str())<0 || (synch && fsync(fileno(fp))<0)) {
-		CondorErrno = ERR_FILE_WRITE_FAILED;
-		CondorErrMsg = "failed to log operation: " + buffer;
-		return( false );
+	int wrote_entry;
+
+	wrote_entry = true;
+
+	if (fp) {
+		string buffer;
+		unparser.Unparse( buffer, rec );
+		if (fprintf(fp, "%s\n", buffer.c_str()) < 0) {
+		    wrote_entry = false;
+		} else if (synch && 0) {
+			if (fflush(fp) != 0 || fsync(fileno(fp)) != 0) {
+				wrote_entry = false;
+			}
+		}
+		if (!wrote_entry) {
+			CondorErrno = ERR_FILE_WRITE_FAILED;
+			CondorErrMsg = "failed to log operation: " + buffer;
+		}
 	}
-	return( true );
+	// If there is no log file, we return true. Technically,
+	// we haven't written a log file entry, but it wasn't desired
+	// anyway, so it's okay.
+	return wrote_entry;
 }
 
 
@@ -342,7 +379,7 @@ ReadLogFile( )
     int     fd;
     char    buf[16];
 
-        // open the file and wrap a source around it
+	// open the file and wrap a source around it
     if( ( fd = open( logFileName.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
         CondorErrno = ERR_LOG_OPEN_FAILED;
         sprintf( buf, "%d", errno );
@@ -360,7 +397,7 @@ ReadLogFile( )
         return( false );
     }
 
-        // read log records and execute in (non-persistent, immediate) mode
+	// read log records and execute in (non-persistent, immediate) mode
     ClassAd *logRec;
     while( ( logRec = ReadLogEntry( log_fp ) ) != 0 ) {
         if( !OperateInRecoveryMode( logRec ) ) {
@@ -448,4 +485,18 @@ TruncateLog( )
     }
 
     return( true );
+}
+
+static bool string_is_empty(const string &text)
+{
+	bool is_empty;
+
+	is_empty = true;
+	for (unsigned int index = 0; index < text.length(); index++) {
+		if (!isspace(text[index])) {
+			is_empty = false;
+			break;
+		}
+	}
+	return is_empty;
 }

@@ -1,55 +1,93 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
-#include "condor_common.h"
 #include "common.h"
-#include "extArray.h"
+#include "lexer.h"
 #include "exprTree.h"
+#include "collection.h"
+#include "collectionBase.h"
+#include "classad.h"
 
 BEGIN_NAMESPACE( classad )
-
 //-------------classad templates --------------
-	// lex buffer
-template class ExtArray<char>;
-	// function table
-template class map<string, void*, CaseIgnLTStr>;
-template class map<string, void*, CaseIgnLTStr>::iterator;
-	// attribute list
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
-template class hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
-	// expr evaluation cache
-template class hash_map<const ExprTree*, Value, ExprHash >;
-template class hash_map<const ExprTree*, Value, ExprHash >::iterator;
-	// component stuff
-template class vector< pair<string, ExprTree*> >;
-template class vector<ExprTree*>;
+
+// function table
+template map<string, void*, CaseIgnLTStr>;
+template map<string, void*, CaseIgnLTStr>::iterator;
+
+// attribute list
+template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
+template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
+template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
+
+// expr evaluation cache
+template hash_map<const ExprTree*, Value, ExprHash >;
+template hash_map<const ExprTree*, Value, ExprHash >::iterator;
+
+// component stuff
+template vector< pair<string, ExprTree*> >;
+template vector<ExprTree*>;
+
+template map<string, ClassAd *>;
+template map<string, ClassAdCollection *>;
+
+#ifdef CLASSAD_DISTRIBUTION
+template vector<string>;
+#include "transaction.h"
+#include "view.h"
+
+// view content
+template multiset<ViewMember, ViewMemberLT>;
+template multiset<ViewMember, ViewMemberLT>::iterator;
+
+// list of sub-views
+template slist<View*>;
+
+// view registry
+template hash_map<string,View*,StringHash>;
+template hash_map<string,View*,StringHash>::iterator;
+
+// index
+template hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+    StringHash>::iterator;
+template hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
+    StringHash>;
+
+// main classad table
+template hash_map<string, ClassAdProxy, StringHash>;
+template hash_map<string, ClassAdProxy, StringHash>::iterator;
+
+// transaction registry
+template hash_map<string, ServerTransaction*, StringHash>;
+template hash_map<string, ServerTransaction*, StringHash>::iterator;
+
+// operations in transaction
+template list<XactionRecord>;
+#endif
 
 class _ClassAdInit 
 {
 	public:
 		_ClassAdInit( ) { tzset( ); }
 } __ClassAdInit;
-
 
 END_NAMESPACE

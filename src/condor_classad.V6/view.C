@@ -1,31 +1,29 @@
-/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
+/*********************************************************************
  *
- * See LICENSE.TXT for additional notices and disclaimers.
+ * Condor ClassAd library
+ * Copyright (C) 1990-2001, CONDOR Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI, and Rajesh Raman.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of version 2.1 of the GNU Lesser General
+ * Public License as published by the Free Software Foundation.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+ * USA
+ *
+ *********************************************************************/
 
-#include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_classad.h"
+#include "common.h"
 #include "view.h"
-#include "collectionServer.h"
+#include "collection.h"
+#include "collectionBase.h"
 
 // ----------- <implementation of ViewMember class> -----------------
 
@@ -134,7 +132,7 @@ SetViewName( const ViewName &name )
 
 
 bool View::
-SetViewInfo( ClassAdCollectionServer *coll, ClassAd *ad )
+SetViewInfo( ClassAdCollection *coll, ClassAd *ad )
 {
 	ExprTree	*rankExpr=NULL, *constraintExpr=NULL, *tmp=NULL;
 	ExprList	*partitionExprs=NULL;
@@ -246,7 +244,7 @@ GetViewInfo( )
 
 
 bool View::
-SetConstraintExpr( ClassAdCollectionServer *coll, const string &expr )
+SetConstraintExpr( ClassAdCollection *coll, const string &expr )
 {
 	ExprTree		*constraint;
 
@@ -260,7 +258,7 @@ SetConstraintExpr( ClassAdCollectionServer *coll, const string &expr )
 
 
 bool View::
-SetConstraintExpr( ClassAdCollectionServer *coll, ExprTree *constraint )
+SetConstraintExpr( ClassAdCollection *coll, ExprTree *constraint )
 {
 	ClassAd					*ad;
 	ViewMembers::iterator	vmi;
@@ -293,7 +291,7 @@ SetConstraintExpr( ClassAdCollectionServer *coll, ExprTree *constraint )
 }
 
 bool View::
-SetRankExpr( ClassAdCollectionServer *coll, const string &expr )
+SetRankExpr( ClassAdCollection *coll, const string &expr )
 {
 	ExprTree	*rank;
 
@@ -307,7 +305,7 @@ SetRankExpr( ClassAdCollectionServer *coll, const string &expr )
 
 
 bool View::
-SetRankExpr( ClassAdCollectionServer *coll, ExprTree *rank )
+SetRankExpr( ClassAdCollection *coll, ExprTree *rank )
 {
 	ClassAd					*ad;
 	ViewMember				vm;
@@ -357,7 +355,7 @@ SetRankExpr( ClassAdCollectionServer *coll, ExprTree *rank )
 
 
 bool View::
-SetPartitionExprs( ClassAdCollectionServer *coll, const string &expr )
+SetPartitionExprs( ClassAdCollection *coll, const string &expr )
 {
 	ExprTree	*exprList=NULL;
 
@@ -375,7 +373,7 @@ SetPartitionExprs( ClassAdCollectionServer *coll, const string &expr )
 
 
 bool View::
-SetPartitionExprs( ClassAdCollectionServer *coll, ExprList *el )
+SetPartitionExprs( ClassAdCollection *coll, ExprList *el )
 {
 		// insert expression list into view info
 	ClassAd *ad = evalEnviron.GetLeftAd( );
@@ -508,7 +506,7 @@ FindPartition( ClassAd *rep, ViewName &partition )
 
 
 bool View::
-InsertSubordinateView( ClassAdCollectionServer *coll, ClassAd *viewInfo )
+InsertSubordinateView( ClassAdCollection *coll, ClassAd *viewInfo )
 {
 	View					*newView = new View( this );
 	ViewMembers::iterator	vmi;
@@ -552,7 +550,7 @@ InsertSubordinateView( ClassAdCollectionServer *coll, ClassAd *viewInfo )
 
 
 bool View::
-InsertPartitionedView( ClassAdCollectionServer *coll, ClassAd *viewInfo, 
+InsertPartitionedView( ClassAdCollection *coll, ClassAd *viewInfo, 
 	ClassAd *rep )
 {
 	string	signature;
@@ -620,7 +618,7 @@ InsertPartitionedView( ClassAdCollectionServer *coll, ClassAd *viewInfo,
 
 
 bool View::
-DeleteChildView( ClassAdCollectionServer *coll, const ViewName &vName )
+DeleteChildView( ClassAdCollection *coll, const ViewName &vName )
 {
 	if( !DeleteSubordinateView( coll, vName ) && 
 			!DeletePartitionedView( coll, vName ) ) {
@@ -633,7 +631,7 @@ DeleteChildView( ClassAdCollectionServer *coll, const ViewName &vName )
 
 
 bool View::
-DeleteSubordinateView( ClassAdCollectionServer *coll, const ViewName &vName )
+DeleteSubordinateView( ClassAdCollection *coll, const ViewName &vName )
 {
 	SubordinateViews::iterator	xi;
 
@@ -652,7 +650,7 @@ DeleteSubordinateView( ClassAdCollectionServer *coll, const ViewName &vName )
 
 
 bool View::
-DeletePartitionedView( ClassAdCollectionServer *coll, const ViewName &vName )
+DeletePartitionedView( ClassAdCollection *coll, const ViewName &vName )
 {
 	PartitionedViews::iterator 	mi;
 
@@ -719,7 +717,7 @@ DeletePartitionedView( ClassAdCollectionServer *coll, const ViewName &vName )
 
 
 void View::
-DeleteView( ClassAdCollectionServer *coll )
+DeleteView( ClassAdCollection *coll )
 {
 	SubordinateViews::iterator	si;
 	PartitionedViews::iterator	pi;
@@ -740,7 +738,7 @@ DeleteView( ClassAdCollectionServer *coll )
 
 
 bool View::
-DeletePartitionedView( ClassAdCollectionServer *coll, ClassAd *rep )
+DeletePartitionedView( ClassAdCollection *coll, ClassAd *rep )
 {
 	string signature = makePartitionSignature( rep );
 
@@ -759,7 +757,7 @@ DeletePartitionedView( ClassAdCollectionServer *coll, ClassAd *rep )
 // an ad.  However, the view assumes that in the case of view partitions, the
 // parent view will have identified the correct child partition to use.
 bool View::
-ClassAdInserted( ClassAdCollectionServer *coll, const string &key, 
+ClassAdInserted( ClassAdCollection *coll, const string &key, 
 	ClassAd *ad )
 {
 	PartitionedViews::iterator	partition;
@@ -835,7 +833,7 @@ ClassAdInserted( ClassAdCollectionServer *coll, const string &key,
 
 
 void View::
-ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad )
+ClassAdPreModify( ClassAdCollection *coll, ClassAd *ad )
 {
 	SubordinateViews::iterator	xi;
 	PartitionedViews::iterator	mi;
@@ -856,7 +854,7 @@ ClassAdPreModify( ClassAdCollectionServer *coll, ClassAd *ad )
 
 
 bool View::
-ClassAdModified( ClassAdCollectionServer *coll, const string &key, 
+ClassAdModified( ClassAdCollection *coll, const string &key, 
 	ClassAd *mad )
 {
 	bool	match, wasMember, sameRank, rval = true;
@@ -973,7 +971,7 @@ ClassAdModified( ClassAdCollectionServer *coll, const string &key,
 
 
 void View::
-ClassAdDeleted( ClassAdCollectionServer *coll, const string &key, 
+ClassAdDeleted( ClassAdCollection *coll, const string &key, 
 	ClassAd *ad )
 {
 	ViewMembers::iterator	vmi;
@@ -1018,7 +1016,7 @@ makePartitionSignature( ClassAd *ad )
 	string				signature;
     Value   			value;
 	ClassAd				*oad, *info;
-	ExprList			*el;
+	const ExprList		*el;
 
 		// stash the old ad from the environment and insert the new ad in
 	oad = evalEnviron.RemoveRightAd( );
