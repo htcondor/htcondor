@@ -47,8 +47,30 @@ and \Condor{status} will always treat this variable as a float.
 \Condor{release} tools to be more helpful, and to mention the
 \Opt{-constraint} option.
 
-\item Fixed a misleading error message in \Condor{q} that was
-displayed in very rare circumstances.
+\item When you ran \Condor{q} in a way that it needed to query the
+\Condor{collector} and that query failed, the error message used to be
+very short and cryptic.
+Now, there is a verbose message that explains what went wrong and
+possible ways you can fix the problem.
+Also fixed a misleading error message in \Condor{q} that was
+displayed under very rare circumstances.
+
+\end{itemize}
+
+\noindent Packaging Changes:
+
+\begin{itemize}
+
+\item Begining with Condor version 6.4.6, all of the Condor-G related
+binaries (\Condor{gridmanager}, \Condor{glidein}, and
+\Prog{gahp\_server}) are also included in the full release of Condor.
+So, if you are using the full Condor system and want to use Condor's
+grid-enabled functionality, you no longer need to download and install
+a separate ``contrib module''.  
+However, if all you want is Condor-G, the contrib module is still
+available.
+For more information, please the chapter on ``Grid Computing'' on
+page~\pageref{grid-computing}.
 
 \item Fixed a process family managment bug in the \Condor{startd} on 
 Windows. This bug was preventing the \Condor{startd} from detecting
