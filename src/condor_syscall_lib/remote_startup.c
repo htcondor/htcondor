@@ -207,7 +207,7 @@ static int open_read_stream( const char *path );
 	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 void unblock_signals();
 
-int _Ckpt_Via_TCP_Stream;
+extern int _Ckpt_Via_TCP_Stream;
 
 int
 MAIN( int argc, char *argv[], char **envp )
