@@ -436,30 +436,33 @@ LogSetAttribute::Play(void *data_structure)
 int
 LogSetAttribute::WriteBody(int fd)
 {
-	int		rval, rval1;
+	int		rval, rval1, len;
 
-	rval = write(fd, key, strlen(key));
-	if (rval < 0) {
-		return rval;
+	len = strlen(key);
+	rval = write(fd, key, len);
+	if (rval < len) {
+		return -1;
 	}
 	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) {
-		return rval1;
+	if (rval1 < 1) {
+		return -1;
 	}
 	rval1 += rval;
-	rval = write(fd, name, strlen(name));
-	if (rval < 0) {
-		return rval;
+	len = strlen(name);
+	rval = write(fd, name, len);
+	if (rval < len) {
+		return -1;
 	}
 	rval1 += rval;
 	rval = write(fd, " ", 1);
-	if (rval < 0) {
+	if (rval < 1) {
 		return rval;
 	}
 	rval1 += rval;
-	rval = write(fd, value, strlen(value));
-	if (rval < 0) {
-		return rval;
+	len = strlen(value);
+	rval = write(fd, value, len);
+	if (rval < len) {
+		return -1;
 	}
 	return rval1 + rval;
 }
@@ -521,20 +524,22 @@ LogDeleteAttribute::Play(void *data_structure)
 int
 LogDeleteAttribute::WriteBody(int fd)
 {
-	int		rval, rval1;
+	int		rval, rval1, len;
 
-	rval = write(fd, key, strlen(key));
-	if (rval < 0) {
-		return rval;
+	len = strlen(key);
+	rval = write(fd, key, len);
+	if (rval < len) {
+		return -1;
 	}
 	rval1 = write(fd, " ", 1);
-	if (rval1 < 0) {
-		return rval1;
+	if (rval1 < 1) {
+		return -1;
 	}
 	rval1 += rval;
-	rval = write(fd, name, strlen(name));
-	if (rval < 0) {
-		return rval;
+	len = strlen(name);
+	rval = write(fd, name, len);
+	if (rval < len) {
+		return -1;
 	}
 	return rval1 + rval;
 }
@@ -545,12 +550,10 @@ LogBeginTransaction::ReadBody( int fd )
 {
 	char 	ch;
 	int		rval = read( fd, &ch, 1 );
-	if( rval < 1 ) {
-		return( rval );
-	}
-	if( ch != '\n' ) {
+	if( rval < 1 || ch != '\n' ) {
 		return( -1 );
 	}
+	return( 1 );
 }
 
 
@@ -559,12 +562,10 @@ LogEndTransaction::ReadBody( int fd )
 {
 	char 	ch;
 	int		rval = read( fd, &ch, 1 );
-	if( rval < 1 ) {
-		return( rval );
-	}
-	if( ch != '\n' ) {
+	if( rval < 1 || ch != '\n' ) {
 		return( -1 );
 	}
+	return( 1 );
 }
 
 
