@@ -143,7 +143,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		// If we got this far and we're not in claimed/idle, there
 		// really is a problem activating the claim.
 	if( a != idle_act ) {
-		rip->log_ignore( ACTIVATE_CLAIM, s );
+		rip->log_ignore( ACTIVATE_CLAIM, s, a );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
