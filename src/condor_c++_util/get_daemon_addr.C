@@ -110,7 +110,7 @@ build_valid_daemon_name( char* name )
 {
 	char *tmp;
 	static char daemonName[100];
-	int size;
+
 	if( name && *name ) {
 		tmp = strchr( name, '@' );
 		if( tmp ) {
