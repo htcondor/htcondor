@@ -870,35 +870,47 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	struct procentry64 pent;
 	struct fdsinfo64 fent;
 	int retval;
-	pid_t my_pid;
 
 	/* I do this so the getprocs64() call doesn't affect what we passed in */
-	my_pid = pid;
 
 	/* Ask the OS for this one process entry, based on the pid */
-	retval = getprocs64(&pent, sizeof(struct procentry64), &fent, 
-				sizeof(struct fdsinfo64), &my_pid, 1);
-	if (retval == -1)
+	pid_t index = 0;
+	while( 1 )
 	{
-		/* some odd problem with getprocs64(), let the caller figure it out */
-		return -1;
+		retval = getprocs64(&pent, sizeof(struct procentry64),
+							&fent, sizeof(struct fdsinfo64),
+							&index, 1);
+
+		if ( retval == -1 )
+		{
+			// some odd problem with getprocs64(), let the caller figure it out
+			return -1;
+
+			// Not found.  Ug.
+		} else if ( retval == 0 ) {
+			return -1;
+
+			// Found our match?
+		} else if ( pid == pent.pi_pid ) {
+			initpi( pi );
+			pi->imgsize = pent.pi_size * getpagesize();
+			pi->rssize = pent.pi_drss + pent.pi_trss; /* XXX not really right */
+			pi->minfault = pent.pi_minflt;
+			pi->majfault = pent.pi_majflt;
+			pi->user_time = pent.pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
+			pi->sys_time = pent.pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
+			pi->age = secsSinceEpoch() - pent.pi_start;
+			pi->pid = pent.pi_pid;
+			pi->ppid = pent.pi_ppid;
+			pi->creation_time = pent.pi_start;
+
+			pi->cpuusage = 0.0; /* XXX fixme compute it */
+
+			// All done
+			return 0;
+		}
 	}
-
-	initpi( pi );
-	pi->imgsize = pent.pi_size * getpagesize();
-	pi->rssize = pent.pi_drss + pent.pi_trss; /* XXX not really right */
-	pi->minfault = pent.pi_minflt;
-	pi->majfault = pent.pi_majflt;
-	pi->user_time = pent.pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
-	pi->sys_time = pent.pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
-	pi->age = secsSinceEpoch() - pent.pi_start;
-	pi->pid = pent.pi_pid;
-	pi->ppid = pent.pi_ppid;
-	pi->creation_time = pent.pi_start;
-
-	pi->cpuusage = 0.0; /* XXX fixme compute it */
-
-	return 0;
+	return -1;
 #else
 #error Please define ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) for this platform!
 #endif
@@ -1869,41 +1881,7 @@ ProcAPI::buildPidList() {
 
 #endif
 
-/* Using the list of processes pointed to by pidList and returned by
-   getAndRemNextPid(), a linked list of procInfo structures is
-   built.  At the end, allProcInfos will point to the head of this
-   list.  This function is used on all OS's except for HPUX.
-*/
-#ifndef HPUX
-int
-ProcAPI::buildProcInfoList() {
-  
-	piPTR current;
-	piPTR temp;
-	pid_t thispid;
-
-		// make a header node for ease of list construction:
-	deallocAllProcInfos();
-	allProcInfos = new procInfo;
-	current = allProcInfos;
-	current->next = NULL;
-
-	temp = NULL;
-	while( (thispid = getAndRemNextPid()) >= 0 ) {
-		if( getProcInfo(thispid, temp) >= 0 ) {
-			current->next = temp;
-			current = temp;
-			temp = NULL;
-		}
-	}
-
-		// we're done; remove header node.
-	temp = allProcInfos;
-	allProcInfos = allProcInfos->next;
-	delete temp;
-	return 0;
-}
-#else
+#ifdef HPUX
 /* now for the HPUX version.  In a sense, it's simpler, because no
    pidlist has to be built......the allProcInfos list
    is built by repeated calls to pstat_getproc(), which will return
@@ -1970,7 +1948,114 @@ ProcAPI::buildProcInfoList() {
 	}
 	return 0;
 }
-#endif   // end of HPUX's buildProcInfoList()
+// end of HPUX's buildProcInfoList()
+
+#elif defined AIX
+/* now for the AIX version.  In a sense, it's simpler, because no
+   pidlist has to be built......the allProcInfos list
+   is built by repeated calls to getprocs64(), which will return
+   information about every process in the system, if asked enough
+   times and in the proper manner.
+*/
+int
+ProcAPI::buildProcInfoList() {
+  
+		// this determines the number of process infos to grab at
+		// once.   10 seems to be a good number.
+	const int BURSTSIZE = 10;    
+	piPTR current;
+
+		// make a header node for ease of list construction:
+	deallocAllProcInfos();
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
+
+		// loop until count == 0, which will occur when all have been returned
+	pid_t idx = 0;  // index within the context
+	while( 1 ) {
+		struct procentry64 pent[ BURSTSIZE ];
+		struct fdsinfo64 fent[ BURSTSIZE ];
+
+		// Ask AIX for a group of processes
+		int count = getprocs64( pent, sizeof(struct procentry64),
+								fent, sizeof(struct fdsinfo64),
+								&idx, BURSTSIZE );
+
+		// some odd problem with getprocs64(), let the caller figure it out
+		if ( count < 0 ) {
+			dprintf( D_ALWAYS, "ProcAPI: getprocs64() failed\n" );
+			return -1;
+		} else if ( count == 0 ) {
+			break;
+		}
+
+		// Loop through & add them all
+		for( int i=0;  i<count;  i++ ) {
+			piPTR pi = new procInfo;
+			initpi( pi );
+
+			pi->imgsize = pent[i].pi_size * getpagesize();
+			pi->rssize = pent[i].pi_drss + pent[i].pi_trss; /* XXX not really right */
+			pi->minfault = pent[i].pi_minflt;
+			pi->majfault = pent[i].pi_majflt;
+			pi->user_time = pent[i].pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
+			pi->sys_time = pent[i].pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
+			pi->age = secsSinceEpoch() - pent[i].pi_start;
+			pi->pid = pent[i].pi_pid;
+			pi->ppid = pent[i].pi_ppid;
+			pi->creation_time = pent[i].pi_start;
+
+			pi->cpuusage = 0.0; /* XXX fixme compute it */
+
+			current->next = pi;
+			current = pi;
+		}
+	}
+
+	// remove that header node:
+	piPTR temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+
+	return 0;
+}
+
+/* Using the list of processes pointed to by pidList and returned by
+   getAndRemNextPid(), a linked list of procInfo structures is
+   built.  At the end, allProcInfos will point to the head of this
+   list.  This function is used on all OS's except for HPUX or AIX.
+*/
+#else
+int
+ProcAPI::buildProcInfoList() {
+  
+	piPTR current;
+	piPTR temp;
+	pid_t thispid;
+
+		// make a header node for ease of list construction:
+	deallocAllProcInfos();
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
+
+	temp = NULL;
+	while( (thispid = getAndRemNextPid()) >= 0 ) {
+		if( getProcInfo(thispid, temp) >= 0 ) {
+			current->next = temp;
+			current = temp;
+			temp = NULL;
+		}
+	}
+
+		// we're done; remove header node.
+	temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+	return 0;
+}
+#endif
 
 /* buildFamily takes a list of procInfo structs pointed to by 
    allProcInfos and an ancestor pid 'daddypid' and builds a list
