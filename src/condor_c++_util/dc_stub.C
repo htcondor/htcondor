@@ -25,5 +25,5 @@
    libraries where needed. */
 #include "condor_common.h"
 
-char* ZZZ_dc_sinful() { return 0; }
+char* global_dc_sinful() { return 0; }
 
