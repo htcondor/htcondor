@@ -35,6 +35,10 @@ applies to machines running Windows XP SP2.
 
 \begin{itemize}
 
+\item Fixed a bug specific to Windows that could cause, in rare occurances
+due to a race condition, Condor to fail to properly signal the job to
+suspend, continue, or preempt.
+
 \item When Condor transfers the job executable using the file transfer
   mechanism, it used to leave the binary sitting as a world-writeable
   file inside the execute directory on UNIX.
