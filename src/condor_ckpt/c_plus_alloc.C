@@ -36,9 +36,30 @@ void * operator new(size_t size)
 	return (void *)malloc(size);
 }
 
+
 void operator delete( void *to_free )
 {
 	if( to_free ) {
 		(void)free( to_free );
 	}
 }
+
+#if defined( __GNUC__ )
+#	if __GNUG__== 2 && __GNUC_MINOR__ == 6
+		extern "C" {
+			void *__builtin_new( size_t );
+			void __builtin_delete( void * );
+			void *
+			__builtin_vec_new (size_t sz)
+			{
+				return __builtin_new( sz );
+			}
+
+			void
+			__builtin_vec_delete( void *to_free )
+			{
+				__builtin_delete( to_free );
+			}
+		}
+#	endif
+#endif
