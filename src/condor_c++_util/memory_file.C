@@ -130,7 +130,7 @@ ssize_t memory_file::read( char *data, size_t length )
 
 	if(length==0) return 0;
 
-	if((pointer+length)>filesize) length = filesize-pointer;
+	if((pointer+(off_t)length)>filesize) length = filesize-pointer;
 	memcpy(data,&buffer[pointer],length);
 
 	pointer += length;
