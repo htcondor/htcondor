@@ -40,6 +40,7 @@ const char ATTR_CLOCK_MIN                [] = "ClockMin";
 const char ATTR_CLUSTER_ID               [] = "ClusterId";
 const char ATTR_COMPLETION_DATE			 [] = "CompletionDate";
 const char ATTR_CONDOR_LOAD_AVG			 [] = "CondorLoadAvg";
+const char ATTR_CONDOR_ADMIN			 [] = "CondorAdmin";
 const char ATTR_CONSOLE_IDLE			 [] = "ConsoleIdle";
 const char ATTR_CONTINUE                 [] = "Continue";
 const char ATTR_CORE_SIZE				 [] = "CoreSize";
