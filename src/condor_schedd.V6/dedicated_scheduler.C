@@ -1997,11 +1997,14 @@ DedicatedScheduler::computeSchedule( void )
 	int i, l, last;
 	MRecArray* new_matches;
 
-		// Clear out the "scheduled" flag in all of our match_recs,
-		// since we'll reset those as we create the new schedule.
+		// Clear out the "scheduled" flag in all of our match_recs
+		// that aren't already allocated to a job, so we can set them
+		// correctly as we create the new schedule.
 	all_matches->startIterations();
     while( all_matches->iterate( mrec ) ) {
-		mrec->scheduled = false;
+		if( ! mrec->allocated ) {
+			mrec->scheduled = false;
+		}
     }
 
 		// For each job, try to satisfy it as soon as possible.
@@ -2883,6 +2886,10 @@ DedicatedScheduler::isPossibleToSatisfy( ClassAd* job, int max_hosts )
 {
 	ClassAd* candidate;
 	int req;
+	StringList names;
+	char name_buf[512];
+	char* name;
+	match_rec* mrec;
 	
 	dprintf( D_FULLDEBUG, 
 			 "Trying to satisfy job with all possible resources\n" );
@@ -2898,9 +2905,22 @@ DedicatedScheduler::isPossibleToSatisfy( ClassAd* job, int max_hosts )
 		}
 		if( req ) {
 			num_matches++;
+			name_buf[0] = '\0';
+			candidate->LookupString( ATTR_NAME, name_buf );
+			names.append( name_buf );
 		}
 		if( num_matches == max_hosts ) {
-				// We've found all we need for this job
+				// We've found all we need for this job.
+				// Set the scheduled flag on any match records we used
+				// for satisfying this job so we don't release them
+				// prematurely. 
+			names.rewind();
+			while( (name = names.next()) ) {
+				HashKey key(name);
+				if( all_matches->lookup(key, mrec) >= 0 ) {
+					mrec->scheduled = true;
+				}
+			}
 			return true;
 		}
 	}
