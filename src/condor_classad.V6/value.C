@@ -249,6 +249,9 @@ SetAbsoluteTimeValue( abstime_t asecs )
 
 ostream& operator<<(ostream &stream, Value &value)
 {
+	ClassAdUnParser unparser;
+	string          unparsed_text;
+
 	switch (value.valueType) {
 	case Value::NULL_VALUE:
 		stream << "(null)";
@@ -272,22 +275,16 @@ ostream& operator<<(ostream &stream, Value &value)
 	case Value::REAL_VALUE:
 		stream << value.realValue;
 		break;
+	case Value::LIST_VALUE:
+	case Value::CLASSAD_VALUE:
 	case Value::RELATIVE_TIME_VALUE: 
 	case Value::ABSOLUTE_TIME_VALUE: {
-	  ClassAdUnParser unpar;
-	  string str;
-	  unpar.Unparse(str,value);
-	  stream <<str;
-	  break;
+		unparser.Unparse(unparsed_text, value);
+		stream << unparsed_text;
+		break;
 	}
 	case Value::STRING_VALUE:
 		stream << value.strValue;
-		break;
-	case Value::CLASSAD_VALUE:
-		stream << "classad value";
-		break;
-	case Value::LIST_VALUE:
-		stream << "list value";
 		break;
 	}
 
