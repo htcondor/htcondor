@@ -254,11 +254,14 @@ public:
 	bool Rewind();
 
 	/** Find a entry with a given name.  Iterates through all entries in the
-		directory until a match is found, or the end is reached.  If a match is
-		found, the current entry matches it.
+		directory until a match is found, or the end is reached.  If a match
+		is found, the current entry matches it.  Note that this function
+		rewind()s the directory object, and, by definition, changes the
+		current entry pointer.
 		@return true if a match is found, false if not.
 		@see Next()
 	*/
+
 	bool Find_Named_Entry( const char *name );
 
 	/** Get last access time of current file.  If there is no current
