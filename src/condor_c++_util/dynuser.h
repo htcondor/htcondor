@@ -45,6 +45,7 @@ public:
 		else { return ACCOUNT_PREFIX; }
 	};
 
+	bool reuse_accounts() { return reuse_account; }
 
 private:
 
