@@ -359,7 +359,7 @@ The vanilla universe has very few restrictions, so
 it can be used when either the standard universe's additional services are not
 desired,  or when the job cannot abide by the restrictions
 of the standard universe.
-The globus universe allows users to submit Globus jobs (see 
+The Globus universe allows users to submit Globus jobs (see 
 \Url{http://www.globus.org}) through the Condor interface.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -478,7 +478,8 @@ The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
 into a Globus RSL string and used as the arguments to the \Prog{globusrun}
-program.
+program. The manual page for \Condor{submit} has detailed descriptions for
+the Globus-related attributes.
 
 %%%%%%%%%%%%%%
 \subsection{Relinking for the Standard Universe}
@@ -921,6 +922,10 @@ accounts would only use cycles not wanted by other users of the system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/dagman.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/glidein.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
