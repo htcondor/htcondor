@@ -1763,6 +1763,8 @@ void DaemonCore::Driver()
 		
 		if (rv > 0) {	// connection requested
 
+			bool recheck_status = false;
+
 			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {			
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...					
@@ -1823,12 +1825,62 @@ void DaemonCore::Driver()
 					if ( (*pipeTable)[i].call_handler ) {
 
 						(*pipeTable)[i].call_handler = false;
-						
-						(*pipeTable)[i].in_handler = true;
-						
+
 						// save the pentry on the stack, since we'd otherwise lose it
 						// if the user's handler call Cancel_Pipe().
 						PidEntry* saved_pentry = (*pipeTable)[i].pentry;
+
+						if ( recheck_status || saved_pentry ) {
+							// we have already called at least one callback handler.  what
+							// if this handler drained this registed pipe, so that another
+							// read on the pipe could block?  to prevent this, we need
+							// to check one more time to make certain the pipe is ready
+							// for reading.
+							// NOTE: we also enter this code if saved_pentry != NULL.
+							//       why?  because that means we are on Windows, and
+							//       on Windows we need to check because pipes are 
+							//       signalled not by select() but by our pidwatcher
+							//       thread, which may have signaled this pipe ready
+							//       when were in a timer handler or whatever.
+#ifdef WIN32
+							// WINDOWS
+							DWORD num_bytes_avail = 0;
+							if ( saved_pentry && saved_pentry->hPipe ) 
+							{
+								PeekNamedPipe(
+								  saved_pentry->hPipe,	// handle to pipe
+								  NULL,				// data buffer
+								  0,				// size of data buffer
+								  NULL,				// number of bytes read
+								  &num_bytes_avail,	// number of bytes available
+								  NULL  // unread bytes
+								);
+							}
+							if ( num_bytes_avail == 0 ) {
+								// there is no longer anything available to read
+								// on the pipe.  try the next entry....
+								continue;
+							}
+#else
+							// UNIX
+							FD_ZERO(&readfds);
+							FD_SET( (*pipeTable)[i].pipefd,&readfds);
+							struct timeval stimeout;
+							stimeout.tv_sec = 0;	// set timeout for a poll
+							stimeout.tv_usec = 0;
+							int sresult = select( (*pipeTable)[i].pipefd + 1, 
+								(SELECT_FDSET_PTR) &readfds, 
+								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0, 
+								&stimeout );
+							if ( sresult == 0 ) {
+								// nothing available, try the next entry...
+								continue;
+							}
+#endif
+						}	// end of if ( recheck_status || saved_pentry )
+						
+						(*pipeTable)[i].in_handler = true;
+						
 
 						// log a message
 						dprintf(D_DAEMONCORE,
@@ -1839,6 +1891,7 @@ void DaemonCore::Driver()
 
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( (*pipeTable)[i].data_ptr);
+						recheck_status = true;
 						if ( (*pipeTable)[i].handler )
 							// a C handler
 							result = (*( (*pipeTable)[i].handler))( (*pipeTable)[i].service, (*pipeTable)[i].pipefd);
@@ -1870,6 +1923,14 @@ void DaemonCore::Driver()
 						}
 #endif
 
+						if ( (*pipeTable)[i].call_handler == true ) {
+							// looks like the handler called Cancel_Pipe(),
+							// and now entry i no longer points to what we 
+							// think it points to.  Decrement i now, so when
+							// we loop back we do not miss calling a handler.
+							i--;
+						}
+
 					}	// if call_handler is True
 				}	// if valid entry in pipeTable
 			}	// for 0 thru nPipe checking if call_handler is true
@@ -1882,6 +1943,29 @@ void DaemonCore::Driver()
 					if ( (*sockTable)[i].call_handler ) {
 
 						(*sockTable)[i].call_handler = false;
+
+						if ( recheck_status &&
+							 ((*sockTable)[i].is_connect_pending == false) ) 
+						{
+							// we have already called at least one callback handler.  what
+							// if this handler drained this registed pipe, so that another
+							// read on the pipe could block?  to prevent this, we need
+							// to check one more time to make certain the pipe is ready
+							// for reading.
+							FD_ZERO(&readfds);
+							FD_SET( (*pipeTable)[i].pipefd,&readfds);
+							struct timeval stimeout;
+							stimeout.tv_sec = 0;	// set timeout for a poll
+							stimeout.tv_usec = 0;
+							int sresult = select( (*pipeTable)[i].pipefd + 1, 
+								(SELECT_FDSET_PTR) &readfds, 
+								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0, 
+								&stimeout );
+							if ( sresult == 0 ) {
+								// nothing available, try the next entry...
+								continue;
+							}
+						}
 
 						// ok, select says this socket table entry has new data.
 
@@ -1919,6 +2003,7 @@ void DaemonCore::Driver()
 
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &( (*sockTable)[i].data_ptr);
+						recheck_status = true;
 						if ( (*sockTable)[i].handler )
 							// a C handler
 							result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
