@@ -568,6 +568,21 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 								"DAG Node: %1023s", job_name ) == 1 ) {
 						job = GetJob( job_name );
 						if( job ) {
+							if( !recovery ) {
+									// as a sanity-check, compare the
+									// job ID in the userlog with the
+									// one that appeared earlier in
+									// the submit command's stdout
+                                if( condorID.Compare( job->_CondorID ) != 0 ) {
+                                    debug_printf( DEBUG_QUIET,
+												  "ERROR: job %s: job ID in userlog submit event (%d.%d) doesn't match ID reported earlier by submit command (%d.%d)!  Trusting the userlog for now., but this is scary!\n",
+                                                  job_name,
+                                                  condorID._cluster,
+                                                  condorID._proc,
+                                                  job->_CondorID._cluster,
+                                                  job->_CondorID._proc );
+                                }
+							}
 							job->_CondorID = condorID;
 						}
 					}
@@ -808,6 +823,12 @@ Dag::SubmitReadyJobs()
     job->_Status = Job::STATUS_SUBMITTED;
     _numJobsSubmitted++;
     
+        // stash the job ID reported by the submit command, to compare
+        // with what we see in the userlog later as a sanity-check
+        // (note: this sanity-check is not possible during recovery,
+        // since we won't have seen the submit command stdout...)
+	job->_CondorID = condorID;
+
 	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",
 				  job->JobTypeString(), condorID._cluster, condorID._proc );
     
