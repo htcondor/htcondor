@@ -878,22 +878,22 @@ Claim::makeCODStarterArgs( void )
 
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
-		args += " -job_cluster ";
+		args += " -job-cluster ";
 		args += c_cluster;
 	} 
 	if( c_proc >= 0 ) {
-		args += " -job_proc ";
+		args += " -job-proc ";
 		args += c_proc;
 	} 
 
 		// finally, specify how the job should get its ClassAd
 	if( c_cod_keyword ) { 
-		args += " -job_keyword ";
+		args += " -job-keyword ";
 		args += c_cod_keyword;
 	}
 
 	if( c_has_job_ad ) { 
-		args += " -job_ad_path - ";
+		args += " -job-input-ad - ";
 	}
 
 	return strdup( args.Value() );
