@@ -68,10 +68,6 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #endif
 #define ALPHA(ch) (isalpha(ch)||ch=='_')
 
-#if defined(SUNOS41)
-#define RAND_MAX 32767
-#endif
-
 #define WHITE(ch) (isspace(ch))
 #define QUOTE(ch) (ch=='"')
 #define DIGIT(ch) (isdigit(ch))
@@ -794,28 +790,14 @@ CONTEXT	*cont2;
 	if( strcmp("Random_Int",name) == MATCH ) {
 		result = create_elem();
 		result->type = INT;
-		/* use random() instead of rand() when possible */
-#if defined(OSF1) || defined(SUNOS)
-		srandom(time(NULL));
-		result->i_val = random();
-#else
-		srand(time(NULL));
-		result->i_val = rand();
-#endif
+		result->i_val = get_random_int();
 		return result;
 	}
 
 	if( strcmp("Random_Float",name) == MATCH ) {
 		result = create_elem();
 		result->type = FLOAT;
-		/* use random() instead of rand() when possible */
-#if defined(OSF1) || defined(SUNOS)
-		srandom(time(NULL));
-		result->f_val = random()/((float) MAXINT);
-#else
-		srand(time(NULL));
-		result->f_val = rand()/((float) RAND_MAX);
-#endif
+		result->f_val = get_random_float();
 		return result;
 	}
 
