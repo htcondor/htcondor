@@ -984,6 +984,13 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	shadow_rec *srec;
 	int mode;
 
+	// NOTE: This function is *not* transaction safe -- it should not be
+	// called while a queue management transaction is active.  Why?
+	// Because  we call GetJobAd() instead of GetAttributeXXXX().
+	// At some point, we should
+	// have some code here to assert that is the case.  
+	// Questions?  -Todd <tannenba@cs.wisc.edu>
+
 	// First check if there is a shadow assiciated with this process.
 	// If so, send it SIGUSR,
 	// but do _not_ call DestroyProc - we'll do that via the reaper
@@ -998,41 +1005,64 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			 log_hold ? "true" : "false",
 			 notify ? "true" : "false" );
 
-	if ( GetAttributeInt(job_id.cluster, job_id.proc, 
-                         ATTR_JOB_STATUS, &mode) == -1 ) {
+		// Note: job_ad should *NOT* be deallocated, so we don't need
+		// to worry about deleting it before every return case, etc.
+	ClassAd* job_ad = GetJobAd( job_id.cluster, job_id.proc );
+
+	if ( !job_ad ) {
         dprintf ( D_ALWAYS, "tried to abort %d.%d; not found.\n", 
                   job_id.cluster, job_id.proc );
         return;
-    }
+	}
+
+	mode = -1;
+	job_ad->LookupInteger(ATTR_JOB_STATUS,mode);
+	if ( mode == -1 ) {
+		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d\n",
+				ATTR_JOB_STATUS,job_id.cluster, job_id.proc);
+	}
 
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
-	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
-					&job_universe);
-	if (job_universe == CONDOR_UNIVERSE_PVM) {
-		job_id.proc = 0;		// PVM shadow is always associated with proc 0
-	}
+	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+
 	if (job_universe == CONDOR_UNIVERSE_GLOBUS) {
-		// tell grid manager about the jobs removal, then return.
 		if( ! notify ) {
+				// caller explicitly does not the gridmanager notified??
+				// buyer had better beware, but we will honor what
+				// we are told.  
 				// nothing to do
 			return;
 		}
-		char owner[_POSIX_PATH_MAX];
-		char proxy[_POSIX_PATH_MAX];
-		owner[0] = '\0';
-		proxy[0] = '\0';
-		GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-		GetAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY, 
-							proxy);
-		if ( gridman_per_job ) {
-			GridUniverseLogic::JobRemoved(owner,proxy,job_id.cluster,job_id.proc);
-		} else {
-			GridUniverseLogic::JobRemoved(owner,proxy,0,0);
+		int job_managed = 0;
+		job_ad->LookupBool(ATTR_JOB_MANAGED, job_managed);
+			// If job_managed is true, then notify the gridmanager and return.
+			// If job_managed is false, we will fall through the code at the
+			// bottom of this function will handle the operation.
+		if ( job_managed  ) {
+			char owner[_POSIX_PATH_MAX];
+			char proxy[_POSIX_PATH_MAX];
+			owner[0] = '\0';
+			proxy[0] = '\0';
+			job_ad->LookupString(ATTR_OWNER,owner);
+			job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
+			if ( gridman_per_job ) {
+				GridUniverseLogic::JobRemoved(owner,proxy,job_id.cluster,job_id.proc);
+			} else {
+				GridUniverseLogic::JobRemoved(owner,proxy,0,0);
+			}
+			return;
 		}
-		return;
 	}
 
-	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
+	if (job_universe == CONDOR_UNIVERSE_PVM) {
+		job_id.proc = 0;		// PVM shadow is always associated with proc 0
+	} 
+
+	// If it is not a Globus Universe job (which has already been dealt with above), 
+	// then find the process/shadow managing it.
+	if ((job_universe != CONDOR_UNIVERSE_GLOBUS) && 
+		(srec = scheduler.FindSrecByProcID(job_id)) != NULL) 
+	{
 
 		// if we have already preempted this shadow, we're done.
 		if ( srec->preempted ) {
@@ -1078,16 +1108,14 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
             
 			char owner[_POSIX_PATH_MAX];
 			owner[0] = '\0';
-			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+			job_ad->LookupString(ATTR_OWNER,owner);
 			init_user_ids(owner);
 			int kill_sig;
-			ClassAd* job_ad = GetJobAd( job_id.cluster, job_id.proc );
 			kill_sig = findRmKillSig( job_ad );
 			if( kill_sig <= 0 ) {
 					// Fall back on the regular ATTR_KILL_SIG
 				kill_sig = findSoftKillSig( job_ad );
 			}
-			FreeJobAd( job_ad );
 			if( kill_sig <= 0 ) {
 				kill_sig = SIGTERM;
 			}
@@ -1106,23 +1134,28 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 		if (mode == REMOVED) {
 			srec->removed = TRUE;
 		}
-        
-    } else {
-		// We did not find a shadow for this job; just remove it.
-		if( mode == REMOVED ) {
-			if( !scheduler.WriteAbortToUserLog(job_id) ) {
-				dprintf( D_ALWAYS, 
-						 "Failed to write abort event to the user log\n" ); 
-			}
-			DestroyProc( job_id.cluster, job_id.proc );
+
+		return;        
+    } 
+	
+
+	// If we made it here, we did not find a shadow or other job manager 
+	// process for this job.  Just handle the operation ourselves.
+	if( mode == REMOVED ) {
+		if( !scheduler.WriteAbortToUserLog(job_id) ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write abort event to the user log\n" ); 
 		}
-		if( mode == HELD ) {
-			if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
-				dprintf( D_ALWAYS, 
-						 "Failed to write hold event to the user log\n" ); 
-			}
+		DestroyProc( job_id.cluster, job_id.proc );
+	}
+	if( mode == HELD ) {
+		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to write hold event to the user log\n" ); 
 		}
 	}
+
+	return;
 }
 
 } /* End of extern "C" */

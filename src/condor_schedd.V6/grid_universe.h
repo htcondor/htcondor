@@ -33,7 +33,7 @@ class GridUniverseLogic : public Service
 
 		static void JobCountUpdate(const char* owner, const char* proxy,
 				int cluster, int proc,
-				int num_globus_jobs, int num_globus_unsubmitted_jobs);
+				int num_globus_jobs, int num_globus_unmanaged_jobs);
 
 		static void JobRemoved(const char* owner, const char* proxy, 
 				int cluster, int proc);

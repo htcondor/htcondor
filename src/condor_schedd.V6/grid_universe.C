@@ -95,17 +95,17 @@ GridUniverseLogic::~GridUniverseLogic()
 void 
 GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, 
 			int cluster, int proc, int num_globus_jobs,
-			int num_globus_unsubmitted_jobs)
+			int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
-	ASSERT( num_globus_jobs >= num_globus_unsubmitted_jobs );
+	ASSERT( num_globus_jobs >= num_globus_unmanaged_jobs );
 	ASSERT( num_globus_jobs >= 0 );
-	ASSERT( num_globus_unsubmitted_jobs >= 0 );
+	ASSERT( num_globus_unmanaged_jobs >= 0 );
 
 	// if there are unsubmitted jobs, the gridmanager apparently
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
-	if ( num_globus_unsubmitted_jobs > 0 ) {
+	if ( num_globus_unmanaged_jobs > 0 ) {
 		JobAdded(owner, proxy, cluster, proc);
 		return;
 	}
