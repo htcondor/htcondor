@@ -102,9 +102,9 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   // submit log
 
   sprintf( prependLines, 
-		   "-a 'dag_node_name = %s' "
-		   "-a 'dagman_job_id = %s' "
-		   "-a 'submit_event_notes = DAG Node: $(dag_node_name)'",
+		   "-a \"dag_node_name = %s\" "
+		   "-a \"dagman_job_id = %s\" "
+		   "-a \"submit_event_notes = DAG Node: $(dag_node_name)\"",
 		   DAGNodeName, DAGManJobId );
 
   cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
@@ -115,7 +115,11 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   }
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
+#ifndef WIN32
   sprintf( command, "%s %s %s 2>&1", exe, prependLines, cmdFile );
+#else
+  sprintf( command, "%s %s %s", exe, prependLines, cmdFile );
+#endif
   
   bool success = false;
   const int tries = 6;
