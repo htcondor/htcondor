@@ -45,6 +45,14 @@ X11_INCLUDE =           /usr/X11R6/include
 #define PlatformGccFlags
 #endif
 
+#if !defined(PlatformLdFlags)
+#define PlatformLdFlags
+#endif
+
+#if !defined(TestPlatformLdFlags)
+#define TestPlatformLdFlags
+#endif
+
 #if !defined(Strip)
 #define Strip strip
 #endif
@@ -60,8 +68,8 @@ STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
 
-
 PLATFORM_LDFLAGS = PlatformLdFlags
+TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
 /*
    These next few lines are not supposed to be pre-processor
@@ -236,6 +244,7 @@ ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
 STD_LIBS = \
   $(CUTIL_LIB) \
