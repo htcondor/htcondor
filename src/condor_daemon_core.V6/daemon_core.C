@@ -2548,7 +2548,7 @@ int DaemonCore::Create_Process(
 			// Otherwise, we change directory and execv fails (and doesn't 
 			// return a #$%^&* error, it just #$%^&* dies )
 		
-		if( (cwd != NULL) && (cwd[0] != NULL) ) {
+		if( cwd && (cwd[0] != '\0') ) {
 
 			if ( name[0] != '/' ) {   // relative path
 				char currwd[_POSIX_PATH_MAX];
