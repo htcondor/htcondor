@@ -1818,6 +1818,7 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_iwd.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
+			*rsl += "<attempts>5</attempts>";
 			*rsl += "</transfer>";
 		}
 
@@ -1828,6 +1829,7 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 			*rsl += printXMLParam( "sourceUrl", buff.Value() );
 			buff.sprintf( "file://%s", remote_executable.Value() );
 			*rsl += printXMLParam( "destinationUrl", buff.Value());
+			*rsl += "<attempts>5</attempts>";
 			*rsl += "</transfer>";
 		}
 
@@ -1849,6 +1851,7 @@ xsi:schemaLocation=\"http://www.globus.org/namespaces/2004/06/job \
 							  basename (filename));
 				*rsl += printXMLParam ("destinationUrl", 
 									   buff.Value());
+				*rsl += "<attempts>5</attempts>";
 				*rsl += "</transfer>";
 
 			}
