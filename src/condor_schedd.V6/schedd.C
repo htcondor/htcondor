@@ -982,6 +982,7 @@ abort_job_myself(PROC_ID job_id)
 {
 	shadow_rec *srec;
 	int mode;
+	char* tmp = NULL;
 
 	// First check if there is a shadow assiciated with this process.
 	// If so, send it SIGUSR,
@@ -1000,6 +1001,34 @@ abort_job_myself(PROC_ID job_id)
                   job_id.cluster, job_id.proc );
         return;
     }
+
+	if( mode == REMOVED ) {
+			// If we're here, the user called condor_rm, so we should
+			// set ATTR_REMOVE_REASON (if it's not already)
+		if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+								  ATTR_REMOVE_REASON, &tmp) < 0 ) {
+				// nothing there, set it ourselves
+			SetAttributeString( job_id.cluster, job_id.proc, 
+								ATTR_REMOVE_REASON, 
+								"Job removed by condor_rm" );
+		}
+			// GetAttributeStringNew() always allocates a string, even
+			// when it fails, so we want to free() the result in
+			// either case.
+		free( tmp );
+	}
+	if( mode == HELD ) {
+			// If we're here, the user called condor_hold, so we
+			// should set ATTR_HOLD_REASON (if it's not already)
+		if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+								  ATTR_HOLD_REASON, &tmp) < 0 ) {
+				// nothing there, set it ourselves
+			SetAttributeString( job_id.cluster, job_id.proc, 
+								ATTR_HOLD_REASON, 
+								"Job held by condor_hold" );
+		}
+		free( tmp );
+	}
 
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE,
@@ -1173,12 +1202,12 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 
 	char* reason = NULL;
 	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_REMOVE_REASON, &reason) < 0 ) {
-		event.setReason( "Job removed by condor_rm" );
-	} else {
+							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
 		event.setReason( reason );
-		free( reason );
 	}
+		// GetAttributeStringNew always allocates memory, so we free
+		// regardless of the return value.
+	free( reason );
 
 	int status = ULog->writeEvent(&event);
 	delete ULog;
