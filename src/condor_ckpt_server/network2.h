@@ -132,7 +132,6 @@ int I_bind(int                 socket_desc,
 	   struct sockaddr_in* addr);
 char* gethostaddr(void); 
 char* gethostnamebyaddr(struct in_addr* addr); 
-char* getserveraddr(void); 
 int I_socket(void);
 int I_listen(int socket_desc, 
 	     int queue_len); 
