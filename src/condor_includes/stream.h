@@ -295,6 +295,8 @@ public:
 	int code_array(gid_t *&array, int &len);
     ///
 	int code(struct utsname &);
+	///
+	int code(condor_mode_t &);
 #endif // !defined(WIN32)
 
 #if HAS_64BIT_STRUCTS

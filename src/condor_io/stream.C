@@ -787,6 +787,18 @@ Stream::code(struct utsname &n)
 	return TRUE;
 }
 
+
+int
+Stream::code(condor_mode_t &m)
+{
+	int y = m & (S_IRUSR|S_IWUSR|S_IXUSR|
+				 S_IRGRP|S_IWGRP|S_IXGRP|
+				 S_IROTH|S_IWOTH|S_IXOTH);
+	STREAM_ASSERT(code(y));
+	return TRUE;
+}
+
+
 #endif // !defined(WIN32)
 
 /*
