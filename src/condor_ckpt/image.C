@@ -603,9 +603,16 @@ Image::Write( const char *ckpt_file )
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
 								len)) < 0)  {
-			perror( "open_ckpt_file" );
-			exit( 1 );
-		}
+			if (check_sig == SIGUSR2) { // periodic checkpoint
+				dprintf( D_ALWAYS,
+						"open_ckpt_file failed, aborting periodic ckpt\n" );
+				return -1;
+			}
+			else {
+				perror( "open_ckpt_file" );
+				exit( 1 );
+			}
+		}	
 	}
 
 		// Write out the checkpoint
@@ -628,8 +635,15 @@ Image::Write( const char *ckpt_file )
 		dprintf(D_ALWAYS, "About to rename \"%s\" to \"%s\"\n",
 				tmp_name, ckpt_file);
 		if( rename(tmp_name,ckpt_file) < 0 ) {
-			perror( "rename" );
-			exit( 1 );
+			if (check_sig == SIGUSR2) { // periodic checkpoint
+				dprintf( D_ALWAYS,
+						"rename failed, aborting periodic ckpt\n" );
+				return -1;
+			}
+			else {
+				perror( "rename" );
+				exit( 1 );
+			}
 		}
 		dprintf( D_ALWAYS, "Renamed OK\n" );
 	}
