@@ -32,7 +32,7 @@ int IndexFile::
 dump_index()
 {
    	hash_map<string,int,StringHash>::iterator m=Index.begin();
-	cout << "in dump index the lenght= " << Index.size() << endl;
+	cout << "in dump index the length= " << Index.size() << std::endl;
 	while (m!=Index.end()){
 		cout << "dump index  key= " << m->first << "  offset=" << m->second << endl;
 		m++;   
