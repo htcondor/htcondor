@@ -83,8 +83,29 @@ extern int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL) */
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
 #endif
 
+#ifdef MALLOC_DEBUG
+#define MALLOC(size) mymalloc(__FILE__,__LINE__,size)
+#define CALLOC(nelem,size) mycalloc(__FILE__,__LINE__,nelem,size)
+#define REALLOC(ptr,size) myrealloc(__FILE__,__LINE__,ptr,size)
+#define FREE(ptr) myfree(__FILE__,__LINE__,ptr)
+char    *mymalloc(), *myrealloc(), *mycalloc();
+#else
+#define MALLOC(size) malloc(size)
+#define CALLOC(nelem,size) calloc(nelem,size)
+#define REALLOC(ptr,size) realloc(ptr,size)
+#define FREE(ptr) free(ptr)
+#endif
+
+#define D_RUSAGE( flags, ptr ) { \
+        dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec,\
+        (ptr)->ru_utime.tv_usec ); \
+        dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
+        (ptr)->ru_stime.tv_usec ); \
+}
+
 #if defined(AIX31) || defined(AIX32)
 #define BIN_MAIL "/usr/bin/mail"
 #else
 #define BIN_MAIL "/bin/mail"
 #endif
+
