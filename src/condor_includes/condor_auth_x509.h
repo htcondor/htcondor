@@ -24,18 +24,18 @@
 #ifndef CONDOR_AUTHENTICATOR_GSS
 #define CONDOR_AUTHENTICATOR_GSS
 
-#if !defined(SKIP_AUTHENTICATION) && defined(X509_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "globus_gss_assist.h"
 
-const char STR_X509_DIRECTORY[]        = "X509_DIRECTORY";
-const char STR_X509_USER_PROXY[]       = "X509_USER_PROXY";
-const char STR_X509_CERT_DIR[]         = "X509_CERT_DIR";
-const char STR_X509_USER_CERT[]        = "X509_USER_CERT";
-const char STR_X509_USER_KEY[]         = "X509_USER_KEY";
-const char STR_SSLEAY_CONF[]           = "SSLEAY_CONF";
-const char STR_X509_MAPFILE[]          = "GRIDMAP";
+const char STR_GSI_DAEMON_DIRECTORY[] = "GSI_DAEMON_DIRECTORY";
+const char STR_GSI_USER_PROXY[]       = "X509_USER_PROXY";
+const char STR_GSI_CERT_DIR[]         = "X509_CERT_DIR";
+const char STR_GSI_USER_CERT[]        = "X509_USER_CERT";
+const char STR_GSI_USER_KEY[]         = "X509_USER_KEY";
+const char STR_SSLEAY_CONF[]          = "SSLEAY_CONF";
+const char STR_GSI_MAPFILE[]          = "GRIDMAP";
 
 class GSSComms {
 public:
@@ -105,8 +105,12 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 
     int nameGssToLocal( char * GssClient );
 
-    int get_user_x509name(char*,char*);
+    int get_user_GSIname(char*,char*);
     
+    //bool verifyServerName();
+    // This method verifies the connected server's name using the list of 
+    // GSI names specified by the GSI_DAEMON_NAME configuration parameters
+
     /** Check whether the security context of the scoket is valid or not 
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
