@@ -33,14 +33,12 @@
 template class SimpleList<CondorCronJob*>;
 
 // Basic constructor
-CondorCron::
-CondorCron( )
+CondorCron::CondorCron( )
 {
 }
 
 // Basic destructor
-CondorCron::
-~CondorCron( )
+CondorCron::~CondorCron( )
 {
 	CondorCronJob	*curJob;
 
@@ -55,8 +53,7 @@ CondorCron::
 
 // Reconfigure all jobs
 int
-CondorCron::
-Reconfig( )
+CondorCron::Reconfig( )
 {
 	CondorCronJob	*curJob;
 
@@ -70,8 +67,7 @@ Reconfig( )
 
 // Clear all job marks
 void
-CondorCron::
-ClearAllMarks( )
+CondorCron::ClearAllMarks( )
 {
 	CondorCronJob	*curJob;
 
@@ -84,8 +80,7 @@ ClearAllMarks( )
 
 // Delete all unmarked jobs
 void
-CondorCron::
-DeleteUnmarked( )
+CondorCron::DeleteUnmarked( )
 {
 	CondorCronJob	*curJob;
 
@@ -104,8 +99,7 @@ DeleteUnmarked( )
 }
 
 int
-CondorCron::
-AddJob( const char *name, CondorCronJob *newJob )
+CondorCron::AddJob( const char *name, CondorCronJob *newJob )
 {
 	// Do we already have a job by this name?
 	if ( NULL != FindJob( name ) ) {
@@ -122,8 +116,7 @@ AddJob( const char *name, CondorCronJob *newJob )
 
 // Delete a job
 int
-CondorCron::
-DeleteJob( const char *jobName )
+CondorCron::DeleteJob( const char *jobName )
 {
 	// Does the job exist?
 	const CondorCronJob *Job = FindJob( jobName );
@@ -145,8 +138,7 @@ DeleteJob( const char *jobName )
 
 // Find a job from the list
 CondorCronJob *
-CondorCron::
-FindJob( const char *jobName )
+CondorCron::FindJob( const char *jobName )
 {
 	CondorCronJob	*curJob;
 

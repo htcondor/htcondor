@@ -121,7 +121,6 @@ class CondorCronJob : public Service
 	CronJobErr		*stdErrBuf;		// Buffer for stderr
 	bool			marked;			// Is this one marked?
 	int				killTimer;		// Make sure it dies
-	int				todoReadTimer;	// TODO: Read timer
 
 	// Options
 	bool			optKill;		// Kill the job if before next run?
@@ -130,7 +129,8 @@ class CondorCronJob : public Service
 	virtual int RunJob( void );
 	virtual int StartJob( void );
 	virtual int KillHandler( void );
-	virtual int TodoReadHandler( void );
+	virtual int StdoutHandler( int pipe );
+	virtual int StderrHandler( int pipe );
 	virtual int KillJob( bool );
 	virtual int Reaper( int exitPid, int exitStatus );
 	virtual int RunProcess( void );

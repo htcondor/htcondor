@@ -32,8 +32,7 @@
 #include "condor_cronmgr.h"
 
 // Basic constructor
-CondorCronMgr::
-CondorCronMgr( const char *name )
+CondorCronMgr::CondorCronMgr( const char *name )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: Constructing '%s'\n", name );
 	Name = strdup( name );
@@ -41,16 +40,14 @@ CondorCronMgr( const char *name )
 }
 
 // Basic destructor
-CondorCronMgr::
-~CondorCronMgr( )
+CondorCronMgr::~CondorCronMgr( )
 {
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
 }
 
 // Handle Reconfig
 int
-CondorCronMgr::
-Reconfig( void )
+CondorCronMgr::Reconfig( void )
 {
 	char *paramBuf = GetParam( "CRONJOBS" );
 
@@ -72,8 +69,7 @@ Reconfig( void )
 
 // Read a parameter
 char *
-CondorCronMgr::
-GetParam( const char *paramName, 
+CondorCronMgr::GetParam( const char *paramName, 
 		  const char *paramNameSep,
 		  const char *paramName2,
 		  const char *paramName3 )
@@ -111,8 +107,7 @@ GetParam( const char *paramName,
 
 // Basic constructor
 int
-CondorCronMgr::
-ParseJobList( const char *jobString )
+CondorCronMgr::ParseJobList( const char *jobString )
 {
 	StringList	*jobList = new StringList( jobString, " \t\n," );
 
@@ -282,8 +277,7 @@ ParseJobList( const char *jobString )
 
 // Create a new job
 CondorCronJob *
-CondorCronMgr::
-NewJob( const char *name )
+CondorCronMgr::NewJob( const char *name )
 {
 	dprintf( D_FULLDEBUG, "*** Creating a Condor job '%s' ***\n", name );
 	CondorCronJob *job = new CondorCronJob( name );

@@ -33,8 +33,7 @@
 #define READBUF_SIZE	1024
 
 // Cron's Line StdOut Buffer constructor
-CronJobOut::
-CronJobOut( const char *prefix) :
+CronJobOut::CronJobOut( const char *prefix) :
 		LineBuffer( 128 )
 {
 	this->prefix = NULL;
@@ -43,8 +42,7 @@ CronJobOut( const char *prefix) :
 
 // Set output name prefix
 int
-CronJobOut::
-SetPrefix( const char *prefix )
+CronJobOut::SetPrefix( const char *prefix )
 {
 	if ( this->prefix ) { 
 		free( (void*)this->prefix ); 
@@ -62,8 +60,7 @@ SetPrefix( const char *prefix )
 
 // Output function
 int
-CronJobOut::
-Output( char *buf, int len )
+CronJobOut::Output( char *buf, int len )
 {
 	// Check for record delimitter
 	if ( '-' == buf[0] ) {
@@ -87,8 +84,7 @@ Output( char *buf, int len )
 }
 
 // Cron's Line StdErr Buffer constructor
-CronJobErr::
-CronJobErr( const char *prefix) :
+CronJobErr::CronJobErr( const char *prefix) :
 		LineBuffer( 128 )
 {
 	this->prefix = NULL;
@@ -97,8 +93,7 @@ CronJobErr( const char *prefix) :
 
 // Set stderr name prefix
 int
-CronJobErr::
-SetPrefix( const char *prefix )
+CronJobErr::SetPrefix( const char *prefix )
 {
 	if ( this->prefix ) { 
 		free( (void*)this->prefix ); 
@@ -116,8 +111,7 @@ SetPrefix( const char *prefix )
 
 // StdErr Output function
 int
-CronJobErr::
-Output( char *buf, int len )
+CronJobErr::Output( char *buf, int len )
 {
 	// Clean up EOL
 	if ( '\n' ==  buf[len] ) {
@@ -132,8 +126,7 @@ Output( char *buf, int len )
 
 // Output function
 MyString *
-CronJobOut::
-GetString( void )
+CronJobOut::GetString( void )
 {
 	MyString	*retString = new MyString( stringBuf );
 
@@ -145,8 +138,7 @@ GetString( void )
 }
 
 // CronJob constructor
-CondorCronJob::
-CondorCronJob( const char *jobName )
+CondorCronJob::CondorCronJob( const char *jobName )
 {
 	// Reset *everything*
 	path = NULL;
@@ -161,7 +153,6 @@ CondorCronJob( const char *jobName )
 	optKill = false;
 	runTimer = -1;
 	killTimer = -1;
-	todoReadTimer = -1;
 	childFds[0] = childFds[1] = childFds[2] = -1;
 	stdOut = stdErr = -1;
 
@@ -181,8 +172,7 @@ CondorCronJob( const char *jobName )
 }
 
 // CronJob destructor
-CondorCronJob::
-~CondorCronJob( )
+CondorCronJob::~CondorCronJob( )
 {
 	dprintf( D_FULLDEBUG, "Cron: Deleting timer '%s'; ID = %d, path = '%s'\n",
 			 name, runTimer, path );
@@ -209,16 +199,14 @@ CondorCronJob::
 
 // Set job characteristics
 int
-CondorCronJob::
-SetName( const char *newName )
+CondorCronJob::SetName( const char *newName )
 {
 	return SetVar( &name, newName, false );
 }
 
 // Set job characteristics
 int
-CondorCronJob::
-SetPrefix( const char *newPrefix )
+CondorCronJob::SetPrefix( const char *newPrefix )
 {
 	stdOutBuf->SetPrefix( newPrefix );
 	stdErrBuf->SetPrefix( newPrefix );
@@ -227,40 +215,35 @@ SetPrefix( const char *newPrefix )
 
 // Set job characteristics
 int
-CondorCronJob::
-SetPath( const char *newPath )
+CondorCronJob::SetPath( const char *newPath )
 {
 	return SetVar( &path, newPath, false );
 }
 
 // Set job characteristics
 int
-CondorCronJob::
-SetArgs( const char *newArgs )
+CondorCronJob::SetArgs( const char *newArgs )
 {
 	return SetVar( &args, newArgs, true );
 }
 
 // Set job characteristics
 int
-CondorCronJob::
-SetEnv( const char *newEnv )
+CondorCronJob::SetEnv( const char *newEnv )
 {
 	return SetVar( &env, newEnv, true );
 }
 
 // Set job characteristics
 int
-CondorCronJob::
-SetCwd( const char *newCwd )
+CondorCronJob::SetCwd( const char *newCwd )
 {
 	return SetVar( &cwd, newCwd, true );
 }
 
 // Set job characteristics
 int
-CondorCronJob::
-SetKill( bool kill )
+CondorCronJob::SetKill( bool kill )
 {
 	optKill = kill;
 	return 0;
@@ -268,8 +251,7 @@ SetKill( bool kill )
 
 // Set job characteristics
 int
-CondorCronJob::
-SetVar( char **var, const char *value, bool allowNull )
+CondorCronJob::SetVar( char **var, const char *value, bool allowNull )
 {
 	// If path is already set, and hasn't changed, do nothing!
 	if (  ( NULL != *var ) && ( NULL != value ) &&
@@ -298,8 +280,7 @@ SetVar( char **var, const char *value, bool allowNull )
 
 // Set job characteristics
 int
-CondorCronJob::
-SetPeriod( CronJobMode newMode, unsigned newPeriod )
+CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 {
 	// Verify that the mode seleted is valid
 	if (  ( CRON_CONTINUOUS != newMode ) && ( CRON_PERIODIC != newMode )  ) {
@@ -351,8 +332,7 @@ SetPeriod( CronJobMode newMode, unsigned newPeriod )
 
 // Reconfigure a running job
 int
-CondorCronJob::
-Reconfig( void )
+CondorCronJob::Reconfig( void )
 {
 	// Only do this to running continuous jobs
 	if (  ( CRON_CONTINUOUS != mode ) || ( CRON_RUNNING != state )  ) {
@@ -366,8 +346,7 @@ Reconfig( void )
 
 // Schdedule the job to run
 int
-CondorCronJob::
-RunJob( void )
+CondorCronJob::RunJob( void )
 {
 
 	// Make sure that the job is idle!
@@ -385,32 +364,13 @@ RunJob( void )
 	// Job not running, just start it
 	dprintf( D_JOB, "Cron: Running job '%s', path '%s'\n", name, path );
 
-	// TODO: Create the "Read" timer
-	if ( todoReadTimer < 0 ) {
-		dprintf( D_FULLDEBUG, "Cron: Creating Read timer for '%s'\n", 
-				 name );
-		todoReadTimer = daemonCore->Register_Timer(
-			1,
-			1,
-			(TimerHandlercpp)& CondorCronJob::TodoReadHandler,
-			"TodoReadTimer",
-			this );
-		if ( todoReadTimer < 0 ) {
-			dprintf( D_ALWAYS, "Cron: Failed to create read timer\n" );
-			return -1;
-		}
-		dprintf( D_FULLDEBUG, "Cron: new read timer ID = %d set to 1s/1s\n",
-				 todoReadTimer );
-	}
-
 	// Start it up
 	return RunProcess( );
 }
 
 // Handle the kill timer
 int
-CondorCronJob::
-KillHandler( void )
+CondorCronJob::KillHandler( void )
 {
 
 	// Log that we're here
@@ -426,20 +386,9 @@ KillHandler( void )
 	return KillJob( false );
 }
 
-// Handle the "Read" timer -- TODO --
-int
-CondorCronJob::
-TodoReadHandler( void )
-{
-	// Read a chunk
-	return TodoRead( 0, 50 );
-
-}
-
 // Start a job
 int
-CondorCronJob::
-StartJob( void )
+CondorCronJob::StartJob( void )
 {
 	if ( CRON_IDLE != state ) {
 		dprintf( D_ALWAYS, "Cron: Job '%s' already running!\n", name );
@@ -447,34 +396,13 @@ StartJob( void )
 	}
 	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n", name, path );
 
-	// TODO: Create the "Read" timer
-	if ( todoReadTimer < 0 ) {
-		dprintf( D_FULLDEBUG, "Cron: Creating Read timer for '%s'\n", 
-				 name );
-		todoReadTimer = daemonCore->Register_Timer(
-			1,
-			1,
-			(TimerHandlercpp)& CondorCronJob::TodoReadHandler,
-			"TodoReadTimer",
-			this );
-		if ( todoReadTimer < 0 ) {
-			dprintf( D_ALWAYS, "Cron: Failed to create read timer\n" );
-			return -1;
-		}
-		dprintf( D_FULLDEBUG, "Cron: new read timer ID = %d set to 1s/1s\n",
-				 todoReadTimer );
-	} else {
-		daemonCore->Reset_Timer( todoReadTimer, 1, 1 );
-	}
-
 	// Run it
 	return RunProcess( );
 }
 
 // Child reaper
 int
-CondorCronJob::
-Reaper( int exitPid, int exitStatus )
+CondorCronJob::Reaper( int exitPid, int exitStatus )
 {
 	dprintf( D_ALWAYS, "Cron: Job '%s' (pid %d) exit status=%d, state=%s\n",
 			 name, exitPid, exitStatus, StateString( ) );
@@ -484,15 +412,6 @@ Reaper( int exitPid, int exitStatus )
 		dprintf( D_ALWAYS, "Cron: WARNING: Child PID %d != Exit PID %d\n",
 				 pid, exitPid );
 	}
-
-	// TODO: Suspend the read timer
-	if ( todoReadTimer > 0 )
-	{
-		daemonCore->Reset_Timer( todoReadTimer, TIMER_NEVER, TIMER_NEVER );
-	}
-
-	// TODO: Do the final read
-	TodoRead( 0, 100 );
 
 	// Read it's final stdout for building a ClassAd
 	MyString	*string = stdOutBuf->GetString( );
@@ -548,8 +467,7 @@ Reaper( int exitPid, int exitStatus )
 
 // Publisher
 int
-CondorCronJob::
-ProcessOutput( MyString *string )
+CondorCronJob::ProcessOutput( MyString *string )
 {
 	(void) string;
 
@@ -559,8 +477,7 @@ ProcessOutput( MyString *string )
 
 // Start a job
 int
-CondorCronJob::
-RunProcess( void )
+CondorCronJob::RunProcess( void )
 {
 	dprintf( D_ALWAYS, "Running '%s'\n", name );
 
@@ -615,116 +532,103 @@ RunProcess( void )
 	// All ok here
 	state = CRON_RUNNING;
 
-	// HACK: TODO
-	TodoRead( 2, 0 );
+	// All ok!
 	return 0;
 }
 
-// Hack to read from the pipes 'til Todd get's the pipe checking in
-// daemonCore
+// Data is available on Standard Out.  Read it!
+//  Note that we set the pipe to be non-blocking when we created it
 int
-CondorCronJob::
-TodoRead ( int sec, int usec )
+CondorCronJob::StdoutHandler ( int pipe )
 {
-	fd_set			fd_read;
-	struct timeval	timeout;
-	int				maxfd = MAX( stdOut, stdErr ) + 1;
 	char			buf[READBUF_SIZE];
 	int				bytes;
 
-	timeout.tv_sec = sec;
-	timeout.tv_usec = usec;
+	// Read a block from it
+	bytes = read( stdOut, buf, READBUF_SIZE );
 
-	// Loop 'til select times out or both fd's close
-	while( ( stdOut >= 0 ) || ( stdErr >= 0 ) )
+	// Zero means it closed
+	if ( bytes == 0 )
 	{
-
-		// Build the FD set, call select
-		FD_ZERO( &fd_read );
-		if ( stdOut >= 0 ) FD_SET( stdOut, &fd_read );
-		if ( stdErr >= 0 ) FD_SET( stdErr, &fd_read );
-		int numfds = select( maxfd, &fd_read, NULL, NULL, &timeout );
-
-		// Check the results of select
-		if ( 0 == numfds )
-		{
-			return 0;
-		}
-		else if ( numfds < 0 )
-		{
-			dprintf( D_ALWAYS, "Cron: select failed %d : '%s'\n",
-					 errno, strerror( errno ) );
-			return -1;
-		}
-
-		// Check for data on StdOut
-		if ( ( stdOut >= 0 ) && FD_ISSET( stdOut, &fd_read ) )
-		{
-			bytes = read( stdOut, buf, READBUF_SIZE );
-			if ( bytes == 0 )
-			{
-				dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
-				close( stdOut );
-				stdOut = -1;
-			}
-			else if ( bytes > 0 )
-			{
-				const char	*bptr = buf;
-
-				// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
-				// so that's what Buffer returns, too...
-				while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
-					MyString	*string = stdOutBuf->GetString( );
-					ProcessOutput( string );
-				}
-			}
-			else if ( errno != EWOULDBLOCK )
-			{
-				dprintf( D_ALWAYS,
-						 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
-						 name, errno, strerror( errno ) );
-				return -1;
-			}
-		}
-
-		// Check for data on StdErr
-		if ( ( stdErr >= 0 ) && FD_ISSET( stdErr, &fd_read ) )
-		{
-			bytes = read( stdErr, buf, READBUF_SIZE );
-			if ( bytes == 0 )
-			{
-				dprintf( D_ALWAYS, "Cron: STDERR closed for '%s'\n", name );
-				close( stdErr );
-				stdErr = -1;
-			}
-			else if ( bytes > 0 )
-			{
-				const char	*bptr = buf;
-				while( stdErrBuf->Buffer( &bptr, &bytes ) > 0 ) {
-					// Do nothing for now
-				}
-			}
-			else if ( errno != EWOULDBLOCK )
-			{
-				dprintf( D_ALWAYS, 
-						 "Cron: read STDERR failed for '%s' %d : '%s'\n",
-						 name, errno, strerror( errno ) );
-				return -1;
-			}
-		}
-
+		dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", name );
+		daemonCore->Close_Pipe( stdOut );
+		stdOut = -1;
 	}
 
-	// Flush the Std err/out buffers
+	// Positve value is byte count
+	else if ( bytes > 0 )
+	{
+		const char	*bptr = buf;
+
+		// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
+		// so that's what Buffer returns, too...
+		while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
+			MyString	*string = stdOutBuf->GetString( );
+			ProcessOutput( string );
+		}
+	}
+
+	// Negative is an error; check for EWOULDBLOCK
+	else if ( errno != EWOULDBLOCK )
+	{
+		dprintf( D_ALWAYS,
+				 "Cron: read STDOUT failed for '%s' %d: '%s'\n",
+				 name, errno, strerror( errno ) );
+		return -1;
+	}
+
+	// Flush the buffers
 	stdOutBuf->Flush();
+	return 0;
+}
+
+// Data is available on Standard Error.  Read it!
+//  Note that we set the pipe to be non-blocking when we created it
+int
+CondorCronJob::StderrHandler ( int pipe )
+{
+	char			buf[READBUF_SIZE];
+	int				bytes;
+
+	// Read a block from it
+	bytes = read( stdErr, buf, READBUF_SIZE );
+
+	// Zero means it closed
+	if ( bytes == 0 )
+	{
+		dprintf( D_ALWAYS, "Cron: STDERR closed for '%s'\n", name );
+		daemonCore->Close_Pipe( stdErr );
+		stdErr = -1;
+	}
+
+	// Positve value is byte count
+	else if ( bytes > 0 )
+	{
+		const char	*bptr = buf;
+
+		while( stdErrBuf->Buffer( &bptr, &bytes ) > 0 ) {
+			// Do nothing for now
+		}
+	}
+
+	// Negative is an error; check for EWOULDBLOCK
+	else if ( errno != EWOULDBLOCK )
+	{
+		dprintf( D_ALWAYS,
+				 "Cron: read STDERR failed for '%s' %d: '%s'\n",
+				 name, errno, strerror( errno ) );
+		return -1;
+	}
+
+
+	// Flush the buffers
 	stdErrBuf->Flush();
 	return 0;
 }
 
 // Create the job's file descriptors
 int
-CondorCronJob::
-OpenFds ( void )
+CondorCronJob::OpenFds ( void )
 {
 	int	tmpfds[2];
 
@@ -732,7 +636,7 @@ OpenFds ( void )
 	childFds[0] = -1;
 
 	// Pipe to stdout
-	if ( pipe( tmpfds ) < 0 ) {
+	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
 		dprintf( D_ALWAYS, "Cron: Can't create pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );
@@ -740,14 +644,14 @@ OpenFds ( void )
 	}
 	stdOut = tmpfds[0];
 	childFds[1] = tmpfds[1];
-
-	// Make it non-blocking -- TODO
-# ifdef UNIX
-	fcntl( stdOut, F_SETFL, FNDELAY );
-# endif
+	daemonCore->Register_Pipe( stdOut,
+							   "Standard Out",
+							   (PipeHandlercpp) & CondorCronJob::StdoutHandler,
+							   "Standard Out Handler",
+							   this );
 
 	// Pipe to stderr
-	if ( pipe( tmpfds ) < 0 ) {
+	if ( daemonCore->Create_Pipe( tmpfds, true ) < 0 ) {
 		dprintf( D_ALWAYS, "Cron: Can't create STDERR pipe, errno %d : %s\n",
 				 errno, strerror( errno ) );
 		CleanAll( );
@@ -755,11 +659,11 @@ OpenFds ( void )
 	}
 	stdErr = tmpfds[0];
 	childFds[2] = tmpfds[1];
-
-	// Make it non-blocking -- TODO
-# ifdef UNIX
-	fcntl( stdErr, F_SETFL, FNDELAY );
-# endif
+	daemonCore->Register_Pipe( stdOut,
+							   "Standard Error",
+							   (PipeHandlercpp) & CondorCronJob::StderrHandler,
+							   "Standard Error Handler",
+							   this );
 
 	// Done; all ok
 	return 0;
@@ -767,8 +671,7 @@ OpenFds ( void )
 
 // Clean up all file descriptors & FILE pointers
 void
-CondorCronJob::
-CleanAll ( void )
+CondorCronJob::CleanAll ( void )
 {
 	CleanFd( &stdOut );
 	CleanFd( &stdErr );
@@ -779,8 +682,7 @@ CleanAll ( void )
 
 // Clean up a FILE *
 void
-CondorCronJob::
-CleanFile ( FILE **file )
+CondorCronJob::CleanFile ( FILE **file )
 {
 	if ( NULL != *file ) {
 		fclose( *file );
@@ -790,8 +692,7 @@ CleanFile ( FILE **file )
 
 // Clean up a file descriptro
 void
-CondorCronJob::
-CleanFd ( int *fd )
+CondorCronJob::CleanFd ( int *fd )
 {
 	if ( *fd >= 0 ) {
 		close( *fd );
@@ -801,8 +702,7 @@ CleanFd ( int *fd )
 
 // Kill a job
 int
-CondorCronJob::
-KillJob( bool force )
+CondorCronJob::KillJob( bool force )
 {
 	// Idle?
 	if ( CRON_IDLE == state ) {
@@ -831,8 +731,7 @@ KillJob( bool force )
 
 // Set the job timer
 int
-CondorCronJob::
-SetTimer( unsigned first, unsigned period )
+CondorCronJob::SetTimer( unsigned first, unsigned period )
 {
 	// Reset the timer
 	if ( runTimer >= 0 )
@@ -871,8 +770,7 @@ SetTimer( unsigned first, unsigned period )
 
 // Start the kill timer
 int
-CondorCronJob::
-KillTimer( unsigned seconds )
+CondorCronJob::KillTimer( unsigned seconds )
 {
 	// Cancel request?
 	if ( TIMER_NEVER == seconds ) {
@@ -917,8 +815,7 @@ KillTimer( unsigned seconds )
 
 // Convert state value into string (for printing)
 const char *
-CondorCronJob::
-StateString( CronJobState state )
+CondorCronJob::StateString( CronJobState state )
 {
 	switch( state )
 	{
@@ -937,8 +834,7 @@ StateString( CronJobState state )
 
 // Same, but uses the job's current state
 const char *
-CondorCronJob::
-StateString( void )
+CondorCronJob::StateString( void )
 {
 	return StateString( state );
 }
