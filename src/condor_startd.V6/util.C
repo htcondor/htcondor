@@ -31,16 +31,19 @@ check_perms()
 {
 	struct stat st;
 	mode_t mode;
+	mode_t desired_mode = (0777 | S_ISVTX);
+		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT("stat exec path");
+		EXCEPT( "stat exec path (%s), errno: %d", exec_path, errno ); 
 	}
 
-	if ((st.st_mode & 0777) != 0777) {
+	if ((st.st_mode & desired_mode) != desired_mode) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		mode = st.st_mode | 0777;
+		mode = st.st_mode | desired_mode;
 		if (chmod(exec_path, mode) < 0) {
-			EXCEPT("chmod exec path");
+			EXCEPT( "chmod exec path (%s), errno: %d", exec_path,
+					errno );  
 		}
 	}
 }
