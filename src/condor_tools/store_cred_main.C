@@ -123,7 +123,11 @@ int main(int argc, char *argv[]) {
 	if ( my_domain) { free(my_domain); }
 	my_name = my_domain = NULL;
 	
-	return result;
+	if ( result == SUCCESS ) {
+	   	return 0;
+	} else {
+		return 1;
+	}
 }
 
 void
