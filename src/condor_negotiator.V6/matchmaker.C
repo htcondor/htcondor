@@ -310,6 +310,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
+		delete ad;
 		return FALSE;
 	}
 
