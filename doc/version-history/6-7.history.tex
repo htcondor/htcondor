@@ -15,6 +15,11 @@ The details of each version are described below.
 
 \item Version 6.7.1 contains all of the features, ports, and bug fixes
   from the previous stable series, up to and including version 6.6.6.
+  There are a few additional bugs that have been fixed in the 6.6.x
+  stable series which have not yet been released, but which will
+  appear in version 6.6.7.
+  These bug fixes have been included in version 6.7.1, and appear in
+  the ``Bugs fixes included from version 6.6.7'' list below.
   In addition, a number of new features and some bug fixes have been
   made, which are described below in more detail.
 
@@ -84,6 +89,22 @@ timeout settings.
   In 6.7.0, the \Condor{schedd} would leak a copy of ClassAd for every
   job it tried to spawn (on average, around 2000 bytes per job).
 
+\item Fixed the bugs in Condor's MPI support that were introduced in
+  version 6.7.0.
+  Condor now supports MPI jobs linked with MPICH 1.2.4 and older.
+  Improved Condor's log messages and email notifications when MPI jobs
+  run on multiple virtual machines (the messages now include the
+  appropriate ``vmX'' identifier, not just the hostname).
+  Unfortuately, due to changes in MPICH between version 1.2.4 and
+  1.2.5, Condor's MPI support is not compatible with MPICH 1.2.5.
+  We will be addressing this problem in a future release.
+
+\end{itemize}
+
+\noindent Bugs fixes included from version 6.6.7:
+
+\begin{itemize}
+
 \item Fixed an important bug in the low-level code that Condor uses to
   transfer files across a network.
   There were certain temporary failure cases that were being treated
@@ -113,15 +134,13 @@ timeout settings.
   \Condor{status} tool will print out the string ``FALSE'' or ``TRUE''
   as appropriate.
 
-\item Fixed the bugs in Condor's MPI support that were introduced in
-  version 6.7.0.
-  Condor now supports MPI jobs linked with MPICH 1.2.4 and older.
-  Improved Condor's log messages and email notifications when MPI jobs
-  run on multiple virtual machines (the messages now include the
-  appropriate ``vmX'' identifier, not just the hostname).
-  Unfortuately, due to changes in MPICH between version 1.2.4 and
-  1.2.5, Condor's MPI support is not compatible with MPICH 1.2.5.
-  We will be addressing this problem in a future release.
+\item The ClassAd attribute scope resolution prefixes, \texttt{MY.}
+  and \texttt{TARGET.}, are no longer case sensitive.
+
+\item \Condor{dagman} now does better checking for inconsistent events
+(such as getting multiple terminate events for a single job).  This
+checking can be disabled with the \Opt{-NoEventChecks} command-line
+option.
 
 \end{itemize}
 
