@@ -1,3 +1,4 @@
+
 CMNT
 CMNT Set the following if you want a PVM ready checkpointing library
 CMNT compiled.  This will require that the PVM library be linked into
@@ -70,8 +71,9 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 #endif
 
 #if DOES_CHECKPOINTING
-OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
-	local_startup.o fake_remote_syscall.o fake_hooks.o \
+OBJ =	image.o machdep.$(OS).o file_state.o buffer_cache.o file_types.o \
+	file_table_interf.o tmp_stack.o \
+	syscall_mode.o local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ)
 #else
@@ -79,7 +81,6 @@ OBJ =	syscall_mode.o
 #endif
 
 #if DOES_CHECKPOINTING
-
 	all_target(ToUpper libckpt.a c_plus_alloc.o condor_rt0.o $(COMPRESS_LIB) $(RELEASE_OBJ) )
 
 #if IS_X86_SOLARIS || IS_GLIBC_LINUX
@@ -254,4 +255,4 @@ clean::
 clean::
 	rm -f c_plus_alloc.o syscall_mode.o
 
-html:
+html_target( buffer_cache.h file_state.h file_types.h file_table_interf.h )
