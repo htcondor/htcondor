@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include "machdep.h"
 
 #define NAME_LEN 64
 typedef long RAW_ADDR;
@@ -7,9 +8,8 @@ typedef int BOOL;
 const BOOL	TRUE = 1;
 const BOOL	FALSE = 0;
 
-#if defined(SUNOS41)
+#if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43)
 typedef int ssize_t; // should be included in <sys/types.h>, but SUN didn't
-const int StackGrowsDown = TRUE;
 #endif
 
 class Header {
@@ -59,8 +59,8 @@ public:
 	void Restore();
 	char *FindSeg( void *addr );
 	void Display();
-protected:
 	void RestoreSeg( const char *seg_name );
+protected:
 	RAW_ADDR	GetStackLimit();
 	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end );
 	void SwitchStack( char *base, size_t len );
@@ -71,6 +71,7 @@ protected:
 	int		fd;
 	ssize_t	pos;
 };
+void RestoreStack();
 
 extern "C" void Checkpoint( int );
 extern "C" {
