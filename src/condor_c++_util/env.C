@@ -30,7 +30,7 @@ AppendEnvVariable( char* env, char* name, char* value )
         return false;
     }
 
-    // make sure env has enough room for ':' + name + '=' + value + '\0'
+    // make sure env has enough room for ';' + name + '=' + value + '\0'
     if( strlen( env ) + strlen( name ) + strlen( value ) + 3 >=
         ATTRLIST_MAX_EXPRESSION ) {
         return false;
@@ -38,7 +38,7 @@ AppendEnvVariable( char* env, char* name, char* value )
 
     // append delimiter if this isn't the first variable in env
     if( env[0] != '\0' ) {
-        strcat( env, ":" );
+        strcat( env, ";" );
     }
     sprintf( env, "%s%s=%s", env, name, value );
     return true;
