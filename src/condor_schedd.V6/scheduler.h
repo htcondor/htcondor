@@ -308,6 +308,10 @@ class Scheduler : public Service
 	int intoAd ( ClassAd *ad, char *lhs, char *rhs );
 	int intoAd ( ClassAd *ad, char *lhs, int rhs );
 
+		// A bit that says wether or not we've sent email to the admin
+		// about a shadow not starting.
+	int sent_shadow_failure_email;
+
 };
 	
 #endif

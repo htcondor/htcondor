@@ -34,6 +34,7 @@
 #include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
+#include "condor_email.h"
 #include "environ.h"
 #include "condor_updown.h"
 #include "condor_uid.h"
@@ -185,6 +186,7 @@ Scheduler::Scheduler()
 	checkContactQueue_tid = -1;
     storedMatches = new HashTable < int, ExtArray<match_rec*> *> 
                                                   ( 5, mpiHashFunc );
+	sent_shadow_failure_email = FALSE;
 }
 
 Scheduler::~Scheduler()
@@ -1739,6 +1741,25 @@ Scheduler::StartJobs()
 						rec->id);
                 Relinquish(rec);
                 DelMrec(rec);
+				mark_job_stopped( &id );
+
+					/* We want to send some email to the administrator
+					   about this.  We only want to do it once, though. */
+				if ( !sent_shadow_failure_email ) {
+					sent_shadow_failure_email = TRUE;
+					FILE *email = email_admin_open("Failed to start shadow.");
+					fprintf(email,"Condor failed to start the " );
+					fprintf(email,"condor_shadow.\n\nThis may be a ");
+					fprintf(email,"configuration problem or a problem with\n");
+					fprintf(email,"permissions on the condor_shadow ");
+					fprintf(email,"binary.\n");
+					char *schedlog = param ( "SCHEDD_LOG" );
+					if ( schedlog ) {
+						email_asciifile_tail( email, schedlog, 50 );
+						free ( schedlog );
+					}
+					email_close ( email );
+				}
                 continue;
             } else {
                 dprintf ( D_FULLDEBUG, "Match stored for mpi use\n" );
@@ -3579,7 +3600,8 @@ Scheduler::Init()
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
-		////////////////////////////////////////////////////////////////////	
+		////////////////////////////////////////////////////////////////////
+
 	InitQmgmt();
 
 
@@ -3632,6 +3654,8 @@ Scheduler::Init()
 		sprintf( nameBuf, "<%s:%d>", inet_ntoa(*(my_sin_addr())),
 				 shadowCommandrsock->get_port());
 		MyShadowSockName = strdup( nameBuf );
+
+		sent_shadow_failure_email = FALSE;
 	}
 
 }
@@ -3771,7 +3795,7 @@ Scheduler::reconfig()
 {
 	Init();
 	RegisterTimers();			// reset timers
-	 timeout();
+	timeout();
 }
 
 // This function is called by a timer when we are shutting down
