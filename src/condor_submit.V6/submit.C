@@ -53,6 +53,7 @@
 #include <sys/stat.h>
 #endif
 #include "my_hostname.h"
+#include "get_full_hostname.h"
 #include "condor_qmgr.h"
 
 #ifdef __GNUG__
@@ -202,6 +203,7 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
+	char	*fullhost;
 	
 	setbuf( stdout, NULL );
 
@@ -230,7 +232,12 @@ main( int argc, char *argv[] )
 			if ( ptr[0][1] == 'r' ) {
 				Remote++;
 				ptr++;
-				queue_file = *ptr;
+				if( !(fullhost = get_full_hostname(*ptr)) ) {
+					fprintf( stderr, "%s: unknown host %s\n", 
+							 MyName, *ptr );
+					exit(1);
+				}
+				queue_file = strdup(fullhost);
 			} else {
 				usage();
 			}
