@@ -34,6 +34,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/times.h>
+#if !defined(HPUX9)
+#include "condor_fix_timeval.h"
+#endif
 #include <sys/resource.h>
 #include "fcntl.h"
 #include <string.h>
@@ -41,7 +44,6 @@
 #include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
-
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
 
