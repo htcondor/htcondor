@@ -24,8 +24,6 @@
 #include "condor_common.h"
 #include "domain_tools.h"
 
-#ifdef WIN32
-
 bool
 domainAndNameMatch( const char *account1,
                     const char *account2,
@@ -52,4 +50,3 @@ getDomainAndName( char* namestr, char* &domain, char* &name ) {
 	}
 }
 
-#endif /* win32 */

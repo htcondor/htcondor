@@ -1,8 +1,6 @@
 #ifndef __DOMAIN_TOOLS_H
 #define __DOMAIN_TOOLS_H
 
-#ifdef WIN32
-
 // returns true if the two specified accounts and domains match
 bool
 domainAndNameMatch( const char *account1, 
@@ -16,5 +14,4 @@ void
 getDomainAndName( char* namestr, char* &domain, char* &name );
 
 
-#endif  /* WIN32 */
 #endif  /* __DOMAIN_TOOLS_H */
