@@ -35,7 +35,7 @@ memory_file::memory_file()
 {
 	buffer = new char[DEFAULT_BUFFER_SIZE];
 	bufsize = DEFAULT_BUFFER_SIZE;
-	bzero(buffer,bufsize);
+	memset(buffer, 0, bufsize);
 	pointer = filesize = 0;
 }
 
@@ -171,7 +171,7 @@ void memory_file::ensure( int needed )
 
 		char *newbuffer = new char[newsize];
 		memcpy(newbuffer,buffer,bufsize);
-		bzero(&newbuffer[bufsize],newsize-bufsize);
+		memset(&newbuffer[bufsize], 0, newsize-bufsize);
 		delete [] buffer;
 		buffer = newbuffer;
 		bufsize = newsize;
