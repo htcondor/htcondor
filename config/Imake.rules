@@ -143,7 +143,7 @@ release:: $(RELEASE_DIR)/##dir##/##lib
 #define release_symlink_target( src, dir, dest )	@@\
 release:: $(RELEASE_DIR)/##dir##/##dest			@@\
 							@@\
-$(RELEASE_DIR)/##dir##/##dest##: src			@@\
+$(RELEASE_DIR)/##dir##/##dest##: 			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
 	ln -s src $(RELEASE_DIR)/##dir##/##dest			
 #endif /* release_symlink_target */
@@ -246,7 +246,7 @@ $(STRIP_DIR)/##dir##/##dest##: src			@@\
 #define strip_symlink_target( src, dir, dest )	@@\
 stripped:: $(STRIP_DIR)/##dir##/##dest##		@@\
 							@@\
-$(STRIP_DIR)/##dir##/##dest##: src			@@\
+$(STRIP_DIR)/##dir##/##dest##: 			@@\
 	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
 	ln -s src $(STRIP_DIR)/##dir##/##dest
 #endif /* strip_symlink_target */
@@ -328,7 +328,7 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 #define static_symlink_target( src, dir, dest )	@@\
 static:: $(STATIC_DIR)/##dir##/##dest##			@@\
 							@@\
-$(STATIC_DIR)/##dir##/##dest##: src			@@\
+$(STATIC_DIR)/##dir##/##dest##: 			@@\
 	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
 	ln -s src $(STATIC_DIR)/##dir##/##dest
 #endif /* static_symlink_target */
