@@ -76,6 +76,11 @@ timeout settings.
   something like ``RETRY job 10 unless-exit 9'', then the retries will
   only happen if the node doesn't exit with a value of 9. 
 
+\item Condor-G can now submit jobs to Globus 3.2 (WS) (for jobs with 
+  \Expr{universe = grid}, \Expr{grid\_type = gt3}). Submitting to Globus 
+  3.0 (as in Condor 6.7.0) is no longer supported. Submitting to pre-WS 
+  Globus (2.x) is still supported (\Expr{grid\_type = gt2}).
+
 \end{itemize}
 
 \noindent Bugs Fixed:
