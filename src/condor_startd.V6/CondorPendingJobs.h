@@ -26,8 +26,8 @@ class CondorPendingJobs
     private:
     char* capab; // capability of job as advertized by negotiatior
     // sock and from are typically shadow particulars
-    char Client[MAX_STRING];
-    char ClientMachine[MAX_STRING];
+    char* Client;
+    char* ClientMachine;
     Sock* sock;
     struct sockaddr_in* from; // who do we respond to when we clear this job?
     resource_id_t rid; // which resource did this job request

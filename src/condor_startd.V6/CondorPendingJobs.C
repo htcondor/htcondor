@@ -13,6 +13,8 @@ CondorPendingJobs::PendingJob::PendingJob()
   capab = 0;
   sock = 0;
   from = 0;
+  Client = 0;
+  ClientMachine = 0;
 }
 
 void CondorPendingJobs::PendingJob::SetSock(Sock* s)
@@ -27,12 +29,12 @@ void CondorPendingJobs::PendingJob::SetJobAd(ClassAd* job)
 
 void CondorPendingJobs::PendingJob::SetClient(const char* Cl)
 {
-  strcpy(Client,Cl);
+	Client = (char *)Cl;
 }
 
 void CondorPendingJobs::PendingJob::SetClientMachine(const char* ClM)
 {
-  strcpy(ClientMachine,ClM);
+	ClientMachine = (char *)ClM;
 }
 
 void CondorPendingJobs::PendingJob::SetAliveInterval(int AlI)
@@ -57,12 +59,12 @@ void CondorPendingJobs::PendingJob::SetRespondAddress(struct sockaddr_in* From)
 
 void CondorPendingJobs::PendingJob::RetClient(char* client)
 {
-  client = strdup(Client);
+  client = Client;
 }
 
 void CondorPendingJobs::PendingJob::RetClientMachine(char* client)
 {
-  client = strdup(ClientMachine);
+  client = ClientMachine;
 }
 
 void CondorPendingJobs::PendingJob::ScheddInterval(int& interval)
