@@ -104,7 +104,7 @@ ALPHA_SRC	-a \
 			src/h
 
 ALPHA_CODE	-a TOOLS ALPHA_SRC
-ALPHA_ALL	-a DOC ALPHA_SRC
+ALPHA_ALL	-a DOC ALPHA_CODE
 AIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_aix
 AIX_ALL		-a DOC TOOLS COMMON_CODE src/condor_syscall_lib_aix
 ULTRIX_CODE	-a TOOLS COMMON_CODE src/condor_syscall_lib_ultrix
