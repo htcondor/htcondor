@@ -21,6 +21,8 @@ ref.pdf:
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
+	makeindex ref
+	latex ref.tex
 	rm -f ref.ps
 	dvips ref.dvi
 	rm -f ref.pdf
@@ -48,6 +50,7 @@ ref.dvi:
 	latex ref.tex
 	latex ref.tex
 	makeindex ref
+	latex ref.tex
 
 ref.ps: ref.dvi
 	dvips ref.dvi
@@ -76,7 +79,9 @@ ref.html: $(TARGETDIR)
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
-	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	makeindex ref
+	latex ref.tex
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -long_titles 3 -tmp /tmp -toc_depth 2 -local_icons ref.tex
 	rm -f ref.dvi
 	mv ref condor-$(SUBVER)-Manual
 	tar cvf condor-$(SUBVER)-Manual.tar condor-$(SUBVER)-Manual
