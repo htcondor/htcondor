@@ -136,6 +136,14 @@ SOURCE=..\src\condor_starter.V6.1\jic_local_config.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\jic_local_file.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\jic_local_file.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\jic_shadow.C
 # End Source File
 # Begin Source File
@@ -204,6 +212,14 @@ SOURCE=..\src\condor_starter.V6.1\parallel_master_proc.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\script_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\script_proc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\starter.h
 # End Source File
 # Begin Source File
@@ -213,6 +229,10 @@ SOURCE=..\src\condor_starter.V6.1\starter_class.C
 # Begin Source File
 
 SOURCE=..\src\condor_starter.V6.1\starter_v61_main.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\user_proc.C
 # End Source File
 # Begin Source File
 

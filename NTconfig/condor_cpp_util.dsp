@@ -257,6 +257,14 @@ SOURCE="..\src\condor_c++_util\condor_version.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\CondorError.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\CondorError.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\config.C"
 # End Source File
 # Begin Source File
@@ -513,11 +521,6 @@ SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\lower_case.C"
-# SUBTRACT CPP /YX /Yc /Yu
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\lsa_mgr.C"
 # End Source File
 # Begin Source File
@@ -696,6 +699,14 @@ SOURCE="..\src\condor_c++_util\user_log.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\user_log.c++.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\utc_time.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\utc_time.h"
 # End Source File
 # Begin Source File
 
