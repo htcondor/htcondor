@@ -54,6 +54,7 @@
 #include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
+#include "string_list.h"
 
 #include "my_username.h"
 
@@ -166,6 +167,7 @@ char	*BufferBlockSize = "buffer_block_size";
 
 char	*FetchFiles = "fetch_files";
 char	*CompressFiles = "compress_files";
+char	*AppendFiles = "append_files";
 
 char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
@@ -1141,6 +1143,19 @@ SetCompressFiles()
 	value = condor_param( CompressFiles );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_COMPRESS_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
+void
+SetAppendFiles()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( AppendFiles );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_APPEND_FILES,value);
 		InsertJobExpr (buffer);
 	}
 }
@@ -2196,6 +2211,7 @@ queue(int num)
 		SetFileOptions();
 		SetFetchFiles();
 		SetCompressFiles();
+		SetAppendFiles();
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
@@ -2417,6 +2433,7 @@ check_open( const char *name, int flags )
 {
 	int		fd;
 	char	*pathname, *temp;
+	StringList *list;
 
 	/* No need to check for existence of the Null file. */
 	if (strcmp(name, NULL_FILE) == MATCH) return;
@@ -2432,6 +2449,17 @@ check_open( const char *name, int flags )
 			*temp = '\0';
 			memmove ( temp, temp+8, strlen(temp+8) );
 		}
+	}
+
+	/* If this file as marked as append-only, do not truncate it here */
+
+	temp = condor_param( AppendFiles );
+	if(temp) {
+		list = new StringList(temp);
+		if(list->contains_withwildcard(name)) {
+			flags = flags & ~O_TRUNC;
+		}
+		delete list;
 	}
 
 	if( (fd=open(pathname,flags,0664)) < 0 ) {
