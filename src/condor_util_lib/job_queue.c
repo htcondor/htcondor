@@ -417,7 +417,7 @@ TerminateCluster( DBM *Q, int cluster, int status )
 		}
 		break;
 	  default:
-		EXCEPT( "Unknown PROC version (%d)\n", ClusterVersion );
+		EXCEPT( "Unknown Cluster version (%d)\n", ClusterVersion );
 	}
 
 	CurJobQ = NULL;
@@ -622,6 +622,8 @@ terminate_proc( PROC *p )
 	datum	key;
 	V2_PROC	*v2_ptr = (V2_PROC *)p;
 	V3_PROC	*v3_ptr = (V3_PROC *)p;
+
+	ClusterVersion = p->version_num;
 
 	switch( p->version_num ) {
 	  case 2:
