@@ -86,6 +86,81 @@ get_x509_proxy_filename()
 	return proxy_file;
 }
 
+/* Return the subject name of a given proxy cert. 
+  On error, return NULL.
+  On success, return a pointer to a null-terminated string.
+  IT IS THE CALLER'S RESPONSBILITY TO DE-ALLOCATE THE STIRNG
+  WITH free().
+ */
+char *
+x509_proxy_subject_name( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return NULL;
+#else
+
+	proxy_cred_desc *pcd = NULL;
+	struct stat stx;
+	char *subject = NULL;
+	int must_free_proxy_file = FALSE;
+
+	/* initialize SSLeay and the error strings */
+	ERR_load_prxyerr_strings(0);
+	SSLeay_add_ssl_algorithms();
+
+    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
+
+	if (!pcd) {
+		_globus_error_message = "problem during internal initialization";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return NULL;
+	}
+
+	/* Load proxy */
+	if (!proxy_file)  {
+		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+		must_free_proxy_file = TRUE;
+	}
+
+	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
+		_globus_error_message = "unable to find proxy file";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
+		_globus_error_message = "unable to load proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
+		_globus_error_message = "unable to load public key from proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
+		return NULL;
+	}
+
+    subject=X509_NAME_oneline(X509_get_subject_name(pcd->ucert),NULL,0);
+
+	if (!subject) {
+		_globus_error_message = "unable to load subject from proxy";
+	}
+
+	if ( must_free_proxy_file ) {
+		free(proxy_file);
+	}
+    
+    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
+
+	return subject;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
 /* Return the time at which the proxy expires. On error, return -1.
  */
 time_t
@@ -123,18 +198,21 @@ x509_proxy_expiration_time( const char *proxy_file )
 	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
 		_globus_error_message = "unable to find proxy file";
 		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
 		return -1;
 	}
 
 	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
 		_globus_error_message = "unable to load proxy";
 		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
 		return -1;
 	}
 
 	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
 		_globus_error_message = "unable to load public key from proxy";
 		if ( must_free_proxy_file ) free(proxy_file);
+		proxy_cred_desc_free(pcd);
 		return -1;
 	}
 
