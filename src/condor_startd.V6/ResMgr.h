@@ -180,6 +180,7 @@ private:
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
+	time_t	startTime;		// Time that we started
 
 	StringList**	type_strings;	// Array of StringLists that
 		// define the resource types specified in the config file.  

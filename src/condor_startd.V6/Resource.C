@@ -59,6 +59,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	kill_tid = -1;
 	update_tid = -1;
 	r_is_deactivating = false;
+	update_sequence = 0;
 
 		// Set ckpt filename for avail stats here, since this object
 		// knows the resource id, and we need to use a different ckpt
@@ -517,6 +518,11 @@ Resource::do_update( void )
 
 	this->publish( &public_ad, A_PUBLIC | A_ALL | A_EVALUATED );
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
+
+	// NRL TODO: Put in seq # attribute
+	char	tmp [80];
+	sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, update_sequence++ );
+	public_ad.InsertOrUpdate( tmp );
 
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,

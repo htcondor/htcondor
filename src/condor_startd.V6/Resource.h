@@ -161,8 +161,9 @@ public:
 	int				type( void ) { return r_attr->type(); };
 
 private:
-	int		kill_tid;	// DaemonCore timer id for kiling timer.
-	int		update_tid;	// DaemonCore timer id for update delay
+	int			kill_tid;	// DaemonCore timer id for kiling timer.
+	int			update_tid;	// DaemonCore timer id for update delay
+	unsigned	update_sequence;	// Update sequence number
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.

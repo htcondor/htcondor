@@ -31,6 +31,7 @@ template class SimpleList<NamedClassAd*>;
 
 ResMgr::ResMgr()
 {
+	startTime = time( NULL );
 	coll_sock = NULL;
 	view_sock = NULL;
 	totals_classad = NULL;
@@ -1083,6 +1084,11 @@ int
 ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
+
+	// Publish our "epoch" time
+	char	tmp [80];
+	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
+	public_ad->InsertOrUpdate( tmp );
 
 	if( coll_sock ) {
 		if( DebugFlags & D_FULLDEBUG ) {
