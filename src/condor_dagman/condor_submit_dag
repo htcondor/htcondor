@@ -247,7 +247,7 @@ sub write_submit_file {
 }
 
 
-sub check_output_files() {
+sub check_output_files {
     local( $had_error ) = 0;
     if( $force ) {
 	unlink( "$sub_file" );
