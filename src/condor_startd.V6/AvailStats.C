@@ -119,7 +119,7 @@ AvailStats::publish( ClassAd* cp, amask_t how_much )
 		if( as_start_avail ) {
 
 				// only insert these attributes when in non-owner state
-			sprintf( line, "%s=%d", ATTR_AVAIL_SINCE, avail_since() );
+			sprintf( line, "%s=%ld", ATTR_AVAIL_SINCE, (long)avail_since() );
 			cp->Insert(line); 
   
 			sprintf( line, "%s=%d", ATTR_AVAIL_TIME_ESTIMATE,
@@ -235,7 +235,7 @@ AvailStats::serialize()
 	MyString state;
 	char buf[20];
 
-	sprintf(buf, "%d", time(0)-as_birthdate);
+	sprintf(buf, "%ld", (long)(time(0)-as_birthdate));
 	state += buf;
 	sprintf(buf, " %d", as_tot_avail_time);
 	state += buf;
@@ -282,8 +282,8 @@ AvailStats::checkpoint()
 		FILE *fp = fopen(tmp_ckpt_filename.Value(), "w");
 		if( fp ) {
 			MyString state = serialize();
-			if( fwrite(state.Value(), sizeof(char), state.Length(),
-					   fp) == state.Length() ) {
+			if( (int)fwrite(state.Value(), sizeof(char), state.Length(),
+							fp) == state.Length() ) {
 				fclose(fp);
 				rotate_file(tmp_ckpt_filename.Value(),
 							ckpt_filename.Value());
