@@ -279,7 +279,7 @@ char *str;
 ** Return non-zero iff the named configuration parameter contains the given
 ** pattern.  
 */
-boolean( parameter, pattern )
+param_in_pattern( parameter, pattern )
 char	*parameter;
 char	*pattern;
 {

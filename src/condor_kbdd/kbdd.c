@@ -262,7 +262,7 @@ init_params()
 	if( param("KBDD_DEBUG") == NULL ) {
 		EXCEPT( "KBDD_DEBUG not defined in config file\n" );
 	}
-	Foreground += boolean( "KBDD_DEBUG", "Foreground" );
+	Foreground += param_in_pattern( "KBDD_DEBUG", "Foreground" );
 
 #ifdef X_EXTENSIONS
     tmp = param("USE_X_IDLE_EXTENSION");

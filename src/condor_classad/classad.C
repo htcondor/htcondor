@@ -12,7 +12,6 @@
 # include "except.h"
 # include "condor_ast.h"
 # include "condor_registration.h"
-# include "condor_expressions.h"
 # include "condor_attrlist.h"
 # include "condor_attributes.h"
 # include "condor_classad.h"
@@ -22,7 +21,6 @@ static Registration regi;                   // this is the registration for
                                             // should be defined in the calling
                                             // procedure.
 static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
-extern "C" int _EXCEPT_(char*, ...);
 #if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
 #endif
@@ -92,6 +90,7 @@ ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 }
 #endif
 
+#if 0 // dont use CONTEXTs anymore
 ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {
 	myType = NULL;
@@ -106,6 +105,7 @@ ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
     	SetRankExpr ("Rank = 0");
 	}
 }
+#endif
 
 ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
 {

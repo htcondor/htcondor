@@ -35,8 +35,10 @@
 #include "condor_io.h"
 #include <sys/stat.h>
 #include "condor_fix_socket.h"
+#if !defined(WIN32)
 #include <netinet/in.h>
 #include <sys/param.h>
+#endif
 
 #include "condor_debug.h"
 
@@ -79,11 +81,15 @@ enum {
 	CONNECTION_ACTIVE,
 } connection_state = CONNECTION_ACTIVE;
 
+#if !defined(WIN32)
 uid_t	active_owner_uid = 0;
+#endif
 char	*active_owner = 0;
 char	*rendevous_file = 0;
 
 Transaction *trans = 0;
+
+class Service;
 
 prio_rec	PrioRecArray[INITIAL_MAX_PRIO_REC];
 prio_rec	* PrioRec = &PrioRecArray[0];
@@ -98,7 +104,9 @@ InvalidateConnection()
 		free(active_owner);
 	}
 	active_owner = 0;
+#if !defined(WIN32)
 	active_owner_uid = 0;
+#endif
 	connection_state = CONNECTION_CLOSED;
 }
 
@@ -150,7 +158,9 @@ FreeConnection()
 		free(active_owner);
 	}
 	active_owner = 0;
+#if !defined(WIN32)
 	active_owner_uid = 0;
+#endif
 	connection_state = CONNECTION_ACTIVE;
 }
 
@@ -161,7 +171,9 @@ UnauthenticatedConnection()
 	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting owner"
 			" to \"nobody\"\n" );
 	init_user_ids("nobody");
+#if !defined(WIN32)
 	active_owner_uid = get_user_uid();
+#endif
 	if (active_owner != 0)
 		free(active_owner);
 	active_owner = strdup( "nobody" );
@@ -195,11 +207,13 @@ ValidateRendevous()
 
 	unlink(rendevous_file);
 
+#if !defined(WIN32)
 	if (stat_buf.st_uid != active_owner_uid && stat_buf.st_uid != 0 &&
 		stat_buf.st_uid != get_condor_uid()) {
 		UnauthenticatedConnection();
 		return 0;
 	}
+#endif
 	connection_state = CONNECTION_ACTIVE;
 	return 0;
 }
@@ -282,9 +296,15 @@ TruncLog(char *log_name)
 	LogState(new_log_fd);
 	close(log_fd);
 	log_fd = new_log_fd;
+#if defined(WIN32)
+	if (MoveFileEx(tmp_log_name, log_name, MOVEFILE_REPLACE_EXISTING) == 0) {
+		return -1;
+	}
+#else
 	if (rename(tmp_log_name, log_name) < 0) {
 		return -1;
 	}
+#endif
 	return 0;
 }
 
@@ -339,17 +359,17 @@ AppendLog(LogRecord *log, Job *job, Cluster *cl)
 extern "C" {
 
 int
-handle_q(ReliSock *sock, struct sockaddr_in* = NULL)
+handle_q(Service *, int, Stream *sock)
 {
 	int	rval;
 
 	trans = new Transaction;
-	Q_SOCK = sock;
+	Q_SOCK = (ReliSock *)sock;
 
 	InvalidateConnection();
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( sock );
+		rval = do_Q_request( (ReliSock *)sock );
 	} while(rval >= 0);
 	FreeConnection();
 
@@ -360,12 +380,13 @@ handle_q(ReliSock *sock, struct sockaddr_in* = NULL)
 		delete trans;
 		trans = 0;
 	}
-	dprintf(D_ALWAYS, "Connection closed, Q is:\n");
+	// dprintf(D_ALWAYS, "Connection closed, Q is:\n");
 	if (rendevous_file != 0) {
 		unlink(rendevous_file);
 		free(rendevous_file);
 		rendevous_file = 0;
 	}
+	return 0;
 }
 
 
@@ -379,10 +400,12 @@ InitializeConnection( char *owner, char *tmp_file )
 	// man page says string returned by tempnam has been malloc()'d
 	free(new_file);
 	init_user_ids( owner );
+#if !defined(WIN32)
 	active_owner_uid = get_user_uid();
 	if (active_owner_uid < 0) {
 		return -1;
 	}
+#endif
 	active_owner = strdup( owner );
 	rendevous_file = strdup( tmp_file );
 	dprintf(D_ALWAYS, "InitializeConnection returning 0 (%s)\n",
@@ -446,8 +469,8 @@ int DestroyProc(int cluster_id, int proc_id)
 	LogDestroyProc	*log;
 	PROC_ID		job_id;
 
-        job_id.cluster = cluster_id;
-        job_id.proc = proc_id;
+	job_id.cluster = cluster_id;
+	job_id.proc = proc_id;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -480,8 +503,8 @@ int DestroyCluster(int cluster_id)
 	Job					*job;
 	PROC_ID		job_id;
 
-        job_id.cluster = cluster_id;
-        job_id.proc = -1;
+	job_id.cluster = cluster_id;
+	job_id.proc = -1;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -742,13 +765,11 @@ NextAttribute(int cluster_id, int proc_id, char *attr_name)
 }
 
 int
-SendSpoolFile(char *filename, char *address)
+SendSpoolFile(char *filename)
 {
-	int sockfd, pid, len;
+	int filesize, total=0, nbytes, written;
 	FILE *fp;
-	struct sockaddr_in addr;
-	char path[_POSIX_PATH_MAX];
-	struct in_addr myaddr;
+	char path[_POSIX_PATH_MAX], buf[4*1024];
 
 	if (strchr(filename, '/') != NULL) {
 		dprintf(D_ALWAYS, "ReceiveFile called with a path (%s)!\n",
@@ -764,84 +785,40 @@ SendSpoolFile(char *filename, char *address)
 		return -1;
 	}
 
-	if ((sockfd = socket(PF_INET,SOCK_STREAM,0)) < 0) {
-		dprintf(D_ALWAYS, "failed to create socket in ReceiveFile()\n");
-		EXCEPT("socket");
+	/* Tell client to go ahead with file transfer. */
+	Q_SOCK->encode();
+	Q_SOCK->put(0);
+	Q_SOCK->eom();
+
+	/* Read file size from client. */
+	Q_SOCK->decode();
+	if (!Q_SOCK->code(filesize)) {
+		dprintf(D_ALWAYS, "Failed to receive file size from client in SendSpoolFile.\n");
+		Q_SOCK->eom();
+		return -1;
 	}
 
-	get_inet_address(&myaddr);
-	memset( (char *)&addr, 0,sizeof(addr));   /* zero out */
-	addr.sin_family = AF_INET;
-	addr.sin_addr = myaddr;
-	addr.sin_port = htons(0);
-
-     if(bind(sockfd,(struct sockaddr *)&addr, sizeof(addr))<0) {      
-		 dprintf(D_ALWAYS, "bind failed in ReceiveFile()\n");
-		 EXCEPT("bind");
-     }
-
-	len = sizeof(addr);
-	if (getsockname(sockfd, (struct sockaddr *)&addr, &len)<0) {
-		dprintf(D_ALWAYS, "getsockname failed in ReceiveFile()\n");
-		EXCEPT("getsockname");
+	while (total < filesize &&
+		   (nbytes = Q_SOCK->code_bytes(buf, sizeof(buf))) > 0) {
+		dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
+		if ((written = fwrite(&buf, sizeof(char), nbytes, fp)) < nbytes) {
+			dprintf(D_ALWAYS, "failed to write %d bytes (only wrote %d)\n",
+					nbytes, written);
+			EXCEPT("fwrite");
+		}
+		dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
+		total += written;
 	}
-
-	strcpy(address, sin_to_string(&addr));
-	dprintf(D_FULLDEBUG, "receiving %s on %s\n", path, address);
-
-	if ((pid = fork()) < 0) {
-		dprintf(D_ALWAYS, "fork failed in ReceiveFile()\n");
-		EXCEPT("fork");
-	}
-
-	if (pid == 0) {				// child
-		char buf[4 * 1024];
-		struct sockaddr from;
-		int nbytes=0, written=0, total=0, xfersock, fromlen = sizeof(from);
-		int filesize;
-		if (listen(sockfd, 1) == -1) {
-			EXCEPT("listen");
-		}
-		if ((xfersock = accept(sockfd, (struct sockaddr *)&from,
-							   &fromlen)) == -1) {
-			EXCEPT("accept");
-		}
-		
-		if (read(xfersock, &filesize, sizeof(int)) < 0) {
-			EXCEPT("read");
-		}
-		filesize = ntohl(filesize);
-
-		while (total < filesize &&
-			   (nbytes = read(xfersock, &buf, sizeof(buf))) > 0) {
-			dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
-			if ((written = fwrite(&buf, sizeof(char), nbytes, fp)) < nbytes) {
-				dprintf(D_ALWAYS, "failed to write %d bytes (only wrote %d)\n",
-						nbytes, written);
-				EXCEPT("fwrite");
-			}
-			dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
-			total += written;
-		}
-		dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
-		total = htonl(total);
-		if (write(xfersock, &total, sizeof(int)) < 0) {
-			dprintf(D_ALWAYS, "failed to send ack in ReceiveFile()\n");
-			EXCEPT("write");
-		}
-		dprintf(D_FULLDEBUG, "successfully wrote %s (%d bytes)\n",
-				path, total);
-		exit(0);
-	}
+	Q_SOCK->eom();
+	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+	dprintf(D_FULLDEBUG, "successfully wrote %s (%d bytes)\n",
+			path, total);
 
 	if (fclose(fp) == EOF) {
 		EXCEPT("fclose");
 	}
-	if (close(sockfd) == -1) {
-		EXCEPT("close");
-	}
 
-	return 0;
+	return total;
 }
 
 } /* should match the extern "C" */
@@ -1002,6 +979,7 @@ Job::EvalAttribute(const char *name, EvalResult &result)
 	}
 
 	expr_tree->EvalTree(ad, &result);
+	return 0;
 }
 
 
@@ -1041,7 +1019,6 @@ int
 Job::GetAttribute(const char *name, char *val)
 {
 	EvalResult	result;
-	char		*ptr;
 
 	if (ad == 0) {
 		*val = 0;
@@ -1132,7 +1109,9 @@ Job::OwnerCheck(char *test_owner)
 		return 1;
 	}
 	if (strcmp(my_owner, test_owner) != 0) {
+#if !defined(WIN32)
 		errno = EACCES;
+#endif
 		return 0;
 	} else {
 		return 1;
@@ -1326,6 +1305,7 @@ Cluster::~Cluster()
 	}
 	if (job != 0) {
 		delete job;
+		job = 0;
 	}
 
 	if (ad != 0) {
@@ -1543,7 +1523,6 @@ int get_job_prio(int cluster, int proc)
     int job_prio;
     int status;
     int job_status;
-    struct shadow_rec *srp;
     PROC_ID id;
     int     q_date;
     char    buf[100], *owner;
@@ -1609,6 +1588,7 @@ int get_job_prio(int cluster, int proc)
 ** regardless of the state they are in.
 */
 
+int
 all_job_prio(int cluster, int proc)
 {
     int prio;
@@ -1641,6 +1621,7 @@ all_job_prio(int cluster, int proc)
 	if ( N_PrioRecs == MAX_PRIO_REC ) {
 		grow_prio_recs( 2 * N_PrioRecs );
 	}
+	return 0;
 }
 
 int mark_idle(int cluster, int proc)
@@ -1677,7 +1658,6 @@ int mark_idle(int cluster, int proc)
 */
 void mark_jobs_idle()
 {
-    char    queue[MAXPATHLEN];
     WalkJobQueue( mark_idle );
 }
 

@@ -2,14 +2,16 @@
 #include <iostream.h>
 #include <stdio.h>
 #include <string.h>
+#if !defined(WIN32)
 #include <netinet/in.h>
+#endif
 
 #include "condor_query.h"
 #include "condor_attributes.h"
 #include "condor_collector.h"
 #include "condor_config.h"
 #include "condor_network.h"
-#include "reli_sock.h"
+#include "condor_io.h"
 #include "condor_parser.h"
 #include "condor_adtypes.h"
 
@@ -34,7 +36,8 @@ const char *ScheddIntegerKeywords [] =
 };
 
 const char *ScheddFloatKeywords [] = 
-{	
+{
+	""		// add null string to avoid compiler error
 };
 
 const char *StartdStringKeywords [] = 
@@ -53,6 +56,7 @@ const char *StartdIntegerKeywords [] =
 
 const char *StartdFloatKeywords [] =
 {
+	""		// add null string to avoid compiler error
 };
 
 // normal ctor

@@ -1,3 +1,5 @@
+#include "condor_common.h"
+#include "condor_debug.h"
 #include "server_interface.h"
 #if 0
 #include "../server2/constants2.h"
@@ -11,7 +13,9 @@
 #include <errno.h>
 #include <assert.h>
 #include <string.h>
+#if !defined(WIN32)
 #include <unistd.h>
+#endif
 #include <stdio.h>
 
 #if !defined(TRUE)
@@ -39,7 +43,6 @@ void StripPrefix(const char* pathname,
 int ConnectToServer(request_type type)
 {
 	int                conn_req_sd;
-	struct hostent*    h;
 	struct sockaddr_in server_sa;
 	char			   *server_IP;
 	
@@ -52,13 +55,13 @@ int ConnectToServer(request_type type)
 		fprintf(stderr, "ERROR:\n");
 		return INSUFFICIENT_RESOURCES;
     }
-	else if (conn_req_sd == SOCKET_ERROR) {
+	else if (conn_req_sd == CKPT_SERVER_SOCKET_ERROR) {
 		fprintf(stderr, "ERROR:\n");
 		fprintf(stderr, "ERROR:\n");
 		fprintf(stderr, "ERROR: unable to create a new socket\n");
 		fprintf(stderr, "ERROR:\n");
 		fprintf(stderr, "ERROR:\n");
-		return SOCKET_ERROR;
+		return CKPT_SERVER_SOCKET_ERROR;
     }
 	memset((char*) &server_sa, 0, (int) sizeof(server_sa));
 	server_sa.sin_family = AF_INET;
@@ -221,7 +224,7 @@ int RequestService(const char*     owner,
 		return server_sd;
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.key = htonl(key);
-	req.service = htons(type);
+	req.service = htons((short)type);
 	if (owner != NULL)
 		strncpy(req.owner_name, owner, MAX_NAME_LENGTH);
 	if (filename != NULL)

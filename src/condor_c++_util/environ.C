@@ -36,11 +36,9 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include <string.h>
 #include <ctype.h>
 #include "environ.h"
-#include "proto.h"
 
 inline int
 is_white( char ch )
@@ -80,7 +78,6 @@ Environ::add_string( char *str )
 {
 	char	*ptr;
 	char	*buf;
-	char	*src;
 	char	*dst;
 
 	 // dprintf( D_ALWAYS, "Adding compound string \"%s\"\n", str );

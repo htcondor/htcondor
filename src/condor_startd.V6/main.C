@@ -336,7 +336,7 @@ static void init_params()
 
 		/* XXX  What's going on here?  This is weird! -Derek */
 	if (!fgflag)
-		fgflag = boolean("STARTD_DEBUG", "Foreground");
+		fgflag = param_in_pattern("STARTD_DEBUG", "Foreground");
 
 	if (admin)
 		free(admin);

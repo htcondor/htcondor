@@ -34,7 +34,9 @@
 #ifndef _SMPL_LIST_H_
 #define _SMPL_LIST_H_
 
-#pragma interface 
+#if !defined(WIN32)
+#pragma interface
+#endif
 
 #include <iostream.h>
 

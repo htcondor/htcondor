@@ -30,4 +30,5 @@
 #	undef BSD_COMP
 #endif
 
-#endif // defined(WIN32)
+#include "condor_constants.h"
+#endif // else clause of  defined(WIN32)

@@ -1,14 +1,11 @@
 #if !defined(_LIBQMGR_H)
 #define _LIBQMGR_H
 
-#include "condor_xdr.h"
 #include "proc.h"
 
-#define QMGMT_CMD	1111
+
 
 typedef struct {
-	int		fd;
-	XDR		xdr;
 	int		count;
 	char	*rendevous_file;
 } Qmgr_connection;
@@ -39,19 +36,22 @@ int GetNextJob(int, int, int *, int *);
 int FirstAttribute(int, int, char *);
 int NextAttribute(int, int, char *);
 
-int SendSpoolFile(char *filename, char *address);
+int SendSpoolFile(char *filename);		/* prepare for file xfer */
+int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
 Qmgr_connection *ConnectQ(char *qmgr_location);
-int DisconnectQ(Qmgr_connection *);
-int WalkJobQueue(scan_func);
+void DisconnectQ(Qmgr_connection *);
+void WalkJobQueue(scan_func);
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
 
 /* These are here for compatibility with old code which uses the PROC
    structure to ease porting.  Use of these functions is discouraged! */
+#if defined(NEW_PROC)
 int SaveProc(PROC *);
 int GetProc(int, int, PROC *);
+#endif
 
 #if defined(__cplusplus)
 }

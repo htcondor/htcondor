@@ -352,7 +352,7 @@ TimerManager::Timeout()
 		// Update curr_dataptr for GetDataPtr()
 		daemonCore->curr_dataptr = &(timer_list->data_ptr);
 
-			// Initialize our flag so we know if ResetTimer was called.
+		// Initialize our flag so we know if ResetTimer was called.
 		did_reset = FALSE;
 
 		// Now we call the registered handler.  If we were told that the handler
@@ -370,7 +370,7 @@ TimerManager::Timeout()
 
 		/* Watch out for cancel_timer() called in the users handler with only 
 		 * one item in list which makes timer_list go to NULL */
-		if (timer_list != NULL && did_reset == FALSE) {
+		if (timer_list != NULL  && did_reset == FALSE) {
 			// here we remove the timer we just serviced, or renew it if it is 
 			// periodic.  note calls to CancelTimer are safe even if the user's
 			// handler called CancelTimer as well...
@@ -381,9 +381,9 @@ TimerManager::Timeout()
 						 current_id, is_cpp);
 				// and dont forget to renew the users data_ptr
 				daemonCore->Register_DataPtr(data_ptr);
-				// now clear curr_regdataptr; the above NewTimer should appear "transparent"
+				// now clear curr_dataptr; the above NewTimer should appear "transparent"
 				// as far as the user code/API is concerned
-				daemonCore->curr_regdataptr = NULL;
+				daemonCore->curr_dataptr = NULL;
 			} else {
 				// timer is not perodic; it is just a one-time event.  we just called
 				// the handler, so now remove the timer from out list.  
@@ -395,11 +395,16 @@ TimerManager::Timeout()
 
 	// set result to number of seconds until next event.  get an update on the
 	// time from time() in case the handlers we called above took significant time.
-	if ( timer_list == NULL )
-			// If there are no timers, we want to sleep forever (basically).
-		result = 100000;
-	else
+	if ( timer_list == NULL ) {
+		// we set result to be -1 so that we do not busy poll.
+		// a -1 return value will tell the DaemonCore:Driver to use select with
+		// no timeout.
+		result = -1;
+	} else {
 		result = (timer_list->when) - time(NULL);
+		if (result < 0)
+			result = 0;
+	}
 
 	dprintf( D_DAEMONCORE, "DaemonCore Timeout() Complete, returning %d \n",result);
 	in_timeout = FALSE;

@@ -248,14 +248,14 @@ int Server::SetUpPort(u_short port)
       Log(0, "ERROR: insufficient resources for new socket");
       exit(INSUFFICIENT_RESOURCES);
     }
-  else if (temp_sd == SOCKET_ERROR) {
+  else if (temp_sd == CKPT_SERVER_SOCKET_ERROR) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: cannot open a server request socket" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR:" << endl << endl;
       Log(0, "ERROR: cannot open a server request socket");
-      exit(SOCKET_ERROR);
+      exit(CKPT_SERVER_SOCKET_ERROR);
   }
   memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
   socket_addr.sin_family = AF_INET;
@@ -593,8 +593,8 @@ void Server::ProcessServiceReq(int             req_id,
 	BlockSignals();
 #if defined(DEBUG)
 	switch (service_req.service) {
-        case SERVICE_STATUS:
-		    sprintf(log_msg, "Service SERVICE_STATUS request from %s", 
+        case CKPT_SERVER_SERVICE_STATUS:
+		    sprintf(log_msg, "Service CKPT_SERVER_SERVICE_STATUS request from %s", 
 					service_req.owner_name);
 			break;
 		case SERVICE_RENAME:
@@ -613,7 +613,7 @@ void Server::ProcessServiceReq(int             req_id,
 	Log(req_id, log_msg);  
 #endif
 	switch (service_req.service) {
-        case SERVICE_STATUS:
+        case CKPT_SERVER_SERVICE_STATUS:
 		    num_files = imds.GetNumFiles();
 			service_reply.num_files = htonl(num_files);
 			if (num_files > 0) {
@@ -632,10 +632,10 @@ void Server::ProcessServiceReq(int             req_id,
 					UnblockSignals();
 					close(req_sd);
 					return;
-				} else if (data_conn_sd == SOCKET_ERROR) {
+				} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
 					service_reply.server_addr.s_addr = htonl(0);
 					service_reply.port = htons(0);
-					service_reply.req_status = htons(abs(SOCKET_ERROR));
+					service_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
 					net_write(req_sd, (char*) &service_reply, 
 							  sizeof(service_reply));
 					sprintf(log_msg, "Service request from %s DENIED:", 
@@ -889,7 +889,7 @@ void Server::ProcessServiceReq(int             req_id,
 		Log("Cannot sent IP/port to shadow (socket closed)");
     } else {
 		close(req_sd);
-		if (service_req.service == SERVICE_STATUS)
+		if (service_req.service == CKPT_SERVER_SERVICE_STATUS)
 			if (num_files == 0) {
 				Log(req_id, "Request for server status GRANTED:");
 				Log("No files on checkpoint server");
@@ -1225,10 +1225,10 @@ void Server::ProcessStoreReq(int            req_id,
 			UnblockSignals();
 			close(req_sd);
 			return;
-		} else if (data_conn_sd == SOCKET_ERROR) {
+		} else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
 			store_reply.server_name.s_addr = htonl(0);
 			store_reply.port = htons(0);
-			store_reply.req_status = htons(abs(SOCKET_ERROR));
+			store_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
 			net_write(req_sd, (char*) &store_reply, sizeof(store_reply_pkt));
 			BlockSignals();
 			sprintf(log_msg, "Store request from %s DENIED:", 
@@ -1503,11 +1503,11 @@ void Server::ProcessRestoreReq(int             req_id,
 		  UnblockSignals();
 		  close(req_sd);
 		  return;
-	  } else if (data_conn_sd == SOCKET_ERROR) {
+	  } else if (data_conn_sd == CKPT_SERVER_SOCKET_ERROR) {
 		  restore_reply.server_name.s_addr = htonl(0);
 		  restore_reply.port = htons(0);
 		  restore_reply.file_size = htonl(0);
-		  restore_reply.req_status = htons(abs(SOCKET_ERROR));
+		  restore_reply.req_status = htons(abs(CKPT_SERVER_SOCKET_ERROR));
 		  net_write(req_sd, (char*) &restore_reply, sizeof(restore_reply_pkt));
 		  BlockSignals();
 		  sprintf(log_msg, "Restore request from %s DENIED:", 

@@ -34,16 +34,25 @@
 **
 ************************************************************************/
 
+#include "condor_common.h"
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <malloc.h>
+#undef va_start
+#undef va_end
 #include <varargs.h>
 #include <time.h>
+#if !defined(WIN32)
 #include <sys/file.h>
 #include <sys/param.h>
+#endif
 
 #include "condor_sys.h"
 #include "debug.h"
 #include "except.h"
 #include "clib.h"
+#include "condor_string.h"
 
 /* Solaris specific change ..dhaval 6/23 */
 #if defined(Solaris)
@@ -54,9 +63,13 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		Termlog;
 
+void set_debug_flags( char *strflags );
+FILE *open_debug_file( char flags[] );
+
+void
 dprintf_config( subsys, logfd )
 char *subsys;
-int logfd;		/* The descriptor to use if the log output goes to a tty */
+int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();
@@ -89,9 +102,9 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 		pval = param(pname);
 		if( pval && (*pval == 't' || *pval == 'T') ) {
-			DebugFP = fdopen( open_debug_file(O_CREAT|O_TRUNC|O_WRONLY), "a" );
+			DebugFP = open_debug_file("a");
 		} else {
-			DebugFP = fdopen( open_debug_file(O_CREAT|O_WRONLY), "a" );
+			DebugFP = open_debug_file("a");
 		}
 		free(pval); 	/* BUG: Ashish */
 
@@ -139,7 +152,7 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 #if defined(HPUX9)
 			stderr->__fileL = logfd & 0xf0;	/* Low byte of fd */
 			stderr->__fileH = logfd & 0x0f;	/* High byte of fd */
-#elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris251)
+#elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris251) || defined(WIN32)
 			((stderr)->_file) = logfd;
 #elif defined(LINUX)
 			stderr->_fileno = logfd;
@@ -148,18 +161,17 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 #endif
 		}
 
+#if !defined(WIN32)
 		setlinebuf( stderr );
+#endif
 
 		(void)fflush( stderr );	/* Don't know why we need this, but if not here
 							   the first couple dprintf don't come out right */
 	}
 }
 
-#if 0
-static
-#endif
-set_debug_flags( strflags )
-char *strflags;
+void
+set_debug_flags( char *strflags )
 {
 	char tmp[ BUFSIZ ];
 	char *argv[ BUFSIZ ], *flag;

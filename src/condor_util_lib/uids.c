@@ -30,6 +30,16 @@
 
 /* See condor_uid.h for description. */
 
+#if defined(WIN32)
+
+#include "condor_uid.h"
+
+priv_state _set_priv(priv_state s, char file[], int line, int dologging) { return s; }
+void init_user_ids(const char username[]) {}
+void init_condor_ids() {}
+
+#else
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pwd.h>
@@ -421,3 +431,5 @@ set_condor_rgid()
 
 	return SET_REAL_GID(CondorGid);
 }
+
+#endif

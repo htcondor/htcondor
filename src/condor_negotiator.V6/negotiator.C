@@ -110,12 +110,11 @@ extern "C"
 {
 	void	dprintf(int, char*...);
 	int		config_from_server(char*, char*, CONTEXT*);
-	void	_EXCEPT_(char*...);
 	int		udp_connect(char*, int);	
 	int		xdr_mach_rec(XDR*, MACH_REC*); 
 	int		snd_int(XDR*, int, int);
 	int		xdr_in_addr(XDR*, struct in_addr*); 
-	int		boolean(char*, char*); 
+	int		param_in_pattern(char*, char*); 
 	void	insque(struct qelem*, struct qelem*); 
 	int		rcv_int(XDR*, int*, int);
 	int		rcv_context(XDR*, CONTEXT*, int); 
@@ -566,7 +565,7 @@ void init_params()
 	} else {
 		free( tmp );
 	}
-	Foreground += boolean( "NEGOTIATOR_DEBUG", "Foreground" );
+	Foreground += param_in_pattern( "NEGOTIATOR_DEBUG", "Foreground" );
 	
 	Log = param( "LOG" );
 	if( Log == NULL )  {

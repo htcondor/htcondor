@@ -226,6 +226,17 @@ int calc_phys_memory()
 	return (int)(phys_mem/(1024000));
 }
 
+#elif defined(WIN32)
+
+#include "condor_common.h"
+
+int
+calc_phys_memory()
+{
+	MEMORYSTATUS status;
+	GlobalMemoryStatus(&status);
+	return (int)(status.dwTotalPhys/(1024000));
+}
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int

@@ -148,6 +148,7 @@ LogSetAttribute::~LogSetAttribute()
 }
 
 
+int
 LogSetAttribute::Play()
 {
 	Job	*job;
@@ -161,6 +162,7 @@ LogSetAttribute::Play()
 }
 
 
+int
 LogSetAttribute::WriteBody(int fd)
 {
 	int		rval, rval1;
@@ -187,24 +189,26 @@ LogSetAttribute::WriteBody(int fd)
 }
 
 
-LogSetAttribute::WriteBody(XDR *xdrs)
+int
+LogSetAttribute::WriteBody(Stream *s)
 {
-	if (!xdr_int(xdrs, &cluster)) {
+	if (!s->code(cluster)) {
 		return 0;
 	}
-	if (!xdr_int(xdrs, &proc)) {
+	if (!s->code(proc)) {
 		return 0;
 	}
-	if (!xdr_string(xdrs, &name, strlen(name) + 1)) {
+	if (!s->code(name)) {
 		return 0;
 	}
-	if (!xdr_string(xdrs, &value, strlen(value) + 1)) {
+	if (!s->code(value)) {
 		return 0;
 	}
 	return 1;
 }
 
 
+int
 LogSetAttribute::ReadBody(int fd)
 {
 	int rval, rval1;
@@ -241,19 +245,22 @@ LogSetAttribute::ReadBody(int fd)
 }
 
 
-LogSetAttribute::ReadBody(XDR *xdrs)
+int
+LogSetAttribute::ReadBody(Stream *s)
 {
 	char	buf[1000];
+	int		bufsize;
 	char	*ptr;
 
-	if (!xdr_int(xdrs, &cluster)) {
+	if (!s->code(cluster)) {
 		return 0;
 	}
-	if (!xdr_int(xdrs, &proc)) {
+	if (!s->code(proc)) {
 		return 0;
 	}
 	ptr = &(buf[0]);
-	if (!xdr_string(xdrs, &ptr, sizeof(buf))) {
+	bufsize = sizeof(buf);
+	if (!s->code(ptr, bufsize)) {
 		return 0;
 	}
 
@@ -262,7 +269,8 @@ LogSetAttribute::ReadBody(XDR *xdrs)
 	}
 	name = strdup(buf);
 	ptr = &(buf[0]);
-	if (!xdr_string(xdrs, &ptr, sizeof(buf))) {
+	bufsize = sizeof(buf);
+	if (!s->code(ptr, bufsize)) {
 		return 0;
 	}
 
@@ -292,6 +300,7 @@ LogDeleteAttribute::~LogDeleteAttribute()
 }
 
 
+int
 LogDeleteAttribute::Play()
 {
 	Job	*job;
@@ -304,6 +313,7 @@ LogDeleteAttribute::Play()
 }
 
 
+int
 LogDeleteAttribute::WriteBody(int fd)
 {
 	int		rval, rval1;
@@ -325,21 +335,23 @@ LogDeleteAttribute::WriteBody(int fd)
 }
 
 
-LogDeleteAttribute::WriteBody(XDR *xdrs)
+int
+LogDeleteAttribute::WriteBody(Stream *s)
 {
-	if (!xdr_int(xdrs, &cluster)) {
+	if (!s->code(cluster)) {
 		return 0;
 	}
-	if (!xdr_int(xdrs, &proc)) {
+	if (!s->code(proc)) {
 		return 0;
 	}
-	if (!xdr_string(xdrs, &name, strlen(name) + 1)) {
+	if (!s->code(name)) {
 		return 0;
 	}
 	return 1;
 }
 
 
+int
 LogDeleteAttribute::ReadBody(int fd)
 {
 	int rval, rval1;
@@ -366,19 +378,21 @@ LogDeleteAttribute::ReadBody(int fd)
 }
 
 
-LogDeleteAttribute::ReadBody(XDR *xdrs)
+int
+LogDeleteAttribute::ReadBody(Stream *s)
 {
 	char	buf[1000];
 	char	*ptr;
+	int		bufsize = sizeof(buf);
 
-	if (!xdr_int(xdrs, &cluster)) {
+	if (!s->code(cluster)) {
 		return 0;
 	}
-	if (!xdr_int(xdrs, &proc)) {
+	if (!s->code(proc)) {
 		return 0;
 	}
 	ptr = &(buf[0]);
-	if (!xdr_string(xdrs, &ptr, sizeof(buf))) {
+	if (!s->code(ptr, bufsize)) {
 		return 0;
 	}
 

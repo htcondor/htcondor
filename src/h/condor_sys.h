@@ -45,7 +45,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) && !defined(IRIX53)
+#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) && !defined(IRIX53) && !defined(WIN32)
 #include <syscall.h> 
 #endif
 
@@ -76,7 +76,9 @@ extern int Syscalls;
 */
 extern char *CONDOR_SyscallNames[];
 
+#if !defined(WIN32)
 #include "syscall_numbers.h"
+#endif
 
 #define NFAKESYSCALLS    22
 

@@ -95,10 +95,8 @@ int NextAttribute(int cluster_id, int proc_id, char *attr_name)
 	ALLOC_PATH( attr_name );
 }
 
-int SendSpoolFile(char *filename, char *address)
+int SendSpoolFile(char *filename)
 {
 	SEND_PATH( filename );
 	ALLOC_PATH( filename );
-	GET_PATH( address );
-	ALLOC_PATH( address );
 }

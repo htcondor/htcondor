@@ -32,6 +32,29 @@
 ** given filename resides.
 */
 
+#if defined(WIN32)
+
+#include "condor_common.h"
+#include <limits.h>
+
+int
+free_fs_blocks(char *filename)
+{
+	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
+	if (GetDiskFreeSpaceEx(filename, &FreeBytesAvailableToCaller, &TotalNumberOfBytes, 
+		&TotalNumberOfFreeBytes) == 0) {
+		return -1;
+	} else {
+		if (FreeBytesAvailableToCaller.HighPart > 0) {
+			return INT_MAX;
+		} else {
+			return (int)(FreeBytesAvailableToCaller.LowPart/1024);
+		}
+	}
+}
+
+#else
+
 #include <stdio.h>
 #include <string.h>
 
@@ -302,3 +325,4 @@ char *filename;
 }
 #endif /* I386 && DYNIX */
 
+#endif /* !WIN32 */

@@ -9,10 +9,11 @@
 #include <string.h>
 #include <assert.h>
 #include <except.h>
+#include <stdlib.h>	// for realloc
 #include "condor_registration.h"
+#include "condor_common.h"
 
 static  char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
-extern  "C" int _EXCEPT_(char*, ...);
 
 //
 // Constructor of the Registration class.

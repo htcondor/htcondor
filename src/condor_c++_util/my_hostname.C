@@ -26,8 +26,11 @@
 **
 */ 
 
+#include "condor_common.h"
+#if !defined(WIN32)
 #define _POSIX_SOURCE
 #include "condor_fix_utsname.h"
+#endif
 
 /*
   Return our hostname in a static data buffer.
@@ -35,10 +38,18 @@
 char *
 my_hostname()
 {
+#if defined(WIN32)
+	static char hostname[1024];
+	if (gethostname(hostname, sizeof(hostname)) == 0)
+		return hostname;
+	else
+		return 0;
+#else
 	static struct utsname	uname_buf;
 
 	if( uname(&uname_buf) < 0 ) {
 		return 0;
 	}
 	return uname_buf.nodename;
+#endif
 }

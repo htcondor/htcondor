@@ -1,9 +1,10 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
+#if !defined(WIN32)
 #include <pwd.h>
-/*
-#include "condor_xdr.h"
-*/
+#endif
+
+#include <stdio.h>
 #include "condor_io.h"
 
 #include "qmgr.h"
@@ -12,10 +13,12 @@
 #include "condor_attributes.h"
 
 int open_url(char *, int, int);
+#if !defined(WIN32)
 #if defined(HPUX9)
 extern "C" int gethostname(char *name, unsigned int namelen);
 #else
 extern "C" int gethostname(char *name, int namelen);
+#endif
 #endif
 extern "C" char*	get_schedd_addr(const char*); 
 
@@ -30,14 +33,13 @@ static Qmgr_connection *connection = 0;
 Qmgr_connection *
 ConnectQ(char *qmgr_location)
 {
-	char	localurl[1000];
-/*	XDR		*xdrs;*/
 	int		rval;
-	char	owner[100];
 	char	tmp_file[255];
 	int		fd;
 	int		cmd;
+#if !defined(WIN32)
 	struct  passwd *pwd;
+#endif
 	char	hostname[256]; 
 	char*	scheddAddr = NULL;
 
@@ -83,28 +85,42 @@ ConnectQ(char *qmgr_location)
 		free(connection);
 		return 0;
 	}
-	connection->fd = qmgmt_sock->get_file_desc();
-	if (connection->fd < 0) {
+	if (!qmgmt_sock->ok()) {
 		dprintf(D_ALWAYS, "Can't connect to qmgr\n");
 		free(connection);
 		return 0;
 	}
-/*	xdrs = xdr_Init( &(connection->fd), &(connection->xdr));
-	xdr_qmgmt = xdrs; */
-/*	xdrrec_endofrecord(xdr_qmgmt,TRUE); */
 
 	/* Get the schedd to handle Q ops. */
 	qmgmt_sock->encode();
 	cmd = QMGMT_CMD;
 	qmgmt_sock->code(cmd);
+	
+	/* No end of message here.  Send InitializeConnection info in the same packet.
 	qmgmt_sock->end_of_message();
+	*/
+
+#if defined(WIN32)
+	char username[UNLEN+1];
+	unsigned long usernamelen = UNLEN+1;
+	if (GetUserName(username, &usernamelen) < 0) {
+		free(connection);
+		return 0;
+	}
+
+#else
 
 	pwd = getpwuid(geteuid());
 	if (pwd == 0) {
 		free(connection);
 		return 0;
 	}
-	rval = InitializeConnection(pwd->pw_name, tmp_file);
+
+	char *username = pwd->pw_name;
+
+#endif
+
+	rval = InitializeConnection(username, tmp_file);
 	if (rval < 0) {
 		free(connection);
 		return 0;
@@ -117,6 +133,7 @@ ConnectQ(char *qmgr_location)
 }
 
 
+void
 DisconnectQ(Qmgr_connection *conn)
 {
 	if (conn == 0) {
@@ -128,7 +145,6 @@ DisconnectQ(Qmgr_connection *conn)
 		CloseConnection();
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
-		close(conn->fd);
 		if (conn->rendevous_file != 0) {
 			unlink(conn->rendevous_file);
 			free(conn->rendevous_file);
@@ -143,22 +159,70 @@ DisconnectQ(Qmgr_connection *conn)
 
 
 
+int
+SendSpoolFileBytes(char *filename)
+{
+	int fd, len = 0, cc, ack;
+	char buf[ 4 * 1024 ];
+	struct stat filesize;
+	
+	fd = open( filename, O_RDONLY, 0 );
+	if( fd < 0 ) {
+		EXCEPT("open %s", filename);
+	}
+
+	if (fstat(fd, &filesize) < 0) {
+		EXCEPT("fstat of executable %s failed", filename);
+	}
+
+	qmgmt_sock->encode();
+	if ( !qmgmt_sock->code(filesize.st_size) ) {
+		EXCEPT("filesize write failed");
+	}
+
+	for(;;) {
+		cc = read(fd, buf, sizeof(buf));
+		if( cc < 0 ) {
+			EXCEPT("read %s: len = %d", filename, len);
+		}
+
+		if( qmgmt_sock->code_bytes(buf, cc) != cc ) {
+			fprintf(stderr,"Error writing initial executable into queue\nPerhaps no more space available in $(SPOOL)?\n");
+			EXCEPT("write %s: cc = %d, len = %d", filename, cc, len);
+		}
+
+		len += cc;
+
+		if( cc != sizeof(buf) ) {
+			break;
+		}
+	}
+	qmgmt_sock->eom();
+
+	qmgmt_sock->decode();
+	if (!qmgmt_sock->code(ack)) {
+		EXCEPT("Failed to read ack from qmgmr!  Checkpoint store failed!");
+	}
+	qmgmt_sock->eom();
+
+	if (ack != len) {
+		EXCEPT("Failed to transfer %d bytes of checkpoint file (only %d)",
+			   len, ack);
+	}
+
+	(void)close( fd );
+
+	return 0;
+}
+
+
+void
 WalkJobQueue(scan_func func)
 {
 	int	cluster, proc;
 	int next_cluster, next_proc;
 	int disconn_when_done = 0;
 	int rval;
-
-#if 0
-	if (connection == 0) {
-		disconn_when_done = 1;
-		ConnectQ();
-		if (connection == 0) {
-			return -1;
-		}
-	}
-#endif
 
 	cluster = -1;
 	proc = -1;
@@ -180,6 +244,7 @@ WalkJobQueue(scan_func func)
 }
 
 
+#if !defined(WIN32)
 int
 rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
@@ -364,3 +429,4 @@ GetProc(int cl, int pr, PROC *p)
 	}
 	return 0;
 }
+#endif

@@ -80,12 +80,13 @@ Cluster *FirstCluster();
 Cluster *FindCluster(int);
 Job *FindJob(int, int);
 void PrintQ();
+class Service;
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 int ReadLog(char *);
-int handle_q(ReliSock *, struct sockaddr_in*);
+int handle_q(Service *, int, Stream *sock);
 #if defined(__cplusplus)
 }
 #endif

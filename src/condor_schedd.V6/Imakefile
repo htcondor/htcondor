@@ -8,7 +8,7 @@ CPP = PreProcessCmd
 LDFLAGS = $(LIBDBM)
 
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 QMGMT_SRC = qmgmt.C qmgmt_receivers.C qmgmt_transaction.C log.C \
 	qmgmt_log.C qmgr_lib_support.C

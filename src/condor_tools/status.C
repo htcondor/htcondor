@@ -62,7 +62,6 @@ extern "C" {
 void SetSyscalls(){}  
 
 void      dprintf ( int flags, char *fmt, ... );
-void      _EXCEPT_ ( char *fmt, ... );
 int       xdr_mach_rec( XDR *xdrs, MACH_REC *ptr );
 int       print_header ( FILE *fp );
 int       display_status_line ( STATUS_LINE *line, FILE *fp );

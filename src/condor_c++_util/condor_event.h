@@ -19,7 +19,9 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include <stdio.h>				/* for FILE type */
+#if !defined(WIN32)
 #include <sys/resource.h>		/* for struct rusage */
+#endif
 #include <limits.h>				/* for _POSIX_PATH_MAX */
 
 enum ULogEventNumber
@@ -63,8 +65,10 @@ class ULogEvent
 	int				 subproc;
 
   protected:
+#if !defined(WIN32)
 	int readRusage (FILE *, rusage &);
 	int writeRusage (FILE *, rusage &);
+#endif
 	virtual int readEvent (FILE *) = 0;	// read the event from a file
 	virtual int writeEvent (FILE *) = 0;   	// write the event to a file
 
@@ -150,8 +154,10 @@ class CheckpointedEvent : public ULogEvent
 	virtual int readEvent (FILE *);
 	virtual int writeEvent (FILE *);
 
+#if !defined(WIN32)
 	rusage	run_local_rusage;
 	rusage  run_remote_rusage;
+#endif
 };
 
 
@@ -166,8 +172,10 @@ class JobEvictedEvent : public ULogEvent
 	virtual int writeEvent (FILE *);
 
 	bool	checkpointed;	 	// was it checkpointed on eviction?
+#if !defined(WIN32)
 	rusage	run_local_rusage;	// local and remote usage for the run
 	rusage  run_remote_rusage;
+#endif
 };
 
 
@@ -185,10 +193,12 @@ class JobTerminatedEvent : public ULogEvent
 	int		returnValue;		// return value (valid only on normal exit)
 	int		signalNumber;		// signal number (valid only on abnormal exit)
 	char    coreFile[_POSIX_PATH_MAX]; // name of core file
+#if !defined(WIN32)
 	rusage	run_local_rusage;	// local and remote usage for the run
 	rusage  run_remote_rusage;
 	rusage	total_local_rusage;	// total local and remote rusage
 	rusage  total_remote_rusage;
+#endif
 };
 
 

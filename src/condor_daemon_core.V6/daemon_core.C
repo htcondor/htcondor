@@ -7,11 +7,17 @@
 
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
-static const int DEFAULT_MAXSOCKETS = 16;
+static const int DEFAULT_MAXSOCKETS = 8;
+static const int DEFAULT_MAXREAPS = 8;
+static const int DEFAULT_PIDBUCKETS = 8;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
 #include "condor_common.h"
+
+#ifdef __GNUG__
+#pragma implementation "HashTable.h"
+#endif
 
 #ifndef WIN32
 #include <std.h>
@@ -48,19 +54,36 @@ TimerManager DaemonCore::t;
 #define _DC_BLOCKSIGNAL 2
 #define _DC_UNBLOCKSIGNAL 3
 
+// Hash function for pid table.
+static int compute_pid_hash(pid_t &key, int numBuckets) 
+{
+	return ( key % numBuckets );
+}
+
 // DaemonCore constructor. 
 
-DaemonCore::DaemonCore(int ComSize,int SigSize,int SocSize)
+DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int ReapSize)
 {
 
-	if(ComSize < 0 || SigSize < 0 || SocSize < 0)
+	if(ComSize < 0 || SigSize < 0 || SocSize < 0 || PidSize < 0)
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
 
+	if ( PidSize == 0 )
+		PidSize = DEFAULT_PIDBUCKETS;
+	pidTable = new PidHashTable(PidSize, compute_pid_hash);
+	ppid = 0;
+#ifdef WIN32
+	mypid = ::GetCurrentProcessId();
+#else
+	mypid = ::getpid();
+#endif
+
 	maxCommand = ComSize;
 	maxSig = SigSize;
 	maxSocket = SocSize;
+	maxReap = ReapSize;
 
 	if(maxCommand == 0)
 		maxCommand = DEFAULT_MAXCOMMANDS;
@@ -87,7 +110,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,int SocSize)
 		maxSocket = DEFAULT_MAXSOCKETS;
 
 	sockTable = new SockEnt[maxSocket];
-	if(sigTable == NULL)
+	if(sockTable == NULL)
 	{
 		EXCEPT("Out of memory!");
 	}
@@ -96,8 +119,24 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,int SocSize)
 
 	initial_command_sock = -1;
 
+	if(maxReap == 0)
+		maxReap = DEFAULT_MAXREAPS;
+
+	reapTable = new ReapEnt[maxReap];
+	if(reapTable == NULL)
+	{
+		EXCEPT("Out of memory!");
+	}
+	nReap = 0;
+	memset(reapTable,'\0',maxReap*sizeof(ReapEnt));
+
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
+#ifdef WIN32
+	dcmainThreadId = ::GetCurrentThreadId();
+
+	memset(PidWatcherTable,'\0',sizeof(PidWatcherTable));
+#endif
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -133,6 +172,15 @@ DaemonCore::~DaemonCore()
 		delete []sockTable;
 	}
 
+	if (reapTable != NULL)
+	{
+		for (i=0;i<maxReap;i++) {
+			free_descrip( reapTable[i].reap_descrip );
+			free_descrip( reapTable[i].handler_descrip );
+		}
+		delete []reapTable;
+	}
+
 	t.CancelAllTimers();
 }
 
@@ -166,6 +214,26 @@ int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip, SocketHand
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp, handler_descrip, s, perm, TRUE) ); 
 }
 
+int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandler handler, 
+								char* handler_descrip, Service* s) {
+	return( Register_Reaper(-1, reap_descrip, handler, (ReaperHandlercpp)NULL, handler_descrip, s, FALSE) );
+}
+
+int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandlercpp handlercpp, 
+								char* handler_descrip, Service* s) {
+	return( Register_Reaper(-1, reap_descrip, NULL, handlercpp, handler_descrip, s, TRUE) ); 
+}
+
+int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, ReaperHandler handler, 
+								char* handler_descrip, Service* s) {
+	return( Register_Reaper(rid, reap_descrip, handler, (ReaperHandlercpp)NULL, handler_descrip, s, FALSE) );
+}
+
+int	DaemonCore::Reset_Reaper(int rid, char* reap_descrip, ReaperHandlercpp handlercpp, 
+								char* handler_descrip, Service* s) {
+	return( Register_Reaper(rid, reap_descrip, NULL, handlercpp, handler_descrip, s, TRUE) ); 
+}
+
 int	DaemonCore::Register_Timer(unsigned deltawhen, Event event, char *event_descrip, 
 					   Service* s, int id) {
 	return( t.NewTimer(s, deltawhen, event, event_descrip, 0, id) );
@@ -190,7 +258,7 @@ int	DaemonCore::Cancel_Timer( int id ) {
 	return( t.CancelTimer(id) );
 }
 
-int	DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
+int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
 	return( t.ResetTimer(id,when,period) );
 }
 
@@ -284,22 +352,17 @@ int DaemonCore::InfoCommandPort()
 
 char * DaemonCore::InfoCommandSinfulString()
 {
-	sockaddr_in	addr;
-	int			addr_len = sizeof(addr);
+	static char *result = NULL;
 
 	if ( initial_command_sock == -1 ) {
 		// there is no command sock!
 		return NULL;
 	}
-									
-	if (getsockname(sockTable[initial_command_sock].sockd, (sockaddr *)&addr, &addr_len) < 0) 
-		return NULL;
 
-	if ( get_inet_address(&addr.sin_addr) == -1 )
-		return NULL;
-
-	return( sin_to_string( &addr ) );
-
+	if ( result == NULL )
+		result = strdup( sock_to_string( sockTable[initial_command_sock].sockd ) );
+	
+	return result;
 }
 
 int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
@@ -473,6 +536,87 @@ int DaemonCore::Cancel_Socket( Stream* )
 	return TRUE;
 }
 
+int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handler, 
+					ReaperHandlercpp handlercpp, char *handler_descrip, Service* s, 
+					int is_cpp)
+{
+    int     i;	
+    int     j;	
+    
+    // In reapTable, unlike the others handler tables, we allow for a NULL handler
+	// and a NULL handlercpp - this means just reap with no handler, so use
+	// the default daemon core reaper handler which reaps the exit status on unix
+	// and frees the handle on Win32.
+
+	// An incoming rid of -1 means choose a new rid; otherwise we want to 
+	// replace a table entry, resulting in a new entry with the same rid.
+
+	// No hash table; just store in an array
+
+    // Set i to be the entry in the table we're going to modify.  If the rid
+	// is -1, then find an empty entry.  If the rid is > 0, assert that this
+	// is  valid entry.
+	if ( rid == -1 ) {
+		// a brand new entry in the table
+		if(nReap >= maxReap) {
+			EXCEPT("# of reaper handlers exceeded specified maximum");
+		}
+		// scan thru table to find a new entry. scan in such a way that we do not
+		// re-use rid's until we have to.
+		for(i = nReap % maxReap, j=0; j < maxReap; j++, i = (i + 1) % maxReap) {
+			if ( reapTable[i].num == 0 ) {
+				break;
+			} else {
+				if ( reapTable[i].num != i + 1 ) {
+					EXCEPT("reaper table messed up");
+				}
+			}
+		}
+		nReap++;	// this is a new entry, so increment our counter
+		rid = i + 1;
+	} else {
+		if ( (rid < 1) || (rid > maxReap) )
+			return FALSE;	// invalid rid passed to us
+		if ( (reapTable[rid - 1].num) != rid )
+			return FALSE;	// trying to re-register a non-existant entry
+		i = rid - 1;
+	}
+
+	// Found the entry to use at index i. Now add in the new data.
+	reapTable[i].num = rid;
+	reapTable[i].handler = handler;
+	reapTable[i].handlercpp = handlercpp;
+	reapTable[i].is_cpp = is_cpp;
+	reapTable[i].service = s;
+	free_descrip(reap_descrip);
+	if ( reap_descrip )
+		reapTable[i].reap_descrip = strdup(reap_descrip);
+	else
+		reapTable[i].reap_descrip = EMPTY_DESCRIP;
+	free_descrip(handler_descrip);
+	if ( handler_descrip )
+		reapTable[i].handler_descrip = strdup(handler_descrip);
+	else
+		reapTable[i].handler_descrip = EMPTY_DESCRIP;
+
+	// Update curr_regdataptr for SetDataPtr()
+	curr_regdataptr = &(reapTable[i].data_ptr);
+
+	// Conditionally dump what our table looks like
+	DumpReapTable(D_FULLDEBUG | D_DAEMONCORE);
+
+	return rid;
+}
+
+int DaemonCore::Cancel_Reaper( int rid )
+{
+	// stub
+
+	// be certain to get through the pid table and edit the rids 
+
+	return TRUE;
+}
+
 // For debugging purposes
 void DaemonCore::Dump(int flag, char* indent)
 {
@@ -510,6 +654,39 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 			if ( comTable[i].handler_descrip )
 				descrip2 = comTable[i].handler_descrip;
 			dprintf(flag, "%s%d: %s %s\n", indent, comTable[i].num, descrip1, descrip2);
+		}
+	}
+	dprintf(flag, "\n");
+}
+
+void DaemonCore::DumpReapTable(int flag, const char* indent)
+{
+	int		i;
+	char *descrip1, *descrip2;
+
+	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
+	// and only have output if _both_ are specified by the user
+	// in the condor_config.  this is a little different than
+	// what dprintf does by itself ( which is just 
+	// flag & DebugFlags > 0 ), so our own check here:
+	if ( (flag & DebugFlags) != flag )
+		return;
+
+	if ( indent == NULL) 
+		indent = DEFAULT_INDENT;
+
+	dprintf(flag,"\n");
+	dprintf(flag, "%sReapers Registered\n", indent);
+	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
+	for (i = 0; i < maxReap; i++) {
+		if ((reapTable[i].handler != NULL) || (reapTable[i].handlercpp != NULL)) {
+			descrip1 = "NULL";
+			descrip2 = descrip1;
+			if ( reapTable[i].reap_descrip )
+				descrip1 = reapTable[i].reap_descrip;
+			if ( reapTable[i].handler_descrip )
+				descrip2 = reapTable[i].handler_descrip;
+			dprintf(flag, "%s%d: %s %s\n", indent, reapTable[i].num, descrip1, descrip2);
 		}
 	}
 	dprintf(flag, "\n");
@@ -591,6 +768,8 @@ void DaemonCore::Driver()
 	int			i;
 	int			tmpErrno;
 	struct timeval	timer;
+	struct timeval *ptimer;
+	int temp;
 #ifndef WIN32
 	sigset_t fullset, emptyset;
 	sigfillset( &fullset );
@@ -636,10 +815,16 @@ void DaemonCore::Driver()
 		//   it was itself raised by a signal handler!).  so if sent_signal is
 		//   TRUE, set the select timeout to zero so that we break thru select
 		//   and service this outstanding signal and yet we do not starve commands...
-		timer.tv_sec = t.Timeout();
+		temp = t.Timeout();
 		if ( sent_signal == TRUE )
-			timer.tv_sec = 0;
+			temp = 0;
+		timer.tv_sec = temp;
 		timer.tv_usec = 0;
+		if ( temp < 0 )
+			ptimer = NULL;
+		else
+			ptimer = &timer;		// no timeout on the select() desired
+		
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
@@ -653,23 +838,23 @@ void DaemonCore::Driver()
 		errno = 0;
 
 #if !defined(WIN32)
-			// Unblock all signals so that we can get them during the
-			// select. 
+		// Unblock all signals so that we can get them during the
+		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
 #endif
 
 #if defined(HPUX9)
-		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, &timer);
+		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, ptimer);
 #else
-		rv = select(FD_SETSIZE, &readfds, NULL, NULL, &timer);
+		rv = select(FD_SETSIZE, &readfds, NULL, NULL, ptimer);
 #endif
 		tmpErrno = errno;
 
 #ifndef WIN32
 		// Unix
 
-			// Block all signals until next select so that we don't
-			// get confused. 
+		// Block all signals until next select so that we don't
+		// get confused.
 		sigprocmask( SIG_SETMASK, &fullset, NULL );
 
 		if(rv < 0) {
@@ -773,7 +958,7 @@ void DaemonCore::HandleReq(int socki)
 	result = stream->code(req);
 	stream->timeout(old_timeout);
 	if(!result) {
-		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (timeout?)\n");
+		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( is_tcp )
 			delete stream;
 		else
@@ -852,10 +1037,13 @@ int DaemonCore::HandleSigCommand(int command, Stream* stream)
 {
 	int sig;
 
+	assert( command == DC_RAISESIGNAL );
+
 	// We have been sent a DC_RAISESIGNAL command
 
 	// read the signal number from the socket
-	stream->code(sig);
+	if (!stream->code(sig))
+		return FALSE;
 
 	// and call HandleSig to raise the signal
 	return( HandleSig(_DC_RAISESIGNAL,sig) );
@@ -922,24 +1110,77 @@ int DaemonCore::HandleSig(int command,int sig)
 	return TRUE;
 }
 
-int DaemonCore::Send_Signal(int pid, int sig)
+int DaemonCore::Send_Signal(pid_t pid, int sig)
 {
-	// a Signal is sent via UDP if going to a different process on the same
+	PidEntry * pidinfo;
+	int same_thread, is_local;
+	char *destination;
+	Stream* sock;
+
+	// a Signal is sent via UDP if going to a different process or thread on the same
 	// machine.  it is sent via TCP if going to a process on a remote machine.
 	// if the signal is being sent to ourselves (i.e. this process), then just twiddle
 	// the signal table and set sent_signal to TRUE.  sent_signal is used by the
 	// Driver() to ensure that a signal raised from inside a signal handler is 
 	// indeed delivered.
 	
-	if ( pid == 0 ) {
-		// send signal to ourselves
-		HandleSig(_DC_RAISESIGNAL,sig);
-		sent_signal = TRUE;
-		return TRUE;
+#ifdef WIN32
+	if ( dcmainThreadId == ::GetCurrentThreadId() )
+		same_thread = TRUE;
+	else
+		same_thread = FALSE;
+#else
+	// On Unix, we only support one thread inside daemons for now...
+	same_thread = TRUE;
+#endif
+
+	// handle the case of sending a signal to the same process
+	if ( pid == mypid ) {
+		if ( same_thread == TRUE ) {
+			// send signal to ourselves, same process & thread.
+			// no need to go via UDP/TCP, just call HandleSig directly.
+			HandleSig(_DC_RAISESIGNAL,sig);
+			sent_signal = TRUE;
+			return TRUE;
+		} else {
+			// send signal to same process, different thread.
+			// we will still need to go out via UDP so that our call to select() returns.
+			destination = InfoCommandSinfulString();
+			is_local = TRUE;
+		}
 	}
 
-	// do not support process management yet....
-	return FALSE;
+	// handle case of sending to a child process; get info on this pid
+	if ( pid != mypid ) {
+		if ( pidTable->lookup(pid,pidinfo) < 0 ) {
+			// invalid pid
+			dprintf(D_ALWAYS,"Send_Signal: ERROR invalid pid %d\n",pid);
+			return FALSE;
+		}
+		is_local = pidinfo->is_local;
+		destination = pidinfo->sinful_string;
+	}
+
+	// now destination process is local, send via UDP; if remote, send via TCP
+	if ( is_local == TRUE )
+		sock = (Stream *) new SafeSock(destination,0,3);
+	else
+		sock = (Stream *) new ReliSock(destination,0,20);
+
+	// send the signal out as a DC_RAISESIGNAL command
+	sock->encode();		
+	if ( (!sock->put(DC_RAISESIGNAL)) ||
+		 (!sock->code(sig)) ||
+		 (!sock->end_of_message()) ) {
+		dprintf(D_ALWAYS,"Send_Signal: ERROR sending signal %d to pid %d\n",sig,pid);
+		delete sock;
+		return FALSE;
+	}
+
+	delete sock;
+
+	dprintf(D_DAEMONCORE,"Send_Signal: sent signal %d to pid %d\n",sig,pid);
+	return TRUE;
 }
 
 int DaemonCore::SetDataPtr(void *dptr)
@@ -980,3 +1221,311 @@ void *DaemonCore::GetDataPtr()
 
 	return ( *curr_dataptr );
 }
+
+
+int DaemonCore::Create_Process(
+			char		*name,
+			char		*args,
+			priv_state	condor_priv,
+			int			reaper_id,
+			int			want_command_port,
+			char		*env,
+			char		*cwd,
+		//	unsigned int std[3],
+			int			new_process_group,
+			Stream		*sock_inherit_list[] )
+{
+	int i;
+	char *ptmp;
+	char inheritbuf[_INHERITBUF_MAXSIZE];
+	ReliSock* rsock = NULL;	// tcp command socket for new child
+	SafeSock* ssock = NULL;	// udp command socket for new child
+	pid_t newpid;
+#ifdef WIN32
+	STARTUPINFO si;
+	PROCESS_INFORMATION piProcess;
+#endif
+
+	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
+
+	// First do whatever error checking we can that is not platform specific
+
+	/*/ check reaper_id validity
+	if ( (reaper_id < 1) || (reaper_id > maxReap) || (reapTable[reaper_id - 1].num == 0) ) {
+		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
+		return FALSE;
+	} */
+
+	// check name validity
+	if ( !name ) {
+		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
+		return FALSE;
+	}
+
+#ifdef WIN32
+	sprintf(inheritbuf,"%lu ",GetCurrentProcessId());
+#else
+	sprintf(inheritbuf,"%lu ",getpid());
+#endif
+
+	strcat(inheritbuf,InfoCommandSinfulString());
+
+	if ( sock_inherit_list ) {
+		for (i = 0; (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS); i++) {
+			// check that this is a valid cedar socket
+			if ( !(sock_inherit_list[i]->valid()) ) {
+				dprintf(D_ALWAYS,"Create_Process: invalid inherit socket list, entry=%d\n",i);
+				return FALSE;
+			}
+
+			// make certain that this socket is inheritable
+			if ( !( ((Sock *)sock_inherit_list[i])->set_inheritable(TRUE)) ) {
+				return FALSE;
+			 }
+
+			// now place the type of socket into inheritbuf
+			 switch ( sock_inherit_list[i]->type() ) {
+				case Stream::reli_sock :
+					strcat(inheritbuf," 1 ");
+					break;
+				case Stream::safe_sock :
+					strcat(inheritbuf," 2 ");
+					break;
+				default:
+					// we only inherit safe and reli socks at this point...
+					assert(0);
+					break;
+			}
+			// now serialize object into inheritbuf
+			 ptmp = sock_inherit_list[i]->serialize();
+			 strcat(inheritbuf,ptmp);
+			 delete []ptmp;
+		}
+	}
+	strcat(inheritbuf," 0");
+
+	// if we want a command port for this child process, create
+	// an inheritable tcp and a udp socket to listen on, and place 
+	// the info into the inheritbuf.
+	if ( want_command_port != FALSE ) {
+		if ( want_command_port == TRUE ) {
+			// choose any old port (dynamic port)
+			rsock = new ReliSock( 0 );
+			// now open a SafeSock _on the same port_ choosen above
+			if ( rsock )
+				ssock = new SafeSock( rsock->get_port() );
+		} else {
+			// use well-known port specified by want_command_port
+			rsock = new ReliSock( want_command_port );
+			ssock = new SafeSock( want_command_port );
+		}
+		if ( !rsock ) {
+			dprintf(D_ALWAYS,"Create_Process:Unable to create command Relisock\n");
+		}
+		if ( !ssock ) {
+			dprintf(D_ALWAYS,"Create_Process:Unable to create command SafeSock\n");
+		}
+
+		// now duplicate the underlying SOCKET to make it inheritable
+		if ( !(rsock->set_inheritable(TRUE)) ) {
+			return FALSE;
+		}
+		if ( !(ssock->set_inheritable(TRUE)) ) {
+			return FALSE;
+		}
+
+		// and now add these new command sockets to the inheritbuf
+		strcat(inheritbuf," ");
+		ptmp = rsock->serialize();
+		strcat(inheritbuf,ptmp);
+		delete []ptmp;
+		strcat(inheritbuf," ");
+		ptmp = ssock->serialize();
+		strcat(inheritbuf,ptmp);
+		delete []ptmp;		 
+	}
+	strcat(inheritbuf," 0");
+	
+	// Place inheritbuf into the environment as env variable CONDOR_INHERIT
+#ifdef WIN32
+	if ( !SetEnvironmentVariable("CONDOR_INHERIT",inheritbuf) ) {
+		dprintf(D_ALWAYS,"Create_Process: SetEnvironmentVariable failed, errno=%d\n",GetLastError());
+		return FALSE;
+	}
+#else
+#endif
+
+
+#ifdef WIN32
+	// START A NEW PROCESS ON WIN32
+
+	// prepare a STARTUPINFO structure for the new process
+	ZeroMemory(&si,sizeof(si));
+	si.cb = sizeof(si);
+	
+
+	// should be DETACHED_PROCESS
+	if ( new_process_group == TRUE )
+		new_process_group = CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE;
+	else
+		new_process_group = CREATE_NEW_CONSOLE;
+
+
+	if ( !CreateProcess(name,args,NULL,NULL,TRUE,new_process_group,env,cwd,&si,&piProcess) ) {
+		dprintf(D_ALWAYS,"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
+		return FALSE;
+	}
+
+	// take pid info out of piProcess and place in our table
+	newpid = piProcess.dwProcessId;
+
+	// reset sockets that we had to inherit back to a non-inheritable permission
+	if ( sock_inherit_list ) {
+		for (i = 0; (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS); i++) {
+			((Sock *)sock_inherit_list[i])->set_inheritable(FALSE);
+		}
+	}
+#else
+	// START A NEW PROCESS ON UNIX
+#endif
+
+	// Now that we have a child, store the info in our pidTable
+	PidEntry *pidtmp = new PidEntry;
+	pidtmp->pid = newpid;
+	strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
+	pidtmp->is_local = TRUE;
+	pidtmp->reaper_id = reaper_id;
+#ifdef WIN32
+	pidtmp->hProcess = piProcess.hProcess;
+	pidtmp->hThread = piProcess.hThread;
+#endif 
+	assert( pidTable->insert(newpid,pidtmp) == 0 );
+	dprintf(D_DAEMONCORE,"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
+
+	// Now that child exists, we (the parent) should close up our copy of
+	// the childs command listen cedar sockets.
+	delete ssock;
+	delete rsock;
+
+	return newpid;	
+}
+
+void
+DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock ) 
+{
+	char inheritbuf[_INHERITBUF_MAXSIZE];
+	char *ptmp;
+
+	// Here we handle inheritance of sockets, file descriptors, and/or handles
+	// from our parent.  This is done via an environment variable "CONDOR_INHERIT".
+	// If this variable does not exist, it usually means our parent is not a daemon core
+	// process.  
+	// CONDOR_INHERIT has the following fields.  Each field seperated by a space:
+	//	*	parent pid
+	//	*	parent sinful-string
+	//  *   cedar sockets to inherit.  each will start with a 
+	//		"1" for relisock, a "2" for safesock, and a "0" when done.
+	//	*	command sockets.  first the rsock, then the ssock, then a "0".
+
+	inheritbuf[0] = '\0';
+#ifdef WIN32
+	if (GetEnvironmentVariable("CONDOR_INHERIT",inheritbuf,_INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
+		EXCEPT("CONDOR_INHERIT too large");
+	}
+#else
+	ptmp = getenv("CONDOR_INHERIT");
+	if ( ptmp ) {
+		if ( strlen(ptmp) > _INHERITBUF_MAXSIZE-1 ) {
+			EXCEPT("CONDOR_INHERIT too large");
+		}
+		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
+	}
+#endif
+
+	if ( (ptmp=strtok(inheritbuf," ")) != NULL ) {
+		// we read out CONDOR__INHERIT ok, ptmp is now first item
+		
+		// insert ppid into table
+		dprintf(D_DAEMONCORE,"Parent PID = %s\n",ptmp);
+		ppid = atoi(ptmp);
+		PidEntry *pidtmp = new PidEntry;
+		pidtmp->pid = ppid;
+		ptmp=strtok(NULL," ");
+		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",ptmp);
+		strcpy(pidtmp->sinful_string,ptmp);
+		pidtmp->is_local = TRUE;
+		pidtmp->reaper_id = 0;
+#ifdef WIN32
+		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , FALSE, ppid );
+		assert(pidtmp->hProcess);
+		pidtmp->hThread = NULL;		// do not allow child to suspend parent
+#endif
+		assert( pidTable->insert(ppid,pidtmp) == 0 );
+
+		// inherit cedar socks
+		ptmp=strtok(NULL," ");
+		while ( ptmp && (*ptmp != '0') ) {
+			switch ( *ptmp ) {
+				case '1' :
+					// inherit a relisock
+					rsock = new ReliSock();
+					ptmp=strtok(NULL," ");
+					rsock->serialize(ptmp);
+					rsock->set_inheritable(FALSE);
+					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
+					// place into array...
+					break;
+				case '2':
+					ssock = new SafeSock();
+					ptmp=strtok(NULL," ");
+					ssock->serialize(ptmp);
+					ssock->set_inheritable(FALSE);
+					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
+					// place into array...
+					break;
+				default:
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					break;
+			} // end of switch
+			ptmp=strtok(NULL," ");
+		}
+
+		// inherit our "command" cedar socks.  they are sent
+		// relisock, then safesock, then a "0".
+		// we then register rsock and ssock as command sockets below...
+		rsock = NULL;
+		ssock = NULL;
+		ptmp=strtok(NULL," ");
+		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
+			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
+			rsock = new ReliSock();
+			((ReliSock *)rsock)->serialize(ptmp);
+			rsock->set_inheritable(FALSE);
+		}
+		ptmp=strtok(NULL," ");
+		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
+			ssock = new SafeSock();
+			ssock->serialize(ptmp);
+			ssock->set_inheritable(FALSE);
+		}
+
+	}	// end of if we read out CONDOR_INHERIT ok
+
+}
+
+#ifdef NOT_YET
+int
+DaemonCore::HandleDC_SIGCHLD(int sig)
+{
+	// This function gets called when one or more processes in our pid table
+	// has terminated.  We need to reap the process, call any registered reapers,
+	// and adjust our pid table.
+}
+
+int
+DaemonCore::WatchPid(PidEntry *pidentry)
+{
+	int i;
+
+	for (i=0;i<
+#endif  // of NOT_YET

@@ -1,8 +1,6 @@
-#if defined(LINUX)
+#if !defined(WIN32)
 #pragma interface
 #endif
-
-#pragma interface
 
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow

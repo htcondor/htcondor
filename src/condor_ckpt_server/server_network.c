@@ -326,7 +326,7 @@ int I_socket(int exit_status)
       if (exit_status)
 	return(exit_status);
       else
-	exit(SOCKET_ERROR);
+	exit(CKPT_SERVER_SOCKET_ERROR);
     }
   return(sd);
 }

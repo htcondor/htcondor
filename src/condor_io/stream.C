@@ -303,6 +303,7 @@ int Stream::code(PROC_ID &id)
 	return TRUE;
 }
 
+#if 0	// hopefully we won't neet to port the PROC structure
 
 /* extern int stream_proc_vers2( Stream *s, V2_PROC *proc ); */
 extern int stream_proc_vers3( Stream *s, PROC *proc );
@@ -325,6 +326,8 @@ int Stream::code(PROC &proc)
 	}
 	return TRUE;
 }
+
+#endif
 
 int Stream::code(STARTUP_INFO &start)
 {
@@ -1278,7 +1281,6 @@ int Stream::get(
         NETWORK_TRACE("get string and int " <<   l);
 	return TRUE;
 }
-
 
 int Stream::snd_int(
 	int val, 

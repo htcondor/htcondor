@@ -114,7 +114,7 @@ protected:
 	int set_inheritable( int flag );
 #else
 	// On unix, sockets are always inheritable
-	inline int set_inheritable( int flag ) { return TRUE; }
+	inline int set_inheritable( int ) { return TRUE; }
 #endif
 
 	/*

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 
@@ -38,7 +37,7 @@ Foo::timerone()
 
 	printf("*** going to port %d\n",port);
 
-	SafeSock* rsock = new SafeSock("127.0.0.1",port);
+	SafeSock* rsock = new SafeSock(daemonCore->InfoCommandSinfulString(),0,3);
 	rsock->encode();
 	rsock->snd_int(1,FALSE);
 	char *buf="Please Work!";
@@ -64,6 +63,8 @@ Foo::com1(int command, Stream* stream)
 	if ( thestring )
 		free(thestring);
 
+	//printf("Serialize = <%s>\n",stream->serialize());
+
 	return TRUE;
 }
 
@@ -71,36 +72,55 @@ int sig9(Service* s,int sig)
 {
 	printf("*** HEY MAN!! I got sig %d\n",sig);
 
-#ifdef WIN32
-	Sleep(1000);
-#else
-	sleep(1);
-#endif
+	// daemonCore->Send_Signal( daemonCore->getpid(), 9 );
 
-	daemonCore->Send_Signal( daemonCore->getpid(), 9 );
+	return TRUE;
+}
+
+int sig3(Service* s,int sig)
+{
+	printf("*** HEY MAN!! I got sig %d\n",sig);
+
+	// daemonCore->Send_Signal( daemonCore->getpid(), 9 );
 
 	return TRUE;
 }
 
 Foo::Foo()
 {
-	daemonCore->Register_Timer(5,5,(Eventcpp)timer5,"Five Second Timer",this);
+
 	daemonCore->Register_Timer(3,(Eventcpp)timerone,"One-Time Timer",this);
 	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)com1,"com1()",this);
 	daemonCore->Register_Signal(9,"SIG9",(SignalHandler)sig9,"sig9()");
+	daemonCore->Register_Signal(3,"SIG3",(SignalHandler)sig3,"sig3()");
 }
 
 main_init(int argc, char *argv[])
 {
 	Foo*	f;
+	pid_t result;
 	
-	printf("*** In main_init()\n");
-
-	printf("*** Command Sock = %s\n",daemonCore->InfoCommandSinfulString());
+	printf("*** In main_init(), argc=%d\n",argc);
 
 	f = new Foo();
 
 	daemonCore->Send_Signal(daemonCore->getpid(),9);
+
+	if ( argc == 1 ) {
+		result = daemonCore->Create_Process(
+					"C:\\home\\tannenba\\ws_nt\\NTconfig\\daemon_core_test\\Debug\\daemon_core_test.exe",
+					"daemon_core_test.exe -f -t -NOTAGAIN");
+		if ( result == FALSE ) {
+			printf("*** Create_Process failed\n");
+		} else {
+			printf("*** Create_Process SUCCEEDED!!\n");
+		}
+		if ( !daemonCore->Send_Signal(result,3) ) {
+			printf("*** Send_Signal 3 to child failed!!!\n");
+		}
+		daemonCore->Register_Timer(5,5,(Eventcpp)f->timer5,"Five Second Timer",f);
+	}
+
 
 	return TRUE;
 }

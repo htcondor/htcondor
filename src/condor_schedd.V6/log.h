@@ -1,13 +1,13 @@
 #if !defined(_LOG_H)
 #define _LOG_H
 
-#include "condor_xdr.h"
-
 /* This defines a base class for "logs" of operations.  These logs indicate
    operations which have been performed on a data structure (for example
    the job queue), and the log can be "replayed" to recreate the state of
    the data structure.
 */
+
+#include "condor_io.h"
 
 class LogRecord {
 public:
@@ -18,18 +18,18 @@ public:
 	int get_op_type() { return op_type; }
 
 	int Write(int fd);
-	int Write(XDR *);
+	int Write(Stream *);
 
 	int Read(int fd);
-	int Read(XDR *);
+	int Read(Stream *);
 	int ReadHeader(int fd);
-	int ReadHeader(XDR *);
-	virtual int ReadBody(int fd) {}
-	virtual int ReadBody(XDR *xdrs) { return WriteBody(xdrs); }
+	int ReadHeader(Stream *);
+	virtual int ReadBody(int fd) { return 0; }
+	virtual int ReadBody(Stream *s) { return WriteBody(s); }
 	int ReadTail(int fd);
-	int ReadTail(XDR *);
+	int ReadTail(Stream *);
 
-	virtual int Play() {}
+	virtual int Play() { return 0; }
 
 protected:
 	int readstring(int, char *&);
@@ -37,13 +37,13 @@ protected:
 	int body_size;
 
 private:
-	WriteHeader(int fd);
-	virtual WriteBody(int fd) {}
-	WriteTail(int fd);
+	int WriteHeader(int fd);
+	virtual int WriteBody(int fd) { return 0; }
+	int WriteTail(int fd);
 
-	WriteHeader(XDR *);
-	virtual WriteBody(XDR *) {}
-	WriteTail(XDR *);
+	int WriteHeader(Stream *);
+	virtual int WriteBody(Stream *) { return 0; }
+	int WriteTail(Stream *);
 
 	LogRecord *next;
 	LogRecord *prev;

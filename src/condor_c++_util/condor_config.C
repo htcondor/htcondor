@@ -47,13 +47,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#if !defined(WIN32)
 #include <pwd.h>
 #include <netdb.h>
+#endif
+#include "condor_common.h"
 #include "debug.h"
 #include "clib.h"
 #include "condor_sys.h"
 #include "condor_config.h"
-#include "util_lib_proto.h"
+#include "condor_string.h"
 #include "condor_attributes.h"
 
 #if defined(__cplusplus)
@@ -68,7 +71,7 @@ char *get_op_sys();
 int SetSyscalls(int);
 #if defined(LINUX) || defined(HPUX9)
     int gethostname(char*, unsigned int);
-#else
+#elif !defined(WIN32)
     int gethostname(char*, int);
 #endif
 
@@ -132,7 +135,9 @@ int
 real_config(const char *env_name, const char *file_name,
 			const char *local_name, ClassAd *classAd)
 {
+#if !defined(WIN32)
 	struct passwd	*pw, *getpwnam();
+#endif
 	char			*ptr;
 	int				rval, fd;
 	char			hostname[1024];
@@ -147,9 +152,11 @@ real_config(const char *env_name, const char *file_name,
 		*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
+#if !defined(WIN32)
 	if( (pw=getpwnam( "condor" )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
+#endif
 
 		// Find location of condor_config file
 
@@ -304,7 +311,9 @@ real_config(const char *env_name, const char *file_name,
 		free( op_sys );
 	}
 
+#if !defined(WIN32)
 	(void)endpwent();
+#endif
 	(void)SetSyscalls( scm );
 	return 0;
 }
@@ -340,7 +349,8 @@ macro_expand( char *str )
 ** Return non-zero iff the named configuration parameter contains the given
 ** pattern.  
 */
-boolean( char *parameter, char *pattern )
+int
+param_in_pattern( char *parameter, char *pattern )
 {
 	char	*argv[512];
 	int		argc;
@@ -362,6 +372,66 @@ boolean( char *parameter, char *pattern )
 	return 0;
 }
 
+
+#if defined(WIN32)
+
+char *
+get_arch()
+{
+	static char answer[1024];	
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	switch(info.wProcessorArchitecture) {
+	case PROCESSOR_ARCHITECTURE_INTEL:
+		sprintf(answer, "INTEL");
+		break;
+	case PROCESSOR_ARCHITECTURE_MIPS:
+		sprintf(answer, "MIPS");
+		break;
+	case PROCESSOR_ARCHITECTURE_ALPHA:
+		sprintf(answer, "ALPHA");
+		break;
+	case PROCESSOR_ARCHITECTURE_PPC:
+		sprintf(answer, "PPC");
+		break;
+	case PROCESSOR_ARCHITECTURE_UNKNOWN:
+	default:
+		sprintf(answer, "UNKNOWN");
+		break;
+	}
+
+	return answer;
+}
+
+char *
+get_op_sys()
+{
+	static char answer[1024];
+	OSVERSIONINFO info;
+	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+	if (GetVersionEx(&info) > 0) {
+		switch(info.dwPlatformId) {
+		case VER_PLATFORM_WIN32s:
+			sprintf(answer, "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			break;
+		case VER_PLATFORM_WIN32_WINDOWS:
+			sprintf(answer, "WIN32%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			break;
+		case VER_PLATFORM_WIN32_NT:
+			sprintf(answer, "WINNT%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			break;
+		default:
+			sprintf(answer, "UNKNOWN");
+			break;
+		}
+	} else {
+		sprintf(answer, "ERROR");
+	}
+
+	return answer;
+}
+
+#else
 /* uname() is POSIX, so this should work on all platforms.  -Jim */
 #include <sys/utsname.h>
 
@@ -391,6 +461,8 @@ get_op_sys()
 	strcat( answer, buf.release );
 	return answer;
 }
+
+#endif
 
 #if defined(__cplusplus)
 }

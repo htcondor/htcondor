@@ -1,9 +1,6 @@
 #define _POSIX_SOURCE
 
-/* Solaris specific change ..dhaval 6/25 */
-#if defined(Solaris)
-#include "_condor_fix_types.h" 
-#endif 
+#include "condor_common.h"
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 typedef char * caddr_t;

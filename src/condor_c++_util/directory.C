@@ -6,8 +6,6 @@
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
-const int MATCH = 0;	// for strcmp()
-
 
 Directory::Directory( const char *name )
 {

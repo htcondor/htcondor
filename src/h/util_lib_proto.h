@@ -58,16 +58,7 @@ int flock ( int fd, int op );
 int getdtablesize ( void );
 int getmnt ( int *start, struct fs_data buf[], unsigned bufsize, int mode, char *path );
 
-/* int getpagesize ( void ); */
-/* long unsigned int getpagesize( void ); */
-
 char * getwd ( char *path );
-XDR * OpenHistory ( char *file, XDR *xdrs, int *fd );
-XDR * xdr_Init( int *sock, XDR *xdrs );
-void CloseHistory ( XDR *H );
-void AppendHistory ( XDR *H, PROC *p );
-int ScanHistory ( XDR *H, void (*func)(PROC *) );
-int LockHistory ( XDR *H, int op );
 #if defined(LINUX)
 void insque ( struct qelem *elem, struct qelem *pred );
 void remque ( struct qelem *elem );
@@ -75,35 +66,7 @@ void remque ( struct qelem *elem );
 int insque ( struct qelem *elem, struct qelem *pred );
 int remque ( struct qelem *elem );
 #endif
-DBM * OpenJobQueue ( char *path, int flags, int mode );
-int CloseJobQueue ( DBM *Q );
-int LockJobQueue ( DBM *Q, int op );
-int CreateCluster ( DBM *Q );
-int StoreProc ( DBM *Q, PROC *proc );
-int FetchProc ( DBM *Q, PROC *proc );
 
-#if defined(__cplusplus)
-int ScanJobQueue ( DBM *Q, void (*func)(PROC *) );
-int ScanCluster ( DBM *Q, int cluster, void (*func)() );
-#else
-int ScanJobQueue ( DBM *Q, int (*func)() );
-int ScanCluster ( DBM *Q, int cluster, int (*func)() );
-#endif
-
-int TerminateCluster ( DBM *Q, int cluster, int status );
-int TerminateProc ( DBM *Q, PROC_ID *pid, int status );
-CLUSTER_LIST * fetch_cluster_list ( DBM *Q );
-int data_too_big ( int size );
-#if 0
-#if defined(LINUX) || defined(HPUX9)
-DBM * dbm_open ( const char *file, int flags, int mode );
-#else
-DBM * dbm_open ( char *file, int flags, int mode );
-#endif
-int dbm_store ( DBM *Q, datum key, datum data, int flags );
-datum dbm_fetch ( DBM *Q, datum key );
-int dbm_delete ( DBM *Q, datum key );
-#endif
 char * ltrunc ( register char *str );
 int set_machine_status ( int status );
 int get_machine_status ( void );
@@ -113,19 +76,11 @@ char * format_time ( float fp_secs );
 int display_proc_long ( PROC *proc );
 int display_v2_proc_long ( PROC *proc );
 
-#if 0
-int setlinebuf ( FILE *fp );
-#endif
-
 int display_status_line ( STATUS_LINE *line, FILE *fp );
 char * shorten ( char *state );
 int free_status_line ( STATUS_LINE *line );
 int print_header ( FILE *fp );
 char * format_seconds ( int t_sec );
-#if 0
-char * strdup ( const char *s );
-char * strdup ( char *s );
-#endif
 int stricmp ( register char *s1, register char *s2 );
 int strincmp ( register char *s1, register char *s2, register n );
 char * substr ( char *string, char *pattern );
@@ -183,30 +138,8 @@ int getdtablesize ();
 int getmnt ();
 /* int getpagesize (); */
 char * getwd ();
-XDR * OpenHistory ();
-XDR * xdr_Init ();
-void CloseHistory ();
-void AppendHistory ();
-int ScanHistory ();
-int LockHistory ();
 int insque ();
 int remque ();
-DBM * OpenJobQueue ();
-int CloseJobQueue ();
-int LockJobQueue ();
-int CreateCluster ();
-int StoreProc ();
-int FetchProc ();
-int ScanJobQueue ();
-int ScanCluster ();
-int TerminateCluster ();
-int TerminateProc ();
-CLUSTER_LIST * fetch_cluster_list ();
-int data_too_big ();
-DBM * dbm_open ();
-int dbm_store ();
-datum dbm_fetch ();
-int dbm_delete ();
 char * ltrunc ();
 int set_machine_status ();
 int get_machine_status ();

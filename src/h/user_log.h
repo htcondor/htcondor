@@ -78,8 +78,10 @@ USR_MSG MsgCatalog[] = {
 
 typedef struct {
 	char		*path;
+#if !defined(WIN32)
 	uid_t		user_uid, saved_uid;
 	gid_t		user_gid, saved_gid;
+#endif
 	int			cluster;
 	int			proc;
 	int			subproc;
@@ -97,8 +99,8 @@ USER_LOG *
 	OpenUserLog( const char *own, const char *file, int c, int p, int s );
 void CloseUserLog( USER_LOG * lp );
 void PutUserLog( USER_LOG *lp,  int, ... );
-void BeginUserLogBlock();
-void EndUserLogBlock();
+void BeginUserLogBlock( USER_LOG *lp );
+void EndUserLogBlock( USER_LOG *lp );
 
 #if defined(__cplusplus)
 }

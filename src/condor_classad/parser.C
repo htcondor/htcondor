@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "condor_config.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
 #include "condor_scanner.h"

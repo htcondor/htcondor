@@ -563,7 +563,7 @@ init_params()
 		EXCEPT( "\"SCHEDD_DEBUG\" not specified" );
 	}
 	free( tmp );
-	if( boolean("SCHEDD_DEBUG","Foreground") ) {
+	if( param_in_pattern("SCHEDD_DEBUG","Foreground") ) {
 		Foreground = 1;
 	}
 

@@ -30,6 +30,9 @@
 #ifndef _EXCEPT_H
 #define _EXCEPT_H
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 /*
 **	Definition of exception macro
@@ -49,5 +52,10 @@ extern int	_EXCEPT_Line;			/* Line number of the exception           */
 extern char	*_EXCEPT_File;			/* File name of the exception             */
 extern int	_EXCEPT_Errno;			/* Error number from most recent sys call */
 extern int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL) */
+extern void _EXCEPT_( char *fmt, ... );
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _EXCEPT_H */

@@ -30,6 +30,7 @@
 #include "condor_io.h"
 #include "condor_timer_manager.h"
 #include "condor_commands.h"
+#include "HashTable.h"
 
 // enum for Daemon Core socket/command/signal permissions
 enum DCpermission { ALLOW, READ, WRITE, NEGOTIATOR };
@@ -49,6 +50,11 @@ typedef int		(Service::*SocketHandlercpp)(Stream*);
 
 typedef int		(*ReaperHandler)(Service*,int pid,int exit_status);
 typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
+
+// other typedefs
+#ifdef WIN32
+typedef DWORD pid_t;
+#endif
 
 // defines for signals; compatibility with traditional UNIX values maintained
 #define	DC_SIGHUP	1	/* hangup */
@@ -92,12 +98,14 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 #define	DC_SIGCANCEL 36	/* thread cancellation signal used by libthread */
 
 
+
+
 class DaemonCore : public Service
 {
 	friend class TimerManager;
 	
 	public:
-		DaemonCore(int ComSize = 0, int SigSize = 0, int SocSize = 0);
+		DaemonCore(int PidSize = 0, int ComSize = 0, int SigSize = 0, int SocSize = 0, int ReapSize = 0);
 		~DaemonCore();
 
 		void	Driver();
@@ -117,7 +125,17 @@ class DaemonCore : public Service
 		int		Register_Signal(int sig, char *sig_descript, SignalHandlercpp handlercpp, 
 					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
 		int		Cancel_Signal( int sig );
-			
+
+		int		Register_Reaper(char *reap_descrip, ReaperHandler handler, 
+					char *handler_descrip, Service* s = NULL);
+		int		Register_Reaper(char *reap_descript, ReaperHandlercpp handlercpp, 
+					char *handler_descrip, Service* s);
+		int		Reset_Reaper(int rid, char *reap_descrip, ReaperHandler handler, 
+					char *handler_descrip, Service* s = NULL);
+		int		Reset_Reaper(int rid, char *reap_descript, ReaperHandlercpp handlercpp, 
+					char *handler_descrip, Service* s);
+		int		Cancel_Reaper( int rid );
+		
 		int		Register_Socket(Stream* iosock, char *iosock_descrip, SocketHandler handler,
 					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
 		int		Register_Socket(Stream* iosock, char *iosock_descrip, SocketHandlercpp handlercpp,
@@ -140,25 +158,39 @@ class DaemonCore : public Service
 
 		void	Dump(int, char* = NULL );
 
-		inline int getpid() { return 0; };
+		inline pid_t getpid() { return mypid; };
+		inline pid_t getppid() { return ppid; };
 
-		int		Send_Signal(int pid, int sig);
+		int		Send_Signal(pid_t pid, int sig);
 
 		int		SetDataPtr( void * );
 		int		Register_DataPtr( void * );
 		void	*GetDataPtr();
 		
+		int		Create_Process(
+			char		*name,
+			char		*args,
+			priv_state	condor_priv = PRIV_UNKNOWN,
+			int			reaper_id = 1,
+			int			want_commanand_port = TRUE,
+			char		*env = NULL,
+			char		*cwd = NULL,
+		//	unsigned int std[3] = { 0, 0, 0 },
+			int			new_process_group = FALSE,
+			Stream		*sock_inherit_list[] = NULL 			
+			);
+
 #ifdef FUTURE		
 		int		Block_Signal()
 		int		Unblock_Signal()
-		int		Register_Reaper(Service* s, ReaperHandler handler);
-		int		Create_Process()
 		int		Create_Thread()
 		int		Kill_Process()
 		int		Kill_Thread()
 #endif
 
 		int		HandleSigCommand(int command, Stream* stream);
+
+		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
 		
 	private:
 
@@ -175,6 +207,10 @@ class DaemonCore : public Service
 		int		Register_Socket(Stream* iosock, char *iosock_descrip, SocketHandler handler, 
 					SocketHandlercpp handlercpp, char *handler_descrip, Service* s, 
 					DCpermission perm, int is_cpp);
+		int		Register_Reaper(int rid, char *reap_descip, ReaperHandler handler, 
+					ReaperHandlercpp handlercpp, char *handler_descrip, Service* s, 
+					int is_cpp);
+
 
 		struct CommandEnt
 		{
@@ -202,7 +238,9 @@ class DaemonCore : public Service
 			DCpermission	perm;
 			Service*		service; 
 			int				is_blocked;
-			int				is_pending;
+			// Note: is_pending must be volatile because it could be set inside
+			// of a Unix asynchronous signal handler (such as SIGCHLD).
+			volatile int	is_pending;	
 			char*			sig_descrip;
 			char*			handler_descrip;
 			void*			data_ptr;
@@ -232,6 +270,52 @@ class DaemonCore : public Service
 		SockEnt*			sockTable;		// socket table
 		int					initial_command_sock;  
 
+		struct ReapEnt
+		{
+		    int				num;
+		    ReaperHandler	handler;
+			ReaperHandlercpp	handlercpp;
+			int				is_cpp;
+			Service*		service; 
+			char*			reap_descrip;
+			char*			handler_descrip;
+			void*			data_ptr;
+		};
+		void				DumpReapTable(int, const char* = NULL);
+		int					maxReap;		// max number of reaper handlers
+		int					nReap;			// number of reaper handlers used
+		ReapEnt*			reapTable;		// reaper table
+
+		struct PidEntry
+		{
+			pid_t pid;
+#ifdef WIN32
+			HANDLE hProcess;
+			HANDLE hThread;
+			int global_index;
+			int pidentryindex;
+#endif
+			char sinful_string[28];
+			int is_local;
+			int	reaper_id;
+		};
+		typedef HashTable <pid_t, PidEntry *> PidHashTable;
+		PidHashTable* pidTable;
+		pid_t mypid;
+		pid_t ppid;
+
+#ifdef WIN32
+		struct PidWatcherEntry
+		{
+			PidEntry* pidentries[63];
+			HANDLE event;
+			int global_index;
+			int nEntries;
+		};
+
+		PidWatcherEntry* PidWatcherTable[63];
+#endif
+			
 		static				TimerManager t;
 		void				DumpTimerList(int, char* = NULL);
 
@@ -239,15 +323,23 @@ class DaemonCore : public Service
 	
 		fd_set				readfds; 
 
+#ifdef WIN32
+		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core
+#endif
+
 		// these need to be in thread local storage someday
 		void **curr_dataptr;
 		void **curr_regdataptr;
 		// end of thread local storage
 };
 
+
+
 #ifndef _NO_EXTERN_DAEMON_CORE
 extern DaemonCore* daemonCore;
 #endif
 
+#define MAX_INHERIT_SOCKS 10
+#define _INHERITBUF_MAXSIZE 500
 
 #endif

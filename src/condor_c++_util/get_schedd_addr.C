@@ -35,24 +35,6 @@
 #include "condor_common.h"
 #include "condor_query.h"
 
-#if !defined(WANT_V6)
-extern "C"
-{
-char* get_schedd_addr(const char* name)
-{
-	char*				scheddAddr = (char*)malloc(sizeof(char)*100);
-
-	sprintf(scheddAddr, "<%s:%d>", name, SCHED_PORT);
-	return scheddAddr;
-}
-char* get_startd_addr(const char* name)
-{
-	char*				startdAddr = (char*)malloc(sizeof(char)*100);
-
-	sprintf(startdAddr, "<%s:%d>", name, START_PORT);
-	return startdAddr;
-}
-#else
 extern "C"
 {
 char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
@@ -89,4 +71,3 @@ char* get_startd_addr(const char* name)
 	return get_daemon_addr(name, STARTD_AD, ATTR_STARTD_IP_ADDR);
 } 
 }
-#endif

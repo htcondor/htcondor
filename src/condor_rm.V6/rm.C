@@ -43,52 +43,26 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_jobqueue.h"
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
-#if DBM_QUEUE
-#include "proc_obj.h"
-#endif
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 extern "C" char *get_schedd_addr(const char *);
 
-#if DBM_QUEUE
-DBM		*Q, *OpenJobQueue();
-#else
 #include "condor_qmgr.h"
-#endif
 
 char	*MyName;
-#if DBM_QUEUE
-char	*Spool;
-#endif
 BOOLEAN	TroubleReported;
 BOOLEAN All;
 static BOOLEAN Force = FALSE;
-#if DBM_QUEUE
-ProcFilter	*PFilter = new ProcFilter();
-#endif
 
 	// Prototypes of local interest
-#if DBM_QUEUE
-void do_it( ProcObj * );
-void init_params();
-#else
 void ProcArg(const char*);
-#endif
 void notify_schedd( int cluster, int proc );
 void usage();
-#if DBM_QUEUE
-extern "C" BOOLEAN	xdr_proc_id(XDR *, PROC_ID *);
-#endif
-
-#if !DBM_QUEUE
-extern "C" int gethostname();
-#endif
 
 char				hostname[512];
 
@@ -107,26 +81,15 @@ usage()
 int
 main( int argc, char *argv[] )
 {
-#if DBM_QUEUE
-	char	queue_name[_POSIX_PATH_MAX];
-#endif
 	char	*arg;
-#if DBM_QUEUE
-	List<ProcObj>	*proc_list;
-	ProcObj			*p;
-#else
-	char*				args[argc - 1];			// args of jobs to be deleted
+	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args of jobs to be deleted
 	int					nArgs = 0;				// number of args to be deleted
 	int					i;
 	Qmgr_connection*	q;
-#endif
 
 	MyName = argv[0];
 
 	config( 0 );
-#if DBM_QUEUE
-	init_params();
-#endif
 
 	if( argc < 2 ) {
 		usage();
@@ -151,41 +114,13 @@ main( int argc, char *argv[] )
 				argv++;
 				strcpy (hostname, *argv);	
 			} else {
-			#if DBM_QUEUE
-				if( !PFilter->Append(arg) ) {
-					usage();
-				}
-			#else
 				args[nArgs] = arg;
 				nArgs++;
-			#endif
 			}
 		}
 	}
 
 		/* Open job queue */
-#if DBM_QUEUE
-	(void)sprintf( queue_name, "%s/job_queue", Spool );
-	if( (Q=OpenJobQueue(queue_name,O_RDWR,0)) == NULL ) {
-		EXCEPT( "OpenJobQueue(%s)", queue_name );
-	}
-
-		// Create a list of all procs we're interested in
-	PFilter->Install();
-	proc_list = ProcObj::create_list( Q, ProcFilter::Func );
-
-		// Process the list
-	proc_list->Rewind();
-	while( p = proc_list->Next() ) {
-		do_it( p );
-	}
-
-		// Clean up
-	LockJobQueue( Q, UNLOCK );
-	CloseJobQueue( Q );
-	ProcObj::delete_list( proc_list );
-	delete PFilter;
-#else
 	if (hostname[0] == '\0')
 	{
 		// hostname was not set at command line; obtain from system
@@ -203,7 +138,6 @@ main( int argc, char *argv[] )
 		ProcArg(args[i]);
 	}
 	DisconnectQ(q);
-#endif
 
 #if defined(ALLOC_DEBUG)
 	print_alloc_stats();
@@ -215,17 +149,6 @@ main( int argc, char *argv[] )
 
 extern "C" int SetSyscalls( int foo ) { return foo; }
 
-
-#if DBM_QUEUE
-void
-init_params()
-{
-	Spool = param("SPOOL");
-	if( Spool == NULL ) {
-		EXCEPT( "SPOOL not specified in config file\n" );
-	}
-}
-#endif
 
 void
 notify_schedd( int cluster, int proc )
@@ -291,38 +214,6 @@ notify_schedd( int cluster, int proc )
 }
 
 
-#if DBM_QUEUE
-void
-do_it( ProcObj *p )
-{
-	PROC_ID	id;
-
-		// Make sure it makes sense to remove the process, unless -f Force command line
-		// option is in effect, in which case we trust the user knows better
-	if ( Force == FALSE ) {
-		switch( p->get_status() ) {
-	  	case REMOVED:
-	  	case COMPLETED:
-	  	case SUBMISSION_ERR:
-			return;
-		}
-	}
-
-	id.cluster = p->get_cluster_id();
-	id.proc = p->get_proc_id();
-
-		// Make sure user is allowed to remove it
-	if( !p->perm_to_modify() ) {
-		fprintf( stderr, "%d.%d: Permission Denied\n", id.cluster, id.proc);
-		return;
-	}
-
-		// Ok, go ahead and remove it
-	TerminateProc( Q, &id, REMOVED );
-	notify_schedd( id.cluster, id.proc );
-	printf( "Deleted %d.%d\n", id.cluster, id.proc );
-}
-#else
 void ProcArg(const char* arg)
 {
 	int		c, p;								// cluster/proc #
@@ -346,9 +237,6 @@ void ProcArg(const char* arg)
 			} else {
 			fprintf(stderr, "Cluster %d removed.\n", c);
 			}
-#ifdef 0
-			notify_schedd( c, -1 );
-#endif
 			return;
 		}
 		if(*tmp == '.')
@@ -368,9 +256,6 @@ void ProcArg(const char* arg)
 				} else {
 					fprintf(stderr, "Job %d.%d removed.\n", c, p);
 				}
-#ifdef 0
-				notify_schedd( c, p );
-#endif
 				return;
 			}
 			fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
@@ -396,4 +281,3 @@ void ProcArg(const char* arg)
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped.\n", arg);
 	}
 }
-#endif

@@ -42,7 +42,7 @@ typedef enum lock_status
 
 typedef enum service_type
 {
-  SERVICE_STATUS=190,
+  CKPT_SERVER_SERVICE_STATUS=190,
   SERVICE_RENAME=191,
   SERVICE_DELETE=192,
   SERVICE_EXIST=193,

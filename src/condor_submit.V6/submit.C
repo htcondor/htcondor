@@ -54,8 +54,10 @@
 #include "condor_io.h"
 #include "condor_parser.h"
 #include "files.h"
+#if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
+#endif
 
 #include "condor_qmgr.h"
 
@@ -114,9 +116,11 @@ char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
 char    *UserLogFile    = "user_log";
-
-extern int	Terse;
-extern int	DontDisplayTime;
+#if defined(WIN32)
+char	*NullFile		= "NUL";
+#else
+char	*NullFile		= "/dev/null";
+#endif
 
 void 	reschedule();
 void 	SetExecutable();
@@ -159,10 +163,8 @@ void	InsertJobExpr (char *expr);
 
 extern "C" {
 
-void _mkckpt( char *, char * );
 int SetSyscalls( int foo );
 int	get_machine_name(char*);
-int gethostname();
 char *get_schedd_addr(char *);
 
 }
@@ -171,7 +173,6 @@ int
 main( int argc, char *argv[] )
 {
 	FILE	*fp;
-	char	queue_name[_POSIX_PATH_MAX];
 	char	**ptr;
 	char	*cmd_file = NULL, *queue_file = NULL;
 	int dag_pause = 0;
@@ -183,8 +184,6 @@ main( int argc, char *argv[] )
 	init_params();
 
 	DebugFlags |= D_EXPR;
-	Terse = 1;
-	DontDisplayTime = TRUE;
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
@@ -219,8 +218,6 @@ main( int argc, char *argv[] )
 	init_params();
 
 	DebugFlags |= D_EXPR;
-	Terse = 1;
-	DontDisplayTime = TRUE;
 
 	if( cmd_file == NULL ) {
 		usage();
@@ -353,8 +350,6 @@ SetExecutable()
 {
   char	*ename;
   static int exec_set = 0;
-  char	*argv[64];
-  int		argc;
 
   if( exec_set ) {
 	return;
@@ -408,8 +403,15 @@ SetExecutable()
 
   // generate initial checkpoint file
   strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
-  _mkckpt(IckptName, ename);
-		
+
+	if (SendSpoolFile(IckptName) < 0) {
+		EXCEPT("permission to transfer executable %s denied", IckptName);
+	}
+
+	if (SendSpoolFileBytes(ename) < 0) {
+		EXCEPT("failed to transfer executable file %s", ename);
+	}
+
   exec_set = 1;
 }
 
@@ -418,9 +420,6 @@ SetUniverse()
 {
 	char	*univ;
 	char	*mach_count;
-	int		i;
-	int     ckpt;
-	P_DESC	dummy;
 	char	*ptr;
 
 	univ = condor_param(Universe);
@@ -495,7 +494,6 @@ SetImageSize()
 	char	*p;
 	char    buff[2048];
 	int		mem_req = 0;
-	int		i;
 
 	tmp = condor_param(ImageSize);
 
@@ -560,8 +558,6 @@ calc_image_size( char *name )
 void
 SetStdFile( int which_file )
 {
-	int		i;
-	char	macro_name[128];
 	char	*macro_value;
 	char	*generic_name;
 	char    buffer[_POSIX_PATH_MAX + 32];
@@ -586,7 +582,7 @@ SetStdFile( int which_file )
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
-		macro_value = "/dev/null";
+		macro_value = NullFile;
 	}
 	
 	if( whitespace(macro_value) ) 
@@ -696,7 +692,9 @@ SetEnvironment()
 	char *env = condor_param(Environment);
 	char *shell_env;
 	char *envvalue;
+#if !defined(WIN32)
 	struct rlimit rl;
+#endif
 	char tmp[BUFSIZ];
 
 	envvalue = "";
@@ -716,7 +714,7 @@ SetEnvironment()
 	/* Defined by shell variable */
 	else 
 	{
-#if defined(HPUX9) 		/* hp-ux doesn't support RLIMIT_CORE */
+#if defined(HPUX9) || defined(WIN32)		/* hp-ux doesn't support RLIMIT_CORE */
 		envvalue = "";
 #else
 		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
@@ -872,7 +870,11 @@ check_iwd( char *iwd )
 {
 	char	pathname[ _POSIX_PATH_MAX ];
 
+#if defined(WIN32)
+	(void)sprintf( pathname, "%s", iwd );
+#else
 	(void)sprintf( pathname, "%s/%s", JobRootdir, iwd );
+#endif
 	compress( pathname );
 
 	if( access(pathname, F_OK|X_OK) < 0 ) {
@@ -1060,9 +1062,6 @@ queue()
 		case 0:			/* Success */
 		case 1:
 			break;
-		case E2BIG:		/* Exceedes size limit of dbm/ndbm implementation */
-			DoCleanup();
-			exit( 1 );
 		default:		/* Failed for some other reason... */
 			EXCEPT( "Failed to queue" );
 	}
@@ -1171,7 +1170,9 @@ check_open( char *name, int flags )
 {
 	int		fd;
 	char	pathname[_POSIX_PATH_MAX];
-	int		i;
+
+	/* No need to check for existence of the Null file. */
+	if (strcmp(name, NullFile) == MATCH) return;
 
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
 		(void)sprintf( pathname, "%s%s", JobRootdir, name );
@@ -1217,14 +1218,22 @@ DoCleanup()
 char *
 get_owner()
 {
-	struct passwd	*pwd;
-
 	if (Remote) return ("nobody");
 
+#if defined(WIN32)
+	char username[UNLEN+1];
+	unsigned long usernamelen = UNLEN+1;
+	if (GetUserName(username, &usernamelen) < 0) {
+		EXCEPT( "GetUserName failed.\n" );
+	}
+	return strdup(username);
+#else
+	struct passwd	*pwd;
 	if( (pwd=getpwuid(getuid())) == NULL ) {
 		EXCEPT( "Can't get passwd entry for uid %d\n", getuid() );
 	}
 	return strdup(pwd->pw_name);
+#endif
 }
 
 void
@@ -1352,7 +1361,6 @@ SaveClassAd (ClassAd &ad)
 {
 	ExprTree *tree, *lhs, *rhs;
 	char lhstr[128], rhstr[2048];
-	char buffer[4096];
 	int  retval = 0;
 
 	SetAttributeInt (ClusterId, ProcId, "ClusterId", ClusterId);
@@ -1377,7 +1385,7 @@ SaveClassAd (ClassAd &ad)
 void 
 InsertJobExpr (char *expr)
 {
-	ExprTree *tree, *lhs, *rhs;
+	ExprTree *tree, *lhs;
 	char      name[128];
 	int retval = Parse (expr, tree);
 

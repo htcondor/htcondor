@@ -37,7 +37,7 @@ ACCOUNTANT = accountant
 		tools kbdd
 
 #define Libraries \
-		util_lib c++_util xdr_lib ckpt io classad daemon_core \
+		util_lib c++_util ckpt io classad daemon_core \
 		syscall_lib
 		
 #elif IS_V5
@@ -45,14 +45,14 @@ ACCOUNTANT = accountant
 		scripts tools shadow.V5 starter.V5 startd \
 		schedd kbdd  negotiator collector globalq master.dhruba prio q rm \
 		submit.v3  on off test_suite_C.V5 $(TEST_SUITE_F)
-#		define Libraries	xdr_lib util_lib c++_util ckpt syscall_lib
+#		define Libraries	util_lib c++_util ckpt syscall_lib
 #else
 #	define Programs \
 		scripts standalone tools shadow starter startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
 		submit.v2 submit.v3  on off \
 		test_suite_C $(TEST_SUITE_F)
-#		define Libraries	xdr_lib util_lib c++_util $(SYSCALL_LIB) $(PVM_LIBRARY)
+#		define Libraries	util_lib c++_util $(SYSCALL_LIB) $(PVM_LIBRARY)
 #endif
 
 
@@ -85,7 +85,6 @@ simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 object_target(util_lib)
 object_target(c++_util)
-object_target(xdr_lib)
 
 #if WANT_PVM && HAS_PVM
 	object_target($(PVM_LIBRARY))

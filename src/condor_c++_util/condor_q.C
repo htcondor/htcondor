@@ -24,6 +24,7 @@ static const char *strKeywords[] =
 
 static const char *fltKeywords[] = 
 {
+	""	// add one string to avoid compiler error
 };
 
 // scan function to walk the job queue
@@ -126,7 +127,6 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
 	int     		result;
-	char    		scheddString [32];
 
 	// make the query ad
 	if ((result = query.makeQuery (filterAd)) != Q_OK)

@@ -3,7 +3,6 @@
 
 #include "log.h"
 #include "qmgmt.h"
-#include "condor_xdr.h"
 
 class PtrListEntry {
 public:
@@ -38,7 +37,7 @@ class Transaction {
 public:
 //	Transaction();
 //	~Transaction();
-	void Commit(XDR *);
+	void Commit(Stream *);
 	void Commit(int fd);
 	void Rollback();
 	void AppendLog(LogRecord *);

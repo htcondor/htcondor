@@ -27,6 +27,9 @@
 ** 
 */ 
 
+#include "condor_common.h"
+
+#if !defined(WIN32)
 #include <sys/types.h>
 #include <sys/param.h>
 
@@ -35,6 +38,10 @@
 #endif
 
 #include <sys/resource.h>
+#endif
+
+#include <stdio.h>
+
 #include "proc.h"
 
 char	*param();

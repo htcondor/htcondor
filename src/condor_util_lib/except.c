@@ -29,6 +29,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <varargs.h>
 #include <time.h>
 #include "condor_sys.h"
@@ -52,8 +53,10 @@ int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)();
+int		SetSyscalls(int);
+void	dprintf ( int flags, char *fmt, ... );
 
-
+void
 _EXCEPT_(va_alist)
 va_dcl
 {

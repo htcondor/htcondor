@@ -11,9 +11,9 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd) { return write(fd, &cluster_num, sizeof(cluster_num)); }
-	WriteBody(XDR *xdrs) { return xdr_int(xdrs, &cluster_num); }
-	ReadBody(int fd) { return read(fd, &cluster_num, sizeof(cluster_num)); }
+	int WriteBody(int fd) { return write(fd, &cluster_num, sizeof(cluster_num)); }
+	int WriteBody(Stream *s) { return s->code(cluster_num); }
+	int ReadBody(int fd) { return read(fd, &cluster_num, sizeof(cluster_num)); }
 	
 	int cluster_num;
 };
@@ -25,9 +25,9 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd) { return write(fd, &cluster_num, sizeof(cluster_num)); }
-	WriteBody(XDR *xdrs) { return xdr_int(xdrs, &cluster_num); }
-	ReadBody(int fd) { return read(fd, &cluster_num, sizeof(cluster_num)); }
+	int WriteBody(int fd) { return write(fd, &cluster_num, sizeof(cluster_num)); }
+	int WriteBody(Stream *s) { return s->code(cluster_num); }
+	int ReadBody(int fd) { return read(fd, &cluster_num, sizeof(cluster_num)); }
 	
 	int cluster_num;
 };
@@ -39,16 +39,16 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd) { return write(fd, cluster_proc, sizeof(cluster_proc)); }
+	int WriteBody(int fd) { return write(fd, cluster_proc, sizeof(cluster_proc)); }
 
-	WriteBody(XDR *xdrs) { 
-		if (!xdr_int(xdrs, &(cluster_proc[0]))) {
+	int WriteBody(Stream *s) { 
+		if (!s->code(cluster_proc[0])) {
 			return 0;
 		}
-		return xdr_int(xdrs, &(cluster_proc[1]));
+		return s->code(cluster_proc[1]);
 	}
 		               
-	ReadBody(int fd) { return read(fd, &cluster_proc, sizeof(cluster_proc)); }
+	int ReadBody(int fd) { return read(fd, &cluster_proc, sizeof(cluster_proc)); }
 
 	int cluster_proc[2];
 };
@@ -60,16 +60,16 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd) { return write(fd, cluster_proc, sizeof(cluster_proc)); }
+	int WriteBody(int fd) { return write(fd, cluster_proc, sizeof(cluster_proc)); }
 
-	WriteBody(XDR *xdrs) { 
-		if (!xdr_int(xdrs, &(cluster_proc[0]))) {
+	int WriteBody(Stream *s) { 
+		if (!s->code(cluster_proc[0])) {
 			return 0;
 		}
-		return xdr_int(xdrs, &(cluster_proc[1]));
+		return s->code(cluster_proc[1]);
 	}
 		               
-	ReadBody(int fd) { return read(fd, &cluster_proc, sizeof(cluster_proc)); }
+	int ReadBody(int fd) { return read(fd, &cluster_proc, sizeof(cluster_proc)); }
 
 	int cluster_proc[2];
 };
@@ -82,10 +82,10 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd);
-	WriteBody(XDR *xdrs);
-	ReadBody(int fd);
-	ReadBody(XDR *xdrs);
+	int WriteBody(int fd);
+	int WriteBody(Stream *s);
+	int ReadBody(int fd);
+	int ReadBody(Stream *s);
 
 	int  cluster;
 	int  proc;
@@ -100,10 +100,10 @@ public:
 	int Play();
 
 private:
-	WriteBody(int fd);
-	WriteBody(XDR *xdrs);
-	ReadBody(int fd);
-	ReadBody(XDR *xdrs);
+	int WriteBody(int fd);
+	int WriteBody(Stream *s);
+	int ReadBody(int fd);
+	int ReadBody(Stream *s);
 
 	int  cluster;
 	int  proc;

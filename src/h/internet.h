@@ -12,7 +12,14 @@
 #include "proc.h"
 #include "_condor_fix_types.h"
 #include "expr.h"
+
+#if !defined(WIN32)
 #include <netinet/in.h>
+#endif
+
+#if !defined(SOCKET) && !defined(WIN32)
+#define SOCKET int
+#endif 
 
 /* maximum length of a machine name */
 #define  MAXHOSTLEN     1024	
@@ -53,6 +60,8 @@ int append_job_id(CONTEXT *context, int cluster, int proc);
 int string_to_sin(char *addr, struct sockaddr_in *sin);
 
 char *sin_to_string(struct sockaddr_in *sin);
+
+char *sock_to_string(SOCKET sockd);
 
 void
 display_from( struct sockaddr_in *from );

@@ -31,6 +31,7 @@
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
+#if !defined(WIN32)
 #ifndef BOOLEAN_TYPE_DEFINED
 typedef int BOOLEAN;
 typedef int BOOL_T;
@@ -40,6 +41,7 @@ typedef int BOOL_T;
 #if !defined(TRUE)
 #	define TRUE 1
 #	define FALSE 0
+#endif
 #endif
 
 #if defined(NEW_PROC)
@@ -110,8 +112,8 @@ extern "C" {
 	LP *InitUserLog( const char *own, const char *file, int c, int p, int s );
 	void CloseUserLog( LP * lp );
 	void PutUserLog( LP *lp,  const char *fmt, ... );
-	void BeginUserLogBlock();
-	void EndUserLogBlock();
+	void BeginUserLogBlock( LP *lp );
+	void EndUserLogBlock( LP *lp );
 #if defined(__cplusplus)
 }
 #endif

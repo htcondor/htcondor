@@ -33,13 +33,13 @@ ServerStat::ServerStat()
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
 		exit(INSUFFICIENT_RESOURCES);
-    } else if (socket_desc == SOCKET_ERROR) {
+    } else if (socket_desc == CKPT_SERVER_SOCKET_ERROR) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: error creating socket" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
-		exit(SOCKET_ERROR);
+		exit(CKPT_SERVER_SOCKET_ERROR);
     }
 	bzero((char*) &addr_info, sizeof(struct sockaddr_in));
 	addr_info.sin_family = AF_INET;
@@ -179,7 +179,7 @@ service_reply_pkt ServerStat::InitHandshake()
 	int                bytes_read=0;
 	int                temp_len;
 	
-	req.service = htons((u_short) SERVICE_STATUS);
+	req.service = htons((u_short) CKPT_SERVER_SERVICE_STATUS);
 	req.ticket = htonl((unsigned int) AUTHENTICATION_TCKT);
 	bytes_written = net_write(socket_desc, (char*) &req, sizeof(req));
 	if (bytes_written != sizeof(req)) {
@@ -278,13 +278,13 @@ void ServerStat::LoadInfo()
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
 		exit(INSUFFICIENT_RESOURCES);
-    } else if (socket_desc == SOCKET_ERROR) {
+    } else if (socket_desc == CKPT_SERVER_SOCKET_ERROR) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: error creating socket" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR:" << endl << endl;
-		exit(SOCKET_ERROR);
+		exit(CKPT_SERVER_SOCKET_ERROR);
     }
 	bzero((char*) &addr_info, sizeof(addr_info));
 	addr_info.sin_family = AF_INET;

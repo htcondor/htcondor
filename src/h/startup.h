@@ -6,9 +6,11 @@ typedef struct {
 	int		cluster;				/* Condor Cluster # */
 	int		proc;					/* Condor Proc # */
 	int		job_class;				/* STANDARD, VANILLA, PVM, PIPE, ... */
+#if !defined(WIN32)	// don't know how to port these yet
 	uid_t	uid;					/* Execute job under this UID */ 
 	gid_t	gid;					/* Execute job under this gid */
 	pid_t	virt_pid;				/* PVM virt pid of this process */
+#endif
 	int		soft_kill_sig;			/* Use this signal for a soft kill */
 	char	*cmd;					/* Command name given by the user */
 	char	*args;					/* Command arguments given by the user */

@@ -5,8 +5,8 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -I../condor_c++_util -DALLOC_DEBUG
 
 LDFLAGS =
 
-SRC = submit.C _mkckpt.c
-OBJ = submit.o _mkckpt.o
+SRC = submit.C
+OBJ = submit.o
 LIB = ../condor_schedd.V6/libqmgmt.a \
 	  ../condor_c++_util/cplus_lib.a \
 	  ../condor_classad/expr_lib.a \

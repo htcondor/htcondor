@@ -42,12 +42,21 @@
 **	(*DebugId)() which takes DebugFP as an argument.
 **
 ************************************************************************/
+
+#include "condor_common.h"
+
 #include <stdio.h>
+#undef va_start
+#undef va_end
 #include <varargs.h>
 #include <time.h>
 #include <errno.h>
+
+#if !defined(WIN32)
 #include <sys/file.h>
 #include <sys/param.h>
+#endif
+
 #include <sys/stat.h>
 
 #include "condor_sys.h"
@@ -70,20 +79,27 @@
 #endif
 
 FILE	*debug_lock();
-FILE	*fdopen();
 
-int open_debug_file( int flags );
+FILE *open_debug_file( char flags[] );
+void debug_unlock();
+void preserve_log_file();
+
 
 extern int	errno;
 
 int		DebugFlags = D_ALWAYS;
 FILE	*DebugFP = stderr;
 int		MaxLog;
-char	*DebugFile;
-char	*DebugLock;
+char	*DebugFile = NULL;
+char	*DebugLock = NULL;
 int		(*DebugId)();
+int		SetSyscalls(int mode);
 
+#if defined(WIN32)
+HANDLE	LockHandle = INVALID_HANDLE_VALUE;
+#else
 int		LockFd = -1;
+#endif
 
 static char _FileName_[] = __FILE__;
 
@@ -96,6 +112,7 @@ char *DebugFlagNames[] = {
 	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
 };
 
+#if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
 /*
 **	Initialize the DebugFP to a specific file number.
 */
@@ -116,6 +133,7 @@ int fd;
 		exit( 1 );
 	}
 }
+#endif
 
 /*
 ** Note: setting this to true will avoid blocking signal handlers from running
@@ -131,6 +149,7 @@ int InDBX = 0;
 ** current debugging flags.
 */
 /* VARARGS1 */
+void
 dprintf(va_alist)
 va_dcl
 {
@@ -140,7 +159,9 @@ va_dcl
 	struct tm *tm, *localtime();
 	long *clock;
 	int scm;
+#if !defined(WIN32)
 	sigset_t	mask, omask;
+#endif
 	int saved_errno;
 	int	saved_flags;
 	priv_state	priv;
@@ -163,7 +184,9 @@ va_dcl
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
-		/* Block any signal handlers which might try to print something */
+#if !defined(WIN32) // signals don't exist in WIN32
+
+	/* Block any signal handlers which might try to print something */
 	sigfillset( &mask );
 	sigdelset( &mask, SIGABRT );
 	sigdelset( &mask, SIGBUS );
@@ -174,6 +197,8 @@ va_dcl
 	sigdelset( &mask, SIGTRAP );
 	sigdelset( &mask, SIGCHLD );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
+
+#endif
 
 		/* log files owned by condor system acct */
 		/* avoid priv macros so we can bypass priv logging */
@@ -196,14 +221,7 @@ va_dcl
 
 	fmt = va_arg(pvar, char *);
 
-#if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
-	{
-		int *argaddr = &va_arg(pvar, int);
-		_doprnt( fmt, argaddr, DebugFP );
-	}
-#else 
 	vfprintf( DebugFP, fmt, pvar );
-#endif 
 
 		/* Close and unlock the log file */
 	debug_unlock();
@@ -211,8 +229,12 @@ va_dcl
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
+#if !defined(WIN32) // signals don't exist in WIN32
+
 		/* Let them signal handlers go!! */
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
+
+#endif
 
 	(void) SetSyscalls( scm );
 
@@ -228,20 +250,30 @@ FILE *
 debug_lock()
 {
 	int			length;
+#if !defined(WIN32)
 	int			oumask;
+#endif
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
 	if( DebugLock ) {
+#if defined(WIN32)
+		if( LockHandle == INVALID_HANDLE_VALUE ) {
+			// open file with exclusive access (no sharing) -- what happens when we fail to get the
+			// exclusive lock?
+			LockHandle = CreateFile(DebugLock, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			if( LockHandle == INVALID_HANDLE_VALUE ) {
+				fprintf( DebugFP, "Can't open \"%s\", errno = %d\n", DebugLock, errno );
+				exit( errno );
+			}
+		}
+#else
 		if( LockFd < 0 ) {
 			oumask = umask( 0 );
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-				if( errno == EMFILE ) {
-					fd_panic( __LINE__, __FILE__ );
-				}
 				fprintf( DebugFP, "Can't open \"%s\"\n", DebugLock );
 				exit( errno );
 			}
@@ -253,17 +285,20 @@ debug_lock()
 							DebugLock);
 			exit( errno );
 		}
+#endif
 	}
 
 	if( DebugFile ) {
 		errno = 0;
 
-		DebugFP = fdopen(open_debug_file(O_CREAT|O_WRONLY), "a");
+		DebugFP = open_debug_file("a");
 
 		if( DebugFP == NULL ) {
+#if !defined(WIN32)
 			if( errno == EMFILE ) {
 				fd_panic( __LINE__, __FILE__ );
 			}
+#endif
 			fprintf(stderr, "Could not open DebugFile <%s>\n", DebugFile);
 			exit( errno );
 		}
@@ -285,6 +320,7 @@ debug_lock()
 	return DebugFP;
 }
 
+void
 debug_unlock()
 {
 	priv_state priv;
@@ -295,11 +331,18 @@ debug_unlock()
 
 	if( DebugLock ) {
 			/* Don't forget to unlock the file */
+#if defined(WIN32)
+		if( CloseHandle(LockHandle) == 0) {
+				fprintf(DebugFP, "Can't release lock on \"%s\", errno = %d\n",
+					DebugLock, GetLastError() );
+		}
+#else
 		if( flock(LockFd,LOCK_UN) < 0 ) {
 			fprintf(DebugFP,"Can't release exclusive lock on \"%s\"\n",
 															DebugLock );
 			exit( errno );
 		}
+#endif
 	}
 
 	if( DebugFile ) {
@@ -314,10 +357,10 @@ debug_unlock()
 /*
 ** Copy the log file to a backup, then truncate the current one.
 */
+void
 preserve_log_file()
 {
 	char		old[MAXPATHLEN + 4];
-	int			fd;
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -326,6 +369,18 @@ preserve_log_file()
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
+	fclose( DebugFP );
+
+	unlink(old);
+
+#if defined(WIN32)
+
+	/* use rename on WIN32, since link isn't available */
+	if (rename(DebugFile, old) < 0)
+		exit (__LINE__);
+
+#else
+
 	/*
 	** for some still unknown reason, newer versions of OSF/1 (Digital Unix)
     ** sometimes do not rotate the log correctly using 'rename'.  Changing
@@ -333,14 +388,13 @@ preserve_log_file()
 	** it for all platforms as there is no need for atomicity.  --RR
     */
 
-	fclose( DebugFP );
-	unlink (old);
-
 	if (link (DebugFile, old) < 0)
 		exit (__LINE__);
 
 	if (unlink (DebugFile) < 0)
 		exit (__LINE__);
+
+#endif
 
 	/* double check the result of the rename */
 	{
@@ -354,27 +408,16 @@ preserve_log_file()
 		}
 	}
 
-	fd = open_debug_file( O_CREAT | O_WRONLY );
+	DebugFP = open_debug_file("a");
 
-#if 0
-	(void)close( fileno(DebugFP) );
-#	if defined(HPUX9)
-	DebugFP->__fileL = fd & 0xf0;	/* Low byte of fd */
-	DebugFP->__fileH = fd & 0x0f;	/* High byte of fd */
-#	elif defined(ULTRIX43) || defined(IRIX331)
-	((DebugFP)->_file) = fd;
-#	else
-	fileno(DebugFP) = fd;
-#	endif
-#else
-	DebugFP = fdopen( fd, "a" );
 	if (DebugFP == NULL) exit (__LINE__);
-#endif
+
 	fprintf (DebugFP, "Now in new log file %s\n", DebugFile);
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 }
 
+#if !defined(WIN32)
 /*
 ** Can't open log or lock file becuase we are out of fd's.  Try to let
 ** somebody know what happened.
@@ -403,7 +446,7 @@ char	*file;
 	(void)fflush( DebugFP );
 	exit( EMFILE );
 }
-
+#endif
 	
 
 #ifdef NOTDEF
@@ -437,34 +480,38 @@ char	*name;
 sigset(){}
 #endif
 
-int
-open_debug_file(int flags)
+FILE *
+open_debug_file(char flags[])
 {
-	int			fd;
+	FILE		*fp;
+#if !defined(WIN32)
 	int			oumask;
+#endif
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	/* The log file MUST be group writeable */
-	oumask = umask( 0 );
-	if( (fd=open(DebugFile,flags,0664)) < 0 ) {
+	/* Note: The log file shouldn't need to be group writeable anymore, since PRIV_CONDOR changes euid now. */
+	if( (fp=fopen(DebugFile,flags)) == NULL ) {
+#if !defined(WIN32)
 		if( errno == EMFILE ) {
 			fd_panic( __LINE__, __FILE__ );
 		}
+#endif
 		if (DebugFP == 0) {
 			DebugFP = stderr;
 		}
 		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile );
+#if !defined(WIN32)
 		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
 				 errno, geteuid(), getegid() );
+#endif
 		perror( "open" );
 		abort();
-		exit( errno );
 	}
-	(void) umask( oumask );
+	// (void) umask( oumask );  // perhaps no longer need this...
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
-	return fd;
+	return fp;
 }

@@ -30,7 +30,9 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#if !defined(WIN32)
 #include <netdb.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "expr.h"
@@ -38,16 +40,17 @@
 #include "except.h"
 #include "condor_config.h"
 #include "condor_classad.h"
-#include "util_lib_proto.h"
+#include "condor_string.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+int get_var( register char *value, register char **leftp, 
+			 register char **namep, register char **rightp );
 
-char	*getline(), *expand_macro(), *ltrunc(), *lookup_macro();
-int		get_var();
+	
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		ConfigLineNo;
 
@@ -344,8 +347,8 @@ expand_macro( char *value, BUCKET **table, int table_size )
 			return( NULL );
 		}
 
-		rval = MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-														strlen(right) + 1));
+		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+														 strlen(right) + 1));
 		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 		FREE( tmp );
 		tmp = rval;
@@ -354,6 +357,7 @@ expand_macro( char *value, BUCKET **table, int table_size )
 	return( tmp );
 }
 
+int
 get_var( register char *value, register char **leftp, 
 		 register char **namep, register char **rightp )
 {

@@ -61,7 +61,7 @@ char	*sprintf();
 #endif
 #endif
 
-#if !defined( OSF1 )
+#if !defined( OSF1 ) && !defined(WIN32)
 #ifndef htons
 u_short	htons();
 #endif htons
@@ -70,17 +70,15 @@ u_short	htons();
 u_short	ntohs();
 #endif ntohs
 
-#if !defined(OSF1)
-#	ifndef htonl
-		u_long	htonl();
-#	endif htonl
+#ifndef htonl
+u_long	htonl();
+#endif htonl
 
-#	ifndef ntohl
-		u_long	ntohl();
-#	endif ntohl
-#endif
+#ifndef ntohl
+u_long	ntohl();
+#endif ntohl
 
 #ifndef time
 time_t	time();
 #endif time
-#endif	/* !OSF1 */
+#endif	/* !OSF1 && !WIN32 */

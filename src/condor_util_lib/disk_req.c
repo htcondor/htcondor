@@ -30,6 +30,7 @@ typedef struct fd_set fd_set;
 #include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
+#include "condor_constants.h"
 #include "condor_types.h"
 #include "proc.h"
 #include "debug.h"

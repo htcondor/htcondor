@@ -500,6 +500,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		in code( msg );
 		alloc( msg, MAX_STRING );
 	}
+#if 0
 	int work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig ): pseudo {
 		out code( p );
 		alloc( p, PROC_SIZE );
@@ -512,6 +513,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		out signal( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
+#endif
 	int startup_info_request( STARTUP_INFO *s ): pseudo {
 		out code( s );
 		alloc( s, STARTUP_INFO_SIZE );

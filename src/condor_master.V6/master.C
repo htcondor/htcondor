@@ -123,7 +123,7 @@ extern "C"
 #endif  /* IRIX62 */
 	int 	dprintf_config( char*, int);
 	int 	detach();
-	int	boolean(char*, char*);
+	int	param_in_pattern(char*, char*);
 	char*	strdup(const char*);
 	int	SetSyscalls( int );
 
@@ -500,7 +500,7 @@ init_params()
 	ad.SetTargetTypeName("");
 
 	if( param("MASTER_DEBUG") ) {
-		if( boolean("MASTER_DEBUG","Foreground") ) {
+		if( param_in_pattern("MASTER_DEBUG","Foreground") ) {
 			Foreground = 1;
 		}
 	}

@@ -2,10 +2,15 @@
 #include "_condor_fix_resource.h"
 #include <iostream.h>
 #include <stdio.h>
+
+#ifndef WIN32
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
 #include <netinet/in.h>
+
+extern "C" void event_mgr (void);
+#endif	// of ifndef WIN32
 
 #include "condor_classad.h"
 #include "condor_parser.h"
@@ -19,16 +24,11 @@
 
 #include "condor_attributes.h"
 #include "collector_engine.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 static char *_FileName_ = __FILE__;
 
 extern char *CondorAdministrator;
-
-#if defined(USE_XDR)
-extern "C" XDR *xdr_Udp_Init ();
-extern "C" int xdr_context (XDR *, CONTEXT *);
-static bool backwardCompatibility (int &, ClassAd *&, XDR *);
-#endif
 
 static void killHashTable (CollectorHashTable &);
 static ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
@@ -45,27 +45,20 @@ static	ClassAd *LONG_GONE		= (ClassAd *) 0x3;
 static	ClassAd *THRESHOLD		= (ClassAd *) 0x4;
 
 CollectorEngine::
-CollectorEngine (TimerManager *timerManager) : 
-    StartdAds     	(GREATER_TABLE_SIZE, &hashFunction),
+CollectorEngine () : 
+    StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
-	ScheddAds     	(GREATER_TABLE_SIZE, &hashFunction),
-	MasterAds     	(GREATER_TABLE_SIZE, &hashFunction),
-	CkptServerAds 	(LESSER_TABLE_SIZE , &hashFunction),
-	GatewayAds    	(LESSER_TABLE_SIZE , &hashFunction)
+	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
+	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
+	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
+	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction)
 {
-	timeToClean = false;
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
-	clientSocket = -1;
 	pvtAds = false;
-	if (timerManager == NULL)
-	{
-		EXCEPT ("Require timer manager!");
-	}
-	timer = timerManager;
 }
 
 
@@ -97,7 +90,7 @@ scheduleHousekeeper (int timeout)
 	// cancel outstanding housekeeping requests
 	if (housekeeperTimerID != -1)
 	{
-		(void) timer->CancelTimer (housekeeperTimerID);
+		(void) daemonCore->Cancel_Timer(housekeeperTimerID);
 	}
 
 	// reset for new timer
@@ -111,9 +104,9 @@ scheduleHousekeeper (int timeout)
 	if (timeout > 0)
 	{
 		// schedule housekeeper
-		housekeeperTimerID = timer->NewTimer (this, machineUpdateInterval,
-									(void *) &engine_housekeepingHandler,
-									machineUpdateInterval);
+		housekeeperTimerID = daemonCore->Register_Timer(machineUpdateInterval,
+						machineUpdateInterval,(TimerHandlercpp)housekeeper,
+						"CollectorEngine::housekeeper",this);
 		if (housekeeperTimerID == -1)
 			return 0;
 	}
@@ -127,7 +120,7 @@ scheduleDownMasterCheck (int timeout)
 {
 	// cancel outstanding check requests
 	if (masterCheckTimerID != -1) {
-		(void) timer->CancelTimer (masterCheckTimerID);
+		(void) daemonCore->Cancel_Timer(masterCheckTimerID);
 	}
 
 	// reset for new timer
@@ -141,9 +134,9 @@ scheduleDownMasterCheck (int timeout)
 	// if timeout interval was non-zero (i.e., master checks required) ...
     if (timeout > 0) {
         // schedule master checks
-        masterCheckTimerID = timer->NewTimer (this, masterCheckInterval,
-                                    (void *) &engine_masterCheckHandler,
-                                    masterCheckInterval);
+		masterCheckTimerID = daemonCore->Register_Timer(masterCheckInterval,
+						masterCheckInterval,(TimerHandlercpp)masterCheck,
+						"CollectorEngine::masterCheck",this);
         if (masterCheckTimerID == -1)
             return 0;
     }
@@ -219,27 +212,18 @@ ClassAd *CollectorEngine::
 collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 {
 	ClassAd	*clientAd;
-	int		timerID;
-	ClassAd *rval;
+	ClassAd	*rval;
 
-	// start timer
-	timerID=timer->NewTimer(this,clientTimeout,(void*)
-								engine_clientTimeoutHandler);
-	if (timerID == -1)
-	{
-		EXCEPT ("Could not allocate timer");
-	}
+	// use a timeout
+	sock->timeout(clientTimeout);
 
-	// don't need backward compatibility here --- new daemons will use I/O
-	if (!(clientAd = new ClassAd)) 
-	{
-		EXCEPT ("Memory error!");
-	}
+	clientAd = new ClassAd;
+	if (!clientAd) return 0;
 
 	// get the ad
 	if (!clientAd->get(*sock))
 	{
-		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd\n",
+		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd (or timeout occured)\n",
 				command);
 		delete clientAd;
 		sock->end_of_message();
@@ -247,7 +231,7 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	}
 	
 	// the above includes a timed communication with the client
-	(void) timer->CancelTimer (timerID);
+	sock->timeout(0);
 
 	rval = collect(command, clientAd, from, insert, sock);
 
@@ -261,30 +245,6 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	return rval;
 }
 
-#if defined(USE_XDR)
-ClassAd *CollectorEngine::
-collect (int command, XDR *xdrs, sockaddr_in *from, int &insert)
-{
-	ClassAd  *clientAd;
-	int      timerID;
-
-	// start timer
-	timerID = timer->NewTimer(this,clientTimeout,(void *)engine_clientTimeoutHandler);
-	if (timerID == -1)
-	{
-		EXCEPT ("Could not allocate timer");
-	}
-
-	// so that old startds and schedds can talk to the new collector
-	if (!backwardCompatibility (command, clientAd, xdrs)) return NULL;
-
-	// the above includes a timed xdr communication with the client
-	(void) timer->CancelTimer (timerID);
-
-	return (collect(command, clientAd, from, insert));
-}
-#endif
-
 ClassAd *CollectorEngine::
 collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 {
@@ -294,20 +254,6 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	HashKey hk;
 	char    hashString [64];
 	
-	// safer to housekeep now if necessary
- 	if (timeToClean)
-	{
-		timeToClean = false;
-		housekeeper ();
-	}
-
-	// check for down masters
-	if (timeToCheckMasters)
-	{
-		timeToCheckMasters = false;
-		masterCheck ();
-	}
-
 	// mux on command
 	switch (command)
 	{
@@ -542,7 +488,6 @@ updateClassAd (CollectorHashTable &hashTable,
 	}
 }		
 
-
 void CollectorEngine::
 checkMasterStatus (ClassAd *ad)
 {
@@ -577,9 +522,9 @@ checkMasterStatus (ClassAd *ad)
 	}
 }
 
-
-void CollectorEngine::
-housekeeper (void)
+int 
+CollectorEngine::
+housekeeper()
 {
 	time_t now;
    
@@ -588,7 +533,7 @@ housekeeper (void)
 	{
 		dprintf (D_ALWAYS, 
 				 "Housekeeper:  Error in reading system time --- aborting\n");
-		return;
+		return FALSE;
 	}
 
 	dprintf (D_ALWAYS, "Housekeeper:  Ready to clean old ads\n");
@@ -612,7 +557,14 @@ housekeeper (void)
 	cleanHashTable (CkptServerAds, now, makeCkptSrvrAdHashKey);
 
 	// add other ad types here ...
+
+#ifndef WIN32
+	// cron manager
+	event_mgr();
+#endif
+
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
+	return TRUE;
 }
 
 
@@ -659,8 +611,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	}
 }
 
-
-void CollectorEngine::
+int CollectorEngine::
 masterCheck ()
 {
 	ClassAd  *ad;
@@ -709,6 +660,7 @@ masterCheck ()
 
 		// need to report for recently down masters (children still alive)
 		if (ad == RECENTLY_DOWN) {
+#ifndef WIN32
 			// if the mailer is not open, open it now
 			if (mailer < 0) {
 				if (get_machine_name (whoami) == -1) {
@@ -719,12 +671,13 @@ masterCheck ()
 							whoami);
 				if ((mailer = email (buffer)) < 0) {
 					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
-					return;
+					return FALSE;
 				}
 				fdprintf (mailer, "The following masters are dead, leaving"
 							" orphaned daemons\n\n");
 			}
 			fdprintf (mailer, "\t\t%s\n", hkString);
+#endif
 			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString);
 			nextStatus = DONE_REPORTING;
 		}	
@@ -753,49 +706,10 @@ masterCheck ()
 	if (mailer > -1) close (mailer);
 
 	dprintf (D_ALWAYS, "MasterCheck:  Done checking for down masters\n");
+	return TRUE;
 }
 
-
-int  
-engine_clientTimeoutHandler (Service *x)
-{
-    if (((CollectorEngine *)x)->clientSocket == -1)
-	{
-		dprintf (D_ALWAYS, "Alarm: Got alarm, but have no client socket\n");
-		return 0;
-	}
-    
-    dprintf (D_ALWAYS, 
-			 "Alarm: Client took too long (over %d secs) -- aborting\n",
-			 ((CollectorEngine *)x)->clientTimeout);
-
-	(void) close (((CollectorEngine *)x)->clientSocket);
-    ((CollectorEngine *)x)->clientSocket = -1;
-
-	return 0;
-}
-
-
-int
-engine_housekeepingHandler (Service *x)
-{
-	dprintf (D_ALWAYS, "Alarm: Ready to clean out old ads ...\n");
-	((CollectorEngine *)x)->timeToClean = true;
-
-	return 0;
-}
-
-
-int
-engine_masterCheckHandler (Service *x)
-{
-	dprintf (D_ALWAYS, "Alarm: Ready to check master status ...\n");
-	((CollectorEngine *)x)->timeToCheckMasters = true;
-
-	return 0;
-}
-
-
+#ifndef WIN32
 int
 email (char *subject, char *address)
 {
@@ -813,76 +727,6 @@ email (char *subject, char *address)
 		fdprintf (mailer, "Subject:  %s\n\n", subject);
 
 	return mailer;
-}
-
-	
-#if defined(USE_XDR)
-static bool 
-backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
-{
-	CONTEXT *context;
-
-	switch (command)
-	{
-	  // Old: these commands are supplied by old Startds and Schedds
-	  case STARTD_INFO:
-	  case SCHEDD_INFO:
-		if (command == STARTD_INFO)
-		{
-			dprintf (D_ALWAYS, "Got STARTD_INFO command;"
-					 "upgrading STARTD_INFO -> UPDATE_STARTD_AD\n");
-			command = UPDATE_STARTD_AD;
-		}
-		else
-		{
-			dprintf (D_ALWAYS, "Got SCHEDD_INFO command;"
-					 "upgrading SCHEDD_INFO -> UPDATE_SCHEDD_AD\n");
-			command = UPDATE_SCHEDD_AD;
-		}
-		context = create_context ();
-		if (!xdr_context (xdrs, context))
-		{
-			dprintf (D_ALWAYS, "Command %d not followed by CONTEXT\n");
-			return false;
-		}
-		clientAd = new ClassAd (context);
-		clientAd->SetMyTypeName ("Machine");
-		clientAd->SetTargetTypeName ("Job");
-		free_context (context);
-		break;
-
-#if 0
-	  // these are the new commands
-	  case UPDATE_STARTD_AD:
-	  case UPDATE_SCHEDD_AD:
-	  case UPDATE_MASTER_AD:
-	  case UPDATE_GATEWAY_AD:
-	  case UPDATE_CKPT_SRVR_AD:
-	  case QUERY_STARTD_ADS:
-	  case QUERY_SCHEDD_ADS:
-	  case QUERY_MASTER_ADS:
-	  case QUERY_GATEWAY_ADS:
-	  case QUERY_CKPT_SRVR_ADS:
-		clientAd = new ClassAd ();
-		if (!clientAd->get (xdrs))
-		{
-			dprintf (D_ALWAYS, "Command %d not followed by ClassAd\n",command);
-			return false;
-		}
-		if (!xdrrec_skiprecord (xdrs))
-		{
-			dprintf (D_ALWAYS, "Could not skiprecord\n");
-			return false;
-		}
-		break;
-#endif
-
-	  default:
-		dprintf (D_ALWAYS, "Received illegal command %d: aborting\n", command);
-		return false;
-	}
-
-	return true;
 }
 #endif
 

@@ -1,8 +1,6 @@
 #ifndef _DGRAM_IO_HANDLE_H
 #define _DGRAM_IO_HANDLE_H 
 
-#include <netinet/in.h>
-
 /* this structure is used to compact together all the information
    needed to 'send' datagram sockets from schedd and startd to the
    collector.  -- Raghu 2/28/95

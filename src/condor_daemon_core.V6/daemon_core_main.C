@@ -41,16 +41,16 @@ main( int argc, char** argv )
 	int		command_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char*	ptmp;
-	ReliSock* rsock;	// tcp command socket
-	SafeSock* ssock;	// udp command socket
-#ifdef NOT_YET_WIN32
-	char	buf[_POSIX_PATH_MAX];
-	char	*inbuf, *outbuf;
-	int		i,j;
-#endif
+	ReliSock* rsock = NULL;	// tcp command socket
+	SafeSock* ssock = NULL;	// udp command socket
 
 	// instantiate a daemon core
-	daemonCore = new DaemonCore();
+	// have lots of pid table hash buckets if we're the SCHEDD, since the
+	// SCHEDD could have lots of children...
+	if ( strcmp(mySubSystem,"SCHEDD") == 0 )
+		daemonCore = new DaemonCore(500);
+	else
+		daemonCore = new DaemonCore();
 
 #ifndef WIN32
 		// Handle Unix signals
@@ -61,10 +61,10 @@ main( int argc, char** argv )
 	sigfillset( &fullset );
 	sigprocmask( SIG_SETMASK, &fullset, NULL );
 
-		// TODO: Install signal handlers for SIGTERM, SIGQUIT and
-		// SIGHUP to raise the DaemonCore versions, and register
-		// handlers for those DC signals to call main_shutdown_* and
-		// main_config. 
+	// TODO: Install signal handlers for SIGTERM, SIGQUIT and
+	// SIGHUP to raise the DaemonCore versions, and register
+	// handlers for those DC signals to call main_shutdown_* and
+	// main_config.
 #endif
 
 	// set myName to be argv[0] with the path stripped off
@@ -148,6 +148,8 @@ main( int argc, char** argv )
 	// then register ourselves as an NT Service.
 	if (!Foreground) {
 #ifdef WIN32
+		// Disconnect from the console
+		FreeConsole();
 		if ( strcmp(mySubSystem,"MASTER") == 0 ) {
 			// TODO here we call the Service code
 		}
@@ -160,37 +162,8 @@ main( int argc, char** argv )
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
 
-
-
-
-#ifdef NOT_YET_WIN32
-	// Here we handle inheritance of sockets, file descriptors, and/or handles
-	// from our parent.  This is done via an environment variable "CONDOR_INHERIT".
-	// If this variable does not exist, it usually means our parent is not a daemon core
-	// process.  
-	// CONDOR_INHERIT has the following structure:
-	//		parent handle/pid
-	//		
-	{
-	DWORD	EnvVarSize;		// size in bytes of environment variable
-	LPWSAPROTOCOL_INFO	pProtoInfo;	// pointer to WSAPROTOCOL_INFO structure
-
-	inbuf = new char[ 3000 ];
-	if ( EnvVarSize=GetEnvironmentVariable("CONDOR_INHERIT",inbuf,3000) ) {
-
-		// found it, now convert it from ascii to binary
-		pProtoInfo = (LPWSAPROTOCOL_INFO) malloc(sizeof(WSAPROTOCOL_INFO));
-		outbuf = (char *) pProtoInfo;
-		for (i=0, ptmp=bigbuf; i < (EnvVarSize / 3); i++, ptmp+=3) {
-			sscanf(ptmp,"%x-",&j);
-			outbuf[i] = (char) j;
-		}
-		delete []inbuf;
-	
-		// now open it by calling the special "duplicate" Relisock constructor
-	}
-	}
-#endif
+	// Now take care of inheriting resources from our parent
+	daemonCore->Inherit(rsock,ssock);
 
 	// SETUP COMMAND SOCKET
 
@@ -198,28 +171,34 @@ main( int argc, char** argv )
 		dprintf(D_DAEMONCORE,"Setting up command socket\n");
 		
 		// we want a command port for this process, so create
-		// a tcp and a udp socket to listen on.
-		if ( command_port == -1 ) {
-			// choose any old port (dynamic port)
-			rsock = new ReliSock( 0 );
-			// now open a SafeSock _on the same port_ choosen above
-			if ( rsock )
-				ssock = new SafeSock( rsock->get_port() );
-		} else {
-			// use well-known port specified by command_port
-			rsock = new ReliSock( command_port );
-			ssock = new SafeSock( command_port );
-		}
-		if ( !rsock ) {
-			EXCEPT("Unable to create command Relisock");
-		}
-		if ( !ssock ) {
-			EXCEPT("Unable to create command SafeSock");
+		// a tcp and a udp socket to listen on if we did not
+		// already inherit them above.
+		// If rsock/ssock are not NULL, it means we inherited them from our parent
+		if ( rsock == NULL && ssock == NULL ) {
+			if ( command_port == -1 ) {
+				// choose any old port (dynamic port)
+				rsock = new ReliSock( 0 );
+				// now open a SafeSock _on the same port_ choosen above
+				if ( rsock )
+					ssock = new SafeSock( rsock->get_port() );
+			} else {
+				// use well-known port specified by command_port
+				rsock = new ReliSock( command_port );
+				ssock = new SafeSock( command_port );
+			}
+			if ( !rsock ) {
+				EXCEPT("Unable to create command Relisock");
+			}
+			if ( !ssock ) {
+				EXCEPT("Unable to create command SafeSock");
+			}
 		}
 
 		// now register these new command sockets
 		daemonCore->Register_Command_Socket( (Stream*)rsock );
 		daemonCore->Register_Command_Socket( (Stream*)ssock );
+		dprintf(D_ALWAYS,"DaemonCore: Command Socket at %s\n",
+			daemonCore->InfoCommandSinfulString());
 
 		// now register any DaemonCore "default" handlers
 

@@ -31,16 +31,21 @@
 
 /* Header Files */
 
-#include "constants2.h"
+#include "condor_common.h"
+#include "condor_debug.h"
+
+#if !defined(WIN32)
 #include <sys/types.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <errno.h>
+#include "constants2.h"
 #include "debug.h"
 
 /* P R O T O T Y P E S */
@@ -111,7 +116,7 @@ int I_bind(int                 socket_desc,
       fprintf(stderr, "ERROR:\n");
       fprintf(stderr, "ERROR: unable to bind socket (pid=%d)\n", 
 	      (int) getpid());
-      fprintf(stderr, "\terrno = %d\n", errno);
+	  fprintf(stderr, "\terrno = %d\n", errno);
       fprintf(stderr, "ERROR:\n");
       fprintf(stderr, "ERROR:\n\n");
       return BIND_ERROR;
@@ -336,6 +341,7 @@ char* getserveraddr()
 
 int I_socket()
 {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int sd;
 	
 	sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -349,9 +355,12 @@ int I_socket()
 			fprintf(stderr, "(%d)\n", (int) getpid());
 			fprintf(stderr, "ERROR:\n");
 			fprintf(stderr, "ERROR:\n\n");
-			return SOCKET_ERROR;
+			return CKPT_SERVER_SOCKET_ERROR;
 		}
 	return(sd);
+#else
+	return 0;
+#endif
 }
 
 
@@ -388,6 +397,7 @@ int I_socket()
 int I_listen(int socket_desc,
 	     int queue_len)
 {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
   if ((queue_len > 5) || (queue_len < 0))
     queue_len = 5;
   if (listen(socket_desc, queue_len) < 0)
@@ -400,6 +410,7 @@ int I_listen(int socket_desc,
       fprintf(stderr, "ERROR:\n\n");
       return LISTEN_ERROR;
     }
+#endif
   return CKPT_OK;
 }
 
@@ -451,6 +462,7 @@ int I_accept(int                 socket_desc,
 			 struct sockaddr_in* addr, 
 			 int*                addr_len)
 {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int temp;
 	
 	while ((temp=accept(socket_desc, (struct sockaddr*) addr, addr_len)) < 0) {
@@ -465,6 +477,9 @@ int I_accept(int                 socket_desc,
 		}
     }
 	return(temp);
+#else
+	return 0;
+#endif
 }
 
 
@@ -506,6 +521,7 @@ int net_write(int   socket_desc,
 			  char* buffer, 
 			  int   size)
 {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int bytes_written;
 	int bytes_remaining;
 	int total=0;
@@ -522,4 +538,7 @@ int net_write(int   socket_desc,
 	if (total != size)
 		return CHILDTERM_BAD_FILE_SIZE;
 	return total;
+#else
+	return 0;
+#endif
 }

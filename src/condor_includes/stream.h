@@ -102,6 +102,9 @@
 		- on encode, flush stream and send record delimiter.  on decode, discard
 		data up until the next record delimiter.
 
+	11) char * serialize()
+		- save/restore object state
+
 	* CODE/PUT/GET:
 
 	- Put (and Get) routines write to (and read from) streams,
@@ -129,6 +132,8 @@
 
 #include "condor_common.h"
 
+// This #define is a desperate move. GNU g++ seems to choke at runtime on our
+// inline function for eom.  Someday not needed ?
 #define eom end_of_message
 
 #include "proc.h"
@@ -170,6 +175,8 @@ class Stream {
 **		PUBLIC INTERFACE TO ALL STREAMS
 */
 public:
+
+	friend class DaemonCore;
 
 	/*
 	**	Type definitions
@@ -220,7 +227,7 @@ public:
 	//	Condor types
 
 	int code(PROC_ID &);
-	int code(PROC &);
+//	int code(PROC &);
 	int code(STARTUP_INFO &);
 	int code(PORTS &);
 	int code(StartdRec &);
@@ -259,7 +266,7 @@ public:
 
 	int code(PROC_ID *x)			{ return code(*x); }
 	int code(struct rusage *x)		{ return code(*x); }
-	int code(PROC *x)				{ return code(*x); }
+//	int code(PROC *x)				{ return code(*x); }
 	int code(STARTUP_INFO *x)		{ return code(*x); }
 	int code(struct stat *x)		{ return code(*x); }
 	int code(struct statfs *x)		{ return code(*x); }
@@ -339,11 +346,16 @@ public:
 	int snd_int(int val, int end_of_record);
 	int rcv_int(int &val, int end_of_record);
 
-
 /*
 **		PRIVATE INTERFACE TO ALL STREAMS
 */
 protected:
+
+	// serialize object (save/restore object state to an ascii string)
+	//
+	virtual char * serialize(char *) { assert(0); return (char *)0; }
+	// virtual char * serialize(char *) = 0;
+	inline char * serialize() { return(serialize(NULL)); }
 
 	/*
 	**	Type definitions

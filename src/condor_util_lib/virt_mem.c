@@ -29,6 +29,24 @@ static char sccsid[] = "@(#)virt_mem.c	4.3 9/18/91";
 ** 
 */ 
 
+#if defined(WIN32)
+
+#include "condor_common.h"
+
+/*
+** Try to determine the swap space available on our own machine.  The answer
+** is in kilobytes.
+*/
+int
+calc_virt_memory()
+{
+	MEMORYSTATUS status;
+	GlobalMemoryStatus(&status);
+	return (int)status.dwAvailPageFile/1024;
+}
+
+#else
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -524,3 +542,4 @@ return count;
 }
 #endif
 
+#endif /* !defined(WIN32) */

@@ -1,5 +1,4 @@
-int SetSyscalls(what)
-	int what;
+int SetSyscalls(int what)
 {
 	return what;
 }

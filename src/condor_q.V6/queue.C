@@ -1,5 +1,4 @@
 #include <iostream.h>
-#include <pwd.h>
 #include "condor_common.h"
 #include "_condor_fix_resource.h"
 #include "condor_config.h"
@@ -7,9 +6,10 @@
 #include "condor_attributes.h"
 #include "files.h"
 
-extern "C" SetSyscalls(){}
-extern "C" int float_to_rusage (float, float, struct rusage *);
+extern "C" int SetSyscalls(int val){return val;}
 void short_print (int, int, const char*, int, int, int, int, int, const char *);
+extern "C" void set_debug_flags( char * );
+extern "C" char *get_schedd_addr(const char *);
 
 static void short_header (void);
 static void usage (char *);
@@ -20,7 +20,7 @@ static int verbose = 0, summarize = 1;
 static int malformed, unexpanded, running, idle;
 
 extern	"C" BUCKET*		ConfigTab[];
-extern int Termlog;
+extern "C" extern int Termlog;
 
 int main (int argc, char **argv)
 {
@@ -31,7 +31,6 @@ int main (int argc, char **argv)
 	int               cluster, proc;
 	char              constraint[1024];
 	char              *host = 0;
-	struct passwd*		pwd;
 	char*				scheddAddr;
 	
 	for (i = 1; i < argc; i++)
@@ -138,15 +137,13 @@ static void
 displayJobShort (ClassAd *ad)
 {
 	int cluster, proc, date, status, prio, image_size;
-	float utime, stime;
+	float utime;
 	char owner[64], cmd[2048], args[2048];
-	struct rusage ru;
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
 		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
 		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
 		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)	||
-		!ad->EvalFloat   (ATTR_JOB_REMOTE_SYS_CPU, NULL, stime)	||
 		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)			||
 		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)				||
 		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)		||
@@ -157,11 +154,10 @@ displayJobShort (ClassAd *ad)
 		return;
 	}
 	
-	float_to_rusage (utime,stime,&ru);
 	shorten (owner, 14);
 	if (ad->EvalString ("Args", NULL, args)) strcat (cmd, args);
 	shorten (cmd, 18);
-	short_print (cluster, proc, owner, date, ru.ru_utime.tv_sec, status, prio,
+	short_print (cluster, proc, owner, date, (int)utime, status, prio,
 					image_size, cmd); 
 
 	switch (status)
@@ -190,7 +186,7 @@ short_header (void)
 static void
 shorten (char *buff, int len)
 {
-	if (strlen (buff) > len) buff[len] = '\0';
+	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
 }
 		
 static void

@@ -16,7 +16,7 @@ enum AdTypes
     NUM_AD_TYPES
 };
 
-#include "condor_commands.h"
+#include "condor_commands.h"   // collector commands
 
 #endif // __COLLECTOR_H__
 

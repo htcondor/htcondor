@@ -28,7 +28,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include <pwd.h>
 #include <stdarg.h>
 #include "user_log.c++.h"
 #include <time.h>
@@ -47,6 +46,7 @@ UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
 	initialize (owner, file, c, p, s);
 }
 
+#if defined(NEW_PROC)
 void UserLog::
 initialize (PROC *p)
 {
@@ -68,6 +68,7 @@ initialize (PROC *p)
 
 	initialize (p->owner, path, p->id.cluster, p->id.proc, 0);
 }
+#endif
 
 /* --- The following two functions are taken from the shadow's ulog.c --- */
 /*
@@ -128,7 +129,6 @@ get_env_val( const char *str )
 void UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
-	struct passwd	*pwd;
 	priv_state		priv;
 
 		// Save parameter info
@@ -179,7 +179,7 @@ UserLog::~UserLog()
 {
 	delete [] path;
 	delete lock;
-	fclose( fp );
+	if (fp != 0) fclose( fp );
 }
 
 void
@@ -314,7 +314,6 @@ extern "C" void
 PutUserLog( LP *lp, const char *fmt, ... )
 {
 	va_list		ap;
-	FILE	*fp;
 	char	buf[1024];
 
 	if( !lp ) {
@@ -385,7 +384,7 @@ readEvent (ULogEvent *& event)
 {
 	long   filepos;
 	int    eventnumber;
-	int    retval1, retval2, retval3;
+	int    retval1, retval2;
 	
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location

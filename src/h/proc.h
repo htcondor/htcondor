@@ -27,11 +27,12 @@
 ** 
 */ 
 
-#include "_condor_fix_resource.h"  /* dhaval */
-
 #ifndef CONDOR_PROC_INCLUDED
 #define CONDOR_PROC_INCLUDED
 
+#if !defined(WIN32)
+#include "_condor_fix_resource.h"  /* dhaval */
+#endif
 
 typedef struct {
 	int		cluster;
@@ -53,7 +54,7 @@ typedef struct {
 #define PVMD		6	/* Explicit, PVM daemon process */
 #define SCHED_UNIVERSE	7	/* Scheduler universe: run job locally */
 
-
+#if !defined(WIN32) // hopefully we won't need PROC structures in V6 so don't bother porting to NT
 /*
 ** Version 3
 */
@@ -172,6 +173,9 @@ typedef struct {
 	struct rusage	local_usage;
 	struct rusage	remote_usage;
 } OLD_PROC;
+
+#endif
+
 /*
 **	Possible notification options
 */

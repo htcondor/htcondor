@@ -1217,6 +1217,10 @@ calc_ncpus()
 	return (int)sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(IRIX53)
 	return sysmp(MP_NPROCS);
+#elif defined(WIN32)
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	return (int)info.dwNumberOfProcessors;
 #else sequent
 	return 1;
 #endif sequent

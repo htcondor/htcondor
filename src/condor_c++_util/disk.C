@@ -25,9 +25,6 @@ File::~File()
 // this method writes an UpDown object onto disk file
 int File::operator << (const UpDown & upDown)
 {
-	int  fd;
-
-
 	ofstream fout(fileName);   // open the output file
 	if ( fout.fail() )
 	{
@@ -64,8 +61,6 @@ int File::operator << (const UpDown & upDown)
 // reading in the file 
 int File::operator >> (UpDown & upDown)
 {
-	int  fd;
-
 	ifstream fin(fileName);   // open the input file
 	if ( fin.fail() )
 	{

@@ -68,7 +68,7 @@
 #define LOG_FILE_OPEN_ERROR                 26
 #define ACCEPT_ERROR                        27
 #define BIND_ERROR                          28
-#define SOCKET_ERROR                        29
+#define CKPT_SERVER_SOCKET_ERROR            29
 #define BAD_SOCKET_DESC_ERROR               30
 #define NOT_TCPIP                           31
 #define LISTEN_ERROR                        32

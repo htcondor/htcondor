@@ -199,8 +199,6 @@ COMMAND CmdTable[] = {
 	NO_COMMAND,		"",
 };
 
-typedef int BOOLEAN;
-
 #if 0
 	static int		DebugFd;
 	void debug_msg( const char *msg );

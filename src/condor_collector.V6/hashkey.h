@@ -1,10 +1,13 @@
 #ifndef __COLLHASH_H__
 #define __COLLHASH_H__
 
+#include "condor_common.h"
 #include <iostream.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef WIN32
 #include <netinet/in.h>
+#endif
 #include "condor_classad.h"
 
 #include "HashTable.h"

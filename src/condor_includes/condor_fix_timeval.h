@@ -19,23 +19,18 @@
 #  define __EXTENSIONS__
 #	 include <sys/time.h>
 #  undef __EXTENSIONS__
-
-#if 0
-
 #elif defined(Solaris)
 /* Solaris specific change ..dhaval 6/26 */
-#  if defined(_POSIX_SOURCE)
-#    define HOLD_POSIX_SOURCE
-#    undef _POSIX_SOURCE
-#  endif /* _POSIX_SOURCE */
-#  include <sys/types.h>
-#  if defined(HOLD_POSIX_SOURCE)
-#    define _POSIX_SOURCE
-#  endif
+#if defined(_POSIX_SOURCE)
+#define HOLD_POSIX_SOURCE
+#undef _POSIX_SOURCE
+#endif /* _POSIX_SOURCE */
+#	include <sys/types.h>
+#if defined(HOLD_POSIX_SOURCE)
+#define _POSIX_SOURCE
+#endif
 
-#endif 0
-
-
+#elif defined(WIN32)
 #else  
 #  include <sys/time.h> 
 

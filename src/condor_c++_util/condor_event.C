@@ -1,9 +1,9 @@
 
 #include "condor_common.h"
 #include <string.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include "condor_event.h"
-#include "user_log.h"
+#include "user_log.c++.h"
 
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
@@ -330,25 +330,32 @@ CheckpointedEvent::
 int CheckpointedEvent::
 writeEvent (FILE *file)
 {
+#if defined(WIN32)
+	if (fprintf (file, "Job was checkpointed.\n") < 0)
+		return 0;
+#else
 	if (fprintf (file, "Job was checkpointed.\n") < 0  		||
 		(!writeRusage (file, run_remote_rusage)) 			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
+#endif
 	return 1;
 }
 
 int CheckpointedEvent::
 readEvent (FILE *file)
 {
-	char buffer[128];
 	int retval = fscanf (file, "Job was checkpointed.");
+#if !defined(WIN32)
+	char buffer[128];
 	if (retval == EOF ||
 		!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
-	
+#endif
+
 	return 1;
 }
 		
@@ -358,8 +365,10 @@ JobEvictedEvent ()
 {
 	eventNumber = ULOG_JOB_EVICTED;
 	checkpointed = false;
+#if !defined(WIN32)
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
+#endif
 }
 
 JobEvictedEvent::
@@ -380,9 +389,11 @@ readEvent (FILE *file)
 	checkpointed = (bool) ckpt;
 	if (fgets (buffer, 128, file) == 0) return 0;
 	
+#if !defined(WIN32)
 	if (!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
+#endif
 	
 	return 1;
 }
@@ -400,12 +411,14 @@ writeEvent (FILE *file)
 	else
 		retval = fprintf (file, "Job was not checkpointed.\n\t");
 
+#if !defined(WIN32)
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage)) 			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
 		(fprintf (file, "  -  Run Local Usage\n") < 0))
 		return 0;
+#endif
 
 	return 1;
 }
@@ -418,8 +431,10 @@ JobTerminatedEvent ()
 	eventNumber = ULOG_JOB_TERMINATED;
 	coreFile[0] = '\0';
 	returnValue = signalNumber = -1;
+#if !defined(WIN32)
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
+#endif
 }
 
 JobTerminatedEvent::
@@ -451,6 +466,7 @@ writeEvent (FILE *file)
 			retval = fprintf (file, "\t(0) No core file\n\t");
 	}
 
+#if !defined(WIN32)
 	if ((retval < 0)										||
 		(!writeRusage (file, run_remote_rusage))			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
@@ -461,6 +477,7 @@ writeEvent (FILE *file)
 		(!writeRusage (file,  total_local_rusage))			||
 		(fprintf (file, "  -  Total Local Usage\n") < 0))
 		return 0;
+#endif
 	
 	return 1;
 }
@@ -503,12 +520,14 @@ readEvent (FILE *file)
 		}
 	}
 
+#if !defined(WIN32)
 	// read in rusage values
 	if (readRusage(file,run_remote_rusage)  && fgets(buffer, 128, file) &&
 		readRusage(file,run_local_rusage)   && fgets(buffer, 128, file) &&
 		readRusage(file,total_remote_rusage)&& fgets(buffer, 128, file) &&
 		readRusage(file,total_local_rusage) && fgets(buffer, 128, file))
 		return 1;
+#endif
 	
 	return 0;
 }
@@ -582,6 +601,7 @@ static const int minutes = 60 * seconds;
 static const int hours = 60 * minutes;
 static const int days = 24 * hours;
 
+#if !defined(WIN32)
 int ULogEvent::
 writeRusage (FILE *file, rusage &usage)
 {
@@ -632,3 +652,4 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
+#endif

@@ -29,13 +29,12 @@
 **               University of Wisconsin, Computer Sciences Dept.
 ** Uses <IP:PORT> rather than hostnames
 **
-** Modified by Cai, Weiru
-**			User condor_daemon_core 
 */
 
 #define _POSIX_SOURCE
 #include "condor_common.h"
 
+#if !defined(WIN32)
 #include <netdb.h>
 #include <pwd.h>
 
@@ -55,8 +54,12 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
 
 #include "condor_fix_wait.h"
+#include "condor_fdset.h"
+#endif // !defined WIN32
 
 #if defined(HPUX9)
 #include "fake_flock.h"
@@ -66,23 +69,20 @@
 #include "fake_flock.h"
 #endif
 
-#include <sys/stat.h>
-#include <netinet/in.h>
 #include "debug.h"
 #include "trace.h"
 #include "except.h"
 #include "sched.h"
 #include "clib.h"
 #include "exit.h"
-#include "dgram_io_handle.h" /* defines DRAM_IO_HANDLE */
 
-#include "condor_fdset.h"
 
-#include "condor_daemon_core.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
 #include "condor_adtypes.h"
 #include "condor_uid.h"
+#include "condor_config.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -91,12 +91,11 @@
 
 extern "C"
 {
-	void	_EXCEPT_(char*...);
 	void	dprintf_config(char*, int);
 	void	dprintf(int, char*...);
 	char*	param(char*);
-	int		boolean(char*, char*);
-	int		SetSyscalls() {}
+	int		param_in_pattern(char*, char*);
+	int		SetSyscalls() { return 0; }
 	int		ReadLog(char*);
 }
 extern	void	mark_jobs_idle();
@@ -104,20 +103,16 @@ extern	void	mark_jobs_idle();
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 // global variables to control the daemon's running and logging
-char*		Log;							// log directory
 char*		Spool;							// spool directory
-int			Foreground = 0;
-extern int	Termlog;
+char*		mySubSystem = "SCHEDD";
 
 // global objects
 Scheduler	scheduler;
-DaemonCore	core(10, 10, 10);
-char*		myName;
 Scheduler*	sched = &scheduler;		// for non-member functions to access data
 char		Name[MAXHOSTNAMELEN];
 int			ScheddName = 0;
 
-void	Init();
+void Init();
 
 void usage(char* name)
 {
@@ -125,21 +120,12 @@ void usage(char* name)
 	exit( 1 );
 }
 
-main(int argc, char* argv[])
+int
+main_init(int argc, char* argv[])
 {
 	char**		ptr; 
 	char		job_queue_name[_POSIX_PATH_MAX];
-	struct		utsname	name;
  
-	myName = argv[0];
-
-	// run as condor.condor at all times unless root privilege is needed
-	set_condor_priv();
-
-	if(argc > 7)
-	{
-		usage(argv[0]);
-	}
 	for(ptr = argv + 1; *ptr; ptr++)
 	{
 		if(ptr[0][0] != '-')
@@ -148,15 +134,6 @@ main(int argc, char* argv[])
 		}
 		switch(ptr[0][1])
 		{
-		  case 'f':
-			Foreground = 1;
-			break;
-		  case 't':
-			Termlog = 1;
-			break;
-		  case 'b':
-			Foreground = 0;
-			break;
 		  case 'n':
 			strcpy(Name, *(++ptr)); 
 			ScheddName++;
@@ -168,14 +145,13 @@ main(int argc, char* argv[])
 	
 	ClassAd *ScheddClassad = new ClassAd();
 	config( ScheddClassad );
-	
-	Init();
 
+	Init();
+	
 	// if a name if not specified, assume the name of the machine
 	if(!ScheddName)
 	{
-		uname(&name);
-		strcpy(Name, name.nodename);
+		gethostname(Name, MAXHOSTNAMELEN);
 	}
 
 	ScheddClassad->SetMyTypeName(SCHEDD_ADTYPE);
@@ -189,26 +165,6 @@ main(int argc, char* argv[])
 		ScheddClassad->Insert(expr);
 	}
 
-	// This is so if we dump core it'll go in the log directory
-	if(chdir(Log) < 0)
-	{
-		EXCEPT("chdir to log directory <%s>", Log);
-	}
-	
-	// Arrange to run in background
-	if(!Foreground)
-	{
-		if(fork())
-			exit(0);
-	}
-	
-	// Set up logging
-	dprintf_config("SCHEDD", 2);
-	dprintf(D_ALWAYS, "**************************************************\n");
-	dprintf(D_ALWAYS, "***		  CONDOR_SCHEDD.V6 STARTING UP	      ***\n");
-	dprintf(D_ALWAYS, "**************************************************\n");
-	dprintf(D_ALWAYS, "\n");
-
 	sprintf(job_queue_name, "%s/job_queue.log", Spool);
 	ReadLog(job_queue_name);
 	mark_jobs_idle();
@@ -216,25 +172,16 @@ main(int argc, char* argv[])
 	// initialize all the modules
 	scheduler.Init();
 	scheduler.SetClassAd(ScheddClassad);
-	scheduler.Register(&core);
-	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port(),
-									   CONDOR_IO_SOCK));
+	scheduler.Register(daemonCore);
+	scheduler.SetCommandPort(daemonCore->InfoCommandPort());
 	
 	scheduler.timeout();
-	
-	core.Driver();
+
+	return 0;
 } 
-	
+
 void Init()
 {
-	char*	tmp;
-
-    Log = param( "LOG" );
-    if( Log == NULL )  {
-        EXCEPT( "No log directory specified in config file\n" );
-    }
-	Foreground += boolean("SCHEDD_DEBUG","Foreground");
-
 	Spool = param("SPOOL");
 	if(!Spool)
 	{

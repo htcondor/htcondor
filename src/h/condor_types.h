@@ -71,11 +71,13 @@ struct fs_data {
 #include <sys/time.h>
 #define _POSIX_SOURCE SAVE_POSIX_DEF
 #define _POSIX_4SOURCE SAVE_POSIX_4DEF
-#else
+#elif !defined(WIN32)
 #include <sys/time.h>
 #endif /* _POSIX_SOURCE */
 
+#if !defined(WIN32)
 #include <sys/resource.h>
+#endif
 
 #endif	/* RUSAGE_SELF */
 
@@ -91,8 +93,6 @@ typedef char * caddr_t;
 #if defined(OSF1)
 #define malloc hide_malloc
 #endif
-#include <rpc/types.h>
-#include <rpc/xdr.h>
 #if defined(OSF1)
 #undef malloc
 #define mem_alloc(bsize)        malloc(bsize)
@@ -100,10 +100,6 @@ typedef char * caddr_t;
 
 
 #include "proc.h"
-
-#ifndef CONDOR_NDBM_INCLUDED
-#include <ndbm.h>
-#endif	/* CONDOR_NDBM_INCLUDED */
 
 typedef struct status_line {
 	char	*name;

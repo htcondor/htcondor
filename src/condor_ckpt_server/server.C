@@ -33,11 +33,11 @@ void Server::SetupReqPorts()
 
   log_file << "Setting up request ports ...";
 #endif
-  recv_req_sd = I_socket(SOCKET_ERROR);
+  recv_req_sd = I_socket(CKPT_SERVER_SOCKET_ERROR);
   server_addr.sin_port = htons(CKPT_SVR_STORE_REQ_PORT);
   I_bind(recv_req_sd, &server_addr, 0);
   I_listen(recv_req_sd, 5);
-  xmit_req_sd = I_socket(SOCKET_ERROR);
+  xmit_req_sd = I_socket(CKPT_SERVER_SOCKET_ERROR);
   server_addr.sin_port = htons(CKPT_SVR_RESTORE_REQ_PORT);
   I_bind(xmit_req_sd, &server_addr, 0);
   I_listen(xmit_req_sd, 5);

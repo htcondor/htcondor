@@ -66,39 +66,32 @@ LogRecord::readstring(int fd, char * &str)
 int
 LogRecord::Write(int fd)
 {
-	WriteHeader(fd);
-	WriteBody(fd);
-	WriteTail(fd);
+	return WriteHeader(fd) + WriteBody(fd) + WriteTail(fd);
 }
 
 
 int
-LogRecord::Write(XDR *xdrs)
+LogRecord::Write(Stream *s)
 {
-	xdrs->x_op = XDR_ENCODE;
-	WriteHeader(xdrs);
-	WriteBody(xdrs);
-	WriteTail(xdrs);
+	s->encode();
+
+	return WriteHeader(s) + WriteBody(s) + WriteTail(s);
 }
 
 
 int
 LogRecord::Read(int fd)
 {
-	ReadHeader(fd);
-	ReadBody(fd);
-	ReadTail(fd);
+	return ReadHeader(fd) + ReadBody(fd) + ReadTail(fd);
 }
 
 
 int
-LogRecord::Read(XDR *xdrs)
+LogRecord::Read(Stream *s)
 {
-	xdrs->x_op = XDR_DECODE;
+	s->decode();
 
-	ReadHeader(xdrs);
-	ReadBody(xdrs);
-	ReadTail(xdrs);
+	return ReadHeader(s) + ReadBody(s) + ReadTail(s);
 }
 
 
@@ -121,7 +114,8 @@ LogRecord::WriteHeader(int fd)
 }
 
 
-int LogRecord::WriteTail(int fd)
+int
+LogRecord::WriteTail(int fd)
 {
 	int	rval, tot;
 
@@ -158,7 +152,8 @@ LogRecord::ReadHeader(int fd)
 }
 
 
-int LogRecord::ReadTail(int fd)
+int
+LogRecord::ReadTail(int fd)
 {
 	int	rval, tot;
 
@@ -177,35 +172,37 @@ int LogRecord::ReadTail(int fd)
 
 
 int
-LogRecord::WriteHeader(XDR *xdrs)
+LogRecord::WriteHeader(Stream *s)
 {
-	int	rval, tot;
+	int	rval;
 
-	rval = xdr_int(xdrs, &op_type);
+	rval = s->code(op_type);
 	if (!rval) {
 		return rval;
 	}
-	rval = xdr_int(xdrs, &body_size);
+	rval = s->code(body_size);
 	return rval;
 }
 
 
-int LogRecord::WriteTail(XDR *xdrs)
+int
+LogRecord::WriteTail(Stream *s)
 {
-	return WriteHeader(xdrs);
+	return WriteHeader(s);
 }
 
 
 int
-LogRecord::ReadHeader(XDR *xdrs)
+LogRecord::ReadHeader(Stream *s)
 {
-	return WriteHeader(xdrs);
+	return WriteHeader(s);
 }
 
 
-int LogRecord::ReadTail(XDR *xdrs)
+int
+LogRecord::ReadTail(Stream *s)
 {
-	return WriteTail(xdrs);
+	return WriteTail(s);
 }
 
 

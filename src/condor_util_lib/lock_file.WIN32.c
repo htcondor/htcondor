@@ -1,5 +1,5 @@
 /* 
-** Copyright 1993 by Miron Livny, and Mike Litzkow
+** Copyright 1997 by the Condor Team
 ** 
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
@@ -22,81 +22,44 @@
 ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
-** Author:  Mike Litzkow
+** Author:  Jim Basney
 **
+** Purpose: Advisory file locking on Windows NT
 */ 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include "condor_constants.h"
+#include <sys/locking.h>
 #include "file_lock.h"
-#include <stdio.h>
+#include "fake_flock.h"
 
-extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
-
-FileLock::FileLock( int f )
+int
+lock_file(int fd, LOCK_TYPE type, int do_block)
 {
-	fd = f;
-	blocking = TRUE;
-	state = UN_LOCK;
-}
+	int	mode, result;
+	long original_pos, pos;
 
-FileLock::~FileLock()
-{
-	if( state != UN_LOCK ) {
-		release();
-	}
-}
+	original_pos = lseek(fd, SEEK_CUR, 0);
+	if (original_pos < 0) return original_pos;
+	pos = lseek(fd, SEEK_SET, 0);
+	if (pos < 0) return pos;
 
-void
-FileLock::display()
-{
-	printf( "fd = %d\n", fd );
-	printf( "blocking = %s\n", blocking ? "TRUE" : "FALSE" );
-	switch( state ) {
-	  case READ_LOCK:
-		printf( "state = READ\n" );
+	switch (type) {
+	case READ_LOCK:
+	case WRITE_LOCK:
+		if (do_block)
+			mode = _LK_LOCK;
+		else
+			mode = _LK_NBLCK;
 		break;
-	  case WRITE_LOCK:
-		printf( "state = WRITE\n" );
-		break;
-	  case UN_LOCK:
-		printf( "state = UNLOCKED\n" );
+	case UN_LOCK:
+	case LOCK_UN:
+		mode = _LK_UNLCK;
 		break;
 	}
-}
 
-BOOLEAN
-FileLock::is_blocking()
-{
-	return blocking;
-}
+	result = _locking(fd, mode, 4L);
 
-LOCK_TYPE
-FileLock::get_state()
-{
-	return state;
-}
+	lseek(fd, SEEK_SET, original_pos);
 
-void
-FileLock::set_blocking( BOOLEAN val )
-{
-	blocking = val;
-}
-
-BOOLEAN
-FileLock::obtain( LOCK_TYPE t )
-{
-	int		status = lock_file( fd, t, blocking );
-	if( status == 0 ) {
-		state = t;
-	}
-	return status == 0;
-}
-
-BOOLEAN
-FileLock::release()
-{
-	return obtain( UN_LOCK );
+	return result;
 }

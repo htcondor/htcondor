@@ -11,7 +11,6 @@
 #define _CONDOR_SCHED_H_
 
 #include "_condor_fix_types.h"
-#include "dgram_io_handle.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
@@ -87,15 +86,15 @@ class Scheduler : public Service
 	void			sigquit_handler();
 	void			sigint_handler();
 	void			SetClassAd(ClassAd*);
-	void			SetSockName(int);
+	void			SetCommandPort(int);
 	
 	// negotiation
-	void			negotiate(ReliSock*, struct sockaddr_in*);
-	void			reschedule_negotiator(ReliSock*, struct sockaddr_in*);
-	void			vacate_service(ReliSock *, struct sockaddr_in*);
+	void			negotiate(int, Stream *);
+	void			reschedule_negotiator(int, Stream *);
+	void			vacate_service(int, Stream *);
 
 	// job managing
-	void			abort_job(ReliSock*, struct sockaddr_in*);
+	void			abort_job(int, Stream *);
 	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 	friend	int		count(int, int);
@@ -121,7 +120,6 @@ class Scheduler : public Service
 	// information about this scheduler
 	ClassAd*		ad;
 	char*			MySockName;		// dhaval
-	int				UdpSock;					// for talking to collector
 	Scheduler*		myself;
 	u_short			port;
 	

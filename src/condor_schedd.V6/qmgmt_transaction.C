@@ -121,13 +121,13 @@ PtrList::NextEntry(void *prev)
 
 
 void
-Transaction::Commit(XDR *xdrs)
+Transaction::Commit(Stream *s)
 {
 	LogRecord		*log;
 
 	for (log = (LogRecord *) op_log.FirstEntry(); log != 0; 
 		 log = (LogRecord *) op_log.NextEntry(log)) {
-		log->Write(xdrs);
+		log->Write(s);
 	}
 	CommitDirty();
 }

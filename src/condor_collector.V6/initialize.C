@@ -12,8 +12,10 @@
 static char *_FileName_ = __FILE__;
 
 // prototypes
+#ifndef WIN32
 extern void reportToDevelopers (void);
 extern "C" int schedule_event( int , int , int , int , int , void (*)(void));
+#endif
 
 // variables from the config file
 extern char *Log;
@@ -26,109 +28,9 @@ extern int   QueryTimeout;
 extern int   MachineUpdateInterval;
 extern int   MasterCheckInterval;
 
-// communication
-extern int ClientSocket;
-
-
-int
-initializeTCPSocket (const char *service, int port)
-{
-	struct sockaddr_in sin;
-	struct servent     *servp;
-	int    on = 1;
-	int    sock;
-
-	// get the port of the collector
-	memset ((char *) &sin, 0, sizeof (sin));
-	servp = getservbyname (service, "tcp");
-	if (servp)
-	{
-		sin.sin_port = htons ((u_short) servp->s_port);
-	}
-	else
-	{
-		sin.sin_port = htons (port);
-	}
-
-	// create a socket
-	sock = socket (AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-	{
-		EXCEPT ("failed socket()");
-	}
-	
-	// allow reuse of local addresses
-	if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on))
-		< 0)
-	{
-		EXCEPT ("failed setsockopt()");
-	}
-
-	// bind to the collector's address
-	if (bind (sock, (struct sockaddr *)&sin, sizeof (sin)) < 0)
-	{
-		// check if address is in use ...
-		if (errno == EADDRINUSE)
-		{
-			EXCEPT ("CONDOR_COLLECTOR ALREADY RUNNING");
-		}
-		else
-		{
-			EXCEPT ("failed bind()");
-		}
-	}
-
-	// allow up to five connections
-	if (listen (sock, 5) < 0)	
-	{
-		EXCEPT ("failed listen()");
-	}
-	
-	return sock;
-}
-
-
-int
-initializeUDPSocket (const char *service, int port)
-{
-	struct sockaddr_in sin;
-	struct servent     *servp;
-	int    sock;
-
-	memset ((char *)&sin, 0, sizeof (sin));
-	servp = getservbyname (service, "udp");
-	if (servp)
-	{
-		sin.sin_port = htons ((u_short) servp->s_port);
-	}
-	else
-	{
-		sin.sin_port = htons (port);
-	}
-
-	sock = socket (AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0)
-	{
-		EXCEPT ("failed socket()");
-	}
-
-	if (bind (sock, (struct sockaddr *)&sin, sizeof (sin)) < 0)
-	{
-		if (errno == EADDRINUSE)
-		{
-			EXCEPT ("CONDOR_COLLECTOR ALREADY RUNNING");
-		}
-		else
-		{
-			EXCEPT ("failed bind()");
-		}
-	}
-
-	return sock;
-}
 
 void
-initializeParams (void)
+initializeParams()
 {
     char *tmp;
 
@@ -172,7 +74,7 @@ initializeParams (void)
 }
 
 
-
+#ifndef WIN32
 void
 initializeReporter (void)
 {
@@ -184,3 +86,4 @@ initializeReporter (void)
 	schedule_event( STAR, 15, 0, 0, 0, reportToDevelopers );
 	schedule_event( STAR, 23, 0, 0, 0, reportToDevelopers );
 }
+#endif

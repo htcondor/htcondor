@@ -52,4 +52,6 @@ char	*line;
 	}
 	argv[count] = 0;
 	*argc = count;
+
+	return 0;
 }
