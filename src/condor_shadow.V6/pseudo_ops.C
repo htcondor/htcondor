@@ -52,6 +52,7 @@ extern "C"  void log_image_size (int);
 
 extern "C" int access_via_afs (const char *);
 extern "C" int access_via_nfs (const char *);
+extern "C" int use_local_access (const char *);
 
 extern int JobStatus;
 extern int ImageSize;
@@ -958,6 +959,10 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	if(is_ckpt_file(full_path)) {
 		answer = IS_RSC;
 		dprintf( D_SYSCALLS, "\tanswer = IS_RSC\n" );
+	} else if( use_local_access(full_path) ) {
+		answer = IS_NFS;	/* should be IS_LOCAL but we need to be compatible
+							   with older syscall lib */
+		dprintf( D_SYSCALLS, "\tanswer = IS_LOCAL (a.k.a. IS_NFS)\n" );
 	} else if( access_via_afs(full_path) ) {
 		answer = IS_AFS;
 		dprintf( D_SYSCALLS, "\tanswer = IS_AFS\n" );
@@ -1065,6 +1070,13 @@ pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
+}
+
+int
+use_local_access( const char *file )
+{
+	return ((strcmp(file, "/dev/null") == MATCH) ||
+			(strcmp(file, "/dev/zero") == MATCH));
 }
 
 access_via_afs( const char *file )
