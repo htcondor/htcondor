@@ -207,6 +207,7 @@ ParseThing(void)
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
+    tree = NULL;
 	lexer.PeekToken(&token);
 	if (token.token_type == XMLLexer::tokenType_Tag) {
 		switch (token.tag_id) {
@@ -302,12 +303,9 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		}
 		else if (tag_id == XMLLexer::tagID_Real) {
 			double real;
-			if (hex_to_double(token.text, real)) {
-				value.SetRealValue(real);
-			} else {
-				return NULL;
-			}
-		} 
+            real = strtod(token.text.c_str(), NULL);
+            value.SetRealValue(real);
+        }
 		else {        // its a string
 			bool validStr = true;
 			token.text += " ";

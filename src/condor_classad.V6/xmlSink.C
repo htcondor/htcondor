@@ -163,10 +163,22 @@ Unparse(
 		case Value::REAL_VALUE: {   
 			double real;
 
-			val.IsRealValue(real);   
-			double_to_hex(real, tempBuf);
 			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_Start);
-			buffer += tempBuf;
+			val.IsRealValue(real); 
+            if (real == 0.0) {
+                buffer += "0.0";
+            } else if (real == -0.0) {
+                buffer += "-0.0";
+            } else if (isnan(real)) {
+                buffer += "NaN";
+            } else if (isinf(real) == -1){
+                buffer += "-INF";
+            } else if (isinf(real) == 1) {
+                buffer += "INF";
+            } else {
+                sprintf(tempBuf, "%1.15E", real);
+                buffer += tempBuf;
+            }
 			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_End);
 			break;
 		}
