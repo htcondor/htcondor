@@ -459,6 +459,9 @@ find_file(const char *env_name, const char *file_name)
 {
 
 	char	*config_file = NULL, *env;
+#if defined(CONDOR-G)
+	char	*home_dir;
+#endif
 	int		fd;
 
 		// If we were given an environment variable name, try that first. 
@@ -477,8 +480,34 @@ find_file(const char *env_name, const char *file_name)
 
 #ifndef WIN32
 	// Only look in /etc/condor and in ~condor on Unix.
+#if defined(CONDOR-G)
+    // For Condor-G, first check in the default install path, which is the
+    // user's homedirectory/CondorG/etc/condor_config 
 	if( ! config_file ) {
-			// try /etc/condor/file_name
+		struct passwd *pwent;      
+		
+		if( pwent = getpwuid( getuid() ) ) {
+			home_dir = strdup( pwent->pw_dir );
+	
+			config_file = (char *)malloc((strlen(file_name) + strlen(home_dir) +
+                            strlen("CondorG/etc/") + 3 ) * sizeof(char));	
+			config_file[0] = '\0';
+			strcat(config_file, home_dir);
+			strcat(config_file, "/CondorG/etc/");
+			strcat(config_file, file_name); 
+			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+				free( config_file );
+				config_file = NULL;
+			} else {
+				close( fd );
+			}
+			free( home_dir);
+		}
+	}
+#endif /* CONDOR-G */
+
+	if( ! config_file ) {
+		// try /etc/condor/file_name
 		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
 		config_file[0] = '\0';
 		strcat( config_file, "/etc/condor/" );

@@ -949,18 +949,21 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 		int nice_user = 0;
 		char user[_POSIX_PATH_MAX];
 			// We can't just use attr_value, since it contains '"'
-			// marks.  So, we have to strip those off...  owner[0]
-			// will be one, so after this, we'll have to use owner[1]
-			// as the begining of the string.
-		char owner[_POSIX_PATH_MAX];
-		strcpy( owner, attr_value );
-		while( (tmp = strrchr(owner, '"')) ) {
-			*tmp = '\0';
+			// marks.  Carefully remove them here.
+		char owner_buf[_POSIX_PATH_MAX];
+		strcpy( owner_buf, attr_value );
+		char *owner = owner_buf;
+		if( *owner == '"' ) {
+			owner++;
+			int endquoteindex = strlen(owner) - 1;
+			if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) {
+				owner[endquoteindex] = '\0';
+			}
 		}
 		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
 						 &nice_user ); 
 		sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
-				 &owner[1], scheduler.uidDomain() );  
+				 owner, scheduler.uidDomain() );  
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 	} 
 	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
@@ -978,22 +981,25 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			// should create a new value for ATTR_USER while we're at
 			// it, since that might need to change now that
 			// ATTR_NICE_USER is set.
-		char owner[ _POSIX_PATH_MAX];
+		char owner_buf[ _POSIX_PATH_MAX];
+		char *owner = owner_buf;
 		char user[_POSIX_PATH_MAX];
 		bool nice_user = false;
 		if( ! stricmp(attr_value, "TRUE") ) {
 			nice_user = true;
 		}
-		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner)
+		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner_buf) 
 			>= 0 ) {
-				// strip off any '"' marks from ATTR_OWNER.  owner[0]
-				// will be one, so after this, we'll have to use
-				// owner[1] as the begining of the string.
-			while( (tmp = strrchr(owner, '"')) ) {
-				*tmp = '\0';
+				// carefully strip off any '"' marks from ATTR_OWNER.  
+			if( *owner == '"' ) {
+				owner++;
+				int endquoteindex = strlen(owner) - 1;
+				if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) { 
+					owner[endquoteindex] = '\0';
+				}
 			}
 			sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
-					 "", &owner[1], scheduler.uidDomain() );  
+					 "", owner, scheduler.uidDomain() );  
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 		}
 	}

@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
@@ -13,7 +35,7 @@
 #include "gridmanager.h"
 
 
-#define QMGMT_TIMEOUT 300
+#define QMGMT_TIMEOUT 5
 
 #define GLOBUS_POLL_INTERVAL	1
 #define JOB_PROBE_INTERVAL		300
@@ -45,8 +67,8 @@ template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<PROC_ID, GlobusJob *>;
 template class HashBucket<PROC_ID, GlobusJob *>;
-template class List<GlobusJob *>;
-template class Item<GlobusJob *>;
+// template class List<GlobusJob *>;
+// template class Item<GlobusJob *>;
 template class List<JobUpdateEvent>;
 template class Item<JobUpdateEvent>;
 
@@ -54,6 +76,31 @@ template class Item<JobUpdateEvent>;
 void 
 addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
 {
+	JobUpdateEvent *curr_event;
+	
+	// For some event types we 
+	// check if there is already the same event on our list and then
+	// remove it before adding the new event.
+	// For example, if we are adding an event to set the status
+	// to DONE, and there is already an event to set it to RUNNING,
+	// we may as well remove the earlier event so we do not waste
+	// the schedd's time.
+	if ( event == JOB_UE_UPDATE_STATE ||
+		 event == JOB_UE_UPDATE_CONTACT )
+	{
+		JobUpdateEventQueue.Rewind();
+		while ( JobUpdateEventQueue.Next( curr_event ) ) {
+			if ( job == curr_event->job && 
+				event == curr_event->event &&
+				subtype == curr_event->subtype ) 
+			{
+				JobUpdateEventQueue.DeleteCurrent();
+				delete curr_event;
+			}
+		}
+	}
+
+
 	JobUpdateEvent *new_event = new JobUpdateEvent;
 	new_event->job = job;
 	new_event->event = event;
@@ -147,11 +194,11 @@ GridManager::Init()
 void
 GridManager::Register()
 {
-	daemonCore->Register_Signal( ADD_JOBS, "AddJobs",
+	daemonCore->Register_Signal( GRIDMAN_ADD_JOBS, "AddJobs",
 		(SignalHandlercpp)&GridManager::ADD_JOBS_signalHandler,
 		"ADD_JOBS_signalHandler", (Service*)this, WRITE );
 
-	daemonCore->Register_Signal( REMOVE_JOBS, "RemoveJobs",
+	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 		(SignalHandlercpp)&GridManager::REMOVE_JOBS_signalHandler,
 		"REMOVE_JOBS_signalHandler", (Service*)this, WRITE );
 
@@ -195,7 +242,7 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 	if ( !schedd ) {
-		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
+		dprintf( D_ALWAYS, "Failed to connect to schedd! (in ADD_JOBS)\n");
 		return FALSE;
 	}
 
@@ -239,28 +286,36 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 				dprintf(D_ALWAYS,"Submited job %d.%d\n",
 					new_job->procID.cluster,new_job->procID.proc);
 			} else {
-				dprintf(D_ALWAYS,"ERROR: Job Submit failed because %s\n",
+				dprintf(D_ALWAYS,"ERROR: Job %d.%d Submit failed because %s\n",
+					new_job->procID.cluster,new_job->procID.proc,
 					new_job->errorString());
+				if (new_job->RSL) {
+					dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
+						new_job->procID.cluster,new_job->procID.proc,
+						new_job->RSL);
+				}
 				// TODO : we just failed to submit a job; handle it better.
 			}
 		} else {
 			dprintf(D_FULLDEBUG,
 				"Job %d.%d already submitted to Globus\n",
 				new_job->procID.cluster,new_job->procID.proc);
-			// No worry about inserting the same job multiple
-			// times into the JobsByContact table since all fetches from
-			// the schedd after the first one require that jobState
-			// is G_UNSUBMITTED.  So no need to do checks here.
-			//
 			// So here the job has already been submitted to Globus.
 			// We need to place the contact string into our hashtable,
 			// and setup to get async events.
-			JobsByContact->insert(HashKey(new_job->jobContact), new_job);
-			new_job->callback_register();
+			if ( new_job->jobContact ) {
+				GlobusJob *tmp_job = NULL;
+				// see if this contact string already in our hash table
+				JobsByContact->lookup(HashKey(new_job->jobContact), tmp_job);
+				if ( tmp_job == NULL ) {
+					// nope, this string is not in our hash table.  insert it.
+					JobsByContact->insert(HashKey(new_job->jobContact), new_job);
+					new_job->callback_register();
+				}
+			}
 		}
 
 		new_ads.Delete( next_ad );
-		FreeJobAd( next_ad );
 	}
 
 	return TRUE;
@@ -284,7 +339,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
 	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
 	if ( !schedd ) {
-		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
+		dprintf( D_ALWAYS, "Failed to connect to schedd! (in REMOVE_JOBS)\n");
 		return FALSE;
 	}
 
@@ -301,19 +356,17 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	// Try to cancel the jobs
 	new_ads.Open();
 
+	PROC_ID curr_procid;
+	GlobusJob *curr_job;
 	while ( ( next_ad = new_ads.Next() ) != NULL ) {
-
-		int rc;
-		PROC_ID curr_procid;
-		GlobusJob *curr_job;
 
 		next_ad->LookupInteger( ATTR_CLUSTER_ID, curr_procid.cluster );
 		next_ad->LookupInteger( ATTR_PROC_ID, curr_procid.proc );
 
+		curr_job = NULL;
 		JobsByProcID->lookup( curr_procid, curr_job );
-		if ( rc != 0 || curr_job == NULL ) {
+		if ( curr_job == NULL ) {
 			new_ads.Delete( next_ad );
-			FreeJobAd( next_ad );
 			continue;
 		}
 
@@ -323,21 +376,33 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 				curr_job->procID.cluster,curr_job->procID.proc);
 			
 			if ( curr_job->cancel() == false ) {
-
 				// Error
 				dprintf(D_ALWAYS,"ERROR: Job cancel failed because %s\n",
 					globus_gram_client_error_string(curr_job->errorCode));
 
+				// TODO what now?  try later ?
+			} else {
+				// Success.  We don't actually remove it until
+				// we receive the status update from the job manager.
+				dprintf(D_ALWAYS,"Removed job %d.%d\n",
+					curr_job->procID.cluster,curr_job->procID.proc);
 			}
-
+			/*
 			if ( curr_job->jobContact != NULL )
 				JobsByContact->remove( HashKey( curr_job->jobContact ) );
 			JobsByProcID->remove( curr_procid );
 			addJobUpdateEvent( curr_job, JOB_REMOVED );
+			*/
+		} else {
+
+			// If there is no contact, remove the job now
+			addJobUpdateEvent( curr_job, JOB_UE_UPDATE_STATE );
+			addJobUpdateEvent( curr_job, JOB_UE_REMOVE_JOB );
+			addJobUpdateEvent( curr_job, JOB_UE_ULOG_ABORT );
+
 		}
 
 		new_ads.Delete( next_ad );
-		FreeJobAd( next_ad );
 
 	}
 
@@ -354,40 +419,60 @@ GridManager::updateSchedd()
 	Qmgr_connection *schedd;
 	JobUpdateEvent *curr_event;
 	GlobusJob *curr_job;
+	bool handled;
 
 	dprintf(D_FULLDEBUG,"in updateSchedd()\n");
+
+	updateScheddTimerSet = false;
 
 	JobUpdateEventQueue.Rewind();
 
 	while ( JobUpdateEventQueue.Next( curr_event ) ) {
+
 		curr_job = curr_event->job;
+		handled = false;
 
 		switch ( curr_event->event) {
 		case JOB_UE_ULOG_EXECUTE:
 			WriteExecuteToUserLog( curr_job );
-
+			handled = true;
 			break;
 		case JOB_UE_ULOG_TERMINATE:
 			WriteTerminateToUserLog( curr_job );
-
+			handled = true;
+			break;
+		case JOB_UE_ULOG_ABORT:
+			WriteAbortToUserLog( curr_job );
+			handled = true;
 			break;
 		case JOB_UE_EMAIL:
+			handled = true;
 			break;
 		case JOB_UE_CALLBACK:
 			curr_job->callback();
-
+			handled = true;
 			break;
 		}
 
+		if ( handled ) {
+			JobUpdateEventQueue.DeleteCurrent();
+			delete curr_event;
+		}
+
+	}
+
+	// Any items left in the list at this point must be qmgmt ops.
+	// Before connecting to the schedd queue, check if the list
+	// is empty.  If so, we're done.
+	if ( JobUpdateEventQueue.IsEmpty() ) {
+		return TRUE;
 	}
 
 	schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd!\n");
 		// Should we be retrying infinitely?
-		daemonCore->Register_Timer( UPDATE_SCHEDD_DELAY,
-				(TimerHandlercpp)&GridManager::updateSchedd,
-				"updateSchedd", (Service*)this );
+		setUpdate();
 		return TRUE;
 	}
 
@@ -417,10 +502,22 @@ GridManager::updateSchedd()
 								 ATTR_JOB_STATUS, RUNNING );
 				break;
 			case G_FAILED:
+//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
+
 				// Send new job state command
-				SetAttributeInt( curr_job->procID.cluster,
+				if ( curr_job->abortedByUser ) {
+//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
+
+					SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, REMOVED );
+				} else {
+//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
+
+					SetAttributeInt( curr_job->procID.cluster,
 								 curr_job->procID.proc,
 								 ATTR_JOB_STATUS, COMPLETED );
+				}
 				break;
 			case G_DONE:
 				// Send new job state command
@@ -438,10 +535,15 @@ GridManager::updateSchedd()
 
 			break;
 		case JOB_UE_UPDATE_CONTACT:
-			SetAttributeString( curr_job->procID.cluster,
+			// Before calling SetAttributeString, make certain
+			// the jobContact string is not NULL.  This could be 
+			// the case if the job has already completed.
+			if ( curr_job->jobContact) {
+				SetAttributeString( curr_job->procID.cluster,
 								curr_job->procID.proc,
 								ATTR_GLOBUS_CONTACT_STRING,
 								curr_job->jobContact );
+			}
 
 			break;
 		case JOB_UE_REMOVE_JOB:
@@ -464,6 +566,10 @@ GridManager::updateSchedd()
 			// Remove all knowledge we may have about this job
 			if ( curr_job->jobContact ) {
 				JobsByContact->remove(HashKey(curr_job->jobContact));
+			} else {
+				if ( curr_job->old_jobContact ) {
+					JobsByContact->remove(HashKey(curr_job->old_jobContact));
+				} 
 			}
 			JobsByProcID->remove( curr_job->procID );
 			delete curr_job;
@@ -476,11 +582,11 @@ GridManager::updateSchedd()
 		}
 		
 		JobUpdateEventQueue.DeleteCurrent();
+		delete curr_event;
 	}
 
 	DisconnectQ( schedd );
 
-	updateScheddTimerSet = false;
 
 
 	return TRUE;
@@ -498,6 +604,8 @@ GridManager::jobProbe()
 {
 	GlobusJob *next_job;
 
+	//dprintf(D_FULLDEBUG,"in jobProbe elements=%d\n",JobsByContact->getNumElements() );
+
 	JobsByContact->startIterations();
 
 	while ( JobsByContact->iterate( next_job ) != 0 ) {
@@ -509,12 +617,28 @@ GridManager::jobProbe()
 
 			if ( next_job->probe() == false ) {
 				dprintf( D_ALWAYS, 
-						"Globus jobmanager unreachable for job %d.%d\n",
+						"Globus JobManager unreachable for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
 				// job manager is unreachable
 				// resubmit or fail?
 				// bad stuff
 				// TODO: INSERT JAMIE'S RE-ATTACH TO JOBMANAGER CODE HERE
+
+				// For now, check if we can contact the gatekeeper.
+				// If we can contact the gatekeeper, and not the jobmanager,
+				// we know the jobmanager is gone.  So either 
+				// resubmit the job or place it on hold.
+				int err=globus_gram_client_ping(next_job->rmContact);
+				if ( err == GLOBUS_SUCCESS ) {
+					// jobmanager definitely gone.
+					// make it appear like it exited with status 1
+					dprintf( D_ALWAYS, 
+						"Job %d.%d exiting with status 1 because JobManager gone\n",
+						 next_job->procID.cluster, next_job->procID.proc );
+					next_job->exit_value = 1;
+					next_job->callback(GLOBUS_GRAM_CLIENT_JOB_STATE_DONE);
+				} 
+
 			}
 
 		}
@@ -550,7 +674,11 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 	this_job->callback( state, errorcode );
 
 	if ( this_job->jobContact == NULL ) {
+		//dprintf(D_ALWAYS,"TODD DEUBG AAA 1 size=%d job_contact=%s\n",
+				//this_->JobsByContact->getNumElements(), job_contact);
 		this_->JobsByContact->remove( HashKey( job_contact ) );
+		//dprintf(D_ALWAYS,"TODD DEUBG AAA 2 size=%d job_contact=%s\n",
+				//this_->JobsByContact->getNumElements(), job_contact);
 	} else if ( strcmp( this_job->jobContact, job_contact ) != 0 ) {
 		this_->JobsByContact->remove( HashKey( job_contact ) );
 		this_->JobsByContact->insert( HashKey( this_job->jobContact ),
@@ -572,11 +700,6 @@ GridManager::InitializeUserLog( GlobusJob *job )
 		// User doesn't want a log
 		return NULL;
 	}
-
-	// Normally, if the user log is specified with a relative pathname, it's
-	// relative to the IWD of the job. But if we consider the IWD to be on
-	// the remote machine, where on the local machine do we put the log
-	// file? For now, assume the CWD.
 
 	dprintf( D_FULLDEBUG, "Writing record to user logfile=%s owner=%s\n",
 			 job->userLogFile, Owner );
@@ -613,6 +736,27 @@ GridManager::WriteExecuteToUserLog( GlobusJob *job )
 }
 
 bool
+GridManager::WriteAbortToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	JobAbortedEvent event;
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_ABORT event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
 GridManager::WriteTerminateToUserLog( GlobusJob *job )
 {
 	UserLog *ulog = InitializeUserLog( job );
@@ -640,7 +784,7 @@ GridManager::WriteTerminateToUserLog( GlobusJob *job )
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
 	event.normal = true;
-	event.returnValue = 0;
+	event.returnValue = job->exit_value;
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

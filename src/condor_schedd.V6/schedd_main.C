@@ -39,6 +39,7 @@
 #include "dedicated_scheduler.h"
 #include "condor_adtypes.h"
 #include "condor_uid.h"
+#include "grid_universe.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -114,6 +115,7 @@ int
 main_config()
 {
 	dedicated_scheduler.reconfig();
+	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
 	return 0;
 }
@@ -123,6 +125,7 @@ int
 main_shutdown_fast()
 {
 	dedicated_scheduler.shutdown_fast();
+	GridUniverseLogic::shutdown_fast();
 	scheduler.shutdown_fast();
 	return 0;
 }
@@ -132,6 +135,7 @@ int
 main_shutdown_graceful()
 {
 	dedicated_scheduler.shutdown_graceful();
+	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
 	return 0;
 }

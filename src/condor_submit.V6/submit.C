@@ -143,6 +143,7 @@ char	*Error			= "error";
 char	*RootDir		= "rootdir";
 #endif
 char	*InitialDir		= "initialdir";
+char	*RemoteInitialDir		= "remote_initialdir";
 char	*Requirements	= "requirements";
 char	*Preferences	= "preferences";
 char	*Rank				= "rank";
@@ -202,6 +203,7 @@ void 	SetStdFile( int which_file );
 void 	SetPriority();
 void 	SetNotification();
 void 	SetNotifyUser ();
+void	SetRemoteInitialDir();
 void	SetExitRequirements();
 void 	SetArguments();
 void 	SetEnvironment();
@@ -222,7 +224,7 @@ void	SetKillSig();
 void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
 int	read_condor_file( FILE *fp );
-char * 	condor_param( char *name );
+char * 	condor_param( const char *name );
 void 	set_condor_param( char *name, char *value );
 void 	queue(int num);
 char * 	check_requirements( char *orig );
@@ -405,7 +407,7 @@ main( int argc, char *argv[] )
 #if !defined(WIN32)	
 		// Make sure root isn't trying to submit.
 	if( getuid() == 0 || getgid() == 0 ) {
-		fprintf( stderr, "ERROR: Submitting jobs as user/group 0 (root) is not "
+		fprintf( stderr, "\nERROR: Submitting jobs as user/group 0 (root) is not "
 				 "allowed for security reasons.\n" );
 		exit( 1 );
 	}
@@ -492,9 +494,9 @@ main( int argc, char *argv[] )
 
 	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
-			fprintf( stderr, "ERROR: Can't find address of schedd %s\n", ScheddName );
+			fprintf( stderr, "\nERROR: Can't find address of schedd %s\n", ScheddName );
 		} else {
-			fprintf( stderr, "ERROR: Can't find address of local schedd\n" );
+			fprintf( stderr, "\nERROR: Can't find address of local schedd\n" );
 		}
 		exit(1);
 	}
@@ -510,7 +512,7 @@ main( int argc, char *argv[] )
 		fp = stdin;
 	} else {
 		if( (fp=fopen(cmd_file,"r")) == NULL ) {
-			fprintf( stderr, "ERROR: Failed to open command file\n");
+			fprintf( stderr, "\nERROR: Failed to open command file\n");
 			exit(1);
 		}
 	}
@@ -1496,6 +1498,23 @@ SetLogNotes()
 }
 
 void
+SetRemoteInitialDir()
+{
+	char *who = condor_param(RemoteInitialDir);
+
+	if( ! who ) {
+			// isn't there, try ClassAd flavor
+		who = condor_param( ATTR_JOB_REMOTE_IWD );
+	}
+
+	if (who) {
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_REMOTE_IWD, who);
+		InsertJobExpr (buffer);
+		free(who);
+	}
+}
+
+void
 SetExitRequirements()
 {
 	char *who = condor_param(ExitRequirements);
@@ -1844,19 +1863,20 @@ check_iwd( char *iwd )
 void
 SetUserLog()
 {
-	char *ulog = condor_param(UserLogFile);
+	char *ulog_entry = condor_param(UserLogFile);
 
-	if (ulog) {
-		if (whitespace(ulog)) {
+	if (ulog_entry) {
+		if (whitespace(ulog_entry)) {
 			fprintf(stderr,"Only one %s can be specified.\n", UserLogFile);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
+		char *ulog = full_path(ulog_entry,false);
+		free(ulog_entry);
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
 		InsertJobExpr(buffer);
 		UserLogSpecified = true;
-		free(ulog);
 	}
 }
 
@@ -2223,7 +2243,7 @@ read_condor_file( FILE *fp )
 }
 
 char *
-condor_param( char *name )
+condor_param( const char *name )
 {
 	char *pval = lookup_macro(name, ProcVars, PROCVARSIZE);
 
@@ -2270,11 +2290,11 @@ connect_to_the_schedd()
 	if (ConnectQ(ScheddAddr) == 0) {
 		if( ScheddName ) {
 			fprintf( stderr, 
-					"ERROR: Failed to connect to queue manager %s\n",
+					"\nERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
 		} else {
 			fprintf( stderr, 
-				"ERROR: Failed to connect to local queue manager\n" );
+				"\nERROR: Failed to connect to local queue manager\n" );
 		}
 		exit(1);
 	}
@@ -2350,7 +2370,7 @@ queue(int num)
 			}
 /*
 			if ( rm_contact && (check_globus_rm_contacts(rm_contact) != 0) ) {
-				fprintf( stderr, "ERROR: Can't find scheduler in MDS\n" );
+				fprintf( stderr, "\nERROR: Can't find scheduler in MDS\n" );
 				exit( 1 );
 			}
 */
@@ -2376,6 +2396,7 @@ queue(int num)
 		SetEnvironment();
 		SetNotification();
 		SetNotifyUser();
+		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetUserLog();
 		SetCoreSize();

@@ -1400,6 +1400,13 @@ void
 Daemons::UpdateCollector()
 {
 	int		cmd = UPDATE_MASTER_AD;
+	int		error_debug;
+
+#if defined(CONDOR-G)
+	error_debug = D_FULLDEBUG;
+#else
+	error_debug = D_ALWAYS;
+#endif
 
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
@@ -1410,7 +1417,7 @@ Daemons::UpdateCollector()
 
 		// Port doesn't matter, since we've got the sinful string. 
 	if (!sock.connect(Collector->addr(), 0)) {
-		dprintf( D_ALWAYS, "Can't locate collector %s\n", 
+		dprintf( error_debug, "Can't locate collector %s\n", 
 				 Collector->fullHostname() );
 		return;
 	}

@@ -13,10 +13,6 @@
 // For developmental testing
 extern int test_mode;
 
-// These are temporary.
-#define ADD_JOBS	42
-#define REMOVE_JOBS	43
-
 
 class GridManager : public Service
 {
@@ -43,6 +39,7 @@ class GridManager : public Service
 
 	UserLog *InitializeUserLog( GlobusJob * );
 	bool WriteExecuteToUserLog( GlobusJob * );
+	bool WriteAbortToUserLog( GlobusJob * );
 	bool WriteTerminateToUserLog( GlobusJob * );
 
 

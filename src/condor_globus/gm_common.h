@@ -21,6 +21,7 @@ extern char *gassServerUrl;
 #define JOB_UE_ULOG_TERMINATE		6
 #define JOB_UE_EMAIL				7
 #define JOB_UE_CALLBACK				8
+#define JOB_UE_ULOG_ABORT			9
 
 class GlobusJob;
 

@@ -209,6 +209,25 @@ GridUniverseLogic::SendRemoveSignal(Service *)
 	return 0;
 }
 
+void
+GridUniverseLogic::signal_all(int sig)
+{
+	gman_node_t* gman_node = NULL;
+
+	// Iterate through our entire table and send the desired sig
+
+	if (gman_pid_table) {
+		gman_node_t* tmpnode;
+		gman_pid_table->startIterations();
+		while ( gman_pid_table->iterate(tmpnode) ) {
+			if (tmpnode->pid) {
+				daemonCore->Send_Signal(tmpnode->pid,sig);
+			}
+		}
+	}
+}
+
+
 int 
 GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 {
@@ -234,13 +253,13 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 
 	if (!gman_node) {
 		dprintf(D_ALWAYS,
-			"Gridmanager exited pid=%d status=%d owner=Unknown\n",
+			"condor_gridmanager exited pid=%d status=%d owner=Unknown\n",
 			pid,exit_status);
 		// nothing more to do, so return
 		return 0;
 	}
 
-	dprintf(D_ALWAYS,"Gridmanager exited pid=%d status=%d owner=%s\n",
+	dprintf(D_ALWAYS,"condor_gridmanager exited pid=%d status=%d owner=%s\n",
 			pid,exit_status,owner.Value());
 
 	// Cancel any timers before removing the node!!
@@ -316,18 +335,20 @@ GridUniverseLogic::StartOrFindGManager(const char* owner)
 
 	char *gman_args;
 	gman_args = param("GRIDMANAGER_ARGS");
-	if ( !gman_args ) {
-		gman_args = strdup("\0");
-	}
 	char gman_final_args[_POSIX_ARG_MAX];
-	sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
-	free(gman_args);
+	if (gman_args) {
+		sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
+		free(gman_args);
+	} else {
+		sprintf(gman_final_args,"condor_gridmanager -f",gman_args);
+	}
+	dprintf(D_FULLDEBUG,"Execing %s\n",gman_final_args);
 
 	init_user_ids(owner);
 
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
-		gman_args,				// Command-line args
+		gman_final_args,		// Command-line args
 		PRIV_USER_FINAL,		// Run as the Owner
 		rid						// Reaper ID
 		);

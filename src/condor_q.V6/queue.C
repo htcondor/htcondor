@@ -46,6 +46,7 @@
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
+#include "globus_utils.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -802,41 +803,69 @@ format_owner (char *owner, AttrList *ad)
 	return result;
 }
 
+static char *
+format_globusStatus( int globusStatus, AttrList *ad )
+{
+	static char result[64];
+
+fprintf(stderr,"status is %d\n", globusStatus);
+	switch ( globusStatus ) {
+	case G_UNSUBMITTED:
+		strcpy( result, GlobusJobStatusNames[G_UNSUBMITTED] );
+		break;
+	case G_PENDING:
+		strcpy( result, GlobusJobStatusNames[G_PENDING] );
+		break;
+	case G_ACTIVE:
+		strcpy( result, GlobusJobStatusNames[G_ACTIVE] );
+		break;
+	case G_FAILED:
+		strcpy( result, GlobusJobStatusNames[G_FAILED] );
+		break;
+	case G_DONE:
+		strcpy( result, GlobusJobStatusNames[G_DONE] );
+		break;
+	case G_SUSPENDED:
+		strcpy( result, GlobusJobStatusNames[G_SUSPENDED] );
+		break;
+	default:
+		strcpy( result, "[?????]" );
+	}
+
+	return result;
+}
 
 static char *
-format_globusHostJMAndExec( char  *globusResource, AttrList *ad )
+format_globusHostAndJM( char  *globusResource, AttrList *ad )
 {
 	static char result[64];
 	char	host[80] = "[?????]";
-	char	exec[1024] = "[?????]";
 	char	jm[80] = "[?????]";
 	char	*tmp;
 	int	p;
 
-	// copy the hostname
-	p = strcspn( globusResource, ":/" );
-	if ( p > sizeof(host) )
-		p = sizeof(host) - 1;
-	strncpy( host, tmp, p );
-	host[p] = '\0';
+	if ( globusResource != NULL ) {
+		// copy the hostname
+		p = strcspn( globusResource, ":/" );
+		if ( p > sizeof(host) )
+			p = sizeof(host) - 1;
+		strncpy( host, globusResource, p );
+		host[p] = '\0';
 
-	if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
-		tmp += 11; // 11==strlen("jobmanager-")
+		if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+			tmp += 11; // 11==strlen("jobmanager-")
 
-		// copy the jobmanager name
-		p = strcspn( tmp, ":" );
-		if ( p > sizeof(jm) )
-			p = sizeof(jm) - 1;
-		strncpy( jm, tmp, p );
-		jm[p] = '\0';
+			// copy the jobmanager name
+			p = strcspn( tmp, ":" );
+			if ( p > sizeof(jm) )
+				p = sizeof(jm) - 1;
+			strncpy( jm, tmp, p );
+			jm[p] = '\0';
+		}
 	}
 
-	// get the executable name
-	ad->LookupString(ATTR_JOB_CMD, result);
-
 	// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jm, host,
-			 basename(exec) );
+	sprintf( result, " %-8.8s %-18.18s  ", jm, host );
 	return( result );
 }
 
@@ -954,10 +983,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
 								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat( "%7s ", "GlobusStatus" );
+			mask.registerFormat( (IntCustomFmt) format_globusStatus,
+								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
-								 format_globusHostJMAndExec,
-								 ATTR_GLOBUS_RESOURCE, "[?????] [?????]\n" );
+								 format_globusHostAndJM,
+								 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -1108,17 +1139,19 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.display( stdout, &jobs );
 		} else if( globus ) {
 			summarize = false;
-			printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
+			printf( " %-7s %-14s %-11s %-8s %-18s  %-18s\n", 
 				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
 			if (!setup_mask) {
 				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 				mask.registerFormat ( (StringCustomFmt) format_owner,
 									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat( "%7s ", "GlobusStatus" );
+				mask.registerFormat( (IntCustomFmt) format_globusStatus,
+									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
-									 format_globusHostJMAndExec,
-									 ATTR_GLOBUS_RESOURCE, "[?????] [?????]\n" );
+									 format_globusHostAndJM,
+									 ATTR_GLOBUS_RESOURCE, "[?????] [?????]" );
+				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
 			}

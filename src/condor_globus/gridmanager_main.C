@@ -101,10 +101,9 @@ main_init( int argc, char **argv )
 	gridmanager.Init();
 	gridmanager.Register();
 
-	// Maybe trigger a check of the schedd's jobs here
-	if ( test_mode ) {
-		daemonCore->Send_Signal( getpid(), ADD_JOBS );
-	}
+	// Trigger a check of the schedd's jobs here to make certain we start
+	// managing any globus universe jobs already in the queue at the time we're born
+	daemonCore->Send_Signal( getpid(), GRIDMAN_ADD_JOBS );
 
 	return TRUE;
 }

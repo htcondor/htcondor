@@ -38,9 +38,13 @@ class GridUniverseLogic : public Service
 
 		static void JobAdded(const char* owner);
 
+		static void reconfig() { signal_all(DC_SIGHUP); }
+		static void shutdown_graceful() { signal_all(DC_SIGTERM); }
+		static void shutdown_fast() { signal_all(DC_SIGQUIT); }
 
 	private:
 
+		static void signal_all(int sig);
 		static const int job_added_delay;
 		static const int job_removed_delay;
 

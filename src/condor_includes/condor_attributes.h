@@ -114,6 +114,7 @@ const char ATTR_JOB_EXIT_REQUIREMENTS	 [] = "ExitRequirements";
 const char ATTR_JOB_ID					 [] = "JobId";
 const char ATTR_JOB_INPUT				 [] = "In";
 const char ATTR_JOB_IWD					 [] = "Iwd";
+const char ATTR_JOB_REMOTE_IWD			 [] = "RemoteIwd";
 const char ATTR_JOB_LOCAL_CPU			 [] = "LocalCpu";
 const char ATTR_JOB_LOCAL_SYS_CPU		 [] = "LocalSysCpu";
 const char ATTR_JOB_LOCAL_USER_CPU		 [] = "LocalUserCpu";
