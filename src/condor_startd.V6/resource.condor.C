@@ -27,6 +27,7 @@ extern int polls_per_update_load;
 extern int polls_per_update_kbdd;
 extern char *exec_path;
 extern char *Starter;
+extern int run_benchmarks;
 
 extern "C" int resource_initAd(resource_info_t* rip);
 extern "C" char *param(char*);
@@ -38,6 +39,8 @@ extern "C" int event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid);
 
 extern "C" int calc_virt_memory();
 extern "C" float calc_load_avg();
+extern "C" int dhry_mips();
+extern "C" int clinpack_kflops();
 
 char *kbd_dev=NULL;
 char *mouse_dev=NULL;
@@ -47,7 +50,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 static void check_perms __P((void));
 static void cleanup_execute_dir __P((void));
 static int calc_disk __P((void));
-static int calc_idle_time __P((resource_info_t *));
+static void calc_idle_time __P((resource_info_t *, int &, int &));
 static int calc_ncpus __P((void));
 static int tty_idle_time __P((char *));
 
@@ -171,10 +174,41 @@ resource_params(resource_id_t rid, job_id_t jid, task_id_t tid,
 
 	if (rid != NO_RID) {
 		old->res.res_load = get_load_avg();
-		dprintf(D_ALWAYS, "load avg: %f\n", old->res.res_load);
+		dprintf(D_FULLDEBUG, "load avg: %f\n", old->res.res_load);
 		old->res.res_memavail = calc_virt_memory();
 		old->res.res_diskavail = calc_disk();
-		old->res.res_idle = calc_idle_time(rip);
+		calc_idle_time(rip, old->res.res_idle, old->res.res_console_idle);
+
+
+		/* Perform CPU Benchmarks only if desired in config_file 
+		 * _and_ only if we've been idle for quite some time or we've
+		 * have not computed them for the first time yet.
+		 */
+		if ( run_benchmarks ) {
+			if ( get_machine_status() == M_IDLE ) {
+				(old->res.res_consecutive_idle)++;
+			} else {
+				old->res.res_consecutive_idle = 0;
+			}
+			if ((old->res.res_mips == 0) || (old->res.res_consecutive_idle >= 5)) {
+				int new_mips_calc = dhry_mips();
+				int new_kflops_calc = clinpack_kflops();
+				old->res.res_consecutive_idle = 0;  // don't recompute right away
+				if ( old->res.res_mips == 0 ) {
+					old->res.res_mips = new_mips_calc;
+					old->res.res_kflops = new_kflops_calc;
+				} else {
+					// compute a weighted average
+					old->res.res_mips = (old->res.res_mips * 3 + 
+						new_mips_calc) / 4;
+					old->res.res_kflops = (old->res.res_kflops * 3 + 
+						new_kflops_calc) / 4;
+				}
+				dprintf(D_FULLDEBUG,"recalc:DHRY_MIPS=%d,CLINPACK KFLOPS=%d\n",	
+					old->res.res_mips, old->res.res_kflops);
+			}
+		}
+
 	} else if (jid != NO_JID) {
 	} else if (tid != NO_TID) {
 	}
@@ -320,6 +354,24 @@ ClassAd* resource_context(resource_info_t* rip)
   sprintf(line,"KeyboardIdle=%d",rp->res.res_idle);
   cp->Insert(line); 
   
+  // ConsoleIdle cannot be determined on all platforms; thus, only
+  // advertise if it is not -1.
+  if ( rp->res.res_console_idle != -1 ) {
+  	sprintf(line,"ConsoleIdle=%d",rp->res.res_console_idle);
+  	cp->Insert(line); 
+  }
+  
+  // KFLOPS and MIPS are only conditionally computed; thus, only
+  // advertise them if we computed them.
+  if ( rp->res.res_kflops != 0 ) {
+	sprintf(line,"KFLOPS=%d",rp->res.res_kflops);
+	cp->Insert(line);
+  }
+  if ( rp->res.res_mips != 0 ) {
+	sprintf(line,"MIPS=%d",rp->res.res_mips);
+	cp->Insert(line);
+  }
+
   return cp;
 }
 
@@ -690,25 +742,35 @@ kill_starter(int pid, int signo)
 	static char *AltUtmpName = "/var/adm/utmp";
 #endif
 
-/* TODO: console_idle */
-static int
-calc_idle_time(resource_info_t* rip)
+/* calc_idle_time fills in user_idle and console_idle with the number
+ * of seconds since there has been activity detected on any tty or on
+ * just the console, respectively.  therefore, console_idle will always
+ * be equal to or greater than user_idle.  think about it.  also, note
+ * that user_idle and console_idle are passed by reference.  Also,
+ * on some platforms console_idle is always -1 because it cannot reliably
+ * be determined.
+ */
+static void
+calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 {
 	int tty_idle;
-	int user_idle;
-	int console_idle = -1;
 	int now;
 	struct utmp utmp;
 	ELEM temp;
-	static int oldval = 0, kbdd_counter = 0;
+	static int oldval = 0, console_oldval = 0, kbdd_counter = 0;
 #if defined(HPUX9) || defined(LINUX)	/*Linux uses /dev/mouse	*/
 	int i;
 	char devname[MAXPATHLEN];
 #endif
 
+	console_idle = -1;  // initialize
+
 	if (oldval != 0 && (rip == NULL || rip->r_state != JOB_RUNNING) &&
-	    ++kbdd_counter != polls_per_update_kbdd)
-		return oldval;
+	    ++kbdd_counter != polls_per_update_kbdd) {
+		user_idle = oldval;
+		console_idle = console_oldval;
+		return;
+	}
 
 	user_idle = tty_pty_idle_time();
 	dprintf( D_FULLDEBUG, "ttys/ptys idle %d seconds\n",  user_idle );
@@ -767,21 +829,19 @@ calc_idle_time(resource_info_t* rip)
 	dprintf( D_FULLDEBUG, "/dev/mouse idle for %d seconds\n", tty_idle);
 #endif
 
-#if 0
-	/* XXX TODO */
-	if (console_idle != -1) {
-		temp.type = INT;
-		temp.i_val = console_idle;
-		store_stmt(build_expr("ConsoleIdle",&temp), cp);
-	}
-#endif
-
 	now = (int)time((time_t *)0);
 	user_idle = MIN(now - Last_X_Event, user_idle);
 
-	dprintf(D_FULLDEBUG, "User Idle Time is %d seconds\n", user_idle);
+	/* if Last_X_Event != 0, then condor_kbdd told us someone did something
+	 * on the console. but always believe a /dev device over the kbdd */
+	 if ( (console_idle == -1) && (Last_X_Event != 0) ) {
+		 console_idle = now - Last_X_Event;
+	 }
+
+	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n", user_idle,console_idle);
 	oldval = user_idle;
-	return user_idle;
+	console_oldval = console_idle;
+	return;
 }
 
 #if !defined(OSF1) /* in tty_idle.OSF1.C for that platform */
@@ -793,6 +853,8 @@ tty_pty_idle_time()
 	int tty_idle;
 	int answer = INT_MAX;
 	int now;
+	static int saved_now;
+	static int saved_idle_answer = -1;
 	struct utmp utmp;
 
 	if ((fp=fopen(UtmpName,"r")) == NULL) {
@@ -802,7 +864,7 @@ tty_pty_idle_time()
 	}
 
 	while (fread((char *)&utmp, sizeof utmp, 1, fp)) {
-#if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53)
+#if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX)
 		if (utmp.ut_type != USER_PROCESS)
 #else
 		if (utmp.ut_name[0] == '\0')
@@ -813,6 +875,21 @@ tty_pty_idle_time()
 		answer = MIN(tty_idle, answer);
 	}
 	fclose(fp);
+
+	/* Here we check to see if we are about to return INT_MAX.  If so,
+	 * we recompute via the last pty access we knew about.  -Todd, 2/97 */
+	 now = (int)time( (time_t *)0 );
+	 if ( (answer == INT_MAX) && ( saved_idle_answer != -1 ) ) {
+		 answer = (now - saved_now) + saved_idle_answer;
+		 if ( answer < 0 )
+			 answer = 0; /* someone messed with the system date */
+	 } else {
+		 if ( answer != INT_MAX ) {
+			 /* here we are returning an answer we discovered; save it */
+			 saved_idle_answer = answer;
+			 saved_now = now;
+		 }
+	 }
 
 	return answer;
 }
