@@ -1690,11 +1690,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 	
 	if( fReqConstraint < totalMachines ) {
 		sprintf( return_buff,
-				 "\t%5d rejected the job\n"
+				 "%s\t%5d rejected the job\n"
 				 "\t%5d are serving equal or higher priority customers%s\n" 
 				 "\t%5d do not prefer this job\n"
 				 "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
 				 "\t%5d are available to service your job\n",
+				 return_buff,
 				 fOffConstraint,
 				 fPreemptPrioCond, niceUser ? "(*)" : "",
 				 fRankCond,
@@ -1714,6 +1715,9 @@ doRunAnalysisToBuffer( ClassAd *request )
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No machines matched job's requirements\n");
 		strcat( return_buff, "\n" ); 	// NAC
+	}
+
+	if( fReqConstraint > 0 ) {
 		string buffer_string;			// NAC
 		char buffer[2048];				// NAC
 		AnalyzeJobToBuffer( request, startdAds, buffer_string );	// NAC
