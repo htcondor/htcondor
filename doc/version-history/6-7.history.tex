@@ -73,6 +73,11 @@ the submit if a node submit fails, or to put that job at the end of
 the ready jobs queue.  The default is TRUE, which retries the failed
 submit before trying to submit any other jobs.
 
+\item The schedd now uses non-blocking connection attempts when contacting
+startds.  This prevents the long (typically 40 second) hang of all schedd
+operations when the connection attempt does not complete, due to
+network problems.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
