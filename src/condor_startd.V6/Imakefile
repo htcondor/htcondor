@@ -1,9 +1,8 @@
 SRC_DIR = $(SRC_TREE)/condor_startd.V6
-TARGET_SYSTEM = condor
 
 # Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -O2 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -Wall -O3
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -O3
 
 #if IS_R6000_AIX32
 #	define LOAD_AVG_SRC load_avg.AIX.c
@@ -25,14 +24,9 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -Wall -O3
 #	define LOAD_AVG_OBJ load_avg.BSD.o load_avg.uptime.o
 #endif
 
-#if IS_ALPHA_OSF1
-PLATFORM_SPECIAL_SRC = tty_idle.OSF1.C
-PLATFORM_SPECIAL_OBJ = tty_idle.OSF1.o
-#endif
+STARTD_SRC = Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C calc.C command.C LOAD_AVG_SRC main.C util.C clinpack.c dhry21a.c dhry21b.c timers_b.c 
 
-STARTD_SRC = Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C calc.C command.C LOAD_AVG_SRC main.C util.C $(PLATFORM_SPECIAL_SRC) clinpack.c dhry21a.c dhry21b.c timers_b.c 
-
-STARTD_OBJ = Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o $(PLATFORM_SPECIAL_OBJ) clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
+STARTD_OBJ = Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
  
 #if IS_SGI_IRIX62
 #undef MldLib
@@ -53,9 +47,7 @@ depend_target($(STARTD_SRC))
 
 c_plus_target(condor_startd,$(STARTD_OBJ),$(LIB))
 release_target(condor_startd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-
 pure_c_plus_target(condor_startd.pure, $(STARTD_OBJ), $(LIB) )
-
 purecov_c_plus_target(condor_startd.pc, $(STARTD_OBJ), $(LIB) )
 
 IMPORT_LINKS = ../../config/import_links
