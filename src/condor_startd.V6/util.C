@@ -147,10 +147,15 @@ command_to_string( int cmd )
 		return "activate_claim";
 	case GIVE_STATE:
 		return "give_state";
+	case PCKPT_JOB:
+		return "pckpt_job";
 	case PCKPT_ALL_JOBS:
 		return "pckpt_all_jobs";
+	case VACATE_CLAIM:
+		return "vacate_claim";
 	case VACATE_ALL_CLAIMS:
 		return "vacate_all_claims";
+
 	default:
 		return "unknown";
 	}
