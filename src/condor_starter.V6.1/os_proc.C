@@ -47,6 +47,8 @@ OsProc::OsProc()
     dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = NULL;
 	JobPid = Cluster = Proc = -1;
+	exit_status = -1;
+	requested_exit = false;
 	job_suspended = FALSE;
 }
 
@@ -274,66 +276,83 @@ OsProc::StartJob()
 	return 1;
 }
 
+
 int
-OsProc::JobExit(int pid, int status)
+OsProc::JobCleanup( int pid, int status )
+{
+	int reason;	
+	bool job_exit_wants_ad = true;
+
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobCleanup()\n" );
+
+		// There's nothing special for us to do here, except save the
+		// exit status for future use.
+	if (JobPid == pid) {		
+		exit_status = status;
+		return 1;
+	}
+	return 0;
+}
+
+
+bool
+OsProc::JobExit( void )
 {
 	int reason;	
 	bool job_exit_wants_ad = true;
 
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
-	if (JobPid == pid) {		
-		if ( requested_exit == true ) {
-			reason = JOB_NOT_CKPTED;
-		} else {
-			reason = JOB_EXITED;
-		}
+	if ( requested_exit == true ) {
+		reason = JOB_NOT_CKPTED;
+	} else {
+		reason = JOB_EXITED;
+	}
 
 		// protocol changed w/ v6.3.0 so the Update Ad is sent
 		// with the final REMOTE_CONDOR_job_exit system call.
 		// to keep things backwards compatible, do not send the 
 		// ad with this system call if the shadow is older.
 
-			// However, b/c the shadow didn't start sending it's
-			// version to the starter until 6.3.2, we confuse 6.3.0
-			// and 6.3.1 shadows with 6.2.X shadows that don't support
-			// the new protocol.  Luckily, we never released 6.3.0 or
-			// 6.3.1 for windoze, and we never released any part of
-			// the new shadow/starter for Unix until 6.3.0.  So, we
-			// only have to do this compatibility check on windoze,
-			// and we don't have to worry about it not being able to
-			// tell the difference between 6.2.X, 6.3.0, and 6.3.1,
-			// since we never released 6.3.0 or 6.3.1. :)
-			// Derek Wright <wright@cs.wisc.edu> 1/25/02
+		// However, b/c the shadow didn't start sending it's version
+		// to the starter until 6.3.2, we confuse 6.3.0 and 6.3.1
+		// shadows with 6.2.X shadows that don't support the new
+		// protocol.  Luckily, we never released 6.3.0 or 6.3.1 for
+		// windoze, and we never released any part of the new
+		// shadow/starter for Unix until 6.3.0.  So, we only have to
+		// do this compatibility check on windoze, and we don't have
+		// to worry about it not being able to tell the difference
+		// between 6.2.X, 6.3.0, and 6.3.1, since we never released
+		// 6.3.0 or 6.3.1. :) Derek <wright@cs.wisc.edu> 1/25/02
+
 #ifdef WIN32		
-		job_exit_wants_ad = false;
-		CondorVersionInfo ver* = Starter->GetShadowVersion();
-		if( ver && ver->built_since_version(6,3,0) ) {
-			job_exit_wants_ad = true;	// new shadow; send ad
-		}
+	job_exit_wants_ad = false;
+	CondorVersionInfo ver* = Starter->GetShadowVersion();
+	if( ver && ver->built_since_version(6,3,0) ) {
+		job_exit_wants_ad = true;	// new shadow; send ad
+	}
 #endif		
 
-		ClassAd ad;
-		ClassAd *ad_to_send;
-
-		if ( job_exit_wants_ad ) {
-			PublishUpdateAd( &ad );
-			ad_to_send = &ad;
-		} else {
-			dprintf(D_FULLDEBUG,
-				"Shadow is pre-v6.3.0 - not sending final update ad\n");
-			ad_to_send = NULL;
-		}
-			
-		if( REMOTE_CONDOR_job_exit(status, reason, ad_to_send) < 0 ) {   
-			dprintf( D_ALWAYS, 
-					 "Failed to send job exit status to Shadow.\n" );
-		}
-		return 1;
+	ClassAd ad;
+	ClassAd *ad_to_send;
+	
+	if ( job_exit_wants_ad ) {
+		PublishUpdateAd( &ad );
+		ad_to_send = &ad;
+	} else {
+		dprintf( D_FULLDEBUG,
+				 "Shadow is pre-v6.3.0 - not sending final update ad\n" ); 
+		ad_to_send = NULL;
 	}
-
-	return 0;
+			
+	if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
+		dprintf( D_ALWAYS, 
+				 "Failed to send job exit status to Shadow.\n" );
+		return false;
+	}
+	return true;
 }
+
 
 void
 OsProc::Suspend()
