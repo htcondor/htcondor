@@ -189,7 +189,8 @@ sub DoConfig( $$ )
 		my $Opt = $Module->{Options};
 		my $Cont = ( $i == $#Modules ) ? "" : "\\";
 		print OUT
-		    "\t$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt $Cont\n";
+		      "\t$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt $Cont\n";
+# Does this work to add a comment here?
 	    }
 	    next;
 	}
