@@ -200,7 +200,7 @@ KILL_VANILLA		: $(StateTimer) > $(MaxVacateTime)
 CMNT 
 CMNT Periodic Checkpointing (uncomment to enable)
 CMNT LastCkpt	= (CurrentTime - LastPeriodicCkpt)
-CMNT PERIODIC_CHECKPOINT	: ( (image_size < 60) && ( $(LastCkpt) > (6 * $(HOUR)) ) ) || ( $(LastCkpt) > (12 * $(HOUR)) ) 
+CMNT PERIODIC_CHECKPOINT	: ( (image_size < 60000) && ( $(LastCkpt) > (6 * $(HOUR)) ) ) || ( $(LastCkpt) > (12 * $(HOUR)) ) 
 
 CMNT
 CMNT Expressions used to prioritize job queue
