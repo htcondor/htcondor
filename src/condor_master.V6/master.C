@@ -1,34 +1,37 @@
 /* 
- ** Copyright 1986, 1987, 1988, 1989, 1990, 1991 by the Condor Design Team
- ** 
- ** Permission to use, copy, modify, and distribute this software and its
- ** documentation for any purpose and without fee is hereby granted,
- ** provided that the above copyright notice appear in all copies and that
- ** both that copyright notice and this permission notice appear in
- ** supporting documentation, and that the names of the University of
- ** Wisconsin and the Condor Design Team not be used in advertising or
- ** publicity pertaining to distribution of the software without specific,
- ** written prior permission.  The University of Wisconsin and the Condor
- ** Design Team make no representations about the suitability of this
- ** software for any purpose.  It is provided "as is" without express
- ** or implied warranty.
- ** 
- ** THE UNIVERSITY OF WISCONSIN AND THE CONDOR DESIGN TEAM DISCLAIM ALL
- ** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
- ** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
- ** WISCONSIN OR THE CONDOR DESIGN TEAM BE LIABLE FOR ANY SPECIAL, INDIRECT
- ** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
- ** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
- ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
- ** OR PERFORMANCE OF THIS SOFTWARE.
- ** 
- ** Author:   Dhrubajyoti Borthakur
- ** 	         University of Wisconsin, Computer Sciences Dept.
- ** Edited further by : Dhaval N Shah
- ** 	         University of Wisconsin, Computer Sciences Dept.
- ** Modified by: Cai, Weiru
- ** 			 University of Wisconsin, Computer Sciences Dept.
- */ 
+** Copyright 1986, 1987, 1988, 1989, 1990, 1991 by the Condor Design Team
+** 
+** Permission to use, copy, modify, and distribute this software and its
+** documentation for any purpose and without fee is hereby granted,
+** provided that the above copyright notice appear in all copies and that
+** both that copyright notice and this permission notice appear in
+** supporting documentation, and that the names of the University of
+** Wisconsin and the Condor Design Team not be used in advertising or
+** publicity pertaining to distribution of the software without specific,
+** written prior permission.  The University of Wisconsin and the Condor
+** Design Team make no representations about the suitability of this
+** software for any purpose.  It is provided "as is" without express
+** or implied warranty.
+** 
+** THE UNIVERSITY OF WISCONSIN AND THE CONDOR DESIGN TEAM DISCLAIM ALL
+** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
+** WISCONSIN OR THE CONDOR DESIGN TEAM BE LIABLE FOR ANY SPECIAL, INDIRECT
+** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+** OR PERFORMANCE OF THIS SOFTWARE.
+** 
+** Author:   Dhrubajyoti Borthakur
+** 	         University of Wisconsin, Computer Sciences Dept.
+** Edited further by : Dhaval N Shah
+** 	         University of Wisconsin, Computer Sciences Dept.
+** Modified by: Cai, Weiru
+** 			 University of Wisconsin, Computer Sciences Dept.
+** Major clean-up, re-write by Derek Wright (7/10/97)
+** 			 University of Wisconsin, Computer Sciences Dept.
+**
+*/ 
 
 #define _POSIX_SOURCE
 
@@ -54,13 +57,12 @@ extern "C" {
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
+#include "condor_mach_status.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "condor_mach_status.h"
 #include "master.h"
 #include "file_lock.h"
 #include "condor_timer_manager.h"
-#include "condor_classad.h"
 #include "condor_collector.h"
 #include "files.h"
 #include "cctp_msg.h"
@@ -185,9 +187,6 @@ ClassAd	ad;						// ad to central mgr. Weiru
 char	*CollectorHost;
 int					UdpSock;
 
-#if 0
-char	*NegotiatorHost;
-#endif
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
 int		r_factor = 300;								// recover factor
@@ -204,6 +203,8 @@ int		NotFlag;
 int		PublishObituaries;
 int		Lines;
 
+extern int ConfigLineNo;
+
 char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
@@ -216,11 +217,6 @@ class Daemons daemons;
 char*			configServer;
 extern BUCKET	*ConfigTab[];
 
-extern "C" 
-{
-	void	add_to_path(char* name);
-    int		read_config(char*, char*, CONTEXT*, BUCKET**, int, int); 
-}
 
 void
 usage( const char* name )
@@ -233,42 +229,26 @@ int
 DoCleanup()
 {
 	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-	daemons.SignalAll(SIGKILL);
+	daemons.SignalAll(SIGTERM);
 	return 1;
 }
-
 
 int
 main( int argc, char* argv[] )
 {
-	struct passwd		*pwd;
+	struct passwd		*pw;
 	char			**ptr, *startem;
 	
 	MyName = argv[0];
 
-#ifdef UW_LOCAL_HACK
-/*
- * If you want to use the kbdd, then link it with the right -L _and_ -R
- * flags under Solaris, so that this isn't needed. - Frank
- * [ gcc -o condor_kbdd <objfiles> -L<xpath> -R<xpath> ...]
- */
-#if defined(X86) && defined(Solaris)
-	/* Set the environment for the X11 dynamic library for condor_kbdd */
-	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sunx86_54/lib");
-#else if defined(sun4m) && defined(Solaris)
-	/* Set the environment for the X11 dynamic library for condor_kbdd */
-	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
-#endif
-#endif
-
 	/* Run as group condor so we can access log files even if they
 	   are remotely mounted with NFS - needed because
 	   root = nobody on the remote file system */
-	if( (pwd=getpwnam("condor")) == NULL ) {
+	if( (pw=getpwnam("condor")) == NULL ) {
 		EXCEPT( "condor not in passwd file" );
 	}
-	if( setgid(pwd->pw_gid) < 0 ) {
-		EXCEPT( "setgid(%d)", pwd->pw_gid );
+	if( setgid(pw->pw_gid) < 0 ) {
+		EXCEPT( "setgid(%d)", pw->pw_gid );
 	}
 
 	/*
@@ -276,7 +256,7 @@ main( int argc, char* argv[] )
 	 ** even if he has group write permission.  We need to be Condor
 	 ** most of the time.
 	 */
-	setuid(0);	// If started up by setuid program, only euid is 0.
+
 	set_condor_euid();
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
@@ -316,83 +296,15 @@ main( int argc, char* argv[] )
 	install_sig_handler( SIGTERM, vacate_machine );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
-	
-	// Weiru
-	// Look for the master configuration file condor_config.master. If found,
-	// get configuration files from the configuration server. Use default
-	// otherwise.
-	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
-				   EXPAND_LAZY) < 0)
-		// use default configuration files
-	{
-		config( MyName, (CONTEXT*)0 );
-	}
-	else
-		// try to use configuration server
-	{
-#if defined(USE_CONFIG_SERVER)
-		configServer = param("CONFIG_SERVER_HOST");
-		if(!configServer)
-			// use default configuration files
-		{
-#endif
-			config(MyName, (CONTEXT*)0);
-#if defined(USE_CONFIG_SERVER)
-		}
-		else
-			// use configuration server
-		{
-			// Check to see if this is the configuration server host. If it is,
-			// start configuration server immediately.
-			config_location = param("CONFIG_FILE_LOCATION");
-			if(!config_location)
-			{
-				config_location = pwd->pw_dir;
-			}
-			
-			if(IsSameHost(configServer))
-			{
-				StartConfigServer();
-			}
 
-			// GetConfig will add the configuration file timestamp attribute
-			// into the master's classad. If a configuration server location is
-			// specified in the master configuration file but the connection
-			// attempt failed, this attribute will still be inserted with the
-			// timestamp value being negative infinity. This is so that if the
-			// config server come back up sometime in the future it will
-			// notify this master to get new configuration files if there are
-			// any.
-			if(GetConfig(configServer, config_location) < 0)
-			{
-				if(config_from_server(config_location, MyName, NULL) < 0)
-				{
-					config(MyName, (CONTEXT*)0);
-				}
-			} 
-			else
-			{
-				if(config_from_server(config_location, MyName, NULL) < 0)
-				{
-					fprintf(stderr, "config_from_server(%s, %s, NULL)\n",
-							config_location, MyName);
-					exit(1);
-				} 
-				doConfigFromServer = TRUE;				
-			}
-		}
-#endif
-	}
+	config_master(&ad);
 
 	init_params();
-	add_to_path( "/etc" );
-	add_to_path( "/usr/etc" );
 
 	if( argc > 4 ) {
 		usage( argv[0] );
 	}
 	_EXCEPT_Cleanup = DoCleanup;
-
 
 	/* This is so if we dump core it'll go in the log directory */
 	if( chdir(Log) < 0 ) {
@@ -425,14 +337,11 @@ main( int argc, char* argv[] )
 	char*	log_file = daemons.DaemonLog(getpid());
 	get_lock( log_file);  
 
-
-
 	dprintf( D_ALWAYS,"*************************************************\n" );
 	dprintf( D_ALWAYS,"***          CONDOR_MASTER STARTING UP        ***\n" );
 	dprintf( D_ALWAYS,"***               PID = %-6d                ***\n",
 			getpid() );
 	dprintf( D_ALWAYS,"*************************************************\n" );
-
 
 	// once a day at 3:30 a.m.
 	tMgr.NewTimer(NULL, 3600, (void*)daily_housekeeping, 3600 * 24);
@@ -520,9 +429,8 @@ init_params()
 
 	Log = param( "LOG" );
 	if( Log == NULL )  {
-		EXCEPT( "No log directory specified in config file\n" );
+		EXCEPT( "No log directory specified in config file" );
 	}
-
 
 	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
 		EXCEPT( "COLLECTOR_HOST not specified in config file" );
@@ -530,12 +438,6 @@ init_params()
 	
 	UdpSock = udp_unconnect();
 	
-#if 0
-	if( (NegotiatorHost = param("NEGOTIATOR_HOST")) == NULL ) {
-		EXCEPT( "NEGOTIATOR_HOST not specified in config file" );
-	}
-#endif
-
 	if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
 		EXCEPT( "CONDOR_ADMIN not specified in config file" );
 	}
@@ -546,40 +448,48 @@ init_params()
 	} else {
 		PublishObituaries = FALSE;
 	}
+	if( tmp ) {
+		free( tmp );
+	}
 
 	tmp = param("OBITUARY_LOG_LENGTH");
-	if( tmp == NULL ) {
-		Lines = 20;
-	} else {
+	if( tmp ) {
 		Lines = atoi( tmp );
+		free( tmp );
+	} else {
+		Lines = 20;
 	}
 
 	tmp = param( "MASTER_BACKOFF_CEILING" );
-	if( tmp == NULL ) {
-		ceiling = 3600;
-	} else {
+	if( tmp ) {
 		ceiling = atoi( tmp );
+		free( tmp );
+	} else {
+		ceiling = 3600;
 	}
 
 	tmp = param( "MASTER_BACKOFF_FACTOR" );
-    if( tmp == NULL ) {
-    	e_factor = 2.0;
-    } else {
+    if( tmp ) {
         e_factor = atof( tmp );
+		free( tmp );
+    } else {
+    	e_factor = 2.0;
     }
 	
 	tmp = param( "MASTER_RECOVER_FACTOR" );
-    if( tmp == NULL ) {
-    	r_factor = 300;
-    } else {
+    if( tmp ) {
         r_factor = atoi( tmp );
+		free( tmp );
+    } else {
+    	r_factor = 300;
     }
 	
 	tmp = param( "MASTER_UPDATE_CTMR_INTERVAL" );
-    if( tmp == NULL ) {
-        interval = 300;
-    } else {
+    if( tmp ) {
         interval = atoi( tmp );
+		free( tmp );
+    } else {
+        interval = 300;
     }
 
 	tmp = new char[100];
@@ -603,7 +513,6 @@ init_params()
 
 	FS_Preen = param( "PREEN" );
 	FS_CheckJobQueue = param( "CHECKJOBQUEUE" );
-
 
 	daemon_list = param("DAEMON_LIST");
 	if (daemon_list) {
@@ -919,7 +828,7 @@ void
 sighup_handler()
 {
 	dprintf( D_ALWAYS, "Re reading config file\n" );
-	config( MyName, (CONTEXT *)0 );
+	config( &ad );
 	init_params();
 	daemons.SignalAll(SIGHUP);
 	dprintf( D_ALWAYS | D_NOHEADER, "\n" );

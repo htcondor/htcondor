@@ -27,50 +27,28 @@
 ** 
 */ 
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
 #define _POSIX_SOURCE  // FIX
 
-#include <stdio.h>
-
-#if defined(IRIX331)
-#define __EXTENSIONS__
-#include <signal.h>
-#undef __EXTENSIONS__
-#define BADSIG SIG_ERR
-#else
-#include <signal.h>
-#endif
+#include "condor_common.h"
 
 #if defined(Solaris251)
 #define __EXTENSIONS__
 #endif
-#include <errno.h>
 #include <pwd.h>
 #include <netdb.h>
-#include <string.h>
-#if 0
-#include <strings.h>
-#endif
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
 #include "condor_fix_timeval.h"  // FIX
 #include <sys/resource.h>
 #include <sys/wait.h>
-#if defined(LINUX)
-#include <unistd.h>
-#endif
 #include <math.h>
+
 #include "condor_constants.h"
-
-#include "condor_common.h"
-
 #include "condor_debug.h"
 #include "condor_expressions.h"
+#include "condor_mach_status.h"
 #include "condor_config.h"
 #include "condor_uid.h"
-#include "condor_mach_status.h"
 #include "master.h"
 #include "file_lock.h"
 
@@ -79,24 +57,26 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #define _BSD
 #endif
 
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+
 typedef void (*SIGNAL_HANDLER)();
 void install_sig_handler( int, SIGNAL_HANDLER );
 
 // these are defined in master.C
 extern int		NotFlag;
-extern int 		RestartsPerHour;
+extern int		RestartsPerHour;
 extern int 		MasterLockFD;
 extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
 extern int		doConfigFromServer; 
 extern char*	config_location;
 
-extern int     collector_runs_here();
-extern int     negotiator_runs_here();
-extern time_t  GetTimeStamp(char* file);
-extern void    do_killpg(int, int);
-extern void	   do_kill( int pid, int sig );
-extern int 	   NewExecutable(char* file, time_t* tsp);
+extern int		collector_runs_here();
+extern int		negotiator_runs_here();
+extern time_t	GetTimeStamp(char* file);
+extern void		do_killpg(int, int);
+extern void		do_kill( int pid, int sig );
+extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern int		DoCleanup();
 
 int		hourly_housekeeping(void);
@@ -126,8 +106,6 @@ extern "C"
 
 // if this machine is a world-machine, then the standard schedd and
 // startd are not started.
-
-
 
 extern Daemons 		daemons;
 extern int			ceiling;
@@ -467,6 +445,7 @@ int daemon::StartDaemon()
 		// In version 6 daemons are not started as root but as Condor
 		/* Daemons need to be started as root. */
 		if(getuid()==0) {
+#define USE_ROOT_RUID
 #ifndef USE_ROOT_RUID
 			if (getuid() == 0) {
 				set_root_euid();
