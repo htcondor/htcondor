@@ -36,7 +36,6 @@
 const char ATTR_ACTIVITY				 [] = "Activity";
 const char ATTR_AFS_CELL				 [] = "AFSCell";
 const char ATTR_ARCH                     [] = "Arch";
-const char ATTR_BOTTOM_FEEDER			 [] = "BottomFeeder";
 const char ATTR_CAPABILITY				 [] = "Capability";
 const char ATTR_CLIENT_MACHINE           [] = "ClientMachine"; 
 const char ATTR_CLOCK_DAY                [] = "ClockDay";
@@ -95,6 +94,7 @@ const char ATTR_MEMORY                   [] = "Memory";
 const char ATTR_MIN_HOSTS				 [] = "MinHosts";
 const char ATTR_MIPS                     [] = "Mips";
 const char ATTR_NAME                     [] = "Name";
+const char ATTR_NICE_USER			 	 [] = "NiceUser";
 const char ATTR_NEST                     [] = "Nest";
 const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";
