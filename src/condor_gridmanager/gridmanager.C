@@ -1242,7 +1242,7 @@ WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 bool
 WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 {
-	const char *unknown = "UNKNOWN";
+	char buf[1024];
 
 	UserLog *ulog = InitializeUserLog( job );
 	if ( ulog == NULL ) {
@@ -1255,8 +1255,10 @@ WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
 			 job->procID.cluster, job->procID.proc, job->userLogFile );
 
 	GlobusSubmitFailedEvent event;
-	
-	event.reason =  strnewp(job->errorString());
+
+	snprintf( buf, 1024, "%d %s", job->submitFailureCode,
+			GahpMain.globus_gram_client_error_string(job->submitFailureCode) );
+	event.reason =  strnewp(buf);
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

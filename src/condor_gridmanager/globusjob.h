@@ -63,10 +63,9 @@ class GlobusJob : public Service
 	int syncedErrorSize;
 	int shadowBirthday;
 	char *holdReason;
+	int submitFailureCode;
 
 	GahpClient gahp;
-
-	const char *errorString();
 
 	char *buildRSL( ClassAd *classad );
 

@@ -150,6 +150,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	syncedErrorSize = 0;
 	shadowBirthday = 0;
 	holdReason = NULL;
+	submitFailureCode = 0;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -456,7 +457,7 @@ int GlobusJob::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
-					globusError = rc;
+					submitFailureCode = globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( this );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
@@ -1156,6 +1157,7 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 			if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 					// TODO: should SUBMIT_FAILED_EVENT be used only on
 					//   certain errors (ones we know are submit-related)?
+				submitFailureCode = new_error_code;
 				update_actions |= UA_LOG_SUBMIT_FAILED_EVENT;
 			} else {
 				update_actions |= UA_LOG_SUBMIT_EVENT;
@@ -1285,11 +1287,6 @@ int GlobusJob::syncIO()
 	}
 
 	return TRUE;
-}
-
-const char *GlobusJob::errorString()
-{
-	return gahp.globus_gram_client_error_string( globusError );
 }
 
 char *GlobusJob::buildRSL( ClassAd *classad )
