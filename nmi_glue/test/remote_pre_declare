@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.1.2.5 2004-06-29 00:34:06 wright Exp $
+# $Id: remote_pre_declare,v 1.1.2.6 2004-06-29 20:18:21 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -10,6 +10,9 @@ use Cwd;
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $vers_file = "CONDOR-VERSION";
+
+# autoflush our STDOUT
+$| = 1;
 
 ######################################################################
 # grab the Condor version out of the version file so we can unpack our 
