@@ -286,6 +286,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				if (!pvtAd->get(*sock))
 				{
 					dprintf(D_ALWAYS,"\t(Could not get startd's private ad)\n");
+					delete pvtAd;
 					break;
 				}
 				
