@@ -683,6 +683,7 @@ void dap_event_timer () {
     // exists.
     // 
     if( G.dag->NumJobsSubmitted() == 0 &&
+		G.dag->NumJobsReady() == 0 &&
 		G.dag->NumScriptsRunning() == 0 ) {
 		if( G.dag->NumJobsFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
