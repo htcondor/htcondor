@@ -12,10 +12,10 @@
 &get_platform_defaults();
 &customize_config_file( "condor_config.generic",
 		       "../release_dir/etc/examples/condor_config.generic" );
-&customize_config_file( "condor_config.submit.generic",
-		       "../release_dir/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.root.generic",
 		       "../release_dir/etc/examples/condor_config.root.generic" );
+&customize_config_file( "condor_config.submit.generic",
+		       "../release_dir/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.local.central.manager",
 	       "../release_dir/etc/examples/condor_config.local.central.manager" );
 &customize_boot_script();
@@ -128,6 +128,12 @@ sub customize_config_file {
     
     -f $target && unlink( $target );
     
+    if( $generic =~ /.*submit.*/ ) {
+	$wants_kbd = 0;
+    } else {
+	$wants_kbd = $needs_kbd;
+    }
+
     open( TARGET, ">$target" ) ||
 	die "Can't open $target: $!\n";
     open( GENERIC, "<$generic" ) || 
@@ -149,13 +155,13 @@ sub customize_config_file {
 	   last SWITCH;
         }
 	if( /^DAEMON_LIST.*$/ ) {
-	    if( $needs_kbd ) {
+	    if( $wants_kbd ) {
 		chop($_);
 		$_ = "$_, KBDD\n";
 	    } 
 	    last SWITCH;
 	}
-	if( /^STARTD_DEBUG.*/ && $needs_kbd ) {
+	if( /^STARTD_DEBUG.*/ && $wants_kbd ) {
 	    $_ = "STARTD_DEBUG\t\t= ";
 	    last SWITCH;
 	}
