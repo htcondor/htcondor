@@ -385,7 +385,7 @@ int DaemonCore::InfoCommandPort()
 	}
 
 	// this will return a -1 on error
-	return( (*sockTable)[initial_command_sock].iosock->get_port() );
+	return( ((Sock*)((*sockTable)[initial_command_sock].iosock))->get_port() );
 }
 
 // NOTE: InfoCommandSinfulString always returns a pointer to a _static_ buffer!
@@ -1339,7 +1339,7 @@ int DaemonCore::HandleReq(int socki)
 	if(!result) {
 		if (is_tcp) {
 			dprintf(D_ALWAYS, "DaemonCore: Command received via TCP from %s\n",
-					sin_to_string(stream->endpoint()) );
+					sin_to_string(((Sock*)stream)->endpoint()) );
 		}
 		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( insock != stream )	{   // delete the stream only if we did an accept
@@ -1374,12 +1374,14 @@ int DaemonCore::HandleReq(int socki)
 
 	if ( reqFound == TRUE ) {
 		// Check the daemon core permission for this command handler
-		if ( Verify(comTable[index].perm,stream->endpoint()) == FALSE ) {
+		if ( Verify(comTable[index].perm,((Sock*)stream)->endpoint()) == FALSE ) {
 			// Permission check FAILED
 			reqFound = FALSE;	// so we do not call the handler function below
 			result = 0;	// make result != to KEEP_STREAM, so we blow away this socket below
-			dprintf(D_ALWAYS,"DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
-				sin_to_string(stream->endpoint()),req,comTable[index].command_descrip);
+			dprintf( D_ALWAYS,
+					 "DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
+					 sin_to_string(((Sock*)stream)->endpoint()), req,
+					 comTable[index].command_descrip );
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
 				stream->end_of_message();
@@ -1387,14 +1389,14 @@ int DaemonCore::HandleReq(int socki)
 			dprintf(comTable[index].dprintf_flag,
 					"DaemonCore: Command received via %s from %s\n",
 					(is_tcp) ? "TCP" : "UDP",
-					sin_to_string(stream->endpoint()) );
+					sin_to_string(((Sock*)stream)->endpoint()) );
 			dprintf(comTable[index].dprintf_flag, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
 		}
 	} else {
 		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s\n",
 				(is_tcp) ? "TCP" : "UDP",
-				sin_to_string(stream->endpoint()) );
+				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
 		result = 0;		// make result != to KEEP_STREAM, so we blow away this socket below
 		// if UDP, consume the rest of this message to try to stay "in-sync"
@@ -2913,21 +2915,14 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 					// zombies lying around.  -Derek Wright 2/26/99
 				continue;
 			}
-#if defined( GLIBC ) && defined( LINUX )
-				// For some weird reason, on GLIBC-LINUX, we get
-				// EAGAIN when there's nothing left to reap.
-			if( errno != EAGAIN ) {
-#else
-				// On every other platform, we're expecting waitpid()
-				// to return ECHILD.
-			if( errno != ECHILD ) {
-#endif
+
+			if( errno == ECHILD || errno == EAGAIN ) {
+				dprintf( D_FULLDEBUG, 
+						 "DaemonCore: No more children processes to reap.\n" ); 
+			} else {
 					// If it's not what we expect, we want D_ALWAYS 
 				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
 						 pid, errno );
-			} else {
-				dprintf( D_FULLDEBUG, 
-						 "DaemonCore: No more children processes to reap.\n" ); 
 			}
             break;
         }
