@@ -984,3 +984,9 @@ void StartConfigServer()
 	sleep(5); 
 }
 #endif
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
