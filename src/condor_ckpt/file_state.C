@@ -132,11 +132,7 @@ OpenFileTable::Init()
 	PreOpen( 1, FALSE, TRUE, FALSE );
 	PreOpen( 2, FALSE, TRUE, FALSE );
 
-#if defined(Solaris)
 	getcwd( Condor_CWD, sizeof(Condor_CWD) );
-#else
-	getwd( Condor_CWD );
-#endif
 }
 
 
@@ -644,7 +640,7 @@ OpenFileTable::Save()
 	off_t	pos;
 	File	*f;
 
-	getwd( cwd );
+	getcwd( cwd, sizeof(cwd) );
 
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
