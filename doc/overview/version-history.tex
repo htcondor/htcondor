@@ -40,7 +40,7 @@ jobs.  Both sockets and pipes are created on the executing machine.
 Checkpointing is deferred anytime a socket or pipe is open.
 
 \item Added limited support for select() and poll() in standard jobs.
-Both calls will work on files opened locally.
+Both calls will work only on files opened locally.
 
 \item Added limited support for fcntl() and ioctl() in standard jobs.
 Both calls will be performed remotely if the control-number is understood
@@ -54,6 +54,14 @@ by default.
 \item Added extensive feedback on I/O performance in the user's email.
 
 \item Added -io option to \Condor{q} to show I/O statistics.
+
+\item Removed libckpt.a and libzckpt.a.  To build for standalone
+checkpointing, just do a regular \Condor{compile}.
+No -standalone option is necessary.
+
+\item The checkpointing library now only re-opens files when they are
+actually used.  If files or other needed resources cannot be found
+at restart time, the checkpointer will fail with a verbose error.
 
 \end{itemize}
 
