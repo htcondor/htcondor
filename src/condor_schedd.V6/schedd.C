@@ -351,6 +351,34 @@ Scheduler::count_jobs()
 	return 0;
 }
 
+/* renice_shadow() will nice the shadow if specified in the condor_config.
+ * the value of SHADOW_RENICE_INCREMENT will be added to the current process
+ * priority (the higher the priority number, the less CPU will be allocated).
+ * renice_shadow() is meant to be called by the child process after a fork()
+ * and before an exec().  it returns the value added to the priority, or 0
+ * if the priority did not change. 
+ */
+int
+renice_shadow()
+{
+	char *ptmp;
+	int i = 0;
+
+#ifndef WIN32
+	ptmp = param("SHADOW_RENICE_INCREMENT");
+	if ( ptmp ) {
+		i = atoi(ptmp);
+		if ( i > 0 && i < 20 )
+			nice(i);
+		else
+			i = 0;
+		free(ptmp);
+	}
+#endif
+
+	return i;
+}
+
 int
 count( ClassAd *job )
 {
@@ -1148,6 +1176,10 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 			mark_job_stopped(job_id);
 			break;
 		case 0:		/* the child */
+			
+			// Renice 
+			renice_shadow();
+
 			(void)close( 0 );
 #ifdef CARMI_OPS
 			if ((retval = dup2( pipes[0], 0 )) < 0)
@@ -1158,9 +1190,11 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 		        else
 			    dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
 #endif		
+			// Close descriptors we do not want inherited by the shadow
 			for( i=3; i<lim; i++ ) {
 				(void)close( i );
 			}
+
 			Shadow = param("SHADOW");
 			(void)execve( Shadow, argv, environ );
 			dprintf( D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
@@ -1247,6 +1281,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 				argv[1] = MySockName;
 				argv[2] = 0;
 				
+				renice_shadow();
+
 				dprintf( D_ALWAYS, "About to call: %s ", Shadow );
 				for( ptr = argv; *ptr; ptr++ ) {
 					dprintf( D_ALWAYS | D_NOHEADER, "%s ", *ptr );
