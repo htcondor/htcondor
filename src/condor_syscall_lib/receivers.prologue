@@ -2,7 +2,7 @@
 #	define _POSIX_SOURCE
 #endif
 
-#if defined(OSF1) && defined(__GNUC__) && 0
+#if defined(OSF1) && defined(__GNUC__)
 	typedef struct  _quad { int val[2]; } quad;
 #endif
 
