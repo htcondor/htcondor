@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../release_dir/src/chirp/chirp_client.h"
+#include "chirp_client.h"
 
 #define		REMDIR		"job_chirp_io_mkdir"
 #define 	TSTMSG		"Testing message"
