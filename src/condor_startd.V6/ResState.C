@@ -229,10 +229,15 @@ ResState::eval( void )
 		break;	
 		
 	case matched_state:
-		if( rip->eval_is_owner() == 0 ) {
-				// STATE TRANSITION #8
-			change( owner_state );
-		}
+			// Nothing to do here.  If we're matched, we only want to
+			// leave if the match timer goes off, or if someone with
+			// the right capability tries to claim us.  We can't check
+			// the START expression, since we don't have a job ad, and
+			// we can't check IS_OWNER, since that isn't what you want
+			// (IS_OWNER might be true, while the START expression
+			// might allow some jobs in, and if you get matched with
+			// one of those, you want to stay matched until they try
+			// to claim us).  
 		break;
 
 	default:
