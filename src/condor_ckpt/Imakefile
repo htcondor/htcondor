@@ -28,6 +28,8 @@ PACKAGE = image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ)
 depend_target($(SRC) $(PACKAGE) )
 all_target(test3)
 
+program_target(noenv,noenv.o,$(NULL),no_release)
+program_target(my_printenv,my_printenv.o,$(NULL),no_release)
 c_plus_target(test,driver.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(test2,driver2.o $(PACKAGE),$(NULL),no_release)
 c_plus_target(test3,driver3.o $(PACKAGE),$(NULL),no_release)
