@@ -232,14 +232,14 @@ erase(iterator f, iterator l)
 bool ExprList::
 _Evaluate (EvalState &, Value &val) const
 {
-	val.SetListValue (this);
+	val.SetListValue ((ExprList *)this);
 	return( true );
 }
 
 bool ExprList::
 _Evaluate( EvalState &, Value &val, ExprTree *&sig ) const
 {
-	val.SetListValue( this );
+	val.SetListValue((ExprList* )this);
 	return( ( sig = Copy( ) ) );
 }
 

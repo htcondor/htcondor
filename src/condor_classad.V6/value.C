@@ -236,7 +236,7 @@ SetStringValue( const char *s )
 }
 
 void Value::
-SetListValue( const ExprList *l)
+SetListValue( ExprList *l)
 {
     valueType = LIST_VALUE;
     listValue = l;

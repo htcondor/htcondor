@@ -112,7 +112,7 @@ class Value
 		/** Sets an expression list value; previous value discarded.
 			@param l The list value.
 		*/
-		void SetListValue(const ExprList* l);
+		void SetListValue(ExprList* l);
 
 		/** Sets a ClassAd value; previous value discarded.
 			@param c The ClassAd value.
@@ -203,6 +203,11 @@ class Value
 		*/
 		inline bool IsListValue(const ExprList*& l) const;
 		/** Checks if the value is an expression list.
+			@param l The expression list if the value is an expression list.
+			@return true iff the value is an expression list.
+		*/
+		inline bool IsListValue(ExprList*& l) const;
+		/** Checks if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue() const;
@@ -286,7 +291,7 @@ class Value
 			bool			booleanValue;
 			int				integerValue;
 			double 			realValue;
-			const ExprList	*listValue;
+			ExprList        *listValue;
 			ClassAd			*classadValue;
 			double			relTimeValueSecs;
 			abstime_t absTimeValueSecs;
@@ -342,8 +347,23 @@ IsRealValue () const
 inline bool Value::
 IsListValue( const ExprList *&l) const
 {
-	l = listValue;
-	return(valueType == LIST_VALUE);
+    if (valueType == LIST_VALUE) {
+        l = listValue;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+inline bool Value::
+IsListValue( ExprList *&l) const
+{
+    if (valueType == LIST_VALUE) {
+        l = listValue;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 inline bool Value::
