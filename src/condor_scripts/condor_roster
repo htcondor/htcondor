@@ -93,7 +93,7 @@ die "can't read '$RosterStateFile'" if (! open ( IN, $RosterStateFile ) );
 while ( <IN> )
 {
     chomp;
-    s/\#.*$//g;
+    s/\s*\#.*$//g;
     next if ( $_ eq "" );
     if ( /arch\s+=\s+\"(.+)\"/i )
     {
@@ -125,6 +125,7 @@ while ( <IN> )
     }
     elsif ( /ExcludeHost\s+=\s+\"(.+?)\"/i )
     {
+	print "$.: No Host = '$1'\n" if ( $Debug );
 	push( @ExcludeHosts, $1 );
     }
     elsif ( /IncludeHost\s+=\s+\"(.+?)\"/i )
@@ -169,17 +170,18 @@ my $MachineCount = 0;	# Raw machine count
 my $HostCount = 0;	# Hosts added to the list count
 if ( $MachineList eq "" )
 {
-    die "Can't read stdin" if (! open ( MACHINES, "<\&STDIN" ) );
+    open ( MACHINES, "<\&STDIN" ) || die "Can't read stdin";
 }
 else
 {
-    die "Can't run '$MachineList'" if (! open ( MACHINES, "$MachineList|" ) );
+    open ( MACHINES, "$MachineList|" ) || die "Can't run '$MachineList'";
 }
 MACHINE:
 while ( <MACHINES> )
 {
     chomp;
     next if ( /^\#/ );
+    print "$_\n" if ( $Debug > 1 );
 
     # Parse the line
     $MachineCount++;
@@ -205,7 +207,7 @@ while ( <MACHINES> )
     next if ( $Sponsor =~ /$ExcludeSponsors/ );
     print "<S:$Sponsor> " if ( $Debug );
 
-    # No host?
+   # No host?
     $Host =~ s/\..*//;
     next if ( $Host =~ /$ExcludeHosts/ );
     print "<H:$Host> " if ( $Debug );

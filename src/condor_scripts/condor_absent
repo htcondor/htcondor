@@ -11,15 +11,19 @@ my %Options =
      "[-]"		=> "Read roster from STDIN",
      "[-reserved]"	=> "Check the reserved list",
      "[-cluster]"	=> "Report \"Cluster\" nodes that are down",
+     "[-pool=host]"	=> "Set the condor pool to host",
+     "[-v]"		=> "Verbose",
      "[-h]"		=> "Dump help",
     );
 
 # Process command line
+my $Verbose = 0;
 my $DoPing = 0;
 my $DoReserved = 0;
 my $DoClusterCheck = 0;
 my $RosterFile = "";
 my $Program = $0;
+my $CondorPool = "";
 foreach my $Arg ( @ARGV )
 {
     if ( $Arg =~ /-ping/ )
@@ -37,6 +41,14 @@ foreach my $Arg ( @ARGV )
     elsif ( $Arg =~ /-cluster/ )
     {
 	$DoClusterCheck = 1;
+    }
+    elsif ( $Arg =~ /-pool=(.*)/ )
+    {
+	$CondorPool = $1;
+    }
+    elsif ( $Arg =~ /-v/ )
+    {
+	$Verbose++;
     }
     elsif ( $Arg =~ /-h/ )
     {
@@ -75,8 +87,10 @@ if ( defined( $ENV{CONDOR_ROSTER_STATE} ) )
     $RosterStateFile = $ENV{CONDOR_ROSTER_STATE};
 }
 my $CondorStatus = "condor_status";
-my $CondorStatusArgs = "-pool condor.cs.wisc.edu -master";
 my $CondorReserved = "condor_reserved";
+my $CondorStatusArgs = "-master";
+$CondorStatusArgs = $CondorStatusArgs . " -pool $CondorPool"
+    if ( $CondorPool ne "" );
 
 # Read the state; all we really need is the "ClusterNodes" list
 my %ClusterNodes;
@@ -169,6 +183,7 @@ if ( $DoReserved )
 	    delete $Absent{$Host};
 	}
 	$ReservedCount++;
+	print "Reserved: $Host\n" if ( $Verbose >= 1 );
     }
     close( IN );
 }

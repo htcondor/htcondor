@@ -4,6 +4,7 @@ use strict;
 # use warnings;
 
 # How to run the cluster tool...
+print "Old:\n";
 {
     my $Tool = "/unsup/condor/bin/condor_cluster_tool";
     my $ToolArgs = "check";
@@ -13,17 +14,14 @@ use strict;
     die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
     while ( <IN> )
     {
+	print;
 	chomp;
 	if ( /(.*): Condor is (\w+)/ )
 	{
 	    my $Host = $1;
 	    my $Status = $2;
-	    if ( /reserved/ )
+	    if ( ( $Status eq "off" ) || ( /reserved/ )  )
 	    {
-		if ( $Status eq "on" )
-		{
-		    # print STDERR "$Host: Reserved and on!\n";
-		}
 		print "$Host\n";
 	    }
 	}
@@ -31,6 +29,7 @@ use strict;
     close( IN );
 }
 
+print "New:\n";
 # How to run the NEW cluster tool...
 {
     my $Tool = "/unsup/condor/bin/condor_new_cluster_tool";
@@ -41,12 +40,13 @@ use strict;
     die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
     while ( <IN> )
     {
+	print;
 	chomp;
 	if ( /(.*)\s+is\s+(\S+)/ )
 	{
 	    my $Host = $1;
 	    my $Status = $2;
-	    print "$Host\n" if ( $Status =~ /reserved/ );
+	    print "$Host\n" if ( $Status eq "reserved" );
 	}
     }
     close( IN );
