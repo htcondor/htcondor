@@ -266,25 +266,11 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
-    //-->DAP
-    if ((condorLogName == NULL) && (dapLogName == NULL)) {
-        debug_printf( DEBUG_SILENT, "No Condor or DaP Log files were specified\n" );
+    if( !condorLogName && !dapLogName ) {
+        debug_printf( DEBUG_SILENT,
+					  "ERROR: no Condor or DaP log files were specified\n" );
         Usage();
     }
-
-    if (condorLogName == NULL) {
-      debug_printf( DEBUG_SILENT, "Warning: No Condor Log file was specified\n" );
-    }
-    if (dapLogName == NULL) {
-      debug_printf( DEBUG_SILENT, "Warning: No DaP Log file was specified\n" );
-    }
-    //<--DAP
-    /*
-    if (condorLogName == NULL) {
-        debug_printf( DEBUG_SILENT, "No Condor Log file was specified\n" );
-        Usage();
-    }
-    */
     if (lockFileName == NULL) {
         debug_printf( DEBUG_SILENT, "No DAG lock file was specified\n" );
         Usage();
@@ -301,11 +287,14 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
- 
-    debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s\n",
-                   condorLogName);
-    debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
-		  dapLogName); //-->DAP
+	if( condorLogName ) {
+		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s\n",
+					  condorLogName );
+	}
+	if( dapLogName ) {
+		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
+					  dapLogName );
+	}
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
     debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
@@ -418,19 +407,17 @@ int main_init (int argc, char ** const argv) {
         }
     }
 
-    debug_printf( DEBUG_VERBOSE, "Running timers...\n");
-    
-    
-    //<--DAP
-    if (condorLogName != NULL ){
-      daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
-				  "condor_event_timer" );
+	ASSERT( condorLogName || dapLogName );
+    if( condorLogName ) {
+		dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
+		daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
+									"condor_event_timer" );
     }
-    if (dapLogName != NULL){
-      daemonCore->Register_Timer( 1, 5, (TimerHandler)dap_event_timer,
-				  "dap_event_timer" );
+    if( dapLogName ) {
+		dprintf( D_ALWAYS, "Registering dap_event_timer...\n" );
+		daemonCore->Register_Timer( 1, 5, (TimerHandler)dap_event_timer,
+									"dap_event_timer" );
     }
-    //--DAP
 
     return 0;
 }
