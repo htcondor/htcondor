@@ -144,8 +144,8 @@ printStartdNormal (ClassAd *ad)
 			pm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
 			pm.registerFormat("%-10.10s ",  ATTR_STATE), "[????????] ";
 			pm.registerFormat("%-10.10s ",  ATTR_ACTIVITY, "[????????] ");
-			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat("%-4d",  ATTR_MEMORY, "[??]  ");
+			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
+			pm.registerFormat("%4d",  ATTR_MEMORY, "[??]  ");
 
 			first = false;
 		}
@@ -184,11 +184,11 @@ printServer (ClassAd *ad)
 			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
 			pm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
 			pm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
-			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
-			pm.registerFormat("%-6d  ",  ATTR_MEMORY, "[????]  ");
-			pm.registerFormat("%-7d ",  ATTR_DISK, "[?????]");
-			pm.registerFormat("%-10d ", ATTR_MIPS, "[????????] ");
-			pm.registerFormat("%-10d\n", ATTR_KFLOPS, "[????????]\n");
+			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
+			pm.registerFormat("%6d  ",  ATTR_MEMORY, "[????]  ");
+			pm.registerFormat("%7d ",  ATTR_DISK, "[?????]");
+			pm.registerFormat("%10d ", ATTR_MIPS, "[????????] ");
+			pm.registerFormat("%10d\n", ATTR_KFLOPS, "[????????]\n");
 
 			first = false;
 		}
@@ -208,7 +208,7 @@ printState (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-10.10s %-3.3s %-5.5s %-6.6s  "
+			printf ("\n%-10.10s %-3.3s %5.5s %-6.6s  "
 					"%-10.10s %-7.7s   %-11.11s"
 					"%-4.4s %-12.12s\n\n",
 				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv", 
@@ -216,9 +216,9 @@ printState (ClassAd *ad)
 				ATTR_ACTIVITY, "ActvtyTime");
 		
 			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
-			pm.registerFormat("%-3d " , ATTR_CPUS, "[??] ");
-			pm.registerFormat("%-5d " , ATTR_MEMORY, "[???] ");
-			pm.registerFormat("%-.3f ", ATTR_LOAD_AVG, "[???]  ");
+			pm.registerFormat("%3d " , ATTR_CPUS, "[??] ");
+			pm.registerFormat("%5d " , ATTR_MEMORY, "[???] ");
+			pm.registerFormat("%.3f ", ATTR_LOAD_AVG, "[???]  ");
 			pm.registerFormat( (IntCustomFmt) format_time,
 									ATTR_KEYBOARD_IDLE,
 									"[??????????] ");
@@ -395,8 +395,11 @@ printCkptSrvrNormal(ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%20.20s\n\n", ATTR_NAME);
-			pm.registerFormat("%-20.20s", ATTR_NAME, "[??????????????????]");
+			printf ("\n%-20.20s %-9.9s %-11.11s\n\n", ATTR_NAME,
+					"AvailDisk", ATTR_SUBNET);
+			pm.registerFormat("%-20.20s ", ATTR_NAME, "[??????????????????]");
+			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			pm.registerFormat("%11s\n", ATTR_SUBNET, "[?????]\n");
 			first = false;
 		}
 	}
