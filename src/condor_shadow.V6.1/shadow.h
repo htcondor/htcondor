@@ -89,14 +89,6 @@ class UniShadow : public BaseShadow
 		/// Log an execute event to the UserLog
 	void logExecuteEvent( void );
 
-		/** Try to activate the claim for our remote resource.  this 
-			deals with all possible return values from
-			RemoteResource::activateClaim(), including
-			CONDOR_TRY_AGAIN, which causes us to register a timer to
-			attempt this again in 5 seconds.
-		*/
-	void attemptActivateClaim( void );
-
 	float bytesSent();
 	float bytesReceived();
 
@@ -116,7 +108,6 @@ class UniShadow : public BaseShadow
 
  private:
 	RemoteResource *remRes;
-	int activate_claim_tid;
 };
 
 

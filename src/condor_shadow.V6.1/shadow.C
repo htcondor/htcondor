@@ -34,14 +34,10 @@ UniShadow::UniShadow() {
 		// pass RemoteResource ourself, so it knows where to go if
 		// it has to call something like shutDown().
 	remRes = new RemoteResource( this );
-	activate_claim_tid = -1;
 }
 
 UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
-	if( activate_claim_tid != -1 && daemonCore) {
-		daemonCore->Cancel_Timer( activate_claim_tid );
-	}
 }
 
 
@@ -215,10 +211,14 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, WRITE );
 
-		// finally, we can attempt to activate our claim.  this
-		// function deals with all the possible results of talking to
-		// the startd for us, including CONDOR_TRY_AGAIN
-	attemptActivateClaim();
+		// finally, we can attempt to activate our claim.
+	if( remRes->activateClaim() ) {
+			// success, log an execute event
+		logExecuteEvent();
+	} else {
+			// we're screwed, give up:
+		shutDown( JOB_NOT_STARTED, 0 );
+	}
 }
 
 
@@ -232,46 +232,6 @@ UniShadow::logExecuteEvent( void )
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
 	}
-}
-
-
-void
-UniShadow::attemptActivateClaim( void )
-{
-	int rval = remRes->activateClaim();
-	switch( rval ) {
-	case OK:
-			// either a) our timer just went off or b) we never set
-			// one.  in any case, we don't want to think we've still
-			// got a timer pending...
-		activate_claim_tid = -1;
-		logExecuteEvent();
-		break;
-	case NOT_OK:
-			// we're screwed, give up:
-		shutDown( JOB_NOT_STARTED, 0 );
-			// clear timer id (see above)
-		activate_claim_tid = -1;
-		break;
-	case CONDOR_TRY_AGAIN:
-			// set a timer and try this again in a few seconds.
-		dprintf( D_FULLDEBUG, "activateClaim returned CONDOR_TRY_AGAIN, "
-				 "setting timer to try again in 5 seconds\n" );
-		if( activate_claim_tid != -1 ) {
-				// we're already in a timer handler, so it's better to
-				// just reset the timer itself
-			daemonCore->Reset_Timer( activate_claim_tid, 5, 0 );
-		} else { 
-				// first time here, register the timer...
-			activate_claim_tid = daemonCore->Register_Timer( 5, 0,
-				 (TimerHandlercpp)&UniShadow::attemptActivateClaim,
-			     "attemptActivateClaim", this );
-		}
-		if( activate_claim_tid < 0 ) {
-			EXCEPT( "Can't register DC timer!" );
-		}
-		break;
-    }
 }
 
 
