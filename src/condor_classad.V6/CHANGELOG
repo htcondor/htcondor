@@ -1,0 +1,3 @@
+Changes for version 0.9.1:
+
+* Fixed usage of va_end in debug.C
