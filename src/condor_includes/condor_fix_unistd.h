@@ -23,7 +23,6 @@ typedef struct fd_set fd_set;
 
 #if defined(LINUX)
 #       define idle _hide_idle
-#       define gethostname _hide_gethostname
 #endif
 
 #include <unistd.h>
@@ -40,7 +39,6 @@ typedef struct fd_set fd_set;
 
 #if defined(LINUX)
 #       undef idle
-#       undef gethostname
 #endif
 
 /*
