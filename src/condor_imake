@@ -48,16 +48,18 @@ p   exit 1
 fi
 
 # Now, find an appropriate cpp to use
-IMAKECPP="$IMAKEROOT/imake_cpp"
-if [ ! -x $IMAKECPP ] ; then
-    if [ -f $IMAKECPP ] ; then
-        rm -f $IMAKECPP
-    fi	 
-    echo '#!/bin/sh' > $IMAKECPP
-    echo $Imakecppflags >> $IMAKECPP
-    chmod 755 $IMAKECPP
+if [ ! $os = "AIX" ] ; then
+	IMAKECPP="$IMAKEROOT/imake_cpp"
+	if [ ! -x $IMAKECPP ] ; then
+    	if [ -f $IMAKECPP ] ; then
+        	rm -f $IMAKECPP
+    	fi	 
+    	echo '#!/bin/sh' > $IMAKECPP
+    	echo $Imakecppflags >> $IMAKECPP
+    	chmod 755 $IMAKECPP
+	fi
+	export IMAKECPP
 fi
-export IMAKECPP
 
 # end of USE_OLD_IMAKE
 fi
@@ -66,5 +68,4 @@ fi
 # Finally, call imake with all the flags
 ##################################################
 ${IMAKE} -s Makefile -I../config -I../../config $*
-
 
