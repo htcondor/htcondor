@@ -1248,7 +1248,6 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		// don't allow any root processes
 	if( requested_uid == 0 || requested_gid == 0 ) {
-
 		EXCEPT( "Attempt to start user process with root privileges" );
 	}
 		
@@ -1261,11 +1260,12 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 			char *want_soft = NULL;
 	
 			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
-				 *want_soft != 'T' || *want_soft != 't' ) {
+				 (*want_soft != 'T' && *want_soft != 't') ) {
 			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
 			}
-			if ( want_soft )
+			if ( want_soft ) {
 				free(want_soft);
+			}
 		}
 		(void)endpwent();
 

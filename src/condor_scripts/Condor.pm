@@ -258,7 +258,8 @@ sub Monitor
 		      
 		      $sinful = $parts[$#parts];
 		      @ip_port = &strip_sinful($sinful);
-		      
+		     
+			# Call the registered callback if it exists. 
 		      if( exists $SubmitCallback{$cluster} )
 		      {
 			  $temp = $SubmitCallback{$cluster};

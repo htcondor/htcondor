@@ -499,7 +499,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		if( querySchedds ) {
 			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 		} else {
-			printf ("\n\n-- Submittor: %s : %s : %s\n", scheddName, 
+			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
 					scheddAddr, scheddMachine);	
 		}
 
@@ -518,7 +518,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		if( querySchedds ) {
 			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
 		} else {
-			printf ("\n\n-- Submittor: %s : %s : %s\n", scheddName, 
+			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
 					scheddAddr, scheddMachine);	
 		}
 		
