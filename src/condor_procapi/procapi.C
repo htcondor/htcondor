@@ -396,7 +396,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		pi->age = 0;
 	}
 
-	pi->creation_time = now - age;
+	pi->creation_time = now - pi->age;
 
   /* here we've got to do some sampling ourself to get the cpuusage
 	 and make the page faults a rate...
