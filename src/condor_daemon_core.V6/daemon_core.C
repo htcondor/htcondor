@@ -42,14 +42,13 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "internet.h"
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
+#include "condor_commands.h"
 
 #if defined(GSS_AUTHENTICATION)
 #include "auth_sock.h"
 #else
 #define AuthSock ReliSock
 #endif
-
-static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 extern "C" 
 {
@@ -2852,7 +2851,7 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 	status = ::kill(pid,0);
 	if ( status == 0 )
 		status = TRUE;	
-	set_priv_state(priv);
+	set_priv(priv);
 #else
 	// on Win32, open a handle to the pid and call GetExitStatus
 	HANDLE pidHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pid);
