@@ -119,20 +119,6 @@ CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 CONDOR_LD_DIR=$CONDOR_LIBDIR
 CONDOR_SPECIAL_CLIB=/not-there-bull
 
-# if I am on a linux box, determine where I should be looking
-LINUX_LIB=
-if [ `uname` = "Linux" ]; then
-	if [ -f /lib/libc-2.2* ]; then
-		LINUX_LIB="glibc22"
-	elif [ -f /lib/libc-2.1* ]; then
-		LINUX_LIB="glibc21"
-	elif [ -f /lib/libc-2.0* ]; then
-		LINUX_LIB="glibc20"
-	else
-		LINUX_LIB="libc5"
-	fi
-fi
-
 # --------------------------------------------------
 
 # Tell our "ld" to link to with the Condor libs
@@ -202,26 +188,6 @@ do
 	# if we made it here, there are no more command-line options
 	break
 done
-
-# if these files exist, then keep them, otherwise append the correct lib dir
-# this is so a developer using make release can still use the libs
-if [ `uname` = "Linux" ]; then
-	if [ ! -f "$CONDOR_CLIB" ]; then
-		CONDOR_CLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorsyscall.a
-	fi
-
-	if [ ! -f "$CONDOR_ZCLIB" ]; then
-		CONDOR_ZCLIB=$CONDOR_LIBDIR/$LINUX_LIB/libcondorzsyscall.a
-	fi
-
-	if [ ! -f "$CONDOR_RT0" ]; then
-		CONDOR_RT0=$CONDOR_LIBDIR/$LINUX_LIB/condor_rt0.o
-	fi
-
-	if [ ! -f "$CONDOR_CPLUS" ]; then
-		CONDOR_CPLUS=$CONDOR_LIBDIR/$LINUX_LIB/libcondorc++support.a
-	fi
-fi
 
 #
 # If the compressed ckpt library is available, use it.
