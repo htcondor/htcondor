@@ -3011,9 +3011,14 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 	shadowsByProcID->insert(new_rec->job_id, new_rec);
 
 	if ( new_rec->match ) {
-		if ( new_rec->match->peer && new_rec->match->peer[0] ) {
+		struct sockaddr_in sin;
+		if ( new_rec->match->peer && new_rec->match->peer[0] &&
+			 string_to_sin(new_rec->match->peer, &sin) == 1) {
+			// make local copy of static hostname buffer
+			char *hostname = strdup(sin_to_hostname(&sin, NULL));
 			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-							   ATTR_REMOTE_HOST,new_rec->match->peer);
+							   ATTR_REMOTE_HOST, hostname);
+			free(hostname);
 		}
 		if ( new_rec->match->pool ) {
 			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
