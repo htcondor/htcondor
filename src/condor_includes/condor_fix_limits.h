@@ -11,4 +11,14 @@
 #   undef select
 #endif
 
-#endif
+/* 
+** Linux doesn't define WORD_BIT unless __SVR4_I386_ABI_L1__ is
+** defined, and this is all we need, so lets just define it.
+*/ 
+#if defined(LINUX)
+#   if !defined(WORD_BIT)
+#		define WORD_BIT 32
+#	endif 
+#endif /* LINUX */
+
+#endif /* FIX_LIMITS_H */
