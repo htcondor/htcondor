@@ -51,7 +51,7 @@ extern int free_fs_blocks();
 extern V2_PROC *Proc;
 
 /* XDR xdr_RSC, *xdr_syscall = &xdr_RSC; */
-ReliSock *syscall_sock;
+ReliSock *syscall_sock = NULL;
 
 ReliSock *
 RSC_ShadowInit( int rscsock, int errsock )
