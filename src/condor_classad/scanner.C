@@ -59,7 +59,7 @@ void Scanner(char*& s, Token& t)
         t.type = LX_NULL;
 		return;
     }
-    if(!strncmp(s, "TRUE", 4) && !isalpha(*(s+4)) && *(s+4) != '_')
+    if(!strncasecmp(s, "TRUE", 4) && !isalpha(*(s+4)) && *(s+4) != '_')
     // TRUE
     {
         s = s + 4;
@@ -68,7 +68,7 @@ void Scanner(char*& s, Token& t)
         t.type = LX_BOOL;
 		return;
     }
-    if(!strncmp(s, "FALSE", 5) && !isalpha(*(s+5)) && *(s+5) != '_')
+    if(!strncasecmp(s, "FALSE", 5) && !isalpha(*(s+5)) && *(s+5) != '_')
     // FALSE
     {
         s = s + 5;

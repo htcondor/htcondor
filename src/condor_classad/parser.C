@@ -17,8 +17,6 @@
 #include "condor_ast.h"
 #include "condor_scanner.h"
 
-const int PARSER_TABLESIZE = 20;
-
 static	Token*	nextToken = NULL;
 static	int		alreadyRead;
 
