@@ -56,6 +56,23 @@ while ( $Collector eq "" )
     $Collector = $_;
 }
 
+# Are we the central manager?
+my $DaemonList = "MASTER, STARTD";
+while ( 1 )
+{
+    print "Is this host ($ENV{HOSTNAME}) the Hawkeye manager node (y/n)? ";
+    $_ = <>;
+    if ( ! /^[ny]/i )
+    {
+	print "  Please answer yes or no\n";
+    }
+    else
+    {
+	$DaemonList = "$DaemonList, COLLECTOR" if ( /^y/i );
+	last;
+    }
+}
+
 # Build up the new config...
 my $ConfigIn = "$TargetDir/hawkeye_config.example";
 my $ConfigOut = "$TargetDir/etc/hawkeye_config";
@@ -83,8 +100,20 @@ my $PathSbin = "$TargetDir/sbin";
 }
 
 # Output to user
-print "You should add '$PathBin' and '$PathSbin' to your path\n";
-print "You should set HAWKEYE_CONFIG=$ConfigOut\n";
+print "\n";
+{
+    my $Tmp = $PathBin;
+    $Tmp =~ s/\//\\\//g;
+    print "You should add '$PathBin' to your PATH\n"
+	if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+    $Tmp = $PathSbin;
+    $Tmp =~ s/\//\\\//g;
+    print "You should add '$PathSbin' to your PATH\n"
+	if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+    print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
+	if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
+	      ( $ENV{HAWKEYE_CONFIG} eq $ConfigOut )  );
+}
 
 
 # ###############################################
@@ -130,6 +159,13 @@ sub DoConfig( $$ )
 	    next;
 	}
 
+	# Daemon list
+	elsif ( /^DAEMON_LIST\s+=/ )
+	{
+	    print OUT "DAEMON_LIST = $DaemonList\n";
+	    next;
+	}
+
 	# Actual cronjob list
 	elsif ( /^STARTD_CRONJOBS\s+=/ )
 	{
@@ -153,7 +189,6 @@ sub DoConfig( $$ )
 		my $Cont = ( $i == $#Modules ) ? "" : "\\";
 		print OUT
 		    "\t$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt $Cont\n";
-		print "$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt\n";
 	    }
 	    next;
 	}
