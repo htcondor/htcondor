@@ -77,6 +77,9 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
+	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
+			 "\"%s\"\n", daemonString(_type), name ? name : "NULL",
+			 pool ? pool : "NULL" );
 }
 
 
@@ -626,6 +629,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
 			_name = strnewp( specified_host );
+			dprintf( D_HOSTNAME, 
+					 "No name given, but %s defined to \"%s\"\n", buf,
+					 specified_host );
 			free(specified_host);
 		}
 	}
@@ -635,48 +641,39 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 	if( _name ) {
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
-		
-			// First, make sure we're only trying to resolve the
-			// hostname part of the name...
-		strncpy( tmpname, _name, 512 );
-		tmp = strchr( tmpname, '@' );
-		if( tmp ) {
-				// There's a '@'.
-			*tmp = '\0';
-				// Now, tmpname holds whatever was before the @ 
-			tmp++;
-			if( *tmp ) {
-					// There was something after the @, try to resolve it
-					// as a full hostname:
-				if( ! (New_full_hostname(get_full_hostname(tmp))) ) { 
-						// Given a hostname, this is a fatal error.
-					sprintf( buf, "unknown host %s", tmp );  
-					newError( buf );
-					return false;
-				} 
-			} else {
-					// There was nothing after the @, use localhost:
-				New_full_hostname( strnewp(my_full_hostname()) );
-			}
-			sprintf( buf, "%s@%s", tmpname, _full_hostname );
-			New_name( strnewp(buf) );
-		} else {
-				// There's no '@', just try to resolve the hostname.
-			if( (New_full_hostname(get_full_hostname(tmpname))) ) {
-				New_name( strnewp(_full_hostname) );
-			} else {
-					// Given a hostname, this is a fatal error.
-				sprintf( buf, "unknown host %s", tmpname );  
-				newError( buf );
-				return false;
-			}           
+
+		tmp = get_daemon_name( _name );
+		if( ! tmp ) {
+				// we failed to contruct the daemon name.  the only
+				// possible reason for this is being given faulty
+				// hostname.  This is a fatal error.
+			MyString err_msg = "unknown host ";
+			err_msg += get_host_part( _name );
+			newError( err_msg.Value() );
+			return false;
 		}
+			// if it worked, we've not got the proper values for the
+			// name (and the full hostname, since that's just the
+			// "host part" of the "name"...
+		New_name( tmp );
+		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
+				 tmp );
+			// now, grab the fullhost from the name we just made...
+		tmp = strnewp( get_host_part(_name) ); 
+		dprintf( D_HOSTNAME,
+				 "Using \"%s\" for full hostname in Daemon object\n", tmp );
+		New_full_hostname( tmp );
+
 			// Now that we got this far and have the correct name, see
 			// if that matches the name for the local daemon.  
 			// If we were given a pool, never assume we're local --
 			// always try to query that pool...
 		my_name = localName();
+		dprintf( D_HOSTNAME, "Local daemon name would be \"%s\"\n", 
+				 my_name );
 		if( !_pool && !strcmp(_name, my_name) ) {
+		dprintf( D_HOSTNAME, "Name \"%s\" matches local name and "
+				 "no pool given, treating as a local daemon\n", _name );
 			_is_local = true;
 		}
 		delete [] my_name;
@@ -684,15 +681,22 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			// We got no name, but we have an address.  Try to
 			// do an inverse lookup and fill in some hostname info
 			// from the IP address we already have.
+		dprintf( D_HOSTNAME, "Address \"%s\" specified, but no name, "
+				 "looking up host info\n", _addr );
 		string_to_sin( _addr, &sockaddr );
 		hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
 							   sizeof(struct in_addr), AF_INET ); 
 		if( ! hostp ) {
 			New_full_hostname( NULL );
-
-			sprintf( buf, "cant find host info for %s", _addr );
+			dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
+					 strerror(errno), errno );
+			sprintf( buf, "can't find host info for %s", _addr );
 			newError( buf );
 		} else {
+				// TODO: we should really be checking for a full host
+				// here and looking at aliases, DEFAULT_DOMAIN_NAME,
+			dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
+					 "full hostname\n", hostp->h_name );
 			New_full_hostname( strnewp(hostp->h_name) );
 		}
 	} else {
@@ -701,6 +705,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		_is_local = true;
 		New_name( localName() );
 		New_full_hostname( strnewp(my_full_hostname()) );
+		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
+				 "values - name: \"%s\", full host: \"%s\"\n", 
+				 _name, _full_hostname );
 	}
 
 		// Now that we have the real, full names, actually find the
@@ -710,12 +717,16 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		sprintf( buf, "%s_ADDRESS_FILE", subsys );
 		addr_file = param( buf );
 		if( addr_file ) {
+			dprintf( D_HOSTNAME, "Finding address for local daemon, "
+					 "%s is \"%s\"\n", buf, addr_file );
 			if( (addr_fp = fopen(addr_file, "r")) ) {
 					// Read out the sinful string.
 				fgets( buf, 100, addr_fp );
 					// chop off the newline
 				chomp( buf );
 				if( is_valid_sinful(buf) ) {
+					dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
+							 "local address file\n", buf );
 					New_addr( strnewp(buf) );
 				}
 					// Let's see if this is new enough to also have a
@@ -724,10 +735,14 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 						// chop off the newline
 					chomp( buf );
 					New_version( strnewp(buf) );
+					dprintf( D_HOSTNAME, "Found version string \"%s\" in "
+							 "local address file\n", buf );
 					if( fgets(buf, 200, addr_fp) ) {
 							// chop off the newline
 						chomp( buf );
 						New_platform( strnewp(buf) );
+						dprintf( D_HOSTNAME, "Found platform string \"%s\" "
+								 "in local address file\n", buf );
 					}
 				}
 				fclose( addr_fp );
@@ -739,17 +754,23 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 				// If we didn't find the version string in the address
 				// file, try to ident the daemon's binary directly.
 			sprintf( buf, "%s", subsys );
+			dprintf( D_HOSTNAME, "No version string in local address file, "
+					 "trying to find it in the daemon's binary\n" );
 			char* exe_file = param( buf );
 			if( exe_file ) {
 				char ver[128];
 				CondorVersionInfo vi;
 				vi.get_version_from_file(exe_file, ver, 128);
 				New_version( strnewp(ver) );
+				dprintf( D_HOSTNAME, "Found version string \"%s\" "
+						 "in local binary (%s)\n", ver, exe_file );
+				free( exe_file );
+			} else {
+				dprintf( D_HOSTNAME, "%s not defined in config file, "
+						 "can't locate daemon binary for version info\n", 
+						 buf );
 			}
-			free( exe_file );
 		}
-
-
 	}
 
 
@@ -799,6 +820,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_addr( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using address \"%s\"\n", tmpname, buf );
 
 		sprintf( tmpname, ATTR_VERSION );
 		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
@@ -810,6 +833,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_version( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using version \"%s\"\n", tmpname, buf );
 
 		sprintf( tmpname, ATTR_PLATFORM );
 		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
@@ -821,10 +846,14 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_platform( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using platform \"%s\"\n", tmpname, buf );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
 	_port = string_to_port( _addr );
+	dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
+			 _port, _addr );
 	return true;
 }
 
@@ -839,6 +868,10 @@ Daemon::getCmInfo( const char* subsys )
 	char* tmp;
 	struct in_addr sin_addr;
 	struct hostent* hostp;
+
+	dprintf( D_HOSTNAME, "Entering getCmInfo() name: \"%s\", "
+			 "pool: \"%s\", addr: \"%s\"\n", _name ? _name : "NULL", 
+			 _pool ? _pool : "NULL", _addr ? _addr : "NULL" );
 
 		// For CM daemons, normally, we're going to be local (we're
 		// just not sure which config parameter is going to find it
@@ -869,20 +902,34 @@ Daemon::getCmInfo( const char* subsys )
 		_is_local = false;
 	}
 
+	dprintf( D_HOSTNAME,
+			 "Finding info on local central manager to compare\n" );
+
 		// Try the config file for a subsys-specific IP addr 
 	sprintf( buf, "%s_IP_ADDR", subsys );
 	local_host = param( buf );
+	if( local_host ) {
+		dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, local_host );
+	}
 
 	if( ! local_host ) {
 			// Try the config file for a subsys-specific hostname 
 		sprintf( buf, "%s_HOST", subsys );
 		local_host = param( buf );
+		if( local_host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
+					 local_host ); 
+		}
 	}
 
 	if( ! local_host ) {
 			// Try the generic CM_IP_ADDR setting (subsys-specific
 			// settings should take precedence over this). 
 		local_host = param( "CM_IP_ADDR" );
+		if( local_host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
+					 local_host ); 
+		}
 	}
 
 	if( local_host && ! host ) {
@@ -891,9 +938,14 @@ Daemon::getCmInfo( const char* subsys )
 	if( local_host && remote_host && !strcmp(local_host, remote_host) ) { 
 			// We've got the same thing, we're really local, even
 			// though we were given a "remote" host.
+		dprintf( D_HOSTNAME, "Pool specified (%s) matches local pool "
+				 "(%s)\n", remote_host, local_host );
 		_is_local = true;
 		host = local_host;
+	} else {
+		dprintf( D_HOSTNAME, "Remote pool specified (%s)\n", host );
 	}
+
 	if( ! host ) {
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
@@ -909,12 +961,17 @@ Daemon::getCmInfo( const char* subsys )
 		// store that (as is) in _name, so that we can get to it later
 		// if we need it.
 	New_name( strnewp(host) );
+	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
 
 		// See if it's already got a port specified in it, or if we
 		// should use the default port for this kind of daemon.
 	_port = getPortFromAddr( host );
 	if( ! _port ) {
 		_port = getDefaultPort();
+		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
+				 _port ); 
+	} else {
+		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 	}
 
 		// Now that we've got the port, just grab the hostname part of
@@ -935,15 +992,23 @@ Daemon::getCmInfo( const char* subsys )
 	if( is_ipaddr(host, &sin_addr) ) {
 		sprintf( buf, "<%s:%d>", host, _port );
 		New_addr( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address, finding "
+				 "hostname with gethostbyaddr()\n", host );
 
 			// See if we can get the canonical name
 		hostp = gethostbyaddr( (char*)&sin_addr, 
 							   sizeof(struct in_addr), AF_INET ); 
 		if( ! hostp ) {
+			dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
+					 strerror(errno), errno );
 			New_full_hostname( NULL );
 			sprintf( buf, "can't find host info for %s", _addr );
 			newError( buf );
 		} else {
+				// TODO: we should really be checking for a full host
+				// here and looking at aliases, DEFAULT_DOMAIN_NAME,
+			dprintf( D_HOSTNAME, "Found host entry, using \"%s\" for "
+					 "full hostname\n", hostp->h_name );
 			New_full_hostname( strnewp(hostp->h_name) );
 		}
 	} else {
@@ -957,6 +1022,7 @@ Daemon::getCmInfo( const char* subsys )
 			return false;
 		}
 		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
 		New_addr( strnewp(buf) );
 		New_full_hostname( tmp );
 	}
