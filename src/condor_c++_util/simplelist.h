@@ -50,6 +50,7 @@ class SimpleList
 
     // General
     bool Append (ObjType);
+	bool Insert (ObjType);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) { return size; }
 
@@ -102,6 +103,26 @@ Append (ObjType item)
     items[size++] = item;
     return true;
 }
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+Insert (ObjType item)
+{
+	if (size >= maximum_size)
+	{
+		if (!resize (2*maximum_size))
+			return false;
+	}
+
+	size++;
+
+    for (int i = size - 1; i > current; i--)
+		items [i] = items [i-1];
+
+	items[current] = item;
+	return true;
+}
+
 
 template <class ObjType>
 bool SimpleList<ObjType>::
