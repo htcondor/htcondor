@@ -71,6 +71,11 @@ public:
 	int accept(ReliSock &);
 	int accept(ReliSock *);
 
+	//authenticate[_user] are dummy functions to allow upward compatibility
+	//with AuthSock where globus is not implemented for a platform
+	int authenticate() { return 0; }
+	int authenticate_user() { return 1; }
+
 	// Send & Recv Files: Takes buffer pointers and lengths as arguments, 
 	// sends the data in a bulk optimized method. Returns -1 on failure,
 	// or the number of bytes read or written on success. 
