@@ -28,7 +28,7 @@
 #include "internet.h"
 #include "condor_md.h"       // Condor_MD_MAC
 
-#define USABLE_PACKET_SIZE SAFE_MSG_MAX_PACKET_SIZE - SAFE_MSG_HEADER_SIZE
+#define USABLE_PACKET_SIZE SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
 const char THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD[] = "CRAP";
 
 _condorPacket::_condorPacket()
