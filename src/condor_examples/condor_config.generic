@@ -175,7 +175,7 @@ ContinueIdleTime	= 5 * $(MINUTE)
 MaxSuspendTime		= 10 * $(MINUTE)
 MaxVacateTime		= 5 * $(MINUTE)
 
-KeyboardBusy		= KeyboardIdle < $(POLLING_INTERVAL)
+KeyboardBusy		= KeyboardIdle < $(MINUTE)
 CPU_Idle		= $(NonCondorLoadAvg) <= $(BackgroundLoad)
 CPU_Busy		= $(NonCondorLoadAvg) >= $(HighLoad)
 
