@@ -12,6 +12,8 @@
 #include "debug.h"
 #include "script.h"
 
+#define JOB_ERROR_TEXT_MAXLEN 128
+
 /**  The job class represents a job in the DAG and it's state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The
      parents queue is a list of parent jobs that this one depends on.  That
@@ -89,6 +91,9 @@ class Job {
         way you would use the queue_t_names array.
     */
     static const char * status_t_names[];
+
+	// explanation text for errors
+	char error_text[JOB_ERROR_TEXT_MAXLEN];
   
     /** Constructor
         @param jobName Name of job in dag file.  String is deep copied.
@@ -99,8 +104,8 @@ class Job {
     ///
     ~Job();
   
-    // returns copy of _jobName (or job ID if _jobName is undefined)
-	char* GetJobName();
+    // returns _jobName
+	inline const char* GetJobName() { return _jobName; }
 
     /** */ inline char *  GetCmdFile () const { return _cmdFile; }
     /** */ inline JobID_t GetJobID   () const { return _jobID;   }
