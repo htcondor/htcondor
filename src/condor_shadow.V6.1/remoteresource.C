@@ -261,9 +261,12 @@ RemoteResource::printExit( FILE *fp )
 			if( got_exception ) {
 				fprintf( fp, "died with exception %s\n", ename );
 			} else {
-				fprintf( fp, "died on %s.\n", reason_str ? 
-						 reason_str :
-						 daemonCore->GetExceptionString(exit_value) );
+				if( reason_str ) {
+					fprintf( fp, "%s.\n", reason_str );
+				} else {
+					fprintf( fp, "died on %s.\n", 
+							 daemonCore->GetExceptionString(exit_value) );
+				}
 			}
 		} else {
 #ifndef WIN32
