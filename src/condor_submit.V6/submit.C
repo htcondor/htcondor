@@ -1449,7 +1449,7 @@ SetPriority()
 void
 SetPeriodicHoldCheck(void)
 {
-	char *phc = condor_param(PeriodicHoldCheck);
+	char *phc = condor_param(PeriodicHoldCheck, ATTR_PERIODIC_HOLD_CHECK);
 
 	if (phc == NULL)
 	{
@@ -1469,7 +1469,7 @@ SetPeriodicHoldCheck(void)
 void
 SetPeriodicRemoveCheck(void)
 {
-	char *prc = condor_param(PeriodicRemoveCheck);
+	char *prc = condor_param(PeriodicRemoveCheck, ATTR_PERIODIC_REMOVE_CHECK);
 
 	if (prc == NULL)
 	{
@@ -1489,7 +1489,7 @@ SetPeriodicRemoveCheck(void)
 void
 SetExitHoldCheck(void)
 {
-	char *ehc = condor_param(OnExitHoldCheck);
+	char *ehc = condor_param(OnExitHoldCheck, ATTR_ON_EXIT_HOLD_CHECK);
 
 	if (ehc == NULL)
 	{
@@ -1509,7 +1509,7 @@ SetExitHoldCheck(void)
 void
 SetExitRemoveCheck(void)
 {
-	char *erc = condor_param(OnExitRemoveCheck);
+	char *erc = condor_param(OnExitRemoveCheck, ATTR_ON_EXIT_REMOVE_CHECK);
 
 	if (erc == NULL)
 	{
