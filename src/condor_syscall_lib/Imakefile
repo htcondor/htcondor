@@ -190,13 +190,26 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
 	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
 	rm -f sigaction.tmp.o sigaction.o
+
+clean::
+	rm -f SIGACTION.o
+
 #elif !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
 
 #if IS_SOLARIS
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
-uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,ftruncate,FTRUNCATE)
+
+TRUNCATE.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) truncate.o
+	./ToUpper truncate.o truncate.tmp.o ftruncate FTRUNCATE
+	./ToUpper truncate.tmp.o TRUNCATE.o truncate TRUNCATE
+	rm -f truncate.tmp.o truncate.o
+
+clean::
+	rm -f TRUNCATE.o
+
 #endif
 
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
