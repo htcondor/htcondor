@@ -1,7 +1,7 @@
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc \
 		view_collection condor_qedit condor_advertise condor_version \
-		condor_fetch_log
+		condor_fetch_log condor_submit_dag
 
 all_target( $(PROGRAMS) )
 
@@ -57,6 +57,8 @@ c_plus_target(condor_qedit,qedit.o,$(LIB))
 release_target(condor_qedit,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_qedit,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_qedit,qedit.o,$(LIB),$(STATIC_DIR)/bin)
+
+c_plus_target(condor_submit_dag,condor_submit_dag.o,$(LIB))
 
 c_plus_target(condor_version,version.o,$(LIB))
 release_target(condor_version,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
