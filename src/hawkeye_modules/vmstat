@@ -237,7 +237,7 @@ sub GetNameTable( )
     my @OsTable = (
 		   # Any version of Linux
 		   { ostype => "Linux",
-		     osrev => "*",
+		     osrev => ".*",
 		     Command => "/usr/bin/vmstat",
 		     Table => [
 			       "NumProcsRun",
