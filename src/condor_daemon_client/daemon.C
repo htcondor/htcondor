@@ -77,7 +77,6 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
-
 }
 
 
@@ -527,7 +526,6 @@ Daemon::locate( void )
 {
 	char buf[256], *tmp;
 	bool rval;
-	int  port;
 
 		// Make sure we only call locate() once.
 	if( _tried_locate ) {
@@ -564,23 +562,19 @@ Daemon::locate( void )
 		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
 	case DT_COLLECTOR:
-		port = param_get_collector_port();
-		rval = getCmInfo( "COLLECTOR", port );
+		rval = getCmInfo( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		port = param_get_negotiator_port();
-		rval = getCmInfo( "NEGOTIATOR", port );
+		rval = getCmInfo( "NEGOTIATOR" );
 		break;
 	case DT_VIEW_COLLECTOR:
-		port = param_get_condor_view_port();
-		if( (rval = getCmInfo("CONDOR_VIEW", port)) ) {
+		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
 			break;
 		} 
 			// If there's nothing CONDOR_VIEW-specific, try just using
 			// "COLLECTOR".
-		port = param_get_collector_port();
-		rval = getCmInfo( "COLLECTOR", port ); 
+		rval = getCmInfo( "COLLECTOR" ); 
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
@@ -836,7 +830,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 
 
 bool
-Daemon::getCmInfo( const char* subsys, int port )
+Daemon::getCmInfo( const char* subsys )
 {
 	char buf[128];
 	char* host = NULL;
@@ -845,9 +839,6 @@ Daemon::getCmInfo( const char* subsys, int port )
 	char* tmp;
 	struct in_addr sin_addr;
 	struct hostent* hostp;
-
-		// We know this without any work.
-	_port = port;
 
 		// For CM daemons, normally, we're going to be local (we're
 		// just not sure which config parameter is going to find it
@@ -913,10 +904,26 @@ Daemon::getCmInfo( const char* subsys, int port )
 		return false;
 	} 
 
+		// now that we finally know what we're going to use, see if
+		// it's already got a port specified in it, or if we should
+		// use the default port
+	_port = getPortFromAddr( host );
+	if( ! _port ) {
+		_port = getDefaultPort();
+	}
+	tmp = getHostFromAddr( host );
+	if( local_host ) {
+		free( local_host );
+		local_host = NULL;
+	}
+	if( remote_host ) {
+		free( remote_host );
+		remote_host = NULL;
+	}
+	host = tmp;
+
 	if( is_ipaddr(host, &sin_addr) ) {
 		sprintf( buf, "<%s:%d>", host, _port );
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
 		New_addr( strnewp(buf) );
 
 			// See if we can get the canonical name
@@ -936,12 +943,9 @@ Daemon::getCmInfo( const char* subsys, int port )
 				// With a hostname, this is a fatal Daemon error.
 			sprintf( buf, "unknown host %s", host );
 			newError( buf );
-			if( local_host ) free( local_host );
-			if( remote_host ) free( remote_host );
+			free( host );
 			return false;
 		}
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
 		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
 		New_addr( strnewp(buf) );
 		New_full_hostname( tmp );
@@ -957,7 +961,29 @@ Daemon::getCmInfo( const char* subsys, int port )
 		New_pool( strnewp(_full_hostname) );
 	}
 
+	free( host );
 	return true;
+}
+
+
+int
+Daemon::getDefaultPort( void )
+{
+	switch( _type ) {
+	case DT_COLLECTOR:
+		return COLLECTOR_PORT;
+		break;
+	case DT_NEGOTIATOR:
+		return NEGOTIATOR_PORT;
+		break;
+	case DT_VIEW_COLLECTOR:
+		return CONDOR_VIEW_PORT;
+		break;
+	default:
+		return 0;
+		break;
+	}
+	return 0;
 }
 
 

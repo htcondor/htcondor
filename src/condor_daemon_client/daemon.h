@@ -352,10 +352,12 @@ protected:
 		  b/c if we can't find condor_view-specific entries, we fall
 		  back and try to just find the default collector.  
 		  @param subsys The subsystem string for this daemon
-		  @param port The fixed port for this daemon
 		  @return Whether or not we found the info we want
 		  */
-	bool getCmInfo( const char* subsys, int port );
+	bool getCmInfo( const char* subsys );
+
+		/** Get the default port based on what type of Daemon we are */
+	int getDefaultPort( void );
 
 		/** Set a new value for the error string.  If the error string
 		  is already set, deallocate the existing string.  Then, make
