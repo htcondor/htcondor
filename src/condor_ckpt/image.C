@@ -1180,7 +1180,7 @@ ckpt_() {
 }
 void
 ckpt_and_exit_() {
-    ckpt();
+    ckpt_and_exit();
 }
 }   /* end of extern "C" */
 
