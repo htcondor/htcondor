@@ -237,7 +237,11 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 				fi
                 lgcc=true 
               else
-                ldargs=`echo $ldargs -lc`
+				if [ $os = "OSF1" ]; then				
+					ldargs=`echo $ldargs -lm -lc`
+				else
+					ldargs=`echo $ldargs -lc`
+				fi
               fi ;;
      -lstdc++ )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
