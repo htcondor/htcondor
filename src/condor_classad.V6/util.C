@@ -29,6 +29,7 @@ using namespace std;
 BEGIN_NAMESPACE( classad )
 
 #ifdef WIN32
+#define BIGGEST_RANDOM_INT RAND_MAX
 int get_random_integer(void)
 {
     static char initialized = 0;
@@ -42,6 +43,7 @@ int get_random_integer(void)
 	return rand();
 }
 #else
+#define BIGGEST_RANDOM_INT INT_MAX
 int get_random_integer(void)
 {
     static char initialized = 0;
@@ -54,6 +56,11 @@ int get_random_integer(void)
 	return (int) (lrand48() & INT_MAX);
 }
 #endif
+
+double get_random_real(void)
+{
+    return (get_random_integer() / (double) BIGGEST_RANDOM_INT);
+}
 
 long timezone_offset(void)
 {

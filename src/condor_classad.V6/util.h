@@ -38,7 +38,10 @@ struct abstime_t
 	int    offset; // seconds east of Greenwich 
 };
 
+// Get a random number between 0 and something large--usually an int
 int get_random_integer(void);
+// Get a random number between 0 and 1
+double get_random_real(void);
 
 long timezone_offset(void);
 

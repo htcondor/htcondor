@@ -2085,8 +2085,10 @@ random( const char* name,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
 	Value	arg;
-    Value   integerValue;
-    int     random_number;
+    int     int_max;
+    double  double_max;
+    int     random_int;
+    double  random_double;
 
     // takes exactly one argument
 	if( argList.size() != 1 ) {
@@ -2098,16 +2100,16 @@ random( const char* name,const ArgumentList &argList,EvalState &state,
 		return( false );
 	}
 
-    random_number = get_random_integer();
-
-    if (!convertValueToIntegerValue(arg, integerValue)) {
-        result.SetErrorValue();
+    if (arg.IsIntegerValue(int_max)) {
+        random_int = get_random_integer() % int_max;
+        result.SetIntegerValue(random_int);
+    } else if (arg.IsRealValue(double_max)) {
+        random_double = double_max * get_random_real();
+        result.SetRealValue(random_double);
     } else {
-        int max;
-        integerValue.IsIntegerValue(max);
-        random_number = random_number % max;
-        result.SetIntegerValue(random_number);
+        result.SetErrorValue();
     }
+
     return true;
 }
 
