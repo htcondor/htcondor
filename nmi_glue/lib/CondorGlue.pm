@@ -3,14 +3,19 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.9 2005-01-05 19:17:05 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.10 2005-01-05 19:51:35 wright Exp $
 #
 ######################################################################
 
 package CondorGlue;
 
+use Cwd;
 use DBI;
 use File::Basename;
+
+use Getopt::Long;
+use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify
+     $opt_platforms/;
 
 # database parameters
 my $database = "history";
@@ -21,6 +26,105 @@ my $RUN_TABLE = "Run";
 
 # Location of the nightly build tag file
 my $tag_file_url = "http://www.cs.wisc.edu/condor/nwo-build-tags";
+
+my $init_cwd;
+my $workspace;
+my $notify;
+my $platforms;
+my %tags;
+
+
+sub Initialize
+{
+    $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
+        . $ENV{PATH};
+
+    $workspace = "/tmp/condor_build." . "$$";
+
+    $init_cwd = &getcwd();
+    mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+    chdir($workspace) || die "Can't chdir($workspace): $!\n";
+}
+
+
+sub ProcessOptions
+{
+    my $default_platforms = shift;
+
+    GetOptions(
+           'help'          => $opt_help,
+           'nightly'       => $opt_nightly,
+           'tag=s'         => $opt_tag,
+           'module=s'      => $opt_module,
+           'notify=s'      => $opt_notify,
+           'platforms=s'   => $opt_platforms,
+    );
+
+    if( defined($opt_help) ) {
+        printBuildUsage();
+        exit 0;
+    }
+
+    if( defined($opt_platforms) ) {
+        $platforms = "$opt_platforms";
+    } else {
+        $platforms = "$default_platforms";
+    }
+
+    if( defined($opt_notify) ) {
+        $notify = "$opt_notify";
+    } else {
+        $notify = "condor-build\@cs.wisc.edu";
+    }
+
+    if ( defined($opt_tag) or defined($opt_module) ) {
+        print "You specified --tag=$opt_tag and --module-$opt_module\n";
+        if ( defined ($opt_tag) and defined($opt_module) ) {
+            $tags{"$opt_tag"} = $opt_module;
+        } else {
+            print "ERROR: You need to specify both --tag and --module\n";
+            printBuildUsage();
+            chdir($init_cwd);
+            run("rm -rf $workspace", 0);
+            exit 1;
+        }
+    }
+    elsif ( defined($opt_nightly) ) {
+        getNightlyTags();
+    }
+    else {
+        print "You need to have --tag with --module or --nightly\n";
+        printBuildUsage();
+        chdir($init_cwd);
+        run("rm -rf $workspace", 0);
+        exit 1;
+    }
+}
+
+
+sub buildLoop
+{
+    my $generate_func_ref = shift;
+    while ( my($tag, $module) = each(%tags) ) {
+        my $cmdfile = &$generate_func_ref($tag, $module);
+        print "Submitting condor build with tag = $tag, module = $module\n";
+        my $output_str=`/nmi/bin/nmi_submit $cmdfile`;
+        my $status = $?;
+        if( not $status ) {
+            # Sleep for sometime till the records are available in db
+            # 30sec is a good resonable time
+            sleep 30;
+            my @lines = split("\n", $output_str);
+            writeRunidForBuild($lines[15], $tag, $module);
+        } else {
+            print "nmi_submit failed\n";
+        }
+    } 
+    chdir( $init_cwd );
+    run( "rm -rf $workspace", 0 );
+    exit 0;
+}
+
 
 sub printPrereqs
 {
@@ -52,8 +156,16 @@ sub printIdentifiers
     print $fh "project_release = $vers_string\n";
     print $fh "component = condor\n";
     print $fh "component_version = $vers_string\n";
+    print $fh "notify = $notify\n";
+    print $fh "priority = 1\n";
 }
 
+
+sub printPlatforms
+{
+    my $fh = shift;
+    print $fh "platforms = $platforms\n";
+}
 
 
 sub parseTag
@@ -69,11 +181,11 @@ sub parseTag
     if( $tag =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
         $vers[0] = $1;
         $vers[1] = $3;
-	if( $5 ) {
+        if( $5 ) {
             $vers[2] = $5;
         } else {
             $vers[2] = "x";
-	}
+        }
     }
     return ( $desc, @vers );
 }
@@ -159,19 +271,16 @@ sub getNightlyTags
     print "Fetching $tag_file ... \n";
     run( "wget --tries=1 --non-verbose $tag_file_url" );
 
-    my %tags;
-
     open(TAGS, $tag_file) || 
-	die "Can't read nightly tag file $tag_file: $!\n";
+        die "Can't read nightly tag file $tag_file: $!\n";
     while (<TAGS>) {
         chomp($_);
         my @tag = split /\s/, $_;
         $tags{$tag[1]} = $tag[0]; 
     }
     close(TAGS);
-
-    return %tags;
 }
+
 
 sub printBuildUsage
 {
