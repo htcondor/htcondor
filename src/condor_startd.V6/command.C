@@ -124,7 +124,7 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 
 #define ABORT \
 		if (rip->r_jobcontext)			 \
-			{delete (rip->r_jobcontext); free_context(job_con);} \
+			{delete (rip->r_jobcontext);}    \
 		if (rip->r_clientmachine) {		 \
 			free(rip->r_clientmachine);	 \
 			rip->r_clientmachine = NULL;	 \
@@ -140,7 +140,6 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 {
 
 	int start = 1,job_reqs = 1, capability_verify = 1;
-	CONTEXT* job_con=0;
 	ClassAd	*job_context = NULL, *MachineContext;
 	char tmp[80];
 	char *check_string = NULL;
