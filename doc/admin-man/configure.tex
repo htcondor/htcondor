@@ -520,15 +520,16 @@ you wish to control logging for.
   \Condor{preen}, which is described below.  If you change one of the
   filenames with this setting, be sure to change the
   \Macro{VALID\_LOG\_FILES} entry as well, or \Condor{preen} will
-  delete your newly named log files.  
-  
+  delete your newly named log files.
+
 \item[\Macro{MAX\_SUBSYS\_LOG}] \label{param:MaxSubsysLog} This
   setting controls the maximum length in bytes to which the various
   logs will be allowed to grow.  Each log file will grow to the
   specified length, then be saved to a ``.old'' file.  The ``.old''
   files are overwritten each time the log is saved, thus the maximum
   space devoted to logging for any one program will be twice the
-  maximum length of its log file.
+  maximum length of its log file.  A value of 0 specifies that the
+  file should grow unbounded.  The default is 64 KB.
 
 \item[\Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLogOnOpen}  If this macro is defined and set
@@ -544,6 +545,18 @@ you wish to control logging for.
   daemons have a default level, \Dflag{ALWAYS}, and log message for
   that level will be printed to the daemon's log, regardless of what
   you have set here.  The other possible debug levels are:
+
+\item[\Macro{SUBSYS\_LOCK}] \label{param:SubsysLock} This parameter
+  specifies the lock file used to synchonize append operations to the
+  log file for this subsystem.  It must be a separate file from the
+  \Macro{SUBSYS\_LOG} file, since the \Macro{SUBSYS\_LOG} file may be
+  rotated and you want to be able to synchronize access across log
+  file rotations.  A lock file is only required for log files which
+  are accessed by more than one process.  Currently, this includes
+  only the \Macro{SHADOW} subsystem.  This macro is defined relative
+  to the \Macro{LOCK} macro described above.  If, for some strange
+  reason, you decide to change this setting, be sure to change the
+  \Macro{VALID\_LOG\_FILES} entry that \Condor{preen} uses as well.
 
 \begin{description}
   
@@ -605,6 +618,27 @@ you wish to control logging for.
 \label{list:debug level description}
 \end{description}
 
+Log files may optionally be specified per debug level as follows:
+
+\item[\Macro{SUBSYS\_LEVEL\_LOG}] \label{param:SubsysLevelLog} This is
+  the name of a log file for messages at a specific debug level for a
+  specific subsystem.  If the debug level is included in
+  \Macro{SUBSYS\_DEBUG}, then all messages of this debug level will be
+  written both to the \Macro{SUBSYS\_LOG} file and the
+  \Macro{SUBSYS\_LEVEL\_LOG} file.  For example,
+  \Macro{SHADOW\_SYSCALLS\_LOG} specifies a log file for all remote
+  system call debug messages.
+
+\item[\Macro{MAX\_SUBSYS\_LEVEL\_LOG}] \label{param:MaxSubsysLevelLog}
+  Similar to \Macro{MAX\_SUBSYS\_LOG}.
+
+\item[\Macro{TRUNC\_SUBSYS\_LEVEL\_LOG\_ON\_OPEN}]
+  \label{param:TruncSubsysLevelLogOnOpen} Similar to
+  \Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}.
+
+\item[\Macro{SUBSYS\_LEVEL\_LOCK}] \label{param:SubsysLevelLock}
+  Similar to \Macro{SUBSYS\_LOCK}.
+  
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1680,6 +1714,16 @@ These settings control the \Condor{negotiator}.
   section~\ref{sec:user-priority-explained}
   on User Priorities for more details.  Defined in seconds, defaults
   to 86400 (1 day).
+
+\item[\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}]
+  \label{param:NegotiatorSocketCacheSize} This entry defines the
+  maximum number of sockets which the negotiator should keep in its
+  open socket cache.  Caching open sockets makes the negotiation
+  protocol more efficient by eliminating the need for socket
+  connection establishment for each negotiation cycle.  The default is
+  currently 16.  To be effective, this parameter should be set to a
+  value greater than the number of schedds submitting jobs to the
+  negotiator at any time.
 
 \item[\Expr{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
