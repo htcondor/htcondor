@@ -4,6 +4,9 @@
 
 CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR) 
 
+/* we need this target here as the first rule, so that "make" is the
+   same as "make all" */
+all:: all
 
 
 /***************************************************
@@ -18,8 +21,6 @@ TESTCLASS_DECL(long)
 /***************************************************
 * Special-case rules for building helpers, etc.
 ***************************************************/
-
-all:: run_list
 
 clean::
 	rm -f *.o *.exe *.exe.*
@@ -41,9 +42,6 @@ x_compute_bogokips.o: x_compute_bogokips.c
 clean::
 	rm -f x_waste_second.o x_my_bogokips.h
 	rm -f x_compute_bogokips x_compute_bogokips.o
-
-run_list::
-	@touch run_list
 
 release::
 stripped::
