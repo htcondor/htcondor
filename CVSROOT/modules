@@ -396,8 +396,21 @@ V6_7_5_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/gsoap/2.7 \
 		   externals/bundles/srb/3.2.1
 
+
+# Externals needed for V6_7_5 (same as V6_7_5 w/ new classads)
+V6_7_6_EXT      -a V6_7_COMMON_EXT \
+                   externals/bundles/krb5/1.2.7 \
+                   externals/bundles/gahp/1.0.13 \
+                   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+                   externals/bundles/gt3gahp/2.0 \
+                   externals/bundles/gt4gahp/1.0 \
+                   externals/bundles/classads/0.9.8-b1 \
+                   externals/bundles/globus/2.4.3.data \
+                   externals/bundles/gsoap/2.7 \
+                   externals/bundles/srb/3.2.1
+
 # Externals needed for the head of the V6_7-branch
-V6_7_EXT	-a V6_7_5_EXT \
+V6_7_EXT	-a V6_7_6_EXT \
 		   externals/bundles/gt4gahp/1.1
 
 # Externals needed for Stork trunk build
