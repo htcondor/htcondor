@@ -29,11 +29,69 @@ extern int DebugFlags;
 
 // External protos
 extern int main_init(int argc, char *argv[]);	// old main()
+extern int main_config();
+extern int main_shutdown_fast();
+extern int main_shutdown_graceful();
 
 // Globals
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
 DaemonCore*	daemonCore;
+
+
+#ifndef WIN32
+void
+unix_sighup(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+}
+
+void
+unix_sigterm(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+}
+
+void
+unix_sigquit(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+}
+
+void
+unix_sigchld(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGCHLD );
+}
+#endif WIN32
+
+
+int
+handle_dc_sighup( Service*, int )
+{
+	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
+	main_config();
+	return TRUE;
+}
+
+
+int
+handle_dc_sigterm( Service*, int )
+{
+	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
+	main_shutdown_graceful();
+	return TRUE;
+}
+
+
+int
+handle_dc_sigquit( Service*, int )
+{
+	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
+	main_shutdown_fast();
+	return TRUE;
+}
+
 
 main( int argc, char** argv )
 {
@@ -61,11 +119,25 @@ main( int argc, char** argv )
 	sigfillset( &fullset );
 	sigprocmask( SIG_SETMASK, &fullset, NULL );
 
-	// TODO: Install signal handlers for SIGTERM, SIGQUIT and
-	// SIGHUP to raise the DaemonCore versions, and register
-	// handlers for those DC signals to call main_shutdown_* and
-	// main_config.
+		// Install these signal handlers with a default mask
+		// of all signals blocked when we're in the handlers.
+	install_sig_handler_with_mask(SIGQUIT, &fullset, unix_sigquit);
+	install_sig_handler_with_mask(SIGHUP, &fullset, unix_sighup);
+	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
+	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
+	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
+
+		// Install DaemonCore signal handlers common to all daemons.
+	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
+								 (SignalHandler)handle_dc_sighup,
+								 "handle_dc_sighup" );
+	daemonCore->Register_Signal( DC_SIGQUIT, "DC_SIGQUIT", 
+								 (SignalHandler)handle_dc_sigquit,
+								 "handle_dc_sigquit" );
+	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
+								 (SignalHandler)handle_dc_sigterm,
+								 "handle_dc_sigterm" );
 
 	// set myName to be argv[0] with the path stripped off
 	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
@@ -220,3 +292,5 @@ main( int argc, char** argv )
 	EXCEPT("returned from Driver()");
 	return FALSE;
 }	
+
+
