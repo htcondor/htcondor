@@ -1039,8 +1039,16 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	}
 	chkpt_addr_len = sizeof(struct sockaddr_in);
 	// May cause an ACCEPT_ERROR error
+	do {
+		xfer_sd = tcp_accept_timeout(data_conn_sd, &chkpt_addr, 
+									 &chkpt_addr_len, CKPT_ACCEPT_TIMEOUT);
+	} while (xfer_sd == -3 || (xfer_sd == -1 && errno == EINTR));
+#if 0
 	if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
 		ACCEPT_ERROR) {
+#else
+	if (xfer_sd < 0) {
+#endif
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: I_accept() fails" << endl;
@@ -1295,8 +1303,16 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	}
 
 	chkpt_addr_len = sizeof(struct sockaddr_in);
+	do {
+		xfer_sd = tcp_accept_timeout(data_conn_sd, &chkpt_addr, 
+									 &chkpt_addr_len, CKPT_ACCEPT_TIMEOUT);
+	} while (xfer_sd == -3 || (xfer_sd == -1 && errno == EINTR));
+#if 0
 	if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
 		ACCEPT_ERROR) {
+#else
+	if (xfer_sd < 0) {
+#endif
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: I_accept() fails" << endl;
