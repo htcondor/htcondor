@@ -61,6 +61,12 @@ starter to sometimes kill itself when the job completed.  Because this
 happened before the \Condor{starter} reported the job completion back
 to the \Condor{shadow}, such a job would be restarted.
 
+\item Fixed an error in the \Condor{dagman} submit file parsing code:
+  if one job referred to a log file with a relative path, and another
+  job referred to the same log file with an absolute path, the log file
+  reading failed.  Note: things can still get goofed up by symbolic
+  links or paths with ".." in them.
+
 \end{itemize}
 
 \noindent Known Bugs:
