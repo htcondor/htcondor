@@ -37,6 +37,10 @@
 #include <sys/pstat.h>
 #endif
 
+#ifdef BSD
+#include <sys/sysctl.h>
+#endif
+
 int
 sysapi_ncpus_raw(void)
 {
@@ -163,6 +167,15 @@ bogomips        : 299.01
 #elif defined(AIX)
 	sysapi_internal_reconfig();
 	return sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(BSD)
+	sysapi_internal_reconfig();
+	int mib[2], maxproc;
+	size_t len;
+	mib[0] = CTL_HW;
+	mib[1] = HW_NCPU;
+	len = sizeof(maxproc);
+	sysctl(mib, 2, &maxproc, &len, NULL, 0);
+	return(maxproc);
 #else
 #error DO NOT KNOW HOW TO COMPUTE NUMBER OF CPUS ON THIS PLATFORM!
 #endif

@@ -62,6 +62,8 @@
 #	include "condor_sys_solaris.h"
 #elif defined(OSF1)
 #	include "condor_sys_dux.h"
+#elif defined(CONDOR_DARWIN)
+#	include "condor_sys_bsd.h"
 #elif defined(AIX)
 #	include "condor_sys_aix.h"
 #else
@@ -164,10 +166,14 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <rpc/types.h>
+#if !defined(BSD)
 #include <values.h>
+#endif
 #include <math.h>
 #include <utime.h>
+#if !defined(BSD)
 #include <sys/poll.h>
+#endif
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */

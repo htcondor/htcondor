@@ -182,11 +182,11 @@ class ISOTime : public ISOTimeBase
     virtual int         _EvalTree(AttrList*,AttrList*, EvalResult*);
 };
 
-class Boolean : public BooleanBase
+class ClassadBoolean : public BooleanBase
 {
     public :
 
-  	Boolean(int b) : BooleanBase(b) {}
+  	ClassadBoolean(int b) : BooleanBase(b) {}
 	virtual int         CalcPrintToStr(void);
     virtual void        PrintToStr(char*);
 	virtual ExprTree*   DeepCopy(void) const;

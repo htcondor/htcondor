@@ -114,7 +114,7 @@ class Daemons : public Service
 {
 public:
 	Daemons();
-	void	RegisterDaemon(daemon *);
+	void	RegisterDaemon(class daemon *);
 	void 	InitParams();
 	int		GetIndex(const char* process_name);
 
@@ -155,10 +155,10 @@ public:
 	void	Update( ClassAd* );
 	void	UpdateCollector();
 
-	daemon*	FindDaemon( daemon_t dt );
+	class daemon*	FindDaemon( daemon_t dt );
 
 private:
-	daemon **daemon_ptr;
+	class daemon **daemon_ptr;
 	int	no_daemons;
 	int daemon_list_size;
 	int check_new_exec_tid;

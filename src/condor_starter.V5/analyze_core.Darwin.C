@@ -20,53 +20,43 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _CONDOR_SYSCALLS_H
-#define _CONDOR_SYSCALLS_H
+/****************************************************************
+Author:
+	Michael Greger, August 1, 1996
 
-#if defined( AIX )
-#	include "syscall.aix.h"
-#elif defined(Solaris) || defined(CONDOR_DARWIN)
-#	include <sys/syscall.h>
-#elif defined(IRIX)
-#	undef SYSVoffset
-#	undef __SYS_S__
-#	include <sys.s>
-#elif defined(WIN32)
-#else
-#	include <syscall.h>
-#endif
+Purpose:
+	Look for a "core" file at a given location.  Return TRUE if it exists
+	and appears complete and correct, and FALSE otherwise.
 
-#ifndef WIN32
+	This code requires a *correct* libbfd, liberty, bfd.h and ansidecl.h.
+	The code has been tested with libbfd.so.2.6.0.12.  Correct versions
+	of the heasers and libraries should be included with this distribution.
 
-#include "syscall_numbers.h"
+Addendum:
+	Ripped out libbfd usage. Also, don't even check the core for validity
+	beyond its existance. Let the user figure it out when they 
+	use gdb on it. -psilord 4/22/2002
+******************************************************************/
 
-typedef int BOOL;
-#endif
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_constants.h"
 
-static const int SYS_LOCAL = 1;
-static const int 	SYS_REMOTE = 0;
-static const int	SYS_RECORDED = 2;
-static const int	SYS_MAPPED = 2;
+int
+core_is_valid( char *core_fn )
+{
+	struct stat buf;
 
-static const int	SYS_UNRECORDED = 0;
-static const int	SYS_UNMAPPED = 0;
+	if (stat(core_fn, &buf) < 0)
+	{
+		return FALSE;
+	}
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+	/* if the OS gave us something, we should give it to the user and let
+		THEM figure out if it was corrupt or not. */
 
-int SetSyscalls( int mode );
-int GetSyscallMode();
-BOOL LocalSysCalls();
-BOOL RemoteSysCalls();
-BOOL MappingFileDescriptors();
-
-#if defined(OSF1) || defined(HPUX) || defined(IRIX) || defined(Solaris)
-	int syscall( int, ... );
-#endif
-
-#if defined(__cplusplus)
+	return TRUE;
 }
-#endif
 
-#endif /* _CONDOR_SYSCALLS_H */
+
+

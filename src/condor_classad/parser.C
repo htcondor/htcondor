@@ -260,7 +260,7 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_BOOL :
 
             t = ReadToken(s);
-            newTree = new Boolean(t->intVal);
+            newTree = new ClassadBoolean(t->intVal);
     		count = count + t->length;
             break;
 

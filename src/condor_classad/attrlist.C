@@ -1304,7 +1304,7 @@ int AttrList::LookupInteger (const char *name, int &value) const
     }
     if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_BOOL))
 	{
-        value = ((Boolean *) rhs)->Value();
+        value = ((ClassadBoolean *) rhs)->Value();
         return 1;
     }
 
@@ -1336,7 +1336,7 @@ int AttrList::LookupBool (const char *name, int &value) const
     tree = Lookup (name);       
     if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_BOOL))    
     {   
-        value = ((Boolean *) rhs)->Value();   
+        value = ((ClassadBoolean *) rhs)->Value();   
         return 1;       
     }       
 

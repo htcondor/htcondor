@@ -24,8 +24,8 @@ int main()
 
 	while (1) {
 			
-//		ProcAPI::getProcInfo( pids[0], pi );
-		ProcAPI::getFamilyInfo( pids[0], pi );
+		ProcAPI::getProcInfo( pids[0], pi );
+//		ProcAPI::getFamilyInfo( pids[0], pi );
 //		ProcAPI::getProcSetInfo( pids, 3, pi );
 
 		ProcAPI::printProcInfo ( pi );

@@ -503,7 +503,7 @@ int ISOTime::_EvalTree(AttrList*, AttrList*, EvalResult* val)
 }
 
 //-----------------------------------
-int Boolean::_EvalTree(AttrList*, EvalResult* val)
+int ClassadBoolean::_EvalTree(AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -517,7 +517,7 @@ int Boolean::_EvalTree(AttrList*, EvalResult* val)
 
 //-----------tw------------------------
 
-int Boolean::_EvalTree(AttrList*, AttrList*, EvalResult* val)
+int ClassadBoolean::_EvalTree(AttrList*, AttrList*, EvalResult* val)
 {
     if(!val) 
     {
@@ -701,7 +701,7 @@ int ISOTime::CalcPrintToStr(void)
 	return strlen(time) + 2;
 }
 
-int Boolean::CalcPrintToStr(void)
+int ClassadBoolean::CalcPrintToStr(void)
 {
 	int  length;
 	char printed_representation[256];
@@ -925,7 +925,7 @@ void ISOTime::PrintToStr(char* str)
   *(ptr2 + 1) = '\0';
 }
 
-void Boolean::PrintToStr(char* str)
+void ClassadBoolean::PrintToStr(char* str)
 {
 	if( value )
 		strcat( str, "TRUE" );
@@ -1133,11 +1133,11 @@ Float::DeepCopy(void) const
 }
 
 ExprTree*  
-Boolean::DeepCopy(void) const
+ClassadBoolean::DeepCopy(void) const
 {
-	Boolean *copy;
+	ClassadBoolean *copy;
 
-	copy = new Boolean(value);
+	copy = new ClassadBoolean(value);
 	CopyBaseExprTree(copy);
 	
 	return copy;

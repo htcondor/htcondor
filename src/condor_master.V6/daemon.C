@@ -962,12 +962,12 @@ Daemons::Daemons()
 
 
 void
-Daemons::RegisterDaemon(daemon *d)
+Daemons::RegisterDaemon(class daemon *d)
 {
 	int i;
 	if( !daemon_ptr ) {
 		daemon_list_size = 10;
-		daemon_ptr = (daemon **) malloc(daemon_list_size * sizeof(daemon *));
+		daemon_ptr = (class daemon **) malloc(daemon_list_size * sizeof(class daemon *));
 		for( i=0; i<daemon_list_size; i++ ) {
 			daemon_ptr[i] = NULL;
 		}
@@ -976,8 +976,8 @@ Daemons::RegisterDaemon(daemon *d)
 	if (no_daemons >= daemon_list_size) {
 		i = daemon_list_size;
 		daemon_list_size *= 2;
-		daemon_ptr = (daemon **) realloc(daemon_ptr, 
-										daemon_list_size * sizeof(daemon *));
+		daemon_ptr = (class daemon **) realloc(daemon_ptr, 
+										daemon_list_size * sizeof(class daemon *));
 		for( ; i<daemon_list_size; i++ ) {
 			daemon_ptr[i] = NULL;
 		}
@@ -1608,7 +1608,7 @@ Daemons::UpdateCollector()
 }
 
 
-daemon*
+class daemon*
 Daemons::FindDaemon( daemon_t dt )
 {
 	for( int i=0; i < no_daemons; i++ ) {

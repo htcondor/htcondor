@@ -21,6 +21,16 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include <stdio.h>
+#include <unistd.h>
+#ifdef CONDOR_DARWIN
+#include <mach/mach.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/hid/IOHIDLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <Carbon/Carbon.h>
+#endif
+
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
@@ -37,10 +47,13 @@ extern int WINAPI KBShutdown(void);
 extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
+#ifndef CONDOR_DARWIN
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
+#endif
+
 #endif
 
 /* the local function that does the main work */
@@ -211,7 +224,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	return;
 }
 
-#else /* !defined(WIN32) */
+#elif !defined(CONDOR_DARWIN) /* !defined(WIN32) -- all UNIX platforms but OS X*/
 
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
@@ -475,7 +488,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 )
+#elif defined( OSF1 ) || defined(BSD)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
@@ -542,7 +555,110 @@ dev_idle_time( char *path, time_t now )
 	return answer;
 }
 
-#endif /* defined(WIN32) */
+#else /* here's the OS X version of calc_idle_time */
+
+void calc_idle_time_cpp(time_t * user_idle, time_t * console_idle);
+static time_t extract_idle_time(CFMutableDictionaryRef  properties);
+
+/****************************************************************************
+ *
+ * Function: calc_idle_time_cpp
+ * Purpose:  This calculates the idle time on the Mac. It uses the HID 
+ *           (Human Interface Device) Manager, which happens to track
+ *           the system idle time. It doesn't distinguish user idle and 
+ *           console_idle, so they are set to be the same. If you investigate
+ *           the HID Manager deeply, you'll notice that it should be possible
+ *           to get the idle time of the keyboard and mouse separately. As of
+ *           April 2003, that doesn't work, because you can't use the HID 
+ *           Manager to query the keyboard.
+ ****************************************************************************/
+void
+calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
+{
+
+    mach_port_t             masterPort           = NULL;
+    io_iterator_t           hidObjectIterator    = NULL;
+    CFMutableDictionaryRef  hidMatchDictionary   = NULL;
+    io_object_t             hidDevice            = NULL;
+    
+    *user_idle = *console_idle = -1;
+    
+    if (IOMasterPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
+        dprintf(D_ALWAYS, "IDLE: Couldn't create a master I/O Kit port.\n");
+    } else {
+        hidMatchDictionary = IOServiceMatching("IOHIDSystem");
+        if (IOServiceGetMatchingServices(masterPort, hidMatchDictionary, &hidObjectIterator) != kIOReturnSuccess) {
+            dprintf(D_ALWAYS, "IDLE: Can't find IOHIDSystem\n");
+        } else if (hidObjectIterator == NULL) {
+            dprintf(D_ALWAYS, "IDLE Can't find IOHIDSystem\n");
+        } else {
+            // Note that IOServiceGetMatchingServices consumes a reference to the dictionary
+            // so we don't need to release it. We'll mark it as NULL, so we don't try to reuse it.
+            hidMatchDictionary = NULL;
+
+            hidDevice = IOIteratorNext(hidObjectIterator);
+                
+            CFMutableDictionaryRef  properties = 0;
+            if (   IORegistryEntryCreateCFProperties(hidDevice,
+                        &properties, kCFAllocatorDefault, kNilOptions) == KERN_SUCCESS
+                && properties != 0) {
+                
+                *user_idle = extract_idle_time(properties);
+                *console_idle = *user_idle;
+                CFRelease(properties);
+            }
+            IOObjectRelease(hidDevice);
+            IOObjectRelease(hidObjectIterator);    
+        }
+        if (masterPort) {
+            mach_port_deallocate(mach_task_self(), masterPort);
+        }
+    }
+    return;
+}
+
+/****************************************************************************
+ *
+ * Function: extract_idle_time
+ * Purpose:  The HID Manager reports the idle time in nanoseconds. I'm not
+ *           sure if it really tracks with that kind of percision. Anyway, 
+ *           we extract the idle time from the dictionary, and convert it 
+ *           into seconds. 
+ *
+ ****************************************************************************/
+static time_t 
+extract_idle_time(
+    CFMutableDictionaryRef  properties)
+{
+    time_t    idle_time = -1;
+    CFTypeRef object = CFDictionaryGetValue(properties, CFSTR(kIOHIDIdleTimeKey));
+    
+    if (!object) {
+	dprintf(D_ALWAYS, "IDLE: Failed to make CFTypeRef\n");
+    } else {
+	if (CFGetTypeID(object) != CFDataGetTypeID()) {
+            dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+        } else {
+            Size num_bytes;
+            num_bytes = CFDataGetLength((CFDataRef) object);
+            if (num_bytes != 8) {
+                dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+            } else {
+                UInt64  nanoseconds, billion, seconds_64, remainder;
+                UInt32  seconds;
+                CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
+                                ((UInt8 *) &nanoseconds));
+                billion = U64SetU(1000000000);
+                seconds_64 = U64Divide(nanoseconds, billion, &remainder);
+                seconds = U32SetU(seconds_64);
+                idle_time = seconds;
+            }
+        }
+    }
+    return idle_time;
+}
+
+#endif  /* the end of the Mac OS X code, and the  */
 
 
 /* ok, the purpose of this code is to create an interface that is a C linkage
@@ -558,7 +674,7 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 
 	sysapi_internal_reconfig();
 
-#ifndef WIN32
+#if( !defined( WIN32 ) && !defined( CONDOR_DARWIN ) )
 	time_t m_i, m_c;
 
 	/* here calc_idle_time_cpp expects a reference, so let's give it one */

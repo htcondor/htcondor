@@ -33,8 +33,11 @@
     typedef struct fhandle fhandle_t;
 #elif !defined(IRIX)
 #	include <rpc/rpc.h>
+#if defined(BSD)
+#       include <nfs/rpcv2.h>
+#endif
 #	include <nfs/nfs.h>
-#if !defined(OSF1) && !defined(Solaris) && !defined(HPUX11)
+#if !defined(OSF1) && !defined(Solaris) && !defined(HPUX11) && !defined(BSD)
 #	include <nfs/export.h>
 #endif
 #endif

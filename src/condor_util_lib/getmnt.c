@@ -37,11 +37,11 @@ char			*strdup(), *malloc();
  simulation.
 */
 
-#if defined(ULTRIX42) || defined(ULTRIX43)
+#if defined(ULTRIX42) || defined(ULTRIX43) 
 
 	/* Nothing needed on ULTRIX systems - getmnt() is native*/
 
-#elif defined(OSF1)
+#elif defined(OSF1) || defined(CONDOR_DARWIN)
 
 	/* BEGIN OSF1 version - use getmntinfo() */
 

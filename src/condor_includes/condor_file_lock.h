@@ -66,6 +66,11 @@
 #include <sys/file.h>
 #endif
 
+#if defined(BSD)
+#define CONDOR_USE_FLOCK 1 
+#include <sys/file.h>
+#endif
+
 #if defined(WIN32)
 #define CONDOR_USE_FLOCK 0		// does not matter on Win32 since we use lock_file.WIN32.c
 #include "fake_flock.h"

@@ -381,6 +381,36 @@ get_k_vars()
 {
 }
 
+#elif defined(BSD)
+
+#include <sys/resource.h>
+#include <sys/sysctl.h>
+float
+sysapi_load_avg_raw(void)
+{
+
+	float first, second, third;
+	int mib[4];
+	struct loadavg load;
+	size_t len;
+
+	sysapi_internal_reconfig();
+
+	mib[0] = CTL_VM;
+	mib[1] = VM_LOADAVG;
+	len = sizeof(struct loadavg);		
+	sysctl(mib, 2, &load, &len, NULL, 0);
+	first = (float)load.ldavg[0] / (float)load.fscale;
+	second = (float)load.ldavg[1] / (float)load.fscale;
+	third = (float)load.ldavg[2] / (float)load.fscale;
+
+	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_LOAD, "Load avg: %.2f %.2f %.2f\n", 
+			first, second, third );
+	}
+	return first;
+}
+
 #elif defined(WIN32)
 
 /* 

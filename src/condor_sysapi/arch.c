@@ -215,6 +215,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "sparc") ) { //LDAP entry
 		sprintf( tmp, "SUN4x" );
 	} 
+	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
+		sprintf( tmp, "PPC" );
+	} 
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, machine );
@@ -311,6 +314,14 @@ sysapi_translate_opsys( char *sysname, char *release )
 			sprintf( tmp, "IRIX%s", release );
 		}
 	} 
+	else if ( !strncmp(sysname, "Darwin", 6) ) {
+		if( !strcmp( release, "6.4" ) ) {
+			sprintf( tmp, "OSX10_2");
+		}
+		else {
+			sprintf( tmp, "OSX");
+		}
+	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s%s", sysname, release );

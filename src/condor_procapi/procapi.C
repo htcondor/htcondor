@@ -556,6 +556,70 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* HPUX */
 
+#ifdef BSD
+
+
+	// First, let's get the BSD task info for this stucture. This
+	// will tell us things like the pid, ppid, etc. 
+
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	size_t bufSize = 0;
+
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;    
+    mib[2] = KERN_PROC_PID;
+    mib[3] = pid;
+
+    if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+        //perror("Failure calling sysctl");
+        return -1;
+    }
+
+    kprocbuf= kp = (struct kinfo_proc *)malloc(bufSize);
+
+    if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+        //perror("Failure calling sysctl");
+        return -1;
+    }
+
+	// Now, for some things, we're going to have to go to Mach and ask
+	// it what it knows - for example, the image size and friends
+	task_port_t task;
+
+	if(task_for_pid(mach_task_self(), pid, &task) != KERN_SUCCESS) {
+		return -1;
+	}
+
+	task_basic_info_data_t 	ti;
+	unsigned int 		count;	
+	
+	count = TASK_BASIC_INFO_COUNT;	
+	if(task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, 
+			&count)  != KERN_SUCCESS) {
+		return -1;
+	}
+	initpi(pi);
+	pi->imgsize = ti.virtual_size;
+	pi->rssize = ti.resident_size;
+	pi->user_time = ti.user_time.seconds;
+	pi->sys_time = ti.system_time.seconds;
+	pi->creation_time = kp->kp_proc.p_starttime.tv_sec;
+	pi->age = secsSinceEpoch() - pi->creation_time; 
+	pi->pid = pid;
+	pi->ppid = kp->kp_eproc.e_ppid;
+
+	long nowminf, nowmajf;
+	double ustime = pi->user_time + pi->sys_time;
+
+	nowminf = 0;
+	nowmajf = 0;
+	do_usage_sampling(pi, ustime, nowmajf, nowminf);
+
+	mach_port_deallocate(mach_task_self(), task);
+	free(kp);
+	return 0;
+#endif
 #ifdef WIN32
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
@@ -986,6 +1050,27 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	return 0;
 }
 #endif /* HPUX */
+
+#if ( defined(BSD)  )
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
+	
+	int i, mib[2];
+	size_t oldlen;
+	
+	mib[0] = CTL_HW;
+	mib[1] = HW_PHYSMEM;
+
+	oldlen = sizeof(totalmem);	
+	i = sysctl(mib, 2, &totalmem, &oldlen, NULL, 0);
+	
+	mib[0] = CTL_HW;
+	mib[1] = HW_USERMEM;
+	oldlen = sizeof(availmem);	
+	i = sysctl(mib, 2, &availmem, &oldlen, NULL, 0);
+	return 0;
+}
+#endif /* Solaris */
 
 /* This version for windows is obviously broken. :-) */
 #ifdef WIN32
@@ -1520,11 +1605,15 @@ ProcAPI::getAndRemNextPid () {
 	return tpid;
 }
 
-/* Wonderfully enough, this works for all OS's.  This function opens
+/* Wonderfully enough, this works for all OS'es except OS X and HPUX. 
+   OS X has it's own version, HP-UX never calls it.
+   This function opens
    up the /proc directory and reads the pids of all the processes in the
    system.  This information is put into a list of pids that is pointed
    to by pidList, a private data member of ProcAPI.  
  */
+
+#ifndef BSD
 int
 ProcAPI::buildPidList() {
 
@@ -1565,6 +1654,70 @@ ProcAPI::buildPidList() {
 		return -1;
 	}
 }
+#endif
+/* 
+   The darwin/OS X version of this code - it should work just fine on 
+   FreeBSD as well, but FreeBSD does have a /proc that it could look at
+ */
+
+#ifdef BSD
+int
+ProcAPI::buildPidList() {
+
+	pidlistPTR current;
+	pidlistPTR temp;
+	priv_state priv = set_root_priv();
+
+		// make a header node for the pidList:
+	deallocPidList();
+	pidList = new pidlist;
+
+	current = pidList;
+
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	size_t origBufSize;
+	size_t bufSize = 0;
+	int nentries;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_ALL;
+	mib[3] = 0;
+
+	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+		 //perror("Failure calling sysctl");
+		return -1;
+	}	
+
+	kprocbuf= kp = (struct kinfo_proc *)malloc(bufSize);
+
+	origBufSize = bufSize;
+	if ( sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+		free(kprocbuf);
+		return -1;
+	}
+
+	nentries = bufSize / sizeof(struct kinfo_proc);
+
+	for(int i = nentries; --i >=0; kp++) {
+		temp = new pidlist;
+		temp->pid = (pid_t) kp->kp_proc.p_pid;
+		temp->next = NULL;
+		current->next = temp;
+		current = temp;
+	}
+    
+	temp = pidList;
+	pidList = pidList->next;
+	delete temp;           // remove header node.
+
+	set_priv( priv );
+	free(kprocbuf);
+	return 0;
+}
+
+#endif
 
 /* Using the list of processes pointed to by pidList and returned by
    getAndRemNextPid(), a linked list of procInfo structures is
@@ -1819,6 +1972,7 @@ ProcAPI::printProcInfo( piPTR pi ) {
 	printf( "Times:  user, system, age: %ld %ld %ld\n", 
 			pi->user_time, pi->sys_time, pi->age );
 	printf( "percent cpu usage of this process: %5.2f\n", pi->cpuusage);
+	printf( "pid is %d, ppid is %d\n", pi->pid, pi->ppid);
 	printf( "\n" );
 }
 

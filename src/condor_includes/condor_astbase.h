@@ -31,14 +31,14 @@
 //     SubOpBase	-	Float and Integer
 //     MultOpBase	*	Float and Integer
 //     DivOpBase	/	Float and Integer
-//     EqOpBase		==	Float, Integer, Boolean(TRUE/FALSE), and String
-//     NeqOpBase	!=	Float, Integer, Boolean(TRUE/FALSE), and String
+//     EqOpBase		==	Float, Integer, ClassadBoolean(TRUE/FALSE), and String
+//     NeqOpBase	!=	Float, Integer, ClassadBoolean(TRUE/FALSE), and String
 //     GtOpBase		>	Float, Integer
 //     GeOpBase		>=	Float, Integer
 //     LtOpBase		<	Float, Integer
 //     LeOpBase		<=	Float, Integer
-//     AndOpBase	&&	Boolean
-//     OrOpBase		||	Boolean
+//     AndOpBase	&&	ClassadBoolean
+//     OrOpBase		||	ClassadBoolean
 //     AssignOpBase	=	Expression (left hand side must be a variable)
 //
 // The following methods are difined or inherited by all the classes defined in

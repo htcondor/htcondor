@@ -415,7 +415,7 @@ int
 handle_subsys_command( int cmd, Stream* stream )
 {
 	char* subsys = NULL;
-	daemon* daemon;
+	class daemon* daemon;
 	daemon_t dt;
 
 	stream->decode();
@@ -680,7 +680,7 @@ void
 init_daemon_list()
 {
 	char	*daemon_name;
-	daemon	*new_daemon;
+	class daemon	*new_daemon;
 	StringList daemon_names, dc_daemon_names;
 
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
@@ -702,15 +702,15 @@ init_daemon_list()
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new daemon(daemon_name);
+					new_daemon = new class daemon(daemon_name);
 				} else {
-					new_daemon = new daemon(daemon_name, false);
+					new_daemon = new class daemon(daemon_name, false);
 				}
 			}
 		}
 	} else {
 		for(int i = 0; default_daemon_list[i]; i++) {
-			new_daemon = new daemon(default_daemon_list[i]);
+			new_daemon = new class daemon(default_daemon_list[i]);
 		}
 	}
 }
@@ -720,7 +720,7 @@ void
 check_daemon_list()
 {
 	char	*daemon_name;
-	daemon	*new_daemon;
+	class daemon	*new_daemon;
 	StringList daemon_names;
 	char* daemon_list = param("DAEMON_LIST");
 	if( !daemon_list ) {
@@ -739,7 +739,7 @@ check_daemon_list()
 	daemon_names.rewind();
 	while( (daemon_name = daemon_names.next()) ) {
 		if(daemons.GetIndex(daemon_name) < 0) {
-			new_daemon = new daemon(daemon_name);
+			new_daemon = new class daemon(daemon_name);
 		}
 	}
 }

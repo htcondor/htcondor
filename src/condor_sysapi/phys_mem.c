@@ -223,6 +223,20 @@ sysapi_phys_memory_raw(void)
 	return (int)(s.physmem/(1024*1024));
 }
 
+#elif defined(BSD)
+#include <sys/sysctl.h>
+int
+sysapi_phys_memory_raw(void)
+{
+	sysapi_internal_reconfig();
+        int mib[2], physmem;
+        size_t len;   
+        mib[0] = CTL_HW;     
+        mib[1] = HW_PHYSMEM;        
+        len = sizeof(physmem);   
+        sysctl(mib, 2, &physmem, &len, NULL, 0);   
+	return physmem / ( 1024 * 1024);
+}
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
 sysapi_phys_memory_raw(void)

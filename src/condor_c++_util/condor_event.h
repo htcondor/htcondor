@@ -39,7 +39,8 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include <stdio.h>              /* for FILE type */
-#if !defined(WIN32)
+#if !defined(WIN32) 
+#include <sys/time.h>
 #include <sys/resource.h>       /* for struct rusage */
 #endif
 #include <limits.h>             /* for _POSIX_PATH_MAX */
