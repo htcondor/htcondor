@@ -25,92 +25,20 @@
 #define COLLECTION_SERVER_H
 
 #include "collection.h"
+#include "collectionBase.h"
+#include "condor_io.h"
 
+BEGIN_NAMESPACE( classad )
 
-BEGIN_NAMESPACE( classad );
-
-class ServerTransaction;
-//class Sock;
-
-class ClassAdProxy {
-public:
-	ClassAdProxy( ){ ad=NULL; };
-	~ClassAdProxy( ){ };
-
-	ClassAd	*ad;
-};
-
-
-typedef hash_map<string,View*,StringHash> ViewRegistry;
-typedef hash_map<string,ClassAdProxy,StringHash> ClassAdTable;
-typedef hash_map<string,ServerTransaction*,StringHash> XactionTable;
-//typedef deque<string> XactID_S;
-
-class ClassAdCollectionServer : public ClassAdCollectionInterface {
+class ClassAdCollectionServer : public ClassAdCollection {
 public:
 	ClassAdCollectionServer( );
 	virtual ~ClassAdCollectionServer( );
 
-		// Logfile control
-	virtual bool InitializeFromLog( const string &filename );
-
-
-		// View creation/deletion/interrogation
-    virtual bool CreateSubView( const ViewName &viewName,
-				const ViewName &parentViewName,
-				const string &constraint, const string &rank,
-				const string &partitionExprs );
-	virtual bool CreatePartition( const ViewName &viewName,
-				const ViewName &parentViewName,
-				const string &constraint, const string &rank,
-				const string &partitionExprs, ClassAd *rep );
-	virtual bool DeleteView( const ViewName &viewName );
-	virtual bool SetViewInfo( const ViewName &viewName,
-				const string &constraint, const string &rank,
-				const string &partitionAttrs );
-	virtual bool GetViewInfo( const ViewName &viewName, ClassAd *&viewInfo );
-		// Child view interrogation
-	virtual bool GetSubordinateViewNames( const ViewName &viewName,
-				vector<string>& views );
-	virtual bool GetPartitionedViewNames( const ViewName &viewName,
-				vector<string>& views );
-	virtual bool FindPartitionName( const ViewName &viewName, ClassAd *rep, 
-				ViewName &partition );
-
-
-		// ClassAd manipulation 
-	virtual bool AddClassAd( const string &key, ClassAd *newAd );
-	virtual bool UpdateClassAd( const string &key, ClassAd *updateAd );
-	virtual bool ModifyClassAd( const string &key, ClassAd *modifyAd );
-	virtual bool RemoveClassAd( const string &key );
-		// ClassAd interrogation
-	virtual ClassAd *GetClassAd(const string &key );
-
-		 
-		// Transaction management
-	virtual bool OpenTransaction( const string &transactionName );
-	virtual bool CloseTransaction(const string &transactionName,bool commit,
-				int &outcome);
-
-	virtual bool IsMyActiveTransaction( const string &transactionName );
-	virtual void GetMyActiveTransactions( vector<string>& );
-	virtual bool IsActiveTransaction( const string &transactionName );
-	virtual bool GetAllActiveTransactions( vector<string>& );
-	virtual bool IsCommittedTransaction( const string &transactionName );
-	virtual bool GetAllCommittedTransactions( vector<string>& );
-								
-		// Debugging function
-	bool DisplayView( const ViewName &viewName, FILE * );
-
-		// handle remote request function
-		// returns +1 on success, -1 on failure, 0 on client disconnection
-
-        //int HandleClientRequest( int command, Sock *clientSock );
+	int HandleClientRequest( int command, Sock *clientSock );
 
 protected:
-	virtual bool OperateInRecoveryMode( ClassAd * );
-	//virtual bool OperateInNetworkMode( int, ClassAd *, Sock * );
-	virtual bool LogState( FILE * );
+	virtual bool OperateInNetworkMode( int, ClassAd *, Sock * );
 
 private:
 	friend class View;
@@ -118,26 +46,10 @@ private:
 	friend class ClassAd;
 	friend class LocalCollectionQuery;
 
-		// remote interrogation service function
-	//bool HandleReadOnlyCommands( int, ClassAd *, Sock * );
-	//bool HandleQuery( ClassAd *, Sock * );
+	// remote interrogation service function
+	bool HandleReadOnlyCommands( int, ClassAd *, Sock * );
+	bool HandleQuery( ClassAd *, Sock * );
 
-		// low level execution modules
-	bool PlayClassAdOp ( int, ClassAd * );
-	bool PlayXactionOp ( int, const string &, ClassAd *, ServerTransaction *& );
-	bool PlayViewOp ( int, ClassAd * );
-
-		// View registry interface
-	bool RegisterView( const ViewName &viewName, View * );
-	bool UnregisterView( const ViewName &viewName );
-
-		// Internal tables and associated state
-	ViewRegistry	viewRegistry;
-	ClassAdTable	classadTable;
-	View			viewTree;
-	XactionTable	xactionTable;
-        //XactID_S xactid_table; 
-	bool LogViews( FILE *log, View *view, bool subView );
 };
 
 END_NAMESPACE
