@@ -232,52 +232,22 @@ CollectorList::createForNegotiator() {
 
 
 int
-CollectorList::sendUpdates( int cmd, ClassAd * ad1, ClassAd* ad2 )
-{
+CollectorList::sendUpdates (int cmd, ClassAd * ad1, ClassAd* ad2) {
 	int success_count = 0;
 
 	this->rewind();
 	Daemon * daemon;
-	DCCollector* collector;
-	char* tmp_name = NULL;
-	while( this->next(daemon) ) {
-		if( daemon->port() == 0 ) {
-				// if we still think the port is 0, try destroying the
-				// collector object and re-creating it, since the
-				// collector might have started up by now and written
-				// out an address file...
-			tmp_name = strdup(daemon->name());
-			delete daemon;
-			daemon = new DCCollector( tmp_name );
-			free( tmp_name );
-			tmp_name = NULL;
-				// this just replaces the pointer stashed in our list.
-				// that way, the rest of this function (and everything
-				// in the future) will use the new version...
-			list.ReplaceCurrent( daemon );
-		}
-		collector = (DCCollector*) daemon;
-		if( collector->port() > 0 ) {
-			dprintf( D_FULLDEBUG, "Trying to update collector %s\n", 
-					 collector->addr() );
-			if( collector->sendUpdate(cmd, ad1, ad2) ) {
-				success_count++;
-			} else {
-				dprintf( D_ALWAYS, 
-						 "Can't send up to collector %s: %s\n", 
-						 collector->updateDestination(),
-						 collector->error() );
-			}
-		} else {
-			dprintf( D_ALWAYS,
-					 "Collector port (%d) is still invalid, can't send "
-					 "update to collector %s\n", collector->port(),
-					 collector->updateDestination() );
-		}		
+	while (this->next(daemon)) {
+		dprintf( D_FULLDEBUG, 
+				 "Trying to update collector %s\n", 
+				 daemon->addr() );
+		if (((DCCollector*)daemon)->sendUpdate (cmd, ad1, ad2)) {
+			success_count++;
+		} 
 	}
+
 	return success_count;
 }
-
 
 QueryResult
 CollectorList::query(CondorQuery & query, ClassAdList & adList) {
