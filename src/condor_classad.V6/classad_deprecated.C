@@ -439,6 +439,37 @@ GetTargetTypeName( )
 	return targetTypeStr.c_str( );
 }
 
+// Back compatibility helper methods
+
+bool ClassAd::
+AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr )
+{
+	if( expr == NULL ) {
+		return false;
+	}
+	newExpr = AddExplicitConditionals( expr );
+	return true;
+}
+
+ClassAd *ClassAd::
+AddExplicitTargetRefs( )
+{
+	string attr = "";
+	set< string, CaseIgnLTStr > definedAttrs;
+	
+	for( AttrList::iterator a = begin( ); a != end( ); a++ ) {
+		definedAttrs.insert( a->first );
+	}
+	
+	ClassAd *newAd = new ClassAd( );
+	for( AttrList::iterator a = begin( ); a != end( ); a++ ) {
+		newAd->Insert( a->first, 
+					   AddExplicitTargetRefs( a->second, definedAttrs ) );
+	}
+	return newAd;
+}
+
+
 
 // private methods
 void ClassAd::
@@ -460,3 +491,203 @@ evalFromEnvironment( const char *name, Value val )
 	return;
 
 }
+
+ExprTree *ClassAd::
+AddExplicitConditionals( ExprTree *expr )
+{
+	if( expr == NULL ) {
+		return NULL;
+	}
+	ExprTree *currentExpr = expr;
+	ExprTree::NodeKind nKind = expr->GetKind( );
+	switch( nKind ) {
+	case ExprTree::ATTRREF_NODE: {
+			// replace "attr" with "(IsBoolean(attr) ? ( attr ? 1 : 0) : attr)"
+		ExprTree *fnExpr = NULL;
+		vector< ExprTree * > params( 1 );
+		params[0] = expr->Copy( );
+		ExprTree *condExpr = NULL;
+		ExprTree *parenExpr = NULL;
+		ExprTree *condExpr2 = NULL;
+		ExprTree *parenExpr2 = NULL;
+		Value val0, val1;
+		val0.SetIntegerValue( 0 );
+		val1.SetIntegerValue( 1 );
+		fnExpr = FunctionCall::MakeFunctionCall( "IsBoolean", params );
+		condExpr = Operation::MakeOperation( Operation::TERNARY_OP,
+											 expr->Copy( ), 
+											 Literal::MakeLiteral( val1 ),
+											 Literal::MakeLiteral( val0 ) );
+		parenExpr = Operation::MakeOperation( Operation::PARENTHESES_OP,
+											  condExpr, NULL, NULL );
+		condExpr2 = Operation::MakeOperation( Operation::TERNARY_OP,
+											  fnExpr, parenExpr, 
+											  expr->Copy( ) );
+		parenExpr2 = Operation::MakeOperation( Operation::PARENTHESES_OP,
+										 condExpr2, NULL, NULL );
+		return parenExpr2;
+	}
+	case ExprTree::FN_CALL_NODE:
+	case ExprTree::CLASSAD_NODE:
+	case ExprTree::EXPR_LIST_NODE: {
+		return NULL;
+	}
+	case ExprTree::LITERAL_NODE: {
+		Value val;
+		( ( Literal *)expr )->GetValue( val );
+		bool b;
+		if( val.IsBooleanValue( b ) ) {
+			if( b ) {
+					// replace "true" with "1"
+				val.SetIntegerValue( 1 );
+			}
+			else {
+					// replace "false" with "0"
+				val.SetIntegerValue( 0 );
+			}
+			return Literal::MakeLiteral( val );
+		}
+		else {
+			return NULL;
+		}
+	}
+	case ExprTree::OP_NODE: {
+		Operation::OpKind oKind;
+		ExprTree * expr1 = NULL;
+		ExprTree * expr2 = NULL;
+		ExprTree * expr3 = NULL;
+		( ( Operation * )expr )->GetComponents( oKind, expr1, expr2, expr3 );
+		while( oKind == Operation::PARENTHESES_OP ) {
+			currentExpr = expr1;
+			( ( Operation * )expr1 )->GetComponents(oKind,expr1,expr2,expr3);
+		}
+		if( ( Operation::__COMPARISON_START__ <= oKind &&
+			  oKind <= Operation::__COMPARISON_END__ ) ||
+			( Operation::__LOGIC_START__ <= oKind &&
+			  oKind <= Operation::__LOGIC_END__ ) ) {
+				// Comparison/Logic Operation expression
+				// replace "expr" with "expr ? 1 : 0"
+			Value val0, val1;
+			val0.SetIntegerValue( 0 );
+			val1.SetIntegerValue( 1 );
+			ExprTree *tern = NULL;
+			tern = Operation::MakeOperation( Operation::TERNARY_OP,
+											 expr->Copy( ),
+											 Literal::MakeLiteral( val1 ),
+											 Literal::MakeLiteral( val0 ) );
+			return Operation::MakeOperation( Operation::PARENTHESES_OP,
+											 tern, NULL, NULL );
+		}
+		else if( Operation::__ARITHMETIC_START__ <= oKind &&
+				 oKind <= Operation::__ARITHMETIC_END__ ) {
+			ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
+			if( oKind == Operation::UNARY_PLUS_OP || 
+				oKind == Operation::UNARY_MINUS_OP ) {
+				if( newExpr1 != NULL ) {
+					return Operation::MakeOperation(oKind,newExpr1,NULL,NULL);
+				}
+				else {
+					return NULL;
+				}
+			}
+			else {
+				ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
+				if( newExpr1 != NULL || newExpr2 != NULL ) {
+					if( newExpr1 == NULL ) {
+						newExpr1 = expr1->Copy( );
+					}
+					if( newExpr2 == NULL ) {
+						newExpr2 = expr2->Copy( );
+					}
+					return Operation::MakeOperation( oKind, newExpr1, newExpr2,
+													 NULL );
+				}
+				else {
+					return NULL;
+				}
+			}
+		}
+		else if( oKind == Operation::TERNARY_OP ) {
+			ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
+			ExprTree *newExpr3 = AddExplicitConditionals( expr3 );
+			if( newExpr2 != NULL || newExpr3 != NULL ) {
+				if( newExpr2 == NULL ) {
+					newExpr2 = expr2->Copy( );
+				}
+				if( newExpr3 == NULL ) {
+					newExpr3 = expr3->Copy( );
+				}
+				return Operation::MakeOperation( oKind, expr1->Copy( ), 
+												 newExpr2, newExpr3 );
+			}
+			else {
+				return NULL;
+			}
+		}
+		return NULL;
+	}
+	default: {
+		return NULL;
+	}
+	}
+		
+	return NULL;
+}
+
+ExprTree *ClassAd::
+AddExplicitTargetRefs( ExprTree *tree, set<string,CaseIgnLTStr> &definedAttrs )
+{
+	if( tree == NULL ) {
+		return NULL;
+	}
+	ExprTree::NodeKind nKind = tree->GetKind( );
+	switch( nKind ) {
+	case ExprTree::ATTRREF_NODE: {
+		ExprTree *expr = NULL;
+		string attr = "";
+		bool abs = false;
+		( ( AttributeReference * )tree )->GetComponents(expr,attr,abs);
+		if( abs || expr != NULL ) {
+			return tree->Copy( );
+		}
+		else {
+			if( definedAttrs.find( attr ) == definedAttrs.end( ) ) {
+					// attribute is not defined, so insert "target"
+				AttributeReference *target = NULL;
+				target = AttributeReference::MakeAttributeReference(NULL,
+																	"target");
+				return AttributeReference::MakeAttributeReference(target,attr);
+			}
+			else {
+				return tree->Copy( );
+			}
+		}
+	}
+	case ExprTree::OP_NODE: {
+		Operation::OpKind oKind;
+		ExprTree * expr1 = NULL;
+		ExprTree * expr2 = NULL;
+		ExprTree * expr3 = NULL;
+		ExprTree * newExpr1 = NULL;
+		ExprTree * newExpr2 = NULL;
+		ExprTree * newExpr3 = NULL;
+		( ( Operation * )tree )->GetComponents( oKind, expr1, expr2, expr3 );
+		if( expr1 != NULL ) {
+			newExpr1 = AddExplicitTargetRefs( expr1, definedAttrs );
+		}
+		if( expr2 != NULL ) {
+			newExpr2 = AddExplicitTargetRefs( expr2, definedAttrs );
+		}
+		if( expr3 != NULL ) {
+			newExpr3 = AddExplicitTargetRefs( expr3, definedAttrs );
+		}
+		return Operation::MakeOperation( oKind, newExpr1, newExpr2, newExpr3 );
+	}
+	default: {
+ 			// old ClassAds have no function calls, nested ClassAds or lists
+			// literals have no attrrefs in them
+		return tree->Copy( );
+	}
+	}
+}
+

@@ -494,6 +494,11 @@ class ClassAd : public ExprTree
         virtual int	fPrint(FILE*);			// print the ClassAd to a file
 		void		dPrint( int );			// dprintf to given dprintf level
 
+// Back compatiblity helper methods
+
+		bool AddExplicitConditionals( ExprTree *expr, ExprTree *&newExpr );
+		ClassAd *AddExplicitTargetRefs( );
+		
 #endif
 
   	private:
@@ -513,6 +518,9 @@ class ClassAd : public ExprTree
 
 #if defined( DEPRECATED )
 		void evalFromEnvironment( const char *name, Value val );
+		ExprTree *AddExplicitConditionals( ExprTree * );
+		ExprTree *AddExplicitTargetRefs( ExprTree *,
+										 set< string, CaseIgnLTStr > & );
 #endif
 
 		ClassAd *_GetDeepScope( const std::string& ) const;
