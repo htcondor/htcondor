@@ -492,6 +492,10 @@ int rename( const char *from, const char *to ) : pseudo {
 		in code( use_p );
 		alloc( use_p, RUSAGE_SIZE );
 	}
+	int getrusage( int who, struct rusage *use_p ) : pseudo {
+		out code( use_p );
+		alloc( use_p, RUSAGE_SIZE );
+	}
 	int perm_error( const char *msg ) : pseudo {
 		in code( msg );
 		alloc( msg, MAX_STRING );

@@ -51,6 +51,8 @@ int _lxstat(int, const char *, struct stat *);
 #   include <dlfcn.h>   /* for dlopen and dlsym */
 #endif
 
+extern unsigned int _condor_numrestarts;  /* in image.C */
+
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 char	*getwd( char * );
@@ -167,6 +169,8 @@ store_working_directory()
 }
 
 /*
+  getrusage()
+
   Condor doesn't support the fork() system call, so by definition the
   resource usage of all our child processes is zero.  We must support
   this, since those users in the POSIX world will call utimes() which
@@ -178,37 +182,85 @@ store_working_directory()
   current machine, and the usages it accumulated on all the machines
   where it has run in the past.
 */
-
-#if !defined(Solaris) && !defined(IRIX53)
 int
 getrusage( int who, struct rusage *rusage )
 {
-	int rval;
-	struct rusage accum_rusage;
+	int rval = 0;
+	int rval1 = 0;
+	int scm;
+	static struct rusage accum_rusage;
+	static int num_restarts = 50;  /* must not initialize to 0 */
 
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_getrusage, who, rusage );
-	} else {
+	/* Get current rusage for this process accumulated on this machine */
 
-			/* Condor user processes don't have children - yet */
+	/* Set syscalls to local, since getrusage() in libc often calls
+	 * things like _open(), and we wish to avoid an infinite loop
+ 	 */
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		
+#ifdef SYS_getrusage
+		rval1 = syscall( SYS_getrusage, who, rusage);
+#elif DL_EXTRACT
+		{
+        void *handle;
+        int (*fptr)(int,struct rusage *);
+        if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+            rval = -1;
+        } else {
+        	if ((fptr = (int (*)(int,struct rusage *))dlsym(handle, "getrusage")) == NULL) {
+           		 rval = -1;
+        	} else {
+        		rval1 = (*fptr)(who,rusage);
+			}
+		}
+		}
+#else
+		rval1 = GETRUSAGE(who,rusage);
+#endif 
+
+	/* Set syscalls back to what it was */
+	SetSyscalls(scm);
+
+	/* If in remote mode, we need to add in resource usage from previous runs as well */
+	if( !LocalSysCalls() ) {
+
+		/* Condor user processes don't have children - yet */
 		if( who != RUSAGE_SELF ) {
 			memset( (char *)rusage, '\0', sizeof(struct rusage) );
 			return 0;
 		}
 
-			/* Get current rusage for the running job. */
-		syscall( SYS_getrusage, who, rusage);
+		/* If our local getrusage above was successful, query the shadow 
+		 * for past usage */
+		if ( rval1 == 0 ) {  
+			/*
+			 * Get accumulated rusage from previous runs, but only once per
+			 * restart instead of doing a REMOTE_syscall every single time
+			 * getrusage() is called, which can be very frequently.
+			 * Note: _condor_numrestarts is updated in the restart code in
+			 * image.C whenver Condor does a restart from a checkpoint.
+			 */
+			if ( _condor_numrestarts != num_restarts ) {
+				num_restarts = _condor_numrestarts;
+				rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
+				/* on failure, clear out accum_rusage so we do not blow up
+				 * inside of update_rusage()
+				 */
+				if ( rval != 0 ) {
+					memset( (char *)&accum_rusage, '\0', sizeof(struct rusage) );
+				}
+			}
 
-			/* Get accumulated rusage from previous runs */
-		rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
-
-			/* Sum the two. */
-		update_rusage(rusage, &accum_rusage);
+			/* Sum up current rusage and past accumulated rusage */
+			update_rusage(rusage, &accum_rusage);
+		}
 	}
 
-	return( rval );
+	if ( rval == 0  && rval1 == 0 ) 
+		return 0;
+	else
+		return -1;
 }
-#endif
 
 /*
   This routine which is normally provided in the C library determines
