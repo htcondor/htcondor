@@ -748,6 +748,13 @@ Wrapup( )
                                 Proc->id.cluster, Proc->id.proc);
         strcpy (email_addr, Proc->owner);
     }
+    else if (!email_addr[0])
+    {
+        dprintf (D_ALWAYS,
+		    "Job %d.%d has NULL email address - using owner instead\n",
+                                Proc->id.cluster, Proc->id.proc);
+        strcpy (email_addr, Proc->owner);
+    }
     DisconnectQ (NULL);
 #else
     strcpy (email_addr, Proc->owner);
