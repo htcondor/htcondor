@@ -22,10 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-
 #include "condor_common.h"
-#include <varargs.h>
 #include "condor_sys.h"
 #include "exit.h"
 #include "debug.h"
@@ -37,18 +34,14 @@ extern char	*sys_errlist[];
 void add_error_string( const char *str );
 char * strdup( const char *str );
 
-PERM_ERR(va_alist)
-va_dcl
+PERM_ERR(char* fmt, ...)
 {
 	va_list pvar;
-	char *fmt;
 	char buf[ BUFSIZ ];
 	char err_str[ BUFSIZ ];
 
 	(void)SetSyscalls( SYS_LOCAL | SYS_RECORDED );
-	va_start(pvar);
-
-	fmt = va_arg(pvar, char *);
+	va_start(pvar, fmt);
 
 	vsprintf( buf, fmt, pvar );
 
