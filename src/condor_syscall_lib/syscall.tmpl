@@ -981,6 +981,7 @@ They are not needed for remote I/O or for the condor daemons.
 	int setpriority( int which, int who, int priority );
 	int getpriority( int which, int who );
 
+#if !defined(SWITCH)
 #	if defined(LINUX)
 		int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 #	else
@@ -991,6 +992,7 @@ They are not needed for remote I/O or for the condor daemons.
 			alloc( tp, TIMEVAL_SIZE );
 			alloc( tzp, TIMEZONE_SIZE );
 		}
+#endif
 
 #	if defined(HPUX10) || defined(OSF1) || defined(IRIX)
 		long gethostid();
