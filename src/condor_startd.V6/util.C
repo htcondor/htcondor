@@ -321,6 +321,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 	char buf[4096];
 	buf[0] = '\0';
 	ExprTree* tree;
+	ClassAdUnParser unp;
+	string bufString;
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
 	}
@@ -337,7 +339,9 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 		}
 		return false;
 	}
-	tree->PrintToStr( buf );
+//	tree->PrintToStr( buf );
+	unp.Unparse( bufString, tree );
+	strcpy( buf, bufString.c_str( ) );
 
 	if( ! target->Insert( buf ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
