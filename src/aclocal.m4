@@ -164,7 +164,7 @@ AC_DEFUN([_condor_VERIFY_DIR],
 # Side Effects:
 #  Calling this macro terminates configure with AC_MSG_ERROR
 #######################################################################
-AC_DEFUN([_condor_VERIFY_DIR_ERROR],
+AC_DEFUN([_condor_VERIFY_ERROR],
 [AC_MSG_RESULT([no])
  AC_MSG_WARN([$1])
  AC_MSG_ERROR([$2])
