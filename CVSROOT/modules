@@ -73,6 +73,7 @@ COMMON_CODE	-a src/Imakefile \
 
 V6_SRC		-a \
 			src/Imakefile \
+			src/condor_imake \
 			src/CODING_GUIDELINES \
 			src/CVS_Tags \
 			src/condor_accountant.V6 \
