@@ -194,6 +194,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "i386") ) { //LDAP entry
 		sprintf( tmp, "INTEL" );
 	} 
+	else if( !strcmp(machine, "ia64") ) {
+		sprintf( tmp, "IA64" );
+	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
 	} 
