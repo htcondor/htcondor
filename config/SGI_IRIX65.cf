@@ -2,7 +2,7 @@
 
 #define HAS_DYNAMIC_USER_JOBS	YES
 
-#define Platform		SGI_IRIX65
+#define Platform		SGI/IRIX65
 #define ImakeOpsysFlag		-DIS_IRIX65
 #define PlatformFlags		-DIRIX65=IRIX65
 #define IS_SGI_IRIX65		YES

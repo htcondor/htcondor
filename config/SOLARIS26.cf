@@ -6,12 +6,12 @@
 #if IS_X86
 #define		IS_X86_SOLARIS26	YES
 #define		GccArch			i386-unknown-solaris2.6
-#define		Platform		X86_SOLARIS26
+#define		Platform		INTEL/SOLARIS26
 #endif
 
 #if IS_SUN4X
 #define		IS_SUN4X_SOLARIS26	YES
-#define		Platform		SUN4X_SOLARIS26
+#define		Platform		SUN4X/SOLARIS26
 #define		GccArch			sparc-sun-solaris2.6
 #endif
 

@@ -7,27 +7,25 @@
 
 #define	ArchOptimizeFlag	-m486
 
+#if defined( IS_GLIBC21 )
+#   define Platform		INTEL/LINUX/GLIBC21
+#   define PublicTargetName	intel_linux2-glibc21
+#   define LIB_NAME		glibc21
+#elif defined( IS_GLIBC20 )
+#   define Platform		INTEL/LINUX/GLIBC20
+#   define PublicTargetName	intel_linux2-glibc20
+#   define LIB_NAME		glibc20
+#else
+#   define Platform		INTEL/LINUX/LIBC5
+#   define PublicTargetName	intel_linux2-libc5
+#   define LIB_NAME		libc5
+#endif
+
 #if defined( IS_GLIBC )
-#   define Platform		I386_LINUX-G
 	/* this is a bit wonky here, but otherwise the i686 in the path below
 		becomes a ' 1 ' on glib machines with egcs. I don't think i686
 		is used for anything important, so away it goes. */
 #	undef i686
 #   define EgcsLibc /usr/local/lib/gcc-lib/i686-pc-linux-gnu/egcs-2.91.66/libgcc.a
-#else
-#   define Platform		I386_LINUX
 #endif
-
-/* 
-   Define the platform name for the lib subdirectory
-*/
-
-#if defined( IS_GLIBC20 )
-#define LIB_NAME		glibc20
-#elif defined( IS_GLIBC21 )
-#define LIB_NAME		glibc21
-#else
-#define LIB_NAME		libc5
-#endif
-
 
