@@ -1104,6 +1104,28 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 		// add name of SMP virtual machine (from startd) into environment
 	env_obj.add_string(VirtualMachineName);	
 
+	/* Port regulation for user job */
+	char *low = NULL, *high = NULL;
+	int low_port, high_port;
+
+	if ( (low = param("LOWPORT")) != NULL ) {
+		if ( (high = param("HIGHPORT")) != NULL ) {
+			low_port = atoi(low);
+			high_port = atoi(high);
+			sprintf(buf, "_condor_LOWPORT=%d", low_port);
+			env_obj.add_string(buf);
+			sprintf(buf, "_condor_HIGHPORT=%d", high_port);
+			env_obj.add_string(buf);
+			free(low);
+			free(high);
+		} else {
+			dprintf(D_ALWAYS, "LOWPORT is defined but HIGHPORT is not!\n");
+			dprintf(D_ALWAYS, "LOWPORT will be ignored!\n");
+			free(low);
+		}
+	}
+	/* end - Port regulation for user job */
+
 
 		// Generate a directory where process can run and do its checkpointing
 	omask = umask(0);
