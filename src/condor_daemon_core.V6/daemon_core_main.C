@@ -81,6 +81,13 @@ check_parent()
 }
 #endif
 
+// This function clears expired sessions from the cache
+void
+check_session_cache()
+{
+	// daemonCore->getSecMan()->RemoveExpiredKeys();
+}
+
 char* global_dc_sinful() {
 	if (daemonCore) {
 		return daemonCore->InfoCommandSinfulString();
@@ -1300,6 +1307,9 @@ int main( int argc, char** argv )
 				(TimerHandler)check_parent, "check_parent" );
 	}
 #endif
+
+	daemonCore->Register_Timer( 5 * 60, 0,
+				(TimerHandler)check_session_cache, "check_session_cache" );
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
