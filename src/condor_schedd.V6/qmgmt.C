@@ -464,13 +464,27 @@ grow_prio_recs( int newsize )
 }
 
 
+bool
+isQueueSuperUser( const char* user ) 
+{
+	int i;
+	if( ! (user && super_users) ) {
+		return false;
+	}
+	for( i=0; i<num_super_users; i++ ) {
+		if( strcmp( user, super_users[i] ) == 0 ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 // Test if this owner matches my owner, so they're allowed to update me.
 int
 OwnerCheck(ClassAd *ad, const char *test_owner)
 {
 	char	my_owner[_POSIX_PATH_MAX];
-	int		i;
-
 
 	// If test_owner is NULL, then we have no idea who the user is.  We
 	// do not allow anonymous folks to mess around with the queue, so 
@@ -496,11 +510,9 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// The super users are always allowed to do updates.  They are
 	// specified with the "SUPER_USERS" string list in the config
 	// file.  Defaults to root and condor.
-	for( i=0; i<num_super_users; i++) {
-		if( strcmp( test_owner, super_users[i] ) == 0 ) {
-			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), super_user\n" );
-			return 1;
-		}
+	if( isQueueSuperUser(test_owner) ) {
+		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), super_user\n" );
+		return 1;
 	}
 
 #if !defined(WIN32) 

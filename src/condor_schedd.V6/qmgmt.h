@@ -47,6 +47,7 @@ void BeginTransaction();
 void CommitTransaction();
 void AbortTransaction();
 void dirtyJobQueue( void );
+bool isQueueSuperUser( const char* user );
 #if defined(__cplusplus)
 }
 #endif
