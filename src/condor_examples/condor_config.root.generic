@@ -67,6 +67,7 @@ MAIL			= /usr/ucb/mail
 STARTD			= $(SBIN)/condor_startd
 STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
+ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
 
 ##--------------------------------------------------------------------
 ##  condor_schedd
@@ -76,7 +77,8 @@ SCHEDD			= $(SBIN)/condor_schedd
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
-SHADOW_NT		= $(SBIN)/condor_shadow.v61
+SHADOW_NT		= $(SBIN)/condor_shadow.v63
+SHADOW_MPI		= $(SBIN)/condor_shadow.v63
 
 ##  Where is the condor pvm daemon installed?
 PVMD			= $(SBIN)/condor_pvmd
@@ -84,5 +86,8 @@ PVMD			= $(SBIN)/condor_pvmd
 ##  Where is the condor pvm group server daemon installed?
 PVMGS			= $(SBIN)/condor_pvmgs
 
+##--------------------------------------------------------------------
+##  condor_starter
+##--------------------------------------------------------------------
 
-
+MPI_CONDOR_RSH_PATH	= $(SBIN)
