@@ -82,6 +82,9 @@ int do_block;
 	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		op = LOCK_UN;
 		break;
+      default:
+			  /* unknown lock type, fail immediately */
+		return -1;
 	}
 
 	if( !do_block ) {
@@ -135,6 +138,9 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		f.l_type = F_UNLCK;
 		break;
+      default:
+			  /* unknown lock type, fail immediately */
+		return -1;
 	}
 
 		/* be signal safe */
