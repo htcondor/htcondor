@@ -1,6 +1,6 @@
 /* AIX 5 Specific stuff */
 
-#define PlatformFlags		-DAIX5=AIX5 -Wno-deprecated
+#define PlatformFlags		-DAIX5=AIX5
 
 /* XXX This stuff is borkened */
 #define HAS_ADJTIME			YES

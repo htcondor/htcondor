@@ -1,6 +1,6 @@
 /* HPUX 11 Specific stuff */
 
-#define PlatformFlags		-DHPUX11=HPUX11 -Wno-deprecated -L/usr/lib/pa20_64
+#define PlatformFlags		-DHPUX11=HPUX11 -L/usr/lib/pa20_64
 /* -lxnet is to allow use of the XOpen/Unix98 functions with a 64bit compiler */
 #define PlatformLdFlags		-lxnet
 
