@@ -46,7 +46,6 @@ bool run_post_on_failure = TRUE;
 
 char* lockFileName = NULL;
 char* DAGManJobId;
-char* DAP_SERVER = "skywalker.cs.wisc.edu";
 
 Global G;
 
@@ -56,7 +55,6 @@ static void Usage() {
             "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
 	    "\t\t-Storklog <stork_userlog>\n"                       //-->DAP
-	    "\t\t-Storkserver <stork server name>\n"                //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
@@ -113,6 +111,7 @@ Global::Config()
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
 	G.max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
+	G.stork_server = param( "STORK_SERVER" );
 	return true;
 }
 
@@ -175,7 +174,6 @@ void ExitSuccess() {
 }
 
 void condor_event_timer();
-void dap_event_timer();
 void print_status();
 
 /****** FOR TESTING *******
@@ -261,7 +259,6 @@ int main_init (int argc, char ** const argv) {
                 Usage();
            }
             condorLogName = argv[i];
-	//-->DAP
 		} else if( !strcasecmp( "-Storklog", argv[i] ) ) {
             i++;
             if (argc <= i) {
@@ -269,14 +266,6 @@ int main_init (int argc, char ** const argv) {
                 Usage();
            }
             dapLogName = argv[i];        
-		} else if( !strcasecmp( "-Storkserver", argv[i] ) ) {
-	    i++;
-	    if (argc <= i) {
-	        debug_printf( DEBUG_SILENT, "No stork server specified" );
-	        Usage();
-	  }
-	    DAP_SERVER = argv[i];   
-	//<--DAP
         } else if( !strcasecmp( "-Lockfile", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -532,16 +521,10 @@ int main_init (int argc, char ** const argv) {
     }
 
 	ASSERT( condorLogName || dapLogName );
-    if( condorLogName ) {
-		dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
-		daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
-									"condor_event_timer" );
-    }
-    if( dapLogName ) {
-		dprintf( D_ALWAYS, "Registering dap_event_timer...\n" );
-		daemonCore->Register_Timer( 1, 5, (TimerHandler)dap_event_timer,
-									"dap_event_timer" );
-    }
+
+    dprintf( D_ALWAYS, "Registering condor_event_timer...\n" );
+    daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
+				"condor_event_timer" );
 
     return 0;
 }
@@ -602,12 +585,20 @@ void condor_event_timer () {
 	}
 
     // If the log has grown
-    if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
-      if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
+    if (G.dag->DetectCondorLogGrowth()) {
+      if (G.dag->ProcessLogEvents(CONDORLOG) == false) {
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue();
 			return;
         }
+    }
+
+    if( G.dag->DetectDaPLogGrowth() ) {
+      if( G.dag->ProcessLogEvents( DAPLOG ) == false ) {
+	G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+	main_shutdown_rescue();
+	return;
+      }
     }
   
     // print status if anything's changed (or we're in a high debug level)
@@ -668,93 +659,6 @@ void condor_event_timer () {
 		return;
     }
 }
-
-//-->DAP
-void dap_event_timer () {
-
-    //------------------------------------------------------------------------
-    // Proceed with normal operation
-    //
-    // At this point, the DAG is bootstrapped.  All jobs premarked DONE
-    // are in a STATUS_DONE state, and all their children have been
-    // marked ready to submit.
-    //
-    // If recovery was needed, the log file has been completely read and
-    // we are ready to proceed with jobs yet unsubmitted.
-    //------------------------------------------------------------------------
-
-    static int prevJobsDone = 0;
-    static int prevJobs = 0;
-    static int prevJobsFailed = 0;
-    static int prevJobsSubmitted = 0;
-    static int prevJobsReady = 0;
-    static int prevScriptsRunning = 0;
-
-    // If the log has grown
-    if (G.dag->DetectDaPLogGrowth()) {
-
-      if (G.dag->ProcessLogEvents(DAPLOG) == false) {
-			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue();
-			return;
-        }
-    }
-  
-    // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != G.dag->NumJobsDone()
-        || prevJobs != G.dag->NumJobs()
-        || prevJobsFailed != G.dag->NumJobsFailed()
-        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
-        || prevJobsReady != G.dag->NumJobsReady()
-        || prevScriptsRunning != G.dag->NumScriptsRunning()
-		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
-		print_status();
-        prevJobsDone = G.dag->NumJobsDone();
-        prevJobs = G.dag->NumJobs();
-        prevJobsFailed = G.dag->NumJobsFailed();
-        prevJobsSubmitted = G.dag->NumJobsSubmitted();
-        prevJobsReady = G.dag->NumJobsReady();
-        prevScriptsRunning = G.dag->NumScriptsRunning();
-	}
-
-    ASSERT( G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs() );
-
-    //
-    // If DAG is complete, hurray, and exit.
-    //
-    if( G.dag->Done() ) {
-        ASSERT( G.dag->NumJobsSubmitted() == 0 );
-        debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
-		ExitSuccess();
-		return;
-    }
-
-    //
-
-    // If no jobs are submitted and no scripts are running, but the
-    // dag is not complete, then at least one job failed, or a cycle
-    // exists.
-    // 
-    if( G.dag->NumJobsSubmitted() == 0 &&
-		G.dag->NumJobsReady() == 0 &&
-		G.dag->NumScriptsRunning() == 0 ) {
-		if( G.dag->NumJobsFailed() > 0 ) {
-			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-				debug_printf( DEBUG_QUIET,
-							  "ERROR: the following job(s) failed:\n" );
-				G.dag->PrintJobList( Job::STATUS_ERROR );
-			}
-		}
-		else {
-			// no jobs failed, so a cycle must exist
-			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
-		}
-
-		main_shutdown_rescue();
-		return;
-    }
-}
-//<--DAP
 
 
 void
