@@ -422,3 +422,15 @@ ioctl( int fd, int request, caddr_t arg )
 		return rval;
 	}
 #endif
+
+#if defined OSF1
+/*
+  This is some kind of cleanup routine for dynamically linked programs which
+  is called by exit.  For some reason it occasionally cuases a SEGV
+  when mixed with the condor checkpointing code.  Since condor programs
+  are always statically linked, we just make a dummy here to avoid
+  the problem.
+*/
+
+void ldr_atexit() {}
+#endif
