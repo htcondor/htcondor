@@ -43,6 +43,7 @@ MyString Accountant::ResourcesUsedAttr="ResourcesUsed";
 MyString Accountant::UnchargedTimeAttr="UnchargedTime";
 MyString Accountant::AccumulatedUsageAttr="AccumulatedUsage";
 MyString Accountant::BeginUsageTimeAttr="BeginUsageTime";
+MyString Accountant::LastUsageTimeAttr="LastUsageTime"; 
 MyString Accountant::PriorityFactorAttr="PriorityFactor";
 
 MyString Accountant::LastUpdateTimeAttr="LastUpdateTime";
@@ -87,7 +88,7 @@ void Accountant::Initialize()
   
   tmp = param("PRIORITY_HALFLIFE");
   if(tmp) {
-	  HalfLifePeriod=atoi(tmp);
+	  HalfLifePeriod=(float)atof(tmp);
 	  free(tmp);
   }
   dprintf(D_FULLDEBUG,"Accountant::Initialize - HalfLifePeriod=%f\n",HalfLifePeriod);
@@ -96,7 +97,7 @@ void Accountant::Initialize()
 
   tmp = param("NICE_USER_PRIO_FACTOR");
   if(tmp) {
-	  NiceUserPriorityFactor=atoi(tmp);
+	  NiceUserPriorityFactor=(float)atof(tmp);
 	  free(tmp);
   }
 
@@ -104,7 +105,7 @@ void Accountant::Initialize()
 
   tmp = param("REMOTE_PRIO_FACTOR");
   if(tmp) {
-	  RemoteUserPriorityFactor=atoi(tmp);
+	  RemoteUserPriorityFactor=(float)atof(tmp);
 	  free(tmp);
   }
 
@@ -136,11 +137,11 @@ void Accountant::Initialize()
 	  EXCEPT( "SPOOL not defined!" );
   }
   if (!AcctLog) {
-    struct stat statbuf;
-    bool ConvertOldFile=false;
+    // struct stat statbuf;
+    // bool ConvertOldFile=false;
     // if (stat(OldLogFileName.Value(),&statbuf)==0 && stat(LogFileName.Value(),&statbuf)==-1) ConvertOldFile=true;
     AcctLog=new ClassAdLog(LogFileName.Value());
-    if (ConvertOldFile) LoadState(OldLogFileName);
+    // if (ConvertOldFile) LoadState(OldLogFileName);
     dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",LogFileName.Value());
   }
 
@@ -202,8 +203,6 @@ void Accountant::ResetAllUsage()
   HashKey HK;
   char key[_POSIX_PATH_MAX];
   ClassAd* ad;
-  float AccumulatedUsage;
-  int BeginUsageTime;
 
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
@@ -260,12 +259,15 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
 void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T)
 {
-  dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
+  // dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
   // Check if the resource is used
   MyString RemoteUser;
   if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
-    if (CustomerName==RemoteUser) return;
+    if (CustomerName==RemoteUser) {
+      // dprintf(D_FULLDEBUG,"Match already existed!\n");
+      return;
+    }
     RemoveMatch(ResourceName,T);
   }
   
@@ -284,6 +286,8 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
+
+  dprintf(D_ALWAYS,"(ACCOUNTANT) Adding match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
 }
 
 //------------------------------------------------------------------
@@ -316,6 +320,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  dprintf(D_ALWAYS,"(ACCOUNTANT) Removing match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
   }
   
   DeleteClassAd(ResourceRecord+ResourceName);
@@ -368,11 +373,11 @@ void Accountant::UpdatePriorities()
   int T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
-  float AgingFactor=pow(0.5,float(TimePassed)/HalfLifePeriod);
+  float AgingFactor=(float) pow(0.5,float(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
-  dprintf(D_FULLDEBUG,"\nAccountant::UpdatePriorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
+  dprintf(D_ALWAYS,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
 
   HashKey HK;
   char key[_POSIX_PATH_MAX];
@@ -405,6 +410,7 @@ void Accountant::UpdatePriorities()
     SetAttributeFloat(key,PriorityAttr,Priority);
     SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
     if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
+    if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
 
     dprintf(D_FULLDEBUG,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
@@ -431,7 +437,7 @@ void Accountant::UpdatePriorities()
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) 
 {
-  dprintf(D_FULLDEBUG,"Accountant::CheckMatches\n");
+  dprintf(D_FULLDEBUG,"(Accountant) Checking Matches\n");
 
   ClassAd* ResourceAd;
   HashKey HK;
@@ -447,12 +453,17 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
     ResourceName=key+ResourceRecord.Length();
     ResourceAd=FindResourceAd(ResourceName, ResourceList);
-    if (!ResourceAd) 
+    if (!ResourceAd) {
+      dprintf(D_FULLDEBUG,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.Value());
       RemoveMatch(ResourceName);
+    }
 	else {
       ad->LookupString(RemoteUserAttr.Value(),key);
       CustomerName=key;
-      if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) RemoveMatch(ResourceName);
+      if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
+        dprintf(D_FULLDEBUG,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
+        RemoveMatch(ResourceName);
+      }
     }
   }
 
@@ -521,6 +532,7 @@ AttrList* Accountant::ReportState() {
   float PriorityFactor;
   float AccumulatedUsage;
   int BeginUsageTime;
+  int LastUsageTime;
   int ResourcesUsed;
 
   AttrList* ad=new AttrList();
@@ -551,6 +563,10 @@ AttrList* Accountant::ReportState() {
 
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
     sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
+    ad->Insert(tmp);
+
+    if (CustomerAd->LookupInteger(LastUsageTimeAttr.Value(),LastUsageTime)==0) LastUsageTime=0;
+    sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
     ad->Insert(tmp);
 
     if (CustomerAd->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) PriorityFactor=0;
@@ -627,16 +643,23 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (string_to_state(state)==matched_state) return 1;
-  if (string_to_state(state)!=claimed_state) return 0;
-  
+  if (string_to_state(state)!=claimed_state) {
+    dprintf(D_FULLDEBUG,"State was %s - not claimed or matched\n",state);
+    return 0;
+  }
+
   char RemoteUser[512];
   if (!ResourceAd->LookupString(ATTR_REMOTE_USER, RemoteUser)) {
     dprintf (D_ALWAYS, "Could not lookup remote user --- assuming not claimed\n");
     return 0;
   }
 
-  if (CustomerName==RemoteUser) return 1;
-  return 0;
+  if (CustomerName!=MyString(RemoteUser)) {
+    dprintf(D_FULLDEBUG,"Remote user for startd ad: %s does not match customer name\n",RemoteUser);
+    return 0;
+  }
+
+  return 1;
 
 }
 
@@ -763,7 +786,6 @@ bool Accountant::GetAttributeString(const MyString& Key, const MyString& AttrNam
 ClassAd* Accountant::FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList)
 {
   ClassAd* ResourceAd;
-  char Name[512];
   
   ResourceList.Open();
   while ((ResourceAd=ResourceList.Next())!=NULL) {
@@ -794,7 +816,7 @@ bool Accountant::LoadState(const MyString& OldLogFileName)
 {
   dprintf(D_FULLDEBUG,"Loading State from old file\n");
   MyString Action, CustomerName, ResourceName;
-  double d;
+  float d;
 
   // Open log file
   ifstream LogFile(OldLogFileName.Value());
