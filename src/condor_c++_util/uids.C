@@ -57,7 +57,6 @@ static struct {
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
 
-
 const char*
 priv_to_string( priv_state p )
 {
@@ -114,7 +113,7 @@ get_priv()
 
 #include "dynuser.h"
 #include "lsa_mgr.h"
-
+#include "token_cache.h"
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
@@ -132,13 +131,14 @@ static HANDLE CurrUserHandle = NULL;
 static char *UserLoginName = NULL; // either a "nobody" account or the submitting user
 static char *UserDomainName = NULL; // user's domain
 
+static token_cache cached_tokens; // we cache tokens to save time
+
 void uninit_user_ids() 
 {
-	// This is wrong. We need caching in here badly,
-	// but for right now this will work. -stolley
-	if ( CurrUserHandle ) {
-		CloseHandle(CurrUserHandle);
-	}
+	// just reset the "current" pointers.
+	// this doesn't affect the cache, but
+	// makes it behave as though there is 
+	// no user to set_user_priv() on.
 	if ( UserLoginName ) {
 	   	free(UserLoginName);
 	}
@@ -178,16 +178,12 @@ init_user_ids(const char username[], const char domain[])
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
 	// TODO: cache multiple user handles to save time.
-	const char *cur_acct = get_user_loginname();
-	const char *cur_dom = get_user_domainname();
 
 	dprintf(D_FULLDEBUG, "init_user_ids: want user '%s@%s', "
 			"current is '%s@%s'\n",
-		username, domain, cur_acct, cur_dom);
+		username, domain, UserLoginName, UserDomainName);
 	
-	if ( CurrUserHandle && cur_acct && 
-			strcmp(cur_acct,username) == 0 &&  
-			stricmp(cur_dom, domain) == 0 ) { // case insensitive for domain
+	if ( CurrUserHandle = cached_tokens.getToken(username, domain)) {
 		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s@%s,"
 			" so returning.\n", username, domain);
 		return 1;
@@ -203,12 +199,16 @@ init_user_ids(const char username[], const char domain[])
 			dprintf(D_FULLDEBUG, "init_user_ids: Calling thread has token "
 					"we want, so returning.\n");
 			CurrUserHandle = my_usertoken();
-			if ( CurrUserHandle ) {
-				dprintf(D_FULLDEBUG, "init_user_ids: handle is not null\n");
+			if (! CurrUserHandle ) {
+				dprintf(D_FULLDEBUG, "init_user_ids: handle is null!\n");
 			}
 			// these are strdup'ed, so we can just stash their pointers
 			UserLoginName = myusr;
 			UserDomainName = mydom;
+
+			// don't forget to drop it in the cache too
+			cached_tokens.storeToken(UserLoginName, UserDomainName,
+				   		CurrUserHandle);
 			return 1;
 		}
 	}
@@ -268,6 +268,9 @@ init_user_ids(const char username[], const char domain[])
 					GetLastError());
 				return 0;
 			} else {
+				// stash the new token in our cache
+				cached_tokens.storeToken(UserLoginName, UserDomainName,
+					   	CurrUserHandle);
 				return 1;
 			}
 		}
@@ -294,6 +297,10 @@ init_user_ids(const char username[], const char domain[])
 
 		// we created a new user, now just stash the token
 		CurrUserHandle = myDynuser->get_token();
+
+		// drop the handle in our cache too
+		cached_tokens.storeToken(UserLoginName, UserDomainName,
+			   		CurrUserHandle);
 		return 1;
 	}
 }
