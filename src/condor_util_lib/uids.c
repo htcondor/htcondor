@@ -193,9 +193,8 @@ init_condor_ids()
 		if( pwd ) {
 			CondorUserName = strdup( pwd->pw_name );
 		} else {
-				/* Should NEVER get here... */
-			fprintf( stderr, "Can't lookup password info for uid %d\n", CondorUid );
-			exit(1);
+			/* Cannot find an entry in the passwd file for this uid */
+			CondorUserName = strdup("Unknown");
 		}
 
 		/* no need to try to switch ids when running as non-root */
