@@ -65,17 +65,6 @@ typedef struct fd_set fd_set;
 #	define daemon _hide_daemon
 #endif
 
-/* Even though we normally have _XOPEN_SOURCE_EXTENDED defined on
-   dux4.0 by condor_common.h, this file is also included in a few
-   places (most notably, switches.c) without condor_common.h.  So, we
-   want to define it here if it hasn't been set already, since we
-   really need it for unistd.h in switches.c to get the right
-   prototypes.  -Derek 3/27/98 */
-#if defined(OSF1) && ! defined( _XOPEN_SOURCE_EXTENDED )
-#	define CONDOR_XOPEN_SOURCE_EXTENDED
-#	define _XOPEN_SOURCE_EXTENDED
-#endif
-
 
 /**********************************************************************
 ** Actually include the file
@@ -119,12 +108,6 @@ typedef struct fd_set fd_set;
 #	undef daemon
 #endif
 
-
-/* Only if we set it ourself in this file to we want to undef here */
-#if defined(OSF1) && defined( CONDOR_XOPEN_SOURCE_EXTENDED )
-#	undef CONDOR_XOPEN_SOURCE_EXTENDED
-#	undef _XOPEN_SOURCE_EXTENDED
-#endif
 
 /**********************************************************************
 ** Things that should be defined in unistd.h that for whatever reason
