@@ -55,6 +55,7 @@ extern "C" int do_cleanup();
 void reaper_loop();
 int	handle_dc_sigchld( Service*, int );
 int	shutdown_sigchld( Service*, int ); 
+int	check_free();
 
 int
 main_init( int, char* [] )
@@ -310,10 +311,8 @@ startd_exit()
 int
 main_shutdown_fast()
 {
-	if( !resmgr->in_use() ) {
-			// Machine is free, we can just exit right away.
-		startd_exit();
-	}
+		// If the machine is free, we can just exit right away.
+	check_free();
 
 	daemonCore->Cancel_Signal( DC_SIGCHLD );
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
@@ -323,6 +322,9 @@ main_shutdown_fast()
 		// Quickly kill all the starters that are running
 	resmgr->walk( Resource::kill_claim );
 
+	daemonCore->Register_Timer( 0, 5, 
+								(TimerHandler)check_free,
+								 "check_free" );
 	return TRUE;
 }
 
@@ -330,10 +332,8 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	if( !resmgr->in_use() ) {
-			// Machine is free, we can just exit right away.
-		startd_exit();
-	}
+		// If the machine is free, we can just exit right away.
+	check_free();
 
 	daemonCore->Cancel_Signal( DC_SIGCHLD );
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
@@ -343,6 +343,9 @@ main_shutdown_graceful()
 		// Release all claims, active or not
 	resmgr->walk( Resource::release_claim );
 
+	daemonCore->Register_Timer( 0, 5, 
+								(TimerHandler)check_free,
+								 "check_free" );
 	return TRUE;
 }
 
@@ -353,6 +356,7 @@ handle_dc_sigchld( Service*, int )
 	reaper_loop();
 	return TRUE;
 }
+
 
 void
 reaper_loop()
@@ -387,9 +391,7 @@ int
 shutdown_sigchld( Service*, int )
 {
 	reaper_loop();
-	if( ! resmgr->in_use() ) {
-		startd_exit();
-	} 
+	check_free();
 	return TRUE;
 }
 
@@ -406,3 +408,12 @@ do_cleanup()
 	return TRUE;
 }
 
+
+int
+check_free()
+{
+	if( ! resmgr->in_use() ) {
+		startd_exit();
+	} 
+	return TRUE;
+}
