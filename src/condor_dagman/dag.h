@@ -44,7 +44,8 @@ class Dag {
         @param condorLog
         @param dagLockFile
     */
-    Dag (const char *condorLog, const char *lockFileName);
+    Dag (const char *condorLog, const char *lockFileName,
+         const int  numJobsRunningMax);
 
     ///
     ~Dag();
@@ -173,6 +174,14 @@ class Dag {
 
     /// Number of Jobs that are done (completed execution)
     int _numJobsDone;
+    
+    /// Number of Jobs currently running (submitted to Condor)
+    int _numJobsRunning;
+
+    /** Maximum number of jobs to run at once.  Non-negative.  Zero means
+        unlimited
+    */
+    int _numJobsRunningMax;
 };
 
 #endif /* #ifndef DAG_H */

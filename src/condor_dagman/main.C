@@ -14,22 +14,27 @@ extern "C" int SetSyscalls() { return 0; }
 
 class Global {
   public:
-    inline Global (): dag(NULL) {}
+    inline Global (): dag(NULL), maxJobs(0) {}
     inline void CleanUp () { delete dag; }
     Dag * dag;
+    int maxJobs;  // Maximum number of Jobs to run at once
 };
 
 Global G;
 
 //---------------------------------------------------------------------------
 static void Usage() {
-    debug_printf (DEBUG_SILENT, "Usage: condor_dagman -f -t -l .\n"
-                  "\t\t[-debug <level>]\n"
-                  "\t\t-condorlog <NAME.dag.condor.log>\n"
-                  "\t\t-lockfile <NAME.dag.lock>\n"
-                  "\t\t-dag <NAME.dag>\n\n"
-                  "\twhere NAME is the name of your DAG.\n"
-                  "\tdefault -debug is -debug %d\n", DEBUG_NORMAL);
+    debug_printf
+        (DEBUG_SILENT,
+         "Usage: condor_dagman -f -t -l .\n"
+         "\t\t[-Debug <level>]\n"
+         "\t\t-Condorlog <NAME.dag.condor.log>\n"
+         "\t\t-Lockfile <NAME.dag.lock>\n"
+         "\t\t-Dag <NAME.dag>\n"
+         "\t\t[-MaxJobs] <int N>\n\n"
+         "\twhere NAME is the name of your DAG.\n"
+         "\twhere N is Maximum # of Jobs to run at once (0 means unlimited)\n"
+         "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
     DC_Exit(1);
 }
 
@@ -141,6 +146,13 @@ int main_init (int argc, char **argv) {
                 Usage();
             }
             datafile = argv[i];
+        } else if (!strcmp("-MaxJobs", argv[i])) {
+            i++;
+            if (argc <= i) {
+                debug_println (DEBUG_SILENT, "Integer missing after -MaxJobs");
+                Usage();
+            }
+            G.maxJobs = atoi (argv[i]);
         } else Usage();
     }
   
@@ -164,6 +176,10 @@ int main_init (int argc, char **argv) {
         debug_println (DEBUG_SILENT, "No DAG lock file was specified");
         Usage();
     }
+    if (G.maxJobs < 0) {
+        debug_println (DEBUG_SILENT, "-MaxJobs must be non-negative");
+        Usage();
+    }
  
     debug_println (DEBUG_VERBOSE,"Condor log will be written to %s",
                    condorLogName);
@@ -184,7 +200,7 @@ int main_init (int argc, char **argv) {
     // Create the DAG
     //
   
-    G.dag = new Dag (condorLogName, lockFileName);
+    G.dag = new Dag (condorLogName, lockFileName, G.maxJobs);
   
     //
     // Parse the input file.  The parse() routine

@@ -17,14 +17,18 @@ void TQI::Print () const {
 }
 
 //---------------------------------------------------------------------------
-Dag::Dag(const char *condorLogName, const char *lockFileName) :
-    _condorLogInitialized(false),
-    _condorLogSize(0),
-    _lockFileName(NULL),
-    _termQLock(false),
-    _numJobsDone(0) {
+Dag::Dag(const char *condorLogName, const char *lockFileName,
+         const int numJobsRunningMax) :
+    _condorLogInitialized (false),
+    _condorLogSize        (0),
+    _lockFileName         (NULL),
+    _termQLock            (false),
+    _numJobsDone          (0),
+    _numJobsRunning       (0),
+    _numJobsRunningMax    (numJobsRunningMax)
+{
     _condorLogName = strnewp (condorLogName);
-    _lockFileName = strnewp (lockFileName);
+    _lockFileName  = strnewp (lockFileName);
 }
 
 //-------------------------------------------------------------------------
@@ -331,6 +335,8 @@ bool Dag::Submit (Job * job) {
     CondorID condorID(0,0,0);
     submit_submit (job->GetCmdFile(), condorID);
     job->_Status = Job::STATUS_SUBMITTED;
+    _numJobsRunning++;
+    assert (_numJobsRunningMax >= 0 || _numJobsRunning <= _numJobsRunningMax);
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf (", ");
@@ -444,6 +450,8 @@ void Dag::TerminateJob (Job * job) {
         child->Remove(Job::Q_WAITING, job->GetJobID());
     }
     _numJobsDone++;
+    _numJobsRunning--;
+    assert (_numJobsRunning >= 0);
     assert (_numJobsDone <= _jobs.Number());
 
     //
@@ -542,7 +550,8 @@ bool Dag::SubmitReadyJobs () {
     assert (!tqi->children.IsEmpty());
     tqi->children.Rewind();
     JobID_t jobID;
-    while (tqi->children.Next(jobID)) {
+    while (tqi->children.Next(jobID) &&
+           (_numJobsRunningMax == 0 || _numJobsRunning < _numJobsRunningMax)) {
         Job * job = GetJob(jobID);
         assert (job != NULL);
         if (job->CanSubmit()) {
