@@ -36,14 +36,11 @@
 #include "condor_io.h"
 #include "sched.h"
 #include "alloc.h"
-#include "my_hostname.h"
-#include "get_full_hostname.h"
+#include "get_daemon_addr.h"
 #include "condor_attributes.h"
 #include  "list.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
-extern "C" char *get_schedd_addr(const char *);
 
 #include "condor_qmgr.h"
 
@@ -58,14 +55,14 @@ void ProcArg(const char*);
 void notify_schedd();
 void usage();
 
-char				hostname[512];
+char	DaemonName[512];
 
 
 void
 usage()
 {
 	fprintf( stderr,
-		"Usage: %s [-r host] { -a | cluster | cluster.proc | user } ... \n",
+		"Usage: %s [-n schedd_name] { -a | cluster | cluster.proc | user } ... \n",
 		MyName
 	);
 	exit( 1 );
@@ -80,7 +77,7 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args to be deleted
 	int					i;
 	Qmgr_connection*	q;
-	char*	fullname;
+	char*	daemonname;
 
 	MyName = argv[0];
 
@@ -94,7 +91,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	hostname[0] = '\0';
+	DaemonName[0] = '\0';
 	for( argv++; arg = *argv; argv++ ) {
 		if( arg[0] == '-' && arg[1] == 'a' ) {
 			All = TRUE;
@@ -102,15 +99,20 @@ main( int argc, char *argv[] )
 			if( All ) {
 				usage();
 			}
-			if ( arg[0] == '-' && arg[1] == 'r' ) {
-				// use the given name as the host name to connect to
+			if ( arg[0] == '-' && arg[1] == 'n' ) {
+				// use the given name as the schedd name to connect to
 				argv++;
-				if( !(fullname = get_full_hostname(*argv)) ) { 
+				if( ! *argv ) {
+					fprintf( stderr, "%s: -n requires another argument\n", 
+							 MyName);
+					exit(1);
+				}				
+				if( !(daemonname = get_daemon_name(*argv)) ) { 
 					fprintf( stderr, "%s: unknown host %s\n", 
-							 MyName, *argv );
+							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
-				strcpy( hostname, fullname );
+				strcpy( DaemonName, daemonname );
 			} else {
 				args[nArgs] = arg;
 				nArgs++;
@@ -118,15 +120,15 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	// Open job queue 
-	if (hostname[0] == '\0')
-	{
-		// hostname was not set at command line; obtain from system
-		strcpy( hostname, my_full_hostname() );
-	}
-	if((q = ConnectQ(hostname)) == 0)
-	{
-		fprintf( stderr, "Failed to connect to qmgr on host %s\n", hostname );
+		// Open job queue 
+	q = ConnectQ(DaemonName);
+	if( !q ) {
+		if( *DaemonName ) {
+			fprintf( stderr, "Failed to connect to queue manager %s\n", 
+					 DaemonName );
+		} else {
+			fprintf( stderr, "Failed to connect to local queue manager\n" );
+		}
 		exit(1);
 	}
 
@@ -170,15 +172,12 @@ notify_schedd()
 	PROC_ID		*job_id;
 	int 		i;
 
-	if (hostname[0] == '\0')
-	{
-		// if the hostname was not set at command line, obtain from system
-		strcpy( hostname, my_full_hostname() );
-	}
-
-	if ((scheddAddr = get_schedd_addr(hostname)) == NULL)
-	{
-		fprintf( stderr, "Can't find schedd address on %s\n", hostname);
+	if( (scheddAddr = get_schedd_addr(DaemonName)) == NULL ) {
+		if( *DaemonName ) {
+			fprintf( stderr, "Can't find schedd address of %s\n", DaemonName);
+		} else {
+			fprintf( stderr, "Can't find address of local schedd\n" );
+		}
 		exit(1);
 	}
 
@@ -186,7 +185,12 @@ notify_schedd()
 	sock = new ReliSock(scheddAddr, SCHED_PORT);
 	if(!sock->ok()) {
 		if( !TroubleReported ) {
-			fprintf( stderr, "Error: can't connect to Condor scheduler on %s !\n",hostname );
+			if( *DaemonName ) {
+				fprintf( stderr, "Error: Can't connect to schedd %s\n", 
+						 DaemonName );
+			} else {
+				fprintf( stderr, "Error: Can't connect to local schedd\n" );
+			}
 			TroubleReported = 1;
 		}
 		delete sock;
