@@ -32,6 +32,11 @@
 // Disable warnings about multiple template instantiations (done for gcc)
 #pragma warning( disable : 4660 )  
 
+// Disable warnings about truncated debug identifiers
+#pragma warning( disable : 4786 )
+
+#define _STLP_NEW_PLATFORM_SDK
+
 // #define NOGDI
 #define NOSOUND
 #include <winsock2.h>
