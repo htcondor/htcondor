@@ -16,7 +16,8 @@ int transfer_from_file_to_nest(char *src_file, char *dest_host,
 {
     int in_fd;
     char *buf;
-    long src_filesize, dest_filesize;
+    long src_filesize;
+	nestFileSize dest_filesize;
     int bytes_read;
     struct stat filestat;
     NestConnection nest_con_out;
@@ -149,7 +150,8 @@ int transfer_from_nest_to_file(char *src_host, char *src_file,
 {
     int out_fd;
     char *buf;
-    long src_filesize, dest_filesize;
+    long dest_filesize;
+	nestFileSize src_filesize;
     int bytes_read, bytes_written;
     struct stat filestat;
     NestConnection nest_con;
@@ -287,7 +289,7 @@ int transfer_from_nest_to_file(char *src_host, char *src_file,
 int transfer_from_nest_to_nest(char *src_host, char *src_file, char *dest_host, char *dest_file, NestReplyStatus & status)
 {
     char *buf;
-    long src_filesize, dest_filesize;
+	nestFileSize src_filesize, dest_filesize;
     int bytes_read;
     NestConnection nest_con_in, nest_con_out;
 

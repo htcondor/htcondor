@@ -18,7 +18,7 @@ int reserve_space_on_nest(char *dest_host, char *reserve_size, char *duration, c
     if (status != NEST_SUCCESS) return DAP_ERROR;
 
     handle = (NestLotHandle *)malloc(sizeof(NestLotHandle));
-    status = NestRequestUserLot(handle, nest_con, atof(reserve_size), atof(duration));
+    status = NestRequestUserLot(handle, nest_con, atoll(reserve_size), atoi(duration));
 
     if (status != NEST_SUCCESS){
       printf("reserve error: %d\n", status);
