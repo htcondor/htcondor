@@ -153,12 +153,12 @@ int
 REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 {
 	int		loc_fd;
-	int		open_status, write_status = 0, read_status;
+	int		write_status = 0, read_status;
 	char	buf[ CONDOR_IO_BUF_SIZE ];
 	int		checksum;
-	int		len;
-	int		file_size;
-	int		bytes_to_go;
+	size_t		len;
+	size_t		file_size;
+	size_t		bytes_to_go;
 	int		scm;
 	int		close_status;
 	int		rval;
