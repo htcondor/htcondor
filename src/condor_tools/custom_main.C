@@ -130,6 +130,21 @@ Macro filesystem_domain(
 	"\nInternet domain of machines sharing a common NFS file space",
 	"cs.wisc.edu"
 );
+Macro use_nfs(
+	"USE_NFS",
+	"Do you want to use NFS for condor file access?",
+	"FALSE"
+);
+Macro use_ckpt_server(
+	"USE_CKPT_SERVER",
+	"Do you want to use the checkpoint server to store checkpoint files?",
+	"FALSE"
+);
+Macro ckpt_server_host(
+	"CKPT_SERVER_HOST",
+	"Host where the checkpoint server should run, this should be a fully\nqualified internet domain name.",
+	"elm.cs.wisc.edu"	
+);
 
 int
 main()
@@ -163,6 +178,11 @@ main()
 	if( confirm("Will all machines in your pool participate in a common file system via NFS? ") ) {
 		we_have_fs_domain = 1;
 		filesystem_domain.init();
+		if( confirm("\nDo you want to use NFS for condor file access? (This may not have\n a positive impact on performance.)") ) {
+			use_nfs.init( TRUE );
+		} else {
+			use_nfs.init( FALSE );
+		}
 	}
 
 		// Make user confirm that everything is correct
@@ -182,6 +202,7 @@ main()
 	printf( "\t%s\n", uid_domain.gen() );
 	if( we_have_fs_domain ) {
 		printf( "\t%s\n", filesystem_domain.gen() );
+		printf( "\t%s\n", use_nfs.gen() );
 	}
 	if( !confirm("Are all the above settings correct? ") ) {
 		printf( "Configuration Aborted\n" );
