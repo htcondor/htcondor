@@ -66,6 +66,7 @@ void SafeSock::init()
 	}
 
     _authenticated = false;
+    mdChecker_     = NULL;
 }
 
 
@@ -104,6 +105,8 @@ SafeSock::~SafeSock()
 	if (_fqu) {
 		delete []_fqu;
 	}
+
+    delete mdChecker_;
 }
 
 
@@ -127,9 +130,16 @@ int SafeSock::end_of_message()
 
 	switch(_coding){
 		case stream_encode:
-                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID);
+            if (mdChecker_) {
+                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID, 
+                                           mdChecker_->computeMD());
+            }
+            else {
+                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID, 0);
+            }
                     _outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
                     resetCrypto();
+
                     if ( allow_empty_message_flag ) {
                         allow_empty_message_flag = FALSE;
                         return TRUE;
@@ -258,6 +268,10 @@ int SafeSock::put_bytes(const void *data, int sz)
         memcpy(dta, data, sz);
     }
     
+    // Now, add to the MAC
+    if (mdChecker_) {
+        mdChecker_->addMD(dta, sz);
+    }
     bytesPut = _outMsg.putn((char *)dta, sz);
     
     free(dta);
@@ -458,7 +472,6 @@ int SafeSock::handle_incoming_packet()
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, &fromlen );
-    _shortMsg.setVerified(false);  // check MD if necessary
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
@@ -466,11 +479,9 @@ int SafeSock::handle_incoming_packet()
 	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
-
-    _shortMsg.reset();
-	int code = _shortMsg.getHeader(last, seqNo, length, mID, data);
-    if (code == 1) {
-        // short message, checksum maybe okay
+    _shortMsg.reset(); // To be sure
+	
+    if (_shortMsg.getHeader(last, seqNo, length, mID, data)) {
         _shortMsg.curIndex = 0;
         _msgReady = true;
         _whole++;
@@ -481,14 +492,6 @@ int SafeSock::handle_incoming_packet()
         
         _noMsgs++;
         return TRUE;
-    }
-    else if (code == -1) {
-        dprintf(D_SECURITY, "SafeSock: unable to decode header\n");
-        _shortMsg.reset();
-        return false;
-    }
-    else {
-        // code == 0, not a short message, continue
     }
     
     /* long message */
@@ -519,14 +522,7 @@ int SafeSock::handle_incoming_packet()
         }   
     }   
     if(tempMsg != NULL) { // found
-        bool ok = true;
-        if (_shortMsg.verified()) {
-            ok = tempMsg->addPacket(last, seqNo, length, data, 0, 0) ;
-        }
-        else {
-            ok = tempMsg->addPacket(last, seqNo, length, data, _shortMsg.md(), _shortMsg.headerLen());
-        }
-        if (ok) { // message is ready
+        if (tempMsg->addPacket(last, seqNo, length, data)) {
             _longMsg = tempMsg;
             _msgReady = true;
             _whole++;
@@ -542,25 +538,21 @@ int SafeSock::handle_incoming_packet()
             prev->nextMsg = new _condorInMsg(mID, last, seqNo, length, data, 
                                              _shortMsg.isDataMD5ed(), 
                                              _shortMsg.md(), 
-                                             _shortMsg.headerLen(), 
                                              _shortMsg.isDataEncrypted(), prev);
             if(!prev->nextMsg) {    
                 EXCEPT("Error:handle_incomming_packet: Out of Memory");
             }
-            _noMsgs++;
-            return FALSE;
         } else { // first message in the bucket
             _inMsgs[index] = new _condorInMsg(mID, last, seqNo, length, data, 
                                               _shortMsg.isDataMD5ed(), 
                                               _shortMsg.md(), 
-                                              _shortMsg.headerLen(),
                                               _shortMsg.isDataEncrypted(), NULL);
             if(!_inMsgs[index]) {
                 EXCEPT("Error:handle_incomming_packet: Out of Memory");
             }
-            _noMsgs++;
-            return FALSE;
         }
+        _noMsgs++;
+        return FALSE;
     }   
 }
 
@@ -612,8 +604,20 @@ char * SafeSock::serialize() const
 	char * parent_state = Sock::serialize();
 	// now concatenate our state
 	char * outbuf = new char[50];
-	sprintf(outbuf,"*%d*%s*%s",_special_state,sin_to_string(&_who),(_fqu ? _fqu : ""));
+    int len = 0;
+
+    if (_fqu) {
+        len = strlen(_fqu);
+    }
+
+	sprintf(outbuf,"*%d*%s*%d",_special_state,sin_to_string(&_who), len);
 	strcat(parent_state,outbuf);
+
+    if (_fqu) {
+        strcat(parent_state, "*");
+        strcat(parent_state, _fqu);
+    }
+
 	delete []outbuf;
 	return( parent_state );
 }
@@ -623,7 +627,12 @@ char * SafeSock::serialize(char *buf)
 	char sinful_string[28];
 	char usernamebuf[128];
 	char *ptmp;
-
+    int len;
+    
+    if (_fqu) {
+        delete[] _fqu;
+        _fqu = NULL;
+    }   
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
@@ -631,12 +640,22 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
+	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
 	sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string,usernamebuf);
 	string_to_sin(sinful_string, &_who);
 
-	if (_fqu) {
-		delete []_fqu;
-	}
+    // For backward compatibility reasons
+    ptmp = strchr(ptmp, '*');
+    ptmp = strchr(++ptmp, '*');
+    if (ptmp) {
+        ptmp++;
+        // We are using 6.3 format
+        sscanf(ptmp, "%d", &len);
+        if ( (len > 0) && (ptmp = strchr(ptmp, '*'))) {
+            sscanf(ptmp+1, "%s", usernamebuf);
+        }
+    }
+
 	_fqu = strnewp(usernamebuf);
 
 	return NULL;
@@ -678,40 +697,29 @@ const char * SafeSock :: isIncomingDataEncrypted()
 
 bool SafeSock :: set_encryption_id(const char * keyId)
 {
-    bool inited = true;
-
-    if (keyId == 0) {
-        _shortMsg.resetEnc();
-
-        if (_longMsg) {
-            _longMsg->resetEnc();
-        }
-    }
-
-    inited = _outMsg.set_encryption_id(keyId);
-
-    return inited;
+    return _outMsg.set_encryption_id(keyId);
 }
 
 bool SafeSock :: init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
    
-    if (key == 0) {
-        _shortMsg.resetMD(); // For incoming message, we don't need to set keyId
+    if (mdChecker_) {   
+        delete mdChecker_;
+        mdChecker_ = 0;
+    }
+    if (key) {
+        mdChecker_ = new Condor_MD_MAC(key);
+    }
 
-        if (_longMsg) {
-            _longMsg->resetMD();    // For incoming message, we don't need to set keyId
-        }
+    if (_longMsg) {
+        inited = _longMsg->verifyMD(mdChecker_);
     }
     else {
-        _shortMsg.init_MD(false, key);
-        if (_longMsg) {
-            _longMsg->init_MD(key);
-        }
+        inited = _shortMsg.verifyMD(mdChecker_);
     }
     
-    inited = _outMsg.init_MD(key, keyId);
+    inited = _outMsg.init_MD(keyId);
 
     return inited;
 }
