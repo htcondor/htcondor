@@ -68,7 +68,26 @@ StartdCronJob::ProcessOutput( MyString *string )
 
 	// If we had at least one success, use this new ClassAd
 	if ( ok ) {
-		resmgr->adlist_replace( GetName(), classAd );
+
+		// Insert the 'LastUpdate' field
+		const char		*prefix = GetPrefix( );
+		if ( prefix ) {
+			MyString	Update( prefix );
+			Update += "LastUpdate = ";
+			char	tmpBuf [ 20 ];
+			sprintf( tmpBuf, "%ld", (long) time( NULL ) );
+			Update += tmpBuf;
+			const char	*UpdateStr = Update.Value( );
+
+			// Add it in
+			if ( ! classAd->Insert( UpdateStr ) ) {
+				dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
+						 UpdateStr, GetName() );
+			}
+		}
+
+		// Replace the old ClassAd now
+		resmgr->adlist_replace( GetName( ), classAd );
 	}
 
 

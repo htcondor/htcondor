@@ -207,54 +207,6 @@ CondorCronJob::
 	CleanAll( );
 }
 
-// Get job Characteristics
-const char *
-CondorCronJob::
-GetName( void )
-{
-	return name;
-}
-
-// Get job Characteristics
-const char *
-CondorCronJob::
-GetPath( void )
-{
-	return path;
-}
-
-// Get job Characteristics
-const char *
-CondorCronJob::
-GetArgs( void )
-{
-	return args;
-}
-
-// Get job Characteristics
-const char *
-CondorCronJob::
-GetEnv( void )
-{
-	return env;
-}
-
-// Get job Characteristics
-const char *
-CondorCronJob::
-GetCwd( void )
-{
-	return cwd;
-}
-
-// Get job Characteristics
-unsigned
-CondorCronJob::
-GetPeriod( void )
-{
-	return period;
-}
-
 // Set job characteristics
 int
 CondorCronJob::

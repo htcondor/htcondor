@@ -77,13 +77,13 @@ class CondorCronJob : public Service
 	virtual ~CondorCronJob( );
 
 	// Manipulate the job
-	const char *GetName( void );
-	const char *GetPrefix( void );
-	const char *GetPath( void );
-	const char *GetArgs( void );
-	const char *GetEnv( void );
-	const char *GetCwd( void );
-	unsigned GetPeriod( void );
+	const char *GetName( void ) { return name; };
+	const char *GetPrefix( void ) { return prefix; };
+	const char *GetPath( void ) { return path; };
+	const char *GetArgs( void ) { return args; };
+	const char *GetEnv( void ) { return env; };
+	const char *GetCwd( void ) { return cwd; };
+	unsigned GetPeriod( void ) { return period; };
 	int Reconfig( void );
 
 	int SetName( const char *name );
