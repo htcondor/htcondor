@@ -215,7 +215,7 @@ Env::Put( const char* var, const char* val )
 }
 
 bool
-Env::Put( const MyString var, const MyString val )
+Env::Put( const MyString & var, const MyString & val )
 {
 	if( var.Length() == 0 ) {
 		return false;

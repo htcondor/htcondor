@@ -45,7 +45,7 @@ class Env {
 	bool Merge( const char *delimitedString );
 	bool Put( const char *nameValueExpr );
 	bool Put( const char *var, const char *val );
-	bool Put( const MyString, const MyString );
+	bool Put( const & MyString, const & MyString );
 	char *getDelimitedString( const char delim = env_delimiter );
 	char *getNullDelimitedString();
 	char **getStringArray();
