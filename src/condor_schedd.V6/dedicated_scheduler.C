@@ -2117,7 +2117,15 @@ DedicatedScheduler::DelMrec( char* cap )
 				found_it = true;
 				(*rec_array)[i] = (*rec_array)[last];
 				(*rec_array)[last] = NULL;
-				rec_array->truncate(last-1);
+					// We want to decrement last so we break out of
+					// this for loop before checking the element we
+					// NULL'ed out.  Otherwise, the truncate below
+					// will just get undone when we inspect the last
+					// element. 
+				last--;
+					// Truncate our array so we realize the match is
+					// gone, and don't consider it in the future.
+				rec_array->truncate(last);
 			}
 		}		
 		if( ! found_it ) {
