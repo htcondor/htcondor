@@ -954,6 +954,33 @@ In addition, if you have modified your machine policies to preempt
 jobs when they get big a ImageSize, you will need to change those
 policies.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the time output from \Condor{status} appear
+as [?????] ? }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{timing information!incorrect}
+\index{clock skew}
+\index{skew in timing information}
+
+Condor collects timing information for a large variety of uses.
+Collection of the data relies on accurate times.
+Being a distributed system, clock skew among machines causes 
+errant timing calculations.
+Values can be reported too large or too small, with the possibility
+of calculating negative timing values.
+
+This problem may be seen by the user when looking at the output
+of \Condor{status}.
+If the \Opt{ActivityTime} field appears
+as [?????],
+then this calculated statistic was negative.
+\Condor{status} recognizes that a negative amount of time will
+be nonsense to report, and instead displays this string. 
+
+The solution to the problem is to synchronize the clocks on
+these machines.
+An administrator can do this using a tool such as \Prog{ntp}.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Condor on Windows}

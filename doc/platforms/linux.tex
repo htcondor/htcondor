@@ -20,35 +20,35 @@ system:
 \end{itemize}
 
 The Condor Team tries to provide support for various releases of the
-RedHat distribution of Linux.
-RedHat is probably the most popular Linux distribution, and it
+Red Hat distribution of Linux.
+Red Hat is probably the most popular Linux distribution, and it
 provides a common set of versions for the above system components
 which Condor can aim to support.
-Condor will often work with Linux distributions other than RedHat (for
+Condor will often work with Linux distributions other than Red Hat (for
 example, Debian or SuSE) that have the same versions of the above
 components.
 However, we do not usually test Condor on other Linux distributions
 and we do not provide any guarantees about this.
 
-New releases of RedHat usually change the versions of some or all of
+New releases of Red Hat usually change the versions of some or all of
 the above system-level components.
-A version of Condor that works with one release of RedHat might not
+A version of Condor that works with one release of Red Hat might not
 work with newer releases.
 The following sections describe the details of Condor's support for
-the currently available versions of RedHat Linux on x86 architecture
+the currently available versions of Red Hat Linux on x86 architecture
 machines.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-rh6}RedHat Version 6.x}
+\subsection{\label{sec:platform-linux-rh6}Red Hat Version 6.x}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Platforms !RedHat 6.x}
+\index{Platforms !Red Hat 6.x}
 
-RedHat version 6.x is an older release of RedHat, but it is still used
+Red Hat version 6.x is an older release of Red Hat, but it is still used
 by a number of sites.
 Since Condor has worked on this platform since it was first released,
 we still provide binaries that support it.
-RedHat 6.2 uses the 2.2.x Linux kernel series, glibc version 2.1.x,
+Red Hat 6.2 uses the 2.2.x Linux kernel series, glibc version 2.1.x,
 and GCC version egcs-1.1.2.
 To run Condor on this platform and be able to use \Condor{compile},
 you should download the Condor \VersionNotice\  binaries listed for use
@@ -56,48 +56,48 @@ with ``Linux 2.0.x and 2.2.x (glibc 2.1)''.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-rh7}RedHat Version 7.x}
+\subsection{\label{sec:platform-linux-rh7}Red Hat Version 7.x}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Platforms !RedHat 7.x}
+\index{Platforms !Red Hat 7.x}
 
-RedHat version 7.x is fully supported in Condor \VersionNotice.
+Red Hat version 7.x is fully supported in Condor \VersionNotice.
 \Condor{compile} works to link user jobs for the Standard universe
-with the versions of GCC and glibc that come with RedHat 7.x.
+with the versions of GCC and glibc that come with Red Hat 7.x.
 Both the statically linked and dynamically linked versions of the
-Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - RedHat
+Condor binaries listed for use with ``Linux 2.4.x (glibc 2.2) - Red Hat
 7.1, 7.2, 7.3'' will work with no additional effort.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-rh8}RedHat Version 8.x}
+\subsection{\label{sec:platform-linux-rh8}Red Hat Version 8.x}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Platforms !RedHat 8.x}
+\index{Platforms !Red Hat 8.x}
 
-RedHat version 8.x is supported in Condor \VersionNotice.
+Red Hat version 8.x is supported in Condor \VersionNotice.
   
 Unfortunately, \Condor{compile} does not yet work with GCC (gcc, g++
 or g77) version 3.0 or higher.
-RedHat 8.0 uses GCC version 3.2.
+Red Hat 8.0 uses GCC version 3.2.
 So, if you wish to run Standard universe jobs, you can not link them
-with Condor's checkpointing libraries on a RedHat 8.x machine.
-However, if you have a RedHat 7.x machine, you can run
+with Condor's checkpointing libraries on a Red Hat 8.x machine.
+However, if you have a Red Hat 7.x machine, you can run
 \Condor{compile} there, and the resulting binary can be submitted to
-run on RedHat 8.x machines.
-We are planning to provide full support for RedHat 8.x as soon as
+run on Red Hat 8.x machines.
+We are planning to provide full support for Red Hat 8.x as soon as
 possible, but in the meantime, this is the best method for running
 Standard universe jobs.
 If you do not use \Condor{compile} and the Standard universe, the
-RedHat 7.x binaries will probably work as-is for your site. 
+Red Hat 7.x binaries will probably work as-is for your site. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-rh9}RedHat Version 9.x}
+\subsection{\label{sec:platform-linux-rh9}Red Hat Version 9.x}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Platforms !RedHat 9.x}
+\index{Platforms !Red Hat 9.x}
 
-RedHat version 9.x is supported in Condor \VersionNotice as a clipped 
+Red Hat version 9.x is supported in Condor \VersionNotice as a clipped 
 platform.
 
-\Condor{compile} does not yet work with RedHat 9.x, and we are not
-sure if a job linked with the Condor libraries on a RedHat 7.x machine
-will run on a RedHat 9.x machine.  
+\Condor{compile} does not yet work with Red Hat 9.x, and we are not
+sure if a job linked with the Condor libraries on a Red Hat 7.x machine
+will run on a Red Hat 9.x machine.  

@@ -260,7 +260,7 @@ was exposed when users would submit jobs without specifying a file
 for either stdout or stderr; in this case, both would default to 
 \File{/dev/null}, and this could trigger the problem.
 
-\item The Linux 2.2.14 kernel, which is used by default with RedHat 6.2,
+\item The Linux 2.2.14 kernel, which is used by default with Red Hat 6.2,
 has a serious bug can cause the machine to lock up when 
 the same socket is used for repeated connection attempts.   Thus, 
 previous versions of Condor could cause the 2.2.14 kernel to hang
@@ -371,7 +371,7 @@ reported by \Syscall{getrusage}, and it probably should not be.
 
 \begin{itemize}
 
-\item Initial supported added for RedHat Linux 6.2 (i.e. glibc 2.1.3).
+\item Initial supported added for Red Hat Linux 6.2 (i.e. glibc 2.1.3).
 
 \end{itemize}
 
@@ -503,7 +503,7 @@ both the username of the user who the daemon is running as and the
 full hostname of the machine where it is running.
 
 \item Clarified our Linux platform support.  We now officially
-support the RedHat 5.2 and 6.x distributions, and although other Linux
+support the Red Hat 5.2 and 6.x distributions, and although other Linux
 distributions (especially those with similar libc versions) may work,
 they are not tested or supported.
 
@@ -951,7 +951,7 @@ totals to be displayed.  This will be fixed in version 6.1.11.
 
 \item Added full support for Linux 2.0.x and 2.2.x kernels using
 libc5, glibc20 and glibc21.
-This includes support for RedHat 6.x, Debian 2.x and other popular
+This includes support for Red Hat 6.x, Debian 2.x and other popular
 Linux distributions.
 Whereas the Linux machines had once been fragmented across libc5 and
 GNU libc, they have now been reunified.
@@ -1272,7 +1272,7 @@ released binaries for.
 \begin{itemize}
 
 \item Added ``clipped'' support for Alpha Linux machines running the
-2.0.X kernel and glibc 2.0.X (such as RedHat 5.X).
+2.0.X kernel and glibc 2.0.X (such as Red Hat 5.X).
 We do not yet support checkpointing and remote system calls on this
 platform, but we can start ``vanilla'' jobs.
 See section~\ref{sec:Choosing-Universe} on
@@ -1282,8 +1282,8 @@ vs. standard jobs.
 \item Re-added support for Intel Linux machines running the 2.0.X
 Linux kernel, glibc 2.0.X, using the GNU C compiler (gcc/g++ 2.7.X) or
 the EGCS compilers (versions 1.0.X, 1.1.1 and 1.1.2).
-This includes RedHat 5.X, and Debian 2.0.
-\Bold{RedHat 6.0 and Debian 2.1 are not yet supported, since they use
+This includes Red Hat 5.X, and Debian 2.0.
+\Bold{Red Hat 6.0 and Debian 2.1 are not yet supported, since they use
 glibc 2.1.X and the 2.2.X Linux kernel.}
 Future versions of Condor will support all combinations of kernels,
 compilers and versions of libc.
@@ -1494,8 +1494,8 @@ preventing certain Fortran operations from working correctly on
 Linux.  
 
 \item The Linux binaries for GLIBC we now distribute are compiled on a
-RedHat 5.2 machine.
-If you're using this version of RedHat, you might have better luck
+Red Hat 5.2 machine.
+If you're using this version of Red Hat, you might have better luck
 with the dynamically linked version of Condor than previous releases
 of Condor.
 Sites using other GLIBC Linux distributions should continue to use the

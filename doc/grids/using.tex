@@ -646,6 +646,19 @@ argv[2] = +%s
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Removing Condor-G jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+When you remove a job with \Condor{rm}, you may find that the job
+enters the ``X'' state for a very long time. This is normal: Condor-G
+is attempting to communicate with the remote Globus resource and
+ensure that the job has been properly cleaned up. If it takes too long
+or (in rare circumstances) is never removed, you can force the job to
+leave the job queue by using the -forcex option to \Condor{rm}. This
+will forcibly remove jobs that are in the X state without attempting
+to finish any cleanup at the remote resource.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This subsubsection used to reside in the file limitations.tex.
@@ -656,10 +669,6 @@ The following is a list of known limitations:
 
 \begin{enumerate}
 \item{No checkpoints.}
-\item{No matchmaking.}
-\item{File transfer is limited.}
-There are no file transfer mechanisms for files other
-than the executable, \File{stdin}, \File{stdout}, and \File{stderr}.
 \item{No job exit codes.}
 Job exit codes are not available.
 \item{Limited platform availability.}

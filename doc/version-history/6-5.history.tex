@@ -13,6 +13,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Condor-G jobs can now use matchmaking. See
+  Section~\ref{sec:Condor-G-Matchmaking}. 
+
+\item \Condor{advertise} has a new option, -tcp.
+
 \item Added initial support for the \Condor{gridshell}.
   Documentation is not yet available, but will be coming soon.
 
@@ -24,6 +29,9 @@ The details of each version are described below.
 \item Added the \Macro{REQUIRE\_LOCAL\_CONFIG\_FILE} config file setting.
   If this setting is False, the absence of the file specified in the 
   \Macro{LOCAL\_CONFIG\_FILE} config file setting is not treated as an error.
+
+\item Added a new command, \Condor{wait}, which will watch a log file
+  until a job or set of jobs complete.
 
 \end{itemize}
 
@@ -83,6 +91,8 @@ quoted, solving this problem.
       affected.  Likewise, the \Opt{-MaxPre} and \Opt{-MaxPost}
       features are not affected and can be safely used.
 
+\item For large numbers of jobs, \Condor{analyze} may run out of memory
+      and fail.
 \end{itemize}
 
 
@@ -168,17 +178,17 @@ quoted, solving this problem.
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 \\ \hline
-Intel x86 & RedHat Linux 6.2, 7.2 \\
- & RedHat Linux 8 (clipped) \\ \hline
- & RedHat Linux 9 (clipped) \\ \hline
+Intel x86 & Red Hat Linux 6.2, 7.2 \\
+ & Red Hat Linux 8 (clipped) \\ \hline
+ & Red Hat Linux 9 (clipped) \\ \hline
  & Windows NT 4.0 (clipped) \\ \hline
  & Windows NT 2000 (clipped) \\ \hline
  & Windows NT XP (clipped) \\ \hline
 ALPHA & Digital Unix 4.0 \\
- & RedHat Linux 7.2 (clipped) \\ \hline
+ & Red Hat Linux 7.2 (clipped) \\ \hline
  & Tru64 5.1 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
-Itanium & RedHat Linux 7.2 (clipped) \\
+Itanium & Red Hat Linux 7.2 (clipped) \\
 \end{tabular}
 \caption{\label{vers-hist-sup-plat}Condor 6.5.3 supported platforms}
 \end{table}
@@ -630,7 +640,7 @@ user policy expressions, such as periodic\_remove.
 \item The IOProxy handler now handles escaped characters (whitespace)
 in filenames.
 
-\item condor.boot is now configured to work automatically with RedHat
+\item condor.boot is now configured to work automatically with Red Hat
 chkconfig.
 
 \item A new log\_xml option has been added to condor\_submit. It is

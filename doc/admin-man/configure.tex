@@ -1128,6 +1128,24 @@ this check, because users are not in every password file, set
 this attribute to True.
 
 
+\item[\Macro{VMx\_USER}] \label{param:VMxUser}
+The name of a user for Condor to use instead of
+user nobody,
+as part of a solution that plugs a security hole whereby
+a lurker process can prey on a subsequent job run as user
+nobody. 
+\MacroNI{x} is an integer associated with virtual machines.
+On Windows, \MacroNI{VMx\_USER}
+will only work if the credential of the specified
+user is stored on the execute machine using \Condor{store\_cred}.
+See Section~\ref{sec:RunAsNobody} for more information.
+
+\item[\Macro{EXECUTE\_LOGIN\_IS\_DEDICATED}]
+\label{param:ExecuteLoginIsDedicated}
+When set to True,
+forces Condor to use the users given by the \MacroNI{VMx\_USER}
+configuration variable.
+Defaults to False.
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
 The \MacroNI{FILESYSTEM\_DOMAIN}
@@ -2942,6 +2960,18 @@ gridmanager to continue operation. If seconds until expiration is
 less than this number, the gridmanager will shutdown and wait for
 a refreshed proxy credential. The default is 3 minutes (180 seconds).
 
+\item[\Macro{HOLD\_JOB\_IF\_CREDENTIAL\_EXPIRES}]
+\label{param:HoldJobIfCredentialExpires} True or False.
+Defaults to True.
+If True, and for globus universe jobs only,
+Condor-G will place a job on hold
+\MacroNI{GRIDMANAGER\_MINIMUM\_PROXY\_TIME} seconds
+before the proxy expires.
+If False,
+the job will stay in the last known state,
+and Condor-G will periodically check to see if the job's proxy has been
+refreshed, at which point management of the job will resume.
+
 \item[\Macro{GRIDMANAGER\_CONTACT\_SCHEDD\_DELAY}]
 \label{param:GridmanagerContactScheddDelay} The minimum number of
 seconds between connections to the schedd. The default is 5 seconds.
@@ -3055,9 +3085,84 @@ periodic syncs of streamed output to disk. The default is 5 minutes
 %more machines need to be down (or just appear to be) to trigger a restart
 %of the GAHP server.
 
+\item[\Macro{GLOBUS\_GATEKEEPER\_TIMEOUT}]
+\label{param:GlobusGatekeeperTimeout} The number of seconds after
+which if a globus
+universe job fails to ping the gatekeeper,
+the job will be put on hold.
+Defaults to 5 days (in seconds).
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Security-Config-File-Entries}
+Configuration File Entries Relating to Security}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!security configuration variables}
+These macros affect the secure operation of Condor.
+\begin{description}
+
 \item[\Macro{GSI\_DAEMON\_NAME}]
 \label{param:GSIDaemonName} A comma separated list of the subject
 name(s) of the certificate(s) that the daemons use.
+
+\item[\Macro{GSI\_DAEMON\_DIRECTORY}]
+\label{param:GSIDaemonDirectory} A directory name used in the
+construction of complete paths for the configuration variables
+\MacroNI{GSI\_DAEMON\_CERT},
+\MacroNI{GSI\_DAEMON\_KEY}, and
+\MacroNI{GSI\_DAEMON\_TRUSTED\_CA\_DIR},
+for any of these configuration variables are not explicitly set.
+
+\item[\Macro{GSI\_DAEMON\_CERT}]
+\label{param:GSIDaemonCert} A complete path and file name to the
+X.509 certificate to be used in GSI authentication.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
+\begin{verbatim}
+GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_KEY}]
+\label{param:GSIDaemonKey}  A complete path and file name to the
+X.509 private key to be used in GSI authentication.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
+\begin{verbatim}
+GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR}]
+\label{param:GSIDaemonTrustedCADir} The directory that contains the
+list of trusted certification authorities to be used in GSI authentication.
+The files in this directory are the public keys and signing policies
+of the trusted certification authorities.
+If this configuration variable is not defined, and
+\MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+\MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the directory path as
+\begin{verbatim}
+GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
+\end{verbatim}
+
+\item[\Macro{GSI\_DAEMON\_PROXY}]
+\label{param:GSIDaemonProxy} A complete path and file name to the
+X.509 proxy to be used in GSI authentication.
+When this configuration variable is defined, use of this proxy
+takes precedence over use of a certificate and key.
+
+\item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
+\label{param:SessionDuration} The amount of time in seconds before
+a communication session expires.
+Defaults to 3600 seconds (1 hour).
+A session is a record of necessary information to do communication
+between a client and daemon, and is protected by a shared secret key.
+The session expires to reduce the window of opportunity where
+the key may be compromised by attack.
+
 \end{description}
+
 
 \input{admin-man/root-config.tex}

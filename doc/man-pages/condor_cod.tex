@@ -1,0 +1,65 @@
+\begin{ManPage}{\label{man-condor-cod}\Condor{cod}}{1}
+{manage COD machines and jobs}
+
+\Synopsis
+\SynProg{\Condor{cod}}
+\ToolArgsBase
+
+\SynProg{\Condor{cod}}
+\Arg{request}
+\ToolLocate
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\oOpt{-requirements expr}
+
+\SynProg{\Condor{cod}}
+\Arg{release} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\oOpt{-fast}
+
+\SynProg{\Condor{cod}}
+\Arg{activate} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\oOpt{-keyword string | -jobad filename | -cluster N | -proc N | -requirements expr}
+
+\SynProg{\Condor{cod}}
+\Arg{deactivate} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+\oOpt{-fast}
+
+\SynProg{\Condor{cod}}
+\Arg{suspend} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+
+\SynProg{\Condor{cod}}
+\Arg{resume} \OptArg{-id}{ClaimID}
+\Lbr \oOpt{-help | -version} $|$ \oOpt{-debug | -timeout N | -classad file} \Rbr
+
+\index{Condor commands!condor\_cod}
+\index{condor\_cod command}
+
+\Description
+
+\Condor{cod} issues commands that manage and use COD claims on
+machines, given proper authorization.
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+	\OptItem{\Opt{request}}{Create a new COD claim}
+	\OptItem{\Opt{release}}{Relinquish a claim and kill any running job}
+	\OptItem{\Opt{activate}}{Start a job on a given claim}
+	\OptItem{\Opt{deactivate}}{Kill the current job, but keep the claim}
+	\OptItem{\Opt{suspend}}{Suspend the job on a given claim}
+	\OptItem{\Opt{resume}}{Resume the job on a given claim}
+\end{Options}
+
+\GenRem
+
+\Examples
+
+\ExitStatus
+
+\Condor{cod} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

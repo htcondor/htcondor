@@ -73,6 +73,7 @@ discussion of these features before reading any further.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Matchmaking with ClassAds}
+\label{sec:matchmaking-with-classads}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you learn about how to submit a job, it is important to
@@ -525,8 +526,13 @@ Please see section~\ref{sec:MPI} for more details.
 The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
-into a Globus RSL and subsequently submitted to Globus via the GRAM
-protocol.
+into the Globus Resource Specification Language (RSL) and subsequently 
+submitted to Globus via the GRAM
+protocol. You benefit from using the Globus universe because Condor
+maintains your jobs in a queue on your submit machine and can deal
+with a wide variety of common errors you might
+experience. Section~\ref{sec:Condor-G} on page~\pageref{sec:Condor-G}
+has details on using the Globus universe.
 The manual page for \Condor{submit}
 on page~\pageref{man-condor-submit}
 has detailed descriptions of
