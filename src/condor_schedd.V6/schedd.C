@@ -48,6 +48,8 @@
 #include "generic_query.h"
 #include "directory.h"
 #include "condor_ver_info.h"
+#include "grid_universe.h"
+#include "globus_utils.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -348,6 +350,7 @@ Scheduler::count_jobs()
 		Owners[i].FlockLevel = 0;
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].GlobusJobs = 0;
+		Owners[i].GlobusUnsubmittedJobs = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 	}
 
@@ -605,6 +608,15 @@ Scheduler::count_jobs()
 		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
 	}
 
+	 // Tell our GridUniverseLogic class what we've seen in terms
+	 // of Globus Jobs per owner.
+	for (i=0; i < N_Owners; i++) {
+		if ( Owners[i].GlobusJobs > 0 ) {
+			GridUniverseLogic::JobCountUpdate(Owners[i].Name,
+				Owners[i].GlobusJobs,Owners[i].GlobusUnsubmittedJobs);
+		}
+	}
+
 	 // send info about deleted owners
 	 // put 0 for idle & running jobs
 
@@ -692,6 +704,7 @@ count( ClassAd *job )
 	int		cur_hosts;
 	int		max_hosts;
 	int		universe;
+	int		globus_status;
 
 	if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
@@ -739,10 +752,14 @@ count( ClassAd *job )
 			}
 		}
 		if ( universe == GLOBUS_UNIVERSE ) {
-			// for Globus, count jobs in any state by owner.
+			// for Globus, count jobs in G_UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
 			scheduler.Owners[OwnerNum].GlobusJobs++;
+			globus_status = G_UNSUBMITTED;
+			job->LookupInteger(ATTR_JOB_UNIVERSE, globus_status);
+			if ( globus_status == G_UNSUBMITTED ) 
+				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 		}
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
@@ -849,7 +866,10 @@ abort_job_myself(PROC_ID job_id)
 	}
 	if (job_universe == GLOBUS_UNIVERSE) {
 		// tell grid manager about the jobs removal, then return.
-		// TODO
+		char owner[_POSIX_PATH_MAX];
+		owner[0] = '\0';
+		GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+		GridUniverseLogic::JobRemoved(owner);
 		return;
 	}
 
@@ -3120,7 +3140,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				"--setting owner to \"nobody\"\n" );
 		sprintf(owner, "nobody");
 	}
-	if (strcmp(owner, "root") == 0 ) {
+	if (stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
 				job_id->cluster, job_id->proc);
 		return NULL;
