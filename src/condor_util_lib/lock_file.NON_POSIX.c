@@ -107,6 +107,7 @@ int do_block;
 		op = LOCK_EX;
 		break;
 	  case UN_LOCK:
+	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		op = LOCK_UN;
 		break;
 	}
