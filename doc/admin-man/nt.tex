@@ -2,7 +2,7 @@
 \index{Windows NT!introduction|(}
 Welcome to Condor for Windows NT!  
 Windows NT is a strategic platform for Condor,
-and therefore we have been working towards a complete
+and therefore we have been working toward a complete
 port to Windows NT.
 Our goal is to make Condor every bit as capable on Windows NT as it is on
 Unix -- or even more capable.  
@@ -306,19 +306,20 @@ directory so that only Administrators have write access.
 Finally, Condor NT has all the IP/Host-based security mechanisms present
 in the full-blown version of Condor.  See section~\ref{sec:Host-Security}
 starting on page~\pageref{sec:Host-Security} for complete information
-on how to allow/deny access to Condor based upon machine hostname or
+on how to allow/deny access to Condor based upon machine host name or
 IP address.
 
 \subsection{Interoperability between Condor for Unix and Condor NT}
 
 Unix machines and Windows NT machines running Condor can happily
-co-exist in the same Condor pool without any problems.  For now, the
-only restriction is jobs submitted on Windows NT must run on Windows
-NT, and job submitted on Unix must run on Unix.  You will get this
-behavior by default, since \Condor{submit} will automatically set a
-\AdAttr{Requirements} expression in the job ClassAd stating that the
-execute machine must have the same architecture and operating system as
-the submit machine.
+co-exist in the same Condor pool without any problems.
+Jobs submitted on Windows NT can run on Windows NT or Unix,
+and jobs submitted on Unix can run on Unix or Windows NT.
+Without any specification
+(using the \AdAttr{requirements} expression in the submit description file),
+the default behavior will be to 
+require the execute machine to be of the same architecture and operating
+system as the submit machine.
 
 There is absolutely no need to run more than one Condor central manager,
 even if you have both Unix and NT machines.  The Condor central manager
