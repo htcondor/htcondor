@@ -3212,7 +3212,7 @@ connect_to_the_schedd()
 	setupAuthentication();
 
 	CondorError errstack;
-	if( ConnectQ(MySchedd->addr(), 0 /* default */, true /* default */, &errstack) == 0 ) {
+	if( ConnectQ(MySchedd->addr(), 0 /* default */, false /* default */, &errstack) == 0 ) {
 		if( ScheddName ) {
 			fprintf( stderr, 
 					"\nERROR: Failed to connect to queue manager %s\n%s",
