@@ -136,6 +136,8 @@ int	 BWInterval = 0;			// how often do we request RSC bandwidth?
 
 extern char *Executing_Arch, *Executing_OpSys;
 
+extern char *IpcFile;
+
 int		MyPid;
 int		LogPipe;
 int		ImageSize;
@@ -321,7 +323,7 @@ main(int argc, char *argv[], char *envp[])
     {
         dprintf(D_FULLDEBUG, "argv[%d] = %s\n", i, argv[i]);
     }
-	if( argc != 6 ) {
+	if( argc < 6 ) {
 		usage();
 	}
 
@@ -343,6 +345,12 @@ main(int argc, char *argv[], char *envp[])
 		capability = argv[3];
 		cluster = argv[4];
 		proc = argv[5];
+		if ( argc > 6 ) {
+			IpcFile = argv[6];
+			dprintf(D_FULLDEBUG,"Setting IpcFile to %s\n",IpcFile);
+		} else {
+			IpcFile = NULL;
+		}
 		regular_setup( host, cluster, proc, capability );
 	}
 

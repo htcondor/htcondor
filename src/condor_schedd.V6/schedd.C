@@ -2409,12 +2409,44 @@ void Scheduler::StartJobHandler() {
 		free( shadow_is_dc );
 	}
 
+	char ipc_dir[_POSIX_PATH_MAX];
+	ipc_dir[0] = '\0';
+	char *send_ad_via_file = param( "IPC_VIA_FILES_DIR" );
+	if ( send_ad_via_file ) {
+		strcat(ipc_dir,send_ad_via_file);
+		char our_ipc_filename[100];
+		sprintf(our_ipc_filename,"%cpid-%u-%d.%d",DIR_DELIM_CHAR,
+			daemonCore->getpid(),job_id->cluster,job_id->proc);
+		strcat(ipc_dir,our_ipc_filename);
+		free(send_ad_via_file);
+
+		// now write out the job classad to the file
+		ClassAd *job_to_write = GetJobAd(job_id->cluster,job_id->proc);
+
+		priv_state priv = set_condor_priv();
+		FILE *fp_ipc = fopen(ipc_dir,"w");
+		if ( fp_ipc == NULL ) {
+			ipc_dir[0] = '\0';
+		} else {
+			if ( job_to_write->fPrint(fp_ipc) == FALSE ) {
+				ipc_dir[0] = '\0';
+			}
+			fclose(fp_ipc);
+		}
+		set_priv(priv);
+		if ( ipc_dir[0] == '\0' ) {
+			dprintf(D_ALWAYS,
+				"Unable to write classad into file %s, using socket\n",
+				our_ipc_filename);
+		}
+	}
+
 	if ( sh_is_dc ) {
 		sprintf(args, "condor_shadow -f %s %s %s %d %d", MyShadowSockName, 
 				mrec->peer, mrec->id, job_id->cluster, job_id->proc);
 	} else {
-		sprintf(args, "condor_shadow %s %s %s %d %d", MyShadowSockName, 
-				mrec->peer, mrec->id, job_id->cluster, job_id->proc);
+		sprintf(args, "condor_shadow %s %s %s %d %d %s", MyShadowSockName, 
+				mrec->peer, mrec->id, job_id->cluster, job_id->proc, ipc_dir);
 	}
 
         /* Get shadow's nice increment: */

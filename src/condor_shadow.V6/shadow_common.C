@@ -72,6 +72,8 @@ extern "C" {
         V2_PROC *Proc;
 #endif
 
+char *IpcFile;
+
 extern int ExitReason;
 extern int JobExitStatus;
 extern char    ICkptName[];
@@ -494,14 +496,46 @@ int
 InitJobAd(int cluster, int proc)
 {
   if (!JobAd) {   // just get the job ad from the schedd once
-	  if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
+
+	if ( IpcFile ) {
+		// get the jobad file a file
+		priv_state priv = set_condor_priv();
+		FILE* ipc_fp = fopen(IpcFile,"r");
+		int isEOF = 0;
+		int isError = 0;
+		int isEmpty = 0;
+		if ( ipc_fp ) {
+			JobAd = new ClassAd(ipc_fp,"***",isEOF,isError,isEmpty);
+			fclose(ipc_fp);
+			unlink(IpcFile);
+		}
+		set_priv(priv);
+		// if constructor failed, remove the JobAd, and
+		// fallback on getting it via sockets.
+		if (isError != 0 ) {
+			if (JobAd) delete JobAd;
+			JobAd = NULL;
+		}
+		if (JobAd) {
+			// we're done
+			return 0;
+		}
+
+		// if we made it here, we wanted to get the job ad
+		// via the file, but failed
+		dprintf(D_FULLDEBUG,
+			"Failed to read job ad file %s, using socket\n",
+			IpcFile);
+	}
+
+	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
 		EXCEPT("Failed to connect to schedd!");
-	  }
-  	JobAd = GetJobAd( cluster, proc );
-  	DisconnectQ(NULL);
+	}
+	JobAd = GetJobAd( cluster, proc );
+	DisconnectQ(NULL);
   }
   if (!JobAd) {
-	  EXCEPT( "failed to get job ad" );
+	EXCEPT( "failed to get job ad" );
   }
 
   return 0;
