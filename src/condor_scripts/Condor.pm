@@ -26,6 +26,7 @@ BEGIN
     $CONDOR_VACATE = 'condor_vacate';
     $CONDOR_VACATE_JOB = 'condor_vacate_job';
     $CONDOR_RESCHD = 'condor_reschedule';
+    $CONDOR_RM = 'condor_rm';
 
     $DEBUG = 1;
     $cluster = 0;
@@ -695,6 +696,12 @@ sub Monitor
 	    $info{'job'} = $2;
 
 	    debug( "Saw Shadow Exception\n" );
+
+		if(! defined $ShadowCallback)
+		{
+    		runCommand( "$CONDOR_RM $1" );
+			die "Unexpected Shadow Exception. Job Removed!!\n";
+		}
 
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    #$num_active_jobs--;
