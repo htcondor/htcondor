@@ -3,7 +3,6 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LDFLAGS = -lm 
 LIB = $(STD_LIBS)
 
 OBJ = queue.o
