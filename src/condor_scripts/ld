@@ -66,6 +66,12 @@ else
 	osmajver=`uname -r | awk -F. '{print $1}' -`
 fi
 
+# Due to compatibility libraries on various linux machines, figure out what
+# machine hardware we have so we can pick the right compatibility flags
+# for the compiler. Once a true standard universe port is done to this 
+# architecture we can remove this specific functionality concerning 'osmach'.
+osmach=`uname -m`
+
 # figure out if this version of the Condor syscall libraries were built with 
 # gcc3 or later. 
 is_gcc3=0
@@ -274,6 +280,19 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		# is a part of the -static-libgcc feature set. This gets done below
 		# when processing -lgcc.
 	 	;;
+
+	-lgcc_s_32 )
+		# when running the 32-bit x86 libraries in compatibility mode on 
+		# an opteron, remove this flag. The libcomp_libgcc_eh.a inclusion
+		# replaces the functionality of this specific library. This
+		# specific case should probably be reconsidered in the event of
+		# a true opteron port.
+		if [ $os = "Linux" -a $osmach = "x86_64" ]; then
+			ignore=true
+		else
+			ldargs=`echo $ldargs $argument`
+		fi
+		;;
 	
 	# under linux with gcc3+, we must link our executables statically and this
 	# requires that we use a special crtbegin shipped with the compiler that
