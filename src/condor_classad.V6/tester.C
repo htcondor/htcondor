@@ -21,7 +21,7 @@
  *
  *********************************************************************/
 
-#if defined( CLASSAD_DISTRIBUTION )
+#if defined(CLASSAD_DISTRIBUTION)
 #include "classad_distribution.h"
 #else
 #include "condor_classad.h"
@@ -87,6 +87,8 @@ void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, string &err
 void print_expr(ExprTree *tree, Parameters &parameters);
 bool evaluate_expr(ExprTree *tree, Value &value, Parameters &parameters);
 void shorten_line(string &line, int offset);
+void print_help(void);
+void print_version(void);
 
 /*********************************************************************
  *
@@ -173,16 +175,7 @@ int main(int argc, char **argv)
     string      line;
     Parameters  parameters;
 
-    /* --- */
-    Value        value;
-    Variable     *var;
-    string       name = "alain";
-
-    value.SetIntegerValue(33);
-    var = new Variable(name, value);
-
-    variables[name] = var;
-    /* --- */
+    print_version();
 
     parameters.ParseCommandLine(argc, argv);
 
@@ -253,6 +246,7 @@ int main(int argc, char **argv)
             case cmd_Diff:
                 break;
             case cmd_Help:
+                print_help();
                 break;
             }
         }
@@ -537,5 +531,31 @@ void shorten_line(string &line, int offset)
     } else {
         line = "";
     }
+    return;
+}
+
+void print_help(void)
+{
+    print_version();
+
+    cout << "Commands:\n";
+    cout << "let name = expr   Set a variable to an unevaluated expression.\n";
+    cout << "eval name = expr  Set a variable to an evaluated expression.\n";
+    cout << "same expr1 expr2  Prints a message only if expr1 and expr2 are different.\n";
+    cout << "diff expr1 expr2  Prints a message only if expr1 and expr2 are the same.\n";
+    cout << "quit              Exit this program.\n";
+    cout << "help              Print this message.\n";
+
+    
+}
+
+void print_version(void)
+{
+    string classad_version;
+
+    ClassAdLibraryVersion(classad_version);
+
+    cout << "ClassAd Tester v" << classad_version << endl;
+
     return;
 }
