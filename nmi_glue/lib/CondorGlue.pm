@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.15 2005-02-10 21:29:32 parag Exp $
+# $Id: CondorGlue.pm,v 1.1.2.16 2005-02-28 22:05:45 parag Exp $
 #
 ######################################################################
 
@@ -172,6 +172,7 @@ sub generateBuildFile
 sub printPrereqs
 {
     my $fh = shift;
+    my $fh = shift;
 
     # global prereqs
     print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
@@ -183,6 +184,24 @@ sub printPrereqs
     print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3, binutils-2.15\n";
     print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3, binutils-2.15\n";
     print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
+}
+
+
+sub printTestingPrereqs
+{
+    my $fh = shift;
+    my $fh = shift;
+
+    # global prereqs
+    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4\n";
+
+    # platform-specific prereqs
+    print $fh "prereqs_x86_rh_7.2 = binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_x86_rh_8.0 = binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_x86_rh_9 = binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_sun4u_sol_5.8 = gcc-2.95.3, binutils-2.15, java-1.4.2_05\n";
+    print $fh "prereqs_ppc_aix_5.2 = vac-6, vacpp-6, java-1.4.2_05\n";
 }
 
 

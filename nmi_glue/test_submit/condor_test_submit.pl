@@ -173,7 +173,7 @@ sub generate_cmdfile() {
     }
     print CMDFILE "\n";
 
-    CondorGlue::printPrereqs( *CMDFILE );
+    CondorGlue::printTestingPrereqs( *CMDFILE );
 
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
