@@ -1826,6 +1826,17 @@ SetUserLog()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
+
+		// check that the log is a valid path
+		FILE* test = fopen(ulog, "a+");
+		if (!test) {
+			fprintf(stderr,
+				"\nERROR: Invalid log file: \"%s\"\n", ulog);
+			exit( 1 );
+		} else {
+			fclose(test);
+		}
+
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
 		InsertJobExpr(buffer);
@@ -2040,7 +2051,7 @@ read_condor_file( FILE *fp )
 			queue(queue_modifier);
 			continue;
 		}	
-		
+
 #define isop(c)		((c) == '=')
 		
 		/* Separate out the parameter name */
