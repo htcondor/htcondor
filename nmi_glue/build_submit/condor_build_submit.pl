@@ -38,43 +38,23 @@ my $default_platforms =
 CondorGlue::ProcessOptions( $default_platforms );
 
 # will exit when finished
-CondorGlue::buildLoop( \&generateCmdFile ); 
+CondorGlue::buildLoop( \&customizeCmdFile ); 
 
 
-sub generateCmdFile() {
-    my ($tag, $module) = @_;
-
-    my $cmdfile = "condor_cmdfile-$tag";
-    my $srcsfile = "condor_srcsfile-$tag";
-
-    # Generate the source code file
-    CondorGlue::makeFetchFile( $srcsfile, $module, $tag );
-
-    # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
-
-    CondorGlue::printIdentifiers( *CMDFILE, $tag );
-    CondorGlue::printPlatforms( *CMDFILE );
-    print CMDFILE "run_type = build\n";
-
-    # define inputs
-    print CMDFILE "inputs = $srcsfile\n";
+sub customizeCmdFile() {
+    my ($fh, $tag, $module) = @_;
 
     # define the glue scripts we want
-    print CMDFILE "pre_all = nmi_glue/build/pre_all\n";
-    print CMDFILE "remote_declare = nmi_glue/build/remote_declare\n";
-    print CMDFILE "remote_pre = nmi_glue/build/remote_pre\n";
-    print CMDFILE "remote_task = nmi_glue/build/remote_task\n";
-    print CMDFILE "remote_post = nmi_glue/build/remote_post\n";
-    print CMDFILE "platform_post = nmi_glue/build/platform_post\n";
-    print CMDFILE "post_all = nmi_glue/build/post_all\n";
-    print CMDFILE "post_all_args = $tag $module\n";
+    print $fh "pre_all = nmi_glue/build/pre_all\n";
+    print $fh "remote_declare = nmi_glue/build/remote_declare\n";
+    print $fh "remote_pre = nmi_glue/build/remote_pre\n";
+    print $fh "remote_task = nmi_glue/build/remote_task\n";
+    print $fh "remote_post = nmi_glue/build/remote_post\n";
+    print $fh "platform_post = nmi_glue/build/platform_post\n";
+    print $fh "post_all = nmi_glue/build/post_all\n";
+    print $fh "post_all_args = $tag $module\n";
 
     # misc administrative stuff
-    CondorGlue::printPrereqs( *CMDFILE );
-
-    close CMDFILE;
-
-    return $cmdfile;
+    CondorGlue::printPrereqs( *$fh );
 }
 

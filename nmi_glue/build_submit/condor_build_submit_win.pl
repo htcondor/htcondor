@@ -31,27 +31,10 @@ my $default_platforms = "winnt_5.1";
 CondorGlue::ProcessOptions( $default_platforms );
 
 # will exit when finished
-CondorGlue::buildLoop( \&generateCmdFile ); 
+CondorGlue::buildLoop( \&customizeCmdFile ); 
 
-
-sub generateCmdFile() {
-    my ($tag, $module) = @_;
-
-    my $cmdfile = "condor_cmdfile-$tag";
-    my $srcsfile = "condor_srcsfile-$tag";
-
-    # Generate the source code file
-    CondorGlue::makeFetchFile( $srcsfile, $module, $tag );
-
-    # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
-
-    CondorGlue::printIdentifiers( *CMDFILE, $tag );
-    CondorGlue::printPlatforms( *CMDFILE );
-    print CMDFILE "run_type = build\n";
-
-    # define inputs
-    print CMDFILE "inputs = $srcsfile\n";
+sub customizeCmdFile() {
+    my ($fh, $tag, $module) = @_;
 
     # define the glue scripts we want
 #    print CMDFILE "pre_all = nmi_glue/build/pre_all\n";
@@ -69,8 +52,4 @@ sub generateCmdFile() {
     # global prereqs
 # TODO -- should add cygwin here
 #    print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1\n";
-
-    close CMDFILE;
-
-    return $cmdfile;
 }

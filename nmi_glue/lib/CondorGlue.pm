@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.11 2005-01-05 20:18:25 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.12 2005-01-05 20:49:48 wright Exp $
 #
 ######################################################################
 
@@ -97,9 +97,9 @@ sub ProcessOptions
 
 sub buildLoop
 {
-    my $generate_func_ref = shift;
+    my $func_ref = shift;
     while ( my($tag, $module) = each(%tags) ) {
-        my $cmdfile = &$generate_func_ref($tag, $module);
+        my $cmdfile = generateBuildFile($tag,$module,$func_ref);
         print "Submitting condor build with tag = $tag, module = $module\n";
         my $output_str=`/nmi/bin/nmi_submit $cmdfile`;
         my $status = $?;
@@ -116,6 +116,34 @@ sub buildLoop
     chdir( $init_cwd );
     run( "rm -rf $workspace", 0 );
     exit 0;
+}
+
+
+sub generateBuildFile
+{
+    my ($tag, $module, $custom_func_ref) = @_;
+
+    my $cmdfile = "condor_cmdfile-$tag";
+    my $srcsfile = "condor_srcsfile-$tag";
+
+    # Generate the source code file
+    makeFetchFile( $srcsfile, $module, $tag );
+
+    # Generate the cmdfile
+    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
+
+    printIdentifiers( *CMDFILE, $tag );
+    printPlatforms( *CMDFILE );
+    print CMDFILE "run_type = build\n";
+
+    # define inputs
+    print CMDFILE "inputs = $srcsfile\n";
+
+    &$custom_func_ref( *CMDFILE, $tag, $module );
+
+    close CMDFILE;
+
+    return $cmdfile;
 }
 
 
