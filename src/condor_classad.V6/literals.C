@@ -58,13 +58,46 @@ Copy( ) const
 	return newTree;
 }
 
-Literal* Literal::
-MakeAbsTime( time_t now )
-{
-	Value val;
 
-	if( now<0 ) time( &now );
-	val.SetAbsoluteTimeValue( now );
+/* Creates a Real literal, from the string realstr,
+ * according to the ieee754 norms
+ * realstr is meant to be a 16 character string in hexa charcaters, 
+ * which corresponds to the 64-bit internal double value
+ */
+Literal* Literal::
+MakeReal(string realstr) {
+	Value val;
+	union { double d; long long l; } u;
+	if (sscanf(realstr.c_str(), "%llx", &u.l) != 1) {// hex string doesnt correspond to valid real number
+		val.SetErrorValue( ); 
+	} else {
+		val.SetRealValue(u.d);   
+	}
+	return(MakeLiteral( val ));
+}
+
+
+Literal* Literal::
+MakeAbsTime( abstime_t *tim )
+{
+	Value val;	
+	abstime_t abst;
+	if(tim == NULL) { // => current time/offset
+		time_t now;
+		struct tm *tt;
+		time( &now );
+		tt = localtime(&now);
+		abst.secs = now;
+		abst.offset = -timezone;
+		if (tt->tm_isdst > 0) { // add an hour to the offset, if day-light saving is set
+			abst.offset += 3600;
+	  }	  
+		abst.secs -= abst.offset + timezone;
+	}
+	else { //make a literal out of the passed value
+		abst = *tim;
+	}
+	val.SetAbsoluteTimeValue( abst);
 	return( MakeLiteral( val ) );
 }
 
@@ -94,6 +127,292 @@ MakeRelTime( time_t secs )
 	return( MakeLiteral( val ) );
 }
 
+
+/* Function which iterates through the string Str from the location 'index', 
+ *returning the index of the next digit-char 
+ */
+inline void nextDigitChar(string Str, int &index) 
+{
+	int len = Str.length();
+    while((index<len) &&(!isdigit(Str[index]))) {
+		index++;
+    }
+}
+
+
+/* Function which iterates through the string Str backwards from the location 'index'
+ *returning the index of the first occuring non-space character
+ */
+inline void prevNonSpaceChar(string Str, int &index) 
+{
+    while((index>=0) &&(isspace(Str[index]))) {
+		index--;
+    }
+}
+
+
+/* Function which takes a number in string format, 
+ *& reverses the order of the digits & returns the corresponding number 
+ */
+int revNum(string revNumStr) 
+{
+	string numStr = "";
+	int len = revNumStr.length();
+	for(int i=len-1; i>=0 ; i--) {
+		numStr += revNumStr[i];
+	}
+	return(atoi(numStr.c_str()));
+}
+
+
+/* function which returns the timezone offset corresponding to the argument epochsecs,
+ *  which is the number of seconds since the epoch 
+ */
+int Literal::
+findOffset(time_t epochsecs) 
+{
+	tm abstm;
+	int  offset;
+
+	abstm.tm_year = 70;
+	abstm.tm_mon = 0;
+	abstm.tm_mday = 1;
+	abstm.tm_hour = 0;
+	abstm.tm_min =0;
+	abstm.tm_sec = epochsecs;
+	if(mktime(&abstm) == -1) {
+		offset = -1;
+	}
+	if(abstm.tm_isdst > 0) {
+		offset = -timezone+3600;
+	} else {
+		offset = -timezone;
+	}
+	return offset;
+} 
+
+
+/* Creates an absolute time literal, from the string timestr, 
+ *parsing it as the regular expression:
+ D* dddd [D* dd [D* dd [D* dd [D* dd [D* dd D*]]]]] [-dddd | +dddd | z | Z]
+ D => non-digit, d=> digit
+ Ex - 2003-01-25T09:00:00-0600
+*/
+Literal* Literal::
+MakeAbsTime(string timeStr )
+{    
+	abstime_t abst;
+	Value val;
+	bool offset = false; // to check if the argument conatins a timezone offset parameter
+	
+	tm abstm;
+	abstm.tm_year =0;
+	abstm.tm_mon = 0;
+	abstm.tm_mday = 0;
+	abstm.tm_hour = 0;
+	abstm.tm_min =0;
+	abstm.tm_sec = 0;
+	int tzhr = 0; // corresponds to 1st "dd" in -|+dddd
+	int tzmin = 0; // corresponds to 2nd "dd" in -|+dddd
+	
+	int len = timeStr.length();
+	int i=len-1; 
+	prevNonSpaceChar(timeStr,i);
+	if((timeStr[i] == 'z') || (timeStr[i] == 'Z')) { // z|Z corresponds to a timezone offset of 0
+		offset = true;
+		timeStr.erase(i,1); // remove the offset section from the string
+		tzhr = 0;
+		tzmin = 0;
+	}
+	else if((i-4)>0) { // check the offset in the form of -|+dddd
+		string offStr = timeStr.substr(i-4,5);
+		if(((offStr[0] == '+') || (offStr[0] == '-')) && 
+		   (isdigit(offStr[1]))&& (isdigit(offStr[2]))&& (isdigit(offStr[3]))&& (isdigit(offStr[4]))) {
+			offset = true;
+			timeStr.erase(i-4,5);
+			if(offStr[0] == '+') {
+				tzhr = atoi(offStr.substr(1,2).c_str());
+				tzmin = atoi(offStr.substr(3,2).c_str());
+			}
+			else {
+				tzhr = -atoi(offStr.substr(1,2).c_str());
+				tzmin = -atoi(offStr.substr(3,2).c_str());
+			}
+		}
+	}
+	i=0;
+	len = timeStr.length();
+	
+	nextDigitChar(timeStr,i);
+	if(i > len-4) { // string has to contain dddd (year)
+		val.SetErrorValue( );
+		return(MakeLiteral( val ));
+	}    
+	
+	abstm.tm_year = atoi(timeStr.substr(i,4).c_str()) - 1900;
+	i += 4;
+	nextDigitChar(timeStr,i);
+	
+	if(i<=len-2) {
+		abstm.tm_mon = atoi(timeStr.substr(i,2).c_str()) - 1;
+		i += 2;
+	}
+	nextDigitChar(timeStr,i);
+	
+	if(i<=len-2) {
+		abstm.tm_mday = atoi(timeStr.substr(i,2).c_str());	
+		i += 2;
+	}
+	nextDigitChar(timeStr,i);
+	
+	if(i<=len-2) {
+		abstm.tm_hour += atoi(timeStr.substr(i,2).c_str()); 
+		i += 2;
+	}  
+	nextDigitChar(timeStr,i);
+	
+	if(i<=len-2) {
+		abstm.tm_min += atoi(timeStr.substr(i,2).c_str());
+		i += 2;
+	}  
+	nextDigitChar(timeStr,i);
+	
+	if(i<=len-2) {
+		abstm.tm_sec = atoi(timeStr.substr(i,2).c_str());	
+		i += 2;
+	}
+	nextDigitChar(timeStr,i);
+	
+	if((i<=len-1) && (isdigit(timeStr[i]))) {  // there should be no more digit characters once the required
+		val.SetErrorValue( );                             // parameteres are parsed
+		return(MakeLiteral( val ));
+	}      
+	
+	abstm.tm_min -= tzmin;
+	abstm.tm_hour -= tzhr;
+	
+	abst.secs = mktime(&abstm);
+	
+	if(abst.secs == -1)  { // the time should be one, which can be supported by the time_t type
+		val.SetErrorValue( );
+		return(MakeLiteral( val ));
+	}      
+	
+	if(offset) {
+		abst.offset = (tzhr*3600) + (tzmin*60);
+	}
+	else { // if offset is not specified, the offset of the current locality is taken
+		abst.offset = findOffset(abst.secs);
+		abst.secs -= abst.offset;
+	}
+	
+	abst.secs -= timezone;
+	
+	if(abst.offset == -1) { // corresponds to illegal offset
+		val.SetErrorValue( );
+		return(MakeLiteral( val ) );
+	}
+	else {
+		val.SetAbsoluteTimeValue(abst);
+	}
+	
+	return( MakeLiteral( val ) );
+}
+
+
+/* Creates a relative time literal, from the string timestr, 
+ *parsing it as [[[days+]hh:]mm:]ss
+ * Ex - 1+00:02:00
+ */
+Literal* Literal::
+MakeRelTime(string timeStr)
+{
+	Value val;  
+	time_t rsecs;
+	
+	int len = timeStr.length();
+	int secs = 0;
+	int mins = 0;
+	int hrs = 0;
+	int days = 0;
+	bool negative = false;
+    
+	int i=len-1; 
+	prevNonSpaceChar(timeStr,i);
+	// checking for 'sec' parameter & collecting it if present (ss.sss)
+	if((i>=0) &&((timeStr[i] == 's') || (timeStr[i] == 'S') || (isdigit(timeStr[i])))) {
+		if((timeStr[i] == 's') || (timeStr[i] == 'S')) {
+			i--;
+		}
+		prevNonSpaceChar(timeStr,i);
+		string revSecStr;
+		while((i>=0) &&(isdigit(timeStr[i]))) {
+			revSecStr += timeStr[i--];
+		}
+		if((i>=0) &&(timeStr[i] == '.')) {
+			revSecStr += timeStr[i--];
+			while((i>=0) && (isdigit(timeStr[i]))) {
+				revSecStr += timeStr[i--];
+			}
+		}
+		secs = revNum(revSecStr);
+	}
+	
+	prevNonSpaceChar(timeStr,i);
+	// checking for 'min' parameter
+	if((i>=0) &&((timeStr[i] == 'm') || (timeStr[i] == 'M') || (timeStr[i] == ':'))) {
+		i--;
+		string revMinStr;
+		prevNonSpaceChar(timeStr,i);
+		while((i>=0) &&(isdigit(timeStr[i]))) {
+			revMinStr += timeStr[i--];
+		}
+		mins = revNum(revMinStr);
+	}
+	
+	prevNonSpaceChar(timeStr,i);
+	// checking for 'hrs' parameter
+	if((i>=0) &&((timeStr[i] == 'h') || (timeStr[i] == 'H') || (timeStr[i] == ':'))) {
+		i--;
+		string revHrStr;
+		prevNonSpaceChar(timeStr,i);
+		while((i>=0) &&(isdigit(timeStr[i]))) {
+			revHrStr += timeStr[i--];
+		}
+		hrs = revNum(revHrStr);
+	}   
+	
+	prevNonSpaceChar(timeStr,i);
+	// checking for 'days' parameter
+	if((i>=0) &&((timeStr[i] == 'd') || (timeStr[i] == 'D') || (timeStr[i] == '+'))) {
+		i--;
+		string revDayStr;
+		prevNonSpaceChar(timeStr,i);
+		while((i>=0) &&(isdigit(timeStr[i]))) {
+			revDayStr += timeStr[i--];
+		}
+		days = revNum(revDayStr);
+	}     
+	
+	prevNonSpaceChar(timeStr,i);
+	// checking for '-' operator
+	if((i>=0) &&(timeStr[i] == '-')) {
+		negative = true;
+		i--;
+	}
+	
+	prevNonSpaceChar(timeStr,i);
+    
+	if((i>=0) && (!(isspace(timeStr[i])))) { // should not conatin any non-space char beyond -,d,h,m,s
+		val.SetErrorValue( );
+		return(MakeLiteral( val ));
+	}   
+	
+	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
+	val.SetRelativeTimeValue(rsecs);
+	
+	return( MakeLiteral( val ) );
+}
 
 Literal* Literal::
 MakeLiteral( const Value& val, Value::NumberFactor f ) 

@@ -25,6 +25,8 @@
 
 BEGIN_NAMESPACE( classad )
 
+typedef std::vector<ExprTree*> ArgumentList;
+
 /** Represents the literals of the ClassAd language, such as integers,
 		reals, booleans, strings, undefined and real.
 */
@@ -35,11 +37,19 @@ class Literal : public ExprTree
     	~Literal ();
 
 		/** Create an absolute time literal.
-		 * 	@param now The time in UNIX epoch.  If a value of -1 is passed in
+		 * 	@param now The time in UNIX epoch.  If a value of NULL is passed in
 		 * 	the system's current time will be used.
 		 * 	@return The literal expression.
 		 */
-		static Literal* MakeAbsTime( time_t now=-1 );
+		static Literal* MakeAbsTime( abstime_t *now=NULL );
+
+		/* Creates an absolute time literal, from the string timestr, 
+		 *parsing it as the regular expression:
+		 D* dddd [D* dd [D* dd [D* dd [D* dd [D* dd D*]]]]] [-dddd | +dddd | z | Z]
+		 D => non-digit, d=> digit
+		 Ex - 2003-01-25T09:00:00-0600
+		*/
+		static Literal* MakeAbsTime(string timestr);
 
 		/** Create a relative time literal.
 		 * @param secs The number of seconds.  If a value of -1 is passed in
@@ -56,6 +66,17 @@ class Literal : public ExprTree
 		 * @return The literal expression of the relative time (t1 - t2).
 		 */
 		static Literal* MakeRelTime( time_t t1, time_t t2 );
+
+		/* Creates a relative time literal, from the string timestr, 
+		 *parsing it as [[[days+]hh:]mm:]ss
+		 * Ex - 1+00:02:00
+		*/		
+		static Literal* MakeRelTime(string str);
+
+		/* Creates a Real literal, from the string realstr,
+		 * according to the ieee754 norms
+		 */
+		static Literal* MakeReal(string realstr);
 
 		/// Make a deep copy
 		virtual Literal* Copy( ) const;
@@ -80,6 +101,11 @@ class Literal : public ExprTree
 		 * 	@param v The value encapsulated by the literal
 		 */
 		void GetValue( Value& v ) const;
+		
+		/* Takes the number of seconds since the epoch as argument - epochsecs, 
+		 *and returns the timezone offset(relative to GMT) in the currect locality
+		 */
+		static int findOffset(time_t epochsecs);
 
 	protected:
 		/// Constructor
