@@ -33,6 +33,9 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_config.h"
+#include "get_port_range.h"
+
+int bindWithin(const int fd, const int low_port, const int high_port);
 
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
@@ -502,7 +505,6 @@ int bindWithin(const int fd, const int low_port, const int high_port)
 {
 	int start_trial, this_trial;
 	int pid, range;
-	int nextBindPort;
 
 	// Use hash function with pid to get the starting point
     pid = (int) getpid();
