@@ -2,7 +2,7 @@
 \index{DAGMan|(}
 \index{directed acyclic graph}
 \index{Directed Acyclic Graph Manager (DAGMan)}
-\index{condor_submit_dag}
+\index{condor\_submit\_dag}
 \index{job!dependecies}
 
 A directed acyclic graph (DAG) can be used to represent a set of programs
@@ -31,6 +31,7 @@ The following sections specify the use of DAGMan.
 
 \subsection{Input File describing the DAG}
 
+\index{DAGMan!input file example}
 The input file used by DAGMan specifies three items:
 \begin{enumerate}
 \item
@@ -79,6 +80,7 @@ Figure~\ref{fig:dagman-diamond}.
 
 
 
+\index{DAGMan!Job Entry (names node of DAG)}
 The first section of the input file lists
 all the programs that appear in the DAG.
 Each program is described by a single line called a Job Entry.
@@ -112,10 +114,12 @@ the DAG is submitted to Condor for execution
 or after
 a program within
 the DAG completes its execution.
+\index{DAGMan!PRE script}
 Processing done before a program is submitted to Condor is
 called a \Arg{PRE} script.
 Processing done after a program successfully completes
 its execution under Condor is
+\index{DAGMan!POST script}
 called a \Arg{POST} script.
 A node in the DAG is comprised of the program together with
 \Arg{PRE} and/or \Arg{POST} scripts.
@@ -199,6 +203,7 @@ The script \File{pre.csh} may use these arguments
 
 The third type of item in the DAG input file describes the
 dependencies within the DAG.
+\index{DAGMan!describing dependencies}
 Nodes are parents and/or children within the DAG.
 A parent node must be completed successfully before
 any child node may be started.
@@ -230,6 +235,7 @@ produces four dependencies:
 
 \subsection{Condor Submit Description File}
 
+\index{DAGMan!submit description file with}
 Each node in a DAG may be a unique executable, each with a unique
 Condor submit description file.
 Each program may be submitted to a different universe
@@ -249,6 +255,7 @@ log file produced by job submission to Condor.
 Here is an example Condor submit description file to go with the
 diamond-shaped DAG example.
 
+\index{DAGMan!example submit description file}
 \begin{verbatim}
 	# Filename: diamond_job.condor
 	#
@@ -286,6 +293,7 @@ A simple submission has the syntax
 
 \Condor{submit\_dag} \Arg{DAGInputFileName}
 
+\index{DAGMan!job submission}
 The example may be submitted with
 
 \begin{verbatim}

@@ -33,8 +33,6 @@ now a seperate \Condor{GridManager} for each user and proxy pair.
 \item
 More Condor DAGMan improvements and bug fixes:
 
-\begin{itemize}
-
 \item
 Added a new event to the Condor userlog at the completion of a POST
 script.  This allows DAGMan, during recovery, to know which POST
@@ -58,16 +56,12 @@ DAG nodes as ``failed'' so the rest of the DAG can continue.
 
 \end{itemize}
 
-\end{itemize}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-3-0}Version 6.3.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{itemize}
-
-\item
+\noindent
 Many Condor DAGMan improvements and bug fixes:
 
 \begin{itemize}
@@ -117,8 +111,6 @@ Fixed a bug when recovering from the userlog after a crash or reboot.
 \item
 Fixed bugs in the handling of \Arg{-MaxJobs}.
 
-\end{itemize}
-
 \item
 Added a \Arg{-a line} argument to \Condor{submit} to add a line to the
 submit file before processing (overriding the submit file).
@@ -133,6 +125,9 @@ sensibly under their DAGMan master job.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{kbdd} doesn't work properly under Compaq Tru64 5.1, and
+as a result, resources may not leave the ``Unclaimed'' state
+regardless of keyboard or pty activity.  Compaq Tru64 5.0a and earlier
+do work properly.
 
 \end{itemize}

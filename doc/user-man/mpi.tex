@@ -36,6 +36,11 @@ implementation does not support dynamic resource management.  That is,
 processes in the virtual machine may NOT join or leave the computation at 
 any time.  If you start an MPI job with 4 nodes, for example, none of those 4 
 nodes can be preempted by other Condor jobs or the machine's owner.
+Certain resources in your Condor pool should be configured with this
+policy.
+There is a whole section in the Administrator's Manual regarding how
+to configure resource in a Condor Pool to be dedicated resources which
+can execute an MPI application.
 
 \item[Scheduling] We do not yet have a sophisticated scheduling 
 algorithm in place for MPI jobs.  If you set things up properly, 

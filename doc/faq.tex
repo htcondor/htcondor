@@ -65,6 +65,71 @@ more information on flocking.
 \index{Condor!distribution|)}
 \index{Condor!getting|)}
 
+\subsection{What do I do now? My installation of Condor does not work.}
+
+What to do to get Condor running properly depends on what sort of
+error occurs. 
+One common error category are communication errors.
+Condor daemon log files report a failure to bind.
+Or, the errors in the various log files may be of the form:
+
+\begin{verbatim}
+(date and time) Error sending update to collector(s)
+(date and time) Can't send end_of_message
+(date and time) Error sending UDP update to the collector
+
+(date and time) failed to update central manager
+
+(date and time) Can't send EOM to the collector
+\end{verbatim}
+
+This problem can also be observed by running \Condor{status}.
+It will give a message of the form:
+\begin{verbatim}
+Error:  Could not fetch ads --- error communication error
+\end{verbatim}
+
+To solve this problem, understand that
+Condor uses the first network interface it sees on the machine.
+Since machines often have more than one interface,
+this problem usually implies that the wrong network
+interface is being used.
+
+It is incorrect to use the localhost network interface.
+This has IP address 127.0.0.1 on all machines.
+To check if this incorrect IP address is being used,
+look at the contents of the
+CollectorLog file on the pool's
+your central manager right after it is started.  
+The contents will be of the form:
+
+\begin{verbatim}
+5/25 15:39:33 ******************************************************
+5/25 15:39:33 ** condor_collector (CONDOR_COLLECTOR) STARTING UP
+5/25 15:39:33 ** $CondorVersion: 6.2.0 Mar 16 2001 $
+5/25 15:39:33 ** $CondorPlatform: INTEL-LINUX-GLIBC21 $
+5/25 15:39:33 ** PID = 18658
+5/25 15:39:33 ******************************************************
+5/25 15:39:33 DaemonCore: Command Socket at <128.105.101.15:9618>
+\end{verbatim}
+
+The last line tells the IP address and port the collector has
+bound to and is listening on.
+If the IP address is 127.0.0.1, then Condor is definitely using the wrong
+network interface.
+
+There are two solutions to this problem.
+One solution changes the order of the network interfaces.
+The preferred solution
+sets which network interface Condor should use
+by adding the following parameter to the
+local Condor configuration file:
+
+\begin{verbatim}NETWORK_INTERFACE = machine-ip-address\end{verbatim}
+
+Where \verb@machine-ip-address@ is the IP address of the interface you wish
+Condor to use.
+
 \section{Setting up Condor}
 
 \subsection{How do I get more than one job to run on my SMP machine?}
@@ -122,6 +187,64 @@ expression will not evaluate to ``undefined'', preventing it from
 running anywhere!
 
 \index{running a job!on only certain machines|)}
+
+\subsection{How do I configure Condor to only run jobs at night?}
+
+A commonly requested policy for running batch jobs is to only allow
+them to run at night, or at other pre-specified times of the day.
+Condor allows you to configure this policy with the use of the
+\Attr{ClockMin} and \Attr{ClockDay} \Condor{startd} attributes.  
+A complete example of how to use these attributes for this kind of
+policy is discussed in subsection~\ref{sec:Time-Of-Day-Policy} on
+page~\pageref{sec:Time-Of-Day-Policy}, ``A Policy for Only Running
+Jobs at Certain Times of the Day'', inside
+section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
+Policy''
+\index{running a job!only at night|)}
+\index{running a job!at certain times of day|)}
+
+
+\subsection{Why will the \Condor{master} not run when a local
+configuration file is missing?}
+
+If a \Macro{LOCAL\_CONFIG\_FILE} 
+is specified in the global configuration file,
+but the specified file does not exist,
+the \Condor{master} will not start up, and it prints a variation
+of the following example message.
+
+\begin{verbatim}
+ERROR: Can't read config file /mnt/condor/hosts/bagel/condor_config.local
+\end{verbatim}
+
+This is not a bug; it is a feature!
+Condor has always worked this way on purpose.
+There is a potentially
+large security hole if Condor is configured to read from a file that
+does not exist.
+By creating that file, a malicious user could
+change all sorts of Condor settings.
+This is an easy way
+to gain root access to a machine,
+where the daemons are running as root.
+
+The intent is that
+if you've set up your global configuration file to read
+from a local configuration file, and the local file is not there,
+then something is wrong.
+It is better for the \Condor{master} to exit right away and
+log an error message than to start up.
+
+If the \Condor{master} continued with the local configuration file
+missing, either A) someone could breach security or B) you will have
+potentially important configuration information missing.
+Consider the example where the local configiguration file was on an NFS
+partition and the server was down. 
+There would be all sorts of
+really important stuff in the local configuration file,
+and Condor might do bad things if it started without those settings.  
+
+If supplied it with an empty file, the \Condor{master} works fine.
 
 \section{Running Condor Jobs}
 

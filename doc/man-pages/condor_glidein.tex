@@ -51,28 +51,30 @@ the contact string may need to specify which to use.
 See the Globus home page, \Url{www.globus.org} for more
 information about Globus.
 
-\Condor{glidein} works in two steps: setup and execution.
-During setup, a configuration file and the Condor daemons
+\Condor{glidein} works in two steps: set up and execution.
+During set up, a configuration file and the Condor daemons
 master, startd and starter are installed on the Globus
 resource.
-Binaries for the correct architecture are copied from of a central server.
+Binaries for the correct architecture are copied from a central server.
 To obtain access to the server,
-e-mail \Email{condor-admin@cs.wisc.edu} with your X.509
+send
+e-mail to \Email{condor-admin@cs.wisc.edu} with your X.509
 certificate name.
 Globus software version 1.1.3 does not yet include
 the Globus program \Prog{gsincftp},
-\Prog{gsincftp}, the Globus secure version of \Prog{ftp}.
+the Globus secure version of \Prog{ftp}.
 \Condor{glidein} needs this program.
-Install \Prog{gsincftp}, which can be obtained from
+Install \Prog{gsincftp}, obtained from
 \Url{http://www.globus.org/datagrid/deliverables/gsiftp-tools.html}.
-Setup need only be done once per machine and version of Condor.
+Set up need only be done once per machine and version of Condor.
 The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
 By default, all files placed on the remote machine are placed in
 \File{\MacroUNI{HOME}/Condor\_glidein}.
 Each use of \Condor{glidein} will generate spool and log
-files on the Globus resource that should be occasionally removed.
+files on the Globus resource.
+These files should be occasionally removed.
 
 \begin{Options}
     \OptItem{\Opt{-\hspace{.25 mm}-help}}{Display brief usage information and exit}
@@ -191,8 +193,8 @@ files on the Globus resource that should be occasionally removed.
 	The file is called \File{\condor{config.glidein}}.
         }
     \OptItem{\OptArg{-\hspace{.25 mm}-useconfig}{filename}}{
-	Install \Arg{filename} as the config file on the Globus resource
-	instead of the default config file during the setup phase.
+	Install \Arg{filename} as the configuration file on the Globus resource
+	instead of the default configuration file during the set up phase.
 	}
 
 \end{Options}
