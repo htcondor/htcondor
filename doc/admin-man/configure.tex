@@ -2829,6 +2829,8 @@ is 5 minutes (300 seconds).
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 Limits the number of jobs
 that a \Condor{gridmanager} daemon will submit to a resource.
+It is useful for controlling the number of \Prog{jobmanager}
+processes running on the front-end node of a cluster.
 This number may be exceeded if it is reduced through the use
 of \Condor{reconfig} while the \Condor{gridmanager} is running
 or if the \Condor{gridmanager} receives new
@@ -2841,15 +2843,18 @@ jobs falls below the current limit.
 \item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS\_PER\_RESOURCE}]
 \label{param:GridmanagerMaxPendingSubmitsPerResource} The maximum
 number of jobs
-that can be in the process of being submitted at any time. The default
-is 5.
+that can be in the process of being submitted at any time (that is,
+how many \Procedure{globus\_gram\_client\_job\_request} calls are pending).
+It is useful for controlling the number of new
+connections/processes created at a given time.
+The default value is 5.
 This variable allows
 you to set different limits for each resource.
-After the first integer in the value,
-you can provide a list of resourcename/number pairs,
+After the first integer in the value
+comes a list of resourcename/number pairs,
 where each number is the limit for that resource.
 If a resource is not in the list,
-Condor will use the first integer.
+Condor uses the first integer.
 An example usage:
 \begin{verbatim}
 GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE=20,nostos,5,beak,50
