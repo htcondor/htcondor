@@ -34,31 +34,15 @@ Job::Job (const char *jobName, const char *cmdFile):
     _scriptPost (NULL),
     _Status     (STATUS_READY)
 {
-
+	assert( jobName != NULL );
+	assert( cmdFile != NULL );
     _jobName = strnewp (jobName);
-	assert( _jobName != NULL );
     _cmdFile = strnewp (cmdFile);
 
     // _condorID struct initializes itself
 
     // jobID is a primary key (a database term).  All should be unique
     _jobID = _jobID_counter++;
-}
-
-char*
-Job::GetJobName()
-{
-	if( !_jobName ) {
-		char *s = new char[32];
-		if( s == NULL ) {
-			debug_error( 1, DEBUG_SILENT,
-						 "ERROR: out of memory (%s() in %s:%d)!\n",
-						 __FUNCTION__, __FILE__, __LINE__ );
-		}
-		sprintf( s, "#%d (unnamed)", _jobID );
-		return s;
-	}
-	return strnewp( _jobName );
 }
 
 //---------------------------------------------------------------------------
@@ -80,7 +64,16 @@ void Job::Dump () const {
     printf ("          JobID: %d\n", _jobID);
     printf ("       Job Name: %s\n", _jobName);
     printf ("     Job Status: %s\n", status_t_names[_Status]);
+	if( _Status == STATUS_ERROR ) {
+		printf( "          Error: %s\n", error_text ? error_text : "unknown" );
+	}
     printf ("       Cmd File: %s\n", _cmdFile);
+	if( _scriptPre ) {
+		printf( "     PRE Script: %s\n", _scriptPre->GetCmd() );
+	}
+	if( _scriptPost ) {
+		printf( "    POST Script: %s\n", _scriptPost->GetCmd() );
+	}
     printf ("      Condor ID: ");
     _CondorID.Print();
     putchar('\n');
