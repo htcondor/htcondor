@@ -784,7 +784,7 @@ AttrList& AttrList::operator=(const AttrList& other)
 ////////////////////////////////////////////////////////////////////////////////
 int AttrList::Insert(const char* str)
 {
-	ExprTree*	tree;
+	ExprTree*	tree = NULL;
 
 	if(Parse(str, tree) != 0)
 	{
