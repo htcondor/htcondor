@@ -2879,6 +2879,9 @@ int DaemonCore::Create_Process(
 				"Create_Process: Specified executable %s cannot be found. "
 				"errno = %d (%s).\n",
 				name, errno, strerror(errno));	   
+		if ( priv != PRIV_UNKNOWN ) {
+			set_priv( current_priv );
+		}
 		return FALSE;
 	}
 
@@ -2889,6 +2892,9 @@ int DaemonCore::Create_Process(
 			dprintf(D_ALWAYS, 
 				"Create_Process: Specified cwd %s cannot be found.\n",
 				cwd);	   
+			if ( priv != PRIV_UNKNOWN ) {
+				set_priv( current_priv );
+			}	
 			return FALSE;
 		}
 	}
