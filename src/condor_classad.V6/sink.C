@@ -13,36 +13,31 @@ Sink::
 }
 
 
+	
 void Sink::
-setSink (char *&s, int &sz)
+setSink( char *&s )
 {
 	sink = STRING_SINK;
 	last = 0;
 
-	if (s == NULL)
-	{
-		// we have to perform the memory management for the string
-		buffer = new char [1024];
-		bufLen = 1024;
+	// we have to perform the memory management for the string
+	buffer = new char [1024];
+	bufLen = 1024;
 
-		// set up references for update
-		bufRef = &s;
-		bufLenRef = &sz;
+	// set up references for update; perform first update
+	bufRef = &s;
+	*bufRef = buffer;
+}
 
-		// perform first update
-		*bufRef = buffer;
-		*bufLenRef = 0;
-	}
-	else
-	{
-		// user has provided a buffer
-		buffer = s;
-		bufLen = sz;
 
-		// don't use references in this case
-		bufRef = NULL;
-		bufLenRef = NULL;
-	}
+void Sink::
+setSink( char *s, int sz )
+{
+	// buffer provided by user, don't use references
+	sink = STRING_SINK;
+	buffer = s;
+	bufLen = sz;
+	bufRef = NULL;
 }
 
 
@@ -80,15 +75,13 @@ sendToSink (void *bytes, int len)
 	{
 		case STRING_SINK:
 			// first check that we have enough room
-			if (last+len >= bufLen)
-			{
+			if (last+len >= bufLen) {
 				// no ... return false if we cannot resize
 				if (bufRef == NULL) return false;
 
 				// resize to twice original size
 				char *temp = new char [2*bufLen];
-				if (!temp)
-				{
+				if (!temp) {
 					delete [] buffer;
 					return false;
 				}
@@ -104,7 +97,6 @@ sendToSink (void *bytes, int len)
 			// have enough room; copy and update lengths
 			strcpy (buffer+last, buf);
 			last += len;
-			if (bufLenRef) *bufLenRef = last;	
 
 			return true;
 
