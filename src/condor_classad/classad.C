@@ -691,16 +691,40 @@ int ClassAd::put(Stream& s)
     return 1;
 }
 
-int ClassAd::get(Stream& s)
+
+void
+ClassAd::clear( void )
+{
+		// First, clear out everything in our AttrList
+	AttrList::clear();
+
+		// Now, clear out our Type fields, since those are specific to
+		// ClassAd and aren't handled by AttrList::clear().
+    if( myType ) {
+        delete myType;
+		myType = NULL;
+    }
+    if( targetType ) {
+        delete targetType;
+		targetType = NULL;
+    }
+}
+
+
+int
+ClassAd::initFromStream(Stream& s)
 {
     char           namebuf[CLASSAD_MAX_ADTYPE];
 	char *name = namebuf;
 
-	// first get all the attributes
-	if ( !AttrList::get(s) ) {
+		// First, initialize ourselves from the stream.  This will
+		// delete any existing attributes in the list...
+	if ( !AttrList::initFromStream(s) ) {
 		return 0;
 	}
 
+		// Now, if there's also type info on the wire, read that,
+		// too. 
     if(!s.code(name)) {
         return 0;
     }
@@ -714,13 +738,6 @@ int ClassAd::get(Stream& s)
     return 1; 
 }
 
-int ClassAd::code(Stream& s)                                           
-{
-    if(s.is_encode())
-        return put(s);
-    else
-        return get(s);
-}
 
 #if defined(USE_XDR)
 int ClassAd::put (XDR *xdrs)
