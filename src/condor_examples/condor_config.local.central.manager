@@ -9,10 +9,6 @@
 ##  may want to customize and settings you should probably leave alone
 ##  (unless you know what you're doing).
 ##
-##  There are additional configuration items in
-##  condor_config.local.root.central.manager.  That file should ONLY
-##  be writable by root!
-##
 ##  Unless otherwise specified, settings that are commented out show
 ##  the defaults that are used if you don't define a value.  Settings
 ##  that are defined here MUST BE DEFINED since they have no default
@@ -44,6 +40,19 @@
 ##  For example, the name for the UW-Madison Computer Science Condor
 ##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
 #COLLECTOR_NAME		= Short Description of your pool
+
+##  What daemons do you want to run on your central manager?  
+##  NOTE: For it to be the central manager, you need the NEGOTIATOR
+##  and COLLECTOR to run.  It's optional whether or not you want to
+##  run the schedd (to allow jobs to be submited) and/or the startd
+##  (to allow Condor jobs to execute) on your central manager.
+DAEMON_LIST   = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
+
+##  Where are the binaries for these daemons?  (Note: MASTER, SCHEDD,
+##  and STARTD are already defined in the global config file).
+COLLECTOR     = $(SBIN)/condor_collector
+NEGOTIATOR    = $(SBIN)/condor_negotiator
+
 
 ######################################################################
 ######################################################################
