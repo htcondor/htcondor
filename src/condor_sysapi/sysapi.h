@@ -93,6 +93,12 @@ char *sysapi_translate_opsys( char *sysname, char *release );
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( void );
 
+/* check the magic number of the given executable */
+int sysapi_magic_check( char* executable );
+
+/* make sure the given executable is linked with Condor */
+int sysapi_symbol_main_check( char* executable );
+
 END_C_DECLS
 
 #endif
