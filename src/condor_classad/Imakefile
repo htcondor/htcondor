@@ -13,6 +13,7 @@ library_target(libclassad.a,$(OBJ))
 
 c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
 c_plus_target(test_classads, test_classads.o, $(LIB))
+pure_c_plus_target(test_classads.pure, test_classads.o, $(LIB))
 pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
 
 clean::

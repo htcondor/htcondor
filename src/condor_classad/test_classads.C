@@ -457,7 +457,7 @@ test_mytype(
 	int         line_number,
     TestResults *results)
 {
-	static char *actual_value;
+	static const char *actual_value;
 
 	actual_value = classad->GetMyTypeName();
 	if (!strcmp(expected_value, actual_value)) {
