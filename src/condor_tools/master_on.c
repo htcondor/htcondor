@@ -33,6 +33,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <limits.h>
+#include <errno.h>
 #include <afs/stds.h>
 #include <afs/afs.h>
 #include <sys/syscall.h>
