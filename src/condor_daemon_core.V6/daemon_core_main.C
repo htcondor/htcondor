@@ -883,28 +883,91 @@ dc_config_auth()
 
     // Next, we param the configuration file for GSI related stuff and 
     // set the corresponding environment variables for it
+
     char *pbuf = 0;
-    char buffer[1024];
-    memset(buffer, 0, 1024);
+	char *proxy_buf = 0;
+	char *cert_buf = 0;
+	char *key_buf = 0;
+	char *trustedca_buf = 0;
+
+	char buffer[(_POSIX_PATH_MAX * 3)];
+	memset(buffer, 0, (_POSIX_PATH_MAX * 3));
+
     
-    // buffer overflow problem. Hao 
+    // Here's how it works. If you define any of 
+	// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or 
+	// GSI_DAEMON_TRUSTED_CA_DIR, those will get stuffed into the
+	// environment. 
+	//
+	// Everything else depends on GSI_DAEMON_DIRECTORY. If 
+	// GSI_DAEMON_DIRECTORY is not defined, then only settings that are
+	// defined above will be placed in the environment, so if you 
+	// want the cert and host in a non-standard location, but want to use 
+	// /etc/grid-security/certifcates as the trusted ca dir, only 
+	// define GSI_DAEMON_CERT and GSI_DAEMON_KEY, and not
+	// GSI_DAEMON_DIRECTORY and GSI_DAEMON_TRUSTED_CA_DIR
+	//
+	// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable" 
+	// default out of what's already been defined and what it can 
+	// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends 
+	// up as in $(GSI_DAEMON_DIRECTORY)/certificates, and so on
+	// The proxy is not included in the "reasonable defaults" section
+
+	// First, let's get everything we might want
     pbuf = param( STR_GSI_DAEMON_DIRECTORY );
+    proxy_buf = param( STR_GSI_DAEMON_PROXY );
+    cert_buf = param( STR_GSI_DAEMON_CERT );
+    key_buf = param( STR_GSI_DAEMON_KEY );
+    trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
+
 
     if (pbuf) {
-        sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
-        putenv( strdup( buffer ) );
 
-        sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, DIR_DELIM_CHAR);
-        putenv( strdup( buffer ) );
+		if( !trustedca_buf) {
+       	 sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, 
+					DIR_DELIM_CHAR);
+       	 putenv( strdup( buffer ) );
+		}
 
-        sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, DIR_DELIM_CHAR);
-        putenv( strdup ( buffer ) );
-
-        sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, DIR_DELIM_CHAR);
-        putenv( strdup ( buffer  ) );
+		if( !cert_buf ) {
+        	sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, 
+						DIR_DELIM_CHAR);
+        	putenv( strdup ( buffer ) );
+		}
+	
+		if (!key_buf ) {
+        	sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, 
+					DIR_DELIM_CHAR);
+        	putenv( strdup ( buffer  ) );
+		}
 
         free( pbuf );
     }
+
+	if(proxy_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_PROXY, proxy_buf);
+		putenv (strdup( buffer ) );
+		free(proxy_buf);
+	}
+
+	if(cert_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_CERT, cert_buf);
+		putenv (strdup( buffer ) );
+		free(cert_buf);
+	}
+
+	if(key_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_KEY, key_buf);
+		putenv (strdup( buffer ) );
+		free(key_buf);
+	}
+
+	if(trustedca_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_CERT_DIR, trustedca_buf);
+		putenv (strdup( buffer ) );
+		free(trustedca_buf);
+	}
+
 
     pbuf = param( STR_GSI_MAPFILE );
     if (pbuf) {

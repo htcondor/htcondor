@@ -30,6 +30,10 @@
 #include "globus_gss_assist.h"
 
 const char STR_GSI_DAEMON_DIRECTORY[] = "GSI_DAEMON_DIRECTORY";
+const char STR_GSI_DAEMON_PROXY[]     = "GSI_DAEMON_PROXY";
+const char STR_GSI_DAEMON_CERT[]      = "GSI_DAEMON_CERT";
+const char STR_GSI_DAEMON_KEY[]       = "GSI_DAEMON_KEY";
+const char STR_GSI_DAEMON_TRUSTED_CA_DIR[]       = "GSI_DAEMON_TRUSTED_CA_DIR";
 const char STR_GSI_USER_PROXY[]       = "X509_USER_PROXY";
 const char STR_GSI_CERT_DIR[]         = "X509_CERT_DIR";
 const char STR_GSI_USER_CERT[]        = "X509_USER_CERT";
