@@ -44,12 +44,14 @@
 #endif
 #include <limits.h>             /* for _POSIX_PATH_MAX */
 
-/*
-  This is included so the objects derived from ULogEvent can produce a ClassAd
-  representation of themselves. In light of the above comment, perhaps there is
-  a better way to do this. - John Bethencourt 6/3/02
+/* 
+	Since the ULogEvent class definition only deals with the ClassAd via a
+	black box pointer and never needs to know the size of the actual
+	object, I can just declare a forward reference to it here to avoid
+	bringing in the full classad.h header file structure causing complications
+	to third parties using this API. -psilord 02/21/03
 */
-#include "../condor_includes/condor_classad.h"
+class ClassAd;
 
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
