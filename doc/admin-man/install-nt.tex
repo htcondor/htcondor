@@ -1,0 +1,376 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:NT-Install}NT Installation of Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{installation!NT|(}
+\index{NT installation|(}
+This section contains the instructions for installing the NT version
+Condor at your site.  
+The installation sets up a default configuration which
+may be further customized.
+
+Please read the copyright and disclaimer information in 
+section~\ref{sec:copyright-and-disclaimer} on
+page~\pageref{sec:copyright-and-disclaimer} of the manual, or in the
+file 
+\File{LICENSE.TXT}, before proceeding.  Installation and
+use of Condor is acknowledgement that you have read and agreed to these
+terms.
+
+The Condor NT executable for distribution is packaged in
+a single file such as:
+\begin{verbatim}
+  condor-6.3.0-WINNT40-x86.exe
+\end{verbatim}
+
+\index{NT installation!initial file size}
+This file is approximately 5 Mbytes in size, and may be
+removed once Condor is fully installed.
+
+Before installing Condor, please consider joining the condor-world mailing
+list.  Traffic on this list is kept to an absolute minimum.  It is only
+used to announce new releases of Condor.  To subscribe, send a message
+to \Email{majordomo@cs.wisc.edu} with the body:
+\begin{verbatim}
+   subscribe condor-world 
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:NT-Preparing-to-Install}Preparing to Install
+Condor under NT} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{NT installation!preparation}
+Before you install the NT version of Condor at your site,
+there are only two
+decisions to make about the basic layout of your pool.
+
+\begin{enumerate}
+\item What machine will be the central manager?
+\item Do I have enough disk space for Condor?
+\end{enumerate}
+
+If you feel that you already know the answers to these questions,
+skip to the NT Installation Procedure section below,
+section~\ref{sec:nt-install-procedure} on
+page~\pageref{sec:nt-install-procedure}.
+If you are unsure, read on.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{What machine will be the central manager?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One machine in your pool must be the central manager.
+This is the
+centralized information repository for the Condor pool and is also the
+machine that matches available machines with waiting
+jobs.  If the central manager machine crashes, any currently active
+matches in the system will keep running, but no new matches will be
+made.  Moreover, most Condor tools will stop working.  Because of the
+importance of this machine for the proper functioning of Condor, we
+recommend you install it on a machine that is likely to stay up all the
+time, or at the very least, one that will be rebooted quickly if it
+does crash.  Also, because all the services will send updates (by
+default every 5 minutes) to this machine, it is advisable to consider
+network traffic and your network layout when choosing the central
+manager.
+
+For Personal Condor, your machine will act as your central manager.
+
+Install Condor on the central manager before intalling
+on the other machines within the pool.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Do I have enough disk space for Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{NT installation!required disk space}
+The Condor release directory takes up a fair amount of space.
+The size requirement for the release
+directory is approximately 20 Mbytes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:nt-install-procedure}
+Installation Procedure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% condor MUST be run as local system
+% 
+%  root == adminstrator
+%  to install, must be running with administrator privileges
+%  the kernel runs as == local system
+
+Installation of Condor must
+be done by a user with administrator privileges.
+After installation, Condor will be run as local system.
+
+Download Condor.
+Run the downloaded file by double clicking on it.
+This starts the installation process.
+The Condor installation is completed by answering
+questions and choosing options within the following steps.
+
+
+\begin{description}
+\item[If Condor is already installed.]
+
+     For upgrade purposes, you may be running the installation of Condor
+     after it has been previously installed.
+     In this case, a dialog box will appear before the
+     installation of Condor proceeds.
+     The question asks if you wish to preserve your current
+     Condor configuration files.
+     Answer yes or no, as appropriate.
+
+     If you answer no, then there will be a second question
+     that asks if you want to use answers
+     given during the previous intallation
+     as default answers.
+
+\item[STEP 1: License Agreement.]
+
+     The first step in installation of Condor
+     is a welcome and license agreement.
+     You are reminded that it is best to run the installation
+     when no other Windows programs are running.
+     You are given the option of cancelling the installation
+     in order to exit other Windows programs.
+     You are asked to agree to the license.
+     Answer yes or no.
+     After agreeing to the license agreement,
+     fill in the name and company information requested,
+     or use the defaults as given.
+
+     After agreeing to licensing, you will see a window that
+     shows the installation unpacking various parts of the
+     Condor system.  This will be followed by a setup window.
+
+\item[STEP 2: The Condor Pool.]
+
+     The Condor installation needs different
+     information depending on whether the installation
+     is to create a new pool or join an existing
+     Condor pool.
+
+     As you create a new Condor pool, the installation
+     assumes this machine is the central manager.
+     For the creation of a new Condor pool, enter
+     information about the pool:
+     \begin{description}
+     \item[Name of the pool]
+     \item[hostname]
+     \item[Do you want to keep statistics?]
+       Answer yes or no, as appropriate.
+       If yes, then the maximum amount of data accumulated will
+       be 10 Mbytes.
+       A configurable quantity, \Macro{POOL\_HISTORY\_MAX\_STORAGE}
+       sets the maximum amount of data, and it
+       defaults to 10 Mbytes.
+       If no, then the CondorView client will not have data to display.
+     \item[Size of pool]
+       Condor needs to know if this a Personal Condor installation,
+       or if there will be more than one machine in the pool.
+       Personal Condor
+       implies that there is only one machine in the pool.
+       For Personal Condor, several of the following
+       steps are omitted.
+     \end{description}
+
+     An installation on a machine that will be part of an
+     existing Condor
+     pool requests the hostname of the central manager
+     of the pool.
+
+\item[STEP 3: Machine's use of Condor.] 
+
+     This step is omitted for the installation of Personal Condor.
+
+     Each machine within a Condor pool may either
+     submit jobs or execute submitted jobs, or both
+     submit and execute jobs.
+     This step allows the installation on this machine
+     to choose if the machine will only submit jobs,
+     only execute submitted jobs, or both.
+     The common case is both, so the default is both.
+
+\item[STEP 4: Where will Condor be installed?]
+
+\index{NT installation!location of files}
+
+It is strongly recommended that Condor be installed in the
+location shown as the default in the dialog box:
+\File{C:\Bs Condor}.
+
+Installation on the local disk is chosen for several reasons.
+
+Condor runs as local system, and local system
+has no network privileges.
+Therefore, Condor should be installed on a local hard drive
+as opposed to a network drive (file server),
+because accesses to a network drive can not be
+authenticated.
+
+A second reason for installation on the local disk is that
+the NT usage of drive letters has implications for where
+Condor is placed.
+The drive letter used must be dedicated for all users,
+and it must remain at all times for Condor.
+
+To place Condor on a hard drive that is not local,
+a dependency must be added to the service control
+manager such that Condor starts after file services
+are available.
+
+%  !! goes in C:/condor   (default)
+%  !! advice is really should go on local hard drive,
+%  as opposed to a network drive (also called file server)
+%  Because,
+%    1. Condor runs as local system, and accesses to a network
+%      drive can't be authenticated  -- local system has
+%      no network privileges.
+%    2.  it is likely that you don't have this set up:
+%    (and you need it to make it work)
+%    you can add a dependency in the service control manager
+%    that condor should start after the file services are
+%    available
+%    3. drive letters are "system-wide"
+%    Must have dedicated letter (for all users), that remains
+%    intact for all time, or condor won't know where
+%    things are and can't get access (without its "letter")
+
+
+\item[STEP 5: Where should Condor send e-mail if things go wrong?]
+
+     Various parts of Condor will send e-mail to a Condor administrator
+     if something goes wrong that needs human attention.
+     You specify the e-mail address and the SMTP relay host
+     of this administrator.
+
+\item[STEP 6: The domain.]
+
+% not really used right now.  "Things that suck about NT."
+% UNIX has 2 domains:  file system domain and userID domain
+% NT has only 1:  a combination, and so going back to letter
+% drives, things get screwed up.
+     This step is omitted for the installation of Personal Condor.
+
+     Enter the machine's domain.
+     It will be used for both a file system domain and
+     a user ID (UID) domain.
+
+\item[STEP 7: Access permissions.]
+     This step is omitted for the installation of Personal Condor.
+
+     Machines within the Condor pool will need
+     various types of access permission. 
+     The three categories of permission are read, write,
+     and administrator. Enter the machines to be given
+     access permissions.
+
+     \begin{description}
+     \item[Read]
+     Read access allows a machine to obtain information about
+     Condor such as the status of machines in the pool and the
+     job queues.
+     All machines in the pool should be given read access. 
+     In addition, giving read access to *.cs.wisc.edu 
+     will allow the Condor team to obtain information about
+     your Condor pool in the event that debugging is needed.
+     \item[Write]
+     All machines in the pool should be given write access. 
+     It allows machines to send information to Condor, for
+     example, a ClassAd update.
+     Note that any machine with both read and write access
+     may join the Condor pool.
+     \item[Administrator]
+     A machine with administrator access will be allowed more
+     extended permission to to things such as
+     change user priorities, modify the job queue,
+     turn Condor services on and off,
+     and restart Condor.
+     The central manager should be given administrator access
+     and is the default listed.
+     \end{description}
+
+\item[STEP 8: Option for starting Condor jobs.]
+     Condor will execute submitted jobs on machines based on
+     a preference given at installation.
+     Three options are given, and the first is most commonly used
+     by Condor pools.
+     This specification may be changed or refined in
+     the machine ClassAd requirements attribute.
+
+     The three choices:
+     \begin{description}
+     \item[After 15 minutes of no console activity and low CPU activity.]
+     Console activity is the use of the mouse or keyboard.
+     Low CPU activity is defined as a load of less than 30\Percent. 
+     \item[After 15 minutes of no console activity.]
+     \item[Always run Condor jobs.]
+     \end{description}
+
+\item[STEP 9: Option for stopping Condor jobs.]
+     This step is omitted if Condor jobs are always run as
+     the option chosen in STEP 8.
+
+     If Condor is executing a job and the user returns,
+     Condor needs to know what to do with the partially completed job.
+     There are currently two options for the job.
+
+     \begin{description}
+     \item[The job is killed 5 minutes after your return.]
+     The job is suspended immediately once there is console activity.
+     If the activity continues, then the job is
+     killed after 5 minutes, losing ?
+     There is no checkpointing, so the job will
+     be restarted from the beginning at a later time.
+     The job will be placed back into the queue.
+     \item[ Suspend job, leaving it in memory.]
+     At a later time, when a Condor job may again be run,
+     the suspended job is continued, starting from where
+     it was when suspended.
+     (this takes up swap space)
+     \end{description}
+
+%    Advice on which to choose goes here.
+     Killing a job is less intrusive on the workstation owner
+     than leaving it in memory for a later time.
+     A suspended job left in memory will require swap space,
+     possibly a scarce resource.
+     Leaving a job in memory has the benefit that accumulated
+     run time is not lost for a partially completed job.
+
+\item[STEP 10: Review entered information.]
+     Check that the entered information is correctly entered.
+     You have the option to return to previous dialog boxes to fix entries.
+\end{description}
+
+\index{installation!NT|)}
+\index{NT installation|)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{nt-installed-now-what}
+Condor is installed... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{NT installation!starting Condor}
+
+After the installation of Condor is completed, Condor can
+be started.
+From the Start menu, choose Settings.
+From the Settings menu, choose Control Panel.
+From the Control Panel, choose Services.
+From Services, choose Condor, and Start.
+
+Run the Task Manager (Control-Shift-Escape) to check that Condor
+services, such as
+\Condor{master}, ?, and ? are running.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{nt-running-now-what}
+Condor is running... now what?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Once Condor services are running, try building
+and submitting some test jobs.  See \File{C:examples/README}
+for details.
+
