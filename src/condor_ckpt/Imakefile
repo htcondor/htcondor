@@ -1,3 +1,11 @@
+#
+# In most modules, we compile with -fPIC.  Turn it off for this
+# module, because it interferes with checkpointing.
+#
+
+CC_PIC_FLAG =
+
+
 CMNT
 CMNT Set the following if you want a PVM ready checkpointing library
 CMNT compiled.  This will require that the PVM library be linked into
