@@ -98,9 +98,8 @@ directory for you instead of giving up right away.
 
 \begin{itemize}
 
-\item Fixed a bug where we couldn't ever open more than \_POSIX\_PATH\_MAX
-file descriptors in our OpenFileTable implementation. \_POSIX\_PATH\_MAX
-was not the right constant that should have been used in that context.
+\item Fixed a bug where there was a needless limitation on the number of open
+file descriptors a user job could have.
 
 \item Fixed a standalone checkpointing bug where we weren't blocking signals
 in critical sections and causing file table corruption at checkpoint
@@ -112,7 +111,7 @@ the linker would fail on \_\_uname and \_\_sigsuspend.
 \item Fixed a bug in \Condor{shadow} that would send incorrect job
 completion email under Linux.
 
-\item Fixed a bug in the remote system call of fchdir(2) that caused
+\item Fixed a bug in the remote system call of \Syscall{fchdir} that caused
 a garbage file descriptor to be used in Standard Universe jobs.
 
 \item Fixed a bug in the \Condor{shadow} which was causing \Condor{q}
