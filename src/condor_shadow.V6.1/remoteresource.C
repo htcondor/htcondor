@@ -70,7 +70,6 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	state = RR_PRE;
 }
 
-
 RemoteResource::~RemoteResource()
 {
 	if ( dc_startd     ) delete dc_startd;
@@ -620,7 +619,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	float float_value;
-	
+	char string_value[ATTRLIST_MAX_EXPRESSION];
+	char tmp[ATTRLIST_MAX_EXPRESSION];
+
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 
 	if( DebugFlags & D_MACHINE ) {
@@ -643,6 +644,21 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
+	}
+
+	if( update_ad->LookupString(ATTR_EXCEPTION_HIERARCHY,string_value) ) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_HIERARCHY,string_value);
+		jobAd->InsertOrUpdate(tmp);
+	}
+
+	if( update_ad->LookupString(ATTR_EXCEPTION_NAME,string_value) ) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_NAME,string_value);
+		jobAd->InsertOrUpdate(tmp);
+	}
+
+	if( update_ad->LookupString(ATTR_EXCEPTION_TYPE,string_value) ) {
+		sprintf(tmp,"%s=\"%s\"",ATTR_EXCEPTION_TYPE,string_value);
+		jobAd->InsertOrUpdate(tmp);
 	}
 
 	char* job_state = NULL;
