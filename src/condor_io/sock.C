@@ -439,7 +439,7 @@ int Sock::do_connect(
 
 		if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
 			_state = sock_connect;
-			dprintf( D_NETWORK, "%s ACCEPT %s ", sock_to_string(_sock) );
+			dprintf( D_NETWORK, "CONNECT %s ", sock_to_string(_sock) );
 			dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 			return TRUE;
 		}
@@ -487,7 +487,7 @@ int Sock::do_connect(
 			case 1:
 				if (test_connection()) {
 					_state = sock_connect;
-					dprintf( D_NETWORK, "%s ACCEPT %s ",
+					dprintf( D_NETWORK, "CONNECT %s ",
 							 sock_to_string(_sock) );
 					dprintf( D_NETWORK|D_NOHEADER, "%s\n",
 							 sin_to_string(&_who) );
