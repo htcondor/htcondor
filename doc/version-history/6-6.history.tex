@@ -73,8 +73,12 @@ Redhat 7.x.
   longer get an error.
 
 \item Fixed a bug on Windows that would cause ``GetCursorPos() failed''
-to appear repeatedly in the StartLog. The startd now uses a different
-function to track mouse activity that does not have a tendancy to fail.
+  to appear repeatedly in the StartLog. The startd now uses a different
+  function to track mouse activity that does not have a tendancy to fail.
+
+\item Fixed a bug on Windows that would prevent some \Condor{shadow}
+  daemons from obtaining a lock to their log file under heavy load, and
+  thus causing them to EXCEPT().
 
 \item Fixed the bug where the \Condor{starter} would fail to transfer
   back core files created by Vanilla, Java and MPI universe jobs.
