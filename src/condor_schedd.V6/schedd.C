@@ -55,6 +55,7 @@ extern char *gen_ckpt_name();
 
 extern "C"
 {
+	int		SetCkptServerHost(const char *host);
 	int 	RemoveLocalOrRemoteFile(const char *, const char *);
 	int		FileExists(const char *, const char *);
 	int	 	calc_virt_memory();
@@ -2574,6 +2575,8 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 {
     char    ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
+	char	server[_POSIX_PATH_MAX];
+	char	*tmp;
 
 		/* In order to remove from the checkpoint server, we need to know
 		 * the owner's name.  If not passed in, look it up now.
@@ -2583,6 +2586,17 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 			dprintf(D_ALWAYS,"ERROR: cleanup_ckpt_files(): cannot determine owner for job %d.%d\n",cluster,proc);
 		} else {
 			owner = buf;
+		}
+	}
+
+	if (GetAttributeString(cluster, proc, ATTR_LAST_CKPT_SERVER,
+						   server) == 0) {
+		SetCkptServerHost(server);
+	} else {
+		tmp = param("CKPT_SERVER_HOST");
+		if (tmp) {
+			SetCkptServerHost(server);
+			free(tmp);
 		}
 	}
 
