@@ -404,3 +404,35 @@ JICLocal::publishUpdateAd( ClassAd* ad )
 	return Starter->publishUpdateAd( ad );
 }
 
+
+bool
+JICLocal::checkUniverse( int univ ) 
+{
+	switch( univ ) {
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_JAVA:
+			// for now, we don't support much. :)
+		return true;
+
+	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_PARALLEL:
+			// these are at least valid tries, but we don't work with
+			// any of them in stand-alone starter mode... yet.
+		dprintf( D_ALWAYS, "ERROR: %s %s (%d) not supported without the "
+				 "schedd and/or shadow, aborting\n", ATTR_JOB_UNIVERSE,
+				 CondorUniverseName(univ), univ );
+		return false;
+
+	default:
+			// downright unsupported universes
+		dprintf( D_ALWAYS, "ERROR: %s %s (%d) is not supported\n", 
+				 ATTR_JOB_UNIVERSE, CondorUniverseName(univ), univ );
+		return false;
+
+	}
+}
+

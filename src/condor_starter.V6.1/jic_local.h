@@ -197,6 +197,14 @@ protected:
 		*/
 	char* getJobStdFile( const char* attr_name );
 
+		/** Make sure the JobUniverse attribute in our job ClassAd
+			(regardless of how we got it) is valid for a "local" job. 
+			@param univ The value of the JobUniverse attribute
+			@return true if allowed, false if invalid
+		*/
+	bool checkUniverse( int univ );
+
+
 };
 
 
