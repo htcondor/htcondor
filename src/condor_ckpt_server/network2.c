@@ -274,11 +274,12 @@ char* getserveraddr()
 	struct hostent* h;
 	char	*server;
 	
-	server = param("CKPT_SERVER");
+	server = param("CKPT_SERVER_HOST");
 	if (server) {
 		h = gethostbyname(server);
 	} else {
-		h = gethostbyname(SERVER);
+		fprintf(stderr, "\"CKPT_SERVER\" Not defined in the config file!\n");
+		return NULL;
 	}
 	if (h == NULL) {
 		fprintf(stderr, "\nERROR:\n");
