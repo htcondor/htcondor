@@ -619,4 +619,11 @@ RestoreFileState()
 	FileTab.Restore();
 }
 
+void
+Set_CWD( const char *working_dir )
+{
+	strcpy( Condor_CWD, working_dir );
+}
+
+
 } // end of extern "C"
