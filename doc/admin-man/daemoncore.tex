@@ -106,8 +106,37 @@ The arguments and what they do are described below:
   \File{stderr} instead of its specified log file.  This option forces
   the -f option described above.
 
-\item[-version] Causes the daemon to print out version information and
+\item[-v] Causes the daemon to print out version information and
   exit.
+
+\item[-l directory] Overrides the value of \Macro{LOG} as specified in
+  your config files.  Primarily, this option would be used with the
+  \Condor{kbdd} when it needs to run as the individual user logged
+  into the machine, instead of running as root.  Regular users would
+  not normally have permission to write files into Condor's log
+  directory.  Using this option, they can override the value of
+  \Macro{LOG} and have the \Condor{kbdd} write its log file into a
+  directory that the user has permission to write to.
+
+\item[-pidfile filename] Causes the daemon to write out its PID, or
+  process id number, to the specified file.  This file can be used to
+  help shutdown the daemon without searching through the output of the
+  ``ps'' command.
+
+  Since daemons run with their current working directory set to the
+  value of \Macro{LOG}, if you don't specify a full path (with a ``/''
+  to begin), the file will be left in the log directory.  If you leave
+  your pidfile in your log directory, you will want to add whatever
+  filename you use to the \Macro{VALID\_LOG\_FILES} parameter,
+  described in section~\ref{param:ValidLogFiles} on
+  page~\pageref{param:ValidLogFiles}, so that \Condor{preen} does not
+  remove it.
+
+\item[-k filename] Causes the daemon to read out a pid from the
+  specified filename and send a SIGTERM to that process.  The daemon
+  that you start up with ``-k'' will wait until the daemon it is
+  trying to kill has exited.  
+
 
 \end{description}
 
