@@ -1005,7 +1005,7 @@ The second condition is if suspension is not desired and the machine is busy.
 \begin{verbatim}
 PREEMPT	        : ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
                    (Activity == "Suspended") ) || \
-                  ( $(MachineBusy) && (WANT_SUSPEND == False) )
+                  ( SUSPEND && (WANT_SUSPEND == False) )
 \end{verbatim}
 
 Kill a job if it has been vacating for too long.
