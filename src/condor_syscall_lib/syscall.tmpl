@@ -717,9 +717,9 @@ not_supported{
 		ALLOC_PATH( path2 );
 	}
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(OSF1)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(OSF1) || defined(AIX32) || defined(IRIX62)
+#elif defined(AIX32) || defined(IRIX62)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
@@ -759,7 +759,11 @@ not_supported{
 	}
 #endif
 
+#if defined(OSF1) || defined(LINUX)
+	int gethostname( char *address, size_t address_len ) {
+#else 
 	int gethostname( char *address, int address_len ) {
+#endif
 		out code_bytes_bool( address, address_len );
 		alloc( address, address_len );
 	}
@@ -853,7 +857,7 @@ not_supported{
 		in code_bytes_bool( times, TIMEVAL_ARRAY_SIZE );
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
-#if defined(HPUX10)
+#if defined(HPUX10) || defined(OSF1)
 	long gethostid();
 #else
 	int gethostid();
