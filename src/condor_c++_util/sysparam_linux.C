@@ -38,8 +38,9 @@ Linux::get_load_avg()
 	float	load_avg;
 	char	*buf;
 	int	size = sizeof(char *);
+	SysType	type=Float;
 
-	if(readSysParam(LoadAvg, buf, size, Float) < 0) {
+	if(readSysParam(LoadAvg, buf, size, type) < 0) {
 		dprintf(D_ALWAYS, "Failed to read load average\n");
 		return(0.0);
 	}
@@ -50,6 +51,9 @@ Linux::get_load_avg()
 int
 Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 {
+	char	c;
+
+
 	set_root_euid();
 
 	switch ( sys )
@@ -74,6 +78,7 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		break;
 
 	case LoadAvg:						// lookup_load_avg()
+		{
 		LoadVector MyLoad;
 		int temp = MyLoad.Update();
 		if ( temp == -1 )
@@ -87,14 +92,22 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		buffer = (char *)new float[1];
 		*(float *)buffer = MyLoad.Long();
 		break;
+		}
 	
 	case SwapSpace:  					// calc_virt_memory()
 	{
 	    FILE 	*proc;
 	    long	free_vm;
+	    char	c;
 	    char	tmp_c[20];
 	    long	tmp_l;
+		struct utsname buf;
+		int		major, minor, patch;
 
+
+		// Obtain the kernel version so that we know what /proc looks like..
+		if( uname(&buf) < 0 )  return -1;
+		sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
 
 	    proc=fopen("/proc/meminfo","r");
 	    if(!proc) {
@@ -102,14 +115,40 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		set_condor_euid();
 		return -1;
 	    }
-	    // The /proc/meminfo looks something like this:
+	    // The /proc/meminfo looks something like this for V1.x.x:
   	    //		total:	used:	free:	shared:	buffers:
 	    //Mem:     7294976 7159808 135168  4349952  1748992
 	    //Swap:   33898496 8929280 24969216
 
-	    fscanf(proc, "%s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
-	    fscanf(proc, "%s %d %d %d %d %d", &tmp_c, &tmp_l, &tmp_l, &tmp_l, &tmp_l);
-	    fscanf(proc, "%s %d %d %d", &tmp_c, &tmp_l, &free_vm);
+		// and like this for 2.0.0...
+        //       total:    used:    free:  shared: buffers:  cached:
+		//Mem:  19578880 19374080   204800  7671808  1191936  8253440
+		//Swap: 42831872  8368128 34463744
+		//MemTotal:     19120 kB
+		//MemFree:        200 kB
+		//MemShared:     7492 kB
+		//Buffers:       1164 kB
+		//Cached:        8060 kB
+		//SwapTotal:    41828 kB
+		//SwapFree:     33656 kB
+
+		switch(major) {
+			case 1:
+			case 2:
+	    		while((c=fgetc(proc))!='\n');
+	    		while((c=fgetc(proc))!='\n');
+	    		fscanf(proc, "%s %d %d %d", tmp_c, &tmp_l, &free_vm);
+	    		dprintf(D_ALWAYS, "Swap Space:%d\n", free_vm);
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d",
+					major, minor, patch);
+	    		fclose(proc);
+				return -1;
+				break;
+		}
+
 
 	    fclose(proc);
 
@@ -128,7 +167,13 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    long	phys_mem;
 	    char	tmp_c[20];
 	    long	tmp_l;
+		struct utsname buf;
+		int		major, minor, patch;
 
+
+		// Obtain the kernel version so that we know what /proc looks like..
+		if( uname(&buf) < 0 )  return -1;
+		sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
 
 	    proc=fopen("/proc/meminfo","r");
 	    if(!proc) {
@@ -141,8 +186,34 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    //Mem:     7294976 7159808 135168  4349952  1748992
 	    //Swap:   33898496 8929280 24969216
 
-	    fscanf(proc, "%s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
-	    fscanf(proc, "%s %d", &tmp_c, &phys_mem);
+		// and like this for 2.0.0...
+        //       total:    used:    free:  shared: buffers:  cached:
+		//Mem:  19578880 19374080   204800  7671808  1191936  8253440
+		//Swap: 42831872  8368128 34463744
+		//MemTotal:     19120 kB
+		//MemFree:        200 kB
+		//MemShared:     7492 kB
+		//Buffers:       1164 kB
+		//Cached:        8060 kB
+		//SwapTotal:    41828 kB
+		//SwapFree:     33656 kB
+
+		switch(major) {
+			case 1:
+			case 2:
+	    		while((c=fgetc(proc))!='\n');
+	    		fscanf(proc, "%s %d", tmp_c, &phys_mem);
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d",
+					major, minor, patch);
+	    		fclose(proc);
+				return -1;
+				break;
+		}
+
+		fclose(proc);
 
   	    size = sizeof(long);
 	    t    =  Long;
@@ -157,7 +228,13 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	    char	cpu[20];
 	    char	tmp_c[20];
 	    long	tmp_l;
+		struct utsname buf;
+		int		major, minor, patch;
 
+
+		// Obtain the kernel version so that we know what /proc looks like..
+		if( uname(&buf) < 0 )  return -1;
+		sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
 
 	    proc=fopen("/proc/cpuinfo","r");
 	    if(!proc) {
@@ -166,8 +243,45 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		return -1;
 	    }
 
-	    fscanf(proc, "%s %s %s", tmp_c, tmp_c, cpu);
-	    fclose(proc);
+		// cpuinfo looks like:
+		// Kernel version 1.x.x:
+
+		// Really not sure anymore... But, CPU on the third line...
+
+		// Kernel version 2.0.0:
+
+		// processor       : 0
+		// cpu             : 486
+		// model           : DX/4-WB
+		// vendor_id       : AuthenticAMD
+		// stepping        : 4
+		// fdiv_bug        : no
+		// hlt_bug         : no
+		// fpu             : yes
+		// fpu_exception   : yes
+		// cpuid           : yes
+		// wp              : yes
+		// flags           : fpu
+		// bogomips        : 3.72
+
+		switch(major) {
+			case 1:
+	    		fscanf(proc, "%s %s %s", tmp_c, tmp_c, cpu);
+				break;
+			case 2:
+	    		while((c=fgetc(proc))!='\n');
+	    		fscanf(proc, "%s : %s", tmp_c, cpu);
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d",
+					major, minor, patch);
+	    		fclose(proc);
+				return -1;
+				break;
+		}
+
+  	    fclose(proc);
 
   	    size = strlen(cpu)+1;
 	    t    =  String;
@@ -184,19 +298,46 @@ Linux::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	set_condor_euid();
 	return 1;
 }
+
 int
 LoadVector::Update()
 {
     FILE	*proc;
+	struct utsname buf;
+	int		major, minor, patch;
+
+
+	// Obtain the kernel version so that we know what /proc looks like..
+	if( uname(&buf) < 0 )  return -1;
+	sscanf(buf.release, "%d.%d.%d", &major, &minor, &patch);
+
+	// /proc/loadavg looks like:
+
+	// Kernel Version 2.0.0:
+	// 0.03 0.03 0.09 2/42 15582
+
 
     proc=fopen("/proc/loadavg","r");
     if(!proc)
 	return -1;
 
-    fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg);
-    dprintf(D_FULLDEBUG, "Load avg: %f %f %f\n", short_avg, medium_avg, long_avg);
+	switch(major) {
+		case 1:
+		case 2:
+    		fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg);
+			break;
+
+		default:
+			dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d",
+				major, minor, patch);
+    		fclose(proc);
+			return -1;
+			break;
+	}
 
     fclose(proc);
+
+    dprintf(D_FULLDEBUG, "Load avg: %f %f %f\n", short_avg, medium_avg, long_avg);
 
     return 1;
 }
