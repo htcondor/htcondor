@@ -163,19 +163,6 @@ command_give_state( Service*, int, Stream* stream )
 	return TRUE;
 }
 
-
-int
-command_give_classad( Service*, int, Stream* stream ) 
-{
-	Resource* rip;
-	dprintf( D_FULLDEBUG, "command_give_classad() called.\n" );
-	if( (rip = stream_to_rip(stream)) ) {
-		return rip->give_classad( stream );
-	}
-	return FALSE;
-}
-
-
 int
 command_give_totals_classad( Service*, int, Stream* stream ) 
 {
@@ -374,6 +361,52 @@ command_give_request_ad( Service*, int, Stream* stream)
 	stream->end_of_message();
 	return TRUE;
 }
+
+
+int
+command_query_ads( Service*, int, Stream* stream) 
+{
+	ClassAd queryAd;
+	ClassAd *ad;
+	ClassAdList ads;
+	int more = 1, num_ads = 0;
+   
+	dprintf( D_ALWAYS, "In command_query_ads\n" );
+
+	stream->decode();
+    stream->timeout(15);
+	if( !queryAd.get(*stream) || !stream->end_of_message()) {
+        dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+		// Construct a list of all our ClassAds:
+	resmgr->makeAdList( &ads );
+	
+		// Now, find the ClassAds that match.
+	stream->encode();
+	ads.Open();
+	while( ad = ads.Next() ) {
+		if( (*ad) >= queryAd ) {
+			if( !stream->code(more) || !ad->put(*stream) ) {
+				dprintf (D_ALWAYS, 
+						 "Error sending query result to client -- aborting\n");
+				return FALSE;
+			}
+			num_ads++;
+        }
+	}
+
+		// Finally, close up shop.  We have to send NO_MORE.
+	more = 0;
+	if( !stream->code(more) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending EndOfResponse (0) to client\n" );
+		return FALSE;
+	}
+    dprintf( D_FULLDEBUG, "Sent %d ads in response to query\n", num_ads ); 
+	return TRUE;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions
