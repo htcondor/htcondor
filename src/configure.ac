@@ -77,26 +77,227 @@ if test $my_domain = "cs.wisc.edu" && test -d "/s/std/bin" ; then
   AC_MSG_RESULT([yes])
 fi   
 
+# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
+# greater.  Unfortunately, GPT doesn't have a configure script or
+# anything, it just lets perl die with a require statement.  So, we
+# test for the right version here and fail in an early and obvious way
+# if there's a problem.  Also, we check for this early, so we can use
+# perl in the rest of the tests in here, if we want it. 
+AC_PROG_PERL_VERSION([5.005_03], [],
+   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
+
 
 ############################################################
 # Figure out what platform we're being run on
 ############################################################
+AC_MSG_NOTICE([determining host platform])
 arch=`uname -m`
 osrelease=`uname -r`
 osversion=`uname -v`
+_cv_arch=""
+_cv_opsys=""
+_cv_opsys_vers=""
+_cv_sysname=""
+_cv_linux_distro="UNKNOWN"
+_cv_libc_kind="LIBC-UNKNOWN"
+_cv_libc_major="0"
+_cv_libc_minor="0"
+_cv_libc_patch="0"
+
 # Make sure if we get back something that begins with "IRIX" that we
 # strip off anything after it (e.g. "IRIX64", etc).
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
-if test "$os" = "IRIX" ; then
+
+if test "$os" = "HP-UX"; then
+  _cv_opsys="HPUX"
+  _cv_arch="HPPA"
+  if test "$osrelease" = "B.10.20" ; then
+    _cv_opsys_vers="HPUX10"
+    _cv_sysname="hp_ux102"
+  elif test "$osversion" = "B.11.00" ; then
+    _cv_opsys_vers="HPUX11"
+    _cv_sysname="hp_ux110"
+  fi
+
+elif test "$os" = "OSF1" ; then
+  _cv_arch="ALPHA"
+  _cv_opsys="DUX"
+  if test $osrelease = "V4.0" ; then
+    _cv_opsys_vers="DUX4"
+    _cv_sysname="alpha_dux40"
+  elif test $osrelease = "V5.0" -o $osrelease = "V5.1" ; then
+    _cv_opsys_vers="DUX5"
+    _cv_sysname="alpha_dux51"
+  fi
+
+elif test $os = "Linux" ; then
+  # linux is a big mess, since we have different distributions,
+  # different versions of glibc, etc, etc...
+  _cv_opsys="LINUX"
+  if test $arch = "i686" -o $arch = "i586" -o $arch = "i486" ; then
+    _cv_arch="I386"
+  elif test $arch = "alpha" ; then
+    _cv_arch="ALPHA"
+  elif test $arch = "ia64" ; then
+    _cv_arch="IA64"
+  fi
+
+  # next, figure out what linux distribution this is
+  if test -f "/etc/redhat-release" ; then 
+    _rh_vers=`cat /etc/redhat-release|perl -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_rh_vers" in
+     "7.2" )
+       _cv_linux_distro="RH72"
+       ;;
+     "2.1AW" )
+       _cv_linux_distro="RH72"
+       ;;
+     "8.0" )
+       _cv_linux_distro="RH80"
+       ;;
+     "9" )
+       _cv_linux_distro="RH9"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       _cv_linux_distro="UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/SuSE-release" ; then
+    _suse_vers=`cat /etc/SuSE-release | grep VERSION | awk '{print $3}'`
+    case "$_suse_vers" in
+     "8.1" )
+       _cv_linux_distro="SLES81"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to SuSE version $_suse_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+       _cv_linux_distro="UNKNOWN"
+       ;;
+    esac
+  else
+    AC_MSG_WARN([Unrecognised Linux distribution])
+    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
+    _cv_linux_distro="UNKNOWN"
+  fi
+  # this perl 1-liner takes all space-delimited input, sticks it
+  # together with '_' marks, and lower-cases the whole thing
+  _cv_sysname="`echo $_cv_arch $_cv_linux_distro | perl -ane 'print lc join('_',@F)'`"
+  _cv_opsys_vers="LINUX-$_cv_linux_distro"
+
+elif test $os = "SunOS" ; then
+  _cv_opsys="SOLARIS"
+  if test $arch = "sun4m" -o $arch = "sun4u" ; then
+    _cv_arch="SUN4X"
+  else
+    AC_MSG_ERROR([Condor only supports Sparc Solaris (not $arch)])
+  fi
+  if test "$osrelease" = "5.6" ; then
+    _cv_opsys_vers="SOLARIS26"
+    _cv_sysname="sun4x_56"
+  elif test "$osrelease" = "5.7" ; then
+    _cv_opsys_vers="SOLARIS27"
+    _cv_sysname="sun4x_57"
+  elif test "$osrelease" = "5.8" ; then
+    _cv_opsys_vers="SOLARIS28"
+    _cv_sysname="sun4x_58"
+  elif test "$osrelease" = "5.9" ; then
+    _cv_opsys_vers="SOLARIS29"
+    _cv_sysname="sun4x_59"
+  fi
+
+elif test $os = "IRIX" ; then
+  _cv_arch="SGI"
+  _cv_opsys="IRIX"
   if test "$osrelease" = "6.5" ; then
-    # Our default build for 6.5 is mips3 and N32
+    _cv_opsys_vers="IRIX65"
+    _cv_sysname="sgi_65"
     IsMipsVersion=3
     IsMipsABI=N32
   else
+    _cv_opsys_vers="IRIX62"
+    _cv_sysname="sgi_62"
     IsMipsVersion=2
     IsMipsABI=O32
   fi
+
+elif test $os = "AIX" ; then
+  # add detection to this when ia64 is needed
+  _cv_arch="PPC"
+  _cv_opsys="AIX"
+  if test "$osversion" = "5" ; then
+    _cv_opsys_vers="AIX5"
+    _cv_sysname="ppc_aix5"
+  fi
+
+elif test $os = "Darwin" ; then
+  _cv_arch="PPC"
+  _cv_opsys="BSD"
+  _cv_opsys_vers="DARWIN"
+  _cv_sysname="ppc_macosx"
+
+else
+  AC_MSG_ERROR([Condor has not been ported to this platform])
 fi
+
+AC_MSG_CHECKING([architecture])
+AC_MSG_RESULT([$_cv_arch])
+AC_SUBST(_cv_arch,$_cv_arch)
+
+AC_MSG_CHECKING([generic operating system])
+AC_MSG_RESULT([$_cv_opsys])
+AC_SUBST(_cv_opsys,$_cv_opsys)
+
+AC_MSG_CHECKING([operating system version])
+AC_MSG_RESULT([$_cv_opsys_vers])
+AC_SUBST(_cv_opsys_vers,$_cv_opsys_vers)
+
+AC_MSG_CHECKING([system identifying string])
+AC_MSG_RESULT([$_cv_sysname])
+AC_SUBST(_cv_sysname,$_cv_sysname)
+
+if test "$_cv_opsys" = "LINUX" ; then 
+  AC_MSG_CHECKING([exact libc version])
+  for _libc in "/lib/libc.so.6" "/lib/libc.so.6.1" ; do
+    if test -f "$_libc" && test -L "$_libc" ; then 
+      _libc_ver=`echo $_libc|perl -nle '$f=readlink;$f=~/libc-(.*)\.so/;print $1;'`
+      break;
+    elif test -f "$_libc" ; then
+      # ugh!  it's not a symlink to a file named with the version, so
+      # we try an alternative method.  this is mostly a hack based on
+      # crude experimentation.  we run nm on the libc.so, search for
+      # "A" symbols with "GLIBC" in them, and grab the *second to*
+      # last one we find.  based on testing this method on some
+      # versions of glibc where the version was in the filename, this
+      # seems to give us the closest match to reality.  it'll
+      # certainly work to give us the major + minor number, which is
+      # mostly all we care about at this point...
+      _libc_ver=`nm $_libc|grep GLIBC|grep A|tail -2|head -1|awk '{print $3}'|cut -f2 -d_`
+      break;
+    fi
+  done
+  if test "x$_libc_ver" = "x" ; then
+    AC_MSG_RESULT([ERROR])
+    AC_MSG_ERROR([Can not determine libc version on this machine])
+  fi
+  AC_MSG_RESULT([$_libc_ver])
+  _cv_libc_kind="GLIBC"
+  _cv_libc_major=`echo $_libc_ver | cut -f1 -d.`
+  _cv_libc_minor=`echo $_libc_ver | cut -f2 -d.`
+  _cv_libc_patch=`echo $_libc_ver | cut -f3 -d.`
+
+  _cv_libc_full=`echo $_cv_libc_kind $_cv_libc_major $_cv_libc_minor $_cv_libc_patch|perl -ane 'print "#define IS_".join('_',@F)." YES";'`
+  _cv_libc_majmin="#define IS_$_cv_libc_kind$_cv_libc_major$_cv_libc_minor YES"
+  _cv_libc_is_kind="#define IS_$_cv_libc_kind YES"
+else
+  _cv_libc_full=""
+  _cv_libc_majmin=""
+  _cv_libc_is_kind=""
+fi
+AC_SUBST(_cv_libc_full,$_cv_libc_full)
+AC_SUBST(_cv_libc_majmin,$_cv_libc_majmin)
+AC_SUBST(_cv_libc_is_kind,$_cv_libc_is_kind)
 
 
 ############################################################
@@ -208,15 +409,6 @@ AC_SUBST(pure_cache_dir,$ac_cv_purecachedir)
 ############################################################
 # checks for programs
 ############################################################
-
-# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
-# greater.  Unfortunately, GPT doesn't have a configure script or
-# anything, it just lets perl die with a require statement.  So, we
-# test for the right version here and fail in an early and obvious way
-# if there's a problem.  Also, we check for this early, so we can use
-# perl in the rest of the tests in here, if we want it. 
-AC_PROG_PERL_VERSION([5.005_03], [],
-   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
 
 #####################
 # compiler detection
