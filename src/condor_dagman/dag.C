@@ -195,7 +195,7 @@ bool
 Dag::DetectCondorLogGrowth () {
 
 	if( _condorLogFiles.number() <= 0 ) {
-		debug_printf( DEBUG_VERBOSE, "WARNING: DetectCondorLogGrowth() called "
+		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectCondorLogGrowth() called "
 					  "but no Condor log defined\n" );
 		return false;
 	}
@@ -221,7 +221,7 @@ Dag::DetectCondorLogGrowth () {
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
 	if( !_dapLogName ) {
-		debug_printf( DEBUG_VERBOSE, "WARNING: DetectDaPLogGrowth() called "
+		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectDaPLogGrowth() called "
 					  "but no dap log defined\n" );
 		return false;
 	}
