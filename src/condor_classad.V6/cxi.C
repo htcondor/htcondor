@@ -1,4 +1,4 @@
-// #include "condor_config.h"
+#include "condor_config.h"
 #include "classad_package.h"
 #include <ctype.h>
 
@@ -7,7 +7,7 @@ enum Commands {
 
 	CLEAR_TOPLEVEL, 
 	DEEP_INSERT_ATTRIBUTE, 
-	DEEP_REMOVE_ATTRIBUTE,
+	DEEP_DELETE_ATTRIBUTE,
 	EVALUATE, 
 	EVALUATE_WITH_SIGNIFICANCE,
 	FLATTEN, 
@@ -15,9 +15,10 @@ enum Commands {
 	INSERT_ATTRIBUTE, 
 	NEW_TOPLEVEL, 
 	OUTPUT_TOPLEVEL, 
+	PARAM,
 	QUIT,
 	REMOVE_ATTRIBUTE, 
-	SET_CONDOR_TOPLEVEL,
+	SET_MATCH_TOPLEVEL,
 
 	_LAST_COMMAND_ 
 };
@@ -27,7 +28,7 @@ char CommandWords[][32] = {
 
 	"clear_toplevel",
 	"deep_insert",
-	"deep_remove",
+	"deep_delete",
 	"evaluate",
 	"sigeval",
 	"flatten",
@@ -35,9 +36,10 @@ char CommandWords[][32] = {
 	"insert_attribute",
 	"new_toplevel",
 	"output_toplevel",
+	"param",
 	"quit",
-	"remove_attribute",
-	"set_condor_toplevel",
+	"delete_attribute",
+	"set_match_toplevel",
 
 	""	
 };
@@ -49,17 +51,24 @@ int
 main( void )
 {
 	ClassAd 	*ad, *adptr;
-	char 		cmdString[128], buffer1[2048], buffer2[2048];
-//	char		*tmp;
+	char 		cmdString[128], buffer1[2048], buffer2[2048], buffer3[2048];
+	char		*paramStr, *attrName;
 	ExprTree	*expr=NULL, *fexpr=NULL;
 	int 		command;
 	Value		value;
 	Source		src;
 	Sink		snk;
+	FormatOptions	pp;
 
-	snk.setSink( stdout );
+		// set formatter options
+	pp.SetClassAdIndentation( true , 4 );
+	pp.SetListIndentation( true , 4 );
+	pp.SetMinimalParentheses( true );
 
-//	config( 0 );
+	snk.SetSink( stdout );
+	snk.SetFormatOptions( &pp );
+
+	config( 0 );
 
 	ad = new ClassAd();
 
@@ -69,7 +78,7 @@ main( void )
 		command = findCommand( cmdString );
 		switch( command ) {
 			case CLEAR_TOPLEVEL: 
-				ad->clear();
+				ad->Clear();
 				fgets( buffer1, 2048, stdin );
 				break;
 
@@ -78,57 +87,74 @@ main( void )
 					printf( "Error reading primary expression\n" );
 					break;
 				}
-				src.setSource( buffer1, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer1 );
 					break;
 				}
-				if( scanf( "%s", buffer1 ) != 1 ) {
+				if( scanf( "%s", buffer2 ) != 1 ) {
 					printf( "Error reading attribute name\n" );
 					break;
 				}	
-				fgets( buffer2, 2048, stdin );
-				src.setSource( buffer2, 2048 );
-				if( !src.parseExpression( fexpr, true ) ) {
-					printf( "Error parsing expression: %s\n", buffer2 );
+				fgets( buffer3, 2048, stdin );
+				src.SetSource( buffer3, 2048 );
+				if( !src.ParseExpression( fexpr, true ) ) {
+					printf( "Error parsing expression: %s\n", buffer3 );
 					break;
 				} 
-				expr->setParentScope( ad );
-				ad->evaluateExpr( expr, value );
-				if( !value.isClassAdValue( adptr ) ) {
+				expr->SetParentScope( ad );
+				if( !ad->EvaluateExpr( expr, value ) ) {
+					printf( "Error evaluating expression: %s\n", buffer1 );
+					delete expr;
+					delete fexpr;
+					expr = NULL;
+					fexpr = NULL;
+					break;
+				}
+				if( !value.IsClassAdValue( adptr ) ) {
 					printf( "Error:  Primary expression was not a classad\n" );
 					delete expr;
 					expr = NULL;
+					delete fexpr;
+					fexpr = NULL;
 					break;
 				}	
-				if( !adptr->insert( buffer1, fexpr ) ) {
-					printf( "Error inserting expression\n" );
+				if( !adptr->Insert( buffer2, fexpr ) ) {
+					printf( "Error Inserting expression: %s\n", buffer3 );
+					delete fexpr;
+					delete expr;
+					fexpr = NULL;
+					expr = NULL;
 				}
 				delete expr;
 				adptr = NULL;
 				expr  = NULL;
 				break;
 
-			case DEEP_REMOVE_ATTRIBUTE:
+			case DEEP_DELETE_ATTRIBUTE:
 				if( scanf( "%s", buffer1 ) != 1 ) { // expr
 					printf( "Error reading primary expression\n" );
 					break;
 				}
-				src.setSource( buffer1, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer1 );
 					break;
 				}
 				fgets( buffer2, 2048, stdin ); // name
-				expr->setParentScope( ad );
-				ad->evaluateExpr( expr, value );
-				if( !value.isClassAdValue( adptr ) ) {
+				expr->SetParentScope( ad );
+				if( !ad->EvaluateExpr( expr, value ) ) {
+					printf( "Error evaluating expression: %s\n", buffer1 );
+					delete expr;
+					break;
+				}
+				if( !value.IsClassAdValue( adptr ) ) {
 					printf( "Error:  Primary expression was not a classad\n" );
 					delete expr;
 					expr = NULL;
 					break;
 				}
-				if( !adptr->remove( buffer2 ) ) {
+				if( !adptr->Remove( buffer2 ) ) {
 					printf( "Warning:  Attribute %s not found\n", buffer2 );
 				}
 				delete expr;
@@ -137,33 +163,51 @@ main( void )
 
 			case EVALUATE:
 				fgets( buffer1, 2048, stdin );
-				src.setSource( buffer1, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer1 );
 					break;
 				}
-				expr->setParentScope( ad );
-				ad->evaluateExpr( expr, value );
-				value.toSink( snk );
-				snk.flushSink();
+				expr->SetParentScope( ad );
+				if( !ad->EvaluateExpr( expr, value ) ) {
+					printf( "Error evaluating expression: %s\n", buffer1 );
+					delete expr;
+					expr = NULL;
+					break;
+				}
+				if( !value.ToSink( snk  ) ) {
+					printf( "Error writing evaluation result to sink\n" );
+				}
+				snk.FlushSink();
 				delete expr;
 				expr = NULL;
 				break;
 		
 			case EVALUATE_WITH_SIGNIFICANCE:
 				fgets( buffer1, 2048, stdin );
-				src.setSource( buffer1, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer1 );
 					break;
 				}
-				expr->setParentScope( ad );
-				ad->evaluateExpr( expr, value, fexpr );
-				value.toSink( snk );
-				snk.flushSink();
+				expr->SetParentScope( ad );
+				if( !ad->EvaluateExpr( expr, value, fexpr ) ) {
+					printf( "Error evaluating expression: %s\n", buffer1 );
+					delete expr;
+					delete fexpr;
+					expr = NULL;
+					fexpr = NULL;
+					break;
+				}
+				if( !value.ToSink( snk ) ) {
+					printf( "Error writing result to sink\n" );
+				}
+				snk.FlushSink();
 				printf( "\n" );
-				fexpr->toSink( snk );
-				snk.flushSink();
+				if( !fexpr->ToSink( snk ) ) {
+					printf( "Error writing expression to sink\n" );
+				}
+				snk.FlushSink();
 				delete expr;
 				expr = NULL;
 				delete fexpr;
@@ -172,24 +216,31 @@ main( void )
 
 			case FLATTEN: 
 				fgets( buffer1, 2048, stdin );
-				src.setSource( buffer1, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer1 );
 					break;
 				}
-				expr->setParentScope( ad );
-				if( ad->flatten( expr, value, fexpr ) ) {
+				expr->SetParentScope( ad );
+				if( ad->Flatten( expr, value, fexpr ) ) {
 					if( fexpr ) {
-						fexpr->toSink( snk );
+						if( !fexpr->ToSink( snk ) ) {
+							printf( "Error writing flattened expression to "
+								"sink\n" );
+						}
 						delete fexpr;
 						fexpr = NULL;
 					} else {
-						value.toSink( snk );
+						if( !value.ToSink( snk ) ) {
+							printf( "Error writing value to sink\n" );
+						}
 					}
-					snk.flushSink();
+					snk.FlushSink();
 				} else {	
 					printf( "Error flattening expression\n" );
 				}
+				delete expr;
+				expr = NULL;
 				break;
 				
 			case HELP: 
@@ -203,52 +254,53 @@ main( void )
 					break;
 				}	
 				fgets( buffer2, 2048, stdin );
-				src.setSource( buffer2, 2048 );
-				if( !src.parseExpression( expr, true ) ) {
+				src.SetSource( buffer2, 2048 );
+				if( !src.ParseExpression( expr, true ) ) {
 					printf( "Error parsing expression: %s\n", buffer2 );
 					break;
 				} 
-				if( !ad->insert( buffer1, expr ) ) {
-					printf( "Error inserting expression\n" );
+				if( !ad->Insert( buffer1, expr ) ) {
+					printf( "Error Inserting expression\n" );
 				}
 				expr = NULL;
 				break;
 
 			case NEW_TOPLEVEL: 
-				ad->clear();
+				ad->Clear();
 				fgets( buffer1, 2048, stdin );
-				src.setSource( buffer1, 2048 );
-				if( !src.parseClassAd( ad, true ) ) {
+				src.SetSource( buffer1, 2048 );
+				if( !src.ParseClassAd( ad, true ) ) {
 					printf( "Error parsing classad\n" );
 				}
 				break;
 			
 			case OUTPUT_TOPLEVEL:
-				ad->toSink( snk );
-				snk.flushSink();
+				if( !ad->ToSink( snk ) ) {
+					printf( "Error writing to sink\n" );
+				}
+				snk.FlushSink();
 				fgets( buffer1, 2048, stdin );
 				break;
 
-/*
-			case 'p':
+			case PARAM:
 				fgets( buffer1, 2048, stdin );
-				if( !( tmp = param( buffer1 ) ) ) {
+				attrName = strtok( buffer1, " \t\n" );
+				if( !( paramStr = param( attrName ) ) ) {
 					printf( "Did not find %s in config file\n", buffer1 );
 					break;
 				}
-				src.setSource( tmp, strlen( tmp ) );
-				if( !src.parseExpression( expr, true ) ) {
-					printf( "Error parsing expression: %s\n", tmp );
-					free( tmp );
+				src.SetSource( paramStr, strlen( paramStr ) );
+				if( !src.ParseExpression( expr, true ) ) {
+					printf( "Error parsing expression: %s\n", paramStr );
+					free( paramStr );
 					break;
 				}
-				if( !ad->insert( buffer1, expr ) ) {
-					printf( "Error inserting: %s = %s\n", buffer1, tmp );
+				if( !ad->Insert( buffer1, expr ) ) {
+					printf( "Error Inserting: %s = %s\n", buffer1, paramStr );
 				}
-				delete tmp;
+				free( paramStr );
 				expr = NULL;
 				break;
-*/
 				
 			case QUIT: 
 				printf( "Done\n\n" );
@@ -259,15 +311,17 @@ main( void )
 					printf( "Error reading attribute name\n" );
 					break;
 				}
-				if( !ad->remove( buffer1 ) ) {
+				if( !ad->Remove( buffer1 ) ) {
 					printf( "Error removing attribute %s\n", buffer1 );
 				}
 				fgets( buffer1, 2048, stdin );
 				break;
 
-			case SET_CONDOR_TOPLEVEL: 
+			case SET_MATCH_TOPLEVEL: 
 				delete ad;
-				ad = CondorClassAd::makeCondorClassAd( NULL, NULL );
+				if( !( ad = MatchClassAd::MakeMatchClassAd( NULL, NULL ) ) ){
+					printf( "Error making classad\n" );
+				}
 				fgets( buffer1, 2048, stdin );
 				break;
 
@@ -290,7 +344,7 @@ help( void )
 	printf( "clear_toplevel\n\tClear toplevel ad\n\n" );
 	printf( "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
 		" classad <expr1>. (No inter-token spaces\n\tallowed in <expr1>.)\n\n");
-	printf( "deep_remove <expr> <name>\n\tRemove <name> from classad "
+	printf( "deep_delete <expr> <name>\n\tDelete <name> from classad "
 		"<expr>. (No inter-token spaces allowed\n\tin <expr>.\n\n" );
 	printf( "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n\n" );	
 	printf( "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
@@ -301,11 +355,9 @@ help( void )
 		"into toplevel\n\n" );
 	printf( "new_toplevel <classad>\n\tEnter new toplevel ad\n\n" );
 	printf( "output_toplevel\n\tOutput toplevel ad\n\n" );
-/*
-	printf( "p <name>\t- (P)aram from config file and insert in toplevel\n" );
-*/
+	printf("param <name>\n\tParam from config file and insert in toplevel\n\n");
 	printf( "quit\n\tQuit\n\n" );
-	printf( "remove_attribute <name>\n\tRemove attribute <name> from "
+	printf( "delete_attribute <name>\n\tDelete attribute <name> from "
 		"toplevel\n\n" );
 	printf( "set_condor_toplevel\n\tSetup a toplevel ad for matching\n\n" );
 	printf( "\nA command may be specified by an unambiguous prefix\n\n" );
