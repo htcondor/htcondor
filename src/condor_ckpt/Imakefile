@@ -53,6 +53,13 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
 #endif
 
+#if IS_SGI_IRIX53
+ASSEMBLER_SRC = SYSCALL.MIPS.IRIX53.s MMAP.MIPS.IRIX53.s
+ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX53.o MMAP.MIPS.IRIX53.o
+.s.o:
+	gas -o $*.o $*.s
+#endif
+
 #if IS_R6000_AIX32
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o $(FLOCK_OBJ)
 #elif IS_HPPAR_HPUX9
@@ -139,7 +146,7 @@ depend_target($(SRC) )
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o, )
 #else
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o )
 #endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
