@@ -219,7 +219,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
 
 /* new stuff for capability management */
-#define SIZE_OF_CAPABILITY_STRING 16
+#define SIZE_OF_CAPABILITY_STRING 11
 #define SIZE_OF_FINAL_STRING 40					/* ipaddr:port + capability */
 
 #define	EXITSTATUS_OK		0					/* exit status of the agent */
