@@ -133,11 +133,7 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	if(pool) {
-		collector = new Daemon( DT_COLLECTOR, 0, pool );
-	} else {
-		collector = new Daemon( DT_COLLECTOR, 0, 0 );
-	}
+	collector = new Daemon( DT_COLLECTOR, pool, 0 );
 		
 	dprintf(D_FULLDEBUG,"locating collector...\n");
 
