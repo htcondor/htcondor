@@ -71,37 +71,6 @@ OsProc::StartJob()
 		return 0;
 	}
 
-	char owner[128];
-	if ( JobAd->LookupString( ATTR_OWNER, owner ) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				 ATTR_OWNER );
-		return 0;
-	}
-
-#ifndef WIN32
-	// Unix
-	init_user_ids( owner );
-#else
-	// Win32
-
-	// note: this moved into VanillaProc::StartJob for now -Todd 11/11/99
-#if 0
-	// we only support running jobs as user nobody for the first pass
-	char nobody_login[60];
-	sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-	init_user_nobody_loginname(nobody_login);
-	init_user_ids("nobody");
-	{
-		perm dirperm;
-		dirperm.init(nobody_login);
-		int ret_val = dirperm.set_acls(Starter->GetWorkingDir());
-		if ( ret_val < 0 ) {
-			EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
-		}
-	}
-#endif
-#endif
-
 	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
 				ATTR_CLUSTER_ID);
@@ -124,10 +93,21 @@ OsProc::StartJob()
 	// get sinfullstring of our shadow, if shadow told us
 	JobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
 
+	if( ShadowAddr[0] ) {
+		dprintf( D_FULLDEBUG, "In job ad: %s = %s\n",
+				 ATTR_MY_ADDRESS, ShadowAddr );
+	} else {
+		dprintf( D_FULLDEBUG, "Can't find %s in job ad!\n",
+				 ATTR_MY_ADDRESS );
+	}
+
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
 	if ( strcmp(CONDOR_EXEC,JobName) == 0 ) {
-		if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
+		priv_state old_priv = set_user_priv();
+		int retval = chmod( JobName, S_IRWXU | S_IRWXO | S_IRWXG );
+		set_priv( old_priv );
+		if( retval < 0 ) {
 			dprintf ( D_ALWAYS, "Failed to chmod %s!\n",JobName );
 			return 0;
 		}
@@ -273,6 +253,8 @@ OsProc::JobExit(int pid, int status)
 {
 	int reason;	
 
+	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
+
 	if (JobPid == pid) {		
 		if ( Requested_Exit == TRUE ) {
 			reason = JOB_NOT_CKPTED;
@@ -280,8 +262,12 @@ OsProc::JobExit(int pid, int status)
 			reason = JOB_EXITED;
 		}
 
-		if (REMOTE_syscall(CONDOR_job_exit, status, reason) < 0) {
-			dprintf(D_ALWAYS, "Failed to send job exit status to Shadow.\n");
+		ClassAd ad;
+		PublishUpdateAd( &ad );
+
+		if( REMOTE_syscall(CONDOR_job_exit, status, reason, &ad) < 0 ) {   
+			dprintf( D_ALWAYS, 
+					 "Failed to send job exit status to Shadow.\n" );
 		}
 		return 1;
 	}
@@ -323,4 +309,13 @@ OsProc::ShutdownFast()
 	Requested_Exit = TRUE;
 	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
 	return false;	// return false says shutdown is pending
+}
+
+
+bool
+OsProc::PublishUpdateAd( ClassAd* ad ) 
+{
+	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
+		// Nothing special for us to do.
+	return true;
 }
