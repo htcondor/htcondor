@@ -46,6 +46,12 @@
 #	define fchmod	__hide_fchmod
 #endif
 
+#if defined(LINUX)
+#define fstat __hide_fstat 
+#define stat __hide_stat 
+#define lstat __hide_lstat 
+#endif
+
 #include <sys/stat.h>
 
 #include <sys/time.h>
@@ -76,6 +82,12 @@
 #undef stat 
 #undef lstat
 #undef mknod 
+#endif
+
+#if defined(LINUX)
+#undef fstat 
+#undef stat 
+#undef lstat
 #endif
 
 #include <sys/resource.h>
