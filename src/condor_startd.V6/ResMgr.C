@@ -395,15 +395,21 @@ ResMgr::init_socks()
 	if( coll_sock ) {
 		delete coll_sock;
 	}
-	coll_sock = new SafeSock( collector_host, 
-							  COLLECTOR_UDP_COMM_PORT );
+	coll_sock = new SafeSock;
+	if (!coll_sock->connect( collector_host, COLLECTOR_UDP_COMM_PORT )) {
+		dprintf(D_ALWAYS, "Failed to connect to collector <%s:%d>\n",
+				collector_host, COLLECTOR_UDP_COMM_PORT);
+	}
 
 	if( view_sock ) {
 		delete view_sock;
 	}
 	if( condor_view_host ) {
-		view_sock = new SafeSock( condor_view_host, 
-								  CONDOR_VIEW_PORT );
+		view_sock = new SafeSock;
+		if (!view_sock->connect( condor_view_host, CONDOR_VIEW_PORT )) {
+			dprintf(D_ALWAYS, "Failed to connect to condor view server "
+					"<%s:%d>\n", condor_view_host, CONDOR_VIEW_PORT);
+		}
 	}
 }
 

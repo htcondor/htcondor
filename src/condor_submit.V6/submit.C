@@ -503,8 +503,8 @@ reschedule()
 	int			cmd;
 
 	/* Connect to the schedd */
-	ReliSock sock(ScheddAddr, SCHED_PORT);
-	if(sock.get_file_desc() < 0) {
+	ReliSock sock;
+	if(!sock.connect(ScheddAddr)) {
 		EXCEPT( "Can't connect to condor scheduler (%s)\n",
 				ScheddAddr );
 	}

@@ -1388,11 +1388,18 @@ void
 Daemons::UpdateCollector()
 {
 	int		cmd = UPDATE_MASTER_AD;
-	SafeSock sock(CollectorHost, COLLECTOR_PORT, 2);
 
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
+
+	SafeSock sock;
+	sock.timeout(2);
+
+	if (!sock.connect(CollectorHost, COLLECTOR_PORT)) {
+		dprintf(D_ALWAYS, "Can't locate collector %s\n", CollectorHost);
+		return;
+	}
 
 	sock.encode();
 	if(!sock.code(cmd))

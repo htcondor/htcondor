@@ -202,8 +202,8 @@ notify_schedd()
 	}
 
 		/* Connect to the schedd */
-	sock = new ReliSock(scheddAddr, SCHED_PORT);
-	if(!sock->ok()) {
+	sock = new ReliSock;
+	if(!sock->connect(scheddAddr)) {
 		if( !TroubleReported ) {
 			if( *DaemonName ) {
 				fprintf( stderr, "Error: Can't connect to schedd %s\n", 

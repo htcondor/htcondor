@@ -552,8 +552,8 @@ doCommand( char *name )
 	}
 
 		/* Connect to the daemon */
-	ReliSock sock(addr, 0);
-	if(sock.get_file_desc() < 0) {
+	ReliSock sock;
+	if(!sock.connect(addr)) {
 		namePrintf( stderr, name, "Can't connect to" );
 		RESTORE;
 		return;

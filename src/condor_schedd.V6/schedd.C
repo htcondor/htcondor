@@ -563,10 +563,11 @@ Scheduler::update_central_mgr(int command, char *host, int port)
 	if( !host ) {
 		return;
 	}
-	SafeSock	sock(host, port);
+	SafeSock sock;
 	sock.timeout( 30 );
 	sock.encode();
-	if( !sock.put(command) ||
+	if( !sock.connect(host, port) ||
+		!sock.put(command) ||
 		!ad->put(sock) ||
 		!sock.end_of_message() ) {
 		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
@@ -3192,14 +3193,19 @@ Scheduler::shutdown_fast()
 void
 Scheduler::reschedule_negotiator(int, Stream *)
 {
-	 int	  	cmd = RESCHEDULE;
-	ReliSock	sock(NegotiatorHost, NEGOTIATOR_PORT);
+	int	  	cmd = RESCHEDULE;
 
-	// relsock->end_of_message();
-
-	 dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
+	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	timeout();							// update the central manager now
+
+	ReliSock sock;
+
+	if (!sock.connect(NegotiatorHost, NEGOTIATOR_PORT)) {
+		dprintf( D_ALWAYS, "failed to connect to negotiator <%s:%d>\n",
+				 NegotiatorHost, NEGOTIATOR_PORT);
+		return;
+	}
 
 	sock.encode();
 	if (!sock.code(cmd)) {
@@ -3436,9 +3442,12 @@ Scheduler::Relinquish(match_rec* mrec)
 
 	// inform the startd
 
-	sock = new ReliSock(mrec->peer, 0);
+	sock = new ReliSock;
 	sock->encode();
-	if(!sock->put(RELINQUISH_SERVICE))
+	if(!sock->connect(mrec->peer)) {
+		dprintf(D_ALWAYS, "Can't connect to startd %s\n", mrec->peer);
+	}
+	else if(!sock->put(RELINQUISH_SERVICE))
 	{
 		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
 		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
@@ -3463,9 +3472,13 @@ Scheduler::Relinquish(match_rec* mrec)
 	}
 	else
 	{
-		sock = new ReliSock(AccountantName, 0);
+		sock = new ReliSock;
 		sock->encode();
-		if(!sock->put(RELINQUISH_SERVICE))
+		if(!sock->connect(AccountantName)) {
+			dprintf(D_ALWAYS,"Can't connect to accountant %s\n",
+					AccountantName);
+		}
+		else if(!sock->put(RELINQUISH_SERVICE))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
@@ -3570,10 +3583,11 @@ Scheduler::send_alive()
 		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec->peer);
 		numsent++;
 		id = rec->id;
-		sock = new SafeSock(rec->peer, 0);
+		sock = new SafeSock;
 		sock->encode();
 		id = rec->id;
-		if( !sock->put(alive) || 
+		if( !sock->connect(rec->peer) ||
+			!sock->put(alive) || 
 			!sock->code(id) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!

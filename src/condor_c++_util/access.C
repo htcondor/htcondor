@@ -152,9 +152,9 @@ int attempt_access(char *filename, int mode, int uid, int gid)
 		return FALSE;
 	}
 
-	socket = new ReliSock(scheddAddr, 0);
+	socket = new ReliSock();
 
-	if ( socket->get_file_desc() < 0 ) 
+	if ( !socket->connect(scheddAddr) ) 
 	{
 		dprintf(D_ALWAYS, "Can't connect to schedd.\n");
 		return FALSE;

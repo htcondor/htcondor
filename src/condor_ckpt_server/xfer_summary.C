@@ -188,9 +188,10 @@ XferSummary::time_out(time_t now)
 	
 	// Send to collector
 	if (CollectorHost) {
-        SafeSock sock(CollectorHost, COLLECTOR_PORT);
+        SafeSock sock;
         sock.encode();
-        if (!sock.put(command) ||
+        if (!sock.connect(CollectorHost, COLLECTOR_PORT) ||
+			!sock.put(command) ||
             !info.put(sock) ||
             !sock.end_of_message()) {
             dprintf(D_ALWAYS, "failed to update collector!\n");
@@ -199,9 +200,10 @@ XferSummary::time_out(time_t now)
 
 	// Send to condor view host
 	if (CondorViewHost) {
-        SafeSock sock(CondorViewHost, CONDOR_VIEW_PORT);
-        sock.encode();
-        if (!sock.put(command) ||
+        SafeSock sock;
+		sock.encode();
+        if (!sock.connect(CondorViewHost, CONDOR_VIEW_PORT) ||
+			!sock.put(command) ||
             !info.put(sock) ||
             !sock.end_of_message()) {
             dprintf(D_ALWAYS, "failed to update condor view server!\n");
