@@ -44,7 +44,7 @@ static Qmgr_connection connection;
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
-	int		rval, cmd, ok, is_local = FALSE;
+	int		rval, ok, is_local = FALSE;
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
 
