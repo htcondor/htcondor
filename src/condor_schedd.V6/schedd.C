@@ -26,7 +26,6 @@
 #include "sched.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
-#include "config_util.h"
 #include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
@@ -5034,7 +5033,7 @@ Scheduler::Init()
 		// See if the value of this changes, since if so, we've got
 		// work to do...
 	char* oldUidDomain = UidDomain;
-	UidDomain = get_uid_domain();
+	UidDomain = param( "UID_DOMAIN" );
 	if( oldUidDomain ) {
 			// We had an old version, so see if we have a new value
 		if( strcmp(UidDomain,oldUidDomain) ) {
