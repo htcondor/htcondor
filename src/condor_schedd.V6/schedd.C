@@ -685,11 +685,14 @@ abort_job_myself(PROC_ID job_id)
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 			dprintf(D_FULLDEBUG,
-				"Sending SIGUSR1 to scheduler universe job"
+				"Sending SIGTERM to scheduler universe job"
 				" pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
+			int kill_sig = DC_SIGTERM;
+			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_KILL_SIG,
+							&kill_sig);
 			priv_state priv = set_user_priv();
-			if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == TRUE ) {
+			if ( daemonCore->Send_Signal( srec->pid, kill_sig ) == TRUE ) {
 				// successfully sent signal
 				srec->preempted = TRUE;
 			}
@@ -2946,7 +2949,7 @@ Scheduler::preempt(int n)
                 rec->preempted = TRUE;
                 n--;
 			}
-			else if (rec->match) {	/* scheduler universe job check (?) */
+			else if (rec->match) {
 				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
 				} else {
@@ -2959,7 +2962,18 @@ Scheduler::preempt(int n)
 			} 
 			else if (preempt_all) {
 				if ( !rec->preempted ) {
-					daemonCore->Send_Signal( rec->pid, DC_SIGTERM );
+					// This is the scheduler universe job case.  We get here
+					// because scheduler universe jobs don't have associated
+					// match records.  We check to make sure this is in fact
+					// a scheduler universe job before we send the signal
+					// beceause it could also be a shadow for which the
+					// claim was relinquished (by the startd).
+					if (IsSchedulerUniverse(rec)) {
+						int kill_sig = DC_SIGTERM;
+						GetAttributeInt(rec->job_id.cluster, rec->job_id.proc, 
+										ATTR_KILL_SIG,&kill_sig);
+						daemonCore->Send_Signal( rec->pid, kill_sig );
+					}
 				} else {
 					if ( ExitWhenDone ) {
 						n++;
@@ -3271,22 +3285,26 @@ Scheduler::child_exit(int pid, int status)
 					"scheduler universe job (%d.%d) pid %d "
 					"exited with status %d\n", srec->job_id.cluster,
 					srec->job_id.proc, pid, WEXITSTATUS(status) );
-			NotifyUser(srec, "exited with status ",
-					WEXITSTATUS(status) , COMPLETED);
-			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-							ATTR_JOB_STATUS, COMPLETED);
-			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-							ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+			if (!srec->preempted) {
+				NotifyUser(srec, "exited with status ",
+						   WEXITSTATUS(status) , COMPLETED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+								ATTR_JOB_STATUS, COMPLETED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+			}
 		} else if(WIFSIGNALED(status)) {
 			dprintf(D_ALWAYS,
 					"scheduler universe job (%d.%d) pid %d died "
 					"with %s\n", srec->job_id.cluster,
 					srec->job_id.proc, pid, 
 					daemonCore->GetExceptionString(status));
-			NotifyUser(srec, "was killed by signal ",
-						WTERMSIG(status), REMOVED);
-			SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-							ATTR_JOB_STATUS, REMOVED);
+			if (!srec->preempted) {
+				NotifyUser(srec, "was killed by signal ",
+						   WTERMSIG(status), REMOVED);
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+								ATTR_JOB_STATUS, REMOVED);
+			}
 		}
 /*
 			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
@@ -3939,6 +3957,7 @@ Scheduler::shutdown_fast()
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1) {
 		daemonCore->Send_Signal( rec->pid, DC_SIGKILL );
+		rec->preempted = TRUE;
 	}
 
 		// Since this is just sending a bunch of UDP updates, we can
