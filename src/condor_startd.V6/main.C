@@ -42,7 +42,6 @@ int	update_interval = 0;	// Interval to update CM
 char*	exec_path = NULL;
 
 // String Lists
-StringList *console_devices = NULL;
 StringList *startd_job_exprs = NULL;
 
 // Hosts
@@ -56,7 +55,6 @@ int		match_timeout;		// How long you're willing to be
 int		killing_timeout;	// How long you're willing to be in
 							// preempting/killing before you drop the
 							// hammer on the starter
-int		last_x_event = 0;	// Time of the last x event
 time_t	startd_startup;		// Time when the startd started up
 
 int		console_vms = 0;	// # of nodes in an SMP that care about
@@ -400,16 +398,7 @@ init_params( int first_time)
 		free( tmp );
 	}
 
-	if( console_devices ) {
-		delete( console_devices );
-		console_devices = NULL;
-	}
-	tmp = param( "CONSOLE_DEVICES" );
-	if( tmp ) {
-		console_devices = new StringList();
-		console_devices->initializeFromString( tmp );
-		free( tmp );
-	}
+	sysapi_reconfig();
 
 	if( startd_job_exprs ) {
 		delete( startd_job_exprs );
