@@ -390,6 +390,55 @@ The above policy says to only suspend the job if the cpu has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
+\subsection{Why might my job be preempted (evicted)?}
+
+There are four circumstances under which Condor may evict a job.
+They are controlled by different expressions.
+
+Reason number 1 is the user priority:
+controlled by the \Attr{PREEMPTION\_REQUIREMENTS}
+expression in the configuration file.
+If there is a job from a 
+higher priority user sitting idle,
+the \Condor{negotiator} daemon may evict 
+a currently running job submitted from a lower priority user if 
+\Attr{PREEMPTION\_REQUIREMENTS} is True.
+For more on user priorities,
+see section~\ref{sec:Priorities} and
+section~\ref{sec:UserPrio}.
+
+Reason number 2 is the owner (machine) policy:
+controlled by the \Attr{PREEMPT} expression in the configuration file.
+When a job is running and the \Attr{PREEMPT} expression
+evaluates to True,
+the \Condor{startd} will evict the job.
+The \Attr{PREEMPT} expression should reflect 
+the requirements under which the machine owner will not permit
+a job to continue to run.
+For example, a policy to evict a currently running job when a key is hit
+or when it is the 9:00am work arrival time,
+would be expressed in the \Attr{PREEMPT} expression 
+and enforced by the \Condor{startd}.
+For more on the \Attr{PREEMPT} expression,
+see section~\ref{sec:Configuring-Policy}.
+
+Reason number 3 is the owner (machine) preference:
+controlled by the \Attr{RANK} expression in the 
+configuration file (sometimes called the startd rank or machine rank).
+The \Attr{RANK} expression is evaluated as a floating point number.
+When one job is running, a second idle job that evaluates to a higher
+\Attr{RANK} value 
+tells the \Condor{startd} to prefer the second job over the first.
+Therefore, the \Condor{startd} will evict the first 
+job so that it can start running the second (preferred) job.
+For more on \Attr{RANK},
+see section~\ref{sec:Configuring-Policy}.
+
+Reason number 4 is if Condor is to be shutdown:
+on a machine that is currently running a job.
+Condor evicts the currently running job before proceding
+with the shutdown.
+
 \section{Condor on Windows NT / Windows 2000}
 
 \subsection{Will Condor work on a network of mixed Unix and NT machines?}
