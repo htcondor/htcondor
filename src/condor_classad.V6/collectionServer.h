@@ -27,7 +27,7 @@
 #include "collection.h"
 
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 class ServerTransaction;
 class Sock;

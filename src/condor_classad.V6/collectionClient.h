@@ -7,7 +7,7 @@
 class Sock;
 class ClientTransaction;
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 typedef hash_map<string,ClientTransaction*,StringHash> LocalXactionTable;
 
