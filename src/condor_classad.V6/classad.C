@@ -98,6 +98,8 @@ clear( )
 
 		if (attrList[i].attrName) free(attrList[i].attrName);
 		if (attrList[i].expression) delete attrList[i].expression;
+
+		attrList[i].valid = false;
 	}
 	last = 0;
 }
