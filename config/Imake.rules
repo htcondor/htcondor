@@ -196,7 +196,20 @@ clean:: 												@@\
 	rm -f program objlist
 #else
 #define	pure_c_plus_target(program, objlist, libs)	/* NULL MACRO */
-#endif	/* pure_cplus_targ */
+#endif	/* pure_c_plus_target */
+
+
+#if IS_SUN4M_SOLARIS251
+#define PureCollector concat3(-collector=,CrtLibPath,/ld)
+#define	purecov_c_plus_target(program, objlist, libs)	@@\
+##program: objlist libs									@@\
+	purecov -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)						@@\
+clean:: 												@@\
+	rm -f program objlist
+#else
+#define	purecov_c_plus_target(program, objlist, libs)	/* NULL MACRO */
+#endif	/* purecov_c_plus_target */
+
 
 /*
 ** Make sure setgid bit gets turned on after this program gets
