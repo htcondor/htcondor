@@ -46,7 +46,8 @@ public:
 	void remove (char* str);
 	char *next (void) { return strings.Next(); }
 	void deleteCurrent();
-	int number (void) { return strings.Number(); }
+	int number (void) { return strings.Number(); };
+	bool isEmpty(void) { return strings.IsEmpty(); };
 private:
 	List<char> strings;
 };
