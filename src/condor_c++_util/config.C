@@ -35,7 +35,7 @@ extern "C" {
 #endif
 
 int get_var( register char *value, register char **leftp, 
-			 register char **namep, register char **rightp );
+			 register char **namep, register char **rightp, char *self=NULL );
 
 	
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -162,7 +162,12 @@ int Read_config(char* config_file, ClassAd* classAd,
 				return( -1 );
 			}
 		} else  {
-			value = strdup( rhs );
+			/* expand self references only */
+			value = expand_macro( rhs, table, table_size, name );
+			if( value == NULL ) {
+				(void)fclose( conf_fp );
+				return( -1 ); 
+			}
 		}  
 
 		if( op == ':' ) {
@@ -339,15 +344,18 @@ lower_case( register char	*str )
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
+** If self is not NULL, then we only expand references to to the parameter
+** specified by self.  This is used when we want to expand self-references
+** only.
 */
 char *
-expand_macro( char *value, BUCKET **table, int table_size )
+expand_macro( char *value, BUCKET **table, int table_size, char *self )
 {
 	char *tmp = strdup( value );
 	char *left, *name, *tvalue, *right;
 	char *rval;
 
-	while( get_var(tmp, &left, &name, &right) ) {
+	while( get_var(tmp, &left, &name, &right, self) ) {
 		tvalue = lookup_macro( name, table, table_size );
 		if( tvalue == NULL ) {
 			// FREE( tmp );
@@ -359,7 +367,7 @@ expand_macro( char *value, BUCKET **table, int table_size )
 		}
 
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-														 strlen(right) + 1));
+										  strlen(right) + 1));
 		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 		FREE( tmp );
 		tmp = rval;
@@ -368,9 +376,12 @@ expand_macro( char *value, BUCKET **table, int table_size )
 	return( tmp );
 }
 
+/*
+** If self is not NULL, then only look for the parameter specified by self.
+*/
 int
 get_var( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp )
+		 register char **namep, register char **rightp, char *self )
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
@@ -397,8 +408,13 @@ tryagain:
 			}
 
 			if( *value == ')' ) {
-				right = value;
-				break;
+				if( !self || strncmp( name, self, strlen(self) ) == MATCH ) {
+					right = value;
+					break;
+				} else {
+					tvalue = name;
+					goto tryagain;
+				}
 			} else {
 				tvalue = name;
 				goto tryagain;
