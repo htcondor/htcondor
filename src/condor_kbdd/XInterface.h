@@ -71,9 +71,14 @@ class XInterface
 	ExtArray<char *> *logged_on_users;
 };
 
-#if defined(OSF1)
-	static char *UtmpName = "/var/adm/utmpx";
-	static char *AltUtmpName = "/etc/utmpx";
+#if defined(DUX)
+#	if USES_UTMPX
+		static char *UtmpName = "/var/adm/utmpx";
+		static char *AltUtmpName = "/etc/utmpx";
+#	else
+		static char *UtmpName = "/var/run/utmp";
+		static char *AltUtmpName = "/var/adm/utmp";
+#	endif
 #elif defined(LINUX)
 	static char *UtmpName = "/var/run/utmpx";
 	static char *AltUtmpName = "/var/adm/utmpx";

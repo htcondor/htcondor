@@ -33,7 +33,12 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include <paths.h>
-#include <utmpx.h>
+#if USES_UTMPX  /* SGI IRIX 62/65 */
+#	include <utmpx.h>
+#else 
+#	include <utmp.h>
+#endif
+
 #include <setjmp.h>
 
 extern int PollActivity();
@@ -202,7 +207,11 @@ XInterface::Connect()
 	Window root;
 	int s;
 	
+#if USES_UTMPX
 	struct utmpx utmp_entry;
+#else
+	struct utmp utmp_entry;
+#endif
 
 	if ( logged_on_users ) {
 		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
@@ -223,7 +232,14 @@ XInterface::Connect()
 		}                             
 	}                                 
  
-	while(fread((char *)&utmp_entry, sizeof( struct utmpx ), 1, utmp_fp)) {
+	while(fread((char *)&utmp_entry,
+#if USES_UTMPX
+		sizeof( struct utmpx ),
+#else
+		sizeof( struct utmp ),
+#endif
+		1, utmp_fp)) {
+
 		if (utmp_entry.ut_type == USER_PROCESS) {
 			bool _found_it = false;
 			for (int i=0; (i<=logged_on_users->getlast()) && (! _found_it); i++) {
