@@ -200,6 +200,7 @@ parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
 	char* job_input_ad = NULL; 
+	char* job_output_ad = NULL; 
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
 	int job_proc = -1;
@@ -209,6 +210,7 @@ parseArgs( int argc, char* argv [] )
 
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
+	bool warn_multi_output_ad = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
@@ -217,6 +219,7 @@ parseArgs( int argc, char* argv [] )
 	int opt_len;
 
 	char _jobinputad[] = "-job-input-ad";
+	char _joboutputad[] = "-job-output-ad";
 	char _jobkeyword[] = "-job-keyword";
 	char _jobcluster[] = "-job-cluster";
 	char _jobproc[] = "-job-proc";
@@ -278,6 +281,13 @@ parseArgs( int argc, char* argv [] )
 			target = _jobinputad;
 			break;
 
+		case 'o':
+			if( strncmp(_joboutputad, opt, opt_len) ) {
+				invalid( opt );
+			} 
+			target = _joboutputad;
+			break;
+
 		case 'p':
 			if( strncmp(_jobproc, opt, opt_len) ) {
 				invalid( opt );
@@ -318,6 +328,12 @@ parseArgs( int argc, char* argv [] )
 				free( job_input_ad );
 			}
 			job_input_ad = strdup( arg );
+		} else if( target == _joboutputad ) {
+			if( job_output_ad ) {
+				warn_multi_output_ad = true;
+				free( job_output_ad );
+			}
+			job_output_ad = strdup( arg );
 		} else if( target == _jobcluster ) {
 			if( job_cluster >= 0 ) {
 				warn_multi_cluster = true;
@@ -367,6 +383,11 @@ parseArgs( int argc, char* argv [] )
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _jobinputad, job_input_ad );
+	}
+	if( warn_multi_output_ad ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _joboutputad, job_output_ad );
 	}
 	if( warn_multi_cluster ) {
 		dprintf( D_ALWAYS, "WARNING: "
@@ -423,6 +444,10 @@ parseArgs( int argc, char* argv [] )
 	}
 	if( job_input_ad ) {
 		free( job_input_ad );
+	}
+	if( job_output_ad ) {
+        jic->setOutputAdFile( job_output_ad );		
+		free( job_output_ad );
 	}
 	return jic;
 }
