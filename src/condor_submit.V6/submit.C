@@ -423,7 +423,7 @@ main( int argc, char *argv[] )
 
 	// Initialize env_delimiter string... note that 
 	// const char env_delimiter is defined in condor_constants.h
-	sprintf(env_delimiter_string,"%c\0",env_delimiter);
+	sprintf(env_delimiter_string,"%c",env_delimiter);
 
 	setbuf( stdout, NULL );
 
@@ -2320,7 +2320,7 @@ SetGlobusParams()
 	sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
 	InsertJobExpr (buffer, false );
 
-	if ( tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK) ) {
+	if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 		sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 		free(tmp);
 		InsertJobExpr (buff, false );
@@ -2329,7 +2329,7 @@ SetGlobusParams()
 		InsertJobExpr (buff, false );
 	}
 
-	if ( tmp = condor_param(GlobusRSL) ) {
+	if( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buff, false );
