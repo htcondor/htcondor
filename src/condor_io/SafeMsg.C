@@ -57,6 +57,9 @@ _condorPacket::~_condorPacket()
         free(outgoingEncKeyId_);
         outgoingEncKeyId_ = 0;
     }
+	if( md_ ) {
+		free( md_ );
+	}
 }
 
 void _condorPacket :: init()
