@@ -394,6 +394,18 @@ int GlobusJob::doEvaluateState()
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
 			} else if ( condorState == HELD ) {
+				// Before forgetting about this held job, we need to make
+				// sure the globusState is HELD.
+				schedd_actions = 0;
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
+					schedd_actions = UA_UPDATE_GLOBUS_STATE;
+				}
+				done = addScheddUpdateAction( this, schedd_actions,
+											  GM_UNSUBMITTED );
+				if ( !done ) {
+					break;
+				}
 				DeleteJob( this );
 			} else {
 				gmState = GM_SUBMIT;
@@ -900,7 +912,13 @@ int GlobusJob::doEvaluateState()
 			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
-				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+				// If the job has been held, we need to set the globusState
+				// to HELD instead of UNSUBMITTED.
+				if ( condorState == HELD ) {
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
+				} else {
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+				}
 				schedd_actions |= UA_UPDATE_GLOBUS_STATE;
 			}
 			globusStateErrorCode = 0;
@@ -998,6 +1016,23 @@ int GlobusJob::doEvaluateState()
 		case GM_PROXY_EXPIRED:
 			now = time(NULL);
 			if ( condorState == HELD ) {
+				// Before forgetting about this held job, we need to make
+				// sure the globusState is either HELD or UNKNOWN.
+				schedd_actions = 0;
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
+					schedd_actions = UA_UPDATE_GLOBUS_STATE;
+				}
+				if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD &&
+					 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
+					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
+					schedd_actions = UA_UPDATE_GLOBUS_STATE;
+				}
+				done = addScheddUpdateAction( this, schedd_actions,
+											  GM_UNSUBMITTED );
+				if ( !done ) {
+					break;
+				}
 				DeleteJob( this );
 			} else if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
 				if ( jobContact ) {
