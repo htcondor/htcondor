@@ -1488,6 +1488,10 @@ SetJobStatus()
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
 		InsertJobExpr (buffer);
+
+		(void)sprintf( buffer, "%s=\"submitted on hold at user's request\"", 
+					   ATTR_HOLD_REASON );
+		InsertJobExpr( buffer );
 	} else {
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
 		InsertJobExpr (buffer);
