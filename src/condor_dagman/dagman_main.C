@@ -62,6 +62,8 @@ static void Usage() {
             "\t\t[-MaxPre] <int N>\n\n"
             "\t\t[-MaxPost] <int N>\n\n"
             "\t\t[-NoPostFail]\n\n"
+            "\t\t[-WaitForDebug]\n\n"
+            "\t\t[-NoEventChecks]\n\n"
             "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -90,7 +92,8 @@ Global::Global() :
 	paused (false),
 	submit_delay (0),
 	max_submit_attempts (0),
-	datafile (NULL)
+	datafile (NULL),
+	doEventChecks (true)
 {
 }
 
@@ -319,9 +322,16 @@ int main_init (int argc, char ** const argv) {
             G.maxPostScripts = atoi( argv[i] );
         } else if( !strcasecmp( "-NoPostFail", argv[i] ) ) {
 			run_post_on_failure = FALSE;
+
+        } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
+			G.doEventChecks = false;
+
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
-        } else Usage();
+
+        } else {
+			Usage();
+		}
     }
   
     //
@@ -629,6 +639,7 @@ void condor_event_timer () {
     //
     if( G.dag->Done() ) {
         ASSERT( G.dag->NumJobsSubmitted() == 0 );
+		G.dag->CheckAllJobs();
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		ExitSuccess();
 		return;

@@ -13,7 +13,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o \
-			read_multiple_logs.o CondorError.o
+			read_multiple_logs.o CondorError.o check_events.o
 
 #if HAS_OPENSSL
 DH_OBJ = condor_dh.o
@@ -139,6 +139,9 @@ test_libcondorapi.o: test_libcondorapi.C
 	$(CPlusPlus) -I../h -I../condor_includes -c test_libcondorapi.C
 
 c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
+
+c_plus_target(test_check_events,test_check_events.o,$(LIB))
+c_plus_target(check_log_files,check_log_files.o,$(LIB))
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
