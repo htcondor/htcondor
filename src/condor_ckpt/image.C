@@ -56,8 +56,8 @@ extern "C" void _condor_restore_sigstates();
 #if defined(COMPRESS_CKPT)
 #include "zlib.h"
 extern "C" {
-	int condor_malloc_data_size();
-	int condor_malloc_init(void *start);
+	int condor_malloc_init_size();
+	void condor_malloc_init(void *start);
 	char *condor_malloc(size_t);
 	void condor_free(void *);
 	void *condor_morecore(int);
@@ -185,7 +185,7 @@ void *condor_morecore(int incr)
 	
 	if (begin == NULL) {
 		begin = MyImage.FindAltHeap();
-		int malloc_static_data = condor_malloc_data_size();
+		int malloc_static_data = condor_malloc_init_size();
 		int segincr =
 			(((incr+malloc_static_data+
 			   (2*sizeof(void *)))/pagesize)+1)*pagesize;
@@ -1249,6 +1249,9 @@ SegMap::Read( int fd, ssize_t pos )
 	long	saved_len = len;
 	int 	saved_prot = prot;
 	RAW_ADDR	saved_core_loc = core_loc;
+	int segSize;
+	int zfd;
+	char *segLoc;
 
 	if( pos != file_loc ) {
 		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n", pos,
@@ -1271,8 +1274,8 @@ SegMap::Read( int fd, ssize_t pos )
 
 #if defined(HAS_DYNAMIC_USER_JOBS)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
-		int zfd, segSize = len;
-		char *segLoc = (char *)core_loc;
+		segSize = len;
+		segLoc = (char *)core_loc;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			dprintf( D_ALWAYS,
 					 "Unable to open /dev/zero in read/write mode.\n");
