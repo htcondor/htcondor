@@ -166,6 +166,14 @@ Claim::publishCOD( ClassAd* ad )
 
 	line = codId();
 	line += '_';
+	line += ATTR_CLAIM_ID;
+	line += "=\"";
+	line += id();
+	line += '"';
+	ad->Insert( line.Value() );
+
+	line = codId();
+	line += '_';
 	line += ATTR_CLAIM_STATE;
 	line += "=\"";
 	line += getClaimStateString( c_state );
