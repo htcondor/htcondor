@@ -399,29 +399,26 @@ void Scheduler::update_central_mgr()
 	send_context_to_machine(&CollectorHandle, cmd, MachineContext);
 }
 
-
-void Scheduler::abort_job(XDR* xdrs, struct sockaddr_in*)
+extern "C" {
+void abort_job_myself(PROC_ID job_id)
 {
-	PROC_ID	job_id;
-	char	*host;
-	int		i;
+        char    *host;
+        int             i;
 
 
-	xdrs->x_op = XDR_DECODE;
-	if( !xdr_proc_id(xdrs,&job_id) ) {
-		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
-		return;
-	}
+        for( i=0; i<NShadowRecs; i++ ) {
+                if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
+                        (ShadowRecs[i].job_id.proc == job_id.proc ||
+job_id.proc
+ == -1)) {
 
-	for( i=0; i<NShadowRecs; i++ ) {
-		if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
-			(ShadowRecs[i].job_id.proc == job_id.proc || job_id.proc == -1)) {
-
-			host = ShadowRecs[i].match->peer;
-			dprintf( D_ALWAYS,
-				"Found shadow record for job %d.%d, host = %s\n",
-				job_id.cluster, job_id.proc, host );
-			/* send_kill_command( host ); */
+                        host = ShadowRecs[i].match->peer;
+                        dprintf( D_ALWAYS,
+                                "Found shadow record for job %d.%d, host =
+%s\n"
+,
+                                job_id.cluster, job_id.proc, host );
+                        /* send_kill_command( host ); */
             /* change for condor flocking */
             if ( kill( ShadowRecs[i].pid, SIGUSR1) == -1 )
                 dprintf(D_ALWAYS,"Error in sending SIGUSR1 to %d errno = %d\n",
@@ -430,8 +427,23 @@ void Scheduler::abort_job(XDR* xdrs, struct sockaddr_in*)
             else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
                             ShadowRecs[i].pid);
 
-		}
+                }
+        }
+}
+}
+
+void Scheduler::abort_job(XDR* xdrs, struct sockaddr_in*)
+{
+	PROC_ID	job_id;
+
+
+	xdrs->x_op = XDR_DECODE;
+	if( !xdr_proc_id(xdrs,&job_id) ) {
+		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
+		return;
 	}
+
+	abort_job_myself(job_id);
 }
 #if 0
 send_kill_command( host )
@@ -1791,6 +1803,7 @@ void Scheduler::Register(DaemonCore* core)
 	core->Register(this, NEGOTIATE, (void*)negotiate, REQUEST);
 	core->Register(this, RESCHEDULE, (void*)reschedule_negotiator, REQUEST);
 	core->Register(this, VACATE_SERVICE, (void*)vacate_service, REQUEST);
+	core->Register(this, KILL_FRGN_JOB, (void*)abort_job, REQUEST);
 
 	// handler for queue management commands
 	core->Register(NULL, QMGMT_CMD, (void*)handle_q, REQUEST);
