@@ -152,9 +152,6 @@ private:
 	int Key;
 	int ShuttingDown;
 	IOProxy io_proxy;
-
-	int printAdToFile(ClassAd *ad, char* JobHistoryFileName);
-
 };
 
 #endif

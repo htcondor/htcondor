@@ -384,7 +384,6 @@ CStarter::StartJob()
 		// Return to our old priv state
 	set_priv ( priv );
 
-    // printAdToFile( jobAd, "/tmp/starter_ad" );
 	if( DebugFlags & D_JOB ) {
 		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
 		jobAd->dPrint( D_JOB );
@@ -660,25 +659,6 @@ CStarter::Reaper(int pid, int exit_status)
 		DC_Exit(0);
 	}
 	return 0;
-}
-
-int CStarter::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
-
-    FILE* LogFile=fopen(JobHistoryFileName,"a");
-    if ( !LogFile ) {
-        dprintf(D_ALWAYS,"ERROR saving to history file; cannot open%s\n", 
-                JobHistoryFileName);
-        return false;
-    }
-    if (!ad->fPrint(LogFile)) {
-        dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to "
-                "write classad to log file %s\n", JobHistoryFileName);
-        fclose(LogFile);
-        return false;
-    }
-    fprintf(LogFile,"***\n");   // separator
-    fclose(LogFile);
-    return true;
 }
 
 
