@@ -4,18 +4,17 @@ online browsing at URL:
    http://www.cs.wisc.edu/condor/manual
 
 We recommend that you go to the above URL and download the Condor
-Manual.  However, section 3.3.6 of the 6.0 manual, which provides
-installation directions for the CondorView Server contrib module, is
-reproduced below in ASCII.
+Manual.  However, the installation instructions for the PVM contrib
+module are reproduced below in ASCII.
 
      _________________________________________________________________
 
-3.3.6 Installing the PVM Contrib Module
+Installing the PVM Contrib Module
 
    For complete documentation on using PVM in Condor, see the section
    entitled ``Parallel Applications in Condor: Condor-PVM'' in the
    version 6.1 manual. This manual can be found at
-   http://www.cs.wisc.edu/condor/manual/v6.1 . To install the PVM
+   http://www.cs.wisc.edu/condor/manual/v6.1. To install the PVM
    contrib module, all you have to do is download to appropriate
    binary module for whatever platform(s) you plan to use for
    Condor-PVM. Once you have downloaded each module, uncompressed and
