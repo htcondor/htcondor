@@ -737,7 +737,7 @@ Here is a very simple DAG input file used as an example of the inner DAG.
 Use \Condor{submit\_dag} to create a submit description file for this
 inner dag:
 \begin{verbatim}
-   condor_submit_dag -nosubmit inner.dag
+   condor_submit_dag -no_submit inner.dag
 \end{verbatim}
 The resulting file will be named \File{inner.dag.condor.sub}.
 This file will be needed in the DAG input file of the outer DAG.
