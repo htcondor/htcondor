@@ -4459,6 +4459,8 @@ Scheduler::invalidate_ads()
     ad->Insert( line );
 	update_central_mgr( INVALIDATE_SCHEDD_ADS, Collector->addr(), 0 );
 
+	if (N_Owners == 0) return;	// no submitter ads to invalidate
+
 		// Now, we want to invalidate all the submittor ads.  So, go
 		// through each submittor and add their Name to a query.
 	for( i=0; i<N_Owners; i++ ) {
