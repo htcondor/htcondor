@@ -58,11 +58,14 @@
 
 #include "condor_hpux_64bit_types.h"
 
+/* HPUX11 seems to have moved the exportfs() prototype elsewhere.... */
+#if defined(HPUX10)
 /* nfs/nfs.h is needed for fhandle_t.
    struct export is required to pacify prototypes
    of type export * before struct export is defined. */
 
 struct export;
+#endif
 #include <nfs/nfs.h>
 
 /* mount prototype */
