@@ -29,7 +29,9 @@ class ExceptionHandler {
 	public:            
 	ExceptionHandler( );      
 	~ExceptionHandler( );
-	void SetLogFileName( PTSTR pszLogFileName );      
+	void SetLogFileName( PTSTR pszLogFileName );  
+    void TurnOff( );
+	void TurnOn( );
 
      private:
       // entry point where control comes on an unhandled exception

@@ -24,6 +24,8 @@
 #include <tchar.h>
 #include "exphnd.WIN32.h"
 
+#include "condor_debug.h"
+
 //============================== Global Variables =============================
 //
 // Declare the static variables of the ExceptionHandler class
@@ -65,6 +67,20 @@ ExceptionHandler::~ExceptionHandler( ){
     SetUnhandledExceptionFilter( m_previousFilter );
 }
 
+
+//===========================================================
+// When we are instantiated, our constructor set ourselves
+// up to be the exception handler.  Here we provide some methods
+// to allow the user to reset the default exception handler on & off.
+//==========================================================
+void ExceptionHandler::TurnOff() {
+	SetUnhandledExceptionFilter( m_previousFilter );
+}
+
+void ExceptionHandler::TurnOn() {
+	SetUnhandledExceptionFilter(MSJUnhandledExceptionFilter);
+}
+
 //==============================================================
 // Lets user change the name of the report file to be generated 
 //==============================================================
@@ -82,11 +98,11 @@ LONG WINAPI ExceptionHandler::MSJUnhandledExceptionFilter(
                                 GENERIC_WRITE,
 								0,
                                 0,
-								OPEN_ALWAYS,
+								CREATE_ALWAYS,
                                 FILE_FLAG_WRITE_THROUGH,
                                 0 );    
 	if ( m_hReportFile )    {
-        SetFilePointer( m_hReportFile, 0, 0, FILE_END );
+        // SetFilePointer( m_hReportFile, 0, 0, FILE_END );
         GenerateExceptionReport( pExceptionInfo );
         CloseHandle( m_hReportFile );        
 		m_hReportFile = 0;    
@@ -120,6 +136,7 @@ void ExceptionHandler::GenerateExceptionReport(
               pExceptionRecord->ExceptionAddress,
               section, offset, szFaultingModule );
     PCONTEXT pCtx = pExceptionInfo->ContextRecord;    
+	// dprintf(D_ALWAYS,"TEST: SHOWING REGISTERS\n");
 	// Show the registers
 #ifdef _M_IX86  // Intel Only!   
 	_tprintf( _T("\nRegisters:\n") );
@@ -133,7 +150,7 @@ void ExceptionHandler::GenerateExceptionReport(
     _tprintf( _T("Flags:%08X\n"), pCtx->EFlags );    
 #endif
     if ( !InitImagehlpFunctions() )    {
-        OutputDebugString(_T("IMAGEHLP.DLL or its exported procs not found"));
+        // dprintf(D_ALWAYS,"IMAGEHLP.DLL or its exported procs not found\n");
 #ifdef _M_IX86  // Intel Only!
         // Walk the stack using x86 specific code        
 		IntelStackWalk( pCtx );
@@ -288,8 +305,9 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
         // members of the structure before it can be used.
         BYTE symbolBuffer[ sizeof(IMAGEHLP_SYMBOL) + 512 ];
         PIMAGEHLP_SYMBOL pSymbol = (PIMAGEHLP_SYMBOL)symbolBuffer;
-        pSymbol->SizeOfStruct = sizeof(symbolBuffer);
-        pSymbol->MaxNameLength = 512;                        
+        // pSymbol->SizeOfStruct = sizeof(symbolBuffer);
+		pSymbol->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL);
+        pSymbol->MaxNameLength = 511;
         DWORD symDisplacement = 0;  // Displacement of the input address,
                                     // relative to the start of the symbol
         if ( _SymGetSymFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
