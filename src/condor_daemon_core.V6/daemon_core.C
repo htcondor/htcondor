@@ -857,6 +857,11 @@ void DaemonCore::Driver()
 #ifndef WIN32
 	sigset_t fullset, emptyset;
 	sigfillset( &fullset );
+    // We do not want to block the following signals ----
+		sigdelset(&fullset, SIGSEGV);    // so we get a core right away
+		sigdelset(&fullset, SIGABRT);    // so assert() failures drop core right away
+		sigdelset(&fullset, SIGILL);     // so we get a core right away
+		sigdelset(&fullset, SIGBUS);     // so we get a core right away
 	sigemptyset( &emptyset );
 	char asyncpipe_buf[10];
 #endif
@@ -1088,7 +1093,9 @@ int DaemonCore::HandleReq(int socki)
 	old_timeout = stream->timeout(20);
 	stream->decode();
 	result = stream->code(req);
-	stream->timeout(old_timeout);
+	// For now, let keep the timeout, so all command handlers are called with
+	// a timeout of 20 seconds on their socket.
+	// stream->timeout(old_timeout);
 	if(!result) {
 		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( insock != stream )	{   // delete the stream only if we did an accept
