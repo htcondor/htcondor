@@ -598,7 +598,11 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
+#if defined(Solaris)
+	int ftruncate( map(int fd), off_t length ) : pseudo, extract ;
+#else
 	int ftruncate( map(int fd), off_t length );
+#endif
 #endif
 	not_supported int setgid( gid_t gid );
 	int mkdir( const char *path, MODE_T mode ) {
