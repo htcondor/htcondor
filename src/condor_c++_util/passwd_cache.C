@@ -129,7 +129,9 @@ bool passwd_cache::cache_groups(const char* user) {
 				result = false;
 			} else {
 				/* finally, insert info into our cache */
+				group_cache_entry->lastupdated = time(NULL);
 				group_table->insert(user, group_cache_entry);
+
 			}
 		}
 		return result;
