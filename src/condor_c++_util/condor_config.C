@@ -60,6 +60,7 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
+#include "directory.h"			// for StatInfo
 #include "condor_scanner.h"		// for MAXVARNAME, etc
 
 extern "C" {
@@ -460,15 +461,34 @@ find_file(const char *env_name, const char *file_name)
 		// If we were given an environment variable name, try that first. 
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = strdup( env );
-
-		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-			fprintf( stderr, "File specified in %s environment ", env_name );
-			fprintf( stderr, "variable:\n\"%s\" does not exist.", config_file ); 
-			fprintf( stderr, "  Trying fall back options...\n" ); 
+		StatInfo si( config_file );
+		switch( si.Error() ) {
+		case SIGood:
+			if( si.IsDirectory() ) {
+				fprintf( stderr, "File specified in %s environment "
+						 "variable:\n\"%s\" is a directory.  "
+						 "Please specify a file.\n", env_name,
+						 config_file );  
+				free( config_file );
+				exit( 1 );
+			}
+				// Otherwise, we're happy
+			return config_file;
+			break;
+		case SINoFile:
+			fprintf( stderr, "File specified in %s environment "
+					 "variable:\n\"%s\" does not exist.\n",
+					 env_name, config_file );  
 			free( config_file );
-			config_file = NULL;
-		} else {
-			close( fd );
+			exit( 1 );
+			break;
+		case SIFailure:
+			fprintf( stderr, "Cannot stat file specified in %s "
+					 "environment variable:\n\"%s\", errno: %d\n", 
+					 env_name, config_file, si.Errno() );
+			free( config_file );
+			exit( 1 );
+			break;
 		}
 	}
 
