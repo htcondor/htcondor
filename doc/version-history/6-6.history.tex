@@ -80,6 +80,10 @@ Redhat 7.x.
   daemons from obtaining a lock to their log file under heavy load, and
   thus causing them to EXCEPT().
 
+\item Fixed a bug on Windows where file transfers would incorrectly fail
+because of bad permissions when using domain accounts with nested groups,
+or when UNC paths were used.
+
 \item Fixed the bug where the \Condor{starter} would fail to transfer
   back core files created by Vanilla, Java and MPI universe jobs.
   This bug was introduced in Condor version 6.5.2.
