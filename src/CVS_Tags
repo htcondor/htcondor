@@ -71,3 +71,8 @@
 	Dec Alpha OSF/1 v1.3 - runs test jobs submitted in normal way using
 	Shaodow, Startd, and Starter.  Done with normal remote system call
 	connection via TCP.
+5/25/94 DecAlpha_a1.1
+	Dec Alpha OSF/1 v1.3 - Pretty much every thing works here, all the
+	deamons (including collector and negotiator), tools, etc.  Everything
+	has been checked in, checked back out, re-compiled from scratch,
+	and tested.
