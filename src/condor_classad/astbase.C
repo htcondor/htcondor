@@ -1118,7 +1118,6 @@ int BooleanBase::Value()
 	return value;
 }
 
-#ifdef CLASSAD_FUNCTIONS
 FunctionBase::FunctionBase(char *name)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
@@ -1159,5 +1158,4 @@ FunctionBase::AppendArgument(ExprTree *argument)
 	return;
 }
 
-#endif
 

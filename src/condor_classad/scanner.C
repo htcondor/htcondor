@@ -481,13 +481,11 @@ static void scan_operator(
 		token.length++;
 		break;
 
-#ifdef CLASSAD_FUNCTIONS
 	case ';':
 		token.type = LX_SEMICOLON;
 		input = input + 1;
 		token.length++;
 		break;
-#endif
 			
 	default:
 		token.type = LX_ERROR;

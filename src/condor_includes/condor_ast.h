@@ -380,7 +380,6 @@ class AssignOp: public AssignOpBase
 	friend		    class AttrList;
 };
 
-#ifdef CLASSAD_FUNCTIONS
 class Function: public FunctionBase
 {
     public:
@@ -394,12 +393,15 @@ class Function: public FunctionBase
 
 	int FunctionScript(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);
+#ifdef CLASSAD_FUNCTIONS
 	int FunctionSharedLibrary(int number_of_arguments, EvalResult *arguments, 
 					   EvalResult *result);
+#endif
 	int FunctionGetTime(int number_of_arguments, EvalResult *arguments, 
 						EvalResult *result);
+    int FunctionRandom(int number_of_arguments, EvalResult *arguments, 
+						EvalResult *result);
 };
-#endif
 
 extern	int		Parse(const char*, ExprTree*&);
 

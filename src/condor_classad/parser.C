@@ -114,7 +114,6 @@ Match(LexemeType t, char*& s, int& count)
 // intermediate parse functions.
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifdef CLASSAD_FUNCTIONS
 int
 ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
 {
@@ -168,7 +167,6 @@ ParseFunction(char *functionName, char*& s, ExprTree*& newTree, int& count)
 
 	return parse_succeeded;
 }
-#endif
 
 int 
 ParseFactor(char*& s, ExprTree*& newTree, int& count)
@@ -189,7 +187,6 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
 #endif
     		count = count + t->length;
 
-#ifdef CLASSAD_FUNCTIONS
 			{
 				Token *next_token;
 
@@ -205,7 +202,6 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
 					break;
 				}
 			}
-#endif
             break;
 
 		case LX_UNDEFINED:

@@ -32,8 +32,6 @@ template class ListCacheEntry<ClassAd>;
 template class List<ListCacheEntry<ClassAd> >;
 template class Item<ListCacheEntry<ClassAd> >;
 template class ListIterator<ListCacheEntry<ClassAd> >;
-#ifdef CLASSAD_FUNCTIONS
 template class List<ExprTree>;
 template class Item<ExprTree>;
 template class ListIterator<ExprTree>;
-#endif

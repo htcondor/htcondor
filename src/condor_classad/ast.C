@@ -1433,10 +1433,11 @@ AssignOp::DeepCopy(void) const
 	CopyBaseExprTree(copy);
 	return copy;
 }
-
 #ifdef CLASSAD_FUNCTIONS
 #include "dlfcn.h"
 #include "classad_shared.h"
+#endif
+
 int Function::CalcPrintToStr(void)
 {
 	int      length;
@@ -1542,16 +1543,23 @@ int Function::_EvalTree(const AttrList *attrlist1, const AttrList *attrlist2, Ev
 			}
 		}
 		
-		if (!strcasecmp(name, "script")) {
-			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
-		} else if (!strcasecmp(name, "gettime")) {
+        if (!strcasecmp(name, "gettime")) {
 			successful_eval = FunctionGetTime(number_of_args, evaluated_args, result);
 		} else if (!strcasecmp(name, "random")) {
 			successful_eval = FunctionRandom(number_of_args, evaluated_args, result);
-		} else {
+		} else if (!strcasecmp(name, "script")) {
+			successful_eval = FunctionScript(number_of_args, evaluated_args, result);
+		} 
+#ifdef CLASSAD_FUNCTIONS
+        else {
 			successful_eval = FunctionSharedLibrary(number_of_args, 
 													evaluated_args, result);
 		}
+#else
+        else {
+            successful_eval = false;
+        }
+#endif
 		delete [] evaluated_args;
 	}
 
@@ -1686,6 +1694,7 @@ int Function::FunctionScript(
 	return eval_succeeded;
 }
 
+#ifdef CLASSAD_FUNCTIONS
 int Function::FunctionSharedLibrary(
 	int number_of_args,         // IN:  size of evaluated args array
 	EvalResult *evaluated_args, // IN:  the arguments to the function
@@ -1767,7 +1776,7 @@ int Function::FunctionSharedLibrary(
 	}
 	return eval_succeeded;
 }
-
+#endif
 
 int Function::FunctionGetTime(
 	int number_of_args,         // IN:  size of evaluated args array
@@ -1820,4 +1829,3 @@ int Function::FunctionRandom(
 	return success;
 }
 
-#endif

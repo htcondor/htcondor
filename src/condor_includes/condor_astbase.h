@@ -453,7 +453,6 @@ class AssignOpBase : public BinaryOpBase
 									  StringList &external_references) const;
 };
 
-#ifdef CLASSAD_FUNCTIONS
 class FunctionBase : public ExprTree
 {
     public :
@@ -479,6 +478,5 @@ class FunctionBase : public ExprTree
 #endif 
   		char*               name;
 };
-#endif /* CLASSAD_FUNCTIONS */
 
 #endif
