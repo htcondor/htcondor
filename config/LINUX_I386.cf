@@ -10,6 +10,10 @@
 #if defined( IS_GLIBC )
 #   define Platform		I386_LINUX-G
 #   define PublicTargetName	i386_linux2-glibc
+	/* this is a bit wonky here, but otherwise the i686 in the path below
+		becomes a ' 1 ' on glib machines with egcs. I don't think i686
+		is used for anything important, so away it goes. */
+#	undef i686
 #   define EgcsLibc /usr/local/lib/gcc-lib/i686-pc-linux-gnu/egcs-2.91.66/libgcc.a
 #else
 #   define Platform		I386_LINUX
