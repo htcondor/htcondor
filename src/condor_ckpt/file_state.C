@@ -319,6 +319,8 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 	} else {
 		if(!strcmp(method,"local")) {
 			f = new CondorFileLocal;
+		} else if(!strcmp(method,"special")) {
+			f = new CondorFileSpecial("special file");
 		} else if(!strcmp(method,"remote")) {
 			if( fd==2 || !buffer_size ) {
 				f = new CondorFileRemote();
