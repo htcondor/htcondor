@@ -3,7 +3,7 @@
 
 //-------------------------------------------------------------------------
 
-#include "condor_classad.h"
+#include "matchClassad.h"
 #include "Set.h"
 #include "MyString.h"
 
@@ -174,15 +174,25 @@ public:
 
 //-------------------------------------------------------------------------
 
+/// The state of an iterator
 enum CollItorStatus {
-	COLL_NIL_STATUS		= 0,
-	COLL_ITOR_OK 		= ( 1 << 0 ),
-	COLL_BEFORE_START	= ( 1 << 1 ),
-	COLL_AT_END	 		= ( 1 << 2 ),
-	COLL_ITOR_MOVED		= ( 1 << 3 ),
-	COLL_ITEM_ADDED 	= ( 1 << 4 ),
-	COLL_ITEM_REMOVED 	= ( 1 << 5 ),
-	COLL_ITOR_INVALID	= ( 1 << 6 )
+	/** Nil State */	
+		COLL_NIL_STATUS		= 0,
+	/** Iterator OK (i.e., can access elements, can be moved) */ 
+		COLL_ITOR_OK 		= ( 1 << 0 ),
+	/** Iterator before first item (internal state) */ 
+		COLL_BEFORE_START	= ( 1 << 1 ),
+	/** Iterator at end of item list */ 
+		COLL_AT_END	 		= ( 1 << 2 ),
+	/** Iterator was moved automagically */ 
+		COLL_ITOR_MOVED		= ( 1 << 3 ),
+	/** Items were added to set being iterated over */ 
+		COLL_ITEM_ADDED 	= ( 1 << 4 ),
+	/** Items were removed from set being iterated over */ 
+		COLL_ITEM_REMOVED 	= ( 1 << 5 ),
+	/** Iterator is invalid (i.e., cannot be used to access elements or be 
+	 	moved ) */ 
+		COLL_ITOR_INVALID	= ( 1 << 6 )
 };
 
 class ClassAdCollection;
@@ -204,13 +214,11 @@ public:
 	*/
 	~CollChildIterator( );
 
-	/** Get the iterator status.
-	 	@return The status of the iterator
-		@see CollIteratorStatus
-	*/
-	int  GetIteratorStatus( ) const { return( status ); }
-
+	/**@name Iteration Control Methods */
+	//@{
 	/** Get the ID of the child collection the iterator currently points to.
+	 	(The state of the iterator will be set to OK if the operation 
+		succeeded.)
 	 	@param ID The ID of the child collection.  If the function returns false
 			the value of this parameter is undefined.
 		@return false if the iterator does not currently point to a valid
@@ -219,17 +227,36 @@ public:
 	bool CurrentCollection( int &ID );
 
 	/** Move the iterator and get the ID of the next child collection.
+	 	(The previous state of the iterator will be cleared.)
 	 	@param ID The ID of the next child collection
 	 	@return 0 if the iterator is invalid, or has gone past the last child 
-			collection, non-zero if the iterator was successfully moved
+			collection, non-zero if the iterator was successfully moved.
+			Additionally, the return value is {\bf negative} if child 
+			collections were added or removed to the parent collection since
+			the last iteration operation to this iterator.  This situation may
+			have already caused the iterator to move.
 	*/
 	int  NextCollection( int &ID );
 
-	/** Move the iterator to the next child collection
+	/** Move the iterator to the next child collection.
+	 	(The previous state of the iterator will be cleared.)
 	 	@return 0 if the iterator is invalid, or has gone past the last child 
-			collection, non-zero if the iterator was successfully moved
+			collection, non-zero if the iterator was successfully moved.
+			Additionally, the return value is {\bf negative} if child 
+			collections were added or removed to the parent collection since
+			the last iteration operation to this iterator.  This situation may
+			have already caused the iterator to move.
 	*/
 	int  NextCollection( ) { int ID; return( NextCollection( ID ) ); }
+	//@}
+
+	/**@name State Interrogation Methods */
+	//@{
+	/** Get the iterator status.
+	 	@return The status of the iterator
+		@see CollIteratorStatus
+	*/
+	int  GetIteratorStatus( ) const { return( status ); }
 
 	/** Check if the the iterator is valid and pointing at an element
 	 	@return true if the iterator is currently pointing at an element, 
@@ -270,6 +297,7 @@ public:
 		@return true if the iterator is invalid and false otherwise.
 	*/
 	bool IsInvalid( ) const { return( status & COLL_ITOR_INVALID ); }
+	//@}
 
 private:
 	void initialize(ClassAdCollection*,BaseCollection*,int,const IntegerSet&);
@@ -285,8 +313,8 @@ private:
 };
 
 
-/** Class to iterate over the content of a collection (i.e., iterate over the
- 	classads in the collection
+/** Class to iterate over the content of a collection. (i.e., iterate over the
+ 	classads in the collection)
 */
 class CollContentIterator {
 friend class BaseCollection;
@@ -303,14 +331,11 @@ public:
 	 	itself from the collection it is iterating over.
 	*/
 	~CollContentIterator( );
-
-	/** Get the status of the iterator.
-	 	@return The iterator status
-		@see CollIteratorStatus
-	*/
-	int  GetIteratorStatus( ) const { return( status ); }
 	
-	/** Get the classad currenly under the iterator.
+	/**@name Iteration Control Methods */
+	//@{
+	/** Get the classad currenly under the iterator. (The state of the iterator 
+	 	will be reset to OK.)
 	 	@param ad A reference to a ClassAd pointer, which points to an undefined
 			location if the function returns false.
 		@return true if the iterator is currently over a classad, false 
@@ -318,16 +343,19 @@ public:
 	*/
 	bool CurrentAd( const ClassAd *&ad );
 	
-	/** Get the key of the current classad.
+	/** Get the key of the current classad.  (The state of the iterator will
+	 	be reset to OK.)
 	 	@param key A character buffer into which the key of the current element
 			will be copied.  The contents of this buffer is undefined if the
-			iterator is currently pointing to an element (i.e., returns false).
+			iterator is not currently pointing to an element (i.e., returns 
+			false).
 		@return true if the iterator is currently pointing to a valid element,
 			false otherwise.
 	*/
 	bool CurrentAdKey( char *key );
 	
-	/** Get the rank of the current classad.
+	/** Get the rank of the current classad.  (The state of the iterator will
+	 	be reset to OK.)
 	 	@param rank The rank of the classad.  This parameter will have an
 			undefined value if the function returns false.
 		@return true if the iterator is currently pointing to a valid element,
@@ -335,20 +363,39 @@ public:
 	*/
 	bool CurrentAdRank( double &rank );
 	
-	/** Get the next classad in the collection.
+	/** Get the next classad in the collection.  (The previous state of the
+	 	iterator will be cleared.)
 	 	@param ad A reference to a ClasssAd pointer, which points to the next
 			classad in the collection if the iterator was moved successfully to
 			the next element, or undefined otherwise.
 		@return 0 if the iterator was invalid or could not be moved 
 			successfully, and non-zero otherwise.
+			Additionally, the return value is {\bf negative} if classads were 
+			were added or removed to the collection being iterated over since
+			the last iteration operation to the iterator.  This situation may
+			have already caused the iterator to move.
 	*/
 	int  NextAd( const ClassAd *&ad );
 	
-	/** Move iterator to the next classad in the collection.
+	/** Move iterator to the next classad in the collection.  (The previous
+	 	state of the iterator will be cleared.)
 		@return 0 if the iterator was invalid or could not be moved 
 			successfully, and non-zero otherwise.
+			Additionally, the return value is {\bf negative} if classads were 
+			were added or removed to the collection being iterated over since
+			the last iteration operation to the iterator.  This situation may
+			have already caused the iterator to move.
 	*/
 	int  NextAd( ) {  ClassAd *ad; return( NextAd( ad ) ); }
+	//@}
+
+	/**@name State Interrogation Methods */
+	//@{
+	/** Get the status of the iterator.
+	 	@return The iterator status
+		@see CollIteratorStatus
+	*/
+	int  GetIteratorStatus( ) const { return( status ); }
 
     /** Check if the the iterator is valid and pointing at an element
         @return true if the iterator is currently pointing at an element, 
@@ -388,7 +435,8 @@ public:
      @return true if the iterator is invalid and false otherwise.
      */
 	bool IsInvalid( ) const { return( status & COLL_ITOR_INVALID ); }
-
+	//@}
+	
 private:
 	void initialize(ClassAdCollection*,BaseCollection*,int,const RankedAdSet&);
 	void updateForInsertion( );
