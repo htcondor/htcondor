@@ -186,6 +186,52 @@ int BaseShadow::cdToIwd() {
 	return 0;
 }
 
+
+void
+BaseShadow::holdJob( const char* reason )
+{
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
+		dprintf( D_ALWAYS, "Job going into Hold state.\n");
+		exit( JOB_SHOULD_HOLD );
+	}
+
+	char subject[ 256];
+	sprintf( subject, "Condor Job %d.%d put on hold\n", 
+			 getCluster(), getProc() ); 
+
+	FILE* mailer = emailUser( subject );
+	if( mailer ) {
+			// Grab a few things out of the job ad we need.
+		char* job_name = NULL;
+        jobAd->LookupString( ATTR_JOB_CMD, &job_name );
+        char* args = NULL;
+        jobAd->LookupString( ATTR_JOB_ARGUMENTS, &args );
+
+		fprintf( mailer, "Your condor job " );
+			// Only print the args if we have both a name and
+			// args.  However, we need to be careful not to leak
+			// memory if there's no job_name.
+		if( job_name ) {
+			fprintf( mailer, "%s ", job_name );
+			if( args ) {
+				fprintf( mailer, "%s ", args );
+			}
+			free( job_name );
+		}
+		if( args ) {
+			free( args );
+		}
+		fprintf( mailer, "\nis being put on hold.\n\n" );
+		fprintf( mailer, "%s", reason );
+		email_close(mailer);
+	}
+
+	dprintf( D_ALWAYS, "Job going into Hold state.\n");
+	exit( JOB_SHOULD_HOLD );
+}
+
+
 FILE*
 BaseShadow::emailUser( char *subjectline )
 {
@@ -339,6 +385,7 @@ BaseShadow::endingUserLog( int exitStatus, int exitReason )
 
 	}	// end of switch
 }
+
 
 // Note: log_except is static
 void

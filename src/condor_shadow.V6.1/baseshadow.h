@@ -114,6 +114,16 @@ class BaseShadow : public Service
 		 */
 	virtual void shutDown( int reason, int exitStatus ) = 0;
 
+		/** Put this job on hold, if requested, notify the user about
+			it, and exit with the appropriate status so that the
+			schedd actually puts the job on hold.<p>
+			This function is virtual, since different kinds of shadows
+			might want to implement their own version of this to clean
+			up in special ways before actually exiting.
+			@param reason String describing why the job is held
+		*/
+	virtual void holdJob( const char* reason );
+
 		/** The total number of bytes sent over the network on
 			behalf of this job.
 			Each shadow class should override this function and
