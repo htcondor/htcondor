@@ -1,10 +1,14 @@
 \begin{ManPage}{\label{man-condor-rm}\Condor{rm}}{1}
-{remove jobs from the condor queue}
+{remove jobs from the Condor queue}
 \Synopsis \SynProg{\Condor{rm}}
 \ToolArgsBase
-\ToolArgsLocate
-\oArgnm{cluster $|$ cluster.process $|$ user $|$ -all}
-\oOptnm{-constraint \emph{constraint}}
+\ToolLocate
+\ToolJobs
+
+\SynProg{\Condor{rm}}
+\ToolArgsBase
+\ToolLocate
+\ToolAll
 
 \index{Condor commands!condor\_rm}
 \index{condor\_rm command}
@@ -22,13 +26,11 @@ For any given job, only the owner of the job or one of the queue super users
 
 \begin{Options}
 	\ToolArgsBaseDesc
-	\ToolArgsLocateDesc
+	\ToolLocateDesc
 	\OptItem{\Arg{cluster}}{Remove all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Remove the specific job in the cluster}
 	\OptItem{\Arg{user}}{Remove jobs belonging to specified user}
-    \OptItem{\Opt{-all}}{Remove all the jobs in the queue}
-	\OptItem{\Arg{-constraint \emph{constraint}}}{Remove 
-		jobs matching specified constraint}
+        \OptItem{\Arg{-all}}{Remove all the jobs in the queue}
 \end{Options}
 
 \GenRem

@@ -135,11 +135,31 @@ user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 
 figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps
 
+HTML_FOR_NROFF = $(shell \ls ref/condor_*.html)
+
+nroff: local.html
+	\rm -rf man
+	mkdir man
+	mkdir man/man1
+	cd makeman && make clean
+	cd makeman && make makeman
+	cd ..
+	for html in $(HTML_FOR_NROFF); do \
+		makeman/makeman -v -i $$html -s 1; \
+	done
+	mv ref/*.1 man/man1/
+
+ref.nroff: nroff $(TARGETDIR)
+	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
+	tar cf condor-$(SUBVER)-man.tar man
+	gzip condor-$(SUBVER)-man.tar
+	mv condor-$(SUBVER)-man.tar.gz $(TARGETDIR)
+
 $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)

@@ -733,7 +733,7 @@ those details.
 
 Both \AdAttr{requirements} and \AdAttr{rank} need to be specified 
 as valid Condor ClassAd expressions, however, default values are set by the
-\Condor{submit} program if these aren't defined in the submit description file.
+\Condor{submit} program if these are not defined in the submit description file.
 From the \Condor{submit} manual page and the above examples, you see
 that writing ClassAd expressions is intuitive, especially if you
 are familiar with the programming language C.  There are some
@@ -775,12 +775,125 @@ descriptions follow for the attributes which will be common to every
 machine ClassAd. Remember that because ClassAds are flexible, the
 machine ads in your pool may include additional attributes specific
 to your site's installation and policies. 
+
 \subsubsection{\label{user-man-machad}ClassAd Machine Attributes}
 \input{user-man/machad.tex}
+
 \subsubsection{\label{user-man-machad}ClassAd Job Attributes}
 \input{user-man/jobad.tex}
 
+\subsubsection{\label{user-man-machad}Rank Expression Examples}
 
+\index{rank attribute!examples}
+\index{ClassAd attribute!rank examples}
+When considering the match between a job and a machine, rank is used
+to choose a match from among all machines that satisfy the job's
+requirements and are available to the user, after accounting for
+the user's priority and the machine's rank of the job.
+The rank expressions, simple or complex, define a numerical value
+that expresses preferences.
+
+The job's \AdAttr{rank} expression evaluates to one of three values.
+It can be UNDEFINED, ERROR, or a floating point value.
+If \AdAttr{rank} evaluates to a floating point value,
+the best match will be the one with the largest, positive value.
+If no \AdAttr{rank} is given 
+in the submit description file,
+then Condor substitutes a default value of 0.0 when considering
+machines to match.
+If the job's \AdAttr{rank} of a given machine evaluates
+to UNDEFINED or ERROR,
+this same value of 0.0 is used.
+Therefore, the machine is still considered for a match,
+but has no rank above any other.
+
+A boolean expression evaluates to the numerical value of 1.0
+if true, and 0.0 if false.
+
+The following \AdAttr{rank} expressions provide examples to
+follow.
+
+For a job that desires the machine with the most available memory:
+\begin{verbatim}
+   Rank = memory
+\end{verbatim}
+
+For a job that prefers to run on a friend's machine
+on Saturdays and Sundays:
+\begin{verbatim}
+   Rank = ( (clockday == 0) || (clockday == 6) )
+          && (machine == "friend.cs.wisc.edu")
+\end{verbatim}
+
+For a job that prefers to run on one of three specific machines:
+\begin{verbatim}
+   Rank = (machine == "friend1.cs.wisc.edu") ||
+          (machine == "friend2.cs.wisc.edu") ||
+          (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+
+For a job that wants the machine with the best floating point
+performance (on Linpack benchmarks):
+\begin{verbatim}
+   Rank = kflops
+\end{verbatim}
+This particular example highlights a difficulty with rank expression
+evaluation as currently defined.
+While all machines have floating point processing ability,
+not all machines will have the \AdAttr{kflops} attribute defined.
+For machines where this attribute is not defined,
+\AdAttr{Rank} will evaluate to the value UNDEFINED, and
+Condor will use a default rank of the machine of 0.0.
+The \AdAttr{rank} attribute will only rank machines where
+the attribute is defined.
+Therefore, the machine with the highest floating point
+performance may not be the one given the highest rank.
+
+So, it is wise when writing a \AdAttr{rank} expression to check
+if the expression's evaluation will lead to the expected
+resulting ranking of machines.
+This can be accomplished using the \Condor{status} command with the
+\oArg{-constraint} argument.  This allows the user to see a list of
+machines that fit a constraint.
+To see which machines in the pool have \AdAttr{kflops} defined,
+use
+\begin{verbatim}
+condor_status -constraint kflops
+\end{verbatim}
+Alternatively, to see a list of machines where 
+\AdAttr{kflops} is not defined, use
+\begin{verbatim}
+condor_status -constraint "kflops=?=undefined"
+\end{verbatim}
+
+For a job that prefers specific machines in a specific order:
+\begin{verbatim}
+   Rank = ((machine == "friend1.cs.wisc.edu")*3) +
+          ((machine == "friend2.cs.wisc.edu")*2) +
+           (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+If the machine being ranked is \AdStr{friend1.cs.wisc.edu}, then the
+expression
+\begin{verbatim}
+   (machine == "friend1.cs.wisc.edu")
+\end{verbatim}
+is true, and gives the value 1.0.
+The expressions
+\begin{verbatim}
+   (machine == "friend2.cs.wisc.edu")
+\end{verbatim}
+and
+\begin{verbatim}
+   (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+are false, and give the value 0.0.
+Therefore, \AdAttr{rank} evaluates to the value 3.0.
+In this way, machine \AdStr{friend1.cs.wisc.edu} is ranked higher than
+machine \AdStr{friend2.cs.wisc.edu},
+machine \AdStr{friend2.cs.wisc.edu}
+is ranked higher than 
+machine \AdStr{friend3.cs.wisc.edu},
+and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
 \subsection{Heterogeneous Submit: Execution on Differing Architectures} 
@@ -1009,7 +1122,7 @@ The complete submit description file for this example:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Priorities in Condor}
+\section{\label{sec:Priorities}Priorities in Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor has two independent priority controls: \Term{job}
@@ -1298,7 +1411,7 @@ file system disk.
 Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
 must be in your environment.
 \Note to allow a globus resource to join your Condor pool, your 
-administrator must add the hostname(s) to the HOSTALLOW\_WRITE and
+administrator must add the host name(s) to the HOSTALLOW\_WRITE and
 HOSTALLOW\_READ configuration values.
 \end{enumerate}
 

@@ -9,8 +9,25 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\oOptnm{-pool hostname $|$ -name hostname $|$ -addr "\SinfulAny" 
-	$|$ hostname ...}
+\oOptnm{-pool centralmanagerhostname}
+\oOptnm{-name hostname $|$ -addr "\SinfulAny" $|$ hostname ...}
+}
+
+%% Alternative to locate the machines with which you want to mess.
+%% Used by _rm, _hold, and _release.
+\newcommand{\ToolLocate}{
+\oOptnm{-pool centralmanagerhostname}
+\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolJobs}{
+\Argnm{ cluster\Dots $|$ cluster.process\Dots $|$ user\Dots } 
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolAll}{
+\Argnm{ -all } 
 }
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
@@ -35,22 +52,34 @@
 
 %%  Argument descriptions for different classes of arguments 
 \newcommand{\ToolArgsLocateDesc}{
-\OptItem{\OptArg{-pool}{hostname}}{Use the given central manager to
-	find daemons}
-\OptItem{\OptArg{-name}{hostname}}{Send the specified command to specified 
+\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
+	central manager's hostname}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
 	machine}
-\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the specified command
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine's master located at "\SinfulAny"}
 \OptItem{\Opt{hostname ...}}{A list of affected machines}
 }
 
+
+%%  Alternative argument descriptions for different classes of arguments 
+%%  Used by _rm, _hold, and _release.
+\newcommand{\ToolLocateDesc}{
+\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
+	central manager's hostname}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
+	machine}
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
+	to a machine's master located at "\SinfulAny"}
+}
+
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\Opt{-master}}{Send the specified command to the master (default)}
-\OptItem{\Opt{-startd}}{Send the specified command to the startd}
-\OptItem{\Opt{-schedd}}{Send the specified command to the schedd}
-\OptItem{\Opt{-collector}}{Send the specified command to the collector}
-\OptItem{\Opt{-kbdd}}{Send the specified command to the kbdd}
+\OptItem{\Opt{-master}}{Send the command to the master (default)}
+\OptItem{\Opt{-startd}}{Send the command to the startd daemon}
+\OptItem{\Opt{-schedd}}{Send the command to the schedd daemon}
+\OptItem{\Opt{-collector}}{Send the command to the collector daemon}
+\OptItem{\Opt{-kbdd}}{Send the command to the kbdd daemon}
 }
 
 %% This is the description of the common arguments
