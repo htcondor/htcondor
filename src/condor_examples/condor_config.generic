@@ -266,9 +266,6 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  calls?
 #USE_NFS		= False
 
-##  Do your machines run AFS?
-#HAS_AFS		= False
-
 ##  Do you want to use AFS for file access instead of remote system
 ##  calls?
 #USE_AFS		= False

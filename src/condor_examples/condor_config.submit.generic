@@ -139,9 +139,6 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##  calls?
 #USE_NFS		= False
 
-##  Do your machines run AFS?
-#HAS_AFS		= False
-
 ##  Do you want to use AFS for file access instead of remote system
 ##  calls?
 #USE_AFS		= False
