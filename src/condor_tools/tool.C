@@ -136,7 +136,8 @@ int
 main( int argc, char *argv[] )
 {
 	char *daemonname, *MyName = argv[0];
-	char *cmd_str;
+	char *cmd_str; 
+	int size, did_one = FALSE;
 
 	config( 0 );
 
@@ -148,8 +149,11 @@ main( int argc, char *argv[] )
 	}
 	cmd_str = strchr( MyName, '_');
 	if( !cmd_str ) {
-		fprintf( stderr, "Error: unknown command %s\n", MyName );
-		exit(1);
+		size = sizeof( argv[1] );
+		MyName = (char*)malloc( size + 8 );
+		sprintf( MyName, "condor_%s", argv[1] );
+		cmd_str = MyName+6;
+		argv++; argc--;
 	}
 		// Figure out what kind of tool we are.
 	if( !strcmp( cmd_str, "_reconfig" ) ) {
@@ -189,14 +193,13 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	if( argc == 1 ) {
-		do_command( my_full_hostname() );
-		exit( 0 );
-	}
-
 	for( argv++; *argv; argv++ ) {
-		if( **argv == '-' ) {
-			usage( MyName );
+		if( (*argv)[0] == '-' ) {
+			if( (*argv)[1] == 'n' ) {
+				continue;
+			} else {
+				usage( MyName );
+			}
 		}
 		if( (daemonname = get_daemon_name(*argv)) == NULL ) {
 			fprintf( stderr, "%s: unknown host %s\n", MyName, 
@@ -204,6 +207,11 @@ main( int argc, char *argv[] )
 			continue;
 		}
 		do_command( daemonname );
+		did_one = TRUE;
+	}
+
+	if( ! did_one ) {
+		do_command( my_full_hostname() );
 	}
 	exit( 0 );
 }
