@@ -1278,7 +1278,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
 				globusError = 0;
 				gmState = GM_RESTART;
-			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMITE_TIMED_OUT ) {
+			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ) {
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				myResource->CancelSubmit( this );
