@@ -1,10 +1,18 @@
 #include <setjmp.h>
+
+#if defined(ULTRIX42)
+extern "C" void *sbrk( int );
+extern "C" int brk( void * );
+#elif defined(ULTRIX43)
 extern "C" char *sbrk( int );
 extern "C" char *brk( char * );
+#endif
 
 	// NULL gets redefined in <sys/param> on ULTRIX43 machines
-#if defined(ULTRIX43) && defined(NULL)
+#if defined(ULTRIX42) || defined(ULTRIX43)
+#if defined(NULL)
 #undef NULL
+#endif
 #endif
 #include <sys/param.h>
 
