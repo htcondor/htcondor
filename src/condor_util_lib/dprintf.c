@@ -153,7 +153,6 @@ va_dcl
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_SETMASK, &mask, &omask );
 #else
-#endif
 		/* Block any signal handlers which might try to print something */
 	if( ! InDBX ) {
 		/* Blocking signals makes dbx hang */
@@ -161,6 +160,7 @@ va_dcl
 	} else {
 		omask = sigblock( 0 );
 	}
+#endif
 #endif
 
 		/* Open and lock the log file */
