@@ -60,7 +60,6 @@ class Dagman {
 		// whether to peform expensive cycle-detection at startup
 		// (note: we perform run-time cycle-detection regardless)
 	bool startup_cycle_detect;
-    char* stork_server;
 	bool doEventChecks;
 
 		// Allow the job to execute even if we have an error determining

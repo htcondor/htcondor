@@ -107,7 +107,6 @@ Dagman::Config()
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
-	stork_server = param( "STORK_SERVER" );
 	allowExtraRuns = param_boolean(
 			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
 	retrySubmitFirst = param_boolean( "DAGMAN_RETRY_SUBMIT_FIRST", true );
