@@ -192,6 +192,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	char buff[4096];
 	char buff2[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
+	bool job_already_submitted = false;
 
 	RSL = NULL;
 	callbackRegistered = false;
@@ -244,12 +245,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	gahp.setMode( GahpClient::normal );
 	gahp.setTimeout( gahpCallTimeout );
 
-	resourceDown = false;
-	resourceStateKnown = false;
-	myResource = resource;
-	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
-	myResource->RegisterJob( this );
-
 	ad = classad;
 
 	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
@@ -264,7 +259,14 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 		}
 		rehashJobContact( this, jobContact, buff );
 		jobContact = strdup( buff );
+		job_already_submitted = true;
 	}
+
+	resourceDown = false;
+	resourceStateKnown = false;
+	myResource = resource;
+	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
+	myResource->RegisterJob( this, job_already_submitted );
 
 	ad->LookupInteger( ATTR_GLOBUS_STATUS, globusState );
 	ad->LookupInteger( ATTR_JOB_STATUS, condorState );
@@ -608,7 +610,7 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->CancelSubmit(this);
+				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
@@ -1079,7 +1081,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				myResource->CancelSubmit(this);
+				myResource->SubmitComplete(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
@@ -1309,6 +1311,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				// released or removed.
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
+				myResource->CancelSubmit( this );
 				jobContact = NULL;
 				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );
@@ -1365,7 +1368,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			myResource->CancelSubmit(this);
+			myResource->SubmitComplete(this);
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
@@ -1439,6 +1442,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
+				myResource->CancelSubmit( this );
 				jobContact = NULL;
 				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );

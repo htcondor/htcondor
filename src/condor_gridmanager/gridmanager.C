@@ -282,6 +282,7 @@ Reconfig()
 	// when we are asked to reconfig.
 
 
+dprintf(D_FULLDEBUG,"reconfig called!!!!\n");
 	if ( checkResources_tid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer(checkResources_tid);
 		checkResources_tid = TIMER_UNSET;
@@ -332,6 +333,17 @@ Reconfig()
 		max_pending_submits = 5; // default limit is 5
 	}
 	GlobusResource::setSubmitLimit( max_pending_submits );
+
+	int max_submitted_jobs = -1;
+	tmp = param("GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE");
+	if ( tmp ) {
+		max_submitted_jobs = atoi(tmp);
+		free(tmp);
+	}
+	if ( max_submitted_jobs < 0 ) {
+		max_submitted_jobs = 100; // default limit is 100
+	}
+	GlobusResource::setJobLimit( max_submitted_jobs );
 
 	tmp_int = -1;
 	tmp = param("GRIDMANAGER_GAHP_CALL_TIMEOUT");

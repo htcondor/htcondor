@@ -9,6 +9,7 @@
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::submitLimit = 5;		// default value
+int GlobusResource::jobLimit = 100;			// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 
 GlobusResource::GlobusResource( char *resource_name )
@@ -38,19 +39,39 @@ void GlobusResource::Reconfig()
 {
 	gahp.setTimeout( gahpCallTimeout );
 
+dprintf(D_FULLDEBUG,"*** enterting Reconfig\n");
+	// If the jobLimit was widened, move jobs from Wanted to Allowed and
+	// add them to Queued
+	while ( submitsAllowed.Length() < jobLimit &&
+			submitsWanted.Length() > 0 ) {
+		GlobusJob *wanted_job = submitsWanted.Head();
+		submitsWanted.Delete( wanted_job );
+		submitsAllowed.Append( wanted_job );
+//		submitsQueued.Append( wanted_job );
+dprintf(D_FULLDEBUG,"***   job %d.%d moved from submitsWanted to submitsAllowed\n",wanted_job->procID.cluster,wanted_job->procID.proc);
+//dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsQueued\n",wanted_job->procID.cluster,wanted_job->procID.proc);
+		wanted_job->SetEvaluateState();
+	}
+
 	// If the submitLimit was widened, move jobs from Queued to In-Progress
 	while ( submitsInProgress.Length() < submitLimit &&
 			submitsQueued.Length() > 0 ) {
 		GlobusJob *queued_job = submitsQueued.Head();
 		submitsQueued.Delete( queued_job );
 		submitsInProgress.Append( queued_job );
+dprintf(D_FULLDEBUG,"***   job %d.%d moved from submitsQueued to submitsInProgress\n",queued_job->procID.cluster,queued_job->procID.proc);
 		queued_job->SetEvaluateState();
 	}
 }
 
-void GlobusResource::RegisterJob( GlobusJob *job )
+void GlobusResource::RegisterJob( GlobusJob *job, bool already_submitted )
 {
 	registeredJobs.Append( job );
+
+	if ( already_submitted ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsAllowed, returning false\n",job->procID.cluster,job->procID.proc);
+		submitsAllowed.Append( job );
+	}
 
 	if ( firstPingDone == true ) {
 		if ( resourceDown ) {
@@ -81,11 +102,14 @@ void GlobusResource::RequestPing( GlobusJob *job )
 
 bool GlobusResource::RequestSubmit( GlobusJob *job )
 {
+	bool already_allowed = false;
 	GlobusJob *jobptr;
+dprintf(D_FULLDEBUG,"*** enterting RequestSubmit() for job %d.%d\n",job->procID.cluster,job->procID.proc);
 
 	submitsQueued.Rewind();
 	while ( submitsQueued.Next( jobptr ) ) {
 		if ( jobptr == job ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d already in submitsQueued, returning false\n",job->procID.cluster,job->procID.proc);
 			return false;
 		}
 	}
@@ -93,7 +117,40 @@ bool GlobusResource::RequestSubmit( GlobusJob *job )
 	submitsInProgress.Rewind();
 	while ( submitsInProgress.Next( jobptr ) ) {
 		if ( jobptr == job ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d already in submitsInProgress, returning true\n",job->procID.cluster,job->procID.proc);
 			return true;
+		}
+	}
+
+	submitsWanted.Rewind();
+	while ( submitsWanted.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d already in submitsWanted, returning false\n",job->procID.cluster,job->procID.proc);
+			return false;
+		}
+	}
+
+	submitsAllowed.Rewind();
+	while ( submitsAllowed.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+			already_allowed = true;
+			break;
+		}
+	}
+
+	if ( already_allowed == false ) {
+		if ( submitsAllowed.Length() < jobLimit &&
+			 submitsWanted.Length() > 0 ) {
+			EXCEPT("In GlobusResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full\n",resourceName);
+		}
+		if ( submitsAllowed.Length() < jobLimit ) {
+			submitsAllowed.Append( job );
+dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsAllowed\n",job->procID.cluster,job->procID.proc);
+			// proceed to see if submitLimit applies
+		} else {
+			submitsWanted.Append( job );
+dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsWanted, returning false\n",job->procID.cluster,job->procID.proc);
+			return false;
 		}
 	}
 
@@ -103,31 +160,65 @@ bool GlobusResource::RequestSubmit( GlobusJob *job )
 	}
 	if ( submitsInProgress.Length() < submitLimit ) {
 		submitsInProgress.Append( job );
+dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsInProgress, returning true\n",job->procID.cluster,job->procID.proc);
 		return true;
 	} else {
 		submitsQueued.Append( job );
+dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsQueued, returning false\n",job->procID.cluster,job->procID.proc);
 		return false;
 	}
 }
 
-bool GlobusResource::CancelSubmit( GlobusJob *job )
+void GlobusResource::SubmitComplete( GlobusJob *job )
 {
-	if ( submitsQueued.Delete( job ) ) {
-		return true;
-	}
-
+dprintf(D_FULLDEBUG,"*** enterting SubmitComplete() for job %d.%d\n",job->procID.cluster,job->procID.proc);
 	if ( submitsInProgress.Delete( job ) ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d removed from submitsInProgress\n",job->procID.cluster,job->procID.proc);
 		if ( submitsInProgress.Length() < submitLimit &&
 			 submitsQueued.Length() > 0 ) {
 			GlobusJob *queued_job = submitsQueued.Head();
 			submitsQueued.Delete( queued_job );
 			submitsInProgress.Append( queued_job );
+dprintf(D_FULLDEBUG,"***   job %d.%d moved from submitsQueued to submitsInProgress\n",queued_job->procID.cluster,queued_job->procID.proc);
 			queued_job->SetEvaluateState();
 		}
-		return true;
+	} else {
+		// We only have to check submitsQueued if the job wasn't in
+		// submitsInProgress.
+bool foo=
+		submitsQueued.Delete( job );
+if(foo)dprintf(D_FULLDEBUG,"***   job %d.%d removed from submitsQueued\n",job->procID.cluster,job->procID.proc);
 	}
 
-	return false;
+	return;
+}
+
+void GlobusResource::CancelSubmit( GlobusJob *job )
+{
+dprintf(D_FULLDEBUG,"*** enterting CancelSubmit() for job %d.%d\n",job->procID.cluster,job->procID.proc);
+	if ( submitsAllowed.Delete( job ) ) {
+dprintf(D_FULLDEBUG,"***   job %d.%d removed from submitsAllowed\n",job->procID.cluster,job->procID.proc);
+		if ( submitsAllowed.Length() < jobLimit &&
+			 submitsWanted.Length() > 0 ) {
+			GlobusJob *wanted_job = submitsWanted.Head();
+			submitsWanted.Delete( wanted_job );
+			submitsAllowed.Append( wanted_job );
+//			submitsQueued.Append( wanted_job );
+dprintf(D_FULLDEBUG,"***   job %d.%d moved from submitsWanted to submitsAllowed\n",wanted_job->procID.cluster,wanted_job->procID.proc);
+//dprintf(D_FULLDEBUG,"***   job %d.%d appended to submitsQueued\n",wanted_job->procID.cluster,wanted_job->procID.proc);
+			wanted_job->SetEvaluateState();
+		}
+	} else {
+		// We only have to check submitsWanted if the job wasn't in
+		// submitsAllowed.
+bool foo=
+		submitsWanted.Delete( job );
+if(foo)dprintf(D_FULLDEBUG,"***   job %d.%d removed from submitsWanted\n",job->procID.cluster,job->procID.proc);
+	}
+
+	SubmitComplete( job );
+
+	return;
 }
 
 bool GlobusResource::IsEmpty()
