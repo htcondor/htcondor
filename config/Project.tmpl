@@ -220,7 +220,15 @@ VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -D$(OS_FLAG)=$(OS_FLAG) \
 		 $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
+/*
+Generally, compile with -fPIC for position-independent code.
+However, leave it as a separate Make variable so that particular
+modules that cannot use it (i.e. checkpointing) can turn it off.
+*/
+
+CC_PIC_FLAG = -fPIC
+
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
 INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
