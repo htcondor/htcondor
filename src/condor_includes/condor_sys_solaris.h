@@ -25,7 +25,7 @@
 
 #define __EXTENSIONS__
 
-#if defined(Solaris26) || defined(Solaris27)
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
 #	define _LARGEFILE64_SOURCE
 #endif
 
@@ -90,7 +90,7 @@ END_C_DECLS
 #define SIGSET_CONST			const
 #define SYNC_RETURNS_VOID		1
 
-#if defined(Solaris26) || defined(Solaris27)
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
 	#define HAS_64BIT_SYSCALLS	1
 	#define HAS_64BIT_STRUCTS	1
 	#define HAS_F_DUP2FD		1
