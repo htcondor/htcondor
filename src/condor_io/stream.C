@@ -1742,8 +1742,8 @@ bool Stream :: initialize_crypto(KeyInfo * key)
     return (crypto_ != 0);
 }
 
-
-bool Stream :: get_encryption_protocol(KeyInfo * key) 
+/*
+bool Stream :: get_crypto_key(KeyInfo * key) 
 {
     unsigned char data[key->getKeyLength()];
     int code;
@@ -1765,30 +1765,55 @@ bool Stream :: get_encryption_protocol(KeyInfo * key)
     }
 
 }
-
-bool Stream :: set_encryption_protocol(KeyInfo * key)
+*/
+bool Stream :: set_crypto_key(KeyInfo * key)
 {
     int code;
 
-    if (initialize_crypto(key)) {
+    if (key != 0) {
+        char data[key->getKeyLength()];
+        if (initialize_crypto(key)) {
 
-        code = put_bytes(key->getKeyData(), key->getKeyLength());
-        
-        return (code > 0);
+	    if (_coding == stream_encode) {
+                code = put_bytes(key->getKeyData(), key->getKeyLength());
+		if (code == key->getKeyLength()) {
+		    return true;
+		}
+		else {
+		    goto error;
+		}
+	    }
+	    else {
+	        code = get_bytes(data, key->getKeyLength());
+                if (code > 0) {
+                    if (memcmp(data, key->getKeyData(), key->getKeyLength()) != 0) {
+		        goto error;
+	            }
+		    else {
+			return true;
+		    }
+                }
+		else {
+		   goto error;
+		}
+            }
+         }
+         else {
+	     goto error;
+         }
     }
     else {
-        return false;
+        // We are turning encryption off
+        if (crypto_) {
+            delete crypto_;
+	}
+        crypto_ = 0;
+	return true;
     }
-    
-}
-
-void Stream :: set_encryption_off()
-{
-    if (crypto_) {  // Not necessary
+ error:
+    if (crypto_) {
         delete crypto_;
+	crypto_ = 0;
     }
-    crypto_ = 0;
+    return false;
 }
-
-
-
