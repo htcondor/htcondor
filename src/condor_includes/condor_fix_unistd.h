@@ -1,7 +1,18 @@
 #ifndef FIX_UNISTD_H
 #define FIX_UNISTD_H
 
+
+#if defined(SUNOS41)
+#	define read _hide_read
+#	define write _hide_write
+#endif
+
 #include <unistd.h>
+
+#if defined(SUNOS41)
+#	undef read
+#	undef write
+#endif
 
 
 /*
@@ -23,6 +34,10 @@ extern "C" {
 	int symlink( const char *, const char * );
 	void *sbrk( ssize_t );
 	int gethostname( char *, int );
+#	if defined(SUNOS41)
+		ssize_t read( int, void *, size_t );
+		ssize_t write( int, const void *, size_t );
+#	endif
 #else
 	int symlink();
 	char *sbrk();
