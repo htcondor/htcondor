@@ -73,7 +73,7 @@ public class CondorJavaInfo {
 			System.out.println("[");
 		}
 
-		btime = Float.parseFloat(args[1])/5.0;
+		btime = Float.valueOf(args[1]).doubleValue()/5.0;
 		if(btime>0) {
 			double result = 0;
 	                jnt.scimark2.Random r = new jnt.scimark2.Random(Constants.RANDOM_SEED);
