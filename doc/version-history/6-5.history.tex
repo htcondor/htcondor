@@ -52,6 +52,14 @@ The details of each version are described below.
   caused problems for sites that have mixed-case hostnames in their
   DNS records.
 
+\item When the \Condor{shadow} is trying to claim a \Condor{startd},
+  if the IP address of the \Condor{shadow} cannot be resolved, the
+  \Condor{startd} used to refuse the request.
+  Now, the \Condor{startd} accepts the request and uses the IP address
+  of the \Condor{shadow} in the all log messages, tool output, and the
+  \Attr{ClientMachine} ClassAd attribute that are normally set to the
+  hostname.
+
 \end{itemize}
 
 \noindent Known Bugs:
