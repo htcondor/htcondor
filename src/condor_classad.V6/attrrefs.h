@@ -24,21 +24,14 @@
 #ifndef __ATTRREFS_H__
 #define __ATTRREFS_H__
 
-#include "stringSpace.h"
-
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 /** Represents a attribute reference node in the expression tree
 */
 class AttributeReference : public ExprTree 
 {
   	public:
-		/** Constructor
-		*/
-    	AttributeReference ();
-
-		/**  Destructor
-		*/
+		///  Destructor
     	~AttributeReference ();
 
 		/** Factory method to create attribute reference nodes.
@@ -53,9 +46,21 @@ class AttributeReference : public ExprTree
 		*/
     	static AttributeReference *MakeAttributeReference(ExprTree *expr, 
 					const string &attrName, bool absolute=false);
-		void GetComponents( ExprTree *&, string &, bool & ) const;
 
+		/** Deconstructor to get the components of an attribute reference
+		 * 	@param expr The expression part of the reference (NULL for
+		 * 		absolute or simple references)
+		 * 	@param attr The name of the attribute being referred to
+		 * 	@param abs  true iff the reference is absolute (i.e., .attr)
+		 */
+		void GetComponents( ExprTree *&expr,string &attr, bool &abs ) const;
+
+		/// Make a deep copy of the expression
 		virtual AttributeReference* Copy( ) const;
+
+	protected:
+		/// Constructor
+    	AttributeReference ();
 
   	private:
 		// private ctor for internal use
@@ -63,7 +68,7 @@ class AttributeReference : public ExprTree
 		virtual void _SetParentScope( const ClassAd* p );
     	virtual bool _Evaluate( EvalState & , Value & ) const;
     	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& ) const;
-    	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+    	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool ) const;
 
 		ExprTree	*expr;

@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "classad.h"
 
 BEGIN_NAMESPACE( classad )
@@ -221,7 +222,7 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 
 
 bool AttributeReference::
-_Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
+_Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 {
 	ExprTree	*tree;
 	ExprTree	*dummy;
