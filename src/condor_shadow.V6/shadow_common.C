@@ -75,6 +75,11 @@ extern char    TmpCkptName[];
 extern int             MyPid;
 extern char    *Spool;
 extern char    RCkptName[];
+extern int LastRestartTime;
+extern int CommittedTime;
+extern int NumCkpts;
+extern int NumRestarts;
+extern float TotalBytesSent, TotalBytesRecvd;
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
@@ -86,7 +91,6 @@ extern int MainSymbolExists;
 extern int JobStatus;
 extern char    *MailerPgm;
 extern char My_UID_Domain[];
-static char *_FileName_ = __FILE__;
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd;
@@ -126,6 +130,7 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
         double rutime, rstime, lutime, lstime;  /* remote/local user/sys times */
         double trtime, tltime;  /* Total remote/local time */
         double  real_time;
+		float run_time = 0.0;
 		time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
 								archs, and this means that doing a (time_t*)
 								cast on & of a 4 byte int makes my life hell.
@@ -201,10 +206,24 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
                 real_time = proc->completion_date - proc->q_date;
 
 				arch_time = proc->completion_date;
-                fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+                fprintf(mailer, "Completed at:        %s\n",
+						ctime(&arch_time));
 
                 fprintf(mailer, "Real Time:           %s\n", 
 					d_format_time(real_time));
+
+				if (JobAd) {
+					JobAd->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK, run_time);
+				}
+				run_time += proc->completion_date - LastRestartTime;
+				
+				fprintf(mailer, "Run Time:            %s\n",
+						d_format_time(run_time));
+
+				if (CommittedTime > 0) {
+					fprintf(mailer, "Committed Time:      %s\n",
+							d_format_time(CommittedTime));
+				}
         }
         fprintf( mailer, "\n" );
 
@@ -234,6 +253,21 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
                 fprintf(mailer, "Leveraging Factor:   %2.1f\n", trtime / tltime);
         }
         fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n", proc->image_size);
+
+		if (NumCkpts > 0) {
+			fprintf(mailer, "Checkpoints written: %d\n", NumCkpts);
+			fprintf(mailer, "Checkpoint restarts: %d\n", NumRestarts);
+		}
+
+		if (TotalBytesSent > 0.0) {
+			// TotalBytesSent and TotalBytesRecvd are from the shadow's
+			// perspective, and we want to display the stats from the job's
+			// perspective.
+			fprintf(mailer,
+					"Network Usage:       %.0f Kilobytes read\n"
+					"                     %.0f Kilobytes written\n",
+					TotalBytesSent/1024.0, TotalBytesRecvd/1024.0);
+		}
 
 		email_close(mailer);
 }
