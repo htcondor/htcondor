@@ -24,6 +24,7 @@
 #if !defined(SKIP_AUTHENTICATION) && defined(KERBEROS_AUTHENTICATION)
 
 #include "condor_auth_kerberos.h"
+#include "condor_config.h"
 
 const char STR_CONDOR_KERBEROS_CACHE[]  = "CONDOR_KERBEROS_CACHE";
 const char STR_CONDOR_CACHE_SHARE[]     = "CONDOR_KERBEROS_SHARE_CACHE";
