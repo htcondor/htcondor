@@ -1491,7 +1491,7 @@ LogState( FILE *fp )
 	    cla_s=ClassAdStorage.GetClassadFromFile(cla_key,sf_offset);
 	    if (cla_s == ""){
 	      CondorErrno = ERR_CACHE_CLASSAD_ERROR;
-	      CondorErrMsg = "No classad " + key + " can be found from storage file";
+	      CondorErrMsg = "No classad " + cla_key + " can be found from storage file";
 	      return( false );	     
 	    }
 	    ClassAd *cla=parser.ParseClassAd(cla_s,true);
