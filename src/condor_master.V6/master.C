@@ -49,6 +49,8 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #include "condor_adtypes.h"
 // #include "dgram_io_handle.h"
 #include "condor_io.h"
+#include "exit.h"
+
 
 #ifndef WANT_DC_PM
 int sigchld_handler(Service *,int);
@@ -581,7 +583,7 @@ obituary( int pid, int status )
 
     if( WIFSIGNALED(status) ) {
         fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
-				name, my_hostname(), WTERMSIG(status) );
+				name, my_full_hostname(), WTERMSIG(status) );
         /*
 		   fprintf( mailer, "(%s core was produced)\n",
 		   status->w_coredump ? "a" : "no" );
@@ -589,7 +591,7 @@ obituary( int pid, int status )
     } else {
         fprintf( mailer,
 				"\"%s\" on \"%s\" exited with status %d\n",
-				name, my_hostname(), WEXITSTATUS(status) );
+				name, my_full_hostname(), WEXITSTATUS(status) );
     }
     tail_log( mailer, log, Lines );
 
@@ -813,7 +815,7 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	dprintf( D_ALWAYS, "Killed by SIGTERM.  Performing graceful shut down.\n" );
+	dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGTERM\n" );
 
 #ifdef WANT_DC_PM
