@@ -1,3 +1,8 @@
+07/25/04 V6_6-merge-17
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This gets the bug fixes in the startd when it
+   fails to exec() the starter so that it doesn't seg fault.
+
 07/23/04 V6_6-merge-16
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This gets the major bug fixes for the sandbox cleanup
