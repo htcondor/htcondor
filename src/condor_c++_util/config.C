@@ -445,6 +445,7 @@ get_var( register char *value, register char **leftp,
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
+	int selflen = (self) ? strlen(self) : 0;
 
 	tvalue = value;
 	left = value;
@@ -468,7 +469,14 @@ tryagain:
 			}
 
 			if( *value == ')' ) {
-				if( !self || strncmp( name, self, strlen(self) ) == MATCH ) {
+				// We pass (value-name) to strncmp since name contains
+				// the entire line starting from the identifier and value
+				// points to the end of the identifier.  Thus, the difference
+				// between these two pointers gives us the length of the
+				// identifier.
+				int namelen = value-name;
+				if( !self || ( namelen == selflen &&
+							   strncmp( name, self, namelen ) == MATCH ) ) {
 					right = value;
 					break;
 				} else {
