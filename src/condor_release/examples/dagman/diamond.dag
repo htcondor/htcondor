@@ -1,0 +1,13 @@
+##################################################
+# diamond.dag
+#
+# Simple example of a "diamond-shaped" DAG
+##################################################
+
+Job  A  A.submit 
+Job  B  B.submit 
+Job  C  C.submit        
+Job  D  D.submit
+PARENT A CHILD B C
+PARENT B C CHILD D
+
