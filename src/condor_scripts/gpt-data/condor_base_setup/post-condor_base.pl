@@ -4,6 +4,11 @@ use Cwd;
 use strict;
 use Config;
 
+my $condor_uid;
+my $condor_id;
+my $condor_home;
+my @pwdent;
+
 # find the GPT directory
 
 my($gpath, $gptpath);
@@ -164,7 +169,7 @@ sub fixpaths
 fixpaths();
 
 sub find_owner {
-    local( $owner );
+	my $ownerret;
     if( $< ) {
 	# Non-root
 	return $<;
@@ -173,10 +178,10 @@ sub find_owner {
     $_=$ENV{CONDOR_IDS};
     if( $_ ) {
 	s/(\d*)\.\d*/$1/;
-	$owner = $_;
-	@pwdent = getpwuid($owner);
+	$ownerret = $_;
+	@pwdent = getpwuid($ownerret);
 	if( ! $pwdent[0] ) {
-	    print "\nuid specified in CONDOR_IDS ($owner) is not valid.  Please ",
+	    print "\nuid specified in CONDOR_IDS ($ownerret) is not valid.  Please ",
 	    "set the\nCONDOR_IDS environment variable to the uid.gid pair ",
 	    "that Condor\nshould use.\n\n";
 	    exit(1);
@@ -189,7 +194,7 @@ sub find_owner {
     $condor_uid=$pwdent[2];
 
     if( $condor_uid ) {
-	$owner = $condor_uid;
+	$ownerret = $condor_uid;
     } else {
 	print "There's no \"condor\" account on this machine and the CONDOR_IDS ",
 	"environment\nvariable is not set.  Please create a condor account, or ",
@@ -197,5 +202,6 @@ sub find_owner {
 	"Condor should use.\n";
 	exit(1);
     }
-    return $owner;
+    return $ownerret;
 }
+
