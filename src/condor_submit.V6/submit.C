@@ -1015,7 +1015,7 @@ SetUniverse()
 			}
 		}			
 		
-		(void) sprintf (buffer, "%s = %s", ATTR_JOB_GRID_TYPE, univ);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, univ);
 		InsertJobExpr (buffer);
 		free (univ);
 		
