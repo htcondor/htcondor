@@ -65,10 +65,6 @@ int		Runnable(PROC_ID*);
 int		Runnable(ClassAd*);
 int		get_job_prio(ClassAd *ad);
 
-#if !defined(WIN32)
-uid_t	active_owner_uid = 0;
-#endif
-
 static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
@@ -529,10 +525,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	}
 
 	// The super users are always allowed to do updates.  They are
-	// specified with the "SUPER_USERS" string list in the config
-	// file.  Defaults to root and condor.
+	// specified with the "QUEUE_SUPER_USERS" string list in the
+	// config file.  Defaults to root and condor.
 	if( isQueueSuperUser(test_owner) ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), super_user\n" );
+		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
 		return 1;
 	}
 
@@ -541,19 +537,16 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// the UID we're running as.
 	uid_t 	my_uid = get_my_uid();
 	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
-		if( active_owner_uid == my_uid ) {
-			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), its me\n" );
+		if( strcmp(get_real_username(), test_owner) == MATCH ) {
+			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
+					"my username\n", test_owner );
 			return 1;
-		} 
-		else {
-
-#if !defined(WIN32)
+		} else {
 			errno = EACCES;
-#endif
-			dprintf( D_FULLDEBUG, "OwnerCheck: reject test_owner: %s non-super\n",
-					test_owner );
-			dprintf( D_FULLDEBUG,"OwnerCheck: my_uid: %d, active_owner_uid: %d\n",
-					my_uid,active_owner_uid );
+			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
+					 test_owner );
+			dprintf( D_FULLDEBUG, "OwnerCheck: username: %s, test_owner: %s\n",
+					 get_real_username(), test_owner );
 			return 0;
 		}
 	}
@@ -598,10 +591,6 @@ setQSock( ReliSock* rsock )
 		return false;
 	}
 	Q_SOCK = rsock;
-	if( InitializeConnection(rsock->getOwner(), 
-				rsock->getDomain()) < 0 ) {
-		return false;
-	}
 	return true;
 }
 
@@ -610,10 +599,6 @@ void
 unsetQSock( void )
 {
 	Q_SOCK = NULL;
-#ifndef WIN32
-	uninit_user_ids();
-	active_owner_uid = 0;
-#endif
 }
 
 
@@ -635,9 +620,7 @@ handle_q(Service *, int, Stream *sock)
 	// from within the schedd itself.
 	Q_SOCK = (ReliSock *)sock;
 	//Q_SOCK->unAuthenticate();
-#ifndef WIN32
-	active_owner_uid = 0;
-#endif
+
 	active_cluster_num = -1;
 
 	do {
@@ -651,10 +634,6 @@ handle_q(Service *, int, Stream *sock)
 	// the QMGMT code the request originated internally, and it should
 	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
 	//Q_SOCK->unAuthenticate();
-#ifndef WIN32
-	// lets not do this on win32
-	uninit_user_ids();
-#endif
 	// note: Q_SOCK is static...
 	Q_SOCK = NULL;
 
@@ -710,26 +689,14 @@ handle_q(Service *, int, Stream *sock)
 int
 InitializeConnection( const char *owner, const char *domain )
 {
-	
-	if ( owner ) {
-		dprintf(D_SECURITY,"in qmgmt InitializeConnection"
-				"(owner=%s, domain=%s)\n",owner, (domain)?domain:"NULL");
-		if (!init_user_ids( owner, domain )) {
-			dprintf(D_ALWAYS, "init_user_ids() failed.\n");
-			return -1;
-		}
-	}
-	else {
-		//this is a relic, but better than setting to NULL!
-		//    init_user_ids( "nobody" );
-		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=NULL)\n");
-		return -1;
-	}
-
-#if !defined(WIN32)
-	active_owner_uid = get_user_uid();
-#endif /* !WIN32 */
-
+		/*
+		  This function used to call init_user_ids(), but we don't
+		  need that anymore.  perhaps the whole thing should go
+		  away...  however, when i tried that, i got all sorts of
+		  strange link errors b/c other parts of the qmgmt code (the
+		  sender stubs, etc) seem to depend on it.  i don't have time
+		  to do more a thorough purging of it.
+		*/
 	return 0;
 }
 
