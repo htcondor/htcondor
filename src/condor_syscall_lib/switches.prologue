@@ -218,6 +218,7 @@
 
 #if defined(IRIX53)
 #	undef mount
+#	define setpgrp __hide_setpgrp
 	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 #endif
 
@@ -272,6 +273,7 @@
 #	undef sethostname
 #	undef setdomainname
 #	undef ptrace
+#	undef setpgrp
 	/* leave readlink() out, at least on IRIX62; not sure about IRIX53 */
 	/* int readlink( const char *path, void *buf, int buf_size ); */
 	int select();
@@ -284,6 +286,7 @@
 	int sethostname( char *address, int address_len );
 	int setdomainname( char *name, int namelen );
 	int ptrace( long req, long int process, unsigned long *address, unsigned long data);
+	pid_t setpgrp();
 #endif
 
 
