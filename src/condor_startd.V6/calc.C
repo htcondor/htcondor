@@ -215,6 +215,10 @@ dev_idle_time( char *path, time_t now )
 #include <sys/sysmp.h>
 #endif
 
+#ifdef HPUX
+#include <sys/pstat.h>
+#endif
+
 int
 calc_ncpus()
 {
@@ -232,6 +236,14 @@ calc_ncpus()
 			cpus++;
 	}
 	return cpus;
+#elif defined(HPUX)
+        struct pst_dynamic d;
+        if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
+          return d.psd_proc_cnt;
+        }
+        else {
+          return 0;
+        }
 #elif defined(Solaris)
 	return (int)sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(IRIX53)
