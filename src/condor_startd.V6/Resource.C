@@ -53,6 +53,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_load_num_called = 8;
 
 	kill_tid = -1;
+	dprintf( D_ALWAYS, "New machine resource allocated\n" );
 }
 
 
@@ -64,7 +65,9 @@ Resource::~Resource()
 	delete r_classad;
 	delete r_starter;
 	delete r_cur;		
-	delete r_pre;		
+	if( r_pre ) {
+		delete r_pre;		
+	}
 	delete r_reqexp;   
 	delete r_attr;		
 	delete r_load_queue;
@@ -74,7 +77,7 @@ Resource::~Resource()
 
 
 int
-Resource::release_claim()
+Resource::release_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
@@ -92,7 +95,7 @@ Resource::release_claim()
 
 
 int
-Resource::kill_claim()
+Resource::kill_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
@@ -108,7 +111,7 @@ Resource::kill_claim()
 
 
 int
-Resource::got_alive()
+Resource::got_alive( void )
 {
 	if( state() != claimed_state ) {
 		return FALSE;
@@ -127,7 +130,7 @@ Resource::got_alive()
 
 
 int
-Resource::periodic_checkpoint()
+Resource::periodic_checkpoint( void )
 {
 	if( state() != claimed_state ) {
 		return FALSE;
@@ -148,7 +151,7 @@ Resource::periodic_checkpoint()
 
 
 int
-Resource::request_new_proc()
+Resource::request_new_proc( void )
 {
 	if( state() == claimed_state ) {
 		return r_starter->kill( DC_SIGHUP );
@@ -159,7 +162,7 @@ Resource::request_new_proc()
 
 
 int
-Resource::deactivate_claim()
+Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
@@ -171,7 +174,7 @@ Resource::deactivate_claim()
 
 
 int
-Resource::deactivate_claim_forcibly()
+Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
@@ -183,7 +186,7 @@ Resource::deactivate_claim_forcibly()
 
 
 int
-Resource::hardkill_starter()
+Resource::hardkill_starter( void )
 {
 	if( ! r_starter->active() ) {
 		return TRUE;
@@ -199,7 +202,7 @@ Resource::hardkill_starter()
 
 
 int
-Resource::sigkill_starter()
+Resource::sigkill_starter( void )
 {
 		// Now that the timer has gone off, clear out the tid.
 	kill_tid = -1;
@@ -213,29 +216,8 @@ Resource::sigkill_starter()
 }
 
 
-int
-Resource::change_state( State newstate )
-{
-	return r_state->change( newstate );
-}
-
-
-int
-Resource::change_state( Activity newact )
-{
-	return r_state->change( newact );
-}
-
-
-int
-Resource::change_state( State newstate, Activity newact )
-{
-	return r_state->change( newstate, newact );
-}
-
-
 bool
-Resource::in_use()
+Resource::in_use( void )
 {
 	State s = state();
 	if( s == owner_state || s == unclaimed_state ) {
@@ -246,7 +228,7 @@ Resource::in_use()
 
 
 void
-Resource::starter_exited()
+Resource::starter_exited( void )
 {
 	dprintf( D_ALWAYS, "Starter pid %d has exited.\n",
 			 r_starter->pid() );
@@ -286,12 +268,43 @@ Resource::starter_exited()
    decides which state we should enter.
 */
 void
-Resource::leave_preempting_state()
+Resource::leave_preempting_state( void )
 {
 	r_cur->vacate();	// Send a vacate to the client of the match
 	delete r_cur;		
 	r_cur = NULL;
 
+	State dest = destination_state();
+	switch( dest ) {
+	case claimed_state:
+			// If the machine is still available....
+		if( r_reqexp->eval() != 0 ) {
+			r_cur = r_pre;
+			r_pre = NULL;
+				// STATE TRANSITION preempting -> claimed
+			accept_request_claim( this );
+			return;
+		}
+			// Else, fall through, no break.
+		set_destination_state( owner_state );
+		dest = owner_state;	// So change_state() below will be correct.
+	case owner_state:
+	case delete_state:
+		remove_pre();
+		change_state( dest );
+		return;
+		break;
+	case no_state: 
+			// No destination set, use old logic.
+		break;
+	default:
+		EXCEPT( "Unexpected destination (%s) in leave_preempting_state()", 
+				state_to_string(dest) );
+	}
+
+		// Old logic.  This can be ripped out once all the destination
+		// state stuff is fully used and implimented.
+ 
 		// In english:  "If the machine is available and someone
 		// is waiting for it..." 
 	if( (r_reqexp->eval() != 0) &&
@@ -302,20 +315,14 @@ Resource::leave_preempting_state()
 		accept_request_claim( this );
 	} else {
 			// STATE TRANSITION preempting -> owner
-		if( r_pre ) {
-			if( r_pre->agentstream() ) {
-				r_pre->refuse_agent();
-			}
-			delete r_pre;
-			r_pre = NULL;
-		}
+		remove_pre();
 		change_state( owner_state );
 	}
 }
 
 
 int
-Resource::init_classad()
+Resource::init_classad( void )
 {
 	assert( resmgr->config_classad );
 	if( r_classad ) delete(r_classad);
@@ -329,14 +336,14 @@ Resource::init_classad()
 
 
 void
-Resource::timeout_classad()
+Resource::timeout_classad( void )
 {
 	publish( r_classad, A_PUBLIC | A_TIMEOUT );
 }
 
 
 void
-Resource::update_classad()
+Resource::update_classad( void )
 {
 	publish( r_classad, A_PUBLIC | A_UPDATE );
 }
@@ -361,7 +368,7 @@ Resource::give_classad( Stream* stream )
 }
 
 int
-Resource::force_benchmark()
+Resource::force_benchmark( void )
 {
 		// Force this resource to run benchmarking.
 	resmgr->m_attr->benchmark( this, 1 );
@@ -370,7 +377,7 @@ Resource::force_benchmark()
 
 
 int
-Resource::update()
+Resource::update( void )
 {
 	int rval;
 	ClassAd private_ad;
@@ -394,7 +401,7 @@ Resource::update()
 
 
 void
-Resource::final_update() 
+Resource::final_update( void ) 
 {
 	ClassAd public_ad;
 	r_reqexp->unavail();
@@ -404,7 +411,7 @@ Resource::final_update()
 
 
 int
-Resource::eval_and_update()
+Resource::eval_and_update( void )
 {
 	did_update = FALSE;
 
@@ -421,7 +428,7 @@ Resource::eval_and_update()
 
 
 int
-Resource::start_kill_timer()
+Resource::start_kill_timer( void )
 {
 	if( kill_tid >= 0 ) {
 			// Timer already started.
@@ -440,7 +447,7 @@ Resource::start_kill_timer()
 
 
 void
-Resource::cancel_kill_timer()
+Resource::cancel_kill_timer( void )
 {
 	if( kill_tid != -1 ) {
 		daemonCore->Cancel_Timer( kill_tid );
@@ -451,7 +458,7 @@ Resource::cancel_kill_timer()
 
 
 int
-Resource::wants_vacate()
+Resource::wants_vacate( void )
 {
 	int want_vacate = 0;
 	if( r_cur->universe() == VANILLA ) {
@@ -472,7 +479,7 @@ Resource::wants_vacate()
 
 
 int 
-Resource::wants_suspend()
+Resource::wants_suspend( void )
 {
 	int want_suspend;
 	if( r_cur->universe() == VANILLA ) {
@@ -493,7 +500,7 @@ Resource::wants_suspend()
 
 
 int 
-Resource::wants_pckpt()
+Resource::wants_pckpt( void )
 {
 	int want_pckpt; 
 
@@ -536,7 +543,7 @@ Resource::eval_kill()
 
 
 int
-Resource::eval_preempt()
+Resource::eval_preempt( void )
 {
 	int tmp;
 	if( r_cur->universe() == VANILLA ) {
@@ -561,7 +568,7 @@ Resource::eval_preempt()
 
 
 int
-Resource::eval_suspend()
+Resource::eval_suspend( void )
 {
 	int tmp;
 	if( r_cur->universe() == VANILLA ) {
@@ -586,7 +593,7 @@ Resource::eval_suspend()
 
 
 int
-Resource::eval_continue()
+Resource::eval_continue( void )
 {
 	int tmp;
 	if( r_cur->universe() == VANILLA ) {
@@ -739,7 +746,7 @@ Resource::dprintf( int flags, char* fmt, ... )
 
 
 float
-Resource::compute_condor_load()
+Resource::compute_condor_load( void )
 {
 	float avg;
 	float max;
@@ -818,7 +825,7 @@ Resource::compute_condor_load()
 
 
 void
-Resource::resize_load_queue()
+Resource::resize_load_queue( void )
 {
 	int size = (int)ceil(60 / polling_interval);
 	dprintf( D_FULLDEBUG, "Resizing load queue.  Old: %d, New: %d\n",
@@ -838,3 +845,15 @@ Resource::log_ignore( int cmd, State s )
 			 command_to_string(cmd), state_to_string(s) );
 }
 
+
+void
+Resource::remove_pre( void )
+{
+	if( r_pre ) {
+		if( r_pre->agentstream() ) {
+			r_pre->refuse_agent();
+		}
+		delete r_pre;
+		r_pre = NULL;
+	}	
+}
