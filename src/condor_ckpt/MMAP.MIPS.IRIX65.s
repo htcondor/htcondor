@@ -10,16 +10,7 @@ MMAP:
 		jr $31
 		nop
 MMAP_L1:	
-		move $24,$31
-		bal MMAP_L2
+		li $2, -1
+		jr	$31
 		nop
-MMAP_L2:	
-		lui $28,8
-		addiu $28,$28,16724
-		addu $28,$28,$31
-		move $31,$24
-		lw $25,-29436($28)
-		nop 
-		jr $25
-		nop 
 		.end MMAP
