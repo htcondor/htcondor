@@ -4524,10 +4524,48 @@ int DaemonCore::Create_Process(
 	
 	}	// end of dealing with the environment....
 
+	// Check if it's a 16-bit application
+	bool bIs16Bit = false;
+	LOADED_IMAGE loaded;
+	// NOTE (not in MSDN docs): Even when this function fails it still 
+	// may have "failed" with LastError = "operation completed successfully"
+	// and still filled in our structure.  It also might really have 
+	// failed.  So we init the part of the structure we care about and just 
+	// ignore the return value.  
+	loaded.fDOSImage = FALSE;
+	MapAndLoad(name, NULL, &loaded, FALSE, TRUE);
+	if (loaded.fDOSImage == TRUE)
+		bIs16Bit = true;
+	UnMapAndLoad(&loaded);
+	
+	// CreateProcess requires different params for 16-bit apps:
+	//		NULL for the app name
+	//		args begins with app name
+	MyString strArgs = args;
+	if (bIs16Bit)
+	{
+		// surround the executable name with quotes or you'll have problems 
+		// when the execute directory contains spaces!
+		strArgs = "\"" + MyString(name) + MyString("\" ");
+
+		// make sure we're only using backslashes
+		strArgs.replaceString("/", "\\", 0); 
+		
+		// args already should contain the executable name as the first param
+		// we have to strip it out but preserve any real args after it
+		MyString strOldArgs = args;
+		int iFindFirstSpace = strOldArgs.FindChar(' ');
+		if (iFindFirstSpace != -1)
+			strArgs += (args + iFindFirstSpace + 1);
+		
+		args = const_cast<char *>(strArgs.GetCStr());
+		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+	}
+	
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(name,args,NULL,NULL,inherit_handles,
-			new_process_group,newenv,cwd,&si,&piProcess);
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : name,args,NULL,
+			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
@@ -4567,9 +4605,9 @@ int DaemonCore::Create_Process(
 			// restricted to LOCALSYSTEM.  
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
-		cp_result = ::CreateProcessAsUser(user_token,name,args,NULL,NULL,
-			inherit_handles,new_process_group | CREATE_NEW_CONSOLE, 
-			newenv,cwd,&si,&piProcess);
+		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : name,
+			args,NULL,NULL, inherit_handles,
+			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
 	}
 
 	if ( !cp_result ) {
