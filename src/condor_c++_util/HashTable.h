@@ -36,7 +36,6 @@ class HashTable {
 
   void startIterations (void);
   int  iterate (Value &value);
-  int  iterate (Index &index, Value &value);
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
     
