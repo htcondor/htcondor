@@ -89,9 +89,15 @@ The format for \Macro{SHUTDOWN} events is
 \begin{verbatim}
 	SHUTDOWN DAY TIME DURATION BANDWIDTH CONSTRAINT RANK
 \end{verbatim}
-\verb@TIME@ and \verb@DURATION@ are specified in an hours:minutes format.
+\verb@TIME@ and \verb@DURATION@ are specified in an hours:minutes
+format.  \verb@DAY@ is a string of days, where \verb@M@ = Monday,
+\verb@T@ = Tuesday, \verb@W@ = Wednesday, \verb@R@ = Thursday,
+\verb@F@ = Friday, \verb@S@ = Saturday, and \verb@U@ = Sunday.  For
+example, \verb@MTWRFSU@ would specify that the event occurs daily,
+\verb@MTWRF@ would specify that the event occurs only on weekdays, and
+\verb@SU@ would specificy that the event occurs only on weekends.
 
-For example:
+The following is an example event daemon configuration:
 \index{event daemon!example configuration}
 \begin{verbatim}
 EVENT_LIST	= TestEvent, TestEvent2
