@@ -28,7 +28,7 @@
 #include "util.h"
 
 using namespace std;
-extern  time_t timezone;
+extern DLL_IMPORT_MAGIC time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
