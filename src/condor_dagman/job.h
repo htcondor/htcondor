@@ -199,10 +199,16 @@ class Job {
         @return the node's current status
     */
 	status_t GetStatus() const;
+
     /** Returns the node's current status string
         @return address of a string describing the node's current status
     */
 	const char* GetStatusName() const;
+
+    /** Sets the node's current status
+        @return true: status change was successful, false: otherwise
+    */
+	bool SetStatus( status_t newStatus );
 
 		/** Is the specified node a child of this node?
 			@param child Pointer to the node to check for childhood.

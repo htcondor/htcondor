@@ -234,6 +234,16 @@ Job::GetStatus() const
 	return _Status;
 }
 
+
+bool
+Job::SetStatus( status_t newStatus )
+{
+		// TODO: add some state transition sanity-checking here?
+	_Status = newStatus;
+	return true;
+}
+
+
 bool
 Job::AddParent( Job* parent )
 {
