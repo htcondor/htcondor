@@ -1041,7 +1041,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				only_consider_startd_rank = true;
 				if ( display_overlimit ) {  // print message only once
 					display_overlimit = false;
-					dprintf (D_ALWAYS, 	
+					dprintf (D_FULLDEBUG, 	
 						"    Over submitter resource limit (%d) ... "
 					    "only consider startd ranks\n", scheddLimit);
 				}
