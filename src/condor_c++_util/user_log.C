@@ -113,6 +113,7 @@ initialize( const char *file, int c, int p, int s )
 	if (fp) fclose(fp);
 
 #ifndef WIN32
+	// Unix
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		dprintf( D_ALWAYS, 
 			"UserLog::initialize: open(%s) failed - errno %d", path, errno );
@@ -125,7 +126,8 @@ initialize( const char *file, int c, int p, int s )
 			"UserLog::initialize: fdopen() failed - errno %d", path, errno );
 	}
 #else
-	if( (fp = fopen(path,"a+t")) == NULL ) {
+	// Windows (Visual C++)
+	if( (fp = fopen(path,"a+tc")) == NULL ) {
 		dprintf( D_ALWAYS, 
 			"UserLog::initialize: fopen failed - errno %d", path, errno );
 	}
@@ -207,6 +209,7 @@ writeEvent (ULogEvent *event)
 	retval = event->putEvent (fp);
 	if (!retval) fputc ('\n', fp);
 	if (fprintf (fp, SynchDelimiter) < 0) retval = 0;
+	fflush(fp);
 	lock->release ();
 	set_priv( priv );
 	return retval;
