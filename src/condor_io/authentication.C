@@ -43,9 +43,7 @@ Authentication::Authentication( ReliSock *sock )
 #if !defined(SKIP_AUTHENTICATION)
 	//credential_handle is static and set at top of this file//
 	mySock = sock;
-	//start off with socket authenticated, so that queue mgmt stuff works.
-	//this is insecure, but won't work without rewriting queue stuff.
-//	auth_status = CAUTH_ANY;
+	//	auth_status = CAUTH_ANY;
 	auth_status = CAUTH_NONE;
 	claimToBe = NULL;
 	GSSClientname = NULL;
@@ -86,7 +84,7 @@ Authentication::authenticate( char *hostAddr )
 #if defined(WIN32)
 	 case CAUTH_NTSSPI:
 		if ( authenticate_nt() ) {
-			auth_status = CAUTH_NT;
+			auth_status = CAUTH_NTSSPI;
 		}
 		break;
 #else
@@ -197,6 +195,9 @@ Authentication::authenticate_nt()
 	}
 	//return 1 for success, 0 for failure. Server should send sucess/failure
 	//back to client so client can know what to return.
+	
+	// return 0 (failure) until this function is implemented
+	return 0;
 }
 #endif
 
@@ -209,11 +210,11 @@ Authentication::setupEnv( char *hostAddr )
 	//server should be parsed in schedd from config file.
 
 	if ( mySock->isClient() ) {
-		(int) canUseFlags |= (int) CAUTH_CLAIMTOBE;
+		canUseFlags |= (int) CAUTH_CLAIMTOBE;
 #if defined(WIN32)
-		(int) canUseFlags |= (int) CAUTH_NT;
+		canUseFlags |= (int) CAUTH_NTSSPI;
 #else
-		(int) canUseFlags |= (int) CAUTH_FILESYSTEM;
+		canUseFlags |= (int) CAUTH_FILESYSTEM;
 #endif
 
 	}
@@ -465,7 +466,7 @@ Authentication::selectAuthenticationType( int clientCanUse )
 		//wasn't specified in config file [param("AUTHENTICATION_METHODS")]
 		//default to generic authentication:
 #if defined(WIN32)
-		retval = CAUTH_NTSPPI;
+		retval = CAUTH_NTSSPI;
 #else
 		retval = CAUTH_FILESYSTEM;
 #endif
