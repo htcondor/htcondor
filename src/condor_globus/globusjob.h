@@ -6,7 +6,7 @@
 #include "condor_classad.h"
 #include "globus_utils.h"
 
-#define JM_COMMIT_TIMEOUT	60
+#define JM_COMMIT_TIMEOUT	300
 
 class GlobusJob
 {
