@@ -9,17 +9,6 @@ all:: run_list
 clean::
 	rm -f core CkptFile *.out *.err *.log *.o *.exe*
 
-x_large.in: 
-	/bin/rm -rf x_large.in
-	echo /etc/passwd > x_large.in
-
-x_hello.in:
-	/bin/rm -rf x_hello.in
-	echo "Hi there!!!" > x_hello.in
-
-clean::
-	rm -f x_large.in x_hello.in
-
 x_waste_second.o: x_waste_second.c x_my_bogokips.h x_waste_second.h
 	$(CC) -c x_waste_second.c $(CFLAGS)
 
