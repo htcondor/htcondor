@@ -10,53 +10,78 @@ extern "C"
   void dprintf(int, char*...); 
 }
 
-int Accountant::GetPriority(MyString& CustomerName) 
+int Accountant::GetPriority(const MyString& CustomerName) 
 {
   CustomerRecord* Customer=GetCustomerRecord(CustomerName);
-  return Customer->Priority;
+  if (!Customer) return 0;
+  int Priority=Customer->Priority;
+  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
+  return Priority;
 }
 
-void Accountant::SetPriority(MyString& CustomerName, int Priority) 
+void Accountant::SetPriority(const MyString& CustomerName, int Priority) 
 {
-  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  CustomerRecord* Customer=NewCustomerRecord(CustomerName);
   Customer->Priority=Priority;
+  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
 }
 
-void Accountant::AddMatch(MyString& CustomerName, ClassAd* Resource) 
+void Accountant::AddMatch(const MyString& CustomerName, ClassAd* Resource) 
 {
-  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  CustomerRecord* Customer=NewCustomerRecord(CustomerName);
   MyString ResourceName=GetResourceName(Resource);
   Customer->Resources.Add(ResourceName);
 }
 
-void Accountant::RemoveMatch(MyString& CustomerName, ClassAd* Resource)
+void Accountant::RemoveMatch(const MyString& CustomerName, ClassAd* Resource)
 {
   CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  if (!Customer) return;
   MyString ResourceName=GetResourceName(Resource);
   Customer->Resources.Remove(ResourceName);
+  if (DeadCustomer(Customer)) Customers.remove(CustomerName);
 }
 
 void Accountant::UpdatePriorities() 
 {
   CustomerRecord* Customer;
+  MyString CustomerName;
   Customers.startIterations();
-  while (Customers.iterate(Customer)) {
-    int CurrPriority=Customer->Priority;
-    CurrPriority=int(CurrPriority*0.6);
-    CurrPriority-=Customer->Resources.Count();
+  while (Customers.iterate(CustomerName, Customer)) {
+    int Priority=Customer->Priority;
+    int ResourcesUsed=Customer->Resources.Count();
+    Priority=int(Priority*0.6)-ResourcesUsed;
+    Customer->Priority=Priority;
+    if (DeadCustomer(Customer)) Customers.remove(CustomerName);
   }
 }
 
 //---------------------------------------------------------------
 
-Accountant::CustomerRecord* Accountant::GetCustomerRecord(MyString& CustomerName)
+// Returns 1 if Customer can be deleted else 0
+int Accountant::DeadCustomer(CustomerRecord* Customer) {
+  if (Customer->Priority==0 && Customer->Resources.Count()==0) return 1;
+  return 0;
+}
+
+// Get customer record, or NULL if it doesn't exist
+Accountant::CustomerRecord* Accountant::GetCustomerRecord(const MyString& CustomerName)
 {
   CustomerRecord* Customer;
-  if (Customers.lookup(CustomerName,Customer)==-1) {
+  if (Customers.lookup(CustomerName,Customer)==-1) Customer=NULL;
+  return Customer;
+}
+
+
+
+// Check customer record, and create it if it doesn't exist
+Accountant::CustomerRecord* Accountant::NewCustomerRecord(const MyString& CustomerName)
+{
+  CustomerRecord* Customer=GetCustomerRecord(CustomerName);
+  if (Customer==NULL) {
     Customer=new CustomerRecord();
     Customers.insert(CustomerName,Customer);
-    Customer->Priority=0;
-  }
+  }  
   return Customer;
 }
 

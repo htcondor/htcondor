@@ -13,23 +13,24 @@ public:
   // Customer=owner@uid_domain
   // Resource=startd_name@ip_addr
 
-  int GetPriority(MyString& CustomerName); // get priority for a customer
-  void SetPriority(MyString& CustomerName, int Priority); // set priority for a customer
+  int GetPriority(const MyString& CustomerName); // get priority for a customer
+  void SetPriority(const MyString& CustomerName, int Priority); // set priority for a customer
 
-  void AddMatch(MyString& CustomerName, ClassAd* Resource); // Add new match
-  void RemoveMatch(MyString& CustomerName, ClassAd* Resource); // remove a match
+  void AddMatch(const MyString& CustomerName, ClassAd* Resource); // Add new match
+  void RemoveMatch(const MyString& CustomerName, ClassAd* Resource); // remove a match
 
   // void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   void UpdatePriorities(); // update all the priorities
   
-  static int HashFunc(MyString& Key, int TableSize) {
+  static int HashFunc(const MyString& Key, int TableSize) {
     int count=0;
     int length=Key.Length();
     for(int i=0; i<length; i++) count+=Key[i];
     return (count % TableSize);
   }
   
-  Accountant(int MaxCustomers) : Customers(MaxCustomers, HashFunc) {}
+  Accountant(int MaxCustomers, int MaxResources) 
+    : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc) {}
                                                 
 private:
 
@@ -39,15 +40,20 @@ private:
   struct CustomerRecord {
     int Priority;
     StringSet Resources;
+    CustomerRecord() { Priority=0; }
   };
 
   typedef HashTable<MyString, CustomerRecord*> CustomerTable;
   CustomerTable Customers;
   
-  // typedef HashTable<MyString, ClassAd*> ResourceTable;
-  // ResourceTable Resources;
+  typedef HashTable<MyString, ClassAd*> ResourceTable;
+  ResourceTable Resources;
+
+  int DeadCustomer(CustomerRecord* Customer);
   
-  CustomerRecord* GetCustomerRecord(MyString& CustomerName);
+  CustomerRecord* GetCustomerRecord(const MyString& CustomerName);
+  CustomerRecord* NewCustomerRecord(const MyString& CustomerName);
+
   MyString GetResourceName(ClassAd* Resource);
 
 };

@@ -58,12 +58,22 @@ public:
 
   void RemoveLast() { if (Curr) RemoveElem(Curr->Prev); }
 
+  virtual ~StringSet() {
+    Elem* N=Head;
+    while(N) {
+      Elem* M=N->Next;
+      delete N;
+      N=M;
+    }
+  }
+  
 private:
 
   Elem* Find(const MyString& Name) {
     Elem* N=Head;
     while(N) {
       if (N->Name==Name) break;
+      N=N->Next;
     }
     return N; // Not found
   }

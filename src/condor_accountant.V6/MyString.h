@@ -31,13 +31,13 @@ public:
     if (Data) delete[] Data;
   }
 
-  int Length() {
+  int Length() const{
     return Len;
   }
 
   int operator==(const MyString& S) const {
     if (!Data || !S.Data) return -1;
-    if (strcmp(Data,S.Data)) return 1;
+    if (strcmp(Data,S.Data)==0) return 1;
     return 0;
   }
 
@@ -52,7 +52,7 @@ public:
     return *this;
   }
 
-  char operator[](int pos) {
+  char operator[](int pos) const {
     if (pos>=Len) return '\0';
     return Data[pos];
   }
