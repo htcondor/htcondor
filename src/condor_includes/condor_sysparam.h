@@ -85,4 +85,16 @@ private:
 									const int size, const SysType type);
 };
 
+class Linux	: public BaseOs 
+{
+public:
+	Linux();                      // do required initialisation
+	float get_load_avg();
+private:
+	int  	readSysParam(const SysParamName, char*& buffer, int& size, 
+				SysType& type);
+	void	disSysParam(const SysParamName sys, const char*buffer, 
+				const int size, const SysType type);
+};
+
 extern  BaseOs*     platform ;

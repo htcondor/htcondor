@@ -22,6 +22,8 @@
 	typedef long fd_mask;
 #elif defined(HPUX9)
 #	undef _DEFINE_FD_SET
+#elif defined(LINUX)
+#	undef _DEFINE_FD_SET
 #elif defined( AIX32 )
 #	include <sys/select.h>
 #else
