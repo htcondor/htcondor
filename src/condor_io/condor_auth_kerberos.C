@@ -265,6 +265,7 @@ int Condor_Auth_Kerberos :: init_daemon()
     //------------------------------------------
     // Copy the principal information 
     //------------------------------------------
+    krb5_copy_principal(krb_context_, server_, &krb_principal_);
     krb5_copy_principal(krb_context_, krb_principal_, &(creds_->client));
     krb5_copy_principal(krb_context_, server_, &(creds_->server));
     
