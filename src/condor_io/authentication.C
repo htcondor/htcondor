@@ -48,6 +48,7 @@ Authentication::Authentication( ReliSock *sock )
 	canUseFlags         = CAUTH_NONE;
 	serverShouldTry     = NULL;
 	t_mode              = NORMAL;
+        authenticator_      = NULL;
 #endif
 }
 
@@ -424,7 +425,7 @@ int Authentication::handshake(int clientFlags)
     int canUse = (int) canUseFlags;
     
     dprintf ( D_SECURITY, "HANDSHAKE: in handshake(int flags == %i)\n", clientFlags);
-    
+
     if ( mySock->isClient() ) {
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         //            if (!clientFlags) {
@@ -477,7 +478,7 @@ int Authentication::handshake(int clientFlags)
         dprintf ( D_SECURITY, "HANDSHAKE: client received method (shouldUseMethod == %i)\n",
                   shouldUseMethod);
     }
-    
+
     dprintf(D_ALWAYS,
             "ZKM: clientCanUse=%d,shouldUseMethod=%d\n",
             clientCanUse,shouldUseMethod);
