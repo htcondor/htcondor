@@ -86,7 +86,7 @@ void limit( int resource, rlim_t new_limit )
 		/* Set the new limit */
 	lim.rlim_cur = new_limit;
 	if( setrlimit(resource,&lim) < 0 ) {
-		EXCEPT( "setrlimit(%d,0x%x)", resource, &lim );
+		EXCEPT( "setrlimit(%d,0x%x), errno: %d", resource, &lim, errno );
 	}
 
 	(void)SetSyscalls( scm );
