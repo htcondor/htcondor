@@ -1,6 +1,10 @@
 /* Things specific to I386_LINUX machines (all versions) */
 
-#define	ArchOptimizeFlag	-m486
+#ifdef IS_C_COMP_MAJOR_GCC_3
+#define ArchOptimizeFlag -mcpu=i486
+#else
+#define ArchOptimizeFlag -m486
+#endif
 
 #define HAS_GLOBUS	YES
 
