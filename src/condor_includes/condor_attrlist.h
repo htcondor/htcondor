@@ -32,6 +32,8 @@
 
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
+#include "condor_debug.h"
+#include "MyString.h"
 
 #include "stream.h"
 #include "list.h"
