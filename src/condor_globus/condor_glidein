@@ -30,7 +30,10 @@ foreach $CONTACT ( @CONTACTS ) {
 		}
 	}
 	if ( !$setuponly ) {
-		do_submit();
+		if ( do_submit() ) {
+		    print STDERR "Error: condor_submit failed.\n";
+		    exit( 3 );
+		}
 	}
 }
 
@@ -147,6 +150,7 @@ Queue
 
 EOF
 	close( SUBMIT );
+	return ($?);
 }
 
 
