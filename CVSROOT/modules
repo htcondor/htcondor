@@ -37,4 +37,5 @@ rcsinfo		-i mkmodules CVSROOT rcsinfo
 editinfo	-i mkmodules CVSROOT editinfo
 
 # Add other modules here...
-condor_src	-a CONDOR/config CONDOR/src
+code	-a Distfile GENERIC Imakefile config src
+doc		-a config doc
