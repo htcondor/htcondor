@@ -178,7 +178,7 @@ Gahp_Args::read_argv(int readfd)
 	int ibuf = 0;
 	int iargv = 0;
 	int result = 0;
-	static const int buf_size = 1024 * 100;
+	static const int buf_size = 1024 * 500;
 	static const int argv_size = 60;
 
 	free_argv();
