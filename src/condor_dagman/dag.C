@@ -375,12 +375,12 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
+				  job->_Status = Job::STATUS_ERROR;
+
 				  if( job->GetRetries() < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
-
-				  job->_Status = Job::STATUS_ERROR;
 
 				  sprintf( job->error_text, "Condor reported %s event",
 						   ULogEventNumberNames[e->eventNumber] );
@@ -436,13 +436,15 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 										"signal %d.\n", job->GetJobName(),
 										termEvent->signalNumber );
 					  }
+
+                      job->_Status = Job::STATUS_ERROR;
+
 					  if( job->GetRetries() < job->GetRetryMax() ) {
 						  RestartNode( job, recovery );
 						  break;
 					  }
 					  else {
 						  // no more retries -- job failed
-						  job->_Status = Job::STATUS_ERROR;
 						  if( job->GetRetryMax() > 0 ) {
 							  // add # of retries to error_text
 							  char *tmp = strnewp( job->error_text );
@@ -505,12 +507,14 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "died on signal %d\n",
 								   termEvent->signalNumber );
+
+                    job->_Status = Job::STATUS_ERROR;
+
 					if( job->GetRetries() < job->GetRetryMax() ) {
 						RestartNode( job, recovery );
                     }
                     else {
 						// no more retries -- node failed
-						job->_Status = Job::STATUS_ERROR;
 						_numJobsFailed++;
 						if( job->retval == 0 ) {
 							// job had succeeded but POST failed
@@ -540,12 +544,14 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "failed with status %d\n",
 								   termEvent->returnValue );
+
+                    job->_Status = Job::STATUS_ERROR;
+
 					if( job->GetRetries() < job->GetRetryMax() ) {
 						RestartNode( job, recovery );
 					}
 					else {
 						// no more retries -- node failed
-						job->_Status = Job::STATUS_ERROR;
 						_numJobsFailed++;
 						if( job->retval == 0 ) {
 					   		// job had succeeded but POST failed
@@ -896,6 +902,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 						  daemonCore->GetExceptionString(status) );
 			sprintf( job->error_text, "PRE Script died on %s",
 					 daemonCore->GetExceptionString(status) );
+            job->retval = ( 0 - WTERMSIG(status ) );
 		}
 		else if( WEXITSTATUS( status ) != 0 ) {
 			// if script returned failure
@@ -904,12 +911,15 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 						  job->GetJobName(), WEXITSTATUS(status) );
 			sprintf( job->error_text, "PRE Script failed with status %d",
 					 WEXITSTATUS(status) );
+            job->retval = WEXITSTATUS( status );
 		}
+
+        job->_Status = Job::STATUS_ERROR;
+
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
 		}
 		else {
-			job->_Status = Job::STATUS_ERROR;
 			_numJobsFailed++;
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
@@ -1113,14 +1123,30 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
                      job->GetJobName(), job->_scriptPost->GetCmd());
         }
         if( job->retry_max > 0 ) {
+            int retries = (job->retry_max - job->retries);
+
+            if (   job->_Status == Job::STATUS_ERROR
+                && job->retries < job->retry_max 
+                && job->have_retry_abort_val
+                && job->retval == job->retry_abort_val ) {
+                fprintf(fp, "# %d of %d retries performed; remaining attempts "
+                        "aborted after node returned %d\n", 
+                        job->retries, job->retry_max, job->retval );
+            } else {
+                fprintf( fp,
+                         "# %d of %d retries already performed; %d remaining\n",
+                         job->retries, job->retry_max, retries );
+            }
+            
             ASSERT( job->retries <= job->retry_max );
             // print (job->retry_max - job->retries) so that
             // job->retries isn't reset upon recovery
-            int retries = (job->retry_max - job->retries);
-            fprintf( fp,
-                     "# %d of %d retries already performed; %d remaining\n",
-                     job->retries, job->retry_max, retries );
-            fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
+            fprintf( fp, "RETRY %s %d", job->GetJobName(), retries );
+            if( job->have_retry_abort_val ) {
+                fprintf( fp, " UNLESS-EXIT %d", job->retry_abort_val );
+            }
+            fprintf( fp, "\n" );
+            fprintf( fp, "\n" );
         }
         fprintf( fp, "\n" );
 
@@ -1234,6 +1260,15 @@ PrintEvent( debug_level_t level, const char* eventName, Job* job,
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
+    ASSERT( node != NULL );
+    ASSERT( node->_Status == Job::STATUS_ERROR );
+    if( node->have_retry_abort_val && node->retval == node->retry_abort_val ) {
+        debug_printf( DEBUG_NORMAL, "Aborting further retries of node %s "
+                      "(last attempt returned %d)\n",
+                      node->GetJobName(), node->retval);
+        _numJobsFailed++;
+        return;
+    }
 	node->_Status = Job::STATUS_READY;
 	node->retries++;
 	ASSERT( node->GetRetries() <= node->GetRetryMax() );
