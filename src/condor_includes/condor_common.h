@@ -23,19 +23,22 @@
 #ifndef CONDOR_COMMON_H
 #define CONDOR_COMMON_H
 
+
+/**********************************************************************
+** Special macros and things we always want our header files to have
+*********************************************************************/
+#include "condor_header_features.h"
+
 /**********************************************************************
 ** System specific headers and definitions
 *********************************************************************/
-
 #include "condor_system.h"
-
 
 /**********************************************************************
 ** Condor specific headers and definitions
 **********************************************************************/
 #include "condor_constants.h"
 #include "condor_macros.h"
-
 
 /**********************************************************************
 ** C++ specific stuff 
