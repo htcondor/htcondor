@@ -173,11 +173,6 @@ char	*argv[];
     ELEM    temp;
     int     ScheddName=0;
     struct  utsname name;
-	int		i;
-
-	i = 1;
-	while(i);
-
 
 	if (getuid()==0) {
 #ifdef NFSFIX

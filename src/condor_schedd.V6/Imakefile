@@ -31,6 +31,7 @@ OBJ = stub.o schedd.o schedd_main.o $(QMGMT_OBJ)
 OBJ.57 = event.57.o $(HISTORY_OBJ) schedd.57.o stub.57.o $(QMGMT_OBJ)
 
 LIB= $(CLASS_AD_LIB) $(DAEMON_CORE_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib
+LIB.57= $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib
 LIBDIRS=../condor_util_lib ../condor_xdr_lib
 
 QMGR_LIB = $(LIB)
@@ -44,7 +45,7 @@ all_target(condor_schedd libqmgmt.a)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 c_plus_target(condor_schedd,$(OBJ),$(LIB))
-c_plus_target(condor_schedd.57,$(OBJ.57),$(LIB))
+c_plus_target(condor_schedd.57,$(OBJ.57),$(LIB.57))
 c_plus_target(qmgr,$(QMGR_OBJ), $(CLASS_AD_LIB) $(QMGR_LIB))
 library_target(libqmgmt.a,$(QMGMT_LIB_OBJ))
 release_target(condor_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
