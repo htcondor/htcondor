@@ -95,6 +95,7 @@ const char ATTR_MIN_HOSTS				 [] = "MinHosts";
 const char ATTR_MIPS                     [] = "Mips";
 const char ATTR_NAME                     [] = "Name";
 const char ATTR_NEST                     [] = "Nest";
+const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";
 const char ATTR_NUM_USERS                [] = "NumUsers";
 const char ATTR_OPSYS                    [] = "OpSys";
