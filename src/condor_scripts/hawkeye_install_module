@@ -500,11 +500,24 @@ sub ReadDescriptionFile( $$ )
 	next if ( $_ eq "" );
 
 	# Parse the line..
+	my $Attribute = "";
+	my $Value = "";
+	if ( /(\w+):(\s*)(.*)/ )
+	{
+	    $Attribute = uc $1;
+	    $Value = $3 if ( defined $3 );
+	}
 
 	# Module files
-	if ( /MODULEFILES:\s*(.+)/i )
+	if ( $Attribute eq "MODULEFILES" )
 	{
-	    my @Files = split( /\s+/, $1 );
+	    if ( $Value eq "" )
+	    {
+		print STDERR "$DescriptionFile line $.: No modules files specfied\n";
+		$Errors++;
+		last;
+	    }
+	    my @Files = split( /\s+/, $Value );
 	    foreach my $File ( @Files )
 	    {
 		if ( ! -f $File )
@@ -512,6 +525,7 @@ sub ReadDescriptionFile( $$ )
 		    print STDERR
 			"Can't find '$File' specified in module line $.\n";
 		    $Errors++;
+		    last;
 		}
 	    }
 
@@ -524,7 +538,7 @@ sub ReadDescriptionFile( $$ )
 	}
 
 	# Description
-	elsif ( /DESCRIPTION:/i )
+	elsif ( $Attribute eq "DESCRIPTION" )
 	{
 
 	    # Read the module description
@@ -545,41 +559,74 @@ sub ReadDescriptionFile( $$ )
 	}
 
 	# Default name
-	elsif ( /DEFAULT:\s*(\S+)/i )
+	elsif ( $Attribute eq "DEFAULT" )
 	{
-	    $Data->{DefaultName} = $1;
+	    if ( $Value eq "" )
+	    {
+		print STDERR "$DescriptionFile line $.: No default name specfied\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{DefaultName} = $Value;
 	}
 
 	# Prefix
-	elsif ( /PREFIX:\s*(\S+)/i )
+	elsif ( $Attribute eq "PREFIX" )
 	{
-	    $Data->{Prefix} = $1;
+	    if ( $Value eq "" )
+	    {
+		print STDERR "$DescriptionFile line $.: No prefix specfied\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{Prefix} = $Value;
 	}
 
 	# Version (stored, but not used)
-	elsif ( /VERSION:\s*(\S+)/i )
+	elsif ( $Attribute eq "VERSION" )
 	{
-	    $Data->{Version} = $1;
+	    if ( $Value eq "" )
+	    {
+		print STDERR "$DescriptionFile line $.: No version specfied\n";
+		$Errors++;
+		last;
+	    }
+	    $Data->{Version} = $Value;
 	}
 
 	# Period
-	elsif ( /PERIOD:\s*((\d+)[sSmMhHdD]?)/i )
+	elsif ( $Attribute eq "PERIOD" )
 	{
-	    if ( $2 <= 0 )
+	    if ( $Value eq "" )
 	    {
-		print STDERR "Period must be > 0\n";
+		print STDERR "$DescriptionFile line $.: No period specfied\n";
 		$Errors++;
+		last;
+	    }
+	    if ( $Value =~ /((\d+)[sSmMhHdD]?)/ )
+	    {
+		if ( $2 <= 0 )
+		{
+		    print STDERR "Period must be > 0\n";
+		    $Errors++;
+		}
+		else
+		{
+		    $Data->{Period} = $1;
+		}
 	    }
 	    else
 	    {
-		$Data->{Period} = $1;
+		print STDERR "$DescriptionFile line $.: Invalid period specfied\n";
+		$Errors++;
+		last;
 	    }
 	}
 
 	# Options
-	elsif ( /OPTIONS:\s*(.*)/i )
+	elsif ( $Attribute eq "OPTIONS" )
 	{
-	    @{$Data->{Options}} = split( /\s+/, $1 );
+	    @{$Data->{Options}} = split( /\s+/, $Value );
 	    foreach my $Opt ( @{$Data->{Options}} )
 	    {
 		if ( ! $Opt =~ /$ModuleOptionsRe/i )
@@ -591,12 +638,24 @@ sub ReadDescriptionFile( $$ )
 	}
 
 	# Parameter
-	elsif ( /PARAMETER:\s*(\S+)(\s+=(.*))?/i )
+	elsif ( $Attribute eq "PARAMETER" )
 	{
+	    my $ParamName = "";
+	    my $Default = "";
+	    if ( $Value =~ /(\w+)(\s+=\s*(.*))?/ )
+	    {
+		$ParamName = $1;
+		$Default = $3 if ( defined $3 );
+	    }
+	    else
+	    {
+		print STDERR "$DescriptionFile line $.: No parameter name specified\n";
+		$Errors++;
+		last;
+	    }
 	    my $p = ();
-	    my $ParamName = $1;
-	    my $OrigName = $1;
-	    $p->{Default} = $3 if ( defined $3 );
+	    my $OrigName = $ParamName;
+	    $p->{Default} = $Default;
 
 	    # For backward compatibility, mesage the old
 	    # HAWKEYE_<NAME>_<PARAM>
@@ -668,9 +727,10 @@ sub ReadDescriptionFile( $$ )
 	# Unknown
 	else
 	{
-	    print "Can't parse dat file '$DescriptionFile' line $.\n";
+	    print "Can't parse module description file '$DescriptionFile' line $.\n";
 	    print "$Orig\n";
 	    $Errors++;
+	    last;
 	}
     }
     close( DESCRIPTION );
@@ -925,7 +985,8 @@ sub ConfigureModule( $ )
     # What name to give it?
     if ( $NeedsConfig )
     {
-	print "  What logical name do you wish to use <default=$Name>: ";
+	print "  What logical name do you wish to use for this module".
+	    " <default=$Name>: ";
 	$_ = <>; chomp;
 	if ( /\S/ )
 	{
@@ -1102,6 +1163,7 @@ sub UpdateConfig( $ )
 	{
 	    push( @ConfigLines, "# $ParamName =" );
 	}
+	push( @ConfigLines, "##" );
     }
 
     # Check these lines
