@@ -1072,12 +1072,18 @@ not_supported {
 #endif
 
 
-/* We want stubs for kill(), we just don't want a switch, since we
+/* 
+   We want stubs for kill(), we just don't want a switch, since we
    define our own switch for it in switches.special.c. 
-   -Derek Wright 7/8/98 */
-#if ! defined( SWITCH )
-	int kill( pid_t pid, int sig );
-#endif
+   -Derek Wright 7/8/98 
+
+   We actually don't want stubs for kill(), either, since the switch
+   for kill() never sends it remotely (as it shouldn't), and the stubs
+   only open the shadow() up to nasty security problems if someone
+   gains unauthorized access to the shadow.  So, we just have no
+   mention of kill here and leave our switch in switches.special.c 
+   -Derek 7/10/98
+*/
 
 
 #if !defined( CLIP )
