@@ -187,5 +187,17 @@ struct rusage {
 #  define HAS___INT64
 #endif
 
+/* Define the PRIx64 macros */
+
+// If no inttypes, try to define our own
+#if !defined( PRId64 )
+# define PRId64 "I64d"
+#endif
+#if !defined( PRIi64 )
+# define PRIi64 "I64i"
+#endif
+#if !defined( PRIu64 )
+# define PRIu64 "I64u"
+#endif
 
 #endif /* CONDOR_SYS_NT_H */

@@ -181,10 +181,6 @@
 #if !defined(Darwin)
 #include <sys/poll.h>
 #endif
-#if defined( HAS_INTTYPES_H )
-# define __STDC_FORMAT_MACROS
-# include <inttypes.h>
-#endif
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
@@ -210,6 +206,7 @@ typedef fd_set *SELECT_FDSET_PTR;
 # include <stdint.h>
 #endif
 #if defined( HAS_INTTYPES_H )
+# define __STDC_FORMAT_MACROS
 # include <inttypes.h>
 #endif
 
@@ -224,17 +221,16 @@ typedef fd_set *SELECT_FDSET_PTR;
  #define O_LARGEFILE	0x0
 #endif
 
-// If no inttypes, try to define our own
-# if ! defined( HAS_INTTYPES_H )
-#  if defined( WIN32 )
-#   define PRId64 "I64d"
-#   define PRIi64 "I64i"
-#   define PRIu64 "I64u"
-#  else
-#   define PRId64 "lld"
-#   define PRIi64 "lli"
-#   define PRIu64 "llu"
-#  endif
-# endif
+/* If no inttypes, try to define our own (make a guess) */
+/* The win 32 include file defines the win32 versions */
+#if !defined( PRId64 )
+# define PRId64 "lld"
+#endif
+#if !defined( PRIi64 )
+# define PRIi64 "lli"
+#endif
+#if !defined( PRIu64 )
+# define PRIu64 "llu"
+#endif
 
 #endif /* CONDOR_SYSTEM_H */
