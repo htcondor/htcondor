@@ -664,7 +664,7 @@ UserProc::handle_termination( int exit_st )
 	} else if( WIFEXITED(exit_status) ) { 
                                      // exited on own accord with some status
 		dprintf( D_ALWAYS,
-			"Process %d eixted with status %d\n", pid, WEXITSTATUS(exit_status)
+			"Process %d exited with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
 		if( WEXITSTATUS(exit_status) == EXECFAILED ) {
 			dprintf( D_ALWAYS,
