@@ -78,18 +78,23 @@ V6_COMMON    		-a \
 			src/condor_userlog \
 			src/condor_util_lib \
 			src/h \
-			src/html \
-			src/mw
+			src/html
 
 V6_SRC			-a \
 			V6_COMMON \
 			src/condor_classad \
 
+V6_3_SRC		-a \
+			V6_COMMON \
+			src/condor_classad \
+			src/mw
+
 V6_5_SRC		-a \
 			V6_COMMON \
 			src/condor_classad.V6 \
 			src/condor_data_manager \
-			src/condor_nest
+			src/condor_nest \
+			src/mw
 
 CONDOR_VIEW_SRC	-a \
 			src/condor_view_client \
@@ -183,6 +188,9 @@ NT_TOOLS	-a NTconfig
 V6_CODE		-a TOOLS V6_SRC
 V6_NT_CODE	-a NT_TOOLS V6_SRC
 V6_ALL		-a DOC TOOLS NT_TOOLS V6_SRC 
+V6_3_CODE	-a TOOLS V6_3_SRC
+V6_3_NT_CODE	-a NT_TOOLS V6_3_SRC
+V6_3_ALL	-a DOC TOOLS NT_TOOLS V6_3_SRC 
 V6_5_CODE	-a TOOLS V6_5_SRC
 V6_5_NT_CODE	-a NT_TOOLS V6_5_SRC
 V6_5_ALL	-a DOC TOOLS NT_TOOLS V6_5_SRC 
