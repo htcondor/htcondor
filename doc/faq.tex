@@ -856,6 +856,44 @@ No.  Although normal executables are binary compatible, technical details
 of taking checkpoints currently prevents this particular combination.
 Note that this applies to standard universe jobs only.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why have standard universe jobs in Condor 6.6.x have begun unexpectedly segmentation faulting during a checkpoint after an upgrade of Redhat Enterprise Linux 3 to current update levels?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Redhat has apparently backported a 2.6 kernel feature called
+``exec\_shield'' to the current patch levels of the RHEL3 product line. 
+This feature is designed to make buffer overflow attacks incredibly difficult
+to exploit. 
+However, it has the unfortunate side effect of completely breaking all
+user land checkpointing algorithms including the one Condor utilizes.
+The solution is to turn off the kernel feature for each execution of a 
+standard universe job in the Condor system.
+The method employed to do this is with \Expr{USER\_JOB\_WRAPPER} and a shell
+script that looks much like this one:
+
+\begin{verbatim}
+#! /bin/sh
+
+sa="/usr/bin/setarch"
+
+if [ -f $sa ]; then
+    exec $sa i386 ${1+"$@"}
+fi
+
+exec ${1+"$@"}
+\end{verbatim}
+
+Place this shell script into the \Expr{\$(SBIN)} directory of your Condor
+installation with the name of \Prog{fix\_std\_univ} and make sure to 
+\Prog{chmod 755 fix\_std\_univ} it. 
+Then, set \Expr{USER\_JOB\_WRAPPER = \$(SBIN)/fix\_std\_univ} in your
+global config file(or the config files which will affect your Linux install
+of Condor).
+Then do a \Condor{reconfig} of your pool.
+When a standard universe job is run on a machine, if the \Prog{setarch} 
+program is available (under Linux with the ``exec\_shield'' feature), then it
+will run the executable in the i386 personality, which turns off the 
+``exec\_shield'' kernel feature.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
