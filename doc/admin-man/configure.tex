@@ -1216,8 +1216,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
         STRING = This is a string 
         NUMBER = 666
         BOOL1 = True
-        BOOL2 = CurrentTime >= $(NUMBER_MACRO) || $(BOOL1)
-        MY_STRING = "$(STRING_MACRO)"
+        BOOL2 = CurrentTime >= $(NUMBER) || $(BOOL1)
+        MY_STRING = "$(STRING)"
         STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
 \end{verbatim}
 
