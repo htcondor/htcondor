@@ -77,6 +77,7 @@ const char ATTR_SCHEDD_PRIO              [] = "ScheddPrio";
 const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
 const char ATTR_STATE                    [] = "State";
+const char ATTR_STATUS					 [] = "Status";
 const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
 const char ATTR_UID_DOMAIN               [] = "UidDomain";
