@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "operators.h"
 
 BEGIN_NAMESPACE( classad )
@@ -106,7 +107,7 @@ int Operation::
 _doOperation (OpKind op, Value &val1, Value &val2, Value &val3, 
 			bool valid1, bool valid2, bool valid3, Value &result, EvalState*es)
 {
-	ValueType	vt1,  vt2,  vt3;
+	Value::ValueType	vt1,  vt2,  vt3;
 
 	// get the types of the values
 	vt1 = val1.GetType ();
@@ -118,8 +119,9 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		result.CopyFrom( val1 );
 		return SIG_CHLD1;
 	} else if (op == UNARY_PLUS_OP) {
-		if (vt1 == BOOLEAN_VALUE || vt1 == STRING_VALUE || vt1 == LIST_VALUE || 
-			vt1 == CLASSAD_VALUE || vt1 == ABSOLUTE_TIME_VALUE) {
+		if (vt1 == Value::BOOLEAN_VALUE || vt1 == Value::STRING_VALUE || 
+			vt1 == Value::LIST_VALUE || vt1 == Value::CLASSAD_VALUE || 
+			vt1 == Value::ABSOLUTE_TIME_VALUE) {
 			result.SetErrorValue();
 		} else {
 			// applies for ERROR, UNDEFINED and Numbers
@@ -131,30 +133,30 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	// test for cases when evaluation is strict
 	if( IsStrictOperator( op ) ) {
 		// check for error values
-		if( vt1==ERROR_VALUE ) {
+		if( vt1==Value::ERROR_VALUE ) {
 			result.SetErrorValue ();
 			return SIG_CHLD1;
 		}
-		if( valid2 && vt2==ERROR_VALUE ) {
+		if( valid2 && vt2==Value::ERROR_VALUE ) {
 			result.SetErrorValue ();
 			return SIG_CHLD2;
 		}
-		if( valid3 && vt3==ERROR_VALUE ) {
+		if( valid3 && vt3==Value::ERROR_VALUE ) {
 			result.SetErrorValue ();
 			return SIG_CHLD3;
 		}
 
 		// check for undefined values.  we need to check if the corresponding
 		// tree exists, because these values would be undefined" anyway then.
-		if( valid1 && vt1==UNDEFINED_VALUE ) {
+		if( valid1 && vt1==Value::UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
 			return SIG_CHLD1;
 		}
-		if( valid2 && vt2==UNDEFINED_VALUE ) {
+		if( valid2 && vt2==Value::UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
 			return SIG_CHLD2;
 		}
-		if( valid3 && vt3==UNDEFINED_VALUE ) {
+		if( valid3 && vt3==Value::UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
 			return SIG_CHLD3;
 		}
@@ -186,13 +188,13 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		bool b;
 
 		// if the selector is UNDEFINED, the result is undefined
-		if (vt1==UNDEFINED_VALUE) {
+		if (vt1==Value::UNDEFINED_VALUE) {
 			result.SetUndefinedValue();
 			return SIG_CHLD1;
 		}
 
 		// otherwise, if the selector is not boolean propagate error
-		if( vt1 != BOOLEAN_VALUE ) {
+		if( vt1 != Value::BOOLEAN_VALUE ) {
 			result.SetErrorValue();	
 			return SIG_CHLD1;
 		}
@@ -209,7 +211,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		ExprList	*elist;
 
 		// subscripting from a list (strict)
-		if( vt1 != LIST_VALUE || vt2 != INTEGER_VALUE) {
+		if( vt1 != Value::LIST_VALUE || vt2 != Value::INTEGER_VALUE) {
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -416,9 +418,9 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree ) const
 
 
 bool Operation::
-_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr ) const
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 {
-	OpKind		childOp1=__NO_OP__, childOp2=__NO_OP__;
+	int		childOp1=__NO_OP__, childOp2=__NO_OP__;
 	ExprTree	*fChild1=NULL, *fChild2=NULL;
 	Value		val1, val2, val3;
 	OpKind		newOp = operation, op = operation;
@@ -492,8 +494,8 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr ) const
 
 bool Operation::
 combine( OpKind &op, Value &val, ExprTree *&tree,
-			OpKind op1, Value &val1, ExprTree *tree1,
-			OpKind op2, Value &val2, ExprTree *tree2 ) const
+			int op1, Value &val1, ExprTree *tree1,
+			int op2, Value &val2, ExprTree *tree2 ) const
 {
 	Operation 	*newOp;
 	Value		dummy; 	// undefined
@@ -541,7 +543,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		ExprTree	*newOp1 = NULL, *newOp2 = NULL;
 
 		if( op1 != __NO_OP__ ) {
-			newOp1 = Operation::MakeOperation( op1, val1, tree1 );
+			newOp1 = Operation::MakeOperation( (OpKind)op1, val1, tree1 );
 		} else if( tree1 ) {
 			newOp1 = tree1;
 		} else {
@@ -549,7 +551,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		}
 		
 		if( op2 != __NO_OP__ ) {
-			newOp2 = Operation::MakeOperation( op2, val2, tree2 );
+			newOp2 = Operation::MakeOperation( (OpKind)op2, val2, tree2 );
 		} else if( tree2 ) {
 			newOp2 = tree2;
 		} else {
@@ -625,7 +627,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 int Operation::
 doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	ValueType 	vt1, vt2, coerceResult;
+	Value::ValueType 	vt1, vt2, coerceResult;
 	bool		exact = false;	
 
 	// do numerical type promotions --- other types/values are unchanged
@@ -641,7 +643,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		}
 		
 		// undefined or error
-		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE) {
+		if (vt1 == Value::UNDEFINED_VALUE || vt1 == Value::ERROR_VALUE) {
 			result.SetBooleanValue( true );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -658,8 +660,8 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 		}
 
 		// undefined or error
-		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE ||
-			vt2 == UNDEFINED_VALUE || vt2 == ERROR_VALUE) {
+		if (vt1 == Value::UNDEFINED_VALUE || vt1 == Value::ERROR_VALUE ||
+			vt2 == Value::UNDEFINED_VALUE || vt2 == Value::ERROR_VALUE) {
 			result.SetBooleanValue( false );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
@@ -671,9 +673,9 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 
 	switch (coerceResult) {
 		// at least one of v1, v2 is a string
-		case STRING_VALUE:
+		case Value::STRING_VALUE:
 			// check if both are strings
-			if (vt1 != STRING_VALUE || vt2 != STRING_VALUE) {
+			if (vt1 != Value::STRING_VALUE || vt2 != Value::STRING_VALUE) {
 				// comparison between strings and non-exceptional non-string 
 				// values is error
 				result.SetErrorValue();
@@ -682,15 +684,15 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			compareStrings (op, v1, v2, result, exact);
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			compareIntegers (op, v1, v2, result);
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			compareReals (op, v1, v2, result);
 			return( SIG_CHLD1 | SIG_CHLD2 );
 	
-		case BOOLEAN_VALUE:
+		case Value::BOOLEAN_VALUE:
 			// check if both are bools
 			if( !v1.IsBooleanValue( ) || !v2.IsBooleanValue( ) ) {
 				result.SetErrorValue();
@@ -699,12 +701,12 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			compareBools( op, v1, v2, result );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
-		case LIST_VALUE:
-		case CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::CLASSAD_VALUE:
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
-		case ABSOLUTE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
 			if( !v1.IsAbsoluteTimeValue( ) || !v2.IsAbsoluteTimeValue( ) ) {
 				result.SetErrorValue( );
 				return( SIG_CHLD1 | SIG_CHLD2 );
@@ -712,7 +714,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			compareAbsoluteTimes( op, v1, v2, result );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
-		case RELATIVE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			if( !v1.IsRelativeTimeValue( ) || !v2.IsRelativeTimeValue( ) ) {
 				result.SetErrorValue( );
 				return( SIG_CHLD1 | SIG_CHLD2 );
@@ -767,7 +769,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 	// perform type promotions and proceed with arithmetic
 	switch (coerceToNumber (v1, v2)) {
-		case INTEGER_VALUE:
+		case Value::INTEGER_VALUE:
 			v1.IsIntegerValue (i1);
 			v2.IsIntegerValue (i2);
 			switch (op) {
@@ -805,11 +807,11 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 					return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 
-		case REAL_VALUE:
+		case Value::REAL_VALUE:
 			return( doRealArithmetic (op, v1, v2, result) );
 
-		case ABSOLUTE_TIME_VALUE:
-		case RELATIVE_TIME_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
 			return( doTimeArithmetic( op, v1, v2, result ) );
 
 		default:
@@ -824,15 +826,17 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	ValueType	vt1 = v1.GetType();
-	ValueType	vt2 = v2.GetType();
+	Value::ValueType	vt1 = v1.GetType();
+	Value::ValueType	vt2 = v2.GetType();
 	bool		b1, b2;
 
-	if( vt1!=UNDEFINED_VALUE && vt1!=ERROR_VALUE && vt1!=BOOLEAN_VALUE ) {
+	if( vt1!=Value::UNDEFINED_VALUE && vt1!=Value::ERROR_VALUE && 
+			vt1!=Value::BOOLEAN_VALUE ) {
 		result.SetErrorValue();
 		return SIG_CHLD1;
 	}
-	if( vt2!=UNDEFINED_VALUE && vt2!=ERROR_VALUE && vt2!=BOOLEAN_VALUE ) { 
+	if( vt2!=Value::UNDEFINED_VALUE && vt2!=Value::ERROR_VALUE && 
+			vt2!=Value::BOOLEAN_VALUE ) { 
 		result.SetErrorValue();
 		return SIG_CHLD2;
 	}
@@ -842,7 +846,7 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 
 	// handle unary operator
 	if (op == LOGICAL_NOT_OP) {
-		if( vt1 == BOOLEAN_VALUE ) {
+		if( vt1 == Value::BOOLEAN_VALUE ) {
 			result.SetBooleanValue( !b1 );
 		} else {
 			result.CopyFrom( v1 );
@@ -851,15 +855,15 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 	}
 
 	if (op == LOGICAL_OR_OP) {
-		if( vt1 == BOOLEAN_VALUE && b1 ) {
+		if( vt1 == Value::BOOLEAN_VALUE && b1 ) {
 			result.SetBooleanValue( true );
 			return SIG_CHLD1;
-		} else if( vt1 == ERROR_VALUE ) {
+		} else if( vt1 == Value::ERROR_VALUE ) {
 			result.SetErrorValue( );
 			return SIG_CHLD1;
-		} else if( vt1 == BOOLEAN_VALUE && !b1 ) {
+		} else if( vt1 == Value::BOOLEAN_VALUE && !b1 ) {
 			result.CopyFrom( v2 );
-		} else if( vt2 != BOOLEAN_VALUE ) {
+		} else if( vt2 != Value::BOOLEAN_VALUE ) {
 			result.CopyFrom( v2 );
 		} else if( b2 ) {
 			result.SetBooleanValue( true );
@@ -868,15 +872,15 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		}
 		return( SIG_CHLD1 | SIG_CHLD2 );
 	} else if (op == LOGICAL_AND_OP) {
-        if( vt1 == BOOLEAN_VALUE && !b1 ) {
+        if( vt1 == Value::BOOLEAN_VALUE && !b1 ) {
             result.SetBooleanValue( false );
 			return SIG_CHLD1;
-		} else if( vt1 == ERROR_VALUE ) {
+		} else if( vt1 == Value::ERROR_VALUE ) {
 			result.SetErrorValue( );
 			return SIG_CHLD1;
-		} else if( vt1 == BOOLEAN_VALUE && b1 ) {
+		} else if( vt1 == Value::BOOLEAN_VALUE && b1 ) {
 			result.CopyFrom( v2 );
-		} else if( vt2 != BOOLEAN_VALUE ) {
+		} else if( vt2 != Value::BOOLEAN_VALUE ) {
 			result.CopyFrom( v2 );
 		} else if( !b2 ) {
 			result.SetBooleanValue( false );
@@ -1031,25 +1035,28 @@ int Operation::
 doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 {
 	time_t secs1=0, secs2=0;
-	ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
+	Value::ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
 
 		// addition
 	if( op==ADDITION_OP ) {
-		if( vt1==ABSOLUTE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
+				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 + secs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==RELATIVE_TIME_VALUE && vt2==ABSOLUTE_TIME_VALUE ) {
+		if( vt1==Value::RELATIVE_TIME_VALUE && 
+				vt2==Value::ABSOLUTE_TIME_VALUE ) {
 			v1.IsRelativeTimeValue( secs1 );
 			v2.IsAbsoluteTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 + secs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+		if( vt1==Value::RELATIVE_TIME_VALUE && 
+				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsRelativeTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetRelativeTimeValue( secs1 + secs2 );
@@ -1058,21 +1065,24 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 	}
 
 	if( op == SUBTRACTION_OP ) {
-		if( vt1==ABSOLUTE_TIME_VALUE && vt2==ABSOLUTE_TIME_VALUE ) {
+		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
+				vt2==Value::ABSOLUTE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsAbsoluteTimeValue( secs2 );
 			result.SetRelativeTimeValue( secs1 - secs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==ABSOLUTE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+		if( vt1==Value::ABSOLUTE_TIME_VALUE && 
+				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 - secs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+		if( vt1==Value::RELATIVE_TIME_VALUE && 
+				vt2==Value::RELATIVE_TIME_VALUE ) {
 			v1.IsRelativeTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetRelativeTimeValue( secs1 - secs2 );
@@ -1081,7 +1091,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 	}
 
 	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
-		if( vt1==RELATIVE_TIME_VALUE && vt2==INTEGER_VALUE ) {
+		if( vt1==Value::RELATIVE_TIME_VALUE && vt2==Value::INTEGER_VALUE ) {
 			int num, msecs;
 			v1.IsRelativeTimeValue( secs1 );
 			v2.IsIntegerValue( num );
@@ -1094,7 +1104,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==RELATIVE_TIME_VALUE &&  vt2==REAL_VALUE ) {
+		if( vt1==Value::RELATIVE_TIME_VALUE &&  vt2==Value::REAL_VALUE ) {
 			double 	num;
 			int		msecs;
 			v1.IsRelativeTimeValue( secs1 );
@@ -1108,7 +1118,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt1==INTEGER_VALUE && vt2==RELATIVE_TIME_VALUE && 
+		if( vt1==Value::INTEGER_VALUE && vt2==Value::RELATIVE_TIME_VALUE && 
 				op==MULTIPLICATION_OP ) {
 			int num;
 			v1.IsIntegerValue( num );
@@ -1117,7 +1127,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
-		if( vt2==RELATIVE_TIME_VALUE &&  vt1==REAL_VALUE &&
+		if( vt2==Value::RELATIVE_TIME_VALUE &&  vt1==Value::REAL_VALUE &&
 				op==MULTIPLICATION_OP ) {
 			double 	num;
 			v1.IsRelativeTimeValue( secs1 );
@@ -1324,27 +1334,33 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 //  + if both v1 and v2 are Numbers and of the same type, return type
 //  + if v1 is an int and v2 is a real, convert v1 to real; return REAL_VALUE
 //  + if v1 is a real and v2 is an int, convert v2 to real; return REAL_VALUE
-ValueType Operation::
+Value::ValueType Operation::
 coerceToNumber (Value &v1, Value &v2)
 {
 	int	 	i;
 	double 	r;
 
 	// either of v1, v2 not numerical?
-	if (v1.IsClassAdValue()   || v2.IsClassAdValue())   return CLASSAD_VALUE;
-	if (v1.IsListValue()      || v2.IsListValue())   	return LIST_VALUE;
-	if (v1.IsStringValue ()   || v2.IsStringValue ())  return STRING_VALUE;
-	if (v1.IsUndefinedValue() || v2.IsUndefinedValue()) return UNDEFINED_VALUE;
-	if (v1.IsErrorValue ()    || v2.IsErrorValue ())    return ERROR_VALUE;
-	if (v1.IsBooleanValue()	  || v2.IsBooleanValue())	return BOOLEAN_VALUE;
+	if (v1.IsClassAdValue()   || v2.IsClassAdValue())   
+		return Value::CLASSAD_VALUE;
+	if (v1.IsListValue()      || v2.IsListValue())   	
+		return Value::LIST_VALUE;
+	if (v1.IsStringValue ()   || v2.IsStringValue ())  
+		return Value::STRING_VALUE;
+	if (v1.IsUndefinedValue() || v2.IsUndefinedValue()) 
+		return Value::UNDEFINED_VALUE;
+	if (v1.IsErrorValue ()    || v2.IsErrorValue ())    
+		return Value::ERROR_VALUE;
+	if (v1.IsBooleanValue()	  || v2.IsBooleanValue())	
+		return Value::BOOLEAN_VALUE;
 	if (v1.IsAbsoluteTimeValue()||v2.IsAbsoluteTimeValue()) 
-		return ABSOLUTE_TIME_VALUE;
+		return Value::ABSOLUTE_TIME_VALUE;
 	if( v1.IsRelativeTimeValue() || v2.IsRelativeTimeValue() )
-		return RELATIVE_TIME_VALUE;
+		return Value::RELATIVE_TIME_VALUE;
 
 	// both v1 and v2 of same numerical type
-	if (v1.IsIntegerValue(i) && v2.IsIntegerValue(i)) return INTEGER_VALUE;
-	if (v1.IsRealValue(r) && v2.IsRealValue(r)) return REAL_VALUE;
+	if(v1.IsIntegerValue(i) && v2.IsIntegerValue(i))return Value::INTEGER_VALUE;
+	if(v1.IsRealValue(r) && v2.IsRealValue(r)) return Value::REAL_VALUE;
 
 	// type promotions required
 	if (v1.IsIntegerValue(i) && v2.IsRealValue(r))
@@ -1353,7 +1369,7 @@ coerceToNumber (Value &v1, Value &v2)
 	if (v1.IsRealValue(r) && v2.IsIntegerValue(i))
 		v2.SetRealValue ((double)i);
 
-	return REAL_VALUE;
+	return Value::REAL_VALUE;
 }
 
  
@@ -1461,10 +1477,10 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 			// check if selector expression collapsed to a non-undefined value
 			if( !fChild1 && !eval1.IsUndefinedValue() ) {
 				bool   		b; 
-				ValueType	vt = eval1.GetType();
+				Value::ValueType	vt = eval1.GetType();
 
 				// if the selector is not boolean, propagate error
-				if( vt!=BOOLEAN_VALUE ) {
+				if( vt!=Value::BOOLEAN_VALUE ) {
 					val.SetErrorValue();	
 					eval1.Clear();
 					tree = NULL;
