@@ -4313,8 +4313,13 @@ int DaemonCore::Create_Process(
 	PidEntry *pidtmp;
 
 
-#ifdef WIN32  // sheesh, this shouldn't be necessary
+#ifdef WIN32  
+		// declare these variables early so MSVS doesn't complain
+		// about them being declared inside of the goto's below.
 	BOOL inherit_handles = FALSE;
+	char *newenv = NULL;
+	MyString strArgs;
+	bool bIs16Bit = FALSE;
 #else
 	int inherit_handles;
 #endif
@@ -4457,7 +4462,7 @@ int DaemonCore::Create_Process(
 	PROCESS_INFORMATION piProcess;
 	// SECURITY_ATTRIBUTES sa;
 	// SECURITY_DESCRIPTOR sd;
-	char *newenv = NULL;
+	
 
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
@@ -4583,7 +4588,7 @@ int DaemonCore::Create_Process(
 	}	// end of dealing with the environment....
 
 	// Check if it's a 16-bit application
-	bool bIs16Bit = false;
+	bIs16Bit = false;
 	LOADED_IMAGE loaded;
 	// NOTE (not in MSDN docs): Even when this function fails it still 
 	// may have "failed" with LastError = "operation completed successfully"
@@ -4599,7 +4604,7 @@ int DaemonCore::Create_Process(
 	// CreateProcess requires different params for 16-bit apps:
 	//		NULL for the app name
 	//		args begins with app name
-	MyString strArgs = args;
+	strArgs = args;
 	if (bIs16Bit)
 	{
 		// surround the executable name with quotes or you'll have problems 
