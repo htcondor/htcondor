@@ -35,6 +35,7 @@
 #include "mpi_comrade_proc.h"
 #include "syscall_numbers.h"
 #include "my_hostname.h"
+#include "internet.h"
 #include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
 #include "condor_random_num.h"
@@ -220,8 +221,39 @@ CStarter::StartJob()
 
 #ifndef WIN32
 	// Unix
-	dprintf( D_FULLDEBUG, "About to initialize user ids with %s\n", owner );
-	init_user_ids( owner );
+
+		// First, we decide if we're in the same UID_DOMAIN as the
+		// submitting machine.  If so, we'll try to initialize
+		// user_priv via ATTR_OWNER.  If there's no such user in the
+		// passwd file, SOFT_UID_DOMAIN is True, and we're talking to
+		// at least a 6.3.2 version of the shadow, we'll do a remote 
+		// system call to ask the shadow what uid and gid we should
+		// use.  If SOFT_UID_DOMAIN is False and there's no such user
+		// in the password file, but the UID_DOMAIN's match, it's a
+		// fatal error.  If the UID_DOMAIN's just don't match, we
+		// initialize as "nobody".
+	
+	if( SameUidDomain() ) {
+			// Cool, we can try to use ATTR_OWNER for priv user. 
+		if( ! init_user_ids(owner) ) { 
+				// There's a problem, maybe SOFT_UID_DOMAIN can help. 
+				// For now, we'll just forget about SOFT_UID_DOMAIN
+				// and call this a fatal error.
+			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
+					 "as \"%s\"\n", owner );
+			free( owner );
+			return false;
+		}
+	} else {
+			// We're in the wrong UID domain, use "nobody".
+		if( ! init_user_ids("nobody") ) { 
+			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
+					 "as \"nobody\"\n" );
+			free( owner );
+			return false;
+		}
+	}
+
 #else
 	// Win32
 	// taken origionally from OsProc::StartJob.  Here we create the
@@ -254,7 +286,8 @@ CStarter::StartJob()
 	sprintf( WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			 daemonCore->getpid() );
 	if( mkdir(WorkingDir, 0777) < 0 ) {
-		dprintf(D_ALWAYS,"couldn't create dir %s: %s\n",WorkingDir,strerror(errno));
+		dprintf( D_ALWAYS, "couldn't create dir %s: %s\n", WorkingDir,
+				 strerror(errno) );
 		return false;
 	}
 
@@ -272,7 +305,8 @@ CStarter::StartJob()
 #endif /* WIN32 */
 
 	if( chdir(WorkingDir) < 0 ) {
-		dprintf(D_ALWAYS,"couldn't move to %s: %s\n",WorkingDir,strerror(errno));
+		dprintf( D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir,
+				 strerror(errno) ); 
 		return false;
 	}
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
@@ -436,4 +470,20 @@ int CStarter::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
     fprintf(LogFile,"***\n");   // separator
     fclose(LogFile);
     return true;
+}
+
+
+bool
+CStarter::SameUidDomain( void ) 
+{
+	if( ! UIDDomain ) {
+		EXCEPT( "CStarter::SameUidDomain called with NULL UIDDomain!" );
+	}
+	if( ! InitiatingHost ) {
+		EXCEPT( "CStarter::SameUidDomain called with NULL InitiatingHost!" );
+	}
+	if( host_in_domain(InitiatingHost, UIDDomain) ) {
+		return true;
+	}
+	return false;
 }
