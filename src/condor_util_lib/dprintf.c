@@ -141,12 +141,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	EnterCriticalSection(_condor_dprintf_critsec);
 #endif
 
-	saved_errno = errno;
-
-	saved_flags = DebugFlags;       /* Limit recursive calls */
-	DebugFlags = 0;
-
-
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
@@ -155,10 +149,8 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	sigdelset( &mask, SIGBUS );
 	sigdelset( &mask, SIGFPE );
 	sigdelset( &mask, SIGILL );
-	sigdelset( &mask, SIGQUIT );
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
-	sigdelset( &mask, SIGCHLD );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
 		/* Make sure our umask is reasonable, in case we're the shadow
@@ -167,6 +159,12 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	old_umask = umask( 022 );
 
 #endif
+
+	saved_errno = errno;
+
+	saved_flags = DebugFlags;       /* Limit recursive calls */
+	DebugFlags = 0;
+
 
 	/* log files owned by condor system acct */
 
