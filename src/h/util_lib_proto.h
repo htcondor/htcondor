@@ -128,8 +128,8 @@ int print_header ( FILE *fp );
 char * format_seconds ( int t_sec );
 #if 0
 char * strdup ( const char *s );
-#endif
 char * strdup ( char *s );
+#endif
 int stricmp ( register char *s1, register char *s2 );
 int strincmp ( register char *s1, register char *s2, register n );
 char * substr ( char *string, char *pattern );
