@@ -84,7 +84,7 @@ bool_t xdr_char(XDR *, char *);
 bool_t xdr_double(XDR *, double *);
 bool_t xdr_enum(XDR *, enum_t *);
 bool_t xdr_float(XDR *, float *);
-#if defined(Solaris) || defined(OSF1)
+#if defined(Solaris) || defined(OSF1) || defined(LINUX)
 void     xdr_free(xdrproc_t, char *);
 #else
 void xdr_free(XDR *, char *);
