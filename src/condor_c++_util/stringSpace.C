@@ -152,7 +152,7 @@ int StringSpace::
 getCanonical (char *str, SSString &canonical, int adopt)
 {
 	canonical.context = ((canonical.index=getCanonical(str,adopt)) != -1) ?
-							this : NULL;
+							this : 0;
 	return canonical.index;
 }
 
