@@ -19,4 +19,8 @@ release_copy_target($(GAHP_DIR)/gahp_server,$(RELEASE_DIR)/sbin,gahp_server,EXEC
 static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
 strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
 
+# we don't actually want to build the gahp_server
+$(GAHP_DIR)/gahp_server:
+	/bin/true
+
 html:
