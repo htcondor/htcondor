@@ -23,15 +23,33 @@ described below in detail.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This version is the 6.2.0 ``release candidate''.  
-It was not publically released, as it will be released as 6.2.0 once
-it is considered ``stable'' by heavy testing at the UW-Madison
-Computer Science Department Condor pool.
+It was publically released in Feburary of 2001, and it will be released
+as 6.2.0 once it is considered ``stable'' by heavy testing at the 
+UW-Madison Computer Science Department Condor pool.
 
 \noindent New Features:
 
 \begin{itemize}
 
-\item None.
+\item Hostnames in the HOSTALLOW and HOSTDENY entries are now case-insensitive.
+
+\item It is now possible to submit NT jobs from a UNIX machine.
+
+\item The NT release of Condor now supports a USE\_VISIBLE\_DESKTOP parameter. 
+If true, Condor will allow the job to create windows on the desktop of the
+execute machine and interact with the job. This is particularly useful for 
+debugging why an application will not run under Condor.
+
+\item The \Condor{startd} contains support for the new MPI dedicated 
+scheduler that will appear in the 6.3 development series. This will allow
+you to use your 6.2 Condor pool with the new scheduler.
+
+\item Added a \Opt{mixedcase} option to \Condor{config\_val} to allow 
+for overriding the default of lowercasing all the config names
+
+\item Added a pid\_snapshot\_interval option to the config file to
+control how often the \Condor{startd} should examine the running 
+process family. It defaults to 50 seconds.
 
 \end{itemize}
 
@@ -39,6 +57,18 @@ Computer Science Department Condor pool.
 
 \begin{itemize}
 
+\item Fixed a bug with the \Condor{schedd} reaching the MAX\_JOBS\_RUNNING
+mark and properly calculating Scheduler Universe jobs for preemption.
+
+\item Fixed a bug in the \Condor{schedd} loosing track of \Condor{startd}s 
+in the initial claiming phase. This bug affected all platforms, but was most
+likely to manifest on Solaris 2.6
+
+\item CPU Time can be greater than wall clock time in Multi-threaded
+apps, so do not consider it an error in the UserLog.
+
+\item \Condor{restart} \Opt{-master} now works correctly.
+ 
 \item Fixed a rare condition in the \Condor{startd} that could corrupt
 memory and result in a signal 11 (SIGSEGV, or segmentation violation).
 
@@ -48,6 +78,13 @@ logged to the UserLog if the binary for the job resided on AFS.
 \item Fixed a race-condition in Condor's PVM support on SMP machines
 (introduced in version 6.1.16) that caused PVM tasks to be associated
 with the wrong daemon.
+
+\item Better handling of checkpointing on large-memory Linux machines.
+
+\item Fixed random occasions of job completion email not being sent.
+
+\item It is no longer possible to use \Condor{user\_prio} to set a priority of less
+than 1.
 
 \item Fixed a bug in the job completion email statistics.
 Run Time was being underreported when the job completed after doing a
@@ -64,13 +101,20 @@ running under the UNIX ``nobody'' account.
 
 \item Fixed support for the PVM group server.
 
+\item PVM uses an environment variable to communicate with it's children
+instead of a file in /tmp. This file previously could become overwritten
+by mulitple PVM jobs.
+
+\item \Condor{stats} now lives in the ``bin'' directory instead of ``sbin''.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{negotiator} can crash if the Accountantnew.log file becomes
+corrupted. This most often occurs if the Central Manager runs out of diskspace. 
 
 \end{itemize}
 
