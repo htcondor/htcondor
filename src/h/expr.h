@@ -27,6 +27,8 @@
 ** 
 */ 
 
+#if !defined(_EXPR_H)
+#define _EXPR_H
 
 	/* Element types */
 #define LT		1
@@ -97,3 +99,5 @@ typedef struct {
 
 #define IN_STACK	1
 #define IN_COMING	2
+
+#endif	/* _EXPR_H */
