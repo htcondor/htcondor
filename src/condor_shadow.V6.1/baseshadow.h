@@ -343,7 +343,7 @@ class BaseShadow : public Service
 		// since all the work is identical for the stdout and stderr
 		// files, i put all the code into its own method so it can be
 		// shared between the two...
-	void moveOutputFile( const char* in, const char* out );
+	void moveOutputFile( const char* in, const char* out, bool verbose );
 
 		/** Initialize our StringLists for attributes we want to keep
 			updated in the job queue itself

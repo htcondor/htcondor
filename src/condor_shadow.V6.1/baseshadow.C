@@ -30,6 +30,8 @@
 #include "condor_config.h"       // for param()
 #include "condor_email.h"        // for (you guessed it) email stuff
 #include "condor_ver_info.h"
+#include "enum_utils.h"
+
 
 // these are declared static in baseshadow.h; allocate space here
 UserLog BaseShadow::uLog;
@@ -480,6 +482,21 @@ BaseShadow::moveOutputFiles( void )
     char* output = NULL;
     char* orig_error = NULL;
     char* error = NULL;
+    char* should_transfer_str = NULL;
+	ShouldTransferFiles_t should_transfer = STF_NO;
+	bool wants_verbose = true;
+
+		// if we're in transfer IF_NEEDED mode, we don't want verbose
+		// dprintfs from moveOutputFile(), since we expect it to fail
+		// if we didn't use file transfer in this run...
+	if( jobAd->LookupString(ATTR_SHOULD_TRANSFER_FILES, 
+							&should_transfer_str) ) { 
+		should_transfer = getShouldTransferFilesNum( should_transfer_str );
+		if( should_transfer == STF_IF_NEEDED ) {
+			wants_verbose = false;
+		}
+		free( should_transfer_str );
+	}
 
     jobAd->LookupString( ATTR_JOB_OUTPUT, &output );
     jobAd->LookupString( ATTR_JOB_ERROR, &error );
@@ -488,12 +505,12 @@ BaseShadow::moveOutputFiles( void )
 
     //First move stdout data.
     if( orig_output && output ) {
-		moveOutputFile( output, orig_output );
+		moveOutputFile( output, orig_output, wants_verbose );
 	}
 
     //Now move stderr data (unless it is the same file as stdout).
     if( orig_error && error && strcmp(error,output) != 0 ) {
-		moveOutputFile( error, orig_error );
+		moveOutputFile( error, orig_error, wants_verbose );
 	}
 
 	if( output ) { 
@@ -512,22 +529,26 @@ BaseShadow::moveOutputFiles( void )
 
 
 void
-BaseShadow::moveOutputFile( const char* in, const char* out )
+BaseShadow::moveOutputFile( const char* in, const char* out, bool verbose )
 {
 	int in_fd = -1, out_fd = -1;
 
 	in_fd = open(in,O_RDONLY);
 	if( in_fd == -1 ) {
-		dprintf( D_ALWAYS,
-				 "moveOutputFile: failed to read from '%s': %s\n",
-				 in, strerror(errno) );
+		if( verbose ) { 
+			dprintf( D_ALWAYS,
+					 "moveOutputFile: failed to read from '%s': %s\n",
+					 in, strerror(errno) );
+		}
 		return;
 	}
 
 	out_fd = open(out,O_WRONLY|O_CREAT|O_TRUNC);
 	if( out_fd == -1 ) {
-		dprintf( D_ALWAYS, "moveOutputFile: failed to read from "
-				 "'%s': %s\n", out, strerror(errno) );
+		if( verbose ) { 
+			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
+					 "'%s': %s\n", out, strerror(errno) );
+		}
 		close( in_fd );
 		return;
 	}
@@ -535,6 +556,11 @@ BaseShadow::moveOutputFile( const char* in, const char* out )
 		// Copy the data, rather than just moving the files,
 		// because there are too many subtle problems with just
 		// doing rename().
+
+		// the rest of the errors in here mean we found the files and
+		// are trying to move the data but we still had a problem.  we
+		// want to see these messages even if we were called with
+		// verbose == false
 
 	char buf[100];
 	int n_in,n_out;
