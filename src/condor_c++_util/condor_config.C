@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 // Function prototypes
-void real_config(const char*, const char*, const char*, ClassAd*);
+int real_config(const char*, const char*, const char*, ClassAd*);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
@@ -85,18 +85,49 @@ BUCKET	*ConfigTab[TABLESIZE];
 void 
 config(ClassAd *classAd)
 {
-	real_config("CONDOR_CONFIG", "condor_config",
-				"condor_config.local", classAd);
+	if( real_config("CONDOR_CONFIG", "condor_config", 
+					"condor_config.local", classAd) ) {
+		fprintf( stderr, "\nNeither the environment variable CONDOR_CONFIG,\n" );
+		fprintf( stderr, "/etc/condor/, nor ~condor/ contain a condor_config file.\n" );
+		fprintf( stderr, "Either set CONDOR_CONFIG to point to a valid config file,\n" );
+		fprintf( stderr, "or put a \"condor_config\" file in %s or %s.\n", 
+				 "/etc/condor", "~condor/" );
+		fprintf( stderr, "Exiting.\n\n" );
+		exit( 1 );
+	}
 }
 
 void
 config_master(ClassAd *classAd)
 {
-	real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
-				"condor_config.master.local", (ClassAd*)classAd);
+	int rval = real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
+						   "condor_config.master.local", (ClassAd*)classAd);
+
+	if( rval ) {
+			// Trying to find things in with the .master names failed,
+			// try the regular config files.  
+		rval = real_config("CONDOR_CONFIG", "condor_config", 
+						   "condor_config.local", classAd);
+		if( rval ) {
+				// Everything failed, give up.
+			fprintf( stderr, "\nNeither the environment variables %s nor\n",
+					 "CONDOR_CONFIG_MASTER" );
+			fprintf( stderr, "%s, nor %s, nor %s contain\n",
+					 "CONDOR_CONFIG", "/etc/condor/", "~condor/" );
+			fprintf( stderr, "a %s or %s file.  Either set\n",
+					 "condor_config", "condor_config.master" );
+			fprintf( stderr, "%s or %s to point to a\n",	
+					 "CONDOR_CONFIG", "CONDOR_CONFIG_MASTER" );
+			fprintf( stderr, "valid config file, or put a \"%s\" file in\n", 
+					 "condor_config" );
+			fprintf( stderr, "/etc/condor or ~condor/ and try again.\n" );
+			fprintf( stderr, "Exiting.\n\n" );
+			exit( 1 );
+		}
+	}
 }
 
-void 
+int
 real_config(const char *env_name, const char *file_name,
 			const char *local_name, ClassAd *classAd)
 {
@@ -163,10 +194,7 @@ real_config(const char *env_name, const char *file_name,
 	}
 
 	if( ! config_file ) {
-		fprintf( stderr, "\nNeither the environment variable $s,\n", env_name );
-		fprintf( stderr, "/etc/condor/, nor ~condor/ contain a %s\n ", file_name );
-		fprintf( stderr, "Exiting.\n" );
-		exit( 1 );
+		return(1);
 	}
 
 		// Build a hash table with entries for "tilde" and
@@ -267,7 +295,7 @@ real_config(const char *env_name, const char *file_name,
 
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-  
+	return 0;
 }
 
 void
