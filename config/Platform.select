@@ -42,7 +42,7 @@
 #endif
 
 #if defined( IS_IRIX6 )
-#	define OSVersionIncludeFile <SGI_IRIX62.cf>
+#	define PlatformIncludeFile <SGI_IRIX62.cf>
 #	undef IS_IRIX6
 #endif
 
