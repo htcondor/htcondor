@@ -1,7 +1,9 @@
 #ifndef __PERM_H
 #define __PERM_H
 
+#ifdef WIN32
 #include <aclapi.h>
+#endif
 
 const int perm_max_sid_length = 100;
 
@@ -10,6 +12,20 @@ public:
 	perm( );
 	~perm( );
 
+#ifndef WIN32
+	
+	// On Unix, make everything a stub saying sucesss
+
+	bool init ( char *username, char *domain = 0 ) { return true;}
+	int read_access( const char *filename ) { return 1; }
+	int write_access( const char *filename ) { return 1; }
+	int execute_access( const char *filename ) { return 1; }
+	int set_acls( const char *location ) { return 1; }
+
+#else
+
+	// Windows
+	
 	bool init ( char *username, char *domain = 0 );
 
 	// External functions to ask permissions questions: 1 = true, 0 = false, -1 = unknown
@@ -41,7 +57,9 @@ private:
 	// insanity
 	DWORD perm_read, perm_write, perm_execute;
 	*/
+#endif /* of ifdef WIN32 */
 };
 
 
 #endif
+
