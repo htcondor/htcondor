@@ -86,9 +86,14 @@ int main_shutdown_fast();
 int main_shutdown_graceful();
 extern "C" int do_cleanup();
 int reaper( Service*, int pid, int status);
-int	shutdown_reaper( Service*, int pid, int status ); 
 int	check_free();
-
+#if defined( WANT_DC_PM ) 
+int	shutdown_reaper( Service*, int pid, int status ); 
+#else
+void reaper_loop();
+int handle_dc_sigchld( Service*, int );
+int shutdown_sigchld( Service*, int ); 
+#endif /* WANT_DC_PM */
 
 void
 usage( char* MyName)
@@ -131,9 +136,6 @@ main_init( int argc, char* argv[] )
 		// keyboard idle time on SMP machines, etc.
 	startd_startup = time( 0 );
 
-		// If we EXCEPT, don't leave any starters lying around.
-	_EXCEPT_Cleanup = do_cleanup;
-
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
 
@@ -172,6 +174,9 @@ main_init( int argc, char* argv[] )
 		// Do a little sanity checking and cleanup
 	check_perms();
 	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
+
+		// If we EXCEPT, don't leave any starters lying around.
+	_EXCEPT_Cleanup = do_cleanup;
 
 		// register daemoncore stuff
 
@@ -254,12 +259,21 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)command_match_info,
 								  "command_match_info", 0, NEGOTIATOR );
 
+#if defined( WANT_DC_PM )	
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
 	rval = daemonCore->Register_Reaper( "reaper_starters", 
 		(ReaperHandler)reaper, "reaper" );
 	assert(rval == 1);	// we assume reaper id 1 for now
+#else
+		//////////////////////////////////////////////////
+		// Signals
+		//////////////////////////////////////////////////
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
+								 (SignalHandler)handle_dc_sigchld,
+								 "handle_dc_sigchld" );
+#endif /* WANT_DC_PM */
 
 #if defined( OSF1 ) || defined (IRIX62) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
@@ -503,9 +517,16 @@ main_shutdown_fast()
 		// If the machine is free, we can just exit right away.
 	check_free();
 
+#if defined( WANT_DC_PM )	
 	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
+#else
+	daemonCore->Cancel_Signal( DC_SIGCHLD );
+	daemonCore->Register_Signal( DC_SIGCHLD,
+								 "DC_SIGCHLD",(SignalHandler)shutdown_sigchld, 
+								 "shutdown_sigchld" );
+#endif /* WANT_DC_PM */
 
 		// Quickly kill all the starters that are running
 	resmgr->walk( &Resource::kill_claim );
@@ -523,9 +544,16 @@ main_shutdown_graceful()
 		// If the machine is free, we can just exit right away.
 	check_free();
 
+#if defined( WANT_DC_PM )	
 	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
+#else
+	daemonCore->Cancel_Signal( DC_SIGCHLD );
+	daemonCore->Register_Signal( DC_SIGCHLD,
+								 "DC_SIGCHLD",(SignalHandler)shutdown_sigchld, 
+								 "shutdown_sigchld" );
+#endif /* WANT_DC_PM */
 
 		// Release all claims, active or not
 	resmgr->walk( &Resource::release_claim );
@@ -564,6 +592,37 @@ shutdown_reaper(Service *, int pid, int status)
 	return TRUE;
 }
 
+#if !defined( WANT_DC_PM ) 
+int
+handle_dc_sigchld( Service*, int )
+{
+	reaper_loop();
+	return TRUE;
+}
+
+
+int
+shutdown_sigchld(Service*, int )
+{
+	reaper_loop();
+	check_free();
+	return TRUE;
+}
+
+
+void
+reaper_loop()
+{
+	int pid, status;
+	while( (pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0 ) {
+		if (WIFSTOPPED(status)) {
+			dprintf(D_ALWAYS, "pid %d stopped.\n", pid);
+			continue;
+		} 
+		reaper( NULL, pid, status );
+	}
+}
+#endif /* ! WANT_DC_PM */
 
 int
 do_cleanup()
