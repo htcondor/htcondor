@@ -1461,6 +1461,89 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 }
 
+bool SecMan :: invalidateHost(const char * sin)
+{
+    bool removed = true;
+
+    if (sin) {
+        KeyCacheEntry * keyEntry = NULL;
+        MyString  addr(sin), id;
+
+        if (session_cache) {
+            session_cache->key_table->startIterations();
+            while (session_cache->key_table->iterate(id, keyEntry)) {
+                char * comp = sin_to_string(keyEntry->addr());
+                if (addr == MyString(comp)) {
+                    remove_commands(keyEntry);
+                    session_cache->key_table->remove(id);
+                }
+            }
+        }
+    }
+    else {
+        // sock is NULL!
+    }
+
+    return removed;
+}
+
+bool SecMan :: invalidateKey(const char * key_id)
+{
+    bool removed = true;
+    KeyCacheEntry * keyEntry = NULL;
+
+    // What if session_cache is NULL but command_cache is not?
+	if (session_cache) {
+
+        session_cache->lookup(key_id, keyEntry);
+
+        remove_commands(keyEntry);
+
+        // Now, remove session id
+		if (session_cache->remove(key_id)) {
+			dprintf ( D_SECURITY, 
+                      "DC_INVALIDATE_KEY: removed key id %s.\n", 
+                      key_id);
+		} else {
+			dprintf ( D_SECURITY, 
+                      "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", 
+                      key_id);
+		}
+	} else {
+		dprintf ( D_ALWAYS, 
+                  "DC_INVALIDATE_KEY: did not remove %s, no KeyCache exists!\n", 
+                  key_id);
+	}
+
+    return removed;
+}
+
+void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
+{
+    if (keyEntry) {
+        char * commands = NULL;
+        keyEntry->policy()->LookupString(ATTR_SEC_VALID_COMMANDS, &commands);
+        char * addr = strdup(sin_to_string(keyEntry->addr()));
+    
+        // Remove all commands from the command map
+        if (commands) {
+            char keybuf[128];
+            StringList cmd_list(commands);
+            free(commands);
+        
+            if (command_map) {
+                cmd_list.rewind();
+                char * cmd = NULL;
+                while (cmd = cmd_list.next() ) {
+                    memset(keybuf, 0, 128);
+                    sprintf (keybuf, "{%s,<%s>}", addr, cmd);
+                    command_map->remove(keybuf);
+                }
+            }
+        }
+        free(addr);
+    }
+}
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
@@ -1588,7 +1671,7 @@ SecMan::sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr ) {
 
 
 void
-SecMan::ClearCache() {
+SecMan::invalidateAllCache() {
 	delete session_cache;
 	session_cache = new KeyCache(209);
 
