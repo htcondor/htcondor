@@ -1027,6 +1027,12 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 		if (target) {
 			tree = target->Lookup(name);
 		} else {
+			evalFromEnvironment (name, &val);
+			if (val.type == LX_STRING && val.s)
+			{
+				strcpy (value, val.s);
+				return 1;
+			}
 			return 0;
 		}
 	}
@@ -1050,6 +1056,12 @@ int AttrList::EvalInteger (const char *name, AttrList *target, int &value)
 		if (target) {
 			tree = target->Lookup(name);
 		} else {
+			evalFromEnvironment (name, &val);
+			if (val.type == LX_INTEGER)
+			{
+				value = val.i;
+				return 1;
+			}
 			return 0;
 		}
 	}
@@ -1074,6 +1086,12 @@ int AttrList::EvalFloat (const char *name, AttrList *target, float &value)
         if (target) {
             tree = target->Lookup(name);
         } else {
+			evalFromEnvironment (name, &val);
+			if (val.type == LX_FLOAT)
+			{
+				value = val.f;
+				return 1;
+			}
             return 0;
         }
     }
@@ -1097,7 +1115,13 @@ int AttrList::EvalBool (const char *name, AttrList *target, int &value)
         if (target) {
             tree = target->Lookup(name);
         } else {
-            return 0;
+			evalFromEnvironment (name, &val);
+			if (val.type == LX_BOOL)
+			{
+				value = val.b;
+				return 1;
+			}
+			return 0;
         }
     }
 
