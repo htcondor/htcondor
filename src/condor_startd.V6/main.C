@@ -2,16 +2,14 @@
  * Main routine and function for the startd.
  */
 
+#include "condor_common.h"
+
+
 /*
  * System include files.
  */
-#include <stdio.h>
 #include <netdb.h>
-#include <errno.h>
-#include <unistd.h>
-#include <signal.h>
 #include <ctype.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/param.h>
 #include <sys/file.h>
@@ -19,7 +17,9 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
+#if !defined(LINUX)
 #include <sys/select.h>
+#endif
 
 /*
  * Condor include files.
@@ -29,7 +29,6 @@
 #include "trace.h"
 #include "except.h"
 #include "sched.h"
-#include "condor_common.h"
 #include "condor_types.h"
 #include "expr.h"
 #include "clib.h"

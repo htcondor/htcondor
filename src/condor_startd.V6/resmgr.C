@@ -1,9 +1,10 @@
-#include <sys/types.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/select.h>
+#include "condor_common.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
+
+#if !defined(LINUX)
+#include <sys/select.h>
+#endif
 
 #include "condor_types.h"
 #include "condor_debug.h"
