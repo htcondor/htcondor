@@ -1,4 +1,4 @@
-all_target(cplus_lib.a liburl.a libapi.a)
+all_target(cplus_lib.a liburl.a libcondorapi.a)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
@@ -28,11 +28,11 @@ FLOCK_OBJ = ../condor_util_lib/flock.o
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
-library_target( libapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
+library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
 
-libapi.tar: libapi.a
+libcondorapi.tar: libcondorapi.a
 	cp ../h/file_lock.h file_lock.h
-	tar cvf libapi.tar user_log.README file_lock.h condor_event.h user_log.c++.h libapi.a
+	tar cvf libcondorapi.tar user_log.README file_lock.h condor_event.h user_log.c++.h libcondorapi.a
 	rm file_lock.h
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
@@ -68,9 +68,9 @@ foo: foo.o user_log.o
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, mkargv.o)
 
-release:
-stripped:
-static: 
+release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
+strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
+static_library(libcondorapi.a,$(STATIC_DIR)/lib)
 
 foo.o: user_log.h
 test.o: user_log.h
