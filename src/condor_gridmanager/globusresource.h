@@ -33,6 +33,7 @@ class GlobusResource : public Service
 
 	char *resourceName;
 	bool resourceDown;
+	bool firstPingDone;
 	int pingTimerId;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;

@@ -43,6 +43,7 @@ class GlobusJob : public Service
 
 	// New variables
 	bool resourceDown;
+	bool resourceStateKnown;
 	int condorState;
 	int gmState;
 	int globusState;

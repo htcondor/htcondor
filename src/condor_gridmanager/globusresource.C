@@ -14,7 +14,8 @@ int GlobusResource::probeInterval = 300;	// default value
 GlobusResource::GlobusResource( char *resource_name )
 {
 	resourceDown = false;
-	pingTimerId = daemonCore->Register_Timer( TIMER_NEVER,
+	firstPingDone = false;
+	pingTimerId = daemonCore->Register_Timer( 0,
 								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
 	gahp.setNotificationTimerId( pingTimerId );
@@ -33,6 +34,14 @@ GlobusResource::~GlobusResource()
 void GlobusResource::RegisterJob( GlobusJob *job )
 {
 	registeredJobs.Append( job );
+
+	if ( firstPingDone == true ) {
+		if ( resourceDown ) {
+			job->NotifyResourceDown();
+		} else {
+			job->NotifyResourceUp();
+		}
+	}
 }
 
 void GlobusResource::UnregisterJob( GlobusJob *job )
@@ -84,7 +93,7 @@ int GlobusResource::DoPing()
 		ping_failed = true;
 	}
 
-	if ( ping_failed == resourceDown ) {
+	if ( ping_failed == resourceDown && firstPingDone == true ) {
 		// State of resource hasn't changed. Notify ping requesters only.
 		dprintf(D_FULLDEBUG,"resource %s is still %s\n",resourceName,
 				ping_failed?"down":"up");
@@ -104,6 +113,8 @@ int GlobusResource::DoPing()
 				ping_failed?"down":"up");
 
 		resourceDown = ping_failed;
+
+		firstPingDone = true;
 
 		registeredJobs.Rewind();
 		while ( registeredJobs.Next( job ) ) {

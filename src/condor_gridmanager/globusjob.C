@@ -153,9 +153,11 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	gahp.setMode( GahpClient::normal );
 	gahp.setTimeout( GAHP_CALL_TIMEOUT );
 
+	resourceDown = false;
+	resourceStateKnown = false;
 	myResource = resource;
+	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this );
-	resourceDown = myResource->IsDown();
 
 	buf[0] = '\0';
 	classad->LookupString( ATTR_GLOBUS_RSL, buf );
@@ -249,7 +251,9 @@ int GlobusJob::doEvaluateState()
 
 		switch ( gmState ) {
 		case GM_INIT:
-			if ( jobContact == NULL ) {
+			if ( resourceStateKnown == false ) {
+				break;
+			} else if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -967,6 +971,7 @@ int GlobusJob::doEvaluateState()
 
 void GlobusJob::NotifyResourceDown()
 {
+	resourceStateKnown = true;
 	if ( resourceDown == false ) {
 		WriteGlobusResourceDownEventToUserLog( this );
 	}
@@ -977,6 +982,7 @@ void GlobusJob::NotifyResourceDown()
 
 void GlobusJob::NotifyResourceUp()
 {
+	resourceStateKnown = true;
 	if ( resourceDown == true ) {
 		WriteGlobusResourceUpEventToUserLog( this );
 	}
