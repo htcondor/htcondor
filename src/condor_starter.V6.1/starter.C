@@ -40,6 +40,8 @@
 #include "condor_attributes.h"
 #include "condor_random_num.h"
 #include "io_proxy.h"
+#include "condor_ver_info.h"
+
 
 extern ReliSock *syscall_sock;
 
@@ -211,63 +213,11 @@ CStarter::StartJob()
 
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
-
-	char* owner = NULL;
-	if ( jobAd->LookupString( ATTR_OWNER, &owner ) != 1 ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
-				 ATTR_OWNER );
+	if( ! InitUserPriv(jobAd) ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to determine what user "
+				 "to run this job as, aborting\n" );
 		return false;
 	}
-
-#ifndef WIN32
-	// Unix
-
-		// First, we decide if we're in the same UID_DOMAIN as the
-		// submitting machine.  If so, we'll try to initialize
-		// user_priv via ATTR_OWNER.  If there's no such user in the
-		// passwd file, SOFT_UID_DOMAIN is True, and we're talking to
-		// at least a 6.3.2 version of the shadow, we'll do a remote 
-		// system call to ask the shadow what uid and gid we should
-		// use.  If SOFT_UID_DOMAIN is False and there's no such user
-		// in the password file, but the UID_DOMAIN's match, it's a
-		// fatal error.  If the UID_DOMAIN's just don't match, we
-		// initialize as "nobody".
-	
-	if( SameUidDomain() ) {
-			// Cool, we can try to use ATTR_OWNER for priv user. 
-		if( ! init_user_ids(owner) ) { 
-				// There's a problem, maybe SOFT_UID_DOMAIN can help. 
-				// For now, we'll just forget about SOFT_UID_DOMAIN
-				// and call this a fatal error.
-			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
-					 "as \"%s\"\n", owner );
-			free( owner );
-			return false;
-		}
-	} else {
-			// We're in the wrong UID domain, use "nobody".
-		if( ! init_user_ids("nobody") ) { 
-			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
-					 "as \"nobody\"\n" );
-			free( owner );
-			return false;
-		}
-	}
-
-#else
-	// Win32
-	// taken origionally from OsProc::StartJob.  Here we create the
-	// user and initialize user_priv.
-	// we only support running jobs as user nobody for the first pass
-	char nobody_login[60];
-	// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-	sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
-	init_user_nobody_loginname(nobody_login);
-	init_user_ids("nobody");
-#endif
-
-		// deallocate owner string so we don't leak memory.
-	free( owner );
 
 		// Now that we have the right user for priv_state code, we can
 		// finally make the scratch execute directory for this job.
@@ -391,8 +341,172 @@ CStarter::StartJob()
 	}
 }
 
-int
 
+bool
+CStarter::InitUserPriv( ClassAd* jobAd )
+{
+
+#ifndef WIN32
+	// Unix
+
+		// First, we decide if we're in the same UID_DOMAIN as the
+		// submitting machine.  If so, we'll try to initialize
+		// user_priv via ATTR_OWNER.  If there's no such user in the
+		// passwd file, SOFT_UID_DOMAIN is True, and we're talking to
+		// at least a 6.3.2 version of the shadow, we'll do a remote 
+		// system call to ask the shadow what uid and gid we should
+		// use.  If SOFT_UID_DOMAIN is False and there's no such user
+		// in the password file, but the UID_DOMAIN's match, it's a
+		// fatal error.  If the UID_DOMAIN's just don't match, we
+		// initialize as "nobody".
+	
+	char* owner = NULL;
+
+	if( jobAd->LookupString( ATTR_OWNER, &owner ) != 1 ) {
+		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
+				 ATTR_OWNER );
+		return false;
+	}
+
+	if( SameUidDomain() ) {
+			// Cool, we can try to use ATTR_OWNER directly.
+			// NOTE: we want to use the "quiet" version of
+			// init_user_ids, since if we're dealing with a
+			// "SOFT_UID_DOMAIN = True" scenario, it's entirely
+			// possible this call will fail.  We don't want to fill up
+			// the logs with scary and misleading error messages.
+		if( ! init_user_ids_quiet(owner) ) { 
+				// There's a problem, maybe SOFT_UID_DOMAIN can help.
+			bool shadow_is_old = false;
+			bool try_soft_uid = false;
+			char* soft_uid = param( "SOFT_UID_DOMAIN" );
+			if( soft_uid ) {
+				if( soft_uid[0] == 'T' || soft_uid[0] == 't' ) {
+					try_soft_uid = true;
+				}
+				free( soft_uid );
+			}
+			if( try_soft_uid ) {
+					// first, see if the shadow is new enough to
+					// support the RSC we need to do...
+				if( GetShadowVersion() ) {
+					CondorVersionInfo ver(GetShadowVersion(), "SHADOW");
+					if( ! ver.built_since_version(6,3,2) ) {
+						shadow_is_old = true;
+					}
+				} else {
+						// Don't even know the shadow version...
+					shadow_is_old = true;
+				}
+			} else {
+					// No soft_uid_domain or it's set to False.  No
+					// need to do the RSC, we can just fail.
+				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
+						 "passwd file and SOFT_UID_DOMAIN is False\n",
+						 owner ); 
+				free( owner );
+				return false;
+            }
+
+				// if the shadow is old, we have to just print an error
+				// message and fail, since we can't do the RSC we need
+				// to find out the right uid/gid.
+			if( shadow_is_old ) {
+				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
+						 "passwd file,\n"
+						 "\t\tSOFT_UID_DOMAIN is True, but the "
+						 "condor_shadow on the submitting\n"
+						 "\t\thost is too old to support SOFT_UID_DOMAIN. "
+						 " You must upgrade\n"
+						 "\t\tCondor on the submitting host to at least "
+						 "version 6.3.2.\n", owner );
+				free( owner );
+				return false;
+			}
+
+				// if we're here, it means that 1) the owner we want
+				// isn't in the passwd file, 2) SOFT_UID_DOMAIN is
+				// True, and 3) the shadow we're talking to can
+				// support the CONDOR_REMOTE_get_user_info RSC.  So,
+				// we'll do that call to get the uid/gid pair we need
+				// and initialize user priv with that. 
+
+			ClassAd user_info;
+			if( REMOTE_CONDOR_get_user_info( &user_info ) < 0 ) {
+				dprintf( D_ALWAYS, "ERROR: "
+						 "REMOTE_CONDOR_get_user_info() failed\n" );
+				dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
+						 "passwd file,\n"
+						 "\t\tSOFT_UID_DOMAIN is True, but the "
+						 "condor_shadow on the submitting\n"
+						 "\t\thost cannot support SOFT_UID_DOMAIN. "
+						 " You must upgrade\n"
+						 "\t\tCondor on the submitting host to at least "
+						 "version 6.3.2.\n", owner );
+				free( owner );
+				return false;
+			}
+
+			int user_uid, user_gid;
+			if( user_info.LookupInteger( ATTR_UID, user_uid ) != 1 ) {
+				dprintf( D_ALWAYS, "user_info ClassAd does not contain %s!\n", 
+						 ATTR_UID );
+				free( owner );
+				return false;
+			}
+			if( user_info.LookupInteger( ATTR_GID, user_gid ) != 1 ) {
+				dprintf( D_ALWAYS, "user_info ClassAd does not contain %s!\n", 
+						 ATTR_GID );
+				free( owner );
+				return false;
+			}
+
+				// now, we should have the uid and gid of the user.	
+			dprintf( D_FULLDEBUG, "Got UserInfo from the Shadow: "
+					 "uid: %d, gid: %d\n", user_uid, user_gid );
+			if( ! set_user_ids((uid_t)user_uid, (gid_t)user_gid) ) {
+					// This should never really fail, unless the
+					// shadow told us it wants us to use 0 for either
+					// the uid or gid...
+				dprintf( D_ALWAYS, "ERROR: Could not initialize user "
+						 "priv with uid %d and gid %d\n", user_uid,
+						 user_gid );
+				free( owner );
+				return false;
+			}
+		} else {  
+			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
+					 owner );
+		}
+	} else {
+			// We're in the wrong UID domain, use "nobody".
+		if( ! init_user_ids("nobody") ) { 
+			dprintf( D_ALWAYS, "ERROR: Could not initialize user priv "
+					 "as \"nobody\"\n" );
+			free( owner );
+			return false;
+		}
+	}
+		// deallocate owner string so we don't leak memory.
+	free( owner );
+
+#else
+	// Win32
+	// taken origionally from OsProc::StartJob.  Here we create the
+	// user and initialize user_priv.
+	// we only support running jobs as user nobody for the first pass
+	char nobody_login[60];
+	// sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
+	init_user_nobody_loginname(nobody_login);
+	init_user_ids("nobody");
+#endif
+
+	return true;
+}
+
+
+int
 CStarter::Suspend(int)
 {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
