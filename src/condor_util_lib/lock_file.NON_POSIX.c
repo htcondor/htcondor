@@ -113,7 +113,6 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 {
 	struct flock	f;
 	int				cmd;
-	int				status;
 
 	if( do_block ) {
 		cmd = F_SETLKW;		/* blocking */
