@@ -25,6 +25,8 @@
 #include "debug.h"
 #include "util.h"
 
+extern "C" {
+
 //------------------------------------------------------------------------
 int util_getline(FILE *fp, char *line, int max) {
   int c, i = 0;
@@ -54,4 +56,7 @@ int util_popen (const char * cmd) {
 		}
     }
     return r;
+}
+
+
 }
