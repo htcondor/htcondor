@@ -1565,6 +1565,20 @@ These macros control the \Condor{schedd}.
   should rework this queue to cleaning it up.  It is defined in terms of
   seconds and defaults to 86400 (once a day). 
   
+\item[\Macro{WALL\_CLOCK\_CKPT\_INTERVAL}] \label{param:WallClockCkptInterval}
+  The job queue contains a counter for each job's ``wall clock'' run
+  time, i.e., how long each job has executed so far.  This counter is
+  displayed by \Condor{q}.  The counter is updated when the job is
+  evicted or when the job completes.  When the schedd crashes, the run
+  time for jobs that are currently running will not be added to the
+  counter (and so, the run time counter may become smaller than the
+  cpu time counter).  The schedd saves run time ``checkpoints''
+  periodically for running jobs so if the schedd crashes, only run
+  time since the last checkpoint is lost.  This macro controls how
+  often the schedd saves run time checkpoints.  It is defined in terms
+  of seconds and defaults to 3600 (one hour).  A value of 0 will
+  disable wall clock checkpoints.
+
 \item[\Macro{ALLOW\_REMOTE\_SUBMIT}] \label{param:AllowRemoteSubmit}
   Starting with Condor Version 6.0, users can run \Condor{submit} on
   one machine and actually submit jobs to another machine in the
