@@ -775,98 +775,126 @@ be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
 \begin{description}
 
-\item[\Macro{UID\_DOMAIN}] \label{param:UidDomain} Often times,
-  especially if all the machines in the pool are administered by the
-  same organization, all the machines to be added into a Condor pool
-  share the same login account information.  User X
-  has UID Y on all machines within a given Internet/DNS domain. This
-  is usually the case if a central authority creates user logins and
-  maintains a common \File{/etc/passwd} file on all machines.
-  If this is the case,
-  then set this macro to the name of the Internet/DNS domain
-  where this is true. For instance, if all the machines in this Condor
-  pool within the Internet/DNS zone ``cs.wisc.edu'' have a common
-  password file, \MacroU{UID\_DOMAIN} is set to ``cs.wisc.edu''. If
-  this is not the case, comment out the entry and Condor will
-  automatically use the fully qualified hostname of each machine.
-  An asterisk character ( ``*'') is a wildcard to match all domains and
-  therefore to honor all UIDs - a dangerous idea.
-          
-  Condor uses this information to determine if it should run a given
-  Condor job on the remote execute machine with the UID of whomever
-  submitted the job or with the UID of the Unix user nobody.  If the
-  macro is set
-  to ``none'' or not set, then Condor jobs will
-  always execute with the access permissions of user nobody.  For
-  security purposes, it is not a bad idea to have Condor jobs that
-  migrate around on machines across an entire organization to run as
-  user nobody, which by convention has very restricted access to
-  the disk files of a machine.  Standard universe Condor jobs are
-  fine running as user nobody since all I/O is redirected
-  back through the use of remote system calls to a shadow process
-  running on the
-  submit machine (which is authenticated as the user).  If you only plan
-  on running standard universe jobs, then it is a good idea to simply
-  set this to ``none'' or omit it.  Vanilla universe jobs,
-  however, cannot take advantage of Condor's remote system calls.
-  Vanilla universe jobs are dependent upon NFS, RFS, AFS, or some
-  shared file system set up to read/write files as they bounce around
-  from machine to machine. If you want to run vanilla jobs and your
-  shared file systems are via AFS, then you can safely leave this as
-  ``none'' as well. But, if you wish to use vanilla jobs with Condor
-  and you have shared file systems with NFS or RFS, then
-  enter in a legitimate domain name where all your UIDs match (you
-  should be doing this with NFS anyway!) on all machines in the pool,
-  or else users in your pool who submit vanilla jobs will have to make
-  their files world read/write (so that user nobody can access them).
-          
-  Some gritty details for folks who want to know: If the submitting
-  machine and the remote machine about to execute the job both have
-  the same login name in the password file for a given UID, and the
-  \MacroU{UID\_DOMAIN} claimed by the submit machine is indeed found to
-  be a subset of what an inverse lookup to a DNS (domain name server)
-  or NIS reports as the fully qualified domain name for the submit
-  machine's IP address (this security measure safeguards against the
-  submit machine from lying), \emph{then} the job will run
-  with the same UID as the user who submitted the job.  Otherwise it
-  will run as user nobody.
-          
-  Note: the \MacroU{UID\_DOMAIN} parameter is also used when Condor
-  sends e-mail back to the user about a completed job; the address
-  \texttt{Job-Owner@UID\_DOMAIN} is used, unless \MacroU{UID\_DOMAIN}
-  is ``none'', in which case \texttt{Job-Owner@submit-machine} is
-  used.
-  
+\item[\Macro{UID\_DOMAIN}] \label{param:UidDomain}
+The \Macro{UID\_DOMAIN} macro
+is used to decide under which user to run your jobs.
+If the \MacroU{UID\_DOMAIN}
+on the submitting machine is different than
+the \MacroU{UID\_DOMAIN}
+on the machine that runs your job, then Condor will run
+the job as the user called ``nobody''.
+For example, if the submit machine has
+the \MacroU{UID\_DOMAIN}
+``flippy.cs.wisc.edu'' and the machine where the job will execute
+has the \MacroU{UID\_DOMAIN}
+``cs.wisc.edu'', the job will run as user nobody, because
+the two \MacroU{UID\_DOMAIN}s are not the same.
+If the \MacroU{UID\_DOMAIN}
+is the same on both the submit and execute machines,
+then Condor will run the job as the user that submitted the job.
+
+A further check attempts to assure that the submitting
+machine can not lie about its \MacroU{UID\_DOMAIN}.
+Condor compares the 
+submit machine's claimed \MacroU{UID\_DOMAIN}
+to its fully qualified name.
+If the two do not end the same, then the submit machine
+is presumed to be lying about its \MacroU{UID\_DOMAIN}.
+In this case, Condor will run the job as user nobody.
+For example, a job submission to the Condor pool at the UW Madison
+from ``flippy.example.com'', claiming a \MacroU{UID\_DOMAIN}
+of ``cs.wisc.edu'',
+will run the job as the user nobody.
+
+Because of this verification, you need to set your
+\MacroU{UID\_DOMAIN}
+to a real domain name. At the Computer Sciences department
+at the UW Madison, we set the \MacroU{UID\_DOMAIN}
+to be ``cs.wisc.edu'' to
+indicate that whenever someone submits from a department machine, we
+will run the job as the user who submits it.
+
+Also see \Macro{SOFT\_UID\_DOMAIN}
+below for information about one more check
+that Condor performs before running a job as a given user.
+
+A few details:
+
+You could set \MacroU{UID\_DOMAIN}
+to ``*''. This will match all domains,
+but it is a gaping security hole. It is not recommended.
+
+You can set \MacroU{UID\_DOMAIN}
+to ``none'' or leave it undefined. This will
+force Condor to always run jobs as user nobody.
+Running standard universe jobs as user nobody enhances
+your security and should cause no problems, because the jobs use remote
+I/O to access all of their files.
+However, if vanilla jobs are run as
+user nobody, then files that need to be accessed by the job will need
+to be marked as world readable/writable so the user nobody can access
+them.
+
+When Condor sends e-mail about a job, Condor sends the e-mail to
+%% This is the wrong LaTeX  macro to use, but we don't have a correct one.
+\File{user@UID\_DOMAIN}.
+If \MacroU{UID\_DOMAIN}
+is set to ``none'' or it is undefined, 
+the e-mail is
+sent to \File{user@submitmachinename}.
+
+
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
-  Used in conjunction with the \MacroU{UID\_DOMAIN} macro
-  described above.  If the \MacroU{UID\_DOMAIN} settings match on both
-  the execute and submit machines, but the UID of the user who
-  submitted the job is not in the password file (or password
-  information if NIS is being used)
-  of the execute machine, the \Condor{starter} will
-  exit with an error.  If you set \MacroU{SOFT\_UID\_DOMAIN}
-  to be TRUE, Condor will start the job with the specified
-  UID, even if it is not in the password file.
+When Condor is about to run a job as a particular user (instead of the
+user nobody), it verifies that the UID given for the user is in the
+password file and actually matches the given user name.
+However, some
+installations may not have every user in every machine's password
+file, so this check will fail. If you prefer that Condor not do
+this check, because users are not in every password file, set
+this attribute to True.
+
+
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
-  Similar in concept to \MacroU{UID\_DOMAIN}, but this is
-  the Internet/DNS domain name where all the machines within that
-  domain can access the same set of NFS file servers.  
-          
-  Often times, especially if all the machines in the pool are
-  administered by the same organization, all the machines to be added
-  into a Condor pool can mount the same set of NFS fileservers onto
-  the same place in the directory tree.  If all the
-  machines in the pool within a specific Internet/DNS domain mount the
-  same set of NFS file servers onto the same path mount-points,
-  then set this macro to the name of the
-  Internet/DNS domain where this is true.  For instance, if all the
-  machines in the Condor pool within the Internet/DNS zone
-  ``cs.wisc.edu'' have a common password file and mount the same volumes
-  from the same NFS servers, set \MacroU{FILESYSTEM\_DOMAIN} to
-  ``cs.wisc.edu''.  If this is not the case, comment out the
-  entry, and Condor will automatically set it to the fully qualified
-  hostname of the local machine.
+The \Macro{FILESYSTEM\_DOMAIN}
+macro is an arbitrary string that is used to decide if
+two machines (a submitting machine and an execute machine) share a
+file system.
+Although the macro name contains the word ``DOMAIN'',
+the macro is not required to be a domain name, although it often is.
+
+Vanilla Unix jobs currently require a shared file system in order to
+share any data files or see the output of the program.
+Condor decides if there is a shared filesystem by comparing the values
+of 
+\MacroU{FILESYSTEM\_DOMAIN}
+of both the submitting and execute machines.
+If the values are the same,
+Condor assume there is a shared file system.
+Condor implements the check
+by extending the Requirements for your job.
+You can see these requirements by using the \oArg{-v} argument
+to \Condor{submit}.
+
+Note that this implementation is not ideal: machines may share some
+file systems but not others. Condor currently has no way to express
+this automatically. You can express the need to use a
+particular file system by adding additional attributes to your machines
+and submit files, similar to the example given in 
+Frequently Asked Questions, 
+section~\ref{sec:FAQ} on
+how to run jobs only on machines that have 
+certain software installations.
+
+Note that if you do not set 
+\MacroU{FILESYSTEM\_DOMAIN}, Condor will
+automatically set the macro's value to be the fully qualified hostname
+of the local machine.
+Since each machine will have a different
+\MacroU{FILESYSTEM\_DOMAIN},
+they will not be considered to have shared file systems.
+
   
 \item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to TRUE if
   all the machines you plan on adding in your pool can all access a
