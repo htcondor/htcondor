@@ -22,11 +22,15 @@ typedef struct {
 	ELEM	**data;
 } EXPR;
 
+#if !defined(WIN32) // CONTEXT is defined in windows.h!  I hope we don't need these anymore...
+
 typedef struct {
 	int		len;
 	int		max_len;
 	EXPR	**data;
 } CONTEXT;
+
+#endif
 
 typedef struct {
 	int     top;
@@ -52,10 +56,14 @@ typedef struct {
 #define RPAREN	16
 #define NAME	17
 #define STRING	18
+#if !defined(WIN32) // these are built-in types in WIN32!
 #define FLOAT	19
 #define INT		20
 #define BOOL	21
+#endif
+#if !defined(WIN32) // ERROR is a WIN32 macro!
 #define ERROR	22
+#endif
 #define MOD		23
 #define EXPRSTRING 24
 #define ENDMARKER	-1
@@ -68,6 +76,8 @@ typedef struct {
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#if 0 // no more CONTEXTs
 
 #if defined(__STDC__) || (__cplusplus)
 EXPR * scan ( char *line );
@@ -83,6 +93,8 @@ int store_stmt();
 void free_elem();
 void free_context();
 ELEM * eval();
+#endif
+
 #endif
 
 #if defined(__cplusplus)
