@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
 #include "sink.h"
 
@@ -94,30 +95,9 @@ Flatten( Value& val, ExprTree *&tree ) const
 
 
 bool ExprTree::
-Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op) const
+Flatten( EvalState &state, Value &val, ExprTree *&tree, int* op) const
 {
-	Value				cv;
-	bool				rval;
-
-	EvalCache::iterator	itr = state.cache.find( this );
-
-	if( itr != state.cache.end( ) ) {
-		// found in cache; return cached value
-		val.CopyFrom( itr->second );
-		return true;
-	} 
-
-	// not found in cache; insert a cache entry
-	cv.SetUndefinedValue( );
-	state.cache[ this ] = cv;
-
-	// flatten the expression
-	rval = _Flatten( state, val, tree, op );
-
-	// we may not have a value here, so don't cache
-	state.cache.erase( this ); 
-
-	return( rval );
+	return( _Flatten( state, val, tree, op ) );
 }
 
 
