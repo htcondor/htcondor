@@ -4,7 +4,7 @@
 // Converts a string expression into an expression tree. The following function
 // is implemented:
 //
-//     int Parse(char*, ExprTree*&)
+//     int Parse(const char*, ExprTree*&)
 //
 //******************************************************************************
 
@@ -527,11 +527,13 @@ int ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
     return FALSE;
 }
 
-int Parse(char* s, ExprTree*& tree)
+int Parse(const char* s, ExprTree*& tree)
 {
-    char*		tmp = s;	// parsing indicator
+	char*		str = new char[strlen(s) + 1];
+    char*		tmp = str;	// parsing indicator
     int			count = 0;	// count characters which has been read
 
+	strcpy(str, s);
     alreadyRead = TRUE;
     if(ParseAssignExpr(tmp, tree, count))
     {
@@ -539,5 +541,6 @@ int Parse(char* s, ExprTree*& tree)
 		return 0;
     }
 	delete nextToken;
+	delete str;
     return count;
 }
