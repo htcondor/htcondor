@@ -28,6 +28,7 @@
 #include "credential.h"
 #include "condor_credential.h"
 #include "environ.h"
+#include "condor_config.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
 
