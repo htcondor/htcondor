@@ -43,6 +43,9 @@
 #include "strupr.h"
 
 #ifdef WIN32
+
+#include "windows_firewall.h"
+
 extern void register_service();
 extern void terminate(DWORD);
 #endif
@@ -60,6 +63,7 @@ extern "C"
 void	init_params();
 void	init_daemon_list();
 void	init_classad();
+void	init_firewall_exceptions();
 void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
@@ -227,6 +231,8 @@ main_init( int argc, char* argv[] )
 	init_classad();  
 		// Initialize the master entry in the daemons data structure.
 	daemons.InitMaster();
+		// open up the windows firewall 
+	init_firewall_exceptions();
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
@@ -1039,5 +1045,40 @@ main_pre_command_sock_init()
 	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
 #endif
 
+}
+
+void init_firewall_exceptions() {
+#ifdef WIN32
+
+	bool add_exception;
+	char *master_image_path;
+
+	WindowsFirewallHelper wfh;
+	
+	add_exception = param_boolean("ADD_WINDOWS_FIREWALL_EXCEPTION", true);
+
+	if ( add_exception ) {
+
+		master_image_path = getExecPath();
+
+		if ( master_image_path ) {
+
+			if ( !wfh.addTrusted(master_image_path) ) {
+				dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						master_image_path);
+			}
+
+			free(master_image_path);
+
+		} else {
+			dprintf(D_ALWAYS, 
+					"WARNING: Failed to get condor_master image path.\n"
+					"Condor will not be excepted from the Windows firewall.\n");
+		}
+		
+
+	}
+#endif
 }
 
