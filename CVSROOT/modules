@@ -99,6 +99,7 @@ V6_SRC		-a \
 			src/condor_starter.jim \
 			src/condor_submit.V6 \
 			src/condor_status.V6 \
+			src/condor_sysapi \
 			src/condor_syscall_lib \
 			src/condor_test_suite_C.V5 \
 			src/condor_test_suite_F.V5 \
