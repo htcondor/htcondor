@@ -27,7 +27,7 @@
  *   Created: Fri Oct 16 12:47:29 1992
  */
 
-#include "condor_types.h"
+#include "condor_status.h"		/* For STATUS_LINE */
 #include "condor_config.h"
 
 #if defined(__cplusplus)
