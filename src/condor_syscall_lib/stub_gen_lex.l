@@ -82,6 +82,7 @@ PROC				return grab( TYPE_NAME );
 {STRUCT}utsname		return grab( TYPE_NAME );
 {STRUCT}shmid_ds	return grab( TYPE_NAME );
 {STRUCT}addressconf	return grab( TYPE_NAME );
+{STRUCT}acl			return grab( TYPE_NAME );
 "["{WHITE}"]"		return grab( ARRAY );
 map					return grab( MAP );
 in					return grab( IN );
