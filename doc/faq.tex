@@ -123,6 +123,21 @@ running anywhere!
 
 \index{running a job!on only certain machines|)}
 
+\subsection{How do I configure Condor to only run jobs at night?}
+
+A commonly requested policy for running batch jobs is to only allow
+them to run at night, or at other pre-specified times of the day.
+Condor allows you to configure this policy with the use of the
+\Attr{ClockMin} and \Attr{ClockDay} \Condor{startd} attributes.  
+A complete example of how to use these attributes for this kind of
+policy is discussed in subsection~\ref{sec:Time-Of-Day-Policy} on
+page~\pageref{sec:Time-Of-Day-Policy}, ``A Policy for Only Running
+Jobs at Certain Times of the Day'', inside
+section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
+Policy''
+\index{running a job!only at night|)}
+\index{running a job!at certain times of day|)}
+
 \section{Running Condor Jobs}
 
 \subsection{I'm at the University of Wisconsin-Madison Computer
