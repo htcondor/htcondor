@@ -1005,7 +1005,7 @@ int perm::set_acls( const char *filename )
 	return 1;
 }
 
-#ifdef _DEBUG
+#ifdef PERM_DEBUG
 // Main method for testing the Perm functions
 int 
 main(int argc, char* argv[]) {
