@@ -46,14 +46,15 @@
 */
 
 const char usage[] =
-"usage: %s [-total | -raw] [-debug] [-evict] [-j cluster[.proc]] [-all] logfile ...\n"
+"usage: %s [-total | -raw] [-debug] [-evict] [-j cluster[.proc]] [-all] [-ipaddres] logfile ...\n"
 "\t-help\t\tThis message\n"
 "\t-total\t\tOnly display job totals\n"
 "\t-raw\t\tDisplay raw data only\n"
 "\t-debug\t\tDebug mode\n"
 "\t-j\t\tSelect a specific cluster or cluster.proc\n"
 "\t-evict\t\tSelect only allocations which ended due to eviction\n"
-"\t-all\t\tSelect all clusters and all allocations\n";
+"\t-all\t\tSelect all clusters and all allocations\n"
+"\t-ipaddrs\tAvoid DNS lookup by displaying IP addresses\n";
 
 void read_log(const char *filename, int select_cluster, int select_proc);
 void display_stats();
@@ -99,6 +100,7 @@ bool totals_only = false;
 bool debug_mode = false;
 bool evict_only = false;
 bool raw_data = false;
+bool avoid_dns = false;
 
 int
 main(int argc, char *argv[])
@@ -140,6 +142,10 @@ main(int argc, char *argv[])
 			}
 			case 'r': {
 				raw_data = true;
+				break;
+			}
+			case 'i': {
+				avoid_dns = true;
 				break;
 			}
 			default:
@@ -283,7 +289,7 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 
 	char ip_addr[128];
 	// only use the IP address in the key
-	strcpy(ip_addr, host);
+	strcpy(ip_addr, host+1);
 	for (int i=0; i < 128; i++) {
 		if (ip_addr[i] == ':') {
 			ip_addr[i] = '\0';
@@ -295,9 +301,12 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	if (HStats.lookup(hostkey, hs) < 0) {
 		struct sockaddr_in sin;
 		string_to_sin(host, &sin);
-		char *hostname = sin_to_hostname(&sin, NULL);
+		char *hostname = NULL;
+		if (!avoid_dns) {
+			hostname = sin_to_hostname(&sin, NULL);
+		}
 		if (hostname == NULL) {
-			hostname = "unknown";
+			hostname = ip_addr;
 		}
 		hs = new HostStatistics(hostname);
 		HStats.insert(hostkey, hs);
@@ -310,9 +319,9 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	hs->cpu_usage += (double)cpu_usage;
 
 	const char TitleFormat[] =
-		"%-9.9s %-14.14s %10s %9s %9s %9s %5s %3s %3s\n";
+		"%-8.8s %-14.15s %10s %9s %9s %9s %5s %3s %3s\n";
 	const char RecordFormat[] =
-		"%-9.9s %-14.14s %10d %9d %9d %9d %5d %3d %3d\n";
+		"%-8.8s %-15.15s %10d %9d %9d %9d %5d %3d %3d\n";
 
 	if (!totals_only) {
 		if (!raw_data && !initialized) {
