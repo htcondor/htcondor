@@ -2276,12 +2276,9 @@ int DaemonCore::HandleReq(int socki)
 				// this is unlikely to work, but we may as well try... so, we
 				// don't fail here.
 			}
-		} else {
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: no MD5...\n");
 		}
 
 		if (sess_id) {
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: looking for session %s...\n", sess_id);
 			KeyCacheEntry *session = NULL;
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
@@ -2310,8 +2307,6 @@ int DaemonCore::HandleReq(int socki)
 				goto finalize;
 			}
 
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is here...\n", sess_id);
-
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
@@ -2338,11 +2333,8 @@ int DaemonCore::HandleReq(int socki)
 			if (return_address_ss) {
 				free( return_address_ss );
 			}
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT MD5ed.\n");
 		}
 
-		dprintf ( D_SECURITY, "DC_AUTHENTICATE: checking UDP for encryption...\n");
 
 		// get the info, if there is any
 		cleartext_info = (char*)((SafeSock*)stream)->isIncomingDataEncrypted();
@@ -2373,7 +2365,6 @@ int DaemonCore::HandleReq(int socki)
 
 
 		if (sess_id) {
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: looking for session %s...\n", sess_id);
 			KeyCacheEntry *session = NULL;
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
@@ -2401,8 +2392,6 @@ int DaemonCore::HandleReq(int socki)
 				goto finalize;
 			}
 
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is here...\n", sess_id);
-
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
@@ -2428,13 +2417,12 @@ int DaemonCore::HandleReq(int socki)
 			if (return_address_ss) {
 				free( return_address_ss );
 			}
-		} else {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT encrypted.\n");
 		}
 
         if (who != NULL) {
             ((SafeSock*)stream)->setFullyQualifiedUser(who);
             ((SafeSock*)stream)->setAuthenticated(true);
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticated UDP message is from %s.\n", who);
         }
 	}
 	
@@ -2461,16 +2449,10 @@ int DaemonCore::HandleReq(int socki)
 
 	if (req == DC_AUTHENTICATE) {
 
-		if (!is_tcp) {
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: bring on the UDP !\n");
-		}
-
 		Sock* sock = (Sock*)stream;
 		sock->decode();
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
-
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
 		if( !auth_info.initFromStream(*sock)) {
@@ -2487,8 +2469,10 @@ int DaemonCore::HandleReq(int socki)
 			goto finalize;
 		}
 	
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
-		auth_info.dPrint (D_SECURITY);
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
+			auth_info.dPrint (D_SECURITY);
+		}
 
 		char buf[ATTRLIST_MAX_EXPRESSION];
 
@@ -2545,8 +2529,6 @@ int DaemonCore::HandleReq(int socki)
 
 			KeyCacheEntry *session = NULL;
 
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: request to use cached session.\n");
-
             char * tmp_sid = NULL;
 			if( ! auth_info.LookupString(ATTR_SEC_SID, &tmp_sid)) {
 				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
@@ -2557,9 +2539,6 @@ int DaemonCore::HandleReq(int socki)
 
             the_sid = strdup(tmp_sid);
 
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: looking up cached key id %s.\n", the_sid);
-
-
 			// lookup the suggested key
 			if (!sec_man->session_cache->lookup(the_sid, session)) {
 
@@ -2569,42 +2548,14 @@ int DaemonCore::HandleReq(int socki)
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 						   "invalid session %s, failing.\n", the_sid);
 
-				/* this is not UDP.
-				// if this is UDP, they have no idea the key they are
-				// using is bunk, so  it would be nice of us to tell them.
-
-				// blast off a udp packet, its the least we can do.
-				
-				// get their sinful string
-				char client_sinful_string[256];
-				if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, client_sinful_string)) {
-					SafeSock s;
-					if (s.connect(client_sinful_string)) {
-						s.encode();
-						s.put(DC_INVALIDATE_KEY);
-						s.code(the_sid);
-						s.eom();
-						s.close();
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-							the_sid, client_sinful_string);
-					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-							the_sid, client_sinful_string);
-					}
-				} else {
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: no return address for invalid UDP.\n");
-				}
-				*/
-
 				// close the connection.
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: Closing connection.\n");
 				result = FALSE;
 				goto finalize;
 
 			} else {
 				// the session->id() and the_sid strings should be identical.
 
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: found session id %s given to %s:\n",
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
 							session->id(), sin_to_string(session->addr()));
 			}
 
@@ -2616,7 +2567,10 @@ int DaemonCore::HandleReq(int socki)
 			if (session->policy()) {
 				// copy this to the HandleReq() scope
 				the_policy = new ClassAd(*session->policy());
-				the_policy->dPrint (D_SECURITY);
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
+					the_policy->dPrint (D_SECURITY);
+				}
 			}
 
 			// grab the user out of the policy.
@@ -2639,13 +2593,15 @@ int DaemonCore::HandleReq(int socki)
 			ClassAd *our_policy = sec_man->CreateSecurityPolicyAd(PermString(comTable[cmd_index].perm));
 			if (!our_policy) {
 				// our policy is invalid even without the other side getting involved.
-				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Security policy is invalid!\n");
+				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Our security policy is invalid!\n");
 				result = FALSE;
 				goto finalize;
 			}
 
-			dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-			our_policy->dPrint(D_SECURITY);
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
+				our_policy->dPrint(D_SECURITY);
+			}
 			
 			// reconcile.  if unable, close socket.
 			the_policy = sec_man->ReconcileSecurityPolicyAds(auth_info, *our_policy);
@@ -2658,8 +2614,10 @@ int DaemonCore::HandleReq(int socki)
 				result = FALSE;
 				goto finalize;
 			} else {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
-				the_policy->dPrint(D_SECURITY);
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
+					the_policy->dPrint(D_SECURITY);
+				}
 			}
 
 			// handy policy vars
@@ -2681,7 +2639,7 @@ int DaemonCore::HandleReq(int socki)
 				sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
 						 (int)time(0), ZZZ_always_increase() );
 				assert (the_sid == NULL);
-				the_sid = strdup(buf); // This is a memory leak. Fixed above by strdup the other the_sid as well Hao
+				the_sid = strdup(buf);
 
 				if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
 
@@ -2692,7 +2650,6 @@ int DaemonCore::HandleReq(int socki)
 						goto finalize;
 					}
 
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: generating private key id %s...\n", the_sid);
 					unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
 					unsigned char  rbuf[24];
 					if (rkey) {
@@ -2702,18 +2659,18 @@ int DaemonCore::HandleReq(int socki)
 					} else {
 						memset (rbuf, 0, 24);
 						dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
-						// result = FALSE;
-						// goto finalize;
+						result = FALSE;
+						goto finalize;
 					}
 
 					switch (toupper(crypto_method[0])) {
 						case 'B': // blowfish
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: created blowfish key.\n" );
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid);
 							the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
 							break;
 						case '3': // 3des
 						case 'T': // Tripledes
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: created 3des key.\n" );
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid);
 							the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
 							break;
 						default:
@@ -2736,8 +2693,10 @@ int DaemonCore::HandleReq(int socki)
 
 			// if they asked, tell them
 			if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
-				dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
-				the_policy->dPrint( D_SECURITY );
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
+					the_policy->dPrint( D_SECURITY );
+				}
 				sock->encode();
 				if (!the_policy->put(*sock) ||
 					!sock->eom()) {
@@ -2773,17 +2732,12 @@ int DaemonCore::HandleReq(int socki)
 				// it will be detected as long as some crypto is used.
 
 
-				// this means we are authenticating for real
-
-				if (!is_tcp) {
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: UDP can't authenticate!\n");
-					result = FALSE;
-					goto finalize;
-				}
 				char * auth_method = NULL;
 				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS, &auth_method);
 
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+				}
 				if (!sock->authenticate(the_key, sec_man->getAuthBitmask(auth_method))) {
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
 					result = FALSE;
@@ -2802,22 +2756,23 @@ int DaemonCore::HandleReq(int socki)
 
 					result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
-
 					if (!result) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
 						dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
+
 						result = FALSE;
 						goto finalize;
 
 					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: host %s address verified.\n", kerbip);
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", kerbip);
 					}
 				}
 
 			} else {
-				// an FYI
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+				}
 			}
 
 
@@ -2851,11 +2806,6 @@ int DaemonCore::HandleReq(int socki)
 					goto finalize;
 				}
 
-				dprintf (D_SECURITY, "about to enable encryption.\n");
-#ifdef SECURITY_HACK_ENABLE
-				zz2printf (the_key);
-#endif
-
 				sock->decode();
 				if (!sock->set_crypto_key(the_key) ) {
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
@@ -2867,14 +2817,12 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 
-
 			if (new_session) {
 				// clear the buffer
 				sock->decode();
 				sock->eom();
 
 				// ready a classad to send
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: sending p.a. classad.\n");
 				ClassAd pa_ad;
 
 				// session user
@@ -2896,8 +2844,14 @@ int DaemonCore::HandleReq(int socki)
 
 
 				sock->encode();
-				pa_ad.put(*sock);
-				sock->eom();
+				if (! pa_ad.put(*sock) ||
+					! sock->eom() ) {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
+				} else {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
+					}
+				}
 
 				// extract the session duration
 				char *dur = NULL;
@@ -2908,7 +2862,7 @@ int DaemonCore::HandleReq(int socki)
 				// add the key to the cache
 				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
 				sec_man->session_cache->insert(tmp_key);
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %i seconds!\n", the_sid, expiration_time);
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
 			}
 		}
 
@@ -2922,11 +2876,13 @@ int DaemonCore::HandleReq(int socki)
 		req = real_cmd;
 		result = TRUE;
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
 		sock->decode();
-
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
 		sock->allow_one_empty_message();
+
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: setting sock->decode()\n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: allowing an empty message for sock.\n");
+		}
 
 		// fill in the command info
 		reqFound = TRUE;
@@ -6207,13 +6163,6 @@ DaemonCore::Register_Priv_State( priv_state priv )
 bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock ) 
 {
-	// Grab some pointer to these sock strings, since they're
-	// used many times.  none need to be freed.
-
-	sockaddr_in *endpoint = sock->endpoint();
-	char *endpoint_string = sin_to_string(endpoint);
-	const char *user      = sock->getFullyQualifiedUser();
-
 	// we've got to check each textline of the string passed in by
 	// config.  here we use the StringList class to split lines.
 
@@ -6229,100 +6178,107 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 	// short-circuit out of the while once any attribute is not
 	// okay.  otherwise, get one value at a time
 	while (all_attrs_okay && (single_attr = all_attrs.next())) {
-
-		char *name, *tmp;
-		int i;
-
-		if( ! (name = strdup(single_attr)) ) {
-			EXCEPT( "Out of memory!" );
+		// check this individual attr
+		if (!CheckConfigAttrSecurity(single_attr, sock)) {
+			all_attrs_okay = false;
 		}
-		tmp = strchr( name, '=' );
-		if( ! tmp ) {
-			tmp = strchr( name, ':' );
-		}
-		if( tmp ) {
-				// someone's trying to set something, so we should trim
-				// off the value they want to set it to and any whitespace
-				// so we can just look at the attribute name.
-			*tmp = ' ';
-			while( isspace(*tmp) ) {
-				*tmp = '\0';
-				tmp--;
-			}
-		} 
-
-#if (DEBUG_SETTABLE_ATTR_LISTS)
-			dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
-#endif
-
-			// Now, name should point to a NULL-terminated version of the
-			// attribute name we're trying to set.  This is what we must
-			// compare against our SettableAttrsLists.  We need to iterate
-			// through all the possible permission levels, and for each
-			// one, see if we find the given attribute in the
-			// corresponding SettableAttrsList.
-		for( i=0; all_attrs_okay && (i<LAST_PERM); i++ ) {
-
-				// skip permission levels we know we don't want to trust
-			if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
-				continue;
-			}
-
-			if( ! SettableAttrsLists[i] ) { 
-					// there's no list for this perm level, skip it. 
-				continue;
-			}
-
-				// if we're here, we might allow someone to set something
-				// if they qualify for the perm level we're considering.
-				// so, now see if the connection qualifies for this access
-				// level.
-			
-			if( Verify((DCpermission)i, endpoint, user)) {
-					// now we can see if the specific attribute they're
-					// trying to set is in our list.
-				if( (SettableAttrsLists[i])->
-					contains_anycase_withwildcard(name) ) {
-						// everything's cool.  allow this.
-
-#if (DEBUG_SETTABLE_ATTR_LISTS)
-					dprintf( D_ALWAYS, "CheckConfigSecurity: "
-							 "found %s at perm level %s\n", name,
-							 PermString((DCpermission)i) );
-#endif
-
-					free( name );
-
-					// this attribute is definately okay
-					// all_attrs_okay defaults to true, so
-					// no need to modify it here, just when
-					// the security check fails (below)
-				}
-			}
-		} // end of for()
-
-			// If we're still here, someone is trying to set something
-			// they're not allowed to set.  print this out into the log so
-			// folks can see that things are failing due to permissions. 
-
-			// Upper-case-ify the string for everything we print out.
-		strupr(name);
-
-			// First, log it.
-		dprintf( D_ALWAYS,
-				 "WARNING: User %s at %s is trying to modify \"%s\"\n",
-				 user, endpoint_string, name );
-		dprintf( D_ALWAYS, 
-				 "WARNING: Potential security problem, request refused\n" );
-
-		free( name );
-
-		// set the flag saying that not all attributes passed the
-		// security test
-		all_attrs_okay = false;
 	}
 
 	return all_attrs_okay;
+}
+
+
+
+bool
+DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock ) 
+{
+	char *name, *tmp;
+	char* ip_str;
+	int i;
+
+	if( ! (name = strdup(attr)) ) {
+		EXCEPT( "Out of memory!" );
+	}
+	tmp = strchr( name, '=' );
+	if( ! tmp ) {
+		tmp = strchr( name, ':' );
+	}
+	if( tmp ) {
+			// someone's trying to set something, so we should trim
+			// off the value they want to set it to and any whitespace
+			// so we can just look at the attribute name.
+		*tmp = ' ';
+		while( isspace(*tmp) ) {
+			*tmp = '\0';
+			tmp--;
+		}
+	} 
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+		dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
+#endif
+
+		// Now, name should point to a NULL-terminated version of the
+		// attribute name we're trying to set.  This is what we must
+		// compare against our SettableAttrsLists.  We need to iterate
+		// through all the possible permission levels, and for each
+		// one, see if we find the given attribute in the
+		// corresponding SettableAttrsList.
+	for( i=0; i<LAST_PERM; i++ ) {
+
+			// skip permission levels we know we don't want to trust
+		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+			continue;
+		}
+
+		if( ! SettableAttrsLists[i] ) { 
+				// there's no list for this perm level, skip it. 
+			continue;
+		}
+
+			// if we're here, we might allow someone to set something
+			// if they qualify for the perm level we're considering.
+			// so, now see if the connection qualifies for this access
+			// level.
+		
+		if( Verify((DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
+				// now we can see if the specific attribute they're
+				// trying to set is in our list.
+			if( (SettableAttrsLists[i])->
+				contains_anycase_withwildcard(name) ) {
+					// everything's cool.  allow this.
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+				dprintf( D_ALWAYS, "CheckConfigSecurity: "
+						 "found %s at perm level %s\n", name,
+						 PermString((DCpermission)i) );
+#endif
+
+				free( name );
+				return true;
+			}
+		}
+	} // end of for()
+
+		// If we're still here, someone is trying to set something
+		// they're not allowed to set.  print this out into the log so
+		// folks can see that things are failing due to permissions. 
+
+		// Grab a pointer to this string, since it's a little bit
+		// expensive to re-compute.
+	ip_str = sock->endpoint_ip_str();
+		// Upper-case-ify the string for everything we print out.
+	strupr(name);
+
+		// First, log it.
+	dprintf( D_ALWAYS,
+			 "WARNING: Someone at %s is trying to modify \"%s\"\n",
+			 ip_str, name );
+	dprintf( D_ALWAYS, 
+			 "WARNING: Potential security problem, request refused\n" );
+
+	free( name );
+	return false;
 }
 
 
