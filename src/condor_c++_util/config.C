@@ -294,11 +294,23 @@ getline( FILE *fp )
 	char	*ptr;
 	char	*tmp_ptr;
 
-	if ( buflen != 1024 ) {
-		if ( buf ) free(buf);
-		buf = (char *)malloc(1024);
-		buflen = 1024;
+	if( feof(fp) ) {
+			// We're at the end of the file, clean up our buffers and
+			// return NULL.  
+		if ( buf ) {
+			free(buf);
+			buf = NULL;
+			buflen = 0;
+		}
+		return NULL;
 	}
+
+	if ( buflen != 128 ) {
+		if ( buf ) free(buf);
+		buf = (char *)malloc(128);
+		buflen = 128;
+	}
+	buf[0] = '\0';
 	read_buf = buf;
 
 	for(;;) {
@@ -310,14 +322,20 @@ getline( FILE *fp )
 				read_buf = (read_buf - buf) + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
+				len += 4096;
 			} else {
 				// malloc returned NULL, we're out of memory
 				EXCEPT( "Out of memory - config file line too long" );
 			}
 		}
 
-		if( fgets(read_buf,len,fp) == NULL )
-			return line;
+		if( fgets(read_buf,len,fp) == NULL ) {
+			if( buf[0] == '\0' ) {
+				return NULL;
+			} else {
+				return buf;
+			}
+		}
 
 		// See if fgets read an entire line, or simply ran out of buffer space
 		if ( *read_buf == '\0' ) {
