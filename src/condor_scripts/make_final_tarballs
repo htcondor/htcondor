@@ -9,6 +9,9 @@
 # This should be run in the top-level src directory.
 #
 
+# Autoflush the output
+$| = 1;
+
 # Deal with any command-line args we are passed:
 while( $_ = shift( @ARGV ) ) {
   SWITCH: {	
@@ -20,8 +23,8 @@ while( $_ = shift( @ARGV ) ) {
 	$versarg = shift(@ARGV);
 	last SWITCH;
     }
-    if( /-g.*/ ) {
-	$glibc = "glibc";
+    if( /-l.*/ ) {
+	$libc = shift(@ARGV);
 	last SWITCH;
     }
   }
@@ -35,10 +38,10 @@ if( $versarg ) {
     # directly on the condor_master binary.
     $_=`ident strip_dir/sbin/condor_master`;
 }
-/(\$CondorVersion: )?(\d*)\.(\d*)\.(\d*).*/;
-$majorv = $2;
-$minorv = $3;
-$releasev = $4;
+/.*\$CondorVersion: (\d*)\.(\d*)\.(\d*).*/;
+$majorv = $1;
+$minorv = $2;
+$releasev = $3;
 $version = "$majorv.$minorv.$releasev";
 
 # Things you should probably leave alone:
@@ -108,9 +111,9 @@ $target="/p/condor/public/binaries";
   "sunx86_55"     => "solaris251",
   "sunx86_56"     => "solaris26",
   "i386_linux2"   => "linux",
-  "i386_linux22"   => "linux",
+  "i386_linux22"  => "linux",
   "i386_linux3"   => "linux",
-  "alpha_linux3"   => "linux",
+  "alpha_linux3"  => "linux",
   "alpha_dux40"   => "dux40",
   "sgi_62"        => "irix6",
   "sgi_63"        => "irix6",
@@ -125,9 +128,9 @@ $target="/p/condor/public/binaries";
   "sunx86_55"     => "x86",
   "sunx86_56"     => "x86",
   "i386_linux2"   => "x86",
-  "i386_linux22"   => "x86",
+  "i386_linux22"  => "x86",
   "i386_linux3"   => "x86",
-  "alpha_linux3"   => "Alpha",
+  "alpha_linux3"  => "Alpha",
   "alpha_dux40"   => "Alpha",
   "sgi_62"        => "SGI",
   "sgi_63"        => "SGI",
@@ -135,6 +138,16 @@ $target="/p/condor/public/binaries";
   "sgi_65"        => "SGI",
   "hp_ux102"      => "HPPAR"
 );
+
+
+%libcname = (
+  "i386_linux2"   => "libc5",
+  "i386_linux22"  => "glibc21",
+  "i386_linux3"   => "glibc20",
+  "i386_rh61  "   => "glibc21",
+  "alpha_linux3"  => "glibc20"
+);
+
 
 umask(022);
 
@@ -150,12 +163,7 @@ if( ! $sys ) {
 } 
 $arch = $archname{$sys};
 $opsys = $opsysname{$sys};
-if( ! $glibc ) {
-    $glibc = "";
-    if( $sys =~ /.*linux22.*/ || $sys =~ /.*linux3.*/ ) {
-	$glibc = "glibc";
-    } 
-}
+$libc = $libcname{$sys};
 
 `rm -rf $skel`;
 mkdir( "$skel", 0777 );
@@ -174,7 +182,7 @@ foreach $module ( @modules ) {
     }
 
     # Setup skeleton directory
-    print "Setting up skeleton directory for \"$module\"... ";  $| = 1;
+    print "Setting up skeleton directory for \"$module\"... ";
     mkdir( "$skel/$release", 0777 );
 
     # You always want the same version of LICENSE.TXT in everything. 
@@ -222,14 +230,14 @@ foreach $module ( @modules ) {
 	# Make sure the proper tar file exists
 	if( ! (-d $releaselocation{$linktype} && 
 	       -f "$releaselocation{$linktype}/$tarfile") ) {
-	    print "There's no $tarfile file for $linktype on this platform, skipping.\n";
+	    print STDERR "There's no $tarfile file for $linktype on this platform, skipping.\n";
 	    next;
 	}
 
 	# Figure out what our filenames should look like.
 	$platform="$opsys-$arch";
-	if( $glibc ) {
-	    $platform = "$platform-glibc";
+	if( $libc ) {
+	    $platform = "$platform-$libc";
 	}
 	if( $linktype =~ /dynamic/ ) {
 	    $platform = "$platform-dynamic";
@@ -271,14 +279,12 @@ foreach $module ( @modules ) {
 	    print "gzipping $skel/$release-$platform.tar\n";
 	    system( "gzip $skel/$release-$platform.tar" );
 	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
-	    $| = 1;
 	    `mv $skel/$release-$platform.tar.gz $targetdir`;
 	    print "done.\n";
 	} else {
 	    print "compressing $skel/$release-$platform.tar\n";
 	    system( "compress $skel/$release-$platform.tar" );
 	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
-	    $| = 1;
 	    `mv $skel/$release-$platform.tar.Z $targetdir`;
 	    print "done.\n";
 	}
@@ -287,15 +293,15 @@ foreach $module ( @modules ) {
 
 sub fix_tar {
     local( $src, $target ) = @_;
-    local( $tar );
+    my $tar;
 
     $tar = Archive::Tar->new();
 
-    print "\nReading $src\n"; $| = 1;
+    print "\nReading $src\n";
     $tar->read( $src );
-    print "Fixing ownerships\n"; $| = 1;
+    print "Fixing ownerships\n";
     $tar->change_owner( 0,0 );
-    print "Writing $target ... ";  $| = 1;
+    print "Writing $target ... ";
     $tar->write( $target );
     print "done.\n";
 }
