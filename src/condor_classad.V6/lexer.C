@@ -214,10 +214,12 @@ PeekToken (TokenValue *lvalp)
 	} else if (isalpha (ch) || ch == '_') {
 		tokenizeAlphaHead ();
 	} else if (ch == '\"') {
-		tokenizeStringLiteral ();
+		tokenizeString('\"'); // its a string literal
 	} else if( ch == '\'' ) {
-		tokenizeTime( );
-	} else {
+		tokenizeString('\''); // its a quoted attribute
+	} 
+
+	else {
 		tokenizePunctOperator ();
 	}
 
@@ -419,240 +421,65 @@ tokenizeAlphaHead (void)
 	return tokenType;
 }
 
-// tokenizeTime
+
+
+// tokenizeStringLiteral:  Scans strings of the form " ... " or '...' 
+// based on whether the argument passed was '\"' or '\''
 int Lexer::
-tokenizeTime( )
+tokenizeString(char delim)
 {
-	time_t 	secs;
-
-	// mark after the quote
-	wind( );
-	mark( );
-	while( ch > 0 && ch != '\'' ) {
-		wind( );
-	}
-
-	// time not terminated by '
-	if( ch != '\'' ) {
-		tokenType = LEX_TOKEN_ERROR;
-	}
-	else {
-		cut( );
-		wind( );
-
-		// absolute time starts with an alpha character
-		if( isalpha( lexBuffer[0] ) ) {
-			if( !tokenizeAbsoluteTime( lexBuffer.c_str( ), secs ) ) {
-				tokenType = LEX_TOKEN_ERROR;
-			} else {
-				tokenType = LEX_ABSOLUTE_TIME_VALUE;
-				yylval.SetAbsTimeValue( secs );
-			}
-		} else {
-			// relative time value
-			if( !tokenizeRelativeTime( lexBuffer.c_str( ), secs ) ) {
-				tokenType = LEX_TOKEN_ERROR;
-			} else {
-				tokenType = LEX_RELATIVE_TIME_VALUE;
-				yylval.SetRelTimeValue( secs );
-			}
-		}
-	}
-
-	return tokenType;
-}
-
-
-bool Lexer::
-tokenizeAbsoluteTime( const char *buf, time_t &asecs )
-{
-	struct 	tm timeValue;
-	time_t	secs;
-	time_t	absTime=0;
-	char	*tzStr, *tzOff=NULL;
-
-		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`
-		// get the position of the timezone string and timezone offSet
-	if( ( ( tzStr = strchr( buf, '(' ) ) == NULL ) || 
-		( ( tzOff = strchr( buf, ')' ) ) == NULL ) ) {
-		return( false );
-	}
-
-		// delimit ctime()-like segment, timezone string and timezone offSet
-	*(tzStr-1) = '\0';
-	*(tzOff+1) = '\0';
-	tzOff += 2;
-
-		// convert the ctime() like segment into a time_t
-	if( ( strptime( buf, "%a %b %d %H:%M:%S %Y", &timeValue ) == 0 ) ||
-		( absTime = mktime( &timeValue ) ) == -1 ) {
-		return( false );
-	}
-
-		// treat the timezone offSet as a relative time value
-	if( !tokenizeRelativeTime( tzOff, secs ) ) {
-		return( false );
-	}
-
-		//	wierd:  POSIX says that regions west of GMT have *positive*
-		//	offSets.  We have negative offSets to not confuse users.
-	secs = -secs;
-
-		// the actual is the abstime - foreign offSet - timezone (which got
-		// added in by mktime()
-	asecs = (int)absTime + secs - timezone;
-	return( true );
-}
-
-bool Lexer::
-tokenizeRelativeTime( const char *buf, time_t &rsecs )
-{
-	bool negative = false;
-	int  days=0, hrs=0, mins=0, secs=0;
-	char *buf_copy, *ptr, *start, *end;
-	bool secsPresent=false;
-
-	buf_copy = new char[strlen(buf) + 1];
-	if (buf_copy == NULL) {
-		return false;
-	}
-	strcpy(buf_copy, buf);
-	ptr = buf_copy;
-
-		// initial (optional) plus or minus
-	if( *ptr == '-' ) {
-		negative = true;
-		ptr++;
-	} else if( *ptr == '+' ) {
-		negative = false;
-		ptr++;
-	} else if( !isdigit( *ptr ) ) {
-		delete [] buf_copy;
-		return false;
-	}
-
-		// start of (optional) days field
-	start = ptr;
-	while( *ptr && isdigit( *ptr ) ) {
-		ptr++;
-	}
-	if( tolower(*ptr) == 'd' ) {
-		*ptr = '\0';
-		days = strtol( start, &end, 10 );  // base 10
-		if( days == 0 && end == start ) {
-			delete [] buf_copy;
-			return( false );
-		}
-		// wind pointers past hours field
-		*ptr = 'd';
-		ptr++;
-		start = ptr;
-		while( *ptr && isdigit( *ptr ) ) {
-			ptr++;
-		}
-	}
-
-		// now just after (required) hours field
-	if( *ptr == ':' ) {
-		*ptr = '\0';
-		hrs = strtol( start, &end, 10 ); // base 10
-		if( ( hrs < 0 || hrs > 23 ) || ( hrs == 0 && end == start ) ) {
-			// strtol() failed
-			delete [] buf_copy;
-			return( false );
-		}
-		// wind past minutes field
-		*ptr = ':';
-		ptr++;
-		start = ptr;
-		while( *ptr && isdigit( *ptr ) ) {
-			ptr++;
-		}
-	} else {
-		// no hours field
-		delete [] buf_copy;
-		return( false );
-	}
-
-		// check if (optional) seconds are specified after minutes
-	if( *ptr == ':' ) {
-		secsPresent = true;
-		*ptr = '\0';
-	} else if( *ptr != '\0' ) {
-		delete [] buf_copy;
-		return( false );
-	}
-		
-		// get minutes value
-	mins = strtol( start, &end, 10 ); // base 10
-	if( ( mins < 0 || mins > 59 ) || ( mins == 0 && end == start ) ) {
-		// strtol() failed
-		delete [] buf_copy;
-		return( false );
-	}
-
-		// if seconds were also specified
-	if( secsPresent ) {
-		*ptr = ':';
-		ptr++;
-		start = ptr;
-		while( *ptr && isdigit( *ptr ) ) {
-			ptr++;
-		}
-	}
-
-		// must terminate here
-	if( *ptr != '\0' ) {
-		delete [] buf_copy;
-		return( false );
-	}
-
-		// get seconds value
-	if( secsPresent ) {
-		secs = strtol( start, &end, 10 ); // base 10
-		if( ( secs < 0 || secs > 59 ) || ( secs == 0 && end == start ) ) {
-			// strtol() failed
-			delete [] buf_copy;
-			return( false );
-		}
-	}
-
-		// convert all fields into number of secs
-	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
-	delete [] buf_copy;
-	return( true );
-}
-
-
-
-// tokenizeStringLiteral:  Scans strings of the form " ... "
-int Lexer::
-tokenizeStringLiteral (void)
-{
-	int oldCh = 0;
-
+	bool stringComplete = false;
+	
 	// need to mark() after the quote
 	inString = true;
 	wind ();
 	mark ();
-
-	// consume the string literal; read upto " ignoring \"
-	while( ( ch > 0 ) && ( ch != '\"' || ( ch == '\"' && oldCh == '\\' ) ) ) {
-		oldCh = ch;
-		wind( );
+	
+	while (!stringComplete) {
+		int oldCh = 0;
+		// consume the string literal; read upto " ignoring \"
+		while( ( ch > 0 ) && ( ch != delim || ( ch == delim && oldCh == '\\' ) ) ) {
+			oldCh = ch;
+			wind( );
+		}
+		
+		if( ch == delim ) {
+			char tempch = ' ';
+			// read past the whitespace characters
+			while (isspace(tempch)) {
+				tempch = lexSource->ReadCharacter();
+			}
+			if (tempch != delim) {  // a new token exists after the string
+				lexSource->UnreadCharacter();
+				stringComplete = true;
+			} else {    // the adjacent string is to be concatenated to the existing string
+				lexBuffer.erase(lexBufferCount--); // erase the lagging '\"'
+				wind();
+			}
+		}
+		else {
+			// loop quit due to ch == 0 or ch == EOF
+			tokenType = LEX_TOKEN_ERROR;
+			return tokenType;
+		}    
 	}
-
-	if( ch == '\"' ) {
-		cut( );
-		wind( );	// skip over the close quote
-		convert_escapes( lexBuffer );
-		yylval.SetStringValue( lexBuffer.c_str( ) );
-		tokenType = LEX_STRING_VALUE;
-	} else {
-		// loop quit due to ch == 0 or ch == EOF
-		tokenType = LEX_TOKEN_ERROR;
+	cut( );
+	wind( );	// skip over the close quote
+	bool validStr = true; // to check if string is valid after converting escape
+	convert_escapes( lexBuffer, validStr );
+	yylval.SetStringValue( lexBuffer.c_str( ) );
+	if (validStr) {
+		if(delim == '\"') {
+			tokenType = LEX_STRING_VALUE;
+		}
+		else {
+			tokenType = LEX_IDENTIFIER;
+		}
 	}
-
+	else {
+		tokenType = LEX_TOKEN_ERROR; // string conatins a '\0' character inbetween
+	}
+	
 	return tokenType;
 }
 
@@ -958,7 +785,7 @@ strLexToken (int tokenValue)
 	}
 }
 
-void Lexer::convert_escapes(string &text)
+void Lexer::convert_escapes(string &text, bool &validStr)
 {
 	char *copy;
 	int  length;
@@ -1029,6 +856,11 @@ void Lexer::convert_escapes(string &text)
 						new_char = number;
 					} else {
 						new_char = text[source];
+					}
+					if(number == 0) { // "\\0" is an invalid substring within a string literal
+					  validStr = false;
+					  delete [] copy;
+					  return;
 					}
 				} else {
 					new_char = text[source];

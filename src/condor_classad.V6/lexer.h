@@ -90,12 +90,14 @@ class Lexer
 		{
 			public:
 				TokenValue( ) {
-					tt = LEX_TOKEN_ERROR;
-					factor = Value::NO_FACTOR;
-					intValue = 0;
-					realValue = 0.0;
-					boolValue = false;
-					secs = 0;
+					tt                   = LEX_TOKEN_ERROR;
+					factor               = Value::NO_FACTOR;
+					intValue             = 0;
+					realValue            = 0.0;
+					boolValue            = false;
+					relative_secs        = 0;
+					absolute_secs.secs   = 0;
+					absolute_secs.offset = 0;
 				}
 
 				~TokenValue( ) {
@@ -123,12 +125,12 @@ class Lexer
 					strValue = str;
 				}
 
-				void SetAbsTimeValue( time_t asecs ) {
-					secs = asecs;
+				void SetAbsTimeValue( abstime_t asecs ) {
+					absolute_secs = asecs;
 				}
 
 				void SetRelTimeValue( time_t rsecs ) {
-					secs = rsecs;
+					relative_secs = rsecs;
 				}
 
 				TokenType GetTokenType( ) {
@@ -153,12 +155,12 @@ class Lexer
 					str = strValue;	
 				}	
 
-				void GetAbsTimeValue( time_t& asecs ) {
-					asecs = secs;
+				void GetAbsTimeValue( abstime_t& asecs ) {
+					asecs = absolute_secs;
 				}
 
 				void GetRelTimeValue( time_t& rsecs ) {
-					rsecs = secs;
+					rsecs = relative_secs;
 				}
 
 				void CopyFrom( TokenValue &tv ) {
@@ -167,7 +169,8 @@ class Lexer
 					intValue = tv.intValue;
 					realValue = tv.realValue;
 					boolValue = tv.boolValue;
-					secs = tv.secs;
+					relative_secs = tv.relative_secs;
+					absolute_secs = tv.absolute_secs;
 					strValue = tv.strValue;
 				}
 					
@@ -178,7 +181,8 @@ class Lexer
 				double 				realValue;
 				bool 				boolValue;
 				std::string			strValue;
-				time_t				secs;
+				time_t				relative_secs;
+				abstime_t           absolute_secs;
 		};
 
 		// ctor/dtor
@@ -195,6 +199,12 @@ class Lexer
 		// the 'extract token' functions
 		TokenType PeekToken( TokenValue* = 0 );
 		TokenType ConsumeToken( TokenValue* = 0 );
+
+		/* This converts a string so that sequences like \t
+		 * (two-characters, slash and t) are converted into the 
+		 * correct characters like tab. It also converts octal sequences. 
+		 */
+		 static void convert_escapes(std::string &text, bool &validStr); 
 
 		// internal buffer for token accumulation
 		std::string lexBuffer;					    // the buffer itselfw
@@ -233,14 +243,8 @@ class Lexer
 		// to tokenize the various tokens
 		int 		tokenizeNumber (void);		// integer or real
 		int 		tokenizeAlphaHead (void);	// identifiers/reserved strings
-		int 		tokenizeStringLiteral(void);// string constants
-		int			tokenizeTime( void );		// time (absolute and relative)
 		int 		tokenizePunctOperator(void);// punctuation and operators
-
-		static bool tokenizeRelativeTime(const char*,time_t&);// relative time
-		static bool tokenizeAbsoluteTime(const char*,time_t&);// absolute time
-
-		void convert_escapes(std::string &text);
+		int         tokenizeString(char delim);//string constants
 };
 
 END_NAMESPACE // classad
