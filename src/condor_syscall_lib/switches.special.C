@@ -114,6 +114,20 @@ struct condor_kernel_dirent {
 	char            d_name[256]; 
 };
 
+/* This is an annoying little variable that exists in glibc 2.2.4(redhat 7.1),
+	but not in glibc 2.1.3(redhat 6.2). In glibc 2.2.4, it is labeled as a C
+	linker type meaning if no other definition of this variable is found first,
+	the use the first C definition as the actual definition, and make all other
+	C definitions of this variable in other .o files a U. It turned out 
+	that the first definition of this variable was in getdents.o in libc,
+	so something somewhere would bring it in and then cause a multiply defined
+	linker error concerning the getdents family of functions we define here, 
+	and the getdents family of functions in the libc. Even though this is
+	defined under redhat 6.2 compilation, it should have no effect there.
+	Also, C type variables are supposed to be uninitialized so this appears to
+	be a safe thing to do by defining it here. -psilord 01/24/2002 */
+int __have_no_getdents64; 
+
 extern "C" int REMOTE_CONDOR_getdents( int, struct dirent*, size_t);
 extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 {
