@@ -64,7 +64,7 @@ install:: libclassad.a test_classads
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy
-	rm -f test_classads test_classads.pure test_xml sameple libclassad.a
+	rm -f test_classads test_classads.pure test_xml sample libclassad.a
 tidy:
 	rm -f *.o *~ *.bak
 
