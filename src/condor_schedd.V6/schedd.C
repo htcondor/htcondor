@@ -1891,8 +1891,15 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 	int i;
 	ExtArray<PROC_ID> **tjobs = ( ExtArray<PROC_ID> **) arg;
 	ExtArray<PROC_ID> *jobs = *tjobs;
+	int old_timeout;
 
 	int cluster, proc;
+	
+	/* Setup a large timeout; when lots of jobs are being submitted w/ 
+	 * large sandboxes, the default is WAY to small...
+	 */
+	old_timeout = s->timeout(60 * 60 * 8);  
+
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
 	for (i=0; i<JobAdsArrayLen; i++) {
@@ -1904,6 +1911,7 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 			dprintf( D_ALWAYS, "spoolJobFiles(): "
 					 "job ad %d.%d not found\n",cluster,proc );
 			refuse(s);
+			s->timeout(old_timeout);
 			return FALSE;
 		} else {
 			dprintf(D_FULLDEBUG,"spoolJobFiles(): "
@@ -1914,6 +1922,7 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
 			refuse(s);
+			s->timeout(old_timeout);
 			return FALSE;
 		}
 		if ( !ftrans.DownloadFiles() ) {
@@ -1921,6 +1930,7 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
 			refuse(s);
+			s->timeout(old_timeout);
 			return FALSE;
 		}
 	}	
@@ -1932,6 +1942,7 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 	int answer = OK;
 	rsock->code(answer);
 	rsock->eom();
+	s->timeout(old_timeout);
 
 	return TRUE;
 }

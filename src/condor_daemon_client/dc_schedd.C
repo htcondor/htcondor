@@ -193,7 +193,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 		// On the wire protocol
 		// // // // // // // //
 
-	rsock.timeout(20);   // years of research... :)
+	rsock.timeout(60*60*8);   // years of research... :)
 	if( ! rsock.connect(_addr) ) {
 		dprintf( D_ALWAYS, "DCSchedd::spoolJobFiles: "
 				 "Failed to connect to schedd (%s)\n", _addr );
@@ -363,7 +363,7 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 	CondorError errstack;
 	if (!forceAuthentication( &rsock, &errstack )) {
 		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack.get_full_text());
-		return false;
+		return NULL;
 	}
 
 		// Now, put the command classad on the wire
