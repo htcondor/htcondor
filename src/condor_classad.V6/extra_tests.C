@@ -23,8 +23,8 @@
 // This is a program that does a bunch of testing that is easier to do
 // without user input, like in test_classads.
 
-#define ALLOW_CHAINING
 #include "classad_distribution.h"
+#include "classad_features.h"
 #include "lexerSource.h"
 #include <fstream.h>
 #include <iostream>
@@ -67,6 +67,12 @@ static void check_classad_b(ClassAd *classad);
 
 static void test_chaining(void);
 static void test_dirty(void);
+static void test_user_functions(void);
+static bool triple(
+	const char         *name,
+	const ArgumentList &arguments,
+	EvalState          &state,
+	Value              &result);
 
 /*********************************************************************
  *
@@ -80,6 +86,7 @@ main(int argc, char **argv)
 	test_parsing();
 	test_chaining();
 	test_dirty();
+	test_user_functions();
 	return 0;
 }
 
@@ -543,3 +550,130 @@ static void test_dirty(void)
 
 	return;
 }
+
+static void test_user_functions(void)
+{
+	string name = "triple";
+	string classad_text = "[ Test1 = 3 + triple(9); Test2 = 3 + double(9) ]";
+	ClassAd        *classad;
+	ClassAdParser  parser;
+
+	cout << "Testing user functions...\n";
+
+	FunctionCall::RegisterFunction(name, triple);
+
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+	bool opened_library;
+	char path[10240];
+	string libname;
+	path[0] = 0;
+	getcwd(path, 10239);
+	libname = path;
+	libname += "/libshared.so";
+	opened_library = FunctionCall::RegisterSharedLibraryFunctions(libname.c_str());
+	if (!opened_library) {
+		cout << "  Failed to open libshared.so: " << CondorErrMsg << endl;
+	}
+#endif
+
+	classad = parser.ParseClassAd(classad_text);
+	if (classad == NULL) {
+		cout << "  Failed to parse ClassAd in test_internal_user_function().\n";
+		exit(1);
+	}
+
+	int test;
+	if (!classad->EvaluateAttrInt("Test1", test) || test != 30) {
+		cout << "  Failed: Couldn't evaluate internal user function triple correctly.";
+	} else {
+		cout << "  OK: Evaluated internal user function triple (";
+		cout << test << ") correctly.\n";
+	}
+
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+	if (opened_library) {
+		// The library defines triple, but it shouldn't be allowed to
+		// overwrite the original defintion, so we verify that the
+		// result hasn't changed.
+		if (!classad->EvaluateAttrInt("Test1", test) || test != 30) {
+			cout << "  Failed: Couldn't evaluate internal user function triple correctly."
+				 << endl;
+		} else {
+			cout << "  OK: Evaluated internal user function triple (";
+			cout << test << ") correctly.\n";
+		}
+
+		// Then we test the function that comes from the shared library.
+		if (!classad->EvaluateAttrInt("Test2", test) || test != 21) {
+			cout << "  Failed: Couldn't evaluate internal user function double " 
+				 << " (" << test << ") correctly." << endl;
+			if (!classad->EvaluateAttrInt("Test2", test)) {
+				cout << "  Couldn't even evaluate it correctly." << endl;
+			}
+		} else {
+			cout << "  OK: Evaluated internal user function double (";
+			cout << test << ") correctly.\n";
+		}
+		
+	}
+#endif
+	
+	return;
+}
+
+
+static bool triple(
+	const char         *name,
+	const ArgumentList &arguments,
+	EvalState          &state,
+	Value              &result)
+{
+	Value	arg;
+	
+	// takes exactly one argument
+	if( arguments.size() > 1 ) {
+		result.SetErrorValue( );
+		return true;
+	}
+	if( !arguments[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return false;
+	}
+
+	switch( arg.GetType( ) ) {
+		case Value::UNDEFINED_VALUE:
+			result.SetUndefinedValue( );
+			return true;
+
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+		case Value::STRING_VALUE:
+		case Value::ABSOLUTE_TIME_VALUE:
+		case Value::RELATIVE_TIME_VALUE:
+		case Value::BOOLEAN_VALUE:
+			result.SetErrorValue( );
+			return true;
+
+		case Value::INTEGER_VALUE:
+			int int_value;
+
+			arg.IsIntegerValue(int_value);
+			result.SetIntegerValue(3 * int_value);
+			return true;
+
+		case Value::REAL_VALUE:
+			{
+				double real_value;
+				arg.IsRealValue( real_value );
+				result.SetRealValue(3 * real_value);
+				return true;
+			}
+		
+		default:
+			return false;
+	}
+
+	return false;
+}
+
