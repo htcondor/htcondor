@@ -52,7 +52,20 @@ DEPS(job_core_bigenv_sched,job_core_bigenv.exe)
 RUN(job_core_bigenv_sched)
 TESTCLASS(job_core_bigenv_sched,env)
 
-
+/* NOTE: we want this test in the top-level, even though we're linking
+   it for standard universe, since we really don't care about
+   different compilers for this one... we just need to see how the
+   starter/shadow behave when we drop a core file
+*/
+CBUILD($(CC),job_core_coredump,c)
+DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
+DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
+RUN(job_core_coredump_std)
+TESTCLASS(job_core_coredump_std,quick)
+DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
+DEPS(job_core_coredump_van,job_core_coredump.exe)
+RUN(job_core_coredump_van)
+TESTCLASS(job_core_coredump_van,quick)
 
 
 /************************************************************************
