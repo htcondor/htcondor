@@ -99,4 +99,4 @@ protected:
 	int Requested_Exit;
 };
 
-#endif
+#endif /* _CONDOR_USER_PROC_H */
