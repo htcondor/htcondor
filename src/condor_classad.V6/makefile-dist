@@ -12,7 +12,7 @@ BIN_INSTALL = $(INSTALL_DIR)/bin
 INCLUDE_INSTALL = $(INSTALL_DIR)/include
 
 CPlusPlus = g++
-C_PLUS_FLAGS = -Wall -g -DCLASSAD_DISTRIBUTION
+C_PLUS_FLAGS = $(EXTRA_C_PLUS_FLAGS) -Wall -g -DCLASSAD_DISTRIBUTION 
 INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
 NO_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
 PURIFY = purify -g++=yes -chain-length=35 $(CPlusPlus)
