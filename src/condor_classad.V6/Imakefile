@@ -89,7 +89,7 @@ DISTRIBUTION_DIR = classads_0.9.5-beta
 
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h collection.C		\
 collection.h collectionBase.C collectionBase.h common.h classadErrno.h	\
-classadItor.h debug.C debug.h exprList.C exprList.h exprTree.C			\
+classadItor.h cxi.C debug.C debug.h exprList.C exprList.h exprTree.C	\
 exprTree.h extra_tests.C fnCall.C fnCall.h indexfile.h indexfile.C		\
 instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
 literals.C literals.h matchClassad.C matchClassad.h operators.C			\
