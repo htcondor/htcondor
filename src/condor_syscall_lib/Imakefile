@@ -504,10 +504,11 @@ static_copy_target(condor_rt0.o,$(STATIC_DIR)/lib,condor_rt0.o,OBJECT_MODE)
 clean::
 	rm -f libcondorsyscall.a
 
-libcondorsyscall.a: libtmp.a ToUpper
 #   if (IS_X86_SOLARIS)
+libcondorsyscall.a: libtmp.a ToUpper
 	./ToUpper libtmp.a libcondorsyscall.a __cerror __CERROR
 #   else /* GLIBC Linux */
+libcondorsyscall.a: libtmp.a ToUpper
 	./ToUpper libtmp.a libcondorsyscall.a __syscall_error __SYSCALL_ERROR
 #   endif /* Solaris */
 #else /* Not GLIBC Linux or Intel Solaris */
