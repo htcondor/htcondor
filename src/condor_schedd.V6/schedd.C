@@ -346,13 +346,22 @@ Scheduler::count_jobs()
 
 	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
 						 COLLECTOR_UDP_COMM_PORT);
+
+	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
+			   Owners[i].Name, UidDomain );
+
 	  // condor view uses the acct port - because the accountant today is not
 	  // an independant daemon. In the future condor view will be the
 	  // accountant
-	  update_central_mgr(UPDATE_SUBMITTOR_AD, CondorViewHost,
-						 CONDOR_VIEW_PORT);
-	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-			   Owners[i].Name, UidDomain );
+
+		  // The CondorViewHost MAY BE NULL!!!!!  It's optional
+		  // whether you define it or not.  This will cause a seg
+		  // fault if we assume it's defined and use it.  
+		  // -Derek Wright 11/4/98 
+	  if( CondorViewHost ) {
+		  update_central_mgr( UPDATE_SUBMITTOR_AD, CondorViewHost,
+							  CONDOR_VIEW_PORT );
+	  }
 
 	  // Request matches from other pools if FlockLevel > 0
 	  if (FlockHosts && FlockLevel > 0) {
@@ -537,13 +546,19 @@ Scheduler::insert_owner(char* owner)
 void
 Scheduler::update_central_mgr(int command, char *host, int port)
 {
+	// If the host we're given is NULL, just return, don't seg fault. 
+	if( !host ) {
+		return;
+	}
 	SafeSock	sock(host, port);
+	sock.timeout( 30 );
 	sock.encode();
-	if (!sock.put(command) ||
+	if( !sock.put(command) ||
 		!ad->put(sock) ||
-		!sock.end_of_message())
-		dprintf(D_ALWAYS, "failed to update central manager (%s)!\n",
-				host);
+		!sock.end_of_message() ) {
+		dprintf( D_ALWAYS, "failed to update central manager (%s)!\n",
+				 host );
+	}
 }
 
 static int IsSchedulerUniverse(shadow_rec* srec);
