@@ -1725,6 +1725,12 @@ SetStdFile( int which_file )
 	}
 
 	macro_value = condor_param( generic_name, NULL );
+
+	/* Globus jobs are allowed to specify urls */
+	if(JobUniverse == CONDOR_UNIVERSE_GLOBUS && is_globus_friendly_url(macro_value)) {
+		transfer_it = false;
+		stream_it = false;
+	}
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
@@ -1749,7 +1755,6 @@ SetStdFile( int which_file )
 		macro_value = strdup(tmp.Value());
 	}
 	
-
 	switch( which_file ) 
 	{
 	case 0:
