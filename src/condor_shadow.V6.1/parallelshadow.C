@@ -306,7 +306,7 @@ ParallelShadow::startMaster()
         // set permissions on the jobad file:
 #ifdef WIN32
 	perm p;
-	if ( p.set_acls(jobadfile) < 0 ) { // sets 'Full' permissions on file
+	if ( !p.set_acls(jobadfile) ) { // sets 'Full' permissions on file
 		  dprintf(D_ALWAYS, "perm::set_acls() failed!\n");
 #else
 	if ( fchmod(fileno(ja), 0666) < 0 ) {

@@ -25,6 +25,8 @@
 
 #ifdef WIN32
 #include <aclapi.h>
+
+bool SetPrivilege(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivilege);
 #endif
 
 #define MAX_DOMAIN_LENGTH 254	// max string length 
@@ -42,7 +44,7 @@ public:
 	
 	// On Unix, make everything a stub saying sucesss
 
-	bool init ( const char *username, char *domain = 0 ) { return true;}
+	bool init ( const char *username, const char *domain = 0 ) { return true;}
 	int read_access( const char *filename ) { return 1; }
 	int write_access( const char *filename ) { return 1; }
 	int execute_access( const char *filename ) { return 1; }
@@ -52,13 +54,16 @@ public:
 
 	// Windows
 	
-	bool init ( const char *username, char *domain = 0 );
+	bool init ( const char *username, const char *domain = 0 );
 
 	// External functions to ask permissions questions: 1 = true, 0 = false, -1 = unknown
 	int read_access( const char *filename );
 	int write_access( const char *filename );
 	int execute_access( const char *filename );
-	int set_acls( const char *location );
+
+	// returns true on success
+	bool set_acls( const char *location );
+	bool set_owner( const char *location );
 
 protected:
 	int get_permissions( const char *location, ACCESS_MASK &rights );
