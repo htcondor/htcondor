@@ -30,6 +30,7 @@
 #define HAS_VOID_SIGNAL_RETURN	YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		NO
+#define HAS_CP_PRESERVE         YES
 #define NEEDS_SPECIAL_SETJMP	NO
 #define HAS_FORTRAN				YES
 #define HAS_FLOCK				YES
@@ -68,7 +69,7 @@
 #endif Ctags
 
 #ifndef MkDepend
-#define MkDepend $(TOP)/GENERIC/mdepend.sh
+#define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
 
 #define TypicalMemory 12

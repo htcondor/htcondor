@@ -76,7 +76,7 @@
 #endif Ctags
 
 #ifndef MkDepend
-#define MkDepend Tilde/CONDOR/GENERIC/mdepend.sh
+#define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
 
 #define TypicalMemory 12

@@ -67,7 +67,7 @@
 #endif Ctags
 
 #ifndef MkDepend
-#define MkDepend $(TOP)/GENERIC/mdepend.sh
+#define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
 
 
