@@ -28,7 +28,9 @@
 #include "globus_utils.h"
 
 #if defined(CONDOR_GSI)
-#   include "sslutils.h"
+#     include "globus_gsi_credential.h"
+#     include "globus_gsi_system_config.h"
+#     include "globus_gsi_system_config_constants.h"
 #endif
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
@@ -81,7 +83,13 @@ get_x509_proxy_filename()
 {
 	char *proxy_file = NULL;
 #if defined(CONDOR_GSI)
-	proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
+    globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
+
+    globus_module_activate(GLOBUS_GSI_SYSCONFIG_MODULE);
+
+    if (!GLOBUS_GSI_SYSCONFIG_GET_PROXY_FILENAME(&proxy_file, file_type)) {
+        _globus_error_message = "unable to locate proxy file";
+    }
 #endif
 	return proxy_file;
 }
@@ -98,69 +106,79 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 	return -1;
 #else
 
-	proxy_cred_desc *pcd = NULL;
-	time_t time_after;
+    globus_gsi_cred_handle_t         handle       = NULL;
+    globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+    time_t time_after;
 	time_t time_now;
 	time_t time_diff;
 	ASN1_UTCTIME *asn1_time = NULL;
-	struct stat stx;
-	int result;
+	int result = -1;
 	int must_free_proxy_file = FALSE;
 
-	/* initialize SSLeay and the error strings */
-	ERR_load_prxyerr_strings(0);
-	SSLeay_add_ssl_algorithms();
+    globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE);
 
-    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
+    if (!globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+        _globus_error_message = "problem during internal initialization";
+        goto cleanup;
+    }
 
-	if (!pcd) {
-		_globus_error_message = "problem during internal initialization";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
+    if (!globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+        _globus_error_message = "problem during internal initialization";
+        goto cleanup;
+    }
 
-	/* Load proxy */
-	if (!proxy_file)  {
-		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+    /* Check for proxy file */
+    if (proxy_file == NULL) {
+        proxy_file = get_x509_proxy_filename();
+        if (proxy_file == NULL) {
+            goto cleanup;
+        }
 		must_free_proxy_file = TRUE;
-	}
+    }
 
-	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
-		_globus_error_message = "unable to find proxy file";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
-
-	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
-		_globus_error_message = "unable to load proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
-
-	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
-		_globus_error_message = "unable to load public key from proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
+    // We should have a proxy file, now, try to read it
+    if (!globus_gsi_cred_read_proxy(handle, proxy_file)) {
+       _globus_error_message = "unable to read proxy file";
+       goto cleanup;
+    }
 
 	/* validity: set time_diff to time to expiration (in seconds) */
 	asn1_time = ASN1_UTCTIME_new();
 	X509_gmtime_adj(asn1_time,0);
-	time_now = ASN1_UTCTIME_mktime(asn1_time);
-	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
+	
+    if (!globus_gsi_cert_utils_make_time(asn1_time, &time_now)) {
+        goto cleanup;
+    }
+
+	if (!globus_gsi_cred_get_goodtill(handle, &time_after)) {
+        goto cleanup;
+    }
+
 	time_diff = time_after - time_now ;
-	ASN1_UTCTIME_free( asn1_time );
 
 	if ( time_diff < 0 ) {
 		time_diff = 0;
 	}
 
-
 	result = (int) time_diff;
 
-	if ( must_free_proxy_file ) free(proxy_file);
-    
-    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
+    globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
+
+ cleanup:
+    if (must_free_proxy_file) {
+        free(proxy_file);
+    }
+    if (asn1_time) {
+       	ASN1_UTCTIME_free( asn1_time ); 
+    }
+
+    if (handle_attrs) {
+        globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+    }
+
+    if (handle) {
+        globus_gsi_cred_handle_destroy(handle);
+    }
 
 	return result;
 
