@@ -1071,6 +1071,18 @@ ResMgr::compute( amask_t how_much )
 
 
 void
+ResMgr::publish( ClassAd* cp, amask_t how_much )
+{
+	char line[100];
+
+	if( IS_UPDATE(how_much) && IS_PUBLIC(how_much) ) {
+		sprintf( line, "%s=%d", ATTR_TOTAL_VIRTUAL_MACHINES, num_vms() );
+		cp->Insert( line ); 
+	}
+}
+
+
+void
 ResMgr::assign_load( void )
 {
 	if( ! resources ) {
