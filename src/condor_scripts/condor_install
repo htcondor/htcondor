@@ -1204,7 +1204,7 @@ sub configure_full_install {
 		    die "Can't create $local_dir: $!\n";
 		print "\nUsing $local_dir/[hostname] as the local ",
 		"directory for each host.\n";
-		$local_dir_str = "\$(RELEASE_DIR/hosts/\$(HOSTNAME)";
+		$local_dir_str = "\$(RELEASE_DIR)/hosts/\$(HOSTNAME)";
 		$has_mach = 1;
 		$needs_lock=1;
 	    }
