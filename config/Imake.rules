@@ -1182,7 +1182,7 @@ XCOMM Begin translation of func(CBUILD_DEP) @@\
 name.ext:: x_fake_ckpt.h	@@\
 DEP_SYMLINK_EXT(name,ext)		@@\
 CLINK(cmplr,name,name.o dep)		@@\
-CLINK_NOSTD(cmplr,name,dep name.o)	@@\
+CLINK_NOSTD(cmplr,name,name.o dep)	@@\
 XCOMM End translation of func(CBUILD_DEP)
 #endif /* CBUILD_DEP */
 
