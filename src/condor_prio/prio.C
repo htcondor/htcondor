@@ -26,7 +26,7 @@
 **
 */ 
 
-#if defined(Solaris)
+#if defined(Solaris) && !defined(Solaris251)
 #include "condor_fix_timeval.h"
 #include </usr/ucbinclude/sys/rusage.h>
 #endif
