@@ -88,7 +88,7 @@ GETMNT_OBJ = getmnt.o
 	my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
 	sig_install.c internet.c startup_info.c get_random_num.c escapes.c\
 	ckpt_util.c fdprintf.c setsyscalls.c sleep.c basename.c \
-	strcmp_until.c \
+	strcmp_until.c rotate_file.c \
 	stub_gen_lex.l \
 	stub_gen_yacc.y \
 
@@ -105,7 +105,7 @@ GETMNT_OBJ = getmnt.o
 	$(GETWD_OBJ) $(INSQUE_OBJ) env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
-	ckpt_util.o get_random_num.o fdprintf.o \
+	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o
 
 all_target( util_lib.a stub_gen )
