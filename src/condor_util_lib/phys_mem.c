@@ -189,6 +189,43 @@ calc_phys_memory()
  
         return (int)((pages * pagesz) / 1048576);
 }
+#elif defined(LINUX)
+#include <stdio.h>
+
+int calc_phys_memory() 
+{	
+
+	FILE        *proc;
+	long        phys_mem;
+	char        tmp_c[20];
+	long        tmp_l;
+	char   		c;
+
+	proc=fopen("/proc/meminfo","r");
+	if(!proc) {
+		return -1;
+	}
+
+	  /*
+	  // The /proc/meminfo looks something like this:
+
+	  //       total:    used:    free:  shared: buffers:  cached:
+	  //Mem:  19578880 19374080   204800  7671808  1191936  8253440
+	  //Swap: 42831872  8368128 34463744
+	  //MemTotal:     19120 kB
+	  //MemFree:        200 kB
+	  //MemShared:     7492 kB
+	  //Buffers:       1164 kB
+	  //Cached:        8060 kB
+	  //SwapTotal:    41828 kB
+	  //SwapFree:     33656 kB
+	  */	  
+	while((c=fgetc(proc))!='\n');
+	fscanf(proc, "%s %d", tmp_c, &phys_mem);
+	fclose(proc);
+	return (int)(phys_mem/(1024000));
+}
+
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
