@@ -58,7 +58,6 @@ enum Command
     cmd_Sameq,
     cmd_Diff,
     cmd_Diffq,
-    cmd_SameRep,
     cmd_Set,
     cmd_Show,
     cmd_Writexml,
@@ -130,7 +129,6 @@ void handle_same(string &line, State &state, Parameters &parameters);
 void handle_sameq(string &line, State &state, Parameters &parameters);
 void handle_diff(string &line, State &state, Parameters &parameters);
 void handle_diffq(string &line, State &state, Parameters &parameters);
-void handle_samerep(string &line, State &state, Parameters &parameters);
 void handle_set(string &line, State &state, Parameters &parameters);
 void handle_show(string &line, State &state, Parameters &parameters);
 void handle_writexml(string &line, State &state, Parameters &parameters);
@@ -580,8 +578,6 @@ Command get_command(
         command = cmd_Diff;
     } else if (command_name == "diffq") {
         command = cmd_Diffq;
-    } else if (command_name == "samerep") {
-        command = cmd_SameRep;
     } else if (command_name == "set") {
         command = cmd_Set;
     } else if (command_name == "show") {
@@ -644,9 +640,6 @@ bool handle_command(
         break;
     case cmd_Diffq:
         handle_diffq(line, state, parameters);
-        break;
-    case cmd_SameRep:
-        handle_samerep(line, state, parameters);
         break;
     case cmd_Set:
         handle_set(line, state, parameters);
@@ -879,67 +872,6 @@ void handle_diffq(
     if (tree != NULL || tree2 != NULL) {
         if (tree->SameAs(tree2)) {
             print_error_message("the expressions are the same.", state);
-        }
-    }
-    if (tree != NULL) {
-        delete tree;
-    }
-    if (tree2 != NULL) {
-        delete tree2;
-    }
-    return;
-}
-
-/*********************************************************************
- *
- * Function: handle_samerep
- * Purpose:  
- *
- *********************************************************************/
-void handle_samerep(
-    string     &line, 
-    State      &state, 
-    Parameters &parameters)
-{
-    ExprTree  *tree, *tree2;
-
-    get_two_exprs(line, tree, tree2, state, parameters);
-    if (tree != NULL || tree2 != NULL) {
-        Value value1, value2;
-
-        if (!evaluate_expr(tree, value1, parameters)) {
-            print_error_message("Couldn't evaluate first expression.\n", state);
-        } else if (!evaluate_expr(tree2, value2, parameters)) {
-            print_error_message("Couldn't evaluate second expressions.\n", state);
-        } else if (!value2.IsStringValue()) {
-            print_error_message("Second expression does not evaluate to a string.\n", state);
-        } else {
-            ClassAdUnParser unparser;
-            string rep1, rep2;
-            
-            unparser.Unparse(rep1, value1);
-            unparser.Unparse(rep2, value2);
-
-            if (!value1.IsStringValue()) {
-                bool is_valid;
-                // Surround it by quotes, like the string we have
-                rep1 = '"' + rep1 + '"';
-                rep2 += ' ';
-                // Change the string to get rid of \"
-                convert_escapes(rep2, is_valid);
-            }
-            
-            if (rep1 != rep2) {
-                string error;
-                error =  "The two expressions do not print identically.\n";
-                error += "    1: ";
-                error += rep1;
-                error += '\n';
-                error += "    2: ";
-                error += rep2;
-                error += '\n';
-            print_error_message(error, state);
-            }
         }
     }
     if (tree != NULL) {
