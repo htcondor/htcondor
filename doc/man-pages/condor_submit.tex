@@ -465,6 +465,9 @@ an image size of 8 megabytes, use a \Arg{size} of 8000.
 %%%%%%%%%%%%%%%%%%%
 
 \item[machine\_count = $<$min..max$>$ \Bar\ $<$max$>$] 
+For the PVM universe,
+both \Arg{min} and \Arg{max} or just
+\Arg{max} may be defined. 
 If \Opt{machine\_count} is
 specified, Condor will not start the job until it can simultaneously
 supply the job with \Arg{min} machines.  Condor will continue to try 
@@ -473,9 +476,10 @@ to \Arg{max} machines, but will not delay starting of the job to do so.
 If the job is started with fewer than \Arg{max} machines, the job
 will be notified via a usual PvmHostAdd notification as additional
 hosts come on line.
-\textbf{Important:} only use \Opt{machine\_count} if an only if
-submitting into the PVM or MPI Universes.  Use min..max for the PVM
-universe, and just max for the MPI universe.
+
+For the MPI universe, a single value (\Arg{max}) is required.
+It is neither a maximum or minimum, but 
+the number of machines to be dedicated towards running the job.
 
 %%%%%%%%%%%%%%%%%%%
 %% coresize
@@ -796,7 +800,9 @@ defined by lines in the form of
 \begin{verbatim} 
         <macro_name> = <string> 
 \end{verbatim} 
-Two pre-defined macros are supplied by the submit description file parser.
+Three pre-defined macros are supplied by the submit description file parser.
+The third of the pre-defined macros is only relevant to MPI universe
+jobs.
 The
 \MacroU{Cluster} macro supplies the number of the job cluster, and the
 \MacroU{Process} macro supplies the number of the job. These macros are
@@ -804,6 +810,11 @@ intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
 line.  The \MacroU{Process} macro should not be used for PVM jobs.
+The 
+\MacroU{Node} macro is defined only for MPI universe jobs.
+It is a unique value assigned for the duration of the job
+that essentially identifies the machine on which a program is
+executing.
 
 If the dollar sign (``\$'') is desired as a literal character,
 then use
