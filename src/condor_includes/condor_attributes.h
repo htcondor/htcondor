@@ -113,6 +113,7 @@ const char ATTR_HELD_JOBS				 [] = "HeldJobs";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
 const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
 const char ATTR_IS_OWNER                 [] = "IsOwner";
+const char ATTR_IS_QUEUE_SUPER_USER      [] = "IsQueueSuperUser";
 const char ATTR_INACTIVE                 [] = "Inactive";
 const char ATTR_JAR_FILES                [] = "JarFiles";
 const char ATTR_JAVA_MFLOPS              [] = "JavaMFlops";
