@@ -23,44 +23,8 @@
 
 #include "condor_common.h"
 #include "url_condor.h"
+#include "internet.h"
 #include "condor_debug.h"
-
-
-/* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  JCP */
-
-int
-string_to_sin(char *string, struct sockaddr_in *sin)
-{
-	int             i;
-	char    *cur_byte;
-	char    *end_string;
-
-	string++;					/* skip the leading '<' */
-	cur_byte = (char *) &(sin->sin_addr);
-	for(end_string = string; end_string != 0; ) {
-		end_string = (char *)strchr((const char *)string, '.');
-		if (end_string == 0) {
-			end_string = (char *)strchr((const char *)string, ':');
-		}
-		if (end_string) {
-			*end_string = '\0';
-			*cur_byte = atoi(string);
-			cur_byte++;
-			string = end_string + 1;
-			*end_string = '.';
-		}
-	}
-	
-	end_string = (char *)strchr((const char *)string, '>');
-	if (end_string) {
-		*end_string = '\0';
-	}
-	sin->sin_port = htons(atoi(string));
-	if (end_string) {
-		*end_string = '>';
-	}
-}
-
 
 int condor_bytes_stream_open_ckpt_file( const char *name, int flags, 
 									   size_t n_bytes )
@@ -77,6 +41,12 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 		fflush(stderr);
 		return sock_fd;
 	}
+
+	if( ! _condor_local_bind(sock_fd) ) {
+		close( sock_fd );
+		return -1;
+	}
+
 	sin.sin_family = AF_INET;
 	status = connect(sock_fd, (struct sockaddr *) &sin, sizeof(sin));
 	if (status < 0) {
