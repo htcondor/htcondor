@@ -35,7 +35,7 @@ PVM_LIBRARY = pvmd
 
 
 #define Directories release_dir release_dir/bin release_dir/lib
-all: makefiles Directories Libraries Programs
+all: h makefiles Directories Libraries Programs
 release:: all
 
 #if IS_V5
@@ -106,4 +106,8 @@ object_target(scripts)
 check_platform_target
 
 clean::
+	cd h; make clean
 	rm -rf Makefile */Makefile release_dir
+
+h: ALWAYS
+	cd h; imake -I../../config; make all
