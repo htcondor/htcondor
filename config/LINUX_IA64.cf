@@ -39,9 +39,9 @@
 
 #define IS_CLIPPED YES
 
-#define HAS_GLOBUS	NO
-#define HAS_GSI		NO
-#define HAS_OPENSSL NO
+/*#define HAS_GLOBUS	NO*/
+/*#define HAS_GSI		NO*/
+/*#define HAS_OPENSSL NO*/
 
 #undef  HAS_PVM
 #define HAS_PVM NO
@@ -51,15 +51,15 @@
 #undef GLOBUS_FLAVOR
 #define GLOBUS_FLAVOR gcc64dbg
 
-#undef OpenSSLPath
-#undef GlobusPath
-#undef GAHP_DIR
+/*#undef OpenSSLPath*/
+/*#undef GlobusPath*/
+/*#undef GAHP_DIR*/
 
-OpenSSLPath = /usr/uwglobus
-GlobusPath  = /usr/uwglobus
+/*OpenSSLPath = /usr/uwglobus*/
+/*GlobusPath  = /usr/uwglobus*/
 /*GAHP_DIR    = /p/condor/workspaces/epaulson/gahp/bin*/
 /*GAHP_DIR    = /home/psilord/v64/v64-dirty/src/gahp*/
-GAHP_DIR    = /usr/local/ia64-condor-build-support
+/*GAHP_DIR    = /usr/local/ia64-condor-build-support*/
 
 
 
