@@ -867,6 +867,10 @@ Scheduler::negotiate(int, Stream* s)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
+	if (!FlockHosts) {
+		reschedule_request_pending = false;
+	}
+
 	if (FlockHosts) {
 		// first, check if this is our local negotiator
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
@@ -879,8 +883,9 @@ Scheduler::negotiate(int, Stream* s)
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
 					match = true;
 						// since we now know we have heard back from our 
-						// local negotiator, we must clear the reschedule_request_pending
-						// flag permit subsequent reschedule commands to occur.
+						// local negotiator, we must clear the 
+						// reschedule_request_pending flag to
+						// permit subsequent reschedule commands to occur.
 					reschedule_request_pending = false;
 				}
 			}
@@ -3399,13 +3404,13 @@ Scheduler::reschedule_negotiator(int, Stream *)
 {
 	int	  	cmd = RESCHEDULE;
 
-	dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	timeout();							// update the central manager now
 
 		// only send reschedule command to negotiator if there is not a
 		// reschedule request already pending.
 	if ( !reschedule_request_pending ) {
+		dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 		ReliSock sock;
 
 		if (!sock.connect(Negotiator->addr(), 0)) {
@@ -3425,6 +3430,8 @@ Scheduler::reschedule_negotiator(int, Stream *)
 				"failed to send RESCHEDULE command to negotiator\n");
 			return;
 		}
+	} else {
+		dprintf(D_ALWAYS,"reschedule requested -- already pending\n");
 	}
 
 		// if made it here, we have told to negotiator to contact us
