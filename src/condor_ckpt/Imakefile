@@ -110,9 +110,14 @@ OBJ =	syscall_mode.o shared_utils.o
 
 #endif
 
+
 #   if IS_EGCS_BUILD
-        CPP_SUPPORT_OBJ = c_plus_alloc.o _eh.o tinfo.o tinfo2.o \
-			  exception.o frame.o __dummy.o _pure.o
+
+		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
+			  exception.o frame.o __dummy.o _pure.o 
+
+        CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
+		
 #   else 
         CPP_SUPPORT_OBJ = c_plus_alloc.o pure_virtual.o
 #   endif
@@ -215,13 +220,7 @@ uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 
 
 #if IS_EGCS_BUILD
-obj_extract($(EGCS_LIBC),_eh.o) 
-obj_extract($(EGCS_LIBC),tinfo.o) 
-obj_extract($(EGCS_LIBC),tinfo2.o) 
-obj_extract($(EGCS_LIBC),__dummy.o) 
-obj_extract($(EGCS_LIBC),_pure.o) 
-obj_extract($(EGCS_LIBC),exception.o) 
-obj_extract($(EGCS_LIBC),frame.o) 
+obj_extract($(EGCS_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
 #endif
 
 #if IS_GLIBC_LINUX
