@@ -2,6 +2,10 @@
 #define _CLIENT_H
 
 #include "ios_common.h"
+#include "condor_common.h"
+#include "_condor_fix_types.h"
+#include <netinet/in.h>
+#include <unistd.h>
 
 #define DEFLT_MSG 1000
 
