@@ -1,0 +1,10 @@
+----------------------------------------------------------------------
+DEBUGGING
+----------------------------------------------------------------------
+
+For debugging the shadow, you can put: "ShadowWaitForDebug = 1" in
+your job ad.  If the shadow sees this attribute in the job ad, it will
+put itself into an infinite loop as soon as possible after getting the
+job ad from the schedd.  Then, you can attach with a debugger, set
+"shadow_should_wait" to 0, and continue.
+
