@@ -211,8 +211,8 @@ CStarter::StartJob()
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
 
-	char owner[128];
-	if ( jobAd->LookupString( ATTR_OWNER, owner ) != 1 ) {
+	char* owner = NULL;
+	if ( jobAd->LookupString( ATTR_OWNER, &owner ) != 1 ) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_OWNER );
 		return false;
@@ -233,6 +233,9 @@ CStarter::StartJob()
 	init_user_nobody_loginname(nobody_login);
 	init_user_ids("nobody");
 #endif
+
+		// deallocate owner string so we don't leak memory.
+	free( owner );
 
 		// Now that we have the right user for priv_state code, we can
 		// finally make the scratch execute directory for this job.
