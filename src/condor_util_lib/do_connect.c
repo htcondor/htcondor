@@ -151,6 +151,7 @@ int		timeout;
 
 udp_connect( host, port )
 char	*host;
+u_short port;
 {
 	int		sock;
 	struct sockaddr_in	sin;
