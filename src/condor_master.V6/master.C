@@ -274,6 +274,31 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	** most of the time.
 	*/
 	set_condor_euid();
+
+	for( ptr=argv+1; *ptr; ptr++ ) {
+		if( ptr[0][0] != '-' ) {
+			usage( argv[0] );
+		}
+		switch( ptr[0][1] ) {
+			case 'f':
+				Foreground++;
+				break;
+			case 't':
+				Termlog++;
+				break;
+			case 'n':
+				NotFlag++;
+				break;
+			default:
+				usage( argv[0] );
+		}
+	}
+
+	if( !Foreground ) {
+		if( fork() ) {
+			exit( 0 );
+		}
+	}
 	
 	// I moved these here because I might start config server earlier than any
 	// other daemon and if the config server dies it will kill the master if
@@ -360,24 +385,6 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	}
 	_EXCEPT_Cleanup = DoCleanup;
 
-	for( ptr=argv+1; *ptr; ptr++ ) {
-		if( ptr[0][0] != '-' ) {
-			usage( argv[0] );
-		}
-		switch( ptr[0][1] ) {
-			case 'f':
-				Foreground++;
-				break;
-			case 't':
-				Termlog++;
-				break;
-			case 'n':
-				NotFlag++;
-				break;
-			default:
-				usage( argv[0] );
-		}
-	}
 
 		/* This is so if we dump core it'll go in the log directory */
 	if( chdir(Log) < 0 ) {
@@ -410,11 +417,6 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	char*	log_file = daemons.DaemonLog(getpid());
 	get_lock( log_file);  
 
-	if( !Foreground ) {
-		if( fork() ) {
-			exit( 0 );
-		}
-	}
 
 
 	dprintf( D_ALWAYS,"*************************************************\n" );
