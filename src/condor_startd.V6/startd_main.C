@@ -574,7 +574,7 @@ main_shutdown_fast()
 		// various commands. 
 	resmgr->markShutdown();
 
-	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
 
@@ -598,7 +598,7 @@ main_shutdown_graceful()
 		// various commands. 
 	resmgr->markShutdown();
 
-	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
 
