@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#define EXPERIMENTAL
+
 #include "condor_common.h"
 #include "condor_config.h"
 //#include "condor_accountant.h"
@@ -215,12 +217,9 @@ int main (int argc, char **argv)
 	while ((ad = scheddList.Next()))
 	{
 		// get the address of the schedd
-//		if (!ad->LookupString(ATTR_SCHEDD_IP_ADDR, scheddAddr)	||
-//			!ad->LookupString(ATTR_NAME, scheddName)			||
-//			!ad->LookupString(ATTR_MACHINE, scheddMachine))
-		if( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddAddr, 64 ) 	||	// NAC
-			!ad->EvaluateAttrString( ATTR_NAME, scheddName, 64 )		    ||	// NAC
-			!ad->EvaluateAttrString( ATTR_MACHINE, scheddMachine, 64 ) ) {	  	// NAC
+		if( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddAddr, 64 )
+			|| !ad->EvaluateAttrString( ATTR_NAME, scheddName, 64 )
+			|| !ad->EvaluateAttrString( ATTR_MACHINE, scheddMachine, 64 ) ) {
 				continue;
 		}
 		
@@ -518,14 +517,10 @@ job_time(float cpu_time,ClassAd *ad)
 	float previous_runs = 0;
 	double previous_runsD;		// NAC
 
-//	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
-//	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
-//	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->EvaluateAttrInt( ATTR_JOB_STATUS, job_status);			// NAC
 	ad->EvaluateAttrInt( ATTR_SERVER_TIME, cur_time);			// NAC
 	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );	// NAC
 	if ( current_run == false ) {
-//		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 		ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runsD );
 		previous_runs = (float)previous_runsD;
 	}
@@ -578,19 +573,10 @@ buffer_io_display( ClassAd *ad )
 
 	char owner[256];
 
-//	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
-//	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
-//	ad->EvalString(ATTR_OWNER,NULL,owner);
 	ad->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );	// NAC
 	ad->EvaluateAttrInt( ATTR_PROC_ID, proc );			// NAC
 	ad->EvaluateAttrString( ATTR_OWNER, owner, 256 );	// NAC
 
-//  	ad->EvalFloat(ATTR_FILE_READ_BYTES,NULL,read_bytes);
-//  	ad->EvalFloat(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
-//  	ad->EvalFloat(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
-//  	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
-//  	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
-//  	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 	ad->EvaluateAttrReal( ATTR_FILE_READ_BYTES, read_bytesD );			// NAC
 	ad->EvaluateAttrReal( ATTR_FILE_WRITE_BYTES, write_bytesD );		// NAC
 	ad->EvaluateAttrReal( ATTR_FILE_SEEK_COUNT, seek_countD );			// NAC
@@ -635,19 +621,8 @@ bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
 	double utimeD;
-//	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
-//	char buffer[ATTRLIST_MAX_EXPRESSION];
 	char owner[64], cmd[10240], args[10240];
 	char buffer[10240];	
-//  	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
-//  		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
-//  		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)				||
-//  		!ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
-//  		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)		||
-//  		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)			||
-//  		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)	||
-//  		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
-//  		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
 	if (!ad->EvaluateAttrInt( ATTR_CLUSTER_ID,  cluster )			||	// NAC
 		!ad->EvaluateAttrInt( ATTR_PROC_ID,  proc )					||	// NAC
 		!ad->EvaluateAttrInt( ATTR_Q_DATE,  date )					||	// NAC
@@ -664,7 +639,6 @@ bufferJobShort( ClassAd *ad ) {
 	utime = (float)utimeD;
 
 	int niceUser;
-//    if( ad->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
     if( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
         char tmp[100];
         strncpy(tmp,NiceUserName,99);
@@ -674,7 +648,6 @@ bufferJobShort( ClassAd *ad ) {
     }
 
 	shorten (owner, 14);
-//	if (ad->EvalString ("Args", NULL, args)) {
 	if (ad->EvaluateAttrString ("Args", args, 10240 ) ) {
 		sprintf( buffer, "%s %s", basename(cmd), args );
 	} else {
@@ -729,8 +702,7 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 	char* tmp;
 
 	struct sockaddr_in sin;
-//	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
-	if ( ad->EvaluateAttrString( ATTR_REMOTE_HOST, result, MAXHOSTNAMELEN ) ) {	// NAC
+	if ( ad->EvaluateAttrString( ATTR_REMOTE_HOST, result, MAXHOSTNAMELEN ) ) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
@@ -742,7 +714,6 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 		return result;
 	} else {
 		int universe = STANDARD;
-//		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 		ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );	// NAC
 		if (universe == SCHED_UNIVERSE &&
 			string_to_sin(scheddAddr, &sin) == 1) {
@@ -754,8 +725,7 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 			}
 		} else if (universe == PVM) {
 			int current_hosts;
-//			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
-			if ( ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts ) ) {	// NAC
+			if ( ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts ) ) {
 				if (current_hosts == 1) {
 					sprintf(result, "1 host");
 				} else {
@@ -769,25 +739,18 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 }
 
 static char *
-//format_cpu_time (float utime, AttrList *ad)
 format_cpu_time ( float utime, ClassAd *ad )	// NAC
 {
-//	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 	return format_time( (int) job_time(utime, ad) );
 }
 
 static char *
-//format_goodput (int job_status, AttrList *ad)
 format_goodput ( int job_status, ClassAd *ad )	// NAC
 {
 	static char result[9];
 	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
 	float wall_clock = 0.0;
 	double wall_clockD;
-//	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
-//	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-//	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-//	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time );			// NAC
 	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
 	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
@@ -813,10 +776,6 @@ format_mbps (float bytes_sent, ClassAd *ad)
 	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
 	double wall_clockD, bytes_recvdD;	// NAC
-//  	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-//  	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-//  	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-//  	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	ad->EvaluateAttrReal( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clockD );	// NAC
 	ad->EvaluateAttrInt( ATTR_SHADOW_BIRTHDATE, shadow_bday );			// NAC
 	ad->EvaluateAttrInt( ATTR_LAST_CKPT_TIME, last_ckpt );				// NAC
@@ -826,7 +785,6 @@ format_mbps (float bytes_sent, ClassAd *ad)
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
-//  	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
 	ad->EvaluateAttrReal( ATTR_BYTES_RECVD, bytes_recvdD );				// NAC
 	bytes_recvd = (float)bytes_recvdD;									// NAC
 	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
@@ -836,12 +794,10 @@ format_mbps (float bytes_sent, ClassAd *ad)
 }
 
 static char *
-//format_cpu_util (float utime, AttrList *ad)
 format_cpu_util (float utime, ClassAd *ad)
 {
 	static char result[10];
 	int ckpt_time = 0;
-//	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	ad->EvaluateAttrInt( ATTR_JOB_COMMITTED_TIME, ckpt_time);	// NAC
 	if (ckpt_time == 0) return " [??????]";
 	float util = (ckpt_time) ? utime/ckpt_time*100.0 : 0.0;
@@ -852,13 +808,11 @@ format_cpu_util (float utime, ClassAd *ad)
 }
 
 static char *
-//format_owner (char *owner, AttrList *ad)
 format_owner (char *owner, ClassAd *ad)
 {
 	static char result[15];
 	int niceUser;
-//	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-	if ( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
+	if ( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {// NAC
 		char tmp[100];
 		strncpy(tmp,NiceUserName,99);
 		strcat(tmp, ".");
@@ -872,7 +826,6 @@ format_owner (char *owner, ClassAd *ad)
 
 
 static char *
-//format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 format_globusHostJMAndExec( char  *globusArgs, ClassAd * )
 {
 	static char result[64];
@@ -944,7 +897,6 @@ format_globusHostJMAndExec( char  *globusArgs, ClassAd * )
 
 
 static char *
-//format_q_date (int d, AttrList *)
 format_q_date (int d, ClassAd *)
 {
 	return format_date(d);
@@ -1129,8 +1081,6 @@ process_buffer_line( ClassAd *job )
 {
 	clusterProcString * tempCPS = new clusterProcString;
 	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
-//	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
-//	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
 	job->EvaluateAttrInt( ATTR_CLUSTER_ID, tempCPS->cluster );
 	job->EvaluateAttrInt( ATTR_PROC_ID, tempCPS->proc );
 
@@ -1204,7 +1154,6 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
 		if( verbose ) {
-//			jobs.fPrintAttrListList( stdout );
 			jobs.PrintClassAdList();	// NAC
 		} else if( customFormat ) {
 			summarize = false;
@@ -1330,12 +1279,8 @@ setupAnalysis()
 	// populate startd ads with remote user prios
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-//		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-		if( ad->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {	// NAC 
+		if( ad->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
-//				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
-//							prioTable[index].prio );
-//				ad->Insert( buffer );
 				ad->InsertAttr( ATTR_REMOTE_USER_PRIO, 
 								( double )( prioTable[index].prio ) ); // NAC
 			}
@@ -1345,27 +1290,24 @@ setupAnalysis()
 	
 
 	// setup condition expressions
-    sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-//    Parse( buffer, stdRankCondition );
-	parser.ParseExpression( buffer, stdRankCondition );		// NAC
+    sprintf( buffer, "MY.%s > MY.%s || MY.%s is undefined", ATTR_RANK,	// NAC
+			 ATTR_CURRENT_RANK, ATTR_CURRENT_RANK );					// NAC
+	parser.ParseExpression( buffer, stdRankCondition );					// NAC
 	
-    sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
-//    Parse( buffer, preemptRankCondition );
-	parser.ParseExpression( buffer, preemptRankCondition );	// NAC
+    sprintf( buffer, "MY.%s >= MY.%s || MY.%s is undefined", ATTR_RANK, // NAC
+			 ATTR_CURRENT_RANK, ATTR_CURRENT_RANK );					// NAC
+	parser.ParseExpression( buffer, preemptRankCondition );				// NAC
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
-//	Parse( buffer, preemptPrioCondition ) ;
 	parser.ParseExpression( buffer, preemptPrioCondition );	// NAC
 
 	// setup preemption requirements expression
 	if( !( preq = param( "PREEMPTION_REQUIREMENTS" ) ) ) {
 		fprintf( stderr, "\nWarning:  No PREEMPTION_REQUIREMENTS expression in"
 					" config file --- assuming FALSE\n\n" );
-//		Parse( "FALSE", preemptionReq );
 		parser.ParseExpression( "FALSE", preemptionReq );	// NAC
 	} else {
-//		if( Parse( preq , preemptionReq ) ) {
 		if( !parser.ParseExpression( (string)preq, preemptionReq ) ) {	// NAC
 		fprintf( stderr, "\nError:  Failed parse of "
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
@@ -1380,7 +1322,6 @@ setupAnalysis()
 static void
 fetchSubmittorPrios()
 {
-//	AttrList	al;
 	ClassAd		ad;	// NAC
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
@@ -1405,7 +1346,6 @@ fetchSubmittorPrios()
 	}
 
 	sock.decode();
-//	if( !al.get(sock) || !sock.end_of_message() ) {
 	if( ( !getOldClassAdNoTypes( &sock, ad ) ) || !sock.end_of_message() ) {
 		fprintf( stderr, 
 				 "(2) Error:  Could not get priorities from negotiator (%s)\n",
@@ -1418,9 +1358,6 @@ fetchSubmittorPrios()
     	sprintf( attrName , "Name%d", i );
     	sprintf( attrPrio , "Priority%d", i );
 
-//      	if( !al.LookupString( attrName, name ) || 
-//  			!al.LookupFloat( attrPrio, priority ) )
-//              break;
     	if( !ad.EvaluateAttrString( attrName, name, 128 ) || 
 			!ad.EvaluateAttrReal( attrPrio, priorityD ) ) {
             break;
@@ -1452,7 +1389,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-//	EvalResult	result;
+	ClassAd *root;			// NAC
 	Value	result;			// NAC
 	int		cluster, proc;
 	int		jobState;
@@ -1476,8 +1413,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 	return_buff[0]='\0';
 
 
-//	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
-//	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
 		return "Nothing here.\n";										// NAC
 	}																	// NAC
@@ -1488,14 +1423,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
 		return "Nothing here.\n";
 
-//	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
-//	request->Insert( buffer );
-
 	request->InsertAttr( ATTR_SUBMITTOR_PRIO, ( double )( prioTable[index].prio ) ); // NAC
 
-//	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
-//	request->LookupInteger( ATTR_PROC_ID, proc );
-//	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	request->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
 	request->EvaluateAttrInt( ATTR_PROC_ID, proc );
 	request->EvaluateAttrInt( ATTR_JOB_STATUS, jobState );
@@ -1521,16 +1450,16 @@ doRunAnalysisToBuffer( ClassAd *request )
 
   	startdAds.Open();
 	while( ( offer = startdAds.Next() ) ) {
+
 		// 0.  info from machine
 		remoteUser[0] = '\0';
 		totalMachines++;
-//		offer->LookupString( ATTR_NAME , buffer );
 		offer->EvaluateAttrString( ATTR_NAME, buffer, 128 );		// NAC
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-//		if( !( (*offer) >= (*request) ) ) {
-
+		root = new ClassAd( );										// NAC
+		root->Insert( "TARGET", offer );							// NAC
 		request->SetParentScope(offer);								// NAC
 		if( !request->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {	// NAC
                // there was a problem with the match				// NAC
@@ -1540,6 +1469,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 						 return_buff );								// NAC
 			}														// NAC
 			request->SetParentScope( NULL );						// NAC
+			offer->SetParentScope( NULL );							// NAC
 			continue;												// NAC
 		}															// NAC
 		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
@@ -1554,12 +1484,13 @@ doRunAnalysisToBuffer( ClassAd *request )
 			}
 			fReqConstraint++;
 			request->SetParentScope( NULL );						// NAC
+			offer->SetParentScope( NULL );							// NAC
 			continue;
 		}
-		request->SetParentScope( NULL );							// NAC
 
 			// 2. Offer satisfied? 
-//		if( !( (*offer) <= (*request) ) ) {
+		root = new ClassAd( );										// NAC
+		root->Insert( "TARGET", request );							// NAC
 		offer->SetParentScope( request );							// NAC
 		if( !offer->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {		// NAC
                 // there was a problem with the match				// NAC
@@ -1569,29 +1500,35 @@ doRunAnalysisToBuffer( ClassAd *request )
 						 return_buff );								// NAC
 			}														// NAC
 			offer->SetParentScope( NULL );							// NAC
+			request->SetParentScope( NULL );						// NAC
 			continue;												// NAC
 		}															// NAC
 		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
 				  ( val.IsBooleanValue( match ) && !match )		||	// NAC
 				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
-
+			
   			if( verbose ) { 
 				strcat( return_buff, "Failed machine constraint\n");
 			}  
 			fOffConstraint++;
 			offer->SetParentScope( NULL );							// NAC
+			request->SetParentScope( NULL );						// NAC
 			continue;
 		}	
 		offer->SetParentScope( NULL );								// NAC
-		
+		request->SetParentScope( NULL );							// NAC
+
+		root = new ClassAd( );										// NAC
+		root->Insert( "TARGET", offer );							// NAC
+		root->Insert( "MY", request );
+
+
 		// 3. Is there a remote user?
-//		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {	// NAC 
-//			if( stdRankCondition->EvalTree( offer, request, &result ) &&
-//					result.type == LX_INTEGER && result.i == TRUE ) {
+		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
 			stdRankCondition->SetParentScope( offer );				// NAC
 			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
+			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
+				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
 					// both sides satisfied and no remote user
 				if( verbose ) sprintf( return_buff, "%sAvailable\n",
 									   return_buff );
@@ -1599,6 +1536,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 				continue;
 			} else {
 					// no remote user, but std rank condition failed
+
 				fRankCond++;
 				if( verbose ) {
 					sprintf( return_buff,
@@ -1610,39 +1548,36 @@ doRunAnalysisToBuffer( ClassAd *request )
 		}
 
 		// 4. Satisfies preemption priority condition?
-//		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
-//			result.type == LX_INTEGER && result.i == TRUE ) {
 		preemptPrioCondition->SetParentScope( offer );				// NAC
 		offer->EvaluateExpr( preemptPrioCondition, result );		// NAC
-		if( result.IsBooleanValue( boolValue ) && boolValue ) {		// NAC
+		if( ( result.IsBooleanValue( boolValue ) && boolValue )		// NAC
+			|| ( result.IsNumber( intValue ) && intValue ) ) {		// NAC
+
 			// 5. Satisfies standard rank condition?
-//			if( stdRankCondition->EvalTree( offer , request , &result ) &&
-//				result.type == LX_INTEGER && result.i == TRUE )  
-//			{
 			stdRankCondition->SetParentScope( offer );				// NAC
 			offer->EvaluateExpr( stdRankCondition, result );		// NAC
-			if( result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
+			if( ( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
+				|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
 				if( verbose ) {
 					sprintf( return_buff, "%sAvailable\n", return_buff );
 				}
 				available++;
 				continue;
 			} else {
+
 				// 6.  Satisfies preemption rank condition?
-//				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
-//					result.type == LX_INTEGER && result.i == TRUE )
-//				{
 				preemptRankCondition->SetParentScope( offer );			// NAC
 				offer->EvaluateExpr( preemptRankCondition, result );	// NAC
-				if(	result.IsBooleanValue( boolValue ) && boolValue ) {	// NAC
+				if(	( result.IsBooleanValue( boolValue ) && boolValue )	// NAC
+					|| ( result.IsNumber( intValue ) && intValue ) ) {	// NAC
+
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-//					if( preemptionReq->EvalTree( offer , request , &result ) &&
-//						result.type == LX_INTEGER && result.i == FALSE ) 
-//					{
-					preemptionReq->SetParentScope( offer );							   // NAC
-					offer->EvaluateExpr( preemptionReq, result );					   // NAC
-					if( ( result.IsBooleanValue( boolValue ) && !boolValue ) ||		   // NAC
-						( result.IsIntegerValue( intValue ) && intValue == FALSE ) ) { // NAC
+					preemptionReq->SetParentScope( offer );				// NAC
+					offer->EvaluateExpr( preemptionReq, result );		// NAC
+					if( ( result.IsBooleanValue( boolValue ) 			// NAC
+						  && !boolValue ) ||							// NAC
+						( result.IsIntegerValue( intValue ) 			// NAC
+						  && intValue == FALSE ) ) { 					// NAC
 						fPreemptReqTest++;
 						if( verbose ) {
 							sprintf( return_buff,
@@ -1719,7 +1654,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	if( fReqConstraint > 0 ) {
 		string buffer_string;			// NAC
 		char buffer[2048];				// NAC
-		AnalyzeJobToBuffer( request, startdAds, buffer_string );	// NAC
+		AnalyzeJobToBuffer( request, startdAds, buffer_string );// NAC
 		strncpy( buffer, buffer_string.c_str( ), 2048 );			// NAC
 		strcat( return_buff, buffer );	// NAC
 	}
@@ -1729,6 +1664,10 @@ doRunAnalysisToBuffer( ClassAd *request )
 		sprintf( return_buff, "%s   Job %d.%d did not match any"
 			"machine's requirements\n\n", return_buff, cluster, proc);
 	}
+
+//	if( fOffConstraint > 0 ) { 			// NAC
+//		testJobAttrAnalysis( request, startdAds );	// NAC
+//	}									// NAC
 
 	return return_buff;
 }
