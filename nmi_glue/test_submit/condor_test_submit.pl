@@ -41,6 +41,7 @@ GetOptions (
     'notify'          => $opt_notify,
     'platforms=s'     => $opt_platforms,
     'buildid=s'       => $opt_buildid,
+    'test-src=s'      => $opt_test_src,
 );
 
 
@@ -137,6 +138,7 @@ sub generate_cmdfile() {
     my $cmdfile = "condor_cmdfile-$tag";
     my $gluefile = "condor_test.src";
     my $runidfile = "input_build_runid.src";
+    my $src_file = "test_src.src";
 
     # generate the test glue file - may be symlinked eventually
     CondorGlue::makeFetchFile( $gluefile, "nmi_glue/test", $tag );
@@ -155,7 +157,15 @@ sub generate_cmdfile() {
     
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
 
-    print CMDFILE "inputs = $runidfile, $gluefile\n";
+    if (defined $opt_test_src) {
+        generate_test_src_input($src_file);
+        print CMDFILE "inputs = $runidfile, $gluefile, $src_file\n";
+        print CMDFILE "pre_all_args = --src=$opt_test_src\n";
+    }
+    else {
+        print CMDFILE "inputs = $runidfile, $gluefile\n";
+    }
+
     print CMDFILE "pre_all = nmi_glue/test/pre_all\n";
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
     print CMDFILE "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
@@ -179,6 +189,18 @@ sub generate_cmdfile() {
     print CMDFILE "priority = 1\n";
     close CMDFILE;
     return $cmdfile;
+}
+
+
+sub generate_test_src_input() {
+    my ($src_file) = @_;
+
+    # generate the runid input file
+    open(SRCFILE, ">$src_file") || 
+	die "Can't open $src_file for writing: $!\n";
+    print SRCFILE "method = scp\n";
+    print SRCFILE "scp_file = $opt_test_src\n";
+    close SRCFILE;
 }
 
 
@@ -270,6 +292,9 @@ condor source code module to be fetched from cvs
 
 --notify
 List of users to be notified about the results
+
+--test-src
+Source to test against
 
 END_USAGE
 }
