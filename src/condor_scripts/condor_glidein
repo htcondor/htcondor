@@ -1,0 +1,496 @@
+#!/s/std/bin/perl
+#Change first line to point to your perl
+
+sub set_defaults() {
+	#for descriptions, see the condor documentation on condor_glidein
+	#Modify these variables to configure setup to your liking.
+
+	$CONDOR_ADMIN = 'mikeu@cs.wisc.edu'; #need single quotes for admin name
+
+	$RUN_FOR = 0;  #infinite default life for master, startd
+
+	$BASE_DIR = "condor"; #relative pathnames are from $HOME on Globus host
+
+	$SCRIPT = "./condor_glidein";
+
+	$START_EXPRESSION = "START : Owner == \"$ENV{'LOGNAME'}\"";
+
+	$INCLUDE_PVM = 1;
+}
+
+# This script uses Globus tools to extend a Condor pool to include Globus nodes 
+# in the local Condor pool. See the Condor documentation on condor_glidein.
+
+##start of script
+{
+	set_defaults();
+
+	cmd_line_setup();
+
+		#create proxy so that user only needs to type their password once,
+		#and destroy it at the end of this script for security
+	$ENV{'X509_USER_PROXY'} = "/tmp/x509up_u$<.condor";
+
+	print STDERR "Accessing remote Globus resources-  ";
+
+	if ( system( "globus-proxy-init --hours 1 --out $ENV{'X509_USER_PROXY'}" ) )
+	{
+		print STDERR "Error initializing Globus credentials\n";
+		exit( 1 );
+	}
+
+	$RESULT = 0;  #hold onto errors for exit status
+
+		#for each hostname given, do initial authentication to ensure we
+		#can use the resource
+LOOP: foreach $GLOBUSHOST ( @ARGV ) {
+
+		if ( silently( "globusrun -a -r $GLOBUSHOST-$SCHEDULER" ) ) {
+			print STDERR "Error contacting resource $GLOBUSHOST-$SCHEDULER\n";
+			$RESULT = 1;
+			next LOOP;
+		}
+
+			#probe the system remotely with Globus tools and place files needed
+		if ( do_remote_setup() ) {
+			$RESULT = 1;
+			next LOOP;
+		}
+
+		if ( $kill ) {
+			#called with --kill, means kill right away
+			if ( do_kill() ) {
+				$RESULT = 1;
+			}
+			next LOOP;
+		}
+
+			#if setonly wasn't specified, execute the Globus command to launch Condor
+		if ( !$setuponly ) {
+			if ( silently( $MASTER_STRING ) ) {
+				print STDERR "Error executing remote glidein script on $GLOBUSHOST\n";
+				next LOOP; #do this in case someone adds code before end of foreach
+			}
+			else {
+				print "running job on remote scheduler $GLOBUSHOST-$SCHEDULER\n";
+			}
+		}
+	}
+
+	system( "globus-proxy-destroy" );
+	exit( $RESULT ); #sucessful completion
+} 
+###end of script
+
+sub usage() {
+		#print out the command line options
+	($NAME = $0) =~ s/.*\///;
+	print STDERR "Usage: $NAME [options] <globus host> [<globus host>+]\n";
+	print STDERR "\tValid options:\n"
+				. "\t--scheduler <scheduler>\t\tGlobus scheduler, default=fork\n"
+				. "\t--runfor[ mins]\n\t--setuponly|--runonly\n"
+				. "\t--savescript <prefix>\n\t--help\n\t--showdefaults\n"
+				. "\t--kill\t\tkill the condor daemons, overrides other options\n";
+}
+
+sub silently {
+		#get rid of unsightly output from system commands
+		#expects a list compatible with system()
+	if ( $pid = fork() ) {
+		#parent
+		waitpid $pid, 0;
+	}
+	else {
+		#child
+		close STDOUT;
+		close STDERR;
+		exec( @_ );
+	}
+	return $?;
+}
+
+sub cmd_line_setup() {
+		#parse command line options
+	$SCHEDULER = "fork";
+
+	use Getopt::Long;
+	$result = GetOptions(
+		"kill" => \$kill,
+		"runfor:i" => \$RUN_FOR,
+		"setuponly" => \$setuponly,
+		"runonly" => \$runonly,
+		"savescript=s" => \$tmpscript, 
+		"scheduler=s" => \$SCHEDULER,
+		"help" => \$help,
+		"showdefaults" => \$showdefaults );
+	if ( !$result ) {
+		usage();
+		exit( 1 );
+	}
+	if ( $setuponly && $runonly ) {
+		print STDERR "Error: --setuponly and --runonly are mutually exclusive\n";
+		exit( 1 );
+	}
+
+	if ( $showdefaults ) {
+		print "\$CONDOR_ADMIN=$CONDOR_ADMIN\n";
+		print "\$RUN_FOR=$RUN_FOR\n";
+		print "\$BASE_DIR=$BASE_DIR\n";
+		print "\$SCRIPT=$SCRIPT\n";
+		print "\$START_EXPRESSION=$START_EXPRESSION\n";
+		print "\$INCLUDE_PVM=$INCLUDE_PVM\n";
+		$exit = 1;
+	}
+	if ( $help ) {
+		print STDERR "Add a remote node to your local Condor pool\n";
+		print STDERR "For detailed help, see the condor documentation "
+			. "concerning condor_glidein\n\n";
+		usage();
+		$exit = 1;
+	}
+
+	#if they selected showdefaults or help, exit without any further
+	if ( $exit ) {
+		exit( 0 );
+	}
+
+		#ensure at least one hostname was provided
+	if ( $#ARGV < 0 ) {
+		usage();
+		exit( 1 );
+	}
+
+	#strip off scheduler name (e.g., -fork) from hostnames
+	foreach $arg ( @ARGV ) {
+		$arg =~ s/-.*//;
+	}
+
+
+	#until startd has --runfor option, use sleep to fake, secs = mins * 60
+	$RUN_FOR *= 60;
+
+	#need to both hold onto script name AND remember not to delete it
+	if ( $tmpscript ) {
+		$SCRIPT = $tmpscript;
+	}
+
+		#if BASE_DIR is relative path, prepend remote home directory
+	if ( $BASE_DIR =~ /^[^\/]/ ) {
+		$BASE_DIR = ('$GLOBUS_HOME/' . $BASE_DIR );
+	}
+
+	#this mess first ensures that $SUBMIT exists, then extracts the
+	#CondorVersion number from the result of an ident command on the files
+	$SUBMIT = "condor_submit";
+	open( TMP, "which $SUBMIT|" );
+	@TMP = grep( !/no $SUBMIT in/, <TMP> );
+	close TMP;
+	if ( @TMP ) {
+#this should really be CondorVersion, but versions before 6.1.6 say Version
+#		@TMP = grep( /CondorVersion/, `ident @TMP` );
+		@TMP = grep( /Version/, `ident @TMP` );
+		($_, $_, $CONDOR_VERSION, $_) = split( / *[$: ]+/, $TMP[0] );
+	}
+	else {
+		print STDERR "Error: \"$SUBMIT\" not in your search PATH\n";
+		exit( 1 );
+	}
+}
+
+sub do_kill() {
+		#generate script for gracefully killing the remote Condor daemons 
+	$KILL_FILE = "./condor_glidein.kill";
+	$MASTER_STRING = "globusrun -w -r $GLOBUSHOST-fork '&(executable="
+		. "\$(GLOBUSRUN_GASS_URL) # / # \"$KILL_FILE\")'";
+	open( MASTER, ">$KILL_FILE" );
+	print MASTER << "EOF";
+#!/bin/sh
+
+	#This is the globusrun command that is used to launch this script
+	#$MASTER_STRING
+
+	CONDOR_CONFIG=$BASE_DIR/condor_config
+	export CONDOR_CONFIG
+	$EXEC_DIR/condor_master -k $HOST_DIR/master.pid
+EOF
+	close MASTER;
+
+		#run the generated script and clean it up
+	$STATUS = silently( $MASTER_STRING );
+	unlink( $KILL_FILE );
+	return( $STATUS );
+}
+
+sub gen_master_script() {
+		#create the script which lauches Condor on the remote Globus host.
+	$MASTER_STRING = "globusrun -b -r $GLOBUSHOST-$SCHEDULER '&(executable="
+		. "\"$BASE_DIR/$SCRIPT.$GLOBUSHOST\")'";
+	open( MASTER, ">$SCRIPT.$GLOBUSHOST" );
+	print MASTER << "EOF";
+#!/bin/sh
+
+	#This is the globusrun command that is used to launch this script
+	#$MASTER_STRING
+
+	CONDOR_CONFIG=$BASE_DIR/condor_config
+	export CONDOR_CONFIG
+	$EXEC_DIR/condor_master -pidfile $HOST_DIR/master.pid &
+EOF
+	if ( $RUN_FOR > 0 ) {
+		##note: future versions of startd will have a --runfor option, 
+		##so when that works, add it to condor_master above and nix sleep
+	print MASTER << "EOF2"
+		/bin/sleep $RUN_FOR #wait for N sec to kill master
+		#might have been killed by other means...
+		if [ -f $HOST_DIR/master.pid ];
+			then $EXEC_DIR/condor_master -k $HOST_DIR/master.pid;
+		fi
+EOF2
+	}
+	close MASTER;
+}
+
+sub gen_host_config() {
+	open( CONDOR_CONFIG, ">condor_config.host" );
+	print CONDOR_CONFIG "BIN = \$(GLOBAL)/$MACHINE_INFO\n";
+	close( CONDOR_CONFIG );
+}
+
+sub gen_main_config() {
+	##generate the config files
+	$CONDOR_HOST = `condor_config_val CONDOR_HOST`;
+	chomp $CONDOR_HOST;
+	$CONDOR_VIEW_HOST = `condor_config_val CONDOR_VIEW_HOST`;
+	chomp $CONDOR_VIEW_HOST;
+	open( CONDOR_CONFIG, ">condor_config");
+	print CONDOR_CONFIG << "EOF";
+	GLOBAL = $BASE_DIR
+	LOCAL = \$(GLOBAL)/\$(HOSTNAME)
+	LOCAL_DIR = \$(LOCAL)
+
+	LOCAL_CONFIG_FILE = \$(GLOBAL)/\$(HOSTNAME)/condor_config.host
+
+	CONDOR_ADMIN = $CONDOR_ADMIN
+	CONDOR_HOST	 = $CONDOR_HOST
+	CONDOR_VIEW_HOST = $CONDOR_VIEW_HOST
+
+	UID_DOMAIN = $UID_DOMAIN
+	FILESYSTEM_DOMAIN = $UID_DOMAIN
+	HOSTALLOW_ADMINISTRATOR = \$(HOSTNAME)
+	$START_EXPRESSION
+
+	$VIRTUAL_MACHINES
+
+	MAIL = /bin/mail
+	DAEMON_LIST = MASTER, STARTD
+	MASTER_ADDRESS_FILE = \$(LOG)/.master_address
+	MASTER = \$(BIN)/condor_master
+	MASTER_LOG = \$(LOG)/MasterLog
+	STARTD = \$(BIN)/condor_startd
+	STARTER = \$(BIN)/condor_starter
+
+EOF
+if ( $INCLUDE_PVM ) {
+	print CONDOR_CONFIG << "EOF";
+	##NUM_VIRTUAL_MACHINES = 1 ##leave out for now
+	ALTERNATE_STARTER_1 = \$(BIN)/condor_starter.pvm
+	PVMD = \$(BIN)/condor_pvmd
+EOF
+}
+
+print CONDOR_CONFIG << "EOF";
+
+	USE_NFS = False
+	USE_CKPT_SERVER = False
+	NEGOTIATOR_HOST	= \$(CONDOR_HOST)
+	COLLECTOR_HOST = \$(CONDOR_HOST)
+
+	LOG = \$(LOCAL_DIR)/log
+	SPOOL = \$(LOCAL_DIR)/spool
+	EXECUTE = \$(LOCAL_DIR)/execute
+
+	LOCK = \$(LOG)
+	STARTD_LOG = \$(LOG)/StartdLog
+	STARTER_LOG = \$(LOG)/StarterLog
+
+	STARTD_DEBUG =
+
+	SUSPEND : False
+	WANT_SUSPEND : True
+	SUSPEND_VANILLA : False
+	WANT_SUSPEND_VANILLA : True
+	KILL : False
+EOF
+	close CONDOR_CONFIG;
+}
+
+sub do_remote_setup() {
+	print "checking configuration on $GLOBUSHOST\n";
+
+	$REMOTE_SETUP_FILE = "remote_setup.condor";
+	$EXEC_DIR = ( $BASE_DIR . '/$MACHINE_INFO' );
+	$HOST_DIR = ( $BASE_DIR . '/$GLOBUS_HOST' );
+
+	$DIRS = "$BASE_DIR $EXEC_DIR  $HOST_DIR "
+		. "$HOST_DIR/spool $HOST_DIR/execute $HOST_DIR/log";
+	$FILES = "$BASE_DIR/condor_config  "
+		. "$HOST_DIR/condor_config.host  "
+		. "$EXEC_DIR/condor_master "
+		. "$EXEC_DIR/condor_startd "
+		. "$EXEC_DIR/condor_starter ";
+	if ( $INCLUDE_PVM ) {
+		$FILES .= "$EXEC_DIR/condor_starter.pvm "
+			. "$EXEC_DIR/condor_pvmd";
+	}
+
+	open( REMOTE, ">$REMOTE_SETUP_FILE" );
+	print REMOTE << "EOF";
+	GLOBUS_HOME=\$1
+
+	#extract the hostname and domain name from the GLOBUS_HOST_DN parameter
+	FQHN=`\$GLOBUS_SH_ECHO \$2|\$GLOBUS_SH_SED -e 's/hn=//' -e 's/,.*//`
+	GLOBUS_HOST=`\$GLOBUS_SH_ECHO \$FQHN|\$GLOBUS_SH_SED -e 's/\\..*//'`
+	UID_DOMAIN=`\$GLOBUS_SH_ECHO \$FQHN|\$GLOBUS_SH_SED 's/[^\\.]*.//'`
+
+	MACHINE_INFO=\$3
+
+	\$GLOBUS_SH_ECHO "BASE_DIR $BASE_DIR"
+	\$GLOBUS_SH_ECHO "HOST_DIR $HOST_DIR"
+	\$GLOBUS_SH_ECHO "EXEC_DIR $EXEC_DIR"
+	\$GLOBUS_SH_ECHO "GLOBUS_HOME \$GLOBUS_HOME"
+	\$GLOBUS_SH_ECHO "GLOBUS_HOST \$GLOBUS_HOST"
+	\$GLOBUS_SH_ECHO "UID_DOMAIN \$UID_DOMAIN"
+	\$GLOBUS_SH_ECHO "MACHINE_INFO \$MACHINE_INFO"
+
+EOF
+	if ( !$runonly ) {
+	print REMOTE << "EOF2";
+	for newdir in $DIRS; do
+		if [ ! -d \$newdir ];
+			then \$GLOBUS_SH_MKDIR \$newdir;
+		fi
+		if [ ! -d \$newdir ];
+			then \$GLOBUS_SH_ECHO "ERROR mkdir \$newdir"
+			exit;
+		fi
+	done
+
+EOF2
+	}
+
+	print REMOTE << "EOF3";
+	for needfile in $FILES; do
+		if [ ! -f \$needfile -o -h \$needfile ];
+			then \$GLOBUS_SH_ECHO "NEED \$needfile"
+		fi
+	done
+EOF3
+
+	close( REMOTE );
+
+	$EXEC = "globusrun -w -r $GLOBUSHOST-fork '&(executable="
+		. "\$(GLOBUS_TOOLS_PREFIX)/bin/globus-sh-exec)(arguments="
+		. "\$(GLOBUSRUN_GASS_URL) # / # \"./$REMOTE_SETUP_FILE\" "
+		. "\$(HOME) \$(GLOBUS_HOST_DN) "
+		. "$CONDOR_VERSION-\$(GLOBUS_HOST_OSNAME)\$(GLOBUS_HOST_OSVERSION)"
+		. "-\$(GLOBUS_HOST_CPUTYPE))'";
+
+	open( RESULTS, "$EXEC|" );
+
+	undef @SEND;
+	undef @CONFIG;
+	undef $BIN_PATH;
+
+	while ( <RESULTS> ) {
+		chomp;
+
+		if ( s/BASE_DIR // ) {
+			$BASE_DIR = $_;
+		}
+		elsif ( s/HOST_DIR // ) {
+			$HOST_DIR = $_;
+		}
+		elsif ( s/EXEC_DIR // ) {
+			$EXEC_DIR = $_;
+		}
+		elsif ( s/GLOBUS_HOME // ) {
+			$GLOBUS_HOME = $_;
+		}
+		elsif ( s/GLOBUS_HOST // ) {
+			$GLOBUS_HOST = $_;
+		}
+		elsif ( s/UID_DOMAIN // ) {
+			$UID_DOMAIN = $_;
+		}
+		elsif ( s/MACHINE_INFO // ) {
+			$MACHINE_INFO = $_;
+		}
+		elsif ( /ERROR/i ) {
+			print STDERR $_;
+			return( 1 );
+		}
+		elsif ( s/NEED // ) {
+			push @SEND, $_;
+		}
+		else {
+			#unexpected result, print it and exit??
+			print STDERR "Error $GLOBUSHOST: unexpected response \"$_\"";
+			return( 1 );
+		}
+	}
+
+	close( RESULTS );
+	unlink( "$REMOTE_SETUP_FILE" );
+
+	if ( $runonly && defined( @SEND ) ) {
+		#if they --runonly and files are missing, it's an error
+		return( 1 );
+	}
+
+	if ( grep '/condor_config[^\.]/', @SEND ) {
+		gen_main_config();
+		push( @CONFIG, "condor_config" );
+	}
+
+	push( @CONFIG, "$SCRIPT.$GLOBUSHOST" );
+	gen_master_script();
+
+	if ( silently( "globus-rcp @CONFIG $GLOBUSHOST:$BASE_DIR" ) ) {
+		print STDERR "Error posting @CONFIG, to $GLOBUSHOST\n";
+		unlink( <@CONFIG> );
+		return( 1 );
+	}
+
+	if ( grep /condor_config\.host/, @SEND ) {
+		gen_host_config();
+		if ( silently( "globus-rcp condor_config.host $GLOBUSHOST:$HOST_DIR" ) ) {
+			print STDERR "Error posting condor_config.host to $GLOBUSHOST\n";
+			unlink( <condor_config*> );
+			return( 1 );
+		}
+	}
+	unlink( <condor_config*> );
+
+	if ( !$tmpscript ) {
+		unlink( <$SCRIPT.$GLOBUSHOST> );
+	}
+
+	#figure out if any of the needed files are condor_binaries
+	if ( @BINARIES = grep( /$EXEC_DIR/, @SEND ) ) {
+		until ( -d $BIN_PATH ) {
+			print "Enter path to local Condor executable sbin dir "
+				. "(e.g., /usr/local/condor/sbin)\n"
+				. "for architecture \"$MACHINE_INFO\":\n";
+			$BIN_PATH = <STDIN>;
+			chomp $BIN_PATH;
+		}
+		foreach $BIN ( @BINARIES ) {
+			$BIN =~ s/$EXEC_DIR/$BIN_PATH/;
+		}
+		if ( silently( "globus-rcp @BINARIES $GLOBUSHOST:$EXEC_DIR" ) ) {
+			print STDERR "Error posting @BINARIES on $GLOBUSHOST\n";
+			return( 1 );
+		}
+	}
+	return( 0 );
+}
