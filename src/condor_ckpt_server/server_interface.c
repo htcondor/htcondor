@@ -107,8 +107,10 @@ int ConnectToServer(request_type type)
 			server_sa.sin_port = htons(CKPT_SVR_RESTORE_REQ_PORT);
 		}
 	if (connect(conn_req_sd, (struct sockaddr*) &server_sa, 
-				sizeof(server_sa)) < 0)
+				sizeof(server_sa)) < 0) {
+		close(conn_req_sd);
 		return CONNECT_ERROR;
+	}
 	return conn_req_sd;
 }
 
@@ -166,8 +168,10 @@ int RequestStore(const char*     owner,
 	if (server_sd < 0)
 		return server_sd;
 	ret_code = net_write(server_sd, (char*) &req, sizeof(req));
-	if (ret_code != sizeof(req))
+	if (ret_code != sizeof(req)) {
+		close(server_sd);
 		return CHILDTERM_CANNOT_WRITE;
+	}
 	while (bytes_recvd != sizeof(reply)) {
 		errno = 0;
 		bytes_read = read(server_sd, ((char*) &reply)+bytes_recvd, 
