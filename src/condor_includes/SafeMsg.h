@@ -100,10 +100,10 @@ class _condorInMsg
 		int passed;			// # of bytes read so far
 		_condorDirPage* headDir;// head of the linked list of directories
 		_condorDirPage* curDir;	// current directory
-		int curPacket;		/* index of the current packet of the current
-						 * directory */
-		int curData;		/* index of the current data of the current
-						 * packet */
+		int curPacket;		/* index of the current packet into
+						 * the curDir->dEntry[] */
+		int curData;		/* index of the current data
+						 * into the curPacket */
 		_condorInMsg* prevMsg;	/* pointer to the previous message in hashed
 						 * bucket chain */
 		_condorInMsg* nextMsg;	/* pointer to the next message in hashed
@@ -169,6 +169,8 @@ class _condorPacket
 
 		int length;			// length of this packet
 		char* data;			// data portion of this packet
+						/* this just points the starting index
+						   of data of dataGram[] */
 		int curIndex;		// current index into this packet
 		char dataGram[MAX_PACKET_SIZE];/* marshalled packet
 		                                * including header and data */
