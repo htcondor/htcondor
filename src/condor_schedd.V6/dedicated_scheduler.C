@@ -794,8 +794,6 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	MRecArray* matches;
 	ClassAd *job_ad;
 	int i, p, last;
-	char owner[100], user[100], buf[256];
-	int nice_user;
 
 	dprintf( D_FULLDEBUG, "Entering DedicatedScheduler::giveMatches()\n" );
 
