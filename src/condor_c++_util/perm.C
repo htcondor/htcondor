@@ -714,7 +714,10 @@ perm::set_acls( const char *filename )
 			DACL_SECURITY_INFORMATION, NULL, NULL, &oldDACL, NULL, &pSD);
 
 	if ( ERROR_SUCCESS != err ) {
-		dprintf(D_ALWAYS, "perm::set_acls(%s): failed to get security info. "
+		// this is intentionally D_FULLDEBUG, since this error often occurs
+		// if the caller doesn't have WRITE_DAC access to the path. The 
+		// remedy in that case is to call set_owner() on the path first.
+		dprintf(D_FULLDEBUG, "perm::set_acls(%s): failed to get security info. "
 				"err=%d\n", filename, err);
 		return false;
 	}
