@@ -30,7 +30,7 @@ SYSPARAM = sysparam_linux
 
 
 IO_OBJ = stream.o buffers.o reli_sock.o safe_sock.o sock.o sig_num.o \
-         proc.o
+         proc.o open_flags.o
 
 SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
 	  attrlist.C classad.C classifiedjobs.C classad_util.C environment.C \

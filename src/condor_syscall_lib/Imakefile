@@ -149,7 +149,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf.o dprintf_config.o except.o update_rusage.o \
 	condor_errlst.o internet.o $(HP_SPECIFIC_FILES) uids.o
 
-CONDOR_TYPE_OBJ = sig_num.o proc.o
+CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o
 
 IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
