@@ -78,14 +78,12 @@ void CollectorDaemon::Init()
 	Config();
 
 
-#ifndef WIN32
     // setup routine to report to condor developers
     // schedule reports to developers
 	schedule_event( -1, 1,  0, 0, 0, reportToDevelopers );
 	schedule_event( -1, 8,  0, 0, 0, reportToDevelopers );
 	schedule_event( -1, 15, 0, 0, 0, reportToDevelopers );
 	schedule_event( -1, 23, 0, 0, 0, reportToDevelopers );
-#endif
 
 	// install command handlers for queries
 	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
