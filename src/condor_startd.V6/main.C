@@ -93,6 +93,7 @@ main_init( int, char* [] )
 	init_params(1);		// The 1 indicates that this is the first time
 
 	resmgr = new ResMgr;
+	resmgr->walk( Resource::force_benchmark );
 	resmgr->walk( Resource::init_classad );
 
 		// Do a little sanity checking and cleanup

@@ -402,6 +402,14 @@ Resource::timeout_classad()
 	r_attr->refresh( r_classad, TIMEOUT );
 }
 
+int
+Resource::force_benchmark()
+{
+		// Force this resource to run benchmarking.
+	r_attr->benchmark(1);
+	return TRUE;
+}
+
 
 int
 Resource::update()

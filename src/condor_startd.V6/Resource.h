@@ -73,6 +73,7 @@ public:
 	int		init_classad();		
 	void	update_classad();	
 	void	timeout_classad();	
+	int		force_benchmark();
 
 	int		update();				// Update the central manager.
 	int		eval_and_update();		// Evaluate state and update CM. 
