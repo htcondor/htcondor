@@ -123,12 +123,10 @@ CollectorBaseStats::setHistorySize ( int new_size )
 
 	// If new & old are equal, nothing to do
 	if ( new_size == historySize ) {
-		dprintf( D_ALWAYS, "HistSize: no change\n" );
 		return 0;
 
 		// New is zero, old non-zero
 	} else if ( 0 == new_size ) {
-		dprintf( D_ALWAYS, "HistSize: -> 0\n" );
 		if ( historyBuffer) {
 			delete[] historyBuffer;
 			historyBuffer = NULL;
@@ -139,13 +137,11 @@ CollectorBaseStats::setHistorySize ( int new_size )
 
 		// New size requires equal or less memory
 	} else if ( required_words <= historyWords ) {
-		dprintf( D_ALWAYS, "HistSize: Shrunk\n" );
 		historySize = new_size;
 		return 0;
 
 		// New size is larger than we have...
 	} else {
-		dprintf( D_ALWAYS, "HistSize: Grew\n" );
 		unsigned *newbuf = new unsigned[ required_words ];
 		if ( historyBuffer ) {
 			memcpy( newbuf, historyBuffer, historyWords );
