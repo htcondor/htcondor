@@ -304,22 +304,21 @@ int JadKind(ClassAd *suspect)
 UserPolicy::UserPolicy()
 {
 	m_ad = NULL;
-	m_action = STAYS_IN_QUEUE;
 	m_fire_expr = NULL;
+	m_fire_expr_val = -1;
 }
 
 UserPolicy::~UserPolicy()
 {
 	m_ad = NULL;
-	m_action = STAYS_IN_QUEUE;
 	m_fire_expr = NULL;
 }
 
 void UserPolicy::Init(ClassAd *ad)
 {
 	m_ad = ad;
-	m_action = STAYS_IN_QUEUE;
 	m_fire_expr = NULL;
+	m_fire_expr_val = -1;
 
 	this->SetDefaults();
 }
@@ -356,7 +355,8 @@ void UserPolicy::SetDefaults()
 	}
 }
 
-int UserPolicy::AnalyzePolicy(int mode)
+int
+UserPolicy::AnalyzePolicy( int mode )
 {
 	int periodic_hold, periodic_remove;
 	int on_exit_hold, on_exit_remove;
@@ -371,9 +371,9 @@ int UserPolicy::AnalyzePolicy(int mode)
 		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
 	}
 
-	/* if nothing fired, then the default is that the job stays in the queue */
-	m_action = STAYS_IN_QUEUE;
+		// Clear out our stateful variables
 	m_fire_expr = NULL;
+	m_fire_expr_val = -1;
 
 	/*	The user_policy is checked in this
 			order. The first one to succeed is the winner:
@@ -385,89 +385,73 @@ int UserPolicy::AnalyzePolicy(int mode)
 	*/
 
 	/* should I perform a periodic hold? */
-	if (m_ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, m_ad, periodic_hold) == 0)
-	{
-		m_action = UNDEFINED_EVAL;
-		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
-		return m_action;
+	m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
+	if( ! m_ad->EvalBool(ATTR_PERIODIC_HOLD_CHECK, m_ad, periodic_hold) ) {
+		return UNDEFINED_EVAL;
 	}
-	if (periodic_hold == 1)
-	{
-		m_action = HOLD_IN_QUEUE;
-		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
-		return m_action;
+	if( periodic_hold ) {
+		m_fire_expr_val = 1;
+		return HOLD_IN_QUEUE;
 	}
 
 	/* Should I perform a periodic remove? */
-	if (m_ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, m_ad, periodic_remove) == 0)
-	{
-		m_action = UNDEFINED_EVAL;
-		m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
-		return m_action;
+	m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
+	if(!m_ad->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, m_ad, periodic_remove)) {
+		return UNDEFINED_EVAL;
 	}
-	if (periodic_remove == 1)
-	{
-		m_action = REMOVE_FROM_QUEUE;
-		m_fire_expr = ATTR_PERIODIC_REMOVE_CHECK;
-		return m_action;
+	if( periodic_remove ) {
+		m_fire_expr_val = 1;
+		return REMOVE_FROM_QUEUE;
 	}
 
-	if (mode == PERIODIC_ONLY)
-	{
-		return m_action;
+	if( mode == PERIODIC_ONLY ) {
+			// Nothing left to do, just return the default
+		m_fire_expr = NULL;
+		return STAYS_IN_QUEUE;
 	}
 
 	/* else it is PERIODIC_THEN_EXIT so keep going */
 
 	/* This better be in the classad because it determines how the process
 		exited, either by signal, or by exit() */
-	if (m_ad->Lookup(ATTR_ON_EXIT_BY_SIGNAL) == 0)
-	{
-		EXCEPT("UserPolicy Error: %s is not present in the classad",
-			ATTR_ON_EXIT_BY_SIGNAL);
+	if( ! m_ad->Lookup(ATTR_ON_EXIT_BY_SIGNAL) ) {
+		EXCEPT( "UserPolicy Error: %s is not present in the classad",
+				ATTR_ON_EXIT_BY_SIGNAL );
 	}
 
 	/* Check to see if ExitSignal or ExitCode 
 		are defined, if not, then except because
 		caller should have filled this in if calling
 		this function saying to check the exit policies. */
-	if (m_ad->Lookup(ATTR_ON_EXIT_CODE) == 0 && 
-		m_ad->Lookup(ATTR_ON_EXIT_SIGNAL) == 0)
+	if( m_ad->Lookup(ATTR_ON_EXIT_CODE) == 0 && 
+		m_ad->Lookup(ATTR_ON_EXIT_SIGNAL) == 0 )
 	{
-		EXCEPT("UserPolicy Error: No signal/exit codes in job ad!");
+		EXCEPT( "UserPolicy Error: No signal/exit codes in job ad!" );
 	}
 
 	/* Should I hold on exit? */
-	if (m_ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) == 0)
-	{
-		m_action = UNDEFINED_EVAL;
-		m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
-		return m_action;
+	m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
+	if( ! m_ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, m_ad, on_exit_hold) ) {
+		return UNDEFINED_EVAL;
 	}
-	if (on_exit_hold == 1)
-	{
-		m_action = HOLD_IN_QUEUE;
-		m_fire_expr = ATTR_ON_EXIT_HOLD_CHECK;
-
-		return m_action;
+	if( on_exit_hold ) {
+		m_fire_expr_val = 1;
+		return HOLD_IN_QUEUE;
 	}
 
 	/* Should I remove on exit? */
-	if (m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) == 0)
-	{
-		m_action = UNDEFINED_EVAL;
-		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
-		return m_action;
+	m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
+	if( ! m_ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, m_ad, on_exit_remove) ) {
+		return UNDEFINED_EVAL;
 	}
-	if (on_exit_remove == 1)
-	{
-		m_action = REMOVE_FROM_QUEUE;
-		m_fire_expr = ATTR_ON_EXIT_REMOVE_CHECK;
-
-		return m_action;
+	if( on_exit_remove ) {
+		m_fire_expr_val = 1;
+		return REMOVE_FROM_QUEUE;
 	}
-
-	return m_action;
+		// If we didn't want to remove it, OnExitRemove was false,
+		// which means we want the job to stay in the queue...
+	m_fire_expr_val = 0;
+	return STAYS_IN_QUEUE;
 }
 
 const char* UserPolicy::FiringExpression(void)

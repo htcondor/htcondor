@@ -143,9 +143,16 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 	expression caused the action. You can use strcmp against this
 	string and the four attributes detailed at the top of the comment
 	to figure out which expressions caused the action happened to
-	the job.  If AnalyzePolicy() says the job STAYS_IN_QUEUE then
-	FiringExpression() will return NULL.
+	the job.  You can also call FiringExpressionValue() to find out
+	what the firing expression evaluated to which casued the action.
 
+	If you do a periodic evaluation and neither periodic check
+	expression became true, the action you get is STAYS_IN_QUEUE and
+	the FiringExpression() will be NULL.  However, when you do an on
+	exit evaluation, if you get STAYS_IN_QUEUE, that's because an
+	expression fired (ON_EXIT_REMOVE_CHECK) and became false.  In this
+	case, FiringExpression will return ON_EXIT_REMOVE_CHECK and
+	FiringExpressionValue will be 0.
 */
 
 class UserPolicy
@@ -170,6 +177,11 @@ class UserPolicy
 			free this memory and it is overwritten whenever an Init() or
 			AnalyzePolicy() method is called */
 		const char* FiringExpression(void);
+
+		/* This explains what the firing expression evaluated to which
+		   caused the above action.  If no firing expression occured,
+		   return -1. */
+        int FiringExpressionValue( void ) { return m_fire_expr_val; };
 	
 	private: /* functions */
 		/* This function inserts the four user job policy expressions with 
@@ -182,7 +194,7 @@ class UserPolicy
 
 	private: /* variables */
 		ClassAd *m_ad;
-		int m_action;
+	    int m_fire_expr_val;
 		const char *m_fire_expr;
 };
 
