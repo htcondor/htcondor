@@ -80,6 +80,8 @@ VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@
 
 /* Other miscellaneous settings we need */
 
+CONFIGURE_DEFS = @DEFS@
+
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 YACC = @YACC@

@@ -417,11 +417,11 @@ NETMAN_FLAGS =
  end of externals-specific settings and flags
 ********************************************/
 
-VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I.. \
-		 -I$(C_PLUS_INCLUDE) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
+VENDOR_C_FLAGS = CFlags -I.. -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
+		 -I$(C_PLUS_INCLUDE) -I$(DAEMONCLIENT_INCLUDE) \
+		 $(CONFIGURE_DEFS) -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
-		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)\
-		 -I$(DAEMONCLIENT_INCLUDE)
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)
 
 /*
 Generally, compile with -fPIC for position-independent code.
