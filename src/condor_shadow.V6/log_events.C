@@ -23,10 +23,18 @@ extern ClassAd *JobAd;
 extern "C" void 
 initializeUserLog ()
 {
-	char logfilename[_POSIX_PATH_MAX];
-	if (JobAd->LookupString(ATTR_ULOG_FILE, logfilename) == 1) {
+	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	if (JobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
+		if (tmp[0] == '/') {
+			strcpy(logfilename, tmp);
+		} else {
+			sprintf(logfilename, "%s/%s", Proc->iwd, tmp);
+		}
 		ULog.initialize (Proc->owner, logfilename,
 						 Proc->id.cluster, Proc->id.proc, 0);
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
+	} else {
+		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 	}
 }
 
