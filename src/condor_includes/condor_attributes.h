@@ -331,6 +331,7 @@ const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
 const char ATTR_SUSPEND_JOB_AT_EXEC      [] = "SuspendJobAtExec";
 const char ATTR_TARGET_TYPE				 [] = "TargetType";
+const char ATTR_TIME_TO_LIVE             [] = "TimeToLive";
 const char ATTR_TOTAL_CLAIM_RUN_TIME     [] = "TotalClaimRunTime";
 const char ATTR_TOTAL_CLAIM_SUSPEND_TIME [] = "TotalClaimSuspendTime";
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )

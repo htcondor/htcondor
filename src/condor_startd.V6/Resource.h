@@ -85,6 +85,7 @@ public:
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
+    void	publishDeathTime( ClassAd* cap );
 	void	publishVmAttrs( ClassAd* );
 	void	refreshVmAttrs( void );
 

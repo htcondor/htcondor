@@ -71,6 +71,19 @@ static	char*	logAppend = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
+// runfor is non-zero if the -r command-line option is specified. 
+// It is specified to tell a daemon to kill itself after runfor minutes.
+// Currently, it is only used for the master, and it is specified for 
+// glide-in jobs that know that they can only run for a certain amount
+// of time. Glide-in will tell the master to kill itself a minute before 
+// it needs to quit, and it will kill the other daemons. 
+// 
+// The master will check this global variable and set an environment
+// variable to inform the children how much time they have left to run. 
+// This will mainly be used by the startd, which will advertise how much
+// time it has left before it exits. This can be used by a job's requirements
+// so that it can decide if it should run at a particular machine or not. 
+int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
 #ifndef WIN32
@@ -1118,7 +1131,6 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
-	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
 #ifndef WIN32

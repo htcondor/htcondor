@@ -41,6 +41,7 @@
 #include "daemon_types.h"
 #include "daemon_list.h"
 #include "strupr.h"
+#include "condor_environ.h"
 
 #ifdef WIN32
 extern void register_service();
@@ -180,6 +181,7 @@ DoCleanup(int,int,char*)
 int
 main_init( int argc, char* argv[] )
 {
+    extern int runfor;
 	char	**ptr;
 
 #ifdef WIN32
@@ -214,6 +216,27 @@ main_init( int argc, char* argv[] )
 			usage( argv[0] );
 		}
 	}
+
+    if (runfor != 0) {
+        // We will construct an environment variable that 
+        // tells the daemon what time it will be shut down. 
+        // We'll give it an absolute time, though runfor is a 
+        // relative time. This means that we don't have to update
+        // the time each time we restart the daemon.
+        time_t      death_time;
+        MyString    runfor_env_source;
+        const char  *env_name;
+        char        *runfor_env;
+        
+        env_name   = EnvGetName(ENV_DAEMON_DEATHTIME);
+        death_time = time(NULL) + (runfor * 60);
+
+        runfor_env_source.sprintf("%s=%d\n", env_name, death_time);
+        runfor_env = strdup(runfor_env_source.Value());
+        putenv(runfor_env);
+        // Note that we don't free runfor_env, because it lives on 
+        // forever in the environment. 
+    }
 
 	daemons.SetDefaultReaper();
 	

@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "mds.h"
-
+#include "condor_environ.h"
 
 Resource::Resource( CpuAttributes* cap, int rid )
 {
@@ -1266,6 +1266,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		sprintf( line, "%s=%s", ATTR_CPU_IS_BUSY, 
 				 r_cpu_busy ? "True" : "False" );
 		cap->Insert(line); 
+
+        publishDeathTime( cap );
 	}
 
 		// Put in state info
@@ -1319,6 +1321,55 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	}
 }
 
+void
+Resource::publishDeathTime( ClassAd* cap )
+{
+    const char *death_time_env_name;
+    char       *death_time_string;
+    bool        have_death_time;
+    int         death_time;
+    int         relative_death_time;
+    MyString    classad_attribute;
+
+	if( ! cap ) {
+		return;
+	}
+
+    have_death_time     = false;
+    death_time_env_name = EnvGetName(ENV_DAEMON_DEATHTIME);
+    death_time_string   = getenv(death_time_env_name);
+
+    // Lookup the death time that we have.
+    if ( death_time_string ) {
+        death_time = atoi( death_time_string );
+        if ( death_time != 0 ) {
+            have_death_time = true;
+        }
+    }
+
+    if ( !have_death_time ) {
+        // If we don't have a death time, we'll leave forever.
+        // Well, we'll live until Unix time runs out. 
+        relative_death_time = MAXINT;
+    } else {
+        // We're publishing how much time we have to live. 
+        // If we don't have any time left, then we should have died
+        // already, but something is wrong. That's okay, we'll tell people
+        // not to expect anything, by telling them 0.
+        time_t current_time;
+
+        current_time = time(NULL);
+        if (current_time > death_time) {
+            relative_death_time = 0;
+        } else {
+            relative_death_time = death_time - current_time;
+        }
+    }
+
+    classad_attribute.sprintf( "%s=%d", ATTR_TIME_TO_LIVE, relative_death_time );
+    cap->Insert( classad_attribute.Value() );
+    return;
+}
 
 void
 Resource::publishVmAttrs( ClassAd* cap )
