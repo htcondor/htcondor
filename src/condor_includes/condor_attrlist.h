@@ -15,7 +15,7 @@
 
 #include "stream.h"
 
-#define		ATTRLIST_MAX_EXPRESSION		1024
+#define		ATTRLIST_MAX_EXPRESSION		10240
 
 enum							// various AttrLists
 {
