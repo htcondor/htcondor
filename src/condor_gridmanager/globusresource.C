@@ -2,8 +2,6 @@
 
 #include "condor_common.h"
 
-#include "globus_gram_client.h"
-
 #include "globusresource.h"
 #include "gridmanager.h"
 

@@ -28,8 +28,6 @@
 #include "environ.h"  // for Environ object
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#include "globus_gram_client.h"
-
 #include "gridmanager.h"
 #include "globusjob.h"
 
@@ -83,7 +81,7 @@ char *GMStateNames[] = {
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
-			"gmState %s, globusState %d: %s return Globus error %d\n", \
+			"gmState %s, globusState %d: %s returned Globus error %d\n", \
             GMStateNames[gmState],globusState,func,error)
 
 int GlobusJob::probeInterval = 300;		// default value

@@ -2227,7 +2227,7 @@ SetGlobusParams()
 	InsertJobExpr (buffer, false );
 
 	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
-			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
+			 GLOBUS_JOB_UNSUBMITTED );
 	InsertJobExpr (buffer, false );
 
 	if ( tmp = condor_param(GlobusRSL) ) {

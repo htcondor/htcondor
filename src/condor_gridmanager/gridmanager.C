@@ -32,7 +32,6 @@
 #include "format_time.h"  // for format_time and friends
 #include "condor_string.h"	// for strnewp and friends
 
-#include "globus_gram_client.h"
 #include "globus_gss_assist.h"
 
 #include "gridmanager.h"

@@ -30,10 +30,6 @@
 #   include "sslutils.h"
 #endif
 
-#if defined(CONDOR_G)
-#   include "globus_gram_protocol_constants.h"
-#endif
-
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
@@ -43,17 +39,17 @@ char *GlobusJobStatusName( int status )
 {
 #if defined(CONDOR_G)
 	switch ( status ) {
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
+	case 1:			// GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING
 		return "PENDING";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
+	case 2:			// GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE
 		return "ACTIVE";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED:
+	case 4:			// GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED
 		return "FAILED";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE:
+	case 8:			// GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE
 		return "DONE";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
+	case 16:		// GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED
 		return "SUSPENDED";
-	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED:
+	case 32:		// GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED
 		return "UNSUBMITTED";
 	default:
 		return "??????";

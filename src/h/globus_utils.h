@@ -27,9 +27,10 @@
 
 BEGIN_C_DECLS
 
-#if !defined(CONDOR_G)
-#  define GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED 32
-#endif
+/* This value is identical to GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED
+ * in the Globus GRAM header files.
+ */
+#define GLOBUS_JOB_UNSUBMITTED 32
 
 #define NULL_JOB_CONTACT	"X"
 
