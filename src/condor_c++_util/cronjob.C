@@ -512,7 +512,7 @@ CondorCronJob::RunProcess( void )
 	pid = daemonCore->Create_Process(
 		path,				// Path to executable
 		argBuf,				// argv
-		PRIV_UNKNOWN,		// Priviledge level
+		PRIV_CONDOR,		// Priviledge level
 		reaperId,			// ID Of reaper
 		FALSE,				// Command port?  No
 		env,				// Env to give to child
