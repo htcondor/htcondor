@@ -16,8 +16,6 @@
 extern "C" {
 int bzero(void *, int);
 int gethostname(char *, int);
-struct servent *getservbyname(char *, char *);
-struct hostent *gethostbyname(char *);
 
 unsigned int htonl(unsigned int);
 unsigned int ntohl(unsigned int);
