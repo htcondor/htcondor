@@ -951,14 +951,15 @@ Daemon::getCmInfo( const char* subsys )
 		New_full_hostname( tmp );
 	}
 
-		// For CM daemons, we always want the name to be whatever the
-		// full_hostname is.
-	New_name( strnewp(_full_hostname) );
+		// For CM daemons, if we don't already have anything for the
+		// name, use the full hostname.
+	if( ! _name ) {
+		New_name( strnewp(_full_hostname) );
+	}
 
-		// If the pool was set, we want to use the full-hostname for
-		// that, too.
+		// If the pool was set, we want to use _name for that, too. 
 	if( _pool ) {
-		New_pool( strnewp(_full_hostname) );
+		New_pool( strnewp(_name) );
 	}
 
 	free( host );
