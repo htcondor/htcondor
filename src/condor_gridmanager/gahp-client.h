@@ -39,12 +39,6 @@
 				static bool skip_next_r;
 		};
 
-		class Gahp_Buf {
-			public:
-				Gahp_Buf(int size);
-				~Gahp_Buf();
-				char *buffer;
-		};
 
 // Additional error values that GAHP calls can return
 ///

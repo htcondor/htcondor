@@ -138,17 +138,6 @@ dprintf(D_FULLDEBUG,"GAHP <- '%s%s%s'\n", command, buf, args );
 }
 
 
-Gahp_Buf::Gahp_Buf(int size)
-{
-	buffer = (char *)malloc(size);
-	ASSERT(buffer);
-}
-
-Gahp_Buf::~Gahp_Buf()
-{
-	free(buffer);
-}
-
 Gahp_Args::Gahp_Args()
 {
 	argv = NULL;
@@ -930,11 +919,10 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 	}
 
 		// Generate request line
-	int size = 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%d",port);
-	ASSERT( x > 0 && x < size );
+	MyString reqline;
+	bool x = reqline.sprintf("%d",port);
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -994,19 +982,17 @@ GahpClient::globus_gram_client_job_request(
 	if (!resource_manager_contact) resource_manager_contact=NULLSTRING;
 	if (!description) description=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	int size = strlen(resource_manager_contact) + strlen(description) +
-			strlen(callback_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
+	MyString reqline;
 	char *esc1 = strdup( escape(resource_manager_contact) );
 	char *esc2 = strdup( escape(callback_contact) );
 	char *esc3 = strdup( escape(description) );
-	int x = snprintf(buf,size,"%s %s 1 %s", esc1, esc2, esc3 );
+	bool x = reqline.sprintf("%s %s 1 %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	ASSERT( x > 0 && x < size );
-
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+	
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
 	if ( !is_pending(command,buf) ) {
@@ -1058,11 +1044,10 @@ GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	int size = strlen(job_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s",escape(job_contact));
-	ASSERT( x > 0 && x < size );
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escape(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1113,11 +1098,11 @@ GahpClient::globus_gram_client_job_status(const char * job_contact,
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	int size = strlen(job_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s",escape(job_contact));
-	ASSERT( x > 0 && x < size );
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escape(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1176,15 +1161,14 @@ GahpClient::globus_gram_client_job_signal(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!signal_arg) signal_arg=NULLSTRING;
-	int size = strlen(job_contact) + strlen(signal_arg) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
+	MyString reqline;
 	char *esc1 = strdup( escape(job_contact) );
 	char *esc2 = strdup( escape(signal_arg) );
-	int x = snprintf(buf,size,"%s %d %s",esc1,signal,esc2);
+	bool x = reqline.sprintf("%s %d %s",esc1,signal,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x > 0 && x < size );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1243,15 +1227,14 @@ GahpClient::globus_gram_client_job_callback_register(const char * job_contact,
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
 	if (!callback_contact) callback_contact=NULLSTRING;
-	int size = strlen(job_contact) + strlen(callback_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
+	MyString reqline;
 	char *esc1 = strdup( escape(job_contact) );
 	char *esc2 = strdup( escape(callback_contact) );
-	int x = snprintf(buf,size,"%s %s",esc1,esc2);
+	bool x = reqline.sprintf("%s %s",esc1,esc2);
 	free( esc1 );
 	free( esc2 );
-	ASSERT( x > 0 && x < size );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1305,11 +1288,10 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 
 		// Generate request line
 	if (!resource_contact) resource_contact=NULLSTRING;
-	int size = strlen(resource_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s",escape(resource_contact));
-	ASSERT( x > 0 && x < size );
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escape(resource_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
@@ -1358,11 +1340,10 @@ GahpClient::globus_gram_client_job_refresh_credentials(const char *job_contact)
 
 		// Generate request line
 	if (!job_contact) job_contact=NULLSTRING;
-	int size = strlen(job_contact) + 150;
-	Gahp_Buf reqline(size);
-	char *buf = reqline.buffer;
-	int x = snprintf(buf,size,"%s",escape(job_contact));
-	ASSERT( x > 0 && x < size );
+	MyString reqline;
+	bool x = reqline.sprintf("%s",escape(job_contact));
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
 
 		// Check if this request is currently pending.  If not, make
 		// it the pending request.
