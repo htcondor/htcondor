@@ -392,7 +392,7 @@ processCommandLineArguments (int argc, char *argv[])
 
 			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
 				fprintf( stderr, "Error: unknown host %s\n",
-						 argv[0], get_host_part(argv[i+1]) );
+						 get_host_part(argv[i+1]) );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: The name given with the -name "

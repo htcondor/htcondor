@@ -79,7 +79,7 @@ int getProcInfo_test(bool verbose) {
     // time in user mode + system mode should not be greater then age
     if((pi->user_time + pi->sys_time) > pi->age){
       printf("Error process %d:\n", pid);
-      printf("time in user mode %d + sys mode %d is greater than total age\n", pi->user_time, pi->sys_time, pi->age);
+      printf("time in user mode %d + sys mode %d is greater than total age %d\n", pi->user_time, pi->sys_time, pi->age);
       success = -1;
     }
     
