@@ -224,30 +224,28 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		///////////////////////////////////////////////////////
 
 	if( ! filename ) {
-	#ifndef WIN32
 		switch( type ) {
 		case SFT_IN:
-			fd = open( "/dev/null", O_RDONLY );
+			fd = open( NULL_FILE, O_RDONLY );
 			break;
 		case SFT_OUT:
 		case SFT_ERR:
-			fd = open( "/dev/null", O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+			fd = open( NULL_FILE, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 			if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
-				fd = open( "/dev/null", O_WRONLY|O_CREAT, 0666 );
+				fd = open( NULL_FILE, O_WRONLY|O_CREAT, 0666 );
 			}
 			break;
 		}
 		if( fd < 0 ) {
 			char const *errno_str = strerror( errno );
 			MyString err_msg;
-			err_msg.sprintf( "Failed to open %s file '/dev/null': %s "
-							 "(errno %d)", phrase, errno_str, errno );
+			err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
+							 NULL_FILE, phrase, errno_str, errno );
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
 			Starter->jic->notifyStarterError( err_msg.Value(), true );
 			return -1;
 		}
-	#endif
 			// if we're here, we successfully opened the NULL file, so
 			// we can safely return the fd
 		return fd;
