@@ -488,7 +488,7 @@ system.
   the hostname builtin macro - instead of having an empty file for every host
   in the pool, some files can simply be omitted. The default setting is True,
   and Condor will exit with an error if the file listed as the local config 
-  file cannot be read, unless \MacroUNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
+  file cannot be read, unless \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
   to False 
 
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
@@ -578,6 +578,10 @@ system.
   is used by both the \Condor{schedd} which appends the information
   and \Condor{history}, the user-level program used to view
   the history file.
+  This configuration macro is given the default value of
+  \File{\$(SPOOL)/history} in the default configuration.
+  If not defined,
+  no history file is kept.
 % PKK
 % Described in default config file: YES
 % Defined in the default config file: YES 
@@ -609,7 +613,10 @@ system.
 
 \item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
   For systems with multiple network interfaces, Condor chooses the
-  first one defined.  To choose a network interface other than the
+  first one defined.
+  If this configuration macro is not defined,
+  Condor binds to first interface found.
+  To choose a network interface other than the
   first one, this macro is defined by giving the IP address
   to use.
 % PKK
@@ -698,7 +705,7 @@ system.
   used to set
   the resource limit for the size of a core file.  If not defined,
   it leaves in place whatever limit was in effect
-  when you started the Condor daemons (normally the \Condor{master}).
+  when the Condor daemons (normally the \Condor{master}) were started.
   If this parameter is set and TRUE, the limit is increased to
   the maximum.  If it is set to FALSE, the limit is set at 0
   (which means that no core files are created).  Core files
@@ -716,7 +723,7 @@ system.
 
 \item[\Macro{Q\_QUERY\_TIMEOUT}] \label{param:QQueryTimeout}
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
-  connect to the \Condor{schedd}.  Defaults to 20.
+  connect to the \Condor{schedd}.  Defaults to 20 seconds.
 % PKK
 % Described in default config file: NO
 % Defined in the default config file: NO
@@ -726,16 +733,16 @@ system.
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   \label{param:UpdateCollectorWithTcp}
   If your site needs to use TCP connections to send ClassAd updates to
-  your collector (which it almost certainly does NOT), you can enable
-  this feature by setting this to TRUE.
+  your collector (which it almost certainly does NOT), set to TRUE
+  to enable this feature.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when you would need this
-  functionality. 
-  At this time, this setting only effects the main \Condor{collector}
-  for your site, not any sites that a \Condor{schedd} might flock to. 
-  If you enable this feature, you must also define
-  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at your central manager, so
+  for more details and a discussion of when this
+  functionality is needed. 
+  At this time, this setting only affects the main \Condor{collector}
+  for the site, not any sites that a \Condor{schedd} might flock to. 
+  If enabled, also define
+  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at the central manager, so
   that the collector will accept TCP connections for updates, and will
   keep them open for reuse.
   Defaults to FALSE.
@@ -753,8 +760,9 @@ system.
   The list of collectors which will be updated with TCP instead of UDP.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when you would need this
+  for more details and a discussion of when a site needs this
   functionality. 
+  If not defined, no collectors use TCP instead of UDP.
 % PKK
 % Described in default config file: NO
 % Defined in the default config file: NO
@@ -765,10 +773,10 @@ system.
 
 \item[\Macro{TRUST\_UID\_DOMAIN}]
   \label{param:TrustUidDomain}
-  As an added security precaution, when Condor is about to spawn a job
+  As an added security precaution when Condor is about to spawn a job,
   it ensures that the \MacroNI{UID\_DOMAIN} (defined above) of a given
   submit machine is a substring of that machine's fully-qualified
-  hostname.
+  host name.
   However, at some sites, there may be multiple UID spaces that do
   not clearly correspond to Internet domain names.
   In these cases, administrators may wish to use names to describe the
@@ -780,7 +788,8 @@ system.
   \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
   to spawn a job, instead of making sure the submit machine's hostname
   matches the \MacroNI{UID\_DOMAIN}.
-  The default is FALSE, since it is more secure to perform this test. 
+  When not defined, the default is FALSE,
+  since it is more secure to perform this test. 
 % PKK
 % Described in default config file: YES
 % Defined in the default config file: NO
@@ -795,12 +804,16 @@ system.
   pool administrators to specify (in seconds) how long Condor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
   5 minutes. This means that if a pool administrator updates the user
-  or group database (e.g. /etc/passwd or /etc/group), it can take up
+  or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
+  it can take up
   to 5 minutes before Condor will have the updated information. This
   caching feature can be disabled by setting the refresh interval to
   0. In addition, the cache can also be flushed explicitly by running
-  the ``\condor{reconfig} -full'' command. This setting has no effect
-  on Windows.
+  the command
+\begin{verbatim}
+     condor_reconfig -full
+\end{verbatim}
+  This configuration variable has no effect on Windows.
 % PKK
 % Described in default config file: NO
 % Defined in the default config file: NO
