@@ -178,10 +178,15 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
-			// Set a flag to avoid a potential race in our protocol.
-		r_is_deactivating = true;
-			// Singal the starter.
-		return r_starter->kill( DC_SIGSOFTKILL );
+		if( r_starter->active() ) {
+				// Set a flag to avoid a potential race in our
+				// protocol.  
+			r_is_deactivating = true;
+				// Singal the starter.
+			return r_starter->kill( DC_SIGSOFTKILL );
+		} else {
+			return TRUE;
+		}
 	} else {
 		return FALSE;
 	}
@@ -193,10 +198,15 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-			// Set a flag to avoid a potential race in our protocol.
-		r_is_deactivating = true;
-			// Singal the starter.
-		return hardkill_starter();
+		if( r_starter->active() ) {
+				// Set a flag to avoid a potential race in our
+				// protocol.  
+			r_is_deactivating = true;
+				// Singal the starter.
+			return hardkill_starter();
+		} else {
+			return TRUE;
+		}
 	} else {
 		return FALSE;
 	}
