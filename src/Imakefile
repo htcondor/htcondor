@@ -24,7 +24,7 @@ CFLAGS = $(STD_C_FLAGS)
 		accountant.V6 ckpt_server collector.V6 $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		condor_shadow.jim condor_starter.jim tools kbdd
+		shadow.jim starter.jim tools kbdd
 
 #define Libraries \
 		util_lib c++_util ckpt io classad daemon_core.V6 \
@@ -99,8 +99,8 @@ object_target(syscall_lib)
 object_target(io)
 object_target(classad)
 object_target(daemon_core.V6)
-object_target(condor_starter.jim)
-object_target(condor_shadow.jim)
+object_target(starter.jim)
+object_target(shadow.jim)
 
 makefiles:: h/Makefile
 h/Makefile:
