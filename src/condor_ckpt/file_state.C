@@ -280,7 +280,7 @@ int CondorFileTable::count_file_uses( CondorFile *f )
 
 int CondorFileTable::open( const char *logical_name, int flags, int mode )
 {
-	int	fd, real_fd;
+	int	fd, real_fd, temp, result;
 	char	full_path[_POSIX_PATH_MAX];
 	char	url[_POSIX_PATH_MAX];
 	char	method[_POSIX_PATH_MAX];
@@ -295,10 +295,16 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 		strcpy(method,"local");
 		strcpy(full_path,logical_name);
 	} else {
-		REMOTE_syscall( CONDOR_get_file_info, logical_name, url );
-		sscanf(url,"%[^:]:%s",method,full_path);
+		result = REMOTE_syscall( CONDOR_get_file_info, logical_name, url );
+		if( result<0 ) {
+			strcpy(method,"remote");
+			strcpy(full_path,logical_name);
+		} else {
+			sscanf(url,"%[^:]:%s",method,full_path);
+		}
+
 		if(!got_buffer_info) {
-			REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size );
+			REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
 			got_buffer_info = 1;
 		}
 
@@ -322,7 +328,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 		} else if(!strcmp(method,"remotefetch")) {
 		 	f = new CondorFileAgent(new CondorFileRemote);
 		} else {
-			_condor_warning("I don't know how to access file '%s'",url);
+			_condor_warning("I don't know how to access file type '%s'",url);
 			errno = ENOENT;
 			return -1;
 		}
@@ -367,7 +373,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 			( (flags&O_RDONLY) && (info->write_bytes) )
 		)
 	) {
-		_condor_warning("File '%s' for both reading and writing.  This is not safe in a program that may be checkpointed\n",logical_name);
+		_condor_warning("File '%s' opened for both reading and writing.  This is not safe in a program that may be checkpointed\n",logical_name);
 		info->already_warned = 1;
 	}
 
@@ -883,12 +889,14 @@ int CondorFileTable::get_buffer_block_size()
 
 void CondorFileTable::checkpoint()
 {
+	int temp;
+
 	dprintf(D_ALWAYS,"CondorFileTable::checkpoint\n");
 
 	dump();
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size );
+		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
 		REMOTE_syscall( CONDOR_getwd, working_dir );
 	} else {
 		::getcwd( working_dir, _POSIX_PATH_MAX );
@@ -902,18 +910,18 @@ void CondorFileTable::checkpoint()
 			pointers[i]->info->report();
 		}
 	}
-
-	REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size );
 }
 
 void CondorFileTable::suspend()
 {
+	int temp;
+
 	dprintf(D_ALWAYS,"CondorFileTable::suspend\n");
 
 	dump();
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size );
+		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
 		REMOTE_syscall( CONDOR_getwd, working_dir );
 	} else {
 		::getcwd( working_dir, _POSIX_PATH_MAX );
@@ -940,7 +948,7 @@ void CondorFileTable::resume()
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
 	if(MyImage.GetMode()!=STANDALONE) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size );
+		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
 		result = REMOTE_syscall(CONDOR_chdir,working_dir);
 	} else {
 		result = ::chdir( working_dir );
