@@ -446,7 +446,7 @@ command_query_ads( Service*, int, Stream* stream)
 
 	stream->decode();
     stream->timeout(15);
-	if( !queryAd.get(*stream) || !stream->end_of_message()) {
+	if( !queryAd.initFromStream(*stream) || !stream->end_of_message()) {
         dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
 		return FALSE;
 	}
@@ -531,7 +531,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	}
 
 		// Get the classad of the request.
-	if( !req_classad->get(*stream) ) {
+	if( !req_classad->initFromStream(*stream) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd-agent\n" );
 		ABORT;
 	}
@@ -869,7 +869,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Grab request class ad 
 	req_classad = new ClassAd;
-	if( !req_classad->get(*stream) ) {
+	if( !req_classad->initFromStream(*stream) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive request classad from shadow.\n" );
 		ABORT;
 	}

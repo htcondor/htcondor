@@ -480,7 +480,7 @@ GetJobAd( int cluster_id, int proc_id )
 			return NULL;
 		}
 		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+		assert( ad->initFromStream(*qmgmt_sock) );
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -508,7 +508,7 @@ GetJobByConstraint( char *constraint )
 			return NULL;
 		}
 		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+		assert( ad->initFromStream(*qmgmt_sock) );
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -537,7 +537,7 @@ GetNextJob( int initScan )
 		}
 		
 		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+		assert( ad->initFromStream(*qmgmt_sock) );
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;
@@ -567,7 +567,7 @@ GetNextJobByConstraint( char *constraint, int initScan )
 		}
 
 		ClassAd *ad = new ClassAd;
-		assert( ad->get(*qmgmt_sock) );
+		assert( ad->initFromStream(*qmgmt_sock) );
 		assert( qmgmt_sock->end_of_message() );
 
 	return ad;

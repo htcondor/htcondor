@@ -51,7 +51,7 @@ UniShadow::UpdateFromStarter(int command, Stream *s)
 	
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	updateAd.get(*s);
+	updateAd.initFromStream(*s);
 	s->end_of_message();
 
 	if ( !jobad ) {

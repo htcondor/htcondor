@@ -152,7 +152,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if (!ad.get((Stream &)*sock) || !sock->eom())
+    if( !ad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -226,7 +226,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if (!ad.get((Stream &)*sock) || !sock->eom())
+    if( !ad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;

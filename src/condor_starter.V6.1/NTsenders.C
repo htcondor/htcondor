@@ -110,7 +110,7 @@ REMOTE_syscall( int syscall_num, ... )
             dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 			break;
 		}
-		assert( ad->get(*syscall_sock) );
+		assert( ad->initFromStream(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 		break;
 	}
