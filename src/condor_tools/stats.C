@@ -219,6 +219,10 @@ main(int argc, char* argv[])
   config( 0 );
 
   Daemon view_host( DT_VIEW_COLLECTOR, 0, pool );
+  if( ! view_host.locate() ) {
+	  fprintf( stderr, "%s: %s\n", argv[0], view_host.error() );
+	  exit(1);
+  }
 
   const int MaxLen=200;
   char Line[MaxLen+1];
