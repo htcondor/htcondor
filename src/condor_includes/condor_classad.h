@@ -32,7 +32,7 @@ class ClassAd : public AttrList
 
 		ClassAd();								// No associated AttrList list
 		ClassAd(class ProcObj*);				// create from a proc object
-		ClassAd(CONTEXT*);						// create from a CONTEXT
+		ClassAd(const CONTEXT*);				// create from a CONTEXT
         ClassAd(FILE *, char *, int &);			// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.
 		ClassAd(const ClassAd&);				// copy constructor
@@ -45,8 +45,11 @@ class ClassAd : public AttrList
         char*		GetTargetTypeName();		// target type name returned.
         int			GetMyTypeNumber();			// my type number returned.
         int			GetTargetTypeNumber();		// target type number returned.
-        int			IsAMatch(ClassAd*);			// tests whether it's a match
-												// mutually.
+        int			IsAMatch(ClassAd*);			// tests symmetric match
+		friend bool operator==(ClassAd&,ClassAd&);// same as symmetric match
+		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
+		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
+
     private :
 
 		AdType*		myType;						// my type field.
