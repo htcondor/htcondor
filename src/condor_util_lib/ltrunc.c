@@ -38,10 +38,16 @@ register char *str;
 	register char * ptr;
 
 	ptr = str;
+
+	// seek to the null
 	while(*ptr)ptr++;
-	while(isspace(*--ptr))
-		if(ptr < str)
+
+	for(ptr--; ptr >= str; --ptr) {
+		if( !isspace(*ptr) ) {
 			break;
+		}
+	}
+			
 	ptr[1] = '\0';
 	while(isspace(*str))str++;
 	return(str);
