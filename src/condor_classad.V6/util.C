@@ -369,4 +369,52 @@ int classad_isnan(double x)
 }
 #endif
 
+#ifdef WIN32
+bool classad_isneg(double x)
+{
+    int numclass = _fpclass(real);
+    if (   numclass == _FPCLASS_NZ 
+        || numclass == _FPCLASS_NINF
+        || numcalss == _FPCLASS_NN
+        || numclass == _FPCLASS_ND){
+        return true;
+    } else {
+        return false;
+    }
+}
+#elif defined (__SVR4) && defined (__sun)
+#include <ieeefp.h>
+bool classad_isneg(double x)
+{
+    int numclass = fpclass(x);
+
+    if (   numclass == FP_NZERO 
+        || numclass == FP_NINF
+        || numclass ==  FP_NDENORM
+        || numclass == FP_NNORM)
+        return true;
+    } else {
+        return false;
+    }
+}
+#elif defined signbit
+bool classad_isneg(double x)
+{
+    if (signbit(x) != 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+#else
+bool classad_isneg(double x)
+{
+    if (__signbit(x) != 0) {
+        return true;
+    } else {
+        return false;
+    }
+}
+#endif
 END_NAMESPACE // classad
+
