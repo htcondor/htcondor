@@ -74,6 +74,10 @@ CollectorEngine () :
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
+
+	updates_total = 0;
+	updates_sequenced = 0;
+	updates_dropped = 0;
 }
 
 
@@ -371,8 +375,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (StartdAds, "StartdAd     ", clientAd, hk, 
-							  hashString, insert);
+		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
+							  clientAd, hk, hashString, insert);
 
 		// if we want to store private ads
 		if (!sock)
@@ -395,8 +399,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
-			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ", pvtAd,
-									hk, hashString, insPvt);
+			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
+								  "StartdPvt", pvtAd, hk, hashString, insPvt);
 		}
 		break;
 
@@ -409,8 +413,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (ScheddAds, "ScheddAd     ", clientAd, hk,
-							  hashString, insert);
+		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd", 
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_SUBMITTOR_AD:
@@ -424,8 +428,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", clientAd, hk,
-							  hashString, insert);
+		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_LICENSE_AD:
@@ -439,8 +443,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (LicenseAds, "LicenseAd  ", clientAd, hk,
-							  hashString, insert);
+		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_MASTER_AD:
@@ -451,8 +455,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (MasterAds, "MasterAd     ", clientAd, hk, 
-							  hashString, insert);
+		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_CKPT_SRVR_AD:
@@ -464,8 +468,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", clientAd, hk, 
-							  hashString, insert);
+		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_COLLECTOR_AD:
@@ -476,8 +480,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (CollectorAds, "CollectorAd  ", clientAd, hk, 
-							  hashString, insert);
+		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case UPDATE_STORAGE_AD:
@@ -488,8 +492,8 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (StorageAds, "StorageAd  ", clientAd, hk, 
-							  hashString, insert);
+		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
+							  clientAd, hk, hashString, insert);
 		break;
 
 	  case QUERY_STARTD_ADS:
@@ -623,7 +627,8 @@ remove (AdTypes adType, HashKey &hk)
 				
 ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable, 
-			   char *adType, 
+			   const char *adType,
+			   const char *label,
 			   ClassAd *ad, 
 			   HashKey &hk,
 			   char *hashString,
@@ -643,6 +648,9 @@ updateClassAd (CollectorHashTable &hashTable,
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
+
+	// Count the update
+	updates_total++;
 
 	// check if it already exists in the hash table ...
 	if (hashTable.lookup (hk, old_ad) == -1)
@@ -674,6 +682,27 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 		else
 		{
+			// Check the sequence numbers..
+			int	new_seq, old_seq;
+			int	new_stime, old_stime;
+			int	dropped = 0;
+
+			// Compare sequence numbers..
+			if ( new_ad->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, new_seq ) &&
+				 old_ad->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, old_seq ) &&
+				 new_ad->LookupInteger( ATTR_DAEMON_START_TIME, new_stime ) &&
+				 old_ad->LookupInteger( ATTR_DAEMON_START_TIME, old_stime ) )
+			{
+
+				int		expected = old_seq + 1;
+				if (  ( new_stime == old_stime ) && ( expected != new_seq ) )
+				{
+					dprintf( D_ALWAYS, "  Drop: expected %d, got %d\n", expected, new_seq );
+					dropped = ( new_seq < expected ) ? 1 : ( new_seq - expected );
+				}
+			}
+			updates_sequenced++;
+			updates_dropped += dropped;
 			old_ad->ExchangeExpressions (new_ad);
 			delete new_ad;
 		}
@@ -681,7 +710,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 0;
 		return old_ad;
 	}
-}		
+}
 
 void CollectorEngine::
 checkMasterStatus (ClassAd *ad)
@@ -918,6 +947,22 @@ masterCheck ()
 
 	dprintf (D_ALWAYS, "MasterCheck:  Done checking for down masters\n");
 	return TRUE;
+}
+
+// Publish statistics into our ClassAd
+int CollectorEngine::
+publishStats( ClassAd *ad )
+{
+    char line[100];
+
+    sprintf(line,"%s = %d", ATTR_UPDATESTATS_TOTAL, updates_total);
+    ad->Insert(line);
+    sprintf(line,"%s = %d", ATTR_UPDATESTATS_SEQUENCED, updates_sequenced );
+    ad->Insert(line);
+    sprintf(line,"%s = %d", ATTR_UPDATESTATS_LOST, updates_dropped);
+    ad->Insert(line);
+
+	return 0;
 }
 
 static void

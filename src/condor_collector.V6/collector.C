@@ -941,6 +941,9 @@ int CollectorDaemon::sendCollectorAd()
     sprintf(line,"%s = %d",ATTR_NUM_HOSTS_OWNER,machinesOwner);
     ad->Insert(line);
 
+	// Collector engine stats, too
+	collector.publishStats( ad );
+
     // send the ad
 	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
 		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "

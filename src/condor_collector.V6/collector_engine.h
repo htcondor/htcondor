@@ -61,6 +61,9 @@ class CollectorEngine : public Service
 	// walk specified hash table with the given visit procedure
 	int walkHashTable (AdTypes, int (*)(ClassAd *));
 
+	// Publish stats into the collector's ClassAd
+	int publishStats( ClassAd *ad );
+
   private:
 	// the greater tables
 	enum {GREATER_TABLE_SIZE = 1024};
@@ -93,8 +96,13 @@ class CollectorEngine : public Service
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
 				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
-	ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
-	                       char*, int & );
+	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
+						   ClassAd*,HashKey&, char*, int & );
+
+	// Statistics
+	int		updates_total;
+	int		updates_sequenced;
+	int		updates_dropped;
 
   public:
 	// pointer values for representing master states
