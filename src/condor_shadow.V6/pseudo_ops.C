@@ -38,6 +38,7 @@
 #include "../condor_ckpt_server/server_interface.h"
 #include "internet.h"
 #include "condor_config.h"
+#include "filename_tools.h"
 
 #ifdef CARMI_OPS
 #include <ProcList.h>
@@ -1079,12 +1080,47 @@ pseudo_std_file_info( int which, char *name, int *pipe_fd )
 int
 pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 {
-	int		answer, len;
+	int	answer, len;
 	char	full_path[ _POSIX_PATH_MAX ];
+
+	*pipe_fd = -1;
 
 	dprintf( D_SYSCALLS, "\tname = \"%s\"\n", name );
 
-	*pipe_fd = -1;
+	/* First check to see if the logical name matches a
+	   filename that is remapped by the job ad. */
+
+	char	remap_list[ATTRLIST_MAX_EXPRESSION];
+	char	full_url[_POSIX_PATH_MAX*3];
+	char	url_method[_POSIX_PATH_MAX];
+	char	url_server[_POSIX_PATH_MAX];
+	int	url_port;
+	
+	JobAd->LookupString(ATTR_FILE_REMAPS,remap_list);
+        if(filename_remap_find(remap_list,(char*)name,full_url)) {
+
+                dprintf(D_SYSCALLS,"\tthis file is remapped by the user.\n");
+
+                filename_url_parse(full_url,url_method,url_server,&url_port,extern_path);
+
+                dprintf(D_SYSCALLS,"\tremap method: %s\n",url_method);
+                dprintf(D_SYSCALLS,"\tremap server: %s\n",url_server);
+                dprintf(D_SYSCALLS,"\tremap port: %d\n",url_port);
+                dprintf(D_SYSCALLS,"\tremap path: %s\n",extern_path);
+
+                if(!strcmp(url_method,"local")) {
+                        answer = IS_LOCAL;
+                } else if(!strcmp(url_method,"remote")) {
+                        answer = IS_RSC;
+                } else {
+                        dprintf(D_SYSCALLS,"\tunknown method (%s) -- defaulting to remote\n",url_method);
+                        answer = IS_RSC;
+                }
+
+		return answer;
+        }
+
+	dprintf( D_SYSCALLS, "\tnot remapped.\n");
 
 	if( name[0] == '/' ) {
 		strcpy( full_path, name );
@@ -1131,22 +1167,42 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	return answer;
 }
 
-int pseudo_get_buffer_info( int *blocks, int *block_size, int *prefetch_bytes )
+int pseudo_get_buffer_info( int *blocks_out, int *block_size_out, int *prefetch_out )
 {
-	char *btext = param("BUFFER_BLOCK_COUNT");
-	char *bstext = param("BUFFER_BLOCK_SIZE");
-	char *ptext = param("BUFFER_PREFETCH_BYTES");
+	int buffer_size=0,block_size=0,blocks=0,prefetch=0;
 
-	// If the param can't be found or contains funny data,
-	// then we return zeroes, which disables buffering
-	// or prefetching, as the case may be.
+	JobAd->LookupInteger(ATTR_BUFFER_SIZE,buffer_size);
+	JobAd->LookupInteger(ATTR_BUFFER_PREFETCH_SIZE,prefetch);
+	JobAd->LookupInteger(ATTR_BUFFER_BLOCK_SIZE,block_size);
 
-	*blocks = atoi(btext);
-	*block_size = atoi(bstext);
-	*prefetch_bytes = atoi(ptext);
+	/* If the buffer size is greater than zero, than round it up
+	   to match any block size setting. */
 
-	dprintf(D_SYSCALLS,"\tblocks=%d block_size=%d prefetch_bytes=%d\n",
-		*blocks, *block_size, *prefetch_bytes );
+	if(buffer_size>0) {
+
+		if(block_size<=0) block_size=16384;
+
+		blocks = (buffer_size/block_size);
+		if( (blocks*block_size) < buffer_size ) {
+			blocks++;
+			buffer_size = blocks*block_size;
+		}
+
+		if(prefetch<0) {
+			prefetch = 0;
+		} else if(prefetch<block_size) {
+			prefetch = block_size;
+		} else if(prefetch>buffer_size) {
+			prefetch = buffer_size;
+		}
+	}
+
+	*blocks_out = blocks;
+	*block_size_out = block_size;
+	*prefetch_out = prefetch;
+
+	dprintf(D_SYSCALLS,"\tblocks=%d block_size=%d prefetch=%d\n",
+		blocks, block_size, prefetch );
 
 	return 0;
 }
