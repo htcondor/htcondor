@@ -88,7 +88,13 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 
 ##  Read access.  Machines listed as allow (and/or not listed as deny)
 ##  can view the status of your pool, etc.  
-#HOSTALLOW_READ = 
+##  NOTE: By default, without either of these entries specified, you
+##  are granting read access to the whole world.  You may want to
+##  restrict that to hosts in your domain.  If possible, if you grant
+##  read access to *.cs.wisc.edu, the Condor developers will be able
+##  to view the status of your pool and more easily help you install,
+##  configure or debug 
+#HOSTALLOW_READ = *.your.domain, *.cs.wisc.edu
 #HOSTDENY_READ = *.bad.subnet, bad-machine.your.domain, 144.77.88.*
 
 ##  Write access.  Machines listed here can join your pool, submit
@@ -428,8 +434,11 @@ KILLING_TIMEOUT		= 30
 ##  unclaimed and it's been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
+##  Note, if you don't want any benchmarks run at all, either comment
+##  RunBenchmarks out, or set it to "False".
 BenchmarkTimer = (CurrentTime - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
+#RunBenchmarks : False
 
 ##  Normally, when the startd is computing the idle time of all the
 ##  users of the machine (both local and remote), it checks the utmp
@@ -449,10 +458,10 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  "/dev/" portion of the pathname.
 #CONSOLE_DEVICES = mouse, console
 
-##  This entry allows you to have the startd advertise arbitrary
-##  expressions from the config file in its ClassAd.  Give the
-##  comma-seperated list of entries from the config file you want in
-##  the startd classad.  
+##  The STARTD_EXPRS entry allows you to have the startd advertise
+##  arbitrary expressions from the config file in its ClassAd.  Give
+##  the comma-seperated list of entries from the config file you want
+##  in the startd classad.
 ##  Note: because of the different syntax of the config file and
 ##  ClassAds, you might have to do a little extra work to get a given
 ##  entry into the ClassAd.  In particular, ClassAds require "'s
@@ -460,15 +469,19 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  boolean expressions.  For example, if you wanted the startd to
 ##  advertise its list of console devices, when it's configured to run
 ##  benchmarks, and how often it sends updates to the central manager,
-##  you'd have to do the following:
+##  you'd have to define the following helper macro:
 #MY_CONSOLE_DEVICES = "$(CONSOLE_DEVICES)"
+##  Note: this must come before you define STARTD_EXPRS because macros
+##  must be defined before you use them in other macros or
+##  expressions.
+##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the classad of the job its working on.
-##  Just list the attribute names you want advertised.  Note: since
-##  this is already a ClassAd, you don't have to do anything funny
-##  with strings, etc.
+##  Just list the attribute names you want advertised.  
+##  Note: since this is already a ClassAd, you don't have to do
+##  anything funny with strings, etc.
 STARTD_JOB_EXPRS = ImageSize, JobUniverse
 
 
@@ -561,6 +574,13 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  debug information back to the condor_shadow where it will end up
 ##  in the ShadowLog?
 STARTER_LOCAL_LOGGING	= TRUE
+
+##  If the UID_DOMAIN settings match on both the execute and submit
+##  machines, but the uid of the user who submitted the job isn't in
+##  the passwd file of the execute machine, the starter will normally
+##  exit with an error.  Do you want the starter to just start up the
+##  job with the specified uid, even if it's not in the passwd file?
+#SOFT_UID_DOMAIN = FALSE
 
 
 ##--------------------------------------------------------------------
