@@ -42,8 +42,8 @@ extern int		preen_interval;
 extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
-extern char*	CollectorHost;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
+extern Daemon*	Collector;
 
 
 #if 0
@@ -304,7 +304,7 @@ int daemon::Restart()
 		daemonCore->Cancel_Timer( start_tid );
 	}
 	start_tid = daemonCore->
-		Register_Timer( n, (TimerHandlercpp)daemon::DoStart,
+		Register_Timer( n, (TimerHandlercpp)&daemon::DoStart,
 						"daemon::DoStart()", this );
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
 
@@ -442,7 +442,7 @@ daemon::Start()
 	
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
-		recover_tid = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)daemon::Recover,
+		recover_tid = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)&daemon::Recover,
 			"daemon::Recover()",this);
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
@@ -496,7 +496,7 @@ daemon::Stop()
 
 	stop_fast_tid = 
 		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
-									(TimerHandlercpp)daemon::StopFast,
+									(TimerHandlercpp)&daemon::StopFast,
 									"daemon::StopFast()", this );
 }
 
@@ -540,7 +540,7 @@ daemon::StopFast()
 
 	hard_kill_tid = 
 		daemonCore->Register_Timer( shutdown_fast_timeout, 0, 
-									(TimerHandlercpp)daemon::HardKill,
+									(TimerHandlercpp)&daemon::HardKill,
 									"daemon::HardKill()", this );
 }
 
@@ -1069,7 +1069,7 @@ Daemons::FinishRestartMaster()
 				 new_bin_delay );
 		daemonCore->
 			Register_Timer( new_bin_delay, 0, 
-							(TimerHandlercpp)Daemons::FinalRestartMaster,
+							(TimerHandlercpp)&Daemons::FinalRestartMaster,
 							"Daemons::FinalRestartMaster()", this );
 	}
 }
@@ -1318,7 +1318,7 @@ Daemons::StartTimers()
 			// collector before we try to send an update to it.
 		update_tid = daemonCore->
 			Register_Timer( 5, update_interval,
-							(TimerHandlercpp)Daemons::UpdateCollector,
+							(TimerHandlercpp)&Daemons::UpdateCollector,
 							"Daemons::UpdateCollector()", this );
 		old_update_int = update_interval;
 	}
@@ -1333,7 +1333,7 @@ Daemons::StartTimers()
 	if( new_check && StartDaemons ) {
 		check_new_exec_tid = daemonCore->
 			Register_Timer( 5, check_new_exec_interval,
-							(TimerHandlercpp)Daemons::CheckForNewExecutable,
+							(TimerHandlercpp)&Daemons::CheckForNewExecutable,
 							"Daemons::CheckForNewExecutable()", this );
 	}
 	old_check_int = check_new_exec_interval;
@@ -1396,31 +1396,38 @@ Daemons::UpdateCollector()
 	SafeSock sock;
 	sock.timeout(2);
 
-	if (!sock.connect(CollectorHost, COLLECTOR_PORT)) {
-		dprintf(D_ALWAYS, "Can't locate collector %s\n", CollectorHost);
+		// Port doesn't matter, since we've got the sinful string. 
+	if (!sock.connect(Collector->addr(), 0)) {
+		dprintf( D_ALWAYS, "Can't locate collector %s\n", 
+				 Collector->fullHostname() );
 		return;
 	}
 
 	sock.encode();
 	if(!sock.code(cmd))
 	{
-		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
+		dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to collector (%s)\n", 
+				 Collector->fullHostname() );
 		return;
 	}
 	if(!ad->put(sock))
 	{
-		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
+		dprintf( D_ALWAYS, "Can't send ClassAd to the collector (%s)\n",
+				 Collector->fullHostname() );
+
 		return;
 	}
 	if(!sock.end_of_message())
 	{
-		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
+		dprintf( D_ALWAYS, "Can't send EOM to the collector (%s)\n",
+				 Collector->fullHostname() );
+
 	}
 
 		// Reset the timer so we don't do another period update until 
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 
-	dprintf(D_FULLDEBUG, "exit Daemons::UpdateCollector\n");
+	dprintf( D_FULLDEBUG, "exit Daemons::UpdateCollector\n" );
 }
 
 
