@@ -91,10 +91,15 @@ send_file( const char *local, const char *remote, int perm )
 		if( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "Can't read fd %d, errno = %d\n",
 														local_fd, errno );
+			(void)close( local_fd );
+			(void)close( remote_fd );
+			return -1;
 		}
 		if( write(remote_fd,buf,nbytes) != nbytes ) {
 			dprintf( D_ALWAYS, "Can't write fd %d, errno = %d\n",
 														remote_fd, errno );
+			(void)close( local_fd );
+			(void)close( remote_fd );
 			return -1;
 		}
 	}
@@ -148,11 +153,15 @@ get_file( const char *remote, const char *local, int mode )
 		if( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "Can't read fd %d, errno = %d\n",
 														remote_fd, errno );
+			(void)close( local_fd );
+			(void)close( remote_fd );
 			return -1;
 		}
 		if( write(local_fd,buf,nbytes) != nbytes ) {
 			dprintf( D_ALWAYS, "Can't write fd %d, errno = %d\n",
 														local_fd, errno );
+			(void)close( local_fd );
+			(void)close( remote_fd );
 			return -1;
 		}
 	}
