@@ -57,6 +57,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Windows bug fixes:
+\begin{itemize}
+  \item Fixed a bug which could cause Condor to kill processes that
+    aren't related to Condor or the job it was running at the time.
+
+  \item Fixed a problem that could cause daemons or tools to crash
+    when they looked up information about processes running on the
+    system.
+\end{itemize}
+
+\item Fixed a bug where the environment of jobs in any universe could
+  be corrupted.
+
+\item The \Condor{startd} now properly cleans up execute directories on
+  root-squashed NFS mounts.
+
+\item The \Attr{image\_size} attribute of a job on Mac OS X is much
+  closer to the values that \Prog{ps} returns.
+  Previously it would be highly inflated.
+
 \item Fixed a memory leak in the \Condor{gridmanager}.
 
 \item Added the \Opt{-Storklog} argument to \Condor{submit\_dag} to make it
@@ -64,43 +84,50 @@ The details of each version are described below.
 
 \item Removed support for the \Opt{-libc} option for \Condor{version}.
 
-\item Fixed a DAGMan bug where DAGMan failed to monitor Stork job logs.
-
-\item Fixed a bug under Windows which could cause Condor to kill processes that
-	aren't related to Condor or the job it was running at the time.
-
 \item Added a fix to \Condor{compile} where if our internal \Prog{ld} managed
 	to not be invoked during linking of a standard universe executable, 
 	a warning is emitted.
 
-\item Fixed a segfaulting condition under Windows when the daemons or tools
-	looked up information about processes running on the system.
+\item Fixed a minor bug in the file transfer mechanism.  Specifically,
+  if a VANILLA job had \Expr{when\_to\_transfer\_output} set to
+  ON\_EXIT\_OR\_EVICT, wrote more than one output file, and was
+  actually evicted, the condor \Condor{shadow} would have a fatal
+  run-time error (shadow exception) and your job would be rerun.
 
-\item Fixed a bug where the daemons could crash if \Macro{COLLECTOR\_HOST}
-	or \Macro{NEGOTIATOR\_HOST} was defined to be something bogus.
+\item DAGMan bug fixes:
+\begin{itemize}
+  \item If submit files for individual nodes referred to the same log
+    file with different paths, \Condor{dagman} would read log events
+    incorrectly and the DAG would fail.
+    \Condor{dagman} is now able to recognize that the different paths
+    actually refer to the same log file.
 
-\item Fixed a bug that would crash the \Condor{collector} when
-  \Macro{COLLECTOR\_NAME} was too long.
+  \item Fixed a bug where DAGMan failed to monitor Stork job logs.
 
-\item Fixed a minor bug in file transfer.  Specifically, if your VANILLA
-  job had \Expr{when\_to\_transfer\_output} set to ON\_EXIT\_OR\_EVICT, wrote
-  more than one output file, and was actually evicted, the \Condor{shadow}
-  would EXCEPT and your job would be rerun.
+  \item If a node submit file doesn't specify a log file, the warning
+	message now gets printed out in the the DAGMan log file.
+\end{itemize}
 
-\item Fixed an error in \Condor{dagman}: if submit files for individual
-  nodes referred to the same log file with different paths, \Condor{dagman}
-  would read log events incorrectly and the DAG would fail.  \Condor{dagman}
-  is now able to recognize that the different paths actually refer to
-  the same log file.
+\item Bugs related to configuration
+\begin{itemize}
+  \item Fixed a bug where Condor daemons could crash if
+    \Macro{COLLECTOR\_HOST} or \Macro{NEGOTIATOR\_HOST} was defined to
+    be something bogus.
 
-\item Fixed a bug where the environment of jobs in any universe could be
-	corrupted.
+  \item Fixed potential crash in the \Condor{collector} when
+    \Macro{COLLECTOR\_NAME} was too long.
 
-\item Fixed a bug which would result in the segfaulting of a daemon while it
-	was writing to its logfile.
+  \item The default setting for \Macro{POOL\_HISTORY\_DIR} is no
+    longer \Macro{SPOOL}.
+    Using the spool directory would result in history files being
+    obliterated by \Condor{preen}.
+\end{itemize}
 
-\item Fixed a bug in the checkpoint server related to signal handling which
-	caused the daemon to wedge sometimes.
+\item Fixed a bug which could result in a daemon crashing while it was
+	writing to its logfile.
+
+\item Fixed a signal handling bug in the checkpoint server which could
+  cause the daemon to hang sometimes.
 
 \item The kerberos map file now tolerates spaces on either side of the
 	equals sign instead of generating a parse error.
@@ -127,19 +154,6 @@ The details of each version are described below.
   Now, both actions are taken together atomically.
   If a job is succesfully removed, it will always have a
   \Attr{RemoveReason} attribute.
-
-\item The default setting for \Macro{POOL\_HISTORY\_DIR} is no
-  longer \Macro{SPOOL}.  Using the spool directory would result
-  in history files being obliterated by \Condor{preen}.
-
-\item The \Condor{startd} now properly cleans up execute directories on
-  root-squashed NFS mounts.
-
-\item The \Attr{image\_size} attribute of a job on Mac OS X is much closer
-to the values that ps returns. Previously it would be highly inflated.
-
-\item If a node submit file doesn't specify a log file, the warning message
-	now gets printed out in the the DAGMan log file.
 
 \end{itemize}
 
