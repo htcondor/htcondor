@@ -11,10 +11,15 @@ SRC = procapi.C procinterface.C instantiate.C
 
 OBJ = procapi.o procinterface.o instantiate.o
 
+LIB = libprocapi.a ../condor_c++_util/cplus_lib.a \
+        ../condor_util_lib/util_lib.a ../condor_classad/expr_lib.a 
+
 all_target(libprocapi.a)
 
-library_target( libprocapi.a,$(OBJ))
+c_plus_target(procapi.tester,procapi.t.o,$(LIB))
+pure_c_plus_target(procapi.tester.pure,procapi.t.o,$(LIB))
 
+library_target( libprocapi.a,$(OBJ))
 
 tags_target($(SRC),$(NULL))
 depend_target($(SRC))
