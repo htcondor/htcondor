@@ -57,7 +57,7 @@ class EvalResult
     public :
 
     	EvalResult() { type = LX_UNDEFINED; }
-  	~EvalResult() { if(type == LX_STRING) delete s; }
+  	~EvalResult() { if(type == LX_STRING) delete [] s; }
 
 	void fPrintResult(FILE *); // for debugging
 
