@@ -58,15 +58,21 @@ OsProc::StartJob()
 
 	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
 
-#ifndef WIN32
-		// 60001 = nobody , 4046 = yoderme
-	set_user_ids( 4046, 4046 );
-#endif
-
 	if ( !JobAd ) {
 		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
 		return 0;
 	}
+
+	char owner[128];
+	if ( JobAd->LookupString( ATTR_OWNER, owner ) != 1 ) {
+		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
+				 ATTR_OWNER );
+		return 0;
+	}
+
+#ifndef WIN32
+	init_user_ids( owner );
+#endif
 
 	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
