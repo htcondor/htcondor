@@ -35,14 +35,11 @@
 #include "condor_config.h"
 #include "condor_io.h"
 #include "my_hostname.h"
-#include "get_full_hostname.h"
+#include "get_daemon_addr.h"
 
-extern "C" char *get_master_addr(const char *);
-extern "C" char *get_schedd_addr(const char *);
-extern "C" char *get_startd_addr(const char *);
 extern "C" int strincmp( char*, char*, int );
 
-void do_command( char *host );
+void do_command( char *name );
 
 enum daemonType {MASTER, SCHEDD, STARTD};
 
@@ -138,7 +135,7 @@ cmd_to_str( int c )
 int
 main( int argc, char *argv[] )
 {
-	char *fullname, *MyName = argv[0];
+	char *daemonname, *MyName = argv[0];
 	char *cmd_str;
 
 	config( 0 );
@@ -201,36 +198,38 @@ main( int argc, char *argv[] )
 		if( **argv == '-' ) {
 			usage( MyName );
 		}
-		if( (fullname = get_full_hostname(*argv)) == NULL ) {
-			fprintf( stderr, "%s: unknown host %s\n", MyName, *argv );
+		if( (daemonname = get_daemon_name(*argv)) == NULL ) {
+			fprintf( stderr, "%s: unknown host %s\n", MyName, 
+					 get_host_part(*argv) );
 			continue;
 		}
-		do_command( fullname );
+		do_command( daemonname );
 	}
 	exit( 0 );
 }
 
 
 void
-do_command( char *host )
+do_command( char *name )
 {
 	char		*daemonAddr;
 	switch( dt ) {
 	case MASTER:
-		if ((daemonAddr = get_master_addr(host)) == NULL) {
-			fprintf( stderr, "Can't find master address on %s\n", host );
+		if ((daemonAddr = get_master_addr(name)) == NULL) {
+			fprintf( stderr, "Can't find address of master %s\n", name );
 			return;
 		}
 		break;
 	case SCHEDD:
-		if ((daemonAddr = get_schedd_addr(host)) == NULL) {
-			fprintf( stderr, "Can't find schedd address on %s\n", host );
+		if ((daemonAddr = get_schedd_addr(name)) == NULL) {
+			fprintf( stderr, "Can't find address of schedd %s\n", name );
 			return;
 		}
 		break;
 	case STARTD:
-		if ((daemonAddr = get_startd_addr(host)) == NULL) {
-			fprintf( stderr, "Can't find startd address on %s\n", host );
+		if ((daemonAddr = get_startd_addr(get_host_part(name))) == NULL) {
+			fprintf( stderr, "Can't find startd address on %s\n", 
+					 get_host_part(name) );
 			return;
 		}
 		break;
@@ -251,8 +250,13 @@ do_command( char *host )
 		return;
 	}
 
-	printf( "Sent %s command to %s on %s\n", cmd_to_str(cmd), 
-			daemonName, host );
+	if( dt == STARTD ) {
+		printf( "Sent %s command to %s on %s\n", cmd_to_str(cmd), 
+				daemonName, get_host_part(name) );
+	} else {
+		printf( "Sent %s command to %s %s\n", cmd_to_str(cmd), 
+				daemonName, name );
+	}
 }
 
 extern "C" int SetSyscalls(){}
