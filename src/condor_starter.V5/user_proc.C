@@ -1028,7 +1028,7 @@ open_std_file( int which )
 			break;
 		  case 1:
 		  case 2:
-			answer = open( name, O_WRONLY, 0 );
+			answer = open( name, O_WRONLY|O_TRUNC, 0 );
 			break;
 		}
 	}
