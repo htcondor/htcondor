@@ -44,6 +44,7 @@ void version();
 int cmd = 0;
 daemonType dt;
 char* pool = NULL;
+int fast = 0;
 
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
@@ -77,12 +78,17 @@ usage( char *str )
 				 str);
 		break;
 	case DAEMONS_OFF:
-		fprintf( stderr, "  %s turns off any currently running condor daemons.\n", 
+		fprintf( stderr, "  %s gracefully turns off any running condor daemons.\n", 
 				 str );
 		break;
 	case MASTER_OFF:
 		fprintf( stderr, "  %s %s\n  %s\n", str, 
-				 "shuts down any currently running condor daemons ",
+				 "gracefully shuts down any running condor daemons ",
+				 "and causes the condor_master to exit." );
+		break;
+	case MASTER_OFF_FAST:
+		fprintf( stderr, "  %s %s\n  %s\n", str, 
+				 "quickly shuts down any running condor daemons ",
 				 "and causes the condor_master to exit." );
 		break;
 	case RESTART:
@@ -135,6 +141,8 @@ cmd_to_str( int c )
 	switch( c ) {
 	case DAEMONS_OFF:
 		return "DAEMONS_OFF";
+	case DAEMONS_OFF_FAST:
+		return "DAEMONS_OFF_FAST";
 	case DAEMONS_ON:
 		return "DAEMONS_ON";
 	case RECONFIG:
@@ -149,6 +157,8 @@ cmd_to_str( int c )
 		return "RESCHEDULE";
 	case MASTER_OFF:
 		return "MASTER_OFF";
+	case MASTER_OFF_FAST:
+		return "MASTER_OFF_FAST";
 	}
 	return "UNKNOWN";
 }
@@ -222,7 +232,7 @@ main( int argc, char *argv[] )
 		usage( "condor" );
 	}
 	
-		// First, check for -help or -version:
+		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] == '-' ) {
@@ -240,6 +250,20 @@ main( int argc, char *argv[] )
 					}
 					pool = strdup( foo );
 				} else {
+					usage( MyName );
+				}
+				break;
+			case 'f':
+				fast = 1;
+				switch( cmd ) {
+				case MASTER_OFF:
+					cmd = MASTER_OFF_FAST;
+					break;
+				case DAEMONS_OFF:
+					cmd = DAEMONS_OFF_FAST;
+					break;
+				default:
+					fprintf( stderr, "ERROR: -fast is not valid with %s", MyName );
 					usage( MyName );
 				}
 				break;
