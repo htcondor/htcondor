@@ -42,6 +42,13 @@ GlobusFlavor = GLOBUS_FLAVOR
 GlobusFlavor = gcc32dbg
 #endif
 
+#ifdef NEED_SNPRINTF
+SNPRINTF_FLAGS = -DNEED_SNPRINTF
+#else
+SNPRINTF_FLAGS = 
+#endif
+
+
 #if !defined( CLinker )
 #define CLinker CCompiler
 #endif
@@ -217,7 +224,7 @@ DEBUG_FLAG = DebugFlag
   CONDOR_G_FLAGS = -DCONDOR_G
 
 #else
-  CONDOR_G_FLAGS =
+ CONDOR_G_FLAGS =
 #endif /*HasGlobus && WantCondorG */
 
 GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
@@ -336,7 +343,7 @@ NETMAN_FLAGS =
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
-		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)\
 		 -I$(DAEMONCLIENT_INCLUDE)
 
 /*

@@ -7,6 +7,7 @@
 
 #define		IS_SOLARIS251		YES
 
+#define		NEED_SNPRINTF		YES
 #if IS_X86
 #define		IS_X86_SOLARIS251	YES
 #define		GccArch			i386-unknown-solaris2.5.1
