@@ -302,13 +302,24 @@ bool Dag::ProcessLogEvents (bool recovery) {
                           putchar ('\n');
                       }
                       done   = true;
+					  // here we mark result = false to trigger an
+					  // immediate abort -- instead should we flag
+					  // something that allows us to abort later,
+					  // after any nodes running in parallel complete?
+					  // this would delay the abort, but might prevent
+					  // some badput, assuming the user is going to
+					  // use the rescue file to re-run the DAG once
+					  // they fix the problem
+					  result = false;
                   } else {
                       job->_Status = Job::STATUS_DONE;
                       TerminateJob(job);
                       if (DEBUG_LEVEL(DEBUG_DEBUG_1)) Print_TermQ();
                       if (!recovery) {
                           debug_printf (DEBUG_VERBOSE, "\n");
+						  // submit any waiting child jobs
                           if (SubmitReadyJobs() == false) {
+							  // if the submit failed for some reason, abort
                               done   = true;
                               result = false;
                           }
