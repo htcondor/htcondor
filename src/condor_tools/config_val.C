@@ -51,12 +51,15 @@ usage()
 	exit( 1 );
 }
 
+enum PrintType {CONDOR_OWNER, CONDOR_TILDE, CONDOR_NONE};
+
 main( int argc, char* argv[] )
 {
 	char	*value, *tmp, *host = NULL;
 	int		i;
 	StringList params;
-	int		print_owner = FALSE;
+	
+	PrintType pt = CONDOR_NONE;
 
 	MyName = argv[0];
 
@@ -72,7 +75,9 @@ main( int argc, char* argv[] )
 				usage();
 			}
 		} else if( match_prefix( argv[i], "-owner" ) ) {
-			print_owner = TRUE;
+			pt = CONDOR_OWNER;
+		} else if( match_prefix( argv[i], "-tilde" ) ) {
+			pt = CONDOR_TILDE;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -80,15 +85,27 @@ main( int argc, char* argv[] )
 		}
 	}
 
+	if( pt == CONDOR_TILDE ) {
+		if( (tmp = get_tilde()) ) {
+			printf( "%s\n", tmp );
+			exit( 0 );
+		} else {
+			fprintf( stderr,
+					 "Error: Specified -tilde but can't find %s\n",
+					 "condor's home directory." );
+			exit( 1 );
+		}
+	}		
+
+	if( pt == CONDOR_OWNER ) {
+		printf( "%s\n", get_condor_username() );
+		exit( 0 );
+	}
+
 	if( host ) {
 		config_host( 0, 0, host );
 	} else {
 		config( 0 );
-	}
-		
-	if( print_owner ) {
-		printf( "%s\n", get_condor_username() );
-		exit( 0 );
 	}
 
 	params.rewind();
