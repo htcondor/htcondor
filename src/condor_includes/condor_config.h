@@ -33,6 +33,7 @@ extern "C" {
 	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
 	void clear_config ( void );
+	void config_fill_ad( ClassAd*, char* );
 	void set_debug_flags( char * );
 #else
 	void config();
@@ -46,6 +47,7 @@ extern "C" {
 	int param_in_pattern ();
 	void init_config ();
 	void clear_config ();
+	void config_fill_ad ();
 	void set_debug_flags ();
 #endif
 
