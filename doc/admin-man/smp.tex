@@ -17,7 +17,7 @@ How Shared Resources are Represented to Condor}
 
 The way SMP machines are represented to the Condor system is that
 the shared resources are broken up into individual \Term{virtual
-machines} (``vm'') that can be matched with and claimed by users.
+machines} (``VM'') that can be matched with and claimed by users.
 Each virtual machine is represented by an individual ``ClassAd''
 (see the ClassAd reference, section~\ref{classad-reference}, for
 details). 
@@ -28,12 +28,150 @@ So for example, if you had an SMP machine named
 machines, named ``vm1@vulture.cs.wisc.edu'',
 ``vm2@vulture.cs.wisc.edu'', and so on.
 
-For now, the \Condor{startd} simply creates a separate virtual machine
-for every CPU.
+You can configure how you want the \Condor{startd} to break up the
+shared system resources into the different virtual machines.  
 All shared system resources (like RAM, disk space, swap space, etc)
-are divided evenly among all the virtual machines.
-In future versions of Condor, you will be able to configure what
-percentage or total value of each resource will go to each vm.  
+can either be divided evenly among all the virtual machines, with each
+CPU getting its own virtual machine, or you can define your own
+\Term{virtual machine types}, so that resources can be unevenly
+partitioned.
+The following section gives details on how to configure Condor to
+divide the resources on an SMP machine into seperate virtual machines.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-Divide}
+Dividing System Resources in SMP Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes the settings that allow you to define your own
+virtual machine types and to control how many virtual machines of each
+type are reported to Condor.
+
+There are two main ways to go about dividing an SMP machine:
+
+\begin{description}
+
+\item[Define your own virtual machine types.]
+  By defining your own types, you can specify what fraction of shared
+  system resources (CPU, RAM, swap space and disk space) go to each
+  virtual machine.
+  Once you define your own types, you can control how many of each
+  type are being reported at any given time.
+
+\item[Evenly divide all resources.]  
+  If you do not define your own types, the \Condor{startd} will
+  automatically	partition your machine into virtual machines for you.
+  It will do so by giving each VM a single CPU, and evenly dividing
+  all shared resources among each CPU.
+  With this default partitioning, you only have to specify how many
+  VMs are reported at a time.
+  By default, all VMs are reported to Condor.
+
+\end{description}
+
+Begining with Condor version 6.1.6, the number of each type being
+reported can be changed at run-time, by issuing a simple reconfig to
+the \Condor{startd} (sending a SIGHUP or using \Condor{reconfig}).
+However, the definitions for the types themselves cannot be changed
+with a reconfig.
+If you change any VM type definitions, you must use ``\condor{restart}
+-startd'' for that change to take effect.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:VM-Type-Define}
+Defining Virtual Machine Types}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To define your own virtual machine types, you simply add config file
+parameters that list how much of each system resource you want in the
+given VM type.  You do this with settings of the form
+\Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}.
+The ``<N>'' is to be replaced with an actual number, for example, 
+\Macro{VIRTUAL\_MACHINE\_TYPE\_1}, which specifies the virtual 
+machine type you're defining.
+You will use this number later to configure how many VMs of this type
+you want to advertise.
+
+A type describes what share of the total system resources a given
+virtual machine has available to it.
+
+The type can be defined in a number of ways:
+\begin{itemize}
+  \item A simple fraction, such as ``1/4''
+  \item A simple percentage, such as ``25%''
+  \item A comma-separated list of attributes, and a percentage,
+	fraction, or value for each one.
+\end{itemize}
+If you just specify a fraction or percentage, that share of the total
+system resources, including the number of cpus, will be used for each
+virtual machine of this type.
+However, if you specify the comma-seperated list, you can fine-tune
+the amounts for specific attributes.
+
+Some attributes, such as the number of CPUs and total amount of RAM in
+the machine, do not change (unless the machine is turned off and more
+chips are added to it).
+For these two attributes, you can specify either absolute values, or
+percentages of the total available amount.  
+For example, in a machine with 128 megs of RAM, you could specify any
+of the following to get the same effect: ``mem=64'', ``mem=1/2'', or
+``mem=50%''.
+Other resources are dynamic, such as disk space and swap space.
+For these, you must specify the percentage or fraction of the total
+value that is alloted to each VM, instead of specifying absolute values.
+As the total values of these resources change on your machine, each
+VM will take its fraction of the total and report that as its
+available amount.
+
+All attribute names are case insensitive when defining VM types.
+You can use as much or as little of each word as you'd like.
+The attributes you can tune are:
+\begin{itemize}
+  \item cpus
+  \item ram
+  \item disk (must specify with a fraction or percentage)
+  \item swap (must specify with a fraction or percentage)
+\end{itemize}
+In addition, the following names are equivalent: ``ram'' = ``memory''
+and ``swap'' = ``virualmemory''.
+
+Assume the host as 4 CPUs and 256 megs of RAM.
+Here are some example VM type definitions, all of which are valid. 
+Types 1-3 are all equivalent with each other, as are types 4-6
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_1} = cpus=2, ram=128, swap=25%, disk=1/2
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_2} = cpus=1/2, memory=128, virt=25%, disk=50%
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_3} = c=1/2, m=50%, v=1/4, disk=1/2
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_4} = c=25%, m=64, v=1/4, d=25%
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_5} = 25%
+
+\Macro{VIRTUAL\_MACHINE\_TYPE\_6} = 1/4
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-VM-Number}
+Configuring the Number of Virtual Machines Reported}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If you are not defining your own VM types, all you have to configure
+is how many of the evenly divided VMs you want reported to Condor.
+You do this by setting the \Macro{NUM\_VIRTUAL\_MACHINES} parameter.
+You just supply the number of machines you want reported.
+If you do not define this yourself, Condor will advertise all the CPUs
+in your machines by default.
+
+If you define your own types, things are slightly more complicated.  
+Now, you must specify how many virtual machines of each type should be
+reported.
+You do this with settings of the form
+\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>}.
+The ``<N>'' is to be replaced with an actual number, for example, 
+\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_1}. 
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
@@ -75,6 +213,20 @@ tty and console activity.
 In this case, if a machine owner came back to her machine, all the
 currently running jobs would suspend or preempt (depending on your
 policy expressions), all at the same time.
+
+All of this is controlled with the config file parameters listed
+below.    
+These settings are fully described in
+section~\ref{sec:Startd-Config-File-Entries} on
+page~\pageref{sec:Startd-Config-File-Entries} which lists all the
+config file settings for the \Condor{startd}.
+
+\begin{itemize}
+\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}
+\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}
+\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Load}
@@ -131,24 +283,6 @@ If, instead, we run out of virtual machines and we still have owner
 load left, we start assigning that load to Condor nodes, too, creating
 individual nodes with a load average higher than 1.0.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-SMP-Parameters}
-New Config File Parameters for the SMP Startd}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-This section lists the config file settings that you might want to
-customize on an SMP machine.  
-These control each virtual machine's view of the system resources, as
-described in section~\ref{sec:Config-SMP-Policy} above.
-These settings are fully described above in
-section~\ref{sec:Startd-Config-File-Entries} on
-page~\pageref{sec:Startd-Config-File-Entries} which lists all the
-config file settings for the \Condor{startd}.
-\begin{itemize}
-\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}
-\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}
-\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
-\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-logging}
@@ -199,5 +333,5 @@ job, it might look something like this:
 \end{verbatim}
 
 As you can see, shared system resources are printed without the header
-(like total swap space), which vm-specific messages (like the load
-average or state of each vm,) get the special header appended.  
+(like total swap space), which VM-specific messages (like the load
+average or state of each VM,) get the special header appended.  
