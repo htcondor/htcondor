@@ -66,34 +66,43 @@ Match::~Match()
 }	
 	
 
-// Vacate the current match
 void
 Match::vacate() 
 {
 	assert( m_cap );
-
 		// warn the client of this match that it's being vacated
 	if( m_client && m_client->addr() ) {
 		m_client->vacate( m_cap->capab() );
 	}
+}
 
-		// send RELEASE_CLAIM and capability to accountant 
-	if( accountant_host ) {
-		ReliSock sock;
-		sock.timeout( 30 );
-		if( sock.connect( accountant_host, ACCOUNTANT_PORT ) < 0 ) {
-			dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-		} else {
-			if( !sock.put( RELEASE_CLAIM ) ) {
-				dprintf(D_ALWAYS, "Can't send RELEASE_CLAIM command\n");
-			} else if( !sock.put( m_cap->capab() ) ) {
-				dprintf(D_ALWAYS, "Can't send capability to accountant\n");
-			} else if( !sock.eom() ) {
-				dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
-			}
-			sock.close();
-		}
+
+int
+Match::send_accountant( int cmd )
+{
+	if( !accountant_host ) {
+		return FALSE;
 	}
+	ReliSock sock;
+	sock.timeout( 30 );
+	if( sock.connect( accountant_host, ACCOUNTANT_PORT ) < 0 ) {
+		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
+		return FALSE;
+	}
+	if( !sock.put( cmd ) ) {
+		dprintf(D_ALWAYS, "Can't send command (%d) to accountant\n", cmd ); 
+		return FALSE;
+	}
+	if( !sock.put( m_cap->capab() ) ) {
+		dprintf(D_ALWAYS, "Can't send capability to accountant\n");
+		return FALSE;
+	}
+	if( !sock.eom() ) {
+		dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
+		return FALSE;
+	}
+	sock.close();
+	return TRUE;
 }
 
 
