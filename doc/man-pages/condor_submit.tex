@@ -421,20 +421,23 @@ but you know if you run the job again with the same data,
 chances are that the will finish successfully.
 This is
 how you would represent that with \AdAttr{on\_exit\_remove}
-(assuming the signal identifier for segmentation fault is 4):
+(assuming the signal identifier for segmentation fault is 11 on the
+platform where your job will be running):
 
 \begin{verbatim}
-	on_exit_remove = (ExitBySignal == False) && (ExitSignal != 4)
+	on_exit_remove = (ExitBySignal == False) || (ExitSignal != 11)
 \end{verbatim}
 
-This expression will not let the job leave the queue,
-if the job exited by a signal and
-that signal number was 4 (representing segmentation fault).
+This expression will only let the job leave the queue if the job was
+not killed by a signal (it exited normally on its own) or if it was
+killed by a signal other than 11 (representing segmentation fault).
+So, if it was killed by signal 11, it will stay in the job queue.
 In any other case of the job exiting, 
 the job will leave the queue as it normally would have done.
 
-If left unspecified, this will default to \Expr{True}.
-
+If left unspecified, the \AdAttr{on\_exit\_remove} expression will
+default to \Expr{True}.
+ 
 \AdAttr{periodic\_*} expressions take
 precedence over \AdAttr{on\_exit\_*} expressions,
 and \AdAttr{*\_hold} expressions take
