@@ -835,26 +835,46 @@ int DestroyCluster(int cluster_id)
 
 static bool EvalBool(ClassAd *ad, const char *constraint)
 {
-	ExprTree *tree;
+	static ExprTree *tree = NULL;
+	static char * saved_constraint = NULL;
 	EvalResult result;
+	bool constraint_changed = true;
 
-	if (Parse(constraint, tree) != 0) {
-		dprintf(D_ALWAYS, "can't parse constraint: %s\n", constraint);
-		return false;
+	if ( saved_constraint ) {
+		if ( strcmp(saved_constraint,constraint) == 0 ) {
+			constraint_changed = false;
+		}
+	}
+
+	if ( constraint_changed ) {
+		// constraint has changed, or saved_constraint is NULL
+		if ( saved_constraint ) {
+			free(saved_constraint);
+			saved_constraint = NULL;
+		}
+		if ( tree ) {
+			delete tree;
+			tree = NULL;
+		}
+		if (Parse(constraint, tree) != 0) {
+			dprintf(D_ALWAYS, 
+				"can't parse constraint: %s\n", constraint);
+			return false;
+		}
+		saved_constraint = strdup(constraint);
 	}
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
 	if (!tree->EvalTree(NULL, ad, &result)) {
 		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-		delete tree;
 		return false;
 	}
-	delete tree;
 	if (result.type == LX_INTEGER) {
 		return (bool)result.i;
 	}
-	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", constraint);
+	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", 
+		constraint);
 	return false;
 }
 
