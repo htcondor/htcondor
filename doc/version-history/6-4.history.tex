@@ -29,6 +29,13 @@ which contain two nodes with the same name; in the past DAGMan
 did not detect this, and would not exit even when the DAG was
 complete.
 
+\item If no \Attr{Rank} is specified in the job description file, or
+in the \Macro{DEFAULT\_RANK} config file variable, the default value
+is now ``0.0'' not just ``0''.
+Since \Attr{Rank} is supposed to be a floating point value, the
+``0.0'' ensures that the \Opt{-format} option to tools like \Condor{q}
+and \Condor{status} will always treat this variable as a float.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
