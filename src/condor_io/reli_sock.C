@@ -449,14 +449,8 @@ ReliSock::greetMnger()
 
     // get (ip-addr, port) of netMnger
     char *mngerHost = getenv("CONDOR_NET_MNGER");
-    if(!mngerHost)
-        mngerHost = param("CONDOR_NET_MNGER");
-    if(!mngerHost)
         mngerHost = NET_MNGER_ADDR;
     char *mngerPort = getenv("CONDOR_NET_MNGER_PORT");
-    if(!mngerPort)
-        mngerPort = param("CONDOR_NET_MNGER_PORT");
-
     int portNum = (mngerPort) ? atoi(mngerPort) : NET_MNGER_PORT;
 
     // Connect to netMnger
