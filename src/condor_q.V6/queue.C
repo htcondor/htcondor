@@ -44,6 +44,9 @@
 #include "daemon.h"
 #include "my_hostname.h"
 #include "basename.h"
+#include "metric_units.h"
+
+static char *_FileName_ = __FILE__;
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -55,7 +58,7 @@ static 	void displayJobShort (ClassAd *);
 static 	void shorten (char *, int);
 static	bool show_queue (char*, char*, char*);
 
-static 	int verbose = 0, summarize = 1, global = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0;
 static 	int malformed, unexpanded, running, idle, held;
 
 static	CondorQ 	Q;
@@ -423,7 +426,12 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "globus" ) ) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
-		} else {
+		}
+		else
+		if (match_prefix(arg,"io")) {
+			show_io = true;
+		}   
+		else {
 			// assume name of owner of job
 			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
 				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
@@ -476,6 +484,46 @@ job_time(float cpu_time,ClassAd *ad)
 		(cur_time - shadow_bday)*(job_status == RUNNING && shadow_bday);
 
 	return total_wall_time;
+}
+
+static void io_header()
+{
+	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLOCKSIZE");
+}
+
+static void io_display(ClassAd *ad)
+{
+	int cluster=0, proc=0;
+	int read_bytes=0, write_bytes=0, seek_count=0;
+	int buffer_size=0, block_size=0;
+	float wall_clock=-1;
+
+	char owner[256];
+
+	ad->EvalInteger(ATTR_CLUSTER_ID,NULL,cluster);
+	ad->EvalInteger(ATTR_PROC_ID,NULL,proc);
+	ad->EvalString(ATTR_OWNER,NULL,owner);
+
+	ad->EvalInteger(ATTR_FILE_READ_BYTES,NULL,read_bytes);
+	ad->EvalInteger(ATTR_FILE_WRITE_BYTES,NULL,write_bytes);
+	ad->EvalInteger(ATTR_FILE_SEEK_COUNT,NULL,seek_count);
+	ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,wall_clock);
+	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
+	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
+
+	printf("%4d.%-3d %-8s ",cluster,proc,owner);
+
+	if(wall_clock<0) {
+		printf("          [ no i/o data collected yet ]\n");
+	} else {
+		if(wall_clock==0) wall_clock=1;
+		printf("%8s ",metric_units(read_bytes));
+		printf("%8s ",metric_units(write_bytes));
+		printf("%8d ",seek_count);
+		printf("%10s/s ",metric_units((int)((read_bytes+write_bytes)/wall_clock)));
+		printf("%8s ",metric_units(buffer_size));
+		printf("%8s\n",metric_units(block_size));
+	}
 }
 
 static void
@@ -744,6 +792,7 @@ usage (char *myName)
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
+		"\t\t-io\t\t\tShow information regarding I/O\n",
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -865,6 +914,13 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 				setup_mask = true;
 			}
 			mask.display(stdout, &jobs);
+		} else if( show_io ) {
+			io_header();
+			jobs.Open();
+			while(job=jobs.Next()) {
+				io_display( job );
+			}
+			jobs.Close();
 		} else {
 			short_header();
 			jobs.Open();
