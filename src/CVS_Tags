@@ -1,3 +1,7 @@
+12/2/03 V6_7-pre_merge-V6_6-merge-1
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-1.
+
 10/03/03 V6_7-soap-branch
    A new branch off V6_7-branch to hold our initial effort
    at incorporating SOAP interfaces into the Condor daemons.
