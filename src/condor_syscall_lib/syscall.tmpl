@@ -587,7 +587,8 @@ version.
 			#if defined(IRIX)
 				no_sys_chk,
 			#endif
-				also_implements(stat64)   /* for backwards compatibility */
+				also_implements(stat64),   /* for backwards compatibility */
+				file_table
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );
@@ -605,7 +606,8 @@ version.
 			#if defined(IRIX)
 				no_sys_chk,
 			#endif	
-				also_implements(lstat64)   /* for backwards compatibility */
+				also_implements(lstat64),   /* for backwards compatibility */
+				file_table
 		{
 			SEND_PATH( name );
 			ALLOC_PATH( name );

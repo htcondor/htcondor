@@ -1003,7 +1003,7 @@ int CondorFileTable::fstat( int fd, struct stat *buf)
 	return pointers[fd]->file->fstat(buf);
 }
 
-int CondorFileTable::stat( char *name, struct stat *buf)
+int CondorFileTable::stat( const char *name, struct stat *buf)
 {
 	int fd;
 	int scm, oscm;
@@ -1012,12 +1012,13 @@ int CondorFileTable::stat( char *name, struct stat *buf)
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal stat in unmapped mode and hope it gets the right
 		thing */
-	fd = find_logical_name(name);
+	fd = find_logical_name((char*)name);
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();
 		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
 		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		SetSyscalls(scm);
 		ret = ::stat(name, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
 		
@@ -1026,7 +1027,7 @@ int CondorFileTable::stat( char *name, struct stat *buf)
 	return fstat(fd, buf);
 }
 
-int CondorFileTable::lstat( char *name, struct stat *buf)
+int CondorFileTable::lstat( const char *name, struct stat *buf)
 {
 	int fd;
 	int scm, oscm;
@@ -1035,12 +1036,13 @@ int CondorFileTable::lstat( char *name, struct stat *buf)
 	/* See if the file is open, if so, then just do an fstat. If it isn't open
 		then call the normal lstat in unmapped mode and hope it gets the right
 		thing */
-	fd = find_logical_name(name);
+	fd = find_logical_name((char*)name);
 	if (fd == -1)
 	{
 		oscm = scm = GetSyscallMode();
 		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
 		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+		SetSyscalls(scm);
 		ret = ::lstat(name, buf);
 		SetSyscalls(oscm); /* set it back to what it was */
 		
