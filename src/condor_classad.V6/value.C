@@ -564,6 +564,7 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
 		case Value::REAL_VALUE:
             unparser.Unparse(string_representation, value);
             stringValue.SetStringValue(string_representation);
+            could_convert = true;
             break;
 
 		case Value::ABSOLUTE_TIME_VALUE:
