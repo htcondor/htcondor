@@ -93,7 +93,11 @@ before */
 
 /* if _BSD_COMPAT is defined, then getpgrp will get funny arguments from 
    <unistd.h> and that will break receivers.c - Ballard 10/99
-   ( and note how this is done! )*/
+   ( and note how this is done! )
+
+   Also, <grp.h> gives us funny arguments for initgroups() if this is
+   turned on, so we'll include that now, too. - Derek 2004-01-23
+*/
 #if _BSD_COMPAT
 #	define _save_BSD_COMPAT 1
 #else
@@ -102,6 +106,7 @@ before */
 #undef _BSD_COMPAT
 
 #include <unistd.h>
+#include <grp.h>
 #if defined(IRIX62)
 #	undef __vfork
 #endif
