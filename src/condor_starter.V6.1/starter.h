@@ -110,7 +110,8 @@ private:
 	char *Execute;
 	char *UIDDomain;
 	char *FSDomain;
-	char WorkingDir[_POSIX_PATH_MAX];
+	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
+	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
 	int Key;
 	int ShuttingDown;
 	IOProxy io_proxy;

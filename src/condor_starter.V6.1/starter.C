@@ -30,6 +30,7 @@
 #endif
 #include "starter.h"
 #include "vanilla_proc.h"
+#include "java_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
 #include "syscall_numbers.h"
@@ -244,7 +245,7 @@ CStarter::StartJob()
 		dirperm.init(nobody_login);
 		int ret_val = dirperm.set_acls( WorkingDir );
 		if ( ret_val < 0 ) {
-			dprintf(D_ALWAYS,"UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
+			dprintf(D_ALWAYS,"UNABLE TO SET PERMISSIONS ON EXECUTE DIRECTORY");
 			return false;
 		}
 	}
@@ -289,44 +290,45 @@ CStarter::StartJob()
 		// Now that the scratch dir is setup, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
-    int universe = CONDOR_UNIVERSE_STANDARD;
-    if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
-        dprintf( D_ALWAYS, "No universe attr. in jobAd!\n" );
-    }
-
-    UserProc *job;
-
-    switch ( universe )  
-    {
-        case CONDOR_UNIVERSE_VANILLA:
-        case CONDOR_UNIVERSE_STANDARD: { 
-            dprintf ( D_FULLDEBUG, "Firing up a VanillaProc\n" );
-            job = new VanillaProc( jobAd );
-            break;
-        }
-        case CONDOR_UNIVERSE_MPI: {
-            int is_master = FALSE;
-            dprintf ( D_FULLDEBUG, "Is master: %s\n", ATTR_MPI_IS_MASTER );
-            if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
-                is_master = FALSE;
-            }
-            
-            dprintf ( D_FULLDEBUG, "is_master : %d\n", is_master );
-
-            if ( is_master ) {
-                dprintf ( D_FULLDEBUG, "Firing up a MPIMasterProc\n" );
-                job = new MPIMasterProc( jobAd );
-            } else {
-                dprintf ( D_FULLDEBUG, "Firing up a MPIComradeProc\n" );
-                job = new MPIComradeProc( jobAd );
-            }
-            break;
-        }
-	default: {
-		dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",universe,CondorUniverseName(universe));
-		return false;
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
+		dprintf( D_ALWAYS, "Job doesn't specify universe, assuming STANDARD\n" );
 	}
-    } /* switch */
+
+	dprintf( D_ALWAYS, "Starting a %s universe job.\n",CondorUniverseName(universe));
+
+	UserProc *job;
+
+	switch ( universe )  
+	{
+		case CONDOR_UNIVERSE_VANILLA:
+			job = new VanillaProc( jobAd );
+			break;
+		case CONDOR_UNIVERSE_JAVA:
+			job = new JavaProc( jobAd, WorkingDir );
+			break;
+		case CONDOR_UNIVERSE_MPI: {
+			int is_master = FALSE;
+			dprintf ( D_FULLDEBUG, "Is master: %s\n", ATTR_MPI_IS_MASTER );
+			if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
+				is_master = FALSE;
+			}
+			
+			dprintf ( D_FULLDEBUG, "is_master : %d\n", is_master );
+
+			if ( is_master ) {
+				dprintf ( D_FULLDEBUG, "Firing up a MPIMasterProc\n" );
+				job = new MPIMasterProc( jobAd );
+			} else {
+				dprintf ( D_FULLDEBUG, "Firing up a MPIComradeProc\n" );
+				job = new MPIComradeProc( jobAd );
+			}
+			break;
+		}
+		default:
+			dprintf( D_ALWAYS, "I don't support universe %d (%s)\n",universe,CondorUniverseName(universe));
+			return false;
+	} /* switch */
 
 	if (job->StartJob()) {
 		JobList.Append(job);		

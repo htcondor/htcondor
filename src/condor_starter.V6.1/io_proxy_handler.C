@@ -107,7 +107,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
-	if(sscanf(line,"open %s %s %o",path,flags_string,&mode)==3) {
+	if(sscanf(line,"open %s %s %d",path,flags_string,&mode)==3) {
 
 		flags = 0;
 
@@ -190,7 +190,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			sprintf(line,"%d",convert(result,errno));
 			r->put_line_raw(line);
 			if(result>0) {
-				r->put_bytes_raw(buffer,length);
+				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
