@@ -7,7 +7,7 @@
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * contact: CONDOR Team, Attention: Professor Miron Livny,
  * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
  * (608) 262-0856 or miron@cs.wisc.edu.
  *
@@ -16,7 +16,7 @@
  * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
  * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
  * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
@@ -120,8 +120,14 @@ const char ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME [] = "GlobusResourceUnavailable
 const char ATTR_JOB_MUST_EXPAND			 [] = "MustExpand";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
-const char ATTR_X509_USER_PROXY          [] = "x509userproxy";			
+const char ATTR_X509_USER_PROXY          [] = "x509userproxy";
 const char ATTR_X509_USER_PROXY_SUBJECT	 [] = "x509userproxysubject";
+// ckireyev myproxy
+const char ATTR_MYPROXY_SERVER_DN		 [] = "MyProxyServerDN";
+const char ATTR_MYPROXY_HOST_NAME		 [] = "MyProxyHost";
+const char ATTR_MYPROXY_PASSWORD		 [] = "MyProxyPassword";
+const char ATTR_MYPROXY_CRED_NAME		 [] = "MyProxyCredentialName";
+// END ckireyev myproxy
 const char ATTR_HAS_CHECKPOINTING        [] = "HasCheckpointing";
 const char ATTR_HAS_FILE_TRANSFER        [] = "HasFileTransfer";
 const char ATTR_HAS_IO_PROXY             [] = "HasIOProxy";
