@@ -613,17 +613,20 @@ void String::PrintToStr(char* str)
 
 void Boolean::PrintToStr(char* str)
 {
-  sprintf(str, value ? "%sTRUE" : "%sFALSE", str, str);
+	if( value )
+		strcat( str, "TRUE" );
+	else
+		strcat( str, "FALSE" );
 }
 
 void Undefined::PrintToStr(char* str)
 {
-	sprintf(str, "%sUNDEFINED", str);
+	strcat( str, "UNDEFINED" );
 }
 
 void Error::PrintToStr(char* str)
 {
-	sprintf(str, "%sERROR", str);
+	strcat( str, "ERROR" );
 }
 
 void AddOp::PrintToStr(char* str)
@@ -633,9 +636,9 @@ void AddOp::PrintToStr(char* str)
   		switch(lArg->MyType())
 		{
 			case LX_ADD:
-			case LX_SUB:
-			case LX_MULT:
-			case LX_DIV : 
+            case LX_SUB:
+            case LX_MULT:
+            case LX_DIV : 
 			case LX_VARIABLE:
 			case LX_BOOL:
 			case LX_INTEGER:
@@ -901,76 +904,40 @@ void LeOp::PrintToStr(char* str)
 
 void AndOp::PrintToStr(char* str)
 {
-    if(lArg)
-  	switch(lArg->MyType()) {
-		case LX_VARIABLE:
-	    case LX_AND :
-		case LX_OR:
-	    case LX_INTEGER :
-	    case LX_FLOAT :
-		case LX_ERROR:
-		case LX_UNDEFINED:
-	    case LX_STRING :
-	    case LX_BOOL : ((ExprTree*)lArg)->PrintToStr(str);
-			   break;
-     	    default : strcat(str, "(");
-		      ((ExprTree*)lArg)->PrintToStr(str);
-		      strcat(str, ")");
-    	}
+    if(lArg) {
+		switch(lArg->MyType()) {
+			case LX_OR:
+				strcat(str, "(");
+				((ExprTree*)lArg)->PrintToStr(str);
+				strcat(str, ")");
+				break;
+
+			default:
+				((ExprTree*)lArg)->PrintToStr(str);
+				break;
+		}
+	}
     strcat(str, " && ");
-    if(rArg)
-  	switch(rArg->MyType()) {
-		case LX_VARIABLE:
-	    case LX_AND :
-		case LX_OR:
-	    case LX_INTEGER :
-	    case LX_FLOAT :
-		case LX_ERROR:
-		case LX_UNDEFINED:
-	    case LX_STRING :
-	    case LX_BOOL : ((ExprTree*)rArg)->PrintToStr(str);
-			   break;
-    	    default : strcat(str, "(");
-	 	      ((ExprTree*)rArg)->PrintToStr(str);
-		      strcat(str, ")");
+    if(rArg) {
+  		switch(rArg->MyType()) {
+			case LX_OR:
+    	   		strcat(str, "(");
+	 	    	((ExprTree*)rArg)->PrintToStr(str);
+		    	strcat(str, ")");
+				break;
+
+	    	default:
+				((ExprTree*)rArg)->PrintToStr(str);
+				break;
+		}
   	}
 }
 
 void OrOp::PrintToStr(char* str)
 {
-    if(lArg)
-  	switch(lArg->MyType()) {
-		case LX_VARIABLE:
-	    case LX_AND :
-		case LX_OR:
-	    case LX_INTEGER :
-	    case LX_FLOAT :
-		case LX_ERROR:
-		case LX_UNDEFINED:
-	    case LX_STRING :
-	    case LX_BOOL : ((ExprTree*)lArg)->PrintToStr(str);
-			   break;
-     	    default : strcat(str, "(");
-		      ((ExprTree*)lArg)->PrintToStr(str);
-		      strcat(str, ")");
-    	}
+    if(lArg) ((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " || ");
-    if(rArg)
-  	switch(rArg->MyType()) {
-		case LX_VARIABLE:
-	    case LX_AND :
-		case LX_OR:
-	    case LX_INTEGER :
-	    case LX_FLOAT :
-		case LX_ERROR:
-		case LX_UNDEFINED:
-	    case LX_STRING :
-	    case LX_BOOL : ((ExprTree*)rArg)->PrintToStr(str);
-			   break;
-    	    default : strcat(str, "(");
-	 	      ((ExprTree*)rArg)->PrintToStr(str);
-		      strcat(str, ")");
-  	}
+    if(rArg) ((ExprTree*)rArg)->PrintToStr(str);
 }
 
 void AssignOp::PrintToStr(char* str)
@@ -985,35 +952,30 @@ void AssignOp::PrintToStr(char* str)
 static void 
 printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 {
-    if(lArg)
-    {
-    	switch(lArg->MyType())
-		{
-			case LX_AND:
-			case LX_OR:
-				strcat(str, "(");
-			  	((ExprTree*)lArg)->PrintToStr(str);
-			  	strcat(str, ")");
-			  	break;
+	bool 		inequality = (*op == '<' || *op == '>'); // maybe followed by =
+	LexemeType	tt;
 
-	    	default:      
-				((ExprTree*)lArg)->PrintToStr(str);
+    if(lArg) {
+		tt = lArg->MyType();
+		if( ( inequality && ( tt == LX_EQ || tt == LX_META_EQ || tt == LX_NEQ 
+				|| tt == LX_META_NEQ ) ) || tt == LX_OR || tt == LX_AND ) {
+			strcat(str, "(");
+		  	((ExprTree*)lArg)->PrintToStr(str);
+		  	strcat(str, ")");
+		} else {
+			((ExprTree*)lArg)->PrintToStr(str);
    		}
     }
     strcat(str, op);
-    if(rArg)
-    {
-    	switch(rArg->MyType())
-		{
-			case LX_AND:
-			case LX_OR:
-				strcat(str, "(");
-			  	((ExprTree*)rArg)->PrintToStr(str);
-			  	strcat(str, ")");
-			  	break;
-
-	    	default:      
-				((ExprTree*)rArg)->PrintToStr(str);
+    if(rArg) {
+		tt = rArg->MyType();
+		if( ( inequality && ( tt == LX_EQ || tt == LX_META_EQ || tt == LX_NEQ 
+				|| tt == LX_META_NEQ ) ) || tt == LX_OR || tt == LX_AND ) {
+			strcat(str, "(");
+		  	((ExprTree*)rArg)->PrintToStr(str);
+		  	strcat(str, ")");
+		} else {
+			((ExprTree*)rArg)->PrintToStr(str);
    		}
     }
 }
