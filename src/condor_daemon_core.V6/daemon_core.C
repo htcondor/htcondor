@@ -3500,9 +3500,17 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	// UNIX 
 
-	priv_state priv = set_root_priv();
-	int status = kill(pid, SIGTERM);
-	set_priv(priv);
+	int status;
+	if( pid == mypid ) {
+			// if we're doing this to ourselves, just raise the DC
+			// signal directly, so we don't get into an infinite loop.
+		HandleSig( _DC_RAISESIGNAL, SIGTERM );
+		status = 0;
+	} else { 
+		priv_state priv = set_root_priv();
+		status = kill(pid, SIGTERM);
+		set_priv(priv);
+	}
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
 
 #endif
