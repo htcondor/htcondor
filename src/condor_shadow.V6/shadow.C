@@ -31,6 +31,7 @@
 #include "internet.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+#include "condor_version.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "my_hostname.h"
@@ -250,6 +251,17 @@ extern ClassAd *JobAd;
 
 char		*schedd = NULL, *scheddName = NULL;
 
+
+void
+printClassAd( void )
+{
+	printf( "%s = False\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
+	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
+
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
 {
@@ -260,6 +272,11 @@ main(int argc, char *argv[], char *envp[])
 	char	*use_ckpt_server = NULL;
 	char	*capability;
 	int		i;
+
+	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
+		printClassAd();
+		exit( 0 );
+	}
 
 	/* on OSF/1 as installed currently on our machines, attempts to read from
 	   the FILE * returned by popen() fail if the underlying file descriptor
