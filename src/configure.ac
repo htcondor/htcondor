@@ -1161,9 +1161,12 @@ fi
 AC_MSG_RESULT([$_cv_ext_kerberos_version])
 AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
-
 AC_MSG_CHECKING([globus])
-_cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
+if test "$_cv_opsys_vers" = "DUX4"; then
+  _cv_ext_globus_version="globus-2.2.4"
+else
+  _cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
+fi
 AC_MSG_RESULT([$_cv_ext_globus_version])
 AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
 
