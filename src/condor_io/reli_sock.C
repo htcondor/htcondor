@@ -51,6 +51,8 @@ ReliSock::init()
 	is_client = 0;
 	authob = NULL;
 	hostAddr = NULL;
+	rcv_msg.init_parent(this);
+	snd_msg.init_parent(this);
 }
 
 
@@ -877,3 +879,55 @@ ReliSock::unAuthenticate()
 		authob->unAuthenticate();
 	}
 }
+
+int ReliSock :: encrypt(bool flag)
+{
+	if ( authob ){
+		return(authob -> encrypt( flag ));
+	}
+	return -1;
+}
+
+
+int ReliSock :: hdr_encrypt()
+{
+	if ( authob ){
+		return(authob -> hdr_encrypt());
+	}
+	return -1;
+}
+
+bool ReliSock :: is_hdr_encrypt()
+{
+	if ( authob ){
+		return(authob -> is_hdr_encrypt());
+	}
+	return FALSE;
+}
+
+
+bool ReliSock :: is_encrypt()
+{
+	if ( authob ){
+		return(authob -> is_encrypt());
+	}
+	return FALSE;
+}
+
+int  ReliSock :: wrap(char* d_in,int l_in,char*& d_out,int& l_out)
+{
+	if ( authob ){
+		return(authob -> wrap(d_in,l_in,d_out,l_out));
+	}
+	return FALSE;
+}
+
+int ReliSock :: unwrap(char* d_in,int l_in,char*& d_out , int& l_out)
+{
+	if ( authob ){
+		return(authob -> unwrap(d_in,l_in,d_out,l_out));
+	}
+	return FALSE;
+}
+
+
