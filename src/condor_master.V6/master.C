@@ -69,7 +69,9 @@ extern "C" {
 #include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
+#include "condor_adtypes.h"
 #include "dgram_io_handle.h"
+#include "condor_io.h"
 
 #if defined(HPUX9)
 #include "fake_flock.h"
@@ -127,17 +129,14 @@ extern "C"
 	int		gethostname(char*, int);
 	int		sigsetmask(int);
 	int		udp_connect(char*, int);
-	int		snd_int(XDR*, int, int);
 	char*	get_arch();
 	char*	get_op_sys(); 
 	int		udp_unconnect();
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
-	XDR*	xdr_Udp_unconnect_Init(DGRAM_IO_HANDLE*, XDR*); 
 	int		get_inet_address(struct in_addr*); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
-extern	int		xdr_classad(XDR*, ClassAd*);
 char	*param(char*) ;
 void		sigchld_handler(),  sigint_handler(),
 sigquit_handler(),  sighup_handler();
@@ -185,7 +184,6 @@ int		interval;				// report to collector. Weiru
 ClassAd	ad;						// ad to central mgr. Weiru
 
 char	*CollectorHost;
-DGRAM_IO_HANDLE		CollectorHandle;
 int					UdpSock;
 
 #if 0
@@ -333,11 +331,14 @@ main( int argc, char* argv[] )
 	else
 		// try to use configuration server
 	{
+#if defined(USE_CONFIG_SERVER)
 		configServer = param("CONFIG_SERVER_HOST");
 		if(!configServer)
 			// use default configuration files
 		{
+#endif
 			config(MyName, (CONTEXT*)0);
+#if defined(USE_CONFIG_SERVER)
 		}
 		else
 			// use configuration server
@@ -381,6 +382,7 @@ main( int argc, char* argv[] )
 				doConfigFromServer = TRUE;				
 			}
 		}
+#endif
 	}
 
 	init_params();
@@ -528,7 +530,6 @@ init_params()
 	}
 	
 	UdpSock = udp_unconnect();
-	fill_dgram_io_handle(&CollectorHandle, CollectorHost, UdpSock, COLLECTOR_UDP_PORT);
 	
 #if 0
 	if( (NegotiatorHost = param("NEGOTIATOR_HOST")) == NULL ) {
@@ -592,8 +593,8 @@ init_params()
 	Parse(tmp, tree);
 	ad.Insert(tree);
 	delete tmp;
-	ad.SetMyTypeName("MasterAd");
-	ad.SetTargetTypeName("(void)");
+	ad.SetMyTypeName(MASTER_ADTYPE);
+	ad.SetTargetTypeName("");
 
 	if( param("MASTER_DEBUG") ) {
 		if( boolean("MASTER_DEBUG","Foreground") ) {
@@ -1153,32 +1154,30 @@ install_sig_handler( int sig, SIGNAL_HANDLER handler )
 void report_to_collector()
 {
 	int		cmd = UPDATE_MASTER_AD;
-	XDR		xdr, *xdrs = NULL;
+	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
 
 	dprintf(D_FULLDEBUG, "enter report_to_collector\n");
-	xdrs = xdr_Udp_unconnect_Init(&CollectorHandle, &xdr); 
+	sock.attach_to_file_desc(UdpSock);
 
-	if(!snd_int(xdrs, cmd, FALSE))
+	sock.encode();
+	if(!sock.code(cmd))
 	{
-		xdr_destroy(xdrs);
 		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
 		return;
 	}
-	xdrs->x_op = XDR_ENCODE;
-	if(!xdr_classad(xdrs, &ad))
+	if(!ad.put(sock))
 	{
-		xdr_destroy(xdrs);
 		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
 		return;
 	}
-	if(!xdrrec_endofrecord(xdrs, TRUE));
+	if(!sock.end_of_message());
 	{
 		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
 	}
-	xdr_destroy(xdrs);
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
 }
 
+#if defined(USE_CONFIG_SERVER)
 ////////////////////////////////////////////////////////////////////////////////
 // Get the configuration file from the config server. If for any reason the
 // operation wasn't successful, set the value of the attribute LastUpdate in
@@ -1390,6 +1389,7 @@ int GetConfig(char* config_server_name, char* condor_dir)
     fprintf(conf_fp, "%s", configList);
     fclose(conf_fp);
 }
+#endif
 
 int IsSameHost(const char* host)
 {
