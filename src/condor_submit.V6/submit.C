@@ -899,6 +899,12 @@ SetUniverse()
 	exit( 1 );
 #endif
 
+	if(stricmp(univ,"standard")) {
+		fprintf( stderr, "\tERROR: I don't know about the '%s' universe.\n",univ);
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
 	JobUniverse = CONDOR_UNIVERSE_STANDARD;
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_STANDARD);
 	InsertJobExpr (buffer);
