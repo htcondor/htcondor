@@ -128,7 +128,7 @@ DEBUG_FLAG = DebugFlag
 
 #else
 
-#	define GssAuthentication -DGSS_AUTHENTICATION -I../condor_includes \
+#	define GssAuthentication -DGSS_AUTHENTICATION \
 		-I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
 
 #	define ImakeGssFlag -DGSS_AUTHENTICATION
@@ -140,7 +140,7 @@ AUTH2_LIB = ../condor_io/libauth_io.a \
 	$(GLOBUS_DIR)/lib/libglobus_gss.a \
 	$(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
 
-#endif
+#endif /* !defined( GSS_AUTHENTICATION ) */
 
 
 AUTH_FLAGS = GssAuthentication
