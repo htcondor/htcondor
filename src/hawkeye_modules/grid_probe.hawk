@@ -36,7 +36,7 @@ Force Condor into the path
 parameter: HAWKEYE_GRID_ENV=PATH=/sbin:/usr/bin:/home/hawkeye/bin:/home/hawkeye/sbin
 Force Hawkeye into the PATH
 
-parameter: HAWKEYE_GRID_PROBEPATH = /home/hawkeye/GridProbe
+parameter: HAWKEYE_GRID_PROBE = /home/hawkeye/GridProbe/GridProbe.pl
 Where's the probe itself located?
 
 parameter: HAWKEYE_GRID_GLOBUS_LOCATION = $(GLOBUS)
