@@ -193,34 +193,40 @@ LogRecord::readline(FILE *fp, char * &str)
 int
 LogRecord::Write(int fd)
 {
-	int rval;
-
-	rval = WriteHeader(fd);
-	rval += WriteBody(fd);
-	rval += WriteTail(fd);
-
-	return rval;
+	int rval1, rval2, rval3;
+	return( ( rval1=WriteHeader(fd) )<0 || 
+			( rval2=WriteBody(fd) )  <0 || 
+			( rval3=WriteTail(fd) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
 
 int
 LogRecord::Write(FILE *fp)
 {
-	return WriteHeader(fp) + WriteBody(fp) + WriteTail(fp);
+	int rval1, rval2, rval3;
+	return( ( rval1=WriteHeader(fp) )<0 || 
+			( rval2=WriteBody(fp) )  <0 || 
+			( rval3=WriteTail(fp) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
 
 int
 LogRecord::Read(int fd)
 {
-	return ReadHeader(fd) + ReadBody(fd) + ReadTail(fd);
+	int rval1, rval2, rval3;
+	return( ( rval1=ReadHeader(fd) )<0 || 
+			( rval2=ReadBody(fd) )  <0 || 
+			( rval3=ReadTail(fd) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
 
 int
 LogRecord::Read(FILE *fp)
 {
-	return ReadHeader(fp) + ReadBody(fp) + ReadTail(fp);
+	int rval1, rval2, rval3;
+	return( ( rval1=ReadHeader(fp) )<0 || 
+			( rval2=ReadBody(fp) )  <0 || 
+			( rval3=ReadTail(fp) )  <0 ? -1 : rval1+rval2+rval3);
 }
 
 
@@ -228,31 +234,31 @@ int
 LogRecord::WriteHeader(int fd)
 {
 	char op[20];
-
-	sprintf(op, "%d ", op_type);
-
-	return write(fd, op, strlen(op));
+	int  len = sprintf(op, "%d ", op_type);
+	return( write(fd, op, len) < len ? -1 : len );
 }
 
 
 int
 LogRecord::WriteHeader(FILE *fp)
 {
-	return fprintf(fp, "%d ", op_type);
+	char op[20];
+	int  len = sprintf(op, "%d ", op_type);
+	return( fprintf(fp, "%s ", op) < len ? -1 : len );
 }
 
 
 int
 LogRecord::WriteTail(int fd)
 {
-	return write(fd, "\n", 1);
+	return( write(fd, "\n", 1) < 1 ? -1 : 1 );
 }
 
 
 int
 LogRecord::WriteTail(FILE *fp)
 {
-	return fprintf(fp, "\n");
+	return( fprintf(fp, "\n") < 1 ? -1 : 1 );
 }
 
 
@@ -275,7 +281,7 @@ LogRecord::ReadHeader(int fd)
 int
 LogRecord::ReadHeader(FILE *fp)
 {
-	return fscanf(fp, "%d ", &op_type);
+	return( fscanf(fp, "%d ", &op_type) < 1 ? -1 : 1 );
 }
 
 
