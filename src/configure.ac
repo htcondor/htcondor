@@ -1028,7 +1028,21 @@ if test "$ac_purify" = "purify"; then
 fi
 
 
+############################################################
 # checks for libraries
+############################################################
+
+# The DRMAA C library needs to be compiled with pthreads in mind if
+# pthreads are available. This machinery ends up defining HAS_PTHREADS
+# In the build system which is then used to add the correct threading
+# flags to the compile line for drmaa code.
+_cv_has_pthreads=0
+AC_CHECK_LIB(pthread, pthread_create, ac_pthreads="yes", ac_pthreads="no")
+if test $ac_pthreads = "yes"; then
+  _cv_has_pthreads=1
+fi
+AC_SUBST([has_pthreads],[$_cv_has_pthreads])
+
 
 # checks for header files
 
