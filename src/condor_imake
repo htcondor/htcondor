@@ -29,7 +29,9 @@ HasKerb="-DHAS_KERBEROS=YES"
 KerbFlags="$KerbPath $HasKerb"
 
 # figure out where that annoying libgcc is... 
-EgcsLib="-DLIB_GCC=`gcc -print-libgcc-file-name`"
+LIBGCC=`gcc -print-libgcc-file-name`
+EgcsLib="-DLIB_GCC=$LIBGCC"
+
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
