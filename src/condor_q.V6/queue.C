@@ -168,6 +168,10 @@ int main (int argc, char **argv)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	if ( stricmp(basename(argv[0]),"condor_analyze")==0 ) {
+		analyze = true;
+	}
+
 	// process arguments
 	processCommandLineArguments (argc, argv);
 
@@ -1081,7 +1085,34 @@ shorten (char *buff, int len)
 static void
 usage (char *myName)
 {
-	printf ("Usage: %s [options]\n\twhere [options] are\n"
+	bool just_analyze = false;
+
+	if ( stricmp(basename(myName),"condor_analyze")==0 ) {
+		just_analyze = true;
+	}
+
+	if ( just_analyze ) {
+
+	  printf ("Usage: %s [options]\n\twhere [options] are\n"
+		"\t\t-global\t\t\tGet global queue\n"
+		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
+		"\t\t-help\t\t\tThis screen\n"
+		"\t\t-name <name>\t\tName of schedd\n"
+		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
+		"\t\t-long\t\t\tVerbose output\n"
+		"\t\t-run\t\t\tGet information about running jobs\n"
+		"\t\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t\trestriction list\n"
+		"\twhere each restriction may be one of\n"
+		"\t\t<cluster>\t\tGet information about specific cluster\n"
+		"\t\t<cluster>.<proc>\tGet information about specific job\n"
+		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t\t-constraint <expr>\tAdd constraint on classads\n",
+			myName);
+
+	} else {
+
+	  printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
 		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t\t-help\t\t\tThis screen\n"
@@ -1104,6 +1135,8 @@ usage (char *myName)
 		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n",
 			myName);
+
+	}
 }
 
 int
