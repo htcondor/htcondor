@@ -52,7 +52,7 @@ static 	void shorten (char *, int);
 static	bool show_queue (char*, char*, char*);
 
 static 	int verbose = 0, summarize = 1, global = 0;
-static 	int malformed, unexpanded, running, idle;
+static 	int malformed, unexpanded, running, idle, held;
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -435,6 +435,7 @@ displayJobShort (ClassAd *ad)
 		case UNEXPANDED: unexpanded++; break;
 		case IDLE:       idle++;       break;
 		case RUNNING:    running++;    break;
+		case HELD:		 held++;	   break;
 	}
 }
 
@@ -522,7 +523,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		}
 		
 			// initialize counters
-		malformed = 0; idle = 0; running = 0; unexpanded = 0;
+		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
 		if( verbose ) {
 			jobs.fPrintAttrListList( stdout );
@@ -537,9 +538,10 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 		if( summarize ) {
 			printf( "\n%d jobs; "
-					"%d unexpanded, %d idle, %d running, %d malformed\n",
-					unexpanded+idle+running+malformed,unexpanded,idle,running, 
-					malformed);
+					"%d unexpanded, %d idle, %d running, %d held, "
+					"%d malformed\n",
+					unexpanded+idle+running+held+malformed,unexpanded,
+					idle,running,held,malformed);
 		}
 	}
 	return true;
@@ -704,6 +706,16 @@ doRunAnalysis( ClassAd *request )
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	if( jobState == RUNNING ) {
 		printf( "---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
+			proc );
+		return;
+	}
+	if( jobState == HELD ) {
+		printf( "---\n%03d.%03d:  Request is held.\n\n", cluster, 
+			proc );
+		return;
+	}
+	if( jobState == REMOVED ) {
+		printf( "---\n%03d.%03d:  Request is removed.\n\n", cluster, 
 			proc );
 		return;
 	}
