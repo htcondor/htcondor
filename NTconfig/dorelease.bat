@@ -11,6 +11,7 @@ goto end
 echo Copying files...
 copy ..\Release\*.exe %1
 copy ..\Release\*.dll %1
+copy ..\src\condor_starter.V6.1\*.class %1
 copy msvcrt.dll %1
 copy msvcirt.dll %1
 copy pdh.dll %1

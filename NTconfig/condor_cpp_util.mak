@@ -41,9 +41,9 @@ CLEAN :
 	-@erase "$(INTDIR)\ad_printmask.obj"
 	-@erase "$(INTDIR)\classad_collection.obj"
 	-@erase "$(INTDIR)\classad_hashtable.obj"
+	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
-	-@erase "$(INTDIR)\classad_util.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
@@ -87,6 +87,7 @@ CLEAN :
 	-@erase "$(INTDIR)\log_transaction.obj"
 	-@erase "$(INTDIR)\metric_units.obj"
 	-@erase "$(INTDIR)\misc_utils.obj"
+	-@erase "$(INTDIR)\my_distribution.obj"
 	-@erase "$(INTDIR)\my_hostname.obj"
 	-@erase "$(INTDIR)\my_subsystem.obj"
 	-@erase "$(INTDIR)\my_username.obj"
@@ -157,9 +158,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\ad_printmask.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
+	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
-	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Debug\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
@@ -204,6 +205,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\log_transaction.obj" \
 	"$(INTDIR)\metric_units.obj" \
 	"$(INTDIR)\misc_utils.obj" \
+	"$(INTDIR)\my_distribution.obj" \
 	"$(INTDIR)\my_hostname.obj" \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
@@ -242,9 +244,9 @@ CLEAN :
 	-@erase "$(INTDIR)\ad_printmask.obj"
 	-@erase "$(INTDIR)\classad_collection.obj"
 	-@erase "$(INTDIR)\classad_hashtable.obj"
+	-@erase "$(INTDIR)\classad_helpers.obj"
 	-@erase "$(INTDIR)\classad_log.obj"
 	-@erase "$(INTDIR)\classad_merge.obj"
-	-@erase "$(INTDIR)\classad_util.obj"
 	-@erase "$(INTDIR)\condor_attributes.obj"
 	-@erase "$(INTDIR)\condor_config.obj"
 	-@erase "$(INTDIR)\condor_environ.obj"
@@ -288,6 +290,7 @@ CLEAN :
 	-@erase "$(INTDIR)\log_transaction.obj"
 	-@erase "$(INTDIR)\metric_units.obj"
 	-@erase "$(INTDIR)\misc_utils.obj"
+	-@erase "$(INTDIR)\my_distribution.obj"
 	-@erase "$(INTDIR)\my_hostname.obj"
 	-@erase "$(INTDIR)\my_subsystem.obj"
 	-@erase "$(INTDIR)\my_username.obj"
@@ -357,9 +360,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\ad_printmask.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
+	"$(INTDIR)\classad_helpers.obj" \
 	"$(INTDIR)\classad_log.obj" \
 	"$(INTDIR)\classad_merge.obj" \
-	"$(INTDIR)\classad_util.obj" \
 	"$(INTDIR)\condor_attributes.obj" \
 	"..\Release\condor_common.obj" \
 	"$(INTDIR)\condor_config.obj" \
@@ -404,6 +407,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\log_transaction.obj" \
 	"$(INTDIR)\metric_units.obj" \
 	"$(INTDIR)\misc_utils.obj" \
+	"$(INTDIR)\my_distribution.obj" \
 	"$(INTDIR)\my_hostname.obj" \
 	"$(INTDIR)\my_subsystem.obj" \
 	"$(INTDIR)\my_username.obj" \
@@ -463,6 +467,12 @@ SOURCE="..\src\condor_c++_util\classad_hashtable.C"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
+SOURCE="..\src\condor_c++_util\classad_helpers.C"
+
+"$(INTDIR)\classad_helpers.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
 SOURCE="..\src\condor_c++_util\classad_log.C"
 
 "$(INTDIR)\classad_log.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -472,12 +482,6 @@ SOURCE="..\src\condor_c++_util\classad_log.C"
 SOURCE="..\src\condor_c++_util\classad_merge.C"
 
 "$(INTDIR)\classad_merge.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE="..\src\condor_c++_util\classad_util.C"
-
-"$(INTDIR)\classad_util.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -778,6 +782,12 @@ SOURCE="..\src\condor_c++_util\metric_units.C"
 SOURCE="..\src\condor_c++_util\misc_utils.C"
 
 "$(INTDIR)\misc_utils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\my_distribution.C"
+
+"$(INTDIR)\my_distribution.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
