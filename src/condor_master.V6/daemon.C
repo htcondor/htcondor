@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -32,8 +30,6 @@
 #include "exit.h"
 #include "my_hostname.h"
 #include "condor_email.h"
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -154,6 +150,7 @@ daemon::daemon(char *name)
 	}
 	runs_on_this_host();
 	pid = 0;
+	on_hold = FALSE;
 	restarts = 0;
 	newExec = FALSE; 
 	timeStamp = 0;
@@ -169,6 +166,7 @@ daemon::daemon(char *name)
 	port = NULL;
 	config_info_file = NULL;
 #endif
+	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
 
@@ -283,6 +281,9 @@ int daemon::Restart()
 {
 	int		n;
 
+	if( on_hold ) {
+		return FALSE;
+	}
 	if(newExec == TRUE) {
 		restarts = 0;
 		newExec = FALSE; 
@@ -341,7 +342,13 @@ daemon::Start()
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
-
+	if( on_hold ) {
+		return FALSE;
+	}
+	if( pid ) {
+			// Already running
+		return TRUE;
+	}
 	if( (shortname = strrchr(process_name,'/')) ) {
 		shortname += 1;
 	} else {
@@ -460,11 +467,21 @@ daemon::Start()
 void
 daemon::Stop() 
 {
-	if( !strcmp(name_in_config_file, "MASTER") ) {
+	if( type == DT_MASTER ) {
 			// Never want to stop master.
 		return;
 	}
-
+	if( start_tid != -1 ) {
+			// If we think we need to start this in the future, don't. 
+		dprintf( D_ALWAYS, "Canceling timer to re-start %s\n", 
+				 name_in_config_file );
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 	if( stop_state == GRACEFUL ) {
 			// We've already been here, just return.
 		return;
@@ -487,11 +504,21 @@ daemon::Stop()
 void
 daemon::StopFast()
 {
-	if( !strcmp(name_in_config_file, "MASTER") ) {
+	if( type == DT_MASTER ) {
 			// Never want to stop master.
 		return;
 	}
-
+	if( start_tid != -1 ) {
+			// If we think we need to start this in the future, don't. 
+		dprintf( D_ALWAYS, "Canceling timer to re-start %s\n", 
+				 name_in_config_file );
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 	if( stop_state == FAST ) {
 			// We've already been here, just return.
 		return;
@@ -520,11 +547,14 @@ daemon::StopFast()
 void
 daemon::HardKill()
 {
-	if( !strcmp(name_in_config_file, "MASTER") ) {
+	if( type == DT_MASTER ) {
 			// Never want to stop master.
 		return;
 	}
-
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
 	if( stop_state == KILL ) {
 			// We've already been here, just return.
 		return;
@@ -853,7 +883,8 @@ Daemons::CheckForNewExecutable()
     }
 
     for( int i=0; i < no_daemons; i++ ) {
-		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec ) {
+		if( daemon_ptr[i]->runs_here && !daemon_ptr[i]->newExec 
+			&& ! daemon_ptr[i]->on_hold ) {
 			if( NewExecutable( daemon_ptr[i]->process_name,
 							   &daemon_ptr[i]->timeStamp ) ) {
 				found_new = TRUE;
@@ -924,6 +955,7 @@ Daemons::StartAllDaemons()
 			continue;
 		} 
 		if( ! daemon_ptr[i]->runs_here ) continue;
+		daemon_ptr[i]->on_hold = FALSE;
 		daemon_ptr[i]->Start();
 	}
 }
@@ -1206,13 +1238,12 @@ Daemons::SetAllReaper()
 void
 Daemons::SetDefaultReaper()
 {
-	static int already_registered_reaper = 0;
-
 	if( reaper == DEFAULT_R ) {
 			// The default reaper is already set.
 		return;
 	}
 #ifdef WANT_DC_PM
+	static int already_registered_reaper = 0;
 	if ( already_registered_reaper ) {
 		daemonCore->Reset_Reaper( 1, "Default Daemon Reaper",
 							  (ReaperHandlercpp)&Daemons::DefaultReaper,
@@ -1364,4 +1395,16 @@ Daemons::UpdateCollector()
 	daemonCore->Reset_Timer( update_tid, update_interval, update_interval );
 
 	dprintf(D_FULLDEBUG, "exit Daemons::UpdateCollector\n");
+}
+
+
+daemon*
+Daemons::FindDaemon( daemon_t dt )
+{
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->type == dt ) {
+			return daemon_ptr[i];
+		}
+	}
+	return NULL;
 }

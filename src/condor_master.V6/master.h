@@ -24,6 +24,7 @@
 #define __CONDOR_MASTER
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "daemon_types.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -33,6 +34,7 @@ class daemon : public Service
 {
 public:
 	daemon(char *name);
+	daemon_t type;
 	char*	name_in_config_file;
 	char*	daemon_name; 
 	char*	log_filename_in_config_file;
@@ -40,11 +42,13 @@ public:
 	char*	process_name;
 	char*	log_name;
 	int		runs_here;
+	int		on_hold;
 	int		pid;
 	int 	restarts;
 	int		newExec; 
 	time_t	timeStamp;		// Timestamp of this daemon's binary.
 	time_t	startTime;		// Time this daemon was started
+
 
 #if 0
 	char*	port;				 	// for config server
@@ -133,6 +137,8 @@ public:
 
 	void	Update( ClassAd* );
 	void	UpdateCollector();
+
+	daemon*	FindDaemon( daemon_t dt );
 
 private:
 	daemon **daemon_ptr;

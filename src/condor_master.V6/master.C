@@ -21,11 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_uid.h"
@@ -41,6 +37,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #include "exit.h"
 #include "string_list.h"
 #include "get_daemon_addr.h"
+#include "daemon_types.h"
 
 #ifndef WANT_DC_PM
 int standard_sigchld(Service *,int);
@@ -75,6 +72,8 @@ int		main_shutdown_graceful();
 int		main_shutdown_fast();
 int		main_config();
 int		admin_command_handler(Service *, int, Stream *);
+int		handle_subsys_command(int, Stream *);
+
 extern "C" int	DoCleanup();
 
 #if 0
@@ -245,6 +244,15 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( MASTER_OFF_FAST, "MASTER_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMON_ON, "DAEMON_ON",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMON_OFF, "DAEMON_OFF",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMON_OFF_FAST, "DAEMON_OFF_FAST",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
 
 	_EXCEPT_Cleanup = DoCleanup;
 
@@ -271,7 +279,7 @@ main_init( int argc, char* argv[] )
 
 
 int
-admin_command_handler(Service *, int cmd, Stream *)
+admin_command_handler( Service*, int cmd, Stream* stream )
 {
 	if(! AllowAdminCommands ) {
 		dprintf( D_FULLDEBUG, 
@@ -299,17 +307,78 @@ admin_command_handler(Service *, int cmd, Stream *)
 		daemons.DaemonsOff( 1 );
 		return TRUE;
 	case MASTER_OFF:
-		main_shutdown_graceful();
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
 		return TRUE;
 	case MASTER_OFF_FAST:
-		main_shutdown_fast();
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 		return TRUE;
+
+			// These commands are special, since they all need to read
+			// off the subsystem before they know what to do.  So, we
+			// handle them with a special function.
+	case DAEMON_ON:
+	case DAEMON_OFF:
+	case DAEMON_OFF_FAST:
+		return handle_subsys_command( cmd, stream );
+
 	default: 
-		EXCEPT( "Unknown admin command in handle_admin_commands" );
+		EXCEPT( "Unknown admin command (%d) in handle_admin_commands",
+				cmd );
 	}
 	return FALSE;
 }
 
+
+int
+handle_subsys_command( int cmd, Stream* stream )
+{
+	char* subsys = NULL;
+	daemon* daemon;
+	daemon_t dt;
+
+	stream->decode();
+	if( ! stream->code(subsys) ) {
+		dprintf( D_ALWAYS, "Can't read subsystem name\n" );
+		free( subsys );
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( subsys );
+		return FALSE;
+	}
+	if( !(dt = stringToDaemonType(subsys)) ) {
+		dprintf( D_ALWAYS, "Error: got unknown subsystem string \"%s\"\n", 
+				 subsys );
+		free( subsys );
+		return FALSE;
+	}
+	if( !(daemon = daemons.FindDaemon(dt)) ) {
+		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
+				 subsys );
+		free( subsys );
+		return FALSE;
+	}
+	dprintf( D_COMMAND, "Handling daemon-specific command for \"%s\"\n", 
+			 subsys );
+	free( subsys );
+	switch( cmd ) {
+	case DAEMON_ON:
+		daemon->on_hold = FALSE;
+		return daemon->Start();
+	case DAEMON_OFF:
+		daemon->on_hold = TRUE;
+		daemon->Stop();
+		return TRUE;
+	case DAEMON_OFF_FAST:
+		daemon->on_hold = TRUE;
+		daemon->StopFast();
+		return TRUE;
+	default:
+		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
+	}
+	return FALSE;
+}
 
 void
 init_params()
