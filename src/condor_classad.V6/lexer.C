@@ -30,7 +30,7 @@ extern	time_t timezone;
 BEGIN_NAMESPACE( classad )
 
 // macro for recognising octal digits
-#define isodigit(x) ( (x) - '0' < 8 )
+#define isodigit(x) (( (x) - '0' < 8 ) && ((x) - '0' >= 0))
 
 // ctor
 Lexer::
@@ -979,8 +979,6 @@ void Lexer::convert_escapes(string &text)
 			source++;
 
 			char new_char;
-			// Note that we ignore octal and hexadecimal escapes.
-			// I'm thinking about it. 
 			switch(text[source]) {
 			case 'a':	new_char = '\a'; break;
 			case 'b':	new_char = '\b'; break;
@@ -993,7 +991,43 @@ void Lexer::convert_escapes(string &text)
 			case '\?':	new_char = '\?'; break;
 			case '\'':	new_char = '\''; break;
 			case '\"':	new_char = '\"'; break;
-			default:    new_char = text[source]; break;
+			default:   
+				if (isodigit(text[source])) {
+					int  number;
+					// There are two allowed ways to have octal escape characters:
+					//  \[0..3]nn or \nn. We check for them in that order.
+					if (   source <= length - 3
+						&& text[source] >= '0' && text[source] <= '3'
+						&& isodigit(text[source+1])
+						&& isodigit(text[source+2])) {
+
+						// We have the \[0..3]nn case
+						char octal[4];
+						octal[0] = text[source];
+						octal[1] = text[source+1];
+						octal[2] = text[source+2];
+						octal[3] = 0;
+						sscanf(octal, "%o", &number);
+						new_char = number;
+						source += 2; // to account for the two extra digits
+					} else if (   source <= length -2
+							   && isodigit(text[source+1])) {
+
+						// We have the \nn case
+						char octal[3];
+						octal[0] = text[source];
+						octal[1] = text[source+1];
+						octal[2] = 0;
+						sscanf(octal, "%o", &number);
+						new_char = number;
+						source += 1; // to account for the extra digit
+					} else {
+						new_char = text[source];
+					}
+				} else {
+					new_char = text[source];
+				}
+				break;
 			}
 			copy[dest++] = new_char;
 		}
