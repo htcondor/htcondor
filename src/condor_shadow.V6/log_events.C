@@ -11,16 +11,23 @@
 #include "proc.h"
 #include "_condor_fix_resource.h"
 #include "condor_debug.h"
+#include "condor_classad.h"
+#include "condor_attributes.h"
 
 extern UserLog		ULog;
 
 extern int JobStatus;
 extern "C" PROC  *Proc;
+extern ClassAd *JobAd;
 
 extern "C" void 
-initializeUserLog (PROC *p)
+initializeUserLog ()
 {
-	ULog.initialize (p);
+	char logfilename[_POSIX_PATH_MAX];
+	if (JobAd->LookupString(ATTR_ULOG_FILE, logfilename) == 1) {
+		ULog.initialize (Proc->owner, logfilename,
+						 Proc->id.cluster, Proc->id.proc, 0);
+	}
 }
 
 extern "C" void
