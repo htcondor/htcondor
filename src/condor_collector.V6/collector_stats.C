@@ -52,7 +52,7 @@ bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
 }
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-void parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
+int parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
 
 // Instantiate things
 template class ExtArray<CollectorClassStats *>;
