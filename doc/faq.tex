@@ -1185,6 +1185,24 @@ NEGOTIATOR_HOST=
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Where are my missing files?  The command \Expr{when\_to\_transfer\_output = ON\_EXIT\_OR\_EVICT} is in the submit description file.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{submit commands!when\_to\_transfer\_output}
+\index{file transfer mechanism!missing files}
+\index{transferring files}
+Although it may appear as if files are missing,
+they are not.
+The transfer does take place whenever a job is 
+preempted by another job, vacates the machine, or is killed.
+Look for the files in the directory defined by
+the \MacroNI{SPOOL} configuration variable.
+See
+section~\ref{sec:file-transfer-if-when}, on
+page~\pageref{sec:file-transferr-if-when} for details on the naming
+of the intermediate files.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Condor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

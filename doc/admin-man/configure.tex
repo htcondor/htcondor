@@ -1288,9 +1288,9 @@ from ``flippy.example.com'', claiming a \MacroUNI{UID\_DOMAIN}
 of ``cs.wisc.edu'',
 will run the job as the user nobody.
 
-Because of this verification, you need to set your
-\MacroUNI{UID\_DOMAIN}
-to a real domain name. At the Computer Sciences department
+Because of this verification,
+\MacroUNI{UID\_DOMAIN} must be a real domain name.
+At the Computer Sciences department
 at the UW Madison, we set the \MacroUNI{UID\_DOMAIN}
 to be ``cs.wisc.edu'' to
 indicate that whenever someone submits from a department machine, we
@@ -1331,15 +1331,14 @@ However, some
 installations may not have every user in every machine's password
 file, so this check will fail. If you prefer that Condor not do
 this check, because users are not in every password file, set
-this attribute to True.
+this attribute to \Expr{True}.
 
 
 \item[\Macro{VMx\_USER}] \label{param:VMxUser}
 The name of a user for Condor to use instead of
 user nobody,
 as part of a solution that plugs a security hole whereby
-a lurker process can prey on a subsequent job run as user
-nobody. 
+a lurker process can prey on a subsequent job run as user name nobody. 
 \MacroNI{x} is an integer associated with virtual machines.
 On Windows, \MacroNI{VMx\_USER}
 will only work if the credential of the specified
@@ -1359,20 +1358,22 @@ macro is an arbitrary string that is used to decide if
 two machines (a submitting machine and an execute machine) share a
 file system.
 Although the macro name contains the word ``DOMAIN'',
-the macro is not required to be a domain name, although it often is.
+the macro is not required to be a domain name. 
+It often is a domain name.
 
-Vanilla Unix jobs currently require a shared file system in order to
-share any data files or see the output of the program.
-Condor decides if there is a shared filesystem by comparing the values
-of 
-\MacroUNI{FILESYSTEM\_DOMAIN}
-of both the submitting and execute machines.
-If the values are the same,
-Condor assume there is a shared file system.
-Condor implements the check
-by extending the Requirements for your job.
-You can see these requirements by using the \oArg{-v} argument
-to \Condor{submit}.
+% NO LONGER TRUE
+% Vanilla Unix jobs currently require a shared file system in order to
+% share any data files or see the output of the program.
+% Condor decides if there is a shared filesystem by comparing the values
+% of 
+% \MacroUNI{FILESYSTEM\_DOMAIN}
+% of both the submitting and execute machines.
+% If the values are the same,
+% Condor assume there is a shared file system.
+% Condor implements the check
+% by extending the Requirements for your job.
+% You can see these requirements by using the \oArg{-v} argument
+% to \Condor{submit}.
 
 Note that this implementation is not ideal: machines may share some
 file systems but not others. Condor currently has no way to express
@@ -1382,11 +1383,11 @@ and submit files, similar to the example given in
 Frequently Asked Questions, 
 section~\ref{sec:FAQ} on
 how to run jobs only on machines that have 
-certain software installations.
+certain software packages.
 
 Note that if you do not set 
-\MacroUNI{FILESYSTEM\_DOMAIN}, Condor will
-automatically set the macro's value to be the fully qualified hostname
+\MacroUNI{FILESYSTEM\_DOMAIN}, Condor defaults
+to setting the macro's value to be the fully qualified hostname
 of the local machine.
 Since each machine will have a different
 \MacroUNI{FILESYSTEM\_DOMAIN},

@@ -1019,6 +1019,7 @@ Condor's File Transfer Mechanism}
 \index{job!submission without a shared file system}
 \index{shared file system!submission of jobs without one}
 \index{file transfer mechanism}
+\index{transferring files}
 
 Condor works well without a shared file system.
 The Condor file transfer mechanism is utilized by the user
@@ -1083,7 +1084,8 @@ Therefore, the existence of a shared file system is not relevant.
 
 
 %%%%%%%%%%%% 
-\subsubsection{Specifying If and When to Transfer Files}
+\subsubsection{Specifying If and When to Transfer Files
+\label{sec:file-transfer-if-when}}
 %%%%%%%%%%%%
 
 To enable the file transfer mechanism, two commands are
@@ -1104,7 +1106,6 @@ transfer input files from the submit machine to the remote machine
 where the job executes.
 It also specifies whether the output files are transferred 
 back to the submit machine.
-
 The command takes on one of three possible values:
 \begin{enumerate}
 
@@ -1125,23 +1126,43 @@ on a shared file system.
 The \verb@when_to_transfer_output@ command tells Condor when output
 files are to be transferred back to the submit machine after the job
 has executed on a remote machine.
+The command takes on one of two possible values:
 
-The commands takes on one of two possible values:
 \begin{enumerate}
 \item \verb@ON_EXIT@: Condor transfers output files back to the submit
 machine only when the job exits on its own.
 
-\item \verb@ON_EXIT_OR_EVICT@: Condor will always do the transfer,
-whether the job completes on its own, is preempted by another job, or
-is killed.
-This is only useful if partial runs of the job are valuable for some
-reason. An example of valuable partial runs is when the application
+\item \verb@ON_EXIT_OR_EVICT@:
+Condor will always do the transfer,
+whether the job completes on its own, is preempted by another job, 
+vacates the machine, or is killed.
+As the job completes on its own, files are transferred back
+to the directory where the job was submitted, as expected.
+For the other cases, \emph{files are transferred back at eviction time}.
+These files are placed in
+the directory defined by the configuration
+variable \MacroNI{SPOOL}, not the submittor's directory. 
+The transferred files are named using the
+\Attr{ClusterId} and \Attr{ProcId} job ClassAd attributes. 
+The file name takes the form:
+\begin{verbatim}
+   cluster<X>.proc<Y>.subproc0
+\end{verbatim}
+where \verb@<X>@ is the value of \Attr{ClusterId}, and 
+\verb@<Y>@ is the value of \Attr{ProcId}. 
+As an example, job 735.0 may produce the file
+\begin{verbatim}
+   $(SPOOL)/cluster735.proc0.subproc0
+\end{verbatim}
+
+This is only useful if partial runs of the job are valuable.
+An example of valuable partial runs is when the application
 produces its own checkpoints.
 \end{enumerate}
 
 There is no default value for \verb@when_to_transfer_output@.
-If you are using the file transfer mechanism, you must define this
-command.
+If using the file transfer mechanism, 
+this command must be defined.
 If \verb@when_to_transfer_output@ is specified in your submit
 file, but \verb@should_transfer_files@ is not, Condor assumes a
 value of \verb@YES@ for \verb@should_transfer_files@.

@@ -47,7 +47,7 @@ for each user, sorted on accumulated usage.
 The -setprio, -setfactor options are used to change a user's real priority and priority factor.
 The -resetusage and -resetall options are used to reset the accumulated usage for users. The
 usage start time is set to the current time when the accumulated usage is reset. These
-options require administrator privilages.
+options require administrator privileges.
 
 By default only users for whom usage was recorded in the last 24 hours or whose priority is
 greater than the minimum are listed. The -activefrom and -allusers options can be used
@@ -58,8 +58,8 @@ The -getreslist option is used to display the resources currently used by a user
 output includes the start time (the time the resource was allocated to the user), and
 the match time (how long has the resource been allocated to the user).
 
-Note that when specifying usernames on the command line, the name must include the
-uid domain (e.g. user@uid-domain - exactly the same way usernames are listed by the
+Note that when specifying user names on the command line, the name must include the
+UID domain (e.g. user@uid-domain - exactly the same way user names are listed by the
 userprio command).
 
 The -pool option can be used to contact a different central-manager instead of
