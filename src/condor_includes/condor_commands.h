@@ -128,6 +128,7 @@
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
+#define START_AGENT		(SCHED_VERS+77) // have the master start an agent
 
 /************
 *** Command ids used by the collector 
