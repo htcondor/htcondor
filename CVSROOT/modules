@@ -29,12 +29,13 @@
 world		-a .
 
 # CVSROOT support; run mkmodules whenever anything changes.
-CVSROOT		-i mkmodules CVSROOT
-modules		-i mkmodules CVSROOT modules
-loginfo		-i mkmodules CVSROOT loginfo
-commitinfo	-i mkmodules CVSROOT commitinfo
-rcsinfo		-i mkmodules CVSROOT rcsinfo
-editinfo	-i mkmodules CVSROOT editinfo
+CVSROOT			-i mkmodules CVSROOT
+modules			-i mkmodules CVSROOT modules
+loginfo			-i mkmodules CVSROOT loginfo
+commitinfo		-i mkmodules CVSROOT commitinfo
+rcsinfo			-i mkmodules CVSROOT rcsinfo
+editinfo		-i mkmodules CVSROOT editinfo
+validate_user	-i co validate_user
 
 # Add other modules here...
 code	-a Distfile GENERIC Imakefile config src
@@ -100,7 +101,7 @@ ULTRIX_CODE	-a Distfile GENERIC config \
 			src/condor_util_lib \
 			src/condor_xdr_lib \
 			src/h
-OSF1_CODE &ULTRIX_CODE
+OSF1_CODE ULTRIX_CODE
 SUNOS_CODE	-a Distfile GENERIC config \
 			src/Imakefile \
 			src/condor_c++_util \
