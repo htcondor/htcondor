@@ -1,3 +1,15 @@
+4/9/01 V6_3-umn-branch  (take two)
+   This is a new branch (with the same name) for UMN folks who want to
+   hack DAGMan.  Since the old umn branch was created before the big
+   CEDAR cleanup in CVS, and since we didn't want any trouble with
+   that down the road, we wanted to make a new branch for them before
+   they started their work.  Since nothing had been checked in to the
+   new branch, we could safely delete the old branch tag (which I did
+   in both the V6_3-branch and in the V6_3-bandwidth-branch to make
+   sure we removed that tag from all files, even ones that had been
+   deleted on the main V6_3-branch), and re-tag with the same name,
+   creating a new branch.
+
 4/3/01 V6_3-bandwidth-branch
    A new branch off of V6_3 for all the bandwidth control stuff.  This
    branch contains modifications to condor_io and condor_includes.
