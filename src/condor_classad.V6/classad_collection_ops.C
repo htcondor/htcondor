@@ -47,11 +47,12 @@ LogCollNewClassAd::~LogCollNewClassAd()
   if (!Executed && Ad) delete Ad;
 }
 
-void LogCollNewClassAd::Play(void *data_structure)
+bool LogCollNewClassAd::Play(void *data_structure)
 {
   ClassAdCollection* coll=(ClassAdCollection*) data_structure;
-  coll->PlayNewClassAd(key,Ad);
+  if( !coll->PlayNewClassAd(key,Ad) ) return( false );
   Executed=true;
+  return( true );
 }
 
 bool LogCollNewClassAd::ReadBody(FILE* fp)
@@ -74,15 +75,6 @@ bool LogCollNewClassAd::ReadBody(FILE* fp)
   src.SetSource( fp );
   src.SetSentinelChar( '\n' );
   if( !src.ParseClassAd( Ad ) ) return false;
-
-/*
-printf("Read class-ad: key=%s\n",key);
-Sink s;
-s.SetSink(stdout);
-Ad->ToSink(s);
-s.FlushSink();
-printf("\n");
-*/
 
   return true;
 }
@@ -125,10 +117,37 @@ LogCollUpdateClassAd::~LogCollUpdateClassAd()
 	}
 }
 
-void LogCollUpdateClassAd::Play(void *data_structure)
+bool LogCollUpdateClassAd::Play(void *data_structure)
 {
   ClassAdCollection* coll=(ClassAdCollection*) data_structure;
-  coll->PlayUpdateClassAd(key,Ad);
+  return( coll->PlayUpdateClassAd(key,Ad) );
+}
+
+//------------------------------------------------------------------------
+// Modify class Ad
+//------------------------------------------------------------------------
+LogCollModifyClassAd::LogCollModifyClassAd(const char*k, ClassAd*ad) :
+	LogCollNewClassAd( k, ad )
+{
+	op_type = CondorLogOp_CollModifyClassAd;
+}
+
+LogCollModifyClassAd::~LogCollModifyClassAd()
+{
+	if( key ) {
+		free( key );
+		key = NULL;
+	}
+	if( Ad ) {
+		delete Ad;
+		Ad = NULL;
+	}
+}
+
+bool LogCollModifyClassAd::Play(void *data_structure)
+{
+	ClassAdCollection* coll=(ClassAdCollection*) data_structure;
+	return( coll->PlayModifyClassAd(key, Ad) );
 }
 
 //------------------------------------------------------------------------
@@ -147,10 +166,10 @@ LogCollDestroyClassAd::~LogCollDestroyClassAd()
   if (key) free(key);
 }
 
-void LogCollDestroyClassAd::Play(void *data_structure)
+bool LogCollDestroyClassAd::Play(void *data_structure)
 {
   ClassAdCollection* coll=(ClassAdCollection*) data_structure;
-  coll->PlayDestroyClassAd(key);
+  return( coll->PlayDestroyClassAd(key) );
 }
 
 bool LogCollDestroyClassAd::ReadBody(FILE* fp)

@@ -30,8 +30,9 @@
 #define CondorLogOp_CollNewClassAd          201
 #define CondorLogOp_CollDestroyClassAd      202
 #define CondorLogOp_CollUpdateClassAd       203
-#define CondorLogOp_BeginTransaction        204
-#define CondorLogOp_EndTransaction          205
+#define CondorLogOp_CollModifyClassAd		204
+#define CondorLogOp_BeginTransaction        205
+#define CondorLogOp_EndTransaction          206
 
 //----------------------------------------------------------
 
@@ -39,7 +40,7 @@ class LogCollNewClassAd : public LogRecord {
 public:
     LogCollNewClassAd(const char *key, ClassAd* ad);
     virtual ~LogCollNewClassAd();
-    void Play(void *data_structure);
+    bool Play(void *data_structure);
 
 	char* get_key() { return key; }
 	ClassAd* get_ad() { return Ad; }
@@ -59,7 +60,16 @@ class LogCollUpdateClassAd : public LogCollNewClassAd {
 public:
     LogCollUpdateClassAd(const char *key, ClassAd* ad);
     virtual ~LogCollUpdateClassAd();
-    void Play(void* data_structure);
+    bool Play(void* data_structure);
+};
+
+//----------------------------------------------------------
+
+class LogCollModifyClassAd : public LogCollNewClassAd {
+public:
+	LogCollModifyClassAd(const char *key, ClassAd *ad);
+	virtual ~LogCollModifyClassAd();
+	bool Play(void *data_structure);
 };
 
 //----------------------------------------------------------
@@ -68,7 +78,7 @@ class LogCollDestroyClassAd : public LogRecord {
 public:
     LogCollDestroyClassAd(const char *key);
     virtual ~LogCollDestroyClassAd();
-    void Play(void *data_structure);
+    bool Play(void *data_structure);
 
 	char * get_key() { return( key ); }
 
