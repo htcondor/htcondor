@@ -206,6 +206,27 @@ gid_t getegid() : extract, pseudo;
 		out xdr_u_short( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
+
+		// This function is intended for setting up the transfer
+		// of a whole file via a TCP stream.  This allows more
+		// flexibility than the similar put_file() protocol, and may
+		// be more efficient as well, since we bypass XDR.  The name
+		// of the file is the single parameter sent to the shadow, and
+		// the result is a hostname and a port number to which the
+		// actual bytes can be written.
+	int put_file_stream(
+		const char *file, char *host, u_short *port_num ): pseudo {
+
+		SEND_PATH( file );
+		ALLOC_PATH( file );
+
+		out xdr_string( &host, MAX_STRING );
+		alloc( host, MAX_STRING );
+
+		out xdr_u_short( port_num );
+		alloc( port_num, U_SHORT_SIZE );
+	}
+
 		// These two functions implement protocols for sending and fetching
 		// whole files at a time.  Since there is a more complex protocol
 		// involved, it's easier to just code the senders by hand.
