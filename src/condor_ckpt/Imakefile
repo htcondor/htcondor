@@ -1,4 +1,9 @@
+#if IS_MIPS_ULTRIX42
+CC = gcc
+#endif
+
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STATIC)
+
 CFLAGS = $(STD_C_FLAGS)
 
 SRC_DIR = $(SRC_TREE)/condor_ckpt
