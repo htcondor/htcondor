@@ -66,7 +66,6 @@ int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
 int SetSyscalls(int);
-void FillSubsysExprs( ClassAd*, char* );
 
 // External variables
 extern BUCKET	*ConfigTab[];
@@ -92,7 +91,7 @@ config(ClassAd *classAd, char *mySubsystem)
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
 	}
-	FillSubsysExprs( classAd, mySubsystem );
+	config_fill_ad( classAd, mySubsystem );
 }
 
 void
@@ -122,12 +121,12 @@ config_master(ClassAd *classAd)
 			exit( 1 );
 		}
 	}
-	FillSubsysExprs( classAd, "MASTER" );
+	config_fill_ad( classAd, "MASTER" );
 }
 
 
 void
-FillSubsysExprs(ClassAd* ad, char* mySubsys)
+config_fill_ad(ClassAd* ad, char* mySubsys)
 {
 	char 		buffer[1024];
 	char 		*tmp;
