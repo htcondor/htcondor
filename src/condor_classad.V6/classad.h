@@ -36,11 +36,12 @@ BEGIN_NAMESPACE( classad )
 #include "rectangle.h"
 #endif
 
-#if defined( DEPRECATED )
+#if defined( CLASSAD_DEPRECATED )
 #include "stream.h"
 #endif
 
 typedef std::hash_map<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 /// An internal node of an expression which represents a ClassAd. 
 class ClassAd : public ExprTree
@@ -110,7 +111,7 @@ class ClassAd : public ExprTree
 			@param value The integer value of the attribute.
 			@param f The multiplicative factor to be attached to value.
 			@see Value::NumberFactor
-		*/
+e		*/
 		bool InsertAttr( const std::string &attrName,int value, 
 				Value::NumberFactor f=Value::NO_FACTOR );
 
@@ -446,7 +447,7 @@ class ClassAd : public ExprTree
 #endif
 		//@}
 
-#if defined( DEPRECATED )
+#if defined( CLASSAD_DEPRECATED )
 // AttrList methods
 
 		// insert expressions into the ad
@@ -479,9 +480,6 @@ class ClassAd : public ExprTree
 		int         EvalBool  (const char *, class ClassAd *, int &);
 
 		// chaining
-	    void		ChainToAd( ClassAd * ) { }
-		void		unchain( void ) { }
-
 // ClassAd methods
 
         ClassAd(FILE*,char*,int&,int&,int&);	// Constructor, read from file.
@@ -507,6 +505,23 @@ class ClassAd : public ExprTree
 		
 #endif
 
+#ifdef ALLOW_CHAINING
+	    void		ChainToAd(ClassAd *new_chain_parent_ad);
+		void		Unchain(void);
+#endif
+
+		void        EnableDirtyTracking(void)  { do_dirty_tracking = true;  }
+		void        DisableDirtyTracking(void) { do_dirty_tracking = false; }
+		void		ClearAllDirtyFlags(void);
+		void        MarkAttributeDirty(const string &name);
+		void        MarkAttributeClean(const string &name);
+		bool        IsAttributeDirty(const string &name);
+
+		typedef DirtyAttrList::iterator dirtyIterator;
+		dirtyIterator dirtyBegin() { return dirtyAttrList.begin(); }
+		dirtyIterator dirtyEnd() { return dirtyAttrList.end(); }
+		
+
   	private:
 		friend 	class AttributeReference;
 		friend 	class ExprTree;
@@ -522,7 +537,7 @@ class ClassAd : public ExprTree
 		bool _CheckRef( ExprTree *, const std::string & );
 #endif
 
-#if defined( DEPRECATED )
+#if defined( CLASSAD_DEPRECATED )
 		void evalFromEnvironment( const char *name, Value val );
 		ExprTree *AddExplicitConditionals( ExprTree * );
 		ExprTree *AddExplicitTargetRefs( ExprTree *,
@@ -538,7 +553,12 @@ class ClassAd : public ExprTree
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
 		int LookupInScope( const std::string&, ExprTree*&, EvalState& ) const;
-		AttrList	attrList;
+		AttrList	  attrList;
+		DirtyAttrList dirtyAttrList;
+		bool          do_dirty_tracking;
+#ifdef ALLOW_CHAINING
+		ClassAd     *chained_parent_ad;
+#endif
 };
 
 std::ostream& operator<<(std::ostream &os, ClassAd &ad);

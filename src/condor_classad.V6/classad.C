@@ -46,6 +46,10 @@ ClassAd::
 ClassAd ()
 {
 	nodeKind = CLASSAD_NODE;
+	EnableDirtyTracking();
+#ifdef ALLOW_CHAINING
+	chained_parent_ad = NULL;
+#endif
 }
 
 
@@ -54,6 +58,10 @@ ClassAd (const ClassAd &ad)
 {
 	AttrList::const_iterator itr;
 
+	EnableDirtyTracking();
+#ifdef ALLOW_CHAINING
+	chained_parent_ad = NULL;
+#endif
 	nodeKind = CLASSAD_NODE;
 	parentScope = ad.parentScope;
 	
@@ -72,7 +80,11 @@ CopyFrom( const ClassAd &ad )
 	Clear( );
 	nodeKind = CLASSAD_NODE;
 	parentScope = ad.parentScope;
+#ifdef ALLOW_CHAINING
+	chained_parent_ad = ad.chained_parent_ad;
+#endif
 	
+	DisableDirtyTracking();
 	for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
 		if( !( tree = itr->second->Copy( ) ) ) {
 			Clear( );
@@ -83,6 +95,7 @@ CopyFrom( const ClassAd &ad )
 		tree->SetParentScope(this); // ajr
 		attrList[itr->first] = tree;
 	}
+	EnableDirtyTracking();
 
 	return( true );
 }
@@ -98,6 +111,7 @@ ClassAd::
 void ClassAd::
 Clear( )
 {
+	Unchain();
 	AttrList::iterator	itr;
 	for( itr = attrList.begin( ); itr != attrList.end( ); itr++ ) {
 		if( itr->second ) delete itr->second;
@@ -260,6 +274,8 @@ Insert( const string &name, ExprTree *tree )
 		delete itr->second;
 	}
 	attrList[name] = tree;
+
+	MarkAttributeDirty(name);
         
 	return( true );
 }
@@ -279,8 +295,22 @@ DeepInsert( ExprTree *scopeExpr, const string &name, ExprTree *tree )
 ExprTree *ClassAd::
 Lookup( const string &name ) const
 {
-	AttrList::const_iterator	itr = attrList.find( name );
-	return( itr==attrList.end( ) ? NULL : itr->second );
+	ExprTree *tree;
+	AttrList::const_iterator itr;
+
+	itr = attrList.find( name );
+	if (itr != attrList.end()) {
+		tree = itr->second;
+	} 
+#ifdef ALLOW_CHAINING
+	else if (chained_parent_ad != NULL) {
+		tree = chained_parent_ad->Lookup(name);
+	} 
+#endif
+    else {
+		tree = NULL;
+	}
+	return tree;
 }
 
 
@@ -358,15 +388,36 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 bool ClassAd::
 Delete( const string &name )
 {
+	bool deleted_attribute;
+
+    deleted_attribute = false;
 	AttrList::iterator itr = attrList.find( name );
-	if( itr == attrList.end( ) ) {
-		CondorErrno = ERR_MISSING_ATTRIBUTE;
-		CondorErrMsg = "attribute " +name+ " not found to be deleted";
-		return( false );
+	if( itr != attrList.end( ) ) {
+		delete itr->second;
+		attrList.erase( itr );
+		deleted_attribute = true;
 	}
-	delete itr->second;
-	attrList.erase( itr );
-	return( true );
+#ifdef ALLOW_CHAINING
+	// If the attribute is in the chained parent, we delete define it
+	// here as undefined, whether or not it was defined here.  This is
+	// behavior copied from old ClassAds. It's also one reason you
+	// probably don't want to use this feature in the future.
+	if (chained_parent_ad != NULL &&
+		chained_parent_ad->Lookup(name) != NULL) {
+		Value undefined_value;
+		
+		undefined_value.SetUndefinedValue();
+		deleted_attribute = true;
+		Insert(name, Literal::MakeLiteral(undefined_value));
+	}
+#endif
+
+	if (!deleted_attribute) {
+		CondorErrno = ERR_MISSING_ATTRIBUTE;
+		CondorErrMsg = "attribute " + name + " not found to be deleted";
+	}
+
+	return deleted_attribute;
 }
 
 bool ClassAd::
@@ -384,14 +435,34 @@ DeepDelete( ExprTree *scopeExpr, const string &name )
 ExprTree *ClassAd::
 Remove( const string &name )
 {
+	ExprTree *tree;
+
+	tree = NULL;
 	AttrList::iterator itr = attrList.find( name );
-	if( itr == attrList.end( ) ) {
-		return( NULL );
+	if( itr != attrList.end( ) ) {
+		tree = itr->second;
+		attrList.erase( itr );
+		tree->SetParentScope( NULL );
 	}
-	ExprTree *tree = itr->second;
-	attrList.erase( itr );
-	tree->SetParentScope( NULL );
-	return( tree );
+
+#ifdef ALLOW_CHAINING
+	// If the attribute is in the chained parent, we delete define it
+	// here as undefined, whether or not it was defined here.  This is
+	// behavior copied from old ClassAds. It's also one reason you
+	// probably don't want to use this feature in the future.
+	if (chained_parent_ad != NULL &&
+		chained_parent_ad->Lookup(name) != NULL) {
+
+		if (tree == NULL) {
+			tree = chained_parent_ad->Lookup(name);
+		}
+		
+		Value undefined_value;
+		undefined_value.SetUndefinedValue();
+		Insert(name, Literal::MakeLiteral(undefined_value));
+	}
+#endif
+	return tree;
 }
 
 ExprTree *ClassAd::
@@ -515,6 +586,11 @@ Copy( ) const
 	if( !newAd ) return NULL;
 	newAd->nodeKind = CLASSAD_NODE;
 	newAd->parentScope = parentScope;
+#ifdef ALLOW_CHAINING
+	newAd->chained_parent_ad = chained_parent_ad;
+#endif
+
+	newAd->DisableDirtyTracking();
 
 	AttrList::const_iterator	itr;
 	for( itr=attrList.begin( ); itr != attrList.end( ); itr++ ) {
@@ -527,6 +603,7 @@ Copy( ) const
 		tree->SetParentScope(newAd); // ajr
 		newAd->attrList[itr->first] = tree;
 	}
+	newAd->EnableDirtyTracking();
 	return newAd;
 }
 
@@ -1277,6 +1354,57 @@ isValidIdentifier( const string &str )
 		// valid if terminated at end of string
 	return( *ch == '\0' );
 }
+
+#ifdef ALLOW_CHAINING
+void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)
+{
+	if (new_chain_parent_ad != NULL) {
+		chained_parent_ad = new_chain_parent_ad;
+	}
+	return;
+}
+
+void ClassAd::Unchain(void)
+{
+	chained_parent_ad = NULL;
+	return;
+}
+#endif
+
+void ClassAd::ClearAllDirtyFlags(void)
+{ 
+	dirtyAttrList.clear();
+	return;
+}
+
+void ClassAd::MarkAttributeDirty(const string &name)
+{
+	if (do_dirty_tracking) {
+		dirtyAttrList.insert(name);
+	}
+	return;
+}
+
+void ClassAd::MarkAttributeClean(const string &name)
+{
+	if (do_dirty_tracking) {
+		dirtyAttrList.erase(name);
+	}
+	return;
+}
+
+bool ClassAd::IsAttributeDirty(const string &name)
+{
+	bool is_dirty;
+
+	if (dirtyAttrList.find(name) != dirtyAttrList.end()) {
+		is_dirty = true;
+	} else {
+		is_dirty = false;
+	}
+	return is_dirty;
+}
+
 
 ostream& operator<<(ostream &stream, ClassAd &ad)
 {
