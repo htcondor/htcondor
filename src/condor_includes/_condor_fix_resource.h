@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #if !defined(HPUX9)
+#include <sys/time.h>
 #include <sys/resource.h>
 #else
 
