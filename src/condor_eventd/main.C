@@ -33,7 +33,7 @@
 char *mySubSystem = "EVENTD";
 
 int
-main_init(int argc, char *argv[])
+main_init(int, char *[])
 {
 	EventD->Config();
 	return TRUE;
