@@ -4,6 +4,7 @@
 
 #define Tilde /home/condor
 #define RpcLib /**/
+#define SocketLib /**/
 #define MldLib /**/
 #define KernLib /**/
 #define MallocLib /**/
@@ -84,4 +85,4 @@
 #define TypicalMemory 16
 #define ShadowSizeEstimate 400
 
-#define LINUX_INCLUDE_DIR /usr/include
+#define LINUX_INCLUDE_DIR /**/

@@ -26,10 +26,6 @@
 **
 */ 
 
-#if defined(LINUX)
-#define SHARED_CKPTS 1
-#endif
-
 #if !defined(Solaris)
 #define _POSIX_SOURCE
 #endif
@@ -38,6 +34,14 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#if defined(LINUX)
+#include <sys/mman.h>
+extern "C" {
+	caddr_t MMAP(caddr_t, size_t, int, int, int, off_t);
+};
+#endif
+
 #if defined(IRIX53)
 #define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #include <sys/mman.h>		// for mmap()
@@ -890,7 +894,7 @@ SegMap::Read( int fd, ssize_t pos )
 			exit(4);
 		}
 	}		
-#elif defined(LINUX) && defined (SHARED_CKPTS)
+#elif defined(LINUX)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		/*
 		fprintf(stderr, "LINUX IS RESTORING A SHARED_LIB SEG\n");
@@ -923,7 +927,7 @@ SegMap::Read( int fd, ssize_t pos )
 		*/
 
 		long status;
-		if ((status=MMAP((void *)core_loc, (size_t)segSize,
+		if ((status=(long)MMAP((void *)core_loc, (size_t)segSize,
 				prot|PROT_WRITE,
 				MAP_PRIVATE|MAP_FIXED, zfd,
 				(off_t)0)) == -1) {
