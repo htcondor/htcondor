@@ -534,6 +534,7 @@ part_send_job(
 	  sock->timeout(90);
 	  if ( sock->connect(host,START_PORT) == FALSE ) {
 		  reason = JOB_NOT_STARTED;
+		  delete sock;
 		  return -1;
 	  }
 
@@ -640,6 +641,7 @@ part_send_job(
     dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
 	     host );
     reason = JOB_NOT_STARTED;
+	delete sock;
     return -1;
   }
   /* end  flock ; dhruba */
