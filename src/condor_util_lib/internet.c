@@ -376,6 +376,34 @@ string_to_ip( const char* addr )
 }
 
 
+char*
+string_to_ipstr( const char* addr ) 
+{
+	char *tmp;
+	static char result[16];
+	char sinful[MAXHOSTNAMELEN];
+
+	if( ! addr ) {
+		return NULL;
+	}
+	if( ! is_valid_sinful(addr) ) {
+		return NULL;
+	}
+	strcpy( sinful, addr );
+	tmp = strchr( sinful, ':' );
+	if( tmp ) {
+		*tmp = '\0';
+	} else {
+		return NULL;
+	}
+	if( is_ipaddr(&sinful[1], NULL) ) {
+		strcpy( result, &sinful[1] );
+		return result;
+	}
+	return NULL;
+}
+
+
 /* Bind the given fd to the correct local interface. */
 int
 _condor_local_bind( int fd )

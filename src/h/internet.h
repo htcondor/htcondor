@@ -55,6 +55,10 @@ int string_to_port( const char* addr );
    and convert it to the unsigned int version from the ASCII version */
 unsigned int string_to_ip( const char* addr );
 
+/* Extract the ip_addr from a string of the form "<xx.xx.xx.xx:pppp>"
+   and return a pointer to the ASCII version */
+char* string_to_ipstr( const char* addr );
+
 char *sock_to_string(SOCKET sockd);
 
 /* Return the real hostname of a machine given a sin; return NULL if it cannot
