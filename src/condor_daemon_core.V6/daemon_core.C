@@ -3466,9 +3466,9 @@ int DaemonCore::Is_Pid_Alive(pid_t pid)
 	// first set priv_state to root, to make certain kill() does not fail
 	// due to permissions.
 	priv_state priv = set_root_priv();
-	status = ::kill(pid,0);
-	if ( status == 0 )
+	if ( ::kill(pid,0) == 0 ) {
 		status = TRUE;	
+	}
 	set_priv(priv);
 #else
 	// on Win32, open a handle to the pid and call GetExitStatus
