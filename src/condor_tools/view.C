@@ -36,36 +36,65 @@
 //------------------------------------------------------------------------
 
 static int CalcTime(int,int,int);
+static int TimeLine(int FromDate, int ToDate, int Res);
 
 //------------------------------------------------------------------------
 
 static void Usage(char* name) 
 {
-  fprintf(stderr, "Usage: %s [-lastday | -lastweek | -lastmonth | -from m d y [-to m d y]] {-resourcequery <name> | -resourcelist | -resgroupquery <name> | -resgrouplist | -userquery <name> | -userlist}\n");
+  fprintf(stderr, "Usage: %s [-f filename] [-orgformat] [-pool hostname] [-lastday | -lastweek | -lastmonth | -lasthours h | -from m d y [-to m d y]] {-resourcequery <name> | -resourcelist | -resgroupquery <name> | -resgrouplist | -userquery <name> | -userlist | -ckptquery | ckptlist}\n",name);
   exit(1);
 }
 
 //------------------------------------------------------------------------
 
-static const int MinuteSec=60;
-static const int HourSec=MinuteSec*60;
-static const int DaySec=HourSec*24;
-static const int WeekSec=DaySec*7;
-static const int MonthSec=DaySec*30;
-static const int YearSec=DaySec*365;
+const int MinuteSec=60;
+const int HourSec=MinuteSec*60;
+const int DaySec=HourSec*24;
+const int WeekSec=DaySec*7;
+const int MonthSec=DaySec*30;
+const int YearSec=DaySec*365;
+
+//------------------------------------------------------------------------
+
+/*
+int GrpConvStr(char* InpStr, char* OutStr)
+{
+  float T,Unclaimed, Matched, Claimed,Preempting,Owner;
+  if (sscanf(InpStr," %f %f %f %f %f %f",&T,&Unclaimed,&Matched,&Claimed,&Preempting,&Owner)!=6) return -1;
+  sprintf(OutStr,"%f\t%f\t%f\t%f\t%f\t%f\n",T,Unclaimed,Matched,Claimed,Preempting,Owner);
+  return 0;
+}
+*/
+
+//------------------------------------------------------------------------
+
+int ResConvStr(char* InpStr, char* OutStr)
+{
+  float T,LoadAvg;
+  int KbdIdle;
+  int State;
+  if (sscanf(InpStr," %f %d %f %d",&T,&KbdIdle,&LoadAvg,&State)!=4) return -1;
+  char* StateName[]={"UNCLAIMED","MATCHED","CLAIMED","PRE-EMPTING","OWNER"};
+  sprintf(OutStr,"%f\t%d\t%f\t%s\n",T,KbdIdle,LoadAvg,StateName[State-1]);
+  return 0;
+}
 
 //------------------------------------------------------------------------
 
 main(int argc, char* argv[])
 {
-  time_t Now=time(0);
-  time_t ToDate=Now;
-  time_t FromDate=ToDate-60*60*24;
+  int Now=time(0);
+  int ToDate=Now;
+  int FromDate=ToDate-DaySec;
+  int Options=0;
 
   int QueryType=-1;
   MyString QueryArg;
 
-  MyString FileName="outfile.dat";
+  MyString FileName;
+  MyString CondorViewHost;
+  int HistoryQueryPort=CONDOR_VIEW_PORT;
 
   for(int i=1; i<argc; i++) {
 
@@ -83,12 +112,20 @@ main(int argc, char* argv[])
       ToDate=Now;
       FromDate=ToDate-MonthSec;
     }
+    else if (strcmp(argv[i],"-lasthours")==0) {
+      if (argc-i<=1) Usage(argv[0]);
+      int hours=atoi(argv[i+1]);  
+      ToDate=Now;
+      FromDate=ToDate-HourSec*hours;
+      i++;
+    }
     else if (strcmp(argv[i],"-from")==0) {
       if (argc-i<=3) Usage(argv[0]);
       int month=atoi(argv[i+1]);
       int day=atoi(argv[i+2]);
       int year=atoi(argv[i+3]);
       FromDate=CalcTime(month,day,year);
+      // printf("Date translation: %d/%d/%d = %d\n",month,day,year,FromDate);
       i+=3;
     }
     else if (strcmp(argv[i],"-to")==0) {
@@ -97,6 +134,7 @@ main(int argc, char* argv[])
       int day=atoi(argv[i+2]);
       int year=atoi(argv[i+3]);
       ToDate=CalcTime(month,day,year);
+      // printf("Date translation: %d/%d/%d = %d\n",month,day,year,ToDate);
       i+=3;
     }
 
@@ -121,10 +159,28 @@ main(int argc, char* argv[])
       i++;
     }
     else if (strcmp(argv[i],"-userlist")==0) {
-      QueryType=QUERY_HIST_USER_LIST;
+      QueryType=QUERY_HIST_SUBMITTOR_LIST;
     }
     else if (strcmp(argv[i],"-userquery")==0) {
-      QueryType=QUERY_HIST_USER;
+      QueryType=QUERY_HIST_SUBMITTOR;
+      if (argc-i<=1) Usage(argv[0]);
+      QueryArg=argv[i+1];
+      i++;
+    }
+    else if (strcmp(argv[i],"-usergrouplist")==0) {
+      QueryType=QUERY_HIST_SUBMITTORGROUPS_LIST;
+    }
+    else if (strcmp(argv[i],"-usergroupquery")==0) {
+      QueryType=QUERY_HIST_SUBMITTORGROUPS;
+      if (argc-i<=1) Usage(argv[0]);
+      QueryArg=argv[i+1];
+      i++;
+    }
+    else if (strcmp(argv[i],"-ckptlist")==0) {
+      QueryType=QUERY_HIST_CKPTSRVR_LIST;
+    }
+    else if (strcmp(argv[i],"-ckptquery")==0) {
+      QueryType=QUERY_HIST_CKPTSRVR;
       if (argc-i<=1) Usage(argv[0]);
       QueryArg=argv[i+1];
       i++;
@@ -137,6 +193,15 @@ main(int argc, char* argv[])
       FileName=argv[i+1];
       i++;
     }
+    else if (strcmp(argv[i],"-orgformat")==0) {
+      Options=1;
+	}
+    else if (strcmp(argv[i],"-pool")==0) {
+      if (argc-i<=1) Usage(argv[0]);
+      CondorViewHost=argv[i+1];
+      HistoryQueryPort=COLLECTOR_PORT;
+      i++;
+    }
     else {
       Usage(argv[0]);
     }
@@ -147,47 +212,118 @@ main(int argc, char* argv[])
   if (ToDate>Now) ToDate=Now;
 
   config( 0 );
-  char* CondorViewHost = param("CONDOR_VIEW_HOST");
-  if (!CondorViewHost) {
-    fprintf(stderr, "No CONDOR_VIEW_HOST specified in config file\n");
+
+  if (CondorViewHost.Length()==0) {
+    char* tmp=param("CONDOR_VIEW_HOST");
+    if (!tmp) {
+      HistoryQueryPort=COLLECTOR_PORT;
+      tmp=param("COLLECTOR_HOST");
+      if (!tmp) {
+        fprintf(stderr, "No CONDOR_VIEW_HOST or COLLECTOR_HOST  specified in config file\n");
+        exit(1);
+      }
+    }
+    CondorViewHost=tmp;
+  }
+
+  int MaxLen=200;
+  char Line[MaxLen+1];
+  char* LinePtr=Line;
+
+  if (QueryArg.Length()>MaxLen) {
+    fprintf(stderr, "Command line argument is too long\n");
+    exit(1);
+  }
+  strcpy(LinePtr, QueryArg.Value());
+
+  if (QueryArg.Length()>0) TimeLine(FromDate,ToDate,10);
+  // if (QueryArg=="*") Options=1;
+
+  // Open the output file
+  FILE* outfile=stdout;
+  if (FileName.Length()>0) { 
+    outfile=fopen(FileName.Value(),"w");
+    fputs("No Data.\n",outfile);
+    fclose(outfile);
+  }
+  
+  int LineCount=0;
+
+  // ReliSock sock((char*) CondorViewHost.Value(), HistoryQueryPort);
+  ReliSock sock;
+  if (!sock.connect((char*) CondorViewHost.Value(), HistoryQueryPort)) {
+    fprintf(stderr, "failed to connect to the CondorView server\n");
     exit(1);
   }
 
-  char Line[200], *LinePtr;
-  strcpy(Line, (const char*) QueryArg);
+  if (FileName.Length()>0) outfile=fopen(FileName.Value(),"w");
 
-  ReliSock sock(CondorViewHost, CONDOR_VIEW_PORT);
   sock.encode();
-  if (!sock.put(QueryType) ||
-      !sock.put(FromDate) ||
-      !sock.put(ToDate) ||
-      !sock.put(QueryType) ||
-      !sock.put(Line) ||
+  if (!sock.code(QueryType) ||
+      !sock.code(FromDate) ||
+      !sock.code(ToDate) ||
+      !sock.code(Options) ||
+      !sock.code(LinePtr) ||
       !sock.end_of_message()) {
     fprintf(stderr, "failed to send query to the CondorView server\n");
+    fputs("No Data.\n",outfile);
     exit(1);
   }
 
-  sock.decode(); 
-  FILE* outfile=fopen(FileName,"w");
+  char NewStr[200];
 
+  sock.decode(); 
   while(1) {
-    if (!sock.get(LinePtr)) {
+    if (!sock.code(LinePtr)) {
       fprintf(stderr, "failed to receive data from the CondorView server\n");
+      if (LineCount==0) fputs("No Data.\n",outfile);
       exit(1);
     }
     if (strlen(LinePtr)==0) break;
-    fputs(LinePtr, outfile);
+    LineCount++;
+    if (Options==0 && QueryType==QUERY_HIST_STARTD) {
+      ResConvStr(LinePtr,NewStr);
+      fputs(NewStr,outfile);
+    }
+    else {
+      fputs(LinePtr,outfile);
+    }
   }
   if (!sock.end_of_message()) {
     fprintf(stderr, "failed to receive data from the CondorView server\n");
   }
 
-  fclose(outfile);
+  if (LineCount==0) fputs("No Data.\n",outfile);
+  if (FileName.Length()>0) fclose(outfile);
 
   return 0;
 }
 
 int CalcTime(int month, int day, int year) {
+  struct tm time_str;
+  if (year>1900) year-=1900;
+  time_str.tm_year=year;
+  time_str.tm_mon=month-1;
+  time_str.tm_mday=day;
+  time_str.tm_hour=0;
+  time_str.tm_min=0;
+  time_str.tm_sec=0;
+  time_str.tm_isdst=-1;
+  return mktime(&time_str);
+}
+
+int TimeLine(int FromDate, int ToDate, int Res)
+{
+  double Interval=double(ToDate-FromDate)/double(Res);
+  float RelT;
+  long T;
+  FILE* TimeFile=fopen("time.dat","w");
+  if (!TimeFile) return -1;
+  for (int i=0; i<=Res; i++) {
+    T=FromDate+((int)Interval*i);
+    RelT=float(100.0/Res)*i;
+	fprintf(TimeFile,"%.2f\t%s",RelT,asctime(localtime(&T)));
+  }
+  fclose(TimeFile);
   return 0;
 }
