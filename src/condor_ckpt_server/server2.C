@@ -164,6 +164,14 @@ void Server::Init(int max_new_xfers,
 		CkptClassAds = NULL;
 	}
 
+	interval = param( "CKPT_SERVER_CLEAN_INTERVAL" );
+	if (interval) {
+		clean_interval = atoi(interval);
+		free(interval);
+	} else {
+		clean_interval = CLEAN_INTERVAL;
+	}
+
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
 	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
 	service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
@@ -340,13 +348,14 @@ void Server::Execute()
 	fd_set         req_sds;
 	int            num_sds_ready;
 	time_t         current_time;
-	time_t         start_interval_time;
+	time_t         last_reclaim_time;
+	time_t		   last_clean_time;
 	struct timeval poll;
 	
-	current_time = start_interval_time = time(NULL);
+	current_time = last_reclaim_time = last_clean_time = time(NULL);
 	while (more) {                          // Continues until SIGUSR2 signal
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
-										  (unsigned int)start_interval_time);
+										  (unsigned int)last_reclaim_time);
 		poll.tv_usec = 0;
 		errno = 0;
 		FD_ZERO(&req_sds);
@@ -387,16 +396,27 @@ void Server::Execute()
 				exit(SELECT_ERROR);
 			}
 		current_time = time(NULL);
-		if (((unsigned int) current_time - (unsigned int) start_interval_time) 
+		if (((unsigned int) current_time - (unsigned int) last_reclaim_time) 
 			>= reclaim_interval) {
 			BlockSignals();
 			transfers.Reclaim(current_time);
 			UnblockSignals();
-			start_interval_time = current_time;
+			last_reclaim_time = current_time;
 			if (replication_level)
 				Replicate();
 			Log("Sending ckpt server ad to collector...");
 			xfer_summary.time_out(current_time);
+		}
+		if (((unsigned int) current_time - (unsigned int) last_clean_time)
+			>= clean_interval) {
+			if (CkptClassAds) {
+				BlockSignals();
+				Log("Cleaning ClassAd log...");
+				CkptClassAds->TruncLog();
+				Log("Done cleaning ClassAd log...");
+				UnblockSignals();
+			}
+			last_clean_time = current_time;
 		}
     }
 	close(service_req_sd);
@@ -1228,14 +1248,17 @@ void Server::ProcessStoreReq(int            req_id,
 			sprintf(key, "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
 					store_req.filename);
 			ClassAd *ad;
-			if (CkptClassAds &&
-				!CkptClassAds->LookupClassAd(key, ad)) {
-				CkptClassAds->NewClassAd(key, CKPT_FILE_ADTYPE, "");
-				CkptClassAds->SetAttribute(key, ATTR_OWNER, store_req.owner);
-				CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR,
-										   inet_ntoa(shadow_IP));
-				CkptClassAds->SetAttribute(key, ATTR_FILE_NAME,
-										   store_req.filename);
+			if (CkptClassAds) {
+				if (!CkptClassAds->LookupClassAd(key, ad)) {
+					char buf[_POSIX_PATH_MAX];
+					CkptClassAds->NewClassAd(key, CKPT_FILE_ADTYPE, "0");
+					sprintf(buf, "\"%s\"", store_req.owner);
+					CkptClassAds->SetAttribute(key, ATTR_OWNER, buf);
+					sprintf(buf, "\"%s\"", inet_ntoa(shadow_IP));
+					CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR, buf);
+					sprintf(buf, "\"%s\"", store_req.filename);
+					CkptClassAds->SetAttribute(key, ATTR_FILE_NAME, buf);
+				}
 				char size[40];
 				sprintf(size, "%d", store_req.file_size);
 				CkptClassAds->SetAttribute(key, ATTR_FILE_SIZE, size);
@@ -1518,14 +1541,12 @@ void Server::TransmitCheckpointFile(int         data_conn_sd,
 	struct sockaddr_in chkpt_addr;
 	int                chkpt_addr_len;
 	int                xfer_sd;
-	u_lint             bytes_recvd=0;
 	int                bytes_read;
 	int                bytes_to_read;
-	u_lint             bytes_sent=0;
-	u_lint             check;
+	int                bytes_sent=0;
 	int                temp;
 	int                buf_size=DATA_BUFFER_SIZE;
-	int					file_fd;
+	int				   file_fd;
 	int				   peer_info_fd;
 	char			   peer_info_filename[100];
 	
