@@ -119,6 +119,13 @@ int _Esigaction(int signum, const struct sigaction  *act, struct sigaction *olda
 #include <sys/socket.h>
 #define _XOPEN_SOURCE_EXTENDED
 
+/* We need to include this _before_ 'db.h' gets included so that we
+   get the int64_t types */
+#if defined( HAS_INTTYPES_H )
+# define __STDC_FORMAT_MACROS
+# include <inttypes.h>
+#endif
+
 /* On DUX4.0, netdb.h defines gethostid to return an int, while
    unistd.h says it returns a long.  Just hide the definition here. */
 #define gethostid _hide_gethostid
