@@ -120,7 +120,7 @@ SRC = \
 	syscall_connect.C \
 	syscall_numbers.c \
 	xfer_file.c \
-	file_stream.c
+	file_stream.c \
         ios_stub.C \
         ios_msg.C
 	 
