@@ -60,7 +60,7 @@ FILE	*DebugFP = stderr;
 int		MaxLog[D_NUMLEVELS] = { 0 };
 char	*DebugFile[D_NUMLEVELS] = { NULL };
 char	*DebugLock[D_NUMLEVELS] = { NULL };
-int		(*DebugId)();
+int		(*DebugId)(FILE *);
 int		SetSyscalls(int mode);
 
 #if defined(WIN32)
@@ -363,6 +363,8 @@ preserve_log_file(int debug_level)
 {
 	char		old[MAXPATHLEN + 4];
 	priv_state	priv;
+	int			still_in_old_file = FALSE;
+	int			failed_to_rotate = FALSE;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -371,18 +373,41 @@ preserve_log_file(int debug_level)
 	(void)fflush( DebugFP );
 
 	fclose( DebugFP );
+	DebugFP = NULL;
 
 	unlink(old);
 
 #if defined(WIN32)
 
 	/* use rename on WIN32, since link isn't available */
-	if (rename(DebugFile[debug_level], old) < 0)
-		dprintf_exit();
+	if (rename(DebugFile[debug_level], old) < 0) {
+		/* the rename failed, perhaps one of the log files
+		 * is currently open.  Sleep a half second and try again. */		 
+		Sleep(500);
+		unlink(old);
+		if ( rename(DebugFile[debug_level],old) < 0) {
+			/* Crap.  Some bonehead must be keeping one of the files
+			 * open for an extended period.  Win32 will not permit an
+			 * open file to be unlinked or renamed.  So, here we copy
+			 * the file over (instead of renaming it) and then truncate
+			 * our original. */
+
+			if ( ::CopyFile(DebugFile[debug_level],old,FALSE) == 0 ) {
+				/* Even our attempt to copy failed.  We're screwed. */
+				failed_to_rotate = TRUE;
+			}
+
+			/* now truncate the original by reopening _not_ with append */
+			DebugFP = open_debug_file(debug_level, "w");
+			if ( DebugFP ==  NULL ) {
+				still_in_old_file == TRUE;
+			}
+		}
+	}
 
 #else
 
-	/*
+	/* 
 	** for some still unknown reason, newer versions of OSF/1 (Digital Unix)
     ** sometimes do not rotate the log correctly using 'rename'.  Changing
 	** this to a unlink/link/unlink sequence seems to work.  May as well do
@@ -394,9 +419,6 @@ preserve_log_file(int debug_level)
 
 	if (unlink (DebugFile[debug_level]) < 0)
 		dprintf_exit();
-
-
-#endif
 
 	/* double check the result of the rename */
 	{
@@ -410,11 +432,22 @@ preserve_log_file(int debug_level)
 		}
 	}
 
-	DebugFP = open_debug_file(debug_level, "a");
+#endif
+
+	if (DebugFP == NULL) {
+		DebugFP = open_debug_file(debug_level, "a");
+	}
 
 	if (DebugFP == NULL) dprintf_exit();
 
-	fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+	if ( !still_in_old_file ) {
+		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
+	}
+
+	if ( failed_to_rotate ) {
+		fprintf(DebugFP,"ERROR: Failed to rotate log into file %s!\n",old);
+		fprintf(DebugFP,"       Perhaps someone is keeping log files open???");
+	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 }
