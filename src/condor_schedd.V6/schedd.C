@@ -177,11 +177,11 @@ Scheduler::~Scheduler()
         free(MySockName);
     if (MyShadowSockName)
         free(MyShadowSockName);
-	if (shadowCommandrsock) {
+	if (shadowCommandrsock && daemonCore) {
 		daemonCore->Cancel_Socket(shadowCommandrsock);
 		delete shadowCommandrsock;
 	}
-	if (shadowCommandssock) {
+	if (shadowCommandssock && deamonCore) {
 		daemonCore->Cancel_Socket(shadowCommandssock);
 		delete shadowCommandssock;
 	}
