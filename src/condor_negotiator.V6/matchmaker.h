@@ -3,6 +3,7 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_accountant.h"
+#include "condor_io.h"
 
 class Matchmaker : public Service
 {
@@ -30,7 +31,7 @@ class Matchmaker : public Service
 		int  negotiate(char*, char*, double, int, ClassAdList&, ClassAdList&);
 				
 		ClassAd *matchmakingAlgorithm(ClassAd &, ClassAdList &, double = -1.0);
-		int  matchmakingProtocol (ClassAd &, ClassAd *, ClassAdList &, Sock &);
+		int  matchmakingProtocol (ClassAd &, ClassAd *, ClassAdList &, Sock *);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &);
 		char *getCapability (char *, ClassAdList &);
 		friend static int comparisonFunction (ClassAd *, ClassAd *, void *);
@@ -47,6 +48,9 @@ class Matchmaker : public Service
 
 		// the accounting subsystem
 		Accountant accountant;
+
+		// Cache of socket connections to schedds
+		SocketCache		sockCache;
 };
 
 

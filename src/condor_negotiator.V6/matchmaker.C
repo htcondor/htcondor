@@ -318,7 +318,7 @@ int Matchmaker::
 negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			ClassAdList &startdAds, ClassAdList &startdPvtAds)
 {
-	ReliSock	sock;
+	ReliSock	*sock;
 	int			i;
 	int			reply;
 	int			cluster, proc;
@@ -326,19 +326,19 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	ClassAd		request;
 	ClassAd		*offer;
 
-	// 0.  connect to the schedd
-	sock.timeout (NegotiatorTimeout);
-	if (!sock.connect (scheddAddr, 0))
+	// 0.  connect to the schedd --- ask the cache for a connection
+	if (!(sock = sockCache.getReliSock(scheddAddr, NegotiatorTimeout)))
 	{
 		dprintf (D_ALWAYS, "\t\tFailed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
 	}
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
-	sock.encode();
-	if (!sock.put(NEGOTIATE) || !sock.put(scheddName) || !sock.end_of_message())
+	sock->encode();
+	if (!sock->put(NEGOTIATE)||!sock->put(scheddName)||!sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "\t\tFailed to send NEGOTIATE/scheddName/eom\n");
+		sockCache.invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
 
@@ -347,20 +347,22 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	{
 		// 2a.  ask for job information
 		dprintf (D_FULLDEBUG, "\t\tSending SEND_JOB_INFO/eom\n");
-		sock.encode();
-		if (!sock.put(SEND_JOB_INFO) || !sock.end_of_message())
+		sock->encode();
+		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS, "\t\tFailed to send SEND_JOB_INFO/eom\n");
+			sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
 		// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
 		dprintf (D_FULLDEBUG, "\t\tGetting reply from schedd ...\n");
-		sock.decode();
-		if (!sock.get (reply))
+		sock->decode();
+		if (!sock->get (reply))
 		{
 			dprintf (D_ALWAYS, "\t\tFailed to get reply from schedd\n");
-			sock.end_of_message ();
+			sock->end_of_message ();
+            sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
@@ -368,7 +370,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		if (reply == NO_MORE_JOBS)
 		{
 			dprintf (D_ALWAYS, "\t\tGot NO_MORE_JOBS;  done negotiating\n");
-			sock.end_of_message ();
+			sock->end_of_message ();
+            sockCache.invalidateSock(scheddAddr);
 			return MM_DONE;
 		}
 		else
@@ -376,16 +379,18 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			// something goofy
 			dprintf(D_ALWAYS,"\t\tGot illegal command %d from schedd\n",reply);
-			sock.end_of_message ();
+            sockCache.invalidateSock(scheddAddr);
+			sock->end_of_message ();
 			return MM_ERROR;
 		}
 
 		// 2d.  get the request 
 		dprintf (D_FULLDEBUG,"\t\tGot JOB_INFO command; getting classad/eom\n");
-		if (!request.get (sock) || !sock.end_of_message ())
+		if (!request.get(*sock) || !sock->end_of_message())
 		{
 			dprintf(D_ALWAYS, "\t\tJOB_INFO command not followed by ad/eom\n");
-			sock.end_of_message();
+			sock->end_of_message();
+            sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 		if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
@@ -418,11 +423,13 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 					// no preemptable resource offer either ... 
 					dprintf(D_ALWAYS,
 						"\t\t\tRejected (no preemptible offers)\n");
-					sock.encode();
-					if (!sock.put(REJECTED) || !sock.end_of_message())
+					sock->encode();
+					if (!sock->put(REJECTED) || !sock->end_of_message())
 					{
 						dprintf (D_ALWAYS, "\t\t\tCould not send rejection\n");
-						sock.end_of_message ();
+						sock->end_of_message ();
+            			sockCache.invalidateSock(scheddAddr);
+
 						return MM_ERROR;
 					}
 					result = MM_NO_MATCH;
@@ -437,6 +444,14 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			//			startd again for this negotiation cycle.
 			if (result == MM_BAD_MATCH)
 				startdAds.Delete (offer);
+
+			// 2e(iv).  if the matchmaking protocol failed to talk to the 
+			//			schedd, invalidate the connection and return
+			if (result == MM_ERROR)
+			{
+				sockCache.invalidateSock (scheddAddr);
+				return MM_ERROR;
+			}
 		}
 
 		// 2f.  if MM_NO_MATCH was found for the request, get another request
@@ -459,9 +474,12 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	}
 
 	// break off negotiations
-	sock.encode();
-	if (!sock.put (END_NEGOTIATE) || !sock.end_of_message())
+	sock->encode();
+	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
+	{
 		dprintf (D_ALWAYS, "\t\tCould not send END_NEGOTIATE/eom\n");
+        sockCache.invalidateSock(scheddAddr);
+	}
 
 	// ... and continue negotiating with others
 	return MM_RESUME;
@@ -556,7 +574,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock &sock)
+						ClassAdList &startdPvtAds, Sock *sock)
 {
 	int  cluster, proc;
 	char startdAddr[32];
@@ -610,10 +628,10 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 	// 3.  send the match and capability to the schedd
 	dprintf(D_FULLDEBUG,"\t\t\tSending PERMISSION with capability to schedd\n");
-	sock.encode();
-	if (!sock.put(PERMISSION) 	|| 
-		!sock.put(capability)	||
-		!sock.end_of_message())
+	sock->encode();
+	if (!sock->put(PERMISSION) 	|| 
+		!sock->put(capability)	||
+		!sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "\t\t\tCould not send "
 			"PERMISSION/capability ( \"%s\" ) to schedd\n", capability);
