@@ -25,15 +25,15 @@ int Last_X_Event = 0;
 
 extern "C" EXPR *build_expr (char *, ELEM *);
 extern "C" resource_info_t *resmgr_getbyrid(resource_id_t rid);
-extern "C" ClassAd *resmgr_context(resource_id_t rid);
 extern "C" int create_port(int *sock);
 extern "C" int reply(Sock *sock, int answer);
+extern ClassAd *resource_classad(resource_info_t* rip);
+
 
 extern char *AlternateStarter[10];
 extern char *PrimaryStarter;
 extern char *Starter;
 extern char *negotiator_host;
-extern int polls;
 extern int capab_timeout;
 
 extern "C" int event_checkpoint(resource_id_t, job_id_t, task_id_t);
@@ -124,9 +124,9 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 }
 
 #define ABORT \
-	if (rip->r_jobcontext) {			\
-		delete (rip->r_jobcontext);		\
-		rip->r_jobcontext = NULL;		\
+	if (rip->r_jobclassad) {			\
+		delete (rip->r_jobclassad);		\
+		rip->r_jobclassad = NULL;		\
 		rip->r_pid = NO_PID;			\
 	}									\
 	if (rip->r_clientmachine) {			\
@@ -145,7 +145,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 {
 
 	int start = 1,job_reqs = 1, capability_verify = 1;
-	ClassAd	*job_context = NULL, *MachineContext;
+	ClassAd	*job_classad = NULL, *MachineClassad;
 	char tmp[80];
 	char *check_string = NULL;
 	PORTS ports;
@@ -213,46 +213,46 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 					rip->r_clientmachine);
 		}
 
-		/* TODO: Use resource_param */
-		MachineContext = resmgr_context(rid);
+			/* This updates all parameters and fills in the classad */
+		MachineClassad = resource_classad( rip );
 
 		/* Read in job facts and booleans */
-		job_context = new ClassAd;
-		if (!job_context->get(*sock)) {
+		job_classad = new ClassAd;
+		if (!job_classad->get(*sock)) {
 			dprintf( D_ALWAYS, "Can't receive job classad from shadow\n");
 			CondorPendingJobs::DequeueJob();
-			delete job_context;
+			delete job_classad;
 			return -1;
 		}
 		if (!sock->eom()) {
 			dprintf(D_ALWAYS, "Can't receive job classad from shadow\n");
 			CondorPendingJobs::DequeueJob();
-			delete job_context;
+			delete job_classad;
 			return -1;
 		}
 	} else {
-		job_context = CondorPendingJobs::JobAd(rid);
+		job_classad = CondorPendingJobs::JobAd(rid);
 		CondorPendingJobs::DequeueJob();
 		if(rip->r_state==JOB_RUNNING) {
 			dprintf(D_ALWAYS,"State==JOB_RUNNING when JOb is already recd\n");
 			reply(sock,NOT_OK);
 			return -1;
 		}
-		if(!job_context) {
+		if(!job_classad) {
 			dprintf(D_ALWAYS,"Couldnt get job Ad!!\n");
 			reply(sock,NOT_OK);
 			return -1;
 		}
 	}
-	dprintf(D_JOB, "JOB_CONTEXT:\n");
+	dprintf(D_JOB, "JOB_CLASSAD:\n");
 	if (DebugFlags & D_JOB) {
-		job_context->fPrint(stdout);
+		job_classad->fPrint(stdout);
 	}
 	dprintf(D_JOB, "\n");
 	  
-	dprintf(D_MACHINE, "MACHINE_CONTEXT:\n");
+	dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
 	if (DebugFlags & D_MACHINE) {
-		job_context->fPrint(stdout);
+		job_classad->fPrint(stdout);
 	}
 	dprintf(D_MACHINE, "\n");
 	
@@ -275,23 +275,23 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	 * See if machine and job meet each other's requirements, if so
 	 * start the job and tell shadow, otherwise refuse and clean up
 	 */
-	if(MachineContext->EvalBool(ATTR_REQUIREMENTS,job_context,start) == 0) {
+	if(MachineClassad->EvalBool(ATTR_REQUIREMENTS,job_classad,start) == 0) {
 		start = 0;
 	}
 	
-	if(job_context->EvalBool(ATTR_REQUIREMENTS,MachineContext,job_reqs) == 0) {
+	if(job_classad->EvalBool(ATTR_REQUIREMENTS,MachineClassad,job_reqs) == 0) {
 		job_reqs = 0;
 	}
-	job_context->EvalString(ATTR_OWNER,job_context,RemoteUser);
+	job_classad->EvalString(ATTR_OWNER,job_classad,RemoteUser);
 	dprintf(D_ALWAYS, "Remote job owner is %s\n", RemoteUser);
-	job_context->EvalInteger(ATTR_CLUSTER_ID,job_context,job_cluster);
-	job_context->EvalInteger(ATTR_PROC_ID,job_context,job_proc);
+	job_classad->EvalInteger(ATTR_CLUSTER_ID,job_classad,job_cluster);
+	job_classad->EvalInteger(ATTR_PROC_ID,job_classad,job_proc);
 	sprintf(JobId, "%d.%d", job_cluster, job_proc);
 	dprintf(D_ALWAYS, "Remote job ID is %s\n", JobId);
 	  
 	// check whether any PrefExp satisfies this job
 	tTier JobTier = -1;
-	CondorPrefExps::MatchingPrefExp(MachineContext,job_context,JobTier);
+	CondorPrefExps::MatchingPrefExp(MachineClassad,job_classad,JobTier);
 	dprintf(D_ALWAYS,"Job satisfies Pref Tier %d\n",JobTier);
 	  
 	if(CondorPendingJobs::AreTherePendingJobs(rid)) {
@@ -335,13 +335,13 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 
 
 	if(rip->r_state==JOB_RUNNING) {
-		ClassAd* job = rip->r_jobcontext; // current job
+		ClassAd* job = rip->r_jobclassad; // current job
 		if(!job) {
 			dprintf(D_ALWAYS,"Current job is NULL!!\n");
 			ABORT;
 		}
 		tTier CurJobTier = -1;
-		CondorPrefExps::MatchingPrefExp(MachineContext,job,CurJobTier);
+		CondorPrefExps::MatchingPrefExp(MachineClassad,job,CurJobTier);
 		dprintf(D_ALWAYS,"Current Job satisfies Pref Tier %d\n",CurJobTier);
 	    
 		if((JobTier<CurJobTier)&&(CurJobTier>=0)) {
@@ -376,22 +376,21 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 		return -1;
 	}
 	resmgr_changestate(rid, JOB_RUNNING);
-	polls = 0;
 	
 	sprintf(tmp,"%s=\"%s\"",ATTR_CLIENT_MACHINE, rip->r_clientmachine);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 	
 	rip->r_user = strdup(RemoteUser);
 	sprintf(tmp,"%s=\"%s\"",ATTR_REMOTE_USER, rip->r_user);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 	
 	sprintf(tmp,"JobId=\"%s\"",JobId);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 	
 	if (!reply(sock,OK)) {
 		ABORT;
 	}
-	rip->r_jobcontext = job_context;
+	rip->r_jobclassad = job_classad;
   
 	stRec.version_num = VERSION_FOR_FLOCK;
 	stRec.ports.port1 = create_port(&sock_1);
@@ -477,15 +476,15 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 		return -1;
 	}
 
-	if (!rip->r_jobcontext ||
-		((rip->r_jobcontext)->EvalInteger("UNIVERSE",
-										  rip->r_context,universe)==0)) {
+	if (!rip->r_jobclassad ||
+		((rip->r_jobclassad)->EvalInteger("UNIVERSE",
+										  rip->r_classad,universe)==0)) {
 		universe = STANDARD;
 		dprintf(D_ALWAYS,
-				"Default universe (%d) since not in context \n", 
+				"Default universe (%d) since not in classad \n", 
 				universe);
 	} else {
-		dprintf(D_ALWAYS, "Got universe (%d) from JobContext\n",
+		dprintf(D_ALWAYS, "Got universe (%d) from JobClassad\n",
 				universe);
 	}
 
@@ -498,7 +497,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	rip->r_universe = universe;
 
 	/*
-	 * Put the JobUniverse into the machine context so that the negotiator
+	 * Put the JobUniverse into the machine classad so that the negotiator
 	 * can take it into account for preemption (i.e. dont preempt vanilla
 	 * jobs).
 	 *
@@ -506,7 +505,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	 */
 
 	sprintf(tmp,"%s=%d",ATTR_JOB_UNIVERSE, universe);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	ji.ji_hname = hp->h_name;
 	ji.ji_sock1 = fd_1;
@@ -518,17 +517,17 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 
 	/* PREEMPTION : dhruba */
 	sprintf(tmp,"%s=\"%s\"",ATTR_CLIENT_MACHINE, rip->r_clientmachine);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	int tempo = (int)time((time_t *)0);
 	sprintf(tmp,"%s=%d",ATTR_JOB_START, tempo);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	sprintf(tmp,"%s=%d",ATTR_LAST_PERIODIC_CHECKPOINT, tempo);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	sprintf(tmp,"%s=\"%s\"",ATTR_REMOTE_USER, rip->r_user);
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	event_timeout();
 	return 0;
@@ -579,7 +578,7 @@ command_pcheckpoint(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 	event_pcheckpoint(rid, NO_JID, NO_TID);
 
 	sprintf(tmp,"LastPeriodicCkpt=%d",(int)time((time_t *)0));
-	(rip->r_context)->Insert(tmp);
+	(rip->r_classad)->Insert(tmp);
 
 	return 0;
 }
@@ -689,7 +688,7 @@ command_matchinfo(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 	*str1 = '\0';
 
 	if(rip->r_state!=NO_JOB) {
-		ClassAd* job = rip->r_jobcontext; // current job
+		ClassAd* job = rip->r_jobclassad; // current job
 		if(!job) {
 			dprintf(D_ALWAYS,"Current job is NULL!!\n");
 			return -1;
