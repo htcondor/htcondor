@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.13 2004-10-15 00:05:53 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.14 2005-02-07 19:21:53 tannenba Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -127,12 +127,38 @@ chdir( "$SrcDir/$testdir/$compiler" ) ||
     c_die("Can't chdir($SrcDir/$testdir/$compiler): $!\n");
 
 $copy_failure = 0;
+$have_run_out_file = 0;
 
-safe_copy( "$testname.out*", $resultdir );
-safe_copy( "$testname.err*", $resultdir  );
-safe_copy( "$testname.log", $resultdir  );
+# Here is where we need to copy files we wanna save for humans
+# to later figure out why this test most likely failed.  :).
+
+# first we will copy the files that MUST be there.  we do this with
+# safe_copy(), which will flag the test as failed if the files 
+# do not exist or cannot be copied.  Variable copy_failure is
+# being set as a side-effect of function safe_copy().  Isn't perl
+# great?  Every function can have side-effects.  Mmmmm... functional
+# programming apparently is lost upon the Perl-addicts of the world.
 safe_copy( "$testname.run.out", $resultdir  );
-safe_copy( "$testname.cmd.out", $resultdir  );
+$have_run_out_file = $copy_failure;
+# TODO : what happened to run.err ?
+
+# these files are all optional.  if they exist, we'll save 'em, if
+# they do not, we don't worry about it.
+unsafe_copy( "$testname.out*", $resultdir );
+unsafe_copy( "$testname.err*", $resultdir  );
+unsafe_copy( "$testname.log", $resultdir  );
+unsafe_copy( "$testname.cmd.out", $resultdir  );
+
+# try to tarup a 'saveme' subdirectory for this test, which may
+# contain test debug info etc.
+system( "tar zcf $testname.saveme/ $testname.saveme.tar.gz" );
+if( $? >> 8 ) {
+	print "No $testname.saveme subdir exists, fine.\n";
+} else {
+	print "Created $testname.saveme.tar.gz.\n";
+	safe_copy( "$testname.saveme.tar.gz", $resultdir  );
+}
+
 
 if( $copy_failure ) {
     if( $teststatus == 0 ) {
@@ -146,6 +172,25 @@ if( $copy_failure ) {
 	print "Failed to copy some output to results!\n";
     }
 }
+
+print "\n\n----- Start of $testname.run.out ----\n";
+if( $have_run_out_file ) {
+	# no run.out file... ?
+	print "   (( Did not exist!!! ))\n";
+} else {
+	# spit out the contents of the run.out file to the stdout of
+	if( open(RES,"<$testname.run.out") ) {
+		while(<RES>)
+		{
+			print "$_";
+		}
+		close RES;
+	} else {
+		print "   (( Failed to open $testname.run.out ))\n";
+	}
+}
+print "\n----- End of $testname.run.out ----\n";
+
 
 exit $teststatus;
 
@@ -161,6 +206,15 @@ sub safe_copy {
     }
 }
 
+sub unsafe_copy {
+    my( $src, $dest ) = @_;
+    system( "cp $src $dest" );
+    if( $? >> 8 ) {
+	print "   Optional file $src not copied into $dest: $\n";
+    } else {
+	print "Copied $src to $dest\n";
+    }
+}
 
 sub c_die {
     my( $msg ) = @_;
