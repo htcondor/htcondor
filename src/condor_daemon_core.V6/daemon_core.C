@@ -4054,15 +4054,29 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 {
 	BOOL ret_value;
 	priv_state priv;
+	BOOL check_winsta0;
+	char* use_visible;
+	check_winsta0 = FALSE;
 
 	// dprintf(D_FULLDEBUG,"Opening WinSta %s\n",winsta_name);
-
+	
 	if ( strcmp(winsta_name,"WinSta0") == 0 ) {
-		// skip the interactive Winsta to save time
-		dprintf(D_PROCFAMILY,"Skipping Winsta0\n");
-		return TRUE;
-	}
+		
+		// if we're running the job in the foreground, we had better 
+		// look in Winsta0!
+		use_visible = param("USE_VISIBLE_DESKTOP");
+		if (use_visible) { 
+			check_winsta0 = ( use_visible[0] == 'T' ) || (use_visible[0] == 't' );
+			free(use_visible);
+		}
 
+		if (! check_winsta0 ) {
+			// skip the interactive Winsta to save time
+			dprintf(D_PROCFAMILY,"Skipping Winsta0\n");
+			return TRUE;
+		}
+	}
+	
 	// must try to open winsta as the user
 	priv = set_user_priv();
 	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
@@ -4582,7 +4596,7 @@ int DaemonCore::Create_Process(
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
-			// Get the token for the user
+			// Get the token for	 the user
 		HANDLE user_token = priv_state_get_handle();
 		ASSERT(user_token);
 
@@ -4595,6 +4609,7 @@ int DaemonCore::Create_Process(
 			// then run the job on the visible desktop, otherwise create
 			// a new non-visible desktop for the job.
 		char *use_visible = param("USE_VISIBLE_DESKTOP");
+		
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
@@ -5251,9 +5266,18 @@ DaemonCore::Inherit( void )
 		pidtmp->hung_tid = -1;
 		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
+		pidtmp->deallocate = 0L;
+
+		// I don't see why we need STANDARD_RIGHTS_REQUIRED, so I'm dropping it
+		// for now since its screwing up DAGman. Ask Colin if you care.
+
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | 
-						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
+//						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
+						PROCESS_QUERY_INFORMATION, 
 						FALSE, ppid );
+		if ( pidtmp->hProcess == NULL ) {
+			dprintf(D_ALWAYS, "OpenProcess() failed - Error %d\n", GetLastError());
+		}
 		assert(pidtmp->hProcess);
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
 #endif
@@ -5863,6 +5887,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// If process is NT and is remote, we are passed the exit status.
 	// If process is NT and is local, we need to fetch the exit status here.
 #ifdef WIN32
+	pidentry->deallocate = 0L;
 	if ( pidentry->is_local ) {
 		DWORD winexit;
 	
@@ -6099,16 +6124,21 @@ int DaemonCore::SendAliveToParent()
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
 	parent_sinful_string = InfoCommandSinfulString(ppid);	
+	
 	if (!parent_sinful_string ) {
+		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. SendAliveToParent() failed.\n");
 		return FALSE;
 	}
-
+	
+	dprintf(D_FULLDEBUG,"DaemonCore: attempting to connect to '%s'\n", parent_sinful_string);
 	if (!sock.connect(parent_sinful_string)) {
+		dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent. SendAliveToParent() failed.\n");
 		return FALSE;
 	}
 
 	Daemon d(parent_sinful_string);
 	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+		dprintf(D_FULLDEBUG,"DaemonCore: startCommand() failed. SendAliveToParent() failed.\n");
 		return FALSE;
 	}
 	
