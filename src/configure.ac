@@ -1069,13 +1069,89 @@ else
 fi
 
 
-AC_MSG_CHECKING([what globus "flavor" we should use on this platform])
+############################################################
+# What versions of what externals do we need
+############################################################
+AC_MSG_NOTICE([determining versions of external packages])
+
+
+# For now, we hardcode that non-i386 platforms are clipped and don't
+# need an external glibc for anything...
+if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
+  AC_MSG_CHECKING([glibc])
+  _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
+  case "$_cv_libc_full_vers" in
+  "2.2.4" )
+    _cv_ext_glibc_version="glibc-2.2.2"
+    ;;
+  "2.2.5" )
+    _cv_ext_glibc_version="glibc-2.2.2"
+    ;;
+  "2.2.93" )
+    _cv_ext_glibc_version="glibc-2.2.93"
+    ;;
+  "2.3.2" )
+    _cv_ext_glibc_version="glibc-2.3.2"
+    ;;
+  * )  
+    AC_MSG_RESULT([ERROR])
+    AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+  esac
+  AC_MSG_RESULT([$_cv_ext_glibc_version])
+  AC_SUBST(ext_glibc_version,$_cv_ext_glibc_version)
+  AC_SUBST(want_ext_glibc,YES)
+else
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+
+
+AC_MSG_CHECKING([kerberos])
+_cv_ext_kerberos_version="krb5-1.2.5"
+AC_MSG_RESULT([$_cv_ext_kerberos_version])
+AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
+
+
+AC_MSG_CHECKING([globus])
+if test "$os" = "Darwin"; then
+  _cv_ext_globus_version="globus-2.4.3"
+else
+  _cv_ext_globus_version="globus-2.2.4"
+fi
+AC_MSG_RESULT([$_cv_ext_globus_version])
+AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
+
+AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
   _cv_globus_flavor=gcc64dbg
 fi
 AC_MSG_RESULT([$_cv_globus_flavor])
 AC_SUBST(globus_flavor,$_cv_globus_flavor)
+
+
+AC_MSG_CHECKING([gpt])
+_cv_ext_gpt_version="gpt-3.0"
+AC_MSG_RESULT([$_cv_ext_gpt_version])
+AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
+
+
+AC_MSG_CHECKING([gahp])
+_cv_ext_gahp_version="gahp-6.5"
+AC_MSG_RESULT([$_cv_ext_gahp_version])
+AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
+
+
+AC_MSG_CHECKING([zlib])
+_cv_ext_zlib_version="zlib-1.1.3"
+AC_MSG_RESULT([$_cv_ext_zlib_version])
+AC_SUBST(ext_zlib_version,$_cv_ext_zlib_version)
+
+
+AC_MSG_CHECKING([pvm])
+_cv_ext_pvm_version="pvm-3.4.2"
+AC_MSG_RESULT([$_cv_ext_pvm_version])
+AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
 
 
 ############################################################
