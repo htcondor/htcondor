@@ -72,9 +72,6 @@ public:
  		{ return myversion.Arch; }	
  	char *getOpSysVer() 
  		{ return myversion.OpSys; }	
- 	char *getLibcVer()
- 		{ return myversion.Libc; }	
-
 	
 	/** Report if this version id represents a stable or developer series 
 		release.
@@ -104,7 +101,6 @@ public:
 		time_t BuildDate;
 		char *Arch;
 		char *OpSys;
-		char *Libc;
 	} VersionData_t;
 
 
