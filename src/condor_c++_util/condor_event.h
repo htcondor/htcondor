@@ -927,8 +927,16 @@ class JobReleasedEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-	/** message about why a job got released */
-	char msg[BUFSIZ];
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getReason();
+
+		/// makes a copy of the string in our "reason" member
+	void setReason( const char* );
+
+ private:
+
+		/// why the job was released
+	char* reason;
 };
 
 /* MPI events */
