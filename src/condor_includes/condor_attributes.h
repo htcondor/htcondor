@@ -82,6 +82,7 @@ const char ATTR_FORCE					 [] = "Force";
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";
 const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
+const char ATTR_IS_OWNER                 [] = "IsOwner";
 const char ATTR_INACTIVE                 [] = "Inactive";
 const char ATTR_JOB_ARGUMENTS			 [] = "Args";
 const char ATTR_JOB_CMD					 [] = "Cmd";
