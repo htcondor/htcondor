@@ -351,6 +351,11 @@ void
 Email::writeBytes( float run_sent, float run_recv, float tot_sent,
 				   float tot_recv )
 {
+		// if we're not currently open w/ a message, we're done
+	if( ! fp ) {
+		return;
+	}
+
 	fprintf( fp, "\nNetwork:\n" );
 	fprintf( fp, "%10s Run Bytes Received By Job\n", 
 			 metric_units(run_recv) );
