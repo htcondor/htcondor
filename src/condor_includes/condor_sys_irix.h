@@ -35,8 +35,6 @@
    ourselves anymore. */
 #include <rpc/types.h>
 
-#define HAS_U_TYPES
-
 /******************************
 ** unistd.h
 ******************************/
@@ -88,5 +86,12 @@ int pclose(FILE *stream);
 /* Need these to get statfs and friends defined */
 #include <sys/stat.h>
 #include <sys/statfs.h>
+
+/****************************************
+** Condor-specific system definitions
+****************************************/
+#define HAS_U_TYPES
+#define NO_VOID_SIGNAL_RETURN
+
 
 #endif /* CONDOR_SYS_IRIX_H */

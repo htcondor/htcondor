@@ -76,6 +76,10 @@
     typedef unsigned long	u_long;
 #endif
 
+#if !defined(NO_VOID_SIGNAL_RETURN)
+#	define VOID_SIGNAL_RETURN	YES
+#endif
+
 #if !defined(NBBY)
 #	define NBBY 8
 #endif
