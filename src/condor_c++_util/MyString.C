@@ -513,6 +513,25 @@ lower_case(void)
 }
 
 
+bool
+MyString::chomp( void )
+{
+	bool chomped = false;
+	if( Data[Len-1] == '\n' ) {
+		Data[Len-1] = '\0';
+		Len--;
+		chomped = true;
+	}
+#if defined(WIN32)
+	if( ( Len > 1 ) && ( Data[Len-2] == '\r' ) ) {
+		Data[Len-2] = '\0';
+		Len--;
+		chomped = true;
+	}
+#endif
+	return chomped;
+}
+
 
 void
 MyString::init()
@@ -617,6 +636,34 @@ istream& operator>>(istream& is, MyString& S)
     S=buffer; 
     return is;
 }
+
+
+bool
+MyString::readLine( FILE* fp )
+{
+	char buf[1024];
+	bool first_time = true;
+
+	while( 1 ) {
+		if( ! fgets(buf, 1024, fp) ) {
+			if( first_time ) {
+				return false;
+			}
+			return true;
+		}
+		if( first_time ) {
+			*this = buf;
+			first_time = false;
+		} else {
+			*this += buf;
+		}
+		if( strrchr((const char *)buf,'\n') ) {
+				// we found a newline, return success
+			return true;
+		}
+	}
+}
+
 
 int MyStringHash( const MyString &str, int buckets )
 {

@@ -221,6 +221,12 @@ class MyString
 
 	void lower_case(void);
 
+	/** If the last character in the string is a newline, remove
+		it (by setting it to '\0' and decrementing Len).
+		@return True if we removed a newline, false if not
+	*/  
+	bool chomp( void );
+
 	//@}
 
 	// ----------------------------------------
@@ -271,6 +277,20 @@ class MyString
 	friend istream& operator>>(istream& is, MyString& S);
 	//@}
   
+	/** Safely read from the given file until we've hit a newline or
+		an EOF.  We use fgets() in a loop to make sure we've read data
+		until we find a newline.  If the buffer wasn't big enough and
+		there's more to read, we fgets() again and append the results
+		to ourselves.  If we hit EOF right away, we return false, and
+		the value of this MyString is unchanged.  If we read any data
+		at all, that's now the value of this MyString, and we return
+		true.  If we hit EOF before a newline, we still return true,
+		so don't assume a newline just because this returns true.
+		@param fp The file you want to read from
+		@returns True if we found data, false if we're at the EOF 
+	 */
+	bool readLine( FILE* fp );
+
 private:
 
     void init();
