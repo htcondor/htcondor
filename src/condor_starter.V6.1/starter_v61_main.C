@@ -54,6 +54,10 @@ static char* dprintf_header = NULL;
 int my_argc;
 char** my_argv;
 
+static int starter_stdin_fd = -1;
+static int starter_stdout_fd = -1;
+static int starter_stderr_fd = -1;
+
 static void
 usage()
 {
@@ -172,6 +176,12 @@ main_pre_dc_init( int argc, char* argv[] )
 	if( is_gridshell ) {
 		Foreground = 1;
 	}
+
+		// finally, dup() our standard file streams, so we can pass
+		// those onto the actual user job if requested.
+	starter_stdin_fd = dup( 0 );
+	starter_stdout_fd = dup( 1 );
+	starter_stderr_fd = dup( 2 );
 }
 
 
@@ -210,7 +220,9 @@ main_init(int argc, char *argv[])
 			// we couldn't figure out what to do...
 		usage();
 	}
-	if( !Starter->Init(jic, orig_cwd, is_gridshell) ) {
+
+	if( !Starter->Init(jic, orig_cwd, is_gridshell, starter_stdin_fd,
+					   starter_stdout_fd, starter_stderr_fd) ) {
 		dprintf(D_ALWAYS, "Unable to start job.\n");
 		DC_Exit(1);
 	}
@@ -255,7 +267,9 @@ parseArgs( int argc, char* argv [] )
 	int job_proc = -1;
 	int job_subproc = -1;
 	char* shadow_host = NULL;
-
+	char* job_stdin = NULL;
+	char* job_stdout = NULL;
+	char* job_stderr = NULL;
 
 	bool warn_multi_keyword = false;
 	bool warn_multi_input_ad = false;
@@ -263,6 +277,9 @@ parseArgs( int argc, char* argv [] )
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
+	bool warn_multi_stdin = false;
+	bool warn_multi_stdout = false;
+	bool warn_multi_stderr = false;
 
 	char *opt, *arg;
 	int opt_len;
@@ -273,6 +290,9 @@ parseArgs( int argc, char* argv [] )
 	char _jobcluster[] = "-job-cluster";
 	char _jobproc[] = "-job-proc";
 	char _jobsubproc[] = "-job-subproc";
+	char _jobstdin[] = "-job-stdin";
+	char _jobstdout[] = "-job-stdout";
+	char _jobstderr[] = "-job-stderr";
 	char _header[] = "-header";
 	char _gridshell[] = "-gridshell";
 	char* target = NULL;
@@ -353,10 +373,21 @@ parseArgs( int argc, char* argv [] )
 			break;
 
 		case 's':
-			if( strncmp(_jobsubproc, opt, opt_len) ) {
-				invalid( opt );
-			} 
-			target = _jobsubproc;
+			if( !strncmp(_jobsubproc, opt, opt_len) ) {
+				target = _jobsubproc;
+				break;
+			} else if( !strncmp(_jobstdin, opt, opt_len) ) {
+				target = _jobstdin;
+				break;
+			} else if( !strncmp(_jobstdout, opt, opt_len) ) {
+				target = _jobstdout;
+				break;
+			} else if( !strncmp(_jobstderr, opt, opt_len) ) {
+				target = _jobstderr;
+				break;
+			}
+
+			invalid( opt );
 			break;
 
 		default:
@@ -391,6 +422,24 @@ parseArgs( int argc, char* argv [] )
 				free( job_output_ad );
 			}
 			job_output_ad = strdup( arg );
+		} else if( target == _jobstdin ) {
+			if( job_stdin ) {
+				warn_multi_stdin = true;
+				free( job_stdin );
+			}
+			job_stdin = strdup( arg );
+		} else if( target == _jobstdout ) {
+			if( job_stdout ) {
+				warn_multi_stdout = true;
+				free( job_stdout );
+			}
+			job_stdout = strdup( arg );
+		} else if( target == _jobstderr ) {
+			if( job_stderr ) {
+				warn_multi_stderr = true;
+				free( job_stderr );
+			}
+			job_stderr = strdup( arg );
 		} else if( target == _jobcluster ) {
 			if( job_cluster >= 0 ) {
 				warn_multi_cluster = true;
@@ -431,6 +480,24 @@ parseArgs( int argc, char* argv [] )
 		}
 	}
 
+	if( job_stdin && job_stdin[0] == '-' && ! job_stdin[1] &&
+		job_input_ad && job_input_ad[0] == '-' && ! job_input_ad[1] ) { 
+		dprintf( D_ALWAYS, "ERROR: Cannot use starter's stdin for both "
+				 "the job stdin (%s) and to define the job ClassAd (%s). "
+				 "Please do not use '-' for one of these two flags and "
+				 "try again.\n", _jobstdin, _jobinputad );
+		usage();
+	}
+
+	if( job_output_ad && job_output_ad[0] == '-' && ! job_output_ad[1] &&
+		job_stdout && job_stdout[0] == '-' && ! job_stdout[1] ) {
+		dprintf( D_ALWAYS, "ERROR: Cannot use starter's stdout for both the "
+				 "job stdout (%s) and to write the job's output ClassAd "
+				 "(%s). Please do not use '-' for one of these two flags "
+				 "and try again.\n", _jobstdout, _joboutputad );
+		usage();
+	}
+
 	if( warn_multi_keyword ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
@@ -445,6 +512,21 @@ parseArgs( int argc, char* argv [] )
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _joboutputad, job_output_ad );
+	}
+	if( warn_multi_stdin ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobstdin, job_stdin );
+	}
+	if( warn_multi_stdout ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobstdout, job_stdout );
+	}
+	if( warn_multi_stderr ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobstderr, job_stderr );
 	}
 	if( warn_multi_cluster ) {
 		dprintf( D_ALWAYS, "WARNING: "
@@ -510,6 +592,18 @@ parseArgs( int argc, char* argv [] )
 	if( job_output_ad ) {
         jic->setOutputAdFile( job_output_ad );		
 		free( job_output_ad );
+	}
+	if( job_stdin ) {
+        jic->setStdin( job_stdin );		
+		free( job_stdin );
+	}
+	if( job_stdout ) {
+        jic->setStdout( job_stdout );		
+		free( job_stdout );
+	}
+	if( job_stderr ) {
+        jic->setStderr( job_stderr );		
+		free( job_stderr );
 	}
 	return jic;
 }
