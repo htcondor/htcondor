@@ -141,7 +141,6 @@ public:
 	char	*getFileName( int fd ) ;
 	int	getFlag( int fd );
 	mode_t	getMode( int fd );
-	int Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
 	BOOL isIOServerAccess( int fd );
 	BOOL IsDup( int user_fd );
