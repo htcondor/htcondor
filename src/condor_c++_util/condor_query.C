@@ -239,7 +239,6 @@ QueryResult CondorQuery::
 fetchAds (ClassAdList &adList, const char *poolName)
 {
     char        *pool;
-	char		defaultPool[32];
     ReliSock    sock; 
 	int			more;
     QueryResult result;
@@ -248,6 +247,10 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		// This will return the correct addr for the local pool's
 		// collector if poolName is NULL.
 	pool = get_collector_addr( poolName );
+	if( ! pool ) {
+			// We were passed a bogus poolName, abort gracefully
+		return Q_NO_COLLECTOR_HOST;
+	}
 
 	// make the query ad
 	result = (QueryResult) query.makeQuery (queryAd);
@@ -381,7 +384,7 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	if (result != Q_OK) return result;
 
 	in.Open();
-	while (candidate = (ClassAd *) in.Next())
+	while( (candidate = (ClassAd *) in.Next()) )
     {
         // if a match occurs
 		if ((*candidate) >= (queryAd)) out.Insert (candidate);
