@@ -46,6 +46,11 @@
 #define _BSD_COMPAT _save_BSD_COMPAT
 #undef _save_BSD_COMPAT
 
+/* Some prototypes we should have but did not pick up from unistd.h */
+BEGIN_C_DECLS
+extern int getpagesize(void);
+END_C_DECLS
+
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
 
