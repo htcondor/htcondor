@@ -377,7 +377,8 @@ The second field identifies the job which generated the event.
 Within parentheses are the ClassAd job attributes of
 \AdAttr{ClusterId} value, 
 \AdAttr{ProcId} value, 
-and a set of zeros,
+and the MPI-specific rank for MPI universe jobs or a set of zeros
+(for jobs run under universes other than MPI),
 separated by periods.
 The third field is the date and time of the event logging.  
 The fourth field is a string that briefly describes the event.
