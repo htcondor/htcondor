@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void DumpOpenFds();
+void InitFileState();
 void SaveFileState();
 void RestoreFileState();
 int MapFd( int );
