@@ -362,7 +362,7 @@ clean:: 						@@\
 ** condor_compile.  These are used primarily in the test suites. 
 ***********************************************************************/
 
-CONDOR_COMPILE = ../condor_scripts/condor_compile
+CONDOR_COMPILE = ../../condor_scripts/condor_compile
 
 /*
 ** Link all three types of binaries
@@ -529,6 +529,38 @@ clean::							@@\
 	rm -f tags
 #endif 
 
+/*
+** Build directory strucuture for a compiler in the test suite.
+*/
+#ifndef C_COMPILER_TARGET
+#define C_COMPILER_TARGET(compiler) 				@@\
+all:: compiler							@@\
+								@@\
+all:: 								@@\
+	cd compiler; $(MAKE)					@@\
+								@@\
+compiler##: 							@@\
+	mkdir compiler						@@\
+	cd compiler; ln -s ../CImakefile Imakefile		@@\
+	cd compiler; imake IMAKE_FLAGS	-I../../../config -DC_COMPILER=##compiler	@@\
+								@@\
+clean::								@@\
+	rm -rf compiler						
+#endif
 
-
+#ifndef CPP_COMPILER_TARGET
+#define CPP_COMPILER_TARGET(compiler) 				@@\
+all:: compiler							@@\
+								@@\
+all:: 								@@\
+	cd compiler; $(MAKE)					@@\
+								@@\
+compiler##: 							@@\
+	mkdir compiler						@@\
+	cd compiler; ln -s ../CPPImakefile Imakefile		@@\
+	cd compiler; imake IMAKE_FLAGS -I../../../config -DCPP_COMPILER=##compiler	@@\
+								@@\
+clean::								@@\
+	rm -rf compiler						
+#endif
 
