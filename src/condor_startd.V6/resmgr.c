@@ -42,6 +42,8 @@ resmgr_init()
 	resource_id_t rid;
 	resource_param_t param;
 
+	// collect all resources that were listed in the config file
+	// and their number
 	resource_names(&rnames, &nres);
 	dprintf(D_ALWAYS, "resmgr_init: %d resources.\n", nres);
 	resources = (resource_info_t *)calloc(nres, (sizeof (resource_info_t)));
