@@ -31,6 +31,7 @@
 #include "io_proxy.h"
 #include "NTsenders.h"
 #include "condor_ver_info.h"
+#include "file_transfer.h"
 #include "condor_daemon_client.h"
 
 void set_resource_limits();
@@ -104,8 +105,11 @@ public:
 
 	DCShadow* shadow;
 
+	char* GetOrigJobName() { return &OrigJobName[0]; };
+
 protected:
 	List<UserProc> JobList;
+	List<UserProc> CleanedUpJobList;
 
 private:
 
@@ -115,6 +119,13 @@ private:
 
 		/** Send an update ClassAd to the shadow */
 	int UpdateShadow( void );
+
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd. 
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	bool PublishUpdateAd( ClassAd* ad );
 
 		/** Initialize the priv_state code with the appropriate user
 			for this job.  This function deals with all the logic for
@@ -149,6 +160,18 @@ private:
 		*/
 	bool RegisterStarterInfo( void );
 
+		/** Read all the relevent attributes out of the job ad and
+			decide if we need to transfer files.  If so, instantiate a
+			FileTransfer object, start the transfer, and return true.
+			If we don't have to transfer anything, return false.
+			@return true if transfer was begun, false if not
+		*/
+	bool BeginFileTransfer( void );
+
+		/// Callback for when the FileTransfer object is done
+    int TransferCompleted(FileTransfer *);
+
+
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
@@ -169,7 +192,19 @@ private:
 	ClassAd* jobAd;
 	int jobUniverse;
 
-	// timer id for periodically sending info on job to Shadow
+	// the real job executable name (after ATTR_JOB_CMD
+	// is switched to condor_exec).
+	char OrigJobName[_POSIX_PATH_MAX];
+
+	FileTransfer *filetrans;
+
+	// if true, transfer files at vacate time (in addtion to job exit)
+	bool transfer_at_vacate;
+
+		/// if true, we were asked to shutdown
+	bool requested_exit;
+
+		/// timer id for periodically sending info on job to Shadow
 	int shadowupdate_tid;
 
 };
