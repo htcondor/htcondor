@@ -41,6 +41,7 @@ void init_condor_ids() {}
 #else
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <pwd.h>
 #include <sys/types.h>
@@ -83,6 +84,7 @@ char *_FileName_ = __FILE__;
 
 static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
+static char* CondorUserName = NULL;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
 static int SwitchIds = TRUE;
@@ -137,6 +139,9 @@ init_condor_ids()
 	MyUid = getuid();
 	MyGid = getgid();
 	
+	if( CondorUserName ) {
+		free( CondorUserName );
+	}
 
 	pwd=getpwnam("condor");
 	if( pwd ) {
@@ -159,11 +164,24 @@ init_condor_ids()
 				fprintf(stderr, "should be used by Condor.\n");
 				exit(1);
 			}
+			pwd = getpwuid( CondorUid );
+			if( pwd ) {
+				CondorUserName = strdup( pwd->pw_name );
+			} else {
+				fprintf( stderr, "ERROR: the uid specified in CONDOR_IDS " );
+				fprintf( stderr, "environment variable (%d)\n", CondorUid );
+				fprintf(stderr, "does not exist in your password information.\n" );
+				fprintf(stderr, "Please set CONDOR_IDS to ");
+				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
+				fprintf(stderr, "should be used by Condor.\n");
+				exit(1);
+			}
 		} else {
 			/* No CONDOR_IDS set, use condor.condor */
 			if( RealCondorUid > 0 ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
+				CondorUserName = strdup( "condor" );
 			} else {
 				fprintf(stderr,
 						"Can't find \"condor\" in the password file and\n"
@@ -176,6 +194,15 @@ init_condor_ids()
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = MyUid;
 		CondorGid = MyGid;
+		pwd = getpwuid( CondorUid );
+		if( pwd ) {
+			CondorUserName = strdup( pwd->pw_name );
+		} else {
+				/* Should NEVER get here... */
+			fprintf( stderr, "Can't lookup password info for uid %d\n", CondorUid );
+			exit(1);
+		}
+
 		/* no need to try to switch ids when running as non-root */
 		dprintf(D_PRIV, "running as non-root; no privilege switching\n");
 		SwitchIds = FALSE;
@@ -222,6 +249,13 @@ set_user_ids(uid_t uid, gid_t gid)
 	UserUid = uid;
 	UserGid = gid;
 	UserIdsInited = TRUE;
+}
+
+
+void
+uninit_user_ids()
+{
+	UserIdsInited = FALSE;
 }
 
 
@@ -320,6 +354,19 @@ get_condor_gid()
 
 	return CondorGid;
 }
+
+
+/* This returns the string containing the username of whatever uid
+   priv_state condor gives you. */
+char*
+get_condor_username()
+{
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return CondorUserName;
+}	 
 
 
 uid_t
