@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "interpreter.h"
 
 MachAttributes::MachAttributes()
 {
@@ -223,6 +224,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		sprintf( line, "%s = \"%s\"", ATTR_SUBNET, m_subnet );
 		cp->Insert( line );
 
+		InterpreterPublish( cp );
 	}
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
