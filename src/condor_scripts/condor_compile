@@ -117,7 +117,7 @@ invoke_linker () {
 
 CONDOR_LIBDIR=`condor_config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
-STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
+STATIC_ZLIB=$CONDOR_LIBDIR/libcondor_z.a
 CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
@@ -183,7 +183,7 @@ do
 		# Reset anything based off of the libdir by default
 		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
 		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
-		STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
+		STATIC_ZLIB=$CONDOR_LIBDIR/libcondor_z.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 		CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
