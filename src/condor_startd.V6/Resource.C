@@ -429,7 +429,7 @@ Resource::start_kill_timer()
 	kill_tid = 
 		daemonCore->Register_Timer( killing_timeout,
 									0, 
-									(TimerHandlercpp)sigkill_starter,
+									(TimerHandlercpp)&sigkill_starter,
 									"sigkill_starter", this );
 	if( kill_tid < 0 ) {
 		EXCEPT( "Can't register DaemonCore timer" );

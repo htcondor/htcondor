@@ -203,7 +203,7 @@ Match::start_match_timer()
 {
 	m_match_tid = 
 		daemonCore->Register_Timer( match_timeout, 0, 
-								   (TimerHandlercpp)match_timed_out,
+								   (TimerHandlercpp)&match_timed_out,
 								   "match_timed_out", this );
 	if( m_match_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
@@ -263,7 +263,7 @@ Match::start_claim_timer()
 	}
 	m_claim_tid =
 		daemonCore->Register_Timer( (3 * m_aliveint), 0,
-									(TimerHandlercpp)claim_timed_out,
+									(TimerHandlercpp)&claim_timed_out,
 									"claim_timed_out", this );
 	if( m_claim_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
