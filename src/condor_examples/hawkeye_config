@@ -707,3 +707,52 @@ Hawkeye_grid_contacts = test,local,condor
 Hawkeye_grid_test_contact = "test.cs.wisc.edu:12345:/C=US/O=Globus/O=University of Wisconsin/OU=Computer Sciences Department/CN=John Doe"
 Hawkeye_grid_local_contact = "host.cs.wisc.edu/jobmanager"
 Hawkeye_grid_condor_contact = "condorhost.cs.wisc.edu/jobmanager-condor-INTEL-LINUX"
+
+
+
+## #################################################################
+## Define parameters for the GridProbe module
+##  These definitions are for the "TestBed"
+
+## A simple textual description (if desired)
+Hawkeye_testbed_description = "My Grid"
+
+## Directories & paths related to where Globus and Condor are installed
+GLOBUS_INSTALL = /vdt
+CONDOR_INSTALL = /home/condor
+## Where's the Condor config file?
+Hawkeye_testbed_condor_config	= $(CONDOR_INSTALL)/etc/condor_config
+## The host to query (for condor_status)
+Hawkeye_testbed_condor_host	= michael
+## Force condor into the path
+Hawkeye_testbed_condor_path	= $(CONDOR_INSTALL)/bin:$(CONDOR_INSTALL)/sbin
+Hawkeye_testbed_env=PATH=/sbin:/usr/bin:/home/hawkeye/bin:/home/hawkeye/sbin
+## Where's the probe itself located?
+Hawkeye_testbed_probepath = \
+    /home/hawkeye/GridProbe
+## The GLOBUS_LOCATION env variable value
+Hawkeye_testbed_globus_location = $(GLOBUS_INSTALL)
+## Where your X509 certificates are stored
+# Hawkeye_testbed_X509_CERT_DIR = /unsup/globus/share/certificates
+## Temp directoroy to use for condor submissions.  For older Condor
+## versions, this needs to be defined to a shared "temp" directory
+Hawkeye_testbed_tmpdir = /tmp
+
+## List of Globus contacts
+## HAWKEYE_GRID_CONTACTS is a list of logical contact "names"
+Hawkeye_grid_contacts = test,local,condor
+## One entry for each of the logical names; this is the actual Globus
+## "Contact string"
+## HAKWEYE_GRID_name_CONTACT = "your contact string"
+Hawkeye_grid_test_contact = "test.cs.wisc.edu:12345:/C=US/O=Globus/O=University of Wisconsin/OU=Computer Sciences Department/CN=John Doe"
+Hawkeye_grid_local_contact = "host.cs.wisc.edu/jobmanager"
+Hawkeye_grid_condor_contact = "condorhost.cs.wisc.edu/jobmanager-condor-INTEL-LINUX"
+
+## Globus directory (defaults to $HOME/.globus)
+Hawkeye_testbed_globusdir = "/home/hawkeye/.globus"
+
+## Misc args to the grid probe
+Hawkeye_testbed_probeargs = " --skip java --skip chimera --skip condorv"
+
+## Log file stuff
+Hawkeye_testbed_logfile = "/home/hawkeye/log/grid_testbed.log"
