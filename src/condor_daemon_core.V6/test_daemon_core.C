@@ -44,12 +44,12 @@ Foo::timerone()
 
 	printf("*** going to port %d\n",port);
 	
-	SafeSock* rsock = new SafeSock(daemonCore->InfoCommandSinfulString(),0,3);
+	ReliSock* rsock = new ReliSock(daemonCore->InfoCommandSinfulString(),0,3);
 	rsock->encode();
 	rsock->snd_int(1,FALSE);
 	char *buf="Please Work!";
 	rsock->code(buf);
-	rsock->eom();
+	rsock->end_of_message();
 	delete rsock;
 
 	return TRUE;
@@ -113,6 +113,7 @@ int
 main_shutdown_graceful()
 {
 	printf("** IN MAIN_SHUTDOWN_GRACEFUL\n");
+	exit(0);
 	return TRUE;
 }
 int
