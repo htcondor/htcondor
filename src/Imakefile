@@ -26,8 +26,8 @@
 		tools kbdd collector.V6 PvmProgs
 
 #define Libraries \
-		util_lib c++_util io classad daemon_core.V6 \
-		ckpt syscall_lib
+		util_lib c++_util procapi io classad daemon_core.V6 \
+		ckpt syscall_lib 
 
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
@@ -44,6 +44,7 @@ all: h h_all condor_includes makefiles Directories Libraries Programs examples
 release:: all
 stripped:: all
 static:: all
+libs:: h h_all condor_includes makefiles Directories Libraries
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
 	sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
@@ -134,6 +135,7 @@ simple_dir_target(static_ckpt_server/etc/examples)
 
 object_target(util_lib)
 object_target(c++_util)
+object_target(procapi)
 object_target(tools)
 object_target(examples)
 object_target(accountant.V6)
