@@ -26,12 +26,7 @@
 #include <stdio.h>
 #define MEG (1024 * 1024)
 
-#ifdef __cplusplus
-extern "C" void ckpt_and_exit();
-extern "C" {
-#else
-void ckpt_and_exit();
-#endif
+#include "x_fake_ckpt.h"
 
 void foo( register int arg0, register int arg1, register int arg2, register int arg3, register int arg4, register int arg5, register int arg6, register int arg7 );
 
@@ -88,8 +83,3 @@ void foo( register int arg0, register int arg1, register int arg2, register int 
 	      local0, local1, local2, local3, local4, local5, local6, local7 );
 	fflush( stdout );
 }
-
-
-#ifdef __cplusplus
-}
-#endif

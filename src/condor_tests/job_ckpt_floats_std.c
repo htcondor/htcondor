@@ -45,13 +45,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "x_fake_ckpt.h"
 
-/* extern int DebugFlags; */
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-extern void ckpt_and_exit();
 void foo( register float arg0, register float arg1, register float arg2, register float arg3, register float arg4, register float arg5, register float arg6, register float arg7 );
 
 int
@@ -100,7 +95,3 @@ void foo( register float arg0, register float arg1, register float arg2, registe
 	printf( "locals: %f %f %f %f %f %f %f %f\n\n",
 	      local0, local1, local2, local3, local4, local5, local6, local7 );
 }
-
-#ifdef __cplusplus
-}
-#endif

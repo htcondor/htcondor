@@ -35,11 +35,7 @@
 #include <fcntl.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" void ckpt_and_exit();
-#else
-void ckpt_and_exit();
-#endif
+#include "x_fake_ckpt.h"
 
 void abort_me(void);
 void check( int a, int b );

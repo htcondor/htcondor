@@ -85,7 +85,8 @@ StrVector SaveEnv( 256 );
 StrVector SaveArgs( 256 );
 
 void check_vector( char	**vec, StrVector &saved, const char *name );
-extern "C" void ckpt_and_exit();
+
+#include "x_fake_ckpt.h"
 
 int
 main( int argc, char *argv[] )

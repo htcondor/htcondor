@@ -48,11 +48,8 @@
 #define FALSE 0
 #define TRUE 1
 
-#ifdef __cplusplus
-extern "C" void ckpt_and_exit();
-#else
-extern void ckpt_and_exit();
-#endif
+#include "x_fake_ckpt.h"
+
 
 /* This represents an activation record on the run time stack. In fact, this
 	is kept on the runtime stack along with the data it points to to really

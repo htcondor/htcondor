@@ -37,11 +37,7 @@
 #define NSIG 65
 #endif
 
-#ifdef __cplusplus
-extern "C" void ckpt_and_exit();
-#else
-void ckpt_and_exit();
-#endif
+#include "x_fake_ckpt.h"
 
 extern int SetSyscalls(int);
 int sig_array[ NSIG + 1];

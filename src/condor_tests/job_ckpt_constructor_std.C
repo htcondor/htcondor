@@ -28,7 +28,7 @@
 #include <string.h>
 #include <assert.h>
 
-extern "C" void ckpt_and_exit();
+#include "x_fake_ckpt.h"
 
 class TestObj {
 public:

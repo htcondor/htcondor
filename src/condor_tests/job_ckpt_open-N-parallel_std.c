@@ -36,13 +36,7 @@
 #include <fcntl.h>
 #endif
 
-
-
-#ifdef __cplusplus
-extern "C" void ckpt_and_exit();
-#else
-void ckpt_and_exit();
-#endif
+#include "x_fake_ckpt.h"
 
 #if defined(Solaris)
       #include <fcntl.h>
