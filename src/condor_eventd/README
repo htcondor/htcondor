@@ -4,15 +4,17 @@ PARAMETERS
 ----------
 
   EVENTD_LOG - log file
-  EVENTD_DEBUG - debug logging level
+  EVENTD_DEBUG - debug logging level; default is D_ALWAYS
   EVENTD_INTERVAL - number of seconds between collector queries to
-    determine pool state
+    determine pool state; default is 15 minutes
   EVENTD_MAX_PREPARATION - number of seconds before a scheduled event
     when the eventd should start polling; if 0 (default), eventd
     always polls 
   EVENT_LIST - list of macro names which define events
   EVENTD_SHUTDOWN_SLOW_START_INTERVAL - number of seconds between each
-    machine startup after a shutdown event
+    machine startup after a shutdown event; default is 0
+  EVENTD_SHUTDOWN_CLEANUP_INTERVAL - number of seconds between each
+    check for old shutdown configs in the pool; default is one hour
 
 For example:
 
