@@ -376,7 +376,8 @@ sub ReadDataFile( $$ )
     my @KeyWords =
 	qw ( modulefiles default options parameter period version );
     my $KeyWordsRe =
-	"^(" . join( ")|(", @KeyWords ) . "):";
+	"^(" . join( ":)|(", @KeyWords ) . ":)";
+    #print "KeyWordsRe='$KeyWordsRe'\n";
 
     # Read the data file
     my $Errors = 0;
@@ -427,6 +428,7 @@ sub ReadDataFile( $$ )
 		my $Key = $_; $Key =~ s/\s.*$//;
 		if ( ( $_ eq "" ) || ( /^\#/ ) || ( $Key =~ /$KeyWordsRe/i ) )
 		{
+		    #print "Key '$Key' matches\n";
 		    $Data->{Description} = \@Description;
 		    redo READLINE;
 		}
