@@ -19,6 +19,7 @@ public:
     Len=0;
     if (!S) return;
     Len=strlen(S);	
+    if (Len==0) return;
     Data=new char[Len+1];
     strcpy(Data,S);
   };
