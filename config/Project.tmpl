@@ -56,6 +56,10 @@ X11_INCLUDE = /usr/X11R6/include
 #define TestPlatformLdFlags
 #endif
 
+#if !defined(PurifyPlatformLdFlags)
+#define PurifyPlatformLdFlags
+#endif
+
 #if !defined(Strip)
 #define Strip strip
 #endif
@@ -89,7 +93,9 @@ MKDEPEND = MkDepend
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
+PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
+
 
 /*
    These next few lines are not supposed to be pre-processor
@@ -370,6 +376,7 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+PURIFY_LDFLAGS = -lm $(LDFLAGS) $(PURIFY_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
 STD_LIBS = \
   $(CUTIL_LIB) \
