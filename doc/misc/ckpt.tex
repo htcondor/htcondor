@@ -1,0 +1,159 @@
+Checkpointing is taking a snapshot of the current state of a program
+in such a way that the program can be restarted from that state at a
+later time.  Checkpointing gives the Condor scheduler the freedom to
+reconsider scheduling decisions through preemptive-resume scheduling.
+If the scheduler decides to no longer allocate a machine to a job (for
+example, when the owner of that machine returns), it can checkpoint
+the job and preempt it without losing the work the job has already
+accomplished.  The job can be resumed later when the scheduler
+allocates it a new machine.  Additionally, periodic checkpointing
+provides fault tolerance in Condor.  Snapshots are taken periodically,
+and after an interruption in service the program can continue from the
+most recent snapshot.
+
+Condor provides checkpointing services to single process jobs on a
+number of Unix platforms.  To enable checkpointing, the user must link
+the program with the Condor system call library
+(\File{condor\_syscall\_lib.a}), using the
+\Condor{compile} command.  This means that the
+user must have the object files or source code of the program to use
+Condor checkpointing.  However, the checkpointing services provided by
+Condor are strictly optional.  So, while there are some classes of
+jobs for which Condor does not provide checkpointing services, these
+jobs may still be submitted to Condor to take advantage of Condor's
+resource management functionality.  (See
+section~\ref{sec:standard-universe} on
+page~\pageref{sec:standard-universe} for a description of the
+classes of jobs for which Condor does not provide checkpointing
+services.)
+
+Process checkpointing is implemented in the Condor system call library
+as a signal handler.  When Condor sends a checkpoint signal to a
+process linked with this library, the provided signal handler writes
+the state of the process out to a file or a network socket.  This
+state includes the contents of the process stack and data segments,
+all shared library code and data mapped into the process's address
+space, the state of all open files, and any signal handlers and
+pending signals.  On restart, the process reads this state from the
+file, restoring the stack, shared library and data segments, file
+state, signal handlers, and pending signals.  The checkpoint signal
+handler then returns to user code, which continues from where it left
+off when the checkpoint signal arrived.
+
+Condor processes for which checkpointing is enabled perform a
+checkpoint when preempted from a machine.  When a suitable replacement
+execution machine is found (of the same architecture and operating
+system), the process is restored on this new machine from the
+checkpoint, and computation is resumed from where it left off.  Jobs
+that can not be checkpointed are preempted and restarted from the
+beginning.
+
+Condor's periodic checkpointing provides fault tolerance.  Condor
+pools are each configured with the \Expr{PERIODIC\_CHECKPOINT}
+expression which controls when and how often jobs which can be
+checkpointed do periodic checkpoints (examples: never, every three
+hours, etc.).  When the time for a periodic checkpoint occurs, the job
+suspends processing, performs the checkpoint, and immediately
+continues from where it left off.  There is also a \Condor{ckpt} command
+which allows the user to request that a Condor job immediately perform
+a periodic checkpoint.
+
+In all cases, Condor jobs continue execution from the most recent
+complete checkpoint.  If service is interrupted while a checkpoint is
+being performed, causing that checkpoint to fail, the process will
+restart from the previous checkpoint.  Condor uses a commit style
+algorithm for writing checkpoints: a previous checkpoint is deleted
+only after a new complete checkpoint has been written successfully.
+
+The Condor distributions include a standalone checkpointing library,
+\File{libckpt.a}, which provides checkpointing for Unix processes
+without Condor's remote system call functionality.  Standalone
+checkpointing is described in section~\ref{sec:standalone-ckpt}.
+
+Condor can now read and write compressed checkpoints.  This new
+functionality is provided in the \File{condor\_syscall\_zlib.a} and
+\File{libzckpt.a} libraries.  If \File{/usr/lib/libz.a} exists on your
+workstation, \Condor{compile} will automatically link your job with
+the compression-enabled version of the checkpointing library.
+Currently, compression is used only for periodic checkpoints, while we
+experiment with this new functionality.
+
+By default, a checkpoint is written to a file on the local disk of the
+machine where the job was submitted.  A checkpoint server is available
+to serve as a repository for checkpoints.  (See
+section~\ref{sec:Ckpt-Server} on page~\pageref{sec:Ckpt-Server}.)
+When a host is configured to use a checkpoint server, jobs submitted
+on that machine write and read checkpoints to and from the server
+rather than the local disk of the submitting machine, taking the
+burden of storing checkpoint files off of the submitting machines and
+placing it instead on server machines (with disk space dedicated to
+the purpose of storing checkpoints).
+
+\subsection{\label{sec:standalone-ckpt}Standalone Checkpointing}
+
+Using the Condor checkpoint library without the remote system call
+functionality and outside of the Condor system is known as standalone
+mode checkpointing.
+
+To link in standalone mode, use the \Condor{compile}
+utility with the ``-condor\_standalone'' option.  Once your program is
+re-linked with the Condor standalone checkpointing library
+\File{libckpt.a}, your program will require two new command line
+arguments: ``\_condor\_ckpt filename'' and ``\_condor\_restart
+filename''.
+
+If the command line looks like:
+
+\begin{verbatim}
+	exec_name -_condor_ckpt ckpt_filename ..
+\end{verbatim}
+
+then we set up to checkpoint to the given file name.
+
+If the command line looks like:
+
+\begin{verbatim}
+	exec_name -_condor_restart ckpt_filename ...
+\end{verbatim}
+
+then we effect a restart from the given file name.
+
+Any Condor command line options are removed from the head of the
+command line before main() is called.
+
+If we aren't given instructions on the command line, by default we
+assume we are an original invocation, and that we should write any
+checkpoints to the name by which we were invoked with a
+``ckpt'' extension.
+
+To cause a program to checkpoint and exit, send it a SIGTSTP signal.  For 
+example, in C you would add the following line to your code:
+
+\begin{verbatim}
+	kill( getpid(), SIGTSTP );
+\end{verbatim}
+
+Note that most Unix shells are configured to send a TSTP signal to the
+foreground process when the user enters a Ctrl-Z.  To cause a program
+to write a periodic checkpoint (i.e., checkpoint and continue
+running), sent it a SIGUSR2:
+
+\begin{verbatim}
+	kill( getpid(), SIGUSR2 );
+\end{verbatim}
+
+In addition to the command-line parameters interface described above,
+a C interface is also provided for restarting a program from a
+checkpoint file.  The prototypes are:
+
+\begin{verbatim}
+	void init_image_with_file_name( char *ckpt_name );
+	void init_image_with_file_descriptor( int fd );
+	void restart( );
+\end{verbatim}
+
+The init\_image\_with\_file\_name() and
+init\_image\_with\_file\_descriptor() functions are used to specify
+the location of the checkpoint file.  Only one of the two must be
+used.  The restart() function causes the process image from the
+specified file to be read and restored.
