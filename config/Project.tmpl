@@ -23,7 +23,7 @@ GLOBUS_DIR	=	/p/condor/workspaces/globus
 GLOBUS_LIB	=	$(GLOBUS_DIR)/lib
 GLOBUS_INC	=	$(GLOBUS_DIR)/include
 
-AUTH_LIB	=	-L$(GLOBUS_LIB) -l globus_gss_assist -lglobus_gss \
+AUTH_LIB	=	-L$(GLOBUS_LIB) -lglobus_gss_assist -lglobus_gss \
 			-L$(SSL_LIB) -lssl -lcrypto \
 			-lresolv
 
