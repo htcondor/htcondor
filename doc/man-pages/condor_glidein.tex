@@ -82,6 +82,29 @@ in a more accessible place.
 Each instance of \Condor{glidein} will generate spool and log
 files.  These files should be occasionally removed.
 
+\Examples
+
+To setup and run 10 glideins under PBS on a grid site with a
+gatekeeper named \textit{gatekeeper.site.edu}:
+\begin{verbatim}
+% condor_glidein -count 10 gatekeeper.site.edu/jobmanager-pbs
+\end{verbatim}
+
+If you try something like the above and \Condor{glidein} is not able to
+automatically determine everything it needs to know about the remote site,
+it will ask you to provide more information.  A typical result of this
+process is something like the following command:
+\begin{verbatim}
+% condor_glidein -count 10 -arch 6.6.7-i686-pc-Linux-2.4 -setup_jobmanager jobmanager-fork  gatekeeper.site.edu/jobmanager-pbs
+\end{verbatim}
+
+You may use \Condor{q} to see the glidein jobs that have been
+submitted.  Once they successfully run, you may see them join your
+Condor pool by using \Condor{status}.
+
+See the list of common problems and solutions near the end of this section
+if you have trouble getting the system to work.
+
 \begin{Options}
     \OptItem{\Opt{-help}}{Display brief usage information and exit}
     \OptItem{\OptArg{-basedir}{basedir}}{
@@ -139,7 +162,8 @@ files.  These files should be occasionally removed.
         Identifies the glidein tarball to download and install.  If a
 	readonable default can be discovered through MDS, this is
 	optional.  A list of possible values may be found here:
-	\URL{http://www.cs.wisc.edu/condor/glidein/binaries}.  For
+	\URL{http://www.cs.wisc.edu/condor/glidein/binaries}.  The architecture
+        name is the same as the tarball name minus the tar.gz.  For
 	example: 6.6.5-i686-pc-Linux-2.4 }
 
     \OptItem{\OptArg{-scheduler}{name}}{
@@ -265,6 +289,58 @@ run \Condor{glidein} from a directory that does not have the right
 permissions for Condor to access files.  If you are in an AFS directory,
 keep in mind that Condor does not have your AFS ACLs.
 
+\item[Glideins fail to run due to GLIBC errors] Check the list of
+available glidein binaries
+(\URL{http://www.cs.wisc.edu/condor/glidein/binaries}) and try setting
+up glidein with an architecture name that includes the correct glibc
+version for the remote site.
+
+\item[Glideins join pool but no jobs run on them] One common
+cause of this problem is that the glidein machines are in a different
+filesystem domain and your jobs have been submitted with an implicit
+requirement that they must run in the same filesystem domain.  If this
+is your problem, see section~\ref{sec:file-transfer} for details on
+using Condor's file-transfer capabilities.  Another cause of this
+problem is a communication failure.  For example, a firewall may be
+preventing \Condor{negotiator} or \Condor{schedd} from connecting to
+the glidein \Condor{startd}.  Although work is being done to remove
+this requirement in the future, it is currently necessary to have full
+bi-directional connectivity, at least over a restricted range of
+ports.  See page~\pageref{param:HighPort} for more information on
+configuring a port range.
+
+\item[Glideins run but fail to join the pool] This may be caused by
+your pool's security settings or by a communication failure.  Check
+that the security settings in your pool's Condor config file allow
+write access to the glidein machines.  If you do not wish to modify
+the security settings for the pool, you can run a separate pool
+specifically for the glideins and use flocking to balance jobs across
+the two pools of resources.  If instead the glidein daemon log files
+indicate a communication failure, then see the next item.
+
+\item[The startd cannot connect to the collector] This may be caused
+by several things.  One is a firewall.  Another is when the compute
+nodes do not have even outgoing network access.  Configuring Glidein
+to work without full network access to and from the compute nodes is
+still in the experimental stages, so for now, the short answer is that
+you must at least have a range of open (bi-directional) ports and set
+up the glidein config file as described on
+page~\pageref{param:HighPort}.  (Use \Opt{-genconfig}, edit the file,
+and then use \Opt{-useconfig}.)
+
+Another possible cause of connectivity problems may be the use of UDP by
+the \Condor{startd} to register itself with the collector.  You can
+force it to use TCP as described on
+page~\pageref{param:UpdateCollectorWithTcp}.
+
+Yet another possible cause of connectivity problems is when the glidein
+machines have more than one network interface and the default one chosen
+by Condor is not the correct one.  One way to fix this is to modify
+the glidein startup script (using \Opt{-genstartup} and \Opt{-usestartup}).
+The script simply needs to determine the IP address associated with
+the correct network interface and assign this to the environment
+variable \MacroNI{\_condor\_NETWORK\_INTERFACE}.
+
 \item[NFS file locking problems]  If you have the \Opt{-localdir}
 configured to be on NFS (not recommended, but sometimes convenient
 for testing), the Condor daemons may have trouble manipulating file
@@ -273,21 +349,6 @@ locks.  You may insert the following into the Glidein config file:
 \begin{verbatim}
 IGNORE_NFS_LOCK_ERRORS = True
 \end{verbatim}
-
-\item[The startd cannot connect to the negotiator] This may be caused
-by several things.  One is a firewall.  Another is when the compute
-nodes do not have even outgoing network access.  Configuring Glidein
-to work without full network access to and from the compute nodes is
-still in the experimental stages, so for now, the short answer is that
-you must at least have a range of open (bi-directional) ports and set
-up the glidein config file as described on
-page~\pageref{param:HighPort}..  (Use \Opt{-genconfig}, edit the file,
-and then use \Opt{-useconfig}.)
-
-Yet another cause of connectivity problems may be the use of UDP by
-the \Condor{startd} to register itself with the collector.  You can
-force it to use TCP as described on
-page~\pageref{param:UpdateCollectorWithTcp}.
 
 \end{description}
 
