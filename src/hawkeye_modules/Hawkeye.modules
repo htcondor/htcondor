@@ -14,6 +14,7 @@ version: 1.0-rc1
 +open_files
 +top
 +uptime
++vmstat
 +w
 +who
 
@@ -60,6 +61,10 @@ version: 1.0-rc1
 target: uptime
 version: 1.0-rc1
 +uptime
+
+target: vmstat
+version: 1.0-rc1
++vmstat
 
 target: w
 version: 1.0-rc1
