@@ -99,6 +99,70 @@ char *GMStateNames[] = {
         procID.cluster,procID.proc,GMStateNames[gmState],globusState, \
         func,error)
 
+const char *rsl_stringify( const MyString& src )
+{
+	int src_len = src.Length();
+	int src_pos = 0;
+	int var_pos1;
+	int var_pos2;
+	int quote_pos;
+	static MyString dst;
+
+	if ( src_len == 0 ) {
+		dst = "''";
+	} else {
+		dst = "";
+	}
+
+	while ( src_pos < src_len ) {
+		var_pos1 = src.find( "$(", src_pos );
+		var_pos2 = var_pos1 == -1 ? -1 : src.find( ")", var_pos1 );
+		quote_pos = src.find( "'", src_pos );
+		if ( var_pos1 == -1 && var_pos2 == -1 && quote_pos == -1 ) {
+			dst += "'";
+			dst += src.Substr( src_pos, src.Length() - 1 );
+			dst += "'";
+			src_pos = src.Length();
+		} else if ( var_pos2 == -1 ||
+					(quote_pos != -1 && quote_pos < var_pos1 ) ) {
+			if ( src_pos < quote_pos ) {
+				dst += "'";
+				dst += src.Substr( src_pos, quote_pos - 1 );
+				dst += "'#";
+			}
+			dst += '"';
+			while ( src[quote_pos] == '\'' ) {
+				dst += "'";
+				quote_pos++;
+			}
+			dst += '"';
+			if ( quote_pos < src_len ) {
+				dst += '#';
+			}
+			src_pos = quote_pos;
+		} else {
+			if ( src_pos < var_pos1 ) {
+				dst += "'";
+				dst += src.Substr( src_pos, var_pos1 - 1 );
+				dst += "'#";
+			}
+			dst += src.Substr( var_pos1, var_pos2 );
+			if ( var_pos2 + 1 < src_len ) {
+				dst += '#';
+			}
+			src_pos = var_pos2 + 1;
+		}
+	}
+
+	return dst.Value();
+}
+const char *rsl_stringify( const char *string )
+{
+	static MyString src;
+	src = string;
+	return rsl_stringify( src );
+}
+
 int GlobusJob::probeInterval = 300;		// default value
 int GlobusJob::submitInterval = 300;	// default value
 int GlobusJob::restartInterval = 60;	// default value
