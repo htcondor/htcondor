@@ -955,7 +955,13 @@ DaemonCore::ReInit()
 	static int tid = -1;
 
 	// Fetch the negotiator address for the Verify method to use
+#if 0
 	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
+#else
+		// For now, we don't have the query code ported to new
+		// classads, so just don't worry about NEGOTIATOR commands.
+    addr = NULL;
+#endif
 	if ( addr ) {
 		string_to_sin(addr,&sin);
 		memcpy(&negotiator_sin_addr,&(sin.sin_addr),sizeof(negotiator_sin_addr));
