@@ -104,7 +104,7 @@ int	XferCkpts = TRUE;		// Transfer ckpt files before exiting
 int	Running_PVMD = FALSE;	// True if we are running a pvm job
 
 	// Constants
-const int	CkptLimit = 300;	// How long to wait for proc to ckpt and exit
+int	CkptLimit = 300;	// How long to wait for proc to ckpt and exit
 const int	VacateLimit = 60;	// How long to wait for proc to exit
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
@@ -144,6 +144,8 @@ void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
 
+StateMachine	*condor_starter_ptr;
+
 /*
   Main routine for condor_starter.  DEBUGGING can be turned on if we
   need to attach a debugger at run time.  Everything is driven by the
@@ -152,7 +154,7 @@ void init_environment_info();
 int
 main( int argc, char *argv[] )
 {
-	StateMachine	condor_starter( StateTab, TransTab, EventSigs, START, END );
+	StateMachine condor_starter( StateTab, TransTab, EventSigs, START, END );
 
 #define DEBUGGING FALSE
 #if DEBUGGING
@@ -161,10 +163,16 @@ main( int argc, char *argv[] )
 	wait_for_debugger( FALSE );
 #endif
 
+	if (argc == 2 && strcmp(argv[1], "-dot") == MATCH) {
+		condor_starter.dot_print(stdout);
+		exit(0);
+	}
+
 	set_posix_environment();
 	initial_bookeeping( argc, argv );
 
-	// condor_starter.display();
+	condor_starter_ptr = &(condor_starter);
+//	condor_starter.display();
 	condor_starter.execute();
 	dprintf( D_ALWAYS, "********* STARTER terminating normally **********\n" );
 	return 0;
@@ -485,6 +493,10 @@ init_params()
 		MaxCkptInterval = 2 * HOUR;
 	} else {
 		MaxCkptInterval = atoi( tmp );
+	}
+
+	if( (tmp=param("CKPT_TIMEOUT")) != NULL ) {
+		CkptLimit = atoi( tmp );
 	}
 
 	if( (tmp=param("STARTER_DELAYS")) == NULL ) {
@@ -1018,6 +1030,7 @@ supervise_all()
 	int			periodic_checkpointing = FALSE;
 	int			bufid;
 	int			src, tag;
+	static Transition	*tr = 0;
 
 
 	// dprintf( D_ALWAYS, "Entering function supervise_all()\n" );
@@ -1041,6 +1054,15 @@ supervise_all()
 					PvmMsgNames.get_name(tag), src
 				   );
 			return PVM_MSG;
+		}
+	}
+#endif
+
+#if 1
+	if (tr == 0) {
+		tr = condor_starter_ptr->find_transition( ALARM );
+		if ( tr ) {
+			condor_starter_ptr->dont_print_transition( tr );
 		}
 	}
 #endif
