@@ -119,7 +119,11 @@ stack_end_addr()
 #if defined(X86)
 	return 0x8048000; /* -- for x86 */
 #else
-	return 0xF0000000; /* -- for sun4m */
+	#if defined(Solaris27)
+		return 0xFFBF0000;
+	#else
+		return 0xF0000000;
+	#endif
 #endif
 }
 
@@ -185,6 +189,7 @@ num_segments( )
 		free(my_map);
 	}
 	my_map = (prmap_t *) malloc(sizeof(prmap_t) * (prmap_count + 1));  */
+
 	SYSCALL(SYS_ioctl, fd, PIOCMAP, my_map);
 	/* find the text segment by finding where this function is
 	   located */
@@ -221,7 +226,7 @@ segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot )
 	prot = my_map[seg_num].pr_mflags;
 //	if (seg_num == mmap_loc)
 //	  fprintf(stderr, "Checkpointing segment containing mmap.\n"
-//		  "Segment %d (0x%lx - 0x%lx) contains mmap.\n",
+//		  "Segment %d (0x%x - 0x%x) contains mmap.\n",
 //		  seg_num, my_map[seg_num].pr_vaddr,
 //		  my_map[seg_num].pr_vaddr+my_map[seg_num].pr_size);
 	if (seg_num == text_loc)
@@ -256,7 +261,7 @@ display_prmap()
 
 	num_segments();
 	for (i = 0; i < prmap_count; i++) {
-	  dprintf( D_ALWAYS, "addr = 0x%p, size = 0x%lx, offset = 0x%x",
+	  dprintf( D_ALWAYS, "addr = 0x%p, size = 0x%x, offset = 0x%x",
 		 my_map[i].pr_vaddr, my_map[i].pr_size, my_map[i].pr_off);
 	  for (j = 0; j < sizeof(MA_FLAGS) / sizeof(MA_FLAGS[0]); j++) {
 	    if (my_map[i].pr_mflags & MA_FLAGS[j].flag_val) {
