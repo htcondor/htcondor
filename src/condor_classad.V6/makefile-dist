@@ -3,7 +3,9 @@ INSTALL_DIR = /usr/include
 # This include will redefine INSTALL_DIR, if Makefile.config exists
 include Makefile.config
 
-all: libclassad.a test_classads test_xml sample
+LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -lclassad
+
+all:: libclassad.a test_classads extra_tests test_xml sample
 
 LIB_INSTALL = $(INSTALL_DIR)/lib
 BIN_INSTALL = $(INSTALL_DIR)/bin
@@ -33,22 +35,25 @@ instantiations.o:   instantiations.C
 	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -c instantiations.C -o instantiations.o
 
 test_classads: test_classads.o libclassad.a
-	$(CPlusPlus) -o test_classads test_classads.o -L. -lclassad
+	$(CPlusPlus) -o test_classads test_classads.o $(LD_FLAGS)
 
 test_classads.pure: test_classads.o libclassad.a
-	$(PURIFY) -o test_classads.pure test_classads.o -L. -lclassad
+	$(PURIFY) -o test_classads.pure test_classads.o $(LD_FLAGS)
 
 test_xml: test_xml.o libclassad.a
-	$(CPlusPlus) -o test_xml test_xml.o -L. -lclassad
+	$(CPlusPlus) -o test_xml test_xml.o $(LD_FLAGS)
 
 extra_tests: extra_tests.o libclassad.a
-	$(CPlusPlus) -o extra_tests extra_tests.o -L. -lclassad
+	$(CPlusPlus) -o extra_tests extra_tests.o $(LD_FLAGS)
 
 extra_test.pure: extra_tests.o libclassad.a
-	$(PURIFY) -o extra_tests.pure extra_tests.o -L. -lclassad
+	$(PURIFY) -o extra_tests.pure extra_tests.o $(LD_FLAGS)
 
 sample: sample.o libclassad.a
-	$(CPlusPlus) -o sample sample.o -L. -lclassad
+	$(CPlusPlus) -o sample sample.o $(LD_FLAGS)
+
+shared: shared.C
+	$(CPlusPlus) -fPIC -shared -o libshared.so shared.C
 
 install:: libclassad.a test_classads
 	mkdir -p $(LIB_INSTALL)

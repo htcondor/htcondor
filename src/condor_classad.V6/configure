@@ -2,23 +2,39 @@
 
 hold_arguments()
 {
-cat >/tmp/configure.rerun <<EOF
+	cat >/tmp/configure.rerun <<EOF
 #!/bin/sh
 $0 $@
 EOF
-chmod 755 /tmp/configure.rerun
+	chmod 755 /tmp/configure.rerun
+	return
 }
 
 save_arguments()
 {
     echo "saving args in configure.rerun"
     mv /tmp/configure.rerun .
+	return
+}
+
+print_usage()
+{
+	cat <<EOF
+Use: configure [options]
+Where options are:
+ --prefix  <dir>  The directory in which to install $project
+ --enable-shlib   Allow user functions in shared libraries.
+ --help           Show this message         
+Use configure.rerun to rerun configure with previously saved arguments.
+EOF
+	return
 }
 
 hold_arguments "$@"
 
 project="ClassAds"
 install_dir="/usr/local"
+enable_shlib=0
 
 while [ $# -gt 0 ]
 do
@@ -27,18 +43,17 @@ do
 			shift
 			install_dir=$1
 			;;
+		--enable-shlib)
+			shift
+			enable_shlib=1
+			;;
 		-h | -help | --h | --help)
-			cat <<EOF
-Use: configure [options]
-Where options are:
- --prefix            <dir>  The directory in which to install $project
- --help           Show this message         
- Use configure.rerun to rerun configure with previously saved arguments.
-EOF
+			print_usage
 			exit 1
 			;;
 		*)
 			echo "Unknown argument $1"
+			print_usage
 			exit 1
 			;;
 	esac
@@ -54,6 +69,30 @@ cat <<EOF >Makefile.config
 
 INSTALL_DIR = ${install_dir}
 EOF
+
+if [ ${enable_shlib} = 1 ]
+then
+echo "EXTRA_LD_FLAGS = -Xlinker --export-dynamic -ldl" >> Makefile.config
+echo "all:: shared" >> Makefile.config
+fi
+
+echo "Creating classad_features.h..."
+rm -f classad_features.h
+echo "/* classad_features.h, automatically generated at " `date` "*/" >> classad_features.h
+cat >> classad_features.h <<EOF
+#ifndef __CLASSAD_FEATURES_H
+#define __CLASSAD_FEATURES_H
+
+EOF
+if [ ${enable_shlib} = 1 ] 
+then
+cat >> classad_features.h <<EOF
+#define ENABLE_SHARED_LIBRARY_FUNCTIONS
+
+EOF
+fi
+echo "#endif" >> classad_features.h
+
 
 echo ""
 echo "To build, type 'make'"
