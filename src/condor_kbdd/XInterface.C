@@ -7,10 +7,13 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <utmp.h>
-
+#include <setjmp.h>
 #include "XInterface.h"
 #include <stdlib.h>
 const char * PASSWD_FILE = "/etc/passwd";
+
+bool        g_connected;
+jmp_buf     jmp;
 
 extern "C"
 {
@@ -29,17 +32,28 @@ static int
 CatchFalseAlarm(Display *display, XErrorEvent *err)
 {
     char msg[80];
-    
     XGetErrorText(display, err->error_code, msg, 80);
     dprintf(D_ALWAYS, "Caught Error code(%d): %s\n", err->error_code, msg);
     return 0;
 }
 
+static int 
+CatchIOFalseAlarm(Display *display, XErrorEvent *err)
+{
+    char msg[80];
+    g_connected = false;
+        
+    XGetErrorText(display, err->error_code, msg, 80);
+    dprintf(D_ALWAYS, "Caught Error code(%d): %s\n", err->error_code, msg);
+
+    longjmp(jmp, 0);
+    return 0;
+}
 
 // Get the next utmp entry and set our XAUTHORITY environment
 // variable to the .Xauthority file in the user's home directory.
-static int
-NextEntry()
+int
+XInterface::NextEntry()
 {
     utmp *utmp_entry;
     passwd *passwd_entry;
@@ -50,6 +64,22 @@ NextEntry()
     int size;
     FILE *etc_passwd;
     
+    if(!_tried_root)
+    {
+	etc_passwd = fopen(PASSWD_FILE, "r");
+	passwd_entry = fgetpwent(etc_passwd);
+	sprintf(env, "HOME=%s", passwd_entry->pw_dir);
+	if(putenv(env) != 0)
+	{
+	    dprintf(D_ALWAYS, "Putenv failed!.\n");
+	    return -1;
+	}
+	dprintf(D_FULLDEBUG, "Using %s's .Xauthority: \n", 
+		passwd_entry->pw_name, env);
+	_tried_root = true;
+	fclose(etc_passwd);
+    }
+
     do
     {
 	utmp_entry = getutent();
@@ -99,6 +129,7 @@ NextEntry()
 	if(putenv(env) != 0)
 	{
 	    dprintf(D_ALWAYS, "Putenv failed!.\n");
+	    return -1;
 	}
 	dprintf(D_FULLDEBUG, "Using %s's .Xauthority: \n", 
 		passwd_entry->pw_name, env);
@@ -117,9 +148,9 @@ XInterface::XInterface()
     {
 	dprintf(D_ALWAYS, "We must run as root.\n");
     }
-
-    _connected = false;
-   
+    _tried_root = false;
+    g_connected = false;
+    
     while(!Connect())
     {
 	sleep(1);
@@ -129,7 +160,7 @@ XInterface::XInterface()
 
     // See note above the function to see why we need to do this.
     XSetErrorHandler((XErrorHandler) CatchFalseAlarm);
-    XSetIOErrorHandler((XIOErrorHandler) CatchFalseAlarm);
+    XSetIOErrorHandler((XIOErrorHandler) CatchIOFalseAlarm);
 
     //Select the events on each root window of each screen
     for(s = 0; s < ScreenCount(_display); s++)
@@ -156,6 +187,10 @@ XInterface::Connect()
     int err;
     
     setutent(); // Reset utmp file to beginning.
+
+    dprintf(D_FULLDEBUG, "XDisplayName(NULL) returns: %s.\n", 
+	    XDisplayName(NULL));
+    _tried_root = false;
     while(!(_display = XOpenDisplay(NULL)))
     {
 	
@@ -168,23 +203,25 @@ XInterface::Connect()
 	    return false;
 	}
     }
-    _connected = true;
+    g_connected = true;
     return true;
 }
 
 bool
 XInterface::CheckActivity()
 {
-    while(!_connected)
+    setjmp(jmp);
+    while(!g_connected)
     {
 	Connect();
     }
-
+    
     if(ProcessEvents())
     {
 	return true;
     }
-    else if(QueryPointer())
+    dprintf(D_FULLDEBUG, "Attempting to Query pointer...\n");
+    if(QueryPointer())
     {
 	return true;
     }
@@ -297,10 +334,12 @@ XInterface::QueryPointer()
 	if(!found)
 	{
 	    dprintf(D_FULLDEBUG, "Lost connection to X server.\n");
-	    _connected = false;
+	    g_connected = false;
 	}
     }
 
+    dprintf(D_FULLDEBUG, "pointer at (%d, %d) mask: %ud.\n", root_x, root_y,
+	    mask);
     if(root_x == _pointer_prev_x && root_y == _pointer_prev_y && 
        mask == _pointer_prev_mask)
     {

@@ -25,31 +25,36 @@
 
 extern "C" char *get_startd_addr(const char *);
 
-char *mySubSystem = "KBDD";
+char       *mySubSystem = "KBDD";
 XInterface *xinter;
-
 
 int
 update_startd()
 {
-    char *my_name;
-    //SafeSock *ssock;
-    my_name = my_hostname();
+    static int cmd_num = X_EVENT_NOTIFICATION;
+    static char *my_name = my_hostname();
+    static char * my_addr = get_startd_addr(my_name);
+    static SafeSock ssock(my_addr, 0, 0);
 
-
-    
     dprintf( D_FULLDEBUG, "Activity on display.\n");
-    //my_addr = get_startd_addr(my_name);
+    dprintf( D_FULLDEBUG, "My hostname is: %s.\n", my_name);
+    dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
+    dprintf( D_FULLDEBUG, "X_EVENT_NOTIFICATION is: %d.\n",
+	     X_EVENT_NOTIFICATION);
     
-    //dprintf( D_FULLDEBUG, "My hostname is: %s.\n", my_name);
-    //dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
-    
-    //ssock = new SafeSock(my_addr, 0, 3);
-    //ssock->encode();
-    //ssock->snd_int(X_EVENT_NOTIFICATION, TRUE);
-    
-    //delete ssock;
-	return 0;
+    if(ssock.ok())
+    {
+	ssock.encode();
+	ssock.timeout(3);
+	ssock.code(cmd_num);
+	ssock.end_of_message();
+    }
+    else
+    {
+	return -1;
+    }
+
+    return 0;
 }
 
 int 

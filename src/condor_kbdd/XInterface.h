@@ -29,12 +29,11 @@ class XInterface
     void SelectEvents(Window win);
     bool QueryPointer();
     bool Connect();
+    int NextEntry();
 
-    bool        _connected;
     Display     *_display;
     Window      _window;
     int         _screen;
-    bool        _use_xidle;
     time_t      _last_event;
 
     Window       _pointer_root;
@@ -43,7 +42,7 @@ class XInterface
     int          _pointer_prev_x;
     int          _pointer_prev_y;
 
-
+    bool        _tried_root;
 };
 
 
