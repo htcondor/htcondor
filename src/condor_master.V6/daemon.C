@@ -433,12 +433,17 @@ daemon::Start()
 	}
 
 		// Collector needs to listen on a well known port, as does the
-		// Negotiator.
+		// Negotiator.  These two daemons also don't need any root
+		// privileges at all, so we start them as the effective condor
+		// user (what's defined in CONDOR_IDS, "condor", etc)...
+	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
 		command_port = param_get_collector_port();
+		wants_condor_priv = true;
 	}
 	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
 		command_port = param_get_negotiator_port();
+		wants_condor_priv = true;
 	}
 
 	priv_state priv_mode = PRIV_ROOT;
@@ -456,6 +461,29 @@ daemon::Start()
 			dprintf(D_ALWAYS,"couldn't switch to user %s!\n",username);
 		}
 		free(username);
+	}
+	if( wants_condor_priv && priv_mode == PRIV_ROOT ) {
+
+#ifndef	WIN32
+
+			// we go this route on UNIX b/c it's safer, easier, and it
+			// automatically gets it right if CONDOR_IDS is defined.
+		uid_t cuid = get_condor_uid();
+		gid_t cgid = get_condor_gid();
+		int result = set_user_ids( cuid, cgid );
+		if( result ) { 
+			priv_mode = PRIV_USER_FINAL;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "couldn't switch to \"condor\" user %d.%d!\n",
+					 cuid, cgid );
+		}
+
+#else /* WIN32 */
+
+			// don't know what to do here just yet...
+
+#endif /* WIN32 */
 	}
 
 	sprintf( buf, "%s_ARGS", name_in_config_file );
