@@ -35,6 +35,8 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
+extern char *mySubSystem;
+
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
@@ -330,6 +332,8 @@ int Sock::do_connect(
 
 		if (::connect(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0) {
 			_state = sock_connect;
+			dprintf( D_NETWORK, "%s ACCEPT %s ", sock_to_string(_sock) );
+			dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&sin) );
 			return TRUE;
 		}
 
@@ -376,6 +380,10 @@ int Sock::do_connect(
 			case 1:
 				if (test_connection()) {
 					_state = sock_connect;
+					dprintf( D_NETWORK, "%s ACCEPT %s ",
+							 sock_to_string(_sock) );
+					dprintf( D_NETWORK|D_NOHEADER, "%s\n",
+							 sin_to_string(&sin) );
 					return TRUE;
 				} else {
 					if (!failed_once) {
@@ -430,6 +438,11 @@ bool Sock::test_connection()
 int Sock::close()
 {
 	if (_state == sock_virgin) return FALSE;
+
+	if (type() == Stream::reli_sock) {
+		dprintf( D_NETWORK, "%s CLOSE %s\n", mySubSystem,
+				 sock_to_string(_sock) );
+	}
 
 	if (::closesocket(_sock) < 0) return FALSE;
 
