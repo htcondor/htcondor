@@ -275,6 +275,7 @@ the library routine which parses the configuration files.
   \item CKPT\_SERVER
   \item SUBMIT
   \item GRIDMANAGER
+  \item TOOL
   \label{list:subsystem names}
   \end{itemize}
 
@@ -299,14 +300,35 @@ determined automatically at runtime but which can be overwritten.
   on page~\pageref{man-condor-submit} for details.
 
 \item[\MacroU{OPSYS}] \label{param:OpSys}
-  Defines the
-  string used to identify the operating system of the local machine to
-  Condor.
+  Defines the string used to identify the operating system
+  of the local machine to Condor.
   If it is not defined in the configuration file, Condor will
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
+\item[\MacroU{UNAME\_ARCH}] \label{param:UnameArch}
+  The architecture as reported by \Prog{uname}(2)'s \Code{machine} field.
+  Always the same as \MacroNI{ARCH} on Windows.
+
+\item[\MacroU{UNAME\_OPSYS}] \label{param:UnameOpsys}
+  The operating system as reported by \Prog{uname}(2)'s \Code{sysname} field.
+  Always the same as \MacroNI{OPSYS} on Windows.
+
+\item[\MacroU{PID}] \label{param:Pid}
+  The process ID for the daemon or tool.
+
+\item[\MacroU{PPID}] \label{param:Ppid}
+  The process ID of the parent process for the daemon or tool.
+
+\item[\MacroU{USERNAME}] \label{param:Username}
+  The user name of the UID of the daemon or tool.
+  It is useful for setting \MacroNI{GRIDMANAGER\_LOG},
+  as that needs to be done on a per-user basis.
+  For daemons started as root, but running under another UID
+  (typically the user condor), this will be the other UID.
+
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
+  \label{param:FilesystemDomain}
   Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
@@ -314,6 +336,7 @@ determined automatically at runtime but which can be overwritten.
   its use and under what conditions you would want to change it.
 
 \item[\MacroU{UID\_DOMAIN}]
+  \label{param:UIDDomain}
   Defaults to the fully
   qualified hostname of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
@@ -397,6 +420,21 @@ system.
   \Condor{compile} to function.  \MacroUNI{LIB} is usually defined
   relative to the \MacroUNI{RELEASE\_DIR} macro, and has no default
   value.
+
+\item[\Macro{LIBEXEC}] \label{param:LibExec} This directory points
+  to the Condor directory where support commands that Condor
+  needs will be placed.
+  Do not add this directory to a user or systemwide path.
+
+\item[\Macro{INCLUDE}] \label{param:Include} This directory points
+  to the Condor directory where header files reside.
+  \MacroUNI{INCLUDE} would usually be defined relative to
+  the \MacroUNI{RELEASE\_DIR} configuration macro.
+  There is no default value, but
+  if defined, it can make inclusion of necessary header files
+  for compilation of programs (such as those programs
+  that use \File{libcondorapi.a})
+  easier through the use of \Condor{config\_val}.
 
 \item[\Macro{SBIN}] \label{param:Sbin} This directory points to the
   Condor directory where Condor's system binaries (such as the
@@ -2535,6 +2573,8 @@ These macros control the \Condor{schedd}.
   The actual
   number of \Condor{shadow}s may be less if you have reached
   your \MacroUNI{RESERVED\_SWAP} limit.
+  When undefined, and therefore the default value,
+  there is no maximum limit on the number of processes spawned.
 
 \item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
   \label{param:MaxShadowExceptions} This macro controls the maximum
@@ -2546,35 +2586,53 @@ These macros control the \Condor{schedd}.
   macro determines how often the \Condor{schedd} sends a ClassAd
   update to the \Condor{collector}.  It is defined in terms of seconds
   and defaults to 300 (every 5 minutes).
+
+% \item[\Macro{REAL\_TIME\_JOB\_SUSPEND\_UPDATES}] 
+%  \label{param:RealTimeJobSuspendUpdates}
+%  If set to \Expr{True},
+%  then the \Condor{shadow} will immediately update the
+%  \Condor{schedd} upon the suspension or resumption of a job.
+%  This allows \Condor{q} to show a
+%  job in a suspended state in its default output.
+%  In the \Expr{ST} column, there will be an \Expr{S} instead of an
+%  \Expr{R} when the job is running, but suspended.
+
+%  This attribute's real time connotation is currently applied only
+%  to jobs in the vanilla, standard, and java universes.
+%  Other universes may display a suspension state where applicable,
+%  but the information may be stale.
+
+%  The default value and when not present in the configuration
+%  file is \Expr{False}.
   
 \item[\Macro{JOB\_START\_COUNT}] \label{param:JobStartCount}
   This macro works together with the \Macro{JOB\_START\_DELAY} macro
-  (below) to pace job starts.  See the \Macro{JOB\_START\_DELAY} macro
-  below.  The default and minimum values for the \Macro{JOB\_START\_COUNT}
-  macro are both 1.  Small values for this macro are preferred and will
-  minimize the load upon the \Condor{schedd}.
+  to throttle job starts.
+  The default and minimum values for this
+  integer configuration variable are both 1.
+  Small values for this macro are preferred and will
+  minimize the load upon the \Condor{schedd} daemon.
   
 \item[\Macro{JOB\_START\_DELAY}] \label{param:JobStartDelay}
-  This macro works together with the \Macro{JOB\_START\_COUNT} macro
-  (above) to pace job starts.  The  \Condor{schedd} will start
-  \Macro{JOB\_START\_COUNT} jobs as quickly as possible, then delay for
-  \Macro{JOB\_START\_DELAY} seconds, before starting the next set of
-  jobs.  The interval "as quickly as possible" indicates the time
-  required for the \Condor{schedd} to claim \Macro{JOB\_START\_COUNT}
-  machines, and can be as small as zero.
+  This integer-valued macro works together with the
+  \Macro{JOB\_START\_COUNT} macro
+  to throttle job starts.  The  \Condor{schedd} daemon starts
+  \MacroUNI{JOB\_START\_COUNT} jobs at a time, then delays for
+  \MacroUNI{JOB\_START\_DELAY} seconds before starting the next set of jobs.
   This delay prevents a sudden, large load on the submit
-  machine as it spawns many shadows simultaneously, and prevents
-  having to deal
-  with their startup activity all at once.
+  machine as it spawns many \Condor{shadow} daemons simultaneously,
+  and it prevents having to deal
+  with their start up activity all at once.
   The resulting job start rate
-  can average as fast as
-  (\Macro{JOB\_START\_COUNT}/\Macro{JOB\_START\_DELAY}) jobs/second.
-  Similarly, this macro is also used during the graceful shutdown of the
-  \Condor{schedd}.
-  During graceful shutdown, this macro determines how long to wait in
-  between asking each \Condor{shadow} to gracefully shutdown.  
-  Defined in terms of seconds and defaults to 2.  Setting this macro to
-  a lower value is not advised, and can overwhelm the \Condor{schedd}.
+  averages as fast as
+  (\MacroUNI{JOB\_START\_COUNT}/\MacroUNI{JOB\_START\_DELAY}) jobs/second.
+  This configuration variable is also used during the graceful shutdown of the
+  \Condor{schedd} daemon.
+  During graceful shutdown, this macro determines the wait time in
+  between requesting each \Condor{shadow} daemon to gracefully shut down.  
+  It is defined in terms of seconds and defaults to 2.  
+  Setting this macro to a lower value is not advised,
+  as it can overwhelm the \Condor{schedd} daemon.
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
   macro determines how often the \Condor{schedd} should send a keep
@@ -2774,6 +2832,13 @@ These macros control the \Condor{schedd}.
   backup of the current spool file to the spool directory.  This
   backup file will be overwritten each time the \Condor{schedd}
   starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
+
+\item[\Macro{MPI\_CONDOR\_RSH\_PATH}]
+  \label{param:MPICondorRshPath} The complete path to the
+  special version of \Prog{rsh} that is required to spawn MPI
+  jobs under Condor.
+  \MacroU{LIBEXEC} is the proper value for this 
+  configuration variable, required when running MPI dedicated jobs.
 
 \end{description}
 
@@ -3402,10 +3467,12 @@ These macros affect the \Condor{negotiator}.
   other rankings, in order to optimize overall throughput.  For example,
   it is generally used to prevent preemption when possible, even if the job
   rank prefers a machine that is busy.
+  The default value is undefined, which causes this rank
+  to have no effect on the ranking of matches.
 
 \item[\Macro{NEGOTIATOR\_POST\_JOB\_RANK}]
   \label{param:NegotiatorPostJobRank} Resources that match a request
-  are first sorted by the \Macro{NEGOTIATOR\_POST\_JOB\_RANK}
+  are first sorted by the \Macro{NEGOTIATOR\_PRE\_JOB\_RANK}
   expression, then by the user-supplied rank in the job ClassAd, then
   by \Macro{NEGOTIATOR\_POST\_JOB\_RANK}, then by
   \Macro{PREEMPTION\_RANK} (if the match would cause preemption).  The
@@ -3413,6 +3480,8 @@ These macros affect the \Condor{negotiator}.
   choose between machines that the job ranks equally.  For example,
   you might want breadth-first instead of depth-first filling of a
   cluster of multi-processor machines.
+  The default value is undefined, which causes this rank
+  to have no effect on the ranking of matches.
 
 \item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
@@ -3504,6 +3573,19 @@ is one hour (3600 seconds).
 \index{configuration!condor\_gridmanager configuration variables}
 These macros affect the \Condor{gridmanager}.
 \begin{description}
+
+\item[\Macro{GRIDMANAGER\_LOG}]
+\label{param:GridmanagerLog} Logs for the \Condor{gridmanager} 
+  will be written as the user who submitted the individual jobs.
+  As a result \MacroNI{GRIDMANAGER\_LOG} should defined to incorporate
+  \MacroUNI{USERNAME} to specify a different file for each user
+  in a directory that users will be able to write into.
+  An example definition:
+\footnotesize
+\begin{verbatim}
+  GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
+\end{verbatim}
+\normalsize
 
 \item[\Macro{GRIDMANAGER\_CHECKPROXY\_INTERVAL}]
 \label{param:GridmanagerCheckproxyInterval} The number of seconds

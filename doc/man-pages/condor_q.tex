@@ -71,9 +71,14 @@ a one line summary of information as follows:
 	queue. 
 \item[RUN\_TIME]  Wall-clock time accumulated by the job to date in days, 
 	hours, minutes, and seconds.  
-\item[ST] Current status of the job. U = unexpanded (never been run), H = on hold,
-	R = running, I = idle (waiting for a machine to execute on), C = completed, 
-	and X = removed. 
+\item[ST] Current status of the job, which varies somewhat according
+        to the job universe and the timing of updates.
+        U = unexpanded (never been run), H = on hold,
+        R = running,
+%	S = suspended,
+	I = idle
+        (waiting for a machine to execute on), C = completed, 
+        and X = removed. 
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with 
 	higher numbers corresponding to greater priority. 
 \item[SIZE] The virtual image size of the executable in megabytes. 

@@ -9,8 +9,9 @@
 \oOptArg{-maxpre}{NumberOfPREscripts}
 \oOptArg{-maxpost}{NumberOfPOSTscripts}
 \oOpt{-nopostfail}
-\oOptArg{-log}{LogFileName}
+\oOptArg{-storklog}{LogFileName}
 \oOptArg{-notification}{value}
+\oOptArg{-debug}{level}
 \Arg{DAGInputFile}
 
 \index{Condor commands!condor\_submit\_dag}
@@ -31,7 +32,8 @@ description.
 \begin{Options}
   \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
      for DAGMan, but do not submit DAGMan as a Condor job.}
-  \OptItem{\Opt{-verbose}}{Give verbose error messages.}
+  \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
+     to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
      the files that it produces, if the files already exist.}
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
@@ -53,10 +55,9 @@ description.
      the DAG that prevents the POST script within a node
      from running in the case that the job within the node fails.
      Without this option, POST scripts always run when jobs fail.}
-  \OptItem{\OptArg{-log}{LogFileName}}{Forces \Condor{submit\_dag}
-     to omit the check of Condor submit description files for nodes
-     within the DAG to verify that they all use the same log file.
-     The argument \Arg{LogFileName} is used as the single, common log file.}
+  \OptItem{\OptArg{-log}{LogFileName}}{Deprecated option; do not use.}
+  \OptItem{\OptArg{-storklog}{LogFileName}}{Sets the file name for the
+     Stork log of DaP jobs.}
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
      for DAGMan itself. This information will be used within the Condor
      submit description file for DAGMan. This file is produced by
@@ -64,6 +65,13 @@ description.
      within the section of submit description file commands in the
      \Condor{submit} manual page on page~\pageref{man-condor-submit}
      for specification of \Arg{value}.
+     }
+  \OptItem{\OptArg{-debug}{level}}{
+     Passes the the \Arg{level} of debugging output desired to
+     \Condor{dagman}.  \Arg{level} is an integer, with values of
+     0-7 inclusive, where 7 is the most verbose output.
+     A default value of 3 is passed to \Condor{dagman} when not
+     specified with this option.
      }
   \end{Options}
 
@@ -76,17 +84,4 @@ Condor User Manual
 and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}
-
-%%  Usage: condor_submit_dag [options] filename
-%%  where filename is the name of your DAG input file
-%%  and where [options] is one or more of:
-%%  -no_submit          (DAG is not submitted to Condor)
-%%  -verbose            (Verbose error messages from condor_submit_dag)
-%%  -force              (Overwrite files condor_submit_dag uses if they exist)
-%%  -maxjobs number     (Maximum number of jobs ever submitted at once)
-%%  -log filename       (Specify the log file shared by all jobs in the DAG)
-%%  -notification value (Determines how much email you get from Condor
-             %%  about the life of the condor_dagman job.  'value' must be
-             %%  one of "always", "never", "error", or "complete".
-             %%  See the condor_submit man page for details.)
 

@@ -1002,8 +1002,8 @@ When she submits the jobs, she needs to tell Condor to send them to
 machines that have access to that shared data, so she specifies a
 different \AdAttr{requirements} expression than the default:
 \begin{verbatim}
-   Requirements = UidDomain == ``cs.wisc.edu'' && \
-                  FileSystemDomain == ``cs.wisc.edu''
+   Requirements = UidDomain == "cs.wisc.edu" && \
+                  FileSystemDomain == "cs.wisc.edu"
 \end{verbatim}
 
 \Warn If there is \emph{no} shared file system, or the Condor pool

@@ -323,8 +323,8 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{table}[hbt]
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
-Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
-Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.7, 8, 9 \\ \hline
+%Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
 Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
  & Red Hat Linux 9 \\
@@ -332,9 +332,9 @@ Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
  & Debian Linux 3.1 (sarge) \\
  & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0), 
 Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
-ALPHA & Digital Unix 4.0 \\
- & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
- & Tru64 5.1 (clipped) \\ \hline
+%ALPHA & Digital Unix 4.0 \\
+% & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
+ALPHA & Tru64 5.1 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
  & AIX 5.2 (clipped) \\ \hline
 Itanium (IA64) & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ 
@@ -392,49 +392,51 @@ Red Hat Linux, version 9 on x86 \\
 Red Hat Enterprise Linux 3 on x86 \\
 & gcc & version 3.2.3 \\ 
 \hline
-HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
-& gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
-& cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
-\hline
-Digitial Unix 4.0 on ALPHA \\ 
-& cc, CC, cxx, and c89 \\ 
-& KCC \\ 
+% HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
+% & gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+% & cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
+% \hline
+% Digitial Unix 4.0 on ALPHA \\ 
+% & cc, CC, cxx, and c89 \\ 
+% & KCC \\ 
 % & gcc, g++, and g77;  version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
-& gcc, g++, and g77;  version 2.95.3 \\ 
-\hline
+% & gcc, g++, and g77;  version 2.95.3 \\ 
+% \hline
 \end{tabular}
 \caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
 \end{table}
 \end{center}
 
-\index{file transfer!large files (>2Gb)}
+\index{file transfer!large files (>2Gbytes)}
 \index{large file transfer support}
 The following table, 
 Table~\ref{large-file-support},
 identifies which platforms support
 the transfer of large files (greater than 2 Gbyte in length).
-For those platforms where large file transfer is
+For vanilla universe jobs and those platforms where large file transfer is
 supported, the support is automatic.
 
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|lc|} \hline
 \emph{Platform} & \emph{Large File Transfer Supported?} \\ \hline \hline
-Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
-Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 2.6, 2.7, 8, 9 & Yes \\ \hline
+% Hewlett Packard PA-RISC with HPUX 10.20 & Yes \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC with Solaris 8, 9 & Yes \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) with IRIX 6.5 &  Yes \\ \hline
 Intel x86 with Red Hat Linux 7.1, 7.2, 7,3, 8.0, 9 & Yes \\ \hline
+Intel x86 with Red Hat Enterprise Linux 3 & Yes \\ \hline
+Intel x86 with Debian Linux 3.1 (sarge) & Yes \\ \hline
 Intel x86 with Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) & Yes \\ \hline 
 Intel x86 with Windows XP Professional (Win NT 5.1) & Yes \\ \hline
-ALPHA with Digital Unix 4.0 & No \\ \hline
-ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
+% ALPHA with Digital Unix 4.0 & No \\ \hline
+% ALPHA with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
 ALPHA with  Tru64 5.1  & No \\ \hline
 PowerPC with Macintosh OS X  & No \\ \hline
-PowerPC with AIX 5.2L  & Yes \\ \hline
+PowerPC with AIX 5.2  & Yes \\ \hline
 Itanium with Red Hat Linux 7.1, 7.2, 7.3 & Yes \\ \hline
 Itanium with SuSE Linux Enterprise 8.1 & Yes \\ \hline
 \end{tabular}
-\caption{\label{large-file-support}Supported platforms for large file transfer}
+\caption{\label{large-file-support}Supported platforms for large file transfer of vanilla universe job files}
 \end{table}
 \end{center}
 

@@ -8,6 +8,67 @@ All new features added or bugs fixed in the 6.5 series are available
 in the 6.6 series.
 The details of each version are described below.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-8}Version 6.6.8}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item In version 6.6.7, we fixed a number of bugs related to the
+  \Opt{-format} option to various Condor tools.
+  However, some sites were using \Opt{-format} in ways we didn't
+  expect, by not specifying any '%' conversion string in the format
+  string at all.
+  This used to work, given the old buggy code that handled
+  \Opt{-format}, but the changes in version 6.6.7 broke this, and
+  format strings without a '%' conversion string were ignored.
+  Now, if the format string does not contain a '%' conversion string,
+  the attribute name which follows it is once again ignored, and the
+  format string is printed directly without any modification.
+  For example, to print out the machine's \Attr{Name} (always defined)
+  and the \Attr{RemoteUser} (only defined if the machine is claimed),
+  and always print a newline (to keep the formatting legible), this
+  command will now work:
+\begin{verbatim}
+% condor_status -f "%s " Name -f "%s " RemoteUser -f "\n" bogus
+bird.cs.wisc.edu biguser@raven.cs.wisc.edu
+condor.cs.wisc.edu
+dodo.cs.wisc.edu biguser@raven.cs.wisc.edu
+lark.cs.wisc.edu biguser@raven.cs.wisc.edu
+raven.cs.wisc.edu
+...
+\end{verbatim}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-7}Version 6.6.7}
@@ -34,6 +95,10 @@ applies to machines running Windows XP SP2.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug specific to Windows that could cause, in rare occurances
+due to a race condition, Condor to fail to properly signal the job to
+suspend, continue, or preempt.
 
 \item When Condor transfers the job executable using the file transfer
   mechanism, it used to leave the binary sitting as a world-writeable
@@ -123,10 +188,6 @@ been fixed.
 when XML logs are used in a single or multiple log format. The Post
 Script  completion event does not get converted to XML and Dagman
 never sees them complete or fail because of the format of the event.
-
-\item If you are using Solaris 9 with LDAP as a name lookup service,
-Condor will not function, at least in some cases.  We don't yet know
-if this bug affects other Solaris revisions.
 
 \end{itemize}
 

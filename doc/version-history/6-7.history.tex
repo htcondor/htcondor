@@ -55,7 +55,12 @@ numerics and underscores.
 
 \begin{itemize}
 
-\item None.
+\item MPI users who are upgrading from previous versions of Condor
+to version 6.7.2 will need to modify the 
+\Macro{MPI\_CONDOR\_RSH\_PATH} configuration macro of their dedicated
+resource to be \MacroU{LIBEXEC} instead of \MacroUNI{SBIN}.
+Users who are installing Condor version 6.7.2
+for the first time will not need to make any changes.
 
 \end{itemize}
 
@@ -64,10 +69,13 @@ numerics and underscores.
 
 \begin{itemize}
 
-\item Added an \Expr{INCLUDE} config file entry that will be the location 
-	of the header files shipped with Condor that are to be used with
-	libcondorapi.a. 
-	You may find out what this value is via \Condor{config\_val}.
+\item Added an \Macro{INCLUDE} configuration file variable
+   to define the location of header files shipped with Condor
+   that are currently needed to be included when compiling
+   Condor APIs.
+   When \MacroNI{INCLUDE} is defined,
+   \Condor{config\_val} can be used to list header files.
+
 
 \item A Condor pool can now support multiple Collectors. This should
   improve stability due to automatic failover. All daemons will now
@@ -87,9 +95,24 @@ numerics and underscores.
   ClassAd.
 
 \item Added new macro \Macro{JOB\_START\_COUNT} that works in
-conjunction with existing macro \Macro{JOB\_START\_DELAY} to pace job
-starts.  Together, this macro pair provides greater flexibility
-tuning job start rate versus available \Condor{schedd} performance.
+conjunction with existing macro \Macro{JOB\_START\_DELAY} to 
+throttle job starts.
+Together, this macro pair provides greater flexibility
+tuning job start rate given available \Condor{schedd} performance.
+
+\item Added a \MacroNI{LIBEXEC} directory to the install process.
+Support commands that
+the Condor system needs will be added to this directory in future releases.
+This directory should not be added to a user or systemwide path.  
+
+\item Added the ability to decide for each file that condor transfers whether
+it should be encrypted or not, using encrypt\_input\_files, 
+dont\_encrypt\_input\_files, encrypt output files, and
+        dont\_encrypt\_output\_files in the job's submit file.
+
+\item Added DISABLE\_AUTHENTICATION\_IP\_CHECK which will work around problems
+on dual-homed machines where the IP address is reported incorrectly to condor.
+This is particularily a problem when using Kerberos on multi-homed machines.
 
 \end{itemize}
 
@@ -97,15 +120,14 @@ tuning job start rate versus available \Condor{schedd} performance.
 
 \begin{itemize}
 
-\item When supplying a -L<condor/installation/include> linker flag to
-	find the libcondorapi.a library via the -l linker flag to
-	various compilers, under linux there would be errors emitted
-	that indicated an undefined symbols problem linking with
-	libc. 
-	Condor ships a version of glibc in the same location as the
-	libcondorapi.a file, and there was a libc mismatch during linking
-	of program which only used libcondorapi.a.  
-	This has been fixed.
+\item Fixed a bug on Linux systems caused by both 
+      Condor and the Linux distribution having a library file 
+      called \File{libc.a}.
+      The problem caused the link step to fail on Condor API
+      programs.
+      The evaluation order to determine the location of library
+      files caused use of the wrong file, given the duplicate naming.
+      The bug is fixed by renaming the Condor library files.
 
 \item When the \Condor{startd} is evaluating the state of each virtual
   machine (VM), it now refreshes any ClassAd attributes which are
@@ -115,6 +137,14 @@ tuning job start rate versus available \Condor{schedd} performance.
   immediately see this state change.
 
 \item Fixed a bug where you couldn't transfer input files larger than 2 gigabytes.
+
+\item Condor can now detect the size of memory on a Linux machine with the 2.6
+kernel.
+
+\item JAR files specificed in the submit file were not being transfered
+along with the job unless they were also explicitly placed in the list
+of input files to transfer. Now, the JAR files are implicitly added to the
+list of input files to transfer.
 
 \end{itemize}
 
