@@ -5,7 +5,7 @@
 #define IS_HPPAR		YES
 #define IS_HPPAR_HPUX		YES
 
-PLATFORM_LDFLAGS = 
+#define PlatformLdFlags /**/
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC

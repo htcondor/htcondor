@@ -13,7 +13,7 @@
 #define OperatingSystem		Solaris
 #define IS_SOLARIS		YES
 
-PLATFORM_LDFLAGS = -lkstat -lelf -lnsl -lsocket
+#define PlatformLdFlags -lkstat -lelf -lnsl -lsocket
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  

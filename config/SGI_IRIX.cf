@@ -22,7 +22,7 @@
 #define Crt0 /usr/lib/crt1.o
 #define CrtN /usr/lib/crtn.o
 
-PLATFORM_LDFLAGS = /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
+#define PlatformLdFlags /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
 
 #define XLibPath -lX11
 #define XExtLibPath /usr/lib/libXext.a
