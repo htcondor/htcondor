@@ -453,16 +453,17 @@ main( int argc, char *argv[] )
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
 			switch( ptr[0][1] ) {
-			case 'g':
-				// dprintf to console
-				Termlog = 1;
-				dprintf_config ("SUBMIT", 2 );
-				break;
 			case 'v': 
 				Quiet = 0;
 				break;
 			case 'd':
-				DisableFileChecks = 1;
+				if (ptr[0][2] == 'e') {
+					// dprintf to console
+					Termlog = 1;
+					dprintf_config ("TOOL", 2 );
+				} else {
+					DisableFileChecks = 1;
+				}
 				break;
 			case 'r':
 				Remote++;
