@@ -33,6 +33,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "MyString.h"
+#include "format_time.h"
 
 //-----------------------------------------------------------------
 
@@ -52,7 +53,7 @@ static void ProcessInfo(AttrList* ad);
 static int CountElem(AttrList* ad);
 static void CollectInfo(int numElem, AttrList* ad, LineRec* LR);
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem);
-static char* format_date( time_t);
+static void PrintResList(AttrList* ad);
 
 //-----------------------------------------------------------------
 
@@ -72,6 +73,7 @@ main(int argc, char* argv[])
   int SetFactor=0;
   int SetPrio=0;
   bool ResetAll=false;
+  int GetResList=0;
 
   for (int i=1; i<argc; i++) {
     if (strcmp(argv[i],"-setprio")==0) {
@@ -97,6 +99,10 @@ main(int argc, char* argv[])
     }
     else if (strcmp(argv[i],"-usage")==0) {
       DetailFlag=2;
+    }
+    else if (strcmp(argv[i],"-getreslist")==0) {
+      GetResList=i;
+      i+=1;
     }
     else {
       usage(argv[0]);
@@ -207,6 +213,40 @@ main(int argc, char* argv[])
 
     printf("The accumulated usage was reset for all users\n");
 
+  }
+
+  else if (GetResList) { // set priority
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[GetResList+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the submittor you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto update the priority of (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+
+    // send request
+    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
+    sock.encode();
+    if (!sock.put(GET_RESLIST) ||
+        !sock.put(argv[GetResList+1]) ||
+        !sock.end_of_message()) {
+      fprintf( stderr, "failed to send GET_RESLIST command to negotiator\n" );
+      exit(1);
+    }
+
+    // get reply
+    sock.decode();
+    AttrList* ad=new AttrList();
+    if (!ad->get(sock) ||
+        !sock.end_of_message()) {
+      fprintf( stderr, "failed to get classad from negotiator\n" );
+      exit(1);
+    }
+
+    PrintResList(ad);
   }
 
   else {  // list priorities
@@ -384,22 +424,42 @@ static void usage(char* name) {
   exit(1);
 }
 
-//------------------------------------------------------------------------
+//-----------------------------------------------------------------
 
-/*
-  Format a date expressed in "UNIX time" into "month/day hour:minute".
-*/
-
-static char* format_date( time_t date )
+static void PrintResList(AttrList* ad)
 {
-        static char     buf[ 12 ];
-        struct tm       *tm;
+  // ad->fPrint(stdout);
 
-        if (date==0) return " ??? ";
+  char  attrName[32], attrStartTime[32];
+  char  name[128];
+  int   StartTime;
 
-        tm = localtime( &date );
-        sprintf( buf, "%2d/%-2d %02d:%02d",
-                (tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
-        );
-        return buf;
-}
+  char* Fmt="%-30s %12s\n";
+
+  printf(Fmt,"Resource Name"," Match Time");
+  printf(Fmt,"-------------"," ----------");
+
+  int i;
+
+  for (i=1;;i++) {
+    sprintf( attrName , "Name%d", i );
+    sprintf( attrStartTime , "StartTime%d", i );
+
+    if( !ad->LookupString   ( attrName, name ) ||
+		!ad->LookupInteger  ( attrStartTime, StartTime))
+            break;
+
+    char* p=strrchr(name,'@');
+    *p='\0';
+    time_t Now=time(0)-StartTime;
+	printf(Fmt,name,format_time(Now));
+  }
+
+  printf(Fmt,"-------------"," ----------");
+  printf("Number of Resources Used: %d\n",i-1);
+
+  return;
+} 
+
+//-----------------------------------------------------------------
+
