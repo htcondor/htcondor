@@ -146,14 +146,14 @@ AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
 UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
-			condor_errlst.o $(HP_SPECIFIC_FILES)
+	condor_errlst.o internet.o $(HP_SPECIFIC_FILES)
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o
 
 IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
-		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS)
+	$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS) $(IO_OBJ)
 
 SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o 
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
