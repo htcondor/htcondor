@@ -74,7 +74,14 @@ extern int	errno;
 /*
 extern int Syscalls;
 */
+#if defined(__cplusplus)
+extern "C" {
+#endif
 extern char *CONDOR_SyscallNames[];
+extern char *_condor_syscall_name(int);
+#if defined(__cplusplus)
+}
+#endif
 
 #if !defined(WIN32)
 #include "syscall_numbers.h"
