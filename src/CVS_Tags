@@ -1,3 +1,19 @@
+03/23/05 V6_7-parallel-2-branch
+   A new branch off V6_7 for parallel universe support.  Created from
+   V6_7-parallel-2-root on the entire V6_7_CODE module.  The old
+   V6_7-parallel-branch was created from a point on V6_7 that wasn't
+   stable and has build problems.  That branch will be merged into
+   here and abandoned ASAP.
+
+03/23/05 V6_7-spool_owner-branch
+   A branch off V6_7 for fixing file ownership in the spool directory
+   for job sandboxes.  Created from V6_7-spool_owner-root on the
+   entire V6_7_CODE module.
+
+03/23/05 V6_7-kerb14-branch
+   A branch off V6_7 for adding support for Kerberos 1.4.x.  Created
+   from V6_7-kerb14-root on the entire V6_7_CODE module.
+
 03/18/05 V6_7-parallel-branch
    A branch for the parallel universe work
 
