@@ -30,8 +30,6 @@ extern "C" int create_port(int *sock);
 extern "C" int reply(Sock *sock, int answer);
 int command_main(Sock *sock, struct sockaddr_in *from, resource_id_t rid);
 
-char	*MySockName;
-
 static char *_FileName_ = __FILE__;
 
 extern struct sockaddr_in From;
@@ -125,6 +123,7 @@ create_udpsock(char* service, int port)
 int
 create_tcpsock(char* service, int port)
 {
+	char   	*MySockName;
 	struct sockaddr_in	sin;
 	struct servent *servp;
 #ifdef SO_LINGER
