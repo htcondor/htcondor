@@ -267,13 +267,12 @@ int Condor_Auth_Kerberos :: init_daemon()
     int            code, rc = TRUE;
     priv_state     priv;
     krb5_keytab    keytab = 0;
+    char * name;
 
     creds_ = (krb5_creds *) malloc(sizeof(krb5_creds));
     memset(creds_, 0, sizeof(krb5_creds));
 
     keytabName_ = param(STR_CONDOR_SERVER_KEYTAB);
-    
-    dprintf(D_ALWAYS, "Acquiring credential for daemon\n");
     
     if (krb_principal_ == NULL) {
         if ((code = krb5_sname_to_principal(krb_context_, 
@@ -284,6 +283,10 @@ int Condor_Auth_Kerberos :: init_daemon()
             goto error;
         }
     }
+    
+    krb5_unparse_name(krb_context_, krb_principal_, &name);
+    dprintf(D_SECURITY, "Acquired credential for daemon principal %s\n", name);
+    free(name);
     
     //------------------------------------------
     // Copy the principal information 
@@ -520,6 +523,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     int               time, message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
     const char * principal;
+    char *       name;  
 
     request.data = 0;
     reply.data   = 0;
@@ -547,7 +551,9 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     // Now, accept the connection
     //------------------------------------------
-    dprintf(D_SECURITY, "Accepting connection\n");
+    krb5_unparse_name(krb_context_, krb_principal_, &name);
+    dprintf(D_SECURITY, "Accepting connection for server %s\n", name);
+    free(name);
     
     //------------------------------------------
     // Get te KRB_AP_REQ message
@@ -902,6 +908,7 @@ void Condor_Auth_Kerberos :: initialize_client_data()
     //}
     
     struct hostent * hp;
+    char * name;
 
     dprintf(D_SECURITY, "Getting server info\n");
     //------------------------------------------
@@ -929,6 +936,10 @@ void Condor_Auth_Kerberos :: initialize_client_data()
                             defaultCondor_,
                             KRB5_NT_SRV_HST, 
                             &server_);
+
+    krb5_unparse_name(krb_context_, server_, &name);
+    dprintf(D_SECURITY, "Server principal is %s\n", name);
+    free(name);
 }
 
 int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
