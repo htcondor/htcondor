@@ -52,7 +52,7 @@ class CondorID {
         @param The FILE * to send to
     */
     inline void Print (FILE * file = stdout) const {
-        fprintf (file, "(%d.%d.%d)", _cluster, _proc, _subproc);
+        fprintf (file, "(%d.%d)", _cluster, _proc);
     }
 
     /// The job cluster

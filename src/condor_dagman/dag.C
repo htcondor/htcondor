@@ -292,14 +292,16 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   }
 				  else {
 					  job->retval = 0;
+					  debug_printf( DEBUG_NORMAL,
+									"Job %s completed successfully.\n",
+									job->GetJobName() );
 				  }
 
                   // if a POST script is specified for the job, run it
                   if (job->_scriptPost != NULL) {
-					  if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-						  printf( "Running POST script of Job %s ...\n",
-								  job->GetJobName() );
-					  }
+					  debug_printf( DEBUG_NORMAL,
+									"Running POST script of Job %s...\n",
+									job->GetJobName() );
 					  // let the script know the job's exit status
                       job->_scriptPost->_retValJob = termEvent->normal
                           ? termEvent->returnValue : -1;
@@ -407,11 +409,8 @@ bool Dag::Submit (Job * job) {
 	// the script exits successfully
 
     if (job->_scriptPre != NULL) {
-		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-			printf( "Running PRE Script of Job " );
-			job->Print();
-			printf( "\n" );
-		}
+		debug_printf( DEBUG_NORMAL, "Running PRE Script of Job %s...\n",
+					  job->GetJobName() );
 		job->_Status = Job::STATUS_PRERUN;
 		_scriptQ->Run( job->_scriptPre );
 		return true;
@@ -437,10 +436,7 @@ Dag::SubmitCondor( Job* job )
 		return false;
 	}
 
-    if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
-        printf ("Submitting Job ");
-        job->Print();
-    }
+	debug_printf( DEBUG_NORMAL, "Submitting Job %s", job->GetJobName() );
   
     CondorID condorID(0,0,0);
     if (!submit_submit (job->GetCmdFile(), condorID)) {
@@ -456,11 +452,11 @@ Dag::SubmitCondor( Job* job )
     job->_Status = Job::STATUS_SUBMITTED;
 	_numJobsSubmitted++;
 
-    if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
-        printf (", ");
-        condorID.Print();
-		printf( "\n" );
-    }
+	if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+		printf( " " );
+		condorID.Print();
+	}
+	debug_printf( DEBUG_NORMAL, "...\n" );
 
     return true;
 }
@@ -490,7 +486,7 @@ Dag::PreScriptReaper( Job* job, int status )
 	}
 	else {
 		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "PRE Script of Job %s completed successfully\n",
+			printf( "PRE Script of Job %s completed successfully.\n",
 					job->GetJobName() );
 		}
 		job->_Status = Job::STATUS_READY;
@@ -524,7 +520,7 @@ Dag::PostScriptReaper( Job* job, int status )
 	}
 	else {
 		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "POST Script of Job %s completed successfully\n",
+			printf( "POST Script of Job %s completed successfully.\n",
 					job->GetJobName() );
 		}
 
@@ -883,16 +879,13 @@ bool Dag::SubmitReadyJobs () {
 		while( tqi->children.Next( childID ) &&
 			   ( _maxJobsSubmitted == 0 ||
 				 _numJobsSubmitted < _maxJobsSubmitted ) ) {
-			if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-				printf( "SubmitReadyJobs() examining JobID #%d ... ",
-						childID );
-			}
+			debug_printf( DEBUG_DEBUG_4,
+						  "SubmitReadyJobs() examining JobID #%d ... ",
+						  childID );
 			Job* child = GetJob( childID );
 			assert( child != NULL );
 			if( child->CanSubmit() ) {
-				if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-					printf( "submittable!\n" );
-				}
+				debug_printf( DEBUG_DEBUG_4, "submittable!\n" );
 				if( !Submit( child ) ) {
 					if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 						printf( "Fatal error submitting job " );

@@ -14,7 +14,7 @@ int debug_printf (debug_level_t level, const char *fmt, ...) {
     va_start (args, fmt);
     ret = vprintf (fmt, args);
     va_end (args);
-    if (DEBUG_LEVEL(DEBUG_DEBUG_1)) debug_fflush();
+	debug_fflush();
   }
   return ret;
 }
