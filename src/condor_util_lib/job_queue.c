@@ -481,6 +481,8 @@ TerminateProc( DBM *Q, PROC_ID *pid, int status )
 			ckpt_file_name =
 				gen_ckpt_name( Spool, v3_ptr->id.cluster, v3_ptr->id.proc, i );
 			(void)unlink( ckpt_file_name );
+			/* Also, try to get rid of it from the checkpoint server */
+			RemoveRemoteFile(v3_ptr->owner, ckpt_file_name);
 		}
 
 	}
