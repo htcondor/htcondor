@@ -2279,11 +2279,10 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		// stdio-update, so force it to fail, resulting in a stop-and-
 		// restart
 		*rsl += "(invalid=bad)";
-
-		if ( attr_value ) {
-			free( attr_value );
-			attr_value = NULL;
-		}
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
@@ -2292,11 +2291,10 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		// stdio-update, so force it to fail, resulting in a stop-and-
 		// restart
 		*rsl += "(invalid=bad)";
-
-		if ( attr_value ) {
-			free( attr_value );
-			attr_value = NULL;
-		}
+	}
+	if ( attr_value ) {
+		free( attr_value );
+		attr_value = NULL;
 	}
 
 	return rsl;
