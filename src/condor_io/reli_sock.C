@@ -36,7 +36,7 @@
 /**************************************************************/
 
 /* 
-   NOTE: All SafeSock constructors initialize with this, so you can
+   NOTE: All ReliSock constructors initialize with this, so you can
    put any shared initialization code here.  -Derek Wright 3/12/99
 */
 void
@@ -322,7 +322,7 @@ ReliSock::get_file(const char *destination)
 		return -1;
 	}
 
-	while (total < (int)filesize &&
+	while ((filesize == -1 || total < (int)filesize) &&
 			(nbytes = get_bytes_nobuffer(buf, MIN(sizeof(buf),filesize-total),0)) > 0) {
 		dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
 		if ((written = ::write(fd, buf, nbytes)) < nbytes) {
@@ -344,7 +344,7 @@ ReliSock::get_file(const char *destination)
 		return -1;
 	}
 
-	if ( total < (int)filesize ) {
+	if ( total < (int)filesize && filesize != -1 ) {
 		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
 			total, filesize);
 		unlink(destination);
