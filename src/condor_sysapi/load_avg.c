@@ -60,10 +60,28 @@ float
 sysapi_load_avg_raw(void)
 {
   struct pst_dynamic d;
+  	/* make numcpus static so we do not have to recompute
+	 * numcpus every time the load average is requested.
+	 * after all, the number of cpus is not going to change!
+	 * we need to multiply the value the HPUX kerenel gives
+	 * us by the number of CPUs, because on SMP HPUX the kernel
+	 * "distributes" the load average across all CPUs.  But
+	 * no other Unix does that, so our startd assumes otherwise.
+	 * So we multiply by the number of CPUs so HPUX SMP load avg
+	 * is reported the same way as other Unixes. -Todd
+	 * /
+  static int numcpus = 0;  
 
-	sysapi_internal_reconfig();
+  if ( numcpus == 0 ) {
+    numcpus = sysapi_ncpus();
+	if ( numcpus < 1 ) {
+		numcpus = 1;
+	}
+  }
+
+  sysapi_internal_reconfig();
   if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-    return d.psd_avg_1_min;
+    return (d.psd_avg_1_min * numcpus);
   }
   else {
     return -1.0;
