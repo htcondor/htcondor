@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-
+#ifndef WIN32
 #include "condor_common.h"
 #include "parallelshadow.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -986,3 +986,4 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 	}
 }
 
+#endif

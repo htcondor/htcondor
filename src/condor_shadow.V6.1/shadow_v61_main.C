@@ -26,7 +26,9 @@
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
+#ifndef WIN32
 #include "parallelshadow.h"
+#endif
 #include "exit.h"
 #include "condor_debug.h"
 #include "condor_version.h"
