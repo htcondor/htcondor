@@ -37,6 +37,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dedicated_scheduler.h"
+#include "shadow_mgr.h"
 #include "scheduler.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -1892,6 +1893,7 @@ DedicatedScheduler::spawnJobs( void )
 	shadow_rec* srec;
 	int pid, i, n, p;
 	PROC_ID id;
+	Shadow* shadow_obj;
 
 	if( ! allocations ) {
 			// Nothing to do
@@ -1900,12 +1902,13 @@ DedicatedScheduler::spawnJobs( void )
 
 		// TODO: handle multiple procs per cluster!
 
-	shadow = param( "SHADOW_MPI" );
-	if( ! shadow ) {
-		dprintf( D_ALWAYS, "ERROR: SHADOW_MPI not defined in config file -- "
-				 "can't spawn MPI jobs, aborting\n" );
+	shadow_obj = scheduler.shadow_mgr.findShadow( ATTR_HAS_MPI );
+	if( ! shadow_obj ) {
+		dprintf( D_ALWAYS, "ERROR: Can't find a shadow with %s -- "
+				 "can't spawn MPI jobs, aborting\n", ATTR_HAS_MPI );
 		return false;
 	}
+	shadow = shadow_obj->path();
 
 		// Get shadow's nice increment:
     char *shad_nice = param( "SHADOW_RENICE_INCREMENT" );
@@ -1970,7 +1973,7 @@ DedicatedScheduler::spawnJobs( void )
 			// performance optimization, not a correctness thing). 
 	}
 
-	free( shadow );
+	delete( shadow_obj );
 	return true;
 }
 
