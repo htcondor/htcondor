@@ -109,10 +109,10 @@ int		timeout;
 		EXCEPT( "setsockopt( SO_KEEPALIVE )" );
 	}
 
-	hostentp = gethostbyname( host );
     if (host[0]=='<'){ /* dhaval */
     	string_to_sin(host,&sin);
     } else {
+		hostentp = gethostbyname( host );
 		if( hostentp == NULL ) {
 		#if defined(vax) && !defined(ultrix)
 			herror( "gethostbyname" );
