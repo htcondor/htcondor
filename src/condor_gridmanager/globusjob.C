@@ -224,6 +224,9 @@ GlobusJob::~GlobusJob()
 	if ( holdReason ) {
 		free( holdReason );
 	}
+	if (daemonCore) {
+		daemonCore->Cancel_Timer( evaluateStateTid );
+	}
 //	if ( ad ) {
 //		delete ad;
 //	}
@@ -477,8 +480,11 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_UNSUBMITTED;
 			} else {
-				daemonCore->Reset_Timer( evaluateStateTid,
-								(lastSubmitAttempt + submitInterval) - now );
+				unsigned int delay = 0;
+				if ( (lastSubmitAttempt + submitInterval) > now ) {
+					delay = (lastSubmitAttempt + submitInterval) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			break;
 		case GM_SUBMIT_SAVE:
@@ -573,8 +579,11 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 					} else {
 						GetCallbacks();
 					}
-					daemonCore->Reset_Timer( evaluateStateTid,
-								(lastProbeTime + probeInterval) - now );
+					unsigned int delay = 0;
+					if ( (lastProbeTime + probeInterval) > now ) {
+						delay = (lastProbeTime + probeInterval) - now;
+					}				
+					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}
 			}
 			break;
@@ -885,8 +894,11 @@ LOG_GLOBUS_ERROR( "***globus_gram_client_job_request()", rc );
 				} else {
 					GetCallbacks();
 				}
-				daemonCore->Reset_Timer( evaluateStateTid,
-								(lastProbeTime + probeInterval) - now );
+				unsigned int delay = 0;
+				if ( (lastProbeTime + probeInterval) > now ) {
+					delay = (lastProbeTime + probeInterval) - now;
+				}				
+				daemonCore->Reset_Timer( evaluateStateTid, delay );
 			}
 			break;
 		case GM_FAILED:
