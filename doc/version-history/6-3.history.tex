@@ -33,6 +33,8 @@ now a seperate \Condor{GridManager} for each user and proxy pair.
 \item
 More Condor DAGMan improvements and bug fixes:
 
+\begin{itemize}
+
 \item
 Added a new event to the Condor userlog at the completion of a POST
 script.  This allows DAGMan, during recovery, to know which POST
@@ -46,6 +48,14 @@ the number of simultaneously running PRE and POST scripts.  The
 setting both \Arg{-MaxPre} and \Arg{-MaxPost} to the same value.
 
 \item
+Added support for a new ``Retry'' parameter in the DAG file, which
+instructs DAGMan to automatically retry a node a configurable number
+of times if its PRE Script, Job, or POST Script fail for any reason.
+
+\item
+Added timestamps to all DAGMan log messages.
+
+\item
 Fixed a bug whereby DAGMan would clean up its lock file without
 creating a rescue file when killed with SIGTERM.
 
@@ -53,6 +63,12 @@ creating a rescue file when killed with SIGTERM.
 DAGMan no longer aborts the DAG if it encounters executable error or
 job aborted events in the userlog, but rather marks the corresponding
 DAG nodes as ``failed'' so the rest of the DAG can continue.
+
+\item
+Fixed a bug whereby DAGMan could crash if it saw userlog events for
+jobs it didn't submit.
+
+\end{itemize}
 
 \end{itemize}
 
