@@ -27,6 +27,7 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include "extra_param_info.h"
+#include "condor_random_num.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -367,6 +368,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 ** only.
 ** Also expand references of the form "left$ENV(middle)right",
 ** replacing $ENV(middle) with getenv(middle).
+** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
 expand_macro( const char *value, BUCKET **table, int table_size, char *self )
@@ -379,11 +381,38 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	while( !all_done ) {		// loop until all done expanding
 		all_done = true;
 
-		if( !self && get_env(tmp, &left, &name, &right) ) {
+		if( !self && get_special_var("$ENV",true,tmp, &left, &name, &right) ) 
+		{
 			all_done = false;
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
 				EXCEPT("Can't find %s in environment!",name);
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+
+		if( !self && get_special_var("$RANDOM_CHOICE",false,tmp, &left, &name, 
+			&right) ) 
+		{
+			all_done = false;
+			StringList entries(name,",");
+			int num_entries = entries.number();
+			tvalue = NULL;
+			if ( num_entries > 0 ) {
+				int rand_entry = (get_random_int() % num_entries) + 1;
+				int i = 0;
+				entries.rewind();
+				while ( (i < rand_entry) && (tvalue=entries.next()) ) {
+					i++;
+				}
+			}
+			if( tvalue == NULL ) {
+				EXCEPT("$RANDOM_CHOICE() macro in config file empty!",name);
 			}
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
@@ -422,35 +451,41 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 }
 
 /*
-** Same as get_var() below, but finds $ENV() references.
+** Same as get_var() below, but finds special references like $ENV().
 */
 int
-get_env( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp )
+get_special_var( const char *prefix, bool only_id_chars, register char *value, 
+		register char **leftp, register char **namep, register char **rightp )
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
+	int prefix_len;
 
+	if ( prefix == NULL ) {
+		return( 0 );
+	}
+
+	prefix_len = strlen(prefix);
 	tvalue = value;
 	left = value;
 
 	for(;;) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strstr( (const char *)tvalue, "$ENV" );
+			value = (char *)strstr( (const char *)tvalue, prefix );
 		}
 		
 		if( value == NULL ) {
 			return( 0 );
 		}
 
-		value += 4;
+		value += prefix_len;
 		if( *value == '(' ) {
-			left_end = value - 4;
+			left_end = value - prefix_len;
 			name = ++value;
 			while( *value && *value != ')' ) {
 				char c = *value++;
-				if( !ISIDCHAR(c) ) {
+				if( !ISIDCHAR(c) && only_id_chars ) {
 					tvalue = name;
 					goto tryagain;
 				}

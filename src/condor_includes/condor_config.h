@@ -65,7 +65,7 @@ extern "C" {
 	int get_var( register char *value, register char **leftp,
 	      register char **namep, register char **rightp, char *self=NULL,
 		  bool getdollardollar=false);
-	int get_env( register char *value, register char **leftp,
+	int get_special_var( const char *prefix, bool only_id_chars, register char *value, register char **leftp,
 				 register char **namep, register char **rightp);
 	void lower_case( char *str );
 }
