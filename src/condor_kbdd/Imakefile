@@ -9,9 +9,8 @@ UTIL_LIB = ../condor_util_lib/util_lib.a
 C_PLUS_UTIL_LIB = ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-XDR_LIB = ../condor_xdr_lib/xdr_lib.a
 
-STD_LIB = $(DAEMON_CORE_LIB) $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CEDAR_LIB) $(XDR_LIB)
+STD_LIB = $(DAEMON_CORE_LIB) $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CEDAR_LIB) 
 
 #if IS_SGI_IRIX53
 X_LIB = -lX11 -lXext
