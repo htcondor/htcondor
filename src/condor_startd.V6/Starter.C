@@ -96,13 +96,63 @@ Starter::reallykill( int signo, int pg )
 	}
 #endif
 
-	for (errno = 0; (ret = stat(s_name, &st)) < 0; errno = 0) {
-#if !defined(WIN32)
-		if (errno == ETIMEDOUT)
+		/* 
+		   On sites where the condor binaries are installed on NFS,
+		   and the OS is foolish enough to try to page text segments
+		   of programs to the binary even on NFS, we're might get a
+		   segv in the starter if the NFS server is down.  So, we want
+		   to try to stat the binary here to make sure the NFS server
+		   is alive and well.  There are a few cases:
+		   1) Hard NFS mount:  stat will block until things are well.
+		   2) Soft NFS mount:  stat will return right away with some
+ 		      platform dependent errno.
+		   3) starter binary has been moved so stat fails with ENOENT
+		      or ENOTDIR (once the stat returns).
+		   4) Permissions have been screwed so stat fails with EACCES.
+		   So, if stat succeeds, all is well, and we do the kill.
+		   If stat fails with ENOENT or ENOTDIR, we assume the server
+		     is alive, but the binary has been moved, so we do the 
+		     kill.  Similarly with EACCES.
+		   If stat fails with anything else, we ASSUME this is a soft
+  		     mounted NFS volume and the server is down.  So, we poll 
+		     every 15 seconds until the stat succeeds or fails with
+		     a known errno and dprintf to let the world know.
+			 
+		   Added comments, polling, check for known errnos and 
+		   removed EXCEPT  -Derek Wright, 1/2/98
+		 */
+	int needs_stat = TRUE, first_time = TRUE;
+	while( needs_stat ) {
+		errno = 0;
+		ret = stat(s_name, &st);
+		if( ret >=0 ) {
+			needs_stat = FALSE;
 			continue;
-#endif
-		EXCEPT( "Starter::kill(%d): cannot stat <%s> - errno = %d\n",
-				signo, s_name, errno);
+		}
+		switch( errno ) {
+		case EINTR:
+		case ETIMEDOUT:
+			break;
+		case ENOENT:
+		case ENOTDIR:
+		case EACCES:
+			needs_stat = FALSE;
+			break;
+		case ENOLINK:
+			dprintf( D_ALWAYS, 
+					 "Can't stat binary (%s), file server probably down.\n",
+					 s_name );
+			if( first_time ) {
+				dprintf( D_ALWAYS, 
+						 "Will retry every 15 seconds until server is back up.\n" );
+				first_time = FALSE;
+			}
+			sleep(15);
+			break;
+		default:
+			EXCEPT( "stat(%s) failed with unexpected errno (%d)", 
+					s_name, errno );
+		}
 	}
 
 	if( pg ) {
