@@ -28,4 +28,4 @@
 #define EgcsLibc concat(EgcsPath,/libgcc.a)
 
 #define VendorCTestFlags -Aa -Ae
-#define VendorCPPTestFlags -Aa -Ae
+#define VendorCPPTestFlags -Aa -ext
