@@ -21,8 +21,12 @@
 #define _uname __hide__uname
 #define profil __hide_profil
 #define mount __hide_mount
-#include "../condor_includes/_condor_fix_types.h"
-#endif 
+#define __EXTENSIONS__
+#if defined(Solaris26)
+#	define _LARGEFILE64_SOURCE
+#endif /* Solaris 2.6 */
+#include <sys/types.h>
+#endif /* Solaris */
 
 #include "syscall_numbers.h"
 #include "syscall_macros.h"
