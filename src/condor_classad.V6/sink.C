@@ -153,6 +153,12 @@ Unparse( string &buffer, const Value &val )
 			double	r;
 			val.IsRealValue( r );
 			sprintf( tempBuf, "%g", r );
+			if (strchr(tempBuf, '.') == NULL) {
+				// There is no decimal in there, so when
+				// we reparse this later, we'll think it's
+				// an integer unless we tack an a .0
+				strcat(tempBuf, ".0");
+			}
 			buffer += tempBuf;
 			return;
 		}
