@@ -1089,6 +1089,7 @@ gmState=GM_SUBMIT;
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
+				SetJobContact( NULL );
 			}
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
