@@ -171,16 +171,25 @@ void
 ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 {
 	if( coll_sock ) {
-		send_classad_to_sock( coll_sock, public_ad, private_ad );
-		dprintf( D_FULLDEBUG, "Sent update to the collector (%s)\n", 
-				 collector_host );
+		if( send_classad_to_sock(coll_sock, public_ad, private_ad) ) {
+			dprintf( D_FULLDEBUG, "Sent UDP update to the collector (%s)\n", 
+					 collector_host );
+		} else {
+			dprintf( D_ALWAYS, "Error sending UDP update to the collector (%s)\n", 
+					 collector_host );
+		}
 	}  
 
 		// If we have an alternate collector, send public CA there.
 	if( view_sock ) {
-		send_classad_to_sock( view_sock, public_ad, NULL );
-		dprintf( D_FULLDEBUG, 
-				 "Sent update to the condor_view host (%s)\n",
-				 condor_view_host );
+		if( send_classad_to_sock(view_sock, public_ad, NULL) ) {
+			dprintf( D_FULLDEBUG, 
+					 "Sent UDP update to the condor_view host (%s)\n",
+					 condor_view_host );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "Error sending UDP update to the condor_view host (%s)\n",
+					 condor_view_host );
+		}
 	}
 }
