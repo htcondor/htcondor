@@ -79,6 +79,11 @@ submit before trying to submit any other jobs.
 
 \begin{itemize}
 
+\item Fixed the default value of \Macro{OPSYS} in the MacOSX version
+  of Condor.
+  Once again, Condor reports \verb@OSX@ for all versions of MacOSX.
+  This bug was introduced in version 6.7.3 of Condor.
+
 \item Fixed a bug in \Condor{dagman} that caused it to be killed if
 the \Expr{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} parameter was set to too
 high a value.
