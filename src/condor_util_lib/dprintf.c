@@ -636,27 +636,6 @@ _condor_dprintf_exit()
 }
 
 
-#if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
-/*
-** Initialize the DebugFP to a specific file number.  */
-void
-dprintf_init( int fd )
-{
-	FILE *fp;
-
-	errno = 0;
-	fp = fdopen( fd, "a" );
-
-	if( fp != NULL ) {
-		DebugFP = fp;
-	} else {
-		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
-		_condor_dprintf_exit();
-	}
-}
-#endif /* ! LOSE32 */
-
-
 /*
   We want these all to have _condor in front of them for inside the
   user job, but the rest of the Condor code just calls the regular

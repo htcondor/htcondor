@@ -82,7 +82,6 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int (*DebugId)(FILE *);		/* set header message */
 
-void dprintf_init ( int fd );
 void dprintf ( int flags, char *fmt, ... );
 void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
