@@ -119,13 +119,6 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE --success; FALSE -- failure
     //------------------------------------------
     
-    int get_server_info();
-    //------------------------------------------
-    // PURPOSE: Get server info
-    // REQUIRE: NONE
-    // RETURNS: true -- success; false -- failure
-    //------------------------------------------
-    
     int send_request(krb5_data * request);
     //------------------------------------------
     // PURPOSE: Send an authentication request 
@@ -134,11 +127,11 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     //          KERBEROS_DENY  -- denied
     //------------------------------------------
     
-    void initialize_client_data();
+    int init_server_info();
     //------------------------------------------
     // PURPOSE: intialize default cache name and 
     // REQUIRE: NONE
-    // RETURNS: NONE
+    // RETURNS: 1 -- success; -1:  failure
     //------------------------------------------
     
     int forward_tgt_creds(krb5_creds      * creds,
@@ -188,7 +181,6 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     krb5_keyblock *    sessionKey_;       // Session key
     krb5_creds    *    creds_;            // credential
     char *             ccname_;           // FILE:/krbcc_name
-    char *             defaultCondor_;    // Default condor 
     char *             defaultStash_;     // Default stash location
     char *             keytabName_;       // keytab to use   
 };
