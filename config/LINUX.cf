@@ -83,8 +83,6 @@ statically linked to avoid problems */
 
 #define StaticFlag	-static
 
-#define YACC byacc
-
 
 /**************************************************************************
 ** Include Arch-specific config files
