@@ -55,6 +55,7 @@
 #define GM_FAILED				16
 #define GM_DELETE				17
 #define GM_CLEAR_REQUEST		18
+#define GM_HOLD					19
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -845,6 +846,15 @@ int GlobusJob::doEvaluateState()
 			abortLogged = false;
 			evictLogged = false;
 			gmState = GM_UNSUBMITTED;
+			break;
+		case GM_HOLD:
+			// TODO: what happens if we learn here that the job is removed?
+			condorState = HELD;
+			done = addScheddUpdateAction( this, UA_HOLD_JOB, GM_HOLD );
+			if ( !done ) {
+				break;
+			}
+			DeleteJob( this );
 			break;
 		default:
 			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,

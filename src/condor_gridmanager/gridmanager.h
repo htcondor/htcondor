@@ -25,6 +25,7 @@
 #define UA_LOG_EVICT_EVENT			0x0200
 #define UA_UPDATE_STDOUT_SIZE		0x0400
 #define UA_UPDATE_STDERR_SIZE		0x0800
+#define UA_HOLD_JOB					0x1000
 
 extern char *gramCallbackContact;
 extern char *ScheddAddr;

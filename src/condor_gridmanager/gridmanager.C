@@ -599,7 +599,8 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
-		if ( curr_action->actions & UA_UPDATE_CONDOR_STATE ) {
+		if ( (curr_action->actions & UA_UPDATE_CONDOR_STATE) ||
+			 (curr_action->actions & UA_HOLD_JOB) ) {
 			int curr_status;
 			GetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
@@ -607,22 +608,23 @@ doContactSchedd()
 
 			// If the job is marked as REMOVED or HELD on the schedd, don't
 			// change it. Instead, modify our state to match it.
-			if ( curr_status != REMOVED && curr_status != HELD ) {
-				// Right now, if we have a job marked as HELD, it's because
-				// the schedd told us it was. In this case, we don't want
+			if ( curr_status == REMOVED || curr_status == HELD ) {
+				curr_job->UpdateCondorState( curr_status );
+			} else {
+				// If we're actively initiating a hold, always update the
+				// the job status on the schedd. Otherwise, if we have a
+				// job marked as HELD, it's because of an earlier hold
+				// (either by us or the user). In this case, we don't want
 				// to undo a subsequent unhold done on the schedd. Instead,
 				// we keep our HELD state, kill the job, forget about it,
 				// then relearn about it later (this makes it easier to
 				// ensure that we pick up changed job attributes).
-				// Eventually, we'll be able to initiate holds. In that
-				// situation, we'll want to update the schedd state.
-				if ( curr_job->condorState != HELD ) {
+				if ( curr_job->condorState != HELD ||
+					 (curr_action->actions & UA_HOLD_JOB) ) {
 					SetAttributeInt( curr_job->procID.cluster,
 									 curr_job->procID.proc,
 									 ATTR_JOB_STATUS, curr_job->condorState );
 				}
-			} else {
-				curr_job->UpdateCondorState( curr_status );
 			}
 		}
 
