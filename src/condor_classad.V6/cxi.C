@@ -28,7 +28,9 @@
 #else
 #include <ctype.h>
 #include "classad_package.h"
+#if defined WANT_NAMESPACES
 using namespace classad;
+#endif
 #endif
 
 enum Commands {
