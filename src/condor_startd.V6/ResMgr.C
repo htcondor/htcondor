@@ -915,6 +915,9 @@ ResMgr::final_update( void )
 		return;
 	}
 	walk( &(Resource::final_update) );
+	if (m_attr) {
+		m_attr->final_idle_dprintf();
+	}
 }
 
 

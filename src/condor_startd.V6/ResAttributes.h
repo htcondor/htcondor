@@ -67,6 +67,10 @@ public:
 		// Compute kflops and mips on the given resource
 	void benchmark( Resource*, int force = 0 );	
 
+		// On shutdown, print one last D_IDLE debug message, so we don't
+		// lose statistics when the startd is restarted.
+	void final_idle_dprintf();
+
 		// Functions to return the value of shared attributes
 	int				num_cpus()	{ return m_num_cpus; };
 	int				phys_mem()	{ return m_phys_mem; };
@@ -90,7 +94,8 @@ private:
 	int				m_mips;
 	int				m_kflops;
 	int				m_last_benchmark;   // Last time we computed benchmarks
-	int				m_last_keypress; 	// Last time m_idle decreased
+	time_t			m_last_keypress; 	// Last time m_idle decreased
+	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
 		// Static info

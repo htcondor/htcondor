@@ -29,7 +29,8 @@ MachAttributes::MachAttributes()
 	m_mips = -1;
 	m_kflops = -1;
 	m_last_benchmark = 0;
-	m_last_keypress = -1;
+	m_last_keypress = time(0)-1;
+	m_seen_keypress = false;
 
 	m_arch = NULL;
 	m_opsys = NULL;
@@ -135,6 +136,8 @@ MachAttributes::compute( amask_t how_much )
 		if (tmp) {
 			m_idle_interval = atoi(tmp);
 			free(tmp);
+		} else {
+			m_idle_interval = -1;
 		}
 	}
 
@@ -161,14 +164,21 @@ MachAttributes::compute( amask_t how_much )
 		m_clock_day = the_time->tm_wday;
 
 		if (m_last_keypress < my_timer - m_idle) {
-			if (m_last_keypress > 0 && m_idle_interval >= 0) {
+			if (m_idle_interval >= 0) {
 				int duration = my_timer - m_last_keypress;
 				if (duration > m_idle_interval) {
-					dprintf(D_IDLE, "end idle interval of %d sec.\n",
-							duration);
+					if (m_seen_keypress) {
+						dprintf(D_IDLE, "end idle interval of %d sec.\n",
+								duration);
+					} else {
+						dprintf(D_IDLE,
+								"first keyboard event %d sec. after startup\n",
+								duration);
+					}
 				}
 			}
 			m_last_keypress = my_timer;
+			m_seen_keypress = true;
 		}
 	}
 
@@ -176,6 +186,19 @@ MachAttributes::compute( amask_t how_much )
 		m_condor_load = resmgr->sum( &(Resource::condor_load) );
 		if( m_condor_load > m_load ) {
 			m_condor_load = m_load;
+		}
+	}
+}
+
+void
+MachAttributes::final_idle_dprintf()
+{
+	if (m_idle_interval >= 0) {
+		time_t my_timer = time(0);
+		int duration = my_timer - m_last_keypress;
+		if (duration > m_idle_interval) {
+			dprintf(D_IDLE, "keyboard idle for %d sec. before shutdown\n",
+					duration);
 		}
 	}
 }
