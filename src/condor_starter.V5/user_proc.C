@@ -295,7 +295,7 @@ UserProc::link_to_executable( char *src, int & error_code )
 	status =  symlink( src, cur_ckpt );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS,
-			"Can't create sym link from \"%s\" to \"%s\", errno = %d",
+			"Can't create sym link from \"%s\" to \"%s\", errno = %d\n",
 			src, cur_ckpt, errno
 		);
 	} else {
