@@ -9,9 +9,17 @@
   we have to hide that definition here and provide our own.  -- mike
 */
 
+#if defined(LINUX)
+#define __USE_GNU
+#endif
+
 #define strdup _hide_strdup
 #include <string.h>
 #undef strdup
+
+#if defined(LINUX)
+#undef __USE_GNU
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
