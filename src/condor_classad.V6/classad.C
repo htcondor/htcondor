@@ -878,9 +878,8 @@ EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
 	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
 }
 
-#if defined( EXPERIMENTAL )
 bool ClassAd::
-GetExternalReferences( const ExprTree *tree, References &refs )
+GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 {
     EvalState       state;
 
@@ -888,13 +887,13 @@ GetExternalReferences( const ExprTree *tree, References &refs )
     state.curAd = (ClassAd*)tree->GetParentScope( );
 	if( !state.curAd ) state.curAd = this;
 	
-    return( _GetExternalReferences( tree, this, state, refs ) );
+    return( _GetExternalReferences( tree, this, state, refs, fullNames ) );
 }
 
 
 bool ClassAd::
 _GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
-	EvalState &state, References& refs )
+	EvalState &state, References& refs, bool fullNames )
 {
     switch( expr->GetKind( ) ) {
         case LITERAL_NODE:
@@ -916,16 +915,32 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 					return false;				// NAC
 				}								// NAC
             } else {
-                if( !tree->Evaluate( state, val ) ) return( false );
+                if( !tree->Evaluate( state, val ) ) {
+                    return( false );
+                }
 
                     // if the tree evals to undefined, the external references
                     // are in the tree part
                 if( val.IsUndefinedValue( ) ) {
-                    return( _GetExternalReferences( tree, ad, state, refs ));
+                    if (fullNames) {
+                        string fullName;
+                        if (tree != NULL) {
+                            ClassAdUnParser unparser;
+                            unparser.Unparse(fullName, tree);
+                            fullName += ".";
+                        }
+                        fullName += attr;
+                        refs.insert( fullName );
+                        return true;
+                    } else {
+                        return( _GetExternalReferences( tree, ad, state, refs, fullNames ));
+                    }
                 }
                     // otherwise, if the tree didn't evaluate to a classad,
                     // we have a problem
-                if( !val.IsClassAdValue( start ) ) return( false );
+                if( !val.IsClassAdValue( start ) )  {
+                    return( false );
+                }
             }
                 // lookup for attribute
 			ClassAd *curAd = state.curAd;
@@ -942,7 +957,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
                 case EVAL_OK: {
                         // attr is internal; find external refs in result
-					bool rval=_GetExternalReferences(result,ad,state,refs);
+					bool rval=_GetExternalReferences(result,ad,state,refs,fullNames);
 					state.curAd = curAd;
 					return( rval );
 				}
@@ -958,13 +973,13 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             Operation::OpKind	op;
             ExprTree    		*t1, *t2, *t3;
             ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
-            if( t1 && !_GetExternalReferences( t1, ad, state, refs ) ) {
+            if( t1 && !_GetExternalReferences( t1, ad, state, refs, fullNames ) ) {
                 return( false );
             }
-            if( t2 && !_GetExternalReferences( t2, ad, state, refs ) ) {
+            if( t2 && !_GetExternalReferences( t2, ad, state, refs, fullNames ) ) {
                 return( false );
             }
-            if( t3 && !_GetExternalReferences( t3, ad, state, refs ) ) {
+            if( t3 && !_GetExternalReferences( t3, ad, state, refs, fullNames ) ) {
                 return( false );
             }
             return( true );
@@ -978,7 +993,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
-                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
 					return( false );
 				}
             }
@@ -993,7 +1008,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
-                if( !_GetExternalReferences( itr->second, ad, state, refs )) {
+                if( !_GetExternalReferences( itr->second, ad, state, refs, fullNames )) {
 					return( false );
 				}
             }
@@ -1008,7 +1023,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
-                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
 					return( false );
 				}
             }
@@ -1020,6 +1035,8 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return false;
     }
 }
+
+#if defined( EXPERIMENTAL )
 
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, PortReferences &refs )

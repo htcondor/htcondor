@@ -33,8 +33,9 @@
 
 BEGIN_NAMESPACE( classad )
 
+typedef std::set<std::string, CaseIgnLTStr> References;
+
 #if defined( EXPERIMENTAL )
-	typedef std::set<std::string, CaseIgnLTStr> References;
 	typedef std::map<const ClassAd*, References> PortReferences;
 #include "rectangle.h"
 #endif
@@ -478,8 +479,9 @@ e		*/
 		bool FlattenAndInline( const ExprTree* expr, Value& val,	// NAC
 							   ExprTree *&fexpr )const;				// NAC
 		
+		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames );
+
 #if defined( EXPERIMENTAL )
-		bool GetExternalReferences( const ExprTree *tree, References &refs );
 		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
 					const std::string &allowed, const References &imported );
@@ -566,9 +568,10 @@ e		*/
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
 
-#if defined( EXPERIMENTAL )
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
-					EvalState &, References& );
+					EvalState &, References&, bool fullNames );
+
+#if defined( EXPERIMENTAL )
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, PortReferences& );
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
