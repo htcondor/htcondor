@@ -1279,7 +1279,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 							"\nthis feature is not supported by the version"
 							" of the Condor Central Manager\n"
 							"currently installed.  Please ask your site's"
-							" condor administrator to upgrade the\n"
+							" Condor administrator to upgrade the\n"
 							"Central Manager to a more recent revision.\n");
 				}
 				fprintf(email,
