@@ -478,6 +478,9 @@ class ProcAPI {
   static long unsigned boottime; // this is used only in linux.  It
 		// represents the number of seconds after the epoch that the
 		// machine was booted.  Used in age calculation.
+  static long unsigned boottime_expiration; // the boottime value will
+		// change if the time is adjusted on this machine (by ntpd or afs,
+		// for example), so we recompute it when our value expires
 
 #endif // LINUX
 

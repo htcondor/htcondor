@@ -34,6 +34,7 @@ pidlistPTR ProcAPI::pidList	= NULL;
 int ProcAPI::pagesize		= 0;
 #ifdef LINUX
 long unsigned ProcAPI::boottime	= 0;
+long unsigned ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
 #include "ntsysinfo.h"
@@ -431,9 +432,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// that the process started...convert jiffies to seconds.
 	start_time = jiffie_start_time / 100;
   
-		// check to see if we've gotten the system boot time before,
-		// and if not, get it:
-	if( boottime == 0 ) {
+	now = secsSinceEpoch();
+
+		// get the system boot time periodically, since it may change
+		// if the time on the machine is adjusted
+	if( boottime_expiration <= now ) {
 		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
@@ -441,7 +444,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			}
 			sscanf( s, "%s %lu", junk, &boottime );
 			fclose( fp );
-		} else {
+			boottime_expiration = now+60; // update once every minute
+		} else if (boottime == 0) {
+				// we failed to get the boottime, so we must abort
+				// unless we have an old boottime value to fall back on
 			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat "
 					 "for btime.\n" );
 			delete pi; 
@@ -453,7 +459,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// now we've got the boottime, the start time, and can get
 		// current time.  Throw 'em all together:  (yucky)
 
-	now = secsSinceEpoch();
 	pi->age = (now - boottime) - start_time;
 
 		// There seems to be something weird about jiffie_start_time
