@@ -244,9 +244,15 @@ fetchAds (ClassAdList &adList, const char *poolName)
     QueryResult result;
     ClassAd     queryAd, *ad;
 
-		// This will return the correct addr for the local pool's
-		// collector if poolName is NULL.
-	pool = get_collector_addr( poolName );
+	if( is_valid_sinful(poolName) ) {
+			// We already have a sinful string, use that.
+		pool = poolName;
+	} else {
+			// Assume we have a hostname, and try to find a collector
+			// with it. This will return the correct addr for the
+			// local pool's collector if poolName is NULL.
+		pool = get_collector_addr( poolName );
+	}
 	if( ! pool ) {
 			// We were passed a bogus poolName, abort gracefully
 		return Q_NO_COLLECTOR_HOST;
