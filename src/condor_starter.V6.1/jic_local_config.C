@@ -61,7 +61,7 @@ JICLocalConfig::getLocalJobAd( void )
 	job_ad = new ClassAd();
 
 		// first, things we absolutely need
-	if( !getUniverse(job_ad, key) ) { 
+	if( !getUniverse(job_ad) ) { 
 		return false;
 	}
 	if( !getConfigString(job_ad, key, 1, ATTR_JOB_CMD, "executable")) {
@@ -189,7 +189,7 @@ JICLocalConfig::getConfigAttr( ClassAd* ad, const char* key, bool warn,
 
 
 bool
-JICLocalConfig::getUniverse( ClassAd* ad, const char* key ) 
+JICLocalConfig::getUniverse( ClassAd* ad ) 
 {
 	char* tmp;
 	char param_name[256];

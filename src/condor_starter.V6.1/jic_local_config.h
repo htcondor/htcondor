@@ -60,7 +60,7 @@ private:
 						bool is_string, const char* attr,
 						const char* alt_name );
 
-	bool getUniverse( ClassAd* ad, const char* key );
+	bool getUniverse( ClassAd* ad );
 
 		// Private data
 	char* key;
