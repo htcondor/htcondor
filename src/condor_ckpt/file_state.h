@@ -222,17 +222,16 @@ public:
 	/** A checkpoint has resumed, so open everything up again. */
 	void	resume();
 
-	/** Returns the real fd corresponding to this virtual
-	    fd.  If the mapping is non trivial, -1 is returned. */
-	int	map_fd_hack( int fd );
+	/** Converts a mapped fd into an unmapped fd.
+	    If the mapping is non-trivial, -1 is returned. */
+	int	get_unmapped_fd( int fd );
 
-	/** Returns true if this file can be accessed by local
-	    syscalls.  Returns false otherwise. */
-	int	local_access_hack( int fd );
+	/** Returns true if this fd should be access local */
+	int	is_fd_local( int fd );
 
-	/** Resolve this incomplete name into a physical url */
-	void	resolve_name( const char *incomplete_name, char *url );
-
+	/** Returns true if this file name should be accessed locally */
+	int	is_file_name_local( const char *name );
+	
 private:
 
 	int	resume( int fd );

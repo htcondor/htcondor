@@ -19,7 +19,7 @@ public:
 	virtual int read(int offset, char *data, int length);
 	virtual int write(int offset, char *data, int length);
 
-	virtual int local_access_hack();
+	virtual int is_file_local();
 };
 
 #endif

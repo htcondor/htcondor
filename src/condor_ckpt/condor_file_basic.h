@@ -30,7 +30,7 @@ public:
 	virtual int	get_size();
 	virtual char	*get_url();
 
-	virtual int	map_fd_hack();
+	virtual int	get_unmapped_fd();
 
 protected:
 	int	fd;		// the real fd used by this file

@@ -1609,26 +1609,15 @@ output_switch( struct node *n )
 	for( p=n->param_list->next; p!=n->param_list; p=p->next ) {
 		if( p->is_mapped ) {
 			printf("\tif( MappingFileDescriptors() ) {\n");
-			printf("\t\tdo_local = _condor_file_is_local( %s );\n",p->id);
-			printf("\t\t%s = _condor_file_table_map( %s );\n",p->id,p->id);
+			printf("\t\tdo_local = _condor_is_fd_local( %s );\n",p->id);
+			printf("\t\t%s = _condor_get_unmapped_fd( %s );\n",p->id,p->id);
 			printf("\t}\n\n");
 		}
 		if( p->is_map_name ) {
-			printf("\tchar url[_POSIX_PATH_MAX];\n");
-			printf("\tif( MappingFileDescriptors() ) {\n");
-			printf("\t\t_condor_file_table_resolve( %s, url );\n",p->id);
-			printf("\t\tif(!strncmp(url,\"local:\",6)) do_local=1;\n");
-			printf("\t\t%s = strchr(url,':')+1;\n",p->id);
-			printf("\t}\n");
+			printf("\tdo_local = _condor_is_file_name_local( %s );\n\n",p->id);
 		}
 		if( p->is_map_name_two ) {
-			printf("\tint do_local_two=0;\n");
-			printf("\tchar url_two[_POSIX_PATH_MAX];\n");
-			printf("\tif( MappingFileDescriptors() ) {\n");
-			printf("\t\t_condor_file_table_resolve( %s, url_two );\n",p->id);
-			printf("\t\tif(!strncmp(url_two,\"local:\",6)) do_local_two=1;\n");
-			printf("\t\t%s = strchr(url_two,':')+1;\n",p->id);
-			printf("\t}\n");
+			printf("\tint do_local_two = _condor_is_file_name_local( %s );\n\n",p->id);
 			printf("\tif( do_local!=do_local_two ) {\n");
 			printf("\t\terrno = EXDEV;\n");
 			printf("\t\t_condor_signals_enable();\n");

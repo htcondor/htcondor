@@ -97,7 +97,7 @@ int CondorFileRemote::ftruncate( size_t s )
 
 /* This file cannot be accessed locally */
 
-int CondorFileRemote::local_access_hack()
+int CondorFileRemote::is_file_local()
 {
 	return 0;
 }

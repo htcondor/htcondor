@@ -144,7 +144,7 @@ char *CondorFileBasic::get_url()
 	return url;
 }
 
-int CondorFileBasic::map_fd_hack()
+int CondorFileBasic::get_unmapped_fd()
 {
 	return fd;
 }

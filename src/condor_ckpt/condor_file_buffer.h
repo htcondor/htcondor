@@ -43,8 +43,8 @@ public:
 	virtual int	get_size();
 	virtual char	*get_url();
 
-	virtual int map_fd_hack();
-	virtual int local_access_hack();
+	virtual int get_unmapped_fd();
+	virtual int is_file_local();
 
 private:
 	void trim();

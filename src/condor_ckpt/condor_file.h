@@ -58,20 +58,8 @@ public:
 	virtual int	get_size()=0;
 	virtual char	*get_url()=0;
 
-	/**
-	Return the real fd associated with this file.
-	Returns -1 if the mapping is not trivial.
-	*/
-
-	virtual int map_fd_hack()=0;
-
-	/**
-	Returns true if this file can be accessed by
-	referring to the fd locally.  Returns false
-	otherwise.
-	*/
-
-	virtual int local_access_hack()=0;
+	virtual int get_unmapped_fd()=0;
+	virtual int is_file_local()=0;
 };
 
 #endif

@@ -23,7 +23,7 @@ public:
 	virtual int ioctl( int cmd, int arg );
 	virtual int ftruncate( size_t length );
 
-	virtual int local_access_hack();
+	virtual int is_file_local();
 };
 
 #endif

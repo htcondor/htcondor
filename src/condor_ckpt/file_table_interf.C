@@ -32,28 +32,34 @@
 
 extern "C" {
 
-int _condor_file_table_map( int user_fd )
+int _condor_get_unmapped_fd( int user_fd )
 {
+	_condor_file_table_init();
 	if( MappingFileDescriptors() ) {
-		return FileTab->map_fd_hack(user_fd);
+		return FileTab->get_unmapped_fd(user_fd);
 	} else {
 		return user_fd;
 	}
 }
 
-int _condor_file_is_local( int user_fd )
+int _condor_is_fd_local( int user_fd )
 {
+	_condor_file_table_init();
 	if( MappingFileDescriptors() ) {
-		return FileTab->local_access_hack(user_fd);
+		return FileTab->is_fd_local(user_fd);
 	} else {
 		return LocalSysCalls();
 	}
 }
 
-void _condor_file_table_resolve( const char *incomplete_name, char *url )
+int _condor_is_file_name_local( const char *name )
 {
 	_condor_file_table_init();
-	FileTab->resolve_name( incomplete_name, url );
+	if( MappingFileDescriptors() ) {
+		return FileTab->is_file_name_local(name);
+	} else {
+		return LocalSysCalls();
+	}
 }
 
 void _condor_file_table_dump()

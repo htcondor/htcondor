@@ -343,14 +343,14 @@ char * CondorFileBuffer::get_url()
 	return original->get_url();
 }
 
-int CondorFileBuffer::map_fd_hack()
+int CondorFileBuffer::get_unmapped_fd()
 {
-	return original->map_fd_hack();
+	return original->get_unmapped_fd();
 }
 
-int CondorFileBuffer::local_access_hack()
+int CondorFileBuffer::is_file_local()
 {
-	return original->local_access_hack();
+	return original->is_file_local();
 }
 
 /*

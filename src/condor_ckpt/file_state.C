@@ -347,33 +347,6 @@ int CondorFileTable::count_file_uses( CondorFile *f )
 }
 
 /*
-Convert an incomplete logical name into a physical url.  This is a public function which may be used by the system call switches.  This function will not fail.
-*/
-
-void CondorFileTable::resolve_name( const char *incomplete_name, char *url )
-{
-	char logical_name[_POSIX_PATH_MAX];
-
-	// First get the incomplete name into a complete path
-
-	complete_path( incomplete_name, logical_name );
-
-	// Now look to see if the file is already open.
-	// If it is, use that url.
-
-	int match = find_logical_name( logical_name );
-	if(match!=-1) {
-		resume(match);
-		strcpy( url, pointers[match]->file->get_url() );
-		return;
-	}
-
-	// If that fails, then go through the whole resolution process.
-
-	lookup_url( logical_name, url );
-}
-
-/*
 Convert a logical file name into a physical url by any and all methods available.  This function will not fail -- it will always fall back on something reasonable.  This is a private function which expects an already compelted path name.
 */
 
@@ -1019,8 +992,8 @@ int CondorFileTable::poll( struct pollfd *fds, int nfds, int timeout )
 	}
 
 	for( int i=0; i<nfds; i++ ) {
-		if(_condor_file_is_local(fds[i].fd)) {
-			realfds[i].fd = _condor_file_table_map(fds[i].fd);
+		if(_condor_is_fd_local(fds[i].fd)) {
+			realfds[i].fd = _condor_get_unmapped_fd(fds[i].fd);
 			realfds[i].events = fds[i].events;
 		} else {
 			_condor_warning("poll() is not supported for remote files");
@@ -1062,9 +1035,9 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	/* For each fd, put its mapped equivalent in the appropriate set */
 
 	for( fd=0; fd<n; fd++ ) {
-		fd_real = _condor_file_table_map(fd);
+		fd_real = _condor_get_unmapped_fd(fd);
 		if( fd_real>=0 ) {
-			if( _condor_file_is_local(fd) ) {
+			if( _condor_is_fd_local(fd) ) {
 				if( r && FD_ISSET(fd,r) )
 					FD_SET(fd_real,&r_real);
 				if( w && FD_ISSET(fd,w) )
@@ -1097,8 +1070,8 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	/* Set the bit for each fd whose real equivalent is set. */
 
 	for( fd=0; fd<n; fd++ ) {
-		fd_real = _condor_file_table_map(fd);
-		if( fd_real>=0 && _condor_file_is_local(fd) ) {
+		fd_real = _condor_get_unmapped_fd(fd);
+		if( fd_real>=0 && _condor_is_fd_local(fd) ) {
 			if( r && FD_ISSET(fd_real,&r_real) )
 				FD_SET(fd,r);
 			if( w && FD_ISSET(fd_real,&w_real) )
@@ -1205,16 +1178,46 @@ int CondorFileTable::resume( int fd )
 	return 0;
 }
 
-int CondorFileTable::map_fd_hack( int fd )
+int CondorFileTable::get_unmapped_fd( int fd )
 {
 	if( resume(fd)<0 ) return -1;
-	return pointers[fd]->file->map_fd_hack();
+	return pointers[fd]->file->get_unmapped_fd();
 }
 
-int CondorFileTable::local_access_hack( int fd )
+int CondorFileTable::is_fd_local( int fd )
 {
 	if( resume(fd)<0 ) return -1;
-	return pointers[fd]->file->local_access_hack();
+	return pointers[fd]->file->is_file_local();
+}
+
+int CondorFileTable::is_file_name_local( const char *incomplete_name )
+{
+	char url[_POSIX_PATH_MAX];
+	char logical_name[_POSIX_PATH_MAX];
+
+	// Convert the incomplete name into a complete path
+
+	complete_path( incomplete_name, logical_name );
+
+	// Now look to see if the file is already open.
+	// If it is, ask the file if it is local.
+
+	int match = find_logical_name( logical_name );
+	if(match!=-1) {
+		resume(match);
+		return pointers[match]->file->is_file_local();
+	}
+
+	// Otherwise, resolve the url by normal methods.
+	lookup_url( logical_name, url );
+
+	// Finally, return true if the url begins with "local"
+
+	if(!strncmp(url,"local:",6)) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 

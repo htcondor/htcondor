@@ -46,7 +46,7 @@ int CondorFileLocal::write(int pos, char *data, int length) {
 	return result;
 }
 
-int CondorFileLocal::local_access_hack()
+int CondorFileLocal::is_file_local()
 {
 	return 1;
 }
