@@ -88,9 +88,6 @@ class ExprTree
 		/// Virtual destructor
 		virtual ~ExprTree ();
 
-		// Assignment operator
-        virtual ExprTree& operator=(const ExprTree &tree);
-
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
 				references. (However, the semantic parent may be different from 
@@ -133,6 +130,8 @@ class ExprTree
   	protected:
 		ExprTree ();
 
+        void CopyFrom(const ExprTree &literal);
+
 		bool Evaluate( Value& v, ExprTree*& t ) const;
 		bool Flatten( Value& val, ExprTree*& tree) const;
 
@@ -163,6 +162,7 @@ class ExprTree
 
 		/// Copy constructor
         ExprTree(const ExprTree &tree);
+        ExprTree &operator=(const ExprTree &literal);
 
 		virtual void _SetParentScope( const ClassAd* )=0;
 		virtual bool _Evaluate( EvalState&, Value& ) const=0;
