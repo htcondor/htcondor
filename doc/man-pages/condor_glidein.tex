@@ -1,25 +1,25 @@
 \begin{ManPage}{\label{man-condor-glidein}\Condor{glidein}}{1}
 {add a Globus resource to a Condor pool}
 \Synopsis \SynProg{\Condor{glidein}}
-\oOpt{-\hspace{.25 mm}-help}
-\oOptArg{-\hspace{.25 mm}-basedir}{basedir}
-\oOptArg{-\hspace{.25 mm}-archdir}{dir}
-\oOptArg{-\hspace{.25 mm}-localdir}{dir}
-\oOpt{-\hspace{.25 mm}-setuponly}
-\oOpt{-\hspace{.25 mm}-runonly}
-\oOptArg{-\hspace{.25 mm}-scheduler}{name}
-\oOptArg{-\hspace{.25 mm}-queue}{name}
-\oOptArg{-\hspace{.25 mm}-project}{name}
-\oOptArg{-\hspace{.25 mm}-memory}{MBytes}
-\oOptArg{-\hspace{.25 mm}-count}{CPUcount}
-\oOptArg{-\hspace{.25 mm}-vms}{VMcount}
-\oOptArg{-\hspace{.25 mm}-idletime}{minutes}
-\oOptArg{-\hspace{.25 mm}-runtime}{minutes}
-\oOpt{-\hspace{.25 mm}-anybody}
-\oOptArg{-\hspace{.25 mm}-admin}{address}
-\oOpt{-\hspace{.25 mm}-genconfig}
-\oOptArg{-\hspace{.25 mm}-useconfig}{filename}
-\OptArg{\{-\hspace{.25 mm}-contactfile}{filename} \} \Bar \Opt{Globus contact string}
+\oOpt{-help}
+\oOptArg{-basedir}{basedir}
+\oOptArg{-archdir}{dir}
+\oOptArg{-localdir}{dir}
+\oOpt{-setuponly}
+\oOpt{-runonly}
+\oOptArg{-scheduler}{name}
+\oOptArg{-queue}{name}
+\oOptArg{-project}{name}
+\oOptArg{-memory}{MBytes}
+\oOptArg{-count}{CPUcount}
+\oOptArg{-vms}{VMcount}
+\oOptArg{-idletime}{minutes}
+\oOptArg{-runtime}{minutes}
+\oOpt{-anybody}
+\oOptArg{-admin}{address}
+\oOpt{-genconfig}
+\oOptArg{-useconfig}{filename}
+\OptArg{\{-contactfile}{filename} \} \Bar \Opt{Globus contact string}
 
 \index{Condor commands!condor\_glidein}
 \index{condor\_glidein command}
@@ -77,17 +77,17 @@ files on the Globus resource.
 These files should be occasionally removed.
 
 \begin{Options}
-    \OptItem{\Opt{-\hspace{.25 mm}-help}}{Display brief usage information and exit}
-    \OptItem{\OptArg{-\hspace{.25 mm}-basedir}{basedir}}{
+    \OptItem{\Opt{-help}}{Display brief usage information and exit}
+    \OptItem{\OptArg{-basedir}{basedir}}{
 	Specifies the base directory on the Globus resource
 	used for placing files.
 	The default file is \File{\MacroUNI{HOME}/Condor\_glidein}
 	on the Globus resource.
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-archdir}{dir}}{
+    \OptItem{\OptArg{-archdir}{dir}}{
 	Specifies the directory on the Globus resource for placement
 	of the executables. 
-	The default value for \OptArg{-\hspace{.25 mm}-archdir},
+	The default value for \OptArg{-archdir},
 	given according to version information on the Globus resource, is 
 	\Arg{basedir}\File{/\Sinful{condor-version}-\Sinful{Globus canonicalsystemname}} 
 	An example of the directory
@@ -95,51 +95,51 @@ These files should be occasionally removed.
 	for Condor version 6.1.13
 	running on a Sun Sparc machine with Solaris 2.6 is
 	\File{6.1.13-sparc-sun-solaris-2.6} }
-    \OptItem{\OptArg{-\hspace{.25 mm}-localdir}{dir}}{
+    \OptItem{\OptArg{-localdir}{dir}}{
 	Specifies the directory on the Globus resource
 	in which to create log and execution 
 	subdirectories needed by Condor.
 	If limited disk quota in the home or base directory
 	on the Globus resource is a problem,
-	set \Opt{-\hspace{.25 mm}-localdir} to a large temporary space,
+	set \Opt{-localdir} to a large temporary space,
 	such as \File{/tmp} or \File{/scratch}
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-contactfile}{filename}}{
+    \OptItem{\OptArg{-contactfile}{filename}}{
 	Allows the use of a file of Globus contact strings,
 	rather than the single
 	Globus contact string given in the command line.
 	For each of the contacts listed in the file,
 	the Globus resource is added to the local Condor pool.
 	}
-    \OptItem{\Opt{-\hspace{.25 mm}-setuponly}}{
+    \OptItem{\Opt{-setuponly}}{
         Performs only the placement of files on the Globus resource.
-        This option cannot be run simultaneously with \Opt{-\hspace{.25 mm}-runonly} }
-    \OptItem{\Opt{-\hspace{.25 mm}-runonly}}{
+        This option cannot be run simultaneously with \Opt{-runonly} }
+    \OptItem{\Opt{-runonly}}{
 	Starts execution of the Condor daemons on the Globus
 	resource.
         If any of the files are missing, exits with an error code.
-        This option cannot be run simultaneously with \Opt{-\hspace{.25 mm}-setuponly} }
-    \OptItem{\OptArg{-\hspace{.25 mm}-scheduler}{name}}{
+        This option cannot be run simultaneously with \Opt{-setuponly} }
+    \OptItem{\OptArg{-scheduler}{name}}{
 	Selects the Globus job scheduler type.
 	Defaults to \Arg{fork}.
 	NOTE: Contact strings which already contain the scheduler
 	type will \emph{not} be overridden by this option.
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-queue}{name}}{
+    \OptItem{\OptArg{-queue}{name}}{
 	The argument \Arg{name} is a string which specifies which
 	job queue is to be used for submission on the Globus resource.
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-project}{name}}{
+    \OptItem{\OptArg{-project}{name}}{
 	The argument \Arg{name} is a string which specifies which
 	project is to be used for submission on the Globus resource.
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-memory}{MBytes}}{
+    \OptItem{\OptArg{-memory}{MBytes}}{
 	The maximum memory size to request from the Globus resource
 	(in megabytes).
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPUcount}}{
+    \OptItem{\OptArg{-count}{CPUcount}}{
 	Number of CPUs to request, default is 1. }
-    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VMcount}}{
+    \OptItem{\OptArg{-vms}{VMcount}}{
         For machines with multiple CPUs, the CPUs maybe divided
 	up into virtual machines. \Arg{VMcount} is the number
 	of virtual machines that results.
@@ -150,14 +150,14 @@ These files should be occasionally removed.
 	multi-threaded jobs can run in a virtual machine with multiple
 	CPUs.
 	For example, if 4 CPUs are requested and 
-	\Opt{-\hspace{.25 mm}-vms} is not specified, Condor will
+	\Opt{-vms} is not specified, Condor will
 	divide the request up into 4 virtual machines with 1 CPU each.
-	However, if \OptArg{-\hspace{.25 mm}-vms}{2} is specified,
+	However, if \OptArg{-vms}{2} is specified,
 	Condor will divide the request up into 2 virtual machines with
-	2 CPUs each, and if \OptArg{-\hspace{.25 mm}-vms}{1} is
+	2 CPUs each, and if \OptArg{-vms}{1} is
 	specified, Condor will put all 4 CPUs into one virtual
 	machine. }
-    \OptItem{\OptArg{-\hspace{.25 mm}-idletime}{minutes}}{
+    \OptItem{\OptArg{-idletime}{minutes}}{
 	How long the Condor daemons on the Globus resource
 	can remain idle before the resource reverts back to its
 	former state of not being part of the local Condor pool.
@@ -168,14 +168,14 @@ These files should be occasionally removed.
 	or they are killed by the resource or
 	with \Condor{rm}.
 	The default value is 20 minutes.  }
-    \OptItem{\OptArg{-\hspace{.25 mm}-runtime}{minutes}}{
+    \OptItem{\OptArg{-runtime}{minutes}}{
 	How long the Condor daemons on the Globus resource
 	will run before shutting themselves down. This option is useful
 	for resources with enforced maximum run times. Setting
 	\Arg{runtime} to be a few minutes shorter than the allowable
 	limit gives the daemons time to perform a graceful shutdown.
 	}
-    \OptItem{\Arg{-\hspace{.25 mm}-anybody}}{
+    \OptItem{\Arg{-anybody}}{
 	Sets the Condor \Expr{START} expression to TRUE
 	to allow any user job which meets the job's requirements to run on
 	the Globus resource added to the local Condor pool.
@@ -184,16 +184,16 @@ These files should be occasionally removed.
 	Using this option may violate the usage policies of many
 	institutions.
 	}
-    \OptItem{\OptArg{-\hspace{.25 mm}-admin}{address}}{
+    \OptItem{\OptArg{-admin}{address}}{
 	Where to send e-mail with problems.
 	The defaults is the login of the user running
 	\Condor{glidein} at UID domain of the local Condor pool.  }
-    \OptItem{\Opt{-\hspace{.25 mm}-genconfig}}{
+    \OptItem{\Opt{-genconfig}}{
 	This option creates a local copy of the configuration file used
 	on the Globus resource.
 	The file is called \File{\condor{config.glidein}}.
         }
-    \OptItem{\OptArg{-\hspace{.25 mm}-useconfig}{filename}}{
+    \OptItem{\OptArg{-useconfig}{filename}}{
 	Install \Arg{filename} as the configuration file on the Globus resource
 	instead of the default configuration file during the set up phase.
 	}
