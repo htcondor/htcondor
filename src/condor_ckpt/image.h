@@ -143,7 +143,7 @@ extern "C" {
 #endif
 }
 
-extern "C" long data_start_addr();
+long data_start_addr();
 long data_end_addr();
 long stack_start_addr();
 long stack_end_addr();
