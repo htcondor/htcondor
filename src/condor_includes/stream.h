@@ -125,6 +125,7 @@
 /* now to clean up from sched.h... */
 #undef CHECKPOINTING
 #undef SUSPENDED
+#include "condor_constants.h"	/* to get BOOLEAN typedef... */
 #include "startup.h"
 #include "_condor_fix_types.h"
 #include <sys/stat.h>
