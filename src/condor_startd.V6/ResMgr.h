@@ -72,7 +72,7 @@ public:
 	int		num_cpus() { return m_attr->num_cpus(); };
 	int		num_vms() { return nresources; };
 
-	int		send_update( ClassAd*, ClassAd* );
+	int		send_update( int, ClassAd*, ClassAd* );
 	void	final_update();
 	
 		// Evaluate the state of all resources.
