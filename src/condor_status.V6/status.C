@@ -4,6 +4,7 @@
 #include "condor_api.h"
 #include "status_types.h"
 #include "totals.h"
+#include "my_hostname.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -93,7 +94,8 @@ main (int argc, char *argv[])
 
 
 	  case MODE_STARTD_AVAIL:
-    	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
+			  // For now, -avail shows you machines avail to anyone.
+    	sprintf (buffer, "(TARGET.%s == TRUE)", ATTR_REQUIREMENTS);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -265,6 +267,7 @@ firstPass (int argc, char *argv[])
 void 
 secondPass (int argc, char *argv[])
 {
+	char *fullname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
 		if (matchPrefix (argv[i], "-pool")) {
@@ -289,6 +292,12 @@ secondPass (int argc, char *argv[])
 				printf ("Arg %d (%s) --- adding constraint", i, argv[i]);
 			}
 
+			if( !(fullname = get_full_hostname(argv[i])) ) {
+				fprintf( stderr, "%s: unknown host %s\n",
+						 argv[0], argv[i] );
+				exit(1);
+			}
+
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
 			  case MODE_SCHEDD_NORMAL:
@@ -296,7 +305,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
-				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, argv[i]);
+				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, fullname);
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
