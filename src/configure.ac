@@ -79,6 +79,27 @@ fi
 
 
 ############################################################
+# Figure out what platform we're being run on
+############################################################
+arch=`uname -m`
+osrelease=`uname -r`
+osversion=`uname -v`
+# Make sure if we get back something that begins with "IRIX" that we
+# strip off anything after it (e.g. "IRIX64", etc).
+os=`uname -s | sed 's/IRIX.*/IRIX/'`
+if test "$os" = "IRIX" ; then
+  if test "$osrelease" = "6.5" ; then
+    # Our default build for 6.5 is mips3 and N32
+    IsMipsVersion=3
+    IsMipsABI=N32
+  else
+    IsMipsVersion=2
+    IsMipsABI=O32
+  fi
+fi
+
+
+############################################################
 # Check for command-line arguments and environment variables
 ############################################################
 
@@ -159,7 +180,7 @@ AC_ARG_WITH(condor_analyze,
 AC_SUBST(has_condor_analyze,$ac_has_condor_analyze)
 if test $ac_has_condor_analyze = "YES" ; then
   AC_MSG_RESULT([$ac_condor_analyze_dir])
-  CONDOR_SET_ANALYZE([ac_condor_analyze_release],[release],fatal)
+  CONDOR_SET_ANALYZE([release],fatal)
   CONDOR_SET_ANALYZE([ac_condor_analyze_static],[static],no)
   CONDOR_SET_ANALYZE([ac_condor_analyze_strip],[strip],fatal)
 else
@@ -188,6 +209,176 @@ AC_SUBST(pure_cache_dir,$ac_cv_purecachedir)
 # checks for programs
 ############################################################
 
+# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
+# greater.  Unfortunately, GPT doesn't have a configure script or
+# anything, it just lets perl die with a require statement.  So, we
+# test for the right version here and fail in an early and obvious way
+# if there's a problem.  Also, we check for this early, so we can use
+# perl in the rest of the tests in here, if we want it. 
+AC_PROG_PERL_VERSION([5.005_03], [],
+   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
+
+#####################
+# compiler detection
+#####################
+
+AC_LANG(C)
+AC_PROG_CC
+if test $ac_cv_c_compiler_gnu != yes; then
+   AC_MSG_ERROR( [GNU CC (gcc) is required] )
+fi   
+
+# Figure out the version of gcc. 
+# This probably seems like a job for a regular expression, not a big
+# case statement.  however, in our experience, there's enough variation
+# in how these version strings look that explicitly listing the ones
+# we recognize seems to work better than trying to figure it all out
+# automatically.  moreover, porting Condor to a new version of gcc is
+# always a lot of work, so if someone is trying to build on an
+# supported gcc version, we might as well catch them here, before they
+# get very far.
+AC_MSG_CHECKING([for exact version of gcc])
+gcc_vers=`((gcc -v) 2>&1) | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+
+case "$gcc_vers" in
+ "egcs-2.91.66" )
+    CompilerKind="EGCS"
+    CompilerMajor="2"
+    CompilerMinor="91"
+    CompilerPatch="66"
+    ;;
+ "2.95.3" )
+    CompilerKind="GCC"
+    CompilerMajor="2"
+    CompilerMinor="95"
+    CompilerPatch="3"
+    ;;
+ "2.95.4" )
+    CompilerKind="GCC"
+    CompilerMajor="2"
+    CompilerMinor="95"
+    CompilerPatch="4"
+    ;;
+ "2.96" )
+    CompilerKind="GCC"
+    CompilerMajor="2"
+    CompilerMinor="96"
+    CompilerPatch="0"
+    ;;
+ "3.0" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="0"
+    CompilerPatch="0"
+    ;;
+ "3.1" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="1"
+    CompilerPatch="0"
+    ;;
+ "3.2" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="2"
+    CompilerPatch="0"
+    ;;
+ "3.2.1" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="2"
+    CompilerPatch="1"
+    ;;
+ "3.2.2" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="2"
+    CompilerPatch="2"
+    ;;
+ "3.3" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="0"
+    ;;
+ * )
+   AC_MSG_RESULT([ERROR])
+   AC_MSG_ERROR([Condor will not compile with gcc version $gcc_vers])
+   ;;
+esac
+AC_MSG_RESULT([$gcc_vers])
+
+AC_SUBST(CompilerKind,$CompilerKind)
+AC_SUBST(CompilerMajor,$CompilerMajor)
+AC_SUBST(CompilerMinor,$CompilerMinor)
+AC_SUBST(CompilerPatch,$CompilerPatch)
+
+# Find libgcc.a (needed for all platforms)
+GET_GCC_VALUE([libgcc.a],[-print-libgcc-file-name],[_cv_gcc_libc],[gcc_libc])
+GET_GCC_VALUE([libstdc++.a],[--print-file-name=libstdc++.a],[_cv_lib_stdcpp],[lib_std_cpp])
+
+# Find/define crt[01].o for each architecture we support
+AC_MSG_CHECKING([for crt0.o])
+case "$os" in 
+  "SunOS" | "Linux" )
+    CRT_BEGIN=`gcc -print-file-name=crt1.o`
+    ;;
+  "HP-UX" )
+    if test $os = "HP-UX" && test "$osrelease" = "B.10.20" ; then
+      CRT_BEGIN=/lib/crt0.o
+    elif test $os = "HP-UX" && test "$osversion" = "B.11.00" ; then
+      # we support only 64-bit compilations of condor on hpux 11.00
+      CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
+    fi
+    ;;
+  "IRIX" )
+    case "$IsMipsABI" in
+      "N64" )
+        IrixBaseLibPath=/usr/lib64
+        ;;
+      "N32" )
+        IrixBaseLibPath=/usr/lib32
+        ;;
+      "O32" )
+        IrixBaseLibPath=/usr/lib32
+        ;;
+    esac
+    case "$IsMipsVersion" in
+      "2" )
+        IrixLibPath=$IrixBaseLibPath
+        ;;
+      "3" )
+        IrixLibPath="$IrixBaseLibPath/mips3"
+        ;;
+      "4" )
+        IrixLibPath="$IrixBaseLibPath/mips4"
+        ;;
+    esac
+    CRT_BEGIN="$IrixLibPath/crt1.o"
+    ;;
+
+  "OSF1" )
+    CRT_BEGIN=/usr/lib/cmplrs/cc/crt0.o
+    ;;
+
+  "AIX" )
+    CRT_BEGIN=/lib/crt0.o
+    ;;
+esac
+AC_MSG_RESULT([$CRT_BEGIN])
+AC_SUBST([crt_begin],[$CRT_BEGIN])
+
+AC_LANG(C++)
+AC_PROG_CXX
+if test $ac_cv_cxx_compiler_gnu != yes; then
+   AC_MSG_ERROR( [GNU C++ (g++) is required] )
+fi   
+
+
+#####################
+# everything else
+#####################
+
 CHECK_PROG_IS_GNU(MAKE, make)
 if test $_cv_make_is_gnu = no; then
    AC_MSG_ERROR( [GNU make is required] )
@@ -212,27 +403,6 @@ AC_CACHE_CHECK([if patch supports unified diffs],_cv_unified_patch,
 if test $_cv_unified_patch != "yes"; then
    AC_MSG_ERROR( [patch must support unified diffs] )
 fi
-
-AC_LANG(C)
-AC_PROG_CC
-if test $ac_cv_c_compiler_gnu != yes; then
-   AC_MSG_ERROR( [GNU CC (gcc) is required] )
-fi   
-
-AC_LANG(C++)
-AC_PROG_CXX
-if test $ac_cv_cxx_compiler_gnu != yes; then
-   AC_MSG_ERROR( [GNU C++ (g++) is required] )
-fi   
-
-
-# Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
-# greater.  Unfortunately, GPT doesn't have a configure script or
-# anything, it just lets perl die with a require statement.  So, we
-# test for the right version here and fail in an early and obvious way
-# if there's a problem.
-AC_PROG_PERL_VERSION([5.005_03], [],
-   [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
 
 AC_PROG_LEX
 AC_CHECK_PROG(ac_lex,lex,yes,no)
