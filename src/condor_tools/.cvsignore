@@ -6,6 +6,7 @@ condor_reschedule
 condor_status
 condor_summary
 condor_vacate
+condor_checkpoint
 watch_status
 block_jobs
 condor_customize
