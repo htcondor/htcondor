@@ -39,8 +39,6 @@
 
 #include "sslutils.h"	// for proxy_get_filenames
 
-extern gss_cred_id_t globus_i_gram_http_credential;
-
 #define QMGMT_TIMEOUT 5
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -63,6 +61,7 @@ HashTable <PROC_ID, ScheddUpdateAction *> completedScheddUpdates( HASH_TABLE_SIZ
 bool addJobsSignaled = false;
 bool removeJobsSignaled = false;
 int contactScheddTid = TIMER_UNSET;
+int contactScheddDelay;
 
 List<Service *> ObjectDeleteList;
 
@@ -87,7 +86,6 @@ int checkProxy_interval;
 int minProxy_time;
 
 time_t Proxy_Expiration_Time = 0;
-time_t Initial_Proxy_Expiration_Time = 0;
 
 GahpClient GahpMain;
 
@@ -187,7 +185,7 @@ void
 RequestContactSchedd()
 {
 	if ( contactScheddTid == TIMER_UNSET ) {
-		contactScheddTid = daemonCore->Register_Timer( CONTACT_SCHEDD_DELAY,
+		contactScheddTid = daemonCore->Register_Timer( contactScheddDelay,
 												(TimerHandler)&doContactSchedd,
 												"doContactSchedd", NULL );
 	}
@@ -270,12 +268,6 @@ Init()
 	if ( Owner == NULL ) {
 		EXCEPT( "Can't determine username" );
 	}
-
-	// Find the location of our proxy file, if we don't already
-	// know (from the command line)
-	if (X509Proxy == NULL) {
-		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
-	}
 }
 
 void
@@ -303,6 +295,16 @@ Reconfig()
 
 	// This method is called both at startup [from method Init()], and
 	// when we are asked to reconfig.
+
+	contactScheddDelay = -1;
+	tmp = param("GRIDMANAGER_CONTACT_SCHEDD_DELAY");
+	if ( tmp ) {
+		contactScheddDelay = atoi(tmp);
+		free(tmp);
+	} 
+	if ( contactScheddDelay < 0 ) {
+		contactScheddDelay = 5; // default delay = 5 seconds
+	}
 
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
@@ -338,18 +340,16 @@ checkProxy()
 	time_t current_expiration_time = now + seconds_left;
 
 	if ( seconds_left < 0 ) {
-		// Proxy file is gone.  Set things so the below logic
-		// will still do the right thing when our current proxy
-		// goes away, but will never try to refresh with the
-		// non-existant proxy.
+		// Proxy file is gone. Since the GASS needs the proxy file for
+		// new connections, we should treat this as an expired proxy.
 		seconds_left = 0;
 		current_expiration_time = now;
+		Proxy_Expiration_Time = current_expiration_time;
 	}
 
 	if ( Proxy_Expiration_Time == 0 ) {
 		// First time through....
 		Proxy_Expiration_Time = current_expiration_time;
-		Initial_Proxy_Expiration_Time = current_expiration_time;
 		dprintf(D_ALWAYS,
 			"Condor-G proxy cert valid for %s\n",format_time(seconds_left));
 	}
@@ -359,82 +359,19 @@ checkProxy()
 	if ( now > Proxy_Expiration_Time ) {
 		Proxy_Expiration_Time = now;
 	}
-	if ( now > Initial_Proxy_Expiration_Time ) {
-		Initial_Proxy_Expiration_Time = now;
-	}
 
 	// Check if we have a refreshed proxy
 	if ( current_expiration_time > Proxy_Expiration_Time ) {
 		// We have a refreshed proxy!
+		Proxy_Expiration_Time = current_expiration_time;
 
-		/* Update our credential context for GRAM.  This will allow new
-		 * jobmanagers which we subsequently startup to have the refreshed
-		 * proxy.  Aren't we cool?  
-		 */
-    	OM_uint32	major_status;
-    	OM_uint32 	minor_status;
-		gss_cred_id_t old_gram_credential = globus_i_gram_http_credential;
-		static bool first_cred_refresh = true;
-		/* -- Now, acquire our new context.  We care about errors
-		 * here, but we have no good way of handling them.  Dooohh! */
-    	major_status = globus_gss_assist_acquire_cred(&minor_status,
-                        GSS_C_BOTH,
-                        &globus_i_gram_http_credential);
-    	if (major_status != GSS_S_COMPLETE)
-    	{
-			// If we failed, perhaps the proxy file was being changed
-			// right when we were reading it.  Bad luck!  So try
-			// to sleep for one second and try again.
-			sleep(1);
-    		major_status = globus_gss_assist_acquire_cred(&minor_status,
-                        GSS_C_BOTH,
-                        &globus_i_gram_http_credential);
-    		if (major_status != GSS_S_COMPLETE)
-			{
-				// We cannot read in the new proxy... revert to the old.
-				globus_i_gram_http_credential = old_gram_credential;
-			}
-		}
+		MainGahp.globus_gram_client_set_credentials( X509Proxy );
+	}
 
-		if ( major_status == GSS_S_COMPLETE ) {
-			// Success!  We have read in the new context.
-
-			/* -- First, release our old context.  Don't care about errors. 
-			 * Do not release the first time through, because the 
-			 * initial context is in use by all our listening sockets. */
-			if ((old_gram_credential != GSS_C_NO_CREDENTIAL) &&
-				(!first_cred_refresh))
-			{
-				OM_uint32 minor_status; 
-				gss_release_cred(&minor_status,&old_gram_credential); 
-				old_gram_credential = GSS_C_NO_CREDENTIAL;
-			}
-
-			// Print out a message
-			int time_left = Proxy_Expiration_Time - now;
-			if ( time_left < 0 ) {
-				time_left = 0;
-			}
-			char *oldtime = strdup(format_time(time_left));
-			char *newtime = strdup(format_time(seconds_left));
-			dprintf(D_ALWAYS,
-			   "Using refreshed cert - old valid for %s (%d), "
-			   "new valid for %s (%d)\n", 
-			   oldtime,time_left,newtime,seconds_left);
-			free(oldtime);
-			free(newtime);
-
-			// Update some variables
-			Proxy_Expiration_Time = current_expiration_time;
-			first_cred_refresh = false;
-		}
-	
-	}  // done handling a refreshed proxy
-
-	// Verify our Initial Proxy is longer than the minimum allowed
-	if ((Initial_Proxy_Expiration_Time - now) <= minProxy_time) 
+	// Verify our proxy is longer than the minimum allowed
+	if ((Proxy_Expiration_Time - now) <= minProxy_time) 
 	{
-		// Initial Proxy is either already expired, or will expire in
+		// Proxy is either already expired, or will expire in
 		// a very short period of time.
 		// Write something out to the log and send a signal to shutdown.
 		// The schedd will try to restart us every few minutes.
@@ -452,14 +389,12 @@ checkProxy()
 		return FALSE;
 	}
 
-
 	// Setup timer to automatically check it next time.  We want the
 	// timer to go off either at the next user-specified interval,
 	// or right before our credentials expire, whichever is less.
-	int interval1 = MIN(checkProxy_interval, 
+	int interval = MIN(checkProxy_interval, 
 						Proxy_Expiration_Time - now - minProxy_time);
- 	int interval = MIN(interval1, 
-						Initial_Proxy_Expiration_Time - now - minProxy_time);	
+
 	if ( interval ) {
 		if ( checkProxy_tid != TIMER_UNSET ) {
 			daemonCore->Reset_Timer(checkProxy_tid,interval);

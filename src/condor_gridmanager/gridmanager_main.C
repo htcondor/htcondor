@@ -33,12 +33,18 @@ main_activate_globus()
 	int err;
 	static int first_time = true;
 
-	if(gridmanager.X509Proxy && first_time) {
-		setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
+	// Find the location of our proxy file, if we don't already
+	// know (from the command line)
+	if (X509Proxy == NULL) {
+		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
+	}
+
+	if(first_time) {
+		setenv("X509_USER_PROXY", X509Proxy, 1);
 		first_time = false;
 	}		
 
-	if ( GahpMain.Initialize( /* proxy path */ )  == false ) {
+	if ( GahpMain.Initialize( X509Proxy )  == false ) {
 		dprintf( D_ALWAYS, "Error initializing GAHP\n" );
 		return false;
 	}
