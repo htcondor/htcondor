@@ -36,6 +36,7 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 extern int		EventSigs[];
 extern char*	InitiatingHost;
 extern char*	mySubSystem;
+extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 
 /*
   Unblock all signals except those which will encode asynchronous
@@ -175,4 +176,52 @@ init_logging()
 	}
 	return;
 }
+
+
+/*
+  Create a new connection to the shadow using the existing remote
+  system call stream.
+*/
+ReliSock*
+NewConnection( int id )
+{
+	int 	portno;
+	int		syscall = CONDOR_new_connection;
+	ReliSock* reli = new ReliSock();
+	char 	addr[128], *tmp;
+	memset( addr, '\0', 128 );
+
+	SyscallStream->encode();
+
+		// Send the request
+	if( !SyscallStream->code(syscall) ) {
+		EXCEPT( "Can't send CONDOR_new_connection request" );
+	}
+	if( !SyscallStream->code(id) ) {
+		EXCEPT( "Can't send process id for CONDOR_new_connection request" );
+	}
+
+		// Turn the stream around
+	SyscallStream->eom();
+	SyscallStream->decode();
+
+		// Read the port number
+	if( !SyscallStream->code(portno) ) {
+		EXCEPT( "Can't read port number for new connection" );
+	}
+	if( portno < 0 ) {
+		SyscallStream->code( errno );
+		EXCEPT( "Can't get port for new connection" );
+	}
+	SyscallStream->eom();
+
+		// Create the sinful string we want to connect back to.
+	sprintf( addr, "<%s:%d>", SyscallStream->endpoint_ip_str(), portno );
+	dprintf( D_FULLDEBUG, "New Socket address: %s\n", addr );	
+	if( ! reli->connect(addr, 0) ) {
+		EXCEPT( "Can't connect to shadow at %s", addr );	
+	}
+	return reli;
+}
+
 
