@@ -61,9 +61,7 @@ public:
 	**	Methods
 	*/
 
-	// Virtual socket services
-	//
-
+	/// Virtual socket services
 	virtual int handle_incoming_packet() { assert(0); return 0; }
 
 	/** Connect the socket to a remote peer.
@@ -100,16 +98,14 @@ public:
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
 
-	// if any operation takes more than sec seconds, timeout
-	// call timeout(0) to set blocking mode (default)
-	// returns previous timeout
+	/** if any operation takes more than sec seconds, timeout
+        call timeout(0) to set blocking mode (default)
+        @param sec the number of seconds to wait before timing out
+        @return previous timeout
+    */
 	int timeout(int sec);
 
-
-	/*
-	**	Stream protocol
-	*/
-
+    ///
 	virtual ~Sock() {}
 
 
@@ -129,10 +125,17 @@ protected:
 	**	Methods
 	*/
 
+    ///
 	Sock();
 
 	int getportbyserv(char *);
-	int do_connect(char *, int);
+
+    /**
+        @param host the host to connect to, can be sinful form with port, in
+        @param port the port to connect to, ignored if host contains a port
+    */
+	int do_connect(char *host, int port);
+
 	inline SOCKET get_socket (void) { return _sock; }
 	char * do_serialize(char *);
 	inline char * do_serialize() { return(do_serialize(NULL)); };
@@ -143,6 +146,7 @@ protected:
 	inline int set_inheritable( int ) { return TRUE; }
 #endif
 
+    ///
 	bool test_connection();
 
 	/*

@@ -54,41 +54,66 @@ public:
 
 	// Virtual socket services
 	//
+    ///
 	virtual int handle_incoming_packet();
+
+    ///
 	virtual int end_of_message();
-		/* s can be a hostname or sinful string */
+
+    /** Connect to a host on a port
+        @param s can be a hostname or sinful string
+        @param port the port to connect to, ignorred if s contains port
+    */
 	virtual int connect(char *s, int port=0);
 
 
-	// Reliable socket services
-	//
-
+    ///
 	ReliSock();
+
+    ///
 	~ReliSock();
+    ///
 	void init();				/* shared initialization method */
 
+    ///
 	int listen();
+    ///
 	inline int listen(int p) { if (!bind(p)) return FALSE; return listen(); }
+    ///
 	inline int listen(char *s) { if (!bind(s)) return FALSE; return listen(); }
 
+    ///
 	ReliSock *accept();
+    ///
 	int accept(ReliSock &);
+    ///
 	int accept(ReliSock *);
 
+    ///
 	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
+    ///
 	int get_bytes_nobuffer(char *buffer, int max_length,
 							 int receive_size=1);
+    ///
 	int get_file(const char *destination);
+    ///
 	int put_file(const char *source);
 
+    ///
 	int get_port();
+    ///
 	struct sockaddr_in *endpoint();
 
+    ///
 	int get_file_desc();
 
+    ///
 	float get_bytes_sent() { return _bytes_sent; }
+    ///
 	float get_bytes_recvd() { return _bytes_recvd; }
+    ///
 	void reset_bytes_sent() { _bytes_sent = 0; }
+    ///
 	void reset_bytes_recvd() { _bytes_recvd = 0; }
 
 #ifndef WIN32
@@ -100,22 +125,34 @@ public:
 	**	Stream protocol
 	*/
 
+    ///
 	virtual stream_type type();
 
 	//	byte operations
 	//
+    ///
 	virtual int put_bytes(const void *, int);
+    ///
 	virtual int get_bytes(void *, int);
+    ///
 	virtual int get_ptr(void *&, char);
+    ///
 	virtual int peek(char &);
 
+    ///
 	int authenticate();
+    ///
 	int isAuthenticated();
+    ///
 	void unAuthenticate();
+    ///
 	const char *getOwner();
+    ///
 	void setOwner( const char * );
+    ///
 	void setGenericAuthentication();
 
+    ///
 	int isClient() { return is_client; };
 
 

@@ -57,23 +57,36 @@ public:
 
 	// Virtual socket services
 	//
+    ///
 	virtual int handle_incoming_packet();
+    ///
 	virtual int end_of_message();
-		/* s can be a hostname or sinful string */
+
+    /** Connect to a host on a port
+        @param port the port to connect to, ignorred if s includes port
+        @param s can be a hostname or sinful string
+    **/
 	virtual int connect(char *s, int port=0);
+
+    ///
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
 
-
-	// Safe socket services
-	//
-
+    ///
 	SafeSock();
+
+    ///
 	~SafeSock();
+
+    ///
 	void init();				/* shared initialization method */
 
+    ///
 	int get_port();
+    ///
 	struct sockaddr_in *endpoint();
+    ///
 	char *endpoint_IP();
+    ///
 	int endpoint_port();
 
 #ifndef WIN32
@@ -85,13 +98,18 @@ public:
 	**	Stream protocol
 	*/
 
+    ///
 	virtual stream_type type() { return Stream::safe_sock; }
 
 	//	byte operations
 	//
+    ///
 	virtual int put_bytes(const void *, int);
+    ///
 	virtual int get_bytes(void *, int);
+    ///
 	virtual int get_ptr(void *&, char);
+    ///
 	virtual int peek(char &);
 
 
