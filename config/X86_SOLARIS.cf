@@ -7,19 +7,52 @@
 #define MallocLib /lib/libkvm.a
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib -lnsl -lsocket  /* ..dhaval 6/28 */
-/* #define SocketLib /lib/libsocket.a   ..dhaval 6/28 */
+#define SocketLib /usr/lib/libsocket.so /usr/lib/libnsl.so
 
-#define Crt0 /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o /*solaris specific */
+#ifndef CrtLibPath
+#if HasGcc
+#define CrtLibPath /usr/local/gnu/lib/gcc-lib/i386-unknown-solaris2.5/2.7.2.1
+#else
+#ifndef SC_VERS
+#define SC_VERS 4.0
+#endif
+#define CrtLibPath concat(concat(/opt/SUNWspro/,SC_VERS),/lib)
+#endif
+#endif
+
+#ifndef Crt0
+#define Crt0 concat(CrtLibPath,/crt1.o)
+#endif
+
+#ifndef CrtAdd
+#if HasGcc
+#define CrtAdd concat(CrtlibPath,/crti.o) concat(CrtLibPath,/values-Xa.o) concat(CrtLibPath,/crtbegin.o)
+#else
+#define CrtAdd concat(CrtlibPath,/crti.o) concat(CrtLibPath,/values-xa.o)
+#endif
+#endif
+
 #define SyscallsExp /**/
 
-#define XLibPath /s/X11R6-2/sunx86_54/lib/libX11.so
-#define XExtLibPath /usr/X11R6/lib/libXext.so /* doubtful because could not 
-find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
+#ifndef X11LibPath
+#define X11LibPath /opt/openwin/lib
+#endif
+
+#ifndef XLibPath
+#define XLibPath concat(-L,X11LibPath) -lX11 concat(-R,X11LibPath)
+#endif
+
+#ifndef XExtLibPath
+#define XExtLibPath concat(-L,X11LibPath) -lXext concat(-R,X11LibPath)
+#endif
+
+#ifndef YpLib
+#define YpLib
+#endif
+
 #define DbmLibrary 
 
 #define HAS_NEW_FORTRAN		YES
-#define SC_VERS				SC1.0
 
 #if HAS_NEW_FORTRAN
 #define FortranLeft -dc -dp -e start -Bstatic -u _MAIN_ -X
@@ -31,12 +64,59 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define FortranRight -lF77 -lI77 -lU77 -lm
 #endif
 
+#ifndef CCompiler
+#if HasGcc
+#define CCompiler gcc
+#else
+#define CCompiler /opt/SUNWspro/bin/cc
+#endif
+#endif
+
+#ifndef CPlusCompiler
+#ifdef HasGPlusPlus
+#define CPlusCompiler g++
+#else
+#define CPlusCompiler /opt/SUNWspro/bin/CC
+#endif
+#endif
+
+#ifndef Demangler
+#define Demangler /opt/SUNWspro/bin/c++filt  /* Ajitk */
+#endif
+
+#ifndef CFlags
+#define CFlags
+#endif
+
+#ifndef StaticFlag
+#define StaticFlag -static
+#endif
+
+#ifndef PreProcessCmd
+#if HasGcc
+#define PreProcessCmd gcc -E -x c-header
+#else
+#define PreProcessCmd cc -E
+#endif
+#endif
 
 #define IS_X86_SOLARIS			YES  /* Dhaval defined it */
-#define IS_V5					YES
 
+#ifndef HAS_X
 #define HAS_X					NO
+#endif
+
+#ifndef HAS_X_EXTENSIONS
 #define HAS_X_EXTENSIONS		NO
+#endif
+
+#ifndef DO_BENCHMARKING
+#define DO_BENCHMARKING			YES
+#endif
+
+#ifndef HAS_PVM
+#define HAS_PVM					NO
+#endif
 
 #define DOES_CHECKPOINTING      YES /* jbasney */
 #define DOES_REMOTE_SYSCALLS    YES /* was YES, but clipped condor */
@@ -75,14 +155,9 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_SETEUID				YES
 #define HAS_GETWD				NO
 #define HAS_INSQUE				YES
-#define DO_BENCHMARKING			YES
-#define HAS_PVM					NO
 #define PVM_ARCH			X86
 
 
-#define CCompiler /s/std/bin/gcc /* different than SunOS */ 
-#define CPlusCompiler /s/std/bin/g++ /* different than SunOS */
-#define Demangler /opt/SUNWspro/bin/c++filt
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd /* ask Jim */

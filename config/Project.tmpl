@@ -1,3 +1,4 @@
+/* XXX There shouldn't be any platform-specific info in this. - Frank */
 TILDE = Tilde
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
@@ -23,7 +24,11 @@ DOC_TREE =			$(TOP)/doc
 INCLUDE_DIR =		../h
 NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
+#ifdef X11Include
+X11_INCLUDE = X11Include
+#else
 X11_INCLUDE =           /usr/X11R6/include	
+#endif
 PS_DIR =			$(DOC_TREE)/POSTSCRIPT
 CAT_DIR = 			$(DOC_TREE)/CAT
 PLATFORM =			Platform
@@ -48,6 +53,12 @@ SYSCALL_LIB = syscall_lib
 #else
 #define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
 #define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a
+#endif
+
+#if USES_ROOT_RUID
+#define UidFlags -DUSE_ROOT_RUID
+#else
+#define UidFlags
 #endif
 
 #if HAS_NDBM
@@ -120,32 +131,32 @@ ARCH_FLAG = Architecture
 
 #if IS_I386_LINUX
 STD_C_PLUS_FLAGS = \
-	CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g
+	CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 STATIC = -static
 #elif (IS_SUN4M_SOLARIS251)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_SUN4M_SOLARIS)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_X86_SOLARIS25)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags -gstabs
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DSolaris251 -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #elif (IS_X86_SOLARIS)
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -gstabs
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #else
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags UidFlags
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 #endif

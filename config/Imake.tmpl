@@ -32,8 +32,16 @@ CMNT
 CMNT This Makefile is generated specifically for Platform machines.
 CMNT
 
-#include PlatformIncludeFile
+#define BeforeVendorCF
 #include <site.def>
+#undef BeforeVendorCF
+
+#include PlatformIncludeFile
+
+#define AfterVendorCF
+#include <site.def>
+#undef AfterVendorCF
+
 #include <Project.tmpl>
 #include <Imake.rules>
 #include INCLUDE_IMAKEFILE

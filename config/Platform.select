@@ -26,6 +26,7 @@
 #   undef sun
 #   undef sparc
 #	define Platform SUN4M_SOLARIS
+#	define SpecificPlatform SUN4M_SOLARIS251
 #	define PlatformIncludeFile <SUN4M_SOLARIS251.cf>
 #	undef IS_SUN4M_SOLARIS251
 #endif
@@ -164,6 +165,7 @@
 #   define Platform X86_SOLARIS
 #if defined(IS_X86_SOLARIS25)
 #   define PlatformIncludeFile <X86_SOLARIS25.cf>
+#   define SpecificPlatform X86_SOLARIS25
 #   undef IS_X86_SOLARIS25
 #else
 #   define PlatformIncludeFile <X86_SOLARIS.cf>

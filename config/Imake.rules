@@ -1,8 +1,13 @@
 #if IS_MIPS_ULTRIX43
 #define IMAKE_FLAGS	-I../../config -Dultrix43a -s Makefile
-#elif IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
+#elif IS_SUN4M_SOLARIS251
+#define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS251 -s Makefile
+PLATFORM_FLAG=-DIS_SUN4M_SOLARIS251
+#elif IS_SUN4M_SOLARIS
 #define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS -s Makefile
 PLATFORM_FLAG=-DIS_SUN4M_SOLARIS
+#elif IS_X86_SOLARIS25
+#define IMAKE_FLAGS 	-I../../config -DIS_X86_SOLARIS25 -s Makefile
 #else
 #define IMAKE_FLAGS	-I../../config -s Makefile
 #endif
@@ -82,7 +87,7 @@ CheckPlatformType:														@@\
 /*
 ** Build a library from .o files.
 */
-#if IS_V5
+#if IS_V5 || IS_V6
 #define library_target(libname, objlist)			@@\
 ## libname ## :	objlist								@@\
 	rm -f libname									@@\
@@ -105,7 +110,7 @@ clean ## ::											@@\
 /*
 ** Build a program from .o files and libraries.
 */
-#if IS_V5
+#if IS_V5 || IS_V6
 #define	program_target(program, objlist, libs)			@@\
 ##program: objlist libs									@@\
 	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
@@ -135,7 +140,7 @@ clean:: 												@@\
 DEMANGLE = 2>&1 | Demangler
 #endif
 
-#if IS_V5
+#if IS_V5 || IS_V6
 #define	c_plus_target(program, objlist, libs )						@@\
 ##program: objlist libs												@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
@@ -152,7 +157,7 @@ clean:: 															@@\
 	cp program $(RELEASE_DIR)/bin
 #endif
 
-#if IS_V5
+#if IS_V5 || IS_V6
 #define SET_GID_MODE	02775
 #define EXECUTABLE_MODE	0755
 #define OBJECT_MODE		0644
@@ -164,7 +169,7 @@ clean:: 															@@\
 ##release##:: dir##/##file
 #endif
 
-#if IS_V5
+#if IS_V5 || IS_V6
 #define release_library(lib, dir )									@@\
 ##dir##/##lib##: lib												@@\
 	COPY_LIBRARY( lib, dir##/##lib )								@@\
@@ -230,7 +235,7 @@ depend: ALWAYS										@@\
 /*
 ** List everything which should be built in this object tree.
 */
-#if IS_V5
+#if IS_V5 || IS_V6
 #define all_target(targetlist)						@@\
 ## all: targetlist
 #else
@@ -351,7 +356,7 @@ clean::																@@\
 /*
 ** Generate a platform specific version of a shell script file using imake.
 */
-#if IS_V5
+#if IS_V5 || IS_V6
 #define script_target(targ,dir,dest,mode)									@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
@@ -384,7 +389,7 @@ release::																	@@\
 /*
 ** Generate a platform specific version of a text file file using imake.
 */
-#if IS_V5
+#if IS_V5 || IS_V6
 #define text_target(targ,dir,dest)											@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template $(PLATFORM_FLAG) -s targ##.tmp -f targ##.generic@@\
