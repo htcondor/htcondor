@@ -494,10 +494,12 @@ int rename( const char *from, const char *to ) : pseudo {
 		alloc( kill_sig, INT_SIZE );
 	}
 #endif /* 0 */
+#ifndef RECEIVER  /* We need a special receiver so that we don't leak memory */
 	int startup_info_request( STARTUP_INFO *s ): pseudo {
 		out code( s );
 		alloc( s, STARTUP_INFO_SIZE );
 	}
+#endif
 	int std_file_info( int which, char *name, int *pipe_fd ) : pseudo {
 		GET_PATH( name );
 		ALLOC_PATH( name );
