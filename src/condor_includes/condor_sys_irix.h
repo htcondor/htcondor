@@ -80,7 +80,8 @@ before */
 #endif /* defined (IRIX65) */
 
 /* For strdup to get prototyped, we need to still have the XOPEN stuff 
-   defined when we include string.h */ // Need to check this
+   defined when we include string.h */ 
+/* XXX Need to check this */
 #include <string.h>
 
 /******************************
