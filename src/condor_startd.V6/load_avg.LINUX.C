@@ -24,8 +24,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
-static char *_FileName_ = __FILE__;
-
 class LoadVector {
 public:
 	int		Update();

@@ -27,8 +27,6 @@
 
 #include <sys/table.h>
 
-static char *_FileName_ = __FILE__;
-
 class LoadVector {
 public:
 	LoadVector();

@@ -32,8 +32,6 @@
 
 #include <sys/pstat.h>
 
-static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h)  */
-
 float
 calc_load_avg()
 {

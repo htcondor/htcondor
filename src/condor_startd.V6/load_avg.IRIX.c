@@ -28,8 +28,6 @@
 #include <sys/sysmp.h>
 #include <sys/sysinfo.h>
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
-
 static int KernelLookupFailed = 0;
 
 static float kernel_load_avg();

@@ -26,8 +26,6 @@
 #include "condor_uid.h"
 #include <kstat.h>
 
-
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 static int KernelLookupFailed = 0;
 
 double kstat_load_avg();

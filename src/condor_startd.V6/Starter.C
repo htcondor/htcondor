@@ -30,8 +30,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-static char *_FileName_ = __FILE__;
-
 
 Starter::Starter( Resource* rip )
 {
