@@ -137,4 +137,20 @@ token_cache::removeOldestToken() {
 	}
 }
 
+/* return the contents of the cache in the form of a string.
+ *
+ * nice for debugging. */
+MyString
+token_cache::cacheToString() {
+	token_cache_entry *ent = NULL;
+	MyString index;
+	static MyString cache_string;
 
+	cache_string = "";
+
+	TokenTable->startIterations();
+	while ( TokenTable->iterate(index, ent) ) {
+		cache_string += index + "\n";	
+	}
+	return cache_string;
+}

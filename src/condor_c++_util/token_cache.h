@@ -29,8 +29,8 @@ class token_cache {
 
 		HANDLE getToken(const char* username, const char* domain);
 		bool storeToken(const char* username, const char* domain, 
-					const HANDLE token);
-		
+			const HANDLE token);
+		MyString cacheToString();		
 		
 	private:
 

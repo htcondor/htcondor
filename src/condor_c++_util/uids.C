@@ -339,6 +339,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
+			dprintf(D_FULLDEBUG, "TokenCache contents: \n%s", cached_tokens.cacheToString().Value());
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {
 					// make certain we're back to 'condor' before impersonating
