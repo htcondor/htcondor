@@ -99,7 +99,7 @@ source.h tester.C tester.h test_classads.C test_instantiations.C		\
 test_xml.C tests.txt transaction.C transaction.h util.C util.h value.C	\
 value.h view.C view.h xmlLexer.C xmlLexer.h xmlSink.h xmlSink.C			\
 xmlSource.h xmlSource.C classad_distribution.h cclassad.C cclassad.h	\
-classad_stl.h LICENSE README CHANGELOG configure
+classad_stl.h LICENSE README CHANGELOG configure newtests.txt
 
 WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
 	win32/classad_dist.dsw win32/classad_dist.mak win32/make.bat
