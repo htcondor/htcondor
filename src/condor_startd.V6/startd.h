@@ -54,8 +54,6 @@
 // Unix specific stuff
 #include "sig_install.h"
 #else
-// Windoze specific stuff
-extern "C" int WINAPI KBShutdown(void);	/* in the Kbdd DLL */
 #include "CondorSystrayNotifier.h"//for the "birdwatcher" (system tray icon)
 extern CondorSystrayNotifier systray_notifier;
 #endif
