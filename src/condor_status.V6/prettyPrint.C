@@ -284,7 +284,7 @@ printScheddNormal (ClassAd *ad)
 		{
 			printf ("\n%-20.20s %-10.10s %-16.16s %-13.13s %-14.14s\n\n",
 				ATTR_NAME, ATTR_MACHINE, ATTR_TOTAL_RUNNING_JOBS, 
-				ATTR_TOTAL_IDLE_JOBS, ATTR_MAX_JOBS_RUNNING);
+				ATTR_TOTAL_IDLE_JOBS, ATTR_TOTAL_HELD_JOBS);
 		
 			pm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
@@ -294,7 +294,7 @@ printScheddNormal (ClassAd *ad)
 													"[??????????????] ");
 			pm.registerFormat("%13d ",ATTR_TOTAL_IDLE_JOBS, 
 													"[???????????] ");
-			pm.registerFormat("%14d\n",ATTR_MAX_JOBS_RUNNING, "[?????]\n");
+			pm.registerFormat("%14d\n",ATTR_TOTAL_HELD_JOBS,"[????????????]\n");
 
 			first = false;
 		}
@@ -315,17 +315,17 @@ printScheddSubmittors (ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			printf ("\n%-20.20s %-10.10s  %-8.8s %-8.8s  %s\n\n",
+			printf ("\n%-20.20s %-10.10s  %8.8s %-8.8s %-8.8s\n\n",
 				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
-				ATTR_MAX_JOBS_RUNNING);
+				ATTR_HELD_JOBS);
 		
 			pm.registerFormat("%-20.20s ", ATTR_NAME, 
 													"[??????????????????] ");
-			pm.registerFormat("%-10.10s ", ATTR_MACHINE, 
-													"[????????] ");
-			pm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
-			pm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
-			pm.registerFormat("%8d\n", ATTR_MAX_JOBS_RUNNING, "[?????]\n");
+			pm.registerFormat("%-10.10s  ", ATTR_MACHINE, 
+													"[????????]  ");
+			pm.registerFormat("%8d ", ATTR_RUNNING_JOBS, "[??????] ");
+			pm.registerFormat("%8d ", ATTR_IDLE_JOBS, "[??????] ");
+			pm.registerFormat("%8d\n", ATTR_HELD_JOBS, "[???????]\n");
 
 			first = false;
 		}

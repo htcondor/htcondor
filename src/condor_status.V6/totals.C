@@ -378,36 +378,48 @@ ScheddNormalTotal()
 {
 	runningJobs = 0;
 	idleJobs = 0;
+	heldJobs = 0;
 }
 
 
 int ScheddNormalTotal::
 update (ClassAd *ad)
 {
-	int attrRunning, attrIdle;
+	int attrRunning, attrIdle, attrHeld;;
+	bool badAd = false;
 
-	if (!ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	||
-		!ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle))
-			return 0;
+	if (ad->LookupInteger(ATTR_TOTAL_RUNNING_JOBS, attrRunning)	) {
+		runningJobs += attrRunning;
+	} else {
+		badAd = true;
+	}
+	if( ad->LookupInteger(ATTR_TOTAL_IDLE_JOBS, attrIdle) ) {
+		idleJobs += attrIdle;
+	} else {
+		badAd = true;
+	}
+	if( ad->LookupInteger(ATTR_TOTAL_HELD_JOBS, attrHeld) ) {
+		heldJobs += attrHeld;
+	} else {
+		badAd = true;
+	}
 
-	runningJobs += attrRunning;	
-	idleJobs += attrIdle;
-
-	return 1;
+	return !badAd;
 }
 
 	
 void ScheddNormalTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%18s   %18s\n", "TotalRunningJobs", "TotalIdleJobs");
+	fprintf (file, "%18s %18s %18s\n", "TotalRunningJobs", "TotalIdleJobs",
+		"TotalHeldJobs");
 }
 
 
 void ScheddNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%18d   %18d\n", runningJobs, idleJobs);
+	if (tl) fprintf(file,"%18d %18d %18d\n", runningJobs, idleJobs, heldJobs);
 }
 
 
@@ -417,36 +429,47 @@ ScheddSubmittorTotal()
 {
 	runningJobs = 0;
 	idleJobs = 0;
+	heldJobs = 0;
 }
 
 
 int ScheddSubmittorTotal::
 update (ClassAd *ad)
 {
-	int attrRunning, attrIdle;
+	int attrRunning=0, attrIdle=0, attrHeld=0;
+	bool badAd = false;
 
-	if (!ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning)	||
-		!ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle))
-			return 0;
+	if( ad->LookupInteger(ATTR_RUNNING_JOBS, attrRunning) ) {
+		runningJobs += attrRunning;	
+	} else {
+		badAd = true;
+	}
+	if( ad->LookupInteger(ATTR_IDLE_JOBS, attrIdle) ) {
+		idleJobs += attrIdle;
+	} else {
+		badAd = true;
+	}
+	if( ad->LookupInteger(ATTR_HELD_JOBS, attrHeld) ) {
+		heldJobs += attrHeld;
+	} else {
+		badAd = true;
+	}
 
-	runningJobs += attrRunning;	
-	idleJobs += attrIdle;
-
-	return 1;
+	return !badAd;
 }
 
 	
 void ScheddSubmittorTotal::
 displayHeader(FILE *file)
 {
-	fprintf (file, "%18s   %18s\n", "RunningJobs", "IdleJobs");
+	fprintf (file, "%18s %18s %18s\n", "RunningJobs", "IdleJobs", "HeldJobs");
 }
 
 
 void ScheddSubmittorTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%18d   %18d\n", runningJobs, idleJobs);
+	fprintf (file, "%18d %18d %18d\n", runningJobs, idleJobs, heldJobs);
 }
 
 

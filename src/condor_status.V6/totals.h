@@ -154,6 +154,7 @@ class ScheddNormalTotal : public ClassTotal
 	protected:
 		int runningJobs;
 		int idleJobs;
+		int heldJobs;
 };
 
 
@@ -168,6 +169,7 @@ class ScheddSubmittorTotal : public ClassTotal
 	protected:
 		int runningJobs;
 		int idleJobs;
+		int heldJobs;
 };
 
 
