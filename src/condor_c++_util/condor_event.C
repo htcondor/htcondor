@@ -334,7 +334,7 @@ writeEvent (FILE *file)
 		break;
 
 	  case CONDOR_EVENT_BAD_LINK:
-		retval=fprintf(file,"(%d) Job not properly linked for V5.\n", errType);
+		retval=fprintf(file,"(%d) Job not properly linked for Condor.\n", errType);
 		break;
 
 	  default:
