@@ -1183,7 +1183,7 @@ AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
 
 
 AC_MSG_CHECKING([gahp])
-_cv_ext_gahp_version="gahp-1.0.10"
+_cv_ext_gahp_version="gahp-1.0.12"
 AC_MSG_RESULT([$_cv_ext_gahp_version])
 AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
 
