@@ -26,8 +26,6 @@
 
 #include "reli_sock.h"             // ReliSock
 #include "condor_debug.h"
-#include "condor_string.h"
-#include "condor_config.h"
 #include "internet.h"
 #include "condor_uid.h"
 #include "my_username.h"
