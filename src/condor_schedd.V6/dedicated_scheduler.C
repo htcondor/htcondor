@@ -1914,6 +1914,8 @@ DedicatedScheduler::spawnJobs( void )
 	shadow_rec* srec;
 	int pid, i, n, p;
 	PROC_ID id;
+	int std_fds[3];
+	int pipe_fds[2];
 
 	if( ! allocations ) {
 			// Nothing to do
@@ -1952,12 +1954,27 @@ DedicatedScheduler::spawnJobs( void )
 		if( ! mrec ) {
 			EXCEPT( "spawnJobs(): allocation node has NULL first match!" );
 		}
-		sprintf( args, "condor_shadow -f %s %s %s %d 0", 
-				 scheduler.shadowSockSinful(), mrec->peer, 
-				 mrec->id, allocation->cluster );
+
+		// Set-up pipe for transferring job ad
+		pipe_fds[0] = -1;
+		pipe_fds[1] = -1;
+		if( ! daemonCore->Create_Pipe(pipe_fds) ) {
+			EXCEPT( "spawnJobs(): Create_Pipe failed!" );
+		} 
+			// pipe_fds[0] is the read-end of the pipe.  we want that
+			// setup as STDIN for the shadow.  we'll hold onto the
+			// write end of it so we can write the job ad there.
+		std_fds[0] = pipe_fds[0];
+		std_fds[1] = -1;
+		std_fds[2] = -1;
+
+		sprintf( args, "condor_shadow -f %d.0 %s -", 
+				 allocation->cluster,
+				 scheduler.shadowSockSinful() );
+
 		pid = daemonCore->
 			Create_Process( shadow, args, PRIV_ROOT, rid, TRUE, NULL,
-							NULL, FALSE, NULL, NULL, niceness );
+							NULL, FALSE, NULL, std_fds, niceness );
 
 		if( ! pid ) {
 			// TODO: handle Create_Process failure
@@ -1990,6 +2007,53 @@ DedicatedScheduler::spawnJobs( void )
 		}
 			// TODO: Deal w/ pushing matches (this is just a
 			// performance optimization, not a correctness thing). 
+
+		// finally, now that the shadow has been spawned, we need to
+		// do some things with the pipe (if there is one):
+			// 1) close our copy of the read end of the pipe, so we
+			// don't leak it.  we have to use DC::Close_Pipe() for
+			// this, not just close(), so things work on windoze.
+		daemonCore->Close_Pipe( pipe_fds[0] );
+
+			// 2) dump out the job ad to the write end, since the
+			// shadow is now alive and can read from the pipe.  we
+			// want to use "true" for the last argument so that we
+			// expand $$ expressions within the job ad to pull things
+			// out of the startd ad before we give it to the shadow. 
+		ClassAd* ad = GetJobAd( id.cluster, id.proc, true );
+		FILE* fp = fdopen( pipe_fds[1], "w" );
+		if ( ad ) {
+			ad->fPrint( fp );
+
+			// Note that ONLY when GetJobAd() is called with expStartdAd==true
+			// do we want to delete the result.
+			delete ad;
+		} else {
+			// This should never happen
+
+			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but that" 
+					"job is already known to exist",
+					id.cluster, id.proc );
+		}
+
+			// TODO: if this is an MPI job, we should really write all
+			// the match info (ClaimIds + sinful strings) to the pipe
+			// before we close it, but that's just a performance
+			// optimization, not a correctness issue.
+
+			// since this is probably a DC pipe that we have to close
+			// with Close_Pipe(), we can't call fclose() on it.  so,
+			// unless we call fflush(), we won't get any output. :(
+		if( fflush(fp) < 0 ) {
+			dprintf( D_ALWAYS,
+					 "writeJobAd: fflush() failed: %s (errno %d)\n",
+					 strerror(errno), errno );
+		}
+
+			// Now that all the data is written to the pipe, we can
+			// safely close the other end, too.  
+		daemonCore->Close_Pipe( pipe_fds[1] );
+
 	}
 
 	return true;
