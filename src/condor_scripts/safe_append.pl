@@ -38,10 +38,14 @@ while( $_ = shift( @ARGV ) ) {
   SWITCH: {
       if( /-a.*/ ) {
 	  $append = shift(@ARGV);
+	  next SWITCH;
       }
       if( /-f.*/ ) {
 	  $file = shift(@ARGV);
 	  next SWITCH;
+      }
+      if( /-v.*/ ) {
+	  $verbose = 1;
       }
   }
 }
@@ -65,5 +69,8 @@ if( grep {$_ eq "$append\n"} @contents ) {
 open FILE, ">>$file" || die "Can't open $file: $!\n";
 print FILE "$append\n";
 close FILE;
+if( $verbose ) {
+    print "Added $append to $file\n";
+}
 exit 0;
 
