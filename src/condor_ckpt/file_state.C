@@ -2422,72 +2422,76 @@ fcntl(int fd, int cmd, ...)
 {
 	int arg = 0;
 	va_list ap;
-        int user_fd;
-        int use_local_access = FALSE;
-		int rval;
-
+	int user_fd;
+	int use_local_access = FALSE;
+	int rval;
+	
 	if ( FileTab == NULL )
 		InitFileState();
-
-        if ((user_fd = MapFd(fd)) < 0) {
-                return -1;
-        }
 	
-        if ( LocalAccess(fd) ) {
-                use_local_access = TRUE;
-        }
+	if ((user_fd = MapFd(fd)) < 0) {
+		return -1;
+	}
 	
-        switch (cmd) {
-        case F_DUPFD:
-#if defined(Solaris26)
-        case F_DUP2FD:
+	if ( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+	
+	switch (cmd) {
+	case F_DUPFD:
+#if HAS_F_DUP2FD
+	case F_DUP2FD:
 #endif
-                va_start( ap, cmd );
+		va_start( ap, cmd );
 // Linux uses a long as the type for the third argument.  All other
 // platforms use an int.  For Linux, we just cast the long to an int
 // for use with our remote syscall.  Derek Wright 4/11/97
 #if defined(LINUX)
-                arg = (int) va_arg( ap, long );
+		arg = (int) va_arg( ap, long );
 #else
-                arg = va_arg( ap, int );
+		arg = va_arg( ap, int );
 #endif
 
-				if( MappingFileDescriptors() ) {
-					rval =  FileTab->DoDup2( fd, arg );
-		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
-					if (rval == arg && MyImage.GetMode() == STANDALONE) {
-                        rval = syscall( SYS_fcntl, fd, cmd, arg );
-					}
-					return rval;
-				}
+		if( MappingFileDescriptors() ) {
+			rval =  FileTab->DoDup2( fd, arg );
+				// In STANDALONE mode, this must make an actual dup of
+				// the fd. -Jim B.  
+			if (rval == arg && MyImage.GetMode() == STANDALONE) {
+				rval = syscall( SYS_fcntl, fd, cmd, arg );
+			}
+			return rval;
+		}
 
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, fd, cmd, arg );
-				} else {
-						return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
-				}
-
-        case F_GETFD:
-        case F_GETFL:
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, arg );
-				} else {
-						return REMOTE_syscall( CONDOR_fcntl,
-											   user_fd, cmd, arg );
-				}
-        case F_SETFD:
-        case F_SETFL:
-                va_start( ap, cmd );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, fd, cmd, arg );
+		} else {
+				// In remote mode, we want to send a CONDOR_dup2 on
+				// the wire, not an fcntl(), so we have a prayer of
+				// heterogeneous syscalls working.  -Derek W. and Jim
+				// B. 8/18/98
+			return REMOTE_syscall( CONDOR_dup2, fd, arg );
+		}
+	case F_GETFD:
+	case F_GETFL:
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, arg );
+		} else {
+			return REMOTE_syscall( CONDOR_fcntl,
+								   user_fd, cmd, arg );
+		}
+	case F_SETFD:
+	case F_SETFL:
+		va_start( ap, cmd );
 #if defined(LINUX)
-                arg = (int) va_arg( ap, long );
+		arg = (int) va_arg( ap, long );
 #else
-                arg = va_arg( ap, int );
+		arg = va_arg( ap, int );
 #endif
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, arg );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, arg );
 		} else {
 			return REMOTE_syscall( CONDOR_fcntl, user_fd, cmd, arg );
-		}
+		}	
 
 	// These fcntl commands use a struct flock pointer for their
 	// 3rd arg.  Supporting these as remote calls would require a
@@ -2497,90 +2501,59 @@ fcntl(int fd, int cmd, ...)
 	case F_SETLK: 
 	case F_SETLKW: 
 		struct flock *lockarg;
-		va_list ap;
-                va_start( ap, cmd );
+		va_start( ap, cmd );
 		lockarg = va_arg ( ap, struct flock* );
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, lockarg );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 			return -1;
 		}
+	// If we have 64 bit syscalls/structs, we'll have some flock64
+	// versions of these, as well.  -Derek W. 8/18/98
+#if HAS_64BIT_SYSCALLS
+	case F_GETLK64:
+	case F_SETLK64: 
+	case F_SETLKW64: 
+		struct flock64 *lock64arg;
+		va_start( ap, cmd );
+		lock64arg = va_arg ( ap, struct flock64* );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, lock64arg );
+		} else {
+			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+			return -1;
+		}
+#endif /* HAS_64BIT_SYSCALLS */
 	default:
 		dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 	}
 	return -1;
 }
+
+
 /* _fcntl and __fcntl must have the same cases as fcntl so the correct
    third argument gets passed.  -Jim B. */
+/* To avoid totally nasty code duplication, we can just use a va_list
+   to pass the variable args for _fcntl() and __fcntl() to our real
+   fcntl() function above.  -Derek W. 8/18/98 */
 int
 _fcntl(int fd, int cmd, ...)
 {
 	va_list ap;
-	int arg = 0;
-	struct flock *lockarg = NULL;
-	switch (cmd) {
-	case F_DUPFD:
-#if defined(Solaris26)
-    case F_DUP2FD:
-#endif
-	case F_SETFD:
-	case F_SETFL:
-		va_start( ap, cmd );
-#if defined(LINUX)
-		arg = (int) va_arg( ap, long );
-#else
-		arg = va_arg( ap, int );
-#endif
-		return fcntl(fd,cmd,arg);
-	case F_GETFD:
-	case F_GETFL:
-		return fcntl(fd,cmd);
-	case F_GETLK:
-	case F_SETLK:
-	case F_SETLKW:
-		va_start( ap, cmd );
-		lockarg = va_arg( ap, struct flock * );
-		return fcntl(fd,cmd,lockarg);
-	default:
-		break;
-	}
-	return fcntl(fd,cmd);
+	va_start( ap, cmd );
+	return fcntl( fd, cmd, ap );
 }
+
+
 int
 __fcntl(int fd, int cmd, ...)
 {
 	va_list ap;
-	int arg = 0;
-	struct flock *lockarg = NULL;
-	switch (cmd) {
-#if defined(Solaris26)
-	case F_DUP2FD:
-#endif
-	case F_DUPFD:
-	case F_SETFD:
-	case F_SETFL:
-		va_start( ap, cmd );
-#if defined(LINUX)
-		arg = (int) va_arg( ap, long );
-#else
-		arg = va_arg( ap, int );
-#endif
-		return fcntl(fd,cmd,arg);
-	case F_GETFD:
-	case F_GETFL:
-		return fcntl(fd,cmd);
-	case F_GETLK:
-	case F_SETLK:
-	case F_SETLKW:
-		va_start( ap, cmd );
-		lockarg = va_arg( ap, struct flock * );
-		return fcntl(fd,cmd,lockarg);
-	default:
-		break;
-	}
-	return fcntl(fd,cmd);
+	va_start( ap, cmd );
+	return fcntl( fd, cmd, ap );
 }
-#endif
+#endif /* SYS_fcntl */
 
 } // end of extern "C"
+
