@@ -23,11 +23,14 @@ run( "$config_val -pool condor -n perdita -negotiator subsystem" );
 run( "$config_val -pool condor -n family.hampshire.edu log" );
 run( "$config_val -a '<128.105.73.32:23525>'" );
 run( "$config_val -a '<128.105.73.32:23525>' log" );
+run( "$config_val -a '<128.105.73.32>' log" );
+run( "$config_val -a" );
 run( "$config_val -h perdita" );
 run( "$config_val -h" );
 run( "$config_val -h chevre log" );
 run( "$config_val -owner" );
 run( "$config_val -tilde" );
+run( "$config_val -foo" );
 
 sub run {
     my( $foo ) = $_[0];
