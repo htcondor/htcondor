@@ -76,7 +76,7 @@ int getCommandFromArgv( int argc, char* argv[] );
 void printOutput( ClassAd* reply, DCStartd* startd );
 void fillRequestAd( ClassAd* );
 void fillActivateAd( ClassAd* );
-
+char* getAddrFromId( const char* id );
 
 /*********************************************************************
    main()
@@ -277,6 +277,26 @@ fillActivateAd( ClassAd* req )
 		line += '"';
 		req->Insert( line.Value() );
 	}
+}
+
+
+char*
+getAddrFromId( const char* id )
+{
+	char* tmp;
+	char* addr;
+	char* copy = strdup( id );
+	tmp = strchr( copy, '#' );
+	if( tmp ) {
+		*tmp = '\0';
+		if( is_valid_sinful(copy) ) { 
+			addr = strdup( copy );
+			free( copy );
+			return addr;
+		}
+	}
+	free( copy );
+	return NULL;
 }
 
 
@@ -551,6 +571,9 @@ parseArgv( int argc, char* argv[] )
 			break;
 
 		case 'a':
+			if( cmd != CA_REQUEST_CLAIM ) {
+				invalid( *tmp );
+			}
 			if( strncmp("-address", *tmp, strlen(*tmp)) ) {
 				invalid( *tmp );
 			} 
@@ -567,6 +590,9 @@ parseArgv( int argc, char* argv[] )
 			break;
 
 		case 'n':
+			if( cmd != CA_REQUEST_CLAIM ) {
+				invalid( *tmp );
+			}
 			if( strncmp("-name", *tmp, strlen(*tmp)) ) {
 				invalid( *tmp );
 			} 
@@ -690,13 +716,23 @@ parseArgv( int argc, char* argv[] )
 		usage( my_name );
 	}
 
-	if( addr ) {
-		target = addr;
-	} else if( name ) {
-		target = name;
-	} else { 
-			// local startd
-		target = NULL;
+	if( needs_id ) {
+		target = getAddrFromId( claim_id );
+		if( ! target ) {
+			fprintf( stderr, 
+					 "ERROR: Invalid ClaimId specified with -id (%s)\n",
+					 claim_id );
+			usage( my_name );
+		}
+	} else {
+		if( addr ) {
+			target = addr;
+		} else if( name ) {
+			target = name;
+		} else { 
+				// local startd
+			target = NULL;
+		}
 	}
 
 	if( cmd == CA_ACTIVATE_CLAIM && ! job_keyword ) { 
@@ -724,26 +760,26 @@ printCmd( int cmd )
 {
 	switch( cmd ) {
 	case CA_REQUEST_CLAIM:
-		fprintf( stderr, "    request\t\tCreate a new COD claim\n" );
+		fprintf( stderr, "   request\t\tCreate a new COD claim\n" );
 		break;
 	case CA_ACTIVATE_CLAIM:
 		fprintf( stderr, 
-				 "    activate\t\tStart a job on a given claim\n" );
+				 "   activate\t\tStart a job on a given claim\n" );
 		break;
 	case CA_DEACTIVATE_CLAIM:
-		fprintf( stderr, "    deactivate\t\tKill the current job, but "
+		fprintf( stderr, "   deactivate\t\tKill the current job, but "
 				 "keep the claim\n" );
 		break;
 	case CA_RELEASE_CLAIM:
-		fprintf( stderr, "    release\t\tRelinquish a claim, and kill "
+		fprintf( stderr, "   release\t\tRelinquish a claim, and kill "
 				 "any running job\n" ); 
 		break;
 	case CA_SUSPEND_CLAIM:
-		fprintf( stderr, "    suspend\t\tSuspend the job on a given "
+		fprintf( stderr, "   suspend\t\tSuspend the job on a given "
 				 "claim\n" ); 
 		break;
 	case CA_RESUME_CLAIM:
-		fprintf( stderr, "    resume\t\tResume the job on a given "
+		fprintf( stderr, "   resume\t\tResume the job on a given "
 				 "claim\n" ); 
 		break;
 	}
@@ -753,7 +789,7 @@ printCmd( int cmd )
 void
 printFast( void ) 
 {
-	fprintf( stderr, "    -fast\t\tQuickly kill any running job\n" );
+	fprintf( stderr, "   -fast\t\tQuickly kill any running job\n" );
 }
 
 
@@ -781,8 +817,6 @@ usage( char *str )
 		exit( 1 );
 	}
 
-	fprintf( stderr, "Usage: %s [target] [general-opts]", str );
-
 	switch( cmd ) {
 	case CA_REQUEST_CLAIM:
 		needs_id = false;
@@ -793,33 +827,33 @@ usage( char *str )
 		break;
 	}
 
-	if( has_cmd_opt ) {
-		fprintf( stderr, " [command-opts]" );
-	} 
-	if( needs_id ) {
-		fprintf( stderr, " -id ClaimId" );
-	}
-	fprintf( stderr, "\n" );
+	fprintf( stderr, "Usage: %s [target] [general-opts]%s\n", str,
+			 has_cmd_opt ? " [command-opts]" : "" );
 
 	printCmd( cmd );
 	
-	fprintf( stderr, "\nWhere [target] can be zero or one of:\n" );
-	fprintf( stderr, "    -name hostname\tContact the startd on the "
-			 "given host\n" ); 
-	fprintf( stderr, "    -pool hostname\tUse the given central manager "
-			 "to find the startd\n\t\t\trequested with -name\n" );
-	fprintf( stderr, "    -addr <addr:port>\tContact the startd at the " 
-			 "given \"sinful string\"\n" );
-	fprintf( stderr, "    (If no targets are specified, "
-			 "the local host is used)\n" );
+	if( needs_id ) { 
+		fprintf( stderr, "\nWhere [target] must include:\n" );
+		fprintf( stderr, "   -id ClaimId\t\tAct on the given COD claim\n" );
+	} else {
+		fprintf( stderr, "\nWhere [target] can be zero or one of:\n" );
+		fprintf( stderr, "   -name hostname\tContact the startd on the "
+				 "given host\n" ); 
+		fprintf( stderr, "   -pool hostname\tUse the given central manager "
+				 "to find the startd\n\t\t\trequested with -name\n" );
+		fprintf( stderr, "   -addr <ip_addr:port>\tContact the startd at " 
+				 "the given \"sinful string\"\n" );
+		fprintf( stderr, "   (If no target is specified, the local "
+				 "host is used)\n" );
+	}
 
 	fprintf( stderr, "\nWhere [general-opts] can be zero or more of:\n" );
-	fprintf( stderr, "    -help\t\tGive this usage information\n" );
-	fprintf( stderr, "    -debug\t\tPrint verbose debugging information\n" );
-	fprintf( stderr, "    -version\t\tPrint the version\n" );
-	fprintf( stderr, "    -timeout N\t\tTimeout all network "
+	fprintf( stderr, "   -help\t\tGive this usage information\n" );
+	fprintf( stderr, "   -debug\t\tPrint verbose debugging information\n" );
+	fprintf( stderr, "   -version\t\tPrint the version\n" );
+	fprintf( stderr, "   -timeout N\t\tTimeout all network "
 			 "operations after N seconds\n" );
-	fprintf( stderr, "    -classad file\tPrint the reply ClassAd to "
+	fprintf( stderr, "   -classad file\tPrint the reply ClassAd to "
 			 "the given file\n" );
 
 	if( has_cmd_opt ) {
@@ -830,18 +864,18 @@ usage( char *str )
 	switch( cmd ) {
 
 	case CA_REQUEST_CLAIM:
-		fprintf( stderr, "    -requirements expr\tFind a resource "
+		fprintf( stderr, "   -requirements expr\tFind a resource "
 				 "that matches the boolean expression\n" );
 		break;
 
 	case CA_ACTIVATE_CLAIM:
-		fprintf( stderr, "    -keyword string\tUse the keyword to "
+		fprintf( stderr, "   -keyword string\tUse the keyword to "
 				 "find the job in the config file\n" );
-		fprintf( stderr, "    -cluster N\t\tStart the job with the "
+		fprintf( stderr, "   -cluster N\t\tStart the job with the "
 				 "given cluster ID\n" );
-		fprintf( stderr, "    -proc N\t\tStart the job with the "
+		fprintf( stderr, "   -proc N\t\tStart the job with the "
 				 "given proc ID\n" );
-		fprintf( stderr, "    -requirements expr\tFind a starter "
+		fprintf( stderr, "   -requirements expr\tFind a starter "
 				 "that matches the boolean expression\n" );
 		break;
 
