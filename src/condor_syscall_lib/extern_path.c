@@ -114,7 +114,7 @@ int		bufsize;
 	if( stat(local_name,&st_buf) < 0 ) {
 		dprintf( D_ALWAYS, "stat failed in external_name: %s\n",
 				 strerror(errno) );
-		Suicide();
+		return -1;
 	}
 	file_dev = st_buf.st_dev;
 
@@ -159,13 +159,13 @@ init()
 	if( gethostname(Hostname,sizeof(Hostname)) < 0 ) {
 		dprintf( D_ALWAYS, "gethostname failed in extern_path.c: %s\n",
 				 strerror(errno) );
-		Suicide();
+		return;
 	}
 
 	if( (N_Sys=getmnt(&start,FS_Buf,sizeof(FS_Buf),NOSTAT_MANY,0)) < 0 ) {
 		dprintf( D_ALWAYS, "getmnt failed in extern_path.c: %s\n",
 				 strerror(errno));
-		Suicide();
+		return;
 	}
 
 	InitDone = TRUE;

@@ -87,9 +87,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 	SetSyscalls( scm );
 
 	if( mode < 0 ) {
-		dprintf( D_ALWAYS, "CONDOR_file_info failed in open_file_stream: %s\n",
-				 strerror(errno) );
-		Suicide();
+		EXCEPT( "CONDOR_file_info failed in open_file_stream\n" );
 	}
 
 	if( mode == IS_PRE_OPEN ) {
