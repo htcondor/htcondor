@@ -8,7 +8,9 @@
 # Figure out the platform-specific crap:
 ######################################################################
 
-UNAME=`uname`
+# Don't forget that IRIX's uname might be "IRIX64" on 64 bit
+# machines.  Just convert to "IRIX" if it begins with IRIX
+UNAME=`uname | sed 's/IRIX.*/IRIX/'`
 
 if [ -f /lib/libc.a ]; then
 	LIBC=/lib/libc.a
