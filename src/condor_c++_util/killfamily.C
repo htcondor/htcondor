@@ -67,7 +67,7 @@ ProcFamily::~ProcFamily()
 }
 
 void
-ProcFamily::setFamilyLogin( char *login )
+ProcFamily::setFamilyLogin( const char *login )
 {
 	if ( login ) {
 		if ( searchLogin ) 

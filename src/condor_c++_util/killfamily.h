@@ -60,7 +60,7 @@ public:
 	
 	void	display();		// dprintf's the existing pid family
 
-	void	setFamilyLogin( char *login );
+	void	setFamilyLogin( const char *login );
 
 private:
 	enum KILLFAMILY_DIRECTION {
