@@ -184,29 +184,41 @@ parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
 	MyString whynot;
 	bool done = false;
 
+	MyString expectedSyntax;
+	expectedSyntax.sprintf( "Expected syntax: %s nodename submitfile [DONE]",
+							nodeTypeKeyword );
+
 		// NOTE: fear not -- any missing tokens resulting in NULL
-		// strings will be handled correctly by AddNode()
+		// strings will be error-handled correctly by AddNode()
 
 		// first token is the node name
 	char *nodeName = strtok( NULL, DELIMITERS );
 		// next token is the submit file name
 	char *submitFile = strtok( NULL, DELIMITERS );
-		// last token is optional DONE marker
+		// last (optional) token is DONE marker
 	char *doneKey = strtok( 0, DELIMITERS );
+		// anything else is garbage
+	char *garbage = strtok( 0, DELIMITERS );
 	if( doneKey ) {
 		if( strcasecmp( doneKey, "DONE" ) != 0 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): unexpected "
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
 						  "parameter \"%s\"\n", dagFile, lineNum, doneKey );
+			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 		}
 		done = true;
+	}
+	if( garbage ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", dagFile, lineNum, garbage );
+			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			return false;
 	}
 	if( !AddNode( nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
-		debug_printf( DEBUG_QUIET, "Expected syntax: %s nodename submitfile "
-					  "[DONE]\n", nodeTypeKeyword );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
 	}
 	return true;
