@@ -5616,69 +5616,59 @@ Scheduler::child_exit(int pid, int status)
 	shadow_rec*		srec;
 	int				StartJobsFlag=TRUE;
 	int				q_status;  // status of this job in the queue 
+	PROC_ID			job_id;
 
 	srec = FindSrecByPid(pid);
+	job_id.cluster = srec->job_id.cluster;
+	job_id.proc = srec->job_id.proc;
 
 	if (IsSchedulerUniverse(srec)) {
-		PROC_ID jobId;
-		jobId.cluster = srec->job_id.cluster;
-		jobId.proc = srec->job_id.proc;
-
 		// scheduler universe process
 		if(WIFEXITED(status)) {
-			dprintf(D_FULLDEBUG,
-					"scheduler universe job (%d.%d) pid %d "
-					"exited with status %d\n", srec->job_id.cluster,
-					srec->job_id.proc, pid, WEXITSTATUS(status) );
-			if (!srec->preempted) {
-				NotifyUser(srec, "exited with status ",
-						   WEXITSTATUS(status) , COMPLETED);
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-								ATTR_JOB_STATUS, COMPLETED);
-				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
-								 ATTR_ENTERED_CURRENT_STATUS,
-								 (int)time(0) );
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+			dprintf( D_FULLDEBUG,
+					 "scheduler universe job (%d.%d) pid %d "
+					 "exited with status %d\n", job_id.cluster,
+					 job_id.proc, pid, WEXITSTATUS(status) );
+			if( !srec->preempted ) {
+				set_job_status( job_id.cluster, job_id.proc, COMPLETED ); 
+				SetAttributeInt( job_id.cluster, job_id.proc, 
 								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
-				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
-							 ATTR_ON_EXIT_BY_SIGNAL, "FALSE");
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
-								ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
-				WriteTerminateToUserLog( jobId, status );
+				SetAttribute( job_id.cluster, job_id.proc,
+							  ATTR_ON_EXIT_BY_SIGNAL, "FALSE" );
+				SetAttributeInt( job_id.cluster, job_id.proc,
+								 ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
+				WriteTerminateToUserLog( job_id, status );
+				NotifyUser( srec, "exited with status ",
+							WEXITSTATUS(status), COMPLETED );
 			} else {
-				WriteEvictToUserLog( jobId );
+					// job exited b/c we removed or held it.  the
+					// job's queue status will already be correct, so
+					// we don't have to change anything else...
+				WriteEvictToUserLog( job_id );
 			}
 		} else if(WIFSIGNALED(status)) {
-			dprintf(D_ALWAYS,
-					"scheduler universe job (%d.%d) pid %d died "
-					"with %s\n", srec->job_id.cluster,
-					srec->job_id.proc, pid, 
-					daemonCore->GetExceptionString(status));
-			if (!srec->preempted) {
-				NotifyUser(srec, "was killed by signal ",
-						   WTERMSIG(status), REMOVED);
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
-								ATTR_JOB_STATUS, REMOVED);
-				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
-								 ATTR_ENTERED_CURRENT_STATUS,
-								 (int)time(0) );
-				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
-							 ATTR_ON_EXIT_BY_SIGNAL, "TRUE");
-				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
-								ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
-				WriteTerminateToUserLog( jobId, status );
+			dprintf( D_ALWAYS,
+					 "scheduler universe job (%d.%d) pid %d died "
+					 "with %s\n", job_id.cluster, job_id.proc, pid, 
+					 daemonCore->GetExceptionString(status) );
+			if( !srec->preempted ) {
+					/* we didn't try to kill this job via rm or hold,
+					   so either it killed itself or was killed from
+					   the outside world.  either way, from our
+					   perspective, it is now completed.
+					*/
+				set_job_status( job_id.cluster,	job_id.proc, COMPLETED ); 
+				SetAttribute( job_id.cluster, job_id.proc,
+							  ATTR_ON_EXIT_BY_SIGNAL, "TRUE" );
+				SetAttributeInt( job_id.cluster, job_id.proc,
+								 ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
+				WriteTerminateToUserLog( job_id, status );
+				NotifyUser( srec, "was killed by signal ",
+							WTERMSIG(status), COMPLETED );
 			} else {
-				WriteEvictToUserLog( jobId );
+				WriteEvictToUserLog( job_id );
 			}
 		}
-/*
-			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
-				dprintf(D_ALWAYS, "DestroyProc(%d.%d) failed -- "
-						"presumably job was already removed\n",
-						srec->job_id.cluster,
-						srec->job_id.proc);
-			}
-*/
 		delete_shadow_rec( pid );
 	} else if (srec) {
 		// A real shadow
