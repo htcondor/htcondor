@@ -41,6 +41,9 @@
 *************************************************************/
 
 #define _POSIX_SOURCE
+#if defined(AIX32)
+#	define _G_USE_PROTOS
+#endif
 
 #include <stdio.h>
 #include "fcntl.h"
@@ -584,6 +587,28 @@ open( const char *path, int flags, ... )
 	{
 		return isatty(0);
 	}
+#endif
+
+#if defined(AIX32)
+int
+openx( const char *path, int flags, mode_t creat_mode, int ext )
+{
+
+	if( ext != 0 ) {
+		errno = ENOSYS;
+		return -1;
+	}
+
+	if( MappingFileDescriptors() ) {
+		return FileTab->DoOpen( path, flags, creat_mode );
+	} else {
+		if( LocalSysCalls() ) {
+			return syscall( SYS_openx, path, flags, creat_mode, ext );
+		} else {
+			return REMOTE_syscall( CONDOR_openx, path, flags, creat_mode, ext );
+		}
+	}
+}
 #endif
 
 #if defined( SYS_close )
