@@ -107,6 +107,11 @@
 */
 #define TestPlatformLdFlags -lnsl -lsocket 
 
+/*
+    platform-specific libraries for linking w/Orbacus
+*/
+#define PlatformOBLibs -lsocket -lposix4
+
 
 /**************************************************************************
 ** Include OS version and Arch-specific config files
