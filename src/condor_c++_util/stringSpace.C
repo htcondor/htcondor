@@ -55,6 +55,7 @@ StringSpace (int sz) : stringSpace ((int) (1.25 * sz), &hashFunction)
 	filler.adoptMode = SS_INVALID;
 	filler.refCount = 0;
 	strTable.fill (filler);
+	caseSensitive = true;
 
 	// the current index
 	current = 0;	
@@ -81,7 +82,7 @@ purge ()
 			{
 				case SS_DUP:
 				case SS_ADOPT_C_STRING:
-					free (strTable[i].string);
+					free ( (char*) strTable[i].string);
 					strTable[i].string = NULL;
 					break;
 
@@ -107,7 +108,7 @@ purge ()
 
 
 int StringSpace::
-getCanonical (char *str, int adopt)
+getCanonical (const char *str, int adopt)
 {
 	int index;
 	MyString myStr(str);
@@ -127,7 +128,7 @@ getCanonical (char *str, int adopt)
 	{
 		switch (adopt)
         {
-            case SS_ADOPT_C_STRING:     free (str);     break;
+            case SS_ADOPT_C_STRING: free( (char*)str);  break;
             case SS_ADOPT_CPLUS_STRING: delete [] str;  break;
             case SS_DUP:
             default:
@@ -154,7 +155,7 @@ getCanonical (char *str, int adopt)
 
 
 int StringSpace::
-getCanonical (char *str, SSString &canonical, int adopt)
+getCanonical (const char *str, SSString &canonical, int adopt)
 {
 	canonical.context = ((canonical.index=getCanonical(str,adopt)) != -1) ?
 							this : 0;
@@ -163,7 +164,7 @@ getCanonical (char *str, SSString &canonical, int adopt)
 
 
 int StringSpace::
-getCanonical (char *str, SSString *&canonical, int adopt)
+getCanonical (const char *str, SSString *&canonical, int adopt)
 {
 	if (!(canonical = new SSString)) return -1;
 	return getCanonical (str, *canonical, adopt);
@@ -196,11 +197,21 @@ SSString::
 void
 SSString::copy (const SSString &sstr)
 {
+		// clean up previous reference
+	dispose( );
+
     index = sstr.index;
     context = sstr.context;
 
     // update reference count
     if (context) context->strTable[index].refCount++;
+}
+
+const SSString& 
+SSString::operator=( const SSString &str )
+{
+	copy( str );
+	return( *this );
 }
 
 void 
@@ -209,11 +220,13 @@ SSString::dispose ()
     // if it is a valid reference, decrement refcount and check it is zero
     if (context && (--context->strTable[index].refCount) == 0)
     {
+		MyString str( context->strTable[index].string );
+
         switch (context->strTable[index].adoptMode)
         {
             case SS_DUP: 
             case SS_ADOPT_C_STRING:
-                free (context->strTable[index].string);
+                free ( (char*) context->strTable[index].string);
 				context->strTable[index].string = NULL;
 				context->strTable[index].adoptMode = SS_INVALID;
                 break;
@@ -227,6 +240,7 @@ SSString::dispose ()
             default:
                 break;
         }
+		context->stringSpace.remove( str );
     }
 
 	context = NULL;

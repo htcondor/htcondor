@@ -89,16 +89,16 @@ class StringSpace
 	~StringSpace ();
 
 	// principal member functions
-	void 	setCaseSensitive( bool );
-	int		getCanonical(char*,SSString&, int=SS_DUP);
-	int		getCanonical(char*,SSString*&,int=SS_DUP);
-    int     getCanonical(char*,int=SS_DUP); // insert string without reference
+	void setCaseSensitive( bool );
+	int	getCanonical(const char*,SSString&, int=SS_DUP);
+	int	getCanonical(const char*,SSString*&,int=SS_DUP);
+    int getCanonical(const char*,int=SS_DUP);// insert string without reference
 	inline 	int checkFor (char *str);		// check if str is in the space
 	inline 	int getNumStrings (void);		// number of strings in space
 
 	// the subscript operator can be used to obtain the char string
-	inline char  *operator[] (SSString);
-	inline char  *operator[] (int); 	// less safe than the above
+	inline const char  *operator[] (SSString);
+	inline const char  *operator[] (int); 	// less safe than the above
 
 	// misc
 	void  dump ();			// print contents of space to screen
@@ -108,7 +108,7 @@ class StringSpace
 	friend class SSString;
 
 	// the shared storage cell for the strings
-	struct SSStringEnt { int refCount; char *string; int adoptMode; };
+	struct SSStringEnt { int refCount; const char *string; int adoptMode; };
 
 	HashTable<MyString,int> stringSpace;	
 	ExtArray<SSStringEnt> strTable;
@@ -125,9 +125,10 @@ class SSString
 	SSString(const SSString &);
 	~SSString();
 
+	const SSString &operator= (const SSString &);
    	void copy (const SSString &);			// copy reference
    	void dispose ();						// dispose reference
-	inline 	char *getCharString (void);		// get the ASCII string itself	
+	inline 	const char *getCharString (void);// get the ASCII string itself	
 	inline 	int	 getIndex (void);			// get the integer index 
 
   private:
@@ -142,7 +143,7 @@ class SSString
 
 // --------[ Implementations of inline functions follow ]--------------------
 
-inline char * StringSpace::
+inline const char * StringSpace::
 operator[] (SSString ssstr)
 {
     if (ssstr.index >= 0 && ssstr.index < current && ssstr.context == this)
@@ -151,7 +152,7 @@ operator[] (SSString ssstr)
         return NULL;
 }
 
-inline char * StringSpace::
+inline const char * StringSpace::
 operator[] (int id)
 {
     return (id >= 0 && id < current) ? strTable[id].string : (char*)NULL;
@@ -171,7 +172,7 @@ StringSpace::getNumStrings (void)			// number of strings in the space
 }
 
 
-inline char	*
+inline const char	*
 SSString::getCharString (void)		// get the ASCII string itself	
 {
 	return (context ? context->strTable[index].string : (char *)NULL);
