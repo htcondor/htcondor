@@ -1,3 +1,9 @@
+12/31/04 V6_6-merge-31
+   The state of the V6_6-branch for yet another merge into the
+   V6_7-branch.  This includes another fix to the race condition in
+   the port 0 stuff, tons of NWO glue improvements and fixes, and OSX
+   build changes for the NWO (to fix OPSYS, make_final_tarballs, etc). 
+
 12/29/04 V6_6-merge-30
    The state of the V6_6-branch for yet another merge into the
    V6_7-branch.  This includes the fix to the race condition in port
