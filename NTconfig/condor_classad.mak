@@ -42,12 +42,12 @@ ALL : "$(OUTDIR)\condor_classad.lib"
 
 !ELSE 
 
-ALL : "condor_cpp_util - Win32 Debug" "condor_util_lib - Win32 Debug" "$(OUTDIR)\condor_classad.lib"
+ALL : "condor_util_lib - Win32 Debug" "condor_cpp_util - Win32 Debug" "$(OUTDIR)\condor_classad.lib"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_util_lib - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" 
+CLEAN :"condor_cpp_util - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -98,8 +98,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\scanner.obj" \
 	"$(INTDIR)\value.obj" \
 	"$(INTDIR)\xml_classads.obj" \
-	"..\src\condor_util_lib\condor_util.lib" \
-	"$(OUTDIR)\condor_cpp_util.lib"
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_classad.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -120,12 +120,12 @@ ALL : "$(OUTDIR)\condor_classad.lib"
 
 !ELSE 
 
-ALL : "condor_cpp_util - Win32 Release" "condor_util_lib - Win32 Release" "$(OUTDIR)\condor_classad.lib"
+ALL : "condor_util_lib - Win32 Release" "condor_cpp_util - Win32 Release" "$(OUTDIR)\condor_classad.lib"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_util_lib - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" 
+CLEAN :"condor_cpp_util - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
@@ -175,8 +175,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\scanner.obj" \
 	"$(INTDIR)\value.obj" \
 	"$(INTDIR)\xml_classads.obj" \
-	"..\src\condor_util_lib\condor_util.lib" \
-	"$(OUTDIR)\condor_cpp_util.lib"
+	"$(OUTDIR)\condor_cpp_util.lib" \
+	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_classad.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -229,52 +229,52 @@ LIB32_OBJS= \
 
 !IF  "$(CFG)" == "condor_classad - Win32 Debug"
 
-"condor_util_lib - Win32 Debug" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
-   cd "."
-
-"condor_util_lib - Win32 DebugCLEAN" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
-   cd "."
-
-!ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
-
-"condor_util_lib - Win32 Release" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
-   cd "."
-
-"condor_util_lib - Win32 ReleaseCLEAN" : 
-   cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
-   cd "."
-
-!ENDIF 
-
-!IF  "$(CFG)" == "condor_classad - Win32 Debug"
-
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+!IF  "$(CFG)" == "condor_classad - Win32 Debug"
+
+"condor_util_lib - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" 
+   cd "."
+
+"condor_util_lib - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_classad - Win32 Release"
+
+"condor_util_lib - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" 
+   cd "."
+
+"condor_util_lib - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 

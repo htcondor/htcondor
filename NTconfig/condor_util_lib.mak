@@ -33,7 +33,7 @@ RSC=rc.exe
 OUTDIR=.\..\Debug
 INTDIR=.\..\Debug
 
-ALL : "..\src\h\syscall_numbers.h" "..\src\condor_util_lib\condor_util.lib"
+ALL : "..\src\condor_util_lib\condor_util.lib"
 
 
 CLEAN :
@@ -74,7 +74,6 @@ CLEAN :
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "..\src\condor_util_lib\condor_util.lib"
-	-@erase "..\src\h\syscall_numbers.h"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
@@ -105,6 +104,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\escapes.obj" \
 	"$(INTDIR)\except.obj" \
 	"$(INTDIR)\fdprintf.obj" \
+	"$(INTDIR)\filename_tools.obj" \
 	"$(INTDIR)\get_port_range.obj" \
 	"$(INTDIR)\get_random_num.obj" \
 	"$(INTDIR)\globus_utils.obj" \
@@ -118,8 +118,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\filename_tools.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -202,6 +201,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\escapes.obj" \
 	"$(INTDIR)\except.obj" \
 	"$(INTDIR)\fdprintf.obj" \
+	"$(INTDIR)\filename_tools.obj" \
 	"$(INTDIR)\get_port_range.obj" \
 	"$(INTDIR)\get_random_num.obj" \
 	"$(INTDIR)\globus_utils.obj" \
@@ -215,8 +215,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\filename_tools.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -400,7 +399,7 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_include
 
 SOURCE=..\src\condor_util_lib\except.c
 
-"$(INTDIR)\except.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+"$(INTDIR)\except.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch" "..\src\h\syscall_numbers.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

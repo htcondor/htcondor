@@ -212,6 +212,10 @@ SOURCE="..\src\condor_c++_util\condor_md.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_parameters.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_q.C"
 # End Source File
 # Begin Source File
@@ -274,6 +278,14 @@ SOURCE=..\src\condor_daemon_client\daemon_types.C
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\daemon_types.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_collector.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_collector.h
 # End Source File
 # Begin Source File
 
