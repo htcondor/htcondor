@@ -1099,39 +1099,49 @@ AddRectangle( const ExprTree* tree, Rectangles &r, const string &allowed,
 
 		// make rectangle from constraint
 	ftree = NULL;
-	if( !Flatten( tree, val, ftree ) || !ftree ) {
+	if( !Flatten( tree, val, ftree ) ) {
 		return( false );
 	}
-	rval = _MakeRectangles( ftree, allowed, r, true );
-	delete ftree;
-	if( !rval ) {
-		return( false );
+	if( !ftree ) {
+			// hmm ... the requirements flattened to a single value
+		bool b;
+		if( !val.IsBooleanValue( b ) || !b ) return( false );
+
+			// must be true; just increment the rectangle number.
+			// typification will ensure that all exported attrs are
+			// unconstrained.  Include imported attrs of course.
+		r.NewRectangle( );
+	} else {
+		rval = _MakeRectangles( ftree, allowed, r, true );
+		delete ftree;
+		if( !rval ) {
+			return( false );
+		}
+		ftree = NULL;
 	}
-	ftree = NULL;
 
 		// project imported attributes to each rectangle created
 	for( References::iterator itr=irefs.begin( );itr!=irefs.end( ); itr++ ) {
-		for( int i = oldRid+1; i <= r.rId; i++ ) {
-			if( !LookupInScope( *itr, ad ) ) {
-					// attribute absent --- add to unimported list
-				r.unimported[*itr].insert( i );
-				continue;
-			} 
-			if( !EvaluateAttr( *itr, val ) ) {
-					// error
-				return( false );
-			} 
-			if(val.IsExceptional()||val.IsClassAdValue()||val.IsListValue()) {
-					// not a literal; require verification at post-processing
-				r.AddImportedVerificationRequest( *itr, i );
-				continue;
+		if( !LookupInScope( *itr, ad ) ) {
+				// attribute absent --- add to unimported lists
+			for( int i = oldRid+1 ; i <= r.rId ; i++ ) {
+				r.unimported[*itr].Insert( i );
 			}
-				// not open and not constraint; hence (false, false)
-			if( r.AddUpperBound( *itr, val, false, false, i ) !=
-						Rectangles::NO_ERROR || 
+		} else if( !EvaluateAttr( *itr, val ) || val.IsExceptional() ||
+				   val.IsClassAdValue() || val.IsListValue() ) {
+				// not a literal; require verification at post-processing
+			for( int i = oldRid+1 ; i <= r.rId ; i++ ) {
+				r.AddDeviantImported( *itr, i );
+			}
+		} else {
+			for( int i = oldRid+1 ; i <= r.rId ; i++ ) {
+					// not open and not constraint; hence (false, false)
+				if( r.AddUpperBound( *itr, val, false, false, i ) !=
+					Rectangles::NO_ERROR || 
 					r.AddLowerBound( *itr, val, false, false, i ) !=
-						Rectangles::NO_ERROR ) {
-				return( false );
+					Rectangles::NO_ERROR ) {
+					return( false );
+				}
 			}
 		}
 	}
@@ -1220,7 +1230,7 @@ _MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r,
 		}
 	} else {
 			// unknown:  add to verify exported
-		r.AddExportedVerificationRequest( );
+		r.AddDeviantExported( );
 		return( true );
 	}
 
