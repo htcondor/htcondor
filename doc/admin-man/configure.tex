@@ -1267,8 +1267,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   since tools including \Condor{q} and
   \Condor{rm} do not need to send any messages over the network to
   locate the \Condor{schedd} daemon.
-  This macro is not necessary for the \Condor{collector} or \Condor{negotiator}
-  daemons, since their command sockets are at well-known ports.  
+  This macro is not necessary for the \Condor{collector} 
+  daemon, since it's command socket is at a well-known port.  
   
 \item[\Macro{SUBSYS\_ATTRS} or \label{param:SubsysExprs}
 \Macro{SUBSYS\_EXPRS}] \label{param:SubsysAttrs}
@@ -1285,8 +1285,8 @@ server, shadow, and starter, none of which use DaemonCore yet).
   For example, \MacroNI{STARTD\_ATTRS} and
   \MacroNI{STARTD\_EXPRS} are interchangable.
   
-  \Note The \Condor{negotiator} and \Condor{kbdd} do not send
-  ClassAds now, so this entry does not affect them.  The
+  \Note The \Condor{kbdd} does not send
+  ClassAds now, so this entry does not affect it.  The
   \Condor{startd}, \Condor{schedd}, \Condor{master}, and
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
@@ -3538,6 +3538,12 @@ These macros affect the \Condor{negotiator}.
   size specified with this macro, the maximum size will be
   automatically expanded.
   The default is 1 megabyte (1000000).
+
+\item[\Macro{NEGOTIATOR\_DISCOUNT\_SUSPENDED\_RESOURCES}] \label{param:NegotiatorDiscountSuspendedResources} 
+   This macro tells the negotiator to not count resources that are suspended
+   when calculating the number of resources a user is using. 
+   Defaults to false, that is, a user is still charged for a resource even
+   when that resource has suspended the job.
 
 \item[\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}]
   \label{param:NegotiatorSocketCacheSize} This macro defines the
