@@ -68,6 +68,7 @@ extern "C" {
 #include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
+#include "dgram_io_handle.h"
 
 #if defined(HPUX9)
 #include "fake_flock.h"
@@ -128,6 +129,9 @@ extern "C"
 	int		snd_int(XDR*, int, int);
 	char*	get_arch();
 	char*	get_op_sys(); 
+	int		udp_unconnect();
+	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
+	XDR*	xdr_Udp_unconnect_Init(DGRAM_IO_HANDLE*, XDR*); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
@@ -135,7 +139,8 @@ extern	int		xdr_classad(XDR*, ClassAd*);
 char	*param(char*) ;
 void		sigchld_handler(),  sigint_handler(),
 		sigquit_handler(),  sighup_handler();
-void	SigalrmHandler(), RestartMaster();
+void	RestartMaster();
+void	siggeneric_handler(int); 
 void 	vacate_machine(), vacate_machine_part_two();
 // local function prototypes
 void	init_params();
@@ -176,6 +181,9 @@ int		interval;				// report to collector. Weiru
 ClassAd	ad;						// ad to central mgr. Weiru
 
 char	*CollectorHost;
+DGRAM_IO_HANDLE		CollectorHandle;
+int					UdpSock;
+
 #if 0
 char	*NegotiatorHost;
 #endif
@@ -207,7 +215,7 @@ char	*default_daemon_list[] = {
 
 // create an object of class daemons.
 class Daemons daemons;
-char*				configServer;
+char*			configServer;
 extern BUCKET	*ConfigTab[];
 
 extern "C" 
@@ -275,7 +283,9 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	install_sig_handler( SIGHUP, sighup_handler );
 	install_sig_handler( SIGUSR1, RestartMaster );
 	install_sig_handler( SIGTERM, vacate_machine );
-
+	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
+	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
+	
 	// Weiru
 	// Look for the master configuration file condor_config.master. If found,
 	// get configuration files from the configuration server. Use default
@@ -321,11 +331,19 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			// any.
 			if(GetConfig(configServer, config_location) < 0)
 			{
-				config(MyName, (CONTEXT*)0);
-			}
+				if(config_from_server(config_location, MyName, NULL) < 0)
+				{
+					config(MyName, (CONTEXT*)0);
+				}
+			} 
 			else
 			{
-				config_from_server(config_location, MyName, NULL);
+				if(config_from_server(config_location, MyName, NULL) < 0)
+				{
+					fprintf(stderr, "config_from_server(%s, %s, NULL)\n",
+							config_location, MyName);
+					exit(1);
+				} 
 				doConfigFromServer = TRUE;				
 			}
 		}
@@ -493,7 +511,10 @@ init_params()
 	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
 		EXCEPT( "COLLECTOR_HOST not specified in config file" );
 	}
-
+	
+	UdpSock = udp_unconnect();
+	fill_dgram_io_handle(&CollectorHandle, CollectorHost, UdpSock, COLLECTOR_UDP_PORT);
+	
 #if 0
 	if( (NegotiatorHost = param("NEGOTIATOR_HOST")) == NULL ) {
 		EXCEPT( "NEGOTIATOR_HOST not specified in config file" );
@@ -1115,20 +1136,13 @@ void report_to_collector()
 {
 	int		cmd = UPDATE_MASTER_AD;
 	XDR		xdr, *xdrs = NULL;
-	int		sd;
 
 	dprintf(D_FULLDEBUG, "enter report_to_collector\n");
-	if((sd = udp_connect(CollectorHost, COLLECTOR_UDP_PORT)) < 0)
-	{
-		dprintf(D_ALWAYS, "Failed to connect to the collector\n");
-		return;
-	}
+	xdrs = xdr_Udp_unconnect_Init(&CollectorHandle, &xdr); 
 
-	xdrs = xdr_Init(&sd, &xdr);
 	if(!snd_int(xdrs, cmd, FALSE))
 	{
 		xdr_destroy(xdrs);
-		close(sd);
 		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
 		return;
 	}
@@ -1136,7 +1150,6 @@ void report_to_collector()
 	if(!xdr_classad(xdrs, &ad))
 	{
 		xdr_destroy(xdrs);
-		close(sd);
 		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
 		return;
 	}
@@ -1145,7 +1158,6 @@ void report_to_collector()
 		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
 	}
 	xdr_destroy(xdrs);
-	close(sd);
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
 }
 
@@ -1411,3 +1423,9 @@ void StartConfigServer()
 	sleep(5); 
 }
 
+void siggeneric_handler(int sig)
+{
+	dprintf(D_ALWAYS, "signal (%d) received at %s, %d\n", sig, __FILE__,
+			__LINE__);
+	return;
+}
