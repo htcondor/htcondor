@@ -896,11 +896,12 @@ char * find_env( const char * name, const char * env );
 char *strdup( const char *);
 char *Strdup( const char *str)
 {
-	char*	dup = (char*)malloc(1);
+	char*	dup;
 
-	dup[0] = '\0';
 	if(str == NULL)
 	{
+		dup = (char *)malloc(1);
+		dup[0] = '\0';
 		return dup;
 	}
 	return strdup(str);
