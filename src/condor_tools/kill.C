@@ -70,6 +70,7 @@ void usage(char*);			// print usage info and exit
 void my_exit(int);			// close the syslog and exit
 void find_condor_pids();	// find all processes that begin with "condor_"
 CondorPid* find_cpid(pid_t);	// find the CondorPid object with the given pid
+bool isaNum( char *s );     // checks if string contains solely numeric chars
 
 
 int
