@@ -363,6 +363,17 @@ class ClassAd : public ExprTree
 				over.
 			@param attrName The name of the attribute.
 			@param buf The buffer for the string value.
+			@param len Size of buffer
+			@return true iff attrName evaluated to a string
+		*/
+		bool EvaluateAttrString( const string &attrName, char *buf, int len) 
+				const;
+
+		/** Evaluates an attribute to a string.  If the string value does not 
+				fit into the buffer, only the portion that does fit is copied 
+				over.
+			@param attrName The name of the attribute.
+			@param buf The buffer for the string value.
 			@return true iff attrName evaluated to a string
 		*/
 		bool EvaluateAttrString( const string &attrName, string &buf ) const;
