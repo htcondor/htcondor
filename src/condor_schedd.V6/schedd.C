@@ -391,9 +391,11 @@ Scheduler::~Scheduler()
 	for( i=0; i<N_Owners; i++) {
 		if( Owners[i].Name ) { 
 			free( Owners[i].Name );
+			Owners[i].Name = NULL;
 		}
 		if( Owners[i].X509 ) { 
 			free( Owners[i].X509 );
+			Owners[i].X509 = NULL;
 		}
 	}
 
@@ -471,6 +473,8 @@ Scheduler::count_jobs()
 	time_t current_time = time(0);
 	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
+		Owners[i].Domain = NULL;
+		Owners[i].X509 = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
@@ -796,9 +800,16 @@ Scheduler::count_jobs()
 		for(k=0; k<N_Owners;k++) {
 		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
 		}
-	  // Now that we've finished using OldOwners[i].Name, we can
-		  // free it.
-		FREE( OldOwners[i].Name );
+		// Now that we've finished using OldOwners[i].Name, we can
+		// free it.
+		if ( OldOwners[i].Name ) {
+			free(OldOwners[i].Name);
+			OldOwners[i].Name = NULL;
+		}
+		if ( OldOwners[i].X509 ) {
+			free(OldOwners[i].X509);
+			OldOwners[i].X509 = NULL;
+		}
 
 		  // If k < N_Owners, we found this OldOwner in the current
 		  // Owners table, therefore, we don't want to send the
@@ -1202,6 +1213,7 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			char proxy[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			proxy[0] = '\0';
+			domain[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
 			if ( GridUniverseLogic::group_per_subject() ) {
@@ -6287,6 +6299,8 @@ Scheduler::Init()
 		PeriodicExprInterval = 300;
 	} else {
 		PeriodicExprInterval = atoi(tmp);
+		free(tmp);
+		tmp = NULL;
 	}
 
 	if ( first_time_in_init ) {	  // cannot be changed on the fly
