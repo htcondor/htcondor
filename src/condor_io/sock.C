@@ -1108,6 +1108,9 @@ int Sock::set_async_handler( CedarHandler *handler )
 	return install_async_handler( _sock, handler, this );
 }
 
+#endif  /* of ifndef WIN32 for the async support */
+
+
 int Sock :: encrypt(bool)
 {
 	return -1;
@@ -1122,7 +1125,7 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(int clientFlags = 0)
+int Sock :: authenticate(int clientFlags)
 {
 	return -1;
 }
@@ -1140,4 +1143,4 @@ bool Sock :: is_encrypt()
     return FALSE;
 }
 
-#endif
+
