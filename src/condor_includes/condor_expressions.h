@@ -1,8 +1,7 @@
 #ifndef EXPRESSIONS_H
 #define EXPRESSIONS_H
 
-static const MAX_EXPR_LIST	= 512;
-
+#define MAX_EXPR_LIST	512
 
 typedef struct {
 	int		type;
