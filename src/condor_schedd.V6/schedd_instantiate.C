@@ -43,6 +43,7 @@ template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
 template class ExtArray<int>;
+template class ExtArray<PROC_ID>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
