@@ -1,4 +1,10 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This is a stable release series of Condor.
+It is based on the 6.5 development series.
+All new features added or bugs fixed in the 6.5 series are available
+in the 6.6 series.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-0}Version 6.6.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -18,8 +24,9 @@
 temporary files on the execution machine.
 
 \item In rare circumstances, a Linux kernel bug results in conflicting
-information about system boot time (/proc/stat and /proc/uptime).
-Specifically, the "btime" field in /proc/stat suddenly jumps to
+information about system boot time (\File{/proc/stat} and
+\File{/proc/uptime}). 
+Specifically, the "btime" field in \File{/proc/stat} suddenly jumps to
 the present moment and then stays at that value.  This
 was resulting in incorrect estimation of process ages, which caused
 Condor's estimation of CondorLoadAvg to be completely wrong.  A more
