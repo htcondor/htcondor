@@ -20,10 +20,12 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+
 /*
  * Main routine and function for the startd.
  */
-
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
 static char *_FileName_ = __FILE__;
@@ -83,9 +85,8 @@ int main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
 extern "C" int do_cleanup();
-void reaper_loop();
-int	handle_dc_sigchld( Service*, int );
-int	shutdown_sigchld( Service*, int ); 
+int reaper( Service*, int pid, int status);
+int	shutdown_reaper( Service*, int pid, int status ); 
 int	check_free();
 
 
@@ -254,19 +255,18 @@ main_init( int argc, char* argv[] )
 								  "command_match_info", 0, NEGOTIATOR );
 
 		//////////////////////////////////////////////////
-		// Signals 
+		// Reapers 
 		//////////////////////////////////////////////////
-	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
-								 (SignalHandler)handle_dc_sigchld,
-								 "handle_dc_sigchld" );
+	rval = daemonCore->Register_Reaper( "reaper_starters", 
+		(ReaperHandler)reaper, "reaper" );
+	assert(rval == 1);	// we assume reaper id 1 for now
 
-		//////////////////////////////////////////////////
-		// Reapers (not yet, since we're doing it outside DC)
-		//////////////////////////////////////////////////
-
-#if defined( OSF1 ) || defined (IRIX62) 
+#if defined( OSF1 ) || defined (IRIX62) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
 		// is something, even if we haven't heard from the kbdd yet.
+		// We do this on Win32 as well, since Win32 uses last_x_event
+		// variable in a similar fasion to the X11 condor_kbdd, and
+		// thus it must be initialized.
 	command_x_event( 0, 0, 0 );
 #endif
 
@@ -483,12 +483,17 @@ init_params( int first_time)
 void
 startd_exit() 
 {
-	dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );
-	resmgr->final_update();
-
-	delete resmgr;
+	if ( resmgr ) {
+		dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
+		resmgr->final_update();
+		delete resmgr;
+		resmgr = NULL;
+	}
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
+#ifdef WIN32
+	KBShutdown();
+#endif
 	DC_Exit(0);
 }
 
@@ -498,10 +503,9 @@ main_shutdown_fast()
 		// If the machine is free, we can just exit right away.
 	check_free();
 
-	daemonCore->Cancel_Signal( DC_SIGCHLD );
-	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
-								 (SignalHandler)shutdown_sigchld,
-								 "shutdown_sigchld" );
+	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+								 (ReaperHandler)shutdown_reaper,
+								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
 	resmgr->walk( &Resource::kill_claim );
@@ -519,10 +523,9 @@ main_shutdown_graceful()
 		// If the machine is free, we can just exit right away.
 	check_free();
 
-	daemonCore->Cancel_Signal( DC_SIGCHLD );
-	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
-								 (SignalHandler)shutdown_sigchld,
-								 "shutdown_sigchld" );
+	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+								 (ReaperHandler)shutdown_reaper,
+								 "shutdown_reaper" );
 
 		// Release all claims, active or not
 	resmgr->walk( &Resource::release_claim );
@@ -535,45 +538,28 @@ main_shutdown_graceful()
 
 
 int
-handle_dc_sigchld( Service*, int )
+reaper(Service *, int pid, int status)
 {
-	reaper_loop();
+	Resource* rip;
+
+	if( WIFSIGNALED(status) ) {
+		dprintf(D_ALWAYS, "pid %d died on signal %d\n",
+				pid, WTERMSIG(status));
+	} else {
+		dprintf(D_ALWAYS, "pid %d exited with status %d\n",
+				pid, WEXITSTATUS(status));
+	}
+	rip = resmgr->get_by_pid(pid);
+	if( rip ) {
+		rip->starter_exited();
+	}		
 	return TRUE;
 }
 
-
-void
-reaper_loop()
-{
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	int pid, status;
-	Resource* rip;
-
-	while( (pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0 ) {
-		if (WIFSTOPPED(status)) {
-			dprintf(D_ALWAYS, "pid %d stopped.\n", pid);
-			continue;
-		}
-		if( WIFSIGNALED(status) ) {
-			dprintf(D_ALWAYS, "pid %d died on signal %d\n",
-					pid, WTERMSIG(status));
-		} else {
-			dprintf(D_ALWAYS, "pid %d exited with status %d\n",
-					pid, WEXITSTATUS(status));
-		}
-		rip = resmgr->get_by_pid(pid);
-		if( rip ) {
-			rip->starter_exited();
-		}		
-	}
-#endif
-}
-
-
 int
-shutdown_sigchld( Service*, int )
+shutdown_reaper(Service *, int pid, int status)
 {
-	reaper_loop();
+	reaper(NULL,pid,status);
 	check_free();
 	return TRUE;
 }
@@ -592,13 +578,22 @@ do_cleanup()
 		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_ALWAYS, "Exiting because of fatal exception.\n" );
 	}
+
+#ifdef WIN32
+	// Detach our keyboard hook
+	KBShutdown();
+#endif
+
 	return TRUE;
 }
 
 
 int
 check_free()
-{
+{	
+	if ( ! resmgr ) {
+		startd_exit();
+	}
 	if( ! resmgr->in_use() ) {
 		startd_exit();
 	} 
