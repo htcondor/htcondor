@@ -1430,7 +1430,18 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			{
 				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
 				{
-					// convert to the new format
+						// convert to the new format
+						// First, we need to re-allocate attribute_value to a bigger
+						// buffer.
+					int old_size = strlen(attribute_value);
+					attribute_value = (char *) realloc(attribute_value, 
+											old_size 
+											+ 10);  // for the extra parenthesis
+					ASSERT(attribute_value);
+						// since attribute_value may have moved, we need
+						// to reset the value of tvalue.
+					tvalue = strstr(attribute_value,"$$");	
+					ASSERT(tvalue);
 					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
 					bigbuf2 = (char *) malloc(strlen(AttrsToExpand[index])
 											  + 3 // for the equal and the quotes
