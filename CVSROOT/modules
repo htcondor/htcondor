@@ -125,8 +125,10 @@ V_TRUNK_SRC		-a \
 			src/condor_gridmanager \
 			src/condor_netman \
 			src/condor_test_suite_java \
+			src/condor_test_suite_pvm \
 			src/condor_test_dagman \
 			src/condor_cluster_tool \
+			src/hawkeye_modules \
 			src/mw
 
 CONDOR_VIEW_SRC	-a \
@@ -323,8 +325,8 @@ V6_7_MIRROR_BUILD	-a V6_7_MIRROR_ALL V6_7_EXT
 #TRUNK_ALL	-a V6_7_ALL
 TRUNK_SRC	-a V_TRUNK_SRC
 TRUNK_UNIX_CODE	-a TOOLS V_TRUNK_SRC
-TRUNK_NT_CODE	-a NT_TOOLS V_TRUNK_SRC
-TRUNK_CODE	-a TOOLS NT_TOOLS V_TRUNK_SRC
+TRUNK_NT_CODE	-a NT_TOOLS NT_PROGRAMS V_TRUNK_SRC
+TRUNK_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V_TRUNK_SRC
 TRUNK_ALL	-a DOC TRUNK_CODE
 
 JAVA_SRC	-a \
