@@ -156,6 +156,7 @@ class FileTransfer {
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
+	bool did_init;
 };
 
 #endif

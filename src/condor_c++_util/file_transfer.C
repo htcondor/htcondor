@@ -109,6 +109,7 @@ FileTransfer::FileTransfer()
 #endif
 	desired_priv_state = PRIV_UNKNOWN;
 	want_priv_change = false;
+	did_init = false;
 }
 
 FileTransfer::~FileTransfer()
@@ -160,8 +161,12 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 
-	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
+	if( did_init ) {
+			// no need to except, just quietly return success
+		return 1;
+	}
 
+	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
 
 	desired_priv_state = priv;
     if ( priv == PRIV_UNKNOWN ) {
@@ -461,6 +466,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		}
 	}
 
+	did_init = true;
 	return 1;
 }
 
