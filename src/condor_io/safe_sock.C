@@ -608,16 +608,17 @@ char * SafeSock::serialize() const
 	char outbuf[50];
     int len = 0;
 
+    memset(outbuf, 0, 50);
     if (_fqu) {
         len = strlen(_fqu);
     }
 
-	sprintf(outbuf,"*%d*%s*%d",_special_state,sin_to_string(&_who), len);
+	sprintf(outbuf,"*%d*%s*%d*",_special_state,sin_to_string(&_who), len);
 	strcat(parent_state,outbuf);
 
     if (_fqu) {
-        strcat(parent_state, "*");
         strcat(parent_state, _fqu);
+        strcat(parent_state, "*");
     }
 
 	return( parent_state );
@@ -627,7 +628,7 @@ char * SafeSock::serialize(char *buf)
 {
 	char sinful_string[28];
 	char usernamebuf[128];
-	char *ptmp;
+	char *ptmp, *ptr = NULL;
     int len;
     
     if (_fqu) {
@@ -635,28 +636,35 @@ char * SafeSock::serialize(char *buf)
         _fqu = NULL;
     }   
 	ASSERT(buf);
-
-	usernamebuf[0] = '\0';
-
+    memset(sinful_string, 0, 28);
+    memset(usernamebuf, 0, 128);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
-	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
-	string_to_sin(sinful_string, &_who);
-
-    // For backward compatibility reasons
+	sscanf(ptmp,"%d*",&_special_state);
+    // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp = strchr(++ptmp, '*');
-    if (ptmp) {
+    ptmp++;
+
+    // Now, see if we are 6.3 or 6.2
+    if ( (ptr = strchr(ptmp, '*')) != NULL) {
+        // We are 6.3
+        memcpy(sinful_string, ptmp, ptr - ptmp);
+        ptmp = ++ptr;
+        sscanf(ptmp,"%d*", &len);
+        ptmp = strchr(ptmp, '*');
         ptmp++;
-        // We are using 6.3 format
-        sscanf(ptmp, "%d", &len);
-        if ( (len > 0) && (ptmp = strchr(ptmp, '*'))) {
-            sscanf(ptmp+1, "%s", usernamebuf);
+        if ( len > 0 ) {
+            memcpy(usernamebuf, ptmp, len);
         }
     }
+    else {
+        sscanf(ptmp,"%s",sinful_string);
+    }
+
+	string_to_sin(sinful_string, &_who);
 
 	if( usernamebuf[0] ) {
 		_fqu = strnewp(usernamebuf);

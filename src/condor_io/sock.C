@@ -863,11 +863,15 @@ char * Sock::serializeCryptoInfo() const
     }
 
 	// here we want to save our state into a buffer
-	char * outbuf = new char[100];
+	char * outbuf = NULL;
     if (len > 0) {
-        sprintf(outbuf,"%d*%s",len,kserial);
+        outbuf = new char[len+14];
+        memset(outbuf, 0, len+14);
+        sprintf(outbuf,"%d*%d*%s",len, (int)get_crypto_key().getProtocol(), kserial);
     }
     else {
+        outbuf = new char[2];
+        memset(outbuf, 0, 2);
         sprintf(outbuf,"%d",0);
     }
 	return( outbuf );
@@ -877,31 +881,35 @@ char * Sock::serializeCryptoInfo(char * buf)
 {
 	char * kserial = NULL, * ptmp = buf;
     int    len = 0;
+    int protocol = CONDOR_NO_PROTOCOL;
 
     // kserial may be a problem since reli_sock also has stuff after
     // it. As a result, kserial may contains not just the key, but
     // other crap from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d", &len);
-    if ( (len > 0) && ptmp ) {
-        char format[100] = "%";
-        sprintf(&format[1], "%d%s", len, "s");
-        kserial = (char *) malloc(len);
-        sscanf(ptmp, format, kserial);
-
-        // skip over one *
+    sscanf(ptmp, "%d*", &len);
+    if ( len > 0 ) {
+        kserial = (char *) malloc(len+1);
+        memset(kserial, 0, len+1);
         ptmp = strchr(ptmp, '*');
         ptmp++;
+        sscanf(ptmp, "%d*", &protocol);
+        ptmp = strchr(ptmp, '*');
+        ptmp++;
+        memcpy(kserial, ptmp, len);
 
         // Initialize crypto info
-        KeyInfo k((unsigned char *)kserial, 0);
+        KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
         set_crypto_key(&k, 0);
         free(kserial);
+        // Now, skip over this one
+        ptmp = ptmp + len + 1; // skip over the "*" as well
     }
-    // Now, skip over this one
-    ptmp = strchr(ptmp,'*');
-    ptmp++;
+    else {
+        ptmp = strchr(ptmp, '*');
+        ptmp++;
+    }
 	return ptmp;
 }
 
@@ -909,7 +917,13 @@ char * Sock::serialize() const
 {
 	// here we want to save our state into a buffer
 	char * outbuf = new char[500];
-	sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
+    if (outbuf) {
+        memset(outbuf, 0, 500);
+        sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
+    }
+    else {
+        dprintf(D_ALWAYS, "Out of memory!\n");
+    }
 	return( outbuf );
 }
 

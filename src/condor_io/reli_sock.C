@@ -637,6 +637,7 @@ ReliSock::end_of_message()
 {
 	int ret_val = FALSE;
 
+    resetCrypto();
 	switch(_coding){
 		case stream_encode:
 			if ( ignore_next_encode_eom == TRUE ) {
@@ -992,6 +993,7 @@ ReliSock::serialize() const
 	char * parent_state = Sock::serialize();
     // now concatenate our state
 	char * outbuf = new char[50];
+    memset(outbuf, 0, 50);
 	sprintf(outbuf,"*%d*%s*",_special_state,sin_to_string(&_who));
 	strcat(parent_state,outbuf);
 
@@ -1008,9 +1010,10 @@ ReliSock::serialize() const
         sprintf(buf, "%d*", len);
         strcat(parent_state, buf);
         strcat(parent_state, tmp);
+        strcat(parent_state, "*");
     }
     else {
-        sprintf(buf, "%d", len);
+        sprintf(buf, "%d*", 0);
         strcat(parent_state, buf);
     }
 
@@ -1023,34 +1026,37 @@ char *
 ReliSock::serialize(char *buf)
 {
 	char sinful_string[28], fqu[256];
-	char *ptmp;
+	char *ptmp, * ptr = NULL;
 	int len = 0;
 
     ASSERT(buf);
     memset(fqu, 0, 256);
+    memset(sinful_string, 0 , 28);
 	// here we want to restore our state from the incoming buffer
+    fqu_ = NULL;
 
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
-    memset(fqu, 0, 256);
-    sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
-    string_to_sin(sinful_string, &_who);
 
-    // Now see if we are 6.3 serialize or 6.2
+    sscanf(ptmp,"%d*",&_special_state);
+    // skip through this
     ptmp = strchr(ptmp, '*');
     ptmp++;
+    // Now, see if we are 6.3 or 6.2
+    if ((ptr = strchr(ptmp, '*')) != NULL) {
+        // we are 6.3
+        memcpy(sinful_string, ptmp, ptr - ptmp);
 
-    ptmp = strchr(ptmp, '*');
-    if (ptmp != NULL) {
-        // We are 6.3
-        ptmp = serializeCryptoInfo(++ptmp);
-        sscanf(ptmp, "%d", &len);
+        ptmp = ++ptr;
+        // The next part is for crypto
+        ptmp = serializeCryptoInfo(ptmp);
+        sscanf(ptmp, "%d*", &len);
         
         if (len > 0) {
             ptmp = strchr(ptmp, '*');
             ptmp++;
-            sscanf(ptmp, "%s", fqu);
+            memcpy(fqu, ptmp, len);
             if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
                 if (authob && (authob->getFullyQualifiedUser() != NULL)) {
                     // odd situation!
@@ -1061,14 +1067,15 @@ ReliSock::serialize(char *buf)
                     fqu_ = strdup(fqu);
                 }
             }
-            else {
-                fqu_ = NULL;
-            }
-        }
-       else {
-            fqu_ = NULL;
         }
     }
+    else {
+        // we are 6.2, this is the end of it.
+        sscanf(ptmp,"%s",sinful_string);
+    }
+    
+    string_to_sin(sinful_string, &_who);
+    
     return NULL;
 }
 
