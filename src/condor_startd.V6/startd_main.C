@@ -49,6 +49,7 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *startd_job_exprs = NULL;
+StringList *startd_vm_exprs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
@@ -211,6 +212,10 @@ main_init( int, char* argv[] )
 		// need to be evaluated
 	resmgr->walk( &Resource::compute, A_EVALUATED );
 	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
+
+		// Now that everything is computed and published, we can
+		// finally put in the attrs shared across the different VMs
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_SHARED_VM ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -495,6 +500,17 @@ init_params( int first_time)
 	} else {
 		startd_job_exprs = new StringList();
 		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
+	}
+
+	if( startd_vm_exprs ) {
+		delete( startd_vm_exprs );
+		startd_vm_exprs = NULL;
+	}
+	tmp = param( "STARTD_VM_EXPRS" );
+	if( tmp ) {
+		startd_vm_exprs = new StringList();
+		startd_vm_exprs->initializeFromString( tmp );
+		free( tmp );
 	}
 
 	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );

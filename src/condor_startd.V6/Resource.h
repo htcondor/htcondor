@@ -84,6 +84,7 @@ public:
 		// Methods for computing and publishing resource attributes 
 	void	compute( amask_t mask);
 	void	publish( ClassAd*, amask_t );
+	void	publishVmAttrs( ClassAd* );
 
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};

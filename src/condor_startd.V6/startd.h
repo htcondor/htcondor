@@ -39,6 +39,7 @@
 #include "condor_state.h"
 #include "condor_string.h"
 #include "string_list.h"
+#include "MyString.h"
 #include "get_full_hostname.h"
 #include "condor_random_num.h"
 #include "killfamily.h"
@@ -100,6 +101,7 @@ extern	char*	exec_path;
 // String Lists
 extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
+extern	StringList* startd_vm_exprs;
 
 // Hosts
 extern	DCCollector*	Collector;

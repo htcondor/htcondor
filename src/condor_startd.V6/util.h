@@ -35,7 +35,7 @@ int 	create_port( ReliSock* );
 bool	reply( Stream*, int );
 bool	refuse( Stream* );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
-				  int verbose = 0 ); 
+				  const char* prefix = NULL );
 bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
 bool	configInsert( ClassAd* ad, const char* param_name, 
 					  const char* attr, bool is_fatal );

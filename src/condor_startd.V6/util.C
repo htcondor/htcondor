@@ -275,11 +275,14 @@ refuse( Stream* s )
 
 
 bool
-caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
+caInsert( ClassAd* target, ClassAd* source, const char* attr,
+		  const char* prefix )
 {
-	char buf[4096];
-	buf[0] = '\0';
+	char* str = NULL;
+	const char* good_str = NULL; 
+	MyString modified_str;
 	ExprTree* tree;
+
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
 	}
@@ -289,20 +292,24 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 
 	tree = source->Lookup( attr );
 	if( !tree ) {
-		if( verbose ) {
-			dprintf( D_ALWAYS, 
-					 "caInsert: Can't find %s in source classad.\n", 
-					 attr );
-		}
 		return false;
 	}
-	tree->PrintToStr( buf );
+	tree->PrintToNewStr( &str );
+	if( prefix ) {
+		modified_str = prefix;
+		modified_str += str;
+		good_str = modified_str.Value();
+	} else {
+		good_str = (const char*)str;
+	}
 
-	if( ! target->Insert( buf ) ) {
+	if( ! target->Insert( good_str ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
+		free( str );
 		return false;
 	}		
+	free( str );
 	return true;
 }
 

@@ -1260,6 +1260,12 @@ ResMgr::compute( amask_t how_much )
 		// classads to make sure those are still up-to-date
 	walk( &Resource::refresh_classad, A_EVALUATED );
 
+		// Finally, now that all the internal classads are up to date
+		// with all the attributes they could possibly have, we can
+		// publish the cross-VM attributes desired from
+		// STARTD_VM_ATTRS into each VM's internal ClassAd.
+	walk( &Resource::refresh_classad, A_SHARED_VM );
+
 		// Now that we're done, we can display all the values.
 	walk( &Resource::display, how_much );
 }
@@ -1276,6 +1282,19 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	}
 
 	starter_mgr.publish( cp, how_much );
+}
+
+
+void
+ResMgr::publishVmAttrs( ClassAd* cap )
+{
+	if( ! resources ) {
+		return;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		resources[i]->publishVmAttrs( cap );
+	}
 }
 
 
@@ -1532,7 +1551,7 @@ ResMgr::makeAdList( ClassAdList *list )
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
-		resources[i]->publish( ad, A_PUBLIC | A_ALL | A_EVALUATED ); 
+		resources[i]->publish( ad, A_ALL_PUB ); 
 		ad->Insert( buf );
 		list->Insert( ad );
 	}

@@ -79,6 +79,7 @@ public:
 
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
+	void	publishVmAttrs( ClassAd* );
 
 	void	assign_load( void );
 	void	assign_keyboard( void );

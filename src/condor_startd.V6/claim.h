@@ -117,6 +117,7 @@ public:
 
 	void publish( ClassAd*, amask_t );
 	void publishCOD( ClassAd* );
+	void publishStateTimes( ClassAd* );
 
 	void dprintf( int, char* ... );
 
@@ -240,6 +241,10 @@ private:
 	int			c_job_start;
 	int			c_last_pckpt;
 	time_t		c_entered_state;
+	time_t		c_job_total_run_time;
+	time_t		c_job_total_suspend_time;
+	time_t		c_claim_total_run_time;
+	time_t		c_claim_total_suspend_time;
 	Stream*		c_request_stream; // cedar sock that a remote request
                                   // is waiting for a response on
 

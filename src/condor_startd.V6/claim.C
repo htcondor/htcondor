@@ -70,6 +70,10 @@ Claim::Claim( Resource* rip, bool is_cod )
 		// so we get all the nice functionality that method provides.
 	c_state = CLAIM_IDLE;
 	changeState( CLAIM_UNCLAIMED );
+	c_job_total_run_time = 0;
+	c_job_total_suspend_time = 0;
+	c_claim_total_run_time = 0;
+	c_claim_total_suspend_time = 0;
 }
 
 
@@ -185,6 +189,8 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
 		ad->Insert( line );
 	}
+
+	publishStateTimes( ad );
 }
 
 
@@ -284,6 +290,53 @@ Claim::publishCOD( ClassAd* ad )
 		}	
 	}
 }
+
+
+void
+Claim::publishStateTimes( ClassAd* ad )
+{
+	MyString line;
+	time_t now, time_dif = 0;
+	time_t my_job_run = c_job_total_run_time;
+	time_t my_job_sus = c_job_total_suspend_time;
+	time_t my_claim_run = c_claim_total_run_time;
+	time_t my_claim_sus = c_claim_total_suspend_time;
+
+		// If we're currently claimed or suspended, add on the time
+		// we've spent in the current state, since we only increment
+		// the private data members on state changes... 
+	if( c_state == CLAIM_RUNNING || c_state == CLAIM_SUSPENDED ) {
+		now = time( NULL );
+		time_dif = now - c_entered_state;
+	}
+	if( c_state == CLAIM_RUNNING ) { 
+		my_job_run += time_dif;
+		my_claim_run += time_dif;
+	}
+	if( c_state == CLAIM_SUSPENDED ) {
+		my_job_sus += time_dif;
+		my_claim_sus += time_dif;
+	}
+
+		// Now that we have all the right values, publish them.
+	if( my_job_run > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_RUN_TIME, my_job_run );
+		ad->Insert( line.Value() );
+	}
+	if( my_job_sus > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_SUSPEND_TIME, my_job_sus );
+		ad->Insert( line.Value() );
+	}
+	if( my_claim_run > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_RUN_TIME, my_claim_run );
+		ad->Insert( line.Value() );
+	}
+	if( my_claim_sus > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_SUSPEND_TIME, my_claim_sus );
+		ad->Insert( line.Value() );
+	}
+}
+
 
 
 void
@@ -1230,6 +1283,8 @@ Claim::resetClaim( void )
 		c_cod_keyword = NULL;
 	}
 	c_has_job_ad = 0;
+	c_job_total_run_time = 0;
+	c_job_total_suspend_time = 0;
 }
 
 
@@ -1239,8 +1294,29 @@ Claim::changeState( ClaimState s )
 	if( c_state == s ) {
 		return;
 	}
+	
+	time_t now = time(NULL);
+	if( c_state == CLAIM_RUNNING || c_state == CLAIM_SUSPENDED ) {
+			// the state we're leaving is one of the ones we're
+			// keeping track of total times for, so we've got to
+			// update some things.
+		time_t time_dif = now - c_entered_state;
+		if( c_state == CLAIM_RUNNING ) { 
+			c_job_total_run_time += time_dif;
+			c_claim_total_run_time += time_dif;
+		}
+		if( c_state == CLAIM_SUSPENDED ) {
+			c_job_total_suspend_time += time_dif;
+			c_claim_total_suspend_time += time_dif;
+
+		}
+	}
+
+		// now that all the appropriate time values are updated, we
+		// can actually do the deed.
 	c_state = s;
-	c_entered_state = time(NULL); 
+	c_entered_state = now;
+
 		// everytime a cod claim changes state, we want to update the
 		// collector. 
 	if( c_is_cod ) {

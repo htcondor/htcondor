@@ -314,6 +314,8 @@ const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";
 const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
 const char ATTR_TARGET_TYPE				 [] = "TargetType";
+const char ATTR_TOTAL_CLAIM_RUN_TIME     [] = "TotalClaimRunTime";
+const char ATTR_TOTAL_CLAIM_SUSPEND_TIME [] = "TotalClaimSuspendTime";
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 const char ATTR_TOTAL_CPUS				 [] = "TotalCpus";
 const char ATTR_TOTAL_DISK				 [] = "TotalDisk";
@@ -322,6 +324,8 @@ const char ATTR_TOTAL_REMOVED_JOBS		 [] = "TotalRemovedJobs";
 const char ATTR_TOTAL_HELD_JOBS			 [] = "TotalHeldJobs";
 const char ATTR_TOTAL_IDLE_JOBS			 [] = "TotalIdleJobs";
 const char ATTR_TOTAL_JOB_ADS			 [] = "TotalJobAds";
+const char ATTR_TOTAL_JOB_RUN_TIME       [] = "TotalJobRunTime";
+const char ATTR_TOTAL_JOB_SUSPEND_TIME   [] = "TotalJobSuspendTime";
 const char ATTR_TOTAL_LOAD_AVG			 [] = "TotalLoadAvg";
 const char ATTR_TOTAL_MEMORY			 [] = "TotalMemory";
 const char ATTR_TOTAL_RUNNING_JOBS		 [] = "TotalRunningJobs";

@@ -2,6 +2,9 @@
    The state of the V6_7-branch before merging in the V6_6-infn-branch
    as tagged at V6_6-infn-merge-1.
 
+02/19/04 V6_6-infn-merge-1
+   The state of the V6_6-infn-branch when merged into V6_7-branch
+
 02/19/04 V6_7-post_merge-V6_6-merge-5
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-5.
@@ -19,6 +22,13 @@
    A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
    This will hold various changed made for CDF, some of which are new
    features.
+
+02/13/04 V6_6_2-pre-bbs-snapshot2
+   The state of the V6_6-infn-branch that was given to INFN as a 6.6.2
+   pre-release snapshot.  The version string for this release was:
+   $CondorVersion: 6.6.2 Feb 13 2004 BBS-PRE-RELEASE Snapshot-2 $
+   This tag lives on the V6_6-infn-branch of the V6_6_ALL module and
+   on the trunk of the V6_6_1_EXT module of externals.
 
 02/12/04 V6_6-infn-branch
    A new branch off of V6_6-branch (post V6_6_1) that will be used for
