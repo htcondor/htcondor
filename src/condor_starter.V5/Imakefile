@@ -120,11 +120,9 @@ condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
 	rm -f condor_starter.V5.mike $(OBJ)
-release::
- 	cp condor_starter.V5.mike $(RELEASE_DIR)/bin
 #else
 c_plus_target(condor_starter.V5.mike,$(OBJ),$(LIB))
-release_target(condor_starter.V5.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 #endif
+release_target(condor_starter.V5.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
