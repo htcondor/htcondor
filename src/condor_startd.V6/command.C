@@ -32,6 +32,7 @@ extern "C" int reply(Sock *sock, int answer);
 extern char *AlternateStarter[10];
 extern char *PrimaryStarter;
 extern char *Starter;
+extern char *negotiator_host;
 extern int polls;
 extern int capab_timeout;
 
@@ -213,13 +214,13 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 		if (!job_context->get(*sock)) {
 			dprintf( D_ALWAYS, "Can't receive job classad from shadow\n");
 			CondorPendingJobs::DequeueJob();
-			// we should delete job_context here, right?
+			delete job_context;
 			return -1;
 		}
 		if (!sock->eom()) {
 			dprintf(D_ALWAYS, "Can't receive job classad from shadow\n");
 			CondorPendingJobs::DequeueJob();
-			// we should delete job_context here, right?
+			delete job_context;
 			return -1;
 		}
 	} else {
@@ -635,6 +636,7 @@ command_matchinfo(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 	resource_info_t *rip = NULL;
 	char *str = NULL;
 	char* str1 = NULL;
+	struct hostent *hp;
 
 	dprintf(D_ALWAYS, "command_matchinfo called\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -643,8 +645,24 @@ command_matchinfo(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		return -1;
 	}
 
+	if ((hp = gethostbyaddr((char *)&from->sin_addr,
+							sizeof(from->sin_addr),
+							AF_INET)) == NULL) {
+		dprintf(D_ALWAYS,
+				"host information for %s not found, capability rejected\n",
+				(char *)inet_ntoa(from->sin_addr));
+		sock->eom();
+		return -1;
+	}
+
+	if (strcmp(hp->h_name, negotiator_host)) {
+		dprintf(D_ALWAYS, "capability from %s rejected, Negotiator is %s\n",
+				hp->h_name, negotiator_host);
+		sock->eom();
+		return -1;
+	}
+
 	/* receive the capability from the negotiator */
-	/* XXXXXX THIS SUCKS. should check from where it's coming. */
 	if (!sock->code(str)) {
 		dprintf(D_ALWAYS, "Failed to get mag_string from negotiator\n");
 		free(str);
