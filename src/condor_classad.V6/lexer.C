@@ -23,6 +23,7 @@
 
 // Includes 
 #include "condor_common.h"
+#include "common.h"
 #include "escapes.h"
 #include "lexer.h"
 
@@ -137,7 +138,7 @@ wind (void)
 }
 
 			
-TokenType Lexer::
+Lexer::TokenType Lexer::
 ConsumeToken (TokenValue *lvalp)
 {
 	if (lvalp) lvalp->CopyFrom( yylval );
@@ -151,7 +152,7 @@ ConsumeToken (TokenValue *lvalp)
 
 
 // peekToken() returns the same token till consumeToken() is called
-TokenType Lexer::
+Lexer::TokenType Lexer::
 PeekToken (TokenValue *lvalp)
 {
 	if (!tokenConsumed) {
@@ -236,7 +237,7 @@ tokenizeNumber (void)
 {
 	enum { NONE, INTEGER, REAL };
 	int		numberType = NONE;
-	NumberFactor f;
+	Value::NumberFactor f;
 	int		integer=0;
 	double	real=0;
 	int 	och;
@@ -341,11 +342,13 @@ tokenizeNumber (void)
 	}
 
 	switch( toupper( ch ) ) {
-		case 'K': f = K_FACTOR; wind( ); break;
-		case 'M': f = M_FACTOR; wind( ); break;
-		case 'G': f = G_FACTOR; wind( ); break;
+		case 'B': f = Value::B_FACTOR; wind( ); break;	
+		case 'K': f = Value::K_FACTOR; wind( ); break;
+		case 'M': f = Value::M_FACTOR; wind( ); break;
+		case 'G': f = Value::G_FACTOR; wind( ); break;
+		case 'T': f = Value::T_FACTOR; wind( ); break;
 		default:
-			f = NO_FACTOR;
+			f = Value::NO_FACTOR;
 	}
 
 	if( numberType == INTEGER ) {

@@ -24,131 +24,164 @@
 #ifndef __LEXER_H__
 #define __LEXER_H__
 
-#include "stringSpace.h"
 #include "extArray.h"
 #include "common.h"
-#include "tokens.h"
+#include "value.h"
 
-BEGIN_NAMESPACE( classad )
-
-struct IntValue {
-    int             value;
-    NumberFactor    factor;
-};
-
-struct RealValue {
-    double          value;
-    NumberFactor    factor;
-};
-
-struct AbsTimeValue {
-	int				secs;
-};
-
-struct RelTimeValue {
-	int				secs;
-};
-
-class TokenValue
-{
-	public:
-		TokenValue( ) {
-			tt = LEX_TOKEN_ERROR;
-			factor = NO_FACTOR;
-    		intValue = 0;
-    		realValue = 0.0;
-			boolValue = false;
-			secs = 0;
-		}
-
-		~TokenValue( ) {
-		}
-
-		void SetTokenType( TokenType t ) {
-			tt = t;
-		}
-
-		void SetIntValue( int i, NumberFactor f) {
-			intValue = i;
-			factor = f;
-		}
-
-		void SetRealValue( double r, NumberFactor f ) {
-			realValue = r;
-			factor = f;
-		}
-
-		void SetBoolValue( bool b ) {
-			boolValue = b;
-		}
-
-		void SetStringValue( const string &str) {
-			strValue = str;
-		}
-
-		void SetAbsTimeValue( time_t asecs ) {
-			secs = asecs;
-		}
-
-		void SetRelTimeValue( time_t rsecs ) {
-			secs = rsecs;
-		}
-
-		TokenType GetTokenType( ) {
-			return tt;
-		}
-
-		void GetIntValue( int& i, NumberFactor& f) {
-			i = intValue;
-			f = factor;
-		}
-
-		void GetRealValue( double& r, NumberFactor& f ) {
-			r = realValue;
-			f = factor;
-		}
-
-		void GetBoolValue( bool& b ) {
-			b = boolValue;
-		}
-
-		void GetStringValue( string &str ) {
-			str = strValue;	
-		}	
-
-		void GetAbsTimeValue( time_t& asecs ) {
-			asecs = secs;
-		}
-
-		void GetRelTimeValue( time_t& rsecs ) {
-			rsecs = secs;
-		}
-
-		void CopyFrom( TokenValue &tv ) {
-			tt = tv.tt;
-			factor = tv.factor;
-			intValue = tv.intValue;
-			realValue = tv.realValue;
-			boolValue = tv.boolValue;
-			secs = tv.secs;
-			strValue = tv.strValue;
-		}
-			
-	private:
-		TokenType 		tt;
-		NumberFactor 	factor;
-    	int 			intValue;
-    	double 			realValue;
-		bool 			boolValue;
-    	string 			strValue;
-		time_t			secs;
-};
+BEGIN_NAMESPACE( classad );
 
 
 // the lexical analyzer class
 class Lexer
 {
 	public:
+		enum TokenType
+		{
+			LEX_TOKEN_ERROR,
+			LEX_END_OF_INPUT,
+			LEX_TOKEN_TOO_LONG,
+			LEX_INTEGER_VALUE,
+			LEX_REAL_VALUE,
+			LEX_BOOLEAN_VALUE,
+			LEX_STRING_VALUE,
+			LEX_UNDEFINED_VALUE,
+			LEX_ERROR_VALUE,
+			LEX_IDENTIFIER,
+			LEX_SELECTION,
+			LEX_MULTIPLY,
+			LEX_DIVIDE,
+			LEX_MODULUS,
+			LEX_PLUS,
+			LEX_MINUS,
+			LEX_BITWISE_AND,
+			LEX_BITWISE_OR,
+			LEX_BITWISE_NOT,
+			LEX_BITWISE_XOR,
+			LEX_LEFT_SHIFT,
+			LEX_RIGHT_SHIFT,
+			LEX_URIGHT_SHIFT,
+			LEX_LOGICAL_AND,
+			LEX_LOGICAL_OR,
+			LEX_LOGICAL_NOT,
+			LEX_LESS_THAN,
+			LEX_LESS_OR_EQUAL,
+			LEX_GREATER_THAN,
+			LEX_GREATER_OR_EQUAL,
+			LEX_EQUAL,
+			LEX_NOT_EQUAL,
+			LEX_META_EQUAL,
+			LEX_META_NOT_EQUAL,
+			LEX_BOUND_TO,
+			LEX_QMARK,
+			LEX_COLON,
+			LEX_COMMA,
+			LEX_SEMICOLON,
+			LEX_OPEN_BOX,
+			LEX_CLOSE_BOX,
+			LEX_OPEN_PAREN,
+			LEX_CLOSE_PAREN,
+			LEX_OPEN_BRACE,
+			LEX_CLOSE_BRACE,
+			LEX_BACKSLASH,
+			LEX_ABSOLUTE_TIME_VALUE,
+			LEX_RELATIVE_TIME_VALUE
+		};
+
+		class TokenValue
+		{
+			public:
+				TokenValue( ) {
+					tt = LEX_TOKEN_ERROR;
+					factor = Value::NO_FACTOR;
+					intValue = 0;
+					realValue = 0.0;
+					boolValue = false;
+					secs = 0;
+				}
+
+				~TokenValue( ) {
+				}
+
+				void SetTokenType( TokenType t ) {
+					tt = t;
+				}
+
+				void SetIntValue( int i, Value::NumberFactor f) {
+					intValue = i;
+					factor = f;
+				}
+
+				void SetRealValue( double r, Value::NumberFactor f ) {
+					realValue = r;
+					factor = f;
+				}
+
+				void SetBoolValue( bool b ) {
+					boolValue = b;
+				}
+
+				void SetStringValue( const string &str) {
+					strValue = str;
+				}
+
+				void SetAbsTimeValue( time_t asecs ) {
+					secs = asecs;
+				}
+
+				void SetRelTimeValue( time_t rsecs ) {
+					secs = rsecs;
+				}
+
+				TokenType GetTokenType( ) {
+					return tt;
+				}
+
+				void GetIntValue( int& i, Value::NumberFactor& f) {
+					i = intValue;
+					f = factor;
+				}
+
+				void GetRealValue( double& r, Value::NumberFactor& f ) {
+					r = realValue;
+					f = factor;
+				}
+
+				void GetBoolValue( bool& b ) {
+					b = boolValue;
+				}
+
+				void GetStringValue( string &str ) {
+					str = strValue;	
+				}	
+
+				void GetAbsTimeValue( time_t& asecs ) {
+					asecs = secs;
+				}
+
+				void GetRelTimeValue( time_t& rsecs ) {
+					rsecs = secs;
+				}
+
+				void CopyFrom( TokenValue &tv ) {
+					tt = tv.tt;
+					factor = tv.factor;
+					intValue = tv.intValue;
+					realValue = tv.realValue;
+					boolValue = tv.boolValue;
+					secs = tv.secs;
+					strValue = tv.strValue;
+				}
+					
+			private:
+				TokenType 			tt;
+				Value::NumberFactor factor;
+				int 				intValue;
+				double 				realValue;
+				bool 				boolValue;
+				string 				strValue;
+				time_t				secs;
+		};
+
 		// ctor/dtor
 		Lexer ();
 		~Lexer ();
