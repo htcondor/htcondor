@@ -69,13 +69,13 @@ class ClassAd : public ExprTree
 		*/
 		virtual bool ToSink( Sink &s );	
 
-		/** Update a class-ad with another ClassAd. The attributes from the specified
-            ClassAd are inserted into this ClassAd, overwriting any existing attributes
-            with the same name.
+		/** Update a class-ad with another ClassAd. The attributes from the 
+		 		specified ClassAd are inserted into this ClassAd, overwriting 
+				any existing attributes with the same name.
 			@param ad the class-ad that represents the update.
 			@return false if the ClassAd could not be successfully updated.
 		*/
-		virtual void Update( ClassAd& ad );	
+		void Update( ClassAd& ad );	
 
 		// Accessors/modifiers
 		/** Clears the ClassAd of all attributes.

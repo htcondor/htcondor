@@ -219,7 +219,7 @@ Insert (const char *name, ExprTree *tree)
 bool ClassAd::
 Insert( const char *name, const char *expr, int len )
 {
-	static Source 	src;
+	static Source	src;
 	ExprTree 		*tree;
 
 	src.SetSource( expr, len );
@@ -512,14 +512,14 @@ Update( ClassAd& ad )
 		if (ad.attrList[index].valid && ad.attrList[index].attrName && 
 			ad.attrList[index].expression)
 		{
-			attrName=ad.schema ? ad.attrList[index].canonicalAttrName.getCharString()
-							: ad.attrList[index].attrName;
+			attrName = ad.schema ? 
+						ad.attrList[index].canonicalAttrName.getCharString()
+						: ad.attrList[index].attrName;
 
 			// insert attrname, ad.attrlist[index].expression
 			Insert(attrName,ad.attrList[index].expression->Copy());
 		}
 	}
-
 }
 
 
