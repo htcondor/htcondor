@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.2.7 2005-02-23 00:44:47 wright Exp $
+# $Id: remote_pre.pl,v 1.1.2.8 2005-02-23 23:09:48 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -169,6 +169,9 @@ opendir( DIR, "$BaseDir/condor" ) ||
 @files = readdir(DIR);
 closedir DIR;
 foreach $file ( @files ) {
+    if( $file =~ /\.(\.)?/ ) {
+        next;
+    }
     symlink( "$BaseDir/condor/$file", "$file" ) ||
         die "Can't symlink($BaseDir/condor/$file): $!\n";
 }
