@@ -37,6 +37,7 @@ library_target( liburl.a,$(URL_OBJ))
 library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf_common.o ../condor_util_lib/dprintf.o ../condor_util_lib/mkargv.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/setsyscalls.o uids.o strnewp.o)
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
+c_plus_target(test_stringSpace, test_stringSpace.o,$(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a)
 c_plus_target(access.t, access.t.o, $(LIB))
