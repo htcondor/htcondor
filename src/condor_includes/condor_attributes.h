@@ -386,6 +386,10 @@ const char ATTR_SEC_USER                 [] = "User";
 const char ATTR_SEC_NEW_SESSION          [] = "NewSession";
 const char ATTR_SEC_USE_SESSION          [] = "UseSession";
 
+const char ATTR_UPDATESTATS_TOTAL		 [] = "UpdatesTotal";
+const char ATTR_UPDATESTATS_SEQUENCED	 [] = "UpdatesSequenced";
+const char ATTR_UPDATESTATS_LOST		 [] = "UpdatesLost";
+
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
