@@ -1,3 +1,8 @@
+Changes for version 0.9.5: (not yet released)
+* We now compile on gcc 3.2.x, in addition to other versions of gcc.
+
+* Various bug fixes, particularly in the XML output.
+
 Changes for version 0.9.4: (release 21-Nov-2002)
 * Added user-defined functions
 
