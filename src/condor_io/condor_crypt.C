@@ -75,7 +75,6 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 	memset(key, 0, length);
 
 #if defined(CONDOR_ENCRYPTION)
-    char * file = 0;
     int size = 128;
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
