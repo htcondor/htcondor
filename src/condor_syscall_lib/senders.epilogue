@@ -230,6 +230,9 @@
 		);
 		rval =  -1;
 	}
+#if defined(USE_STUB_CLUMPS) || defined(IRIX53)
+	}
+#endif 
 
 	/* defined in local_startup.c and remote_startup.c */
 	restore_condor_sigmask(omask);

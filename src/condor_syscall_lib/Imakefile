@@ -5,9 +5,20 @@ SETPRIORITY_OBJ = setpriority.o
 CLIP = -DCLIP
 #endif
 
+#if IS_SGI_IRIX53
+/* This silliness is because gcc 2.7.2 on IRIX cannot
+ * handle really large switches and/or functions, like 
+ * stub_gen wants to make for senders.C and receivers.C.
+ * So these options will cluster the stubs so there are
+ * only STUB_CLUMP_SIZE stubs per function/switch statement.
+**/
+STUB_CLUMPS_FLAG = -DUSE_STUB_CLUMPS
+STUB_CLUMP_SIZE = -s 33
+#endif
+
 OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG)
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
@@ -260,20 +271,12 @@ switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	-n syscheck > senders.C
-
-#if IS_SGI_IRIX53 
-CMNT
-CMNT Bypass a bug in gcc.
-CMNT
-CMNT senders.o: senders.C
-CMNT	CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.C
-#endif
+	-n syscheck $(STUB_CLUMP_SIZE) > senders.C
 
 receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	./stub_gen -mode receivers -p receivers.prologue \
-	-e receivers.epilogue -n syscheck \
+	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) \
 	> receivers.C
 
 syscall-list: syscall.tmpl stub_gen 
