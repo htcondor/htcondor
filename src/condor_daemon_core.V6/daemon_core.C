@@ -1128,7 +1128,7 @@ int DaemonCore::HandleReq(int socki)
 	}
 
 	if ( reqFound == TRUE )
-		dprintf(D_DAEMONCORE, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
+		dprintf(D_ALWAYS, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
 	else
 		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
