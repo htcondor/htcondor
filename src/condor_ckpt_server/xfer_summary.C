@@ -233,8 +233,8 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
 	// make local copy of peer address to avoid calling inet_ntoa twice in
 	// fprintf below
 	strcpy(peer_IP, inet_ntoa(peer));
-	fprintf( log_file, "%d/%d %02d:%02d ", tm->tm_mon + 1, tm->tm_mday,
-			tm->tm_hour, tm->tm_min );
+	fprintf( log_file, "%d/%d %02d:%02d:%02d ", tm->tm_mon + 1, tm->tm_mday,
+			tm->tm_hour, tm->tm_min, tm->tm_sec );
 	fprintf( log_file, "%s %s %u bytes %d sec %s %s@%s\n",
 			(tinfo->status == RECV ? "R" : "S"),
 			(success_flag ? "S" : "F"),
