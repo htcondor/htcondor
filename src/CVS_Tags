@@ -1,3 +1,10 @@
+5/1/01 V6_3-syscall-hack-branch
+       New branch for doing massive hacking to the remote syscall
+       infrastructure to avoid using va_args, having a giant
+       do_remote_syscall() function, etc.  Instead, we'll now generate
+       seperate functions for each RSC we're trapping, and ideally,
+       put them all in seperate .o files, too.
+
 5/1/01 V6_3-post-merge-V6_3_0-merge-1
        The state of the V6_3-branch after merging in the
        V6_3_0-branch as tagged at V6_3_0-merge-1.
