@@ -101,7 +101,7 @@ bool Dag::Bootstrap (bool recovery) {
     // the DAG input file)
 	jobs.ToBeforeFirst();
     while( jobs.Next( job ) ) {
-        if( job->_Status == Job::STATUS_DONE ) {
+        if( job->GetStatus() == Job::STATUS_DONE ) {
 			TerminateJob( job, true );
 		}
     }
@@ -115,7 +115,7 @@ bool Dag::Bootstrap (bool recovery) {
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
-			if( job->_Status == Job::STATUS_POSTRUN ) {
+			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
@@ -128,7 +128,7 @@ bool Dag::Bootstrap (bool recovery) {
 
 	jobs.ToBeforeFirst();
 	while( jobs.Next( job ) ) {
-		if( job->_Status == Job::STATUS_READY &&
+		if( job->GetStatus() == Job::STATUS_READY &&
 			job->IsEmpty( Job::Q_WAITING ) ) {
 			StartNode( job );
 		}
@@ -142,9 +142,12 @@ bool Dag::AddDependency (Job * parent, Job * child) {
     ASSERT( parent != NULL );
     ASSERT( child  != NULL );
     
-    if (!parent->Add (Job::Q_CHILDREN,  child->GetJobID())) return false;
-    if (!child->Add  (Job::Q_PARENTS, parent->GetJobID())) return false;
-    if (!child->Add  (Job::Q_WAITING,  parent->GetJobID())) return false;
+	if( !parent->AddChild( child ) ) {
+		return false;
+	}
+	if( !child->AddParent( parent ) ) {
+		return false;
+	}
     return true;
 }
 
@@ -374,7 +377,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  // no POST script was specified, so update DAG with
 				  // job's successful completion
 				  else {
-					  job->_Status = Job::STATUS_DONE;
 					  TerminateJob( job, recovery );
 				  }
 				  SubmitReadyJobs();
@@ -389,7 +391,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				if( !job ) {
 					break;
 				}
-				ASSERT( job->_Status == Job::STATUS_POSTRUN );
+				ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
 
 				PostScriptTerminatedEvent *termEvent =
 					(PostScriptTerminatedEvent*) e;
@@ -471,7 +473,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					// POST script succeeded
 					debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 								   "completed successfully.\n" );
-					job->_Status = Job::STATUS_DONE;
 					TerminateJob( job, recovery );
 				}
 				PrintReadyQ( DEBUG_DEBUG_4 );
@@ -649,7 +650,7 @@ Dag::SubmitReadyJobs()
 	_readyQ->Next( job );
 	_readyQ->DeleteCurrent();
 	ASSERT( job != NULL );
-	ASSERT( job->_Status == Job::STATUS_READY );
+	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
 	debug_printf( DEBUG_VERBOSE, "Submitting Job %s ...\n",
 				  job->GetJobName() );
@@ -715,7 +716,7 @@ int
 Dag::PreScriptReaper( Job* job, int status )
 {
 	ASSERT( job != NULL );
-	ASSERT( job->_Status == Job::STATUS_PRERUN );
+	ASSERT( job->GetStatus() == Job::STATUS_PRERUN );
 
 	if( WIFSIGNALED( status ) || WEXITSTATUS( status ) != 0 ) {
 		// if script returned failure or was killed by a signal
@@ -768,7 +769,7 @@ int
 Dag::PostScriptReaper( Job* job, int status )
 {
 	ASSERT( job != NULL );
-	ASSERT( job->_Status == Job::STATUS_POSTRUN );
+	ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
 
 	PostScriptTerminatedEvent e;
 	UserLog ulog;
@@ -808,7 +809,7 @@ Dag::PrintJobList( Job::status_t status ) const
     Job* job;
     ListIterator<Job> iList( _jobs );
     while( ( job = iList.Next() ) != NULL ) {
-		if( job->_Status == status ) {
+		if( job->GetStatus() == status ) {
 			job->Dump();
 		}
     }
@@ -844,18 +845,18 @@ void Dag::RemoveRunningJobs () const {
     Job * job;
     while (iList.Next(job)) {
 		// if the job has been submitted, condor_rm it
-        if (job->_Status == Job::STATUS_SUBMITTED) {
+        if (job->GetStatus() == Job::STATUS_SUBMITTED) {
 			sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
 			util_popen( cmd );
         }
 		// if node is running a PRE script, hard kill it
-        else if( job->_Status == Job::STATUS_PRERUN ) {
+        else if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre->_pid != 0 );
 			sprintf( cmd, "kill -9 %d", job->_scriptPre->_pid );
 			util_popen( cmd );
         }
 		// if node is running a POST script, hard kill it
-        else if( job->_Status == Job::STATUS_POSTRUN ) {
+        else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 			ASSERT( job->_scriptPost->_pid != 0 );
 			sprintf( cmd, "kill -9 %d", job->_scriptPost->_pid );
 			util_popen( cmd );
@@ -887,7 +888,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     ListIterator<Job> it (_jobs);
     Job * job;
     while (it.Next(job)) {
-        if (job->_Status == Job::STATUS_ERROR) {
+        if (job->GetStatus() == Job::STATUS_ERROR) {
             fprintf (fp, "%s,", job->GetJobName());
         }
     }
@@ -899,7 +900,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     it.ToBeforeFirst();
     while (it.Next(job)) {
         fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
-                 job->_Status == Job::STATUS_DONE ? "DONE" : "");
+                 job->GetStatus() == Job::STATUS_DONE ? "DONE" : "");
         if (job->_scriptPre != NULL) {
             fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
                      job->_scriptPre->GetCmd());
@@ -955,7 +956,9 @@ void
 Dag::TerminateJob( Job* job, bool bootstrap )
 {
     ASSERT( job != NULL );
-    ASSERT( job->_Status == Job::STATUS_DONE );
+
+	job->TerminateSuccess();
+    ASSERT( job->GetStatus() == Job::STATUS_DONE );
 
     //
     // Report termination to all child jobs by removing parent's ID from
@@ -969,7 +972,7 @@ Dag::TerminateJob( Job* job, bool bootstrap )
         ASSERT( child != NULL );
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
-		if( child->_Status == Job::STATUS_READY &&
+		if( child->GetStatus() == Job::STATUS_READY &&
 			child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
 			StartNode( child );
 		}
@@ -1242,7 +1245,7 @@ Dag::DumpDotFileNodes(FILE *temp_dot_file)
 		const char *node_name;
 		
 		node_name = node->GetJobName();
-		switch (node->_Status) {
+		switch (node->GetStatus()) {
 		case Job::STATUS_READY:
 			fprintf(temp_dot_file, 
 				   "    %s [shape=ellipse label=\"%s (I)\"];\n",
@@ -1363,4 +1366,9 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 		_dot_file_name_suffix++;
 	}
 	return;
+}
+
+bool Dag::Add( Job& job )
+{
+	return _jobs.Append(job);
 }
