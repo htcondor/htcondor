@@ -40,6 +40,7 @@
 #include "condor_ckpt_name.h"
 #include "scheduler.h"	// for shadow_rec definition
 #include "condor_email.h"
+#include "globus_utils.h"
 
 extern char *Spool;
 extern char *Name;
@@ -2052,6 +2053,22 @@ int mark_idle(ClassAd *job)
 	if ( status == COMPLETED ) {
 		DestroyProc(cluster,proc);
 	} else if ( status == REMOVED ) {
+		// a globus job with a non-null contact string should be left alone
+		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+			char contact_string[20];
+			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
+			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
+								sizeof(contact_string));
+			if ( strncmp(contact_string,NULL_JOB_CONTACT,
+							sizeof(contact_string)-1) )
+			{
+				// looks like the job's globus contact string is still valid,
+				// so there is still a job submitted remotely somewhere.
+				// don't touch this job -- leave it alone so the gridmanager
+				// completes the task of removing it from the remote site.
+				return 1;
+			}
+		}
 		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
 				 "cleaning up now\n", cluster, proc );
 		scheduler.WriteAbortToUserLog( job_id );
