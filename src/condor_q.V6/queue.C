@@ -1019,23 +1019,56 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 	char	*tmp;
 	int	p;
 
+	
 	if ( globusResource != NULL ) {
-		// copy the hostname
-		p = strcspn( globusResource, ":/" );
-		if ( p > (int) sizeof(host) )
-			p = sizeof(host) - 1;
-		strncpy( host, globusResource, p );
-		host[p] = '\0';
 
-		if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
-			tmp += 11; // 11==strlen("jobmanager-")
+		char *grid_type;
+		ad->LookupString( ATTR_JOB_GRID_TYPE, &grid_type );
 
-			// copy the jobmanager name
-			p = strcspn( tmp, ":" );
-			if ( p > (int) sizeof(jm) )
-				p = sizeof(jm) - 1;
-			strncpy( jm, tmp, p );
-			jm[p] = '\0';
+		if ( grid_type == NULL || !stricmp( grid_type, "gt2" ) ) {
+
+			// copy the hostname
+			p = strcspn( globusResource, ":/" );
+			if ( p > (int) sizeof(host) )
+				p = sizeof(host) - 1;
+			strncpy( host, globusResource, p );
+			host[p] = '\0';
+
+			if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+				tmp += 11; // 11==strlen("jobmanager-")
+
+				// copy the jobmanager name
+				p = strcspn( tmp, ":" );
+				if ( p > (int) sizeof(jm) )
+					p = sizeof(jm) - 1;
+				strncpy( jm, tmp, p );
+				jm[p] = '\0';
+			}
+
+		} else if ( !stricmp( grid_type, "gt3" ) ) {
+
+			strncpy( host, globusResource, sizeof(host) );
+
+		} else if ( !stricmp( grid_type, "gt4" ) ) {
+
+				// Pick the hostname out of the URL
+			if ( strncmp( "https://", globusResource, 8 ) == 0 ) {
+				strncpy( host, &globusResource[8], sizeof(host) );
+				host[sizeof(host)-1] = '\0';
+			} else {
+				strncpy( host, globusResource, sizeof(host) );
+				host[sizeof(host)-1] = '\0';
+			}
+			p = strcspn( host, ":/" );
+			host[p] = '\0';
+
+			strcpy( jm, "Fork" );
+			ad->LookupString( ATTR_GLOBUS_JOBMANAGER_TYPE, jm, sizeof(jm) );
+			jm[sizeof(jm)-1] = '\0';
+		}
+
+		if ( grid_type ) {
+			free( grid_type );
 		}
 	}
 
