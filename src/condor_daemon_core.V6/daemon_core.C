@@ -1710,10 +1710,20 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	}
 
 	// now destination process is local, send via UDP; if remote, send via TCP
-	if ( is_local == TRUE )
-		sock = (Stream *) new SafeSock(destination,0,3);
-	else
-		sock = (Stream *) new ReliSock(destination,0,20);
+	if ( is_local == TRUE ) {
+		sock = (Stream *) new SafeSock();
+		sock->timeout(3);
+	} else {
+		sock = (Stream *) new ReliSock();
+		sock->timeout(20);
+	}
+
+	if (!((Sock *)sock)->connect(destination)) {
+		dprintf(D_ALWAYS,"Send_Signal: ERROR Connect to %s failed.",
+				destination);
+		delete sock;
+		return FALSE;
+	}
 
 	// send the signal out as a DC_RAISESIGNAL command
 	sock->encode();		
@@ -2324,11 +2334,11 @@ int DaemonCore::Create_Process(
 			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ; 
 			 i++) 
 		{
-			// check that this is a valid cedar socket
-			if ( !(sock_inherit_list[i]->valid()) ) {
+			// check that this is not a virgin socket
+			if (((Sock *)sock_inherit_list[i])->_state == Sock::sock_virgin) {
 				dprintf( D_ALWAYS,
 						 "Create_Process: invalid inherit socket list, "
-						 "entry=%d\n",i);
+						 "virgin entry=%d\n",i);
 				return FALSE;
 			}
 
@@ -3242,7 +3252,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	return TRUE;
 }
 
-int DaemonCore::HandleChildAliveCommand(int command, Stream* stream)
+int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 {
 	pid_t child_pid;
 	unsigned int timeout_secs;
@@ -3332,8 +3342,8 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 	
-	sock = new SafeSock(parent_sinfull_string, 0);
-	if (!sock) {
+	sock = new SafeSock();
+	if (!sock->connect(parent_sinfull_string)) {
 		return FALSE;
 	}
 	
