@@ -245,6 +245,7 @@ const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
 const char ATTR_STATE                    [] = "State";
 const char ATTR_STARTER_IP_ADDR          [] = "StarterIpAddr";
+const char ATTR_STARTER_ABILITY_LIST     [] = "StarterAbilityList";
 const char ATTR_STARTER_WAIT_FOR_DEBUG   [] = "StarterWaitForDebug";
 const char ATTR_STATUS					 [] = "Status";
 const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";
