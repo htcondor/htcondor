@@ -23,7 +23,7 @@ DAEMON_LIST	= MASTER, STARTD, SCHEDD
 
 ##  Location of the daemons and programs that Condor will start up.
 ##  If the master is started as root, all of these will be started as
-##  root. 
+##  root.  
 RELEASE_DIR		= /usr/local/condor
 SBIN			= $(RELEASE_DIR)/sbin
 MASTER			= $(SBIN)/condor_master
@@ -39,4 +39,6 @@ PVMD			= $(SBIN)/condor_pvmd
 STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.carmi
 ALTERNATE_STARTER_2	= $(SBIN)/condor_starter
+MAIL			= /usr/ucb/mail
+
 
