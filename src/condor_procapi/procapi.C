@@ -73,39 +73,40 @@ ProcAPI::~ProcAPI() {
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
 #if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
 int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
-  char path[64];
-  struct prpsinfo pri;
-  struct prstatus prs;
+	char path[64];
+	struct prpsinfo pri;
+	struct prstatus prs;
 #ifndef OSF1
-  struct prusage pru;   // prusage doesn't exist in OSF/1
+	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
-  int fd;
-  int retval;
+	int fd;
+	int retval;
 
-  initpi ( pi );
+	initpi ( pi );
 
-  // if the page size has not yet been found, get it.
-  if ( pagesize == 0 )
-    pagesize = getpagesize() / 1024;  // pagesize is in k now
-
-  sprintf ( path, "/proc/%d", pid );
-  if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
-
-    // PIOCPSINFO gets memory sizes, pids, and age.
-    retval = ioctl ( fd, PIOCPSINFO, &pri );
-    if ( retval >= 0 ) {
-      pi->imgsize = pri.pr_size * pagesize;
-      pi->rssize  = pri.pr_rssize * pagesize;
-      pi->pid     = pri.pr_pid;
-      pi->ppid    = pri.pr_ppid;
-      pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
-    } else {
-      pi->pid = pid;
-      perror ( "PIOCPSINFO Error occurred" );
-	  close( fd );
-      return -2;
-    }
+		// if the page size has not yet been found, get it.
+	if ( pagesize == 0 )
+		pagesize = getpagesize() / 1024;  // pagesize is in k now
+  
+	sprintf ( path, "/proc/%d", pid );
+	if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
+			// PIOCPSINFO gets memory sizes, pids, and age.
+		retval = ioctl ( fd, PIOCPSINFO, &pri );
+		if ( retval >= 0 ) {
+			pi->imgsize = pri.pr_size * pagesize;
+			pi->rssize  = pri.pr_rssize * pagesize;
+			pi->pid     = pri.pr_pid;
+			pi->ppid    = pri.pr_ppid;
+			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
+		} else {
+			pi->pid = pid;
+			perror ( "PIOCPSINFO Error occurred" );
+			close( fd );
+			delete pi; 
+			pi = NULL;
+			return -2;
+		}
 
     long nowminf, nowmajf;
 
@@ -124,12 +125,16 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
       nowmajf = pru.pu_majf;  
 #endif
-    } else {
-      pi->pid = pid;
-      perror ( "PIOCUSAGE Error occurred" );
-	  close( fd );
-      return -2;
-    }
+
+	} else {
+		pi->pid = pid;
+		perror ( "PIOCUSAGE Error occurred" );
+		close( fd );
+		delete pi; 
+		pi = NULL;
+		return -2;
+	}
+	
 #else  //here we are in osf/1, which doesn't give this info.
     nowminf = 0;   // let's default to zero in osf1
     nowmajf = 0;
@@ -146,6 +151,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
          the hashtable, put it there using (user+sys time) / age as %cpu.
          If it is there, use ((user+sys time) - old time) / timediff.
       */
+
       struct timeval thistime;
       double timediff, lasttime, oldustime, now, ustime, oldusage;
       long oldminf, oldmajf;
@@ -203,6 +209,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       pi->pid = pid;
       perror ( "PIOCSTATUS Error occurred" );
 	  close( fd );
+	  delete pi;
+	  pi = NULL;
       return -2;
     }
     // close the /proc/pid file
@@ -212,6 +220,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   else {
     dprintf ( D_FULLDEBUG, "ProcAPI: error opening %s.\n", path );
     pi->pid = pid;
+	delete pi;
+	pi = NULL;
     return -1;
   }
 
@@ -240,12 +250,16 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
       dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
       pi->pid = pid;
       close( fd );
+	  delete pi; 
+	  pi = NULL;
       return -2;
     }
   }
   else {
     dprintf (D_FULLDEBUG, "Problem opening %s.\n", path );
     pi->pid = pid;
+	delete pi; 
+	pi = NULL;
     return -1;
   }
 
@@ -274,11 +288,15 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     else {
       dprintf (D_FULLDEBUG, "Problems reading %s.\n", path );
       close( fd );
+	  delete pi; 
+	  pi = NULL;
       return -2;
     }
   }
   else {
     dprintf (D_FULLDEBUG, "Problem opening %s.\n", path );
+	delete pi; 
+	pi = NULL;
     return -1;
   }
 
@@ -386,6 +404,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   else {
     dprintf (D_FULLDEBUG, "Problem opening %s.", path );
     pi->pid = pid;
+	delete pi; 
+	pi = NULL;
     return -1;
   }
 
@@ -415,6 +435,8 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
     }
     else {
       dprintf (D_FULLDEBUG, "Problem opening /proc/stat for btime.\n" );
+	  delete pi; 
+	  pi = NULL;
       return -1;
     }
   }
@@ -500,8 +522,11 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
   retval = pstat_getproc ( &buf, sizeof( buf ), 0, pid );
 
-  if ( retval < 0 ) 
-    return -1;
+  if ( retval < 0 ) {
+	delete pi; 
+	pi = NULL;
+	return -1;
+  }
 
   if ( pagesize == 0 )
     pagesize = getpagesize() / 1024;  // pagesize is in k now
@@ -1060,6 +1085,8 @@ void ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
 	}
 }
 
+
+
 // We assume that the pDataBlock and offsets are all set up, and we have a
 // set of pids (pidslist) to get info on.  Totals returned in pi.
 int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
@@ -1145,6 +1172,7 @@ int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
 #endif // WIN32
 
 #ifndef WIN32
+
 /* This function returns a list of pids that are 'descendents' of that pid.
      I call this a 'family' of pids.  This list is put into pidFamily, which
      I assume is an already-allocated array.  This array will be terminated
