@@ -2,6 +2,9 @@
 \index{universe!Globus}
 \index{Globus}
 
+WHAT GLOBUS IS.
+Globus provides software that allows users access to 
+
 \Condor{glidein} is a program that can be used to add resources from an
 existing Globus resource to a Condor 
 pool on a temporary basis. During this period, these resources are visible 
@@ -23,13 +26,14 @@ See \Url{http://www.globus.org} for information.
 
 \item You must have valid Globus credentials (X509 certificate directory).
 
-\item Testing the Globus requirements:
-\begin{verbatim}
-     --You can run globusrun -version to display the version number.
-     --You can run globusrun -a -r <FQHN>/jobmanager-fork to authenticate 
-       to the host, as well as testing the validity of your credentials 
-       and environment variables.
-\end{verbatim}
+%\item Testing the Globus requirements:
+%\begin{verbatim}
+%--You can run globusrun -version to display the version number.
+%--You can run globusrun -a -r <FQHN>/jobmanager-fork to authenticate 
+%to the host, as well as testing the validity of your credentials 
+%and environment variables.
+%\end{verbatim}
+
 \end{enumerate}
 
 \subsection{Requirements for running \Condor{glidein}}
@@ -57,47 +61,47 @@ and Condor user program directory (.../bin) included in your PATH.
 
 \end{enumerate}
 
-\subsection{Requirements for running \Condor{glidein} as a Condor job}
-\begin{enumerate}
-\item The proxy (located by \Env{X509\_USER\_PROXY} env var) must be readable by
-Condor. At sites using an AFS filesystem, that means that AFS ACLs apply, and must be readable by the Condor programs.
-
-\item Run \Condor{glidein} as a vanilla universe job or as a scheduler universe 
-job. Since scheduler universe jobs run on the submitting machine, some potential
-PATH and \Env{X509\_USER\_PROXY} problems might be avoided by running as scheduler universe jobs (completely unrelated to the --scheduler option to \Condor{glidein}).
-
-\item The environment variables \Env{GLOBUS\_INSTALL\_PATH}  \Env{GLOBUS\_DEPLOY\_PATH}, \Env{PATH}, \Env{X509\_USER\_PROXY}, and \Env{HOME} must be exported using the submit description file options of Getenv = True, or by setting these values with the Environment option.
-
-\item Since \Condor{glidein} is a script which itself submits job(s) to Condor, 
-the \Condor{glidein} script exits normally once the submission completes on
-the remote machine. Because of this, even sucessful glideins will not show up
-when running \Condor{queue}, because \Condor{glidein} has completed, and the
-\Prog{globusrun} program is running on another machine in the pool. Do not
-worry, though-- the glided-in daemons will shut down gracefully after the
-time interval specified with the \Opt{runfor} option [default 20 minutes].
-
-Here is a sample submit description file:
-
-\begin{verbatim}
-   universe = vanilla
-   Executable = /unsup/condor/bin/condor_glidein
-   arguments = denali.mcs.anl.gov
-
-   environment = \
-   PATH=/bin:/unsup/condor/bin:/p/condor/workspaces/globus/bin;\
-   HOME=/u/m/y/myhome;\
-   GLOBUS_INSTALL_PATH=/p/condor/workspaces/globus/common;\
-   X509_USER_PROXY=/u/m/y/myhome/proxy/proxyfile
-
-   Output = outglide.\$(Process)
-   Error = errglide.\$(Process)
-
-   +memoryrequirements = 20
-
-   queue
-\end{verbatim}
-\end{enumerate}
-
+%\subsection{Requirements for running \Condor{glidein} as a Condor job}
+%\begin{enumerate}
+%\item The proxy (located by \Env{X509\_USER\_PROXY} env var) must be readable by
+%Condor. At sites using an AFS filesystem, that means that AFS ACLs apply, and must be readable by the Condor programs.
+%
+%\item Run \Condor{glidein} as a vanilla universe job or as a scheduler universe 
+%job. Since scheduler universe jobs run on the submitting machine, some potential
+%PATH and \Env{X509\_USER\_PROXY} problems might be avoided by running as scheduler universe jobs (completely unrelated to the --scheduler option to \Condor{glidein}).
+%
+%\item The environment variables \Env{GLOBUS\_INSTALL\_PATH}  \Env{GLOBUS\_DEPLOY\_PATH}, \Env{PATH}, \Env{X509\_USER\_PROXY}, and \Env{HOME} must be exported using the submit description file options of Getenv = True, or by setting these values with the Environment option.
+%
+%\item Since \Condor{glidein} is a script which itself submits job(s) to Condor, 
+%the \Condor{glidein} script exits normally once the submission completes on
+%the remote machine. Because of this, even sucessful glideins will not show up
+%when running \Condor{queue}, because \Condor{glidein} has completed, and the
+%\Prog{globusrun} program is running on another machine in the pool. Do not
+%worry, though-- the glided-in daemons will shut down gracefully after the
+%time interval specified with the \Opt{runfor} option [default 20 minutes].
+%
+%Here is a sample submit description file:
+%
+%\begin{verbatim}
+   %universe = vanilla
+   %Executable = /unsup/condor/bin/condor_glidein
+   %arguments = denali.mcs.anl.gov
+%
+   %environment = \
+   %PATH=/bin:/unsup/condor/bin:/p/condor/workspaces/globus/bin;\
+   %HOME=/u/m/y/myhome;\
+   %GLOBUS_INSTALL_PATH=/p/condor/workspaces/globus/common;\
+   %X509_USER_PROXY=/u/m/y/myhome/proxy/proxyfile
+%
+   %Output = outglide.\$(Process)
+   %Error = errglide.\$(Process)
+%
+   %+memoryrequirements = 20
+%
+   %queue
+%\end{verbatim}
+%\end{enumerate}
+%
 \subsection{Usage example}
 Example: a Condor user at UW has access to Globus resources at 
 Argonne, and wants to add the resources to his local Condor pool.
