@@ -1050,7 +1050,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 					return( true );
 			}
 			if( nf != Value::NO_FACTOR ) {
-				result.SetIntegerValue(ivalue*Value::ScaleFactor[nf]);
+				result.SetIntegerValue((int) (ivalue*Value::ScaleFactor[nf]));
 			}
 			return( true );
 
