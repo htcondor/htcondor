@@ -23,7 +23,8 @@ all_target(libclassad.a)
 library_target(libclassad.a,$(OBJ))
 c_plus_target (testeval, $(OBJ) testeval.o , $(LIB))
 C_target(testeval.C,testeval.o)
-pure_c_plus_target(testp.pure, $(OBJ), $(LIB))
+c_plus_target (cxi, cxi.o, $(LIB))
+pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
 
 clean::
 	rm -f *.o 

@@ -84,23 +84,42 @@ _evaluate (EvalState &state, EvalValue &val)
 }
 
 
+bool AttributeReference::
+_flatten( EvalState &state, EvalValue &val, ExprTree*&ntree, OpKind*)
+{
+	if( absolute ) {
+		ntree = copy();
+		return( ntree != NULL );
+	}
+
+	evaluate( state, val );
+
+	if( val.isClassAdValue() || val.isListValue() || val.isUndefinedValue() ) {
+		ntree = copy();
+		return( ntree != NULL );
+	} else {
+		ntree = NULL;
+	}
+	return true;
+}
+
+
 int AttributeReference::
 findExpr( EvalState curState, ExprTree *expr, ExprTree *&tree, 
 			EvalState &nextState )
 {
 	EvalState	parentState;
 
-	if( curState.curAd == NULL ) {
-		tree = NULL;
-		return EVAL_UNDEF;
-	}
-
 	if( expr == NULL && !absolute ) {	
 		// case 1:  attr
+		if( curState.curAd == NULL ) {
+			tree = NULL;
+			return EVAL_UNDEF;
+		}
 		if( CLASSAD_RESERVED_STRCMP( attributeStr , "super" ) == 0 ) {
 			// 1.0:  The implicit "super" attribute
-			if( curState.curAd == curState.rootAd ) {
-				// the root ad has no "super"
+			if( curState.curAd == curState.rootAd || curState.rootAd == NULL ) {
+				// no "super"
 				tree = NULL;
 				return EVAL_UNDEF;
 			}

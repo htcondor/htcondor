@@ -21,10 +21,17 @@ class Literal : public ExprTree
     	void setErrorValue      (void);
 
 	protected:
+		friend FunctionCall;
+		friend ClassAd;
+		friend ExprList;
+		friend Operation;
+
+		static Literal* makeLiteral( EvalValue& );
 		virtual void setParentScope( ClassAd* ) {};
 
   	private:
- 		virtual void    _evaluate (EvalState &, EvalValue &);
+		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+ 		virtual void _evaluate (EvalState &, EvalValue &);
 
 		// literal specific information
     	Value   		value;

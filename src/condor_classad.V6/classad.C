@@ -93,8 +93,7 @@ ClassAd::
 void ClassAd::
 clear( )
 {
-	for (int i = 0; i < last; i++)
-	{
+	for (int i = 0; i < last; i++) {
 		if (!attrList[i].valid) continue;
 
 		if (attrList[i].attrName) free(attrList[i].attrName);
@@ -117,32 +116,26 @@ insert (char *name, ExprTree *tree)
 	tree->setParentScope( this );
 
 	// if the classad is domainized
-	if (schema)
-	{
+	if (schema) {
 		SSString s;
 
 		// operate on the common schema array
 		index = schema->getCanonical (name, s);
 		attrList[index].canonicalAttrName.copy(s);
-	}
-	else
-	{
+	} else {
 		// use the attrlist as a standard unordered list
-		for (index = 0; index < last; index ++)
-		{
+		for (index = 0; index < last; index ++) {
 			if (CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name) == 0)
 				break;
 		}
-		if (index == last) 
-		{
+		if (index == last) {
 			attr = strdup (name);
 			last++;
 		}
 	}
 
 	// if inserting for the first time
-	if (attrList[index].valid == false)
-	{
+	if (attrList[index].valid == false) {
 		if (index > last) last = index+1;
 
 		attrList[index].valid = true;
@@ -153,8 +146,7 @@ insert (char *name, ExprTree *tree)
 	}
 
 	// if a tree was previously inserted here, delete it	
-	if (attrList[index].expression) 
-	{
+	if (attrList[index].expression) {
 		delete (attrList[index].expression);
 	}
 	
@@ -174,16 +166,12 @@ lookup (char *name)
 	if (!name) return NULL;
 
     // if the classad is domainized
-    if (schema)
-    {
+    if (schema) {
         // operate on the common schema array
         index = schema->getCanonical (name);
-    }
-    else
-    {
+    } else {
         // use the attrlist as a standard unordered list
-        for (index = 0; index < last; index ++)
-        {
+        for (index = 0; index < last; index ++) {
             if (CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name) == 0) 
 				break;
         }
@@ -202,18 +190,13 @@ remove (char *name)
 	if (!name) return false;
 
     // if the classad is domainized
-    if (schema)
-    {
+    if (schema) {
         // operate on the common schema array
         index = schema->getCanonical (name);
-    }
-    else
-    {
+    } else {
         // use the attrlist as a standard unordered list
-        for (index = 0; index < last; index ++)
-        {
-            if (CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name) == 0)
-			{
+        for (index = 0; index < last; index ++) {
+            if( CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name)==0 ) {
 				free (attrList[index].attrName);
 				attrList[last] = attrList[index];
 				attrList[index]= attrList[last-1];
@@ -225,8 +208,7 @@ remove (char *name)
         }
     }
 
-	if (attrList[index].valid)
-	{
+	if (attrList[index].valid) {
 		attrList[index].valid = false;
 		delete attrList[index].expression;
 
@@ -245,8 +227,7 @@ toSink (Sink &s)
 
 	if (!s.sendToSink ((void*)"[ ", 2)) return false;
 
-	for (int index = 0; index < last; index++)
-	{
+	for (int index = 0; index < last; index++) {
 		if (attrList[index].valid && attrList[index].attrName && 
 			attrList[index].expression)
 		{
@@ -254,8 +235,7 @@ toSink (Sink &s)
 							: attrList[index].attrName;
 
 			// if this is not the first attribute, print the ";" separator
-			if (!first) 
-			{
+			if (!first) {
 				if (!s.sendToSink ((void*)" ; ", 3)) return false;
 			}
 
@@ -313,6 +293,57 @@ _evaluate( EvalState&, EvalValue& val )
 }
 
 
+bool ClassAd::
+_flatten( EvalState& state, EvalValue&, ExprTree*& tree, OpKind* ) 
+{
+	ClassAd 	*newAd = new ClassAd();
+	EvalValue	eval;
+	ExprTree	*etree;
+	EvalState	intermState;
+
+	intermState.curAd = this;
+	intermState.rootAd = state.rootAd ? state.rootAd : this;
+
+	for( int i = 0 ; i < last ; i++ ) {
+		if( attrList[i].valid ) {
+			// copy attribute name
+			if( attrList[i].attrName ) {
+				newAd->attrList[i].attrName = strdup( attrList[i].attrName );
+			} else {
+				newAd->attrList[i].attrName = NULL;
+			}
+
+			// flatten expression
+			if( !attrList[i].expression->flatten( intermState, eval, etree ) ) {
+				delete newAd;
+				tree = NULL;
+				return false;
+			}
+
+			// if a value was obtained, convert it to a literal
+			if( !etree ) {
+				etree = Literal::makeLiteral( eval );
+				if( !etree ) {
+					delete newAd;
+					tree = NULL;
+					return false;
+				}
+			}
+
+			newAd->attrList[i].expression = etree;
+			newAd->attrList[i].valid = true;
+		} else {
+			newAd->attrList[i].valid = false;
+		}
+	}
+
+	newAd->last = last;
+	tree = newAd;
+
+	return true;
+}
+
+
 void ClassAd::
 setParentScope( ClassAd *ad )
 {
@@ -326,13 +357,11 @@ fromSource (Source &s)
 	ClassAd	*ad = new ClassAd;
 
 	if (!ad) return NULL;
-	if (!s.parseClassAd (ad)) 
-	{
+	if (!s.parseClassAd (ad)) {
 		delete ad;
 		return (ClassAd*)NULL;
 	}
 
-	// ... else 
 	return ad;
 }
 
@@ -413,6 +442,21 @@ evaluate( ExprTree *tree , Value &val )
 	val.copyFrom( value );
 }
 
+bool ClassAd::
+flatten( ExprTree *tree , Value &val , ExprTree *&fexpr )
+{
+	bool rval;
+
+	EvalState	state;
+	EvalValue	value;
+
+	state.curAd  = this;
+	state.rootAd = this;
+	rval = tree->flatten( state , value , fexpr );
+	val.copyFrom( value );
+
+	return rval;
+}
 
 bool ClassAdIterator::
 nextAttribute (char *&attr, ExprTree *&expr)

@@ -36,7 +36,7 @@ class ExprTree
 {
   	public:
 		// dtor
-		virtual ~ExprTree () {};
+		virtual ~ExprTree ();
 
 		// factory method to parse expressions
 		static ExprTree *fromSource (Source &s);
@@ -48,10 +48,14 @@ class ExprTree
 		// general purpose methods
 		NodeKind getKind (void) { return nodeKind; }
 
+		bool flatten( Value&, ExprTree*& );
+		void evaluate( Value& );
+
   	protected:
 		ExprTree ();
 
-		void evaluate (EvalState &, EvalValue &); 
+		bool flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* = NULL );
+		void evaluate( EvalState &, EvalValue & ); 
 		virtual void setParentScope( ClassAd* ) = 0;
 
 		NodeKind	nodeKind;
@@ -66,8 +70,10 @@ class ExprTree
 		friend class ClassAd; 
 
 		virtual void _evaluate (EvalState &, EvalValue &) = 0;
+		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* )=0;
 
 		bool evalFlag;	// for cycle detection
+		bool flattenFlag;
 };
 
 

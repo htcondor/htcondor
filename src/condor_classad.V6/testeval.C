@@ -6,29 +6,38 @@ int main( void )
 {
 	Source		src;
 	Sink		snk;
-	ClassAd		ad;
-	char		buf[32];
 	Value		val;
+	ExprTree	*tree, *ftree;
 	
 	src.setSource( stdin );
 	snk.setSink ( stdout );
 
-	if( !src.parseClassAd( &ad ) ) 
+	if( !src.parseExpression( tree, true ) ) {
 		cerr << "Parse error" << endl;
-	else
-		cerr << "Parsed ok" << endl;
+		exit( 1 );
+	} 
 
-	scanf( "%s" , buf );
-	while( strcmp( buf , "done" ) != 0 ) {
-		if( !ad.evaluate( buf , val ) ) {
-			cerr << "Parse error of " << buf << endl << endl;
-		} else {
-			val.toSink( snk );
-			printf( "\n\n" );
-		}
-		scanf( "%s" , buf );
-		val.clear();
+	cout << endl << "---" << endl;
+	tree->toSink( snk );
+	snk.flushSink();
+	cout << endl << "---" << endl;
+
+	if( !tree->flatten( val, ftree ) ) {
+		cerr << "Failed to flatten" << endl;
 	}
+
+	if( ftree ) {
+		ftree->toSink( snk );
+	} else {
+		val.toSink( snk );
+	}
+
+	snk.flushSink();
+	cout << endl << endl;
+		
+	val.clear();
+	delete tree;
+	delete ftree;
 
 	return 0;
 }

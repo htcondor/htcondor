@@ -22,6 +22,8 @@ class AttributeReference : public ExprTree
 
   	private:
     	virtual void _evaluate( EvalState & , EvalValue & );
+    	virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
+
 		int	findExpr( EvalState , ExprTree* , ExprTree*& , EvalState& );
 
 		ExprTree	*expr;

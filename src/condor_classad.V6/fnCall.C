@@ -2,6 +2,7 @@
 #include "exprTree.h"
 
 static int hashFcn( const MyString& , int numBkts );
+static char* _FileName_ = __FILE__;
 
 bool FunctionCall::initialized = false;
 FunctionCall::FuncTable FunctionCall::functionTable( 20 , &hashFcn );
@@ -26,6 +27,10 @@ FunctionCall () : arguments( 4 )
 		functionTable.insert( "isclassad",	 	isClassAd );
 		functionTable.insert( "ismember",	 	isMember );
 		functionTable.insert( "isexactmember",	isExactMember );
+		functionTable.insert( "sumfrom",		sumFrom );
+		functionTable.insert( "avgfrom",		avgFrom );
+		functionTable.insert( "maxfrom",		boundFrom );
+		functionTable.insert( "minfrom",		boundFrom );
 #else
 		// load up the function dispatch table
 		functionTable.insert( "isUndefined", 	isUndefined );
@@ -37,6 +42,10 @@ FunctionCall () : arguments( 4 )
 		functionTable.insert( "isClassAd",	 	isClassAd );
 		functionTable.insert( "isMember",	 	isMember );
 		functionTable.insert( "isExactMember",	isExactMember );
+		functionTable.insert( "sumFrom",		sumFrom );
+		functionTable.insert( "avgFrom",		avgFrom );
+		functionTable.insert( "maxFrom",		boundFrom );
+		functionTable.insert( "minFrom",		boundFrom );
 #endif
 		initialized = true;
 	}
@@ -130,6 +139,63 @@ _evaluate (EvalState &state, EvalValue &value)
 	else
 		value.setErrorValue();
 }
+
+bool FunctionCall::
+_flatten( EvalState &state, EvalValue &value, ExprTree*&tree, OpKind* )
+{
+	FunctionCall *newCall;
+	ExprTree	*argTree;
+	EvalValue	argValue;
+	bool		fold = true;
+
+	// if the function cannot be resolved, the value is "error"
+	if( !function ) {
+		value.setErrorValue();
+		tree = NULL;
+		return true;
+	}
+
+	// create a residuated function call with flattened args
+	if( ( newCall = new FunctionCall() ) == NULL ) return false;
+	newCall->setFunctionName( functionName );
+
+	// flatten the arguments
+	for( int i = 0 ; i < numArgs ; i++ ) {
+		if( arguments[i]->flatten( state, argValue, argTree ) ) {
+			if( argTree ) {
+				newCall->appendArgument( argTree );
+				fold = false;
+				continue;
+			} else {
+				ASSERT( argTree == NULL );
+				argTree = Literal::makeLiteral( argValue );
+				if( argTree ) {
+					newCall->appendArgument( argTree );
+					continue;
+				}
+			}
+		} 
+
+		// we get here only when something bad happens
+		delete newCall;
+		value.setErrorValue();
+		tree = NULL;
+		return false;
+	} 
+	
+		
+		
+	// assume all functions are "pure" (i.e., side-affect free)
+	if( fold ) {
+		(*function)( functionName , arguments , state , value );
+		tree = NULL;
+	} else {
+		tree = newCall;
+	}
+
+	return true;
+}
+
 
 static int hashFcn( const MyString &fnName , int numBkts )
 {
@@ -354,4 +420,154 @@ isExactMember (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
         val.setErrorValue();
 
     return;
+}
+
+
+void FunctionCall::
+sumFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
+{
+	EvalValue	list, *ca;
+	Value		tmp, result;
+	ValueList	*vl;
+	ClassAd		*ad;
+	bool		first = true;
+
+	// need two arguments
+	if( argList.getlast() != 1 ) {
+		val.setErrorValue();
+		return;
+	}
+
+	// first argument must evaluate to a list
+	argList[0]->evaluate( state, list );
+	if( !list.isListValue( vl ) ) {
+		val.setErrorValue();
+		return;
+	}
+
+	vl->Rewind();
+	result.setUndefinedValue();
+	while( ( ca = vl->Next() ) ) {
+		if( !ca->isClassAdValue( ad ) ) {
+			val.setErrorValue();
+			delete vl;
+			return;
+		}
+		ad->evaluate( argList[1], tmp );
+		if( first ) {
+			result.copyFrom( tmp );
+			first = false;
+		} else {
+			Operation::operate( ADDITION_OP, result, tmp, result );
+		}
+		tmp.clear();
+	}
+
+	delete vl;
+	val.copyFrom( result );
+	return;
+}
+
+
+void FunctionCall::
+avgFrom (char *, ArgumentList &argList, EvalState &state, EvalValue &val)
+{
+	EvalValue	list, *ca;
+	Value		tmp, result;
+	ValueList	*vl;
+	ClassAd		*ad;
+	int			len = 0;
+
+	// need two arguments
+	if( argList.getlast() != 1 ) {
+		val.setErrorValue();
+		return;
+	}
+
+	// first argument must evaluate to a list
+	argList[0]->evaluate( state, list );
+	if( !list.isListValue( vl ) ) {
+		val.setErrorValue();
+		return;
+	}
+
+	result.setUndefinedValue();
+	vl->Rewind();
+	while( ( ca = vl->Next() ) ) {
+		if( !ca->isClassAdValue( ad ) ) {
+			result.setErrorValue();
+			delete vl;
+			return;
+		}
+		ad->evaluate( argList[1], tmp );
+		if( len == 0 ) {
+			// first iteration
+			result.copyFrom( tmp ); 
+		} else {
+			Operation::operate( ADDITION_OP, result, tmp, result );
+		}
+		tmp.clear();
+		len++;
+	}
+
+	if( len > 0 ) {
+		tmp.setRealValue( len );
+		Operation::operate( DIVISION_OP, result, tmp, result );
+	} else {
+		val.setUndefinedValue();
+	}
+
+	delete vl;
+	val.copyFrom( result );
+	return;
+}
+
+
+void FunctionCall::
+boundFrom (char *fn, ArgumentList &argList, EvalState &state, EvalValue &val)
+{
+	EvalValue	list, *ca;
+	Value		result, tmp, cmp;
+	ValueList	*vl;
+	ClassAd		*ad;
+	bool		min = (strncasecmp( "min", fn, 3 ) == 0 );
+	bool		first = true;
+	int			i;
+
+	// need two arguments
+	if( argList.getlast() != 1 ) {
+		val.setErrorValue();
+		return;
+	}
+
+	// first argument must evaluate to a list
+	argList[0]->evaluate( state, list );
+	if( !list.isListValue( vl ) ) {
+		val.setErrorValue();
+		return;
+	}
+
+	val.setUndefinedValue();
+	vl->Rewind();
+	while( ( ca = vl->Next() ) ) {
+		if( !ca->isClassAdValue( ad ) ) {
+			val.setErrorValue();
+			delete vl;
+			return;
+		}
+		ad->evaluate( argList[1], tmp );
+		if( first ) {
+			result.copyFrom( tmp );
+			first = false;
+		} else {
+			Operation::operate(min?LESS_THAN_OP:GREATER_THAN_OP,tmp,result,cmp);
+			if( cmp.isIntegerValue( i ) && i ) {
+				result.copyFrom( tmp );
+			}
+		}
+	}
+
+	delete vl;
+	val.copyFrom( result );
+	return;
 }

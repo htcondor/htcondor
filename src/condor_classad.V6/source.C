@@ -493,9 +493,16 @@ parsePostfixExpression(ExprTree *&tree)
 			Operation	*newTree = new Operation();
 
 			// subscript operation
-			parsePrimaryExpression(treeR);
+			parseExpression(treeR);
 			if( !newTree || !treeL || !treeR ) {
 				delete tree; delete treeL; delete treeR;
+				tree = NULL;
+				return false;
+			}
+			if( ( lexer.consumeToken() ) != LEX_CLOSE_BOX ) {
+				if( !newTree ) delete newTree;
+				if( !treeL ) delete treeL;
+				if( !treeR ) delete treeR;
 				tree = NULL;
 				return false;
 			}
@@ -749,23 +756,35 @@ parseClassAd( ClassAd *ad , bool full )
 	char		*attr;
 	ExprTree	*tree = NULL;
 
+	if( !ad ) return false;
+
 	if( ( tt = lexer.consumeToken() ) != LEX_OPEN_BOX ) return false;
 	tt = lexer.peekToken();
 	while( tt != LEX_CLOSE_BOX ) {
 		// get the name of the expression
-		if( ( tt = lexer.consumeToken( &tv ) ) != LEX_IDENTIFIER ) return false;
+		if( ( tt = lexer.consumeToken( &tv ) ) != LEX_IDENTIFIER ) {
+			ad->clear();
+			return false;
+		}
 		attr = lexer.getCharString( tv.strValue );
 
 		// consume the intermediate '='
-		if( ( tt = lexer.consumeToken() ) != LEX_BOUND_TO ) return false;
+		if( ( tt = lexer.consumeToken() ) != LEX_BOUND_TO ) {
+			ad->clear();
+			return false;
+		}
 
 		// parse the expression
 		parseExpression( tree );
-		if( tree == NULL ) return false;
+		if( tree == NULL ) {
+			ad->clear();
+			return false;
+		}
 
 		// insert the attribute into the classad
 		if( !ad->insert( attr, tree ) ) {
 			delete tree;
+			ad->clear();
 			return false;
 		}
 
@@ -774,14 +793,20 @@ parseClassAd( ClassAd *ad , bool full )
 		if( tt == LEX_SEMICOLON )
 			lexer.consumeToken();
 		else
-		if( tt != LEX_CLOSE_BOX )
+		if( tt != LEX_CLOSE_BOX ) {
+			ad->clear();
 			return false;
+		}
 	}
 
 	lexer.consumeToken();
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.consumeToken() != LEX_END_OF_INPUT ) ) return false;
+	if( full && ( lexer.consumeToken() != LEX_END_OF_INPUT ) ) {
+		ad->clear();
+		return false;
+	}
+
 	return true;
 }
 

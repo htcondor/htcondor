@@ -27,7 +27,8 @@ class FunctionCall : public ExprTree
 		virtual void setParentScope( ClassAd* );
 
 	private:
-		virtual void _evaluate (EvalState &, EvalValue &);
+		virtual void _evaluate( EvalState &, EvalValue & );
+		virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
 
 		// information common to all function calls
 		// a mapping from function names (char*) to static methods
@@ -50,7 +51,9 @@ class FunctionCall : public ExprTree
 		static void isClassAd(char*,ArgumentList&,EvalState&,EvalValue&);
 		static void isMember(char*,ArgumentList&,EvalState&,EvalValue&);
 		static void isExactMember(char*,ArgumentList&,EvalState&,EvalValue&);
-		
+		static void sumFrom(char*,ArgumentList&,EvalState&,EvalValue&);
+		static void avgFrom(char*,ArgumentList&,EvalState&,EvalValue&);
+		static void boundFrom(char*,ArgumentList&,EvalState&,EvalValue&);
 };
 
 

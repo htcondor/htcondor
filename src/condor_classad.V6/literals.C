@@ -18,8 +18,7 @@ Literal::
 ExprTree *Literal::
 copy (CopyMode cm)
 {
-	if( cm == EXPR_DEEP_COPY )
-	{	
+	if( cm == EXPR_DEEP_COPY ) {	
 		Literal *newTree = new Literal;
 
 		if (newTree == 0) return 0;
@@ -49,6 +48,16 @@ toSink (Sink &s)
 }
 
 
+Literal* Literal::
+makeLiteral( EvalValue& val ) 
+{
+	Literal* lit = new Literal();
+	if( !lit ) return NULL;
+	lit->value.copyFrom( val );
+	return lit;
+}
+
+
 void Literal::
 _evaluate (EvalState &, EvalValue &val)
 {
@@ -60,15 +69,20 @@ _evaluate (EvalState &, EvalValue &val)
 	val.copyFrom( v );
 
 	// if integer or real, multiply by the factor
-	if (val.isIntegerValue(i))
-	{
+	if (val.isIntegerValue(i)) {
 		val.setIntegerValue (i*factor);
-	}
-	else
-	if (val.isRealValue(r))
-	{
+	} else if (val.isRealValue(r)) {
 		val.setRealValue (r*(double)factor);
 	}
+}
+
+
+bool Literal::
+_flatten( EvalState &state, EvalValue &val, ExprTree *&tree, OpKind*)
+{
+	tree = NULL;
+	_evaluate( state, val );
+	return true;
 }
 
 

@@ -195,8 +195,7 @@ finishedParse ()
 void Lexer::
 mark (void)
 {
-	switch (lexInputSource)
-	{
+	switch (lexInputSource) {
 		// tokens accumulated in place
 		case LEXER_SRC_STRING_BUFFER:
 			lexTokenString = lexInputStream + pos;
@@ -227,8 +226,7 @@ mark (void)
 void  Lexer::
 cut (void)
 {
-	switch (lexInputSource)
-	{
+	switch (lexInputSource) {
 		// tokens accumulated in place
 		case LEXER_SRC_STRING_BUFFER:
 			savedChar = lexInputStream[pos];	
@@ -265,14 +263,12 @@ uncut (void)
 	// Check if uncut is being called for the first time (i.e., before any
 	// cut), or if the tokens are being accumulated in the lex buffer.  If so, 
 	// do *not* perform the uncut.
-	if (lexTokenString && lexInputSource == LEXER_SRC_STRING_BUFFER) 
-	{
+	if (lexTokenString && lexInputSource == LEXER_SRC_STRING_BUFFER) {
 		lexInputStream[pos] = savedChar;
 	}
 
 	// Are we uncut()ting a string literal?  If so, consume the close quote
-	if (lexTokenString && inString && ch == '\"') 
-	{
+	if (lexTokenString && inString && ch == '\"') {
 		lexTokenString = NULL;
 		lexBufferCount = 0;
 		inString = false;
@@ -300,11 +296,9 @@ wind (void)
 	char chr;
 
 	// are we accumulating a token?
-	if (lexTokenString)
-	{
+	if (lexTokenString) {
 		// check the source
-		switch (lexInputSource)
-		{
+		switch (lexInputSource) {
 			case LEXER_SRC_STRING:
 			case LEXER_SRC_STRING_BUFFER:
 				// common operations to both
@@ -342,14 +336,11 @@ wind (void)
 			default:
 				EXCEPT ("ClassAd Lexer:  Should not get here");
 		}
-	}
-	else
-	{
+	} else {
 		// we are not accumulating a token;  this means that we do not have to
 		// perform any copying and count updating for input sources that require
 		// token accumulation in the lexBuffer
-		switch (lexInputSource)
-		{
+		switch (lexInputSource) {
 			case LEXER_SRC_STRING:
 			case LEXER_SRC_STRING_BUFFER:
 				pos++;
@@ -396,8 +387,7 @@ consumeToken (TokenValue *lvalp)
 TokenType Lexer::
 peekToken (TokenValue *lvalp)
 {
-	if (!tokenConsumed)
-	{
+	if (!tokenConsumed) {
 		if( lvalp ) *lvalp = yylval;
 		return tokenType;
 	}
@@ -409,14 +399,12 @@ peekToken (TokenValue *lvalp)
 	uncut ();
 
 	// consume white space
-	while (isspace (ch)) 
-	{
+	while (isspace (ch)) {
 		wind ();
 	}
 
 	// check if this is the end of the input
-	if (ch == 0 || ch == EOF) 
-	{
+	if (ch == 0 || ch == EOF) {
 		tokenType = LEX_END_OF_INPUT;
 		return tokenType;
 	}
@@ -425,19 +413,17 @@ peekToken (TokenValue *lvalp)
 	mark ();
 
 	// check the first character of the token
-	if (isdigit (ch)) 
+	if (isdigit (ch)) {
 		tokenizeNumber ();	
-	else 
-	if (isalpha (ch) || ch == '_') 
+	} else if (isalpha (ch) || ch == '_') {
 		tokenizeAlphaHead ();
-	else
-	if (ch == '\"') 
+	} else if (ch == '\"') {
 		tokenizeStringLiteral ();
-	else 
+	} else {
 		tokenizePunctOperator ();
+	}
 
-	if (debug)
-	{
+	if (debug) {
 		printf ("%s\n", strLexToken(tokenType));
 	}
 
@@ -458,15 +444,13 @@ tokenizeNumber (void)
 	int uch;
 
 	// the token is either integer or real value
-	while (isdigit (ch)) 
-	{
+	while (isdigit (ch)) {
 		wind ();
 	}
 
 	// if the next character is a '.', the token is a real otherwise
 	// treat the token as an integer and return
-	if (ch != '.') 
-	{
+	if (ch != '.') {
 		// whether or not there's a multiplicative factor, we don't want the
 		// character to be in the tokenString --- just being nice to atoi()
 		cut ();
@@ -475,8 +459,7 @@ tokenizeNumber (void)
 		uch = toupper(ch);
 
 		// check if there is a multiplicative factor
-		if (uch == 'K' || uch == 'M' || uch == 'G')
-		{
+		if (uch == 'K' || uch == 'M' || uch == 'G') {
 			wind ();
 			if (uch == 'K') f = K_FACTOR;
 			if (uch == 'M') f = M_FACTOR;
@@ -489,9 +472,7 @@ tokenizeNumber (void)
 		yylval.intValue.factor = f;
 		uncut ();
 		return tokenType;
-	}
-	else 
-	{
+	} else {
 		// token is a real ... consume the '.'
 		wind ();
 
@@ -508,8 +489,7 @@ tokenizeNumber (void)
 		f = NO_FACTOR;
 
 		// check if there is a multiplicative factor
-		if (uch == 'K' || uch == 'M' || uch == 'G')
-		{
+		if (uch == 'K' || uch == 'M' || uch == 'G') {
 			wind ();
 			if (uch == 'K') f = K_FACTOR;
 			if (uch == 'M') f = M_FACTOR;
@@ -537,17 +517,14 @@ int Lexer::
 tokenizeAlphaHead (void)
 {
 	// true or false or undefined or error or identifier
-	while (isalpha (ch)) 
-	{
+	while (isalpha (ch)) {
 		wind ();
 	}
 
-	if (isdigit (ch) || ch == '_') 
-	{
+	if (isdigit (ch) || ch == '_') {
 		// The token is an identifier; consume the rest of the token
 		wind ();
-		while (isalnum (ch) || ch == '_') 
-		{
+		while (isalnum (ch) || ch == '_') {
 			wind ();
 		}
 		cut ();
@@ -560,31 +537,23 @@ tokenizeAlphaHead (void)
 
 	// check if the string is one of the reserved words
 	cut ();
-	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "true") == 0) 
-	{
+	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "true") == 0) {
 		tokenType = LEX_INTEGER_VALUE;
 		yylval.intValue.value = 1;
 		yylval.intValue.factor = NO_FACTOR;
-	} 
-	else
-	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "false") == 0) 
-	{
+	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "false") == 0) {
 		tokenType = LEX_INTEGER_VALUE;
 		yylval.intValue.value = 0;
 		yylval.intValue.factor = NO_FACTOR;
-	} 
-	else
-	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "undefined") == 0) 
-	{
+	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} 
-	else
-	if (CLASSAD_RESERVED_STRCMP(lexTokenString, "error") == 0) 
-	{
+	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} 
-	else 
-	{
+	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "is") == 0 ) {
+		tokenType = LEX_META_EQUAL;
+	} else if (CLASSAD_RESERVED_STRCMP(lexTokenString, "isnt") == 0) {
+		tokenType = LEX_META_NOT_EQUAL;
+	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
 		yylval.strValue = strings.getCanonical (lexTokenString);
@@ -605,14 +574,12 @@ tokenizeStringLiteral (void)
 	mark ();
 
 	// consume the string literal
-	while (ch != '\"' && ch > 0)
-	{
+	while (ch != '\"' && ch > 0) {
 		wind ();
 	}
 
 	// check the termination condition
-	if (ch == '\"')
-	{
+	if (ch == '\"') {
 		// correctly got the end of string delimiter
 		cut ();
 		tokenType = LEX_STRING_VALUE;
@@ -636,8 +603,7 @@ tokenizePunctOperator (void)
 	int oldch = ch;
 
 	wind ();
-	switch (oldch) 
-	{
+	switch (oldch) {
 		// these cases don't need lookaheads
 		case '.':
 			tokenType = LEX_SELECTION;
@@ -733,8 +699,7 @@ tokenizePunctOperator (void)
 
 		case '&':
 			tokenType = LEX_BITWISE_AND;
-			if (ch == '&')
-			{
+			if (ch == '&') {
 				tokenType = LEX_LOGICAL_AND;
 				wind ();
 			}
@@ -743,8 +708,7 @@ tokenizePunctOperator (void)
 
 		case '|':
 			tokenType = LEX_BITWISE_OR;
-			if (ch == '|')
-			{
+			if (ch == '|') {
 				tokenType = LEX_LOGICAL_OR;
 				wind ();
 			}
@@ -753,8 +717,7 @@ tokenizePunctOperator (void)
 
 		case '<':
 			tokenType = LEX_LESS_THAN;
-			switch (ch)
-			{
+			switch (ch) {
 				case '=':
 					tokenType = LEX_LESS_OR_EQUAL;
 					wind ();
@@ -774,8 +737,7 @@ tokenizePunctOperator (void)
 
 		case '>':
 			tokenType = LEX_GREATER_THAN;
-			switch (ch)
-			{
+			switch (ch) {
 				case '=':
 					tokenType = LEX_GREATER_OR_EQUAL;
 					wind ();
@@ -784,8 +746,7 @@ tokenizePunctOperator (void)
 				case '>':
 					tokenType = LEX_ARITH_RIGHT_SHIFT;
 					wind ();
-					if (ch == '>')
-					{
+					if (ch == '>') {
 						tokenType = LEX_LOGICAL_RIGHT_SHIFT;
 						wind ();
 					}
@@ -800,8 +761,7 @@ tokenizePunctOperator (void)
 
 		case '=':
 			tokenType = LEX_BOUND_TO;
-			switch (ch)
-			{
+			switch (ch) {
 				case '=':
 					tokenType = LEX_EQUAL;
 					wind ();
@@ -841,8 +801,7 @@ tokenizePunctOperator (void)
 
 		case '!':
 			tokenType = LEX_LOGICAL_NOT;
-			switch (ch)
-			{
+			switch (ch) {
 				case '=':
 					tokenType = LEX_NOT_EQUAL;
 					wind ();
@@ -871,8 +830,7 @@ tokenizePunctOperator (void)
 char *Lexer::
 strLexToken (int tokenValue)
 {
-	switch (tokenValue)
-	{
+	switch (tokenValue) {
 		case LEX_END_OF_INPUT:           return "LEX_END_OF_INPUT";
 		case LEX_TOKEN_ERROR:            return "LEX_TOKEN_ERROR";
 		case LEX_TOKEN_TOO_LONG:         return "LEX_TOKEN_TOO_LONG";

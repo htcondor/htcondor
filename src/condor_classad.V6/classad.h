@@ -45,6 +45,9 @@ class ClassAd : public ExprTree
 	bool		evaluate( const char*, Value&, int=-1);// parse+eval (strings)
 	bool		evaluate( char* , Value & , int=-1);// parse+eval'n (strBuffers)
 	void		evaluate( ExprTree*, Value & );		// eval'n
+
+	// flattening method
+	bool		flatten( ExprTree*, Value&, ExprTree *& );
 	
 	// factory methods to procure classads
 	static ClassAd *augmentFromSource 	(Source &, ClassAd &);
@@ -59,6 +62,7 @@ class ClassAd : public ExprTree
 	friend class ClassAdIterator;
 
 	virtual void _evaluate( EvalState& , EvalValue& );
+	virtual bool _flatten( EvalState&, EvalValue&, ExprTree*&, OpKind* );
 
 	static	ClassAdDomainManager 	domMan;
 	ExtArray<Attribute> 			attrList;
