@@ -73,7 +73,7 @@ bool all = false;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
-char *daemonarg = NULL;
+char *subsys_arg = NULL;
 
 
 template class HashBucket<MyString, bool>;
@@ -642,8 +642,8 @@ main( int argc, char *argv[] )
 					tmp++;
 					if( tmp && *tmp ) {
 						subsys_check( MyName );
-						daemonarg = *tmp;
-						dt = stringToDaemonType(daemonarg);
+						subsys_arg = *tmp;
+						dt = stringToDaemonType(subsys_arg);
 						if( dt == DT_NONE ) {
 							dt = DT_ANY;
 						}
@@ -692,7 +692,11 @@ main( int argc, char *argv[] )
 		// that we know the true target daemon type for whatever
 		// command we're using, want the real string to use.
 	if( subsys ) {
-		subsys = (char*)daemonString( dt );
+		if( dt == DT_ANY && subsys_arg ) {
+			subsys = subsys_arg; 
+		} else { 
+			subsys = (char*)daemonString( dt );
+		}
 	}
 
 
@@ -805,18 +809,16 @@ doCommands(int argc,char *argv[],char *MyName) {
 			}
 			break;
 		default:
-			if (! daemonarg ) {
-					// This is probably a daemon name, use it.
-				found_one = true;
-				if( (daemonname = get_daemon_name(*argv)) == NULL ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, 
-							 get_host_part(*argv) );
-					continue;
-				}
-				names.append( daemonname );
-				delete [] daemonname;
-				daemonname = NULL;
+				// This is probably a daemon name, use it.
+			found_one = true;
+			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
+				fprintf( stderr, "%s: unknown host %s\n", MyName, 
+						 get_host_part(*argv) );
+				continue;
 			}
+			names.append( daemonname );
+			delete [] daemonname;
+			daemonname = NULL;
 			break;
 		}
 	}
@@ -1335,7 +1337,9 @@ doCommand( Daemon* d )
 					cmdToStr(my_cmd), d->idStr() );
 		} else {
 			printf( "Sent \"%s\" command for \"%s\" to %s\n",
-					cmdToStr(my_cmd), daemonString(dt), d->idStr() );
+					cmdToStr(my_cmd), 
+					subsys_arg ? subsys_arg : daemonString(dt),
+					d->idStr() );
 		}
 	} else if( d_type == DT_STARTD && all ) {
 			// we want to special case printing about this, since
