@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "startd.h"
 
-
 ResMgr::ResMgr()
 {
 	coll_sock = NULL;
@@ -34,6 +33,7 @@ ResMgr::ResMgr()
 
 	m_proc = new ProcAPI;
 	m_attr = new MachAttributes;
+	m_avail = new AvailAttributes( m_attr );
 
 	nresources = 0;
 	resources = NULL;
@@ -44,17 +44,25 @@ ResMgr::~ResMgr()
 {
 	int i;
 	delete m_attr;
+	delete m_avail;
 	delete m_proc;
 	delete coll_sock;
 	if( view_sock ) {
 		delete view_sock;
 	}
-	if ( resources ) {
+	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
 			delete resources[i];
 		}
 		delete [] resources;
 	}
+	for( i=0; i<=max_types; i++ ) {
+		if( type_strings[i] ) {
+			delete type_strings[i];
+		}
+	}
+	delete [] type_strings;
+	delete [] type_nums;
 }
 
 
@@ -62,38 +70,39 @@ void
 ResMgr::init_resources()
 {
 	CpuAttributes* cap;
-	int i, j, num, max, *nums;
-	float cpu, ram, swap, disk, share;
-	char* tmp;
-	char buf[64];
-	StringList** traits;
+	int i, j, num;
+	float share;
+	char buf[64], *tmp;
 
 	if( (tmp = param("MAX_VIRTUAL_MACHINE_TYPES")) ) {
-		max = atoi( tmp );
+		max_types = atoi( tmp );
+		free( tmp );
 	} else {
-		max = 10;
+		max_types = 10;
 	}
 		// The reason these aren't on the stack is b/c of the variable
-		// nature of max. *sigh*  
-	nums = new int[max+1];
-	traits = new StringList*[max+1];
+		// nature of max_types. *sigh*  
+	type_nums = new int[max_types+1];
+	type_strings = new StringList*[max_types+1];
 
 		// So, first see if we're trying to advertise any virtual
 		// machines of specific types, and if so, grab the type info. 
-	for( i=0; i<=max; i++ ) {
-		traits[i] = NULL;
-		nums[i] = 0;
+	for( i=0; i<=max_types; i++ ) {
+		type_strings[i] = NULL;
+		type_nums[i] = 0;
 		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
 		if( (tmp = param(buf)) ) {
-			nums[i] = atoi( tmp );
-			nresources += nums[i];
+			type_nums[i] = atoi( tmp );
+			free( tmp ) ;
+			nresources += type_nums[i];
 			sprintf( buf, "VIRTUAL_MACHINE_TYPE_%d", i );
 			if( ! (tmp = param(buf)) ) {
 				EXCEPT( "NUM_VITUAL_MACHINES_TYPE_%d is %d, %s undefined.",	
-						i, nums[i], buf );
+						i, type_nums[i], buf );
 			}
-			traits[i] = new StringList();
-			traits[i]->initializeFromString( tmp );
+			type_strings[i] = new StringList();
+			type_strings[i]->initializeFromString( tmp );
+			free( tmp );
 		}
 	}
 
@@ -101,13 +110,26 @@ ResMgr::init_resources()
 			// We found type-specific stuff mentioned, so use that. 
 		num=0;
 		resources = new Resource*[nresources];
-		for( i=0; i<=max; i++ ) {
-			if( nums[i] ) {
+		for( i=0; i<=max_types; i++ ) {
+			if( type_nums[i] ) {
 				currentVMType = i;
-				for( j=0; j<nums[i]; j++ ) {
-					cap = build_vm( traits[i] );
-					resources[num] = new Resource( cap, num+1 );
-					num++;
+				for( j=0; j<type_nums[i]; j++ ) {
+					cap = build_vm( i );
+					if( m_avail->decrement(cap) ) {
+						resources[num] = new Resource( cap, num+1 );
+						num++;
+					} else {
+							// We ran out of system resources.  Since
+							// this is at the init stage, we EXCEPT. 
+						dprintf( D_ALWAYS, 
+								 "ERROR: Can't allocate %s virtual machine of type %d\n",
+								 num_string(j+1), i );
+						dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
+						cap->show_totals( D_ALWAYS );
+						dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
+						m_avail->show_totals( D_ALWAYS );
+						EXCEPT( "Ran of of system resources" );
+					}
 				}					
 			}
 		}
@@ -116,15 +138,17 @@ ResMgr::init_resources()
 			// out how many nodes to advertise.
 		if( (tmp = param("NUM_VIRTUAL_MACHINES")) ) { 
 			nresources = atoi( tmp );
+			free( tmp );
 		} else {
 			nresources = num_cpus();
 		}
-		num = MAX( nresources, num_cpus() );
 		if( nresources ) {
 			resources = new Resource*[nresources];
-			share = (float)1 / num;
+			share = (float)1 / num_cpus();
 			for( i=0; i<nresources; i++ ) {
-				cap = new CpuAttributes( m_attr, 1, share, share, share );
+				cap = new CpuAttributes( m_attr, -1, 1, 
+										 compute_phys_mem(share), 
+										 share, share );
 				resources[i] = new Resource( cap, i+1 );
 			}
 		} else {
@@ -132,24 +156,40 @@ ResMgr::init_resources()
 				// Anything special to do here?
 		}
 	}
-	
-		// Cleanup memory.
-	for( i=0; i<=max; i++ ) {
-		if( traits[i] ) {
-			delete traits[i];
+}
+
+
+void
+ResMgr::reconfig_resources()
+{
+	int i, num = -1;
+	char buf[64], *tmp;
+	CpuAttributes* cap;
+	float share;
+
+		// See if we're trying to advertise any virtual machines of
+		// specific types. 
+	for( i=0; i<=max_types; i++ ) {
+		type_nums[i] = 0;
+		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
+		if( (tmp = param(buf)) ) {
+			type_nums[i] = atoi( tmp );
+			free( tmp );
+			num += type_nums[i];
 		}
 	}
-	delete [] traits;
-	delete [] nums;
+	if( !num ) {
+	}
 }
 
 
 CpuAttributes*
-ResMgr::build_vm( StringList* list )
+ResMgr::build_vm( int type )
 {
-	char *attr, *val, *tmp;
-	int cpus=0, num_ram=0, num;
-	float disk=0, swap=0, ram=0, share;
+	StringList* list = type_strings[type];
+	char *attr, *val;
+	int cpus=0, ram=0;
+	float disk=0, swap=0, share;
 
 		// For this parsing code, deal with the following example
 		// string list:
@@ -175,10 +215,11 @@ ResMgr::build_vm( StringList* list )
 						 "\tSee the manual for details.\n" );
 				exit( 4 );
 			}
-				// We want to be a little smart about CPUs, so put all
-				// the brains in a seperate function.
+				// We want to be a little smart about CPUs and RAM, so put all
+				// the brains in seperate functions.
 			cpus = compute_cpus( share );
-			return new CpuAttributes( m_attr, cpus, share, share, share );
+			ram = compute_phys_mem( share );
+			return new CpuAttributes( m_attr, type, cpus, ram, share, share );
 		}
 			// If we're still here, this is part of a string that
 			// lists out seperate attributes and the share for each one.
@@ -201,11 +242,7 @@ ResMgr::build_vm( StringList* list )
 			break;
 		case 'r':
 		case 'm':
-			if( share > 0 ) {
-				ram = share;
-			} else {
-				num_ram = -(int)share;
-			}
+			ram = compute_phys_mem( share );
 			break;
 		case 's':
 		case 'v':
@@ -249,16 +286,11 @@ ResMgr::build_vm( StringList* list )
 		disk = share;
 	}
 	if( ! ram ) {
-		ram = share;
+		ram = compute_phys_mem( share );
 	}
 
-		// Now create the object.  How exactly we do this depends on
-		// whether we got a percentage or value for ram.
-	if( num_ram ) {
-		return new CpuAttributes( m_attr, cpus, num_ram, swap, disk );
-	} else {
-		return new CpuAttributes( m_attr, cpus, ram, swap, disk );
-	}		
+		// Now create the object.
+	return new CpuAttributes( m_attr, type, cpus, ram, swap, disk );
 }
 
 
@@ -270,13 +302,16 @@ ResMgr::build_vm( StringList* list )
    value, so that our caller knows it's a value, not a percentage. 
 */
 float
-ResMgr::parse_value( char* foo )
+ResMgr::parse_value( const char* str )
 {
-	char* tmp;
+	char *tmp, *foo = strdup( str );
+	float val;
 	if( (tmp = strchr(foo, '%')) ) {
 			// It's a percent
 		*tmp = '\0';
-		return (float)atoi(foo) / 100;
+		val = (float)atoi(foo) / 100;
+		free( foo );
+		return val;
 	} else if( (tmp = strchr(foo, '/')) ) {
 			// It's a fraction
 		*tmp = '\0';
@@ -285,11 +320,15 @@ ResMgr::parse_value( char* foo )
 					 foo, currentVMType );
 			exit( 4 );
 		}
-		return (float)atoi(foo) / ((float)atoi(&tmp[1]));
+		val = (float)atoi(foo) / ((float)atoi(&tmp[1]));
+		free( foo );
+		return val;
 	} else {
 			// This must just be a value.  Return it as a negative
 			// float, so the caller knows it's not a percentage.
-		return -(float)atoi(foo);
+		val = -(float)atoi(foo);
+		free( foo );
+		return val;
 	}
 }
  
@@ -305,14 +344,36 @@ ResMgr::compute_cpus( float share )
 {
 	int cpus;
 	if( share > 0 ) {
-		cpus = (int)floor(share * num_cpus());
+		cpus = (int)floor( share * num_cpus() );
 	} else {
-		cpus = (int)floor(-share);
+		cpus = (int)floor( -share );
 	}
 	if( ! cpus ) {
 		cpus = 1;
 	}
 	return cpus;
+}
+
+
+/*
+  Generally speaking, we want to round down for fractional amounts of
+  physical memory.  However, we never want to advertise less than 1.
+  Plus, if the share in question is negative, it means it's a real
+  value, not a percentage.
+*/
+int
+ResMgr::compute_phys_mem( float share )
+{
+	int phys_mem;
+	if( share > 0 ) {
+		phys_mem = (int)floor( share * m_attr->phys_mem() );
+	} else {
+		phys_mem = (int)floor( -share );
+	}
+	if( ! phys_mem ) {
+		phys_mem = 1;
+	}
+	return phys_mem;
 }
 
 
@@ -554,8 +615,7 @@ ResMgr::state()
 		case owner_state:
 			is_owner = 1;
 			break;
-		case matched_state:
-		case unclaimed_state: 
+		default:
 			break;
 		}
 	}
@@ -704,7 +764,6 @@ ResMgr::assign_load()
 	}
 
 	int i;
-	Resource *rip, *next;
 	float total_owner_load = m_attr->load() - m_attr->condor_load();
 	if( total_owner_load < 0 ) {
 		total_owner_load = 0;
