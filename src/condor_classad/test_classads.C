@@ -1176,7 +1176,7 @@ test_dirty_attribute(
 		results->AddResult(true);
 		delete [] name;
 	}
-	name = classad->NextName();
+	name = classad->NextDirtyName();
 	if (name) {
 		printf("Failed: more than one dirty attribute in line %d\n", __LINE__);
 		results->AddResult(false);
@@ -1217,7 +1217,7 @@ test_dirty_attribute(
 		results->AddResult(true);
 		delete [] name;
 	}
-	name = classad->NextName();
+	name = classad->NextDirtyName();
 	if (name) {
 		printf("Failed: more than two dirty attributes in line %d\n", __LINE__);
 		results->AddResult(false);
@@ -1240,6 +1240,71 @@ test_dirty_attribute(
 		printf("Passed: new ClassAd is clean in line %d\n", __LINE__);
 		results->AddResult(true);
 	}
+
+	// Now make A dirty, and B dirty then clean, and we should have 
+	// just A dirty. 
+	classad->SetDirtyFlag("A", true);
+	classad->SetDirtyFlag("B", true);
+	classad->SetDirtyFlag("B", false);
+
+	classad->ResetName();
+	name = classad->NextDirtyName();
+	if (!name) {
+		printf("Failed: A isn't dirty in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (strcmp(name, "A")) {
+		printf("Failed: %s is dirty, not A in line %d\n", name, __LINE__);
+		results->AddResult(false);
+		delete [] name;
+	} else {
+		printf("Passed: A is dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+		delete [] name;
+	}
+	name = classad->NextDirtyName();
+	if (name) {
+		printf("Failed: more than one dirty attribute in line %d\n", __LINE__);
+		results->AddResult(false);
+		delete [] name;
+	} else {
+		printf("Passed: not more than one dirty attribute in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	// We should also be able to test it with GetDirtyFlag()
+	bool exists, dirty;
+	classad->GetDirtyFlag("A", &exists, &dirty);
+	if (!exists) {
+		printf("Failed: A doesn't exist in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (!dirty) {
+		printf("Failed: A isn't dirty  in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Passed: A is dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	classad->GetDirtyFlag("B", &exists, &dirty);
+	if (!exists) {
+		printf("Failed: B doesn't exist in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else if (dirty) {
+		printf("Failed: B is dirty  in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Passed: B is not dirty in line %d\n", __LINE__);
+		results->AddResult(true);
+	}
+
+	classad->GetDirtyFlag("Unknown", &exists, NULL);
+	if (exists) {
+		printf("Failed: 'Unknown' should not exist in line %d\n", __LINE__);
+		results->AddResult(false);
+	} else {
+		printf("Passed: 'Unknown' doesn't exist in line %d\n", __LINE__);
+	}
+
 
 	delete classad;
 
