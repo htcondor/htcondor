@@ -122,7 +122,7 @@ int				proc;
 
 
 
-/* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  JCP */
+/* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 
 int
 string_to_sin(char *string, struct sockaddr_in *sin)
