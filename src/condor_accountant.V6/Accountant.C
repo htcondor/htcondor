@@ -23,6 +23,7 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
 {
   HalfLifePeriod=600;
   MinPriority=0.5;
+  NiceUserPriorityFactor=1000000;
   LastUpdateTime=Time::Now();
   LogEnabled=0;
 }
@@ -74,12 +75,11 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 double Accountant::GetPriority(const MyString& CustomerName) 
 {
   CustomerRecord* Customer;
-  double Priority=0;
-  const char* CustName=CustomerName;
-  if (strncmp(CustName,NiceUserName,strlen(NiceUserName))==0) return HUGE_VAL;
-  if (Customers.lookup(CustomerName,Customer)==0) Priority=Customer->Priority;
-  if (Priority<MinPriority) Priority=MinPriority;
-  return Priority;
+  double PriorityFactor=1;
+  if (strncmp(CustomerName,NiceUserName,strlen(NiceUserName))==0) PriorityFactor=NiceUserPriorityFactor;
+  if (Customers.lookup(CustomerName,Customer)) return MinPriority*PriorityFactor;
+  if (Customer->Priority<MinPriority) Customer->Priority=MinPriority;
+  return Customer->Priority*PriorityFactor;;
 }
 
 //------------------------------------------------------------------
