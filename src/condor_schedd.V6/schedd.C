@@ -581,7 +581,7 @@ abort_job_myself(PROC_ID job_id)
 	int mode;
 
 	// First check if there is a shadow assiciated with this process.
-	// If so, send it SIGUSR (or SIGKILL if this is a meta scheduler),
+	// If so, send it SIGUSR,
 	// but do _not_ call DestroyProc - we'll do that via the reaper
 	// after the job has exited (and reported its final status to us).
 	//
@@ -623,10 +623,10 @@ abort_job_myself(PROC_ID job_id)
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
 		  char owner[_POSIX_PATH_MAX];
 		  GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-		  dprintf(D_FULLDEBUG,"Sending SIGKILL to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
+		  dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
     	  init_user_ids(owner);
 		  priv_state priv = set_user_priv();
-		  kill( srec->pid, SIGKILL );
+		  kill( srec->pid, SIGUSR1 );
 		  set_priv(priv);
 #endif
 	     }
