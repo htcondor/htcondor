@@ -202,3 +202,35 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 	}		
 	return TRUE;
 }
+
+
+int
+send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA ) 
+{
+	sock->encode();
+	if( ! sock->put( UPDATE_STARTD_AD ) ) {
+		dprintf( D_ALWAYS, "Can't send command\n");
+		sock->end_of_message();
+		return FALSE;
+	}
+	if( pubCA ) {
+		if( ! pubCA->put( *sock ) ) {
+			dprintf( D_ALWAYS, "Can't send public classad\n");
+			sock->end_of_message();
+			return FALSE;
+		}
+	}
+	if( privCA ) {
+		if( ! privCA->put( *sock ) ) {
+			dprintf( D_ALWAYS, "Can't send private classad\n");
+			sock->end_of_message();
+			return FALSE;
+		}
+	}
+	if( ! sock->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't send end_of_message\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+

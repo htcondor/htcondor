@@ -35,6 +35,11 @@ void	log_ignore( int, State );
 char*	command_to_string( int );
 int		reply( Stream*, int );
 int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose = 0 );
+		// Send given classads to the given sock.  If either pointer
+		// is NULL, the class ad is not sent.  
+int		send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
+
+
 
 // Utils from the util_lib that aren't prototyped
 extern "C" {
