@@ -10,6 +10,16 @@ Checkpoint server machines should have a large amount of disk space
 available, and should have a fast connection to machines in the Condor
 pool.
 
+If your spool directories are on a network file system, then
+checkpoint files will make two trips over the network, one between the
+submission machine and the execution machine and a second between the
+submit machine and the network file server.
+If you install a checkpoint server and configure it to use the
+server's local disk, the checkpoint will travel only once over the
+network, between the execution machine and the checkpoint server.
+You may also obtain checkpointing network performance benefits by
+using multiple checkpoint servers, as discussed below.
+
 \Note It is a good idea to pick very stable machines for your checkpoint
 servers.
 If the checkpoint servers crash, the Condor system will continue to
