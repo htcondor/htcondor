@@ -52,7 +52,7 @@ release_target(condor_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
 CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
 
-5.7: condor_schedd.57
+5.7: condor_schedd.57 libqmgmt.a
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, stub_gen)
