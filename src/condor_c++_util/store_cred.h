@@ -52,6 +52,7 @@ int store_cred(char *user, char* pw, int mode );
 
 bool read_no_echo(char* buf, int maxlength);
 char* get_password(void);
+bool isValidCredential( char *user, char* pw );
 int addCredential(char* user, char* pw);
 int deleteCredential(char* user); // not checking password before removal yet
 int queryCredential(char* user);  // just tell me if I have one stashed
