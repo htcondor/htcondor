@@ -1001,8 +1001,10 @@ SetUniverse()
 			univ = strdup("globus");
 		} else {
 			// Validate
-			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus
+			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus,
+			//    gt2
 			if ((stricmp (univ, "globus") == MATCH) ||
+				(stricmp (univ, "gt2") == MATCH) ||
 				(stricmp (univ, "gt3") == MATCH) ||
 				(stricmp (univ, "nordugrid") == MATCH) ||
 				(stricmp (univ, "oracle") == MATCH)) {
@@ -1010,7 +1012,7 @@ SetUniverse()
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
 			} else {
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", univ );
-				fprintf( stderr, "Must be one of: globus, gt3, nordugrid, or oracle\n" );
+				fprintf( stderr, "Must be one of: globus, gt2, gt3, nordugrid, or oracle\n" );
 				exit( 1 );
 			}
 		}			
@@ -2958,6 +2960,7 @@ SetGlobusParams()
 		char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
 		if ((grid_type == NULL ||
 				(stricmp (grid_type, "globus") == MATCH) ||
+				(stricmp (grid_type, "gt2") == MATCH) ||
 				(stricmp (grid_type, "gt3") == MATCH) ||
 				(stricmp (grid_type, "nordugrid") == MATCH))) {
 			fprintf(stderr, "\nERROR: Globus/gt3 jobs require a \"%s\" parameter\n",
@@ -3479,16 +3482,17 @@ queue(int num)
 			proxy_file = get_x509_proxy_filename();
 		}
 
-		// Issue an error if (no proxy) && (universe=globus,gt3,nordugrid)
+		// Issue an error if (no proxy) && (universe=globus,gt2,gt3,nordugrid)
 		if ( proxy_file == NULL) {
 			char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
 			if (JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
 				(grid_type == NULL ||
 					(stricmp (grid_type, "globus") == MATCH) ||
+					(stricmp (grid_type, "gt2") == MATCH) ||
 					(stricmp (grid_type, "gt3") == MATCH) ||
 					(stricmp (grid_type, "nordugrid") == MATCH))) {
 				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
-				fprintf( stderr, "x509 user proxy is required for globus, gt3 or nordugrid jobs\n");
+				fprintf( stderr, "x509 user proxy is required for globus, gt2, gt3 or nordugrid jobs\n");
 				exit (1);
 			}
 		}

@@ -316,7 +316,7 @@ void GlobusJobReconfig()
 	}
 }
 
-const char *GlobusJobAdConst = "JobUniverse =?= 9 && ((JobGridType == \"globus\") =?= True || JobGridType =?= Undefined)";
+const char *GlobusJobAdConst = "JobUniverse =?= 9 && ((JobGridType == \"globus\") =?= True || (JobGridType == \"gt2\") =?= True || JobGridType =?= Undefined)";
 
 bool GlobusJobAdMustExpand( const ClassAd *jobad )
 {
