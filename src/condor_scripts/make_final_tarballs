@@ -51,12 +51,12 @@ while( $_ = shift( @ARGV ) ) {
 if( $versarg ) {
     $vers_string = $versarg;
 } else {
-    # If we weren't told on the command line, use the condor_version
-    # binary directly to find the version string.
-    if( -f "strip_dir/bin/condor_version" ) {
-        $vers_string=`strip_dir/bin/condor_version`;
-    } elsif ( -f "static_dir/bin/condor_version" ) {
-        $vers_string=`./static_dir/sbin/condor_version`;
+    # If we weren't told on the command line, use the condor_master
+    # binary with -version to find the version string.
+    if( -f "strip_dir/sbin/condor_master" ) {
+        $vers_string=`strip_dir/sbin/condor_master -version`;
+    } elsif ( -f "static_dir/sbin/condor_master" ) {
+        $vers_string=`./static_dir/sbin/condor_master -version`;
     } else {
 	die "ERROR: can't find a condor_version, and no -v specified";
     }
