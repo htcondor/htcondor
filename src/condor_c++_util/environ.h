@@ -32,7 +32,7 @@ class Environ {
 public:
 	Environ();
 	~Environ();
-	void	add_string( char * );
+	void	add_string( const char * );
 	char	*getenv( char * );
 	void	display();
 	char	**get_vector();

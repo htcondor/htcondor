@@ -60,11 +60,11 @@ Environ::~Environ()
 }
 
 void
-Environ::add_string( char *str )
+Environ::add_string( const char *str )
 {
-	char	*ptr;
-	char	*buf;
-	char	*dst;
+	const char *ptr;
+	char       *buf;
+	char       *dst;
 
 	 // dprintf( D_ALWAYS, "Adding compound string \"%s\"\n", str );
 
