@@ -48,21 +48,25 @@ URL_SRC = url_condor.C cbstp_url.C file_url.C http_url.C filter_url.C \
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
+API_SRC = generic_query.C condor_query.C condor_q.C ad_printmask.C \
+			condor_event.C user_log.C
+
+API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
+			condor_event.o user_log.o
+
 SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	NON_POSIX.set_prog_env.C alarm.C string_set.C proc_obj.C alloc.C \
 	filter.C directory.C my_hostname.C file_lock.C disk.C up_down.C \
-	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C \
-	carmi_context.C instantiate.C condor_query.C string_list.C \
-	condor_event.C generic_query.C $(URL_SRC) get_schedd_addr.C \
+	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C carmi_context.C \
+	instantiate.C string_list.C condor_event.C $(URL_SRC) get_schedd_addr.C \
 	user_log.C
 
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	NON_POSIX.set_prog_env.o alarm.o string_set.o proc_obj.o alloc.o \
 	filter.o directory.o my_hostname.o file_lock.o disk.o up_down.o \
-	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
-	carmi_context.o instantiate.o condor_query.o string_list.o \
-	condor_event.o generic_query.o $(URL_OBJ) get_schedd_addr.o \
+	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o carmi_context.o \
+	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_schedd_addr.o \
 	user_log.o
 
 #if IS_R6000_AIX32
@@ -71,19 +75,17 @@ TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
 TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
 #endif
 
-all_target(cplus_lib.a liburl.a)
+all_target(cplus_lib.a liburl.a libapi.a)
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
+library_target( libapi.a,$(API_OBJ))
 
 c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
 c_plus_target(test_context, test_carmi_context.o, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
-
-c_plus_target(logwrite,testLogWrite.o,$(TEST_LIBS))
-c_plus_target(logread,testLogRead.o,$(TEST_LIBS))
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)

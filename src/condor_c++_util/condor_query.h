@@ -7,6 +7,7 @@
 #include "condor_collector.h"
 #include "condor_attributes.h"
 #include "query_result_type.h"
+#include "generic_query.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
@@ -110,36 +111,9 @@ class CondorQuery
 	CondorQuery    &operator=  (CondorQuery &);				// assignment
 
   private:
-	int         stringThreshold;
-	int         integerThreshold;
-	int 		floatThreshold;
 	int         command;
 	AdTypes     queryType;
-
-	// bump up the constant if you have more than 32 categories
-	const int   MAX_NUM_CATEGORIES = 32;	
-	List<char>        stringConstraints  [MAX_NUM_CATEGORIES];
-	SimpleList<int>	  integerConstraints [MAX_NUM_CATEGORIES];
-	SimpleList<float> floatConstraints   [MAX_NUM_CATEGORIES];
-	List<char>        customConstraints;
-
-	QueryResult makeQueryAd (ClassAd &);
-	void        clearQueryObject     (void);
-	void        clearStringCategory  (List<char> &);
-	void        clearIntegerCategory (SimpleList<int> &);
-	void        clearFloatCategory   (SimpleList<float> &);
-	void 		copyQueryObject		 (CondorQuery &);
-	void		copyStringCategory   (List<char> &, List<char> &);
-	void		copyIntegerCategory  (SimpleList<int> &, SimpleList<int> &);
-	void 		copyFloatCategory    (SimpleList<float>&, SimpleList<float>&);
+	GenericQuery query;
 };
 
 #endif
-
-
-
-
-
-
-
-
