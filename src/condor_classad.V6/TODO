@@ -1,8 +1,6 @@
 ===== Code =====
 * Can we do more parse time function evaluation? Perhaps int/real?
 
-* Test time representation
-
 * We implement parse time evaluate of abstime differently than run
   time evaluation of abstime. This should be fixed.
 
@@ -32,8 +30,6 @@
   at the EvalState destructor in exprTree.C), but it causes some freed
   memory to be referenced, and I can't figure out why. Until I do, I
   would rather have a leak than to access freed memory. This should be fixed.
-
-* Write or restrict copy constructors and assignment operators. 
 
 * Make a SWIG interface so people can use ClassAds from scripting
   languages. SWIG supports Java, TCL, Python, Perl, and a couple
