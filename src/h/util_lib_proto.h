@@ -112,40 +112,9 @@ int display_proc_short ( PROC *proc );
 char * format_time ( float fp_secs );
 int display_proc_long ( PROC *proc );
 int display_v2_proc_long ( PROC *proc );
-#if defined(Solaris)
-int setegid ( long int egid );
-int seteuid ( long int euid );
-#elif defined (LINUX)
-int setegid ( short unsigned int egid );
-int seteuid ( short unsigned int euid );
-#elif defined (OSF1)
-int setegid ( unsigned int egid );
-int seteuid ( unsigned int euid );
-#else
-int setegid ( int egid );
-int seteuid ( int euid );
-#endif
-/* Solaris specific change ..dhaval 6/27 */
 
 #if 0
 int setlinebuf ( FILE *fp );
-#endif
-
-#if defined(LINUX)
-int setregid ( short unsigned int rgid, short unsigned int egid );
-int setreuid ( short unsigned int ruid, short unsigned int euid );
-#elif defined(OSF1)
-int setregid ( unsigned int rgid, unsigned int egid );
-int setreuid ( unsigned int ruid, unsigned int euid );
-#else
-int setregid ( int rgid, int egid );
-int setreuid ( int ruid, int euid );
-#endif
-
-#if defined(OSF1)
-int setrgid ( unsigned int rgid );
-#else
-int setrgid ( int rgid );
 #endif
 
 int display_status_line ( STATUS_LINE *line, FILE *fp );
@@ -160,11 +129,6 @@ char * strdup ( char *s );
 int stricmp ( register char *s1, register char *s2 );
 int strincmp ( register char *s1, register char *s2, register n );
 char * substr ( char *string, char *pattern );
-int init_condor_uid ( void );
-int get_condor_uid( void );
-int set_condor_euid ( void );
-int set_condor_ruid ( void );
-int set_root_euid ( void );
 int update_rusage ( register struct rusage *ru1, register struct rusage *ru2 );
 int calc_virt_memory ( void );
 int free_fs_blocks(char *filename);
@@ -251,14 +215,9 @@ int display_proc_short ();
 char * format_time ();
 int display_proc_long ();
 int display_v2_proc_long ();
-int setegid ();
-int seteuid ();
 #ifndef HPUX9
 int setlinebuf ();
 #endif
-int setregid ();
-int setreuid ();
-int setrgid ();
 int display_status_line ();
 char * shorten ();
 int free_status_line ();
@@ -268,11 +227,6 @@ char * strdup ();
 int stricmp ();
 int strincmp ();
 char * substr ();
-int init_condor_uid ();
-int get_condor_uid();
-int set_condor_euid ();
-int set_condor_ruid ();
-int set_root_euid ();
 int update_rusage ();
 int calc_virt_memory ();
 int free_fs_blocks();
