@@ -33,5 +33,14 @@ typedef unsigned short mode_t;
 #include <process.h>
 #include <time.h>
 #include <lmcons.h> // for UNLEN
+#if !defined(_POSIX_)
+#	define _POSIX_
+#	define _CONDOR_DEFINED_POSIX_
+#endif
+#include <limits.h>
+#if defined(_CONDOR_DEFINED_POSIX_)
+#	undef _POSIX_
+#	undef _CONDOR_DEFINED_POSIX_
+#endif
 
 #endif
