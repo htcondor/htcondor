@@ -55,7 +55,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o my_distribution.o
+	RegExer.o my_distribution.o error_utils.o
 
 
 library_target( cplus_lib.a,$(OBJ))
