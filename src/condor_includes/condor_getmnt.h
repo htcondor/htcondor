@@ -2,11 +2,11 @@
 #define _CONDOR_GETMNT_H
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
-#include <sys/mount.h>
+#	include <sys/mount.h>
 #endif
 
-#if !defined(OSF1) && !defined(AIX32)
-#include <mntent.h>
+#if !defined(OSF1) && !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32)
+#	include <mntent.h>
 #endif
 
 #if defined(AIX32)
