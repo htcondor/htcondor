@@ -366,15 +366,15 @@ initFromStream(Stream& s)
 int	ClassAd::
 fPrint( FILE *f )
 {
-	PrettyPrint pp;
-	pp.SetOldClassAd( true );
+	ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
 	string buffer;
 
 	if( !f ) {
 		return FALSE;
 	}
 
-	pp.Unparse( buffer, this );
+	unp.Unparse( buffer, this );
 	fprintf( f, "%s", buffer.c_str( ) );
 
 	return TRUE;
