@@ -1,4 +1,4 @@
-README for Condor version 6.0				3/5/98
+README for Condor version 6.1				12/08/98
 
 Please read the file LICENSE.TXT before proceeding.  Installation and
 use of Condor is acknowledgement that you have read and agree to the
@@ -22,7 +22,7 @@ release.tar	- tar file of the "release directory", which contains
 A complete manual for Condor is available on the World Wide Web at
 http://www.cs.wisc.edu/condor/manual/.  You can also find various
 papers, publications and research about Condor on the web page, at
-http://www.cs.wisc.edu/condor/publications.html
+http://www.cs.wisc.edu/condor.
 
 Source is no longer being distributed for Condor, so there are no
 instructions for compiling.  Please go to the Condor home page, 
