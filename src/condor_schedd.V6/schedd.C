@@ -64,7 +64,6 @@ extern "C"
 	char* gen_ckpt_name(char*, int, int, int);
 	int getdtablesize();
 */
-	int calc_virt_memory();
 	void handle_q(Service *, int, Stream *sock);
 	int prio_compar(prio_rec*, prio_rec*);
 }
@@ -930,10 +929,10 @@ Scheduler::negotiate(int, Stream* s)
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
  	/* if ReservedSwap is 0, then we are not supposed to make any
- 	 * swap check, so we can avoid the expensive calc_virt_memory 
+ 	 * swap check, so we can avoid the expensive sysapi_swap_space
  	 * calculation -Todd, 9/97 */
  	if ( ReservedSwap != 0 ) {
- 		SwapSpace = calc_virt_memory();
+ 		SwapSpace = sysapi_swap_space();
  	} else {
  		SwapSpace = INT_MAX;
  	}
