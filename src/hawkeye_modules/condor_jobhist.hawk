@@ -27,5 +27,5 @@ This parameter specifies a constraint that, if specified, is passed to
 'condor_history' to constrain the list of jobs queried.
 
 parameter: Hawkeye_jobs_owner =
-This parameter specifies a owner that, if specified, is passed to 'condor_history'
-to constrain the list of jobs queried.
+This parameter specifies a owner that, if specified, is passed to
+'condor_history' to constrain the list of jobs queried.

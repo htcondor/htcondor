@@ -132,6 +132,7 @@ sub RunJobHistory(  )
 			{ Count => 0, String => "SubmissionError", },
 		       );
     my @JobUniverseMap = (
+			  { Count => 0, String => "Invalid", },
 			  { Count => 0, String => "Standard", },
 			  { Count => 0, String => "Pipe", },
 			  { Count => 0, String => "Linda", },
