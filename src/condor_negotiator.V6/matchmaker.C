@@ -256,9 +256,9 @@ RESCHEDULE_commandHandler (int, Stream *)
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",spin_pie );
-		dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
-		dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
-		dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
+		dprintf (D_FULLDEBUG, "    NumStartdAds = %d\n", numStartdAds);
+		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
+		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
 		scheddAds.Open();
 		while( (schedd = scheddAds.Next()) )
 		{
@@ -266,11 +266,11 @@ RESCHEDULE_commandHandler (int, Stream *)
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
-				dprintf (D_ALWAYS, "\tError!  Could not get %s and %s from ad\n",
+				dprintf (D_ALWAYS, "  Error!  Could not get %s and %s from ad\n",
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
 				return FALSE;
 			}	
-			dprintf(D_ALWAYS,"\tNegotiating with %s at %s\n",scheddName,scheddAddr);
+			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,scheddAddr);
 	
 			// calculate the percentage of machines that this schedd can use
 			scheddPrio = accountant.GetPriority ( scheddName );
@@ -280,12 +280,12 @@ RESCHEDULE_commandHandler (int, Stream *)
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
 			// print some debug info
-			dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following parameters\n");
-			dprintf (D_FULLDEBUG, "\t\tScheddPrio     = %f\n", scheddPrio);
-			dprintf (D_FULLDEBUG, "\t\tscheddShare    = %f\n", scheddShare);
-			dprintf (D_FULLDEBUG, "\t\tScheddUsage    = %d\n", scheddUsage);
-			dprintf (D_FULLDEBUG, "\t\tscheddLimit    = %d\n", scheddLimit);
-			dprintf (D_FULLDEBUG, "\t\tMaxscheddLimit = %d\n", MaxscheddLimit);
+			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the following parameters\n");
+			dprintf (D_FULLDEBUG, "    ScheddPrio     = %f\n", scheddPrio);
+			dprintf (D_FULLDEBUG, "    scheddShare    = %f\n", scheddShare);
+			dprintf (D_FULLDEBUG, "    ScheddUsage    = %d\n", scheddUsage);
+			dprintf (D_FULLDEBUG, "    scheddLimit    = %d\n", scheddLimit);
+			dprintf (D_FULLDEBUG, "    MaxscheddLimit = %d\n", MaxscheddLimit);
 		
 			if ( scheddLimit < 1 ) {
 				// Optimization: If limit is 0, don't waste time with negotiate
@@ -300,18 +300,18 @@ RESCHEDULE_commandHandler (int, Stream *)
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume negotiations
 					// at a later negotiation cycle.
-					dprintf(D_FULLDEBUG,"\tThis schedd hit its scheddlimit.\n");
+					dprintf(D_FULLDEBUG,"  This schedd hit its scheddlimit.\n");
 					hit_schedd_prio_limit = TRUE;
 					break;
 				case MM_DONE: 
 					// the schedd got all the resources it wanted. delete this schedd
 					// ad.
-					dprintf(D_FULLDEBUG,"\tThis schedd got all it wants; removing it.\n");
+					dprintf(D_FULLDEBUG,"  This schedd got all it wants; removing it.\n");
 					scheddAds.Delete( schedd);
 					break;
 				case MM_ERROR:
 				default:
-					dprintf( D_ALWAYS,"\tError: Ignoring schedd for this cycle\n" );
+					dprintf( D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
 					scheddAds.Delete( schedd );
 			}
 		}
@@ -378,7 +378,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 	// set the constraints on the various queries
 	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
-	dprintf (D_ALWAYS, "\tGetting startd ads ...\n");
+	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
 	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
 	if (((result = startdQuery.addConstraint(buffer))	!= Q_OK) ||
 		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
@@ -390,7 +390,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	}
 
 	// 2.  Only obtain schedd ads that have idle jobs
-	dprintf (D_ALWAYS, "\tGetting schedd ads ...\n");
+	dprintf (D_ALWAYS, "  Getting schedd ads ...\n");
 	sprintf (buffer, "%s > 0", ATTR_IDLE_JOBS);
 	if (((result = scheddQuery.addConstraint (buffer)) != Q_OK) ||
 		((result = scheddQuery.fetchAds(scheddAds))    != Q_OK))
@@ -402,7 +402,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	}
 
 	// 3. (no constraint on private ads)	
-	dprintf (D_ALWAYS, "\tGetting startd private ads ...\n");
+	dprintf (D_ALWAYS, "  Getting startd private ads ...\n");
 	if	((result = startdPvtQuery.fetchAds(startdPvtAds)) != Q_OK)
 	{
 		dprintf (D_ALWAYS, 
@@ -434,7 +434,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	// 0.  connect to the schedd --- ask the cache for a connection
 	if (!sockCache.getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
 	{
-		dprintf (D_ALWAYS, "\t\tFailed to connect to %s\n", scheddAddr);
+		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
 	}
 
@@ -442,7 +442,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	sock->encode();
 	if (!sock->put(NEGOTIATE)||!sock->put(scheddName)||!sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "\t\tFailed to send NEGOTIATE/scheddName/eom\n");
+		dprintf (D_ALWAYS, "    Failed to send NEGOTIATE/scheddName/eom\n");
 		sockCache.invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
@@ -454,21 +454,21 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	for (i = 0; i < scheddLimit;  i++)
 	{
 		// 2a.  ask for job information
-		dprintf (D_FULLDEBUG, "\t\tSending SEND_JOB_INFO/eom\n");
+		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
 		{
-			dprintf (D_ALWAYS, "\t\tFailed to send SEND_JOB_INFO/eom\n");
+			dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
 			sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
 		// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
-		dprintf (D_FULLDEBUG, "\t\tGetting reply from schedd ...\n");
+		dprintf (D_FULLDEBUG, "    Getting reply from schedd ...\n");
 		sock->decode();
 		if (!sock->get (reply))
 		{
-			dprintf (D_ALWAYS, "\t\tFailed to get reply from schedd\n");
+			dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
 			sock->end_of_message ();
             sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
@@ -477,7 +477,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		// 2c.  if the schedd replied with NO_MORE_JOBS, cleanup and quit
 		if (reply == NO_MORE_JOBS)
 		{
-			dprintf (D_ALWAYS, "\t\tGot NO_MORE_JOBS;  done negotiating\n");
+			dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
 			sock->end_of_message ();
 			return MM_DONE;
 		}
@@ -485,17 +485,17 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		if (reply != JOB_INFO)
 		{
 			// something goofy
-			dprintf(D_ALWAYS,"\t\tGot illegal command %d from schedd\n",reply);
+			dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
 			sock->end_of_message ();
             sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
 		// 2d.  get the request 
-		dprintf (D_FULLDEBUG,"\t\tGot JOB_INFO command; getting classad/eom\n");
+		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
 		if (!request.get(*sock) || !sock->end_of_message())
 		{
-			dprintf(D_ALWAYS, "\t\tJOB_INFO command not followed by ad/eom\n");
+			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
             sockCache.invalidateSock(scheddAddr);
 			return MM_ERROR;
@@ -503,11 +503,11 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
 			!request.LookupInteger (ATTR_PROC_ID, proc))
 		{
-			dprintf (D_ALWAYS, "\t\tCould not get %s and %s from request\n",
+			dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
 					ATTR_CLUSTER_ID, ATTR_PROC_ID);
 			return MM_ERROR;
 		}
-		dprintf(D_ALWAYS, "\t\tRequest %05d.%05d:\n", cluster, proc);
+		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
 
 		// insert the priority expression into the request
 		request.Insert( prioExpr );
@@ -523,7 +523,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			if (!(offer = matchmakingAlgorithm(scheddName, request, startdAds)))
 			{
 				// no offer ...
-				dprintf(D_ALWAYS, "\t\t\tNo offer --- trying preemption\n");
+				dprintf(D_ALWAYS, "      No offer --- trying preemption\n");
 			
 				// try matchmaking algorithm with preemption mode enabled
 				// (i.e., with priority == priority threshold)
@@ -532,11 +532,11 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 				{
 					// no preemptable resource offer either ... 
 					dprintf(D_ALWAYS,
-						"\t\t\tRejected (no preemptible offers)\n");
+						"      Rejected (no preemptible offers)\n");
 					sock->encode();
 					if (!sock->put(REJECTED) || !sock->end_of_message())
 					{
-						dprintf (D_ALWAYS, "\t\t\tCould not send rejection\n");
+						dprintf (D_ALWAYS, "      Could not send rejection\n");
 						sock->end_of_message ();
             			sockCache.invalidateSock(scheddAddr);
 
@@ -554,10 +554,10 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 					remotePriority = accountant.GetPriority (remoteUser);
 
 					// got a candidate preemption --- print a helpful message
-					dprintf( D_ALWAYS, "\t\t\tAttempting preemption of %s "
+					dprintf( D_ALWAYS, "      Attempting preemption of %s "
 								"(who has a priority of %f)\n", remoteUser,
 								remotePriority);
-					dprintf( D_ALWAYS, "\t\t\t(schedd's priority is %f)\n", 
+					dprintf( D_ALWAYS, "      (schedd's priority is %f)\n", 
 								priority);
 				}
 			}
@@ -596,14 +596,14 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	if (i == scheddLimit)
 	{
 		dprintf (D_ALWAYS, 	
-				"\t\tReached schedd resource limit: %d ... stopping\n", i);
+				"    Reached schedd resource limit: %d ... stopping\n", i);
 	}
 
 	// break off negotiations
 	sock->encode();
 	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "\t\tCould not send END_NEGOTIATE/eom\n");
+		dprintf (D_ALWAYS, "    Could not send END_NEGOTIATE/eom\n");
         sockCache.invalidateSock(scheddAddr);
 	}
 
@@ -635,36 +635,42 @@ matchmakingAlgorithm(char *scheddName, ClassAd &request,ClassAdList &startdAds,
 
 	// scan the offer ads
 	startdAds.Open ();
-	while ((candidate = startdAds.Next ()))
-	{
-		// are we in preemption mode? 
-		if (preemptPrio >= 0)
-		{
-			// if there is a remote user who has a higher priority, dont preempt
-			if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) &&
-				preemptPrio-accountant.GetPriority(remoteUser) > PriorityDelta) 
-					continue;
-
-			dprintf( D_FULLDEBUG, "Passed preemption priority condition:\n" );
-			dprintf( D_FULLDEBUG, "  %s has higher priority than %s (???)\n", 
-						scheddName, remoteUser );
-			dprintf( D_FULLDEBUG, "  tested: submittorPrio - remoteUserPrio "
-						"> PriorityDelta\n" );
-			dprintf( D_FULLDEBUG, "  tested: %f - %f > %f; result=%d\n", 
-					preemptPrio, accountant.GetPriority(remoteUser), 
-					PriorityDelta, preemptPrio - 
-						accountant.GetPriority(remoteUser) > PriorityDelta );
-
-			// if the PreemptionHold expression evaluates to true, dont preempt
-			if (PreemptionHold 											&& 
-				PreemptionHold->EvalTree(candidate,&request,&result)	&&
-				result.type == LX_INTEGER && result.i == TRUE)
-					continue;
-		}
-
+	while ((candidate = startdAds.Next ())) {
 		// the candidate offer and request must match
-		if (*candidate == request)
-		{
+		if (*candidate == request) {
+			// are we in preemption mode? 
+			if (preemptPrio >= 0) {
+				// if there is a remote user ....
+				if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+					// check if the remote user has better priority
+					if( preemptPrio + PriorityDelta >= 
+							accountant.GetPriority(remoteUser) ) {
+						// yes ... ignore this candidate
+						continue;
+					}
+
+					// have a remote user *and* worse priority ...
+					dprintf(D_FULLDEBUG,
+								"Passed preemption priority condition:\n");
+					dprintf(D_FULLDEBUG,
+								"  %s has better priority than %s (???)\n", 
+								scheddName, remoteUser );
+					dprintf(D_FULLDEBUG, 
+								"  tested: submittorPrio - remoteUserPrio "
+								"> PriorityDelta\n" );
+					dprintf(D_FULLDEBUG, "  tested: %f - %f > %f; result=%d\n", 
+								preemptPrio, accountant.GetPriority(remoteUser),
+								PriorityDelta, preemptPrio + PriorityDelta >= 
+								accountant.GetPriority(remoteUser) );
+				}
+
+				// if the PreemptionHold expression is true, dont preempt
+				if (PreemptionHold 											&& 
+					PreemptionHold->EvalTree(candidate,&request,&result)	&&
+					result.type == LX_INTEGER && result.i == TRUE)
+						continue;
+			}
+
 			// if the offer has no Rank expr, the symmetric match is enough
  			// if the offer has a Rank expr, the match criterion must hold
 			offerRank = candidate->Lookup(ATTR_RANK);
@@ -747,7 +753,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	if (!offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)		||
 		!offer->LookupString (ATTR_NAME, startdName))
 	{
-		dprintf (D_ALWAYS, "\t\t\tCould not lookup %s and %s\n", 
+		dprintf (D_ALWAYS, "      Could not lookup %s and %s\n", 
 					ATTR_NAME, ATTR_STARTD_IP_ADDR);
 		return MM_BAD_MATCH;
 	}
@@ -755,52 +761,53 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// find the startd's capability from the private ad
 	if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
 	{
-		dprintf(D_ALWAYS,"\t\t\t%s has no capability\n", startdName);
+		dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
 		return MM_BAD_MATCH;
 	}
 	
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
-	dprintf (D_FULLDEBUG, "\t\t\tConnecting to startd %s at %s\n", 
+	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
 				startdName, startdAddr); 
 	startdSock.timeout (NegotiatorTimeout);
 	if (!startdSock.connect (startdAddr, 0))
 	{
-		dprintf(D_ALWAYS,"\t\t\tCould not connect to %s\n", startdAddr);
+		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
 		return MM_BAD_MATCH;
 	}
 
 	// 2.  pass the startd MATCH_INFO and capability string
-	dprintf (D_FULLDEBUG, "\t\t\tSending MATCH_INFO/capability( \"%s\" )/eom to"
-				" startd\n", capability);
+	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
+	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
 	startdSock.encode();
 	if (!startdSock.put (MATCH_INFO) || 
 		!startdSock.put (capability) || 
 		!startdSock.end_of_message())
 	{
-		dprintf (D_ALWAYS,"\t\t\tCould not send MATCH_INFO/capability( \"%s\" )"
-			"/eom to startd %s\n", capability, startdName);
+		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
+					startdName );
+		dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
 		return MM_BAD_MATCH;
 	}
 
 	// 3.  send the match and capability to the schedd
-	dprintf(D_FULLDEBUG,"\t\t\tSending PERMISSION with capability to schedd\n");
+	dprintf(D_FULLDEBUG,"      Sending PERMISSION with capability to schedd\n");
 	sock->encode();
 	if (!sock->put(PERMISSION) 	|| 
 		!sock->put(capability)	||
 		!sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "\t\t\tCould not send "
-			"PERMISSION/capability ( \"%s\" ) to schedd\n", capability);
+		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
+		dprintf( D_FULLDEBUG, "      (Capability is \"%s\")\n", capability);
 		return MM_ERROR;
 	}
 
     // 4. notifiy the accountant
-	dprintf(D_FULLDEBUG,"\t\t\tNotifying the accountant\n");
+	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
 	accountant.AddMatch(scheddName, offer);
 
 	// done
-	dprintf (D_ALWAYS, "\t\t\tSuccessfully matched with %s\n", startdName);
+	dprintf (D_ALWAYS, "      Successfully matched with %s\n", startdName);
 	return MM_GOOD_MATCH;
 }
 
