@@ -34,7 +34,6 @@
 #include "syscall_numbers.h"
 #include "exit.h"
 #include "condor_uid.h"
-#include "condor_ver_info.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -282,11 +281,9 @@ OsProc::JobExit(int pid, int status)
 			// Derek Wright <wright@cs.wisc.edu> 1/25/02
 #ifdef WIN32		
 		job_exit_wants_ad = false;
-		if ( Starter->GetShadowVersion() ) {
-			CondorVersionInfo ver(Starter->GetShadowVersion(),"SHADOW");
-			if( ver.built_since_version(6,3,0) ) {
-				job_exit_wants_ad = true;	// new shadow; send ad
-			}
+		CondorVersionInfo ver* = Starter->GetShadowVersion();
+		if( ver && ver->built_since_version(6,3,0) ) {
+			job_exit_wants_ad = true;	// new shadow; send ad
 		}
 #endif		
 
