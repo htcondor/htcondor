@@ -961,8 +961,9 @@ char * Sock::serializeCryptoInfo(char * buf)
         ptmp++;
     }
     else {
-        ptmp = strchr(ptmp, '*');
-        ptmp++;
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
+		ptmp++;
     }
 	return ptmp;
 }
@@ -1007,8 +1008,9 @@ char * Sock::serializeMdInfo(char * buf)
         ptmp++;
     }
     else {
-        ptmp = strchr(ptmp, '*');
-        ptmp++;
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
+		ptmp++;
     }
 	return ptmp;
 }
