@@ -119,6 +119,16 @@ struct contactStartdArgs {
 	char *pool;
 };
 
+// SC2000 This struct holds the state in contactStartdArgs.  We register
+// a pointer to this state so we can restore it after a non-blocking connect.
+struct contactStartdState {
+    match_rec* mrec;
+    char* capability;
+    char* server;
+    ClassAd *jobAd;
+};
+
+
 class Scheduler : public Service
 {
   public:
