@@ -22,7 +22,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When the \Condor{vacate\_master} is started with the \Opt{-r} option to
+  indicate that it should quite after a period of time, the
+  \Condor{vacate\_startd} will now indicate how much time is remaining before it
+  exits. It does this by advertising TimeToLive in the machine
+  ClassAd.
 
 \end{itemize}
 
