@@ -84,6 +84,7 @@
 
 #define HAS_PVM				YES
 #define HAS_DLOPEN			YES
+#define HAS_DAGMAN_HELPER   NO
 
 #define HAS_STATIC			NO
 
