@@ -22,7 +22,7 @@ An input file defined prior to submission describes the DAG, and
 a Condor submit description file for each program in the DAG
 is used by Condor.
 
-Each node (program) in the DAG needs its own Condor submit description file.
+Each node (program) in the DAG specifies a Condor submit description file.
 As DAGMan submits jobs to Condor, it monitors the Condor log file(s) to 
 to enforce the ordering required for the DAG.
 
@@ -321,6 +321,10 @@ vanilla, or DAGMan.
 One limitation exists:
 each Condor submit description file must submit only one job.
 There may not be multiple \verb@queue@ commands, or DAGMan will fail.
+This requirement exists to enforce the requirements of a well-defined DAG.
+If each node of the DAG could cause the submission of multiple
+Condor jobs, then it would violate the definition of a DAG.
+
 DAGMan no longer requires that all jobs specify the same log file.
 However, if the DAG contains a very large number of jobs, each
 specifying its own log file, performance may suffer.  Therefore,
@@ -330,8 +334,22 @@ DAGMan enforces the dependencies within a DAG
 using the events recorded in the
 log file(s) produced by job submission to Condor.
 
-Here is an example Condor submit description file to go with the
-diamond-shaped DAG example.
+Here is a simple input file for a 
+modified version of diamond-shaped DAG example.
+
+\begin{verbatim}
+	# Filename: diamond.dag
+	#
+	Job  A  diamond_job.condor 
+	Job  B  diamond_job.condor 
+	Job  C  diamond_job.condor	
+	Job  D  diamond_job.condor
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+\end{verbatim}
+
+A single Condor submit description file goes with all the nodes
+in this DAG:
 
 \index{DAGMan!example submit description file}
 \begin{verbatim}
@@ -361,7 +379,7 @@ submitted to Condor.
 For DAGs with many nodes, this is recommended
 to reduce or eliminate excessive numbers of e-mails.
 
-A separate example shows an intended use of a \Arg{Vars} entry
+A separate example shows an intended use of a \Arg{VARS} entry
 in the DAG.
 It can be used to dramatically reduce the number of submit description
 files needed for a DAG.
