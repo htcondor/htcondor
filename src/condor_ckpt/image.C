@@ -1795,6 +1795,11 @@ terminate_with_sig( int sig )
 	t.tv_sec = 1;
 	t.tv_nsec = 0;
 	SYSCALL(SYS_nanosleep, &t, NULL);
+#elif defined(SYS_select)
+	struct timeval t;
+	t.tv_sec = 1;
+	t.tv_usec = 0;
+	SYSCALL(SYS_select, 0, NULL, NULL, NULL, &t);
 #else
 #error "Please port me!  I need a sleep system call."
 #endif
