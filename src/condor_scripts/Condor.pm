@@ -460,7 +460,7 @@ sub Monitor
 sub debug
 {
     my $string = shift;
-    print "DEBUG: $string" if $DEBUG;
+    print "DEBUG ", timestamp(), ": string" if $DEBUG;
 }
 
 sub ParseSubmitFile
@@ -525,4 +525,8 @@ sub DebugOn
 sub DebugOff
 {
     $DEBUG = 0;
+}
+
+sub timestamp {
+    return scalar localtime();
 }
