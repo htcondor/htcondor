@@ -45,8 +45,8 @@
 static int	polling_freq;
 static int	owner_polling_freq;
 int	polls_per_update;
-static int	polls_per_update_kbdd; // never used!
-static int	polls_per_update_load; // never used!
+int	polls_per_update_kbdd;
+int	polls_per_update_load;
 
 /*
  * Flags from the commandline.
