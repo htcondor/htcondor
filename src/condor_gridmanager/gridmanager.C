@@ -895,12 +895,23 @@ doContactSchedd()
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
-					ASSERT(next_ad);
-					resource_name[0] = '\0';
-					next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+					if ( next_ad == NULL ) {
+						// We may get here if it was not possible to expand
+						// one of the $$() expressions.  We don't want to
+						// roll back the transaction and blow away the
+						// hold that the schedd just put on the job, so
+						// simply skip over this ad.
+
+						dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
+					}
+					else {
+						resource_name[0] = '\0';
+						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+					}
 				}
 
-				if ( resource_name[0] == '\0' ) {
+				if ( !next_ad) ; //Failed to get ad.  Continue.
+				else if ( resource_name[0] == '\0' ) {
 
 					const char *hold_reason =
 						"GlobusResource is not set in the job ad";	
