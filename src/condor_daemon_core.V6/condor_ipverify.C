@@ -175,6 +175,9 @@ IpVerify::Init()
 	}
 
 	for ( i=0; perm_ints[i] >= 0; i++ ) {
+			// We're broken if either: there's no name for this kind
+			// of DC permission, _or_ there _is_ an entry for it
+			// already (since we thought we just deleted them all). 
 		if ( !perm_names[i] || PermTypeArray[perm_ints[i]] ) {
 			EXCEPT("IP VERIFY code misconfigured");
 		}
