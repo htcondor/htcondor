@@ -176,6 +176,7 @@ if ( $DoReserved )
 # Dump it out - Print out entries in the roster that aren't in the
 # condor_status output.
 my @ClusterDown;
+my $ClusterAbsent;
 if ( $DoPing )
 {
     my %PingOk;
@@ -225,6 +226,11 @@ if ( $DoPing )
 		push( @ClusterDown, $Host );
 	    }
 	}
+	# Otherwise, note it as an "absent" cluster node
+	elsif ( defined $ClusterNodes{$Host} )
+	{
+	    $ClusterAbsent++;
+	}
     }
 }
 
@@ -246,9 +252,10 @@ if ( $DoClusterCheck )
 }
 print "# Summary\n";
 print "#   $RosterCount machine in the roster\n";
-print "#   $ClusterCount cluster nodes ";
-print "($ReservedCount reserved) " if ( $DoReserved );
-print "(" . ($#ClusterDown + 1) . " down) " if ( $DoClusterCheck );
+print "#   Cluster: $ClusterCount nodes";
+print ", $ReservedCount reserved" if ( $DoReserved );
+print ", " . ($#ClusterDown + 1) . " down" if ( $DoClusterCheck );
+print ", $ClusterAbsent absent";
 print "\n#   $AbsentCount hosts absent\n";
 
 # ******************************************************
