@@ -91,13 +91,13 @@ example, \verb@MTWRFSU@ would specify that the event occurs daily,
 
 Two options can be specified to change the default behavior of
 \Macro{SHUTDOWN} events.
-If \Macro{\_RUNTIME} is appended to the \Macro{SHUTDOWN} event
+If \MacroNI{\_RUNTIME} is appended to the \MacroNI{SHUTDOWN} event
 specification, the startd shutdown configurations will not be
 persistent.  If a machine reboots or a startd is restarted, the startd
 will no longer be ``shutdown'' and may transition out of the owner state.
 This is useful for reboot events, where the startd should leave the
 shutdown state when the machine reboots.
-If \Macro{\_STANDARD} is appended to the \Macro{SHUTDOWN} event
+If \MacroNI{\_STANDARD} is appended to the \MacroNI{SHUTDOWN} event
 specification, the eventd will only consider standard universe jobs.
 It will vacate only standard universe jobs and configure machines to
 run only non-standard universe jobs during the shutdown event.
@@ -121,7 +121,7 @@ type event, which
 specifies that all machines whose startd ads match the constraint
 \verb@Arch == "INTEL"@ should be shutdown for one hour (or until the
 startd restarts) starting at 2:00 every Wednesday.
-\verb@TestEvent2@ is a \Macro{SHUTDOWN} type event, which specifies
+\verb@TestEvent2@ is a \MacroNI{SHUTDOWN} type event, which specifies
 that all machines should be shutdown for 30 minutes starting at
 14:00 every Friday.
 

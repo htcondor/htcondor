@@ -380,7 +380,7 @@ by Condor.
    except those specified in
    the \File{condor\_config.root} configuration file.
 
-\item[\DCPerm{DAEMON}] \label{sec-level-daemon} 
+\item[\DCPerm{IMMEDIATE\_FAMILY}] \label{sec-level-immfamily} 
    This access level is only used by Condor daemons for internal
    exchange of requests.
    An example is the message sent from the \Condor{startd} daemon
@@ -420,7 +420,7 @@ by Condor.
 %\index{configuration macro!\texttt{SEC\_READ\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_WRITE\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_ADMIN\_NEGOTIATION}}
-%\index{configuration macro!\texttt{SEC\_DAEMON\_NEGOTIATION}}
+%\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_CONFIG\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_OWNER\_NEGOTIATION}}
 %\index{configuration macro!\texttt{SEC\_NEGOTIATOR\_NEGOTIATION}}
@@ -439,7 +439,7 @@ The levels are
     READ
     WRITE
     ADMIN
-    DAEMON
+    IMMEDIATE_FAMILY
     CONFIG
     OWNER
     NEGOTIATOR
@@ -461,8 +461,8 @@ The communication types are
     AUTHENTICATION
     ENCRYPTION
     INTEGRITY
+    NEGOTIATION
 \end{verbatim}
-%   NEGOTIATION
 Two examples of the complete macro names are
 \MacroNI{SEC\_ADMIN\_AUTHENTICATION}
 and
@@ -546,8 +546,8 @@ For the daemon, there are eight macros to configure authentication:
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION}}
 \index{SEC\_ADMIN\_AUTHENTICATION macro@\texttt{SEC\_ADMIN\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_ADMIN\_AUTHENTICATION}}
-\index{SEC\_DAEMON\_AUTHENTICATION macro@\texttt{SEC\_DAEMON\_AUTHENTICATION} macro}
-\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION}}
+\index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION} macro}
+\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION}}
 \index{SEC\_CONFIG\_AUTHENTICATION macro@\texttt{SEC\_CONFIG\_AUTHENTICATION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION}}
 \index{SEC\_OWNER\_AUTHENTICATION macro@\texttt{SEC\_OWNER\_AUTHENTICATION} macro}
@@ -559,7 +559,7 @@ For the daemon, there are eight macros to configure authentication:
     SEC_READ_AUTHENTICATION
     SEC_WRITE_AUTHENTICATION
     SEC_ADMIN_AUTHENTICATION
-    SEC_DAEMON_AUTHENTICATION
+    SEC_IMMEDIATE_FAMILY_AUTHENTICATION
     SEC_CONFIG_AUTHENTICATION
     SEC_OWNER_AUTHENTICATION
     SEC_NEGOTIATOR_AUTHENTICATION
@@ -606,8 +606,8 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_AUTHENTICATION\_METHODS}}
 \index{SEC\_ADMIN\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_ADMIN\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMIN\_AUTHENTICATION\_METHODS}}
-\index{SEC\_DAEMON\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DAEMON\_AUTHENTICATION\_METHODS}}
+\index{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_AUTHENTICATION\_METHODS}}
 \index{SEC\_CONFIG\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_AUTHENTICATION\_METHODS}}
 \index{SEC\_OWNER\_AUTHENTICATION\_METHODS macro@\texttt{SEC\_OWNER\_AUTHENTICATION\_METHODS} macro}
@@ -619,7 +619,7 @@ macros
     SEC_READ_AUTHENTICATION_METHODS
     SEC_WRITE_AUTHENTICATION_METHODS
     SEC_ADMIN_AUTHENTICATION_METHODS
-    SEC_DAEMON_AUTHENTICATION_METHODS
+    SEC_IMMEDIATE_FAMILY_AUTHENTICATION_METHODS
     SEC_CONFIG_AUTHENTICATION_METHODS
     SEC_OWNER_AUTHENTICATION_METHODS
     SEC_NEGOTIATOR_AUTHENTICATION_METHODS
@@ -653,29 +653,6 @@ SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, NTSSPI
 indicates that either Kerberos or Windows authentication may be used,
 but Kerberos is preferred over Windows.
 
-If Kerberos is used for authentication, then 
-the optional configuration variable
-\Macro{KERBEROS\_MAP\_FILE}
-may be used to define a path to an administrator-maintained file that
-contains Kerberos domain (called a realm) to Condor UID domain mapping.
-The configuration syntax is
-\begin{verbatim}
-KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
-\end{verbatim}
-
-Lines within the map file have the syntax
-\begin{verbatim}
-   KerberosRealm = UIDDomain
-\end{verbatim}
-If no map file is specified, then Condor assumes that the
-Kerberos realm is the same as the Condor UID domain.
-Here are two lines from a map file to use as an example:
-\begin{verbatim}
-   CS.WISC.EDU   = cs.wisc.edu
-   ENGR.WISC.EDU = ee.wisc.edu
-\end{verbatim}
-
-% documentation about the X509 map file goes here
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-Encryption} Encryption}
@@ -704,8 +681,8 @@ For the daemon, there are eight macros to enable or disable encryption:
 \index{configuration macro!\texttt{SEC\_WRITE\_ENCRYPTION}}
 \index{SEC\_ADMIN\_ENCRYPTION macro@\texttt{SEC\_ADMIN\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_ADMIN\_ENCRYPTION}}
-\index{SEC\_DAEMON\_ENCRYPTION macro@\texttt{SEC\_DAEMON\_ENCRYPTION} macro}
-\index{configuration macro!\texttt{SEC\_DAEMON\_ENCRYPTION}}
+\index{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION} macro}
+\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_ENCRYPTION}}
 \index{SEC\_CONFIG\_ENCRYPTION macro@\texttt{SEC\_CONFIG\_ENCRYPTION} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_ENCRYPTION}}
 \index{SEC\_OWNER\_ENCRYPTION macro@\texttt{SEC\_OWNER\_ENCRYPTION} macro}
@@ -717,7 +694,7 @@ For the daemon, there are eight macros to enable or disable encryption:
     SEC_READ_ENCRYPTION
     SEC_WRITE_ENCRYPTION
     SEC_ADMIN_ENCRYPTION
-    SEC_DAEMON_ENCRYPTION
+    SEC_IMMEDIATE_FAMILY_ENCRYPTION
     SEC_CONFIG_ENCRYPTION
     SEC_OWNER_ENCRYPTION
     SEC_NEGOTIATOR_ENCRYPTION
@@ -726,7 +703,7 @@ For the daemon, there are eight macros to enable or disable encryption:
 As an example, the macro defined in the configuration file
 for a daemon as
 \begin{verbatim}
-SEC_DAEMON_ENCRYPTION = REQUIRED
+SEC_IMMEDIATE_FAMILY_ENCRYPTION = REQUIRED
 \end{verbatim}
 signifies that any daemon to daemon communication must be
 encrypted.
@@ -763,8 +740,8 @@ macros
 \index{configuration macro!\texttt{SEC\_WRITE\_CRYPTO\_METHODS}}
 \index{SEC\_ADMIN\_CRYPTO\_METHODS macro@\texttt{SEC\_ADMIN\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_ADMIN\_CRYPTO\_METHODS}}
-\index{SEC\_DAEMON\_CRYPTO\_METHODS macro@\texttt{SEC\_DAEMON\_CRYPTO\_METHODS} macro}
-\index{configuration macro!\texttt{SEC\_DAEMON\_CRYPTO\_METHODS}}
+\index{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS} macro}
+\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_CRYPTO\_METHODS}}
 \index{SEC\_CONFIG\_CRYPTO\_METHODS macro@\texttt{SEC\_CONFIG\_CRYPTO\_METHODS} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_CRYPTO\_METHODS}}
 \index{SEC\_OWNER\_CRYPTO\_METHODS macro@\texttt{SEC\_OWNER\_CRYPTO\_METHODS} macro}
@@ -776,7 +753,7 @@ macros
     SEC_READ_CRYPTO_METHODS
     SEC_WRITE_CRYPTO_METHODS
     SEC_ADMIN_CRYPTO_METHODS
-    SEC_DAEMON_CRYPTO_METHODS
+    SEC_IMMEDIATE_FAMILY_CRYPTO_METHODS
     SEC_CONFIG_CRYPTO_METHODS
     SEC_OWNER_CRYPTO_METHODS
     SEC_NEGOTIATOR_CRYPTO_METHODS
@@ -825,8 +802,8 @@ For the daemon, there are eight macros to enable or disable an integrity check:
 \index{configuration macro!\texttt{SEC\_WRITE\_INTEGRITY}}
 \index{SEC\_ADMIN\_INTEGRITY macro@\texttt{SEC\_ADMIN\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_ADMIN\_INTEGRITY}}
-\index{SEC\_DAEMON\_INTEGRITY macro@\texttt{SEC\_DAEMON\_INTEGRITY} macro}
-\index{configuration macro!\texttt{SEC\_DAEMON\_INTEGRITY}}
+\index{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY macro@\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY} macro}
+\index{configuration macro!\texttt{SEC\_IMMEDIATE\_FAMILY\_INTEGRITY}}
 \index{SEC\_CONFIG\_INTEGRITY macro@\texttt{SEC\_CONFIG\_INTEGRITY} macro}
 \index{configuration macro!\texttt{SEC\_CONFIG\_INTEGRITY}}
 \index{SEC\_OWNER\_INTEGRITY macro@\texttt{SEC\_OWNER\_INTEGRITY} macro}
@@ -838,7 +815,7 @@ For the daemon, there are eight macros to enable or disable an integrity check:
     SEC_READ_INTEGRITY
     SEC_WRITE_INTEGRITY
     SEC_ADMIN_INTEGRITY
-    SEC_DAEMON_INTEGRITY
+    SEC_IMMEDIATE_FAMILY_INTEGRITY
     SEC_CONFIG_INTEGRITY
     SEC_OWNER_INTEGRITY
     SEC_NEGOTIATOR_INTEGRITY
@@ -847,7 +824,7 @@ For the daemon, there are eight macros to enable or disable an integrity check:
 As an example, the macro defined in the configuration file
 for a daemon as
 \begin{verbatim}
-SEC_DAEMON_INTEGRITY = REQUIRED
+SEC_IMMEDIATE_FAMILY_INTEGRITY = REQUIRED
 \end{verbatim}
 signifies that any daemon to daemon communication must
 have its integrity assured.
@@ -879,20 +856,17 @@ Included as comments within the configuration file is an example
 suggesting settings that enable security features.
 Here is that example of the daemon-side portion.
 
-% from Zach
+% from Zach  (3/7/03)
 \begin{verbatim}
 SEC_DEFAULT_AUTHENTICATION=REQUIRED
 SEC_DEFAULT_ENCRYPTION=REQUIRED
 SEC_DEFAULT_INTEGRITY=REQUIRED
 
-SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS
-SEC_DEFAULT_CRYPTO_METHODS = 3DES
-
-KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
-
+SEC_DEFAULT_AUTHENTICATION_METHODS = FS, KERBEROS
+SEC_DEFAULT_CRYPTO_METHODS = 3DES, BLOWFISH
 \end{verbatim}
 
-This set of configuration macros forces all security features
+This set of configuration macros forces security features
 to be used at all times.
 All communication is authenticated (using Kerberos),
 and all communication is both encrypted
@@ -900,6 +874,13 @@ and all communication is both encrypted
 and has its
 integrity checked to make sure that messages
 are not modified or corrupted.
+Negotiation configuration variables are not included in this
+suggested configuration.
+The default (when undefined) will be to set
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION=OPTIONAL
+\end{verbatim}
+
 
 Note that this example configuration requires that all Condor daemons be
 version 6.3.3 or later, since previous versions will not have
@@ -1074,9 +1055,50 @@ of authentication are given below.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
 \index{authentication!Kerberos}
+If Kerberos is used for authentication, then 
+the configuration variable
+\Macro{KERBEROS\_MAP\_FILE}
+must be used to define a path to an administrator-maintained file that
+contains Kerberos domain (called a realm) to Condor UID domain mapping.
+The configuration syntax is
+\begin{verbatim}
+KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
+\end{verbatim}
 
+Lines within the map file have the syntax
+\begin{verbatim}
+   KERB.REALM = UID.domain.name
+\end{verbatim}
+%If no map file is specified, then Condor assumes that the
+%Kerberos realm is the same as the Condor UID domain.
+Here are two lines from a map file to use as an example:
+\begin{verbatim}
+   CS.WISC.EDU   = cs.wisc.edu
+   ENGR.WISC.EDU = ee.wisc.edu
+\end{verbatim}
+
+The configuration variable
+\Macro{CONDOR\_SERVER\_PRINCIPAL}
+defines the name of a Kerberos principal.
+If \MacroNI{CONDOR\_SERVER\_PRINCIPAL} is not defined,
+then the default value used is "host".
+A principal specifies a unique name to which a set of credentials
+may be assigned.
+\index{authentication!Kerberos principal}
+
+Condor takes the specified (or default) principal and appends
+a slash character, the host name, an '@' (at sign character),
+and the kerberos realm.
+As an example, the configuration
+\begin{verbatim}
+CONDOR_SERVER_PRINCIPAL=condor-daemon
+\end{verbatim}
+results in Condor's use of
+\begin{verbatim}
+condor-daemon/the.host.name@YOUR.KERB.REALM
+\end{verbatim}
+as the server principal.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1165,8 +1187,8 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{ALLOW\_ADMINISTRATOR}}
 \index{ALLOW\_CONFIG macro@\texttt{ALLOW\_CONFIG} macro}
 \index{configuration macro!\texttt{ALLOW\_CONFIG}}
-\index{ALLOW\_DAEMON macro@\texttt{ALLOW\_DAEMON} macro}
-\index{configuration macro!\texttt{ALLOW\_DAEMON}}
+\index{ALLOW\_IMMEDIATE\_FAMILY macro@\texttt{ALLOW\_IMMEDIATE\_FAMILY} macro}
+\index{configuration macro!\texttt{ALLOW\_IMMEDIATE\_FAMILY}}
 \index{ALLOW\_OWNER macro@\texttt{ALLOW\_OWNER} macro}
 \index{configuration macro!\texttt{ALLOW\_OWNER}}
 \index{ALLOW\_NEGOTIATOR macro@\texttt{ALLOW\_NEGOTIATOR} macro}
@@ -1179,8 +1201,8 @@ A complete list of the authorization macros:
 \index{configuration macro!\texttt{DENY\_ADMINISTRATOR}}
 \index{DENY\_CONFIG macro@\texttt{DENY\_CONFIG} macro}
 \index{configuration macro!\texttt{DENY\_CONFIG}}
-\index{DENY\_DAEMON macro@\texttt{DENY\_DAEMON} macro}
-\index{configuration macro!\texttt{DENY\_DAEMON}}
+\index{DENY\_IMMEDIATE\_FAMILY macro@\texttt{DENY\_IMMEDIATE\_FAMILY} macro}
+\index{configuration macro!\texttt{DENY\_IMMEDIATE\_FAMILY}}
 \index{DENY\_OWNER macro@\texttt{DENY\_OWNER} macro}
 \index{configuration macro!\texttt{DENY\_OWNER}}
 \index{DENY\_NEGOTIATOR macro@\texttt{DENY\_NEGOTIATOR} macro}
@@ -1190,14 +1212,14 @@ A complete list of the authorization macros:
     ALLOW_WRITE
     ALLOW_ADMINISTRATOR
     ALLOW_CONFIG
-    ALLOW_DAEMON
+    ALLOW_IMMEDIATE_FAMILY
     ALLOW_OWNER
     ALLOW_NEGOTIATOR
     DENY_READ
     DENY_WRITE
     DENY_ADMINISTRATOR
     DENY_CONFIG
-    DENY_DAEMON
+    DENY_IMMEDIATE_FAMILY
     DENY_OWNER
     DENY_NEGOTIATOR
 \end{verbatim}
@@ -1270,7 +1292,7 @@ ALLOW_WRITE           = *@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_ADMINISTRATOR   = condor-admin@cs.wisc.edu/*.cs.wisc.edu
 ALLOW_NEGOTIATOR      = condor@cs.wisc.edu/$(NEGOTIATOR_HOST)
 ALLOW_CONFIG          = condor-admin@cs.wisc.edu/*.cs.wisc.edu
-ALLOW_DAEMON          = condor@cs.wisc.edu/*.cs.wisc.edu
+ALLOW_IMMEDIATE_FAMILY= condor@cs.wisc.edu/*.cs.wisc.edu
 \end{verbatim}
 
 This example configuration authorizes
@@ -1305,7 +1327,7 @@ It authorizes only programs (which will be the daemons)
 running as 
 \verb@condor@ to
 carry out requests that require the 
-\DCPerm{DAEMON} access level,
+\DCPerm{IMMEDIATE\_FAMILY} access level,
 where the commands originate from
 any machine in the
 \verb@cs.wisc.edu@ domain.
@@ -1332,6 +1354,8 @@ host-based security.
 This is now an outdated form of implementing security at
 the level of machine access. 
 It remains available and documented for purposes of backward compatibility.
+If used at the same time as the user-based authorization,
+the two specifications are merged together.
 
 The host-based security allows control over what machines can
 join a Condor pool, what machines can find out information about
@@ -1857,5 +1881,13 @@ example to make sense.
 \end{itemize}
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:security-networks}
+Using Condor w/ Firewalls, Private Networks, and NATs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{security!firewalls}
+\index{security!private networks}
+\index{security!NATs}
 
 \index{security! in Condor|)}

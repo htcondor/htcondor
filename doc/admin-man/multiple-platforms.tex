@@ -22,14 +22,14 @@ global file would be the one that is found with the
 \Env{CONDOR\_CONFIG} environment variable, user condor's home
 directory, or \File{/etc/condor/condor\_config}.
 
-You would then set the \Macro{LOCAL\_CONFIG\_FILE} parameter from that
+You would then set the \MacroNI{LOCAL\_CONFIG\_FILE} parameter from that
 global config file to specify both a platform-specific config file and
 optionally, a local, machine-specific config file (this parameter is
 described in section~\ref{sec:Condor-wide-Config-File-Entries} on
 ``Condor-wide Config File Entries'').
 
 The order in which you specify files in the
-\Macro{LOCAL\_CONFIG\_FILE} parameter is important, because settings
+\MacroNI{LOCAL\_CONFIG\_FILE} parameter is important, because settings
 in files at the beginning of the list are overridden if the same
 settings occur in files later in the list.  So, if you specify the
 platform-specific file and then the machine-specific file, settings in
@@ -76,7 +76,7 @@ a soft linked named ``condor\_config.platform'' that points to
         condor_config.platform -> condor_config.@sys
 \end{verbatim}
 
-and your \Macro{LOCAL\_CONFIG\_FILE} parameter would be set to:
+and your \MacroNI{LOCAL\_CONFIG\_FILE} parameter would be set to:
 
 \begin{verbatim}
   LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
@@ -119,7 +119,7 @@ The only settings that are truly platform-specific are:
 
 Reasonable defaults for all of these settings will be found in the
 default config files inside a given platform's binary distribution
-(except the \Macro{RELEASE\_DIR}, since it is up to you where you want
+(except the \MacroNI{RELEASE\_DIR}, since it is up to you where you want
 to install your Condor binaries and libraries).  If you have multiple
 platforms, simply take one of the condor\_config files you get from
 either running \Condor{install} or from the
@@ -128,7 +128,7 @@ out and save them into a platform-specific file, and install the
 resulting platform-independent file as your global config file.  Then,
 find the same settings from the config files for any other platforms
 you are setting up and put them in their own platform specific files.
-Finally, set your \Macro{LOCAL\_CONFIG\_FILE} parameter to point to
+Finally, set your \MacroNI{LOCAL\_CONFIG\_FILE} parameter to point to
 the appropriate platform-specific file, as described above.
 
 Not even all of these settings are necessarily going to be different.
@@ -138,7 +138,7 @@ could just set \Macro{MAIL} to that in your global file and not define
 it anywhere else.  If you've only got Digital Unix and IRIX machines,
 the \Macro{DAEMON\_LIST} will be the same for each, so there's no
 reason not to put that in the global config file (or, if you have no
-IRIX or Digital Unix machines, \Macro{DAEMON\_LIST} won't have to be
+IRIX or Digital Unix machines, \MacroNI{DAEMON\_LIST} won't have to be
 platform-specific either).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -157,19 +157,19 @@ files.
 Since the \Macro{LOCAL\_CONFIG\_FILE} parameter can be an arbitrary
 list of files, you can even break up your global, platform-independent
 settings into separate files.  In fact, your global config file might
-only contain a definition for \Macro{LOCAL\_CONFIG\_FILE}, and all
+only contain a definition for \MacroNI{LOCAL\_CONFIG\_FILE}, and all
 other settings would be handled in separate files.  
 
 You might want to give different people permission to change different
 Condor settings.  For example, if you wanted some user to be able to
 change certain settings, but nothing else, you could specify those
-settings in a file which was early in the \Macro{LOCAL\_CONFIG\_FILE}
+settings in a file which was early in the \MacroNI{LOCAL\_CONFIG\_FILE}
 list, give that user write permission on that file, then include all
 the other files after that one.  That way, if the user was trying to
 change settings she/he shouldn't, they would simply be overridden.  
 
 As you can see, this mechanism is quite flexible and powerful.  If you
 have very specific configuration needs, they can probably be met by
-using file permissions, the \Macro{LOCAL\_CONFIG\_FILE} setting, and
+using file permissions, the \MacroNI{LOCAL\_CONFIG\_FILE} setting, and
 your imagination.
 
