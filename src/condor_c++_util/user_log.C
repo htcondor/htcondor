@@ -33,7 +33,6 @@
 
 static const char SynchDelimiter[] = "...\n";
 
-static void display_ids();
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
 
@@ -512,3 +511,4 @@ void ReadUserLog::outputFilePos(const char *pszWhereAmI)
 {
 	dprintf(D_ALWAYS, "Filepos: %d, context: %s\n", ftell(_fp), pszWhereAmI);
 }
+
