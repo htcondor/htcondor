@@ -904,13 +904,23 @@ Daemon::getCmInfo( const char* subsys )
 		return false;
 	} 
 
-		// now that we finally know what we're going to use, see if
-		// it's already got a port specified in it, or if we should
-		// use the default port
+
+		// Now that we finally know what we're going to use, we should
+		// store that (as is) in _name, so that we can get to it later
+		// if we need it.
+	New_name( strnewp(host) );
+
+		// See if it's already got a port specified in it, or if we
+		// should use the default port for this kind of daemon.
 	_port = getPortFromAddr( host );
 	if( ! _port ) {
 		_port = getDefaultPort();
 	}
+
+		// Now that we've got the port, just grab the hostname part of
+		// it for the rest of the logic.  We can deallocate the other
+		// strings we used for this so that we don't have to worry
+		// about leaking memory if we return...
 	tmp = getHostFromAddr( host );
 	if( local_host ) {
 		free( local_host );
@@ -949,12 +959,6 @@ Daemon::getCmInfo( const char* subsys )
 		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
 		New_addr( strnewp(buf) );
 		New_full_hostname( tmp );
-	}
-
-		// For CM daemons, if we don't already have anything for the
-		// name, use the full hostname.
-	if( ! _name ) {
-		New_name( strnewp(_full_hostname) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
