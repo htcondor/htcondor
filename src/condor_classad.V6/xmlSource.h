@@ -51,7 +51,7 @@ class ClassAdXMLParser
         ClassAdXMLParser(const ClassAdXMLParser &parser)            { return;       }
         ClassAdXMLParser &operator=(const ClassAdXMLParser &parser) { return *this; }
 
-		ClassAd *ClassAdXMLParser::ParseClassAd(void);
+		ClassAd  *ParseClassAd(void);
 		ExprTree *ParseAttribute(std::string &attribute_name);
 		ExprTree *ParseThing(void);
 		ExprTree *ParseList(void);
@@ -61,6 +61,7 @@ class ClassAdXMLParser
 		ExprTree *ParseAbsTime(void);
 		ExprTree *ParseRelTime(void);
 		ExprTree *ParseExpr(void);
+        void SwallowEndTag(XMLLexer::TagID tag_id);
 
 		XMLLexer lexer;
 };

@@ -128,16 +128,16 @@ ParseClassAd(void)
 					classad->DisableDirtyTracking();
 				} else {
 					// We're done, return the ClassAd we got, if any.
+                    in_classad = false;
 					break;
 				}
 			}
 		} else {
-			if (   token.token_type == XMLLexer::tokenType_Tag) {
-			  if (   token.tag_id   == XMLLexer::tagID_Attribute ) {
-			    if(token.tag_type == XMLLexer::tagType_Invalid) {
+			if (token.token_type == XMLLexer::tokenType_Tag) {
+			  if (token.tag_id   == XMLLexer::tagID_Attribute) {
+			    if (token.tag_type == XMLLexer::tagType_Invalid) {
 			      return NULL;
-			    }
-			    else if( token.tag_type == XMLLexer::tagType_Start) {
+			    } else if( token.tag_type == XMLLexer::tagType_Start) {
 					string attribute_name;
 					ExprTree *tree;
 					
@@ -149,8 +149,15 @@ ParseClassAd(void)
 					  return NULL;
 					}
 			    } 
-			  }
-			  else if (   token.tag_id != XMLLexer::tagID_XML
+              } else if (token.tag_id   == XMLLexer::tagID_ClassAd) {
+                  lexer.ConsumeToken(NULL);
+                  if (token.tag_type == XMLLexer::tagType_End) {
+                      in_classad = false;
+                      break;
+                  } else {
+                      // This is invalid, but we'll just ignore it.
+                  }
+			  } else if (   token.tag_id != XMLLexer::tagID_XML
 							  && token.tag_id != XMLLexer::tagID_XMLStylesheet
 							  && token.tag_id != XMLLexer::tagID_Doctype
 							  && token.tag_id != XMLLexer::tagID_ClassAds) {
@@ -173,7 +180,6 @@ ExprTree *ClassAdXMLParser::
 ParseAttribute(
 	string    &attribute_name)
 {
-	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
@@ -189,15 +195,7 @@ ParseAttribute(
 			tree = ParseThing();
 		}
 
-		have_token = lexer.PeekToken(&token);
-		if (have_token && token.token_type == XMLLexer::tokenType_Tag
-			&& token.tag_id == XMLLexer::tagID_Attribute
-			&& token.tag_type == XMLLexer::tagType_End) {
-			lexer.ConsumeToken(&token);
-		} else {
-			// It's probably invalid XML, but we'll keep on going in 
-			// the hope of figuring out something reasonable. 
-		}
+        SwallowEndTag(XMLLexer::tagID_Attribute);
 	}
 	return tree;
 }
@@ -328,16 +326,7 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 		tree = Literal::MakeLiteral(value);
 	}
 
-	// Get end tag
-	have_token = lexer.PeekToken(&token);
-	if (have_token && token.token_type == XMLLexer::tokenType_Tag
-		&& token.tag_id == tag_id
-		&& token.tag_type == XMLLexer::tagType_End) {
-		lexer.ConsumeToken(&token);
-	} else {
-		// It's probably invalid XML, but we'll keep on going in 
-		// the hope of figuring out something reasonable. 
-	}
+    SwallowEndTag(tag_id);
 
 	return tree;
 }
@@ -345,7 +334,6 @@ ParseNumberOrString(XMLLexer::TagID tag_id)
 ExprTree *ClassAdXMLParser::
 ParseBool(void)
 {
-	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
@@ -364,17 +352,7 @@ ParseBool(void)
 	tree = Literal::MakeLiteral(value);
 
 	if (token.tag_type == XMLLexer::tagType_Start) {
-		// They had a start token, so swallow the
-		// end token.
-		have_token = lexer.PeekToken(&token);
-		if (have_token && token.token_type == XMLLexer::tokenType_Tag
-			&& token.tag_id == XMLLexer::tagID_Bool
-			&& token.tag_type == XMLLexer::tagType_End) {
-			lexer.ConsumeToken(&token);
-		} else {
-			// It's probably invalid XML, but we'll keep on going in 
-			// the hope of figuring out something reasonable. 
-		}
+        SwallowEndTag(XMLLexer::tagID_Bool);
 	}
 	
 	return tree;
@@ -383,7 +361,6 @@ ParseBool(void)
 ExprTree *ClassAdXMLParser::
 ParseUndefinedOrError(XMLLexer::TagID tag_id)
 {
-	bool             have_token;
 	ExprTree         *tree;
 	XMLLexer::Token  token;
 
@@ -400,17 +377,7 @@ ParseUndefinedOrError(XMLLexer::TagID tag_id)
 	tree = Literal::MakeLiteral(value);
 
 	if (token.tag_type == XMLLexer::tagType_Start) {
-		// They had a start token, so swallow the
-		// end token.
-		have_token = lexer.PeekToken(&token);
-		if (have_token && token.token_type == XMLLexer::tokenType_Tag
-			&& token.tag_id == tag_id
-			&& token.tag_type == XMLLexer::tagType_End) {
-			lexer.ConsumeToken(&token);
-		} else {
-			// It's probably invalid XML, but we'll keep on going in 
-			// the hope of figuring out something reasonable. 
-		}
+        SwallowEndTag(tag_id);
 	}
 
 	return tree;
@@ -431,6 +398,7 @@ ParseAbsTime(void)
 		lexer.ConsumeToken(&token);
 		tree = Literal::MakeAbsTime(token.text);
 	}
+    SwallowEndTag(XMLLexer::tagID_AbsoluteTime);
 	return tree;
 }
 
@@ -449,6 +417,7 @@ ParseRelTime(void)
 		lexer.ConsumeToken(&token);
 		tree = Literal::MakeRelTime(token.text);
 	}
+    SwallowEndTag(XMLLexer::tagID_RelativeTime);
 	return tree;
 }
 
@@ -473,18 +442,29 @@ ParseExpr(void)
 		tree = parser.ParseExpression(token.text);
 	}
 
-	// Get end tag
+    SwallowEndTag(XMLLexer::tagID_Expr);
+
+	return tree;
+}
+
+void ClassAdXMLParser::
+SwallowEndTag(
+    XMLLexer::TagID tag_id)
+{
+    bool              have_token;
+	XMLLexer::Token  token;
+
 	have_token = lexer.PeekToken(&token);
-	if (have_token && token.token_type == XMLLexer::tokenType_Tag
-		&& token.tag_id == XMLLexer::tagID_Expr
-		&& token.tag_type == XMLLexer::tagType_End) {
+	if (   have_token 
+        && token.token_type == XMLLexer::tokenType_Tag
+		&& token.tag_id     == tag_id
+		&& token.tag_type   == XMLLexer::tagType_End) {
 		lexer.ConsumeToken(&token);
 	} else {
 		// It's probably invalid XML, but we'll keep on going in 
 		// the hope of figuring out something reasonable. 
 	}
-
-	return tree;
+    return;
 }
 
 END_NAMESPACE // classad
