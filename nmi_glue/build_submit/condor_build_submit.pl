@@ -102,9 +102,14 @@ exit 0;
 sub generate_cmdfile() {
     my ($tag, $module) = @_;
 
-    (my $release = $module) =~ s/_BUILD//;
-    $release =~ s/V//; 
+    my $release = $tag;
+    $release =~ s/BUILD-V//;
+    $release =~ s/-branch-.*//;
     my @versions = split("_", $release);
+    if( ! $versions[2] ) {
+        $versions[2] = "x";
+    }
+    my $vers_string = "$versions[0], $versions[1], $versions[2]";
 
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
@@ -123,9 +128,9 @@ sub generate_cmdfile() {
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
     print CMDFILE "description = $tag\n";
     print CMDFILE "project = condor\n";
-    print CMDFILE "project_release = $versions[0], $versions[1], x\n";
+    print CMDFILE "project_release = $vers_string\n";
     print CMDFILE "component = condor\n";
-    print CMDFILE "component_version = $versions[0], $versions[1], x\n";
+    print CMDFILE "component_version = $vers_string\n";
     print CMDFILE "inputs = $srcsfile\n";
     print CMDFILE "pre_all = nmi_glue/build/pre_all\n";
     print CMDFILE "remote_declare = nmi_glue/build/remote_declare\n";
