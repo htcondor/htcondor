@@ -310,16 +310,8 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-		#if defined(GLIBC21) || defined(GLIBC22)
+		#if defined(GLIBC22)
 			off64_t llseek( int fd, off64_t offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
-		#elif defined(GLIBC20)
-			unsigned long llseek( int fd, unsigned long offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
-		#else
-			long long llseek( int fd, long long offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
 		#endif
@@ -378,11 +370,7 @@ All of these calls manipulate the open file table.
 
 	/* Truncate must go through the table to update the file size. */
 
-	#if defined(LINUX) && !defined(GLIBC)
-		int ftruncate( int fd, size_t length ) :
-	#else
-		int ftruncate( int fd, off_t length ) :
-	#endif
+	int ftruncate( int fd, off_t length ) :
 		#if !defined(SWITCH)
 			/* Sender needed, even if not a true syscall */
 			no_sys_chk,
@@ -455,10 +443,8 @@ version.
 	Most of the switches are special.
 	*/
 
-	#if defined(LINUX) && (defined(GLIBC20)||defined(GLIBC21)||defined(GLIBC22))
+	#if defined(LINUX) && defined(GLIBC22)
 		#define STAT_NEEDS_SPECIAL_SWITCH
-	#elif defined(LINUX)
-		#define STAT_NEEDS_EXTRACT
 	#elif defined(IRIX)
 		#define STAT_NEEDS_SPECIAL_SWITCH
 	#endif
@@ -524,9 +510,17 @@ version.
 	but they send the name of the 32-bit system call on the wire.
 	*/
 
-	#if defined(HAS_64BIT_SYSCALLS)
+	#if defined(HAS_64BIT_SYSCALLS) 
 
-	#if (defined(Solaris) && !defined(Solaris251)) && !defined(IRIX)
+	/*
+	  This is stupid, you'd never have both Solaris + IRIX
+	  defined, but i'm just leaving it in here since eventually
+	  it'll change into "defined(Solaris) || defined(IRIX) once
+	  it's all tested and working, apropos the comments below...
+	    -derek wright <wright@cs.wisc.edu> 11/22/03
+	*/
+	#if defined(Solaris) && !defined(IRIX)
+
 		/* when I can test this for sure, I'll remove the IRIX stuff from
 			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
@@ -804,11 +798,7 @@ report an error if reside on different devices.
 	}
 
 
-	#if defined(Solaris251)
-	int readlink( map_name(const char *path), void *buf, int buf_size ) {
-	#else
 	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
-	#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out code_bytes_bool( buf, buf_size );
@@ -827,12 +817,7 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-	#if defined(LINUX) && !defined(GLIBC)
-		int truncate( map_name(const char *path), size_t length ) : extract {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	#elif defined(Solaris) 
+	#if defined(Solaris) 
 		int truncate( map_name(const char *path), off_t length ) : extract {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -842,7 +827,7 @@ report an error if reside on different devices.
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 		}
-	#endif /* LINUX */
+	#endif /* Solaris */
 
 
 	int mkdir( map_name(const char *path), mode_t mode ) {
@@ -1509,11 +1494,7 @@ not_supported {
 		pid_t fork1();
 	#endif
 
-	#if defined(LINUX) && ! (defined(GLIBC21) || defined(GLIBC22))
-	pid_t vfork() : EXTRACT;
-	#else
 	pid_t vfork();
-	#endif
 
 	int execve( const char *path, char * const argv[], char * const envp [] );
 
@@ -1569,7 +1550,7 @@ not_supported {
 		int profil( char *buf, int buf_size, int offset, int scale );
 	#elif defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
-	#elif defined(Solaris26) || defined(Solaris251)
+	#elif defined(Solaris26)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
@@ -1581,7 +1562,7 @@ not_supported {
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-	#if defined(LINUX) || defined(Solaris251) || defined(IRIX65) || defined(OSF1)
+	#if defined(LINUX) || defined(IRIX65) || defined(OSF1)
 		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 	#elif defined(HPUX)

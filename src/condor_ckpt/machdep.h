@@ -21,36 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #ifndef _MACHDEP_H
 #define _MACHDEP_H
 
-#if defined(ULTRIX42)
-
-	extern "C" int brk( void * );
-	extern "C" void *sbrk( int );
-	typedef void (*SIG_HANDLER)();
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
-#elif defined(ULTRIX43)
-
-	extern "C" char *brk( char * );
-	extern "C" char *sbrk( int );
-	typedef void (*SIG_HANDLER)();
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
-#elif defined(SUNOS41)
-
-	extern "C" int brk( void * );
-	extern "C" void *sbrk( int );
-	typedef void (*SIG_HANDLER)( ... );
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
-#elif defined(SOLARIS2) || defined(Solaris)
+#if defined(Solaris)
 
 	extern "C" int brk( void * );
 	extern "C" void *sbrk( int );
@@ -78,24 +52,6 @@
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp
 
-#elif defined(HPUX9)
-
-	extern "C" int brk( const void * );
-	extern "C" void *sbrk( int );
-#	include <signal.h>
-	typedef void (*SIG_HANDLER)( __harg );
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
-#elif defined(AIX32)
-
-	extern "C" int brk( void * );
-	extern "C" void *sbrk( int );
-	typedef void (*SIG_HANDLER)( int );
-#	define SETJMP _setjmp
-#	define LONGJMP _longjmp
-
-
 #elif defined(IRIX) 
 
 	extern "C" int brk( void * );
@@ -119,4 +75,4 @@
 
 #endif
 
-#endif
+#endif /* _MACHDEP_H */

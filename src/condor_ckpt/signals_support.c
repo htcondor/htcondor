@@ -228,9 +228,6 @@ struct sigvec *ovec;
 	if( ! MappingFileDescriptors() ) {
 #if defined(HPUX)
 			rval = syscall( SYS_sigvector, sig, vec, ovec );
-#elif defined(SUNOS41) || defined(ULTRIX43)
-			rval = SIGVEC( sig, vec, ovec );
-#else
 			rval = syscall( SYS_sigvec, sig, vec, ovec );
 #endif
 	} else {
@@ -258,8 +255,6 @@ struct sigvec *ovec;
 
 #if defined(HPUX)
 			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
-#elif defined(SUNOS41) || defined(ULTRIX43)
-			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
 #else
 			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
 #endif
@@ -383,13 +378,8 @@ SIGACTION(int sig, const struct sigaction *act, struct sigaction *oact)
 #endif
 
 #if defined(SYS_sigaction)
-#if defined(LINUX) && !defined(GLIBC)
-int
-sigaction( int sig, struct sigaction *act, struct sigaction *oact )
-#else
 int
 sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
-#endif
 {
 	struct sigaction tmp, *my_act = &tmp;
 
@@ -412,7 +402,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(OSF1) || defined(ULTRIX43) || defined(Solaris) || (defined(LINUX)&&defined(GLIBC))
+#if defined(OSF1) || defined(Solaris) || defined(LINUX)
 	return SIGACTION( sig, my_act, oact);
 #elif defined(IRIX)
 	return syscall(SYS_ksigaction, sig, my_act, oact);
@@ -458,7 +448,7 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 			sigdelset(my_set,SIGCONT);
 		}
 	}
-#if defined(OSF1) || defined(ULTRIX43)
+#if defined(OSF1)
 	SIGPROCMASK(how,my_set,oset);
 #else
 	return syscall(SYS_sigprocmask,how,my_set,oset);
@@ -469,11 +459,7 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 #if defined (SYS_sigsuspend)
 int
 sigsuspend(set)
-#if defined(SUNOS41)
-sigset_t *set;
-#else
 const sigset_t *set;
-#endif
 {
 	sigset_t	my_set = *set;
 	if ( MappingFileDescriptors() ) {
@@ -481,7 +467,7 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
-#if defined(OSF1) || defined(ULTRIX43) || defined(LINUX)
+#if defined(OSF1) || defined(LINUX)
 	return SIGSUSPEND(&my_set);
 #else
 	return syscall(SYS_sigsuspend,&my_set);
@@ -519,7 +505,7 @@ void (*func)(int);
 #endif
 
 }
-#endif
+#endif /* defined(SYS_signal) */
 
 #if 0
 void

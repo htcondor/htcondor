@@ -73,7 +73,6 @@ int __xstat(int, const char *, struct stat *);
 int __fxstat(int, int, struct stat *);
 int __lxstat(int, const char *, struct stat *);
 
-#if defined(GLIBC21) || defined(IRIX) || defined(GLIBC22)
 int _condor_xstat64(int version, const char *path, struct stat64 *buf);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf);
 int _condor_fxstat64(int versino, int fd, struct stat64 *buf);
@@ -84,7 +83,6 @@ int _lxstat64(int, const char *, struct stat64 *);
 int __xstat64(int, const char *, struct stat64 *);
 int __fxstat64(int, int, struct stat64 *);
 int __lxstat64(int, const char *, struct stat64 *);
-#endif
 
 #endif /* LINUX or IRIX */
 
@@ -343,7 +341,7 @@ what each of these parameters do, and I am throwing them to the wind.
 Whee!
 */
 
-#if defined(Solaris) && !defined(Solaris251)
+#if defined(Solaris)
 
 extern "C" int REMOTE_CONDOR_socket( int, int, int);
 int so_socket( int a, int b, int c, int d, int e )
@@ -393,7 +391,7 @@ on that fd.  A door is something like a named pipe.  So, we must
 trap door_info and cause it to return "that is not a door", and all is well.
 */
 
-#if defined(Solaris251) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 int door_info( int fd, void *info )
 {
@@ -777,7 +775,7 @@ int __lxstat(int version, const char *path, struct stat *buf)
 	return _condor_lxstat( version, path, buf );
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22)
 int _xstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_xstat64( version, path, buf );
@@ -807,7 +805,7 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_lxstat64( version, path, buf );
 }
-#endif /* GLIBC21 */
+#endif /* GLIBC22 */
 
 /*
    _condor_k_stat_convert() takes in a version, and two pointers, one
@@ -865,6 +863,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		target->__unused2 = 0;
 		target->__unused3 = 0;
 		#if defined (GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -891,7 +890,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(GLIBC21) || defined(IRIX) || defined(GLIBC22)
+#if defined(IRIX) || defined(GLIBC22)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
@@ -932,6 +931,7 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 		target->__unused2 = 0;
 		target->__unused3 = 0;
 		#if defined(GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -1031,7 +1031,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 	}
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22)
 void 
 _condor_s_stat_convert64( int version, const struct stat *source, 
 						struct stat64 *target )
@@ -1072,6 +1072,7 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 		target->__unused2 = 0;
 		target->__unused3 = 0;
 		#if defined(GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -1140,7 +1141,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22)
 extern "C" int REMOTE_CONDOR_stat( const char *, struct stat * );
 int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1213,7 +1214,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22)
 extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int
 _condor_fxstat64(int version, int fd, struct stat64 *buf)
@@ -1287,7 +1288,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22)
 extern "C" int REMOTE_CONDOR_lstat( const char *, struct stat *);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1480,9 +1481,9 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(HPUX9) || defined(LINUX) 
+#if defined(LINUX) 
 ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris)
 ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #else
 int readv( int fd, struct iovec *iov, int iovcnt )
@@ -1508,7 +1509,7 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(HPUX9) || defined(LINUX) 
+#if defined(LINUX) 
 ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
 #elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
 ssize_t writev( int fd, const struct iovec *iov, int iovcnt )

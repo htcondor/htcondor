@@ -7,10 +7,6 @@
 #include "switches.remap-SOLARIS.h"
 #endif
 
-#ifdef Solaris251
-#include "switches.remap-SOLARIS251.h"
-#endif
-
 #ifdef Solaris26
 #include "switches.remap-SOLARIS26.h"
 #endif
@@ -29,10 +25,6 @@
 
 #ifdef IRIX65
 #include "switches.remap-IRIX65.h"
-#else 
-#ifdef IRIX
-#include "switches.remap-IRIX.h"
-#endif
 #endif
 
 #ifdef LINUX

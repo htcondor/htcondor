@@ -82,7 +82,7 @@
 #	define SYNC_RETURNS_VOID 1
 #endif
 
-#if defined(HPUX10) || (defined(Solaris) && !defined(Solaris251))
+#if defined(HPUX10) || defined(Solaris)
 #	define HAS_64BIT_STRUCTS	1
 #	define HAS_64BIT_SYSCALLS	1
 #endif

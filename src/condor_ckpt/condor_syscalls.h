@@ -21,14 +21,10 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #ifndef _CONDOR_SYSCALLS_H
 #define _CONDOR_SYSCALLS_H
 
-#if defined( AIX32)
-#	include "syscall.aix32.h"
-#elif defined(Solaris)
+#if defined(Solaris)
 #	include <sys/syscall.h> /* Solaris specific change ..dhaval 6/30 */
 #elif defined(IRIX)
 #	include <sys.s>
@@ -57,7 +53,7 @@ BOOL LocalSysCalls();
 BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
 
-#if defined(OSF1) || defined(HPUX) || defined(SUNOS41) || defined (Solaris)
+#if defined(OSF1) || defined(HPUX) || defined (Solaris)
 	int syscall( int, ... );
 #endif
 
@@ -72,4 +68,4 @@ BOOL MappingFileDescriptors();
 }
 #endif
 
-#endif
+#endif /* _CONDOR_SYSCALLS_H */

@@ -72,11 +72,9 @@ extern "C" {
 	extern "C" unsigned int ntohl( unsigned int );
 #elif defined(HPUX)
 #	include <netinet/in.h>
-#elif defined(Solaris) && defined(sun4m)
+#elif defined(Solaris)
 	#define htonl(x)		(x)
 	#define ntohl(x)		(x)
-#elif defined(Solaris)
-	/* Already included it */
 #elif defined(IRIX)
 	#include <sys/endian.h>
 #elif defined(LINUX)
@@ -429,7 +427,6 @@ _condor_prestart( int syscall_mode )
 	   on restart, and we will lose floats on context switches.  -Jim B. */
 #if defined(Solaris)
 	setnetconfig();
-#if defined(sun4m)
 	float x=23, y=14, z=256;
 	if ((x+y)>z) {
 		dprintf(D_ALWAYS,
@@ -437,7 +434,6 @@ _condor_prestart( int syscall_mode )
 		Suicide();
 	}
 	z=x*y;
-#endif
 #endif
 
 }
@@ -2080,23 +2076,6 @@ _condor_save_stack_location()
 {
 	SavedStackLoc = stack_start_addr();
 }
-
-#if defined( X86 ) && defined( Solaris ) 
-int
-__CERROR() 
-{
-	return errno;
-}
-#endif
-
-
-#if defined( X86 ) && defined( Solaris26 ) 
-int
-__CERROR64()
-{
-	return errno;
-}
-#endif
 
 void mydprintf(int foo, const char *fmt, ...)
 {
