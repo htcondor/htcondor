@@ -168,7 +168,7 @@ int main (int argc, char **argv)
 
 	if (first)
 	{
-		fprintf (stderr,"Error: Collector has no record of schedd/submittor\n");
+		fprintf (stderr,"Error: Collector has no record of schedd/submitter\n");
 		exit(1);
 	}
 
@@ -217,7 +217,7 @@ processCommandLineArguments (int argc, char *argv[])
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
-				fprintf (stderr, "Cannot query both schedd's and submittors\n");
+				fprintf (stderr, "Cannot query both schedd's and submitters\n");
 				exit(1);
 			}
 
@@ -244,17 +244,17 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (match_prefix (arg, "submittor")) {
+		if (match_prefix (arg, "submitter")) {
 
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
-				fprintf (stderr, "Cannot query both schedd's and submittors\n");
+				fprintf (stderr, "Cannot query both schedd's and submitters\n");
 				exit(1);
 			}
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Argument -submittor requires another "
+				fprintf( stderr, "Argument -submitter requires another "
 							"parameter\n");
 				exit(1);
 			}
@@ -414,17 +414,19 @@ usage (char *myName)
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
-		"\t\t-submittor <submittor>\tGet queue of specific submittor\n"
+		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-name <name>\t\tName of schedd\n"
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-long\t\t\tVerbose output\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
+		"\t\trestriction list\n"
+		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n", myName);
-
+		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"\t\t-constraint <expr>\tAdd constraint on classads\n",
+			myName);
 }
 
 
@@ -607,7 +609,7 @@ fetchSubmittorPrios()
 	}
 
 	if( i == 1 ) {
-		printf( "Warning:  Found no submittors\n" );
+		printf( "Warning:  Found no submitters\n" );
 	}
 }
 
