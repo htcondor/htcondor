@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include "condor_fix_stdio.h"
 #include <stdlib.h>
-#include <unistd.h>
+#include "condor_fix_unistd.h"
 #include <limits.h>
 #include <string.h>
 #include <ctype.h>
