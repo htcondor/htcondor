@@ -1,10 +1,6 @@
-#define _POSIX_SOURCE
 #include "condor_common.h"
-#if !defined(WIN32)
-#include <pwd.h>
-#endif
+static char *_FileName_ = __FILE__;
 
-#include <stdio.h>
 #include "condor_io.h"
 
 #include "qmgr.h"
@@ -14,17 +10,7 @@
 #include "condor_classad.h"
 
 int open_url(char *, int, int);
-#if !defined(WIN32)
-#if defined(HPUX9)
-extern "C" int gethostname(char *name, unsigned int namelen);
-#else
-extern "C" int gethostname(char *name, int namelen);
-#endif
-#endif
 extern "C" char*	get_schedd_addr(const char*); 
-
-static char *_FileName_ = __FILE__;
-
 
 ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
