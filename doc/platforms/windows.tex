@@ -1,50 +1,48 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:platform-windows}Microsoft Windows}
-\index{platform-specific information!Windows}
-\index{Windows NT!introduction|(}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Windows|(}
 
-Windows NT is a strategic platform for Condor,
+Windows is a strategic platform for Condor,
 and therefore we have been working toward a complete
-port to Windows NT.
-Our goal is to make Condor every bit as capable on Windows NT as it is on
-Unix -- or even more capable.  
+port to Windows.
+Our goal is to make Condor every bit as capable on Windows as it is on
+Unix -- or even more capable.
 
-Porting Condor from Unix to Windows NT is a formidable task,
+Porting Condor from Unix to Windows is a formidable task,
 because many
 components of Condor must interact closely with the underlying operating
 system.
 Instead of waiting until all components of Condor are running
-and stabilized on Windows NT,
-we have decided to make a clipped version of Condor for Windows NT.
+and stabilized on Windows,
+we have decided to make a clipped version of Condor for Windows.
 A clipped version is one in which there is no checkpointing
 and there are no remote system calls.
 
 This section contains additional information specific to running
-Condor on Windows NT.  Eventually this information will be integrated
+Condor on Windows.  Eventually this information will be integrated
 into the Condor Manual as a whole, and this section will disappear.
-In order to effectively use Condor NT, first read the overview
+In order to effectively use Condor, first read the overview
 chapter (section~\ref{sec:overview})
 and the user's manual (section~\ref{sec:usermanual}).
 If you will
-also be administrating or customizing the policy and set up of Condor NT,
+also be administrating or customizing the policy and set up of Condor,
 also read the administrator's manual 
 chapter (section~\ref{sec:Admin-Intro}).
 After reading these chapters,
 review the information in this chapter for
 important information and differences when using and administrating
-Condor on Windows NT.
+Condor on Windows.
 For information on installing Condor for Windows, see
 section~\ref{sec:Windows-Install}.
-\index{Windows NT!introduction|)}
 
 
-\index{Windows NT!release notes|(}
 
-\subsection{What is missing from Condor NT \VersionNotice?}
+\subsection{What is missing from Condor \VersionNotice\ for Windows?}
+\index{Windows!release notes}
 
-In general, this release on NT works the same as the 
-release of Condor for Unix.  
+In general, this release for Windows works the same as the 
+release of Condor for Unix.
 However, the following items are not supported in this version:
 
 \begin{itemize}
@@ -62,17 +60,17 @@ of accounts (one per VM) with minimal access rights to run the job.
 
 \end{itemize}
 
-\subsection{What is included in Condor NT \VersionNotice?}
+\subsection{What is included in Condor \VersionNotice\ for Windows?}
 
 Except for those items listed above, most everything works
-the same way in Condor NT as it does in the Unix release.
+the same way in Condor as it does in the Unix release.
 This release is based on the Condor \VersionNotice\ source tree, and thus the
 feature set is the same as Condor \VersionNotice\ for Unix.  
-For instance, all of the following work in Condor NT:
+For instance, all of the following work in Condor:
 \begin{itemize}
 
 \item The ability to submit, run, and manage queues of jobs running on a
-cluster of NT machines.
+cluster of Windows machines.
 
 \item All tools such as \Condor{q}, \Condor{status}, \Condor{userprio},
 are included. Only \Condor{compile} is
@@ -86,21 +84,22 @@ ClassAds contain a full complement of information, including system
 dependent entries such as dynamic updates of the job's image size and CPU
 usage.
 
-\item Everything necessary to run a Condor central manager on Windows NT.
+\item Everything necessary to run a Condor central manager on Windows.
 
 \item Security mechanisms.
 
 \item Support for SMP machines.
 
-\item Condor NT can run jobs at a lower operating system priority level.
+\item Condor for Windows can run jobs at a lower operating system
+priority level.
 Jobs can be suspended, soft-killed by using a WM\_CLOSE message,
 or hard-killed automatically based upon policy expressions.
-For example, Condor NT can automatically suspend a job
+For example, Condor can automatically suspend a job
 whenever keyboard/mouse or non-Condor created CPU activity is detected, and
 continue the job after the the machine has been idle for a specified amount
 of time.
 
-\item Condor NT correctly manages jobs which create multiple processes.  For
+\item Condor correctly manages jobs which create multiple processes.  For
 instance, if a Condor job spawns multiple processes and Condor
 needs to kill the job,
 all processes created by the job will be terminated.
@@ -108,7 +107,7 @@ all processes created by the job will be terminated.
 \item In addition to interactive tools, users and administrators can receive
 information from Condor by e-mail (standard SMTP) and/or by log files.
 
-\item Condor NT includes a friendly GUI installation and set up program,
+\item Condor includes a friendly GUI installation and set up program,
 which can perform a full install or deinstall of Condor.
 Information specified by the user in the set up program is stored in the
 system registry.  
@@ -118,15 +117,15 @@ new release using a minimal amount of effort.
 \end{itemize}
 
 
-\subsection{Details on how Condor NT starts/stops a job}
+\subsection{Details on how Condor for Windows starts/stops a job}
 
-This section provides some details on how Condor NT starts and stops jobs.
+This section provides some details on how Condor starts and stops jobs.
 This discussion is geared for the Condor administrator or advanced user who is
-already familiar with the material in the Administrators' Manual
-and wishes to know detailed information on what Condor NT does when
+already familiar with the material in the Administrator's Manual
+and wishes to know detailed information on what Condor does when
 starting and stopping jobs.
 
-When Condor NT is about to start a job, the \Condor{startd} on the execute
+When Condor is about to start a job, the \Condor{startd} on the execute
 machine spawns a \Condor{starter} process.  The \Condor{starter} then
 creates:
 \begin{enumerate}
@@ -192,7 +191,7 @@ the starter sends a WM\_CLOSE message to the job.
 If the job spawned multiple child processes, the WM\_CLOSE message is only
 sent to the parent process (that is, the one started by the starter).
 The
-WM\_CLOSE message is the preferred way to terminate a process on Windows NT,
+WM\_CLOSE message is the preferred way to terminate a process on Windows,
 since this method allows the job to cleanup and free any resources it may
 have allocated.
 When the job exits, the starter cleans up any processes left behind.
@@ -220,9 +219,9 @@ cleanup work at vacate time; a WM\_CLOSE message
 generates a CTRL\_CLOSE\_EVENT.  See SetConsoleCtrlHandler() in the Win32
 documentation for more info.
 
-\Note The default handler in Windows NT for a WM\_CLOSE message is for the
+\Note The default handler in Windows for a WM\_CLOSE message is for the
 process to exit.  Of course, the job could be coded to ignore it and not
-exit, but eventually the \Condor{startd} will get impatient and hard-kill
+exit, but eventually the \Condor{startd} will become impatient and hard-kill
 the job (if that is the policy desired by the administrator).
 
 Finally, after the job has left and any files transferred back,
@@ -235,7 +234,7 @@ If for some reason the \Condor{startd} should disappear as well
 (that is, if the entire machine was power-cycled hard),
 the \Condor{startd} will clean up when Condor is restarted.
 
-\subsection{Security considerations in Condor NT}
+\subsection{Security considerations in Condor for Windows}
 
 % WRT the backslash character, extra spaces are added before it
 % as viewed from the html generated.
@@ -285,9 +284,9 @@ integrity of the job queue is compromised, because a malicious user could
 remove other user's jobs or even change what executable a user's job will
 run.  To guard against this, in Condor's default configuration all connections to the \Condor{schedd} (the
 process which manages the job queue on a given machine) are authenticated
-using Windows NT's SSPI security layer.  The user is then authenticated
-using the same challenge-response protocol that NT uses to authenticate
-users to Windows NT file servers.  Once authenticated, the only users
+using Windows' SSPI security layer.  The user is then authenticated
+using the same challenge-response protocol that Windows uses to authenticate
+users to Windows file servers.  Once authenticated, the only users
 allowed to edit job entry in the queue are:
 \begin{enumerate}
 \item the user who originally submitted that job (i.e. Condor allows users
@@ -301,22 +300,22 @@ Condor itself will not be able to access the job queue when needed.  If the
 LocalSystem account on your machine is compromised, you have all sorts of
 problems!
 
-To protect the actual job queue files themselves, the Condor NT installation
+To protect the actual job queue files themselves, the Condor installation
 program will automatically set permissions on the entire Condor release
 directory so that only Administrators have write access.
 
-Finally, Condor NT has all the IP/Host-based security mechanisms present
+Finally, Condor has all the IP/Host-based security mechanisms present
 in the full-blown version of Condor.  See section~\ref{sec:Host-Security}
 starting on page~\pageref{sec:Host-Security} for complete information
 on how to allow/deny access to Condor based upon machine host name or
 IP address.
 
-\subsection{Interoperability between Condor for Unix and Condor NT}
+\subsection{Interoperability between Condor for Unix and Condor for Windows}
 
-Unix machines and Windows NT machines running Condor can happily
+Unix machines and Windows machines running Condor can happily
 co-exist in the same Condor pool without any problems.
-Jobs submitted on Windows NT can run on Windows NT or Unix,
-and jobs submitted on Unix can run on Unix or Windows NT.
+Jobs submitted on Windows can run on Windows or Unix,
+and jobs submitted on Unix can run on Unix or Windows.
 Without any specification
 (using the \AdAttr{requirements} expression in the submit description file),
 the default behavior will be to 
@@ -324,19 +323,19 @@ require the execute machine to be of the same architecture and operating
 system as the submit machine.
 
 There is absolutely no need to run more than one Condor central manager,
-even if you have both Unix and NT machines.  The Condor central manager
-itself can run on either Unix or NT; there is no advantage to choosing
+even if you have both Unix and Windows machines.  The Condor central manager
+itself can run on either Unix or Windows; there is no advantage to choosing
 one over the other.  Here at University of Wisconsin-Madison, for
 instance, we have hundreds of Unix (Solaris, Linux, Irix, etc) and
-Windows NT machines in our Computer Science Department Condor pool.
-Our central manager is running on Windows NT.  All is happy.
+Windows machines in our Computer Science Department Condor pool.
+Our central manager is running on Windows.  All is happy.
 
-\subsection{Some differences between Condor for Unix -vs- Condor NT}
+\subsection{Some differences between Condor for Unix -vs- Condor for Windows}
 
 \begin{itemize}
 
 \item On Unix, we recommend the creation of a ``\textit{condor}'' account
-when installing Condor.  On NT, this is not necessary, as Condor NT is
+when installing Condor.  On Windows, this is not necessary, as Condor is
 designed to run as a system service as user LocalSystem.
 
 \item On Unix, Condor finds the \File{condor\_config} main configuration
@@ -359,6 +358,6 @@ fault occurred and where it happened.  This information can be used by
 the Condor developers to fix the problem.
 
 \end{itemize}
-\index{Windows NT!release notes|)}
 
 \input{platforms/windows-install.tex}
+\index{platform-specific information!Windows|)}

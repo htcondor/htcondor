@@ -134,9 +134,9 @@ As Condor-C is a recent addition to Condor,
 the universes, associated integer assignments,
 and notes about the existence of functionality are given in 
 Table~\ref{working-remote-universes}.
-The note "not yet supported" implies that
+The note "untested" implies that
 submissions under the given universe have not yet
-been tested.
+been throughly tested.
 They may already work.
 
 % universes, and whether they work in Condor-C
@@ -144,18 +144,18 @@ They may already work.
 \begin{table}[hbt]
 \begin{tabular}{|l|l|l}
 \textbf{Universe Name} & \textbf{Value} & \textbf{Notes}\\ \hline \hline
-standard  & 1 & not yet supported \\ \hline
-PVM       & 4 & not yet supported \\ \hline
+standard  & 1 & untested \\ \hline
+PVM       & 4 & untested \\ \hline
 vanilla   & 5 & works well \\ \hline
 scheduler & 7 & does \emph{not} work \\ \hline
-MPI       & 8 & not yet supported \\ \hline
+MPI       & 8 & untested \\ \hline
 grid      & 9 & \\
  & grid\_type = condor & works well \\
- & grid\_type = gt2  & not intended to work with Condor-C \\
- & grid\_type = gt3 & not intended to work with Condor-C \\
- & grid\_type = nordugrid & not yet supported \\
- & grid\_type = oracle & not yet supported \\ \hline
-java & 10 & not yet supported \\ \hline
+ & grid\_type = gt2  & untested \\
+ & grid\_type = gt3 & untested \\
+ & grid\_type = nordugrid & untested \\
+ & grid\_type = oracle & untested \\ \hline
+java & 10 & untested \\ \hline
 \end{tabular}
 \caption{\label{working-remote-universes}Functionality of remote job universes with Condor-C}
 \end{table}

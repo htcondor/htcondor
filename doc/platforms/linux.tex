@@ -20,10 +20,10 @@ system:
 \end{itemize}
 
 The Condor Team tries to provide support for various releases of the
-Red Hat distribution of Linux.
+distribution of Linux.
 Red Hat is probably the most popular Linux distribution, and it
 provides a common set of versions for the above system components
-which Condor can aim to support.
+at which Condor can aim support.
 Condor will often work with Linux distributions other than Red Hat (for
 example, Debian or SuSE) that have the same versions of the above
 components.
@@ -38,6 +38,31 @@ The following sections describe the details of Condor's support for
 the currently available versions of Red Hat Linux on x86 architecture
 machines.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-activity}Linux Kernel-specific Information}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Linux keyboard and mouse activity}
+\index{Linux!keyboard and mouse activity}
+
+Distributions that rely on the Linux 2.4.x and all Linux 2.6.x kernels
+through version 2.6.10
+do not modify the \Code{atime} of the input device file.
+This leads to difficulty when Condor is run using one of these
+kernels. 
+The problem manifests itself in that Condor cannot properly
+detect keyboard or mouse activity.
+Therefore, using the activity in policy setting cannot
+signal that Condor should stop running a job on a machine.
+
+Condor version 6.6.8 implements a workaround for PS/2 devices.
+A better fix is the Linux 2.6.10 kernel
+patch linked to from the directions posted at
+\URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
+This patch works better for PS/2 devices, and
+may also work for USB devices.
+A future version of Condor will implement better recognition
+of USB devices,
+such that the kernel patch will also definitively work for USB devices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:platform-linux-rh6}Red Hat Version 6.x}

@@ -121,7 +121,12 @@ the grid\_monitor was activated.
 
 \begin{itemize}
 
-\item None.
+\item This release contains all the bug fixes from the 6.6 stable
+  series upto and including version 6.6.7, and some of the fixes that
+  will be included in version 6.6.8.
+  The bug fixes in version 6.6.8 that were not included in version
+  6.7.3 are listed in a seperate section of the 6.6.8 version
+  history. 
 
 \end{itemize}
 
@@ -151,6 +156,25 @@ if it encounters a double run of the same node job (set the
 direct installation is desired instead of submitting a setup job to the
 remote gatekeeper.  (For example, this is useful when doing an installation
 onto AFS.)
+
+\item If \Attr{RemoteOwner} is exported via \Expr{STARTER\_VM\_EXPRS} into the
+ad of other virtual machines, the \Condor{negotiator} automatically inserts
+\Attr{RemoteUserPrio} into the ad as well, so policy expressions can now take
+into account the priority of jobs running on other virtual machines on the
+same host.
+
+\item Linux 2.6 kernels do not update the access time for console devices,
+so Condor was unable to detect if there has been activity at the keyboard
+or mouse. As a work-around, Condor now polls /proc/interrupts to detect
+if the keyboard has requested attention. This does not work for USB keyboards
+or pseudo TTYs, so \Attr{ConsoleIdle} on 2.6 kernels will be wrong for some
+devices. Future versions of Condor or Linux may correct this.
+
+\item \Condor{dagman} no longer removes the X509\_USER\_PROXY environment 
+variable.
+This should allow users to set the environment variable before invoking 
+\Condor{submit\_dag} and have the jobs submitted by \Condor{dagman} correctly
+find the proxy file.
 
 \end{itemize}
 
@@ -185,6 +209,38 @@ zero (silent), could cause it to to improperly recognize persistant
 
 \begin{itemize}
 
+\item Unfortunately, the default \Macro{OPSYS} value for the MacOSX
+  version of Condor was incorrectly changed in version 6.7.3.
+  Condor used to always report \verb@OSX@, but in version 6.7.3 it
+  will report either \verb@OSX10_2@, \verb@OSX10_3@, or
+  \verb@OSX_UNK@.
+  This is wrong, since Condor jobs submitted to any version of OSX
+  should be able to run on any other version of OSX, and the above
+  change needlessly partitions resources and complicates things for
+  end-users.
+  Therefore, anyone running version 6.7.3 on MacOSX is encouraged to
+  add the following line to their global \File{condor\_config} file:
+\begin{verbatim}
+OPSYS = OSX
+\end{verbatim}
+
+  If your pool is already running the new release, you can cause the
+  above change to take effect by running the following command on your
+  pool's central manager machine (or any machine listed in the
+  \MacroNI{HOSTALLOW\_ADMINISTRATOR} list) after you have changed the
+  \MacroNI{OPSYS} value in your configuration:
+\begin{verbatim}
+condor_reconfig -all
+\end{verbatim}
+
+  However, if you have already submitted jobs to your pool with the
+  old \MacroNI{OPSYS} value, the \Attr{Requirements} expression in
+  those jobs will still refer to the incorrect value.
+  In this case, you should either a) wait for the jobs to complete
+  before making the above change, b) remove the jobs and resubmit
+  them after you've made the change, or c) manually run \Condor{qedit}
+  on the jobs to change their \Attr{Requirements} expressions.
+
 \item When running in recovery mode on a DAG that has PRE scripts,
 \Condor{dagman} may attempt more than the specified number of retries
 of a node (counting retries attempted during the first run of the
@@ -204,7 +260,7 @@ in recovery mode.
 
 \begin{itemize}
 
-\item Condor \VersionNotice includes some bug fixes from Version 6.6.7,
+\item Condor Version 6.7.2 includes some bug fixes from Version 6.6.7,
 but none from Version 6.6.8.
 
 \item MPI users who are upgrading from previous versions of Condor

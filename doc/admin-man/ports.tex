@@ -1,17 +1,17 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Port-Details}Port Usage in Special Evironments }
+\subsection{\label{sec:Port-Details}Port Usage in Special Environments }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{port usage}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Ports-NonStandard}Non Standard Ports for Central Managers}
+\subsubsection{\label{sec:Ports-NonStandard}Non Standard Port Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!nonstandard ports for central managers}
 By default,
 Condor uses port 9618 for the \Condor{collector} daemon
 and 9614 for the \Condor{negotiator} daemon.
-To use non standard port numbers for these daemons,
+To use non well-known port numbers for these daemons,
 the configuration variables that tell Condor these communication
 details are modified.
 Instead of
@@ -21,11 +21,77 @@ COLLECTOR_HOST = $(CONDOR_HOST)
 NEGOTIATOR_HOST = $(CONDOR_HOST)
 \end{verbatim}
 the configuration might be
+\footnotesize
 \begin{verbatim}
 CONDOR_HOST = machX.cs.wisc.edu
 COLLECTOR_HOST = $(CONDOR_HOST):9650
 NEGOTIATOR_HOST = $(CONDOR_HOST):9651
 \end{verbatim}
+\normalsize
+
+If a non well-known port is defined, the same value of
+\MacroNI{COLLECTOR\_HOST} (including the port) must be used for all
+machines in the Condor pool.
+Therefore, this setting should be modified in the global
+configuration file (\File{condor\_config} file),
+or the value must be duplicated across
+all configuration files in the pool if a single configuration file
+is not being shared.
+
+On single-machine pools, 
+it is permitted to configure the
+\Condor{collector} and \Condor{negotiator} daemons
+to use a dynamically assigned port,
+as given out by the operating system.
+This prevents port conflicts with other services on the same machine.
+However, dynamically assigned ports are only to be used on
+single-machine Condor pools,
+and only if the
+\Macro{COLLECTOR\_ADDRESS\_FILE} and \Macro{NEGOTIATOR\_ADDRESS\_FILE}
+configuration variables have also been defined.
+This mechanism allows all of the Condor daemons and tools running on
+the same machine to find the real port for the \Condor{collector} and
+\Condor{negotiator} daemons,
+even when these ports are not defined in the
+configuration file and are not known in advance.
+
+To enable these daemons to use a dynamic port,
+the port number is set to 0 in the \Macro{COLLECTOR\_HOST} and
+\Macro{NEGOTIATOR\_HOST} variables.
+The \MacroNI{COLLECTOR\_ADDRESS\_FILE} and \MacroNI{NEGOTIATOR\_ADDRESS\_FILE}
+configuration variables must also be defined,
+as they provide known files where the IP address
+and port information that is dynamically generated will be stored.
+All Condor clients know to look at the
+information stored in these files.
+For example:
+\footnotesize
+\begin{verbatim}
+COLLECTOR_HOST = $(CONDOR_HOST):0
+NEGOTIATOR_HOST = $(CONDOR_HOST):0
+COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+NEGOTIATOR_ADDRESS_FILE = $(LOG)/.negotiator_address
+\end{verbatim}
+\normalsize
+
+\Note Using a port of 0 for the \Condor{collector} and
+\Condor{negotiator} and specifying a
+\MacroNI{COLLECTOR\_ADDRESS\_FILE} or
+\MacroNI{NEGOTIATOR\_ADDRESS\_FILE} 
+only works in Condor version 6.6.8 or later in the 6.6 stable series,
+and in version 6.7.4 or later in the 6.7 development series.
+Do not attempt to use these settings with older versions of Condor.
+
+Configuration definitions of \MacroNI{COLLECTOR\_ADDRESS\_FILE}
+and \MacroNI{NEGOTIATOR\_ADDRESS\_FILE}
+are in section~\ref{param:SubsysAddressFile} on
+page~\pageref{param:SubsysAddressFile},
+and
+\MacroNI{COLLECTOR\_HOST} and
+\MacroNI{NEGOTIATOR\_HOST} are in
+section~\ref{param:CollectorHost} on
+page~\pageref{param:CollectorHost}.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -43,39 +109,89 @@ specific ports and to utilize a specific range of ports.
 By default,
 Condor uses port 9618 for the \Condor{collector} daemon,
 9614 for the \Condor{negotiator} daemon,
-and system-assigned (apparently random) ports for everything else.
+and dynamic (apparently random) ports for everything else.
 See section~\ref{sec:Ports-NonStandard},
-if non standard ports are to be used for the
-\Condor{collector} \Condor{negotiator} daemons.
+if dynamic ports are desired for the
+\Condor{collector} and \Condor{negotiator} daemons.
 
 The configuration variables
 \Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting a restricted
 range of ports that Condor will use.
-This may be useful if behind a firewall.
+This may be useful when some machines are behind a firewall.
 The configuration macros
-\MacroNI{HIGHPORT} and \MacroNI{LOWPORT} only affect these
-system-assigned ports, but will restrict them to the range specified.
-These configuration variables are fully defined
+\MacroNI{HIGHPORT} and \MacroNI{LOWPORT} 
+will restrict dynamic ports to the range specified.
+The configuration variables are fully defined
 in section~\ref{sec:Condor-wide-Config-File-Entries}.
-Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at least 1024.
+Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at 
+least 1024 for Condor version 6.6.8.
 
-% From Alain, Karen is awaiting confirmation on 7/7/03
-% If a machine is an execution machine, it needs several ports. By default,
-% you can have one job per CPU on your machine (this can be changed by
-% defining virtual CPUs). Someone will need to estimate this better than me,
-% but you need something like:
-% 
-% 1 port per job that can run (condor_starter)
-% 1 port for condor_master
-% 1 port for condor_startd (advertises machine)
-%
-% It possible that we need more than that.
-% 
-% If a machine is an submission machine, you'll need:
-% 
-% 1 port for condor_master
-% 1 port for schedd
-% 1 port per active job that you have
+The total number of ports needed depends on the size of the pool,
+the usage of the machines within the pool (which machines
+run which daemons),
+and the number of jobs that may execute at one time.
+Here we discuss how many ports are used by each
+participant in the system.
+
+The central manager of the pool needs
+\Expr{5 + \MacroNI{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}}
+ports for daemon communication,
+where 
+\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}
+is specified in the
+configuration or defaults to the value 16.
+
+Each execute machine (those machines running a \Condor{startd} daemon)
+requires
+\Expr{ 5 + (5 * number of virtual machines advertised by that machine)}
+ports.
+By default, the number of virtual machines advertised
+will equal the number of physical CPUs in that machine.
+
+Submit machines (those machines running a \Condor{schedd} daemon)
+require
+\Expr{ 5 + (5 *  \MacroNI{MAX\_JOBS\_RUNNING})} ports.
+The configuration variable \Macro{MAX\_JOBS\_RUNNING}
+limits (on a per-machine basis, if desired)
+the maximum number of jobs.
+Without this configuration macro,
+the maximum number of jobs that could be simultaneously
+executing at one time
+is a function of the number of reachable execute machines. 
+
+Also be aware that \MacroNI{HIGHPORT} and \MacroNI{LOWPORT}
+only impact dynamic port selection used by the Condor system,
+and they do not impact port selection used by jobs submitted to Condor.
+Thus, jobs submitted to Condor that may create
+network connections may not work in a port restricted environment.
+For this reason, specifying \MacroNI{HIGHPORT} and \MacroNI{LOWPORT}
+is not going to produce the
+expected results if a user submit jobs to be executed under
+the PVM or MPI job universes.
+
+Where desired, a local
+configuration for machines \emph{not} behind a firewall
+can override the usage of \MacroNI{HIGHPORT} and \MacroNI{LOWPORT},
+such that the ports used for these machines are not restricted.
+This can be accomplished by adding the following to the
+local configuration file of those machines not
+behind a firewall:
+\begin{verbatim}
+HIGHPORT = UNDEFINED
+LOWPORT  = UNDEFINED
+\end{verbatim}
+
+
+If the maximum number of ports allocated using 
+\MacroNI{HIGHPORT} and \MacroNI{LOWPORT}
+is too few,
+socket binding errors of the form
+\footnotesize
+\begin{verbatim}
+failed to bind any port within <$LOWPORT> - <$HIGHPORT>
+\end{verbatim}
+\normalsize
+are like to appear repeatedly in log files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-MultipleCollectors}Multiple Collectors}
