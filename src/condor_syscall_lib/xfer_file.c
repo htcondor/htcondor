@@ -41,6 +41,10 @@ extern int	Syscalls;
 
 #define CHUNK_SIZE 4096
 
+#if defined(LINUX)
+#define MIN(a,b)	((a)<(b)?(a):(b))
+#endif
+
 /*
 ** Transfer a local file to a remote machine.
 */
