@@ -136,7 +136,7 @@ void do_loop( int count, int ckptfreq )
 	struct rusage   buf;
 
 	for( i=0; i<count; i++ ) {
-		waste_a_second();
+		x_waste_a_second();
 		printf( "%d\t", i );
 
 		if( getrusage(RUSAGE_SELF,&buf) < 0 ) {

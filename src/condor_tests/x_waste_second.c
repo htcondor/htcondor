@@ -55,7 +55,7 @@ extern "C" {
 #endif
 
 void
-waste_a_second()
+x_waste_a_second()
 {
 	int	i, j;
 

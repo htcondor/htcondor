@@ -86,7 +86,7 @@ main( int argc, char* argv[] )
 			exit( 1 );
 		}
 		save( &tp, &old_tp );
-		waste_a_second();
+		x_waste_a_second();
 	}
 
 	printf( "SUCCESS\n");

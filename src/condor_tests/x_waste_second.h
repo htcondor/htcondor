@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-void waste_a_second();
+void x_waste_a_second();
 
 #ifdef __cplusplus
 }
