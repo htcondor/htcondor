@@ -33,7 +33,7 @@
 #include "condor_uid.h"
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include <math.h>
+#include "exit.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -439,7 +439,8 @@ int daemon::StartDaemon()
 	if( pid == 0 ) {	/* The child */
 		pid = ::getpid();
 		if( setsid() == -1 ) {
-			EXCEPT( "setsid(), errno = %d\n", errno );
+			dprintf( D_ALWAYS, "ERROR: setsid() failed, errno = %d\n", errno );
+			exit( JOB_EXEC_FAILED );
 		}
 
 		// Close all inherited sockets and fds
@@ -454,9 +455,9 @@ int daemon::StartDaemon()
 			(void)execl( process_name, shortname, "-f", 0 );
 		}
 	
-		// should never get here...
-		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
-		return 0;
+		dprintf( D_ALWAYS, "ERROR: execl( %s, %s, -f, 0 ) failed, errno = %d\n",
+				 process_name, shortname, errno );
+		exit( JOB_EXEC_FAILED );
 	}
 #endif
 	
@@ -468,7 +469,7 @@ int daemon::StartDaemon()
 	}
 
 	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
-		shortname, pid );
+		process_name, pid );
 	
 	// update the timestamp so we do not restart accidently a second time
 	timeStamp = GetTimeStamp(process_name);
