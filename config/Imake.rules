@@ -49,6 +49,13 @@ object_dir_target(condor_##obj_name)
 #define all_target(targetlist)				@@\
 all: targetlist
 
+/*
+** Just build a given thing from a given directory.
+*/
+#define single_target(dir, target)			@@\
+##dir##/##target##: dir					@@\
+	cd dir; make target
+
 
 /***********************************************************************
 ** building targets
