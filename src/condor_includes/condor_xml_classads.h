@@ -105,6 +105,20 @@ class ClassAdXMLUnparser
 	 * @param use_compact_spacing A boolean indicating if compact spacing is desired. */
 	void SetUseCompactSpacing(bool use_compact_spacing);
 
+	/** Query to find out if we will output the Type attribute.
+	 *  @return true if we do, false if not. */
+	bool GetOutputType(void);
+
+	/** Set whether or not we output the Type attribute */
+	void SetOutputType(bool output_type);
+
+	/** Query to find out if we will output the TargetType attribute.
+	 *  @return true if we do, false if not. */
+	bool GetOuputTargetType(void);
+
+	/** Set whether or not we output the Target attribute */
+	void SetOutputTargetType(bool output_target_type);
+
 	/** Adds XML header to buffer. This is the information that should appear 
 	 * at the beginning of all ClassAd XML files. 
 	 * @param buffer The string to append the header to. */
@@ -133,6 +147,8 @@ class ClassAdXMLUnparser
 
  private:
 	bool _use_compact_spacing;
+	bool _output_type;
+	bool _output_target_type;
 };
 
 #endif /* __CONDOR_XML_CLASSADS_H */
