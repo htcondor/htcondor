@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
+#include "condor_debug.h"
 
 #define MAX_NUM_PIDS 2000
 
