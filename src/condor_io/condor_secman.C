@@ -1618,7 +1618,7 @@ bool SecMan :: invalidateHost(const char * sin)
 {
     bool removed = true;
 
-    if (sin) {
+    if (sin && sin[0]) {
         KeyCacheEntry * keyEntry = NULL;
         MyString  addr(sin), id;
 
@@ -1627,7 +1627,7 @@ bool SecMan :: invalidateHost(const char * sin)
             while (session_cache->key_table->iterate(id, keyEntry)) {
 				char * remote_sinful = sin_to_string(keyEntry->addr());
 					// if this is an outgoing session, we need to check against the keyEntry->addr()
-				if (addr == MyString(remote_sinful)) {
+				if (remote_sinful && remote_sinful[0] &&  (addr == MyString(remote_sinful))) {
 					if (DebugFlags & D_FULLDEBUG) {
 						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
 					}
@@ -1638,7 +1638,7 @@ bool SecMan :: invalidateHost(const char * sin)
 						// ServerCommandSock that is in the cached policy classad.
 					char * local_sinful = NULL;
 					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
-					if (addr == MyString(local_sinful)) {
+					if (local_sinful && local_sinful[0] && (addr == MyString(local_sinful))) {
 						if (DebugFlags & D_FULLDEBUG) {
 							dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), local_sinful);
 						}
@@ -1646,7 +1646,9 @@ bool SecMan :: invalidateHost(const char * sin)
 						// remove_commands(keyEntry);
 						session_cache->remove(id.Value());
 					}
-					free(local_sinful);
+					if (local_sinful) {
+						free(local_sinful);
+					}
 				}
             }
         }
