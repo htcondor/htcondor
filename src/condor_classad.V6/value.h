@@ -336,7 +336,13 @@ IsStringValue() const
 inline bool Value::
 IsStringValue( const char *&s ) const
 {
-	s = strValue.c_str( );
+	// We want to be careful not to copy it in here. 
+	// People may accumulate in the "s" after this call,
+	// So it best to only touch it if it exists.
+	// (Example: the strcat classad function)
+	if (valueType == STRING_VALUE) {
+		s = strValue.c_str( );
+	}
     return( valueType == STRING_VALUE );
 }
 
