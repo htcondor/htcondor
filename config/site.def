@@ -43,7 +43,7 @@ GlobusPath = /unsup/globus-2.0-latest
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /local.perdita/wright/condor/v63-arena
+#define Top /p/condor/workspaces/hbwang/latest
 
 #define TmpDir		/tmp
 
@@ -79,7 +79,7 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
-#define WANT_X509       YES
+#define WANT_GSI        YES
 #define WANT_KERBEROS   YES
 #define WANT_MD         YES
 #define WANT_3DES       YES

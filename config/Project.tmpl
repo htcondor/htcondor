@@ -242,15 +242,15 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
     $(GlobusPath)/lib/libglobus_io_$(GlobusFlavor).a \
     $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
 
-/* X509 Authentication requires globus*/
-#if WANT_X509 && HAS_GSI
+/* GSI Authentication requires globus*/
+#if WANT_GSI && HAS_GSI
   #define NEEDS_GSI YES
-  X509_FLAGS = -DX509_AUTHENTICATION
-  X509_LIB =
+  GSI_AUTH_FLAGS = -DGSI_AUTHENTICATION
+  GSI_AUTH_LIB =
 #else
-  X509_FLAGS =
-  X509_LIB   = 
-#endif /* WANT_X509 && HAS_GSI */
+  GSI_AUTH_FLAGS =
+  GSI_AUTH_LIB   = 
+#endif /* WANT_GSI && HAS_GSI */
 
 /* Kerberos */
 #if HAS_KERBEROS && WANT_KERBEROS
@@ -300,7 +300,7 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 #if NEEDS_GSI && HAS_GSI
   /* Make sure that USE_GLOBUS_OPENSSL is set */
   #define NEEDS_OPENSSL YES
-  GSI_FLAGS = -DCONDOR_GSI
+  GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
   GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a \
@@ -329,9 +329,9 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 #endif
 
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(X509_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
 		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
-SECURITY_LIB   = $(X509_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+SECURITY_LIB   = $(GSI_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
 		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
