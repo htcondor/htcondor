@@ -141,7 +141,7 @@ void
 EventHandler::de_install()
 {
 	NameTableIterator next_sig( SigNames );
-	struct sigaction action;
+	//struct sigaction action;//unused variable, avoiding warning.
 	int		signo;
 	int		i;
 
