@@ -3470,9 +3470,11 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 	static char win32_reason [] = 
 		"No condor_shadow installed that supports WIN32 jobs";
 	static char dc_vanilla_reason [] = 
-		"No condor_shadow installed that supports new VANILLA jobs";
+		"No condor_shadow installed that supports vanilla jobs on "
+		"V6.3.3 or newer resources";
 	static char old_vanilla_reason [] = 
-		"No condor_shadow installed that supports old VANILLA jobs";
+		"No condor_shadow installed that supports vanilla jobs on "
+		"resources older than V6.3.3";
 
 	PROC_ID job_id;
 	char* hold_reason;
@@ -3512,15 +3514,22 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 
 		// real work begins
 
+		// reset a bunch of state in the ClassAd for this job
 	mark_job_stopped( &job_id );
 
+		// since we couldn't spawn this shadow, we should remove this
+		// shadow record from the match record and delete the shadow
+		// rec so we don't leak memory or tie up this match
 	RemoveShadowRecFromMrec( srec );
+	delete srec;
 
+		// hold the job, since we won't be able to run it without
+		// human intervention
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
 			 true, true, true, *notify_admin );
 
-	delete srec;
-
+		// regardless of what it used to be, we need to record that we
+		// no longer want to notify the admin for this kind of error
 	*notify_admin = false;
 }
 
