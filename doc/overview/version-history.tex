@@ -112,6 +112,14 @@ details about using these settings.
 
 \begin{itemize}
 
+\item A race condition which could cause the \Condor{shadow} to not
+exit when its job was removed has been fixed.
+This bug would cause jobs that had been removed with \Condor{rm} to
+remain in the queue marked as status ``X'' for a long time.
+In addition, Condor would not shutdown quickly on hosts that had hit
+this race condition, since the \Condor{schedd} wouldn't exit until all
+of its \Condor{shadow} children had exited.
+
 \item A signal race condition during restart of a Condor job has
 been fixed.
 
