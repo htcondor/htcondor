@@ -141,18 +141,20 @@ char	*Status[] = {
 display_proc_long( proc )
 PROC	*proc;
 {
+	time_t arch_time = 0; /* 8 byte time_t versus 4 byte int for ctime() */
 	(void)putchar( '\n' );
 	printf( "Structure Version: %d\n", proc->version_num );
 	printf( "Id: %d.%d\n", proc->id.cluster, proc->id.proc );
 	printf( "Owner: %s\n", proc->owner );
-	printf( "Queue Date: %s", ctime( (time_t *)&proc->q_date ) );
+	arch_time = proc->q_date;
+	printf( "Queue Date: %s", ctime( &arch_time ) );
 
 	if( proc->status == COMPLETED ) {
 		if( proc->completion_date == 0 ) {
 			printf( "Completion Date: (not recorded)\n" );
 		} else {
-			printf( "Completion Date: %s",
-								ctime((time_t *)&proc->completion_date));
+			arch_time = proc->completion_date;
+			printf( "Completion Date: %s", ctime(&arch_time));
 		}
 	} else {
 		printf( "Completion Date: (not completed)\n" );

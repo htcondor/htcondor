@@ -54,6 +54,7 @@ PROC	*proc;
 	char		cmd[23];
 	int			len;
 	char		*src, *dst;
+	time_t		arch_time;
 
 	switch( proc->status ) {
 		case UNEXPANDED:
@@ -75,7 +76,8 @@ PROC	*proc;
 			activity = ' ';
 	}
 
-	tm = localtime( (time_t *)&proc->q_date );
+	arch_time = proc->q_date;
+	tm = localtime( &arch_time );
 
 		/* put as much of the cmd and program args as will fit in 18 spaces */
 	len = 18;
@@ -184,6 +186,10 @@ display_v3_proc_long( proc )
 PROC	*proc;
 {
 	int		i;
+	time_t arch_time = 0;	/* this is for 8byte time_t sizes, you cannot
+								do a (time_t*)&thingy if thingy is 4 bytes
+								long, assign your time to this then call
+								ctime() */
 
 	(void)putchar( '\n' );
 	printf( "Structure Version: %d\n", proc->version_num );
@@ -207,14 +213,15 @@ PROC	*proc;
 	printf( "Checkpoint: %s\n", proc->checkpoint ? "TRUE" : "FALSE" );
 	printf( "Remote Syscalls: %s\n", proc->remote_syscalls ? "TRUE" : "FALSE" );
 	printf( "Owner: %s\n", proc->owner );
-	printf( "Queue Date: %s", ctime( (time_t *)&proc->q_date ) );
+	arch_time = proc->q_date;
+	printf( "Queue Date: %s", ctime( &arch_time ));
 
 	if( proc->status == COMPLETED ) {
 		if( proc->completion_date == 0 ) {
 			printf( "Completion Date: (not recorded)\n" );
 		} else {
-			printf( "Completion Date: %s",
-								ctime((time_t *)&proc->completion_date));
+			arch_time = proc->completion_date;
+			printf( "Completion Date: %s", ctime(&arch_time));
 		}
 	} else {
 		printf( "Completion Date: (not completed)\n" );
@@ -308,18 +315,21 @@ V2_PROC	*proc;
 PROC	*proc;
 #endif
 {
+	time_t arch_time = 0; /* 8 byte time_t versus 4 byte int in ctime() */
+
 	(void)putchar( '\n' );
 	printf( "Structure Version: %d\n", proc->version_num );
 	printf( "Id: %d.%d\n", proc->id.cluster, proc->id.proc );
 	printf( "Owner: %s\n", proc->owner );
-	printf( "Queue Date: %s", ctime( (time_t *)&proc->q_date ) );
+	arch_time = proc->q_date;
+	printf( "Queue Date: %s", ctime( &arch_time ) );
 
 	if( proc->status == COMPLETED ) {
 		if( proc->completion_date == 0 ) {
 			printf( "Completion Date: (not recorded)\n" );
 		} else {
-			printf( "Completion Date: %s",
-								ctime((time_t *)&proc->completion_date));
+			arch_time = proc->completion_date;
+			printf( "Completion Date: %s", ctime(&arch_time));
 		}
 	} else {
 		printf( "Completion Date: (not completed)\n" );

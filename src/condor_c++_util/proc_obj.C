@@ -432,15 +432,21 @@ b_enum( char *table[], const char *name, int val )
 static void
 d_date( const char *name, int val )
 {
+	time_t arch_time = 0;/* 8 byte time_t verses 4 byte int, this is portable */
+
 	do_indent();
-	printf( "%s: %s", name, ctime((time_t *)&val) );
+
+	arch_time = val;
+	printf( "%s: %s", name, ctime(&arch_time) );
 }
 
 static char*
 b_date( const char *name, int val )
 {
 	char *temp = new char[50];
-	sprintf( temp, "%s\t%s\n", name, ctime((time_t *)&val) );
+	time_t arch_time = 0;/* 8 byte time_t verses 4 byte int, this is portable */
+
+	sprintf( temp, "%s\t%s\n", name, ctime(&arch_time) );
 	return temp;
 }
 

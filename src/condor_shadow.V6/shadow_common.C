@@ -122,6 +122,12 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
         double rutime, rstime, lutime, lstime;  /* remote/local user/sys times */
         double trtime, tltime;  /* Total remote/local time */
         double  real_time;
+		time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
+								archs, and this means that doing a (time_t*)
+								cast on & of a 4 byte int makes my life hell.
+								So we fix it by assigning the time we want to
+								a real time_t variable, then using ctime()
+								to convert it to a string */
 
         dprintf(D_FULLDEBUG, "NotifyUser() called.\n");
 
@@ -199,12 +205,17 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 
         display_errors( mailer );
 
-        fprintf(mailer, "Submitted at:        %s", ctime( (time_t *)&proc->q_date) );
+		arch_time = proc->q_date;
+        fprintf(mailer, "Submitted at:        %s", ctime(&arch_time));
+
         if( proc->completion_date ) {
                 real_time = proc->completion_date - proc->q_date;
-                fprintf(mailer, "Completed at:        %s",
-                                                                        ctime((time_t *)&proc->completion_date) );
-                fprintf(mailer, "Real Time:           %s\n", d_format_time(real_time));
+
+				arch_time = proc->completion_date;
+                fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+
+                fprintf(mailer, "Real Time:           %s\n", 
+					d_format_time(real_time));
         }
         fprintf( mailer, "\n" );
 
