@@ -388,6 +388,8 @@ Scheduler::count_jobs()
 	// TotalIdleJobs and TotalRunningJobs.
 	ad->Delete (ATTR_IDLE_JOBS);
 	ad->Delete (ATTR_RUNNING_JOBS);
+	// The schedd's ad doesn't need ATTR_SCHEDD_NAME either.
+	ad->Delete (ATTR_SCHEDD_NAME);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_IDLE_JOBS, JobsIdle);
 	ad->Insert (tmp);
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
@@ -421,6 +423,8 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_NUM_USERS);
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
+	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
+	ad->InsertOrUpdate(tmp);
 
 	for ( i=0; i<N_Owners; i++) {
 	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
@@ -4444,7 +4448,6 @@ Scheduler::invalidate_ads()
 	int i;
 	char *host;
 	char line[256];
-	GenericQuery query;
 
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just delete it and start over again.
@@ -4461,16 +4464,10 @@ Scheduler::invalidate_ads()
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
-		// Now, we want to invalidate all the submittor ads.  So, go
-		// through each submittor and add their Name to a query.
-	for( i=0; i<N_Owners; i++ ) {
-		sprintf( line, "%s == \"%s@%s\"", ATTR_NAME, Owners[i].Name,
-				 UidDomain ); 
-		query.addCustomOR( line );
-	}
-		// This will overwrite the Requirements expression in ad.
-	query.makeQuery( *ad );
-
+		// Invalidate all our submittor ads.
+	sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_SCHEDD_NAME,
+			 Name );
+    ad->InsertOrUpdate( line );
 	update_central_mgr( INVALIDATE_SUBMITTOR_ADS, Collector->addr(), 0 );
 	if( FlockCollectors && FlockLevel > 0 ) {
 		for( i=1, FlockCollectors->rewind();
