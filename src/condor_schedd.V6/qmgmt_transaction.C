@@ -24,6 +24,8 @@
 ** 
 ** Author:  Jim Pruyne
 **
+** Fixed on 7/8/97 by Derek Wright
+**
 */ 
 
 #define _POSIX_SOURCE
@@ -34,13 +36,12 @@
 
 PtrList::~PtrList()
 {
-	PtrListEntry	*p;
-
-	for (p = head; p != 0 && p != last; p = p->GetNext()) {
-		delete p->GetNext();
-	}
-	if (head != 0) {
-		delete head;
+	PtrListEntry	*p, *q;
+	p = head;
+	while(p) {
+		q = p->GetNext();
+		delete p;
+		p = q;
 	}
 }
 
@@ -216,5 +217,4 @@ Transaction::RollBackDirty()
 		job->Rollback();
 	}
 }
-
 
