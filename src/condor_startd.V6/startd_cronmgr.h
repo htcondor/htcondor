@@ -32,11 +32,14 @@ class StartdCronMgr : public CondorCronMgr
 	StartdCronMgr( void );
 	virtual ~StartdCronMgr( void );
 	int Shutdown( bool force );
+	bool ShutdownOk( void );
 
   protected:
 	virtual CondorCronJob *NewJob( const char *name );
 
   private:
+	bool ShuttingDown;
+	int JobEvent( CondorCronJob *job, CondorCronEvent event );
 	
 };
 

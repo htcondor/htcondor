@@ -101,7 +101,6 @@ int main_shutdown_fast();
 int main_shutdown_graceful();
 extern "C" int do_cleanup(int,int,char*);
 int reaper( Service*, int pid, int status);
-int	check_free();
 int	shutdown_reaper( Service*, int pid, int status ); 
 
 void
@@ -610,7 +609,7 @@ main_shutdown_fast()
 	}
 
 		// If the machine is free, we can just exit right away.
-	check_free();
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -624,8 +623,8 @@ main_shutdown_fast()
 	resmgr->walk( &Resource::kill_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)check_free,
-								 "check_free" );
+								(TimerHandler)startd_check_free,
+								 "startd_check_free" );
 	return TRUE;
 }
 
@@ -641,7 +640,7 @@ main_shutdown_graceful()
 	}
 
 		// If the machine is free, we can just exit right away.
-	check_free();
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -655,8 +654,8 @@ main_shutdown_graceful()
 	resmgr->walk( &Resource::release_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)check_free,
-								 "check_free" );
+								(TimerHandler)startd_check_free,
+								 "startd_check_free" );
 	return TRUE;
 }
 
@@ -685,7 +684,7 @@ int
 shutdown_reaper(Service *, int pid, int status)
 {
 	reaper(NULL,pid,status);
-	check_free();
+	startd_check_free();
 	return TRUE;
 }
 
@@ -698,7 +697,7 @@ do_cleanup(int,int,char*)
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
 			// If the machine is already free, we can exit right away.
-		check_free();		
+		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
 		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
@@ -714,14 +713,17 @@ do_cleanup(int,int,char*)
 
 
 int
-check_free()
+startd_check_free()
 {	
+	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
+		return FALSE;
+	}
 	if ( ! resmgr ) {
 		startd_exit();
 	}
 	if( ! resmgr->in_use() ) {
 		startd_exit();
-	} 
+	}
 	return TRUE;
 }
 
