@@ -659,6 +659,14 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_OLD_JM_ALIVE ) {
+					// TODO: need to avoid an endless loop of old jm not
+					// responding, start new jm, new jm says old one still
+					// running, try to contact old jm again. How likely is
+					// this to happen?
+					gmState = GM_INIT;
+					break;
+				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					newJM = false;
 					gmState = GM_CLEAR_REQUEST;
