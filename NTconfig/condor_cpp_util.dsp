@@ -229,6 +229,14 @@ SOURCE="..\src\condor_c++_util\email_cpp.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\env.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\env.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\environ.C"
 # End Source File
 # Begin Source File
