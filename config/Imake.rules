@@ -150,6 +150,20 @@ clean::                                                    @@\
 	rm -f classfile
 #endif
 
+/*
+** Build a JAR file from several .java files.
+**
+*/
+
+#ifndef jar_target
+#define jar_target( jarfile, sourcefiles, classroot ) @@\
+jarfile: sourcefiles                                  @@\
+	$(JAVAC) $(JAVACFLAGS) -d . sourcefiles       @@\
+	$(JAR) $(JARFLAGS) cf $@ classroot            @@\
+clean::                                               @@\
+	rm -rf jarfile classroot
+#endif
+
 
 /***********************************************************************
 ** release targets
@@ -754,11 +768,10 @@ clean::						@@\
 #define html_target( files )					@@\
 html: files							@@\
 	/bin/rm -rf html					@@\
-	/unsup/doc++/bin/doc++ -H -d html -u -g -l -j -p \	@@\
+	DocCompiler -H -d html -u -g -l -j -p       \           @@\
 		-m -f -B ../html/condor_banner.html \		@@\
 		files
 #endif /* html_target */
-
 
 /***********************************************************************
 ** misc rules

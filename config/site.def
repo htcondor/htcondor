@@ -9,6 +9,9 @@
 #define Demangler	c++filt
 
 #define JavaCompiler    javac
+#define JarTool         jar
+
+#define DocCompiler     /unsup/doc++-3.4.8/bin/doc++
 
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include
