@@ -250,7 +250,7 @@ This is an attempt to do autoconf-style configuration of the little
 details.  Ideally, we would collect all these little details about
 _all_ the calls and put them in one standard place.
 */
-#if defined(Solaris27)
+#if defined(Solaris27) || defined(Solaris28)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE unsigned int
 	#define SOCKET_ALTERNATE_LENGTH_TYPE void
@@ -888,6 +888,7 @@ report an error if they are not the same.
 		ALLOC_PATH( path1 );
 		ALLOC_PATH( path2 );
 	}
+
 
 	#if defined(Solaris251)
 	int readlink( map_name(const char *path), void *buf, int buf_size ) {
@@ -1584,7 +1585,9 @@ not_supported {
 		pid_t waitpid(pid_t pid, int *status, int options);
 	#endif
 
-	#if defined(Solaris27)
+	#if defined(Solaris28)
+		long ptrace( int req, pid_t process, int address, int data);
+	#elif defined(Solaris27)
 		long ptrace( int req, long process, long address, long data);
 	#elif defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
@@ -1607,7 +1610,7 @@ not_supported {
 not_supported {
 	#if defined(LINUX)
 		int profil( char *buf, int buf_size, int offset, int scale );
-	#elif defined(Solaris27)
+	#elif defined(Solaris27) || defined(Solaris28)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
 	#elif defined(Solaris26) || defined(Solaris251)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
