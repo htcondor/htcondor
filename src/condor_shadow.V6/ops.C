@@ -106,8 +106,6 @@ extern int UsePipes;
 
 extern int free_fs_blocks();
 
-static FILE *LogFP;
-
 extern V2_PROC *Proc;
 
 /* XDR xdr_RSC, *xdr_syscall = &xdr_RSC; */
@@ -126,11 +124,8 @@ RSC_ShadowInit( int rscsock, int errsock )
 	syscall_sock->encode();
 
 	LogSock = errsock;
-	LogFP = fdopen(LogSock, "r");
-
-	if( LogFP == NULL ) {
-		EXCEPT("Cannot fdopen LogSock");
-	}
+	// Now set LogSock to be posix-style non-blocking
+	fcntl(LogSock,F_SETFL,O_NONBLOCK);
 
 	return( syscall_sock );
 }
@@ -195,41 +190,51 @@ FILE	*log_fp;
 
 HandleLog()
 {
-	register char *nlp;
+	char *nlp;
 	char buf[ BUFSIZ ];
+	int len,i,done;
+	static char oldbuf[ BUFSIZ ];
 
 	for(;;) {
-		memset(buf,0,sizeof(buf));
-
 		errno = 0;
-		if( fgets(buf, sizeof(buf), LogFP) == NULL ) {
-			dprintf( D_FULLDEBUG, "errno = %d\n", errno );
-			dprintf( D_FULLDEBUG, "buf = '%s'\n", buf);
-			return -1;
+
+		if ( (len=read(LogSock,buf,sizeof(buf)-1)) == -1 ) {
+			if ( errno == EINTR )
+				continue;	// interrupted by signal; just continue
+			if ( errno == EAGAIN )
+				return 0;	// no more data to read 
+
+			dprintf(D_FULLDEBUG,"HandleLog() read FAILED, errno=%d\n",errno );
+			return -1; 		// anything other than EINTR or EAGAIN is error
+		}
+
+		nlp = buf;
+		done = 1;
+		for (i=0;i<len;i++) {
+			switch ( buf[i] ) {
+				case '\n' :
+					buf[i] = '\0';
+					// NOTICE: no break here, we fall thru....
+				case '\0' :
+					if ( nlp[0] != '\0' ) {
+						dprintf(D_ALWAYS,"Read: %s%s\n",oldbuf,nlp);
+					}
+					nlp = &(buf[i+1]);
+					oldbuf[0] = '\0';
+					done = 1;
+					break;
+				default :
+					done = 0;
+			}
 		}
 
 
-		nlp = strchr(buf, '\n');
-		if( nlp != NULL ) {
-			*nlp = '\0';
+		if ( !done ) {
+			/* we did not receive the entire line - store the first part */
+			buf[ BUFSIZ - 1 ]  = '\0';  /* make certain strcpy does not SEGV */
+			strcpy(oldbuf,newbuf);
 		}
 
-		if ( buf[0] != '\0' ) {
-			dprintf(D_ALWAYS, "Read: %s\n", buf );
-		}
-
-		/*
-		**	If there is more to read, read it, otherwise just return...
-		*/
-#if defined(LINUX)
-		if( LogFP->_IO_read_ptr == LogFP->_IO_read_end) {
-			return 0;
-		}
-#else
-		if( LogFP->_cnt == 0 ) {
-			return 0;
-		}
-#endif
 	}
 }
 
