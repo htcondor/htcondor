@@ -40,6 +40,7 @@
 #include "condor_file_agent.h"
 #include "condor_file_buffer.h"
 #include "condor_file_compress.h"
+#include "condor_file_append.h"
 #include "condor_error.h"
 
 #include <stdarg.h>
@@ -412,6 +413,10 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 	} else if( !strcmp( method, "compress" ) ) {
 		f = create_url_chain( rest );
 		if(f) return new CondorFileCompress( f );
+		else return 0;
+	} else if( !strcmp( method, "append" ) ) {
+		f = create_url_chain( rest );
+		if(f) return new CondorFileAppend( f );
 		else return 0;
 	} else {
 		return 0;
