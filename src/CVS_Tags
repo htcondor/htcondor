@@ -1,3 +1,10 @@
+8/25/03 V6_5-dag-crash-fix
+   The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
+   executable sent to Duncan and Scott at UW-Milwaukee (see condor-admin
+   #7292).  "6.5.5 Aug 25 2003 PRE-RELEASE" is the version string.
+   This fixes a bug in the logging of events to the *.dagman.out file
+   that may have caused DAGMan crashes Duncan and Scott have seen.
+
 8/12/03 V6_5-post-gridshell-vdt_1_1_10
    The state of the V6_5-branch after merging in the
    V6_5-gridshell3-branch as tagged at gridshell-vdt_1_1_10
