@@ -128,6 +128,14 @@ use 3 more file descriptors.
   The same error occurs when the \Condor{schedd} is not running, which
   is a far more common situation.
 
+\item Fixed a minor bug where Condor could get confused if a machine
+  had only a fully qualified domain name in DNS, but no simple
+  hostname without the domain name.
+  In this case, Condor daemons and tools used to exit with a fatal
+  error.
+  Now, they function properly, since there's no reason for them to
+  consider this a problem.
+
 \end{itemize}
 
 \noindent Known Bugs:
