@@ -1,8 +1,8 @@
 NAME = condor_dagman
 all_target($(NAME))
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
-CFLAGS = $(STD_C_FLAGS) -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \

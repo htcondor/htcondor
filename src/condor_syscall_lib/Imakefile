@@ -526,7 +526,7 @@ STUB_GEN_PLATFORM = -DIRIX65
 
 STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
 	$(SAVE_SIGSTATE) $(FILE_TABLE) $(REMOTE_SYSCALLS) $(CLIP) \
-	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS) -Wall
+	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS)
 
 switches.C: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \

@@ -1,7 +1,7 @@
 all_target(libclassad.a)
 
-C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS)
-CFLAGS = -Wall $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
 

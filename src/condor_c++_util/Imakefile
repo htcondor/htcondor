@@ -1,7 +1,7 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall 
-CFLAGS = $(STD_C_FLAGS) -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
 LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
