@@ -685,6 +685,20 @@ SetUniverse()
 		return;
 	}
 
+#if defined( CLIPPED )
+		// If we got this far, we must be a standard job.  Since we're
+		// clipped, that can't possibly work, so warn the user at
+		// submit time.  -Derek Wright 6/11/99
+	fprintf( stderr, 
+			 "\nERROR: You are trying to submit a \"standard\" job to Condor.\n"
+			 "This version of Condor only supports \"vanilla\" jobs, which\n"
+			 "perform no checkpointing or remote system calls.  See the\n"
+			 "Condor manual for details "
+			 "(http://www.cs.wisc.edu/condor/manual).\n\n" );
+	DoCleanup();
+	exit( 1 );
+#endif
+
 	JobUniverse = STANDARD;
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, STANDARD);
 	InsertJobExpr (buffer);
