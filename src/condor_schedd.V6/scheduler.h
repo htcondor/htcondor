@@ -108,6 +108,7 @@ class Scheduler : public Service
 	// negotiation
 	int				doNegotiate(int, Stream *);
 	int				negotiatorSocketHandler(Stream *);
+	int				delayedNegotiatorHandler(Stream *);
 	int				negotiate(int, Stream *);
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
@@ -144,6 +145,11 @@ class Scheduler : public Service
 	ClassAd*		ad;
 	char*			MySockName;		// dhaval
 	Scheduler*		myself;
+
+	// information about the command port which Shadows use
+	char*			MyShadowSockName;
+	ReliSock*		shadowCommandrsock;
+	SafeSock*		shadowCommandssock;
 	
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
