@@ -126,9 +126,13 @@ program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 	lex stub_gen_lex.l
+clean::
+	rm -f lex.yy.c
 
 y.tab.c: stub_gen_yacc.y scanner.h
 	yacc -d stub_gen_yacc.y
+clean::
+	rm -f y.tab.c y.tab.h
 
 tags_target(SourceFiles,$(NULL))
 depend_target(SourceFiles)
