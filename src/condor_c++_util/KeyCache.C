@@ -277,9 +277,10 @@ void KeyCache::expire(KeyCacheEntry *e) {
 	free( key_id );
 }
 
-void KeyCache::RemoveExpiredKeys() {
+StringList * KeyCache::getExpiredKeys() {
 
 	// draw the line
+    StringList * list = new StringList();
 	time_t cutoff_time = time(0);
 
 	// iterate through all entries from the hash
@@ -288,9 +289,11 @@ void KeyCache::RemoveExpiredKeys() {
 	key_table->startIterations();
 	while (key_table->iterate(id, key_entry)) {
 		// check the freshness date on that key
-		if (key_entry->expiration() && key_entry->expiration() < cutoff_time) {
-			expire(key_entry);
+		if (key_entry->expiration() && key_entry->expiration() <= cutoff_time) {
+            list->append(id.Value());
+			//expire(key_entry);
 		}
 	}
+    return list;
 }
 

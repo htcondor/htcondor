@@ -29,6 +29,7 @@
 #include "CryptKey.h"
 #include "MyString.h"
 #include "HashTable.h"
+#include "string_list.h"
 
 class SecMan;
 class KeyCacheEntry {
@@ -78,7 +79,7 @@ public:
 	bool remove(const char *key_id);
 	void expire(KeyCacheEntry*);
 
-	void RemoveExpiredKeys();
+	StringList * getExpiredKeys();
 
 private:
 	void copy_storage(const KeyCache &kc);
