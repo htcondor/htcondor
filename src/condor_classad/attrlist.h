@@ -124,6 +124,7 @@ class AttrList : public AttrListAbstract
 		AttrListElem*	tail;			// used by Insert
 		AttrListElem*	ptrExpr;		// used by NextExpr 
 		AttrListElem*	ptrName;		// used by NextName
+		int				seq;			// sequence number
 };
 
 class AttrListList

@@ -73,6 +73,7 @@ AttrListRep::AttrListRep(AttrList* attrList, AttrListList* attrListList)
 ////////////////////////////////////////////////////////////////////////////////
 AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 {
+	seq = 0;
     exprList = NULL;
     tail = NULL;
     ptrExpr = NULL;
@@ -87,6 +88,7 @@ AttrList::AttrList() : AttrListAbstract(ATTRLISTENTITY)
 AttrList::AttrList(AttrListList* associatedList) :
 		  AttrListAbstract(ATTRLISTENTITY)
 {
+	seq = 0;
     exprList = NULL;
     tail = NULL;
     ptrExpr = NULL;
@@ -115,6 +117,7 @@ AttrList::AttrList(FILE *file, char *delimitor, int &isEOF) : AttrListAbstract(A
     ExprTree *tree;
     EvalResult *val;
 
+	seq = 0;
     exprList = NULL;
     associatedList = NULL;
     tail = NULL;
@@ -231,6 +234,7 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
     ExprTree *tree;
     EvalResult *val;
 
+	seq = 0;
     exprList = NULL;
     associatedList = NULL;
     tail = NULL;
@@ -328,6 +332,7 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 {
 	ExprTree*	tmpTree;	// trees converted from proc structure fields
 
+	seq = 0;
 	exprList = NULL;
 	associatedList = NULL;
 	tail = NULL;
@@ -413,6 +418,49 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Converts a (key word, value) pair from a proc structure to a tree.
+////////////////////////////////////////////////////////////////////////////////
+ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
+{
+	ExprTree*	tmpVarTree;		// Variable node
+	ExprTree*	tmpTree;		// Value tree
+	char*		tmpStr;			// used to add "" to a string
+
+	tmpVarTree = new Variable(var);
+	switch(t)
+	{
+		case LX_INTEGER :
+
+			tmpTree = new Integer(i);
+			break;
+
+		case LX_FLOAT :
+
+			tmpTree = new Float(f);
+			break;
+
+		case LX_STRING :
+
+			tmpStr = new char[strlen(s)+3];
+			sprintf(tmpStr, "\"%s\"", s);
+			tmpTree = new String(tmpStr);
+			break;
+
+		case LX_EXPR :
+
+			if(Parse(s, tmpTree) != 0)
+			{
+				delete tmpVarTree;
+				delete tmpTree;
+				return NULL;
+			}
+			break;
+	}
+
+	return new AssignOp(tmpVarTree, tmpTree);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Create a AttrList from a CONTEXT.
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -444,6 +492,7 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 	int			i, j;
 	ExprTree*	tmpTree;
 
+	seq = 0;
 	associatedList = NULL;
 	tail = NULL;
 	ptrExpr = NULL;
@@ -615,49 +664,6 @@ char *Print_elem(ELEM *elem, char *str)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Converts a (key word, value) pair from a proc structure to a tree.
-////////////////////////////////////////////////////////////////////////////////
-ExprTree* AttrList::ProcToTree(char* var, LexemeType t, int i, float f, char* s)
-{
-	ExprTree*	tmpVarTree;		// Variable node
-	ExprTree*	tmpTree;		// Value tree
-	char*		tmpStr;			// used to add "" to a string
-
-	tmpVarTree = new Variable(var);
-	switch(t)
-	{
-		case LX_INTEGER :
-
-			tmpTree = new Integer(i);
-			break;
-
-		case LX_FLOAT :
-
-			tmpTree = new Float(f);
-			break;
-
-		case LX_STRING :
-
-			tmpStr = new char[strlen(s)+3];
-			sprintf(tmpStr, "\"%s\"", s);
-			tmpTree = new String(tmpStr);
-			break;
-
-		case LX_EXPR :
-
-			if(Parse(s, tmpTree) != 0)
-			{
-				delete tmpVarTree;
-				delete tmpTree;
-				return NULL;
-			}
-			break;
-	}
-
-	return new AssignOp(tmpVarTree, tmpTree);
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // AttrList class copy constructor.
 ////////////////////////////////////////////////////////////////////////////////
 AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
@@ -687,6 +693,7 @@ AttrList::AttrList(AttrList &old) : AttrListAbstract(ATTRLISTENTITY)
     this->ptrExpr = NULL;
     this->ptrName = NULL;
     this->associatedList = old.associatedList;
+	this->seq = old.seq;
     if(this->associatedList)
     {
 		this->associatedList->associatedAttrLists->Insert(this);
