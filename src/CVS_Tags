@@ -1,3 +1,9 @@
+01/21/4 V6_7-mirror-branch
+   A new branch off of V6_7-branch for adding the job mirroring stuff
+   for CORE.  This is the gridmanager/Condor-C method of doing it.
+   Since it's so complicated it's now living in its own branch.
+   Created from the V6_7-mirror-root tag.
+
 01/16/04 V6_7-core-2-branch
    A new branch off of V6_7-branch for adding the 2nd round of custom
    features for CORE.  These include:
