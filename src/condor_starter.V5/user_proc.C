@@ -1055,7 +1055,7 @@ open_std_file( int fd )
 	if(fd==0) {
 		flags = O_RDONLY;
 	} else {
-		flags = O_WRONLY|O_TRUNC;
+		flags = O_CREAT|O_WRONLY|O_TRUNC;
 	}
 
 	/* The starter doesn't have the whole elaborate url mechanism. */
