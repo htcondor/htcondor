@@ -322,7 +322,8 @@ toClassAd()
 	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
 										 ISO8601_DateAndTime, FALSE);
 	if( eventTimeStr ) {
-		char buf1[strlen(eventTimeStr) + 16];
+//		char buf1[strlen(eventTimeStr) + 16];
+		char buf1[16];
 		snprintf(buf1, strlen(eventTimeStr) + 16,
 				 "EventTime = \"%s\"", eventTimeStr);
 		free(eventTimeStr);
@@ -356,7 +357,9 @@ void ULogEvent::
 initFromClassAd(ClassAd* ad)
 {
 	if( !ad ) return;
-	ad->LookupInteger("EventTypeNumber", (int) eventNumber);
+	int en;
+	ad->LookupInteger("EventTypeNumber", en);
+	eventNumber = (ULogEventNumber) en;
 	char* timestr = NULL;
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool f = FALSE;
@@ -447,10 +450,9 @@ toClassAd()
 	}
 
 	if( submitEventLogNotes && submitEventLogNotes[0] ) {
-		char buf2[strlen(submitEventLogNotes) + 15];
-		snprintf(buf2, strlen(submitEventLogNotes) + 15, "LogNotes = \"%s\"",
-				 submitEventLogNotes);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("LogNotes = \"%s\"", submitEventLogNotes);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -591,14 +593,14 @@ toClassAd()
 	char buf0[512];
 	
 	if( rmContact && rmContact[0] ) {
-		char buf2[strlen(rmContact) + 16];
-		snprintf(buf2, strlen(rmContact) + 16, "RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 	if( jmContact && jmContact[0] ) {
-		char buf3[strlen(jmContact) + 16];
-		snprintf(buf3, strlen(jmContact) + 16, "JMContact = \"%s\"",jmContact);
-		if( !myad->Insert(buf3) ) return NULL;
+		MyString buf3;
+		buf3.sprintf("JMContact = \"%s\"",jmContact);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
 
 	snprintf(buf0, 512, "RestartableJM = %s", restartableJM ? "TRUE" : "FALSE");
@@ -716,9 +718,9 @@ toClassAd()
 	if( !myad ) return NULL;
 	
 	if( reason && reason[0] ) {
-		char buf2[strlen(reason) + 13];
-		snprintf(buf2, strlen(reason) + 13, "Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -810,9 +812,9 @@ toClassAd()
 	if( !myad ) return NULL;
 	
 	if( rmContact && rmContact[0] ) {
-		char buf2[strlen(rmContact) + 16];
-		snprintf(buf2, strlen(rmContact) + 16, "RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -905,9 +907,9 @@ toClassAd()
 	if( !myad ) return NULL;
 	
 	if( rmContact && rmContact[0] ) {
-		char buf2[strlen(rmContact) + 16];
-		snprintf(buf2, strlen(rmContact) + 16, "RMContact = \"%s\"",rmContact);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -1533,14 +1535,14 @@ toClassAd()
 	}
 
 	if( reason ) {
-		char buf2[strlen(reason) + 16];
-		snprintf(buf2, strlen(reason) + 16, "Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 	if( core_file ) {
-		char buf3[strlen(core_file) + 16];
-		snprintf(buf3, strlen(core_file) + 16, "CoreFile = \"%s\"", core_file);
-		if( !myad->Insert(buf3) ) return NULL;
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core_file);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
 	
 	return myad;
@@ -1678,9 +1680,9 @@ toClassAd()
 	if( !myad ) return NULL;
 	
 	if( reason ) {
-		char buf2[strlen(reason) + 16];
-		snprintf(buf2, strlen(reason) + 16, "Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -1910,9 +1912,9 @@ toClassAd()
 
 	const char* core = getCoreFile();
 	if( core ) {
-		char buf3[strlen(core) + 16];
-		snprintf(buf3, strlen(core) + 16, "CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3) ) return NULL;
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
@@ -2107,23 +2109,34 @@ writeEvent (FILE *file)
 ClassAd* ShadowExceptionEvent::
 toClassAd()
 {
+	bool     success = true;
 	ClassAd* myad = ULogEvent::toClassAd();
-	if( !myad ) return NULL;
-	char buf0[512];
+	if( myad ) {
+		char buf0[512];
 	
-	if( message ) {
-		char buf2[strlen(message) + 16];
-		snprintf(buf2, strlen(message) + 16, "Message = \"%s\"", message);
-		if( !myad->Insert(buf2) ) return NULL;
+		if( message ) {
+			MyString buf2;
+			buf2.sprintf("Message = \"%s\"", message);
+			if( !myad->Insert(buf2.Value())) {
+				success = false;
+			}
+		}
+
+		snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) {
+			success = false;
+		}
+		snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) {
+			success = false;
+		}
 	}
-
-	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
-
+	if (!success) {
+		delete myad;
+		myad = NULL;
+	}
 	return myad;
 }
 
@@ -2337,9 +2350,9 @@ toClassAd()
 	
 	const char* reason = getReason();
 	if( reason ) {
-		char buf2[strlen(reason) + 16];
-		snprintf(buf2, strlen(reason) + 16, "Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -2448,9 +2461,9 @@ toClassAd()
 	
 	const char* reason = getReason();
 	if( reason ) {
-		char buf2[strlen(reason) + 16];
-		snprintf(buf2, strlen(reason) + 16, "Reason = \"%s\"", reason);
-		if( !myad->Insert(buf2) ) return NULL;
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -2686,9 +2699,9 @@ toClassAd()
 
 	const char* core = getCoreFile();
 	if( core ) {
-		char buf3[strlen(core) + 16];
-		snprintf(buf3, strlen(core) + 16, "CoreFile = \"%s\"", core);
-		if( !myad->Insert(buf3) ) return NULL;
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
 
 	char* rs = rusageToStr(run_local_rusage);
