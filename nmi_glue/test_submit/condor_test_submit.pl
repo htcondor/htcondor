@@ -187,16 +187,16 @@ sub generate_cmdfile() {
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
     print CMDFILE "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
     print CMDFILE "remote_declare = nmi_glue/test/remote_declare\n";
-    # select scope of testsuite run - quick takes 30 minutes, full takes 12 hours 
-    #print CMDFILE "remote_declare_args = full\n";
-    print CMDFILE "remote_declare_args = quick\n";
+    # select scope of testsuite run 
+    # all takes 30 minutes
+    print CMDFILE "remote_declare_args = all\n";
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
 
     print CMDFILE "platforms = ";
     foreach $platform (@platforms) { 
-      print CMDFILE "$platform,";
+        print CMDFILE "$platform,";
     }
     print CMDFILE "\n";
 
