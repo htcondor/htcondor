@@ -41,8 +41,6 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NMIDIR = "/nmi/run";
-
 my $PLATFORMS = "winnt_5.1";
 
 my $notify;

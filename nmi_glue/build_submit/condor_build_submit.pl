@@ -42,7 +42,6 @@ GetOptions (
     'platforms=s'       => $opt_platforms,
 );
 
-my $NMIDIR = "/nmi/run";
 my $workspace = "/tmp/condor_build." . "$$";
 
 my %tags;

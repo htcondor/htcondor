@@ -41,7 +41,6 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NMIDIR = "/nmi/run";
 
 #format of test_ids file
 #109 BUILD-V6_6-branch-2004-9-27 V6_6_BUILD
