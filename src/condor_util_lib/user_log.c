@@ -67,6 +67,9 @@ static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
 static char *find_fmt( int msg_num );
 
+static int ULogLockFd = -1;
+static int ULogLockCount = 0;
+
 /*
   Initialize a new user log "instance".
 */
@@ -75,6 +78,8 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
 {
 	struct passwd	*pwd;
 	USER_LOG	*LP;
+	mode_t omask;
+	char *file_name;
 
 	LP = (USER_LOG *)malloc( sizeof(USER_LOG) );
 
@@ -86,6 +91,24 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
 	LP->subproc = s;
 	LP->in_block = FALSE;
 	LP->locked = FALSE;
+
+		/* Open a zero length file on the local filesystem (hopefully) to use
+		 * as a lock file, since the log file itself may be over NFS/AFS, and
+		 * file locking over NFS is often problematic at best -Todd 7/95 */
+	if ( ULogLockFd < 0 ) {
+    	file_name = param( "USERLOG_LOCK" );
+    	if( !file_name ) {
+        	EXCEPT( "No USERLOG_LOCK file specified in config file\n" );
+    	}
+
+    	omask = umask( 0 );
+ 
+    	if( (ULogLockFd = open(file_name,O_RDWR|O_CREAT,0664)) < 0 ) {
+        	EXCEPT( "Cannot open User Log lock file \"%s\"", file_name );
+    	}
+ 
+    	umask( omask );
+	}
 
 		/* Look up process owner's UID and GID */
 	if( (pwd = getpwnam(owner)) == NULL ) {
@@ -110,6 +133,8 @@ OpenUserLog( const char *owner, const char *file, int c, int p, int s )
 		EXCEPT( "setvbuf" );
 	}
 
+	ULogLockCount++;	/* counter so we know when we can close the lock file */
+
 		/* get back to whatever UID and GID we started with */
 	restore_id( LP );
 	return LP;
@@ -128,6 +153,13 @@ CloseUserLog( USER_LOG *LP )
 	release_lock( LP );
 	fclose( LP->fp );
 	free( LP->path );
+
+	/* If we are closing the last user log instance, then close lock file as well */
+	ULogLockCount--;
+	if ( ULogLockCount == 0 ) {
+		close( ULogLockFd );
+		ULogLockFd = -1;
+	}
 }
 
 /*
@@ -318,7 +350,7 @@ get_lock( USER_LOG *LP )
 	if( LP->locked ) {
 		return;
 	}
-	lock_file( LP->fd, WRITE_LOCK, TRUE );
+	lock_file( ULogLockFd, WRITE_LOCK, TRUE );
 	LP->locked = TRUE;
 }
 
@@ -331,7 +363,7 @@ release_lock( USER_LOG *LP )
 	if( !LP->locked ) {
 		return;
 	}
-	lock_file( LP->fd, UN_LOCK, TRUE );
+	lock_file( ULogLockFd, UN_LOCK, TRUE );
 	LP->locked = FALSE;
 }
 
