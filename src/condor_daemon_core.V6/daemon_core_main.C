@@ -128,17 +128,6 @@ main( int argc, char** argv )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-		// Install DaemonCore signal handlers common to all daemons.
-	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
-								 (SignalHandler)handle_dc_sighup,
-								 "handle_dc_sighup" );
-	daemonCore->Register_Signal( DC_SIGQUIT, "DC_SIGQUIT", 
-								 (SignalHandler)handle_dc_sigquit,
-								 "handle_dc_sigquit" );
-	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
-								 (SignalHandler)handle_dc_sigterm,
-								 "handle_dc_sigterm" );
-
 	// set myName to be argv[0] with the path stripped off
 	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
 		ptmp=strrchr(argv[0],'\\');
@@ -282,6 +271,17 @@ main( int argc, char** argv )
 		
 	}
 	
+		// Install DaemonCore signal handlers common to all daemons.
+	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
+								 (SignalHandler)handle_dc_sighup,
+								 "handle_dc_sighup" );
+	daemonCore->Register_Signal( DC_SIGQUIT, "DC_SIGQUIT", 
+								 (SignalHandler)handle_dc_sigquit,
+								 "handle_dc_sigquit" );
+	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
+								 (SignalHandler)handle_dc_sigterm,
+								 "handle_dc_sigterm" );
+
 	// call the daemons main_init()
 	main_init( argc, argv );
 
