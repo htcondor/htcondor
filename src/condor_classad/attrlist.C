@@ -601,7 +601,7 @@ AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 				tmpChar = tmpExpr + 2;
 				Print_elem(rElem, tmpChar);
 				strcat(tmpExpr, ")");
-				elem = (ELEM *)malloc(sizeof(ELEM));
+				elem = new ELEM;
 				elem->val.string_val = tmpExpr;
 				elem->type = EXPRSTRING;
 				Push(&stack, elem);
@@ -996,13 +996,12 @@ int AttrList::LookupBool (const char *name, int &value)
 int AttrList::EvalString (const char *name, AttrList *target, char *value)
 {
 	ExprTree *tree;
-	EvalResult *val;
+	EvalResult val;
 
 	tree = Lookup(name);
-	if (tree->EvalTree(this,target,val) && val && val->type==LX_STRING && 
-		val->s)
+	if (tree->EvalTree(this,target,&val) && val.type==LX_STRING && val.s)
 	{
-		strcpy (value, val->s);
+		strcpy (value, val.s);
 		return 1;
 	}
 
@@ -1012,12 +1011,12 @@ int AttrList::EvalString (const char *name, AttrList *target, char *value)
 int AttrList::EvalInteger (const char *name, AttrList *target, int &value) 
 {
     ExprTree *tree;
-    EvalResult *val;   
+    EvalResult val;   
 
     tree = Lookup(name);   
-    if (tree->EvalTree (this, target, val) && val && val->type == LX_INTEGER)
+    if (tree->EvalTree (this, target, &val) && val.type == LX_INTEGER)
     {
-		value = val->i;
+		value = val.i;
         return 1;
     }
 
@@ -1027,12 +1026,12 @@ int AttrList::EvalInteger (const char *name, AttrList *target, int &value)
 int AttrList::EvalFloat (const char *name, AttrList *target, float &value) 
 {
     ExprTree *tree;
-    EvalResult *val;   
+    EvalResult val;   
 
     tree = Lookup(name);   
-    if (tree->EvalTree (this, target, val) && val && val->type == LX_FLOAT)
+    if (tree->EvalTree (this, target, &val) && val.type == LX_FLOAT)
     {
-        value = val->f;
+        value = val.f;
         return 1;
     }
 
@@ -1042,12 +1041,12 @@ int AttrList::EvalFloat (const char *name, AttrList *target, float &value)
 int AttrList::EvalBool (const char *name, AttrList *target, int &value) 
 {
     ExprTree *tree;
-    EvalResult *val;   
+    EvalResult val;   
 
     tree = Lookup(name);   
-    if (tree->EvalTree (this, target, val) && val && val->type == LX_BOOL)
+    if (tree->EvalTree (this, target, &val) && val.type == LX_BOOL)
     {
-        value = val->b;
+        value = val.b;
         return 1;
     }
 
