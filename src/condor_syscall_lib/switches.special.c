@@ -765,12 +765,4 @@ FORK()
 	return _libc_FORK();
 }
 
-#include <signal.h>
-
-int 
-SIGACTION(int sig, const struct sigaction *act, struct sigaction *oact)
-{
-	return _libc_SIGACTION(sig, act, oact);
-}
-
 #endif
