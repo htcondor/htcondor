@@ -27,6 +27,7 @@
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "condor_debug.h"
+#include "condor_file_info.h"
 
 int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 int open_file_stream( const char *file, int flags, size_t *len );
@@ -43,35 +44,44 @@ int _condor_in_file_stream;
 int
 open_file_stream( const char *file, int flags, size_t *len )
 {
-	char	url[_POSIX_PATH_MAX];
-	char	method[_POSIX_PATH_MAX];
-	char	local_path[_POSIX_PATH_MAX];
 	unsigned int	addr;
 	unsigned short	port;
 	int				fd = -1;
+	char			local_path[ _POSIX_PATH_MAX ];
 	int				pipe_fd;
 	int				st;
 	int				mode;
-	int				scm;
-	int				success;
 
 		/* first assume we'll open it locally */
 	_condor_in_file_stream = FALSE;
 
 		/* Ask the shadow how we should access this file */
-	success = REMOTE_syscall( CONDOR_get_file_info, file, url );
-	if( success < 0 ) {
-		EXCEPT( "CONDOR_get_file_info failed in open_file_stream\n" );
+	mode = REMOTE_syscall( CONDOR_file_info, file, &pipe_fd, local_path );
+
+	if( mode < 0 ) {
+		EXCEPT( "CONDOR_file_info failed in open_file_stream\n" );
 	}
 
-		/* Split the url into method and path */
-	sscanf(url,"%[^:]:%s",method,local_path);
+	if( mode == IS_PRE_OPEN ) {
+		fprintf( stderr, "CONDOR ERROR: The shadow says a stream file "
+				 "is a pre-opened pipe!\n" );
+		EXCEPT( "The shadow says a stream file is a pre-opened pipe!\n" );
+	}
 
-	dprintf(D_ALWAYS,"method: %s  local_path: %s\n",method,local_path);
+		/* Try to access it using local system calls */
+	if( mode == IS_NFS || mode == IS_AFS ) {
+		fd = syscall( SYS_open, local_path, flags, 0664 );
+		if( fd >= 0 ) {
+			if( !(flags & O_WRONLY) ) {
+				*len = syscall( SYS_lseek, fd, 0, 2 );
+				syscall( SYS_lseek, fd, 0, 0 );
+			}
+			dprintf( D_ALWAYS, "Opened \"%s\" via local syscalls\n",local_path);
+		}
+	}
 
-		/* If the mode is remote, use the stream protocol */
-		/* Otherwise, go through the usual mechanism */
-	if(!strcmp(method,"remote")) {
+		/* Try to access it using the file stream protocol  */
+	if( fd < 0 ) {
 		if( flags & O_WRONLY ) {
 			st = REMOTE_syscall(CONDOR_put_file_stream, file,*len,&addr,&port);
 		} else {
@@ -92,15 +102,6 @@ open_file_stream( const char *file, int flags, size_t *len )
 			dprintf( D_ALWAYS,"Opened \"%s\" via file stream\n", local_path);
 		}
 		_condor_in_file_stream = TRUE;
-	} else {
-		fd = syscall( SYS_open, local_path, flags, 0664 );
-		if( fd >= 0 ) {
-			if( !(flags & O_WRONLY) ) {
-				*len = syscall( SYS_lseek, fd, 0, 2 );
-				syscall( SYS_lseek, fd, 0, 0 );
-			}
-			dprintf( D_ALWAYS, "Opened \"%s\" via local syscalls\n",local_path);
-		}
 	}
 
 	return fd;
@@ -131,6 +132,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	if( ! _condor_local_bind(fd) ) {
 			/* error in bind() */
 		close(fd);
+		SetSyscalls( scm );
 		return -1;
 	}
 
@@ -144,6 +146,7 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	status = connect( fd, (struct sockaddr *)&sin, sizeof(sin) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
+		SetSyscalls( scm );
 		return -1;
 	}
 	dprintf( D_FULLDEBUG, "Connection completed - returning fd %d\n", fd );
