@@ -35,6 +35,9 @@
 #ifndef _XOPEN_SOURCE_EXTENDED
 # define _XOPEN_SOURCE_EXTENDED
 #endif
+#ifndef _AES_SOURCE
+# define _AES_SOURCE
+#endif
 
 #include <sys/types.h>
 /* The system include file defines this in terms of bzero(), but ANSI
