@@ -269,6 +269,11 @@ class BaseShadow : public Service
 		*/
 	bool updateJobInQueue( update_t type );
 
+		/** Timer handler which just calls updateJobInQueue with the
+			right arguments so we do a periodic update.
+		*/
+	void periodicUpdateQ( void );
+
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
 		*/
@@ -299,6 +304,11 @@ class BaseShadow : public Service
 	const char* getCoreName( void );
 
 	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
+
+		/** Start a timer to do periodic updates of the job queue for
+			this job.
+		*/
+	void startQueueUpdateTimer( void );
 
  protected:
 	
@@ -374,6 +384,9 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 	char *core_file_name;
+
+	// misc
+	int q_update_tid;
 
 		/// Pointers to lists of attribute names we care about
 

@@ -45,6 +45,7 @@ BaseShadow::BaseShadow() {
 	useAFS = useNFS = useCkptServer = false;
 	jobAd = NULL;
 	cluster = proc = -1;
+	q_update_tid = -1;
 	owner[0] = '\0';
 	iwd[0] = '\0';
 	core_file_name = NULL;
@@ -938,6 +939,13 @@ BaseShadow::updateExprTree( ExprTree* tree )
 
 
 void
+BaseShadow::periodicUpdateQ( void )
+{
+	updateJobInQueue( U_PERIODIC );	
+}
+
+
+void
 BaseShadow::evalPeriodicUserPolicy( void )
 {
 	shadow_user_policy.checkPeriodic();
@@ -951,6 +959,32 @@ BaseShadow::getCoreName( void )
 		return core_file_name;
 	} 
 	return "unknown";
+}
+
+
+void
+BaseShadow::startQueueUpdateTimer( void )
+{
+	if( q_update_tid >= 0 ) {
+		return;
+	}
+	char* tmp;
+	int q_interval = 0;
+	tmp = param( "SHADOW_QUEUE_UPDATE_INTERVAL" );
+	if( tmp ) {
+		q_interval = atoi( tmp );
+		free( tmp );
+	}
+	if( ! q_interval ) {
+		q_interval = 15 * 60;  // by default, update every 15 minutes 
+	}
+	q_update_tid = daemonCore->
+		Register_Timer( q_update_tid, q_update_tid,
+                        (TimerHandlercpp)&BaseShadow::periodicUpdateQ,
+                        "periodicUpdateQ", this );
+    if( q_update_tid < 0 ) {
+        EXCEPT( "Can't register DC timer!" );
+    }
 }
 
 

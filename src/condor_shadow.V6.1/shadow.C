@@ -104,11 +104,6 @@ UniShadow::updateFromStarter(int command, Stream *s)
 		jobad->Insert( buf );
 	}
 
-		// for now, we always try to update the job queue whenever we
-		// get more info from the starter.  in the future, we'll want
-		// to be smarter about this, have a timer, etc.
-	updateJobInQueue( U_PERIODIC );
-
 	return TRUE;
 }
 
@@ -354,6 +349,9 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 
 		// Start the timer for the periodic user job policy  
 	shadow_user_policy.startTimer();
+
+		// Start the timer for updating the job queue for this job 
+	startQueueUpdateTimer();
 }
 
 
