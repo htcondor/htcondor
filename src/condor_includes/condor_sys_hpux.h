@@ -52,12 +52,14 @@
 #	define WCOREFLG 0x0200
 #endif
 
+/* Define all the 64-bit types and structures we need. 
+   We want to do this before we get sys/fcntl.h so that we have
+   off64_t defined when we're trying to define struct flock64 */
+#include "condor_hpux_64bit_types.h"
+
 #define _LARGEFILE64_SOURCE
 #include <sys/fcntl.h>
 #undef _LARGEFILE64_SOURCE
-
-/* Define all the 64-bit types and structures we need. */
-#include "condor_hpux_64bit_types.h"
 
 
 /****************************************
