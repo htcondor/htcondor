@@ -32,7 +32,7 @@ int main_init(int argc, char* argv[])
   }
 
   Accountant accountant;
-
+  
   ClassAd* AccountantClassAd=new ClassAd();
   config(AccountantClassAd);
 
@@ -49,30 +49,22 @@ int main_init(int argc, char* argv[])
   ClassAd* Ad5=new ClassAd("Name = \"5\",StartdIpAddr = \"fred\"",',');
   ClassAd* Ad6=new ClassAd("Name = \"6\",StartdIpAddr = \"fred\"",',');
 
-  dprintf(D_ALWAYS,"Start\n");
-
   accountant.AddMatch("Arieh",Ad1);
   accountant.AddMatch("Arieh",Ad2);
   accountant.AddMatch("Arieh",Ad3);
   accountant.AddMatch("Shlomo",Ad4);
-  accountant.AddMatch("Shlomo",Ad5);
+  accountant.AddMatch("Yuval",Ad5);
   accountant.AddMatch("Yuval",Ad6);
 
-  accountant.SetPriority("Arieh",3);
-  accountant.SetPriority("Shlomo",2);
-  accountant.SetPriority("Yuval",1);
-
-  accountant.UpdatePriorities();
-  accountant.SavePriorities();
-  // accountant.Reset();
-  // accountant.SavePriorities();
-  accountant.UpdatePriorities();
-  accountant.LoadPriorities();
   accountant.UpdatePriorities();
 
-  sleep(10);
-  
-  // while(1) { sleep(1); accountant.UpdatePriorities(); }
+  // accountant.SetPriority("Arieh",3);
+  // accountant.SetPriority("Shlomo",2);
+  // accountant.SetPriority("Yuval",1);
+
+  // for(int i=0;i<5; i++) { sleep(1); accountant.UpdatePriorities(); }
+
+  // accountant.SaveState();
 
 #endif
 

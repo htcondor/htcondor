@@ -8,7 +8,7 @@ Introduction
 Provides accounting information in the form of priorities.
 Each customer is a user that submits jobs on some machine, and 
 he is identified by his login@uid_domain.
-Each resource is a schedd, and it is identified by name@ip_addr.
+Each resource is a startd, and it is identified by name@ip_addr.
 
 The accountant gets information about all the matches that were
 made and broken. This is done in real time, meaning that the time
@@ -72,16 +72,18 @@ The resources tables holds all used resources. Each resource's record
 holds the name of the customer using it, and the start time of the match.
  
 The methods available are:
-Reset - clears all accounting and match information
+
 GetPriority - get the priority of a customer 
-SetPriority - set the priority of a customer
+SetPriority - set the priority of a customer (used internally by LoadState,
+                                              should not be called normally)
 AddMatch - add a new match
 RemoveMatch - called when a match is broken
 UpdatePriorities - update all the priorities
 CheckMatches - go through all startd's class ads, and break matches
-  when the state field is 'Unclaimed'.
-LoadPriorities - Load the priority table from a file
-SavePriorities - Save the priority table to a file
+               when the state field is 'Unclaimed'.
+SaveState - Save the state to log files (Priority.log and Matches.log)
+LoadState - Load the state from the log file (used by the constructor,
+                                              should not be called normally)
 
 ---------------------
 files

@@ -23,30 +23,10 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
   LastUpdateTime=Time::Now();
   MinPriority=0.5;
   Epsilon=0.001;
-  PriorityFile=param("SPOOL");
-  PriorityFile+="/Priority.log";
-}
-
-//------------------------------------------------------------------
-// Reset to empty
-//------------------------------------------------------------------
-
-void Accountant::Reset() 
-{
-  MyString Name;
-
-  CustomerRecord* Customer;
-  Customers.startIterations();
-  while (Customers.iterate(Name, Customer)) delete Customer;
-  Customers.clear();
-
-  ResourceRecord* Resource;
-  Resources.startIterations();
-  while (Resources.iterate(Name, Resource)) delete Resource;
-  Resources.clear();
-
-  LastUpdateTime=Time::Now();
-  return;
+  PriorityFileName=MatchFileName=param("SPOOL");
+  PriorityFileName+="/Priority.log";
+  MatchFileName+="/Match.log";
+  LoadState();
 }
 
 //------------------------------------------------------------------
@@ -85,8 +65,15 @@ void Accountant::SetPriority(const MyString& CustomerName, double Priority)
 
 void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
+  Time T=Time::Now();
   MyString ResourceName=GetResourceName(ResourceAd);
-  RemoveMatch(ResourceName);
+  AddMatch(CustomerName,ResourceName,T);
+  LogAction(1,CustomerName,ResourceName,T);
+}
+
+void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T) 
+{
+  RemoveMatch(ResourceName,T);
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) {
     Customer=new CustomerRecord;
@@ -101,11 +88,11 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
     EXCEPT ("ERROR in Accountant::AddMatch - unable to insert to Resources table");
   }
   Resource->CustomerName=CustomerName;
-  Resource->Ad=new ClassAd(*ResourceAd);
-  Resource->StartTime=Time::Now();
+  // Resource->Ad=new ClassAd(*ResourceAd);
+  Resource->StartTime=T;
 
-  double UnchargedTime=Time::DiffTime(LastUpdateTime, Resource->StartTime);
-  Customer->UnchargedTime-=UnchargedTime;
+  // add negative "uncharged" time if match starts after last update
+  if (T>LastUpdateTime) Customer->UnchargedTime-=Time::DiffTime(LastUpdateTime, T);
 }
 
 //------------------------------------------------------------------
@@ -114,35 +101,27 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
 void Accountant::RemoveMatch(const MyString& ResourceName)
 {
+  Time T=Time::Now();
+  RemoveMatch(ResourceName,T);
+  LogAction(0,"*",ResourceName,T);
+}
+
+void Accountant::RemoveMatch(const MyString& ResourceName, const Time& T)
+{
   ResourceRecord* Resource;
   if (Resources.lookup(ResourceName,Resource)==-1) return;
   Resources.remove(ResourceName);
   MyString CustomerName=Resource->CustomerName;
   
-  Time CurrTime=Time::Now();
   Time StartTime=Resource->StartTime;
-  if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
-  double UnchargedTime=Time::DiffTime(StartTime, CurrTime);
-  
   delete Resource;
+
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) return;
   Customer->ResourceNames.Remove(ResourceName);
-  Customer->UnchargedTime+=UnchargedTime;
-}
 
-//------------------------------------------------------------------
-// Go through the list of startd ad's and check of matches
-// that were broken (by checkibg the claimed state)
-//------------------------------------------------------------------
-
-void Accountant::CheckMatches(ClassAdList& ResourceList) {
-  ResourceList.Open();
-  ClassAd* ResourceAd;
-  while ((ResourceAd=ResourceList.Next())!=NULL) {
-    if (NotClaimed(ResourceAd)) RemoveMatch(GetResourceName(ResourceAd));
-  }
-  return;
+  if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
+  if (T>LastUpdateTime) Customer->UnchargedTime+=Time::DiffTime(StartTime, T);
 }
 
 //------------------------------------------------------------------
@@ -185,49 +164,139 @@ void Accountant::UpdatePriorities()
 }
 
 //------------------------------------------------------------------
-// Load priorities from file
+// Go through the list of startd ad's and check of matches
+// that were broken (by checkibg the claimed state)
 //------------------------------------------------------------------
 
-void Accountant::LoadPriorities()
-{
-  dprintf(D_FULLDEBUG,"Loading priorities\n");
-  FILE* fp=fopen((const char*)PriorityFile, "r");
-  if (fp==NULL) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::LoadPriorities - failed to open priorities file %s\n",(const char*) PriorityFile);
-    return;
+void Accountant::CheckMatches(ClassAdList& ResourceList) {
+  ResourceList.Open();
+  ClassAd* ResourceAd;
+  while ((ResourceAd=ResourceList.Next())!=NULL) {
+    if (NotClaimed(ResourceAd)) RemoveMatch(GetResourceName(ResourceAd));
   }
-
-  char s[40];
-  float f;
-  while (1) {
-    if (fscanf(fp,"%s %f\n",s,&f)==EOF) break;
-    dprintf(D_FULLDEBUG,"Customer=%s, Priority=%5.3f\n",s,f);
-    SetPriority(s,f);
-  }
-  fclose(fp);
   return;
 }
 
 //------------------------------------------------------------------
-// Save priorities to file
+// Write Match Log Entry
 //------------------------------------------------------------------
 
-void Accountant::SavePriorities()
+void Accountant::WriteLogEntry(ofstream& os, int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T)
 {
-  dprintf(D_FULLDEBUG,"Saving priorities\n");
-  FILE* fp=fopen((const char*)PriorityFile, "w");
-  if (fp==NULL) {
-    dprintf(D_ALWAYS, "ERROR in Accountant::SavePriorities - failed  to open priorities file %s\n",(const char*) PriorityFile);
+  os << (AddMatch ? "A" : "R");
+  os << " " << CustomerName << " " << ResourceName << " " << T << endl; 
+}
+
+//------------------------------------------------------------------
+// Append action to matches log file
+//------------------------------------------------------------------
+
+void Accountant::LogAction(int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T)
+{
+  ofstream MatchFile(MatchFileName,ios::app);
+  if (!MatchFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::LogMatchAction - failed to open match file %s\n",(const char*) MatchFileName);
     return;
   }
+  WriteLogEntry(MatchFile, AddMatch, CustomerName, ResourceName, T); 
+  MatchFile.close(); 
+}
+
+//------------------------------------------------------------------
+// Save state
+//------------------------------------------------------------------
+
+void Accountant::SaveState()
+{
+  dprintf(D_FULLDEBUG,"Saving State\n");
+  MyString CustomerName, ResourceName;
+
+  ofstream PriorityFile(PriorityFileName);
+  if (!PriorityFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open priorities file %s\n",(const char*) PriorityFileName);
+    return;
+  }
+  PriorityFile << LastUpdateTime << endl;
+
   CustomerRecord* Customer;
-  MyString CustomerName;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
-    fprintf(fp,"%-30s %8.3f\n", (const char*) CustomerName,Customer->Priority);
-    dprintf(D_FULLDEBUG,"%s %8.3f\n", (const char*) CustomerName,Customer->Priority);
+    PriorityFile << CustomerName << " " << Customer->Priority << endl;
   }
-  fclose(fp);
+  PriorityFile.close();
+  
+  ofstream MatchFile(MatchFileName);
+  if (!MatchFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::SaveState - failed to open match file %s\n",(const char*) MatchFileName);
+    return;
+  }
+
+  ResourceRecord* Resource;
+  Resources.startIterations();
+  while (Resources.iterate(ResourceName, Resource)) {
+    WriteLogEntry(MatchFile,1,Resource->CustomerName,ResourceName,Resource->StartTime);
+  }
+  MatchFile.close(); 
+  
+  return;
+}
+
+//------------------------------------------------------------------
+// Load State
+//------------------------------------------------------------------
+
+void Accountant::LoadState()
+{
+  dprintf(D_FULLDEBUG,"Loading State\n");
+  MyString CustomerName, ResourceName;
+  MyString S;
+  double Priority;
+  Time T;
+
+  // Clear all match & priority information
+  CustomerRecord* Customer;
+  Customers.startIterations();
+  while (Customers.iterate(CustomerName, Customer)) delete Customer;
+  Customers.clear();
+  ResourceRecord* Resource;
+  Resources.startIterations();
+  while (Resources.iterate(ResourceName, Resource)) delete Resource;
+  Resources.clear();
+
+  // Open priority log file
+  ifstream PriorityFile(PriorityFileName);
+  if (!PriorityFile) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::LoadState - failed to open priorities file %s\n",(const char*) PriorityFileName);
+    return;
+  }
+
+  // Read priority log file
+  PriorityFile >> LastUpdateTime;
+  while(1) {
+    PriorityFile >> CustomerName >> Priority;
+    if (PriorityFile.eof()) break;
+    SetPriority(CustomerName, Priority);
+  }
+  PriorityFile.close();
+
+  // Open match log file
+  ifstream MatchFile(MatchFileName);
+  if (!MatchFileName) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::LoadState - failed to open match file %s\n",(const char*) MatchFileName);
+    return;
+  }
+
+  // Read match log file
+  while(1) {
+    MatchFile >> S >> CustomerName >> ResourceName >> T;
+    if (MatchFile.eof()) break;
+    if (S=="A") AddMatch(CustomerName,ResourceName,T);
+    else RemoveMatch(ResourceName);
+  }
+  MatchFile.close();
+
+  UpdatePriorities();
+
   return;
 }
 
@@ -241,7 +310,7 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
   char startdAddr[64];
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
-    EXCEPT ("ERROR in GetResourceName: Error - Name not specified\n");
+    EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
   }
   MyString Name=startdName;
   Name+="@";
