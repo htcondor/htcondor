@@ -1,6 +1,6 @@
 
 This chapter provides a basic, high-level overview of Condor, including
-Condor’s major features and limitations. Because Condor is a system to
+Condor's major features and limitations. Because Condor is a system to
 implement a High-Throughput Computing environment, this section begins
 defining what is meant by High-Throughput Computing.
 
@@ -61,7 +61,7 @@ Condor is a software system that creates a High Throughput Computing
 UNIX workstations on a network. Although Condor can manage a dedicated
 cluster of workstations, a key appeal of Condor is its ability to
 effectively harness non-dedicated, preexisting resources in a
-distributed ownership setting such as machines sitting on people’s desks
+distributed ownership setting such as machines sitting on people's desks
 in offices and labs. 
 
 \subsection{A Hunter of Available Workstations}
@@ -87,7 +87,7 @@ your job completes (and Condor notifies you via email).
 Perhaps you have to run this 5 hour compute job 250 different times
 (perhaps on 250 different data sets). In this case, Condor can be a real
 time saver. With one command you can submit all 250 runs into Condor.
-Depending upon the number of machines in your organization’s Condor
+Depending upon the number of machines in your organization's Condor
 pool, there could be dozens or even hundreds of otherwise idle machines
 (especially at night, for example) at any given moment running your
 job. 
@@ -139,12 +139,12 @@ environment. If a user submits a job to Condor which runs on somebody
 else's workstation, but the job is not finished when the workstation
 owner returns, the job can be checkpointed and restarted as soon as
 possible on another machine and will keep on executing in this manner
-until the job is completed. Condor’s Periodic Checkpoint feature can
+until the job is completed. Condor's Periodic Checkpoint feature can
 periodically checkpoint the job even in lieu of migration in order to
 safeguard the accumulated computation time on job from being lost in the
 event of a system failure (such as the machine being shutdown, a crash,
 etc). 
-	\item[Remote System Calls.] In Condor’s Standard Universe execution
+	\item[Remote System Calls.] In Condor's Standard Universe execution
 mode, the local execution environment is preserved for remotely
 executing processes via Remote System Calls. Users do not have to worry
 about making data files available to remote workstations or even
@@ -153,7 +153,7 @@ their programs there. The program behaves under Condor as if it was
 running as the user whom submitted the job on the workstation where it
 was originally submitted, no matter on which machine it really ends up
 executing on.
-	\item[No Changes Necessary to User’s Source Code.] No special programming
+	\item[No Changes Necessary to User's Source Code.] No special programming
 is required to use Condor. Condor is able to run normal UNIX programs.
 The checkpoint and migration of programs by Condor is transparent and
 automatic, as is the use of Remote System Calls.  These facilities are
@@ -277,7 +277,7 @@ uses this email listgroup to announce new releases of Condor and other major Con
 news items.  Membership into condor-world is automated by MajorDomo software.  To 
 subscribe or unsubscribe from the the list, follow the instructions at  
 \Url{http://www.cs.wisc.edu/condor/condor-world/condor-world.html}.  Because many of us receive 
-too much email as it is, you’ll be happy to know that the condor-world email listgroup is 
+too much email as it is, you'll be happy to know that the condor-world email listgroup is 
 moderated and only major announcements of wide interest are distributed.
 
 Finally, you can reach the Condor Team directly.  The Condor Team is comprised of the 
