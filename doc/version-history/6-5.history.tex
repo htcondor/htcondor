@@ -19,15 +19,21 @@ documented in the condor\_submit portion of the manual.
 program that creates visualizations of DAGs. This feature is
 documented in Section~\ref{sec:DAGMan}.
 
-\item The email report from condor_preen is now less cryptic, and
+\item The email report from condor\_preen is now less cryptic, and
 more self-explanatory.
 
 \item Specifying full device paths (e.g., ``/dev/mouse'') instead of bare
-device names (e.g., ``mouse'') in CONSOLE_DEVICES in the config file is no
+device names (e.g., ``mouse'') in CONSOLE\_DEVICES in the config file is no
 longer an error.
 
-\item The condor_submit tool now prints a more helpful, specific error if
+\item The condor\_submit tool now prints a more helpful, specific error if
 the specified job executable is not found, or can't be accessed.
+
+\item The startd ``cron'' (Hawkeye) now permits zero length ``prefix''
+strings.
+
+\item A number of new Hawkeye modules have been added, and most have
+various bug fixes and improvements.
 
 \end{itemize}
 
