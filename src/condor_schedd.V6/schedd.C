@@ -3040,13 +3040,13 @@ void
 Scheduler::Register()
 {
     // message handlers for schedd commands
-    daemonCore->Register_Command(NEGOTIATE, "NEGOTIATE", 
-			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR);
-    daemonCore->Register_Command(RESCHEDULE, "RESCHEDULE", 
+    daemonCore->Register_Command( NEGOTIATE, "NEGOTIATE", 
+			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR );
+    daemonCore->Register_Command( RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
                                this, WRITE);
-    daemonCore->Register_Command(RECONFIG, "RECONFIG", 
-			(CommandHandler)dc_reconfig, "reconfig", 0, OWNER);
+    daemonCore->Register_Command( RECONFIG, "RECONFIG", 
+			(CommandHandler)dc_reconfig, "reconfig", 0, OWNER );
     daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
     daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
@@ -3054,16 +3054,17 @@ Scheduler::Register()
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
-	daemonCore->Register_Command(ATTEMPT_ACCESS, "ATTEMPT_ACCESS", 
-								 (CommandHandler)attempt_access_handler, 
-								 "attempt_access_handler", NULL, WRITE);
+	daemonCore->Register_Command( ATTEMPT_ACCESS, "ATTEMPT_ACCESS", 
+								  (CommandHandler)attempt_access_handler, 
+								  "attempt_access_handler", NULL, WRITE, 
+								  D_FULLDEBUG );
 
     // handler for queue management commands
     // Note: This could either be a READ or a WRITE command.  Too bad we have 
 	// to lump both together here.
-    daemonCore->Register_Command(QMGMT_CMD, "QMGMT_CMD",
-								 (CommandHandler)handle_q, 
-								 "handle_q", NULL, READ);
+    daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
+								  (CommandHandler)handle_q, 
+								  "handle_q", NULL, READ, D_FULLDEBUG );
 
     // reaper
 #ifdef WIN32
