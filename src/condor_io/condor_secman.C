@@ -1479,7 +1479,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-	if ( !stricmp( method, "GSS_AUTHENTICATION" ) ) {
+	if ( !stricmp( method, "GSS_AUTHENTICATION" ) ||
+		 !stricmp( method, "X509" ) ) {
 		return CAUTH_X509;
 	} else if ( !stricmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
