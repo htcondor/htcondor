@@ -546,7 +546,12 @@ negotiationTime ()
 
 	// Register a lookup function that passes through the list of all ads.
 
-//	ClassAdLookupRegister( lookup_global, &allAds );
+	// ClassAd evaluations use this function to resolve names
+    // This function existed as part of Condor before we had new ClassAds
+    // It doesn't exist anymore. It's also not used--Doug added it for his
+    // research. We may want something like it in the future, but we don't
+    // need it. So for now, we comment it out.
+	//ClassAdLookupRegister( lookup_global, &allAds );
 
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
@@ -1191,14 +1196,29 @@ float Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
-	EvalResult result;
+	//EvalResult result;
+	Value result;
 	float rank = -(FLT_MAX);
+	MatchClassAd mad;
+	double rankD = 0;
+	int rankI = 0;
+	const ClassAd *oldScope = NULL;
 
-	if(expr && expr->EvalTree(resource,&request,&result)) {
-		if( result.type == LX_FLOAT ) {
-			rank = result.f;
-		} else if( result.type == LX_INTEGER ) {
-			rank = result.i;
+	mad.ReplaceLeftAd( &request );
+	mad.ReplaceRightAd( resource );
+
+//	if(expr && expr->EvalTree(resource,&request,&result)) {
+	oldScope = expr->GetParentScope( );
+	expr->SetParentScope( resource );
+	if(expr && resource->EvaluateExpr( expr, result ) ) {
+//		if( result.type == LX_FLOAT ) {
+//			rank = result.f;
+		if( result.IsRealValue( rankD ) ) {
+			rank = (float)rankD;
+//		} else if( result.type == LX_INTEGER ) {
+//			rank = result.i;
+		} else if( result.IsIntegerValue( rankI ) ) {
+			rank = (float)rankI;
 		} else {
 			dprintf(D_ALWAYS, "Failed to evaluate %s "
 			                  "expression to a float.\n",expr_name);
@@ -1207,6 +1227,10 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		dprintf(D_ALWAYS, "Failed to evaluate %s "
 		                  "expression.\n",expr_name);
 	}
+
+	expr->SetParentScope( oldScope );
+	mad.RemoveLeftAd( );
+	mad.RemoveRightAd( );
 	return rank;
 }
 
