@@ -1293,8 +1293,13 @@ void
 clean_submit_file_dir()
 {
     char cmd[3000];
+#ifdef WIN32
+    snprintf(cmd, sizeof(cmd)-1, "del /Q %s%s*.%s", file_dir, SUBMIT_FILE_DIR,
+	     SUBMIT_FILE_EXTN);
+#else
     snprintf(cmd, sizeof(cmd)-1, "rm -f %s%s%c%s", file_dir, SUBMIT_FILE_DIR,
-	     '*', SUBMIT_FILE_EXTN);
+	     '*', SUBMIT_FILE_EXTN);    
+#endif
     system(cmd);
 }
 
