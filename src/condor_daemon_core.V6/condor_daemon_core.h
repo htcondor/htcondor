@@ -344,13 +344,17 @@ class DaemonCore : public Service
 		// end of thread local storage
 };
 
-
-
 #ifndef _NO_EXTERN_DAEMON_CORE
+
+	// Function to call when you want your daemon to really exit.
+	// This allows DaemonCore a chance to clean up.
+extern void DC_Exit( int status );	
+
 extern DaemonCore* daemonCore;
 #endif
 
 #define MAX_INHERIT_SOCKS 10
 #define _INHERITBUF_MAXSIZE 500
 
-#endif
+
+#endif /* _CONDOR_DAEMON_CORE_H_ */
