@@ -191,7 +191,8 @@ main( void )
 				if( !value.ToSink( snk  ) ) {
 					printf( "Error writing evaluation result to sink\n" );
 				}
-				snk.FlushSink();
+				snk.Terminate( );
+				snk.FlushSink( );
 				delete expr;
 				expr = NULL;
 				break;
@@ -215,12 +216,14 @@ main( void )
 				if( !value.ToSink( snk ) ) {
 					printf( "Error writing result to sink\n" );
 				}
-				snk.FlushSink();
+				snk.Terminate( );
+				snk.FlushSink( );
 				printf( "\n" );
 				if( !fexpr->ToSink( snk ) ) {
 					printf( "Error writing expression to sink\n" );
 				}
-				snk.FlushSink();
+				snk.Terminate( );
+				snk.FlushSink( );
 				delete expr;
 				expr = NULL;
 				delete fexpr;
@@ -248,7 +251,8 @@ main( void )
 							printf( "Error writing value to sink\n" );
 						}
 					}
-					snk.FlushSink();
+					snk.Terminate( );
+					snk.FlushSink( );
 				} else {	
 					printf( "Error flattening expression\n" );
 				}
@@ -291,7 +295,8 @@ main( void )
 				if( !ad->ToSink( snk ) ) {
 					printf( "Error writing to sink\n" );
 				}
-				snk.FlushSink();
+				snk.Terminate( );
+				snk.FlushSink( );
 				fgets( buffer1, 2048, stdin );
 				break;
 
