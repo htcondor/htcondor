@@ -61,6 +61,20 @@ starter to sometimes kill itself when the job completed.  Because this
 happened before the \Condor{starter} reported the job completion back
 to the \Condor{shadow}, such a job would be restarted.
 
+\item Fixed a few memory and registry handle leaks in the \Condor{schedd}
+and \Condor{startd}. These leaks particularly affected Windows systems.
+
+\item On Windows, Condor was known to have trouble accessing config files
+with UNC paths (with appropriate permissions set). This has been fixed.
+
+\item On Windows, \Condor{store\_cred} would fail if the account did not
+have \verb@Log on Locally@ priviledges, even if the account was allowed
+to log in interactively. This has been fixed.
+
+\item Fixed a bug on Windows that would cause the \Condor{schedd} to
+crash if \Dflag{FULL\_DEBUG} was turned on, and the submitting user
+account did not have Administrator access rights.
+
 % this bug was fixed by kent but not in time for 6.6.5, so i'm just
 % commenting it out of the version history for now.  we can uncomment
 % this blurb and stick it in the 6.6.6 version history... 
