@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 #include "mpi_master_proc.h"
-#include "starter.h"        // for proto of pseudo calls we use
+#include "NTsenders.h"
 #include "condor_attributes.h"
 #include "condor_string.h"  // for strnewp
 #include "my_hostname.h"
@@ -70,7 +70,7 @@ MPIMasterProc::JobCleanup( int pid, int status )
 
 		// Now, just let our parent versions of this function do their
 		// magic. 
-    return MpiComradeProc::JobCleanup( pid, status );
+    return MPIComradeProc::JobCleanup( pid, status );
 }
 #endif /* ! MPI_USES_RSH */
 
