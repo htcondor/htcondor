@@ -56,16 +56,26 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
 
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
+#if IS_LINUX
+#if IS_GLIBC21
+FORK_OBJ = FORK.o
+#elif IS_GLIBC20
+FORK_OBJ = FORK.o VFORK.o
+#else
+FORK_OBJ = __FORK.o
+#endif /* libc */
+#endif /* LINUX */
+
 #	if IS_HPUX
 EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 		  MMAP.o PIPE.o GETCWD.o GETLOGIN.o
 #	elif IS_GLIBC_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
-		FORK.o PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
+		$(FORK_OBJ) PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
 		TRUNCATE.o SIGACTION.o 
 #	elif IS_I386_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
-		__FORK.o __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
+		$(FORK_OBJ) __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
 		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o SIGSUSPEND.o \
 		TRUNCATE.o
 #	elif IS_DUX
@@ -228,7 +238,6 @@ uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
 uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
 uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
-uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),fsync.o,FSYNC.o,fsync,FSYNC)
 
 #if IS_X86_SOLARIS
@@ -280,10 +289,31 @@ uppercase_target($(SIMPLE_LIBC),__geteuid.o,__GETEUID.o,__geteuid,__GETEUID)
 uppercase_target($(SIMPLE_LIBC),__getegid.o,__GETEGID.o,__getegid,__GETEGID)
 uppercase_target($(SIMPLE_LIBC),__getppid.o,__GETPPID.o,__getppid,__GETPPID)
 uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
-uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 uppercase_target($(SIMPLE_LIBC),getrusage.o,GETRUSAGE.o,getrusage,GETRUSAGE)
+
+uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
+
+#if IS_LINUX && ! IS_GLIBC
+__FORK.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) __fork.o
+	./ToUpper __fork.o __FORK_TMP.o vfork VFORK
+	./ToUpper __FORK_TMP.o __FORK.o fork FORK
+	rm -f __fork.o __FORK_TMP.o
+#else
+uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
+#endif
+
+#if IS_LINUX && IS_GLIBC20
+VFORK.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) vfork.o
+	./ToUpper vfork.o VFORK_TMP.o vfork VFORK
+	./ToUpper VFORK_TMP.o VFORK.o fork FORK
+	rm -f vfork.o VFORK_TMP.o
+#else
+uppercase_target($(SIMPLE_LIBC),vfork.o,VFORK.o,fork,VFORK)
+#endif
 
 #if IS_SOLARIS26 || IS_SOLARIS27
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
