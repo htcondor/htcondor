@@ -32,10 +32,8 @@
 #include "daemon.h"
 #include "my_hostname.h"
 #include "my_username.h"
-#include "get_daemon_addr.h"
 
 int open_url(char *, int, int);
-extern "C" char*	get_schedd_addr(const char*, const char*); 
 extern "C" int		strcmp_until(const char *, const char *, const char);
 
 ReliSock *qmgmt_sock = NULL;
@@ -45,8 +43,6 @@ Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
 	int		rval, ok;
-	char*	scheddAddr = NULL;
-	char	localaddrbuf[100];
 	char*	tmp;
 
 		// do we already have a connection active?
@@ -55,45 +51,23 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		return( NULL );
 	}
 
-		// get the address of the schedd to which we want a connection
-	if( !qmgr_location || !*qmgr_location ) {
-			/* No schedd identified --- use local schedd */
-		tmp = get_schedd_addr();
-		if ( tmp ) {
-				// copy out of static buffer
-			strcpy(localaddrbuf,tmp);
-			scheddAddr = localaddrbuf;
-		}
-	} else if(qmgr_location[0] != '<') {
-			/* Get schedd's IP address from collector */
-		tmp = get_schedd_addr(qmgr_location);
-		if ( tmp ) {
-				// copy out of static buffer
-			strcpy(localaddrbuf,tmp);
-			scheddAddr = localaddrbuf;
-		}
-	} else {
-			/* We were passed the sinful string already */
-		scheddAddr = qmgr_location;
-	}
-
-
-
     // no connection active as of now; create a new one
-	if(scheddAddr) {
-        Daemon d( DT_SCHEDD, scheddAddr );
-        qmgmt_sock = (ReliSock*) d.startCommand (QMGMT_CMD, Stream::reli_sock, timeout);
-        ok = qmgmt_sock != NULL;
-        if( !ok ) {
-            dprintf(D_ALWAYS, "Can't connect to queue manager\n");
-        }
-	} else {
+	Daemon d( DT_SCHEDD, qmgr_location );
+	if( ! d.locate() ) {
 		ok = FALSE;
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
 					 qmgr_location );
 		} else {
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
+		}
+	} else { 
+		qmgmt_sock = (ReliSock*) d.startCommand( QMGMT_CMD, 
+												 Stream::reli_sock,
+												 timeout );
+		ok = qmgmt_sock != NULL;
+		if( !ok ) {
+			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
 		}
 	}
 
