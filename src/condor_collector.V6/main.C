@@ -22,8 +22,6 @@ void usage(char* name)
 
 int main_init(int argc, char *argv[])
 {
-	char** ptr;
-	
 	// handle collector-specific command line args
 	if(argc > 2)
 	{
