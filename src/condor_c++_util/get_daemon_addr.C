@@ -34,6 +34,7 @@
 
 #include "condor_common.h"
 #include "condor_query.h"
+#include "get_full_hostname.h"
 
 extern "C"
 {
@@ -44,8 +45,15 @@ char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
 	char*				daemonAddr = (char*)malloc(sizeof(char)*100);
 	char				constraint[500];
 	ClassAdList			ads;
+	char*				fullname;
+
+		// Make sure we've got a fully qualified name.
+	fullname = get_full_hostname( name );
+	if( !fullname ) {
+		return NULL;
+	}
 	
-	sprintf(constraint, "%s == \"%s\"", ATTR_NAME, name); 
+	sprintf(constraint, "%s == \"%s\"", ATTR_NAME, fullname); 
 	query.addConstraint(constraint);
 	query.fetchAds(ads);
 	ads.Open();
