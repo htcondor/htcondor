@@ -199,6 +199,7 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 	  case RUNNABLE:
 	  case NON_RUNNABLE:
 	  case CHECKPOINTING:
+	  case CANT_FETCH:
 		if( ckpt_trans ) {
 			bsd_status.w_termsig = SIGQUIT;
 			dprintf( D_ALWAYS, "STATUS encoded as CKPT, *IS* TRANSFERRED\n" );
@@ -232,10 +233,12 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 		dprintf( D_ALWAYS, "STATUS encoded as BAD LINK\n" );
 		break;
 
+/*
 	  case CANT_FETCH:
 		bsd_status.w_termsig = 0;
 		bsd_status.w_coredump = 1;
 		bsd_status.w_retcode = posix_st;
+*/
 
 	}
 	return (void *)&bsd_status;
