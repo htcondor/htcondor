@@ -99,7 +99,7 @@ DCShadow::locate( void )
 
 
 bool
-DCShadow::updateJobInfo( ClassAd* ad )
+DCShadow::updateJobInfo( ClassAd* ad, bool confirm_update )
 {
 	if( ! ad ) {
 		dprintf( D_FULLDEBUG, 
@@ -107,32 +107,59 @@ DCShadow::updateJobInfo( ClassAd* ad )
 		return false;
 	}
 
-	if( ! shadow_safesock ) {
+	if( ! shadow_safesock && ! confirm_update ) {
 		shadow_safesock = new SafeSock;
-		shadow_safesock->connect( _addr );
+		shadow_safesock->timeout(20);   // years of research... :)
+		if( ! shadow_safesock->connect(_addr) ) {
+			dprintf( D_ALWAYS, "updateJobInfo: Failed to connect to shadow " 
+					 "(%s)\n", _addr );
+			delete shadow_safesock;
+			shadow_safesock = NULL;
+			return false;
+		}
 	}
 
+	ReliSock reli_sock;
 	Sock* tmp;
-	tmp = startCommand( SHADOW_UPDATEINFO, 	(Sock*)shadow_safesock );
+
+	if( confirm_update ) {
+			// For now, if we have to ensure that the update gets
+			// there, we use a ReliSock (TCP).
+		reli_sock.timeout(20);   // years of research... :)
+		if( ! reli_sock.connect(_addr) ) {
+			dprintf( D_ALWAYS, "updateJobInfo: Failed to connect to shadow " 
+					 "(%s)\n", _addr );
+			return false;
+		}
+		tmp = startCommand( SHADOW_UPDATEINFO, (Sock*)&reli_sock );
+	} else {
+		tmp = startCommand( SHADOW_UPDATEINFO, (Sock*)shadow_safesock );
+	}
 	if( ! tmp ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO command to shadow\n" );
-		delete shadow_safesock;
-		shadow_safesock = NULL;
+		if( shadow_safesock ) {
+			delete shadow_safesock;
+			shadow_safesock = NULL;
+		}
 		return false;
 	}
 	if( ! ad->put(*tmp) ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO ClassAd to shadow\n" );
-		delete shadow_safesock;
-		shadow_safesock = NULL;
+		if( shadow_safesock ) {
+			delete shadow_safesock;
+			shadow_safesock = NULL;
+		}
 		return false;
 	}
 	if( ! tmp->end_of_message() ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO EOM to shadow\n" );
-		delete shadow_safesock;
-		shadow_safesock = NULL;
+		if( shadow_safesock ) {
+			delete shadow_safesock;
+			shadow_safesock = NULL;
+		}
 		return false;
 	}
 	return true;
