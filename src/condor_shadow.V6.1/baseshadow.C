@@ -196,7 +196,7 @@ BaseShadow::holdJob( const char* reason )
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
 		dprintf( D_ALWAYS, "Job going into Hold state.\n");
-		exit( JOB_SHOULD_HOLD );
+		DC_Exit( JOB_SHOULD_HOLD );
 	}
 
 	char subject[ 256];
@@ -231,7 +231,7 @@ BaseShadow::holdJob( const char* reason )
 	}
 
 	dprintf( D_ALWAYS, "Job going into Hold state.\n");
-	exit( JOB_SHOULD_HOLD );
+	DC_Exit( JOB_SHOULD_HOLD );
 }
 
 
@@ -410,7 +410,7 @@ BaseShadow::checkSwap( void )
 
 	if( free_swap < reserved_swap ) {
 		dprintf( D_ALWAYS, "Not enough reserved swap space\n" );
-		exit( JOB_NO_MEM );
+		DC_Exit( JOB_NO_MEM );
 	}
 }	
 
