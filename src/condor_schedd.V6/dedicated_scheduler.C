@@ -153,8 +153,9 @@ AvailTimeList::display( int debug_level )
 {
 	Item<ResTimeNode> *cur;
 	ResTimeNode *tmp;
+	bool found_one = false;
 
-	dprintf( debug_level, "Begining AvailTimeList::display()\n" );
+	dprintf( debug_level, "Displaying dedicated resources:\n" );
 
 		// Stash our current pointer, so we don't mess up any on-going
 		// iterations
@@ -162,8 +163,11 @@ AvailTimeList::display( int debug_level )
 	Rewind();
 	while( (tmp = Next()) ) {
 		tmp->display( debug_level );
+		found_one = true;
 	}
-	dprintf( debug_level, "Finished AvailTimeList::display()\n" );
+	if( ! found_one ) {
+		dprintf( debug_level, " No resources claimed\n" );
+	}
 }
 
 
@@ -171,13 +175,10 @@ void
 AvailTimeList::addResource( match_rec* mrec )
 {
 	ResTimeNode *rtn, *tmp;
-	char buf[128];
 	bool wants_insert = false;
 	ClassAd* resource = mrec->my_match_ad;
 	
 	time_t t = findAvailTime( mrec );
-	sprintf( buf, "in addResource() - Time: %d ", (int)t );
-	displayResource( resource, buf, D_FULLDEBUG );
 	
 	Rewind();
 	while( (tmp = Next()) ) {
@@ -187,8 +188,6 @@ AvailTimeList::addResource( match_rec* mrec )
 		if( tmp->time == t ) { 
 				// Found one with the same time already, just insert
 				// this resource into that ResTimeNode's list
-			dprintf( D_FULLDEBUG, "Already have an entry for time %d\n",
-					 (int)t );
 			tmp->res_list->Insert( resource );
 				// We're done, so reset the current pointer and return 
 			return;
@@ -216,8 +215,6 @@ AvailTimeList::addResource( match_rec* mrec )
 		  ResTimeNode and insert it into our current position in the
 		  list.
 		*/
-	dprintf( D_FULLDEBUG, "Creating new entry for time %d\n",
-			 (int)t );
 	rtn = new ResTimeNode(t);
 	rtn->res_list->Insert( resource );
 
@@ -331,8 +328,12 @@ void
 ResTimeNode::display( int debug_level )
 {
 	ClassAd* res;
-	dprintf( debug_level, "Resources available at time %d:\n", 
-			 time );
+	if( time == -1 ) {
+		dprintf( debug_level, " Unclaimed resource(s):\n" );
+	} else {
+		dprintf( debug_level, " Resource(s) available at time %d:\n",  
+				 time );
+	}
 	res_list->Rewind();
 	while( (res = res_list->Next()) ) {
 		displayResource( res, "   ", debug_level );
@@ -1169,8 +1170,6 @@ void
 DedicatedScheduler::handleDedicatedJobTimer( int seconds )
 {
 	if( hdjt_tid != -1 ) {
-		dprintf( D_FULLDEBUG, 
-				 "Already have a timer for handleDedicatedJobs()\n" );
 			// Nothing to do, we've already been here
 		return;
 	}
@@ -1363,7 +1362,6 @@ DedicatedScheduler::reaper( int pid, int status )
 			}
 			break;
 		case JOB_EXITED:
-			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
 			if( q_status != HELD ) {
 				set_job_status( srec->job_id.cluster,
 								srec->job_id.proc, COMPLETED );
@@ -1516,15 +1514,12 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 
 	stream->encode();
 
-	dprintf( D_FULLDEBUG, "Pushing %d procs for cluster %d\n",
+	dprintf( D_FULLDEBUG, "Pushing %d proc(s) for cluster %d\n",
 			 alloc->num_procs, cluster );
 	if( ! stream->code(alloc->num_procs) ) {
 		dprintf( D_ALWAYS, "ERROR in giveMatches: can't send num procs\n" );
 		return FALSE;
-	} else {
-		dprintf( D_FULLDEBUG, "giveMatches: put %d num procs on wire\n",
-				 alloc->num_procs ); 
-	}		
+	}
 
 	for( p=0; p<alloc->num_procs; p++ ) {
 		job_ad = new ClassAd( *((*alloc->jobs)[p]) );
@@ -1703,7 +1698,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
 	now = 0;
-	dprintf( D_FULLDEBUG, "Set now to: %d\n", (int)now );
 
 		// This will gather up pointers to all the job classads we
 		// care about, and sort them by QDate.
@@ -1817,10 +1811,8 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// about
 	query.fetchAds( *resources );
 
-	dprintf( D_FULLDEBUG, "Found %d dedicated resources\n",
+	dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
 			 resources->Length() );
-	listDedicatedResources( D_FULLDEBUG, resources );
-
 	return true;
 }
 
@@ -1843,8 +1835,6 @@ DedicatedScheduler::sortResources( void )
 		if( ! (mrec = getMrec(res, buf)) ) {
 				// We don't have a match_rec for this resource yet, so
 				// put it in our unclaimed_resources list
-			dprintf( D_FULLDEBUG, "sortResources(): No match_rec for %s, "
-					 "storing in unclaimed_resources list\n", buf );
 			addUnclaimedResource( res );
 			continue;
 		}
@@ -1863,7 +1853,12 @@ DedicatedScheduler::sortResources( void )
 			// Now, we can actually add this resource to our list. 
 		avail_time_list->addResource( mrec );
 	}
-	avail_time_list->display( D_FULLDEBUG );
+	if( DebugFlags & D_FULLDEBUG ) {
+		avail_time_list->display( D_FULLDEBUG );
+		if( hasUnclaimedResources() ) {
+			unclaimed_resources->display( D_FULLDEBUG );
+		}
+	}
 }
 
 
@@ -1889,10 +1884,10 @@ DedicatedScheduler::listDedicatedResources( int debug_level,
 		return;
 	}
 	dprintf( debug_level, "DedicatedScheduler: Listing all "
-			 "dedicated resources - \n" );
+			 "possible dedicated resources - \n" );
 	resources->Rewind();
 	while( (ad = resources->Next()) ) {
-		displayResource( ad, "Dedicated: ", debug_level );
+		displayResource( ad, "   ", debug_level );
 	}
 }
 
@@ -2049,7 +2044,7 @@ DedicatedScheduler::computeSchedule( void )
 		}
 
 		dprintf( D_FULLDEBUG, 
-				 "Trying to find %d resources for dedicated job %d.%d\n",
+				 "Trying to find %d resource(s) for dedicated job %d.%d\n",
 				 max_hosts, cluster, proc );
 
 			// These are the potential resources for the job
@@ -2192,7 +2187,15 @@ DedicatedScheduler::computeSchedule( void )
 			// don't yet have claimed.
 		if( unclaimed_resources ) {
 			un_candidates = new CAList; 
-			dprintf( D_FULLDEBUG, "Have partial match (%d), trying to find %d unclaimed resources\n", candidates->Length(), unclaimed_needed ); 
+			if( candidates->Length() > 0 ) {
+				dprintf( D_FULLDEBUG, "Have partial match (%d), trying to "
+						 "find %d unclaimed resource(s)\n",
+						 candidates->Length(), unclaimed_needed );  
+			} else {
+				dprintf( D_FULLDEBUG, "Have no available resources, trying "
+						 "to find %d unclaimed resource(s)\n",
+						 unclaimed_needed );
+			}
 			if( ! unclaimed_resources->satisfyJob(job,
 												  unclaimed_needed, 
 												  un_candidates) ) {
@@ -2211,7 +2214,7 @@ DedicatedScheduler::computeSchedule( void )
 				// the unclaimed_resources list, and go onto the next
 				// job.
 			dprintf( D_FULLDEBUG, "Satisfied job %d with unclaimed "
-					 "resources, generating resource requests.\n", 
+					 "resource(s), generating resource request(s)\n", 
 					 cluster );
 
 			un_candidates->Rewind();
@@ -2349,7 +2352,7 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec )
 	MRecArray* matches;
 	int i, n, m;
 
-	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n",
+	dprintf( D_FULLDEBUG, "DedicatedScheduler::shutdownMpiJob, cluster %d\n", 
 			 srec->job_id.cluster );
 
 	if( ! srec ) {
@@ -2393,14 +2396,14 @@ DedicatedScheduler::DelMrec( char* cap )
 
 	if( ! cap ) {
 		dprintf( D_ALWAYS, "Null parameter to DelMrec() -- "
-				 "claim not deleted\n" );
+				 "match not deleted\n" );
 		return false;
 	}
 
 		// First, delete it from our table hashed on capability. 
 	HashKey key( cap );
 	if( all_matches_by_cap->lookup(key, rec) < 0 ) {
-		dprintf( D_ALWAYS, "mrec for \"%s\" not found -- "
+		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
 				 "match not deleted\n", cap );
 		return false;
 	}
@@ -2538,7 +2541,6 @@ DedicatedScheduler::publishRequestAd( void )
 		// we've got. 
 	sprintf( tmp, "%s = %d", ATTR_IDLE_JOBS,
 			 resource_requests->getNumElements() ); 
-	dprintf( D_FULLDEBUG, "%s\n", tmp );
 	ad.InsertOrUpdate( tmp );
 	
 		// TODO: Eventually, we could try to publish this info as
@@ -2583,10 +2585,6 @@ DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 
 	if( resource_requests->lookup(key, req) == 0 ) {
 			// Found it.  Bail out now
-		dprintf( D_FULLDEBUG, "DedicatedScheduler::generateRequest: "
-				 "Already have a resource request for %s, aborting\n",
-				 namebuf ); 
-			// displayResourceRequests();
 		return;
 	}
 
@@ -2637,9 +2635,6 @@ DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 
 		// Finally, add this request to our array.
 	resource_requests->insert( key, req );
-	
-	dprintf( D_FULLDEBUG, "Added resource request\n" );
-	displayRequest( req, "GenerateRequest: ", D_FULLDEBUG );
 }
 
 
@@ -2669,14 +2664,14 @@ DedicatedScheduler::displayResourceRequests( void )
 		return;
 	}
 
-	dprintf( level, "Starting displayResourceRequests()\n" );
+	dprintf( level, "Displaying all dedicated resource requests:\n" );
 
 	resource_requests->startIterations();
 	while( resource_requests->iterate(req) ) {
 		if( ! req ) {
 			continue;
 		}
-		displayRequest( req, "", D_FULLDEBUG );
+		displayRequest( req, " ", D_FULLDEBUG );
 	}
 }
 
@@ -3006,7 +3001,7 @@ displayResource( ClassAd* ad, char* str, int debug_level )
 	ad->LookupString( ATTR_NAME, name );
 	ad->LookupString( ATTR_OPSYS, opsys );
 	ad->LookupString( ATTR_ARCH, arch );
-	dprintf( debug_level, "%s%s\t%s\t%s\n", str, name, opsys, arch );
+	dprintf( debug_level, "%s%s\t%s\t%s\n", str, opsys, arch, name );
 }
 
 
