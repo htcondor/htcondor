@@ -21,7 +21,7 @@ EXTRACT = SIGVEC.o _SIGVEC.o
 EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
 #elif IS_MIPS_ULTRIX43
 EXTRACT = SIGVEC.o SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
-#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
+#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 EXTRACT = MMAP.o SYSCALL.o SIGACTION.o _SIGACTION.o
 #endif
 
@@ -117,7 +117,7 @@ uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
 #if !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
@@ -142,7 +142,7 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 
 depend_target($(SRC) )
 
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o, )
 #elif (IS_HPPAR_HPUX9)
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o )
