@@ -2,6 +2,7 @@
 #define _IMAGE_H
 
 #include <sys/types.h>
+#include <limits.h>
 #include "machdep.h"
 
 #define NAME_LEN 64
@@ -13,8 +14,7 @@ typedef int BOOL;
 #	undef FALSE
 #endif
 
-const BOOL	TRUE = 1;
-const BOOL	FALSE = 0;
+#include "condor_constants.h"
 
 #if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43) || defined(IRIX4) || defined(IRIX5)
 typedef int ssize_t; // should be included in <sys/types.h>, but some don't
@@ -23,18 +23,13 @@ typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 class Header {
 public:
 	Header();
-	Header( int cluster, int proc, const char *owner );
-	void Init( int cluster, int proc, const char *owner );
 	void IncrSegs() { n_segs += 1; }
 	int	N_Segs() { return n_segs; }
 	void Display();
 private:
 	int		magic;
 	int		n_segs;
-	int		cluster;
-	int		proc;
-	char	owner[NAME_LEN];
-	char	pad[ 1024 - 4 * sizeof(int) - NAME_LEN ];
+	char	pad[ 1024 - 2 * sizeof(int) - NAME_LEN ];
 };
 
 class SegMap {
@@ -57,11 +52,14 @@ private:
 
 class Image {
 public:
+	Image( char * ckpt_name );
+	Image( int ckpt_fd );
 	Image();
 	void Save();
-	void Save( int cluster, int proc, const char *owner );
+	int	Write();
 	int Write( int fd );
 	int Write( const char *name );
+	int Read();
 	int Read( int fd );
 	int Read( const char *name );
 	void Close();
@@ -69,10 +67,14 @@ public:
 	char *FindSeg( void *addr );
 	void Display();
 	void RestoreSeg( const char *seg_name );
+	void SetFd( int fd );
+	void SetFileName( char *ckpt_name );
 protected:
+	void Init( char *ckpt_name, int ckpt_fd );
 	RAW_ADDR	GetStackLimit();
 	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end );
 	void SwitchStack( char *base, size_t len );
+	char	*file_name;
 	Header	head;
 	int		max_segs;
 	SegMap	*map;
@@ -85,7 +87,9 @@ void RestoreStack();
 extern "C" void Checkpoint( int, int, void * );
 extern "C" {
 void ckpt();
-void restart();
+extern "C" void restart();
+extern "C" void init_image_with_file_name( char *ckpt_name );
+extern "C" void init_image_with_file_descriptor( int ckpt_fd );
 }
 
 
