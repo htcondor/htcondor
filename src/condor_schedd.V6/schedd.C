@@ -3096,10 +3096,21 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		if ( new_rec->match->peer && new_rec->match->peer[0] &&
 			 string_to_sin(new_rec->match->peer, &sin) == 1) {
 			// make local copy of static hostname buffer
-			char *hostname = strdup(sin_to_hostname(&sin, NULL));
-			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
-							   ATTR_REMOTE_HOST, hostname);
-			free(hostname);
+			char *tmp, *hostname;
+			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+				hostname = strdup( tmp );
+				SetAttributeString( new_rec->job_id.cluster, 
+									new_rec->job_id.proc,
+									ATTR_REMOTE_HOST, hostname );
+				free(hostname);
+			} else {
+					// Error looking up host info...
+					// Just use the sinful string
+				SetAttributeString( new_rec->job_id.cluster, 
+									new_rec->job_id.proc,
+									ATTR_REMOTE_HOST, 
+									new_rec->match->peer );
+			}
 		}
 		if ( new_rec->match->pool ) {
 			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
@@ -3953,7 +3964,6 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
     char	 ckpt_name[MAXPATHLEN];
 	char	buf[_POSIX_PATH_MAX];
 	char	server[_POSIX_PATH_MAX];
-	char	*tmp;
 	int		universe = STANDARD;
 
 		/* In order to remove from the checkpoint server, we need to know
