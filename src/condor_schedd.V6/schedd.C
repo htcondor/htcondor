@@ -853,9 +853,15 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
         case 0:     /* the child */
 
             close(0);
+
+			/* don't do these closes here because we still need the
+			   DebugLock fd in dprintf.c.  -Jim B. */
+#if 0
             for(i = 3; i < lim; i++) {
                 close(i);
             }
+#endif
+
             Agent(server, id, MySockName, user, aliveInterval, jobAdCopy);
 			
 
