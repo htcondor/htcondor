@@ -1331,18 +1331,32 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
+
 /*
   Return process's initial working directory
 */
 int
 pseudo_get_iwd( char *path )
 {
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all vanilla jobs call this, and all standard jobs call
+		  pseudo_chdir(), before they start executing.  log_execute()
+		  keeps track of itself and makes sure it only really logs the
+		  event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
+
 	PROC	*p = (PROC *)Proc;
 
 	strcpy( path, p->iwd );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", p->iwd );
 	return 0;
 }
+
 
 /*
   Return name of checkpoint file for this process
@@ -1431,6 +1445,18 @@ int
 pseudo_chdir( const char *path )
 {
 	int		rval;
+	
+		/*
+		  Try to log an execute event.  We had made logging the
+		  execute event it's own pseudo syscall, but that broke
+		  compatibility with older versions of Condor.  So, even
+		  though this is still kind of hacky, it should be right,
+		  since all standard jobs call this, and all vanilla jobs call
+		  pseudo_get_iwd(), before they start executing.
+		  log_execute() keeps track of itself and makes sure it only
+		  really logs the event once in the lifetime of a shadow.
+		*/
+	log_execute( ExecutingHost );
 
 	dprintf( D_SYSCALLS, "\tpath = \"%s\"\n", path );
 	dprintf( D_SYSCALLS, "\tOrig CurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
@@ -1454,8 +1480,7 @@ pseudo_chdir( const char *path )
 }
 
 /*
-  Take note of the executing machine's filesystem domain
-*/
+  Take note of the executing machine's filesystem domain */
 int
 pseudo_register_fs_domain( const char *fs_domain )
 {
