@@ -50,7 +50,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		// we're only dealing with one host, so this is trivial:
 	remRes->setExecutingHost( host );
 	remRes->setCapability( capability );
-	remRes->setMachineName( "Not-yet-gotten" );
+	remRes->setMachineName( "Unknown" );
 	
 		// base init takes care of lots of stuff:
 	baseInit( jobAd, schedd_addr, cluster, proc );
@@ -95,16 +95,15 @@ void UniShadow::shutDown( int reason, int exitStatus ) {
 	FILE* mailer;
 	mailer = shutDownEmail( reason, exitStatus );
 	if ( mailer ) {
-		fprintf( mailer, "Your Condor job %d.%d exited with status "
-				 "%d (0x%X).\n", getCluster(), getProc(), 
-				 exitStatus, exitStatus );
-				 
-		if ( exitStatus < 0 ) {
-			fprintf( mailer, "\nLooks like something bad happened.\n");
-		}
-		else {
-			fprintf( mailer, "\nHave a nice day.\n" );
-		}
+		fprintf( mailer, "Your Condor job %d.%d has completed.\n\n", 
+				 getCluster(), getProc() );
+
+		fprintf ( mailer, "It  " );
+
+		remRes->printExit( mailer );
+
+		fprintf( mailer, "\nHave a nice day.\n" );
+
 		email_close(mailer);
 	}
 
@@ -115,8 +114,11 @@ void UniShadow::shutDown( int reason, int exitStatus ) {
 }
 
 int UniShadow::handleJobRemoval(int sig) {
+    dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remRes->setExitReason( JOB_KILLED );
 	remRes->killStarter();
 		// more?
 	return 0;
 }
+
+

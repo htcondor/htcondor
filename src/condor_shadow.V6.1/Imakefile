@@ -13,7 +13,8 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 #endif
 
 OBJ = main.o baseshadow.o shadow.o mpishadow.o remoteresource.o \
-	pseudo_ops.o NTreceivers.o instantiate.o FAKE_GETMNT_OBJ 
+	mpiresource.o pseudo_ops.o NTreceivers.o instantiate.o \
+	FAKE_GETMNT_OBJ 
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)

@@ -30,6 +30,15 @@
 #include "user_log.c++.h"
 #include "exit.h"
 
+/* I'm not sure if this is 100% necessary, but it was in the 
+   old shadow's log_events.C... */
+#if !defined( WCOREDUMP )
+#define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
+#endif
+
+/* Forward declaration to prevent loops... */
+class RemoteResource;
+
 /** This is the base class for the various incarnations of the Shadow.<p>
 
 	If you want to change something related to the shadow, 
@@ -114,6 +123,15 @@ class BaseShadow : public Service
 		 */
 	void initUserLog();
 
+		/** Write out the proper things to the user log upon
+			a job's exit.  
+			@param exitStatus The number from wait()
+			@param exitReason The reason we exited
+			@param res The remote resource that exited.  Needed for 
+			             such things as amount of bytes transferred, etc.
+		*/
+	void endingUserLog( int exitStatus, int exitReason, RemoteResource *res );
+
 		/** Change to the 'Iwd' directory.  Send email if problem.
 			@return 0 on success, -1 on failure.
 		*/
@@ -150,6 +168,10 @@ class BaseShadow : public Service
 	char *getSpool() { return spool; }
 		/// Returns the schedd address
 	char *getScheddAddr() { return scheddAddr; }
+        /// Returns the current working dir for the job
+    char *getIwd() { return iwd; }
+        /// Returns the owner of the job - found in the job ad
+    char *getOwner() { return owner; }
 
  protected:
 

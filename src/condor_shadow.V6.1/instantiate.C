@@ -23,8 +23,15 @@
 
 #include "condor_common.h"
 #include "list.h"
-#include "remoteresource.h"
+#include "mpiresource.h"
+#include "file_transfer.h"
+#include "HashTable.h"
 
 // for the MPIShadow, a list of remote resource classes....
-template class List<RemoteResource *>;
+template class ExtArray<MpiResource *>;
+
+// for the file transfer object.
+template class HashTable<MyString, FileTransfer *>;
+template class HashBucket<MyString, FileTransfer *>;
+template class HashTable<int, FileTransfer *>;
 

@@ -62,12 +62,21 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	this->cluster = atoi(cluster);
 	this->proc = atoi(proc);
 
-	if (jobAd->LookupString(ATTR_OWNER, owner) != 1) {
+	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
 	}
-	if (jobAd->LookupString(ATTR_JOB_IWD, iwd) != 1) {
+	if ( !jobAd->LookupString(ATTR_JOB_IWD, iwd)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_JOB_IWD);
 	}
+
+        // put the shadow's sinful string into the jobAd.  Helpful for
+        // the mpi shadow, at least...and a good idea in general.
+	char buf[256];
+    sprintf ( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
+              daemonCore->InfoCommandSinfulString() );
+    if ( !jobAd->Insert( buf )) {
+        EXCEPT( "Failed to insert %s!", ATTR_MY_ADDRESS );
+    }
 
 	this->jobAd = jobAd;
 	
@@ -182,7 +191,7 @@ FILE* BaseShadow::emailUser(char *subjectline)
     ** should go.  this info is in the classad.
     */
 	email_addr[0] = '\0';
-	if ( (jobAd->LookupString(ATTR_NOTIFY_USER, email_addr) != 1) ||
+	if ( (!jobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) ||
 		 (email_addr[0] == '\0') ) {
 		// no email address specified in the job ad; use owner
 		strcpy(email_addr, owner);
@@ -268,6 +277,165 @@ void BaseShadow::initUserLog()
 	}
 }
 
+void BaseShadow::endingUserLog( int exitStatus, int exitReason, 
+								RemoteResource *res ) {
+		/* This taken from the old shadow's log_events.C */
+
+		/* Question from Mike Y: how do we use exitReason here? 
+		   The old shadow just had the status... */
+
+		/* These next lines make a dummy rusage.  When we support
+		   rusages in the RemoteResource class, we won't need it. */
+	struct rusage r;
+	memset( &r, 0, sizeof(struct rusage) );
+
+	switch (WTERMSIG(exitStatus))
+	{
+		case 0:
+		case -1: {
+				// if core, bad exectuable --- otherwise, a normal exit
+			if (WCOREDUMP(exitStatus) && WEXITSTATUS(exitStatus) == ENOEXEC) {
+					// log the ULOG_EXECUTABLE_ERROR event
+				ExecutableErrorEvent event;
+				event.errType = CONDOR_EVENT_NOT_EXECUTABLE;
+				if (!uLog.writeEvent (&event)) {
+					dprintf (D_ALWAYS, "Unable to log NOT_EXECUTABLE event\n");
+				}
+			}
+			else
+				if (WCOREDUMP(exitStatus) && WEXITSTATUS(exitStatus) == 0) {
+						// log the ULOG_EXECUTABLE_ERROR event
+					ExecutableErrorEvent event;
+					event.errType = CONDOR_EVENT_BAD_LINK;
+					if (!uLog.writeEvent (&event)) {
+						dprintf (D_ALWAYS, "Unable to log BAD_LINK event\n");
+					}
+				}
+				else {
+						// log the ULOG_JOB_TERMINATED event
+					JobTerminatedEvent event;
+					event.normal = true; // normal termination
+					event.returnValue = WEXITSTATUS(exitStatus);
+
+						/* These need to be fixed when we get the info...
+						   These ought to be res->total_local_rusage, etc */
+					event.run_local_rusage = r;
+					event.run_remote_rusage = r;
+					event.total_local_rusage = r;
+					event.total_remote_rusage = r;
+
+						/* we want to log the events from the perspective 
+						   of the user job, so if the shadow *sent* the 
+						   bytes, then that means the user job *received* 
+						   the bytes */
+
+						/* Ditto again for bytes sent, recvd.  These should
+						   come from res->bytesSent, etc... 
+
+					event.recvd_bytes = BytesSent;
+					event.sent_bytes = BytesRecvd;
+					if (syscall_sock) {
+						event.recvd_bytes += syscall_sock->get_bytes_sent();
+						event.sent_bytes += syscall_sock->get_bytes_recvd();
+					}
+					event.total_recvd_bytes = TotalBytesSent;
+					event.total_sent_bytes = TotalBytesRecvd;
+*/
+					if (!uLog.writeEvent (&event)) {
+						dprintf (D_ALWAYS,"Unable to log "
+								 "ULOG_JOB_TERMINATED event\n");
+					}
+				}
+			break;
+		}			
+			
+		case SIGKILL: {
+				// evicted without a checkpoint
+			
+			JobEvictedEvent event;
+			event.checkpointed = false;
+			event.run_local_rusage = r;
+			event.run_remote_rusage = r;
+				// we want to log the events from the perspective of the
+				// user job, so if the shadow *sent* the bytes, then that
+				// means the user job *received* the bytes
+/*
+			event.recvd_bytes = BytesSent;
+			event.sent_bytes = BytesRecvd;
+			if (syscall_sock) {
+				event.recvd_bytes += syscall_sock->get_bytes_sent();
+				event.sent_bytes += syscall_sock->get_bytes_recvd();
+			}
+*/
+			if (!uLog.writeEvent (&event)) {
+				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+			}
+			break;
+		}
+			
+		case SIGQUIT: {
+				// evicted, but *with* a checkpoint
+			
+			JobEvictedEvent event;
+			event.checkpointed = true;
+			event.run_local_rusage = r;
+			event.run_remote_rusage = r;
+				// we want to log the events from the perspective of the
+				// user job, so if the shadow *sent* the bytes, then that
+				// means the user job *received* the bytes
+/*
+			event.recvd_bytes = BytesSent;
+			event.sent_bytes = BytesRecvd;
+			if (syscall_sock) {
+				event.recvd_bytes += syscall_sock->get_bytes_sent();
+				event.sent_bytes += syscall_sock->get_bytes_recvd();
+			}
+*/
+			if (!uLog.writeEvent (&event)) {
+				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+			}
+			break;
+		}
+
+		default: {
+				// abnormal termination
+
+			JobTerminatedEvent event;
+			
+			event.normal = false;
+			event.signalNumber = WTERMSIG(exitStatus);
+			if (WCOREDUMP(exitStatus)) {
+				sprintf (event.coreFile, "%s/core.%d.%d", getIwd(), 
+						 getCluster(), getProc() );
+			}
+			else {
+					// no core file
+				event.coreFile[0] = '\0';
+			}
+
+			event.run_local_rusage = r;
+			event.run_remote_rusage = r;
+			event.total_local_rusage = r;
+			event.total_remote_rusage = r;
+
+				// we want to log the events from the perspective of the
+				// user job, so if the shadow *sent* the bytes, then that
+				// means the user job *received* the bytes
+/*
+			event.recvd_bytes = BytesSent;
+			event.sent_bytes = BytesRecvd;
+			if (syscall_sock) {
+				event.recvd_bytes += syscall_sock->get_bytes_sent();
+				event.sent_bytes += syscall_sock->get_bytes_recvd();
+			}
+*/
+			if (!uLog.writeEvent (&event)) {
+				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
+			}
+		} // of default:
+	} // of switch()
+}
+
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
@@ -309,9 +477,9 @@ display_dprintf_header(FILE *fp)
 	}
 
 	if ( mycluster != -1 ) {
-		fprintf( fp, "(%d.%d) (%d): ", mycluster,myproc,mypid );
+		fprintf( fp, "(%d.%d) (%ld): ", mycluster,myproc,mypid );
 	} else {
-		fprintf( fp, "(?.?) (%d): ", mypid );
+		fprintf( fp, "(?.?) (%ld): ", mypid );
 	}	
 
 	return TRUE;

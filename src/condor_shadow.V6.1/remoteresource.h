@@ -76,7 +76,7 @@ class RemoteResource : public Service {
 					const char * capability );
 
 		/// Destructor
-	~RemoteResource();
+	virtual ~RemoteResource();
 
 		/** This function connects to the executing host and does
 			an ACTIVATE_CLAIM command on it.  The capability, starternum
@@ -86,17 +86,23 @@ class RemoteResource : public Service {
 			                  The default is 2.
 			@return 0 if everthing went ok, -1 if error.				  
 		 */ 
-	int requestIt( int starterVersion = 2 );
+	virtual int requestIt( int starterVersion = 2 );
 
 		/** Here we tell the remote starter to kill itself in a gentle manner.
 			@return 0 on success, -1 if a problem occurred.
 		*/
-	int killStarter();
+	virtual int killStarter();
 
 		/** Print out this representation of the remote resource.
 			@param debugLevel The dprintf debug level you wish to use 
 		*/
-	void dprintfSelf( int debugLevel);
+	virtual void dprintfSelf( int debugLevel);
+
+		/** Print out the ending status of this job.
+			Used to email the user at the end...
+			@param fp A valid file pointer initialized for writing.
+		*/
+	virtual void printExit( FILE *fp );
 
 		/** Each of these remote resources can handle syscalls.  The 
 			claimSock gets registered with daemonCore, and it will
@@ -104,7 +110,7 @@ class RemoteResource : public Service {
 			@param sock Stuff comes in here
 			@return KEEP_STREAM
 		*/
-	int handleSysCalls( Stream *sock );
+	virtual int handleSysCalls( Stream *sock );
 
 		/** Return the sinful string of the remote host.
 			@param executingHost Will contain the host's sinful string.
@@ -169,12 +175,12 @@ class RemoteResource : public Service {
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
 		*/
-	void setExitReason( int reason );
+	virtual void setExitReason( int reason );
 
 		/** Set the status this host exited with.  
 			@param status Host exit status.
 		*/
-	void setExitStatus( int status );
+	virtual void setExitStatus( int status );
 
 		/** Set this resource's jobAd */
 	void setJobAd( ClassAd *jA ) { this->jobAd = jA; };
@@ -243,14 +249,13 @@ class RemoteResource : public Service {
 	BaseShadow *shadow;
 	
  private:
+
 		// initialization done in both constructors.
 	void init ( BaseShadow *shad );
 
 		// Making these private PREVENTS copying.
 	RemoteResource( const RemoteResource& );
 	RemoteResource& operator = ( const RemoteResource& );
-
-
 };
 
 

@@ -113,8 +113,7 @@ main_init(int argc, char *argv[])
 		Shadow = new UniShadow();
 		break;
 	case MPI:
-		EXCEPT( "MPI coming soon!" );
-//		Shadow = new MPIShadow();
+		Shadow = new MPIShadow();
 		break;
 	case PVM:
 		EXCEPT( "PVM...hopefully one day..." );

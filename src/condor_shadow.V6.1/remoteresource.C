@@ -78,8 +78,9 @@ RemoteResource::~RemoteResource() {
 }
 
 int RemoteResource::requestIt( int starterVersion ) {
+/* starterVersion is a default to 2. */
 
-	int			reply;
+	int reply;
 	
 	if ( !executingHost || !capability ) {
 		shadow->dprintf ( D_ALWAYS, "executingHost or capability not defined"
@@ -89,14 +90,14 @@ int RemoteResource::requestIt( int starterVersion ) {
 	}
 
 	if ( !jobAd ) {
-		dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
+		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
 		return -1;
 	}
 
 	claimSock->close();	// make sure ClaimSock is a virgin socket
 	claimSock->timeout(SHADOW_SOCK_TIMEOUT);
 	if (!claimSock->connect(executingHost, 0)) {
-		dprintf(D_ALWAYS, "failed to connect to execute host %s\n", 
+		shadow->dprintf(D_ALWAYS, "failed to connect to execute host %s\n", 
 				executingHost);
 		setExitReason(JOB_NOT_STARTED);
 		return -1;
@@ -109,42 +110,48 @@ int RemoteResource::requestIt( int starterVersion ) {
 		!jobAd->put(*claimSock)          ||
 		!claimSock->end_of_message())
 	{
-		dprintf(D_ALWAYS, "failed to send ACTIVATE_CLAIM request to %s\n",
-				executingHost);
+		shadow->dprintf(D_ALWAYS, "failed to send ACTIVATE_CLAIM "
+                        "request to %s\n", executingHost);
 		setExitReason(JOB_NOT_STARTED);
 		return -1;
 	}
 
 	claimSock->decode();
 	if (!claimSock->code(reply) || !claimSock->end_of_message()) {
-		dprintf(D_ALWAYS, "failed to receive ACTIVATE_CLAIM reply from %s\n",
-				executingHost);
+		shadow->dprintf(D_ALWAYS, "failed to receive ACTIVATE_CLAIM "
+                        "reply from %s\n", executingHost);
 		setExitReason(JOB_NOT_STARTED);
 		return -1;
 	}
 
 	if (reply != OK) {
-		dprintf(D_ALWAYS, "Request to run on %s was REFUSED.\n",
+		shadow->dprintf(D_ALWAYS, "Request to run on %s was REFUSED.\n",
 				executingHost);
 		setExitReason(JOB_NOT_STARTED);
 		return -1;
 	}
 
-	dprintf(D_ALWAYS, "Request to run on %s was ACCEPTED.\n",executingHost);
+	shadow->dprintf(D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
+                    executingHost);
 	return 0;
 }
 
 int RemoteResource::killStarter() {
-	ReliSock	sock;
+
+	ReliSock sock;
 
 	if ( !executingHost ) {
-		dprintf ( D_ALWAYS, "In killStarter, executingHost not defined.\n");
+		shadow->dprintf ( D_ALWAYS, "In killStarter, "
+                          "executingHost not defined.\n");
 		return -1;
 	}
 
+	shadow->dprintf( D_ALWAYS, "Removing machine \"%s\".\n", 
+					 machineName ? machineName : executingHost );
+
 	sock.timeout(SHADOW_SOCK_TIMEOUT);
 	if (!sock.connect(executingHost, 0)) {
-		dprintf(D_ALWAYS, "failed to connect to executing host %s\n",
+		shadow->dprintf(D_ALWAYS, "failed to connect to executing host %s\n",
 				executingHost );
 		return -1;
 	}
@@ -154,8 +161,8 @@ int RemoteResource::killStarter() {
 		!sock.put(capability)    ||
 		!sock.end_of_message())
 	{
-		dprintf(D_ALWAYS, "failed to send KILL_FRGN_JOB to startd %s\n",
-				executingHost );
+		shadow->dprintf(D_ALWAYS, "failed to send KILL_FRGN_JOB "
+                        "to startd %s\n", executingHost );
 		return -1;
 	}
 
@@ -177,9 +184,59 @@ void RemoteResource::dprintfSelf( int debugLevel ) {
 	shadow->dprintf ( debugLevel, "\texitStatus:    %d\n", exitStatus);
 }
 
+void RemoteResource::printExit( FILE *fp ) {
+
+		/* Add more cases to the switch as they develop... */
+
+	switch ( exitReason ) {
+	case JOB_EXITED: {
+		if ( WIFSIGNALED(exitStatus) ) {
+			fprintf ( fp, "died on signal %d.\n", 
+					  WTERMSIG(exitStatus) );
+		}
+		else {
+			if ( WEXITSTATUS(exitStatus) == ENOEXEC ) {
+					/* What has happened here is this:  The starter
+					   forked, but the exec failed with ENOEXEC and
+					   called exit(ENOEXEC).  The exit appears normal, 
+					   however, and the status is ENOEXEC - or 8.  If
+					   the user job can exit with a status of 8, we're
+					   hosed.  A better solution should be found. */
+				fprintf( fp, "exited because of an invalid binary.\n" );
+			} else {
+				fprintf ( fp, "exited normally with status %d.\n", 
+						  WEXITSTATUS(exitStatus) );
+			}
+		}
+
+		break;
+	}
+	case JOB_KILLED: {
+		fprintf ( fp, "was forceably removed by condor.\n" );
+		break;
+	}
+	case JOB_NOT_CKPTED: {
+		fprintf ( fp, "was removed by condor, without a checkpoint.\n" );
+		break;
+	}
+	case JOB_NOT_STARTED: {
+		fprintf ( fp, "was never started.\n" );
+		break;
+	}
+	case JOB_SHADOW_USAGE: {
+		fprintf ( fp, "had incorrect arguments to the condor_shadow.\n" );
+		fprintf ( fp, "                                    "
+				  "This is an internal problem...\n" );
+		break;
+	}
+	default: {
+		fprintf ( fp, "has a strange exit reason of %d.\n", exitReason );
+	}
+	} // switch()
+}
+
 int RemoteResource::handleSysCalls( Stream *sock ) {
 
-		// XXX I *think* this is what I want to do...
 		// change value of the syscall_sock to correspond with that of
 		// this claim sock right before do_REMOTE_syscall().
 
@@ -187,9 +244,11 @@ int RemoteResource::handleSysCalls( Stream *sock ) {
 	thisRemoteResource = this;
 
 	if (do_REMOTE_syscall() < 0) {
-		dprintf(D_SYSCALLS, "Shadow: do_REMOTE_syscall returned < 0\n");
+		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
 			// we call our shadow's shutdown method:
 		shadow->shutDown(exitReason, exitStatus);
+			// close sock on this end...the starter has gone away.
+		return TRUE;
 	}
 
 	return KEEP_STREAM;
@@ -342,11 +401,22 @@ void RemoteResource::setExitReason( int reason ) {
 	// This prevents exitReason being reset from JOB_KILLED to
 	// JOB_NOT_CKPTED or some such when the starter gets killed
 	// and the syscall sock goes away.
+
+	shadow->dprintf ( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
+					  machineName ? machineName : executingHost, reason );
+
 	if ( exitReason != JOB_KILLED ) {
 		exitReason = reason;
 	}
 }
 
 void RemoteResource::setExitStatus( int status ) {
+	shadow->dprintf ( D_FULLDEBUG, "setting exit status on %s to %d\n", 
+					  machineName ? machineName : "???", status );
+
 	exitStatus = status;
 }
+
+
+
+
