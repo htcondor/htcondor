@@ -319,3 +319,6 @@ struct module;
 #	define GETEUID(x)  (__GETEUID(x))
 #endif /* LINUX */
 
+sigset_t condor_block_signals();
+void condor_restore_sigmask(sigset_t);
+
