@@ -18,6 +18,8 @@ public:
   // User Functions
   //--------------------------------------------------------
 
+  Initialize();  // Initialize some parameters
+
   double GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
 
@@ -44,9 +46,9 @@ public:
 private:
 
   //--------------------------------------------------------
-  // Prvate methods Methods
+  // Private methods Methods
   //--------------------------------------------------------
-
+  
   void AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T); 
   void RemoveMatch(const MyString& ResourceName, const Time& T);
   void UpdatePriorities(const Time& T);
