@@ -80,6 +80,7 @@ private:
 class V3_ProcObj : public ProcObj {
 public:
 	V3_ProcObj( const V3_PROC *proc );
+	V3_ProcObj() { p = NULL; }
 	~V3_ProcObj();
 
 		// "Read-Only" access functions
