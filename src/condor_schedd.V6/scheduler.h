@@ -66,12 +66,16 @@ class Scheduler : public Service
 	void			Init();
 	void			Register(DaemonCore*);
 
+	// accessing
+   	int				Port() { return port; }
+ 
 	// maintainence
 	void			timeout(); 
 	void			sighup_handler();
 	void			sigint_handler();
 	void			SetClassAd(ClassAd*);
-
+	void			SetSockName(int);
+	
 	// negotiation
 	void			negotiate(XDR*, struct sockaddr_in*);
 	void			reschedule_negotiator(XDR*, struct sockaddr_in*);

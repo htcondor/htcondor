@@ -114,7 +114,7 @@ extern "C"
 	int	 set_root_euid(char*, int);
 	void _EXCEPT_(char*...);
 	char* gen_ckpt_name(char*, int, int, int);
-	int	 do_connect(char*, char*, u_int);
+	int	 do_connect(const char*, const char*, u_int);
 	int	 gethostname(char*, int);
 	int		send_context_to_machine(DGRAM_IO_HANDLE*, int, CONTEXT*);
 	int	 boolean(char*, char*);
@@ -134,12 +134,15 @@ extern "C"
 extern	int	send_classad_to_machine(DGRAM_IO_HANDLE*, int, const ClassAd*);
 extern	int	get_job_prio(int, int);
 extern	void	FindRunnableJob(int, int&);
+extern	int			Runnable(PROC_ID*);
 
 extern	char*		myName;
 extern	char*		Spool;
 extern	char*		CondorAdministrator;
 extern	Scheduler*	sched;
 extern	CONTEXT*	MachineContext;
+extern	char		Name[];
+extern	int			ScheddName;
 
 // shadow records and priority records
 shadow_rec      ShadowRecs[MAX_SHADOW_RECS];
@@ -194,6 +197,7 @@ Scheduler::Scheduler()
 	rec = new Mrec*[MAXMATCHES];
 	aliveFrequency = 0;
 	aliveInterval = 0;
+	port = 0; 
 }
 
 Scheduler::~Scheduler()
@@ -833,15 +837,10 @@ void Scheduler::StartJobs()
 
 		// This is the case we want to try and start a job.
 		id.cluster = rec[i]->cluster;
-		if(rec[i]->proc >= 0)
-		// we already have a candidate
-		{
-			id.proc = rec[i]->proc;
-		}
-		else
+		id.proc = rec[i]->proc; 
+		if(!Runnable(&id))
 		// find the job in the cluster with the highest priority
 		{
-			dprintf(D_FULLDEBUG | D_NOHEADER, "\n");
 			FindRunnableJob(rec[i]->cluster, id.proc);
 		}
 		if(id.proc < 0)
@@ -1624,26 +1623,28 @@ void Scheduler::SetClassAd(ClassAd* a)
 void Scheduler::Init()
 {
 	char*					tmp;
-	struct sockaddr_in		addr;
-	struct hostent*			host = gethostent();
 	char					tmpExpr[200];
 
 	// set the name of the schedd
-	memset((char*)&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(SCHED_PORT);
-	get_inet_address(&(addr.sin_addr));
-	MySockName = sin_to_string(&addr);
-	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
-	if (MySockName !=0){
-		sprintf(tmpExpr, "%s = %s", ATTR_SCHEDD_IP_ADDR, MySockName);
-		ad->Insert(tmpExpr);
-		ELEM	tmp;
-
-		tmp.type = STRING;
-		tmp.val.string_val = MySockName;
-		store_stmt(build_expr(ATTR_SCHEDD_IP_ADDR, &tmp), MachineContext);
+	if(ScheddName)
+	{
+		sprintf(tmpExpr, "SCHEDD__%s_PORT", Name); 
+		tmp = param(tmpExpr);
+		if(tmp)
+		{
+			port = atoi(tmp);
+			free(tmp);
+		}
 	}
+	else
+	{
+		tmp = param("SCHEDD_PORT");
+		if(tmp)
+		{
+			port = atoi(tmp);
+			free(tmp);
+		}
+	} 
 
 	CollectorHost = param( "COLLECTOR_HOST" );
     if( CollectorHost == NULL ) {
@@ -2242,3 +2243,49 @@ void job_prio(int cluster, int proc)
 {
 	sched->JobsRunning += get_job_prio(cluster, proc);
 }
+
+void Scheduler::SetSockName(int sock)
+{
+	struct hostent*			host = gethostent();
+	struct sockaddr_in		addr;
+	int						addrLen; 
+	char					tmpExpr[200];
+	ELEM					tmp;
+
+	memset((char*)&addr, 0, sizeof(addr));
+	errno = 0;
+	addrLen = sizeof(addr); 
+	if(getsockname(sock, (struct sockaddr*)&addr, &addrLen) < 0)
+	{
+		EXCEPT("getservbyname(), errno = %d", errno);
+	}
+	
+	if(port == 0)
+	{
+		port = ntohs(addr.sin_port);
+		dprintf(D_ALWAYS, "System assigned port %d\n", port);
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "Configured port %d, ", port);
+		dprintf(D_ALWAYS, "System assigned port %d\n", ntohl(addr.sin_port));
+	} 
+		
+	addr.sin_family = AF_INET;
+	get_inet_address(&(addr.sin_addr));
+	MySockName = sin_to_string(&addr);
+	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
+	if (MySockName !=0){
+		sprintf(tmpExpr, "%s = %s", ATTR_SCHEDD_IP_ADDR, MySockName);
+		ad->Insert(tmpExpr);
+		ELEM	tmp;
+
+		tmp.type = STRING;
+		tmp.val.string_val = MySockName;
+		store_stmt(build_expr(ATTR_SCHEDD_IP_ADDR, &tmp), MachineContext);
+	}
+	else
+	{
+		EXCEPT("Can't get socket name");
+	} 
+}	

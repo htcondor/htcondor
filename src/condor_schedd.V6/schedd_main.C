@@ -116,6 +116,8 @@ DaemonCore	core(10, 10, 10);
 char*		myName;
 Scheduler*	sched = &scheduler;		// for non-member functions to access data
 CONTEXT*	MachineContext;
+char		Name[MAXHOSTNAMELEN];
+int			ScheddName = 0;
 
 void	Init();
 
@@ -130,8 +132,6 @@ main(int argc, char* argv[])
 	char**		ptr; 
 	ClassAd*	myAd; 
 	char		job_queue_name[_POSIX_PATH_MAX];
-	char		Name[MAXHOSTNAMELEN];
-	int		ScheddName = 0;
 	struct		utsname	name;
 	char		config_file[MAXPATHLEN] = "";
  
@@ -245,8 +245,8 @@ main(int argc, char* argv[])
 	scheduler.Init();
 	scheduler.SetClassAd(myAd);
 	scheduler.Register(&core);
-	core.OpenTcp(argv[0], SCHED_PORT);
-
+	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port()));
+	
 	scheduler.timeout();						// UPDOWN
 	
 	core.Driver();

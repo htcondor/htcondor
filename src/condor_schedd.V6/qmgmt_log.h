@@ -95,7 +95,7 @@ private:
 
 class LogDeleteAttribute : public LogRecord {
 public:
-	LogDeleteAttribute(int, int, char *);
+	LogDeleteAttribute(int, int, const char *);
 	~LogDeleteAttribute();
 	int Play();
 

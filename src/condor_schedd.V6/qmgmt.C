@@ -49,6 +49,7 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 #include "condor_qmgr.h"
 #include "condor_updown.h"
 #include "prio_rec.h"
+#include "condor_attributes.h"
 
 extern char *Spool;
 
@@ -514,7 +515,7 @@ CloseConnection()
 
 
 int
-GetAttributeFloat(int cluster_id, int proc_id, char *attr_name, float *val)
+GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)
 {
 	Job		*job;
 
@@ -527,7 +528,7 @@ GetAttributeFloat(int cluster_id, int proc_id, char *attr_name, float *val)
 
 
 int
-GetAttributeInt(int cluster_id, int proc_id, char *attr_name, int *val)
+GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 {
 	Job		*job;
 
@@ -540,7 +541,7 @@ GetAttributeInt(int cluster_id, int proc_id, char *attr_name, int *val)
 
 
 int
-GetAttributeString(int cluster_id, int proc_id, char *attr_name, char *val)
+GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val)
 {
 	Job		*job;
 
@@ -553,7 +554,7 @@ GetAttributeString(int cluster_id, int proc_id, char *attr_name, char *val)
 
 
 int
-GetAttributeExpr(int cluster_id, int proc_id, char *attr_name, char *val)
+GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 {
 	Job		*job;
 
@@ -566,7 +567,7 @@ GetAttributeExpr(int cluster_id, int proc_id, char *attr_name, char *val)
 
 
 int
-DeleteAttribute(int cluster_id, int proc_id, char *attr_name)
+DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	int		rval;
 	Job		*job;
@@ -895,7 +896,7 @@ Job::SetAttribute(char *name, char *value)
 
 
 int
-Job::DeleteAttribute(char *name)
+Job::DeleteAttribute(const char *name)
 {
 	char *tmp_expr;
 	ExprTree *expr_tree;
@@ -920,7 +921,7 @@ Job::DeleteAttribute(char *name)
 
 
 int
-Job::EvalAttribute(char *name, EvalResult &result)
+Job::EvalAttribute(const char *name, EvalResult &result)
 {
 	ExprTree	*expr_tree;
 
@@ -934,7 +935,7 @@ Job::EvalAttribute(char *name, EvalResult &result)
 
 
 int
-Job::GetAttribute(char *name, float *val)
+Job::GetAttribute(const char *name, float *val)
 {
 	EvalResult	result;
 
@@ -950,7 +951,7 @@ Job::GetAttribute(char *name, float *val)
 
 
 int
-Job::GetAttribute(char *name, int *val)
+Job::GetAttribute(const char *name, int *val)
 {
 	EvalResult	result;
 
@@ -966,7 +967,7 @@ Job::GetAttribute(char *name, int *val)
 
 
 int
-Job::GetAttribute(char *name, char *val)
+Job::GetAttribute(const char *name, char *val)
 {
 	EvalResult	result;
 	char		*ptr;
@@ -995,7 +996,7 @@ Job::GetAttribute(char *name, char *val)
 
 
 int
-Job::GetAttributeExpr(char *name, char *val)
+Job::GetAttributeExpr(const char *name, char *val)
 {
 	ExprTree	*expr_tree;
 
@@ -1790,9 +1791,8 @@ void mark_jobs_idle()
 
 /*
  * Weiru
- * This function only look at one cluster. It first look at the job "c.p" to
- * see if it's runnable. If it is, return it. Otherwise, return the runnable
- * job in the cluster with the highest priority.
+ * This function only look at one cluster. Find the job in the cluster with the
+ * highest priority.
  */
 void FindRunnableJob(int c, int& rp)
 {
@@ -1807,9 +1807,7 @@ void FindRunnableJob(int c, int& rp)
 		return;
 	}
 
-	dprintf(D_FULLDEBUG, "Look for runnable job in cluster %d\n", c);
 	con = ConnectQ(0);
-	// job c.p is not runnable. Sort the cluster on priorities.
 	N_PrioRecs = 0;
 	rp = -1;
 	p = -1;
@@ -1820,7 +1818,6 @@ void FindRunnableJob(int c, int& rp)
 			if(nc != c)
 			// no more jobs in this cluster
 			{
-				dprintf(D_FULLDEBUG, "%d jobs in prio records\n", N_PrioRecs);
 				DisconnectQ(con);
 				break;
 			}
@@ -1829,7 +1826,6 @@ void FindRunnableJob(int c, int& rp)
 		}
 		else
 		{
-			dprintf(D_FULLDEBUG, "%d jobs in prio records\n", N_PrioRecs);
 			DisconnectQ(con);
 			break;
 		}
@@ -1837,7 +1833,6 @@ void FindRunnableJob(int c, int& rp)
 	if(N_PrioRecs == 0)
 	// no more jobs to run
 	{
-		dprintf(D_FULLDEBUG, "No more jobs to run\n");
 		rp = -1;
 		return;
 	}
@@ -1848,14 +1843,29 @@ void FindRunnableJob(int c, int& rp)
 int Runnable(PROC_ID* id)
 {
 	int		cur, max;					// current hosts and max hosts
-
+	int		status;
+	
+	if(id->cluster < 1 || id->proc < 0)
+	{
+		return FALSE;
+	}
+	
+	if(GetAttributeInt(id->cluster, id->proc, ATTR_STATUS, &status) < 0)
+	{
+		return FALSE;
+	}
+	if(status == HELD)
+	{
+		return FALSE;
+	}
+	
 	if(GetAttributeInt(id->cluster, id->proc, "CurrentHosts", &cur) < 0)
 	{
-		cur = 0;
+		return FALSE; 
 	}
 	if(GetAttributeInt(id->cluster, id->proc, "MaxHosts", &max) < 0)
 	{
-		max = 1;
+		return FALSE; 
 	}
 	if(cur < max)
 	{

@@ -5,6 +5,7 @@
 
 #include "qmgr.h"
 #include "condor_qmgr.h"
+#include "debug.h"
 
 int open_url(char *, int, int);
 
@@ -23,7 +24,8 @@ ConnectQ(char *qmgr_location)
 	int		fd;
 	int		cmd;
 	struct  passwd *pwd;
-
+	char*	tmp_qmgr_location = qmgr_location;
+	
 	if (connection != 0) {
 		connection->count++;
 		return connection;
@@ -38,9 +40,15 @@ ConnectQ(char *qmgr_location)
 	if (qmgr_location == 0) {
 		qmgr_location = "localhost";
 	}
+	if(qmgr_location[0] != '<')
+	{
+		qmgr_location = get_schedd_addr(qmgr_location);
+	} 
 	connection->fd = do_connect(qmgr_location, "condor_schedd", QMGR_PORT);
+	free(qmgr_location);
+	qmgr_location = tmp_qmgr_location; 
 	if (connection->fd < 0) {
-		perror("Connecting to qmgr:");
+		dprintf(D_ALWAYS, "Can't connect to qmgr");
 		free(connection);
 		return 0;
 	}

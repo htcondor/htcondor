@@ -18,11 +18,11 @@ public:
 	Job	*get_next();
 	int get_proc() { return proc; }
 	int	 SetAttribute(char *, char *);
-	int  DeleteAttribute(char *);
-	int  GetAttribute(char *, float *);
-	int  GetAttribute(char *, int *);
-	int  GetAttribute(char *, char *);
-	int  GetAttributeExpr(char *, char *);
+	int  DeleteAttribute(const char *);
+	int  GetAttribute(const char *, float *);
+	int  GetAttribute(const char *, int *);
+	int  GetAttribute(const char *, char *);
+	int  GetAttributeExpr(const char *, char *);
 	int  FirstAttributeName(char *);
 	int  NextAttributeName(char *);
 	int  OwnerCheck(char *);
@@ -33,7 +33,7 @@ public:
 	void print();
 
 private:
-	int EvalAttribute(char *, EvalResult &);
+	int EvalAttribute(const char *, EvalResult &);
 
 	Job	*next;
 	Job	*prev;

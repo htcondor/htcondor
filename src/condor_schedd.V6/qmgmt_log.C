@@ -276,7 +276,7 @@ LogSetAttribute::ReadBody(XDR *xdrs)
 }
 
 
-LogDeleteAttribute::LogDeleteAttribute(int cl, int p, char *n)
+LogDeleteAttribute::LogDeleteAttribute(int cl, int p, const char *n)
 {
 	op_type = CONDOR_DeleteAttribute;
 	body_size = sizeof(cluster) + sizeof(proc) + strlen(n) + 1;
