@@ -59,6 +59,7 @@ class SimpleList
     bool    Next(ObjType &);
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
+	bool	ReplaceCurrent(ObjType &);
 
     // Debugging
     void Display (ostream & out) const;
@@ -135,6 +136,17 @@ DeleteCurrent ()
 
     current--;
     size--;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+ReplaceCurrent (ObjType &item)
+{
+    if (items && current < size && current >= 0) {
+		items [current] = item;
+		return true;
+    }
+    return false;
 }
 
 template <class ObjType>
