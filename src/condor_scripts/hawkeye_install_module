@@ -1,5 +1,6 @@
-#! /usr/bin/perl -w
+#! /usr/bin/env perl
 use strict;
+use warnings;
 $| = 1;
 
 # Prototypes
@@ -276,7 +277,7 @@ sub ReadConfigFile( )
     {
 	open( CONFIG, $File ) || die "Can't read config @ $File";
 
-	print "Reading config file $File...";
+	print "Reading config file $File ...";
 	my $Line = "";
 	while( <CONFIG> )
 	{
@@ -317,27 +318,7 @@ sub ReadConfigFile( )
 	    push( @ConfigFiles, split( /[\,\s]+/, $Local ) );
 	}
     }
-
-    # Ok, let's find the by evaluating the config
-    if ( $Config{ModulesDir} eq "" )
-    {
-	my $Tmp = Expand( "MODULES" );
-	$Config{ModulesDir} = $Tmp if ( ( defined $Tmp ) && ( -d $Tmp ) );
-    }
-    # Last resort
-    if ( $Config{ModulesDir} eq "" )
-    {
-	if ( $Config{BaseConfigFile} =~ /(.*)\/hawkeye_config/ )
-	{
-	    my $Tmp = $1 . "/modules";
-	    $Config{ModulesDir} = $Tmp if ( -d $Tmp );
-	}
-    }
-
-    # Give up...
-    die "Unable to find modules directory\n"
-	if ( $Config{ModulesDir} eq "" );
-
+    print "\n";
 
     # Add basic things to the config if they're not defined...
     $Config{CronName} = Expand( "STARTD_CRON_NAME" );
@@ -349,20 +330,30 @@ sub ReadConfigFile( )
 	$ConfigMacros{STARTD_CRON_NAME} = $Config{CronName};
     }
 
-    my $Modules = Expand( "MODULES" );
+    # Find the modules directory location
+    my $Modules = $ConfigMacros{MODULES};
     if ( ! defined $Modules )
     {
 	my $Hawkeye = Expand( "HAWKEYE" );
+	my $HawkeyeDir = Expand( "HAWKEYE_DIR" );
 	my $ReleaseDir = Expand( "RELEASE_DIR" );
 
-	if ( $Config{Modules} ne "" )
+	# 1. Look for direct config via cmd line
+	if ( $Config{ModulesDir} ne "" )
 	{
-	    $Modules = $Config{Modules};
+	    $Modules = $Config{ModulesDir};
 	}
-	elsif ( defined $Hawkeye )
+	# 2. Look for HAWKEYE_DIR in config
+	elsif ( ( defined $HawkeyeDir ) && ( -d $HawkeyeDir ) )
+	{
+	    $Modules = "\$(HAWKEYE_DIR)/modules";
+	}
+	# 3. Look for HAWKEYE in config
+	elsif ( ( defined $Hawkeye ) && ( -d $Hawkeye ) )
 	{
 	    $Modules = "\$(HAWKEYE)/modules";
 	}
+	# 4. Look for RELEASE_DIR in config
 	elsif ( defined $ReleaseDir )
 	{
 	    $Modules = "\$(RELEASE_DIR)/modules";
@@ -375,15 +366,30 @@ sub ReadConfigFile( )
 	    exit 1;
 	}
 
-	# Create the modules directory if it doesn't exit
-	if ( ! -d $Modules )
-	{
-	    print "Creating modules directory '$Modules'...\n";
-	    mkdir( $Modules, 0755 ) || die "Can't mkdir '$Modules'";
-	}
+	# Configure the new values
 	push @NewConfig, "MODULES = $Modules";
 	$ConfigMacros{MODULES} = $Modules;
     }
+
+    # Now, expand it and set our internal config
+    if ( $Config{ModulesDir} eq "" )
+    {
+	# Bomb if the modules directory doesn't exist
+	my $Dir = Expand( "MODULES" );
+	if ( ! -d $Dir )
+	{
+	    print STDERR "Modules directory '$Modules' does not exist!\n";
+	    exit 1;
+	}
+
+	# Store the expanded version for internal use
+	$Config{ModulesDir} = $Dir if ( $Config{ModulesDir} eq "" );
+    }
+
+    # Give up...
+    die "Unable to find modules directory\n"
+	if ( $Config{ModulesDir} eq "" );
+    print "Found modules directory '$Config{ModulesDir}'\n";
 
     # Jobs defined?
     my $CronJobsVar = uc( $ConfigMacros{STARTD_CRON_NAME} ) . "_JOBS";
@@ -393,8 +399,7 @@ sub ReadConfigFile( )
 	push @NewConfig, "$CronJobsVar = ";
 	$ConfigMacros{$CronJobsVar} = "";
     }
-
-    print "Found modules directory '$Config{ModulesDir}'\n";
+    $Config{CronJobsVar} = $CronJobsVar;
 
     # Try to find the file that last definied the job list
     if ( $Config{ConfigFile} eq "" )
@@ -468,7 +473,7 @@ sub InstallModules ( )
     # Summary info
     my @Ok;
     my @Failed;
-    my $ConfigUpdated = 0;
+    my $ConfigUpdated = scalar @NewConfig;
 
     # Walk through the list of modules...
     print "Installing modules\n";
@@ -959,7 +964,7 @@ sub InstallModule( $ )
 
     # Check to see if it's already configured
     my $Found = 0;
-    my $JobString = Expand( "HAWKEYE_JOBS" );
+    my $JobString = Expand( $Config{CronJobsVar} );
     foreach my $Job ( split( /\s+/, $JobString ) )
     {
 	my @Fields = split( /:/, $Job );
@@ -1034,17 +1039,15 @@ sub ConfigureModule( $ )
 	}
 	else
 	{
-	    print "  Previous configuration for $Name found; import it? ";
+	    print "  Previous configuration for $Name found; import it [Y/n]? ";
 	    $_ = <>;
-	    if ( $_ =~ /^y/i )
-	    {
-		$Import = 1;
-	    }
+	    $Import = /^n/i ? 0 : 1;
 	}
 
 	# Ok, import from the old
 	if ( $Import )
 	{
+	    print "  Importing settings for $Name ...";
 	    $Data->{Options} = $Data->{Current}{Options};
 	    $Data->{Prefix}  = $Data->{Current}{Prefix};
 	    $Data->{Period}  = $Data->{Current}{Period};
@@ -1059,6 +1062,7 @@ sub ConfigureModule( $ )
 		$Param->{Default} = $Current
 		    if ( ( defined $Current ) && ( $Current ne "" ) );
 	    }
+	    print "  Done\n";
 	}
     }
     else
@@ -1287,8 +1291,9 @@ sub UpdateConfig( $ )
     {
 	push( @NewConfig, "##\t$Text" );
     }
+
     push( @NewConfig,
-	  "HAWKEYE_JOBS = \$(HAWKEYE_JOBS) " .
+	  "$Config{CronJobsVar} = \$($Config{CronJobsVar}) " .
 	  $Name . ":" . $Data->{Prefix} . ":" .
 	  "\$(MODULES)/" . $Data->{ModuleFile} . ":" .
 	  $Data->{Period} . ":" . join(":", @{$Data->{Options}} ) );
@@ -1303,7 +1308,7 @@ sub UpdateConfig( $ )
 	my $Default= (defined $Param->{Default} ) ? $Param->{Default} : "";
 	push( @NewConfig, "##    Default: $Default" );
 
-	my $ParamName = uc( "HAWKEYE_" . $Name . "_"  . $Param->{Name} );
+	my $ParamName = uc( $Config{CronName} . "_" . $Name . "_"  . $Param->{Name} );
 	if ( defined $Param->{Value} )
 	{
 	    push( @NewConfig, "$ParamName = $Param->{Value}" );
@@ -1342,13 +1347,35 @@ sub WriteConfig( )
     my $File = $Config{ConfigFile};
     my $TmpFile = "$File.tmp.$$";
     open( TMP, ">$TmpFile" ) || die "Can't create temp config '$TmpFile'";
-    foreach my $Line ( @{$ConfigLines{$File}} )
+
+    my $EmacsLocal = 0;
+    foreach ( @{$ConfigLines{$File}} )
     {
-	print TMP "$Line\n";
+	if ( /\#\#\# Local Variables:/ )
+	{
+	    $EmacsLocal = 1;
+	    push( @NewConfig, "" );
+	    push( @NewConfig, $_ );
+	    next;
+	}
+	if ( $EmacsLocal )
+	{
+	    if ( /\#\#\#/ )
+	    {
+		push( @NewConfig, $_ );
+		$EmacsLocal = 0 if ( /End:/ );
+		next;
+	    }
+	    else
+	    {
+		$EmacsLocal = 0;
+	    }
+	}
+	print TMP "$_\n";
     }
-    foreach my $Line ( @NewConfig )
+    foreach ( @NewConfig )
     {
-	print TMP "$Line\n";
+	print TMP "$_\n";
     }
     close( TMP );
 
@@ -1356,20 +1383,27 @@ sub WriteConfig( )
     my $OverWrite = $Config{UpdateConfig};
     if ( ! $OverWrite )
     {
-	print "About to overwrite $Config{ConfigFile}; ok? ";
-	$OverWrite = 1 if ( <> =~ /^y/ );
+	if ( -f $Config{ConfigFile} )
+	{
+	    print "About to overwrite $Config{ConfigFile}; ok? ";
+	    $OverWrite = 1 if ( <> =~ /^y/ );
+	}
+	else
+	{
+	    $OverWrite = 1;
+	}
     }
 
     # OverWrite it?
     if ( $OverWrite )
     {
-	system( "/bin/cp $TmpFile $Config{ConfigFile}" );
+	unlink( $Config{ConfigFile} );
+	rename( $TmpFile, $Config{ConfigFile} );
 	print "\n$Config{ConfigFile} updated\n";
     }
     else
     {
-	system( "/bin/cp $TmpFile $Config{ConfigFile}.$$" );
-	print "New config in $Config{ConfigFile}.$$\n";
+	print "New config in $TmpFile\n";
     }
 
     return 1;
@@ -1415,36 +1449,6 @@ sub ProcessConfigLine( $ )
 sub Expand( $ )
 {
     my $Var = shift;
-
-    # No dice; try getting it from the startd
-    if ( ! exists ( $ConfigMacros{$Var} ) )
-    {
-	# Can we / should we?
-	if ( $Config{Startd} )
-	{
-	    print "Trying to contact the startd to expand '$Var'...\n";
-
-	    my $Cmd = $Distribution . "_config_val -startd $Var";
-	    my $Tmp = `$Cmd`;
-
-	    if ( $Tmp eq "" )
-	    {
-		print "-- Unable to contact the startd --\n";
-		$Config{Startd} = 0;
-	    }
-	    else
-	    {
-		# Note that the startd is available..
-		$Config{Startd} = 1;
-		if ( ! $Tmp =~ /Not defined/ )
-		{
-		    print "Got '$Tmp' from the startd\n";
-		    $ConfigMacros{ModulesDir} = $Tmp;
-		    return $Tmp;
-		}
-	    }
-	}
-    }
 
     # One more check
     return undef if ( ! exists ( $ConfigMacros{$Var} ) );
