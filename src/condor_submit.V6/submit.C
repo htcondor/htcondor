@@ -122,6 +122,7 @@ BUCKET *ProcVars[ PROCVARSIZE ];
 */
 char	*Cluster 		= "cluster";
 char	*Process			= "process";
+char	*Hold			= "hold";
 char	*Priority		= "priority";
 char	*Notification	= "notification";
 char	*Executable		= "executable";
@@ -697,9 +698,6 @@ SetExecutable()
 
 	InsertJobExpr ("CurrentHosts = 0");
 
-	(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
-	InsertJobExpr (buffer);
-
 	switch(JobUniverse) 
 	{
 	case STANDARD:
@@ -1224,6 +1222,22 @@ SetStdFile( int which_file )
 		
 	if ( macro_value )
 		free(macro_value);
+}
+
+void
+SetJobStatus()
+{
+	char *hold = condor_param(Hold);
+
+	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, HELD);
+		InsertJobExpr (buffer);
+	} else {
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
+		InsertJobExpr (buffer);
+	}
+
+	if( hold ) free(hold);
 }
 
 void
@@ -2128,6 +2142,7 @@ queue(int num)
 		// Note: Due to the unchecked use of global variables everywhere in
 		// condor_submit, the order that we call the below Set* functions
 		// is very important!
+		SetJobStatus();
 		SetPriority();
 		SetEnvironment();
 		SetNotification();
