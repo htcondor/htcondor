@@ -1,3 +1,8 @@
+08/02/04 V6_6-merge-19
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges the fixes to ad_printmask.C for condor_q
+   and condor_status -format bugs regarding boolean attributes. 
+
 08/02/04 V6_7-pre_merge-V6_6-merge-19
    The beginning of a merge of V6_6-branch into V6_7-branch.
 
@@ -6,6 +11,10 @@
    tag. This is the 3rd generation of the V6_7-condorc-branch. The
    V6_7-branch has infn_batch code and links with globus 2.4.*, both of
    which we now want on the condorc branch.
+
+07/27/04 V6_6_6
+   The official 6.6.6 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_6_EXT 
 
 07/27/04 V6_7-post_merge-V6_6-merge-18
    The end of a merge of V6_6-branch into V6_7-branch.

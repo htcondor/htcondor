@@ -60,7 +60,8 @@ INET_NTOA_OBJ = inet_ntoa.o
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
 	filename_tools.o d_format_time.o chomp.o strupr.o globus_utils.o \
 	condor_universe.o condor_perms.o proc_id.o access_euid.o \
-	condor_snutils.o nullfile.o copy_file.o get_exec_path.o
+	condor_snutils.o printf_format.o nullfile.o copy_file.o \
+	get_exec_path.o
 
 test: test.o util_lib.a
 	$(CC) $(CFLAGS) -o test test.o util_lib.a

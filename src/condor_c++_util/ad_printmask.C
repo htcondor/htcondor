@@ -25,6 +25,7 @@
 #include "escapes.h"
 #include "MyString.h"
 #include "condor_string.h"
+#include "printf_format.h"
 
 static char *new_strdup (const char *);
 
@@ -142,6 +143,10 @@ display (AttrList *al)
 	char*	bool_str = NULL;
 	char *value_from_classad = NULL;
 
+	struct printf_fmt_info fmt_info;
+	printf_fmt_t fmt_type;
+	const char* tmp_fmt = NULL;
+
 	formats.Rewind();
 	attributes.Rewind();
 	alternates.Rewind();
@@ -157,57 +162,97 @@ display (AttrList *al)
 				if (!(tree = al->Lookup (attr)))
 				{
 					if ( alt ) {
-						stringValue.sprintf( "%s", alt );
-						retval += stringValue;
+						retval += alt;
 					}
 					continue;
 				}
 
-				// print the result
-				if (tree->EvalTree (al, NULL, &result))
-				{
-					switch (result.type)
-					{
-					case LX_STRING:
-						stringValue.sprintf( fmt->printfFmt, result.s );
+					// figure out what kind of format string the
+					// caller is using, and print out the appropriate
+					// value depending on what they want.
+				tmp_fmt = fmt->printfFmt;
+				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+					if( alt ) {
+						retval += alt;
+					}
+					continue;
+				}
+
+					// Now, figure out what kind of value they want
+				fmt_type = fmt_info.type;
+				switch( fmt_type ) {
+				case PFT_STRING:
+					if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+						stringValue.sprintf( fmt->printfFmt,
+											 value_from_classad );
 						retval += stringValue;
-						break;
-
-					case LX_FLOAT:
-						stringValue.sprintf( fmt->printfFmt, result.f );
-						retval += stringValue;
-						break;
-
-					case LX_INTEGER:
-						stringValue.sprintf( fmt->printfFmt, result.i );
-						retval += stringValue;
-						break;
-
-					case LX_UNDEFINED:
-					case LX_BOOL:
-
-							// if the classad lookup worked, but the
-							// evaluation gave us an undefined result,
-							// (or if it's a bool), we know the
-							// attribute is there.  so, instead of
-							// printing out the evaluated result, just
-							// print out the unevaluated expression.
+						free( value_from_classad );
+						value_from_classad = NULL;
+					} else {
 						rhs = tree->RArg();
 						if( rhs ) {
 							rhs->PrintToNewStr( &bool_str );
 							if( bool_str ) {
-								stringValue.sprintf(	fmt->printfFmt,
-														bool_str );
+								stringValue.sprintf(fmt->printfFmt, bool_str);
 								retval += stringValue;
 								free( bool_str );
-								break;
+								bool_str = NULL;
+							}
+						} else {
+							if ( alt ) {
+								retval += alt;
 							}
 						}
-
-					default:
-						retval += alt;
-						continue;
 					}
+					break;
+
+				case PFT_INT:
+				case PFT_FLOAT:
+					if( tree->EvalTree (al, NULL, &result) ) {
+						switch( result.type ) {
+						case LX_FLOAT:
+							if( fmt_type == PFT_INT ) {
+								stringValue.sprintf( fmt->printfFmt, 
+													 (int)result.f );
+							} else {
+								stringValue.sprintf( fmt->printfFmt, 
+													 result.f );
+							}
+							retval += stringValue;
+							break;
+
+						case LX_INTEGER:
+							if( fmt_type == PFT_INT ) {
+								stringValue.sprintf( fmt->printfFmt, 
+													 result.i );
+							} else {
+								stringValue.sprintf( fmt->printfFmt, 
+													 (float)result.i );
+							}
+							retval += stringValue;
+							break;
+
+						default:
+								// the thing they want to print
+								// doesn't evaulate to an int or a
+								// float, so just print the alternate
+							if ( alt ) {
+								retval += alt;
+							}
+							break;
+						}
+					} else {
+							// couldn't eval
+						if( alt ) {
+							retval += alt;
+						}
+					}
+					break;
+
+				default:
+					EXCEPT( "Unknown value (%d) from parsePrintfFormat()!",
+							(int)fmt_type );
+					break;
 				}
 				break;
 
