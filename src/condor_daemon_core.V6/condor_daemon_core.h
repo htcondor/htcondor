@@ -122,9 +122,9 @@ class DaemonCore : public Service
 		int		Verify(DCpermission perm, const struct sockaddr_in *sin );
 		
 		int		Register_Command(int command, char *com_descrip, CommandHandler handler, 
-					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
+					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW, int dprintf_flag = D_COMMAND);
 		int		Register_Command(int command, char *com_descript, CommandHandlercpp handlercpp, 
-					char *handler_descrip, Service* s, DCpermission perm = ALLOW);
+					char *handler_descrip, Service* s, DCpermission perm = ALLOW, int dprintf_flag = D_COMMAND);
 		int		Cancel_Command( int command );
 		int		InfoCommandPort();
 		char*	InfoCommandSinfulString(int pid=-1);
@@ -225,7 +225,7 @@ class DaemonCore : public Service
 
 		int		Register_Command(int command, char *com_descip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
-					DCpermission perm, int is_cpp);
+					DCpermission perm, int dprintf_flag, int is_cpp);
 		int		Register_Signal(int sig, char *sig_descip, SignalHandler handler, 
 					SignalHandlercpp handlercpp, char *handler_descrip, Service* s, 
 					DCpermission perm, int is_cpp);
@@ -248,6 +248,7 @@ class DaemonCore : public Service
 			char*			command_descrip;
 			char*			handler_descrip;
 			void*			data_ptr;
+			int				dprintf_flag;
 		};
 		void				DumpCommandTable(int, const char* = NULL);
 		int					maxCommand;		// max number of command handlers
