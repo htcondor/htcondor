@@ -39,6 +39,8 @@ ALL : "$(OUTDIR)\condor_cpp_util.lib"
 CLEAN :
 	-@erase "$(INTDIR)\access.obj"
 	-@erase "$(INTDIR)\ad_printmask.obj"
+	-@erase "$(INTDIR)\check_events.obj"
+	-@erase "$(INTDIR)\check_log_files.obj"
 	-@erase "$(INTDIR)\classad_collection.obj"
 	-@erase "$(INTDIR)\classad_command_util.obj"
 	-@erase "$(INTDIR)\classad_hashtable.obj"
@@ -174,6 +176,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_cpp_util.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
+	"$(INTDIR)\check_events.obj" \
+	"$(INTDIR)\check_log_files.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
@@ -278,6 +282,8 @@ ALL : "$(OUTDIR)\condor_cpp_util.lib"
 CLEAN :
 	-@erase "$(INTDIR)\access.obj"
 	-@erase "$(INTDIR)\ad_printmask.obj"
+	-@erase "$(INTDIR)\check_events.obj"
+	-@erase "$(INTDIR)\check_log_files.obj"
 	-@erase "$(INTDIR)\classad_collection.obj"
 	-@erase "$(INTDIR)\classad_command_util.obj"
 	-@erase "$(INTDIR)\classad_hashtable.obj"
@@ -412,6 +418,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_cpp_util.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\access.obj" \
 	"$(INTDIR)\ad_printmask.obj" \
+	"$(INTDIR)\check_events.obj" \
+	"$(INTDIR)\check_log_files.obj" \
 	"$(INTDIR)\classad_collection.obj" \
 	"$(INTDIR)\classad_command_util.obj" \
 	"$(INTDIR)\classad_hashtable.obj" \
@@ -524,6 +532,18 @@ SOURCE="..\src\condor_c++_util\access.C"
 SOURCE="..\src\condor_c++_util\ad_printmask.C"
 
 "$(INTDIR)\ad_printmask.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\check_events.C"
+
+"$(INTDIR)\check_events.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\check_log_files.C"
+
+"$(INTDIR)\check_log_files.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
