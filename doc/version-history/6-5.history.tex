@@ -16,8 +16,10 @@ The details of each version are described below.
 \item Added the \Dflag{HOSTNAME} debugging level to print out verbose
   messages regarding how Condor resolves hostnames, domain names,
   IP addresses, and so on.
-  This is mainly useful for sites that are having trouble getting
-  Condor to work with their DNS or NIS installation.
+  If set, the Condor daemons also print out messages showing how they
+  initialize their own local hostname and IP address.
+  This is useful for sites that are having trouble getting Condor to
+  work because of problems with their DNS or NIS installation.
 
 \item Minor improvements for Computing On Demand (COD) support: 
   Simplified the interface to the \Condor{cod} command-line tool
