@@ -982,6 +982,7 @@ int CondorFileTable::fcntl( int fd, int cmd, int arg )
 		#endif
 
 		default:
+			return pointers[fd]->file->fcntl(cmd,arg);
 			break;
 	}
 }
