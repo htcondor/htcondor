@@ -25,7 +25,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT */
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
@@ -86,7 +85,7 @@ main_init(int argc, char* argv[])
 		switch(ptr[0][1])
 		{
 		  case 'n':
-			Name = strdup( build_valid_daemon_name(*(++ptr)) ); 
+			Name = build_valid_daemon_name( *(++ptr) );
 			break;
 		  default:
 			usage(argv[0]);
