@@ -438,6 +438,8 @@ e		*/
 		iterator find(std::string const& attrName);
 		const_iterator find(std::string const& attrName) const;
 
+        int size(void) const { return attrList.size(); }
+
 		/**@name Miscellaneous */
 		//@{
 		void Update( const ClassAd& ad );	
@@ -490,13 +492,13 @@ e		*/
 //		ExprTree*   Lookup(char *) const;  		// for convenience
 //      ExprTree*	Lookup(const char*) const;	// look up an expression
 
-		int         LookupString(const char *, char *); 
-		int         LookupString(const char *, char *, int); //uses strncpy
-		int         LookupString (const char *name, char **value);
-        int         LookupInteger(const char *, int &);
-        int         LookupFloat(const char *, float &);
-        int         LookupBool(const char *, int &);
-        int         LookupBool(const char *, bool &);
+		int         LookupString(const char *, char *) const; 
+		int         LookupString(const char *, char *, int) const; //uses strncpy
+		int         LookupString (const char *name, char **value) const;
+        int         LookupInteger(const char *, int &) const;
+        int         LookupFloat(const char *, float &) const;
+        int         LookupBool(const char *, int &) const;
+        int         LookupBool(const char *, bool &) const;
 
 		// evaluate values in classads
 		int         EvalString (const char *, class ClassAd *, char *);
