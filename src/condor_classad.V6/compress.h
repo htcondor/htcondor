@@ -25,7 +25,7 @@
 #define COMPRESS_H
 
 #include <hash_map>
-#include "externrefs.h"
+#include "classad.h"
 
 class ClassAdBin
 {
