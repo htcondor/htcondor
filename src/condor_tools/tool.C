@@ -35,10 +35,6 @@
 #include "get_daemon_addr.h"
 #include "daemon_types.h"
 
-#ifndef WIN32
-extern "C" int strincmp( char*, char*, int );
-#endif
-
 void doCommand( char *name );
 void version();
 void namePrintf( FILE* stream, char* name, char* str, ... );
