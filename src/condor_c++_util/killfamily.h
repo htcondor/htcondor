@@ -32,6 +32,7 @@ class ProcFamily {
 public:
 	
 	ProcFamily( pid_t pid, priv_state priv, int test_only = 0 );
+	ProcFamily( pid_t pid, priv_state priv, ProcAPI* papi );
 
 	~ProcFamily();
 
@@ -42,6 +43,13 @@ public:
 
 	void takesnapshot();
 
+		// Allocates an array for all pids in the current pid family, 
+		// sets the given pointer to that array, and returns the
+		// number of pids  in the family.  The array must be
+		// deallocated with delete.
+	int		currentfamily( pid_t* & );	
+	int		size() { return family_size; };
+	
 private:
 	enum KILLFAMILY_DIRECTION {
 		PATRICIDE, 		// parent die first, then kids
@@ -74,7 +82,8 @@ private:
 
 	ExtArray<a_pid> *old_pids;
 
-
+	int family_size;
+	int needs_free;
 };
 
 #endif

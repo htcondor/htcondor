@@ -24,20 +24,35 @@
 #include "condor_common.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
+static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
 	daddy_pid = pid;
 	procAPI = new ProcAPI;
+	needs_free = 1;
 	old_pids = NULL;
 	mypriv = priv;
 	test_only_flag = test_only;
+	family_size = 0;
+}
+
+ProcFamily::ProcFamily( pid_t pid, priv_state priv, ProcAPI* papi )
+{
+	daddy_pid = pid;
+	procAPI = papi;
+	needs_free = 0;
+	old_pids = NULL;
+	mypriv = priv;
+	test_only_flag = 0;
+	family_size = 0;
 }
 
 ProcFamily::~ProcFamily()
 {
-	delete procAPI;
-
+	if( needs_free ) {
+		delete procAPI;
+	}
 	if ( old_pids ) {
 		delete old_pids;
 	}
@@ -53,14 +68,12 @@ ProcFamily::hardkill()
 void
 ProcFamily::suspend()
 {
-	takesnapshot();
 	spree(SIGSTOP, PATRICIDE);
 }
 
 void
 ProcFamily::resume()
 {
-	takesnapshot();
 	spree(SIGCONT, INFANTICIDE);
 }
 
@@ -226,6 +239,10 @@ ProcFamily::takesnapshot()
 	}
 	old_pids = new_pids;
 
+		// Record the new size of our pid family, (which is
+		// conveniently stored in newpidindex already).
+	family_size = newpidindex;
+
 	// getProcInfo() allocates memory; free it
 	if ( pinfo ) {
 		delete pinfo;
@@ -235,3 +252,19 @@ ProcFamily::takesnapshot()
 	set_priv(priv);
 }
 
+
+int
+ProcFamily::currentfamily( pid_t* & ptr  )
+{
+	pid_t* tmp;
+	int i;
+	tmp = new pid_t[ family_size ];
+	if( !tmp ) {
+		EXCEPT( "Out of memory!" );
+	}
+	for( i=0; i<family_size; i++ ) {
+		tmp[i] = (*old_pids)[i].pid;
+	}
+	ptr = tmp;
+	return family_size;
+}
