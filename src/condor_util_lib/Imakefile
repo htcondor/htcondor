@@ -136,6 +136,8 @@ lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 clean::
 	rm -f lex.yy.c
 
+y.tab.h: y.tab.c
+
 y.tab.c: stub_gen_yacc.y scanner.h
 	YACC -d stub_gen_yacc.y
 clean::
