@@ -379,13 +379,12 @@ daemon::Start()
 	char * username = param( buf );
 	if(username) {
 		int result = init_user_ids(username);
-		free(username);
 		if(result) {
 			priv_mode = PRIV_USER_FINAL;
 		} else {
 			dprintf(D_ALWAYS,"couldn't switch to user %s!\n",username);
-			free(username);
 		}
+		free(username);
 	}
 
 	sprintf( buf, "%s_ARGS", name_in_config_file );
