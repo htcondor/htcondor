@@ -1,11 +1,35 @@
+06/16/04 V6_7-post_merge-V6_6-merge-14
+	The end of the merge of V6_6-branch into V6_7-branch
+
+06/16/04 V6_7-pre_merge-V6_6-merge-14
+	The beginning of the merge of V6_6-branch into V6_7-branch
+
+06/16/04 V6_6-merge-14
+	The state of the V6_6-branch for yet another exciting merge into 
+V6_7-branch.
+
 06/15/04 V6_7-post_merge-V6_7-credd-merge-1
-  The end of the merge of V6_7-credd-branch into V6_7-branch
+	The end of the merge of V6_7-credd-branch into V6_7-branch
 
 06/15/04 V6_7-pre_merge-V6_7-credd-merge-1
-  The begining of the merge of V6_7-credd-branch into V6_7-branch
+	The begining of the merge of V6_7-credd-branch into V6_7-branch
 
 06/15/04 V6_7-credd-merge-1
-  A new tag for merging V6_7-credd-branch into V6_7-branch
+	A new tag for merging V6_7-credd-branch into V6_7-branch
+
+06/03/04 V6_6-post_merge-V6_6-imake-merge-1
+	The state of the V6_6-brach After I had merged in the V6_6-imake-branch
+	at V6_6-imake-merge-1.
+
+06/03/04 V6_6-pre_merge-V6_6-imake-merge-1
+	The state of the V6_6-branch just before I merged V6_6-imake-branch
+	into it for the first time. This redoes the imake system to be more
+	compliant and easier to use.
+
+06/2/04 V6_6-imake-merge-1
+	The state of the V6_6-imake-branch before a merge into the V6_6-branch.
+	Contains the imake fixes to enable functioning on gcc 3.3.
+
 
 05/27/04 V6_7-soap-2-branch
    A new branch off of V6_7-branch created from the V6_7-soap-2-root
@@ -14,7 +38,7 @@
    since the V6_7-soap-root tag.
 
 05/26/04 V6_7-credd-branch
-  A new branch for the new Condor daemon - condor_credd. Created from 
+	A new branch for the new Condor daemon - condor_credd. Created from 
 V6_7-credd-root. By ckireyev.
 
 05/25/04 V6_7-infn_batch-branch
@@ -61,6 +85,7 @@ V6_7-credd-root. By ckireyev.
 05/17/04 V6_7-pre_merge-V6_6-merge-12
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-12.
+
 
 05/16/04 V6_6-merge-12
    The state of the V6_6-branch for yet another merge into
