@@ -21,16 +21,24 @@ TEST_SUITE_F = test_suite_F
 PVM_LIBRARY = pvmd
 #endif
 
+#if USE_CONFIG_SERVER
+CONFIG_SERVER = config_server
+#endif
+
+#if USE_ACCOUNTANT
+ACCOUNTANT = accountant
+#endif
+
 #if IS_V6
 #	define Programs \
-		accountant ckpt_server collector.V6 config_server globalq \
-		master.V6 negotiator.V6 off on prio schedd.V6 q.V6 rm.V6 \
-		scripts shadow.V6 startd starter.V5 submit.V6 \
+		$(ACCOUNTANT) ckpt_server collector.V6 $(CONFIG_SERVER) globalq \
+		master.V6 negotiator.V6 off on schedd.V6 prio q.V6 rm.V6 \
+		scripts shadow.V6 startd.V6 starter.V5 submit.V6 \
 		tools kbdd
 
 #define Libraries \
 		util_lib c++_util xdr_lib ckpt io classad daemon_core \
-		expressions syscall_lib
+		syscall_lib
 		
 #elif IS_V5
 #	define Programs \
@@ -88,12 +96,16 @@ object_target(tools)
 
 
 #if IS_V6
+#if USE_ACCOUNTANT
 	object_target(accountant)
+#endif
 	object_target(ckpt_server)
+#if USE_CONFIG_SERVER
 	object_target(config_server)
+#endif
 	object_target(shadow.V6)
 	object_target(starter.V5)
-	object_target(startd)
+	object_target(startd.V6)
 	object_target(schedd.V6)
 #if HAS_X
 	object_target(kbdd)
@@ -113,7 +125,6 @@ object_target(tools)
 	object_target(io)
 	object_target(classad)
 	object_target(daemon_core)
-	object_target(expressions)
 makefiles:: h/Makefile
 h/Makefile:
 	cd h; imake IMAKE_FLAGS
@@ -158,11 +169,11 @@ object_target(negotiator)
 object_target(collector)
 object_target(master.dhruba)
 object_target(q)
+object_target(rm)
 #endif
 
 object_target(globalq)
 object_target(prio)
-object_target(rm)
 object_target(on)
 object_target(off)
 object_target(scripts)
