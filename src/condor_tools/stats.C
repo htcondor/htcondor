@@ -84,7 +84,9 @@ int ResConvStr(char* InpStr, char* OutStr)
 
 //------------------------------------------------------------------------
 
-main(int argc, char* argv[])
+int main(int argc, char* argv[]);
+
+int main(int argc, char* argv[])
 {
   int Now=time(0);
   int ToDate=Now;
