@@ -562,7 +562,7 @@ void StringBase::Display()
 
 void BooleanBase::Display()
 {
-    dprintf(D_NOHEADER | D_ALWAYS, value ? "TRUE" : "FALSE");
+    dprintf(D_NOHEADER | D_ALWAYS, (char *)(value ? "TRUE" : "FALSE") );
 }
 
 
