@@ -574,10 +574,14 @@ OsProc::renameCoreFile( void )
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	if( rename(old_name.Value(), new_name.Value()) >= 0 ) {
-		rval = true;
+	if( rename(old_name.Value(), new_name.Value()) != 0 ) {
+		// rename failed
 		t_errno = errno; // grab errno right away
-	}
+		rval = false;
+	} else { 
+		// rename succeeded
+		rval = true;
+   	}
 	set_priv( old_priv );
 
 	if( rval ) {
