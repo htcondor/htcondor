@@ -188,6 +188,12 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
+	} else if(sscanf(line,"fsync %d",&fd)==1) {
+
+		result = REMOTE_CONDOR_fsync(fd);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
 	} else if(sscanf(line,"read %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);

@@ -454,6 +454,27 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_fsync:
+	  {
+		int fd;
+
+		assert( syscall_sock->code(fd) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = fsync(fd);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code( terrno ) );
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );

@@ -245,6 +245,17 @@ public class ChirpClient {
 		simple_command("rmdir "+name+"\n");
 	}
 
+	/**
+	This call blocks until all outstanding operations have
+	been committed to stable storage.
+	@param fd The file descriptor to sync.
+	@throws IOException
+	*/
+
+	public void fsync( int fd ) throws IOException {
+		simple_command("fsync "+fd+"\n");
+	}
+
 	private int simple_command( String cmd ) throws IOException {
 		int response;
 		try {

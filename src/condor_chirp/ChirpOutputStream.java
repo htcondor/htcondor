@@ -133,5 +133,13 @@ public class ChirpOutputStream extends java.io.OutputStream {
 
 	public void flush() {
 	}
+
+	/**
+	Forces all uncommitted data to stable storage.
+	*/
+
+	public void fsync( int fd ) throws IOException {
+		client.fsync(fd);
+	}
 }
 

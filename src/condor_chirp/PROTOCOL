@@ -98,6 +98,11 @@ cookie <string:cookie>
 
 	Authenticate to the server with the given cookie string.
 
+fsync  <decimal:fd>
+
+	Block until all uncommitted changes to this file descriptor
+	have been written to stable storage.
+
 login  <string:name> <string:password>
 
 	Authenticate to the server with this name and password.
