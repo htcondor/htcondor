@@ -40,4 +40,15 @@
     //@Include: classad_collection.h
   //@}
 
+  /** @name Daemon API
+      <hr>
+      The Daemon API allow a program to get information about a
+	  daemon, such as the hostname, the "sinful string", the port it's
+	  listening on, etc.  You can also get a new ReliSock or SafeSock
+	  object connected to the daemon.
+  */
+  //@{
+    //@Include: daemon.h
+  //@}
+
 //@}
