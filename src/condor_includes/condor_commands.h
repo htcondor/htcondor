@@ -138,6 +138,8 @@
 #define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
 #define DELETE_USER			(SCHED_VERS+82)		// negotiator  (actually, accountant)
 
+
+
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
   on the wire that means "read a ClassAd off the wire, lookup
@@ -292,6 +294,13 @@ const int QUERY_ANY_ADS = 48;
 #define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
 #define GIVE_MATCHES 	       (DCSHADOW_BASE+3)  // for MPI & parallel shadow
 #define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
+
+
+#define CREDD_BASE 81000
+#define CREDD_STORE_CRED (CREDD_BASE+0)
+#define CREDD_GET_CRED (CREDD_BASE+1)
+#define CREDD_REMOVE_CRED (CREDD_BASE+2)
+#define CREDD_QUERY_CRED (CREDD_BASE+3)
 
 
 /*

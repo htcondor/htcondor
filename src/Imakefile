@@ -60,7 +60,7 @@ TEST_SUITE_BASE = test_suite_base
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts startd.V6 StdUnvProgs submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel c-gahp credd
 
 #define Libraries \
 		util_lib daemon_client classad c++_util condor_procapi/libprocapi.a \
@@ -214,6 +214,7 @@ object_target(scripts)
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
 object_target(c-gahp)
+object_target(credd)
 object_target(dcskel)
 #if WANT_DRMAA
 object_target(drmaa)
@@ -235,6 +236,8 @@ single_target(condor_ckpt_server,ckpt_server_api.a)
 
 object_target(test_suite_C.V5)
 object_target(test_suite_base)
+
+
 #if HAS_FORTRAN
    object_target($(TEST_SUITE_F))
 #endif

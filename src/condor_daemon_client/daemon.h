@@ -360,8 +360,9 @@ protected:
 		  the appropriate collector if that doesn't work.
 		  @param subsys The subsystem string for this daemon
 		  @param adtype The type of ClassAd we'll query.
+		  @parma query_collector Whether to query collector if all else fails
 		  */
-	bool getDaemonInfo( const char* subsys, AdTypes adtype );
+	bool getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector = true );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have

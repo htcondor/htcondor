@@ -740,6 +740,9 @@ Daemon::locate( void )
 	case DT_NEGOTIATOR:
 		rval = getCmInfo( "NEGOTIATOR" );
 		break;
+	case DT_CREDD:
+	  rval = getDaemonInfo( "CREDD", ANY_AD, false );
+	  break;
 	case DT_VIEW_COLLECTOR:
 		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
@@ -783,7 +786,7 @@ Daemon::locate( void )
 
 
 bool
-Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
+Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 {
 	char				buf[512], tmpname[512];
 	char				*addr_file, *tmp, *my_name;
@@ -913,6 +916,10 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			}
 			free( addr_file );
 		} 
+	}
+
+	if ((! _addr) && (!query_collector)) {
+	  return false;
 	}
 
 	if( ! _addr ) {
