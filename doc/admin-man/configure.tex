@@ -1853,6 +1853,13 @@ the defaults work quite well, and you probably
 will not want to change them for any reason.
 \begin{description}
 
+\item[\Macro{MASTER\_NAME}] \label{param:MasterName}
+  A unique name given for a \Condor{master} daemon on a machine.
+  Defaults to username@hostname, where the username is the user name
+  under which the \Condor{master} daemon is executed.
+  If the \Condor{master} daemon is running as root, then
+  \MacroNI{MASTER\_NAME} is the host name.
+
 \item[\Macro{MASTER\_ATTRS}] \label{param:MasterExprs} This macro is
   described in section~\ref{param:SubsysExprs} as
   \MacroNI{SUBSYS\_ATTRS}.
@@ -1894,6 +1901,13 @@ will not want to change them for any reason.
   \Condor{master}'s \File{InstanceLock}.
   If \File{\$(LOCK)} is undefined, then the master log itself is locked.
 
+\item[\Macro{ADD\_WINDOWS\_FIREWALL\_EXCEPTION}]
+  \label{param:AddWindowsFirewallException} If set to false, the
+  \Condor{master} will not automatically add Condor to the Windows
+  Firewall list of trusted applications. Such trusted applications can
+  accept incoming connections without interference from the firewall. This
+  only affects machines running Windows XP SP2 or higher. The default
+  is True.
 
 \end{description}
 
@@ -2664,6 +2678,15 @@ These macros control the \Condor{schedd}.
   If you decide to change this setting (not recommended),
   be sure to change the \MacroUNI{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
+
+\item[\Macro{SCHEDD\_NAME}] \label{param:ScheddName}
+  A unique name given for a \Condor{schedd} daemon on a machine.
+  Defaults to username@hostname, where the username is the user name
+  under which the \Condor{schedd} daemon is executed.
+  If the \Condor{schedd} daemon is running as root, then
+  \MacroNI{SCHEDD\_NAME} is the host name.
+  This configuration macro is used to identify \Condor{schedd}
+  ClassAds.
 
 \item[\Macro{SCHEDD\_ATTRS}] \label{param:ScheddAttrs} This macro is
   correctly used as \MacroNI{SUBMIT\_EXPRS}, as described in
@@ -3795,6 +3818,15 @@ The location of a file visible to both server and client in
 Remote File System authentication.
 The default when not defined is the directory 
 \File{/shared/scratch/tmp}.
+
+\item[\Macro{ENCRYPT\_EXECUTE\_DIRECTORY}]
+\label{param:EncryptExecuteDirectory}
+The execute directory for jobs on Windows platforms may be
+encrypted by setting this configuration variable to \Expr{True}.
+Defaults to \Expr{False}.
+The method of encryption uses the EFS (Encrypted File System)
+feature of Windows NTFS v5.
+
 \end{description}
 
 

@@ -25,13 +25,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added a feature to the \Condor{master} which automatically adds
+the Condor daemons to the Windows Firewall exception list. This only
+applies to machines running Windows XP SP2.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When Condor transfers the job executable using the file transfer
+  mechanism, it used to leave the binary sitting as a world-writeable
+  file inside the execute directory on UNIX.
+  Now, executable files transfered by Condor have the proper
+  permissions (mode 0755).
 
 \item Fixed an important bug in the low-level code that Condor uses to
   transfer files across a network.
@@ -43,6 +51,10 @@ The details of each version are described below.
   This should significantly help throughput for some sites,
   particularly ones that transfer very large files as output from
   their jobs.
+ 
+\item Fixed a bug in the file transfer mechanism which caused
+  segmentation faults when very long input/output/intermediate file
+  lists were used.
 
 \item Fixed a number of bugs in the \Opt{-format} option to \Condor{q}
   and \Condor{status}.
@@ -73,6 +85,20 @@ overridden with the \Opt{-AllowLogError} command-line option.
 (such as getting multiple terminate events for a single job).  This
 checking can be disabled with the \Opt{-NoEventChecks} command-line
 option.
+
+\item Under Tru64, Condor would sometimes fail to start a job while
+	setting the resource limits on behalf of the job.
+	This error appears to be the result of a kernel issue.
+	A workaround has been implemented which will leave the limits
+	of the job unmodified and run the job when this specific error
+	situation arises.
+
+\item On Windows, occasionally Condor would exhibit erratic behavior
+when a machine resumes from sleeping. This has been fixed.
+
+\item On Windows, occasionally Condor would fail to bind to any available
+interfaces due to a mishandling of a function return value. This has
+been fixed.
 
 \end{itemize}
 

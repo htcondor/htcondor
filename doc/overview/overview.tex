@@ -324,19 +324,21 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
-Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
+Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.7, 8, 9 \\ \hline
 Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
 Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
  & Red Hat Linux 9 \\
- & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0) (clipped) \\ 
- & Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
+ & Red Hat Enterprise Linux 3 \\
+ & Debian Linux 3.1 (sarge) \\
+ & Windows 2000 Professional and Server, 2003 Server (Win NT 5.0), 
+Windows XP Professional (Win NT 5.1) (clipped) \\ \hline
 ALPHA & Digital Unix 4.0 \\
  & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
  & Tru64 5.1 (clipped) \\ \hline
 PowerPC & Macintosh OS X (clipped) \\
- & AIX 5.2L (clipped) \\ \hline
-Itanium & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\
- & SuSE Linux Enterprise 8.1 (clipped) \\ \hline
+ & AIX 5.2 (clipped) \\ \hline
+Itanium (IA64) & Red Hat Linux 7.1, 7.2, 7.3 (clipped) \\ 
+ & SuSE Linux Enterprise Server 8.1 (clipped) \\ \hline
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -384,15 +386,15 @@ Red Hat Linux, version 8 on x86 \\
 & pghpf, version 5.0 & Portland Group high performace Fortran compiler \\ 
 & pgcc, version 5.0 \\ 
 \hline
+Red Hat Linux, version 9 on x86 \\ 
+& gcc & version 3.2.2 \\ 
+\hline
+Red Hat Enterprise Linux 3 on x86 \\
+& gcc & version 3.2.3 \\ 
+\hline
 HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
 & gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
 & cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
-\hline
-IRIX 6.5 on Silicon Graphics MIPS (R5000, R8000, and R10000)\\ 
-& cc, CC, and c89 \\ 
-& f77 and f90 \\ 
-& gcc, g++, and g77;  version egcs-1.1.2 for mips4 & We plan to support newer versions of the GNU compiler collection in the near future.  mips4 executables will \emph{not} run on a mips3-only architecture, but
- a mips4 architecture will run a mips3 executable.\\ 
 \hline
 Digitial Unix 4.0 on ALPHA \\ 
 & cc, CC, cxx, and c89 \\ 
