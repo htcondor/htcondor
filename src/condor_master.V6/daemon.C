@@ -45,13 +45,16 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 // these are defined in master.C
-extern int		NotFlag;
 extern int		RestartsPerHour;
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
 extern int		master_exit(int);
 extern int		update_interval;
 extern int		check_new_exec_interval;
+extern int		preen_interval;
+extern int		new_bin_delay;
+extern char*	FS_Preen;
+
 
 #if 0
 extern int		doConfigFromServer; 
@@ -59,9 +62,10 @@ extern char*	config_location;
 #endif
 
 extern time_t	GetTimeStamp(char* file);
-extern int 	   	NewExecutable(char* file, time_t* tsp);
+extern int 	   	NewExecutable(char* file, time_t tsp);
 extern void		tail_log( FILE*, char*, int );
 extern void		update_collector();
+extern int		run_preen(Service*);
 
 #ifndef WANT_DC_PM
 extern int standard_sigchld(Service *,int);
@@ -102,6 +106,7 @@ extern char*		MailerPgm;
 extern int			Lines;
 extern int			PublishObituaries;
 extern int			StartDaemons;
+extern char*		MasterName;
 
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
@@ -285,20 +290,15 @@ int daemon::Restart()
 {
 	int		n;
 
-	if( NotFlag ) {
-		dprintf( D_ALWAYS, "NOT Starting \"%s\"\n", process_name );
-		return 0;
-	}
-	if(newExec == TRUE)
-	{
+	if(newExec == TRUE) {
 		restarts = 0;
 		newExec = FALSE; 
-		return Start();
+		n = new_bin_delay;
+	} else {
+		n = NextStart();
+		restarts++;
 	}
 
-	n = NextStart();
-
-	restarts++;
 	if( recover_tid != -1 ) {
 		dprintf( D_FULLDEBUG, 
 				 "Cancelling recovering timer (%d) for %s\n", 
@@ -373,8 +373,11 @@ daemon::Start()
 
 #ifdef WANT_DC_PM
 
-	sprintf( argbuf, "%s -f\0", shortname );
-
+	if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
+		sprintf( argbuf, "%s -f -n %s\0", shortname, MasterName );
+	} else {
+		sprintf( argbuf, "%s -f\0", shortname );
+	}
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
 				argbuf,			// args
@@ -407,7 +410,7 @@ daemon::Start()
 		}
 
 		// Close all inherited sockets and fds
-		for (i=0;i < max_fds; i++)
+		for (i=0; i<max_fds; i++)
 			close(i);
 
 		if( command_port != TRUE ) {
@@ -415,9 +418,13 @@ daemon::Start()
 			(void)execl( process_name, shortname, "-f", "-p",
 						 argbuf, 0 );
 		} else {
-			(void)execl( process_name, shortname, "-f", 0 );
+			if( (strcmp(name_in_config_file,"SCHEDD") == 0) && MasterName ) {
+				(void)execl( process_name, shortname, "-f", "-n", MasterName, 0 );
+			} else {
+				(void)execl( process_name, shortname, "-f", 0 );
+			}
 		}
-	
+
 		dprintf( D_ALWAYS, "ERROR: execl( %s, %s, -f, 0 ) failed, errno = %d\n",
 				 process_name, shortname, errno );
 		exit( JOB_EXEC_FAILED );
@@ -660,6 +667,10 @@ daemon::CancelAllTimers()
 		daemonCore->Cancel_Timer( recover_tid );
 		recover_tid = -1;
 	}
+	if( start_tid != -1 ) {
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
 }
 
 
@@ -739,8 +750,11 @@ Daemons::Daemons()
 	daemon_list_size = 0;
 	check_new_exec_tid = -1;
 	update_tid = -1;
+	preen_tid = -1;
 	reaper = NO_R;
 	all_daemons_gone_action = MASTER_RESET;
+	immediate_restart = FALSE;
+	immediate_restart_master = FALSE;
 }
 
 
@@ -823,27 +837,54 @@ Daemons::CheckForNewExecutable()
     if ( master == -1 ) {
         EXCEPT("CheckForNewExecutable: MASTER not specifed");
     }
-    if( NewExecutable(daemon_ptr[master]->process_name,
-					  &daemon_ptr[master]->timeStamp) ) {
+	if( daemon_ptr[master]->newExec ) {
+			// We already noticed the master has a new binary, so we
+			// already started to restart it.  There's nothing else to
+			// do here.
+		return;
+	}
+    if( NewExecutable( daemon_ptr[master]->process_name,
+					   daemon_ptr[master]->timeStamp ) ) {
 		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
 				 daemon_ptr[master]->process_name );
+		daemon_ptr[master]->newExec = TRUE;
+		immediate_restart_master = immediate_restart;
+			// Begin the master restart procedure.
         RestartMaster();
 		return;
     }
 
-    for (int i=0; i < no_daemons; i++) {
-		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid ) {
+    for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->runs_here ) {
 			if( NewExecutable( daemon_ptr[i]->process_name,
-							   &daemon_ptr[i]->timeStamp) ) {
-				daemon_ptr[i]->newExec = TRUE;
-				daemon_ptr[i]->restarts = 0;
+							   daemon_ptr[i]->timeStamp ) ) {
+				daemon_ptr[i]->newExec = TRUE;				
+				if( immediate_restart ) {
+						// If we want to avoid the new_binary_delay,
+						// we can just set the newExec flag to false,
+						// reset restarts to 0, and kill the daemon.
+						// When it gets restarted, the new binary will
+						// be used, but we won't think it's a new
+						// binary, so we won't use the new_bin_delay.
+					daemon_ptr[i]->newExec = FALSE;
+					daemon_ptr[i]->restarts = 0;
+				}
+				if( daemon_ptr[i]->pid ) {
+					dprintf( D_ALWAYS,"%s was modified, killing.\n", 
+							 daemon_ptr[i]->process_name );
+					daemon_ptr[i]->Stop();
+				} else {
+					if( immediate_restart ) {
+							// This daemon isn't running now, but
+							// there's a new binary.  Cancel the
+							// current start timer and restart it
+							// now. 
+						daemon_ptr[i]->CancelAllTimers();
+						daemon_ptr[i]->Restart();
+					}
+				}
 			}
-			if( daemon_ptr[i]->newExec == TRUE ) {
-				dprintf( D_ALWAYS,"%s was modified, killing.\n", 
-						 daemon_ptr[i]->process_name );
-				daemon_ptr[i]->Stop();
-			}
-		} 
+		}
 	}
 	dprintf(D_FULLDEBUG, "exit Daemons::CheckForNewExecutable\n");
 }
@@ -917,15 +958,6 @@ Daemons::StopFastAllDaemons()
 
 
 void
-Daemons::CancelAllStopTimers()
-{
-	for( int i=0; i < no_daemons; i++ ) {
-		daemon_ptr[i]->CancelAllTimers();
-	}
-}
-
-
-void
 Daemons::ReconfigAllDaemons()
 {
 	dprintf( D_ALWAYS, "Reconfiguring all running daemons.\n" );
@@ -966,11 +998,30 @@ Daemons::RestartMaster()
 #endif
 }
 
-
 // This function is called when all the children have finally exited
-// and we're ready to actually do the restart.
+// and we're ready to actually do the restart.  It checks whether we
+// want to immediately restart or not, and either sets a daemonCore
+// timer to call FinalRestartMaster() after MASTER_NEW_BINARY_DELAY or
+// just calls FinalRestartMaster directly.
 void
 Daemons::FinishRestartMaster()
+{
+	if( immediate_restart_master ) {
+		dprintf( D_ALWAYS, "Restarting master right away.\n" );
+		FinalRestartMaster();
+	} else {
+		dprintf( D_ALWAYS, "Restarting master in %d seconds.\n",
+				 new_bin_delay );
+		daemonCore->
+			Register_Timer( new_bin_delay, 0, 
+							(TimerHandlercpp)Daemons::FinalRestartMaster,
+							"Daemons::FinalRestartMaster()", this );
+	}
+}
+
+// Function that actually does the restart of the master.
+void
+Daemons::FinalRestartMaster()
 {
 #ifndef WANT_DC_PM
 	int 		i, max_fds = getdtablesize();
@@ -987,19 +1038,25 @@ Daemons::FinishRestartMaster()
 	}
 	(void)close( MasterLockFD );
 
-	dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
-			 daemon_ptr[index]->process_name);
-
 		// Now close all sockets and fds so our new invocation of
 		// condor_master does not inherit them.
-	for (i=0; i < max_fds; i++) 
+	for (i=0; i < max_fds; i++) {
 		close(i);
+	}
 
 		// Make sure the exec() of the master works.  If it fails,
 		// we'll fall past the execl() call, and hit the exponential
 		// backoff code.
 	while(1) {
-		(void)execl(daemon_ptr[index]->process_name, "condor_master", "-f", 0);
+		dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
+				 daemon_ptr[index]->process_name);
+		if( MasterName ) {
+			(void)execl(daemon_ptr[index]->process_name, 
+						"condor_master", "-f", "-n", MasterName, 0);
+		} else {
+			(void)execl(daemon_ptr[index]->process_name, 
+						"condor_master", "-f", 0);
+		}
 		daemon_ptr[index]->restarts++;
 		i = daemon_ptr[index]->NextStart();
 		dprintf( D_ALWAYS, 
@@ -1159,6 +1216,7 @@ Daemons::StartTimers()
 {
 	static int old_update_int = -1;
 	static int old_check_int = -1;
+	static int old_preen_int = -1;
 
 	if( old_update_int != update_interval ) {
 		if( update_tid != -1 ) {
@@ -1185,4 +1243,19 @@ Daemons::StartTimers()
 							"Daemons::CheckForNewExecutable()", this );
 	}
 	old_check_int = check_new_exec_interval;
+
+	int new_preen = (int)( old_preen_int != preen_interval );
+	int first_preen = MIN( HOUR, preen_interval );
+	if( !FS_Preen || new_preen ) {
+		if( preen_tid != -1 ) {
+			daemonCore->Cancel_Timer( preen_tid );
+		}
+	}
+	if( new_preen && FS_Preen ) {
+		preen_tid = daemonCore->
+			Register_Timer( first_preen, preen_interval,
+							(TimerHandler)run_preen,
+							"run_preen()" );
+	}
+	old_preen_int = preen_interval;
 }	
