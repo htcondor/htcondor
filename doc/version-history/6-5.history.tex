@@ -116,6 +116,13 @@ Collector's ClassAd as a hex string.
 \item If no \Macro{STARTD\_EXPRS} is specified, the \Condor{startd}
   now defaults to ``JobUniverse''.
 
+\item Globus universe jobs under Condor-G now send email on job
+completion based on the notification setting in the submit file.
+
+\item When submitting a Globus universe job to Condor-G the
+input, output, and error files can now optionally be any URL
+usable by globus-url-copy.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
