@@ -501,7 +501,7 @@ int net_write(int   socket_desc,
 		buffer += bytes_written;
     }
 	if (total != size)
-		return CHILDTERM_BAD_FILE_SIZE;
+		return -1;
 	return total;
 #else
 	return 0;
