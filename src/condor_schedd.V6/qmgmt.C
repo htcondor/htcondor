@@ -1599,6 +1599,8 @@ int get_job_prio(int cluster, int proc)
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts >= max_hosts) {
+		dprintf (D_FULLDEBUG,"In get_job_prio() cur_hosts(%d)>=max_hosts(%d)\n",
+								cur_hosts, max_hosts);
         return cur_hosts;
     }
 
@@ -1804,7 +1806,6 @@ void FindRunnableJob(int c, int& rp)
 	int					rval;
 	int					p;
 	int					nc, np;					// next cluster and proc
-//	Qmgr_connection*	con;
 
 	if(c <= 0)
 	{
@@ -1812,7 +1813,6 @@ void FindRunnableJob(int c, int& rp)
 		return;
 	}
 
-//	con = ConnectQ(0);
 	N_PrioRecs = 0;
 	rp = -1;
 	p = -1;
@@ -1823,7 +1823,6 @@ void FindRunnableJob(int c, int& rp)
 			if(nc != c)
 			// no more jobs in this cluster
 			{
-//				DisconnectQ(con);
 				break;
 			}
 			get_job_prio(nc, np);
@@ -1831,7 +1830,7 @@ void FindRunnableJob(int c, int& rp)
 		}
 		else
 		{
-//			DisconnectQ(con);
+			dprintf (D_FULLDEBUG, "GetNextJob(%d, %d) returned %d\n",c,p,rval);
 			break;
 		}
 	} while(rval != -1);
@@ -1850,32 +1849,41 @@ int Runnable(PROC_ID* id)
 	int		cur, max;					// current hosts and max hosts
 	int		status;
 	
+	dprintf (D_FULLDEBUG, "Job %d.%d:");
+
 	if(id->cluster < 1 || id->proc < 0)
 	{
+		dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable\n");
 		return FALSE;
 	}
 	
 	if(GetAttributeInt(id->cluster, id->proc, ATTR_STATUS, &status) < 0)
 	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_STATUS);
 		return FALSE;
 	}
 	if(status == HELD)
 	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (HELD)\n");
 		return FALSE;
 	}
 	
 	if(GetAttributeInt(id->cluster, id->proc, "CurrentHosts", &cur) < 0)
 	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no CurrentHosts)\n");
 		return FALSE; 
 	}
 	if(GetAttributeInt(id->cluster, id->proc, "MaxHosts", &max) < 0)
 	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no MaxHosts)\n");
 		return FALSE; 
 	}
 	if(cur < max)
 	{
+		dprintf (D_FULLDEBUG | D_NOHEADER, " is runnable\n");
 		return TRUE;
 	}
+	dprintf (D_FULLDEBUG | D_NOHEADER, " not runnable (default rule)\n");
 	return FALSE;
 }
 
