@@ -35,12 +35,12 @@ Coleman, and Alain Roy, but really, Rajesh did all of the real
 work. The release was prepared by Alain Roy, who is responsible for
 maintaining the code.
 
-The original ClassAd library (used in versions of Condor from x.x to
-6.4) was written by -------, with ideas and inspiration from Miron
-Livny and Marvin Solomon. Although nary a wisp of that original code
-exists in the current implementation, the everday use and experience
-with the original code provided much of the guidance and inspiration
-for this version. 
+The original ClassAd library (used in versions of Condor up to 6.4)
+was written by various members of the Condor team, with ideas and
+inspiration from Miron Livny and Marvin Solomon. Although nary a wisp
+of that original code exists in the current implementation, the
+everday use and experience with the original code provided much of the
+guidance and inspiration for this version.
 
 ===== Status =====
 Version 0.9 is an early release. We hope to release version 1.0 by the
