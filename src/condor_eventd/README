@@ -64,7 +64,7 @@ configuration:
 
   EndDownTime = 913066770 
   Shutdown = (CurrentTime < EndDownTime)
-  START : $(START) && ($(Shutdown) == False)
+  START : ($(START)) && ($(Shutdown) == False)
   STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime
 
 EndDownTime is set to be (event start time + event duration +
