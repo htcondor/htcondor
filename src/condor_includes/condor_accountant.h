@@ -14,7 +14,6 @@ public:
 
   // User Functions
 
-  void SetAccountant(char* sin); // set accountant remote/local mode
   void Reset();                  // Flush all tables
 
   double GetPriority(const MyString& CustomerName); // get priority for a customer
