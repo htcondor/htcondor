@@ -188,3 +188,25 @@ void Init()
 		EXCEPT("No spool directory specified");
 	}
 }
+
+
+int
+main_config()
+{
+	return TRUE;
+}
+
+
+int
+main_shutdown_fast()
+{
+	return TRUE;
+}
+
+
+int
+main_shutdown_graceful()
+{
+	return TRUE;
+}
+
