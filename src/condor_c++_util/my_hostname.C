@@ -121,6 +121,11 @@ init_ipaddr()
 	ipaddr_initialized = TRUE;
 }
 
+#ifdef WIN32
+	// see below comment in init_hostname() to learn why we must
+	// include condor_io in this module.
+#include "condor_io.h"
+#endif
 
 void
 init_hostnames()
@@ -128,6 +133,17 @@ init_hostnames()
     char *tmp, hostbuf[MAXHOSTNAMELEN];
     int i;
     hostbuf[0]='\0';
+#ifdef WIN32
+	// On Win32 we instantiate a bullshit SafeSock which we do not use.
+	// We do this because there are a couple tools in Condor, like
+	// condor_history, which do not use any CEDAR sockets but which call
+	// some socket helper functions like gethostbyname().  These helper
+	// functions will fail unless WINSOCK is initialized.  WINSOCK
+	// is initialized via a global constructor in CEDAR, so we must
+	// make certain we call at least one CEDAR function so the linker
+	// brings in the global constructor to initialize WINSOCK! -Todd T.
+	SafeSock bullshit;
+#endif
 
     if( hostname ) {
         free( hostname );
