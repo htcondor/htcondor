@@ -50,6 +50,8 @@ class SafeSock : public Sock {
 //
 public:
 
+	friend class DaemonCore;
+
 	/*
 	**	Methods
 	*/
@@ -81,8 +83,9 @@ public:
 	char *endpoint_IP();
 	int endpoint_port();
 
-	int get_file_desc();
+#if 0 // interface no longer supported
 	int attach_to_file_desc(int);
+#endif
 	
 	/*
 	**	Stream protocol
@@ -111,13 +114,15 @@ protected:
 	/*
 	**	Methods
 	*/
-
+	char * serialize(char *);
+	inline char * serialize() { return(serialize(NULL)); }
+	int get_file_desc();
 
 	/*
 	**	Data structures
 	*/
 
-	int rcv_packet(int);
+	int rcv_packet(SOCKET);
 	class RcvMsg {
 	public:
 		RcvMsg() : buf(65536), ready(0) {}

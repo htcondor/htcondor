@@ -30,10 +30,13 @@
 
 #define _POSIX_SOURCE
 
+#include <stdio.h>	// for sprintf
+
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "internet.h"
 
 
 SafeSock::SafeSock(					/* listen on port		*/
@@ -271,13 +274,42 @@ int SafeSock::peek(
 }
 
 int SafeSock::rcv_packet(
-	int	_sock
+	SOCKET _sock
 	)
 {
 	char	tmp[65536];
 	int		len, fromlen;
 
 	fromlen = sizeof(struct sockaddr_in);
+
+	if (_timeout > 0) {
+		struct timeval	timer;
+		fd_set			readfds;
+		int				nfds=0, nfound;
+		timer.tv_sec = _timeout;
+		timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+		nfds = _sock + 1;
+#endif
+		FD_ZERO( &readfds );
+		FD_SET( _sock, &readfds );
+
+		nfound = select( nfds, &readfds, 0, 0, &timer );
+
+		switch(nfound) {
+		case 0:
+			return -1;
+			break;
+		case 1:
+			break;
+		default:
+			dprintf( D_ALWAYS, "select returns %d, recv failed\n",
+				nfound );
+			return -1;
+			break;
+		}
+	}
+
 	if ((len = recvfrom(_sock, tmp, 65536, 0,
 						(struct sockaddr *)&_who,&fromlen)) < 0) {
 		return FALSE;
@@ -333,7 +365,7 @@ int SafeSock::get_file_desc()
 	return _sock;
 }
 
-
+#if 0 // interface no longer supported
 int SafeSock::attach_to_file_desc(
 	int		fd
 	)
@@ -344,7 +376,7 @@ int SafeSock::attach_to_file_desc(
 	_state = sock_connect;
 	return TRUE;
 }
-
+#endif
 
 struct sockaddr_in *SafeSock::endpoint()
 {
@@ -374,4 +406,33 @@ char *SafeSock::endpoint_IP()
 int SafeSock::endpoint_port()
 {
 	return (int) ntohs(_who.sin_port);
+}
+
+char * SafeSock::serialize(char *buf)
+{
+	char sinful_string[28];
+	char *ptmp;
+
+	if ( buf == NULL ) {
+		// here we want to save our state into a buffer
+
+		// first, get the state from our parent class
+		char * parent_state = Sock::do_serialize();
+		// now concatenate our state
+		char * outbuf = new char[50];
+		sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
+		strcat(parent_state,outbuf);
+		delete []outbuf;
+		return( parent_state );
+	}
+
+	// here we want to restore our state from the incoming buffer
+
+	// first, let our parent class restore its state
+	ptmp = Sock::do_serialize(buf);
+	assert( ptmp );
+	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
+	string_to_sin(sinful_string, &_who);
+
+	return NULL;
 }

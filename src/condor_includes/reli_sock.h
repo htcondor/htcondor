@@ -43,6 +43,8 @@ class ReliSock : public Sock {
 //
 public:
 
+	friend class DaemonCore;
+
 	/*
 	**	Methods
 	*/
@@ -77,7 +79,9 @@ public:
 
 	int get_file_desc();
 
+#if 0 // interface no longer supported
 	int attach_to_file_desc(int);
+#endif
 
 	/*
 	**	Stream protocol
@@ -107,7 +111,8 @@ protected:
 	/*
 	**	Methods
 	*/
-
+	virtual char * serialize(char *);
+	inline char * serialize() { return(serialize(NULL)); }
 
 	/*
 	**	Data structures
@@ -116,7 +121,7 @@ protected:
 	class RcvMsg {
 	public:
 		RcvMsg() : ready(0) {}
-		int rcv_packet(int, int);
+		int rcv_packet(SOCKET, int);
 
 		ChainBuf	buf;
 		int			ready;
