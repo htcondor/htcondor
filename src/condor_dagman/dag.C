@@ -474,7 +474,10 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 				// run twice" bug).  Extra abort events we just ignore;
 				// other bad events will abort the DAG unless configured
 				// to continue.
-			if ( doEventChecks ) {
+				// Note: we only check an event if we have a job object for
+				// it, so that we don't pay any attention to unrelated
+				// "garbage" events that may be in the log(s).
+			if ( doEventChecks && job ) {
 				MyString	eventError;
 				bool		eventIsGood;
 				bool checkResult = _ce.CheckAnEvent(event, eventError,
