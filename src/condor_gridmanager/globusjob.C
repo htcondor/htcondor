@@ -630,7 +630,7 @@ int GlobusJob::doEvaluateState()
 					}
 					globusStateErrorCode = 0;
 					ClearCallbacks();
-					gmState = GM_SUBMIT_SAVE;
+					gmState = GM_RESTART_SAVE;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
