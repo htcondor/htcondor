@@ -1,0 +1,52 @@
+\begin{ManPage}{\label{man-condor-qedit}\Condor{qedit}}{1}
+{modify job attributes}
+\Synopsis \SynProg{\Condor{qedit}}
+\oOptArg{-n}{schedd-name}
+\Arg{cluster \Bar cluster.proc \Bar owner \Bar -constraint constraint}
+\Arg{attribute-name}
+\Arg{attribute-value}
+\Arg{\Dots}
+
+\index{Condor commands!condor\_qedit}
+\index{condor\_qedit command}
+
+\Description
+
+\Condor{qedit} modifies job attributes in the Condor job queue.  The
+jobs are specified either by cluster number, cluster.proc job ID,
+owner, or by a ClassAd constraint expression.  The attribute-value may
+be any ClassAd expression (integer, floating point number, string,
+expression).
+
+\begin{Options}
+    \OptItem{\OptArg{-n}{schedd-name}}{Modify job attributes in the queue of the specified schedd}
+\end{Options}
+
+\begin{Examples}
+\begin{verbatim}
+% condor_qedit -name perdita 1849.0 In '"myinput"'
+Set attribute "In".
+% condor_qedit jbasney NiceUser TRUE
+Set attribute "NiceUser".
+% condor_qedit -constraint 'JobUniverse == 1' Requirements '(Arch == "INTEL") && (OpSys == "SOLARIS26") && (Disk >= ExecutableSize) && (VirtualMemory >= ImageSize)'
+Set attribute "Requirements".
+\end{verbatim}
+\end{Examples}
+
+\begin{GenRem}
+Strings must be specified with quotes (for example, '"String"').
+
+If a job is currently running, modified attributes for that job will
+not take effect until the job restarts.
+
+\Condor{qedit} will not allow modification of the following
+attributes to ensure security and correctness: Attr{Owner},
+Attr{ClusterId}, Attr{ProcId}, Attr{MyType}, Attr{TargetType}, and
+Attr{JobStatus}.
+
+Please use \Condor{hold} to place a job ``on hold'' and
+\Condor{release} to release a held job, instead of attempting to
+modify \Attr{JobStatus} directly.
+\end{GenRem}
+
+\end{ManPage}
