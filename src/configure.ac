@@ -34,8 +34,6 @@ AC_MSG_NOTICE([checking for critical tools used by configure])
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
 REQUIRE_PATH_PROG([CUT],[cut])
-CHECK_HEADTAIL_N([HEAD],[head])
-CHECK_HEADTAIL_N([TAIL],[tail])
 
 # Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
 # greater.  Unfortunately, GPT doesn't have a configure script or
@@ -45,7 +43,6 @@ CHECK_HEADTAIL_N([TAIL],[tail])
 # perl in the rest of the tests in here, if we want it. 
 AC_PROG_PERL_VERSION([5.005_03], [],
    [AC_MSG_ERROR([perl version 5.005_03 or higher is required])])
-
 
 AC_MSG_NOTICE([verifying build environment ]) 
 
@@ -342,13 +339,13 @@ if test "$_cv_opsys" = "LINUX" ; then
       # ugh!  it's not a symlink to a file named with the version, so
       # we try an alternative method.  this is mostly a hack based on
       # crude experimentation.  we run nm on the libc.so, search for
-      # "A" symbols with "GLIBC" in them, and grab the *second to*
+      # "A" symbols with "GLIBC_#.#.#" in them, and grab the *second to*
       # last one we find.  based on testing this method on some
       # versions of glibc where the version was in the filename, this
       # seems to give us the closest match to reality.  it'll
       # certainly work to give us the major + minor number, which is
       # mostly all we care about at this point...
-      _libc_ver=`nm $_libc|grep GLIBC|grep A|$TAIL_2|$HEAD_1|$AWK '{print $3}'|$CUT -f2 -d_`
+      _libc_ver=`nm $_libc|$PERL -e 'while(<>){if(/.*A GLIBC_(\d)\.(\d)\.(\d)/){$s=$v;$v="$1.$2.$3"}}print "$s\n";'`
       break;
     fi
   done
@@ -521,7 +518,7 @@ AC_MSG_RESULT([$gcc_path])
 # supported gcc version, we might as well catch them here, before they
 # get very far.
 AC_MSG_CHECKING([for exact version of gcc])
-gcc_vers=`gcc -v 2>&1 | $TAIL_1 | $PERL -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+gcc_vers=`gcc -v 2>&1 |$PERL -ne '{if(/.*gcc version\s*(\S*).*/){ print "$1\n";}}'`
 
 case "$gcc_vers" in
  "egcs-2.91.66" )
