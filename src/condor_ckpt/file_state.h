@@ -43,17 +43,18 @@ public:
 	void Display();
 	void Save();
 	void Restore();
-	int PreOpen( int fd );
+	int PreOpen( int fd, BOOL readable, BOOL writeable );
 	int DoOpen( const char *path, int flags, int mode );
 	int DoClose( int fd );
 	int DoDup( int fd );
 	int DoDup2( int fd, int dupfd );
 	int	Map( int user_fd );
+	BOOL IsLocalAccess( int user_fd );
 	BOOL IsDup( int user_fd );
 private:
 	int		find_avail( int start );
 	void	fix_dups( int user_fd );
-	File	file[_POSIX_OPEN_MAX];
+	File	*file;		// array allocated at run time
 };
 
 char *string_copy( const char *);
