@@ -21,8 +21,9 @@ a Condor submit description file for each program in the DAG
 is used by Condor.
 
 Each node (program) in the DAG needs its own Condor submit description file.
-As DAGMan submits jobs to Condor, it uses a single Condor log file
+As DAGMan submits jobs to Condor, it monitors the Condor log file(s) to 
 to enforce the ordering required for the DAG.
+
 The DAG itself is defined by the contents of a DAGMan input file.
 DAGMan is responsible for scheduling, recovery, and reporting
 for the set of programs submitted to Condor.
@@ -132,7 +133,7 @@ Syntax for \Arg{PRE} and \Arg{POST} script lines within the input file
 
 \Arg{SCRIPT} \Arg{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
-\Arg{SCRIPT} \Arg{POST}  \Arg{JobName}\Arg{ExecutableName} \oArg{arguments}
+\Arg{SCRIPT} \Arg{POST}  \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
 The \Arg{SCRIPT} keyword identifies the type of line within
 the DAG input file.
@@ -276,15 +277,17 @@ Each program may be submitted to a different universe
 within Condor, for example standard,
 vanilla, or DAGMan.
 
-Two limitations exist.
-First, each Condor submit description file must submit only one job.
+One limitation exists:
+each Condor submit description file must submit only one job.
 There may not be multiple \verb@queue@ lines, or DAGMan will fail.
-The second limitation is that
-the submit description file for all jobs within the DAG
-must specify the same log.
+DAGMan no longer requires that all jobs specify the same log file.
+However, if your DAG contains a very large number of jobs, each
+specifying its own log file, performance may suffer.  Therefore,
+if your DAG contains a large number of jobs, it is best to have
+all of the jobs use the same log file.
 DAGMan enforces the dependencies within a DAG
 using the events recorded in the
-log file produced by job submission to Condor.
+log file(s) produced by job submission to Condor.
 
 Here is an example Condor submit description file to go with the
 diamond-shaped DAG example.
@@ -383,27 +386,27 @@ scripts that may be running at one time.
 \subsection{Job Monitoring}
 
 After submission, the progress of the DAG can be monitored
-by looking at the common log file,
+by looking at the log file(s),
 observing the e-mail that program submission to Condor causes,
 or by using \Condor{q} \Arg{-dag}.
 
 \subsection{Job Failure and Job Removal}
 
-\Condor{submit\_dag} attempts to check the DAG input file
-to verify that all the nodes in the DAG
-specify the same log file.
+\Condor{submit\_dag} attempts to check the DAG input file.
 If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
-To omit the check that all nodes use the same log file,
-as may be desired in the case where there are thousands of nodes,
-submit the job with the \Arg{-log} option.
+DAGMan normally generates a list of job log files to
+monitor by examing all of the job submission files.  If
+that will not work (some job submission files will be generated
+by \Arg{PRE} scripts, for example), you can specify a single
+common log file with the \Arg{-log} option.
 An example of this submission:
 \begin{verbatim}
 condor_submit_dag -log diamond_condor.log
 \end{verbatim}
-This option tells \Condor{submit\_dag} to omit the verification
-step and use the given file as the log file.
+This option tells \Condor{submit\_dag} use the given file as
+the log file, if no log files are specified in submit files.
 
 To remove an entire DAG, consisting of DAGMan plus
 any jobs submitted to Condor,
