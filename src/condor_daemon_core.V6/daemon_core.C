@@ -1620,16 +1620,16 @@ int DaemonCore::HandleReq(int socki)
 
 		if( ! auth_info.LookupString(ATTR_AUTH_TYPES, auth_types)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "extract auth_info.AUTH_TYPES!\n");
+					   "extract auth_info.%s!\n", ATTR_AUTH_TYPES);
 			return FALSE;
 		}
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.AUTH_TYPES == '%s'\n",
-				auth_types);
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: auth_info.%s == '%s'\n",
+				ATTR_AUTH_TYPES, auth_types);
 
-		if( ! auth_info.LookupString(ATTR_AUTHENTICATE, buf)) {
+		if( ! auth_info.LookupString(ATTR_AUTH_ACTION, buf)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-					   "extract auth_info.AUTHENTICATE!\n");
+					   "extract auth_info.%s!\n", ATTR_AUTH_ACTION);
 			return FALSE;	
 		}
 
@@ -1695,9 +1695,9 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 
-		result = auth_info.LookupInteger(ATTR_COMMAND, req);
+		result = auth_info.LookupInteger(ATTR_AUTH_COMMAND, req);
 		if (! result) {
-			EXCEPT ("AUTH: no COMMAND in ClassAd!");
+			EXCEPT ("AUTH: no %s in ClassAd!", ATTR_AUTH_COMMAND);
 		}
 
 
@@ -3367,7 +3367,7 @@ int DaemonCore::Create_Process(
 		}
 		
 		if( (args == NULL) || (args[0] == 0) ) {
-			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n", args);
+			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 			unix_args = new char*[2];
 			unix_args[0] = new char[strlen(name)+1];
 			strcpy ( unix_args[0], name );

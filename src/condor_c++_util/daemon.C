@@ -474,15 +474,15 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 
 	// command
-	sprintf(buf, "%s=%i", ATTR_COMMAND, cmd);
+	sprintf(buf, "%s=%i", ATTR_AUTH_COMMAND, cmd);
 	auth_info.Insert(buf);
 	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
 	// authentication action
 	if (authentication_action == AUTH_YES) {
-		sprintf(buf, "%s=\"YES\"", ATTR_AUTHENTICATE);
+		sprintf(buf, "%s=\"YES\"", ATTR_AUTH_ACTION);
 	} else {
-		sprintf(buf, "%s=\"ASK\"", ATTR_AUTHENTICATE);
+		sprintf(buf, "%s=\"ASK\"", ATTR_AUTH_ACTION);
 	}
 
 	auth_info.Insert(buf);
@@ -535,19 +535,20 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 			return NULL;
 		}
 
-		if (auth_response.LookupString("CONDOR_VERSION", buf)) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: CONDOR_VERSION "
-				"== %s in response ClassAd", buf);
+		if (auth_response.LookupString(ATTR_VERSION, buf)) {
+			dprintf ( D_SECURITY, "STARTCOMMAND: %s "
+				"== %s in response ClassAd", ATTR_VERSION, buf);
 			New_version(buf);
 		} else {
-			dprintf ( D_SECURITY, "STARTCOMMAND: no CONDOR_VERSION "
-						"in response ClassAd" );
+			dprintf ( D_SECURITY, "STARTCOMMAND: no %s "
+						"in response ClassAd.\n", ATTR_VERSION,
+						ATTR_AUTH_ACTION );
 		}
 
 
-		if (!auth_response.LookupString(ATTR_AUTHENTICATE, buf)) {
-			dprintf ( D_ALWAYS, "STARTCOMMAND: no AUTHENTICATE "
-						"in response ClassAd" );
+		if (!auth_response.LookupString(ATTR_AUTH_ACTION, buf)) {
+			dprintf ( D_ALWAYS, "STARTCOMMAND: no %s "
+						"in response ClassAd!\n", ATTR_AUTH_ACTION );
 			delete sock;
 			return NULL;
 		}

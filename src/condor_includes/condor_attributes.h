@@ -270,9 +270,9 @@ const char ATTR_ON_EXIT_SIGNAL		     [] = "ExitSignal";
 const char ATTR_PERIODIC_HOLD_CHECK		 [] = "PeriodicHold";
 const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
 
-const char ATTR_AUTH_TYPES               [] = "AUTH_TYPES";
-const char ATTR_AUTHENTICATE             [] = "AUTHENTICATE";
-const char ATTR_COMMAND                  [] = "COMMAND";
+const char ATTR_AUTH_TYPES               [] = "AuthTypes";
+const char ATTR_AUTH_ACTION              [] = "AuthAction";
+const char ATTR_AUTH_COMMAND             [] = "AuthCommand";
 
 
 #endif
