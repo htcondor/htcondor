@@ -43,7 +43,7 @@ void Daemon::common_init() {
 	_type = DT_NONE;
 	_port = 0;
 	_is_local = false;
-	_tried_locate = true;
+	_tried_locate = false;
 
 	_addr = NULL;
 	_name = NULL;
