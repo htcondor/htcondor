@@ -36,6 +36,9 @@ static char* CondorUserName = NULL;
 static const char* RealUserName = NULL;
 THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static int SwitchIds = TRUE;
+static int UserIdsInited = FALSE;
+static int OwnerIdsInited = FALSE;
+
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
 static char *priv_state_name[] = {
@@ -537,8 +540,6 @@ int setegid(gid_t);
 static uid_t CondorUid, UserUid, MyUid, RealCondorUid, OwnerUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
-static int UserIdsInited = FALSE;
-static int OwnerIdsInited = FALSE;
 static char* UserName = NULL;
 static char* OwnerName = NULL;
 static passwd_cache pcache;
