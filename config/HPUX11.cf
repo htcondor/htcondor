@@ -44,7 +44,7 @@
 #define IS_EGCS_BUILD			YES
 
 #undef IS_CLIPPED
-#define IS_CLIPPED NO
+#define IS_CLIPPED YES
 
 #undef HAS_PVM
 #define HAS_PVM NO
