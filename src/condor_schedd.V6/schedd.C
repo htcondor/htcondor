@@ -2552,9 +2552,9 @@ Scheduler::Register()
 			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR);
     daemonCore->Register_Command(RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
-                               this, ALLOW);
+                               this, WRITE);
     daemonCore->Register_Command(RECONFIG, "RECONFIG", 
-			(CommandHandler)dc_reconfig, "reconfig", 0, ALLOW);
+			(CommandHandler)dc_reconfig, "reconfig", 0, OWNER);
     daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
     daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
@@ -2565,7 +2565,7 @@ Scheduler::Register()
 	// to lump both together here.
     daemonCore->Register_Command(QMGMT_CMD, "QMGMT_CMD",
 								 (CommandHandler)handle_q, 
-								 "handle_q", NULL, WRITE);
+								 "handle_q", NULL, READ);
 
     // signal handlers
     daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, 
