@@ -64,6 +64,11 @@ LOCAL_DIR		= $(TILDE)
 LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
 
+## If the local config file is not present, is it an error?
+## WARNING: This is a potential security issue. 
+## If not specificed, te default is True
+#REQUIRE_LOCAL_CONFIG_FILE = TRUE
+
 ##--------------------------------------------------------------------
 ##  Mail parameters:
 ##--------------------------------------------------------------------
