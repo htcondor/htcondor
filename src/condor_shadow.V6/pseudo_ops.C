@@ -141,13 +141,13 @@ pseudo_getuid()
 int
 pseudo_geteuid()
 {
-	return get_user_gid();;
+	return get_user_uid();
 }
 
 int
 pseudo_getgid()
 {
-	return get_user_uid();
+	return get_user_gid();
 }
 
 int
@@ -245,13 +245,22 @@ pseudo_send_file( const char *path, mode_t mode )
 	int	checksum;
 	int	fd;
 	int	len, nbytes;
+	mode_t omask;
 
 	dprintf(D_SYSCALLS, "\tpseudo_send_file(%s,0%o)\n", path, mode );
 
+		// Want to make sure our umask is reasonable, since the user
+		// job might have called umask(), which goes remote and
+		// effects us, the shadow.  -Derek Wright 6/11/98
+	omask = umask( 022 );
+
 		/* Open the file for writing, send back status from the open */
 	if( (fd=open(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
+		(void)umask(omask);
 		return -1;
 	}
+	(void)umask(omask);
+
 	syscall_sock->encode();
 	assert( syscall_sock->code(fd) );
 	assert( syscall_sock->end_of_message() );
@@ -421,8 +430,12 @@ is_ickpt_file(const char path[])
    stored on the checkpoint server.  Will try the local call first (in case
    it is just a rename being call ed by a user job), but if that fails, we'll
    see if the checkpoint server can do it for us.
-*/
 
+   Also, be sure we've got a reasonable umask() when we twiddle
+   checkpoint files, since the user job might have called umask(),
+   which would have gone remote, and would now be in effect here in
+   the shadow.   -Derek Wright 6/11/98
+*/
 int
 pseudo_rename(char *from, char *to)
 {
@@ -430,14 +443,17 @@ pseudo_rename(char *from, char *to)
 	PROC *p = (PROC *)Proc;
 	bool	CkptFile = is_ckpt_file(from) && is_ckpt_file(to);
 	priv_state	priv;
+	mode_t	omask;
 
 	if (CkptFile) {
 		priv = set_condor_priv();
+		omask = umask( 022 );
 	}
 
 	rval = rename(from, to);
 
 	if (CkptFile) {
+		(void)umask( omask );
 		set_priv(priv);
 	}
 
@@ -627,6 +643,7 @@ pseudo_put_file_stream(
 	bool	ICkptFile = is_ickpt_file(file);
 	int		retry_wait = 5;
 	priv_state	priv;
+	mode_t	omask;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -670,10 +687,18 @@ pseudo_put_file_stream(
 		priv = set_condor_priv();
 	}
 
+		// Want to make sure our umask is reasonable, since the user
+		// job might have called umask(), which goes remote and
+		// effects us, the shadow.  -Derek Wright 6/11/98
+	omask = umask( 022 );
+
 	if( (file_fd=open(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
+		(void)umask(omask);
 		return -1;
 	}
+
+	(void)umask(omask);
 
 	get_host_addr( ip_addr );
 	display_ip_addr( *ip_addr );
@@ -1288,6 +1313,12 @@ simp_log( const char *msg )
 	static FILE	*fp;
 	static char name[] = "/tmp/condor_log";
 	int		fd;
+	mode_t	omask;
+
+		// Want to make sure our umask is reasonable, since the user
+		// job might have called umask(), which goes remote and
+		// effects us, the shadow.  -Derek Wright 6/11/98
+	omask = umask( 022 );
 
 	if( !fp ) {
 		if( (fd=open(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
@@ -1302,6 +1333,7 @@ simp_log( const char *msg )
 	}
 
 	fprintf( fp, msg );
+	(void)umask( omask );
 }
 
 int pseudo_get_IOServerAddr(const int *reqtype, const char *filename,
