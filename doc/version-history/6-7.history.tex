@@ -68,7 +68,12 @@ when aborting a DAG.
 
 \begin{itemize}
 
-\item None.
+\item When running in recovery mode on a DAG that has PRE scripts,
+\Condor{dagman} may attempt more than the specified number of retries
+of a node (counting retries attempted during the first run of the
+DAG).  This is because if a node fails because of the PRE script
+failing, that fact is not recorded in the log, so that retry is missed
+in recovery mode.
 
 \end{itemize}
 
