@@ -276,8 +276,7 @@ BaseShadow::shutDown( int reason )
 		abortJob(); 
 	}
 
-	if( reason == JOB_EXITED || reason == JOB_KILLED
-		|| reason == JOB_COREDUMPED ) {
+	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
 			// This will not return.  it'll take all desired actions
 			// and will eventually call DC_Exit()...
 		shadow_user_policy.checkAtExit();
