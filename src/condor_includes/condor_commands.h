@@ -115,12 +115,14 @@
 #define DAEMONS_OFF_FAST	(SCHED_VERS+61)
 #define MASTER_OFF_FAST		(SCHED_VERS+62)
 #define GET_RESLIST			(SCHED_VERS+63)		// negotiator
-#define ATTEMPT_ACCESS		(SCHED_VERS+64) // schedd, test a file
+#define ATTEMPT_ACCESS		(SCHED_VERS+64) 	// schedd, test a file
 #define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
 #define PCKPT_JOB			(SCHED_VERS+66)     // periodic ckpt a given VM
 #define DAEMON_OFF			(SCHED_VERS+67)		// specific daemon, subsys follows 
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
+#define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
+
 
 /************
 *** Command ids used by the collector 
