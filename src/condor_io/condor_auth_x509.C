@@ -62,7 +62,8 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
 int Condor_Auth_X509 :: authenticate(const char * remoteHost)
 {
     int status = 1;
-    
+    int reply = 0;
+
     //don't just return TRUE if isAuthenticated() == TRUE, since 
     //we should BALANCE calls of Authenticate() on client/server side
     //just like end_of_message() calls must balance!
@@ -70,8 +71,58 @@ int Condor_Auth_X509 :: authenticate(const char * remoteHost)
     if ( !authenticate_self_gss() ) {
         dprintf( D_SECURITY, "authenticate: user creds not established\n" );
         status = 0;
+	// If I failed, notify the other side.
+	if (mySock_->isClient()) {
+		// Tell the other side, abort
+		mySock_->encode();
+		mySock_->code(status);
+		mySock_->end_of_message();
+	}
+	else {
+		// I am server, first wait for the other side
+		mySock_->decode();
+   		mySock_->code(reply);
+		mySock_->end_of_message();
+
+		if (reply == 1) { 
+			// The other side was okay, tell them the bad news
+			mySock_->encode();
+			mySock_->code(status);
+			mySock_->end_of_message();
+		}
+	}
     }
     else {
+	// wait to see if the other side is okay
+	if (mySock_->isClient()) {
+		// Tell the other side, that I am fine, then wait for answer
+		mySock_->encode();
+		mySock_->code(status);
+		mySock_->end_of_message();
+
+		mySock_->decode();
+		mySock_->code(reply);
+		mySock_->end_of_message();
+		if (reply == 0) {   // The other side failed, abort
+			return 0;
+		}
+	}
+	else {
+		// I am server, first wait for the other side
+		mySock_->decode();
+		mySock_->code(reply);
+		mySock_->end_of_message();
+		
+		if (reply) {
+			mySock_->encode();
+			mySock_->code(status);
+			mySock_->end_of_message();
+		}
+		else {
+			return 0;  // The other side failed, abort
+		}
+	}
+
         //temporarily change timeout to 5 minutes so the user can type passwd
         //MUST do this even on server side, since client side might call
         //authenticate_self_gss() while server is waiting on authenticate!!
@@ -227,7 +278,7 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 
     if ( (major_status = globus_gss_assist_gridmap(GSSClientname, &local)) 
          != GSS_S_COMPLETE) {
-        dprintf(D_SECURITY, "Unable to map X509 user name %s to local id.\n", GSSClientname);
+        dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
         return 0;
     }
 
@@ -235,7 +286,7 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
     // split it into user@domain
     char * tmp = strchr(local, '@');
     if (tmp == NULL) {
-        dprintf(D_SECURITY, "X509 certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", local);
+        dprintf(D_SECURITY, "GSI certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", local);
         return 0;
     }
     
