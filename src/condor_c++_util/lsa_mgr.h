@@ -58,6 +58,9 @@ class lsa_mgr {
 		// returns true on successful remove
 		bool remove( const LPWSTR Login );
 
+		// returns true if we have a password stored for login
+		bool isStored( const LPWSTR Login );
+
 		// return user's password or NULL if no
 		// matching record exists
 		// You MUST delete the result!
@@ -75,6 +78,8 @@ class lsa_mgr {
 		
 		// convert char to unicode string
 		LPWSTR charToUnicode( char* str ); 
+		// basically a wide-char strstr that's case insensitive
+		wchar_t* wcsstri(wchar_t* haystack, wchar_t* needle);
 
 	private:
 		
@@ -93,7 +98,7 @@ class lsa_mgr {
 
 		// returns a pointer to the location in Data_string that matches the
 		// given Owner, Login pair or null if no match
-		LPWSTR findInDataString( const LPWSTR Login );
+		LPWSTR findInDataString( const LPWSTR Login, bool case_sense=false );
 
 		// cleans up buffers used by this class to store password info
 		void freeBuffers() { 

@@ -223,6 +223,20 @@ lsa_mgr::remove( const LPWSTR Login ) {
 	}
 }
 
+bool
+lsa_mgr::isStored( const LPWSTR Login ) {
+	wchar_t* pw = NULL;
+
+	pw = query(Login);
+	if ( pw ) {
+		// we found something, but don't leak memory
+		delete[] pw;
+		return true;
+	} else {
+		return false;
+	}
+}
+
 LPWSTR
 lsa_mgr::query( const LPWSTR Login ) {
 	
@@ -379,7 +393,7 @@ lsa_mgr::extractDataString() {
 }
 
 LPWSTR
-lsa_mgr::findInDataString( const LPWSTR Login ) {
+lsa_mgr::findInDataString( const LPWSTR Login, bool case_sensitive ) {
 	int look_for_size = wcslen(Login) + 3; // delimiter+delimiter+null
 	wchar_t* look_for = new wchar_t[look_for_size];
 	
@@ -394,12 +408,53 @@ lsa_mgr::findInDataString( const LPWSTR Login ) {
 	look_for[wcslen(look_for)] = CC_DATA_DELIM;
 		
 //	wprintf(L"Looking for '%s'\n", look_for);
-	wchar_t* result = wcsstr(Data_string, look_for);
+	wchar_t* result; 
+	if ( case_sensitive ) {
+		result = wcsstr(Data_string, look_for);
+	} else {
+		result = wcsstri(Data_string, look_for);
+	}
 	delete[] look_for;
 	return result;
 }
 
-void doAdd() {
+// strstr that's case insensitive
+wchar_t* 
+lsa_mgr::wcsstri(wchar_t* haystack, wchar_t* needle) {
+	wchar_t* h_lwr = NULL; // lowercase versions of
+	wchar_t* n_lwr = NULL; // the above args
+	wchar_t* match = NULL;
+
+	if ( haystack && needle ) {
+		h_lwr = new wchar_t[wcslen(haystack)+1];
+		n_lwr = new wchar_t[wcslen(needle)+1];
+		
+		// make lowercase copies
+		wcscpy(h_lwr, haystack);
+		wcscpy(n_lwr, needle);
+		wcslwr(h_lwr);
+		wcslwr(n_lwr);
+
+		// do the strstr
+		match = wcsstr(h_lwr, n_lwr);
+		if ( match ) {
+			// set match to point to original haystack
+			// using offset
+			match = &haystack[match-h_lwr];
+		} else {
+			match = NULL;
+		}
+		
+		delete[] h_lwr;
+		delete[] n_lwr;
+	}
+
+	return match;
+}
+
+
+void 
+doAdd() {
 	char inBuf[1024];
 	wchar_t *Login=NULL, *Passw=NULL;
 	
@@ -520,3 +575,4 @@ int interactive() {
 }
 
 #endif // WIN32
+

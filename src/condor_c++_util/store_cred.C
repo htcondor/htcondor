@@ -75,8 +75,8 @@ void store_cred_handler(void *, int i, Stream *s) {
 	//	For debugging
 //	DebugFP = stderr;
 	
-	wchar_t pwbuf[255];
-	wchar_t userbuf[255];
+	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
+	wchar_t userbuf[MAX_PASSWORD_LENGTH];
 
 	char *user = NULL;
 	char *pw = NULL;
@@ -84,66 +84,104 @@ void store_cred_handler(void *, int i, Stream *s) {
 	int result;
 	priv_state priv;
 	int errno_result = 0;
-	int answer = FALSE;
+	int answer = FAILURE;
 	lsa_mgr lsa_man;
 	
 	s->decode();
 	
 	result = code_store_cred(s, user, pw, mode);
 	
-	if( result == FALSE )
-	{
+	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
-		if( user ) {
-			free( user );
-		}
-		if ( pw ) {
-			free ( pw );
-		}
 		return;
+	} else {
+		if ( user ) {
+			swprintf(userbuf, L"%S", user);
+		}
 	}
 
 	dprintf( D_FULLDEBUG, "store_cred: Switching to root priv\n");
-	
 	priv = set_root_priv();
 	
 	switch(mode) {
 	case ADD_MODE:
-		dprintf( D_FULLDEBUG, "Adding %s to credential storage.\n", 
-			user );
+		HANDLE usrHnd;
+		bool retval;
+		char* dom;
+
+		dprintf( D_FULLDEBUG, "Adding %S to credential storage.\n", 
+			userbuf );
+
+		usrHnd = NULL;
+		retval = false;
+	
+		// split the domain and the user name for LogonUser
+		dom = strchr(user, '@');
+		*dom = '\0';
+		dom++;
+		// now see if we can get a user token from this password
+		retval = LogonUser(
+			user,						// user name
+			dom,						// domain or server - local for now
+			pw,							// password
+			LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
+			LOGON32_PROVIDER_DEFAULT,	// logon provider
+			&usrHnd						// receive tokens handle
+		);
+		CloseHandle(usrHnd); // don't leak the handle
+		if (pw) {
+			swprintf(pwbuf, L"%S", pw); // make a wide-char copy first
+			ZeroMemory(pw, strlen(pw));
+		}
+		if ( ! retval ) {
+			dprintf(D_FULLDEBUG, "store_cred: Credential not valid\n");
+			answer=FAILURE_BAD_PASSWORD; //fail
+			break;
+		}
+
 		// call lsa_mgr api
 		// answer = return code
-		swprintf(userbuf, L"%S", user);
-		swprintf(pwbuf, L"%S", pw);
-		answer = lsa_man.add(userbuf, pwbuf);
-		ZeroMemory(pwbuf, 255*sizeof(wchar_t)); 
-		ZeroMemory(userbuf, 255*sizeof(wchar_t));
+		if (!lsa_man.add(userbuf, pwbuf)){
+			answer = FAILURE;
+		} else {
+			answer = SUCCESS;
+		}
+		ZeroMemory(pwbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t)); 
+		ZeroMemory(userbuf, MAX_PASSWORD_LENGTH*sizeof(wchar_t));
 		break;
 	case DELETE_MODE:
-		dprintf( D_FULLDEBUG, "Deleting %s from credential storage.\n", 
-			user );
+		dprintf( D_FULLDEBUG, "Deleting %S from credential storage.\n", 
+			userbuf );
 		// call lsa_mgr api
 		// answer = return code
 		swprintf(userbuf, L"%S", user);
-		answer = lsa_man.remove(userbuf);
-		ZeroMemory(userbuf, 255*sizeof(wchar_t));
+		if (!lsa_man.remove(userbuf)) {
+			answer = FAILURE;
+		} else {
+			answer = SUCCESS;
+		}
+		break;
+	case QUERY_MODE:
+		dprintf( D_FULLDEBUG, "Checking for %S in credential storage.\n", 
+			userbuf );
+		swprintf(userbuf, L"%S", user);
+		if (!lsa_man.isStored(userbuf)) {
+			answer = FAILURE;
+		} else {
+			answer = SUCCESS;
+		}
 		break;
 	default:
-		dprintf( D_ALWAYS, "store_cred: Unknown access mode.\n" );
-		if( user ) {
-			free( user );
-		}
-		if ( pw ) {
-			free ( pw );
-		}
-		return;
+		dprintf( D_ALWAYS, "store_cred: Unknown access mode (%d).\n", mode );
+		answer=0;
+		break;
 	}
-	
-	if( user ) {
-		free( user );
+
+	if (pw) {
+		free(pw);
 	}
-	if ( pw ) {
-		free ( pw );
+	if (user) {
+		free(user);
 	}
 	
 	dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
@@ -213,17 +251,24 @@ int store_cred(char* user, char* pw, int mode)
 	switch(mode)
 	{
 	case ADD_MODE:
-		if( return_val ) {
+		if( return_val == SUCCESS ) {
 			dprintf(D_FULLDEBUG, "Schedd says the Addition succeeded!\n");					
 		} else {
 			dprintf(D_FULLDEBUG, "Schedd says the Addition failed!\n");
 		}
 		break;
 	case DELETE_MODE:
-		if( return_val ) {
+		if( return_val == SUCCESS ) {
 			dprintf(D_FULLDEBUG, "Schedd says the Delete succeeded!\n");
 		} else {
 			dprintf(D_FULLDEBUG, "Schedd says the Delete failed!\n");
+		}
+		break;
+	case QUERY_MODE:
+		if( return_val == SUCCESS ) {
+			dprintf(D_FULLDEBUG, "Schedd says we have a credential stored!\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Schedd says the query failed!\n");
 		}
 		break;
 	}
@@ -278,7 +323,7 @@ get_password() {
 			return NULL;
 		}
 		
-		printf("\nRe-enter password: ");
+		printf("\nConfirm password: ");
 		if ( ! read_no_echo(buf2, MAX_PASSWORD_LENGTH) ) {
 			delete[] buf;
 			delete[] buf2;
@@ -289,8 +334,7 @@ get_password() {
 		
 		if ( failure ) {
 			fprintf(stderr, "\n\nPasswords don't match!\n\n");
-		}
-		
+		} 
 	} while ( failure );	
 	
 	ZeroMemory(buf2, MAX_PASSWORD_LENGTH);	
@@ -305,6 +349,10 @@ int deleteCredential( char* user ) {
 
 int addCredential( char* user, char* pw ) {
 	return store_cred(user, pw, ADD_MODE);	
+}
+
+int queryCredential( char* user ) {
+	return store_cred(user, NULL, QUERY_MODE);	
 }
 
 

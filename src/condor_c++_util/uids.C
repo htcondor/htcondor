@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "condor_environ.h"
 #include "condor_distribution.h"
+#include "my_username.h"
 
 
 /* See condor_uid.h for description. */
@@ -129,12 +130,23 @@ extern dynuser *myDynuser; 	// the "system wide" dynuser object
 
 static HANDLE CurrUserHandle = NULL;
 static char *UserLoginName = NULL; // either a "nobody" account or the submitting user
+static char *UserDomainName = NULL; // user's domain
 
 void uninit_user_ids() 
 {
-	CloseHandle(CurrUserHandle);
-	free(UserLoginName);
+	// This is wrong. We need caching in here badly,
+	// but for right now this will work. -stolley
+	if ( CurrUserHandle ) {
+		CloseHandle(CurrUserHandle);
+	}
+	if ( UserLoginName ) {
+	   	free(UserLoginName);
+	}
+	if ( UserDomainName ) {
+		free(UserDomainName);
+	}
 	UserLoginName = NULL;
+	UserDomainName= NULL;
 	CurrUserHandle = NULL;
 }
 
@@ -147,28 +159,61 @@ const char *get_user_loginname() {
     return UserLoginName;
 }
 
+const char *get_user_domainname() {
+    return UserDomainName;
+}
+
 int
-init_user_ids(const char username[]) 
+init_user_ids(const char username[], const char domain[]) 
 {
 	int retval = 0;
 
 	dprintf(D_ALWAYS,
 		"entering init_user_ids()...watch out.\n");
 	
-	if (!username) { return 0; }
+	if (!username || !domain) {
+		dprintf(D_ALWAYS, "WARNING: init_user_ids() called with"
+			   " NULL arguments!");
+	   	return 0;
+   	}
 
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
 	// TODO: cache multiple user handles to save time.
 	const char *cur_acct = get_user_loginname();
-	dprintf(D_FULLDEBUG, "init_user_ids: want user '%s', current is '%s'\n",
-		username, cur_acct);
+	const char *cur_dom = get_user_domainname();
+
+	dprintf(D_FULLDEBUG, "init_user_ids: want user '%s@%s', "
+			"current is '%s@%s'\n",
+		username, domain, cur_acct, cur_dom);
 	
-	if ( CurrUserHandle && cur_acct && strcmp(cur_acct,username) == 0 ) {
-		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s,"
-			" so returning.\n", username);
+	if ( CurrUserHandle && cur_acct && 
+			strcmp(cur_acct,username) == 0 &&  
+			stricmp(cur_dom, domain) == 0 ) { // case insensitive for domain
+		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s@%s,"
+			" so returning.\n", username, domain);
 		return 1;
+	} else {
+		char* myusr = my_username();
+		char* mydom = my_domainname();
+
+		// see if our calling thread matches the user and domain
+		// we want a token for. This happens if we're submit for example.
+		if ( strcmp( myusr, username ) == 0 &&
+			 stricmp( mydom, domain ) == 0 ) { // domain is case insensitive
+
+			dprintf(D_FULLDEBUG, "init_user_ids: Calling thread has token "
+					"we want, so returning.\n");
+			CurrUserHandle = my_usertoken();
+			if ( CurrUserHandle ) {
+				dprintf(D_FULLDEBUG, "init_user_ids: handle is not null\n");
+			}
+			// these are strdup'ed, so we can just stash their pointers
+			UserLoginName = myusr;
+			UserDomainName = mydom;
+			return 1;
+		}
 	}
 
 	if ( strcmp(username,"nobody") != 0 ) {
@@ -178,17 +223,22 @@ init_user_ids(const char username[])
 		lsa_mgr lsaMan;
 		char pw[255];
 		char user[255];
-		wchar_t w_username[255];
+		char dom[255];
+		wchar_t w_fullname[255];
 		wchar_t *w_pw;
 
-		swprintf(w_username, L"%S", username);
+		// these should probably be snprintfs
+		swprintf(w_fullname, L"%S@%S", username, domain);
 		sprintf(user, "%s", username);
+		sprintf(dom, "%s", domain);
 		
-		w_pw = lsaMan.query(w_username);
+		// make sure we're SYSTEM when we do this
+		w_pw = lsaMan.query(w_fullname);
+
 
 		if ( ! w_pw ) {
 			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
-				"'%s'\n", username);
+				"'%s@%s'\n", username, domain);
 			return 0;
 		} else {
 			sprintf(pw, "%S", w_pw);
@@ -200,7 +250,7 @@ init_user_ids(const char username[])
 			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
 			retval = LogonUser(
 				user,						// user name
-				".",						// domain or server - local for now
+				dom,						// domain or server - local for now
 				pw,							// password
 				LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
 											// LOGON_BATCH doesn't seem to work right here.
@@ -208,11 +258,13 @@ init_user_ids(const char username[])
 				&CurrUserHandle				// receive tokens handle
 			);
 
+			// clear pw from memory
+			ZeroMemory(pw, 255);
+
 			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
 
 			UserLoginName = strdup(username);
-			// clear pw from memory
-			ZeroMemory(pw, 255);
+			UserDomainName = strdup(domain);
 
 			if ( !retval ) {
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
@@ -241,6 +293,7 @@ init_user_ids(const char username[])
 		}
 	
 		UserLoginName = strdup( myDynuser->get_accountname() );
+		UserDomainName = strdup( "." );
 
 		// we created a new user, now just stash the token
 		CurrUserHandle = myDynuser->get_token();
@@ -288,9 +341,9 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 				}
 				ImpersonateLoggedOnUser(CurrUserHandle);
 			} else {
-				// We do not have a CurrUserHandle.  So don't record ourselves
-				// as in a user priv state.... switch back to what we were.
-				CurrentPrivState = PrevPrivState;
+				// Tried to set_user_priv() but it failed, so bail out!
+
+				EXCEPT("set_user_priv() failed!");
 			}
 			break;
 		case PRIV_UNKNOWN:		/* silently ignore */
@@ -668,7 +721,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 
 
 int
-init_user_ids( const char username[] ) {
+init_user_ids( const char username[], const char domain[] ) {
+	// we ignore the domain parameter on UNIX
 	return init_user_ids_implementation( username, 0 );
 }
 

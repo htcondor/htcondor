@@ -88,7 +88,7 @@ class UserLog {
         @param subp condorID subproc to put into each ULogEvent
 		@param xml  make this true to write XML logs, false to use the old form
     */
-    UserLog(const char *owner, const char *file,
+    UserLog(const char *owner, const char *domain, const char *file,
 			int clu, int proc, int subp, bool xml = XML_USERLOG_DEFAULT);
     
     ///
@@ -101,7 +101,8 @@ class UserLog {
         @param s the condor ID subproc to put into each ULogEvent
 		@return true on success
     */
-    bool initialize(const char *owner, const char *file, int c, int p, int s);
+    bool initialize(const char *owner, const char *domain, const char *file,
+		   	int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
@@ -255,7 +256,8 @@ typedef void LP;
 extern "C" {
 #endif
     /// Deprecated.
-    LP *InitUserLog( const char *own, const char *file, int c, int p, int s );
+    LP *InitUserLog( const char *own, const char *domain, const char *file,
+		   	int c, int p, int s );
 
     /// Deprecated.
     void CloseUserLog( LP * lp );

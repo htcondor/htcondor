@@ -37,12 +37,12 @@ static const char SynchDelimiter[] = "...\n";
 extern "C" char *find_env (const char *, const char *);
 extern "C" char *get_env_val (const char *);
 
-UserLog::UserLog (const char *owner, const char *file,
+UserLog::UserLog (const char *owner, const char *domain, const char *file,
 				  int c, int p, int s, bool xml)
 {
 	UserLog();
 	use_xml = xml;
-	initialize (owner, file, c, p, s);
+	initialize (owner, domain, file, c, p, s);
 }
 
 /* --- The following two functions are taken from the shadow's ulog.c --- */
@@ -157,12 +157,16 @@ initialize( const char *file, int c, int p, int s )
 }
 
 bool UserLog::
-initialize( const char *owner, const char *file, int c, int p, int s )
+initialize( const char *owner, const char *domain, const char *file,
+	   	int c, int p, int s )
 {
 	priv_state		priv;
 
 	uninit_user_ids();
-	init_user_ids(owner);
+	if (!  init_user_ids(owner, domain) ) {
+		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		return FALSE;
+	}
 
 		// switch to user priv, saving the current user
 	priv = set_user_priv();
@@ -337,11 +341,12 @@ UserLog::output_header()
 }
 
 extern "C" LP *
-InitUserLog( const char *own, const char *file, int c, int p, int s )
+InitUserLog( const char *own, const char *domain, const char *file,
+	   	int c, int p, int s )
 {
 	UserLog	*answer;
 
-	answer = new UserLog( own, file, c, p, s );
+	answer = new UserLog( own, domain, file, c, p, s );
 	return (LP *)answer;
 }
 
