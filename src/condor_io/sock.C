@@ -1314,9 +1314,6 @@ int Sock :: condor_read(SOCKET fd, char *buf, int sz, int timeout)
 	ASSERT(buf != NULL); /* Need real memory to put data into */
 	ASSERT(sz > 0);      /* Need legit size on buffer */
 	
-
-#ifdef GSS_AUTHENTICATION //encrypted data transfers
-		
 	if (is_encrypt()){
 		
 		dprintf(D_ALWAYS,"Entering encrypted receive\n");
@@ -1348,17 +1345,17 @@ int Sock :: condor_read(SOCKET fd, char *buf, int sz, int timeout)
 			if ( nr == l_in ){
 		
 				//unwrap encypted data and copy to data buffer
-				if (unwrap(d_in, l_in , d_out , l_out) == GSS_S_COMPLETE){ 
-					memcpy(buf,d_out,sz);
-					r_sz = sz;	
-					dprintf(D_ALWAYS,"condor_read: length of  data = %d\n",l_out);
-					free(d_in);
-					hdr_encrypt();
-					return sz;
+				if (unwrap(d_in, l_in , d_out , l_out) == TRUE){ 
+				  memcpy(buf,d_out,sz);
+				  r_sz = sz;	
+				  dprintf(D_ALWAYS,"condor_read: length of  data = %d\n",l_out);
+				  free(d_in);
+				  hdr_encrypt();
+				  return sz;
 				}
 				else{
-					dprintf(D_ALWAYS,"Sock::condor_read : unwrap call failed\n");
-					return -1;
+				  dprintf(D_ALWAYS,"Sock::condor_read : unwrap call failed\n");
+				  return -1;
 				}	
 				
 			}
@@ -1381,12 +1378,9 @@ int Sock :: condor_read(SOCKET fd, char *buf, int sz, int timeout)
 		   return sz;
 		}
 	}
-	else 
-		return(_condor_read(fd, buf,sz , timeout));
-#else 
-		return(_condor_read(fd, buf, sz, timeout));
-#endif 
-
+	else {
+	  return(_condor_read(fd, buf,sz , timeout));
+	}
 }
 
 int Sock :: condor_write(SOCKET fd, char *buf, int sz, int timeout) {
@@ -1404,46 +1398,34 @@ int Sock :: condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need valid buffer to write */
 	
-	
-
-#ifdef GSS_AUTHENTICATION //for encrypted transfers
-		
 	if (is_encrypt()){
 			
-		if (wrap(buf, sz  , buf_out , l_out) == GSS_S_COMPLETE){ 
-					
-		
-			temp = htonl(l_out);
-			nwo = _condor_write(fd,(char*)&temp,sizeof(int),0);
-			if (nwo <= 0){
-				dprintf( D_ALWAYS, 
-				"send returned %d, timeout=%d, errno=%d. Assuming failure.\n",
-				nwo, timeout, errno);
-				return -1;
-			}
-			nwo = _condor_write(fd, buf_out, l_out, timeout); 
-			free(buf_out);
-			if (nwo < 0){
-				dprintf(D_ALWAYS,"Sock :: condor_write : _condor_write failed\n");
-			   	return -1;
-			}	
-			return sz;
-		}
-		else {
-			dprintf(D_ALWAYS, "condor_write : Wrap call failed during secure send \n");
-			return -1;
-		}
+	  if (wrap(buf, sz  , buf_out , l_out) == TRUE){ 
+	    temp = htonl(l_out);
+	    nwo = _condor_write(fd,(char*)&temp,sizeof(int),0);
+	    if (nwo <= 0){
+	      dprintf( D_ALWAYS, 
+		       "send returned %d, timeout=%d, errno=%d. Assuming failure.\n",
+		       nwo, timeout, errno);
+	      return -1;
+	    }
+	    nwo = _condor_write(fd, buf_out, l_out, timeout); 
+	    free(buf_out);
+	    if (nwo < 0){
+	      dprintf(D_ALWAYS,"Sock :: condor_write : _condor_write failed\n");
+	      return -1;
+	    }	
+	    return sz;
+	  }
+	  else {
+	    dprintf(D_ALWAYS, "condor_write : Wrap call failed during secure send \n");
+	    return -1;
+	  }
 	}
-	else 
-		return(_condor_write(fd, buf, sz, timeout));
-#else 
-	return(_condor_write(fd, buf, sz, timeout));
-#endif
-
-	
+	else {
+	  return(_condor_write(fd, buf, sz, timeout));
+	}
 }
-
-#if !defined(SKIP_AUTHENTICATION)
 
 int Sock :: encrypt(bool)
 {
@@ -1474,18 +1456,17 @@ void Sock :: unAuthenticate()
 	
 bool Sock :: is_encrypt()
 {
-	return FALSE;
+    return FALSE;
 }
 
 
 int  Sock :: wrap(char* d_in,int l_in,char*& d_out,int& l_out)
 {
-  return FALSE;
+    return FALSE;
 }
 
 int Sock ::  unwrap(char* d_in,int l_in,char*& d_out, int& l_out)
 {
-	return FALSE;
+    return FALSE;
 }
-#endif
 #endif
