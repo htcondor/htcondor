@@ -23,7 +23,6 @@
 
 
 #include "condor_common.h"
-#include "get_daemon_addr.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "daemon.h"

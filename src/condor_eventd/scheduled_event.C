@@ -25,7 +25,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_query.h"
-#include "get_daemon_addr.h"
 #include "condor_config.h"
 #include "daemon.h"
 
