@@ -144,6 +144,13 @@ extern "C" {
 
 #if defined(Solaris)
 	int gethostname( char *, int );
+	long gethostid();
+	int getpagesize();
+	int getdtablesize();
+	int getpriority( int, id_t );
+	int setpriority( int, id_t, int );
+	int utimes( const char*, struct timeval* );
+	int getdomainname( char*, size_t );
 #endif
 
 /* Only if we set it ourself in this file to we want to undef here */
