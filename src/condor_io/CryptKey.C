@@ -39,9 +39,6 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
       protocol_   (copy.protocol_),
       duration_   (copy.duration_)
 {
-    if (keyData_) {
-        free( keyData_ );
-    }
     init(copy.keyData_, copy.keyDataLen_);
 }
 
