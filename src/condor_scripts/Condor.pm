@@ -887,7 +887,8 @@ sub ParseSubmitFile
 	    }
 
 	    # compress whitespace and remove trailing newline for readability
-	    $value =~ s/\s+/ /g;
+		# Don't change white space. Some environment tests expect tabs to stay tabs.
+	    # $value =~ s/\s+/ /g;
 	    chomp $value;
 
 	
