@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_string.h"
+#include "common.h"
 #include "classad.h"
 #include "classadItor.h"
 
@@ -133,7 +134,7 @@ GetComponents( vector< pair< string, ExprTree* > > &attrs ) const
 
 // --- begin integer attribute insertion ----
 bool ClassAd::
-InsertAttr( const string &name, int value, NumberFactor f )
+InsertAttr( const string &name, int value, Value::NumberFactor f )
 {
 	Value val;
 	val.SetIntegerValue( value );
@@ -143,7 +144,7 @@ InsertAttr( const string &name, int value, NumberFactor f )
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value, 
-	NumberFactor f )
+	Value::NumberFactor f )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -155,7 +156,7 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, int value,
 
 // --- begin real attribute insertion ---
 bool ClassAd::
-InsertAttr( const string &name, double value, NumberFactor f )
+InsertAttr( const string &name, double value, Value::NumberFactor f )
 {
 	Value val;
 	val.SetRealValue( value );
@@ -165,7 +166,7 @@ InsertAttr( const string &name, double value, NumberFactor f )
 
 bool ClassAd::
 DeepInsertAttr( ExprTree *scopeExpr, const string &name, double value, 
-	NumberFactor f )
+	Value::NumberFactor f )
 {
 	ClassAd *ad = _GetDeepScope( scopeExpr );
 	if( !ad ) return( false );
@@ -526,7 +527,7 @@ _Evaluate( EvalState&, Value &val, ExprTree *&tree ) const
 
 
 bool ClassAd::
-_Flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* ) const
+_Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 {
 	ClassAd 	*newAd = new ClassAd();
 	Value		eval;
@@ -685,6 +686,7 @@ GetExternalReferences( const ExprTree *tree, References &refs )
     return( _GetExternalReferences( tree, this, state, refs ) );
 }
 
+
 bool ClassAd::
 _GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
 	EvalState &state, References& refs )
@@ -745,8 +747,8 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             
         case OP_NODE: {
                 // recurse on subtrees
-            OpKind      op;
-            ExprTree    *t1, *t2, *t3;
+            Operation::OpKind	op;
+            ExprTree    		*t1, *t2, *t3;
             ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
             if( t1 && !_GetExternalReferences( t1, ad, state, refs ) ) {
                 return( false );
@@ -811,148 +813,320 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
     }
 }
 
+bool ClassAd::
+GetExternalReferences( const ExprTree *tree, PortReferences &refs )
+{
+    EvalState       state;
+
+    state.rootAd = this; 
+    state.curAd = (ClassAd*)tree->GetParentScope( );
+	if( !state.curAd ) state.curAd = this;
+	
+    return( _GetExternalReferences( tree, this, state, refs ) );
+}
 
 bool ClassAd::
-AddRectangle( int &rkey, Rectangles &r, const References &irefs )
+_GetExternalReferences( const ExprTree *expr, ClassAd *ad, 
+	EvalState &state, PortReferences& refs )
 {
-	MatchClassAd	mad;
-	ExprTree		*tree, *ftree;
+    switch( expr->GetKind( ) ) {
+        case LITERAL_NODE:
+                // no external references here
+            return( true );
+
+        case ATTRREF_NODE: {
+            const ClassAd   *start;
+            ExprTree        *tree, *result;
+            string          attr;
+            Value           val;
+            bool            abs;
+			PortReferences::iterator	pitr;
+
+            ((AttributeReference*)expr)->GetComponents( tree, attr, abs );
+                // establish starting point for attribute search
+            if( tree==NULL ) {
+                start = abs ? state.rootAd : state.curAd;
+            } else {
+                if( !tree->Evaluate( state, val ) ) return( false );
+
+                    // if the tree evals to undefined, the external references
+                    // are in the tree part
+                if( val.IsUndefinedValue( ) ) {
+                    return( _GetExternalReferences( tree, ad, state, refs ));
+                }
+                    // otherwise, if the tree didn't evaluate to a classad,
+                    // we have a problem
+                if( !val.IsClassAdValue( start ) ) return( false );
+
+					// make sure that we are starting from a "valid" scope
+				if( ( pitr = refs.find( start ) ) == refs.end( ) && 
+						start != this ) {
+					return( false );
+				}
+            }
+                // lookup for attribute
+			ClassAd *curAd = state.curAd;
+            switch( start->LookupInScope( attr, result, state ) ) {
+                case EVAL_ERROR:
+                        // some error
+                    return( false );
+
+                case EVAL_UNDEF:
+                        // attr is external
+                    pitr->second.insert( attr );
+					state.curAd = curAd;
+                    return( true );
+
+                case EVAL_OK: {
+                        // attr is internal; find external refs in result
+					bool rval=_GetExternalReferences(result,ad,state,refs);
+					state.curAd = curAd;
+					return( rval );
+				}
+
+                default:    
+                        // enh??
+                    return( false );
+            }
+        }
+            
+        case OP_NODE: {
+                // recurse on subtrees
+            Operation::OpKind   op;
+            ExprTree    		*t1, *t2, *t3;
+            ((Operation*)expr)->GetComponents( op, t1, t2, t3 );
+            if( t1 && !_GetExternalReferences( t1, ad, state, refs ) ) {
+                return( false );
+            }
+            if( t2 && !_GetExternalReferences( t2, ad, state, refs ) ) {
+                return( false );
+            }
+            if( t3 && !_GetExternalReferences( t3, ad, state, refs ) ) {
+                return( false );
+            }
+            return( true );
+        }
+
+        case FN_CALL_NODE: {
+                // recurse on subtrees
+            string                      fnName;
+            vector<ExprTree*>           args;
+            vector<ExprTree*>::iterator itr;
+
+            ((FunctionCall*)expr)->GetComponents( fnName, args );
+            for( itr = args.begin( ); itr != args.end( ); itr++ ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        case CLASSAD_NODE: {
+                // recurse on subtrees
+            vector< pair<string, ExprTree*> >           attrs;
+            vector< pair<string, ExprTree*> >::iterator itr;
+
+            ((ClassAd*)expr)->GetComponents( attrs );
+            for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
+                if( !_GetExternalReferences( itr->second, ad, state, refs )) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        case EXPR_LIST_NODE: {
+                // recurse on subtrees
+            vector<ExprTree*>           exprs;
+            vector<ExprTree*>::iterator itr;
+
+            ((ExprList*)expr)->GetComponents( exprs );
+            for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
+                if( !_GetExternalReferences( *itr, ad, state, refs ) ) {
+					return( false );
+				}
+            }
+            return( true );
+        }
+
+
+        default:
+            return false;
+    }
+}
+
+bool ClassAd::
+AddRectangle( const ExprTree* tree, Rectangles &r, const string &allowed,
+	const References&irefs )
+{
+	ExprTree		*ftree;
 	bool			rval;
 	Value			val;
-	double			realVal;
+	int				oldRid = r.rId;
+	const ClassAd	*ad;
 
-		// project imported attributes
-	for( References::iterator itr=irefs.begin( );itr!=irefs.end( ); itr++ ) {
-		if( !(tree=Lookup(*itr) ) ) {
-			continue;
-		} else if( tree->GetKind() != LITERAL_NODE ) {
-			return( false );
-		}
-		((Literal*)tree)->GetValue( val );
-		if( !val.IsNumber( realVal ) ) {
-			return( false );
-		}
-		if( !r.AddUpperBound( rkey, *itr, realVal, false ) || 
-				!r.AddLowerBound( rkey, *itr, realVal, false ) ) {
-			return( false );
-		}
-	}
-
-
-	mad.ReplaceRightAd( this );
-	tree = Lookup( ATTR_REQUIREMENTS );
-	if( !Flatten( tree, val, ftree ) ) {
+		// make rectangle from constraint
+	ftree = NULL;
+	if( !Flatten( tree, val, ftree ) || !ftree ) {
 		return( false );
 	}
-	rval = _MakeRectangle( rkey, ftree, r, true );
+	rval = _MakeRectangles( ftree, allowed, r, true );
 	delete ftree;
-	mad.RemoveRightAd( );
 	if( !rval ) {
 		return( false );
 	}
+	ftree = NULL;
 
+		// project imported attributes to each rectangle created
+	for( References::iterator itr=irefs.begin( );itr!=irefs.end( ); itr++ ) {
+		for( int i = oldRid+1; i <= r.rId; i++ ) {
+			if( !LookupInScope( *itr, ad ) ) {
+					// attribute absent --- add to unimported list
+				r.unimported[*itr].insert( i );
+				continue;
+			} 
+			if( !EvaluateAttr( *itr, val ) ) {
+					// error
+				return( false );
+			} 
+			if(val.IsExceptional()||val.IsClassAdValue()||val.IsListValue()) {
+					// not a literal; require verification at post-processing
+				r.AddImportedVerificationRequest( *itr, i );
+				continue;
+			}
+				// not open and not constraint; hence (false, false)
+			if( r.AddUpperBound( *itr, val, false, false, i ) !=
+						Rectangles::NO_ERROR || 
+					r.AddLowerBound( *itr, val, false, false, i ) !=
+						Rectangles::NO_ERROR ) {
+				return( false );
+			}
+		}
+	}
 
 	return( true );
 }
 
 
 bool ClassAd::
-_MakeRectangle( int &rkey, const ExprTree *tree, Rectangles &r, bool ORmode )
+_MakeRectangles( const ExprTree *tree, const string &allowed, Rectangles &r, 
+	bool ORmode )
 {
     if( tree->GetKind( ) != OP_NODE ) return( false );
 
-    OpKind  		op;
-    ExprTree 		*t1, *t2, *lit, *attr;
+    Operation::OpKind	op;
+    ExprTree 			*t1, *t2, *lit, *attr;
+	string				attrName;
+	ExprTree			*expr;
+	bool				absolute;
 
     ((Operation*)tree)->GetComponents( op, t1, t2, lit );
 	lit = NULL;
 
-	if( op == PARENTHESES_OP ) {
-		return( _MakeRectangle( rkey, t1, r, ORmode ) );
+	if( op == Operation::PARENTHESES_OP ) {
+		return( _MakeRectangles( t1, allowed, r, ORmode ) );
 	}
 
 		// let only ||, &&, <=, <, ==, is, >, >= through
-	if( ( op != LOGICAL_AND_OP && op != LOGICAL_OR_OP ) && 
-			( op < __COMPARISON_START__ || op > __COMPARISON_END__ ||
-			op == NOT_EQUAL_OP || op == ISNT_OP ) ) {
+	if( ( op!=Operation::LOGICAL_AND_OP && op!=Operation::LOGICAL_OR_OP ) && 
+		( op<Operation::__COMPARISON_START__||op>Operation::__COMPARISON_END__||
+			op == Operation::NOT_EQUAL_OP || op == Operation::ISNT_OP ) ) {
 		return( false );
 	}
 
 	if( ORmode ) {
-		if( op == LOGICAL_OR_OP ) {
+		if( op == Operation::LOGICAL_OR_OP ) {
 				// continue recursively in OR mode
-			return( _MakeRectangle( rkey, t1, r, ORmode ) &&
-					_MakeRectangle( rkey, t2, r, ORmode ) );
+			return( _MakeRectangles( t1, allowed, r, ORmode ) &&
+					_MakeRectangles( t2, allowed, r, ORmode ) );
 		} else {
-				// switch to AND mode
+				// switch to AND mode (starting new rectangle)
 			ORmode = false;
+			r.NewRectangle( );
 		}
 	}
 
 		// ASSERT:  In AND mode now (i.e., ORmode is false)
-	if( op == LOGICAL_AND_OP ) {
-		bool rval = _MakeRectangle( rkey, t1, r, ORmode );
-		if( !rval ) return( false );
-		rkey++; // next rectangle
-		return( rval && _MakeRectangle( rkey, t2, r, ORmode ) );
-	} else if( op == LOGICAL_OR_OP ) {
+	if( op == Operation::LOGICAL_AND_OP ) {
+		return( _MakeRectangles( t1, allowed, r, ORmode ) &&
+				_MakeRectangles( t2, allowed, r, ORmode ) );
+	} else if( op == Operation::LOGICAL_OR_OP ) {
 			// something wrong
 		printf( "Error:  Found || when making rectangles in AND mode\n" );
 		return( false );
 	}
 
-	if( t1->GetKind( )==ATTRREF_NODE && t2->GetKind( )==LITERAL_NODE ) {
+	if( t1->GetKind( )==ExprTree::ATTRREF_NODE && 
+			t2->GetKind( )==ExprTree::LITERAL_NODE ) {
 			// ref <op> lit
 		attr = t1;
 		lit  = t2;
-	} else if(t2->GetKind()==ATTRREF_NODE && t1->GetKind()==LITERAL_NODE){
+		if( !_CheckRef( attr, allowed ) ) return( false );
+	} else if(t2->GetKind()==ExprTree::ATTRREF_NODE && 
+			t1->GetKind()==ExprTree::LITERAL_NODE){
 			// lit <op> ref
 		attr = t2;
 		lit  = t1;
+		if( !_CheckRef( attr, allowed ) ) return( false );
 		switch( op ) {
-			case LESS_THAN_OP: op = GREATER_THAN_OP; break;
-			case GREATER_THAN_OP: op = LESS_THAN_OP; break;
-			case LESS_OR_EQUAL_OP: op = GREATER_OR_EQUAL_OP; break;
-			case GREATER_OR_EQUAL_OP: op = LESS_OR_EQUAL_OP; break;
+			case Operation::LESS_THAN_OP: 
+				op = Operation::GREATER_THAN_OP; 
+				break;
+			case Operation::GREATER_THAN_OP: 
+				op = Operation::LESS_THAN_OP; 
+				break;
+			case Operation::LESS_OR_EQUAL_OP: 
+				op = Operation::GREATER_OR_EQUAL_OP; 
+				break;
+			case Operation::GREATER_OR_EQUAL_OP: 
+				op = Operation::LESS_OR_EQUAL_OP; 
+				break;
 			default:
 				break;
 		}
 	} else {
-			// unrecognizable form
-		return( false );
+			// unknown:  add to verify exported
+		r.AddExportedVerificationRequest( );
+		return( true );
 	}
 
 		// literal must be a comparable value 
 	Value	val;
-	double	real;
 	((Literal*)lit)->GetValue( val );
-	if( !val.IsNumber( real ) ) {
+	if( val.IsExceptional( ) || val.IsClassAdValue( ) || val.IsListValue( ) ) {
 		return( false );
 	}
 
 		// get the dimension name; assume already flattened
-	string			attrName;
-	ExprTree		*expr;
-	bool			absolute;
 	((AttributeReference*)attr)->GetComponents( expr, attrName, absolute );
 		
+		// all these are constraint dimensions, so 'true' in the last arg
     switch( op ) {
-        case LESS_THAN_OP:
-			return( r.AddUpperBound( rkey, attrName, real, true ) );  // open
+        case Operation::LESS_THAN_OP:
+			return( r.AddUpperBound( attrName, val, true, true ) ==
+					Rectangles::NO_ERROR); // open
 
-        case LESS_OR_EQUAL_OP:
-			return( r.AddUpperBound( rkey, attrName, real, false ) ); // closed
+        case Operation::LESS_OR_EQUAL_OP:
+			return( r.AddUpperBound( attrName, val, false, true ) ==
+					Rectangles::NO_ERROR);//closed
 
-        case EQUAL_OP:
-        case IS_OP:
-			return( r.AddUpperBound( rkey, attrName, real, false ) && // closed
-					r.AddLowerBound( rkey, attrName, real, false ) ); // closed
+        case Operation::EQUAL_OP:
+        case Operation::IS_OP:
+			return( r.AddUpperBound( attrName, val, false, true ) ==
+						Rectangles::NO_ERROR &&//closed
+					r.AddLowerBound( attrName, val, false, true ) ==
+						Rectangles::NO_ERROR);//closed
 
-		case GREATER_THAN_OP:
-			return( r.AddLowerBound( rkey, attrName, real, true ) );  // open
+		case Operation::GREATER_THAN_OP:
+			return( r.AddLowerBound( attrName, val, true, true ) ==
+					Rectangles::NO_ERROR); // open
 
-        case GREATER_OR_EQUAL_OP:
-			return( r.AddLowerBound( rkey, attrName, real, false ) ); // closed
+        case Operation::GREATER_OR_EQUAL_OP:
+			return( r.AddLowerBound( attrName, val, false, true ) ==
+					Rectangles::NO_ERROR);//closed
 
         default:
             return( false );
@@ -961,11 +1135,29 @@ _MakeRectangle( int &rkey, const ExprTree *tree, Rectangles &r, bool ORmode )
     return( false );
 }
 
+bool ClassAd::
+_CheckRef( ExprTree *tree, const string &allowed )
+{
+	ExprTree 	*expr, *exprSub;
+	string		attrName, attrNameSub;
+	bool		absolute;
+
+	if( !tree->GetKind() == ATTRREF_NODE ) return( false );
+	((AttributeReference*)tree)->GetComponents( expr, attrName, absolute );
+	if( absolute || !expr || expr->GetKind() != ATTRREF_NODE ) return( false );
+	((AttributeReference*)expr)->GetComponents(exprSub, attrNameSub, absolute);
+	if( exprSub || absolute ) return( false );
+	if( strcasecmp( attrNameSub.c_str(), allowed.c_str() )!=0 ) return( false );
+
+	return( true );
+}
+
+
 #endif  // EXPERIMENTAL
 
 
 bool ClassAd::
-Flatten( ExprTree *tree , Value &val , ExprTree *&fexpr ) const
+Flatten( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 {
 	EvalState	state;
 

@@ -30,10 +30,11 @@
 #include "exprTree.h"
 
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 #if defined( EXPERIMENTAL )
 	typedef set<string, CaseIgnLTStr> References;
+	typedef map<const ClassAd*, References> PortReferences;
 #include "rectangle.h"
 #endif
 
@@ -65,8 +66,17 @@ class ClassAd : public ExprTree
 		virtual ClassAd* Copy( ) const;
 		//@}
 
-		ClassAd *MakeClassAd( vector< pair< string, ExprTree* > > & );
-		void GetComponents( vector< pair< string, ExprTree *> > & ) const;
+		/** Factory method to make a classad
+		 * 	@param vec A vector of (name,expression) pairs to make a classad
+		 * 	@return The constructed classad
+		 */
+		ClassAd *MakeClassAd( vector< pair< string, ExprTree* > > &vec );
+
+		/** Deconstructor to get the components of a classad
+		 * 	@param vec A vector of (name,expression) pairs which are the
+		 * 		attributes of the classad
+		 */
+		void GetComponents( vector< pair< string, ExprTree *> > &vec ) const;
 
 		/**@name Insertion Methods */
 		//@{	
@@ -98,10 +108,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
 			@param f The multiplicative factor to be attached to value.
-			@see NumberFactor
+			@see Value::NumberFactor
 		*/
 		bool InsertAttr( const string &attrName,int value, 
-				NumberFactor f=NO_FACTOR );
+				Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into a nested classad.  The scope expression 
 		 		is evaluated to obtain a nested classad, and the attribute is
@@ -112,10 +122,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The integer value of the attribute.
 			@param f The multiplicative factor to be attached to value.
-			@see NumberFactor
+			@see Value::NumberFactor
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName,
-				int value, NumberFactor f=NO_FACTOR );
+				int value, Value::NumberFactor f=Value::NO_FACTOR );
 
 		/** Inserts an attribute into the ClassAd.  The real value is
 				converted into a Literal expression, and then inserted into
@@ -123,10 +133,10 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param value The real value of the attribute.
 			@param f The multiplicative factor to be attached to value.
-			@see NumberFactor
+			@see Value::NumberFactor
 		*/
 		bool InsertAttr( const string &attrName,double value, 
-				NumberFactor f=NO_FACTOR);
+				Value::NumberFactor f=Value::NO_FACTOR);
 
 		/** Inserts an attribute into a nested classad.  The scope expression
 		 		is evaluated to obtain a nested classad, and the insertion is
@@ -141,7 +151,7 @@ class ClassAd : public ExprTree
 				and the classad assumes responsibility for freeing the storage.
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const string &attrName,
-				double value, NumberFactor f=NO_FACTOR);
+				double value, Value::NumberFactor f=Value::NO_FACTOR);
 
 		/** Inserts an attribute into the ClassAd.  The boolean value is
 				converted into a Literal expression, and then inserted into
@@ -369,19 +379,14 @@ class ClassAd : public ExprTree
 
 		/**@name Miscellaneous */
 		//@{
-		/** Update a class-ad with another ClassAd. The attributes from the 
-		 		specified ClassAd are inserted into this ClassAd, overwriting 
-				any existing attributes with the same name.
-			@param ad the class-ad that represents the update.
-			@return false if the ClassAd could not be successfully updated.
-		*/
 		void Update( const ClassAd& ad );	
 
 		void Modify( ClassAd& ad );
 
 		bool CopyFrom( const ClassAd &ad );
 
-		/** Flattens the Classad.
+		/** Flattens (a partial evaluation operation) the given expression in 
+		  		the context of the classad.
 			@param expr The expression to be flattened.
 			@param val The value after flattening, if the expression was 
 				completely flattened.  This value is valid if and only if	
@@ -390,11 +395,13 @@ class ClassAd : public ExprTree
 				not flatten to a single value, and NULL otherwise.
 			@return true if the flattening was successful, and false otherwise.
 		*/
-		bool Flatten( ExprTree* expr, Value& val, ExprTree *&fexpr ) const;
+		bool Flatten( const ExprTree* expr, Value& val, ExprTree *&fexpr )const;
 		
 #if defined( EXPERIMENTAL )
 		bool GetExternalReferences( const ExprTree *tree, References &refs );
-		bool AddRectangle( int &rkey, Rectangles &r, const References &refs );
+		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
+		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
+					const string &allowed, const References &imported );
 #endif
 		//@}
 
@@ -407,7 +414,10 @@ class ClassAd : public ExprTree
 #if defined( EXPERIMENTAL )
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, References& );
-		bool _MakeRectangle( int&, const ExprTree*, Rectangles&, bool );
+		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
+					EvalState &, PortReferences& );
+		bool _MakeRectangles(const ExprTree*,const string&,Rectangles&, bool);
+		bool _CheckRef( ExprTree *, const string & );
 #endif
 
 		ClassAd *_GetDeepScope( const string& ) const;
@@ -416,7 +426,7 @@ class ClassAd : public ExprTree
 		virtual void _SetParentScope( const ClassAd* p );
 		virtual bool _Evaluate( EvalState& , Value& ) const;
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
 	
 		int LookupInScope( const string&, ExprTree*&, EvalState& ) const;
 		AttrList	attrList;
