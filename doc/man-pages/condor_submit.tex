@@ -257,6 +257,13 @@ submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
 
+Note that in the case of globus universe, the default behavior is
+different.  \emph{No} output files will be transferred by default.  If
+you do specify a list of output files to transfer, the paths are
+evaluated relative to \Opt{remote\_initialdir}, or if no
+\Opt{remote\_initialdir} is specified, relative to the temporary
+scratch directory that is created for the job.
+
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}.
