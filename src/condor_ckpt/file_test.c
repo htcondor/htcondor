@@ -65,23 +65,7 @@ main( int argc, char *argv[] )
 	}
 	write( 1, "\n", 1 );
 
-	/*
-	printf( "Closing %d\n", fd2 );
-	if( close(fd2) < 0 ) {
-		perror( "close" );
-		exit( 1 );
-	}
-	DumpOpenFds();
-	*/
-
-	SaveFileState();
-	printf( "Saved File State:\n" );
-	DumpOpenFds();
-
-	RestoreFileState();
-	DumpOpenFds();
-
-	exit( 0 );
+	exit( 13 );
 	return 0;
 }
 
