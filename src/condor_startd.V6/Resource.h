@@ -127,6 +127,8 @@ public:
 	char*			r_name;		// Name of this resource
 	char*			r_id;		// CPU id of this resource
 
+	int				type() { return r_attr->type(); };
+
 private:
 	int		kill_tid;	// DaemonCore timer id for kiling timer.
 
