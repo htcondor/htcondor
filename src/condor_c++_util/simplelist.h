@@ -15,7 +15,7 @@
  * by the U.S. Government is subject to restrictions as set forth in 
  * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
  * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR
  * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
@@ -36,7 +36,7 @@
 template <class ObjType> class SimpleListIterator;
 
 template <class ObjType>
-class SimpleList 
+class SimpleList
 {
     friend class SimpleListIterator<ObjType>;
     public:
@@ -50,6 +50,7 @@ class SimpleList
 
     // General
     bool Append (const ObjType &);
+	bool Prepend (const ObjType &);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) { return size; }
 	inline int Length(void) { return Number(); }
@@ -105,6 +106,28 @@ Append (const ObjType &item)
     items[size++] = item;
     return true;
 }
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+Prepend (const ObjType &item)
+{
+	int i=0;
+
+    if (size >= maximum_size)
+	{
+		if (!resize (2*maximum_size))
+			return false;
+	}
+
+
+	for (i=size;i>0;i--) {
+		items[i]=items[i-1];
+	}
+    items[0] = item;
+	size++;
+    return true;
+}
+
 
 template <class ObjType>
 bool SimpleList<ObjType>::
