@@ -1077,8 +1077,8 @@ orphanCallbackHandler()
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"orphanCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus event %d, ignoring\n", orphan->job_contact,
-			 orphan->state );
+			"contact %s on globus state %d, errorcode %d, ignoring\n",
+			orphan->job_contact, orphan->state, orphan->errorcode );
 		free( orphan->job_contact );
 		delete orphan;
 		return TRUE;
@@ -1108,7 +1108,8 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 	if ( rc != 0 || this_job == NULL ) {
 		dprintf( D_ALWAYS, 
 			"gramCallbackHandler: Can't find record for globus job with "
-			"contact %s on globus event %d, delaying\n", job_contact, state );
+			"contact %s on globus state %d, errorcode %d, delaying\n",
+			job_contact, state, errorcode );
 		OrphanCallback_t *new_orphan = new OrphanCallback_t;
 		new_orphan->job_contact = strdup( job_contact );
 		new_orphan->state = state;
