@@ -42,6 +42,13 @@
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
+#ifdef CARMI_OPS
+#include <ProcList.h>
+
+extern HostLIST* HostList;
+extern char* ExecutingHost;
+#endif
+
 static char *_FileName_ = __FILE__;
 
 #include "user_log.h"
@@ -1267,6 +1274,30 @@ pseudo_pvm_task_info(int pid, int task_tid)
 int
 pseudo_suspended(int suspended)
 {
+#ifdef CARMI_OPS
+	/************* MAKE CHANGES HERE **********/
+	/* Find HOST from HostList and change status of
+	   HOST->Status to  "Suspended" = 3 "Resume" = 2*/
+ 	HostLIST *hlist = HostList;
+	int found = 0;
+
+	dprintf(D_ALWAYS, "Suspended = %d \n", suspended);
+
+	while(!found && (hlist))
+	{
+	   if (!strcmp(hlist->hostname, ExecutingHost))
+		found = 1;
+           else
+		hlist = hlist->next;
+	}
+
+	if (found)
+		hlist->status = (suspended ? 3 : 2);
+        else
+	   dprintf(D_ALWAYS, "Host not found in pseudo_suspended\n");
+        
+        
+#endif
 	return 0;
 }
 

@@ -233,6 +233,7 @@ int DoCleanup();
 int Termlog;
 
 ReliSock	*sock_RSC1, *RSC_ShadowInit(int rscsock, int errsock);
+ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
 
 
 int MainSymbolExists = 1;
@@ -261,6 +262,16 @@ usage()
 	char	*SyscallLabel;
 #endif
 
+#ifdef CARMI_OPS
+#include <ProcList.h>
+
+extern ProcLIST* ProcList;
+extern HostLIST* HostList;
+extern ClassLIST* ClassList;
+extern ScheddLIST* ScheddList;
+extern SpawnLIST* SpawnList;
+#endif
+
 char*		schedd;
 
 /*ARGSUSED*/
@@ -280,7 +291,9 @@ main(int argc, char *argv[], char *envp[])
 
 
 #if !defined(OSF1) && !defined(Solaris)
-	close( 0 );
+#ifndef CARMI_OPS
+	close( 0 );					// stdin should remain open for CARMI_OPS
+#endif
 	close( 1 );
 	close( 2 );
 #endif
@@ -473,6 +486,22 @@ HandleSyscalls()
 {
 	int		fake_arg;
 
+#ifdef CARMI_OPS
+	struct timeval select_to;
+	fd_set readfds, exceptfds;
+	int cnt;
+	int max_fd = -1;
+	int sockfd, errsock;
+	struct sockaddr_in from;
+	int len = sizeof(from);
+	ProcLIST *plist;
+	ProcLIST *tempproc;
+	NotifyLIST *temp, *next;
+	int list;
+
+	Proc = &(ProcList->proc);
+#endif
+
 	if (getuid()==0) {
 		/* Must be root for chroot() call. */
 		set_root_euid(__FILE__,__LINE__);
@@ -540,6 +569,162 @@ HandleSyscalls()
 	errno = 0;
 
 	for(;;) {	/* get a request and fulfill it */
+#ifdef CARMI_OPS
+		FD_ZERO(&readfds);
+		FD_SET(fileno(stdin), &readfds);
+		max_fd = (max_fd > fileno(stdin))?max_fd:fileno(stdin);
+		
+		plist = ProcList;
+		while (plist != NULL)
+		{
+		  if (plist->proc.status != COMPLETED)
+		  {
+		     FD_SET(plist->rsc_sock, &readfds);
+		     if (plist->rsc_sock > max_fd) max_fd = plist->rsc_sock;
+		     FD_SET(plist->client_log, &readfds);
+		     if (plist->client_log > max_fd) max_fd = plist->client_log;
+		  }
+		  plist = plist->next;
+		}
+		
+		select_to.tv_sec = 1;
+		select_to.tv_usec = 0;
+		unblock_signal(SIGCHLD);
+		unblock_signal(SIGUSR1);
+		cnt = select(max_fd + 1, (fd_set *) &readfds, (fd_set *) 0,
+			 (fd_set *) 0, &select_to);
+		block_signal(SIGCHLD);
+		block_signal(SIGUSR1);
+
+		if (cnt <= 0) /* means timer expiration or interrupt got */
+		  continue;
+		    
+		if (FD_ISSET(fileno(stdin), &readfds))
+		    {
+		      /* means new host from the schedd */
+		      NewHostFound();
+		    }
+		
+		plist = ProcList;
+		while (plist != NULL)
+		{
+		  if (FD_ISSET(plist->client_log, &readfds))
+		    {
+		      char buf[275];
+		      int len;
+
+		      dprintf(D_ALWAYS, "ErrSock read to be done \n");
+                      len = read(plist->client_log, buf, sizeof(buf)-1);
+		      if (len != 0)
+			{
+			  int old_cnt, cnter;
+
+			  buf[len] = '\0';
+			  old_cnt = 0;
+			  for(cnter = 0; cnter <= len; cnter++)
+			    {
+			      if ((buf[cnter] == '\n' || buf[cnter] == '\0')&&
+				  (cnter - old_cnt > 1))
+				  {
+				    buf[cnter] = '\0';
+				    dprintf(D_ALWAYS | D_NOHEADER, "->%s\n",
+					    &(buf[old_cnt]));
+                                    old_cnt = cnter+1;
+				  }
+	                     }
+                        }
+       		   }
+			plist = plist->next;
+	        }
+
+		plist = ProcList;
+		while (plist != NULL)
+		{
+		  if (FD_ISSET(plist->rsc_sock, &readfds))
+                    {
+		      if (do_REMOTE_syscall(plist->xdr_RSC1, plist) < 0)
+			{
+			  if( !UsePipes ) 
+			    {
+			      send_quit( plist->hostname );
+			    }
+			  
+			  dprintf(D_ALWAYS,
+				  "Shadow: Job %d.%d exited, 
+				  termsig = %d, coredump = %d, retcode = %d\n",
+				  Proc->id.cluster, Proc->id.proc, 
+				  JobStatus.w_termsig, JobStatus.w_coredump, 
+				  JobStatus.w_retcode );
+			  
+			  Proc = &(plist->proc);
+			  Wrapup();
+			  xdr_destroy(plist->xdr_RSC1);
+			  free(plist->xdr_RSC1);
+			  close(plist->client_log);
+			  close(plist->rsc_sock);
+			  for(tempproc = ProcList; 
+			      ((tempproc->next != plist)&&(ProcList != plist));
+			      tempproc = tempproc->next);
+			  if (ProcList == plist)
+			    {
+			      /* have to delete the head */
+			      ProcList = ProcList->next;
+
+			      /* Empty out the DelNotifyList, etc. from plist */
+			      /*
+			      for (list=1; list<=3; list++)
+			      {
+				   if (list == 1) temp=plist->DelNotifyList;
+				   if (list == 2) temp=plist->ResNotifyList;
+				   if (list == 3) temp=plist->SusNotifyList;
+
+				   while(temp)
+				   {
+				       next = temp->next;
+				       free(temp);
+				       temp = next;
+				   }
+				}
+				*/
+
+			      free(plist);
+			      plist = ProcList;
+			    }
+			  else
+			    {
+			      tempproc->next = plist->next;
+
+			      /* Empty out the DelNotifyList, etc. from plist */
+			      /*
+			      for (list=1; list<=3; list++)
+			      {
+				   if (list == 1) temp=plist->DelNotifyList;
+				   if (list == 2) temp=plist->ResNotifyList;
+				   if (list == 3) temp=plist->SusNotifyList;
+				   while(temp)
+				   {
+				       next = temp->next;
+				       free(temp);
+				       temp = next;
+				   }
+				}
+				*/
+
+			      free(plist);
+			      plist = tempproc->next;
+			    }
+			}
+		      else
+			plist = plist->next;
+		    }
+		  else
+		    plist = plist->next;
+		}
+		max_fd = -1;
+		if ((ProcList == NULL) && (SpawnList == NULL))  break;
+	      }
+	
+#else
 		if( do_REMOTE_syscall() < 0 ) {
 			dprintf(D_SYSCALLS, "Shadow: do_REMOTE_syscall returned < 0\n");
 			break;
@@ -548,6 +733,7 @@ HandleSyscalls()
 		strcpy( SyscallLabel, "shadow" );
 #endif
 	}
+#endif // CARMI_OPS
 
 		/* Take back normal condor privileges */
 #if defined(AIX32)
@@ -1154,6 +1340,27 @@ host );
 
 	delete sock;
 
+#ifdef CARMI_OPS
+
+	if( (ProcList->rsc_sock = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
+		EXCEPT( "connect to scheduler on \"%s\", port1 = %d",
+													host, ports.port1 );
+	}
+
+	dprintf( D_ALWAYS, "Shadow: RSC_SOCK connected, fd = %d\n", ProcList->rsc_sock);
+
+	if( (ProcList->client_log = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
+		EXCEPT( "connect to scheduler on \"%s\", port2 = %d",
+													host, ports.port2 );
+	}
+
+	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", ProcList->client_log );
+
+	ProcList->xdr_RSC1 = RSC_MyShadowInit( &(ProcList->rsc_sock), &(ProcList->client_log));
+        free(stRec.server_name); 
+
+#else
+
 	if( (sd = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
 		EXCEPT( "connect to scheduler on \"%s\", port1 = %d",
 													host, ports.port1 );
@@ -1177,6 +1384,8 @@ host );
 	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", CLIENT_LOG );
 
 	sock_RSC1 = RSC_ShadowInit( RSC_SOCK, CLIENT_LOG );
+
+#endif // CARMI_OPS
 
 }
 
@@ -1305,8 +1514,16 @@ start_job( char *cluster_id, char *proc_id )
 	int		cluster_num;
 	int		proc_num;
 
+#ifdef CARMI_OPS
+	ProcLIST*	Proc;
+
+	Proc = (ProcLIST *) malloc(sizeof(ProcLIST)); /* is this needed ?? */
+	Proc->proc.id.cluster = atoi( cluster_id );
+	Proc->proc.id.proc = atoi( proc_id );
+#else
 	Proc->id.cluster = atoi( cluster_id );
 	Proc->id.proc = atoi( proc_id );
+#endif
 
 #if DBM_QUEUE
 	OPENJOBQUEUE(QueueD, QueueName, O_RDWR, 0);
@@ -1320,9 +1537,15 @@ start_job( char *cluster_id, char *proc_id )
 	proc_num = atoi( proc_id );
 
 	ConnectQ(schedd);
+#ifdef CARMI_OPS
+	if (GetProc(cluster_num, proc_num, &(Proc->proc)) < 0) {
+		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
+	}
+#else
 	if (GetProc(cluster_num, proc_num, Proc) < 0) {
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
 	}
+#endif
 	DisconnectQ(0);
 
 #endif
@@ -1337,6 +1560,31 @@ start_job( char *cluster_id, char *proc_id )
 	}
 #endif
 
+#ifdef CARMI_OPS
+	LocalUsage = Proc->proc.local_usage;
+#if defined(NEW_PROC)
+	RemoteUsage = Proc->proc.remote_usage[0];
+#else
+	RemoteUsage = Proc->proc.remote_usage;
+#endif
+	ImageSize = Proc->proc.image_size;
+
+#if DBM_QUEUE
+	CLOSEJOBQUEUE( QueueD );
+#endif
+	get_client_ids( &(Proc->proc) );
+
+	strcpy( Proc->CkptName, CkptName );
+	strcpy( Proc->ICkptName, ICkptName );
+	strcpy( Proc->RCkptName, RCkptName );
+	strcpy( Proc->TmpCkptName, TmpCkptName );
+	Proc->proc.n_pipes = 0; // temporary 
+	Proc->procId = (ProcList == NULL) ? 1 : ProcList->procId + 1;
+	Proc->next = ProcList;
+	ProcList = Proc;
+	/* don't forget to add the host here */
+	/* and also to update the class information */
+#else
 	LocalUsage = Proc->local_usage;
 #if defined(NEW_PROC)
 	RemoteUsage = Proc->remote_usage[0];
@@ -1349,6 +1597,7 @@ start_job( char *cluster_id, char *proc_id )
 	CLOSEJOBQUEUE( QueueD );
 #endif
 	get_client_ids( Proc );
+#endif
 }
 
 int
@@ -1598,7 +1847,12 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 
 	ExecutingHost = host;
 	start_job( cluster, proc );
+#ifdef CARMI_OPS
+	send_job( &(ProcList->proc), host, capability );
+	strcpy(ProcList->hostname, host);
+#else
 	send_job( Proc, host, capability );
+#endif
 }
 
 void
@@ -1712,6 +1966,11 @@ void
 reaper()
 {
 	pid_t		pid;
+#ifdef CARMI_OPS
+	SpawnLIST* sp_list;
+	SpawnLIST* sp_prev;
+	int found;
+#endif
 #if defined(AIX32)
 	union wait 		status;
 #else
@@ -1732,6 +1991,53 @@ reaper()
 		if( pid == 0 || pid == -1 ) {
 			break;
 		}
+
+#ifdef CARMI_OPS
+                found = 0;
+		sp_list = SpawnList;
+		sp_prev = NULL;
+		if( WIFEXITED(status) ) {
+			dprintf( D_ALWAYS,
+				"Reaped child status - pid %d exited with status %d\n",
+				pid, WEXITSTATUS(status)
+			);
+			if ( ((status >> 8) & 0x0ff) == 2)
+			{
+			  /* the process reaped was a spawn process */
+			  while(!found && (sp_list != NULL))
+			  {
+			    if (sp_list->pid == pid)
+			       found = 1;
+                            else
+			     {
+			       sp_prev = sp_list;
+			       sp_list = sp_list->next;
+			     }
+			  }
+			  if (found)
+			    {
+			      regular_setup(sp_list->hostname, sp_list->Cl_str,
+					    sp_list->Pr_str);
+			      if (!sp_prev)
+				SpawnList = sp_list->next;
+			      else
+				sp_prev->next = sp_list->next;
+			      
+			      free(sp_list);
+			    }
+			}
+						  
+		} else {
+			dprintf( D_ALWAYS,
+				"Reaped child status - pid %d killed by signal %d\n",
+				pid, WTERMSIG(status)
+			);
+		}
+			
+	}
+
+#else
+
 		if( WIFEXITED(status) ) {
 			dprintf( D_ALWAYS,
 				"Reaped child status - pid %d exited with status %d\n",
@@ -1745,6 +2051,8 @@ reaper()
 		}
 			
 	}
+
+#endif
 
 #ifdef HPUX9
 #define _BSD
@@ -1771,7 +2079,18 @@ display_uids()
 void
 condor_rm()
 {
+#ifdef CARMI_OPS
+	ProcLIST*       plist;
+
+	for (plist = ProcList; plist != NULL; plist = ProcList)	{
+		ReliSock	sock(plist->hostname, START_PORT);
+
+#else
+
 	ReliSock	sock(ExecutingHost, START_PORT);
+
+#endif
+
 	int			cmd;
 
 	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
@@ -1793,6 +2112,17 @@ condor_rm()
 
     dprintf( D_ALWAYS,"Sent KILL_FRGN_JOB command to startd on %s\n",
 		ExecutingHost);
+
+#ifdef CARMI_OPS
+	 xdr_destroy(ProcList->xdr_RSC1);
+	 free(ProcList->xdr_RSC1);
+	 close(ProcList->rsc_sock);
+	 close(ProcList->client_log);
+	 ProcList = plist->next;
+	 free(plist);
+       }
+#endif
+
 }
 
 int

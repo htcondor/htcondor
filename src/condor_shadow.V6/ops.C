@@ -139,6 +139,24 @@ RSC_ShadowInit( int rscsock, int errsock )
 	return( syscall_sock );
 }
 
+#ifdef CARMI_OPS
+XDR *
+RSC_MyShadowInit( int *rscsock, int *errsock )
+{
+   XDR* xdrs;
+/* AT --- have added this line here to make the streams dynamically 
+   allocated, rather than being a single statoc stream */
+	xdrs = (XDR *) malloc(sizeof(XDR));
+	
+	xdrrec_create( xdrs, XDR_BUFSIZE, XDR_BUFSIZE, (caddr_t)rscsock,
+			XDR_ShadowRead, XDR_ShadowWrite );
+/*        xdrrec_skiprecord( xdrs ); */     /* flush input buffer */
+	xdrs->x_op = XDR_ENCODE;
+	return( xdrs );
+}
+#endif
+
+
 #if 0
 char MsgBuf[ BUFSIZ ];
 HandleChildLog( log_fp )

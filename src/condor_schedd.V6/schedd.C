@@ -160,6 +160,10 @@ shadow_rec*     add_shadow_rec(int, PROC_ID*, Mrec*, int);
 shadow_rec*     find_shadow_rec();
 #endif
 
+#ifdef CARMI_OPS
+struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
+#endif
+
 Mrec::Mrec(char* i, char* p, PROC_ID* id)
 {
     strcpy(this->id, i);
@@ -980,6 +984,12 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 	int		i, lim;
 	int		parent_id;
 
+#ifdef CARMI_OPS
+	struct shadow_rec *srp;
+	char out_buf[80];
+	int pipes[2];
+#endif
+
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s\n",
 			job_id->cluster, job_id->proc, mrec->peer);
 
@@ -1010,6 +1020,33 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 	lim = getdtablesize();
 
 	parent_id = getpid();
+
+#ifdef CARMI_OPS
+	srp = find_shadow_by_cluster( job_id );
+	
+	if (srp != NULL) /* mean that the shadow exists */
+	  {
+	    if (!find_shadow_rec( job_id )) /* means the shadow rec for this
+					      process does not exist */
+	      add_shadow_rec( srp->pid, job_id, server, srp->conn_fd);
+		  /* next write out the server cluster and proc on conn_fd */
+	    dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
+			job_id->cluster, job_id->proc, srp->pid);
+	    sprintf(out_buf, "%s %d %d\n", server, job_id->cluster, 
+		    job_id->proc);
+	    dprintf( D_ALWAYS, "sending %s", out_buf);
+	    if (write(srp->conn_fd, out_buf, strlen(out_buf)) <= 0)
+	      dprintf(D_ALWAYS, "error in write %d \n", errno);
+            else
+	      dprintf(D_ALWAYS, "done writting to %d \n", srp->conn_fd);
+	    return 1;	
+	  }
+	
+       /* now the case when the shadow is absent */
+	socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
+	dprintf(D_ALWAYS, "Got the socket pair %d %d \n", pipes[0], pipes[1]);
+#endif
+
 	switch( (pid=fork()) ) {
 		case -1:	/* error */
 			if( errno == ENOMEM ) {
@@ -1022,6 +1059,15 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 			break;
 		case 0:		/* the child */
 			(void)close( 0 );
+#ifdef CARMI_OPS
+			if ((retval = dup2( pipes[0], 0 )) < 0)
+			  {
+			    dprintf(D_ALWAYS, "Dup2 returns %d\n", retval);  
+			    EXCEPT("Could not dup pipe to stdin\n");
+			  }
+		        else
+			    dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
+#endif		
 			for( i=3; i<lim; i++ ) {
 				(void)close( i );
 			}
@@ -1042,6 +1088,11 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 		default:	/* the parent */
 			dprintf( D_ALWAYS, "Running %d.%d on \"%s\", (shadow pid = %d)\n",
 				job_id->cluster, job_id->proc, mrec->peer, pid );
+#ifdef ASHISH_DEBUG
+			close(pipes[0]);
+			srp = add_shadow_rec( pid, job_id, server, pipes[1] );
+			dprintf( D_ALWAYS, "pipes[1] = %d\n", pipes[1]);
+#endif	
 			return add_shadow_rec( pid, job_id, mrec, -1 );
 	}
 	return NULL;
@@ -1619,6 +1670,23 @@ struct shadow_rec* find_shadow_rec(PROC_ID* id)
 	}
 	return NULL;
 }
+
+#ifdef CARMI_OPS
+struct shadow_rec *find_shadow_by_cluster( PROC_ID *id )
+{
+	int		i;
+	int		my_cluster;
+
+	my_cluster = id->cluster;
+
+	for( i=0; i<NShadowRecs; i++ ) {
+		if( my_cluster == ShadowRecs[i].job_id.cluster) {
+				return &ShadowRecs[i];
+		}
+	}
+	return NULL;
+}
+#endif
 
 void Scheduler::mail_problem_message()
 {
