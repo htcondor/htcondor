@@ -697,7 +697,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
-			dprintf(D_ALWAYS, "Can't find address for %s %s", 
+			dprintf(D_ALWAYS, "Can't find address for %s %s\n", 
 					 daemonString(_type), _name );
 			sprintf( buf, "Can't find address for %s %s", 
 					 daemonString(_type), _name );
@@ -708,7 +708,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		// construct the IP_ADDR attribute
 		sprintf( tmpname, "%sIpAddr", subsys );
 		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
 					 tmpname, daemonString(_type), _name );
 			sprintf( buf, "Can't find %s in classad for %s %s",
 					 tmpname, daemonString(_type), _name );
@@ -719,7 +719,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 
 		sprintf( tmpname, ATTR_VERSION );
 		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
 					 tmpname, daemonString(_type), _name );
 			sprintf( buf, "Can't find %s in classad for %s %s",
 					 tmpname, daemonString(_type), _name );
@@ -730,7 +730,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 
 		sprintf( tmpname, ATTR_PLATFORM );
 		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
-			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s\n",
 					 tmpname, daemonString(_type), _name );
 			sprintf( buf, "Can't find %s in classad for %s %s",
 					 tmpname, daemonString(_type), _name );
