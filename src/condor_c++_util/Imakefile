@@ -89,7 +89,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	classad_helpers.o classad_merge.o \
-	linebuffer.o cron.o cronmgr.o cronjob.o distribution.o \
+	linebuffer.o cron.o cronmgr.o cronjob.o distribution.o my_sinful_addr.o \
 	condor_attributes.o condor_environ.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o killfamily.o access.o get_mysubsystem.o \
