@@ -22,11 +22,11 @@ $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
              . $ENV{PATH};
 
 GetOptions (
-    'help'            => $opt_help,
-    'nightly'         => $opt_nightly,
-    'tag'             => $opt_tag,
-    'module'          => $opt_module,
-    'notify'          => $opt_notify,
+    'help'              => $opt_help,
+    'nightly'           => $opt_nightly,
+    'tag=s'             => $opt_tag,
+    'module=s'          => $opt_module,
+    'notify=s'          => $opt_notify,
 );
 
 my $NMIDIR = "/nmi/run";
@@ -61,21 +61,24 @@ mkdir($workspace) || die "Can't create workspace $workspace\n";
 chdir($workspace) || die "Can't change workspace $workspace\n";
 
 if ( defined($opt_tag) or defined($opt_module) ) {
-    print "Sorry --tag and --module not supported yet.\n";
+    print "You specified --tag=$opt_tag and --module-$opt_module\n";
+    if ( defined ($opt_tag) and defined($opt_module) ) {
+        $tags{"$opt_tag"} = $opt_module;
+    }
+    else {
+        print "ERROR: You need to specify both --tag and --module\n";
+        print_usage();
+        exit 1;
+    }
+}
+elsif ( defined($opt_nightly) ) {
+    %tags = &get_nightlytags();
+}
+else {
+    print "You need to have --tag with --module or --nightly\n";
     print_usage();
     exit 1;
 }
-#if ( defined($opt_nightly) ) {
-#    %tags = &get_nightlytags();
-#}
-#else {
-#    if ( defined($opt_tag) or defined($opt_module) ) {
-#        print "You can not have --tag and --nightly at the same time\n";
-#        print_usage();
-#        exit 1;
-#    }
-#}
-    %tags = &get_nightlytags();
 
 while ( my($tag, $module) = each(%tags) ) {
     my $cmdfile = &generate_cmdfile($tag, $module);
