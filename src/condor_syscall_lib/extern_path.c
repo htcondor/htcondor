@@ -62,13 +62,11 @@ static char				Hostname[512];
 static int				InitDone;
 
 
-
-
 /*
 ** Translate a name which may cross a mount point.
 */
 external_name( name, buf, bufsize )
-char	*name;
+const char	*name;
 char	*buf;
 int		bufsize;
 {
