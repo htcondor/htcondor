@@ -112,7 +112,7 @@ dir##/##file: file					@@\
 	cp file dir					@@\
 	chmod mode dir##/##file				@@\
 release:: dir##/##file
-#endif  release_target
+#endif  /* release_target */
 
 
 /*
@@ -130,41 +130,41 @@ release:: dir##/##lib
 /*
 ** Target is released by creating a symbolic link to another.
 */
-#ifndef symlink_torelease_target
-#define symlink_torelease_target( src, dir, dest )	@@\
+#ifndef release_symlink_target
+#define release_symlink_target( src, dir, dest )	@@\
 release:: $(RELEASE_DIR)/##dir##/##dest			@@\
 							@@\
 $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
 	ln -s src $(RELEASE_DIR)/##dir##/##dest			
-#endif /* symlink_torelease_target */
+#endif /* release_symlink_target */
 
 
 /*
 ** Target is released by creating a hard link to another.
 */
-#ifndef link_torelease_target
-#define link_torelease_target( src, dir, dest )		@@\
+#ifndef release_link_target
+#define release_link_target( src, dir, dest )		@@\
 release:: $(RELEASE_DIR)/##dir##/##dest##		@@\
 							@@\
 $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
 	ln src $(RELEASE_DIR)/##dir##/##dest		
-#endif /* link_torelease_target */
+#endif /* release_link_target */
 
 
 /*
 ** Target is released by copying
 */
-#ifndef copy_torelease_target
-#define copy_torelease_target( src, dir, dest, mode )	@@\
+#ifndef release_copy_target
+#define release_copy_target( src, dir, dest, mode )	@@\
 release:: $(RELEASE_DIR)/##dir##/##dest##		@@\
 							@@\
 $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest	@@\
 	cp src $(RELEASE_DIR)/##dir##/##dest		@@\
 	chmod mode $(RELEASE_DIR)/##dir##/##dest
-#endif /* copy_torelease_target */
+#endif /* release_copy_target */
 
 
 /***********************************************************************
@@ -214,33 +214,33 @@ dir##/##file: src					@@\
 	cp src dir##/##file				@@\
 	chmod mode dir##/##file				@@\
 stripped:: dir##/##file
-#endif strip_copy_target
+#endif /* strip_copy_target */
 
 
 /*
 ** Stripped target is released by creating a hard link to another. 
 */
-#ifndef link_tostrip_target
-#define link_tostrip_target( src, dir, dest )		@@\
+#ifndef strip_link_target
+#define strip_link_target( src, dir, dest )		@@\
 stripped:: $(STRIP_DIR)/##dir##/##dest##		@@\
 							@@\
 $(STRIP_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
 	ln src $(STRIP_DIR)/##dir##/##dest		
-#endif /* link_tostrip_target */
+#endif /* strip_link_target */
 
 
 /*
 ** Stripped target is released by creating a symbolic link to another.
 */
-#ifndef symlink_tostrip_target
-#define symlink_tostrip_target( src, dir, dest )	@@\
+#ifndef strip_symlink_target
+#define strip_symlink_target( src, dir, dest )	@@\
 stripped:: $(STRIP_DIR)/##dir##/##dest##		@@\
 							@@\
 $(STRIP_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(STRIP_DIR)/##dir##/##dest		@@\
 	ln -s src $(STRIP_DIR)/##dir##/##dest
-#endif /* symlink_tostrip_target */
+#endif /* strip_symlink_target */
 
 
 
@@ -270,7 +270,7 @@ dir##/##program: objlist libs					@@\
 clean:: 							@@\
 	rm -f program##.static objlist				@@\
 static:: dir##/##program
-#endif  static_target
+#endif  /* static_target */
 
 
 /*
@@ -302,27 +302,61 @@ static:: dir##/##file
 /*
 ** Static target is released by creating a hard link to another. 
 */
-#ifndef link_tostatic_target
-#define link_tostatic_target( src, dir, dest )		@@\
+#ifndef static_link_target
+#define static_link_target( src, dir, dest )		@@\
 static:: $(STATIC_DIR)/##dir##/##dest##			@@\
 							@@\
 $(STATIC_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
 	ln src $(STATIC_DIR)/##dir##/##dest		
-#endif /* link_tostatic_target */
+#endif /* static_link_target */
 
 
 /*
 ** Static target is released by creating a symbolic link to another.
 */
-#ifndef symlink_tostatic_target
-#define symlink_tostatic_target( src, dir, dest )	@@\
+#ifndef static_symlink_target
+#define static_symlink_target( src, dir, dest )	@@\
 static:: $(STATIC_DIR)/##dir##/##dest##			@@\
 							@@\
 $(STATIC_DIR)/##dir##/##dest##: src			@@\
 	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
 	ln -s src $(STATIC_DIR)/##dir##/##dest
-#endif /* symlink_tostatic_target */
+#endif /* static_symlink_target */
+
+
+/***********************************************************************
+** tarball targets
+**
+** These rules are used for creating the contrib and release tarballs.
+***********************************************************************/
+#ifndef contrib_tarball
+#define contrib_tarball( name, files )	@@\
+	full_tarball( name, files, contrib )
+#endif /* contrib_tarball */
+
+#ifndef release_tarball
+#define release_tarball( name, files )	@@\
+	full_tarball( name, files, dir )
+#endif /* release_tarball */
+
+#ifndef full_tarball
+#define full_tarball( name, files, type )		@@\
+##name##: static_##name stripped_##name			@@\
+							@@\
+stripped_##name##: stripped				@@\
+	/bin/rm -f strip_##type##/##name		@@\
+	cd strip_##type##; tar -cvf name files		@@\
+							@@\
+static_##name##: static					@@\
+	/bin/rm -f static_##type##/##name		@@\
+	cd static_##type##; tar -cvf name files		@@\
+							@@\
+public::  pub_static_##name pub_stripped_##name		@@\
+pub_static_##name##: static_##name			@@\
+							@@\
+pub_stripped_##name##: stripped_##name
+#endif /* full_tarball */
 
 
 /***********************************************************************
