@@ -31,7 +31,7 @@ typedef enum { READ_LOCK, WRITE_LOCK, UN_LOCK } LOCK_TYPE;
 
 class FileLock {
 public:
-	FileLock( int fd );
+	FileLock( int fd, FILE *fp = NULL );
 	~FileLock();
 
 		// Read only access functions
@@ -46,6 +46,7 @@ public:
 
 private:
 	int			fd;			// File descriptor to deal with
+	FILE		*fp;
 	BOOLEAN		blocking;	// Whether or not to block
 	LOCK_TYPE	state;		// Type of lock we are holding
 };
