@@ -1,4 +1,6 @@
 Changes for version 0.9.6: 
+* Fixed a bug where the lexer would choke on any string ending in a backslash.
+  Now it will only choke if the string ends in an odd number of backslashes. 
 
 * Fixed bug that sometimes caused Flatten() to return an expression
   with a bad pointer.
