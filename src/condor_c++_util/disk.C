@@ -26,8 +26,6 @@
 #include "condor_updown.h"
 #include "condor_disk.h"
 
-extern	"C"		dprintf(int, char *, char *);
-
 // constructor
 File::File(const char* filename)
 {

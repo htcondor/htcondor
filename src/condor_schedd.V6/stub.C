@@ -40,7 +40,6 @@ extern "C"
 	void upDown_ReadFromFile(const char* );
 	void upDown_WriteToFile(const char*);
 	void upDown_Display(void);
-	void dprintf(int, char*, char*, char*, char*, char*);
 }
 
 
