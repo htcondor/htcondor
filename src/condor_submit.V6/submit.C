@@ -377,26 +377,20 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-		//need IWD early, might need it for RendezvousDir if not defined.
-	ComputeIWD();
-
-
 		//RendezvousDir can be specified in submit-description file,
 		//else use InitialDir as specified or default InitialDir.
 	char *Rendezvous = NULL;
-	if ( !(Rendezvous = condor_param( RendezvousDir ) ) )
+	if ( (Rendezvous = condor_param( RendezvousDir ) ) )
 	{
-			//RendezvousDir defaults to InitialDir if not defined
-		Rendezvous = strdup( JobIwd );
+		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
+				Rendezvous );
+		char tmpstring[1024];
+		sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
+			//putenv because Authentication::authenticate() expects them there.
+		putenv( strdup( tmpstring ) );
+		if ( Rendezvous )
+			free( Rendezvous );
 	}
-	dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
-			Rendezvous );
-	char tmpstring[1024];
-	sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
-		//putenv because Authentication::authenticate() expects them there.
-	putenv( strdup( tmpstring ) );
-	if ( Rendezvous )
-		free( Rendezvous );
 
 
 		//if defined in file, set up to use x509certdir
@@ -637,14 +631,12 @@ SetExecutable()
 	case VANILLA:
 	case SCHED_UNIVERSE:
 	case MPI:  // for now
-#if !defined(WIN32)
 	case GLOBUS_UNIVERSE:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
-#endif
 	default:
 		EXCEPT( "Unknown universe (%d)", JobUniverse );
 	}
