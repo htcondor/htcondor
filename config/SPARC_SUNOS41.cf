@@ -3,6 +3,7 @@
 
 #define RpcLib /**/
 #define MldLib /**/
+#define SocketLib
 #define KernLib /lib/libkvm.a
 #define MallocLib /lib/libkvm.a
 #define SimpleLibC /lib/libc.a
@@ -64,6 +65,7 @@
 #define HAS_SETREUID			YES
 #define HAS_UTIMES				YES
 #define HAS_UTIME				NO
+#define HAS_U_TYPES				YES
 #define HAS_VHANGUP				YES
 #define HAS_SETRESUID			NO
 #define HAS_SETRESGID			NO
