@@ -30,9 +30,7 @@ static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 extern "C" 
 {
 	char*			sin_to_string(struct sockaddr_in*);
-	void			display_from(struct sockaddr_in*);
 }
-
 
 
 TimerManager DaemonCore::t;
@@ -1038,8 +1036,9 @@ int DaemonCore::HandleReq(int socki)
 			stream = insock;
 		}
 
-		dprintf(D_ALWAYS, "DaemonCore: Command received via TCP\n");
-		display_from(stream->endpoint());
+		dprintf( D_ALWAYS, "DaemonCore: Command received via TCP from %s\n", 
+				 sin_to_string(stream->endpoint()) );
+
 	}
 	// set up a connection for a udp socket
 	else {
@@ -1047,7 +1046,6 @@ int DaemonCore::HandleReq(int socki)
 		// our "listen sock" is also our "accept" sock, so just
 		// assign stream to the insock. UDP = connectionless, get it?
 		stream = insock;
-		dprintf(D_ALWAYS, "DaemonCore: Command received via UDP\n");
 		// in UDP we cannot display who the command is from until we read something off 
 		// the socket, so we display who from after we read the command below...
 	}
@@ -1069,9 +1067,9 @@ int DaemonCore::HandleReq(int socki)
 	
 	// If UDP, display who message is from now, since we could not do it above
 	if ( !is_tcp ) {		
-		display_from(stream->endpoint());	
+		dprintf( D_ALWAYS, "DaemonCore: Command received via UDP from %s\n", 
+				 sin_to_string(stream->endpoint()) );
 	}
-
 
 	// get the handler function
 
