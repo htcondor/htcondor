@@ -652,8 +652,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
-			dprintf(D_ALWAYS, "SetAttribute failed: job not found and cluster %d != active cluster %d\n",
-					cluster_id, active_cluster_num);
 			return -1;
 		}
 	}
