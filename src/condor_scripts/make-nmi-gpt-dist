@@ -17,8 +17,8 @@ my $VERSION = " make-gpt-dist 1.0 ";
 my $log, $version, $method;
 my $Compiler = "gcc64";
 my $TarExec = "tar";
-my $GPT_Tarfile = "/home/bt/gpt-2.1.tar.gz";
-my $GT_Core_Tarfile = "/home/bt/globus_core-2.1.tar.gz";
+my $GPT_Tarfile = "../../gpt-2.1.tar.gz";
+my $GT_Core_Tarfile = "../../globus_core-2.1.tar.gz";
 my $GlobusDir  = getcwd();
 my $buildInstallGPT;
 my $topDir = getcwd();
@@ -37,6 +37,8 @@ my $put_dev_pkg_in_bin_bundle=0;
 
 print "Building GPT packages for Condor-G\n";
 System("printenv");
+print "Make-Nmi-Gpt-Dist waking up HERE*************************************\n";
+System("pwd; ls");
 
 GetOptions (
 	'version' => \$version, 
