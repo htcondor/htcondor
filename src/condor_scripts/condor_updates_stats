@@ -20,7 +20,7 @@ my %Config =
 
 
 my $Program = "condor_updates_stats";
-my $RevisionString = '$Revision: 1.1.2.3 $';
+my $RevisionString = '$Revision: 1.1.2.4 $';
 my %Help =
     (
      Usage => "$Program [options]",
@@ -68,7 +68,11 @@ foreach my $Arg ( @ARGV )
     }
     elsif( $Arg eq "--version" )
     {
-	print "$Program $RevisionString\n";
+	if ( $RevisionString =~ /([\d\.]+)/ )
+	{
+	    $RevisionString = $1;
+	}
+	print "$Program version: $RevisionString\n";
 	exit 0;
     }
     elsif(  ( $Arg eq "--help" ) || ( $Arg eq "-h" ) )
