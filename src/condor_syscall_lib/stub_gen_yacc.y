@@ -956,7 +956,7 @@ output_receiver( struct node *n )
 		printf( ");\n" );
 	}
 	printf( "\t\tterrno = errno;\n" );
-	printf( "\t\tdprintf( D_SYSCALLS, \"rval = %%d, errno = %%d\\n\", rval, terrno );\n" );
+	printf( "\t\tdprintf( D_SYSCALLS, \"\\trval = %%d, errno = %%d\\n\", rval, terrno );\n" );
 	printf( "\n" );
 
 
