@@ -1,3 +1,8 @@
+06/03/04 V6_6-pre_merge-V6_6-imake-merge-1
+	The state of the V6_6-branch just before I merged V6_6-imake-branch
+	into it for the first time. This redoes the imake system to be more
+	compliant and easier to use.
+
 05/18/04 V6_6-merge-13
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  fixes getExecPath() on windoze which was breaking the 
