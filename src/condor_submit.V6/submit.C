@@ -1969,7 +1969,7 @@ SetUserLog()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
-		char *ulog = full_path(ulog_entry,false);
+		char *ulog = full_path(ulog_entry);
 		free(ulog_entry);
 		check_path_length(ulog, UserLogFile);
 		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
