@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_stat_std.cmd';
+$testname = 'Stat Test';
+	
+$file = 'x_data.in';
+
+($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime,
+$mtime, $ctime, $blksize, $blocks) = lstat($file);
+$mode = $mode & 0777;
+$mode = sprintf("0%o", $mode);
+push( @CondorTest::expected_output, "Output from lstat():" );
+push( @CondorTest::expected_output, "$file:" );
+push( @CondorTest::expected_output, "  st_mode = $mode" );
+push( @CondorTest::expected_output, "  st_ino = $ino" );
+push( @CondorTest::expected_output, "  st_dev = $dev" );
+push( @CondorTest::expected_output, "  st_nlink = $nlink" );
+push( @CondorTest::expected_output, "  st_uid = $uid" );
+push( @CondorTest::expected_output, "  st_gid = $gid" );
+push( @CondorTest::expected_output, "  st_size = $size" );
+push( @CondorTest::expected_output, "  st_mtime = $mtime" );
+push( @CondorTest::expected_output, "  st_ctime = $ctime" );
+
+($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime,
+$mtime, $ctime, $blksize, $blocks) = stat($file);
+$mode = $mode & 0777;
+$mode = sprintf("0%o", $mode);
+push( @CondorTest::expected_output, "Output from stat():" );
+push( @CondorTest::expected_output, "$file:" );
+push( @CondorTest::expected_output, "  st_mode = $mode" );
+push( @CondorTest::expected_output, "  st_ino = $ino" );
+push( @CondorTest::expected_output, "  st_dev = $dev" );
+push( @CondorTest::expected_output, "  st_nlink = $nlink" );
+push( @CondorTest::expected_output, "  st_uid = $uid" );
+push( @CondorTest::expected_output, "  st_gid = $gid" );
+push( @CondorTest::expected_output, "  st_size = $size" );
+push( @CondorTest::expected_output, "  st_mtime = $mtime" );
+push( @CondorTest::expected_output, "  st_ctime = $ctime" );
+push( @CondorTest::expected_output, "Normal End Of Job" );
+
+# Skip the lines for st_atime, since those might vary through no fault
+# of our own...
+@CondorTest::skipped_output_lines = ( 10, 22 );
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -167,7 +167,8 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_JOB_RECONNECT_FAILED:
 		return new JobReconnectFailedEvent;
 
-	  default:
+	default:
+		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
         EXCEPT( "Invalid ULogEventNumber" );
 
 	}

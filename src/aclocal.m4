@@ -71,6 +71,36 @@ fi
 ])dnl
 
 
+
+
+#######################################################################
+# CONDOR_EXTERNAL_VERSION written by Derek Wright
+# <wright@cs.wisc.edu> to specify the required version for a given
+# external package needed for building Condor.  In addition to setting
+# variables and printing out stuff, this macro checks to make sure
+# that the externals directory tree we've been configured to use
+# contains the given version of the external package.
+# Arguments: 
+#  $1 is the package "name" for the external
+#  $2 is the package "version" of the external
+# Side Effects:
+#  If the given version is found in the externals tree, 
+#  the variable $_cv_ext_<name>_version is set to hold the value, we
+#  print out "checking <name> ... <version>, and we do a variable
+#  substitution in our output files for "ext_<name>_version".
+#######################################################################
+AC_DEFUN([CONDOR_EXTERNAL_VERSION],
+[AC_MSG_CHECKING([$1])
+ _err_msg="The requested version of [$1] ([$1]-[$2]) does not exist in $ac_cv_externals"
+ _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]],$_err_msg)
+ _condor_VERIFY_DIR([$ac_cv_externals/bundles/[$1]/[$2]],$_err_msg)
+ _condor_VERIFY_FILE([$ac_cv_externals/bundles/[$1]/[$2]/build_[$1]-[$2]],$_err_msg)
+ _cv_ext_$1_version="[$1]-[$2]"
+ AC_MSG_RESULT([$_cv_ext_$1_version])
+ AC_SUBST([ext_$1_version],$_cv_ext_$1_version)
+])
+
+
 #######################################################################
 # CONDOR_VERIFY_EXTERNALS_DIR written by Derek Wright
 # <wright@cs.wisc.edu> to verify if a given directory is a valid

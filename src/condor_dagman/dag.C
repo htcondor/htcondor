@@ -1547,7 +1547,8 @@ Dag::IncludeExtraDotCommands(
 
 	include_file = fopen(_dot_include_file_name, "r");
 	if (include_file == NULL) {
-        debug_printf(DEBUG_NORMAL, "Can't open %s\n", _dot_include_file_name);
+        debug_printf(DEBUG_NORMAL, "Can't open dot include file %s\n",
+					_dot_include_file_name);
 	} else {
 		char line[100];
 		fprintf(dot_file, "// Beginning of commands included from %s.\n", 

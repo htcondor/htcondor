@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.4.1 2004-07-19 05:28:36 wright Exp $ 
+# $Id: pre_all,v 1.1.4.2 2004-10-22 06:55:36 wright Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -38,6 +38,8 @@ my $ExtDir = "$CommonDir/externals";
 -d $SrcDir || die "$SrcDir does not exist!\n";
 -d $DocDir || die "$DocDir does not exist!\n";
 -d $ExtDir || die "$ExtDir does not exist!\n";
+
+my $result = "results.tar.gz";
 
 
 ######################################################################
@@ -142,6 +144,26 @@ print "Done creating source tarball\n";
 print "Removing all source directories\n";
 safe_sys( "rm -rf $src_tar_dir" );
 print "Done removing all source directories\n";
+
+
+######################################################################
+# 5) Create platform-independent results.tar.gz file
+######################################################################
+
+# All we want to do is tar the files in common into
+# common/results.tar.gz so that we can save them.
+print "Tarring up contents of common to save for later\n";
+chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
+open( TAR, "tar -zcvf $result $vers_file $src_tarball|" ) ||
+    die "Can't open(tar -zcvf $result $vers_file $src_tarball): $!\n";
+while( <TAR> ) {
+    print $_;
+}
+close( TAR );
+if( $? ) {
+    die "Tar failed with status $?\n";
+}
+print "tar completed successfully\n";
 
 print "All steps completed successfully!\n";
 exit 0;

@@ -1,0 +1,22 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_floats-async_std.cmd';
+$testname = 'Condition Test';
+
+@CondorTest::expected_output = 
+( 'Program completed successfully.', 
+  'Be sure that it checkpointed at least once.' );
+
+CondorTest::RegisterExitedSuccess( $testname, 
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 1) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
+

@@ -6,7 +6,7 @@ EXT_INSTALL=$EXT_ROOT/install
 WANT_EXT_GLIBC=@want_ext_glibc@
 EXT_GLIBC_VERSION=@ext_glibc_version@
 
-EXT_KERBEROS_VERSION=@ext_kerberos_version@
+EXT_KERBEROS_VERSION=@ext_krb5_version@
 
 EXT_GLOBUS_VERSION=@ext_globus_version@
 GLOBUS_FLAVOR=@globus_flavor@

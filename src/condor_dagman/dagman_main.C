@@ -442,13 +442,16 @@ int main_init (int argc, char ** const argv) {
 		}
 
 		dagman.condorLogFiles.append( condorLogName );
-	 }
 
+	}
 
 	if( dagman.condorLogFiles.number() > 0 ) {
 		dagman.condorLogFiles.rewind();
-		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s, etc.\n",
-					  dagman.condorLogFiles.next() );
+		debug_printf( DEBUG_VERBOSE, "All DAG node user log files:\n");
+		const char *logfile;
+		while( (logfile = dagman.condorLogFiles.next()) ) {
+			debug_printf( DEBUG_VERBOSE, "  %s\n", logfile );
+		}
 	}
 
 	if( dapLogName ) {

@@ -1,63 +1,22 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.4.4 2004-10-14 15:04:03 parag Exp $
+# $Id: post_all,v 1.1.4.5 2004-10-22 06:55:36 wright Exp $
 # Submit-side NMI build system infrastructure to save results after
-# all the platform-specific jobs have completed.  In this case, all we 
-# care about is saving the platform-independent stuff.  
+# all the platform-specific jobs have completed.  In this case, we've
+# already saved everything we care about during pre_all.  So, the only
+# thing of value for this script to do is to spawn the nightly test
+# run for the now-completed build...
 ######################################################################
-
-use Cwd;
 
 # autoflush our STDOUT
 $| = 1;
 
-my $BaseDir = getcwd();
-my $CommonDir = "$BaseDir/common";
-my $vers_file = "CONDOR-VERSION";
-my $result = "results.tar.gz";
-my $src_file;
-
-chdir( "$CommonDir" ) || die "Can't chdir($CommonDir): $!\n";
-
-open( VERS, "$vers_file" ) || die "Can't open $vers_file: $!\n";
-while( <VERS> ) {
-    $vers = $_;
-}
-close( VERS );
-$src_file = "condor-$vers.tar.gz";
--f $src_file || die "$src_file does not exist!\n";
-
-# All we want to do is tar the files in common into
-# common/results.tar.gz so that we can save them.
-print "Tarring up contents of common to save for later\n";
-open( TAR, "tar -zcvf $result $vers_file $src_file|" ) ||
-    die "Can't open(tar -zcvf $result $vers_file $src_file): $!\n";
-while( <TAR> ) {
-    print $_;
-}
-close( TAR );
-if( $? ) {
-    die "Tar failed with status $?\n";
-}
-print "tar completed successfully\n";
-print "Removing files:\n";
-my $had_error = 0;
-foreach $file ("$vers_file", "$src_file") {
-    if( unlink($file) ) {
-        print "  $file\n";
-    } else {
-        warn "Can't remove $file: $!\n";
-        $had_error = 1;	
-    }
-}
-if( $had_error ) {
-    print "Error encountered, returning FAILURE\n";
-    exit 1;
-}
-
-print "All steps completed successfully\n";
 print "Submitting test jobs ...\n";
-system("nmi_glue/test_submit/condor_test_submit.pl --nightly");
+system( "nmi_glue/test_submit/condor_test_submit.pl --nightly" );
+if( $? ) {
+    die "condor_test_submit.pl failed with status $status\n";
+}
+print "All steps completed successfully\n";
 exit 0;
 

@@ -1,0 +1,31 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_longjmp_std.cmd';
+$testname = 'Threads Test';
+
+for( $i=0; $i<10; $i++ ) {
+     push( @CondorTest::expected_output, "i = $i" );
+     push( @CondorTest::expected_output, 'About to Ckpt from STACK' );
+     push( @CondorTest::expected_output, 'Returned from ckpt_and_exit' );
+     push( @CondorTest::expected_output, 'About to Ckpt from DATA' );
+     push( @CondorTest::expected_output, 'Returned from ckpt_and_exit' );
+}
+
+push( @CondorTest::expected_output, 'Normal End_Of_Job' );
+
+# Skip all the lines that print out explicit STACK and DATA addresses
+@CondorTest::skipped_output_lines = 
+(2, 5, 9, 12, 16, 19, 23, 26, 30, 33, 37, 40, 44, 47, 51, 54, 58, 61, 65, 68);
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+

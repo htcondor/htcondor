@@ -1,10 +1,30 @@
+10/22/04 V6_6-merge-23
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This includes all of the new condor_tests directory
+   and imake changes, along with some other minor fixes and
+   enhancements from V6_6_7 and some stuff that'll be in V6_6_8.
+
 10/22/04 V6_7-pre_merge-V6_6-merge-23
    The state of the V6_7-branch before yet another merge from V6_6-branch.
+
+10/11/04 V6_6_7
+   The official 6.6.7 release tag (at long last!).  this lives on
+   V6_6_ALL and V6_6_7_EXT 
+   
+10/06/04 V6_6-krb5_1_3-branch + V6_6-krb5_1_3-root
+   This is a new branch off the end of the V6_6-branch for changes to
+   get Condor to link with and use Kerberos5 version 1.3.x.  The
+   Kerberos API changed between 1.2.x and 1.3.x, and there are a
+   number of security enhancements and portability fixes that are
+   driving us to want to switch to krb5-1.3.x.  So, we've got this
+   branch so that we can isolate the changes, do builds on all our
+   platforms, and heavily test the new kerberos before we merge it
+   back into the stable code-base.
 
 10/06/04 V6_7_2 
   A tag for the 6.7.2 release. It lives on the V6_7_2-branch
 
-11/10/04 V6_7-Technion_ha2-root & V6_7-Technion_ha2-branch
+10/06/04 V6_7-Technion_ha2-root & V6_7-Technion_ha2-branch
    Second root & branch tags for Technion High Availability work.
 
 10/05/04 V6_7-soap-3-branch

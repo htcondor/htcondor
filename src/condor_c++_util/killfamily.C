@@ -186,9 +186,17 @@ ProcFamily::safe_kill(a_pid *pid, int sig)
 				"(err=%d)\n", inpid, GetLastError());
 		}
 
+			// note that it is important to call time() first, and
+			// then call getProcInfo().  this is because these two
+			// calls are not atomic, and thus a second may click
+			// inbetween these two calls, thus causing the logic
+			// below to think the pid is not part of the pid family.
+			// -Todd Tannenbaum <tannenba@cs.wisc.edu> 10/04
+		time_t curr_time = time(NULL);
+
 		ProcAPI::getProcInfo(inpid, pi);
 
-		int birth = (time(NULL) - pi->age);
+		int birth = (curr_time - pi->age);
 
 			// check if process birthday is atleast as old as the last
 			// snapshot's value

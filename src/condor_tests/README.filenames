@@ -1,0 +1,136 @@
+----------------------------------------------------------------------
+INTRODUCTION
+----------------------------------------------------------------------
+
+This file describes the file name convention used in the condor_tests
+directory for the monolithic "Condor Test Suite".  Because we've
+decided (for now) to go with a flat directory for all the tests, the
+filenames are going to be really important to help maintain some order
+and sanity, especially as we add more and more tests.  Please read
+this document carefully before adding any new files to this
+directory. 
+
+
+----------------------------------------------------------------------
+TESTNAMES
+----------------------------------------------------------------------
+
+Each test name is of them form:
+
+   type_subsys_feature_univ
+
+Where:
+
+type = job | lib | cmd | soap
+
+   job: any tests submitted as a condor job to a personal condor pool
+   lib: unit tests against a library in the code (e.g., classads, userlog)
+   cmd: execution tests of our command-line tools
+   soap: tests of (or via) the SOAP API
+
+subsys = high-level part of condor being tested
+
+   To clarify this part of the name, there is a whole section devoted
+   to describing this below (with examples).
+
+feature = specific thing being tested
+
+   This is the name of the specific thing being tested.  The
+   combination of the feature and subsys should completely describe
+   *what* is being tested.
+
+univ = job universe, where appropriate
+
+    This is optional if irrelevant, but err on side of specifying it.
+
+Each of these 4 sections of the testname (type, subsys, feature,
+universe) is delimited by an '_' (underscore).  We should never have
+more than 3 '_' (underscore) characters in the name.  Therefore, if
+either the "subsys" or "feature" part need to be delimited to make
+sense, we should use '-' (dash).  For example:
+
+ job_filexfer_sandbox-empty_van
+ ^^^ ^^^^^^^^ ^^^^^^^^^^^^^ ^^^
+type  subsys    feature     univ
+
+
+----------------------------------------------------------------------
+SUBSYSTEM NAMES
+----------------------------------------------------------------------
+
+The subsystem element of a test name should describe what high-level
+part of Condor is being tested.  Below is a list of subsys values and
+what they're used for:
+
+ckpt         checkpoint/restore
+rsc          remote system calls
+auth         authentication and authorization
+core         core condor functionality (could spans multiple subsystems)
+core-cpp     core C++ functionality
+filexfer     file transfer mechanism
+userlog      the userlog file
+dagman       DAGMan
+scale        scalability
+
+The subsys should be a noun, a part of condor, not an adjective, that
+classifies the test (like "simple", "advanced", etc).  If you're
+thinking adjectvie, you should probably be using a "testclass" instead
+(see README.testclass).
+
+
+----------------------------------------------------------------------
+FILENAMES
+----------------------------------------------------------------------
+
+Most filenames are of the form:
+
+   testname.extension
+
+The extensions should be whatever they need to be to indicate what
+kind of file it is.  For example:
+
+   .c      C source file
+   .C      C++ source file
+   .h      C or C++ header file
+   .f      fortran source file
+   .pl     Perl script
+   .pm     Perl module
+   .sh     Shell script (bourne shell)
+   .run    Condor test "run file"
+   .cmd    Condor submit description file
+   .in     an input file used by a test
+
+When tests generate their own output files, they should follow this
+convention:
+
+   .log    Condor user-log file
+   .out    STDOUT
+   .err    STDERR
+
+In general, all files that belong with a given test should use their
+testname as the first part of the filename.  For example, a standard
+universe job that tests if floating point registers are restored
+properly across checkpoints might have this name:
+
+job_ckpt_floats_std
+
+If this was a C program with the usual .run file and .cmd file, the
+files would be named:
+
+job_ckpt_floats_std.c
+job_ckpt_floats_std.cmd
+job_ckpt_floats_std.run
+
+
+However, some files are helper programs or parts of tests that are
+shared across multiple tests.  These files should have a top-level
+"type" of "x".  The rest of the filename should just try to be as
+descriptive as possible to indicate what it is and what it's used for,
+and of course, the extension should be accurate.  Here are some
+examples:
+
+x_return-0.sh
+x_return-1.sh
+x_fake-ckpt.c
+x_waste-second.c
+

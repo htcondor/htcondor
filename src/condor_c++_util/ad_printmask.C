@@ -158,27 +158,48 @@ display (AttrList *al)
 		switch( fmt->fmtKind )
 		{
 		  	case PRINTF_FMT:
-				// get the expression tree of the attribute
-				if (!(tree = al->Lookup (attr)))
-				{
+					// figure out what kind of format string the
+					// caller is using, and print out the appropriate
+					// value depending on what they want.
+				tmp_fmt = fmt->printfFmt;
+				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
+						/*
+						  if parsePrintfFormat() returned 0, it means
+						  there are no conversion strings in the
+						  format string.  some users do this as a hack
+						  for always printing a newline after printing
+						  some attributes that might not be there.
+						  since we don't have a better alternative
+						  yet, we should support this kind of use.
+						  in this case, we should just print out the
+						  format string directly, and not worry about
+						  looking up attributes at all.  however, if
+						  there is an alt string defined, we should
+						  print that, instead. -Derek 2004-10-15
+						*/
+					if( alt && alt[0] ) {
+						retval += alt;
+					} else { 
+						retval += fmt->printfFmt;
+					}
+					continue;
+				}
+
+					// if we got here, there's some % conversion
+					// string, so we'll need to get the expression
+					// tree of the attribute they asked for...
+				if( !(tree = al->Lookup (attr)) ) {
+						// drat, we couldn't find it.  if there's an
+						// alt string, use that, otherwise bail.
 					if ( alt ) {
 						retval += alt;
 					}
 					continue;
 				}
 
-					// figure out what kind of format string the
-					// caller is using, and print out the appropriate
-					// value depending on what they want.
-				tmp_fmt = fmt->printfFmt;
-				if( ! parsePrintfFormat(&tmp_fmt, &fmt_info) ) {
-					if( alt ) {
-						retval += alt;
-					}
-					continue;
-				}
-
-					// Now, figure out what kind of value they want
+					// Now, figure out what kind of value they want,
+					// based on the kind of % conversion in their
+					// format string 
 				fmt_type = fmt_info.type;
 				switch( fmt_type ) {
 				case PFT_STRING:

@@ -1,0 +1,57 @@
+/***********************************************************************
+**  Common settings shared by *all* test-related Imakefiles
+***********************************************************************/
+
+CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR) 
+
+/*
+   We need this target here as the first rule, so that "make" is the
+   same as "make all" (by having an "all::" target as the very first
+   rule).  In addition, this particular all:: target ensures that we
+   create all the various lists we need (dealing with test classes and
+   the like).  This way, we can catch errors right away, and we get
+   all that stuff out of the way early in the build.
+*/
+all:: all_lists
+all_lists:: list_all
+
+
+/***************************************************
+* Test "Class" declarations
+***************************************************/
+
+TESTCLASS_DECL(env)
+TESTCLASS_DECL(quick)
+TESTCLASS_DECL(critical)
+TESTCLASS_DECL(long)
+
+
+/***************************************************
+* Special-case rules for building helpers, etc.
+***************************************************/
+
+clean::
+	rm -f *.o *.exe *.exe.*
+	rm -f core core.*.* *.out *.output *.err *.log
+	rm -f CkptFile ckpt_file *.ckpt list_all
+
+x_waste_second.o: x_waste_second.c x_my_bogokips.h x_waste_second.h
+	$(CC) -c x_waste_second.c $(CFLAGS)
+
+x_my_bogokips.h: x_compute_bogokips
+	./x_compute_bogokips x_my_bogokips.h
+
+x_compute_bogokips: x_compute_bogokips.o
+	$(CC) -o x_compute_bogokips x_compute_bogokips.o $(CFLAGS)
+
+x_compute_bogokips.o: x_compute_bogokips.c
+	$(CC) -c x_compute_bogokips.c $(CFLAGS)
+
+clean::
+	rm -f x_waste_second.o x_my_bogokips.h
+	rm -f x_compute_bogokips x_compute_bogokips.o
+
+release::
+stripped::
+static::
+

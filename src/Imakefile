@@ -242,6 +242,7 @@ single_target(condor_schedd.V6,libqmgmt.a)
 single_target(condor_accountant.V6,libacct.a)
 single_target(condor_ckpt_server,ckpt_server_api.a)
 
+object_target(tests)
 object_target(test_suite_C.V5)
 object_target(test_suite_base)
 

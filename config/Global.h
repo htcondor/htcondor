@@ -76,6 +76,9 @@
 #define Concat6(a,b,c,d,e,f)SimpleConcat6(a,b,c,d,e,f)
 #endif /* Concat6 */
 
+/* A simple rule to "string-ify" the given argument */
+#define str(s) #s
+
 
 /***************************************************************************
 ** Undefine any symbols the compiler might have defined for us since

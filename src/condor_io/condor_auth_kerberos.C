@@ -177,7 +177,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
         if (out_data.ciphertext.data) {    
             free(out_data.ciphertext.data);
         }
-        dprintf(D_ALWAYS, "%s\n", error_message(code));
+        dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
         return false;
     }
     
@@ -241,7 +241,7 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
                                  &out_data)) {
         output_len = 0;
         output = 0;
-        dprintf(D_ALWAYS, "%s\n", error_message(code));
+        dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
         if (out_data.data) {
             free(out_data.data);
         }
@@ -398,7 +398,7 @@ int Condor_Auth_Kerberos :: init_user()
     goto cleanup;
     
  error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
     rc = FALSE;
 
  cleanup:
@@ -449,7 +449,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     
     // Send out the request
     if ((reply = send_request(&request)) != KERBEROS_MUTUAL) {
-        dprintf(D_ALWAYS, "Could not authenticate!\n");
+        dprintf( D_ALWAYS, "KERBEROS: Could not authenticate!\n" );
         return FALSE;
     }
     
@@ -461,7 +461,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     switch (reply) 
         {
         case KERBEROS_DENY:
-            dprintf(D_ALWAYS, "Authentication failed\n");
+            dprintf( D_ALWAYS, "KERBEROS: Authentication failed\n" );
             return FALSE;
             break; // unreachable
         case KERBEROS_FORWARD:
@@ -473,13 +473,13 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
             
             // This is an implict GRANT
             //if (forward_tgt_creds(creds_, 0)) {
-            //    dprintf(D_ALWAYS, "Unable to forward credentials\n");
+            //    dprintf(D_ALWAYS,"KERBEROS: Unable to forward credentials\n");
             //return FALSE;  
             //            }
         case KERBEROS_GRANT:
             break; 
         default:
-            dprintf(D_ALWAYS, "Response is invalid\n");
+            dprintf( D_ALWAYS, "KERBEROS: Response is invalid\n" );
             break;
         }
     
@@ -499,7 +499,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     goto cleanup;
     
  error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
     // Abort
     mySock_->encode();
     reply = KERBEROS_ABORT;
@@ -547,7 +547,8 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     }
     
     if (code) {
-        dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
+        dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+				 error_message(code) );
         goto error;
     }
     
@@ -555,12 +556,11 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     // Get te KRB_AP_REQ message
     //------------------------------------------
     if(read_request(&request) == FALSE) {
-        dprintf(D_ALWAYS, "Server is unable to read request\n");
+        dprintf( D_ALWAYS, "KERBEROS: Server is unable to read request\n" );
         goto error;
     }
     
-    dprintf(D_ALWAYS, "Reading request object\n");
-
+	dprintf( D_SECURITY, "Reading kerberos request object (krb5_rd_req)\n");
     priv = set_root_priv();   // Get the old privilige
     
     if (code = krb5_rd_req(krb_context_,
@@ -571,7 +571,8 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
                            &flags,
                            &ticket)) {
         set_priv(priv);   // Reset
-        dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
+        dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+				 error_message(code) );
         goto error;
     }
     set_priv(priv);   // Reset
@@ -581,7 +582,8 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     //------------------------------------------
     if (flags & AP_OPTS_MUTUAL_REQUIRED) {
         if (code = krb5_mk_rep(krb_context_, auth_context_, &reply)) {
-            dprintf(D_ALWAYS, "Kerberos server authentication error:%s\n", error_message(code));
+            dprintf( D_ALWAYS, "Kerberos server authentication error:%s\n",
+					 error_message(code) );
             goto error;
         }
 
@@ -642,7 +644,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     
     mySock_->encode();
     if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to send response message!\n");
+        dprintf( D_ALWAYS, "KERBEROS: Failed to send response message!\n" );
     }
     
  cleanup:
@@ -712,7 +714,7 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
  error:
     free(request.data);
     
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
     return KERBEROS_DENY;
 }
 
@@ -767,7 +769,8 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
     
     return TRUE;
  error:
-    dprintf(D_ALWAYS, "Unable to initialize kerberos: %s\n",error_message(code));
+    dprintf( D_ALWAYS, "Unable to initialize kerberos: %s\n",
+			 error_message(code) );
     return FALSE;
 }
 
@@ -997,7 +1000,7 @@ int Condor_Auth_Kerberos :: init_server_info()
     //}
     //else {
     // Exception!
-    //  dprintf(D_ALWAYS, "Unable to stash ticket -- STASH directory is not defined!\n");
+    //  dprintf(D_ALWAYS,"KERBEROS: Unable to stash ticket -- STASH directory is not defined!\n");
     //}
 
     char * serverPrincipal = param(STR_KERBEROS_SERVER_PRINCIPAL);
@@ -1101,7 +1104,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     message = KERBEROS_FORWARD;
     mySock_->encode();
     if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to send response\n");
+        dprintf(D_ALWAYS, "Failed to send KERBEROS_FORWARD response\n");
         goto cleanup;
     }
     
@@ -1110,7 +1113,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     goto cleanup;
     
  error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message(code) );
     
  cleanup:
     
@@ -1152,7 +1155,8 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
       
       mySock_->encode();
       if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-      dprintf(D_ALWAYS, "Failed to send response\n");
+      dprintf( D_ALWAYS,
+	  "Failed to send KERBEROS_FORWARD response in receive_tgt_creds()\n" );
       return 1;
       }
       
@@ -1160,17 +1164,18 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
 	mySock_->decode();
 	
 	if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-	  dprintf(D_ALWAYS, "Failed to receive response\n");
+	  dprintf(D_ALWAYS,
+	  "Failed to receive KERBEROS_FORWARD response in receive_tgt_creds()\n");
 	  return 1;
           }
           
           if (message != KERBEROS_FORWARD) {
-	  dprintf(D_ALWAYS, "Client did not send forwarding message!\n");
+	  dprintf(D_ALWAYS, "Client did not send KERBEROS_FORWARD message!\n");
 	  return 1;
           }
           else {
 	  if (!mySock_->code(request.length)) {
-          dprintf(D_ALWAYS, "Credential length is invalid!\n");
+          dprintf(D_ALWAYS, "KERBEROS: Credential length is invalid!\n");
           return 1;
 	  }
 	  
@@ -1178,7 +1183,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
 	  
 	  if ((!mySock_->get_bytes(request.data, request.length)) ||
           (!mySock_->end_of_message())) {
-          dprintf(D_ALWAYS, "Credential is invalid!\n");
+          dprintf(D_ALWAYS, "KERBEROS: Credential is invalid!\n");
           return 1;
 	  }
 	  
@@ -1213,7 +1218,7 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
           
           }
           else {
-          dprintf(D_ALWAYS, "Stash location is not set!\n");
+          dprintf(D_ALWAYS, "KERBEROS: Stash location is not set!\n");
           goto error;
           }
           }
@@ -1225,14 +1230,14 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
   
     mySock_->encode();
     if ((!mySock_->code(message)) || (!mySock_->end_of_message())) {
-        dprintf(D_ALWAYS, "Failed to send response\n");
+        dprintf(D_ALWAYS, "Failed to send KERBEROS_GRANT response\n");
         return 1;
     }
     
     return 0;  // Everything is fine
   
  error:
-    dprintf(D_ALWAYS, "%s\n", error_message(code));
+    dprintf(D_ALWAYS, "KERBEROS: %s\n", error_message(code));
     //if (ccache) {
     //  krb5_cc_destroy(krb_context_, ccache);
     //}
@@ -1252,7 +1257,7 @@ int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 
     if (message == KERBEROS_PROCEED) {
         if (!mySock_->code(request->length)) {
-            dprintf(D_ALWAYS, "Incorrect message 1!\n");
+            dprintf(D_ALWAYS, "KERBEROS: Incorrect message 1!\n");
             code = FALSE;
         }
         else {
@@ -1260,7 +1265,7 @@ int Condor_Auth_Kerberos :: read_request(krb5_data * request)
             
             if ((!mySock_->get_bytes(request->data, request->length)) ||
                 (!mySock_->end_of_message())) {
-                dprintf(D_ALWAYS, "Incorrect message 2!\n");
+                dprintf(D_ALWAYS, "KERBEROS: Incorrect message 2!\n");
                 code = FALSE;
             }
         }
@@ -1310,7 +1315,8 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     return;
 
  error:
-    dprintf(D_ALWAYS, "Unable to obtain remote address: ", error_message(code));
+    dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: ",
+			 error_message(code) );
 }
 
 int Condor_Auth_Kerberos :: endTime() const

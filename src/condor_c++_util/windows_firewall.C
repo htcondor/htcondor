@@ -36,12 +36,26 @@ WindowsFirewallHelper::WindowsFirewallHelper() {
     fwMgr  = NULL;
 	fwPolicy = NULL;
 	wfh_initialized = false;
+	wfh_operational = false;
 }
 
 WindowsFirewallHelper::~WindowsFirewallHelper() {
 	
 	WindowsFirewallCleanup();
 	
+}
+
+bool
+WindowsFirewallHelper::ready() {
+
+	/* initialized == have we run init() yet? */
+	/* operational == does the firewall stuff work on this OS? */
+
+	if ( ! wfh_initialized ) {
+		wfh_operational = init();
+	}
+
+	return wfh_operational;
 }
 
 bool
@@ -87,12 +101,8 @@ WindowsFirewallHelper::firewallIsOn() {
 
 	hr = S_OK;
 
-	if ( !wfh_initialized ) { 
-		if ( !init() ) {
-			// we don't know if its enabled or not, but since init() failed, 
-			// there's nothing more we can do with the firewall anyways.
-			return false;
-		}
+	if ( ! ready() ) { 
+		return false;
 	}
 
     // Get the current state of the firewall.
@@ -116,12 +126,8 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 	HRESULT hr = S_OK;
 	INetFwAuthorizedApplication* fwApp = NULL;
 	
-	if ( !wfh_initialized ) { 
-		if ( !init() ) {
-			// if init() failed, we're probably not on XP SP2 or better.
-			// there's nothing more we can do in any case.
-			return false;
-		}
+	if ( ! ready() ) { 
+		return false;
 	}
 
 	if ( !firewallIsOn() ) {
@@ -230,12 +236,8 @@ WindowsFirewallHelper::applicationIsTrusted(const char* app_path) {
 
 	result = false;
 
-	if ( !wfh_initialized ) {
-		if ( !init() ) {
-			// if init() failed, we're probably not on XP SP2 or better.
-			// there's nothing more we can do in any case.
-			return false;
-		}
+	if ( ! ready() ) {
+		return false;
 	}
 
 	app_path_bstr = charToBstr(app_path);
@@ -282,7 +284,10 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 	int i;
 	VARIANT v;
 
-	
+	if ( ! ready() ) {
+		return false;
+	}
+
 	fwApps->get__NewEnum(&pUnknown);
 	fwApps->get_Count(&count);
 
@@ -328,12 +333,8 @@ WindowsFirewallHelper::removeTrusted( const char *app_path ) {
 	HRESULT hr = S_OK;
 	bool result = false;
 
-	if ( !wfh_initialized ) {
-		if ( !init() ) {
-			// if init() failed, we're probably not on XP SP2 or better.
-			// there's nothing more we can do in any case.
-			return false;
-		}
+	if ( ! ready() ) {
+		return false;
 	}
 
 	app_path_bstr = charToBstr(app_path);

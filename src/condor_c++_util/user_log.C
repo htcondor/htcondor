@@ -588,9 +588,13 @@ skipXMLHeader(char afterangle, long filepos)
 ULogEventOutcome ReadUserLog::
 readEvent (ULogEvent *& event)
 {
+	if ( !_fp ) {
+		return ULOG_NO_EVENT;
+	}
+
 	if( log_type == LOG_TYPE_UNKNOWN ) {
 	    if( !determineLogType() ) {
-			dprintf(D_ALWAYS, "ReadUserLog:determineLogType failed");
+			dprintf(D_ALWAYS, "ReadUserLog::determineLogType failed");
 			return ULOG_RD_ERROR;
 		}
 	}
@@ -678,6 +682,7 @@ readEventOld(ULogEvent *& event)
 	// rewind to this location
 	if (!_fp || ((filepos = ftell(_fp)) == -1L))
 	{
+		dprintf( D_FULLDEBUG, "ReadUserLog: invalid _fp, or ftell() failed\n" );
 		if (!is_locked) {
 			lock->release();
 		}
@@ -692,6 +697,13 @@ readEventOld(ULogEvent *& event)
 		// check for end of file -- why this is needed has been
 		// lost, but it was removed once and everything went to
 		// hell, so don't touch it...
+			// Note: this is needed because if this method is called and
+			// you're at the end of the file, fscanf returns EOF (-1) and
+			// you get here.  If you're at EOF you had better bail out...
+			// (This is not uncommon -- any time you try to read an event
+			// and there aren't any events to read you get here.)
+			// If fscanf returns 0, you're probably *really* in trouble.
+			// wenger 2004-10-07.
 		if( feof( _fp ) ) {
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr( _fp );
@@ -700,12 +712,15 @@ readEventOld(ULogEvent *& event)
 			}
 			return ULOG_NO_EVENT;
 		}
+		dprintf( D_FULLDEBUG, "ReadUserLog: error (not EOF) reading "
+					"event number\n" );
 	}
 
 	// allocate event object; check if allocated successfully
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) 
 	{
+		dprintf( D_FULLDEBUG, "ReadUserLog: unable to instantiate event\n" );
 		if (!is_locked) {
 			lock->release();
 		}
@@ -718,6 +733,8 @@ readEventOld(ULogEvent *& event)
 	// check if error in reading event
 	if (!retval1 || !retval2)
 	{	
+		dprintf( D_FULLDEBUG, "ReadUserLog: error reading event; re-trying\n" );
+
 		// we could end up here if file locking did not work for
 		// whatever reason (usual NFS bugs, whatever).  so here
 		// try to wait a second until the current partially-written
@@ -770,6 +787,8 @@ readEventOld(ULogEvent *& event)
 			    event =
 			      instantiateEvent( (ULogEventNumber)eventnumber );
 			    if( !event ) { 
+				  dprintf( D_FULLDEBUG, "ReadUserLog: unable to "
+				  			"instantiate event\n" );
 			      if( !is_locked ) {
 					lock->release();
 			      }
@@ -782,6 +801,8 @@ readEventOld(ULogEvent *& event)
 			// if failed again, we have a parse error
 			if (!retval1 != 1 || !retval2)
 			{
+				dprintf( D_FULLDEBUG, "ReadUserLog: error reading event "
+							"on second try\n");
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
@@ -804,6 +825,8 @@ readEventOld(ULogEvent *& event)
 			  {
 			    // got the event, but could not synchronize!!
 			    // treat as incomplete event
+				dprintf( D_FULLDEBUG, "ReadUserLog: got event on second try "
+						"but synchronize() failed\n");
 			    delete event;
 			    event = NULL;  // To prevent FMR: Free memory read
 			    clearerr( _fp );
@@ -818,6 +841,7 @@ readEventOld(ULogEvent *& event)
 		{
 			// if we could not synchronize the log, we don't have the full	
 			// event in the stream yet; restore file position and return
+			dprintf( D_FULLDEBUG, "ReadUserLog: syncronize() failed\n");
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
@@ -849,6 +873,9 @@ readEventOld(ULogEvent *& event)
 		{
 			// got the event, but could not synchronize!!  treat as incomplete
 			// event
+			dprintf( D_FULLDEBUG, "ReadUserLog: got event on first try "
+					"but synchronize() failed\n");
+
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (_fp);
@@ -863,6 +890,9 @@ readEventOld(ULogEvent *& event)
 	if (!is_locked) {
 		lock->release();
 	}
+
+	dprintf( D_ALWAYS, "Error: got to the end of "
+			"ReadUserLog::readEventOld()\n");
 
 	return ULOG_UNK_ERROR;
 }

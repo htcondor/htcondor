@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_f-areauc_std.cmd';
+$testname = 'Fortran Area Under a Curve Test';
+
+$OutputTest = sub {
+	my %info = @_;
+
+	$output = $info{"output"};
+	open( OUTPUT, "<$output" ) || die "Can't open $output: $!\n";
+
+	# The first line should be SUCCESS or FAILURE
+	$line = <OUTPUT>;
+
+	if ((not $line =~ /.*SUCCESS.*/) && 
+		(not $line =~ /.*FAILURE.*/))
+	{
+		close OUTPUT;
+		die "$testname: FAILURE (bad output to STDOUT)\n";
+	}
+	# screw the rest of the lines, if there are any....
+	close OUTPUT;
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $OutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

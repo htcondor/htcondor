@@ -32,11 +32,16 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 
+static const char * VERSION = "0.9.1";
+
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
+
+enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 static ReadMultipleUserLogs	reader;
 static int		verbosity = 0;
 
+Status CheckArgs(int argc, char **argv);
 bool CompareStringLists(StringList &reference, StringList &test);
 bool GetGoodLogFiles(StringList &logFiles);
 bool GetBadLogFiles();
@@ -46,25 +51,18 @@ void PrintEvent(ULogEvent *event);
 
 int main(int argc, char **argv)
 {
+		// Set up the dprintf stuff...
+	Termlog = true;
+	dprintf_config("test_multi_log", 2);
+	DebugFlags = D_ALWAYS;
+
 	int		result = 0;
 
-	const char *usage = "Usage: test_multi_log [-v <n>]\n";
-	if ( argc >= 2 ) {
-		if ( !strcmp(argv[1], "-usage") ) {
-			printf(usage);
-			return 0;
-		} else if ( !strcmp(argv[1], "-v") ) {
-			if (argc >= 3) {
-				verbosity = atoi(argv[2]);
-			} else {
-				printf("-v flag needs value\n");
-				return 1;
-			}
-		} else {
-			fprintf(stderr, "Illegal argument: %s\n", argv[1]);
-			printf(usage);
-			return 1;
-		}
+	Status tmpStatus = CheckArgs(argc, argv);
+	if ( tmpStatus == STATUS_CANCEL ) {
+		return 0;
+	} else if ( tmpStatus == STATUS_ERROR ) {
+		return 1;
 	}
 
 	if ( !GetBadLogFiles() ) {
@@ -88,6 +86,55 @@ int main(int argc, char **argv)
 	}
 
 	return result;
+}
+
+
+
+Status
+CheckArgs(int argc, char **argv)
+{
+	Status	status = STATUS_OK;
+
+	const char *	usage = "Usage: test_multi_log [options]\n"
+			"  -debug <level>: debug level (e.g., D_FULLDEBUG)\n"
+			"  -usage: print this message and exit\n"
+			"  -verbosity <number>: set verbosity level (default is 0)\n"
+			"  -version: print the version number and compile date\n";
+
+	for ( int index = 1; index < argc; ++index ) {
+		if ( !strcmp(argv[index], "-debug") ) {
+			if ( ++index >= argc ) {
+				fprintf(stderr, "Value needed for -debug argument\n");
+				printf("%s", usage);
+				status = STATUS_ERROR;
+			} else {
+				set_debug_flags( argv[index] );
+			}
+
+		} else if ( !strcmp(argv[index], "-usage") ) {
+			printf("%s", usage);
+			status = STATUS_CANCEL;
+
+		} else if ( !strcmp(argv[index], "-verbosity") ) {
+			if ( ++index >= argc ) {
+				fprintf(stderr, "Value needed for -verbosity argument\n");
+				printf("%s", usage);
+				status = STATUS_ERROR;
+			} else {
+				verbosity = atoi(argv[index]);
+			}
+		} else if ( !strcmp(argv[index], "-version") ) {
+			printf("test_multi_log: %s, %s\n", VERSION, __DATE__);
+			status = STATUS_CANCEL;
+
+		} else {
+			fprintf(stderr, "Unrecognized argument: <%s>\n", argv[index]);
+			printf("%s", usage);
+			status = STATUS_ERROR;
+		}
+	}
+
+	return status;
 }
 
 // true == okay; false == error
@@ -150,6 +197,22 @@ GetBadLogFiles()
 	MyString		errorMsg;
 	errorMsg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 			"test_multi_log2.dag", "job", logFiles);
+	if ( errorMsg != "" ) {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	} else {
+		printf("...should have gotten an error (test failed)");
+		printf(" (at %s: %d)\n", __FILE__, __LINE__);
+		isOkay = false;
+	}
+
+	if ( verbosity >= 1 ) {
+		printf("Log files:\n");
+		logFiles.print();
+	}
+
+	printf("Getting log files...\n");
+	errorMsg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+			"test_multi_log3.dag", "job", logFiles);
 	if ( errorMsg != "" ) {
 		printf("...got expected error (%s)\n", errorMsg.Value());
 	} else {

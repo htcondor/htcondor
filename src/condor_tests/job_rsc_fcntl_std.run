@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_fcntl_std.cmd';
+$testname = 'Fcntl Test';
+
+$foo = <<"_EOX";
+F_GETFD gives: 0
+F_GETFD gives: 1	(should be 1)
+F_GETFD gives: 0	(should be 0)
+F_GETFL gives: 1
+F_DUPFD returs: 5 with arg = 5
+_EOX
+
+@CondorTest::expected_output = split '\n', $foo;
+
+@CondorTest::skipped_output_lines = (1, 6);
+# Line 1: 'Filedes = 32', so we don't know what fd we're going to get
+# Line 6: 'F_GETFL gives: 2049', and the value varies across platforms
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
+

@@ -1,0 +1,63 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd1 = 'job_core_coredump_std.cmd';
+$handle1 = 'Create Core File';
+$wants_core{$handle1} = 1;
+
+$cmd2 = 'job_core_coredump-none_std.cmd';
+$handle2 = 'No Core File';
+$wants_core{$handle2} = 0;
+
+$core_file = 'core';
+
+$CheckCoreFiles = sub {
+    my %info = @_;
+    my $core = $info{"core"};
+    my $handle = $info{"handle"};
+    my $core_file_found = 0;
+    my @expected_output;
+
+    print "Checking for $core...";
+    if( $core ne "" && (-e $core) ) {
+	print "yes.\n";
+	$core_file_found = 1;
+    } else {
+	print "no.\n";
+    }
+
+    if( $wants_core{$handle} ) {
+	$core_file_found || 
+	    die "$handle: FAILURE (No core file created)\n";
+    } else {
+	$core_file_found && 
+	    die "$handle: FAILURE (core file created)\n";
+    }
+
+    -z $info{"error"} || 
+	die "$handle: FAILURE (STDERR contains data)\n";
+
+    @expected_output = ( 'About to divide by zero' );
+
+   CondorTest::CompareText( $info{"output"}, \@expected_output ) ||
+	die "$handle: FAILURE (STDOUT doesn't match expected output)\n";
+};
+
+CondorTest::RegisterExitedAbnormal( $handle1, $CheckCoreFiles );
+CondorTest::RegisterExitedAbnormal( $handle2, $CheckCoreFiles );
+
+if( CondorTest::RunTest($handle1, $cmd1, 0) ) {
+    print "$handle1: SUCCESS\n";
+} else {
+    die "$handle1: CondorTest::RunTest() failed\n";
+}
+
+if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
+    print "$handle2: SUCCESS\n";
+} else {
+    die "$handle2: CondorTest::RunTest() failed\n";
+}
+
+exit(0);
+

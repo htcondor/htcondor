@@ -676,6 +676,19 @@ clean::						@@\
 XCOMM End translation of func(all_symlink_target)
 #endif /* all_symlink_target */
 
+
+#ifndef all_copy_target
+#define all_copy_target(src,dest)		@@\
+XCOMM Begin translation of func(all_copy_target) @@\
+all:: dest					@@\
+dest: src					@@\
+	/bin/rm -f dest				@@\
+	cp src dest				@@\
+clean::						@@\
+	/bin/rm -f dest			@@\
+XCOMM End translation of func(all_copy_target)
+#endif /* all_copy_target */
+
 /***********************************************************************
 ** tarball targets
 **
@@ -915,11 +928,87 @@ XCOMM End translation of func(quantify_c_plus_target)
 ** condor_compile.  These are used primarily in the test suites. 
 ***********************************************************************/
 
+/* This is a little weird, but if "FLAGS_MACRO_NAME" is defined, we're
+   in a compiler-specific subdirectory of the test suite.  If it's
+   not, we're at the top-level, so how we find condor_compile and
+   condor_arch link are different...
+*/
+#ifdef FLAGS_MACRO_NAME
 CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
+#else
+CONDOR_COMPILE = ../condor_scripts/condor_compile
+CONDOR_ARCH_LINK = perl ../condor_scripts/condor_arch_link
+#endif
+
+/*
+** Link a program with Condor libraries for the standard universe
+*/
+#ifndef CLINK
+#if IS_CLIPPED
+#define CLINK(compiler,name,obj)	/* */ @@\
+XCOMM Begin translation of func(CLINK)		@@\
+XCOMM NULL BODY!				@@\
+XCOMM End translation of func(CLINK)
+#else
+#define CLINK(compiler,name,obj)		@@\
+XCOMM Begin translation of func(CLINK)		@@\
+all:: name.cndr.exe				@@\
+name:: name.cndr.exe				@@\
+       @/bin/true				@@\
+name.cndr.exe: obj				@@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
+	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
+clean::						@@\
+	rm -f name.cndr.exe obj			@@\
+XCOMM End translation of func(CLINK)
+#endif /* IS_CLIPPED */
+#endif /* CLINK */
+
+
+/*
+** Link a program to run normally intended for the standard universe
+** without libraries at all
+*/
+#ifndef CLINK_NOSTD
+#define CLINK_NOSTD(compiler,name,obj)		@@\
+XCOMM Begin translation of func(CLINK_NOSTD)	@@\
+all:: name.exe					@@\
+name:: name.exe					@@\
+       @/bin/true				@@\
+name.exe: obj x_fake_ckpt.o			@@\
+	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)	@@\
+clean::						@@\
+	rm -f name.exe obj			@@\
+XCOMM End translation of func(CLINK_NOSTD)
+#endif /* CLINK_NOSTD */
+
+
+
+/*
+** Link a program to run normally (no condor libraries at all)
+*/
+#ifndef LINK
+#define LINK(compiler,name,obj)			@@\
+XCOMM Begin translation of func(LINK)		@@\
+all:: name.exe					@@\
+name:: name.exe					@@\
+       @/bin/true				@@\
+name.exe: obj					@@\
+	compiler -o name.exe obj $(TEST_LDFLAGS)  @@\
+clean::						@@\
+	rm -f name.exe obj			@@\
+XCOMM End translation of func(LINK)
+#endif /* LINK */
+
+
+/***********************************************************************
+** DEPRECATED condor_compile rules
+***********************************************************************/
 
 /*
 ** Link a program for running remotely
+** This rule is deprecated, in favor of using CLINK 
 */
 #ifndef RLINK
 #if IS_CLIPPED
@@ -942,8 +1031,10 @@ XCOMM End translation of func(RLINK)
 #endif /* IS_CLIPPED */
 #endif /* RLINK */
 
+
 /*
 ** Link a program to run normally (no condor at all)
+** This rule is deprecated in favor of using LINK
 */
 #ifndef VLINK
 #define VLINK(compiler,name,obj)		@@\
@@ -985,7 +1076,7 @@ compiledir/Imakefile:	CImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-	   -DC_COMPILER=compiler \				@@\
+	   -I.. -DC_COMPILER=compiler \				@@\
 	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
@@ -1014,7 +1105,7 @@ compiledir/Imakefile: CPPImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-	   -DCPP_COMPILER=compiler \				@@\
+	   -I.. -DCPP_COMPILER=compiler \			@@\
 	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
@@ -1043,7 +1134,7 @@ compiledir/Imakefile: FImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-		-DFORTRAN_HAS_RECURSION=has_recursion \	@@\
+		-I.. -DFORTRAN_HAS_RECURSION=has_recursion \	@@\
 		-DF_COMPILER=compiler	\			@@\
 		-DFLAGS_MACRO_NAME=flags_macro_name		@@\
 								@@\
@@ -1058,39 +1149,243 @@ XCOMM End translation of func(F_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
 
 
-/*
-** Rule for building and linking a given test program
-*/
+/***********************************************************************
+** Rules for building, describing, and declaring tests
+***********************************************************************/
+
 #ifndef BUILD
 #define BUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(BUILD)	@@\
-BUILD_FILES(name,ext)			@@\
-RLINK(cmplr,name,name.o)		@@\
-VLINK(cmplr,name,name.o)		@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
+LINK(cmplr,name,name.o)			@@\
 XCOMM End translation of func(BUILD)
 #endif /* BUILD */
 
-#ifndef BUILD_EXTRA
-#define BUILD_EXTRA(cmplr,name,ext,obj)	@@\
-XCOMM Begin translation of func(BUILD_EXTRA) @@\
-BUILD_FILES(name,ext)			@@\
+#ifndef BUILD_DEP
+#define BUILD_DEP(cmplr,name,ext,dep)	@@\
+XCOMM Begin translation of func(BUILD_DEP) @@\
+DEP_SYMLINK_EXT(name,ext)		@@\
+LINK(cmplr,name,dep name.o)		@@\
+XCOMM End translation of func(BUILD_DEP)
+#endif /* BUILD_DEP */
+
+#ifndef CBUILD
+#define CBUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(CBUILD) @@\
+name.ext:: x_fake_ckpt.h	@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
+CLINK(cmplr,name,name.o)		@@\
+CLINK_NOSTD(cmplr,name,name.o)		@@\
+XCOMM End translation of func(CBUILD)
+#endif /* CBUILD */
+
+#ifndef CBUILD_DEP
+#define CBUILD_DEP(cmplr,name,ext,dep)	@@\
+XCOMM Begin translation of func(CBUILD_DEP) @@\
+name.ext:: x_fake_ckpt.h	@@\
+DEP_SYMLINK_EXT(name,ext)		@@\
+CLINK(cmplr,name,dep name.o)		@@\
+CLINK_NOSTD(cmplr,name,dep name.o)	@@\
+XCOMM End translation of func(CBUILD_DEP)
+#endif /* CBUILD_DEP */
+
+#ifndef DEP_SYMLINK
+#ifdef FLAGS_MACRO_NAME
+#define DEP_SYMLINK(name,file)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK) @@\
+name:: file				@@\
+       @/bin/true			@@\
+all:: file				@@\
+file::					@@\
+	/bin/rm -f file 		@@\
+	ln -s ../file file		@@\
+XCOMM End translation of func(DEP_SYMLINK)
+#else /* ! defined(FLAGS_MACRO_NAME) */
+#define DEP_SYMLINK(name,file)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK) @@\
+XCOMM NULL BODY				@@\
+XCOMM End translation of func(DEP_SYMLINK)
+#endif /* defined(FLAGS_MACRO_NAME) */
+#endif /* DEP_SYMLINK */
+
+#ifndef DEP_SYMLINK_EXT
+#define DEP_SYMLINK_EXT(name,ext)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK_EXT) @@\
+DEP_SYMLINK(name,name.ext)			@@\
+XCOMM End translation of func(DEP_SYMLINK_EXT)
+#endif /* DEP_SYMLINK_EXT */
+
+
+#ifndef DEPS
+#define DEPS(name,deps)				@@\
+XCOMM Begin translation of func(DEPS)		@@\
+all:: deps					@@\
+name:: deps					@@\
+       @/bin/true				@@\
+XCOMM End translation of func(DEPS)
+#endif /* DEPS */
+
+
+#ifndef RUN
+#define RUN(name)				@@\
+XCOMM Begin translation of func(RUN)		@@\
+DEP_SYMLINK_EXT(name,run)			@@\
+DEPS(name,Condor.pm CondorTest.pm)		@@\
+list_all:: Concat(list_all__,name)		@@\
+Concat(list_all__,name):: safe_append.pl name.run	@@\
+	@perl safe_append.pl -v -f list_all -a name	@@\
+XCOMM End translation of func(RUN)
+#endif /* RUN */
+
+
+/*
+   TESTCLASS_DECL() is used to declare a new testclass in the test
+   suite.  However, exactly what it has to do depends on if it's in
+   the top-level Imakefile or in the compiler specific subdirs.  In
+   the compiler specific subdirs, it just has to define a dummy rule
+   for the given testclass so that "make [testclass]" will have at
+   least 1 target, and will work, even if there are no tests to build
+   for that class.  In the top-level, it has to find all the compiler
+   subdirectories (by depending on the compiler_list), and for each
+   one in the list, cd into the corresponding subdirectory and invoke
+   "make [testclass]".
+
+   There are some things this rule will do in common, regardless of if
+   it's in the top-level or a compiler subdirectory.  These tasks are
+   put in a common rule, TESTCLASS_DECL_BASE(), so they can be shared.
+*/
+#ifndef TESTCLASS_DECL
+#ifdef FLAGS_MACRO_NAME
+#define TESTCLASS_DECL(classname)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
+TESTCLASS_DECL_BASE(classname)			@@\
+classname::					@@\
+	@/bin/true				@@\
+XCOMM End translation of func(TESTCLASS_DECL)
+#else /* ! FLAGS_MACRO_NAME */
+#define TESTCLASS_DECL(classname)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
+TESTCLASS_DECL_BASE(classname)			@@\
+classname:: compiler_list			@@\
+	for X in `cat compiler_list` ; do \	@@\
+	    make $$X/Makefile; \		@@\
+	     cd $$X; make classname; cd ..; \	@@\
+	done					@@\
+XCOMM End translation of func(TESTCLASS_DECL)
+#endif /* FLAGS_MACRO_NAME */
+#endif /* TESTCLASS_DECL */
+
+/*
+   This rule contains common stuff for both versions of
+   TESTCLASS_DECL().  See the comment above for why there are two.
+   This rule handles all the testclass list related work.  In
+   particular, it ensures that the "all_lists" target depends on
+   making a list for this class, it adds this class to the master list
+   of all testclasses ("list_testclass"), it initializes the list for
+   this specific testclass ("list_[classname]"), and cleans up all of
+   the above on "make clean".
+*/
+#ifndef TESTCLASS_DECL_BASE
+#define TESTCLASS_DECL_BASE(classname)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL_BASE) @@\
+all_lists:: Concat(list_,classname)		@@\
+list_testclass:: Concat(list_testclass_,classname)	@@\
+Concat(list_testclass_,classname):: safe_append.pl	@@\
+	@perl safe_append.pl -v -f list_testclass -a classname	@@\
+Concat(list_,classname):: list_testclass	@@\
+	touch Concat(list_,classname)		@@\
+clean::						@@\
+	rm -f list_testclass Concat(list_,classname) @@\
+XCOMM End translation of func(TESTCLASS_DECL_BASE)
+#endif /* TESTCLASS_DECL_BASE */
+
+
+/*
+   This rule is how a given test is added to a specific testclass.
+   It ensures that the "all_lists" target depends on this testclass's
+   list, which helps us catch errors early in the build process.  It
+   also ensures that the classname itself depends on this test
+   (e.g. "TESTCLASS(foo,bar)" will ensure that "make bar" will build
+   test foo), and it verifies that this testclass has been properly
+   declared with a TESTCLASS_DECL() rule.  It does this final step by
+   depending on the master list of testclasses (which is only created
+   and populated by TESTCLASS_DECL() rules), and it greps through that
+   list to find the given testclass this rule is envoked with.  If
+   this rule is being called with a testclass not in the master list,
+   make will fail with a verbose error message.  If it's being called
+   with a valid testclass, it appends the given testname into the list
+   for the given classname.
+*/
+#ifndef TESTCLASS
+#define TESTCLASS(testname,classname)		@@\
+XCOMM Begin translation of func(TESTCLASS)	@@\
+all:: Concat(list_,classname)			@@\
+all_lists:: Concat(list_,classname)		@@\
+classname:: Concat4(list_,classname,__,testname)	@@\
+classname:: testname				@@\
+Concat(list_,classname):: Concat4(list_,classname,__,testname)	@@\
+Concat4(list_,classname,__,testname):: list_testclass safe_append.pl	@@\
+	@grep classname list_testclass > /dev/null; \	@@\
+	if test $$? -ne 0 ; then \		@@\
+	   CLASSNAME=str(classname); \		@@\
+	   TESTNAME=str(testname); \		@@\
+	   echo "ERROR: testclass \"$$CLASSNAME\" is not declared!"; \ @@\
+	   echo "ERROR: test \"$$TESTNAME\" is in this testclass!"; \ @@\
+	   echo "A) add a TESTCLASS_DECL() rule for \"$$CLASSNAME\", or"; \ @@\
+	   echo "B) put \"$$TESTNAME\" in a different testclass"; \ @@\
+	   exit 1; \				@@\
+	fi					@@\
+	@perl safe_append.pl -v -f Concat(list_,classname) -a testname  @@\
+XCOMM End translation of func(TESTCLASS)
+#endif /* TESTCLASS */
+
+
+#ifndef DESC
+#define DESC(name,description)	@@\
+XCOMM Begin translation of func(DESC)		@@\
+desc:: Concat(name,_desc)			@@\
+	@true					@@\
+Concat(name,_desc):				@@\
+	@echo description > name.desc		@@\
+XCOMM End translation of func(DESC)
+#endif /* DESC */
+
+
+
+/***********************************************************************
+** DEPRECATED (OWO) rules for building and linking a given test program
+***********************************************************************/
+
+#ifndef OWO_BUILD
+#define OWO_BUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(OWO_BUILD)	@@\
+OWO_BUILD_FILES(name,ext)			@@\
+RLINK(cmplr,name,name.o)		@@\
+VLINK(cmplr,name,name.o)		@@\
+XCOMM End translation of func(OWO_BUILD)
+#endif /* OWO_BUILD */
+
+#ifndef OWO_BUILD_EXTRA
+#define OWO_BUILD_EXTRA(cmplr,name,ext,obj)	@@\
+XCOMM Begin translation of func(OWO_BUILD_EXTRA) @@\
+OWO_BUILD_FILES(name,ext)			@@\
 RLINK(cmplr,name,obj name.o)	@@\
 VLINK(cmplr,name,obj name.o) @@\
-XCOMM End translation of func(BUILD_EXTRA)
-#endif /* BUILD_EXTRA */
+XCOMM End translation of func(OWO_BUILD_EXTRA)
+#endif /* OWO_BUILD_EXTRA */
 
-#ifndef RBUILD
-#define RBUILD(cmplr,name,ext)		@@\
-XCOMM Begin translation of func(RBUILD) @@\
-BUILD_FILES(name,ext)			@@\
+#ifndef OWOW_OWO_RBUILD
+#define OWO_RBUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(OWO_RBUILD) @@\
+OWO_BUILD_FILES(name,ext)		@@\
 RLINK(cmplr,name,name.o)	@@\
-XCOMM End translation of func(RBUILD)
-#endif /* RBUILD */
+XCOMM End translation of func(OWO_RBUILD)
+#endif /* OWO_RBUILD */
 
 
-#ifndef BUILD_FILES
-#define BUILD_FILES(name,ext)		@@\
-XCOMM Begin translation of func(BUILD_FILES) @@\
+#ifndef OWO_BUILD_FILES
+#define OWO_BUILD_FILES(name,ext)		@@\
+XCOMM Begin translation of func(OWO_BUILD_FILES) @@\
 name:: name.ext					@@\
        @/bin/true				@@\
 all:: name.ext					@@\
@@ -1098,13 +1393,13 @@ name.ext:					@@\
 	ln -s ../name.ext .			@@\
 clean::						@@\
 	rm -f name.ext				@@\
-XCOMM End translation of func(BUILD_FILES)
-#endif /* BUILD_FILES */
+XCOMM End translation of func(OWO_BUILD_FILES)
+#endif /* OWO_BUILD_FILES */
 
 
-#ifndef RUN
-#define RUN(name)	@@\
-XCOMM Begin translation of func(RUN)		@@\
+#ifndef OWO_RUN
+#define OWO_RUN(name)	@@\
+XCOMM Begin translation of func(OWO_RUN)	@@\
 all:: name.run name.cmd				@@\
 name:: name.run name.cmd			@@\
        @/bin/true				@@\
@@ -1119,19 +1414,20 @@ clean::						@@\
 run_list:: Concat(run_list_,name)		@@\
 Concat(run_list_,name):: safe_append.pl name.run	@@\
 	@perl safe_append.pl -v -f run_list -a name	@@\
-XCOMM End translation of func(RUN)
-#endif /* RUN */
+XCOMM End translation of func(OWO_RUN)
+#endif /* OWO_RUN */
 
-#ifndef BUILD_DEPS
-#define BUILD_DEPS(name,deps)	@@\
-XCOMM Begin translation of func(RUN_DEPS)	@@\
+
+#ifndef OWO_BUILD_DEPS
+#define OWO_BUILD_DEPS(name,deps)	@@\
+XCOMM Begin translation of func(OWO_BUILD_DEPS)	@@\
 all:: deps					@@\
 name:: deps					@@\
        @/bin/true				@@\
 clean::						@@\
 	rm -f deps				@@\
-XCOMM End translation of func(RUN_DEPS)
-#endif /* RUN */
+XCOMM End translation of func(OWO_BUILD_DEPS)
+#endif /* OWO_BUILD_DEPS */
 
 
 /***********************************************************************

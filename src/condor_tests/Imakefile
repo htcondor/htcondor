@@ -1,0 +1,139 @@
+/************************************************************************
+  Include settings/rules shared across all test Imakefile's
+************************************************************************/
+#include "Imakefile.common"
+
+/* 
+   If we're just doing "make all", the first thing we should do is
+   build all the various lists we need (dealing with test classes,
+   compiler subdirectories, etc), and do so in all the compiler  
+   subdirectories.  This way, we can catch errors right away, and we
+   get all that stuff out of the way early in the build.
+*/
+all_lists:: compiler_list
+	@for X in `cat compiler_list` ; do \
+	    make $$X/Makefile; \
+	    cd $$X; make all_lists; cd ..; \
+	done
+
+
+/************************************************************************
+   Shared settings/rules used by all tests in the top-level directory,
+   and that deal with the testing build framework itself.
+************************************************************************/
+
+LD_DIR = -condor_ld_dir ../condor_scripts
+LIB_DIR = -condor_lib ../condor_syscall_lib
+INCLUDE_FLAGS = -I../condor_includes -I../h -I../condor_c++_util
+BUILD_FLAGS = $(TESTSUITE_FLAGS_GCC)
+CC = gcc
+CPlusPlus = g++
+CFLAGS  = $(BUILD_FLAGS) $(INCLUDE_FLAGS) -g 
+C_PLUS_FLAGS  = $(CFLAGS)
+
+/* the perl infrastructure for running tests lives in another
+   directory, so we have to add sylinks for those */
+all_symlink_target(../condor_scripts/Condor.pm,Condor.pm)
+all_symlink_target(../condor_scripts/CondorTest.pm,CondorTest.pm)
+all_symlink_target(../condor_scripts/safe_append.pl,safe_append.pl)
+all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
+
+BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
+
+
+/************************************************************************
+   Rules for all the single-compiler (or no compiler) tests
+************************************************************************/
+
+DESC(job_filexfer_sandbox-empty_van,"Are job sandboxes with bad permissions cleaned up?")
+RUN(job_filexfer_sandbox-empty_van)
+TESTCLASS(job_filexfer_sandbox-empty_van,quick)
+
+DESC(job_core_sh-loop_van,"Simple vanilla job that loops for N seconds")
+RUN(job_core_sh-loop_van)
+TESTCLASS(job_core_sh-loop_van,quick)
+
+BUILD($(CC),job_core_bigenv,c)
+DESC(job_core_bigenv_van,"Vanilla test for enormous environment")
+DEPS(job_core_bigenv_van,job_core_bigenv.exe)
+RUN(job_core_bigenv_van)
+TESTCLASS(job_core_bigenv_van,env)
+TESTCLASS(job_core_bigenv_van,quick)
+
+DESC(job_core_bigenv_sched,"Scheduler test for enormous environment")
+DEPS(job_core_bigenv_sched,job_core_bigenv.exe)
+RUN(job_core_bigenv_sched)
+TESTCLASS(job_core_bigenv_sched,env)
+
+/* NOTE: we want this test in the top-level, even though we're linking
+   it for standard universe, since we really don't care about
+   different compilers for this one... we just need to see how the
+   starter/shadow behave when we drop a core file
+*/
+CBUILD($(CC),job_core_coredump,c)
+DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
+DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
+RUN(job_core_coredump_std)
+TESTCLASS(job_core_coredump_std,quick)
+DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
+DEPS(job_core_coredump_van,job_core_coredump.exe)
+RUN(job_core_coredump_van)
+TESTCLASS(job_core_coredump_van,quick)
+
+
+/************************************************************************
+   Settings specific to compiler-specific subdirectories
+************************************************************************/
+
+#if ! IS_CLIPPED 
+
+all:: compiler_list
+
+#if HAS_FORTRAN
+
+#if HAS_GNU_G77
+/* g77 never has recursion */
+F_COMPILER_TARGET(g77,$(GNU_G77),TESTSUITE_FLAGS_G77,0)
+#endif
+
+#if HAS_VENDOR_F77
+#if FORTRAN_HAS_RECURSION
+F_COMPILER_TARGET(f77,$(VENDOR_F77),TESTSUITE_FLAGS_F77,1)
+#else 
+F_COMPILER_TARGET(f77,$(VENDOR_F77),TESTSUITE_FLAGS_F77,0)
+#endif /* FORTRAN_HAS_RECURSION */
+#endif /* HAS_VENDOR_F77 */
+
+#if HAS_VENDOR_F90
+F_COMPILER_TARGET(f90,$(VENDOR_F90),TESTSUITE_FLAGS_F77,0)
+#endif
+
+#endif /* HAS_FORTRAN */
+
+/* We always want to build the test suite with gcc and g++ */
+C_COMPILER_TARGET(gcc,gcc,TESTSUITE_FLAGS_GCC)
+
+CPP_COMPILER_TARGET(g++,g++,TESTSUITE_FLAGS_GPP)
+
+/* now, let's see if we've got any vendor compilers */
+#if HAS_VENDOR_CC
+C_COMPILER_TARGET(cc,$(VENDOR_CC),TESTSUITE_FLAGS_CC)
+#endif
+
+#if HAS_VENDOR_CPLUS
+CPP_COMPILER_TARGET($(VENDOR_CPLUS_NAME),$(VENDOR_CPLUS),TESTSUITE_FLAGS_CPP)
+#endif
+
+#endif /* ! IS_CLIPPED */
+
+
+/***********************************************************************
+   Empty rules to make our top-level Imakefile happy
+************************************************************************/
+
+html:
+release::
+stripped::
+static::
+clean::
+

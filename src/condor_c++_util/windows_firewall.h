@@ -61,6 +61,8 @@ public:
 	~WindowsFirewallHelper();
 
 	bool init();
+
+	bool ready();
 	
 	bool firewallIsOn();
 	bool applicationIsTrusted(const char* app_path);
@@ -85,6 +87,7 @@ private:
 	BSTR charToBstr(const char*);
 	
 	bool wfh_initialized; // flag indicating init() has been called.
+	bool wfh_operational; // flag indicating whether this OS supports ICF
 };
 
 #endif /* _CONDOR_WINDOWS_FIREWALL_H */
