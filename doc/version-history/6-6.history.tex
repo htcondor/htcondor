@@ -42,11 +42,29 @@ a Machine, Schedd or License ClassAd sent to the \Condor{collector} has
 an IP address field which is empty (which should never happen), the
 \Condor{collector} will crash.
 
-\item Fixed a minor bug if \Macro{JOB\_START\_DELAY} was set to 0 that
-   would prevent the \Condor{schedd} from correctly cleaning up during
-   graceful shutdown (\verb@SIGTERM@, or \Condor{off}).
-   Now, the \Condor{schedd} will properly shutdown, even if
-   \MacroNI{JOB\_START\_DELAY} is set to 0.
+\item Fixed some bugs in how the \Condor{schedd} handles a graceful
+  shutdown (either because of a \Condor{off}) or a \verb@SIGTERM@ on
+  UNIX): 
+\begin{itemize}
+  \item There was a minor bug if \Macro{JOB\_START\_DELAY} was set to
+     0 that would prevent the \Condor{schedd} from correctly cleaning
+     up during graceful shutdown.
+     Now, the \Condor{schedd} will properly shutdown, even if
+     \MacroNI{JOB\_START\_DELAY} is set to 0.
+
+  \item Fixed a bug when there are scheduler universe jobs that were
+    recently submitted to the queue.
+    Previously, the shutdown code would not evict scheduler universe
+    jobs that had been submitted since the last
+    \Macro{SCHEDD\_INTERVAL} (which defaults to 5 minutes).
+    So, if a user submitted a scheduler universe job and then someone
+    shutdown Condor on that machine, the \Condor{schedd} would wait
+    until the next \MacroNI{SCHEDD\_INTERVAL} had elapsed before
+    evicting the job.
+    Now, the schedd will always attempt to evict scheduler universe
+    jobs during a shutdown, without waiting for this interval to pass.
+\end{itemize}
+
 
 \end{itemize}
 
