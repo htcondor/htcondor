@@ -1,13 +1,16 @@
-#if defined(Solaris)
-#include <nfs/nfs.h>		/* for fhandle_t.  Include before
-			condor_common to avoid duplicate definitions of MIN */ 
+#if defined(Solaris251)
+#include <nfs/nfs.h>	
+    /* 
+	nfs.h defines fhandle_t.  Include before condor_common to
+	avoid duplicate definitions of MIN.  However, only do this on 
+	Solaris251, since in Solaris26, all the 64-bit interface stuff
+	gets broken if you do this and you don't have the problem with
+	MIN.  -Derek 6/24/98
+    */  
 #endif
 
 #include "condor_common.h"
-#define MODE_T unsigned int	/* use 32 bits on all platforms */
-
 #include "condor_nfs.h"
-
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_io.h"
@@ -19,6 +22,8 @@
 // ClassAds needed for start_work_request used by PVM starter/shadow
 #include "condor_classad.h"
 #endif
+
+#define MODE_T unsigned int	/* use 32 bits on all platforms */
 
 static char *_FileName_ = __FILE__;
 
