@@ -72,6 +72,8 @@ XDR *
 init_syscall_connection( int want_debug_mode )
 {
 	XDR	*answer;
+	int	rval;
+	int	my_errno;
 
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 
@@ -87,6 +89,14 @@ init_syscall_connection( int want_debug_mode )
 		pre_open( RSC_SOCK, TRUE, TRUE, TRUE );
 		pre_open( CLIENT_LOG, FALSE, TRUE, TRUE );
 	}
+
+#if 0
+	rval = errno = my_errno = 0;
+	rval = write( CLIENT_LOG, "Hello World\n", 12 );
+	if( rval != 12 ) {
+		exit(1);
+	}
+#endif
 
 	answer = RSC_Init( RSC_SOCK, CLIENT_LOG );
 	dprintf_init( CLIENT_LOG );
