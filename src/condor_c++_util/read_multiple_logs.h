@@ -36,9 +36,6 @@
 #include "string_list.h"
 #include "HashTable.h"
 
-#define MULTI_LOG_HASH_INSTANCE template class HashTable<char *, \
-		ReadMultipleUserLogs::LogFileEntry *>
-
 class ReadMultipleUserLogs
 {
 public:
@@ -95,7 +92,39 @@ private:
 
 	int				iLogFileCount;
 	LogFileEntry *	pLogFileEntries;
-	HashTable<char *, LogFileEntry *>	logHash;
+
+	class JobID 
+	{
+	public:
+		int			cluster;
+		int			proc;
+		int			subproc;
+
+		JobID() {
+			cluster = proc = subproc = 0;
+		}
+
+		JobID(const JobID &other) {
+			cluster = other.cluster;
+			proc = other.proc;
+			subproc = other.subproc;
+		}
+
+		int operator==(const JobID &other) {
+			return (cluster == other.cluster && proc == other.proc &&
+					subproc == other.subproc);
+		}
+	};
+
+	static int hashFuncJobID(const JobID &key, int numBuckets);
+
+	HashTable<JobID, LogFileEntry *>	logHash;
+
+	// For instantiation in programs that use this class.
+#define MULTI_LOG_HASH_INSTANCE template class \
+		HashTable<ReadMultipleUserLogs::JobID, \
+		ReadMultipleUserLogs::LogFileEntry *>
+
 
 	    /** Goes through the list of logs and tries to initialize (open
 		    the file of) any that aren't initialized yet.

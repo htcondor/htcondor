@@ -31,7 +31,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
-	logHash(LOG_HASH_SIZE, hashFuncJobIdStr, rejectDuplicateKeys)
+	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -40,7 +40,7 @@ ReadMultipleUserLogs::ReadMultipleUserLogs() :
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs(StringList &listLogFileNames) :
-	logHash(100, hashFuncJobIdStr, rejectDuplicateKeys)
+	logHash(LOG_HASH_SIZE, hashFuncJobID, rejectDuplicateKeys)
 {
 	pLogFileEntries = NULL;
 	iLogFileCount = 0;
@@ -576,33 +576,39 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 {
 	bool	result = false;
 
-	const int	MAX_LEN = 64;
-	char	jobId[MAX_LEN];
-	int printRes = snprintf(jobId, MAX_LEN, "%d.%d", event->cluster,
-			event->proc);
-	if ( printRes >= MAX_LEN || printRes < 0 ) {
-		dprintf(D_ALWAYS, "Buffer too short at %s: %d\n", __FILE__, __LINE__);
-		result = false;
-	} else {
+	JobID	id;
+	id.cluster = event->cluster;
+	id.proc = event->proc;
+	id.subproc = event->subproc;
 
-		LogFileEntry *	oldLog;
-		if ( logHash.lookup(jobId, oldLog) == 0 ) {
-				// We already have an event for this job ID.  See whether
-				// the log matches the one we already have.
-			if ( log == oldLog ) {
-				result = false;
-			} else {
-				dprintf(D_FULLDEBUG,
-						"ReadMultipleUserLogs found duplicate log\n");
-				result = true;
-			}
-		} else {
-				// First event for this job ID.  Insert the given log into
-				// the hash table.
-			logHash.insert(jobId, log);
+	LogFileEntry *	oldLog;
+	if ( logHash.lookup(id, oldLog) == 0 ) {
+			// We already have an event for this job ID.  See whether
+			// the log matches the one we already have.
+		if ( log == oldLog ) {
 			result = false;
+		} else {
+			dprintf(D_FULLDEBUG,
+					"ReadMultipleUserLogs found duplicate log\n");
+			result = true;
 		}
+	} else {
+			// First event for this job ID.  Insert the given log into
+			// the hash table.
+		logHash.insert(id, log);
+		result = false;
 	}
+
+	return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int
+ReadMultipleUserLogs::hashFuncJobID(const JobID &key, int numBuckets)
+{
+	int		result = key.cluster ^ key.proc ^ key.subproc;
+	result %= numBuckets;
 
 	return result;
 }
