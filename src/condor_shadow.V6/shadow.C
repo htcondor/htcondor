@@ -1086,6 +1086,33 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 		}
+
+		// if the job completed, then update the exit code/signal attributes
+		if (Proc->status == COMPLETED)
+		{
+			int exit_code, exit_signal, exit_by_signal;
+
+			// only new style ads have ATTR_ON_EXIT_BY_SIGNAL, so only
+			// SetAttribute for those types of ads
+			if (JobAd->LookupInteger(ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal)==1)
+			{
+				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+			   		ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal);
+
+				if (exit_by_signal == 1) /* exited via signal */
+				{
+					JobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, exit_signal);
+					SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+						   			ATTR_ON_EXIT_SIGNAL, exit_signal);
+				}
+				else
+				{
+					JobAd->LookupInteger(ATTR_ON_EXIT_CODE, exit_code);
+					SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+						   			ATTR_ON_EXIT_CODE, exit_code);
+				}
+			}
+		}
 	}
 
 	if (!DisconnectQ(0)) {
