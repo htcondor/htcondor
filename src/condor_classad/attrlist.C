@@ -5,6 +5,7 @@
 //
 //******************************************************************************
 
+# include <iostream.h>
 # include <std.h>
 # include <ctype.h>
 # include <assert.h>
@@ -548,7 +549,7 @@ char *Print_elem(ELEM *elem, char *str)
   return tmpChar;
 }
 
-AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(const CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 {
 	STACK		stack;
 	ELEM*		elem, *lElem, *rElem;
@@ -1482,3 +1483,88 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
     }
     return NULL;
 }
+
+int AttrList::put(Stream& s)
+{
+    AttrListElem*   elem;
+    char*           line;
+    int             numExprs = 0;
+
+    //get the number of expressions
+    for(elem = exprList; elem; elem = elem->next)
+        numExprs++;
+
+    s.encode();
+
+    if(!s.code(numExprs))
+        return 0;
+
+    line = new char[200];
+    for(elem = exprList; elem; elem = elem->next) {
+        strcpy(line, "");
+        elem->tree->PrintToStr(line);
+        if(!s.code(line)) {
+            delete [] line;
+            return 0;
+        }
+    }
+    delete [] line;
+
+    return 1;
+}
+
+int AttrList::get(Stream& s)
+{
+    ExprTree*       tree;
+    char*           line;
+    int             numExprs;
+
+    exprList       = NULL;
+    associatedList = NULL;
+    tail           = NULL;
+    ptrExpr        = NULL;
+    ptrName        = NULL;
+
+    s.decode();
+
+    if(!s.code(numExprs))
+        return 0;
+    
+    line = new char[200];
+    for(int i = 0; i < numExprs; i++) {
+        if(!s.code(line)) {
+            delete [] line;
+            return 0;
+        }
+        
+        if(!Parse(line, tree)) {
+            if(tree->MyType() == LX_ERROR) {
+                cerr << "Parse error in the incomming stream -- quitting !" 
+                     << endl;
+                delete [] line;
+                exit(1);
+            }
+        }
+        else {
+            cerr << "Parse error in the incomming stream -- quitting !" << endl;
+            delete [] line;
+            exit(1);
+        }
+        
+        Insert(tree);
+        strcpy(line, "");
+        delete tree;
+    }
+    delete [] line;
+
+    return 1;
+}
+
+int AttrList::code(Stream& s)                                           
+{
+    if(s.is_encode())
+        return put(s);
+    else
+        return get(s);
+}
+

@@ -490,3 +490,112 @@ int ClassAd::fPrint(FILE* f)
 	
 	return AttrList::fPrint(f);
 }
+
+int ClassAd::put(Stream& s)
+{
+    AttrListElem*   elem;
+    char*           line;
+    int             numExprs = 0;
+
+    //get the number of expressions
+    for(elem = exprList; elem; elem = elem->next)
+        numExprs++;
+
+    s.encode();
+
+    if(!s.code(numExprs))
+        return 0;
+
+    line = new char[200];
+    for(elem = exprList; elem; elem = elem->next) {
+        strcpy(line, "");
+        elem->tree->PrintToStr(line);
+        if(!s.code(line)) {
+            delete [] line;
+            return 0;
+        }
+    }
+    delete [] line;
+
+    if(!s.code(myType->name))
+        return 0;
+    if(!s.code(targetType->name))
+        return 0;
+
+    return 1;
+}
+
+int ClassAd::get(Stream& s)
+{
+    ExprTree*       tree;
+    char*           name;
+    char*           line;
+    int             numExprs;
+
+    exprList       = NULL;
+    associatedList = NULL;
+    tail           = NULL;
+    ptrExpr        = NULL;
+    ptrName        = NULL;
+    myType         = NULL;
+    targetType     = NULL;
+
+    s.decode();
+
+    if(!s.code(numExprs)) 
+        return 0;
+    
+    line = new char[200];
+    for(int i = 0; i < numExprs; i++) {
+        if(!s.code(line)) {
+            delete [] line;
+            return 0;
+        }
+        
+        if(!Parse(line, tree)) {
+            if(tree->MyType() == LX_ERROR) {
+                cerr << "Parse error in the incomming stream -- quitting !" 
+                     << endl;
+                delete [] line;
+                exit(1);
+            }
+        }
+        else {
+            cerr << "Parse error in the incomming stream -- quitting !" << endl;
+    delete [] line;
+            exit(1);
+        }
+        
+        Insert(tree);
+        strcpy(line, "");
+        delete tree;
+    }
+    delete [] line;
+
+    name = new char[50];
+    if(!s.code(name)) {
+        delete [] name;
+        return 0;
+    }
+    SetMyTypeName(name);
+    delete [] name;
+
+    name = new char[50];
+    if(!s.code(name)) {
+        delete [] name;
+        return 0;
+    }
+    SetTargetTypeName(name);
+    delete [] name;
+
+    return 1; 
+}
+
+int ClassAd::code(Stream& s)                                           
+{
+    if(s.is_encode())
+        return put(s);
+    else
+        return get(s);
+}
+
