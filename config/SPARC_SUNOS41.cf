@@ -11,8 +11,8 @@
 #define Crt0 /lib/crt0.o
 #define SyscallsExp /**/
 
-#define XLibPath /usr/misc/X11/lib/libX11.a
-#define XExtLibPath /usr/misc/X11/lib/libXext.a
+#define XLibPath /usr/sup/X11/lib/libX11.a
+#define XExtLibPath /usr/sup/X11/lib/libXext.a
 #define DbmLibrary -ldbm
 
 #define HAS_NEW_FORTRAN		YES
