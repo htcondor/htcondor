@@ -50,7 +50,6 @@ UTIL = \
 NAME_TAB = syscall_numbers.o
 
 SRC = \
-	ToUpper.c \
 	extern_path.c \
 	receivers.epilogue \
 	receivers.prologue \
@@ -150,9 +149,6 @@ release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 
 library_target(condor_syscall_lib.a,$(LIB_OBJ))
 release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
-
-program_target(ToUpper,ToUpper.o,$(NULL))
-release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 #if IS_ALPHA_OSF1
 CPP = /usr/ucb/cpp
