@@ -75,7 +75,7 @@ ProcessOutput( const char *line )
 				if ( ! OutputAd->Insert( UpdateStr ) ) {
 					dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
 							 UpdateStr, GetName() );
-					TodoWrite( );
+					// TodoWrite( );
 				}
 			}
 
@@ -91,7 +91,7 @@ ProcessOutput( const char *line )
 		if ( ! OutputAd->Insert( line ) ) {
 			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
 					 line, GetName() );
-			TodoWrite( );
+			// TodoWrite( );
 		} else {
 			OutputAdCount++;
 		}

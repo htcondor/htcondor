@@ -155,6 +155,7 @@ class CondorCronJob : public Service
 	int KillTimer( unsigned seconds );
 
 	// Debug / TODO
+# if 0
 	char	*TodoBuffer;
 	int		TodoBufSize;
 	int		TodoBufWrap;
@@ -162,6 +163,7 @@ class CondorCronJob : public Service
 	int		TodoWriteNum;
 	public:
 	void	TodoWrite( void );
+# endif
 };
 
 #endif /* _CONDOR_CRONJOB_H */

@@ -153,9 +153,12 @@ CondorCronJob::CondorCronJob( const char *jobName )
 	// Build my output buffers
 	stdOutBuf = new CronJobOut( this );
 	stdErrBuf = new CronJobErr( this );
+
+# if 0
 	TodoBufSize = 20 * 1024;
 	TodoWriteNum = TodoBufWrap = TodoBufOffset = 0;
 	TodoBuffer = (char *) malloc( TodoBufSize );
+# endif
 
 	// Store the name, etc.
 	SetName( jobName );
@@ -493,11 +496,10 @@ ProcessOutputQueue( void )
 
 	// If there's data, process it...
 	if ( linecount != 0 ) {
-		dprintf( D_FULLDEBUG, "%s: Queue size %d\n", 
-				 name, linecount );
-		char	*linebuf;
+		dprintf( D_FULLDEBUG, "%s: %d lines in Queue\n", name, linecount );
 
 		// Read all of the data from the queue
+		char	*linebuf;
 		while( ( linebuf = stdOutBuf->GetLineFromQueue( ) ) != NULL ) {
 			int		tmpstatus = ProcessOutput( linebuf );
 			if ( tmpstatus ) {
@@ -623,6 +625,7 @@ RunProcess( void )
 }
 
 // Debugging
+# if 0
 void
 CondorCronJob::TodoWrite( void )
 {
@@ -644,6 +647,7 @@ CondorCronJob::TodoWrite( void )
 	TodoBufOffset = 0;
 	TodoBufWrap = 0;
 }
+# endif
 
 // Data is available on Standard Out.  Read it!
 //  Note that we set the pipe to be non-blocking when we created it
@@ -672,6 +676,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 			const char	*bptr = buf;
 
 			// TODO
+#		  if 0
 			if ( TodoBuffer ) {
 				char	*OutPtr = TodoBuffer + TodoBufOffset;
 				int		Count = bytes;
@@ -685,6 +690,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 					}
 				}
 			}
+#		  endif
 			// End TODO
 
 			// stdOutBuf->Output() returns 1 if it finds '-', otherwise 0,
