@@ -35,13 +35,8 @@ void init_condor_ids() {}
 
 #else
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <pwd.h>
-#include <sys/types.h>
+#include <condor_common.h>
 #include <grp.h>
-#include <time.h>
 
 #if defined(AIX31) || defined(AIX32)
 #include <sys/types.h>
