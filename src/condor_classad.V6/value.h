@@ -179,6 +179,12 @@ class Value
 			@return true iff the value is a string.
 		*/
 		bool IsStringValue( const char *&str ) const; 	
+		/** Checks if the value is a string.  
+			@param str A buffer to hold the string value.
+			@param len The size of the buffer.
+			@return true iff the value is a string.
+		*/
+		bool IsStringValue( char *str, int len ) const; 	
 		/** Checks if the value is a string.
 			@return true iff the value is string.
 		*/
@@ -332,6 +338,16 @@ IsStringValue( const char *&s ) const
 {
 	s = strValue.c_str( );
     return( valueType == STRING_VALUE );
+}
+
+inline bool Value::
+IsStringValue( char *s, int len ) const
+{
+	if( valueType == STRING_VALUE ) {
+		strncpy( s, strValue.c_str( ), len );
+		return( true );
+	}
+	return( false );
 }
 
 inline bool Value::
