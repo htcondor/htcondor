@@ -44,9 +44,6 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
 extern char *Spool;
 extern char* JobHistoryFileName;
-extern int canTryGSS;
-extern int canTryFilesystem;
-extern int canTryNT;
 
 extern "C" {
 /*
@@ -150,19 +147,6 @@ InitQmgmt()
 			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
 		}
 	}
-
-#if 0
-	allow_remote_submit = FALSE;
-	tmp = param( "ALLOW_REMOTE_SUBMIT" );
-	if( tmp ) {
-		if( *tmp == 'T' || *tmp == 't' ) {
-			allow_remote_submit = TRUE;
-			
-		}			
-		free( tmp );
-	}
-#endif
-
 }
 
 
@@ -314,10 +298,13 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 			return 1;
 		} 
 		else {
+#if 0
 			if ( Q_SOCK->isAuthenticated() ) {
 				dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),already auth\n");
 				return( 1 );
 			}
+#endif
+
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
@@ -393,16 +380,6 @@ handle_q(Service *, int, Stream *sock)
 //	InvalidateConnection();
 	Q_SOCK->unAuthenticate();
 
-	if ( canTryGSS ) {
-		Q_SOCK->canTryGSS();
-	}
-	if ( canTryFilesystem ) {
-		Q_SOCK->canTryFilesystem();
-	}
-	if ( canTryNT ) {
-		Q_SOCK->canTryNT();
-	}
-
 	do {
 		/* Probably should wrap a timer around this */
 		rval = do_Q_request( (ReliSock *)Q_SOCK );
@@ -412,7 +389,9 @@ handle_q(Service *, int, Stream *sock)
 
 	  //this is closest I could get to simulating old behavior, but when one of 
 	  //the do_Q_req. above fails, we should unAuthenticate() & delete sock
-	Q_SOCK->setGenericAuthentication();
+//Q_SOCK->setGenericAuthentication();
+Q_SOCK->unAuthenticate();
+	uninit_user_ids();
 
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
 
@@ -429,12 +408,17 @@ handle_q(Service *, int, Stream *sock)
 int
 InitializeConnection( char *owner )
 {
-//should I even do this? I init_user_ids in authenticate??
-	init_user_ids( owner );
+	if ( owner ) {
+		init_user_ids( owner );
+	}
+	else {
+		//this is a relic, but better than setting to NULL!
+		init_user_ids( "nobody" );
+		return -1;
+	}
 
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
-	Q_SOCK->setOwnerUid( active_owner_uid );
 #endif !WIN32
 
 	return 0;

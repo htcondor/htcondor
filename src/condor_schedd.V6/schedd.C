@@ -78,17 +78,12 @@ extern char* Spool;
 extern char * Name;
 extern char * JobHistoryFileName;
 extern char * mySubSystem;
-extern char * X509CertDir;
 
 extern FILE *DebugFP;
 extern char *DebugFile;
 extern char *DebugLock;
 
 extern Scheduler scheduler;
-
-int canTryGSS = 0;  //make global so handle_q() can see it
-int canTryFilesystem = 1;  //make global so handle_q() can see it
-int canTryNT = 1;  //make global so handle_q() can see it
 
 // priority records
 extern prio_rec *PrioRec;
@@ -2788,39 +2783,6 @@ Scheduler::Init()
 	if( Spool ) free( Spool );
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
-	}
-
-//TODO: should read order in which to try different methods!!!
-	if ( X509CertDir ) 
-		free( X509CertDir );
-	if( (X509CertDir = param("X509_CERT_DIR")) ) {
-		char tmpstring[MAXPATHLEN];
-		sprintf( tmpstring, "X509_CERT_DIR=%s/", X509CertDir );
-		putenv( strdup( tmpstring ) );
-		dprintf( D_ALWAYS, "read X509_CERT_DIR, can use GSS authentication\n");
-	}
-	else {
-		dprintf( D_FULLDEBUG, "no X509_CERT_DIR, no GSS authentication\n");
-	}
-
-	//for now, default to can use unless set to false, but should 
-	//change this because it's inconsistent with other methods
-	char * tryNT = param( "ALLOW_NT_AUTHENTICATION" );
-	if ( tryNT ) {
-		if ( tryNT[0] == 'F' || tryNT[0] == 'f' ) {
-			canTryNT = 0;
-		}
-		free( tryNT );
-	}
-
-	//for now, default to can use unless set to false, but should 
-	//change this because it's inconsistent with other methods
-	char * tryFilesystem = param( "ALLOW_FILESYSTEM_AUTHENTICATION" );
-	if ( tryFilesystem ) {
-		if ( tryFilesystem[0] == 'F' || tryFilesystem[0] == 'f' ) {
-			canTryFilesystem = 0;
-		}
-		free( tryFilesystem );
 	}
 
 	if( CondorViewHost ) free( CondorViewHost );
