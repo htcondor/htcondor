@@ -471,6 +471,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
@@ -524,6 +525,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -591,6 +593,7 @@ int GlobusJob::doEvaluateState()
 				myResource->CancelSubmit(this);
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -688,6 +691,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -782,6 +786,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -822,6 +827,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -871,6 +877,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -900,6 +907,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -952,6 +960,7 @@ int GlobusJob::doEvaluateState()
 				myResource->CancelSubmit(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1034,6 +1043,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -1056,6 +1066,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1105,6 +1116,7 @@ int GlobusJob::doEvaluateState()
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+						 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
@@ -1152,6 +1164,7 @@ int GlobusJob::doEvaluateState()
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+						 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
@@ -1232,6 +1245,7 @@ int GlobusJob::doEvaluateState()
 			}
 			myResource->CancelSubmit(this);
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
