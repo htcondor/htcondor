@@ -11,13 +11,13 @@
 
 &get_platform_defaults();
 &customize_config_file( "condor_config.generic",
-		       "../release_dir/etc/examples/condor_config.generic" );
+		       "../strip_dir/etc/examples/condor_config.generic" );
 &customize_config_file( "condor_config.root.generic",
-		       "../release_dir/etc/examples/condor_config.root.generic" );
+		       "../strip_dir/etc/examples/condor_config.root.generic" );
 &customize_config_file( "condor_config.submit.generic",
-		       "../release_dir/etc/examples/condor_config.submit.generic" );
+		       "../strip_dir/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.local.central.manager",
-	       "../release_dir/etc/examples/condor_config.local.central.manager" );
+	       "../strip_dir/etc/examples/condor_config.local.central.manager" );
 &customize_boot_script();
 
 
@@ -178,7 +178,7 @@ sub customize_config_file {
 sub customize_boot_script {
     open( GENERIC, "<condor.boot.generic" ) || 
 	die "Can't open condor.boot.generic: $!\n";
-    open( TARGET, ">../release_dir/etc/examples/condor.boot" ) ||
+    open( TARGET, ">../strip_dir/etc/examples/condor.boot" ) ||
 	die "Can't open target condor.boot: $!\n";
 
     print "Configuring condor.boot.generic ... ";
@@ -191,5 +191,5 @@ sub customize_boot_script {
     print "done.\n";
     close TARGET;
     close GENERIC;
-    chmod( 0755, "../release_dir/etc/examples/condor.boot" );
+    chmod( 0755, "../strip_dir/etc/examples/condor.boot" );
 }    
