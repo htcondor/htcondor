@@ -50,6 +50,13 @@ performing a segmentation fault.
 Also, when you use the \Opt{-sort} option, \Condor{status} will only
 display ClassAds where the attributes you use to sort are defined.
 
+\item Users can now define \Macro{NUM\_CPUS} to override the automatic
+computation of the number of CPUs in your machine.
+Using this config setting can cause unexpected results, and is not
+recommended. 
+This feature is only provided for sites that specifically want this
+behavior and know what they are doing.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
