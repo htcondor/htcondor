@@ -144,7 +144,7 @@ int main (int argc, char **argv)
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			sprintf( scheddName, "%s", schedd.name() );
 			sprintf( scheddMachine, "%s", schedd.fullHostname() );
-			if ( verbose ) {
+			if ( verbose || run || show_io || goodput ) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
 			} else {
@@ -194,7 +194,7 @@ int main (int argc, char **argv)
 			!ad->LookupString(ATTR_MACHINE, scheddMachine))
 				continue;
 	
-		if( verbose ) {
+		if ( verbose || run || show_io || goodput ) {
 			show_queue( scheddAddr, scheddName, scheddMachine );
 		} else {
 			show_queue_buffered( scheddAddr, scheddName, scheddMachine );
