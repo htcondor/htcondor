@@ -533,6 +533,14 @@ job completes, etc. Most users find specifying a \Opt{log} file to be very
 handy; its use is recommended. If no \Opt{log} entry is specified, 
 Condor does not create a log for this cluster.
 
+\item[log_xml = $<$True \Bar\ False$>$] If \Opt{log_xml} is true, 
+then the log file will be written in ClassAd XML. If it isn't
+specified, XML is not used. Note that it's an XML fragment, and is
+missing the file header and footer. Also note that you should never
+mix XML and non-XML in a single file: if multiple jobs write to a
+single log file, it is up to you to make sure that all of them specify
+(or don't specify) this option in the same way.
+
 %%%%%%%%%%%%%%%%%%%
 %% jar_files
 %%%%%%%%%%%%%%%%%%%
