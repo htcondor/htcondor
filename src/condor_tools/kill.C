@@ -193,9 +193,8 @@ find_condor_pids() {
         if( strstr( cmdline, "condor_" ) == cmdline ) {
             pid = atoi( proc_dir->d_name );
 			cpid = new CondorPid( pid, cmdline );
-			condor_pids->Append( cpid )
-            printf("%s (%d) = %s\n", tmp_name, pid, cmdline);
-        }
+			condor_pids->Append( cpid );
+		}
     }
 
     closedir( proc_root );
