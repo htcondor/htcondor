@@ -59,11 +59,7 @@ class ExprList : public ExprTree
 		 */
 		void GetComponents( std::vector<ExprTree*>& list) const;
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-		virtual ExprList* Copy( ) const;
-#else
 		virtual ExprTree* Copy( ) const;
-#endif		
 
         bool CopyFrom(const ExprList &other_list);
 

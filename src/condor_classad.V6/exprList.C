@@ -38,7 +38,7 @@ ExprList()
 ExprList::
 ExprList(std::vector<ExprTree*>& list)
 {
-    std::copy(list.begin(), list.end(), std::back_inserter(exprList));
+    CopyFrom(list);
 	return;
 }
 
@@ -74,11 +74,7 @@ Clear ()
 	exprList.clear( );
 }
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-ExprList *ExprList::
-#else
 ExprTree *ExprList::
-#endif
 Copy( ) const
 {
 	ExprList *newList = new ExprList;
@@ -100,8 +96,7 @@ CopyFrom(const ExprList &other_list)
 
     success = true;
 
-	parentScope = other_list.parentScope;
-
+    ExprTree::CopyFrom(other_list);
 
 	vector<ExprTree*>::const_iterator itr;
 	for( itr = other_list.exprList.begin( ); itr != other_list.exprList.end( ); itr++ ) {

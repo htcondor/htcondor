@@ -67,25 +67,7 @@ ClassAd ()
 ClassAd::
 ClassAd (const ClassAd &ad)
 {
-	AttrList::const_iterator itr;
-
-	DisableDirtyTracking();
-	nodeKind          = CLASSAD_NODE;
-	parentScope       = ad.parentScope;
-	chained_parent_ad = ad.chained_parent_ad;
-	
-	for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
-		ExprTree *tree = itr->second->Copy( );
-
-		if (tree == NULL) {
-			CondorErrno = ERR_MEM_ALLOC_FAILED;
-			CondorErrMsg = "Couldn't copy attribute in copy constructor";
-			return;
-		}
-		tree->SetParentScope(this);
-		attrList[itr->first] = tree;
-	}
-	EnableDirtyTracking();
+    CopyFrom(ad);
 	return;
 }	
 
@@ -110,8 +92,7 @@ CopyFrom( const ClassAd &ad )
 		succeeded = false;
 	} else {
 		Clear( );
-		nodeKind = CLASSAD_NODE;
-		parentScope = ad.parentScope;
+        ExprTree::CopyFrom(ad);
 		chained_parent_ad = ad.chained_parent_ad;
 		
 		DisableDirtyTracking();
@@ -669,11 +650,7 @@ Modify( ClassAd& mod )
 }
 
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-ClassAd* ClassAd::
-#else
 ExprTree* ClassAd::
-#endif
 Copy( ) const
 {
 	ExprTree *tree;
