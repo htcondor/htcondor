@@ -446,7 +446,7 @@ initialize (const char *filename)
 	}
 
 	char afterangle;
-	if( fscanf(_fp, " <%c", &afterangle) ) {
+	if( fscanf(_fp, " <%c", &afterangle) > 0 ) {
 
 		setIsXMLLog(TRUE);
 
