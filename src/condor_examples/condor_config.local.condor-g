@@ -9,10 +9,20 @@ GAHP				= $(SBIN)/gahp_server
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
+##
+## Note that the Gridmanager runs as the User, not a Condor daemon, so 
+## all users must have write permssion to the directory that the 
+## Gridmanager will use for it's logfile. Our suggestion is to create a
+## directory called GridLogs in $(LOG) with UNIX permissions 1777 
+## (just like /tmp )
+##  Another option is to use /tmp as the location of the GridManager log.
+## 
 
-GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
 MAX_GRIDMANAGER_LOG	= 64000
 GRIDMANAGER_DEBUG	= D_COMMAND
+
+GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
+#GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 
 ##--------------------------------------------------------------------
 ##  Various other settings that the Condor-G can use. 
