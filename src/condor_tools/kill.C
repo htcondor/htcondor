@@ -152,7 +152,7 @@ void
 find_condor_pids() {
 
 	FILE *ps;
-	char line[250], *tmp;
+	char line[250];
 	pid_t pid;
 	CondorPid *cpid;
 
@@ -171,9 +171,8 @@ find_condor_pids() {
 
 	fgets( line, 249, ps );  /* skip the column header line */
 	while( fgets(line,249,ps) != NULL ) {
-		tmp = strstr( line, "condor_" );
-		if( tmp ) {
-				// Found a line that contains "condor_", grab the pid
+		if( strstr( line, "condor_" ) == line ) {
+			// found a line that begins with "condor_", so grab the pid
 			sscanf( line, "%*s %ld", &pid );
 			cpid = new CondorPid( pid, line );
 			condor_pids->Append( cpid );
