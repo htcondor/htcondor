@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
+
 #if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
 
 #include "condor_auth_sspi.h"
@@ -320,7 +322,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
         GetUserName( buf, &bufsiz );
         dprintf( D_FULLDEBUG,
                  "sspi_server_auth(): user name is: \"%s\"\n", buf );
-        setOwner(buf);
+        setRemoteUser(buf);
         it_worked = TRUE;
         (pf->RevertSecurityContext)( &srvCtx );
     }
