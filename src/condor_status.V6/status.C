@@ -392,7 +392,8 @@ secondPass (int argc, char *argv[])
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
-				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, daemonname);
+				sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
+						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
@@ -436,14 +437,44 @@ matchPrefix (const char *s1, const char *s2)
 int
 lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 {
-	char 	name1[64];
-	char	name2[64];
+	char 	buf1[128];
+	char	buf2[128];
+	int		val;
 
-	if (!ad1->LookupString(ATTR_NAME, name1) ||
-		!ad2->LookupString(ATTR_NAME, name2))
-			return 0;
+	if( !ad1->LookupString(ATTR_OPSYS, buf1) ||
+		!ad2->LookupString(ATTR_OPSYS, buf2) ) {
+		buf1[0] = '\0';
+		buf2[0] = '\0';
+	}
+	val = strcmp( buf1, buf2 );
+	if( val ) { 
+		return (val < 0);
+	} 
 
-	return (strcmp (name1, name2) < 0);
+	if( !ad1->LookupString(ATTR_ARCH, buf1) ||
+		!ad2->LookupString(ATTR_ARCH, buf2) ) {
+		buf1[0] = '\0';
+		buf2[0] = '\0';
+	}
+	val = strcmp( buf1, buf2 );
+	if( val ) { 
+		return (val < 0);
+	} 
+
+	if( !ad1->LookupString(ATTR_MACHINE, buf1) ||
+		!ad2->LookupString(ATTR_MACHINE, buf2) ) {
+		buf1[0] = '\0';
+		buf2[0] = '\0';
+	}
+	val = strcmp( buf1, buf2 );
+	if( val ) { 
+		return (val < 0);
+	} 
+
+	if (!ad1->LookupString(ATTR_NAME, buf1) ||
+		!ad2->LookupString(ATTR_NAME, buf2))
+		return 0;
+	return ( strcmp( buf1, buf2 ) < 0 );
 }
 
 int
