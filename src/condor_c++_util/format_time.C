@@ -81,6 +81,11 @@ format_time( int tot_secs )
     int     secs;
     static char answer[25];
 
+	if ( tot_secs < 0 ) {
+		sprintf(answer,"[?????]");
+		return answer;
+	}
+
     days = tot_secs / DAY;
     tot_secs %= DAY;
     hours = tot_secs / HOUR;
