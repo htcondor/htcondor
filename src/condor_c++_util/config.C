@@ -228,6 +228,7 @@ int Read_config(char* config_file, ClassAd* classAd,
 ** Just compute a hash value for the given string such that
 ** 0 <= value < size 
 */
+int
 hash( register char *string, register int size )
 {
 	register unsigned int		answer;
