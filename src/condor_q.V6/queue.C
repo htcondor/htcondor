@@ -145,7 +145,7 @@ int main (int argc, char **argv)
 			sprintf( scheddAddr, "%s", schedd.addr() );
 			sprintf( scheddName, "%s", schedd.name() );
 			sprintf( scheddMachine, "%s", schedd.fullHostname() );
-			if ( verbose || run || show_io || goodput ) {
+			if ( verbose || run || show_io || goodput || customFormat ) {
 				exit( !show_queue( scheddAddr, scheddName,
 							scheddMachine ) );
 			} else {
@@ -992,11 +992,13 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
 			// print header
-		if( querySchedds ) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-		} else {
-			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+		if ( ! customFormat ) {
+			if( querySchedds ) {
+				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+			} else {
+				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
 					scheddAddr, scheddMachine);	
+			}
 		}
 		
 			// initialize counters
