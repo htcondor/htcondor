@@ -714,9 +714,12 @@ doContactSchedd()
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 
 			if ( JobsByProcID->lookup( procID, next_job ) == 0 ) {
-				// Should probably skip jobs we already have marked for removal
+				// Should probably skip jobs we already have marked as
+				// held or removed
 
-				next_job->UpdateCondorState( REMOVED );
+				int curr_status;
+				next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
+				next_job->UpdateCondorState( curr_status );
 				num_ads++;
 
 			} else {
