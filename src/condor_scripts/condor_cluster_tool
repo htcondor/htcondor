@@ -32,8 +32,8 @@ use FileHandle;
           $NUMNODES = 64;   # (note: we assume $NUMNODES <=99 in a few places)
          $STARTNODE = 2;
          $CONDOR_CM = "condor.cs.wisc.edu";
-$CLUSTER_CONSTRAINT = "-const 'IsComputeCluster == True'";
            $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
+             $DEBUG = 1;
 
 
 ### Global variables (not user-servicable)
@@ -47,46 +47,66 @@ $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
 
 ### The guts
 
-if( $#ARGV < 0 ) {   # $#ARGV is 1 less than the # of args...
+# remember, $#ARGV is always 1 less than the # of args...
+if( $#ARGV < 0 ) {
     usage();
     exit 1;
 }
 
-$datetime = scalar localtime();
+# determine username & timestamp and then open logfile
 $user = scalar getpwuid( $UID );
+$datetime = scalar localtime();
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
+
+# make sure partial logging occurs even if user kills us mid-way
 LOG->autoflush();
+
+# log command-line args
 print LOG "$datetime $user";
 foreach $arg ( @ARGV ) {
     print LOG " $arg";
 }
 print LOG "\n";
 
-$cmd = shift;
-@args = @ARGV;
-if( $cmd eq "on" ) {
-    if( $#args < 0 ) {
+# parse args
+$cmd = shift;    # "on, "off", "check", etc.
+@args = @ARGV;   # args to prior command, if any
+
+if( $cmd eq "on" )
+{
+    if( $#args < 0 )
+    {
 	usage();
 	exit 1;
     }
     start_condor( @args );
-} elsif( $cmd =~ /^of/ ) {
-    if( $#args < 0 ) {
+}
+elsif( $cmd =~ /^of/ )
+{
+    if( $#args < 0 )
+    {
 	usage();
 	exit 1;
     }
     stop_condor( @args );
-} elsif( $cmd =~ /^ch/ ) {
-    if( $#args < 0 ) {
-	foreach $n ($STARTNODE .. 9) {
+}
+elsif( $cmd =~ /^ch/ )
+{
+    if( $#args < 0 )
+{
+	foreach $n ($STARTNODE .. 9)
+	{
 	    push @args, "c0$n";
 	}
-	foreach $n (10 .. $NUMNODES) {
+	foreach $n (10 .. $NUMNODES)
+	{
 	    push @args, "c$n";
 	}
     }
     check_condor( @args );
-} else {
+}
+else
+{
     usage();
     exit 1;
 }
@@ -97,7 +117,8 @@ exit 0;
 
 ### Subroutines
 
-sub usage {
+sub usage()
+{
     print STDERR
 	"Usage: $0 off N\n",
 	"       $0 on hosts\n",
@@ -115,15 +136,20 @@ sub usage {
 }
 
 
-sub start_condor {
+sub start_condor
+{
     my @hosts = @_;
-    foreach $host ( @hosts ) {
-	# if the user just specifies a number, prepend the "cXX" node name
-	if( $host =~ /^\d+$/ ) {
-	    if( $host < 10 ) {
+    foreach $host ( @hosts )
+    {
+	# if the user just specified a number, translate to a "cXX" node name
+	if( $host =~ /^\d+$/ )
+	{
+	    if( $host < 10 )
+	    {
 		$host = "c0$host";
 	    }
-	    else {
+	    else
+	    {
 		$host = "c$host";
 	    }
 	}
@@ -150,12 +176,12 @@ sub stop_condor {
 	kill_condor( $host );
     }
 
-    foreach $host ( @hosts ) {
-	parse_cluster_status();
-	while( defined $status{"vm1\@$host"} ||
-	       defined $status{"vm2\@$host"} ) {
+    foreach $host ( @hosts )
+    {
+	while( condor_up( $host ) )
+	{
+	    print "DEBUG: $host still up...\n" if $DEBUG;
 	    sleep 1;
-	    parse_cluster_status();
 	}
 	print $host, "\n";
 	print LOG "$datetime $user    (given $host)\n";
@@ -167,8 +193,6 @@ sub find_avail {
     my ($num) = @_;
     my ($found, $host, @avail);
 
-    parse_cluster_status();
-
     $found = 0;
     for( $i = $STARTNODE; $i <= $NUMNODES; $i++ ) {
 	if( $i < 10 ) {
@@ -176,8 +200,9 @@ sub find_avail {
 	} else {
 	    $host = "c$i";
 	}
-	if( @status{"vm1\@$host.cs.wisc.edu"} ) {
-	    # This node is up, give it up.
+	if( condor_up ( $host ) )
+	{
+	    # this node is available; give it up
 	    push @avail, $host;
 	    $found++;
 	} 
@@ -189,24 +214,26 @@ sub find_avail {
 }
 
 
-sub parse_cluster_status {
-    my ($format, $name, $state, $act);
+sub condor_up()
+{
+    my $node = shift;
 
-    $format =
-	"-format \"%s:\" Name " .
-	"-format \"%s:\" State " .
-	"-format \"%s\n\" Activity";
+    open( CMD, "$CONDOR_STATUS $node |" )
+	|| die "$0: error running \"$CONDOR_STATUS $node\": $!\n";
 
-    open( CMD, "$CONDOR_STATUS $CLUSTER_CONSTRAINT $format |" )
-	|| die "$0: error running $CONDOR_STATUS: $!\n";
-
-    undef @status;
-
-    while( <CMD> ) {
+    while( <CMD> )
+    {
 	chomp;
-	($name, $state, $act) = split /:/;
-	$status{$name} = ($state, $act);
+	if ( /^condor_status: / )
+	{
+	    die "$_\n$0: error running \"$CONDOR_STATUS $node\"\n";
+	}
+	elsif ( /^vm\d+\@$node/ || /^$node/ )
+	{
+	    return 1;
+	}
     }
+    return 0;
 }
 
 
