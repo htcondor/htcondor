@@ -88,6 +88,8 @@
 #define PVM_ARCH			LINUX
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
+#define HAS_STATIC			YES
+
 
 #define StaticFlag	-static
 #define UnixName /vmlinuz		/* pathname of the system executable */

@@ -73,6 +73,8 @@
 #define HAS_PVM				YES
 #define PVM_ARCH			SGI64
 
+#define HAS_STATIC			NO
+
 #define StaticFlag /**/
 #define UnixName /unix          /* pathname of the system executable */
 #define syscall_lib syscall_lib_irix

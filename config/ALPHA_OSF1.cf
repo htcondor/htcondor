@@ -74,8 +74,8 @@
 #define HAS_SETLINEBUF			YES
 #define HAS_PVM				NO
 #define PVM_ARCH			ALPHA
-
 #define USE_GCC				YES
+#define HAS_STATIC			YES
 
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
