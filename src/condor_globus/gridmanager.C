@@ -798,7 +798,8 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 					curr_job->procID.proc);
 			WaitingToCancel.Append( curr_job );
 
-		} else if ( curr_job->restartingJM == false ) {
+		} else if ( curr_job->restartingJM == false &&
+					curr_job->restartWhen == 0 ) {
 			// If we're in the middle of restarting the jobmanager, don't
 			// send a cancel because it'll just cancel the new jobmanager and
 			// not the job. Once the restart is complete, the job will be
@@ -1045,6 +1046,29 @@ GridManager::cancelAllPendingEvents(GlobusJob *curr_job)
 void
 GridManager::addRestartJM( GlobusJob *job )
 {
+	// restart will fail for an old jobmanager, so just do what the restart
+	// function would do on a restart failure
+	if ( job->newJM == false ) {
+		JobsByContact->remove(HashKey(job->jobContact));
+		free( job->jobContact );
+		job->jobContact = NULL;
+
+		if ( job->jobState == G_CANCELED ||
+			 job->removedByUser ) {
+
+			job->jobState = G_CANCELED;
+			removeJobUpdateEvents( job );
+			addJobUpdateEvent( job, JOB_UE_CANCELED );
+
+		} else {
+
+			job->jobState = G_UNSUBMITTED;
+			addJobUpdateEvent( job, JOB_UE_RESUBMIT );
+
+		}
+		return;
+	}
+
 	bool need_signal = JMsToRestart.IsEmpty();
 
 	if ( job->restartWhen == 0 ) {
@@ -1119,12 +1143,14 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 				// Can't restart, so give up on this job
 				// submission. Resubmit the job (or let a
 				// cancel complete).
-				dprintf(D_ALWAYS,
+				if ( curr_job->newJM ) {
+					dprintf(D_ALWAYS,
 						"JM restart failed for job %d.%d because %s (%d)\n",
 						curr_job->procID.cluster,
 						curr_job->procID.proc,
 						curr_job->errorString(),
 						curr_job->errorCode);
+				}
 
 				JobsByContact->remove(HashKey(curr_job->jobContact));
 				free( curr_job->jobContact );
