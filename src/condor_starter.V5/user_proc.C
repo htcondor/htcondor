@@ -482,7 +482,6 @@ UserProc::execute()
 	dprintf( D_ALWAYS | D_NOHEADER, ", 0 )\n" );
 
 
-
 	if( (pid = fork()) < 0 ) {
 		EXCEPT( "fork" );
 	}
@@ -507,7 +506,11 @@ UserProc::execute()
 		renice_self( "JOB_RENICE_INCREMENT" );
 
 			// child process should have only it's submitting uid, and cannot
-			// switch back to root or some other uid.
+			// switch back to root or some other uid.  
+			// It'd be nice to check for errors here, but
+			// unfortunately, we can't, since this only returns the
+			// previous priv state, not whether it worked or not. 
+			//  -Derek Wright 4/30/98
 		set_user_priv_final();
 
 		switch( job_class ) {
@@ -540,6 +543,13 @@ UserProc::execute()
 			break;
 		}
 
+			// Make sure we're not root
+		if( getuid() == 0 ) {
+				// EXCEPT( "We're about to start as root, aborting." );
+				// You can't see this error message at all.  So, just
+				// exit(4), which is what EXCEPT normally gives. 
+			exit( 4 );
+		}
 
 			// Everything's ready, start it up...
 		errno = 0;
