@@ -67,14 +67,15 @@ END {
     qsort(Users, 0, num_users-1);
     printf("\nCheckpoint Server Transfer Log Data from %s %s to %s %s\n\n",
 	   StartDate, StartTime, EndDate, EndTime);
-    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s\n",
-	   "", "Send", "Send", "Receive", "Receive", "Total", "Total");
-    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s\n",
+    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s %9.9s\n",
+	   "", "Send", "Send", "Receive", "Receive", "Total", "Total",
+	   "Total");
+    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s %9.9s\n",
 	   "", "Bandwidth", "Success", "Bandwidth", "Success", "Bandwidth",
-	   "Success");
-    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s\n\n",
+	   "Success", "Traffic");
+    printf("%-16.16s %9.9s %7.7s %9.9s %7.7s %9.9s %7.7s %9.9s\n\n",
 	   "User/Host/Subnet", "(Mb/s)", "Rate", "(Mb/s)", "Rate", "(Mb/s)",
-	   "Rate");
+	   "Rate", "(MB)");
     for (i=0; i < num_users; i++) {
 	User = Users[i];
 	Bytes = BytesSent[User] + BytesRecvd[User];
@@ -82,14 +83,15 @@ END {
 	Attempted = AttemptedSends[User] + AttemptedRecvs[User];
 	Completed = CompletedSends[User] + CompletedRecvs[User];
 	if (TimeSending[User] > 0 && TimeReceiving[User] > 0) {
-	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
+	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%% %9.0f\n",
 		   User,
 		   BytesSent[User]*8/TimeSending[User]/1024/1024,
 		   CompletedSends[User]/AttemptedSends[User]*100,
 		   BytesRecvd[User]*8/TimeReceiving[User]/1024/1024,
 		   CompletedRecvs[User]/AttemptedRecvs[User]*100,
 		   Bytes*8/Time/1024/1024,
-		   Completed/Attempted*100);
+		   Completed/Attempted*100,
+		   (BytesSent[User]+BytesRecvd[User])/1024/1024);
 	}
     }
     printf("\n");
@@ -100,14 +102,15 @@ END {
 	Attempted = AttemptedSends[Host] + AttemptedRecvs[Host];
 	Completed = CompletedSends[Host] + CompletedRecvs[Host];
 	if (TimeSending[Host] > 0 && TimeReceiving[Host] > 0) {
-	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
+	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%% %9.0f\n",
 		   Host,
 		   BytesSent[Host]*8/TimeSending[Host]/1024/1024,
 		   CompletedSends[Host]/AttemptedSends[Host]*100,
 		   BytesRecvd[Host]*8/TimeReceiving[Host]/1024/1024,
 		   CompletedRecvs[Host]/AttemptedRecvs[Host]*100,
 		   Bytes*8/Time/1024/1024,
-		   Completed/Attempted*100);
+		   Completed/Attempted*100,
+		   (BytesSent[Host]+BytesRecvd[Host])/1024/1024);
 	}
 	TotalBytesSent += BytesSent[Host];
 	TotalBytesRecvd += BytesRecvd[Host];
@@ -126,14 +129,15 @@ END {
 	Attempted = AttemptedSends[Subnet] + AttemptedRecvs[Subnet];
 	Completed = CompletedSends[Subnet] + CompletedRecvs[Subnet];
 	if (TimeSending[Subnet] > 0 && TimeReceiving[Subnet] > 0) {
-	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n",
+	    printf("%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%% %9.0f\n",
 		   Subnet,
 		   BytesSent[Subnet]*8/TimeSending[Subnet]/1024/1024,
 		   CompletedSends[Subnet]/AttemptedSends[Subnet]*100,
 		   BytesRecvd[Subnet]*8/TimeReceiving[Subnet]/1024/1024,
 		   CompletedRecvs[Subnet]/AttemptedRecvs[Subnet]*100,
 		   Bytes*8/Time/1024/1024,
-		   Completed/Attempted*100);
+		   Completed/Attempted*100,
+		   (BytesSent[Subnet]+BytesRecvd[Subnet])/1024/1024);
 	}
     }
     TotalBytes = TotalBytesSent + TotalBytesRecvd;
@@ -141,14 +145,15 @@ END {
     TotalAttempted = TotalAttemptedSends + TotalAttemptedRecvs;
     TotalCompleted = TotalCompletedSends + TotalCompletedRecvs;
     if (TotalTimeSending > 0 && TotalTimeReceiving > 0) {
-	printf("\n%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%%\n\n",
+	printf("\n%-16.16s %9.2f %6.0f%% %9.2f %6.0f%% %9.2f %6.0f%% %9.0f\n\n",
 	       "Overall",
 	       TotalBytesSent*8/TotalTimeSending/1024/1024,
 	       TotalCompletedSends/TotalAttemptedSends*100,
 	       TotalBytesRecvd*8/TotalTimeReceiving/1024/1024,
 	       TotalCompletedRecvs/TotalAttemptedRecvs*100,
 	       TotalBytes*8/TotalTime/1024/1024,
-	       TotalCompleted/TotalAttempted*100);
+	       TotalCompleted/TotalAttempted*100,
+	       (TotalBytesSent+TotalBytesRecvd)/1024/1024);
     }
     printf("\n%-16.16s %25.25s %25.25s\n\n", "User", "MB Sent", "MB Received");
     for (i=0; i < num_users; i++) {
