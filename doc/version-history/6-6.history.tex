@@ -177,6 +177,10 @@ gahp\_server.
     newline at the end of the message.
   \end{itemize}
 
+\item Fixed a bug in the \Condor{configure} installation tool.
+  Previously, it would set \MacroNI{MAIL\_PATH}, which doesn't exist
+  in Condor and had no effect.
+  Now, \Condor{configure} correctly sets \Macro{MAIL}, instead.
 
 \end{itemize}
 
