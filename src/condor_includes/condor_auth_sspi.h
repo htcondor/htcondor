@@ -28,7 +28,11 @@
 
 #define	SECURITY_WIN32 1
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
-#include "sspi.NT.h"
+
+/* no longer needed under the new SDK 
+#include "sspi.NT.h" */
+
+#include <sspi.h>
 
 class Condor_Auth_SSPI : public Condor_Auth_Base {
  public:
