@@ -240,7 +240,7 @@ bool Condor_Credential_M :: add_service_cred(Credential_t type)
   return add_user_cred(type);
 }
 
-Condor_Credential_B * create_new_cred(Credential_t type)
+Condor_Credential_B * Condor_Credential_M :: create_new_cred(Credential_t type)
 {
   Condor_Credential_B * newCred = NULL;
   
