@@ -39,19 +39,20 @@ my %Config =
 # Valid field list:
 my %TopFields =
     (
-     pid	=> { enabled => 0, type => "n", l => "PID" },
-     user	=> { enabled => 0, type => "s", l => "USER" },
-     priority	=> { enabled => 0, type => "n", l => "PRI" },
-     nice	=> { enabled => 0, type => "n", l => "NI" },
-     size	=> { enabled => 0, type => "n", l => "SIZE" },
-     rss	=> { enabled => 0, type => "n", l => "RSS" },
-     share	=> { enabled => 0, type => "n", l => "SHARE" },
-     state	=> { enabled => 0, type => "s", l => "STAT" },
-     lib	=> { enabled => 0, type => "n", l => "LIB" },
-     cpu	=> { enabled => 0, type => "%", l => "%CPU" },
-     mem	=> { enabled => 0, type => "%", l => "%MEM" },
-     time	=> { enabled => 0, type => "t", l => "TIME" },
-     command	=> { enabled => 0, type => "s", l => "COMMAND" },
+     pid	=> { enabled => 0, type => "n", l => [ "PID", ], },
+     user	=> { enabled => 0, type => "s", l => [ "USER", "USERNAME", ], },
+     priority	=> { enabled => 0, type => "n", l => [ "PRI", ], },
+     thread	=> { enabled => 0, type => "n", l => [ "THR", ], },
+     nice	=> { enabled => 0, type => "n", l => [ "NI", "NICE", ], },
+     size	=> { enabled => 0, type => "n", l => [ "SIZE", ] },
+     rss	=> { enabled => 0, type => "n", l => [ "RSS", "RES" ], },
+     share	=> { enabled => 0, type => "n", l => [ "SHARE", ], },
+     state	=> { enabled => 0, type => "s", l => [ "STAT", "STATE", ], },
+     lib	=> { enabled => 0, type => "n", l => [ "LIB", ], },
+     cpu	=> { enabled => 0, type => "%", l => [ "%CPU", "CPU", ], },
+     mem	=> { enabled => 0, type => "%", l => [ "%MEM", ], },
+     time	=> { enabled => 0, type => "t", l => [ "TIME", ], },
+     command	=> { enabled => 0, type => "s", l => [ "COMMAND", ], },
     );
 my %TopTypes =
     (
@@ -261,9 +262,12 @@ sub Configure( )
     {
 	foreach my $Key ( keys %TopFields )
 	{
-	    if ( $TopFields{$Key}{l} eq $tf )
+	    foreach my $Label ( @{$TopFields{$Key}{l}} )
 	    {
-		$TopFields{$Key}{offset} = $Offset;
+		if ( $Label eq $tf )
+		{
+		    $TopFields{$Key}{offset} = $Offset;
+		}
 	    }
 	}
 	$Offset++;
@@ -314,8 +318,9 @@ sub Configure( )
     {
 	my $Fields = "";
 	my $Name;
-	$ConfigStringFields =~ s/\s+/,/g;
-	my ( @List ) = split ( /,+/, $ConfigStringFields );
+	my ( @List ) = split ( /[\s\,]+/, $ConfigStringFields );
+	print STDERR "Enable list: " . join( " ", @List ) . "\n"
+	    if ( $Config{Debug} );
 	if ( $List[0] eq "*" )
 	{
 	    print STDERR "Enabling: " if ( $Config{Debug} );
@@ -341,7 +346,12 @@ sub Configure( )
 			"Warning: Invalid field '$Name' in Top list\n";
 		    next;
 		}
-		next if ( $TopFields{$Name}{offset} < 0 );
+		elsif ( $TopFields{$Name}{offset} < 0 )
+		{
+		    print STDERR
+			"Warning: Field name '$Name' not found in top output\n";
+		    next;
+		}
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
 		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
@@ -400,7 +410,7 @@ sub RunIt( $ )
       READHEADER:
 	my @Buffer;
 	while ( <TOP> ) {
-	    # Uptime display?
+	    # Uptime line?
 	    if ( /.*up.*load/ ) {
 		my %Uptime;
 
@@ -412,6 +422,41 @@ sub RunIt( $ )
 		{
 		    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
+		}
+	    }
+	    # Older tops just dump a "load" line
+	    elsif ( /^load averages:\s+(.*)/ ) {
+		chomp;
+
+		# Hack out the commas
+		my @LoadInfo = split( /[\s\,]+/, $1 );
+		if ( $#LoadInfo == 3 )
+		{
+		    my %Load;
+
+		    # Parse the uptime line
+		    $Load{Load01} = shift( @LoadInfo );
+		    $Load{Load05} = shift( @LoadInfo );
+		    $Load{Load15} = shift( @LoadInfo );
+
+		    my $TimeStr = shift( @LoadInfo );
+		    if ( $TimeStr =~ /(\d+):(\d+)([ap])m/ ) {
+			my $Time = ( $1 * 60 ) + $2;
+			$Time += (12 * 60 ) if ( $3 =~ /p/ );
+			$Load{Time} = $Time;
+			$Load{TimeString} = $TimeStr;
+		    }
+		    elsif ( $TimeStr =~ /(\d+):(\d+):(\d+)/ ) {
+			$Load{Time} = ( $1 * 60 ) + $2;
+			$Load{TimeString} = $TimeStr;
+		    }
+
+		    # And, add it to our summary
+		    foreach my $Attr ( keys %Load )
+		    {
+			my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+			$Summary->Add( $Attr, $Type, $Load{$Attr} );
+		    }
 		}
 	    }
 	    # Processes summary?
@@ -662,6 +707,12 @@ sub FixString( $ )
     elsif ( $$String =~ /^(\d+)m$/ )
     {
 	$$String = $1;
+	return "n";
+    }
+    # Clean up nnnnH (ie 12345H = 12345 hours)
+    elsif ( $$String =~ /^([\d\.]+)H$/ )
+    {
+	$$String = $1 * 60;
 	return "n";
     }
     # Percentages (just return the number portion, strip the %)
