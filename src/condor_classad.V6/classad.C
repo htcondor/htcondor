@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_string.h"
 #include "classad.h"
+#include "classadItor.h"
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
