@@ -1,30 +1,6 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-char*
-get_full_hostname()
-{
-	static char answer[MAX_STRING];
-	char this_host[MAX_STRING];
-	struct hostent *host_ptr;
-
-	/* determine our own host name */
-	if (gethostname(this_host,MAX_STRING) < 0) {
-		EXCEPT("gethostname");
-	}
-
-	/* Look up out official host information */
-	if ((host_ptr = gethostbyname(this_host)) == NULL) {
-		EXCEPT("gethostbyname");
-	}
-
-	/* copy out the official hostname */
-	strcpy(answer, host_ptr->h_name);
-
-	return answer;
-}
-
-
 void
 check_perms()
 {
@@ -62,21 +38,6 @@ cleanup_execute_dir()
 			exec_path, exec_path);
 	system(buf);
 #endif
-}
-
-
-int
-reply(Stream *stream, int answer)
-{
-	stream->encode();
-	if( !stream->code(answer) ) {
-		return FALSE;
-	}
-	if( !stream->end_of_message() ) {
-		return FALSE;
-	}
-	dprintf(D_ALWAYS, "Replied %s\n", answer ? "ACCEPTED" : "REFUSED");
-	return TRUE;
 }
 
 
@@ -277,7 +238,7 @@ create_port(int* sock)
 int
 config_classad( Resource* rip )
 {
-	config( rip->r_classad );
+	config( rip->r_classad, "STARTD" );
 	rip->init_classad();
 	return TRUE;
 }
@@ -324,3 +285,16 @@ command_to_string( int cmd )
 	}
 	return "error";
 }
+
+
+int
+reply( Stream* s, int cmd )
+{
+	s->encode();
+	if( !s->code( cmd ) || !s->end_of_message() ) {
+		return FALSE;
+	} else {
+		return TRUE;
+	}
+}
+

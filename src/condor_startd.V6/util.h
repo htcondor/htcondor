@@ -2,13 +2,11 @@
 #define _UTIL_H
 
 class ClassAd;
-class Sock;
+class Stream;
 
-/* Our utilities */
-char*	get_full_hostname(void);
+// Our utilities 
 void	cleanup_execute_dir(void);
 void	check_perms(void);
-int		reply(Stream*, int);
 float	compute_rank( ClassAd*, ClassAd* );
 int		wants_vacate( Resource* );
 int		wants_suspend( Resource* );
@@ -20,8 +18,9 @@ int		create_port( int* );
 int		config_classad( Resource* );
 void	log_ignore( int, State );
 char*	command_to_string( int );
+int		reply( Stream*, int );
 
-/* Utils from the util_lib that aren't prototyped */
+// Utils from the util_lib that aren't prototyped
 extern "C" {
 	int		get_random_int();
 	int		set_seed( int );
