@@ -48,6 +48,7 @@ public:
   int Exist(const KeyType& Key);   // Returns 1 if Key is in the set, 0 otherwise
   void Add(const KeyType& Key);    // Add Key to the set
   void Remove(const KeyType& Key); // Remove Key from the set
+  void Clear();
 
   void StartIterations();          // Start iterating through the set
   int Iterate(KeyType& Key);       // get next key
@@ -56,6 +57,8 @@ public:
 #ifdef DEBUG_FLAG
   void PrintSet();
 #endif
+
+  void operator=(Set& S);
 
 private:
   
@@ -82,6 +85,14 @@ public:
 // Implemenatation
 //-------------------------------------------------------
 
+template <class KeyType>
+void Set<KeyType>::operator=(Set<KeyType>& S) {
+  Clear();
+  KeyType Key;
+  S.StartIterations();
+  while(S.Iterate(Key)) Add(Key);
+}
+
 // Constructor
 template <class KeyType> 
 Set<KeyType>::Set() {
@@ -95,6 +106,20 @@ int Set<KeyType>::Count() {
   return Len; 
 }
   
+// Remove all elements
+template <class KeyType>
+void Set<KeyType>::Clear() {
+  Curr=Head;
+  SetElem<KeyType>* N;
+  while(Curr) {
+    N=Curr;
+    Curr=Curr->Next;
+    delete N;
+  }
+  Len=0;
+  Head=Curr=NULL;
+}
+
 // 0=Not in set, 1=is in the set
 template <class KeyType> 
 int Set<KeyType>::Exist(const KeyType& Key) { 
