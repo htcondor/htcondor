@@ -1,4 +1,7 @@
 Changes for version 0.9.5: (not yet released)
+* Fixed a bug in printing parenthesized expressions with minimal
+  parentheses. (It used to print garbage in some cases.)
+
 * Identifiers can be quoted with almost anything between the
   quotes. This means you can have a ClassAd like:
 
@@ -26,29 +29,21 @@ underscore and be followed by alpanumeric characters or underscores.
 * The XML output is different in the following ways:
 
   - The <n> (number) tag has been replaced by <i> (integer) and <r>
-    (real) tags. Real numbers are always represented by a hexadecimal
-    64-bit IEEE754 number to maintain precision.
+    (real) tags. Real numbers are always represented as described
+    below.
 
   - <at> is now absolute time, and <rt> is relative time. Between the
     tags, they are identical to the above representation. 
 
-* Real numbers can be identified precisely with a hexadecimal number,
-  like this: 
+* Real number representation has been changed a bit. When real numbers
+  are printed, they are printed with a fixed number of digits of
+  precision. They look like: 4.500000000000000E+00. If you need to
+  refer to "not a number", infinity, or negative infinity, you can do
+  it like:
 
-  [
-    X = ieee754(????);
-  ]
-
-  This is equivalent to:
-
-  [
-    X = ????;
-  ]
-
-  When you print a ClassAd with the ClassAdUnparser, you will see the
-  ieee754 format, to preserve precision, but a comment will be
-  inserted so you can see the real value. The PrettyPrinter will only
-  show the floating point representation you are used it, like 3.14. [fix]
+     nan               = real("NaN");
+     infinity          = real("INF");
+     negative_infinity = real("-INF");
 
 * We now compile on gcc 3.2.x, in addition to other versions of gcc.
 
