@@ -48,11 +48,12 @@ extern ReliSock *syscall_sock;
 int CONDOR_NotSupported( int num, ... );
 int CONDOR_Ignored( int num, ... );
 
-#if defined(USE_STUB_CLUMPS) || defined(IRIX53)
+#if defined(USE_STUB_CLUMPS) || defined(IRIX)
 int do_REMOTE_syscall1(int);
 int do_REMOTE_syscall2(int);
 int do_REMOTE_syscall3(int);
 int do_REMOTE_syscall4(int);
+int do_REMOTE_syscall5(int);
 #endif
 
 #if !defined(PVM_RECEIVE)
