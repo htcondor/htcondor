@@ -36,6 +36,9 @@ static void self_monitor(void)
 
 SelfMonitorData::SelfMonitorData()
 {
+    _monitoring_is_on = false;
+    _timer_id         = -1;
+
     last_sample_time = -1;
     cpu_usage        = -1.0;
     image_size       = 0;
