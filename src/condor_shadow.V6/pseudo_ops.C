@@ -1027,7 +1027,7 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 
 	strcpy( extern_path, full_path );
 
-#ifdef HPUX9
+#ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
 	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
 	if ( strcmp(extern_path,"/usr/lib/nls////strerror.cat") == 0 )
@@ -1490,6 +1490,19 @@ pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
 
 	rval = write( fd, buf, len );
 	return rval;
+}
+
+
+/* 
+   For sync(), we just want to call sync, since on most systems,
+   sync() just returns void, and we'll pass back a 0 anyway. 
+   -Derek Wright 7/17/98
+*/
+int
+pseudo_sync()
+{
+    sync();
+	return 0;
 }
 
 } /* extern "C" */
