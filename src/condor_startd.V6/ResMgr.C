@@ -969,7 +969,8 @@ ResMgr::get_by_pid( pid_t pid )
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_starter->pid() == pid ) {
+		if( resources[i]->r_starter &&
+			resources[i]->r_starter->pid() == pid ) {
 			return resources[i];
 		}
 	}
@@ -1230,6 +1231,8 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 		sprintf( line, "%s=%d", ATTR_TOTAL_VIRTUAL_MACHINES, num_vms() );
 		cp->Insert( line ); 
 	}
+
+	starter_mgr.publish( cp, how_much );
 }
 
 
