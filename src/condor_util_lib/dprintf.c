@@ -197,14 +197,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 				/* Print the message with the time and a nice identifier */
 				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-					if( (saved_flags|flags) & D_SECONDS ) {
-						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
-								 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-								 tm->tm_min, tm->tm_sec );
-					} else {
-						fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
-								 tm->tm_mday, tm->tm_hour, tm->tm_min );
-					}
+					fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
+							 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+							 tm->tm_min, tm->tm_sec );
 
 					if ( (saved_flags|flags) & D_FDS ) {
 						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
