@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "source.h"
 #include "matchClassad.h"
 
 BEGIN_NAMESPACE( classad )
@@ -71,7 +72,7 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 	ClassAd *upd;
 	if( !( upd = parser.ParseClassAd( 
 			"[symmetricMatch = leftMatchesRight && rightMatchesLeft ;"
-			"leftMatchesRight = adcd.ad.requirements ;"
+			"leftMatchesRight = adcr.ad.requirements ;"
 			"rightMatchesLeft = adcl.ad.requirements ;"
 			"leftRankValue = adcl.ad.rank ;"
 			"rightRankValue = adcr.ad.rank]" ) ) ) {
