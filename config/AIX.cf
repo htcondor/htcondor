@@ -49,6 +49,9 @@ PRELINK_CPP_FLAGS = -Ur -u main
 #define HAS_PVM				NO
 #define PVM_ARCH			RS6K
 
+#undef WANT_DRMAA
+#define WANT_DRMAA	NO
+
 #define ShadowSizeEstimate 200
 
 /**************************************************************************

@@ -33,6 +33,7 @@
 #define WANT_NEST	NO		/* the NeST I/O module */
 #define WANT_ORACLE_UNIVERSE   NO
 #define WANT_NORDUGRID_UNIVERSE	NO
+#define WANT_DRMAA		YES
 
 #define USE_GLOBUS_OPENSSL YES
 #define NEEDS_PRELINKER	NO
