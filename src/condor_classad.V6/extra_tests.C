@@ -300,9 +300,9 @@ static void read_from_stream(ClassAd **classad_a, ClassAd **classad_b)
 
 	cout << "Reading from ifstream.\n";
 
-	*classad_a = parser.ParseClassAd(&stream);
-	*classad_b = parser.ParseClassAd(&stream);
-	classad_c = parser.ParseClassAd(&stream);
+	*classad_a = parser.ParseClassAd(stream);
+	*classad_b = parser.ParseClassAd(stream);
+	classad_c = parser.ParseClassAd(stream);
 
 	check_parse(*classad_a, *classad_b, classad_c);
 	return;
@@ -324,9 +324,9 @@ static void read_from_stream_alt(ClassAd **classad_a, ClassAd **classad_b)
 	*classad_a = new ClassAd;
 	*classad_b = new ClassAd;
 	classad_c  = new ClassAd;
-	parser.ParseClassAd(&stream, **classad_a);
-	parser.ParseClassAd(&stream, **classad_b);
-	if (!parser.ParseClassAd(&stream, *classad_c)) {
+	parser.ParseClassAd(stream, **classad_a);
+	parser.ParseClassAd(stream, **classad_b);
+	if (!parser.ParseClassAd(stream, *classad_c)) {
 		delete classad_c;
 		classad_c = NULL;
 	}
