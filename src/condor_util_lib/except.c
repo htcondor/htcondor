@@ -33,6 +33,10 @@ char	*foo;
 { printf( foo ); }
 #else LINT
 
+#ifdef WIN32
+static int sys_nerr = -9999999;
+#endif
+
 extern int	condor_nerr;
 extern char	*condor_errlist[];
 
