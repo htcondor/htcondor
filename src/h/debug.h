@@ -52,6 +52,8 @@
 
 #define D_ALL		(~D_NOHEADER)
 
+#include <stdio.h>
+
 /*
 **	Important external variables...
 */
