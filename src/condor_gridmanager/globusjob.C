@@ -1718,6 +1718,7 @@ MyString *GlobusJob::buildSubmitRSL()
 	int transfer;
 	MyString *rsl = new MyString;
 	MyString iwd = "";
+	MyString riwd = "";
 	MyString buff;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
@@ -1773,11 +1774,22 @@ MyString *GlobusJob::buildSubmitRSL()
 	if ( ad->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
 		*rsl += rsl_stringify( attr_value );
+
+		riwd = attr_value;
 	} else if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
 		// The user didn't specify a remote IWD, so tell the jobmanager to
 		// create a scratch directory in its default location and make that
 		// the remote IWD.
 		*rsl += ")(scratchdir='')(directory=$(SCRATCH_DIRECTORY)";
+
+		riwd = "$(SCRATCH_DIRECTORY)";
+	} else {
+		// The jobmanager can't create a directory for us, so use its
+		// default of $(HOME).
+		riwd = "$(HOME)";
+	}
+	if ( riwd[riwd.Length()-1] != '/' ) {
+		riwd += '/';
 	}
 	if ( attr_value != NULL ) {
 		free( attr_value );
@@ -1871,7 +1883,9 @@ MyString *GlobusJob::buildSubmitRSL()
 				buff += filename;
 				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
-				*rsl += rsl_stringify( basename( filename ) );
+				buff = riwd;
+				buff += basename( filename );
+				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
 		}
@@ -1901,7 +1915,9 @@ MyString *GlobusJob::buildSubmitRSL()
 			while ( (filename = filelist.next()) != NULL ) {
 				// append file pairs to rsl
 				*rsl += '(';
-				*rsl += rsl_stringify( basename( filename ) );
+				buff = riwd;
+				buff += basename( filename );
+				*rsl += rsl_stringify( buff );
 				*rsl += ' ';
 				buff = "$(GRIDMANAGER_GASS_URL)";
 				if ( filename[0] != '/' ) {
