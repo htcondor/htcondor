@@ -373,35 +373,39 @@ system.
   
 \item[\Macro{COLLECTOR\_HOST}] \label{param:CollectorHost} The
   hostname of the machine where the \Condor{collector} is running for
-  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
-  macro described above.  There is no default value for this macro;
-  \Macro{COLLECTOR\_HOST} must be defined for your pool to work
+  your pool.  Normally, it is defined relative to
+  the \MacroUNI{CONDOR\_HOST}
+  macro.  There is no default value for this macro;
+  \Macro{COLLECTOR\_HOST} must be defined for the pool to work
   properly.
 
   In addition to defining the hostname, this setting can optionally be
-  used to specify the network port that the \Condor{collector} should
-  use.
-  The port is seperated from the hostname by a ':' symbol.
-  For example, \verb@COLLECTOR_HOST = $(CONDOR_HOST):1234@.
+  used to specify the network port of the \Condor{collector}.
+  The port is separated from the hostname by a colon ('\verb@:@').
+  For example,
+\begin{verbatim}
+  COLLECTOR_HOST = $(CONDOR_HOST):1234
+\end{verbatim}
   If no port is specified, the default port of 9618 is used.
   Using the default port is recommended for most sites.
-  This should only be modified if there is a conflict with another
+  It is only changed if there is a conflict with another
   service listening on the same network port.
   For more information about specifying a non-standard port for the
-  \Condor{collector}, see section~\ref{sec:Ports-NonStandard} on
+  \Condor{collector} daemon,
+  see section~\ref{sec:Ports-NonStandard} on
   page~\pageref{sec:Ports-NonStandard}.
 
 
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
-  hostname of the machine where the \Condor{negotiator} is running for
-  your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
-  macro described above.  There is no default value for this macro;
-  \Macro{NEGOTIATOR\_HOST} must be defined for your pool to work
+  host name of the machine where the \Condor{negotiator} is running for
+  the pool.
+  Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
+  macro.  There is no default value for this macro;
+  \Macro{NEGOTIATOR\_HOST} must be defined for the pool to work
   properly.
-  This setting also be used to optionally define a network port for
-  the \Condor{negotatior}.
-  For more information, see the \MacroNI{COLLECTOR\_HOST} setting
-  above.
+  This variable may also be used to optionally define a network port for
+  the \Condor{negotatior} daemon, as explained for the
+  the \MacroNI{COLLECTOR\_HOST} variable.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
@@ -1196,23 +1200,37 @@ server, shadow, and starter, none of which use DaemonCore yet).
 %  \end{itemize}
 
 \item[\Macro{SUBSYS\_ADDRESS\_FILE}]
-  \label{param:SubsysAddressFile} Every Condor daemon that uses
-  DaemonCore has a command port where commands are sent.  The
-  IP/port of the daemon is put in that daemon's ClassAd so that other
-  machines in the pool can query the \Condor{collector} (which listens
-  on a well-known port) to find the address of a given daemon on a
-  given machine.  However, tools and daemons executing on the same
-  machine they wish to communicate with are not required to query the
-  collector. They look in a file on the local disk to find
-  the IP/port.  Setting this macro will cause daemons to write the
-  IP/port of their command socket to a specified file.  In this way,
-  local tools will continue to operate, even if the machine running
-  the \Condor{collector} crashes.  Using this file will also generate
-  slightly less network traffic in your pool (since \Condor{q},
-  \Condor{rm}, and others do not have to send any messages over the network to
-  locate the \Condor{schedd}).  This macro is not needed
-  for the collector or negotiator, since their command sockets are at
-  well-known ports.  
+  \label{param:SubsysAddressFile}
+  \index{}
+  \index{NEGOTIATOR\_ADDRESS\_FILE macro@\texttt{NEGOTIATOR\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{NEGOTIATOR\_ADDRESS\_FILE}}
+  \index{COLLECTOR\_ADDRESS\_FILE macro@\texttt{COLLECTOR\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{COLLECTOR\_ADDRESS\_FILE}}
+  A complete path to a file that is to contain an
+  IP address and port number for a daemon. 
+  Every Condor daemon that uses
+  DaemonCore has a command port where commands are sent.
+  The IP/port of the daemon is put in that daemon's ClassAd,
+  so that other machines in the pool can query the
+  \Condor{collector} (which listens on a well-known port)
+  to find the address of a given daemon on a given machine.
+  When tools and daemons are all executing on the same
+  single machine, communications do not require a query of the
+  \Condor{collector} daemon.
+  Instead, they look in a file on the local disk
+  to find the IP/port.
+  This macro causes daemons to write the
+  IP/port of their command socket to a specified file.
+  In this way,
+  local tools will continue to operate,
+  even if the machine running the \Condor{collector} crashes.
+  Using this file will also generate
+  slightly less network traffic in the pool,
+  since tools including \Condor{q} and
+  \Condor{rm} do not need to send any messages over the network to
+  locate the \Condor{schedd} daemon.
+  This macro is not necessary for the \Condor{collector} or \Condor{negotiator}
+  daemons, since their command sockets are at well-known ports.  
   
 \item[\Macro{SUBSYS\_ATTRS} or \label{param:SubsysExprs}
 \Macro{SUBSYS\_EXPRS}] \label{param:SubsysAttrs}
