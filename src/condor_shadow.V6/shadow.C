@@ -52,16 +52,9 @@
 #include "debug.h"
 #include "fileno.h"
 #include "exit.h"
-
-#if defined(AIX32)
-#	include <sys/id.h>
-#   include <sys/wait.h>
-#   include <sys/m_wait.h>
-#	include "condor_fdset.h"
-#endif
-
 #include "shadow.h"
 
+/* XXX This should not be here */
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
@@ -71,7 +64,7 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
@@ -1422,7 +1415,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 reaper(int unused)
 #else
@@ -1483,7 +1476,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 handle_sigusr1( int unused )
 #else
@@ -1508,7 +1501,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 handle_sigquit( int unused )
 #else
