@@ -136,6 +136,7 @@ class Scheduler : public Service
 	void			StartSchedUniverseJobs();
 	void			send_alive();
 	void			StartJobHandler();
+	bool			WriteAbortToUserLog(PROC_ID job_id);
 	
   private:
 	

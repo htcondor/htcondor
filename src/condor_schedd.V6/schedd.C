@@ -40,6 +40,7 @@
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "renice_self.h"
+#include "user_log.c++.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -590,11 +591,53 @@ abort_job_myself(PROC_ID job_id)
 	     srec->removed = TRUE;
 	} else {
 		// We did not find a shadow for this job; just remove it.
+		if (!scheduler.WriteAbortToUserLog(job_id)) {
+			dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
+		}
 		DestroyProc(job_id.cluster,job_id.proc);
 	}
+
 }
 } /* End of extern "C" */
 
+
+// Write to userlog
+bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
+{
+	char tmp[_POSIX_PATH_MAX];
+    if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE, tmp) < 0) return false;
+	
+	char owner[_POSIX_PATH_MAX];
+	char logfilename[_POSIX_PATH_MAX];
+	char iwd[_POSIX_PATH_MAX];
+
+    GetAttributeString(job_id.cluster, job_id.proc, ATTR_JOB_IWD, iwd);
+	if (tmp[0] == '/') {
+		strcpy(logfilename, tmp);
+	} else {
+		sprintf(logfilename, "%s/%s", iwd, tmp);
+	}
+
+	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+
+	dprintf(D_FULLDEBUG,"Writing abort record to user logfile=%s owner=%s\n",logfilename,owner);
+
+    init_user_ids(owner);
+	priv_state priv = set_user_priv();
+
+    UserLog* ULog=new UserLog();
+	ULog->openLog(logfilename, job_id.cluster, job_id.proc, 0);
+
+	JobAbortedEvent event;
+	int status=ULog->writeEvent(&event);
+
+	delete ULog;
+	set_priv(priv);
+
+	if (!status) return false;
+	return true;
+}
+		
 
 int
 Scheduler::abort_job(int, Stream* s)
@@ -1848,6 +1891,12 @@ Scheduler::delete_shadow_rec(int pid)
 		dprintf(D_FULLDEBUG,
 				"Deleting shadow rec for PID %d, job (%d.%d)\n",
 				pid, rec->job_id.cluster, rec->job_id.proc );
+
+		if (rec->removed) {
+			if (!WriteAbortToUserLog(rec->job_id)) {
+				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
+			}
+		}
 		check_zombie( pid, &(rec->job_id) );
 		RemoveShadowRecFromMrec(rec);
 		shadowsByPid->remove(pid);
