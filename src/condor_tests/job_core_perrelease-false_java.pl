@@ -45,11 +45,16 @@ $submit = sub
 {
 	my %info = @_;
 	$cluster = $info{"cluster"};
-	my $status = `condor_q $cluster -format %d JobStatus`;
-	sleep 2;
+	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	while($qstat == -1)
+	{
+		print "Job status unknown - wait a bit\n";
+		sleep 2;
+		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+	}
 
 	print "It better be on hold... status is $status(5 is correct)";
-	if($status != HELD)
+	if($qstat != HELD)
 	{
 		die "Cluster $cluster failed to go on hold\n";
 	}

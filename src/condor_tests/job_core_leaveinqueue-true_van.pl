@@ -30,11 +30,15 @@ $success = sub
 	my $cluster = $info{"cluster"};
 
 	sleep 10;
-	system("condor_q");
 	print "Good, job should be done but left in the queue!!!\n";
-	my $status = `condor_q $cluster -format %d JobStatus`;
-	print "Status from condor_q $cluster -format %d JobStatus is -- $status --\n";
-	if( $status != COMPLETED )
+	my $qstat = CondorTest::GoodCondorQ_Result($cluster);
+	while($qstat == -1)
+	{
+		print "Job status unknown - wait a bit\n";
+		sleep 2;
+		$qstat = CondorTest::GoodCondorQ_Result($cluster);
+	}
+	if( $qstat != COMPLETED )
 	{
 		die "Job not still found in queue in completed state\n";
 	}
