@@ -63,6 +63,7 @@ AuthSock::lookup_user( char *client_name ) {
 				client_name, filename );
 		return -1;
 	}
+	dprintf( D_FULLDEBUG,"lookup user %s successful\n", client_name );
 	return 0;
 }
 
@@ -146,7 +147,7 @@ AuthSock::authenticate_user()
 	OM_uint32 minor_status;
 
 	if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
-		dprintf( D_FULLDEBUG, "user is authenticated\n" );
+		dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
 		return TRUE;
 	}
 
@@ -155,6 +156,7 @@ AuthSock::authenticate_user()
 			&& getenv( "X509_CERT_DIR" ) ) ) 
 	{
 		//don't log error, since this can be called before env vars are set!
+		dprintf(D_FULLDEBUG,"X509 env vars not set yet (might not be error)\n");
 		return FALSE;
 	}
 
@@ -170,6 +172,7 @@ AuthSock::authenticate_user()
 		return FALSE;
 	}
 
+	dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
 	return TRUE;
 }
 
@@ -209,7 +212,6 @@ AuthSock::auth_connection_client()
 		  authsock_put, (void *) this 
 	);
 
-
 	if (major_status != GSS_S_COMPLETE)
 	{
 		dprintf( D_ALWAYS, "failed auth connection:init security context:0x%x\n",
@@ -228,6 +230,8 @@ AuthSock::auth_connection_client()
 	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
 
 	conn_auth_state = auth_cert;
+
+	dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", gateKeeper);
 	return TRUE;
 }
 
@@ -292,6 +296,9 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
 
 	authsock.Set_conn_auth_state( auth_cert );
+
+	dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", 
+			authsock.GSSClientname);
 	return TRUE;
 }
 
@@ -407,8 +414,12 @@ int AuthSock::authenticate() {
 	}
 
 	switch ( conn_type ) {
-		case auth_server : return ( auth_connection_server( *this ) );
-		case auth_client : return ( auth_connection_client() );
+		case auth_server : 
+			dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
+			return ( auth_connection_server( *this ) );
+		case auth_client : 
+			dprintf(D_FULLDEBUG,"about to authenticate server from client\n" );
+			return ( auth_connection_client() );
 		default : 
 			dprintf( D_ALWAYS,"authenticate:needed to have connected/accepted\n" );
 			return FALSE;
