@@ -26,16 +26,10 @@
 **
 */ 
 
+#include "condor_common.h"
 #include "image.h"
-#include <stdio.h>
 #include <sys/procfs.h>		// for /proc calls
 #include <sys/mman.h>		// for mmap() test
-#include <sys/types.h>		// for open() and getpid()
-#include <sys/stat.h>		// for open()
-#include <fcntl.h>		// for open()
-#include <unistd.h>		// for getpid()
-#include <stdlib.h>		// for malloc() and free()
-#include <string.h>				// for strerror()
 #include "condor_debug.h"
 #include "condor_syscalls.h"
 
