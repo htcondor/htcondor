@@ -93,7 +93,7 @@ GETMNT_OBJ = getmnt.o
 	dprintf.c dprintf_config.c except.c \
 	ltrunc.c mkargv.c proc.c signames.c strdup.c \
 	stricmp.c expr.c perror.c condor_errlst.c detach.c \
-	update_rusage.c uids.c cronos.c phys_mem.c \
+	update_rusage.c uids.c cronos.c phys_mem.c match_prefix.c \
 	free_fs_blocks.c $(FLOCK_SRC) $(SETREUID_SRC) $(GETDTABLESIZE_SRC) \
 	$(SETRGID_SRC) $(SETREGID_SRC) $(SETEGID_SRC) $(SETEUID_SRC) \
 	$(GETPAGESIZE_SRC) $(SETLINEBUF_SRC) $(GETWD_SRC) $(INSQUE_SRC) \
@@ -118,7 +118,7 @@ GETMNT_OBJ = getmnt.o
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o \
 	ckpt_server_api_stubs.o ckpt_util.o get_random_num.o fdprintf.o \
-	setsyscalls.o
+	setsyscalls.o match_prefix.o
 
 all_target( util_lib.a stub_gen )
 
