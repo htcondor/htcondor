@@ -1,3 +1,5 @@
+# XXX DO NOT USE THIS SCRIPT!!!!
+
 #!/bin/sh
 # condor_cleanckpts  Todd Tannenbaum, 2/97
 # 	updated for Condor V6 1/98
