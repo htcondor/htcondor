@@ -189,31 +189,20 @@ struct sockaddr_in  *from;
 char *
 calc_subnet_name(char* host)
 {
-	struct hostent	*hostp;
-	char			hostname[MAXHOSTNAMELEN];
 	char			subnetname[MAXHOSTNAMELEN];
 	char			*subnet_ptr;
 	char			*host_addr_string;
 	int				subnet_length;
-	struct in_addr	in;
+	struct			in_addr	in;
+	unsigned int	host_ordered_addr;
+	unsigned int		net_ordered_addr;
 
-	if(!host)
-	{
-		if( gethostname(hostname, sizeof(hostname)) == -1 ) {
-			dprintf( D_ALWAYS, "Gethostname failed");
-			return strdup("");
-		}
-	}
-	else
-	{
-		strcpy(hostname, host);
-	}
-	
-	if( (hostp = gethostbyname(hostname)) == NULL ) {
-		dprintf( D_ALWAYS, "Gethostbyname failed");
+	if ( !(host_ordered_addr = my_ip_addr()) ) {
 		return strdup("");
 	}
-	memcpy((char *) &in,(char *)hostp->h_addr, hostp->h_length);
+
+	net_ordered_addr = htonl(host_ordered_addr);
+	memcpy((char *) &in,(char *)&net_ordered_addr, sizeof(host_ordered_addr));
 	host_addr_string = inet_ntoa( in );
 	if( host_addr_string ) {
 		subnet_ptr = (char *) strrchr(host_addr_string, '.');
