@@ -199,7 +199,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 				case 1:
 					if( FD_ISSET(fd, &readfds) ) {
 							// see if the socket was closed
-						nro = recv(fd, &tmpbuf, 1, MSG_PEEK);
+						nro = recv(fd, tmpbuf, 1, MSG_PEEK);
 						if( ! nro ) {
 							dprintf( D_ALWAYS, "condor_write(): "
 									 "Socket closed when trying "
