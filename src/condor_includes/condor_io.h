@@ -47,6 +47,7 @@ int getsockname(int, struct sockaddr *,int *);
 #include "sock.h"
 #include "reli_sock.h"
 #include "safe_sock.h"
+#include "sockCache.h"
 
 
 #endif
