@@ -1061,16 +1061,22 @@ activate_claim( Resource* rip, Stream* stream )
 	time_t now = time( NULL );
 
 		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Claim object. 
+		// to spawn the starter.  set it in our Claim object.  Once
+		// it's there, we no longer control this memory so we should
+		// clear out our pointer to avoid confusion/problems.
 	rip->r_cur->setStarter( tmp_starter );
-		// Grab the job ID, so we've got it...
+	tmp_starter = NULL;
+		// Grab the job ID, so we've got it.  Once we give the
+		// req_classad to the Claim object, we no longer control it. 
 	rip->r_cur->saveJobInfo( req_classad );
+	req_classad = NULL;
 
 		// Actually spawn the starter
 	if( ! rip->r_cur->spawnStarter(now, shadow_sock) ) {
-			// Error spawning starter!
-		delete( tmp_starter );
-		rip->r_cur->setStarter( NULL );
+			// if Claim::spawnStarter fails, it resets the Claim
+			// object to clear out all the info we just stashed above
+			// with setStarter() and saveJobInfo().  it's safe to just
+			// abort now, and all the state will be happy.
 		ABORT;
 	}
 
