@@ -30,6 +30,8 @@
 #include "enum_utils.h"
 
 
+/** The subclass of the Daemon object for talking to a startd
+*/
 class DCStartd : public Daemon {
 public:
 
