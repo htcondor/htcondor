@@ -68,6 +68,7 @@
 
 #if defined(IRIX53)
 #	include <dlfcn.h>	/* for dlopen and dlsym */
+#	include <sys/mman.h>	/* for mmap */
 #endif
 
 #if defined(Solaris)
@@ -426,4 +427,5 @@ THREE( socket, _socket, int, int, int )
 
 #if defined(IRIX53)
 ONE( getwd, _getwd, char * )
+SIX( mmap, _mmap, char *, size_t, int, int, int, off_t )
 #endif
