@@ -711,7 +711,7 @@ getAddrFromClaimId( const char* id )
 
 char *
 hostname_to_string (const char * hostname, const int default_port) {
-	static char hostname_buff[MAXHOSTNAMELEN];
+	static char hostname_buff[MAXHOSTNAMELEN+10];
 
 	if (!(hostname) || !(*hostname))
 		return NULL;
