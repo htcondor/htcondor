@@ -1309,4 +1309,14 @@ __CERROR()
 }
 #endif
 
+
+#if defined( X86 ) && defined( Solaris26 ) 
+int
+__CERROR64()
+{
+	return errno;
+}
+#endif
+
+
 } /* extern "C" */
