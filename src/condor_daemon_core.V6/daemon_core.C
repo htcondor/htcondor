@@ -5582,10 +5582,12 @@ int DaemonCore::Create_Process(
 	// Free up the name buffer
 	free( (void *) namebuf );
 
+#ifndef WIN32
 		// if we're here, it means we did NOT have a pid collision, or
 		// we had too many and gave up.  either way, we should clear
 		// out our static counter.
 	num_pid_collisions = 0;
+#endif
 
 	errno = return_errno;
 	return newpid;	
