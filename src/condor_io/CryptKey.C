@@ -91,22 +91,22 @@ KeyInfo :: ~KeyInfo()
     keyData_ = 0;
 }
 
-unsigned char * KeyInfo :: getKeyData()
+const unsigned char * KeyInfo :: getKeyData() const
 {
     return keyData_;
 }
     
-int KeyInfo :: getKeyLength()
+int KeyInfo :: getKeyLength() const
 {
     return keyDataLen_;
 }
 
-Protocol KeyInfo :: getProtocol()
+Protocol KeyInfo :: getProtocol() const
 {
     return protocol_;
 }
 
-int KeyInfo :: getDuration()
+int KeyInfo :: getDuration() const
 {
     return duration_;
 }
