@@ -34,6 +34,8 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <sys/ioctl.h>
+#include <errno.h>
 #include "except.h"
 #include "debug.h"
 #include "clib.h"
@@ -260,3 +262,144 @@ fill_dgram_io_handle(DGRAM_IO_HANDLE *handle, char *chost, int sock_fd, int port
    (handle->addr).sin_port = htons(port_num);
 
  }
+
+
+/*--------------------------------------------------------
+
+  tcp_accept_timeout() , tcp_connect_timeout()   are used
+  to incorporate timeout facility into accept and connect
+  for connection-oriented sockets  -- raghu  5/23
+  THIS IS NOT TESTED OUT.  MAKE SURE IT WORKS BEFORE USING
+
+*/
+
+
+/* tcp_connect_timeout() returns -1  on error
+                                 -2  on timeout
+                                 sockfd itself if connect succeeds
+*/
+
+int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
+                  int timeout ) {
+
+ int on=1, off=0;
+ struct timeval          timer;
+ fd_set                          writefds;
+ int                                     nfound;
+ int                                     nfds;
+ int                                     tmp_errno;
+
+
+    /* We want to attempt the connect with the socket in non-blocking
+           mode.  That way if there is some problem on the other end we
+           won't get hung up indefinitely waiting to connect to one host.
+           For some reason on AIX if you set this here, the connect()
+           fails.  In that case errno doesn't get set either... */
+#if !defined(AIX31) && !defined(AIX32)
+        if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
+                EXCEPT( "ioctl" );
+        }
+#endif
+
+        if( connect(sockfd, sin,len) < 0 ) {
+                tmp_errno = errno;
+                switch( errno ) {
+                        case EINPROGRESS:
+                                break;
+                        default:
+                                dprintf( D_ALWAYS,
+                                        "Can't connect to host , errno =%d\
+n",
+                                         tmp_errno );
+                                (void)close( sockfd );
+                                return -1;
+                }
+        }
+
+#ifdef AIX31    /* see note above */
+        if( ioctl(sockfd,FIONBIO,(char *)&on) < 0 ) {
+                EXCEPT( "ioctl" );
+        }
+#endif AIX31
+
+
+       timer.tv_sec = timeout;
+        timer.tv_usec = 0;
+        nfds = sockfd + 1;
+        FD_ZERO( &writefds );
+        FD_SET( sockfd, &writefds );
+        nfound = select( nfds, (int *)0, (int *)&writefds, (int *)0,
+
+                        (struct timeval *)&timer );
+        switch( nfound ) {
+        case 0:
+                (void)close( sockfd );
+                return -2;
+        case 1:
+                if( ioctl(sockfd,FIONBIO,(char *)&off) < 0 ) {
+                        EXCEPT( "ioctl" );
+                }
+                return sockfd;
+        default:
+                EXCEPT( "Select returns %d", nfound );
+                return -1;
+        }
+}
+
+
+
+/*
+ tcp_accept_timeout() : accept with timeout
+ most of this code is got from negotiator.c
+ 
+  returns       -1 on error
+                -2 on timeout
+                -3 if there is an interrupt
+                a newfd > 0  on success
+
+ NOT TESTED.  --raghu 5/23
+*/
+
+int tcp_accept_timeout(int ConnectionSock, struct sockadrr *sin, int len,
+                       int timeout) {
+        int             count;
+        fd_set  readfds;
+        struct timeval timer;
+
+       struct sockaddr dummy;
+    timer.tv_sec = timeout;
+    timer.tv_usec = 0;
+    FD_ZERO( &readfds );
+    FD_SET( ConnectionSock, &readfds );
+    #if defined(AIX31) || defined(AIX32)
+        errno = EINTR;  /* Shouldn't have to do this... */
+    #endif
+    count = select(FD_SETSIZE, (int *)&readfds, (int *)0, (int *)0,
+                   (struct timeval *)&timer );
+    if( count < 0 ) {
+          if( errno == EINTR ) {
+               dprintf( D_ALWAYS, "select() interrupted, restarting...\n");
+               return -3;;
+          } else {
+               EXCEPT( "select() returns %d, errno = %d", count, errno );
+          }
+    }
+                /*
+                ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count
+) );
+                */
+
+    if( NFDS(count) == 0 ) {
+          return -2;
+    } else if( FD_ISSET(ConnectionSock,&readfds) ) {
+          return (  accept( ConnectionSock, (struct sockaddr *)sin, len)  )
+;    
+
+    } else {
+          EXCEPT( "select: unknown connection, readfds = 0x%x, count = %d",
+                readfds, NFDS(count) );
+    }
+   
+    return -1; 
+}
+
