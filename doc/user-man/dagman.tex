@@ -66,10 +66,10 @@ An example input file for DAGMan is
 \begin{verbatim}
 	# Filename: diamond.dag
 	#
-	Job  A  A.condor 
-	Job  B  B.condor 
-	Job  C  C.condor	
-	Job  D  D.condor
+	JOB  A  A.condor 
+	JOB  B  B.condor 
+	JOB  C  C.condor	
+	JOB  D  D.condor
 	Script PRE  A top_pre.csh
 	Script PRE  B mid_pre.perl  $JOB
 	Script POST B mid_post.perl $JOB $RETURN
@@ -92,19 +92,26 @@ Figure~\ref{fig:dagman-diamond}.
 \caption{\label{fig:dagman-diamond}Diamond DAG}
 \end{figure}
 
+DAGMan has the ability to manage different types of jobs.  Condor CPU
+jobs are indicated with the \Arg{JOB} keyword.  Stork data placement
+jobs are indicated with the \Arg{DATA} keyword.  All \Arg{JobName}s,
+irrespective of type, must be unique.  Otherwise, the term \Term{Job}
+or \Term{job} will indicate a generic job, of any type.
+
 Each DAG file keyword is described below.
 
-\subsubsection{JOB}
+\subsubsection{\label{dagman:JOB}JOB}
 
 \index{DAGMan!Job Entry (names node of DAG)}
 The first section of the input file lists
 all the programs that appear in the DAG.
-Each program is described by a single line called a Job Entry.
-The syntax used for each Job Entry is
+Each program to be managed by Condor is described by a single line
+called a \Arg{JOB} Entry.
+The syntax used for each Condor \Arg{JOB} Entry is
 
 \Arg{JOB} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
 
-A Job Entry maps a \Arg{JobName} to a Condor submit description file.
+A \Arg{JOB} Entry maps a \Arg{JobName} to a Condor submit description file.
 The \Arg{JobName} uniquely identifies nodes within the
 DAGMan input file and within output messages.
 
@@ -123,6 +130,34 @@ an error occurs causing the DAG to not be completed.
 DAGMan generates a Rescue DAG, a DAGMan input file that can be
 used to restart and complete a DAG without re-executing
 completed programs.
+
+\subsubsection{\label{dagman:DATA}DATA}
+
+The \Arg{DATA} keyword specifies a job to be managed by the Stork data
+placement server.  
+The syntax used for each Condor \Arg{DATA} Entry is
+
+\Arg{DATA} \Arg{JobName} \Arg{SubmitDescriptionFileName} \oArg{DONE}
+
+A \Arg{DATA} Entry maps a \Arg{JobName} to a Stork submit description file.
+In all other respects, the \Arg{DATA} keyword is identical to the
+\Arg{JOB} keyword, in section~\ref{dagman:JOB}.
+
+Here's an example of a simple DAG that stages in data via Stork,
+processes the data via Condor, and stages the processed data out via
+Stork.  Depending upon the implementation, multiple data stage in jobs
+may be run in parallel, and data stage out jobs may be run in
+parallel:
+
+\begin{verbatim}
+	DATA    STAGE_IN1  stage_in1.stork
+	DATA    STAGE_IN2  stage_in2.stork
+	JOB     PROCESS    process.condor 
+	DATA    STAGE_OUT1 stage_out1.stork
+	DATA    STAGE_OUT2 stage_out2.stork
+	PARENT  STAGE_IN1 STAGE_IN2  CHILD  PROCESS
+	PARENT  PROCESS    CHILD  STAGE_OUT1 STAGE_OUT2
+\end{verbatim}
 
 \subsubsection{SCRIPT}
 
@@ -233,7 +268,7 @@ The script \File{pre.csh} may use these arguments
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
-\subsubsection{PARENT...CHILD}
+\subsubsection{\label{dagman:ParentChild}PARENT..CHILD}
 
 The third type of item in the DAG input file describes the
 dependencies within the DAG.
@@ -371,17 +406,17 @@ This can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Condor Submit Description File}
+\subsection{Submit Description File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
 Each node in a DAG may be a unique executable, and each may have a unique
-Condor submit description file.
-Each program may be submitted to a different universe
-within Condor, for example standard,
+submit description file.
+Each Condor program may be submitted to a different universe,
+for example standard,
 vanilla, or DAGMan.
 
-One limitation exists:
+One key limitation:
 each Condor submit description file must submit only one job.
 There may not be multiple \verb@queue@ commands, or DAGMan will fail.
 This requirement exists to enforce the requirements of a well-defined DAG.
@@ -393,6 +428,8 @@ However, if the DAG contains a very large number of jobs, each
 specifying its own log file, performance may suffer.  Therefore,
 if the DAG contains a large number of jobs, it is best to have
 all of the jobs use the same log file.
+Another current limitation is that all
+Stork jobs currently require a separate log file.
 DAGMan enforces the dependencies within a DAG
 using the events recorded in the
 log file(s) produced by job submission to Condor.
@@ -403,10 +440,10 @@ modified version of diamond-shaped DAG example.
 \begin{verbatim}
 	# Filename: diamond.dag
 	#
-	Job  A  diamond_job.condor 
-	Job  B  diamond_job.condor 
-	Job  C  diamond_job.condor	
-	Job  D  diamond_job.condor
+	JOB  A  diamond_job.condor 
+	JOB  B  diamond_job.condor 
+	JOB  C  diamond_job.condor	
+	JOB  D  diamond_job.condor
 	PARENT A CHILD B C
 	PARENT B C CHILD D
 \end{verbatim}
@@ -433,7 +470,7 @@ This implies that each node within the DAG runs the
 same program.
 The \MacroU{cluster} macro
 is used to produce unique file names for each program's output.
-Each job is submitted separately, into its own cluster,
+Each \Arg{JOB} is submitted separately, into its own cluster,
 so this provides unique names for the output files.
 
 The notification is set to \verb@NEVER@ in this example.
@@ -544,6 +581,9 @@ scripts that may be running at one time,
 while the optional \Arg{-maxpost} argument limits the number of POST
 scripts that may be running at one time.
 
+DAGs that submit jobs to Stork using the \Arg{DATA} keyword must also
+specify the Stork user log file, using the \Arg{-storklog} argument.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -574,7 +614,7 @@ This option tells \Condor{submit\_dag} use the given file as
 the log file, if no log files are specified in submit files.
 
 To remove an entire DAG, consisting of DAGMan plus
-any jobs submitted to Condor,
+any jobs submitted to Condor or Stork,
 remove the DAGMan job running under Condor.
 \Condor{q} will list the job number.
 Use the job number to remove the job, for example
@@ -595,8 +635,9 @@ Use the job number to remove the job, for example
 \end{verbatim}
 \normalsize
 
-Before the DAGMan job stops running, it uses \Condor{rm}
-to remove any Condor jobs within the DAG that are running.
+Before the DAGMan job stops running, it uses \Condor{rm}, and/or
+\Stork{rm} 
+to remove any jobs within the DAG that are running.
 
 In the case where a
 machine is scheduled to go down,
@@ -758,9 +799,9 @@ Here is a very simple DAG input file used as an example of the inner DAG.
 \begin{verbatim}
 	# Filename: inner.dag
 	#
-	Job  X  X.submit
-	Job  Y  Y.submit
-	Job  Z  Z.submit
+	JOB  X  X.submit
+	JOB  Y  Y.submit
+	JOB  Z  Z.submit
 	PARENT X CHILD Y
 	PARENT Y CHILD Z
 \end{verbatim}
@@ -779,10 +820,10 @@ A simple example of a DAG input file for the outer DAG is
 \begin{verbatim}
 	# Filename: diamond.dag
 	#
-	Job  A  A.submit 
-	Job  B  inner.dag.condor.sub
-	Job  C  C.submit	
-	Job  D  D.submit
+	JOB  A  A.submit 
+	JOB  B  inner.dag.condor.sub
+	JOB  C  C.submit	
+	JOB  D  D.submit
 	PARENT A CHILD B C
 	PARENT B C CHILD D
 \end{verbatim}
