@@ -72,6 +72,40 @@ LogRecord::readword(int fd, char * &str)
 }
 
 int
+LogRecord::readword(FILE *fp, char * &str)
+{
+	int		i, bufsize = 1024;
+	char	*buf = (char *)malloc(bufsize);
+
+	// ignore leading whitespace
+	do {
+		buf[0] = fgetc( fp );
+		if( buf[0] == EOF && !feof( fp ) ) {
+			free( buf );
+			return( -1 );
+		}
+	} while (isspace(buf[0]) && buf[0] != EOF );
+
+	// read until whitespace
+	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0' && buf[i-1]!=EOF; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			bufsize *= 2;
+		} 
+		buf[i] = fgetc( fp );
+		if( buf[i] == EOF && !feof( fp ) ) {
+			free( buf );
+			return( -1 );
+		}
+	}
+	buf[i-1] = '\0';
+	str = strdup(buf);
+	free(buf);
+	return i;
+}
+
+
+int
 LogRecord::readline(int fd, char * &str)
 {
 	int		i, rval, bufsize = 1024;
@@ -94,6 +128,39 @@ LogRecord::readline(int fd, char * &str)
 		rval = read(fd, &(buf[i]), 1);
 		if (rval < 0) {
 			return rval;
+		}
+	}
+	buf[i-1] = '\0';
+	str = strdup(buf);
+	free(buf);
+	return i;
+}
+
+int
+LogRecord::readline(FILE *fp, char * &str)
+{
+	int		i, bufsize = 1024;
+	char	*buf = (char *)malloc(bufsize);
+
+	// ignore leading whitespace
+	do {
+		buf[0] = fgetc( fp );
+		if( buf[0] == EOF && !feof( fp ) ) {
+			free( buf );
+			return( -1 );
+		}
+	} while (isspace(buf[0]) && buf[0] != EOF );
+
+	// read until newline
+	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {
+		if (i == bufsize) {
+			buf = (char *)realloc(buf, bufsize*2);
+			bufsize *= 2;
+		} 
+		buf[i] = fgetc( fp );
+		if( buf[i] == EOF && !feof( fp ) ) {
+			free( buf );
+			return( -1 );
 		}
 	}
 	buf[i-1] = '\0';
@@ -218,6 +285,26 @@ ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type))
 	}
 	log_rec = InstantiateLogEntry(fd, head_only.get_op_type());
 	if (head_only.ReadTail(fd) < 0) {
+		delete log_rec;
+		return 0;
+	}
+	return log_rec;
+}
+
+
+LogRecord *
+ReadLogEntry(FILE *fp, LogRecord* (*InstantiateLogEntry)(FILE *fp, int type))
+{
+	LogRecord		*log_rec;
+	LogRecord		head_only;
+	int				rval;
+
+	rval = head_only.ReadHeader(fp);
+	if (rval < 0) {
+		return 0;
+	}
+	log_rec = InstantiateLogEntry(fp, head_only.get_op_type());
+	if (head_only.ReadTail(fp) < 0) {
 		delete log_rec;
 		return 0;
 	}
