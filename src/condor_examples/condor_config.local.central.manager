@@ -90,6 +90,17 @@ CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 ##  be sent from your pool, uncomment the following line.
 #CONDOR_DEVELOPERS_COLLECTOR = NONE
 
+##  Enable history logging in the collector
+#KEEP_POOL_HISTORY = false
+
+##  Set the directory where history files reside
+#POOL_HISTORY_DIR = $(SPOOL)
+
+##  The maximum combined size of the history files
+#POOL_HISTORY_MAX_STORAGE = 10000000
+
+##  The interval (in seconds) between samples for history logging
+#POOL_HISTORY_SAMPLING_INTERVAL = 60
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
