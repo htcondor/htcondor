@@ -187,13 +187,19 @@ getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 	tree->RArg()->PrintToStr(constraint);
 
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
+#if 0
 		ClassAd *adCopy = new ClassAd(*ad);
 		list.Insert(adCopy);	// insert copy so list can't destroy original
 		FreeJobAd(ad);
+#endif
+		list.Insert(ad);
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+#if 0
 			adCopy = new ClassAd(*ad);
 			list.Insert(adCopy);	// insert copy
 			FreeJobAd(ad);
+#endif
+			list.Insert(ad);
 		}
 	}
 
