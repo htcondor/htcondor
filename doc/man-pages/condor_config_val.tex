@@ -1,12 +1,37 @@
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
-{Query a given condor configuration variable}
+{Query or set a given condor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
-\oOptArg{-name}{daemon\_name}
-\oOptArg{-pool}{hostname}
-\oOptArg{-address}{<ip:port>}
-\oOpt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}
-\Arg{variable}
+\oArg{options}
+\Opt{variable}
 \oOpt{variable \Dots}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-set}{variable value}
+\oOpt{variable value \Dots}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-rset}{variable value}
+\oOpt{variable value \Dots}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-unset}{variable value}
+\oOpt{variable value \Dots}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\OptArg{-runset}{variable value}
+\oOpt{variable value \Dots}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\Opt{-tilde}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
+\Opt{-owner}
 
 \Description
 
@@ -18,14 +43,60 @@ variables is currently set to.  If a given variable is not defined,
 not defined.  By default, \Condor{config\_val} looks in the local
 machine's configuration files in order to evaluate the variables.
 
+\Condor{config\_val} can also be used to quickly set configuration
+variables for a specific daemon on a given machine.  Each daemon
+remembers settings made by \Condor{config\_val}.  The configuration
+file is not modified by this command.  Persistent settings remain when
+the daemon is restarted.  Runtime settings are lost when the daemon is
+restarted.  \Note The changes will not take effect until you perform a
+\Condor{reconfig}.
+
 \begin{Options}
 	\OptItem{\OptArg{-name}{daemon\_name}}{ Query the specified
 	daemon for its configuration}
 	\OptItem{\OptArg{-pool}{hostname}}{ Use the given central
 	manager to find daemons}
-	\OptItem{\OptArg{-address}{<ip:port>}}{ connect to the given ip/port}
-	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}}{The daemon to query (if not specified, master is default)}
+	\OptItem{\OptArg{-address}{\Sinful{ip:port}}}{ Connect to the
+	given ip/port}
+	\OptItem{\OptArg{-host}{hostname}}{ Connect to the given hostname}
+	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
+	-collector \Bar -negotiator}}{The daemon to query (if not
+	specified, master is default)}
+	\OptItem{\OptArg{-set}{variable value}} { Set a persistent
+	config file expression}
+	\OptItem{\OptArg{-rset}{variable value}} { Set a runtime
+	config file expression}
+	\OptItem{\OptArg{-unset}{variable value}} { Unset a persistent
+	config file expression}
+	\OptItem{\OptArg{-runset}{variable value}} { Unset a runtime
+	config file expression}
+	\OptItem{\Opt{-tilde}}{ Return the path to the Condor home
+	directory}
+	\OptItem{\Opt{-owner}}{ Return the owner of the
+	\Condor{config\_val} process}
 	\OptItem{\Opt{variable \Dots}}{The variables to query}
 \end{Options}
+
+\Examples
+
+\begin{verbatim}
+% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+500
+% condor_config_val -name perdita -schedd -set MAX_JOBS_RUNNING 10
+Successfully set configuration "MAX_JOBS_RUNNING : 10" on 
+schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+% condor_reconfig -schedd perdita
+Sent "Reconfig" command to schedd perdita.cs.wisc.edu
+% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+10
+% condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING
+Successfully unset configuration "MAX_JOBS_RUNNING" on 
+schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+% condor_reconfig -schedd perdita
+Sent "Reconfig" command to schedd perdita.cs.wisc.edu
+% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+500
+\end{verbatim}
+
 
 \end{ManPage}
