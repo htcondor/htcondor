@@ -144,6 +144,11 @@ public:
 	/// Maintain communications state between send/receive calls by GSS-API.
 	AuthComms authComms;
 
+	/** Name of client extracted from handshake during authentication.
+	    Client gets this value back during handshake.
+	 */
+	char *GSSClientname;
+
 protected:
 	/// States to track status/authentication level of current AuthSock.
 	enum AuthState { auth_none=0, auth_cert=1, auth_client=2, auth_server=4 };
@@ -171,6 +176,7 @@ private:
 
 	/// Name that client requires server will present in its certificate.
 	char *gateKeeper;
+
 
 	/** Look up username from database of local condor users (currently NO-OP).
 	    @param client_name: name to lookup as appears in certificate
