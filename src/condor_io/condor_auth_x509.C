@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if !defined(SKIP_AUTHENTICATION) && defined(X509_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
 
 #include "condor_auth_x509.h"
 #include "sslutils.h"
@@ -35,78 +35,12 @@ extern DLL_IMPORT_MAGIC char **environ;
 //----------------------------------------------------------------------
 
 Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
-    : Condor_Auth_Base (sock, CAUTH_X509),
+    : Condor_Auth_Base (sock, CAUTH_GSI),
       context_handle   (GSS_C_NO_CONTEXT),
       credential_handle(GSS_C_NO_CREDENTIAL),
+      token_status     (0),
       ret_flags        (0)
 {
-    char buffer[1024];
-    char *pbuf;
-    
-    memset(buffer, 0, 1024);
-    
-    if (!mySock_->isClient() || isDaemon()){
-        erase_env();
-
-        pbuf = param( STR_X509_DIRECTORY );
-        if (pbuf) {
-            sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf);
-            putenv( strdup( buffer ) );
-	    
-            sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf);
-            putenv( strdup ( buffer ) );
-            
-            sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY,pbuf);
-            putenv( strdup ( buffer  ) );
-            
-            sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
-            putenv( strdup ( buffer ) );
-            
-            free(pbuf);
-        }
-
-        pbuf = param( STR_X509_MAPFILE );
-        if (pbuf) {
-            sprintf( buffer, "%s=%s", STR_X509_MAPFILE, pbuf);
-            putenv( strdup (buffer) );
-            free(pbuf);
-        }
-    }	
-    else{
-        pbuf = getenv(STR_X509_DIRECTORY );   
-        
-        if (pbuf) {
-	    if (!getenv(STR_X509_CERT_DIR )){	
-                sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf );
-                putenv(  strdup( buffer ) );
-	    }
-	    
-	    if (!getenv( STR_X509_USER_CERT )){	
-                sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf );
-                putenv( strdup ( buffer )  );
-	    }
-	    
-	    if (!getenv( STR_X509_USER_KEY )){	
-                sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY, pbuf );
-                putenv( strdup ( buffer )  );
-	    }
-	    
-	    if (!getenv(STR_SSLEAY_CONF)){	
-                sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf );
-                putenv( strdup ( buffer ) );
-	    }
-
-	    //free( pbuf );
-        }
-    }
-    
-    pbuf = param("CONDOR_GATEKEEPER") ; 
-    
-    if (pbuf){
-        sprintf(buffer ,"CONDOR_GATEKEEPER=%s",pbuf);
-        putenv( buffer );
-        free(pbuf);
-    }
 }
 
 Condor_Auth_X509 ::  ~Condor_Auth_X509()
@@ -133,7 +67,7 @@ int Condor_Auth_X509 :: authenticate(const char * remoteHost)
     //just like end_of_message() calls must balance!
     
     if ( !authenticate_self_gss() ) {
-        dprintf( D_ALWAYS, "authenticate: user creds not established\n" );
+        dprintf( D_SECURITY, "authenticate: user creds not established\n" );
         status = 0;
     }
     else {
@@ -186,8 +120,6 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    dprintf(D_ALWAYS,"Encrypting using X.509 %s --> %x\n", data_in, data_out);
-    
     return major_status;
 }
     
@@ -222,8 +154,6 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
     data_out = (char*)output_token -> value;
     length_out = output_token -> length;
 
-    dprintf(D_ALWAYS,"Decrypting using X.509 %x --> %s\n", data_in, data_out);
- 
     return major_status;
 }
 
@@ -266,7 +196,7 @@ void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
     }
 }
 
-int Condor_Auth_X509::get_user_x509name(char *proxy_file, char* name)
+int Condor_Auth_X509::get_user_GSIname(char *proxy_file, char* name)
 {
 
     proxy_cred_desc *     pcd = NULL;
@@ -454,7 +384,8 @@ int Condor_Auth_X509::authenticate_self_gss()
     
     priv_state priv;
     
-    if (!mySock_->isClient() || isDaemon()) {
+    //if ((!mySock_->isClient() && {
+    if (isDaemon()) {
         priv = set_root_priv();
     }
     
@@ -467,7 +398,8 @@ int Condor_Auth_X509::authenticate_self_gss()
                                                       &credential_handle);
     }
 
-    if (!mySock_->isClient() || isDaemon()) {
+    //if (!mySock_->isClient() || isDaemon()) {
+    if (isDaemon()) {
         set_priv(priv);
     }
     
@@ -475,8 +407,7 @@ int Condor_Auth_X509::authenticate_self_gss()
     
     if (major_status != GSS_S_COMPLETE)
 	{
-        sprintf(comment,"authenticate_self_gss: acquiring self 
-				credentials failed \n");
+        sprintf(comment,"authenticate_self_gss: acquiring self credentials failed. Please check your Condor configuration file if this is a server process. Or the user environment variable if this is a user process. \n");
         print_log( major_status,minor_status,0,comment); 
         credential_handle = GSS_C_NO_CREDENTIAL; 
         return FALSE;
@@ -492,21 +423,41 @@ int Condor_Auth_X509::authenticate_client_gss()
     OM_uint32	minor_status = 0;
     GSSComms    authComms;
     int         status = 0;
+    char * fqh = sin_to_hostname(mySock_->endpoint(), NULL);
 
     authComms.sock   = mySock_;
     authComms.buffer = NULL;
     authComms.size   = 0;
     
-    priv_state priv;
-    
-    char *gateKeeper = param( "CONDOR_GATEKEEPER" );
-    
-    if ( !gateKeeper ) {
-        dprintf( D_ALWAYS, "env var CONDOR_GATEKEEPER not set\n" );
+    char * daemonNames = param( "GSI_DAEMON_NAME" );
+    char * buf = NULL;
+    if (daemonNames) {
+        char *tmp;
+        char * dollar = strchr(daemonNames, '$');
+        if (dollar && (dollar+1) && (*(dollar+1) == '$')) {
+            // We have our macor, expand it into our host name
+            buf = (char *) malloc(strlen(daemonNames)+strlen(fqh));
+            strncpy(buf, daemonNames, strlen(daemonNames) - strlen(dollar));
+            tmp = buf + strlen(daemonNames) - strlen(dollar);
+            strcpy(tmp, fqh);
+            dprintf(D_FULLDEBUG, "The expanded name is %s\n", buf);
+            status = 1;
+        }
+        else {
+            dprintf(D_SECURITY, "The parameter GSI_DAEMON_NAME is not correctly specified.\n"); 
+        }
+    }
+
+    mySock_->encode();
+    if (!mySock_->code(status) || !mySock_->end_of_message()) {
         return FALSE;
     }
-    
-    //nameGssToLocal(gateKeeper);
+
+    if (status == 0) {
+        goto error;
+    }
+
+    priv_state priv;
     
     if (isDaemon()) {
         priv = set_root_priv();
@@ -515,7 +466,7 @@ int Condor_Auth_X509::authenticate_client_gss()
     major_status = globus_gss_assist_init_sec_context(&minor_status,
                                                       credential_handle,
                                                       &context_handle,
-                                                      gateKeeper,
+                                                      buf,
                                                       GSS_C_MUTUAL_FLAG,
                                                       &ret_flags, 
                                                       &token_status,
@@ -528,16 +479,17 @@ int Condor_Auth_X509::authenticate_client_gss()
     if (isDaemon()) {
         set_priv(priv);
     }
-    
+
     if (major_status != GSS_S_COMPLETE)	{
         print_log(major_status,minor_status,token_status,
-                  "Condor_Auth_X509 Failure on client side");
-        free(gateKeeper);
-        return FALSE;
+                  "Condor GSI authentication Failure on client side");
+        goto error;
     }
     
-    dprintf(D_SECURITY, "valid GSS connection established to %s\n", gateKeeper);
-    free(gateKeeper);
+    free(buf);
+    //if (!verifyServerName()) {
+    //    goto error;
+    //}
 
     //char      * proxy = NULL;
     //proxy = getenv(STR_X509_USER_PROXY);
@@ -551,7 +503,7 @@ int Condor_Auth_X509::authenticate_client_gss()
     // Now, wait for final signal
     mySock_->decode();
     if (!mySock_->code(status) || !mySock_->end_of_message()) {
-        dprintf(D_SECURITY, "Unable to receive final confirmation for GSS Authentication!\n");
+        dprintf(D_SECURITY, "Unable to receive final confirmation for GSI Authentication!\n");
         return FALSE;
     }
     if (status == 0) {
@@ -559,23 +511,40 @@ int Condor_Auth_X509::authenticate_client_gss()
         return FALSE;
     }
     
-    
+    if (daemonNames) {
+        free (daemonNames);
+    }
     return TRUE;
+ error:
+    if (daemonNames) {
+        free (daemonNames);
+    }
+    return FALSE;
 }
 
 int Condor_Auth_X509::authenticate_server_gss()
 {
     char *    GSSClientname;
-    int	      token_status = 0;
     int       status = 0;
     OM_uint32 major_status = 0;
     OM_uint32 minor_status = 0;
     GSSComms  authComms;
-    
+
     authComms.sock   = mySock_;
     authComms.buffer = NULL;
     authComms.size   = 0;
-    
+
+    // See if client is all set to go
+    mySock_->decode();
+    if (!mySock_->code(status) || !mySock_->end_of_message()) {
+        return FALSE;
+    }
+    else {
+        if (status == 0) {
+            return FALSE;
+        }
+    }
+
     priv_state priv;
     
     priv = set_root_priv();
@@ -598,7 +567,7 @@ int Condor_Auth_X509::authenticate_server_gss()
     
     if ( (major_status != GSS_S_COMPLETE)) {
         print_log(major_status,minor_status,token_status,
-                  "X509 GSS authentication failure on server side" );
+                  "Condor GSI authentication failure on server side" );
         return FALSE;
     }
     
@@ -607,7 +576,7 @@ int Condor_Auth_X509::authenticate_server_gss()
         dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
     }
     else {
-        dprintf(D_SECURITY,"Valid GSS connection established to %s\n", 
+        dprintf(D_SECURITY,"Valid GSI connection established to %s\n", 
                 GSSClientname);
     }
         
