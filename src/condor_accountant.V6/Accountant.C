@@ -23,7 +23,6 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
 {
   HalfLifePeriod=600;
   MinPriority=0.5;
-  Epsilon=0.001;
   LastUpdateTime=Time::Now();
   LogEnabled=0;
 }
@@ -46,7 +45,6 @@ Accountant::Initialize()
   tmp = param("SPOOL");
   if(tmp) {
 	  LogFileName=tmp;
-		  // LogFileName+="/p/condor/workspaces/adiel/local/spool";
 	  LogFileName+="/Accountant.log";
 	  free(tmp);
   } else {
@@ -195,11 +193,25 @@ void Accountant::UpdatePriorities(const Time& T)
 
   dprintf(D_FULLDEBUG,"Accountant::UpdatePriorities - AgingFactor=%8.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
 
+  // Trace
+  MyString TraceFileName=LogFileName+".trace";
+  struct stat buf;
+  int TraceFlag=0;
+  ofstream TraceFile;
+  if (stat(TraceFileName, &buf)==0) {
+    TraceFlag=1;
+    TraceFile.open(TraceFileName,ios::app);
+    TraceFile << setprecision(3);
+    TraceFile.setf(ios::fixed);
+    if (!TraceFile) TraceFlag=0;
+  }
+
   CustomerRecord* Customer;
   MyString CustomerName;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
     double Priority=Customer->Priority;
+	if (Priority<MinPriority) Priority=MinPriority;
     double UnchargedResources=0;
     if (TimePassed>0) UnchargedResources=(Customer->UnchargedTime/TimePassed);
     double ResourcesUsed=Customer->ResourceNames.Count();
@@ -213,11 +225,17 @@ void Accountant::UpdatePriorities(const Time& T)
 
     Customer->UnchargedTime=0;
     Customer->Priority=Priority;
-    if (Customer->Priority<Epsilon && Customer->ResourceNames.Count()==0) {
+    if (Customer->Priority<MinPriority && Customer->ResourceNames.Count()==0) {
       delete Customer;
       Customers.remove(CustomerName);
     }
+    else if (TraceFlag) {
+      TraceFile << T << "," << CustomerName << "," << Priority << "," << ResourcesUsed << endl;
+    }	
+
   }
+
+  if (TraceFlag) TraceFile.close();
 
   SaveState();
 }
@@ -274,7 +292,7 @@ AttrList* Accountant::ReportState() {
   int OwnerNum=1;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
-    if (Customer->Priority<MinPriority) continue;
+    // if (Customer->Priority<MinPriority) continue;
     sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
     ad->Insert(tmp);
     sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
