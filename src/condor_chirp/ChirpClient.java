@@ -6,10 +6,10 @@ import java.net.*;
 
 public class ChirpClient {
 
-	private File file=null;
 	private Socket socket=null;
-	private PrintWriter output=null;
-	private BufferedReader input=null;
+	private OutputStream output=null;
+	private InputStream input=null;
+	final private String encoding = "US-ASCII";
 
 	/**
 	Connect and authenticate to the default Chirp server.
@@ -18,7 +18,14 @@ public class ChirpClient {
 	*/
 
 	public ChirpClient() throws IOException {
-		ChirpConfig config = new ChirpConfig("chirp.config");
+		ChirpConfig config;
+		try {
+			String filename = System.getProperty("chirp.config");
+			if(filename==null) throw new ChirpError("system property chirp.config is not defined!");
+			config = new ChirpConfig(filename);
+		} catch( Exception e ) {
+			throw new ChirpError(e);
+		}
 		connect(config.getHost(),config.getPort());
 		cookie(config.getCookie());
 	}
@@ -40,8 +47,8 @@ public class ChirpClient {
 		int response;
 
 		socket = new Socket(host,port);
-		output = new PrintWriter(socket.getOutputStream());
-		input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		output = socket.getOutputStream();
+		input = socket.getInputStream();
 	}
 
 	/**
@@ -49,17 +56,19 @@ public class ChirpClient {
 	This call must be done before any other Chirp calls.
 	If it is not, other methods are likely to throw exceptions indicating "not authenticated."
 	@param c The cookie to present.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public void cookie( String c ) throws IOException {
 		int response;
 		try {
-			output.println("cookie "+c);
+			String line ="cookie "+c+"\n";	
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		returnOrThrow(response);
 	}
@@ -78,17 +87,19 @@ public class ChirpClient {
 		<li> a - modifies 'w' to always append
 		<ul>
 	@param mode If created , the initial UNIX access mode.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public int open( String path, String flags, int mode ) throws IOException {
 		int response;
 		try {
-			output.println("open "+path+" "+flags+" "+mode);
+			String line ="open "+path+" "+flags+" "+mode+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		return returnOrThrow(response);
 	}
@@ -96,17 +107,19 @@ public class ChirpClient {
 	/**
 	Close a file.
 	@param fd The file descriptor to close.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public void close( int fd ) throws IOException {
 		int response;
 		try {
-			output.println("close "+fd);
+			String line = "close "+fd+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		returnOrThrow(response);
 	}
@@ -118,22 +131,24 @@ public class ChirpClient {
 	@param pos The position in the buffer to start.
 	@param length The maximum number of elements to read.
 	@returns The number of elements actually read.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
-	public int read( int fd, char [] buffer, int pos, int length ) throws IOException {
+	public int read( int fd, byte [] buffer, int pos, int length ) throws IOException {
 		int response,actual;
 
 		try {
-			output.println("read "+fd+" "+length);
+			String line = "read "+fd+" "+length+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 			if(response>0) {
-				actual = fullRead(buffer,pos,length);
-				if(actual!=length) throw new ChirpException();
+				actual = fullRead(buffer,pos,response);
+				if(actual!=response) throw new ChirpError("server disconnected");
 			}
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		return returnOrThrow(response);
 	}
@@ -146,18 +161,21 @@ public class ChirpClient {
 	@param pos The position in the buffer to start.
 	@param length The maximum number of elements to write.
 	@returns The number of elements actually written.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
-	public int write( int fd, char [] buffer, int pos, int length ) throws IOException {
+	public int write( int fd, byte [] buffer, int pos, int length ) throws IOException {
 		int response;
+
 		try {
-			output.println("write "+fd+" "+length);
+			String line = "write "+fd+" "+length+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.write(buffer,pos,length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		return returnOrThrow(response);
 	}
@@ -172,17 +190,19 @@ public class ChirpClient {
 	@param offset The number of bytes to change.
 	@param whence The source of the seek: SEEK_SET, SEEK_CUR, or SEEK_END.
 	@returns The new file position, measured from the beginning of the file.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public int lseek( int fd, int offset, String whence ) throws IOException {
 		int response;
-		try {
-			output.println("seek "+fd+" "+offset+" "+whence);
+		try {	
+			String line ="seek "+fd+" "+offset+" "+whence+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		return returnOrThrow(response);
 	}
@@ -190,17 +210,19 @@ public class ChirpClient {
 	/**	
 	Delete a file.
 	@param name The name of the file.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public void unlink( String name ) throws IOException {
 		int response;
 		try {
-			output.println("unlink "+name);
+			String line ="unlink "+name+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		returnOrThrow(response);
 	}
@@ -209,17 +231,19 @@ public class ChirpClient {
 	Rename a file.
 	@param name The old name.
 	@param newname The new name.
-	@throws IOException, ChirpException
+	@throws IOException, ChirpError
 	*/
 
 	public void rename( String name, String newname ) throws IOException {
 		int response;
 		try {
-			output.println("rename "+name+" "+newname);
+			String line ="rename "+name+" "+newname+"\n";
+			byte [] bytes = line.getBytes(encoding);
+			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
-			throw new ChirpException(e);
+			throw new ChirpError(e);
 		}
 		returnOrThrow(response);
 	}
@@ -254,7 +278,7 @@ public class ChirpClient {
 		}
 	}
 
-	private int fullRead( char [] buffer, int offset, int length ) throws IOException {
+	private int fullRead( byte [] buffer, int offset, int length ) throws IOException {
 		int total=0;
 		int actual;
 
@@ -273,18 +297,35 @@ public class ChirpClient {
 
 	private int getResponse() throws IOException {
 		int response;
-		String line;
+		String line="";
+		String digit;
+		byte [] b = new byte[1];
 
-		line = input.readLine();
-		if(line==null) throw new ProtocolException("server disconnected unexpectedly");
-		return Integer.parseInt(line);
+		while(true) {
+			b[0] = (byte) input.read();
+			digit = new String(b,0,1,encoding);
+
+			if(digit.charAt(0)=='\n') {
+				if(line.length()>0) {
+					return Integer.parseInt(line);
+				} else {
+					continue;
+				}
+			} else {
+				line = line+digit;
+			}
+		}
 	}
 }
 
-class ChirpException extends RuntimeException {
-	ChirpException( String s ) {
-		super("Chirp: exception while performing RPC: "+ e.toString());
+class ChirpError extends Error {
+	ChirpError( String s ) {
+		super("Chirp: "+ s);
 	}
+	ChirpError( Exception e ) {
+		super("Chirp: " +e.toString());
+	}
+
 }
 
 

@@ -14,11 +14,11 @@ LDFLAGS =
 AR = ar
 ARFLAGS =
 
-all: ChirpTest.jar chirp_test
+all: Chirp.jar chirp_test
 
-ChirpTest.jar: ChirpTest.java ChirpClient.java ChirpConfig.java ChirpReader.java ChirpWriter.java
+Chirp.jar: ChirpTest.java ChirpClient.java ChirpConfig.java ChirpInputStream.java ChirpOutputStream.java
 	${JAVAC} ${JAVACFLAGS} -d . $^
-	${JAR} ${JARFLAGS} cvf $@ edu
+	${JAR} ${JARFLAGS} cf $@ edu
 
 chirp_test: chirp_test.o chirp_client.o
 	${LD} ${LDFLAGS} $^ -o $@ -lnsl

@@ -1,5 +1,6 @@
 
 package edu.wisc.cs.condor.chirp;
+
 import java.io.*;
 
 public class ChirpTest {
@@ -9,19 +10,14 @@ public class ChirpTest {
 		try {
 			String line;
 
-			BufferedReader in = new BufferedReader(new ChirpReader(new ChirpClient(),"/etc/hosts"));
-			PrintWriter out = new PrintWriter(new ChirpWriter(new ChirpClient(),"/tmp/outfile"));
+			BufferedReader in = new BufferedReader(new InputStreamReader(new ChirpInputStream(args[0])));
+			PrintWriter out = new PrintWriter(new OutputStreamWriter(new ChirpOutputStream(args[1])));
 
 			while(true) {
 				line = in.readLine();
 				if(line==null) break;
 				out.println(line);
 			}
-
-			ChirpClient cc = new ChirpClient();
-
-			cc.rename("/tmp/outfile","/tmp/outfile.renamed");
-			cc.unlink("/tmp/outfile.renamed");
 
 			System.out.println("done!");
 

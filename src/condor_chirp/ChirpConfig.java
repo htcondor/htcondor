@@ -11,14 +11,13 @@ public class ChirpConfig {
 	private int port;
 
 	public ChirpConfig( String filename ) throws IOException {
-		String portstr;
 		BufferedReader br = new BufferedReader(new FileReader(filename));
 		StringTokenizer st = new StringTokenizer(br.readLine());
 
 		host = st.nextToken();
-		portstr = st.nextToken();
-		cookie = st.nextToken();
+		String portstr = st.nextToken();
 		port = Integer.parseInt(portstr);
+		cookie = st.nextToken();
 	}
 
 	public String getHost() {
