@@ -117,31 +117,36 @@ EventDaemon::Config()
 int
 EventDaemon::Timeout()
 {
-	int TimeToNearestEvent = INT_MAX;
+	int TimeToNearestEvent = -1;
+	bool EventActive = false;
 	for (int ev=0; ev < NumEvents; ev++) {
-		if (EventList[ev] &&
-			EventList[ev]->IsValid() && !EventList[ev]->IsActive()) {
-			int TimeToEvent = EventList[ev]->TimeToEvent();
-			if (TimeToNearestEvent > TimeToEvent) {
-				TimeToNearestEvent = TimeToEvent;
-			}
-			if (MaxEventPreparation == 0 ||
-				TimeToEvent <= MaxEventPreparation) {
-				int TimeNeeded = EventList[ev]->TimeNeeded();
-				dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d, TimeNeeded=%d\n",
-						EventList[ev]->Name(), TimeToEvent, TimeNeeded);
-				if (TimeNeeded + EventInterval >= TimeToEvent) {
-					dprintf(D_ALWAYS, "%s: Activating...\n",
-							EventList[ev]->Name());
-					EventList[ev]->ActivateEvent();
-				}
+		if (EventList[ev] && EventList[ev]->IsValid()) {
+			if (EventList[ev]->IsActive()) {
+				EventActive = true;
 			} else {
-				dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d\n",
-						EventList[ev]->Name(), TimeToEvent);
+				int TimeToEvent = EventList[ev]->TimeToEvent();
+				if (TimeToNearestEvent > TimeToEvent ||
+					TimeToNearestEvent == -1) {
+					TimeToNearestEvent = TimeToEvent;
+				}
+				if (MaxEventPreparation == 0 ||
+					TimeToEvent <= MaxEventPreparation) {
+					int TimeNeeded = EventList[ev]->TimeNeeded();
+					dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d, TimeNeeded=%d\n",
+							EventList[ev]->Name(), TimeToEvent, TimeNeeded);
+					if (TimeNeeded + EventInterval >= TimeToEvent) {
+						dprintf(D_ALWAYS, "%s: Activating...\n",
+								EventList[ev]->Name());
+						EventList[ev]->ActivateEvent();
+					}
+				} else {
+					dprintf(D_FULLDEBUG, "%s: TimeToEvent=%d\n",
+							EventList[ev]->Name(), TimeToEvent);
+				}
 			}
 		}
 	}
-	if (TimeToNearestEvent > MaxEventPreparation) {
+	if (!EventActive && TimeToNearestEvent > MaxEventPreparation) {
 		dprintf(D_FULLDEBUG, "All events are a long way off.\n");
 		dprintf(D_FULLDEBUG, "Next Timeout() will occur in %d seconds.\n",
 				TimeToNearestEvent-MaxEventPreparation);
