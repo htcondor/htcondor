@@ -404,25 +404,18 @@ int SetCkptServerHost(const char *host)
 
 static char* getserveraddr()
 {
-	struct hostent* h;
+	struct hostent* h = NULL;
 
-	if (server_host) {
-		h = gethostbyname(server_host);
-	} else {
-		dprintf(D_FULLDEBUG,
-				"Can't get address for checkpoint server host: %s\n",
-				(server_host) ? server_host : "(NULL)");
+	if (server_host == NULL) return NULL;
+
+	h = gethostbyname(server_host);
+	if (h == NULL) {
+		dprintf(D_ALWAYS,
+				"Can't get address for checkpoint server host %s: %s\n",
+				(server_host) ? server_host : "(NULL)", strerror(errno));
 		return NULL;
 	}
-	if (h == NULL) {
-		fprintf(stderr, "\nERROR:\n");
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n", 
-				(int) getpid());
-		fprintf(stderr, "ERROR:\n");
-		fprintf(stderr, "ERROR:\n\n");
-		return NULL;
-        }
+
 	return(h->h_addr);
 }
 
