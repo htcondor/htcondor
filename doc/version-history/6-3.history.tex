@@ -96,6 +96,18 @@ and with post-6.3.1 releases in this development series.
 The \Condor{run} script now correctly exits when it sees a job aborted
 event, instead of hanging, waiting for a termination event.
 
+\item
+Until now, when a DAG node's Condor job failed, the node failed,
+regardless of whether its POST script succeeded or failed.  This was a
+bug, because it prevented users from using POST scripts to evaluate
+jobs with non-zero exit codes and deem them successful anyway.  This
+has now been fixed -- a node's success is equal to its POST script's
+success -- but the change may affect existing DAGs which rely on the
+old, broken behavior.  Users utilizing POST scripts must now be sure
+to pass the POST script the job's return value, and return it again,
+if they do not wish to alter it; otherwise failed jobs will be masked
+by ignorant POST scripts which always succeed.
+
 \end{itemize}
 
 \noindent Known Bugs:
