@@ -368,16 +368,22 @@ $(STATIC_DIR)/##dir##/##dest##: 			@@\
 */
 #ifndef all_link_target
 #define all_link_target( src, dest )		@@\
-all::						@@\
+all:: dest					@@\
+dest: src					@@\
 	/bin/rm -f dest				@@\
-	ln src dest
+	ln src dest				@@\
+clean::						@@\
+	/bin/rm -f dest
 #endif /* all_link_target */
 
 #ifndef all_symlink_target
 #define all_symlink_target( src, dest )		@@\
-all::						@@\
+all:: dest					@@\
+dest: src					@@\
 	/bin/rm -f dest				@@\
-	ln -s src dest
+	ln -s src dest				@@\
+clean::						@@\
+	/bin/rm -f dest
 #endif /* all_symlink_target */
 
 
@@ -431,7 +437,7 @@ afs_##name##:: strip_##type##/##name			@@\
 							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name files
+	cd strip_##type##; tar -cvf name --owner=root --group=root files
 #endif /* strip_full_tarball */
 
 #ifndef static_full_tarball
@@ -444,7 +450,7 @@ afs_##name##:: static_##type##/##name			@@\
 							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name files
+	cd static_##type##; tar -cvf name --owner=root --group=root files
 #else 
 #define static_full_tarball( name, files, type ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -554,7 +560,7 @@ VLINK( compiler, vanillatarg, obj );
 */
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
-	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(ALL_LDFLAGS) @@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) remotetarg		@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
@@ -566,7 +572,7 @@ all:: remotetarg
 */
 #define VLINK( compiler, vanillatarg, obj )			@@\
 vanillatarg: obj fake_ckpt.o					@@\
-	compiler -o vanillatarg obj fake_ckpt.o	$(ALL_LDFLAGS)	@@\
+	compiler -o vanillatarg obj fake_ckpt.o	$(TEST_LDFLAGS)	@@\
 								@@\
 clean::								@@\
 	rm -f vanillatarg obj					@@\
@@ -590,9 +596,12 @@ all:: compiledir compiledir##/Makefile				@@\
 								@@\
 compiledir##: 							@@\
 	mkdir compiledir					@@\
+								@@\
+compiledir##/Imakefile:	CImakefile				@@\
+	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CImakefile Imakefile		@@\
 								@@\
-compiledir##/Makefile: compiledir				@@\
+compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
 	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 	   -DC_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
@@ -607,9 +616,12 @@ all:: compiledir compiledir##/Makefile				@@\
 								@@\
 compiledir##: 							@@\
 	mkdir compiledir					@@\
+								@@\
+compiledir##/Imakefile: CPPImakefile				@@\
+	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
 								@@\
-compiledir##/Makefile: compiledir				@@\
+compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
 	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 	   -DCPP_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
@@ -624,9 +636,12 @@ all:: compiledir compiledir##/Makefile				@@\
 								@@\
 compiledir##:							@@\
 	mkdir compiledir					@@\
+								@@\
+compiledir##/Imakefile: FImakefile				@@\
+	cd compiledir; /bin/rm -f Imakefile			@@\
 	cd compiledir; ln -s ../FImakefile Imakefile		@@\
 								@@\
-compiledir##/Makefile: compiledir				@@\
+compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
 	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
 		-DFORTRAN_HAS_RECURSION=##has_recursion \	@@\
 		-DF_COMPILER=##compiler	\			@@\
