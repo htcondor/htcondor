@@ -1293,6 +1293,9 @@ SegMap::Read( int fd, ssize_t pos )
 				  MAP_PRIVATE|MAP_FIXED, zfd,
 				  (off_t)0)) == MAP_FAILED) {
 #elif defined(IRIX)
+			// Irix 6.5 dumps some garbage in the protection bits that
+			// makes the mmap fail.  So, we need to clean out the garbage.
+		saved_prot &= (PROT_READ | PROT_WRITE | PROT_EXEC);
 		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
 				 (saved_prot|PROT_WRITE)&(~MA_SHARED),
 				 MAP_PRIVATE|MAP_FIXED, zfd,
