@@ -457,7 +457,7 @@ command_query_ads( Service*, int, Stream* stream)
 		// Now, find the ClassAds that match.
 	stream->encode();
 	ads.Open();
-	while( ad = ads.Next() ) {
+	while( (ad = ads.Next()) ) {
 		if( (*ad) >= queryAd ) {
 			if( !stream->code(more) || !ad->put(*stream) ) {
 				dprintf (D_ALWAYS, 
@@ -504,8 +504,8 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 
 	ClassAd	*req_classad = new ClassAd, *mach_classad = rip->r_classad;
 	int cmd, mach_requirements = 1, req_requirements = 1;
-	float rank = -1;
-	float oldrank = -1;
+	float rank = 0;
+	float oldrank = 0;
 	char *client_addr = NULL;
 	int interval;
 	State s = rip->state();

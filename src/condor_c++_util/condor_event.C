@@ -37,25 +37,25 @@
 					 return 0; }
 
 const char * ULogEventNumberNames[] = {
-	"ULOG_SUBMIT          ", // Job submitted
-	"ULOG_EXECUTE         ", // Job now running
-	"ULOG_EXECUTABLE_ERROR", // Error in executable
-	"ULOG_CHECKPOINTED    ", // Job was checkpointed
-	"ULOG_JOB_EVICTED     ", // Job evicted from machine
-	"ULOG_JOB_TERMINATED  ", // Job terminated
-	"ULOG_IMAGE_SIZE      ", // Image size of job updated
-	"ULOG_SHADOW_EXCEPTION", // Shadow threw an exception
-	"ULOG_JOB_SUSPENDED   ", // Job was suspended
-	"ULOG_JOB_UNSUSPENDED "  // Job was unsuspended
-	"ULOG_JOB_HELD        "  // Job was held
-	"ULOG_JOB_RELEASED    "  // Job was released
+	"ULOG_SUBMIT",					// Job submitted
+	"ULOG_EXECUTE",					// Job now running
+	"ULOG_EXECUTABLE_ERROR",		// Error in executable
+	"ULOG_CHECKPOINTED",			// Job was checkpointed
+	"ULOG_JOB_EVICTED",				// Job evicted from machine
+	"ULOG_JOB_TERMINATED",			// Job terminated
+	"ULOG_IMAGE_SIZE",				// Image size of job updated
+	"ULOG_SHADOW_EXCEPTION",		// Shadow threw an exception
+	"ULOG_JOB_SUSPENDED",			// Job was suspended
+	"ULOG_JOB_UNSUSPENDED",			// Job was unsuspended
+	"ULOG_JOB_HELD",  				// Job was held
+	"ULOG_JOB_RELEASED",  			// Job was released
 #if defined(GENERIC_EVENT)
-	,"ULOG_GENERIC        "
+	"ULOG_GENERIC",
 #endif	    
-	,"ULOG_JOB_ABORTED    "  // Job aborted
-	,"ULOG_NODE_EXECUTE   "  // Node executing
-	,"ULOG_NODE_TERMINATED"  // Node terminated
-,
+	"ULOG_JOB_ABORTED",  			// Job aborted
+	"ULOG_NODE_EXECUTE",  			// MPI Node executing
+	"ULOG_NODE_TERMINATED",  		// MPI Node terminated
+	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -120,6 +120,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_NODE_TERMINATED:
 		return new NodeTerminatedEvent;
+
+	case ULOG_POST_SCRIPT_TERMINATED:
+		return new PostScriptTerminatedEvent;
 
 	  default:
         EXCEPT( "Invalid ULogEventNumber" );
@@ -1053,3 +1056,64 @@ NodeTerminatedEvent::readEvent( FILE *file )
 	return TerminatedEvent::readEvent( file, "Node" );
 }
 
+
+// ----- PostScriptTerminatedEvent class
+
+PostScriptTerminatedEvent::
+PostScriptTerminatedEvent()
+{
+	eventNumber = ULOG_POST_SCRIPT_TERMINATED;
+	normal = false;
+	returnValue = -1;
+	signalNumber = -1;
+}
+
+
+PostScriptTerminatedEvent::
+~PostScriptTerminatedEvent()
+{
+}
+
+
+int PostScriptTerminatedEvent::
+writeEvent( FILE* file )
+{
+    if( fprintf( file, "POST Script terminated.\n" ) < 0 ) {
+        return 0;
+    }
+
+    if( normal ) {
+        if( fprintf( file, "\t(1) Normal termination (return value %d)\n", 
+					 returnValue ) < 0 ) {
+            return 0;
+        }
+    } else {
+        if( fprintf( file, "\t(0) Abnormal termination (signal %d)\n",
+					 signalNumber ) < 0 ) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+
+int PostScriptTerminatedEvent::
+readEvent( FILE* file )
+{
+	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &normal ) != 1 ) {
+		return 0;
+	}
+
+    if( normal ) {
+        if( fscanf( file, "Normal termination (return value %d)",
+					&returnValue ) != 1 ) {
+            return 0;
+		}
+    } else {
+        if( fscanf( file, "Abnormal termination (signal %d)",
+					&signalNumber ) != 1 ) {
+            return 0;
+		}
+    }
+    return 1;
+}

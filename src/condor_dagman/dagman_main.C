@@ -33,8 +33,9 @@
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
-bool run_post_on_failure;	// for DAGMAN_RUN_POST_ON_FAILURE config setting
+bool run_post_on_failure = TRUE;
 
+char* lockFileName = NULL;
 char* DAGManJobId;
 
 // Required for linking with condor libs
@@ -45,13 +46,15 @@ class Global {
     inline Global ():
         dag          (NULL),
         maxJobs      (0),
-        maxScripts   (0),
+        maxPreScripts (0),
+        maxPostScripts (0),
         rescue_file  (NULL),
         datafile     (NULL) {}
     inline void CleanUp () { delete dag; }
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
-    int maxScripts;  // max. number of PRE/POST scripts to run at once
+    int maxPreScripts;  // max. number of PRE scripts to run at once
+    int maxPostScripts;  // max. number of POST scripts to run at once
     char *rescue_file;
     char *datafile;
 };
@@ -68,7 +71,9 @@ static void Usage() {
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
             "\t\t[-MaxJobs] <int N>\n\n"
-            "\t\t[-MaxScripts] <int N>\n\n"
+            "\t\t[-MaxPre] <int N>\n\n"
+            "\t\t[-MaxPost] <int N>\n\n"
+            "\t\t[-NoPostFail]\n\n"
             "\twhere NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
@@ -87,18 +92,10 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 
-int main_config() { 
-	char* s = param( "DAGMAN_RUN_POST_ON_FAILURE" );
-	if( s != NULL && !strcasecmp( s, "TRUE" ) ) {
-		run_post_on_failure = TRUE;
-	}	
-	else {
-		run_post_on_failure = FALSE;
-	}
-	if( s != NULL ) {
-		free( s );
-	}
-    return TRUE;
+int
+main_config()
+{
+	return 0;
 }
 
 int
@@ -121,6 +118,7 @@ int main_shutdown_remove(Service *, int) {
         debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
         G.dag->Rescue(G.rescue_file, G.datafile);
     }
+	unlink( lockFileName ); 
 	main_shutdown_graceful();
 	return FALSE;
 }
@@ -142,7 +140,6 @@ int main_init (int argc, char **argv) {
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
     char *condorLogName  = NULL;
-    char *lockFileName   = NULL;
 
     for (int i = 0 ; i < argc ; i++) {
         printf ("argv[%d] == \"%s\"\n", i, argv[i]);
@@ -205,13 +202,27 @@ int main_init (int argc, char **argv) {
             }
             G.maxJobs = atoi (argv[i]);
         } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
+			debug_println( DEBUG_SILENT, "-MaxScripts has been replaced with "
+						   "-MaxPre and -MaxPost arguments" );
+			Usage();
+        } else if( !strcmp( "-MaxPre", argv[i] ) ) {
             i++;
             if( argc <= i ) {
                 debug_println( DEBUG_SILENT,
-							   "Integer missing after -MaxScripts" );
+							   "Integer missing after -MaxPre" );
                 Usage();
             }
-            G.maxScripts = atoi( argv[i] );
+            G.maxPreScripts = atoi( argv[i] );
+        } else if( !strcmp( "-MaxPost", argv[i] ) ) {
+            i++;
+            if( argc <= i ) {
+                debug_println( DEBUG_SILENT,
+							   "Integer missing after -MaxPost" );
+                Usage();
+            }
+            G.maxPostScripts = atoi( argv[i] );
+        } else if( !strcmp( "-NoPostFail", argv[i] ) ) {
+			run_post_on_failure = FALSE;
         } else Usage();
     }
   
@@ -235,8 +246,12 @@ int main_init (int argc, char **argv) {
         debug_println (DEBUG_SILENT, "-MaxJobs must be non-negative");
         Usage();
     }
-    if( G.maxScripts < 0 ) {
-        debug_println( DEBUG_SILENT, "-MaxScripts must be non-negative" );
+    if( G.maxPreScripts < 0 ) {
+        debug_println( DEBUG_SILENT, "-MaxPre must be non-negative" );
+        Usage();
+    }
+    if( G.maxPostScripts < 0 ) {
+        debug_println( DEBUG_SILENT, "-MaxPost must be non-negative" );
         Usage();
     }
  
@@ -270,7 +285,8 @@ int main_init (int argc, char **argv) {
     // Create the DAG
     //
   
-    G.dag = new Dag( condorLogName, lockFileName, G.maxJobs, G.maxScripts );
+    G.dag = new Dag( condorLogName, G.maxJobs, G.maxPreScripts,
+					 G.maxPostScripts );
 
     if( G.dag == NULL ) {
         EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
@@ -342,11 +358,12 @@ print_status() {
     (void)time( (time_t*)&clock );
     tm = localtime( (time_t*)&clock );
 	debug_printf( DEBUG_VERBOSE, "%02d/%02d %02d:%02d:%02d: %d/%d done, "
-				  "%d failed, %d submitted, %d ready, %d script%s\n",
+				  "%d failed, %d submitted, %d ready, %d:%d script%s\n",
 				  tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min,
 				  tm->tm_sec, G.dag->NumJobsDone(), G.dag->NumJobs(),
 				  G.dag->NumJobsFailed(), G.dag->NumJobsSubmitted(),
-				  G.dag->NumJobsReady(), G.dag->NumScriptsRunning(),
+				  G.dag->NumJobsReady(), G.dag->NumPreScriptsRunning(),
+				  G.dag->NumPostScriptsRunning(),
 				  G.dag->NumScriptsRunning() == 1 ? "" : "s" );
 	return;
 }
@@ -380,6 +397,7 @@ void main_timer () {
             G.dag->RemoveRunningJobs();
             debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
             G.dag->Rescue(G.rescue_file, G.datafile);
+			unlink( lockFileName );
 			main_shutdown_graceful();
 			return;
         }
@@ -431,6 +449,7 @@ void main_timer () {
 		else {
 			debug_println( DEBUG_NORMAL, "Rescue file not defined..." );
 		}
+		unlink( lockFileName );
 		main_shutdown_graceful();
     }
 }

@@ -2,6 +2,13 @@
        The state of the V6_3-branch before merging in the
        V6_3_0-branch as tagged at V6_3_0-merge-1.
 
+5/1/01 V6_3_0-merge-1
+        The state of the V6_3_0-branch when we first merged it into
+        the V6_3-branch for the new syscall branch and the air force. 
+
+4/20/01 V6_3_0
+	The 6.3.0 release, which lives on V6_3_0-branch.
+
 4/19/01  V6_3-pre-kerberos
     A tag VALID ONLY ON SRC that represents the 6_3-branch right before
     Hao checked in his Kerberos stuff. Some files in config/ were checked

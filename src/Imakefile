@@ -16,24 +16,12 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
-#define MpiFiles sbin/condor_starter.v61 sbin/rsh
-
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
 #define SDKFiles src include lib/libcondorsdk.a
-
-#define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status \
-  sbin/condor_vacate sbin/condor_checkpoint
-
-#define SMPContribFiles etc/examples/condor_config.local.smp \
-  sbin/condor_starter
-
-#define ViewServerFiles sbin/condor_collector sbin/condor_stats
-
-#define ViewServerContribFiles etc/examples/condor_config.local.view_server
 
 #define ViewClientFiles sbin/condor_stats
 
@@ -141,9 +129,6 @@ contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
 /* contrib_tarball( sdk.tar, SDKFiles ) */
 
-both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
-both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
-
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
@@ -154,12 +139,9 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-contrib_tarball( mpi.tar, MpiFiles )
+all_tarballs: ckpt_server.tar eventd.tar PvmTar
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
-
-afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
+afs_tarballs: afs_release.tar afs_ckpt_server.tar afs_eventd.tar AfsPvmTar 
 
 public:: all_tarballs
 

@@ -68,7 +68,8 @@ enum ULogEventNumber {
 #endif      
     /** Job Aborted               */  ULOG_JOB_ABORTED,
     /** Node executed   	      */  ULOG_NODE_EXECUTE,
-    /** Node terminated	    	  */  ULOG_NODE_TERMINATED
+    /** Node terminated	    	  */  ULOG_NODE_TERMINATED,
+    /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -590,6 +591,37 @@ class NodeTerminatedEvent : public TerminatedEvent
 
 		/// node identifier for this event
 	int node;
+};
+
+
+class PostScriptTerminatedEvent : public ULogEvent
+{
+ public:
+    ///
+    PostScriptTerminatedEvent();
+    ///
+    ~PostScriptTerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    int readEvent( FILE* file );
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    int writeEvent( FILE* file );
+
+    /// did it exit normally
+    bool normal;
+
+    /// return value (valid only on normal exit)
+    int returnValue;
+
+    /// terminating signal (valid only on abnormal exit)
+    int signalNumber;
 };
 
 

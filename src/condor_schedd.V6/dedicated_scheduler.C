@@ -298,8 +298,12 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 	ClassAd* candidate;
 	int req;
 	
-	dprintf( D_FULLDEBUG, "Checking resources available at time %d\n", 
-			 (int)time );
+	if( time == -1 ) {
+		dprintf( D_FULLDEBUG, "Checking unclaimed resources\n" );
+	} else {
+		dprintf( D_FULLDEBUG, "Checking resources available at time %d\n",
+				 (int)time );
+	}
 
 	res_list->Rewind();
 	num_matches = 0;
@@ -350,7 +354,6 @@ DedicatedScheduler::DedicatedScheduler()
 	idle_clusters = NULL;
 	avail_time_list = NULL;
 	resources = NULL;
-	resource_requests = NULL;
 	unclaimed_resources = NULL;
 	hdjt_tid = -1;
 	sanity_tid = -1;
@@ -362,8 +365,7 @@ DedicatedScheduler::DedicatedScheduler()
 		( 199, hashFunction );
 	all_matches_by_cap = new HashTable < HashKey, match_rec*>
 		( 199, hashFunction );
-	resource_requests = new HashTable < HashKey, ClassAd*>
-		( 199, hashFunction );
+	resource_requests = new Queue<ClassAd*>(64);
 
 	num_matches = 0;
 
@@ -412,14 +414,9 @@ DedicatedScheduler::~DedicatedScheduler()
 	}
 	delete all_matches;
 
-	if( resource_requests ) { 
-		ClassAd* ad;
-		resource_requests->startIterations();
-		while( resource_requests->iterate( ad ) ) {
-			delete ad;
-		}
-		delete resource_requests;
-	}
+		// Clear out the resource_requests queue
+	clearResourceRequests();  	// Delete classads in the queue
+	delete resource_requests;	// Delete the queue itself 
 }
 
 
@@ -594,24 +591,17 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 		// all of this stuff?
 	id.cluster = id.proc = 0;
 
-	if( resource_requests ) {
-		max_reqs = resource_requests->getNumElements();
-	} else {
-		max_reqs = 0;
-	}
+	max_reqs = resource_requests->Length();
 	
-		// Create a list for unfulfilled requests
-	HashTable<HashKey,ClassAd*>* unmet_requests = 
-		new HashTable<HashKey, ClassAd*>( 199, hashFunction );
+		// Create a queue for unfulfilled requests
+	Queue<ClassAd*>* unmet_requests;
+	if( max_reqs > 4 ) {
+		unmet_requests = new Queue<ClassAd*>( max_reqs ); 
+	} else {
+		unmet_requests = new Queue<ClassAd*>( 4 ); 
+	}
 
-	resource_requests->startIterations();
-	while( (resource_requests->iterate(key,req)) ) {
-
-			// No matter what happens, we're going to be done w/ this
-			// request in the current request list.  Either we'll just
-			// delete the request, b/c it will have been fulfilled, or
-			// we'll put it on the list of unmet requests.
-		resource_requests->remove(key);
+	while( resource_requests->dequeue(req) >= 0 ) {
 
 		serviced_other_commands += daemonCore->ServiceCommandSocket();
 #if 0
@@ -648,17 +638,16 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 				// The CM told us we had to stop negotiating.
 
 				// First of all, the current request is still unmet. 
-			unmet_requests->insert( key, req );
+			unmet_requests->enqueue( req );
 
 				// Now, the rest of the requests still in our list are
 				// also unmet...
-			while( (resource_requests->iterate(key,req)) ) {
-				unmet_requests->insert( key, req );
-				resource_requests->remove( key );
+			while( resource_requests->dequeue(req) >= 0 ) {
+				unmet_requests->enqueue( req );
 			}
 			
-				// Now, switch over our list of unmet requests to be
-				// the main list, and deallocate the old main list. 
+				// Now, switch over our queue of unmet requests to be 
+				// the main queue, and deallocate the old main one.
 			delete resource_requests;
 			resource_requests = unmet_requests;
 
@@ -688,7 +677,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 				// This request was rejected.  Save it in our list
 				// of unmet requests.
 			reqs_rejected++;
-			unmet_requests->insert( key, req );
+			unmet_requests->enqueue( req );
 
 				// That's all we can do, go onto the next req.
 			break;
@@ -711,7 +700,7 @@ DedicatedScheduler::negotiate( Stream* s, char* negotiator_name )
 		/*
 		  If we broke out of here, we ran out of resource requests.
 		  If there's anything in unmet_requests, we want that to be
-		  our new resource_requests table.  In fact, even if
+		  our new resource_requests queue.  In fact, even if
 		  unmet_requests is empty, we still want to use that, since we
 		  need to delete one of them to avoid leaking memory, and we
 		  might as well just always use unmet_requests as the requests
@@ -1997,6 +1986,11 @@ DedicatedScheduler::computeSchedule( void )
 	int i, l, last;
 	MRecArray* new_matches;
 
+		//----------------------------------------------------------
+		// First, we need to do some clean-up, so we create a fresh
+		// schedule from scratch, given the current state of things. 
+		//----------------------------------------------------------
+
 		// Clear out the "scheduled" flag in all of our match_recs
 		// that aren't already allocated to a job, so we can set them
 		// correctly as we create the new schedule.
@@ -2006,6 +2000,20 @@ DedicatedScheduler::computeSchedule( void )
 			mrec->scheduled = false;
 		}
     }
+
+		// Now, we want to remove any stale resource requests we might
+		// still have.  If we decided we want to negotiate for some
+		// resources the last time around, and those still haven't
+		// been serviced, we want to get rid of them at this point.
+		// If nothing's changed, we'll make the same decisions this
+		// time through, and end up with the same set of requests.  If
+		// things have changed, we don't want to act on our old
+		// decisions... 
+	clearResourceRequests();
+
+		//----------------------------------------------------------
+		// Clean-up is done, actually compute a schedule...
+		//----------------------------------------------------------
 
 		// For each job, try to satisfy it as soon as possible.
 	l = idle_clusters->getlast();
@@ -2231,8 +2239,8 @@ DedicatedScheduler::computeSchedule( void )
 
 			un_candidates->Rewind();
 			while( (ad = un_candidates->Next()) ) {
-					// Make a request
-				generateRequest( ad );
+					// Make a resource request out of this job
+				generateRequest( job );
 					// Remove the resource from unclaimed_resources
 					// (so we don't think we could satisfy any other
 					// jobs with it).
@@ -2564,7 +2572,7 @@ DedicatedScheduler::publishRequestAd( void )
 		// negotiate.  These are really how many resource requests
 		// we've got. 
 	sprintf( tmp, "%s = %d", ATTR_IDLE_JOBS,
-			 resource_requests->getNumElements() ); 
+			 resource_requests->Length() ); 
 	ad.InsertOrUpdate( tmp );
 	
 		// TODO: Eventually, we could try to publish this info as
@@ -2587,61 +2595,20 @@ DedicatedScheduler::publishRequestAd( void )
 
 
 void
-DedicatedScheduler::generateRequest( ClassAd* machine_ad )
+DedicatedScheduler::generateRequest( ClassAd* job )
 {
-	char tmp[1024];
-	char namebuf[1024];
+	char tmp[8192];
+	char buf[8192];
 
-		// First, grab some things out of the machine ad so we can
-		// figure out what requirements should be.  
-	
-	namebuf[0] = '\0';
-	if( ! machine_ad->LookupString(ATTR_NAME, namebuf) ) {
-		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::generateRequest():"
-				 " %s not defined in machine ClassAd\n", ATTR_NAME );
-		return;
-	}
+		// First, make a job of the job ad, as is, and use that as the
+		// basis for our resource request.
+	ClassAd* req = new ClassAd( *job );
 
-		// before we get any further, make sure we don't already have
-		// a request for this name.
-	HashKey key(namebuf);
-	ClassAd* req = NULL;
-
-	if( resource_requests->lookup(key, req) == 0 ) {
-			// Found it.  Bail out now
-		return;
-	}
-
-		// First, generate the request ad itself.
-	req = new ClassAd;
-	req->SetMyTypeName(JOB_ADTYPE);
-	req->SetTargetTypeName(STARTD_ADTYPE);
-
-		// We'll require we get the exact machine we were given.
-	sprintf( tmp, "%s = (%s == \"%s\")", ATTR_REQUIREMENTS, ATTR_NAME,
-			 namebuf ); 
-	req->InsertOrUpdate( tmp );
-	
-		// Now, fill in a bunch of stuff about ourself to identify us,
-		// and make it seem like this is a real job...
-	sprintf( tmp, "%s = \"%s\"", ATTR_USER, name() );
-	req->InsertOrUpdate( tmp );
-
+		// Now, insert some attributes we need
 	sprintf( tmp, "%s = \"%s\"", ATTR_SCHEDULER, name() );
 	req->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s = \"%s\"", ATTR_OWNER, owner() );
-	req->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s = 0", ATTR_IMAGE_SIZE );
-	req->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s = %d", ATTR_JOB_UNIVERSE, MPI );
-	req->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s = FALSE", ATTR_NICE_USER );
-	req->InsertOrUpdate( tmp );
-
+		// Patch up existing attributes with the values we want. 
 	sprintf( tmp, "%s = 1", ATTR_MIN_HOSTS );
 	req->InsertOrUpdate( tmp );
 
@@ -2651,27 +2618,59 @@ DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 	sprintf( tmp, "%s = 0", ATTR_CURRENT_HOSTS );
 	req->InsertOrUpdate( tmp );
 
-	sprintf( tmp, "%s = 0", ATTR_CLUSTER_ID );
-	req->InsertOrUpdate( tmp );
+		// Also, we need to modify the requirements expression.
+	buf[0] = '\0';
+    ExprTree* expr = job->Lookup( ATTR_REQUIREMENTS );
 
-	sprintf( tmp, "%s = 0", ATTR_PROC_ID );
+		// ATTR_REQUIREMENTS better be there, better be an assignment,
+		// and better have a right argument! 
+	ASSERT( expr );
+	ASSERT( expr->MyType() == LX_ASSIGN );
+	ASSERT( expr->RArg() );
+
+		// We just want the right side of the assignment, which is
+		// just the value (without the "Requirements = " part)
+	expr->RArg()->PrintToStr( buf );
+
+		// Construct the new requirements expression by adding a
+		// clause that says we need to run on a machine that's going
+		// to accept us as the dedicated scheduler.  
+		// TODO: In the future, we don't want to require this, we just
+		// want to rank it, and require that the minimum claim time is
+		// >= the duration of the job...
+	sprintf( tmp, "%s = (DedicatedScheduler == \"%s\") && (%s)", 
+			 ATTR_REQUIREMENTS, name(), buf );
 	req->InsertOrUpdate( tmp );
 
 		// Finally, add this request to our array.
-	resource_requests->insert( key, req );
+	resource_requests->enqueue( req );
+}
+
+
+void
+DedicatedScheduler::clearResourceRequests( void )
+{
+	ClassAd* ad;
+	while( resource_requests->dequeue(ad) >= 0 ) {
+		delete ad;
+	}
 }
 
 
 bool
 DedicatedScheduler::requestResources( void )
 {
-	if( resource_requests ) {
+	if( resource_requests->Length() > 0 ) {
 			// If we've got things we want to grab, publish a ClassAd
 			// to ask to negotiate for them...
 		displayResourceRequests();
 		publishRequestAd();
 		scheduler.sendReschedule();
-	}
+	} else {
+			// We just want to publish another add to let the
+			// negotiator know we're satisfied.
+		publishRequestAd();
+	}		
 	return true;
 }
 
@@ -2679,24 +2678,9 @@ DedicatedScheduler::requestResources( void )
 void
 DedicatedScheduler::displayResourceRequests( void )
 {
-	int level = D_FULLDEBUG;
-	ClassAd* req;
-
-	if( ! resource_requests ) {
-		dprintf( level, "displayResourceRequests: "
-				 "No resource_request array\n" );
-		return;
-	}
-
-	dprintf( level, "Displaying all dedicated resource requests:\n" );
-
-	resource_requests->startIterations();
-	while( resource_requests->iterate(req) ) {
-		if( ! req ) {
-			continue;
-		}
-		displayRequest( req, " ", D_FULLDEBUG );
-	}
+	dprintf( D_FULLDEBUG,
+			 "Waiting to negotiate for %d dedicated resource request(s)\n",
+			 resource_requests->Length() );
 }
 
 

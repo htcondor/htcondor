@@ -123,6 +123,9 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  The default priority factor for nice users
 #NICE_USER_PRIO_FACTOR = 10000000
 
+##  Maximum size of the accountant database file
+#MAX_ACCOUNTANT_DATABASE_SIZE = 1000000
+
 ##  The UID_DOMAIN of users who are considered local.  If undefined,
 ##  all users are considered local.  Remote (non-local) users get a
 ##  configurable boost to their priority value (giving them worse

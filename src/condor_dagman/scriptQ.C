@@ -35,7 +35,7 @@ ScriptQ::ScriptQ( Dag* dag )
 	_dag = dag;
 	_numScriptsRunning = 0;
 
-    _scriptPidTable = new HashTable<int,Script*>( 499, &hashFuncInt );
+    _scriptPidTable = new HashTable<int,Script*>( 127, &hashFuncInt );
     _waitingQueue = new Queue<Script*>();
 
     if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
@@ -61,12 +61,14 @@ ScriptQ::~ScriptQ()
 int
 ScriptQ::Run( Script *script )
 {
+	char prefix[8];
+	strcpy( prefix, script->_post ? "POST" : "PRE" );
+	int maxScripts =
+		script->_post ? _dag->_maxPostScripts : _dag->_maxPreScripts;
 	// if we have no script limit, or we're under the limit, run now
-	if( _dag->_maxScriptsRunning == 0 ||
-		_numScriptsRunning < _dag->_maxScriptsRunning ) {
+	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
 		debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
-					  script->_post ? "POST" : "PRE",
-					  script->_job->GetJobName() );
+					  prefix, script->_job->GetJobName() );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
@@ -75,17 +77,14 @@ ScriptQ::Run( Script *script )
 			return 1;
 		}
 		// BackgroundRun() returned pid 0
-		else if( DEBUG_LEVEL( DEBUG_NORMAL ) ) {
-			printf( "  error: daemonCore->Create_Process() failed; deferring "
-					"%s script of Job ", script->_post ? "POST" : "PRE" );
-			script->_job->Print();
-			printf( "\n" );
-		}
+		debug_printf( DEBUG_NORMAL, "  error: daemonCore->Create_Process() "
+					  "failed; deferring %s script of Job %s\n", prefix,
+					  script->_job->GetJobName() );
 	}
 	// max scripts already running
-	debug_printf( DEBUG_VERBOSE, "Max scripts (%d) already running; "
-				  "deferring %s script of Job %s\n", _dag->_maxScriptsRunning,
-				  script->_post ? "POST" : "PRE", script->_job->GetJobName() );
+	debug_printf( DEBUG_VERBOSE, "Max %s scripts (%d) already running; "
+				  "deferring %s script of Job %s\n", prefix, maxScripts,
+				  prefix, script->_job->GetJobName() );
 
 	_waitingQueue->enqueue( script );
 	return 0;

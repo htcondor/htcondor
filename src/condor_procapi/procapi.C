@@ -1704,7 +1704,7 @@ ProcAPI::buildFamily( pid_t daddypid ) {
 		// el problemo : if daddypid not in list at all, return -1
 	if( current == NULL ) {
 		delete [] familypids;
-		dprintf( D_ALWAYS, "ProcAPI::buildFamily failed: parent %d "
+		dprintf( D_FULLDEBUG, "ProcAPI::buildFamily failed: parent %d "
 				 "not found on system.\n", daddypid );
 		return -1;
 	}

@@ -419,7 +419,7 @@ readEvent (ULogEvent *& event)
 		// synchronize the log
 		sleep( 1 );
 		if( fseek( _fp, filepos, SEEK_SET) == -1 ) {
-			dprintf( D_ALWAYS, "fseek() failed in %s()", __FUNCTION__ );
+			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
 			return ULOG_UNK_ERROR;
 		}
 		if( synchronize() )

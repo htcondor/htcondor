@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/perl
 
 ###########################################################################
 #
@@ -23,23 +23,25 @@ print "\n";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
-$max_scripts = 0;
+$max_pre = 0;
+$max_post = 0;
 $notification = "";
+$NoPostFail = 0;
 while( $_ = shift ) {
   SWITCH: {	    
-    if( /^-no_s.*/ ) {
+    if( /^-no_s.*/i ) {
 	$submit = 0;
 	last SWITCH;
     } 
-    if( /^-v.*/ ) {
+    if( /^-v.*/i ) {
 	$verbose = 1;
 	last SWITCH;
     } 
-    if( /^-f.*/ ) {
+    if( /^-f.*/i ) {
 	$force = 1;
 	last SWITCH;
     } 
-    if( /^-not.*/ ) {
+    if( /^-not.*/i ) {
 	$notification = shift;
 	if( ! grep(/$notification/i, ("always", "complete", "error", "never")) ) {
 	    print "Invalid argument to -notification option: $notification\n";
@@ -47,14 +49,14 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-l.*/ ) {
+    if( /^-l.*/i ) {
 	$job_log = shift;
 	if( ! $job_log ) {
 	    &usage();
 	}
 	last SWITCH;
     }
-    if( /^-maxj.*/ ) {
+    if( /^-maxj.*/i ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
 	    &usage();
@@ -66,19 +68,35 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-maxs.*/ ) {
-	$max_scripts = shift;
-	if( ! $max_scripts ) {
+    if( /^-MaxPr.*/i ) {
+	$max_pre = shift;
+	if( ! $max_pre ) {
 	    &usage();
 	}
-	if( !($max_scripts =~ /^\d+$/) ) {
-	    print "ERROR: Invalid argument \"$max_scripts\" to -maxscripts.\n",
+	if( !($max_pre =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_pre\" to -MaxPre.\n",
 	    "You must specify a number.\n\n";
 	    &usage();
 	}
 	last SWITCH;
     }
-    if( /^-r/ ) {
+    if( /^-MaxPo.*/i ) {
+	$max_post = shift;
+	if( ! $max_post ) {
+	    &usage();
+	}
+	if( !($max_post =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_post\" to -MaxPost.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
+    if( /^-NoPostFail.*/i ) {
+	$NoPostFail = 1;
+	last SWITCH;
+    }
+    if( /^-r/i ) {
 	$remote_schedd = shift;
 	if( ! $remote_schedd ) {
 	    &usage();
@@ -170,7 +188,9 @@ sub usage {
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
-    print "    -maxscripts number  (Maximum number of PRE/POST scripts to run at once)\n";
+    print "    -MaxPre number      (Maximum number of PRE scripts to run at once)\n";
+    print "    -MaxPost number     (Maximum number of POST scripts to run at once)\n";
+    print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
     print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -272,8 +292,14 @@ sub write_submit_file {
     if( $max_jobs ) {
 	$args = $args . " -MaxJobs $max_jobs";
     }
-    if( $max_scripts ) {
-	$args = $args . " -MaxScripts $max_scripts";
+    if( $max_pre ) {
+	$args = $args . " -MaxPre $max_pre";
+    }
+    if( $max_post ) {
+	$args = $args . " -MaxPost $max_post";
+    }
+    if( $NoPostFail == 1 ) {
+	$args = $args . " -NoPostFail";
     }
     print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= PATH=$path\n";

@@ -11,3 +11,10 @@
   - another where DAGMAN detects a .lock files from a previous,
     aborted run, and uses the .log file to reconstruct its state in
     order to continue
+
+* notable rescue behavior:
+
+  - if a node's POST script fails, the resulting rescue file will not
+    mark that node as DONE, so the node's PRE script and Job will
+    re-run (unnecessarily?) upon resubmission
+

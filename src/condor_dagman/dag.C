@@ -35,40 +35,38 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 //---------------------------------------------------------------------------
-Dag::Dag(const char *condorLogName, const char *lockFileName,
-         const int maxJobsSubmitted, const int maxScriptsRunning ) :
-	_maxScriptsRunning    (maxScriptsRunning),
+Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
+		  const int maxPreScripts, const int maxPostScripts ) :
+	_maxPreScripts        (maxPreScripts),
+	_maxPostScripts       (maxPostScripts),
     _condorLogInitialized (false),
     _condorLogSize        (0),
-    _lockFileName         (NULL),
     _numJobsDone          (0),
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted)
 {
     _condorLogName = strnewp (condorLogName);
-    _lockFileName  = strnewp (lockFileName);
 
  	_readyQ = new SimpleList<Job*>;
-	_scriptQ = new ScriptQ( this );
+	_preScriptQ = new ScriptQ( this );
+	_postScriptQ = new ScriptQ( this );
 	_submitQ = new Queue<Job*>;
 
-	if( !_readyQ || !_submitQ || !_scriptQ ) {
-		EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
-				__FUNCTION__, __FILE__, __LINE__ );
+	if( !_readyQ || !_submitQ || !_preScriptQ || !_postScriptQ ) {
+		EXCEPT( "ERROR: out of memory (%s:%d)!\n", __FILE__, __LINE__ );
 	}
 
-	debug_printf( DEBUG_DEBUG_4,
-				  "_maxJobsSubmitted = %d, _maxScriptsRunning = %d\n",
-				  _maxJobsSubmitted, _maxScriptsRunning );
+	debug_printf( DEBUG_DEBUG_4, "_maxJobsSubmitted = %d, "
+				  "_maxPreScripts = %d, _maxPostScripts = %d\n",
+				  _maxJobsSubmitted, _maxPreScripts, _maxPostScripts );
 }
 
 //-------------------------------------------------------------------------
 Dag::~Dag() {
-    unlink(_lockFileName);  // remove the file being used as semaphore
     delete [] _condorLogName;
-    delete [] _lockFileName;
-	delete _scriptQ;
+	delete _preScriptQ;
+	delete _postScriptQ;
 	delete _submitQ;
 	delete _readyQ;
 }
@@ -92,11 +90,19 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
         debug_println (DEBUG_NORMAL, "Running in RECOVERY mode...");
         if (!ProcessLogEvents (recovery)) return false;
+
+		// all jobs stuck in STATUS_POSTRUN need their scripts run
+		jobs.ToBeforeFirst();
+		while( jobs.Next( job ) ) {
+			if( job->_Status == Job::STATUS_POSTRUN ) {
+				_postScriptQ->Run( job->_scriptPost );
+			}
+		}
     }
 
-	if( DEBUG_LEVEL( DEBUG_DEBUG_1 ) ) {
+	if( DEBUG_LEVEL( DEBUG_DEBUG_2 ) ) {
 		PrintJobList();
-		PrintReadyQ( DEBUG_DEBUG_1 );
+		PrintReadyQ( DEBUG_DEBUG_2 );
 	}	
 
 	jobs.ToBeforeFirst();
@@ -219,71 +225,50 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-			debug_printf( DEBUG_VERBOSE, "Event: %s for Job ",
+			debug_printf( DEBUG_VERBOSE, "Event: %s for ",
 						  ULogEventNumberNames[e->eventNumber] );
-            
+
+			Job* job = GetJob( condorID );
+
             switch(e->eventNumber) {
                 
-                //--------------------------------------------------
               case ULOG_EXECUTABLE_ERROR:
               case ULOG_JOB_ABORTED:
-              {
-                  Job * job = GetJob (condorID);
-                  
-                  if (DEBUG_LEVEL(DEBUG_VERBOSE)) job_print (job,true);
-                  
-                  // If this is one of our jobs, then we must inform the user
-                  // that UNDO is not yet handled
-                  if (job != NULL) {
-                      if (DEBUG_LEVEL(DEBUG_QUIET)) {
-                          printf ("\n------------------------------------\n");
-                          job->Print(true);
-                          printf (" resulted in %s.\n"
-                                  "This version of Dagman does not support "
-                                  "job resubmition, so this DAG must be "
-                                  "aborted.\n",
-                                  ULogEventNumberNames[e->eventNumber]);
-                      }
-                      done   = true;
-                      result = false;
-                  }
-              }
-              break;
+
+				  PrintEvent( DEBUG_VERBOSE, job );
+				  if( !job ) {
+					  break;
+				  }
+
+                  // inform the user that resubmit is not yet handled
+				  debug_printf( DEBUG_QUIET,
+								"This version of Dagman does not support "
+								"job resubmition, so this node will be "
+								"marked as \"failed\".\n" );
+				  job->_Status = Job::STATUS_ERROR;
+				  _numJobsFailed++;
+				  sprintf( job->error_text, "Condor reported %s event",
+						   ULogEventNumberNames[e->eventNumber] );
+
+ 				  if( job->_scriptPost == NULL ||
+					  run_post_on_failure == FALSE ) {
+					  break;
+				  }
+				  // if a POST script is specified for the job, run it
+				  job->_Status = Job::STATUS_POSTRUN;
+				  // there's no easy way to represent these errors as
+				  // return values or signals, so just say SIGKILL
+				  job->_scriptPost->_retValJob = -9;
+				  if( !recovery ) {
+					  _postScriptQ->Run( job->_scriptPost );
+				  }
+
+				  break;
               
-              case ULOG_CHECKPOINTED:
-              case ULOG_JOB_EVICTED:
-              case ULOG_IMAGE_SIZE:
-			case ULOG_JOB_SUSPENDED:
-			case ULOG_JOB_UNSUSPENDED:
-			case ULOG_JOB_HELD:
-			case ULOG_JOB_RELEASED:
-				// FYI, these next two events do not refer to DAGMan
-				// nodes, but rather to MPI "nodes"
-			case ULOG_NODE_EXECUTE:
-			case ULOG_NODE_TERMINATED:
-              case ULOG_SHADOW_EXCEPTION:
-              case ULOG_GENERIC:
-              case ULOG_EXECUTE:
-                if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
-                    Job * job = GetJob (condorID);
-					job_print( job, true );
-					debug_printf( DEBUG_VERBOSE, "\n" );
-                }
-                break;
-                
-                //--------------------------------------------------
               case ULOG_JOB_TERMINATED:
-              {
-                  Job * job = GetJob (condorID);
-                  
-                  if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
-                    job_print(job, true);
-                    debug_printf( DEBUG_VERBOSE, "\n" );
-                  }
-                  
-                  if (job == NULL) {
-					  debug_printf( DEBUG_QUIET, "ERROR: unknown terminated "
-									"job found in log\n" );
+			  {	
+				  PrintEvent( DEBUG_VERBOSE, job );
+                  if( !job ) {
                       break;
                   }
 
@@ -311,12 +296,14 @@ bool Dag::ProcessLogEvents (bool recovery) {
 										"signal %d.\n", job->GetJobName(),
 										termEvent->signalNumber );
 					  }
-
-					  if( run_post_on_failure == FALSE ) {
+ 
+					  if( job->_scriptPost == NULL ||
+						  run_post_on_failure == FALSE ) {
 						  break;
 					  }
                   }
 				  else {
+					  assert( termEvent->returnValue == 0 );
 					  job->retval = 0;
 					  debug_printf( DEBUG_NORMAL,
 									"Job %s completed successfully.\n",
@@ -327,9 +314,11 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   if (job->_scriptPost != NULL) {
 					  job->_Status = Job::STATUS_POSTRUN;
 					  // let the script know the job's exit status
-                      job->_scriptPost->_retValJob = termEvent->normal
-                          ? termEvent->returnValue : -1;
-					  _scriptQ->Run( job->_scriptPost );
+					  job->_scriptPost->_retValJob = termEvent->normal
+						  ? termEvent->returnValue : -1;
+					  if( !recovery ) {
+						  _postScriptQ->Run( job->_scriptPost );
+					  }
 				  }
 				  // no POST script was specified, so update DAG with
 				  // job's successful completion
@@ -338,30 +327,88 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  TerminateJob( job, recovery );
 				  }
 				  SubmitReadyJobs();
-				  PrintReadyQ( DEBUG_DEBUG_1 );
+				  PrintReadyQ( DEBUG_DEBUG_2 );
+
+				  break;
 			  }
-			  break;
-              
-              //--------------------------------------------------
+
+			case ULOG_POST_SCRIPT_TERMINATED:
+			{
+				PrintEvent( DEBUG_VERBOSE, job );
+				if( !job ) {
+					break;
+				}
+
+				if( !recovery ) {
+					// ignore this event since the reaper has already
+					// handled it
+					break;
+				}
+
+				PostScriptTerminatedEvent *termEvent =
+					(PostScriptTerminatedEvent*) e;
+					
+				if( !termEvent->normal ) {
+					job->_Status = Job::STATUS_ERROR;
+					// if the Condor job failed earlier, we already
+					// incremented _numJobsFailed, and we want
+					// error_text to report the job failure rather
+					// than the POST script failure, so do this only
+					// if the job succeeded and this POST script is
+					// what's causing the node to fail...
+					if( job->retval == 0 ) {
+						_numJobsFailed++;
+						sprintf( job->error_text,
+								 "POST Script died on signal %d",
+								 termEvent->signalNumber );
+					}
+				} else if( termEvent->returnValue != 0 ) {
+					job->_Status = Job::STATUS_ERROR;
+					// see previous comment...
+					if( job->retval == 0 ) {
+						_numJobsFailed++;
+						sprintf( job->error_text,
+								 "POST Script failed with status %d",
+								 termEvent->returnValue );
+					}
+				} else {
+					if( job->retval == 0 ) {
+						// update DAG dependencies given our
+						// successful completion
+						job->_Status = Job::STATUS_DONE;
+						TerminateJob( job );
+					}
+					else {
+						// restore STATUS_ERROR from the job failure
+						job->_Status = Job::STATUS_ERROR;
+					}
+				}
+				break;
+			}
               case ULOG_SUBMIT:
-                
+			  {
 				SubmitEvent* submit_event = (SubmitEvent*) e;
 				char job_name[1024];
-				sscanf( submit_event->submitEventLogNotes, "DAG Node: %1023s",
-						job_name );
-				Job* job = GetJob( job_name );
-				if( ! job ) {
-					debug_printf( DEBUG_QUIET,
-								  "Unknown submit event (job \"%s\") found "
-								  "in log\n", job_name );
-                    break;
+				if( sscanf( submit_event->submitEventLogNotes,
+							"DAG Node: %1023s", job_name ) != 1 ) {
+					debug_printf( DEBUG_NORMAL, "WARNING: no DAG Node info "
+								  "found in userlog (submit event)\n" );
+				}
+				job = GetJob( job_name );
+				PrintEvent( DEBUG_VERBOSE, job );
+				if( !job ) {
+					break;
+				}
+				if( job ) {
+					job->_CondorID = condorID;
 				}
 
 				if( recovery ) {
 					job->_Status = Job::STATUS_SUBMITTED;
 					_numJobsSubmitted++;
+					break;
 				}
-				else {
+
 					// as a sanity check, compare the job from the
 					// submit event to the job we expected to see from
 					// our submit queue
@@ -385,18 +432,27 @@ bool Dag::ProcessLogEvents (bool recovery) {
 						_submitQ->enqueue( expectedJob );
 						break;
 					}
-				}
 
-				job->_CondorID = condorID;
-				if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
-					job_print( job, true );
-					debug_printf( DEBUG_VERBOSE, "\n" );
-				}
-                
-				PrintReadyQ( DEBUG_DEBUG_1 );
+					PrintReadyQ( DEBUG_DEBUG_2 );
+					break;
+			  }
+			case ULOG_CHECKPOINTED:
+			case ULOG_JOB_EVICTED:
+			case ULOG_IMAGE_SIZE:
+			case ULOG_JOB_SUSPENDED:
+			case ULOG_JOB_UNSUSPENDED:
+			case ULOG_JOB_HELD:
+			case ULOG_JOB_RELEASED:
+			case ULOG_NODE_EXECUTE:
+			case ULOG_NODE_TERMINATED:
+			case ULOG_SHADOW_EXCEPTION:
+			case ULOG_GENERIC:
+			case ULOG_EXECUTE:
+			default:
+
+                PrintEvent( DEBUG_VERBOSE, job );
                 break;
-            }
-            break;
+			}
         }
 		if( e != NULL ) {
 			// event allocated earlier by _condorLog.readEvent()
@@ -413,6 +469,9 @@ bool Dag::ProcessLogEvents (bool recovery) {
 
 //---------------------------------------------------------------------------
 Job * Dag::GetJob (const char * jobName) const {
+	if( !jobName ) {
+		return NULL;
+	}
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) {
@@ -440,7 +499,7 @@ bool Dag::Submit (Job * job) {
 
     if( job->_scriptPre && job->_scriptPre->_done == FALSE ) {
 		job->_Status = Job::STATUS_PRERUN;
-		_scriptQ->Run( job->_scriptPre );
+		_preScriptQ->Run( job->_scriptPre );
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
@@ -545,29 +604,41 @@ Dag::PostScriptReaper( Job* job, int status )
 	assert( job != NULL );
 	assert( job->_Status == Job::STATUS_POSTRUN );
 
+	PostScriptTerminatedEvent e;
+
+	debug_printf( DEBUG_NORMAL, "POST Script of Job %s ", job->GetJobName() );
+
 	if( WIFSIGNALED( status ) ) {
-        debug_printf( DEBUG_QUIET, "POST Script of Job %s died on %s\n",
-                      job->GetJobName(),
+        debug_printf( DEBUG_NORMAL, "died on %s\n",
                       daemonCore->GetExceptionString(status) );
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsFailed++;
-        sprintf( job->error_text, "POST Script died on %s",
-                 daemonCore->GetExceptionString(status) );
+		// if the job itself failed, we already incremented
+		// _numJobsFailed, and we want error_text to say job failure,
+		// not the POST script's failure, so do this only if the job
+		// succeeded and this POST script is causing the node to fail
+		if( job->retval == 0 ) {
+			_numJobsFailed++;
+			sprintf( job->error_text, "POST Script died on %s",
+					 daemonCore->GetExceptionString(status) );
+		}
+		e.normal = false;
+		e.signalNumber = status;
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
-        debug_printf( DEBUG_QUIET, "POST Script of Job %s failed with status "
-                      "%d\n", job->GetJobName(), WEXITSTATUS(status) );
+        debug_printf( DEBUG_NORMAL, "failed with status %d\n",
+					  WEXITSTATUS(status) );
         job->_Status = Job::STATUS_ERROR;
-        _numJobsFailed++;
-        sprintf( job->error_text, "POST Script failed with status %d",
-                 WEXITSTATUS(status) );
+		// see previous comment...
+		if( job->retval == 0 ) {
+			_numJobsFailed++;
+			sprintf( job->error_text, "POST Script failed with status %d",
+					 WEXITSTATUS(status) );
+		}
+		e.normal = true;
+		e.returnValue = WEXITSTATUS(status);
 	}
 	else {
-		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
-			printf( "POST Script of Job %s completed successfully.\n",
-					job->GetJobName() );
-		}
-
+		debug_printf( DEBUG_NORMAL, "completed successfully.\n" );
 		if( job->retval == 0 ) {
 			// update DAG dependencies given our successful completion
 			job->_Status = Job::STATUS_DONE;
@@ -577,8 +648,18 @@ Dag::PostScriptReaper( Job* job, int status )
 			// restore STATUS_ERROR if the job had failed
 			job->_Status = Job::STATUS_ERROR;
 		}
+		e.normal = true;
+		e.returnValue = WEXITSTATUS(status);
 
-		PrintReadyQ( DEBUG_DEBUG_1 );
+		PrintReadyQ( DEBUG_DEBUG_2 );
+	}
+
+	UserLog ulog;
+	ulog.initialize( _condorLogName, job->_CondorID._cluster,
+					 job->_CondorID._proc, job->_CondorID._subproc );
+	if( ! ulog.writeEvent( &e ) ) {
+		debug_printf( DEBUG_NORMAL,
+					  "Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
 	}
 	return true;
 }
@@ -759,4 +840,18 @@ Dag::TerminateJob( Job* job, bool bootstrap )
     }
     _numJobsDone++;
     assert (_numJobsDone <= _jobs.Number());
+}
+
+void Dag::
+PrintEvent( debug_level_t level, Job* job )
+{
+	if( job ) {
+		debug_printf( level, "Job %s (%d.%d.%d)\n",
+					  job->GetJobName(), job->_CondorID._cluster,
+					  job->_CondorID._proc, job->_CondorID._subproc );
+	} else {
+		debug_printf( level, "Unknown Job (%d.%d.%d)\n",
+					  job->_CondorID._cluster, job->_CondorID._proc,
+					  job->_CondorID._subproc );
+	}
 }

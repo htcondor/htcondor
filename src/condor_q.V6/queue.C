@@ -261,8 +261,19 @@ processCommandLineArguments (int argc, char *argv[])
 	for (i = 1; i < argc; i++)
 	{
 		if( *argv[i] != '-' ) {
-			// no dash means this arg is the desired job owner
-			if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
+			// no dash means this arg is a cluster/proc, proc, or owner
+			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
+				sprintf( constraint, "((%s == %d) && (%s == %d))", 
+						 ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
+				Q.addOR( constraint );
+				summarize = 0;
+			} 
+			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
+				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
+				Q.addOR( constraint );
+				summarize = 0;
+			} 
+			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
 				// this error doesn't seem very helpful... can't we say more?
 				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
 				exit( 1 );
@@ -453,20 +464,6 @@ processCommandLineArguments (int argc, char *argv[])
 			usingPrintMask = true;
 			i+=2;
 		}
-		else
-		if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-			sprintf (constraint, "((%s == %d) && (%s == %d))", 
-									ATTR_CLUSTER_ID, cluster,
-									ATTR_PROC_ID, proc);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
-		else
-		if (sscanf (argv[i], "%d", &cluster) == 1) {
-			sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
 		else
 		if (match_prefix (arg, "global")) {
 			global = 1;
@@ -840,7 +837,7 @@ format_owner (char *owner, AttrList *ad)
 	char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
 	char dag_node_name[ATTRLIST_MAX_EXPRESSION];
 	if( dag && ad->LookupString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
-//		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
+		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
 		ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
 		sprintf( result, " |-%-11.11s", dag_node_name );
 		return result;
@@ -956,6 +953,7 @@ usage (char *myName)
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
+		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
