@@ -65,7 +65,7 @@ FILE	*DebugFP = NULL;
 */
 int		MaxLog[D_NUMLEVELS+1] = { 0 };
 char	*DebugFile[D_NUMLEVELS+1] = { NULL };
-char	*DebugLock[D_NUMLEVELS+1] = { NULL };
+char	*DebugLock = NULL;
 
 int		(*DebugId)(FILE *);
 int		SetSyscalls(int mode);
@@ -86,7 +86,7 @@ char *DebugFlagNames[] = {
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
 	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
-	"D_KEYBOARD", "D_PROCFAMILY", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
+	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_UNDEF25", "D_UNDEF26",
 	"D_UNDEF27", "D_UNDEF28", "D_FDS", "D_SECONDS", "D_NOHEADER",
 };
 
@@ -222,27 +222,31 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 				/* Open and lock the log file */
 			(void)debug_lock(debug_level);
 
-			/* Print the message with the time and a nice identifier */
-			if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-				if( (saved_flags|flags) & D_SECONDS ) {
-					fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
-							 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-							 tm->tm_min, tm->tm_sec );
-				} else {
-					fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
-						 tm->tm_mday, tm->tm_hour, tm->tm_min );
+			if (DebugFP) {
+
+				/* Print the message with the time and a nice identifier */
+				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
+					if( (saved_flags|flags) & D_SECONDS ) {
+						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
+								 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+								 tm->tm_min, tm->tm_sec );
+					} else {
+						fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
+								 tm->tm_mday, tm->tm_hour, tm->tm_min );
+					}
+
+					if ( (saved_flags|flags) & D_FDS ) {
+						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
+					}
+
+					if( DebugId ) {
+						(*DebugId)( DebugFP );
+					}
 				}
 
-				if ( (saved_flags|flags) & D_FDS ) {
-					fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
-				}
+				vfprintf( DebugFP, fmt, args );
 
-				if( DebugId ) {
-					(*DebugId)( DebugFP );
-				}
 			}
-
-			vfprintf( DebugFP, fmt, args );
 
 			/* Close and unlock the log file */
 			debug_unlock(debug_level);
@@ -298,9 +302,9 @@ debug_lock(int debug_level)
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
-	if( DebugLock[debug_level] ) {
+	if( DebugLock ) {
 		if( LockFd < 0 ) {
-			LockFd = open(DebugLock[debug_level],O_CREAT|O_WRONLY,0660);
+			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 					/* 
 					   if( errno == ENOENT ) { ...
@@ -311,9 +315,8 @@ debug_lock(int debug_level)
 					   back to condor when we're done.
 					*/
 				fprintf( stderr, "Can't open \"%s\", errno: %d (%s)\n",
-						 DebugLock[debug_level], errno, strerror(errno) );
+						 DebugLock, errno, strerror(errno) );
 				dprintf_exit();
-
 			}
 		}
 
@@ -335,6 +338,7 @@ debug_lock(int debug_level)
 		DebugFP = open_debug_file(debug_level, "a");
 
 		if( DebugFP == NULL ) {
+			if (debug_level > 0) return NULL;
 #if !defined(WIN32)
 			if( errno == EMFILE ) {
 				fd_panic( __LINE__, __FILE__ );
@@ -345,6 +349,11 @@ debug_lock(int debug_level)
 		}
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
+			if (debug_level > 0) {
+				fclose( DebugFP );
+				DebugFP = NULL;
+				return NULL;
+			}
 			fprintf( DebugFP, "Can't seek to end of DebugFP file\n" );
 			dprintf_exit();
 		}
@@ -373,9 +382,9 @@ debug_unlock(int debug_level)
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	(void)fflush( DebugFP );
+	if (DebugFP) (void)fflush( DebugFP );
 
-	if( DebugLock[debug_level] ) {
+	if( DebugLock ) {
 			/* Don't forget to unlock the file */
 #if defined(WIN32)
 		if ( lock_file(LockFd,UN_LOCK,TRUE) < 0 )
@@ -383,15 +392,20 @@ debug_unlock(int debug_level)
 		if( flock(LockFd,LOCK_UN) < 0 ) 
 #endif
 		{
-			fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
-					 DebugLock[debug_level] );
+			if (DebugFP) {
+				fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
+						 DebugLock );
+			} else {
+				fprintf( stderr,"Can't release exclusive lock on \"%s\"\n",
+						 DebugLock );
+			}				
 			DebugUnlockBroken = 1;
 			dprintf_exit();
 		}
 	}
 
 	if( DebugFile[debug_level] ) {
-		(void)fclose( DebugFP );
+		if (DebugFP) (void)fclose( DebugFP );
 		DebugFP = NULL;
 	}
 
@@ -587,7 +601,8 @@ open_debug_file(int debug_level, char flags[])
 		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
 				 errno, geteuid(), getegid() );
 #endif
-		dprintf_exit();
+		if (debug_level == 0) dprintf_exit();
+		return NULL;
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
