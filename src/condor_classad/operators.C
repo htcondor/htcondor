@@ -30,7 +30,7 @@ static void doArithmetic	(OpKind, Value&, Value&, Value&);
 static void doLogical	 	(OpKind, Value&, Value&, Value&);
 static void doBitwise	 	(OpKind, Value&, Value&, Value&);
 static void doRealArithmetic(OpKind, Value&, Value&, Value&);
-static void compareStrings	(OpKind, Value&, Value&, Value&);
+static void compareStrings	(OpKind, Value&, Value&, Value&, bool case_sensitive);
 static void compareReals	(OpKind, Value&, Value&, Value&);
 static void compareIntegers (OpKind, Value&, Value&, Value&);
 static ValueType coerceToNumber(Value&, Value&);
@@ -209,6 +209,7 @@ static void
 doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	ValueType vt1, vt2, coerceResult;
+	bool case_sensitive = false;
 
 	// do numerical type promotions --- other types/values are unchanged
 	coerceResult = coerceToNumber (v1, v2);
@@ -231,8 +232,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 		}
 
-		// if not the above cases, =?= is just like ==
+		// if not the above cases, =?= is just like ==, but
+		// case-sensitive for strings
 		op = EQUAL_OP;
+		case_sensitive = true;
 	}
 	// perform comparison for =!= ; negation of =?=
 	if (op == META_NOT_EQUAL_OP)
@@ -251,8 +254,10 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 		}
 
-		// if not the above cases, =!= is just like !=
+		// if not the above cases, =!= is just like !=, but
+		// case-sensitive for strings
 		op = NOT_EQUAL_OP;
+		case_sensitive = true;
 	}
 
 	switch (coerceResult)
@@ -267,7 +272,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				result.setErrorValue();
 				return;
 			}
-			compareStrings (op, v1, v2, result);
+			compareStrings (op, v1, v2, result, case_sensitive);
 			return;
 
 		case INTEGER_VALUE:
@@ -608,7 +613,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 
 static void 
-compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
+compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool case_sensitive)
 {
 	char *s1, *s2;
 	int  cmp;
@@ -617,7 +622,11 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result)
 	v2.isStringValue (s2);
 
 	result.setIntegerValue (0);
-	cmp = strcmp(s1, s2);
+	if (case_sensitive) {
+		cmp = strcmp(s1, s2);
+	} else {
+		cmp = strcasecmp(s1, s2);
+	}
 	if (cmp < 0)
 	{
 		// s1 < s2
