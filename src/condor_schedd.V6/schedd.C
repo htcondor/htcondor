@@ -63,7 +63,6 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern char *gen_ckpt_name();
-extern void	Init();
 
 #include "condor_qmgr.h"
 
@@ -84,12 +83,13 @@ extern "C"
 extern	int		get_job_prio(ClassAd *ad);
 extern	void	FindRunnableJob(int, int&);
 extern	int		Runnable(PROC_ID*);
-extern 	char*	my_hostname();
 
 extern	char*		Spool;
-extern	char*		CondorAdministrator;
-extern	Scheduler	scheduler;
 extern	char*		Name;
+extern	char*		JobHistoryFileName;
+extern	char*		mySubSystem;
+
+extern	Scheduler	scheduler;
 
 // priority records
 extern prio_rec	*PrioRec;
@@ -2222,52 +2222,109 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 		unlink(ckpt_name);
 }
 
-void
-Scheduler::SetClassAd(ClassAd* a)
-{
-	if(ad)
-	{
-		delete ad;
-	}
-	ad = a;
-}
 
 int pidHash(const int &pid, int numBuckets)
 {
 	return pid % numBuckets;
 }
 
+
 int procIDHash(const PROC_ID &procID, int numBuckets)
 {
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
-// initialize the configuration parameters
+// Initialize the configuration parameters and classad.  Since we call
+// this again when we reconfigure, we have to be careful not to leak
+// memory. 
 void
 Scheduler::Init()
 {
 	char*					tmp;
 	char					expr[1024];
 
-	CollectorHost = param( "COLLECTOR_HOST" );
-    if( CollectorHost == NULL ) {
-        EXCEPT( "No Collector host specified in config file\n" );
+		//////////////////////////////////////////////////////////////
+		// Initialize our classad
+		//////////////////////////////////////////////////////////////
+	if( ad ) delete ad;
+	ad = new ClassAd();
+
+	config( ad, mySubSystem );
+
+	ad->SetMyTypeName(SCHEDD_ADTYPE);
+	ad->SetTargetTypeName("");
+
+		// Throw name and machine into the classad.
+	sprintf( expr, "%s = \"%s\"", ATTR_NAME, Name );
+	ad->Insert(expr);
+
+	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
+	ad->Insert(expr);
+
+		// Put in our sinful string
+	if( MySockName ) {
+		free( MySockName);
+	}
+	MySockName = strdup( daemonCore->InfoCommandSinfulString() );
+
+	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
+	ad->Insert(expr);
+
+		////////////////////////////////////////////////////////////////////
+		// Grab all the essential parameters we need from the config file.
+		////////////////////////////////////////////////////////////////////
+
+	if( Spool ) free( Spool );
+	if( !(Spool = param("SPOOL")) ) {
+		EXCEPT( "No spool directory specified in config file" );
+	}
+
+	if( CollectorHost ) free( CollectorHost );
+	if( ! (CollectorHost = param("COLLECTOR_HOST")) ) {
+        EXCEPT( "No Collector host specified in config file" );
     }
 
-	// Assume that we are still using machine names in the configuration file.
-	// If we move to ip address and port, this need to be changed.
-	AccountantName = param( "ACCOUNTANT_HOST" );
-    if( AccountantName == NULL ) {
-        dprintf(D_ALWAYS, "No Accountant host specified in config file\n" );
+	if( NegotiatorHost ) free( NegotiatorHost );
+    if( ! (NegotiatorHost = param("NEGOTIATOR_HOST")) ) {
+        EXCEPT( "No NegotiatorHost host specified in config file" );
     }
 
-    NegotiatorHost = param( "NEGOTIATOR_HOST" );
-    if( NegotiatorHost == NULL ) {
-        EXCEPT( "No NegotiatorHost host specified in config file\n" );
+	if( Shadow ) free( Shadow );
+    if( ! (Shadow = param("SHADOW")) ) {
+        EXCEPT( "SHADOW not specified in config file\n" );
     }
+
+	if( CondorAdministrator ) free( CondorAdministrator );
+    if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
+        EXCEPT( "CONDOR_ADMIN not specified in config file" );
+    }
+
+	if( Mail ) free( Mail );
+    if( ! (Mail=param("MAIL")) ) {
+        EXCEPT( "MAIL not specified in config file\n" );
+    }
+
+		// UidDomain will always be defined, since config() will put
+		// in my_full_hostname() if it's not defined in the file.
+	if( UidDomain ) free( UidDomain );
+	UidDomain = param( "UID_DOMAIN" );
+
+		////////////////////////////////////////////////////////////////////
+		// Grab all the optional parameters from the config file.
+		////////////////////////////////////////////////////////////////////
+
+	if( AccountantName ) free( AccountantName );
+	if( ! (AccountantName = param("ACCOUNTANT_HOST")) ) {
+        dprintf(D_FULLDEBUG, "No Accountant host specified in config file\n" );
+    }
+
+	if( JobHistoryFileName ) free( JobHistoryFileName );
+	if( ! (JobHistoryFileName = param("HISTORY")) ) {
+        dprintf(D_FULLDEBUG, "No history file specified in config file\n" );
+	}
 
     tmp = param( "SCHEDD_INTERVAL" );
-    if( tmp == NULL ) {
+    if( ! tmp ) {
         SchedDInterval = 120;
     } else {
         SchedDInterval = atoi( tmp );
@@ -2275,25 +2332,23 @@ Scheduler::Init()
     }
 
 	tmp = param( "QUEUE_CLEAN_INTERVAL" );
-	if( tmp == NULL ) {
+	if( ! tmp ) {
 		QueueCleanInterval = 24*60*60;	// every 24 hours
 	} else {
 		QueueCleanInterval = atoi( tmp );
 		free( tmp );
 	}
 
-    if( (Shadow=param("SHADOW")) == NULL ) {
-        EXCEPT( "SHADOW not specified in config file\n" );
-    }
-
-    if( (tmp=param("MAX_JOB_STARTS")) == NULL ) {
+	tmp = param( "MAX_JOB_STARTS" );
+    if( ! tmp ) {
         MaxJobStarts = 5;
     } else {
         MaxJobStarts = atoi( tmp );
         free( tmp );
     }
 
-    if( (tmp=param("MAX_JOBS_RUNNING")) == NULL ) {
+	tmp = param( "MAX_JOBS_RUNNING" );
+    if( ! tmp ) {
         MaxJobsRunning = 15;
     } else {
         MaxJobsRunning = atoi( tmp );
@@ -2301,6 +2356,9 @@ Scheduler::Init()
     }
 
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
+		// Someday, we might want to actually resize these hashtables
+		// on reconfig if MaxJobsRunning changes size, but we don't
+		// have the code for that and it's not too important.
 	if (matches == NULL) {
 	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
 												   hashFunction);
@@ -2311,31 +2369,20 @@ Scheduler::Init()
 											 procIDHash);
 	}
 
-    if( (tmp=param("RESERVED_SWAP")) == NULL ) {
+	tmp = param( "RESERVED_SWAP" );
+    if( !tmp ) {
         ReservedSwap = 5 * 1024;            /* 5 megabytes */
     } else {
         ReservedSwap = atoi( tmp ) * 1024;  /* Value specified in megabytes */
         free( tmp );
     }
 
-    if( (tmp=param("SHADOW_SIZE_ESTIMATE")) == NULL ) {
+	tmp = param( "SHADOW_SIZE_ESTIMATE" );
+    if( ! tmp ) {
         ShadowSizeEstimate = DEFAULT_SHADOW_SIZE;
     } else {
         ShadowSizeEstimate = atoi( tmp );   /* Value specified in kilobytes */
         free( tmp );
-    }
-
-    if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
-        EXCEPT( "CONDOR_ADMIN not specified in config file" );
-    }
-
-    UidDomain = param( "UID_DOMAIN" );
-    if( NegotiatorHost == NULL ) {
-        EXCEPT( "No UID_DOMAIN specified in config file\n" );
-    }
-
-    if( (Mail=param("MAIL")) == NULL ) {
-        EXCEPT( "MAIL not specified in config file\n" );
     }
 
 	tmp = param("ALIVE_INTERVAL");
@@ -2345,14 +2392,6 @@ Scheduler::Init()
         aliveInterval = atoi(tmp);
         free(tmp);
 	}
-
-	MySockName = strdup( daemonCore->InfoCommandSinfulString() );
-
-	sprintf( expr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName );
-	ad->Insert(expr);
-
-	sprintf( expr, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() ); 
-	ad->Insert(expr);
 }
 
 void
@@ -2478,10 +2517,7 @@ Scheduler::reconfig()
 {
     dprintf( D_ALWAYS, "Re-reading config file\n" );
 
-	config( ad );
-
 	Init();
-	::Init();
 	RegisterTimers();			// reset timers
     timeout();
 }
@@ -2750,7 +2786,7 @@ Scheduler::Relinquish(match_rec* mrec)
 		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
 		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 	}
-	else if(!sock->put(mrec->id) || !sock->eom())
+	else if(!sock->put(mrec->id) || !sock->end_of_message())
 	{
 		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
 		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
