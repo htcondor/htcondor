@@ -124,10 +124,16 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
-	//--> DAP
-        if (!ProcessLogEvents (CONDORLOG, recovery))  return false;
-        if (!ProcessLogEvents (DAPLOG, recovery))  return false;
-	//<-- DAP
+		if( _condorLogName ) {
+			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
+				return false;
+			}
+		}
+		if( _dapLogName ) {
+			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
+				return false;
+			}
+		}
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
