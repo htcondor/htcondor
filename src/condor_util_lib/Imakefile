@@ -80,7 +80,17 @@ test: test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
 
-program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
+y.tab.o: y.tab.c
+	gcc $(CFLAGS) -c y.tab.c
+
+lex.yy.o: lex.yy.c
+	gcc $(CFLAGS) -c lex.yy.c
+
+stub_gen: y.tab.o lex.yy.o
+	gcc $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
+
+clean::
+	rm -f stub_gen y.tab.o lex.yy.o 
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
 	lex stub_gen_lex.l
