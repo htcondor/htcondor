@@ -345,6 +345,7 @@ pure_target(condor_shadow.V6.1,condor_shadow.pure)
 pure_target(condor_starter.V6.1,condor_starter.pure)
 pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
+pure_target(condor_dagman,condor_dagman.pure)
 
 clean::
 	rm -rf $(PURE_DIR)
