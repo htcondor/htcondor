@@ -41,11 +41,12 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
 #	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
-		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  SYSCONF.o	
 #	elif (IS_X86_SOLARIS25)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
-		  i386_data.o
+		  i386_data.o SYSCONF.o
 
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
@@ -217,6 +218,14 @@ uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 #if (IS_X86_SOLARIS25)
 i386_data.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) i386_data.o
+#endif
+
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
+	ar x    $(SIMPLE_LIBC)      sysconf.o 	  ; mv  sysconf.o  $(TMP_DIR)
+	ToUpper $(TMP_DIR)/sysconf.o   $(TMP_DIR)/SYSCONF.o   sysconf   SYSCONF
+	ToUpper $(TMP_DIR)/SYSCONF.o   SYSCONF.o SYSCONFig sysconfig
+	rm -f $(TMP_DIR)/sysconf.o $(TMP_DIR)/SYSCONF.o
 #endif
 
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
