@@ -25,6 +25,7 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "daemon.h"
+#include "killfamily.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
@@ -66,7 +67,7 @@ public:
 	void	CancelAllTimers();
 	void	CancelRestartTimers();
 	void	Kill( int );
-	void	Killpg( int );
+	void	KillFamily( void );
 	void	Reconfig();
 
 private:
@@ -86,6 +87,7 @@ private:
 
 	int		was_not_responding;
 
+	ProcFamily*	procfam;
 };
 
 

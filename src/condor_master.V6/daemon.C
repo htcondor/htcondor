@@ -53,11 +53,6 @@ extern int		run_preen(Service*);
 
 int		hourly_housekeeping(void);
 
-extern "C"
-{
-	void killkids( pid_t, int );
-}
-
 extern "C" 	char	*SigNames[];
 
 // to add a new process as a condor daemon, just add one line in 
@@ -152,6 +147,8 @@ daemon::daemon(char *name)
  	hard_kill_tid = -1;
 	stop_state = NONE;
 	needs_update = FALSE;
+	procfam = NULL;
+
 #if 0
 	port = NULL;
 	config_info_file = NULL;
@@ -419,6 +416,13 @@ daemon::Start()
 		needs_update = FALSE;
 		daemons.UpdateCollector();
 	}
+
+	if( procfam ) {
+		delete procfam;
+	}
+	procfam = new ProcFamily( pid, PRIV_ROOT );
+	procfam->takePeriodicSnapshot( 15, 60 );
+
 	return pid;	
 }
 
@@ -519,16 +523,11 @@ daemon::HardKill()
 		hard_kill_tid = -1;
 	}
 
-#ifdef WANT_DC_PM
-	Kill( DC_SIGKILL );
-		// Can we do better than that for DC_PM?
-#else
-	killkids( pid, SIGKILL );
-	Killpg( SIGKILL );
+		// Actually do the kill.
+	KillFamily();
 	dprintf( D_ALWAYS, 
 			 "Sent SIGKILL to %s (pid %d) and all it's children.\n",
 			 name_in_config_file, pid );
-#endif
 }
 
 
@@ -550,9 +549,14 @@ daemon::Exited( int status )
 	dprintf( D_ALWAYS, "%s%s\n", buf1, buf2 );
 
 		// For good measure, try to clean up any dead/hung children of
-		// The daemon that just died by sending SIGKILL to it's
-		// process group.
-	Killpg( DC_SIGKILL );	
+		// the daemon that just died by sending SIGKILL to it's
+		// entire process family.
+	KillFamily();
+
+		// Now that we're done with that and the pid is gone, we can
+		// delete our ProcFamily object now.
+	delete procfam;
+	procfam = NULL;
 
 		// Set flag saying if it exited cuz it was not responding
 	was_not_responding = daemonCore->Was_Not_Responding(pid);
@@ -681,25 +685,6 @@ daemon::CancelRestartTimers()
 
 
 void
-daemon::Killpg( int sig )
-{
-	if( (!pid) || (pid == 1) ) {
-		return;
-	}
-#ifdef WANT_DC_PM
-	dprintf( D_FULLDEBUG, 
-		"Killing process groups not supported with DC_PM.\n" );
-	return;
-#else
-	priv_state priv = set_root_priv();
-	(void)kill(-pid, sig );
-	set_priv(priv);
-#endif
-	
-}
-
-
-void
 daemon::Kill( int sig )
 {
 	if( (!pid) || (pid == -1) ) {
@@ -719,6 +704,14 @@ daemon::Kill( int sig )
 		dprintf( D_ALWAYS, "Sent %s to %s (pid %d)\n",
 				 SigNames[sig], name_in_config_file, pid );
 	}
+}
+
+
+void
+daemon::KillFamily( void ) 
+{
+	if( ! procfam ) return;
+	procfam->hardkill();
 }
 
 
