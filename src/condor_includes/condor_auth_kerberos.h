@@ -105,14 +105,6 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS : TRUE -- success; FALSE failure
     //------------------------------------------
     
-    int common_client_authenticate();
-    //------------------------------------------
-    // PURPOSE: Client side of authentication -- used both by
-    //          daemon and user authentication
-    // REQUIRE: 
-    // RETUNRS: TRUE -- if success; FALSE -- if failure
-    //------------------------------------------
-
     int init_kerberos_context();
     //------------------------------------------
     // PURPOSE: Initialize context
