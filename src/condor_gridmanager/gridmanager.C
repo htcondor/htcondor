@@ -31,6 +31,8 @@
 #include "condor_config.h"
 #include "format_time.h"  // for format_time and friends
 #include "condor_string.h"	// for strnewp and friends
+#include "daemon.h"
+#include "dc_schedd.h"
 
 #include "gridmanager.h"
 
