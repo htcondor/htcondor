@@ -13,7 +13,7 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
 	directory.o my_hostname.o file_lock.o disk.o up_down.o \
-	environ.o afs.o subproc.o \
+	environ.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
@@ -52,16 +52,6 @@ test: test.o user_log.o
 
 tester: tester.o $(LIB)
 	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
-
-test_afs: test_afs.o afs.o $(LIB)
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_afs test_afs.o afs.o $(LIB)
-clean::
-	rm -f test_afs
-
-test_subproc: test_subproc.o subproc.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_subproc test_subproc.o subproc.o $(LIB)
-clean::
-	rm -f test_subproc
 
 foo: foo.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(LIB)
