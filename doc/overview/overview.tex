@@ -24,9 +24,12 @@ In contrast, High Performance Computing (HPC)
 environments deliver a
 tremendous amount of compute power over a short period of time. HPC
 environments are often measured in terms of FLoating point Operations
-per Second (FLOPS). But a growing community is not concerned about
-FLOPS, as their problems are on a much larger scale. These people are
-concerned with floating point operations per month or per year. They are
+per Second (FLOPS). 
+A growing community is not concerned about FLOPS,
+as their problems are of a much larger scale.
+These people are
+concerned with floating point operations per month or per year.
+They are
 more interested in how many jobs they can complete over a long period of
 time instead of how fast an individual job can complete.
 
@@ -37,8 +40,9 @@ resources. Years ago, the engineering and scientific community relied on
 large centralized mainframe and/or big-iron supercomputers to do
 computational work. A large number of individuals and groups needed
 to pool their financial resources to afford such a machine. Users had
-to wait for their turn on the mainframe, and only had a
-certain amount of time allocated to them. While this environment was
+to wait for their turn on the mainframe, 
+and they only had a certain amount of time allocated to them.
+While this environment was
 inconvenient for users, it was very efficient, because the mainframe
 was busy nearly all the time.
 
@@ -57,7 +61,7 @@ of personal computers. This is an environment of distributed ownership,
 where individuals throughout an organization own their own resources.
 The total computational power of the institution as a whole might rise
 dramatically as the result of such a change, but because of distributed
-ownership individuals could not capitalize on the institutional growth of
+ownership, individuals could not capitalize on the institutional growth of
 computing power. And while distributed ownership is more convenient for
 the users, it is much less efficient. Many personal desktop
 machines sit idle for very long periods of time while their owners are
@@ -95,27 +99,32 @@ If no
 machine on the network is currently available, then the job is stored in
 a queue on disk until a machine becomes available.
 
-So, for example, you submit a compute job that typically takes 5
-hours to run. Condor may start running it on Machine A, but after 3
-hours Condor notices activity on the keyboard. So Condor checkpoints
-your job and migrates it to Machine B. After two hours on Machine B,
-your job completes (and Condor notifies you via email). 
+As an example, a compute job that typically takes 5
+hours to run is submitted to Condor.
+Condor may start running the job on Machine A, but after 3
+hours Condor detects activity on the keyboard.
+Condor will checkpoint
+the job and migrates it to Machine B.
+After two hours on Machine B,
+the job completes (notifying the submitter via e-mail). 
 
-Perhaps you have to run this 5 hour compute job 250 different times
+Perhaps this 5 hour compute job must be run 250 different times
 \index{job!multiple data sets}
-(perhaps on 250 different data sets). In this case, Condor can be a real
-time saver. With one command you can submit all 250 runs into Condor.
-Depending upon the number of machines in your organization's Condor
+(perhaps on 250 different data sets).
+In this case, Condor can be a real time saver.
+With one command, all 250 runs are submitted to Condor.
+Depending upon the number of machines in the organization's Condor
 pool, there could be dozens or even hundreds of otherwise idle machines
-(especially at night, for example) at any given moment running your
-job. 
+running the job at any given moment.
 
 Condor makes it easy to maximize the number of machines which can run
-your job. Because Condor does not require participating machines to
+a job. Because Condor does not require participating machines to
 share file systems (via NFS or AFS for example), machines across the
-entire enterprise can run your job, including machines in different
-administrative domains. Condor does not even require you to have an
-account (login) on machines where it runs your job. Condor can do this
+entire enterprise can run a job, including machines in different
+administrative domains.
+Condor does not require an
+account (login) on machines where it runs a job.
+Condor can do this
 because of its \Term{remote system call}
 \index{remote system call}
 technology, which traps
@@ -132,7 +141,8 @@ sophisticated and distributed resource management.
 Match-making resource
 \index{matchmaking}
 owners with resource consumers is the cornerstone of a successful HTC
-environment. Unlike many other compute cluster resource management
+environment.
+Unlike many other compute cluster resource management
 systems which attach properties to the job queues themselves (resulting
 in user confusion over which queue to use as well as administrative
 hassle in constantly adding and editing queue properties to satisfy user
@@ -149,7 +159,7 @@ Likewise,
 when submitting a job, users can specify a \Term{resource request} ad
 \index{resource!request}
 which
-defines both the required and desired set of resources to run the job.
+defines both the required and a desired set of properties to run the job.
 Similarly, a resource offer ad can define requirements and preferences.
 Condor acts as a broker by matching and ranking resource
 offer ads with resource request ads, making certain that all
@@ -186,7 +196,7 @@ mode preserves the local execution environment
 via remote system calls. Users do not have to worry
 about making data files available to remote workstations or even
 obtaining a login account on remote workstations before Condor executes
-their programs there. The program behaves under Condor as if it was
+their programs there. The program behaves under Condor as if it were
 running as the user that submitted the job on the workstation where it
 was originally submitted, no matter on which machine it really ends up
 executing on.
@@ -207,18 +217,19 @@ action to regain control. Condor handles this automatically.
 	\item[ClassAds.]The ClassAd mechanism 
 \index{ClassAd}
 in Condor provides an extremely
-flexible, expressive framework for match-making
+flexible, expressive framework for matchmaking
 resource requests with resource offers. One result is that users can
 easily request practically any resource, both in terms of job
-requirements and/or job desires. For
-example, a user can require that a job run on a machine with 64 Mbytes of
-RAM, but state a preference for 128 Mbytes if available. Likewise, a
-workstation
+requirements and job desires.
+For example, a user can require that a job run on a machine
+with 64 Mbytes of RAM,
+but state a preference for 128 Mbytes if available.
+Likewise, a workstation
 can state a preference in a resource offer to run jobs
-from a certain set of users, and it can require that there be
+from a specified set of users, and it can require that there be
 no interactive workstation
-activity detectable between 9 am and 5 pm before starting a job.  Job
-requirements/preferences and resource availability constraints can be
+activity detectable between 9 am and 5 pm before starting a job.
+Job requirements/preferences and resource availability constraints can be
 described in terms of powerful expressions, resulting in
 Condor's adaptation to nearly any desired policy. 
 \end{description}
