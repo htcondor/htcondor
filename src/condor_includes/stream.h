@@ -169,6 +169,8 @@
 
 #endif // !defined(WIN32)
 
+class ClassAd;
+
 class Stream {
 
 /*
@@ -227,10 +229,10 @@ public:
 	//	Condor types
 
 	int code(PROC_ID &);
-//	int code(PROC &);
 	int code(STARTUP_INFO &);
 	int code(PORTS &);
 	int code(StartdRec &);
+	int code(ClassAd &);
 
 #if !defined(WIN32)
 
@@ -259,22 +261,22 @@ public:
 	int code(unsigned short *x) 	{ return code(*x); }
 	int code(float *x) 				{ return code(*x); }
 	int code(double *x) 			{ return code(*x); }
+	int code(PROC_ID *x)			{ return code(*x); }
+	int code(STARTUP_INFO *x)		{ return code(*x); }
+	int code(PORTS *x)				{ return code(*x); }
+	int code(StartdRec *x)			{ return code(*x); }
+	int code(ClassAd *x)			{ return code(*x); }
 
 #if !defined(WIN32)
 	
 	int signal(int *x)				{ return signal(*x); }
 
-	int code(PROC_ID *x)			{ return code(*x); }
 	int code(struct rusage *x)		{ return code(*x); }
-//	int code(PROC *x)				{ return code(*x); }
-	int code(STARTUP_INFO *x)		{ return code(*x); }
 	int code(struct stat *x)		{ return code(*x); }
 	int code(struct statfs *x)		{ return code(*x); }
 	int code(struct timezone *x)	{ return code(*x); }
 	int code(struct timeval *x)		{ return code(*x); }
 	int code(struct rlimit *x)		{ return code(*x); }
-	int code(PORTS *x)				{ return code(*x); }
-	int code(StartdRec *x)			{ return code(*x); }
 
 #endif // !defined(WIN32)
 
