@@ -56,6 +56,13 @@ public:
 		*/ 
 	virtual int JobExit(int pid, int status) = 0;
 
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd.
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	virtual bool PublishUpdateAd( ClassAd* ad ) = 0;
+
 		/** Suspend. */
 	virtual void Suspend() = 0;
 
