@@ -45,6 +45,7 @@ class Macro {
 public:
 	Macro( const char *name, const char *prompt, const char *dflt );
 	void init( int (*f)(const char *) = 0 );
+	void init( int truth );
 	char *get_val() { return value; }
 	char *gen( int shell_cmd = 0 );
 private:

@@ -80,6 +80,16 @@ Macro::init( int (*f)(const char *) )
 	printf( "\n" );
 }
 
+void
+Macro::init( int truth )
+{
+	if( truth ) {
+		value = copy( "TRUE" );
+	} else {
+		value =copy( "FALSE" );
+	}
+}
+
 char *
 Macro::gen( int is_shell_cmd )
 {
