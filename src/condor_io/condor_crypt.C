@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include "condor_crypt.h"
 #include "condor_md.h"
+#include "condor_random_num.h"
 #if defined(CONDOR_ENCRYPTION)
 #include <openssl/rand.h>              // SSLeay rand function
 #endif
@@ -68,47 +69,37 @@ Protocol Condor_Crypt_Base :: protocol()
 
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
+    unsigned char * key = (unsigned char *)(malloc(length));
+
 #if defined(CONDOR_ENCRYPTION)
     char * file = 0;
     int size = 4096;
     if (count_ == 0) {
-        //#if defined(WIN32)
         unsigned char * buf = (unsigned char *) malloc(size);
-        // I don't think Windoz has /dev/random, so let me find some other way
-        // to create randomness, for now, the stupid way
+
         RAND_seed(buf, size);
-        /*
-#else
-        file = "/dev/random";
-        
-        RAND_load_file(file, size);      // Initialize PRNG
-        // This scheme has one major drawbacks. Everytime a new key is needed, 
-        // we need to initialize the PRNG, which could slow down the processing
-        // However, the other way to do this require a static method to initialize
-        // the state once for all during the lifetime of the process. Then the
-        // question becomes who will call it to initialize it.  Hao (7/2001)
-        
-        // Yet another way to do it, although maybe silly, is to have a static
-        // variable which is initialized to 0 and only the first time when
-        // Randomkey is called will we initialize the PRNG. Actually, I kind
-        // of like the idea now. Hao
-        
-        // WARNING, it may be safer to check for /dev/random first before we use it
-#endif
-        */
+
         free(buf);
     }
     else {
         count_++;
     }
 
-    unsigned char * key = (unsigned char *)(malloc(length));
-
     RAND_bytes(key, length);
-    return key;
 #else
-	return 0;
+    // use condor_util_lib/get_random.c
+    int r, s, size = sizeof(r);
+    unsigned char * tmp = key;
+    for (s = 0; s < length; s+=size, tmp+=size) {
+        r = get_random_int();
+        memcpy(tmp, &r, size);
+    }
+    if (length > s) {
+        r = get_random_int();
+        memcpy(tmp, &r, length - s);
+    }
 #endif
+    return key;
 }
 
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
