@@ -416,7 +416,7 @@ X_is_active()
 
 	dprintf( D_FULLDEBUG, "Searching process table\n" );
 
-#if defined(AIX31) || defined(AIX32)
+#if defined(AIX31) || defined(AIX32) || defined(OSF1)
 	if( (fp=popen("ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"ps -ef\",\"r\")" );
 	}
@@ -496,11 +496,13 @@ XErrorEvent	*event;
 														sizeof(error_text) );
 	dprintf( D_ALWAYS, "\ttext = \"%s\"\n", error_text );
 
+#if !defined(OSF1)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
 		dprintf( D_ALWAYS, "Can't close display fd (%d)\n", d->fd );
 	}
+#endif
 
 		/* Try this for debugging */
 	/*
@@ -525,11 +527,13 @@ Display		*d;
 
 	dprintf( D_ALWAYS, "Got X I/O Error, errno = %d\n", errno );
 
+#if !defined(OSF1)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
 		dprintf( D_ALWAYS, "Can't close display fd (%d)\n", d->fd );
 	}
+#endif
 
 	(void)time( &now );
 	if( now - SecondLastError < MIN_ERROR_INTERVAL ) {
