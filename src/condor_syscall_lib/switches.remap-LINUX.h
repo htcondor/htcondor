@@ -97,10 +97,6 @@ REMAP_ZERO( fork, __fork, pid_t )
 REMAP_ZERO( vfork, __vfork, pid_t )
 REMAP_TWO( fstatfs, __fstatfs, int , int , struct statfs * )
 REMAP_ZERO( getegid, __getegid, gid_t )
-
-/* There is a a SYS_getdents on linux, but there is no libc entry... */
-/* REMAP_THREE( getdents, __getdents, int , int , struct dirent *, size_t ) */
-
 REMAP_ZERO( geteuid, __geteuid, uid_t )
 REMAP_ZERO( getgid, __getgid, gid_t )
 REMAP_TWO( getgroups, __getgroups, int , int , gid_t*)
