@@ -108,7 +108,6 @@ char*		mySubSystem = "SCHEDD";
 
 // global objects
 Scheduler	scheduler;
-Scheduler*	sched = &scheduler;		// for non-member functions to access data
 char		Name[MAXHOSTNAMELEN];
 int			ScheddName = 0;
 
@@ -170,8 +169,8 @@ main_init(int argc, char* argv[])
 	mark_jobs_idle();
 
 	// initialize all the modules
-	scheduler.Init();
 	scheduler.SetClassAd(ScheddClassad);
+	scheduler.Init();
 	scheduler.Register(daemonCore);
 	scheduler.SetCommandPort(daemonCore->InfoCommandPort());
 	
