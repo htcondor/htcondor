@@ -37,14 +37,14 @@ PVM_LIBRARY = pvmd
 		scripts tools shadow.V5 starter.V5 startd \
 		schedd kbdd  negotiator collector globalq master.dhruba prio q rm \
 		submit.v3  on off test_suite_C.V5 $(TEST_SUITE_F)
-#		define Libraries	c++_util util_lib xdr_lib ckpt syscall_lib
+#		define Libraries	xdr_lib util_lib c++_util ckpt syscall_lib
 #else
 #	define Programs \
 		scripts standalone tools shadow starter startd \
 		schedd kbdd  negotiator collector globalq master prio q rm \
 		submit.v2 submit.v3  on off \
 		test_suite_C $(TEST_SUITE_F)
-#		define Libraries	c++_util util_lib xdr_lib $(SYSCALL_LIB) $(PVM_LIBRARY)
+#		define Libraries	xdr_lib util_lib c++_util $(SYSCALL_LIB) $(PVM_LIBRARY)
 #endif
 
 
