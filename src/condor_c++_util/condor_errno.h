@@ -29,7 +29,7 @@ extern int 		CondorErrno;
 
 #ifdef __cplusplus
 #include <string> 
-extern string	CondorErrMsg;
+extern std::string CondorErrMsg;
 #endif
 
 static const int ERR_OK = 0;
