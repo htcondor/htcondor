@@ -49,6 +49,8 @@
 #elif defined(IRIX53)
 #		undef _POSIX_SOURCE
 #		include <sys/wait.h>
+#elif defined(Solaris)
+#		include </usr/ucbinclude/sys/wait.h>
 #endif
 
 /*
