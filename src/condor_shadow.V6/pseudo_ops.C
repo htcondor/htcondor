@@ -1403,7 +1403,7 @@ pseudo_get_a_out_name( char *path )
 	// Switch to Condor uid first, since ickpt files are 
 	// stored in the SPOOL directory as user Condor.
 	priv_state old_priv = set_condor_priv();
-	result = access(ICkptName,F_OK | X_OK);
+	result = access(ICkptName,R_OK);
 	set_priv(old_priv);
 
 	if ( result >= 0 ) {
