@@ -329,10 +329,14 @@ resource_free(resource_id_t rid)
 		rip->r_jobclassad = NULL;
 	}
 
-	rip->r_pid = NO_PID;
+	/* free r_user, which was created with strdup */
+	free(rip->r_user);
+	/* XXX boundary crossing */
+	free(rip->r_clientmachine);
+	rip->r_clientmachine = NULL;
+	
 	rip->r_claimed = FALSE;
 
-	resmgr_changestate(rip->r_rid, NO_JOB);
 	return 0;
 }
 
@@ -372,8 +376,8 @@ resource_initAd(resource_info_t* rip)
 	init_static_info(rip);
 
 		// Save the orig. requirement expression for later use.
-	rip->r_origreqexp = malloc( sizeof(char) * 512 );
-	rip->r_origreqexp[0] = '\0';  // PrintToStr just uses strcat()!!
+	rip->r_origreqexp = new char[512];
+	rip->r_origreqexp[0] = '\0';	// need a NULL cuz PrintToStr does strcat
 	((rip->r_classad)->Lookup(ATTR_REQUIREMENTS))->PrintToStr(rip->r_origreqexp);
 
 	return (rip->r_classad)->Insert("State=\"NoJob\"");
@@ -917,14 +921,11 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 	console_idle = -1;  // initialize
 
 	user_idle = tty_pty_idle_time();
-	dprintf( D_FULLDEBUG, "ttys/ptys idle %d seconds\n",  user_idle );
 
 	if (kbd_dev) {
 		tty_idle = tty_idle_time(kbd_dev);
 		user_idle = MIN(tty_idle, user_idle);
 		console_idle = tty_idle;
-		dprintf(D_FULLDEBUG, "/dev/%s idle %d seconds\n",
-				kbd_dev, tty_idle);
 	}
 
 	if (mouse_dev) {
@@ -932,8 +933,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		user_idle = MIN(tty_idle, user_idle);
 		if (console_idle != -1)
 			console_idle = MIN(tty_idle, console_idle);
-		dprintf(D_FULLDEBUG, "/dev/%s idle %d seconds\n", mouse_dev,
-				tty_idle);
 	}
 /*
 ** On HP's "/dev/hil1" - "/dev/hil7" are mapped to input devices such as
@@ -950,8 +949,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 			console_idle = tty_idle;
 		else
 			console_idle = MIN(tty_idle, console_idle);
-
-		dprintf(D_FULLDEBUG, "%s idle %d seconds\n", devname, tty_idle);
 	}
 	tty_idle = tty_idle_time("ps2kbd");
 	console_idle = MIN(tty_idle, console_idle);
@@ -970,7 +967,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 	sprintf(devname, "mouse");
 	tty_idle = tty_idle_time(devname);
 	user_idle = MIN( tty_idle, user_idle );
-	dprintf( D_FULLDEBUG, "/dev/mouse idle for %d seconds\n", tty_idle);
 #endif
 
 	now = (int)time((time_t *)0);
@@ -984,6 +980,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 
 	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
 			user_idle,console_idle);
+	
 	return;
 }
 
@@ -1153,13 +1150,13 @@ static void init_static_info(resource_info_t* rip)
 		config_classad->Insert(tmp);
 	}
   
-	addrname = (char *)malloc(32);
 	getsockname(rip->r_sock, (struct sockaddr *)&sin, &len);
 	get_inet_address(&sin.sin_addr);
-	strcpy(addrname, sin_to_string(&sin));
-  
+	
+	addrname = strdup( sin_to_string(&sin) );
 	sprintf(tmp,"%s=\"%s\"",(char *)ATTR_STARTD_IP_ADDR,addrname);
 	config_classad->Insert(tmp);
+	free(addrname);
 
 	// Quick hack to refer to the START expression as the machine
 	// classad requirements.  Eventually we should do some more
