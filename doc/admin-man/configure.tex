@@ -303,6 +303,10 @@ system.
   your pool.  Normally it is defined with the
   \MacroUNI{CONDOR\_HOST} macro described above.
 
+\item[\Macro{SCHEDD\_HOST}] \label{param:ScheddHost} The
+  hostname of the machine where the \Condor{schedd} is running for
+  your pool.
+
 \item[\Macro{RELEASE\_DIR}] \label{param:ReleaseDir} The full path to
   the Condor release directory, which holds the \File{bin}, \File{etc},
   \File{lib}, and \File{sbin} directories.
@@ -2729,6 +2733,9 @@ periodic syncs of streamed output to disk. The default is 5 minutes
 %\item[\Macro{GRIDMANAGER\_MAX\_TIME\_DOWN\_RESOURCES}]
 %\label{param:GridmanagerMaxTimeDownResources} To be written...
 
+\item[\Macro{GSI\_DAEMON\_NAME}]
+\label{param:GSIDaemonName} A comma separated list of the subject
+name(s) of the certificate(s) that the daemons use.
 \end{description}
 
 \input{admin-man/root-config.tex}
