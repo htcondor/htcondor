@@ -38,6 +38,7 @@ GCC_LIBC = LIB_GCC
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
 #define WANT_MAN_PAGES	YES
+#define WANT_CONDOR_ANALZYE YES
 #define IS_V6			YES
 #define USE_QMGMT		YES
 #define HAS_NEW_FORTRAN YES
@@ -128,5 +129,6 @@ GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
 
 MANDIR = /p/condor/workspaces/man/v6.5
 PVM_DIR = /afs/cs.wisc.edu/p/condor/workspaces/pvm/pvm3.4.2
+CONDOR_ANALYZE_DIR = /afs/cs.wisc.edu/p/condor/workspaces/epaulson/condor_analyze_dir/bin
 
 #endif  /* AfterVendorCF */
