@@ -884,8 +884,18 @@ XCOMM End translation of func(quantify_c_plus_target)
 ** condor_compile.  These are used primarily in the test suites. 
 ***********************************************************************/
 
+/* This is a little weird, but if "FLAGS_MACRO_NAME" is defined, we're
+   in a compiler-specific subdirectory of the test suite.  If it's
+   not, we're at the top-level, so how we find condor_compile and
+   condor_arch link are different...
+*/
+#ifdef FLAGS_MACRO_NAME
 CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
+#else
+CONDOR_COMPILE = ../condor_scripts/condor_compile
+CONDOR_ARCH_LINK = perl ../condor_scripts/condor_arch_link
+#endif
 
 /*
 ** Link a program with Condor libraries for the standard universe
