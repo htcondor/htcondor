@@ -287,9 +287,6 @@ ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 	if( coll_sock ) {
 		if( send_classad_to_sock(coll_sock, public_ad, private_ad) ) {
 			num++;
-			dprintf( D_FULLDEBUG, 
-					 "Sent UDP update to the collector (%s)\n", 
-					 collector_host );
 		} else {
 			dprintf( D_ALWAYS,
 					 "Error sending UDP update to the collector (%s)\n", 
@@ -301,9 +298,6 @@ ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 	if( view_sock ) {
 		if( send_classad_to_sock(view_sock, public_ad, NULL) ) {
 			num++;
-			dprintf( D_FULLDEBUG, 
-					 "Sent UDP update to the condor_view host (%s)\n", 
-					 collector_host );
 		} else {
 			dprintf( D_ALWAYS, 
 					 "Error sending UDP update to the collector (%s)\n", 
@@ -352,6 +346,9 @@ ResMgr::eval_all()
 void
 ResMgr::report_updates()
 {
+	if( !num_updates ) {
+		return;
+	}
 	if( coll_sock ) {
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
@@ -437,9 +434,9 @@ ResMgr::assign_keyboard()
 
 	if( is_smp() ) {
 			// First, initialize all CPUs to the max idle time we've
-			// got, which would be 15 minutes longer than the time
-			// since we started up. 
-		max = (time(0) - startd_startup) + (16 * 60);
+			// got, which is some configurable amount of minutes
+			// longer than the time since we started up. 
+		max = (time(0) - startd_startup) + disconnected_keyboard_boost;
 		for( i = 0; i < nresources; i++ ) {
 			resources[i]->r_attr->set_console( max );
 			resources[i]->r_attr->set_keyboard( max );
@@ -447,12 +444,12 @@ ResMgr::assign_keyboard()
 	}
 
 		// Now, assign console activity to all CPUs that care.
-	for( i = 0; i < console_cpus  && i < nresources; i++ ) {
+	for( i = 0; i < console_vms  && i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( console );
 	}
 
 		// Finally, assign keyboard activity to all CPUS that care. 
-	for( i = 0; i < keyboard_cpus && i < nresources; i++ ) {
+	for( i = 0; i < keyboard_vms && i < nresources; i++ ) {
 		resources[i]->r_attr->set_keyboard( keyboard );
 	}
 }
