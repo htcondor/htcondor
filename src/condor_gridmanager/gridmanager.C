@@ -573,7 +573,6 @@ checkResources()
 	time_t most_recent_time = 0;
 	time_t least_recent_time = 0;
 	bool locked_up;
-	time_t downfor;
 
 	ResourcesByName.startIterations();
 	while ( ResourcesByName.iterate( next_resource ) != 0 ) {

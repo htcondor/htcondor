@@ -33,7 +33,6 @@
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
-static int DFS_ORDER;
 //-----------------------------------------------------------------------------
 void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
