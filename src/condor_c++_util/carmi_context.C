@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include "condor_fix_string.h"
 #include <rpc/xdr.h>
 #include <unistd.h>
 #include "carmi_context.h"
