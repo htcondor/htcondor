@@ -746,6 +746,7 @@ UserProc::execute()
 
 		switch( job_class ) {
 		  
+		  case STANDARD:
 		  case PVM:
 		  case PIPE:
 			if( chdir(local_dir) < 0 ) {
