@@ -1,0 +1,86 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Prototypes
+sub Init( );
+sub RunIt( );
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my $Hash;
+my $ModuleName = "test";
+my @Params = "";
+my $CmdLine = join( " ", @ARGV );
+
+# Do it
+Init();
+RunIt();
+
+sub Init()
+{
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+
+    # Get my name from the command line
+    $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
+
+    # Read the config info..
+    $Params[0] = HawkeyeLib::ReadConfig( $ModuleName, "_Param0", "true" );
+    $Params[1] = HawkeyeLib::ReadConfig( $ModuleName, "_Param1", "xyzzy" );
+    $Params[2] = HawkeyeLib::ReadConfig( $ModuleName, "_Param2", 1 );
+    $Params[3] = HawkeyeLib::ReadConfig( $ModuleName, "_Param3", "/bin/echo");
+    $Params[4] = HawkeyeLib::ReadConfig( $ModuleName, "_Param4", 0 );
+
+    # Finally, parse the command line...
+    foreach my $Arg ( @ARGV )
+    {
+	# Cluster on/off
+	if ( $Arg =~ /-param(\d)=(.*)/ )
+	{
+	    $Params[$1] = $2;
+	}
+	else
+	{
+	    print STDERR "Unknown option '$Arg'\n";
+	    print STDERR "Usage: test [name [options]]\n";
+	    print STDERR
+		"  [name]         \tModules logical name\n" .
+		"  [-paramN=X]    \tSet parameter N to X\n" ;
+	    exit 1;
+	}
+    }
+}
+
+# Do the real work here...
+sub RunIt()
+{
+
+    # Start things off
+    $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    $Hash->Add( "CmdLine", "s", $CmdLine );
+    $Hash->Add( "ModuleName", "s", $ModuleName );
+
+    foreach my $Num ( 0 .. $#Params )
+    {
+	my $Type = ( $Params[$Num] =~ /\D/ ) ? "s" : "n";
+	$Hash->Add( "Param$Num", $Type, $Params[$Num] );
+    }
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}
