@@ -47,6 +47,8 @@ static void get_k_vars();
 
 float lookup_load_avg();
 
+extern float lookup_load_avg_via_uptime();
+
 struct nlist nl[] = {
 #if defined(IRIX331) || defined(HPUX9) || defined(IRIX53)
     { "avenrun",0,0 },

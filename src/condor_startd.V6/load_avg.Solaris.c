@@ -37,6 +37,8 @@ static int KernelLookupFailed = 0;
 
 double kstat_load_avg();
 
+extern float lookup_load_avg_via_uptime();
+
 float
 calc_load_avg()
 {
