@@ -33,9 +33,6 @@ char	*foo;
 { printf( foo ); }
 #else LINT
 
-extern int	sys_nerr;
-extern char	*sys_errlist[];
-
 extern int	condor_nerr;
 extern char	*condor_errlist[];
 
