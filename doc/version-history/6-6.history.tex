@@ -34,8 +34,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem that sometimes caused DAGMan to segfault while
+\item Fixed a problem that sometimes caused \Condor{dagman} to segfault while
       parsing DAGs (as far as we know, only very large DAGs).
+
+\item Fixed an error in the \Condor{dagman} submit file parsing code:
+      submit files that do not have whitespace surrounding the equal sign
+      on the log file line were not correctly parsed, causing the DAG
+      to fail.
 
 \end{itemize}
 
