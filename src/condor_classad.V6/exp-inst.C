@@ -38,7 +38,7 @@ template class map< int, Interval >;
 template class map< int, Interval >::iterator;
 template class map< string, OneDimension, CaseIgnLTStr >;
 template class map< string, OneDimension, CaseIgnLTStr >::iterator;
-template class ExtArray<unsigned int>;      // key set
+template class vector<unsigned int>;      // key set
 template class set< double >;               // end points set
 template class set< double >::iterator;
 template class set< int >;					// index entries
@@ -49,7 +49,6 @@ template class map< int, int >;
 template class map< int, int >::iterator;
 template class map< string, set<int>, CaseIgnLTStr >;
 template class map< string, set<int>, CaseIgnLTStr >::iterator;
-template class map< int, ExtArray<unsigned int> >;
 
 	// classad compression
 class ClassAdBin;
