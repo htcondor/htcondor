@@ -21,22 +21,15 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#define _ALL_SOURCE
-
-#include <stdio.h>
+#include "condor_common.h"
 #include <filehdr.h>
 #include <aouthdr.h>
 #include <model.h>
 #include <magic.h>
 #include <nlist.h>
 #include "condor_debug.h"
-#include "_condor_fix_resource.h"
 #include "types.h"
 #include "proto.h"
-
-#include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
 
 extern "C" {
 #ifdef HPUX10

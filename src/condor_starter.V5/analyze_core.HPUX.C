@@ -33,14 +33,9 @@ Portability:
 	and is not portable to other systems.
 ******************************************************************/
 
-#define _ALL_SOURCE
-
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include "condor_common.h"
 #include <sys/core.h>
 #include "condor_debug.h"
-#include "_condor_fix_resource.h"
 #include "types.h"
 #include "proto.h"
 
