@@ -88,11 +88,12 @@ DISTRIBUTION_DIR = classads_0.9.2
 DIST_FILES = attrrefs.C attrrefs.h classad.C classad.h collection.C \
 collection.h collectionBase.C collectionBase.h common.h classadErrno.h \
 classadItor.h debug.C debug.h exprList.C exprList.h exprTree.C \
-exprTree.h fnCall.C fnCall.h instantiations.C lexer.C lexer.h \
-literals.C literals.h matchClassad.C matchClassad.h operators.C \
+exprTree.h fnCall.C fnCall.h indexfile.h indexfile.C instantiations.C lexer.C \
+lexer.h literals.C literals.h matchClassad.C matchClassad.h operators.C \
 operators.h query.C query.h sample.C sink.C sink.h source.C source.h \
-test_classads.C man_cache_test.C tests.txt transaction.C transaction.h value.C value.h \
-view.C view.h xmlSink.h xmlSink.C classad_distribution.h LICENSE README \
+test_classads.C test_xml.C tests.txt transaction.C transaction.h value.C \
+value.h view.C view.h xmlLexer.C xmlLexer.h xmlSink.h xmlSink.C xmlSource.h \
+xmlSource.C classad_distribution.h LICENSE README \
 CHANGELOG configure
 
 dist: $(DIST_FILES)
@@ -119,4 +120,3 @@ c_plus_target (test_classads, test_classads.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (man_cache_test, man_cache_test.o, $(LIB))
 pure_c_plus_target (test_classads.pure, test_classads.o, $(LIB))
-
