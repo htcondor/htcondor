@@ -80,9 +80,17 @@ if( ! $dagfile ) {
     $rescue_file = "$dagfile.rescue";
 }
 
-# Figure out if condor_dagman is installed, and if so, where. 
-chop( $dagman_path = `which condor_dagman` );
--x $dagman_path || 
+
+# See if there is an executable 'condor_dagman' anywhere in our path.
+foreach $dir ( split /:/, $ENV{PATH} )
+{
+    $cur_path = "$dir/condor_dagman";
+    if( -x $cur_path ) {
+        $dagman_path = $cur_path;
+        last;
+    }
+}
+$dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
 
 # Make sure all the files we're going to use are available, and if
