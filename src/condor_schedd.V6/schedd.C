@@ -4721,7 +4721,6 @@ Scheduler::child_exit(int pid, int status)
 					// no break, fall through and do the action
 			case JOB_NO_CKPT_FILE:
 			case JOB_KILLED:
-			case JOB_COREDUMPED:
 				if( q_status != HELD ) {
 					set_job_status( srec->job_id.cluster,
 									srec->job_id.proc, REMOVED ); 
@@ -4729,6 +4728,7 @@ Scheduler::child_exit(int pid, int status)
 				break;
 			case JOB_EXITED:
 				dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
+			case JOB_COREDUMPED:
 				if( q_status != HELD ) {
 					set_job_status( srec->job_id.cluster,
 									srec->job_id.proc, COMPLETED ); 
