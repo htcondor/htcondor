@@ -291,11 +291,11 @@ char	*pattern;
 	return 0;
 }
 
-#if defined(SUNOS41) || defined(ULTRIX43)
+#if defined(SUNOS41) || defined(Solaris) || defined(ULTRIX43)
 #include <sys/utsname.h>
 #endif
 
-#if defined(SUNOS41)
+#if defined(SUNOS41) || defined(Solaris)
 char *
 get_arch()
 {
@@ -315,7 +315,7 @@ get_arch()
 }
 #endif
 
-#if defined(SUNOS41) || defined(ULTRIX43)
+#if defined(SUNOS41) || defined(Solaris) || defined(ULTRIX43)
 char *
 get_op_sys()
 {
