@@ -390,4 +390,4 @@ clean::
 import(../condor_ckpt,$(STANDALONE_COMPRESS_LIB))
 #endif
 
-docs:
+html:

@@ -55,4 +55,4 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 #endif
 
 clean::
-docs:
+html:

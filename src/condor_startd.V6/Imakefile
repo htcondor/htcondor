@@ -36,7 +36,7 @@ pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 
-docs:
+html:
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )

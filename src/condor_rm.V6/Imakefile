@@ -19,4 +19,4 @@ release_link_target($(RELEASE_DIR)/bin/condor_rm,bin,condor_hold)
 strip_link_target($(STRIP_DIR)/bin/condor_rm,bin,condor_hold)
 static_link_target($(STATIC_DIR)/bin/condor_rm,bin,condor_hold)
 
-docs:
+html:

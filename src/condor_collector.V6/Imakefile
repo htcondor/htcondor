@@ -21,4 +21,4 @@ purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 IMPORT_LINKS = ../../config/import_links
 import(../condor_status.V6,totals.o)
 
-docs:
+html:

@@ -12,7 +12,7 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 library_target(libcedar.a, $(OBJ))
 
 c_plus_target(cedar.t, cedar.t.o, $(LIB))
-doc_target( ../condor_includes/reli_sock.h ../condor_includes/sock.h )
+html_target( ../condor_includes/reli_sock.h ../condor_includes/sock.h )
 
 release:
 stripped:

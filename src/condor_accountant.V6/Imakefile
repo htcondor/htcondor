@@ -16,4 +16,4 @@ pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
 release:
 stripped:
 static:
-docs:
+html:

@@ -1,7 +1,8 @@
 all_target( syscall_numbers.h syscall_numbers.o )
 awk_target( syscall_numbers.h, syscall_numbers.tmpl, awk_prog.include_file )
 awk_target( syscall_numbers.c, syscall_numbers.tmpl, awk_prog.name_table )
-docs:
+
+html:
 
 clean::
 	rm -f syscall_numbers.o

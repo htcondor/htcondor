@@ -18,4 +18,4 @@ release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 
-docs:
+html:
