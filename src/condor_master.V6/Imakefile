@@ -1,0 +1,24 @@
+SRC_DIR = $(SRC_TREE)/condor_master
+CFLAGS = $(STD_C_FLAGS) 
+C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DNEW_PROC
+
+SRC = master.C path.c daemon.C
+OBJ = master.o path.o daemon.o
+UTIL_LIB = ../condor_util_lib/util_lib.a
+XDR_LIB = ../condor_xdr_lib/xdr_lib.a
+CLASS_LIB = ../condor_c++_util/cplus_lib.a
+DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+CLASSAD_LIB = ../condor_classad/expr_lib.a
+
+#if IS_HPPAR_HPUX9
+BSD_LIB = /usr/lib/libBSD.a
+#endif
+
+LIB = $(DAEMON_CORE_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(XDR_LIB) $(UTIL_LIB) $(BSD_LIB) SocketLib KernLib
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
+
+all_target(condor_master)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+c_plus_target(condor_master,$(OBJ),$(LIB))
+release_target(condor_master,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
