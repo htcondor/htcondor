@@ -75,6 +75,7 @@ VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@
 /* Other miscellaneous settings we need */
 
 LEX = @LEX@
+LEXLIB = @LEXLIB@
 YACC = @YACC@
 
 TMP_DIR = @TMPDIR@
