@@ -2369,6 +2369,13 @@ SetArguments()
 	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
 	InsertJobExpr (buffer);
 
+	if( JobUniverse == CONDOR_UNIVERSE_JAVA && !*args)
+	{
+		fprintf(stderr, "\nERROR: In Java universe, you must specify the class name to run.\nExample:\n\narguments = MyClass\n\n");
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
 	free(args);
 }
 
