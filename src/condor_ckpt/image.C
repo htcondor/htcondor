@@ -19,6 +19,7 @@ static char *_FileName_ = __FILE__;
 #endif
 
 extern int errno;
+extern int _Ckpt_Via_TCP_Stream;
 
 const int KILO = 1024;
 
@@ -366,14 +367,19 @@ Image::Write( const char *ckpt_file )
 
 		// In remote mode, our peer will send back the actual
 		// number of bytes transferred as a check
-	if( MyImage.GetMode() == REMOTE ) {
-		bytes_read = read( fd, &nbytes, sizeof(nbytes) );
-		nbytes = ntohl( nbytes );
+	if( _Ckpt_Via_TCP_Stream ) {
+		if( MyImage.GetMode() == REMOTE ) {
+			bytes_read = read( fd, &nbytes, sizeof(nbytes) );
+			nbytes = ntohl( nbytes );
+		}
 	}
 
+	dprintf( D_ALWAYS, "About to close ckpt fd (%d)\n", fd );
 	if( close(fd) < 0 ) {
+		dprintf( D_ALWAYS, "Close failed!\n" );
 		return -1;
 	}
+	dprintf( D_ALWAYS, "Closed OK\n" );
 
 	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 	SetSyscalls( scm );
@@ -404,6 +410,7 @@ Image::Write( int fd )
 		return -1;
 	}
 	pos += nbytes;
+	dprintf( D_ALWAYS, "Wrote headers OK\n" );
 
 		// Write out the SegMaps
 	for( i=0; i<head.N_Segs(); i++ ) {
@@ -411,7 +418,9 @@ Image::Write( int fd )
 			return -1;
 		}
 		pos += nbytes;
+		dprintf( D_ALWAYS, "Wrote SegMap[%d] OK\n", i );
 	}
+	dprintf( D_ALWAYS, "Wrote all SegMaps OK\n" );
 
 		// Write out the Segments
 	for( i=0; i<head.N_Segs(); i++ ) {
@@ -419,7 +428,9 @@ Image::Write( int fd )
 			return -1;
 		}
 		pos += nbytes;
+		dprintf( D_ALWAYS, "Wrote Segment[%d] OK\n", i );
 	}
+	dprintf( D_ALWAYS, "Wrote all Segments OK\n" );
 	return 0;
 }
 
