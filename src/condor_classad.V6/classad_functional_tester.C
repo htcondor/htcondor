@@ -1425,7 +1425,7 @@ void print_version(void)
 
     ClassAdLibraryVersion(classad_version);
 
-    cout << "ClassAd Tester v" << classad_version << endl;
+    cout << "ClassAd Functional Tester v" << classad_version << endl;
 
     return;
 }
