@@ -465,6 +465,17 @@ int String::_EvalTree(AttrList*, EvalResult* val)
     return TRUE;
 }
 
+int Time::_EvalTree(AttrList*, EvalResult* val)
+{
+    if(!val) 
+    {
+	return FALSE;
+    }
+    val->type = LX_TIME;
+    val->s = new char[strlen(time) + 1];
+    strcpy(val->s, time);
+    return TRUE;
+}
 
 //-------tw-----------------------------
 
@@ -480,6 +491,17 @@ int String::_EvalTree(AttrList*, AttrList*, EvalResult* val)
     return TRUE;
 }
 
+int Time::_EvalTree(AttrList*, AttrList*, EvalResult* val)
+{
+    if(!val) 
+    {
+	return FALSE;
+    }
+    val->type = LX_TIME;
+    val->s = new char[strlen(time) + 1];
+    strcpy(val->s, time);
+    return TRUE;
+}
 
 //-----------------------------------
 int Boolean::_EvalTree(AttrList*, EvalResult* val)
@@ -672,6 +694,12 @@ int String::CalcPrintToStr(void)
 	}
 	// Then we have to add 2, for the opening and closing quote marks.
 	return length + 2;
+}
+
+int Time::CalcPrintToStr(void)
+{
+	// Add 2, for the opening and closing quote (') marks.
+	return strlen(time) + 2;
 }
 
 int Boolean::CalcPrintToStr(void)
@@ -872,6 +900,24 @@ void String::PrintToStr(char* str)
 		*ptr2 = '\\';
 		ptr2++;
 	}
+	*ptr2 = *ptr1;
+	ptr1++;
+	ptr2++;
+  }
+  *ptr2 = '"';
+  *(ptr2 + 1) = '\0';
+}
+
+void Time::PrintToStr(char* str)
+{
+  char*		ptr1 = time;
+  char*		ptr2 = str;
+
+  while(*ptr2 != '\0') ptr2++;
+  *ptr2 = '\'';
+  ptr2++;
+  while(*ptr1 != '\0')
+  {
 	*ptr2 = *ptr1;
 	ptr1++;
 	ptr2++;
@@ -1110,6 +1156,24 @@ String::DeepCopy(void) const
 	value_copy = new char[strlen(value)+1];
 	strcpy(value_copy, value);
 	copy = new String(value_copy);
+#endif
+	CopyBaseExprTree(copy);
+	
+	return copy;
+}
+
+ExprTree*  
+Time::DeepCopy(void) const
+{
+	Time *copy;
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	copy = new Time(time);
+#else
+	char   *time_copy;
+	time_copy = new char[strlen(time)+1];
+	strcpy(time_copy, time);
+	copy = new Time(time_copy);
 #endif
 	CopyBaseExprTree(copy);
 	
