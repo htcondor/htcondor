@@ -110,6 +110,7 @@ XDR_STATFS_OBJ = xdr_statfs.GEN.o
 XDR_OBJ = \
  	xdr_rusage.o \
  	xdr_proc.o \
+	xdr_strings.o \
 	xdr_stat.o \
  	$(XDR_STATFS_OBJ) \
  	xdr_timeval.o \
