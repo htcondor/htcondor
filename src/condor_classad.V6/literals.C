@@ -163,7 +163,7 @@ _Evaluate (EvalState &, Value &val) const
 			val.SetIntegerValue(i);
 		}
 	} else if (val.IsRealValue(r)) {
-		val.SetRealValue (r*(double)factor);
+		val.SetRealValue (r*Value::ScaleFactor[factor]);
 	}
 
 	return( true );
