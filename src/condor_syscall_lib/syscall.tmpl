@@ -495,6 +495,11 @@ All of these calls manipulate the open file table.
 	
 	int fchdir( int fd ) : file_table;
 
+	int chdir( const char *path ) : pseudo, file_table {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
 	/*
 	poll and switch are supported in a limited way for local files
 	and sockets, so we need the switch to trap them, but
@@ -850,11 +855,6 @@ do this.  This issue will eventually need to be addressed.
 			ALLOC_PATH( path_name );
 		}
 	#endif
-
-	int chdir( const char *path ) : pseudo {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
 
 	int unlink( const char *path ) {
 		SEND_PATH( path );

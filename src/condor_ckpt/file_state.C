@@ -166,6 +166,8 @@ void CondorFileTable::init()
 	pointers[1] = new CondorFilePointer(0,make_info("default stdout"),O_WRONLY);
 	pointers[2] = new CondorFilePointer(0,make_info("default stderr"),O_WRONLY);
 
+	strcpy( working_dir, "." );
+
 	atexit( _condor_disable_buffering );
 }
 
@@ -472,10 +474,33 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 	return p->file;
 }
 
+/*
+If short_path is an absolute path, copy it to full path.
+Otherwise, tack the current directory on to the front
+of short_path, and copy it to full_path.
+*/
+ 
+void CondorFileTable::complete_path( const char *short_path, char *full_path )
+{
+        if(short_path[0]=='/') {
+                strcpy(full_path,short_path);
+        } else {
+                strcpy(full_path,working_dir);
+                strcat(full_path,"/");
+                strcat(full_path,short_path);
+        }
+}
+
 int CondorFileTable::open( const char *logical_name, int flags, int mode )
 {
+	char full_logical_name[_POSIX_PATH_MAX];
+
 	CondorFile *file=0;
 	CondorFileInfo *info=0;
+
+	// Convert a relative path into a complete path
+
+	complete_path( logical_name, full_logical_name );
 
 	// Find a fresh file descriptor
 	// This has to come first so we know if this is stderr
@@ -486,10 +511,10 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 		return -1;
 	}
 
-	file = open_file_unique( (char*) logical_name, flags, mode, fd!=2 );
+	file = open_file_unique( (char*) full_logical_name, flags, mode, fd!=2 );
 	if(!file) return -1;
 
-	info = make_info( (char*) logical_name );
+	info = make_info( (char*) full_logical_name );
 	info->open_count++;
 
 	// Flags that should be applied once only are now removed
@@ -810,7 +835,35 @@ int CondorFileTable::fchdir( int fd )
 	dprintf(D_ALWAYS,"CondorFileTable::fchdir(%d) will try chdir(%s)\n",
 		fd, pointers[fd]->info->logical_name );
 
-	return ::chdir( pointers[fd]->info->logical_name );
+	return chdir( pointers[fd]->info->logical_name );
+}
+
+/*
+chdir() works by attempting the chdir remotely, and then
+storing the working directory text.  If this is a relative
+path, we just tack it on to the given path.  We have
+to be careful never to do a getcwd(), because this is not
+safe on auto-mounted NFS systems.
+*/
+
+int CondorFileTable::chdir( const char *path )
+{
+	int result;
+
+	if( MyImage.GetMode() != STANDALONE ) {
+		result = REMOTE_syscall( CONDOR_chdir, path );
+	} else {
+		result = syscall( SYS_chdir, path );
+	}
+
+	if( result==-1 ) return result;
+
+	if( path[0]=='/' ) {
+		strcpy( working_dir, path );
+	} else {
+		strcat( working_dir, "/" );
+		strcat( working_dir, path );
+	}
 }
 
 /*
@@ -1018,7 +1071,7 @@ int CondorFileTable::get_buffer_block_size()
 }
 
 /*
-Checkpoint the state of the file table.  This involves storing the current working directory, reporting the disposition of all files, and flushing and closing them.  The closed files will be re-bound and re-opened lazily after a resume.  Notice that these need to be closed even for a periodic checkpoint, because logical names must be re-bound to physical urls.  If a close fails at this point, we must roll-back, otherwise the data on disk would not be consistent with the checkpoint image.
+Checkpoint the state of the file table.  This involves reporting the disposition of all files, and flushing and closing them.  The closed files will be re-bound and re-opened lazily after a resume.  Notice that these need to be closed even for a periodic checkpoint, because logical names must be re-bound to physical urls.  If a close fails at this point, we must roll-back, otherwise the data on disk would not be consistent with the checkpoint image.
 */
 
 void CondorFileTable::checkpoint()
@@ -1031,11 +1084,7 @@ void CondorFileTable::checkpoint()
 
 	if( MyImage.GetMode() != STANDALONE ) {
 		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
-		REMOTE_syscall( CONDOR_getwd, working_dir );
-	} else {
-		::getcwd( working_dir, _POSIX_PATH_MAX );
 	}
-
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
 	for( int i=0; i<length; i++ ) {

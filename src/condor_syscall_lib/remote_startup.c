@@ -418,6 +418,12 @@ MAIN( int argc, char *argv[], char **envp )
 		/* This is the checkpointing-only startup */
 
 		do_remote_syscalls = 0;
+
+		/* Need to store the cwd in the file table */
+		scm = SetSyscalls( SYS_LOCAL|SYS_MAPPED );
+		chdir( getwd(0) );
+		SetSyscalls( scm );
+
 		_condor_prestart( SYS_LOCAL );
 
 		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
@@ -807,13 +813,16 @@ _condor_set_iwd()
 {
 	char	iwd[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
+	int	scm;
 
 	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
 		_condor_error_fatal( "Can't determine initial working directory" );
 	}
-	if( REMOTE_syscall(CONDOR_chdir,iwd) < 0 ) {
+	scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
+	if( chdir(iwd) < 0 ) {
 		_condor_error_retry( "Can't move to directory %s", iwd );
 	}
+	SetSyscalls(scm);
 }
 
 void

@@ -180,6 +180,9 @@ public:
 	    name.  This is not exactly UNIX semantics. */
 	int	fchdir( int fd );
 
+	/** Change the working directory with UNIX semantics. */
+	int	chdir( const char *path );
+
 	/** Handle known fcntl values by modifying the table, or passing
 	    the value to the appropriate file object.  Unknown fcntls
 	    or those with non-integer third arguments fail with a 
@@ -235,6 +238,7 @@ private:
 	void	lookup_url( char *logical_name, char *url );
 	int	find_url( char *url );
 	int	find_logical_name( char *logical_name );
+	void	complete_path( const char *short_path, char *long_path );
 
 	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
 	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );
