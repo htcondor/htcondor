@@ -176,7 +176,7 @@ not your jobs will run ahead of another user's jobs.
 %% notification
 %%%%%%%%%%%%%%%%%%%
 
-\item[notification = $<$when$>$] Owners of condor jobs are notified by
+\item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of condor jobs are notified by
 email when certain events occur. If \Arg{when} is set to
 \mbox{Always}, the owner will be notified whenever the job is
 checkpointed, and when it completes. If \Arg{when} is set to
@@ -190,7 +190,7 @@ regardless what happens to the job.
 %% notify_user
 %%%%%%%%%%%%%%%%%%%
 
-\item[notify\_user = $<$email-address$>$] Used to specify the email
+\item[notify\_user = $<$email-address$>$]\label{man-condor-submit-notify-user} Used to specify the email
 address to use when Condor sends email about a job.  If not specified,
 Condor will default to using :
 \begin{verbatim}
