@@ -56,18 +56,6 @@ SYSCALL_LIB = syscall_lib
 #define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
 #define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a
 
-#if USES_ROOT_RUID
-#define UidFlags -DUSE_ROOT_RUID
-#else
-#define UidFlags
-#endif
-
-#if HAS_VOID_SIGNAL_RETURN
-#define SigFlag -DVOID_SIGNAL_RETURN
-#else
-#define SigFlag
-#endif
-
 #define AR_DELETE(libname,objects) ar d libname objects
 #define AR_EXTRACT(libname,objects) ar x libname objects
 
@@ -137,7 +125,7 @@ DEBUG_FLAG = DebugFlag
 
 STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
- SigFlag CompatFlags UidFlags $(DEBUG_FLAG) PlatformFlags
+ $(DEBUG_FLAG) PlatformFlags
 
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 
