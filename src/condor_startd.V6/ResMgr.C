@@ -659,11 +659,13 @@ ResMgr::init_socks( void )
 {
 	if( coll_sock ) {
 		delete coll_sock;
+		coll_sock = NULL;
 	}
 	coll_sock = Collector->safeSock();
 
 	if( view_sock ) {
 		delete view_sock;
+		view_sock = NULL;
 	}
 	if( condor_view_host ) {
 		view_sock = new SafeSock;
@@ -932,6 +934,14 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 	int num = 0;
 
 	if( coll_sock ) {
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_FULLDEBUG, 
+					 "Attempting to send update to collector <%s:%d>\n", 
+					 coll_sock->endpoint_ip_str(), coll_sock->endpoint_port() );
+			dprintf( D_FULLDEBUG, 
+					 "Collector Daemon Object: %s (%s)\n",
+					 Collector->addr(), Collector->fullHostname() );
+		}
 		if( send_classad_to_sock(cmd, coll_sock, public_ad, private_ad) ) {
 			num++;
 		} else {
@@ -943,6 +953,11 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 
 		// If we have an alternate collector, send public CA there.
 	if( view_sock ) {
+		if( DebugFlags & D_FULLDEBUG ) {
+			dprintf( D_FULLDEBUG, 
+					 "Attempting to send update to view collector <%s:%d>\n", 
+					 view_sock->endpoint_ip_str(), view_sock->endpoint_port() );
+		}
 		if( send_classad_to_sock(cmd, view_sock, public_ad, NULL) ) {
 			num++;
 		} else {
