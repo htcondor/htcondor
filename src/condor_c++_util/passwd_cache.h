@@ -21,8 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef __NIS_CACHE_H
-#define __NIS_CACHE_H
+#ifndef __PASSWD_CACHE_H
+#define __PASSWD_CACHE_H
 
 #include <grp.h>
 #include "MyString.h"
@@ -130,4 +130,4 @@ class passwd_cache {
 		GroupHashTable *group_table;
 };
 
-#endif /* __NIS_CACHE_H */
+#endif /* __PASSWD_CACHE_H */
