@@ -57,11 +57,11 @@ is serving, while fast shutdown results in a hard kill of every shadow
 with no chance of checkpointing.  
 
 For all daemons, ``reconfigure'' just means that the daemon re-reads
-its config file(s) and any settings that have change take effect.  For
-example, changing the level of debugging output, the value of timers
-that determine how often daemons perform certain actions, the paths to
-the binaries you want the \Condor{master} to spawn, etc.  See
-section~\ref{sec:Configuring-Condor} on ``Configuring Condor'' for
+its config file(s) and any settings that have changed take effect.
+For example, changing the level of debugging output, the value of
+timers that determine how often daemons perform certain actions, the
+paths to the binaries you want the \Condor{master} to spawn, etc.  
+See section~\ref{sec:Configuring-Condor} on ``Configuring Condor'' for
 full details on what settings are in the config files and what they
 do.
 
@@ -99,8 +99,7 @@ The arguments and what they do are described below:
 \item[-p port] Causes the daemon to bind to the specified port for its
   \Term{command socket}.  The master uses this option to make sure the
   \Condor{collector} and \Condor{negotiator} start up on the
-  well-known ports that the rest of Condor depends on them using.  In
-  addition, you could
+  well-known ports that the rest of Condor depends on them using.
 
 \item[-t] Causes the daemon to print out its error message to
   \File{stderr} instead of its specified log file.  This option forces
@@ -117,6 +116,10 @@ The arguments and what they do are described below:
   directory.  Using this option, they can override the value of
   \Macro{LOG} and have the \Condor{kbdd} write its log file into a
   directory that the user has permission to write to.
+
+\item[-a string] Whatever string you specify is automatically
+  appended (with a ``.'') to the filename of the log for this daemon,
+  as specified in your config file.
 
 \item[-pidfile filename] Causes the daemon to write out its PID, or
   process id number, to the specified file.  This file can be used to
@@ -136,7 +139,6 @@ The arguments and what they do are described below:
   specified filename and send a SIGTERM to that process.  The daemon
   that you start up with ``-k'' will wait until the daemon it is
   trying to kill has exited.  
-
 
 \end{description}
 
