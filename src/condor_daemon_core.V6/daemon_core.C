@@ -49,6 +49,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "strupr.h"
+#include "env.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
@@ -3225,18 +3226,52 @@ int DaemonCore::Create_Process(
 	}
 
 
-	// Place inheritbuf into the environment as env variable CONDOR_INHERIT.
-	// Add it to the user-specified environment if one specified, else add
-	// it to our environment (which will then be inherited by our child).
-	// Rememer to free newenv if not NULL; it was malloced.
-	newenv = ParseEnvArgsString(env,inheritbuf);
-	if ( !newenv ) {
+	// Deal with environment.  If the user specified an environment, we 
+	// augment augment it with default system environment variables and 
+	// the CONDOR_INHERIT var.  If the user did not specify an e
+	if ( env ) {
+		Env job_environ;
+		char envbuf[200];
+		const char * default_vars[] = { "SystemDrive", "SystemRoot", 
+			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", 
+			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER", 
+			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
+			"\0" };		// must end list with NULL string
+		
+			// first, add in env vars from user
+		job_environ.Merge(env);		
+
+			// next, add in default system env variables.  we do this after
+			// the user vars are in place, because we want the values for
+			// these system variables to override whatever the user said.
+		int i = 0;
+		while ( default_vars[i][0] ) {
+			envbuf[0]='\0';
+			GetEnvironmentVariable(default_vars[i],envbuf,sizeof(envbuf));
+			if (envbuf[0]) {
+				job_environ.Put(default_vars[i],envbuf);
+			}
+			i++;
+		}
+
+			// now, add in the inherit buf
+		job_environ.Put("CONDOR_INHERIT", inheritbuf);
+
+			// and finally, get it all back as a NULL delimited string.
+			// remember to deallocate this with delete [] since it will
+			// be allocated on the heap with new [].
+		newenv = job_environ.getNullDelimitedString();
+	
+	} else {
+	
+		newenv = NULL;
 		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set "
 					"CONDOR_INHERIT env.\n");
 			return FALSE;
 		}
-	}
+	
+	}	// end of dealing with the environment....
 
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
@@ -3290,12 +3325,12 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		if ( newenv ) {
-			free(newenv);
+			delete [] newenv;
 		}
 		return FALSE;
 	}
 	if ( newenv ) {
-		free(newenv);
+		delete [] newenv;
 	}
 
 	// save pid info out of piProcess 
@@ -4689,120 +4724,7 @@ int DaemonCore::SendAliveToParent()
 	return TRUE;
 }
 	
-#ifdef WIN32
-char *DaemonCore::ParseEnvArgsString(char *incoming, char *inheritbuf)
-{
-	int len;
-	char *answer;
-
-	if ( incoming == NULL )
-		return NULL;
-
-	char envbuf[200];
-	MyString sys_env_vars;
-
-	// Add in a bunch of environment variables to the job
-	// that should be present for every process on Win32.
-	envbuf[0]='\0';
-	GetEnvironmentVariable("SystemDrive",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|SystemDrive=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("SystemRoot",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|SystemRoot=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("COMPUTERNAME",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|COMPUTERNAME=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("NUMBER_OF_PROCESSORS",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|NUMBER_OF_PROCESSORS=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("OS",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|OS=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("PROCESSOR_ARCHITECTURE",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|PROCESSOR_ARCHITECTURE=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("PROCESSOR_IDENTIFIER",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|PROCESSOR_IDENTIFIER=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("PROCESSOR_LEVEL",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|PROCESSOR_LEVEL=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("PROCESSOR_REVISION",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|PROCESSOR_REVISION=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("PROGRAMFILES",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|PROGRAMFILES=";
-		sys_env_vars += envbuf;
-	}
-	
-	envbuf[0]='\0';
-	GetEnvironmentVariable("WINDIR",envbuf,sizeof(envbuf));
-	if (envbuf[0]) {
-		sys_env_vars += "|WINDIR=";
-		sys_env_vars += envbuf;
-	}
-
-	if ( inheritbuf ) {
-		sys_env_vars += "|CONDOR_INHERIT=" ;
-		sys_env_vars += inheritbuf ;
-	}
-
-	len = strlen(incoming) + sys_env_vars.Length() +  2;
-	answer = (char *)malloc(len);
-	ASSERT(answer);
-	strcpy(answer,incoming);		
-	if ( sys_env_vars.Length() > 0 ) {
-		strcat(answer,sys_env_vars.Value());
-	}
-	answer[ strlen(answer)+1 ] = '\0';
-
-	char *temp = answer;
-	while( (temp = strchr(temp, '|') ) )
-	{
-		*temp = '\0';
-		temp++;
-	}
-	return answer;
-}
-#else
+#ifndef WIN32
 char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
 {
 	char seperator;
