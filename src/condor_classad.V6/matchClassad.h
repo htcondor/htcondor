@@ -85,7 +85,7 @@ class MatchClassAd : public ClassAd
 		 	expressions in the classad are deleted.
 			@param al The ad to be placed in the left context.
 			@param ar The ad to be placed in the right context.
-			@return A CondorClassad, or NULL if the operation failed.
+			@return true if the operation succeeded, false otherwise
 		*/
 		bool InitMatchClassAd( ClassAd* al, ClassAd *ar );
 
@@ -94,7 +94,7 @@ class MatchClassAd : public ClassAd
 			@param al The ad to be placed in the left context.
 			@return true if the operation succeeded and false otherwise.
 		*/
-		bool ReplaceLeftAd(  ClassAd *al );
+		bool ReplaceLeftAd( ClassAd *al );
 
 		/** Replaces ad in the right context, or insert one if an ad did not
 			previously exist
