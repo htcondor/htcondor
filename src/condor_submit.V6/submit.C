@@ -2304,12 +2304,19 @@ check_requirements( char *orig )
 	}
 
 	if ( JobUniverse == PVM ) {
-		(void)strcat( answer, " && (Machine != \"" );
-		(void)strcat( answer, my_full_hostname() );
-	         // XXX Temporary hack:  we only want to run on the first node
-	         // of an SMP machine for pvm jobs.
-		(void)strcat( answer, "\" && ((VirtualMachineID =?= UNDEFINED ) "
-	                   "|| (VirtualMachineID =?= 1)) )" );
+		ptr = param("PVM_OLD_PVMD");
+		if (ptr) {
+			if (ptr[0] == 'T' || ptr[0] == 't') {
+				(void)strcat( answer, " && (Machine != \"" );
+				(void)strcat( answer, my_full_hostname() );
+					// XXX Temporary hack: we only want to run on the
+					// first node of an SMP machine for pvm jobs.
+				(void)strcat( answer,
+							  "\" && ((VirtualMachineID =?= UNDEFINED ) "
+							  "|| (VirtualMachineID =?= 1)) )" );
+			}
+			free(ptr);
+		}
 	} 
 
 	if ( JobUniverse == VANILLA ) {
