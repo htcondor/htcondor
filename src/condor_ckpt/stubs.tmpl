@@ -15,7 +15,14 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mount.h>
+
+#if defined(ULTRIX42)
+#	include <sys/param.h>
+#	include <sys/mount.h>
+#else
+#	include <sys/mount.h>
+#endif
+
 
 %%
 int read( map(int fd), void *buf, size_t len );
