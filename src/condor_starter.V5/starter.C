@@ -21,7 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#if defined(IRIX53)
+#include "condor_fix_limits.h"
+#endif
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -1410,6 +1412,15 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		requested_uid = 59999;
 	if ( (requested_gid > 59999) || (requested_gid < 0) )
 		requested_gid = 59999;
+#endif
+
+#ifdef IRIX53
+		// Same weirdness on IRIX.  60001 is the default uid for
+		// nobody, lets hope that works.
+	if ( (requested_uid >= UID_MAX ) || (requested_uid < 0) )
+		requested_uid = 60001;
+	if ( (requested_gid >= UID_MAX) || (requested_gid < 0) )
+		requested_gid = 60001;
 #endif
 
 }
