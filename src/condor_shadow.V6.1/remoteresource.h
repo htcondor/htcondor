@@ -29,6 +29,7 @@
 #include "condor_classad.h"
 #include "reli_sock.h"
 #include "baseshadow.h"
+#include "file_transfer.h"
 
 /** This class represents one remotely running user job.  <p>
 
@@ -115,6 +116,16 @@ class RemoteResource : public Service {
 		*/ 
 	void getMachineName( char *& machineName );
 
+		/** Return the filesystem domain of the remote host.
+			@param filesystemDomain Will contain the host's fs_domain
+		*/
+	void getFilesystemDomain( char *& filesystemDomain );
+
+		/** Return the uid domain of the remote host.
+			@param uidDomain Will contain the host's uid_domain
+		*/
+	void getUidDomain( char *& uidDomain );
+
 		/** Return the capability for talking to the host.
 			@param capability Will contain the capability for the host.
 		*/ 
@@ -176,6 +187,18 @@ class RemoteResource : public Service {
 		*/
 	void setMachineName( const char *machineName );
 
+		/** Set the filesystem domain for this host.
+			@param filesystemDomain The filesystem domain of this host.
+		*/
+	void setFilesystemDomain( const char *filesystemDomain );
+
+		/** Set the uid domain for this host.
+			@param uidDomain The uid domain of this host.
+		*/
+	void setUidDomain( const char *uidDomain );
+
+	FileTransfer filetrans;
+
  protected:
 
 		/** Set the claimSock associated with this host.  
@@ -197,6 +220,8 @@ class RemoteResource : public Service {
 	char *machineName;
 	char *capability;
 	char *starterAddress;
+	char *fs_domain;
+	char *uid_domain;
 	ReliSock *claimSock;
 	int exitReason;
 	int exitStatus;
