@@ -13,6 +13,8 @@ template class List<GlobusJob>;
 template class Item<GlobusJob>;
 
 
+GlobusResource::probeInterval = 300;	// default value
+
 GlobusResource::GlobusResource( char *resource_name )
 {
 	resourceDown = false;
@@ -117,8 +119,7 @@ int GlobusResource::DoPing()
 	}
 
 	if ( resourceDown ) {
-		// TODO: We should param for the ping interval
-		daemonCore->Reset_Timer( pingTimerId, 300 );
+		daemonCore->Reset_Timer( pingTimerId, probeInterval );
 	}
 
 	return 0;

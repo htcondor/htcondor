@@ -291,6 +291,7 @@ Register()
 void
 Reconfig()
 {
+	int tmp_int;
 	char *tmp = NULL;
 
 	// This method is called both at startup [from method Init()], and
@@ -305,6 +306,28 @@ Reconfig()
 	if ( contactScheddDelay < 0 ) {
 		contactScheddDelay = 5; // default delay = 5 seconds
 	}
+
+	tmp_int = -1;
+	tmp = param("GRIDMANAGER_JOB_PROBE_INTERVAL");
+	if ( tmp ) {
+		tmp_int = aoti(tmp);
+		free(tmp);
+	}
+	if ( tmp_int < 0 ) {
+		tmp_int = 5 * 60; // default interval is 5 minutes
+	}
+	GlobusJob::setProbeInterval( tmp_int );
+
+	tmp_int = -1;
+	tmp = param("GRIDMANAGER_RESOURCE_PROBE_INTERVAL");
+	if ( tmp ) {
+		tmp_int = aoti(tmp);
+		free(tmp);
+	}
+	if ( tmp_int < 0 ) {
+		tmp_int = 5 * 60; // default interval is 5 minutes
+	}
+	GlobusResource::setProbeInterval( tmp_int );
 
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
@@ -535,6 +558,34 @@ doContactSchedd()
 			} else {
 				curr_job->UpdateCondorState( curr_status );
 			}
+		}
+
+		// Adjust run time for condor_q
+		if ( curr_job->condorState == RUNNING &&
+			 curr_job->shadow_birthday == 0 ) {
+
+			// The job has started a new interval of running
+			int current_time = (int)time(NULL);
+			SetAttributeInt( curr_job->procID.cluster,
+							 curr_job->procID.proc,
+							 ATTR_SHADOW_BIRTHDATE, current_time );
+			curr_job->shadow_birthday = current_time;
+
+		} else if ( curr_job->condorState != RUNNING &&
+					curr_job->shadow_birthday != 0 ) {
+
+			// The job has stopped an interval of running, add the current
+			// interval to the accumulated total run time
+			float accum_time = 0;
+			GetAttributeFloat(cluster, proc,
+							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			accum_time += (float)( time(NULL) - curr_job->shadow_birthday );
+			SetAttributeFloat(cluster, proc,
+							  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
+			DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
+			SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, 0);
+			curr_job->shadow_birthday = 0;
+
 		}
 
 		if ( curr_actions->actions & UA_UPDATE_GLOBUS_STATE ) {

@@ -34,8 +34,6 @@
 #include "globusjob.h"
 
 
-#define JOB_PROBE_INTERVAL		300
-
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
 #define TIME_NEVER		10000000
@@ -88,6 +86,8 @@ char *GMStateNames[] = {
 			"gmState %s, globusState %d: %s return Globus error %d\n", \
             GMStateNames[gmState],globusState,func,error)
 
+GlobusJob::probeInterval = 300;		// default value
+
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
 	dprintf(D_ALWAYS, "GlobusJob copy constructor called. This is a No-No!\n");
@@ -99,9 +99,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	char buf[4096];
 	bool full_rsl_given = false;
 
-	removedByUser = false;
 	callbackRegistered = false;
-	ignore_callbacks = false;
 	classad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	classad->LookupInteger( ATTR_PROC_ID, procID.proc );
 	jobContact = NULL;
@@ -444,7 +442,7 @@ int GlobusJob::doEvaluateState()
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
 					}
-					if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
+					if ( now >= lastProbeTime + probeInterval ) {
 						rc = globus_gram_client_job_status( jobContact,
 															&status, &error );
 						if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -465,7 +463,7 @@ int GlobusJob::doEvaluateState()
 						lastProbeTime = now;
 					}
 					daemonCore->Reset_Timer( evaluateStateTid,
-								(lastProbeTime + JOB_PROBE_INTERVAL) - now );
+								(lastProbeTime + probeInterval) - now );
 				}
 			}
 			break;
@@ -700,7 +698,7 @@ int GlobusJob::doEvaluateState()
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}
-				if ( now >= lastProbeTime + JOB_PROBE_INTERVAL ) {
+				if ( now >= lastProbeTime + probeInterval ) {
 					rc = globus_gram_client_job_status( jobContact, &status,
 														&error );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -720,7 +718,7 @@ int GlobusJob::doEvaluateState()
 					lastProbeTime = now;
 				}
 				daemonCore->Reset_Timer( evaluateStateTid,
-								(lastProbeTime + JOB_PROBE_INTERVAL) - now );
+								(lastProbeTime + probeInterval) - now );
 			}
 			break;
 		case GM_FAILED:

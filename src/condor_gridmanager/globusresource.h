@@ -21,6 +21,8 @@ class GlobusResource : public Service
 	bool IsDown();
 	char *ResourceName();
 
+	void setProbeInterval( int new_interval );
+
  private:
 	int DoPing();
 
@@ -29,6 +31,7 @@ class GlobusResource : public Service
 	int pingTimerId;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
+	static probeInterval;
 
 	GahpClient gahp;
 };

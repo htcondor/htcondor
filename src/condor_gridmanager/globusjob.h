@@ -26,6 +26,10 @@ class GlobusJob : public Service
 	void UpdateGlobusState( int new_state, int new_error_code );
 	GlobusResource *GetResource();
 
+	void setProbeInterval( int new_interval );
+
+	static probeInterval;
+
 	// New variables
 	bool resourceDown;
 	int condorState;
@@ -54,7 +58,6 @@ class GlobusJob : public Service
 	int globusError;
 	int jmFailureCode;
 	char *userLogFile;
-	bool removedByUser;
 	int exitValue;
 	bool submitLogged;
 	bool executeLogged;
@@ -66,7 +69,6 @@ class GlobusJob : public Service
 
  protected:
 	bool callbackRegistered;
-	bool ignore_callbacks;
 	//Classad *ad;
 };
 
