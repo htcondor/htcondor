@@ -476,11 +476,11 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 		my_exit(1);
 	}
 	if (set) {
-		fprintf( stderr, "Successfully set configuration \"%s\" on %s %s "
+		fprintf( stdout, "Successfully set configuration \"%s\" on %s %s "
 				 "%s.\n",
 				 param_value, daemonString(dt), name, addr );
 	} else {
-		fprintf( stderr, "Successfully unset configuration \"%s\" on %s %s "
+		fprintf( stdout, "Successfully unset configuration \"%s\" on %s %s "
 				 "%s.\n",
 				 param_value, daemonString(dt), name, addr );
 	}
