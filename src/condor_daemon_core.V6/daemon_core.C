@@ -2219,7 +2219,6 @@ int DaemonCore::HandleReq(int socki)
     KeyInfo *the_key        = NULL;
     char * the_sid = NULL;
     string who;   // Remote user
-	Value v;
 
 	insock = (*sockTable)[socki].iosock;
 
@@ -2876,21 +2875,15 @@ int DaemonCore::HandleReq(int socki)
 
 				// session user
 				sprintf(buf, "%s", ((ReliSock*)sock)->getFullyQualifiedUser());
-                v.Clear();
-                v.SetStringValue(buf);
-				pa_ad.Insert(string(ATTR_SEC_USER), Literal::MakeLiteral(v));
+				pa_ad.InsertAttr(ATTR_SEC_USER, buf);
 
 				// session id
 				sprintf (buf, "%s", the_sid);
-                v.Clear();
-                v.SetStringValue(buf);
-				pa_ad.Insert(string(ATTR_SEC_SID), Literal::MakeLiteral(v));
+				pa_ad.InsertAttr(ATTR_SEC_SID, buf);
 
 				// other commands this session is good for
 				sprintf (buf, "%s", GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
-                v.Clear();
-                v.SetStringValue(buf);
-				pa_ad.Insert(string(ATTR_SEC_VALID_COMMANDS), Literal::MakeLiteral(v));
+				pa_ad.InsertAttr(ATTR_SEC_VALID_COMMANDS, buf);
 
 				// also put these attributes in the policy classad we are caching.
 				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
