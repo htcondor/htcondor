@@ -35,13 +35,24 @@ int MdsGenerate(ClassAd *machine, const char *file )
 
 	// Get my hostname from the ClassAd...
 	char 	*Host;
+	char	HostBuf	[256];
 	machine->LookupString( "Machine", &Host );
 	if ( NULL != Host ) {
-		fprintf( fp,
-				 "dn: Mds-Device-Group-name=machine, Mds-Host-hn=%s, "
-				 "mds-Vo-name=local, o=grid\n", Host );
+		strncpy( HostBuf, Host, sizeof( HostBuf ) );
+		HostBuf[sizeof( HostBuf ) - 1] = '\0';
 		free( Host );
+	} else if ( gethostname( HostBuf, sizeof(HostBuf ) ) == 0  ) {
+		// Do nothing
+	} else {
+		strcpy( HostBuf, "unknown" );
 	}
+	fprintf( fp,
+			 "dn: Mds-Device-Group-name=machine, Mds-Host-hn=%s, "
+			 "mds-Vo-name=local, o=grid\n", HostBuf );
+
+	// Fill in a simple Object class
+	fprintf( fp, "objectclass: MdsDeviceGroup\n" );
+	fprintf( fp, "objectclass: MdsHost\n" );
 
 	// Prepare to walk through the ClassAd
 	machine->ResetName();
