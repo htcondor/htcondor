@@ -164,6 +164,7 @@ GridManager::GridManager()
 	Owner = NULL;
 	ScheddAddr = NULL;
 	X509Proxy = NULL;
+	useDefaultProxy = true;
 	checkProxy_tid = -1;
 	Proxy_Expiration_Time = 0;
 	Initial_Proxy_Expiration_Time = 0;
@@ -476,7 +477,7 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 
 	dprintf(D_FULLDEBUG,"in ADD_JOBS_signalHandler\n");
 	
-	if(X509Proxy) {
+	if(useDefaultProxy == false) {
 		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
 				ATTR_X509_USER_PROXY, X509Proxy);
 	} else {
@@ -559,6 +560,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 		dprintf(D_FULLDEBUG,"Running jobs need servicing. Delaying submit.\n");
 		daemonCore->Block_Signal( GRIDMAN_ADD_JOBS );
 		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_SUBMIT_JOB );
+		return TRUE;
 	}
 
 	JobsToSubmit.Rewind();
@@ -1245,7 +1247,6 @@ GridManager::updateSchedd()
 		setUpdate();
 		return TRUE;
 	}
-dprintf(D_FULLDEBUG,"Connected to schedd\n");
 
 	JobUpdateEventQueue.Rewind();
 
@@ -1387,7 +1388,6 @@ dprintf(D_FULLDEBUG,"Connected to schedd\n");
 			DestroyProc(curr_job->procID.cluster,
 						curr_job->procID.proc);
 
-dprintf(D_FULLDEBUG,"added job %d.%d (%x) to delete queue for event %d\n",curr_job->procID.cluster,curr_job->procID.proc,(int)curr_job,curr_event->event);
 			jobs_to_delete.Append( curr_job );
 
 			handled = true;
@@ -1444,7 +1444,6 @@ dprintf(D_FULLDEBUG,"added job %d.%d (%x) to delete queue for event %d\n",curr_j
 
 	jobs_to_delete.Rewind();
 
-dprintf(D_FULLDEBUG,"about to delete %d jobs\n",jobs_to_delete.Number());
 	while ( jobs_to_delete.Next( curr_job ) ) {
 
 		// For jobs we just removed from the schedd's queue, remove all
@@ -1452,7 +1451,6 @@ dprintf(D_FULLDEBUG,"about to delete %d jobs\n",jobs_to_delete.Number());
 		// from the schedd because some of the lists we need to search could
 		// be very long. Most of these lists shouldn't contain the job, but
 		// we're being safe.
-dprintf(D_FULLDEBUG,"deleting job %d.%d (%x)\n",curr_job->procID.cluster,curr_job->procID.proc,(int)curr_job);
 		if ( curr_job->jobContact != NULL ) {
 			JobsByContact->remove( HashKey( curr_job->jobContact ) );
 		}

@@ -469,7 +469,7 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 				// asked to shutdown, ignore the error if we can
 				// restart the job manager.... and we'll simply
 				// restart it next time we need it.
-				if ( (error == GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STOP_MANAGER ||
+				if ( (error == GLOBUS_GRAM_CLIENT_ERROR_JM_STOPPED ||
 					  error == GLOBUS_GRAM_CLIENT_ERROR_TTL_EXPIRED ||
 					  error == GLOBUS_GRAM_CLIENT_ERROR_USER_PROXY_EXPIRED) &&
 					  newJM ) {

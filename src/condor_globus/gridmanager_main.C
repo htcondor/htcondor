@@ -125,6 +125,7 @@ main_init( int argc, char **argv )
 			if ( argc <= i + 1 )
 				usage( argv[0] );
 			gridmanager.X509Proxy = strdup( argv[i + 1] );
+			gridmanager.useDefaultProxy = false;
 			i++;
 			break;
 		default:

@@ -54,6 +54,7 @@ class GridManager : public Service
 	char *gramCallbackContact;
 	char *ScheddAddr;
 	char *X509Proxy;
+	bool useDefaultProxy;
 
 	HashTable <HashKey, GlobusJob *> *JobsByContact;
 	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;
