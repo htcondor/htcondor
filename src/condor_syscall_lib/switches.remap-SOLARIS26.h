@@ -46,5 +46,7 @@ REMAP_SIX( mmap64, _mmap64, MMAP_T, MMAP_T, size_t, int, int, int, off64_t )
 REMAP_THREE( setitimer, _setitimer, int , int , struct itimerval *, struct itimerval *)
 REMAP_TWO( setrlimit64, _setrlimit64, int, int, const struct rlimit64 * ) 
 REMAP_TWO( stat64, _stat64, int, const char *, struct stat64 * )
+REMAP_FOUR_VOID( profil, _profil, void , unsigned short *, unsigned int , unsigned int , unsigned int )
+
 
 #endif /* REMOTE_SYSCALLS */

@@ -35,5 +35,7 @@ REMAP_THREE( readlink, _readlink, int , const char *, void *, int )
 
 REMAP_FOUR( ptrace, _ptrace, int , int , long , int , int )
 REMAP_THREE( setitimer, _setitimer, int , int , const struct itimerval *, struct itimerval *)
+REMAP_FOUR_VOID( profil, _profil, void , unsigned short *, unsigned int , unsigned int , unsigned int )
+
 
 #endif /* REMOTE_SYSCALLS */
