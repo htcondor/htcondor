@@ -1,0 +1,15 @@
+# Data file describing the 'who' module
+ModuleFiles: who
+Version: 1.0-rc1
+
+Description:
+Monitors uses logged on the system (based on the "who" program)
+
+
+Default: who
+options:
+period: 5m
+prefix: who_
+
+# It's parameters
+# none
