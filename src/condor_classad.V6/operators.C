@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "operators.h"
+#include "sink.h"
 
 using namespace std;
 
@@ -1485,7 +1486,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 
 		case TERNARY_OP:
 			// Flatten the selector expression
-			if( !Flatten( state, eval1, fChild1 ) ) {
+			if( !child1->Flatten( state, eval1, fChild1 ) ) {
 				tree = NULL;
 				return false;
 			}
@@ -1505,9 +1506,9 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree ) const
 
 				// eval1 is either a real or an integer
 				if(	eval1.IsBooleanValue(b) && b!=0 ) {
-					return child1->Flatten( state, val, tree );	
-				} else {
 					return child2->Flatten( state, val, tree );	
+				} else {
+					return child3->Flatten( state, val, tree );	
 				}
 			} else {
 				// Flatten arms of the if expression
