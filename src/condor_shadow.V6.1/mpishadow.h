@@ -84,8 +84,11 @@ class MPIShadow : public BaseShadow
 	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
 			   char capability[], char cluster[], char proc[]);
 
-		/** Shut down properly.  Send email to the user if requested.
-			Calls DC_Exit(), therefore it doesn't return.
+		/** Shut down properly.  We have MPI-specific logic in this
+			version which decides if we're really ready to shutdown or
+			not.  Once it's going to really shutdown, it just calls
+			the BaseShadow version to do the real work (which is the
+			same in both cases).
 			@param exitReason The reason this mpi job exited.
 		*/
 	void shutDown( int exitReason );
@@ -100,6 +103,8 @@ class MPIShadow : public BaseShadow
 	int getImageSize( void );
 
 	int getDiskUsage( void );
+
+	int getExitReason( void );
 
 	float bytesSent( void );
 	float bytesReceived( void );
@@ -118,6 +123,19 @@ class MPIShadow : public BaseShadow
 			@return Always return true, since we're an MPI shadow
 		*/
 	bool setMpiMasterInfo( char* str );
+
+		/** If desired, send the user email now that this job has
+			terminated.  For MPI jobs, we print out all the hosts
+			where the job ran, and any other useful info.
+		*/
+	virtual void emailTerminateEvent( int exitReason );
+
+
+		/** Do all work to cleanup before this shadow can exit.  To
+			cleanup an MPI job, we've got to kill all our starters,
+			and remove the procgroup file, if we're using one.
+		*/
+	virtual void cleanUp( void );
 
  private:
 
