@@ -6,6 +6,6 @@ error = job_core_perhold-true_sched.err
 hold	= false
 periodic_hold = JobStatus == 2
 Notification = NEVER
-arguments  = 40
+arguments  = 100
 queue
 

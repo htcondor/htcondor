@@ -5,6 +5,6 @@ output = job_core_perremove-true_sched.out
 error = job_core_perremove-true_sched.err
 periodic_remove = (CurrentTime - QDate) > 2
 Notification = NEVER
-arguments  = 3
+arguments  = 500
 queue
 
