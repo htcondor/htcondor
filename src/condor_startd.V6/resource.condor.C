@@ -617,7 +617,7 @@ event_killall(resource_id_t rid, job_id_t jid, task_id_t tid)
 
 	if (getuid() == 0)
 		set_root_euid();
-#if defined(HPUX9) || defined(LINUX) || defined(Solaris)
+#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(OSF1)
 	if( kill(-getpgrp(),SIGKILL) < 0 ) {
 #else
 	if( kill(-getpgrp(0),SIGKILL) < 0 ) {
