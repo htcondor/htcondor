@@ -1,3 +1,8 @@
+08/02/04 V6_6-merge-19
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges the fixes to ad_printmask.C for condor_q
+   and condor_status -format bugs regarding boolean attributes. 
+
 07/27/04 V6_6_6
    The official 6.6.6 release tag (at long last!).  this lives on
    V6_6_ALL and V6_6_6_EXT 
