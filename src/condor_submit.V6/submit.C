@@ -2946,6 +2946,29 @@ queue(int num)
 				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 				exit( 1 );
 			}
+
+			/* Insert the proxy subject name into the ad */
+			char *proxy_subject = x509_proxy_subject_name(proxy_file);
+			if ( !proxy_subject ) {
+				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+				exit( 1 );
+			}
+			/* Dreadful hack: replace all the spaces in the cert subject
+			 * with underscores.... why?  because we need to pass this
+			 * as a command line argument to the gridmanager, and until
+			 * daemoncore handles command-line args w/ an argv array, spaces
+			 * will cause trouble.  
+			 */
+			char *space_tmp;
+			do {
+				if ( (space_tmp = strchr(proxy_subject,' ')) ) {
+					*space_tmp = '_';
+				}
+			} while (space_tmp);
+			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+						   proxy_subject);
+			InsertJobExpr(buffer);	
+			free( proxy_subject );
 #endif
 			
 			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
