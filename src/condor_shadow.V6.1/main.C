@@ -36,7 +36,7 @@ BaseShadow *Shadow;
 static void
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: condor_shadow schedd_addr host"
+	printf( "Usage: condor_shadow schedd_addr host"
 			 "capability cluster proc\n" );
 	exit( JOB_SHADOW_USAGE );
 }
@@ -47,10 +47,17 @@ usage()
 char *mySubSystem = "SHADOW";
 
 int
+dummy_reaper(Service *,int pid,int)
+{
+	dprintf(D_ALWAYS,"dummy-reaper: pid %d exited; ignored\n",pid);
+	return TRUE;
+}
+
+int
 main_init(int argc, char *argv[])
 {
 	if (argc != 6) {
-		dprintf(D_ALWAYS, "argc = %d\n", argc);
+		dprintf(D_ALWAYS, "Bad usage, argc = %d\n", argc);
 		for (int i=0; i < argc; i++) {
 			dprintf(D_ALWAYS, "argv[%d] = %s\n", i, argv[i]);
 		}
@@ -64,6 +71,15 @@ main_init(int argc, char *argv[])
 	if (argv[2][0] != '<') {
 		EXCEPT("host not specified with sinful string.");
 	}
+
+		// Register a do-nothing reaper.  This is just because the
+		// file transfer object, which could be instantiated later,
+		// registers its own reaper and does an EXCEPT if it gets
+		// a reaper ID of 1 (since lots of other daemons have a reaper
+		// ID of 1 hard-coded as special... this is bad).
+	daemonCore->Register_Reaper("dummy_reaper",
+							(ReaperHandler)&dummy_reaper,
+							"dummy_reaper",NULL);
 
 		// We have to figure out what sort of shadow to make.
 		// That's why so much processing goes on here....
@@ -79,8 +95,6 @@ main_init(int argc, char *argv[])
 		// talk to the schedd to get job ad & set remote host:
 	ConnectQ(schedd_addr);
 	jobAd = GetJobAd(cluster, proc);
-		// Move the following somewhere else for MPI/PVM?
-	SetAttributeString(cluster,proc,ATTR_REMOTE_HOST,argv[2]);
 	DisconnectQ(NULL);
 	if (!jobAd) {
 		dprintf( D_ALWAYS, "errno: %d\n", errno );
