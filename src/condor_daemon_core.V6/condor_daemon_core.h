@@ -758,7 +758,7 @@ class DaemonCore : public Service
         @param value
         @return Not_Yet_Documented
     */
-    int SetEnv(char *key, char *value);
+    int SetEnv(const char *key, char *value);
 
     /** Put env_var into the environment
         @param env_var Desired string to go into environment;

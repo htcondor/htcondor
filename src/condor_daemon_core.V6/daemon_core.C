@@ -4138,7 +4138,7 @@ DCFindWindow(HWND hWnd, LPARAM p)
 }
 #endif	// of ifdef WIN32
 
-int DaemonCore::SetEnv( char *key, char *value)
+int DaemonCore::SetEnv( const char *key, char *value)
 {
 	assert(key);
 	assert(value);
