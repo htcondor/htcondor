@@ -87,6 +87,7 @@ STARTUP_INFO		return grab( TYPE_NAME );
 {STRUCT}sigcontext	return grab( TYPE_NAME );
 {STRUCT}sigstack	return grab( TYPE_NAME );
 {STRUCT}rlimit		return grab( TYPE_NAME );
+{STRUCT}export		return grab( TYPE_NAME );
 {STRUCT}exportfsdata	return grab( TYPE_NAME );
 {STRUCT}msqid_ds	return grab( TYPE_NAME );
 {STRUCT}msgbuf		return grab( TYPE_NAME );
