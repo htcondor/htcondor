@@ -23,7 +23,9 @@ Opsys=""
 Other=""
 Other2=""
 
-# kerberos discovery
+# kerberos discovery *SHOULD* go here eventually.  this isn't
+# "discovery" at all, it's just hard-coding stuff (that's wrong on
+# many platforms), but eventually, this is where the code should go. 
 KerbPath="-DKERBEROS_PATH=/s/krb5"
 HasKerb="-DHAS_KERBEROS=YES"
 KerbFlags="$KerbPath $HasKerb"
