@@ -1,3 +1,12 @@
+
+
+08/02/02 V6_5-tdp-branch
+	 	Branch for all the "TDP" work, which stands for "Tool Daemon
+	 	Protocol".  This is the work to integrate Condor with
+	 	Paradyn, creating paused processes, etc.  Branched off of the
+	 	main V6_5-branch.  This branch contains all the changes made
+		on the (now abandoned) V6_3-tdp-branch.
+
 7/25/02 V6_5_0-PRE-RELEASE-1
 	The first 6.5.0 release to run on our big pool. It lives on the 6_5-branch,
 	and has support for the new parallel universe.
@@ -157,7 +166,7 @@ were both built from this tag, with identical flags
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon
 	 	Protocol".  This is the work to integrate Condor with
 	 	Paradyn, creating paused processes, etc.  Branched off of the
-	 	main V6_3-branch.  
+	 	main V6_3-branch.  ABANDONED - use the V6_5-tdp-branch.
 
 02/07/02 V6_3-pre-globus2_0-switch
 		The V6_3-branch, right before we switched over to use Globus2.0.
