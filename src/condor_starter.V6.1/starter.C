@@ -987,9 +987,9 @@ CStarter::SameUidDomain( void )
 	if( host_in_domain(shadow->name(), UIDDomain) ) {
 		return true;
 	}
-	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our"
-			 "UidDomain, yet its hostname (%s) does not match\n",
-			 shadow->name() );
+	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our "
+			 "UidDomain (%s), yet its hostname (%s) does not match\n",
+			 UIDDomain, shadow->name() );
 	return false;
 }
 
