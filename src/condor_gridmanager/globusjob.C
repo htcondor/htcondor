@@ -178,6 +178,35 @@ const char *rsl_stringify( const char *string )
 	return rsl_stringify( src );
 }
 
+// TODO: This appears three times in the Condor source.  Unify?
+//   (It only is made visible in condor_shadow.jim's prototypes.h.)
+static char *
+d_format_time( double dsecs )
+{
+	int days, hours, minutes, secs;
+	static char answer[25];
+
+	const int SECONDS = 1;
+	const int MINUTES = (60 * SECONDS);
+	const int HOURS   = (60 * MINUTES);
+	const int DAYS    = (24 * HOURS);
+
+	secs = dsecs;
+
+	days = secs / DAYS;
+	secs %= DAYS;
+
+	hours = secs / HOURS;
+	secs %= HOURS;
+
+	minutes = secs / MINUTES;
+	secs %= MINUTES;
+
+	(void)sprintf(answer, "%3d %02d:%02d:%02d", days, hours, minutes, secs);
+
+	return( answer );
+}
+
 static
 void
 email_terminate_event(PROC_ID procID, ClassAd * jobAd)
@@ -222,9 +251,6 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 		return;
 	}
 
-
-
-#if 0
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
 	char JobName[_POSIX_PATH_MAX];
@@ -235,15 +261,21 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 	Args[0] = '\0';
 	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
 	
+	/*
+	// Not present.  Probably doesn't make sense for Globus
 	int had_core = FALSE;
 	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+	*/
 
 	int q_date = 0;
 	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
 	
+	/*
+	// Present, but probably doesn't make sense for Globus
 	float remote_sys_cpu = 0.0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
 	
+	// Present, but probably doesn't make sense for Globus
 	float remote_user_cpu = 0.0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
 	
@@ -252,6 +284,7 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 	
 	int shadow_bday = 0;
 	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	*/
 	
 	float previous_runs = 0;
 	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
@@ -264,33 +297,34 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 						   to convert it to a string */
 	
 	time_t now = time(NULL);
-#endif	
+
 	fprintf( mailer, "Your Condor job %d.%d \n", procID.cluster, procID.proc);
-	/*if ( JobName[0] ) {
+	if ( JobName[0] ) {
 		fprintf(mailer,"\t%s %s\n",JobName,Args);
-	}*/
+	}
 	fprintf(mailer,"has exited normally.\n");
 
-#if 0	
+	/*
 	if( had_core ) {
 		fprintf( mailer, "Core file is: %s\n", getCoreName() );
 	}
+	*/
 
 	arch_time = q_date;
 	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
-	if( exitReason == JOB_EXITED || exitReason == JOB_COREDUMPED ) {
-		double real_time = now - q_date;
-		arch_time = now;
-		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
-		
-		fprintf(mailer, "Real Time:           %s\n", 
-				d_format_time(real_time));
-	}	
+	double real_time = now - q_date;
+	arch_time = now;
+	fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+	
+	fprintf(mailer, "Real Time:           %s\n", 
+			d_format_time(real_time));
 
 
 	fprintf( mailer, "\n" );
 	
+	/*
+	// None of this is valid for Globus jobs.
 	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
 	
 	double rutime = remote_user_cpu;
@@ -308,7 +342,8 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 	fprintf(mailer, "Allocation/Run time:     %s\n",
 			d_format_time(total_wall_time) );
 
-		// TODO: deal w/ total bytes
+	// TODO: Can we/should we get this for Globus jobs.
+		// TODO: deal w/ total bytes <- obsolete? in original code)
 	float network_bytes;
 	network_bytes = bytesSent();
 	fprintf(mailer, "\nNetwork:\n" );
@@ -317,7 +352,7 @@ email_terminate_event(PROC_ID procID, ClassAd * jobAd)
 	network_bytes = bytesReceived();
 	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
 			metric_units(network_bytes) );
-#endif
+	*/
 
 	email_close(mailer);
 }
