@@ -43,6 +43,7 @@
 
 extern char* mySubSystem;
 extern char* global_dc_sinful();
+extern bool global_dc_set_cookie(int len, unsigned char* data);
 
 #define SECURITY_HACK_ENABLE
 void zz1printf(KeyInfo *k) {
@@ -924,7 +925,38 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 	// so, we send a DC_AUTHENTICATE via TCP.  this will get us authenticated
 	// and get us a key, which is what needs to happen.
 
-	if ((!have_session) && (!is_tcp)) {
+	// however, we cannot do this if the UDP message is addressed to
+	// our own daemoncore process, as we are NOT multithreaded and
+	// cannot hold a TCP conversation with ourself. so, in this case,
+	// we set a cookie in daemoncore and put the cookie in the classad
+	// as proof that the message came from ourself.
+
+	MyString destsinful = sin_to_string(sock->endpoint());
+	MyString oursinful = global_dc_sinful();
+	bool using_cookie = false;
+
+	if (destsinful == oursinful) {
+		// use a cookie.
+		unsigned char randomjunk[256];
+		char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
+			                 '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+		for (int i = 0; i < 128; i++) {
+			randomjunk[i] = symbols[rand() % 16];
+		}
+
+		// good ol null terminator
+		randomjunk[127] = 0;
+
+		global_dc_set_cookie (128, randomjunk);
+
+		sprintf (buf, "%s=\"%s\"", ATTR_SEC_COOKIE, randomjunk);
+		auth_info.Insert(buf);
+		dprintf (D_SECURITY, "SECMAN: %s\n", buf);
+
+		using_cookie = true;
+
+	} else if ((!have_session) && (!is_tcp)) {
+		// can't use a cookie, so try to start a session.
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
@@ -1054,7 +1086,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 	bool retval = true;
 
-	if (!is_tcp) {
+	if (!using_cookie && !is_tcp) {
 
 		// udp works only with an already established session (gotten from a
 		// tcp connection).  if there's no session, there's no way to enable
