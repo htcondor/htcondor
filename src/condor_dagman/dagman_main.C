@@ -167,21 +167,21 @@ int main_init (int argc, char ** const argv) {
     for (i = 1; i < argc; i++) {
         if (!strcmp("-Debug", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No debug level specified\n" );
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
         } else if (!strcmp("-Condorlog", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No condor log specified" );
                 Usage();
            }
             condorLogName = argv[i];
         } else if (!strcmp("-Lockfile", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DagMan lockfile specified\n" );
                 Usage();
             }
@@ -190,21 +190,21 @@ int main_init (int argc, char ** const argv) {
             Usage();
         } else if (!strcmp("-Dag", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
             G.datafile = argv[i];
         } else if (!strcmp("-Rescue", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
             G.rescue_file = argv[i];
         } else if (!strcmp("-MaxJobs", argv[i])) {
             i++;
-            if (argc <= i) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxJobs\n" );
                 Usage();
@@ -216,7 +216,7 @@ int main_init (int argc, char ** const argv) {
 			Usage();
         } else if( !strcmp( "-MaxPre", argv[i] ) ) {
             i++;
-            if( argc <= i ) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxPre\n" );
                 Usage();
@@ -224,7 +224,7 @@ int main_init (int argc, char ** const argv) {
             G.maxPreScripts = atoi( argv[i] );
         } else if( !strcmp( "-MaxPost", argv[i] ) ) {
             i++;
-            if( argc <= i ) {
+            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxPost\n" );
                 Usage();
