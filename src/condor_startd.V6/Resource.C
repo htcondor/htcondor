@@ -124,6 +124,12 @@ Resource::periodic_checkpoint()
 		return FALSE;
 	}
 	r_cur->setlastpckpt((int)time(NULL));
+
+		// Now that we updated this time, be sure to insert those
+		// attributes into the classad right away so we don't keep
+		// periodically checkpointing with stale info.
+	r_cur->update( r_classad );
+
 	return TRUE;
 }
 
@@ -598,7 +604,12 @@ Resource::wants_suspend()
 int 
 Resource::wants_pckpt()
 {
-	int want_pckpt;
+	int want_pckpt; 
+
+	if( r_cur->universe() != STANDARD ) {
+		return FALSE;
+	}
+
 	if( r_classad->EvalBool( "PERIODIC_CHECKPOINT",
 							 r_cur->ad(),
 							 want_pckpt ) == 0) { 
