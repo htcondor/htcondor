@@ -33,7 +33,7 @@ use FileHandle;
          $STARTNODE = 2;
          $CONDOR_CM = "condor.cs.wisc.edu";
            $LOGFILE = "/p/condor/workspaces/cluster/condor_cluster_tool.log";
-             $DEBUG = 1;
+             $DEBUG = 0;
 
 
 ### Global variables (not user-servicable)
