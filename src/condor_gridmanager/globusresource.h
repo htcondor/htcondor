@@ -14,7 +14,7 @@ class GlobusResource : public Service
 {
  public:
 
-	GlobusResource( char *resource_name );
+	GlobusResource( const char *resource_name );
 	~GlobusResource();
 
 	void Reconfig();
@@ -30,6 +30,8 @@ class GlobusResource : public Service
 	char *ResourceName();
 
 	time_t getLastStatusChangeTime() { return lastStatusChange; }
+
+	static const char *CanonicalName( const char *name );
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }

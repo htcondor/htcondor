@@ -14,7 +14,7 @@ int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 
-GlobusResource::GlobusResource( char *resource_name )
+GlobusResource::GlobusResource( const char *resource_name )
 {
 	resourceDown = false;
 	firstPingDone = false;
@@ -112,6 +112,22 @@ void GlobusResource::Reconfig()
 		submitsInProgress.Append( queued_job );
 		queued_job->SetEvaluateState();
 	}
+}
+
+const char *GlobusResource::CanonicalName( const char *name )
+{
+	static MyString canonical;
+	char *host;
+	char *port;
+
+	parse_resource_manager_string( name, &host, &port, NULL, NULL );
+
+	canonical.sprintf( "%s:%s", host, *port ? port : "2119" );
+
+	free( host );
+	free( port );
+
+	return canonical.Value();
 }
 
 void GlobusResource::RegisterJob( GlobusJob *job, bool already_submitted )

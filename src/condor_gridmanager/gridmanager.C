@@ -868,13 +868,15 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 
 				} else {
 
-					rc = ResourcesByName.lookup( HashKey( resource_name ),
+					const char *canonical_name = GlobusResource::CanonicalName( resource_name );
+					ASSERT(canonical_name);
+					rc = ResourcesByName.lookup( HashKey( canonical_name ),
 												  resource );
 
 					if ( rc != 0 ) {
-						resource = new GlobusResource( resource_name );
+						resource = new GlobusResource( canonical_name );
 						ASSERT(resource);
-						ResourcesByName.insert( HashKey( resource_name ),
+						ResourcesByName.insert( HashKey( canonical_name ),
 												 resource );
 					} else {
 						ASSERT(resource);

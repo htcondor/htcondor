@@ -82,6 +82,7 @@ class GlobusJob : public Service
 	int outputWaitErrorSize;
 	// HACK!
 	bool retryStdioSize;
+	char *resourceManagerString;
 
 	GahpClient gahp;
 

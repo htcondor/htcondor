@@ -258,6 +258,15 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
 	buff[0] = '\0';
+	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
+	if ( buff[0] != '\0' ) {
+		resourceManagerString = strdup( buff );
+	} else {
+		EXCEPT( "No GlobusResource defined for job %d.%d",
+				procID.cluster, procID.proc );
+	}
+
+	buff[0] = '\0';
 	ad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buff );
 	if ( buff[0] != '\0' && strcmp( buff, NULL_JOB_CONTACT ) != 0 ) {
 		if ( jmVersion == GRAM_V_UNKNOWN ) {
@@ -340,6 +349,9 @@ GlobusJob::~GlobusJob()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
+	}
+	if ( resourceManagerString ) {
+		free( resourceManagerString );
 	}
 	if ( jobContact ) {
 		free( jobContact );
@@ -622,7 +634,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				rc = gahp.globus_gram_client_job_request( 
-										myResource->ResourceName(),
+										resourceManagerString,
 										RSL->Value(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
@@ -1075,7 +1087,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					RSL = buildRestartRSL();
 				}
 				rc = gahp.globus_gram_client_job_request(
-										myResource->ResourceName(),
+										resourceManagerString,
 										RSL->Value(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
@@ -1395,7 +1407,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			}
 			snprintf( cleanup_rsl, sizeof(cleanup_rsl), "&(cleanup=%s)", jobContact );
 			rc = gahp.globus_gram_client_job_request( 
-										myResource->ResourceName(), 
+										resourceManagerString, 
 										cleanup_rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact,
