@@ -33,6 +33,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 
 
 #define IS_X86_SOLARIS25			YES  /* weiru defined it */
+/* #define IS_X86_SOLARIS				YES */
 #define IS_V5					YES
 
 #define HAS_X					NO
@@ -76,7 +77,7 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define DO_BENCHMARKING			YES
-#define HAS_PVM					NO
+#define HAS_PVM					YES
 #define PVM_ARCH			X86SOL2
 
 
