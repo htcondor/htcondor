@@ -27,12 +27,6 @@
 ** 
 */ 
 
-#define _POSIX_SOURCE
-
-#if defined(IRIX62)
-#include "condor_fdset.h"
-#endif 
-
 #include "condor_common.h"
 #include "condor_fdset.h"
 #include "condor_classad.h"
@@ -44,42 +38,11 @@
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 
-#include <signal.h>
-#include <pwd.h>
-#include <netdb.h>
-
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
 #endif
 
-#ifdef IRIX331
-#include <sys.s>
-#endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(IRIX53) && !defined(Solaris)
-#include <syscall.h>
-#endif
-
-#if defined(Solaris)
-#include <sys/syscall.h>
-#include </usr/ucbinclude/sys/wait.h>
-#include <fcntl.h>
-#endif
-
-#include <sys/uio.h>
-#if !defined(LINUX)
-#include <sys/buf.h>
-#endif
-#include <sys/stat.h>
-#include <sys/errno.h>
-#include <sys/file.h>
-#include <sys/time.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/resource.h>
-
-#include "condor_fix_string.h"
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
@@ -93,21 +56,11 @@
 #	include "condor_fdset.h"
 #endif
 
-#if defined(HPUX9)
-#	include <sys/wait.h>
-#else
-#	include "condor_fix_wait.h"
-#endif
-
-#undef _POSIX_SOURCE
-#include "condor_types.h"
 
 #include "clib.h"
 #include "shadow.h"
 #include "subproc.h"
 #include "afs.h"
-
-#include "condor_constants.h"
 
 extern "C" {
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
@@ -470,27 +423,27 @@ void
 handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
-	int stat = *jobstatus;
+	int status = *jobstatus;
 	char my_coredir[4096];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
-	switch( WTERMSIG(stat) ) {
+	switch( WTERMSIG(status) ) {
 
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
-		if( WCOREDUMP(stat) && WEXITSTATUS(stat) == ENOEXEC ) {
+		if( WCOREDUMP(status) && WEXITSTATUS(status) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
 			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
 			ExitReason = JOB_EXCEPTION;
-		} else if( WCOREDUMP(stat) && WEXITSTATUS(stat) == 0 ) {
+		} else if( WCOREDUMP(status) && WEXITSTATUS(status) == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 6 Condor.\n" );
 				MainSymbolExists = FALSE;
 				ExitReason = JOB_EXCEPTION;
 		} else {
 			(void)sprintf(notification, "exited with status %d.",
-					WEXITSTATUS(stat) );
+					WEXITSTATUS(status) );
 			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
-				WEXITSTATUS(stat) );
+				WEXITSTATUS(status) );
 			ExitReason = JOB_EXITED;
 		}
 
@@ -522,22 +475,22 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 			getwd( coredir );
 #endif
 		}
-		if( WCOREDUMP(stat) ) {
+		if( WCOREDUMP(status) ) {
 			if( strcmp(proc->rootdir, "/") == 0 ) {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
-					 WTERMSIG(stat) ,
+					 WTERMSIG(status) ,
 						coredir, proc->id.cluster, proc->id.proc);
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
-					 WTERMSIG(stat) ,proc->rootdir, coredir, 
+					 WTERMSIG(status) ,proc->rootdir, coredir, 
 					 proc->id.cluster, proc->id.proc);
 			}
 			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
-				"was killed by signal %d.", WTERMSIG(stat));
+				"was killed by signal %d.", WTERMSIG(status));
 			ExitReason = JOB_KILLED;
 		}
 		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
