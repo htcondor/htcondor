@@ -31,12 +31,12 @@
 #if defined(AIX31) || defined(AIX32)
 extern int	errno;
 #else
-int	errno;
+extern int errno;
 
 int	sys_nerr;
 extern char *sys_errlist[];
 
-int condor_nerr;
+extern int condor_nerr;
 extern char *condor_errlist[];
 
 perror(s)
