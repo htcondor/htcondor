@@ -3,4 +3,59 @@
 \label{sec:Ckpt-Server}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Todo
+The Checkpoint Server is a daemon that can be installed on a server to
+handle all of the checkpoints that a Condor pool will create.
+This machine should have a large amount of disk space available, and
+should have a fast connection to your machines.
+
+\Note It is a good idea to pick a very stable machine for your checkpoint
+server.
+If the checkpoint server crashes, the Condor system will continue to
+operate.
+While the Condor system will recover from a checkpoint server crash
+as best it can, there are two problems that can (and will) occur.
+
+The first problem is that if the checkpoint server is not functioning,
+when jobs need to checkpoint, they will go back to the local schedd's.
+While this is desirable, the problem is that with a checkpoint server
+people may not have enough local disk space to store the checkpoint
+files.
+Hence, when the checkpoint files get transmitted back, they will not
+be able to be kept because the disk is full.
+
+The second problem is that when the jobs wish to start, if they cannot
+be retrieved from the checkpoint server, they will be retrieved from the
+local schedd.
+If there is no checkpoint file on the local schedd, the job will be reloaded
+from scratch.
+It is advisable to shut your pool down before bringing your checkpoint
+server down.
+
+To install a checkpoint server, copy the file \File{condor\_config.local.checkpoint.server}
+to your machines local configuration file (e.g. \File{froth.local}).
+There is one setting that you must change, and that is \Macro{CKPT\_SERVER\_DIR}.
+The \Macro{CKPT\_SERVER\_DIR} defines where your checkpoint files should be located.
+It is better if this is on a very fast local file system (preferably a RAID).
+The speed of this file system will have a direct impact on the speed at which your
+checkpoint files can be retrieved from the remote machines.
+
+The other optional settings are:
+\begin{description}
+
+\item[\Macro{DAEMON\_LIST}] As described in section \ref{sec:Master-Config-File-Entries},
+the DAEMON\_LIST entry must have MASTER and CKPT\_SERVER.
+Add STARTD if you want to allow jobs to run on your checkpoint server.
+Similarly, add SCHEDD if you would like to submit jobs from your checkpoint server.
+
+\item[\Macro{CKPT\_SERVER\_LOG}] The CKPT\_SERVER\_LOG is where the
+checkpoint server log gets put.
+
+\item[\Macro{MAX\_CKPT\_SERVER\_LOG}] Use this item to configure the
+size of the checkpoint server log before it is rotated.
+
+\item[\Macro{CKPT\_SERVER\_DEBUG}] The amount of information you would like printed
+in your logfile.
+Currently, the only debug level supported is
+\Dflag{ALWAYS}.
+
+\end{description}
