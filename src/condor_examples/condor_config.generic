@@ -329,7 +329,7 @@ KILL		: $(ActivityTimer) > $(MaxVacateTime)
 ##  The RANK expression controls which jobs this machine prefers to
 ##  run over others.  Some examples from the manual include:
 ##    RANK : ImageSize
-##    RANK : RANK : (Owner == "coltrane") + (Owner == "tyner") \
+##    RANK : (Owner == "coltrane") + (Owner == "tyner") \
 ##                  + ((Owner == "garrison") * 10) + (Owner == "jones")
 ##  By default, RANK is always 0, meaning that all jobs have an equal
 ##  ranking.
