@@ -412,6 +412,18 @@ V6_7_EXT	-a V6_7_7_EXT
 V6_7_NT_EXT -a EXT_COMMON \
                    externals/bundles/gsoap/2.7
 
+# Externals needed for V6_7 with kerberos 1.4
+V6_7_KERB14_EXT -a V6_7_COMMON_EXT \
+                   externals/bundles/krb5/1.4 \
+                   externals/bundles/gahp/1.0.13 \
+                   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+                   externals/bundles/gt3gahp/2.0 \
+                   externals/bundles/gt4gahp/1.2a \
+                   externals/bundles/classads/0.9.8-b1 \
+                   externals/bundles/globus/2.4.3.data \
+                   externals/bundles/gsoap/2.7 \
+                   externals/bundles/srb/3.2.1
+
 # Externals needed for Stork trunk build
 STORK_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
@@ -496,6 +508,9 @@ V6_7_SOAP_3_BUILD	-a V6_7_ALL V6_7_SOAP_3_EXT
 
 # For 1-off builds to see if we can get krb5-1.2.7 working, we need this:
 V6_6_7_KRB_1_2_7_BUILD	-a V6_6_ALL V6_6_7_KRB_1_2_7_EXT
+
+# For 1-off builds to see if we can get krb5-1.4 working, we need this:
+V6_7_KERB14_BUILD 	-a V6_7_ALL V6_7_KERB14_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
