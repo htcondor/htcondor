@@ -16,11 +16,6 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
-#define CondorGFiles sbin/condor_gridmanager sbin/gahp_server \
-    bin/condor_glidein 
-
-#define CondorGContribFiles etc/examples/condor_config.local.condor-g
- 
 #define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
   bin/condor_submit
 
@@ -355,13 +350,6 @@ contrib_tarball(pvm.tar,PvmFiles)
 #define PvmTar 
 #endif 
 
-#if WANT_CONDOR_G && HAS_GLOBUS
-#define CondorGTar condor-g.tar
-both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
-#else
-#define CondorGTar 
-#endif /* Condor-G */
-
 #if HAS_STATIC
 #define StaticTar static.tar
 static.tar: static
@@ -375,7 +363,7 @@ strip.tar: stripped
 	rm -f strip_dir/release.tar
 	cd strip_dir; $(TAR_CMD) -cvf release.tar AllFiles
 
-all_tarballs: strip.tar StaticTar ckpt_server.tar EventdTar dagman.tar PvmTar CondorGTar
+all_tarballs: strip.tar StaticTar ckpt_server.tar EventdTar dagman.tar PvmTar
 
 public: release all_tarballs
 	if test ! -d ../public; then mkdir ../public; fi

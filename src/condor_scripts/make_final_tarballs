@@ -75,7 +75,7 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
+@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "ckpt_server", "pvm" );
@@ -110,7 +110,6 @@ require 5.002;
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
   "mpi"           => "MPI contrib module",
-  "condor-g"      => "Condor-G technology",
   "sdk"           => "software developer's kit",
   "eventd"        => "Condor Eventd contrib module"
 );	   
