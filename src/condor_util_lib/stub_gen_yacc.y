@@ -1109,6 +1109,10 @@ output_receiver( struct node *n )
 			find_type_name( var->id, param_list ),
 			size->id
 		);
+		printf( "\t\tmemset( %s, 0, (unsigned)%s );\n",
+			var->id,
+			size->id
+		);
 	}
 
 		/*
