@@ -695,7 +695,7 @@ Resource::eval_kill()
 		if( (r_classad->EvalBool( "KILL_VANILLA",
 									r_cur->ad(), tmp) ) == 0 ) {  
 			if( (r_classad->EvalBool( "KILL",
-										r_classad,
+										r_cur->ad(),
 										tmp) ) == 0 ) { 
 				EXCEPT("Can't evaluate KILL");
 			}
