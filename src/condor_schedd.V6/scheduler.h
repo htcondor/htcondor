@@ -20,14 +20,14 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////
 //
 // condor_sched.h
 //
-// Define class Scheduler. This class does local scheduling and then negotiates
-// with the central manager to obtain resources for jobs.
+// Define class Scheduler. This class does local scheduling and then 
+// negotiates with the central manager to obtain resources for jobs.
 //
-////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////
 
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
@@ -66,25 +66,25 @@ struct OwnerData {
   OwnerData() { Name=NULL; JobsRunning=JobsIdle=0; }
 };
 
+enum MrecStatus {
+    M_ACTIVE,
+    M_INACTIVE,
+    M_DELETED,
+	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
+	M_DELETE_PENDING         // is set if we should delete, but in above state
+};
+
 struct match_rec
 {
     match_rec(char*, char*, PROC_ID*);
-    char    		id[SIZE_OF_CAPABILITY_STRING];
-    char    		peer[50];
-    int     		cluster;
-    int     		proc;
-    int     		status;
-    int     		agentPid;
-	shadow_rec*		shadowRec;
-	int				alive_countdown;
-	int				num_exceptions;
-};
-
-enum
-{
-    M_ACTIVE,
-    M_INACTIVE,
-    M_DELETED
+    char    		 id[SIZE_OF_CAPABILITY_STRING];
+    char    		 peer[50];
+    int     		 cluster;
+    int     		 proc;
+    enum MrecStatus  status;
+	shadow_rec*		 shadowRec;
+	int				 alive_countdown;
+	int				 num_exceptions;
 };
 
 class Scheduler : public Service
@@ -127,12 +127,11 @@ class Scheduler : public Service
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
     int         	MarkDel(char*);
-    match_rec*       	FindMrecByPid(int);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
-	int				Agent(char*, char*, char*, char*, int, ClassAd*);
+	int				Agent(char*, char*, char*, ClassAd*, match_rec*);
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
@@ -177,6 +176,7 @@ class Scheduler : public Service
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
+	int             startJobsDelayBit;  // for delay when starting jobs.
 	
 	// useful names
 	char*			CondorViewHost;
@@ -201,16 +201,39 @@ class Scheduler : public Service
 	int				count_jobs();
 	void			update_central_mgr(int command, char *host, int port);
 	int				insert_owner(char*);
-#ifndef WIN32
+#ifndef WANT_DC_PM
 	void			reaper(int);
 #endif
 	void			child_exit(int, int);
 	void			clean_shadow_recs();
 	void			preempt(int);
-	int				permission(char*, char*, char*, PROC_ID*);
+		/** We add a match record (AddMrec), then open a ReliSock to the
+			startd.  We push the capability and the jobAd, then register
+			the Socket with startdContactSockHandler and put the new mrec
+			into the daemonCore data pointer.  
+			@param capability AKA id, this identifies the mrec
+			@param user The submitting "owner@uiddomain"
+			@param server The startd to contact
+			@param jobId Put in the mrec and used to get the jobAd
+			@return 0 on failure and 1 on success
+		 */
+	int		 		contactStartd(char *capability , char *user, 
+								  char *server, PROC_ID *jobId   );
+
+		/** Registered in contactStartd, this function is called when
+			the startd replies to our request.  If it replies in the 
+			positive, the mrec->status is set to M_ACTIVE, else the 
+			mrec gets deleted.  The 'sock' is de-registered and deleted
+			before this function returns.
+			@param sock The sock with the startd's reply.
+			@return FALSE on denial/problems, TRUE on success
+		*/
+	int             startdContactSockHandler( Stream *sock );
+
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*);
 	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
+	shadow_rec*     start_mpi(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	void			Relinquish(match_rec*);
 	void 			swap_space_exhausted();
