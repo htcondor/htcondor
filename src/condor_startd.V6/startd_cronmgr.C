@@ -74,7 +74,7 @@ StartdCronMgr::NewJob( const char *name )
 
 	// Register our death handler...
 	CronEventHandler e;
-	e = (CronEventHandler) &( StartdCronMgr::JobEvent );
+	e = (CronEventHandler) &StartdCronMgr::JobEvent;
 	//NewJob->SetEventHandler( (CronEventHandler) &StartdCronMgr::JobEvent,
 	//						 this );
 	job->SetEventHandler( e, this );
@@ -83,7 +83,7 @@ StartdCronMgr::NewJob( const char *name )
 }
 
 // Notified when a job dies
-int
+void
 StartdCronMgr::JobEvent( CondorCronJob *Job, CondorCronEvent Event )
 {
 	(void) Job;

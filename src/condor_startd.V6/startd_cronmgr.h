@@ -39,7 +39,7 @@ class StartdCronMgr : public CondorCronMgr
 
   private:
 	bool ShuttingDown;
-	int JobEvent( CondorCronJob *job, CondorCronEvent event );
+	void JobEvent( CondorCronJob *job, CondorCronEvent event );
 	
 };
 

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_procapi_test.mak
 
 "..\src\condor_c++_util\ntsysinfo.C" : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -11,7 +11,6 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 

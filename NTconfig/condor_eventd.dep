@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_eventd.mak
 
 ..\src\condor_eventd\eventd.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -34,6 +34,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_system.h"\
@@ -52,7 +53,6 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -60,7 +60,7 @@
 	
 
 ..\src\condor_eventd\eventd_instantiate.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -91,6 +91,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_system.h"\
@@ -109,7 +110,6 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -117,7 +117,7 @@
 	
 
 ..\src\condor_eventd\eventd_main.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -149,6 +149,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_system.h"\
@@ -167,7 +168,6 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -175,7 +175,7 @@
 	
 
 ..\src\condor_netman\instantiate.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -184,6 +184,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
@@ -201,6 +202,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
@@ -221,7 +223,6 @@
 	"..\src\condor_netman\netusagealloc.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -229,7 +230,7 @@
 	
 
 ..\src\condor_netman\netbandwidthalloc.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -241,12 +242,11 @@
 	"..\src\condor_netman\netcapacity.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netcapacity.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -257,12 +257,11 @@
 	"..\src\condor_netman\netcapacity.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netcapacityalloc.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -276,12 +275,11 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netman.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -290,6 +288,7 @@
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
@@ -309,6 +308,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
@@ -327,7 +327,6 @@
 	"..\src\condor_netman\netusagealloc.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -335,7 +334,7 @@
 	
 
 ..\src\condor_netman\netres.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -349,12 +348,11 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netsharealloc.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -366,12 +364,11 @@
 	"..\src\condor_netman\netsharealloc.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netusage.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -382,12 +379,11 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\netusagealloc.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -401,12 +397,11 @@
 	"..\src\condor_netman\netusagealloc.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_netman\router.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -416,12 +411,11 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_eventd\scheduled_event.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -461,6 +455,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_system.h"\
@@ -479,7 +474,6 @@
 	"..\src\condor_netman\netusage.h"\
 	"..\src\condor_netman\router.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_findhost.mak
 
 ..\src\condor_tools\give_interactive.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_api.h"\
@@ -21,6 +21,7 @@
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_includes\basename.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
@@ -45,6 +46,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_state.h"\
@@ -63,7 +65,6 @@
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
