@@ -249,7 +249,7 @@ V6_6_EXT	-a EXT_COMMON \
 		   externals/bundles/gahp/1.0.10 \
 		   externals/bundles/glibc/2.2.2 \
 		   externals/bundles/glibc/2.2.93 \
-		   externals/bundles/glibc/2.3.2 \
+		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.2.4 \
 		   externals/bundles/globus/2.4.3 \
 		   externals/bundles/gpt/3.0 \
