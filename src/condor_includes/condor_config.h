@@ -47,16 +47,16 @@ extern "C" {
 	void config_fill_ad( ClassAd* );
 	int  set_persistent_config(char *admin, char *config);
 	int  set_runtime_config(char *admin, char *config);
-	char * expand_macro ( char *value, BUCKET *table[], int table_size,
+	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
 						  char *self=NULL );
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
 	char * get_tilde();
-	char * param ( char *name );
+	char * param ( const char *name );
 	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
-	char * lookup_macro ( char *name, BUCKET *table[], int table_size );
-	char * macro_expand ( char *name );
+	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
+	char * macro_expand ( const char *name );
 	int param_in_pattern ( char *parameter, char *pattern);
 	void init_config ( void );
 	void clear_config ( void );
