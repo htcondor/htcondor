@@ -23,6 +23,7 @@ public:
 	~ResState();
 	State	state() {return r_state;};
 	Activity activity() {return r_act;};
+	void	init_classad();
 	int		change( Activity );
 	int		change( State );
 	int 	eval();

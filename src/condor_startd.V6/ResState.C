@@ -19,6 +19,27 @@ ResState::~ResState()
 }
 
 
+void
+ResState::init_classad() 
+{
+	char tmp[80];
+	ClassAd* cp = rip->r_classad;
+	int now = (int)time(NULL);
+
+	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(r_state) );
+	cp->InsertOrUpdate( tmp );
+
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, now );
+	cp->InsertOrUpdate( tmp );
+
+	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, activity_to_string(r_act) );
+	cp->InsertOrUpdate( tmp );
+
+	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, now );
+	cp->InsertOrUpdate(tmp);
+}
+
+
 int
 ResState::change( State new_state )
 {

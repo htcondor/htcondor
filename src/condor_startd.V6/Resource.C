@@ -6,9 +6,9 @@ Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 {
 	char tmp[100];
 
-	r_state = new ResState( this );
 	r_classad = new ClassAd;
 	r_private_classad = new ClassAd;
+	r_state = new ResState( this );
 	r_starter = new Starter;
 	r_cur = new Match;
 	r_pre = NULL;
@@ -55,18 +55,8 @@ Resource::init_classad()
 	int		needs_free = 0;
 	int 	now = (int)time(NULL);
 	
-		// Initialize state and activity attributes
-	sprintf( tmp, "%s=\"%s\"", ATTR_STATE, state_to_string(owner_state) );
-	r_classad->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_STATE, now );
-	r_classad->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=\"%s\"", ATTR_ACTIVITY, activity_to_string(busy_act) );
-	r_classad->InsertOrUpdate( tmp );
-
-	sprintf( tmp, "%s=%d", ATTR_ENTERED_CURRENT_ACTIVITY, now );
-	r_classad->InsertOrUpdate(tmp);
+		// Insert state and activity attributes
+	r_state->init_classad();
 
 		// Name of this resource (needs to be in public and private ads)
 	sprintf( tmp, "%s=\"%s\"", ATTR_NAME, r_name );
@@ -89,7 +79,6 @@ Resource::init_classad()
 	} else {
 		dprintf( D_ALWAYS, "AFS_Cell not set\n" );
 	}
-
 
 		// If the UID domain is not set, use our hostname as the
 		// default.   
