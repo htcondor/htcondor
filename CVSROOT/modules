@@ -305,6 +305,14 @@ V6_6_7_EXT	-a -a V6_6_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gahp/1.0.12
 
+V6_6_7_KRB_1_2_7_EXT	-a -a V6_6_COMMON_EXT \
+		   externals/bundles/krb5/1.2.7 \
+		   externals/bundles/glibc/2.2.93 \
+		   externals/bundles/glibc/2.3.2.27.9.7 \
+		   externals/bundles/globus/2.2.4 \
+		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
+		   externals/bundles/gahp/1.0.12
+
 # Externals needed for the head of the V6_6-branch
 V6_6_EXT	-a V6_6_7_EXT
 
@@ -415,6 +423,9 @@ V6_7_MIRROR_BUILD	-a V6_7_MIRROR_ALL V6_7_EXT
 # The V6_7-soap-*-branch(s) use a new external, so they need this
 V6_7_SOAP_BUILD		-a V6_7_ALL V6_7_SOAP_EXT
 V6_7_SOAP_3_BUILD	-a V6_7_ALL V6_7_SOAP_3_EXT
+
+# For 1-off builds to see if we can get krb5-1.2.7 working, we need this:
+V6_6_7_KRB_1_2_7_BUILD	-a V6_6_ALL V6_6_7_KRB_1_2_7_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
