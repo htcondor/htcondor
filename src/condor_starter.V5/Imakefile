@@ -97,11 +97,15 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
 
-all_target(condor_starter.V5.mike test_it hound)
+/* all_target(condor_starter.V5.mike test_it hound) ---we no longer need test_it & hound */
+all_target(condor_starter.V5.mike)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
+
+/*  We no longer need test_it and hound *
 c_plus_target(test_it,test_it.o,$(NULL))
 c_plus_target(hound,hound.o,$(NULL))
+*/
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
