@@ -353,6 +353,32 @@ CleanJobQueue()
 }
 
 
+void
+DestroyJobQueue( void )
+{
+	if (JobQueueDirty) {
+			// We can't destroy it until it's clean.
+		CleanJobQueue();
+	}
+	ASSERT( JobQueueDirty == false );
+	delete JobQueue;
+	JobQueue = NULL;
+
+		// There's also our hashtable of the size of each cluster
+	delete ClusterSizeHashTable;
+	ClusterSizeHashTable = NULL;
+
+		// Also, clean up the array of super users
+	if( super_users ) {
+		int i;
+		for( i=0; i<num_super_users; i++ ) {
+			delete [] super_users[i];
+		}
+		delete [] super_users;
+	}
+}
+
+
 int
 grow_prio_recs( int newsize )
 {

@@ -39,6 +39,7 @@ extern "C" {
 void InitJobQueue(const char *job_queue_name);
 void InitQmgmt();
 void CleanJobQueue();
+void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
 void BeginTransaction();
 void CommitTransaction();
