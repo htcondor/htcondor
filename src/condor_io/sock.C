@@ -184,7 +184,7 @@ int Sock::getportbyserv(
 			my_prot = "tcp";
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 	}
 
 	if (!(sp = getservbyname(s, my_prot))) return -1;
@@ -203,13 +203,13 @@ int Sock::assign(
 	// our CEDAR socket type
 	switch(type()){
 		case safe_sock:
-			assert( pProtoInfo->iSocketType == SOCK_DGRAM );
+			ASSERT( pProtoInfo->iSocketType == SOCK_DGRAM );
 			break;
 		case reli_sock:
-			assert( pProtoInfo->iSocketType == SOCK_STREAM );
+			ASSERT( pProtoInfo->iSocketType == SOCK_STREAM );
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 	}
 
 	_sock = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO, 
@@ -281,7 +281,7 @@ int Sock::assign(SOCKET sockd)
 			my_type = SOCK_STREAM;
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 	}
 
 #ifndef WIN32 /* Unix */
@@ -881,7 +881,7 @@ char * Sock::serializeCryptoInfo(char * buf)
     // kserial may be a problem since reli_sock also has stuff after
     // it. As a result, kserial may contains not just the key, but
     // other crap from reli_sock as well. Hence the code below. Hao
-    assert(ptmp);
+    ASSERT(ptmp);
 
     sscanf(ptmp, "%d", &len);
     if ( (len > 0) && ptmp ) {
@@ -902,6 +902,7 @@ char * Sock::serializeCryptoInfo(char * buf)
     // Now, skip over this one
     ptmp = strchr(ptmp,'*');
     ptmp++;
+	return ptmp;
 }
 
 char * Sock::serialize() const
@@ -918,7 +919,7 @@ char * Sock::serialize(char *buf)
 	int i, len = 0;
 	SOCKET passed_sock;
 
-	assert(buf);
+	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
 	sscanf(buf,"%u*%d*%d",&passed_sock,&_state,&_timeout);

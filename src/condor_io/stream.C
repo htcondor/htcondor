@@ -1921,7 +1921,8 @@ const KeyInfo& Stream :: get_crypto_key() const
         return crypto_->get_key();
     }
 #endif
-    assert(0);
+    ASSERT(0);	// This does not return...
+	return  crypto_->get_key();  // just to make compiler happy...
 }
 
 bool 
@@ -1939,7 +1940,7 @@ Stream::set_crypto_key(KeyInfo * key, const char * keyId)
             delete crypto_;
             crypto_ = 0;
         }
-        assert(keyId == 0);
+        ASSERT(keyId == 0);
         inited = true;
     }
 

@@ -22,20 +22,20 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include <stdlib.h>
 #include "condor_crypt.h"
 #include "condor_md.h"
 #include "condor_random_num.h"
 #if defined(CONDOR_ENCRYPTION)
 #include <openssl/rand.h>              // SSLeay rand function
 #endif
-#include <assert.h>
+#include "condor_debug.h"
+
 
 Condor_Crypt_Base :: Condor_Crypt_Base(Protocol protocol, const KeyInfo& keyInfo)
     : keyInfo_ (keyInfo)
 {
 #if defined(CONDOR_ENCRYPTION)
-    assert(keyInfo_.getProtocol() == protocol);
+    ASSERT(keyInfo_.getProtocol() == protocol);
 #endif
 }
 

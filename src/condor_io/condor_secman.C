@@ -979,7 +979,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			dprintf ( D_SECURITY, "SECMAN: succesfully sent NOP via TCP!\n");
 			// check if there's a key now...  what about now, is there
 			// a key now?  (you see what i'm saying.... :)
-			assert (enc_key == NULL);
+			ASSERT (enc_key == NULL);
 
 			// need to use the command map to get the sid!!!
 
@@ -1011,7 +1011,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				// i got a key...  let's use it!
 				dprintf ( D_SECURITY, "SECMAN: SEC_UDP obtained key id %s!\n", enc_key->id());
 
-				assert (auth_info);
+				ASSERT (auth_info);
 
 				delete auth_info;
 				auth_info = new ClassAd(*enc_key->policy());
@@ -1025,8 +1025,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				// listen.
 				dprintf ( D_SECURITY, "SECMAN: SEC_UDP has no key to use!\n");
 
-				assert (enc_key == NULL);
-				assert (have_session == false);
+				ASSERT (enc_key == NULL);
+				ASSERT (have_session == false);
 			}
 		}
 	}
@@ -1193,7 +1193,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		if (sec_lookup_feat_act(*auth_info, ATTR_SEC_ENACT) != SEC_FEAT_ACT_YES) {
 
 			// if we asked them what to do, get their response
-			assert (is_tcp);
+			ASSERT (is_tcp);
 
 			ClassAd auth_response;
 			sock->decode();
@@ -1263,7 +1263,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 		if (will_authenticate == SEC_FEAT_ACT_YES) {
 
-			assert (sock->type() == Stream::reli_sock);
+			ASSERT (sock->type() == Stream::reli_sock);
 
 			dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			char * auth_method = NULL;
@@ -1290,7 +1290,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				if (enc_key && enc_key->key()) {
 					ki = new KeyInfo(*(enc_key->key()));
 				} else {
-					assert (ki == NULL);
+					ASSERT (ki == NULL);
 				}
 			}
 		}
@@ -1377,7 +1377,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			}
 
 
-			assert (enc_key == NULL);
+			ASSERT (enc_key == NULL);
 
 
 			// extract the session duration
@@ -1633,23 +1633,23 @@ SecMan::SecMan(int nbuckets) {
 SecMan::SecMan(const SecMan &copy) {
 	// session_cache is static.  if there's a copy, it
 	// should already have been constructed.
-	assert (session_cache);
-	assert (command_map);
+	ASSERT (session_cache);
+	ASSERT (command_map);
 	sec_man_ref_count++;
 }
 
 const SecMan & SecMan::operator=(const SecMan &copy) {
 	// session_cache is static.  if there's a copy, it
 	// should already have been constructed.
-	assert (session_cache);
-	assert (command_map);
+	ASSERT (session_cache);
+	ASSERT (command_map);
 	return *this;
 }
 
 
 SecMan::~SecMan() {
-	assert (session_cache);
-	assert (command_map);
+	ASSERT (session_cache);
+	ASSERT (command_map);
 
 	// don't delete session_cache - it is static!!!
 	sec_man_ref_count--;

@@ -82,7 +82,7 @@ SafeSock::SafeSock(const SafeSock & orig)
 	// now copy all cedar state info via the serialize() method
 	char *buf = NULL;
 	buf = orig.serialize();	// get state from orig sock
-	assert(buf);
+	ASSERT(buf);
 	serialize(buf);	// put the state into the new sock
 	delete [] buf;
 }
@@ -624,13 +624,13 @@ char * SafeSock::serialize(char *buf)
 	char usernamebuf[128];
 	char *ptmp;
 
-	assert(buf);
+	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
-	assert( ptmp );
+	ASSERT( ptmp );
 	sscanf(ptmp,"%d*%s*%s",&_special_state,sinful_string,usernamebuf);
 	string_to_sin(sinful_string, &_who);
 

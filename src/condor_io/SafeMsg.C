@@ -132,7 +132,7 @@ const unsigned char * _condorPacket :: md()
 bool _condorPacket :: set_encryption_id(const char * keyId)
 {
     // This should be for outpacket only!
-    assert(empty());
+    ASSERT(empty());
     if (outgoingEncKeyId_) {
         free(outgoingEncKeyId_);
         outgoingEncKeyId_ = 0;

@@ -73,7 +73,7 @@ ReliSock::ReliSock(const ReliSock & orig) : Sock(orig)
 	// now copy all cedar state info via the serialize() method
 	char *buf = NULL;
 	buf = orig.serialize();	// get state from orig sock
-	assert(buf);
+	ASSERT(buf);
 	serialize(buf);			// put the state into the new sock
 	delete [] buf;
 }
@@ -670,7 +670,7 @@ ReliSock::end_of_message()
 			break;
 
 		default:
-			assert(0);
+			ASSERT(0);
 	}
 
 	return ret_val;
@@ -1019,13 +1019,13 @@ ReliSock::serialize(char *buf)
 	char sinful_string[28], fqu[256];
 	char *ptmp;
 	
-    assert(buf);
+    ASSERT(buf);
     memset(fqu, 0, 256);
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
-    assert( ptmp );
+    ASSERT( ptmp );
     memset(fqu, 0, 256);
     sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
     string_to_sin(sinful_string, &_who);
@@ -1098,7 +1098,7 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 			break;
 
 		default:
-			assert(0);
+			ASSERT(0);
 	}
 
 	return ret_val;
