@@ -1170,6 +1170,16 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 		return true;
 	}
 	JobAbortedEvent event;
+
+	char* reason = NULL;
+	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+							  ATTR_REMOVE_REASON, &reason) < 0 ) {
+		event.setReason( "Job removed by condor_rm" );
+	} else {
+		event.setReason( reason );
+		free( reason );
+	}
+
 	int status = ULog->writeEvent(&event);
 	delete ULog;
 
@@ -4203,6 +4213,11 @@ Scheduler::child_exit(int pid, int status)
 				break;
 			case JOB_CKPTED:
 			case JOB_NOT_CKPTED:
+					// we can't have the same value twice in our
+					// switch, so we can't really have a valid case
+					// for this, but it's the same number as
+					// JOB_NOT_CKPTED, so we're safe.
+			// case JOB_SHOULD_REQUEUE:  
 			case JOB_NOT_STARTED:
 				if (!srec->removed) {
 					Relinquish(srec->match);
@@ -4215,6 +4230,13 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_BAD_STATUS:
 				EXCEPT("shadow exited because job status != RUNNING");
 				break;
+			case JOB_SHOULD_REMOVE:
+				dprintf( D_ALWAYS, "Removing job %d.%d\n",
+						 srec->job_id.cluster, srec->job_id.proc );
+					// set this flag in our shadow record so we treat
+					// this just like a condor_rm
+				srec->removed = true;
+					// no break, fall through and do the action
 			case JOB_NO_CKPT_FILE:
 			case JOB_KILLED:
 			case JOB_COREDUMPED:
