@@ -859,41 +859,12 @@ int ReliSock::RcvMsg::rcv_packet( SOCKET _sock, int _timeout)
 	int		len, len_t, header_size;
 	int		tmp_len;
 
-        header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
+	header_size = mdChecker_ ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	len = 0;
-	while (len < header_size) {
-		if (_timeout > 0) {
-			struct timeval	timer;
-			fd_set			readfds;
-			int				nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
-#if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
-#endif
-			FD_ZERO( &readfds );
-			FD_SET( _sock, &readfds );
-				
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-				
-			switch(nfound) {
-			case 0:
-				return FALSE;
-				break;
-			case 1:
-				break;
-			default:
-				dprintf( D_ALWAYS, "select returns %d, recv failed\n", nfound );
-				return FALSE;
-				break;
-			}
-		}
-		tmp_len = recv(_sock, hdr+len, header_size - len, 0);
-		if (tmp_len <= 0) {
-			return FALSE;
-		}
-		len += tmp_len;
+	if ( condor_read(_sock,hdr,header_size,_timeout) < 0 ) {
+			// condor_read() already does dprintfs into the log
+			// about what went wrong...
+		return FALSE;
 	}
 	end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
