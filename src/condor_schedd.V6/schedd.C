@@ -318,7 +318,11 @@ Scheduler::count_jobs()
 
 	// when all jobs are finished, reset FlockLevel
 	if (N_Owners == 0) {
-		FlockLevel = 0;
+		if (FlockLevel > 0) {
+			dprintf(D_ALWAYS,
+					"all jobs are finished; flock level reset to 0\n");
+			FlockLevel = 0;
+		}
 	}
 
 	for ( i=0; i<N_Owners; i++) {
