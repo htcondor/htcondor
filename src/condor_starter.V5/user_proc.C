@@ -792,9 +792,11 @@ UserProc::send_sig( int sig )
 			break;
 		case SIGSTOP:
 			family->suspend();
+			pids_suspended = family->size();
 			break;
 		case SIGCONT:
 			family->resume();
+			pids_suspended = 0;
 			break;
 		case SIGKILL:
 			family->hardkill();
@@ -821,6 +823,8 @@ UserProc::send_sig( int sig )
 			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
+		/* standard jobs can't fork, so.... */
+		pids_suspended = 1;
 		dprintf( D_ALWAYS, "Sent signal SIGCONT to user job %d\n", pid);
 	}
 
@@ -834,6 +838,12 @@ UserProc::send_sig( int sig )
 		}
 		perror("kill");
 		EXCEPT( "kill(%d,%d)", pid, sig );
+	}
+	
+	/* record the fact we unsuspended the job. */
+	if (sig == SIGCONT)
+	{
+		pids_suspended = 0;
 	}
 
 	set_priv(priv);
@@ -1131,7 +1141,8 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	user_time( 0 ),
 	sys_time( 0 ),
 	guaranteed_user_time( 0 ),
-	guaranteed_sys_time( 0 )
+	guaranteed_sys_time( 0 ),
+	pids_suspended( -1 )
 {
 	char	buf[ _POSIX_PATH_MAX ];
 	char	*value;
