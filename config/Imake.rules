@@ -417,7 +417,7 @@ afs_##name##:: strip_dir/##name					@@\
 	cp strip_dir/##name $(PUBLIC_D_TARGET)			@@\
 								@@\
 strip_dir/##name##: stripped					@@\
-	condor_scripts/make_both_tarball strip##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball strip##, name##, files##, contribfiles
 #endif /* strip_both_tarball */
 
 #ifndef static_both_tarball
@@ -429,7 +429,7 @@ afs_##name##:: static_dir/##name				@@\
 	cp static_dir/##name $(PUBLIC_S_TARGET)			@@\
 								@@\
 static_dir/##name##: static					@@\
-	condor_scripts/make_both_tarball static##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball static##, name##, files##, contribfiles
 #else 
 #define static_both_tarball( name, files, contribfiles ) /* NULL MACRO */
 #endif /* HAS_STATIC */
