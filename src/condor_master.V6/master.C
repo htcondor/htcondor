@@ -30,6 +30,7 @@
 ** 			 University of Wisconsin, Computer Sciences Dept.
 ** Major clean-up, re-write by Derek Wright (7/10/97)
 ** 			 University of Wisconsin, Computer Sciences Dept.
+** Another major clean-up.  Nearly a total re-write by Derek (1/14-15/98)
 **
 */ 
 
@@ -47,19 +48,16 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #include "condor_attributes.h"
 #include "condor_network.h"
 #include "condor_adtypes.h"
-// #include "dgram_io_handle.h"
 #include "condor_io.h"
 #include "exit.h"
-
+#include "string_list.h"
 
 #ifndef WANT_DC_PM
-int sigchld_handler(Service *,int);
+int standard_sigchld(Service *,int);
+int all_reaper_sigchld(Service *,int);
 #endif
 
 #define MAX_LINES 100
-
-typedef void (*SIGNAL_HANDLER)();
-extern "C" void install_sig_handler( int, SIGNAL_HANDLER );
 
 typedef struct {
 	long	data[MAX_LINES + 1];
@@ -74,28 +72,19 @@ extern void register_service();
 extern void terminate(DWORD);
 #endif
 
-extern "C" char	*SigNames[];
+typedef void (*SIGNAL_HANDLER)();
 
 // prototypes of library functions
 extern "C"
 {
-	int 	detach();
-	char*	get_arch();
-	char*	get_op_sys(); 
-	int	get_inet_address(struct in_addr*); 
+	void install_sig_handler( int, SIGNAL_HANDLER );
 }
 
-// void	sigchld_handler(), sigquit_handler(),  sighup_handler();
-
-void	RestartMaster();
-void	siggeneric_handler(int); 
-void 	sigterm_handler(), wait_all_children();
 
 // local function prototypes
 void	init_params();
-int 	collector_runs_here();
-int 	negotiator_runs_here();
-void 	obituary( int pid, int status );
+void	init_daemon_list();
+void	init_classad();
 void 	tail_log( FILE* output, char* file, int lines );
 void 	display_line( long loc, FILE* input, FILE* output );
 void 	init_queue( QUEUE* queue, int size );
@@ -103,45 +92,50 @@ void 	insert_queue( QUEUE        *queue, long    elem);
 long	delete_queue(QUEUE* );
 int		empty_queue(QUEUE* );
 void	get_lock(char * );
-void	do_killpg(int, int);
-void	do_kill(int, int);
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
+void	RestartMaster();
 int		daily_housekeeping(Service*);
+void	update_collector();
 void	usage(const char* );
-void	report_to_collector();
-int		GetConfig(char*, char*);
-void	StartConfigServer();
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
 int		main_config();
-int		master_reaper(Service *, int, int);
 int		admin_command_handler(Service *, int, Stream *);
-
 extern "C" int	DoCleanup();
 
-char	*MailerPgm;
-int		MasterLockFD;
-int		interval;				// report to collector. Weiru
-ClassAd	ad;						// ad to central mgr. Weiru
+#if 0
+int		GetConfig(char*, char*);
+void	StartConfigServer();
+char*			configServer;
+#endif
 
-char	*CollectorHost;
+// Global variables
+ClassAd	*ad = NULL;				// ClassAd to send to collector
+char	*MailerPgm = NULL;
+int		MasterLockFD;
+int		update_interval;
+int		check_new_exec_interval;
+
+char	*CollectorHost = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
 int		r_factor = 300;								// recover factor
 char*	config_location;						// config file from server
 int		doConfigFromServer = FALSE; 
-char	*CondorAdministrator;
-char	*FS_Preen;
-char	*Log;
-char	*FS_CheckJobQueue;
+char	*CondorAdministrator = NULL;
+char	*FS_Preen = NULL;
 int		NT_ServiceFlag = FALSE;		// TRUE if running on NT as an NT Service
 
-int		NotFlag;
+int		shutdown_graceful_timeout;
+int		shutdown_fast_timeout;
+
+int		NotFlag = 0;
 int		PublishObituaries;
 int		Lines;
 int		AllowAdminCommands = FALSE;
+int		StartDaemons = TRUE;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -154,11 +148,9 @@ char	*default_daemon_list[] = {
 
 // create an object of class daemons.
 class Daemons daemons;
-char*			configServer;
 
 // for daemonCore
 char *mySubSystem = "MASTER";
-
 
 int
 master_exit(int retval)
@@ -192,7 +184,10 @@ DoCleanup()
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-		main_shutdown_graceful();  // this will exit if successful
+		main_shutdown_graceful();  // this will exit if successful,
+								   // but will return before all
+								   // daemons have exited... what can
+								   // we do?!
 	}
 
 	if ( NT_ServiceFlag == FALSE ) {
@@ -206,7 +201,7 @@ DoCleanup()
 int
 main_init( int argc, char* argv[] )
 {
-	char			**ptr, *startem;
+	char	**ptr;
 	int i;
 
 #ifdef WIN32
@@ -236,32 +231,18 @@ main_init( int argc, char* argv[] )
 		}
 	}
 
-		// Put this before we fork so that if something goes wrong, we
-		// see it....  Unfortunately, now the daemon core will have already
-		// forked.  TODO: fix this... Todd, 11/97.
-	//config_master(&ad);
-	config_master(NULL);
-
+	daemons.SetDefaultReaper();
 	
-	// I moved these here because I might start config server earlier than any
-	// other daemon and if the config server dies it will kill the master if
-	// a sigchld handler is not installed.
-#ifndef WIN32
-	// install_sig_handler( SIGILL, dump_core );
-	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
-	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
-#endif
-
-#ifdef WANT_DC_PM
-	daemonCore->Register_Reaper("daemon reaper",(ReaperHandler)master_reaper,
-		"master_reaper()");
-#else
-	daemonCore->Cancel_Signal(DC_SIGCHLD);
-	daemonCore->Register_Signal(DC_SIGCHLD,"DC_SIGCHLD",
-		(SignalHandler)sigchld_handler,"sigchld_handler");
-#endif
-	
+		// Grab all parameters needed by the master.
 	init_params();
+		// param() for DAEMON_LIST and initialize our daemons object.
+	init_daemon_list();
+		// Lookup the paths to all the daemons we now care about.
+	daemons.InitParams();
+		// Initialize our classad;
+	init_classad();  
+		// Initialize the master entry in the daemons data structure.
+	daemons.InitMaster();
 
 		// Register admin commands
 	daemonCore->Register_Command( RECONFIG, "RECONFIG",
@@ -270,28 +251,22 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler" );
+	daemonCore->Register_Command( DAEMONS_OFF, "DAEMONS_OFF",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler" );
+	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler" );
 
 	_EXCEPT_Cleanup = DoCleanup;
 
-	startem = param("START_DAEMONS");
-	if( !startem || *startem == 'f' || *startem == 'F' ) {
-		dprintf( D_ALWAYS, "START_DAEMONS flag was set to %s.  Exiting.\n",
-				startem?startem:"(NULL)");
-		master_exit( 0 );
-	}
-
-	MailerPgm = param( "MAIL" );
-	if ( MailerPgm == NULL ) {
-		MailerPgm = BIN_MAIL;
-	}
-
+#if !defined(WIN32)
 	if( !Termlog ) {
-#if defined(HPUX9)   || defined(Solaris)
+			// If we're not connected to a terminal, start our own
+			// process group.
 		setsid();
-#elif !defined(WIN32)
-		detach();
-#endif
 	}
+#endif
 
 	/* Make sure we are the only copy of condor_master running */
 #ifndef WIN32
@@ -299,18 +274,16 @@ main_init( int argc, char* argv[] )
 	get_lock( log_file);  
 #endif
 
-	// once a day  (starts up PREEN)
-	daemonCore->Register_Timer(3600,24 * 3600,(TimerHandler)daily_housekeeping,
-		"daily_housekeeping()");
-	
-	daemonCore->Register_Timer(5,300,(TimerHandlercpp)Daemons::CheckForNewExecutable,
-		"Daemons::CheckForNewExecutable()",&daemons);
-	
-	daemonCore->Register_Timer(0,interval,(TimerHandler)report_to_collector,
-		"report_to_collector()");
-	
-	daemons.StartAllDaemons();
+	if( StartDaemons ) {
+		daemons.StartAllDaemons();
+	}
 
+	// once a day  (starts up PREEN)
+	daemonCore->Register_Timer( 3600, 24 * 3600,
+								(TimerHandler)daily_housekeeping,
+								"daily_housekeeping()" );
+	
+	daemons.StartTimers();
 	return TRUE;
 }
 
@@ -328,9 +301,16 @@ admin_command_handler(Service *, int cmd, Stream *)
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
 	case RECONFIG:
-		return main_config();
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+		return TRUE;
 	case RESTART:
-		RestartMaster();
+		daemons.RestartMaster();
+		return TRUE;
+	case DAEMONS_ON:
+		daemons.DaemonsOn();
+		return TRUE;
+	case DAEMONS_OFF:
+		daemons.DaemonsOff();
 		return TRUE;
 	default: 
 		EXCEPT( "Unknown admin command in handle_admin_commands" );
@@ -339,81 +319,55 @@ admin_command_handler(Service *, int cmd, Stream *)
 }
 
 
-int
-master_reaper(Service *, int pid, int status)
-{
-	if( !daemons.IsDaemon(pid) ) {
-		dprintf( D_ALWAYS, "Pid %d died with ", pid );
-		if( WIFEXITED(status) ) {
-			dprintf( D_ALWAYS | D_NOHEADER,
-					"status %d\n", WEXITSTATUS(status) );
-			return FALSE;
-		}
-		if( WIFSIGNALED(status) ) {
-			dprintf( D_ALWAYS | D_NOHEADER,
-					"signal %d\n", WTERMSIG(status) );
-		}
-		return FALSE;
-	}
-	if( PublishObituaries ) {
-		obituary( pid, status );
-	}
-	daemons.Restart( pid );
-	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
-	return TRUE;
-}
-
-#if !defined(WANT_DC_PM)
-int
-sigchld_handler(Service *,int)
-{
-	int		pid = 0;
-	int	status;
-
-	dprintf(D_FULLDEBUG, "SIG_CLD caught\n");
-
-	errno = 0;
-	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
-		if( pid == -1 ) {
-			// several UNIX's occasionally return -1 with ECHILD
-			// instead of returning 0....
-			if(errno == ECHILD)
-			{
-				break;
-			}
-			EXCEPT( "waitpid(), error # = %d", errno );
-		}
-		if( WIFSTOPPED(status) ) {
-			continue;
-		}
-		master_reaper(NULL,pid,status);
-		errno = 0;
-	}
-	return TRUE;
-}
-#endif  // of !defined(WANT_DC_PM)
-
-
 void
 init_params()
 {
 	char	*tmp;
-	char	*daemon_list;
-	char	*daemon_name;
-	int		i;
-	daemon	*new_daemon;
 
-	Log = param( "LOG" );
-	if( Log == NULL )  {
-		EXCEPT( "No log directory specified in config file" );
+	tmp = param( "START_MASTER" );
+	if( tmp ) {
+		if( *tmp == 'F' || *tmp == 'f' ) {
+			dprintf( D_ALWAYS, "START_MASTER was set to %s, shutting down.\n", tmp );
+			StartDaemons = FALSE;
+			main_shutdown_graceful();
+		}
+		free( tmp );
 	}
 
+	if( CollectorHost ) {
+		free( CollectorHost );
+	}
 	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
 		EXCEPT( "COLLECTOR_HOST not specified in config file" );
 	}
 	
+	if( CondorAdministrator ) {
+		free( CondorAdministrator );
+	}
 	if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
 		EXCEPT( "CONDOR_ADMIN not specified in config file" );
+	}
+
+	if( MailerPgm ) {
+		free( MailerPgm );
+	}
+	if( (MailerPgm = param("MAIL")) == NULL ) {
+		EXCEPT( "MAIL not specified in config file" ); 
+	}
+
+	tmp = param("START_DAEMONS");
+	if( tmp ) {
+		if( *tmp == 'f' || *tmp == 'F' ) {
+			dprintf( D_ALWAYS, 
+					 "START_DAEMONS flag was set to %s.  Not starting daemons.\n",
+					 tmp );
+			StartDaemons = FALSE;
+		}
+		free( tmp );
+	} else {
+		dprintf( D_ALWAYS, 
+				 "START_DAEMONS flag was not set.  Not starting daemons.\n" );
+		StartDaemons = FALSE;
 	}
 
 	tmp = param("PUBLISH_OBITUARIES");
@@ -426,45 +380,85 @@ init_params()
 		free( tmp );
 	}
 
+	Lines = 0;
 	tmp = param("OBITUARY_LOG_LENGTH");
 	if( tmp ) {
 		Lines = atoi( tmp );
 		free( tmp );
-	} else {
+	} 
+	if( !Lines ) {
 		Lines = 20;
 	}
 
+	ceiling = 0;
 	tmp = param( "MASTER_BACKOFF_CEILING" );
 	if( tmp ) {
 		ceiling = atoi( tmp );
 		free( tmp );
-	} else {
+	} 
+	if( !ceiling ) {
 		ceiling = 3600;
 	}
 
+	e_factor = 0;
 	tmp = param( "MASTER_BACKOFF_FACTOR" );
     if( tmp ) {
         e_factor = atof( tmp );
 		free( tmp );
-    } else {
+    } 
+	if( !e_factor ) {
     	e_factor = 2.0;
     }
 	
+	r_factor = 0;
 	tmp = param( "MASTER_RECOVER_FACTOR" );
     if( tmp ) {
         r_factor = atoi( tmp );
 		free( tmp );
-    } else {
+    } 
+	if( !r_factor ) {
     	r_factor = 300;
     }
 	
-	tmp = param( "MASTER_UPDATE_CTMR_INTERVAL" );
+	update_interval = 0;
+	tmp = param( "MASTER_UPDATE_INTERVAL" );
     if( tmp ) {
-        interval = atoi( tmp );
+        update_interval = atoi( tmp );
 		free( tmp );
-    } else {
-        interval = 300;
+    } 
+	if( !update_interval ) {
+        update_interval = 5 * MINUTE;
     }
+
+	check_new_exec_interval = 0;
+	tmp = param( "MASTER_CHECK_NEW_EXEC_INTERVAL" );
+    if( tmp ) {
+        check_new_exec_interval = atoi( tmp );
+		free( tmp );
+    }
+	if( !check_new_exec_interval ) {
+        check_new_exec_interval = 5 * MINUTE;
+    }
+
+	shutdown_fast_timeout = 0;
+	tmp = param( "SHUTDOWN_FAST_TIMEOUT" );
+	if( tmp ) {
+		shutdown_fast_timeout = atoi( tmp );
+		free( tmp );
+	}
+	if( !shutdown_fast_timeout ) {
+		shutdown_fast_timeout = 5 * MINUTE;
+	}
+
+	shutdown_graceful_timeout = 0;
+	tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
+	if( tmp ) {
+		shutdown_graceful_timeout = atoi( tmp );
+		free( tmp );
+	}
+	if( !shutdown_graceful_timeout ) {
+		shutdown_graceful_timeout = 30 * MINUTE;
+	}
 
 	AllowAdminCommands = FALSE;
 	tmp = param( "ALLOW_ADMIN_COMMANDS" );
@@ -475,141 +469,90 @@ init_params()
 		free( tmp );	
 	}
 
-	char line[100];
-	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
-	ad.Insert(line);
-
-	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
-	ad.Insert(line);
-
-	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
-			daemonCore->InfoCommandSinfulString() );
-	ad.Insert(line);
-
-	ad.SetMyTypeName(MASTER_ADTYPE);
-	ad.SetTargetTypeName("");
-
+	if( FS_Preen ) {
+		free( FS_Preen );
+	}
 	FS_Preen = param( "PREEN" );
-	FS_CheckJobQueue = param( "CHECKJOBQUEUE" );
+}
 
-	daemon_list = param("DAEMON_LIST");
-	if (daemon_list) {
-		do {
-			while(*daemon_list && (*daemon_list == ' ' || *daemon_list== '\t'))
-				daemon_list++;
-			if (*daemon_list) {
-				daemon_name = daemon_list;
-				while (*daemon_list != ',' && *daemon_list) 
-					daemon_list++;
-				if (*daemon_list) {
-					*daemon_list = '\0';
-					if(daemons.GetIndex(daemon_name) < 0)
-					{
-						new_daemon = new daemon(daemon_name);
-					}
-					daemon_list++;
-				} else {
-					new_daemon = new daemon(daemon_name);
-				}
+
+void
+init_daemon_list()
+{
+	char	*daemon_name;
+	daemon	*new_daemon;
+	StringList daemon_names;
+
+	char* daemon_list = param("DAEMON_LIST");
+	if( daemon_list ) {
+		daemon_names.initializeFromString(daemon_list);
+		free( daemon_list );
+
+		daemon_names.rewind();
+		while( (daemon_name = daemon_names.next()) ) {
+			if(daemons.GetIndex(daemon_name) < 0) {
+				new_daemon = new daemon(daemon_name);
 			}
-		} while (*daemon_list);
+		}
 	} else {
-		for(i = 0; default_daemon_list[i]; i++) {
+		for(int i = 0; default_daemon_list[i]; i++) {
 			new_daemon = new daemon(default_daemon_list[i]);
 		}
 	}
-	daemons.InitParams();
 }
+
 
 void
-obituary( int pid, int status )
+check_daemon_list()
 {
-#if !defined(WIN32)		// until we add email support to WIN32 port...
-    char    cmd[512];
-    FILE    *mailer;
-    char    *name, *log;
-    char    *mail_prog;
-
-
-	/* If daemon with a serious bug gets installed, we may end up
-	 ** doing many restarts in rapid succession.  In that case, we
-	 ** don't want to send repeated mail to the CONDOR administrator.
-	 ** This could overwhelm the administrator's machine.
-	 */
-    int restart = daemons.NumberRestarts(pid);
-    if ( restart == -1 ) {
-        EXCEPT( "Pid %d returned by wait3(), but not a child\n", pid );
-    }
-    if ( restart > 3 ) return;
-
-    // always return for KBDD
-    if ( strcmp( daemons.SymbolicName(pid), "KBDD") == 0 ) {
-        return;
-	}
-
-	// Just return if process was killed with SIGKILL.  This means the
-	// admin did it, and thus no need to send email informing the
-	// admin about something they did...
-	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) ) {
+	char	*daemon_name;
+	daemon	*new_daemon;
+	StringList daemon_names;
+	int num_daemons_in_list = 0;
+	char* daemon_list = param("DAEMON_LIST");
+	if( !daemon_list ) {
+			// Without a daemon list, there's no way it could be
+			// different than what we've got now.
 		return;
 	}
+	daemon_names.initializeFromString(daemon_list);
+	free( daemon_list );
 
-	// Just return if process exited with status 0.  If everthing's
-	// ok, why bother sending email?
-	if ( (WIFEXITED(status)) && (WEXITSTATUS(status) == 0 ) ) {
-		return;
+	daemon_names.rewind();
+	while( (daemon_name = daemon_names.next()) ) {
+		num_daemons_in_list++;
+		if(daemons.GetIndex(daemon_name) < 0) {
+			new_daemon = new daemon(daemon_name);
+		}
 	}
-
-    name = daemons.DaemonName( pid );
-    log = daemons.DaemonLog( pid );
-
-    dprintf( D_ALWAYS, "Sending obituary for \"%s\" to \"%s\"\n",
-			name, CondorAdministrator );
-
-    mail_prog = param("MAIL");
-    if (mail_prog) {
-        (void)sprintf( cmd, "%s -s \"%s\" %s", mail_prog,
-					   "CONDOR Problem",
-					   CondorAdministrator );
-    } else {
-        EXCEPT("\"MAIL\" not specified in the config file! ");
-    }
-
-    if( (mailer=popen(cmd,"w")) == NULL ) {
-        EXCEPT( "popen(\"%s\",\"w\")", cmd );
-    }
-
-    fprintf( mailer, "\n" );
-
-    if( WIFSIGNALED(status) ) {
-        fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
-				name, my_full_hostname(), WTERMSIG(status) );
-        /*
-		   fprintf( mailer, "(%s core was produced)\n",
-		   status->w_coredump ? "a" : "no" );
-		   */
-    } else {
-        fprintf( mailer,
-				"\"%s\" on \"%s\" exited with status %d\n",
-				name, my_full_hostname(), WEXITSTATUS(status) );
-    }
-    tail_log( mailer, log, Lines );
-
-	/* Don't do a pclose here, it wait()'s, and may steal an
-	 ** exit notification of one of our daemons.  Instead we'll clean
-	 ** up popen's child in our SIGCHLD handler.
-	 */
-#if defined(HPUX9)
-    /* on HPUX, however, do a pclose().  This is because pclose() on HPUX
-	 ** will _not_ steal an exit notification, and just doing an fclose
-	 ** can cause problems the next time we try HPUX's popen(). -Todd */
-    pclose(mailer);
-#else
-    (void)fclose( mailer );
-#endif
-
-#endif	// of !defined(WIN32)
 }
+
+
+void
+init_classad()
+{
+	if( ad ) delete( ad );
+	ad = new ClassAd();
+
+	ad->SetMyTypeName(MASTER_ADTYPE);
+	ad->SetTargetTypeName("");
+
+	char line[100];
+	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
+	ad->Insert(line);
+
+	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+	ad->Insert(line);
+
+	sprintf(line, "%s = \"%s\"", ATTR_MASTER_IP_ADDR,
+			daemonCore->InfoCommandSinfulString() );
+	ad->Insert(line);
+
+		// In case MASTER_EXPRS is set, fill in our ClassAd with those
+		// expressions. 
+	config_fill_ad( ad, mySubSystem ); 	
+}
+
 
 void
 tail_log( FILE* output, char* file, int lines )
@@ -702,7 +645,6 @@ FileLock *MasterLock;
 void
 get_lock( char* file_name )
 {
-
 	if( (MasterLockFD=open(file_name,O_RDWR,0)) < 0 ) {
 		EXCEPT( "open(%s,0,0)", file_name );
 	}
@@ -717,55 +659,6 @@ get_lock( char* file_name )
 }
 
 
-void
-do_killpg( int pgrp, int sig )
-{
-#ifndef WIN32
-	priv_state	priv;
-
-	if( !pgrp ) {
-		return;
-	}
-
-	priv = set_root_priv();
-
-	(void)kill(-pgrp, sig );
-
-	set_priv(priv);
-#endif	// ifndef WIN32
-}
-
-void
-do_kill( int pid, int sig )
-{
-	int 		status;
-
-	if( !pid ) {
-		return;
-	}
-
-#ifdef WANT_DC_PM
-	status = daemonCore->Send_Signal(pid,sig);
-	if ( status == FALSE )
-		status = -1;
-	else
-		status = 1;
-#else
-	priv_state priv = set_root_priv();
-	status = kill( pid, sig );
-	set_priv(priv);
-#endif
-
-	if( status < 0 ) {
-		// EXCEPT( "kill(%d,%d)", pid, sig );
-		// An EXCEPT seemed to harsh here... we want our Master to _stick around_ !!!
-		// Instead, log an error message.
-		dprintf(D_ALWAYS,"ERROR: failed to send %s to pid %d\n",SigNames[sig],pid);
-	} else {
-		dprintf( D_ALWAYS, "Sent %s to process %d\n", SigNames[sig], pid );
-	}
-}
-
 /*
  ** Re read the config file, and send all the daemons a signal telling
  ** them to do so also.
@@ -773,15 +666,29 @@ do_kill( int pid, int sig )
 int
 main_config()
 {
-	config_master( &ad );
+		// Re-read the config files and create a new classad
+	init_classad(); 
+
+		// Reset our config values
 	init_params();
-	dprintf( D_ALWAYS, "Sending all daemons a SIGHUP\n" );
-#ifdef WANT_DC_PM
-	daemons.SignalAll(DC_SIGHUP);
-#else
-	daemons.SignalAll(SIGHUP);
-#endif
-	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
+
+		// Re-read the paths to our executables.  If any paths
+		// changed, the daemons will be marked as having a new
+		// executable.
+	daemons.InitParams();
+
+	if( StartDaemons ) {
+			// Restart any daemons who's executables are new or ones 
+			// that the path to the executable has changed.
+		daemons.CheckForNewExecutable();
+			// Tell all the daemons that are running to reconfig.
+		daemons.ReconfigAllDaemons();
+	} else {
+		daemons.DaemonsOff();
+	}
+		// Re-register our timers, since their intervals might have
+		// changed.
+	daemons.StartTimers();
 	return TRUE;
 }
 
@@ -791,21 +698,14 @@ main_config()
 int
 main_shutdown_fast()
 {
-	dprintf( D_ALWAYS, "Killed by SIGQUIT.  Performing quick shut down.\n" );
-	dprintf( D_ALWAYS, "Sending all daemons a SIGQUIT\n" );
+	daemons.SetAllGoneAction( MASTER_EXIT );
 
-#ifdef WANT_DC_PM
-	daemons.SignalAll(DC_SIGQUIT);
-	daemons.Wait_And_Exit( 0 );		// this will return now, but will exit after last child
+	if( daemons.NumberOfChildren() == 0 ) {
+		daemons.AllDaemonsGone();
+	}
+
+	daemons.StopFastAllDaemons();
 	return TRUE;
-#else
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-	daemons.SignalAll(SIGQUIT);
-	wait_all_children();
-	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	master_exit( 0 );
-	return TRUE;
-#endif
 }
 
 
@@ -815,43 +715,50 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
-	dprintf( D_ALWAYS, "Sending all daemons a SIGTERM\n" );
+	daemons.SetAllGoneAction( MASTER_EXIT );
 
-#ifdef WANT_DC_PM
-	daemons.SignalAll(DC_SIGTERM);
-	daemons.Wait_And_Exit( 0 );
-	return TRUE;
-#else
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-	daemons.SignalAll(SIGTERM);
-	wait_all_children();
-	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	master_exit( 0 );
-	return TRUE;
-#endif
-}
-
-void
-wait_all_children()
-{
-#ifndef WANT_DC_PM
-	int pid;
-	dprintf( D_FULLDEBUG, "Begining to wait for all children\n" );
-	for(;;) {
-		pid = wait( 0 );
-		dprintf( D_FULLDEBUG, "Wait() returns pid %d\n", pid );
-		if( pid < 0 ) {
-			if( errno == ECHILD ) {
-				break;
-			} else {
-				EXCEPT( "wait( 0 ), errno = %d", errno );
-			}
-		}
+	if( daemons.NumberOfChildren() == 0 ) {
+		daemons.AllDaemonsGone();
 	}
-	dprintf( D_FULLDEBUG, "Done waiting for all children\n" );
-#endif  // of ifndef WANT_DC_PM
+
+	daemons.StopAllDaemons();
+	return TRUE;
 }
+
+
+#if !defined(WANT_DC_PM)
+int
+all_reaper_sigchld( Service*, int )
+{
+	int		pid = 0;
+	int	status;
+
+	while( (pid=waitpid(-1,&status,WNOHANG)) > 0 ) {
+		if( WIFSTOPPED(status) ) {
+			continue;
+		}	
+		daemons.AllReaper( NULL, pid, status );
+	}
+	return TRUE;
+}	
+
+
+int
+standard_sigchld( Service *, int )
+{
+	int		pid = 0;
+	int	status;
+
+	while( (pid=waitpid(-1,&status,WNOHANG)) > 0 ) {
+		if( WIFSTOPPED(status) ) {
+			continue;
+		}
+		daemons.DefaultReaper( NULL, pid, status );
+	}
+	return TRUE;
+}
+
+#endif  // of !defined(WANT_DC_PM)
 
 time_t
 GetTimeStamp(char* file)
@@ -935,6 +842,7 @@ daily_housekeeping(Service*)
 	return TRUE;
 }
 
+
 void
 RestartMaster()
 {
@@ -942,10 +850,11 @@ RestartMaster()
 }
 
 
-void report_to_collector()
+void
+update_collector()
 {
 	int		cmd = UPDATE_MASTER_AD;
-	SafeSock sock(CollectorHost, COLLECTOR_UDP_COMM_PORT,2);
+	SafeSock sock(CollectorHost, COLLECTOR_PORT, 2);
 
 	dprintf(D_FULLDEBUG, "enter report_to_collector\n");
 
@@ -955,7 +864,7 @@ void report_to_collector()
 		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
 		return;
 	}
-	if(!ad.put(sock))
+	if(!ad->put(sock))
 	{
 		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
 		return;
@@ -968,13 +877,14 @@ void report_to_collector()
 	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
 }
 
+#if 0
 void StartConfigServer()
 {
 	daemon*			newDaemon;
 	
 	newDaemon = new daemon("CONFIG_SERVER");
 	newDaemon->process_name = param(newDaemon->name_in_config_file);
-	if(newDaemon->process_name == NULL && newDaemon->flag)
+	if(newDaemon->process_name == NULL && newDaemon->runs_here)
 	{
 		dprintf(D_ALWAYS, "Process not found in config file: %s\n",
 				newDaemon->name_in_config_file);
@@ -987,7 +897,7 @@ void StartConfigServer()
 	if(newDaemon->log_filename_in_config_file != NULL)
 	{
 		newDaemon->log_name = param(newDaemon->log_filename_in_config_file);
-		if(newDaemon->log_name == NULL && newDaemon->flag)
+		if(newDaemon->log_name == NULL && newDaemon->runs_here)
 		{
 			dprintf(D_ALWAYS, "Log file not found in config file: %s\n",
 					newDaemon->log_filename_in_config_file);
@@ -1000,9 +910,4 @@ void StartConfigServer()
 	// before doing anything else
 	sleep(5); 
 }
-
-
-void siggeneric_handler(int sig)
-{
-	EXCEPT("signal (%d) received", sig);
-}
+#endif

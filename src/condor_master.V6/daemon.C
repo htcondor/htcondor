@@ -24,7 +24,13 @@
 ** 
 ** Author:   Dhrubajyoti Borthakur
 ** 	         University of Wisconsin, Computer Sciences Dept.
-** 
+** Edited further by : Dhaval N Shah
+** 	         University of Wisconsin, Computer Sciences Dept.
+** Modified by: Cai, Weiru
+** 			 University of Wisconsin, Computer Sciences Dept.
+** Major clean-up, re-write by Derek Wright (7/10/97)
+** 			 University of Wisconsin, Computer Sciences Dept.
+** Another major clean-up.  Nearly a total re-write by Derek (1/14-15/98)
 */ 
 
 #include "condor_common.h"
@@ -34,37 +40,42 @@
 #include "master.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "exit.h"
+#include "my_hostname.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
-typedef void (*SIGNAL_HANDLER)();
-extern "C" void install_sig_handler( int, SIGNAL_HANDLER );
 
 // these are defined in master.C
 extern int		NotFlag;
 extern int		RestartsPerHour;
 extern int 		MasterLockFD;
-extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
+extern int		master_exit(int);
+extern int		update_interval;
+extern int		check_new_exec_interval;
+
+#if 0
 extern int		doConfigFromServer; 
 extern char*	config_location;
-extern int		master_exit(int);
+#endif
 
-extern int		collector_runs_here();
-extern int		negotiator_runs_here();
 extern time_t	GetTimeStamp(char* file);
-extern void		do_killpg(int, int);
-extern void		do_kill( int pid, int sig );
 extern int 	   	NewExecutable(char* file, time_t* tsp);
-extern int		DoCleanup();
-extern void		wait_all_children();
+extern void		tail_log( FILE*, char*, int );
+extern void		update_collector();
+
+#ifndef WANT_DC_PM
+extern int standard_sigchld(Service *,int);
+extern int all_reaper_sigchld(Service *,int);
+#endif
 
 int		hourly_housekeeping(void);
 
 extern "C"
 {
-	int		event_mgr();
+	void killkids( pid_t, int );
 }
+
+extern "C" 	char	*SigNames[];
 
 // to add a new process as a condor daemon, just add one line in 
 // the structure below. The first elemnt is the string that is 
@@ -78,17 +89,23 @@ extern "C"
 // this name shud be set to true in the condor_config file for the
 // process to be created.
 
-// make sure that the master does not start itself : set the flag off
-
-// if this machine is a world-machine, then the standard schedd and
-// startd are not started.
+// make sure that the master does not start itself : set runs_here off
 
 extern Daemons 		daemons;
 extern int			ceiling;
 extern float		e_factor;					// exponential factor
 extern int			r_factor;					// recovering factor
+extern int			shutdown_graceful_timeout;
+extern int			shutdown_fast_timeout;
+extern char*		CondorAdministrator;
+extern char*		MailerPgm;
+extern int			Lines;
+extern int			PublishObituaries;
+extern int			StartDaemons;
 
-
+///////////////////////////////////////////////////////////////////////////
+// daemon Class
+///////////////////////////////////////////////////////////////////////////
 daemon::daemon(char *name)
 {
 	char	buf[1000];
@@ -132,21 +149,28 @@ daemon::daemon(char *name)
 		flag_in_config_file = param(buf);
 		*(daemon_name - 2) = '_';
 	} 
-	process_name = 0;
-	log_name = 0;
-	if (strcmp(name, "MASTER") != MATCH) {
-		flag = TRUE;
+	process_name = NULL;
+	log_name = NULL;
+	if( strcmp(name, "MASTER") == MATCH ) {
+		runs_here = FALSE;
 	} else {
-		flag = FALSE;
+		runs_here = TRUE;
 	}
 	runs_on_this_host();
 	pid = 0;
 	restarts = 0;
 	newExec = FALSE; 
 	timeStamp = 0;
-	recoverTimer = -1;
+	start_tid = -1;
+	recover_tid = -1;
+	stop_tid = -1;
+	stop_fast_tid = -1;
+ 	hard_kill_tid = -1;
+	stop_state = NONE;
+#if 0
 	port = NULL;
 	config_info_file = NULL;
+#endif
 	daemons.RegisterDaemon(this);
 }
 
@@ -166,9 +190,9 @@ daemon::runs_on_this_host()
 		if (strncmp(flag_in_config_file, "BOOL_", 5) == MATCH) {
 			tmp	= param( flag_in_config_file);
 			if ( tmp && (*tmp == 't' || *tmp == 'T')) {
-				flag = TRUE;
+				runs_here = TRUE;
 			} else {
-				flag = FALSE;
+				runs_here = FALSE;
 			}
 		} else {
 			if (this_host_addr_list == 0) {
@@ -198,7 +222,7 @@ daemon::runs_on_this_host()
 						flag_in_config_file);
 				return FALSE;
 			}
-			flag = FALSE;
+			runs_here = FALSE;
 			hp = gethostbyname( tmp );
 			if (hp == 0) {
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
@@ -208,7 +232,7 @@ daemon::runs_on_this_host()
 				for (j = 0; hp->h_addr_list[j]; j++) {
 					if (memcmp(this_host_addr_list[i], hp->h_addr_list[j],
 							   hp->h_length) == MATCH) {
-						flag = TRUE;
+						runs_here = TRUE;
 						break;
 					}
 				}
@@ -224,122 +248,42 @@ daemon::runs_on_this_host()
 		{
 			if(*tmp == 'T' || *tmp == 't')
 			{
-				flag = TRUE;
+				runs_here = TRUE;
 			}
 			else
 			{
-				flag = FALSE;
+				runs_here = FALSE;
 			}
 		}
 	}
-	return flag;
-}
-
-Daemons::Daemons()
-{
-	daemon_ptr = 0;
-	no_daemons  =  0;
-	daemon_list_size = 0;
+	return runs_here;
 }
 
 
 void
-Daemons::RegisterDaemon(daemon *d)
+daemon::Recover()
 {
-	if (daemon_ptr == 0) {
-		daemon_list_size = 10;
-		daemon_ptr = (daemon **) malloc(daemon_list_size * sizeof(daemon *));
-	}
-
-	if (no_daemons >= daemon_list_size) {
-		daemon_list_size *= 2;
-		daemon_ptr = (daemon **) realloc(daemon_ptr, 
-										daemon_list_size * sizeof(daemon *));
-	}
-	daemon_ptr[no_daemons] = d;
-	no_daemons++;
+	restarts = 0;
+	recover_tid = -1; 
+	dprintf(D_FULLDEBUG, "%s recovered\n", name_in_config_file);
 }
 
 
-void Daemons::InitParams()
+int
+daemon::NextStart()
 {
-	for ( int i =0; i < no_daemons; i++) {
-		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
-		if(daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->daemon_name) {
-			*(daemon_ptr[i]->daemon_name - 2) = '\0'; 
-			daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
-			*(daemon_ptr[i]->daemon_name - 2) = '_';
-		}
-		
-		if ( daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->flag ) {
-			dprintf(D_ALWAYS, "Process not found in config file: %s\n", 
-					daemon_ptr[i]->name_in_config_file);
-			EXCEPT("Can't continue...");
-		}
-
-		// check that log file is necessary
-		if ( daemon_ptr[i]->log_filename_in_config_file != NULL) {
-			daemon_ptr[i]->log_name = 
-					param(daemon_ptr[i]->log_filename_in_config_file);
-			if ( daemon_ptr[i]->log_name == NULL && daemon_ptr[i]->flag ) {
-				dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
-						daemon_ptr[i]->log_filename_in_config_file);
-#if 0
-				{ EXCEPT("Log file name not found\n");}
-#endif
-			}
-		}
+	int n;
+	n = 9 + (int)ceil(pow(e_factor, restarts));
+	if( n > ceiling ) {
+		n = ceiling;
 	}
-
-
-	// initialise master data structure
-	int index = GetIndex("MASTER");
-	if ( index == -1 ) {
-		dprintf(D_ALWAYS, "InitParams:MASTER not specified\n");
-		EXCEPT("InitParams:MASTER not Specifed\n");
-	}
-	daemon_ptr[index]->timeStamp = 
-		GetTimeStamp(daemon_ptr[index]->process_name);
-	daemon_ptr[index]->pid = daemonCore->getpid();
+	return n;
 }
 
-int Daemons::GetIndex(const char* name)
-{
-	for ( int i=0; i < no_daemons; i++)
-		if ( strcmp(daemon_ptr[i]->name_in_config_file,name) == 0 )
-			return i;	
-	return -1;
-}
-
-void Daemons::StartAllDaemons()
-{
-	// initialise master data structure
-	int index = GetIndex("MASTER");
-	if ( index == -1 )
-	{
-		dprintf(D_ALWAYS, "StartAllDaemons :MASTER not specified\n");
-		EXCEPT("StartAllDaemons :MASTER not Specifed\n");
-	}
-	daemon_ptr[index]->timeStamp = 
-		GetTimeStamp(daemon_ptr[index]->process_name);
-	daemon_ptr[index]->pid       = daemonCore->getpid();
-
-	for ( int i=0; i < no_daemons; i++) {
-		// create only those processes that exists in this machine
-		if(daemon_ptr[i]->pid != 0)
-		// the daemon is already started
-		{
-			continue;
-		} 
-		if ( daemon_ptr[i]->flag == FALSE ) continue;
-		daemon_ptr[i]->StartDaemon();
-	}
-}
 
 int daemon::Restart()
 {
 	int		n;
-	int		timer;
 
 	if( NotFlag ) {
 		dprintf( D_ALWAYS, "NOT Starting \"%s\"\n", process_name );
@@ -349,29 +293,42 @@ int daemon::Restart()
 	{
 		restarts = 0;
 		newExec = FALSE; 
-		return StartDaemon();
+		return Start();
 	}
-	n = 9 + (int)ceil(pow(e_factor, restarts));
 
-	if(n > ceiling)
-	{
-		n = ceiling;
-	}
+	n = NextStart();
+
 	restarts++;
-	if(recoverTimer != -1)
-	{
-		dprintf(D_ALWAYS, "Cancelling recovering timer (%d) for %s\n", recoverTimer, process_name);
-		daemonCore->Cancel_Timer(recoverTimer);
-		recoverTimer = -1;
+	if( recover_tid != -1 ) {
+		dprintf( D_FULLDEBUG, 
+				 "Cancelling recovering timer (%d) for %s\n", 
+				 recover_tid, process_name );
+		daemonCore->Cancel_Timer( recover_tid );
+		recover_tid = -1;
 	}
-	timer = daemonCore->Register_Timer(n,(TimerHandlercpp)daemon::StartDaemon,"daemon::StartDaemon()",this);
+	if( start_tid != -1 ) {
+		daemonCore->Cancel_Timer( start_tid );
+	}
+	start_tid = daemonCore->
+		Register_Timer( n, (TimerHandlercpp)daemon::DoStart,
+						"daemon::DoStart()", this );
 	dprintf(D_ALWAYS, "restarting %s in %d seconds\n", process_name, n);
-	dprintf(D_FULLDEBUG, "Added timer (%d) for restarting %s\n", timer,
-		process_name);
 	return 1;
 }
 
-int daemon::StartDaemon()
+
+// This little function is used so when the start timer goes off, we
+// can set the start_tid back to -1 before we actually call Start().
+void
+daemon::DoStart()
+{
+	start_tid = -1;
+	Start();
+}
+
+
+int
+daemon::Start()
 {
 	char	*shortname;
 	int command_port = TRUE;
@@ -379,6 +336,11 @@ int daemon::StartDaemon()
 	int i, max_fds = getdtablesize();
 #endif
 	char argbuf[150];
+
+	if( start_tid != -1 ) {
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
 
 	if( (shortname = strrchr(process_name,'/')) ) {
 		shortname += 1;
@@ -394,7 +356,6 @@ int daemon::StartDaemon()
 
 	if( access(process_name,X_OK) != 0 ) {
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
-		// flag = FALSE;
 		pid = 0; 
 		// Schedule to try and restart it a little later
 		Restart();
@@ -426,7 +387,9 @@ int daemon::StartDaemon()
 
 	if ( pid == FALSE ) {
 			// Create_Process failed!
-		dprintf(D_ALWAYS,"ERROR: Create_Process failed, trying to start %s\n",process_name);
+		dprintf( D_ALWAYS,
+				 "ERROR: Create_Process failed, trying to start %s\n",
+				 process_name);
 		pid = 0;
 		return 0;
 	}
@@ -463,143 +426,588 @@ int daemon::StartDaemon()
 	
 	// if this is a restart, start recover timer
 	if (restarts > 0) {
-		recoverTimer = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)daemon::Recover,
+		recover_tid = daemonCore->Register_Timer(r_factor,(TimerHandlercpp)daemon::Recover,
 			"daemon::Recover()",this);
-		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recoverTimer);
+		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
 	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
 		process_name, pid );
-	
+
 	// update the timestamp so we do not restart accidently a second time
 	timeStamp = GetTimeStamp(process_name);
 
 	return pid;	
 }
 
-void Daemons::Restart(int pid)
-{
-	// find out which daemon died
-	for ( int i=0; i < no_daemons; i++) {
-		if (( pid == daemon_ptr[i]->pid)&&(daemon_ptr[i]->flag == TRUE)) {
-			// this is the daemon that died: schedule to restart it
-			dprintf( D_ALWAYS, "The %s (process %d ) died\n",
-						daemon_ptr[i]->name_in_config_file,pid);
-			daemon_ptr[i]->pid = 0; 
-#ifdef WANT_DC_PM
-			do_killpg( pid, DC_SIGKILL ) ;	// this is currently a no-op if WANT_DC_PM defined
-#else
-			do_killpg( pid, SIGKILL ) ;	
-#endif
-			// This is ok, since we're only calling Restart() when a
-			// daemon has already exited.  So, killing the process
-			// group with SIGKILL shouldn't do any harm and will clean
-			// up any dead/hung processes that are children of the
-			// daemon that died.  -Derek Wright 7/29/97
 
-			// restart
-			daemon_ptr[i]->Restart();
-			return;
-		}
+void
+daemon::Stop() 
+{
+	if( !strcmp(name_in_config_file, "MASTER") ) {
+			// Never want to stop master.
+		return;
 	}
-	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
+
+	if( stop_state == GRACEFUL ) {
+			// We've already been here, just return.
+		return;
+	}
+	stop_state = GRACEFUL;
+
+#ifdef WANT_DC_PM
+	Kill( DC_SIGTERM );
+#else
+	Kill( SIGTERM );
+#endif
+
+	stop_fast_tid = 
+		daemonCore->Register_Timer( shutdown_graceful_timeout, 0, 
+									(TimerHandlercpp)daemon::StopFast,
+									"daemon::StopFast()", this );
 }
 
 
-void Daemons::RestartMaster()
+void
+daemon::StopFast()
 {
-	int			index = GetIndex("MASTER");
-#ifndef WANT_DC_PM
-	int 		i, max_fds = getdtablesize();
-#endif
-
-	if ( index == -1 ) {
-		dprintf(D_ALWAYS, "Restart Master:MASTER not specified\n");
-		EXCEPT("Restart Master:MASTER not Specifed\n");
+	if( !strcmp(name_in_config_file, "MASTER") ) {
+			// Never want to stop master.
+		return;
 	}
 
-	dprintf(D_ALWAYS, "RESTARTING MASTER (new executable)\n");
+	if( stop_state == FAST ) {
+			// We've already been here, just return.
+		return;
+	}
+	stop_state = FAST;
+
+	if( stop_fast_tid != -1 ) {
+		dprintf( D_ALWAYS, 
+				 "Timeout for graceful shutdown has expired for %s.\n", 
+				 name_in_config_file );
+		stop_fast_tid = -1;
+	}
 
 #ifdef WANT_DC_PM
-	dprintf(D_ALWAYS,"RESTARTING MASTER not yet supported with WANT_DC_PM\n");
+	Kill( DC_SIGQUIT );
+#else
+	Kill( SIGQUIT );
+#endif
+
+	hard_kill_tid = 
+		daemonCore->Register_Timer( shutdown_fast_timeout, 0, 
+									(TimerHandlercpp)daemon::HardKill,
+									"daemon::HardKill()", this );
+}
+
+void
+daemon::HardKill()
+{
+	if( !strcmp(name_in_config_file, "MASTER") ) {
+			// Never want to stop master.
+		return;
+	}
+
+	if( stop_state == KILL ) {
+			// We've already been here, just return.
+		return;
+	}
+	stop_state = KILL;
+
+	if( hard_kill_tid != -1 ) {
+		dprintf( D_ALWAYS, 
+				 "Timeout for fast shutdown has expired for %s.\n", 
+				 name_in_config_file );
+		hard_kill_tid = -1;
+	}
+
+#ifdef WANT_DC_PM
+	Kill( DC_SIGKILL );
+		// Can we do better than that for DC_PM?
+#else
+	killkids( pid, SIGKILL );
+	Killpg( SIGKILL );
+	dprintf( D_ALWAYS, 
+			 "Sent SIGKILL to %s (pid %d) and all it's children.\n",
+			 name_in_config_file, pid );
+#endif
+}
+
+
+void
+daemon::Exited( int status )
+{
+	char buf1[256];
+	char buf2[256];
+	sprintf( buf1, "The %s (pid %d) ", name_in_config_file, pid );
+	if( WIFSIGNALED(status) ) {
+		sprintf( buf2, "died with signal %d", WTERMSIG(status) );
+	} else {
+		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
+	}
+	dprintf( D_ALWAYS, "%s%s\n", buf1, buf2 );
+
+		// For good measure, try to clean up any dead/hung children of
+		// The daemon that just died by sending SIGKILL to it's
+		// process group.
+#ifdef WANT_DC_PM
+	Killpg( DC_SIGKILL );	
+#else
+	Killpg( SIGKILL ) ;	
+#endif
+		// Mark this daemon as gone.
+	pid = 0;
+	CancelAllTimers();
+	stop_state = NONE;
+}
+
+
+void
+daemon::Obituary( int status )
+{
+#if !defined(WIN32)		// until we add email support to WIN32 port...
+    char    cmd[512];
+    FILE    *mailer;
+
+	/* If daemon with a serious bug gets installed, we may end up
+	 ** doing many restarts in rapid succession.  In that case, we
+	 ** don't want to send repeated mail to the CONDOR administrator.
+	 ** This could overwhelm the administrator's machine.
+	 */
+    if ( restarts > 3 ) return;
+
+    // always return for KBDD
+    if( strcmp( name_in_config_file, "KBDD") == 0 ) {
+        return;
+	}
+
+	// Just return if process was killed with SIGKILL.  This means the
+	// admin did it, and thus no need to send email informing the
+	// admin about something they did...
+	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) ) {
+		return;
+	}
+
+	// Just return if process exited with status 0.  If everthing's
+	// ok, why bother sending email?
+	if ( (WIFEXITED(status)) && 
+		 ( (WEXITSTATUS(status) == 0 ) || 
+		   (WEXITSTATUS(status) == JOB_EXEC_FAILED ) ) ) {
+		return;
+	}
+
+    dprintf( D_ALWAYS, "Sending obituary for \"%s\" to \"%s\"\n",
+			process_name, CondorAdministrator );
+
+	(void)sprintf( cmd, "%s -s \"%s\" %s", MailerPgm, 
+				   "CONDOR Problem",
+				   CondorAdministrator );
+
+    if( (mailer=popen(cmd,"w")) == NULL ) {
+        EXCEPT( "popen(\"%s\",\"w\")", cmd );
+    }
+
+    fprintf( mailer, "\n" );
+
+    if( WIFSIGNALED(status) ) {
+        fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
+				process_name, my_full_hostname(), WTERMSIG(status) );
+        /*
+		   fprintf( mailer, "(%s core was produced)\n",
+		   status->w_coredump ? "a" : "no" );
+		   */
+    } else {
+        fprintf( mailer,
+				"\"%s\" on \"%s\" exited with status %d\n",
+				process_name, my_full_hostname(), WEXITSTATUS(status) );
+    }
+    tail_log( mailer, log_name, Lines );
+
+	/* Don't do a pclose here, it wait()'s, and may steal an
+	 ** exit notification of one of our daemons.  Instead we'll clean
+	 ** up popen's child in our SIGCHLD handler.
+	 */
+#if defined(HPUX9)
+    /* on HPUX, however, do a pclose().  This is because pclose() on HPUX
+	 ** will _not_ steal an exit notification, and just doing an fclose
+	 ** can cause problems the next time we try HPUX's popen(). -Todd */
+    pclose(mailer);
+#else
+    (void)fclose( mailer );
+#endif
+
+#endif	// of !defined(WIN32)
+}
+
+
+void
+daemon::CancelAllTimers()
+{
+	if( stop_tid  != -1 ) {
+		daemonCore->Cancel_Timer( stop_tid );
+		stop_tid = -1;
+	}
+	if( stop_fast_tid  != -1 ) {
+		daemonCore->Cancel_Timer( stop_fast_tid );
+		stop_fast_tid = -1;
+	}
+	if( hard_kill_tid  != -1 ) {
+		daemonCore->Cancel_Timer( hard_kill_tid );
+		hard_kill_tid = -1;
+	}
+	if( recover_tid  != -1 ) {
+		daemonCore->Cancel_Timer( recover_tid );
+		recover_tid = -1;
+	}
+}
+
+
+void
+daemon::Killpg( int sig )
+{
+	if( (!pid) || (pid == 1) ) {
+		return;
+	}
+#ifdef WANT_DC_PM
+	dprintf( D_ALWAYS, "Killing process groups not supported with DC_PM.\n" );
 	return;
 #else
+	priv_state priv = set_root_priv();
+	(void)kill(-pid, sig );
+	set_priv(priv);
+#endif
+	
+}
 
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN);
 
-		/* Send SIGTERM to all daemons (NOT process groups) and let
-		   them do their own clean up.  -Derek Wright 7/29/97 */
-	for ( i=0; i < no_daemons; i++) {
-		if ((daemon_ptr[i]->flag == TRUE )&& ( daemon_ptr[i]->pid )
-				&& ( index != i)) {
-			do_kill(daemon_ptr[i]->pid, SIGTERM);
-			dprintf(D_ALWAYS, "Killed %s pid = %d\n",
-				daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
-		}
+void
+daemon::Kill( int sig )
+{
+	if( (!pid) || (pid == -1) ) {
+		return;
 	}
 
-		/* Wait until all children die */
-	wait_all_children();
+	int status;
 
-	if ( MasterLock->release() == FALSE ) {
-		dprintf(D_ALWAYS,
-				"Can't remove lock on \"%s\"\n",daemon_ptr[index]->log_name);
-		EXCEPT( "file_lock(%d)", MasterLockFD );
+#ifdef WANT_DC_PM
+	status = daemonCore->Send_Signal(pid,sig);
+	if ( status == FALSE )
+		status = -1;
+	else
+		status = 1;
+#else
+	priv_state priv = set_root_priv();
+	status = kill( pid, sig );
+	set_priv(priv);
+#endif
+
+	if( status < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: failed to send %s to pid %d\n",
+				 SigNames[sig], pid );
+	} else {
+		dprintf( D_ALWAYS, "Sent %s to %s (pid %d)\n",
+				 SigNames[sig], name_in_config_file, pid );
 	}
-	dprintf( D_ALWAYS, "Unlocked file descriptor %d\n", MasterLockFD );
-	(void)close( MasterLockFD );
-	dprintf( D_ALWAYS, "Closed file descriptor %d\n", MasterLockFD );
+}
 
-	dprintf( D_ALWAYS, "Doing exec( \"%s\", \"condor_master\", 0 )", 
-			daemon_ptr[index]->process_name);
 
-	// Now close all sockets and fds so our new invocation of condor_master
-	// does not inherit them.
-	for (i=0; i < max_fds; i++) 
-		close(i);
-
-	(void)execl(daemon_ptr[index]->process_name, "condor_master", 0);
-	EXCEPT("execl(%s, condor_master, 0)",daemon_ptr[index]->process_name);
+void
+daemon::Reconfig()
+{
+	if( stop_state != NONE ) {
+			// If we're currently trying to shutdown this daemon,
+			// there's no need to reconfig it.
+		return;
+	}
+#ifdef WANT_DC_PM
+	Kill( DC_SIGHUP );
+#else
+	Kill( SIGHUP );
 #endif
 }
 
-void Daemons::CheckForNewExecutable()
+
+///////////////////////////////////////////////////////////////////////////
+//  Daemons Class
+///////////////////////////////////////////////////////////////////////////
+
+Daemons::Daemons()
+{
+	daemon_ptr = NULL;
+	no_daemons  =  0;
+	daemon_list_size = 0;
+	check_new_exec_tid = -1;
+	update_tid = -1;
+	reaper = NO_R;
+	all_daemons_gone_action = MASTER_RESET;
+}
+
+
+void
+Daemons::RegisterDaemon(daemon *d)
+{
+	int i;
+	if( !daemon_ptr ) {
+		daemon_list_size = 10;
+		daemon_ptr = (daemon **) malloc(daemon_list_size * sizeof(daemon *));
+		for( i=0; i<daemon_list_size; i++ ) {
+			daemon_ptr[i] = NULL;
+		}
+	}
+
+	if (no_daemons >= daemon_list_size) {
+		i = daemon_list_size;
+		daemon_list_size *= 2;
+		daemon_ptr = (daemon **) realloc(daemon_ptr, 
+										daemon_list_size * sizeof(daemon *));
+		for( ; i<daemon_list_size; i++ ) {
+			daemon_ptr[i] = NULL;
+		}
+
+	}
+	daemon_ptr[no_daemons] = d;
+	no_daemons++;
+}
+
+
+void
+Daemons::InitParams()
+{
+	char* tmp = NULL;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->process_name ) {
+			tmp = daemon_ptr[i]->process_name;
+		}
+		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
+		if( tmp && strcmp(daemon_ptr[i]->process_name, tmp) ) {
+				// The path to this daemon has changed in the config
+				// file, we will need to start the new version.
+			daemon_ptr[i]->newExec = TRUE;
+			free( tmp );
+			tmp = NULL;
+		}
+
+			// check that log file is necessary
+		if ( daemon_ptr[i]->log_filename_in_config_file != NULL) {
+			if( daemon_ptr[i]->log_name ) {
+				free( daemon_ptr[i]->log_name );
+			}
+			daemon_ptr[i]->log_name = 
+					param(daemon_ptr[i]->log_filename_in_config_file);
+			if ( daemon_ptr[i]->log_name == NULL && daemon_ptr[i]->runs_here ) {
+				dprintf(D_ALWAYS, "Log file not found in config file: %s\n", 
+						daemon_ptr[i]->log_filename_in_config_file);
+			}
+		}
+	}
+}
+
+
+int
+Daemons::GetIndex(const char* name)
+{
+	for ( int i=0; i < no_daemons; i++)
+		if ( strcmp(daemon_ptr[i]->name_in_config_file,name) == 0 )
+			return i;	
+	return -1;
+}
+
+
+void
+Daemons::CheckForNewExecutable()
 {
     int master = GetIndex("MASTER");
 
 	dprintf(D_FULLDEBUG, "enter Daemons::CheckForNewExecutable\n");
     if ( master == -1 ) {
-        dprintf(D_ALWAYS, "SigalrmHandler:MASTER not specified\n");
-        EXCEPT("SigalrmHandler:MASTER not Specifed\n");
+        EXCEPT("CheckForNewExecutable: MASTER not specifed");
     }
     if( NewExecutable(daemon_ptr[master]->process_name,
-                                    &daemon_ptr[master]->timeStamp) ) {
-        dprintf(D_ALWAYS, " Restarting master\n");
+					  &daemon_ptr[master]->timeStamp) ) {
+		dprintf( D_ALWAYS,"%s was modified, restarting.\n", 
+				 daemon_ptr[master]->process_name );
         RestartMaster();
+		return;
     }
 
     for (int i=0; i < no_daemons; i++) {
-        if ( i== master ) continue;
-		if (( daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
-				&& NewExecutable(daemon_ptr[i]->process_name,
-									&daemon_ptr[i]->timeStamp)) {
-			daemon_ptr[i]->restarts = 0;
-			daemon_ptr[i]->newExec = TRUE;
-			if(daemon_ptr[i]->pid > 0) {
-				dprintf(D_ALWAYS,"%s was modified.  Killing %d\n", 
-						daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
-#ifdef WANT_DC_PM
-				do_kill( daemon_ptr[i]->pid, DC_SIGTERM );
-#else
-				do_kill( daemon_ptr[i]->pid, SIGTERM );
-#endif
-			} else {
-				daemon_ptr[i]->StartDaemon(); 
+		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid ) {
+			if( NewExecutable( daemon_ptr[i]->process_name,
+							   &daemon_ptr[i]->timeStamp) ) {
+				daemon_ptr[i]->newExec = TRUE;
+				daemon_ptr[i]->restarts = 0;
+			}
+			if( daemon_ptr[i]->newExec == TRUE ) {
+				dprintf( D_ALWAYS,"%s was modified, killing.\n", 
+						 daemon_ptr[i]->process_name );
+				daemon_ptr[i]->Stop();
 			}
 		} 
 	}
-
 	dprintf(D_FULLDEBUG, "exit Daemons::CheckForNewExecutable\n");
+}
+
+
+void
+Daemons::DaemonsOn()
+{
+		// Maybe someday we'll add code here to edit the config file.
+	StartDaemons = TRUE;
+	StartAllDaemons();
+}
+
+
+void
+Daemons::DaemonsOff()
+{
+		// Maybe someday we'll add code here to edit the config file.
+	StartDaemons = FALSE;
+	all_daemons_gone_action = MASTER_RESET;
+	StopAllDaemons();
+}
+
+
+void
+Daemons::StartAllDaemons()
+{
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid > 0 ) {
+				// the daemon is already started
+			continue;
+		} 
+		if( ! daemon_ptr[i]->runs_here ) continue;
+		daemon_ptr[i]->Start();
+	}
+}
+
+
+void
+Daemons::StopAllDaemons() 
+{
+	daemons.SetAllReaper();
+	int running = 0;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->Stop();
+			running++;
+		}
+	}
+	if( !running ) {
+		AllDaemonsGone();
+	}	   
+}
+
+
+void
+Daemons::StopFastAllDaemons()
+{
+	daemons.SetAllReaper();
+	int running = 0;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->StopFast();
+			running++;
+		}
+	}
+	if( !running ) {
+		AllDaemonsGone();
+	}	   
+}
+
+
+void
+Daemons::CancelAllStopTimers()
+{
+	for( int i=0; i < no_daemons; i++ ) {
+		daemon_ptr[i]->CancelAllTimers();
+	}
+}
+
+
+void
+Daemons::ReconfigAllDaemons()
+{
+	dprintf( D_ALWAYS, "Reconfiguring all running daemons.\n" );
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->Reconfig();
+		}
+	}
+}
+
+
+void
+Daemons::InitMaster()
+{
+		// initialize master data structure
+	int index = GetIndex("MASTER");
+	if ( index == -1 ) {
+		EXCEPT("InitMaster: MASTER not Specifed");
+	}
+	daemon_ptr[index]->timeStamp = 
+		GetTimeStamp(daemon_ptr[index]->process_name);
+	daemon_ptr[index]->pid = daemonCore->getpid();
+}
+
+
+void
+Daemons::RestartMaster()
+{
+#ifdef WANT_DC_PM
+	dprintf(D_ALWAYS, "Restarting master not yet supported with WANT_DC_PM\n");
+#else
+	if( NumberOfChildren() == 0 ) {
+		FinishRestartMaster();
+	}
+	all_daemons_gone_action = MASTER_RESTART;
+	StartDaemons = FALSE;
+	StopAllDaemons();
+#endif
+}
+
+
+// This function is called when all the children have finally exited
+// and we're ready to actually do the restart.
+void
+Daemons::FinishRestartMaster()
+{
+#ifndef WANT_DC_PM
+	int 		i, max_fds = getdtablesize();
+	int			index = GetIndex("MASTER");
+
+	if ( index == -1 ) {
+		EXCEPT("Restart Master: MASTER not specifed");
+	}
+
+	if ( MasterLock->release() == FALSE ) {
+		dprintf( D_ALWAYS,
+				 "Can't remove lock on \"%s\"\n",daemon_ptr[index]->log_name);
+		EXCEPT( "file_lock(%d)", MasterLockFD );
+	}
+	(void)close( MasterLockFD );
+
+	dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
+			 daemon_ptr[index]->process_name);
+
+		// Now close all sockets and fds so our new invocation of
+		// condor_master does not inherit them.
+	for (i=0; i < max_fds; i++) 
+		close(i);
+
+		// Make sure the exec() of the master works.  If it fails,
+		// we'll fall past the execl() call, and hit the exponential
+		// backoff code.
+	while(1) {
+		(void)execl(daemon_ptr[index]->process_name, "condor_master", "-f", 0);
+		daemon_ptr[index]->restarts++;
+		i = daemon_ptr[index]->NextStart();
+		dprintf( D_ALWAYS, 
+				 "Cannot execute condor_master, will try again in %d seconds\n", 
+				 i );
+		sleep(i);
+	}
+#endif
 }
 
 
@@ -614,115 +1022,167 @@ char* Daemons::DaemonLog( int pid )
 	return "Unknown Program!!!";
 }
 
-char* Daemons::DaemonName( int pid )
+
+#if 0
+void
+Daemons::SignalAll( int signal )
 {
-	// be careful : a pointer to data in this class is returned
-	// posibility of getting tampered
-
-	for ( int i=0; i < no_daemons; i++)
-		if ( daemon_ptr[i]->pid == pid )
-			return (daemon_ptr[i]->process_name);
-	return "Unknown Program!!!";
+	// Sends the given signal to all daemons except the master
+	// itself.  (Master has runs_here set to false).
+	for ( int i=0; i < no_daemons; i++) {
+		if( daemon_ptr[i]->runs_here && (daemon_ptr[i]->pid > 0) ) {
+			daemon_ptr[i]->Kill(signal);
+		}
+	}
 }
+#endif
 
-char* Daemons::SymbolicName( int pid )
-{
-	// be careful : a pointer to data in this class is returned
-	// posibility of getting tampered
-
-	for ( int i=0; i < no_daemons; i++)
-		if ( daemon_ptr[i]->pid == pid )
-			return (daemon_ptr[i]->name_in_config_file);
-	return "Unknown Program!!!";
-}
-
-int Daemons::NumberRestarts(int pid)
-{
-	for ( int i=0; i < no_daemons; i++)
-		if ( daemon_ptr[i]->pid == pid )
-			return (daemon_ptr[i]->restarts);
-	return -1;
-}
-
-
-void Daemons::SignalAll(int signal)
-{
-	// kills all daemons except the master itself
-	for ( int i=0; i < no_daemons; i++)
-		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid > 0  )
-		  && ( strcmp(daemon_ptr[i]->name_in_config_file,"MASTER") != 0))
-			do_kill(daemon_ptr[i]->pid, signal);
-}
-
-
-int Daemons::IsDaemon(int pid)
-{
-	for ( int i=0; i < no_daemons; i++)
-		if ( daemon_ptr[i]->pid == pid )
-			return 1;
-	return 0;
-}
-	
-void daemon::Recover()
-{
-	restarts = 0;
-	recoverTimer = -1; 
-	dprintf(D_FULLDEBUG, "%s recovered\n", name_in_config_file);
-}
 
 // This function returns the number of active child processes currently being
 // supervised by the master.
 int Daemons::NumberOfChildren()
 {
 	int result = 0;
-
-	for ( int i=0; i < no_daemons; i++)
-		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
-		  && ( strcmp(daemon_ptr[i]->name_in_config_file,"MASTER") != 0))
+	for( int i=0; i < no_daemons; i++) {
+		if( daemon_ptr[i]->runs_here && daemon_ptr[i]->pid ) {
 			result++;
-
+		}
+	}
 	dprintf(D_FULLDEBUG,"NumberOfChildren() returning %d\n",result);
-	
 	return result;
 }
 
+
 int
-Daemons::Wait_Reaper(int pid, int)
+Daemons::AllReaper(Service *, int pid, int status)
 {
 		// find out which daemon died
-	for ( int i=0; i < no_daemons; i++) {
-		if (( pid == daemon_ptr[i]->pid)&&(daemon_ptr[i]->flag == TRUE)) {
-			// this is the daemon that died; mark it dead
-			dprintf( D_ALWAYS, "The %s (process %d ) died\n",
-						daemon_ptr[i]->name_in_config_file,pid);
-			daemon_ptr[i]->pid = 0; 
-
-			// check if this is the last daemon; if so, exit.
-			if ( NumberOfChildren() == 0 ) {
-				dprintf(D_ALWAYS,"All child processes have exited; Master Exiting...\n");
-				// fetch the user requested exit code
-				int* exit_code = (int *) daemonCore->GetDataPtr();
-				master_exit(*exit_code);
+	for( int i=0; i < no_daemons; i++) {
+		if( pid == daemon_ptr[i]->pid ) {
+			daemon_ptr[i]->Exited( status );
+			if( NumberOfChildren() == 0 ) {
+				AllDaemonsGone();
 			}
-
 			return TRUE;
 		}
 	}
-	
 	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
 	return TRUE;
 }
 
-// This function will wait for all children to exit, and then will call
-// exit with the supplied exit code.  
-void Daemons::Wait_And_Exit(int exit_code)
+
+int
+Daemons::DefaultReaper(Service *, int pid, int status)
 {
-	int *dp;
-
-	dp = new int;
-	*dp = exit_code;
-
-	daemonCore->Reset_Reaper(1,"daemon reaper",(ReaperHandlercpp)Daemons::Wait_Reaper,
-		"Daemons::Wait_Reaper()",this);
-	daemonCore->Register_DataPtr((void *)dp);
+	for( int i=0; i < no_daemons; i++) {
+		if( pid == daemon_ptr[i]->pid ) {
+			daemon_ptr[i]->Exited( status );
+			if( PublishObituaries ) {
+				daemon_ptr[i]->Obituary( status );
+			}
+			daemon_ptr[i]->Restart();
+			return TRUE;
+		}
+	}
+	dprintf( D_ALWAYS, "Child %d died, but not a daemon -- Ignored\n", pid);
+	return TRUE;
 }
+
+
+
+// This function will set the reaper to one that calls
+// AllDaemonsGone() when all the daemons have exited.
+void
+Daemons::SetAllReaper()
+{
+	if( reaper == ALL_R ) {
+			// All reaper is already set.
+		return;
+	}
+#ifdef WANT_DC_PM
+	daemonCore->Reset_Reaper( 1, "All Daemon Reaper",
+							  (ReaperHandlercpp)Daemons::AllReaper,
+							  "Daemons::AllReaper()",this);
+#else
+	daemonCore->Cancel_Signal(DC_SIGCHLD);
+	daemonCore->Register_Signal(DC_SIGCHLD,"DC_SIGCHLD",
+		(SignalHandler)all_reaper_sigchld,"all_reaper_sigchld");
+#endif
+	reaper = ALL_R;
+}
+
+
+// This function will set the reaper to one that calls
+// AllDaemonsGone() when all the daemons have exited.
+void
+Daemons::SetDefaultReaper()
+{
+	if( reaper == DEFAULT_R ) {
+			// The default reaper is already set.
+		return;
+	}
+#ifdef WANT_DC_PM
+	daemonCore->Register_Reaper( "default daemon reaper",
+								 (ReaperHandlercpp)Daemons::DefaultReaper,
+								 "Daemons::DefaultReaper()", this );
+#else
+	daemonCore->Cancel_Signal( DC_SIGCHLD );
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
+		(SignalHandler)standard_sigchld, "standard_sigchld" );
+#endif
+	reaper = DEFAULT_R;
+}
+
+
+void
+Daemons::AllDaemonsGone()
+{
+	switch( all_daemons_gone_action ) {
+	case MASTER_RESET:
+		dprintf( D_ALWAYS, "All daemons are gone.\n" );
+		SetDefaultReaper();
+		break;
+	case MASTER_RESTART:
+		dprintf( D_ALWAYS, "All daemons are gone.  Restarting.\n" );
+		FinishRestartMaster();
+		break;
+	case MASTER_EXIT:
+		dprintf( D_ALWAYS, "All daemons are gone.  Exiting.\n" );
+		master_exit(0);
+		break;
+	}
+}
+
+
+void
+Daemons::StartTimers()
+{
+	static int old_update_int = -1;
+	static int old_check_int = -1;
+
+	if( old_update_int != update_interval ) {
+		if( update_tid != -1 ) {
+			daemonCore->Cancel_Timer( update_tid );
+		}
+		update_tid = daemonCore->
+			Register_Timer( 0, update_interval,
+							(TimerHandler)update_collector,
+							"update_collector" );
+		old_update_int = update_interval;
+	}
+
+	int new_check = (int)( old_check_int != check_new_exec_interval );
+	if( new_check || !StartDaemons ) {
+		if( check_new_exec_tid != -1 ) {
+			daemonCore->Cancel_Timer( check_new_exec_tid );
+			check_new_exec_tid = -1;
+		}
+	}
+	if( new_check && StartDaemons ) {
+		check_new_exec_tid = daemonCore->
+			Register_Timer( 5, check_new_exec_interval,
+							(TimerHandlercpp)Daemons::CheckForNewExecutable,
+							"Daemons::CheckForNewExecutable()", this );
+	}
+	old_check_int = check_new_exec_interval;
+}	
