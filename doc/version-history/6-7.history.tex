@@ -64,6 +64,18 @@ was changed in such a way that Condor-G jobs submitted by a newer
 \condor{submit} reverts to the old behavior when talking to an old
 \condor{schedd}.
 
+\item Fixed a bug in handling the job's environment for GT4 jobs. Condor
+incorrectly used ``<name>=<value>'' for each variable's name.
+
+\item Improved hold reason in certain cases when a GT4 job goes on hold.
+
+\item \condor{q} -globus now works properly for GT4 jobs. Also, the resouce
+name in the user log execute event is printed properly for GT4 jobs.
+
+\item Fixed a bug that could cause Condor to not detect when a GT4 job
+completes. This was triggered by Condor not properly recognizing the
+StageOut Globus job state.
+
 \end{itemize}
 
 
