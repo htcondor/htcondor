@@ -2692,8 +2692,15 @@ findAvailTime( match_rec* mrec )
 			// TODO: Be smarter here.
 		return now + 500;
 	case M_CLAIMED:
+			// Should be Claimed/Idle.  This is the ideal situation.
+			// However, we might have stale classad info, so just say
+			// we're done, instead of allowing the stale info to throw 
+			// us off.
+		return now;
     case M_ACTIVE:
-			// Actually claimed by us, break out and let the state
+			// Actually claimed by us, but already running a job.
+			// Break out and let the state and other attributes
+			// determine when we're available.
 		break;
 	default:
 		EXCEPT( "Unknown status in match rec (%d)", mrec->status );
@@ -2708,7 +2715,9 @@ findAvailTime( match_rec* mrec )
 	case matched_state:
 			// Shouldn't really be here, since we're checking the mrec
 			// status above.  However, we might have stale classad
-			// info, so don't freak out.  
+			// info and/or an incorrect mrec status.  So, say we'll be
+			// available in 30 seconds, and let things work themselves
+			// out when we have more fresh info.
 		return now + 30;
 		break;
 
