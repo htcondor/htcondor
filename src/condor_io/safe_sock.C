@@ -173,7 +173,9 @@ int SafeSock::connect(
 	if (_state == sock_virgin || _state == sock_assigned) bind();
 
 	if (_state != sock_bound) {
-		dprintf(D_ALWAYS, "SafeSock::connect bind() failed: _state = %d\n", _state); 
+		dprintf(D_ALWAYS,
+		        "SafeSock::connect bind() failed: _state = %d\n",
+			  _state); 
 		return FALSE;
 	}
 	
@@ -212,7 +214,6 @@ int SafeSock::put_bytes(const void *dta, int sz)
 {
 	int bytesPut;
 
-	//dprintf(D_ALWAYS, "put_bytes(%d bytes) requested\n", sz);
 	bytesPut = _outMsg.putn((char *)dta, sz);
 	return bytesPut;
 }
@@ -251,7 +252,9 @@ int SafeSock::get_bytes(void *dta, int size)
 				case 1:
 					break;
 				default:
-					dprintf(D_NETWORK, "select returns %d, recv failed\n", nfound );
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
 					return 0;
 					break;
 			}
@@ -267,9 +270,12 @@ int SafeSock::get_bytes(void *dta, int size)
 		readSize = _shortMsg.getn(tempBuf, size);
 	if(readSize == size) {
 		memcpy(dta, tempBuf, readSize);
+		free(tempBuf);
 		return readSize;
-	} else
+	} else {
+		free(tempBuf);
 		return -1;
+	}
 }
 
 
@@ -310,8 +316,9 @@ int SafeSock::get_ptr(void *&ptr, char delim)
 				case 1:
 					break;
 				default:
-					dprintf(D_ALWAYS, "select returns %d, recv failed\n", 
-						nfound );
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
 					return 0;
 					break;
 			}
@@ -325,7 +332,6 @@ int SafeSock::get_ptr(void *&ptr, char delim)
 	}
 	else { // short message
 		size = _shortMsg.getPtr(ptr, delim);
-		//cout << "\tSafeSock::(short)get_ptr: " << (char *)ptr << endl;
 		return size;
 	}
 }
@@ -354,7 +360,9 @@ int SafeSock::peek(char &c)
 				case 1:
 					break;
 				default:
-					dprintf(D_ALWAYS, "select returns %d, recv failed\n", nfound );
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
 					return 0;
 					break;
 			}
@@ -390,8 +398,6 @@ int SafeSock::handle_incoming_packet()
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, &fromlen );
-	//printf("Packet[%d] received\n", received);
-	dprintf(D_NETWORK, "Packet[%d] received\n", received);
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
@@ -407,7 +413,6 @@ int SafeSock::handle_incoming_packet()
 			_avgSwhole = ((_whole - 1) * _avgSwhole + length) / _whole;
 
 		_noMsgs++;
-		dprintf(D_NETWORK, "short msg is ready\n");
 		return TRUE;
 	}
 
@@ -447,31 +452,25 @@ int SafeSock::handle_incoming_packet()
 				_avgSwhole = _longMsg->msgLen;
 			else
 				_avgSwhole = ((_whole - 1) * _avgSwhole + _longMsg->msgLen) / _whole;
-			dprintf(D_NETWORK, "long msg is ready\n");
 			return TRUE;
 		}
-		dprintf(D_NETWORK, "a packet[%d] added to _longMsg\n", length);
 		return FALSE;
 	} else { // not found
 		if(prev) { // add a new message at the end of the chain
 			prev->nextMsg = new _condorInMsg(mID, last, seqNo,
 			                                 length, data, prev);
 			if(!prev->nextMsg) {
-				dprintf(D_ALWAYS, "Out of Memory\n");
-				exit(-1);
+				EXCEPT("Error:handle_incomming_packet: Out of Memory");
 			}
 			_noMsgs++;
-			dprintf(D_NETWORK, "_longMsg is made with a packet[%d]\n", length);
 			return FALSE;
 		} else { // first message in the bucket
 			_inMsgs[index] = new _condorInMsg(mID, last, seqNo,
 			                                  length, data, NULL);
 			if(!_inMsgs[index]) {
-				dprintf(D_ALWAYS, "Out of Memory\n");
-				exit(-1);
+				EXCEPT("Error:handle_incomming_packet: Out of Memory");
 			}
 			_noMsgs++;
-			dprintf(D_NETWORK, "_longMsg is made with a packet[%d]\n", length);
 			return FALSE;
 		}
 	}
@@ -574,7 +573,9 @@ int SafeSock::getMsgSize()
 				case 1:
 					break;
 				default:
-					dprintf(D_ALWAYS, "select returns %d, recv failed\n", nfound );
+					dprintf(D_NETWORK,
+					        "select returns %d, recv failed\n",
+						  nfound );
 					return FALSE;
 					break;
 			}
@@ -591,11 +592,9 @@ void SafeSock::dumpSock()
 {
 	_condorInMsg *tempMsg;
 
-	printf("** _outMsgID = [%d, %d, %d, %d] **\n",
-	        _outMsgID.ip_addr, _outMsgID.pid, _outMsgID.time, _outMsgID.msgNo);
-	printf("[In] Long Messages\n");
+	dprintf(D_NETWORK, "[In] Long Messages\n");
 	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++) {
-		printf("\nBucket [%d]\n", i);
+		dprintf(D_NETWORK, "\nBucket [%d]\n", i);
 		tempMsg = _inMsgs[i];
 		while(tempMsg) {
 			tempMsg->dumpMsg();
@@ -603,11 +602,11 @@ void SafeSock::dumpSock()
 		}
 	}
 
-	printf("\n\n[In] Short Message\n");
+	dprintf(D_NETWORK, "\n\n[In] Short Message\n");
 	if(_msgReady && _longMsg == NULL)
 		_shortMsg.dumpPacket();
 	
-	printf("\n\n[Out] out message\n");
+	dprintf(D_NETWORK, "\n\n[Out] out message\n");
 	_outMsg.dumpMsg(_outMsgID);
 }
 #endif
