@@ -461,7 +461,7 @@ find_file(const char *env_name, const char *file_name)
 	// Only look in the registry on WinNT.
 	HKEY handle;
 
-	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE,"Software\\Condor",
+	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE,"Software\\Condor",
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -474,7 +474,7 @@ find_file(const char *env_name, const char *file_name)
 		DWORD valSize = _POSIX_PATH_MAX - 2;
 
 		the_path[0] = '\0';
-		if ( RegQueryValueEx(handle, "CONDOR_CONFIG", 0, 
+		if ( RegQueryValueEx(handle, env_name, 0, 
 			&valType, (unsigned char *)the_path, &valSize) == ERROR_SUCCESS ) {
 
 			// confirm it is a string value with something there
