@@ -685,7 +685,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 #ifndef WIN32
 
 priv_state
-Directory::setOwnerPriv( const char* path, uid_t owner, gid_t group )
+Directory::setOwnerPriv( const char* path )
 {
 	uid_t	uid;
 	gid_t	gid;
@@ -698,7 +698,7 @@ Directory::setOwnerPriv( const char* path, uid_t owner, gid_t group )
 	if( is_root_dir && owner_ids_inited ) {
 		uid = owner_uid;
 		gid = owner_gid;
-	} else if( ! user || ! group ) {
+	} else {
 			// If we don't already know, figure out what user owns our
 			// parent directory...
 		if( ! GetIds( path, &uid, &gid ) ) {
@@ -711,11 +711,6 @@ Directory::setOwnerPriv( const char* path, uid_t owner, gid_t group )
 			owner_gid = gid;
 			owner_ids_inited = true;
 		}
-	} else {
-			// We were told (since presumably our caller already did
-			// the stat() for us), so just use that...
-		uid = user;
-		gid = group;
 	}
 
 		// !! Refuse to do anything as root !!

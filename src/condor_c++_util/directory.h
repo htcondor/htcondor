@@ -381,8 +381,7 @@ private:
 	struct _finddata_t filedata;
 #else
 	DIR *dirp;
-	priv_state setOwnerPriv( const char* path, uid_t owner = 0,
-							 gid_t group = 0 );
+	priv_state setOwnerPriv( const char* path );
 	uid_t owner_uid;
 	gid_t owner_gid;
 	bool owner_ids_inited;
