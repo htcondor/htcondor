@@ -216,6 +216,8 @@ XDR		*xdr_RSC1, *RSC_ShadowInit();
 
 int MainSymbolExists = 1;
 
+char	config_file[MAXPATHLEN] = "";
+
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: shadow host cluster proc\n" );
@@ -273,6 +275,12 @@ char *envp[];
 			argv++;
 			argc--;
 		}
+		if(strcmp("-c", argv[1]) == MATCH)
+		{
+			strcpy(config_file, argv[2]);
+			argv = argv + 2;
+			argc = argc - 2;
+		} 
 	}
 
 
@@ -285,9 +293,16 @@ char *envp[];
 
 	_EXCEPT_Cleanup = DoCleanup;
 	MyPid = getpid();
-
-	config( argv[0], (CONTEXT *)0 );
-
+	
+	if(config_file[0] == '\0')
+	{
+		config( argv[0], (CONTEXT *)0 );
+	}
+	else
+	{
+		config_from_server( argv[0], (CONTEXT *)0, config_file );
+	}
+	
 	dprintf_config( "SHADOW", SHADOW_LOG );
 	DebugId = whoami;
 

@@ -146,6 +146,7 @@ CONTEXT		*NegotiatorContext;
 PRIO_REC	 DummyPrioRec, *Endmarker = &DummyPrioRec;
 
 char *MyName;
+char		config_file[MAXPATHLEN] = "";
 
 #if !defined(MAX)
 #	define MAX(a,b) ((a)>(b)?(a):(b))
@@ -158,7 +159,7 @@ char *MyName;
 usage( name )
 char	*name;
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t]\n", name );
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-c config_file_name]\n", name );
 	exit( 1 );
 }
 
@@ -179,15 +180,7 @@ char	*argv[];
 	set_condor_euid(__FILE__,__LINE__);
 #endif NFSFIX
 
-	MyName = *argv;
-	NegotiatorContext = create_context();
-	config( argv[0], NegotiatorContext );
-
-	init_params();
-	Terse = TRUE;
-	Silent = TRUE;
-
-	if( argc > 3 ) {
+	if( argc > 5 ) {
 		usage( argv[0] );
 	}
 	for( ptr=argv+1; *ptr; ptr++ ) {
@@ -201,10 +194,29 @@ char	*argv[];
 			case 't':
 				Termlog++;
 				break;
+			case 'c':
+				strcpy(config_file, *(++ptr));
+				ptr++;
+				break; 
 			default:
 				usage( argv[0] );
 		}
 	}
+
+	MyName = *argv;
+	NegotiatorContext = create_context();
+	if(config_file[0] == '\0')
+	{
+		config( argv[0], NegotiatorContext );
+	}
+	else
+	{
+		config_from_server( argv[0], NegotiatorContext, config_file );
+	}
+	
+	init_params();
+	Terse = TRUE;
+	Silent = TRUE;
 
 		/* This is so if we dump core it'll go in the log directory */
 	if( chdir(Log) < 0 ) {

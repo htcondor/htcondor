@@ -98,6 +98,7 @@ extern "C"
 	int		boolean(char*, char*);
 	int		SetSyscalls() {}
 	int		ReadLog(char*);
+	void	config_from_server(char*, CONTEXT*, char*); 
 }
 extern	void	mark_jobs_idle();
 
@@ -120,7 +121,7 @@ void	Init();
 
 void usage(char* name)
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name]\n", name );
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name] [-c config_file_name]", name); 
 	exit( 1 );
 }
 
@@ -132,10 +133,8 @@ main(int argc, char* argv[])
 	char		Name[MAXHOSTNAMELEN];
 	int		ScheddName = 0;
 	struct		utsname	name;
-#ifdef WAIT_FOR_DEBUG
-	int		i;
-#endif
-
+	char		config_file[MAXPATHLEN] = "";
+ 
 	myName = argv[0];
 	if(getuid() == 0)
 	{
@@ -144,17 +143,8 @@ main(int argc, char* argv[])
 		set_condor_euid(__FILE__,__LINE__);
 	#endif NFSFIX
 	}
-
-	MachineContext = create_context();
-	config(argv[0], MachineContext);
-#ifdef WAIT_FOR_DEBUG
-	i = 1;
-	while(i);
-#endif
-	myAd = new ClassAd(MachineContext); 
-	Init();
 	
-	if(argc > 5)
+	if(argc > 7)
 	{
 		usage(argv[0]);
 	}
@@ -180,10 +170,27 @@ main(int argc, char* argv[])
 			++ptr;
 			ScheddName++;
 			break;
+		case 'c':
+			strcpy(config_file, *(++ptr));
+			++ptr;
+			break; 
 		  default:
 			usage(argv[0]);
 		}
 	}
+	
+	MachineContext = create_context();
+	if(config_file[0] == '\0')
+	{
+		config(argv[0], MachineContext);
+	}
+	else
+	{
+		config_from_server(argv[0], MachineContext, config_file);
+	}
+	
+	myAd = new ClassAd(MachineContext); 
+	Init();
 
 	// if a name if not specified, assume the name of the machine
 	if(!ScheddName)
