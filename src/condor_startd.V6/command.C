@@ -8,7 +8,6 @@
 #include "expr.h"
 #include "world.h"	/* XXX */
 #include "proc.h"
-#include "cdefs.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
 #include "CondorPrefExps.h"
@@ -271,7 +270,6 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	if(MachineContext->EvalBool(ATTR_REQUIREMENTS,job_context,start) == 0) {
 		start = 0;
 	}
-	/* fvdl XXX sometimes fails somehow */
 	
 	if(job_context->EvalBool(ATTR_REQUIREMENTS,MachineContext,job_reqs) == 0) {
 		job_reqs = 0;

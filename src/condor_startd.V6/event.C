@@ -8,7 +8,6 @@
 #include "condor_mach_status.h"
 #include "sched.h"
 
-#include "cdefs.h"
 #include "event.h"
 #include "state.h"
 #include "resource.h"

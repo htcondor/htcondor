@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <netdb.h>
 
-#include "cdefs.h"
 #include "sched.h"
 #include "condor_types.h"
 #include "condor_debug.h"
@@ -21,7 +20,7 @@
  * Various functions to aid and perform RPCs
  */
 
-extern "C" char *sin_to_string __P((struct sockaddr_in *));
+extern "C" char *sin_to_string(struct sockaddr_in *);
 extern "C" void vacate_client(resource_id_t rid);
 extern "C" int create_udpsock(char *service, int port);
 extern "C" int create_tcpsock(char *service, int port);
@@ -35,9 +34,6 @@ static char *_FileName_ = __FILE__;
 struct sockaddr_in From;
 extern char *IP;
 extern char *AccountantHost;
-
-extern "C" Sock *sock_Udp_Init __P((int *, SafeSock *));	/* XXX */
-extern "C" char *sin_to_string __P((struct sockaddr_in *));
 
 /*
  * Handle an incoming request. Mainly just set up the rpc stream and
@@ -68,7 +64,7 @@ call_incoming(int s, int socktype, resource_id_t rid)
 		dprintf(D_ALWAYS, "handling incoming UDP command\n");
 		sock - new SafeSock();	// need to set IP:PORT here???
 		((SafeSock *)sock)->attach_to_file_desc(s);
-		ip = &From;	/* XXX UGH! */
+		ip = ((SafeSock *)sock)->endpoint();
 	}
 	ret = command_main(sock, ip, rid);
 	delete sock;
