@@ -71,6 +71,10 @@ init_config()
 	bzero( (char *)ConfigTab, sizeof(ConfigTab) );
 }
 
+#if !defined(USER_NAME)
+#	define USER_NAME "condor"
+#endif
+
 config( a_out_name, context )
 char	*a_out_name;
 CONTEXT	*context;
@@ -89,7 +93,7 @@ CONTEXT	*context;
 	** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-	if( (pw=getpwnam("condor")) == NULL ) {
+	if( (pw=getpwnam(USER_NAME)) == NULL ) {
 		printf( "Can't find user \"condor\" in passwd file!\n" );
 		exit( 1 );
 	}
