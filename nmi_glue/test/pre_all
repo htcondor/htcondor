@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.4.5 2004-09-14 19:22:55 bgietzel Exp $
+# $Id: pre_all,v 1.1.4.6 2004-09-14 20:25:43 bgietzel Exp $
 # Submit-side NMI build system infrastructure to setup source
 # input for test jobs before the platform-specific stuff is called.
 # All we have to do is untar the common/results.tar.gz file so that
@@ -30,6 +30,10 @@ if( $? ) {
     die "'tar -zxvf $huge_tarball' failed with status $?\n";
 }
 print "Untar of huge tarball completed successfully\n";
+
+# Now, unlink huge tarball
+print "Removing $huge_tarball\n";
+unlink( $huge_tarball ) || die "Can't unlink($huge_tarball): $!\n";
 
 #=======================================================================
 
