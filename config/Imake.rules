@@ -1161,14 +1161,13 @@ DEP_SYMLINK(name,name.ext)			@@\
 XCOMM End translation of func(DEP_SYMLINK_EXT)
 #endif /* DEP_SYMLINK_EXT */
 
+
 #ifndef DEPS
 #define DEPS(name,deps)				@@\
 XCOMM Begin translation of func(DEPS)		@@\
 all:: deps					@@\
 name:: deps					@@\
        @/bin/true				@@\
-clean::						@@\
-	rm -f deps				@@\
 XCOMM End translation of func(DEPS)
 #endif /* DEPS */
 
@@ -1178,8 +1177,6 @@ XCOMM End translation of func(DEPS)
 XCOMM Begin translation of func(RUN)		@@\
 DEP_SYMLINK_EXT(name,run)			@@\
 DEPS(name,Condor.pm CondorTest.pm)		@@\
-clean::						@@\
-	rm -f run_list				@@\
 run_list:: Concat(run_list_,name)		@@\
 Concat(run_list_,name):: safe_append.pl name.run	@@\
 	@perl safe_append.pl -v -f run_list -a name	@@\
