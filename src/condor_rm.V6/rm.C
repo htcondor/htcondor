@@ -36,6 +36,7 @@
 #include "get_daemon_addr.h"
 #include "condor_attributes.h"
 #include  "list.h"
+#include "sig_install.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -79,7 +80,6 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args to be deleted
 	int					i;
 	Qmgr_connection*	q;
-	char*	daemonname;
 	char*	cmd_str;
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
