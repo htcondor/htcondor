@@ -46,6 +46,7 @@ SocketCache::
 ~SocketCache()
 {
 	clearCache();
+	delete [] sockCache;
 }
 
 
