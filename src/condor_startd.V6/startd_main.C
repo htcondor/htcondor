@@ -303,6 +303,8 @@ main_init( int, char* argv[] )
 		(ReaperHandler)reaper, "reaper" );
 	assert(main_reaper != FALSE);
 
+	daemonCore->Set_Default_Reaper( main_reaper );
+
 #if defined( OSF1 ) || defined (IRIX) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
 		// is something, even if we haven't heard from the kbdd yet.

@@ -317,6 +317,18 @@ class DaemonCore : public Service
 	/** @name Reaper events.
 	 */
 	//@{
+
+
+    /** This method selects the reaper to be called when a process exits
+        and no reaper is registered.  This can be used, for example,
+        to catch the exit of processes that were created by other facilities
+        than DaemonCore.
+
+        @param reaper_id The already-registered reaper number to use.
+     */
+
+    void Set_Default_Reaper( int reaper_id );
+
     /** Not_Yet_Documented
         @param reap_descrip     Not_Yet_Documented
         @param handler          Not_Yet_Documented
@@ -877,6 +889,7 @@ class DaemonCore : public Service
     int                 maxReap;        // max number of reaper handlers
     int                 nReap;          // number of reaper handlers used
     ReapEnt*            reapTable;      // reaper table
+    int                 defaultReaper;
 
     struct PidEntry
     {

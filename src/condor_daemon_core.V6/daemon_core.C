@@ -138,6 +138,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 	nReap = 0;
 	memset(reapTable,'\0',maxReap*sizeof(ReapEnt));
+	defaultReaper=-1;
 
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
@@ -251,6 +252,11 @@ DaemonCore::~DaemonCore()
 	}
 
 	t.CancelAllTimers();
+}
+
+void DaemonCore::Set_Default_Reaper( int reaper_id )
+{
+	defaultReaper = reaper_id;
 }
 
 /********************************************************
@@ -4390,12 +4396,22 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 
 	// Fetch the PidEntry for this pid from our hash table.
 	if ( pidTable->lookup(pid,pidentry) == -1 ) {
-		// we did not find this pid... probably popen finished.
-		// log a message and return FALSE.
 
-		dprintf(D_DAEMONCORE,
-			"Unknown process exited (popen?) - pid=%d\n",pid);
-		return FALSE;
+		if( defaultReaper!=-1 ) {
+			pidentry = new PidEntry;
+			ASSERT(pidentry);
+			pidentry->parent_is_local = TRUE;
+			pidentry->reaper_id = defaultReaper;
+			pidentry->hung_tid = -1;
+		} else {
+
+			// we did not find this pid... probably popen finished.
+			// log a message and return FALSE.
+
+			dprintf(D_DAEMONCORE,
+				"Unknown process exited (popen?) - pid=%d\n",pid);
+			return FALSE;
+		}
 	}
 
 	// If process is Unix, we are passed the exit status.
