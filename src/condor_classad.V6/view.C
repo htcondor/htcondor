@@ -590,6 +590,7 @@ InsertSubordinateView( ClassAdCollection *coll, ClassAd *viewInfo )
 	newView->SetViewName( name );
 	if( !coll->RegisterView( name, newView ) ) {
 		CondorErrMsg += "; failed to insert new view";
+		delete newView;
 		return( false );
 	}
 	subordinateViews.push_front( newView );
