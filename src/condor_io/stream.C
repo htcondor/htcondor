@@ -1850,6 +1850,8 @@ bool Stream :: get_crypto_key(KeyInfo * key)
 bool 
 Stream::set_crypto_key(KeyInfo * key)
 {
+
+#if defined(CONDOR_BLOWFISH_ENCRYPTION) || defined(CONDOR_3DES_ENCRYPTION)
     int code;
     static int PADDING_LEN = 24;
     int length = key->getKeyLength() + PADDING_LEN; // Pad with 24 bytes of random data
@@ -1907,5 +1909,8 @@ Stream::set_crypto_key(KeyInfo * key)
     if (data) {
         free(data);
     }
+#endif /* CONDOR_3DES_ENCRYPTION or CONDOR_BLOWFISH_ENCRYPTION */
+
     return false;
+
 }
