@@ -806,16 +806,14 @@ void static_policy(void)
 {
 	char buf[4096];
 	int ehc, erc;
+	int prc;
 
 	ASSERT( JobAd != NULL );
 
-	/* If the classad options are undefined, do normal behavour */
+	/* check the exit hold policy */
 	if (JobAd->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, JobAd, ehc) == 0) {
 		return;
 	}
-
-	/* Check hold stuff first, then check remove */
-
 	if (ehc == 1)
 	{
 		dprintf( D_ALWAYS, "Static policy: hold on exit\n");
@@ -829,11 +827,20 @@ void static_policy(void)
 		dprintf( D_ALWAYS, "Static policy: don't hold on exit\n" );
 	}
 
-	/* If the classad options are undefined, do normal behavour */
+	/* if the periodic remove check said to remove, then ignore what the exit
+		remove check said to do. */
+	if (JobAd->EvalBool(ATTR_PERIODIC_REMOVE_CHECK, JobAd, prc) != 0) {
+		if (prc == 1) {
+		dprintf( D_ALWAYS, "Static policy: ignoring on_exit remove policy "
+			"because periodic exit remove policy takes precedence\n" );
+		return;
+		}
+	}
+
+	/* Now check the exit remove policy */
 	if (JobAd->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, JobAd, erc) == 0) {
 		return;
 	}
-
 	if (erc == 1)
 	{
 		dprintf( D_ALWAYS, "Static policy: remove on exit\n" );
