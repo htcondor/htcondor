@@ -27,13 +27,14 @@
 #include <vector>
 #include "lexer.h"
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 class ClassAd;
 class ExprTree;
 class ExprList;
 class FunctionCall;
 
+/// The parser object
 class ClassAdParser
 {
 	public:
@@ -43,7 +44,7 @@ class ClassAdParser
 		/// Destructor
 		~ClassAdParser();
 
-		/** Parses a ClassAd from this Source object.
+		/** Parse a ClassAd 
 			@param buffer Buffer containing the string representation of the
 				classad.
 			@param full If this parameter is true, the parse is considered to
@@ -53,9 +54,19 @@ class ClassAdParser
 				otherwise
 		*/
 		ClassAd *ParseClassAd( const string &buffer, bool full=false );
+
+		/** Parse a ClassAd 
+			@param buffer Buffer containing the string representation of the
+				classad.
+			@param ad The classad to be populated
+			@param full If this parameter is true, the parse is considered to
+				succeed only if the ClassAd was parsed successfully and no
+				other tokens follow the ClassAd.
+			@return true on success, false on failure
+		*/
 		bool ParseClassAd( const string &buffer, ClassAd &ad, bool full=false );
 
-		/** Parses an expression from this Source object.
+		/** Parse an expression 
 			@param expr Reference to a ExprTree pointer, which will be pointed
 				to the parsed expression.  The previous value of the pointer
 				will be destroyed.
@@ -66,6 +77,16 @@ class ClassAdParser
 		*/
 		bool ParseExpression( const string &buffer, ExprTree*& expr, 
 					bool full=false);
+
+		/** Parse an expression
+			@param buffer Buffer containing the string representation of the
+				expression.
+			@param full If this parameter is true, the parse is considered to
+				succeed only if the expression was parsed successfully and no
+				other tokens are left.
+			@return pointer to the expression object if successful, or NULL 
+				otherwise
+		*/
 		ExprTree *ParseExpression( const string &buffer, bool full=false);
 
 		void SetDebug( bool d ) { lexer.SetDebug( d ); }
