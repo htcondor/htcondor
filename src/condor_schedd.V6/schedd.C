@@ -11,11 +11,11 @@
  * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
  * (608) 262-0856 or miron@cs.wisc.edu.
  *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure
  * by the U.S. Government is subject to restrictions as set forth in 
  * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
  * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR
  * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
@@ -6334,15 +6334,15 @@ Scheduler::Register()
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
-	daemonCore->Register_Command( ATTEMPT_ACCESS, "ATTEMPT_ACCESS", 
-								  (CommandHandler)&attempt_access_handler, 
-								  "attempt_access_handler", NULL, WRITE, 
+	daemonCore->Register_Command( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
+								  (CommandHandler)&attempt_access_handler,
+								  "attempt_access_handler", NULL, WRITE,
 								  D_FULLDEBUG );
 #ifdef WIN32
-	// Command handler for stashing credentials.  
-	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
-								(CommandHandler)&store_cred_handler, 
-								"cred_access_handler", NULL, WRITE, 
+	// Command handler for stashing credentials.
+	daemonCore->Register_Command( STORE_CRED, "STORE_CRED",
+								(CommandHandler)&store_cred_handler,
+								"cred_access_handler", NULL, WRITE,
 								D_FULLDEBUG );
 #endif
 
@@ -6352,15 +6352,20 @@ Scheduler::Register()
 	// itself calls daemonCore->Verify() to check for WRITE access if
 	// someone tries to modify the queue.
 	daemonCore->Register_Command( QMGMT_CMD, "QMGMT_CMD",
-								  (CommandHandler)&handle_q, 
+								  (CommandHandler)&handle_q,
 								  "handle_q", NULL, READ, D_FULLDEBUG );
 
-	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE", 
-								  (CommandHandlercpp)&Scheduler::dumpState, 
+	daemonCore->Register_Command( DUMP_STATE, "DUMP_STATE",
+								  (CommandHandlercpp)&Scheduler::dumpState,
 								  "dumpState", this, READ  );
-	
+
+	daemonCore->Register_Command( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
+								  (CommandHandler)&get_myproxy_password_handler,
+								  "get_myproxy_password", NULL, WRITE, D_FULLDEBUG  );
+
+
 	 // reaper
-	daemonCore->Register_Reaper( "reaper", 
+	daemonCore->Register_Reaper( "reaper",
                                  (ReaperHandlercpp)&Scheduler::child_exit,
 								 "child_exit", this );
 
