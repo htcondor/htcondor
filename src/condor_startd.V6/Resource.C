@@ -61,6 +61,20 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	update_tid = -1;
 	r_is_deactivating = false;
 
+		// Set ckpt filename for avail stats here, since this object
+		// knows the resource id, and we need to use a different ckpt
+		// file for each resource.
+	if( compute_avail_stats ) {
+		char *log = param("LOG");
+		if (log) {
+			MyString avail_stats_ckpt_file(log);
+			free(log);
+			sprintf(tmp, "%c.avail_stats.%d", DIR_DELIM_CHAR, rid);
+			avail_stats_ckpt_file += tmp;
+			r_avail_stats.checkpoint_filename(avail_stats_ckpt_file);
+		}
+	}
+
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
 				 r_attr->type() );
@@ -859,6 +873,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
 	}
+
+		// Put in availability statistics
+	r_avail_stats.publish( cap, mask );
 }
 
 
@@ -873,6 +890,8 @@ Resource::compute( amask_t mask )
 		// we get static stuff recomputed on reconfig, etc.
 	r_reqexp->compute( mask );
 
+		// Compute availability statistics
+	r_avail_stats.compute( mask );
 }
 
 

@@ -141,6 +141,7 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
 	procInfo		r_pinfo;	// aggregate ProcAPI info for starter & job
+	AvailStats		r_avail_stats; // computes resource availability stats
 
 	int				type( void ) { return r_attr->type(); };
 

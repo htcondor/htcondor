@@ -67,6 +67,10 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
+bool	compute_avail_stats = false;
+	// should the startd compute vm availability statistics; currently 
+	// false by default
+
 char* Name = NULL;
 
 
@@ -501,7 +505,16 @@ init_params( int first_time)
 	if( tmp ) {
 		startd_noclaim_shutdown = atoi( tmp );
 		free( tmp );
-	} 
+	}
+
+	compute_avail_stats = false;
+	tmp = param( "STARTD_COMPUTE_AVAIL_STATS" );
+	if( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			compute_avail_stats = true;
+		}
+		free( tmp );
+	}
 
 	tmp = param( "STARTD_NAME" );
 	if( tmp ) {
