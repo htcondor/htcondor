@@ -3,7 +3,6 @@
 %a 4000
 %e 2500
 %{
-#include "condor_common.h"
 #include "scanner.h"
 #include "y.tab.h"
 
