@@ -176,15 +176,24 @@ LookupFloat( const char *name, float &value )
 int ClassAd::
 LookupBool( const char *name, int &value )
 {
-	int intVal;
-	int retVal = LookupInteger( name, intVal );
-	if( retVal ) {
-		value = intVal ? 1 : 0;
-		return 0;
+	int   intVal;
+	bool  boolVal;
+	int haveBool;
+	string sName;
+
+	sName = string(name);
+
+	if (EvaluateAttrBool(name, boolVal)) {
+		haveBool = true;
+		value = boolVal ? 1 : 0;
+	} else if (EvaluateAttrInt(name, intVal)) {
+		haveBool = true;
+		value = (intVal != 0) ? 1 : 0;
+	} else {
+		haveBool = false;
+		value = 0;
 	}
-	else {
-		return retVal;
-	}
+	return haveBool;
 }
 
 int ClassAd::
