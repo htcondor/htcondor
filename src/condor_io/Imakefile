@@ -11,7 +11,7 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
 		condor_auth_kerberos.o condor_auth_fs.o condor_auth_sspi.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
-		SafeMsg.o condor_crypt.o CryptKey.o
+		SafeMsg.o condor_crypt.o CryptKey.o condor_crypt_3des.o
 #       condor_crypt_blowfish.o condor_crypt_3des.o 
 #		autoTest.o manTest.o
 
