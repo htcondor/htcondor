@@ -10,12 +10,17 @@ grep ^START_DAEMONS $LOCAL_CONFIG_FILE >& /dev/null || \
 
 chmod 664 $LOCAL_CONFIG_FILE
 
-ex - $LOCAL_CONFIG_FILE << EOF
-/^START_DAEMONS/c
-START_DAEMONS = False
-.
-x
-EOF
+if ( -x `which sed` ) then
+   mv $LOCAL_CONFIG_FILE $LOCAL_CONFIG_FILE~
+   sed 's/^START_DAEMONS.*$/START_DAEMONS = False/' < \
+	$LOCAL_CONFIG_FILE~ > $LOCAL_CONFIG_FILE
+else if ( -x `which awk` ) then
+   mv $LOCAL_CONFIG_FILE $LOCAL_CONFIG_FILE~
+   awk '/^START_DAEMONS/ {print "START_DAEMONS = False"; next;} \
+	{print;}' $LOCAL_CONFIG_FILE~ > $LOCAL_CONFIG_FILE
+else 
+   echo "config_off: could not modify $LOCAL_CONFIG_FILE"
+endif
 
 echo "The new situation:"
 grep ^START_DAEMONS $LOCAL_CONFIG_FILE
