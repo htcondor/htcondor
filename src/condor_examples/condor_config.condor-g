@@ -277,7 +277,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it's probably condor.  Otherwise, it's whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
