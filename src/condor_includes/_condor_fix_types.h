@@ -1,14 +1,6 @@
 #ifndef FIX_TYPES_H
 #define FIX_TYPES_H
 
-	 /*
-	 OSF/1 has this as an "unsigned long", but this is incorrect.  It
-	 is used by lseek(), and must be able to hold negative values.
-	 */
-#if defined(OSF1) && !defined(__GNUC__)
-#define off_t _hide_off_t
-#endif
-
 #if defined(OSF1)
 /* We need to define _OSF_SOURCE so that type quad, and
    u_int and friends get defined.  We should leave it on since we'll
@@ -40,11 +32,6 @@ typedef int		bool_t;
 #endif
 
 #include <sys/types.h>
-
-#if defined(OSF1) && !defined(__GNUC__)
-#undef off_t
-typedef long off_t;
-#endif
 
 /*
 The system include file defines this in terms of bzero(), but ANSI says
