@@ -2037,6 +2037,14 @@ control state or activity transitions within the
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
 
+\item[\Macro[COUNT\_HYPERTHREAD\_CPUS]] \label[param:CountHyperthreadCpus]
+  This macro controls how condor sees hyperthreaded
+  processors. When set to TRUE (the default) it includes virtual CPUs in
+  the default value of \MacroNI[NUM\_CPUS]. On dedicated cluster nodes, 
+  counting virtual CPUs can sometimes improve total throughput at the expense 
+  of individual job speed. However, counting them on desktop workstations can
+  interfere with interactive job performance.
+
 \item[\Macro{MEMORY}] \label{param:Memory}
   Normally, Condor will automatically detect the amount of physical
   memory available on your machine.  Define \MacroNI{MEMORY} to tell
@@ -2442,8 +2450,12 @@ These macros control the \Condor{schedd}.
   normally defined in terms of \MacroUNI{SBIN}.
 
 \item[\Macro{MAX\_JOBS\_RUNNING}] \label{param:MaxJobsRunning} This
-  macro controls the maximum number of \Condor{shadow} processes
-  a given \Condor{schedd} is allowed to spawn.  The actual
+  macro limits the number of processes spawned by a given
+  \Condor{schedd}, for all job universes except the 
+  globus [grid] universe.  See section~\ref{sec:Choosing-Universe}.
+  This includes, but is not limited to \Condor{shadow} processes,
+  and scheduler universe processes, including \Condor{dagman}.
+  The actual
   number of \Condor{shadow}s may be less if you have reached
   your \MacroUNI{RESERVED\_SWAP} limit.
 
@@ -2998,19 +3010,22 @@ These macros affect the \Condor{collector}.
   and defaults to 60.
   
 \item[\Macro{CONDOR\_DEVELOPERS}] \label{param:CondorDevelopers}
+  By default,
   Condor will send e-mail once per week to this address with the output
   of the \Condor{status} command, which lists how many machines
-  are in the pool and how many are running jobs.  Use the default
-  value of condor-admin@cs.wisc.edu and
-  the weekly status message will be sent to the Condor Team at University of
-  Wisconsin-Madison, the developers of Condor.  The Condor Team uses
+  are in the pool and how many are running jobs.  The default
+  value of \textit{condor-admin@cs.wisc.edu} will send this report to
+  the Condor Team developers at the University of Wisconsin-Madison.
+  The Condor Team uses
   these weekly status messages in order to have some idea as to how
   many Condor pools exist in the world.  We appreciate
   getting the reports, as this is one way we can convince funding
   agencies that Condor is being used in the real world.  If you do
-  not wish this information to be sent to the Condor Team,
-  set the value to NONE which disables this feature, or put in some other
-  address that you want the weekly status report sent to.
+  not wish this information to be sent to the Condor Team, you must explicitly
+  set the value to \textit{NONE} to disable this feature, or put in some other
+  address that you want the weekly status report sent to.  If this macro
+  definition is commented out in the configuration file, Condor will assume
+  the default behavior to send the weekly email.
 
 \item[\Macro{COLLECTOR\_NAME}] \label{param:CollectorName}
   This macro is used to specify a short description of your pool.
@@ -3025,9 +3040,12 @@ These macros affect the \Condor{collector}.
   number of machines running jobs, the hostname of your central
   manager, and the \MacroUNI{COLLECTOR\_NAME} specified above.  These
   updates help the Condor Team see how Condor is being used around the world.
-  By default, they will be sent to condor.cs.wisc.edu.  If you don't want
-  these updates to be sent from your pool, set this macro to
-  NONE. 
+  By default, they will be sent to \textit{condor.cs.wisc.edu}.  If you don't want
+  these updates to be sent from your pool, you must explicitly set this macro to
+   \textit{NONE}. 
+  If this macro
+  definition is commented out in the configuration file, Condor will assume
+  the default behavior to send the periodic updates.
 
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
   \label{param:CollectorSocketBufsize} This specifies the buffer size, in

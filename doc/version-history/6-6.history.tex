@@ -9,8 +9,9 @@ in the 6.6 series.
 The details of each version are described below.
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-6-2}Version 6.6.2}
+\subsection{\label{sec:New-6-6-5}Version 6.6.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
@@ -21,10 +22,142 @@ The details of each version are described below.
 
 \end{itemize}
 
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a problem that sometimes caused DAGMan to segfault while
+      parsing DAGs (as far as we know, only very large DAGs).
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-4}Version 6.6.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item This version only contains platform-specific bug fixes.
+  Therefore, it was only released for the two effected platforms. 
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed the bug in Condor's file transfer mechanism for Mac OSX
+  that was introduced in version 6.6.3.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-3}Version 6.6.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item The Globus universe support for versions of Globus prior to 2.2 (specifically, those using GRAM 1.5 or earlier) has been removed.
+
+\end{itemize}
+
 
 \noindent New Features:
 
 \begin{itemize}
+
+\item The Globus universe now supports submitting jobs to Globus Toolkit 3.2 installations.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The negotiator no longer crashes when a grid site ClassAd sets WantAdRevaluate but does not contain an UpdateSequenceNumber.
+
+\item Globus universe jobs were failing to go on hold when a \$\$() expression
+could not be expanded.
+
+\item On Windows, the system-wide TEMP variable is included in the
+execute environment if it is not specified in the submit file.
+
+\item Fixed a rarely-occuring bug when  the child process forked by the schedd gets stuck in an infinite loop when the user does ``condor\_submit -s''. This should also fix problems when the child process forked by the collector would sometimes get stuck in an infinite loop when \Expr{ COLLECTOR\_QUERY\_WORKERS > 0 } in the config file.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item The Condor file transfer mechanism is broken on Mac OSX in
+  Condor version 6.6.3.
+  OSX users should either upgrade to version 6.6.4, or install a
+  patched \Condor{starter} binary available from
+  \URL{http://www.cs.wisc.edu/condor/binaries/condor-6.6.3-patch1-MacOSX-PPC.tar.Z}. 
+
+\end{itemize}
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-2}Version 6.6.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item There will be another release, 6.6.3, within a few weeks.  We decided to
+	release this version now because it adds the AIX platform and has some bug
+	fixes which we thought important enough for a release.  However, if you are
+	not affected by the bugs fixed (see below) you may wish to wait for 6.6.3.
+     
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Clipped support for AIX 5.2.
+      This means VANILLA universe only - no checkpointing or STANDARD universe.
 
 \item The setting \Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT} allows
    configuring the two phase commit timeout in Globus.  This maps to the
@@ -58,6 +191,11 @@ this ouput and displays it to the user in a readable format.
       remote gatekeeper.  Previously it was limited to supporting the condor,
 	  fork, lsf, pbs, and remote jobmanager scripts.
 
+\item A new parameter, \Macro{SEC\_DEBUG\_PRINT\_KEYS}, controls whether or not
+      the keys used for encryption get printed into the log.
+	  The default is false.
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -76,6 +214,9 @@ flocking to machines that did not happen to be in the
 \item Eliminated a race condition which might cause the grid monitor to
 	erroneously decide that the status file was broken when in fact it
 	was being uploaded and was empty.
+
+\item The grid monitor now attempts to restart transfers in the event of
+    globus-url-copy hanging.
 
 \item Removed some settings from the default configuation files
   shipped with Condor that are no longer used in the code.
@@ -115,8 +256,9 @@ the userlog for the same job; this can happen due to a bug in the
 
 \begin{itemize}
 
-\item If a job terminates via SIGSEGV, the \Condor{schedd} logs both a
-      terminate event and an abort event to the userlog.
+\item If a scheduler universe job terminates via a signal, the 
+      \Condor{schedd} logs both a terminate event and an abort event
+      to the userlog. 
 
 \item Keyboard activity is not reported for pseudo-ttys on Mac OS X, only
       the physically connected keyboard
