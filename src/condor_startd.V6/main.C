@@ -61,7 +61,7 @@ main_init( int, char* [] )
 	init_params(1);		// The 1 indicates that this is the first time
 
 	resmgr = new ResMgr;
-	resmgr->walk( config_classad );
+	resmgr->walk( Resource::init_classad );
 
 		// Do a little sanity checking and cleanup
 	check_perms();
@@ -126,6 +126,9 @@ main_init( int, char* [] )
 								  "GIVE_CLASSAD",
 								  (CommandHandler)command_give_classad,
 								  "command_give_classad", NULL, READ );
+	daemonCore->Register_Command( GIVE_REQUEST_AD, "GIVE_REQUEST_AD",
+								  (CommandHandler)command_give_request_ad,
+								  "command_give_request_ad", NULL, READ );
 
 		// This command should be registered with negotiator permission
 	daemonCore->Register_Command( MATCH_INFO, "MATCH_INFO",
@@ -153,10 +156,10 @@ main_init( int, char* [] )
 int
 main_config()
 {
+		// Re-read config file, and rebuild ads for each resource.  
+	resmgr->walk( Resource::init_classad );  
 		// Re-read config file for startd-wide stuff.
 	init_params(0);
-		// Re-read config file for each resource.
-	resmgr->walk( config_classad );  
 		// Re-evaluate and update the CM for each resource.
 	resmgr->walk( Resource::eval_and_update );
 	return TRUE;
@@ -284,7 +287,8 @@ int
 main_shutdown_fast()
 {
 		// Quickly kill all the starters that are running
-	resmgr->walk( kill_claim );
+	resmgr->walk( Resource::kill_claim );
+	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 	exit(0);
 	return TRUE;
 }
@@ -299,10 +303,11 @@ main_shutdown_graceful()
 								 "shutdown_sigchld" );
 
 		// Release all claims, active or not
-	resmgr->walk( release_claim );
+	resmgr->walk( Resource::release_claim );
 
 	if( !resmgr->in_use() ) {
 			// Machine is free, we can just exit right away.
+		dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 		exit(0);
 	}
 	return TRUE;
@@ -350,10 +355,9 @@ shutdown_sigchld( Service*, int )
 {
 	reaper_loop();
 	if( ! resmgr->in_use() ) {
+		dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 		exit(0);
+
 	} 
 	return TRUE;
 }
-
-
-
