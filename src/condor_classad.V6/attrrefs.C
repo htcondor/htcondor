@@ -286,6 +286,7 @@ int AttributeReference::
 FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 {
 	ClassAd	*current=NULL;
+	ExprList *adList = NULL;
 	Value	val;
 	bool	rval;
 
@@ -307,14 +308,83 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		} else if( val.IsErrorValue( ) ) {
 			return( PROP_ERROR );
 		}
-
-		if( !val.IsClassAdValue( current ) ) {
+		
+		if( !val.IsClassAdValue( current ) && !val.IsListValue( adList ) ) {
 			return( EVAL_ERROR );
 		}
 	}
 
-	// lookup with scope; this may side-affect state
-	return( current->LookupInScope( attributeStr, tree, state ) );
+	if( val.IsClassAdValue( ) ) {
+			// lookup with scope; this may side-affect state		
+		return( current->LookupInScope( attributeStr, tree, state ) );
+	}
+	else {
+		vector< ExprTree *> eVector;
+		ExprTree *currExpr = NULL;
+		ExprList *nestedList = NULL;
+			// iterate through exprList and apply attribute reference
+			// to each exprTree
+		for(ExprListIterator itr(adList);!itr.IsAfterLast( );itr.NextExpr( )){
+			current = NULL;
+ 			currExpr = itr.CurrentExpr( )->Copy( );
+				// establish starting point for search
+			if( currExpr == NULL ) {
+					// "attr" and ".attr"
+				current = absolute ? state.rootAd : state.curAd;
+			} else {
+					// "expr.attr"
+
+				rval = wantSig ? currExpr->Evaluate( state, val, sig )
+					: currExpr->Evaluate( state, val);
+				if( !rval ) {
+					return( EVAL_FAIL );
+				}
+
+				if( val.IsUndefinedValue( ) || val.IsErrorValue( ) ) {
+					eVector.push_back( Literal::MakeLiteral( val ) );
+					continue;
+				}
+				else if( !val.IsClassAdValue( current ) ) {
+					if( val.IsListValue( nestedList ) ) {
+							// recurse the attribute reference on nested lists
+						AttributeReference *attrRef = NULL;
+						ExprList *evaledList = NULL;
+						attrRef = MakeAttributeReference( nestedList,
+														  attributeStr,
+														  false );
+						attrRef->SetParentScope(nestedList->GetParentScope( ));
+						val.Clear( );
+						rval = wantSig ? attrRef->Evaluate( state, val, sig )
+							: attrRef->Evaluate( state, val );
+						if( !rval ) {
+							return( EVAL_FAIL );
+						}
+						if( val.IsListValue( evaledList ) ) {
+							eVector.push_back( evaledList );
+							continue;
+						}
+					}
+					val.SetErrorValue( );
+					eVector.push_back( Literal::MakeLiteral( val ) ) ;
+					continue;
+				}
+			}
+
+				// lookup with scope; this may side-affect state		
+			currExpr = NULL;
+			rval = current->LookupInScope( attributeStr, currExpr, state );
+			if( currExpr != NULL ) {
+				eVector.push_back( currExpr );
+			}
+			else {
+				val.SetUndefinedValue( );
+				eVector.push_back( Literal::MakeLiteral( val ) );
+			}
+		}
+		tree = ExprList::MakeExprList( eVector );
+		tree->SetParentScope( adList->GetParentScope( ) );
+		return EVAL_OK;
+	}
 }
 
 
