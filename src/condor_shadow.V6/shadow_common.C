@@ -431,7 +431,7 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		if( WCOREDUMP(status) && WEXITSTATUS(status) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
 			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
-			ExitReason = JOB_EXCEPTION;
+			ExitReason = JOB_KILLED;
 		} else if( WCOREDUMP(status) && WEXITSTATUS(status) == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 6 Condor.\n" );
