@@ -73,6 +73,9 @@ VanillaProc::StartJob()
 	char systemshell[_POSIX_PATH_MAX];
 	char tmp[_POSIX_PATH_MAX];
 
+	ClassAdUnParser unp;
+	string treeString;
+
 	const char* jobtmp = Starter->jic->origJobName();
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
@@ -98,8 +101,12 @@ VanillaProc::StartJob()
 		job_args = argstmp = NULL;
 		
 		tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
-		if ( tree != NULL && tree->RArg() != NULL ) {
-			tree->RArg()->PrintToNewStr(&argstmp);
+//		if ( tree != NULL && tree->RArg() != NULL ) {
+//			tree->RArg()->PrintToNewStr(&argstmp);
+		if ( tree != NULL ) {
+			unp.Unparse( treeString, tree );
+			argstmp = new char[treeString.length( )+1];
+			strcpy( argstmp, treeString.c_str( ) );
 			job_args = argstmp+1;		// skip first quote
 			length = strlen(job_args);
 			job_args[length-1] = '\0';	// destroy last quote

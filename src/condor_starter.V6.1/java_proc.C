@@ -35,6 +35,10 @@ int JavaProc::StartJob()
 	char      *job_args;
 	int		  length;
 
+	ClassAdUnParser unp;
+	unp.SetOldClassAd( true );
+	string treeString;
+
 	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
 		jarfiles_list = new StringList(jarfiles);
 	}
@@ -59,12 +63,16 @@ int JavaProc::StartJob()
 	if ( tree == NULL ) {
 		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
 		return 0;
-	} else if ( tree->RArg() == NULL ) { 
+//	} else if ( tree->RArg() == NULL ) { 
 		// this shouldn't happen, but to be safe
-		dprintf(D_ALWAYS,"JavaProc: %s RArg is not defined!\n",ATTR_JOB_ARGUMENTS);
-		return 0;
+//		dprintf(D_ALWAYS,"JavaProc: %s RArg is not defined!\n",ATTR_JOB_ARGUMENTS);
+//		return 0;
 	}
-	tree->RArg()->PrintToNewStr(&tmp_args);
+//	tree->RArg()->PrintToNewStr(&tmp_args);
+	unp.Unparse( treeString, tree );
+	tmp_args = new char[treeString.length( )+1];
+	strcpy( tmp_args, treeString.c_str( ) );
+
 	job_args = tmp_args+1; // skip first quote
 	length = strlen(job_args);
 	job_args[length-1] = '\0'; // destroy last quote
