@@ -76,7 +76,7 @@ GETMNT_OBJ = getmnt.o
 #endif
 
 #define SourceFiles \
-	blankline.c ctrace.c do_connect.c \
+	blankline.c ctrace.c do_connect.c email.c email_file.c \
 	dprintf.c dprintf_config.c except.c killkids.c \
 	ltrunc.c mkargv.c proc.c signames.c strdup.c \
 	stricmp.c expr.c perror.c condor_errlst.c detach.c \
@@ -99,7 +99,7 @@ GETMNT_OBJ = getmnt.o
 	strdup.o stricmp.o expr.o perror.o condor_errlst.o \
 	ctrace.o detach.o update_rusage.o uids.o cronos.o \
 	$(VIRT_MEM_OBJ) phys_mem.o free_fs_blocks.o $(FLOCK_OBJ) \
-	$(SETREUID_OBJ) \
+	$(SETREUID_OBJ) email.o email_file.o \
 	$(GETDTABLESIZE_OBJ) $(SETRGID_OBJ) $(SETREGID_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) $(INSQUE_OBJ) env_param.o ckpt_name.o \
