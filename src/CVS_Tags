@@ -1,3 +1,11 @@
+12/02/03 V6_6-merge-1
+   The state of the V6_6-branch when first merged into V6_7-branch.
+   This is after V6_6_0, but before V6_6_1.  This is the first merge
+   from V6_6-branch -> V6_7-branch.  it includes the entire autoconf +
+   externals build system, the rh8 full port, an updated copyright
+   notice, and all the bug fixes for V6_6_0 (and some that will show
+   up for V6_6_1). 
+
 11/27/03 V6_6-branch-post-redhat80-fullport-checkin
 	This is the state of the V6_6-branch just after I checked in the full
 	port for the redhat 8.0 revision of Linux.
