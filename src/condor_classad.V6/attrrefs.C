@@ -55,7 +55,11 @@ AttributeReference::
 }
 
 
+#ifdef USE_COVARIANT_RETURN_TYPES
+AttributeReference *AttributeReference::
+#else
 ExprTree *AttributeReference::
+#endif
 Copy( ) const
 {
 	AttributeReference *newTree = new AttributeReference ();

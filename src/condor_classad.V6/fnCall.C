@@ -142,7 +142,11 @@ FunctionCall::
 }
 
 
+#ifdef USE_COVARIANT_RETURN_TYPES
+FunctionCall *FunctionCall::
+#else
 ExprTree *FunctionCall::
+#endif
 Copy( ) const
 {
 	FunctionCall *newTree = new FunctionCall;

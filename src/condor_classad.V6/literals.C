@@ -42,8 +42,11 @@ Literal::
 {
 }
 
-
+#ifdef USE_COVARIANT_RETURN_TYPES
+Literal *Literal::
+#else
 ExprTree *Literal::
+#endif
 Copy( ) const
 {
 	Literal *newTree = new Literal;

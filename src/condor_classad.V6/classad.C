@@ -611,7 +611,11 @@ Modify( ClassAd& mod )
 }
 
 
+#ifdef USE_COVARIANT_RETURN_TYPES
+ClassAd* ClassAd::
+#else
 ExprTree* ClassAd::
+#endif
 Copy( ) const
 {
 	ExprTree *tree;

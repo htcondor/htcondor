@@ -107,8 +107,9 @@ using namespace std;
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "classad_features.h"
 #endif /* CLASSAD_DISTRIBUTION */
+
+#include "classad_features.h"
 
 #ifdef __cplusplus
 #include <string>

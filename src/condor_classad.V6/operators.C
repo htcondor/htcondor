@@ -50,7 +50,11 @@ Operation::
 }
 
 
+#ifdef USE_COVARIANT_RETURN_TYPES
+Operation *Operation::
+#else
 ExprTree *Operation::
+#endif
 Copy( ) const
 {
 	Operation *newTree = new Operation ();

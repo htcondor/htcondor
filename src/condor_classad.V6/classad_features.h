@@ -33,4 +33,6 @@
 
 /*#define ENABLE_SHARED_LIBRARY_FUNCTIONS*/
 
+/*#define USE_COVARIANT_RETURN_TYPES*/
+
 #endif 

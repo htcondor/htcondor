@@ -60,8 +60,11 @@ Clear ()
 	exprList.clear( );
 }
 
-	
+#ifdef USE_COVARIANT_RETURN_TYPES
+ExprList *ExprList::
+#else
 ExprTree *ExprList::
+#endif
 Copy( ) const
 {
 	ExprList *newList = new ExprList;
