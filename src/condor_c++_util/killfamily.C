@@ -48,8 +48,6 @@
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
 	daddy_pid = pid;
-	procAPI = new ProcAPI;
-	needs_free = 1;
 	old_pids = NULL;
 	mypriv = priv;
 	test_only_flag = test_only;
@@ -57,30 +55,22 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_user_time = 0;
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
+	dc_tid = -1;
+	dprintf( D_PROCFAMILY, 
+			 "Created new ProcFamily w/ pid %d as parent\n", daddy_pid );
 }
 
-ProcFamily::ProcFamily( pid_t pid, priv_state priv, ProcAPI* papi )
-{
-	daddy_pid = pid;
-	procAPI = papi;
-	needs_free = 0;
-	old_pids = NULL;
-	mypriv = priv;
-	test_only_flag = 0;
-	family_size = 0;
-	exited_cpu_user_time = 0;
-	exited_cpu_sys_time = 0;
-	max_image_size = 0;
-}
 
 ProcFamily::~ProcFamily()
 {
-	if( needs_free ) {
-		delete procAPI;
-	}
 	if ( old_pids ) {
 		delete old_pids;
 	}
+	if( dc_tid >= 0 ) {
+		daemonCore->Cancel_Timer( dc_tid );
+	}
+	dprintf( D_PROCFAMILY,
+			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid ); 
 }
 
 void
@@ -221,7 +211,7 @@ ProcFamily::takesnapshot()
 	priv = set_priv(mypriv);
 
 	// grab all pids in the family we can see now
-	if ( procAPI->getPidFamily(daddy_pid,pidfamily) < 0 ) {
+	if ( ProcAPI::getPidFamily(daddy_pid,pidfamily) < 0 ) {
 		// daddy_pid must be gone!
 		dprintf( D_PROCFAMILY, 
 				 "ProcFamily::takesnapshot: getPidFamily(%d) failed.\n", 
@@ -253,7 +243,7 @@ ProcFamily::takesnapshot()
 					// So, if currpid still exists on the system, and 
 					// the birthdate matches, grab decendants of currpid.
 
-					if ( procAPI->getProcInfo(currpid,pinfo) == 0 ) {
+					if ( ProcAPI::getProcInfo(currpid,pinfo) == 0 ) {
 						// compare birthdays; allow 2 seconds "slack"
 						birth = (time(NULL) - pinfo->age) - 
 									(*old_pids)[i].birthday;
@@ -262,7 +252,7 @@ ProcFamily::takesnapshot()
 							// to our list and also get currpid's decendants
 							pidfamily[j] = currpid;
 							pidfamily[j+1] = 0;
-							procAPI->getPidFamily(currpid,&(pidfamily[j+1]));
+							ProcAPI::getPidFamily(currpid,&(pidfamily[j+1]));
 							// and this pid most certainly did not exit, so
 							// set our flag accordingly.
 							currpid_exited = false;
@@ -288,7 +278,7 @@ ProcFamily::takesnapshot()
 			// Thankfully this will go away in the Win32 port once we
 			// start injecting in our DLL into the user job.  -Todd
 			if ( found_it ) {
-				if ( procAPI->getProcInfo(currpid,pinfo) == 0 ) {
+				if ( ProcAPI::getProcInfo(currpid,pinfo) == 0 ) {
 					// compare birthdays; allow 2 seconds "slack"
 					birth = (time(NULL) - pinfo->age) - 
 								(*old_pids)[i].birthday;
@@ -323,7 +313,7 @@ ProcFamily::takesnapshot()
 	alive_cpu_user_time = 0;
 	unsigned long curr_image_size = 0;
 	for ( j=0; pidfamily[j]; j++ ) {
-		if ( procAPI->getProcInfo(pidfamily[j],pinfo) == 0 ) {
+		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo) == 0 ) {
 			(*new_pids)[newpidindex].pid = pinfo->pid;
 			(*new_pids)[newpidindex].ppid = pinfo->ppid;
 			(*new_pids)[newpidindex].birthday = time(NULL) - pinfo->age;
@@ -395,7 +385,7 @@ void
 ProcFamily::display()
 {
 	int i;
-	dprintf( D_PROCFAMILY, "ProcFamily: parent: %d others:", daddy_pid );
+	dprintf( D_PROCFAMILY, "ProcFamily: parent: %d family:", daddy_pid );
 	for( i=0; i<family_size; i++ ) {
 		dprintf( D_PROCFAMILY | D_NOHEADER, " %d", (*old_pids)[i].pid );
 	}
@@ -406,3 +396,21 @@ ProcFamily::display()
 		alive_cpu_user_time, exited_cpu_user_time, max_image_size);
 }
 
+
+bool
+ProcFamily::takePeriodicSnapshot( int start, int period )
+{
+	if( dc_tid >= 0 ) {
+		daemonCore->Cancel_Timer( dc_tid );
+	}
+	dc_tid = daemonCore->
+		Register_Timer( start, period, 
+						(TimerHandlercpp)&ProcFamily::takesnapshot,
+						"ProcFamily::takesnapshot", this );
+	if( dc_tid < 0 ) {
+			// Error creating the timer
+		dc_tid = -1;
+		return false;
+	}
+	return true;
+}

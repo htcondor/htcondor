@@ -33,7 +33,6 @@ class ProcFamily : public Service {
 public:
 	
 	ProcFamily( pid_t pid, priv_state priv, int test_only = 0 );
-	ProcFamily( pid_t pid, priv_state priv, ProcAPI* papi );
 
 	~ProcFamily();
 
@@ -52,6 +51,13 @@ public:
 
 	void takesnapshot();
 
+		// Start a periodic DaemonCore timer to take a snapshot at the
+		// given start time and periodic interval.  If you call this
+		// again when a timer is already set, we cancel the old timer
+		// and register a new one.  To stop the timer, just delete
+		// this object.
+	bool takePeriodicSnapshot( int start, int period );
+
 		// Allocates an array for all pids in the current pid family, 
 		// sets the given pointer to that array, and returns the
 		// number of pids  in the family.  The array must be
@@ -60,6 +66,8 @@ public:
 	int		size() { return family_size; };
 	
 	void	display();		// dprintf's the existing pid family
+
+	
 
 private:
 	enum KILLFAMILY_DIRECTION {
@@ -76,7 +84,7 @@ private:
 
 	priv_state mypriv;
 
-	ProcAPI *procAPI;
+	int dc_tid;
 
 	class a_pid {
 		public:
@@ -99,7 +107,6 @@ private:
 	ExtArray<a_pid> *old_pids;
 
 	int family_size;
-	int needs_free;
 
 	// total cpu usage for pids which have exited
 	long exited_cpu_user_time;
