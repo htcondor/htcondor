@@ -663,10 +663,10 @@ else
 fi
 
 # now, look for everything else, depending on our platform.  if it's
-# Linux, we know there are no vendor compilers to worry about, so we
-# can bail without doing any real work.  otherwise, we have to search
-# for what we might be able to use...
-if test "$os" = "Linux" ; then
+# Linux or Darwin, we know the "vendor" compilers are really gcc, so
+# we can bail without doing any real work.  otherwise, we have to
+# search for what we might be able to use...
+if test "$os" = "Linux" || test "$os" = "Darwin" ; then
   AC_SUBST([_cv_vendor_cc],[""])
   AC_SUBST([_cv_vendor_cplus],[""])
   AC_SUBST([_cv_vendor_cplus_name],[""])
