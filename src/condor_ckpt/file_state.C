@@ -77,6 +77,8 @@ static int				Condor_isremote;
 
 char * shorten( char *path );
 extern "C" void Set_CWD( const char *working_dir );
+extern "C" sigset_t block_condor_signals(void);
+extern "C" void restore_condor_sigmask(sigset_t omask);
 
 extern int errno;
 extern volatile int check_sig;
@@ -245,6 +247,10 @@ OpenFileTable::DoClose( int fd )
 
 		// simple case, no dups - just clean up
 	if( !was_duped )  {
+		/* we don't want to be interrupted by a checkpoint between when
+		   we close this file and we mark it closed in our local data
+		   structure */
+		sigset_t omask = block_condor_signals();
 		if( file[fd].isRemoteAccess() ) {
 			rval = REMOTE_syscall( CONDOR_close, file[fd].real_fd );
 		} else {
@@ -253,6 +259,7 @@ OpenFileTable::DoClose( int fd )
 		file[fd].open = FALSE;
 		delete [] file[fd].pathname;
 		file[fd].pathname = NULL;
+		restore_condor_sigmask(omask);
 		return rval;
 	}
 
@@ -720,12 +727,17 @@ open( const char *path, int flags, ... )
 	int		fd;
 	int		status;
 	int		is_remote = FALSE;
+	sigset_t omask;
 
 	if( flags & O_CREAT ) {
 		va_start( ap, flags );
 		creat_mode = va_arg( ap, int );
 	}
 
+	/* we don't want to be interrupted by a checkpoint between when
+	   we open this file and we mark it opened in our local data
+	   structure */
+	omask = block_condor_signals();
 	if( LocalSysCalls() ) {
 		fd = syscall( SYS_open, path, flags, creat_mode );
 		strcpy( local_path, path );
@@ -758,6 +770,7 @@ open( const char *path, int flags, ... )
 	Condor_isremote = is_remote;
 
 	if( fd < 0 ) {
+		restore_condor_sigmask(omask);
 		return -1;
 	}
 
@@ -765,6 +778,7 @@ open( const char *path, int flags, ... )
 		fd = FileTab->DoOpen( local_path, flags, fd, is_remote );
 	}
 
+	restore_condor_sigmask(omask);
 	return fd;
 }
 #endif
@@ -881,14 +895,24 @@ __close( int fd )
 int
 dup( int old )
 {
+	sigset_t omask;
+	int rval;
+
+	/* we don't want to be interrupted by a checkpoint between when
+	   modify our local file table and actually make the change */
+	omask = block_condor_signals();
 	if( MappingFileDescriptors() ) {
 		return FileTab->DoDup( old );
 	}
 
 	if( LocalSysCalls() ) {
-		return syscall( SYS_dup, old );
+		rval = syscall( SYS_dup, old );
+		restore_condor_sigmask(omask);
+		return rval;
 	} else {
-		return REMOTE_syscall( CONDOR_dup, old );
+		rval = REMOTE_syscall( CONDOR_dup, old );
+		restore_condor_sigmask(omask);
+		return rval;
 	}
 }
 #endif
