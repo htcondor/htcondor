@@ -111,8 +111,8 @@ displayTotals (int keyLength)
 
 	if (malformed > 0)
 	{
-		printf ("\n%*.*s(Omitted %d malformed ads in computed totals)\n\n",
-			keyLength, keyLength, "", malformed);
+		printf("\n%*.*s(Omitted %d malformed ads in computed attribute totals)"
+				"\n\n", keyLength, keyLength, "", malformed);
 	}
 }
 
@@ -185,25 +185,30 @@ update (ClassAd *ad)
 {
 	char state[32];
 	int	 attrMem, attrDisk, attrMips, attrKflops;
+	bool badAd = false;
 	State s;
 
-	if (!ad->LookupString (ATTR_STATE, state)		||
-		!ad->LookupInteger(ATTR_MEMORY,attrMem)		||
-		!ad->LookupInteger(ATTR_DISK,  attrDisk)	||
-		!ad->LookupInteger(ATTR_MIPS,  attrMips)	||
-		!ad->LookupInteger(ATTR_KFLOPS,attrKflops))
-			return 0;
+	// if ATTR_STATE is not found, abort this ad
+	if (!ad->LookupString (ATTR_STATE, state)) return 0;
 
+	// for the other attributes, assume zero if absent
+	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
+	if (!ad->LookupInteger(ATTR_DISK,  attrDisk)){ badAd = true; attrDisk = 0;}
+	if (!ad->LookupInteger(ATTR_MIPS,  attrMips)){ badAd = true; attrMips = 0;}
+	if (!ad->LookupInteger(ATTR_KFLOPS,attrKflops)){badAd= true;attrKflops = 0;}
 
 	s = string_to_state(state);
 	if (s == claimed_state || s == unclaimed_state)
-			avail++;
+		avail++;
 
 	machines++;
 	memory 	+= attrMem;
 	disk   	+= attrDisk;
 	condor_mips	+= attrMips;
 	kflops	+= attrKflops;
+
+	// if some attribute was missing, report the ad as malformed
+	if (badAd) return 0;
 
 	return 1;
 }
@@ -240,16 +245,19 @@ update (ClassAd *ad)
 {
 	int attrMips, attrKflops;
 	float attrLoadAvg;
+	bool badAd = false;
 
-	if (!ad->LookupInteger(ATTR_MIPS, attrMips)		||
-		!ad->LookupInteger(ATTR_KFLOPS, attrKflops)	||
-		!ad->LookupFloat  (ATTR_LOAD_AVG, attrLoadAvg))
-			return 0;
+	if (!ad->LookupInteger(ATTR_MIPS, attrMips)) { badAd = true; attrMips = 0;}
+	if (!ad->LookupInteger(ATTR_KFLOPS, attrKflops)){badAd=true; attrKflops=0;}
+	if (!ad->LookupFloat(ATTR_LOAD_AVG,attrLoadAvg)){badAd=true;attrLoadAvg=0;}
 
 	condor_mips += attrMips;
-	kflops += kflops;
+	kflops += attrKflops;
 	loadavg += attrLoadAvg;	
 	machines ++;
+
+	// if some attribute was missing, report the ad as malformed
+	if (badAd) return false;
 
 	return 1;
 }
