@@ -84,8 +84,8 @@ ProcAd::dumpToAd( piPTR pi ) {
 
 	ClassAd *ad = new ClassAd;
 
-	ad->InsertAttr( "THIS_PID", pi->pid );
-	ad->InsertAttr( "PARENT_PID", pi->ppid );
+	ad->InsertAttr( "THIS_PID", (int)pi->pid );
+	ad->InsertAttr( "PARENT_PID", (int)pi->ppid );
 	ad->InsertAttr( "IMAGE_SIZE", (int)pi->imgsize );
 	ad->InsertAttr( "RESIDENT_SET_SIZE", (int)pi->rssize );
 	ad->InsertAttr( "MAJOR_PAGE_FAULTS", (int)pi->majfault );
@@ -93,7 +93,7 @@ ProcAd::dumpToAd( piPTR pi ) {
 	ad->InsertAttr( "USER_TIME", (int)pi->user_time );
 	ad->InsertAttr( "SYSTEM_TIME", (int)pi->sys_time );
 	ad->InsertAttr( "PROCESS_AGE", (int)pi->age );
-	ad->InsertAttr( "PERCENT_CPU_USAGE", pi->cpuusage );
+	ad->InsertAttr( "PERCENT_CPU_USAGE", (double)pi->cpuusage );
 	
 	return ad;
 }
