@@ -1,4 +1,11 @@
 ===== Code =====
+* Can we do more parse time function evaluation? Perhaps int/real?
+
+* Test time representation
+
+* We implement parse time evaluate of abstime differently than run
+  time evaluation of abstime. This should be fixed.
+
 * Nick wanted ClassAd:InsertAttrTime()
 
 * Attributes with XML tags in them output correctly?
@@ -19,8 +26,6 @@
 * Document cxi.
 
 * Test printing values that are classads, lists, or times. 
-
-* Test time representation
 
 * There is a memory leak when using the . operator on lists. I fixed
   the memory leak (search for "need_delete" in and attrefs.C and look
