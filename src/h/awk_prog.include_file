@@ -1,0 +1,7 @@
+BEGIN {
+	printf "/************************************************************\n"
+	printf "This file is generated automatically by an awk script - DO NOT EDIT\n"
+	printf "************************************************************/\n"
+	printf "\n"
+}
+/CONDOR_/ { printf "#define %s %s\n", $1, $2 }
