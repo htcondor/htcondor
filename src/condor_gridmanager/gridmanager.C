@@ -827,14 +827,16 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 						  curr_job->procID.proc,
 						  ATTR_JOB_MANAGED,
 						  "FALSE" );
-			SetAttribute( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  ATTR_JOB_MATCHED,
-						  "FALSE" );
-			SetAttributeInt( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  ATTR_CURRENT_HOSTS,
-						  0 );
+			if ( curr_job->ad->Lookup( ATTR_JOB_MATCHED ) != NULL ) {
+				SetAttribute( curr_job->procID.cluster,
+							  curr_job->procID.proc,
+							  ATTR_JOB_MATCHED,
+							  "FALSE" );
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_CURRENT_HOSTS,
+								 0 );
+			}
 		}
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
