@@ -133,26 +133,6 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  ACCOUNTANT_LOCAL_DOMAIN is defined above).
 #REMOTE_PRIO_FACTOR = 10000
 
-##  The NEGOTIATOR_TRAFFIC_LIMIT macro specifies the maximum
-##  amount of network traffic (in KB) the negotiator may initiate per
-##  NEGOTIATOR_TRAFFIC_INTERVAL for job placement and preemption.
-##  The negotiator uses the job ImageSize and ExecutableSize
-##  parameters to track network usage.  The negotiator will try to use
-##  bandwidth up to the limit, so if starting a large ImageSize job
-##  would put the negotiator over the limit, it will try to start a
-##  small ImageSize job in its place.  Thus, using traffic limits
-##  penalizes large ImageSize jobs for the load they place on the
-##  network.  This parameter defaults to 0, which disables network
-##  usage management in the negotiator.
-#NEGOTIATOR_TRAFFIC_LIMIT = 300000
-
-##  The NEGOTIATOR_TRAFFIC_INTERVAL macro specifies the interval
-##  (in seconds) to be used in maintaining the
-##  NEGOTIATOR_TRAFFIC_LIMIT.  This parameter defaults to 0, which
-##  disables network usage management in the negotiator.  It is common
-##  to set this parameter equal to NEGOTIATOR_INTERVAL.
-#NEGOTIATOR_TRAFFIC_INTERVAL = $(NEGOTIATOR_INTERVAL)
-
 ##  The NEGOTIATOR_SOCKET_CACHE_SIZE macro defines the maximum number
 ##  of sockets which the negotiator should keep in its open socket
 ##  cache.  Caching open sockets makes the negotiation protocol more
