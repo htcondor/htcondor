@@ -2532,14 +2532,17 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	char			cluster[10], proc_str[10];
 	int				pid;
 	int				shadow_fd;
-	char			out_buf[80];
+	char			out_buf[1000];
 	struct shadow_rec *srp;
 	int	 c;     	// current hosts
 	int	 old_proc;  // the class in the cluster.  
                     // needed by the multi_shadow -Bin
+	char			hostname[MAXHOSTNAMELEN];
+
+	mrec->my_match_ad->LookupString(ATTR_NAME, hostname);
 
 	dprintf( D_FULLDEBUG, "Got permission to run job %d.%d on %s...\n",
-			job_id->cluster, job_id->proc, mrec->peer);
+			job_id->cluster, job_id->proc, hostname);
 	
 	if(GetAttributeInt(job_id->cluster,job_id->proc,ATTR_CURRENT_HOSTS,&c)<0){
 		c = 1;
@@ -2621,7 +2624,8 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 	dprintf( D_ALWAYS, "First Line: %s", out_buf );
 	write(shadow_fd, out_buf, strlen(out_buf));
 
-	sprintf(out_buf, "%s %s %d\n", mrec->peer, mrec->id, old_proc);
+	sprintf(out_buf, "%s %s %d %s\n", mrec->peer, mrec->id, old_proc,
+			hostname);
 	dprintf( D_ALWAYS, "sending %s", out_buf);
 	write(shadow_fd, out_buf, strlen(out_buf));
 	return srp;
