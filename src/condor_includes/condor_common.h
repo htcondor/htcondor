@@ -52,24 +52,26 @@
 
 #define _POSIX_SOURCE
 #include "_condor_fix_types.h"
-#include "condor_fix_stdio.h"
 #include "condor_fix_unistd.h"
-#include "_condor_fix_resource.h"
+#include <stdarg.h>		/* Include this before stdio.h so GNU's va_list is defined */
+#include "condor_fix_stdio.h"
+#include "condor_fdset.h"
 #include "condor_fix_string.h"
 #include "condor_fix_signal.h"
 #include "condor_fix_sys_ioctl.h"
-#include "condor_file_lock.h"
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_sys_wait.h"
+#include "condor_file_lock.h"
 #include "condor_fix_assert.h"
 #include "condor_fix_socket.h"
+#include "condor_fix_netdb.h"
 #include <sys/utsname.h>		
 #include "condor_fix_limits.h"
 #include <stdlib.h>
+#include <sys/resource.h>
 #include <ctype.h>
 #include <fcntl.h>	
 #include <errno.h>
-#include <netdb.h>
 #include <pwd.h>
 #include <time.h>
 #include <sys/time.h>
@@ -79,8 +81,6 @@
 #include <sys/param.h>
 #include <values.h>
 #include <math.h>
-#include <stdarg.h>
-
 
 #endif /* System specific stuff */
 
@@ -91,6 +91,7 @@
 #include "condor_constants.h"
 #include "condor_macros.h"
 
+
 /**********************************************************************
 ** C++ specific stuff 
 **********************************************************************/
@@ -99,12 +100,7 @@
 #include <iostream.h>
 #include <iomanip.h>
 
-#endif __cplusplus
+#endif /* __cplusplus */
+
 
 #endif /* CONDOR_COMMON_H */
-
-
-
-
-
-
