@@ -64,8 +64,21 @@
 \newcommand{\Todo}{\begin{center} \fbox{This section has not yet been written} \end{center}}
 \newcommand{\Syscall}[1]{\texttt{#1()}}		% The name of a syscall
 
+% A keyword in a meta-language
+\newcommand{\Keyword}[1] {{\tt #1}}
+
+% The name of a procedure
+\newcommand{\Procedure}[1] {{\tt #1\(\)}}
+
+% A program code snippet
+\newcommand{\Code}[1] {{\tt #1}}
+
+% Make a nice box with a header to point out a tricky feature
+\newcommand{\Notice}[1] {\noindent {\bf Notice: }\\ \fbox{\parbox[t]{\textwidth}{#1}}}
+
 % Release directory entry
 \newcommand{\Release}[1]{\texttt{$<$release\_dir$>$/#1}}
+
 
 %
 % This sets the BODY tag when converted to HTML.

@@ -1,0 +1,67 @@
+\begin{ManPage}{\label{man-condor-bypass}\Condor{bypass}}{1}
+{Generate code for bypassing standard system calls.}
+
+\Synopsis \SynProg{\Condor{bypass}}
+\oOpt{-local}
+\oOpt{-remote}
+\oOpt{-syscall}
+\oOpt{-dynamic}
+\oOpt{-static}
+\oOpt{-plain}
+\oOptArg{-dynamiclibrary}{library-name}
+\oOptArg{-staticlibrary}{library-name}
+
+\index{Condor commands!condor\_bypass}
+\index{condor\_bypass command}
+
+\Description
+
+\Condor{bypass} is used to instrument a program with new code that replaces
+operating system calls.
+
+\Condor{bypass} is a standalone programming tool that is used to build
+the Condor system.  This tool is {\em not} needed to use the Condor system,
+but is made available for others to take advantage of some of the machinery
+inside Condor.
+
+\Condor{bypass} reads an interface description (ID) file on its standard input
+and generates several C++ files that implement the ID.  Instructions for
+writing ID files are not included here -- consult the Condor manual instead.
+
+The files generated are:
+
+\begin{itemize}
+\item[\File{bypass\_client.C}] This code should be compiled and linked with your application.
+\item[\File{bypass\_extract.o}] When using static library linkage, this code should be linked with your application.
+\item[\File{bypass\_server.C}] When building a client/server pair, this code should be compiled to create the server.
+\item[\File{bypass\_global.h}] This header file is used by both the client and server modules.
+\end{itemize}
+
+\begin{Options}
+\OptItem{\Opt{-local}} { Create code only for a standalone client. (The default) }
+\OptItem{\Opt{-remote}} { Create code for both a client and server. }
+\OptItem{\Opt{-syscall}} { Set the default linkage to \Keyword{syscall}. (The default) }
+\OptItem{\Opt{-dynamic}} { Set the default linkage to \Keyword{dynamic}. }
+\OptItem{\Opt{-static}} { Set the default linkage to \Keyword{static}. }
+\OptItem{\Opt{-plain}} { Set the default linkage to \Keyword{plain}. }
+\OptItem{\OptArg{-dynamiclibrary}{library}} { Set the dynamic library name. (Default is \File{/usr/lib/libc.so}.) }
+\OptItem{\OptArg{-staticlibrary}{library}} { Set the static library name.  (Default is \File{/usr/lib/libc.a}.) }
+\end{Options}
+
+\Examples
+
+Read \File{info.bypass} and produce code for a standalone client with \Keyword{syscall} linkage:
+\begin{verbatim}
+condor_bypass -local < info.bypass
+\end{verbatim}
+
+Read \File{remote.bypass} and produce code for a client/server pair with \Keyword{dynamic} linkage on /File{/lib/libc.so.6}:
+\begin{verbatim}
+condor_bypass -remote -dynamic -dynamiclibrary /lib/libc.so.6 < remote.bypass
+\end{verbatim}
+
+\SeeAlso
+Condor User Manual
+
+\end{ManPage}
+
