@@ -102,6 +102,10 @@ SOURCE=..\src\condor_util_lib\dprintf_config.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\escapes.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\except.c
 # End Source File
 # Begin Source File
@@ -142,11 +146,11 @@ SOURCE=..\src\condor_util_lib\phys_mem.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\signames.c
+SOURCE=..\src\condor_util_lib\setsyscalls.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_util_lib\setsyscalls.c
+SOURCE=..\src\condor_util_lib\signames.c
 # End Source File
 # Begin Source File
 
