@@ -22,7 +22,6 @@
 #define IS_SGI_IRIX53			YES
 #define IS_V5				YES
 
-#define HAS_X				NO
 #define HAS_X_EXTENSIONS		NO
 
 #define DOES_CHECKPOINTING		YES
