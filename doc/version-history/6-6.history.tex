@@ -33,6 +33,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed an important bug in the low-level code that Condor uses to
+  transfer files across a network.
+  There were certain temporary failure cases that were being treated
+  as permanent, fatal errors.
+  This resulted in file transfers that aborted prematurely, causing
+  jobs to needlessly re-run.
+  The code now gracefully recovers from these temporary errors.
+  This should significantly help throughput for some sites,
+  particularly ones that transfer very large files as output from
+  their jobs.
+
+\item Fixed a number of bugs in the \Opt{-format} option to \Condor{q}
+  and \Condor{status}.
+  Now, these tools will properly handle printing boolean expressions
+  in all cases.
+  Previously, depending on how the boolean evaluated, either the
+  expression was printed, or the tool could crash.
+  Furthermore, the tools do a better job of handling the different 
+  types of format conversion strings and printing out the appropriate
+  value.
+  For example, if a user tries to print out a boolean attribute with
+  \verb@condor_status -format "%d\n" HasFileTransfer@, the
+  \Condor{status} tool will evalute \Attr{HasFiletransfer} and print
+  either a 0 or a 1 (FALSE or TRUE).
+  If, on the other hand, a user tries to print out a boolean attribute
+  with \verb@condor_status -format "%s\n" HasFileTransfer@, the
+  \Condor{status} tool will print out the string ``FALSE'' or ``TRUE''
+  as appropriate.
+
 \item The ClassAd attribute scope resolution prefixes, \texttt{MY.} and
 \texttt{TARGET.}, are no longer case sensitive.
 
