@@ -17,9 +17,11 @@ CLASS_LIB_SRC = alarm.C
 CLASS_LIB_OBJ = alarm.o
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
-	user_proc.C starter.toy.C tables.C 
+	user_proc.C starter.toy.C tables.C starter_common.C 
+
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
-	user_proc.o tables.o ../condor_syscall_lib/file_stream.o 
+	user_proc.o tables.o starter_common.o \
+	../condor_syscall_lib/file_stream.o 
 
 NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
 	analyze_core.$(OS).C
