@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "collectionServer.h"
 #include "query.h"
 
@@ -184,7 +185,8 @@ Connect( const string &serverAddr, int port )
 	serverSock.close( );
 	serverSock.encode( );
 	if( !serverSock.connect( (char*)serverAddr.c_str( ), port ) || 
-			!serverSock.put((int)ClassAdCollOp_Connect) || !serverSock.eom() ){
+		!serverSock.put((int)ClassAdCollectionInterface::ClassAdCollOp_Connect)
+		|| !serverSock.eom() ){
 		CondorErrno = ERR_CONNECT_FAILED;
 		CondorErrMsg = "failed to connect to collection server";
 		return( false );
@@ -196,7 +198,7 @@ void RemoteCollectionQuery::
 Disconnect( )
 {
 	serverSock.encode( );
-	serverSock.put( (int)ClassAdCollOp_Disconnect );
+	serverSock.put( (int)ClassAdCollectionInterface::ClassAdCollOp_Disconnect );
 	serverSock.eom( );
 	serverSock.close( );
 }
@@ -264,8 +266,8 @@ PostQuery( const string &viewName, ExprTree *constraint )
 
 	serverSock.encode( );
 	unp.Unparse( buffer, &query );
-	if( !serverSock.put( (int) ClassAdCollOp_QueryView ) ||
-			!serverSock.put((char*)buffer.c_str( )) || !serverSock.eom( ) ) {
+	if(!serverSock.put((int)ClassAdCollectionInterface::ClassAdCollOp_QueryView)
+		|| !serverSock.put((char*)buffer.c_str( )) || !serverSock.eom( ) ) {
 		CondorErrno = ERR_COMMUNICATION_ERROR;
 		CondorErrMsg = "failed to send query to collection server";
 		return( false );
