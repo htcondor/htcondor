@@ -1,0 +1,349 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Prototypes
+sub Init( );
+sub RunIt( );
+sub RunAbsent( );
+sub RunTotal( $$ );
+sub RunSubmit(  );
+
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my $Hash;
+
+# Config info
+my %Directories = (
+		   Base => "",
+		   Global => "",
+		   Local => "",
+		  );
+
+my %Config = (
+	      MaxAge => 24 * 60 * 60,
+	     );
+
+# Do it
+Init();
+RunIt();
+
+sub Init()
+{
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+
+    # Get the GASS cache base directory..
+    $Directories{Base} = HawkeyeLib::ReadConfig( "_directory", "" );
+
+    # Is this a valid Gass Cache?
+    if (  ( $Directories{Base} eq "" ) || ( ! -d $Directories{Base} )  )
+    {
+	print STDERR "Cache directory '$Directories{Base}' is invalid\n";
+	exit 1;
+    }
+    $Directories{Global} = $Directories{Base} . "/global";
+    $Directories{Local} = $Directories{Base} . "/local";
+    if (  ( ! -d $Directories{Local} ) || ( ! -d $Directories{Global} )  )
+    {
+	print STDERR
+	    "Cache directory '$Directories{Base}' does not appear to\n" .
+	    "be a valid GASS cache\n";
+	exit 1;
+    }
+
+    # Max age
+    my $Tmp = HawkeyeLib::ReadConfig( "_maxage", "" );
+    $Config{MaxAge} = HawkeyeLib::ParseSeconds( $Tmp, $Config{MaxAge} );
+
+    # Finally, parse the command line...
+    foreach my $Arg ( @ARGV )
+    {
+	# No args at current...
+	if ( $Arg =~ /^-this-option-is-bogus$/ )
+	{
+	    # Do nothing
+	}
+	else
+	{
+	    print STDERR "Unknown option '$Arg'\n";
+	    print STDERR "Usage: gass_cache [name [options]]\n";
+	    print STDERR
+		"  [name]         \tModules logical name\n" .
+		"  {No options]   \t\n";
+	    exit 1;
+	}
+    }
+}
+
+# Cache data file info...
+my @DataFiles;
+my @EmptyDirs;
+my %DataInodes;
+my %TagInodes;
+my %UrlInodes;
+
+# Do the real work here...
+sub RunIt()
+{
+
+    # Start things off
+    $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Make the cache our working directory..
+    chdir $Directories{Base} || die "Can't chdir to $Directories{Base}\n";
+
+    # Scan for data files...
+    ScanFiles( );
+
+    # Check for orphanned global files...
+    CheckOrphans( );
+    CacheUsage( );
+    CheckAge( );
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}
+
+# Scan for data files, collect info on 'em
+sub ScanFiles( )
+{
+    my $Cmd = "find . -type f -printf '%h %f %i %n %s %b %A@ %C@ %T@\n' ";
+    if ( ! open( FIND, "$Cmd|" ) )
+    {
+	print STDERR "Can't run '$Cmd'\n";
+	exit 1;
+    }
+    while( <FIND> )
+    {
+	my @Results = split;
+
+	my %File;
+	$File{Directory} = shift @Results;
+	$File{Name} = shift @Results;
+	$File{Inode} = shift @Results;
+	$File{Links} = shift @Results;
+	$File{Bytes} = shift @Results;
+	$File{Blocks} = shift @Results;
+	$File{Access} = shift @Results;
+	$File{Change} = shift @Results;
+	$File{Modify} = shift @Results;
+
+	# What type of file is it (based on it's name)
+	$File{IsGlobal} = $File{Directory} =~ /global/;
+	$File{IsLocal} = $File{Directory} =~ /global/;
+	$File{IsData} = $File{Name} =~ /^data/;
+	$File{IsTag} = $File{Name} =~ /^tag$/;
+	$File{IsUrl} = $File{Name} =~ /^url$/;
+
+	# Data file?
+	if ( $File{IsData} )
+	{
+	    push @DataFiles, \%File;
+	    push @{$DataInodes{$File{Inode}}}, $#DataFiles;
+	}
+
+	# Tag file handling
+	elsif ( $File{IsTag} )
+	{
+	    if ( exists $TagInodes{$File{Inode}} )
+	    {
+		$TagInodes{$File{Inode}}++;
+	    }
+	    else
+	    {
+		$TagInodes{$File{Inode}} = 1;
+	    }
+	}
+
+	# URL file handling
+	elsif ( $File{IsUrl} )
+	{
+	    if ( exists $UrlInodes{$File{Inode}} )
+	    {
+		$UrlInodes{$File{Inode}}++;
+	    }
+	    else
+	    {
+		$UrlInodes{$File{Inode}} = 1;
+	    }
+	}
+    }
+    close( FIND );
+}
+
+# Scan for empty directories
+sub ScanDirs( )
+{
+    my $Cmd = "find local global -type d -empty -print\n' ";
+    if ( ! open( FIND, "$Cmd|" ) )
+    {
+	print STDERR "Can't run '$Cmd'\n";
+	exit 1;
+    }
+    while( <FIND> )
+    {
+	chomp;
+	push @EmptyDirs, $_;
+    }
+    close( FIND );
+}
+
+# Find orphaned files here...
+sub CheckOrphans()
+{
+
+    # Walk through all of the files...
+    my $Count = 0;
+    my $TotalBytes = 0;
+    my $TotalBlocks = 0;
+    foreach my $File ( @DataFiles )
+    {
+	if (  ( $File->{IsGlobal} ) && ( 1 == $File->{Links} )  )
+	{
+	    $Count++;
+	    $TotalBytes += $File->{Bytes};
+	    $TotalBlocks += $File->{Blocks};
+	}
+    }
+
+    # Report it all..
+    $Hash->Add( "GlobalOrphanCount", "n", $Count );
+    $Hash->Add( "GlobalOrphanBytes", "n", $TotalBytes );
+    $Hash->Add( "GlobalOrphanBlocks", "n", $TotalBlocks );
+}
+
+
+# Total cache usage stats..
+sub CacheUsage( $$ )
+{
+    # Total data file usage..
+
+    # Walk through all of the files...
+    my $Count = 0;
+    my $TotalBytes = 0;
+    my $TotalBlocks = 0;
+    my $MaxBytes = 0;
+    foreach my $File ( @DataFiles )
+    {
+	if ( $File->{IsGlobal} )
+	{
+	    $Count++;
+	    $TotalBytes += $File->{Bytes};
+	    $TotalBlocks += $File->{Blocks};
+	    $MaxBytes = $File->{Bytes} if ( $File->{Bytes} > $MaxBytes );
+	}
+    }
+
+    # Report it all..
+    $Hash->Add( "GlobalDataCount", "n", $Count );
+    $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
+    $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
+
+    # Run 'du'...
+    my $Cmd = "du -sb global local";
+    if ( ! open( DU, "$Cmd|" ) )
+    {
+	print STDERR "Can't run '$Cmd'\n";
+	return;
+    }
+    my %Du;
+    while( <DU> )
+    {
+	chomp;
+	if ( /^(\d+)\s(\S+)/ )
+	{
+	    $Du{$2} = $1;
+	}
+    }
+    close( DU );
+    my $TotalDu = 0;
+    foreach my $Dir ( keys %Du )
+    {
+	$Hash->Add( "Du_" . $Dir, "n", $Du{$Dir} );
+	$TotalDu += $Du{$Dir};
+    }
+    $Hash->Add( "Du", "n", $TotalDu );
+
+    # Tag & URL counts
+    my $TagCount = keys %TagInodes;
+    my $UrlCount = keys %UrlInodes;
+    $Hash->Add( "TagCount", "n", $TagCount );
+    $Hash->Add( "UrlCount", "n", $UrlCount );
+}
+
+# Check file ages
+sub CheckAge(  )
+{
+    my $CurTime = time();
+
+    my $MaxAge = 0;
+    my $TotalAge = 0;
+
+    my $OldCount = 0;
+    my $OldTotalBytes = 0;
+    my $OldTotalBlocks = 0;
+    my $OldTotalAge = 0;
+    my $OldOrphanCount = 0;
+
+    my $Count = 0;
+    foreach my $File ( @DataFiles )
+    {
+	my $FileTime = $File->{Modify};
+	$FileTime = $File->{Change} if ( 0 == $FileTime );
+	my $Age = $CurTime - $FileTime;
+
+	# Some quick calcs.
+	$Count++;
+	$TotalAge += $Age;
+	$MaxAge = $Age if ( $Age > $MaxAge );
+
+	# If it's an old global file, note it..
+	if (  ( $File->{IsGlobal} ) && ( $Age > $Config{MaxAge} )  )
+	{
+	    $OldCount++;
+	    $OldTotalAge += $Age;
+	    $OldTotalBytes += $File->{Bytes};
+	    $OldTotalBlocks += $File->{Blocks};
+	    $OldOrphanCount++ if ( 1 == $File->{Links} );
+	}
+    }
+
+    # Avoid divide by zeros...
+    $Count = 1 if ( 0 == $Count );
+
+    $Hash->Add( "OldCount", "n", $OldCount );
+    $Hash->Add( "OldOrphanCount", "n", $OldOrphanCount );
+    $OldCount = 1 if ( 0 == $OldCount );
+
+    # Store the results...
+    $Hash->Add( "MeanAge", "n",
+		sprintf "%.1f", $TotalAge / $Count );
+    $Hash->Add( "OldMeanAge", "n",
+		sprintf "%.1f", $OldTotalAge / $OldCount );
+    $Hash->Add( "OldTotalBytes", "n", $OldTotalBytes );
+    $Hash->Add( "OldMeanBytes", "n",
+		sprintf "%.1f", $OldTotalBytes / $OldCount );
+    $Hash->Add( "OldTotalBlocks", "n", $OldTotalBlocks );
+    $Hash->Add( "OldMeanBlocks", "n",
+		sprintf "%.1f", $OldTotalBlocks / $OldCount );
+
+    # And, the old age threshold that we used...
+    $Hash->Add( "AgeThreshold", "n", $MaxAge );
+}
