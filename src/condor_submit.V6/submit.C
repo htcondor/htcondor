@@ -691,7 +691,7 @@ SetExecutable()
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
-	if ( JobUniverse != MPI ) {
+	if ( JobUniverse != MPI && JobUniverse != PVM ) {
 		InsertJobExpr ("MinHosts = 1");
 		InsertJobExpr ("MaxHosts = 1");
 	}
@@ -762,6 +762,21 @@ SetUniverse()
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
 		int tmp;
+		char *pvmd = param("PVMD");
+
+		if (!pvmd || access(pvmd, R_OK|X_OK) != 0) {
+			fprintf(stderr, "Error: Condor PVM support is not installed.\n"
+					"You must install the Condor PVM Contrib Module before\n"
+					"submitting PVM universe jobs\n");
+			if (!pvmd) {
+				fprintf(stderr, "PVMD parameter not defined in the Condor "
+						"configuration file.\n");
+			} else {
+				fprintf(stderr, "Can't access %s: %s\n", pvmd,
+						strerror(errno));
+			}
+			exit(1);
+		}
 
 		JobUniverse = PVM;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PVM);
@@ -789,6 +804,9 @@ SetUniverse()
 			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
 			InsertJobExpr (buffer);
 			free(mach_count);
+		} else {
+			InsertJobExpr ("MinHosts = 1");
+			InsertJobExpr ("MaxHosts = 1");
 		}
 		free(univ);
 		return;
