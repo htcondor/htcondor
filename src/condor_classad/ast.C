@@ -762,7 +762,7 @@ printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
     }
 }
 
-Variable*  
+ExprTree*  
 Variable::DeepCopy(void) const
 {
 	Variable *copy;
@@ -773,7 +773,7 @@ Variable::DeepCopy(void) const
 	return copy;
 }
 
-Integer*  
+ExprTree*  
 Integer::DeepCopy(void) const
 {
 	Integer *copy;
@@ -784,7 +784,7 @@ Integer::DeepCopy(void) const
 	return copy;
 }
 
-Float*  
+ExprTree*  
 Float::DeepCopy(void) const
 {
 	Float *copy;
@@ -795,7 +795,7 @@ Float::DeepCopy(void) const
 	return copy;
 }
 
-Boolean*  
+ExprTree*  
 Boolean::DeepCopy(void) const
 {
 	Boolean *copy;
@@ -806,7 +806,7 @@ Boolean::DeepCopy(void) const
 	return copy;
 }
 
-String*  
+ExprTree*  
 String::DeepCopy(void) const
 {
 	String *copy;
@@ -817,7 +817,7 @@ String::DeepCopy(void) const
 	return copy;
 }
 
-Undefined*  
+ExprTree*  
 Undefined::DeepCopy(void) const
 {
 	Undefined *copy;
@@ -828,7 +828,7 @@ Undefined::DeepCopy(void) const
 	return copy;
 }
 
-Error*  
+ExprTree*  
 Error::DeepCopy(void) const
 {
 	Error *copy;
@@ -839,7 +839,7 @@ Error::DeepCopy(void) const
 	return copy;
 }
 
-AddOp*
+ExprTree*
 AddOp::DeepCopy(void) const
 {
 	AddOp     *copy;
@@ -862,7 +862,7 @@ AddOp::DeepCopy(void) const
 	return copy;
 }
 
-SubOp*
+ExprTree*
 SubOp::DeepCopy(void) const
 {
 	SubOp  *copy;
@@ -877,7 +877,7 @@ SubOp::DeepCopy(void) const
 	return copy;
 }
 
-MultOp*
+ExprTree*
 MultOp::DeepCopy(void) const
 {
 	MultOp    *copy;
@@ -892,7 +892,7 @@ MultOp::DeepCopy(void) const
 	return copy;
 }
 
-DivOp*
+ExprTree*
 DivOp::DeepCopy(void) const
 {
 	DivOp     *copy;
@@ -907,7 +907,7 @@ DivOp::DeepCopy(void) const
 	return copy;
 }
 
-MetaEqOp*
+ExprTree*
 MetaEqOp::DeepCopy(void) const
 {
 	MetaEqOp  *copy;
@@ -922,7 +922,7 @@ MetaEqOp::DeepCopy(void) const
 	return copy;
 }
 
-MetaNeqOp*
+ExprTree*
 MetaNeqOp::DeepCopy(void) const
 {
 	MetaNeqOp *copy;
@@ -937,7 +937,7 @@ MetaNeqOp::DeepCopy(void) const
 	return copy;
 }
 
-EqOp*
+ExprTree*
 EqOp::DeepCopy(void) const
 {
 	EqOp      *copy;
@@ -952,7 +952,7 @@ EqOp::DeepCopy(void) const
 	return copy;
 }
 
-NeqOp*
+ExprTree*
 NeqOp::DeepCopy(void) const
 {
 	NeqOp     *copy;
@@ -967,7 +967,7 @@ NeqOp::DeepCopy(void) const
 	return copy;
 }
 
-GtOp*
+ExprTree*
 GtOp::DeepCopy(void) const
 {
 	GtOp      *copy;
@@ -982,7 +982,7 @@ GtOp::DeepCopy(void) const
 	return copy;
 }
 
-GeOp*
+ExprTree*
 GeOp::DeepCopy(void) const
 {
 	GeOp      *copy;
@@ -997,7 +997,7 @@ GeOp::DeepCopy(void) const
 	return copy;
 }
 
-LtOp*
+ExprTree*
 LtOp::DeepCopy(void) const
 {
 	LtOp      *copy;
@@ -1012,7 +1012,7 @@ LtOp::DeepCopy(void) const
 	return copy;
 }
 
-LeOp*
+ExprTree*
 LeOp::DeepCopy(void) const
 {
 	LeOp      *copy;
@@ -1027,7 +1027,7 @@ LeOp::DeepCopy(void) const
 	return copy;
 }
 
-AndOp*
+ExprTree*
 AndOp::DeepCopy(void) const
 {
 	AndOp     *copy;
@@ -1042,7 +1042,7 @@ AndOp::DeepCopy(void) const
 	return copy;
 }
 
-OrOp*
+ExprTree*
 OrOp::DeepCopy(void) const
 {
 	OrOp      *copy;
@@ -1057,7 +1057,7 @@ OrOp::DeepCopy(void) const
 	return copy;
 }
 
-AssignOp*
+ExprTree*
 AssignOp::DeepCopy(void) const
 {
 	AssignOp  *copy;
@@ -1071,4 +1071,3 @@ AssignOp::DeepCopy(void) const
 	CopyBaseExprTree(copy);
 	return copy;
 }
-
