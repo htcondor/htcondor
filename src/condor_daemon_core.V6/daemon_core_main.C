@@ -298,7 +298,20 @@ check_core_files()
 
 }
 
-
+int
+handle_off_fast( Service*, int, Stream* )
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+	return TRUE;
+}
+	
+int
+handle_off_graceful( Service*, int, Stream* )
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	return TRUE;
+}
+	
 int
 handle_reconfig( Service*, int, Stream* )
 {
@@ -331,28 +344,28 @@ handle_config_val( Service*, int, Stream* stream )
 	tmp = param( param_name );
 	if( ! tmp ) {
 		dprintf( D_FULLDEBUG, 
-				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
+				 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
 				 param_name );
 		free( param_name );
 		if( ! stream->put("Not defined") ) {
-			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 			return FALSE;
 		}
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
 			return FALSE;
 		}
 		return FALSE;
 	} else {
 		free( param_name );
 		if( ! stream->code(tmp) ) {
-			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 			free( tmp );
 			return FALSE;
 		}
 		free( tmp );
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
 			return FALSE;
 		}
 	}
@@ -983,17 +996,17 @@ int main( int argc, char** argv )
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
 								 (SignalHandler)handle_dc_sighup,
-								 "handle_dc_sighup" );
+								 "handle_dc_sighup()" );
 	daemonCore->Register_Signal( DC_SIGQUIT, "DC_SIGQUIT", 
 								 (SignalHandler)handle_dc_sigquit,
-								 "handle_dc_sigquit" );
+								 "handle_dc_sigquit()" );
 	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
-								 "handle_dc_sigterm" );
+								 "handle_dc_sigterm()" );
 #ifndef WIN32
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
-								 "HandleDC_SIGCHLD",daemonCore,IMMEDIATE_FAMILY);
+								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
 #endif
 
 		// Install DaemonCore command handlers common to all daemons.
@@ -1001,6 +1014,10 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_reconfig,
 								  "handle_reconfig()", 0, ADMINISTRATOR );
 
+	daemonCore->Register_Command( DC_CONFIG_VAL, "DC_CONFIG_VAL",
+								  (CommandHandler)handle_config_val,
+								  "handle_config_val()", 0, ADMINISTRATOR );
+		// Deprecated name for it.
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
 								  "handle_config_val()", 0, ADMINISTRATOR );
@@ -1013,19 +1030,23 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_config,
 								  "handle_config()", 0, ADMINISTRATOR );
 
+	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
+								  (CommandHandler)handle_off_fast,
+								  "handle_off_fast()", 0, ADMINISTRATOR );
 
-	// call daemon-core ReInit, and register a periodic timer to call
-	// it every 8 hours.  This just clears the cached DNS info.  The
-	// reason we don't just register it as a periodic timer with 0 for
-	// the initial value is b/c we need to make sure these data
-	// structures are setup now, and we can't be sure of the order of
-	// timers, etc, if we just leave it to chance.  -Derek 1/19/99
+	daemonCore->Register_Command( DC_OFF_GRACEFUL, "DC_OFF_GRACEFUL",
+								  (CommandHandler)handle_off_graceful,
+								  "handle_off_graceful()", 0, ADMINISTRATOR );
+
+	// Call daemonCore's ReInit(), which clears the cached DNS info.
+	// It also initializes some stuff, which is why we call it now. 
+	// This function will set a timer to call itself again 8 hours
+	// after it's been called, so that even after an asynchronous
+	// reconfig, we still wait 8 hours instead of just using a
+	// periodic timer.  -Derek Wright <wright@cs.wisc.edu> 1/28/99 
 	daemonCore->ReInit();
-	daemonCore->Register_Timer( 8*60*60, 8*60*60, 
-								(Eventcpp)DaemonCore::ReInit,
-								"DaemonCore::ReInit", daemonCore );
 
-	// call the daemons main_init()
+	// call the daemon's main_init()
 	main_init( argc, argv );
 
 	// now call the driver.  we never return from the driver (infinite loop).

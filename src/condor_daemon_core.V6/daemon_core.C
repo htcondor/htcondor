@@ -946,6 +946,7 @@ DaemonCore::ReInit()
 {
 	char *addr;
 	struct sockaddr_in sin;
+	static tid = -1;
 
 	// Fetch the negotiator address for the Verify method to use
 	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
@@ -957,9 +958,22 @@ DaemonCore::ReInit()
 		memset(&negotiator_sin_addr,'\0',sizeof(negotiator_sin_addr));
 	}
 
-	// Reset our IpVerify object
+		// Reset our IpVerify object
 	ipverify.Init();
 
+		// Handle our timer.  If this is the first time, we need to
+		// register it.  Otherwise, we just reset its value to go off
+		// 8 hours from now.  The reason we don't do this as a simple
+		// periodic timer is that if we get sent a RECONFIG, we call
+		// this anyway, and we don't want to clear out the cache soon
+		// after that, just b/c of a periodic timer.  -Derek 1/28/99
+	if( tid < 0 ) {
+		tid = daemonCore->
+			Register_Timer( 8*60*60, 0, (Eventcpp)DaemonCore::ReInit,
+							"DaemonCore::ReInit()", daemonCore );
+	} else {
+		daemonCore->Reset_Timer( tid, 8*60*60, 0 );
+	}
 	return TRUE;
 }
 
