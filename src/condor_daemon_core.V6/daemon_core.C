@@ -5542,93 +5542,122 @@ DaemonCore::Register_Priv_State( priv_state priv )
 bool
 DaemonCore::CheckConfigSecurity( const char* config, Sock* sock ) 
 {
-	char *name, *tmp;
-	char* ip_str;
-	int i;
+	// Grab some pointer to these sock strings, since they're
+	// used many times.  none need to be freed.
 
-	if( ! (name = strdup(config)) ) {
-		EXCEPT( "Out of memory!" );
-	}
-	tmp = strchr( name, '=' );
-	if( ! tmp ) {
-		tmp = strchr( name, ':' );
-	}
-	if( tmp ) {
-			// someone's trying to set something, so we should trim
-			// off the value they want to set it to and any whitespace
-			// so we can just look at the attribute name.
-		*tmp = ' ';
-		while( isspace(*tmp) ) {
-			*tmp = '\0';
-			tmp--;
+	sockaddr_in *endpoint = sock->endpoint();
+	char *endpoint_string = sin_to_string(endpoint);
+	const char *user      = sock->getFullyQualifiedUser();
+
+	// we've got to check each textline of the string passed in by
+	// config.  here we use the StringList class to split lines.
+
+	StringList all_attrs (config, "\n");
+
+	// start out by assuming everything is okay.  we'll check all
+	// the attrs and set this flag if something is not authorized.
+	bool  all_attrs_okay = true;
+
+	char *single_attr;
+	all_attrs.rewind();
+
+	// short-circuit out of the while once any attribute is not
+	// okay.  otherwise, get one value at a time
+	while (all_attrs_okay && (single_attr = all_attrs.next())) {
+
+		char *name, *tmp;
+		int i;
+
+		if( ! (name = strdup(single_attr)) ) {
+			EXCEPT( "Out of memory!" );
 		}
-	} 
-
-#if (DEBUG_SETTABLE_ATTR_LISTS)
-		dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
-#endif
-
-		// Now, name should point to a NULL-terminated version of the
-		// attribute name we're trying to set.  This is what we must
-		// compare against our SettableAttrsLists.  We need to iterate
-		// through all the possible permission levels, and for each
-		// one, see if we find the given attribute in the
-		// corresponding SettableAttrsList.
-	for( i=0; i<LAST_PERM; i++ ) {
-
-			// skip permission levels we know we don't want to trust
-		if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
-			continue;
+		tmp = strchr( name, '=' );
+		if( ! tmp ) {
+			tmp = strchr( name, ':' );
 		}
-
-		if( ! SettableAttrsLists[i] ) { 
-				// there's no list for this perm level, skip it. 
-			continue;
-		}
-
-			// if we're here, we might allow someone to set something
-			// if they qualify for the perm level we're considering.
-			// so, now see if the connection qualifies for this access
-			// level.
-		
-		if( Verify((DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
-				// now we can see if the specific attribute they're
-				// trying to set is in our list.
-			if( (SettableAttrsLists[i])->
-				contains_anycase_withwildcard(name) ) {
-					// everything's cool.  allow this.
-
-#if (DEBUG_SETTABLE_ATTR_LISTS)
-				dprintf( D_ALWAYS, "CheckConfigSecurity: "
-						 "found %s at perm level %s\n", name,
-						 PermString((DCpermission)i) );
-#endif
-
-				free( name );
-				return true;
+		if( tmp ) {
+				// someone's trying to set something, so we should trim
+				// off the value they want to set it to and any whitespace
+				// so we can just look at the attribute name.
+			*tmp = ' ';
+			while( isspace(*tmp) ) {
+				*tmp = '\0';
+				tmp--;
 			}
-		}
-	} // end of for()
+		} 
 
-		// If we're still here, someone is trying to set something
-		// they're not allowed to set.  print this out into the log so
-		// folks can see that things are failing due to permissions. 
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+			dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
+#endif
 
-		// Grab a pointer to this string, since it's a little bit
-		// expensive to re-compute.
-	ip_str = sock->endpoint_ip_str();
-		// Upper-case-ify the string for everything we print out.
-	strupr(name);
+			// Now, name should point to a NULL-terminated version of the
+			// attribute name we're trying to set.  This is what we must
+			// compare against our SettableAttrsLists.  We need to iterate
+			// through all the possible permission levels, and for each
+			// one, see if we find the given attribute in the
+			// corresponding SettableAttrsList.
+		for( i=0; all_attrs_okay && (i<LAST_PERM); i++ ) {
 
-		// First, log it.
-	dprintf( D_ALWAYS,
-			 "WARNING: Someone at %s is trying to modify \"%s\"\n",
-			 ip_str, name );
-	dprintf( D_ALWAYS, 
-			 "WARNING: Potential security problem, request refused\n" );
+				// skip permission levels we know we don't want to trust
+			if( i == ALLOW || i == IMMEDIATE_FAMILY ) {
+				continue;
+			}
 
-	free( name );
-	return false;
+			if( ! SettableAttrsLists[i] ) { 
+					// there's no list for this perm level, skip it. 
+				continue;
+			}
+
+				// if we're here, we might allow someone to set something
+				// if they qualify for the perm level we're considering.
+				// so, now see if the connection qualifies for this access
+				// level.
+			
+			if( Verify((DCpermission)i, endpoint, user)) {
+					// now we can see if the specific attribute they're
+					// trying to set is in our list.
+				if( (SettableAttrsLists[i])->
+					contains_anycase_withwildcard(name) ) {
+						// everything's cool.  allow this.
+
+#if (DEBUG_SETTABLE_ATTR_LISTS)
+					dprintf( D_ALWAYS, "CheckConfigSecurity: "
+							 "found %s at perm level %s\n", name,
+							 PermString((DCpermission)i) );
+#endif
+
+					free( name );
+
+					// this attribute is definately okay
+					// all_attrs_okay defaults to true, so
+					// no need to modify it here, just when
+					// the security check fails (below)
+				}
+			}
+		} // end of for()
+
+			// If we're still here, someone is trying to set something
+			// they're not allowed to set.  print this out into the log so
+			// folks can see that things are failing due to permissions. 
+
+			// Upper-case-ify the string for everything we print out.
+		strupr(name);
+
+			// First, log it.
+		dprintf( D_ALWAYS,
+				 "WARNING: User %s at %s is trying to modify \"%s\"\n",
+				 user, endpoint_string, name );
+		dprintf( D_ALWAYS, 
+				 "WARNING: Potential security problem, request refused\n" );
+
+		free( name );
+
+		// set the flag saying that not all attributes passed the
+		// security test
+		all_attrs_okay = false;
+	}
+
+	return all_attrs_okay;
 }
 
 
