@@ -26,7 +26,7 @@
 ** 
 */ 
 
-#if !defined(SUNOS41)
+#if !defined(SUNOS41) && !defined(OSF1)
 #define _POSIX_SOURCE
 #endif
 
@@ -340,38 +340,40 @@ MASK_TYPE mask;
 }
 #endif
 
-
-#if defined(SYS_sigaction)
 int
-sigaction( sig, act, oact )
-int sig;
-const struct sigaction *act;
-struct sigaction *oact;
+sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 {
-	if ( MappingFileDescriptors() ) {	
-		switch (sig) {
-			/* don't let user code mess with these signals */
-			case SIGUSR1:
-			case SIGTSTP:
-			case SIGCONT:
-				if ( act != NULL ) {
+	struct sigaction tmp, *my_act = &tmp;
+
+	if ( MappingFileDescriptors() ) {		/* called by User code */
+		if ( act ) {
+				/* don't let user code mess with these signals */
+			switch (sig) {
+				case SIGUSR1:
+				case SIGTSTP:
+				case SIGCONT:
 					errno = EINVAL;
 					return -1;
-				}
+			}
+				/* block checkpointing inside users signal handler */
+			*my_act = *act;
+			sigaddset( &(my_act->sa_mask), SIGTSTP );
+			sigaddset( &(my_act->sa_mask), SIGUSR1 );
+		} else {
+			my_act = NULL;
 		}
-		if ( act ) {
-			/* block checkpointing inside users signal handler */
-			sigaddset( &(act->sa_mask), SIGTSTP );
-			sigaddset( &(act->sa_mask), SIGUSR1 );
-		}
+	} else {	/* called by Condor code */
+		my_act = act;
 	}
-#if defined(SYS_sigaction)
-	return syscall(SYS_sigaction, sig, act, oact);
+
+#if !defined(SYS_sigaction) || defined(OSF1)
+	return SIGACTION( sig, my_act, oact);
 #else
-	return SIGACTION( sig, act, oact);
+	return syscall(SYS_sigaction, sig, my_act, oact);
 #endif
 }
-#endif
+
+
 
 #if defined(SYS_sigprocmask)
 int
@@ -380,20 +382,31 @@ int how;
 const sigset_t *set;
 sigset_t *oset;
 {
+	sigset_t tmp, *my_set = &tmp;
+
 	if ( MappingFileDescriptors() ) {
-		if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
-			sigdelset(set,SIGUSR1);
-			sigdelset(set,SIGTSTP);
-			sigdelset(set,SIGCONT);
+		if( set ) {
+			*my_set = *set;
+			if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
+				sigdelset(my_set,SIGUSR1);
+				sigdelset(my_set,SIGTSTP);
+				sigdelset(my_set,SIGCONT);
+			}
+		} else {
+			my_set = NULL;
 		}
 	}
-#if defined(SYS_sigprocmask)
-	return syscall(SYS_sigprocmask,how,set,oset);
+#if !defined(SYS_sigprocmask) || defined(OSF1)
+	SIGPROCMASK(how,my_set,oset);
 #else
-	SIGPROCMASK(how,set,oset);
+	return syscall(SYS_sigprocmask,how,my_set,oset);
 #endif
 }
 #endif
+
+#if 0	/* Beginning of OUT routines */
+#endif	/* End of OUT routines */
+
 
 #if defined (SYS_sigsuspend)
 int
@@ -404,15 +417,16 @@ sigset_t *set;
 const sigset_t *set;
 #endif
 {
+	sigset_t	my_set = *set;
 	if ( MappingFileDescriptors() ) {
-		sigdelset(set,SIGUSR1);
-		sigdelset(set,SIGTSTP);
-		sigdelset(set,SIGCONT);
+		sigdelset(&my_set,SIGUSR1);
+		sigdelset(&my_set,SIGTSTP);
+		sigdelset(&my_set,SIGCONT);
 	}
-#if defined(SYS_sigsuspend)
-	return syscall(SYS_sigsuspend,set);
+#if !defined(SYS_sigsuspend) || defined(OSF1)
+	SIGSUSPEND(&my_set);
 #else
-	SIGSUSPEND(set);
+	return syscall(SYS_sigsuspend,&my_set);
 #endif
 }
 #endif
@@ -457,7 +471,6 @@ void (*func)(int);
 #endif
 }
 #endif
-
 
 #if 0
 void
