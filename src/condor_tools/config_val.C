@@ -40,6 +40,7 @@
 
 
 char	*MyName;
+char	*mySubSystem = NULL;
 
 usage()
 {
@@ -74,6 +75,12 @@ main( int argc, char* argv[] )
 			} else {
 				usage();
 			}
+		} else if( match_prefix( argv[i], "-subsystem" ) ) {
+			if( argv[i + 1] ) {
+				mySubSystem = strdup( argv[++i] );
+			} else {
+				usage();
+			}
 		} else if( match_prefix( argv[i], "-owner" ) ) {
 			pt = CONDOR_OWNER;
 		} else if( match_prefix( argv[i], "-tilde" ) ) {
@@ -83,6 +90,12 @@ main( int argc, char* argv[] )
 		} else {
 			params.append( strdup( argv[i] ) );
 		}
+	}
+
+		// If we didn't get told what subsystem we should use, set it
+		// to "TOOL".
+	if( !mySubSystem ) {
+		mySubSystem = strdup( "TOOL" );
 	}
 
 	if( pt == CONDOR_TILDE ) {
@@ -103,7 +116,7 @@ main( int argc, char* argv[] )
 	}
 
 	if( host ) {
-		config_host( 0, 0, host );
+		config_host( 0, host );
 	} else {
 		config( 0 );
 	}
