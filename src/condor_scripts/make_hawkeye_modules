@@ -144,8 +144,8 @@ sub main( @ )
 	    if ( ! exists $KnownTargets{$Target}{Version} );
 	if ( ! exists $KnownTargets{$Target}{OS} )
 	{
-	    $KnownTargets{$Target}{OS} = "Any-Unix";
-	    warn "No O/S Specified; assuming 'Any-Unix'";
+	    $KnownTargets{$Target}{OS} = "Unix-Any";
+	    warn "No O/S Specified; assuming 'Unix-Any'";
 	}
 	die "$Target has no files"
 	    if ( ! exists $KnownTargets{$Target}{HawkFiles} );
