@@ -43,3 +43,4 @@
 #define	CONDOR_SetAttributeByConstraint	10021		/* Todd */
 #define	CONDOR_InitializeReadOnlyConnection 10022	/* Todd */
 #define CONDOR_BeginTransaction		10023			/* Todd */
+#define CONDOR_AbortTransaction 	10024			/* Carey */

@@ -331,6 +331,31 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_AbortTransaction:
+	{
+		int terrno;
+
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = 0;	// AbortTransaction returns void (sigh), so always success
+
+		AbortTransaction( );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+
 	case CONDOR_CloseConnection:
 	  {
 		int terrno;
