@@ -46,16 +46,67 @@ my %SortOut;
 
 # Main logic
 $| = 1;
+print STDERR "My pid = $$\n";
 my $Reconfig = 0;
 my $RunOnce = 0;
+my $AllDone = 0;
+my $TopPid = -1;
+my @TopHeader;
+
+# Initialize signal handlers
+$SIG{HUP} = sub {
+    print STDERR "Got HUP\n";
+    $Reconfig = 1;
+};
+$SIG{TERM} = sub {
+    print STDERR "Got SIGTERM (PID = $TopPid)\n";
+    if ( $TopPid > 0 ) {
+	kill( "TERM", $TopPid ) || print STDERR "Can't kill $TopPid\n";
+    }
+    $AllDone++;
+};
+$SIG{CHLD} = sub {
+    my $Pid = wait ();
+    if ( $Pid == $TopPid ) {
+	print STDERR "\"top\" process $Pid died\n";
+    }
+};
+
+# Initialize...
 Init();
-$SIG{HUP} = sub{ print STDERR "Got HUP\n"; $Reconfig = 1; };
-while( 1 )
+
+# Loop 'til we're done
 {
-    Configure( );
-    $Reconfig = 0;
-    RunIt();
-    exit 0 if ( $RunOnce );
+    my $LastTime = -1;
+    my $FastCount = 0;
+    while( ! $AllDone )
+    {
+
+	# Timing logic
+	my $CurTime = time();
+	my $TimeDiff = $CurTime - $LastTime;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < 30 ) ) {
+	    print STDERR "top died after $TimeDiff seconds\n";
+	    if ( ++$FastCount > 1 ) {
+		my $SleepTime = $FastCount * 10;
+		print STDERR "Sleeping for $SleepTime seconds\n";
+		sleep( $SleepTime );
+	    }
+	} else {
+	    $FastCount-- if ( $FastCount > 0 );
+	}
+	$LastTime = $CurTime;
+
+	# Check configuration
+	if ( $Reconfig ) {
+	    Configure( );
+	    $Reconfig = 0;
+	}
+
+	# Run the test
+	RunIt();
+	exit 0 if ( $RunOnce );
+    }
 }
 
 sub Init {
@@ -78,6 +129,15 @@ sub Init {
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 0 );
+
+    # Pull out the top 'header' info
+    $_ =`top -b -n 1 |grep COMMAND`;
+    chomp;
+    s/^\s+//;
+    @TopHeader = split ( /\s+/, $_ );
+
+    # Do an initial configuration
+    Configure( );
 }
 
 
@@ -118,16 +178,14 @@ sub Configure {
 	print STDERR "Ignoring top config time '$ConfigStringPeriod'\n";
     }
 
-    # Run top to get the list of fields that it outputs
-    # my @TopFields = split ( /\s+/, `top|grep COMMAND`);
+    # Examine the field names that we got at startup
     foreach my $Key ( keys %TopFields )
     {
 	$TopFields{$Key}{offset} = -1;
     }
     my $Offset = 0;
-    foreach my $tf ( split ( /\s+/, `top -b -n 1 |grep COMMAND`) )
+    foreach my $tf ( @TopHeader )
     {
-	next if ( $tf eq "" );
 	foreach my $Key ( keys %TopFields )
 	{
 	    if ( $TopFields{$Key}{l} eq $tf )
@@ -230,7 +288,9 @@ sub RunIt
     my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
     #my $Cmd = "/bin/nice -20 top -b -n 1";
     my $Cmd = "/bin/nice -20 top -b -d $TopPeriod";
-    Carp::confess( "Can't run top '$Cmd'" ) if ( ! open ( TOP, "$Cmd|" ) );
+    $TopPid = open ( TOP, "$Cmd|" );
+    Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
+    print STDERR "$Cmd => $TopPid\n";
 
     # Make stdout unbufferred
     $| = 1;
@@ -238,10 +298,16 @@ sub RunIt
     # Flag to skip the first input line
     my $SkipFirst = 0;
 
+    # Timing info
+    my $LastTime = -1;
+    my $FastCount = 0;
+
+    # Loop til top dies..
     while( 1 )
     {
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
+	last if ( eof TOP );
 
 	# Store the # of processes that we should read
 	my $NumProcesses = 0;
@@ -249,6 +315,8 @@ sub RunIt
 	# Read the header
       READHEADER:
 	while ( <TOP> ) {
+	    last if ( eof TOP );
+
 	    # Uptime display?
 	    if ( /.*up.*load/ ) {
 		my %Uptime;
@@ -311,6 +379,7 @@ sub RunIt
 	my %Processes;
       READPROC:
 	while ( <TOP> ) {
+	    last if ( eof TOP );
 
 	    # Verify that we start with a process ID type thingy, 
 	    # then parse it..
@@ -347,8 +416,24 @@ sub RunIt
 	}
 	ProcessData( \%Processes );
 
+	# Timing logic
+	my $CurTime = time();
+	my $TimeDiff = $CurTime - $LastTime;
+	my $MaxTime = $TopPeriod * 1.5;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $TopPeriod ) ) {
+	    print STDERR "output looped in $TimeDiff seconds!\n";
+	    if ( ++$FastCount > 1 ) {
+		print STDERR "Killing top (PID = $TopPid )\n";
+		kill( "TERM", $TopPid );
+		last;
+	    }
+	} else {
+	    $FastCount-- if ( $FastCount > 0 );
+	}
+	$LastTime = $CurTime;
+
 	# Run once mode?
-	exit 0 if ( $RunOnce );
+	$AllDone++ if ( $RunOnce );
 
 	# Check for reconfig
 	last if ( $Reconfig );
