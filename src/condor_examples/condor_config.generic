@@ -376,6 +376,16 @@ GLIDEIN_SERVER_URLS = \
 ## allowed to suspend and resume.
 #REAL_TIME_JOB_SUSPEND_UPDATES = False
 
+## A standard universe job can perform arbitrary shell calls via the
+## libc 'system()' function. This function call is routed back to the shadow
+## which performs the actual system() invocation in the initialdir of the
+## running program and as the user who submitted the job. However, since the
+## user job can request ARBITRARY shell commands to be run by the shadow, this
+## is a generally unsafe practice. This should only be made available if it is
+## actually needed. If this attribute is not defined, then it is the same as
+## it being defined to False. Set it to True to allow the shadow to execute
+## arbitrary shell code from the user job.
+#SHADOW_ALLOW_UNSAFE_REMOTE_EXEC = False
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
