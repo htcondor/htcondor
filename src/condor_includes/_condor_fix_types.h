@@ -24,6 +24,7 @@ typedef int		bool_t;
 
 /* for IRIX62, we want _BSD_TYPES defined when we include sys/types.h, but
  * then we want to set it back to how it was. -Todd, 1/31/97
+ */
 #if defined(IRIX62)
 #	ifdef _BSD_TYPES
 #		include <sys/types.h>
