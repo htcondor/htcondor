@@ -186,6 +186,10 @@ SOURCE=..\src\condor_classad\evaluateOperators.C
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_classad\new_classads.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_classad\operators.C
 # End Source File
 # Begin Source File

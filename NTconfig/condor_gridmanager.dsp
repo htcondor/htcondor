@@ -156,6 +156,14 @@ SOURCE=..\src\condor_gridmanager\gt3resource.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\infnbatchjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\infnbatchjob.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_gridmanager\mirrorjob.C
 # End Source File
 # Begin Source File
