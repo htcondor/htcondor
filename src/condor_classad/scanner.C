@@ -244,12 +244,10 @@ static void scan_string(
 
 	// First count the length of the string. 
 	while (*s != '"' && *s != '\0') {
-		// An escaped quote is only one character. When we have an
-		// escaped quote, make certain s+2 != \0 so that on NT we can
-		// have strings that are pathnames that end with a '\'. (Note
-		// that short-circuiting makes this check perfectly safe.)
-		if(*s == '\\' && *(s+1) == '"' && *(s+2) != '\0') {
+		// Anything preceded by a backslash is one character.
+		if(*s == '\\' ) {
 			s++;
+			if(!*s) break;
 		}
 		s++;
 		string_length++;
@@ -273,8 +271,8 @@ static void scan_string(
 		dest = token.strVal;
         while(*input != '"' && *input != '\0')
 		{
-			// skip the backslash for the escaped quote
-			if(*input == '\\' && *(input + 1) == '"' && *(input + 2) != '\0')
+			// Anything preceded by a blackslash is one character
+			if(*input == '\\' )
 			{
 				input++;
 				token.length++; 
