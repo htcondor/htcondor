@@ -746,6 +746,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		}
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
+dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster, curr_job->procID.proc);
 			CloseConnection();
 			BeginTransaction();
 			DestroyProc(curr_job->procID.cluster,

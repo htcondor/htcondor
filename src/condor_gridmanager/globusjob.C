@@ -1103,6 +1103,17 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					doResubmit = 1;
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE &&
+					 condorState == COMPLETED ) {
+					// Our restart attempt failed because the jobmanager
+					// couldn't find the state file. If the job is marked
+					// COMPLETED, then it's almost certain that we told the
+					// jobmanager to clean up but died before we could
+					// remove the job from the queue. So let's just remove
+					// it now.
+					gmState = GM_DELETE;
+					break;
+				}
 				// TODO: What should be counted as a restart attempt and
 				// what shouldn't?
 				numRestartAttempts++;
