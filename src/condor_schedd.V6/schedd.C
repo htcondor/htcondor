@@ -40,6 +40,7 @@
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "renice_self.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -357,31 +358,26 @@ Scheduler::count_jobs()
 	return 0;
 }
 
-/* renice_shadow() will nice the shadow if specified in the condor_config.
- * the value of SHADOW_RENICE_INCREMENT will be added to the current process
- * priority (the higher the priority number, the less CPU will be allocated).
- * renice_shadow() is meant to be called by the child process after a fork()
- * and before an exec().  it returns the value added to the priority, or 0
- * if the priority did not change. 
+/* 
+ * renice_shadow() will nice the shadow if specified in the
+ * condor_config.  the value of SHADOW_RENICE_INCREMENT will be added
+ * to the current process priority (the higher the priority number,
+ * the less CPU will be allocated).  renice_shadow() is meant to be
+ * called by the child process after a fork() and before an exec().
+ * it returns the value added to the priority, or 0 if the priority
+ * did not change.  renice_shadow() now just calls renice_self() from
+ * the C++ util that actually does the work, since other parts of
+ * Condor might need to be reniced (namely, the user job).  -Derek
+ * Wright, <wright@cs.wisc.edu> 4/14/98
  */
 int
 renice_shadow()
 {
-	int i = 0;
-
-#ifndef WIN32
-	char* ptmp = param("SHADOW_RENICE_INCREMENT");
-	if ( ptmp ) {
-		i = atoi(ptmp);
-		if ( i > 0 && i < 20 )
-			nice(i);
-		else
-			i = 0;
-		free(ptmp);
-	}
+#ifdef WIN32
+	return 0;
+#else 
+	return renice_self( "SHADOW_RENICE_INCREMENT" ); 
 #endif
-
-	return i;
 }
 
 int
