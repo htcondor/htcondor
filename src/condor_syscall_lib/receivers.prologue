@@ -104,15 +104,12 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	int condor_sysnum;
 	int rval;
 	int	read_ok;
-	extern int SyscallSockClosed;
 
 	syscall_sock->decode();
 
-	/* SyscallSockClosed = FALSE; */
 	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
-		/* ASSERT( SyscallSockClosed ); */
 		dprintf( D_ALWAYS, 
 		"Failed to get syscall_code for proc %d removing..\n", process);
 
