@@ -325,6 +325,7 @@ handle_config_val( Service*, int, Stream* stream )
 		dprintf( D_FULLDEBUG, 
 				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
 				 param_name );
+		free( param_name );
 		if( ! stream->put("Not defined") ) {
 			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			return FALSE;
@@ -335,6 +336,7 @@ handle_config_val( Service*, int, Stream* stream )
 		}
 		return FALSE;
 	} else {
+		free( param_name );
 		if( ! stream->code(tmp) ) {
 			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			free( tmp );
@@ -346,6 +348,56 @@ handle_config_val( Service*, int, Stream* stream )
 			return FALSE;
 		}
 	}
+	return TRUE;
+}
+
+int
+handle_config( Service *, int cmd, Stream *stream )
+{
+	char *admin = NULL, *config = NULL;
+	int rval = 0;
+
+	stream->decode();
+
+	if ( ! stream->code(admin) ) {
+		dprintf( D_ALWAYS, "Can't read admin string\n" );
+		free( admin );
+		return FALSE;
+	}
+
+	if ( ! stream->code(config) ) {
+		dprintf( D_ALWAYS, "Can't read configuration string\n" );
+		free( admin );
+		free( config );
+		return FALSE;
+	}
+
+	switch(cmd) {
+	case DC_CONFIG_PERSIST:
+		rval = set_persistent_config(admin, config);
+		// set_persistent_config will free admin and config when appropriate
+		break;
+	case DC_CONFIG_RUNTIME:
+		rval = set_runtime_config(admin, config);
+		// set_runtime_config will free admin and config when appropriate
+		break;
+	default:
+		dprintf( D_ALWAYS, "unknown DC_CONFIG command!\n" );
+		free( admin );
+		free( config );
+		return FALSE;
+	}
+
+	stream->encode();
+	if ( ! stream->code(rval) ) {
+		dprintf (D_ALWAYS, "Failed to send rval for DC_CONFIG.\n" );
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG.\n" );
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -930,6 +982,15 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
 								  "handle_config_val()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
+								  (CommandHandler)handle_config,
+								  "handle_config()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
+								  (CommandHandler)handle_config,
+								  "handle_config()", 0, ADMINISTRATOR );
+
 
 	// call daemon-core ReInit
 	daemonCore->ReInit();
