@@ -334,7 +334,8 @@ InitJobQueue(const char *job_queue_name)
 				// Make sure ATTR_SCHEDULER is correct.
 				// XXX TODO: Need a better way than hard-coded
 				// universe check to decide if a job is "dedicated" 
-			if( universe == CONDOR_UNIVERSE_MPI ) {
+			if( universe == CONDOR_UNIVERSE_MPI ||
+				universe == CONDOR_UNIVERSE_PARALLEL ) {
 				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", tmp,

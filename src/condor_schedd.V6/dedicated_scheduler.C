@@ -565,7 +565,7 @@ DedicatedScheduler::shutdown_graceful( void )
 
 
 /* 
-   The dedicated scheduler's negotate() method.  This is based heavily
+   The dedicated scheduler's negotiate() method.  This is based heavily
    on Scheduler::negotiate().  However, b/c we're not really
    negotiating for jobs, but for resource requests, and since a
    million other things are different, these have to be seperate

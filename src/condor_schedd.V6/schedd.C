@@ -875,8 +875,10 @@ count( ClassAd *job )
 					cluster, proc, needs_management, job_managed ? 0 : 1);
 			}
 		}
-			// We want to record the cluster id of all idle MPI jobs  
-		if( universe == CONDOR_UNIVERSE_MPI && status == IDLE ) {
+			// We want to record the cluster id of all idle MPI and parallel
+		    // jobs
+		if( (universe == CONDOR_UNIVERSE_MPI ||
+			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
 			int cluster = 0;
 			job->LookupInteger( ATTR_CLUSTER_ID, cluster );
 			dedicated_scheduler.addDedicatedCluster( cluster );
@@ -909,6 +911,7 @@ service_this_universe(int universe)
 	switch (universe) {
 		case CONDOR_UNIVERSE_GLOBUS:
 		case CONDOR_UNIVERSE_MPI:
+		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_SCHEDULER:
 			return false;
 		default:
@@ -4522,7 +4525,10 @@ Scheduler::shadow_prio_recs_consistent()
 			BadProc = srp->job_id.proc;
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_UNIVERSE, &universe);
 			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
-			if (status != RUNNING && universe!=CONDOR_UNIVERSE_PVM && universe!=CONDOR_UNIVERSE_MPI) {
+			if (status != RUNNING &&
+				universe!=CONDOR_UNIVERSE_PVM &&
+				universe!=CONDOR_UNIVERSE_MPI &&
+				universe!=CONDOR_UNIVERSE_PARALLEL) {
 				// display_shadow_recs();
 				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
 				dprintf( D_ALWAYS, "ERROR: Found a consistency problem!!!\n" );
@@ -6033,7 +6039,9 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 		return FALSE;
 	}
 
-	if ( (universe == CONDOR_UNIVERSE_PVM) || (universe == CONDOR_UNIVERSE_MPI ) ) 
+	if ( (universe == CONDOR_UNIVERSE_PVM) ||
+		 (universe == CONDOR_UNIVERSE_MPI) ||
+		 (universe == CONDOR_UNIVERSE_PARALLEL) )
 		return FALSE;
 
 	matches->startIterations();

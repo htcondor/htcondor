@@ -52,7 +52,7 @@ template class SimpleList<Shadow*>;
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
 
-// for MPI use:
+// for MPI (or parallel) use:
 template class ExtArray<match_rec*>;
 template class ExtArray<MRecArray*>;
 template class ExtArray<ClassAd*>;
