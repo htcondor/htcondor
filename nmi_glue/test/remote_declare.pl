@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.5 2004-06-24 23:31:48 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.6 2004-06-24 23:54:41 wright Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -43,7 +43,7 @@ foreach $testdir (@testdirs) {
 	while( <RUNLIST> ) {
 	    chomp;
 	    $testname = $_;
-	    print TASKLIST "$compiler#$testname\n";
+	    print TASKLIST "$compiler.$testname\n";
 	}
 	close( RUNLIST );
     } 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.7 2004-06-24 23:31:48 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.8 2004-06-24 23:54:41 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -26,7 +26,7 @@ my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
 # get the testname and group
 ######################################################################
 
-@testinfo = split(/#/, $fulltestname);
+@testinfo = split(/\./, $fulltestname);
 my $compiler = @testinfo[0];
 my $testname = @testinfo[1];
 if( ! $compiler || ! $testname ) {
