@@ -2,7 +2,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "dag.h"
-#include "log.h"
 #include "debug.h"
 #include "parse.h"
 
