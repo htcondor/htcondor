@@ -62,7 +62,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "../src/condor_c++_util"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX"..\src\condor_includes\condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /YX"..\src\condor_includes\condor_common.h" /FD /TP /c
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -83,6 +83,10 @@ SOURCE="..\src\condor_c++_util\condor_config.C"
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_config.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_event.C"
 # End Source File
 # Begin Source File
 
@@ -110,6 +114,18 @@ SOURCE="..\src\condor_c++_util\disk.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\environ.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\environ.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\file_lock.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\generic_query.C"
 # End Source File
 # Begin Source File
@@ -126,6 +142,10 @@ SOURCE="..\src\condor_c++_util\list.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\my_hostname.C"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
@@ -139,6 +159,10 @@ SOURCE="..\src\condor_c++_util\simplelist.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\up_down.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\user_log.C"
 # End Source File
 # End Target
 # End Project
