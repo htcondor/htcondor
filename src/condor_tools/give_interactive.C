@@ -304,7 +304,6 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 
 	// what else?
 
-	// perhaps a config_fill_ad with subsys interactive?
 }
 
 
@@ -400,6 +399,7 @@ main(int argc, char *argv[])
 	int i;
 	char buffer[1024];
 
+	mySubSystem = "INTERACTIVE";
 	config();
 
 	// parse command line args
