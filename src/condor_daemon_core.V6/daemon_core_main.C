@@ -198,8 +198,18 @@ int main( int argc, char** argv )
 			break;		// break out of for loop
 	}
 
-	// call config so we can call param
-	config(NULL);
+	// using "-t" also implicitly sets "-f"; i.e. only to stderr in the foreground
+	if ( Termlog ) {
+		Foreground = 1;
+	}
+
+	// call config so we can call param.  If we're the master, call config_master
+	// which will parse in condor_config.master as well.
+	if ( strcmp(mySubSystem,"MASTER") == 0 ) {
+		config_master(NULL);
+	} else {
+		config(NULL);
+	}
 
 	// Set up logging
 	dprintf_config(mySubSystem,2);
@@ -237,9 +247,6 @@ int main( int argc, char** argv )
 #ifdef WIN32
 		// Disconnect from the console
 		FreeConsole();
-		if ( strcmp(mySubSystem,"MASTER") == 0 ) {
-			// TODO here we call the Service code
-		}
 #else	// UNIX
 		// on unix, background means just fork ourselves
 		if ( fork() ) {
@@ -250,6 +257,8 @@ int main( int argc, char** argv )
 		if ( strcmp(mySubSystem,"MASTER") == 0 ) {
 			close(0); close(1); close(2);
 		}
+		// and detach from the controlling tty
+		detach();
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
 
