@@ -5,7 +5,8 @@
 
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
-EGCS_LIBC = EgcsLibc
+EGCS_LIBC = LIB_GCC
+
 CRT0 = Crt0
 
 TOP = Top
@@ -181,18 +182,6 @@ DEBUG_FLAG = DebugFlag
 #define PlatformFlags
 #endif
 
-#if !defined( ImakeArchFlag )
-#define ImakeArchFlag
-#endif
-
-#if !defined( ImakeOpsysFlag )
-#define ImakeOpsysFlag
-#endif
-
-#if !defined( ImakeOtherFlag )
-#define ImakeOtherFlag
-#endif
-
 #if !defined( VendorCTestFlags )
 #define VendorCTestFlags
 #endif
@@ -238,7 +227,6 @@ DEBUG_FLAG = DebugFlag
 
 #  define GssAuthFlags -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
           -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include
-#  define ImakeGssFlag -DGSS_AUTHENTICATION
 
   SSL_DIR = /unsup/SSLeay-0.9.0b
   AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
@@ -249,17 +237,14 @@ DEBUG_FLAG = DebugFlag
 #else
 
 #  define GssAuthFlags
-#  define ImakeGssFlag
 
 #endif /* !defined( GSS_AUTHENTICATION ) */
 
 #if WANT_KERBEROS
-# define ImakeKerberosFlag -DKERBEROS_AUTHENTICATION
   KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
 #else
   KERBEROS_FLAG = 
-# define ImakeKerberosFlag
-#endif /* !defined(KERBEROS_AUTHENTICAION) */
+#endif /* !defined(WANT_KERBEROS) */
 
 AUTH_FLAGS = GssAuthFlags
 
@@ -270,10 +255,6 @@ NETMAN_FLAGS = -DWANT_NETMAN
 NETMAN_LIB =
 NETMAN_FLAGS =
 #endif
-
-#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag \
-        ImakeKerberosFlag
-#define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
