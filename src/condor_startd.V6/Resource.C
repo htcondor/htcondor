@@ -236,7 +236,9 @@ Resource::leave_preempting_state()
 	} else {
 			// STATE TRANSITION preempting -> owner
 		if( r_pre ) {
-			r_pre->vacate();
+			if( r_pre->agentstream() ) {
+				r_pre->refuse_agent();
+			}
 			delete r_pre;
 			r_pre = NULL;
 		}
