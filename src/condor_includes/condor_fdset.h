@@ -20,6 +20,8 @@
 #	define NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
 #	define _DEFINE_FD_SET
 	typedef long fd_mask;
+#elif defined(HPUX9)
+#	undef _DEFINE_FD_SET
 #elif defined( AIX32 )
 #	include <sys/select.h>
 #else
@@ -31,15 +33,15 @@
 
 
 #if defined( _DEFINE_FD_SET )
-#define	howmany(x, y)	(((x)+((y)-1))/(y))
+#	define	howmany(x, y)	(((x)+((y)-1))/(y))
 
-typedef	struct fd_set {
-	fd_mask	fds_bits[howmany(FD_SETSIZE, NFDBITS)];
-} fd_set;
-#define FD_SET(n, p)    ((p)->fds_bits[(n)/NFDBITS] |= (1 << ((n) % NFDBITS)))
-#define FD_CLR(n, p)    ((p)->fds_bits[(n)/NFDBITS] &= ~(1 << ((n) % NFDBITS)))
-#define FD_ISSET(n, p)  ((p)->fds_bits[(n)/NFDBITS] & (1 << ((n) % NFDBITS)))
-#define FD_ZERO(p)  memset((char *)(p), 0, sizeof(*(p)))
+	typedef	struct fd_set {
+		fd_mask	fds_bits[howmany(FD_SETSIZE, NFDBITS)];
+	} fd_set;
+#	define FD_SET(n, p)  ((p)->fds_bits[(n)/NFDBITS] |= (1 << ((n) % NFDBITS)))
+#	define FD_CLR(n, p)  ((p)->fds_bits[(n)/NFDBITS] &= ~(1 << ((n) % NFDBITS)))
+#	define FD_ISSET(n, p)  ((p)->fds_bits[(n)/NFDBITS] & (1 << ((n) % NFDBITS)))
+#	define FD_ZERO(p)  memset((char *)(p), 0, sizeof(*(p)))
 #endif
 
 #if defined(__cplusplus)
