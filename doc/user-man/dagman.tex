@@ -575,6 +575,40 @@ then the Rescue DAG file will also contain Retry entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{DAGMan Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!configuration}
+
+\index{DAGMan!DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}
+\Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL} is an integer that
+controls how many individual jobs \Condor{dagman} will submit in a row
+before servicing other requests (such as a \Condor{rm}).  It cannot be
+set to less than 1, or more than 1000; if undefined, it defaults to 5.
+
+\index{DAGMan!DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}
+\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} is an integer that controls how
+many times in a row \Condor{dagman} will attempt to execute
+\Condor{submit} for a given job before giving up.  It cannot be
+set to less than 1, or more than 10; if left undefined, it defaults to
+6.
+
+\index{DAGMan!DAGMAN\_SUBMIT\_DELAY}
+\Macro{DAGMAN\_SUBMIT\_DELAY} is an integer that controls the number
+of seconds \Condor{dagman} will sleep before submitting consecutive
+jobs.  It can be increased to help reduce the load on the schedd.  It
+cannot be set to less than 0 or more than 60; if undefined, it
+defaults to 0.
+
+\index{DAGMan!DAGMAN\_STARTUP\_CYCLE\_DETECT}
+\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is a boolean that controls
+whether \Condor{dagman} checks for cycles in the DAG structure at
+startup, in addition to its runtime cycle detection.  The startup
+check can be expensive for large DAGs, so if undefined, it defaults to
+False.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
