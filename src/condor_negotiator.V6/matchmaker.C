@@ -217,6 +217,8 @@ RESCHEDULE_commandHandler (int, Stream *)
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
+	// for ads which have RemoteUser set, add RemoteUserPrio
+	addRemoteUserPrios( startdAds ); 
 
 	// ----- Sort the schedd list in decreasing priority order
 	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
@@ -404,6 +406,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
+	char		prioExpr[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
 	if (!sockCache.getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
@@ -420,6 +423,9 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		sockCache.invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
+
+	// setup expression with the submittor's priority
+	(void) sprintf( prioExpr , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
 
 	// 2.  negotiation loop with schedd
 	for (i = 0; i < scheddLimit;  i++)
@@ -480,6 +486,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		}
 		dprintf(D_ALWAYS, "\t\tRequest %05d.%05d:\n", cluster, proc);
 
+		// insert the priority expression into the request
+		request.Insert( prioExpr );
 
 		// 2e.  find a compatible offer for the request --- keep attempting
 		//		to find matches until we can successfully (1) find a match,
@@ -515,7 +523,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 				}
 				else
 				{
-					char 	remoteUser[128];
+					char	remoteUser[128];
 					double	remotePriority;
 
 					offer->LookupString(ATTR_REMOTE_USER, remoteUser);
@@ -831,4 +839,23 @@ getCapability (char *startdName, char *startdAddr, ClassAdList &startdPvtAds)
 	}
 	startdPvtAds.Close();
 	return NULL;
+}
+
+void Matchmaker::
+addRemoteUserPrios( ClassAdList &cal )
+{
+	ClassAd	*ad;
+	char	remoteUser[64];
+	char	buffer[128];
+	float	prio;
+
+	cal.Open();
+	while( ( ad = cal.Next() ) ) {
+		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+			prio = (float) accountant.GetPriority( remoteUser );
+			(void) sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , prio );
+			ad->Insert( buffer );
+		}
+	}
+	cal.Close();
 }

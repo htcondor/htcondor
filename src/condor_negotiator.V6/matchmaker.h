@@ -30,11 +30,12 @@ class Matchmaker : public Service
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&);	
 		int  negotiate(char*, char*, double, int, ClassAdList&, ClassAdList&);
-				
 		ClassAd *matchmakingAlgorithm(ClassAd &, ClassAdList &, double = -1.0);
-		int  matchmakingProtocol (ClassAd &, ClassAd *, ClassAdList &, Sock *, char*);
+		int matchmakingProtocol(ClassAd &,ClassAd *,ClassAdList &,Sock *,char*);
 		void calculateNormalizationFactor (ClassAdList &, double &, double &);
 		char *getCapability (char *, char *, ClassAdList &);
+		void addRemoteUserPrios( ClassAdList& );
+
 		friend static int comparisonFunction (ClassAd *, ClassAd *, void *);
 
 		// configuration information
