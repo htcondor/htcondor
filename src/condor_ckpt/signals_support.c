@@ -58,7 +58,7 @@ extern void _sigreturn();
 
 void display_sigstate( int line, const char * file );
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(Solaris)
 typedef int				SS_TYPE;
 #else
 typedef struct sigstack SS_TYPE;
@@ -240,7 +240,7 @@ struct sigvec *ovec;
 			break;
 		default:
 			if (vec) {
-				bcopy( (char *) vec, (char *) &nvec, sizeof nvec );
+				memcpy( (char *) &nvec,(char *) vec, sizeof nvec );
 				/* while in the handler, block checkpointing */
 #if defined(LINUX)
 				nvec.sv_mask |= __sigmask( SIGTSTP );
