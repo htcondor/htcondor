@@ -40,6 +40,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <sys/param.h>
 
 #if defined(Solaris)
 #include <sys/filio.h>
