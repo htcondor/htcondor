@@ -13,6 +13,8 @@
 #define		IS_SUN4X_SOLARIS251	YES
 #define		GccArch			sparc-sun-solaris2.5.1
 #define		Platform		SUN4X_SOLARIS251
+#define		IS_EGCS_BUILD		YES
+#define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.5.1/egcs-2.91.66
 #endif
 
 #ifndef SC_VERS
