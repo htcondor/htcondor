@@ -5,6 +5,9 @@
  *   Created: Fri Oct 16 12:47:29 1992
  */
 
+#include "condor_types.h"
+#include "config.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
