@@ -23,6 +23,7 @@ public:
 
 	virtual int ftruncate( size_t s );
 	virtual int fsync();
+	virtual int fstat( struct stat *buf );
 
 	virtual int	is_readable();
 	virtual int	is_writeable();

@@ -36,6 +36,7 @@ public:
 	virtual int ioctl( int cmd, int arg );
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
+	virtual int fstat( struct stat *buf );
 
 	virtual int	is_readable();
 	virtual int	is_writeable();

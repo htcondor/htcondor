@@ -108,6 +108,17 @@ int CondorFileBasic::ftruncate( size_t length )
 	return result;
 }
 
+int CondorFileBasic::fstat(struct stat *buf)
+{
+	int scm,result;
+
+	scm = SetSyscalls(syscall_mode);
+	result = ::fstat(fd, buf);
+	SetSyscalls(scm);
+
+	return result;
+}
+
 int CondorFileBasic::fsync()
 {
 	int scm,result;

@@ -52,6 +52,7 @@ public:
 	virtual int ioctl( int cmd, int arg )=0;
 	virtual int ftruncate( size_t length )=0; 
 	virtual int fsync()=0;
+	virtual int fstat( struct stat *buf )=0;
 
 	virtual int	is_readable()=0;
 	virtual int	is_writeable()=0;
@@ -61,6 +62,7 @@ public:
 
 	virtual int get_unmapped_fd()=0;
 	virtual int is_file_local()=0;
+
 };
 
 #endif
