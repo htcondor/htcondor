@@ -1750,7 +1750,7 @@ int operator;
 
 	while ( end < (expr->len-2))
 	{
-		dprintf(D_FULLDEBUG, "start = %d end = %d\n", start,end);
+		/* dprintf(D_EXPR, "start = %d end = %d\n", start,end); */
 		for ( i=1,loop=start,flag =TRUE; i < this->len-2; i++, loop++)
 			if ( !cmp_elem(expr->data[loop], this->data[i]) ) 
 			{
