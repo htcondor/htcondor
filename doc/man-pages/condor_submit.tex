@@ -341,6 +341,17 @@ access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
 
+%%%%%%%%%%%%%%%%%%%
+%% rendezvousdir
+%%%%%%%%%%%%%%%%%%%
+
+\item[rendezvousdir = $<$directory-path$>$] Used to specify the 
+shared-filesystem directory to be used for filesystem authentication
+when submitting to a remote scheduler.  Should be a path to a preexisting 
+directory.  If not specified, \Condor{submit} will automatically use
+the \Opt{initialdir} as the value for \Opt{rendezvousdir}. 
+
+
 \begin{description}
 \item[Example One:]
 Suppose that your job reads a file named \verb@dataset.1@.  To instruct Condor
