@@ -304,11 +304,18 @@ ParallelShadow::startMaster()
     delete [] sinful;
 
         // set permissions on the jobad file:
-    if ( fchmod(fileno(ja), 0666) < 0 ) {
+#ifdef WIN32
+	perm p;
+	if ( p.set_acls(jobadfile) < 0 ) { // sets 'Full' permissions on file
+		  dprintf(D_ALWAYS, "perm::set_acls() failed!\n");
+#else
+	if ( fchmod(fileno(ja), 0666) < 0 ) {
         dprintf(D_ALWAYS, "fchmod failed! errno %d\n", errno);
+#endif
         fclose(ja);
         shutDown(JOB_NOT_STARTED);
     }
+
     if( fclose(ja) == EOF ) {
         dprintf(D_ALWAYS, "fclose failed!  errno = %d\n", errno);
     }
