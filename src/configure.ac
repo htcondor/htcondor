@@ -374,6 +374,31 @@ if test $ac_cv_cxx_compiler_gnu != yes; then
    AC_MSG_ERROR( [GNU C++ (g++) is required] )
 fi   
 
+#########
+# figure out what linker flags put us in static-link mode
+#########
+if test $os = "SunOS" ; then
+  AC_MSG_CHECKING([what gcc flag forces the linker into static mode])
+  echo "main() { return 0; }" > static_test.c
+  gcc -c static_test.c > /dev/null 2>&1
+  gcc_static_ld_flag=""
+  for arg in "-Wl,-Bstatic" "-Wl,-B,static" ; do
+    gcc -o static_test static_test.o $arg  > /dev/null 2>&1
+    if test $? -eq 0 ; then
+      gcc_static_ld_flag="$arg"
+      break
+    fi
+  done
+  rm -f static_test.c static_test.o static_test > /dev/null 2>&1
+  if test "x$gcc_static_ld_flag" = "x" ; then
+    AC_MSG_RESULT([ERROR])
+    AC_MSG_ERROR([Can not find flags for this linker!])
+  else 
+    AC_MSG_RESULT([$gcc_static_ld_flag])
+    AC_SUBST([gcc_static_ld_flag],[$gcc_static_ld_flag])
+  fi
+fi
+  
 
 #####################
 # everything else
