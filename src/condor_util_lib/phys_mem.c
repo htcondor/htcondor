@@ -180,15 +180,34 @@ calc_phys_memory()
 int
 calc_phys_memory()
 {
-	unsigned long pages, pagesz;
+	unsigned long pages, pagesz, hack;
+	int factor;
 
 	pages = sysconf(_SC_PHYS_PAGES);
 	pagesz = sysconf(_SC_PAGESIZE);
 
 	if (pages == -1 || pagesz == -1)
 		return -1;
- 
-	return (int) ((pages * pagesz) / (1024 * 1024));
+
+		/* pagesz is in bytes, this gives us kbytes */
+	factor = pagesz >> 10;
+
+#if defined(X86)
+		/* This is super-ugly.  For some reason, Intel Solaris seems
+		   to have some kind of rounding error for reporting memory.
+		   These values just came from a little trail and error and
+		   seem to work pretty well.  -Derek Wright (1/29/98)
+	hack = (pages * factor);
+	if( hack > 130000 ) {
+		return (int) (hack / 1020);
+	} else if( hack > 65000 ) {
+		return (int) (hack / 1010);
+	} else {
+		return (int) (hack / 1000);
+	}
+#else
+	return (int) ((pages * factor) / 1024);
+#endif
 }
 #elif defined(LINUX)
 #include <stdio.h>
@@ -236,7 +255,7 @@ calc_phys_memory()
 {
 	MEMORYSTATUS status;
 	GlobalMemoryStatus(&status);
-	return (int)(status.dwTotalPhys/(1024000));
+	return (int)(status.dwTotalPhys/(1024*1024));
 }
 #elif defined(OSF1)
 
