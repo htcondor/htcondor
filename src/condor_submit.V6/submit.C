@@ -113,7 +113,7 @@ char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
-char    *UserLog        = "user_log";
+char    *UserLogFile    = "user_log";
 
 extern int	Terse;
 extern int	DontDisplayTime;
@@ -165,6 +165,7 @@ int	get_machine_name(char*);
 int gethostname();
 int read_config(char*, char*, CONTEXT*, BUCKET**, int, int);
 char *get_schedd_addr(char *);
+void Config();
 }
 
 int
@@ -1019,7 +1020,7 @@ queue()
 		job.fPrint (stdout);
 	}
 
-	// log_submit();
+	log_submit();
 }
 
 char *
@@ -1070,7 +1071,7 @@ check_requirements( char *orig )
 
 	if (JobUniverse == PVM) {
 		char	localhost[80];
-		gethostname(localhost);
+		gethostname(localhost, 80);
 		(void)strcat( answer, " && (Machine != \"" );
 		(void)strcat( answer, localhost );
 		(void)strcat( answer, "\")" );
@@ -1163,6 +1164,8 @@ get_owner()
 {
 	struct passwd	*pwd;
 
+	if (Remote) return ("nobody");
+
 	if( (pwd=getpwuid(getuid())) == NULL ) {
 		EXCEPT( "Can't get passwd entry for uid %d\n", getuid() );
 	}
@@ -1254,7 +1257,6 @@ int SetSyscalls( int foo ) { return foo; }
 #include "environ.h"
 #include "user_log.c++.h"
 
-#if 0
 void
 log_submit()
 {
@@ -1262,30 +1264,33 @@ log_submit()
     char    *simple_name;
     char    *path;
     char    tmp[ _POSIX_PATH_MAX ];
+	char    owner[64];
     UserLog usr_log;
     SubmitEvent jobSubmit;
 
-        // Get name of user log file (if any)
-    env.add_string( Proc.env );
+    // Get name of user log file (if any)
+	if (job.LookupString ("Env", tmp) == FALSE) 
+		return;
+    env.add_string( tmp );
     if( (simple_name=env.getenv("LOG")) == NULL ) {
         return;
     }
 
-        // Convert to a pathname using IWD if needed
+    // Convert to a pathname using IWD if needed
     if( simple_name[0] == '/' ) {
         path = simple_name;
     } else {
-        sprintf( tmp, "%s/%s", Proc.iwd, simple_name );
+        sprintf( tmp, "%s/%s", JobIwd, simple_name );
         path = tmp;
     }
 
         // Output the information
     strcpy (jobSubmit.submitHost, ThisHost);
-    usr_log.initialize ( Proc.owner, path, Proc.id.cluster, Proc.id.proc, 0 );
+	job.LookupString ("Owner", owner);
+    usr_log.initialize ( owner, path, ClusterId, ProcId, 0 );
     if (!usr_log.writeEvent (&jobSubmit))
         dprintf (D_ALWAYS, "Error logging submit event.\n");
 }
-#endif
 
 #define SECOND 1
 #define MINUTE (SECOND * 60)
@@ -1298,7 +1303,7 @@ SaveClassAd (ClassAd &ad)
 	ExprTree *tree, *lhs, *rhs;
 	char lhstr[128], rhstr[2048];
 	char buffer[4096];
-	int  retval;
+	int  retval = 0;
 
 	SetAttributeInt (ClusterId, ProcId, "ClusterId", ClusterId);
 	SetAttributeInt (ClusterId, ProcId, "ProcId", ProcId);
