@@ -1,3 +1,7 @@
+05/26/04 V6_7-credd-branch
+  A new branch for the new Condor daemon - condor_credd. Created from 
+V6_7-credd-root. By ckireyev.
+
 05/25/04 V6_7-infn_batch-branch
    A new branch off V6_7-branch for collaborative work with INFN to
    add support for submitting jobs to a local batch system. Created
