@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include "condor_common.h"
 #include "condor_fdset.h"
 #include "condor_classad.h"
@@ -33,26 +31,13 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
-
-#if defined(AIX31) || defined(AIX32)
-#include "syscall.aix.h"
-#endif
-
+#include "../condor_ckpt_server/server_interface.h"
 
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
 #include "files.h"
 #include "exit.h"
-
-#if defined(AIX32)
-#	include <sys/id.h>
-#   include <sys/wait.h>
-#   include <sys/m_wait.h>
-#	include "condor_fdset.h"
-#endif
-
-
 #include "clib.h"
 #include "shadow.h"
 #include "subproc.h"
@@ -69,7 +54,9 @@ extern "C" {
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
+	int DoCleanup();
 }
+
 
 #if defined(NEW_PROC)
         extern PROC    *Proc;
