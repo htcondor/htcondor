@@ -43,9 +43,9 @@ class MPIComradeProc : public VanillaProc
 
     virtual void Continue();
 
-    virtual void ShutDownGraceful();
+    virtual bool ShutDownGraceful();
 
-    virtual void ShutdownFast();
+    virtual bool ShutdownFast();
 
 };
 

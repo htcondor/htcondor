@@ -68,15 +68,14 @@ MPIComradeProc::Continue() {
     VanillaProc::Continue();
 }
 
-void 
+bool 
 MPIComradeProc::ShutDownGraceful() { 
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownGraceful()\n");
-//    VanillaProc::ShutdownFast();
-	VanillaProc::ShutdownGraceful();
+	return VanillaProc::ShutdownGraceful();
 }
 
-void
+bool
 MPIComradeProc::ShutdownFast() {
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownFast()\n");
-    VanillaProc::ShutdownFast();
+    return VanillaProc::ShutdownFast();
 }
