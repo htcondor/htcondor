@@ -127,7 +127,7 @@ reserve_for_afs_cache()
 		answer = 0;
 	}
 
-	dprintf( D_ALWAYS, "Reserving %d kbytes for AFS cache\n", answer );
+	dprintf( D_FULLDEBUG, "Reserving %d kbytes for AFS cache\n", answer );
 	return answer;
 }
 
@@ -151,8 +151,9 @@ reserve_for_fs()
 		if( answer < 0 ) {
 			answer = 0;
 		}
+		dprintf( D_ALWAYS, "Reserving %d kbytes for file system\n", answer );
 	}
-	dprintf( D_ALWAYS, "Reserving %d kbytes for file system\n", answer );
+	dprintf( D_FULLDEBUG, "Reserving %d kbytes for file system\n", answer );
 	return answer;
 }
 
