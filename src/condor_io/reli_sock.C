@@ -152,6 +152,10 @@ int ReliSock::accept(
 	c._sock = c_sock;
 	c._state = sock_connect;
 	c.decode();
+	if (  c._timeout == 0 ) {
+		int on = 1;
+		c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
+	}
 
 	return TRUE;
 }
