@@ -62,6 +62,7 @@ GahpClient::GahpClient()
 	pending_reqid = 0;
 	pending_result = NULL;
 	pending_timeout = 0;
+	pending_timeout_tid = -1;
 	user_timerid = -1;
 	if ( requestTable == NULL ) {
 		requestTable = new HashTable<int,GahpClient*>( 300, &hashFuncInt );
@@ -1095,6 +1096,34 @@ GahpClient::clear_pending()
 	if (pending_args) free(pending_args);
 	pending_args = NULL;
 	pending_timeout = 0;
+	if ( pending_timeout_tid != -1 ) {
+		daemonCore->Cancel_Timer(pending_timeout_tid);
+		pending_timeout_tid = -1;
+	}
+}
+
+int
+GahpClient::reset_user_timer(int tid)
+{
+	int retval = TRUE;
+
+	if ( user_timerid != -1 ) {
+		retval =  daemonCore->Reset_Timer(user_timerid,0);
+	}
+	
+	// clear out any timeout timer on this event.
+	if ( pending_timeout_tid != -1 ) {
+		if ( tid < 0 ) {
+			// if tid < 0, we were not called from DaemonCore, so our timer
+			// is still out there.  Cancel it.  Note that if tid >= 0, then
+			// DaemonCore has already canceled the timer because it just
+			// went off, and it is not periodic.
+			daemonCore->Cancel_Timer(pending_timeout_tid);
+		}
+		pending_timeout_tid = -1;
+	}
+
+	return retval;
 }
 
 void
@@ -1115,6 +1144,9 @@ GahpClient::now_pending(const char *command,int reqid,const char *buf)
 	}
 	if (m_timeout) {
 		pending_timeout = time(NULL) + m_timeout;
+		pending_timeout_tid = daemonCore->Register_Timer(m_timeout + 1,
+			(TimerHandlercpp)&GahpClient::reset_user_timer,
+			"GahpClient::reset_user_timer",this);
 	}
 }
 
@@ -1238,9 +1270,7 @@ GahpClient::poll()
 				// clear entry from our hashtable so we can reuse the reqid
 			requestTable->remove(result_reqid);
 				// and reset the user's timer if requested
-			if ( entry->user_timerid != -1 ) {
-				daemonCore->Reset_Timer(entry->user_timerid,0);
-			}
+			entry->reset_user_timer(-1);				
 		}
 	}	// end of looping through each result line
 

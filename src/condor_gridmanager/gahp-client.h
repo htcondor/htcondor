@@ -436,6 +436,7 @@ class GahpClient : public Service {
 		void now_pending(const char *command,int reqid,const char *buf);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
+		int reset_user_timer(int tid);
 
 			// Methods for private GAHP commands
 		bool command_version(bool banner_string = false);
@@ -452,6 +453,7 @@ class GahpClient : public Service {
 		int pending_reqid;
 		Gahp_Args* pending_result;
 		time_t pending_timeout;
+		int pending_timeout_tid;
 		static HashTable<int,GahpClient*> *requestTable;
 		int user_timerid;
 
