@@ -26,9 +26,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where \Condor{dagman}, if removed from the queue via
-      \Condor{rm}, would fail to remove jobs it had just submitted, if
-      those jobs' submit events had not yet appeared in the userlog.
+\item Fixed a bug in the standard universe where C++ code that threw an 
+exception would result in abortion of the executable instead of the delivery
+of the exception. 
+This bug affects Condor version 6.6.0 for Redhat 7.x.
+
+\item Fixed bug whereby \Condor{dagman}, if removed from the queue via
+      \Condor{rm}, could fail to remove all of its submitted jobs if
+      any of their submit events had not yet appeared in the userlog.
 
 \item Fixed the bug whereby \Condor{preen} could potentially remove
   files related to a valid Computing on Demand (COD) claim on an
