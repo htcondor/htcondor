@@ -39,7 +39,7 @@
 **  counting levels at 0, D_NUMLEVELS should be one greater than the
 **  highest level.
 */
-#define D_NUMLEVELS		26
+#define D_NUMLEVELS		28
 #define D_MAXFLAGS 		32
 #define D_ALWAYS 		(1<<0)
 #define D_SYSCALLS		(1<<1)
@@ -68,6 +68,7 @@
 #define D_IDLE			(1<<24)
 #define D_MATCH			(1<<25)
 #define D_ACCOUNTANT	(1<<26)
+#define D_FAILURE	(1<<27)
 #define D_FDS           (1<<(D_MAXFLAGS-3))
 #define D_SECONDS		(1<<(D_MAXFLAGS-2))
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
