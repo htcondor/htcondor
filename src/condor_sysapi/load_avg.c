@@ -122,7 +122,9 @@ sysapi_load_avg_raw(void)
 	if (KernelLookupFailed)
 		val = lookup_load_avg_via_uptime();
 
-	dprintf( D_FULLDEBUG, "Load avg: %f\n", val );
+	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_LOAD, "Load avg: %f\n", val );
+	}
 	return val;
 }
 
@@ -256,8 +258,10 @@ sysapi_load_avg_raw(void)
 
     fclose(proc);
 
-    dprintf(D_FULLDEBUG, "Load avg: %f %f %f\n", short_avg, medium_avg, long_avg);
-
+	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_LOAD, "Load avg: %f %f %f\n", short_avg, 
+				 medium_avg, long_avg );
+	}
 	return short_avg;
 }
 
@@ -323,7 +327,9 @@ sysapi_load_avg_raw(void)
 	if (KernelLookupFailed)
 		val = lookup_load_avg_via_uptime();
 
-	dprintf( D_FULLDEBUG, "Load avg: %f\n", val );
+	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_LOAD, "Load avg: %f\n", val );
+	}
 	return val;
 }
 
@@ -648,7 +654,6 @@ lookup_load_avg_via_uptime()
 	 */
 	if (uptime_path != NULL) {
 		if ((output_fp = popen(uptime_path, "r")) == NULL) {
-//			dprintf(D_ALWAYS, "popen(\"uptime\")");
 			return DEFAULT_LOADAVG;
 		}
 		
@@ -658,7 +663,6 @@ lookup_load_avg_via_uptime()
 				pclose(output_fp);
 				return DEFAULT_LOADAVG;
 			}
-//			dprintf(D_FULLDEBUG, "%s ", word);
 			
 			if (strcmp(word, "average:") == 0) {
 				/*
@@ -670,8 +674,6 @@ lookup_load_avg_via_uptime()
 					dprintf(D_ALWAYS, "can't read loadavg from uptime\n");
 					pclose(output_fp);
 					return DEFAULT_LOADAVG;
-				} else {
-//					dprintf(D_FULLDEBUG,"The loadavg is %f\n",loadavg);
 				}
 				
 				/*
@@ -681,7 +683,6 @@ lookup_load_avg_via_uptime()
 				 *  -- Ajitk
 				 */
 				pclose(output_fp);
-//				dprintf(D_FULLDEBUG, "\n");
 				return loadavg;
 			}
 		} while (!feof(output_fp)); 
@@ -691,8 +692,6 @@ lookup_load_avg_via_uptime()
 		 */
         
 		pclose(output_fp);
-        
-		/*EXCEPT("uptime eof");*/
 	}
 	
 	/* not reached */
