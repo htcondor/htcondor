@@ -44,9 +44,11 @@ ReliSock::ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
 		ignore_next_decode_eom(FALSE) 
 {
 	is_client = 0;
+#if !defined(SKIP_AUTHENTICATION)
 	authob = NULL;
+#endif
 	hostAddr = NULL;
-	canUseFlags = Authentication::CAUTH_NONE;
+//	canUseFlags = Authentication::CAUTH_NONE;
 }
 
 
@@ -58,9 +60,11 @@ ReliSock::ReliSock( int port )
 		dprintf(D_ALWAYS, "failed to listen on port %d!\n", port);
 	}
 	is_client = 0;
+#if !defined(SKIP_AUTHENTICATION)
 	authob = NULL;
+#endif
 	hostAddr = NULL;
-	canUseFlags = Authentication::CAUTH_NONE;
+//	canUseFlags = Authentication::CAUTH_NONE;
 }
 
 
@@ -72,9 +76,11 @@ ReliSock::ReliSock( char *serv )
 		dprintf(D_ALWAYS, "failed to listen on serv %s!\n", serv);
 	}
 	is_client = 0;
+#if !defined(SKIP_AUTHENTICATION)
 	authob = NULL;
+#endif
 	hostAddr = NULL;
-	canUseFlags = Authentication::CAUTH_NONE;
+//	canUseFlags = Authentication::CAUTH_NONE;
 }
 
 
@@ -90,9 +96,11 @@ ReliSock::ReliSock(
 		dprintf(D_ALWAYS, "failed to connect to %s:%d!\n", host, port);
 	}
 	is_client = 1;
+#if !defined(SKIP_AUTHENTICATION)
 	authob = NULL;
+#endif
 	hostAddr = strdup( host );
-	canUseFlags = Authentication::CAUTH_NONE;
+//	canUseFlags = Authentication::CAUTH_NONE;
 }
 
 
@@ -109,9 +117,11 @@ ReliSock::ReliSock(
 		dprintf(D_ALWAYS, "failed to connect to %s:%s!\n", host, serv);
 	}
 	is_client = 1;
+#if !defined(SKIP_AUTHENTICATION)
 	authob = NULL;
+#endif
 	hostAddr = strdup( host );
-	canUseFlags = Authentication::CAUTH_NONE;
+//	canUseFlags = Authentication::CAUTH_NONE;
 }
 
 
@@ -119,10 +129,12 @@ ReliSock::ReliSock(
 ReliSock::~ReliSock()
 {
 	close();
+#if !defined(SKIP_AUTHENTICATION)
 	if ( authob ) {
 		delete authob;
 		authob = NULL;
 	}
+#endif
 	if ( hostAddr ) {
 		free( hostAddr );
 		hostAddr = NULL;
@@ -828,85 +840,62 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 
 int 
 ReliSock::authenticate() {
+#if !defined(SKIP_AUTHENTICATION)
 	if ( !authob ) {
 		authob = new Authentication( this );
 	}
 	if ( authob ) {
 		return( authob->authenticate( hostAddr ) );
 	}
+#endif
 	return( 0 );
 }
 
-int
-ReliSock::setOwner( char *owner ) {
-	if ( this && authob ) {
-		return( authob->setOwner( owner ) );
+void
+ReliSock::setOwner( char *newOwner ) {
+#if !defined(SKIP_AUTHENTICATION)
+	if ( authob ) {
+		authob->setOwner( newOwner );
 	}
-	return FALSE;
+#endif
 }
 
 char *
 ReliSock::getOwner() {
-	if ( !this || !authob ) {
-		return( NULL );
-	}
-
-	return( authob->getOwner() );
-}
-
-int 
-ReliSock::setOwnerUid( int uid ) {
+#if !defined(SKIP_AUTHENTICATION)
 	if ( this && authob ) {
-		return( authob->setOwnerUid( uid ) );
+		return( authob->getOwner() );
 	}
-	return FALSE;
-}
-
-int 
-ReliSock::getOwnerUid() {
-	if ( !this || !authob ) {
-		return -1;
-	}
-	return( authob->getOwnerUid() );
+#endif
+	return NULL;
 }
 
 int
 ReliSock::isAuthenticated()
 {
+#if !defined(SKIP_AUTHENTICATION)
 	if ( !authob ) {
 		dprintf(D_FULLDEBUG, "authentication not called prev, auth'ing TRUE\n" );
 		return 1;
 	}
 	return( authob->isAuthenticated() );
+#endif
+	return 0;
 }
 
 void
 ReliSock::setGenericAuthentication() {
-	authob->setAuthType( Authentication::CAUTH_ANY );
-}
-
-void
-ReliSock::canTryNT()
-{
-   canUseFlags |= Authentication::CAUTH_NT;
-}
-
-void
-ReliSock::canTryFilesystem()
-{
-   canUseFlags |= Authentication::CAUTH_FILESYSTEM;
-}
-
-void
-ReliSock::canTryGSS()
-{
-   canUseFlags |= Authentication::CAUTH_GSS;
+#if !defined(SKIP_AUTHENTICATION)
+	authob->setAuthAny();
+#endif
 }
 
 void
 ReliSock::unAuthenticate()
 {
+#if !defined(SKIP_AUTHENTICATION)
 	if ( authob ) {
 		authob->unAuthenticate();
 	}
+#endif
 }

@@ -30,10 +30,12 @@
 #include "condor_common.h"
 #include "authentication.h"
 #include "condor_debug.h"
-#include "internet.h"
 #include "condor_string.h"
+#include "condor_config.h"
+#include "internet.h"
 #include "condor_uid.h"
 #include "my_username.h"
+#include "string_list.h"
 
 
 #if defined(GSS_AUTHENTICATION)
@@ -56,29 +58,41 @@ Authentication::authenticate_nt()
 }
 #endif
 
-int 
+void 
 Authentication::setupEnv( char *hostAddr )
 {
 	char tmpstring[1024];
-	char *CertDir;
-
 
 	//only for client because canTryGSS/canTryFilesystem, etc. for 
 	//server should be parsed in schedd from config file.
 
 	if ( mySock->isClient() ) {
-
+		(int) canUseFlags |= (int) CAUTH_CLAIMTOBE;
 #if defined(WIN32)
-//TODD: put whatever code you want here, my suggestion is:
-//		mySock->canUseFlags |= CAUTH_NT;
+		(int) canUseFlags |= (int) CAUTH_NT;
 #else
-		mySock->canUseFlags |= CAUTH_FILESYSTEM;
+		(int) canUseFlags |= (int) CAUTH_FILESYSTEM;
 #endif
 
 	}
+	else {   //server
+		serverShouldTry = NULL;
+		serverShouldTry = param( "AUTHENTICATION_METHODS" );
+
+		char *X509CertDir = NULL;
+
+		if( (X509CertDir = param("X509_CERT_DIR")) ) {
+			char tmpstring[MAXPATHLEN];
+			sprintf( tmpstring, "X509_CERT_DIR=%.*s/",MAXPATHLEN, X509CertDir );
+			putenv( strdup( tmpstring ) );
+		}
+	}
+
+#if defined(GSS_AUTHENTICATION)
+	char *CertDir = NULL;
 
 	if ( !( CertDir = getenv( "X509_CERT_DIR" ) ) ) {
-		return 0;
+		return;
 	}
 	struct stat statbuf;
 	int canTryGSS = 1;
@@ -90,12 +104,16 @@ Authentication::setupEnv( char *hostAddr )
 		canTryGSS = 0;
 	}
 
-#if defined(GSS_AUTHENTICATION)
 	if ( !canTryGSS ) {
-		fprintf( stderr, "unable to read x509 directory %s\n", CertDir );
-		return( 0 );
+		if ( mySock->isClient() ) {
+			fprintf( stderr, "\nunable to read x509 directory %s\n", CertDir );
+		}
+		else {
+			dprintf( D_ALWAYS, "unable to read x509 directory %s\n", CertDir );
+		}
+		free( CertDir );
+		return;
 	}
-#endif
 
 	sockaddr_in sin;
 	char *hostname;
@@ -111,7 +129,7 @@ Authentication::setupEnv( char *hostAddr )
 		}
 		else {
 			free( CertDir );
-			return( 0 );
+			return;
 		}
 	}
 	
@@ -128,12 +146,63 @@ Authentication::setupEnv( char *hostAddr )
 	//only for client because canTryGSS/canTryFilesystem, for server
 	//should be parsed in schedd from config file.
 	if ( mySock->isClient() ) {
-		mySock->canUseFlags |= CAUTH_GSS;
+		canUseFlags |= CAUTH_GSS;
+	}
+	free( CertDir );
+#endif
+}
+
+void
+Authentication::setAuthAny()
+{
+	canUseFlags = CAUTH_ANY;
+}
+
+int
+Authentication::authenticate_claimtobe() {
+	int retval = 0;
+	char *tmpOwner = NULL;
+
+	if ( mySock->isClient() ) {
+		mySock->encode();
+		if ( tmpOwner = my_username() ) {
+			//send 1 and then username
+			retval = 1;
+			mySock->code( retval );
+			mySock->code( tmpOwner );
+			setOwner( tmpOwner );
+			delete [] tmpOwner;
+			mySock->end_of_message();
+			mySock->decode();
+			mySock->code( retval );
+		}
+		else {
+			//send 0
+			mySock->code( retval );
+		}
+	}
+	else { //server side
+		mySock->decode();
+		mySock->code( retval );
+		//if 1, receive owner and send back ok
+		if ( retval == 1 ) {
+			mySock->code( tmpOwner );
+			mySock->end_of_message();
+			mySock->encode();
+			if ( tmpOwner ) {
+				retval = 1;
+				setOwner( tmpOwner );
+				free( tmpOwner );
+			}
+			else {
+				retval = 0;
+			}
+			mySock->code( retval );
+		}
 	}
 
-//	free( CertDir );
-	
-	return( 1 );
+	mySock->end_of_message();
+	return retval;
 }
 
 Authentication::Authentication( ReliSock *sock )
@@ -144,10 +213,10 @@ Authentication::Authentication( ReliSock *sock )
 	//this is insecure, but won't work without rewriting queue stuff.
 	auth_status = CAUTH_ANY;
 	claimToBe = NULL;
-	ownerUid = -1;
 	GSSClientname = NULL;
 	authComms.buffer = NULL;
 	authComms.size = 0;
+	canUseFlags = CAUTH_NONE;
 }
 
 Authentication::~Authentication()
@@ -164,7 +233,7 @@ Authentication::isAuthenticated()
 int
 Authentication::authenticate( char *hostAddr )
 {
-	setupEnv( mySock->hostAddr );
+	setupEnv( hostAddr );
 
 	int firm = handshake();
 	dprintf(D_FULLDEBUG,"authenticate, handshake returned: %d\n", firm );
@@ -180,7 +249,7 @@ Authentication::authenticate( char *hostAddr )
 #endif
 
 #if defined(WIN32)
-	 case CAUTH_NT:
+	 case CAUTH_NTSSPI:
 		if ( authenticate_nt() ) {
 			auth_status = CAUTH_NT;
 		}
@@ -193,9 +262,16 @@ Authentication::authenticate( char *hostAddr )
 		}
 		break;
 #endif
+	 case CAUTH_CLAIMTOBE:
+		if( authenticate_claimtobe() ) {
+			auth_status = CAUTH_CLAIMTOBE;
+		}
+		break;
 
 	 default:
-		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake\n" );
+		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake, "
+				"returning 0 (FAILURE)\n" );
+		return 0;
 	}
 	//if none of the methods succeeded, we fall thru to default "none" from above
 
@@ -235,30 +311,17 @@ Authentication::getOwner() {
 }
 
 int
-Authentication::setOwnerUid( int uid ) {
-	if ( !this ) {
-		return 0;
-	}
-	ownerUid = uid;
-	return( 1 );
-}
-
-int
-Authentication::getOwnerUid() {
-	return( ownerUid );
-}
-
-int
 Authentication::handshake()
 {
 	int shouldUseMethod = 0;
 
 	int clientCanUse = 0;
+	int canUse = (int) canUseFlags;
 
 	switch( mySock->isClient() ) {
 	 case 1:
 		mySock->encode();
-		mySock->code( mySock->canUseFlags );
+		mySock->code( canUse );
 		mySock->end_of_message();
 		mySock->decode();
 		mySock->code( shouldUseMethod );
@@ -348,12 +411,14 @@ Authentication::authenticate_filesystem()
 			}
 			else {
 				//need to lookup username from file and do setOwner()
-				setOwner( (char *) my_username( stat_buf.st_uid ) );
+				char *tmpOwner = my_username( stat_buf.st_uid );
+				setOwner( tmpOwner );
+				delete [] tmpOwner;
 			}
 		}
 		unlink( new_file );
 
-		init_user_ids( getOwner() );
+//		init_user_ids( getOwner() );
 	}
 	else {
 		retval = -1;
@@ -369,23 +434,44 @@ Authentication::authenticate_filesystem()
 int
 Authentication::selectAuthenticationType( int clientCanUse ) 
 {
-//this should be changed to somehow go in the order as specified in config file
-	dprintf( D_FULLDEBUG, "auth handshake: clientCanUse: %d\n", clientCanUse );
 	int retval = 0;
 
-	if ( clientCanUse & mySock->canUseFlags & CAUTH_GSS ) {
-		retval = CAUTH_GSS;
-	}
-	else {
+	if ( !serverShouldTry ) {
+		//wasn't specified in config file [param("AUTHENTICATION_METHODS")]
+		//default to generic authentication:
 #if defined(WIN32)
-		if ( clientCanUse & mySock->canUseFlags & CAUTH_NT ) {
-			retval = CAUTH_NT;
+		retval = CAUTH_NTSPPI;
+#else
+		retval = CAUTH_FILESYSTEM;
+#endif
+		dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
+		return( retval );
+	}
+	StringList server( serverShouldTry );
+	char *tmp = NULL;
+
+	server.rewind();
+	while ( tmp = server.next() ) {
+		if ( ( clientCanUse & CAUTH_GSS ) && !stricmp( tmp, "GSS" ) ) {
+			retval = CAUTH_GSS;
+			break;
+		}
+#if defined(WIN32)
+		if ( ( clientCanUse & CAUTH_NTSSPI ) && !stricmp( tmp, "NTSSPI" ) ) {
+			retval = CAUTH_NTSSPI;
+			break;
 		}
 #else
-		if ( clientCanUse & mySock->canUseFlags & CAUTH_FILESYSTEM ) {
+		if ( ( clientCanUse & CAUTH_FILESYSTEM ) && !stricmp( tmp, "FS" ) ) {
 			retval = CAUTH_FILESYSTEM;
+			break;
 		}
 #endif
+		if ( ( clientCanUse & CAUTH_CLAIMTOBE ) && !stricmp( tmp, "CLAIMTOBE" ) )
+		{
+			retval = CAUTH_CLAIMTOBE;
+			break;
+		}
 	}
 	dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
 
@@ -714,7 +800,7 @@ Authentication::authenticate_gss()
 			default: 
 				dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
 				status = authenticate_server_gss();
-init_user_ids( getOwner() );
+//				init_user_ids( getOwner() );
 				break;
 		}
 		mySock->timeout(time); //put it back to what it was before
