@@ -8,14 +8,11 @@ extern "C" char *sbrk( int );
 	// Data starts at well known value USRDATA
 	// Data ends at sbrk(0)
 #	undef NULL
-#	include <sys/param.h>
-#	include <sys/vmparam.h>
 	int data_start_addr() { return USRDATA; }
 	int data_end_addr() { return (int)sbrk(0); }
 #elif defined(SUNOS41)
 	// Data starts at first DATA_ALIGN boundary after end of text
 	// Data ends at sbrk(0)
-#	include <sys/param.h>
 	extern int etext;
 	int
 	data_start_addr()
@@ -82,18 +79,23 @@ stack_end_addr()
 
 /*
   Switch to a temporary stack area in the DATA segment, then execute the
-  given function.
+  given function.  Note: we save the address of the function in a
+  global data location - referencing a value on the stack after the SP
+  is moved would be an error.
 
   Portability: Given the above machine dependent definitions of SETJMP,
   LONGJMP, and StkPtrIdx, it is likely that this code won't have to
   vary for different platforms.
 */
+static void (*SaveFunc)();
+
 const int	TmpStackSize = 4096;
 static char	TmpStack[ TmpStackSize ];
 void
 ExecuteOnTmpStk( void (*func)() )
 {
 	jmp_buf	env;
+	SaveFunc = func;
 
 	if( SETJMP(env) == 0 ) {
 			// First time through - move SP
@@ -105,6 +107,6 @@ ExecuteOnTmpStk( void (*func)() )
 		LONGJMP( env, 1 );
 	} else {
 			// Second time through - call the function
-		func();
+		SaveFunc();
 	}
 }
