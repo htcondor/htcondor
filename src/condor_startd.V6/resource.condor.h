@@ -57,6 +57,8 @@ typedef struct jobstartinfo {
 int resource_init();
 int resource_names(resource_name_t **, int *);
 int resource_open(resource_name_t, resource_id_t *);
+int resource_timeout_params(resource_id_t, job_id_t, task_id_t, resource_param_t *, resource_param_t *);
+int resource_update_params(resource_id_t, job_id_t, task_id_t, resource_param_t *, resource_param_t *);
 int resource_params(resource_id_t, job_id_t, task_id_t, resource_param_t *, resource_param_t *);
 int resource_allocate(resource_id_t rid, int njobs, int ntasks);
 int resource_activate(resource_id_t, int, job_id_t *, int, task_id_t *, start_info_t *);
