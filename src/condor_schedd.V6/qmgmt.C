@@ -1064,6 +1064,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
 	ClassAd			*ad;
+	char			alternate_attrname_buf[_POSIX_PATH_MAX];
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
@@ -1095,18 +1096,23 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
 		}
 
-		char *test_owner = new char [strlen(Q_SOCK->getOwner() )+3];
-		sprintf(test_owner, "\"%s\"", Q_SOCK->getOwner() );
-		if (strcmp(attr_value, test_owner) != 0) {
+		sprintf(alternate_attrname_buf, "\"%s\"", Q_SOCK->getOwner() );
+		if (strcmp(attr_value, alternate_attrname_buf) != 0) {
+			if ( stricmp(attr_value,"UNDEFINED")==0 ) {
+					// If the user set the owner to be undefined, then
+					// just fill in the value of Owner with the owner name
+					// of the authenticated socket.
+				attr_value  = alternate_attrname_buf;
+			} else {
 #if !defined(WIN32)
-			errno = EACCES;
+				errno = EACCES;
 #endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting owner to %s when active owner is %s\n",
-					attr_value, test_owner);
-			delete [] test_owner;
-			return -1;
+				dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s when active owner is %s\n",
+					attr_value, alternate_attrname_buf);
+				return -1;
+			}
 		}
-		delete [] test_owner;
 
 			// If we got this far, we're allowing the given value for
 			// ATTR_OWNER to be set.  However, now, we should try to
