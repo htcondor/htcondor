@@ -1274,6 +1274,7 @@ to restart the Condor daemons and effect the change.
 \section{Grid Computing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{grid computing!FAQs}
 \begin{description}
 
 \item[Do I need to have a Condor pool installed to use Condor-G?]
@@ -1315,6 +1316,8 @@ will still require Globus and Condor-G to submit jobs into the PBS queue.
 
 \item[What is glidein?]
 
+\index{glidein}
+\index{Condor-G!glidein}
 Glidein provides a way to temporarily add a Globus resource
 to a local Condor pool.
 Condor-G is not required to use glidein.
@@ -1329,6 +1332,104 @@ Condor can also dynamically schedule jobs across the Grid.
 
 See section~\ref{sec:Glidein} of the manual
 for further information.
+
+
+\item[Submitting Condor jobs through my Globus gatekeeper does not work.
+What is wrong?]
+\index{Globus!gatekeeper errors}
+
+The Condor configuration file is in a non-standard location,
+and Globus does not know how to locate it, when you see either of the
+following error messages.
+
+\underline{first error message}
+\begin{verbatim}
+% globus-job-run \
+  globus-gate-keeper.example.com/jobmanager-condor /bin/date
+
+Neither the environment variable CONDOR_CONFIG, /etc/condor/,
+nor ~condor/ contain a condor_config file.  Either set
+CONDOR_CONFIG to point to a valid config file, or put a
+"condor_config" file in /etc/condor or ~condor/ Exiting.
+
+GRAM Job failed because the job failed when the job manager
+attempted to run it (error code 17)
+\end{verbatim}
+
+\underline{second error message}
+\begin{verbatim}
+% globus-job-run \
+   globus-gate-keeper.example.com/jobmanager-condor /bin/date
+
+ERROR: Can't find address of local schedd GRAM Job failed
+because the job failed when the job manager attempted to run it
+(error code 17)
+\end{verbatim}
+
+As described in
+section~\ref{sec:Preparing-to-Install}, 
+Condor searches for its configuration file using the following
+ordering.
+\begin{enumerate}
+\item File specified in \Env{CONDOR\_CONFIG} environment variable
+\item \File{/etc/condor/condor\_config}
+\item \File{\Tilde condor/condor\_config}
+\end{enumerate}
+
+Presuming the configuration file is not in a standard location,
+you will need to set the \Env{CONDOR\_CONFIG} environment variable
+\index{environment variables!CONDOR\_CONFIG}
+by hand, or set it in an initialization script.
+One of the following solutions for an initialization may be used.
+\begin{enumerate}
+\item 
+Wherever \Prog{globus-gatekeeper} is launched,
+replace it with a minimal shell script that sets
+\Env{CONDOR\_CONFIG} and then starts \Prog{globus-gatekeeper}.
+Something like the following should work:
+
+\begin{verbatim}
+  #! /bin/sh
+  CONDOR_CONFIG=/path/to/condor_config
+  export CONDOR_CONFIG
+  exec /path/to/globus/sbin/globus-gatekeeper "$@"
+\end{verbatim}
+\item 
+If you are starting \Prog{globus-gatekeeper} using \Prog{inetd},
+\Prog{xinetd}, or a similar program,
+set the environment variable there.
+If you are using \Prog{inetd}, you can use the \Prog{env} program
+to set the environment.
+This example does this;
+the example is shown on multiple lines,
+but it will be all on one line in the \Prog{inetd} configuration. 
+\begin{verbatim}
+globus-gatekeeper stream tcp nowait root /usr/bin/env
+env CONDOR_CONFIG=/path/to/condor_config
+/path/to/globus/sbin/globus-gatekeeper
+-co /path/to/globus/etc/globus-gatekeeper.conf
+\end{verbatim}
+If you're using \Prog{xinetd}, add an env setting
+something like the following:
+\begin{verbatim}
+service gsigatekeeper
+{
+    env = CONDOR_CONFIG=/path/to/condor_config
+    cps = 1000 1
+    disable = no
+    instances = UNLIMITED
+    max_load = 300
+    nice = 10
+    protocol = tcp
+    server = /path/to/globus/sbin/globus-gatekeeper
+    server_args = -conf /path/to/globus/etc/globus-gatekeeper.conf
+    socket_type = stream
+    user = root
+    wait = no
+}
+\end{verbatim}
+
+\end{enumerate}
 
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
