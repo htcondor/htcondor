@@ -107,6 +107,7 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
+		void unchain( void );
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
@@ -169,8 +170,9 @@ class AttrList : public AttrListAbstract
 
         // shipping functions
         int put(Stream& s);
-        int get(Stream& s);
-        int code(Stream& s);
+		int initFromStream(Stream& s);
+
+		void clear( void );
 
 #if defined(USE_XDR)
 		int put (XDR *);
