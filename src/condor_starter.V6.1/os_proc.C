@@ -460,6 +460,8 @@ OsProc::renameCoreFile( void )
 	free( new_name );
 
 	if( rval ) {
+			// make sure it'll get transfered back, too.
+		Starter->addToTransferOutputFiles( buf );
 		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
 	} else if( errno != ENOENT ) {
 		dprintf( D_ALWAYS, "Failed to rename core file: "
