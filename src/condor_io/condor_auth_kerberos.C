@@ -779,6 +779,10 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
         goto error;
     } 
     else {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf( D_SECURITY, "krb5_unparse_name: %s\n", client );
+		}
+
         // We need to parse it right now. from userid@domain
         // to just user id
         char *tmp, * domain;
