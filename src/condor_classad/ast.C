@@ -872,14 +872,14 @@ void Variable::PrintToStr(char* str)
 
 void Integer::PrintToStr(char* str)
 {
-  sprintf(str, "%s%d", str, value);
+  sprintf(str+strlen(str), "%d", value);
   if(unit == 'k')
 	strcat(str, " k");
 }
 
 void Float::PrintToStr(char* str)
 {
-  sprintf(str, "%s%f", str, value);
+  sprintf(str+strlen(str), "%f", value);
   if(unit == 'k')
 	strcat(str, " k");
 }
