@@ -91,16 +91,11 @@ main_init(int argc, char* argv[])
 		switch(ptr[0][1])
 		{
 		  case 'n':
-			Name = strdup(*(++ptr)); 
+			Name = strdup( build_valid_daemon_name(*(++ptr)) ); 
 			break;
 		  default:
 			usage(argv[0]);
 		}
-	}
-	
-	// if a name if not specified, use the full hostname of the machine
-	if(!Name) {
-		Name = strdup( my_full_hostname() );
 	}
 	
 		// Initialize all the modules
