@@ -71,7 +71,7 @@
 
 
 #define IS_X86_SOLARIS25			YES  /* weiru defined it */
-/* #define IS_X86_SOLARIS				YES */
+#define IS_X86_SOLARIS				YES
 #define IS_V5					YES
 
 #ifndef HAS_X
