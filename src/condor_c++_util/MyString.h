@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include <string.h>
 #include <iostream.h>
+#include "simplelist.h"
 
 #ifndef _MyString_H_
 #define _MyString_H_
@@ -292,6 +293,58 @@ public:
     return is;
   }
 
+  // returns the index of the first match, or -1 for no match found
+  int find(const char *pszToFind, int iStartPos = 0) { 
+		if (!Data)
+			return -1;
+		const char *pszFound = strstr(Data + iStartPos, pszToFind);
+		if (!pszFound)
+			return -1;
+		return pszFound - Data;
+  }
+  
+  bool replaceString(const char *pszToReplace, const char *pszReplaceWith, int iStartFromPos=0) {
+		SimpleList<int> listMatchesFound; 		
+
+		int iToReplaceLen = strlen(pszToReplace);
+		if (!iToReplaceLen)
+			return false;
+
+		int iWithLen = strlen(pszReplaceWith);
+		while (iStartFromPos <= Len)
+		{
+			iStartFromPos = find(pszToReplace, iStartFromPos);
+			if (iStartFromPos == -1)
+				break;
+			listMatchesFound.Append(iStartFromPos);
+			iStartFromPos += iToReplaceLen;
+		}
+		if (!listMatchesFound.Number())
+			return false;
+		
+		int iLenDifPerMatch = iWithLen - iToReplaceLen;
+		int iNewLen = Len + iLenDifPerMatch * listMatchesFound.Number();
+		char *pNewData = new char[iNewLen+1];
+		
+		int iItemStartInData;
+		int iPosInNewData = 0;
+		int iPreviousEnd = 0;
+		listMatchesFound.Rewind();
+		while(listMatchesFound.Next(iItemStartInData)) {
+			memcpy(pNewData + iPosInNewData, Data + iPreviousEnd, iItemStartInData - iPreviousEnd);
+			iPosInNewData += (iItemStartInData - iPreviousEnd);
+			memcpy(pNewData + iPosInNewData, pszReplaceWith, iWithLen);
+			iPosInNewData += iWithLen;
+			iPreviousEnd = iItemStartInData + iToReplaceLen;
+		}
+		memcpy(pNewData + iPosInNewData, Data + iPreviousEnd, Len - iPreviousEnd + 1);
+		delete [] Data;
+		Data = pNewData;
+		Len = iNewLen;
+
+		return true;
+	}
+  
 private:
 
   char* Data;	
