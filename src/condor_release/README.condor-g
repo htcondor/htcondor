@@ -1,8 +1,0 @@
-This module adds Condor-G support to an existing Condor installation.
-Condor-G adds the ability to manage Globus jobs to Condor.  You will
-need a functioning Condor installation to install this module.  You
-can download Condor from here:
-http://www.cs.wisc.edu/condor/downloads/
-
-Details on how to install the Condor-G module can be found here:
-http://www.cs.wisc.edu/condor/manual/v6.4/5_3Using_Globus.html#sec:Condor-G-FullInstall
