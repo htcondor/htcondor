@@ -180,6 +180,15 @@ main( int argc, char* argv[] )
 		mySubSystem = strdup( "TOOL" );
 	}
 
+		// Want to do this before we try to find the address of a
+		// remote daemon, since if there's no -pool option, we need to
+		// param() for the COLLECTOR_HOST to contact.
+	if( host ) {
+		config_host( 0, host );
+	} else {
+		config( 0 );
+	}
+
 	if( name || pool ) {
 		addr = get_daemon_addr( dt, name, pool );
 		if( ! addr ) {
@@ -205,12 +214,6 @@ main( int argc, char* argv[] )
 	if( pt == CONDOR_OWNER ) {
 		printf( "%s\n", get_condor_username() );
 		my_exit( 0 );
-	}
-
-	if( host ) {
-		config_host( 0, host );
-	} else {
-		config( 0 );
 	}
 
 	params.rewind();
