@@ -1305,20 +1305,29 @@ lseek64( int fd, off64_t offset, int whence )
 
         if( LocalSysCalls() || use_local_access ) {
 
-#if defined(SYS_llseek)
-/*                rval = syscall( SYS_llseek, user_fd, offset, whence );*/
+#if defined(SYS_llseek) && !defined(SYS_lseek64)
 				/* This SYS_lseek stuff is a temporary measure until I figure
-					out why I can't use the above line. It is sorta ok to leave
-					it like this, because if we ever seeked more than 2Gb 
-					on an fd, a lot of other stuff will break. -pete 11/19/99 */
+					out why I can't use SYS_llseek with ftell under solaris. 
+					It is sorta ok to leave it like this, because if we ever 
+					seeked more than 2Gb on an fd, a lot of other stuff will 
+					break. -pete 11/19/99 */
+#if defined (Solaris)
                 rval = syscall( SYS_lseek, user_fd, (off_t)offset, whence );
-#else /* defined (SYS_lseek64) */
+#else
+                rval = syscall( SYS_llseek, user_fd, offset, whence );
+#endif
+
+#elif defined(SYS_lseek64) && !defined(SYS_llseek)
 				/* if you disassemble the lseek64 call under irix 6.5, you
 					will find that it actually calls SYS_lseek under the
 					covers. It is prolly one of those niceties that the
 					IRIX OS supplies for your convenience. Stupid damned
 					purple macintosh. -pete 11/17/99 */
                 rval = syscall( SYS_lseek, user_fd, (off_t)offset, whence );
+#else
+
+#error Need to resolve the choice of SYS_llseek and SYS_lseek64
+
 #endif
 				
         } else {
