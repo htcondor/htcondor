@@ -39,6 +39,11 @@ if it encounters a double run of the same node job (set the
 
 \item Added Condor-C: the "condor" grid\_type.  Condor-C allows jobs to be handed from one \Condor{schedd} to another \Condor{schedd}.
 
+\item Added \Opt{setup\_here} option to \Condor{glidein} for cases where
+direct installation is desired instead of submitting a setup job to the
+remote gatekeeper.  (For example, this is useful when doing an installation
+onto AFS.)
+
 \end{itemize}
 
 \noindent Bugs Fixed:

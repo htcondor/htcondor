@@ -2,23 +2,29 @@
 {add a Globus resource to a Condor pool}
 \Synopsis \SynProg{\Condor{glidein}}
 \oOpt{-help}
-\oOptArg{-basedir}{basedir}
-\oOptArg{-archdir}{dir}
-\oOptArg{-localdir}{dir}
-\oOpt{-setuponly}
-\oOpt{-runonly}
-\oOptArg{-scheduler}{name}
-\oOptArg{-queue}{name}
-\oOptArg{-project}{name}
-\oOptArg{-memory}{MBytes}
-\oOptArg{-count}{CPUcount}
-\oOptArg{-vms}{VMcount}
-\oOptArg{-idletime}{minutes}
-\oOptArg{-runtime}{minutes}
-\oOpt{-anybody}
 \oOptArg{-admin}{address}
+\oOpt{-anybody}
+\oOptArg{-archdir}{dir}
+\oOptArg{-basedir}{basedir}
+\oOptArg{-count}{CPUcount}
 \oOpt{-genconfig}
+\oOpt{-genstartup}
+\oOpt{-gensubmit}
+\oOptArg{-idletime}{minutes}
+\oOptArg{-localdir}{dir}
+\oOptArg{-memory}{MBytes}
+\oOptArg{-project}{name}
+\oOptArg{-queue}{name}
+\oOptArg{-runtime}{minutes}
+\oOpt{-runonly}
+\oOpt{-setuponly}
+\oOpt{-setup\_here}
+\oOptArg{-setup\_jobmanager}{jobmanager}
+\oOptArg{-scheduler}{name}
+\oOptArg{-suffix}{suffix}
 \oOptArg{-useconfig}{filename}
+\oOptArg{-usestartup}{filename}
+\oOptArg{-vms}{VMcount}
 \OptArg{\{-contactfile}{filename} \} \Bar \Opt{Globus contact string}
 
 \index{Condor commands!condor\_glidein}
@@ -60,19 +66,21 @@ To obtain access to the server,
 or to set up your own server, follow
 instructions on the Glidein Server Setup page,
 at \URL{http://www.cs.wisc.edu/condor/glidein}.
-Set up need only be done once per machine and version of Condor.
+Set up need only be done once per site.
 The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
 By default, all files placed on the remote machine are placed in
-\File{\MacroUNI{HOME}/Condor\_glidein}.  You are encouraged
-to change this (with \Opt{-localdir}) to make it write to local
+\File{\MacroUNI{HOME}/Condor\_glidein}.  It is assumed that this
+directory is shared by all of the machines that will be running
+the glidein Condor daemons.  By default, the daemon log files will also
+be written into this area, but you are encouraged
+to change this (e.g. with \Opt{-localdir}) to make them write to local
 scratch space on the execution machine.  However, for debugging
 initial problems, it may be convenient to have the log files
 in a more accessible place.
 Each instance of \Condor{glidein} will generate spool and log
-files on the Globus resource.
-These files should be occasionally removed.
+files.  These files should be occasionally removed.
 
 \begin{Options}
     \OptItem{\Opt{-help}}{Display brief usage information and exit}
@@ -111,14 +119,19 @@ These files should be occasionally removed.
 	For each of the contacts listed in the file,
 	the Globus resource is added to the local Condor pool.
 	}
-    \OptItem{\Opt{-setuponly}}{
-        Performs only the placement of files on the Globus resource.
-        This option cannot be run simultaneously with \Opt{-runonly} }
     \OptItem{\Opt{-runonly}}{
 	Starts execution of the Condor daemons on the Globus
 	resource.
         If any of the files are missing, exits with an error code.
         This option cannot be run simultaneously with \Opt{-setuponly} }
+    \OptItem{\Opt{-setuponly}}{
+        Performs only the placement of files on the Globus resource.
+        This option cannot be run simultaneously with \Opt{-runonly} }
+    \OptItem{\Opt{-setup\_here}}{
+        Runs the setup process directly instead of submitting a setup
+	job to the remote Globus resource.  For example, this may
+        be used to install glidein in an AFS area that is read-only
+        from the remote Globus resource. }
     \OptItem{\OptArg{-setup\_jobmanager}{jobmanager-fork}}{
         Jobmanager to use for running Glidein setup process.  If a
 	readonable default can be discovered through MDS, this is optional. }
