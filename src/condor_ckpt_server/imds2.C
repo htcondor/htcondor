@@ -81,7 +81,7 @@ int IMDS::AddFile(struct in_addr machine_IP,
       file_data->data.size = file_size;
       file_data->data.last_modified_time = time(NULL);
       file_data->data.state = state;
-      file_data->lock = EXCLUSIVE_LOCK;
+      file_data->lock = UNLOCKED;
     }
   else
     {
