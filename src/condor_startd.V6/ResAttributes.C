@@ -503,7 +503,7 @@ bool
 AvailAttributes::decrement( CpuAttributes* cap ) 
 {
 	int new_cpus, new_phys_mem;
-	float new_virt_mem, new_disk, floor = -0.000001;
+	float new_virt_mem, new_disk, floor = -0.000001f;
 	
 	new_cpus = a_num_cpus - cap->c_num_cpus;
 	new_phys_mem = a_phys_mem - cap->c_phys_mem;
