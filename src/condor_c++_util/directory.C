@@ -50,7 +50,6 @@ struct _finddata_t Directory::filedata;
 Directory::Directory( const char *name, priv_state priv ) 
 {
 	curr_filename = NULL;
-	dirp = -1;
 
 #ifndef WIN32
 	// Unix
@@ -58,6 +57,8 @@ Directory::Directory( const char *name, priv_state priv )
 	if( dirp == NULL ) {
 		EXCEPT( "Can't open directory \"%s\"", name );
 	}
+#else
+	dirp = -1;
 #endif
 	
 	curr_dir = strnewp(name);
@@ -186,7 +187,7 @@ Directory::Remove_Current_File()
 					priv = set_condor_priv(); 
 				}
 				
-				if ( unlink( path ) < 0 ) {
+				if ( unlink( buf ) < 0 ) {
 					ret_val = false;
 				} else {
 					ret_val = true;
