@@ -360,7 +360,8 @@ OsProc::StartJob()
 	set_priv ( priv );
 
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-				   FALSE, env_str, job_iwd, TRUE, NULL, fds, nice_inc );
+				   FALSE, env_str, job_iwd, TRUE, NULL, fds, nice_inc,
+				   DC_JOBOPT_NO_ENV_INHERIT );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
