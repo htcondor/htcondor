@@ -306,6 +306,12 @@ JICLocal::initJobInfo( void )
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 		job_universe = CONDOR_UNIVERSE_VANILLA;
 	}
+		// also, make sure the universe we've got is valid, since in
+		// certain cases we may not check this until now, and we want
+		// to make sure we bail out if we can't support it.
+	if( ! checkUniverse(job_universe) ) {
+		return false;
+	}
 
 	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {
