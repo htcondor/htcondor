@@ -14,18 +14,15 @@
 #define IS_IRIX			YES
 #define Architecture		SGI
 
-#define RpcSvc	/usr/lib/librpcsvc.so
-#define RpcSun	/usr/lib/libsun.a
-#define MallocLib	/usr/lib/libmalloc.a
+#define RpcSvc /usr/lib/librpcsvc.so 
+#define RpcSun /usr/lib/libsun.a
 #define RpcLib RpcSvc RpcSun
-#define MldLib /usr/lib/libmld.a
-#define KernLib /**/
 #define SimpleLibC /usr/lib/nonshared/libc.a
 #define LibC RpcLib SimpleLibC
 #define Crt0 /usr/lib/crt1.o
 #define CrtN /usr/lib/crtn.o
-#define SyscallsExp /**/
-#define SocketLib /**/
+
+PLATFORM_LDFLAGS = /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
 
 #define XLibPath -lX11
 #define XExtLibPath /usr/lib/libXext.a
