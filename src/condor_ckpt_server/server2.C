@@ -1364,7 +1364,7 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	struct sockaddr_in chkpt_addr;
 	int                chkpt_addr_len;
 	int                xfer_sd;
-	ssize_t            bytes_recvd=0;
+	int				   bytes_recvd=0;
 	int                buf_size=DATA_BUFFER_SIZE;
 	int				   file_fd;
 	

@@ -685,9 +685,9 @@ int
 Image::Write( int fd )
 {
 	int		i;
-	ssize_t	pos = 0;
-	ssize_t	nbytes;
-	ssize_t ack;
+	int		pos = 0;
+	int		nbytes;
+	int		ack;
 	int		status;
 
 		// Write out the header
@@ -750,7 +750,7 @@ int
 Image::Read()
 {
 	int		i;
-	ssize_t	nbytes;
+	int		nbytes;
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
@@ -797,12 +797,12 @@ Image::Close()
 ssize_t
 SegMap::Read( int fd, ssize_t pos )
 {
-	ssize_t nbytes;
+	int		nbytes;
 	char *orig_brk;
 	char *cur_brk;
 	char	*ptr;
-	size_t	bytes_to_go;
-	size_t	read_size;
+	int		bytes_to_go;
+	int		read_size;
 	long	saved_len = len;
 	int 	saved_prot = prot;
 	RAW_ADDR	saved_core_loc = core_loc;
