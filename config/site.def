@@ -18,3 +18,5 @@
 #define CentralMgrHost		frigg.cs.wisc.edu
 #define CondorAdministrator	condor-admin
 #define YpLib
+
+#define WANT_PVM	YES

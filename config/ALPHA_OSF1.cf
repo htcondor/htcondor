@@ -3,7 +3,7 @@
 
 #define Tilde /usr/home/condor
 #define RpcLib /**/
-#define MldLib /**/
+#define MldLib /usr/lib/libmld.a
 #define KernLib /**/
 #define MallocLib /**/
 #define SimpleLibC /lib/libc.a
@@ -53,6 +53,7 @@
 #define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define HAS_SETLINEBUF			YES
+#define HAS_PVM				NO
 
 #define CCompiler cc
 #define CPlusCompiler cxx
