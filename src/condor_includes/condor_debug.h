@@ -82,3 +82,9 @@ static int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL) */
 #define TRACE \
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
 #endif
+
+#if defined(AIX31) || defined(AIX32)
+#define BIN_MAIL "/usr/bin/mail"
+#else
+#define BIN_MAIL "/bin/mail"
+#endif
