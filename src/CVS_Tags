@@ -1,9 +1,21 @@
+05/13/03 V6_5-pre-merge-V6_5_0-merge-3
+   The state of the V6_5-branch just before merging in the V6_5_0-branch
+   as tagged at V6_5_0-merge-3.  The last merge was done at V6_5_1.
+
+05/13/03 V6_5_0-merge-3
+   Merging into the V6_5-branch again.  The last one was done at V6_5_1.
+   V6_5_0-merge-2 was skipped.
+
 04/17/03 V6_5-gridmanager_reorg-branch
     A new branch off of V6_5-branch for Jaime's overhaul of the gridmanager
     to allow it to handle multiple job types (Globus, Oracle, NorduGrid, etc).
 
 04/11/03 HAWKEYE_V1_0_RC2
     Release Candidate 2 of Hawkeye 1.0.
+
+04/10/03 V6_5_1_a
+   Very small packaging fixes to 6.5.1. They fix how we make our GPT
+   package--they are not changes to the Condor code.
 
 04/09/03 V6_5-post-merge-V6_5_1
    The V6_5-branch just before merging in the changes from V6_5_0-branch
