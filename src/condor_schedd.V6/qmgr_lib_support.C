@@ -33,14 +33,19 @@ static char *_FileName_ = __FILE__;
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
 int open_url(char *, int, int);
+extern "C" char*	get_schedd_addr(const char*, const char*); 
 
-
-ReliSock *qmgmt_sock;
+AuthSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location)
+ConnectQ(char *qmgr_location, int auth=0 )
 {
 	int		rval;
 	char	tmp_file[255];
@@ -83,7 +88,7 @@ ConnectQ(char *qmgr_location)
 	}
 		
 	if(scheddAddr) {
-		qmgmt_sock = new ReliSock(scheddAddr, QMGR_PORT);
+		qmgmt_sock = new AuthSock(scheddAddr, QMGR_PORT);
 	} else {
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
@@ -143,13 +148,13 @@ ConnectQ(char *qmgr_location)
 		}
 		username = pwd->pw_name;
 	}
-
 #endif
 
 	if( username && *username ) {
-		rval = InitializeConnection(username, tmp_file);
-	} else {
-		rval = InitializeConnection("nobody", tmp_file);
+			rval = InitializeConnection(username, tmp_file, auth );
+	} 
+	else {
+			rval = InitializeConnection("nobody", tmp_file, auth );
 	}
 
 	if (rval < 0) {

@@ -58,6 +58,7 @@ char*		Spool = NULL;							// spool directory
 char* 		JobHistoryFileName = NULL;
 char*		Name = NULL;
 char*		mySubSystem = "SCHEDD";
+char*		CondorCertDir = NULL;
 
 // global objects
 Scheduler	scheduler;
