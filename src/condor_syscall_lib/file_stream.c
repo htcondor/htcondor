@@ -26,30 +26,9 @@
 **
 */ 
 
-#define _POSIX_SOURCE
-
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
-#if defined(OSF1) && !defined(__GNUC__)
-#define __STDC__
-#endif
-
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
-#include "condor_fix_assert.h"
-
-#include <sys/socket.h>
-
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include <signal.h>
-
 #include "condor_debug.h"
 #include "condor_file_info.h"
 static char *_FileName_ = __FILE__;
