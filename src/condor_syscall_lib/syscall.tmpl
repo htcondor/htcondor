@@ -152,20 +152,21 @@
 		ALLOC_PATH( domain );
 	}
 #endif	/* not SWITCH and not CLIP */
-#if defined(Solaris)
+
+#if !(!defined (SWITCH) && !defined(CLIP)) && defined(Solaris)
 	int register_afs_cell( const char *cell ) : pseudo {
-		SEND_PATH( cell );
-		ALLOC_PATH( cell );
-	}
-	int register_fs_domain( const char *domain ) : pseudo {
-		SEND_PATH( domain );
-		ALLOC_PATH( domain );
-	}
-	int register_uid_domain( const char *domain ) : pseudo {
-		SEND_PATH( domain );
-		ALLOC_PATH( domain );
-	} 
-#endif
+        SEND_PATH( cell );
+        ALLOC_PATH( cell );
+    }
+    int register_fs_domain( const char *domain ) : pseudo {
+        SEND_PATH( domain );
+        ALLOC_PATH( domain );
+    }
+    int register_uid_domain( const char *domain ) : pseudo {
+        SEND_PATH( domain );
+        ALLOC_PATH( domain );
+    }
+
 
 #if !defined( CLIP )
 	int link( const char *p1, const char *p2 ) {
@@ -199,7 +200,7 @@
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if defined(LINUX)
+#if defined(LINUX) 
 	int sync();
 #else
 	void sync();
@@ -458,10 +459,20 @@ int rename( const char *from, const char *to ) : pseudo {
 		}
 #	endif
 	int flock( map(int fd), int op );
+#if defined(Solaris)
+not_supported{
 	int fstatfs( map(int fd), struct statfs *buf ) {
 		out xdr_statfs( buf );
 		alloc( buf, STATFS_SIZE );
 	}
+	}
+#else 
+int fstatfs( map(int fd), struct statfs *buf ) {
+	out xdr_statfs( buf );
+		alloc( buf, STATFS_SIZE );
+	}
+#endif
+
 	int fsync( map(int fd) );
 
 	int symlink( const char *path1, const char *path2 ) {
@@ -613,16 +624,30 @@ int rename( const char *from, const char *to ) : pseudo {
 	pid_t setsid();
 #if defined(HPUX9)
 	int statfs( char *path, struct statfs *buf ) {
-#elif defined(LINUX)
-	int statfs( const char *path, struct statfs *buf ) {
-#else
-	int statfs( char *path, struct statfs *buf, int len ) {
-#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out xdr_statfs( buf );
 		alloc( buf, STATFS_SIZE );
 	}
+#elif defined(LINUX)
+	int statfs( const char *path, struct statfs *buf ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_statfs( buf );
+		alloc( buf, STATFS_SIZE );
+	}
+#elif defined(Solaris)
+	not_supported
+{	int statfs( char *path, struct statfs *buf, int len );
+	}
+#else
+	int statfs( char *path, struct statfs *buf, int len ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+		out xdr_statfs( buf );
+		alloc( buf, STATFS_SIZE );
+	}
+#endif
 	int getdomainname( char *name, int namelen ) {
 		out xdr_string( &name, namelen );
 		alloc( name, namelen );
