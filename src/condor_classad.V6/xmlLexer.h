@@ -90,6 +90,11 @@ class XMLLexer
 	// the 'extract token' functions
 	bool PeekToken(Token* token);
 	bool ConsumeToken(Token *token);
+
+	// The buffer_offset is set to be just before where we begin,
+	// but callers may expect it to be at the character, so we adjust it.
+	void SetOffset(int offset) { buffer_offset = offset - 1; }
+	int GetOffset(void) { return buffer_offset + 1; }
 	
  private:
 	Token       current_token;
