@@ -1,14 +1,12 @@
-#if !defined(_CLASSAD_HASHTABLE_H)
-#define _CLASSAD_HASHTABLE_H
+#if !defined(_STRING_HASHKEY_H)
+#define _STRING_HASHKEY_H
 
 /*
-   The ClassAdHashTable type is used to store collections of ClassAds in
-   memory.  It can be used with the ClassAdLog class (see classad_log.h)
-   for persistent storage.  
+   The HashKey class makes a HashTable key from a char*.  This
+   class seems to duplicate functionality in the MyString class.  :-(
 */
 
 #include "HashTable.h"
-#include "condor_classad.h"
 
 #include <assert.h>
 
@@ -29,7 +27,5 @@ private:
 };
 
 int hashFunction(const HashKey &, int);
-
-typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 #endif
