@@ -192,7 +192,6 @@ COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 #else
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
-STANDALONE_COMPRESS_LIB = libcondorzckpt.a
 COMPRESS_LIB = libcondorzsyscall.a
 #endif
 
@@ -216,8 +215,7 @@ LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ) $(SPECIAL_IO_OBJ) \
 	$(SPECIAL_OBJ) $(CPP_UTIL_OBJ)
 
-SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a \
-	libcondorckpt.a $(STANDALONE_COMPRESS_LIB) 
+SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
@@ -469,7 +467,6 @@ import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
 import(../condor_shadow.V6, pseudo_ops.h)
-import(../condor_ckpt,libcondorckpt.a)
 import(../condor_ckpt,libcondorc++support.a)
 
 authentication.o: authentication.C
@@ -483,7 +480,6 @@ $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
 	ar -r $(COMPRESS_LIB) $(COMPRESS_OBJ)
 clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
-import(../condor_ckpt,$(STANDALONE_COMPRESS_LIB))
 #endif
 
 html:
