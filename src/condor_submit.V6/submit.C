@@ -676,10 +676,11 @@ check_path_length(const char *path, char *lhs)
 void
 SetExecutable()
 {
+	bool	transfer_it = true;
 	char	*ename = NULL;
 	char	*full_ename = NULL;
 	char	*copySpool = NULL;
-	char	*transfer = NULL;
+	char	*macro_value = NULL;
 
 	ename = condor_param(Executable);
 
@@ -689,15 +690,19 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	transfer = condor_param( TransferExecutable );
-	if ( transfer == NULL ) {
-		transfer = (char *)malloc( 16 );
-		strcpy( transfer, "TRUE" );
+	macro_value = condor_param( TransferExecutable ) ;
+	if ( macro_value ) {
+		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			InsertJobExpr( buffer );
+			transfer_it = false;
+		}
+		free( macro_value );
 	}
 
 	// If we're not transfering the executable, leave a relative pathname
 	// unresolved. This is mainly important for the Globus universe.
-	if ( *transfer != 'F' && *transfer != 'f' ) {
+	if ( transfer_it ) {
 		full_ename = full_path( ename, false );
 	} else {
 		full_ename = ename;
@@ -753,7 +758,7 @@ SetExecutable()
 	// spool executable only if no $$(arch).$$(opsys) specified
 
 	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
-		 *transfer != 'F' && *transfer != 'f' ) {	
+		 transfer_it ) {
 
 		if (SendSpoolFile(IckptName) < 0) {
 			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
@@ -770,7 +775,6 @@ SetExecutable()
 	}
 
 	free(ename);
-	free(transfer);
 	free(copySpool);
 }
 
@@ -1185,30 +1189,6 @@ SetTransferFiles()
 			InsertJobExpr (output_files);
 		}
 	}
-
-	macro_value = condor_param( TransferExecutable ) ;
-	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
-		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
-		InsertJobExpr( buffer );
-	}
-
-	macro_value = condor_param( TransferInput ) ;
-	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
-		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
-		InsertJobExpr( buffer );
-	}
-
-	macro_value = condor_param( TransferOutput ) ;
-	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
-		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
-		InsertJobExpr( buffer );
-	}
-
-	macro_value = condor_param( TransferError ) ;
-	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
-		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
-		InsertJobExpr( buffer );
-	}
 }
 
 void
@@ -1254,37 +1234,42 @@ SetAppendFiles()
 void
 SetStdFile( int which_file )
 {
+	bool	transfer_it = true;
 	char	*macro_value = NULL;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
 	switch( which_file ) 
 	{
-	  case 0:
+	case 0:
 		generic_name = Input;
+		macro_value = condor_param( TransferInput );
 		break;
-	  case 1:
+	case 1:
 		generic_name = Output;
+		macro_value = condor_param( TransferOutput );
 		break;
-	  case 2:
+	case 2:
 		generic_name = Error;
+		macro_value = condor_param( TransferError );
 		break;
-	  default:
+	default:
 		fprintf(stderr, "Unknown standard file descriptor (%d)\n", which_file );
 		DoCleanup(0,0,NULL);
 	}
 
+	if ( macro_value ) {
+		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
+			transfer_it = false;
+		}
+		free( macro_value );
+	}
 
 	macro_value = condor_param( generic_name );
-#if !defined(WIN32)
-		//if no files in Globus job, don't set anything
-	if ( !macro_value && ( JobUniverse == GLOBUS_UNIVERSE ) ) {
-		return;
-	}
-#endif
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
+		transfer_it = false;
 		macro_value = strdup(NULL_FILE);
 	}
 	
@@ -1300,20 +1285,35 @@ SetStdFile( int which_file )
 
 	switch( which_file ) 
 	{
-	  case 0:
+	case 0:
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
 		InsertJobExpr (buffer);
-		check_open( macro_value, O_RDONLY );
+		if ( transfer_it ) {
+			check_open( macro_value, O_RDONLY );
+		} else {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
+			InsertJobExpr( buffer );
+		}
 		break;
-	  case 1:
+	case 1:
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
 		InsertJobExpr (buffer);
-		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		if ( transfer_it ) {
+			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		} else {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
+			InsertJobExpr( buffer );
+		}
 		break;
-	  case 2:
+	case 2:
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
 		InsertJobExpr (buffer);
-		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		if ( transfer_it ) {
+			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+		} else {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
+			InsertJobExpr( buffer );
+		}
 		break;
 	}
 		
