@@ -330,13 +330,10 @@ void Server::Execute()
 		//   request comes in (change the &poll argument to NULL).  The 
 		//   philosophy is that one does not need to reclaim a child process
 		//   until another is ready to start
-		while ((more) && ((num_sds_ready=select(max_req_sd_plus1,
-#if defined(HPUX9)
-												(int *)&req_sds, 
-#else
-												&req_sds, 
-#endif
-												NULL, NULL, &poll)) > 0)) {
+		while( (more) && 
+			   ((num_sds_ready=select(max_req_sd_plus1,
+									  (SELECT_FDSET_PTR)&req_sds, 
+									  NULL, NULL, &poll)) > 0)) {
 			if (FD_ISSET(service_req_sd, &req_sds))
 				HandleRequest(service_req_sd, SERVICE_REQ);
 			if (FD_ISSET(store_req_sd, &req_sds))
