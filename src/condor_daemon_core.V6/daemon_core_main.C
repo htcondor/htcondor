@@ -45,9 +45,12 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
 
 // External protos
 extern int main_init(int argc, char *argv[]);	// old main()
-extern int main_config();
+extern int main_config(bool is_full);
 extern int main_shutdown_fast();
 extern int main_shutdown_graceful();
+
+// Internal protos
+void dc_reconfig( bool is_full );
 
 // Globals
 int		Foreground = 0;		// run in background by default
@@ -61,7 +64,6 @@ char*	addrFile = NULL;
 int line_where_service_stopped = 0;
 #endif
 bool	DynamicDirs = false;
-
 
 
 #ifndef WIN32
@@ -471,9 +473,13 @@ handle_off_graceful( Service*, int, Stream* )
 
 	
 int
-handle_reconfig( Service*, int, Stream* )
+handle_reconfig( Service*, int cmd, Stream* )
 {
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+	if( cmd == DC_RECONFIG_FULL ) {
+		dc_reconfig( true );
+	} else {
+		dc_reconfig( false );
+	}		
 	return TRUE;
 }
 	
@@ -648,11 +654,10 @@ unix_sigusr1(int)
 #endif /* ! WIN32 */
 
 
-int
-handle_dc_sighup( Service*, int )
-{
-	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
 
+void
+dc_reconfig( bool is_full )
+{
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
@@ -677,8 +682,11 @@ handle_dc_sighup( Service*, int )
 	// it will go there.  the location of LOG may have changed, so redo it here.
 	drop_core_in_log();
 
-	// call daemon-core's ReInit
-	daemonCore->ReInit();
+	// If we're doing a full reconfig, call ReInit to clear out the
+	// DNS info we have cashed for the IP verify code
+	if( is_full ) {
+		daemonCore->ReInit();
+	}
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
@@ -705,8 +713,15 @@ handle_dc_sighup( Service*, int )
 	}
 
 	// call this daemon's specific main_config()
-	main_config();
+	main_config( is_full );
+}
 
+
+int
+handle_dc_sighup( Service*, int )
+{
+	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
+	dc_reconfig( true );
 	return TRUE;
 }
 
@@ -1184,6 +1199,10 @@ int main( int argc, char** argv )
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
+								  (CommandHandler)handle_reconfig,
+								  "handle_reconfig()", 0, WRITE );
+
+	daemonCore->Register_Command( DC_RECONFIG_FULL, "DC_RECONFIG_FULL",
 								  (CommandHandler)handle_reconfig,
 								  "handle_reconfig()", 0, ADMINISTRATOR );
 
