@@ -38,7 +38,7 @@ NetMnger *mnger = NULL;
 
 void alarmHandler(int signo)
 {
-    printf("timer goes off\n");
+    //cout << "timer goes off\n";
     mnger->sendPolling();
 }
 
@@ -124,10 +124,10 @@ int main(int argc, char *argv[])
     //  - signal handler remains installed after catching a signal
     //  - the same signal will be blocked while the handler is executing
     if ( sigaction(SIGALRM, &act, &oact) < 0 ) {
-        printf("sigaction failed: %s\n", strerror(errno));
+        dprintf(D_ALWAYS, "sigaction failed: %s\n", strerror(errno));
         exit(-1);
     }
-    printf("NetMnger::doMainLoop - alarm handler registered\n");
+    dprintf(D_NETWORK, "NetMnger::doMainLoop - alarm handler registered\n");
     /* end of signal handler registration */
 
     mnger->mainLoop();
@@ -153,7 +153,6 @@ NetMnger::NetMnger(int port, long initBand, int window, int backOffRate)
     _listenSock = socket(AF_INET, SOCK_STREAM, 0);
     if(_listenSock <= 0) {
         dprintf(D_ALWAYS, "NetMnger::NetMnger - socket creation failed\n");
-        printf("NetMnger::NetMnger - socket creation failed\n");
         exit(-1);
     }
 
@@ -162,14 +161,14 @@ NetMnger::NetMnger(int port, long initBand, int window, int backOffRate)
         _mngSockTbl[i].bandInfo = NULL;
         _mngSockTbl[i].halfConn = NULL;
     }
-    printf("NetMnger created\n");
+    dprintf(D_NETWORK, "NetMnger created\n");
 }
 
 
 void NetMnger::mainLoop()
 {
     struct sockaddr_in myAddr, peerAddr;
-    socklen_t addrLen = sizeof(myAddr);
+    unsigned int addrLen = sizeof(myAddr);
     struct fd_set rdfds;
     int maxfd = _listenSock+1;
 
@@ -180,14 +179,12 @@ void NetMnger::mainLoop()
     myAddr.sin_port = htons((u_short)_port);
     if(bind(_listenSock, (struct sockaddr *)&myAddr, addrLen)) {
         dprintf(D_ALWAYS, "NetMnger::doMainLoop - bind failed, errno = %d\n", errno);
-        printf("NetMnger::doMainLoop - bind failed, errno: %s\n", strerror(errno));
         return;
     }
 
     // Change the listen socket to a passive one
     if(::listen(_listenSock, 5)) {
         dprintf(D_ALWAYS, "NetMnger::doMainLoop - listen failed, errno = %d\n", errno);
-        printf("NetMnger::doMainLoop - listen failed, errno = %d\n", errno);
         return;
     }
 
@@ -206,13 +203,13 @@ void NetMnger::mainLoop()
                 }
             }
 
-            printf("selecting...\n");
+            //printf("selecting...\n");
             result = select(maxfd, &rdfds, 0, 0, 0);
             if(result < 0) {
                 if(errno == EINTR)
                 continue;
                 else {
-                    printf("select failed: %s\n", strerror(errno));
+                    dprintf(D_ALWAYS, "NetMnger::mainLoop - select failed: %s\n", strerror(errno));
                     exit(-1);
                 }
             }
@@ -226,6 +223,8 @@ void NetMnger::mainLoop()
             _mngSockTbl[sock].bandInfo = (BandInfo *)-1;
             _mngSockTbl[sock].halfConn = (HalfConn *)-1;
 
+            dprintf(D_FULLDEBUG, "a connection accepted through sock = %d\n", sock);
+            dprintf(D_FULLDEBUG, "register in _mngSockTbl[%d]\n", sock);
             printf("a connection accepted through sock = %d\n", sock);
             printf("register in _mngSockTbl[%d]\n", sock);
         }
@@ -259,7 +258,7 @@ void NetMnger::handleMngPacket(const int fd)
 
     switch(opCode) {
         case BND_CONN_RPT:
-            printf("Connection: (fd = %d)\n", fd);
+            //printf("Connection: (fd = %d)\n", fd);
             if(condor_read(fd, buffer, BND_SZ_CONN - 1, 0) != BND_SZ_CONN-1) {
                 dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
                                    connRpt read fail: errono = %d\n", errno);
@@ -286,7 +285,7 @@ void NetMnger::handleMngPacket(const int fd)
             return;
 
         case BND_CLOSE_RPT:
-            printf("Close: (fd = %d)\n", fd);
+            //printf("Close: (fd = %d)\n", fd);
             handleClose(fd);
             return;
 
@@ -307,8 +306,6 @@ void NetMnger::handleMngPacket(const int fd)
         default:
             dprintf(D_ALWAYS, "NetMnger::handleMngPacket -\
                                invalid op-code\n");
-            printf("NetMnger::handleMngPacket -\
-                    invalid op-code\n");
             return;
     }
 }
@@ -379,7 +376,7 @@ void NetMnger::handleConnRpt(const int fd,
         ptr->maxBytes -= chipOff;
         if(ptr->curUse > ptr->maxBytes) {
             ptr->realloc = true;
-            printf("allocation(fd=%d) is updated from %ld to %ld\n", ptr->mngSock, ptr->curUse, ptr->maxBytes);
+            //printf("allocation(fd=%d) is updated from %ld to %ld\n", ptr->mngSock, ptr->curUse, ptr->maxBytes);
         }
         ptr = ptr->next;
     }
@@ -482,7 +479,7 @@ void NetMnger::handleBandRpt(const int fd,
 
 
     if(connPtr->reported) {
-        printf("Bandwidth report received more than once\n");
+        //printf("Bandwidth report received more than once\n");
         return;
     }
 
@@ -509,8 +506,8 @@ void NetMnger::handleBandRpt(const int fd,
     }
 
     // reallocate and send out reallocation
-    cout << "bandPtr->reported: " << bandPtr->reported << endl;
-    cout << "bandPtr->noConn: " << bandPtr->noConn << endl;
+    //cout << "bandPtr->reported: " << bandPtr->reported << endl;
+    //cout << "bandPtr->noConn: " << bandPtr->noConn << endl;
     if(bandPtr->reported == bandPtr->noConn)
         bandPtr->reallocate();
 
@@ -533,7 +530,7 @@ void NetMnger::sendPolling()
         }
     }
 
-    printf("sent Polling to %d ReliSocks and collecting bandwidth report...\n", total);
+    //printf("sent Polling to %d ReliSocks and collecting bandwidth report...\n", total);
     // Restart timer
     alarm(180);
 }
@@ -545,7 +542,7 @@ void BandInfo::reallocate()
     HalfConn *ptr;
 
     if(spillOut > 0) {
-        printf("SpillOut = %ld\n", spillOut);
+        //printf("SpillOut = %ld\n", spillOut);
         fullUsage = -2;
         long chipIn = spillOut / noConn;
         capacity = 0;
@@ -557,7 +554,7 @@ void BandInfo::reallocate()
             connPtr = connPtr->next;
         }
     } else if(room > EPSILONE * noConn) {
-        printf("Room = %ld\n", room);
+        //printf("Room = %ld\n", room);
         fullUsage = 0;
         long aportion = room/noConn;
         while(connPtr) {
@@ -627,9 +624,9 @@ void HalfConn::sendAlloc()
     // Send the report to netMnger
     (void) condor_write(mngSock, buffer, BND_SZ_ALLOC, 0);
     
-    printf("Send Allocation: (fd = %d)\n", mngSock);
-    printf("\t(maxBytes: %ld, window: %d sec, percent: %d)\n",
-           maxBytes, window, maxPercent);
+    //printf("Send Allocation: (fd = %d)\n", mngSock);
+    //printf("\t(maxBytes: %ld, window: %d sec, percent: %d)\n",
+    //       maxBytes, window, maxPercent);
 }
 
 

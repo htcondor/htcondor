@@ -65,11 +65,14 @@ int main(int argc, char *argv[])
 		case 1: // Server
 			cout << "Port: ";
 			cin >> port;
-            //cout << "Sleep between receive: ";
-            //cin >> interval;
 			listenSock.listen(port);
 			socket = listenSock.accept();
+            if (!socket) {
+                cerr << "Accept failed\n";
+                exit(0);
+            }
 			cout << "connected to a client" << endl;
+            socket->timeout(5);
 			while(true) {
 				socket->decode();
 				socket->code(charString);
@@ -100,7 +103,7 @@ int main(int argc, char *argv[])
 				exit(-1);
 			}
 			cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
-            //(void) time(&prev);
+            clientSock.timeout(5);
 			while(true) {
                 struct timeval timer;
 

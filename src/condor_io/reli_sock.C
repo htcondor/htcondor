@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "condor_rw.h"
 #include "condor_socket_types.h"
+#include "get_port_range.h"
 
 #ifdef WIN32
 #include <mswsock.h>    // For TransmitFile()
@@ -102,7 +103,7 @@ ReliSock::bandRegulate()
     _bandReg = true;
     
     // if this has already connected to the peer and
-    // not greeted to the netMnger, do greet to netMnger
+    // not greeted to the netMnger, do greet to netMnger now
     if(_state == sock_connect && !_greeted)
         return greetMnger();
     else
@@ -115,11 +116,11 @@ int
 ReliSock::reportConnect(const int myIP, const short myPort,
                         const int peerIP, const short peerPort)
 {
-    cout << "Report Connection\n";
-    cout << "\tmyIP: " << myIP << endl;
-    cout << "\tmyPort: " << myPort << endl;
-    cout << "\tpeerIP: " << peerIP << endl;
-    cout << "\tpeerPort: " << peerPort << endl;
+    dprintf(D_FULLDEBUG, "ReliSock reported to netMnger a new connection:\n");
+    dprintf(D_FULLDEBUG, "\tmyIP: %d(in network bytes order)\n", myIP);
+    dprintf(D_FULLDEBUG, "\tmyPort: %d(in network bytes order)\n", myPort);
+    dprintf(D_FULLDEBUG, "\tpeerIP: %d(in network bytes order)\n", peerIP);
+    dprintf(D_FULLDEBUG, "\tpeerPort: %d(in network bytes order)\n", peerPort);
 
     char buffer[BND_SZ_CONN];
     int index = 1;
@@ -151,7 +152,7 @@ ReliSock::reportConnect(const int myIP, const short myPort,
 void
 ReliSock::reportClose()
 {
-    cout << "Report Close\n";
+    dprintf(D_FULLDEBUG, "ReliSock reported close\n");
 
     char buffer;
 
@@ -173,12 +174,12 @@ ReliSock::reportBandwidth()
 
     // Make the header
     buffer[0] = BND_BAND_RPT;
-    cout << "Bandwidth Report: \n";
+    dprintf(D_FULLDEBUG, "ReliSock reported Bandwidth Usage upon request from NetMnger: \n");
 
     if(_bndCtl_state == normal) {
         // report as not being congested
         buffer[1] = (char) false;
-        cout << "\tCongest: false\n";
+        dprintf(D_FULLDEBUG, "\tCongest: false(in normal state)\n");
         if(!_beenBackedOff) {
             if(_totalSent > 0) {
                 // report actual bytes sent during the period
@@ -187,7 +188,7 @@ ReliSock::reportBandwidth()
             } else {
                 temp = _maxBytes;
             }
-            cout << "\tBytes: " << temp << endl;
+            dprintf(D_FULLDEBUG, "\tTotal bytes sent: %ld\n", temp);
         } else {
             // report extrapolated value from recent 4 WIN
             int index = _curIdx;
@@ -197,22 +198,22 @@ ReliSock::reportBandwidth()
                     index = BND_CTL_WINS - 1;
             }
             temp *= 4;
-            cout << "\tBytes: " << temp << " [Xtrapolated]" << endl;
+            dprintf(D_FULLDEBUG, "\tTotal bytes sent: %ld(Xtrapolated value)\n", temp);
         }
     } else if(_bndCtl_state == backOff) {
         // report as being congested
         buffer[1] = (char) true;
-        cout << "\tCongest: true\n";
+        dprintf(D_FULLDEBUG, "\tCongest: true(in backOff state)\n");
         // report the capability of the current network
         temp = _capability;
-        cout << "\tBytes: " << temp << endl;
+        dprintf(D_FULLDEBUG, "\tTotal bytes sent: %ld(_capability)\n", temp);
     } else {
         // report as being not congested
         buffer[1] = (char) false;
-        cout << "\tCongest: false\n";
+        dprintf(D_FULLDEBUG, "\tCongest: false(in scouting state)\n");
         // report the capability of the current network
         temp = _maxBytes;
-        cout << "\tBytes: " << temp << endl;
+        dprintf(D_FULLDEBUG, "\tTotal bytes sent: %ld(_maxBytes)\n", temp);
     }
 
     // Fill the content
@@ -223,9 +224,14 @@ ReliSock::reportBandwidth()
     memcpy(&buffer[index], &temp, sizeof(long));
 
     // Send the report to netMnger
-    if(condor_write(_mngSock, buffer, BND_SZ_BAND, _timeout) == BND_SZ_BAND)
+    int result = condor_write(_mngSock, buffer, BND_SZ_BAND, _timeout);
+    if (result == BND_SZ_BAND)
         return TRUE;
-    else {
+    else if (result == 0) {
+        dprintf(D_ALWAYS, "ReliSock::reportBandwidth - \
+                mngSock has been closed prematuraly\n");
+        return FALSE;
+    } else {
         reportClose();
         ::close(_mngSock);
         return FALSE;
@@ -313,12 +319,14 @@ ReliSock::accept( ReliSock  &c )
     int on = 1;
     c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
     if(_bandReg) {
-        if( c.bandRegulate() != TRUE ) {
-            dprintf(D_ALWAYS, "ReliSock::accept - failed to do bandRegulate");
-            return FALSE;
-        }
         if( c.greetMnger() != TRUE ) {
             dprintf(D_ALWAYS, "ReliSock::accept - failed to do greetMnger");
+            ::close(c_sock);
+            return FALSE;
+        }
+        if( c.bandRegulate() != TRUE ) {
+            dprintf(D_ALWAYS, "ReliSock::accept - failed to do bandRegulate");
+            ::close(c_sock);
             return FALSE;
         }
     }
@@ -373,7 +381,7 @@ ReliSock::connect( char *host, int port, bool non_blocking_flag )
     /* Connect to peer ReliSock */
     hostAddr = strdup( host );
     if(do_connect( host, port, non_blocking_flag) != TRUE) {
-        if(_bandReg) {
+        if(_bandReg && _greeted) {
             reportClose();
             ::close(_mngSock);
         }
@@ -381,8 +389,13 @@ ReliSock::connect( char *host, int port, bool non_blocking_flag )
         return FALSE;
     }
 
-    if(_bandReg && !_greeted)
-        return greetMnger();
+    if(_bandReg) {
+        if (greetMnger() != TRUE) {
+            ::close(_sock);
+            return FALSE;
+        } else
+            return TRUE;
+    }
     else return TRUE;
 }
 
@@ -392,7 +405,7 @@ int
 ReliSock::greetMnger()
 {
     struct sockaddr_in sockAddr;
-    socklen_t addrLen = sizeof(sockAddr);
+    unsigned int addrLen = sizeof(sockAddr);
 
     // Create management socket
     _mngSock = socket(AF_INET, SOCK_STREAM, 0);
@@ -401,16 +414,22 @@ ReliSock::greetMnger()
         return FALSE;
     }
 
-    // Bind _mngSock to an ephemeral port
-    // Notice: Later these lines must be changed to bind within a range
-    bzero(&sockAddr, sizeof(sockAddr));
-    sockAddr.sin_family = AF_INET;
-    sockAddr.sin_addr.s_addr = htonl(my_ip_addr());
-    sockAddr.sin_port = htons(0);
-    if(::bind(_mngSock, (sockaddr *)&sockAddr, addrLen)) {
-        dprintf(D_ALWAYS, "ReliSock::greetMnger -\
-                           Failed to bind _mngSock to a local port\n");
-        return FALSE;
+    // Bind _mngSock
+    int lowPort, highPort;
+    if ( get_port_range(&lowPort, &highPort) == TRUE ) {
+        if ( bindWithin(_mngSock, lowPort, highPort) == TRUE ) {
+            return TRUE;
+        } else return FALSE;
+    } else {
+        bzero(&sockAddr, sizeof(sockAddr));
+        sockAddr.sin_family = AF_INET;
+        sockAddr.sin_addr.s_addr = htonl(my_ip_addr());
+        sockAddr.sin_port = htons(0);
+        if(::bind(_mngSock, (sockaddr *)&sockAddr, addrLen)) {
+            dprintf(D_ALWAYS, "ReliSock::greetMnger -\
+                               Failed to bind _mngSock to a local port\n");
+            return FALSE;
+        }
     }
 
     // get (ip-addr, port) of netMnger
@@ -527,7 +546,6 @@ ReliSock::put_bytes_nobuffer( char *buf, int length , int send_size)
                     result = handleMngPacket();
                     if(result <0) {
                         dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer: handleMngPacket failed.\n");
-                        printf("handleMngPacket 1\n");
                         return -1;
                     }
                 }
@@ -535,7 +553,6 @@ ReliSock::put_bytes_nobuffer( char *buf, int length , int send_size)
                 result = condor_write(_sock, cur, (length - i), _timeout);
                 if( result < 0 ) {
                     dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer: Send failed.\n");
-                    printf("condor_write 1\n");
                     return -1;
                 }
             }
@@ -581,7 +598,6 @@ ReliSock::put_bytes_nobuffer( char *buf, int length , int send_size)
                     result = handleMngPacket();
                     if(result < 0) {
                         dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer: handleMngPacket failed.\n");
-                        printf("handleMngPacket 2\n");
                         return -1;
                     }
                 }
@@ -590,7 +606,6 @@ ReliSock::put_bytes_nobuffer( char *buf, int length , int send_size)
 
                 if( result < 0 ) {
                     dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer: Send failed.\n");
-                    printf("ReliSock::put_bytes_nobuffer: Send failed.\n");
                     return -1;
                 }
             }
@@ -867,7 +882,6 @@ ReliSock::end_of_message()
                     mngReady = false;
                     // we won't be nice here, because the packet we are sending
                     // is too small to regulate
-                    // epilogue book keeping
                     if(_maxBytes > 0) {
                         congested = false;
                         nbytes = snd_msg.snd_packet(_sock, _mngSock, TRUE, _timeout, 40000, congested, mngReady);
@@ -1076,10 +1090,9 @@ int ReliSock::RcvMsg::rcv_packet(SOCKET _sock,
         }
         if(FD_ISSET(_sock, &rdfds)) {
             tmp_len = recv(_sock, hdr+len, 5-len, 0);
-            //cerr << "rcv_packet: " << tmp_len << endl;
             if (tmp_len <= 0) {
                 if(timer) free(timer);
-                cerr << "ReliSock::rcv_packet: recv failed " << strerror(errno) << endl;
+                dprintf(D_ALWAYS, "ReliSock::rcv_packet: recv failed %s\n", strerror(errno));
                 return FALSE;
             }
             len += tmp_len;
@@ -1126,9 +1139,15 @@ int ReliSock::RcvMsg::rcv_packet(SOCKET _sock,
 int ReliSock::handleMngPacket()
 {
     char opCode;
+    int result;
 
     // Read op-code
-    if(condor_read(_mngSock, &opCode, 1, 0) != 1) {
+    result = condor_read(_mngSock, &opCode, 1, 0);
+    if (result == 0) {
+        dprintf(D_ALWAYS, "ReliSock::handleMngPacket - \
+                fail to read op-code: socket closed prematuraly\n");
+        return FALSE;
+    } else if (result != 1) {
         dprintf(D_ALWAYS, "ReliSock::handleMngPacket - \
                            fail to read op-code from the managing socket\n");
         return FALSE;
@@ -1136,10 +1155,10 @@ int ReliSock::handleMngPacket()
 
     switch(opCode) {
         case BND_POLLING:
-            cout << "Report Req. arrived\n";
+            dprintf(D_FULLDEBUG, "ReliSock::handleMngPacket - bandwidth report req. arrived\n");
             return reportBandwidth();
         case BND_ALLOC_BAND:
-            cout << "Allocation arrived\n";
+            dprintf(D_FULLDEBUG, "ReliSock::handleMngPacket - bandwidth allocation arrived\n");
             return handleAlloc();
         default:
             dprintf(D_ALWAYS, "ReliSock::handleMngPacket - \
@@ -1156,11 +1175,18 @@ int ReliSock::handleAlloc()
     short short_param = 0;
     long sec, bytes;
     float percent = 0.0;
+    int result;
 
     // Read a packet after op-code
-    if(condor_read(_mngSock, buffer, BND_SZ_ALLOC-1, 0) != BND_SZ_ALLOC-1) {
+    result = condor_read(_mngSock, buffer, BND_SZ_ALLOC-1, 0);
+    if (result == 0) {
         dprintf(D_ALWAYS, "ReliSock::handleMngPacket - \
-                           fail to read a packet from the managing socket\n");
+                mngSock has been closed prematuraly\n");
+        return FALSE;
+    } else if (result != BND_SZ_ALLOC-1) {
+        dprintf(D_ALWAYS, "ReliSock::handleMngPacket - \
+                fail to read a packet from the managing socket\n");
+        reportClose();
         return FALSE;
     }
 
@@ -1173,9 +1199,9 @@ int ReliSock::handleAlloc()
     memcpy(&short_param, &buffer[16+4-sizeof(short)], sizeof(short));
     percent = (float)ntohs((u_short)short_param) / 100.0;
 
-    cout << "\tbytes: " << bytes << endl;
-    cout << "\tsec: " << sec << endl;
-    cout << "\tpercent: " << percent << endl;
+    dprintf(D_FULLDEBUG, "\tmax bytes allowed: %ld\n", bytes);
+    dprintf(D_FULLDEBUG, "\twindow: %d(sec)\n", sec);
+    dprintf(D_FULLDEBUG, "\tbackOff rate: %d(%)\n", percent);
     // Call setLimit
     return setLimit(sec, bytes, percent);
 }
@@ -1193,7 +1219,7 @@ int ReliSock::setLimit(const int sec, const int bytes, const float percent)
        bytes <= CONDOR_IO_BUF_SIZE * pow(9.0/5.0, BND_CTL_LEVELS-1) ||
        percent <= 0.0 || percent > 1.0)
     {
-        printf("ReliSock::setLimit - Bad Parameter\n");
+        dprintf(D_NETWORK, "ReliSock::setLimit - Bad Parameter\n");
         _maxBytes = 0;
         _totalSent = 0;
         return FALSE;
@@ -1205,16 +1231,16 @@ int ReliSock::setLimit(const int sec, const int bytes, const float percent)
     // define initial windows _w[i] and limits _l[i]
     _w[0] = sec * 1000;
     _l[0] = _maxBytes;
-    printf("=================================================================\n");
-    printf("New windows and corresponding limits defined:\n");
-    cout << "\t[" << _w[0] << "msec, " << _l[0] << " byte]";
+    dprintf(D_FULLDEBUG, "=================================================================\n");
+    dprintf(D_FULLDEBUG, "New windows and corresponding limits defined:\n");
+    dprintf(D_FULLDEBUG, "[%d msec, %d bytes]", _w[0], _l[0]);
     for(int i=1; i<BND_CTL_LEVELS; i++) {
         _w[i] = _w[i-1] / 2;
         _l[i] = _l[i-1] / 9.0 * 5.0;
-        cout << "\t[" << _w[i] << "msec, " << _l[i] << " byte]";
+        dprintf(D_FULLDEBUG, "  [%d msec, %d bytes]", _w[i], _l[i]);
     }
-    printf("\n");
-    printf("=================================================================\n");
+    dprintf(D_FULLDEBUG, "\n");
+    dprintf(D_FULLDEBUG, "=================================================================\n");
 
     // initialize _s[i]'s and _allowance
     int initVal = _maxBytes / BND_CTL_WINS;
@@ -1283,11 +1309,11 @@ void ReliSock::retreatWall()
         // Adjust limits, _l[i], based on the _capability calculated above
         // and _maxPercent given by user
         _l[0] = (unsigned long)(_capability * _maxPercent);
-        printf("\tBacked off to:\n");
-        cout << "\t\t[" << _l[0] << "]\n";
+        dprintf(D_FULLDEBUG, "\tBacked off to:\n");
+        dprintf(D_FULLDEBUG, "\t\t[%d]\n", _l[0]);
         for(int i = 1; i < BND_CTL_LEVELS; i++) {
             _l[i] = (unsigned long) (_l[i-1] * 5.0 / 9.0);
-            cout << "\t\t[" << _l[i] << "]\n";
+            dprintf(D_FULLDEBUG, "\t\t[%d]\n", _l[i]);
         }
     }
 
@@ -1310,11 +1336,12 @@ void ReliSock::advanceWall()
     // Adjust _l[i]
     _l[0] = (unsigned long)(_l[0] * 1.3);
     if(_l[0] > _maxBytes) _l[0] = _maxBytes;
-    printf("\tMoved forward to:\n");
-    cout << "\t\t[" << _l[0] << "]\n";
+    dprintf(D_FULLDEBUG, "\tMoved forward to:\n");
+    dprintf(D_FULLDEBUG, "\t\t[%d]\n", _l[0]);
     for(int i = 1; i < BND_CTL_LEVELS; i++) {
         _l[i] = (unsigned long) (_l[i-1] * 5.0 / 9.0);
-        cout << "\t\t[" << _l[i] << "]\n";
+        dprintf(D_FULLDEBUG, "\t\t[%d]\n", _l[i]);
+        //cout << "\t\t[" << _l[i] << "]\n";
     }
 
     // Reset s[i]
@@ -1324,8 +1351,8 @@ void ReliSock::advanceWall()
 
     _allowance = initVal;
 
-    cout << "\tCapability: " << _capability << endl;
-    cout << "\tAllowance: " << _allowance << endl;
+    //cout << "\tCapability: " << _capability << endl;
+    //cout << "\tAllowance: " << _allowance << endl;
 
     return;
 }
@@ -1338,8 +1365,9 @@ void ReliSock::calculateAllowance()
     unsigned long sent = 0;
     struct timeval temp;
 
-    cout << "Allowed: " << _allowance << "::";
-    cout << " Sent: " << _deltaS << endl;
+    dprintf(D_FULLDEBUG, "Allowed: %ld :: Sent: %ld\n", _allowance, _deltaS);
+    //cout << "Allowed: " << _allowance << "::";
+    //cout << " Sent: " << _deltaS << endl;
 
     /*
      * Adjust _s[i], _T, and _deltaT, _totalSent
@@ -1391,9 +1419,10 @@ void ReliSock::calculateAllowance()
      * the last 16 consecutive windows, we try to use more bandwidth, taking
      * it as the network congestion has been resolved.
      */
-    cout << "short: " << _shortReached << "  numSends: " <<  _numSends << endl;
+    dprintf(D_FULLDEBUG, "# of packets sent: %ld :: blocked: %ld\n", _numSends, _shortReached);
+    //cout << "short: " << _shortReached << "  numSends: " <<  _numSends << endl;
     if(_shortReached * 200 > _numSends /* 0.5% */) { // congested during the last WIN
-        printf("_congested: %d\n", _congested+1);
+        dprintf(D_FULLDEBUG, "_congested: %d\n", _congested+1);
         _resolved = -7;
         if(++_congested >= 2) {
             _bndCtl_state = backOff;
@@ -1407,9 +1436,11 @@ void ReliSock::calculateAllowance()
     else {
         _congested = 0;
         if(_bndCtl_state != normal) { // if not congested and in backOff or scouting state
-            cout << "_resolved: " << _resolved+1 << endl;
+            dprintf(D_FULLDEBUG, "_resolved: %d\n", _resolved+1);
+            //cout << "_resolved: " << _resolved+1 << endl;
             if(++_resolved >= 4) {
-                cout << "\tadvance wall by 1.3\n";
+                dprintf(D_FULLDEBUG, "\tadvance wall by 1.3 times\n");
+                //cout << "\tadvance wall by 1.3\n";
                 advanceWall();
                 _resolved = 0;
                 _shortReached = _numSends = 0;
@@ -1422,7 +1453,7 @@ void ReliSock::calculateAllowance()
                 else {  // in scouting state
                     if(_l[0] == _maxBytes) {
                         _capability = _maxBytes;
-                        printf("\tgo back to normal state\n");
+                        dprintf(D_FULLDEBUG, "\tgo back to normal state\n");
                         _bndCtl_state = normal;
                     }
                     return;

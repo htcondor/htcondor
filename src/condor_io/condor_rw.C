@@ -100,7 +100,7 @@ int condor_read(SOCKET fd, char *buf, int sz, int timeout)
 			dprintf( D_ALWAYS, 
 					 "recv returned %d, errno = %d, assuming failure.\n",
 					 nro, errno );
-            cerr << "condor_read: recv failed: " << strerror(errno) << endl;
+            //cerr << "condor_read: recv failed: " << strerror(errno) << endl;
 			return -1;
 		} else if( nro == 0 ) {
 			return nr;
@@ -272,7 +272,7 @@ condor_mux_read(SOCKET fd, SOCKET mfd, char *buf, int sz, int timeout, bool &rea
 				                   read failed, errno = %d\n",
 				        nro, errno);
 				if(timer) free(timer);
-                cerr << "condor_mux_read: recv failed " << strerror(errno) << endl;
+                //cerr << "condor_mux_read: recv failed " << strerror(errno) << endl;
 				return -1;
 			}
 			nr += nro;
@@ -295,7 +295,7 @@ condor_mux_write(SOCKET fd, SOCKET mfd, char *buf, int sz, int timeout,
     int maxfd, nfound;
 	struct timeval curr, prev;
     struct timeval timer;
-    int elapsed;
+    double elapsed;
 
 #ifndef WIN32
     maxfd = (fd > mfd) ? fd + 1 : mfd + 1;
@@ -334,7 +334,7 @@ condor_mux_write(SOCKET fd, SOCKET mfd, char *buf, int sz, int timeout,
 
         if(nfound < 0) {
             if(errno == EINTR) {
-                cerr << "select interrupted\n";
+                //cerr << "select interrupted\n";
                 continue;
             }
             dprintf(D_ALWAYS, "condor_mux_write: select failed: %s\n", strerror(errno));
@@ -360,9 +360,9 @@ condor_mux_write(SOCKET fd, SOCKET mfd, char *buf, int sz, int timeout,
             nw += nwo;
             if(threshold > 0) {
                 (void) gettimeofday(&curr, NULL);
-                elapsed = (curr.tv_sec - prev.tv_sec)*1000000.0 + (curr.tv_usec - prev.tv_usec);
+                elapsed = (double)((curr.tv_sec - prev.tv_sec)*1000000.0 + (curr.tv_usec - prev.tv_usec));
                 //cout << "elapsed: " << elapsed << endl;
-                if(elapsed >= threshold) {
+                if(elapsed >= (double)threshold) {
                     congested = true;
                     //cout << "elapsed: " << elapsed << "      threshold: " << threshold << endl;
                 }

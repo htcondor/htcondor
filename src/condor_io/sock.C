@@ -316,53 +316,10 @@ int Sock::assign(SOCKET sockd)
 }
 
 
-int Sock::bindWithin(const int low_port, const int high_port)
-{
-	// Use hash function with pid to get the starting point
-    struct timeval curTime;
-#ifndef WIN32
-    (void) gettimeofday(&curTime, NULL);
-#else
-	// Win32 does not have gettimeofday, sigh.
-	curTime.tv_usec = ::GetTickCount();
-#endif
-
-	// int pid = (int) getpid();
-	int range = high_port - low_port + 1;
-	// this line must be changed to use the hash function of condor
-	int start_trial = low_port + (curTime.tv_usec * 73/*some prime number*/ % range);
-
-	int this_trial = start_trial;
-	do {
-		sockaddr_in		sin;
-
-		memset(&sin, 0, sizeof(sockaddr_in));
-		sin.sin_family = AF_INET;
-		sin.sin_addr.s_addr = htonl(my_ip_addr());
-		sin.sin_port = htons((u_short)this_trial++);
-
-		if ( ::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0 ) { // success
-			dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
-			return TRUE;
-		} else {
-			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
-		}
-
-		if ( this_trial > high_port )
-			this_trial = low_port;
-	} while(this_trial != start_trial);
-
-	dprintf(D_ALWAYS, "Sock::bindWithin - failed to bind any port within (%d ~ %d)\n",
-	        low_port, high_port);
-
-	return FALSE;
-}
-
-
 int Sock::bind(int port)
 {
 	sockaddr_in		sin;
-	socklen_t		addrLen = sizeof(sockaddr_in);
+	unsigned int	addrLen = sizeof(sockaddr_in);
 	
 	// Following lines are added because some functions in condor call
 	// this method without checking the port numbers returned from
@@ -383,7 +340,7 @@ int Sock::bind(int port)
 	// an arbitrary free port. /* 07/27/2000 - sschang */
 	int lowPort, highPort;
 	if ( port == 0 && get_port_range(&lowPort, &highPort) == TRUE ) {
-		if ( bindWithin(lowPort, highPort) == TRUE ) {
+		if ( bindWithin(_sock, lowPort, highPort) == TRUE ) {
 			_state = sock_bound;
 			return TRUE;
 		} else return FALSE;
@@ -420,6 +377,50 @@ int Sock::bind(int port)
 
 	return TRUE;
 }
+
+
+int Sock::bindWithin(const int sock, const int low_port, const int high_port)
+{
+    // Use hash function with pid to get the starting point
+    struct timeval curTime;
+#ifndef WIN32
+    (void) gettimeofday(&curTime, NULL);
+#else
+    // Win32 does not have gettimeofday, sigh.
+    curTime.tv_usec = ::GetTickCount();
+#endif
+
+    // int pid = (int) getpid();
+    int range = high_port - low_port + 1;
+    // this line must be changed to use the hash function of condor
+    int start_trial = low_port + (curTime.tv_usec * 73/*some prime number*/ % range);
+
+    int this_trial = start_trial;
+    do {
+        sockaddr_in     sin;
+
+        memset(&sin, 0, sizeof(sockaddr_in));
+        sin.sin_family = AF_INET;
+        sin.sin_addr.s_addr = htonl(my_ip_addr());
+        sin.sin_port = htons((u_short)this_trial++);
+
+        if (::bind(sock, (sockaddr *)&sin, sizeof(sockaddr_in)) == 0 ) { // success
+            dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
+            return TRUE;
+        } else {
+            dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
+        }
+
+        if ( this_trial > high_port )
+            this_trial = low_port;
+    } while(this_trial != start_trial);
+
+    dprintf(D_ALWAYS, "Sock::bindWithin - failed to bind any port within (%d ~ %d)\n",
+            low_port, high_port);
+
+    return FALSE;
+}
+
 
 int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 {

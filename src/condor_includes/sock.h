@@ -230,6 +230,8 @@ protected:
 	char * serialize(char *);
 	char * serialize() const;
 
+	int bindWithin(const int sock, const int low, const int high);
+
 #ifdef WIN32
 	int set_inheritable( int flag );
 #else
@@ -250,7 +252,6 @@ protected:
 	struct sockaddr_in _who;	// the endpoint of "connection"
 
 private:
-	int bindWithin(const int low, const int high);
 
 		// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	

@@ -67,7 +67,7 @@ int reportConnect(const int myIP, const short myPort,
 int main()
 {
     sockaddr_in sockAddr;
-    socklen_t addrLen = sizeof(sockAddr);
+    unsigned int addrLen = sizeof(sockAddr);
 
     // make a test socket and connect to netMnger
     tSock = socket(AF_INET, SOCK_STREAM, 0);
