@@ -458,12 +458,12 @@ process_locals( char* param_name, char* host )
 	
 	local_required = true;	
     tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-    if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-        local_required = false;
-    } else {
-        local_required = true;
+    if( tmp ) {
+		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
+			local_required = false;
+		}
+		free( tmp );
     }
-    if( tmp ) free( tmp );
 
 	file = param( param_name );
 	if( file ) {
