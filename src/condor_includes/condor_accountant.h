@@ -53,6 +53,8 @@ public:
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
+  float GetPriorityFactor(const MyString& CustomerName); // get priority factor for a customer
+
   void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
   void ResetAccumulatedUsage(const MyString& CustomerName);
   void ResetAllUsage();
