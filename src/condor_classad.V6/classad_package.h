@@ -32,9 +32,16 @@
 #include <time.h>
 #include <limits.h>
 
+	// if this file is being included, it must be a standalone implementation
+#define  STANDALONE
+
 #include "common.h"
 #include "exprTree.h"
 #include "matchClassad.h"
-#include "classad_collection.h"
+
+#if defined(COLLECTIONS)
+#include "collectionServer.h"
+#include "collectionClient.h"
+#endif
 
 #endif
