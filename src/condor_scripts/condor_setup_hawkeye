@@ -381,7 +381,7 @@ sub ReadConfigFile( )
 	$Config{ConfigFile} = $File if ( defined $File );
     }
 
-    # Find the "sbin" directory
+    # Find the "sbin" & "bin" directories
     my $Sbin = Expand( "SBIN" );
     if ( ( !defined $Sbin ) || ( $Sbin eq "" ) )
     {
@@ -389,6 +389,14 @@ sub ReadConfigFile( )
 	exit 1;
     }
     $Config{SbinDir} = $Sbin;
+
+    my $Bin = Expand( "BIN" );
+    if ( ( !defined $Bin ) || ( $Bin eq "" ) )
+    {
+	print STDERR "BIN not defined in config.  Giving up.\n";
+	exit 1;
+    }
+    $Config{BinDir} = $Bin;
 
     # Try to find the file that last definied the job list
     FindConfigToUpdate( \@ConfigFiles );
@@ -529,6 +537,35 @@ sub InstallFiles( )
 	unlink( $Full );
     }
 
+    # Create "hawkeye_config_val"
+    my $File = $Config{BinDir} . "/hawkeye_config_val";
+    if ( ! ( -f $File ) )
+    {
+	print "hawkeye_config_val -> $Config{BinDir} ... ";
+	my $CronPrefix = uc $Config{CronName} . "_";
+	open( HCV, ">$File" ) or die "Can't create $File";
+	print HCV <<HCV_1 ;
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+# Parse the command line
+foreach my \$ArgNo ( 0 .. \$#ARGV )
+{
+    # Get the "real" variable name
+    \$ARGV\[\$ArgNo\] =~ s/^hawkeye_/$CronPrefix/i;
+}
+
+# Now, run the real condor_config_val
+# print join( " ", "condor_config_val", \@ARGV ) . "\\n";
+exec( "condor_config_val", \@ARGV );
+HCV_1
+	close( HCV );
+	chmod( 0755, $File );
+	print "Ok\n";
+    }
+
+    # Done
     return 1;
 
 } # InstallFiles
