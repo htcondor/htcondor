@@ -1188,11 +1188,11 @@ read_condor_file( FILE *fp )
 			free (exValue);
 		} 
 
+		lower_case( name );
+
 		if (strcmp(name, Executable) == 0) {
 			NewExecutable = true;
 		}
-
-		lower_case( name );
 
 		/* Put the value in the Configuration Table */
 		insert( name, value, ProcVars, PROCVARSIZE );
@@ -1252,10 +1252,15 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
  			if ((ClusterId = NewCluster()) == -1) {
-				fprintf(stderr, "Failed to create cluster\n");
+				fprintf(stderr, "\nError: Failed to create cluster\n");
 				exit(1);
 			}
 			ProcId = -1;
+		}
+
+		if ( ClusterId == -1 ) {
+			fprintf(stderr,"\nError: Used queue command without specifying an executable\n");
+			exit(1);
 		}
 
 		ProcId = NewProc (ClusterId);
