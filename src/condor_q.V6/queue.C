@@ -23,23 +23,25 @@
 #include "condor_common.h"
 #include <iostream.h>
 #include "condor_config.h"
+#include "condor_accountant.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"
+#include "condor_io.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "get_full_hostname.h"
+#include "MyString.h"
+#include "extArray.h"
 #include "files.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 extern 	"C" void set_debug_flags( char * );
-
-static	char *_FileName_ = __FILE__;
 
 static 	void short_header (void);
 static 	void usage (char *);
@@ -61,6 +63,22 @@ static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	char		*pool = NULL;
 
+// for run failure analysis
+static  int			findSubmittor( char * );
+static	void 		setupAnalysis();
+static 	void		fetchSubmittorPrios();
+static	void		doRunAnalysis( ClassAd* );
+struct 	PrioEntry { MyString name; float prio; };
+static 	bool		analyze	= false;
+static	char		*fixSubmittorName( char*, int );
+static	ClassAdList startdAds;
+static	ExprTree	*stdRankCondition;
+static	ExprTree	*preemptRankCondition;
+static	ExprTree	*preemptPrioCondition;
+static	ExprTree	*preemptionHold;
+static  ExtArray<PrioEntry> prioTable;
+template class ExtArray<PrioEntry>;
+
 extern 	"C"	int		Termlog;
 
 int main (int argc, char **argv)
@@ -81,6 +99,10 @@ int main (int argc, char **argv)
 	// process arguments
 	processCommandLineArguments (argc, argv);
 
+	// check if analysis is required
+	if( analyze ) {
+		setupAnalysis();
+	}
 	// if we haven't figured out what to do yet, just display the
 	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
@@ -113,7 +135,6 @@ int main (int argc, char **argv)
 	}
 
 	// get the list of ads from the collector
-
 	if( pool ) {
 		result = querySchedds ? scheddQuery.fetchAds(scheddList, pool) : 
 			submittorQuery.fetchAds(scheddList, pool);
@@ -122,8 +143,7 @@ int main (int argc, char **argv)
 			submittorQuery.fetchAds(scheddList);
 	}
 
-	if (result != Q_OK)
-	{
+	if (result != Q_OK) {
 		fprintf (stderr, "Error %d: %s\n", result, getStrQueryResult(result));
 		exit(1);
 	}
@@ -264,9 +284,17 @@ processCommandLineArguments (int argc, char *argv[])
 				exit (1);
 			}
 
-			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
-				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
-				exit (1);
+			{
+				char *ownerName = argv[i];
+				// ensure that the "nice-user" prefix isn't inserted as part
+				// of the job ad constraint
+				if( strstr( argv[i] , NiceUserName ) == argv[i] ) {
+					ownerName = argv[i]+strlen(NiceUserName)+1;
+				}
+				if (Q.add (CQ_OWNER, ownerName) != Q_OK) {
+					fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
+					exit (1);
+				}
 			}
 
 			querySubmittors = true;
@@ -308,6 +336,10 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "help")) {
 			usage(argv[0]);
 			exit(0);
+		}
+		else
+		if (match_prefix( arg , "analyze")) {
+			analyze = true;
 		}
 		else
 		{
@@ -388,6 +420,7 @@ usage (char *myName)
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-long\t\t\tVerbose output\n"
+		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n", myName);
@@ -406,6 +439,25 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 		// sort jobs by (cluster.proc)
 	jobs.Sort( (SortFunctionType)JobSort );
+
+		// check if job is being analyzed
+	if( analyze ) {
+			// print header
+		if( querySchedds ) {
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+		} else {
+			printf ("\n\n-- Submittor: %s : %s : %s\n", scheddName, 
+					scheddAddr, scheddMachine);	
+		}
+
+		jobs.Open();
+		while( ( job = jobs.Next() ) ) {
+			doRunAnalysis( job );
+		}
+		jobs.Close();
+
+		return true;
+	}
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
@@ -439,4 +491,334 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		}
 	}
 	return true;
+}
+
+
+static void
+setupAnalysis()
+{
+	CondorQuery	query(STARTD_AD);
+	int			rval;
+	char		buffer[64];
+	char		*phold;
+	ClassAd		*ad;
+	char		remoteUser[128];
+	int			index;
+
+	// fetch startd ads
+	if( pool ) {
+		rval = query.fetchAds( startdAds );
+	} else {
+		rval = query.fetchAds( startdAds , pool );
+	}
+	if( rval != Q_OK ) {
+		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
+		exit( 1 );
+	}
+
+	// fetch submittor prios
+	fetchSubmittorPrios();
+
+	// populate startd ads with remote user prios
+	startdAds.Open();
+	while( ( ad = startdAds.Next() ) ) {
+		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
+				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+							prioTable[index].prio );
+				ad->Insert( buffer );
+			}
+		}
+	}
+	startdAds.Close();
+	
+
+	// setup condition expressions
+    sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    Parse( buffer, stdRankCondition );
+
+    sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    Parse( buffer, preemptRankCondition );
+
+	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
+			ATTR_SUBMITTOR_PRIO, PriorityDelta );
+	Parse( buffer, preemptPrioCondition ) ;
+
+	// setup preemption hold expression
+	if( !( phold = param( "PREEMPTION_HOLD" ) ) ) {
+		fprintf( stderr, "\nWarning:  No PREEMPTION_HOLD expression in "
+					"config file --- assuming FALSE\n\n" );
+		Parse( "FALSE", preemptionHold );
+	} else {
+		if( Parse( phold , preemptionHold ) ) {
+			fprintf( stderr, "\nError:  Failed parse of PREEMPTION_HOLD "
+				"expression: \n\t%s\n", phold );
+			exit( 1 );
+		}
+		free( phold );
+	}
+
+}
+
+
+static void
+fetchSubmittorPrios()
+{
+	char	*negotiator = param("NEGOTIATOR_HOST");
+	AttrList	al;
+	int		numSub;
+	char  	attrName[32], attrPrio[32];
+  	char  	name[128];
+  	float 	priority;
+	int		i = 1;
+
+	if( !negotiator ) {
+		fprintf( stderr, "Error:  Could not find NEGOTIATOR_HOST in config "
+			"file\n" );
+		exit( 1 );
+	}
+
+	// connect to negotiator
+	ReliSock sock(negotiator, NEGOTIATOR_PORT);
+	sock.encode();
+	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
+		fprintf( stderr, "Error:  Could not get priorities from negotiator\n" );
+		exit( 1 );
+	}
+
+	sock.decode();
+	if( !al.get(sock) || !sock.end_of_message() ) {
+		fprintf( stderr, "Error:  Could not get priorities from negotiator\n" );
+		exit( 1 );
+	}
+
+	i = 1;
+	while( i ) {
+    	sprintf( attrName , "Name%d", i );
+    	sprintf( attrPrio , "Priority%d", i );
+
+    	if( !al.LookupString( attrName, name ) || 
+			!al.LookupFloat( attrPrio, priority ) )
+            break;
+
+		prioTable[i-1].name = name;
+		prioTable[i-1].prio = priority;
+		i++;
+	}
+
+	if( i == 1 ) {
+		printf( "Warning:  Found no submittors\n" );
+	}
+}
+
+
+static void
+doRunAnalysis( ClassAd *request )
+{
+	char	owner[128];
+	char	remoteUser[128];
+	char	buffer[128];
+	int		index;
+	ClassAd	*offer;
+	EvalResult	result;
+	int		cluster, proc;
+	int		jobState;
+	int		niceUser;
+
+	int 	fReqConstraint 	= 0;
+	int		fOffConstraint 	= 0;
+	int		fRankCond		= 0;
+	int		fPreemptPrioCond= 0;
+	int		fPreemptHoldTest= 0;
+	int		available		= 0;
+	int		totalMachines	= 0;
+
+	if( !request->LookupString( ATTR_OWNER , owner ) ) return;
+	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
+
+	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
+		return;
+
+	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
+	request->Insert( buffer );
+
+	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	request->LookupInteger( ATTR_PROC_ID, proc );
+	request->LookupInteger( ATTR_JOB_STATUS, jobState );
+	if( jobState == RUNNING ) {
+		printf( "---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
+			proc );
+		return;
+	}
+
+	startdAds.Open();
+	while( ( offer = startdAds.Next() ) ) {
+		// 0.  info from machine
+		remoteUser[0] = '\0';
+		totalMachines++;
+		offer->LookupString( ATTR_REMOTE_USER, remoteUser );
+		offer->LookupString( ATTR_NAME , buffer );
+		if( verbose ) printf( "%-15.15s ", buffer );
+
+		// 1. Request satisfied? 
+		if( !( (*offer) >= (*request) ) ) {
+			if( verbose ) printf( "Failed request constraint\n" );
+			fReqConstraint++;
+			continue;
+		} 
+
+		// 2. Offer satisfied? 
+		if( !( (*offer) <= (*request) ) ) {
+			if( verbose ) printf( "Failed offer constraint\n" );
+			fOffConstraint++;
+			continue;
+		}	
+
+			
+		// 3. Satisfies preemption priority condition?
+		if( preemptPrioCondition->EvalTree( offer, request, &result ) &&
+			result.type == LX_INTEGER && result.i == TRUE ) {
+
+			// 4. Satisfies standard rank condition?
+			if( stdRankCondition->EvalTree( offer , request , &result ) &&
+				result.type == LX_INTEGER && result.i == TRUE )  
+			{
+				if( verbose ) printf( "Available\n" );
+				available++;
+				continue;
+			} else {
+				// 5.  Satisfies preemption rank condition?
+				if( preemptRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE )
+				{
+					// 6.  Tripped on PREEMPTION_HOLD?
+					if( preemptionHold->EvalTree( offer , request , &result ) &&
+						result.type == LX_INTEGER && result.i == TRUE ) 
+					{
+						fPreemptHoldTest++;
+						if( verbose ) {
+							printf( "Can preempt %s, but failed PreemptionHold "
+								"test\n", remoteUser);
+						}
+						continue;
+					} else {
+						// not held
+						if( verbose ) {
+							printf( "Available (can preempt %s)\n", remoteUser);
+						}
+						available++;
+					}
+				} else {
+					// failed 5 and 4, but satisfies 3; so have priority
+					// but not better or equally preferred than current
+					// customer
+					fRankCond++;
+				}
+			} 
+		} else {
+			// failed 4
+			fPreemptPrioCond++;
+			if( verbose ) {
+				printf( "Insufficient priority to preempt %s\n" , 
+					remoteUser );
+			}
+			continue;
+		}
+	}
+	startdAds.Close();
+
+	printf( "---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n", 
+			cluster, proc, totalMachines );
+	printf( "\t%5d do not satisfy the request's constraints\n", fReqConstraint);
+	printf( "\t%5d resource offer constraints are not satisfied by this "
+			"request\n", fOffConstraint );
+	printf( "\t%5d are serving equal or higher priority customers%s\n", 
+					fPreemptPrioCond, niceUser ? "(*)" : "" );
+	printf( "\t%5d are serving more preferred customers\n", fRankCond );
+	printf( "\t%5d cannot preempt because preemption has been held\n", 
+			fPreemptHoldTest );
+	printf( "\t%5d are available to service your request\n", available );
+
+	if( niceUser ) {
+		printf( "\n\t(*)  Since this is a \"nice-user\" request, this request "
+			"has a\n\t     very low priority and is unlikely to preempt other "
+			"requests.\n" );
+	}
+			
+
+	if( fReqConstraint == totalMachines ) {
+		char reqs[2048];
+		ExprTree *reqExp;
+		printf( "\nWARNING:  Be advised:\n" );
+		printf( "   No resources matched request's constraints\n" );
+		printf( "   Check the %s expression below:\n\n" , ATTR_REQUIREMENTS );
+		if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
+			printf( "   ERROR:  No %s expression found" , ATTR_REQUIREMENTS );
+		} else {
+			reqs[0] = '\0';
+			reqExp->PrintToStr( reqs );
+			printf( "%s\n\n", reqs );
+		}
+	}
+
+	if( fOffConstraint == totalMachines ) {
+		printf( "\nWARNING:  Be advised:" );
+		printf("   Request %d.%d did not match any resource's constraints\n\n",
+				cluster, proc);
+	}
+}
+
+
+static int
+findSubmittor( char *name ) 
+{
+	MyString 	sub(name);
+	int			last = prioTable.getlast();
+	int			i;
+	
+	for( i = 0 ; i <= last ; i++ ) {
+		if( prioTable[i].name == sub ) return i;
+	}
+
+	prioTable[i].name = sub;
+	prioTable[i].prio = 0.5;
+
+	return i;
+}
+
+
+static char*
+fixSubmittorName( char *name, int niceUser )
+{
+	static 	bool initialized = false;
+	static	char uid_domain[64];
+	static	char buffer[128];
+			char *at;
+
+	if( !initialized ) {
+		char *tmp = param( "UID_DOMAIN" );
+		if( !tmp ) {
+			fprintf( stderr, "Error:  UID_DOMAIN not found in config file\n" );
+			exit( 1 );
+		}
+		strcpy( uid_domain , tmp );
+		free( tmp );
+		initialized = true;
+	}
+
+	if( strchr( name , '@' ) ) {
+		sprintf( buffer, "%s%s%s", 
+					niceUser ? NiceUserName : "",
+					niceUser ? "." : "",
+					name );
+		return buffer;
+	} else {
+		sprintf( buffer, "%s%s%s@%s", 
+					niceUser ? NiceUserName : "",
+					niceUser ? "." : "",
+					name, uid_domain );
+		return buffer;
+	}
+
+	return NULL;
 }
