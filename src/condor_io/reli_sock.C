@@ -29,6 +29,7 @@
 #include "condor_rw.h"
 #include "condor_socket_types.h"
 #include "condor_md.h"
+#include "stat_wrapper.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -600,28 +601,16 @@ ReliSock::put_file( filesize_t *size, int fd )
 	filesize_t	total = 0;
 	unsigned int eom_num = 666;
 
-#if defined HAS_STAT64
-	struct stat64 filestat;
-	if (::fstat64(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat64 failed\n");
+
+	StatWrapper	filestat( fd );
+	if ( filestat.GetStatus() ) {
+		int		staterr = filestat.GetErrno( );
+		dprintf(D_ALWAYS, "ReliSock: put_file: StatBuf failed: %d %s\n",
+				staterr, strerror( staterr ) );
 		return -1;
 	}
-	filesize = filestat.st_size;
-#elif defined HAS__STATI64
-	struct _stati64 filestat;
-	if (::_fstati64(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat failed\n");
-		return -1;
-	}
-	filesize = filestat.st_size;
-#else
-	struct stat filestat;
-	if (::fstat(fd, &filestat) < 0) {
-		dprintf(D_ALWAYS, "ReliSock: put_file: fstat failed\n");
-		return -1;
-	}
-	filesize = filestat.st_size;
-#endif
+	filesize = filestat.GetStatBuf( )->st_size;
+	dprintf( D_FULLDEBUG, "put_file: Found file size %lld\n", filesize );
 
 	// Send the file size to the reciever
 	if ( !put(filesize) || !end_of_message() ) {
