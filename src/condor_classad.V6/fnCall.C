@@ -86,7 +86,8 @@ FunctionCall( )
 		*/
 
 			// time management
-	      	functionTable["currenttime"	] =	(void*)currentTime;
+        functionTable["time"        ] = (void*)epochTime;
+        functionTable["currenttime"	] =	(void*)currentTime;
 		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
 		functionTable["daytime"		] =	(void*)dayTime;
         //functionTable["makedate"	] =	(void*)makeDate;
@@ -1008,6 +1009,19 @@ listCompare(
 	return true;
 }
 
+bool FunctionCall::
+epochTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
+{
+
+		// no arguments
+	if( argList.size( ) > 0 ) {
+		val.SetErrorValue( );
+		return( true );
+	}
+
+    val.SetIntegerValue(time(NULL));
+	return( true );
+}
 
 bool FunctionCall::
 currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)

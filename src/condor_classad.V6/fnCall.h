@@ -142,6 +142,8 @@ class FunctionCall : public ExprTree
 	// time management (constructors)
 
 
+    static bool epochTime (const char *, const ArgumentList &argList, 
+                           EvalState &, Value &val);
 	static bool currentTime(const char*,const ArgumentList&,EvalState&,
 							Value&);
 	static bool timeZoneOffset(const char*,const ArgumentList&,EvalState&,
