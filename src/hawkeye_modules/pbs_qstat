@@ -71,7 +71,7 @@ sub RunIt()
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
     # Read input from qstat command
-    my $qstat = "$Qstat $Qname";
+    my $qstat = "$Qstat -fQ $Qname";
     open (QSTAT, "$qstat|") or die "open $qstat for read: $!";
 
     # Read Queue status.
