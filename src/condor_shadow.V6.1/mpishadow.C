@@ -719,19 +719,10 @@ MPIShadow::spawnNode( MpiResource* rr )
 
 
 void 
-MPIShadow::shutDown( int exitReason ) {
-
-		/* With many resources, we have to figure out if all of
-		   them are done, and we have to figure out if we need
-		   to kill others.... */
-	int i;
-
-	if( !shutDownLogic( exitReason ) ) {
-		return;  // leave if we're not *really* ready to shut down.
-	}
-
+MPIShadow::cleanUp( void )
+{
         // unlink the procgroup file:
-    char pgfilename[128];
+    char pgfilename[512];
     sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
     if( unlink( pgfilename ) == -1 ) {
@@ -741,93 +732,83 @@ MPIShadow::shutDown( int exitReason ) {
         }
     }
 
-		/* write a terminate event to the user log. */
-	endingUserLog( exitReason );
-
-	// As we leave, we need to deactivate the claim.
-	// Does this go here, or should it go earlier
-	// does killing the starter
+		// kill all the starters
 	MpiResource *r;
-    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+	int i;
+    for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
 		char *tmp = NULL;
 		r->getStartdAddress( tmp );
-		dprintf(D_FULLDEBUG, "Killing the starter on %s\n",tmp);
+		dprintf( D_FULLDEBUG, "Killing the starter on %s\n", tmp );
 		r->killStarter();
 		delete [] tmp;
 	}		
-
-	MpiResource *rr;
-    if ( getJobAd() ) {
-            // For lack of anything better to do here, set the last 
-            // executing host to the host the master was on.
-        char *tmp = NULL;
-        rr = ResourceList[0];
-        if ( rr ) {
-            rr->getStartdAddress( tmp );
-			if (!ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT)) {
-				EXCEPT("Failed to connect to schedd!");
-			}
-            DeleteAttribute( getCluster(), getProc(), ATTR_REMOTE_HOST );
-            SetAttributeString( getCluster(), getProc(), 
-                                ATTR_LAST_REMOTE_HOST, tmp );
-            DisconnectQ( NULL );
-            delete [] tmp;
-        } else {
-            DC_Exit( exitReason );
-        }
-    } else {
-        DC_Exit( exitReason );
-    }
+}
 
 
-		// if we are being called from the exception handler, return
-		// now.
-	if ( exitReason == JOB_EXCEPTION ) {
+void
+MPIShadow::emailTerminateEvent( int exitReason )
+{
+	int i;
+	FILE* mailer;
+	mailer = shutDownEmail( exitReason );
+	if( ! mailer ) {
+			// nothing to do
 		return;
 	}
 
-		// returns a mailer if desired
-	FILE* mailer;
-	mailer = shutDownEmail( exitReason );
-	if ( mailer ) {
-		fprintf( mailer, "Your Condor-MPI job %d.%d has completed.\n", 
-				 getCluster(), getProc() );
+	fprintf( mailer, "Your Condor-MPI job %d.%d has completed.\n", 
+			 getCluster(), getProc() );
 
-		fprintf( mailer, "\nHere are the machines that ran your MPI job.\n");
-		fprintf( mailer, "They are listed in the order they were started\n" );
-		fprintf( mailer, "in, which is the same as MPI_Comm_rank.\n\n" );
-		
-		fprintf( mailer, "    Machine Name               Result\n" );
-		fprintf( mailer, " ------------------------    -----------\n" );
+	fprintf( mailer, "\nHere are the machines that ran your MPI job.\n");
+	fprintf( mailer, "They are listed in the order they were started\n" );
+	fprintf( mailer, "in, which is the same as MPI_Comm_rank.\n\n" );
+	
+	fprintf( mailer, "    Machine Name               Result\n" );
+	fprintf( mailer, " ------------------------    -----------\n" );
 
-		int allexitsone = TRUE;
-		int exit_code;
-		for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
-			(ResourceList[i])->printExit( mailer );
-			exit_code = (ResourceList[i])->exitCode();
-			if( exit_code != 1 ) {
-				allexitsone = FALSE;
-			}
+	int allexitsone = TRUE;
+	int exit_code;
+	for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		(ResourceList[i])->printExit( mailer );
+		exit_code = (ResourceList[i])->exitCode();
+		if( exit_code != 1 ) {
+			allexitsone = FALSE;
 		}
-
-		if ( allexitsone ) {
-			fprintf ( mailer, "\nCondor has noticed that all of the " );
-			fprintf ( mailer, "processes in this job \nhave an exit status " );
-			fprintf ( mailer, "of 1.  This *might* be the result of a core\n");
-			fprintf ( mailer, "dump.  Condor can\'t tell for sure - the " );
-			fprintf ( mailer, "MPICH library catches\nSIGSEGV and exits" );
-			fprintf ( mailer, "with a status of one.\n" );
-		}
-
-		fprintf( mailer, "\nHave a nice day.\n" );
-
-		email_close(mailer);
 	}
-    
-		// does not return.
-	DC_Exit( exitReason );
+
+	if ( allexitsone ) {
+		fprintf ( mailer, "\nCondor has noticed that all of the " );
+		fprintf ( mailer, "processes in this job \nhave an exit status " );
+		fprintf ( mailer, "of 1.  This *might* be the result of a core\n");
+		fprintf ( mailer, "dump.  Condor can\'t tell for sure - the " );
+		fprintf ( mailer, "MPICH library catches\nSIGSEGV and exits" );
+		fprintf ( mailer, "with a status of one.\n" );
+	}
+
+	fprintf( mailer, "\nHave a nice day.\n" );
+	
+	email_close(mailer);
 }
+
+
+void 
+MPIShadow::shutDown( int exitReason )
+{
+		/* With many resources, we have to figure out if all of
+		   them are done, and we have to figure out if we need
+		   to kill others.... */
+	if( !shutDownLogic( exitReason ) ) {
+		return;  // leave if we're not *really* ready to shut down.
+	}
+
+		/* if we're still here, we can call BaseShadow::shutDown() to
+		   do the real work, which is shared among all kinds of
+		   shadows.  the shutDown process will call other virtual
+		   functions to get universe-specific goodness right. */
+	BaseShadow::shutDown( exitReason );
+}
+
 
 int 
 MPIShadow::shutDownLogic( int& exitReason ) {
@@ -1114,7 +1095,14 @@ MPIShadow::bytesReceived( void )
 	return total;
 }
 
-
+int
+MPIShadow::getExitReason( void )
+{
+	if( ResourceList[0] ) {
+		return ResourceList[0]->getExitReason();
+	}
+	return -1;
+}
 
 
 bool
