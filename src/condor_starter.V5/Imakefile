@@ -56,8 +56,16 @@ CLASS_LIB = ../condor_c++_util/cplus_lib.a
 
 
 #if IS_ALPHA_OSF1
-REMOTE_SYSCALL_LIB = ../condor_ckpt/libcondor.a $(UTIL_LIB)\
- $(XDR_LIB) $(CLASS_LIB) $(PVM_LIB)
+REMOTE_SYSCALL_LIB = \
+	../condor_syscall_lib/senders.o \
+	../condor_syscall_lib/syscall_mode.o \
+	../condor_syscall_lib/syscall_connect.o \
+	../condor_syscall_lib/remote_syscall.o \
+	../h/syscall_numbers.o \
+	$(UTIL_LIB) \
+	$(XDR_LIB) \
+	$(CLASS_LIB) \
+	$(PVM_LIB)
 #else
 #if IS_R6000_AIX32
 REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
