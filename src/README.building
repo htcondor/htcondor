@@ -29,9 +29,9 @@ The source release of Condor should contain a config directory and a src
 directory.  It may be necessary to edit the files in the config directory
 to match your environment.  In particular, the site-specific config file named
 "site.def" contains paths to the C and C++ compiler you are using.  Make
-certain to edit the definitions for  CCompiler, CPlusCompiler, Demangler, and
-GccVersion.  If you are not going to compile with GNU gcc/g++ (bad idea), you
-will also need to customize CrtLibPath.
+certain to edit the definitions for  CCompiler, CPlusCompiler, Demangler, 
+GccVersion, and Top inside of "site.def".  If you are not going to compile 
+with GNU gcc/g++ (bad idea), you will also need to customize CrtLibPath.
 
 
 Using imake
@@ -91,7 +91,10 @@ You are now ready to build Condor.  Follow the below steps:
 
 1) cd into the config directory and customize any imake settings as described
 above.  Specifically, edit the paths for CCompiler, CPlusCompiler, 
-Demangler, CrtLibPath in the site.def file.
+Demangler, CrtLibPath, and Top in the site.def file.  The path for the 
+Top macro in site.def should specify the full pathname to the top-level 
+directory where the Condor source files are unpacked, i.e. the directory 
+which contains the "config" and "src" subdirectories.
 
 2) On most platforms (all except Linux?), you will need to make ansi_cpp as
 described above and make certain the environment variable IMAKECPP points to
