@@ -253,7 +253,7 @@ int Variable::EvalTree(AttrListList* classads, EvalResult* val)
 {
     ExprTree* tmp = NULL;
     
-    if(!val) 
+    if(!val || !classads) 
     {
 	return FALSE;
     }
@@ -271,7 +271,7 @@ int Variable::EvalTree(AttrList* classad, EvalResult* val)
 {
     ExprTree* tmp = NULL;
     
-    if(!val) 
+    if(!val || !classad) 
     {
 	return FALSE;
     }
@@ -292,7 +292,7 @@ int Variable::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* v
 {
     ExprTree* tmp = NULL;
     
-    if(!val) 
+    if(!val || (!my_classad && !req_classad)) 
     {
 	return FALSE;
     }
