@@ -23,7 +23,7 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include <assert.h>
+#include <condor_fix_assert.h>
 
 //--------------------------------------------------------------------
 // Queue template
