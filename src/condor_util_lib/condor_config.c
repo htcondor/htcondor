@@ -76,9 +76,10 @@ init_config()
 #	define USER_NAME "condor"
 #endif
 
-config( a_out_name, context )
+config( a_out_name, context, fromServer )
 char	*a_out_name;
 CONTEXT	*context;
+int		fromServer;
 {
 	struct passwd	*pw, *getpwnam();
 	char			*ptr;
@@ -114,7 +115,11 @@ CONTEXT	*context;
 		*ptr = '\0';
 	insert( "hostname", hostname, ConfigTab, TABLESIZE );
 
-		/* Test versions end in _t, prog name gets passed in */
+	/* Different cases for default configuration or server configuration */
+	/* weiru */
+	if(fromServer == 0)
+	{
+	/* Test versions end in _t, prog name gets passed in */
 	for( ptr=a_out_name; *ptr; ptr++ );
 	if( strcmp("_t",ptr-2) == 0 ) {
 		testing = 1;
@@ -153,6 +158,18 @@ CONTEXT	*context;
 	(void) read_config( pw->pw_dir, config_file, context,
 						ConfigTab, TABLESIZE, EXPAND_LAZY );
 	free( config_file );
+	}
+	else
+	{
+		rval = read_config(".", SERVER_CONFIG, context, ConfigTab, TABLESIZE,
+						   EXPAND_LAZY);
+		if(rval < 0)
+		{
+			fprintf(stderr, "Configuration Error Line %d while processing config file %s/%s ", ConfigLineNo, pw->pw_dir, config_file);
+			perror("");
+			exit(1);
+		}
+	}
 	
 
 		/* Try to get a runtime value for our machine architecture,
