@@ -256,6 +256,11 @@ int SafeSock::put_bytes(const void *data, int sz)
 	int bytesPut, l_out;
     unsigned char * dta = 0;
 
+    //char str[10000];
+    //str[0] = 0;
+    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)data)[idx]); }
+    //dprintf(D_NETWORK, "---> cleartext: %s\n", str);
+
     // Check to see if we need to encrypt
     // This works only because putn will actually put all 
     if (get_encryption()) {
@@ -273,6 +278,11 @@ int SafeSock::put_bytes(const void *data, int sz)
     if (mdChecker_) {
         mdChecker_->addMD(dta, sz);
     }
+
+    //str[0] = 0;
+    //for(int idx=0; idx<sz; idx++) { sprintf(&str[strlen(str)], "%02x,", dta[idx]); }
+    //dprintf(D_NETWORK, "---> ciphertext: %s\n", str);
+
     bytesPut = _outMsg.putn((char *)dta, sz);
     
     free(dta);
@@ -323,6 +333,7 @@ int SafeSock::get_bytes(void *dta, int size)
 	}
 
 	char *tempBuf = (char *)malloc(size);
+    if (!tempBuf) { EXCEPT("malloc failed"); }
 	int readSize, length;
     unsigned char * dec;
 
@@ -335,6 +346,11 @@ int SafeSock::get_bytes(void *dta, int size)
         readSize = _shortMsg.getn(tempBuf, size);
     }
 
+    //char str[10000];
+    //str[0] = 0;
+    //for(int idx=0; idx<readSize; idx++) { sprintf(&str[strlen(str)], "%02x,", tempBuf[idx]); }
+    //dprintf(D_NETWORK, "<--- ciphertext: %s\n", str);
+
 	if(readSize == size) {
             if (get_encryption()) {
                 unwrap((unsigned char *) tempBuf, readSize, dec, length);
@@ -345,10 +361,16 @@ int SafeSock::get_bytes(void *dta, int size)
                 memcpy(dta, tempBuf, readSize);
             }
 
+            //str[0] = 0;
+            //for(int idx=0; idx<size; idx++) { sprintf(&str[strlen(str)], "%02x,", ((char *)dta)[idx]); }
+            //dprintf(D_NETWORK, "<--- cleartext: %s\n", str);
+
             free(tempBuf);
             return readSize;
 	} else {
 		free(tempBuf);
+        dprintf(D_NETWORK,
+                "SafeSock::get_bytes - failed because bytes read is different from bytes requested\n");
 		return -1;
 	}
 }
@@ -477,13 +499,19 @@ int SafeSock::handle_incoming_packet()
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
 	}
+    char str[50];
+    sprintf(str, sock_to_string(_sock));
+    dprintf( D_NETWORK, "RECV %d bytes at %s from %s\n",
+            received, str, sin_to_string(&_who));
+    //char temp_str[10000];
+    //temp_str[0] = 0;
+    //for (int i=0; i<received; i++) { sprintf(&temp_str[strlen(temp_str)], "%02x,", _shortMsg.dataGram[i]); }
+    //dprintf(D_NETWORK, "<---packet [%d bytes]: %s\n", received, temp_str);
 
-	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
-	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
     _shortMsg.reset(); // To be sure
 	
-    if (_shortMsg.getHeader(last, seqNo, length, mID, data)) {
+    if (_shortMsg.getHeader(received, last, seqNo, length, mID, data)) {
         _shortMsg.curIndex = 0;
         _msgReady = true;
         _whole++;
@@ -493,8 +521,11 @@ int SafeSock::handle_incoming_packet()
             _avgSwhole = ((_whole - 1) * _avgSwhole + length) / _whole;
         
         _noMsgs++;
+        dprintf( D_NETWORK, "\tFull msg [%d bytes]\n", length);
         return TRUE;
     }
+
+    dprintf( D_NETWORK, "\tFrag [%d bytes]\n", length);
     
     /* long message */
     curTime = (unsigned long)time(NULL);
@@ -505,6 +536,8 @@ int SafeSock::handle_incoming_packet()
         tempMsg = tempMsg->nextMsg;
         // delete 'timeout'ed message
         if(curTime - prev->lastTime > _tOutBtwPkts) {
+            dprintf(D_NETWORK, "found timed out msg: cur=%lu, msg=%lu\n",
+                    curTime, prev->lastTime);
             delMsg = prev;
             prev = delMsg->prevMsg;
             if(prev)
@@ -519,12 +552,21 @@ int SafeSock::handle_incoming_packet()
             else     {
                 _avgSdeleted = ((_deleted - 1) * _avgSdeleted + delMsg->msgLen) / _deleted;
             }   
-            dprintf(D_NETWORK, "Timeouted message deleted\n");
+            dprintf(D_NETWORK, "Deleting timeouted message:\n");
+            delMsg->dumpMsg();
             delete delMsg;
         }   
     }   
     if(tempMsg != NULL) { // found
-        if (tempMsg->addPacket(last, seqNo, length, data)) {
+        if (seqNo == 0) {
+            tempMsg->set_sec(_shortMsg.isDataMD5ed(),
+                    _shortMsg.md(),
+                    _shortMsg.isDataEncrypted());
+        }
+        bool rst = tempMsg->addPacket(last, seqNo, length, data);
+        //dprintf(D_NETWORK, "new packet added\n");
+        //tempMsg->dumpMsg();
+        if (rst) {
             _longMsg = tempMsg;
             _msgReady = true;
             _whole++;
@@ -544,6 +586,8 @@ int SafeSock::handle_incoming_packet()
             if(!prev->nextMsg) {    
                 EXCEPT("Error:handle_incomming_packet: Out of Memory");
             }
+            //dprintf(D_NETWORK, "new msg created\n");
+            //prev->nextMsg->dumpMsg();
         } else { // first message in the bucket
             _inMsgs[index] = new _condorInMsg(mID, last, seqNo, length, data, 
                                               _shortMsg.isDataMD5ed(), 
@@ -552,6 +596,8 @@ int SafeSock::handle_incoming_packet()
             if(!_inMsgs[index]) {
                 EXCEPT("Error:handle_incomming_packet: Out of Memory");
             }
+            //dprintf(D_NETWORK, "new msg created\n");
+            //_inMsgs[index]->dumpMsg();
         }
         _noMsgs++;
         return FALSE;

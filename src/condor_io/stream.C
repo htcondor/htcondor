@@ -1414,7 +1414,10 @@ Stream::get( char	&c)
 		case internal:
 		case external:
 		case ascii:
-			if (get_bytes(&c, 1) != 1) return FALSE;
+			if (get_bytes(&c, 1) != 1) {
+                dprintf(D_NETWORK, "Stream::get(char) failed\n");
+                return FALSE;
+            }
 			break;
 	}
    NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
@@ -1432,7 +1435,10 @@ Stream::get( unsigned char	&c)
 		case internal:
 		case external:
 		case ascii:
-			if (get_bytes(&c, 1) != 1) return FALSE;
+			if (get_bytes(&c, 1) != 1) {
+                dprintf(D_NETWORK, "Stream::get(uchar) failed\n");
+                return FALSE;
+            }
 			break;
 	}
    NETWORK_TRACE("get char " << c << " c(" << ++getcount << ") ");    
@@ -1449,21 +1455,31 @@ Stream::get( int		&i)
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(int) from internal failed\n");
+                return FALSE;
+            }
 			break;
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
+                    dprintf(D_NETWORK, "Stream::get(int) failed to read padding\n");
 					return FALSE;
 				}
 			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(int) failed to read int\n");
+                return FALSE;
+            }
 			i = ntohl(tmp);
 			sign = (i >= 0) ? 0 : 0xff;
 			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != sign) {
+                    dprintf(D_NETWORK,
+                            "Stream::get(int) incorrect pad received: %x\n",
+                            pad[s]);
 					return FALSE; // overflow
 				}
 			}
@@ -1489,20 +1505,30 @@ Stream::get( unsigned int	&i)
 
 	switch(_code){
 		case internal:
-			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&i, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(uint) from internal failed\n");
+                return FALSE;
+            }
 			break;
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
+                    dprintf(D_NETWORK, "Stream::get(uint) failed to read padding\n");
 					return FALSE;
 				}
 			}
-			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
+			if (get_bytes(&tmp, sizeof(int)) != sizeof(int)) {
+                dprintf(D_NETWORK, "Stream::get(uint) failed to read int\n");
+                return FALSE;
+            }
 			i = ntohl(tmp);
 			for (int s=0; s < INT_SIZE-sizeof(int); s++) { // chk 4 overflow
 				if (pad[s] != 0) {
+                    dprintf(D_NETWORK,
+                            "Stream::get(uint) incorrect pad received: %x\n",
+                            pad[s]);
 					return FALSE; // overflow
 				}
 			}
