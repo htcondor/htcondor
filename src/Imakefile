@@ -92,9 +92,10 @@ TEST_SUITE_BASE = test_suite_base
 	static_dir/etc static_dir/etc/examples static_dir/include \
 	static_dir/src static_dir/src/chirp \
 	static_dir/man static_dir/man/man1 \
+	static_dir/lib/webservice \
 	static_contrib static_contrib/bin static_contrib/lib \
 	static_contrib/sbin static_contrib/etc \
-	static_contrib/etc/examples static_contrib/include
+	static_contrib/etc/examples static_contrib/include 
 #else
 #define StaticDirectories
 #endif
@@ -105,11 +106,13 @@ TEST_SUITE_BASE = test_suite_base
 	release_dir/libexec \
 	release_dir/include release_dir/src release_dir/src/chirp \
 	release_dir/man release_dir/man/man1 pure_bin \
+	release_dir/lib/webservice \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/libexec \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_dir/src strip_dir/src/chirp \
 	strip_dir/man strip_dir/man/man1 \
+	strip_dir/lib/webservice \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
@@ -135,6 +138,7 @@ simple_dir_target(release_dir/src)
 simple_dir_target(release_dir/src/chirp)
 simple_dir_target(release_dir/man)
 simple_dir_target(release_dir/man/man1)
+simple_dir_target(release_dir/lib/webservice)
 
 simple_dir_target(pure_bin)
 
@@ -150,6 +154,7 @@ simple_dir_target(strip_dir/src)
 simple_dir_target(strip_dir/src/chirp)
 simple_dir_target(strip_dir/man)
 simple_dir_target(strip_dir/man/man1)
+simple_dir_target(strip_dir/lib/webservice)
 
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
@@ -173,6 +178,7 @@ simple_dir_target(static_dir/src)
 simple_dir_target(static_dir/src/chirp)
 simple_dir_target(static_dir/man)
 simple_dir_target(static_dir/man/man1)
+simple_dir_target(static_dir/lib/webservice)
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
 simple_dir_target(static_contrib/lib)
