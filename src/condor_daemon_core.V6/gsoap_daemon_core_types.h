@@ -14,6 +14,7 @@
  */
 
 //gsoap condor service namespace: urn:condor
+//gsoap condor schema form: unqualified
 
 typedef char *xsd__string;
 typedef char *xsd__anyURI;
