@@ -292,25 +292,6 @@ int SafeSock::snd_packet(
 }
 
 
-int SafeSock::get_port()
-{
-	sockaddr_in	addr;
-	int			addr_len;
-
-	addr_len = sizeof(sockaddr_in);
-
-	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
-
-	return (int) ntohs(addr.sin_port);
-}
-
-
-int SafeSock::get_file_desc()
-{
-	return _sock;
-}
-
-
 #ifndef WIN32
 	// interface no longer supported
 int SafeSock::attach_to_file_desc(
@@ -324,39 +305,6 @@ int SafeSock::attach_to_file_desc(
 	return TRUE;
 }
 #endif
-
-
-struct sockaddr_in *SafeSock::endpoint()
-{
-	return &_who;
-}
-
-
-char *SafeSock::endpoint_IP()
-{
-	int             i;
-	static  char    buf[24];
-	char    tmp_buf[10];
-	char    *cur_byte;
-	unsigned char   this_byte;
-
-	buf[0] = '\0';
-	cur_byte = (char *) &(_who.sin_addr);
-	for (i = 0; i < sizeof(_who.sin_addr); i++) {
-		this_byte = (unsigned char) *cur_byte;
-		sprintf(tmp_buf, "%u.", this_byte);
-		cur_byte++;
-		strcat(buf, tmp_buf);
-	}
-	buf[strlen(buf) - 1] = '\0';
-	return buf;
-}
-
-
-int SafeSock::endpoint_port()
-{
-	return (int) ntohs(_who.sin_port);
-}
 
 
 char * SafeSock::serialize(char *buf)
