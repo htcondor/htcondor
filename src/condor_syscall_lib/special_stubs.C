@@ -59,6 +59,17 @@ my_ip_addr()
 	return syscall_sock->get_ip_int();
 }
 
+/*
+	In the 6.3 series, REMOTE_syscall had been removed. Well, it turns out
+	that 6.4 was supposed to be backwards compatible with 6.2. :( This means
+	that a 6.2 starter is going to look for the symbol REMOTE_syscall in a
+	6.3+(including 6.4) standard universe executable in order to determine if
+	it had been linked with condor correctly. This function must do nothing
+	except exist for a while until we get rid of it for good and in a
+	non-backwards compatible way.
+*/
+void REMOTE_syscall(void) {} ;
+
 
 /*
   _condor_dprintf_va is the real meat of dprintf().  We have different
