@@ -30,8 +30,19 @@ machines in your pool to the same version.
 \begin{itemize}
 
 \item Added \Term{file\_remaps} as command in the job submit file given to
+standard universe jobs.
+A Job can now specify that it would like to have files be remapped
+from one file to another.
+In addition you can specify that files should be read from the local machine
+by specifing them.
+See the \Condor{submit} manual page on page~\pageref{man-condor-submit} for
+more details.
 
-\item submit buffer
+\item Added \Term{buffer\_size} and \Term{buffer\_block\_size} so that standard
+jobs can specify that they wish to have I/O buffering turned on.
+By default, jobs do not specify buffering, however, for many situations buffering
+can drastically increase throughput.  See the \Condor{submit} manual page
+on page~\pageref{man-condor-submit} for more details.
 
 \item The \Condor{schedd} is much more memory efficient handling clusters
 with hundreds/thousands of jobs.  
