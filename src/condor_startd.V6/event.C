@@ -48,14 +48,13 @@ void update_central_mgr(void);
 
 static int eval_state(resource_info_t* rip)
 {
-	int start = FALSE, tmp;
+	int tmp;
 	int want_vacate, want_suspend;
 
 	resource_context(rip);
 	if (rip->r_state == SYSTEM)
 		resmgr_changestate(rip->r_rid, NO_JOB);
 	if (rip->r_state == NO_JOB)	{
-		(rip->r_context)->EvalBool(ATTR_REQUIREMENTS,template_ClassAd,start);
 		if(CondorPendingJobs::AreTherePendingJobs(rip->r_rid)) {
 			dprintf(D_ALWAYS,"Identified a pending job\n");
 			if(MatchInfo(rip,CondorPendingJobs::CapabString(rip->r_rid)))
@@ -74,7 +73,7 @@ static int eval_state(resource_info_t* rip)
 				   (status1!=CondorPendingJobs::eOK))
 					dprintf(D_ALWAYS,"Simulated Request Service FAILED!!!\n");
 				else
-					dprintf(D_ALWAYS,"Simulated Request Service succeeded!\n");
+ 					dprintf(D_ALWAYS,"Simulated Request Service succeeded!\n");
 				CondorPendingJobs::ClientMachine(rip->r_rid,
 												 rip->r_clientmachine);
 				command_startjob(sock,from,rip->r_rid, true);
@@ -243,7 +242,6 @@ event_sigchld(int sig)
 	resource_id_t rid;
 	resource_info_t *rip;
 	char tmp[80];
-	dprintf(D_ALWAYS,"Handling SIGCHLD\n");
 
 	while ((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0 ) {
 		if (WIFSTOPPED(status)) {
@@ -252,7 +250,6 @@ event_sigchld(int sig)
 		}
 		rip = resmgr_getbypid(pid);
 		if (rip == NULL) {
-			fprintf(D_ALWAYS, "ignoring stray SIGCHLD (pid = %d)\n", pid);
 			return;
 		}
 		if (WIFSIGNALED(status))
@@ -322,7 +319,6 @@ static int send_resource_context(resource_info_t* rip)
 {
 	ClassAd *cp;
 
-	dprintf(D_ALWAYS, "send_resource_context called.\n");
 	AccountForPrefExps(rip);
 	cp = resource_context(rip);
 	send_classad_to_machine(collector_host, COLLECTOR_UDP_COMM_PORT,
@@ -335,6 +331,6 @@ static int send_resource_context(resource_info_t* rip)
 
 void update_central_mgr()
 {
-	dprintf(D_ALWAYS, "update_central_manager called.\n");
+	dprintf(D_ALWAYS, "updating central manager\n");
 	resmgr_walk(send_resource_context);
 }

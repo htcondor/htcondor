@@ -25,17 +25,17 @@ typedef struct {
 	int r_interval;
 } resource_info_t;
 
-int resmgr_init __P((void));
-int resmgr_add __P((resource_id_t, resource_info_t *));
-int resmgr_del __P((resource_id_t rid));
+int resmgr_init(void);
+int resmgr_add(resource_id_t, resource_info_t *);
+int resmgr_del(resource_id_t rid);
 extern "C" resource_info_t *resmgr_getbyrid(resource_id_t rid);
-resource_info_t *resmgr_getbyname __P((resource_name_t));
-resource_info_t *resmgr_getbypid __P((int));
-int resmgr_walk __P((int (*) __P((resource_info_t *))));
-int resmgr_vacateall __P((void));
+resource_info_t *resmgr_getbyname(resource_name_t);
+resource_info_t *resmgr_getbypid(int);
+int resmgr_walk(int (*) (resource_info_t *));
+int resmgr_vacateall(void);
 bool resmgr_resourceinuse(void);
 extern "C" ClassAd *resmgr_context(resource_id_t rid);
-int resource_initcontext __P((resource_info_t *));
-ClassAd *resource_context __P((resource_info_t *));
+int resource_initcontext(resource_info_t *);
+ClassAd *resource_context(resource_info_t *);
 
 #endif /* _CONDOR_RESMGR_H */
