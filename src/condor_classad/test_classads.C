@@ -101,6 +101,7 @@ struct parameters
 	bool test_references;
 	bool test_xml;
 	bool test_dirty;
+	bool test_functions;
 };
 
 class TestResults
@@ -417,7 +418,9 @@ main(
 	}
 
 #ifdef CLASSAD_FUNCTIONS
-	test_functions(&test_results);
+	if (parameters.test_functions) {
+		test_functions(&test_results);
+	}
 #endif
 
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
@@ -471,7 +474,7 @@ parse_command_line(
 	parameters->test_references       = false;
 	parameters->test_xml              = false;
 	parameters->test_dirty            = false;
-
+	parameters->test_functions        = false;
 	argument_index = 1;
 
 	while (argument_index < argc) {
@@ -492,6 +495,7 @@ parse_command_line(
 			parameters->test_references       = true;
 			parameters->test_xml              = true;
 			parameters->test_dirty            = true;
+			parameters->test_functions        = true;
 		} else if (!strcmp(argv[argument_index], "-s")
 		    || !strcmp(argv[argument_index], "-scanner")) {
 			parameters->test_scanner          = true;
@@ -515,6 +519,9 @@ parse_command_line(
 		} else if (!strcmp(argv[argument_index], "-d")
 		    || !strcmp(argv[argument_index], "-dirty")) {
 			parameters->test_dirty            = true;
+		} else if (!strcmp(argv[argument_index], "-f")
+		    || !strcmp(argv[argument_index], "-functions")) {
+			parameters->test_functions        = true;
 		} else {
 			fprintf(stderr, "Unknown argument: %s\n", 
 					argv[argument_index]);
