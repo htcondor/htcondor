@@ -1812,9 +1812,13 @@ SetExitRequirements()
 							  ATTR_JOB_EXIT_REQUIREMENTS );
 
 	if (who) {
-		sprintf( buffer, "%s = %s", ATTR_JOB_EXIT_REQUIREMENTS, who ); 
-		InsertJobExpr (buffer);
+		fprintf(stderr, 
+			"\nERROR: %s is deprecated.\n"
+			"Please use on_exit_remove or on_exit_hold.\n", 
+			ExitRequirements );
 		free(who);
+		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
 }
 	
