@@ -37,7 +37,7 @@ const int CAUTH_CLAIMTOBE               = 2;
 const int CAUTH_FILESYSTEM              = 4;
 const int CAUTH_FILESYSTEM_REMOTE       = 8;
 const int CAUTH_NTSSPI                  = 16;
-const int CAUTH_X509                    = 32;
+const int CAUTH_GSI                     = 32;
 const int CAUTH_KERBEROS                = 64;
 const int CAUTH_ANONYMOUS               = 128;
 
