@@ -641,7 +641,7 @@ short_header (void)
 static char *
 format_remote_host (char *, AttrList *ad)
 {
-	static char result[40];
+	static char result[MAXHOSTNAMELEN];
 	struct sockaddr_in sin;
 	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
 		if (result[0] == '<' &&
