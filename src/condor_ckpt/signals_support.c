@@ -43,7 +43,18 @@ extern void _sigreturn();
 #if defined(NSIG)
 #define NUM_SIGS NSIG
 #else
-#define NUM_SIGS 50   /* error on the high side... */
+#error Must know NSIG -  see comment here in the code !
+/* If you get the error message above, you need to devise a way so that
+ * NSIG is set to be the maximum number of signals supported on this
+ * platform.  Usually, NSIG is defined in <signal.h>, but you may need
+ * to edit condor_includes/condor_fix_signal.h to define or undefine something
+ * in order to fix this.  DO NOT JUST DEFINE NSIG SOMEPLACE YOURSELF.  Why?  
+ * Say you define NSIG to be 25 for the Foo operating system.  A few months
+ * later, Foo 2.0 comes out and has 5 new signals for a total of 30.  Your
+ * own little define still says 25, and is now wrong.  Get it? By using a 
+ * true value in the system header files you are ensured they will get updated
+ * with new versions of the operating system.
+ */
 #endif
 
 void display_sigstate( int line, const char * file );
@@ -86,11 +97,8 @@ condor_save_sigstates()
 
 	if ( signal_states.nsigs == 0 ) {
 		/* This code only runs once; here we figure out how many signals
-		 * this OS supports.  If signal.h defines NSIG, we believe it, else
-		 * we do some useless work to try to figure it out for ourselves. */
-#if defined(NSIG)
-		signal_states.nsigs = NSIG;
-#else
+		 * this OS supports and verify our array (of size NUM_SIGS) is
+		 * big enough to store all the state. */
 		sigfillset(&mask);
 		sig = 1;
 		while ( sigismember(&mask,sig) != -1 ) sig++;
@@ -101,7 +109,6 @@ condor_save_sigstates()
 					sig, NUM_SIGS);
 			Suicide();
 		}
-#endif
 	}
 
 	/* Save handler information for each signal */
