@@ -21,16 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#define _POSIX_SOURCE
-
-#include "_condor_fix_types.h"
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
-#include <time.h>
-#include <sys/wait.h>
-#include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
 
