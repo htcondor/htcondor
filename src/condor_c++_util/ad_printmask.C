@@ -82,10 +82,6 @@ display (FILE *file, AttrList *al)
 				fprintf (file, fmt, result.i);
 				break;
 
-			  case LX_BOOL:
-				fprintf (file, fmt, result.b);
-				break;
-
 			  default:
 				fprintf (file, "%s", alt);
 				retval = 0;
