@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "common.h"
 #include "collectionServer.h"
 #include "query.h"
