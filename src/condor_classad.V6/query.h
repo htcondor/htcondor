@@ -50,6 +50,14 @@ public:
 	void ToAfterLast(void);
 	bool IsAfterLast(void) const { return( itr==keys.end( ) ); }
 
+	typedef std::vector<std::string>::iterator iterator;
+	typedef std::vector<std::string>::const_iterator const_iterator;
+
+	iterator begin()              { return keys.begin(); }
+	const_iterator begin() const  { return keys.begin(); }
+	iterator end()                { return keys.end(); }
+	const_iterator end() const    { return keys.end(); }
+
 private:
 	ClassAdCollection                   *collection;
 	std::vector<std::string>            keys;
