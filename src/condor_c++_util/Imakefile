@@ -77,11 +77,15 @@ TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
 TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
 #endif
 
+#if !HAS_FLOCK
+FLOCK_OBJ = ../condor_util_lib/flock.o
+#endif 
+
 all_target(cplus_lib.a liburl.a libapi.a)
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
-library_target( libapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o ../condor_util_lib/flock.o ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
+library_target( libapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
 
 libapi.tar: libapi.a
 	cp ../h/file_lock.h file_lock.h
