@@ -42,9 +42,9 @@ extern DLL_IMPORT_MAGIC char **environ;
 template class HashTable<HashKey, char *>;
 template class HashBucket<HashKey, char *>;
 
-HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
-
 #endif
+
+HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
 
 int SetEnv( const char *key, const char *value)
 {
@@ -176,7 +176,7 @@ const char *GetEnv( const char *env_var )
 		value = (char *)malloc( value_size );
 	}
 	rc = GetEnvironmentVariable( env_var, value, value_size );
-	if ( rc > sizeof(value) - 1 ) {
+	if ( rc > value_size - 1 ) {
 			// environment variable value is too large,
 			// reallocate our string and try again
 		free( value );
@@ -184,7 +184,7 @@ const char *GetEnv( const char *env_var )
 		value = (char *)malloc( value_size );
 		rc = GetEnvironmentVariable( env_var, value, value_size );
 	}
-	if ( rc > sizeof(value) - 1 ) {
+	if ( rc > value_size - 1 ) {
 		dprintf( D_ALWAYS, "GetEnv(): environment variable still too large: %d\n", rc );
 		return NULL;
 	} else if ( rc == 0 ) {
