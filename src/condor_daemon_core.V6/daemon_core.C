@@ -877,7 +877,7 @@ DaemonCore::Cancel_And_Close_All_Sockets(void)
 
 	while ( nSock > 0 ) {
 		if ( (*sockTable)[0].iosock ) {	// if a valid entry....
-			Stream* insock = (*sockTable)[i].iosock;
+			Stream* insock = (*sockTable)[0].iosock;
 			Cancel_Socket( insock );		
 			delete insock;
 			i++;
@@ -897,7 +897,7 @@ DaemonCore::Cancel_And_Close_All_Pipes(void)
 
 	while ( nPipe > 0 ) {
 		if ( (*pipeTable)[0].pipefd ) {	// if a valid entry....
-			Close_Pipe( (*pipeTable)[i].pipefd );		
+			Close_Pipe( (*pipeTable)[0].pipefd );		
 			i++;
 		}
 	}
