@@ -3,7 +3,6 @@ package edu.wisc.cs.condor.chirp;
 
 import java.io.*;
 import java.net.*;
-import java.util.regex.*;
 
 /*
 XXX XXX XXX
@@ -280,9 +279,25 @@ public class ChirpClient {
 		return returnOrThrow(response);
 	}
 
-	static Pattern escaper = Pattern.compile("([ \\\\])");
 	public String ChirpWord( String cmd ) {
-		return escaper.matcher(cmd).replaceAll("\\\\$1");
+		StringBuffer buf = new StringBuffer();
+
+		for(int i=0; i<cmd.length(); i++) {
+			char ch = cmd.charAt(i);
+			switch(ch) {
+			case '\\':
+			case ' ':
+			case '\n':
+			case '\t':
+			case '\r':
+				buf.append("\\");
+				//fall through
+			default:
+			    buf.append(ch);
+			}
+		}
+
+		return buf.toString();
         }
 
 	private int returnOrThrow( int code ) throws IOException {
