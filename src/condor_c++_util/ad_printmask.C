@@ -148,7 +148,7 @@ display (FILE *file, AttrList *al)
 
 		  	case INT_CUSTOM_FMT:
 				if( al->EvalInteger( attr, NULL, intValue ) ) {
-					fputs( (fmt->df)( intValue ) , file );
+					fputs( (fmt->df)( intValue , al ) , file );
 				} else {
 					fputs( alt, file );
 					retval = 0;
@@ -157,7 +157,7 @@ display (FILE *file, AttrList *al)
 
 		  	case FLT_CUSTOM_FMT:
 				if( al->EvalFloat( attr, NULL, floatValue ) ) {
-					fputs( (fmt->ff)( floatValue ) , file );
+					fputs( (fmt->ff)( floatValue , al ) , file );
 				} else {
 					fputs( alt, file );
 					retval = 0;
@@ -166,7 +166,7 @@ display (FILE *file, AttrList *al)
 
 		  	case STR_CUSTOM_FMT:
 				if( al->EvalString( attr, NULL, stringValue ) ) {
-					fputs( (fmt->sf)( stringValue ) , file );
+					fputs( (fmt->sf)( stringValue , al ) , file );
 				} else {
 					fputs( alt, file );
 					retval = 0;

@@ -8,9 +8,9 @@
 
 enum FormatKind { PRINTF_FMT, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT };
 
-typedef char *(*IntCustomFmt)(int);
-typedef char *(*FloatCustomFmt)(float);
-typedef char *(*StringCustomFmt)(char*);
+typedef char *(*IntCustomFmt)(int,AttrList*);
+typedef char *(*FloatCustomFmt)(float,AttrList*);
+typedef char *(*StringCustomFmt)(char*,AttrList*);
 
 struct Formatter
 {
