@@ -904,32 +904,36 @@ void LeOp::PrintToStr(char* str)
 
 void AndOp::PrintToStr(char* str)
 {
+	LexemeType	tt;
+
     if(lArg) {
-	strcat(str, "(");
-	((ExprTree*)lArg)->PrintToStr(str);
-	strcat(str, ")");
+		tt = lArg->MyType();
+		if( tt == LX_OR ) {
+			strcat(str, "(");
+			((ExprTree*)lArg)->PrintToStr(str);
+			strcat(str, ")");
+		} else {
+			((ExprTree*)lArg)->PrintToStr(str);
+		}
 	}
     strcat(str, " && ");
     if(rArg) {
-    	strcat(str, "(");
-	((ExprTree*)rArg)->PrintToStr(str);
-	strcat(str, ")");
-  	}
+		tt = rArg->MyType();
+		if( tt == LX_OR ) {
+			strcat(str, "(");
+			((ExprTree*)rArg)->PrintToStr(str);
+			strcat(str, ")");
+		} else {
+			((ExprTree*)rArg)->PrintToStr(str);
+		}
+	}
 }
 
 void OrOp::PrintToStr(char* str)
 {
-    if(lArg) {
-	strcat(str, "(");
-	((ExprTree*)lArg)->PrintToStr(str);
-	strcat(str, ")");
-	}
+	if( lArg )((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " || ");
-    if(rArg) {
-    	strcat(str, "(");
-	((ExprTree*)rArg)->PrintToStr(str);
-	strcat(str, ")");
-  	}
+    if(rArg) ((ExprTree*)rArg)->PrintToStr(str);
 }
 
 void AssignOp::PrintToStr(char* str)
