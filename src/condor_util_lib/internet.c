@@ -130,6 +130,7 @@ string_to_sin(char *string, struct sockaddr_in *sin)
 	int             i;
 	char    *cur_byte;
 	char    *end_string;
+	int 	temp=0;
 
 	string++;					/* skip the leading '<' */
 	cur_byte = (char *) &(sin->sin_addr);
@@ -150,6 +151,9 @@ string_to_sin(char *string, struct sockaddr_in *sin)
 	string[strlen(string) - 1] = '\0'; /* Chop off the trailing '>' */
 	sin->sin_port = htons(atoi(string));
 	sin->sin_family = AF_INET;
+	string[temp-1] = '>';
+	string[temp] = '\0';
+	string[temp-6] = ':';
 }
 
 
