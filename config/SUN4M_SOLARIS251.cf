@@ -3,8 +3,8 @@
 
 #define RpcLib /**/
 #define MldLib /**/
-#define KernLib /usr/lib/libelf.a /usr/lib/libkvm.a/* ..dhaval 6/28 */
-#define MallocLib /lib/libkvm.a
+#define KernLib /usr/lib/libelf.a /* weiru */
+#define KvmLib -lkvm
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 #define SocketLib /lib/libsocket.a  /lib/libnsl.a  /lib/libdl.so /lib/libintl.a /* ..dhaval 6/28 */
@@ -67,8 +67,8 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_GETPGRP2			NO
 #define HAS_KILLPG				YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREGID			NO
-#define HAS_SETREUID			NO
+#define HAS_SETREGID			YES
+#define HAS_SETREUID			YES
 #define HAS_UTIMES				YES
 #define HAS_UTIME				NO
 #define HAS_VHANGUP				YES
@@ -83,8 +83,8 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define PVM_ARCH			SUN4SOL2
 
 
-#define CCompiler /s/std/bin/gcc /* different than SunOS */ 
-#define CPlusCompiler /s/std/bin/g++ /* different than SunOS */
+#define CCompiler /s/gcc-2.7.2/bin/gcc /* different than SunOS */ 
+#define CPlusCompiler /s/gcc-2.7.2/bin/g++ /* different than SunOS */
 #define Demangler /opt/SUNWspro/bin/c++filt  /* Ajitk */
 #define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
