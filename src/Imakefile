@@ -6,7 +6,8 @@
 #define MasterFiles sbin/condor_master AdminTools
 
 #define SubmitSbinFiles sbin/condor_schedd sbin/condor_shadow \
-  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule
+  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule \
+  sbin/condor_shadow.v61
 
 #define SubmitOnlyFiles bin lib include etc SubmitSbinFiles MasterFiles
 
