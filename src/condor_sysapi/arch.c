@@ -32,8 +32,12 @@
 	a 'initializer element is not constant' during compile. I have defined
 	them as to make the preprocessor do the work instead of a const int.
 	-psilord 06/01/99 */
+#ifndef TRUE
 #define TRUE 1
+#endif
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 static char *_FileName_ = __FILE__;
 
