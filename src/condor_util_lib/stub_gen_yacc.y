@@ -1302,12 +1302,7 @@ output_receiver( struct node *n )
 			n->pseudo ? "pseudo_" : "",
 			n->id
 		);
-		for( p=param_list->next; p != param_list; p = p->next ) {
-			printf( "%s%s ",
-				p->id,
-				p->next == param_list ? "" : ","
-			);
-		}
+		output_param_list( param_list, 1, 0  ); 
 		printf( ");\n" );
 	}
 	printf( "\t\tterrno = errno;\n" );

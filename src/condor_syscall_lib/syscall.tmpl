@@ -557,11 +557,11 @@ version.
 	int fchmod( map(int fd), mode_t mode );
 
 	#if defined(Solaris) || defined(IRIX)
-		int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
+		int statfs( const char *path, struct statfs *buf, rdiscard(int len), rdiscard(int fstyp) ) : pseudo {
 	#elif defined(OSF1)
-		int statfs( char *path, struct statfs *buf, int len ) {
+		int statfs( char *path, struct statfs *buf, rdiscard(int len) ) : pseudo {
 	#else
-		int statfs( const char *path, struct statfs *buf ) {
+		int statfs( const char *path, struct statfs *buf ) : pseudo {
 	#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -585,8 +585,13 @@ version.
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
-	#if defined(HPUX) || defined(OSF1)
+	#if defined(HPUX) || defined(OSF1) || defined(LINUX)
+	    #if defined(LINUX)
+		int getdirentries( map(int fd), char *buf, size_t nbytes, off_t *basep )
+	    #else
 		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, off_t *basep )
+	    #endif
+
 		{
 			out code_bytes_bool( buf, rval );
 			in code_bytes_bool( basep, EIGHT );
@@ -594,7 +599,7 @@ version.
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
-	#elif defined(Solaris) || defined(IRIX)
+	#elif defined(Solaris) || defined(IRIX) || defined(LINUX)
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
 			also_implements(getdents64)
 		{
