@@ -145,7 +145,7 @@ class BaseShadow : public Service
 			@param res The remote resource that exited.  Needed for 
 			             such things as amount of bytes transferred, etc.
 		*/
-	void endingUserLog( int exitStatus, int exitReason, RemoteResource *res );
+	void endingUserLog( int exitStatus, int exitReason );
 
 		/** Change to the 'Iwd' directory.  Send email if problem.
 			@return 0 on success, -1 on failure.
@@ -194,10 +194,24 @@ class BaseShadow : public Service
 		/// Used by static and global functions to access shadow object
 	static BaseShadow* myshadow_ptr;
 
- protected:
+		/** Method to handle command from the starter to update info 
+			about the job.  Each kind of shadow needs to handle this
+			differently, since, for example, cpu usage is stored in
+			the remote resource object, and in mpi, we've got a whole
+			list of those, while in the unishadow, we've only got 1.
+		*/
+	virtual int updateFromStarter(int command, Stream *s) = 0;
+
+	virtual int getImageSize( void ) = 0;
+
+	virtual int getDiskUsage( void ) = 0;
+
+	virtual struct rusage getRUsage( void ) = 0;
 
 		// make UserLog static so it can be accessed by EXCEPTION handler
 	static UserLog uLog;
+
+ protected:
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
 			If we're a regular shadow, this pointer gets copied into the
@@ -229,6 +243,8 @@ class BaseShadow : public Service
 	BaseShadow& operator = ( const BaseShadow& );
 
 };
+
+extern void dumpClassad( const char*, ClassAd*, int );
 
 #endif
 
