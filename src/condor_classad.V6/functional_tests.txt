@@ -17,6 +17,9 @@ diff real("NaN"), real("NaN")
 same real("INF"), real("INF")
 same real("-INF"), real("-INF")
 diff real("INF"), real("-INF")
+//diff 0.0, -(0.0)
+//diff 0.0, real("-0.0")
+//same string(-0.0), "-0.0"
 
 /////////////////////////////////
 echo Testing basic attributes in a ClassAd...
