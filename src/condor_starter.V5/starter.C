@@ -1076,6 +1076,18 @@ get_job_info()
 	}
 
 	u_proc->display();
+
+	// We need to clean up the memory allocated in the STARTUP_INFO I
+	// think that STARTUP_INFO should probably be a class with a
+	// destructor, but I am pretty unfamiliar with the code, so I'm
+	// going to make a minimal change here. By the way, we know it's
+    // safe to free this memory, because the UserProc class makes
+	// copies of it. --Alain 25-Sep-2001
+	if (s.cmd)  free(s.cmd);
+	if (s.args) free(s.args);
+	if (s.env)  free (s.env);
+	if (s.iwd)  free (s.iwd);
+
 	return u_proc;
 }
 
