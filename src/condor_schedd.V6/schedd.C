@@ -2327,7 +2327,18 @@ void Scheduler::StartJobHandler() {
         free( shad_nice );
     }
 
-	pid = daemonCore->Create_Process(Shadow, args, PRIV_UNKNOWN, 1, 
+	/* Print out the current priv state, for debugging. */
+	priv_state current_priv = set_root_priv();
+	set_priv(current_priv);
+
+	dprintf(D_FULLDEBUG,
+		"About to Create_Process(%s, ...).  Current priv state: %d\n",
+		Shadow, current_priv);
+
+	/* We should create the Shadow as PRIV_ROOT so it can read it if
+	   it needs too.  This used to be PRIV_UNKNOWN, which was determined
+	   to be definately not what we wanted.  -Ballard 2/3/00 */
+	pid = daemonCore->Create_Process(Shadow, args, PRIV_ROOT, 1, 
                                      sh_is_dc, NULL, NULL, FALSE, NULL, NULL, 
                                      niceness );
 
