@@ -561,8 +561,24 @@ sub ReadDataFile( $$ )
 	elsif ( /PARAMETER:\s*(\S+)(\s+=(.*))?/i )
 	{
 	    my $p = ();
-	    $p->{Name} = $1;
+	    my $ParamName = $1;
+	    my $OrigName = $1;
 	    $p->{Default} = $3 if ( defined $3 );
+
+	    # For backward compatibility, message the old HAKWEYE_<NAME>_<PARAM>
+	    # parameter names to just plain <PARAM>
+	    my $Pat1 = "hawkeye_" . $Data->{DefaultName} . "_(\\w+)";
+	    my $Pat2 = "hawkeye_[a-zA-Z]+_(\\w+)";
+	    if ( $ParamName =~ /^$Pat1$/i )
+	    {
+		$ParamName = $1;
+	    }
+	    elsif ( $ParamName =~ /^$Pat2/i )
+	    {
+		$ParamName = $1;
+	    }
+	    $p->{Name} = $ParamName;
+	    $p->{OrigName} = $OrigName;
 	    my @Description;
 	    while( <DATA> )
 	    {
@@ -576,6 +592,8 @@ sub ReadDataFile( $$ )
 		    $p = ();
 		    redo READLINE;
 		}
+
+		s/$OrigName/$ParamName/ if ( $OrigName ne $ParamName );
 		push @Description, $_;
 	    }
 
@@ -597,6 +615,20 @@ sub ReadDataFile( $$ )
 	}
     }
     close( DATA );
+
+
+    # For backward compatibility, message the old HAKWEYE_<NAME>_<PARAM>
+    # parameter names to just plain <PARAM>
+    # Clean up the description, too
+    for my $Param ( @{$Data->{Parameters}} )
+    {
+	next if ( $Param->{Name} eq $Param->{OrigName} );
+	foreach my $LineNo ( 0 .. $#{$Data->{Description}} )
+	{
+	    $Data->{Description}[$LineNo] =~
+		s/$Param->{OrigName}/$Param->{Name}/;
+	}
+    }
 
     # Final checks
     if ( ! exists $Data->{ModuleFile} )
@@ -863,13 +895,14 @@ sub UpdateConfig( $ )
 	my $Default= (defined $Param->{Default} ) ? $Param->{Default} : "";
 	push( @ConfigLines, "##    Default: $Default" );
 
+	my $ParamName = uc( "HAKWEYE_" . $Name . "_"  . $Param->{Name} );
 	if ( defined $Param->{Value} )
 	{
-	    push( @ConfigLines, "$Param->{Name} = $Param->{Value}" );
+	    push( @ConfigLines, "$ParamName = $Param->{Value}" );
 	}
 	else
 	{
-	    push( @ConfigLines, "# $Param->{Name} =" );
+	    push( @ConfigLines, "# $ParamName =" );
 	}
     }
 
