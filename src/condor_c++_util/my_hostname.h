@@ -23,8 +23,16 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
 extern	char*	my_hostname();
 extern	char*	my_full_hostname();
 extern	unsigned int	my_ip_addr();
+
+#if defined( __cplusplus )
+}
+#endif
 
 #endif /* MY_HOSTNAME_H */
