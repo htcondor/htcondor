@@ -81,8 +81,8 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
     if (status == -1) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
-		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", 
-					 command );
+		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
+					  "pclose() failed!\n", command );
 		return false;
     }
   }
@@ -120,8 +120,9 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
   command = new char[cmdLen];
   if (command == NULL) {
-	  debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
+	  debug_printf( DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
 				   __FILE__, __LINE__ );
+	  return false;
   }
 
 #ifdef WIN32
@@ -212,8 +213,8 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
     if (status == -1) {
 		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
 					 command_output.Value());
-		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", 
-					 command );
+		debug_printf( DEBUG_QUIET, "ERROR while running \"%s\": "
+					  "pclose() failed!\n", command );
 		return false;
     }
   }
@@ -238,8 +239,9 @@ dap_submit( const char* cmdFile, CondorID& condorID,
   cmdLen = strlen( exe ) + strlen( cmdFile ) + 512;
   command = new char[cmdLen];
   if (command == NULL) {
-	  debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
+	  debug_printf( DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
 				   __FILE__, __LINE__ );
+	  return false;
   }
 
   // we use 2>&1 to make sure we get both stdout and stderr from command

@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_string.h"
 #include "basename.h"
 #include "dag.h"
 #include "debug.h"
@@ -32,6 +33,8 @@
 #include "condor_environ.h"
 #include "dagman_main.h"
 #include "dagman_commands.h"
+
+void ExitSuccess();
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
@@ -94,22 +97,38 @@ main_shutdown_fast()
 }
 
 int main_shutdown_graceful() {
-    G.CleanUp();
+	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
+	if( G.dag ) {
+		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
+					  G.rescue_file );
+		G.dag->Rescue( G.rescue_file, G.datafile );
+			// we write the rescue DAG *before* removing jobs because
+			// otherwise if we crashed, failed, or were killed while
+			// removing them, we would leave the DAG in an
+			// unrecoverable state...
+		if( G.dag->NumJobsSubmitted() > 0 ) {
+			debug_printf( DEBUG_NORMAL, "Removing running jobs...\n" );
+			G.dag->RemoveRunningJobs();
+		}
+	}
 	unlink( lockFileName ); 
+    G.CleanUp();
 	DC_Exit( 1 );
     return FALSE;
 }
 
 int main_shutdown_remove(Service *, int) {
-    debug_printf( DEBUG_NORMAL, "Received SIGUSR1, removing running jobs\n" );
-    G.dag->RemoveRunningJobs();
-    if (G.rescue_file != NULL) {
-        debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n" );
-        G.dag->Rescue(G.rescue_file, G.datafile);
-    }
+    debug_printf( DEBUG_NORMAL, "Received SIGUSR1\n" );
 	main_shutdown_graceful();
-	return FALSE;
+	return false;
 }
+
+void ExitSuccess() {
+	unlink( lockFileName ); 
+    G.CleanUp();
+	DC_Exit( 0 );
+}
+
 void condor_event_timer();
 void dap_event_timer();
 void print_status();
@@ -295,10 +314,13 @@ int main_init (int argc, char ** const argv) {
                    lockFileName);
     debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
 
-    if (G.rescue_file != NULL) {
-        debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-                       G.rescue_file);
-    }
+	if( G.rescue_file == NULL ) {
+		MyString s = G.datafile;
+		s += ".rescue";
+		G.rescue_file = strnewp( s.Value() );
+	}
+	debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
+				  G.rescue_file);
 
 		// if requested, wait for someone to attach with a debugger...
 	while( wait_for_debug );
@@ -474,11 +496,6 @@ void condor_event_timer () {
     if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
       if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-            debug_printf( DEBUG_QUIET, "Aborting DAG...\n"
-                           "removing running jobs");
-            G.dag->RemoveRunningJobs();
-            debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
-            G.dag->Rescue(G.rescue_file, G.datafile);
 			main_shutdown_graceful();
 			return;
         }
@@ -513,8 +530,8 @@ void condor_event_timer () {
     if( G.dag->Done() ) {
         ASSERT( G.dag->NumJobsSubmitted() == 0 );
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
-		G.CleanUp();
-		DC_Exit( 0 );
+		ExitSuccess();
+		return;
     }
 
     //
@@ -537,14 +554,8 @@ void condor_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		if( G.rescue_file != NULL ) {
-			debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
-			G.dag->Rescue(G.rescue_file, G.datafile);
-		}
-		else {
-			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
-		}
 		main_shutdown_graceful();
+		return;
     }
 }
 
@@ -573,11 +584,6 @@ void dap_event_timer () {
     if (G.dag->DetectDaPLogGrowth()) {
         if (G.dag->ProcessLogEvents(DAPLOG) == false) {
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-            debug_printf( DEBUG_QUIET, "Aborting DAG...\n"
-                           "removing running jobs");
-            G.dag->RemoveRunningJobs();
-            debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
-            G.dag->Rescue(G.rescue_file, G.datafile);
 			main_shutdown_graceful();
 			return;
         }
@@ -608,8 +614,8 @@ void dap_event_timer () {
     if( G.dag->Done() ) {
         ASSERT( G.dag->NumJobsSubmitted() == 0 );
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
-		G.CleanUp();
-		DC_Exit( 0 );
+		ExitSuccess();
+		return;
     }
 
     //
@@ -632,14 +638,8 @@ void dap_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		if( G.rescue_file != NULL ) {
-			debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
-			G.dag->Rescue(G.rescue_file, G.datafile);
-		}
-		else {
-			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
-		}
 		main_shutdown_graceful();
+		return;
     }
 }
 //<--DAP
