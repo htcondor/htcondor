@@ -5,6 +5,7 @@
 #if defined(Solaris)
 #	include "_condor_fix_types.h"
 #       include <sys/statfs.h>
+#	include <nfs/nfs.h>	/* for fhandle_t */
 #endif
 
 #if defined(HPUX9) || defined(Solaris)
