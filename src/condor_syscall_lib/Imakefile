@@ -522,7 +522,7 @@ static_library(libcondorsyscall.a,$(STATIC_DIR)/lib)
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libz.a, $(RELEASE_DIR)/lib)
+release_library(libz.a,$(RELEASE_DIR)/lib)
 strip_library(libz.a,$(STRIP_DIR)/lib)
 static_library(libz.a,$(STATIC_DIR)/lib)
 #endif
