@@ -542,6 +542,7 @@ accept_request_claim( Resource* rip )
 
 	Stream* stream = rip->r_cur->agentstream();
 	assert( stream );
+	Sock* sock = (Sock*)stream;
 
 	stream->encode();
 	if( !stream->put( OK ) ) {
@@ -575,7 +576,7 @@ accept_request_claim( Resource* rip )
 	free( client_addr );
 
 		// Figure out the hostname of our client.
-	if( ! (tmp = sin_to_hostname(stream->endpoint(), NULL)) ) {
+	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
 		rip->dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
 		ABORT;
 	} 
@@ -641,7 +642,8 @@ activate_claim( Resource* rip, Stream* stream )
 	StartdRec stRec;
 	start_info_t ji;	/* XXXX */
 	int universe, job_cluster, job_proc, starter;
-	char* shadow_addr = strdup( sin_to_string( stream->endpoint() ));
+	Sock* sock = (Sock*)stream;
+	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -749,20 +751,10 @@ activate_claim( Resource* rip, Stream* stream )
 		stRec.ports.port1 = rsock_1.get_port();
 		stRec.ports.port2 = rsock_2.get_port();
 
-			/* send name of server machine: dhruba */ 
-		if (get_machine_name(official_name) == -1) {
-			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-			ABORT;
-		}
-			/* fvdl XXX fails for machines with multiple interfaces */
-		stRec.server_name = (char *)strdup( official_name );
+		stRec.server_name = strdup( my_full_hostname() );
 	
-			/* send ip_address of server machine: dhruba */ 
-			// This is very whacky and wrong... needs fixing.
-		if( get_inet_address((in_addr*)&stRec.ip_addr) == -1) {
-			rip->dprintf( D_ALWAYS, "Error in get_machine_name\n" );
-			ABORT;
-		}
+			// Send our local IP address, too.
+		memcpy( &stRec.ip_addr, my_sin_addr(), sizeof(struct in_addr) );
 		
 		stream->encode();
 		if (!stream->code(stRec)) {
