@@ -35,6 +35,8 @@ struct SubmitDagOptions
 	bool bForce;
 	MyString strNotification;
 	MyString strJobLog;
+	MyString strStorkLog;
+	MyString strStorkServer;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
@@ -148,12 +150,27 @@ void submitDag(SubmitDagOptions &opts)
 	writeSubmitFile(opts);
 
 	printf("-----------------------------------------------------------------------\n");
-	printf("File for submitting this DAG to Condor   : %s\n", opts.strSubFile.Value());
-	printf("Log of DAGMan debugging messages         : %s\n", opts.strDebugLog.Value());
-	printf("Log of Condor library debug messages     : %s\n", opts.strLibLog.Value());
-	printf("Log of the life of condor_dagman itself  : %s\n", opts.strSchedLog.Value());
+	printf("File for submitting this DAG to Condor           : %s\n", 
+			opts.strSubFile.Value());
+	printf("Log of DAGMan debugging messages                 : %s\n",
+		   	opts.strDebugLog.Value());
+	printf("Log of Condor library debug messages             : %s\n", 
+			opts.strLibLog.Value());
+	printf("Log of the life of condor_dagman itself          : %s\n",
+		   	opts.strSchedLog.Value());
 	printf("\n");
-	printf("Condor Log file for all jobs of this DAG : %s\n", opts.strJobLog.Value());
+	printf("Condor Log file for all jobs of this DAG         : %s\n", 
+			opts.strJobLog.Value());
+
+	if (opts.strStorkLog != "") {
+		printf("Stork Log file for all DaP jobs of this DAG      : %s\n",
+			   	opts.strStorkLog.Value());
+	}
+
+	if (opts.strStorkServer != "") {
+	printf("Stork server to which DaP jobs will be submitted : %s\n",
+		   	opts.strStorkLog.Value());
+	}
 
 	if (opts.bSubmit)
 	{
@@ -301,6 +318,14 @@ void writeSubmitFile(const SubmitDagOptions &opts)
     if(opts.bNoPostFail) 
 	{
 		strArgs += " -NoPostFail";
+    }
+    if(opts.strStorkLog != "") 
+	{
+		strArgs += " -Storklog " + opts.strStorkLog;
+    }
+    if(opts.strStorkServer != "") 
+	{
+		strArgs += " -Storkserver " + opts.strStorkServer;
     }
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
@@ -468,6 +493,18 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				printUsage();
 			opts.strDagmanPath = argv[++iArg];
 		}
+		else if (strArg.find("-storklog") != -1)
+		{
+			if (bIsLastArg)
+				printUsage();
+			opts.strStorkLog = argv[++iArg];
+		}
+		else if (strArg.find("-storkserver") != -1)
+		{
+			if (bIsLastArg)
+				printUsage();
+			opts.strStorkServer = argv[++iArg];
+		}
 		else if (strArg.find("-d") != -1)
 		{
 			if (bIsLastArg)
@@ -497,6 +534,10 @@ int printUsage()
     printf("    -MaxPost number     (Maximum number of POST scripts to run at once)\n");
     printf("    -NoPostFail         (Don't run POST scripts after failed jobs)\n");
     printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
+// -->STORK
+    printf("    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n");
+    printf("    -storkserver hostname (Specify the hostname to submit DaP jobs)\n");
+// <--STORK
     printf("    -notification value (Determines how much email you get from Condor)\n");
     printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
