@@ -927,7 +927,7 @@ namePrintf( FILE* stream, char* name, char* str, ... )
 	if( name ) {
 		if( *name == '<' ) {
 				// sinful string,
-			if( dt != DT_NONE & dt != DT_ANY ) {
+			if( dt != DT_NONE && dt != DT_ANY ) {
 				fprintf( stream, " %s at %s\n", daemonString(dt), name );			
 			} else {
 				fprintf( stream, " daemon at %s\n", name );			
