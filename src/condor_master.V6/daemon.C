@@ -269,7 +269,7 @@ daemon::NextStart()
 {
 	int n;
 	n = 9 + (int)ceil(pow(e_factor, restarts));
-	if( n > ceiling ) {
+	if( n > ceiling || n < 0 ) {
 		n = ceiling;
 	}
 	return n;
