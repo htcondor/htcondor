@@ -26,7 +26,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When the first start running, all Condor daemons will now try to
+  print to their log file the full path to the binary they are
+  executing. 
+  Unfortunately, we can only reliably get this information on Linux,
+  Solaris and Windows platforms.
+  On other platforms, this information will only be printed to the log
+  file in certain cases that depend on how the daemon was invoked.
+  This new feature was added to aid in debugging problems where sites
+  were not running the version of the Condor daemons they thought they
+  were due to problems in custom-built startup scripts.
 
 \end{itemize}
 
@@ -45,7 +54,20 @@ The details of each version are described below.
 \item The -analyze option to \Condor{q} is only meaningful for certain
   universes.  \Condor{q} now warns if the output might not be meaningful. 
 
-\item Java universe: when jar files are transferred to the execute machine (with \Expr{should\_transfer\_files} or \Expr{tranfer\_input\_files}) the Starter will use the local path (in the execute directory) for the jarfiles, instead of the original path specified in the submit file.
+\item Java universe: when jar files are transferred to the execute
+  machine (with \Expr{should\_transfer\_files} or
+  \Expr{tranfer\_input\_files}) the \Condor{starter} will use the
+  local path (in the execute directory) for the jarfiles, instead of
+  the original path specified in the submit file.
+
+\item Fixed a minor bug where if the \Condor{schedd} crashed or was
+  killed at just the wrong moment while a job was being removed
+  because the \Attr{periodic\_remove} expression had evaluated to
+  TRUE, the job might have been successfully removed but the
+  \Attr{RemoveReason} attribute could have been lost.
+  Now, both actions are taken together atomically.
+  If a job is succesfully removed, it will always have a
+  \Attr{RemoveReason} attribute.
 
 \end{itemize}
 
