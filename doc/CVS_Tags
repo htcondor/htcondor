@@ -7,6 +7,11 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+
+12/28/04 V6_7_3-branch
+    A release branch for the 6.7.3 manual.  Created from the
+    V6_7_3-root tag.
+
 12/3/04 V6_7-branch-post-merge-V6_7_2-doc-merge-2
     The state of the doc directory in V6_7-branch after merging
     changes from the V6_7_2-branch as tagged  V6_7_2-doc-merge-2.
