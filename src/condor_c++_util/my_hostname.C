@@ -114,7 +114,7 @@ init_full_hostname()
 void
 init_ipaddr( int config_done )
 {
-	char *network_interface;
+	char *network_interface, *tmp;
 	struct hostent * host_ptr;
 
     if( ! hostname ) {
@@ -141,15 +141,16 @@ init_ipaddr( int config_done )
 	}
 
 	if( ! ipaddr_initialized ) {
-			// Look up our official host information
 		if( ! has_sin_addr ) {
-			if( (host_ptr = gethostbyname(hostname)) == NULL ) {
+				// Get our official host info to initialize sin_addr
+			tmp = get_full_hostname( hostname, &sin_addr );
+			if( ! tmp ) {
 				EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
 			}
-				// Grab our ip_addr
-			memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
-			sin_addr.s_addr = ip_addr;
 			has_sin_addr = true;
+				// We don't need the full hostname, we've already got
+				// that... 
+			delete [] tmp;
 		}
 		ip_addr = ntohl( sin_addr.s_addr );
 		ipaddr_initialized = TRUE;

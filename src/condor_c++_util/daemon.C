@@ -532,6 +532,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 	char* host = NULL;
 	char* local_host = NULL;
 	char* remote_host = NULL;
+	char* tmp;
 	struct in_addr sin_addr;
 
 		// We know this without any work.
@@ -612,8 +613,8 @@ Daemon::getCmInfo( const char* subsys, int port )
 		}
 	} else {
 			// We were given a hostname, not an address.
-		hostp = gethostbyname( host );
-		if( ! hostp ) {
+		tmp = get_full_hostname( host, &sin_addr );
+		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
 			sprintf( buf, "unknown host %s", host );
 			newError( buf );
@@ -623,10 +624,9 @@ Daemon::getCmInfo( const char* subsys, int port )
 		}
 		if( local_host ) free( local_host );
 		if( remote_host ) free( remote_host );
-		sin_addr = *(struct in_addr*)(hostp->h_addr_list[0]);
 		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
 		New_addr( strnewp(buf) );
-		New_full_hostname( strnewp(hostp->h_name) );
+		New_full_hostname( tmp );
 	}
 
 		// For CM daemons, we always want the name to be whatever the
