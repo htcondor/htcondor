@@ -213,6 +213,15 @@ main( int argc, char* argv[] )
 		mySubSystem = strdup( "TOOL" );
 	}
 
+		// We need to do this before we call config().  A) we don't
+		// need config() to find this out and B) config() will fail if
+		// all the config files aren't setup yet, and we use
+		// "condor_config_val -owner" for condor_init.  Derek 9/23/99 
+	if( pt == CONDOR_OWNER ) {
+		printf( "%s\n", get_condor_username() );
+		my_exit( 0 );
+	}
+
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
 		// param() for the COLLECTOR_HOST to contact.
@@ -246,11 +255,6 @@ main( int argc, char* argv[] )
 			my_exit( 1 );
 		}
 	}		
-
-	if( pt == CONDOR_OWNER ) {
-		printf( "%s\n", get_condor_username() );
-		my_exit( 0 );
-	}
 
 	params.rewind();
 
