@@ -702,7 +702,7 @@ clean::								@@\
 #endif
 
 #ifndef F_COMPILER_TARGET
-#define F_COMPILER_TARGET(compiler)			@@\
+#define F_COMPILER_TARGET(compiler, has_recursion)	@@\
 all:: compiler						@@\
 							@@\
 all::							@@\
@@ -711,7 +711,9 @@ all::							@@\
 compiler##:						@@\
 	mkdir compiler					@@\
 	cd compiler; ln -s ../FImakefile Imakefile	@@\
-	cd compiler; imake IMAKE_FLAGS -I../../../config -DF_COMPILER=##compiler @@\
+	cd compiler; imake IMAKE_FLAGS -I../../../config \ @@\
+		-DFORTRAN_HAS_RECURSION=##has_recursion \ @@\
+		-DF_COMPILER=##compiler			@@\
 							@@\
 clean::							@@\
 	rm -rf compiler					
