@@ -177,14 +177,18 @@ not your jobs will run ahead of another user's jobs.
 %%%%%%%%%%%%%%%%%%%
 
 \item[notification = $<$when$>$]\label{man-condor-submit-notification} Owners of condor jobs are notified by
-email when certain events occur. If \Arg{when} is set to
-\mbox{Always}, the owner will be notified whenever the job is
-checkpointed, and when it completes. If \Arg{when} is set to
-\mbox{Complete} (the default), the owner will be notified when the
-job terminates. If \Arg{when} is set to \mbox{Error}, the owner will
-only be notified if the job terminates abnormally. Finally, if
-\Arg{when} is set to \mbox{Never}, the owner will not be mailed,
-regardless what happens to the job. 
+email when certain events occur.
+If \Arg{when} is set to \mbox{Always}, the owner will be notified
+whenever the job is checkpointed, and when it completes.
+If \Arg{when} is set to \mbox{Complete} (the default), the owner will
+be notified when the job terminates.
+If \Arg{when} is set to \mbox{Error}, the owner will only be notified
+if the job terminates abnormally.
+If \Arg{when} is set to \mbox{Never}, the owner will not be mailed,
+regardless what happens to the job.
+The statistics included in the email are documented in
+section~\ref{sec:job-completion} on
+page~\pageref{sec:job-completion}.
 
 %%%%%%%%%%%%%%%%%%%
 %% notify_user
