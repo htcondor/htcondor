@@ -1709,6 +1709,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                 DelMrec(mrec);
             }
 		} else if ((srec = FindSrecByPid(pid)) != NULL && srec->match == NULL) {
+				// Shadow record without a capability... must be a
+				// scheduler universe process.
 			if(WIFEXITED(status)) {
 				dprintf(D_FULLDEBUG,
 						"scheduler universe job (%d.%d) pid %d "
@@ -1732,7 +1734,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 			}
 			delete_shadow_rec( pid );
 		} else {
-            if( WIFEXITED(status) ) {
+				// Shadow record with capability... must be a real shadow.
+			if( WIFEXITED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
                                                 pid, WEXITSTATUS(status) );
                 if( WEXITSTATUS(status) == JOB_NO_MEM ) {
