@@ -52,7 +52,7 @@ grep "#define" $SYSCALL | grep "SYS_" | awk '{print $2}' | sed 's/SYS_//' \
 # place all global functions in condor_syscall_lib into /tmp/asc2.$$
 # for C++ objects, just report the object with "[C++]" appended instead
 # of all the C++ methods.
-$NM ../condor_syscall_lib/condor_syscall_lib.a | grep " T " | c++filt | \
+$NM ../condor_syscall_lib/libcondorsyscall.a | grep " T " | c++filt | \
    sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq  > /tmp/asc2.$$
 
 # store trapped calls into /tmp/asc3.$$ and pretty print them 
