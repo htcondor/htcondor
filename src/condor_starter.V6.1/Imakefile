@@ -1,5 +1,5 @@
 # we can change this later...
-NAME = condor_starter.v63
+NAME = condor_starter
 RSH_NAME = rsh
 WRAPPER_CLASS = CondorJavaWrapper.class
 
