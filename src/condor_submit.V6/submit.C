@@ -1315,13 +1315,6 @@ SetTransferFiles()
 			InsertJobExpr (output_files);
 		}
 	}
-
-#ifndef WIN32
-	// On Unix, now set never_transfer to be true before this function exits.
-	// This way, restrictions on file system domain are set.
-	never_transfer = true;
-#endif
-
 }
 
 void
@@ -2935,19 +2928,36 @@ check_requirements( char *orig )
 		}
 	} 
 
-	if ( JobUniverse == CONDOR_UNIVERSE_VANILLA ) {
-		for( ptr = answer; *ptr; ptr++ ) {
-			if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
-				has_fsdomain = TRUE;
-				break;
-			}
-		}
-		if ( !has_fsdomain && never_transfer) {
-			(void)strcat( answer, " && ((OpSys == \"WINNT40\" || OpSys == \"WINNT50\") || (OpSys != \"WINNT40\" && OpSys != \"WINNT50\" && FileSystemDomain == \"" );
-			(void)strcat( answer, My_fs_domain );
-			(void)strcat( answer, "\"))" );
-		} 
+	if( (JobUniverse == CONDOR_UNIVERSE_VANILLA) 
+		|| (JobUniverse == CONDOR_UNIVERSE_MPI) 
+		|| (JobUniverse == CONDOR_UNIVERSE_JAVA) ) {
+			/* 
+			   This is a kind of job that might be using file transfer
+			   or a shared filesystem.  so, tack on the appropriate
+			   clause to make sure we're either at a machine that
+			   supports file transfer, or that we're in the same file
+			   system domain.
+			*/
 
+		if( never_transfer ) {
+				// no file transfer used.  if there's nothing about
+				// the FileSystemDomain yet, tack on a clause for
+				// that. 
+			for( ptr = answer; *ptr; ptr++ ) {
+				if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
+					has_fsdomain = TRUE;
+					break;
+				}
+			}
+			if( !has_fsdomain ) {
+				(void)strcat( answer, "&& (FileSystemDomain == \"" );
+				(void)strcat( answer, My_fs_domain );
+				(void)strcat( answer, "\")" );
+			} 
+		} else {
+				// we're going to use file transfer.  
+			(void)strcat( answer, "&& (HasFileTransfer)");
+		}			
 	}
 
 	return answer;
