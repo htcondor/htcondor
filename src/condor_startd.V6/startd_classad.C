@@ -9,24 +9,27 @@
 #include "condor_attributes.h"
 #include "condor_expressions.h"
 #include "condor_collector.h"
-
-int send_classad_to_machine(DGRAM_IO_HANDLE *UdpHandle, int cmd, const ClassAd* ad);
+#include "condor_io.h"
+#include "condor_adtypes.h"
 
 extern "C" {
 
 int
-send_classad_to_negotiator(DGRAM_IO_HANDLE *handle, CONTEXT *cp)
+send_classad_to_machine(char *host, int port, int sd, CONTEXT *cp)
 {
-	int ret;
-	ClassAd *ad;
+	ClassAd ad(cp);
+	SafeSock sock(host, port);
 
-	ad = new ClassAd(cp);
-	ad->SetMyTypeName ("Machine");
-	ad->SetTargetTypeName ("Job");
+	ad.SetMyTypeName (STARTD_ADTYPE);
+	ad.SetTargetTypeName (JOB_ADTYPE);
 	
-	ret = send_classad_to_machine(handle, UPDATE_STARTD_AD, ad);
-	delete ad;
-	return ret;
+	sock.attach_to_file_desc(sd);
+	sock.encode();
+	sock.put(UPDATE_STARTD_AD);
+	ad.put(sock);
+	sock.end_of_message();
+	
+	return 0;
 }
 
 }
