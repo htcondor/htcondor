@@ -265,5 +265,7 @@ class BaseShadow : public Service
 
 extern void dumpClassad( const char*, ClassAd*, int );
 
+extern BaseShadow *Shadow;
+
 #endif
 
