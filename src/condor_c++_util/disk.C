@@ -19,7 +19,7 @@ File::File(const char* filename)
 // destructior
 File::~File()
 {
-	delete fileName;
+	delete []fileName;
 }
 
 // this method writes an UpDown object onto disk file
@@ -51,7 +51,7 @@ int File::operator << (const UpDown & upDown)
 		data[i].priority = upDown.table[i].priority;
 	}
 	fout.write((char*) data, sizeof (Data)*header.activeUsers);
-	delete data;
+	delete []data;
 	if ( fout.fail() )
 	{
 		dprintf(D_FULLDEBUG, "Cannot write into file: %s\n", fileName);
@@ -105,6 +105,6 @@ int File::operator >> (UpDown & upDown)
 	}
 	upDown.activeUsers 	= header.activeUsers;
 	fin.close();	
-	delete data;
+	delete []data;
 	return Success;
 }
