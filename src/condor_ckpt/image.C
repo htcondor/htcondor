@@ -840,15 +840,13 @@ SegMap::Read( int fd, ssize_t pos )
 		cur_brk = (char *)sbrk(0);
 	}
 
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX53) || defined(LINUX)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
-//		long pageSize = sysconf(_SC_PAGESIZE);
 		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			perror("open");
 			exit(2);
 		}
-//		segSize += pageSize - (segSize % pageSize);
 
 	  /* Some notes about mmap:
 	     - The MAP_FIXED flag will ensure that the memory allocated is
@@ -871,11 +869,17 @@ SegMap::Read( int fd, ssize_t pos )
 				prot|PROT_WRITE,
 				MAP_PRIVATE|MAP_FIXED, zfd,
 				(off_t)0)) == MAP_FAILED) {
-#else /* defined(IRIX53) */
+#elif defined(IRIX53)
 		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
 					 (saved_prot|PROT_WRITE)&(~MA_SHARED),
 					 MAP_PRIVATE|MAP_FIXED, zfd,
 					 (off_t)0) == -1) {
+#elif defined(LINUX)
+		long status;
+		if ((status=(long)MMAP((void *)core_loc, (size_t)segSize,
+				prot|PROT_WRITE,
+				MAP_PRIVATE|MAP_FIXED, zfd,
+				(off_t)0)) == -1) {
 #endif
 			perror("mmap");
 			fprintf(stderr, "Attempted to mmap /dev/zero at "
@@ -886,69 +890,16 @@ SegMap::Read( int fd, ssize_t pos )
 			exit(3);
 		}
 
+		/* WARNING: We have potentially just overwritten libc.so.  Do
+		   not make calls that are defined in this (or any other)
+		   shared library until we restore all shared libraries from
+		   the checkpoint (i.e., use mystrcmp and SYSCALL).  -Jim B. */
+
 		if (SYSCALL(SYS_close, zfd) < 0) {
 			perror("close");
 			exit(4);
 		}
 	}		
-#elif defined(LINUX)
-	else if ( mystrcmp(name,"SHARED LIB") == 0) {
-		/*
-		fprintf(stderr, "LINUX IS RESTORING A SHARED_LIB SEG\n");
-		fflush(stderr);
-		*/
-		int zfd, segSize = len;
-		/*if ((zfd = linux_open_syscall("/dev/zero", O_RDWR)) == -1) {*/
-		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
-			perror("open");
-			exit(2);
-		}
-
-	  /* Some notes about mmap:
-	     - The MAP_FIXED flag will ensure that the memory allocated is
-	       exactly what was requested.
-	     - Both the addr and off parameters must be aligned and sized
-	       according to the value returned by getpagesize() when MAP_FIXED
-	       is used.  If the len parameter is not a multiple of the page
-	       size for the machine, then the system will automatically round
-	       up. 
-	     - Protections must allow writing, so that the dll data can be
-	       copied into memory. 
-	     - Memory should be private, so we don't mess with any other
-	       processes that might be accessing the same library. */
-
-		/*
-		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
-			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
-			prot|PROT_WRITE, zfd);
-		*/
-
-		long status;
-		if ((status=(long)MMAP((void *)core_loc, (size_t)segSize,
-				prot|PROT_WRITE,
-				MAP_PRIVATE|MAP_FIXED, zfd,
-				(off_t)0)) == -1) {
-			perror("mmap");
-			fprintf(stderr, "Attempted to mmap /dev/zero at "
-				"address 0x%lx, size 0x%lx\n", core_loc,
-				segSize);
-			fprintf(stderr, "Current segmap dump follows\n");
-			display_prmap();
-			exit(3);
-		}
-		/*
-		fprintf(stderr, "mmap returned 0x%x\n",status);
-		fflush(stderr);
-		*/
-
-		/*if (linux_close_syscall(zfd) < 0) {*/
-		if (SYSCALL(SYS_close, zfd) < 0) {
-			perror("close");
-			exit(4);
-		}
-	}		
-
-
 #endif		
 
 		// This overwrites an entire segment of our address space
