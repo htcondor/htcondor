@@ -90,7 +90,6 @@ V6_3_SRC		-a \
 			V6_COMMON \
 			src/condor_classad \
 			src/condor_netman \
-			src/mw \
 			src/condor_chirp \
 			src/condor_test_suite_java \
 			src/condor_dcskel \
@@ -141,7 +140,6 @@ V_TRUNK_SRC		-a \
 			src/condor_test_dagman \
 			src/condor_cluster_tool \
 			src/hawkeye_modules \
-			src/mw
 
 STORK_GSI_SRC -a \
 			V_TRUNK_SRC \
