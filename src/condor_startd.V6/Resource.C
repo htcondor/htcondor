@@ -343,6 +343,24 @@ Resource::update_classad()
 
 
 int
+Resource::give_classad( Stream* stream )
+{
+	ClassAd ad;
+	this->publish( &ad, A_PUBLIC | A_ALL );
+	stream->encode();
+	if( ! ad.put(*stream) ) {
+		dprintf( D_ALWAYS, "In give_classad(): Can't send classad\n");
+		stream->end_of_message();
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "In give_classad(): Can't send end_of_message\n");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+int
 Resource::force_benchmark()
 {
 		// Force this resource to run benchmarking.
@@ -718,12 +736,21 @@ Resource::compute_condor_load()
 	int numcpus = resmgr->num_cpus();
 	procInfo* pinfo = NULL;
 	static int num_called = 8;
+	int i;
 
 	if( r_starter->active() ) { 
 		num_called++;
 		if( num_called >= 10 ) {
 			r_starter->recompute_pidfamily();
 			num_called = 0;
+		}
+
+		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+			dprintf( D_LOAD, "Computing CondorLoad w/ pids: " );
+			for( i=0; i<r_starter->pidfamily_size(); i++ ) {
+				::dprintf( D_LOAD | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
+			}
+			::dprintf( D_LOAD | D_NOHEADER, "\n" );
 		}
 
 		if( (resmgr->m_proc->
@@ -734,6 +761,15 @@ Resource::compute_condor_load()
 				// stale info, so before we give up for real,
 				// recompute and try once more.
 			r_starter->recompute_pidfamily();
+
+			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+				dprintf( D_LOAD, "Failed once, now using pids: " );
+				for( i=0; i<r_starter->pidfamily_size(); i++ ) {
+					::dprintf( D_LOAD | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
+				}
+				::dprintf( D_LOAD | D_NOHEADER, "\n" );
+			}
+
 			if( (resmgr->m_proc->
 				 getProcSetInfo(r_starter->pidfamily(), 
 								r_starter->pidfamily_size(),  
@@ -744,6 +780,10 @@ Resource::compute_condor_load()
 		if( !pinfo ) {
 			EXCEPT( "Out of memory!" );
 		}
+		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+			dprintf( D_LOAD, "Percent CPU usage for those pids is: %f\n", 
+					 pinfo->cpuusage );
+		}
 		r_load_queue->push( 1, pinfo->cpuusage );
 		delete pinfo;
 	} else {
@@ -751,11 +791,12 @@ Resource::compute_condor_load()
 	}
 	avg = (r_load_queue->avg() / numcpus);
 
-#if 0
-	r_load_queue->display();
-	dprintf( D_FULLDEBUG | D_NOHEADER, "Size: %d  Avg value: %f\n", 
-			 r_load_queue->size(), avg );
-#endif
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+		r_load_queue->display();
+		dprintf( D_LOAD, 
+				 "LoadQueue: Size: %d  Avg value: %f  Share of system load: %f\n", 
+				 r_load_queue->size(), r_load_queue->avg(), avg );
+	}
 
 	max = MAX( numcpus, resmgr->m_attr->load() );
 	load = (avg * max) / 100;
