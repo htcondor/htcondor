@@ -39,9 +39,8 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 
-Daemon::Daemon( char* sinful_addr, int port ) 
-{
-	_type = DT_ANY;
+Daemon::common_init() {
+	_type = DT_NONE;
 	_port = 0;
 	_is_local = false;
 	_tried_locate = true;
@@ -55,6 +54,12 @@ Daemon::Daemon( char* sinful_addr, int port )
 	_id_str = NULL;
 	_hostname = NULL;
 	_full_hostname = NULL;
+}
+
+Daemon::Daemon( char* sinful_addr, int port ) 
+{
+	common_init();
+	_type = DT_ANY;
 
 	if( sinful_addr && is_valid_sinful(sinful_addr) ) {
 		if (port) {
@@ -77,19 +82,8 @@ Daemon::Daemon( char* sinful_addr, int port )
 
 Daemon::Daemon( daemon_t type, const char* name, const char* pool ) 
 {
+	common_init();
 	_type = type;
-	_port = 0;
-	_is_local = false;
-	_tried_locate = false;
-
-	_addr = NULL;
-	_name = NULL;
-	_version = NULL;
-	_platform = NULL;
-	_error = NULL;
-	_id_str = NULL;
-	_hostname = NULL;
-	_full_hostname = NULL;
 
 	if( pool ) {
 		_pool = strnewp( pool );
