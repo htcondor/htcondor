@@ -117,6 +117,10 @@ char	*argv[];
 	set_condor_euid(__FILE__,__LINE__);
 #endif NFSFIX
 
+if (getuid()==0)
+	set_condor_ruid(__FILE__,__LINE__);
+
+
 	MyName = *argv;
 	config( MyName, 0 );
 	init_params();
