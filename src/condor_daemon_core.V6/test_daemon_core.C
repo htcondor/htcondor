@@ -24,7 +24,6 @@
 #include "condor_daemon_core.h"
 
 extern "C" int SetSyscalls(int val){return val;}
-extern char* myName;
 char* mySubSystem = "COLLECTOR";
 
 class Foo : public Service
