@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "startd.h"
 
+
 ResMgr::ResMgr()
 {
 	coll_sock = NULL;
@@ -35,7 +36,7 @@ ResMgr::ResMgr()
 
 	m_proc = new ProcAPI;
 	m_attr = new MachAttributes;
-	m_avail = new AvailAttributes( m_attr );
+	id_disp = NULL;
 
 	nresources = 0;
 	resources = NULL;
@@ -47,8 +48,8 @@ ResMgr::~ResMgr()
 	int i;
 	if( config_classad ) delete config_classad;
 	if( totals_classad ) delete totals_classad;
+	if( id_disp ) delete id_disp;
 	delete m_attr;
-	delete m_avail;
 	delete m_proc;
 	delete coll_sock;
 	if( view_sock ) {
@@ -82,121 +83,261 @@ ResMgr::init_config_classad()
 void
 ResMgr::init_resources()
 {
-	CpuAttributes* cap;
 	int i, j, num;
-	float share;
-	char buf[64], *tmp;
+	char *tmp;
+	CpuAttributes** new_cpu_attrs;
 
+		// These things can only be set once, at startup, so they
+		// don't need to be in build_cpu_attrs() at all.
 	if( (tmp = param("MAX_VIRTUAL_MACHINE_TYPES")) ) {
 		max_types = atoi( tmp );
 		free( tmp );
 	} else {
 		max_types = 10;
 	}
-		// The reason these aren't on the stack is b/c of the variable
+		// The reason this isn't on the stack is b/c of the variable
 		// nature of max_types. *sigh*  
-	type_nums = new int[max_types+1];
 	type_strings = new StringList*[max_types+1];
+	memset( type_strings, 0, (sizeof(StringList*) * max_types+1) );
 
-		// So, first see if we're trying to advertise any virtual
-		// machines of specific types, and if so, grab the type info. 
-	for( i=0; i<=max_types; i++ ) {
-		type_strings[i] = NULL;
-		type_nums[i] = 0;
-		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
-		if( (tmp = param(buf)) ) {
-			type_nums[i] = atoi( tmp );
-			free( tmp ) ;
-			nresources += type_nums[i];
-			sprintf( buf, "VIRTUAL_MACHINE_TYPE_%d", i );
-			if( ! (tmp = param(buf)) ) {
-				EXCEPT( "NUM_VITUAL_MACHINES_TYPE_%d is %d, %s undefined.",	
-						i, type_nums[i], buf );
-			}
-			type_strings[i] = new StringList();
-			type_strings[i]->initializeFromString( tmp );
-			free( tmp );
-		}
+		// Fill in the type_strings array with all the appropriate
+		// string lists for each type definition.  This only happens
+		// once!  If you change the type definitions, you must restart
+		// the startd, or else too much weirdness is possible.
+	initTypes( 1 );
+
+		// First, see how many VMs of each type are specified.
+	nresources = countTypes( &type_nums, true );
+
+		// See if the config file allows for a valid set of
+		// CpuAttributes objects.  Since this is the startup-code
+		// we'll let it EXCEPT() if there is an error.
+	new_cpu_attrs = buildCpuAttrs( nresources, type_nums, true );
+	if( ! new_cpu_attrs ) {
+		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
 
-	if( nresources ) {
-			// We found type-specific stuff mentioned, so use that. 
-		num=0;
-		resources = new Resource*[nresources];
-		for( i=0; i<=max_types; i++ ) {
-			if( type_nums[i] ) {
-				currentVMType = i;
-				for( j=0; j<type_nums[i]; j++ ) {
-					cap = build_vm( i );
-					if( m_avail->decrement(cap) ) {
-						resources[num] = new Resource( cap, num+1 );
-						num++;
-					} else {
-							// We ran out of system resources.  Since
-							// this is at the init stage, we EXCEPT. 
-						dprintf( D_ALWAYS, 
-								 "ERROR: Can't allocate %s virtual machine of type %d\n",
-								 num_string(j+1), i );
-						dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
-						cap->show_totals( D_ALWAYS );
-						dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
-						m_avail->show_totals( D_ALWAYS );
-						EXCEPT( "Ran out of system resources" );
-					}
-				}					
-			}
-		}
-	} else {
-			// We're evenly dividing things, so we only have to figure
-			// out how many nodes to advertise.
-		if( (tmp = param("NUM_VIRTUAL_MACHINES")) ) { 
-			nresources = atoi( tmp );
-			free( tmp );
-		} else {
-			nresources = num_cpus();
-		}
-		if( nresources ) {
-			resources = new Resource*[nresources];
-			share = (float)1 / num_cpus();
-			for( i=0; i<nresources; i++ ) {
-				cap = new CpuAttributes( m_attr, -1, 1, 
-										 compute_phys_mem(share), 
-										 share, share );
-				resources[i] = new Resource( cap, i+1 );
-			}
-		} else {
-				// We're not supposed to advertise any VMs. 
-				// Anything special to do here?
-		}
+		// Now, we can finally allocate our resources array, and
+		// populate it.  
+	resources = new Resource*[nresources];
+	for( i=0; i<nresources; i++ ) {
+		resources[i] = new Resource( new_cpu_attrs[i], i+1 );
 	}
+
+		// We can now seed our IdDispenser with the right VM id. 
+	id_disp = new IdDispenser( i+1 );
+
+		// Finally, we can free up the space of the new_cpu_attrs
+		// array itself, now that all the objects it was holding that
+		// we still care about are stashed away in the various
+		// Resource objects.  Since it's an array of pointers, this
+		// won't touch the objects at all.
+	delete [] new_cpu_attrs;
 }
 
 
 void
 ResMgr::reconfig_resources()
 {
-	int i, num = 0, num_set = 0;
-	char buf[64], *tmp;
-	CpuAttributes* cap;
-	float share;
+	int i, diff, num = 0;
+	int *new_type_nums;
+	CpuAttributes** new_cpu_attrs;
 
-		// See if we're trying to advertise any virtual machines of
-		// specific types. 
+		// See if any new types were defined.  Don't except if there's
+		// any errors, just dprintf().
+	initTypes( 0 );
+
+		// First, see how many VMs of each type are specified.
+	num = countTypes( &new_type_nums, false );
+
+	if( typeNumCmp(new_type_nums, type_nums) ) {
+			// We want the same number of each VM type that we've got
+			// now.  We're done!
+		return;
+	}
+
 	for( i=0; i<=max_types; i++ ) {
-		type_nums[i] = 0;
-		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
-		if( (tmp = param(buf)) ) {
-			num_set = 1;
-			type_nums[i] = atoi( tmp );
-			free( tmp );
-			num += type_nums[i];
+		diff = new_type_nums[i] - type_nums[i];
+		if( diff > 0 ) {
+				// More of this type requested than we already have.
+				// We need to make some new VMs of this type.
+		} else if ( diff < 0 ) {
+				// We want less of this type than we have now.  We
+				// need to evict some and free up the resources. 
+		} else {
+				// No change
 		}
+	}
+
+		// Now, sort our resources by type, to see what we have.
+	resource_sort( vm_type_cmp );
+}
+
+
+
+CpuAttributes** 
+ResMgr::buildCpuAttrs( int total, int* type_num_array, bool except )
+{
+	int i, j, num;
+	CpuAttributes* cap;
+	CpuAttributes** cap_array;
+	float share;
+	char* tmp;
+
+		// Available system resources.
+	AvailAttributes avail( m_attr );
+	
+	cap_array = new CpuAttributes* [total];
+	if( ! cap_array ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	num = 0;
+	for( i=0; i<=max_types; i++ ) {
+		if( type_num_array[i] ) {
+			currentVMType = i;
+			for( j=0; j<type_num_array[i]; j++ ) {
+				cap = build_vm( i, except );
+				if( avail.decrement(cap) ) {
+					cap_array[num] = cap;
+					num++;
+				} else {
+						// We ran out of system resources.  
+					dprintf( D_ALWAYS, 
+							 "ERROR: Can't allocate %s virtual machine of type %d\n",
+							 num_string(j+1), i );
+					dprintf( D_ALWAYS | D_NOHEADER, "\tRequesting: " );
+					cap->show_totals( D_ALWAYS );
+					dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
+					avail.show_totals( D_ALWAYS );
+					if( except ) {
+						EXCEPT( "Ran out of system resources" );
+					} else {
+							// Gracefully cleanup and abort
+						for( i=0; i<num; i++ ) {
+							delete cap_array[i];
+						}
+						delete [] cap_array;
+						return NULL;
+					}
+				}					
+			}
+		}
+	}
+	return cap_array;
+}
+	
+
+void
+ResMgr::initTypes( bool except )
+{
+	int i;
+	char* tmp;
+	char buf[128];
+
+	sprintf( buf, "VIRTUAL_MACHINE_TYPE_0" );
+	if( (tmp = param(buf)) ) {
+		if( except ) {
+			EXCEPT( "Can't define %s in the config file", buf );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "Can't define %s in the config file, ignoring\n",
+					 buf ); 
+		}
+	}
+
+	if( ! type_strings[0] ) {
+			// Type 0 is the special type for evenly divided VMs. 
+		type_strings[0] = new StringList();
+		sprintf( buf, "1/%d", num_cpus() );
+		type_strings[0]->initializeFromString( buf );
+	}	
+
+	for( i=1; i < max_types; i++ ) {
+		if( type_strings[i] ) {
+			continue;
+		}
+		sprintf( buf, "VIRTUAL_MACHINE_TYPE_%d", i );
+		if( ! (tmp = param(buf)) ) {
+			continue;
+		}
+		type_strings[i] = new StringList();
+		type_strings[i]->initializeFromString( tmp );
+		free( tmp );
 	}
 }
 
 
+int
+ResMgr::countTypes( int** array_ptr, bool except )
+{
+	int i, num=0, num_set=0;
+	char* tmp;
+	char buf[128];
+	int* new_type_nums = new int[max_types+1];
+
+	if( ! array_ptr ) {
+		EXCEPT( "ResMgr:countTypes() called with NULL array_ptr!" );
+	}
+
+		// Type 0 is special, user's shouldn't define it.
+	sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_0" );
+	if( (tmp = param(buf)) ) {
+		if( except ) {
+			EXCEPT( "Can't define %s in the config file", buf );
+		} else {
+			dprintf( D_ALWAYS, 
+					 "Can't define %s in the config file, ignoring\n",
+					 buf ); 
+		}
+	}
+
+	for( i=1; i<=max_types; i++ ) {
+		new_type_nums[i] = 0;
+		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
+		if( (tmp = param(buf)) ) {
+			num_set = 1;
+			new_type_nums[i] = atoi( tmp );
+			free( tmp );
+			num += new_type_nums[i];
+		}
+	}
+
+	if( num_set ) {
+			// We found type-specific stuff, use that.
+		new_type_nums[0] = 0;
+	} else {
+			// We haven't found any special types yet.  Therefore,
+			// we're evenly dividing things, so we only have to figure
+			// out how many nodes to advertise.
+		if( (tmp = param("NUM_VIRTUAL_MACHINES")) ) { 
+			new_type_nums[0] = atoi( tmp );
+			free( tmp );
+		} else {
+			new_type_nums[0] = num_cpus();
+		}
+		num = new_type_nums[0];
+	}
+	*array_ptr = new_type_nums;
+	return num;
+}
+
+
+bool
+ResMgr::typeNumCmp( int* a, int* b )
+{
+	int i;
+	for( i=0; i<=max_types; i++ ) {
+		if( a[i] != b[i] ) {
+			return false;
+		}
+	}
+	return true; 
+}
+
+
 CpuAttributes*
-ResMgr::build_vm( int type )
+ResMgr::build_vm( int type, bool except )
 {
 	StringList* list = type_strings[type];
 	char *attr, *val;
@@ -213,7 +354,7 @@ ResMgr::build_vm( int type )
 				// percentage or fraction for all attributes.
 				// For example "1/4" or "25%".  So, we can just parse
 				// it as a percentage and use that for everything.
-			share = parse_value( attr );
+			share = parse_value( attr, except );
 			if( share <= 0 ) {
 				dprintf( D_ALWAYS, "ERROR: Bad description of machine type %d: ",
 						 currentVMType );
@@ -225,7 +366,11 @@ ResMgr::build_vm( int type )
 						 "\tor list all attributes (like \"c=1, r=25%, s=25%, d=25%\").\n" );
 				dprintf( D_ALWAYS | D_NOHEADER, 
 						 "\tSee the manual for details.\n" );
-				exit( 4 );
+				if( except ) {
+					DC_Exit( 4 );
+				} else {	
+					return NULL;
+				}
 			}
 				// We want to be a little smart about CPUs and RAM, so put all
 				// the brains in seperate functions.
@@ -235,7 +380,7 @@ ResMgr::build_vm( int type )
 		}
 			// If we're still here, this is part of a string that
 			// lists out seperate attributes and the share for each one.
-
+		
 			// Get the value for this attribute.  It'll either be a
 			// percentage, or it'll be a distinct value (in which
 			// case, parse_value() will return negative.
@@ -243,9 +388,16 @@ ResMgr::build_vm( int type )
 			dprintf( D_ALWAYS, 
 					 "Can't parse attribute \"%s\" in description of machine type %d\n",
 					 attr, currentVMType );
-			exit( 4 );
+			if( except ) {
+				DC_Exit( 4 );
+			} else {	
+				return NULL;
+			}
 		}
-		share = parse_value( &val[1] );
+		share = parse_value( &val[1], except );
+		if( ! share ) {
+				// Invalid share.
+		}
 
 			// Figure out what attribute we're dealing with.
 		switch( attr[0] ) {
@@ -264,7 +416,11 @@ ResMgr::build_vm( int type )
 				dprintf( D_ALWAYS,
 						 "You must specify a percent or fraction for swap in machine type %d\n", 
 						 currentVMType ); 
-				exit( 4 );
+				if( except ) {
+					DC_Exit( 4 );
+				} else {	
+					return NULL;
+				}
 			}
 			break;
 		case 'd':
@@ -274,13 +430,21 @@ ResMgr::build_vm( int type )
 				dprintf( D_ALWAYS, 
 						 "You must specify a percent or fraction for disk in machine type %d\n", 
 						currentVMType ); 
-				exit( 4 );
+				if( except ) {
+					DC_Exit( 4 );
+				} else {	
+					return NULL;
+				}
 			}
 			break;
 		default:
 			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in machine type %d\n", 
 					 attr, currentVMType );
-			exit( 4 );
+			if( except ) {
+				DC_Exit( 4 );
+			} else {	
+				return NULL;
+			}
 			break;
 		}
 	}
@@ -314,7 +478,7 @@ ResMgr::build_vm( int type )
    value, so that our caller knows it's a value, not a percentage. 
 */
 float
-ResMgr::parse_value( const char* str )
+ResMgr::parse_value( const char* str, bool except )
 {
 	char *tmp, *foo = strdup( str );
 	float val;
@@ -330,7 +494,11 @@ ResMgr::parse_value( const char* str )
 		if( ! tmp[1] ) {
 			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of machine type %d\n",
 					 foo, currentVMType );
-			exit( 4 );
+			if( except ) {
+				DC_Exit( 4 );
+			} else {	
+				return 0;
+			}
 		}
 		val = (float)atoi(foo) / ((float)atoi(&tmp[1]));
 		free( foo );
@@ -827,15 +995,13 @@ ResMgr::assign_keyboard()
 	time_t keyboard = m_attr->keyboard_idle();
 	time_t max;
 
-	if( is_smp() ) {
-			// First, initialize all CPUs to the max idle time we've
-			// got, which is some configurable amount of minutes
-			// longer than the time since we started up. 
-		max = (time(0) - startd_startup) + disconnected_keyboard_boost;
-		for( i = 0; i < nresources; i++ ) {
-			resources[i]->r_attr->set_console( max );
-			resources[i]->r_attr->set_keyboard( max );
-		}
+		// First, initialize all CPUs to the max idle time we've got,
+		// which is some configurable amount of minutes longer than
+		// the time since we started up.
+	max = (time(0) - startd_startup) + disconnected_keyboard_boost;
+	for( i = 0; i < nresources; i++ ) {
+		resources[i]->r_attr->set_console( max );
+		resources[i]->r_attr->set_keyboard( max );
 	}
 
 		// Now, assign console activity to all CPUs that care.
@@ -942,4 +1108,42 @@ owner_state_cmp( const void* a, const void* b )
 	val2 = (int)rip2->state();
 	return val1 - val2;
 }
+
+
+int
+vm_type_cmp( const void* a, const void* b )
+{
+	Resource *rip1, *rip2;
+	rip1 = *((Resource**)a);
+	rip2 = *((Resource**)b);
+		// Since we just want to sort on the resource type, which is
+		// an integer, we don't need to do anything fancy. 
+	return( rip1->type() - rip2->type() );
+}
+
+
+IdDispenser::IdDispenser( int seed )
+{
+	set.Add( seed );
+}
+
+
+int
+IdDispenser::next()
+{
+	int id;
+	set.StartIterations();
+	set.Iterate( id );
+	set.RemoveLast();
+	set.Add( id+1 );
+	return id;
+}
+
+
+void
+IdDispenser::insert( int id )
+{
+	set.Add( id );
+}
+
 
