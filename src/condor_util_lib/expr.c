@@ -177,11 +177,10 @@ create_expr()
 {
 	EXPR	*answer;
 
-	answer = (EXPR *)MALLOC( sizeof(EXPR) );
+	answer = (EXPR *)CALLOC( 1, sizeof(EXPR) );
 	answer->len = 0;
 	answer->max_len = EXPR_INCR;
-	answer->data = (ELEM **)MALLOC(
-					(unsigned)(answer->max_len * sizeof(ELEM *)) );
+	answer->data = (ELEM **)CALLOC( (unsigned)answer->max_len, sizeof(ELEM *) );
 	return answer;
 }
 
@@ -1250,7 +1249,8 @@ free_elem( elem )
 ELEM	*elem;
 {
 	if( elem->type == STRING || elem->type == NAME ) {
-		FREE( elem->s_val );
+		/* FREE( elem->s_val ); */
+		free( elem->val.string_val );
 	}
 	FREE( (char *)elem );
 }
@@ -1281,7 +1281,7 @@ create_elem()
 {
 	ELEM	*answer;
 
-	answer = (ELEM *)MALLOC( sizeof(ELEM) );
+	answer = (ELEM *)CALLOC( 1, sizeof(ELEM) );
 	answer->type = ERROR;
 	answer->i_val = 0;
 	return answer;
@@ -1321,11 +1321,10 @@ create_context()
 {
 	CONTEXT	*answer;
 
-	answer = (CONTEXT *)MALLOC( sizeof(CONTEXT) );
+	answer = (CONTEXT *)CALLOC( 1, sizeof(CONTEXT) );
 	answer->len = 0;
 	answer->max_len = EXPR_INCR;
-	answer->data = (EXPR **)MALLOC(
-							(unsigned)(answer->max_len * sizeof(EXPR *)) );
+	answer->data = (EXPR **)CALLOC( (unsigned)answer->max_len, sizeof(EXPR *) );
 	return answer;
 }
 
