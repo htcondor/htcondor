@@ -8,7 +8,7 @@ grep "#define" /usr/include/sys/syscall.h | grep "SYS_" | awk -F'_' '{print $2}'
 # place all global functions in condor_syscall_lib into /tmp/asc2.$$
 # for C++ objects, just report the object with "[C++]" appended instead
 # of all the C++ methods.
-nm -p ../condor_syscall_lib/condor_syscall_lib.a | grep " T " | c++filt | \
+nm -pv ../condor_syscall_lib/condor_syscall_lib.a | grep " T " | c++filt | \
    sed 's/::[^ ]*/\[C++\]/' | awk '{print $3}' - | sort | uniq  > /tmp/asc2.$$
 
 # store trapped calls into /tmp/asc3.$$ and pretty print them 
@@ -35,11 +35,12 @@ END { if ( i != 0 )
 # first take everything in switches.o out of asc2.$$, cuz we wanna
 # use the output from stub-gen as more authoratative on if it is
 # supported or not.  save into asc4.$$
-nm -p ../condor_syscall_lib/switches.o | grep " T " | awk '{print $3}' - | \
+nm -pv ../condor_syscall_lib/switches.o | grep " T " | awk '{print $3}' - | \
    sort | uniq | comm -23 /tmp/asc2.$$ - > /tmp/asc4.$$
 # Now list the supported calls
 echo "*** SYSTEM CALLS TRAPPED AND _SUPPORTED_ BY CONDOR"
 grep "|S|" ../condor_syscall_lib/syscall-list | awk -F\| '{print $1}' - | \
+   sort | uniq | comm -12 /tmp/asc2.$$ - |
    cat - /tmp/asc3.$$ /tmp/asc4.$$ | sort | uniq -d | awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
    i++
@@ -58,7 +59,8 @@ END { if ( i != 0 )
 # simply use what stub-gen tells us.
 echo "*** SYSTEM CALLS TRAPPED AND _UNSUPPORTED_ BY CONDOR"
 grep "|U|" ../condor_syscall_lib/syscall-list | awk -F\| '{print $1}' - | \
-   sort | awk \
+   sort | uniq | comm -12 /tmp/asc2.$$ - |
+   awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
    i++
    items++
@@ -76,7 +78,8 @@ END { if ( i != 0 )
 # simply use what stub-gen tells us.
 echo "*** SYSTEM CALLS TRAPPED AND _IGNORED_ BY CONDOR"
 grep "|I|" ../condor_syscall_lib/syscall-list | awk -F\| '{print $1}' - | \
-   sort | awk \
+   sort | uniq | comm -12 /tmp/asc2.$$ - |
+   awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
    i++
    items++
@@ -92,8 +95,8 @@ END { if ( i != 0 )
 
 echo "*** SYSTEM CALLS NOT TRAPPED AT ALL BY CONDOR"
 NOTTRAPPED=`comm -23 /tmp/asc1.$$ /tmp/asc3.$$`
-MANDIR=/afs/cs.wisc.edu/common/usr/man/vendor/hp700_ux90/man2.Z
-#MANDIR=/notthere
+#MANDIR=/afs/cs.wisc.edu/common/usr/man/vendor/hp700_ux90/man2.Z
+MANDIR=/usr/man
 for SYSCALL in $NOTTRAPPED 
 do
 	echo $SYSCALL | awk '{printf "%20.20s - ",sprintf("%s()",$0)}' - 
@@ -114,6 +117,24 @@ $0 ~ /^\.SH SYNOPSIS/ { i = 0 }
 	echo " "
 done
 echo " "
+
+echo "*** WARNING: ALL SYSTEM CALLS IN SYSCALL.TMPL BUT NOT IN SYSCALLS.H,"
+echo "*** AND NOT TRAPPED SOMEPLACE OTHER THAN SWITCHES.O"
+awk -F\| '{print $1}' ../condor_syscall_lib/syscall-list | \
+   sort | uniq | comm -13 /tmp/asc1.$$ - | comm -13 /tmp/asc4.$$ - |
+   awk \
+'{ printf "%20.20s",sprintf("%s()",$0)
+   i++
+   items++
+   if (i > 2) {
+	  i = 0
+	  printf "\n"
+   }
+}
+END { if ( i != 0 )
+		printf "\n"
+	  printf "--- %d items.\n\n",items  }
+' -
 
 echo "*** ALL UNDERSCORE SYSTEM CALLS FOUND IN LIBC"
 nm -p /lib/libc.a | awk '{print $3}' -  | sort | uniq > /tmp/asc5.$$
@@ -185,7 +206,7 @@ echo " "
 
 echo "*** LIKELY FUNCTION/OBJECT NAMESPACE CLUTTER IN condor_syscall_lib"
 cat /tmp/asc3.$$ /tmp/asc7.$$ | sort | comm -23 /tmp/asc2.$$ - |\
-	grep -v -i '^_condor' - | awk \
+	grep -v -i '^_condor' | awk \
 '{ 
    if ( $0 ~ /C\+\+/ ) {
       printf "%30.30s",sprintf("%s",$0)
@@ -207,9 +228,9 @@ echo " "
 
 
 echo "*** LIKELY VARIABLE NAMESPACE CLUTTER IN condor_syscall_lib"
-nm -p ../condor_syscall_lib/condor_syscall_lib.a | grep " D " | c++filt | \
-   sed 's/::[^ ]*/\[C++\]/' | awk '{print $3}' - | sort | uniq |\
-   grep -v -i '^_condor' - | awk \
+nm -pv ../condor_syscall_lib/condor_syscall_lib.a | grep " D " | c++filt | \
+   sed 's/::[^ ]*/\[C++\]/' | awk '{print $1}' - | sort | uniq |\
+   grep -v -i '^_condor' | awk \
 '{ printf "%20.20s",sprintf("%s",$0)
    i++
    items++
