@@ -51,6 +51,15 @@
 static bool GetIds( const char *path, uid_t *owner, gid_t *group );
 #endif
 
+// Ugly hack: stat64 prototyps are wacked on HPUX, so define them myself
+// These are cut & pasted from the HPUX man pages...
+#if defined( HPUX )
+extern "C" {
+	extern int stat64(const char *path, struct stat64 *buf);
+	extern int fstat64(int fildes, struct stat64 *buf);
+}
+#endif
+
 	// Define a "standard" StatBuf type
 #if defined HAS_STAT64
 typedef struct stat64 StatStructType;
