@@ -194,6 +194,19 @@ As an example, to execute only on machines of a minimum speed:
 requirements = (JavaMFlops>4.5)
 \end{verbatim}
 
+Options to the Java VM itself can be set in the 
+submit description file:
+
+\begin{verbatim}
+java_vm_args = -DMyProperty=Value -DAnotherProperty=AnotherValue -verbose:gc
+\end{verbatim}
+
+These options are those which go after the java command, but before
+the user's main class.  Do not use this to set the classpath, as
+Condor handles that itself.  Setting these options is useful for
+setting system properties, system assertions and debugging certain
+kinds of problems.
+
 %%%%%
 \subsection{Chirp I/O}
 %%%%%
