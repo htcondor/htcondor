@@ -77,7 +77,7 @@ Script::BackgroundRun( int reaperId )
     }
 
 	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
-									   PRIV_UNKNOWN, reaperId, TRUE,
+									   PRIV_UNKNOWN, reaperId, FALSE,
 									   NULL, NULL, FALSE, NULL, NULL, 0 );
     delete [] cmd;
 	return _pid;
