@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "exprTree.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 ExprList::
 ExprList()
@@ -344,4 +344,4 @@ IsAfterLast( )
 	return( iter.IsAfterLast( ) );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

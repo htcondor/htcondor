@@ -3,7 +3,7 @@
 
 static char _FileName_[] = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 ClassAdDomainManager::
 ClassAdDomainManager ()
@@ -42,4 +42,4 @@ GetDomainSchema (char *domainName, int &index, StringSpace *&schema)
 	}
 }
 
-} // namespace classad
+END_NAMESPACE // classad

@@ -7,7 +7,9 @@
 #include <ctype.h>
 #endif
 
-namespace classad {
+#if defined( WANT_NAMESPACES )
+using namespace classad;
+#endif
 
 enum Commands {
 	_NO_CMD_,
@@ -415,5 +417,3 @@ findCommand( char *cmdStr )
 	}
 	return -1;
 }
-
-} // namespace classad

@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 ClassAd* getOldClassAd( Sock& sock )
 {
@@ -78,4 +78,4 @@ void printClassAdValue( Value &val )
 	sink.FlushSink( );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

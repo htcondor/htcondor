@@ -27,7 +27,7 @@
 #include "classad_io.h"
 #include "condor_io.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class CedarSource : public ByteSource {
 	public:
@@ -71,6 +71,6 @@ class CedarStream : public ByteStream {
 	}
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//CEDAR_IO

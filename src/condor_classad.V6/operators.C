@@ -3,7 +3,7 @@
 
 static char *_FileName_ = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 	// the order in this array should be the same as the OpKind enumeration
 	// in common.h
@@ -1694,4 +1694,4 @@ PrecedenceLevel( OpKind op )
 	}
 }
 
-} // namespace classad
+END_NAMESPACE // classad

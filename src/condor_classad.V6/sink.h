@@ -24,10 +24,11 @@
 #ifndef __DUMPER_H__
 #define __DUMPER_H__
 
+#include "common.h"
 #include "classad_io.h"
 #include "formatOptions.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class ClassAdCollection;
 
@@ -142,6 +143,6 @@ class Sink
 		ByteSink	*sink;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__DUMPER_H__

@@ -24,7 +24,7 @@
 #ifndef FORMAT_OPTS_H
 #define FORMAT_OPTS_H
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class Sink;
 
@@ -118,6 +118,6 @@ class FormatOptions
         int     marginIndentLen;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//FORMAT_OPTS_H

@@ -2,7 +2,7 @@
 #include "sink.h"
 #include "formatOptions.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 Sink::
 Sink ()
@@ -244,4 +244,4 @@ GetMarginWrap( int &cols, int &indentLen )
 	indentLen = marginIndentLen;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

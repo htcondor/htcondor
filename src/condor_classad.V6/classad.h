@@ -30,7 +30,7 @@
 #include "sink.h"
 #include "source.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 // each attribute in the classad
 class Attribute
@@ -600,7 +600,7 @@ class ClassAd : public ExprTree
 		int				last;
 };
 	
-} // namespace classad
+END_NAMESPACE // classad
 
 #include "classadItor.h"
 

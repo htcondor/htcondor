@@ -27,7 +27,7 @@
 
 static char *_FileName_ = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 //------------------------------------------------------------------------
 // Add new class ad
@@ -188,4 +188,4 @@ bool LogCollDestroyClassAd::WriteBody(FILE* fp)
   return true;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

@@ -24,7 +24,15 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-namespace classad {
+#if defined( WANT_NAMESPACES )
+#define BEGIN_NAMESPACE( x ) namespace x {
+#define END_NAMESPACE }
+#else
+#define BEGIN_NAMESPACE( x )
+#define END_NAMESPACE
+#endif
+
+BEGIN_NAMESPACE( classad )
 
 enum MmMode
 {
@@ -154,7 +162,6 @@ enum OpKind
     __LAST_OP__             = __MISC_END__
 };
 
-char* strnewp( const char* );
 
 const char ATTR_COLLECTION_HINTS[] 	= "CollectionHints";
 const char ATTR_CONTEXT			[] 	= "Context";
@@ -174,6 +181,8 @@ const char ATTR_WANT_PRELUDE	[]	= "WantPrelude";
 const char ATTR_WANT_RESULTS	[]	= "WantResults";
 const char ATTR_WANT_POSTLUDE	[]	= "WantPostlude";
 
-} // namespace classad
+END_NAMESPACE // classad
+
+char* strnewp( const char* );
 
 #endif//__COMMON_H__

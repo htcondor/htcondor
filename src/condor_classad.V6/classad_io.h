@@ -24,7 +24,9 @@
 #ifndef CLASSAD_IO
 #define CLASSAD_IO
 
-namespace classad {
+#include "common.h"
+
+BEGIN_NAMESPACE( classad )
 
 /** The ByteSource class serves as an abstract input source for classad 
 	expressions, and can be extended for custom situations.  A derived class 
@@ -342,6 +344,6 @@ class FileDescStream : public ByteStream {
     }
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif

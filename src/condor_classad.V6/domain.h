@@ -24,10 +24,11 @@
 #ifndef __DOMAIN_H__
 #define __DOMAIN_H__
 
+#include "common.h"
 #include "stringSpace.h"
 #include "extArray.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class ClassAdDomainManager
 {
@@ -59,6 +60,6 @@ class ClassAdDomainManager
 
 extern ClassAdDomainManager domMan;			// domain manager
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__DOMAIN_H__

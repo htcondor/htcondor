@@ -3,7 +3,7 @@
 
 static char *_FileName_ = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 AttributeReference::
 AttributeReference()
@@ -221,4 +221,4 @@ SetReference (ExprTree *tree, char *attrStr, bool absolut)
 	attributeStr= attrStr ? strnewp(attrStr) : 0;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

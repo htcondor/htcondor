@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "cedar_io.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 CedarSource::
 CedarSource( )
@@ -68,4 +68,4 @@ _Flush( )
 	return( true );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

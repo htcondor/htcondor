@@ -2,7 +2,7 @@
 #include "exprTree.h"
 #include "domain.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 Literal::
 Literal ()
@@ -186,4 +186,4 @@ SetRelTimeValue( int secs, int usecs )
 	value.SetRelativeTimeValue( secs, usecs );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

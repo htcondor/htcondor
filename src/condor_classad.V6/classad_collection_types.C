@@ -6,7 +6,7 @@
 #include "matchClassad.h"
 #include "classad_collection_types.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 BaseCollection::
 BaseCollection(BaseCollection* parent, const MyString& rank) : childItors( 4 ), contentItors( 4 )
@@ -226,4 +226,4 @@ CheckClassAd(ClassAd*)
 	return true;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

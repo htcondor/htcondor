@@ -35,7 +35,7 @@
 #include "log_transaction.h"
 #include "classad_collection_types.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 //--------------------------------------------------------------------------
 
@@ -403,6 +403,6 @@ private:
 
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif

@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "classad_io.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 bool ByteSource::
 GetChar( int& chr )
@@ -150,7 +150,7 @@ Flush( )
 {
 	if( _PutBytes( (void*)&terminal, 1 ) ) {
 		index++;
-		return( true );
+		return( _Flush( ) );
 	}
 	return( false );
 }
@@ -321,4 +321,4 @@ _PutBytes( const void *buf, int sz )
 	return( write( fd, buf, sz ) == sz );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

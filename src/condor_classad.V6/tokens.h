@@ -24,7 +24,7 @@
 #ifndef __TOKENS_H__
 #define __TOKENS_H__
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 enum TokenType
 {
@@ -78,6 +78,6 @@ enum TokenType
 	LEX_RELATIVE_TIME_VALUE
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__TOKENS_H__

@@ -26,7 +26,7 @@
 
 #include "lexer.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class ClassAd;
 class ExprTree;
@@ -173,6 +173,6 @@ class Source
 		ByteSource *src;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__SOURCE_H__

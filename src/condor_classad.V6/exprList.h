@@ -26,7 +26,7 @@
 
 #include "list.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 /** 
 	Expression node which represents a list of expressions 
@@ -223,6 +223,6 @@ class ExprListIterator
 		ListIterator<ExprTree> iter;
 };	
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__EXPR_LIST_H__

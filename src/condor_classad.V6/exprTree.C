@@ -2,7 +2,7 @@
 #include "stringSpace.h"
 #include "exprTree.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 extern int exprHash( ExprTree* const&, int );
 
@@ -200,4 +200,4 @@ SetRootScope( )
 	rootAd = prevScope;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

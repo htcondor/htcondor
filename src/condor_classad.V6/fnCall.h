@@ -26,7 +26,7 @@
 
 #include "HashTable.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 typedef ExtArray<ExprTree*> ArgumentList;
 
@@ -124,6 +124,6 @@ class FunctionCall : public ExprTree
 		static bool doMath(char*,ArgumentList&,EvalState&,Value&);
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__FN_CALL_H__

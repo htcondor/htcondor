@@ -26,7 +26,7 @@
 
 #include "classad.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 /** Special case of a ClassAd which sets up the scope names for bilateral 
   	matching.  The top-level scope is defined as follows:
@@ -147,6 +147,6 @@ class MatchClassAd : public ClassAd
 		ClassAd *lCtx, *rCtx, *lad, *rad;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif

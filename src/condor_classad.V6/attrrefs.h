@@ -26,7 +26,7 @@
 
 #include "stringSpace.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 /** Represents a attribute reference node in the expression tree
 */
@@ -80,6 +80,6 @@ class AttributeReference : public ExprTree
     	SSString    attributeName;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__ATTRREFS_H__

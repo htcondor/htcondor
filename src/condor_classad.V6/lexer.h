@@ -30,7 +30,7 @@
 #include "tokens.h"
 #include "classad_io.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 const int MAX_TOKEN_SIZE = 4096;
 
@@ -224,6 +224,6 @@ class Lexer
 		ByteSource	*src;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif //__LEXER_H__

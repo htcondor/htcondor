@@ -5,10 +5,10 @@
 #include "classad_collection_ops.h"
 
 static char *_FileName_ = __FILE__;
+
+BEGIN_NAMESPACE( classad )
+
 static int  hashFunction( const MyString&, int );
-
-namespace classad {
-
 //-----------------------------------------------------------------------
 // Constructor (initialization)
 //-----------------------------------------------------------------------
@@ -1570,4 +1570,4 @@ int hashFunction( const MyString& key, int numBkts )
 	return( hashVal % numBkts );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

@@ -5,7 +5,7 @@
 
 static char*_FileName_ = __FILE__;
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 // ctor
 Source::
@@ -983,4 +983,4 @@ ParseExprList( ExprList &list , bool full )
 	return true;
 }
 
-} // namespace classad
+END_NAMESPACE // classad

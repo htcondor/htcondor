@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "matchClassad.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 MatchClassAd::
 MatchClassAd()
@@ -150,4 +150,4 @@ RemoveRightAd( )
 	return( rad );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

@@ -2,7 +2,7 @@
 #include "operators.h"
 #include "value.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 StringSpace Value::stringSpace( 256 );
 
@@ -428,4 +428,4 @@ WriteString( const char* s, Sink &sink )
 	return( sink.SendToSink( (void*)"\"", 1 ) );
 }
 
-} // namespace classad
+END_NAMESPACE // classad

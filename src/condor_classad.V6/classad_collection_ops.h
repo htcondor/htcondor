@@ -34,7 +34,7 @@
 #define CondorLogOp_BeginTransaction        205
 #define CondorLogOp_EndTransaction          206
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 //----------------------------------------------------------
 
@@ -106,6 +106,6 @@ public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif

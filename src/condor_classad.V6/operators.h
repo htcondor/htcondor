@@ -26,7 +26,7 @@
 
 #include "exprTree.h"
 
-namespace classad {
+BEGIN_NAMESPACE( classad )
 
 class Sink;
 
@@ -139,6 +139,6 @@ class Operation : public ExprTree
 		ExprTree	*child3;
 };
 
-} // namespace classad
+END_NAMESPACE // classad
 
 #endif//__OPERATORS_H__
