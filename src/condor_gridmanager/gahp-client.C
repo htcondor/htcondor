@@ -852,7 +852,7 @@ GahpClient::globus_gass_server_superez_init( char **gass_url, int port )
 
 int 
 GahpClient::globus_gram_client_job_request(
-	char * resource_manager_contact,
+	const char * resource_manager_contact,
 	const char * description,
 	const int job_state_mask,
 	const char * callback_contact,

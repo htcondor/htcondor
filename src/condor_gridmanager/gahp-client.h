@@ -215,7 +215,7 @@ class GahpClient : public Service {
 
 		///
 		int 
-		globus_gram_client_job_request(char * resource_manager_contact,
+		globus_gram_client_job_request(const char * resource_manager_contact,
 			const char * description,
 			const int job_state_mask,
 			const char * callback_contact,
