@@ -3,7 +3,7 @@
 
 /* This code may or may not be what you want. Please compare it with
  * the dirty attribute stuff that has been added to Old ClassAds. 
- * Currently, no one uses it.
+ * Currently, no one uses it the code in this file. 
  */
 
 #include "condor_common.h"
