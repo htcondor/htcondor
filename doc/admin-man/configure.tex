@@ -1112,8 +1112,7 @@ You could set \MacroU{UID\_DOMAIN}
 to ``*''. This will match all domains,
 but it is a gaping security hole. It is not recommended.
 
-You can set \MacroU{UID\_DOMAIN}
-to ``none'' or leave it undefined. This will
+You can also leave \MacroU{UID\_DOMAIN} undefined. This will
 force Condor to always run jobs as user nobody.
 Running standard universe jobs as user nobody enhances
 your security and should cause no problems, because the jobs use remote
@@ -1127,9 +1126,7 @@ When Condor sends e-mail about a job, Condor sends the e-mail to
 %% This is the wrong LaTeX  macro to use, but we don't have a correct one.
 \File{user@UID\_DOMAIN}.
 If \MacroUNI{UID\_DOMAIN}
-is set to ``none'' or it is undefined, 
-the e-mail is
-sent to \File{user@submitmachinename}.
+is undefined, the e-mail is sent to \File{user@submitmachinename}.
 
 
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
