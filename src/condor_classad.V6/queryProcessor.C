@@ -27,6 +27,8 @@
 #include "intervalTree.h"
 #include "../gm-oo/gangster-indexed.h"
 
+using namespace std;
+
 int QueryProcessor::numQueries = 0;
 //extern KeySet givenAway;
 
@@ -264,7 +266,7 @@ DoQuery( Rectangles &window, KeySet &result )
 	KeySet						deviantExportedSet;
 	KeySet						tmpResult;
 	QueryOutcome				qo;
-	std::string						demangled;
+	string						demangled;
 	DimRectangleMap::iterator	ditr, daxitr;
 	KeySet::iterator			ksitr;
 	int							tmp;
@@ -361,7 +363,7 @@ MapRectangleID( int srId, int &rId, int &portNum, int &pId, int &cId )
 {
 	if( summarize ) {
 		Constituents::iterator  citr;
-		std::set<int>::iterator      sitr;
+		set<int>::iterator      sitr;
 
 		if( ( citr = consts.find( srId ) ) == consts.end( ) ) {
 			return( false );
@@ -541,7 +543,7 @@ ClassAdStringIndex::MakeStringIndex( OneDimension &dim )
 	ClassAdStringIndex		*si = new ClassAdStringIndex( );
 	OneDimension::iterator	itr;
 	StringIndex::iterator	sitr;
-	std::string					str;
+	string					str;
 
 	if( !si ) return( NULL );
 	for( itr = dim.begin( ); itr != dim.end( ); itr++ ) {
@@ -561,7 +563,7 @@ ClassAdStringIndex::MakeStringIndex( OneDimension &dim )
 bool
 ClassAdStringIndex::Delete( int rkey, const Interval &interval )
 {
-	std::string					str;
+	string					str;
 	StringIndex::iterator	sitr;
 
 	if( !interval.lower.IsStringValue( str ) ) return( false );
@@ -576,7 +578,7 @@ ClassAdStringIndex::Delete( int rkey, const Interval &interval )
 bool
 ClassAdStringIndex::Filter( const Interval &interval, KeySet &result )
 {
-	std::string					str;
+	string					str;
 	StringIndex::iterator	bitr, eitr;
 	IndexEntries::iterator	nitr;
 

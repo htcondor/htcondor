@@ -50,6 +50,20 @@ template class map< int, int >::iterator;
 template class map< string, set<int>, CaseIgnLTStr >;
 template class map< string, set<int>, CaseIgnLTStr >::iterator;
 
+// new
+template class map<int, KeySet>;
+template class map<int, KeySet>::iterator;
+template class map<string, KeySet, CaseIgnLTStr>;
+template class map<string, KeySet, CaseIgnLTStr>::iterator;
+template class map<string, int, CaseIgnLTStr>;
+template class map<string, int, CaseIgnLTStr>::iterator;
+template class map<int, set<int> >;
+template class map<int, set<int> >::iterator;
+template class map<int, string>;
+template class map<int, string>::iterator;
+template class map<string, map<int, string>, CaseIgnLTStr>;
+template class map<string, map<int, string>, CaseIgnLTStr>::iterator;
+
 	// classad compression
 class ClassAdBin;
 template class hash_map< string, ClassAdBin*, StringHash >;

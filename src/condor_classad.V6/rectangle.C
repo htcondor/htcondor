@@ -27,6 +27,8 @@
 #include "rectangle.h"
 #include "sink.h"
 
+using namespace std;
+
 //const int  KeySet::size  = 32;
 const int  KeySet::SUINT = sizeof(unsigned int)*8;//in bits
 	// number of 1's in various byte values (have you attended a Microsoft
@@ -312,7 +314,7 @@ Summarize( Rectangles &rectangles, Representatives &representatives,
     References::iterator        ritr;
     References::iterator        refitr;
     DimRectangleMap::iterator   ditr;
-    std::string                      buffer;
+    string                      buffer;
     ClassAdUnParser             unp;
     Representatives::iterator   repItr;
     int                         rep;
@@ -491,7 +493,7 @@ NewRectangle( int id )
 
 
 int Rectangles::
-AddUpperBound( const std::string &attr, Value &val, bool open, bool constraint,
+AddUpperBound( const string &attr, Value &val, bool open, bool constraint,
 	int rkey )
 {
 	AllDimensions::iterator	aitr;
@@ -553,7 +555,7 @@ AddUpperBound( const std::string &attr, Value &val, bool open, bool constraint,
 
 
 int Rectangles::
-AddLowerBound( const std::string &attr, Value &val, bool open, bool constraint, 
+AddLowerBound( const string &attr, Value &val, bool open, bool constraint, 
 	int rkey )
 {
 	AllDimensions::iterator	aitr;
@@ -614,7 +616,7 @@ AddLowerBound( const std::string &attr, Value &val, bool open, bool constraint,
 }
 
 bool Rectangles::
-AddRectangles( ClassAd *ad, const std::string &label, bool object )
+AddRectangles( ClassAd *ad, const string &label, bool object )
 {
 	ExprTree	*tree;
 	return( (tree=ad->Lookup(ATTR_REQUIREMENTS)) &&
@@ -773,14 +775,14 @@ AddDeviantExported( int rkey )
 
 
 void Rectangles::
-AddDeviantImported( const std::string &attr, int rkey )
+AddDeviantImported( const string &attr, int rkey )
 {
 	deviantImported[attr].Insert( rkey<0?rId:rkey );
 }
 
 
 void Rectangles::
-AddUnexportedDimension( const std::string &attr, int rkey )
+AddUnexportedDimension( const string &attr, int rkey )
 {
 	unexported[attr].Insert( rkey<0?rId:rkey );
 }
@@ -792,7 +794,7 @@ NormalizeInterval( Interval &i, char prefix )
 	double	dl, du;
 	abstime_t	al, au;
 	time_t	tl, tu;
-	std::string	s1, s2;
+	string	s1, s2;
 	bool	bl, bu;
 	
 	switch( prefix ) {
@@ -919,7 +921,7 @@ Display( FILE *fp )
 	AllDimensions::iterator		aitr;
 	OneDimension::iterator		oitr;
 	DimRectangleMap::iterator	vitr;
-	std::string						lower, upper;
+	string						lower, upper;
 	ClassAdUnParser				unp;
 	KeyMap::iterator			kitr;
 	KeySet::iterator			ksitr;
@@ -1034,11 +1036,11 @@ Display( FILE *fp )
 
 
 bool Rectangles::
-Rename( const ClassAd *ad, const std::string &attrName, const std::string &label, 
-	std::string &renamed )
+Rename( const ClassAd *ad, const string &attrName, const string &label, 
+	string &renamed )
 {
 	bool			absolute;
-	std::string			auxAttrName;
+	string			auxAttrName;
 	ExprTree		*expr;
 	const ClassAd	*scope;
 
@@ -1067,7 +1069,7 @@ Rename( const ClassAd *ad, const std::string &attrName, const std::string &label
 
 bool Rectangles::
 Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad, 
-	const std::string &label )
+	const string &label )
 {
 	AllDimensions::iterator	aitr;
 	OneDimension::iterator	oitr;
@@ -1075,7 +1077,7 @@ Augment( Rectangles &rec1, Rectangles &rec2, const ClassAd *ad,
 	DimRectangleMap::iterator	dit;
 	int		nr1 = rec1.rId+1, nr2 = rec2.rId+1;
 	int		nRecId;
-	std::string	renamed;
+	string	renamed;
 
 		// for each rectangle in rec1
 	for( int i = 0 ; i < nr1 ; i++ ) {
