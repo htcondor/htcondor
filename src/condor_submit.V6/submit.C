@@ -1870,6 +1870,7 @@ sig_name_lookup(char sig[])
 	}
 	fprintf( stderr, "\nERROR: unknown signal %s\n", sig );
 	exit(1);
+	return -1;
 }
 
 void
