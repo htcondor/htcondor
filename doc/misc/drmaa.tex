@@ -1,0 +1,86 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{API-DRMAA} The DRMAA API}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DRMAA (Distributed Resource Management Application API)}
+\index{API!DRMAA}
+\index{Distributed Resource Management Application API (DRMAA)}
+
+The following quote from the DRMAA Specification 1.0 abstract
+nicely describes the purpose of the API:
+
+The Distributed Resource Management Application API (DRMAA),
+developed by a working group of the Global Grid Forum (GGF),
+\begin{quote}
+provides a generalized API to distributed resource management systems
+(DRMSs) in order to facilitate integration of application programs.
+The scope of DRMAA is limited to job submission,
+job monitoring and control,
+and the retrieval of the finished job status.
+DRMAA provides application developers and
+distributed resource management builders
+with a programming model that enables
+the development of distributed applications
+tightly coupled to an underlying DRMS.
+For deployers of such distributed applications,
+DRMAA preserves flexibility and choice in system design.
+\end{quote}
+
+The API allows users who write programs using DRMAA functions
+and link to a DRMAA library to submit,
+control, and retrieve information about jobs to a Grid system.
+The Condor implementation of a portion of the API
+allows programs (applications) to use the library
+functions provided to submit, monitor and control
+Condor jobs.
+
+See the DRMAA site 
+(\URL{http://www.drmaa.org}) to find the
+API specification for DRMA 1.0 for further details on the API.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{DRMAA-Implementation} Implementation Details}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+The library was developed from the DRMA API Specification 1.0 of January 2004
+and the DRMAA C Bindings v0.9 of September 2003.
+It is a static C library that expects a POSIX thread model
+on Unix systems and a Windows thread model on Windows systems.
+Unix systems that do not support POSIX threads
+are not guaranteed thread safety when calling the library's functions.
+
+The object library file is called \File{libcondordrmaa.a},
+and it is located within
+the \File{<release>/lib} directory in the Condor download.
+Its header file  is called \File{lib\_condor\_drmaa.h}, and it is located within
+the \File{<release>/include} directory in the Condor download.
+
+Use of the library requires that a
+local \Condor{schedd} daemon  must be running.
+And, the program linked to the library must have
+sufficient spool space.
+This space should be in \File{/tmp}
+or specified by the environment variables
+\Env{TEMP}, \Env{TMP}, or \Env{SPOOL}.
+The program linked to the library and the local \Condor{schedd} daemon
+must have read, write, and traverse rights to the spool space.
+
+The library currently supports the following specification-defined
+job attributes:
+\begin{description}
+\item{DRMAA\_REMOTE\_COMMAND}
+\item{DRMAA\_JS\_STATE}
+\item{DRMAA\_NATIVE\_SPECIFICATION}
+\item{DRMAA\_BLOCK\_EMAIL}
+\item{DRMAA\_INPUT\_PATH}
+\item{DRMAA\_OUTPUT\_PATH}
+\item{DRMAA\_ERROR\_PATH}
+\item{DRMAA\_V\_ARGV}
+\item{DRMAA\_V\_ENV}
+\item{DRMAA\_V\_EMAIL}
+\end{description}
+
+The attribute \Attr{DRMAA\_NATIVE\_SPECIFICATION} can be used
+to direct all commands supported within
+submit description files.
+
