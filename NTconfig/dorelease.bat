@@ -29,5 +29,6 @@ copy condor.exe condor_restart.exe
 copy condor.exe condor_reconfig.exe
 copy condor.exe condor_reschedule.exe
 copy condor.exe condor_vacate.exe
+copy condor_cod.exe condor_cod_request.exe
 popd
 :end
