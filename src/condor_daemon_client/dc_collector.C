@@ -267,7 +267,7 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 		MyString err_msg;
 		err_msg.sprintf( "Can't send update: invalid collector port (%d)", 
 						 _port );
-		newError( err_msg.Value() );
+		newError( CA_COMMUNICATION_ERROR, err_msg.Value() );
 		return false;
 	}
 
