@@ -121,6 +121,10 @@ begin-classad Misc
            ];
   ClassAds = { [a = 1], [a = 2], [a = 3] };
   Set = ClassAds.a;
+  SizeSet = size(Set);
+  SizeZero = size({});
+  SizeOne = size({1});
+  SizeTwo = size({1, 2});
   Sum = sum(Set);
   Average = avg(Set);
   Min = min(Set);
@@ -129,6 +133,10 @@ begin-classad Misc
   AllBig   = allcompare(">", Set, 100); 
   AnyTwo   = anycompare("==", Set, 2);
   AllTwo   = allcompare("==", Set, 2);
+  A = 1;
+  B = true;
+  C = !A;
+  D = !B;
 ]
 end-classad
 
@@ -149,6 +157,17 @@ evaluate Misc AllSmall
 evaluate Misc AllBig
 evaluate Misc AnyTwo
 evaluate Misc AllTwo
+evaluate Misc ClassAds.b
+evaluate Misc All_Undefined
+evaluate Misc Any_Undefined
+evaluate Misc A
+evaluate Misc B
+evaluate Misc C
+evaluate Misc D
+evaluate Misc SizeSet;
+evaluate Misc SizeZero;
+evaluate Misc SizeOne;
+evaluate Misc SizeTwo;
 
 ######################################################################
 #
