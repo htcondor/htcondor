@@ -809,8 +809,10 @@ Dag::SubmitReadyJobs()
 
 //---------------------------------------------------------------------------
 int
-Dag::PreScriptReaper( Job* job, int status )
+Dag::PreScriptReaper( const char* nodeName, int status )
 {
+	ASSERT( nodeName != NULL );
+	Job* job = GetJob( nodeName );
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_PRERUN );
 
@@ -862,8 +864,10 @@ Dag::PreScriptReaper( Job* job, int status )
 // done not when the reaper is called, but in ProcessLogEvents when
 // the log event (written by the reaper) is seen...
 int
-Dag::PostScriptReaper( Job* job, int status )
+Dag::PostScriptReaper( const char* nodeName, int status )
 {
+	ASSERT( nodeName != NULL );
+	Job* job = GetJob( nodeName );
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
 
@@ -1538,35 +1542,41 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	}
 	else if( node->GetStatus() == Job::STATUS_READY ) {
 		ASSERT( _readyQ );
-		ASSERT( _readyQ->IsMember( node ) );
 
-		debug_printf( DEBUG_VERBOSE, "=== Ready Queue (Before) ===" );
-		PrintReadyQ( DEBUG_VERBOSE );
+		if( _readyQ->IsMember( node ) ) {
 
-			// remove node from ready queue
-		removed = false;
-		_readyQ->Rewind();
-		while( _readyQ->Next( candidate ) ) {
-			ASSERT( candidate );
-			if( candidate == node ) {
-				_readyQ->DeleteCurrent();
-				removed = true;
-			continue;
+				// remove node from ready queue
+
+			debug_printf( DEBUG_VERBOSE, "=== Ready Queue (Before) ===" );
+			PrintReadyQ( DEBUG_VERBOSE );
+
+			removed = false;
+			_readyQ->Rewind();
+			while( _readyQ->Next( candidate ) ) {
+				ASSERT( candidate );
+				if( candidate == node ) {
+					_readyQ->DeleteCurrent();
+					removed = true;
+					continue;
+				}
 			}
+			ASSERT( removed );
+			ASSERT( !_readyQ->IsMember( node ) );
+			debug_printf( DEBUG_VERBOSE, "=== Ready Queue (After) ===" );
+			PrintReadyQ( DEBUG_VERBOSE );
 		}
-		ASSERT( removed );
-		ASSERT( !_readyQ->IsMember( node ) );
-		debug_printf( DEBUG_VERBOSE, "=== Ready Queue (After) ===" );
-		PrintReadyQ( DEBUG_VERBOSE );
 	}
 	else {
+			// this should never happen, unless we add a new state and
+			// fail to handle it above...
 		debug_printf( DEBUG_QUIET, "ERROR: node %s in unexpected state (%s)\n",
 					  node->GetJobName(), node->GetStatusName() );
-			// bail b/c DAG state is likely corrupt...
-		ASSERT( false );
+		whynot.sprintf( "node in unexpected state (%s)",
+						node->GetStatusName() );
+		return false;
 	}
 
-		// remove node from job queue
+		// remove node from the DAG
 	removed = false;
 	_jobs.Rewind();
 	while( _jobs.Next( candidate ) ) {
@@ -1577,7 +1587,14 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 			continue;
 		}
 	}
-	ASSERT( removed );
+		// we know the node is in _jobs (since we looked it up via
+		// GetJob() above), and DeleteCurrent() can't fail (!), so
+		// there should be no way for us to get through the above loop
+		// without having seen & removed the node... also, we can't
+		// safely just return false here and let a higher level handle
+		// the error, since the node is already half-removed and thus
+		// the DAG state is FUBAR...
+	ASSERT( removed == true );
 
 	whynot = "n/a";
 	return true;

@@ -191,8 +191,8 @@ class Dag {
     */
     void Rescue (const char * rescue_file, const char * datafile) const;
 
-	int PreScriptReaper( Job* job, int status );
-	int PostScriptReaper( Job* job, int status );
+	int PreScriptReaper( const char* nodeName, int status );
+	int PostScriptReaper( const char* nodeName, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
