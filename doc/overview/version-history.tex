@@ -71,6 +71,22 @@ the job classad now contain hostnames instead IP address and port
 numbers.  The \Opt{-run} option of older versions of \Condor{q} is not
 compatible with this change.
 
+\item Condor will now automatically check for compatibility between
+the version of the Condor libraries you have linked into a standard
+job (using \Condor{compile}) and the version of the \Condor{shadow}
+installed on your submit machine.
+If they are incompatible, the \Condor{shadow} will now put your job on
+hold and send you email explaining what went wrong and what you can do
+about it, (unless you set ``Notification = Never'' in your submit
+file).
+
+\item Added commented-out settings in the default
+\File{condor\_config} file we ship for various SMP-specific settings
+in the \Condor{startd}.
+Be sure to read section~\ref{sec:Configuring-SMP} on ``Configuring the
+Startd for SMP Machine'' on page~\pageref{sec:Configuring-SMP} for
+details about using these settings. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
