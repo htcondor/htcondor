@@ -646,8 +646,6 @@ fi
 #########
 gcc_ld_prog=`gcc -print-prog-name=ld`
 AC_MSG_NOTICE([checking what gcc flag forces $gcc_ld_prog into static mode])
-echo "main() { return 0; }" > static_test.c
-gcc -c static_test.c > /dev/null 2>&1
 gcc_static_ld_flag=""
 # determine the flags...
 if test $os = "AIX" ; then
@@ -656,8 +654,10 @@ if test $os = "AIX" ; then
   # C++ compiler support libraries, which must be linked in statically
   # so the executables can be run on machines that they weren't built on.
   AC_MSG_NOTICE([using a pre-determined AIX static linking algorithm])
-  rm -f static_test.c static_test.o static_test > /dev/null 2>&1
 else
+  # make a trivial test program and compile it to a .o...
+  echo "main() { return 0; }" > static_test.c
+  gcc -c static_test.c > /dev/null 2>&1
   #####
   # -Bstatic is GNU ld
   # -B,static is Solaris ld
