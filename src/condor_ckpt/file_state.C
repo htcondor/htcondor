@@ -697,7 +697,7 @@ int CondorFileTable::ioctl( int fd, int cmd, int arg )
 	return pointers[fd]->file->ioctl(cmd,arg);
 }
 
-int CondorFileTable::ftruncate( int fd, size_t length )
+int CondorFileTable::ftruncate( int fd, size_t size )
 {
 	if( (fd<0) || (fd>=length) || (pointers[fd]==0) ) {
 		errno = EBADF;
@@ -707,11 +707,11 @@ int CondorFileTable::ftruncate( int fd, size_t length )
 	/* The below length check is a hack to patch an f77 problem on
 	   OSF1.  - Jim B. */
 
-	if( length<0 ) return 0;
+	if( size<0 ) return 0;
 
 	pointers[fd]->file->resume(resume_count);
 
-	return pointers[fd]->file->ftruncate(length);
+	return pointers[fd]->file->ftruncate(size);
 }
 
 /*
