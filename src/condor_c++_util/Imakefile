@@ -21,7 +21,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	daemon.o
+	daemon.o uids.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -29,7 +29,7 @@ FLOCK_OBJ = ../condor_util_lib/flock.o
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
-library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
+library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o uids.o)
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 
