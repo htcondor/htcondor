@@ -1953,11 +1953,11 @@ void DaemonCore::Driver()
 							// to check one more time to make certain the pipe is ready
 							// for reading.
 							FD_ZERO(&readfds);
-							FD_SET( (*pipeTable)[i].pipefd,&readfds);
+							FD_SET( (*sockTable)[i].sockd,&readfds);
 							struct timeval stimeout;
 							stimeout.tv_sec = 0;	// set timeout for a poll
 							stimeout.tv_usec = 0;
-							int sresult = select( (*pipeTable)[i].pipefd + 1, 
+							int sresult = select( FD_SETSIZE, 
 								(SELECT_FDSET_PTR) &readfds, 
 								(SELECT_FDSET_PTR) 0,(SELECT_FDSET_PTR) 0, 
 								&stimeout );
