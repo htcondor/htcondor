@@ -30,6 +30,10 @@ int main (int argc, char **argv)
 	char              *host = 0;
 	char*				scheddAddr;
 	
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
+
 	for (i = 1; i < argc; i++)
 	{
 		if (strcmp (argv[i], "-l") == 0)

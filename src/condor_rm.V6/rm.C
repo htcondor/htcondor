@@ -95,6 +95,10 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
+
 	hostname[0] = '\0';
 	for( argv++; arg = *argv; argv++ ) {
 		if( arg[0] == '-' && arg[1] == 'a' ) {
