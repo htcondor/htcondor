@@ -347,6 +347,13 @@ CollectorClassStatsList::CollectorClassStatsList( int history_size )
 // Destructor
 CollectorClassStatsList::~CollectorClassStatsList( void )
 {
+	int		classNum;
+	int		last = classStats.getlast();
+
+	// Walk through them all & delete them
+	for ( classNum = 0;  classNum <= last;  classNum++ ) {
+		delete classStats[classNum];
+	}
 }
 
 // Update statistics
