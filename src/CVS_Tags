@@ -1,3 +1,10 @@
+03/07/05 V6_6-merge-35
+   The state of the V6_6-branch for a merge into V6_7-branch. This
+   merge picks up a crucial bugfix in condor_secman, some fixes to the
+   std univ shadow for better error propagation, some important NMI
+   glue changes, some test fixes, the email hacks for johnbent's data
+   collection, and another fix for windoze locale stuff.
+
 02/10/05 V6_6-merge-34
    The state of the V6_6-branch for a merge into V6_7_4-branch. This merge
    picks up two bug fixes and a bunch of tests.
