@@ -119,6 +119,10 @@ protected:
 	ssize_t	pos;	// position in ckpt file of seg currently reading/writing
 	size_t	len;	// size of our ckpt file
 };
+
+/* We would like to access the global image from elsewhere. */
+extern Image MyImage;
+
 void RestoreStack();
 
 #if defined(HPUX10)
