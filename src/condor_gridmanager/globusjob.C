@@ -693,7 +693,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				if ( GetCallbacks() ) {
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
-						 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ) {
+						 (globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
+						  globusStateErrorCode == 0) ) {
 dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n",procID.cluster, procID.proc);
 						doResubmit = 1;
 						gmState = GM_CLEAR_REQUEST;
