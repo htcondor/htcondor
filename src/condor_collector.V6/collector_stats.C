@@ -41,23 +41,19 @@ template class ExtArray<CollectorClassStats *>;
 // Constructor
 CollectorBaseStats::CollectorBaseStats ( int history_size )
 {
-	//dprintf( D_ALWAYS, "Base %p: History size %d\n", this, history_size );
 	// Initialize & copy...
 	historySize = history_size;
 
 	// Allocate a history buffer
-	if ( history_size ) {
-		history_size += ( sizeof(unsigned) - 1 );
-		historyWords = ( history_size / sizeof(unsigned) );
-		historyBuffer = new unsigned[ historyWords];
-		if ( ! historyBuffer ) {
-			historySize = 0;
-			historyWords = 0;
-		} 
+	if ( historySize ) {
+		historyWordBits = 8 * sizeof(unsigned);
+		historyWords = ( historySize + historyWordBits - 1) / historyWordBits;
+		historyMaxbit = historyWordBits * historyWords - 1;
+		historyBuffer = new unsigned[historyWords];
 	} else {
 		historyBuffer = NULL;
+		historyWords = 0;
 	}
-	//dprintf( D_ALWAYS, "Base: Words:%d, Size:%d, Buffer:%p\n", historyWords, historySize, historyBuffer );
 
 	// Reset vars..
 	updatesTotal = 0;
@@ -74,7 +70,7 @@ CollectorBaseStats::~CollectorBaseStats ( void )
 	// Free up the history buffer
 	if ( historyBuffer ) {
 		//dprintf( D_ALWAYS, "Freeing history buffer\n" );
-		free( historyBuffer );
+		delete( historyBuffer );
 		historyBuffer = NULL;
 	}
 }
@@ -84,46 +80,150 @@ void
 CollectorBaseStats::reset ( void )
 {
 	// Free up the history buffer
-	//dprintf( D_ALWAYS, "Base: Resetting (%p)...\n", historyBuffer );
 	if ( historyBuffer ) {
-		int		word;
-		for( word = 0;  word < historyWords;  word++ ) {
-			*(historyBuffer + word) = 0;
-		}
+		memset( historyBuffer, 0, historyWords * sizeof(unsigned) );
 	}
 	updatesTotal = 0;
 	updatesSequenced = 0;
 	updatesDropped = 0;
 }
 
+// Change the history size
+int
+CollectorBaseStats::setHistorySize ( int new_size )
+{
+	int	required_words =
+		( ( new_size + historyWordBits - 1 ) / historyWordBits );
+
+	// If new & old are equal, nothing to do
+	if ( new_size == historySize ) {
+		return 0;
+
+		// New is zero, old non-zero
+	} else if ( 0 == new_size ) {
+		if ( historyBuffer) {
+			delete( historyBuffer );
+			historyBuffer = NULL;
+			historySize = historyWords = 0;
+			historyMaxbit = 0;
+		}
+		return 0;
+
+		// New size requires equal or less memory
+	} else if ( required_words <= historyWords ) {
+		historySize = new_size;
+		return 0;
+
+		// New size is larger than we have...
+	} else {
+		unsigned *newbuf = new unsigned[ required_words ];
+		if ( historyBuffer ) {
+			memcpy( newbuf, historyBuffer, historyWords );
+			delete( historyBuffer );
+		}
+		historyBuffer = newbuf;
+		historySize = new_size;
+		historyMaxbit = historyWordBits * historyWords - 1;
+	}
+
+	return 0;
+}
+
 // Update our statistics
 void
 CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 {
-	updatesTotal++;
+	int		count = 1;
 	if ( sequenced ) {
 		if ( dropped ) {
 			updatesSequenced += dropped;
+			count = dropped;
 		} else {
 			updatesSequenced++;
 		}
 	}
 	updatesDropped += dropped;
+	updatesTotal++;
 
-	// TODO: Update the history buffer
+	// Update the history buffer
 	if ( historyBuffer ) {
-		int		word;
-		for( word = 0;  word < historyWords;  word++ ) {
-			*(historyBuffer + word) = 0;
+		int		update_num;
+		int		max_offset = historyMaxbit;
+
+		// For each update to shift unsignedo our barrell register..
+		for	( update_num = 0;  update_num < count; update_num++ ) {
+			unsigned		word_num = historyBitnum / historyWordBits;
+			unsigned		bit_num = historyBitnum % historyWordBits;
+			unsigned		mask = (1 << bit_num);
+
+			// Set the bit...
+			if ( dropped ) {
+				historyBuffer[word_num] |= mask;
+			} else {
+				historyBuffer[word_num] &= (~ mask);
+			}
+
+			// Next bit
+			if ( ++historyBitnum >= max_offset ) {
+				historyBitnum = 0;
+			}
 		}
 	}
 }
 
 // TODO
 char *
+CollectorBaseStats::getHistoryString ( char *buf )
+{
+	unsigned		outbit = 0;				// Current bit # to output
+	unsigned		outword = 0x0;			// Current word to ouput
+	int			outoff;					// Offset char * in output str.
+	int			offset = historyBitnum;	// History offset
+	int			loop;					// Loop variable
+
+	// Calculate the "last" offset
+	if ( --offset < 0 ) {
+		offset = historyMaxbit;
+	}
+	int		word_num = offset / historyWordBits;
+	int		bit_num = offset % historyWordBits;
+
+	// Walk through 1 bit at a time...
+	for( loop = 0;  loop < historySize;  loop++ ) {
+		unsigned	mask = (1 << bit_num);
+
+		if ( historyBuffer[word_num] & mask ) {
+			outword |= ( 0x8 >> outbit );
+		}
+		if ( --bit_num < 0 ) {
+			bit_num = (historyWordBits - 1);
+			if ( --word_num < 0 ) {
+				word_num = (historyWords - 1);
+			}
+		}
+
+		// Convert to a char
+		if ( ++outbit == 4 ) {
+			buf[outoff++] = ( outword <= 9 ) ? ( '0' + outword ) : ( 'a' + outword - 10 );
+			outbit = 0;
+			outword = 0x0;
+		}
+
+	}
+	if ( outbit ) {
+		buf[outoff++] = outword <= 9 ? ( '0' + outword ) : ( 'a' + outword - 10 );
+		outbit = 0;
+		outword = 0x0;
+	}
+	buf[outoff++] = '\0';
+	return buf;
+}
+
+char *
 CollectorBaseStats::getHistoryString ( void )
 {
-	return NULL;
+	char		*buf = new char[ getStringLen() ];
+	return getHistoryString( buf );
 }
 
 
@@ -132,8 +232,8 @@ CollectorBaseStats::getHistoryString ( void )
 // ************************************
 
 // Constructor
-CollectorClassStats::
-CollectorClassStats ( const char *class_name, int history_size ) :
+CollectorClassStats::CollectorClassStats ( const char *class_name,
+										   int history_size ) :
 		CollectorBaseStats( history_size )
 {
 	// Copy out the 
@@ -195,13 +295,11 @@ CollectorClassStatsList::updateStats( const char *class_name,
 {
 	int				classNum;
 	CollectorClassStats *classStat = NULL;
-	//dprintf( D_ALWAYS, "ClassList: Updating '%s'\n", class_name );
 
 	// Walk through the ads that we know of, find a match...
 	int		last = classStats.getlast();
 	for ( classNum = 0;  classNum <= last;  classNum++ ) {
 		if ( classStats[classNum]->match( class_name ) ) {
-			//dprintf( D_ALWAYS, "Found match @ %d\n", classNum );
 			classStat = classStats[classNum];
 			break;
 		}
@@ -209,7 +307,6 @@ CollectorClassStatsList::updateStats( const char *class_name,
 
 	// No matches; create a new one, add to the list
 	if ( ! classStat ) {
-		//dprintf( D_ALWAYS, "ClassList: No matches; creating '%s'\n", class_name ) ;
 		classStat = new CollectorClassStats ( class_name, historySize );
 		classStats[classStats.getlast() + 1] = classStat;
 	}
@@ -224,7 +321,7 @@ CollectorClassStatsList::publish( ClassAd *ad )
 {
 	int		classNum;
 	int		last = classStats.getlast();
-    char		line[100];
+    char		line[1000];
 
 	// Walk through them all & publish 'em
 	for ( classNum = 0;  classNum <= last;  classNum++ ) {
@@ -238,7 +335,29 @@ CollectorClassStatsList::publish( ClassAd *ad )
 		sprintf( line, "%s_%s = %d", ATTR_UPDATESTATS_LOST,
 				 name, classStats[classNum]->getDropped( ) );
 		ad->Insert(line);
+		char	*tmp = classStats[classNum]->getHistoryString( );
+		sprintf( line, "%s_%s = \"0x%s\"", ATTR_UPDATESTATS_HISTORY,
+				 name, tmp );
+		ad->Insert(line);
+		delete tmp;
 	}
+	return 0;
+}
+
+// Set the history size
+int 
+CollectorClassStatsList::setHistorySize( int new_size )
+{
+	int		classNum;
+	int		last = classStats.getlast();
+
+	// Walk through them all & publish 'em
+	for ( classNum = 0;  classNum <= last;  classNum++ ) {
+		classStats[classNum]->setHistorySize( new_size );
+	}
+
+	// Store it off for future reference
+	historySize = new_size;
 	return 0;
 }
 
@@ -256,6 +375,13 @@ CollectorStats::CollectorStats( int class_history_size, int daemon_history_size 
 CollectorStats::~CollectorStats( void )
 {
 	delete classList;
+}
+
+// Set the "class" history size
+int
+CollectorStats::setClassHistorySize( int new_size )
+{
+	return classList->setHistorySize( new_size );
 }
 
 // Update statistics

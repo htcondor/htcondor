@@ -33,7 +33,7 @@
 class CollectorEngine : public Service
 {
   public:
-	CollectorEngine();
+	CollectorEngine( CollectorStats *stats = NULL );
 	~CollectorEngine();
 
 	// maximum time a client can take to communicate with the collector
@@ -101,7 +101,7 @@ class CollectorEngine : public Service
 						   ClassAd*,HashKey&, char*, int & );
 
 	// Statistics
-	CollectorStats	*stats;
+	CollectorStats	*collectorStats;
 
   public:
 	// pointer values for representing master states

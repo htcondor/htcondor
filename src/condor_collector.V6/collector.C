@@ -36,7 +36,8 @@ extern char* mySubSystem;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 
-CollectorEngine CollectorDaemon::collector;
+CollectorStats CollectorDaemon::collectorStats( 0, 0 );
+CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
@@ -889,6 +890,14 @@ void CollectorDaemon::Config()
 	} else {
 		dprintf( D_FULLDEBUG, "No SocketCache, will refuse TCP updates\n" );
 	}		
+
+    tmp = param ("COLLECTOR_CLASS_HISTORY_SIZE");
+    if( tmp ) {
+		int	size = atoi( tmp );
+        collectorStats.setClassHistorySize( size );
+    } else {
+        collectorStats.setClassHistorySize( 0 );
+    }
 		
     return;
 }
@@ -942,7 +951,7 @@ int CollectorDaemon::sendCollectorAd()
     ad->Insert(line);
 
 	// Collector engine stats, too
-	collector.publishStats( ad );
+	collectorStats.publishGlobal( ad );
 
     // send the ad
 	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {

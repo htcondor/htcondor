@@ -36,18 +36,27 @@ class CollectorBaseStats
 	virtual ~CollectorBaseStats( void  );
 	void updateStats( bool sequened, int dropped );
 	void reset( void );
+	int setHistorySize( int size );
 	int getTotal( void ) { return updatesTotal; };
 	int getSequenced( void ) { return updatesSequenced; };
 	int getDropped( void ) { return updatesDropped; };
 	char *getHistoryString( void );
+	char *getHistoryString( char * );
+	int getStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
 
   private:
-	int			updatesTotal;
-	int			updatesSequenced;
-	int			updatesDropped;
-	unsigned		*historyBuffer;
-	int			historySize;
-	int			historyWords;
+	int			updatesTotal;			// Total # of updates
+	int			updatesSequenced;		// # of updates "sequenced"
+	int			updatesDropped;			// # of updates dropped
+
+	// History info
+	unsigned		*historyBuffer;			// History buffer
+	int			historySize;			// Size of history to report
+	int			historyWords;			// # of words allocated
+	int			historyWordBits;		// # of bits / word (used a lot)
+	int			historyBitnum;			// Current bit #
+	int			historyMaxbit;			// Max bit #
+	int			historyStringlen;		// Size of required char* buffer
 };
 
 // Per "class" update stats
@@ -71,6 +80,7 @@ class CollectorClassStatsList
 	~CollectorClassStatsList( void );
 	void updateStats( const char *class_name, bool sequened, int dropped );
 	int publish ( ClassAd *ad );
+	int setHistorySize( int size );
 
   private:
 	ExtArray<CollectorClassStats *> classStats;
@@ -85,6 +95,7 @@ class CollectorStats
 	virtual ~CollectorStats( void );
 	int update( const char *className, ClassAd *oldAd, ClassAd *newAd );
 	int publishGlobal( ClassAd *Ad );
+	int setClassHistorySize( int size );
 
   private:
 	CollectorBaseStats		global;

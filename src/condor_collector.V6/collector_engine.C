@@ -56,8 +56,7 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 char	*strStatus (ClassAd *);
 
-CollectorEngine::
-CollectorEngine () : 
+CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
 	StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
 	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
@@ -74,7 +73,8 @@ CollectorEngine () :
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
-	stats = new CollectorStats( 0, 0 );
+
+	collectorStats = stats;
 }
 
 
@@ -653,7 +653,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_ALWAYS, "%s: Inserting ** %s\n", adType, hashString);
 
 		// Update statistics
-		stats->update( label, NULL, new_ad );
+		collectorStats->update( label, NULL, new_ad );
 
 		// Now, store it away
 		if (hashTable.insert (hk, new_ad) == -1)
@@ -670,7 +670,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
 
 		// Update statistics
-		stats->update( label, old_ad, new_ad );
+		collectorStats->update( label, old_ad, new_ad );
 
 		// check if it has special status (master ads)
 		if (old_ad < CollectorEngine::THRESHOLD)
@@ -929,13 +929,6 @@ masterCheck ()
 
 	dprintf (D_ALWAYS, "MasterCheck:  Done checking for down masters\n");
 	return TRUE;
-}
-
-// Publish statistics into our ClassAd
-int
-CollectorEngine::publishStats( ClassAd *ad )
-{
-	return stats->publishGlobal( ad );
 }
 
 static void
