@@ -56,6 +56,12 @@ void _condor_file_table_dump()
 	FileTab->dump();
 }
 
+void _condor_file_table_aggravate( int on_off )
+{
+	_condor_file_table_init();
+	FileTab->set_aggravate_mode( on_off );
+}
+
 void _condor_file_table_checkpoint()
 {
 	_condor_file_table_init();

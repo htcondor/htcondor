@@ -135,6 +135,9 @@ public:
 	/** If flush mode is set to 1, all writes are immediately flushed */
 	void	set_flush_mode( int on_off );
 
+	/** If aggravation is enabled, virtual fds will never match real fds. */
+	void	set_aggravate_mode( int on_off );
+
 	/** Display debug info */
 	void	dump();
 
@@ -246,6 +249,7 @@ private:
 	int	buffer_block_size;
 	int	got_buffer_info;
 	int	flush_mode;
+	int	aggravate_mode;
 	int	resume_count;
 };
 

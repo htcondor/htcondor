@@ -194,6 +194,11 @@ void CondorFileTable::set_flush_mode( int on_off )
 	flush_mode = on_off;
 }
 
+void CondorFileTable::set_aggravate_mode( int on_off )
+{
+	aggravate_mode = on_off;
+}
+
 void CondorFileTable::dump()
 {
 	dprintf(D_ALWAYS,"\nOPEN FILE TABLE:\n");
@@ -238,12 +243,26 @@ CondorFileInfo * CondorFileTable::find_info( char *kind, char *name )
 	return i;
 }
 
+/*
+Usually, chose the lowest numbered file descriptor that is available.
+However, if aggravation is enabled, never choose an fd between
+3 and 31.  This helps to uncover bugs due to untrapped system calls.
+*/
+
 int CondorFileTable::find_empty()
 {
 	int fd;
-	for( fd=0; fd<length; fd++ )
-		if( !pointers[fd] )
+
+	for( fd=0; fd<length; fd++ ) {
+		if( aggravate_mode ) {
+			if( fd>2 && fd<32 ) {
+				continue;
+			}
+		}
+		if( !pointers[fd] ) {
 			return fd;
+		}
+	}
 
 	return -1;
 }

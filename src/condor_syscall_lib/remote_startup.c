@@ -361,6 +361,18 @@ MAIN( int argc, char *argv[], char **envp )
 			continue;
 		}
 
+			/*
+			-_condor_aggravate_bugs is helpful for causing
+			the file table to generate virtual fds which 
+			are not the same as the real fds.
+			*/
+
+		if( (strcmp(arg, "aggravate_bugs")) == MATCH ) {
+			_condor_file_table_aggravate(1);
+			continue;
+		}
+
+		_condor_error_fatal("I don't understand argument %s",arg);
 	}
 
 		/*
@@ -429,7 +441,6 @@ MAIN( int argc, char *argv[], char **envp )
 	}
 
 	InRestart = FALSE;
-
 
 	#if defined(HPUX)
 		exit(_start( argc, argv, envp ));
