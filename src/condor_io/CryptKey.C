@@ -46,9 +46,10 @@ KeyInfo :: KeyInfo(unsigned char * keyData,
                    int             keyDataLen,
                    Protocol        protocol,
                    int             duration )
-    : protocol_   (protocol),
+    : 
       keyData_    (0),
       keyDataLen_ (keyDataLen),
+	  protocol_   (protocol),
       duration_   (duration)
 {
     init(keyData, keyDataLen);
