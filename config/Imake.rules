@@ -213,6 +213,43 @@ clean::												@@\
 #endif
 
 /*
+** Target is released by creating a symbolic link to another.
+*/
+#ifndef symlink_torelease_target
+#define symlink_torelease_target(src,dir,dest)	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
+													@@\
+$(RELEASE_DIR)/##dir##/##dest##: src				@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
+	ln -s src $(RELEASE_DIR)/##dir##/##dest			
+#endif
+
+/*
+** Target is released by creating a hard link to another.
+*/
+#ifndef link_torelease_target
+#define link_torelease_target(src,dir,dest)	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
+													@@\
+$(RELEASE_DIR)/##dir##/##dest##: src				@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
+	ln src $(RELEASE_DIR)/##dir##/##dest		
+#endif
+
+/*
+** Target is released by copying
+*/
+#ifndef copy_torelease_target
+#define copy_torelease_target(src,dir,dest,mode)	@@\
+release:: $(RELEASE_DIR)/##dir##/##dest##			@@\
+													@@\
+$(RELEASE_DIR)/##dir##/##dest##: src				@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest		@@\
+	cp src $(RELEASE_DIR)/##dir##/##dest			@@\
+	chmod mode $(RELEASE_DIR)/##dir##/##dest
+#endif
+
+/*
 ** Build a tags file for a source directory.
 */
 #ifndef tags_target
