@@ -19,6 +19,19 @@ The details of each version are described below.
       reported job states didn't always match the total number of jobs
       in the DAG.
 
+\item Most Condor commands (\Condor{on}, \Condor{off},
+  \Condor{restart}, \Condor{reconfig}, \Condor{vacate},
+  \Condor{checkpoint}, \Condor{reschedule}) now support a \Opt{-all}
+  command-line option to specify which daemons to act on.
+  This is more efficient and much easier to use than previous methods
+  for accomplishing the same effect.
+  Using \Opt{-all} with \Condor{off} correctly leaves the existing
+  \Condor{master} processes running on each host, so that a subsequent
+  \Condor{on} would work.
+  See section~\ref{sec:Pool-Shutdown-and-Restart} on
+  page~\pageref{sec:Pool-Shutdown-and-Restart} for more details on
+  proper use of \Opt{-all} with \Condor{off} and \Condor{on}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -69,6 +82,25 @@ job log.  Addtionally, the schedd would exit with an error status.
 
 \item Changed the default ``Periodic Expression Interval'' parameter
 (PERIODIC\_EXPR\_INTERVAL) from 60 seconds to 300 seconds.
+
+\item Whenever \Condor{reconfig} was used to re-configure multiple
+  daemons which included the \Condor{collector} for a pool, the
+  command would start to fail after the \Condor{collector} was
+  reconfigured due to problems with security sessions in Condor's
+  strong authentication code.
+  This situation no longer causes problems for the \Condor{reconfig}
+  tool, and it can properly re-configure multiple daemons at once,
+  even if one of them is the \Condor{collector} for a pool.
+
+\item Most Condor commands (\Condor{on}, \Condor{off},
+  \Condor{restart}, \Condor{reconfig}, \Condor{vacate},
+  \Condor{checkpoint}, \Condor{reschedule}) now check to make sure
+  they are not sending a duplicate command if the user specifies the
+  same target machine or daemon twice.  For example:
+\begin{verbatim}
+     condor_reconfig hostname1 hostname2 hostname1
+\end{verbatim}
+  will only send a single reconfig command to \verb@hostname1@.
 
 \end{itemize}
 
