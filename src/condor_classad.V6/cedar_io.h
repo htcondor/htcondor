@@ -69,6 +69,17 @@ class CedarStream : public ByteStream {
 		((CedarSource*)m_src)->Initialize (s,maxlen);
 		((CedarSink*)m_snk)->Initialize (s,maxlen);
 	}
+
+    ///
+    virtual bool Connect (std::string sinful,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Connect (std::string address, int port,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Close ();
 };
 
 END_NAMESPACE // classad

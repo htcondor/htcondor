@@ -25,6 +25,7 @@
 #define CLASSAD_IO
 
 #include "common.h"
+#include <string>
 
 BEGIN_NAMESPACE( classad )
 
@@ -275,6 +276,23 @@ class ByteStream {
     }
     ///
     inline bool Flush () { return m_snk->Flush(); }
+
+    ///
+    enum Sock {
+        /** */ Sock_STREAM,
+        /** */ Sock_DGRAM
+    };
+
+    ///
+    virtual bool Connect (std::string sinful,
+                          Sock stype = Sock_STREAM) = 0;
+
+    ///
+    virtual bool Connect (std::string address, int port,
+                          Sock stype = Sock_STREAM) = 0;
+
+    ///
+    virtual bool Close () = 0;
   protected:
     ///
     ByteStream () {}
@@ -302,6 +320,17 @@ class FileStream : public ByteStream {
     inline void InitSnk (FILE *fp, int maxlen = -1) {
         ((FileSink*)m_snk)->Initialize(fp,maxlen);
     }
+
+    ///
+    virtual bool Connect (std::string sinful,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Connect (std::string address, int port,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Close ();
 };
 
 ///
@@ -322,6 +351,17 @@ class FileDescStream : public ByteStream {
     inline void InitSnk (int fd, int maxlen) {
         ((FileDescSink*) m_snk)->Initialize (fd, maxlen);
     }
+
+    ///
+    virtual bool Connect (std::string sinful,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Connect (std::string address, int port,
+                          Sock stype = Sock_STREAM);
+
+    ///
+    virtual bool Close ();
 };
 
 END_NAMESPACE // classad
