@@ -118,7 +118,8 @@ V6_7_MIRROR_SRC		-a V6_6_SRC \
 V6_7_SRC		-a V6_6_SRC \
 			src/condor_c-gahp \
 			src/condor_drmaa \
-			src/condor_credd
+			src/condor_credd \
+			src/stork
 
 V_TRUNK_SRC		-a \
 			V6_COMMON \
@@ -143,6 +144,7 @@ V_TRUNK_SRC		-a \
 			src/condor_cluster_tool \
 			src/hawkeye_modules \
 
+# For developing Stork GSI authentication on the trunk
 STORK_GSI_SRC -a \
 			V_TRUNK_SRC \
 			src/condor_credd.TEMPORARY
@@ -360,12 +362,15 @@ V6_7_3_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/krb5/1.2.7 \
 		   externals/bundles/gahp/1.0.12 \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
-		   externals/bundles/gt3gahp/2.0
+		   externals/bundles/gt3gahp/2.0 \
+		   externals/bundles/classads/0.9.7 \
+		   externals/bundles/globus/2.4.3.data \
+		   externals/bundles/srb/3.2.1
 
 # Externals needed for the head of the V6_7-branch
 V6_7_EXT	-a V6_7_3_EXT
 
-# Externals needed for Stork build
+# Externals needed for Stork trunk build
 STORK_EXT	-a EXT_COMMON \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
