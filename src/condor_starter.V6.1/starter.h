@@ -34,7 +34,6 @@
 #include "file_transfer.h"
 #include "condor_daemon_client.h"
 
-void set_resource_limits();
 extern ReliSock *syscall_sock;
 
 /* thse are the remote system calls that the starter uses */
