@@ -624,6 +624,7 @@ NUM_CPUS = 1
 ##
 ##--------------------------------------------------------------------
 MODULES = $(HAWKEYE)/modules
+STARTD_CRON_NAME = Hawkeye
 HAWKEYE_JOBS =
 
 
