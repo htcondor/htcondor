@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 
 /*
 ** Try to determine the swap space available on our own machine.  The answer
@@ -64,28 +65,74 @@ calc_virt_memory()
 
 #elif defined(HPUX)
 
-/* The HPUX code here grabs the amount of free swap in Kbyes.
- * This code doesn't require being root.  -Mike Yoder 7-16-98*/
+/* here's the deal:  Using any number in pst_getdynamic seems to be
+   *way* to small for our purposes.  I don't know why.  I have found
+   another way to get a number for virtual memory:  pst_swapinfo.  When
+   this is called, one "pool" of swap space on the system is described.
+   I don't know how many there will be; I don't know how this will vary
+   from system to system.  There are two types of swap pools:
+   Block Device Fields and File System Fields.  I'm going to ignore the
+   File System Fields.  The number I will return is the sum of the
+   pss_nfpgs (number of free pages in pool) * pagesize across all
+   Block Device Fields.  Sound confusing enough?
+
+   On the cae HPs, two swap spaces are returned.  One is the FS pool.
+
+   For more information, see /usr/include/sys/pstat.h and the
+   pstat manual pages.
+
+   -Mike Yoder 9-28-98
+*/
 #include <sys/pstat.h>
 
 int
-calc_virt_memory()
+calc_virt_memory ()
 {
-	int pagesize;
-	struct pst_static s;
-	struct pst_dynamic d;
-  
-	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-		pagesize = s.page_size / 1024;   /* it's right here.... */
-	} else {
-		return -1;
-	}
-  
-	if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-		return d.psd_vm * pagesize;
-	} else {
-		return -1;
-	}	
+  int pagesize;  /* in kB */
+  long virt_mem_size = 0;  /* the so-called virtual memory size we seek */
+  struct pst_static s;
+  struct pst_swapinfo pss[10];
+  int count, i;
+  int idx = 0; /* index within the context */
+
+  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
+    pagesize = s.page_size / 1024;   /* it's right here.... */
+  }
+  else {
+    dprintf ( D_ALWAYS, "Error getting pagesize.  Errno = %d\n", errno );
+    return 100000;
+  }
+
+
+  /* loop until count == 0, will occur when we've got 'em all */
+  while ((count = pstat_getswap(pss, sizeof(pss[0]), 10, idx)) > 0) {
+    /* got 'count' entries.  process them. */
+
+    for ( i = 0 ; i < count ; i++ ) {
+
+      /* first ensure that it's enabled */
+      if ( (pss[i].pss_flags & 1) == 1 ) {
+        /* now make sure it's a SW_BLOCK */
+        if ( (pss[i].pss_flags & 2) == 2 ) {
+          /* add free pages to total */
+          virt_mem_size += pss[i].pss_nfpgs * pagesize;
+        }
+      }
+    }
+
+    idx = pss[count-1].pss_idx+1;
+  }
+
+  if (count == -1)
+    dprintf ( D_ALWAYS, "Error in pstat_getswap().  Errno = %d\n", errno );
+
+  if ( virt_mem_size != 0 )
+    return virt_mem_size;
+  else {
+    /* Print an error and guess.  :-) */
+    dprintf ( D_ALWAYS, "Error determining virt_mem_size.  Guessing 100MB.\n");
+    return 100000;
+  }
 }
 
 #elif defined(IRIX)
@@ -119,3 +166,7 @@ calc_virt_memory()
 }
 
 #endif /* !defined(WIN32) */
+
+
+
+
