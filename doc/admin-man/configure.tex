@@ -2684,4 +2684,76 @@ is one hour (3600 seconds).
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Gridmanager-Config-File-Entries}
+\condor{gridmanager} Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+These macros affect the \Condor{gridmanager}.
+\begin{description}
+
+\item[\Macro{GRIDMANAGER\_CHECKPROXY\_INTERVAL}]
+\label{param:GridmanagerCheckproxyInterval} The number of seconds
+between checks for an updated X509 proxy credential. The default
+is 10 minutes (600 seconds).
+
+\item[\Macro{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}]
+\label{param:GridmanagerMinimumProxyTime} The minimum number of
+seconds before expiration of the X509 proxy credential for the
+gridmanager to continue operation. If seconds until expiration is
+less than this number, the gridmanager will shutdown and wait for
+a refreshed proxy credential. The default is 3 minutes (180 seconds).
+
+\item[\Macro{GRIDMANAGER\_CONTACT\_SCHEDD\_DELAY}]
+\label{param:GridmanagerContactScheddDelay} The minimum number of
+seconds between connections to the schedd. The default is 5 seconds.
+
+\item[\Macro{GRIDMANAGER\_JOB\_PROBE\_DELAY}]
+\label{param:GridmanagerJobProbeDelay} The number of seconds between
+active probes of the status of a submitted job. The default is 5
+minutes (300 seconds).
+
+\item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_DELAY}]
+\label{param:GridmanagerResourceProbeDelay} The number of seconds
+between pings of a remote resource that is currently down. The default
+is 5 minutes (300 seconds).
+
+\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_SUBMITS}]
+\label{param:GridmanagerMaxPendingSubmits} The maximum number of jobs
+that can be in the process of being submitted at any time. The default
+is 5.
+
+\item[\Macro{GAHP}]
+\label{param:Gahp} The full path to the binary of the GAHP server.
+
+\item[\Macro{GAHP\_ARGS}]
+\label{param:GahpArgs} Arguments to be passed to the GAHP server.
+
+\item[\Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}]
+\label{param:GridmanagerGahpCallTimeout} The number of seconds after
+which a pending GAHP command should time out. The default is 5 minutes
+(300 seconds).
+
+\item[\Macro{GRIDMANAGER\_MAX\_PENDING\_REQUESTS}]
+\label{param:GridmanagerMaxPendingRequests} The maximum number of GAHP
+commands that can be pending at any time. The default is 50.
+
+\item[\Macro{GRIDMANAGER\_CONNECT\_FAILURE\_RETRY\_COUNT}]
+\label{param:GridmanagerConnectFailureRetryCount} The number of times
+to retry a command that failed due to a timeout or a failed connection.
+The default is 3.
+
+\item[\Macro{GRIDMANAGER\_SYNC\_JOB\_IO\_INTERVAL}]
+\label{param:GridmanagerSyncJobIoInterval} The number of seconds between
+periodic syncs of streamed output to disk. The default is 5 minutes
+(300 seconds).
+
+%\item[\Macro{GRIDMANAGER\_RESTART\_ON\_ANY\_DOWN\_RESOURCES}]
+%\label{param:GridmanagerRestartOnAnyDownResources} To be written...
+
+%\item[\Macro{GRIDMANAGER\_MAX\_TIME\_DOWN\_RESOURCES}]
+%\label{param:GridmanagerMaxTimeDownResources} To be written...
+
+\end{description}
+
 \input{admin-man/root-config.tex}

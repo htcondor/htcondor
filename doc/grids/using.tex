@@ -39,9 +39,9 @@ computation.
 \item[GASS]
 The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
 \index{Condor-G!GASS}
-mechanisms for transferring data between a remote HTTP, FTP, or GASS server. 
+mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
 Condor-G uses GASS to transfer the executable, stdin, stdout, and stderr
-between the submission local and the remote resource.
+between the submission machine and the remote resource.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -90,19 +90,11 @@ such as if the remote Globus resource crashes.
 \subsubsection{\label{sec:Condor-G-Install}Condor-G Installation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!installation}
-\index{contrib module!Condor-G}
-\index{Condor-G!contrib module}
-\index{installation!Condor-G contrib module}
-The preferred method to obtain and install Condor-G
-utilizes a full installation
-of Condor together with a contrib module to acquire the
-ability to submit globus universe jobs.
-
-\index{Condor-G!installation with contrib module}
+Condor-G is included in the standard Condor distribution.
 Once Condor is obtained via download, installed, and configured,
-(see manual
+(see
 section~\ref{sec:install} on page~\pageref{sec:install})
-there are three steps necessary before a globus universe job
+there are two steps necessary before a globus universe job
 can be submitted:
 
 \begin{enumerate}
@@ -122,31 +114,18 @@ Three ways are listed for obtaining the Globus tools:
    follow the link to installing and setting up the Virtual Data Toolkit.
    \end{enumerate}
 
-\item{Obtain the Condor-G contrib module.}
-From the Condor home page,
-\URL{http://www.cs.wisc.edu/condor/},
-find and click on the Condor-G page.
-Find and click on the Condor-G contrib module link.
-After agreeing to the license,
-find and click on the Condor-G module for the proper platform
-to begin the transfer. 
-
-After the transfer is complete, you will have received some text files
-along with the file \File{condor-g.tar}.
-Untar this file in the existing \MacroUNI{release} directory to 
-produce the four files
-\begin{verbatim}
-    sbin/condor_gridmanager
-    sbin/gahp_server
-    etc/examples/condor_config.local.condor-g
-    bin/condor_glidein
-\end{verbatim}
-
 \item{Configure for Condor-G.}
-To configure Condor to be able to run globus universe jobs,
-import the contents of the file
-\File{etc/examples/condor\_config.local.condor-g}
-to the existing configuration file.
+If you installed Condor using the submit-only option, you will
+need to add the following entries to your configuration file:
+\begin{verbatim}
+GRIDMANAGER             = $(SBIN)/condor_gridmanager
+GAHP                    = $(SBIN)/gahp_server
+MAX_GRIDMANAGER_LOG     = 64000
+GRIDMANAGER_DEBUG       = D_COMMAND
+GRIDMANAGER_LOG         = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
+GLIDEIN_SERVER_NAME     = gridftp.cs.wisc.edu
+GLIDEIN_SERVER_DIR      = /p/condor/public/binaries/glidein
+\end{verbatim}
 
 If Condor-G is installed as root, the file
 set by the configuration variable
@@ -156,79 +135,43 @@ also have world-execute permission.
 The Gridmanager runs as the user who submitted the job,
 so the Gridmanager may not be able to write to the ordinary 
 \MacroUNI{log} directory.
-The example configuration file sets the log file to be 
-\begin{verbatim}
-GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME) 
-\end{verbatim}
-Use of this definition of \MacroNI{GRIDMANAGER\_LOG}
-will likely require the creation of
+%The example configuration file sets the log file to be 
+%\begin{verbatim}
+%GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME) 
+%\end{verbatim}
+Use of the definition of \MacroNI{GRIDMANAGER\_LOG}
+shown above will likely require the creation of
 the directory \verb@$(LOG)/GridLogs@.
 Permissions on this directory should be set
 by running \Prog{chmod} using the value 1777. 
 
-Another option is to use the commented out configuration, located
-directly below within the example configuration file,
-to set \MacroNI{GRIDMANAGER\_LOG} with
+Another option is to locate the Gridmanager log files
+somewhere else, like so:
 \begin{verbatim}
 GRIDMANAGER_LOG  = /tmp/GridmanagerLog.$(USERNAME)
 \end{verbatim}
 
-\item{Run or Reconfigure Condor.}
-If Condor is running while Condor-G is added, then a
-\Condor{reconfigure} command must be issued to update
-the configuration.
-If Condor is not running while Condor-G is added, then 
-start Condor running.
-Directions for running the Condor daemons do not change when using
-the Condor-G contrib module.
-See section~\ref{sec:Run-Condor} on page~\pageref{sec:Run-Condor}
-for details.
+If you make any changes to the configuration file while
+Condor is running, you will need to issue a \Condor{reconfigure}
+command.
+
+See section~\ref{sec:Configuring-Condor} on
+page~\pageref{sec:Configuring-Condor} for
+more information about configuration file entries.
+See section~\ref{sec:Gridmanager-Config-File-Entries} on
+page~\pageref{sec:Gridmanager-Config-File-Entries} for information
+about  configuration file entries specific to the Condor-G
+gridmanager.
+
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Credentials}Configuration and Credential Management}
+\subsubsection{\label{sec:Condor-G-Credentials}Credential Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The following are required configuration file entries that
-relate to submission of globus universe jobs.
-Condor-G fails if any of these entries are missing.
-These entries are provided in the file
-\File{etc/examples/condor\_config.local.condor-g}
-that is used during the installation of the Condor-G contrib module.
-
-\footnotesize
-\begin{verbatim}
-GRIDMANAGER             = $(SBIN)/condor_gridmanager
-GRIDMANAGER_LOG         = $(LOG)/GridmanagerLog
-MAX_GRIDMANAGER_LOG     = 64000
-GRIDMANAGER_DEBUG       = D_FULLDEBUG
-GAHP                    = $(SBIN)/gahp_server
-\end{verbatim} 
-\normalsize
-
-\AdAttr{GRIDMANAGER}
-gives the path to the gridmanager daemon.
-The 
-\AdAttr{GRIDMANAGER\_LOG}
-and
-\AdAttr{MAX\_GRIDMANAGER\_LOG}
-entries give the location of and how long
-the log files may be.
-\AdAttr{GRIDMANAGER\_DEBUG}
-sets a debugging level for the gridmanager daemon.
-The
-\AdAttr{GAHP} entry specifies the location of the required
-GAHP (Globus ASCII Helper Protocol) server.
-Details of the protocol may be found at
-\URL{http://www.cs.wisc.edu/condor/gahp/}.
-
-Further configuration file entries are for the gridmanager daemon,
-and they are relevant to
-the newest job managers from the Globus 2.0 version of software.
-\begin{verbatim}
-GRIDMANAGER_CHECKPROXY_INTERVAL = 600
-GRIDMANAGER_MINIMUM_PROXY_TIME = 180
-\end{verbatim} 
+(Reword this section to talk more about credential management and less
+about specific config values. Also, probably move it out of the setup
+section.)
 
 Condor-G periodically checks for an updated proxy at
 an interval given by the configuration variable
@@ -257,16 +200,6 @@ instead of simply losing
 contact with the remote job because Condor-G is unable to
 authenticate the remote job.
 The default setting is 3 minutes (180 seconds).
-
-% other variables that should probably get documented
-%GRIDMANAGER_CONTACT_SCHEDD_DELAY
-%GRIDMANAGER_JOB_PROBE_DELAY
-%GRIDMANAGER_RESOURCE_PRODBE_DELAY
-%GRIDMANAGER_MAX_PENDING_SUBMITS
-%GRIDMANAGER_GAHP_CALL_TIMEOUT
-%GRIDMANAGER_SYNC_JOB_IO_INTERVAL
-%GRIDMANAGER_MAX_PENDING_REQUESTS
-%GAHP_ARGS
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Using-Condor-G}Using the Globus Universe}
@@ -413,7 +346,7 @@ queue
 \end{verbatim} 
 \normalsize
 
-In this example, the executable (the binary) is pre-staged.
+In this example, the executable (the binary) has been pre-staged.
 The executable is on the remote machine, and it is not to
 be transferred before execution.
 Note that the required 
@@ -582,3 +515,25 @@ globusrsl = (project=Test_Project)
 This example's attribute name for the additional RSL is
 \verb@project@, and the value assigned is \verb@Test_Project@.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This subsubsection used to reside in the file limitations.tex.
+\index{Condor-G!limitations}
+Submitting jobs to run under the globus universe has not yet
+been perfected.
+The following is a list of known limitations:
+
+\begin{enumerate}
+\item{No checkpoints.}
+\item{No matchmaking.}
+\item{File transfer is limited.}
+There are no file transfer mechanisms for files other
+than the executable, \File{stdin}, \File{stdout}, and \File{stderr}.
+\item{No job exit codes.}
+Job exit codes are not available.
+\item{Limited platform availability.}
+Condor-G is only available on Linux, Solaris,
+Digital UNIX, and IRIX.
+HP-UX support will hopefully be available later.
+\end{enumerate}
