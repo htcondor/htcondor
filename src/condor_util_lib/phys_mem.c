@@ -92,6 +92,7 @@ calc_phys_memory()
 }
 #elif defined(HPUX9) || defined(IRIX53) 
 
+#include "condor_uid.h"
 #include <stdio.h>
 #include <nlist.h>
 #include <sys/types.h>
@@ -113,8 +114,8 @@ calc_phys_memory()
 {
   int kmem;
   int maxmem, physmem;
-
-
+  priv_state      priv;
+  priv = set_root_priv();
   /*
    *   Lookup addresses of variables.
   */
@@ -165,17 +166,17 @@ calc_phys_memory()
   physmem = physmem<<2;			/* assumes that a page is 4K */
   physmem /= 1024;				/* convert from kbytes to mbytes */
 #endif
-
+  set_priv(priv);
   return(physmem);
 }
 
-#elif defined(Solaris)
+#elif defined(Solaris) 
 
 /*
  * This works for Solaris >= 2.3
  */
 #include <unistd.h>
- 
+
 int
 calc_phys_memory()
 {
@@ -187,7 +188,7 @@ calc_phys_memory()
 	if (pages == -1 || pagesz == -1)
 		return -1;
  
-        return (int)((pages * pagesz) / 1048576);
+        return (int)((pages * pagesz) / (1024 * 1024));
 }
 #elif defined(LINUX)
 #include <stdio.h>
@@ -237,6 +238,60 @@ calc_phys_memory()
 	GlobalMemoryStatus(&status);
 	return (int)(status.dwTotalPhys/(1024000));
 }
+#elif defined(OSF1)
+
+#include "condor_common.h"
+#include "condor_uid.h"
+#include <unistd.h>
+#include <paths.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <fcntl.h>
+#include <nlist.h>
+
+struct nlist nl[] = { 
+    { "_physmem", },
+    { 0, },
+};
+
+int calc_phys_memory()
+{
+    int i;
+    int kmem;
+    unsigned int physmem;
+    priv_state      priv;
+    
+    priv = set_root_priv();
+
+    i = nlist(_PATH_UNIX, nl);
+    if( i == -1 )
+    {
+	return -1;
+    }
+    if(( nl[0].n_type == 0 ) || ( nl[0].n_value == 0)) 
+    {
+	return -1;
+    }
+    kmem = open(_PATH_KMEM, O_RDONLY, 0);
+    if ( kmem == -1 )
+    {
+	return -1;
+    }
+    i = lseek(kmem, nl[0].n_value, SEEK_SET);
+    if ( i == -1 )
+    {
+	return -1;
+    }
+    i = read(kmem, &physmem, sizeof(physmem));
+    if ( i == -1 )
+    {
+	return -1;
+    }
+    physmem = ctob(physmem);
+    set_priv(priv);
+
+    return (int)(physmem / ( 1024 * 1024) );
+}
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
@@ -245,3 +300,5 @@ calc_phys_memory()
 	return -1;
 }
 #endif
+
+
