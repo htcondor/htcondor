@@ -47,7 +47,7 @@
 */
 
 #include "condor_common.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "clib.h"
 #include "condor_sys.h"
 #include "condor_config.h"
