@@ -11,6 +11,9 @@ the machine where this job last checkpointed.  If the job has never
 checkpointed, this attribute is UNDEFINED.
 %
 \item[\AdAttr{ClusterId}] : Integer cluster identifier for this job.
+A ``cluster'' is a group of jobs that were submitted together.  Each
+job has its own unique job identifier within the cluser, but shares a
+common cluster identifier.
 %
 \item[\AdAttr{ExecutableSize}] : Size of the executable in kbytes.
 %
@@ -22,7 +25,8 @@ attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 %
 \item[\AdAttr{JobPrio}] : Integer priority for this job, set by
-\Condor{submit} or \Condor{prio}.  The default value is 0.
+\Condor{submit} or \Condor{prio}.  The default value is 0.  The higher
+the number, the worse the priority.
 %
 \item[\AdAttr{JobStatus}] : Integer which indicates the current
 status of the job, where 1 = Idle, 2 = Running, 3 = Removed, 4 =

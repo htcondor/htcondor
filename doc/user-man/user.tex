@@ -543,13 +543,13 @@ it.
 
 \subsubsection{Example 2}
 
-Example 2 queues 2 copies of program the program \Prog{mathematica}. The
+Example 2 queues two copies of the program \Prog{mathematica}. The
 first copy will run in directory \File{run\_1}, and the second will run in
 directory \File{run\_2}. For both queued copies, 
 \File{stdin} will be \File{test.data},
 \File{stdout} will be \File{loop.out}, and
 \File{sterr} will be \File{loop.error}.
-There will be 2 sets of files written,
+There will be two sets of files written,
 as the files are each written to their own directories.
 This is a convenient way to organize data if you
 have a large group of Condor jobs to run. The example file 
@@ -584,10 +584,11 @@ The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
 Silicon Graphics workstations running IRIX 6.x. 
-This job requires Condor 
-to run the program on machines which have greater than 32 megabytes of
-physical memory, and expresses a preference to run the program
-on machines with more than 64 megabytes, if such machines are available.
+This job requires Condor to run the program on machines which have
+greater than 32 megabytes of physical memory, and expresses a
+preference to run the program on machines with more than 64 megabytes,
+if such machines are available.  It also advises Condor that it will
+use up to 28 megabytes of memory when running.
 Each of the 150 runs of the program is given its own process number,
 starting with process number 0.
 So, files 
