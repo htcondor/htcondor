@@ -1071,6 +1071,23 @@ the user priority of any specific Condor user very high.
 If done, for example, with a guest account,
 the guest could only use cycles not wanted by other users of the system.
 
+\subsection{Environment Variables}
+
+\index{environment variables}
+\index{execution environment}
+Condor provides several tidbits of information to your job that
+allow it to make sensible decisions when running in a batch mode.
+These are provided in the form of environment variables that your
+job may read in the manner provided by your language.
+
+\begin{itemize}
+\item \Env{CONDOR\_SCRATCH\_DIR} \index{CONDOR\_SCRATCH\_DIR} - This variable gives the name of a directory
+where your job may place temporary data files.  This directory is unique for
+every job that is run, and is always deleted, no matter how your job completes.
+\item \Env{CONDOR\_VM} \index{CONDOR\_VM} - This variable gives the name of the virtual machine,
+if any, on which your job is run.
+\end{itemize}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
