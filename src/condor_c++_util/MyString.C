@@ -24,6 +24,12 @@
 #include "condor_common.h"
 #include "MyString.h"
 
+/*--------------------------------------------------------------------
+ *
+ * Constructors and Destructors
+ *
+ *--------------------------------------------------------------------*/
+
 MyString::MyString() 
 {
     Data=NULL;
@@ -69,6 +75,12 @@ MyString::~MyString()
 	return;
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Accessors. (More accessors in MyString.h)
+ *
+ *--------------------------------------------------------------------*/
+
 char 
 MyString::operator[](int pos) const 
 {
@@ -85,6 +97,12 @@ MyString::operator[](int pos)
 	}	
 	return Data[pos];
 }
+
+/*--------------------------------------------------------------------
+ *
+ * Assignment Operators
+ *
+ *--------------------------------------------------------------------*/
 
 MyString& MyString::
 operator=(const MyString& S) 
@@ -137,6 +155,12 @@ MyString::operator=( const char *s )
     return *this;
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Memory Management
+ *
+ *--------------------------------------------------------------------*/
+
 bool 
 MyString::reserve( const int sz ) 
 {
@@ -185,6 +209,12 @@ MyString::reserve_at_least(const int sz)
 	return success;
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Concatenating Strings
+ *
+ *--------------------------------------------------------------------*/
+
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
@@ -232,7 +262,13 @@ MyString operator+(const MyString& S1, const MyString& S2)
     S += S2;
     return S;
 }
-   
+
+/*--------------------------------------------------------------------
+ *
+ * Miscellaneous Functions
+ *
+ *--------------------------------------------------------------------*/
+
 MyString 
 MyString::Substr(int pos1, int pos2) const 
 {
@@ -375,6 +411,12 @@ MyString::replaceString(
 	return true;
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Comparisions
+ *
+ *--------------------------------------------------------------------*/
+
 int operator==(const MyString& S1, const MyString& S2) 
 {
     if (!S1.Data && !S2.Data) {
@@ -441,6 +483,12 @@ int operator>=(const MyString& S1, const MyString& S2)
 { 
 	return (!(S1<S2)); 
 }
+
+/*--------------------------------------------------------------------
+ *
+ * I/O
+ *
+ *--------------------------------------------------------------------*/
 
 ostream& operator<<(ostream& os, const MyString& S) 
 {
