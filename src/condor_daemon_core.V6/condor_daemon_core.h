@@ -111,14 +111,6 @@ int WIFSIGNALED(DWORD stat);
 #define _DC_BLOCKSIGNAL 2
 #define _DC_UNBLOCKSIGNAL 3
 
-// If WANT_DC_PM is defined, it means we want DaemonCore Process Management.
-// We _always_ want it on WinNT; on Unix, some daemons still do their own 
-// Process Management (just until we get around to changing them to use 
-// daemon core).
-#if defined(WIN32) && !defined(WANT_DC_PM)
-#define WANT_DC_PM
-#endif
-
 /** helper function for finding available port for both 
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);

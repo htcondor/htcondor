@@ -169,7 +169,6 @@ main_init(int argc, char *argv[])
 #endif
 
 	if ( argc == 1 ) {
-#ifdef WANT_DC_PM
 		result = daemonCore->Create_Process(
 					"/bin/ls",
 					"/bin/ls -l");
@@ -181,7 +180,6 @@ main_init(int argc, char *argv[])
 		if ( !daemonCore->Send_Signal(result,10) ) {
 			printf("*** Send_Signal 10 to child failed!!!\n");
 		}
-#endif
 		daemonCore->Register_Timer(5,5,(Eventcpp)f->timer5,"Five Second Timer",f);
 	}
 
