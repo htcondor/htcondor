@@ -50,7 +50,6 @@
 #include "fcntl.h"
 #include <string.h>
 #include "condor_syscalls.h"
-#include "condor_fix_socket.h"
 #include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
