@@ -17,7 +17,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A \Condor{dagman} job will fail and report a cycle in the Dag
+when XML logs are used in a single or multiple log format. The Post
+Script  completion event does not get converted to XML and Dagman
+never sees them complete or fail because of the format of the event.
+
+\item If you are using Solaris 9 with LDAP as a name lookup service,
+Condor will not function, at least in some cases.  We don't yet know
+if this bug affects other Solaris revisions.
 
 \end{itemize}
 
