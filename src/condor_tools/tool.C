@@ -182,8 +182,9 @@ usage( char *str )
 				 "they are done checkpointing." );
 		break;
 	case SQUAWK:
-		fprintf( stderr, "  %s\n", str, 
-				 "is a developer-only command used to talk to daemons." );
+		fprintf( stderr, "  %s\n"
+				 "is a developer-only command used to talk to daemons.", 
+				 str );
 		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",

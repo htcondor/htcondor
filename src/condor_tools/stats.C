@@ -257,7 +257,7 @@ main(int argc, char* argv[])
       !sock.code(Options) ||
       !sock.code(LinePtr) ||
       !sock.end_of_message()) {
-    fprintf( stderr, "failed to send query to the CondorView server\n",
+    fprintf( stderr, "failed to send query to the CondorView server %s\n",
 			 view_host.fullHostname() );
     fputs("No Data.\n",outfile);
     exit(1);
