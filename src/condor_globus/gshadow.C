@@ -7,19 +7,20 @@
 #include "condor_adtypes.h"
 #include "condor_qmgr.h"
 
-#define QUERY_DELAY_SECS_DEFAULT 15 //can be overriden ClassAd
 
 /* gshadow is a wrapper around globusrun, meant to be a scheduler  universe 
  * scheduler. It monitors job status and updates its ClassAd.
  */
 
-void wait_for_debugger( int do_wait );
-void Debug( char *str );
-void Debug( int number );
+
+#define QUERY_DELAY_SECS_DEFAULT 15 //can be overriden ClassAd
+char *chomp( char *buf );
+
 
 	//these are global so the sig handlers can use them.
-char *contactString = NULL;
-char *globusrun = NULL;
+volatile char *contactString = NULL;
+volatile char *globusrun = NULL;
+
 
 void
 remove_job( int signal ) {
@@ -30,6 +31,8 @@ remove_job( int signal ) {
 		execl( globusrun, globusrun, "-kill", contactString, NULL );
 
 			//if we get here, execl failed...
+		fprintf(stderr, "ERROR on execl %s %s -kill %s\n", globusrun, 
+				globusrun, contactString );
 //		dprintf(D_ALWAYS, "ERROR on execl %s %s -kill %s\n", globusrun, 
 //				globusrun, contactString );
 	}
@@ -42,27 +45,12 @@ my_exit( int signal ) {
 	remove_job( signal );
 }
 
-//strip off newline if exists
-char *
-chomp( char *buffer ) {
-	int size;
-
-	if ( size = strlen( buffer ) ) {
-		if ( buffer[size-1] == '\n' ) {
-			buffer[size-1] = '\0';
-		}
-	}
-	return( buffer );
-}
-
 int 
 main( int argc, char *argv[] ) {
 	FILE *run = NULL;
-	char Gstatus[64];
-	Gstatus[0] = 0;
-	char buffer[2048];
-	char args[ATTRLIST_MAX_EXPRESSION];
-	args[0] = 0;
+	char Gstatus[64] = "";
+	char buffer[2048] = "";
+	char args[ATTRLIST_MAX_EXPRESSION] = "";
 	int delay = QUERY_DELAY_SECS_DEFAULT;
 
 		//install sig handlers
@@ -77,8 +65,8 @@ main( int argc, char *argv[] ) {
 	if ( !( cluster = atoi( argv[1] ) ) )
 	{
 //		dprintf( D_FULLDEBUG, "%s invalid command invocation\n" );
-		fprintf( stderr, "usage: %s <cluster>.<pid> <sinful schedd addr> "
-				"<globusrunpath> <args>", argv[0] );
+		fprintf( stderr, "usage: %s <cluster>.<pid> <sinful schedd addr> \\"
+				"<globusrunpath> <args>\n", argv[0] );
 		exit( 1 );
 	}
 
@@ -90,6 +78,7 @@ main( int argc, char *argv[] ) {
 	Qmgr_connection *schedd = ConnectQ( argv[2] );
 	if ( !schedd ) {
 //		dprintf( D_ALWAYS, "%s ERROR, cannot connect to schedd (%s)\n", argv[2] );
+		fprintf( stderr, "%s ERROR, cannot connect to schedd (%s)\n", argv[2] );
 		exit( 2 );
 	}
 
@@ -98,12 +87,12 @@ main( int argc, char *argv[] ) {
 		|| GetAttributeString( cluster, proc, "GlobusArgs", args ) )
 	{
 //		dprintf(D_ALWAYS,"ERROR, cannot find ClassAd for %d.%d\n", cluster, proc);
+		fprintf(stderr,"ERROR, cannot find ClassAd for %d.%d\n", cluster, proc);
 		DisconnectQ( schedd );
 		exit( 3 );
 	}
 
 		//these values *might* be in ClassAd
-	buffer[0] = 0;
 	GetAttributeString( cluster, proc, "GlobusContactString", buffer );
 	if ( buffer[0] ) {
 		contactString = strdup( buffer );
@@ -119,6 +108,7 @@ main( int argc, char *argv[] ) {
 	)
 	{
 //		dprintf( D_ALWAYS, "ERROR stat'ing globusrun (%s)\n", globusrun );
+		fprintf( stderr, "ERROR stat'ing globusrun (%s)\n", globusrun );
 		exit( 4 );
 	}
 
@@ -132,6 +122,7 @@ main( int argc, char *argv[] ) {
 
 		if ( !(run = popen( buffer, "r" ) ) ) {
 //			dprintf( D_ALWAYS, "unable to popen \"%s\"", buffer );
+//			fprintf( stderr, "unable to popen \"%s\"", buffer );
 			exit( 5 );
 		}
 
@@ -173,6 +164,8 @@ main( int argc, char *argv[] ) {
 				DisconnectQ( schedd );
 			}
 			else {
+				fprintf( stderr, "unable to update classAd for %d.%d\n",
+					cluster, proc );
 //				dprintf( D_ALWAYS, "unable to update classAd for %d.%d\n",
 //					cluster, proc );
 				exit( 6 );
@@ -183,45 +176,15 @@ main( int argc, char *argv[] ) {
 	}
 }
 
-/*
-  Wait up for one of those nice debuggers which attaches to a running
-  process.  These days, most every debugger can do this with a notable
-  exception being the ULTRIX version of "dbx".
-*/
-void 
-wait_for_debugger( int do_wait )
-{
-   sigset_t sigset;
+//strip off newline if exists
+char *
+chomp( char *buffer ) {
+	int size;
 
-   // This is not strictly POSIX conforming becuase it uses SIGTRAP, but
-   // since it is only used in those environments where is is defined, it
-   // will probably pass...
-#if defined(SIGTRAP)
-      /* Make sure we don't block the signal used by the
-      ** debugger to control the debugged process (us).
-      */
-   sigemptyset( &sigset );
-   sigaddset( &sigset, SIGTRAP );
-   sigprocmask( SIG_UNBLOCK, &sigset, 0 );
-#endif
-
-   while( do_wait )
-      ;
-}
-
-void
-Debug( char *str )
-{
-	FILE *fp = popen( "rmail mikeu@cs.wisc.edu", "w" );
-	if ( fp ) {
-		fprintf( fp, str );
+	if ( size = strlen( buffer ) ) {
+		if ( buffer[size-1] == '\n' ) {
+			buffer[size-1] = '\0';
+		}
 	}
-	pclose( fp );
-}
-void 
-Debug( int number )
-{
-	char buffer[64];
-	sprintf( buffer, "step %d\n", number );
-	Debug( buffer );
+	return( buffer );
 }
