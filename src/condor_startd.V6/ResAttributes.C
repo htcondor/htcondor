@@ -200,10 +200,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 	if( IS_UPDATE(how_much) || IS_PUBLIC(how_much) ) {
 
-		sprintf( line, "%s=%lu", ATTR_VIRTUAL_MEMORY, m_virt_mem );
+		sprintf( line, "%s=%lu", ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
 		cp->Insert( line ); 
 
-		sprintf( line, "%s=%lu", ATTR_DISK, m_disk );
+		sprintf( line, "%s=%lu", ATTR_TOTAL_DISK, m_disk );
 		cp->Insert( line ); 
 
 			// KFLOPS and MIPS are only conditionally computed; thus, only
@@ -306,16 +306,37 @@ deal_with_benchmarks( Resource* rip )
 	}
 }
 
-CpuAttributes::CpuAttributes( MachAttributes* map, 
-							  float phys_mem_percent, 
-							  float virt_mem_percent, 
+
+CpuAttributes::CpuAttributes( MachAttributes* map, int num_cpus, 
+							  float phys_mem_percent,
+							  float virt_mem_percent,
 							  float disk_percent )
 {
+	init( map, num_cpus, virt_mem_percent, disk_percent );
 	c_phys_mem_percent = phys_mem_percent;
+}
+
+
+CpuAttributes::CpuAttributes( MachAttributes* map, int num_cpus, 
+							  int num_phys_mem,
+							  float virt_mem_percent,
+							  float disk_percent )
+{
+	init( map, num_cpus, virt_mem_percent, disk_percent );
+	c_phys_mem = num_phys_mem;
+	c_phys_mem_percent = 0;		// We don't have this percentage.
+}
+
+
+void
+CpuAttributes::init( MachAttributes* map, int num_cpus, 
+					 float virt_mem_percent,
+					 float disk_percent )
+{
+	this->map = map;
+	c_num_cpus = num_cpus;
 	c_virt_mem_percent = virt_mem_percent;
 	c_disk_percent = disk_percent;
-	this->map = map;
-	c_num_cpus = 1;
 	c_idle = -1;
 	c_console_idle = -1;
 }
@@ -380,9 +401,13 @@ CpuAttributes::compute( amask_t how_much )
 
 	if( IS_STATIC(how_much) && IS_SHARED(how_much) ) {
 
-			// Physical memory
-		val = map->phys_mem() * c_phys_mem_percent;
-		c_phys_mem = (int)floor( val );
+			// Physical memory.  If we want a percentage share, that
+			// takes precedence.  If not, we just use the number of
+			// megs we were given initially.
+		if( c_phys_mem_percent ) {
+			val = map->phys_mem() * c_phys_mem_percent;
+			c_phys_mem = (int)floor( val );
+		} 
 	}
 
 	if( IS_UPDATE(how_much) && IS_SHARED(how_much) ) {

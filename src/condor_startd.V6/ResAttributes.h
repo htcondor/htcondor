@@ -112,7 +112,14 @@ private:
 class CpuAttributes
 {
 public:
-	CpuAttributes( MachAttributes*, float, float, float );
+
+	CpuAttributes( MachAttributes*, int num_cpus, 
+				   float phys_mem_percent, float virt_mem_percent,
+				   float disk_percent );
+
+	CpuAttributes( MachAttributes*, int num_cpus, 
+				   int num_phys_mem, float virt_mem_percent,
+				   float disk_percent );
 
 	void attach( Resource* );	// Attach to the given Resource
 									   
@@ -156,6 +163,9 @@ private:
 	float			c_phys_mem_percent;
 	float			c_virt_mem_percent;
 	float			c_disk_percent;
+
+	void	init( MachAttributes* map, int num_cpus,  
+				  float virt_mem_percent, float disk_percent ); 
 };	
 
 
