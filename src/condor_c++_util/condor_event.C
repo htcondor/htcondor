@@ -29,6 +29,7 @@
 #include "condor_string.h"
 #include "condor_classad.h"
 #include "iso_dates.h"
+#include "condor_attributes.h"
 
 //--------------------------------------------------------
 #include "condor_debug.h"
@@ -380,8 +381,9 @@ initFromClassAd(ClassAd* ad)
 {
 	if( !ad ) return;
 	int en;
-	ad->LookupInteger("EventTypeNumber", en);
-	eventNumber = (ULogEventNumber) en;
+	if ( ad->LookupInteger("EventTypeNumber", en) ) {
+		eventNumber = (ULogEventNumber) en;
+	}
 	char* timestr = NULL;
 	if( ad->LookupString("EventTime", &timestr) ) {
 		bool f = FALSE;
@@ -1824,10 +1826,17 @@ initFromClassAd(ClassAd* ad)
 
 	char* multi = NULL;
 	ad->LookupString("Reason", &multi);
-	if( multi ) setReason(multi);
-	multi = NULL;
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
 	ad->LookupString("CoreFile", &multi);
-	if( multi ) setCoreFile(multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
 }
 
 
@@ -1936,7 +1945,11 @@ initFromClassAd(ClassAd* ad)
 
 	char* multi = NULL;
 	ad->LookupString("Reason", &multi);
-	if( multi ) setReason(multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
 }
 
 // ----- TerminatedEvent baseclass
@@ -2208,7 +2221,11 @@ initFromClassAd(ClassAd* ad)
 	
 	char* multi = NULL;
 	ad->LookupString("CoreFile", &multi);
-	if( multi ) setCoreFile(multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
 
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
@@ -2500,6 +2517,8 @@ JobHeldEvent::JobHeldEvent ()
 {
 	eventNumber = ULOG_JOB_HELD;
 	reason = NULL;
+	code = 0;
+	subcode = 0;
 }
 
 
@@ -2522,6 +2541,18 @@ JobHeldEvent::setReason( const char* reason_str )
     } 
 }
 
+void
+JobHeldEvent::setReasonCode(const int val)
+{
+	code = val;
+}
+
+void
+JobHeldEvent::setReasonSubCode(const int val)
+{
+	subcode = val;
+}
+
 
 const char* JobHeldEvent::
 getReason( void ) const
@@ -2529,6 +2560,17 @@ getReason( void ) const
 	return reason;
 }
 
+int JobHeldEvent::
+getReasonCode( void ) const
+{
+	return code;
+}
+
+int JobHeldEvent::
+getReasonSubCode( void ) const
+{
+	return subcode;
+}
 
 int
 JobHeldEvent::readEvent( FILE *file )
@@ -2548,6 +2590,7 @@ JobHeldEvent::readEvent( FILE *file )
 		return 1;	// backwards compatibility
 	}
 
+
 	chomp( reason_buf );  // strip the newline
 		// This is strange, sometimes we get the \t from fgets(), and
 		// sometimes we don't.  Instead of trying to figure out why,
@@ -2557,6 +2600,22 @@ JobHeldEvent::readEvent( FILE *file )
 	} else {
 		reason = strnewp( reason_buf );
 	}
+
+	// read the code and subcodes, but if not there, rewind
+	// for backwards compatibility.
+	fgetpos( file, &filep );
+	int incode = 0;
+	int insubcode = 0;
+	int fsf_ret = fscanf(file, "\tCode %d Subcode %d\n", &incode,&insubcode);
+	if ( fsf_ret != 2 ) {
+		code = 0;
+		subcode = 0;
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
+	}
+	code = incode;
+	subcode = insubcode;
+
 	return 1;
 }
 
@@ -2570,12 +2629,18 @@ JobHeldEvent::writeEvent( FILE *file )
 	if( reason ) {
 		if( fprintf(file, "\t%s\n", reason) < 0 ) {
 			return 0;
-		} else {
-			return 1;
+		} 
+	} else {
+		if( fprintf(file, "\tReason unspecified\n") < 0 ) {
+			return 0;
 		}
-	} 
-		// do we want to do anything else if there's no reason?
-		// should we fail?  EXCEPT()?  
+	}
+
+	// write the codes
+	if( fprintf(file, "\tCode %d Subcode %d\n", code,subcode) < 0 ) {
+		return 0;
+	}
+
 	return 1;
 }
 
@@ -2586,11 +2651,15 @@ toClassAd()
 	if( !myad ) return NULL;
 	
 	const char* reason = getReason();
-	if( reason ) {
-		MyString buf2;
-		buf2.sprintf("Reason = \"%s\"", reason);
+	MyString buf2;
+	if ( reason ) {
+		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,reason);
 		if( !myad->Insert(buf2.Value()) ) return NULL;
 	}
+	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_CODE,code);
+	if( !myad->Insert(buf2.Value()) ) return NULL;
+	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_SUBCODE,code);
+	if( !myad->Insert(buf2.Value()) ) return NULL;
 
 	return myad;
 }
@@ -2603,8 +2672,18 @@ initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) setReason(multi);
+	int incode = 0;
+	int insubcode = 0;
+	ad->LookupString(ATTR_HOLD_REASON, &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, incode);
+	setReasonCode(incode);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, insubcode);
+	setReasonSubCode(insubcode);
 }
 
 JobReleasedEvent::JobReleasedEvent()
@@ -2715,7 +2794,11 @@ initFromClassAd(ClassAd* ad)
 
 	char* multi = NULL;
 	ad->LookupString("Reason", &multi);
-	if( multi ) setReason(multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
 }
 
 static const int seconds = 1;
@@ -3001,7 +3084,11 @@ initFromClassAd(ClassAd* ad)
 	
 	char* multi = NULL;
 	ad->LookupString("CoreFile", &multi);
-	if( multi ) setCoreFile(multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
 
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
