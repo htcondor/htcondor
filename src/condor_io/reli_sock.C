@@ -35,7 +35,7 @@
 #include "condor_rw.h"
 
 static char _FileName_[] = __FILE__;
-extern char *mySubSystem;
+extern "C" char *mySubSystem;
 
 ReliSock::ReliSock(					/* listen on port		*/
 	int		port

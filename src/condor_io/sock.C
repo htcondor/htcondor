@@ -35,7 +35,7 @@
 #include "condor_debug.h"
 #include <stdio.h>
 
-extern char *mySubSystem;
+extern "C" char *mySubSystem;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
