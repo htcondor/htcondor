@@ -158,6 +158,7 @@ evaluate Misc AllBig
 evaluate Misc AnyTwo
 evaluate Misc AllTwo
 evaluate Misc ClassAds.b
+evaluate Misc ClassAds.c
 evaluate Misc All_Undefined
 evaluate Misc Any_Undefined
 evaluate Misc A
