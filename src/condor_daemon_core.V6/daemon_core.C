@@ -6105,11 +6105,17 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 int DaemonCore::SendAliveToParent()
 {
     SafeSock sock;
-	char *parent_sinful_string;
+	char parent_sinful_string[30];
+	char *tmp;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
-	parent_sinful_string = InfoCommandSinfulString(ppid);	
-	if (!parent_sinful_string ) {
+	tmp = InfoCommandSinfulString(ppid);
+	if ( tmp ) {
+			// copy the result from InfoCommandSinfulString to the
+			// stack, because the pointer we got back is a static buffer
+		strcpy(parent_sinful_string,tmp);
+	} else {
+			// parent already gone?
 		return FALSE;
 	}
 
