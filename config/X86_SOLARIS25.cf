@@ -64,8 +64,8 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_GETPGRP2			NO
 #define HAS_KILLPG				YES
 #define HAS_SETHOSTNAME			YES
-#define HAS_SETREGID			NO
-#define HAS_SETREUID			NO
+#define HAS_SETREGID			YES
+#define HAS_SETREUID			YES
 #define HAS_UTIMES				YES
 #define HAS_UTIME				NO
 #define HAS_VHANGUP				YES
@@ -73,11 +73,11 @@ find /usr/sup/X11/lib/libXext.a and also could be libXext.so.6.0 */
 #define HAS_SETRESGID			NO
 #define HAS_SETEGID				YES
 #define HAS_SETEUID				YES
-#define HAS_GETWD				NO
+#define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define DO_BENCHMARKING			YES
 #define HAS_PVM					NO
-#define PVM_ARCH			X86
+#define PVM_ARCH			X86SOL2
 
 
 #define CCompiler /s/std/bin/gcc /* different than SunOS */ 
