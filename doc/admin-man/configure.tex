@@ -124,11 +124,31 @@ in your config files, and these attributes will just be treated as
 macros.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-File-Env}
+Config File Environment References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+References to the Condor process's environment are also allowed in the
+configuration file.
+Environment references are of the form:
+\begin{verbatim}
+        $ENV(environment_variable_name)
+\end{verbatim}
+For example, 
+\begin{verbatim}
+        A = $ENV(HOME)
+\end{verbatim}
+binds \MacroNI{A} to the value of the HOME environment variable.
+Environment references are not currently used in standard Condor
+configurations.
+However, they can sometimes be useful in custom configurations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}
 Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Other than macros, a Condor configuration file can contain comments or
+A Condor configuration file can also contain comments or
 line continuations.
 A comment is any line beginning with a ``\#'' character.
 A continuation is any entry that continues across multiples lines.
@@ -1237,6 +1257,20 @@ will not want to change them for any reason.
   section~\ref{param:SubsysAddressFile} as
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
+\item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
+  \label{param:SecondaryCollectorList} This macro lists the hostnames
+  of ``secondary collectors''.  A secondary collector is a machine
+  running a \Condor{collector} daemon that is not the Central Manager.
+  Secondary collectors make it possible to execute administrative
+  commands in the pool when the Central Manager is down by using the
+  \Opt{-pool} argument to specify the name of a secondary collector to
+  use to locate the \Condor{master} daemon.
+
+\item[\Macro{ALLOW\_ADMIN\_COMMANDS}]
+  \label{param:AllowAdminCommands} If set to NO for a given host, this
+  macro disables administrative commands, such as \Condor{reconfig},
+  \Condor{restart}, \Condor{on}, and \Condor{off}, to that host.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1377,6 +1411,19 @@ control state or activity transitions within the
   This way, jobs submitted in your pool could specify that they did or
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
+
+\item[\Macro{MEMORY}] \label{param:Memory}
+  Normally, Condor will automatically detect the amount of physical
+  memory available on your machine.  Define \Macro{MEMORY} to tell
+  Condor how much physical memory (in MB) your machine has, overriding
+  the value Condor computes automatically.
+
+\item[\Macro{RESERVED\_MEMORY}] \label{param:ReservedMemory}
+  How much memory would you like reserved from Condor?  By default,
+  Condor considers all the physical memory of your machine as
+  available to be used by Condor jobs.  If \Macro{RESERVED\_MEMORY} is
+  defined, Condor subtracts it from the amount of memory it advertises
+  as available.
 
 \end{description}
 
