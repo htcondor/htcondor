@@ -39,7 +39,7 @@ To identify jobs which are running, type
 \begin{verbatim}
 %  condor_q
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
  127.0   raman           4/11 15:35   0+00:00:00 R  0   1.4  hello             
@@ -79,7 +79,7 @@ is killed without a checkpoint, and its queue entry removed.  For example:
 \begin{verbatim}
 %  condor_q
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
  132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello             
@@ -91,7 +91,7 @@ Job 132.0 removed.
 
 %  condor_q
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
 
@@ -161,7 +161,7 @@ command.  For example, to change the priority of a job to -15,
 \begin{verbatim}
 %  condor_q raman
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  126.0   raman           4/11 15:06   0+00:00:00 U  0   0.3  hello             
 
@@ -171,7 +171,7 @@ command.  For example, to change the priority of a job to -15,
 
 %  condor_q raman
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  126.0   raman           4/11 15:06   0+00:00:00 U  -15 0.3  hello             
 
@@ -195,7 +195,7 @@ option of \Condor{q}.  For example, the following job submitted by user
 \begin{verbatim}
 % condor_q
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
  ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
  125.0   jbasney         4/10 15:35   0+00:00:00 U  -10 1.2  hello.remote      
 
@@ -207,7 +207,7 @@ Running \Condor{q}'s analyzer provided the following information:
 \begin{verbatim}
 %  condor_q 125.0 -analyze
 
--- Submittor: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
 ---
 125.000:  Run analysis summary.  Of 323 resource offers,
           323 do not satisfy the request's constraints
