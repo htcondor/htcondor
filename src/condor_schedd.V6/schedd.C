@@ -181,7 +181,7 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Socket(shadowCommandrsock);
 		delete shadowCommandrsock;
 	}
-	if (shadowCommandssock && deamonCore) {
+	if (shadowCommandssock && daemonCore) {
 		daemonCore->Cancel_Socket(shadowCommandssock);
 		delete shadowCommandssock;
 	}
