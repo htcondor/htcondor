@@ -880,8 +880,13 @@ CStarter::Reaper(int pid, int exit_status)
 	int all_jobs = 0;
 	UserProc *job;
 
-	dprintf( D_ALWAYS, "Job exited, pid=%d, status=%d\n", pid,
-			 exit_status );
+	if( WIFSIGNALED(exit_status) ) {
+		dprintf( D_ALWAYS, "Job exited, pid=%d, signal=%d\n", pid,
+				 WTERMSIG(exit_status) );
+	} else {
+		dprintf( D_ALWAYS, "Job exited, pid=%d, status=%d\n", pid,
+				 WEXITSTATUS(exit_status) );
+	}
 
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
