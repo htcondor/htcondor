@@ -171,7 +171,8 @@ void JavaInfo::query_create()
 
 	init_user_ids("nobody");
 
-	query_pid = daemonCore->Create_Process(java,args,PRIV_USER_FINAL,reaper_id,FALSE,NULL,NULL,FALSE,NULL,fds);
+	query_pid = daemonCore->Create_Process(java,args,PRIV_USER_FINAL,reaper_id,
+		FALSE,NULL,NULL,FALSE,NULL,fds);
 	if(query_pid==FALSE) {
 		dprintf( D_ALWAYS, "JavaInfo: Unable to create query process!\n" );
 		unlink(output_file);
