@@ -51,7 +51,6 @@ extern "C" int get_random_int();
 
 CStarter::CStarter()
 {
-	InitiatingHost = NULL;
 	Execute = NULL;
 	UIDDomain = NULL;
 	FSDomain = NULL;
@@ -59,11 +58,10 @@ CStarter::CStarter()
 	Opsys = NULL;
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
-	ShadowAddr[0] = '\0';
 	jobAd = NULL;
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
 	shadowupdate_tid = -1;
-	shadowsock = NULL;
+	shadow = NULL;
 }
 
 
@@ -94,8 +92,8 @@ CStarter::~CStarter()
 		daemonCore->Cancel_Timer(shadowupdate_tid);
 		shadowupdate_tid = -1;
 	}
-	if( shadowsock ) {
-		delete shadowsock;
+	if( shadow ) {
+		delete shadow;
 	}
 }
 
@@ -103,9 +101,13 @@ CStarter::~CStarter()
 bool
 CStarter::Init( char peer[] )
 {
-	InitiatingHost = peer;
+	if( shadow ) {
+		delete shadow;
+	}
+	shadow = new DCShadow( peer );
+	ASSERT( shadow );
 
-	dprintf(D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost);
+	dprintf(D_ALWAYS, "Submitting machine is \"%s\"\n", shadow->name());
 
 	Config();
 
@@ -218,32 +220,24 @@ CStarter::ShutdownFast(int)
 void
 CStarter::InitShadowInfo( void )
 {
-	if( ! jobAd ) {
-		EXCEPT( "InitShadowVersion called with NULL jobAd" );
+	ASSERT( jobAd );
+	ASSERT( shadow );
+
+	if( ! shadow->initFromClassAd(jobAd) ) { 
+		dprintf( D_ALWAYS, "Failed to initialize shadow info from job ClassAd!\n" );
+		return;
 	}
 
-	char* tmp = NULL;
 	if( ShadowVersion ) {
 		delete ShadowVersion;
 		ShadowVersion = NULL;
 	}
-	jobAd->LookupString( ATTR_SHADOW_VERSION, &tmp );
+	char* tmp = shadow->version();
 	if( tmp ) {
-		dprintf( D_FULLDEBUG, "Version of Shadow is %s\n",
-				 tmp );
+		dprintf( D_FULLDEBUG, "Version of Shadow is %s\n", tmp );
 		ShadowVersion = new CondorVersionInfo( tmp, "SHADOW" );
 	} else {
 		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.2)\n" ); 
-	}
-
-	// get sinfullstring of our shadow, if shadow told us
-	jobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
-
-	if( ShadowAddr[0] ) {
-		dprintf( D_FULLDEBUG, "Shadow Address: %s\n", ShadowAddr );
-	} else {
-		dprintf( D_ALWAYS, "WARNING: Can't find %s in job ad!\n",
-				 ATTR_MY_ADDRESS );
 	}
 }
 
@@ -252,6 +246,10 @@ bool
 CStarter::RegisterStarterInfo( void )
 {
 	int rval;
+
+	if( ! shadow ) {
+		EXCEPT( "RegisterStarterInfo called with NULL DCShadow object" );
+	}
 
 		// If the shadow is older than 6.3.2, we need to use the
 		// CONDOR_register_machine_info method, which sends a bunch of
@@ -311,7 +309,6 @@ CStarter::RegisterStarterInfo( void )
 				 mfhn, 0 );
 		delete [] mfhn;
 	}
-
 	if( rval < 0 ) {
 		return false;
 	}
@@ -726,12 +723,9 @@ CStarter::SameUidDomain( void )
 	char* job_uid_domain = NULL;
 	bool same_domain = false;
 
-	if( ! UIDDomain ) {
-		EXCEPT( "CStarter::SameUidDomain called with NULL UIDDomain!" );
-	}
-	if( ! InitiatingHost ) {
-		EXCEPT( "CStarter::SameUidDomain called with NULL InitiatingHost!" );
-	}
+	ASSERT( UIDDomain );
+	ASSERT( shadow->name() );
+
 	if( jobAd->LookupString( ATTR_UID_DOMAIN, &job_uid_domain ) != 1 ) {
 			// No UidDomain in the job ad, what should we do?
 			// For now, we'll just have to assume that we're not in
@@ -760,12 +754,12 @@ CStarter::SameUidDomain( void )
 		// contains our UidDomain as a substring of its hostname.
 		// this way, we know someone's not just lying to us about what
 		// UidDomain they're in.
-	if( host_in_domain(InitiatingHost, UIDDomain) ) {
+	if( host_in_domain(shadow->name(), UIDDomain) ) {
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: the submitting host claims to be in our\n"
 			 "\t\tUidDomain, yet its hostname (%s) does not match\n",
-			 InitiatingHost );
+			 shadow->name() );
 	return false;
 }
 
@@ -776,19 +770,6 @@ CStarter::UpdateShadow( void )
 	ClassAd ad;
 
 	dprintf( D_FULLDEBUG, "Entering CStarter::UpdateShadow()\n" );
-
-	if ( ShadowAddr[0] == '\0' ) {
-		// we do not have an address for the shadow
-		dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): "
-				 "No ShadowAddr!\n" );
-		return FALSE;
-	}
-
-	if ( !shadowsock ) {
-		shadowsock = new SafeSock();
-		ASSERT( shadowsock );
-		shadowsock->connect( ShadowAddr );
-	}
 
 		// Publish all the info we care about into the ad.  This
 		// method is virtual, so we'll get all the goodies from
@@ -809,10 +790,8 @@ CStarter::UpdateShadow( void )
 	}
 
 		// Send it to the shadow
-	shadowsock->snd_int( SHADOW_UPDATEINFO, FALSE );
-	ad.put( *shadowsock );
-	shadowsock->end_of_message();
-	
+	shadow->updateJobInfo( &ad );
+
 	dprintf( D_FULLDEBUG, "Leaving CStarter::UpdateShadow(): success\n" );
 	return TRUE;
 }
