@@ -108,11 +108,13 @@ ClassAdLog::AppendLog(LogRecord *log)
 		}
 		active_transaction->AppendLog(log);
 	} else {
-		if (log->Write(log_fd) < 0) {
-			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
-		}
-		if (fsync(log_fd) < 0) {
-			EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+		if (log_fd>=0) {
+			if (log->Write(log_fd) < 0) {
+				EXCEPT("write to %s failed, errno = %d", log_filename, errno);
+			}
+			if (fsync(log_fd) < 0) {
+				EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
+			}
 		}
 		log->Play((void *)&table);
 		delete log;
