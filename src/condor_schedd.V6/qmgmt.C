@@ -1369,7 +1369,8 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				// user just has $$opsys.$$arch in the
 				// ATTR_JOB_CMD attribute, convert it to the
 				// new format w/ parenthesis: $$(opsys).$$(arch)
-			if ( (index == 0) && ((tvalue=strstr(attribute_value,"$$")) != NULL) ) 
+			if ( (index == 0) && (attribute_value != NULL)
+				 && ((tvalue=strstr(attribute_value,"$$")) != NULL) ) 
 			{
 				if ( stricmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
 				{

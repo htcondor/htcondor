@@ -144,9 +144,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
-		dprintf(D_ALWAYS, "About to hit crash?\n");
 		match->dPrint(D_ALWAYS);
-		dprintf(D_ALWAYS, "Printed classad, now really about to crash?\n");
 		my_match_ad = new ClassAd( *match );
 	} else {
 		my_match_ad = NULL;
@@ -3041,7 +3039,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	input[_POSIX_PATH_MAX];
 	char	output[_POSIX_PATH_MAX];
 	char	error[_POSIX_PATH_MAX];
-	char	*env;
+	char	*env = NULL;
 	char	job_args[_POSIX_ARG_MAX];
 	char	args[_POSIX_ARG_MAX];
 	char	owner[20], iwd[_POSIX_PATH_MAX];
@@ -3152,7 +3150,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 	if (GetAttributeStringNew(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
 							&env) < 0) {
-		env[0] = '\0';
+		// Note that GetAttributeStringNew always fills in the env variable,
+		// even if it's an empty string. We get back -1 if it's empty. 
+		// Filling it in with 0 is redundant, I suppose. 
+			env[0] = '\0';
 	}
 
 	// stick a CONDOR_ID environment variable in job's environment
