@@ -875,7 +875,73 @@ CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
 
 /*
+** Link a program with Condor libraries for the standard universe
+*/
+#ifndef CLINK
+#if IS_CLIPPED
+#define CLINK(compiler,name,obj)	/* */ @@\
+XCOMM Begin translation of func(CLINK)		@@\
+XCOMM NULL BODY!				@@\
+XCOMM End translation of func(CLINK)
+#else
+#define CLINK(compiler,name,obj)		@@\
+XCOMM Begin translation of func(CLINK)		@@\
+all:: name.cndr.exe				@@\
+name:: name.cndr.exe				@@\
+       @/bin/true				@@\
+name.cndr.exe: obj				@@\
+	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
+	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
+clean::						@@\
+	rm -f name.cndr.exe obj			@@\
+XCOMM End translation of func(CLINK)
+#endif /* IS_CLIPPED */
+#endif /* CLINK */
+
+
+/*
+** Link a program to run normally intended for the standard universe
+** without libraries at all
+*/
+#ifndef CLINK_NOSTD
+#define CLINK_NOSTD(compiler,name,obj)		@@\
+XCOMM Begin translation of func(CLINK_NOSTD)	@@\
+all:: name.exe					@@\
+name:: name.exe					@@\
+       @/bin/true				@@\
+name.exe: obj x_fake_ckpt.o			@@\
+	compiler -o name.exe obj x_fake_ckpt.o $(TEST_LDFLAGS)	@@\
+clean::						@@\
+	rm -f name.exe obj			@@\
+XCOMM End translation of func(CLINK_NOSTD)
+#endif /* CLINK_NOSTD */
+
+
+
+/*
+** Link a program to run normally (no condor libraries at all)
+*/
+#ifndef LINK
+#define LINK(compiler,name,obj)			@@\
+XCOMM Begin translation of func(LINK)		@@\
+all:: name.exe					@@\
+name:: name.exe					@@\
+       @/bin/true				@@\
+name.exe: obj					@@\
+	compiler -o name.exe obj $(TEST_LDFLAGS)  @@\
+clean::						@@\
+	rm -f name.exe obj			@@\
+XCOMM End translation of func(LINK)
+#endif /* LINK */
+
+
+/***********************************************************************
+** DEPRECATED condor_compile rules
+***********************************************************************/
+
+/*
 ** Link a program for running remotely
+** This rule is deprecated, in favor of using CLINK 
 */
 #ifndef RLINK
 #if IS_CLIPPED
@@ -898,8 +964,10 @@ XCOMM End translation of func(RLINK)
 #endif /* IS_CLIPPED */
 #endif /* RLINK */
 
+
 /*
 ** Link a program to run normally (no condor at all)
+** This rule is deprecated in favor of using LINK
 */
 #ifndef VLINK
 #define VLINK(compiler,name,obj)		@@\
@@ -941,7 +1009,7 @@ compiledir/Imakefile:	CImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-	   -DC_COMPILER=compiler \				@@\
+	   -I.. -DC_COMPILER=compiler \				@@\
 	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
@@ -970,7 +1038,7 @@ compiledir/Imakefile: CPPImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile		@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-	   -DCPP_COMPILER=compiler \				@@\
+	   -I.. -DCPP_COMPILER=compiler \			@@\
 	   -DFLAGS_MACRO_NAME=flags_macro_name			@@\
 								@@\
 clean::								@@\
@@ -999,7 +1067,7 @@ compiledir/Imakefile: FImakefile				@@\
 								@@\
 compiledir/Makefile: compiledir compiledir/Imakefile	@@\
 	cd compiledir; ../../condor_imake -I../../../config \	@@\
-		-DFORTRAN_HAS_RECURSION=has_recursion \	@@\
+		-I.. -DFORTRAN_HAS_RECURSION=has_recursion \	@@\
 		-DF_COMPILER=compiler	\			@@\
 		-DFLAGS_MACRO_NAME=flags_macro_name		@@\
 								@@\
@@ -1014,39 +1082,144 @@ XCOMM End translation of func(F_COMPILER_TARGET)
 #endif /* F_COMPILER_TARGET */
 
 
-/*
-** Rule for building and linking a given test program
-*/
+/***********************************************************************
+** Rules for building, describing, and declaring tests
+***********************************************************************/
+
 #ifndef BUILD
 #define BUILD(cmplr,name,ext)		@@\
 XCOMM Begin translation of func(BUILD)	@@\
-BUILD_FILES(name,ext)			@@\
-RLINK(cmplr,name,name.o)		@@\
-VLINK(cmplr,name,name.o)		@@\
+SYM_FILE(name,ext)			@@\
+LINK(cmplr,name,name.o)			@@\
 XCOMM End translation of func(BUILD)
 #endif /* BUILD */
 
-#ifndef BUILD_EXTRA
-#define BUILD_EXTRA(cmplr,name,ext,obj)	@@\
-XCOMM Begin translation of func(BUILD_EXTRA) @@\
-BUILD_FILES(name,ext)			@@\
+#ifndef BUILD_DEP
+#define BUILD_DEP(cmplr,name,ext,dep)	@@\
+XCOMM Begin translation of func(BUILD_DEP) @@\
+SYM_FILE(name,ext)			@@\
+LINK(cmplr,name,dep name.o)		@@\
+XCOMM End translation of func(BUILD_DEP)
+#endif /* BUILD_DEP */
+
+#ifndef CBUILD
+#define CBUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(CBUILD) @@\
+SYM_FILE(name,cmd)			@@\
+SYM_FILE(name,ext)			@@\
+CLINK(cmplr,name,name.o)		@@\
+CLINK_NOSTD(cmplr,name,name.o)		@@\
+XCOMM End translation of func(CBUILD)
+#endif /* CBUILD */
+
+#ifndef CBUILD_DEP
+#define CBUILD_DEP(cmplr,name,ext,dep)	@@\
+XCOMM Begin translation of func(CBUILD_DEP) @@\
+SYM_FILE(name,ext)			@@\
+CLINK(cmplr,name,dep name.o)		@@\
+CLINK_NOSTD(cmplr,name,dep name.o)	@@\
+XCOMM End translation of func(CBUILD_DEP)
+#endif /* CBUILD_DEP */
+
+#ifndef SYM_FILE
+#define SYM_FILE(name,ext)		@@\
+XCOMM Begin translation of func(SYM_FILE) @@\
+name:: name.ext					@@\
+       @/bin/true				@@\
+all:: name.ext					@@\
+name.ext:					@@\
+	ln -s ../name.ext .			@@\
+XCOMM End translation of func(SYM_FILE)
+#endif /* SYM_FILE */
+
+#ifndef DEPS
+#define DEPS(name,deps)				@@\
+XCOMM Begin translation of func(DEPS)		@@\
+all:: deps					@@\
+name:: deps					@@\
+       @/bin/true				@@\
+clean::						@@\
+	rm -f deps				@@\
+XCOMM End translation of func(DEPS)
+#endif /* DEPS */
+
+
+#ifndef RUN
+#define RUN(name)				@@\
+XCOMM Begin translation of func(RUN)		@@\
+SYM_FILE(name,run)				@@\
+DEPS(name,Condor.pm CondorTest.pm)		@@\
+clean::						@@\
+	rm -f run_list				@@\
+run_list:: Concat(run_list_,name)		@@\
+Concat(run_list_,name):: safe_append.pl name.run	@@\
+	@perl safe_append.pl -v -f run_list -a name	@@\
+XCOMM End translation of func(RUN)
+#endif /* RUN */
+
+
+#ifndef TESTCLASS
+#define TESTCLASS(name,testclass)		@@\
+XCOMM Begin translation of func(TESTCLASS)	@@\
+clean::						@@\
+	rm -f class_list Concat(testclass,_list) @@\
+class_list:: Concat(testclass,_list)		@@\
+class_list:: Concat(class_list_,name)		@@\
+Concat(class_list_,name):: safe_append.pl	@@\
+	@perl safe_append.pl -v -f class_list -a testclass	@@\
+Concat(testclass,_list):: Concat3(list_,testclass,name)	@@\
+Concat3(list_,testclass,name):: safe_append.pl	@@\
+	@perl safe_append.pl -v -f Concat(testclass,_list) -a name	@@\
+XCOMM End translation of func(TESTCLASS)
+#endif /* TESTCLASS */
+
+
+#ifndef DESC
+#define DESC(name,description)	@@\
+XCOMM Begin translation of func(DESC)		@@\
+desc:: Concat(name,_desc)			@@\
+	@true					@@\
+Concat(name,_desc):				@@\
+	@echo description > name.desc		@@\
+XCOMM End translation of func(DESC)
+#endif /* DESC */
+
+
+
+/***********************************************************************
+** DEPRECATED (OWO) rules for building and linking a given test program
+***********************************************************************/
+
+#ifndef OWO_BUILD
+#define OWO_BUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(OWO_BUILD)	@@\
+OWO_BUILD_FILES(name,ext)			@@\
+RLINK(cmplr,name,name.o)		@@\
+VLINK(cmplr,name,name.o)		@@\
+XCOMM End translation of func(OWO_BUILD)
+#endif /* OWO_BUILD */
+
+#ifndef OWO_BUILD_EXTRA
+#define OWO_BUILD_EXTRA(cmplr,name,ext,obj)	@@\
+XCOMM Begin translation of func(OWO_BUILD_EXTRA) @@\
+OWO_BUILD_FILES(name,ext)			@@\
 RLINK(cmplr,name,obj name.o)	@@\
 VLINK(cmplr,name,obj name.o) @@\
-XCOMM End translation of func(BUILD_EXTRA)
-#endif /* BUILD_EXTRA */
+XCOMM End translation of func(OWO_BUILD_EXTRA)
+#endif /* OWO_BUILD_EXTRA */
 
-#ifndef RBUILD
-#define RBUILD(cmplr,name,ext)		@@\
-XCOMM Begin translation of func(RBUILD) @@\
-BUILD_FILES(name,ext)			@@\
+#ifndef OWOW_OWO_RBUILD
+#define OWO_RBUILD(cmplr,name,ext)		@@\
+XCOMM Begin translation of func(OWO_RBUILD) @@\
+OWO_BUILD_FILES(name,ext)		@@\
 RLINK(cmplr,name,name.o)	@@\
-XCOMM End translation of func(RBUILD)
-#endif /* RBUILD */
+XCOMM End translation of func(OWO_RBUILD)
+#endif /* OWO_RBUILD */
 
 
-#ifndef BUILD_FILES
-#define BUILD_FILES(name,ext)		@@\
-XCOMM Begin translation of func(BUILD_FILES) @@\
+#ifndef OWO_BUILD_FILES
+#define OWO_BUILD_FILES(name,ext)		@@\
+XCOMM Begin translation of func(OWO_BUILD_FILES) @@\
 name:: name.ext					@@\
        @/bin/true				@@\
 all:: name.ext					@@\
@@ -1054,13 +1227,13 @@ name.ext:					@@\
 	ln -s ../name.ext .			@@\
 clean::						@@\
 	rm -f name.ext				@@\
-XCOMM End translation of func(BUILD_FILES)
-#endif /* BUILD_FILES */
+XCOMM End translation of func(OWO_BUILD_FILES)
+#endif /* OWO_BUILD_FILES */
 
 
-#ifndef RUN
-#define RUN(name)	@@\
-XCOMM Begin translation of func(RUN)		@@\
+#ifndef OWO_RUN
+#define OWO_RUN(name)	@@\
+XCOMM Begin translation of func(OWO_RUN)	@@\
 all:: name.run name.cmd				@@\
 name:: name.run name.cmd			@@\
        @/bin/true				@@\
@@ -1075,19 +1248,20 @@ clean::						@@\
 run_list:: Concat(run_list_,name)		@@\
 Concat(run_list_,name):: safe_append.pl name.run	@@\
 	@perl safe_append.pl -v -f run_list -a name	@@\
-XCOMM End translation of func(RUN)
-#endif /* RUN */
+XCOMM End translation of func(OWO_RUN)
+#endif /* OWO_RUN */
 
-#ifndef BUILD_DEPS
-#define BUILD_DEPS(name,deps)	@@\
-XCOMM Begin translation of func(RUN_DEPS)	@@\
+
+#ifndef OWO_BUILD_DEPS
+#define OWO_BUILD_DEPS(name,deps)	@@\
+XCOMM Begin translation of func(OWO_BUILD_DEPS)	@@\
 all:: deps					@@\
 name:: deps					@@\
        @/bin/true				@@\
 clean::						@@\
 	rm -f deps				@@\
-XCOMM End translation of func(RUN_DEPS)
-#endif /* RUN */
+XCOMM End translation of func(OWO_BUILD_DEPS)
+#endif /* OWO_BUILD_DEPS */
 
 
 /***********************************************************************
