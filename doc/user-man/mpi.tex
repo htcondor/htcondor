@@ -32,11 +32,11 @@ under Condor.
 Administratively, Condor must be configured such that resources
 (machines) running MPI jobs are dedicated.
 \index{scheduling!dedicated}
-Dedicated machines are ones that, once they begin execution of
-a program, will continue executing the program until
-the program ends.
-The program will not be preempted (to run another program) or
-suspended.
+Dedicated machines never vacate their running condor jobs
+should the machine's interactive owner return.  Once the dedicated 
+scheduler claims a dedicated machine for use, it will try to use
+that machine to satisfy the requirements of the queue of MPI jobs.
+
 Since Condor is not ordinarily used in this manner (Condor uses
 opportunistic scheduling),
 machines that are to be used as dedicated resources
@@ -226,4 +226,48 @@ and \File{errfile.0} will contain
 Printing to stderr...0
 \end{verbatim}
 
+Different nodes for an MPI job can have different machine requirements.
+For example, often the first node, sometimes called the head node, needs
+to run on a specific machine.  This can be also useful for debugging.
+Condor accomodates this by supporting 
+multiple \Attr{queue} statements in the submit file, much like with
+the other universes.  For example:
+
+\begin{verbatim}
+######################################
+## MPI example submit description file
+## with multiple procs
+######################################
+universe = MPI
+executable = simplempi
+log = logfile
+input = infile.$(NODE)
+output = outfile.$(NODE)
+error = errfile.$(NODE)
+machine_count = 1
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+requirements = ( machine == "machine1")
+queue
+
+requirements = ( machine =!= "machine1")
+machine_count = 3
+queue
+\end{verbatim}
+
+The dedicated scheduler will allocate four machines (nodes) total in 
+two procs for this job.  The first proc has one node, (rank 0 
+in MPI terms) and will run on the machine named machine1.  The 
+other three nodes, in the second proc, will run on other machines.  
+Like in the other condor universes, the second requirements command 
+overwrites the first, but the other commands are inherited from the 
+first proc.
+
+When submitting jobs with multiple requirements, it is
+best to write the requirements to be mutually exclusive,
+or to have the most selective requirement first in the submit file.
+This is because the scheduler tries to match jobs to machine in
+submit file order.  If the requirements are not mutually exclusive,
+it can happen that the scheduler may unable to schedule the job, even
+if all needed resources are available.
 \index{MPI|)}

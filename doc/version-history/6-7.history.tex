@@ -22,6 +22,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The dedicated scheduler can now preempt running MPI jobs from 
+appropriately configured machines. See 
+~\ref{sec:Configure-Dedicated-Preemption} for details.
+
+\item The MPI universe now supports submit files with multiple procs (queue 
+commands), each with distinct requirements.  This is useful for placing
+the head node of an MPI job on a specific machine, and the rest of the 
+nodes elsewhere. See ~\ref{sec:MPI} for details.
+
 \item Added optional \Expr{DAGMAN\_RETRY\_SUBMIT\_FIRST} configuration
 parameter that tells \Condor{dagman} whether to immediately retry
 the submit if a node submit fails, or to put that job at the end of
