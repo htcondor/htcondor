@@ -33,6 +33,7 @@ resource_info_t *resmgr_getbyname __P((resource_name_t));
 resource_info_t *resmgr_getbypid __P((int));
 int resmgr_walk __P((int (*) __P((resource_info_t *))));
 int resmgr_vacateall __P((void));
+bool resmgr_resourceinuse(void);
 extern "C" ClassAd *resmgr_context(resource_id_t rid);
 int resource_initcontext __P((resource_info_t *));
 ClassAd *resource_context __P((resource_info_t *));

@@ -193,6 +193,16 @@ resmgr_vacateall(void)
 	return resmgr_walk(resmgr_vacateone);
 }
 
+bool
+resmgr_resourceinuse(void)
+{
+	int i;
+
+	for (i = 0; i < nresources; i++)
+		if (resources[i].r_state != NO_JOB) return true;
+	return false;
+}	
+
 static int
 resmgr_vacateone(resource_info_t* rinfop)
 {
@@ -221,7 +231,6 @@ resmgr_command(resource_info_t* rinfop)
 	return 0;
 }
 
-// CHANGE
 ClassAd*
 resmgr_context(resource_id_t rid)
 {
@@ -232,20 +241,6 @@ resmgr_context(resource_id_t rid)
 
 	return rip->r_context;
 }
-
-/*
-CONTEXT *
-resmgr_context(rid)
-	resource_id_t rid;
-{
-	resource_info_t *rip;
-
-	if (!(rip = resmgr_getbyrid(rid)))
-		return NULL;
-
-	return rip->r_context;
-}
-*/
 
 char *
 state_to_string(int state)
@@ -269,7 +264,6 @@ state_to_string(int state)
 	return "Unknown";
 }
 
-// CHANGE -> N Anand
 void resmgr_changestate(resource_id_t rid, int new_state)
 {
   ClassAd* cp;
