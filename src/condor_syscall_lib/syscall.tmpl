@@ -502,7 +502,11 @@ int rename( const char *from, const char *to ) {
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 	int gethostid();
+#if defined(HPUX9)
+	int setrlimit( int resource, const  struct rlimit *rlp ) {
+#else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
+#endif
 		in xdr_rlimit( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
