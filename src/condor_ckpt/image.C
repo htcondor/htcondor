@@ -400,6 +400,7 @@ Checkpoint( int sig, int code, void *scp )
 		patch_registers( scp );
 		MyImage.Close();
 		RestoreFileState();
+		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		syscall( SYS_write, 1, "About to return to user code\n", 29 );
 		return;
 	}
