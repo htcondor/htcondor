@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_ver_info.h"
 
 #include "daemon.h"
 #include "condor_string.h"
@@ -41,9 +42,12 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 	_port = 0;
 	_is_local = false;
 	_tried_locate = false;
+	_auth_cap_known = false;
+	_is_auth_cap = false;
 
 	_addr = NULL;
 	_name = NULL;
+	_version = NULL;
 	_error = NULL;
 	_id_str = NULL;
 	_hostname = NULL;
@@ -98,6 +102,16 @@ Daemon::hostname( void )
 		locate();
 	}
 	return _hostname;
+}
+
+
+char*
+Daemon::version( void )
+{
+	if( ! _version ) {
+		locate();
+	}
+	return _version;
 }
 
 
@@ -282,20 +296,12 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 Sock*
 Daemon::startCommand( int cmd, Sock* sock, int sec )
 {
-	const int AUTH_NO  = 0;
-	const int AUTH_ASK = 1;
-	const int AUTH_YES = 2;
-
 	// the classad for sending
 	ClassAd auth_info;
 
 	// temp vars for putting the classad together
 	char *buf;
 	char *paramer;
-
-	int  authenticating;
-
-	dprintf ( D_SECURITY, "authenticating for command %i.\n", cmd);
 
 
 	// set up the socket
@@ -308,46 +314,97 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		sock->timeout( sec );
 	}
 
+
+	// read the config
+
+	// default value for config file
+	bool always_authenticate = false; 
+
+	paramer = param("ALWAYS_AUTHENTICATE");
+	if (paramer) {
+		dprintf (D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE)"
+					" == %s\n", paramer);
+		if ((stricmp(paramer, "YES") == 0) ||
+		    (stricmp(paramer, "TRUE") == 0)) {
+			dprintf ( D_SECURITY, "STARTCOMMAND: "
+					      "forcing authentication.\n");
+			always_authenticate = true;
+		}
+		free(paramer);
+	} else {
+		dprintf (D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE)"
+					"failed, assuming FALSE.\n" );
+	}
+
+	// find out if client supports authentication negotiation
+
+
+
+	// look at the version if we haven't and it is available
+	if (!_auth_cap_known && _version) {
+		dprintf(D_SECURITY, "STARTCOMMAND: talking to a %s daemon.\n", _version);
+
+		CondorVersionInfo vi(_version);
+		int cmpres = vi.compare_versions("$CondorVersion: 6.3.0 Jul 17 2001 $");
+
+		_auth_cap_known = true;
+		_is_auth_cap = (cmpres <= 0);
+	}
+
+
+	// possible courses of action:
+	const int AUTH_FAIL = 0;
+	const int AUTH_OLD  = 1;
+	const int AUTH_NO   = 2;
+	const int AUTH_ASK  = 3;
+	const int AUTH_YES  = 4;
+
+	int authentication_action;
+
+
+	// now the 'logic' :)
+	if (always_authenticate) {
+		authentication_action = AUTH_YES;
+		if (_auth_cap_known && !_is_auth_cap) {
+			authentication_action = AUTH_FAIL;
+		}
+	} else {
+		authentication_action = AUTH_ASK;
+		if (_auth_cap_known && !_is_auth_cap) {
+			authentication_action = AUTH_OLD;
+		}
+	}
+
+
+
+	// now take action
+
 	sock->encode();
 
-        paramer = param("SKIP_AUTHENTICATION");
-	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(SKIP_AUTHENTICATION) == %s\n", paramer);
-		if (strcasecmp(paramer, "YES") == 0) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: skipping negotiationg for authentication.\n" );
+	// AUTH_FAIL - we demand auth, the daemon does not support it
+	if (authentication_action == AUTH_FAIL) {
+		// cannot possibly authenticate to pre-6.3.0,
+		// so exit with error.
+		dprintf(D_SECURITY, "STARTCOMMAND: cannot authenticate"
+					" with pre 6.3.0\n");
 
-			// just code the command and be done
-			sock->code(cmd);
-			free(paramer);
-			return sock;
+		delete sock;
+		return NULL;
+	}
 
-		}
+	// AUTH_OLD - we support auth, daemon does not.  command is sent
+	// like it was in pre 6.3
+	if (authentication_action == AUTH_OLD) {
+		dprintf(D_SECURITY, "STARTCOMMAND: skipping negotiation\n");
 
-		// this still needs to be freed
+		// just code the command and be done
+		sock->code(cmd);
 		free(paramer);
-
-	} else {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(SKIP_AUTHENTICATION) failed!\n" );
+		return sock;
 	}
 
 
-	// start with whatever the command asked for
-	// HACK: start with AUTH_ASK
-	authenticating = AUTH_ASK;
-
-	// allow the config to force authentication
-        paramer = param("ALWAYS_AUTHENTICATE");
-	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE) == %s\n", paramer);
-		if (strcasecmp(paramer, "YES") == 0) {
-			dprintf ( D_SECURITY, "STARTCOMMAND: forcing authentication.\n" );
-			authenticating = AUTH_YES;
-		}
-		free(paramer);
-	} else {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(ALWAYS_AUTHENTICATE) failed!\n" );
-	}
-
+	dprintf ( D_SECURITY, "negotiating auth for command %i.\n", cmd);
 
         // package the ClassAd together
 
@@ -356,8 +413,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	paramer = param("AUTHENTICATION_METHODS");
 	if (paramer != NULL) {
-		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) == %s\n",
-				paramer );
+		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) == %s\n", paramer );
 		buflen += strlen(paramer);
 	} else {
 		dprintf ( D_SECURITY, "STARTCOMMAND: param(AUTHENTICATION_METHODS) failed!\n" );
@@ -375,6 +431,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		sprintf(buf, "%s=\"%s\"", ATTR_AUTH_TYPES, paramer);
 		free(paramer);
 	} else {
+		// ZKM
 		sprintf(buf, "%s=\"\"", ATTR_AUTH_TYPES);
 	}
 
@@ -387,10 +444,13 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	auth_info.Insert(buf);
 	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
-	// convert authenticate into a string
-	assert (authenticating >= 0 && authenticating <= 2);
-	char* tmpdesc[] = { "NO", "ASK", "YES" };
-	sprintf(buf, "%s=\"%s\"", ATTR_AUTHENTICATE, tmpdesc[authenticating]);
+	// authentication action
+	if (authentication_action == AUTH_YES) {
+		sprintf(buf, "%s=\"YES\"", ATTR_AUTHENTICATE);
+	} else {
+		sprintf(buf, "%s=\"ASK\"", ATTR_AUTHENTICATE);
+	}
+
 	auth_info.Insert(buf);
 	dprintf ( D_SECURITY, "STARTCOMMAND: inserted '%s'\n", buf);
 
@@ -425,55 +485,59 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	bool retval;
 
-	switch(authenticating) {
-		case AUTH_YES:
-			dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) RIGHT NOW.\n");
-			retval = sock->authenticate(0xFFFF);
-			break;
+	if (authentication_action == AUTH_ASK) {
+		ClassAd auth_response;
+		sock->decode();
+		auth_response.code(*sock);
+		sock->end_of_message();
 
-		case AUTH_ASK:
-			{
-				ClassAd auth_response;
-				sock->decode();
-				auth_response.code(*sock);
-				sock->end_of_message();
+		dprintf ( D_SECURITY, "STARTCOMMAND: server responded with:\n");
+		auth_response.dPrint( D_SECURITY );
 
-				dprintf ( D_SECURITY, "STARTCOMMAND: server responded with:\n");
-				auth_response.dPrint( D_SECURITY );
+		buf = new char[128];
+		if (buf == NULL) {
+			dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n");
+			delete sock;
+			return NULL;
+		}
 
-				buf = new char[128];
-				if (buf == NULL) {
-					dprintf ( D_ALWAYS, "STARTCOMMAND: new failed!\n");
-					retval = false;
-					break;
-				}
+		if (auth_response.LookupString("CONDOR_VERSION", buf)) {
+			dprintf ( D_ALWAYS, "STARTCOMMAND: no CONDOR_VERSION "
+						"in response ClassAd" );
+			New_version(buf);
+		}
 
-				if (!auth_response.LookupString(ATTR_AUTHENTICATE, buf)) {
-					EXCEPT( "AUTH: no AUTHENTICATE in response ClassAd" );
-				}
-				if(strcasecmp(buf, "YES") == 0) {
-					dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) RIGHT NOW.\n");
-					retval = sock->authenticate(0xFFFF);
-				}
-				break;
-			}
-		case AUTH_NO:
-			dprintf ( D_SECURITY, "STARTCOMMAND: not authenticating.\n");
-			retval = true;
-			break;
 
-		default:
-			EXCEPT( "AUTH: wierd value for authenticating" );
+		if (!auth_response.LookupString(ATTR_AUTHENTICATE, buf)) {
+			dprintf ( D_ALWAYS, "STARTCOMMAND: no AUTHENTICATE "
+						"in response ClassAd" );
+			delete sock;
+			return NULL;
+		}
+		if(strcasecmp(buf, "YES") == 0) {
+			authentication_action = AUTH_YES;
+		} else {
+			authentication_action = AUTH_NO;
+		}
+
+	}
+
+	if (authentication_action == AUTH_YES) {
+		dprintf ( D_SECURITY, "STARTCOMMAND: authenticate(0xFFFF) "
+					"RIGHT NOW.\n");
+		retval = sock->authenticate(0xFFFF);
+	} else {
+		dprintf ( D_SECURITY, "STARTCOMMAND: not authenticating.\n");
+		retval = true;
 	}
 
 	dprintf (D_SECURITY, "STARTCOMMAND: retval is %i.\n", retval);
 	if (retval) {
 		dprintf ( D_SECURITY, "STARTCOMMAND: setting sock->encode()\n");
 		sock->encode();
-
 		return sock;
 	} else {
-		dprintf (D_SECURITY, "STARTCOMMAND: retval sucked.\n");
+		dprintf (D_SECURITY, "STARTCOMMAND: authenticate failed.\n");
 		delete sock;
 		return NULL;
 	}
@@ -550,13 +614,13 @@ Daemon::locate( void )
 		// and _name. 
 	switch( _type ) {
 	case DT_SCHEDD:
-		rval = getDaemonInfo( "SCHEDD", ATTR_SCHEDD_IP_ADDR, SCHEDD_AD );
+		rval = getDaemonInfo( "SCHEDD", SCHEDD_AD );
 		break;
 	case DT_STARTD:
-		rval = getDaemonInfo( "STARTD", ATTR_STARTD_IP_ADDR, STARTD_AD );
+		rval = getDaemonInfo( "STARTD", STARTD_AD );
 		break;
 	case DT_MASTER:
-		rval = getDaemonInfo( "MASTER", ATTR_MASTER_IP_ADDR, MASTER_AD );
+		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
 	case DT_COLLECTOR:
 		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT );
@@ -607,8 +671,7 @@ Daemon::locate( void )
 
 
 bool
-Daemon::getDaemonInfo( const char* subsys, 
-					   const char* attribute, AdTypes adtype )
+Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 {
 	char				buf[512], tmpname[512];
 	char				*addr_file, *tmp, *my_name;
@@ -711,6 +774,18 @@ Daemon::getDaemonInfo( const char* subsys,
 		if( is_valid_sinful(buf) ) {
 			New_addr( strnewp(buf) );
 		}
+
+		sprintf( buf, "%s", subsys );
+		char* exe_file = param( buf );
+		if( exe_file ) {
+			char ver[128];
+			CondorVersionInfo vi;
+			vi.get_version_from_file(exe_file, ver, 128);
+			New_version( strnewp(ver) );
+		}
+		free( exe_file );
+
+
 	}
 
 	if( ! _addr ) {
@@ -740,18 +815,38 @@ Daemon::getDaemonInfo( const char* subsys,
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
+			dprintf(D_ALWAYS, "Can't find address for %s %s", 
+					 daemonString(_type), _name );
 			sprintf( buf, "Can't find address for %s %s", 
 					 daemonString(_type), _name );
 			newError( buf );
 			return false; 
 		}
-		if(scan->EvalString(attribute, NULL, buf) == FALSE) {
+
+		// construct the IP_ADDR attribute
+		sprintf( tmpname, "%sIpAddr", subsys );
+		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+					 tmpname, daemonString(_type), _name );
 			sprintf( buf, "Can't find %s in classad for %s %s",
-					 attribute, daemonString(_type), _name );
+					 tmpname, daemonString(_type), _name );
 			newError( buf );
 			return false;
 		}
 		New_addr( strnewp(buf) );
+
+		sprintf( tmpname, ATTR_VERSION );
+		if(scan->EvalString( tmpname, NULL, buf ) == FALSE) {
+			dprintf(D_ALWAYS, "Can't find %s in classad for %s %s",
+					 tmpname, daemonString(_type), _name );
+			sprintf( buf, "Can't find %s in classad for %s %s",
+					 tmpname, daemonString(_type), _name );
+			newError( buf );
+			return false;
+		}
+		dprintf (D_ALWAYS, "VERSION: %s\n", buf);
+		New_version( strnewp(buf) );
+
 	}
 
 		// Now that we have the sinful string, fill in the port. 
@@ -945,6 +1040,16 @@ Daemon::New_addr( char* str )
 	} 
 	_addr = str;
 	return str;
+}
+
+char*
+Daemon::New_version ( char* ver )
+{
+	if( _version ) {
+		delete [] _version;
+	} 
+	_version = ver;
+	return ver;
 }
 
 

@@ -26,6 +26,7 @@
 
 static const char* daemon_names[] = {
 	"none",
+	"any",
 	"master",
 	"schedd",
 	"startd",

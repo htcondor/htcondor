@@ -135,6 +135,13 @@ public:
 		  */
 	char* hostname( void );
 
+		/** Return the version of the daemon is running.
+		  This function will return NULL only if there was
+		  an error in the locate() method.
+		  @return Just the hostname where the daemon is running.
+		  */
+	char* version( void );
+
 		/** Return the full hostname where the daemon is running.
 		  This is the fully qualified hostname, including the domain
 		  name.  For example, "raven.cs.wisc.edu".  This function will
@@ -290,6 +297,7 @@ private:
 	char* _hostname;
 	char* _full_hostname;
 	char* _addr;
+	char* _version;
 	char* _pool;
 	char* _error;
 	char* _id_str;
@@ -297,6 +305,8 @@ private:
 	daemon_t _type;
 	bool _is_local;
 	bool _tried_locate;
+	bool _auth_cap_known;
+	bool _is_auth_cap;
 
 		// //////////////////////////////////////////////////////////
 		/// Helper methods.
@@ -307,12 +317,9 @@ private:
 		  port, ip_addr, etc.  We check for address files, and query
 		  the appropriate collector if that doesn't work.
 		  @param subsys The subsystem string for this daemon
-		  @param attrirbute The attribute from the classad that stores
-		  the address we want
 		  @param adtype The type of ClassAd we'll query.
 		  */
-	bool getDaemonInfo( const char* subsys, 
-						const char* attribute, AdTypes adtype );
+	bool getDaemonInfo( const char* subsys, AdTypes adtype );
 
 		/** Helper for central manager daemons (collector and
 		  negotiator).  These are a special case since they have
@@ -359,6 +366,7 @@ private:
 	char* New_full_hostname( char* );
 	char* New_hostname( char* );
 	char* New_name( char* );
+	char* New_version( char* );
 	char* New_addr( char* );
 	char* New_pool( char* );
 };

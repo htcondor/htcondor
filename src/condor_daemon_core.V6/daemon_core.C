@@ -1575,14 +1575,26 @@ int DaemonCore::HandleReq(int socki)
         if (req == DC_AUTHENTICATE) {
 		ReliSock* sock = (ReliSock*)stream;
 
-		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE\n");
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
 
+		// determine the value of config.ALWAYS_AUTHENTICATE
+		char *paramer;
+		paramer = param("ALWAYS_AUTHENTICATE");
+
+		bool always_authenticate = false;
+		if (paramer) {
+			if ((stricmp(paramer, "YES") == 0) ||
+			    (stricmp(paramer, "TRUE") == 0)) {
+				always_authenticate = true;
+			}
+			free (paramer);
+		}
+	
 		int saveres = result;
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
-		if( ! auth_info.code(*sock) ||
-			! sock->end_of_message()) {
+		if( !auth_info.code(*sock) || !sock->end_of_message()) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 					   "receive auth_info!\n");
 			return FALSE;	
@@ -1614,31 +1626,41 @@ int DaemonCore::HandleReq(int socki)
 
 		if (stricmp(buf, "YES") == 0) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-			sock->authenticate(getAuthBitmask(auth_types));
-		} else if (stricmp(buf, "NO") == 0) {
-			char *paramer;
-			paramer = param("ALWAYS_AUTHENTICATE");
-
-			if (paramer) {
-				if (stricmp(paramer, "YES") == 0) {
-					// client refused to authenticate
-					// when server required it
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: client refused to authenticate.\n");
-					free (paramer);
-					return FALSE;
-				}
-				free (paramer);
+			if (!sock->authenticate(getAuthBitmask(auth_types))) {
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
+				return FALSE;
 			}
+		} else if (stricmp(buf, "NO") == 0) {
+			if (always_authenticate) {
+				// client refused to authenticate
+				// when server required it
+				dprintf (D_ALWAYS, "DC_AUTHENTICATE: client refused to authenticate.\n");
+				return FALSE;
+			}
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
 		} else if (stricmp(buf, "ASK") == 0) {
 			ClassAd auth_response;
-			auth_response.Insert("AUTHENTICATE=\"YES\"");
+			if (always_authenticate) {
+				auth_response.Insert("AUTHENTICATE=\"YES\"");
+			} else {
+				auth_response.Insert("AUTHENTICATE=\"NO\"");
+			}
 			sock->encode();
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending following classad telling client to authenticate: \n");
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending following classad to client: \n");
 			auth_response.dPrint (D_SECURITY);
 			auth_response.code(*sock);
 			sock->end_of_message();
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-			sock->authenticate(getAuthBitmask(auth_types));
+
+			if (always_authenticate) {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+				if (!sock->authenticate(getAuthBitmask(auth_types))) {
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
+					return FALSE;
+				}
+			} else {
+				dprintf (D_SECURITY, "DC_AUTHENTICATE: decided not to authenticate.\n");
+			}
+
 		}
 
 		// CHECK TO SEE IF THE KERB-IP is the same
@@ -1646,7 +1668,6 @@ int DaemonCore::HandleReq(int socki)
 		const char* sockip = sin_to_string(sock->endpoint());
 		const char* kerbip = sock->authob->getRemoteAddress() ;
 
-		result = strcmp(sockip, kerbip);
 		result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
