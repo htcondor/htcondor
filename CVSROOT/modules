@@ -59,7 +59,6 @@ AIX_CODE	-a Distfile GENERIC config \
 			src/condor_standalone \
 			src/condor_startd \
 			src/condor_starter \
-			src/condor_submit \
 			src/condor_submit.v2 \
 			src/condor_submit.v3 \
 			src/condor_syscall_lib_aix \
