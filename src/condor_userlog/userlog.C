@@ -394,10 +394,34 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_SUBMIT:
 				delete event;
 				break;
-			case ULOG_EXECUTE:
+			case ULOG_EXECUTE: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				ExecRecs.insert(HashKey(hash), (ExecuteEvent *)event);
+				HashKey key(hash);
+				// check if we already have an execute event for this job
+				ExecuteEvent *execEvent;
+				if (ExecRecs.lookup(key, execEvent) >= 0) {
+					// This means we found two execute events for the
+					// job not separated by an evict or terminate
+					// event.  Which one should we throw out?  We
+					// throw out the later event for now, since the
+					// 6.1.15 and 6.1.16 shadows logged execute events
+					// before every other event, so keeping the first
+					// execute event gives correct results for those
+					// shadows.  In the worst case, we will
+					// overestimate run-time and badput by doing this.
+					// We give a warning in debug mode.
+					if (debug_mode) {
+						fprintf(stderr, "warning: discarding execute event "
+								"(job %s)\n  found before evict or "
+								"termination event for previous execute "
+								"event.\n", hash);
+					}
+					delete event;
+					break;
+				}
+				ExecRecs.insert(key, (ExecuteEvent *)event);
 				break;
+			}
 			case ULOG_CHECKPOINTED: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
 				HashKey key(hash);
