@@ -358,7 +358,69 @@ problem.  Viewing the job's error and log files
 may assist in tracking down the problem.  If the cause is still unclear, please
 contact your system administrator.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:job-log-events}In the Log file}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{job!log events}
+\index{log files!event descriptions}
+In a job's log file are a log of events (a listing of events in
+chronological order) that occurred during the life of the job.
+The formatting of the events is always the same, 
+so that they may be machine readable.
+Four fields are always present,
+and they will most often be followed by other fields that give further
+information that is specific to the type of event.
+
+The first field in an event is the numeric value assigned as the
+event type in a 3-digit format.
+The second field identifies the job which generated the event. 
+Within parentheses are the ClassAd job attributes of
+\AdAttr{ClusterId} value, 
+\AdAttr{ProcId} value, 
+and a set of zeros,
+separated by periods.
+The third field is the date and time of the event logging.  
+The fourth field is a string that briefly describes the event.
+Fields that follow the fourth field give further information for the specific
+event type.
+
+Table~\ref{job-event-table} lists all event types.
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|lll|} \hline
+\Bold{Event Number} & \Bold{Event Description} & \Bold{Notes} \\ \hline \hline
+000 & Job submitted             \\ \hline
+001 & Job now running           \\ \hline
+002 & Error in executable       \\ \hline
+003 & Job was checkpointed      \\ \hline
+004 & Job evicted from machine  \\ \hline
+005 & Job terminated            \\ \hline
+006 & Image size of job updated \\ \hline
+007 & Shadow threw an exception \\ \hline
+008 & Generic Log Event         \\ \hline
+009 & Job Aborted               \\ \hline
+010 & Job was suspended         \\ \hline
+011 & Job was unsuspended       \\ \hline
+012 & Job was held              \\ \hline
+013 & Job was released          \\ \hline
+014 & Parallel Node executed    \\ \hline
+015 & Parallel Node terminated  \\ \hline
+016 & POST script terminated    \\ \hline
+017 & Job Submitted to Globus   \\ \hline
+018 & Globus Submit failed      \\ \hline
+019 & Globus Resource Up        \\ \hline
+020 & Globus Resource Down      \\ \hline
+021 & Remote Error              \\ \hline
+\end{tabular}
+\caption{\label{job-event-table}Events within Log files}
+\end{table}
+\end{center}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!completion}
 
 When your Condor job completes(either through normal means or abnormal
