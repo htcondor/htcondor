@@ -65,7 +65,11 @@ case $os in
 				osld="/usr/lib/old_ld"
 				abi="-o32"
 			else
-				osld="/usr/lib/ld"
+				if [ $brokenbase = "ld32" ]; then
+					osld="/usr/lib32/cmplrs/ld32"
+				else
+					osld="/usr/lib/ld"
+				fi
 			fi
 		fi
 		;;
@@ -181,8 +185,13 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		if [ X$abi = X-o32 ]; then
 			ldargs="-mips2 $abi" 
 		else
-			ldargs="$abi -woff 85"
+			if [ "$brokenbase" = "ld32" ]; then
+				ldargs="-LD_MSG:verbose=131 $abi -woff 85"
+			else
+				ldargs="$abi -woff 85"
+			fi
 		fi
+
 
 	#6/3/99 mikeu: the rest of this is redoing the work done in prev case stmt
 	#	# must use old_ld to link with Condor on IRIX
