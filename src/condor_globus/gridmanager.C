@@ -716,7 +716,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 	// Get all the new Grid job ads
 	dprintf(D_FULLDEBUG,"ConnectQ w/ constraint=%s\n",expr_buf);
-	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, true );
+	Qmgr_connection *schedd = ConnectQ( ScheddAddr, QMGMT_TIMEOUT, false );
 	if ( !schedd ) {
 		dprintf( D_ALWAYS, "Failed to connect to schedd! (in REMOVE_JOBS)\n");
 		return FALSE;
