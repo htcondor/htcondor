@@ -278,6 +278,9 @@ V6_6_EXT	-a V6_6_COMMON_EXT \
 V6_7_EXT	-a V6_6_EXT \
 		externals/bundles/gt3gahp/1.0
 
+# Externals needed for V6_7_0
+V6_7_0_EXT  -a V6_7_EXT
+
 # Windows-only programs. dagedit will be added here too.
 NT_PROGRAMS -a src/condor_birdwatcher 
 
