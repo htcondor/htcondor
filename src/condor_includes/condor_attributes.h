@@ -35,6 +35,7 @@ const char ATTR_ACTION_IDS				 [] = "ActionIds";
 const char ATTR_ACTION_RESULT			 [] = "ActionResult";
 const char ATTR_ACTION_RESULT_TYPE		 [] = "ActionResultType";
 const char ATTR_ACTIVITY				 [] = "Activity";
+const char ATTR_ALLOW_NOTIFICATION_CC    [] = "AllowNotificationCC";
 const char ATTR_APPEND_FILES			[] = "AppendFiles";
 const char ATTR_ARCH                     [] = "Arch";
 const char ATTR_AVAIL_BANDWIDTH_TO_SUBMIT_MACHINE[] = "AvailBandwidthToSubmitMachine";
