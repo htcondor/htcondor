@@ -229,51 +229,27 @@ AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// A dummy class used by the delete operator to avoid recursion               //
+// Destructor
+// This used to be operator delete(), but no longer.
 ////////////////////////////////////////////////////////////////////////////////
-class Dummy
+ExprTree::~ExprTree()
 {
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// Delete operator member functions                                           //
-////////////////////////////////////////////////////////////////////////////////
-
-void ExprTree::operator delete(void* exprTree)
-{
-    if(exprTree)
-    {
-	if(((ExprTree*)exprTree)->cardinality > 0)
-	// this is a binary operator, delete the children
-	{
-	    if(((BinaryOpBase*)exprTree)->lArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->lArg;
-	    }
-	    if(((BinaryOpBase*)exprTree)->rArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->rArg;
-	    }
+	// The cardinality is a (lame) way to indicate if it's a binary operator
+	if (cardinality > 0) {
+		if (LArg()) {
+			delete LArg();
+		}
+		if (RArg()) {
+			delete RArg();
+		}
 	}
-        if(((ExprTree*)exprTree)->ref > 0)
-        // there are more than one pointer to this expression tree
-        {
- 	    ((ExprTree*)exprTree)->ref--;
-        }
-        else
-        // no more pointer to this expression tree
-        {
-	    	if(((ExprTree*)exprTree)->type == LX_VARIABLE)
-	    	{
-				delete []((VariableBase*)exprTree)->name;
-	    	}
-	    	if(((ExprTree*)exprTree)->type == LX_STRING)
-	    	{
-				delete []((StringBase*)exprTree)->value;
-	    	}
-	    	delete (Dummy*)exprTree;
-        }
-    }
+	if (type == LX_VARIABLE) {
+		delete []((VariableBase*) this)->name;
+	}
+	if (type == LX_STRING) {
+		delete []((StringBase*) this)->value;
+	}
+	return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -503,6 +479,19 @@ ExprTree* ExprTree::Copy()
     }
     this->ref++;
 	return this;
+}
+
+// This is used by the various CopyDeep()s to get the variables from the base
+// ExprTree class.
+void ExprTree::CopyBaseExprTree(ExprTree * const recipient) const
+{
+	recipient->unit         = unit;
+	recipient->ref          = ref;
+	recipient->type         = type;
+	recipient->cardinality  = cardinality;
+	recipient->sumFlag      = sumFlag;
+	recipient->evalFlag     = evalFlag;
+	return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
