@@ -42,6 +42,7 @@
 #include "condor_common.h"
 #include "scanner.h"
 extern int yyline;
+extern int yylex( void );
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
 	int is_ptr, struct node *action_func_list );
