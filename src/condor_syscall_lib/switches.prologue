@@ -13,6 +13,13 @@
 #endif
 
 #if defined(Solaris)
+#define fstat __hide_fstat 
+#define stat __hide_stat 
+#define lstat __hide_lstat 
+#define mknod __hide_mknod 
+#define uname __hide_uname 
+#define profil __hide_profil
+#define mount __hide_mount
 #include "../condor_includes/_condor_fix_types.h"
 #include </usr/ucbinclude/sys/rusage.h>
 #endif 
@@ -38,6 +45,7 @@
 #	define profil	__hide_profil
 #endif
 #include <sys/stat.h>
+
 #include <sys/time.h>
 #if defined(HPUX9)
 #	undef mknod
@@ -53,6 +61,13 @@
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
 #endif
 
+#if defined(Solaris)
+#undef fstat 
+#undef stat 
+#undef lstat
+#undef mknod 
+#endif
+
 #include <sys/resource.h>
 #if defined(HPUX9)
 #undef _PROTOTYPES
@@ -66,6 +81,10 @@
 #if	defined(ULTRIX43)
 #	undef uname
 	int uname( struct utsname *name );
+#endif
+
+#if defined(Solaris)
+#	undef uname
 #endif
 
 #if defined(SUNOS41) 
@@ -128,6 +147,11 @@
 #	define read		__hide_read
 #endif
 #include "condor_fix_unistd.h"
+#if defined(Solaris)
+#	undef profil
+#	undef mount
+#endif
+
 #if defined(HPUX9)
 #   undef mknod
 #	undef readlink
@@ -161,7 +185,7 @@
 	int shmget( key_t key, unsigned int size, unsigned int flags );
 #endif
 
-#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43)
+#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43) || defined(Solaris)
 #	define TRUE 1
 #	define FALSE 0
 #endif
@@ -170,6 +194,8 @@
 #undef MODE_T
 #if defined(AIX32)
 #	define MODE_T ulong_t
+#elif defined(Solaris)
+#	define MODE_T unsigned long
 #else
 #	define MODE_T unsigned int
 #endif
@@ -289,3 +315,4 @@ THREE( socket, _socket, int, int, int )
 #if defined(LINUX)
 #include "switches.linux.h"
 #endif
+
