@@ -1,3 +1,11 @@
+10/05/04 V6_7-soap-3-branch
+   The V6_7-soap-3-branch from V6_7-soap-3-root. This branch is a catch-up
+   branch to mainly take advantage of Imake changes. The 
+   V6_7-soap-2-branch will be merged into this.
+
+10/05/04 V6_7-soap-3-root
+   The start of the V6_7-soap-3-branch off of V6_7-branch.
+
 09/24/04 V6_7_2-branch
    Branch for the 6.7.2 release.  This tag includes all of the
    V6_7_CODE module, and was created from the V6_7_2-root tag.
