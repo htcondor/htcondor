@@ -1,0 +1,65 @@
+Job     NODE0         job_dagman_prepost-node.cmd
+Job     NODE1         job_dagman_prepost-node.cmd
+Job     NODE2         job_dagman_prepost-node.cmd
+Job     NODE3         job_dagman_prepost-node.cmd
+Job     NODE4         job_dagman_prepost-node.cmd
+Job     NODE5         job_dagman_prepost-node.cmd
+Job     NODE6         job_dagman_prepost-node.cmd
+Job     NODE7         job_dagman_prepost-node.cmd
+Job     NODE8         job_dagman_prepost-node.cmd
+Job     NODE9         job_dagman_prepost-node.cmd
+Job     NODE10         job_dagman_prepost-node.cmd
+Job     NODE11         job_dagman_prepost-node.cmd
+Job     NODE12         job_dagman_prepost-node.cmd
+Job     NODE13         job_dagman_prepost-node.cmd
+Job     NODE14         job_dagman_prepost-node.cmd
+Job     NODE15         job_dagman_prepost-node.cmd
+Job     NODE16         job_dagman_prepost-node.cmd
+Job     NODE17         job_dagman_prepost-node.cmd
+Job     NODE18         job_dagman_prepost-node.cmd
+Job     NODE19         job_dagman_prepost-node.cmd
+Job		FINAL			job_dagman_prepost-srvr-close.cmd
+
+Script POST NODE0     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE1     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE2     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE3     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE4     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE5     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE6     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE7     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE8     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE9     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE10     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE11     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE12     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE13     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE14     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE15     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE16     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE17     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE18     ./job_dagman_prepost-posthello.pl $RETURN
+Script POST NODE19     ./job_dagman_prepost-posthello.pl $RETURN
+
+Script PRE NODE0     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE1     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE2     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE3     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE4     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE5     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE6     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE7     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE8     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE9     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE10     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE11     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE12     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE13     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE14     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE15     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE16     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE17     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE18     ./job_dagman_prepost-prehello.pl 
+Script PRE NODE19     ./job_dagman_prepost-prehello.pl 
+
+PARENT NODE0 NODE1 NODE2 NODE3 NODE4 NODE5 NODE6 NODE7 NODE8 NODE9 NODE10 NODE11 NODE12 NODE13 NODE14 NODE15 NODE16 NODE17 NODE18 NODE19 CHILD FINAL

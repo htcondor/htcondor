@@ -1,0 +1,41 @@
+Job     NODE0         job_dagman_fullremove.cmd
+Job     NODE1         job_dagman_fullremove.cmd
+Job     NODE2         job_dagman_fullremove.cmd
+Job     NODE3         job_dagman_fullremove.cmd
+Job     NODE4         job_dagman_fullremove.cmd
+Job     NODE5         job_dagman_fullremove.cmd
+Job     NODE6         job_dagman_fullremove.cmd
+Job     NODE7         job_dagman_fullremove.cmd
+Job     NODE8         job_dagman_fullremove.cmd
+Job     NODE9         job_dagman_fullremove.cmd
+Job     NODE10         job_dagman_fullremove.cmd
+Job     NODE11         job_dagman_fullremove.cmd
+Job     NODE12         job_dagman_fullremove.cmd
+Job     NODE13         job_dagman_fullremove.cmd
+Job     NODE14         job_dagman_fullremove.cmd
+Job     NODE15         job_dagman_fullremove.cmd
+Job     NODE16         job_dagman_fullremove.cmd
+Job     NODE17         job_dagman_fullremove.cmd
+Job     NODE18         job_dagman_fullremove.cmd
+Job     NODE19         job_dagman_fullremove.cmd
+
+Script POST NODE0     ./job_dagman_monitor.pl $RETURN
+Script POST NODE1     ./job_dagman_monitor.pl $RETURN
+Script POST NODE2     ./job_dagman_monitor.pl $RETURN
+Script POST NODE3     ./job_dagman_monitor.pl $RETURN
+Script POST NODE4     ./job_dagman_monitor.pl $RETURN
+Script POST NODE5     ./job_dagman_monitor.pl $RETURN
+Script POST NODE6     ./job_dagman_monitor.pl $RETURN
+Script POST NODE7     ./job_dagman_monitor.pl $RETURN
+Script POST NODE8     ./job_dagman_monitor.pl $RETURN
+Script POST NODE9     ./job_dagman_monitor.pl $RETURN
+Script POST NODE10     ./job_dagman_monitor.pl $RETURN
+Script POST NODE11     ./job_dagman_monitor.pl $RETURN
+Script POST NODE12     ./job_dagman_monitor.pl $RETURN
+Script POST NODE13     ./job_dagman_monitor.pl $RETURN
+Script POST NODE14     ./job_dagman_monitor.pl $RETURN
+Script POST NODE15     ./job_dagman_monitor.pl $RETURN
+Script POST NODE16     ./job_dagman_monitor.pl $RETURN
+Script POST NODE17     ./job_dagman_monitor.pl $RETURN
+Script POST NODE18     ./job_dagman_monitor.pl $RETURN
+Script POST NODE19     ./job_dagman_monitor.pl $RETURN
