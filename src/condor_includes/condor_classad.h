@@ -88,10 +88,10 @@ class ClassAdList : public AttrListList
 
 	// User supplied function should define the "<" relation and the list
 	// is sorted in ascending order
-	void        Sort(int(*)(ClassAd*, ClassAd*));
+	void        Sort(int(*)(ClassAd*, ClassAd*, void*));
 
   private:
-	void		Sort(int(*)(ClassAd*, ClassAd*), AttrListAbstract*&);
+	void		Sort(int(*)(ClassAd*, ClassAd*, void*), void*, AttrListAbstract*&);
 };
 
 #endif
