@@ -35,7 +35,9 @@
 
 /* Things we want defined on all systems */
 
+#ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE
+#endif
 
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
@@ -131,6 +133,7 @@ typedef fd_set *SELECT_FDSET_PTR;
 #include <stdarg.h>
 #include <signal.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/ioctl.h>
@@ -155,6 +158,7 @@ typedef fd_set *SELECT_FDSET_PTR;
 #include <values.h>
 #include <math.h>
 #include <utime.h>
+#include <sys/poll.h>
 
 #define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
 #define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */

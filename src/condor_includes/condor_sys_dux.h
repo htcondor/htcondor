@@ -35,7 +35,13 @@
    says we should use memset(). */
 #undef FD_ZERO
 #define FD_ZERO(p)     memset((char *)(p), 0, sizeof(*(p)))
-#define HAS_U_TYPES
+
+/* bzero has different types in these two files.  Let's choose one. */
+
+#define bzero __condor_hack_bzero
+#include <strings.h>
+#undef bzero
+#include <sys/select.h>
 
 /* Include sysmisc.h for the proc library now, but it needs to _not_
  * have _XOPEN_SOURCE_EXTENDED defined, cuz we need struct sigaltstack. 
@@ -58,10 +64,26 @@ END_C_DECLS
 #include <stdio.h>
 #include <sys/select.h>
 
+#if !defined(_LIBC_POLLUTION_H_)
+#define _LIBC_POLLUTION_H_
+#define CONDOR_LIBC_POLLUTION_H_
+#endif
 #include <signal.h>
+#if defined(CONDOR_LIBC_POLLUTION_H_)
+#undef _LIBC_POLLUTION_H_
+#undef CONDOR_LIBC_POLLUTION_H_
+#endif
+
 #if !defined(NSIG) && defined(SIGMAX)
 #define NSIG (SIGMAX+1)
 #endif
+
+/* Provide a prototype for _Esigaction, otherwise C++ thinks it is a constructor for struct sigaction */
+
+int _Esigaction(int signum, const struct sigaction  *act, struct sigaction *oldact);
+
+/* And, redirect calls to sigaction to _Esigaction like the header file wants */
+#define sigaction(a,b,c) _Esigaction(a,b,c)
 
 /* Need these to get statfs and friends defined */
 #include <sys/stat.h>
@@ -92,7 +114,6 @@ END_C_DECLS
 #include <netdb.h>
 #undef gethostid
 
-
 /* On Digital Unix, basename() has the wrong prototype.  Normally,
    we'd "hide" it, but the system header files are already doing wierd
    things with it, like "#define basename _Ebasename", etc.  So, to
@@ -101,5 +122,25 @@ END_C_DECLS
 #include <string.h>
 #undef basename
 #undef dirname
+
+/* These don't seem to have prototypes in OSF */
+
+BEGIN_C_DECLS
+int async_daemon(void);
+int nfssvc(int,int,int);
+int swapon(const char *,int);
+END_C_DECLS
+
+/****************************************
+** Condor-specific system definitions
+****************************************/
+
+#define HAS_U_TYPES		1
+#define SIGSET_CONST		const
+#define SYNC_RETURNS_VOID	1
+#define NO_VOID_SIGNAL_RETURN	1
+
+typedef long long off64_t;
+typedef caddr_t MMAP_T;
 
 #endif /* CONDOR_SYS_DUX_H */

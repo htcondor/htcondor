@@ -28,9 +28,12 @@
    to take ints (according to the man page, POSIX, whatever) that
    really take enums.  -Derek Wright 4/17/98 */
 #define getpriority __hide_getpriority
+#define setpriority __hide_setpriority
 #define getrlimit __hide_getrlimit
 #define __getrlimit __hide__getrlimit
 #define setrlimit __hide_setrlimit
+#define getrusage __hide_getrusage
+
 #endif /* LINUX && GLIBC */
 
 #if !defined(WIN32)
@@ -43,19 +46,33 @@ extern "C" {
 
 #if defined(LINUX) && defined(GLIBC)
 #undef getpriority
+#undef setpriority
 #undef getrlimit
 #undef __getrlimit
 #undef setrlimit
+#undef getrusage
+
 int getrlimit(int, struct rlimit *);
 int __getrlimit(int, struct rlimit *);
 int setrlimit(int, const struct rlimit *);
 int getpriority(int, int);
-
+int setpriority(int, int, int);
+int getrusage(int, struct rusage * );
 #endif /* LINUX && GLIBC */
 
+/* on a glibc 2.1 machine r_lim_t is defined, so we undef it and let the typdef
+	through */
+#if defined(LINUX) && defined(GLIBC21)
+#	undef rlim_t
+#endif
+
+#if defined(LINUX) && !defined(GLIBC)
+	typedef long rlim_t;
+#endif
 
 #if defined(__cplusplus)
 }
 #endif
 
 #endif /* CONDOR_FIX_SYS_RESOURCE_H */
+

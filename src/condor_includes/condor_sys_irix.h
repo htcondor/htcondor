@@ -36,10 +36,12 @@
    ourselves anymore. */
 #include <rpc/types.h>
 
+/* For some reason this isn't found in sys/types */
+typedef long long blkcnt64_t;
+
 /* For strdup to get prototyped, we need to still have the XOPEN stuff 
    defined when we include string.h */
 #include <string.h>
-
 
 /******************************
 ** unistd.h
@@ -74,6 +76,7 @@ int pclose(FILE *stream);
 ******************************/
 #define SIGTRAP 5
 #define SIGBUS 10
+#define SIGIO 22
 #define _save_NO_ANSIMODE _NO_ANSIMODE
 #undef _NO_ANSIMODE
 #define _NO_ANSIMODE 1
@@ -135,6 +138,9 @@ int pclose(FILE *stream);
 
 #include <sys/select.h>
 
+#undef _SGIAPI
+#define _SGIAPI 1
+
 /* Need these to get statfs and friends defined */
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -142,12 +148,16 @@ int pclose(FILE *stream);
 /* Needed to get TIOCNOTTY defined */
 #include <sys/ttold.h>
 
-
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
-#define HAS_U_TYPES				1
-#define NO_VOID_SIGNAL_RETURN	1
 
+#define HAS_U_TYPES			1
+#define SIGSET_CONST			const
+#define SYNC_RETURNS_VOID		1
+#define NO_VOID_SIGNAL_RETURN		1
+#define HAS_64BIT_STRUCTS		1
+
+typedef void * MMAP_T;
 
 #endif /* CONDOR_SYS_IRIX_H */

@@ -29,6 +29,9 @@
 #	define _LARGEFILE64_SOURCE
 #endif
 
+#include "condor_fix_sys_utsname.h"
+#include "condor_fix_sys_stat.h"
+
 #include <sys/types.h>
 
 #include <unistd.h>
@@ -70,17 +73,30 @@ END_C_DECLS
 
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <sys/dirent.h>
+
+BEGIN_C_DECLS
+/* This is a system call with no header. */
+extern int fdsync( int fd,int flags );
+/* I can't find this prototype... */
+extern int getdents(int, struct dirent *, unsigned int);
+END_C_DECLS
 
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
-#define HAS_U_TYPES				1
 
-#if !defined( Solaris251 ) 
-#	define HAS_64BIT_STRUCTS	1
-#	define HAS_64BIT_SYSCALLS	1
-#	define HAS_F_DUP2FD			1
+#define HAS_U_TYPES			1
+#define SIGSET_CONST			const
+#define SYNC_RETURNS_VOID		1
+
+#if defined(Solaris26) 
+	#define HAS_64BIT_STRUCTS	1
+	#define HAS_F_DUP2FD		1
+#elif defined(Solaris251)
+	typedef long long off64_t;
 #endif
 
+typedef void* MMAP_T;
 
 #endif /* CONDOR_SYS_SOLARIS_H */

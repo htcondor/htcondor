@@ -23,17 +23,42 @@
 #ifndef _FILE_TABLE_INTERF_H
 #define _FILE_TABLE_INTERF_H
 
+/**
+This file describes the simple C interface to file table
+operations that the startup and checkpoint code needs
+access to.
+<p>
+All these functiosn are prefixed with _condor because
+they will be linked with user jobs.
+*/
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-void InitFileState( void );
-void DumpOpenFds( void );
-void SaveFileState( void );
-void RestoreFileState( void );
-int MapFd( int );
-void Set_CWD( const char *working_dir );
-int LocalAccess( int );
+/** Display known info about the file table */
+void _condor_file_table_dump();
+
+/** Set up the file table if necessary.  Calling this function multiple times is harmless.  All system calls that access FileTab should call this function first. */
+void _condor_file_table_init();
+
+/** Perform a periodic checkpoint of the file state. */
+void _condor_file_table_checkpoint();
+
+/** Checkpoint the file state in preparation for a vacation. */
+void _condor_file_table_suspend();
+
+/** Restore the file state after a checkpoint. */
+void _condor_file_table_resume();
+
+/** Get the real fd associated with this virtual fd. */
+int _condor_file_table_map( int fd );
+
+/** Return true if this virtual fd refers to a local file. */
+int _condor_file_is_local( int user_fd );
+
+/** Just before the program is about to exit, perform any necessary cleanup such as buffer flushing, data reporting, etc. */
+void _condor_file_table_cleanup();
 
 #if defined(__cplusplus)
 }

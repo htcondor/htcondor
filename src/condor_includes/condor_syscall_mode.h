@@ -62,10 +62,9 @@ BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
 int REMOTE_syscall( int syscall_num, ... );
 
-#if defined(OSF1) || defined(HPUX)
+#if defined(OSF1) || defined(HPUX) || defined(IRIX) || defined(Solaris)
 	int syscall( int, ... );
 #endif
-
 
 #if defined(__cplusplus)
 }

@@ -55,8 +55,6 @@ typedef struct fd_set fd_set;
 #endif
 
 #if defined(LINUX) && defined(GLIBC)
-#	define truncate _hide_truncate
-#	define ftruncate _hide_ftruncate
 #	define profil _hide_profil
 #	define daemon _hide_daemon
 #endif
@@ -118,8 +116,6 @@ int pipe(int fildes[2]);
 
 
 #if defined(LINUX) && defined(GLIBC)
-#	undef truncate
-#	undef ftruncate
 #	undef profil
 #	undef daemon
 #endif
@@ -161,8 +157,6 @@ extern "C" {
 #endif
 
 #if defined(LINUX) && defined(GLIBC)
-	int truncate( const char *, size_t );
-	int ftruncate( int, size_t );
 	int profil( char*, int, int, int );
 #endif
 

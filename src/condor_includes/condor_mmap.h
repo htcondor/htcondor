@@ -52,8 +52,8 @@
 extern "C" {
 #endif
 
-MMAP_T MMAP(MMAP_T, size_t, int, int, int, off_t);
-MMAP_T mmap(MMAP_T, size_t, int, int, int, off_t);
+MMAP_T	MMAP(MMAP_T, size_t, int, int, int, off_t);
+MMAP_T	mmap(MMAP_T, size_t, int, int, int, off_t);
 
 #if defined(__cplusplus)
 }

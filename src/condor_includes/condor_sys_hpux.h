@@ -24,6 +24,8 @@
 #define CONDOR_SYS_HPUX_H
 
 #define _XPG4_EXTENDED
+#define _XOPEN_SOURCE_EXTENDED
+#define _PROTOTYPES
 
 #include <sys/types.h>
 
@@ -52,22 +54,31 @@
 #	define WCOREFLG 0x0200
 #endif
 
-/* Define all the 64-bit types and structures we need. 
-   We want to do this before we get sys/fcntl.h so that we have
-   off64_t defined when we're trying to define struct flock64 */
+#include <sys/fcntl.h>
+
 #include "condor_hpux_64bit_types.h"
 
-#define _LARGEFILE64_SOURCE
-#include <sys/fcntl.h>
-#undef _LARGEFILE64_SOURCE
+/* nfs/nfs.h is needed for fhandle_t.
+   struct export is required to pacify prototypes
+   of type export * before struct export is defined. */
 
+struct export;
+#include <nfs/nfs.h>
+
+/* mount prototype */
+#include <sys/mount.h>
 
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
-#define HAS_U_TYPES				1
-#define SIGISMEMBER_IS_BROKEN	1
+
 #define HAS_64BIT_STRUCTS		1
-#define HAS_64BIT_SYSCALLS		1
+#define SIGSET_CONST			const
+#define HAS_U_TYPES			1
+#define SYNC_RETURNS_VOID		1
+#define SIGISMEMBER_IS_BROKEN		1
+
+typedef void* MMAP_T;
 
 #endif /* CONDOR_SYS_HPUX_H */
+
