@@ -450,6 +450,8 @@ usage()
 
 int Do_SYS_check = 1;
 int gen_local_calls = 1;
+int stub_clump_size = 0;
+int stub_clump_num = 0;
 
 main( int argc, char *argv[] )
 {
@@ -481,6 +483,9 @@ main( int argc, char *argv[] )
 				break;
 			  case 'e':
 				Epilogue = *(++argv);
+				break;
+			  case 's':
+				stub_clump_size = atoi( *(++argv) );
 				break;
 			  case 'n':
 				arg = *(++argv);
@@ -1044,6 +1049,7 @@ output_receiver( struct node *n )
 	struct node *p, *q;
 	struct node *var, *size;
 	char   *rval;
+	static int clump_number = 0;
 
 	assert( n->node_type == FUNC );
 
@@ -1220,6 +1226,23 @@ output_receiver( struct node *n )
 	} else {
 		printf( "#endif\n\n" );
 	}
+
+	stub_clump_num++;
+	if ( stub_clump_size > 0 && stub_clump_num >= stub_clump_size ) {
+		stub_clump_num = 0;
+		clump_number++;
+		printf( "\n" );
+		printf( "\tdefault:\n");
+		printf( "\t\tdo_REMOTE_syscall%d(condor_sysnum);\n",
+			clump_number );
+		printf( "\t}\n" );
+		printf( "}\n\n" );
+		printf( "int\n" );
+		printf( "do_REMOTE_syscall%d(int condor_sysnum)\n",clump_number);
+		printf( "{\n" );
+		printf( "\tint rval;\n\n" );
+		printf( "\tswitch(condor_sysnum) {\n\n" );
+	}
 }
 
 /*
@@ -1230,6 +1253,7 @@ output_sender( struct node *n )
 {
 	struct node *param_list = n->param_list;
 	struct node *p, *q;
+	static first_output_sender = 1;
 
 	assert( n->node_type == FUNC );
 
@@ -1339,6 +1363,21 @@ output_sender( struct node *n )
 
 	printf( "\t}\n" );
 	printf( "\n" );
+
+	stub_clump_num++;
+	if ( stub_clump_size > 0 && stub_clump_num >= stub_clump_size ) {
+		stub_clump_num = 0;
+		printf("\tdefault:\n");
+		printf("\t\tkeep_going = 1;\n");
+		printf("\t}\n");
+		if ( !first_output_sender ) 
+			printf("\t}\n");
+		else
+			first_output_sender = 0;
+		printf("\n\tif ( keep_going ) {\n");
+		printf("\tkeep_going = 0;\n");
+		printf("\tswitch( syscall_num ) {\n");
+	}
 }
 
 
