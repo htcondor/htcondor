@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "condor_classad.h"
 #include "operators.h"
 

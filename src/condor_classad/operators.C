@@ -1,5 +1,3 @@
-#include <math.h>				// for HUGE_VAL
-#include <limits.h>				// for WORD_BIT
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "operators.h"
