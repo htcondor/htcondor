@@ -14,6 +14,16 @@ RUN(job_rsc_hello_std)
 DEPS(job_rsc_hello_std,x_hello.in)
 TESTCLASS(job_rsc_hello_std,quick)
 
+DESC(job_ckpt_floats_std,"ckpt/restore floating point registers")
+CBUILD($(CC),job_ckpt_floats_std,c)
+RUN(job_ckpt_floats_std)
+TESTCLASS(job_ckpt_floats_std,quick)
+
+DESC(job_ckpt_integers_std,"ckpt/restore integer registers")
+CBUILD($(CC),job_ckpt_integers_std,c)
+RUN(job_ckpt_integers_std)
+TESTCLASS(job_ckpt_integers_std,quick)
+
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
 /* 
