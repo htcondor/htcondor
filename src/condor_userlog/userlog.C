@@ -180,9 +180,9 @@ void
 display_stats()
 {
 	const char TitleFormat[] =
-		"%-9.9s %9.9s %9.9s %9.9s %9.9s %9.9s %8.8s %5.5s\n";
+		"%-14.14s %9.9s %9.9s %9.9s %9.9s %9.9s %8.8s %6.6s\n";
 	const char RecordFormat[] =
-		"%-9.9s %9.0f %9.0f %9.0f %9.0f %9.0f %7.0f%% %4.0f%%\n";
+		"%-14.14s %9.0f %9.0f %9.0f %9.0f %9.0f %7.1f%% %5.1f%%\n";
 
 	// display HostStatistics
 	printf(TitleFormat, "", "Wall Time", "Good Time", "CPU Usage",
@@ -293,8 +293,10 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	hs->good_time += (double)good_time;
 	hs->cpu_usage += (double)cpu_usage;
 
-	const char TitleFormat[] = "%-9.9s %-9.9s %10s %9s %9s %9s %5s %3s %3s\n";
-	const char RecordFormat[] = "%-9.9s %-9.9s %10d %9d %9d %9d %5d %3d %3d\n";
+	const char TitleFormat[] =
+		"%-9.9s %-14.14s %10s %9s %9s %9s %5s %3s %3s\n";
+	const char RecordFormat[] =
+		"%-9.9s %-14.14s %10d %9d %9d %9d %5d %3d %3d\n";
 
 	if (!totals_only) {
 		if (!raw_data && !initialized) {
