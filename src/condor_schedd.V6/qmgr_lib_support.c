@@ -51,6 +51,7 @@ ConnectQ(char *qmgr_location)
 		if(scheddAddr)
 		{
 			connection->fd=do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
+			free(scheddAddr);
 		}
 		else
 		{
@@ -63,10 +64,10 @@ ConnectQ(char *qmgr_location)
 		/* get schedd's IP address from collector */
 		scheddAddr = get_schedd_addr(qmgr_location);
 		if(scheddAddr)
-	    {
+	    	{
         	connection->fd = do_connect(scheddAddr, "condor_schedd", QMGR_PORT);
         	free(scheddAddr);
-    	}
+    		}
 		else
 		{
 			/* 
