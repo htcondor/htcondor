@@ -1,16 +1,17 @@
-This section provides a brief summary of what can be done once your jobs
-begin execution. The basic mechanisms for monitoring a job are
-introduced, but the commands that are discussed include a lot more
-functionality than is displayed in this section. You are encouraged to
+This section provides a brief summary of what can be done once jobs
+are submitted. The basic mechanisms for monitoring a job are
+introduced, but the commands are discussed briefly.
+You are encouraged to
 look at the man pages of the commands referred to (located in
 Chapter~\ref{command-reference} beginning on
 page~\pageref{command-reference}) for more information. 
 
-Once your jobs have been submitted, Condor will attempt to find resources
-to run your jobs.  The existence of your requests is communicated to the
-Condor manager by registering you as a ``submitter.''  A list of all the
-current submitters may be obtained through \Condor{status} with the 
-\Arg{-submitters} option, which would yield output similar to the following:
+When jobs are submitted, Condor will attempt to find resources
+to run the jobs. 
+A list of all those with jobs submitted
+may be obtained through \Condor{status} with the 
+\Arg{-submitters} option. 
+An example of this would yield output similar to:
 \begin{verbatim}
 %  condor_status -submitters
 
@@ -32,10 +33,11 @@ ashoks@jules.ncsa.ui                74                   54
                Total               109                  103
 \end{verbatim}
 
-\subsection{Checking on the progress of your jobs}
+\subsection{Checking on the progress of jobs}
 At any time, you can check on the status of your jobs with the \Condor{q}
-tool, which shows the status of all queued jobs along with other information.
-To identify jobs which are running, type
+command.
+This command displays the status of all queued jobs.
+An example of the output from \Condor{q} is
 \begin{verbatim}
 %  condor_q
 
@@ -48,60 +50,43 @@ To identify jobs which are running, type
 3 jobs; 2 idle, 1 running, 0 held
 
 \end{verbatim} 
+This output contains many columns of information about the
+queued jobs.
 The \verb@ST@ column (for status) shows the status of
-current jobs in the queue. ``R'' means the the job is currently
-running. ``I'' stands for idle, which means the job is not running right
-now because it is waiting for a machine to become available. 
-``H'' stands for hold state, which means the job will not be scheduled to
+current jobs in the queue. An \verb@R@ in the status column
+means the the job is currently running.
+An \verb@I@ stands for idle. The job is not running right
+now, because it is waiting for a machine to become available. 
+The status
+\verb@H@ is the hold state. In the hold state,
+the job will not be scheduled to
 run until it is released (see condor\_hold and condor\_release man pages).
-Finally, ``U'' stands for unexpanded, which means that the job has never 
-checkpointed and when it starts running it will start runnibg from the
-beginning (this state is deprecated, so jobs will be in idle state
-from the beginning, but you may still see unexpanded state jobs
-in sites running an older version of condor).
+Older versions of Condor used a
+\verb@U@ in the status column to stand for unexpanded.
+In this state,
+a job has never 
+checkpointed and when it starts running, it will start running from the
+beginning.
+Newer versions of Condor do not use the \verb@U@ state.
 
-\textbf{Note:} The CPU time reported for a job is the time that has been
-committed to the job.  Thus, the CPU time is not updated for a job until
-the job checkpoints, at which time the job has made guaranteed forward 
+The \verb@CPU_USAGE@ time reported for a job is the time that has been
+committed to the job.  It is not updated for a job until
+the job checkpoints. At that time, the job has made guaranteed forward 
 progress.  Depending upon how the site administrator configured the pool,
 several hours may pass between checkpoints, so do not worry if you do
-not observe CPU changing by the hour.  Also note that this is actual CPU
-time as reported by the operating system; this is not wall-clock time.
+not observe the \verb@CPU_USAGE@ entry changing by the hour.
+Also note that this is actual CPU
+time as reported by the operating system; it is not time as
+measured by a wall clock.
 
 Another useful method of tracking the progress of jobs is through the
-\Term{user log} mechanism.  If you have specified a \texttt{log} command in 
+user log.  If you have specified a \AdAttr{log} command in 
 your submit file, the progress of the job may be followed by viewing the
 log file.  Various events such as execution commencement, checkpoint, eviction 
-and termination are logged in the file along with the time at which the event 
-occurred.
+and termination are logged in the file.
+Also logged is the time at which the event occurred.
 
-\subsection{Removing the job from the queue}
-A job can be removed from the queue at any time by using the \Condor{rm}
-command.  If the job that is being removed is currently running, the job
-is killed without a checkpoint, and its queue entry removed.  For example:
-\begin{verbatim}
-%  condor_q
-
--- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
- ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
- 132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello             
-
-2 jobs; 1 idle, 1 running, 0 held
-
-%  condor_rm 132.0
-Job 132.0 removed.
-
-%  condor_q
-
--- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
- ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
- 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
-
-1 jobs; 1 idle, 0 running, 0 held
-\end{verbatim}
-
-\subsection{While your job is running ...}
+% Karen's note:  degraded performance where?
 When your job begins to run, Condor starts up a \Condor{shadow} process
 on the submit machine.  The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
@@ -152,6 +137,34 @@ bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
 ...
 \end{verbatim}
 
+\subsection{Removing a job from the queue}
+A job can be removed from the queue at any time by using the \Condor{rm}
+command.  If the job that is being removed is currently running, the job
+is killed without a checkpoint, and its queue entry is removed.  
+The following example shows the queue of jobs before and after
+a job is removed.
+\begin{verbatim}
+%  condor_q
+
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+ ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
+ 132.0   raman           4/11 16:57   0+00:00:00 R  0   1.4  hello             
+
+2 jobs; 1 idle, 1 running, 0 held
+
+%  condor_rm 132.0
+Job 132.0 removed.
+
+%  condor_q
+
+-- Submitter: froth.cs.wisc.edu : <128.105.73.44:33847> : froth.cs.wisc.edu
+ ID      OWNER            SUBMITTED    CPU_USAGE ST PRI SIZE CMD               
+ 125.0   jbasney         4/10 15:35   0+00:00:00 I  -10 1.2  hello.remote      
+
+1 jobs; 1 idle, 0 running, 0 held
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-prio}Changing the priority of jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -189,14 +202,14 @@ do not impact user priorities.  They are only a mechanism for the user to
 identify the relative importance of jobs among all the jobs submitted by the
 user to that specific queue.
 
-\subsection{Why won't my job run?}
+\subsection{Why does the job not run?}
 Users sometimes find that their jobs do not run.  There are several reasons why
-a specific job does not run.  These reasons range from failed job or machine
-constraints, bias due to preferences, insufficient priority, or the preemption
-``throttle'' that is implemented by the \Condor{negotiator} to prevent
+a specific job does not run.  These reasons include failed job or machine
+constraints, bias due to preferences, insufficient priority, and the preemption
+throttle that is implemented by the \Condor{negotiator} to prevent
 thrashing.  Many of these reasons can be diagnosed by using the \Arg{-analyze}
 option of \Condor{q}.  For example, the following job submitted by user
-``jbasney'' was found not to run for several days.
+jbasney was found to have not run for several days.
 \begin{verbatim}
 % condor_q
 
@@ -226,13 +239,36 @@ WARNING:  Be advised:
    No resources matched request's constraints
    Check the Requirements expression below:
 
-Requirements = Arch == "INTEL" && OpSys == "SOLARIS251" && 0 && 
+Requirements = Arch == "INTEL" && OpSys == "IRIX6" && 
   Disk >= ExecutableSize && VirtualMemory >= ImageSize
 \end{verbatim}
 
-We see that user ``jbasney'' has inadvertently expressed a \Attr{Requirements}
-expression that can never be satisfied due to the \verb@... && 0 && ...@
-clause which always evaluates to false.
+%%%%%%%%%%%%%%%%%%%
+%condor_status -total lists the Arch/OS combinations in our pool:
+%
+%                     Machines Owner Claimed Unclaimed Matched Preempting
+%
+%           SGI/IRIX6       14     3       0        11       0          0
+%          ALPHA/OSF1        8     6       1         1       0          0
+%     SUN4u/SOLARIS26       84    38      46         0       0          0
+%    SUN4u/SOLARIS251        8     0       1         7       0          0
+%     SUN4x/SOLARIS26      104    47      56         1       0          0
+%    SUN4x/SOLARIS251        1     0       1         0       0          0
+%     INTEL/SOLARIS26      214    63     144         7       0          0
+%       INTEL/WINNT40        6     0       0         6       0          0
+%
+%               Total      439   157     249        33       0          0
+%
+%So, one example of a platform that does not exist would be:
+%
+% requirements = Arch == "INTEL" && OpSys == "IRIX6"
+%
+%%%%%%%%%%%%%%%%%%%
+
+For this job,
+the \Attr{Requirements}
+expression specifies a platform that does not exist.
+Therefore, the expression always evaluates to false.
 
 While the analyzer can diagnose most common problems, there are some situations
 that it cannot reliably detect due to the instantaneous and local nature of the
