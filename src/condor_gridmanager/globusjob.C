@@ -588,6 +588,11 @@ int GlobusJob::doEvaluateState()
 		case GM_SUBMIT: {
 			// Start a new gram submission for this job.
 			char *job_contact;
+			if ( condorState == REMOVED || condorState == HELD ) {
+				myResource->SubmitComplete(this);
+				gmState = GM_UNSUBMITTED;
+				break;
+			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 				UpdateJobAdString( ATTR_HOLD_REASON,
 									"Attempts to submit failed" );
