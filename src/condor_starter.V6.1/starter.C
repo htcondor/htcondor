@@ -70,19 +70,19 @@ CStarter::Init(char peer[])
 
 	// setup daemonCore handlers
 	daemonCore->Register_Signal(DC_SIGSUSPEND, "DC_SIGSUSPEND", 
-		(SignalHandlercpp)Suspend, "Suspend", this, IMMEDIATE_FAMILY);
+		(SignalHandlercpp)&Suspend, "Suspend", this, IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal(DC_SIGCONTINUE, "DC_SIGCONTINUE",
-		(SignalHandlercpp)Continue, "Continue", this, IMMEDIATE_FAMILY);
+		(SignalHandlercpp)&Continue, "Continue", this, IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal(DC_SIGHARDKILL, "DC_SIGHARDKILL",
-		(SignalHandlercpp)ShutdownFast, "ShutdownFast", this, 
+		(SignalHandlercpp)&ShutdownFast, "ShutdownFast", this, 
 		IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal(DC_SIGSOFTKILL, "DC_SIGSOFTKILL",
-		(SignalHandlercpp)ShutdownGraceful, "ShutdownGraceful", this,
+		(SignalHandlercpp)&ShutdownGraceful, "ShutdownGraceful", this,
 		IMMEDIATE_FAMILY);
 	daemonCore->Register_Signal(DC_SIGPCKPT, "DC_SIGPCKPT",
-		(SignalHandlercpp)PeriodicCkpt, "PeriodicCkpt", this,
+		(SignalHandlercpp)&PeriodicCkpt, "PeriodicCkpt", this,
 		IMMEDIATE_FAMILY);
-	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)Reaper, "Reaper",
+	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&Reaper, "Reaper",
 		this);
 
 	// move to working directory
