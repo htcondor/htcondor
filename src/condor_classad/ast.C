@@ -672,7 +672,6 @@ int String::CalcPrintToStr(void)
 	}
 	// Then we have to add 2, for the opening and closing quote marks.
 	return length + 2;
-	//return strlen(value) + 2; // the +2 is for the quote marks around the string
 }
 
 int Boolean::CalcPrintToStr(void)

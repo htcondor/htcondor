@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_xml_classads.h"
 #include "stringSpace.h"
 #include "condor_scanner.h" 
 
@@ -225,6 +226,14 @@ main(
 		if (parameters.verbose) {
 			printf("ClassAd %d:\n", classad_index);
 			classads[classad_index]->fPrint(stdout);
+			printf("\n");
+			ClassAdXMLUnparser unparser;
+			MyString xml;
+			
+			unparser.SetUseCompactSpacing(false);
+			unparser.SetUseCompactNames(false);
+			unparser.Unparse(classads[classad_index], xml);
+			printf("%s\n", xml.Value());
 		}
 	}
 
