@@ -49,3 +49,7 @@
 	starter, but in the mode where the user program makes its shadow
 	connections itself and reads the command stream from a file.
 	Contains many "hacks" to get the remote restart to work.
+4/27/94 IBM_version
+    Version actually checked out earlier on AIX 3.2.5.  Checked in
+    now using "cvs tag" (not rtag), to make sure I can reproduce.
+    Intend to give this version to Bob Mikrut of DoIt on 4/28/94.
