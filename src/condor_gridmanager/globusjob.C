@@ -78,6 +78,9 @@ char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST"
 };
 
+// GAHP call timeout
+#define GAHP_CALL_TIMEOUT	120
+
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 		"(%d.%d) gmState %s, globusState %d: %s returned Globus error %d\n", \
@@ -138,6 +141,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 								"doEvaluateState", (Service*) this );;
 	gahp.setNotificationTimerId( evaluateStateTid );
 	gahp.setMode( GahpClient::normal );
+	gahp.setTimeout( GAHP_CALL_TIMEOUT );
 
 	myResource = resource;
 	myResource->RegisterJob( this );
@@ -267,7 +271,8 @@ int GlobusJob::doEvaluateState()
 					} else {
 						gmState = GM_REGISTER;
 					}
-				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+							rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					gmState = GM_RESTART;
 				} else {
 					// unhandled error
@@ -285,7 +290,8 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
 			}
@@ -334,7 +340,8 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
 			}
@@ -369,7 +376,8 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
 			}
@@ -425,7 +433,8 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
 				}
@@ -464,7 +473,8 @@ int GlobusJob::doEvaluateState()
 							 rc == GAHPCLIENT_COMMAND_PENDING ) {
 							break;
 						}
-						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+							 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 							connect_failure = true;
 							break;
 						}
@@ -504,7 +514,8 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
 				}
@@ -539,7 +550,8 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
 				}
@@ -564,7 +576,8 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
 			}
@@ -613,7 +626,8 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
 				}
@@ -654,7 +668,8 @@ int GlobusJob::doEvaluateState()
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
 			}
@@ -673,7 +688,8 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
 				}
@@ -713,7 +729,8 @@ int GlobusJob::doEvaluateState()
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
-					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
 					}
@@ -747,7 +764,8 @@ int GlobusJob::doEvaluateState()
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
-					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
 					}
