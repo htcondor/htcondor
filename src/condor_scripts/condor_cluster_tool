@@ -32,6 +32,7 @@
 
 use English;
 use FileHandle;
+use Sys::Hostname;
 
 ### Config variables
 
@@ -69,8 +70,7 @@ if( $#ARGV < 0 ) {
 
 # determine username & hostname and then open logfile
 $user = scalar getpwuid( $UID );
-$hostname = `hostname`;
-chomp $hostname;
+$hostname = hostname();
 $user = "$user\@$hostname";
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
 
