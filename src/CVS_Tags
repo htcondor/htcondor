@@ -1,3 +1,7 @@
+03/10/05 V6_7_6-branch
+   A release branch for 6.7.6, created off V6_7-branch from the
+   V6_7_6-root tag (after V6_6-merge-36). 
+
 03/10/05 V6_6-merge-36
    The state of the V6_6-branch for a merge into V6_7-branch. This
    merge picks up a crucial bugfix in DaemonCore's session clearing
