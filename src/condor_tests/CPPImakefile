@@ -38,6 +38,11 @@ TESTCLASS(job_core-cpp_mem-alloc_std,quick)
  * Remote System Calls
  ***************************/
 
+DESC(job_rsc_fstream_std,"Does the C++ fstream() interface work?")
+CBUILD($(CC),job_rsc_fstream_std,C)
+DEPS(job_rsc_fstream_std,x_data.in)
+RUN(job_rsc_fstream_std)
+TESTCLASS(job_rsc_fstream_std,quick)
 
 
 /****************************
