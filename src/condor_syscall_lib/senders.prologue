@@ -91,6 +91,8 @@
 
 #include "syscall_param_sizes.h"
 
+typedef int open_flags_t;
+
 static char *_FileName_ = __FILE__;
 
 
