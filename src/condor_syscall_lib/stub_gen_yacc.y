@@ -4,6 +4,7 @@
 %token UNKNOWN
 %token MAP
 %token EXTRACT
+%token PSEUDO
 %token ARRAY
 %token IN
 %token OUT
@@ -12,11 +13,10 @@
 %token NOSUPP
 
 %type <node> stub_spec param_list param simple_param map_param
-%type <node> stub_body action_func_list 
+%type <node> stub_body action_func_list
 %type <node> action_param action_param_list action_func xfer_func alloc_func
-%type <node> nosupp_func
-%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY
-%type <bool> opt_const opt_ptr opt_ptr_to_const opt_array opt_extract
+%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP EXTRACT ARRAY opt_mult
+%type <bool> opt_const opt_ptr opt_ptr_to_const opt_array
 %type <bool> opt_reference
 %type <param_mode> use_type
 
@@ -28,15 +28,14 @@
 extern int yyline;
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
-	int is_ptr, int extract, struct node *action_func_list );
+	int is_ptr, struct node *action_func_list );
 struct node * mk_xfer_func( char *xdr_func, struct node *param_list,
 	int in, int out );
-struct node * mk_nosupp_func();
 struct node * mk_alloc_func( struct node *param_list );
 struct node * mk_param_node( char *type, char *name,
 	int is_const, int is_ptr, int is_const_ptr, int is_array,
 	int is_in, int is_out );
-struct node * mk_action_param_node( char *name, int is_ref );
+struct node * mk_action_param_node( char *name, int is_ref, char *mult );
 struct node *set_map_attr( struct node * simple );
 struct node *insert_node( struct node *list, struct node *new_elem );
 void display_node( struct node * );
@@ -55,7 +54,7 @@ char * abbreviate( char *type_name );
 void Trace( char *msg );
 char * find_type_name( char *param_name, struct node *param_list );
 int has_out_params( struct node *action_func_list );
-int not_supported( struct node *action_func_list );
+char *malloc( unsigned int );
 
 #define MATCH 0 /* for strcmp() */
 
@@ -63,23 +62,66 @@ int not_supported( struct node *action_func_list );
 #define SENDERS 2
 #define RECEIVERS 3
 
+int Supported = TRUE;
 int	Mode = 0;
 int ErrorEncountered = 0;
+int IsExtracted = FALSE;
+int IsPseudo = FALSE;
+
+
+#if 0
+input
+	: /* empty */
+	| input stub_list
+	| input non_support_list
+	;
+
+#endif
+
 
 %}
 
 %%
 
 input
-	: /* empty */
+	: stub_spec
+	| non_support_list
 	| input stub_spec
+	| input non_support_list
+	| error stub_body
+	;
+
+non_support_list
+	: nosupp_begin stub_spec
+		{
+		Trace( "non_support_list( 1 )" );
+		Supported = TRUE;
+		}
+	| nosupp_begin '{' stub_list '}'
+		{
+		Trace( "non_support_list( 2 )" );
+		Supported = TRUE;
+		}
+	;
+
+nosupp_begin
+	: NOSUPP
+		{
+		Trace( "nosupp_begin" );
+		Supported = FALSE;
+		}
+	;
+
+stub_list
+	: /* empty */
+	| stub_spec stub_list
 	| error stub_body
 	;
 
 stub_spec
-	: TYPE_NAME opt_ptr IDENTIFIER '(' param_list ')' opt_extract stub_body
+	: TYPE_NAME opt_ptr IDENTIFIER '(' param_list ')' specials stub_body
 		{
-		  $$ = mk_func_node( $1.val, $3.val, $5, $2, $7, $8 );
+		  $$ = mk_func_node( $1.val, $3.val, $5, $2, $8 );
 		  if( !ErrorEncountered ) {
 			switch( Mode ) {
 			  case SWITCHES:
@@ -131,10 +173,6 @@ action_func
 		{
 		$$ = $1;
 		}
-	| nosupp_func
-		{
-		$$ = $1;
-		}
 	;
 
 xfer_func
@@ -153,14 +191,6 @@ alloc_func
 		}
 	;
 
-nosupp_func
-	: NOSUPP '(' ')' ';'
-		{
-		Trace( "nosupp_func" );
-		$$ = mk_nosupp_func();
-		}
-	;
-
 action_param_list
 	: action_param
 		{
@@ -175,10 +205,22 @@ action_param_list
 	;
 
 action_param
-	: opt_reference IDENTIFIER
+	: opt_reference IDENTIFIER opt_mult
 		{
 		Trace( "action_param" );
-		$$ = mk_action_param_node( $2.val, $1 );
+		$$ = mk_action_param_node( $2.val, $1, $3.val );
+		}
+	;
+
+opt_mult
+	: '*' IDENTIFIER
+		{
+		Trace( "opt_mult" );
+		$$.val = $2.val;
+		}
+	| /* null */
+		{
+		$$.val =  "";
 		}
 	;
 
@@ -189,12 +231,27 @@ opt_reference
 		{ $$ = FALSE; }
 	;
 
+specials
+	: /* empty */
+	| ':' special_list
+	;
 
-opt_extract
-	: ':' EXTRACT
-		{ $$ = TRUE; }
-	| /* null */
-		{ $$ = FALSE; }
+special_list
+	: pseudo_or_extract
+	| special_list ',' pseudo_or_extract 
+	;
+
+pseudo_or_extract
+	:  PSEUDO
+		{
+		Trace( "pseudo_or_extract (1)" );
+		IsPseudo = TRUE;
+		}
+	|  EXTRACT
+		{
+		Trace( "pseudo_or_extract (2)" );
+		IsExtracted = TRUE;
+		}
 	;
 
 param_list
@@ -414,13 +471,20 @@ mk_param_node( char *type, char *name,
 }
 
 struct node *
-mk_action_param_node( char *name, int is_ref )
+mk_action_param_node( char *name, int is_ref, char *mult )
 {
 	struct node	*answer;
+	char	*name_holder;
 
 	answer = (struct node *)malloc( sizeof(struct node) );
 	answer->node_type = ACTION_PARAM;
-	answer->id = name;
+	if( mult[0] ) {
+		name_holder = malloc( strlen(name) + strlen(mult) +4 );
+		sprintf( name_holder, "%s * %s", name, mult );
+		answer->id = name_holder;
+	} else {
+		answer->id = name;
+	}
 	answer->is_ref = is_ref;
 
 	return answer;
@@ -435,7 +499,7 @@ set_map_attr( struct node * simple )
 
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
-	int is_ptr, int extract, struct node *action_func_list )
+	int is_ptr, struct node *action_func_list )
 {
 	struct node	*answer;
 
@@ -444,7 +508,10 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	answer->type_name = type;
 	answer->id = name;
 	answer->is_ptr = is_ptr;
-	answer->extract = extract;
+	answer->extract = IsExtracted;
+	IsExtracted = FALSE;
+	answer->pseudo = IsPseudo;
+	IsPseudo = FALSE;
 	answer->param_list = p_list;
 	answer->action_func_list = action_func_list;
 
@@ -474,17 +541,6 @@ mk_alloc_func( struct node *param_list )
 	answer = (struct node *)malloc( sizeof(struct node) );
 	answer->node_type = ALLOC_FUNC;
 	answer->param_list = param_list;
-
-	return answer;
-}
-
-struct node *
-mk_nosupp_func()
-{
-	struct node	*answer;
-
-	answer = (struct node *)malloc( sizeof(struct node) );
-	answer->node_type = NOSUPP_FUNC;
 
 	return answer;
 }
@@ -621,7 +677,7 @@ output_remote_call( char *id, struct node *list )
 {
 	struct node	*p;
 
-	printf( "		rval = REMOTE_syscall( SYS_%s", id );
+	printf( "		rval = REMOTE_syscall( CONDOR_%s", id );
 	if( !is_empty_list(list) ) {
 		printf( ", " );
 	}
@@ -748,7 +804,10 @@ output_receiver( struct node *n )
 
 	assert( n->node_type == FUNC );
 
-	printf( "#if defined( SYS_%s )\n", n->id );
+	if( !n->pseudo ) {
+		printf( "#if defined( SYS_%s )\n", n->id );
+	}
+
 	printf( "	case CONDOR_%s:\n", n->id );
 	printf( "	  {\n" );
 
@@ -820,10 +879,13 @@ output_receiver( struct node *n )
 		/* Invoke the system call */
 	printf( "\n" );
 	printf( "\t\terrno = 0;\n" );
-	if( not_supported(n->action_func_list) ) {
+	if( !Supported  ) {
 		printf( "\t\trval = CONDOR_NotSupported( CONDOR_%s );\n", n->id  );
 	} else {
-		printf( "\t\trval = %s( ", n->id );
+		printf( "\t\trval = %s%s( ",
+			n->pseudo ? "pseudo_" : "",
+			n->id
+		);
 		for( p=param_list->next; p != param_list; p = p->next ) {
 			printf( "%s%s ",
 				p->id,
@@ -833,6 +895,7 @@ output_receiver( struct node *n )
 		printf( ");\n" );
 	}
 	printf( "\t\tterrno = errno;\n" );
+	printf( "\t\tdprintf( D_SYSCALLS, \"rval = %%d, errno = %%d\\n\", rval, terrno );\n" );
 	printf( "\n" );
 
 
@@ -879,11 +942,16 @@ output_receiver( struct node *n )
 	}
 
 	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
-	printf( "\t\treturn rval;\n" );
+	printf( "\t\treturn 0;\n" );
 
 
 	printf( "\t}\n" );
-	printf( "#endif\n\n" );
+
+	if( n->pseudo ) {
+		printf( "\n" );
+	} else {
+		printf( "#endif\n\n" );
+	}
 }
 
 /*
@@ -897,8 +965,7 @@ output_sender( struct node *n )
 
 	assert( n->node_type == FUNC );
 
-	printf( "#if defined( SYS_%s )\n", n->id );
-	printf( "	case SYS_%s:\n", n->id );
+	printf( "	case CONDOR_%s:\n", n->id );
 	printf( "	  {\n" );
 
 		/* output a local variable decl for each param of the sys call */
@@ -976,7 +1043,7 @@ output_sender( struct node *n )
 	printf( "\t\tif( rval < 0 ) {\n" );
 	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
 	printf( "\t\t\terrno = terrno;\n" );
-	printf( "\t\t\treturn rval;\n" );
+	printf( "\t\t\tbreak;\n" );
 	printf( "\t\t}\n" );
 
 		/*
@@ -1003,7 +1070,7 @@ output_sender( struct node *n )
 
 
 	printf( "\t}\n" );
-	printf( "#endif\n\n" );
+	printf( "\n" );
 }
 
 /*
@@ -1014,7 +1081,9 @@ output_switch( struct node *n )
 {
 	assert( n->node_type == FUNC );
 
-	printf( "#if defined( SYS_%s )\n", n->id );
+	if( !n->pseudo ) {
+		printf( "#if defined( SYS_%s )\n", n->id );
+	}
 	if( n->is_ptr ) {
 		printf( "%s *\n", n->type_name );
 	} else {
@@ -1044,7 +1113,12 @@ output_switch( struct node *n )
 		}
 	}
 	printf( "}\n" );
-	printf( "#endif\n\n" );
+
+	if( n->pseudo ) {
+		printf( "\n" );
+	} else {
+		printf( "#endif\n\n" );
+	}
 }
 
 FILE *
@@ -1140,19 +1214,6 @@ find_type_name( char *param_name, struct node *param_list )
 	assert( FALSE );
 }
 
-
-int
-not_supported( struct node *action_func_list )
-{
-	struct node	*p;
-
-	for( p=action_func_list->next; p->node_type != DUMMY; p = p->next ) {
-		if( p->node_type == NOSUPP_FUNC ) {
-			return TRUE;
-		}
-	}
-	return FALSE;
-}
 
 int
 has_out_params( struct node *action_func_list )
