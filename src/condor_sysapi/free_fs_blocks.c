@@ -299,11 +299,11 @@ const char *filename;
 		/* On Solaris, we need to use f_frsize, the "fundamental
 		   filesystem block size", not f_bsize, the "preferred file
 		   system block size".  3/25/98  Derek Wright */
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / (float)1024 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / 1024.0 );
 #elif defined(OSF1)
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / (float)512 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / 1024.0 );
 #else
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
 #endif
 
 	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
