@@ -485,28 +485,33 @@ count( ClassAd *job )
 	}
 	
 	if (universe == SCHED_UNIVERSE) {
-		scheduler.SchedUniverseJobsRunning += cur_hosts;
-		scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
-	} else {
-		scheduler.JobsRunning += cur_hosts;
-		scheduler.JobsIdle += (max_hosts - cur_hosts);
-
-		// Per owner info
-		// (This is actually *submittor* information.  With NiceUser's, the
-		// number of owners is not the same as the number of submittors.  So,
-		// we first check if this job is being submitted by a NiceUser, and
-		// if so, insert it as a new entry in the "Owner" table
-		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-			strcpy(buf2,NiceUserName);
-			strcat(buf2,".");
-			strcat(buf2,owner);
-			owner=buf2;		
+		// don't count DELETED or HELD jobs
+		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			scheduler.SchedUniverseJobsRunning += cur_hosts;
+			scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 		}
+	} else {
+		// don't count DELETED or HELD jobs
+		if (status == IDLE || status == UNEXPANDED || status == RUNNING) {
+			scheduler.JobsRunning += cur_hosts;
+			scheduler.JobsIdle += (max_hosts - cur_hosts);
 
-		int OwnerNum = scheduler.insert_owner( owner );
-		scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
-		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+			// Per owner info (This is actually *submittor*
+			// information.  With NiceUser's, the number of owners is
+			// not the same as the number of submittors.  So, we first
+			// check if this job is being submitted by a NiceUser, and
+			// if so, insert it as a new entry in the "Owner" table
+			if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
+				strcpy(buf2,NiceUserName);
+				strcat(buf2,".");
+				strcat(buf2,owner);
+				owner=buf2;		
+			}
 
+			int OwnerNum = scheduler.insert_owner( owner );
+			scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
+			scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+		}
 	}
 	return 0;
 }
@@ -547,13 +552,17 @@ void
 abort_job_myself(PROC_ID job_id)
 {
 	shadow_rec *srec;
+	int mode;
 
 	// First check if there is a shadow assiciated with this process.
 	// If so, send it SIGUSR (or SIGKILL if this is a meta scheduler),
 	// but do _not_ call DestroyProc - we'll do that via the reaper
 	// after the job has exited (and reported its final status to us).
 	//
-	// If there is no shadow, then simply call DestroyProc().
+	// If there is no shadow, then simply call DestroyProc() (if we
+	// are removing the job).
+
+	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &mode);
 
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
 	     // We found a shadow for this job
@@ -595,13 +604,17 @@ abort_job_myself(PROC_ID job_id)
 		  set_priv(priv);
 #endif
 	     }
-	     srec->removed = TRUE;
+		 if (mode == REMOVED) {
+			 srec->removed = TRUE;
+		 }
 	} else {
 		// We did not find a shadow for this job; just remove it.
 		if (!scheduler.WriteAbortToUserLog(job_id)) {
 			dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
 		}
-		DestroyProc(job_id.cluster,job_id.proc);
+		if (mode == REMOVED) {
+			DestroyProc(job_id.cluster,job_id.proc);
+		}
 	}
 
 }
@@ -652,7 +665,7 @@ Scheduler::abort_job(int, Stream* s)
 	PROC_ID	job_id;
 	int nToRemove;
 
-	// First grab the number of jobs to remove
+	// First grab the number of jobs to remove/hold
 	if ( !s->code(nToRemove) ) {
 		dprintf(D_ALWAYS,"abort_job() can't read job count\n");
 		return FALSE;
@@ -675,7 +688,7 @@ Scheduler::abort_job(int, Stream* s)
 		s->end_of_message();
 	} else {
 		// We are being told to scan the queue ourselves and abort
-		// any jobs which have a status = REMOVED
+		// any jobs which have a status = REMOVED or HELD
 		ClassAd *ad;
 		char constraint[120];
 
@@ -684,9 +697,10 @@ Scheduler::abort_job(int, Stream* s)
 		// need any more info off of the socket anyway.
 		s->end_of_message();
 
-		dprintf(D_FULLDEBUG,"abort_job: asked to abort all status REMOVED jobs\n");
+		dprintf(D_FULLDEBUG,"abort_job: asked to abort all status REMOVED/HELD jobs\n");
 
-		sprintf(constraint,"%s == %d",ATTR_JOB_STATUS,REMOVED);
+		sprintf(constraint,"%s == %d || %s == %d",ATTR_JOB_STATUS,REMOVED,
+				ATTR_JOB_STATUS,HELD);
 
 		ad = GetNextJobByConstraint(constraint,1);
 		while ( ad ) {
@@ -1282,7 +1296,9 @@ find_idle_sched_universe_jobs( ClassAd *job )
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
 
-	if (max_hosts > cur_hosts) {
+	// don't count DELETED or HELD jobs
+	if (max_hosts > cur_hosts &&
+		(status == IDLE || status == UNEXPANDED || status == RUNNING)) {
 		dprintf(D_FULLDEBUG,"Found idle scheduler universe job %d.%d\n",id.cluster,id.proc);
 		scheduler.start_sched_universe_job(&id);
 	}
@@ -1948,29 +1964,34 @@ mark_job_stopped(PROC_ID* job_id)
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 							   ATTR_ORIG_MAX_HOSTS, &orig_max);
 
-	strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
-	if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
-		strcpy(owner,"nobody");
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
+
+	// if job isn't RUNNING, then our work is already done
+	if (status == RUNNING) {
+
+		strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
+		if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
+			strcpy(owner,"nobody");
 
 	// set job status to either IDLE or UNEXPANDED depending upon CPU time.
-	cpu_time = 0.0;
-	GetAttributeFloat(job_id->cluster,job_id->proc,ATTR_JOB_REMOTE_USER_CPU,&cpu_time);
-	if ( cpu_time ) {
-		status = IDLE;
-	} else {
-		status = UNEXPANDED;
-	}
+		cpu_time = 0.0;
+		GetAttributeFloat(job_id->cluster,job_id->proc,ATTR_JOB_REMOTE_USER_CPU,&cpu_time);
+		if ( cpu_time ) {
+			status = IDLE;
+		} else {
+			status = UNEXPANDED;
+		}
 
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
-	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
-	if (had_orig >= 0) {
-		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
-						orig_max);
-	}
+		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
+		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
+		if (had_orig >= 0) {
+			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
+							orig_max);
+		}
 	
-	dprintf( D_FULLDEBUG, "Marked job %d.%d as %s\n", job_id->cluster,
-			job_id->proc, status==IDLE?"IDLE":"UNEXPANDED" );
-	
+		dprintf( D_FULLDEBUG, "Marked job %d.%d as %s\n", job_id->cluster,
+				 job_id->proc, status==IDLE?"IDLE":"UNEXPANDED" );
+	}	
 }
 
 
