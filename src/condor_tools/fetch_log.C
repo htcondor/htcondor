@@ -48,7 +48,7 @@ usage( char *cmd )
 	fprintf(stderr,"    -kbdd\n");
 	fprintf(stderr,"    -dagman\n"); 
 	fprintf(stderr,"    -view_collector\n");
-	fprintf(stderr,"\nExample: %s -debug coral STARTD log.file\n\n",cmd);
+	fprintf(stderr,"\nExample: %s -debug coral STARTD\n\n",cmd);
 }
 
 void
@@ -135,6 +135,7 @@ int main( int argc, char *argv[] )
 
 	sock->encode();
 	sock->put( DC_FETCH_LOG );
+	sock->put( DC_FETCH_LOG_TYPE_PLAIN );
 	sock->put( log_name );
 	sock->end_of_message();
 
@@ -149,7 +150,7 @@ int main( int argc, char *argv[] )
 		case -1:
 			reason = "permission denied";
 			break;
-		case DC_FETCH_LOG_SUCCESS:
+		case DC_FETCH_LOG_RESULT_SUCCESS:
 			result = sock->get_file(1,0);
 			if(result>=0) {
 				exitcode = 0;
@@ -157,11 +158,14 @@ int main( int argc, char *argv[] )
 				reason = "connection lost";
 			}
 			break;
-		case DC_FETCH_LOG_NO_NAME:
+		case DC_FETCH_LOG_RESULT_NO_NAME:
 			reason = "no log file by that name";
 			break;
-		case DC_FETCH_LOG_CANT_OPEN:
+		case DC_FETCH_LOG_RESULT_CANT_OPEN:
 			reason = "server was unable to access it";
+			break;
+		case DC_FETCH_LOG_RESULT_BAD_TYPE:
+			reason = "server can't provide that type of log";
 			break;
 		default:
 			reason = "unknown error";

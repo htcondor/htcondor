@@ -489,11 +489,23 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 	ReliSock *stream = (ReliSock*) s;
 	int  total_bytes = 0;
 	int result;
+	int type;
 
-	if( ! stream->code(name) ||
+	if( ! stream->code(type) ||
+		! stream->code(name) || 
 		! stream->end_of_message()) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't read log name\n" );
+		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't read log request\n" );
 		free( name );
+		return FALSE;
+	}
+
+	stream->encode();
+
+	if(type!=DC_FETCH_LOG_TYPE_PLAIN) {
+		dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: I don't know about log type %d!\n",type);
+		result = DC_FETCH_LOG_RESULT_BAD_TYPE;
+		stream->code(result);
+		stream->end_of_message();
 		return FALSE;
 	}
 
@@ -501,12 +513,10 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 	strcpy (pname, name);
 	strcat (pname, "_LOG");
 
-	stream->encode();
-
 	char *filename = param(pname);
 	if(!filename) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: no parameter named %s\n",pname);
-		result = DC_FETCH_LOG_NO_NAME;
+		result = DC_FETCH_LOG_RESULT_NO_NAME;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
@@ -515,13 +525,13 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 	int fd = open(filename,O_RDONLY);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",filename);
-		result = DC_FETCH_LOG_CANT_OPEN;
+		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
 	}
 
-	result = DC_FETCH_LOG_SUCCESS;
+	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
 	total_bytes = stream->put_file(fd);
