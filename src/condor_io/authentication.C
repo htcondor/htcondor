@@ -336,7 +336,7 @@ Authentication::sspi_client_auth( CredHandle& cred, CtxtHandle& cliCtx,
 	}
 
 	(pf->FreeContextBuffer)( secPackInfo );
-	dprintf( D_FULLDEBUG,"sspi_client_auth() exiting" );
+	dprintf( D_FULLDEBUG,"sspi_client_auth() exiting\n" );
 	if ( myTokenSource ) {
 		free( myTokenSource );
 	}
@@ -350,6 +350,7 @@ Authentication::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 {
 	int rc;
 	SecPkgInfo *secPackInfo;
+	int it_worked = FALSE;		// assume failure
 
 	dprintf(D_FULLDEBUG, "sspi_server_auth() entered\n" );
 
@@ -473,6 +474,7 @@ Authentication::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 		dprintf( D_FULLDEBUG,
 			"sspi_server_auth(): user name is: \"%s\"\n", buf );
 		setOwner(buf);
+		it_worked = TRUE;
 		(pf->RevertSecurityContext)( &srvCtx );
 	}
 
@@ -480,8 +482,8 @@ Authentication::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 
 	dprintf( D_FULLDEBUG,"sspi_server_auth() exiting\n" );
 
-	// return success
-	return 1;
+	// return success (1) or failure (0)
+	return it_worked;
 }
 
 int
