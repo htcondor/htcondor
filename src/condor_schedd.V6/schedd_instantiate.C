@@ -27,6 +27,9 @@
 #include "proc.h"
 #include "dedicated_scheduler.h"
 #include "grid_universe.h"
+#include "simplelist.h"
+
+class Shadow;
 
 template class HashTable<int, int>;
 template class HashBucket<int,int>;
@@ -44,6 +47,7 @@ template class List<PROC_ID>;
 template class Item<PROC_ID>;
 template class ExtArray<int>;
 template class ExtArray<PROC_ID>;
+template class SimpleList<Shadow*>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
