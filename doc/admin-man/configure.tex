@@ -1773,6 +1773,19 @@ special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 These settings affect the \Condor{starter}.
 \begin{description}
 
+\item[\Macro{EXEC\_TRANSFER\_ATTEMPTS}] \label{param:ExecTransferAttempts}
+  Sometimes due to a router misconfiguration, kernel bug, or other Act
+  of God network problem, the transfer of the initial checkpoint from
+  the submit machine to the execute machine will fail midway through.
+  This parameter allows a retry of the transfer a certain number of times
+  that must be equal to or greater than 1. If this parameter is not
+  specified, or specified incorrectly, then it will default to three.
+  If the transfer of the initial executable fails every attempt, then
+  the job goes back into the idle state until the next renegotiation
+  cycle.
+
+  \Note: This parameter does not exist in the NT starter.
+
 \item[\Macro{JOB\_RENICE\_INCREMENT}] \label{param:JobReniceIncrement}
   When the starter spawns a Condor job, it can do so with a
   \Term{nice-level}.  
