@@ -761,13 +761,36 @@ doCommands(int argc,char *argv[],char *MyName) {
 	for( argv++; *argv; argv++ ) {
 		switch( (*argv)[0] ) {
 		case '-':
-				// Some command-line arg we already dealt with
-			if( ( (*argv)[1] == 'p' && ((*argv)[1] == '\0' || (*argv)[1] == 'o')) || 
-				((*argv)[1] == 'c' && (*argv)[2] == 'm') ) {
-					// If it's -pool or -cmd, we want to skip the next
-					// arg, too.
-				argv++;
+				// we've already handled all the args that start with
+				// '-'.  however, some of them have a 2nd arg that
+				// we've also already looked at, so we need to deal
+				// with those again and skip over the arguments to
+				// options we've handled.  this includes:
+				//  -pool XXX    (but not "-peaceful")
+				//  -cmd XXX     (but not "-collector")
+				//  -subsys XXX  (but not "-schedd" or "-startd")
+			switch( (*argv)[1] ) {
+			case 'p':
+				if( (*argv)[2] == '\0' || (*argv)[2] == 'o' ) {
+						// this is -pool, skip the next one.
+					argv++;
+				}
+				break;
+			case 'c':
+				if( (*argv)[2] == 'm' ) {
+						// this is -cmd, skip the next one.
+					argv++;
+				}
+				break;
+			case 's':
+				if( (*argv)[2] == 'u' ) {
+						// this is -subsys, skip the next one.
+					argv++;
+				}
+				break;
 			}
+				// no matter what, we're done with this arg, so we
+				// should move onto the next one...
 			continue;
 		case '<':
 				// This is probably a sinful string, use it
