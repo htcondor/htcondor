@@ -46,7 +46,9 @@ void exampleSyntax (const char * example) {
 }
 
 //-----------------------------------------------------------------------------
-bool isKeyWord (char *token) {
+bool
+isKeyWord( const char *token )
+{
     static const char * keywords[] = {
         "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT", "DOT"
     };
@@ -236,6 +238,7 @@ parse_script(
 {
 	const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
 	Job * job = NULL;
+	MyString whynot;
 
 	//
 	// Find the terminating '\0'
@@ -287,17 +290,6 @@ parse_script(
 	}
 	
 	//
-	// Make sure this job doesn't already have a script
-	//
-	if (post ? job->_scriptPost != NULL : job->_scriptPre  != NULL) {
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
-					  "Job previously assigned a %s script", 
-					  filename, lineNumber, 
-					  post ? "POST" : "PRE" );
-		return false;
-	}
-	
-	//
 	// The rest of the line is the script and args
 	//
 	char * rest = jobName;
@@ -344,22 +336,14 @@ parse_script(
 		return false;
 	}
 	
-	if( post ) {
-		job->_scriptPost =
-			new Script( post, rest, job );
-		if( job->_scriptPost == NULL ) {
-			debug_error( 1, DEBUG_SILENT,
-						 "ERROR: out of memory\n");
-		}
+	if( !job->AddScript( post, rest, whynot ) ) {
+		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): "
+					  "failed to add %s script to node %s: %s\n",
+					  filename, lineNumber, post ? "POST" : "PRE",
+					  jobName, whynot );
+		return false;
 	}
-	else {
-		job->_scriptPre =
-			new Script( post, rest, job );
-		if( job->_scriptPre == NULL ) {
-			debug_error( 1, DEBUG_SILENT,
-						 "ERROR: out of memory\n");
-		}
-	}
+
 	return true;
 }
 
