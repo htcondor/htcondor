@@ -481,10 +481,7 @@ int rename( const char *from, const char *to ) {
 		int poll();
 	}
 
-#if 0
-		/* conflicts with library routine in csim.  Also probably not
-		   a reasonable system call for Condor to support.
-		*/
+#if !defined(SWITCH) /* moved into separate .c file to avoid a name conflict */
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
@@ -700,7 +697,9 @@ not_supported {
 	int getsockname( int socket, struct sockaddr *address, int addr_len );
 	int socket( int addr_family, int type, int protocol );
 	int connect( int sock, struct sockaddr *address, int addr_len );
+#if !defined(SWITCH) /* moved into separate .c file to avoid a name conflict */
 	int send( int socket, char *msg, int length, int flags );
+#endif
 	int recv( int socket, char *msg, int length, int flags );
 	int bind( int socket, struct sockaddr *address, int addr_len );
 	int listen( int socket, int backlog );
