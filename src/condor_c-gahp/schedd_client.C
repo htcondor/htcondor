@@ -208,9 +208,9 @@ doContactSchedd()
 									error_msg };
 				enqueue_result (current_command->request_id, result, 2);
 			}
-		}
 
-		current_command->status = SchedDRequest::SDCS_COMPLETED;
+			current_command->status = SchedDRequest::SDCS_COMPLETED;
+		}
 	}
 
 	
@@ -697,12 +697,10 @@ submit_report_result:
 	
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
+	
 
-//	FinishQmgmtTransaction (TRUE);
 
 	DisconnectQ (qmgr_connection, FALSE);
-	if (qmgmt_sock)
-		delete qmgmt_sock;
 	qmgmt_sock = NULL;
 
 	// Clean up the list
