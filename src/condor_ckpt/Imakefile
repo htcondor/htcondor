@@ -41,7 +41,7 @@ COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
 COMPRESS_FLAGS = -DCOMPRESS_CKPT -I/s/zlib/include
-COMPRESS_LIB = libzckpt.a
+COMPRESS_LIB = libcondorzckpt.a
 #endif
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) \
@@ -74,38 +74,52 @@ OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 	local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ)
-#else
+
+#   if IS_EGCS_BUILD
+        CPP_SUPPORT_OBJ = c_plus_alloc.o _eh.o tinfo.o tinfo2.o \
+			  exception.o frame.o __dummy.o _pure.o
+#   else 
+        CPP_SUPPORT_OBJ = c_plus_alloc.o 
+#   endif
+
+#else /* ! DOES_CHECKPOINTING */
 OBJ =	syscall_mode.o
 #endif
 
 #if DOES_CHECKPOINTING
 
-	all_target(ToUpper libckpt.a c_plus_alloc.o condor_rt0.o $(COMPRESS_LIB) $(RELEASE_OBJ) )
+    all_target(ToUpper libcondorckpt.a libcondorc++support.a condor_rt0.o \
+	       $(COMPRESS_LIB) $(RELEASE_OBJ) )
+
+    library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
 
 #if IS_X86_SOLARIS || IS_GLIBC_LINUX
 	library_target(libtmp.a,$(OBJ))
 
 clean::
-	rm -f libckpt.a
+	rm -f libcondorckpt.a
 
-libckpt.a: libtmp.a ToUpper
+libcondorckpt.a: libtmp.a ToUpper
 #   if (IS_X86_SOLARIS)
-	./ToUpper libtmp.a libckpt.a __cerror __CERROR
+	./ToUpper libtmp.a libcondorckpt.a __cerror __CERROR
 #   else /* GLIBC Linux */
-	./ToUpper libtmp.a libckpt.a __syscall_error __SYSCALL_ERROR
+	./ToUpper libtmp.a libcondorckpt.a __syscall_error __SYSCALL_ERROR
 #   endif /* Solaris */
 #else  /* Not GLIBC Linux or Intel Solaris */
 
-	library_target(libckpt.a,$(OBJ))
+	library_target(libcondorckpt.a,$(OBJ))
 
 #endif /* GLIBC Linux or Intel Solaris */
 
-	release_library(libckpt.a,$(RELEASE_DIR)/lib)
-	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
-	strip_library(libckpt.a,$(STRIP_DIR)/lib)
-	strip_copy_target(c_plus_alloc.o,$(STRIP_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
-	static_library(libckpt.a,$(STATIC_DIR)/lib)
-	static_copy_target(c_plus_alloc.o,$(STATIC_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
+	release_library(libcondorckpt.a,$(RELEASE_DIR)/lib)
+	release_target(libcondorc++support.a,$(RELEASE_DIR)/lib,OBJECT_MODE)
+
+	strip_library(libcondorckpt.a,$(STRIP_DIR)/lib)
+	strip_library(libcondorc++support.a,$(STRIP_DIR)/lib)
+
+	static_library(libcondorckpt.a,$(STATIC_DIR)/lib)
+	static_library(libcondorc++support.a,$(STATIC_DIR)/lib)
+
 #if	DOES_COMPRESS_CKPT
 	release_library($(COMPRESS_LIB),$(RELEASE_DIR)/lib)
 	strip_library($(COMPRESS_LIB),$(STRIP_DIR)/lib)
@@ -114,9 +128,11 @@ libckpt.a: libtmp.a ToUpper
 
 #else /* Not DOES_CHECKPOINTING */
 
-	all_target(syscall_mode.o ToUpper)
-release:: all
-stripped:: all
+all_target(syscall_mode.o ToUpper)
+release: all
+stripped: all
+static: all
+
 #endif
 
 
@@ -189,6 +205,16 @@ uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
 
+#if IS_EGCS_BUILD
+obj_extract($(EGCS_LIBC),_eh.o) 
+obj_extract($(EGCS_LIBC),tinfo.o) 
+obj_extract($(EGCS_LIBC),tinfo2.o) 
+obj_extract($(EGCS_LIBC),__dummy.o) 
+obj_extract($(EGCS_LIBC),_pure.o) 
+obj_extract($(EGCS_LIBC),exception.o) 
+obj_extract($(EGCS_LIBC),frame.o) 
+#endif
+
 #if IS_GLIBC_LINUX
 uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP.o,__syscall_error,__SYSCALL_ERROR)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
@@ -224,8 +250,8 @@ _div.o : $(SIMPLE_LIBC)
 umultiply.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) umultiply.o
 #endif
-$(COMPRESS_LIB): libckpt.a $(COMPRESS_OBJ)
-	cp libckpt.a $(COMPRESS_LIB)
+$(COMPRESS_LIB): libcondorckpt.a $(COMPRESS_OBJ)
+	cp libcondorckpt.a $(COMPRESS_LIB)
 	ar -d $(COMPRESS_LIB) image.o
 	ar -r $(COMPRESS_LIB) $(COMPRESS_OBJ)
 clean::
