@@ -7,7 +7,7 @@ VFLAG = -DV5
 VFLAG = -DV4
 #endif
 
-CFLAGS = $(STD_C_FLAGS) $(RONALD) -DNEW_PROC $(VFLAG) -static
+CFLAGS = $(STD_C_FLAGS) $(RONALD) -DNEW_PROC $(VFLAG) 
 
 #if IS_ALPHA_OSF1
 VIRT_MEM_SRC = virt_mem.Alpha.c
