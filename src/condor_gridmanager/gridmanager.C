@@ -1043,6 +1043,29 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 					}
 				}
 
+				// Save the hold reason in our local copy of the job ad
+				// so that we can write it in the hold log event.
+				if ( curr_status == HELD ) {
+					int rc;
+					char *hold_reason = NULL;
+					rc = GetAttributeStringNew( procID.cluster,
+												procID.proc,
+												ATTR_HOLD_REASON,
+												&hold_reason );
+					if ( rc == 0 ) {
+						next_job->UpdateJobAdString( ATTR_HOLD_REASON,
+													 hold_reason );
+					} else if ( rc < 0 && errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
+					}
+					if ( hold_reason ) {
+						free( hold_reason );
+					}
+				}
+
 				// Don't update the condor state if a communications error
 				// kept us from getting a remove reason to go with it.
 				next_job->UpdateCondorState( curr_status );
