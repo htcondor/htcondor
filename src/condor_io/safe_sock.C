@@ -385,7 +385,7 @@ int SafeSock::handle_incoming_packet()
 
 	received = recvfrom(_sock, _shortMsg.dataGram, _condorPacket::MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, &fromlen );
-	printf("Packet[%d] received\n", received);
+	//printf("Packet[%d] received\n", received);
 	dprintf(D_NETWORK, "Packet[%d] received\n", received);
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
