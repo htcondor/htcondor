@@ -837,7 +837,7 @@ format_owner (char *owner, AttrList *ad)
 	char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
 	char dag_node_name[ATTRLIST_MAX_EXPRESSION];
 	if( dag && ad->LookupString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
-//		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
+		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
 		ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
 		sprintf( result, " |-%-11.11s", dag_node_name );
 		return result;
@@ -953,6 +953,7 @@ usage (char *myName)
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
+		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
