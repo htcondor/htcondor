@@ -5,7 +5,12 @@
    This defines a transaction log for data structure operations.
    Calling Commit() will log the operations to disk and perform
    the operations on the data structure in memory.  Destroying 
-   the Transaction class aborts the transaction.
+   the Transaction class aborts the transaction.  Users are
+   encouraged to log a BeginTransaction record before calling
+   Commit() and an EndTransaction record after calling Commit()
+   to handle crashes in the middle of a commit.  This interface
+   does not include BeginTransaction and EndTransaction records
+   so they can be defined as deemed appropriate by the user.
 */
 
 #include "log.h"
