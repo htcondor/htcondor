@@ -398,7 +398,7 @@ static ClassAd * lookup_global( const char *constraint, void *arg )
 	queryAd.SetTargetTypeName (ANY_ADTYPE);
 
 	list->Open();
-	while( ad = list->Next() ) {
+	while( (ad = list->Next()) ) {
 		if(queryAd <= *ad) {
 			return new ClassAd(*ad);
 		}
@@ -728,7 +728,7 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "  Sorting %d ads ...\n",allAds.MyLength());
 
 	allAds.Open();
-	while( ad=allAds.Next() ) {
+	while( (ad=allAds.Next()) ) {
 
 		// Insert each ad into the appropriate list.
 		// After we insert it into a list, do not delete the ad...
