@@ -20,12 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/*
-  N.B. Every file which includes this header will need to contain the
-  following line:
-
-	static char *_FileName_ = __FILE__;
-*/
 
 #ifndef DEBUG_H
 #define DEBUG_H
@@ -75,11 +69,12 @@ extern "C" {
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
-extern int (*DebugId)();		/* set header message */
+extern int (*DebugId)(FILE *);		/* set header message */
 
 #if defined(__STDC__) || defined(__cplusplus)
 void dprintf_init ( int fd );
 void dprintf ( int flags, char *fmt, ... );
+void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
@@ -97,7 +92,7 @@ void dprintf_config ();
 */
 #define EXCEPT \
 	_EXCEPT_Line = __LINE__; \
-	_EXCEPT_File = _FileName_; \
+	_EXCEPT_File = __FILE__; \
 	_EXCEPT_Errno = errno; \
 	_EXCEPT_
 
@@ -121,6 +116,17 @@ extern void _EXCEPT_(char*, ...);
 #endif
 
 #endif
+
+/* On Win32, define assert() to really do an ASSERT(), which does EXCEPT */
+#ifdef WIN32
+#	ifdef assert
+#		undef assert
+#	endif
+#	ifdef ASSERT
+#		undef ASSERT
+#	endif
+#	define assert(cond) ASSERT(cond)
+#endif	/* of ifdef WIN32 */
 
 #ifndef ASSERT
 #define ASSERT(cond) \
