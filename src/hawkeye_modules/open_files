@@ -17,27 +17,6 @@ use HawkeyeLib;
 
 # My Hawkeye object
 my $Hawkeye;
-my $OsInfo = ();
-my $OS;
-my @OsInfo = (
-	      { ostype => "IRIX.*", osrev => ".*",
-		net => ($netdev ? $netdev : "eth0"),
-		cmd => "" },
-	      { ostype => "HP-UX", osrev => ".*",
-		net => ($netdev ? $netdev : "eth0"),
-		cmd => "" },
-	      { ostype => "SunOS", osrev => "5",
-		net => ($netdev ? $netdev : "hme0"),
-		cmd => "/usr/bin/netstat -I " },
-	      { ostype => "SunOS", osrev => "4",
-		net => ($netdev ? $netdev : "hme0"),
-		cmd => "" },
-	      { ostype => "Linux", osrev => ".*",
-		net => ($netdev ? $netdev : "eth0"),
-		cmd => "awk '{print \$2}' < /proc/sys/fs/file-nr"}
-	     );
-my %of_info = (
-	       open_files => "" );
 
 main();
 
@@ -56,84 +35,34 @@ sub Init
 
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
-    $Hawkeye->AutoIndexSet( 0 );
+    $Hawkeye->AutoIndexSet( 1 );
 
-    # Learn about our O/S
-    foreach my $OsNum ( 0 .. $#OsInfo )
-    {
-	my $OsType = $OsInfo[$OsNum]{ostype};
-	my $OsRev = $OsInfo[$OsNum]{osrev};
-	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
-	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
-	{
-	    $OS = $OsInfo[$OsNum];
-	    last;
-	}
-    }
-
-    # Did we find a match?
-    if ( ! defined( $OS->{cmd} ) )
-    {
-	die "O/S Not defined\n";
-    }
 }
 
 # ***********************************************
 # Do the actual work
 sub RunIt
 {
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
-    ###
-    ### Monitors memory usage
-    ###
-
-	my %of_info = ();
-	my $of_output = '';
-
-	if ($OS->{"ostype"} eq "Linux") {
-		$of_info{open_files} = `$OS->{cmd}`;
-	} elsif ($OS->{"ostype"} eq "SunOS") {
-	} elsif ($OS->{"ostype"} eq "HP-UX") {
-	} elsif ($OS->{"ostype"} eq "IRIX.*") {
-	}
-
-
-
-    ###
-    ### The format of @Config is
-    ###
-    ### 
-    ###
-    ### Examples
-    ### 
-    ###
-
-
-    ###
-    ### Store the fields used
-    ###
+    ### Look up # of open file descriptors, etc
+    if ( $ENV{OSTYPE} =~ /linux/i )
     {
-	# Publish to Hawkeye
-	foreach my $Key ( keys %of_info )
+	my $ProcFile = "/proc/sys/fs/file-nr";
+	if ( ! open( PROC, $ProcFile ) )
 	{
-	    # Pull out & clean up the value, and store it away
-	    my $Value = $of_info{$Key};
-	    my $Name = $Key;
-	    if ( $Value =~ /^(\d+)\%$/ )
-	    {
-		$Value = $1;
-		$Name = "$Name (Percent)";
-		$Hawkeye->StoreNum( $Name, $Value );
-	    }
-	    elsif ( $Value =~ /^\d+$/ )
-	    {
-		$Hawkeye->StoreNum( $Name, $Value );
-	    }
-	    else
-	    {
-		$Hawkeye->Store( $Name, $Value );
-	    }
+	    print STDERR "Can't open $ProcFile\n";
+	    exit 1;
 	}
+	while( <PROC> )
+	{
+	    my ( $NrFiles, $NrFreeFiles, $MaxFiles ) = split;
+	    $Hash->Add( "Limit", "n", $MaxFiles );
+	    $Hash->Add( "MaxUsed", "n", $NrFiles );
+	    $Hash->Add( "Available", "n",
+			$MaxFiles - ( $NrFiles - $NrFreeFiles ) );
+	}
+	$Hash->Store( );
     }
 
     $Hawkeye->Publish( );
