@@ -1,26 +1,16 @@
-SRC_DIR = $(SRC_TREE)/condor_submit.V6
-CFLAGS = $(STD_C_FLAGS) -I../condor_c++_util
+NAME = condor_submit
+all_target($(NAME))
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_c++_util -DALLOC_DEBUG -fno-implicit-templates
-
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LDFLAGS = RpcLib SocketLib
+LIB = $(STD_LIBS)
 
-SRC = submit.C
 OBJ = submit.o
-LIB = ../condor_schedd.V6/libqmgmt.a \
-	  ../condor_c++_util/cplus_lib.a \
-	  ../condor_classad/expr_lib.a \
-	  ../condor_util_lib/util_lib.a \
-	  ../condor_io/libcondor.a $(AUTH2_LIB)
 
-LIBDIRS = ../condor_schedd.V6 ../condor_util_lib ../condor_c++_util
-
-all_target(condor_submit)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-c_plus_target(condor_submit,$(OBJ),$(LIB))
-release_target(condor_submit,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target(condor_submit,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_submit,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
-purecov_c_plus_target(condor_submit.pc,$(OBJ),$(LIB))
-pure_c_plus_target(condor_submit.pure,$(OBJ),$(LIB))
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))

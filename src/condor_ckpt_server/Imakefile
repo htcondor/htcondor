@@ -1,31 +1,20 @@
+NAME = condor_ckpt_server
+all_target($(NAME) ckpt_server_api.a)
+
 CFLAGS = $(STD_C_FLAGS) -DDEBUG
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DDEBUG
-
-SRC = network2.c gen_lib.C fileinfo2.C fileindex2.C imds2.C xferstat2.C \
-	signal2.C alarm2.C server2.C xfer_summary.C replication.C
+LIB = $(STD_LIBS) 
+LDFLAGS = -lm SocketLib
 
 OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
 	signal2.o alarm2.o server2.o xfer_summary.o replication.o
 
-UTIL_LIB = ../condor_util_lib/util_lib.a
-C_PLUS_UTIL_LIB = ../condor_c++_util/cplus_lib.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-
-LIB = $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) 
-LDFLAGS = -lm SocketLib
-
 SERVER_API_OBJ = network2.o server_interface.o
-
-all_target(condor_ckpt_server ckpt_server_api.a)
-
-c_plus_target(condor_ckpt_server,$(OBJ),$(LIB))
-pure_c_plus_target(condor_ckpt_server.pure,$(OBJ),$(LIB))
 
 library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 
+c_plus_target($(NAME),$(OBJ),$(LIB))
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
 release:
-
-strip_target(condor_ckpt_server,$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
-static_target(condor_ckpt_server,$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
-
-depend_target($(SRC))

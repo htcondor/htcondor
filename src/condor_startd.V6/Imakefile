@@ -1,57 +1,40 @@
-SRC_DIR = $(SRC_TREE)/condor_startd.V6
+NAME = condor_startd
+all_target( $(NAME) )
 
-# Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
-CFLAGS = $(STD_C_FLAGS) -O2 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
-
-#if IS_ALPHA_OSF1
-#	define LOAD_AVG_SRC load_avg.OSF1.c
-#	define LOAD_AVG_OBJ load_avg.OSF1.o
-#elif IS_LINUX
-#	define LOAD_AVG_SRC load_avg.LINUX.C
-#	define LOAD_AVG_OBJ load_avg.LINUX.o
-#elif IS_SOLARIS
-#       define LOAD_AVG_SRC load_avg.Solaris.c load_avg.uptime.c
-#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
-#elif IS_SGI_IRIX62 || IS_SGI_IRIX53
-#       define LOAD_AVG_SRC load_avg.IRIX.c load_avg.uptime.c
-#       define LOAD_AVG_OBJ load_avg.IRIX.o load_avg.uptime.o
-#elif IS_HPUX
-#	define LOAD_AVG_SRC load_avg.HPUX.c
-#	define LOAD_AVG_OBJ load_avg.HPUX.o
-#endif
-
-SRC = LoadQueue.C Match.C Reqexp.C ResAttributes.C ResMgr.C ResState.C Resource.C Starter.C calc.C command.C LOAD_AVG_SRC main.C util.C clinpack.c dhry21a.c dhry21b.c timers_b.c 
-
-OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
- 
 #if IS_SGI_IRIX62
 #undef MldLib
 #define MldLib /usr/lib/libelf.a
 #endif 
 
+# Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
+CFLAGS = $(STD_C_FLAGS) -O2 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LDFLAGS = SocketLib RpcLib MldLib KernLib
+LIB= $(STD_LIBS)
 
-LIB= $(REMOTE_SYSCALL_LIB) ../condor_daemon_core.V6/daemon_core.a \
-	../condor_procapi/libprocapi.a \
-	../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	../condor_classad/expr_lib.a $(AUTH2_LIB)
+#if IS_ALPHA_OSF1
+#	define LOAD_AVG_OBJ load_avg.OSF1.o
+#elif IS_LINUX
+#	define LOAD_AVG_OBJ load_avg.LINUX.o
+#elif IS_SOLARIS
+#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
+#elif IS_SGI_IRIX62 || IS_SGI_IRIX53
+#       define LOAD_AVG_OBJ load_avg.IRIX.o load_avg.uptime.o
+#elif IS_HPUX
+#	define LOAD_AVG_OBJ load_avg.HPUX.o
+#endif
 
-LIBDIRS= ../condor_util_lib ../condor_classad ../condor_daemon_core.V6 \
-	../condor_procapi
+OBJ = LoadQueue.o Match.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
+	Resource.o Starter.o calc.o command.o LOAD_AVG_OBJ main.o util.o \
+	clinpack.o dhry21a.o dhry21b.o timers_b.o setsyscalls.o 
 
-all_target(condor_startd)
-
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-
-c_plus_target(condor_startd,$(OBJ),$(LIB))
-release_target(condor_startd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_startd,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_startd,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target(condor_startd.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_startd.pc,$(OBJ),$(LIB))
-quantify_c_plus_target(condor_startd.quantify,$(OBJ),$(LIB))
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+quantify_c_plus_target($(NAME).quantify,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )

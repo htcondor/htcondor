@@ -1,11 +1,24 @@
-SRC_DIR = $(SRC_TREE)/condor_starter
+NAME = condor_starter
+all_target($(NAME))
 
 #if !DOES_CHECKPOINTING
 CKPT_FLAG = -DNO_CKPT
 #endif
-
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
+#if (IS_I386_LINUX)
+LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
+#else
+LDFLAGS = KernLib SocketLib RpcLib MldLib 
+#endif
+REMOTE_SYSCALL_LIB = \
+	../condor_syscall_lib/senders.o \
+	../condor_syscall_lib/syscall_mode.o \
+	../condor_syscall_lib/syscall_connect.o \
+	../condor_syscall_lib/remote_syscall.o \
+	../condor_syscall_lib/syscall_numbers.o \
+	../condor_syscall_lib/xfer_file.o
+LIB = $(REMOTE_SYSCALL_LIB) $(STD_LIBS)
 
 #if IS_SGI_IRIX62
 OS = IRIX62
@@ -13,78 +26,39 @@ OS = IRIX62
 OS = OperatingSystem
 #endif
 
-CLASS_LIB_SRC = alarm.C
 CLASS_LIB_OBJ = alarm.o
-
-PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
-	user_proc.C starter.toy.C tables.C starter_common.C 
 
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
 	user_proc.o tables.o starter_common.o \
 	../condor_syscall_lib/file_stream.o 
 
-NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
-	analyze_core.$(OS).C
-NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o analyze_exec.$(OS).o \
-	analyze_core.$(OS).o
+NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o \
+	analyze_exec.$(OS).o analyze_core.$(OS).o
 
-SRC = $(PORTABLE_SRC) $(NON_PORTABLE_SRC)
 OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
+
 CONTRIB_OBJ = starter.contrib.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
-IO_LIB = ../condor_io/libcondor.a
-UTIL_LIB = ../condor_util_lib/util_lib.a
-CLASS_LIB = ../condor_c++_util/cplus_lib.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-
-REMOTE_SYSCALL_LIB = \
-	../condor_syscall_lib/senders.o \
-	../condor_syscall_lib/syscall_mode.o \
-	../condor_syscall_lib/syscall_connect.o \
-	../condor_syscall_lib/remote_syscall.o \
-	../condor_syscall_lib/syscall_numbers.o \
-	../condor_syscall_lib/xfer_file.o \
-	$(CLASS_LIB) \
-	$(CLASSAD_LIB) \
-	$(UTIL_LIB) \
-	$(IO_LIB) 
-
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_procapi/libprocapi.a $(AUTH2_LIB)
-
-#if (IS_I386_LINUX)
-LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
-#else
-LDFLAGS = KernLib SocketLib RpcLib MldLib 
-#endif
-
-LIBDIRS = ../condor_util_lib ../condor_io ../condor_procapi
-
-TOY_SRC = state_machine_driver.C signals.C name_tab.C starter.toy.C \
-	alarm.C
 TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
-TOY_LIB =  $(UTIL_LIB) $(IO_LIB)
 
-all_target(condor_starter)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-c_plus_target(condor_starter,$(OBJ),$(LIB))
-release_target(condor_starter,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_starter,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_starter,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+c_plus_target($(NAME).contrib,$(CONTRIB_OBJ),$(LIB))
+strip_target($(NAME).contrib,$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
+strip_link_target($(STRIP_CONTRIB)/sbin/$(NAME).contrib,$(STRIP_CONTRIB)/sbin,$(NAME))
+static_target($(NAME).contrib,$(CONTRIB_OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
+static_link_target($(STATIC_CONTRIB)/sbin/$(NAME).contrib,$(STATIC_CONTRIB)/sbin,$(NAME))
 
-c_plus_target(condor_starter.contrib,$(CONTRIB_OBJ),$(LIB))
-strip_target(condor_starter.contrib,$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
-strip_link_target($(STRIP_CONTRIB)/sbin/condor_starter.contrib,$(STRIP_CONTRIB)/sbin, condor_starter)
-static_target(condor_starter.contrib,$(CONTRIB_OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
-static_link_target($(STATIC_CONTRIB)/sbin/condor_starter.contrib,$(STATIC_CONTRIB)/sbin, condor_starter)
+c_plus_target(toy,$(TOY_OBJ),$(LIB))
 
-
-c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
-
-starter_state_diagram.dot: condor_starter
-	condor_starter -dot > starter_state_diagram.dot
+starter_state_diagram.dot: $(NAME)
+	./$(NAME) -dot > starter_state_diagram.dot
 
 starter_state_diagram.ps: starter_state_diagram.dot
 	dot -Tps -Gsize="10,9" -Gratio=.75 -Gorientation=landscape \

@@ -1,35 +1,14 @@
-SRC_DIR = $(SRC_TREE)/condor_c++_util
+all_target(cplus_lib.a liburl.a libapi.a)
 
-#if IS_SGI_IRIX53 || IS_SGI_IRIX62
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
-#else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
-#endif
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -DNEW_PROC
-
-URL_SRC = url_condor.C cbstp_url.C file_url.C http_url.C filter_url.C \
-	mailto_url.C cfilter_url.C ftp_url.C include_urls.C 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(STD_LIBS)
 
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
-API_SRC = generic_query.C condor_query.C condor_q.C ad_printmask.C \
-			condor_event.C user_log.C
-
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o
-
-SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
-	alarm.C alloc.C \
-	directory.C my_hostname.C file_lock.C disk.C up_down.C \
-	environ.C afs.C subproc.C \
-	instantiate.C string_list.C condor_event.C $(URL_SRC) get_daemon_addr.C \
-	user_log.C config.C condor_config.C stringSpace.C condor_state.C $(API_SRC)\
-	classad_hashtable.C classad_log.C log_transaction.C log.C \
-	classad_collection.C usagemon.C \
-	get_full_hostname.C format_time.C renice_self.C condor_version.C \
-	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C strnewp.C \
-	access.C access.t.C killfamily.t.C memory_file.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
@@ -43,18 +22,10 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o
 
-CEDAR_LIBS = ../condor_io/libcondor.a
-CLASS_AD_LIB = ../condor_classad/expr_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-PROC_API_LIB = ../condor_procapi/libprocapi.a
-TEST_LIBS = cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a \
-	$(CEDAR_LIBS) $(DAEMON_CORE_LIB) $(AUTH2_LIB) $(PROC_API_LIB)
-
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
 #endif 
 
-all_target(cplus_lib.a liburl.a libapi.a)
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
 library_target( libapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o ../condor_util_lib/uids.o)
@@ -64,37 +35,35 @@ libapi.tar: libapi.a
 	tar cvf libapi.tar user_log.README file_lock.h condor_event.h user_log.c++.h libapi.a
 	rm file_lock.h
 
-c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
+c_plus_target(test_locks,test_locks.o,$(LIB))
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
-c_plus_target(access.t, access.t.o, $(TEST_LIBS) SocketLib )
-c_plus_target(killfamily.t, killfamily.t.o, $(TEST_LIBS) )
-pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(TEST_LIBS) )
-purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(TEST_LIBS) )
+c_plus_target(access.t, access.t.o, $(LIB) SocketLib )
+c_plus_target(killfamily.t, killfamily.t.o, $(LIB) )
+pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB) )
+purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB) )
 
 all-tests: access.t killfamily.t test_locks 
 
 test: test.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
+	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
 
-tester: tester.o $(TEST_LIBS)
-	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(TEST_LIBS)
+tester: tester.o $(LIB)
+	$(CC) $(CFLAGS) -Wl,-u._fpdata_size -o tester tester.o $(LIB)
 
-test_afs: test_afs.o afs.o $(TEST_LIBS)
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_afs test_afs.o afs.o $(TEST_LIBS)
+test_afs: test_afs.o afs.o $(LIB)
+	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_afs test_afs.o afs.o $(LIB)
 clean::
 	rm -f test_afs
 
 test_subproc: test_subproc.o subproc.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_subproc test_subproc.o subproc.o $(TEST_LIBS)
+	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test_subproc test_subproc.o subproc.o $(LIB)
 clean::
 	rm -f test_subproc
 
 foo: foo.o user_log.o
-	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(TEST_LIBS)
+	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o foo foo.o user_log.o $(LIB)
 
-tags_target($(SRC),$(NULL))
-depend_target($(SRC))
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, mkargv.o)
 

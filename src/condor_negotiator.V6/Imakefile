@@ -1,26 +1,17 @@
-SRC_DIR = $(SRC_TREE)/condor_negotiator
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates -Wall
+NAME = condor_negotiator
+all_target($(NAME))
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 LDFLAGS = SocketLib 
+LIB = $(STD_LIBS)
 
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-ACCT_LIB    = ../condor_accountant.V6/libacct.a
-
-SRC = matchmaker.C main.C 
 OBJ = matchmaker.o main.o
 
-LIB = ../condor_daemon_core.V6/daemon_core.a $(ACCT_LIB) $(CLASSAD_LIB) \
-		../condor_c++_util/libapi.a ../condor_c++_util/cplus_lib.a \
-		../condor_util_lib/util_lib.a ../condor_io/libcondor.a $(AUTH2_LIB)
-LIBDIRS = ../condor_util_lib 
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-
-all_target(condor_negotiator)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-c_plus_target(condor_negotiator,$(OBJ),$(LIB))
-pure_c_plus_target(condor_negotiator.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_negotiator.pc,$(OBJ),$(LIB))
-release_target(condor_negotiator,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_negotiator,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_negotiator,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)

@@ -1,38 +1,23 @@
-SRC_DIR = $(SRC_TREE)/condor_tools
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) 
-
-#if IS_SGI_IRIX53 || IS_SGI_IRIX62
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)  
-#else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
-#endif
-
-LDFLAGS = RpcLib SocketLib
-
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-
-SRC = config_val.C preen.C user_prio.C history.C tool.C stats.C releasejob.C \
-	view_collection.C
-
-LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a $(AUTH2_LIB)
-LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc \
 		condor_release view_collection
 
 all_target( $(PROGRAMS) )
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
 
-c_plus_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB))
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)  
+LDFLAGS = RpcLib SocketLib
+LIB = $(STD_LIBS)
+
+c_plus_target(condor_preen,preen.o,$(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB),$(STATIC_DIR)/sbin)
+static_target(condor_preen,preen.o,$(LIB),$(STATIC_DIR)/sbin)
 
-c_plus_target(condor_release,releasejob.o,../condor_schedd.V6/libqmgmt.a $(LIB))
+c_plus_target(condor_release,releasejob.o, $(LIB))
 release_target(condor_release,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_release,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_release,releasejob.o,../condor_schedd.V6/libqmgmt.a $(LIB),$(STATIC_DIR)/bin)
+static_target(condor_release,releasejob.o, $(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -70,6 +55,10 @@ release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reschedule)
 release_link_target($(RELEASE_DIR)/sbin/condor,sbin,condor_master_off)
 
+release_link_target($(RELEASE_DIR)/sbin/condor,bin,condor_checkpoint)
+release_link_target($(RELEASE_DIR)/sbin/condor,bin,condor_vacate)
+release_link_target($(RELEASE_DIR)/sbin/condor,bin,condor_reschedule)
+
 strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_on)
 strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_off)
 strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_checkpoint)
@@ -80,6 +69,10 @@ strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
 strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_reschedule)
 strip_link_target($(STRIP_DIR)/sbin/condor,sbin,condor_master_off)
 
+strip_link_target($(STRIP_DIR)/sbin/condor,bin,condor_checkpoint)
+strip_link_target($(STRIP_DIR)/sbin/condor,bin,condor_vacate)
+strip_link_target($(STRIP_DIR)/sbin/condor,bin,condor_reschedule)
+
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_on)
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_off)
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_checkpoint)
@@ -89,6 +82,10 @@ static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_reconfig)
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_reschedule)
 static_link_target($(STATIC_DIR)/sbin/condor,sbin,condor_master_off)
+
+static_link_target($(STATIC_DIR)/sbin/condor,bin,condor_checkpoint)
+static_link_target($(STATIC_DIR)/sbin/condor,bin,condor_vacate)
+static_link_target($(STATIC_DIR)/sbin/condor,bin,condor_reschedule)
 
 c_plus_target(condor_stats,stats.o,$(LIB))
 static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/sbin)

@@ -1,32 +1,17 @@
-SRC_DIR = $(SRC_TREE)/condor_accountant
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates
+all_target(libacct.a condor_accountant)
 
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-
-CPP = PreProcessCmd
-
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
 LDFLAGS = SocketLib
+LIB = libacct.a $(STD_LIBS)
 
-CLASS_AD_LIB = ../condor_classad/expr_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+LIB_OBJ = Accountant.o
+OBJ = main.o
 
-SRC = Accountant.C main.C
-OBJ = Accountant.o
+library_target(libacct.a, $(LIB_OBJ))
 
-LIB= $(DAEMON_CORE_LIB) ../condor_c++_util/cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a ../condor_c++_util/libapi.a $(AUTH2_LIB)
-
-LIBDIRS=../condor_util_lib ../condor_xdr_lib 
-
-all_target(condor_accountant libacct.a)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-library_target(libacct.a, $(OBJ))
-
-c_plus_target(condor_accountant,main.o $(OBJ),$(LIB))
+c_plus_target(condor_accountant,$(OBJ),$(LIB))
 pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
-
-IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, stub_gen)
 
 release:
 stripped:

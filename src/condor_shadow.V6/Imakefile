@@ -1,59 +1,28 @@
-SRC_DIR = $(SRC_TREE)/condor_shadow
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -DSYSCALL_DEBUG
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DSYSCALL_DEBUG
+NAME = condor_shadow
+all_target($(NAME))
 
+CFLAGS = $(STD_C_FLAGS) -DSYSCALL_DEBUG
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DSYSCALL_DEBUG
 LDFLAGS = RpcLib SocketLib
+LIB = $(STD_LIBS)
 
 #if NEEDS_FAKE_GETMNT
-#define FAKE_GETMNT_SRC getmnt.c
 #define FAKE_GETMNT_OBJ getmnt.o
 #else
-#define FAKE_GETMNT_SRC
 #define FAKE_GETMNT_OBJ
 #endif
 
-RC_SRC = \
-	../condor_syscall_lib/extern_path.c \
-	FAKE_GETMNT_SRC 
-SRC =	$(RC_SRC) ops.C pseudo_ops.C perm_err.c shadow.C shadow_common.C \
-		log_events.C ../condor_syscall_lib/receivers.C
-
 RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 
-CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
-QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a ../condor_io/libcondor.a
-UTIL_LIB = ../condor_util_lib/util_lib.a
-
 OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o shadow_common.o \
-	receivers.o log_events.o $(CKPT_SERV_OBJ)
+	receivers.o log_events.o
 
-LIB =   $(CKPT_SERV_LIB) \
-		$(QMGMT_LIB) \
-		../condor_c++_util/cplus_lib.a \
-		$(CLASSAD_LIB) \
-		$(UTIL_LIB) $(AUTH2_LIB)
-
-LIBDIRS = ../condor_util_lib
-
-all_target(condor_shadow)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-
-c_plus_target(condor_shadow,$(OBJ),$(LIB))
-release_target(condor_shadow,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_shadow,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_shadow,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-pure_c_plus_target(condor_shadow.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_shadow.pc,$(OBJ),$(LIB))
-
-#if IS_SGI_CRAP
-CMNT
-CMNT Bypass a bug in gcc.
-CMNT
-CMNT receivers.o: receivers.C
-CMNT    CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS_FLAG) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c receivers.C
-#endif 
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_syscall_lib,receivers.o)

@@ -1,34 +1,16 @@
-SRC_DIR = $(SRC_TREE)/condor_master
+NAME = condor_master
+all_target($(NAME))
 
-#if defined(USE_CONFIG_SERVER)
-CFLAGS = $(STD_C_FLAGS) -DUSE_CONFIG_SERVER
-C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DUSE_CONFIG_SERVER 
-#else
 CFLAGS = $(STD_C_FLAGS) 
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -Wall
-#endif
-
-SRC = master.C daemon.C
-OBJ = master.o daemon.o
-UTIL_LIB = ../condor_util_lib/util_lib.a
-CLASS_LIB = ../condor_c++_util/cplus_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-#if defined(USE_CONFIG_SERVER)
-CCTP_LIB = ../condor_config_server/cctp_lib.a
-#endif
-
-LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB) $(AUTH2_LIB)
-LIBDIRS = ../condor_util_lib ../condor_c++_util
-
 LDFLAGS = SocketLib
+LIB = $(STD_LIBS)
 
-all_target(condor_master)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-c_plus_target(condor_master,$(OBJ),$(LIB))
-pure_c_plus_target(condor_master.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_master.pc,$(OBJ),$(LIB))
-release_target(condor_master,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_master,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_master,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+OBJ = master.o daemon.o
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))

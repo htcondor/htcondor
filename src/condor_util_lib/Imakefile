@@ -1,97 +1,64 @@
-SRC_DIR = $(SRC_TREE)/condor_util_lib
+all_target( util_lib.a stub_gen )
 
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS)
 
 #if IS_SOLARIS
-VIRT_MEM_SRC = virt_mem.Solaris.c
 VIRT_MEM_OBJ = virt_mem.Solaris.o
 #else
-VIRT_MEM_SRC = virt_mem.c
 VIRT_MEM_OBJ = virt_mem.o
 #endif
 
 #if MALLOC_DEBUG
-MALLOC_SRC = malloc.c
 MALLOC_OBJ = malloc.o
 #endif
 
 #if !HAS_FLOCK
-FLOCK_SRC = flock.c
 FLOCK_OBJ = flock.o
 #endif
 
 #if !HAS_SETREUID
-SETREUID_SRC = setreuid.c
 SETREUID_OBJ = setreuid.o
 #endif
 
 #if !HAS_SETEUID
-SETEUID_SRC = seteuid.c
 SETEUID_OBJ = seteuid.o
 #endif
 
 #if !HAS_SETREGID
-SETREGID_SRC = setregid.c
 SETREGID_OBJ = setregid.o
 #endif
 
 #if !HAS_SETRGID
-SETRGID_SRC = setrgid.c
 SETRGID_OBJ = setrgid.o
 #endif
 
 #if !HAS_SETEGID
-SETEGID_SRC = setegid.c
 SETEGID_OBJ = setegid.o
 #endif
 
 #if !HAS_GETDTABLESIZE
-GETDTABLESIZE_SRC = getdtablesize.c
 GETDTABLESIZE_OBJ = getdtablesize.o
 #endif
 
 #if !HAS_GETWD
-GETWD_SRC = getwd.c
 GETWD_OBJ = getwd.o
 #endif
 
 #if !HAS_GETPAGESIZE
-GETPAGESIZE_SRC = getpagesize.c
 GETPAGESIZE_OBJ = getpagesize.o
 #endif
 
 #if !HAS_SETLINEBUF
-SETLINEBUF_SRC = setlinebuf.c
 SETLINEBUF_OBJ = setlinebuf.o
 #endif
 
 #if !HAS_INSQUE
-INSQUE_SRC = insque.c
 INSQUE_OBJ = insque.o
 #endif
 
 #if NEEDS_FAKE_GETMNT
-GETMNT_SRC = getmnt.c
 GETMNT_OBJ = getmnt.o
 #endif
-
-#define SourceFiles \
-	blankline.c ctrace.c do_connect.c email.c email_file.c \
-	dprintf.c dprintf_config.c except.c killkids.c \
-	ltrunc.c mkargv.c proc.c signames.c strdup.c \
-	stricmp.c expr.c perror.c condor_errlst.c detach.c \
-	update_rusage.c uids.c cronos.c phys_mem.c match_prefix.c \
-	free_fs_blocks.c $(FLOCK_SRC) $(SETREUID_SRC) $(GETDTABLESIZE_SRC) \
-	$(SETRGID_SRC) $(SETREGID_SRC) $(SETEGID_SRC) $(SETEUID_SRC) \
-	$(GETPAGESIZE_SRC) $(SETLINEBUF_SRC) $(GETWD_SRC) $(INSQUE_SRC) \
-	$(MALLOC_SRC) env_param.c ckpt_name.c lock_file.NON_POSIX.c \
-	my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
-	sig_install.c internet.c startup_info.c get_random_num.c escapes.c\
-	ckpt_util.c fdprintf.c setsyscalls.c sleep.c basename.c \
-	strcmp_until.c rotate_file.c \
-	stub_gen_lex.l \
-	stub_gen_yacc.y \
-
 
 #define ObjectFiles \
 	blankline.o do_connect.o dprintf.o dprintf_config.o except.o \
@@ -108,8 +75,6 @@ GETMNT_OBJ = getmnt.o
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
 	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o
 
-all_target( util_lib.a stub_gen )
-
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
 
@@ -117,6 +82,7 @@ test: test.o util_lib.a
 	gcc $(CFLAGS) -o test test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
+
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
@@ -130,9 +96,6 @@ y.tab.c: stub_gen_yacc.y scanner.h
 	YACC -d stub_gen_yacc.y
 clean::
 	rm -f y.tab.c y.tab.h
-
-tags_target(SourceFiles,$(NULL))
-depend_target(SourceFiles)
 
 IMPORT_LINKS = ../../config/import_links
 import(../h,syscall_numbers.c)

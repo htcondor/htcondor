@@ -9,7 +9,6 @@ PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
 SAVE_SIGSTATE_OBJ = signals_support.o
-SAVE_SIGSTATE_SRC = signals_support.c
 
 #if IS_DUX
 SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
@@ -43,7 +42,6 @@ COMPRESS_OBJ = malloc.o zimage.o _rem.o
 #else
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
-COMPRESS_SRC = malloc.c image.C
 COMPRESS_FLAGS = -DCOMPRESS_CKPT -I/s/zlib/include
 COMPRESS_LIB = libzckpt.a
 #endif
@@ -57,8 +55,6 @@ CFLAGS = $(STD_C_FLAGS) $(STATIC)
 CFLAGS = $(STD_C_FLAGS)
 #endif
 
-SRC_DIR = $(SRC_TREE)/condor_ckpt
-
 #if IS_IRIX62
 OS = IRIX62
 #elif IS_HPUX10
@@ -68,15 +64,10 @@ OS = OperatingSystem
 #endif
 
 #if IS_SGI_IRIX62
-ASSEMBLER_SRC = SYSCALL.MIPS.IRIX62.s MMAP.MIPS.IRIX62.s
 ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 .s.o:
 	gas -o $*.o $*.s
 #endif
-
-SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
-	syscall_mode.c local_startup.c fake_remote_syscall.c fake_hooks.c \
-	$(SAVE_SIGSTATE_SRC) fake_util_lib.c eprintf.c $(COMPRESS_SRC)
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
@@ -203,8 +194,6 @@ clean::
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),__syscall.o,__SYSCALL.o,__syscall,__SYSCALL)
 #endif
-
-depend_target($(SRC) )
 
 #if IS_SOLARIS
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o, )

@@ -1,25 +1,18 @@
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
-
-LDFLAGS = RpcLib SocketLib
-
-CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
-QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a ../condor_io/libcondor.a
-UTIL_LIB = ../condor_util_lib/util_lib.a
-CPLUS_LIB = ../condor_c++_util/cplus_lib.a
-
-OBJ = extern_path.o pseudo_ops.o shadow.o main.o receivers.o
-
-LIB =   $(CKPT_SERV_LIB) \
-	$(QMGMT_LIB) \
-	$(CPLUS_LIB) \
-	$(CLASSAD_LIB) \
-	$(UTIL_LIB) $(AUTH2_LIB)
-
 NAME = condor_shadow.v61
-
 all_target($(NAME))
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LDFLAGS = RpcLib SocketLib
+LIB = $(STD_LIBS)
+
+#if NEEDS_FAKE_GETMNT
+#define FAKE_GETMNT_OBJ getmnt.o
+#else
+#define FAKE_GETMNT_OBJ
+#endif
+
+OBJ = extern_path.o pseudo_ops.o shadow.o main.o receivers.o FAKE_GETMNT_OBJ
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -28,7 +21,7 @@ static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-
 IMPORT_LINKS = ../../config/import_links
 import(../condor_syscall_lib,receivers.o)
 import(../condor_syscall_lib,extern_path.o)
+import(../condor_util_lib,getmnt.o)

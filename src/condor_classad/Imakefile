@@ -1,33 +1,19 @@
-SRC_DIR = $(SRC_TREE)/condor_classad
+all_target(libclassad.a)
 
-C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS)
 CFLAGS = -Wall $(STD_C_FLAGS)
-
-IO_OBJ = stream.o buffers.o reli_sock.o safe_sock.o sock.o sig_num.o \
-         proc.o open_flags.o fcntl_cmd.o condor_rw.o
-
-SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
-	  attrlist.C classad.C classifiedjobs.C classad_util.C environment.C \
-	  value.C operators.C evaluateOperators.C instantiate.C
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
 	  attrlist.o classad.o classifiedjobs.o classad_util.o environment.o \
-	  value.o operators.o evaluateOperators.o instantiate.o $(IO_OBJ)
+	  value.o operators.o evaluateOperators.o instantiate.o
 
-all_target(expr_lib.a)
+library_target(libclassad.a,$(OBJ))
 
-library_target( expr_lib.a,$(OBJ))
-
-c_plus_target(test, test.o, expr_lib.a ../condor_util_lib/util_lib.a SocketLib)
-pure_c_plus_target(test.pure, test.o, expr_lib.a ../condor_util_lib/util_lib.a SocketLib)
+c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
+pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
 
 clean::
-	rm -f *.o expr_lib.a
-
-depend_target($(SRC))
-
-IMPORT_LINKS = ../../config/import_links
-import(../condor_io, $(IO_OBJ))
+	rm -f *.o libclassad.a
 
 release:
 stripped:

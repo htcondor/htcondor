@@ -1,30 +1,19 @@
-SRC_DIR = $(SRC_TREE)/condor_kbdd
-CFLAGS = $(STD_C_FLAGS) -g -Wall 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates -Wall
+NAME = condor_kbdd
+all_target($(NAME))
 
-SRC = kbdd.C XInterface.C
-OBJ = kbdd.o XInterface.o
-
-UTIL_LIB = ../condor_util_lib/util_lib.a 
-C_PLUS_UTIL_LIB = ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
-
-STD_LIB = $(DAEMON_CORE_LIB) $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CEDAR_LIB) 
-
+CFLAGS = $(STD_C_FLAGS) -Wall 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
+LIB = $(STD_LIBS) 
 #if IS_SGI_IRIX53
 X_LIB = -lX11 -lXext
 #else
 X_LIB = XExtLibPath XLibPath
 #endif
-LIB = $(STD_LIB) 
-LIBDIRS = ../condor_util_lib ../condor_io
 LDFLAGS = $(X_LIB) SocketLib
 
-all_target(condor_kbdd)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-c_plus_target(condor_kbdd,$(OBJ),$(LIB))
-release_target(condor_kbdd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_kbdd,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_kbdd,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+OBJ = kbdd.o XInterface.o
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)

@@ -1,30 +1,22 @@
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
+NAME = condor_collector
+all_target(collector_engine.a $(NAME))
 
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LDFLAGS = -lm RpcLib SocketLib
+LIB = collector_engine.a $(STD_LIBS)
 
-ENGINE_SRC = hashkey.C collector_engine.C
 ENGINE_OBJ = hashkey.o collector_engine.o
-
-SRC = main.C collector.C view_server.C instantiate.C
 OBJ = main.o collector.o view_server.o instantiate.o totals.o
 
-LIB = ../condor_daemon_core.V6/daemon_core.a collector_engine.a \
-		../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a \
-	  ../condor_util_lib/util_lib.a ../condor_io/libcondor.a $(AUTH2_LIB)
-
-all_target(collector_engine.a condor_collector)
-c_plus_target(condor_collector,$(OBJ),$(LIB))
-
-pure_c_plus_target(condor_collector.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_collector.pc,$(OBJ),$(LIB))
-
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))
-release_target(condor_collector,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target(condor_collector,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-static_target(condor_collector,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_status.V6,totals.o)

@@ -1,16 +1,14 @@
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall -fno-implicit-templates
+NAME = condor_status
+all_target($(NAME))
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 LDFLAGS = RpcLib SocketLib -lm
+LIB = $(STD_LIBS)
 
-SRC = setflags.C status.C totals.C prettyPrint.C
 OBJ = setflags.o status.o totals.o prettyPrint.o
-LIB = ../condor_c++_util/cplus_lib.a ../condor_c++_util/libapi.a ../condor_io/libcondor.a ../condor_util_lib/util_lib.a ../condor_classad/expr_lib.a $(AUTH2_LIB)
-LIBDIRS= ../condor_util_lib ../condor_xdr_lib ../condor_c++_util ../condor_classad
 
-all_target(condor_status)
-tags_target($(SRC),$(LIBDIRS))
-depend_target($(SRC))
-c_plus_target(condor_status,$(OBJ),$(LIB))
-release_target(condor_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target(condor_status,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_status,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)

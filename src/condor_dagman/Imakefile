@@ -1,35 +1,20 @@
-SRC_DIR = $(SRC_TREE)/condor_dagman
+NAME = condor_dagman
+all_target($(NAME))
 
-#C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates -Wall
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -Wall
-
+CFLAGS = $(STD_C_FLAGS) -Wall
 LDFLAGS = SocketLib
+LIB = $(STD_LIBS)
 
-SRC = main.C submit.C dag.C job.C util.C parse.C debug.c types.C script.C
-OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o script.o
+OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
+	script.o instantiate.o
 
-LIB = ../condor_daemon_core.V6/daemon_core.a \
-      ../condor_c++_util/cplus_lib.a \
-      ../condor_util_lib/util_lib.a \
-      ../condor_classad/expr_lib.a $(AUTH2_LIB) 
-
-all_target(dagman.a condor_dagman)
-
-library_target(dagman.a,$(OBJ))
-
-tags_target($(SRC),$(NULL))
-
-c_plus_target(condor_dagman,$(OBJ),$(LIB))
-
-purecov_c_plus_target(condor_dagman.pc,$(OBJ),$(LIB))
-pure_c_plus_target(condor_dagman.pure,$(OBJ),$(LIB))
-
-depend_target($(SRC) $(LIB))
-
-release_target(condor_dagman,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target(condor_dagman,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_dagman,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 
 release_target(condor_submit_dag,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_copy_target(condor_submit_dag,$(STRIP_DIR)/bin, \

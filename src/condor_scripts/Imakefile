@@ -1,14 +1,6 @@
-SRC_DIR = $(SRC_TREE)/condor_scripts
+all_target(condor_install condor_init condor_compile ld)
+
 CFLAGS = $(STD_C_FLAGS)
-
-SRC =
-
-TARGETS = \
-	condor_install condor_init condor_compile ld 
-
-all_target($(TARGETS))
-depend_target($(SRC))
-tags: ALWAYS
 
 release_target(condor_install,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 release_target(condor_init,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -63,3 +55,4 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 #endif
 
 clean::
+
