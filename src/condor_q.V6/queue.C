@@ -939,10 +939,20 @@ doRunAnalysis( ClassAd *request )
 			
 		// 3. Is there a remote user?
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
-			// both sides satisfied and no remote user
-			if( verbose ) printf( "Available\n" );
-			available++;
-			continue;
+			if( stdRankCondition->EvalTree( offer, request, &result ) &&
+					result.type == LX_INTEGER && result.i == TRUE ) {
+				// both sides satisfied and no remote user
+				if( verbose ) printf( "Available\n" );
+				available++;
+				continue;
+			} else {
+				// no remote user, but std rank condition failed
+				fRankCond++;
+				if( verbose ) {
+					printf("Failed rank condition: MY.Rank > MY.CurrentRank\n");
+				}
+				continue;
+			}
 		}
 
 		// 4. Satisfies preemption priority condition?
@@ -1004,7 +1014,7 @@ doRunAnalysis( ClassAd *request )
 			"request\n", fOffConstraint );
 	printf( "\t%5d are serving equal or higher priority customers%s\n", 
 					fPreemptPrioCond, niceUser ? "(*)" : "" );
-	printf( "\t%5d are serving more preferred customers\n", fRankCond );
+	printf( "\t%5d do not prefer this job\n", fRankCond );
 	printf( "\t%5d cannot preempt because preemption has been held\n", 
 			fPreemptHoldTest );
 	printf( "\t%5d are available to service your request\n", available );
