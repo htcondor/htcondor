@@ -11,7 +11,6 @@
 
 #include <fstream.h>
 
-#include "proc_obj.h"
 #include "condor_expressions.h"
 #include "exprtype.h"
 #include "ast.h"
@@ -32,7 +31,7 @@ class ClassAd : public AttrList
     public :
 
 		ClassAd();								// No associated AttrList list
-		ClassAd(ProcObj*);						// create from a proc object
+		ClassAd(class ProcObj*);				// create from a proc object
 		ClassAd(CONTEXT*);						// create from a CONTEXT
         ClassAd(FILE *, char *, int &);			// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.

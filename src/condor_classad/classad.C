@@ -14,6 +14,7 @@
 # include "ast.h"
 # include "registration.h"
 # include "condor_expressions.h"
+# include "proc_obj.h"
 # include "attrlist.h"
 # include "classad.h"
 # include "parser.h"
