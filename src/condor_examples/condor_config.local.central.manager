@@ -79,6 +79,17 @@ CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 ##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
 #COLLECTOR_NAME		= Short Description of your pool
 
+##  By default, every pool sends periodic updates to a central
+##  condor_collector at UW-Madison with basic information about the
+##  status of your pool.  This includes only the number of total
+##  machines, the number of jobs submitted, the number of machines
+##  running jobs, the hostname of your central manager, and the
+##  "COLLECTOR_NAME" specified above.  These updates help us see
+##  how Condor is being used around the world.  By default, they will
+##  be sent to condor.cs.wisc.edu.  If you don't want these updates to
+##  be sent from your pool, uncomment the following line.
+#CONDOR_DEVELOPERS_COLLECTOR = NONE
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
