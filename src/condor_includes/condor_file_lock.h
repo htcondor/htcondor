@@ -66,7 +66,7 @@
 #include <sys/file.h>
 #endif
 
-#if defined(BSD)
+#if defined(CONDOR_DARWIN)
 #define CONDOR_USE_FLOCK 1 
 #include <sys/file.h>
 #endif

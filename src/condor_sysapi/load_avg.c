@@ -381,7 +381,7 @@ get_k_vars()
 {
 }
 
-#elif defined(BSD)
+#elif defined(CONDOR_DARWIN)
 
 #include <sys/resource.h>
 #include <sys/sysctl.h>
