@@ -189,9 +189,9 @@ sub get_nightlyids() {
         $ids{$id[0]} = "$id[1]" . " " . "$id[2]"; 
     }
     # truncate file
-    seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE\n"; 
+    #seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE\n"; 
     #print IDS "" || die "can't print to $NIGHTLY_IDS_FILE\n";
-    truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE\n";  
+    #truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE\n";  
     close(IDS) || die "can't close $NIGHTLY_IDS_FILE\n";
 
     return %ids;
