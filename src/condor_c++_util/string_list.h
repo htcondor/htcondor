@@ -44,6 +44,7 @@ public:
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
+	void insert (const char* str) { strings.Insert( strdup(str) ); }
 	void remove (const char* str);
 	void remove_anycase (const char* str);
 	char *next (void) { return strings.Next(); }
