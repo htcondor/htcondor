@@ -26,6 +26,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug where under very pathological file permission failure
+conditions with a standard universe job, there would be a cycle of an
+execute event followed by a termination event in the user log when the
+job had not actually ran.
+
 \item Fixed a memory management bug introduced in version 6.6.8 that could result
 in deallocated memory being referenced after a child process forked from a
 Condor daemon exits.
@@ -43,7 +48,6 @@ maliciously modified \Condor{submit} tool to overwrite files in the Condor
 \item None.
 
 \end{itemize}
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -215,7 +219,7 @@ with the message, "caInsert: Can't insert CpuBusy into target ClassAd."
 
 \begin{itemize}
 
-\item None.
+\item None
 
 \end{itemize}
 

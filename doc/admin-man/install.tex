@@ -130,10 +130,19 @@ made.  Moreover, most Condor tools will stop working.  Because of the
 importance of this machine for the proper functioning of Condor,
 install the central manager on a machine that is likely to stay up all the
 time, or on one that will be rebooted quickly if it does crash.
+
 Also consider
 network traffic and your network layout when choosing your central
 manager.
 All the daemons send updates (by default, every 5 minutes) to this machine.
+Memory requirements for the central manager differ by the number of machines
+in the pool.
+A pool with up to about 100 machines will require approximately
+25 Mbytes of memory for the central manager's tasks.
+A pool with about 1000 machines will require approximately
+100 Mbytes of memory for the central manager's tasks.
+
+A faster CPU will improve the time to do matchmaking. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Will Condor run as root or not?}

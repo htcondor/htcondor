@@ -101,7 +101,7 @@ The parameters are
 	directory with Condor version 6.1 and above; for Condor version
 	6.0x, the \Condor{stats} program can be found in the CondorView
 	Server Contrib module.
-	The value for \Macro{STATSDIR} is added to the \Macro{PATH}
+	The value for \MacroNI{STATSDIR} is added to the \Macro{PATH}
 	parameter by default; see below.  
 
 	\item[\Macro{PATH}] A list of subdirectories,
@@ -140,8 +140,8 @@ Look at the
 \Prog{\MakeStats\ month} once per day.
 These are reasonable defaults.  
 You can add these commands to cron on any
-system that can access the \MacroU{VIEWDIR} and
-\MacroU{STATSDIR} directories,
+system that can access the \MacroUNI{VIEWDIR} and
+\MacroUNI{STATSDIR} directories,
 even on a system that does not have Condor installed.
 The commands do not need to run as user root; in
 fact, they should probably not run as root.  These commands can run

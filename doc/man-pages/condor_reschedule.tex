@@ -5,9 +5,11 @@
 \ToolArgsBase
 
 \SynProg{\Condor{reschedule}}
+\ToolDebugOption
 \ToolArgsLocate
 
 \SynProg{\Condor{reschedule}}
+\ToolDebugOption
 \ToolWhere
 
 \index{Condor commands!condor\_reschedule}
@@ -29,8 +31,16 @@ This can be useful in situations where the time between negotiation
 cycles is somewhat long, and an administrator wants to see if a job 
 in the queue will get matched without waiting for the next negotiation cycle.
 
+A new negotiation cycle cannot occur more frequently than
+every 20 seconds.
+Requests for new negotiation cycle within that
+20 second window will be deferred until 20 seconds have passed
+since that last cycle.
+
 \begin{Options}
-	\ToolArgsBaseDesc \ToolArgsLocateDesc
+	\ToolArgsBaseDesc
+	\ToolArgsLocateDesc
+	\ToolDebugDesc
 \end{Options}
 
 \ExitStatus

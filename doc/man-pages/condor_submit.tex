@@ -6,6 +6,7 @@
 \oOptArg{-n}{schedd\_name}
 \oOptArg{-r}{schedd\_name}
 \oOpt{-d}
+\ToolDebugOption
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-a} \Arg{command} \Opt{\Dots}\Rbr 
 \oOpt{-s}
@@ -515,7 +516,7 @@ standard universe.  Note that the \Condor{schedd} daemon,
 by default, only checks
 these periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
-\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+\MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -561,7 +562,7 @@ for the standard universe.
 \index{submit commands!periodic\_remove}
 This expression is checked periodically at an interval of
 the number of seconds set by
-the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}.
+the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
 If it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
 
@@ -581,7 +582,7 @@ It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
-\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+\MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_hold
@@ -591,7 +592,7 @@ these evaluations can be adjusted by setting the
 \index{submit commands!periodic\_hold}
 This expression is checked periodically at an interval of
 the number of seconds set by
-the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}.
+the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
 If it becomes true, the job will be placed on hold.
 If unspecified, the default value is \Expr{False}.
 
@@ -608,7 +609,7 @@ It is additionally available, when submitted from a Unix machine,
 for the standard universe.  Note that the schedd, by default, only checks
 periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
-\Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
+\MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
 
 %%%%%%%%%%%%%%%%%%%
 %% periodic_release
@@ -618,7 +619,7 @@ these evaluations can be adjusted by setting the
 \index{submit commands!periodic\_release}
 This expression is checked periodically at an interval of
 the number of seconds set by
-the configuration variable \Macro{PERIODIC\_EXPR\_INTERVAL}
+the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}
 while the job is in the Hold state.
 If the expression becomes \Expr{True}, the job will be released.
 
@@ -1707,6 +1708,9 @@ AUTHENTICATION\_METHODS configuration setting to enable remote file system
 (FS\_REMOTE) authentication.}
 
 \OptItem{\Opt{-d}}{Disable file permission checks.}
+
+\OptItem{\Opt{-debug}}{Cause debugging information to be sent to \File{stderr},
+based on the value of the configuration variable \MacroNI{SUBMIT\_DEBUG}.}
 
 \OptItem{\OptArg{-a}{command}}{Augment the commands in the submit 
 description file with the given command.
