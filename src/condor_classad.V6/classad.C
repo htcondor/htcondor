@@ -326,6 +326,9 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 				strcasecmp(name.c_str( ),"root")==0){
 			// if the "toplevel" attribute was requested ...
 			expr = state.rootAd;
+			if( expr == NULL ) {	// NAC - circularity so no root
+				return EVAL_FAIL;  	// NAC
+			}						// NAC
 			return( expr ? EVAL_OK : EVAL_UNDEF );
 		} else if( strcasecmp( name.c_str( ), "self" ) == 0 ) {
 			// if the "self" ad was requested
@@ -749,6 +752,9 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                 // establish starting point for attribute search
             if( tree==NULL ) {
                 start = abs ? state.rootAd : state.curAd;
+				if( abs && ( start == NULL ) ) {// NAC - circularity so no root
+					return false;				// NAC
+				}								// NAC
             } else {
                 if( !tree->Evaluate( state, val ) ) return( false );
 
@@ -888,6 +894,9 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                 // establish starting point for attribute search
             if( tree==NULL ) {
                 start = abs ? state.rootAd : state.curAd;
+				if( abs && ( start == NULL ) ) {// NAC - circularity so no root
+					return false;				// NAC
+				}								// NAC
             } else {
                 if( !tree->Evaluate( state, val ) ) return( false );
 

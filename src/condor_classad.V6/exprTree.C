@@ -152,6 +152,9 @@ SetRootScope( )
 	ClassAd *prevScope = curAd, *curScope = (ClassAd*)(curAd->parentScope);
 
 	while( curScope ) {
+		if( curScope == curAd ) {	// NAC - loop detection
+			return;					// NAC
+		}							// NAC
 		prevScope = curScope;
 		curScope  = (ClassAd*)(curScope->parentScope);
 	}

@@ -302,6 +302,9 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 	if( expr == NULL ) {
 		// "attr" and ".attr"
 		current = absolute ? state.rootAd : state.curAd;
+		if( absolute && ( current == NULL ) ) {	// NAC - circularity so no root
+			return EVAL_FAIL;					// NAC
+		}										// NAC
 	} else {
 		// "expr.attr"
 		rval=wantSig?expr->Evaluate(state,val,sig):expr->Evaluate(state,val);
