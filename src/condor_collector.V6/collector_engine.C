@@ -41,6 +41,7 @@ CollectorEngine () :
     StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
 	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
+	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
 	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction)
@@ -60,6 +61,7 @@ CollectorEngine::
 	killHashTable (StartdAds);
 	killHashTable (StartdPrivateAds);
 	killHashTable (ScheddAds);
+	killHashTable (SubmittorAds);
 	killHashTable (MasterAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
@@ -180,6 +182,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &StartdPrivateAds;	
 		break;
 
+	  case SUBMITTOR_AD:
+		table = &SubmittorAds;
+		break;
+
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -258,7 +264,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (StartdAds, "StartdAd  ", clientAd, hk, 
+		retVal=updateClassAd (StartdAds, "StartdAd     ", clientAd, hk, 
 							  hashString, insert);
 
 		// if we want to store private ads
@@ -284,7 +290,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				
 				// insert the private ad into its hashtable --- use the same
 				// hash key as the public ad
-				(void) updateClassAd (StartdPrivateAds, "StartdPvt ", pvtAd,
+				(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ", pvtAd,
 										hk, hashString, insPvt);
 			}
 		}
@@ -299,7 +305,22 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (ScheddAds, "ScheddAd  ", clientAd, hk,
+		retVal=updateClassAd (ScheddAds, "ScheddAd     ", clientAd, hk,
+							  hashString, insert);
+		break;
+
+	  case UPDATE_SUBMITTOR_AD:
+		// use the same hashkey function as a schedd ad
+		if (!makeScheddAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			retVal = 0;
+			break;
+		}
+		// since submittor ads always follow a schedd ad, and a master check is
+		// performed for schedd ads, we don't need a master check in here
+		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		retVal=updateClassAd (ScheddAds, "SubmittorAd  ", clientAd, hk,
 							  hashString, insert);
 		break;
 
@@ -311,7 +332,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (MasterAds, "MasterAd  ", clientAd, hk, 
+		retVal=updateClassAd (MasterAds, "MasterAd     ", clientAd, hk, 
 							  hashString, insert);
 		break;
 
@@ -324,13 +345,14 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		checkMasterStatus (clientAd);
 		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd", clientAd, hk, 
+		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", clientAd, hk, 
 							  hashString, insert);
 		break;
 
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
+	  case QUERY_SUBMITTOR_ADS:
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
 		// these are not implemented in the engine, but we allow another
@@ -366,6 +388,11 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case SUBMITTOR_AD:
+			if (SubmittorAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		case MASTER_AD:
 			if (MasterAds.lookup (hk, val) == -1)
 				return 0;
@@ -397,6 +424,9 @@ remove (AdTypes adType, HashKey &hk)
 
 		case SCHEDD_AD:
 			return !ScheddAds.remove (hk);
+
+		case SUBMITTOR_AD:
+			return !SubmittorAds.remove (hk);
 
 		case MASTER_AD:
 			return !MasterAds.remove (hk);
@@ -541,6 +571,9 @@ housekeeper()
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
 	cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
+
+	dprintf (D_ALWAYS, "\tCleaning SubmittorAds ...\n");
+	cleanHashTable (SubmittorAds, now, makeScheddAdHashKey);
 
 	dprintf (D_ALWAYS, "\tCleaning MasterAds ...\n");
 	cleanHashTable (MasterAds, now, makeMasterAdHashKey);

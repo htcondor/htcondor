@@ -113,11 +113,15 @@ main_init(int argc, char *argv[])
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
 	daemonCore->Register_Command(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
@@ -163,6 +167,11 @@ receive_query(Service* s, int command, Stream* sock)
 		whichAds = SCHEDD_AD;
 		break;
 		
+	  case QUERY_SUBMITTOR_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
+		whichAds = SUBMITTOR_AD;
+		break;
+
 	  case QUERY_MASTER_ADS:
 		dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
 		whichAds = MASTER_AD;
