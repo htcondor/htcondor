@@ -2,6 +2,7 @@ all_target(libclassad.a)
 
 C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS)
 CFLAGS = -Wall $(STD_C_FLAGS)
+LIB = $(STD_LIBS)
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
 	  attrlist.o classad.o classifiedjobs.o classad_util.o environment.o \
@@ -11,6 +12,7 @@ OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
 library_target(libclassad.a,$(OBJ))
 
 c_plus_target(test, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
+c_plus_target(test_classads, test_classads.o, $(LIB))
 pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
 
 clean::
