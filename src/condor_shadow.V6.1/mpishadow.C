@@ -1188,6 +1188,11 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 		if ( !uLog.writeEvent( &event )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}
+		
+			// Now that the whole job is running, start up a few
+			// timers we need.
+		shadow_user_policy.startTimer();
+		
 	}
 }
 

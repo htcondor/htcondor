@@ -351,6 +351,9 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 		// We've only got one remote resource, so if it's started
 		// executing, we can safely log our execute event
 	logExecuteEvent();
+
+		// Start the timer for the periodic user job policy  
+	shadow_user_policy.startTimer();
 }
 
 
