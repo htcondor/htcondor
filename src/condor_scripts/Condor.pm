@@ -15,7 +15,6 @@ package Condor;
 
 require 5.0;
 use Carp;
-use Cwd;
 use FileHandle;
 use POSIX "sys_wait_h";
 
@@ -24,7 +23,6 @@ BEGIN
     $CONDOR_SUBMIT = 'condor_submit';
     $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
     $CONDOR_VACATE = 'condor_vacate';
-    $CONDOR_VACATE_JOB = 'condor_vacate_job';
     $CONDOR_RESCHD = 'condor_reschedule';
 
     $DEBUG = 1;
@@ -33,11 +31,6 @@ BEGIN
     $saw_submit = 0;
     %submit_info;
 	%machine_ads;
-    %personal_condor_params;
-    %personal_config_changes;
-	$personal_config = "condor_config";
-	$personal_template = "condor_config_template";
-	$personal_local = "condor_config.local";
 
 	$submit_time = 0;
 	$TimedCallbackWait = 0;
@@ -51,11 +44,6 @@ sub Reset
     $saw_submit = 0;
     %submit_info = {};
     %machine_ads = {};
-    %personal_condor_params = {};
-    %personal_config_changes = {};
-	$personal_config = "condor_config";
-	$personal_template = "condor_config_template";
-	$personal_local = "condor_config.local";
 
 	$submit_time = 0;
 	$TimedCallbackWait = 0;
@@ -293,13 +281,6 @@ sub Vacate
 {
     my $machine = shift || croak "missing machine argument";
     return runCommand( "$CONDOR_VACATE $machine" );
-}
-
-sub VacateJob
-{
-    #my $cluster = shift || croak "missing cluster argument";
-	print "Cluster is $cluster\n";
-    return runCommand( "$CONDOR_VACATE_JOB $cluster" );
 }
 
 sub Reschedule
@@ -906,8 +887,7 @@ sub ParseSubmitFile
 	    }
 
 	    # compress whitespace and remove trailing newline for readability
-		# some tests particularly job_core_env* care that tabs are not converted to spaces
-	    #$value =~ s/\s+/ /g;
+	    $value =~ s/\s+/ /g;
 	    chomp $value;
 
 	
@@ -1057,400 +1037,5 @@ sub safe_WEXITSTATUS {
 		return $status >> 8;
 	} else {
 		return WEXITSTATUS($status);
-	}
-}
-
-sub ParsePersonalCondorParams
-{
-    my $submit_file = shift || croak "missing submit file argument";
-    my $line = 0;
-
-    if( ! open( SUBMIT_FILE, $submit_file ) )
-    {
-	print "error opening \"$submit_file\": $!\n";
-	return 0;
-    }
-    
-    debug( "reading submit file...\n" );
-    while( <SUBMIT_FILE> )
-    {
-	chomp;
-	$line++;
-
-	# skip comments & blank lines
-	next if /^#/ || /^\s*$/;
-
-	# if this line is a variable assignment...
-	if( /^(\w+)\s*\=\s*(.*)$/ )
-	{
-	    $variable = lc $1;
-	    $value = $2;
-
-	    # if line ends with a continuation ('\')...
-	    while( $value =~ /\\\s*$/ )
-	    {
-		# remove the continuation
-		$value =~ s/\\\s*$//;
-
-		# read the next line and append it
-		<SUBMIT_FILE> || last;
-		$value .= $_;
-	    }
-
-	    # compress whitespace and remove trailing newline for readability
-	    $value =~ s/\s+/ /g;
-	    chomp $value;
-
-	
-		# Do proper environment substitution
-	    if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ )
-	    {
-			my $envlookup = $ENV{$2};
-	    	#debug( "Found $envlookup in environment \n");
-			$value = $1.$envlookup.$3;
-	    }
-
-	    debug( "(Condor.pm) $variable = $value\n" );
-	    
-	    # save the variable/value pair
-	    $personal_condor_params{$variable} = $value;
-	}
-	else
-	{
-#	    debug( "line $line of $submit_file not a variable assignment... " .
-#		   "skipping\n" );
-	}
-    }
-    return 1;
-}
-
-sub WhichCondorConfig
-{
-	my $pathtoconfig = shift @_;
-	my $line = "";
-	my $badness = "";
-	my $matchedconfig = "";
-
-	open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
-	while(<CONFIG>)
-	{
-		chomp();
-		$line = $_;
-		print "--$line--\n";
-
-		if( $line =~ /^\s*($pathtoconfig)\s*$/ )
-		{
-			$matchedconfig = $1;
-			print "Matched! $1\n";
-		}
-
-		if( $line =~ /(Can't find address for this master)/ )
-		{
-			$badness = $1;
-			print "Not currently running! $1\n";
-		}
-	}
-	close(CONFIG);
-	# we want matched running or matched not running or lost returned
-
-	if( $matchedconfig eq "" )
-	{
-		return("lost");
-	} 
-	else
-	{
-		if( $badness eq "" )
-		{
-			return("matched running");
-		}
-		else
-		{
-			return("matched not running");
-		}
-	}
-}
-
-sub RelocatePersonalCondor
-{
-	if( -d "old" )
-	{
-		# get rid of left overs from last time hopefully -we- did this
-		system("rm -rf old");
-	}
-
-	# lay down new structure
-	system("mkdir -p old");
-	if( -d "sbin" )
-	{
-		system("mv -f sbin old");
-	}
-	if( -d "bin" )
-	{
-		system("mv -f bin old");
-	}
-	if( -d "lib" )
-	{
-		system("mv -f lib old");
-	}
-}
-
-
-sub InstallPersonalCondor
-{
-	my %control = %personal_condor_params;
-	my $topleveldir = getcwd();
-
-	my $schedd;
-	my $master;
-	my $collector;
-	my $submit;
-	my $startd;
-	my $negotiator;
-	my $condorq = `which condor_q`;
-
-	if( exists $control{"condor"} )
-	{
-		$condordistribution = $control{"condor"};
-		print "Install this condor --$condordistribution--\n";
-		if( $condordistribution eq "install" )
-		{
-			print "My path to condor_q is $condorq and homedir is $homedir\n";
-
-			if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
-			{
-				print "Root path $1 and base $2\n";
-				$binloc = $1;	# we'll get our binaries here.
-			}
-			else
-			{
-				die "Can not seem to find a Condor install!\n";
-			}
-			
-			my $sbinloc;
-
-			if( $binloc =~ /^(\/.*\/)bin\/\s*$/ )
-			{
-				print "Root path to sbin is $1\n";
-				$sbinloc = $1;	# we'll get our binaries here.
-			}
-			else
-			{
-				die "Can not seem to locate Condor release binaries\n";
-			}
-
-			$schedd = $sbinloc . "sbin/". "condor_schedd";
-			$master = $sbinloc . "sbin/". "condor_master";
-			$collector = $sbinloc . "sbin/". "condor_collector";
-			$submit = $binloc . "condor_submit";
-			$startd = $sbinloc . "sbin/". "condor_startd";
-			$negotiator = $sbinloc . "sbin/". "condor_negotiator";
-
-			print "$schedd $master $collector $submit $startd $negotiator\n";
-
-
-			print "Sandbox started rooted here: $topleveldir\n";
-
-			system("mkdir -p $topleveldir/sbin");
-			system("mkdir -p $topleveldir/bin");
-			system("mkdir -p $topleveldir/lib");
-			system("mkdir -p $topleveldir/execute");
-			system("mkdir -p $topleveldir/spool");
-			system("mkdir -p $topleveldir/log");
-
-
-			# now install condor
-
-			system("cp $sbinloc/sbin/* $topleveldir/sbin");
-			system("cp $binloc/* $topleveldir/bin");
-			system("cp $sbinloc/lib/* $topleveldir/lib");
-		}
-		elsif( -e $condordistribution )
-		{
-			system("tar -xf $condordistribution");
-		}
-		else
-		{
-			die "Undiscernable install directive! (condor = $condordistribution)\n";
-		}
-	}
-	else
-	{
-		print " no condor attribute so not installing condor \n";
-	}
-}
-
-sub TunePersonalCondor
-{
-	my %control = %personal_condor_params;
-	my $topleveldir = getcwd();
-	my $condorhost = `/bin/hostname`;
-
-	chomp($condorhost);
-
-	# was a special collector called out?
-	if( exists $control{"collector"} )
-	{
-		$condorhost = $control{"collector"};
-	}
-
-	# was a special template called out?
-	if( exists $control{"condortemplate"} )
-	{
-		$personal_template = $control{"condortemplate"};
-	}
-
-	# was a special config file called out?
-	if( exists $control{"condorconfig"} )
-	{
-		$personal_config = $control{"condorconfig"};
-	}
-
-	# was a special config file called out?
-	if( exists $control{"condorlocal"} )
-	{
-		$personal_local = $control{"condorlocal"};
-	}
-
-	print "Proto file is --$personal_template--\n";
-
-	$personalmaster = "$homedir/sbin/condor_master";
-
-	#filter fig file storing entries we set so we can test
-	#for completeness when we are done
-
-	my $line;
-	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $!\n";
-	open(NEW,">$personal_config") || die "Can not open new config file: $!\n";
-	while(<TEMPLATE>)
-	{
-		$line = $_;
-		chomp($line);
-		if( $line =~ /^RELEASE_DIR\s*=.*/ )
-		{
-			print "-----------$line-----------\n";
-			$personal_config_changes{"RELEASE_DIR"} = "RELEASE_DIR = $topleveldir\n";
-			print NEW "RELEASE_DIR = $topleveldir\n";
-		}
-		elsif( $line =~ /^LOCAL_DIR\s*=.*/ )
-		{
-			print "-----------$line-----------\n";
-			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
-			print NEW "LOCAL_DIR = $topleveldir\n";
-		}
-		elsif( $line =~ /^LOCAL_CONFIG_FILE\s*=.*/ )
-		{
-			print "-----------$line-----------\n";
-			$personal_config_changes{"LOCAL_DIR"} = "LOCAL_DIR = $topleveldir\n";
-			print NEW "LOCAL_CONFIG_FILE = $topleveldir/$personal_local\n";
-		}
-		else
-		{
-			print NEW "$line\n";
-		}
-	}
-	close(TEMPLATE);
-
-	if( ! exists $personal_config_changes{"CONDOR_HOST"} )
-	{
-		$personal_config_changes{"CONDOR_HOST"} = "CONDOR_HOST = $condorhost\n";
-	}
-
-	close(NEW);
-
-	# For this test environment set these.....use local config file
-	open(NEW,">$personal_local")  || die "Can not open template: $!\n";
-	print NEW "COLLECTOR_HOST = \$(CONDOR_HOST):7666\n";
-	print NEW "NEGOTIATOR_HOST = \$(CONDOR_HOST):7667\n";
-	print NEW "CONDOR_HOST = $condorhost\n";
-	print NEW "START = TRUE\n";
-
-	# now we consider configuration requests
-
-	if( exists $control{"vms"} )
-	{
-		my $myvms = $control{"vms"};
-		print "VMs wanted! Number = $myvms\n";
-		print NEW "NUM_CPUS = $myvms\n";
-		print NEW "NUM_VIRTUAL_MACHINES = $myvms\n";
-		$gendatafile = $gendatafile . "_" . $myvms . "VMs";
-	}
-
-	if( exists $control{"encryption"} )
-	{
-		my $myencryptions = $control{"encryption"};
-		print "Encryption wanted! methods = $myencryptions\n";
-		print NEW "SEC_DEFAULT_ENCRYPTION = REQUIRED\n";
-		print NEW "SEC_DEFAULT_CRYPTO_METHODS = $myencryptions\n";
-		$gendatafile = $gendatafile . "_" . $myencryptions;
-	}
-
-	if( exists $control{"authentication"} )
-	{
-		my $myauthentication = $control{"authentication"};
-		if($myauthentication eq "GSI")
-		{
-			print "Setting up authentication";
-			print NEW "SEC_DEFAULT_AUTHENTICATION = REQUIRED\n";
-			print NEW "SEC_DEFAULT_AUTHENTICATION_METHODS = $myauthentication\n";
-			print NEW "GSI_DAEMON_DIRECTORY = /etc/grid-security\n";
-			print NEW "#Subjecct must be in slash form and associate with condor entry in grid-mapfile\n";
-			print NEW "GSI_DAEMON_NAME = /C=US/ST=Wisconsin/L=Madison/O=University of Wisconsin -- Madison/O=Computer Sciences Department/OU=Condor Project/CN=nmi-test-5.cs.wisc.edu/Email=bgietzel@cs.wisc.edu\n";
-			$gendatafile = $gendatafile . "_" . $myauthenication;
-		}
-		else
-		{
-			print "Do not understand requested authentication";
-		}
-	}
-
-	close(NEW);
-}
-
-sub StartPersonalCondor
-{
-	my %control = %personal_condor_params;
-	my $topleveldir = getcwd();
-	my $personalmaster = "$topleveldir/sbin/condor_master";
-
-	my $configfile = $control{"condorconfig"};
-	my $fullconfig = "$topleveldir/$configfile";
-	my $oldpath = $ENV{PATH};
-	my $newpath = "$topleveldir/sbin:$topleveldir/bin:" . "$oldpath";
-	$ENV{PATH} = $newpath;
-
-	print "Using this path: --$newpath--\n";
-
-	print "Want $configfile for config file\n";
-
-	#set up to use the existing generated configfile
-	$ENV{CONDOR_CONFIG} = $fullconfig;
-	my $condorstate = WhichCondorConfig($fullconfig);
-	print "Condor state is $condorstate\n";
-	my $fig = $ENV{CONDOR_CONFIG};
-	print "Condor_config from environment is --$fig--\n";
-
-	# At the momment we only restart/start a personal we just configured 
-	# or reconfigured
-
-	if( $condorstate eq "lost" )
-	{
-		die "Should be set with a new config file but LOST!\n";
-	}
-	elsif( $condorstate eq "matched not running" )
-	{
-		print "start up the personal condor!--$personalmaster--\n";
-		system("$personalmaster");
-		system("condor_config_val -v log");
-	}
-	elsif( $condorstate eq "matched running" )
-	{
-		print "restart the personal condor!\n";
-		system("condor_off -master");
-		sleep 5;
-		system("$personalmaster");
-	}
-	else
-	{
-		die "Bad state for a new personal condor configuration!\n";
 	}
 }
