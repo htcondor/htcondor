@@ -84,7 +84,7 @@ extern int MainSymbolExists;
 extern int JobStatus;
 extern char    *MailerPgm;
 extern char My_UID_Domain[];
-extern char *_FileName_;
+static char *_FileName_ = __FILE__;
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 
