@@ -423,6 +423,8 @@ sub CheckSize(  )
     $BigCount = 1 if ( 0 == $BigCount );
 
     # Store the results...
+    $Hash->Add( "GlobalMaxSize", "n",
+		$MaxSize );
     $Hash->Add( "BigTotalBytes", "n",
 		$BigTotalBytes );
     $Hash->Add( "BigMeanBytes", "n",
