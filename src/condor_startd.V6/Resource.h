@@ -19,6 +19,8 @@ public:
 	int		deactivate_claim();	
 		// Quickly kill starter but keep claim
 	int		deactivate_claim_forcibly();
+	int		hardkill_claim();	// Just send hardkill to the starter,
+								// no state changes, vacates, etc.
 	
 		// Resource state methods
 	int		change_state( State );

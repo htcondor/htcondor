@@ -147,6 +147,18 @@ Resource::deactivate_claim_forcibly()
 
 
 int
+Resource::hardkill_claim()
+{
+	if( state() == claimed_state && r_starter->active() ) { 
+		if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
+			r_starter->killpg( DC_SIGKILL );
+		}
+	}
+	return TRUE;
+}
+
+
+int
 Resource::change_state( State newstate )
 {
 	return r_state->change( newstate );
