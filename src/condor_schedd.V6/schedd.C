@@ -6511,6 +6511,8 @@ releaseJob( int cluster, int proc, const char* reason,
 		 CommitTransaction();
 	}
 
+	scheduler.WriteReleaseToUserLog(tmp_id);
+
 	dprintf( D_ALWAYS, "Job %d.%d released from hold: %s\n", cluster, proc,
 			 reason );
 
