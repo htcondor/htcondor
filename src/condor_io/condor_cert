@@ -186,11 +186,7 @@ elsif ( /^-createca/i ) {
 }
 else { #-help
 	print "usage: condor_cert {-user|-daemon|-createca} <directory path>\n";
-	print "   or: condor_cert -signcert [-infile <infile> <output file>]\n";
-	print "       Note: the default for -signcert is a filter, reading from\n";
-	print "       STDIN and writing to STDOUT. This is overridden by\n";
-	print "       specifying -infile (which must appear after -signcert)\n";
-	print "       and providing an input and output filename.\n";
+	print "   or: condor_cert -signcert -infile <infile> <output file>\n";
 	exit 0;
 }
 
