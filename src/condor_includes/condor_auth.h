@@ -179,7 +179,7 @@ class Condor_Auth_Base {
     //------------------------------------------
  protected:
 
-    const int isDaemon() const;
+    const bool isDaemon() const;
     //------------------------------------------
     // PURPOSE: Whether it's a deamon or not
     // REQUIRE: None
@@ -200,7 +200,7 @@ class Condor_Auth_Base {
     //------------------------------------------
     int             authenticated_;  // status
     int             mode_;           // Which mode are we in
-    int             isDaemon_;       // Whether it's a daemon or not
+    bool            isDaemon_;       // Whether it's a daemon or not
     char *          remoteUser_;     // Remote user
     char *          remoteDomain_;   // Remote domain
     char *          remoteHost_;     // Remote host
