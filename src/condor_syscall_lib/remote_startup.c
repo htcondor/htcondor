@@ -225,11 +225,12 @@ MAIN( int argc, char *argv[], char **envp )
 	init_syscall_connection( FALSE );
 #endif
 
-#if 0
+#if 1
 	dprintf( D_ALWAYS, "User process started\n" );
 	dprintf( D_ALWAYS, "\nOriginal\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
+	delay();
 #endif
 
 		/*
@@ -239,20 +240,27 @@ MAIN( int argc, char *argv[], char **envp )
 	assert( argc >= 3 );
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
-		dprintf( D_FULLDEBUG, "Found condor_cmd_fd\n" );
+#if 1
+		dprintf( D_ALWAYS, "Found condor_cmd_fd\n" );
+		delay();
+#endif
 		cmd_fd = strtol( argv[2], &extra, 0 );
 		if( extra[0] ) {
 			dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", argv[2]);
 			exit( 1 );
 		}
-		dprintf( D_FULLDEBUG, "fd number is %d\n", cmd_fd );
+#if 1
+		dprintf( D_ALWAYS, "fd number is %d\n", cmd_fd );
+		delay();
+#endif
 		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
 		pre_open( cmd_fd, TRUE, FALSE );
 
-#if 0
+#if 1
 		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
 		DumpOpenFds();
 		dprintf( D_ALWAYS, "END\n\n" );
+		delay();
 #endif
 
 
@@ -271,9 +279,15 @@ MAIN( int argc, char *argv[], char **envp )
 		assert( FALSE );
 	}
 
-	dprintf( D_FULLDEBUG, "\nCalling cmd stream processor\n" );
+#if 1
+	dprintf( D_ALWAYS, "\nCalling cmd stream processor\n" );
+	delay();
+#endif
 	_condor_interp_cmd_stream( cmd_fd );
-	dprintf( D_FULLDEBUG, "Done\n\n" );
+#if 1
+	dprintf( D_ALWAYS, "Done\n\n" );
+	delay();
+#endif
 	cmd_name = argv[0];
 	argv += 2;
 	argc -= 2;
@@ -282,7 +296,7 @@ MAIN( int argc, char *argv[], char **envp )
 	unblock_signals();
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
-#if 0
+#if 1
 	dprintf( D_ALWAYS, "\nBefore calling main()\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
@@ -399,7 +413,10 @@ find_cmd( const char *str )
 static BOOLEAN
 condor_iwd( const char *path )
 {
-	dprintf( D_FULLDEBUG, "condor_iwd: path = \"%s\"\n", path );
+#if 1
+	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
+	delay();
+#endif
 	REMOTE_syscall( CONDOR_chdir, path );
 	Set_CWD( path );
 	return TRUE;
@@ -414,6 +431,10 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 	int		remote_fd;
 	int		scm;
 
+#if 1
+	dprintf( D_ALWAYS, "condor_fd( %s, %s, %s\n", num, path, open_mode );
+	delay();
+#endif
 	n = strtol( num, &extra, 0 );
 	assert( extra[0] == '\0' );
 	if( strcmp("O_RDONLY",open_mode) == MATCH ) {
@@ -426,10 +447,13 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 		dprintf( D_ALWAYS, "Unknown file opening mode (%s)\n", open_mode );
 		assert( FALSE );
 	}
+
 	dprintf( D_ALWAYS,
 		"condor_fd: fd_number = %d, file = \"%s\",  mode = 0%o\n",
 		n, path, mode
 	);
+	delay();
+
 	scm = SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 	remote_fd = open( path, mode );
 	assert( remote_fd >= 0 );
@@ -689,3 +713,29 @@ unblock_signals()
 
 	dprintf( D_ALWAYS, "Unblocked all signals\n" );
 }
+
+#define UNIT 10000
+
+#if defined(ALPHA)
+#	define LIM (2000 * UNIT)
+#elif defined(AIX32)
+#	define LIM (225 * UNIT)
+#elif defined(SPARC)
+#	define LIM (260 * UNIT)
+#elif defined(ULTRIX42)
+#	define LIM (170 * UNIT)
+#elif defined(HPPAR)
+#	define LIM (260 * UNIT)
+#endif
+
+#if 1
+	delay()
+	{
+		int		i;
+
+		for( i=0; i<LIM; i++ )
+			;
+	}
+#else
+	delay(){}
+#endif
