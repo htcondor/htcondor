@@ -206,14 +206,12 @@ CStarter::StartJob()
 #else
 	// Win32
 	// taken origionally from OsProc::StartJob.  Here we create the
-	// user and initialize user_priv
-	{	
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		init_user_nobody_loginname(nobody_login);
-		init_user_ids("nobody");
-	}
+	// user and initialize user_priv.
+	// we only support running jobs as user nobody for the first pass
+	char nobody_login[60];
+	sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	init_user_nobody_loginname(nobody_login);
+	init_user_ids("nobody");
 #endif
 
 		// Now that we have the right user for priv_state code, we can
