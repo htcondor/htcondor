@@ -1019,7 +1019,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char startdAddr[32];
 	char startdName[64];
 	char *capability;
-	ReliSock startdSock;
+	SafeSock startdSock;
 	bool send_failed;
 
 	// these will succeed
