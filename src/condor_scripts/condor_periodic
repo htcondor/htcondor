@@ -300,8 +300,10 @@ while(  ! $Exit )
 	    Log( $_ );
 	}
 	close( OUT );
+	Log( "Execution completed @ " . localtime($Now) . "\n" );
     }
 }
 
 # Bye
+Log( "Exiting with status 0\n" );
 exit 0;
