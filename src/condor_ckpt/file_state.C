@@ -453,23 +453,29 @@ OpenFileTable::DoDup2( int orig_fd, int new_fd )
     return -1;
   }
   
-//dprintf(D_ALWAYS,"Just before closing %d\n",new_fd);
-//Display();
+  //dprintf(D_ALWAYS,"Just before closing %d\n",new_fd);
+  //Display();
   // POSIX.1 says do it this way, AIX does it differently - any
   // AIX programs which depend on that behavior are now hosed...
   if( file[new_fd].isOpen() ) {
     DoClose( new_fd );
   }
-//dprintf(D_ALWAYS,"Just after closing %d\n",new_fd);
+  //dprintf(D_ALWAYS,"Just after closing %d\n",new_fd);
   
-//Display();
+  //Display();
   // make new fd a duplicate of the original one
+  // Note: be careful to handle the case of a dup of a dup... we
+  //	need to find the real original (non-dupped) entry here or
+  //	we will get messed up after a checkpoint/restart - Todd 2/98
+  while ( file[orig_fd].isDup() ) {   // find the real non-dup entry
+	orig_fd = file[orig_fd].dup_of;
+  }
   file[new_fd] = file[orig_fd];
   file[new_fd].duplicate = TRUE;
   file[new_fd].dup_of = orig_fd;
   
-//dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
-//Display();
+  //dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
+  //Display();
   return new_fd;
 }
 
@@ -2442,8 +2448,9 @@ fcntl(int fd, int cmd, ...)
 				if( MappingFileDescriptors() ) {
 					rval =  FileTab->DoDup2( fd, arg );
 		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
-					if (rval == arg && MyImage.GetMode() == STANDALONE)
+					if (rval == arg && MyImage.GetMode() == STANDALONE) {
                         rval = syscall( SYS_fcntl, fd, cmd, arg );
+					}
 					return rval;
 				}
 
