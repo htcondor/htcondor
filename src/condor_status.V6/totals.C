@@ -121,23 +121,31 @@ displayTotals (FILE *file, int keyLength)
 	topLevelTotal->displayHeader(file);
 	fprintf (file, "\n");
 
+	// sort the keys (insertion sort) so we display totals in sorted order
 	const char **keys = new (const char *) [allTotals.getNumElements()];
 	allTotals.startIterations();
-	for (int k = 0; k < allTotals.getNumElements(); k++)
+	for (int k = 0; k < allTotals.getNumElements(); k++) // for each key
 	{
 		allTotals.iterate(key, ct);
+		// find the position where we want to insert the key
 		int pos;
 		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++);
 		if (pos < k) {
+			// if we are not inserting at the end of the array, then
+			// we must shift the elements to the right to make room;
+			// we use memmove() because it handles overlapping buffers
+			// correctly (and efficiently)
 			memmove(keys+pos+1, keys+pos, (k-pos)*sizeof(char *));
 		}
+		// insert the key in the right position in the list
 		keys[pos] = strdup(key.Value());
 	}
+	// now that our keys are sorted, display the totals in sort order
 	for (int k = 0; k < allTotals.getNumElements(); k++)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
-		free((void *)keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
+		free((void *)keys[k]);
 		ct->displayInfo(file);
 	}
 	delete [] keys;
