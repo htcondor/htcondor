@@ -17,6 +17,7 @@ public:
 	~ResMgr();
 
 	bool 	in_use();
+	void	final_update();
 	
 	// These two functions walk through the array of rip pointers and
 	// call the specified function on each resource.  The first takes
@@ -32,7 +33,7 @@ public:
 	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab
 	Resource*	get_by_any_cap(char*);	// Find rip by r_cur or r_pre
 	State	state();					// Return the machine state
-
+											   
 private:
 	Resource**	resources;		// Array of pointers to resource objects
 	int			nresources;		// Size of the array
