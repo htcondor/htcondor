@@ -30,6 +30,10 @@
 #ifndef __CONDOR_ATTRIBUTES_H__
 #define __CONDOR_ATTRIBUTES_H__
 
+const char ATTR_ACTION_CONSTRAINT		 [] = "ActionConstraint";
+const char ATTR_ACTION_IDS				 [] = "ActionIds";
+const char ATTR_ACTION_RESULT			 [] = "ActionResult";
+const char ATTR_ACTION_RESULT_TYPE		 [] = "ActionResultType";
 const char ATTR_ACTIVITY				 [] = "Activity";
 const char ATTR_APPEND_FILES			[] = "AppendFiles";
 const char ATTR_ARCH                     [] = "Arch";
@@ -114,6 +118,7 @@ const char ATTR_JAR_FILES                [] = "JarFiles";
 const char ATTR_JAVA_MFLOPS              [] = "JavaMFlops";
 const char ATTR_JAVA_VENDOR              [] = "JavaVendor";
 const char ATTR_JAVA_VERSION             [] = "JavaVersion";
+const char ATTR_JOB_ACTION               [] = "JobAction";
 const char ATTR_JOB_ARGUMENTS			 [] = "Args";
 const char ATTR_JOB_CMD					 [] = "Cmd";
 const char ATTR_JOB_CMDEXT				 [] = "CmdExt";
@@ -180,6 +185,7 @@ const char ATTR_NICE_USER			 	 [] = "NiceUser";
 const char ATTR_NEXT_CLUSTER_NUM		 [] = "NextClusterNum";
 const char ATTR_NODE					 [] = "Node";
 const char ATTR_NOTIFY_USER				 [] = "NotifyUser";
+const char ATTR_NOTIFY_JOB_SCHEDULER     [] = "NotifyJobScheduler";
 const char ATTR_NT_DOMAIN				 [] = "NTDomain";
 const char ATTR_NUM_CKPTS				 [] = "NumCkpts";
 const char ATTR_NUM_HOPS_TO_SUBMIT_MACHINE[] = "NumHopsToSubmitMachine";
