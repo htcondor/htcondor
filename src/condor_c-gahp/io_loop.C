@@ -191,7 +191,7 @@ io_loop(void * arg, Stream * sock) {
 
 		if (is_ready[1]) {
 			MyString * line = NULL;
-			while ((line = result_buffer.GetNextLine()) != NULL) {
+			if ((line = result_buffer.GetNextLine()) != NULL) {
 
 				dprintf (D_FULLDEBUG, "Master received:\"%s\"\n", line->Value());
 

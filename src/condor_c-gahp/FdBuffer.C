@@ -26,18 +26,22 @@
 
 FdBuffer::FdBuffer (int _fd) {
 	fd = _fd;
- 	buffer.reserve (1000);
+ 	buffer.reserve (5000);
 	error = FALSE;
+	newlineCount=0;
 }
 
 FdBuffer::FdBuffer() {
 	fd = -1;
- 	buffer.reserve (1000);
+ 	buffer.reserve (5000);
+ 	newlineCount=0;
 }
 
 
 MyString *
 FdBuffer::ReadNextLineFromBuffer () {
+	if (!HasNextLineInBuffer())
+		return NULL;
 
     const int len = buffer.Length();
 	const char * chars = buffer.Value();
@@ -53,12 +57,14 @@ FdBuffer::ReadNextLineFromBuffer () {
 			int end_char = i-1;
 			if (i != 0 && buffer[i-1] == '\r')		// if command is terminated w '\r\n'
 				end_char--;
-		
-			// Pop the line
+
+			// "Pop" the line
 			MyString * result = new MyString ((MyString)buffer.Substr (0,end_char));
 
 			// Shorten the buffer
             buffer=buffer.Substr (i+1, len);
+
+			newlineCount--;
 
 			return result;
 		}
@@ -70,19 +76,8 @@ FdBuffer::ReadNextLineFromBuffer () {
 
 int
 FdBuffer::HasNextLineInBuffer() {
-	const int len = buffer.Length();
-	const char * chars = buffer.Value();
-	int i=0;
-
-	for (i=0; i<len; i++) {
-		if (chars[i] == '\\') {
-			i++;	// skip the next char, since it was escaped
-			continue;
-		}
-
-		if (buffer[i] == '\n')
-			return TRUE;
-	}
+	if (newlineCount > 0)
+		return TRUE;
 
 	return FALSE;
 }
@@ -97,7 +92,7 @@ FdBuffer::GetNextLine () {
 	MyString * result = ReadNextLineFromBuffer();
 
 
-	if (!result) {
+	if (result == NULL) {
 		// Read another chunk from fd
 
 		char buff[5001];
@@ -106,7 +101,21 @@ FdBuffer::GetNextLine () {
 		if ((num_read = read (this->fd, buff, 5000)) > 0) {
 
 			buff[num_read]='\0';
-			dprintf (D_FULLDEBUG, "reading %d  bytes, from buffer %d, %s\n", num_read, this->fd, buff);
+			dprintf (D_FULLDEBUG, "reading %d  bytes, from buffer %d\n", num_read, this->fd);
+
+			// Count the number of newlines in the newly-read chunk
+			int i=0;
+			if ((buffer.Length() > 0) && buffer[buffer.Length()-1] == '\\')
+				i++;
+			for (; i<num_read; i++) {
+				if (buff[i] == '\\') {
+					i++;	// skip the next char, since it was escaped
+					continue;
+				}
+				if (buff[i] == '\n')
+					newlineCount++;
+			}
+
 			buffer += buff;
 
 			// Try the buffer again

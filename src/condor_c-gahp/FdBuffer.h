@@ -49,15 +49,16 @@ public:
 	int getFd() { return fd; }
 	void setFd(const int _fd) { fd = _fd; }
 	const char * getBuffer() { return buffer.Value(); }
-	
+
 	int IsError() { return error; }
 
 protected:
 	int fd;
 	MyString buffer;
-	
+
+	int newlineCount;
 	int error;
-	
+
 	MyString * ReadNextLineFromBuffer();
 	int HasNextLineInBuffer();
 
