@@ -7,7 +7,6 @@
 #include <string.h>
 #include "exprtype.h"
 #include "ast.h"
-#include "classad.h"
 #include "parser.h"
 #include "buildtable.h"
 
