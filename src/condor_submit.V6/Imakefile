@@ -18,7 +18,7 @@ LIBDIRS = ../condor_schedd.V6 ../condor_util_lib ../condor_c++_util
 all_target(condor_submit)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
-c_plus_target(condor_submit,$(OBJ),$(LIB) $(AUTH_LIB))
+c_plus_target(condor_submit,$(OBJ),$(LIB))
 release_target(condor_submit,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_submit,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_submit,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
