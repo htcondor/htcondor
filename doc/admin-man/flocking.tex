@@ -1,0 +1,19 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Flocking: Configuring a Schedd to Submit to Multiple Pools}
+\label{sec:Flocking}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Condor{schedd} may be configured to submit jobs to more than one
+pool.
+In the default configuration, the \Condor{schedd} contacts the
+Central Manager specified by the \Macro{CONDOR\_HOST} macro (described
+in section~\ref{param:CondorHost}) to locate execute machines
+available to run jobs in its queue.
+However, the
+\Macro{FLOCK\_HOSTS} macro (described in
+section~\ref{param:FlockHosts}) may be used to specify additional
+Central Managers for the \Condor{schedd} to contact.
+When the local
+pool does not satisfy all job requests, the \Condor{schedd} will try
+the pools specified by \Macro{FLOCK\_HOSTS} in turn until all jobs are
+satisfied.
