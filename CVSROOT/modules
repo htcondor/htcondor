@@ -296,9 +296,9 @@ V6_6_6_EXT	-a V6_6_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gahp/1.0.12
 
-# Externals needed for V6_6_7 (same as V6_6_6, except krb5 is now 1.2.7)
+# Externals needed for V6_6_7 (same as V6_6_6, except krb5 might be different)
 V6_6_7_EXT	-a -a V6_6_COMMON_EXT \
-		   externals/bundles/krb5/1.2.7 \
+		   externals/bundles/krb5/1.2.5 \
 		   externals/bundles/glibc/2.2.93 \
 		   externals/bundles/glibc/2.3.2.27.9.7 \
 		   externals/bundles/globus/2.2.4 \
