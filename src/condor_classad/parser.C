@@ -53,7 +53,8 @@ static	char*	StrCpy(char* str)
 // ReadToken() reads in a token to the global variable for parse_... functions
 // to use. Once a token is read by this function, it can not be looked at again.
 ////////////////////////////////////////////////////////////////////////////////
-Token* ReadToken(char*& s)
+Token* 
+ReadToken(char*& s)
 {
     if(alreadyRead == TRUE) 
     {
@@ -68,7 +69,8 @@ Token* ReadToken(char*& s)
 // LookToken 'look at' a token without 'read' it, so that the next token that's
 // read in is the same token. A token can be looked at for many times.
 ////////////////////////////////////////////////////////////////////////////////
-Token* LookToken(char*& s)
+Token* 
+LookToken(char*& s)
 {
     if(alreadyRead == TRUE)
     {
@@ -84,7 +86,8 @@ Token* LookToken(char*& s)
 // Match() reads in a token, see if its type matches the argument t. If it does,
 // then return TRUE; Otherwise return FALSE.
 ////////////////////////////////////////////////////////////////////////////////
-int Match(LexemeType t, char*& s, int& count)
+int 
+Match(LexemeType t, char*& s, int& count)
 {
     Token*	token;
 
@@ -103,7 +106,8 @@ int Match(LexemeType t, char*& s, int& count)
 // intermediate parse functions.
 ///////////////////////////////////////////////////////////////////////////////
 
-int ParseFactor(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseFactor(char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);	// next token
 	ExprTree	*expr;
@@ -209,7 +213,8 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
     return TRUE;
 }
   
-int ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*			t = LookToken(s);	// next token
     ExprTree*		subTree;
@@ -254,7 +259,8 @@ int ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
     return ParseX4(subTree, s, newTree, count);
 }
 
-int ParseMultOp(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseMultOp(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
@@ -266,7 +272,8 @@ int ParseMultOp(char*& s, ExprTree*& newTree, int& count)
     return FALSE;
 }
 
-int ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*			t = LookToken(s);
     ExprTree*		subTree;
@@ -311,7 +318,8 @@ int ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
     return ParseX3(subTree, s, newTree, count);
 }
 
-int ParseAddOp(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseAddOp(char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t;
     ExprTree*	lArg;
@@ -342,7 +350,8 @@ int ParseAddOp(char*& s, ExprTree*& newTree, int& count)
     return TRUE;
 }
 
-int ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);
     ExprTree*	subTree;
@@ -398,7 +407,8 @@ int ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
@@ -410,7 +420,8 @@ int ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);
     ExprTree*	subTree;
@@ -466,7 +477,8 @@ int ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
@@ -478,7 +490,8 @@ int ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);
     ExprTree*	subTree;
@@ -501,7 +514,8 @@ int ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
@@ -513,7 +527,8 @@ int ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
 }
 
 
-int ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
+int 
+ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t = LookToken(s);
     ExprTree*	subTree;
@@ -535,7 +550,8 @@ int ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
     return ParseX1(subTree, s, newTree, count);
 }
 
-int ParseExpr(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseExpr(char*& s, ExprTree*& newTree, int& count)
 {
     ExprTree*	lArg;
 
@@ -546,7 +562,8 @@ int ParseExpr(char*& s, ExprTree*& newTree, int& count)
     return FALSE;
 }
 
-int ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
+int 
+ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
 {
     Token*	t;
     ExprTree* 	lArg;
@@ -584,7 +601,8 @@ int ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
     return FALSE;
 }
 
-int Parse(const char* s, ExprTree*& tree)
+int 
+Parse(const char* s, ExprTree*& tree)
 {
 	char		str[ATTRLIST_MAX_EXPRESSION];
     char*		tmp = str;	// parsing indicator
@@ -601,7 +619,8 @@ int Parse(const char* s, ExprTree*& tree)
     return count;
 }
 
-int Parse(char* s, ExprTree*& tree)
+int 
+Parse(char* s, ExprTree*& tree)
 {
 	return Parse((const char *)s, tree);
 }
