@@ -85,6 +85,7 @@ volatile int check_sig;		// the signal which activated the checkpoint; used
 							// by some routines to determine if this is a periodic
 							// checkpoint (USR2) or a check & vacate (TSTP).
 static size_t StackSaveSize;
+unsigned int _condor_numrestarts = 0;
 
 static int
 net_read(int fd, void *buf, int size)
@@ -1098,6 +1099,7 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
 
+		_condor_numrestarts++;
 		SetSyscalls( scm );
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
