@@ -26,7 +26,6 @@
 **
 */ 
 
-
 /*********************************************************************
 * Find files which may have been left lying around on somebody's workstation
 * by condor.  Depending on command line options we may remove the file
@@ -39,12 +38,8 @@
 
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
-#include <time.h>
 #include "condor_common.h"
+#include <time.h>
 #include <sys/stat.h>
 #include "condor_debug.h"
 #include "condor_constants.h"
