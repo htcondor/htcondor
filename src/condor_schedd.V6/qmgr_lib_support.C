@@ -41,6 +41,7 @@ static char *_FileName_ = __FILE__;
 
 int open_url(char *, int, int);
 extern "C" char*	get_schedd_addr(const char*, const char*); 
+extern "C" int		strcmp_until(const char *, const char *, const char);
 
 AuthSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
@@ -153,10 +154,13 @@ ConnectQ(char *qmgr_location, int auth )
 
 	tmp_file[0] = '\0';
 	if( username && *username ) {
-			rval = InitializeConnection(username, tmp_file, auth );
+		rval = InitializeConnection(username, tmp_file, auth );
+		dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n",
+				username);
 	} 
 	else {
-			rval = InitializeConnection("nobody", tmp_file, auth );
+		rval = InitializeConnection("nobody", tmp_file, auth );
+		dprintf(D_FULLDEBUG,"Connecting to queue as user \"nobody\"\n");
 	}
 
 	if (rval < 0) {
@@ -211,11 +215,23 @@ FreeJobAd(ClassAd *&ad)
 int
 SendSpoolFileBytes(char *filename)
 {
+	qmgmt_sock->encode();
+	if (!qmgmt_sock->put_file(filename)) {		
+		return -1;
+	}
+
+	return 0;
+
+#if 0
 	int fd, len = 0, cc, ack;
-	char buf[ 4 * 1024 ];
+	char buf[ 4096 ];
 	struct stat filesize;
 	
+#if defined(WIN32)
+	fd = open( filename, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0 );
+#else
 	fd = open( filename, O_RDONLY, 0 );
+#endif
 	if( fd < 0 ) {
 		EXCEPT("open %s", filename);
 	}
@@ -242,7 +258,7 @@ SendSpoolFileBytes(char *filename)
 
 		len += cc;
 
-		if( cc != sizeof(buf) ) {
+		if( cc == 0 ) {
 			break;
 		}
 	}
@@ -262,6 +278,7 @@ SendSpoolFileBytes(char *filename)
 	(void)close( fd );
 
 	return 0;
+#endif
 }
 
 
