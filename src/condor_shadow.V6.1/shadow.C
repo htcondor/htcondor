@@ -258,7 +258,7 @@ void UniShadow::shutDown( int reason, int exitStatus )
 		// ExitRequirements, and/or update the job ad in the schedd
 		// so that the exit status is recoreded in the history file.
 	if ( reason == JOB_EXITED ) {
-		char buf[200];
+		char buf[ATTRLIST_MAX_EXPRESSION];
 		sprintf(buf,"%s=%d",ATTR_JOB_EXIT_STATUS,exitStatus);
 		jobAd->InsertOrUpdate(buf);
 		int exit_requirements = TRUE;	// default to TRUE if not specified
@@ -270,6 +270,15 @@ void UniShadow::shutDown( int reason, int exitStatus )
 			if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
 				SetAttributeInt(getCluster(),getProc(),ATTR_JOB_EXIT_STATUS,
 					exitStatus);
+				if(jobAd->LookupString(ATTR_EXCEPTION_HIERARCHY,buf)) {
+					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_HIERARCHY,buf);
+				}
+				if(jobAd->LookupString(ATTR_EXCEPTION_TYPE,buf)) {
+					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_TYPE,buf);
+				}
+				if(jobAd->LookupString(ATTR_EXCEPTION_NAME,buf)) {
+					SetAttributeString(getCluster(),getProc(),ATTR_EXCEPTION_NAME,buf);
+				}
 				DisconnectQ(NULL);
 			}
 		} else {
