@@ -49,8 +49,12 @@ UserProc::initialize( void )
 	JobPid = -1;
 	exit_status = -1;
 	requested_exit = false;
+	job_universe = 0;  // we'll fill in a real value if we can...
 	if( JobAd ) {
 		initKillSigs();
+		if( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, job_universe ) < 1 ) {
+			job_universe = 0;
+		}
 	}
 }
 
@@ -74,6 +78,13 @@ UserProc::initKillSigs( void )
 		rm_kill_sig = SIGTERM;
 	}
 
+	sig = findHoldKillSig( JobAd );
+	if( sig >= 0 ) {
+		hold_kill_sig = sig;
+	} else {
+		hold_kill_sig = SIGTERM;
+	}
+
 	const char* tmp = signalName( soft_kill_sig );
 	dprintf( D_FULLDEBUG, "%s KillSignal: %d (%s)\n", 
 			 name ? name : "Main job", soft_kill_sig, 
@@ -82,6 +93,11 @@ UserProc::initKillSigs( void )
 	tmp = signalName( rm_kill_sig );
 	dprintf( D_FULLDEBUG, "%s RmKillSignal: %d (%s)\n", 
 			 name ? name : "Main job", rm_kill_sig, 
+			 tmp ? tmp : "Unknown" );
+
+	tmp = signalName( hold_kill_sig );
+	dprintf( D_FULLDEBUG, "%s HoldKillSignal: %d (%s)\n", 
+			 name ? name : "Main job", hold_kill_sig, 
 			 tmp ? tmp : "Unknown" );
 }
 

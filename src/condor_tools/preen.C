@@ -225,6 +225,13 @@ check_spool_dir()
 	Qmgr_connection *qmgr;
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
+		// add some reasonable defaults that we never want to remove
+	well_known_list.append( "job_queue.log" );
+	well_known_list.append( "job_queue.log.tmp" );
+	well_known_list.append( "history" );
+	well_known_list.append( "Accountant.log" );
+	well_known_list.append( "Accountantnew.log" );
+	well_known_list.append( "local_univ_execute" );
 
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {

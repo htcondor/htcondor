@@ -903,6 +903,7 @@ SetExecutable()
 		break;
 	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:  // for now
 	case CONDOR_UNIVERSE_PARALLEL:
@@ -986,6 +987,15 @@ SetUniverse()
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
 		InsertJobExpr (buffer);
 		free(univ);
+		return;
+	};
+
+	if( univ && stricmp(univ,"local") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_LOCAL;
+		(void) sprintf( buffer, "%s = %d", ATTR_JOB_UNIVERSE,
+						CONDOR_UNIVERSE_LOCAL );
+		InsertJobExpr( buffer );
+		free( univ );
 		return;
 	};
 

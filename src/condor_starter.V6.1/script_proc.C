@@ -322,3 +322,26 @@ ScriptProc::ShutdownFast()
 }
 
 
+bool
+ScriptProc::Remove()
+{
+	if ( is_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, rm_kill_sig);
+	return false;	// return false says shutdown is pending	
+}
+
+
+bool
+ScriptProc::Hold()
+{
+	if ( is_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, hold_kill_sig);
+	return false;	// return false says shutdown is pending	
+}
+

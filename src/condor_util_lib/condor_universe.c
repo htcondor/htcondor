@@ -30,19 +30,27 @@ Warning: This table should stay in sync
 with the symbols in condor_universe.h
 */
 
-static char *names[] = {
-	"NULL",
-	"STANDARD",
-	"PIPE",
-	"LINDA",
-	"PVM",
-	"VANILLA",
-	"PVMD",
-	"SCHEDULER",
-	"MPI",
-	"GLOBUS",
-	"JAVA",
-	"PARALLEL",
+
+typedef struct {
+	const char	*uc;
+	const char	*ucfirst;
+} UniverseName;
+
+static const UniverseName names [] =
+{
+	{ "NULL","NULL" },
+	{ "STANDARD", "Standard" },
+	{ "PIPE", "Pipe" },
+	{ "LINDA", "Linda" },
+	{ "PVM", "PVM" },
+	{ "VANILLA", "Vanilla" },
+	{ "PVMD", "PVMD" },
+	{ "SCHEDULER", "Scheduler" },
+	{ "MPI", "MPI" },
+	{ "GLOBUS", "Globus" },
+	{ "JAVA", "Java" },
+	{ "PARALLEL", "Parallel" },
+	{ "LOCAL", "Local" }
 };
 
 const char*
@@ -51,10 +59,19 @@ CondorUniverseName( int u )
 	if( u<=CONDOR_UNIVERSE_MIN || u>=CONDOR_UNIVERSE_MAX ) {
 		return "UNKNOWN";
 	} else {
-		return names[u];
+		return names[u].uc;
 	}
 }
 
+const char*
+CondorUniverseNameUcFirst( int u )
+{
+	if( u<=CONDOR_UNIVERSE_MIN || u>=CONDOR_UNIVERSE_MAX ) {
+		return "Unknown";
+	} else {
+		return names[u].ucfirst;
+	}
+}
 
 int
 CondorUniverseNumber( const char* univ )
@@ -96,6 +113,9 @@ CondorUniverseNumber( const char* univ )
 	if( stricmp(univ,"parallel") == MATCH ) {
 		return CONDOR_UNIVERSE_MPI;
 	}
+	if( stricmp(univ,"local") == MATCH ) {
+		return CONDOR_UNIVERSE_LOCAL;
+	}
 	return 0;
 }
 
@@ -107,6 +127,7 @@ universeCanReconnect( int universe )
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_PVM:
 	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_MPI:
 	case CONDOR_UNIVERSE_GLOBUS:
 	case CONDOR_UNIVERSE_PARALLEL:

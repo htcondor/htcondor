@@ -72,7 +72,7 @@ JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
 		socks[0]->type() != Stream::reli_sock) 
 	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
-		DC_Exit(1);
+		Starter->StarterExit( 1 );
 	}
 	syscall_sock = (ReliSock *)socks[0];
 		/* Set a timeout on remote system calls.  This is needed in

@@ -95,12 +95,11 @@ JICLocal::init( void )
 	initOutputAdFile();
 
 		// Now that the user priv is setup and the temp execute dir
-		// exists, we can initialize the LocalUserLog.  if the job
-		// defines StarterUserLog, we'll write the events.  if not,
-		// all attemps to log events will just be no-ops.
-	if( ! u_log->initFromJobAd(job_ad) ) {
+		// exists, we can initialize the LocalUserLog.
+	if( ! initLocalUserLog() ) {
 		return false;
 	}
+
 	return true;
 }
 
@@ -188,7 +187,7 @@ JICLocal::allJobsGone( void )
 		// Since there's no shadow to tell us to go away, we have to
 		// exit ourselves.
 	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
-	DC_Exit(0);
+	Starter->StarterExit( 0 );
 }
 
 
@@ -266,8 +265,20 @@ JICLocal::initUserPriv( void )
 {
 	bool rval = false;
 
-#ifndef WIN32
-	// Unix
+#ifdef WIN32
+		/*
+		  If we're on windoze, and this is anything but a local
+		  universe job, we should immediately try the windoze-specific
+		  method for per-VM users, setting up a nobody account, etc,
+		  and be done with it.  However, if it's local universe, we
+		  basically want to do what we do for the unix case: find
+		  ATTR_OWNER (and ATTR_NT_DOMAIN) from the job ad and
+		  initialize ourselves with that...
+		*/
+	if( job_universe != CONDOR_UNIVERSE_LOCAL ) {
+		return initUserPrivWindows();
+	}
+#endif
 
 		// Before we go through any trouble, see if we even need
 		// ATTR_OWNER to initialize user_priv.  If not, go ahead and
@@ -283,26 +294,51 @@ JICLocal::initUserPriv( void )
 		return false;
 	}
 
+#ifdef WIN32
+		// we only care about or expect to find this attribute if
+		// we're on windoze...
+	char* domain = NULL;
+	if( job_ad->LookupString( ATTR_NT_DOMAIN, &domain ) != 1 ) {
+		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
+				 ATTR_NT_DOMAIN );
+		return false;
+	}
+
+	if( ! init_user_ids(owner,domain) ) { 
+		dprintf( D_ALWAYS,
+				 "ERROR: Bad or missing credential for user \"%s@%s\"\n",
+				 owner, domain );
+	} else {  
+		rval = true;
+		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s@%s\"\n", 
+				 owner, domain );
+	}
+	if( domain ) {
+		free( domain );
+		domain = NULL;
+	}
+
+#else /* UNIX */
+
 	if( ! init_user_ids_quiet(owner) ) { 
 		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
-				 "passwd file for a local job\n", owner ); 
+				 "passwd database for a local job\n", owner ); 
 	} else {  
 		rval = true;
 		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
 				 owner );
 	}
+
+#endif
+
 		// deallocate owner string so we don't leak memory.
 	free( owner );
+	owner = NULL;
+
 	if( rval ) {
 		user_priv_is_initialized = true;
 	}
 	return rval;
-
-#else
-		// Windoze
-	return initUserPrivWindows();
-
-#endif
 }
 
 
@@ -450,6 +486,7 @@ bool
 JICLocal::checkUniverse( int univ ) 
 {
 	switch( univ ) {
+	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_JAVA:
 			// for now, we don't support much. :)
@@ -475,4 +512,12 @@ JICLocal::checkUniverse( int univ )
 
 	}
 }
+
+
+bool
+JICLocal::initLocalUserLog( void )
+{
+	return u_log->initFromJobAd( job_ad );
+}
+
 

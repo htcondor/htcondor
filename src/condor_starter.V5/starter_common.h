@@ -30,6 +30,7 @@
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
 #include "my_hostname.h"
+#include "exit.h"
 
 void init_params(void);
 void init_sig_mask();

@@ -35,6 +35,8 @@ typedef struct {
 
 typedef int (*scan_func)(ClassAd *ad);
 
+#define SHADOW_QMGMT_TIMEOUT 300
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -233,6 +235,7 @@ int float_to_rusage(float, float, struct rusage *);
 #if defined(NEW_PROC)
 int GetProc(int, int, PROC *);
 #endif
+
 
 #if defined(__cplusplus)
 }

@@ -108,6 +108,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	access_time = time_access;
 	modify_time = time_modify;
 	create_time = time_create;
+	mode_set = false;
 	file_size = fsize;
 	isdirectory = is_dir;
 	issymlink = is_symlink;
@@ -230,6 +231,7 @@ StatInfo::init( StatWrapper *statbuf )
 		isdirectory = false;
 		isexecutable = false;
 		issymlink = false;
+		mode_set = false;
 	}
 	else
 	{
@@ -241,7 +243,8 @@ StatInfo::init( StatWrapper *statbuf )
 		create_time = sb->st_ctime;
 		modify_time = sb->st_mtime;
 		file_size = sb->st_size;
-
+		file_mode = sb->st_mode;
+		mode_set = true;
 # if (! defined WIN32)
 		isdirectory = S_ISDIR(sb->st_mode);
 		// On Unix, if any execute bit is set (user, group, other), we
@@ -274,6 +277,16 @@ StatInfo::make_dirpath( const char* dir )
 		sprintf( rval, "%s%c", dir, DIR_DELIM_CHAR );
 	}
 	return rval;
+}
+
+
+mode_t
+StatInfo::GetMode( void ) 
+{
+	if( ! mode_set ) {
+		stat_file( fullpath );
+	}
+	return file_mode;	
 }
 
 

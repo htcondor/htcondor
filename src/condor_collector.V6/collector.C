@@ -1240,28 +1240,7 @@ CollectorUniverseStats::setMax( CollectorUniverseStats &ref )
 const char *
 CollectorUniverseStats::getName( int univ )
 {
-	// Insert universe attributes
-	static const char	*names[] =
-	{
-		NULL,
-		"Standard",
-		NULL,
-		NULL,
-		"PVM",
-		"Vanilla",
-		"PVMD",
-		"Scheduler",
-		"MPI",
-		"Globus",
-		"Java",
-		"Parallel"
-	};
-
-	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
-		return names[univ];
-	} else {
-		return NULL;
-	}
+	return CondorUniverseNameUcFirst( univ );
 }
 
 int

@@ -140,7 +140,7 @@ void PVMdProc::execute()
 			// anything, since we have the UID/GID of the job's owner
 			// and cannot write into the log files...
 		dprintf( D_ALWAYS, "Exec failed - errno = %d\n", errno );
-		exit( EXECFAILED );
+		exit( JOB_EXEC_FAILED );
 	}
 
 		// The parent

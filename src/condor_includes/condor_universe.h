@@ -45,10 +45,12 @@ with the strings in condor_universe.c
 #define CONDOR_UNIVERSE_GLOBUS    9  /* Jobs managed by condor_gmanager */
 #define CONDOR_UNIVERSE_JAVA      10 /* Jobs for the Java Virtual Machine */
 #define CONDOR_UNIVERSE_PARALLEL  11 /* Generalized parallel jobs */
-#define CONDOR_UNIVERSE_MAX       12 /* A placeholder, not a universe. */
+#define CONDOR_UNIVERSE_LOCAL     12 /* Job run locally by the schedd */
+#define CONDOR_UNIVERSE_MAX       13 /* A placeholder, not a universe. */
 
 /* To get the name of a universe, call this function */
 const char *CondorUniverseName( int universe );
+const char *CondorUniverseNameUcFirst( int universe );
 
 /* To get the number of a universe from a string, call this.  Returns
    0 if the given string doesn't correspond to a known universe */

@@ -34,7 +34,7 @@
 
 #define assert(x) if (!(x)) { errno = ETIMEDOUT; return -1; }
 
-int CurrentSysCall;
+static int CurrentSysCall;
 extern ReliSock *qmgmt_sock;
 int terrno;
 

@@ -74,12 +74,12 @@ public:
 
 	char* fileName( void );
 
-private:
+protected:
 
 		/** This version first checks the ClassAd we got from the file
 			before looking in the config file
 		*/
-	bool getUniverse( void );
+	virtual bool getUniverse( void );
 
 		/** Private helper to actually read the file and try to insert
 			it into our job ClassAd.

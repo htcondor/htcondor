@@ -64,6 +64,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\shadow_user_policy.h"\
 	"..\src\condor_sysapi\sysapi.h"\
@@ -72,7 +73,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -144,6 +144,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\mpiresource.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
@@ -154,7 +155,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -229,6 +229,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\mpiresource.h"\
 	"..\src\condor_shadow.V6.1\mpishadow.h"\
@@ -240,7 +241,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -312,6 +312,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\pseudo_ops.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
@@ -323,7 +324,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\syscall_numbers.h"\
 	
@@ -398,6 +398,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\pseudo_ops.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
@@ -409,7 +410,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -488,6 +488,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
 	"..\src\condor_shadow.V6.1\shadow_user_policy.h"\
@@ -498,7 +499,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
 	
@@ -574,6 +574,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\remoteresource.h"\
 	"..\src\condor_shadow.V6.1\shadow.h"\
@@ -584,7 +585,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -646,6 +646,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\shadow_user_policy.h"\
 	"..\src\condor_sysapi\sysapi.h"\
@@ -654,7 +655,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -727,6 +727,7 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_schedd.V6\qmgr_job_updater.h"\
 	"..\src\condor_shadow.V6.1\baseshadow.h"\
 	"..\src\condor_shadow.V6.1\mpiresource.h"\
 	"..\src\condor_shadow.V6.1\mpishadow.h"\
@@ -739,6 +740,5 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\shadow.h"\
 	"..\src\h\startup.h"\
 	

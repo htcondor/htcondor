@@ -213,109 +213,16 @@ UniShadow::getExitReason( void )
 void
 UniShadow::emailTerminateEvent( int exitReason )
 {
-	FILE* mailer;
-	mailer = shutDownEmail( exitReason );
-	if( ! mailer ) {
-			// nothing to do
-		return;
-	}
-
-		// gather all the info out of the job ad which we want to 
-		// put into the email message.
-	char JobName[_POSIX_PATH_MAX];
-	JobName[0] = '\0';
-	jobAd->LookupString( ATTR_JOB_CMD, JobName );
-
-	char Args[_POSIX_ARG_MAX];
-	Args[0] = '\0';
-	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
-	
-	int had_core = FALSE;
-	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
-
-	int q_date = 0;
-	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
-	
-	float remote_sys_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
-	
-	float remote_user_cpu = 0.0;
-	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
-	
-	int image_size = 0;
-	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
-	
-	int shadow_bday = 0;
-	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-	
-	float previous_runs = 0;
-	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
-	
-	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
-						   archs, and this means that doing a (time_t*)
-						   cast on & of a 4 byte int makes my life hell.
-						   So we fix it by assigning the time we want to
-						   a real time_t variable, then using ctime()
-						   to convert it to a string */
-	
-	time_t now = time(NULL);
-	
-	fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
-	if ( JobName[0] ) {
-		fprintf(mailer,"\t%s %s\n",JobName,Args);
-	}
-	
-	fprintf(mailer,"has ");
-	remRes->printExit( mailer );
-	
-	if( had_core ) {
-		fprintf( mailer, "Core file is: %s\n", getCoreName() );
-	}
-
-	arch_time = q_date;
-	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
-	
-	if( exitReason == JOB_EXITED || exitReason == JOB_COREDUMPED ) {
-		double real_time = now - q_date;
-		arch_time = now;
-		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
-		
-		fprintf(mailer, "Real Time:           %s\n", 
-				d_format_time(real_time));
-	}	
-
-
-	fprintf( mailer, "\n" );
-	
-	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
-	
-	double rutime = remote_user_cpu;
-	double rstime = remote_sys_cpu;
-	double trtime = rutime + rstime;
-	double wall_time = now - shadow_bday;
-	fprintf(mailer, "Statistics from last run:\n");
-	fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
-	fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
-	fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
-	fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
-	
-	double total_wall_time = previous_runs + wall_time;
-	fprintf(mailer, "Statistics totaled from all runs:\n");
-	fprintf(mailer, "Allocation/Run time:     %s\n",
-			d_format_time(total_wall_time) );
-
-		// TODO: deal w/ total bytes
-	float network_bytes;
-	network_bytes = bytesSent();
-	fprintf(mailer, "\nNetwork:\n" );
-	fprintf(mailer, "%10s Run Bytes Received By Job\n", 
-			metric_units(network_bytes) );
-	network_bytes = bytesReceived();
-	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
-			metric_units(network_bytes) );
-
-	email_close(mailer);
+	Email mailer;
+		// note, we want to reverse the order of the send/recv in the
+		// call, since we want the email from the job's perspective,
+		// not the shadow's.. 
+	mailer.sendExitWithBytes( jobAd, exitReason, 
+							  bytesReceived(), bytesSent(), 
+							  prev_run_bytes_sent + bytesReceived(), 
+							  prev_run_bytes_recvd + bytesSent() );
 }
+
 
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );

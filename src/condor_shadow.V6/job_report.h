@@ -28,7 +28,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_qmgr.h"
-#include "shadow.h"
 #include "metric_units.h"
 
 /*

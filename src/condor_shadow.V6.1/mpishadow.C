@@ -743,7 +743,9 @@ MPIShadow::emailTerminateEvent( int exitReason )
 {
 	int i;
 	FILE* mailer;
-	mailer = shutDownEmail( exitReason );
+	Email msg;
+
+	mailer = msg.open( jobAd, exitReason );
 	if( ! mailer ) {
 			// nothing to do
 		return;

@@ -2,7 +2,7 @@ NAME = condor_shadow
 all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 

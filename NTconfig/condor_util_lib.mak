@@ -67,6 +67,7 @@ CLEAN :
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
+	-@erase "$(INTDIR)\proc.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\rotate_file.obj"
 	-@erase "$(INTDIR)\setsyscalls.obj"
@@ -154,6 +155,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\nullfile.obj" \
 	"$(INTDIR)\printf_format.obj" \
+	"$(INTDIR)\proc.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
@@ -208,6 +210,7 @@ CLEAN :
 	-@erase "$(INTDIR)\mkargv.obj"
 	-@erase "$(INTDIR)\nullfile.obj"
 	-@erase "$(INTDIR)\printf_format.obj"
+	-@erase "$(INTDIR)\proc.obj"
 	-@erase "$(INTDIR)\proc_id.obj"
 	-@erase "$(INTDIR)\rotate_file.obj"
 	-@erase "$(INTDIR)\setsyscalls.obj"
@@ -294,6 +297,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\mkargv.obj" \
 	"$(INTDIR)\nullfile.obj" \
 	"$(INTDIR)\printf_format.obj" \
+	"$(INTDIR)\proc.obj" \
 	"$(INTDIR)\proc_id.obj" \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
@@ -544,6 +548,12 @@ SOURCE=..\src\condor_util_lib\nullfile.c
 SOURCE=..\src\condor_util_lib\printf_format.c
 
 "$(INTDIR)\printf_format.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_util_lib\proc.c
+
+"$(INTDIR)\proc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

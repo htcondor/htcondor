@@ -236,6 +236,8 @@ const int INVALIDATE_NEGOTIATOR_ADS = 51;
 #define DC_SIGSOFTKILL	102	// vacate w/ checkpoint
 #define DC_SIGHARDKILL	103 // kill w/o checkpoint
 #define DC_SIGPCKPT		104	// periodic checkpoint
+#define DC_SIGREMOVE	105
+#define DC_SIGHOLD		106
 
 /*
 *** Daemon Core Commands and Signals

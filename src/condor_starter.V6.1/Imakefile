@@ -7,8 +7,8 @@ BENCHMARK_CLASS = scimark2lib.jar
 
 all_target($(NAME) $(RSH_NAME) condor_gridshell)
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS) -I../condor_schedd.V6
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
@@ -29,7 +29,8 @@ OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \
 	java_proc.o java_detect.o tool_daemon_proc.o local_user_log.o \
 	job_info_communicator.o jic_shadow.o jic_local.o \
-	jic_local_config.o jic_local_file.o stream_handler.o
+	jic_local_config.o jic_local_file.o jic_local_schedd.o \
+	stream_handler.o
 
 RSH_OBJ = condor_rsh.o
 

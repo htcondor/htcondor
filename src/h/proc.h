@@ -182,8 +182,8 @@ typedef struct {
 #define	UNLOCK	8
 
 /*
-** Warning!  Keep these consistent with the strings defined below
-** in "JobStatusNames".
+** Warning!  Keep these consistent with the strings defined in the
+** JobStatusNames array defined in condor_util_lib/proc.c
 */
 #define UNEXPANDED	0
 #define IDLE		1
@@ -192,24 +192,13 @@ typedef struct {
 #define COMPLETED	4
 #define	HELD		5
 #define SUBMISSION_ERR	6
-
-#ifdef INCLUDE_STATUS_NAME_ARRAY
-char    *JobStatusNames[] = {
-    "UNEXPANDED",
-    "IDLE",
-    "RUNNING",
-    "REMOVED",
-    "COMPLETED",
-	"HELD",
-    "SUBMISSION_ERR",
-};
-#else
-extern char *JobStatusNames[];
-#endif
+#define JOB_STATUS_MAX  7 /* A placeholder, not a valid status. */
 
 BEGIN_C_DECLS
 
 PROC_ID getProcByString( const char* str );
+const char* getJobStatusString( int status );
+int getJobStatusNum( const char* name );
 
 END_C_DECLS
 

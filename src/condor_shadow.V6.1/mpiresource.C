@@ -24,6 +24,7 @@
 
 #include "condor_common.h"
 #include "mpiresource.h"
+#include "classad_helpers.h"
 
 MpiResource::MpiResource( BaseShadow *shadow ) :
 	RemoteResource( shadow ) 
@@ -33,10 +34,12 @@ MpiResource::MpiResource( BaseShadow *shadow ) :
 
 
 void 
-MpiResource::printExit( FILE *fp ) {
-
-	fprintf ( fp, "%25s    ", machineName ? machineName : "Unknown machine" );
-	RemoteResource::printExit( fp );
+MpiResource::printExit( FILE *fp )
+{
+	MyString line;
+	line.sprintf( "%25s    ", machineName ? machineName : "Unknown machine" );
+	printExitString( jobAd, exit_reason, line );
+	fprintf( fp, "%s\n", line.Value() );
 }
 
 

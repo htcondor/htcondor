@@ -21,8 +21,6 @@
   *
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#define INCLUDE_STATUS_NAME_ARRAY
-
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
@@ -52,7 +50,6 @@
 #include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
-#include "shadow.h"
 
 /* XXX This should not be here */
 #if !defined( WCOREDUMP )

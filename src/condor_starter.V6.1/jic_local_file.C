@@ -143,6 +143,10 @@ JICLocalFile::readClassAdFromFile( void )
 			dprintf( D_JOB, "IGNORING COMMENT: %s\n", line.GetCStr() );
 			continue;
 		}
+		if( ! line[0] ) {
+				// ignore blank lines
+			continue;
+		}
 		if( DebugFlags & D_JOB ) {
 			dprintf( D_JOB, "FILE: %s\n", line.GetCStr() );
 		} 

@@ -25,26 +25,44 @@
 #include "condor_email.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
+#include "classad_helpers.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "my_hostname.h"
+#include "exit.h"               // for possible job exit_reason values
+#include "metric_units.h"
 
-extern "C" {
+
+extern "C" char* d_format_time(double);   // this should be in a .h
+
+
+// "private" helper for when we already know the cluster/proc
+static FILE* email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
+								 const char *subject );
 
 FILE *
 email_user_open( ClassAd *jobAd, const char *subject )
 {
+	int cluster = 0, proc = 0;
+	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	jobAd->LookupInteger( ATTR_PROC_ID, proc );
+	return email_user_open_id( jobAd, cluster, proc, subject );
+}
+
+
+FILE *
+email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
+					const char *subject )
+{
     char email_addr[256];
     email_addr[0] = '\0';
-	int cluster = 0, proc = 0;
+
     int notification = NOTIFY_COMPLETE; // default
 
 	ASSERT(jobAd);
 
+		// TODO make this all work properly w/ shouldSend()
     jobAd->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, proc );
-
     switch( notification ) {
 	case NOTIFY_NEVER:
 		dprintf( D_FULLDEBUG, 
@@ -109,4 +127,323 @@ email_user_open( ClassAd *jobAd, const char *subject )
     return email_open( email_addr, subject );
 }
 
-} /* extern "C" */
+
+Email::Email()
+{
+	init();
+}
+
+
+Email::~Email()
+{
+	if( fp ) {
+		send();
+	}
+}
+
+
+void
+Email::init()
+{
+	fp = NULL;
+	cluster = -1;
+	proc = -1;
+}
+
+
+void
+Email::sendHold( ClassAd* ad, const char* reason )
+{
+	sendAction( ad, reason, "put on hold" );
+}
+
+
+void
+Email::sendRemove( ClassAd* ad, const char* reason )
+{
+	sendAction( ad, reason, "removed" );
+}
+
+
+void
+Email::sendAction( ClassAd* ad, const char* reason,
+						const char* action )
+{
+	if( ! ad ) {
+		EXCEPT( "Email::sendAction() called with NULL ad!" );
+	}
+
+	if( ! open(ad, -1, action) ) {
+			// nothing to do
+		return;
+	}
+
+	writeJobId( ad );
+
+	fprintf( fp, "\nis being %s.\n\n", action );
+	fprintf( fp, "%s", reason );
+
+	send();
+}
+
+
+void
+Email::sendError( ClassAd* ad, const char* err_summary, 
+				  const char* err_msg )
+{
+		// TODO!
+}
+
+
+FILE*
+Email::open( ClassAd* ad, int exit_reason, const char* subject )
+{
+	if( ! shouldSend(ad, exit_reason) ) {
+			// nothing to do
+		return NULL;
+	}
+
+	ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+	ad->LookupInteger( ATTR_PROC_ID, proc );
+
+	MyString full_subject;
+	full_subject.sprintf( "Condor Job %d.%d", cluster, proc );
+	if( subject ) {
+		full_subject += " ";
+		full_subject += subject;
+	}
+	fp = email_user_open_id( ad, cluster, proc, full_subject.Value() );
+	return fp; 
+}
+
+
+
+bool
+Email::writeJobId( ClassAd* ad )
+{
+		// if we're not currently open w/ a message, we're done
+	if( ! fp ) {
+		return false;
+	}
+	char* cmd = NULL;
+	ad->LookupString( ATTR_JOB_CMD, &cmd );
+
+	char* args = NULL;
+	ad->LookupString(ATTR_JOB_ARGUMENTS, &args);
+
+	fprintf( fp, "Condor job %d.%d\n", cluster, proc);
+	if( cmd ) {
+		fprintf( fp, "\t%s", cmd );
+		free( cmd );
+		cmd = NULL;
+		if( args ) {
+			fprintf( fp, " %s\n", args );
+			free( args );
+			args = NULL;
+		} else {
+			fprintf( fp, "\n" );
+		}
+	}
+	return true;
+}
+
+
+bool
+Email::writeExit( ClassAd* ad, int exit_reason )
+{
+		// if we're not currently open w/ a message, we're done
+	if( ! fp ) {
+		return false;
+	}
+
+		// gather all the info out of the job ad which we want to 
+		// put into the email message.
+
+	int had_core = FALSE;
+	if( ! ad->LookupBool(ATTR_JOB_CORE_DUMPED, had_core) ) {
+		if( exit_reason == JOB_COREDUMPED ) {
+			had_core = TRUE;
+		}
+	}
+
+		// TODO ATTR_JOB_CORE_FILE_NAME...
+		// we need the IWD in both cases...
+
+	int q_date = 0;
+	ad->LookupInteger( ATTR_Q_DATE, q_date );
+	
+	float remote_sys_cpu = 0.0;
+	ad->LookupFloat( ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu );
+	
+	float remote_user_cpu = 0.0;
+	ad->LookupFloat( ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu );
+	
+	int image_size = 0;
+	ad->LookupInteger( ATTR_IMAGE_SIZE, image_size );
+	
+	int shadow_bday = 0;
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	
+	float previous_runs = 0;
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	
+	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
+						   archs, and this means that doing a (time_t*)
+						   cast on & of a 4 byte int makes my life hell.
+						   So we fix it by assigning the time we want to
+						   a real time_t variable, then using ctime()
+						   to convert it to a string */
+	
+	time_t now = time(NULL);
+
+	writeJobId( ad );
+	MyString msg = "has ";
+	if( ! printExitString(ad, exit_reason, msg)	) {
+		msg += "exited in an unknown way";
+	}
+	fprintf( fp, "%s\n", msg.Value() );
+
+	if( had_core ) {
+			// TODO!
+			// fprintf( fp, "Core file is: %s\n", getCoreName() );
+		fprintf( fp, "Core file generated\n" );
+	}
+
+	arch_time = q_date;
+	fprintf(fp, "\n\nSubmitted at:        %s", ctime(&arch_time));
+	
+	if( exit_reason == JOB_EXITED || exit_reason == JOB_COREDUMPED ) {
+		double real_time = now - q_date;
+		arch_time = now;
+		fprintf(fp, "Completed at:        %s", ctime(&arch_time));
+		
+		fprintf(fp, "Real Time:           %s\n", 
+				d_format_time(real_time));
+	}	
+
+	fprintf( fp, "\n" );
+	
+	fprintf(fp, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	
+	double rutime = remote_user_cpu;
+	double rstime = remote_sys_cpu;
+	double trtime = rutime + rstime;
+	double wall_time = now - shadow_bday;
+	fprintf(fp, "Statistics from last run:\n");
+	fprintf(fp, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
+	fprintf(fp, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
+	fprintf(fp, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
+	fprintf(fp, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	
+	double total_wall_time = previous_runs + wall_time;
+	fprintf(fp, "Statistics totaled from all runs:\n");
+	fprintf(fp, "Allocation/Run time:     %s\n",
+			d_format_time(total_wall_time) );
+
+		// TODO: deal w/ bytes directly from the classad
+	return true;
+}
+
+
+// This method sucks.  As soon as we have a real solution for storing
+// all 4 of these values in the job classad, it should be removed.
+void
+Email::writeBytes( float run_sent, float run_recv, float tot_sent,
+				   float tot_recv )
+{
+	fprintf( fp, "\nNetwork:\n" );
+	fprintf( fp, "%10s Run Bytes Received By Job\n", 
+			 metric_units(run_recv) );
+	fprintf( fp, "%10s Run Bytes Sent By Job\n",
+			 metric_units(run_sent) );
+	fprintf( fp, "%10s Total Bytes Received By Job\n", 
+			 metric_units(tot_recv) );
+	fprintf( fp, "%10s Total Bytes Sent By Job\n",
+			 metric_units(tot_sent) );
+}
+
+
+bool
+Email::send( void )
+{
+	if( ! fp ) {
+		return false;
+	}
+	email_close(fp);
+	init();
+	return true;
+}
+
+
+void
+Email::sendExit( ClassAd* ad, int exit_reason )
+{
+	open( ad, exit_reason );
+	writeExit( ad, exit_reason );
+	send();
+}
+
+
+// This method sucks.  As soon as we have a real solution for storing
+// all 4 of these values in the job classad, it should be removed.
+void
+Email::sendExitWithBytes( ClassAd* ad, int exit_reason,
+						  float run_sent, float run_recv,
+						  float tot_sent, float tot_recv )
+{
+	open( ad, exit_reason );
+	writeExit( ad, exit_reason );
+	writeBytes( run_sent, run_recv, tot_sent, tot_recv );
+	send();
+}
+
+
+bool 
+Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
+{
+	if ( !ad ) {
+		return false;
+	}
+
+	int cluster = 0, proc = 0;
+	int exit_by_signal = FALSE;
+
+	// send email if user requested it
+	int notification = NOTIFY_COMPLETE;	// default
+	ad->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
+
+	switch( notification ) {
+		case NOTIFY_NEVER:
+			return false;
+			break;
+		case NOTIFY_ALWAYS:
+			return true;
+			break;
+		case NOTIFY_COMPLETE:
+			if( exit_reason==JOB_EXITED || exit_reason==JOB_COREDUMPED ) {
+				return true;
+			}
+			break;
+		case NOTIFY_ERROR:
+				// only send email if the job was killed by a signal
+				// and/or core dumped.
+			if( is_error || (exit_reason == JOB_COREDUMPED) ) {
+				return true;
+			}
+			ad->LookupBool( ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal );
+			if( exit_reason == JOB_EXITED && exit_by_signal ) {
+				return true;
+			}
+			break;
+		default:
+			ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+			ad->LookupInteger( ATTR_PROC_ID, proc );
+			dprintf( D_ALWAYS,  "Condor Job %d.%d has "
+					 "unrecognized notification of %d\n",
+					 cluster, proc, notification );
+				// When in doubt, better send it anyway...
+			return true;
+			break;
+	}
+	return false;
+}

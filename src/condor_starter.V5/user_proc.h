@@ -30,8 +30,6 @@
 
 #include "killfamily.h"
 
-#define EXECFAILED 129 // exit status if call to execv() fails
-
 	// Reason user process exited (or didn't execute)
 typedef enum {
 	ABNORMAL_EXIT,	// process exited abnormally due to signal

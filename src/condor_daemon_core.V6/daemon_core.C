@@ -4848,7 +4848,7 @@ int DaemonCore::Create_Process(
 		Env job_environ;
 		char envbuf[_POSIX_PATH_MAX];
 		const char * default_vars[] = { "SystemDrive", "SystemRoot", 
-			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", 
+			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", "COMSPEC", 
 			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER", 
 			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
 			"\0" };		// must end list with NULL string

@@ -210,7 +210,9 @@ protected:
 		*/
 	bool checkUniverse( int univ );
 
-
+		/** Initialize our local UserLog-writing code.
+		 */
+	virtual bool initLocalUserLog( void );
 };
 
 

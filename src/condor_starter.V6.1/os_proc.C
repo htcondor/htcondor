@@ -133,13 +133,7 @@ OsProc::StartJob()
 		// The Java universe cannot tolerate an incorrect argv[0].
 		// For Java, set it correctly.  In a future version, we
 		// may consider removing the CONDOR_EXEC feature entirely.
-
-	int universe;
-	if ( JobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
-		universe = CONDOR_UNIVERSE_VANILLA;
-	}
-
-	if(universe==CONDOR_UNIVERSE_JAVA) {
+	if( job_universe==CONDOR_UNIVERSE_JAVA ) {
 		strcpy( Args, JobName );
 	} else {
 		strcpy( Args, CONDOR_EXEC );
@@ -449,8 +443,12 @@ OsProc::JobExit( void )
 
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
-	if ( requested_exit == true ) {
-		reason = JOB_NOT_CKPTED;
+	if( requested_exit == true ) {
+		if( Starter->jic->hadHold() || Starter->jic->hadRemove() ) {
+			reason = JOB_KILLED;
+		} else {
+			reason = JOB_NOT_CKPTED;
+		}
 	} else if( dumped_core ) {
 		reason = JOB_COREDUMPED;
 	} else {
@@ -570,6 +568,7 @@ OsProc::ShutdownGraceful()
 	return false;	// return false says shutdown is pending	
 }
 
+
 bool
 OsProc::ShutdownFast()
 {
@@ -579,6 +578,30 @@ OsProc::ShutdownFast()
 	requested_exit = true;
 	daemonCore->Send_Signal(JobPid, SIGKILL);
 	return false;	// return false says shutdown is pending
+}
+
+
+bool
+OsProc::Remove()
+{
+	if ( is_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, rm_kill_sig);
+	return false;	// return false says shutdown is pending	
+}
+
+
+bool
+OsProc::Hold()
+{
+	if ( is_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, hold_kill_sig);
+	return false;	// return false says shutdown is pending	
 }
 
 

@@ -86,6 +86,12 @@ public:
 		/// Send a SIGKILL
 	virtual bool ShutdownFast();
 
+		/// Evict for condor_rm (ATTR_REMOVE_KILL_SIG)
+	virtual bool Remove();
+
+		/// Evict for condor_hold (ATTR_HOLD_KILL_SIG)
+	virtual bool Hold();
+
 		/// rename a core file created by this process
 	void checkCoreFile( void );
 	bool renameCoreFile( const char* old_name, const char* new_name );

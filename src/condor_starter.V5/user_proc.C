@@ -634,7 +634,7 @@ UserProc::execute()
 			// space to start the new process.  We don't try to log
 			// anything, since we have the UID/GID of the job's owner
 			// and cannot write into the log files...
-		exit( EXECFAILED );
+		exit( JOB_EXEC_FAILED );
 	}
 
 		// The parent
@@ -732,7 +732,7 @@ UserProc::handle_termination( int exit_st )
 		dprintf( D_FAILURE|D_ALWAYS,
 			"Process %d exited with status %d\n", pid, WEXITSTATUS(exit_status)
 		);
-		if( WEXITSTATUS(exit_status) == EXECFAILED ) {
+		if( WEXITSTATUS(exit_status) == JOB_EXEC_FAILED ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 				"EXEC of user process failed, probably insufficient swap\n"
 			);

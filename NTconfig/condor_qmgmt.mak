@@ -25,6 +25,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_qmgmt - Win32 Debug"
 
 OUTDIR=.\..\Debug
@@ -39,6 +42,7 @@ ALL : "$(OUTDIR)\condor_qmgmt.lib"
 CLEAN :
 	-@erase "$(INTDIR)\qmgmt_common.obj"
 	-@erase "$(INTDIR)\qmgmt_send_stubs.obj"
+	-@erase "$(INTDIR)\qmgr_job_updater.obj"
 	-@erase "$(INTDIR)\qmgr_lib_support.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -47,40 +51,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
 BSC32_SBRS= \
@@ -90,7 +61,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\qmgmt_common.obj" \
 	"$(INTDIR)\qmgmt_send_stubs.obj" \
-	"$(INTDIR)\qmgr_lib_support.obj"
+	"$(INTDIR)\qmgr_lib_support.obj" \
+	"$(INTDIR)\qmgr_job_updater.obj"
 
 "$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -111,6 +83,7 @@ ALL : "$(OUTDIR)\condor_qmgmt.lib"
 CLEAN :
 	-@erase "$(INTDIR)\qmgmt_common.obj"
 	-@erase "$(INTDIR)\qmgmt_send_stubs.obj"
+	-@erase "$(INTDIR)\qmgr_job_updater.obj"
 	-@erase "$(INTDIR)\qmgr_lib_support.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_qmgmt.lib"
@@ -118,8 +91,25 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
+BSC32=bscmake.exe
+BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
+BSC32_SBRS= \
+	
+LIB32=link.exe -lib
+LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib" 
+LIB32_OBJS= \
+	"$(INTDIR)\qmgmt_common.obj" \
+	"$(INTDIR)\qmgmt_send_stubs.obj" \
+	"$(INTDIR)\qmgr_lib_support.obj" \
+	"$(INTDIR)\qmgr_job_updater.obj"
+
+"$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
+    $(LIB32) @<<
+  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
+<<
+
+!ENDIF 
 
 .c{$(INTDIR)}.obj::
    $(CPP) @<<
@@ -150,25 +140,6 @@ CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
-
-RSC=rc.exe
-BSC32=bscmake.exe
-BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_qmgmt.bsc" 
-BSC32_SBRS= \
-	
-LIB32=link.exe -lib
-LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib" 
-LIB32_OBJS= \
-	"$(INTDIR)\qmgmt_common.obj" \
-	"$(INTDIR)\qmgmt_send_stubs.obj" \
-	"$(INTDIR)\qmgr_lib_support.obj"
-
-"$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
-    $(LIB32) @<<
-  $(LIB32_FLAGS) $(DEF_FLAGS) $(LIB32_OBJS)
-<<
-
-!ENDIF 
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -190,6 +161,12 @@ SOURCE=..\src\condor_schedd.V6\qmgmt_common.C
 SOURCE=..\src\condor_schedd.V6\qmgmt_send_stubs.C
 
 "$(INTDIR)\qmgmt_send_stubs.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.C
+
+"$(INTDIR)\qmgr_job_updater.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

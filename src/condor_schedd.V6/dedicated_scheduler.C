@@ -2172,7 +2172,8 @@ DedicatedScheduler::spawnJobs( void )
 		}
 
 		id.proc = 0; // GGT
-		srec = scheduler.add_shadow_rec( pid, &id, mrec, -1 );
+		srec = scheduler.add_shadow_rec( pid, &id, CONDOR_UNIVERSE_MPI, 
+										 mrec, -1 );
 
 			// TODO: make sure we set this right for all the procs in
 			// the cluster.  perhaps we need to supliment the data

@@ -93,6 +93,13 @@ public:
 		/// Send a DC_SIGKILL
 	virtual bool ShutdownFast();
 
+		/// Evict for condor_rm (ATTR_REMOVE_KILL_SIG)
+	virtual bool Remove();
+
+		/// Evict for condor_hold (ATTR_HOLD_KILL_SIG)
+	virtual bool Hold();
+
+
 protected:
 
 	bool job_suspended;

@@ -153,6 +153,9 @@ public:
 	*/
 	filesize_t GetFileSize() { return file_size; }
 
+		/// Return the file's permission mode
+	mode_t GetMode();
+
 	/** Determine if the file is the name of a subdirectory,
 		or just a file.  This also returns true for symlinks
 		that point to directories.
@@ -196,6 +199,8 @@ private:
 	uid_t owner;
 	gid_t group;
 #endif
+	bool mode_set;
+	mode_t file_mode;
 	filesize_t file_size;
 	char* dirpath;
 	char* filename;
@@ -305,6 +310,11 @@ public:
 	/** Get size of current file.  If there is no current file, return 0.
 		@return size of file in bytes */
 	unsigned long GetFileSize() { return curr ? curr->GetFileSize() : 0; };
+
+	/** Get mode of current file.  If there is no current file, return 0.
+		@return permission mode of the current file
+	*/
+	mode_t GetMode() { return curr ? curr->GetMode() : 0; };
 
 	/** Get the size of all the files and all the files in all subdirectories,
 		starting with the directory specified by the constructor.

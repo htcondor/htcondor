@@ -51,19 +51,13 @@ BaseShadow::BaseShadow() {
 	remove_requested = false;
 	cluster = proc = -1;
 	gjid = NULL;
-	q_update_tid = -1;
 	owner[0] = '\0';
 	iwd[0] = '\0';
 	core_file_name = NULL;
 	scheddAddr = NULL;
+	job_updater = NULL;
 	ASSERT( !myshadow_ptr );	// make cetain we're only instantiated once
 	myshadow_ptr = this;
-	common_job_queue_attrs = NULL;
-	hold_job_queue_attrs = NULL;
-	evict_job_queue_attrs = NULL;
-	remove_job_queue_attrs = NULL;
-	requeue_job_queue_attrs = NULL;
-	terminate_job_queue_attrs = NULL;
 	exception_already_logged = false;
 }
 
@@ -74,12 +68,7 @@ BaseShadow::~BaseShadow() {
 	if (jobAd) FreeJobAd(jobAd);
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
+	if( job_updater ) delete job_updater;
 }
 
 void
@@ -106,6 +95,7 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	if( !jobAd->LookupInteger(ATTR_PROC_ID, proc)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
 	}
+
 
 		// Grab the GlobalJobId if we've got it.
 	if( ! jobAd->LookupString(ATTR_GLOBAL_JOB_ID, &gjid) ) {
@@ -148,8 +138,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 	
 	config();
 
-	initJobQueueAttrLists();
-
 	initUserLog();
 
 		// Make sure we've got enough swap space to run
@@ -180,10 +168,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 		// initialize the UserPolicy object
 	shadow_user_policy.init( jobAd, this );
 
-		// finally, clear all the dirty bits on this jobAd, so we only
-		// update the queue with things that have changed after this
-		// point. 
-	jobAd->ClearAllDirtyFlags();
+		// setup an object to keep our job ad updated to the schedd's
+		// permanent job queue.  this clears all the dirty bits on our
+		// copy of the classad, so anything we touch after this will
+		// be updated to the schedd when appropriate.
+	job_updater = new QmgrJobUpdater( jobAd, scheddAddr );
 
 		// CRUFT
 		// we want this *after* we clear the dirty flags so that if we
@@ -262,7 +251,7 @@ BaseShadow::checkFileTransferCruft()
 
 		// also, add it to the list of attributes we want to update,
 		// so we change it in the job queue, too.
-	common_job_queue_attrs->insert( ATTR_TRANSFER_FILES );
+	job_updater->watchAttribute( ATTR_TRANSFER_FILES );
 
 #endif /* ! WIN32 */
 
@@ -336,53 +325,6 @@ void BaseShadow::config()
 	if( !reconnect_e_factor ) {
     	reconnect_e_factor = 2.0;
     }
-}
-
-
-void
-BaseShadow::initJobQueueAttrLists( void )
-{
-	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
-	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
-	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
-	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
-	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
-	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
-
-	common_job_queue_attrs = new StringList();
-	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
-	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
-	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
-	common_job_queue_attrs->insert( ATTR_TOTAL_SUSPENSIONS );
-	common_job_queue_attrs->insert( ATTR_CUMULATIVE_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
-	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
-	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
-	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
-
-	hold_job_queue_attrs = new StringList();
-	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
-
-	evict_job_queue_attrs = new StringList();
-	evict_job_queue_attrs->insert( ATTR_LAST_VACATE_TIME );
-
-	remove_job_queue_attrs = new StringList();
-	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
-
-	requeue_job_queue_attrs = new StringList();
-	requeue_job_queue_attrs->insert( ATTR_REQUEUE_REASON );
-
-	terminate_job_queue_attrs = new StringList();
-	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
-	terminate_job_queue_attrs->insert( ATTR_JOB_EXIT_STATUS );
-	terminate_job_queue_attrs->insert( ATTR_JOB_CORE_DUMPED );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_BY_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_SIGNAL );
-	terminate_job_queue_attrs->insert( ATTR_ON_EXIT_CODE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_HIERARCHY );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_TYPE );
-	terminate_job_queue_attrs->insert( ATTR_EXCEPTION_NAME );
 }
 
 
@@ -780,55 +722,16 @@ BaseShadow::requeueJob( const char* reason )
 void
 BaseShadow::emailHoldEvent( const char* reason ) 
 {
-	char subject[256];
-	sprintf( subject, "Condor Job %d.%d put on hold\n", 
-			 getCluster(), getProc() ); 
-	emailActionEvent( "is being put on hold.", reason, subject );
+	Email mailer;
+	mailer.sendHold( jobAd, reason );
 }
 
 
 void
 BaseShadow::emailRemoveEvent( const char* reason ) 
 {
-	char subject[256];
-	sprintf( subject, "Condor Job %d.%d removed\n", 
-			 getCluster(), getProc() ); 
-	emailActionEvent( "is being removed.", reason, subject );
-}
-
-
-void
-BaseShadow::emailActionEvent( const char* action, const char* reason,
-							  const char* subject )
-{
-	FILE* mailer = emailUser( subject );
-	if( ! mailer ) {
-			// nothing to do
-		return;
-	}
-		// Grab a few things out of the job ad we need.
-	char* job_name = NULL;
-	jobAd->LookupString( ATTR_JOB_CMD, &job_name );
-	char* args = NULL;
-	jobAd->LookupString( ATTR_JOB_ARGUMENTS, &args );
-	
-	fprintf( mailer, "Your condor job " );
-		// Only print the args if we have both a name and args.
-		// However, we need to be careful not to leak memory if
-		// there's no job_name.
-	if( job_name ) {
-		fprintf( mailer, "%s ", job_name );
-		if( args ) {
-			fprintf( mailer, "%s ", args );
-		}
-		free( job_name );
-	}
-	if( args ) {
-		free( args );
-	}
-	fprintf( mailer, "\n%s\n\n", action );
-	fprintf( mailer, "%s", reason );
-	email_close(mailer);
+	Email mailer;
+	mailer.sendRemove( jobAd, reason );
 }
 
 
@@ -840,63 +743,6 @@ BaseShadow::emailUser( const char *subjectline )
 		return NULL;
 	}
 	return email_user_open( jobAd, subjectline );
-}
-
-
-FILE*
-BaseShadow::shutDownEmail( int reason ) 
-{
-
-		// everything else we do only makes sense if there is a JobAd, 
-		// so bail out now if there is no JobAd.
-	if ( !jobAd ) {
-		return NULL;
-	}
-
-	// send email if user requested it
-	int notification = NOTIFY_COMPLETE;	// default
-	jobAd->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
-	int send_email = FALSE;
-	switch( notification ) {
-		case NOTIFY_NEVER:
-			break;
-		case NOTIFY_ALWAYS:
-			send_email = TRUE;
-			break;
-		case NOTIFY_COMPLETE:
-			if( (reason == JOB_EXITED) || (reason == JOB_COREDUMPED) ) {
-				send_email = TRUE;
-			}
-			break;
-		case NOTIFY_ERROR:
-				// only send email if the was killed by a signal
-				// and/or core dumped.
-			if( (reason == JOB_COREDUMPED) || 
-				((reason == JOB_EXITED) && (exitedBySignal())) ) {
-                send_email = TRUE;
-			}
-			break;
-		default:
-			dprintf(D_ALWAYS, 
-				"Condor Job %d.%d has unrecognized notification of %d\n",
-				cluster, proc, notification );
-				// When in doubt, better send it anyway...
-			send_email = TRUE;
-			break;
-	}
-
-		// return the mailer 
-	if ( send_email ) {
-		FILE* mailer;
-		char buf[50];
-
-		sprintf( buf, "Condor Job %d.%d", cluster, proc );
-		if ( (mailer=emailUser(buf)) ) {
-			return mailer;
-		}
-	}
-
-	return NULL;
 }
 
 
@@ -1127,182 +973,34 @@ BaseShadow::log_except(char *msg)
 	}
 }
 
+
 bool
 BaseShadow::updateJobAttr( const char *name, const char *expr )
 {
-	bool result;
-
-	dprintf(D_FULLDEBUG,"updateJobAttr: %s = %s\n",name,expr);
-
-	if(ConnectQ(scheddAddr,SHADOW_QMGMT_TIMEOUT)) {
-		if(SetAttribute(cluster,proc,name,expr)<0) {
-			result = FALSE;
-		} else {
-			result = TRUE;
-		}
-		DisconnectQ(NULL);
-	} else {
-		result = FALSE;
-	}
-
-	if(result==FALSE) {
-		dprintf(D_ALWAYS,"updateJobAttr: couldn't update attribute\n");
-	}
-	return result;
+	return job_updater->updateAttr( name, expr );
 }
+
 
 bool
 BaseShadow::updateJobInQueue( update_t type )
 {
-	ExprTree* tree = NULL;
-	bool is_connected = false;
-	bool had_error = false;
-	bool final_update = false;
-	static bool checked_for_history = false;
-	static bool has_history = false;
-	char* name;
-	char buf[128];
-	
-
-	dprintf( D_FULLDEBUG, "Entering BaseShadow::updateJobInQueue\n" );
-
-	if( ! checked_for_history ) {
-		char* history = param( "HISTORY" );
-		if( history ) {
-			has_history = true;
-			free( history );
-		}
-		checked_for_history = true;
-	}
-
-	StringList* job_queue_attrs = NULL;
-	switch( type ) {
-	case U_HOLD:
-		job_queue_attrs = hold_job_queue_attrs;
-		break;
-	case U_REMOVE:
-		job_queue_attrs = remove_job_queue_attrs;
-		final_update = true;
-		break;
-	case U_REQUEUE:
-		job_queue_attrs = requeue_job_queue_attrs;
-		break;
-	case U_TERMINATE:
-		job_queue_attrs = terminate_job_queue_attrs;
-		final_update = true;
-		break;
-	case U_EVICT:
-		job_queue_attrs = evict_job_queue_attrs;
-		break;
-	case U_PERIODIC:
-			// No special attributes needed...
-		break;
-	default:
-		EXCEPT( "BaseShadow::updateJobInQueue: Unknown update type (%d)!" );
-	}
-
-	if( final_update && ! has_history ) {
-			// there's no history file on this machine, and this job
-			// is about to leave the queue.  there's no reason to send
-			// this stuff to the schedd, since it's all about to be
-			// flushed, anyway.
-		dprintf( D_FULLDEBUG, "BaseShadow::updateJobInQueue: job leaving "
-				 "queue and schedd has no history file, aborting update\n" );
-		return true;
-	}
-
 		// insert the bytes sent/recv'ed by this job into our job ad.
 		// we want this from the perspective of the job, so it's
 		// backwards from the perspective of the shadow.  if this
 		// value hasn't changed, it won't show up as dirty and we
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
-	sprintf( buf, "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
-											   bytesReceived()) );
-	jobAd->Insert( buf );
-	sprintf( buf, "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
+	MyString buf;
+	buf.sprintf( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
+											  bytesReceived()) );
+	jobAd->Insert( buf.Value() );
+	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
-	jobAd->Insert( buf );
+	jobAd->Insert( buf.Value() );
 
-	jobAd->ResetExpr();
-	while( (tree = jobAd->NextDirtyExpr()) ) {
-		name = ((Variable*)tree->LArg())->Name();
-
-			// If we have the lists of attributes we care about and
-			// this attribute is in one of the lists, actually do the
-			// update into the job queue...  If either of these lists
-			// aren't defined, we're careful here to not dereference a
-			// NULL pointer...
-		if( (common_job_queue_attrs &&
-			 common_job_queue_attrs->contains_anycase(name)) || 
-			(job_queue_attrs &&
-			 job_queue_attrs->contains_anycase(name)) ) {
-
-			if( ! is_connected ) {
-				if( ! ConnectQ(scheddAddr, SHADOW_QMGMT_TIMEOUT) ) {
-					return false;
-				}
-				is_connected = true;
-			}
-			if( ! updateExprTree(tree) ) {
-				had_error = true;
-			}
-		}
-	}
-	if( is_connected ) {
-		DisconnectQ(NULL);
-	} 
-	if( had_error ) {
-		return false;
-	}
-	jobAd->ClearAllDirtyFlags();
-	return true;
-}
-
-
-bool
-BaseShadow::updateExprTree( ExprTree* tree )
-{
-	if( ! tree ) {
-		return false;
-	}
-	ExprTree *rhs = tree->RArg(), *lhs = tree->LArg();
-	if( ! rhs || ! lhs ) {
-		return false;
-	}
-	char* name = ((Variable*)lhs)->Name();
-	if( ! name ) {
-		return false;
-	}		
-		// This code used to be smart about figuring out what type of
-		// expression this is and calling SetAttributeInt(), 
-		// SetAttributeString(), or whatever it needed.  However, all
-		// these "special" versions of SetAttribute*() just force
-		// everything back down into the flat string representation
-		// and call SetAttribute(), so it was both a waste of effort
-		// here, and made this code needlessly more complex.  
-		// Derek Wright, 3/25/02
-	char* tmp = NULL;
-	rhs->PrintToNewStr( &tmp );
-	if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
-		dprintf( D_ALWAYS, 
-				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-				 name, tmp );
-		free( tmp );
-		return false;
-	}
-	dprintf( D_FULLDEBUG, 
-			 "Updating Job Queue: SetAttribute(%s, %s)\n",
-			 name, tmp );
-	free( tmp );
-	return true;
-}
-
-
-void
-BaseShadow::periodicUpdateQ( void )
-{
-	updateJobInQueue( U_PERIODIC );	
+		// Now that the ad is current, just let our QmgrJobUpdater
+		// object take care of the rest...
+	return job_updater->updateJob( type );
 }
 
 
@@ -1326,26 +1024,7 @@ BaseShadow::getCoreName( void )
 void
 BaseShadow::startQueueUpdateTimer( void )
 {
-	if( q_update_tid >= 0 ) {
-		return;
-	}
-	char* tmp;
-	int q_interval = 0;
-	tmp = param( "SHADOW_QUEUE_UPDATE_INTERVAL" );
-	if( tmp ) {
-		q_interval = atoi( tmp );
-		free( tmp );
-	}
-	if( ! q_interval ) {
-		q_interval = 15 * 60;  // by default, update every 15 minutes 
-	}
-	q_update_tid = daemonCore->
-		Register_Timer( q_interval, q_interval,
-                        (TimerHandlercpp)&BaseShadow::periodicUpdateQ,
-                        "periodicUpdateQ", this );
-    if( q_update_tid < 0 ) {
-        EXCEPT( "Can't register DC timer!" );
-    }
+	job_updater->startUpdateTimer();
 }
 
 
@@ -1424,4 +1103,3 @@ display_dprintf_header(FILE *fp)
 
 	return TRUE;
 }
-

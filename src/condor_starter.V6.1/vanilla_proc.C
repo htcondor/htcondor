@@ -142,18 +142,23 @@ VanillaProc::StartJob()
 		const char* run_jobs_as = NULL;
 		bool dedicated_account = false;
 
-		run_jobs_as = get_user_loginname();
-
 		// See if we want our family built by login if we're using
 		// specific run accounts. (default is no)
-		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED", false);
+		// If we're local universe, we definitely want this to be NO,
+		// since we're running the job as the user on the submit
+		// machine, and we do NOT want to track the procfamily by the
+		// login!!!  -Derek <wright@cs.wisc.edu> 2004-11-05
+		if( job_universe != CONDOR_UNIVERSE_LOCAL ) {
+			dedicated_account = param_boolean( "EXECUTE_LOGIN_IS_DEDICATED",
+											   false );
+		}
 
 		// we support running the job as other users if the user
 		// is specifed in the config file, and the account's password
 		// is properly stored in our credential stash.
-
 		if (dedicated_account) {
 			// set ProcFamily to find decendants via a common login name
+			run_jobs_as = get_user_loginname();
 			dprintf(D_FULLDEBUG, "Building procfamily by login \"%s\"\n",
 					run_jobs_as);
 			family->setFamilyLogin(run_jobs_as);

@@ -409,6 +409,30 @@ ToolDaemonProc::ShutdownFast()
 
 
 bool
+ToolDaemonProc::Remove()
+{
+	if ( job_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, rm_kill_sig);
+	return false;	// return false says shutdown is pending	
+}
+
+
+bool
+ToolDaemonProc::Hold()
+{
+	if ( job_suspended ) {
+		Continue();
+	}
+	requested_exit = true;
+	daemonCore->Send_Signal(JobPid, hold_kill_sig);
+	return false;	// return false says shutdown is pending	
+}
+
+
+bool
 ToolDaemonProc::PublishUpdateAd( ClassAd* ad ) 
 {
     dprintf( D_FULLDEBUG, "Inside ToolDaemonProc::PublishUpdateAd()\n" );

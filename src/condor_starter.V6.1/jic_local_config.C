@@ -64,9 +64,6 @@ JICLocalConfig::~JICLocalConfig()
 	if( key ) {
 		free( key );
 	}
-	if( job_ad ) {
-		delete job_ad;
-	}  
 }
 
 

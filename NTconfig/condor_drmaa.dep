@@ -5,6 +5,7 @@
 	"..\src\condor_drmaa\drmaa_common.h"\
 	"..\src\condor_drmaa\lib_condor_drmaa.h"\
 	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -24,6 +25,7 @@
 	"..\src\condor_drmaa\auxDrmaa.h"\
 	"..\src\condor_drmaa\lib_condor_drmaa.h"\
 	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -45,6 +47,7 @@
 	"..\src\condor_drmaa\drmaa_common.h"\
 	"..\src\condor_drmaa\lib_condor_drmaa.h"\
 	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_blkng_full_disk_io.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\

@@ -103,6 +103,14 @@ SOURCE=..\src\condor_schedd.V6\qmgr.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\qmgr_job_updater.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_schedd.V6\qmgr_lib_support.C
 # End Source File
 # End Target

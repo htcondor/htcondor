@@ -50,6 +50,8 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_output_ad_file = NULL;
 	job_output_ad_is_stdout = false;
 	requested_exit = false;
+	had_remove = false;
+	had_hold = false;
 	change_iwd = false;
 	user_priv_is_initialized = false;
 }
@@ -229,6 +231,24 @@ JobInfoCommunicator::gotShutdownGraceful( void )
 {
 		// Set our flag so we know we were asked to vacate.
 	requested_exit = true;
+}
+
+
+void
+JobInfoCommunicator::gotRemove( void )
+{
+		// Set our flag so we know we were asked to vacate.
+	requested_exit = true;
+	had_remove = true;
+}
+
+
+void
+JobInfoCommunicator::gotHold( void )
+{
+		// Set our flag so we know we were asked to vacate.
+	requested_exit = true;
+	had_hold = true;
 }
 
 

@@ -26,6 +26,7 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
+#include "condor_attributes.h"
 #include "user_log.c++.h"
 
 /** 
@@ -69,7 +70,9 @@ public:
 
 		/** Initialize ourselves with the info in the given job ad.
 		*/
-	bool initFromJobAd( ClassAd* ad );
+	bool initFromJobAd( ClassAd* ad,
+						const char* path_attr = ATTR_STARTER_ULOG_FILE,
+						const char* xml_attr = ATTR_STARTER_ULOG_USE_XML );
 
 		/// Initialize ourselves such that we won't write a user log 
 	bool initNoLogging( void );

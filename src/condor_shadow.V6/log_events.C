@@ -35,7 +35,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_io.h"
-#include "shadow.h"
 #include "condor_config.h"
 #include "condor_qmgr.h"
 

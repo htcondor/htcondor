@@ -120,12 +120,6 @@ class RemoteResource : public Service {
 		*/
 	virtual void dprintfSelf( int debugLevel);
 
-		/** Print out the ending status of this job.
-			Used to email the user at the end...
-			@param fp A valid file pointer initialized for writing.
-		*/
-	virtual void printExit( FILE *fp );
-
 		/** Each of these remote resources can handle syscalls.  The 
 			claimSock gets registered with daemonCore, and it will
 			call this function to handle it.
