@@ -55,6 +55,8 @@
 #include "globus_utils.h"
 #include "env.h"
 #include "dc_schedd.h"  // for JobActionResults class and enums we use  
+#include "dc_startd.h"
+#include "dc_collector.h"
 #include "nullfile.h"
 #include "store_cred.h"
 #include "file_transfer.h"
@@ -1109,7 +1111,7 @@ Scheduler::updateCentralMgr( int command, ClassAd* ca, char *host,
 		return;
 	}
 
-	Daemon d(host, port);
+	DCCollector d(host);
 
 	d.startCommand(command, &sock);
 
@@ -3283,7 +3285,7 @@ bool
 claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 {
 
-	Daemon matched_startd ( DT_STARTD, mrec->peer, NULL );
+	DCStartd matched_startd ( mrec->peer, NULL );
 	Sock* sock = NULL;
 
 	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
@@ -5131,7 +5133,7 @@ send_vacate(match_rec* match,int cmd)
 		return;
 	}
  
-	Daemon d (match->peer, START_PORT);
+	DCStartd d( match->peer );
 	d.startCommand(cmd, &sock);
 
 	sock.encode();
@@ -6488,7 +6490,7 @@ Scheduler::sendReschedule( void )
 		char *negotiator = FlockNegotiators->next();
 		for( int i=0; negotiator && i < FlockLevel;
 			negotiator = FlockNegotiators->next(), i++ ) {
-			Daemon d(negotiator, port);
+			Daemon d( DT_NEGOTIATOR, negotiator );
 			if (!d.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT)) {
 				dprintf( D_ALWAYS, "failed to send RESCHEDULE command to %s\n",
 						 negotiator );
@@ -6635,7 +6637,7 @@ Scheduler::Relinquish(match_rec* mrec)
 
 	// inform the startd
 
-	Daemon d(mrec->peer);
+	DCStartd d( mrec->peer );
 	sock = (SafeSock*)d.startCommand(RELINQUISH_SERVICE, Stream::safe_sock, STARTD_CONTACT_TIMEOUT);
 
 	if(!sock) {
@@ -6782,7 +6784,7 @@ sendAlive( match_rec* mrec )
     sock.timeout(STARTD_CONTACT_TIMEOUT);
 	sock.encode();
 
-	Daemon d (mrec->peer);
+	DCStartd d( mrec->peer );
 	id = mrec->id;
 
 	if( !sock.connect(mrec->peer) || !d.startCommand ( ALIVE, &sock) ||
