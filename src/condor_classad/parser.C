@@ -34,7 +34,7 @@
 #include "condor_ast.h"
 #include "condor_scanner.h"
 
-static	Token*	nextToken = NULL;
+static	Token	nextToken;
 static	int		alreadyRead;
 
 extern	void		Scanner(char*&, Token&);
@@ -57,11 +57,11 @@ Token* ReadToken(char*& s)
 {
     if(alreadyRead == TRUE) 
     {
-		nextToken = new Token;
-        Scanner(s, *nextToken);
+		nextToken.reset();
+        Scanner(s, nextToken);
     }
     alreadyRead = TRUE;
-    return(nextToken);
+    return(&nextToken);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,11 +72,11 @@ Token* LookToken(char*& s)
 {
     if(alreadyRead == TRUE)
     {
-		nextToken = new Token;
-        Scanner(s, *nextToken);
+		nextToken.reset();
+        Scanner(s, nextToken);
     }
     alreadyRead = FALSE;
-    return(nextToken);
+    return(&nextToken);
 }
 
 
@@ -92,18 +92,10 @@ int Match(LexemeType t, char*& s, int& count)
     count = count + token->length;
     if(t == token->type)
     {
-		if ( token ) {
-			delete token;
-			if (token == nextToken )
-				nextToken = NULL;
-		}
+		nextToken.reset();
         return TRUE;
     }
-	if ( token ) {
-		delete token;
-		if (token == nextToken)
-			nextToken = NULL;
-	}
+	nextToken.reset();
     return FALSE;
 }
 
@@ -123,7 +115,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             t = ReadToken(s);
             newTree = new Variable(StrCpy(t->strVal));
     		count = count + t->length;
-			delete t;
             break;
 
 		case LX_UNDEFINED:
@@ -131,7 +122,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
 			t = ReadToken(s);
 			newTree = new Undefined();
 			count = count + t->length;
-			delete t;
 			break;
 
 		case LX_ERROR:
@@ -139,7 +129,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
 			t = ReadToken(s);
 			newTree = new Error();
 			count = count + t->length;
-			delete t;
 			break;
 
         case LX_INTEGER :
@@ -147,7 +136,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             t = ReadToken(s);
             newTree = new Integer(t->intVal);
     		count = count + t->length;
-			delete t;
             break;
 
         case LX_FLOAT :
@@ -155,7 +143,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             t = ReadToken(s);
             newTree = new Float(t->floatVal);
     		count = count + t->length;
-			delete t;
             break;
 
         case LX_STRING :
@@ -163,7 +150,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             t = ReadToken(s);
             newTree = new String(StrCpy(t->strVal));
     		count = count + t->length;
-			delete t;
             break;
 
         case LX_BOOL :
@@ -171,7 +157,6 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             t = ReadToken(s);
             newTree = new Boolean(t->intVal);
     		count = count + t->length;
-			delete t;
             break;
 
         case LX_LPAREN :
@@ -346,13 +331,11 @@ int ParseAddOp(char*& s, ExprTree*& newTree, int& count)
 		if(!strcmp(tmp, "K") || !strcmp(tmp, "k"))
 		{
 			ReadToken(s);
-			delete t;
 			newTree->unit = 'k';
 		}
 		if(!strcmp(tmp, "M") || !strcmp(tmp, "m"))
 		{
 			ReadToken(s);
-			delete t;
 		}
     }
 
@@ -603,7 +586,7 @@ int ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
 
 int Parse(const char* s, ExprTree*& tree)
 {
-	char*		str = new char[strlen(s) + 1];
+	char		str[ATTRLIST_MAX_EXPRESSION];
     char*		tmp = str;	// parsing indicator
     int			count = 0;	// count characters which has been read
 
@@ -611,18 +594,10 @@ int Parse(const char* s, ExprTree*& tree)
     alreadyRead = TRUE;
     if(ParseAssignExpr(tmp, tree, count))
     {
-		if ( nextToken ) {
-			delete nextToken;
-			nextToken = NULL;
-		}
-		delete [] str;
+		nextToken.reset();
 		return 0;
     }
-	if ( nextToken ) {
-		delete nextToken;
-		nextToken = NULL;
-	}
-	delete [] str;
+	nextToken.reset();
     return count;
 }
 
