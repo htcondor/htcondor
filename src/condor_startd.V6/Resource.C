@@ -119,12 +119,11 @@ Resource::periodic_checkpoint()
 	if( state() != claimed_state ) {
 		return FALSE;
 	}
-	dprintf( D_FULLDEBUG, "Performing a periodic checkpoint on %s.\n", r_name );
+	dprintf( D_ALWAYS, "Performing a periodic checkpoint on %s.\n", r_name );
 	if( r_starter->kill( DC_SIGPCKPT ) < 0 ) {
 		return FALSE;
 	}
-	sprintf( tmp, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, (int)time(NULL) );
-	r_classad->Insert(tmp);
+	r_cur->setlastpckpt((int)time(NULL));
 	return TRUE;
 }
 
