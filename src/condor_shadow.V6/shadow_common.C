@@ -609,9 +609,9 @@ part_send_job(
   }
 
   /* Send the job info */
-  ClassAd ad;
+  ClassAd ad, *adptr = &ad;
   ConnectQ(schedd);
-  GetJobAd( proc->id.cluster, proc->id.proc, &ad );
+  GetJobAd( proc->id.cluster, proc->id.proc, adptr );
   DisconnectQ(NULL);
   if( !ad.put(*sock) ) {
     EXCEPT( "failed to send job ad" );
