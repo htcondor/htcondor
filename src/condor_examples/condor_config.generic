@@ -662,6 +662,7 @@ EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
 SBIN		= $(RELEASE_DIR)/sbin
+LIBEXEC		= $(RELEASE_DIR)/libexec
 
 ## If you leave HISTORY undefined (comment it out), no history file
 ## will be created. 

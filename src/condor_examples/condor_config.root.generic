@@ -28,6 +28,7 @@ RELEASE_DIR		= /usr/local/condor
 
 ##  Pathnames and arguments.
 SBIN			= $(RELEASE_DIR)/sbin
+LIBEXEC			= $(RELEASE_DIR)/libexec
 
 ##--------------------------------------------------------------------
 ##  condor_master
@@ -89,4 +90,4 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  condor_starter
 ##--------------------------------------------------------------------
 
-MPI_CONDOR_RSH_PATH	= $(SBIN)
+MPI_CONDOR_RSH_PATH	= $(LIBEXEC)

@@ -109,7 +109,7 @@ DedicatedScheduler = "DedicatedScheduler@full.host.name"
 ##  Path to the special version of rsh that's required to spawn MPI
 ##  jobs under Condor.  WARNING: This is not a replacement for rsh,
 ##  and does NOT work for interactive use.  Do not use it directly!
-MPI_CONDOR_RSH_PATH = $(SBIN)
+MPI_CONDOR_RSH_PATH = $(LIBEXEC)
 
 ##  This setting puts the DedicatedScheduler attribute, defined above,
 ##  into your machine's classad.  This way, the dedicated scheduler

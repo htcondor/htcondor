@@ -251,6 +251,7 @@ SPOOL		= $(LOCAL_DIR)/spool
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
 SBIN		= $(RELEASE_DIR)/sbin
+LIBEXEC		= $(RELEASE_DIR)/libexec
 HISTORY		= $(SPOOL)/history
 
 ##  Log files

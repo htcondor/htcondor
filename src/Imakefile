@@ -1,4 +1,4 @@
-#define AllFiles etc include src lib bin sbin man 
+#define AllFiles etc include src lib libexec bin sbin man 
 
 #if HAS_FORTRAN
   TEST_SUITE_F = test_suite_F.V5
@@ -73,6 +73,7 @@ TEST_SUITE_BASE = test_suite_base
 #if HAS_STATIC
 #define StaticDirectories \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
+	static_dir/libexec \
 	static_dir/etc static_dir/etc/examples static_dir/include \
 	static_dir/src static_dir/src/chirp \
 	static_dir/man static_dir/man/man1 \
@@ -86,9 +87,11 @@ TEST_SUITE_BASE = test_suite_base
 #define Directories \
 	html condor_release \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
+	release_dir/libexec \
 	release_dir/include release_dir/src release_dir/src/chirp \
 	release_dir/man release_dir/man/man1 pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
+	strip_dir/libexec \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
 	strip_dir/src strip_dir/src/chirp \
 	strip_dir/man strip_dir/man/man1 \
@@ -110,6 +113,7 @@ test_suite: $(ALL_TEST_SUITE)
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
+simple_dir_target(release_dir/libexec)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/include)
 simple_dir_target(release_dir/src)
@@ -122,6 +126,7 @@ simple_dir_target(pure_bin)
 simple_dir_target(strip_dir)
 simple_dir_target(strip_dir/bin)
 simple_dir_target(strip_dir/lib)
+simple_dir_target(strip_dir/libexec)
 simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
@@ -134,6 +139,7 @@ simple_dir_target(strip_dir/man/man1)
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
 simple_dir_target(strip_contrib/lib)
+simple_dir_target(strip_contrib/libexec)
 simple_dir_target(strip_contrib/sbin)
 simple_dir_target(strip_contrib/etc)
 simple_dir_target(strip_contrib/etc/examples)
@@ -143,6 +149,7 @@ simple_dir_target(strip_contrib/include)
 simple_dir_target(static_dir)
 simple_dir_target(static_dir/bin)
 simple_dir_target(static_dir/lib)
+simple_dir_target(static_dir/libexec)
 simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
@@ -154,6 +161,7 @@ simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
 simple_dir_target(static_contrib/lib)
+simple_dir_target(static_contrib/libexec)
 simple_dir_target(static_contrib/sbin)
 simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
