@@ -13,6 +13,7 @@
 */
 #ifndef BOOLEAN_TYPE_DEFINED
 typedef int BOOLEAN;
+typedef int BOOL;
 #endif
 
 #if defined(TRUE)
