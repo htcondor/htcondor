@@ -2939,16 +2939,31 @@ int DaemonCore::Create_Process(
 		set_priv( current_priv );
 	}
 
+		// Before we fork, we want to setup some communication with
+		// our child in case something goes wrong before the exec.  We
+		// don't want the child to exit if the exec fails, since we
+		// can't tell from the exit code if it is from our child or if
+		// the binary we exec'ed happened to use the same exit code.
+		// So, we use a pipe.  The trick is that we set the
+		// close-on-exec flag of the pipe, so we don't leak a file
+		// descriptor to the child.  The parent reads off of the pipe.
+		// If it is closed before there is any data sent, then the
+		// exec succeeded.  Otherwise, it reads the errno and returns
+		// that to the caller.  --Jim B. (Apr 13 2000)
+	int errorpipe[2];
+	if (pipe(errorpipe) < 0) {
+		dprintf(D_ALWAYS,"Create_Process: pipe() failed with errno %d (%s).\n",
+				errno, strerror(errno));
+		return FALSE;
+	}
+
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
-			/* Note (by MEY): We now have little communication with the
-			   starter...there are a few (rare) cases where we can
-			   fail.  One is after the exec(), if the binary file
-			   is not a good binary.  There we exit with the errno - 
-			   number 8 (ENOEXEC).  This will actually show up as a normal 
-			   exit(), with an exit status of 8.  Yes, this sucks and 
-			   we should do something better.  */
+			// close the read end of our error pipe and set the
+			// close-on-exec flag on the write end
+		close(errorpipe[0]);
+		fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
 
 			// make the args / env  into something we can use:
 
@@ -2985,6 +3000,9 @@ int DaemonCore::Create_Process(
 			{
 				dprintf(D_ALWAYS, "Create_Process: setsid() failed: %s\n",
 						strerror(errno) );
+					// before we exit, make sure our parent knows something
+					// went wrong before the exec...
+				write(errorpipe[1], &errno, sizeof(errno));
 				exit(errno); // Yes, we really want to exit here.
 			}
 		}
@@ -2999,6 +3017,9 @@ int DaemonCore::Create_Process(
 				char currwd[_POSIX_PATH_MAX];
 				if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
 					dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
+						// before we exit, make sure our parent knows something
+						// went wrong before the exec...
+					write(errorpipe[1], &errno, sizeof(errno));
 					exit(errno);
 				}
 
@@ -3064,6 +3085,7 @@ int DaemonCore::Create_Process(
 		bool found;
 		dprintf ( D_DAEMONCORE, "Just closed fd " );
 		for ( int j=3 ; j < openfds ; j++ ) {
+			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
 			found = FALSE;
 			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
                 if ( inheritSockFds[k] == j ) {
@@ -3091,6 +3113,9 @@ int DaemonCore::Create_Process(
 			if ( !SetEnv( unix_env[j] ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: Failed to put "
 						  "\"%s\" into environment.\n", unix_env[j] );
+					// before we exit, make sure our parent knows something
+					// went wrong before the exec...
+				write(errorpipe[1], &errno, sizeof(errno));
 				exit(errno); // Yes, we really want to exit here.
 			}
 		}
@@ -3100,6 +3125,9 @@ int DaemonCore::Create_Process(
 		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set "
 					"CONDOR_INHERIT env.\n");
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(errorpipe[1], &errno, sizeof(errno));
 			exit(errno); // Yes, we really want to exit here.
 		}
 
@@ -3143,6 +3171,9 @@ int DaemonCore::Create_Process(
 			// switch to the cwd now that we are in user priv state
 		if ( cwd && cwd[0] ) {
 			if( chdir(cwd) == -1 ) {
+					// before we exit, make sure our parent knows something
+					// went wrong before the exec...
+				write(errorpipe[1], &errno, sizeof(errno));
 				exit(errno); // Let's exit.
 			}
 		}
@@ -3159,17 +3190,39 @@ int DaemonCore::Create_Process(
 		{
 				// We no longer have privs to dprintf. :-(.
 				// Let's exit with our errno.
+				// before we exit, make sure our parent knows something
+				// went wrong before the exec...
+			write(errorpipe[1], &errno, sizeof(errno));
 			exit(errno); // Yes, we really want to exit here.
 		}		
 	}
 	else if( newpid > 0 ) // Parent Process
 	{
+			// close the write end of our error pipe
+		close(errorpipe[1]);
+			// check our error pipe for any problems before the exec
+		int child_errno = 0;
+		if (read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int)) {
+				// If we were able to read the errno from the
+				// errorpipe before it was closed, then we know the
+				// error happened before the exec.  We need to reap
+				// the child and return FALSE.
+			int child_status;
+			waitpid(newpid, &child_status, 0);
+			errno = child_errno;
+			dprintf(D_ALWAYS, "Create_Process: child failed with errno %d (%s)"
+					"before exec().\n", errno, strerror(errno));
+			close(errorpipe[0]);
+			return FALSE;
+		}
+		close(errorpipe[0]);
 		
 	}
 	else if( newpid < 0 )// Error condition
 	{
 		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n", 
 				strerror(errno), errno );
+		close(errorpipe[0]); close(errorpipe[1]);
 		return FALSE;
 	}
 #endif
