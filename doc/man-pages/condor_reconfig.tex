@@ -6,10 +6,12 @@
 \SynProg{\Condor{reconfig}}
 \ToolArgsLocate
 \ToolArgsAffect
+\oOptnm{-full}
 
 \SynProg{\Condor{reconfig}}
 \ToolWhere
 \ToolArgsAffect
+\oOptnm{-full}
 
 \index{Condor commands!condor\_reconfig}
 \index{condor\_reconfig command}
@@ -41,10 +43,12 @@ daemon and all the child processes of the \Condor{master}.
 
 \begin{Options}
     \ToolArgsBaseDesc
-    \OptItem{\Opt{-full}}{Perform a full reconfig.  In addition to
-    re-reading the configuration files, a full reconfig will clear
-    cached DNS information in the daemons.  It should only be used if
-    you need this functionality.}
+    \OptItem{\Opt{-full}}{Perform a full reconfiguration.
+    In addition to re-reading the configuration files,
+    a full reconfiguration will clear
+    cached DNS information in the daemons.
+    Use this option only when the DNS information needs to
+    be reinitialized.}
     \ToolArgsLocateDesc
 \end{Options}
 
