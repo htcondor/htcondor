@@ -293,6 +293,7 @@ _Flush( )
 {
 	if( !file ) return false;
 	fflush( file );
+	fsync( fileno( file ) );
 	return( true );
 }
 
