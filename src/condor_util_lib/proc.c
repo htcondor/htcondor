@@ -510,5 +510,11 @@ PROC	*proc;
 	(void)sprintf( line, "UNIVERSE = %d", proc->universe );
 	store_stmt( scan(line), answer );
 
+	(void)sprintf( line, "q_date = %d", proc->q_date );
+	store_stmt( scan(line), answer );
+
+	(void)sprintf( line, "image_size = %d", proc->image_size );
+	store_stmt( scan(line), answer );
+
 	return answer;
 }
