@@ -40,11 +40,11 @@ void SafeSock::init()
 {
 	_special_state = safesock_none;
 
-	for(int i=0; i<HASH_BUCKET_SIZE; i++)
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++)
 		_inMsgs[i] = NULL;
 	_msgReady = false;
 	_longMsg = NULL;
-	_tOutBtwPkts = MAX_BTW_PKT_ARVL;
+	_tOutBtwPkts = SAFE_SOCK_MAX_BTW_PKT_ARVL;
 
 	// initialize msgID
 	if(_outMsgID.msgNo == 0) { // first object of this class
@@ -81,7 +81,7 @@ SafeSock::~SafeSock()
 {
 	_condorInMsg *tempMsg, *delMsg;
 
-	for(int i=0; i<HASH_BUCKET_SIZE; i++) {
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++) {
 		tempMsg = _inMsgs[i];
 		while(tempMsg) {
 			delMsg = tempMsg;
@@ -131,7 +131,7 @@ int SafeSock::end_of_message()
 					else {
 						int index = labs(_longMsg->msgID.ip_addr +
 						                 _longMsg->msgID.time +
-								     _longMsg->msgID.msgNo) % HASH_BUCKET_SIZE;
+								     _longMsg->msgID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
 						_inMsgs[index] = _longMsg->nextMsg;
 					}
 					if(_longMsg->nextMsg)
@@ -157,7 +157,11 @@ int SafeSock::end_of_message()
 }
 
 
-int SafeSock::connect( char *host, int port)
+int SafeSock::connect(
+	char	*host,
+	int		port, 
+	bool
+	)
 {
 	struct hostent	*hostp = NULL;
 	unsigned long	inaddr = 0;
@@ -306,7 +310,8 @@ int SafeSock::get_ptr(void *&ptr, char delim)
 				case 1:
 					break;
 				default:
-					dprintf(D_ALWAYS, "select returns %d, recv failed\n", nfound );
+					dprintf(D_ALWAYS, "select returns %d, recv failed\n", 
+						nfound );
 					return 0;
 					break;
 			}
@@ -383,7 +388,7 @@ int SafeSock::handle_incoming_packet()
 	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
 	time_t curTime;
 
-	received = recvfrom(_sock, _shortMsg.dataGram, _condorPacket::MAX_PACKET_SIZE,
+	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
 	                    0, (struct sockaddr *)&_who, &fromlen );
 	//printf("Packet[%d] received\n", received);
 	dprintf(D_NETWORK, "Packet[%d] received\n", received);
@@ -408,7 +413,7 @@ int SafeSock::handle_incoming_packet()
 
 	/* long message */
 	curTime = (unsigned long)time(NULL);
-	index = labs(mID.ip_addr + mID.time + mID.msgNo) % HASH_BUCKET_SIZE;
+	index = labs(mID.ip_addr + mID.time + mID.msgNo) % SAFE_SOCK_HASH_BUCKET_SIZE;
 	tempMsg = _inMsgs[index];
 	while(tempMsg != NULL && !same(tempMsg->msgID, mID)) {
 		prev = tempMsg;
@@ -446,6 +451,7 @@ int SafeSock::handle_incoming_packet()
 			return TRUE;
 		}
 		dprintf(D_NETWORK, "a packet[%d] added to _longMsg\n", length);
+		return FALSE;
 	} else { // not found
 		if(prev) { // add a new message at the end of the chain
 			prev->nextMsg = new _condorInMsg(mID, last, seqNo,
@@ -470,6 +476,7 @@ int SafeSock::handle_incoming_packet()
 		}
 	}
 }
+
 
 void SafeSock::getStat(unsigned long &noMsgs,
 			     unsigned long &noWhole,
@@ -587,7 +594,7 @@ void SafeSock::dumpSock()
 	printf("** _outMsgID = [%d, %d, %d, %d] **\n",
 	        _outMsgID.ip_addr, _outMsgID.pid, _outMsgID.time, _outMsgID.msgNo);
 	printf("[In] Long Messages\n");
-	for(int i=0; i<HASH_BUCKET_SIZE; i++) {
+	for(int i=0; i<SAFE_SOCK_HASH_BUCKET_SIZE; i++) {
 		printf("\nBucket [%d]\n", i);
 		tempMsg = _inMsgs[i];
 		while(tempMsg) {
