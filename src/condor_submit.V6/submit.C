@@ -1621,10 +1621,13 @@ check_requirements( char *orig )
 		(void)strcat( answer, " && (VirtualMemory >= ImageSize)" );
 	}
 
-	if ( (JobUniverse == PVM) || (JobUniverse == MPI) ) {
+	if ( JobUniverse == PVM ) {
 		(void)strcat( answer, " && (Machine != \"" );
 		(void)strcat( answer, my_full_hostname() );
-		(void)strcat( answer, "\")" );
+            // XXX Temporary hack:  we only want to run on the first node
+            // of an SMP machine for pvm jobs.
+		(void)strcat( answer, "\" && ((VirtualMachineID =?= UNDEFINED ) "
+                      "|| (VirtualMachineID =?= 1)) )" );
 	} 
 
 	if ( JobUniverse == VANILLA ) {
