@@ -342,6 +342,20 @@ int
 ResState::enter_action( State s, Activity a,
 						int statechange, int ) 
 {
+#ifdef WIN32
+	if (a == busy_act)
+		systray_notifier.notifyCondorJobRunning(rip->r_id - 1);
+	else if (s == unclaimed_state)
+		systray_notifier.notifyCondorIdle(rip->r_id - 1);
+	else if (s == preempting_state)
+		systray_notifier.notifyCondorJobPreempting(rip->r_id - 1);
+	else if (a == suspended_act)
+		systray_notifier.notifyCondorJobSuspended(rip->r_id - 1);
+	else
+		systray_notifier.notifyCondorClaimed(rip->r_id - 1);
+#endif
+
+	
 	switch( s ) {
 	case owner_state:
 			// Always want to create new claim objects

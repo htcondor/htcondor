@@ -32,6 +32,11 @@
 
 // Define global variables
 
+// windows-specific: notifier for the condor "birdwatcher" (system tray icon)
+#ifdef WIN32
+CondorSystrayNotifier systray_notifier;
+#endif
+
 // Resource manager
 ResMgr*	resmgr;			// Pointer to the resource manager object
 
@@ -145,7 +150,7 @@ main_init( int, char* argv[] )
 		}
 	}
 
-		// Seed the random number generator for capability generation.
+	// Seed the random number generator for capability generation.
 	set_seed( 0 );
 
 		// Record the time we started up for use in determining
@@ -600,6 +605,10 @@ startd_exit()
 		delete resmgr;
 		resmgr = NULL;
 	}
+
+#ifdef WIN32
+	systray_notifier.notifyCondorOff();
+#endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 #ifdef WIN32
