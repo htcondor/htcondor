@@ -20,7 +20,7 @@ sub OutputTest
     close OUTPUT;
 
     # check to see if last line indicated success
-    unless( $line =~ /^All job_ckpt_signals_std \< 32 received$/ )
+    unless( $line =~ /^All signals \< 32 received$/ )
     {
 	die "$testname: FAILURE (STDOUT doesn't match expected output)\n";
     }
