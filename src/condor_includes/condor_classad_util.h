@@ -81,6 +81,8 @@ int IsGT(ClassAd *, ClassAd *, char *);
 //
 // Sort a list according to a given constraint in ascending order.
 //
+#if 0
 void SortClassAdList(ClassAdList *, ClassAdList *&, char *);
+#endif
 
 #endif

@@ -174,6 +174,7 @@ int IsGT(ClassAd *ad1, ClassAd *ad2, char *constraint)
 //
 // Sort a list according to a given constraint in ascending order.
 //
+#if 0
 void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constraint)
 {
     int *mark;                               // mark each entity in the list
@@ -246,7 +247,7 @@ void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constrai
     }
     delete []mark;
 }
-
+#endif
 
 
 
