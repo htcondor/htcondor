@@ -57,20 +57,20 @@ int	tflag;
 /*
  * Paths.
  */
-char		*log_path;
-char		*spool_path;
-char		*exec_path;
-char		*mail_path;
-char		*client;
-char		*AccountantHost;
+char		*log_path=NULL;
+char		*spool_path=NULL;
+char		*exec_path=NULL;
+char		*mail_path=NULL;
+char		*client=NULL;
+char		*AccountantHost=NULL;
 extern char	*uptime_path;
 extern	char	*pstat_path;
 
 /*
  * Hosts.
  */
-char	*collector_host;
-char	*alt_collector_host;
+char	*collector_host=NULL;
+char	*alt_collector_host=NULL;
 
 /*
  * Others.
@@ -85,10 +85,10 @@ char	*def_owner = "Owner = \"nobody\"";
 
 ClassAd* template_ClassAd;
 
-char	*PrimaryStarter;
+char	*PrimaryStarter=NULL;
 char	*AlternateStarter[10];
-char	*Starter;
-char	*IP;
+char	*Starter=NULL;
+char	*IP=NULL;
 
 static char *_FileName_ = __FILE__;
 

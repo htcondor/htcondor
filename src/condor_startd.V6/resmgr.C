@@ -26,7 +26,7 @@ static char *_FileName_ = __FILE__;
  * XXX - DON'T do this using lineair searches..
  */
 
-static resource_info_t *resources;
+static resource_info_t *resources=NULL;
 static int nresources;
 static fd_set cur_fds;
 
