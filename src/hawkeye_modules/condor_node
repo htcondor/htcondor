@@ -64,64 +64,84 @@ sub RunIt {
 		      "RunawayPids"	=> [],
 		     );
 
-    # Table to translate "ps-command" regex to $CondorInfo key..
+    # List of owners, keyed by type
     my $DefaultDaemonOwnerList = "condor,root";
-    my %CondorCmdTable =
+    my %OwnerStrings = (
+		      User	=> "*",
+		      Daemon	=> $DefaultDaemonOwnerList,
+		      Master	=> $DefaultDaemonOwnerList,
+		     );
+
+    # Override the defaults
+    if ( $Config{UserOwnerList} ne "" )
+    {
+	$OwnerStrings{User} = $Config{UserOwnerList};
+    }
+    if ( $Config{DaemonOwnerList} ne "" )
+    {
+	$OwnerStrings{Daemon} = $Config{DaemonOwnerList};
+	$OwnerStrings{Master} = $Config{DaemonOwnerList};
+    }
+    if ( $Config{MasterOwnerList} ne "" )
+    {
+	$OwnerStrings{Master} = $Config{MasterOwnerList};
+    }
+
+    # Build the actual lists list
+    my %OwnerLists;
+    foreach my $Key ( keys %OwnerStrings )
+    {
+	@{$OwnerLists{$Key}} = split( /,/, $OwnerStrings{$Key} );
+    }
+
+    # Table to translate "ps-command" regex to $CondorInfo key..
+    my %CondorProgTable =
 	(
-	 condor_starter	=> { Attr => "NumStarters",
-			     DaemonUser => 1,
-			     OwnerList => $DefaultDaemonOwnerList, },
-	 condor_startd	=> { Attr => "NumStartds",
-			     DaemonUser => 1,
-			     OwnerList => $DefaultDaemonOwnerList, },
-	 condor_master	=> { Attr => "NumMasters",
-			     DaemonUser => 1,
-			     OwnerList => $DefaultDaemonOwnerList, },
-	 condor_schedd	=> { Attr => "NumSchedds",
-			     DaemonUser => 1,
-			     OwnerList => $DefaultDaemonOwnerList, },
-	 condor_exec	=> { Attr => "NumExecs",
-			     DaemonUser => 0,
-			     OwnerList => "*", },
-	 condor_shadow	=> { Attr => "NumShadows",
-			     DaemonUser => 0,
-			     OwnerList => "*", },
+	 condor_starter	=> {
+			    Attr => "NumStarters",
+			    Owner => "Daemon",
+			   },
+	 condor_startd	=> {
+			    Attr => "NumStartds",
+			    Owner => "Daemon",
+			   },
+	 condor_master	=> {
+			    Attr => "NumMasters",
+			    Owner => "Master",
+			   },
+	 condor_schedd	=> {
+			    Attr => "NumSchedds",
+			    Owner => "Daemon",
+			   },
+	 condor_exec	=> {
+			    Attr => "NumExecs",
+			    Owner => "User",
+			   },
+	 condor_shadow	=> {
+			    Attr => "NumShadows",
+			    Owner => "User",
+			   },
 	);
 
-    # Set the "user list" for each command
-    foreach my $Cmd ( keys %CondorCmdTable )
-    {
-	if ( $CondorCmdTable{$Cmd}{DaemonUser} )
-	{
-	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{DaemonOwnerList}
-		if ( $Config{DaemonOwnerList} ne "" );
-	}
-	else
-	{
-	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{UserOwnerList}
-		if ( $Config{UserOwnerList} ne "" );
-	}
-    }
-    # Master has a special list that overrides the others..
-    $CondorCmdTable{condor_master}{OwnerList} = $Config{MasterOwnerList}
-	if ( $Config{MasterOwnerList} ne "" );
-
     # Run a 'ps' and gather some info...
-    if ( open( PS, "/bin/ps -eo user,pid,ppid,comm,args|" ) )
+    my $Cmd = "/bin/ps -eo user,pid,ppid,comm,args";
+    if ( ! open( PS, "$Cmd|" ) )
+    {
+	print STDERR "Warning; failed to run '$Cmd'\n";
+    }
+    else
     {
 	while ( <PS> )
 	{
 	    chomp;
-	    my ( $User, $Pid, $Ppid, @CmdString ) = split;
-	    my $CmdString = join(" ", @CmdString);
-	    next if ( ! ( $CmdString =~ /condor/ ) );
+	    my ( $User, $Pid, $Ppid, @ProgString ) = split;
+	    my $ProgString = join(" ", @ProgString);
+	    next if ( ! ( $ProgString =~ /condor/ ) );
 
 	    # Starter with PPID == 1
 	    if ( 1 == $Ppid )
 	    {
-		if ( ( $CmdString =~ /condor_starter/ ) ||
-		     ( $CmdString =~ /condor_exec/ ) ||
-		     ( $CmdString =~ /condor\/execute/ ) )
+		if ( $ProgString =~ /condor(_starter|_exec|\/execute)/ )
 		{
 		    $CondorInfo{NumRunaway}++;
 		    push( @{$CondorInfo{RunawayPids}}, $Pid );
@@ -129,17 +149,16 @@ sub RunIt {
 	    }
 
 	    # Count the processes...
-	    foreach my $CmdPat ( keys %CondorCmdTable )
+	    foreach my $ProgPat ( keys %CondorProgTable )
 	    {
-		if ( $CmdString =~ /$CmdPat/ )
+		if ( $ProgString =~ /$ProgPat/ )
 		{
-		    my $Attr = $CondorCmdTable{$CmdPat}->{Attr};
-		    my $OwnerList = $CondorCmdTable{$CmdPat}->{OwnerList};
+		    my $Attr = $CondorProgTable{$ProgPat}->{Attr};
+		    my $OwnerType = $CondorProgTable{$ProgPat}->{Owner};
 
 		    # Is it on the user match list?
 		    my $UserMatch = 0;
-		    $OwnerList = "*" if ( $OwnerList eq "" );
-		    foreach my $TmpUser ( split( /,/, $OwnerList ) )
+		    foreach my $TmpUser ( @{$OwnerLists{$OwnerType}} )
 		    {
 			$UserMatch++ if (  ( $TmpUser eq "*" ) ||
 					   ( $TmpUser eq $User )  );
