@@ -15,8 +15,17 @@
     	int tz_dsttime; /* type of dst correction */
 	};
 
-#else
-#	include <sys/time.h>
+#elif defined(Solaris)
+/* Solaris specific change ..dhaval 6/26 */
+#if defined(_POSIX_SOURCE)
+#define HOLD_POSIX_SOURCE
+#undef _POSIX_SOURCE
+#endif /* _POSIX_SOURCE */
+#	include <sys/types.h>
+#if defined(HOLD_POSIX_SOURCE)
+#define _POSIX_SOURCE
 #endif
-
+#else  
+#	include <sys/time.h> 
+#endif 
 #endif

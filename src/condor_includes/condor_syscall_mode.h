@@ -3,6 +3,8 @@
 
 #if defined( AIX32)
 #	include "syscall.aix.h"
+#elif defined(Solaris) /* Solaris specific change ..dhaval 6/28 */
+#	include <sys/syscall.h>
 #else
 #	include <syscall.h>
 #endif

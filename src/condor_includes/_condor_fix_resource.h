@@ -5,8 +5,15 @@
 extern "C" {
 #endif
 
-#if defined(ULTRIX43)
+#if defined(ULTRIX43) 
 #	include <time.h>
+#endif
+
+/* Solaris specific change ..dhaval 6/25 */
+#if defined(Solaris) 
+#	include <sys/time.h>
+#	include "condor_fix_timeval.h"
+#	include </usr/ucbinclude/sys/rusage.h>
 #endif
 
 #if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43)

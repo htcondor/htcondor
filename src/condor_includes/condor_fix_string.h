@@ -16,7 +16,6 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
 char *strdup( const char * );
 
 #if defined(__cplusplus)

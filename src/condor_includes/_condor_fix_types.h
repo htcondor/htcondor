@@ -14,7 +14,21 @@
 typedef int		bool_t;
 #endif
 
-#include <sys/types.h>
+#if defined(Solaris)
+/* Solaris specific change ..dhaval 6/26 */
+#if defined(_POSIX_SOURCE)
+#define HOLD_POSIX_SOURCE
+#undef _POSIX_SOURCE
+#endif /* _POSIX_SOURCE */
+#endif /* Solaris */
+
+#	include <sys/types.h>
+
+#if defined(Solaris) && defined(HOLD_POSIX_SOURCE)
+#define _POSIX_SOURCE
+#endif
+
+/* #include <sys/types.h> */
 
 #if defined(OSF1) && !defined(__GNUC__)
 #undef off_t
@@ -43,7 +57,11 @@ need these extra definitions...
 #	define HAS_U_TYPES
 #endif
 
-#if !defined(HAS_U_TYPES)
+ #if defined(Solaris)
+#       define HAS_U_TYPES
+#endif
+
+#if !defined(HAS_U_TYPES)  /*  || defined(Solaris)   */
 	typedef unsigned int u_int;
 	typedef unsigned char   u_char;
 	typedef unsigned short  u_short;
@@ -63,3 +81,7 @@ typedef unsigned long rlim_t;
 #endif
 
 #endif
+
+
+
+

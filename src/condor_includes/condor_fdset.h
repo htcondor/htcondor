@@ -26,6 +26,8 @@
 #	undef _DEFINE_FD_SET
 #elif defined( AIX32 )
 #	include <sys/select.h>
+#elif defined( Solaris )
+#       include <sys/select.h>
 #else
 #	error "Don't know how to build fd_set for this platform"
 #endif

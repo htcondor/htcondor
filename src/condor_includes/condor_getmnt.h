@@ -5,8 +5,14 @@
 #	include <sys/mount.h>
 #endif
 
-#if !defined(OSF1) && !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32)
+#if !defined(OSF1) && !defined(ULTRIX42) && !defined(ULTRIX43) && !defined(AIX32) && !defined(Solaris) /*
+Solaris specific change ..dhaval 6/26 */
 #	include <mntent.h>
+#endif
+
+/* Solaris specific change ..dhaval 6/26 */
+#if defined(Solaris)
+#include <sys/mnttab.h>
 #endif
 
 #if defined(AIX32)

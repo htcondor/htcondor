@@ -40,6 +40,20 @@ private:
 	void	disSysParam(const SysParamName sys, const char*buffer, 
 								const int size, const SysType type);
 } ;
+
+/* Solaris specific change ..dhaval 6/27 */
+
+class solaris		: public BaseOs
+{
+public:
+	solaris();                      // do required initialization
+private:
+	int  	readSysParam(const SysParamName,char*& buffer,int& size,
+													SysType& type) ;
+	void	disSysParam(const SysParamName sys, const char*buffer, 
+								const int size, const SysType type);
+} ;
+
 class Osf1	: public BaseOs 
 {
 public:
