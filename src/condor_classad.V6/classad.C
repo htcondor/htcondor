@@ -45,13 +45,13 @@ void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {
     major = 0;
     minor = 9;
-    patch = 6;
+    patch = 8;
     return;
 }
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "0.9.7";
+    version_string = "0.9.8";
     return;
 }
 
