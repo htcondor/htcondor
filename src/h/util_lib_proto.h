@@ -33,7 +33,7 @@ void StartRecording ( void );
 void CompleteRecording ( long numberOfBytes );
 void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
-int do_connect ( char *host, char *service, u_int port );
+int do_connect ( const char *host, const char *service, u_int port );
 int udp_connect ( char *host, u_int port );
 /* void dprintf_init ( int fd ); change */
 void dprintf ( int flags, char *fmt, ... );
