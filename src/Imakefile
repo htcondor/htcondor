@@ -296,7 +296,6 @@ clean::
 	make clean-up
 
 really-clean:: clean-up
-	rm -f config.*
 
 clean-up:
 	rm -rf *.out Makefile */Makefile* release_* \
