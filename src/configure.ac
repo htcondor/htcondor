@@ -1269,7 +1269,7 @@ AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
 
 
 AC_MSG_CHECKING([gt3gahp])
-_cv_ext_gt3gahp_version="gt3gahp-1.0"
+_cv_ext_gt3gahp_version="gt3gahp-2.0"
 AC_MSG_RESULT([$_cv_ext_gt3gahp_version])
 AC_SUBST(ext_gt3gahp_version,$_cv_ext_gt3gahp_version)
 
