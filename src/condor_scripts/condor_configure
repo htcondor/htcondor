@@ -145,7 +145,7 @@ if (defined($opt_make_personal_condor) ||
     $local_config{PREEMPT}="FALSE";
     $local_config{SUSPEND}="FALSE";
     $local_config{VACATE}="FALSE";
-    $cm=&set_central_manager($host);
+    $cm=&set_central_manager($fullhost);
     $local_config{COLLECTOR_NAME}="Collector at $host";
 }
 elsif (defined($opt_type)) {
@@ -222,35 +222,58 @@ sub user_host_stuff() {
 
     $who=$pwdent[0];
 
-    chomp($host=`hostname`);
+    if ($ENV{HOSTNAME}) {
+	$host=$ENV{HOSTNAME};
+    } else {
+	$host=`hostname`;
+	if ($? ne 0) {
+	    die "\nUnable to determine the host name. Please set the \
+environment variable \$HOSTNAME to the full name of this machine \
+e.g. mymachine.mydomain.com \n";
+	}
+	chomp ($host);
+    }
     
     # Make sure $host is just hostname, with no domain.  Grab everything
     # upto the first ".".
-    $host =~ s/(\w*)\..*/$1/;
     
-    # Lookup the full hostname.
-    $fullhost=(gethostbyname($host))[0];
-    if( ! ($fullhost =~ /.*\..*/) ) {
-	# There's no "." in the hostname.  DNS/hosts/YP is probably
-	# misconfigured... try the other entry, that might be it.
-	$fullhost=(gethostbyname($host))[1];
-    }
+    if ($host =~ /(\w+)\.(\w.*)/) {
 
-    if( ! ($fullhost =~ /.*\..*/) ) {
-	# There's still no "." in the hostname.  DNS/hosts/YP is totally 
-	# misconfigured...
-	chomp($fullhost=`host $host | grep \"has address\" | awk \'\{print \$1\}\'`);
-    }
+	# $host = mymachine.mydomain.com
 
-    if( ! ($fullhost =~ /.*\..*/) ) { 
-        $fullhost=$host;
-	$domain="";
-	print "\nWARNING: Unable to determine full hostname.\n Condor may not work properly\n";
-    } else {
-	# Grab just the domain, so we have it.
-	$fullhost =~ /\w*\.(.*)/;
-	$domain = $1;
+	$host=$1;
+	$domain=$2;
+	$fullhost=$host.'.'.$domain;
     }
+    elsif ($host =~ /\w+/) {
+
+	# $host = mymachine
+
+	# Lookup the full hostname.
+	$fullhost=(gethostbyname($host))[0];
+	if( ! ($fullhost =~ /.*\..*/) ) {
+	    # There's no "." in the hostname.  DNS/hosts/YP is probably
+	    # misconfigured... try the other entry, that might be it.
+	    $fullhost=(gethostbyname($host))[1];
+	}
+
+	if( ! ($fullhost =~ /.*\..*/) ) {
+	    # There's still no "." in the hostname.  DNS/hosts/YP is totally 
+	    # misconfigured...
+	    chomp($fullhost=`host $fullhost | grep \"has address\" | awk \'\{print \$1\}\'`);
+	}
+
+	if( ! ($fullhost =~ /.*\..*/) ) { 
+	    $fullhost=$host;
+	    $domain="";
+	    print "\nWARNING: Unable to determine full hostname.\n Condor may not work properly\n";
+	} else {
+	    # Grab just the domain, so we have it.
+	    $fullhost =~ /\w*\.(.*)/;
+	    $domain = $1;
+	}
+    }
+}
 
 
     ###  Find condor's home directory, if it exists.
@@ -467,6 +490,7 @@ sub install {
 	return $release_dir;
     }
 
+
     # Create config file
     system("cp $release_dir/etc/examples/condor_config.generic $config_file") &&
 	die "Unable to create condor_config file: $config_file!\n";
@@ -487,12 +511,18 @@ sub install {
     $global_config{LOCAL_CONFIG_FILE}="$local_config_file";
 
     &make_personal_condor();
-    $local_config{CONDOR_HOST}=$host;
+    # Don't assume the CONDOR_HOST will be defined (e.g. Condor-G)
+    #$local_config{CONDOR_HOST}=$host;
+    
     $local_config{COLLECTOR}="\$(SBIN)/condor_collector";
     $local_config{NEGOTIATOR}="\$(SBIN)/condor_negotiator";
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)";
+
+    # This is necessary so that if no collector host is specified, 
+    # Condor doesn't start using "central-manager-hostname.your.domain"
+    $global_config{CONDOR_HOST}="";
 
     chomp (my $network_interface=`host $host | grep \"has address\" | awk \'\{print \$4\}\'`);
     
@@ -759,7 +789,7 @@ my $java_jvm_maxmem_arg = "";
 sub make_personal_condor() {
     $local_config{DAEMON_LIST}="MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD";
     $local_config{START}="TRUE";
-    $cm=&set_central_manager($host);
+    $cm=&set_central_manager($fullhost);
 }
 
 sub get_config_value() {
