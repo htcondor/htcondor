@@ -205,7 +205,8 @@ sub RunIt {
 		    }
 		    $CondorInfo{OpSys} = $AdInfo{OpSys};
 		    $CondorInfo{Arch} = $AdInfo{Arch};
-		    $CondorInfo{StarterAbilityList} = $AdInfo{StarterAbilityList};
+		    $CondorInfo{StarterAbilityList} = $AdInfo{StarterAbilityList}
+			if ( exists $AdInfo{StarterAbilityList} );
 		    $CondorInfo{"State$Vm"} = $AdInfo{State};
 		    $CondorInfo{"Activity$Vm"} = $AdInfo{Activity};
 		    $CondorInfo{"LoadAv$Vm"} = $AdInfo{LoadAvg};
