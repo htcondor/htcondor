@@ -2,7 +2,7 @@
 //
 // condor_sched.h
 //
-// Define class Scheduler. This class do local scheduling and then negotiates
+// Define class Scheduler. This class does local scheduling and then negotiates
 // with the central manager to obtain resources for jobs.
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -19,7 +19,11 @@
 #include "sched.h"
 #include "prio_rec.h"
 
-const	int			MAX_SHADOW_RECS	= 512; 
+const	int			MAX_SHADOW_RECS	= 1024; 
+const 	int			MAX_NUM_OWNERS = 512;
+const 	int			MAX_REJECTED_CLUSTERS = 1024;
+const 	int			MAX_SCHED_UNIVERSE_RECS = 32;
+
 
 extern	char**		environ;
 
@@ -129,9 +133,9 @@ class Scheduler : public Service
 	int				SchedUniverseJobsRunning;
 	int				BadCluster;
 	int				BadProc;
-	int				RejectedClusters[1024];
+	int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	int				N_RejectedClusters;
-	char*			Owners[1024];
+	char*			Owners[MAX_NUM_OWNERS];
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
