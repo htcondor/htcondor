@@ -148,7 +148,7 @@ void
 ShadowMgr::init( void )
 {
 	StringList shadow_list;
-	StringList existing_shadow_list;
+	StringList checked_shadow_list;
 	Shadow* tmp_shadow;
 	shadows.Rewind();
 	while( shadows.Next(tmp_shadow) ) {
@@ -179,7 +179,7 @@ ShadowMgr::init( void )
 			}
 			continue;
 		}
-		if( existing_shadow_list.contains(shadow_path) ) {
+		if( checked_shadow_list.contains(shadow_path) ) {
 			if( new_config ) {
 				dprintf( D_ALWAYS, "Shadow pointed to by \"%s\" (%s) is "
 						 "in SHADOW_LIST more than once, ignoring.\n", 
@@ -195,8 +195,10 @@ ShadowMgr::init( void )
 		tmp_shadow = makeShadow( shadow_path );
 		if( tmp_shadow ) {
 			shadows.Append( tmp_shadow );
-			existing_shadow_list.append( shadow_path );
 		}
+			// record the fact that we've already considered this
+			// shadow, even if it failed to give us a classad. 
+		checked_shadow_list.append( shadow_path );
 		free( shadow_path );
 	}
 	if( ! new_config ) {
