@@ -200,7 +200,7 @@ static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 static int open_tcp_stream( const char *hostname, unsigned short port );
 static int open_read_stream( const char *path );
-	   int open_write_stream( const char * ckpt_file );
+	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 
 
 int
@@ -211,39 +211,43 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*extra;
 	int		scm;
 
-	_condor_prestart();
+	_condor_prestart( SYS_REMOTE );
 
 	// init_syscall_connection( SYS_REMOTE | SYS_MAPPED, TRUE );
 	init_syscall_connection( SYS_LOCAL | SYS_UNMAPPED, TRUE );
 
+#if 0
 	dprintf( D_ALWAYS, "User process started\n" );
 	dprintf( D_ALWAYS, "\nOriginal\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
+#endif
 
 		// We must be started by a parent providing a command stream,
 		// therefore there must be at least 3 arguments.
 	assert( argc >= 3 );
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
-		dprintf( D_ALWAYS, "Found condor_cmd_fd\n" );
+		dprintf( D_FULLDEBUG, "Found condor_cmd_fd\n" );
 		cmd_fd = strtol( argv[2], &extra, 0 );
 		if( extra[0] ) {
 			dprintf( D_ALWAYS, "Can't parse cmd stream fd (%s)\n", argv[2]);
 			exit( 1 );
 		}
-		dprintf( D_ALWAYS, "fd number is %d\n", cmd_fd );
+		dprintf( D_FULLDEBUG, "fd number is %d\n", cmd_fd );
 		// scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		pre_open( cmd_fd, TRUE, FALSE );
 
+#if 0
 		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
 		DumpOpenFds();
 		dprintf( D_ALWAYS, "END\n\n" );
+#endif
 
 
 	} else if( strcmp("-_condor_cmd_file",argv[1]) == MATCH ) {
 
-		dprintf( D_ALWAYS, "Found condor_cmd_file\n" );
+		dprintf( D_FULLDEBUG, "Found condor_cmd_file\n" );
 		// scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		cmd_fd = open( argv[2], O_RDONLY);
 		if( cmd_fd < 0 ) {
@@ -256,9 +260,9 @@ MAIN( int argc, char *argv[], char **envp )
 		assert( FALSE );
 	}
 
-	dprintf( D_ALWAYS, "\nCalling cmd stream processor\n" );
+	dprintf( D_FULLDEBUG, "\nCalling cmd stream processor\n" );
 	_condor_interp_cmd_stream( cmd_fd );
-	dprintf( D_ALWAYS, "Done\n\n" );
+	dprintf( D_FULLDEBUG, "Done\n\n" );
 	cmd_name = argv[0];
 	argv += 2;
 	argc -= 2;
@@ -266,9 +270,11 @@ MAIN( int argc, char *argv[], char **envp )
 
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
+#if 0
 	dprintf( D_ALWAYS, "\nBefore calling main()\n" );
 	DumpOpenFds();
 	dprintf( D_ALWAYS, "END\n\n" );
+#endif
 
 		/* Now start running user code */
 	main( argc, argv, envp );
@@ -381,7 +387,7 @@ find_cmd( const char *str )
 static BOOLEAN
 condor_iwd( const char *path )
 {
-	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
+	dprintf( D_FULLDEBUG, "condor_iwd: path = \"%s\"\n", path );
 	REMOTE_syscall( CONDOR_chdir, path );
 	Set_CWD( path );
 	return TRUE;
@@ -408,14 +414,14 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 		dprintf( D_ALWAYS, "Unknown file opening mode (%s)\n", open_mode );
 		assert( FALSE );
 	}
-	dprintf( D_ALWAYS,
+	dprintf( D_FULLDEBUG,
 		"condor_fd: fd_number = %d, file = \"%s\",  mode = 0%o\n",
 		n, path, mode
 	);
 	scm = SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 	remote_fd = open( path, mode );
 	assert( remote_fd >= 0 );
-	dprintf( D_ALWAYS, "remote_fd = %d, n = %d\n", remote_fd, n );
+	dprintf( D_FULLDEBUG, "remote_fd = %d, n = %d\n", remote_fd, n );
 	if( remote_fd != n ) {
 		int		status;
 		status = dup2(remote_fd,n);
@@ -432,7 +438,7 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 static BOOLEAN
 condor_ckpt( const char *path )
 {
-	dprintf( D_ALWAYS, "condor_ckpt: filename = \"%s\"\n", path );
+	dprintf( D_FULLDEBUG, "condor_ckpt: filename = \"%s\"\n", path );
 	init_image_with_file_name( path );
 	return TRUE;
 }
@@ -443,7 +449,7 @@ condor_restart( const char *path )
 {
 	int		fd;
 
-	dprintf( D_ALWAYS, "condor_restart: file = \"%s\"\n", path );
+	dprintf( D_FULLDEBUG, "condor_restart: file = \"%s\"\n", path );
 
 	fd = open_read_stream( path );
 	init_image_with_file_descriptor( fd );
@@ -464,7 +470,7 @@ condor_migrate_to( const char *host_name, const char *port_num )
 		return FALSE;
 	}
 
-	dprintf( D_ALWAYS,
+	dprintf( D_FULLDEBUG,
 		"condor_migrate_to: host = \"%s\", port = %d\n", host_name, port
 	);
 	return TRUE;
@@ -481,7 +487,7 @@ condor_migrate_from( const char *fd_no )
 		return FALSE;
 	}
 	
-	dprintf( D_ALWAYS, "condor_migrate_from: fd = %d\n", fd );
+	dprintf( D_FULLDEBUG, "condor_migrate_from: fd = %d\n", fd );
 	return TRUE;
 }
 
@@ -496,7 +502,7 @@ condor_exit( const char *status )
 		return FALSE;
 	}
 	
-	dprintf( D_ALWAYS, "condor_exit: status = %d\n", st );
+	dprintf( D_FULLDEBUG, "condor_exit: status = %d\n", st );
 	return TRUE;
 }
 
@@ -519,26 +525,26 @@ open_tcp_stream( const char *hostname, unsigned short port )
 		/* Look up the address of the host */
 	host_ptr = gethostbyname( hostname );
 	assert( host_ptr );
-	dprintf( D_ALWAYS, "Found host entry for \"%s\"\n", hostname );
+	dprintf( D_FULLDEBUG, "Found host entry for \"%s\"\n", hostname );
 
 		/* generate a socket */
 	fd = socket( AF_INET, SOCK_STREAM, 0 );
 	assert( fd >= 0 );
-	dprintf( D_ALWAYS, "Generated a data socket - fd = %d\n", fd );
+	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
 		
 		/* set the address */
 	memset( &sin, '\0', sizeof sin );
 	memcpy( &sin.sin_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
 	sin.sin_family = host_ptr->h_addrtype;
 	sin.sin_port = htons( port );
-	dprintf( D_ALWAYS, "Internet address structure set up\n" );
+	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
 
 	status = connect( fd,( struct sockaddr *)&sin, sizeof(sin) );
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
 		exit( 1 );
 	}
-	dprintf( D_ALWAYS, "Connection completed - returning fd %d\n", fd );
+	dprintf( D_FULLDEBUG, "Connection completed - returning fd %d\n", fd );
 
 	SetSyscalls( scm );
 	return fd;
@@ -551,7 +557,7 @@ open_tcp_stream( const char *hostname, unsigned short port )
   a "pseudo system call" to the shadow.
 */
 int
-open_write_stream( const char * ckpt_file )
+open_write_stream( const char * ckpt_file, size_t n_bytes )
 {
 	int		st;
 	char	hostname[ 1024 ];
@@ -560,13 +566,13 @@ open_write_stream( const char * ckpt_file )
 
 		// Get the hostname and port number of a process to which we
 		// can send the checkpoint data.
-	st = REMOTE_syscall( CONDOR_put_file_stream, ckpt_file, hostname, &port );
-	dprintf( D_ALWAYS, "Hostname = \"%s\"\n", hostname );
-	dprintf( D_ALWAYS, "Port = %d\n", port );
+	st = REMOTE_syscall( CONDOR_put_file_stream, ckpt_file, n_bytes, hostname, &port );
+	dprintf( D_FULLDEBUG, "Hostname = \"%s\"\n", hostname );
+	dprintf( D_FULLDEBUG, "Port = %d\n", port );
 
 		// Connect to the specified party
 	fd = open_tcp_stream( hostname, port );
-	dprintf( D_ALWAYS, "Checkpoint Data Connection Ready, fd = %d\n", fd );
+	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
 
 	return fd;
 }
@@ -585,12 +591,12 @@ open_read_stream( const char *path )
 		// send us the checkpoint data.
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 	st = REMOTE_syscall( CONDOR_get_file_stream, path, &len, hostname, &port );
-	dprintf( D_ALWAYS, "Hostname = \"%s\"\n", hostname );
-	dprintf( D_ALWAYS, "Port = %d\n", port );
+	dprintf( D_FULLDEBUG, "Hostname = \"%s\"\n", hostname );
+	dprintf( D_FULLDEBUG, "Port = %d\n", port );
 
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	fd = open_tcp_stream( hostname, port );
-	dprintf( D_ALWAYS, "Checkpoint Data Connection Ready, fd = %d\n", fd );
+	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
 
 	return fd;
 }

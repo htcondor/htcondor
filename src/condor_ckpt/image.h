@@ -52,6 +52,8 @@ private:
 	long		len;
 };
 
+typedef enum { STANDALONE, REMOTE } ExecutionMode;
+
 class Image {
 public:
 	void Save();
@@ -68,6 +70,10 @@ public:
 	void RestoreSeg( const char *seg_name );
 	void SetFd( int fd );
 	void SetFileName( char *ckpt_name );
+	void SetMode( int syscall_mode );
+	ExecutionMode	GetMode() { return mode; }
+	size_t			GetLen()  { return len; }
+	int				GetFd()   { return fd; }
 protected:
 	RAW_ADDR	GetStackLimit();
 	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end );
@@ -75,9 +81,11 @@ protected:
 	char	*file_name;
 	Header	head;
 	SegMap	map[ MAX_SEGS ];
-	BOOL	valid;
-	int		fd;
-	ssize_t	pos;
+	ExecutionMode	mode;	// executing in standalone/remote mode
+	BOOL	valid;		// initialized and ready to write ckpt file or restore
+	int		fd;		// descriptor pointing to ckpt file
+	ssize_t	pos;	// position in ckpt file of seg currently reading/writing
+	size_t	len;	// size of our ckpt file
 };
 void RestoreStack();
 
@@ -87,7 +95,7 @@ void ckpt();
 extern "C" void restart();
 extern "C" void init_image_with_file_name( char *ckpt_name );
 extern "C" void init_image_with_file_descriptor( int ckpt_fd );
-extern "C" void _condor_prestart();
+extern "C" void _condor_prestart( int syscall_mode );
 }
 
 

@@ -49,6 +49,7 @@
 #define __STDC__
 #include "condor_common.h"
 #include "condor_constants.h"
+#include "condor_syscall_mode.h"
 
 #include <assert.h>
 
@@ -66,14 +67,13 @@ MAIN( int argc, char *argv[], char **envp )
 	char	init_working_dir[_POSIX_PATH_MAX];
 	DebugFlags = D_NOHEADER | D_ALWAYS;
 
-	_condor_prestart();
+	_condor_prestart( SYS_LOCAL );
 
 
 		// If the command line looks like 
 		//		exec_name -_condor_ckpt <ckpt_file> ...
 		// then we set up to checkpoint to the given file name
 	if( argc >= 3 && strcmp("-_condor_ckpt",argv[1]) == MATCH ) {
-		// init_image( argv[2] );
 		init_image_with_file_name( argv[2] );
 #if 0
 		init_file_table();
@@ -89,7 +89,6 @@ MAIN( int argc, char *argv[], char **envp )
 		//		exec_name -_condor_restart <ckpt_file> ...
 		// then we effect a restart from the given file name
 	if( argc >= 3 && strcmp("-_condor_restart",argv[1]) == MATCH ) {
-		// init_image( argv[2] );
 		init_image_with_file_name( argv[2] );
 		restart();
 	}
@@ -100,7 +99,6 @@ MAIN( int argc, char *argv[], char **envp )
 		// ".ckpt" extension.
 	if( argc < 3 ) {
 		sprintf( buf, "%s.ckpt", argv[0] );
-		// init_image( buf );
 		init_image_with_file_name( buf );
 #if 0
 		init_file_table();
@@ -113,10 +111,11 @@ MAIN( int argc, char *argv[], char **envp )
 /*
   Open a stream for writing our checkpoint information.  Since we are in
   the "standalone" startup file, this is the local version.  We do it with
-  a simple "open" call.
+  a simple "open" call.  Also, we can ignore the "n_bytes" parameter here -
+  we will get an error on the "write" if something goes wrong.
 */
 int
-open_write_stream( const char * ckpt_file )
+open_write_stream( const char * ckpt_file, size_t n_bytes )
 {
 	int		fd;
 

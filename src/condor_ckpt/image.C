@@ -18,7 +18,12 @@ static char *_FileName_ = __FILE__;
 #include <signal.h>
 #endif
 
-extern "C" int open_write_stream( const char * ckpt_file );
+extern "C" int open_write_stream( const char * ckpt_file, size_t n_bytes );
+
+#if defined(OSF1)
+extern "C" unsigned int htonl( unsigned int );
+extern "C" unsigned int ntohl( unsigned int );
+#endif
 
 Image MyImage;
 static jmp_buf Env;
@@ -77,6 +82,16 @@ Image::SetFileName( char *ckpt_name )
 	pos = 0;
 }
 
+void
+Image::SetMode( int syscall_mode )
+{
+	if( syscall_mode & SYS_LOCAL ) {
+		mode = STANDALONE;
+	} else {
+		mode = REMOTE;
+	}
+}
+
 
 /*
   These actions must be done on every startup, regardless whether it is
@@ -85,9 +100,11 @@ Image::SetFileName( char *ckpt_name )
 */
 extern "C"
 void
-_condor_prestart()
+_condor_prestart( int syscall_mode )
 {
 	struct sigaction action;
+
+	MyImage.SetMode( syscall_mode );
 
 		// Initialize open files table
 	InitFileState();
@@ -136,6 +153,9 @@ Image::Save()
 	for( i=0; i<head.N_Segs(); i++ ) {
 		pos = map[i].SetPos( pos );
 	}
+
+	dprintf( D_ALWAYS, "Size of ckpt image = %d bytes\n", pos );
+	len = pos;
 
 	valid = TRUE;
 }
@@ -252,7 +272,24 @@ Image::RestoreSeg( const char *seg_name )
 void
 RestoreStack()
 {
+
+#if defined(ALPHA)			
+	unsigned int nbytes;		// 32 bit unsigned
+#else
+	unsigned long nbytes;		// 32 bit unsigned
+#endif
+	int		status;
+
 	MyImage.RestoreSeg( "STACK" );
+
+		// In remote mode, we have to send back size of ckpt informaton
+	if( MyImage.GetMode() == REMOTE ) {
+		nbytes = MyImage.GetLen();
+		nbytes = htonl( nbytes );
+		status = write( MyImage.GetFd(), &nbytes, sizeof(nbytes) );
+		dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE RECEIVED OK\n" );
+	}
+
 	LONGJMP( Env, 1 );
 }
 
@@ -277,18 +314,33 @@ Image::Write( const char *ckpt_file )
 	int	fd;
 	int	status;
 	int	scm;
+	int bytes_read;
+#if defined(ALPHA)
+	unsigned int  nbytes;		// 32 bit unsigned
+#else
+	unsigned long  nbytes;		// 32 bit unsigned
+#endif
 
 	if( ckpt_file == 0 ) {
 		ckpt_file = file_name;
 	}
 
-	if( (fd=open_write_stream(ckpt_file)) < 0 ) {
+	if( (fd=open_write_stream(ckpt_file,len)) < 0 ) {
 		perror( "open_write_stream" );
 		exit( 1 );
 	}
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	status = Write( fd );
+
+		// In remote mode, our peer will send back the actual
+		// number of bytes transferred as a check
+	if( MyImage.GetMode() == REMOTE ) {
+		bytes_read = read( fd, &nbytes, sizeof(nbytes) );
+		nbytes = ntohl( nbytes );
+		dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
+	}
+
 	(void)close( fd );
 	SetSyscalls( scm );
 
@@ -480,6 +532,7 @@ init_image_with_file_descriptor( int fd )
 {
 	MyImage.SetFd( fd );
 }
+
 
 /*
   Effect a restart by reading in an "image" containing checkpointing

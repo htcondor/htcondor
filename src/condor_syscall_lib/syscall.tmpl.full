@@ -215,7 +215,7 @@ gid_t getegid() : extract, pseudo;
 		// the result is a hostname and a port number to which the
 		// actual bytes can be written.
 	int put_file_stream(
-		const char *file, char *host, u_short *port_num ): pseudo {
+		const char *file, size_t len,  char *host, u_short *port_num ): pseudo {
 
 		SEND_PATH( file );
 		ALLOC_PATH( file );
