@@ -696,7 +696,7 @@ void
 MPIShadow::spawnNode( MpiResource* rr )
 {
 		// First, contact the startd to spawn the job
-    if ( rr->requestIt() == -1 ) {
+    if( ! rr->requestIt() ) {
         shutDown( JOB_NOT_STARTED, 0 );
     }
 
@@ -887,22 +887,22 @@ MPIShadow::shutDownLogic( int& exitReason, int& exitStatus ) {
 		char *res = NULL;
 		r->getMachineName( res );
 		dprintf ( D_FULLDEBUG, "Resource %s...%13s %d 0x%x\n", res,
-				  Resource_State_String[r->getResourceState()], 
+				  rrStateToString(r->getResourceState()), 
 				  r->getExitReason(), r->getExitStatus() );
 		delete [] res;
 		switch ( r->getResourceState() )
 		{
-			case PENDING_DEATH:
+			case RR_PENDING_DEATH:
 				alldone = FALSE;  // wait for results to come in, and
-			case FINISHED:
+			case RR_FINISHED:
 				break;            // move on...
-			case PRE: {
+			case RR_PRE: {
 					// what the heck is going on? - shouldn't happen.
 				r->setExitStatus( 0 );
 				r->setExitReason( JOB_NOT_STARTED );
 				break;
 			}
-			case EXECUTING: {
+			case RR_EXECUTING: {
 				if ( !normal_exit ) {
 					r->killStarter();
 				}
@@ -939,7 +939,7 @@ MPIShadow::handleJobRemoval( int sig ) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval, sig %d\n", sig );
 
     for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
-		if ( (ResourceList[i]->getResourceState() == EXECUTING ) ) {
+		if ( (ResourceList[i]->getResourceState() == RR_EXECUTING ) ) {
 			ResourceList[i]->setExitReason( JOB_KILLED );
 			ResourceList[i]->killStarter();
 		}
