@@ -30,6 +30,10 @@
 #include "my_hostname.h"
 #include "condor_debug.h"
 
+#if !defined(WIN32)
+#define closesocket close
+#endif
+
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
@@ -613,6 +617,51 @@ bool Sock::do_connect_tryit()
 			connect_state.failed_once = true;
 		}
 		connect_state.connect_failed = true;
+
+		// Here we need to close the underlying socket and re-create
+		// it.  Why?  Because v2.2.14 of the Linux Kernel, which is 
+		// used in RedHat 4.2, has a bug which will cause the machine
+		// to lock up if you do repeated calls to connect() on the same
+		// socket after a call to connect has failed.  The workaround
+		// is if the connect() fails, close the socket.  We do this
+		// procedure on all Unix platforms because we have noticed
+		// strange behavior on Solaris as well when we re-use a 
+		// socket after a failed connect.  -Todd 8/00
+		
+		// stash away the descriptor so we can compare later..
+		int old_sock = _sock;
+
+		// now close the underlying socket.  do not call Sock::close()
+		// here, because we do not want all the CEDAR socket state
+		// (like the _who data member) cleared.
+		::closesocket(_sock);
+		_sock = INVALID_SOCKET;
+		_state = sock_virgin;
+		
+		// now create a new socket
+		if (assign() == FALSE) {
+			dprintf(D_ALWAYS,
+				"assign() failed after a failed connect!\n");
+			return false;
+		}
+
+		// make certain our descriptor number has not changed,
+		// because parts of Condor may have stashed the old
+		// socket descriptor into data structures.  So if it has
+		// changed, use dup2() to set it the same as before.
+		if ( _sock != old_sock ) {
+			if ( dup2(_sock,old_sock) < 0 ) {
+				dprintf(D_ALWAYS,
+					"dup2 failed after a failed connect! errno=%d\n", 
+					errno);
+				return false;
+			}
+			::closesocket(_sock);
+			_sock = old_sock;
+		}
+
+		// finally, bind the socket
+		bind();
 	}
 #endif
 
@@ -641,10 +690,6 @@ bool Sock::test_connection()
 }
 
 
-#if !defined(WIN32)
-#define closesocket close
-#endif
-
 int Sock::close()
 {
 	if (_state == sock_virgin) return FALSE;
@@ -657,7 +702,6 @@ int Sock::close()
 
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;
-	_timeout = 0;
 	memset(&_who, 0, sizeof( struct sockaddr_in ) );
 	memset(&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
 	
