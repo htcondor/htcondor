@@ -3,7 +3,6 @@
 
 #include "condor_common.h"
 
-#include "../condor_daemon_core.V6/condor_timer_manager.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // Condor includes
@@ -14,10 +13,13 @@
 #include "condor_attributes.h"
 #include "util_lib_proto.h"
 #include "internet.h"
-#include "afs.h"
 #include "my_hostname.h"
 #include "condor_state.h"
+#include "string_list.h"
+
+// Unix specific stuff
 #if !defined(WIN32)
+#include "afs.h"
 #include "sig_install.h"
 #endif
 
@@ -33,9 +35,8 @@ class Resource;
 #include "calc.h"
 #include "command.h"
 #include "util.h"
-#include "action.h"
 
-const int MAX_STARTERS = 10;
+static const int MAX_STARTERS = 10;
 
 #ifndef _STARTD_NO_DECLARE_GLOBALS
 // Define external global variables
