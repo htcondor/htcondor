@@ -41,7 +41,6 @@ typedef int		bool_t;
 
 #include <sys/types.h>
 
-
 #if defined(OSF1) && !defined(__GNUC__)
 #undef off_t
 typedef long off_t;
@@ -72,17 +71,6 @@ need these extra definitions...
 	typedef unsigned long   u_long;
 #endif
 
-#if defined(AIX32)
-typedef unsigned short ushort;
-#endif
-
-#if defined(ULTRIX42) ||  defined(ULTRIX43)
-typedef char * caddr_t;
-#endif
-
-#if defined(AIX32)
-typedef unsigned long rlim_t;
-#endif
 
 #if defined(LINUX)
 typedef long rlim_t;
