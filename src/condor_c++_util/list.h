@@ -359,7 +359,7 @@ ObjType *
 List<ObjType>::Current()
 {
 	if( IsEmpty() ) {
-		return NULL;
+		return 0;
 	}
 
 	return current->obj;
@@ -374,7 +374,7 @@ ObjType *
 List<ObjType>::Next()
 {
 	if( AtEnd() ) {
-		return NULL;
+		return 0;
 	}
 
 	current = current->next;
