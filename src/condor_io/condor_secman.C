@@ -41,6 +41,8 @@
 #include "classad_merge.h"
 #include "daemon.h"
 
+using namespace std;
+
 extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
