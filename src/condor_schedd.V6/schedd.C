@@ -50,9 +50,7 @@
 #include "condor_common.h"
 #include "condor_xdr.h"
 #include "sched.h"
-#include "debug.h"
-#include "trace.h"
-#include "except.h"
+#include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
 #include "dgram_io_handle.h"
@@ -506,6 +504,8 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 	dprintf( D_FULLDEBUG, "\n" );
 	dprintf( D_FULLDEBUG, "Entered negotiate\n" );
 
+	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
+
 	SwapSpace = calc_virt_memory();
 
 	N_PrioRecs = 0;
@@ -663,7 +663,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 						RETURN;
 					}
 					// match is in the form "<xxx.xxx.xxx.xxx:xxxx> xxxxxxxx#xx"
-					dprintf(D_ALWAYS, "Received match %s\n", match);
+					dprintf(D_PROTOCOL, "## 4. Received match %s\n", match);
 					capability = strchr(match, '#');
 					if(capability)
 					{
@@ -707,6 +707,23 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 	RETURN;
 }
 #undef RETURN
+
+
+void Scheduler::vacate_service(XDR *xdrs, struct sockaddr_in*)
+{
+	char	*capability = NULL;
+
+	dprintf (D_ALWAYS, "Got VACATE_SERVICE\n");
+	if (!rcv_string (xdrs, &capability, TRUE)) {
+		dprintf (D_ALWAYS, "Failed to get capability\n");
+		return;
+	}
+	DelMrec (capability);
+	free (capability);
+	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
+	return;
+}
+
 
 CONTEXT* Scheduler::build_context(PROC_ID* id)
 {
@@ -821,7 +838,7 @@ void Scheduler::StartJobs()
 	int		i;							// iterate through match records
 	PROC_ID	id;
 
-	dprintf(D_ALWAYS, ">>>>>>>>>>>> Start jobs >>>>>>>>>>>>\n");
+	dprintf(D_ALWAYS, "-------- Begin starting jobs --------\n");
 	for(i = 0; i < nMrec; i++)
 	{
 		dprintf(D_FULLDEBUG, "match (%s) ", rec[i]->id);
@@ -848,26 +865,30 @@ void Scheduler::StartJobs()
 		// no more jobs to run
 		{
 			dprintf(D_FULLDEBUG | D_NOHEADER, "out of jobs\n");
+			dprintf(D_ALWAYS,"Out of jobs (proc id %d); relinquishing\n",
+								id.proc);
 			Relinquish(rec[i]);
 			DelMrec(rec[i]);
 			i--;
 			continue;
 		}
-		dprintf(D_FULLDEBUG | D_NOHEADER, "running %d.%d\n", id.cluster, id.proc);
+		dprintf(D_ALWAYS, "Match (%s) - running %d.%d\n",rec[i]->id,id.cluster,
+				id.proc);
 		if(!(rec[i]->shadowRec = StartJob(rec[i], &id)))
 		// Start job failed. Throw away the match. The reason being that we
 		// don't want to keep a match around and pay for it if it's not
 		// functioning and we don't know why. We might as well get another
 		// match.
 		{
-			dprintf(D_FULLDEBUG, "Starting job failed, relinquish resource\n");
+			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
+						rec[i]->id);
 			Relinquish(rec[i]);
 			DelMrec(rec[i]);
 			i--;
 			continue;
 		}
 	}
-	dprintf(D_ALWAYS, ">>>>>>>>>>>> Done starting jobs >>>>>>>>>>>>\n");
+	dprintf(D_ALWAYS, "-------- Done starting jobs --------\n");
 }
 
 
@@ -1766,14 +1787,24 @@ void Scheduler::Init()
 
 void Scheduler::Register(DaemonCore* core)
 {
+	// message handlers for schedd commands
 	core->Register(this, NEGOTIATE, (void*)negotiate, REQUEST);
 	core->Register(this, RESCHEDULE, (void*)reschedule_negotiator, REQUEST);
-	core->Register(this, 10, (void*)timeout, SchedDInterval, TIMER);
-	core->Register(this, SIGCHLD, (void*)reaper, SIGNAL);
+	core->Register(this, VACATE_SERVICE, (void*)vacate_service, REQUEST);
+
+	// handler for queue management commands
 	core->Register(NULL, QMGMT_CMD, (void*)handle_q, REQUEST);
+
+	// timer handler
+	core->Register(this, 10, (void*)timeout, SchedDInterval, TIMER);
+
+	// signal handlers
+	core->Register(this, SIGCHLD, (void*)reaper, SIGNAL);
 	core->Register(this, SIGINT, (void*)sigint_handler, SIGNAL);
 	core->Register(this, SIGHUP, (void*)sighup_handler, SIGNAL);
 	core->Register(this, SIGPIPE, (void*)SIG_IGN, SIGNAL);
+
+	// these functions are called after the select call in daemon core's loop
 	core->Register(this, (void*)StartJobs);
 	core->Register(this, (void*)send_alive);
 }
@@ -1973,6 +2004,7 @@ void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequ
             continue;
         }
         xdrs = xdr_Init(&sock, &xdr);
+		dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
         if(!snd_int(xdrs, REQUEST_SERVICE, FALSE))
         {
             flag = FALSE;
@@ -1997,8 +2029,9 @@ void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequ
             sleep(1);
             continue;
         }
-        if(reply == ACCEPTED)
+        if(reply == OK)
         {
+			dprintf (D_PROTOCOL, "(Request was accepted)\n");
             if(!snd_string(xdrs, name, FALSE))
             {
                 flag = FALSE;
@@ -2020,6 +2053,12 @@ void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequ
             close(sock);
             break;
         }
+		else
+		if (reply == NOT_OK)
+		{
+			dprintf (D_PROTOCOL, "(Request was NOT accepted)\n");
+			flag = FALSE;
+		}
 		else
 		{
 			flag = FALSE;
@@ -2065,8 +2104,8 @@ void Scheduler::Relinquish(Mrec* mrec)
 	// inform the startd
     if((sock = do_connect(mrec->peer, "condor_startd", 0)) < 0)
     {
-        dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+        dprintf(D_ALWAYS, "\tCan't relinquish startd. Match record is:\n");
+		dprintf(D_ALWAYS, "\t%s\t%s\n", mrec->id,	mrec->peer);
     }
 	else
 	{
@@ -2090,8 +2129,8 @@ void Scheduler::Relinquish(Mrec* mrec)
 		{
 			xdr_destroy(xdrs);
 			close(sock);
-			dprintf(D_FULLDEBUG, "Relinquished startd. Match record is:\n");
-			dprintf(D_FULLDEBUG, "%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_PROTOCOL,"## 7. Relinquished startd. Match record is:\n");
+			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
 			flag = TRUE;
 		}
 	}
@@ -2099,7 +2138,7 @@ void Scheduler::Relinquish(Mrec* mrec)
 	// inform the accountant
 	if(!AccountantName)
 	{
-		dprintf(D_FULLDEBUG, "No accountant to relinquish\n");
+		dprintf(D_PROTOCOL, "## 7. No accountant to relinquish\n");
 	}
 	else if((sock = do_connect(AccountantName, "condor_accountant", 0)) < 0)
     {
@@ -2112,21 +2151,21 @@ void Scheduler::Relinquish(Mrec* mrec)
 
 		if(!snd_int(xdrs, RELINQUISH_SERVICE, FALSE))
 		{
-			dprintf(D_ALWAYS, "Can't relinquish accountant. Match record is:\n");
+			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 			xdr_destroy(xdrs);
 			close(sock);
 		}
 		else if(!snd_string(xdrs, MySockName, FALSE))
 		{
-			dprintf(D_ALWAYS, "Can't relinquish accountant. Match record is:\n");
+			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 			xdr_destroy(xdrs);
 			close(sock);
 		}
 		else if(!snd_string(xdrs, mrec->id, FALSE))
 		{
-			dprintf(D_ALWAYS, "Can't relinquish accountant. Match record is:\n");
+			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 			xdr_destroy(xdrs);
 			close(sock);
@@ -2135,7 +2174,7 @@ void Scheduler::Relinquish(Mrec* mrec)
 		// This is not necessary to send except for being an extra checking
 		// because capability uniquely identifies a match.
 		{
-			dprintf(D_ALWAYS, "Can't relinquish accountant. Match record is:\n");
+			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
 			xdr_destroy(xdrs);
 			close(sock);
@@ -2144,15 +2183,15 @@ void Scheduler::Relinquish(Mrec* mrec)
 		{
 			xdr_destroy(xdrs);
 			close(sock);
-			dprintf(D_FULLDEBUG, "Relinquished accountant. Match record is:\n");
-			dprintf(D_FULLDEBUG, "%s\t%s\n", mrec->id,	mrec->peer);
+			dprintf(D_PROTOCOL,"## 7. Relinquished acntnt. Match record is:\n");
+			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
 			flag = TRUE;
 		}
 	}
 	if(flag)
 	{
-		dprintf(D_ALWAYS, "Relinquished match:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+		dprintf(D_PROTOCOL, "## 7. Successfully relinquished match:\n");
+		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
 	}
 	else
 	{
@@ -2196,15 +2235,14 @@ void Scheduler::send_alive()
 {
     int     sock;
     XDR     xdr, *xdrs;
-    int     i;
+    int     i, j;
 
 	if(aliveFrequency == 0)
 	/* no need to send alive message */
 	{
 		return;
 	}
-    dprintf(D_FULLDEBUG, "send alive messages to startds\n");
-    for(i = 0; i < nMrec; i++)
+    for(i = 0, j = 0; i < nMrec; i++)
     {
 		if(rec[i]->status != M_ACTIVE)
 		{
@@ -2215,29 +2253,28 @@ void Scheduler::send_alive()
         /* time to send alive message */
         {
             rec[i]->alive_countdown = aliveInterval;
+			dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
+			j++;
             if((sock = do_connect(rec[i]->peer, "condor_startd", 0)) < 0)
             /* can't connect to startd */
             {
-                dprintf(D_FULLDEBUG, "\tCan't connect to %s\n",
-                        rec[i]->peer);
+                dprintf(D_PROTOCOL, "\t(Can't connect to %s)\n", rec[i]->peer);
                 continue;
             }
             xdrs = xdr_Init(&sock, &xdr);
             if(!snd_int(xdrs, ALIVE, TRUE))
             {
-                dprintf(D_FULLDEBUG, "\tCan't send alive message to %d\n",
+                dprintf(D_PROTOCOL, "\t(Can't send alive message to %d)\n",
                         rec[i]->peer);
                 xdr_destroy(xdrs);
                 close(sock);
                 continue;
             }
-            dprintf(D_FULLDEBUG, "\tSent alive message to %s\n",
-                    rec[i]->peer);
             xdr_destroy(xdrs);
             close(sock);
         }
     }
-    dprintf(D_FULLDEBUG, "done sending alive messages to startds\n");
+    dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",j);
 }
 
 void job_prio(int cluster, int proc)
