@@ -169,14 +169,14 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return NOT_OK;
 	}
-    /* Need work! Hao
+
 	if( ! job_ad->put(*tmp) ) {
 		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
 				 "Failed to send job_ad to the startd\n" );
 		delete tmp;
 		return NOT_OK;
 	}
-    */
+
 	if( ! tmp->end_of_message() ) {
 		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
 				 "Failed to send EOM to the startd\n" );

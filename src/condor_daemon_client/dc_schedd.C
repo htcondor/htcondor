@@ -230,26 +230,24 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 	}
 
 		// Now, put the command classad on the wire
-    /* Needs work! Hao 
 	if( ! (cmd_ad.put(rsock) && rsock.eom()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send classad\n" );
 		return NULL;
 	}
-    */
+
 		// Next, we need to read the reply from the schedd if things
 		// are ok and it's going to go forward.  If the schedd can't
 		// read our reply to this ClassAd, it assumes we got killed
 		// and it should abort its transaction
 	rsock.decode();
 	ClassAd* result_ad = new ClassAd();
-    /* Need work! Hao
 	if( ! (result_ad->initFromStream(rsock) && rsock.eom()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: "
 				 "Can't read response ad from %s\n", _addr );
 		delete( result_ad );
 		return NULL;
 	}
-    */
+
 		// If the action totally failed, the schedd will already have
 		// aborted the transaction and closed up shop, so there's no
 		// reason trying to continue.  However, we still want to

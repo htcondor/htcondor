@@ -141,7 +141,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 		}
 		return false;
 	}
-    /* Needs work! Hao
+
 	if( ! ad->put(*tmp) ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO ClassAd to shadow\n" );
@@ -151,7 +151,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 		}
 		return false;
 	}
-    */
+
 	if( ! tmp->end_of_message() ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO EOM to shadow\n" );
