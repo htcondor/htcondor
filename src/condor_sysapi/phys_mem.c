@@ -32,12 +32,19 @@ sysapi_phys_memory_raw(void)
 {
 	struct pst_static s;
 	unsigned long pages, pagesz;
+	double size;
 						   
 	sysapi_internal_reconfig();
 	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
 		pages = s.physical_memory;
 		pagesz = s.page_size >> 10;
-		return( (int)((pages * pagesz) >> 10) );
+		size = (double)pages * (double)pagesz;
+		size /= 1024.0;
+
+		if (size > INT_MAX){
+			return INT_MAX;
+		}
+		return (int)size;
 	} else {
 		return -1;
 	}
@@ -54,6 +61,7 @@ sysapi_phys_memory_raw(void)
 {
 	struct rminfo rmstruct;
 	long pages, pagesz;
+	double size;
 
 	sysapi_internal_reconfig();
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
@@ -69,8 +77,13 @@ sysapi_phys_memory_raw(void)
 		pages = rmstruct.physmem;
 	}
 
-		/* Return the answer in megs */
-	return( (int)((pages * pagesz) >> 10) );
+	/* Return the answer in megs */
+	size = (double)pages * (double)pagesz;
+	size /= 1024.0;
+	if (size > INT_MAX){
+		return INT_MAX;
+	}
+	return (int)size;
 }
 
 #elif defined(Solaris) 
@@ -83,7 +96,8 @@ sysapi_phys_memory_raw(void)
 int
 sysapi_phys_memory_raw(void)
 {
-	long pages, pagesz, hack;
+	long pages, pagesz;
+	double hack, size;
 
 	sysapi_internal_reconfig();
 	pages = sysconf(_SC_PHYS_PAGES);
@@ -100,18 +114,32 @@ sysapi_phys_memory_raw(void)
 		   These values just came from a little trail and error and
 		   seem to work pretty well.  -Derek Wright (1/29/98)
  	    */
-	hack = (pages * pagesz);
+	hack = (double)pages * (double)pagesz;
+	
+	/* I don't know if this divisor is right, but it'll do for now.
+		Keller 05/20/99 */
+	if ((hack / 1024.0) > INT_MAX)
+	{
+		return INT_MAX;
+	}
+
 	if( hack > 260000 ) {
-		return (int) (hack / 1023);		
+		return (int) (hack / 1023.0);		
 	} else if( hack > 130000 ) {
-		return (int) (hack / 1020);
+		return (int) (hack / 1020.0);
 	} else if( hack > 65000 ) {
-		return (int) (hack / 1010);
+		return (int) (hack / 1010.0);
 	} else {
-		return (int) (hack / 1000);
+		return (int) (hack / 1000.0);
 	}
 #else
-	return( (int)((pages * pagesz) >> 10) );
+	size = (double)pages * (double)pagesz;
+	size /= 1024.0;
+
+	if (size > INT_MAX) {
+		return INT_MAX;
+	}
+	return (int)size;
 #endif
 }
 
@@ -150,7 +178,14 @@ sysapi_phys_memory_raw(void)
 	while((c=fgetc(proc))!='\n');
 	fscanf(proc, "%s %lf", tmp_c, &phys_mem);
 	fclose(proc);
-	return (int)(phys_mem/1024000.0);
+
+	phys_mem /= (1024*1024);
+
+	if (phys_mem > INT_MAX) {
+		return INT_MAX;
+	}
+
+	return (int)phys_mem;
 }
 
 #elif defined(WIN32)
