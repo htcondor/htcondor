@@ -20,6 +20,9 @@ class Script {
 	// pid of running script, or 0 if not currently running
 	int _pid;
 
+	// has this script been run yet?
+	bool _done;
+
 	int BackgroundRun( int reaperId );
 
     inline char * GetCmd () const { return _cmd; }

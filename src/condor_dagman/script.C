@@ -16,8 +16,10 @@ Script::Script( bool post, char* cmd, Job* job ) :
     _retValJob    (-1),
     _logged       (false),
 	_pid		  (0),
+	_done         (FALSE),
     _job          (job)
 {
+	assert( cmd != NULL );
     _cmd = strnewp (cmd);
 }
 
