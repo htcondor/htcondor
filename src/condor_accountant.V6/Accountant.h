@@ -4,6 +4,7 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "HashTable.h"
+#include "StringSet.h"
 
 class Accountant {
 
@@ -29,19 +30,25 @@ public:
   }
   
   Accountant(int MaxCustomers) : Customers(MaxCustomers, HashFunc) {}
-
+                                                
 private:
 
   // int LoadPriorities(); // Save to file
   // int SavePriorities(); // Read from file
-			      
+
   struct CustomerRecord {
     int Priority;
-    ClassAdList ResourceList;
+    StringSet Resources;
   };
 
   typedef HashTable<MyString, CustomerRecord*> CustomerTable;
   CustomerTable Customers;
+  
+  // typedef HashTable<MyString, ClassAd*> ResourceTable;
+  // ResourceTable Resources;
+  
+  CustomerRecord* GetCustomerRecord(MyString& CustomerName);
+  MyString GetResourceName(ClassAd* Resource);
 
 };
 
