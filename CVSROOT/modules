@@ -44,7 +44,6 @@ COMMON_CODE	-a src/Imakefile \
 			src/condor_c++_util \
 			src/condor_ckpt \
 			src/condor_collector \
-			src/condor_globalq \
 			src/condor_includes \
 			src/condor_io \
 			src/condor_kbdd \
@@ -83,7 +82,6 @@ V6_SRC		-a \
 			src/condor_classad \
 			src/condor_collector.V6 \
 			src/condor_daemon_core.V6 \
-			src/condor_globalq \
 			src/condor_includes \
 			src/condor_io \
 			src/condor_kbdd \
