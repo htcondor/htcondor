@@ -1548,7 +1548,9 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			// a client.  Then restork Q_SOCK back to the original value.
 			ReliSock* saved_sock = Q_SOCK;
 			Q_SOCK = NULL;
-			SetAttributeInt( cluster_id, proc_id,ATTR_JOB_STATUS, HELD );
+			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, HELD );
+			SetAttributeInt( cluster_id, proc_id,
+							 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) ); 
 			Q_SOCK = saved_sock;
 			char buf[256];
 			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
@@ -1816,6 +1818,8 @@ int mark_idle(ClassAd *job)
 		DestroyProc( cluster, proc );
 	} else if ( status == UNEXPANDED ) {
 		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
+		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
+						 (int)time(0) );
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
 		mark_job_stopped(&job_id);

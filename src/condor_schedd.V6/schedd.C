@@ -1666,6 +1666,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		// REAL WORK
 		// // // // //
 	
+	int now = (int)time(0);
+	char time_str[32];
+	sprintf( time_str, "%d", now );
+
 	JobActionResults results( result_type );
 
 		// Set the Q_SOCK so that qmgmt will perform checking on the
@@ -1700,6 +1704,8 @@ Scheduler::actOnJobs(int, Stream* s)
 							// TODO: record failure in response ad?
 					}
 				}
+				SetAttribute( tmp_id.cluster, tmp_id.proc,
+							  ATTR_ENTERED_CURRENT_STATUS, time_str );
 				results.record( tmp_id, AR_SUCCESS );
 				jobs[num_matches] = tmp_id;
 				num_matches++;
@@ -1761,6 +1767,8 @@ Scheduler::actOnJobs(int, Stream* s)
 							  reason_attr_name, reason );
 					// TODO: deal w/ failure here, too?
 			}
+			SetAttribute( tmp_id.cluster, tmp_id.proc,
+						  ATTR_ENTERED_CURRENT_STATUS, time_str );
 			results.record( tmp_id, AR_SUCCESS );
 			jobs[num_matches] = tmp_id;
 			num_matches++;
@@ -3588,6 +3596,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				 job_id->cluster, job_id->proc );
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_JOB_STATUS, HELD );
+		SetAttributeInt( job_id->cluster, job_id->proc,
+						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
 		ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
 		char buf[256];
 		sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
@@ -4057,6 +4067,8 @@ _mark_job_running(PROC_ID* job_id)
 	status = RUNNING;
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
+	SetAttributeInt(job_id->cluster, job_id->proc,
+					ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
 
 	// Also clear out ATTR_SHADOW_BIRTHDATE.  We'll set it to be the
 	// current time when we actually start the shadow (in add_shadow_rec), 
@@ -4107,6 +4119,9 @@ _mark_job_stopped(PROC_ID* job_id)
 		}
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
+		SetAttributeInt( job_id->cluster, job_id->proc,
+						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+
 		if (had_orig >= 0) {
 			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
 							orig_max);
@@ -4589,11 +4604,16 @@ set_job_status(int cluster, int proc, int status)
 				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
 				SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS,
 								status);
+				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_ENTERED_CURRENT_STATUS,
+								 (int)time(0) ); 
 			}
 			ad = GetNextJob(0);
 		}
 	} else {
 		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
+		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
+						 (int)time(0) );
 	}
 }
 
@@ -4622,6 +4642,9 @@ Scheduler::child_exit(int pid, int status)
 						   WEXITSTATUS(status) , COMPLETED);
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_STATUS, COMPLETED);
+				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
+								 ATTR_ENTERED_CURRENT_STATUS,
+								 (int)time(0) );
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
 				WriteTerminateToUserLog( jobId, status );
@@ -4639,6 +4662,9 @@ Scheduler::child_exit(int pid, int status)
 						   WTERMSIG(status), REMOVED);
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_STATUS, REMOVED);
+				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
+								 ATTR_ENTERED_CURRENT_STATUS,
+								 (int)time(0) );
 				WriteTerminateToUserLog( jobId, status );
 			} else {
 				WriteEvictToUserLog( jobId );
@@ -6088,4 +6114,7 @@ fixAttrUser( ClassAd *job )
 	job->Insert( user );
 	return 0;
 }
+
+
+
 
