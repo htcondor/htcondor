@@ -122,12 +122,13 @@ InitJobQueue(const char *job_queue_name)
 {
 	assert(!JobQueue);
 	JobQueue = new ClassAdLog(job_queue_name);
-	ClusterSizeHashTable = new ClusterSizeHashTable_t(17,compute_clustersize_hash);
+	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
 	ClassAd *ad;
 	int 	cluster_num;
+	int		stored_cluster_num;
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
@@ -140,30 +141,42 @@ InitJobQueue(const char *job_queue_name)
 	}
 
 	if (CreatedAd ||
-		ad->LookupInteger(ATTR_NEXT_CLUSTER_NUM, next_cluster_num) != 1) {
-		// cluster_num is not already set, so we set it here
-		next_cluster_num = 1;
-		JobQueue->table.startIterations();
-		while (JobQueue->table.iterate(ad) == 1) {
-			if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
-				if (cluster_num >= next_cluster_num) {
-					next_cluster_num = cluster_num + 1;
-				}
-				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(cluster_num,1);
-				} else {
-					// We've seen this cluster_num go by before; increment proc count
-					(*numOfProcs)++;
-				}
+		ad->LookupInteger(ATTR_NEXT_CLUSTER_NUM, stored_cluster_num) != 1) {
+		// cluster_num is not already set, so we set a flag to set it from a
+		// computed value 
+		stored_cluster_num = 0;
+	}
+
+	next_cluster_num = 1;
+	JobQueue->table.startIterations();
+	while (JobQueue->table.iterate(ad) == 1) {
+		if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
+			if (cluster_num >= next_cluster_num) {
+				next_cluster_num = cluster_num + 1;
+			}
+			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+				// First proc we've seen in this cluster; set size to 1
+				ClusterSizeHashTable->insert(cluster_num,1);
+			} else {
+				// We've seen this cluster_num go by before; increment proc count
+				(*numOfProcs)++;
 			}
 		}
+	}
+
+	if ( stored_cluster_num == 0 ) {
 		sprintf(cluster_str, "%d", next_cluster_num);
 		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
 												   ATTR_NEXT_CLUSTER_NUM,
 												   cluster_str);
 		JobQueue->AppendLog(log);
+	} else {
+		if ( next_cluster_num > stored_cluster_num ) {
+			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
+			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
+		}
 	}
+
 }
 
 
@@ -1189,12 +1202,18 @@ int mark_idle(ClassAd *job)
 
     job->LookupInteger(ATTR_JOB_STATUS, status);
 
-    if( status != RUNNING ) {
+    if( status != RUNNING && status != REMOVED ) {
         return 0;
     }
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
+
+	if ( status == REMOVED ) {
+		DestroyProc(cluster,proc);
+		return 1;
+	}
+
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
