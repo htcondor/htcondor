@@ -38,7 +38,7 @@ my $password = "nmi-nwo-nmi";
 my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
 my $RUN_TABLE = "Run";
 
-my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, x86_tao_1, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2";
+my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, x86_tao_1, sun4u_sol_5.9, sun4u_sol_5.8";
 
 my $notify;
 my %tags;
