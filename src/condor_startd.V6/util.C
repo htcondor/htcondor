@@ -109,7 +109,7 @@ cleanup_execute_dir(int pid)
 		if ( execute_dir.Find_Named_Entry( pid_dir ) ) {
 
 				// Remove the execute directory
-			execute_dir.Remove_Current_File( DIR_REMPRIV_OWNER );
+			execute_dir.Remove_Current_File();
 		}
 
 		return;
@@ -121,7 +121,7 @@ cleanup_execute_dir(int pid)
 			// and try to delete each subdirectory individually.
 			// recursion to the rescue...
 		sleep( 1 );
-		execute_dir.Remove_Entire_Directory( DIR_REMPRIV_OWNER );
+		execute_dir.Remove_Entire_Directory();
 
 			// nothing left in the directory, we're done.
 		return;

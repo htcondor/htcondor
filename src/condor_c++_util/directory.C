@@ -363,7 +363,7 @@ Directory::Find_Named_Entry( const char *name )
 }
 
 bool
-Directory::Remove_Entire_Directory( dir_rempriv_t rem_priv )
+Directory::Remove_Entire_Directory( void )
 {
 	const char* thefile = NULL;
 	bool ret_value = true;
@@ -373,7 +373,7 @@ Directory::Remove_Entire_Directory( dir_rempriv_t rem_priv )
 	Rewind();
 
 	while ( (thefile=Next()) ) {
-		if ( Remove_Current_File( rem_priv ) == false ) {
+		if( ! Remove_Current_File() ) {
 			ret_value = false;
 		}
 	}
@@ -382,35 +382,35 @@ Directory::Remove_Entire_Directory( dir_rempriv_t rem_priv )
 }
 
 bool 
-Directory::Remove_Entry( const char* name, dir_rempriv_t rem_priv )
+Directory::Remove_Entry( const char* name )
 {
 	MyString path;
 	path = curr_dir;
 	path += DIR_DELIM_CHAR;
 	path += name;
-	return do_remove( path.Value(), false, rem_priv );
+	return do_remove( path.Value(), false );
 }
 
 bool
-Directory::Remove_Full_Path( const char *path, dir_rempriv_t rem_priv )
+Directory::Remove_Full_Path( const char *path )
 {
-	return do_remove( path, false, rem_priv );
+	return do_remove( path, false );
 }
 
 bool 
-Directory::Remove_Current_File( dir_rempriv_t rem_priv )
+Directory::Remove_Current_File( void )
 {
 	if ( curr == NULL ) {
 		// there is no current file; user probably did not call
 		// Next() yet.
 		return false;
 	}
-	return do_remove( curr->FullPath(), true, rem_priv );
+	return do_remove( curr->FullPath(), true );
 } 
 
 
 bool 
-Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
+Directory::do_remove( const char* path, bool is_curr )
 {
 	bool is_dir = false;
 

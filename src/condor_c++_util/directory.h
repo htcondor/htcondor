@@ -197,9 +197,6 @@ private:
 };
 
 
-enum dir_rempriv_t { DIR_REMPRIV_DEFAULT,
-					 DIR_REMPRIV_OWNER };
-
 /** Class to iterate filenames in a subdirectory.  Given a subdirectory
 	path, this class can iterate the names of the files in the directory,
 	remove files, and/or
@@ -326,31 +323,27 @@ public:
 	    then the subdirectory (and all files beneath it) are removed.
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_Current_File( dir_rempriv_t RemPriv = DIR_REMPRIV_DEFAULT );
+	bool Remove_Current_File( void );
 
 	/** Remove the specified file.  If the given file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed. 
 		@param path The full path to the file to remove
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_Full_Path( const char *path,
-						   dir_rempriv_t RemPriv = DIR_REMPRIV_DEFAULT );
+	bool Remove_Full_Path( const char *path );
 
 	/** Remove the specified directory entry.  If the given file is a
 		subdirectory, then the subdirectory (and all files beneath it)
 		are removed. @param path The full path to the file to remove
 		@return true on successful removal, otherwise false */
-	bool Remove_Entry( const char* name,
-					   dir_rempriv_t RemPriv = DIR_REMPRIV_DEFAULT );
+	bool Remove_Entry( const char* name );
 
 	/** Remove the all the files and subdirectories in the directory
 		specified by the constructor.  Upon success, the subdirectory
 		will still exist, but will be empty.
 		@return true on successful removal, otherwise false
 	*/
-	bool Remove_Entire_Directory( dir_rempriv_t RemPriv =
-								  DIR_REMPRIV_DEFAULT );
-	
+	bool Remove_Entire_Directory( void );
 
 #ifndef WIN32
 
@@ -370,7 +363,7 @@ private:
 	StatInfo* curr;
 	bool want_priv_change;
 	priv_state desired_priv_state;
-	bool do_remove( const char *path, bool is_curr, dir_rempriv_t RemPriv );
+	bool do_remove( const char *path, bool is_curr );
 	bool do_remove_dir( const char *path );
 	bool do_remove_file( const char *path );
 	void initialize( priv_state priv );
