@@ -56,6 +56,8 @@ GM_UNSUBMITTED
     kill_me()
   other
     submit()
+    if (other error)
+      gm_state = GM_UNSUBMITTED
     determine if jobmanager is new or old
     gm_state = GM_SUBMIT_SAVE
 
