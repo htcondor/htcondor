@@ -37,10 +37,10 @@ Reqexp::eval()
 	tree->EvalTree( ca, &ad, &res);
 	delete tree;
 
-	if( res.type != LX_BOOL ) {
+	if( res.type != LX_INTEGER ) {
 		return -1;
 	} else {
-		return res.b;
+		return res.i;
 	}
 }
 
