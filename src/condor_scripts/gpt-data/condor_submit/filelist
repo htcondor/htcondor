@@ -1,6 +1,7 @@
 sbin/condor_schedd
 sbin/condor_gridmanager
 sbin/gahp_server
+sbin/grid_monitor.sh
 bin/condor_history
 bin/condor_hold
 bin/condor_q
@@ -10,3 +11,9 @@ bin/condor_rm
 bin/condor_submit
 bin/condor_reschedule
 bin/condor_vacate
+var/log
+var/condor
+var/condor/log
+var/condor/spool
+var/condor/execute
+var/condor/log/GridLogs
