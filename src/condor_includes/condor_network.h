@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 #if defined( __STDC__) || defined(__cplusplus)
-int do_connect ( char *host, char *service, u_int port );
+int do_connect ( char *host, char *service, unsigned int port );
 #else
 int do_connect ();
 #endif
