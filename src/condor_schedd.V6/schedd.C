@@ -3603,9 +3603,8 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	if (!mailer) {
 		EXCEPT("cannot execute %s %s\n", buf, "w");
 	}
-	fprintf(mailer, "Your condor job\n" );
-	fprintf(mailer, "\t%s %s\n", cmd, args );
-	fprintf(mailer, "%s%d.\n", msg, status);
+	fprintf(mailer, "Your condor job %s%d.\n\n", msg, status);
+	fprintf(mailer, "Job: %s %s\n", cmd, args);
 	pclose(mailer);
 
 /*
