@@ -8,6 +8,13 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+9/19/03 V6_5_5-branch
+   A release branch for the 6.5.5 manual.  We're going to want to keep
+   making updates to the 6.5.5 manual, but we want to move forward
+   with the 6.6.0 manual, as well.  So, now there's a branch for the
+   6.5.5 manual.  Created from the V6_5_5-root tag.  This branch only
+   exists in the doc directory.
+
 9/11/03 V6_7-branch
    A new branch off the end of the V6_5-branch for the 6.7.x
    development series.  Created from the V6_6-root tag.  Includes the
