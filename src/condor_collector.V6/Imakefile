@@ -1,5 +1,5 @@
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -DUSE_XDR
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fexternal-templates -DUSE_XDR
+CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fexternal-templates
 LDFLAGS = $(LIBDBM) -lm
 
 ENGINE_SRC = hashkey.C collector_engine.C
@@ -14,6 +14,7 @@ LIB = ../condor_daemon_core.V6/daemon_core.a collector_engine.a \
 
 all_target(collector_engine.a condor_collector)
 c_plus_target(condor_collector,$(OBJ),$(LIB))
+pure_c_plus_target(condor_collector.pure,$(OBJ),$(LIB))
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))
