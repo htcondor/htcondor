@@ -52,7 +52,7 @@ main()
   accountant.AddMatch("Shlomo",Ad1);
   accountant.UpdatePriorities();
 
-  accountant.AddMatch("Arieh",Ad1);
+  accountant.AddMatch("Arieh",Ad2);
   accountant.AddMatch("Shlomo",Ad4);
   accountant.UpdatePriorities();
 

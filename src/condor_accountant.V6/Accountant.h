@@ -12,13 +12,15 @@ public:
 
   // User Functions
 
+  void SetAccountant(char* sin); // set accountant remote/local mode
+
   int GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, int Priority); // set priority for a customer
 
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceAd); // remove a match
 
-  // void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
+  void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   void UpdatePriorities(); // update all the priorities
 
   //----------------------------------------------------------------------

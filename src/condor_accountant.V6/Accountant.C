@@ -10,6 +10,10 @@ extern "C"
   void dprintf(int, char*...); 
 }
 
+void Accountant::SetAccountant(char* sin) {
+  return;
+}
+
 int Accountant::GetPriority(const MyString& CustomerName) 
 {
   CustomerRecord* Customer;
@@ -62,6 +66,10 @@ void Accountant::RemoveMatch(const MyString& ResourceName)
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) return;
   Customer->ResourceNames.Remove(ResourceName);
+}
+
+void Accountant::CheckMatches(ClassAdList& ResourceList) {
+  return;
 }
 
 void Accountant::UpdatePriorities() 
