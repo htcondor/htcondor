@@ -11,8 +11,9 @@ questions about Condor.
 \section{Obtaining \& Installing Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-\item[Where can I download Condor?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Where can I download Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!downloading}
 \index{Condor!distribution}
 \index{Condor!getting}
@@ -23,7 +24,9 @@ Condor can be downloaded from
 USA) or \URL{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy).
 
-\item[When I click to download Condor, it sends me back to the downloads page!]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I click to download Condor, it sends me back to the downloads page!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you are trying to download Condor through a web proxy, try
 disabling it.
@@ -31,19 +34,25 @@ Our web site uses the ``referring page'' as you navigate through our
 download menus in order to give you the right version of Condor, but
 sometimes proxies block this information from reaching our web site.
 
-\item[What platforms do you support?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What platforms do you support?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:Availability}, on
 page~\pageref{sec:Availability}.
 Also, you might want to read the platform-specific information in
 Chapter~\ref{platforms} on page~\pageref{platforms}.
 
-\item[What versions of RedHat Linux does Condor supprt?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What versions of RedHat Linux does Condor supprt?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:platform-linux} on
 page~\pageref{sec:platform-linux}. 
 
-\item[Do you distribute source code?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Do you distribute source code?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!source code}
 
 At this time we do \Bold{not} distribute source code publicly, but
@@ -53,7 +62,9 @@ If you need the source code, please e-mail us at
 you.
 
 
-\item[How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{upgrade!version 6.2.x to version 6.4.x}
 
 This series of steps explains how to upgrade a pool of machines
@@ -217,7 +228,9 @@ Add the path name to this directory to the
 %pvm
 %condorview server
 
-\item[What is Personal Condor?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is Personal Condor?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!Personal}
 \index{Personal Condor}
 
@@ -232,7 +245,9 @@ See Section~\ref{sec:Flocking}, on page~\pageref{sec:Flocking} for
 more information on flocking.
 
 
-\item[What do I do now? My installation of Condor does not work.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What do I do now? My installation of Condor does not work.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{port usage!FAQ on communication errors}
 What to do to get Condor running properly depends on what sort of
@@ -305,30 +320,38 @@ local Condor configuration file:
 Where \verb@machine-ip-address@ is the IP address of the interface you wish
 Condor to use.
 
-\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Setting up Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-\item[How do I set up a central manager on a machine with multiple network interfaces?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I set up a central manager on a machine with multiple network interfaces?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Please see section~\ref{sec:Multiple-Interfaces} on 
 page~\pageref{sec:Multiple-Interfaces}.
 
-\item[How do I get more than one job to run on my SMP machine?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I get more than one job to run on my SMP machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
 
-\item[How do I configure a separate policy for the CPUs of an SMP machine?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure a separate policy for the CPUs of an SMP machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Please see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} for a lengthy discussion on
 this topic.
 
-\item[How do I set up my machines so that only certain user's jobs will run on them?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I set up my machines so that only certain user's jobs will run on them?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{running a job!on only certain machines}
 
 Restrictions on what jobs will run on a given resource can be easily
@@ -343,7 +366,9 @@ machine's Condor configuration file:
 To configure multiple machines to do so, simply create a common
 configuration file containing this requirement for them to share.
 
-\item[How do I configure Condor to run my jobs only on machines that have the right packages installed?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor to run my jobs only on machines that have the right packages installed?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a two-step process.
 First, you need to tell the machines to report that they have special
@@ -374,7 +399,9 @@ expression will not evaluate to ``undefined'', preventing it from
 running anywhere!
 
 
-\item[How do I configure Condor to only run jobs at night?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How do I configure Condor to only run jobs at night?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{running a job!only at night|}
 \index{running a job!at certain times of day|}
 
@@ -387,7 +414,9 @@ policy is discussed in subsubsection~\ref{sec:Policy-Examples} on
 page~\pageref{sec:Policy-Examples}.
 
 
-\item[Why will the \Condor{master} not run when a local configuration file is missing?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why will the \Condor{master} not run when a local configuration file is missing?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If a \Macro{LOCAL\_CONFIG\_FILE} 
 is specified in the global configuration file,
@@ -428,14 +457,15 @@ and Condor might do bad things if it started without those settings.
 
 If supplied it with an empty file, the \Condor{master} works fine.
 
-\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Running Condor Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-\item[I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm at the University of Wisconsin-Madison Computer Science Dept., and I am having problems!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
 As
@@ -444,7 +474,9 @@ access control restrictions which can prevent Condor jobs from running
 properly.
 The above URL will explain how to solve the problem.
 
-\item[I'm getting a lot of e-mail from Condor.  Can I just delete it all?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I'm getting a lot of e-mail from Condor.  Can I just delete it all?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
 but you can reduce the amount you get by telling Condor that you don't
@@ -458,7 +490,9 @@ See the Notification parameter in the \Condor{q} man page on
 page~\pageref{man-condor-submit-notification} of this manual for more
 information.
 
-\item[Why will my vanilla jobs only run on the machine where I submitted them from?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why will my vanilla jobs only run on the machine where I submitted them from?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Check the following:
 \begin {enumerate}
@@ -481,7 +515,9 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
 
-\item[My job starts but exits right away with signal 9.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My job starts but exits right away with signal 9.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!exiting with signal 9 \(Unix\)}
 
 
@@ -493,16 +529,17 @@ Another, easier, solution is to try to re-link your program statically
 so it contains all the routines it needs.
 
 
-\item[Why aren't any or all of my jobs running?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why aren't any or all of my jobs running?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!not running, why?}
 \underline{Problems like the following} are often reported to us:
 
 \begin{verbatim}
-> I have submitted 100 jobs to my pool, and only 18 appear to be
-> running, but there are plenty of machines available.
-What should I
-> do to investigate the reason why this happens?
+I have submitted 100 jobs to my pool, and only 18 appear to be
+running, but there are plenty of machines available.  What should I
+do to investigate the reason why this happens?
 \end{verbatim}
 
 Start by following these steps to understand the problem:
@@ -584,8 +621,10 @@ RESERVED_SWAP = 0
 and then send a \Condor{restart} to the submit machine.
 \end{enumerate}
 
-\item[Why does the \Attr{requirements} expression for the job I submitted\\
-have extra things that I did not put in my submit description file?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the \Attr{requirements} expression for the job I submitted\\
+have extra things that I did not put in my submit description file?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{requirements attribute!automatic extensions}
 There are several extensions to the submitted \Attr{requirements}
 that are automatically added by Condor.
@@ -627,7 +666,9 @@ Here is a list:
 
 
 
-\item[Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs and have them run on a SPARC Solaris 2.7 machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Solaris26}
 \index{Solaris27}
 
@@ -636,15 +677,18 @@ and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
-\item[Can I submit my standard universe SPARC Solaris 2.8 jobs and have
-them run on a SPARC Solaris 2.9 machine?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Can I submit my standard universe SPARC Solaris 2.8 jobs and have them run on a SPARC Solaris 2.9 machine?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 No.  Although normal executables are binary compatible, technical details
 of taking checkpoints currently prevents this particular combination.
 Note that this applies to standard universe jobs only.
 
 
-\item[Why do my vanilla jobs keep cycling between suspended and unsuspended?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{vanilla jobs!cycling between suspended and unsuspended}
 
 Condor tries to provide a number, the ``Condor Load Average''
@@ -728,7 +772,9 @@ with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
 
-\item[Why might my job be preempted (evicted)?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why might my job be preempted (evicted)?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 There are four circumstances under which Condor may evict a job.
 They are controlled by different expressions.
@@ -777,9 +823,9 @@ on a machine that is currently running a job.
 Condor evicts the currently running job before proceeding
 with the shutdown.
 
-\item[What signals get sent to my jobs when Condor needs to preempt or
-kill them, or when I remove them from the queue?  Can I tell Condor
-which signals to send?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What signals get sent to my jobs when Condor needs to preempt or kill them, or when I remove them from the queue?  Can I tell Condor which signals to send?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The answer is dependent on the universe of the jobs.
 
@@ -817,13 +863,14 @@ The exception to this is (again) where the job is receiving
 a hard kill.
 Condor sends the value SIGKILL to all the PIDs in the family.
 
-\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Condor on Windows}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-\item[Will Condor work on a network of mixed Unix and NT machines?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Will Condor work on a network of mixed Unix and NT machines?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 You can have a Condor pool that consists of both Unix and NT machines.
 
@@ -856,7 +903,9 @@ NT or Unix machines.}
 \end{enumerate}
 
 
-\item[What versions of Windows will Condor run on?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What versions of Windows will Condor run on?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor does run under Windows 2000 Professional and Server and
 also under Windows XP.
@@ -864,7 +913,9 @@ also under Windows XP.
 Personal Condor also works.
 
 
-\item[Jobs submitted from NT give an error referring to a credential.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Jobs submitted from NT give an error referring to a credential.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Jobs submitted from an NT machine require a stashed password in order
 for Condor to run the jobs as the user submitting the jobs.
@@ -883,7 +934,9 @@ ERROR: No credential stored for username@machinename
 	        condor_store_cred add
 \end{verbatim}
 
-\item[Job submitted from Unix to execute on NT do not work properly.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Jobs submitted from Unix to execute on NT do not work properly.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A difficulty with defaults causes jobs submitted from Unix for execution
 on an NT platform to remain in the queue, but make no progress.
@@ -900,7 +953,9 @@ into the submit description file for jobs submitted from a Unix
 machine for execution on a Windows NT machine.
 
 
-\item[When I run \Condor{status} I get a communication error, or the Condor daemon log files report a failure to bind.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I run \Condor{status} I get a communication error, or the Condor daemon log files report a failure to bind.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor uses the first network interface it sees on your machine.
 This problem usually means you have an extra, inactive network
@@ -917,7 +972,9 @@ Condor config file:
 Where ``ip-address'' is the IP address of the interface you wish
 Condor to use.
 
-\item[My job starts but exits right away with status 128.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My job starts but exits right away with status 128.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!exiting with status 128 \(NT\)}
 
 This can occur when the machine your job is running on is missing a
@@ -929,8 +986,10 @@ To find out what DLLs your program depends on, right-click the program
 in Explorer, choose Quickview, and look under ``Import List''.
 
 
-\item[Why does the startd crash on CondorNT with the error\\
-"caInsert: Can't insert CpuBusy into target classad."?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why does the startd crash on CondorNT with the error\\
+"caInsert: Can't insert CpuBusy into target classad."?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{decimal point!problems with}
 
 This is a common problem with European installations on Windows.
@@ -942,7 +1001,9 @@ however we have users who have fixed the problem by
 changing the following registry value to a period instead of a comma:
 \verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
 
-\item[How can I access network files with Condor on NT?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{How can I access network files with Condor on NT?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Features to allow Condor NT to work well with a network file server are 
 coming very soon.  However, there are a couple of work-arounds which you 
@@ -1223,10 +1284,10 @@ A basic installation script for use with the Inno Setup installation
 package compiler can be found in the Install folder.
 \end{verbatim}
 
-\item[\Condor{off} cannot find my host, and \Condor{status} does not give me a complete host name.  What is wrong?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is wrong when \Condor{off} cannot find my host, and \Condor{status} does not give me a complete host name?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{DEFAULT\_DOMAIN\_NAME macro@\texttt{DEFAULT\_DOMAIN\_NAME} macro}
-\index{configuration macro!\texttt{DEFAULT\_DOMAIN\_NAME}}
 Given the command
 \begin{verbatim}
   condor_off hostname2
@@ -1249,7 +1310,7 @@ the output is of the form
 
 To correct this incomplete host name, add an entry to the
 configuration file for
-\MacroNI{DEFAULT\_DOMAIN\_NAME} 
+\Macro{DEFAULT\_DOMAIN\_NAME} 
 that specifies the domain name to be used.
 For the example given, the configuration entry will be
 \begin{verbatim}
@@ -1268,16 +1329,16 @@ to restart the Condor daemons and effect the change.
 %To correct this incomplete host name on Windows NT Version 4,
 %set the domain in the TCP/IP Properties dialog box.
 %Restart Condor after making this change.
-\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Grid Computing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{grid computing!FAQs}
-\begin{description}
 
-\item[Do I need to have a Condor pool installed to use Condor-G?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Do I need to have a Condor pool installed to use Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 No, you do not.
 Condor-G is only the job management part of Condor.
 It makes perfect sense to install Condor-G on just one machine
@@ -1285,8 +1346,9 @@ within an organization.
 Note that access to remote resources using a Globus interface
 will be done through that one machine using Condor-G.
 
-\item[I want to install Globus on my Condor pool, and have external users
-submit jobs into the pool. Do I need to install Condor-G?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I want to install Globus on my Condor pool, and have external users submit jobs into the pool. Do I need to install Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 No, you do not need to install Condor-G.
 You need to install Globus,
@@ -1295,11 +1357,13 @@ See the Condor-G
 homepage at \URL{http://www.cs.wisc.edu/condor/condorg/}
 for a link to Globus.
 
-\item[I am the administrator at Physics, and I have a 64-node cluster
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{I am the administrator at Physics, and I have a 64-node cluster
 running Condor.
 The administrator at Chemistry is also running Condor on her 64-node cluster.
 We would like to be able to share resources.
-Do I need to install Globus and Condor-G?]
+Do I need to install Globus and Condor-G?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 You may, but you do not have a need to.
 Condor has a feature called flocking,
@@ -1314,7 +1378,9 @@ Unfortunately, flocking only works between Condor pools.
 So, access to a resource managed by PBS, for example,
 will still require Globus and Condor-G to submit jobs into the PBS queue.
 
-\item[What is glidein?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is glidein?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{glidein}
 \index{Condor-G!glidein}
@@ -1334,8 +1400,9 @@ See section~\ref{sec:Glidein} of the manual
 for further information.
 
 
-\item[Submitting Condor jobs through my Globus gatekeeper does not work.
-What is wrong?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Submitting Condor jobs through my Globus gatekeeper does not work.  What is wrong?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Globus!gatekeeper errors}
 
 The Condor configuration file is in a non-standard location,
@@ -1431,12 +1498,13 @@ service gsigatekeeper
 
 \end{enumerate}
 
-\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Troubleshooting}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
-\item[What happens if the central manager crashes?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What happens if the central manager crashes?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{crashes}
 \index{recovery from crashes}
 
@@ -1448,9 +1516,11 @@ again.
 Nothing special needs to be done after the central manager is brought
 back on line.
 
-\item[When I ssh/telnet to a machine to check particulars of how
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
-know a job had been running there!]
+know a job had been running there!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Depending on how your policy is set up, Condor will track \emph{any} tty
 on the machine for the purpose of determining if a job is to be vacated
@@ -1458,9 +1528,11 @@ or suspended on the machine. It could be the case that after you ssh
 there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
 
-\item[What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is wrong? I get no output from \Condor{status}, but the Condor daemons are running.}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-One likely error message within the collector log of the form
+\underline{One likely error message} within the collector log of the form
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 0 (UPDATE_STARTD_AD)
 \end{verbatim}
@@ -1500,7 +1572,7 @@ If this is the problem, then the solution takes one of two forms:
 \end{verbatim}
 \end{enumerate}
 
-Alternatively, this permissions problem
+\underline{Alternatively}, this permissions problem
 may be caused by being too restrictive in the setting of
 your \MacroNI{HOSTALLOW\_WRITE} and/or
 \MacroNI{HOSTDENY\_WRITE} configuration macros.
@@ -1520,7 +1592,7 @@ or possibly
 \end{verbatim}
 
 
-Another likely error message within the collector log of the form
+\underline{Another likely error message} within the collector log of the form
 \begin{verbatim}
 DaemonCore: PERMISSION DENIED to host <xxx.xxx.xxx.xxx> for command 5 (QUERY_STARTD_ADS)
 \end{verbatim}
@@ -1528,13 +1600,14 @@ indicates a similar problem as above, but read permission
 is the problem (as opposed to write permission).
 Use the solutions given above.
 
-\end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{description}
 
-\item[Is there a Condor mailing-list?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Is there a Condor mailing-list?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor!mailing-list}
 \index{Condor!new versions, notification of}
 
@@ -1548,7 +1621,9 @@ of:
 
 
 
-\item[What is the process for upgrading from 6.0 to 6.2?]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{What is the process for upgrading from 6.0 to 6.2?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{upgrading!6.0 to 6.2}
 
 The usual process for upgrading is to copy the original 6.0 binaries
@@ -1566,7 +1641,9 @@ the 6.2 supplied libraries. Backward compatibility to 6.0 from 6.2 had
 been intentionally broken because of an evolution of features that the
 standard universe now supports.
 
-\item[My question isn't in the FAQ!]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{My question isn't in the FAQ!}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
@@ -1577,7 +1654,6 @@ Note that Condor's free e-mail support is provided on a best-effort
 basis, and at times we may not be able to provide a timely response.
 If guaranteed support is important to you, please inquire about our
 paid support services.
-\end{description}
 
 
 
