@@ -93,7 +93,7 @@ reserve_for_afs_cache()
 		/* See if we're configured to deal with an AFS cache */
 	if( do_it < 0 ) {
 		str = param( "RESERVE_AFS_CACHE" );
-		if( str && (*str == 'T' || *str == 't') ) {
+		if( str && (*str == 'T' || *str == 't')) {
 			do_it = TRUE;
 		} else {
 			do_it = FALSE;
