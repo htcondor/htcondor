@@ -4,6 +4,7 @@
 #include "classadItor.h"
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
+static bool isValidIdentifier( const char * );
 
 ClassAdDomainManager ClassAd::domMan;
 
@@ -240,7 +241,7 @@ Insert( const char *name, ExprTree *tree )
 	char		*attr = NULL;
 
 	// sanity check
-	if (!name || !tree) return false;
+	if (!name || !tree || !isValidIdentifier( name ) ) return false;
 
 	// parent of the expression is this classad
 	tree->SetParentScope( this );
@@ -427,7 +428,7 @@ LookupInScope( const char* name, ExprTree*& expr, EvalState &state )
 			// if the "super" attribute was requested ...
 			expr = superScope;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
-		} else if( strcasecmp( name, "toplevel" ) == 0 ) {
+		} else if(strcasecmp(name,"toplevel")==0 || strcasecmp(name,"root")==0){
 			// if the "toplevel" attribute was requested ...
 			expr = state.rootAd;
 			return( expr ? EVAL_OK : EVAL_UNDEF );
@@ -455,7 +456,7 @@ Delete( const char *name )
     int         index;
 
 	// sanity check
-	if (name == NULL) return false;
+	if( !name ) return false;
 
     // if the classad is domainized
     if (schema) {
@@ -784,7 +785,7 @@ bool ClassAd::
 _Evaluate( EvalState&, Value &val, ExprTree *&tree )
 {
 	val.SetClassAdValue( this );
-	return( !( tree = Copy( ) ) );
+	return( ( tree = Copy( ) ) );
 }
 
 
@@ -1053,3 +1054,24 @@ CurrentAttribute (const char *&attr, ExprTree *&expr)
     expr = ad->attrList[index].expression;
 	return true;	
 }
+
+static bool 
+isValidIdentifier( const char *str )
+{
+	const char *ch = str;
+
+		// must start with [a-zA-Z_]
+	if( !isalpha( *ch ) && *ch != '_' ) {
+		return( false );
+	}
+
+		// all other characters must be [a-zA-Z0-9_]
+	ch++;
+	while( isalnum( *ch ) || *ch == '_' ) {
+		ch++;
+	}
+
+		// valid if terminated at end of string
+	return( *ch == '\0' );
+}
+
