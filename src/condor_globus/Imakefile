@@ -10,15 +10,13 @@ OBJ = gshadow.o
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-release_copy_target(condor_glidein,sbin,condor_glidein,EXECUTABLE_MODE)
-
 strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-strip_copy_target(condor_glidein,$(STRIP_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
-
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
-static_copy_target(condor_glidein,$(STATIC_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
-
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+
+release_copy_target(condor_glidein,sbin,condor_glidein,EXECUTABLE_MODE)
+strip_copy_target(condor_glidein,$(STRIP_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
+static_copy_target(condor_glidein,$(STATIC_DIR)/sbin,condor_glidein,EXECUTABLE_MODE)
 
 html:
