@@ -123,8 +123,9 @@ command_main(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 
 #define ABORT \
 	if (rip->r_jobcontext) {			\
-		{delete (rip->r_jobcontext);}	\
+		delete (rip->r_jobcontext);		\
 		rip->r_jobcontext = NULL;		\
+		rip->r_pid = NO_PID;			\
 	}									\
 	if (rip->r_clientmachine) {			\
 		free(rip->r_clientmachine);		\
