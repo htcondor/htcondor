@@ -206,6 +206,7 @@ class GahpServer : public Service {
 	GahpProxyInfo *master_proxy;
 	int proxy_check_tid;
 	bool is_initialized;
+	bool can_cache_proxies;
 	HashTable<HashKey,GahpProxyInfo*> *ProxiesByFilename;
 }; // end of class GahpServer
 	

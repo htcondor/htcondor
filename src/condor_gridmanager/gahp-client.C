@@ -160,6 +160,7 @@ GahpServer::GahpServer(const char *id, const char *path, const char *args)
 	proxy_check_tid = TIMER_UNSET;
 	master_proxy = NULL;
 	is_initialized = false;
+	can_cache_proxies = false;
 	ProxiesByFilename = NULL;
 }
 
@@ -742,6 +743,13 @@ GahpServer::Startup()
 		// If this fails, too fucking bad
 	}
 		
+		// See if this gahp server can cache multiple proxies
+	if ( m_commands_supported->contains_anycase("CACHE_PROXY_FROM_FILE")==TRUE &&
+		 m_commands_supported->contains_anycase("UNCACHE_PROXY")==TRUE &&
+		 m_commands_supported->contains_anycase("USE_CACHED_PROXY")==TRUE ) {
+		can_cache_proxies = true;
+	}
+
 	return true;
 }
 
@@ -767,10 +775,6 @@ GahpServer::Initialize( Proxy *proxy )
 		}
 	}
 
-	ProxiesByFilename = new HashTable<HashKey,GahpProxyInfo*>( 500,
-															   &hashFunction );
-	ASSERT(ProxiesByFilename);
-
 	proxy_check_tid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GahpServer::doProxyCheck,
 								"GahpServer::doProxyCheck", (Service*) this );
@@ -787,9 +791,15 @@ GahpServer::Initialize( Proxy *proxy )
 		return false;
 	}
 
-	if ( cacheProxyFromFile( master_proxy ) == false ) {
-		dprintf( D_ALWAYS, "GAHP: Failed to cache proxy from file!\n" );
-		return false;
+	if ( can_cache_proxies ) {
+		if ( cacheProxyFromFile( master_proxy ) == false ) {
+			dprintf( D_ALWAYS, "GAHP: Failed to cache proxy from file!\n" );
+			return false;
+		}
+
+		ProxiesByFilename = new HashTable<HashKey,GahpProxyInfo*>( 500,
+															   &hashFunction );
+		ASSERT(ProxiesByFilename);
 	}
 
 	master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
@@ -962,19 +972,21 @@ GahpServer::doProxyCheck()
 
 	GahpProxyInfo *next_proxy;
 
-	ProxiesByFilename->startIterations();
-	while ( ProxiesByFilename->iterate( next_proxy ) != 0 ) {
+	if ( ProxiesByFilename ) {
+		ProxiesByFilename->startIterations();
+		while ( ProxiesByFilename->iterate( next_proxy ) != 0 ) {
 
-		if ( next_proxy->proxy->expiration_time >
-			 next_proxy->cached_expiration ) {
+			if ( next_proxy->proxy->expiration_time >
+				 next_proxy->cached_expiration ) {
 
-			if ( cacheProxyFromFile( next_proxy ) == false ) {
-				EXCEPT( "Failed to refresh proxy!" );
+				if ( cacheProxyFromFile( next_proxy ) == false ) {
+					EXCEPT( "Failed to refresh proxy!" );
+				}
+				next_proxy->cached_expiration = next_proxy->proxy->expiration_time;
+
 			}
-			next_proxy->cached_expiration = next_proxy->proxy->expiration_time;
 
 		}
-
 	}
 
 	if ( master_proxy->proxy->expiration_time >
@@ -986,8 +998,10 @@ GahpServer::doProxyCheck()
 			EXCEPT( "Failed to refresh proxy!" );
 		}
 
-		if ( cacheProxyFromFile( master_proxy ) == false ) {
-			EXCEPT( "Failed to refresh proxy!" );
+		if ( can_cache_proxies ) {
+			if ( cacheProxyFromFile( master_proxy ) == false ) {
+				EXCEPT( "Failed to refresh proxy!" );
+			}
 		}
 
 		master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
@@ -1002,7 +1016,9 @@ GahpServer::RegisterProxy( Proxy *proxy )
 	int rc;
 	GahpProxyInfo *gahp_proxy = NULL;
 
-	if ( ProxiesByFilename == NULL ) {
+	if ( ProxiesByFilename == NULL || proxy == NULL ||
+		 can_cache_proxies == false ) {
+
 		return NULL;
 	}
 
@@ -1040,6 +1056,12 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 {
 	int rc;
 	GahpProxyInfo *gahp_proxy = NULL;
+
+	if ( ProxiesByFilename == NULL || proxy == NULL ||
+		 can_cache_proxies == false ) {
+
+		return;
+	}
 
 	if ( master_proxy != NULL && proxy == master_proxy->proxy ) {
 		master_proxy->num_references--;
@@ -1117,6 +1139,7 @@ GahpClient::getErrorString()
 void
 GahpClient::setNormalProxy( Proxy *proxy )
 {
+	ASSERT(server->can_cache_proxies);
 	if ( normal_proxy != NULL && proxy == normal_proxy->proxy ) {
 		return;
 	}
@@ -1131,6 +1154,7 @@ GahpClient::setNormalProxy( Proxy *proxy )
 void
 GahpClient::setDelegProxy( Proxy *proxy )
 {
+	ASSERT(server->can_cache_proxies);
 	if ( deleg_proxy != NULL && proxy != deleg_proxy->proxy ) {
 		return;
 	}
@@ -1949,7 +1973,7 @@ GahpClient::now_pending(const char *command,const char *buf,
 	}
 
 		// Make sure the command is using the proxy it wants.
-	if ( server->is_initialized == true ) {
+	if ( server->is_initialized == true && server->can_cache_proxies == true ) {
 		if ( server->useCachedProxy( pending_proxy ) != true ) {
 			EXCEPT( "useCachedProxy() failed!" );
 		}
