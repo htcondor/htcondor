@@ -105,8 +105,7 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
-    rr->setExecutingHost ( host );
-    rr->setCapability ( capability );
+    rr->setStartdInfo( host, capability );
     rr->setMachineName ( "Unknown" );
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
@@ -165,7 +164,6 @@ MPIShadow::getResources( void )
 	cluster = getCluster();
     rr = ResourceList[0];
 	rr->getCapability( capability );
-
 
 		// First, contact the schedd and send the command, the
 		// cluster, and the capability
@@ -239,8 +237,7 @@ MPIShadow::getResources( void )
             }
 
             rr = new MpiResource( this );
-            rr->setExecutingHost ( host );
-            rr->setCapability ( capability );
+            rr->setStartdInfo( host, capability );
             rr->setMachineName ( "Unknown" );
 			tmp_ad = new ClassAd ( *job_ad );
 			replaceNode ( tmp_ad, nodenum );
@@ -340,7 +337,7 @@ MPIShadow::startMaster()
         
         // get the machine name (using string_to_sin and sin_to_hostname)
     rr = ResourceList[0];
-    rr->getExecutingHost( sinful );
+    rr->getStartdAddress( sinful );
     string_to_sin( sinful, &sin );
     sprintf( mach, "%s", sin_to_hostname( &sin, NULL ));
     fprintf( pg, "%s 0 condor_exec %s\n", mach, getOwner() );
@@ -351,7 +348,7 @@ MPIShadow::startMaster()
         // for each resource, get machine name, make pgfile entry
     for ( int i=1 ; i<=ResourceList.getlast() ; i++ ) {
         rr = ResourceList[i];
-        rr->getExecutingHost( sinful );
+        rr->getStartdAddress( sinful );
         string_to_sin( sinful, &sin );
         sprintf( mach, "%s", sin_to_hostname( &sin, NULL ) );
         fprintf( pg, "%s 1 condor_exec %s\n", mach, getOwner() );
@@ -657,7 +654,7 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 			// the hostname of the resource where it's executing
 		env += env_delim_str;
 		char* sinful = NULL;
-		ResourceList[0]->getExecutingHost( sinful );
+		ResourceList[0]->getStartdAddress( sinful );
 			// Now, we've got a sinful string, so, parse out the ip
 			// address of it.
 		char* foo;
@@ -753,7 +750,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
     for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
 		char *tmp = NULL;
-		r->getExecutingHost( tmp );
+		r->getStartdAddress( tmp );
 		dprintf(D_FULLDEBUG, "Killing the starter on %s\n",tmp);
 		r->killStarter();
 		delete [] tmp;
@@ -766,7 +763,7 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
         char *tmp = NULL;
         rr = ResourceList[0];
         if ( rr ) {
-            rr->getExecutingHost( tmp );
+            rr->getStartdAddress( tmp );
 			if (!ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT)) {
 				EXCEPT("Failed to connect to schedd!");
 			}
