@@ -1,54 +1,127 @@
-\documentstyle{article}
 
-\begin{document}
-
-\input{../condor-macros}
 \newcommand{\func}[1]{\texttt{#1}}
 
-\section{pvm}
-
-Condor has a pvm universe which allows the user to submit pvm jobs to
+Condor has a PVM submit Universe which allows the user to submit PVM jobs to
 the Condor pool.  In this section, we will first
-show the difference between the normal pvm and the pvm under condor
-environment.  Then we give some hints on how to write good pvm
-programs to suit the condor environment by an example program.  In the
-end, we illustrate how to submit pvm jobs to condor by examining a
-sample pvm submit file.
+discuss the differences between running under normal PVM and running PVM under the Condor
+environment.  Then we give some hints on how to write good PVM
+programs to suit the Condor environment via an example program.  In the
+end, we illustrate how to submit PVM jobs to Condor by examining a
+sample Condor submit-description file which submits a PVM job.
 
-\subsection{The differences between Condor-pvm and normal pvm}
+Note that Condor-PVM is an optional Condor module.  To check and see if
+it has been installed at your site, enter the following command:
+\begin{verbatim}
+        ls -l `condor_config_val PVMD`
+\end{verbatim}
+(notice the use of backticks in the above command).  If this shows the
+file ``condor\_pvmd'' on your system, Condor-PVM is installed.  If not,
+ask your site administrator to download Condor-PVM from
+\Url{http://www.cs.wisc.edu/condor-pvm} and install it.
 
-This release of the Condor-pvm is based on pvm3.3.11.  Most of the pvm
+\subsection{What does Condor-PVM do?}
+
+Condor-PVM provides a framework to run parallel applications written to
+PVM in Condor's opportunistic environment.  This means that you no
+longer need a
+set of dedicated machines to run PVM applications; Condor can be used to dynamically 
+construct PVM virtual machines out of non-dedicated desktop machines on your network
+which would have otherwise been idle.   In Condor-PVM, Condor acts as the
+resource manager for the PVM daemon.  Whenever your PVM program asks
+for nodes (machines), the request is remapped to Condor.  Condor then
+finds a machine in the Condor pool via the usual mechanisms, and adds it
+the the PVM virtual machine.  If a machine needs to leave the pool, your
+PVM program is notified of that as well via the normal PVM mechanisms.
+
+\subsection{The Master-Worker Paradigm}
+
+There are several different parallel programming paradigms.  One of the
+more common is the \Term{master-worker} (or \Term{pool of tasks})
+arrangement.  In a master-worker program model, one node acts as the
+controlling master for the parallel application and sends pieces work out to worker nodes.  The
+worker node does some computation, and sends the result back to the
+master node.  The master has a pool of work that needs to be
+done, and simply assigns the next piece of work out to the next worker
+that becomes available.  
+
+Not all parallel programming paradigms lend themselves to an
+opportunistic environment. In such an environment, any of the nodes
+could be preempted and therefore disappear at any moment. The
+master-worker model, on the other hand, is a model that can work well.
+The idea is the master needs to keep track of which piece of work it
+sends to each worker. If the master node is then informed that a worker
+has disappeared, it puts the piece of work it assigned to that worker
+back into the pool of tasks, and sends it out again to the next
+available worker. If the master notices that the number of workers has
+dropped below an acceptable level, it could request for more workers
+(via \func{pvm\_addhosts()}. Or perhaps perhaps the master will request
+a replacement node every single time it is notified that a worker has
+gone away. The point is that in this paradigm, the number of workers is
+not important (although more is better!) and fluxuation in the size of
+the virtual machine can be handled naturally.
+
+Condor-PVM is designed to run PVM applications which follow the
+master-worker paradigm.  Condor runs the master application on the
+machine where the job was submitted and will not preempt it.  Workers
+are pulled in from the Condor pool as they become available.
+
+\subsection{Binary Compatibility}
+
+Condor-PVM does not define a new API (application program interface);
+programs can simply use the existing resource management PVM calls such
+as \func{pvm\_addhosts()} and \func{pvm\_notify()}.  Because of this, some
+master-worker PVM applications are ready to run under Condor-PVM with no
+changes at all.  Irregardless of using Condor-PVM or not, it is good
+master-worker design to handle the case of a worker node disappearing,
+and therefore many programmers have already constructed their master program
+with all the neccesary logic for fault-tolerance purposes.  
+
+In fact, regular PVM and Condor-PVM are \underline{binary compatible}
+with each other.  The same binary which runs under regular PVM will run
+under Condor, and vice-versa.  There is no need to relink for Condor-PVM.
+This permits easy application development
+(develop your PVM application interactively with the regular PVM console, XPVM,
+etc) as well as binary sharing between Condor and some dedicated MPP systems.
+
+\subsection{Runtime differences between Condor-PVM and regular PVM}
+
+This release of the Condor-PVM is based on PVM 3.3.11.  The vast majority of the PVM
 library functions under Condor maintain the same semantics as in
-pvm3.3.11, including the group operations and pvm\_catchout().
+PVM 3.3.11, including messaging operations, group operations, and 
+pvm\_catchout().
 
-We summarize the changes and new features of pvm under condor in the
-following list.
+We summarize the changes and new features of PVM under running in the Condor 
+Condor environment in the following list:
+
 \begin{itemize}
 
-\item Concept of machine class.  Under Condor-pvm, machines of
-  different attributes belong to different machine classes.  Machine
-  classes are are numbered 0, 1, ..., etc..  A machine class can be
-  specified by the user in the submit file (see section~\ref{submit}
-  for details).
+\item Concept of machine class.  Under Condor-PVM, machines of
+  different architectures attributes belong to different machine classes.  Machine
+  classes are are numbered 0, 1, \Dots, etc.  A machine class can be
+  specified by the user in the submit-description file when the job
+  is submitted to Condor.
 
 \item \func{pvm\_addhosts()}.  When the application
   needs to add a host machine, it should call \func{pvm\_addhosts()}
   with the first argument as a string that specifies the machine
   class.  For example, to specify class 0, a pointer to string ``0''
   should be used as the first argument.  Condor will find a machine
-  that satisfies the requirements of class 0 and adds it to the pvm
-  virtue machine.
+  that satisfies the requirements of class 0 and adds it to the PVM
+  virtual machine.
 
-  Under condor, \func{pvm\_addhost()} is no longer synchronous.  It
-  will return before the hosts are actually added to the virtue
-  machine.  The user should call \func{pvm\_notify()} before calling
-  \func{pvm\_addhost()}, so that when a host is added later, the user
-  will be notified.
+  Furthermore, \func{pvm\_addhosts()} no longer blocks under Condor.  It
+  will return immediately, before the hosts are actually added to the virtual
+  machine.  After all, in a non-dedicated environment the amount of time it takes until
+  a machine becomes available is not bound. The user should simply call 
+  \func{pvm\_notify()} before calling
+  \func{pvm\_addhosts()}, so that when a host is added later, the user
+  will be notified via Condor in the usual PVM 
+  fasion (via a PvmHostAdd notification message).
     
-\item \func{pvm\_notify()}.  Under condor, we added two additional 
+\item \func{pvm\_notify()}.  Under Condor, we added two additional 
   possible notification requests, \func{PvmHostSuspend} and
   \func{PvmHostResume}, to the function \func{pvm\_notify()}.  When a
-  host is suspended (or resumed) by condor, if the user has called
+  host is suspended (or resumed) by Condor, if the user has called
   \func{pvm\_notify()} with that host tid and with
   \func{PvmHostSuspend} (or \func{PvmHostResume}) as arguments, then
   the application will receive a notification for the corresponding
@@ -56,24 +129,29 @@ following list.
 
 \item \func{pvm\_spawn()}.  If  the flag in \func{pvm\_spawn()} is 
   PvmTaskArch, then the string specifying the desired architecture
-  class should be used.  Currently, under condor, we allow only one
-  user task to run on one machine, since condor will suspend or vacate
+  class should be used.  Typically, if you are using only one class of
+  machine in your virtual machine, specify ``0'' as the desired architecture.
+
+  Furthermore, under Condor we currently only allow one
+  PVM task to be spawned per node, since Condor's typical setup at most 
+  sites will suspend or vacate
   a job if the load on its machine is higher than a specified
   threshold.
 
 \end{itemize}
 
-\subsection{An example}
+\subsection{A Sample PVM program for Condor-PVM}
 
-Normal pvm applications assume dedicated machines.  However, running a
-pvm application under Condor, since Condor environment is an
+Normal PVM applications assume dedicated machines.  However, when running a
+PVM application under Condor, since Condor's environment is an
 opportunistic environment, machines can be suspended and even removed
-from the pvm virtue machine during the life time of the pvm
+from the PVM virtual machine during the life-time of the PVM
 application.  
 
-Here, we include an extensively commented skeleton of a sample pvm
-program \Prog{master\_sum.c}, which, we hope, will help the users to
-write pvm code that is better suited for the Condor environment.
+Here, we include an extensively commented skeleton of a sample PVM
+program \Prog{master\_sum.c}, which, we hope, will help you to
+write PVM code that is better suited for a non-dedicated opportunistic
+environment like Condor.
 
 \scriptsize
 \begin{verbatim}
@@ -219,7 +297,7 @@ void spawn_a_worker(int i, int* tid, int * host_tid, FILE *fp)
                fprintf(fp, "!! Failed to spawn task[%d]\n", i);
                
                /* 
-                * currently condor-pvm allows only one task running on 
+                * currently Condor-pvm allows only one task running on 
                 * a host
                 */
                 while (need_more_hosts(i) == 1)
@@ -526,27 +604,28 @@ main()
 \end{verbatim}
 \normalsize
 
-\subsection{Sample submit file}
+\subsection{Sample PVM submit file}
 \label{submit}
 
 Like submitting jobs in any other universe,
-to submit a pvm job, the user needs to specify the requirements and
-options in the submit file.  Figure~\ref{pvm_submit} is an example of
-a submit file of a pvm job.  This job has a master pvm program called
+to submit a PVM job, the user needs to specify the requirements and
+options in the submit-desciption file and run \Condor{submit}.  Figure~\ref{pvm_submit} on
+page~\pageref{pvm_submit} is an example of
+a submit-description file for a PVM job.  This job has a master PVM program called
 \func{master\_pvm}.
 
-\begin{figure}[ht]
+\begin{figure}[hbt]
 \small
 \begin{verbatim}
 ###########################################################
 # sample_submit
-# Sample submit file for pvm jobs. 
+# Sample submit file for PVM jobs. 
 ###########################################################
 
-# The job is a pvm universe job.
+# The job is a PVM universe job.
 universe = PVM  
 
-# The executable of the master pvm program is ``master_pvm''.
+# The executable of the master PVM program is ``master_pvm''.
 executable = master_pvm
 
 In = "in_sum"
@@ -564,7 +643,7 @@ queue
 
 ###################  Architecture class 1  ##################
 
-Requirements = (Arch == "SUN4M") && (OpSys == "SOLARIS251") 
+Requirements = (Arch == "SUN4x") && (OpSys == "SOLARIS251") 
 
 # We need at least 1 machine in class 1 before starting the 
 # executable.  We can use up to 3 to start with.
@@ -579,26 +658,26 @@ queue
 \normalsize
 
 \label{pvm_submit}
-\caption{A sample submit file for pvm jobs.}
+\caption{A sample submit file for PVM jobs.}
 \end{figure}
 
 In this sample submit file, the command \func{universe = PVM}
-specifies that the jobs should be submitted into pvm universe.
+specifies that the jobs should be submitted into PVM universe.
 
-The command \func{executable = master\_pvm} tells Condor that the pvm
+The command \func{executable = master\_pvm} tells Condor that the PVM
 master program is \func{master\_sum}.  This program will be started on
 the submitting machine.  The workers should be spawned by this master
 program during execution.
 
-This submit file also tells condor that the pvm virtue machine is
+This submit file also tells Condor that the PVM virtual machine is
 consisted of two different classes of machine architectures.  Class
 0 contains machines with INTEL architecture running SOLARIS251; class
-1 contains machines with SUN4M architecture running SOLARIS251.
+1 contains machines with SUN4x (SPARC) architecture running SOLARIS251.
 
 By using \func{machine\_count = <min>..<max>}, the submit file tells
-Condor that to start the pvm program, there should be at least <min>
+Condor that before the PVM program, there should be at least \verb@<min>@
 number of machines of the current class.  It also asks Condor to give
-it as many as <max> machines.  During the execution of the program,
+it as many as \verb@<max>@ machines.  During the execution of the program,
 the application can get more machines of each of the class by calling
 \func{pvm\_addhosts()} with a string specifying the desired architecture
 class.  (See the sample program in this section for details.)
@@ -606,4 +685,4 @@ class.  (See the sample program in this section for details.)
 The \func{queue} command should be inserted after the specifications of
 each class.
 
-\end{document}
+
