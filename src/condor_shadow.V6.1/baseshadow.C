@@ -474,127 +474,96 @@ BaseShadow::removeJob( const char* reason )
 //This happens in "transfer file" mode when the stdout or stderr
 //files specified by the user contain path information.
 void
-BaseShadow::moveOutputFiles( int exitReason )
+BaseShadow::moveOutputFiles( void )
 {
-    char orig_output[_POSIX_PATH_MAX];
-    char output[_POSIX_PATH_MAX];
-    char orig_error[_POSIX_PATH_MAX];
-    char error[_POSIX_PATH_MAX];
+    char* orig_output = NULL;
+    char* output = NULL;
+    char* orig_error = NULL;
+    char* error = NULL;
 
-    orig_output[0] = output[0] = '\0';
-    orig_error[0] = error[0] = '\0';
-
-    jobAd->LookupString(ATTR_JOB_OUTPUT,output,sizeof(output));
-    jobAd->LookupString(ATTR_JOB_ERROR,error,sizeof(error));
-    jobAd->LookupString(ATTR_JOB_OUTPUT_ORIG,orig_output,sizeof(orig_output));
-    jobAd->LookupString(ATTR_JOB_ERROR_ORIG,orig_error,sizeof(orig_error));
+    jobAd->LookupString( ATTR_JOB_OUTPUT, &output );
+    jobAd->LookupString( ATTR_JOB_ERROR, &error );
+    jobAd->LookupString( ATTR_JOB_OUTPUT_ORIG, &orig_output );
+    jobAd->LookupString( ATTR_JOB_ERROR_ORIG, &orig_error );
 
     //First move stdout data.
-    if(*orig_output && *output) {
-	int in_fd = open(output,O_RDONLY);
-	if( in_fd == -1 ) {
-	    dprintf( D_ALWAYS,
-		      "moveOutputFiles: failed to read from '%s': %s\n",
-		      output,strerror(errno));
+    if( orig_output && output ) {
+		moveOutputFile( output, orig_output );
 	}
-	int out_fd = open(orig_output,O_WRONLY|O_CREAT|O_TRUNC);
-	if( out_fd == -1 ) {
-	    dprintf( D_ALWAYS,
-		      "moveOutputFiles: failed to read from '%s': %s\n",
-		      orig_output,strerror(errno));
-	}
-
-	//Copy the data, rather than just moving the files, because there
-	//are too many subtle problems with just doing rename().
-	if(in_fd == -1 || out_fd == -1) {
-	    if(in_fd != -1) close(in_fd);
-	    if(out_fd != -1) close(out_fd);
-	}
-	else {
-	    char buf[100];
-	    int n_in,n_out;
-	    bool do_removal = true;
-
-	    while((n_in = read(in_fd,buf,sizeof(buf))) > 0) {
-		n_out = write(out_fd,buf,n_in);
-		if(n_out != n_in) {
-		    dprintf( D_ALWAYS,
-			      "moveOutputFiles: failed to write to '%s': %s\n",
-			      orig_output,strerror(errno));
-		    do_removal = false;
-		}
-	    }
-
-	    if( n_in == -1 ) {
-		dprintf( D_ALWAYS,
-			  "moveOutputFiles: failed to read '%s': %s\n",
-			  output,strerror(errno));
-		do_removal = false;
-	    }
-
-	    close(in_fd);
-	    close(out_fd);
-	    if(do_removal && remove(output) == -1) {
-		dprintf( D_ALWAYS,
-			  "moveOutputFiles: failed to remove '%s': %s\n",
-			  output,strerror(errno));
-	    }
-	}
-    }
 
     //Now move stderr data (unless it is the same file as stdout).
-    if(*orig_error && *error && strcmp(error,output) != 0) {
-	int in_fd = open(error,O_RDONLY);
-	if( in_fd == -1 ) {
-	    dprintf( D_ALWAYS,
-		      "moveOutputFiles: failed to read from '%s': %s\n",
-		      error,strerror(errno));
-	}
-	int out_fd = open(orig_error,O_WRONLY|O_CREAT|O_TRUNC);
-	if( out_fd == -1 ) {
-	    dprintf( D_ALWAYS,
-		      "moveOutputFiles: failed to read from '%s': %s\n",
-		      orig_error,strerror(errno));
+    if( orig_error && error && strcmp(error,output) != 0 ) {
+		moveOutputFile( error, orig_error );
 	}
 
-	//Copy the data, rather than just moving the files, because there
-	//are too many subtle problems with just doing rename().
-	if(in_fd == -1 || out_fd == -1) {
-	    if(in_fd != -1) close(in_fd);
-	    if(out_fd != -1) close(out_fd);
+	if( output ) { 
+		free( output );
 	}
-	else {
-	    char buf[100];
-	    int n_in,n_out;
-	    bool do_removal = true;
-
-	    while((n_in = read(in_fd,buf,sizeof(buf))) > 0) {
-		n_out = write(out_fd,buf,n_in);
-		if(n_out != n_in) {
-		    dprintf( D_ALWAYS,
-			      "moveOutputFiles: failed to write to '%s': %s\n",
-			      orig_error,strerror(errno));
-		    do_removal = false;
-		}
-	    }
-
-	    if( n_in == -1 ) {
-		dprintf( D_ALWAYS,
-			  "moveOutputFiles: failed to read '%s': %s\n",
-			  error,strerror(errno));
-		do_removal = false;
-	    }
-
-	    close(in_fd);
-	    close(out_fd);
-	    if(do_removal && remove(error) == -1) {
-		dprintf( D_ALWAYS,
-			  "moveOutputFiles: failed to remove '%s': %s\n",
-			  error,strerror(errno));
-	    }
+	if( orig_output ) { 
+		free( orig_output );
 	}
-    }
+	if( error ) { 
+		free( error );
+	}
+	if( orig_error ) { 
+		free( orig_error );
+	}
 }
+
+
+void
+BaseShadow::moveOutputFile( const char* in, const char* out )
+{
+	int in_fd = -1, out_fd = -1;
+
+	in_fd = open(in,O_RDONLY);
+	if( in_fd == -1 ) {
+		dprintf( D_ALWAYS,
+				 "moveOutputFile: failed to read from '%s': %s\n",
+				 in, strerror(errno) );
+		return;
+	}
+
+	out_fd = open(out,O_WRONLY|O_CREAT|O_TRUNC);
+	if( out_fd == -1 ) {
+		dprintf( D_ALWAYS, "moveOutputFile: failed to read from "
+				 "'%s': %s\n", out, strerror(errno) );
+		close( in_fd );
+		return;
+	}
+	
+		// Copy the data, rather than just moving the files,
+		// because there are too many subtle problems with just
+		// doing rename().
+
+	char buf[100];
+	int n_in,n_out;
+	bool do_removal = true;
+	
+	while( (n_in = read(in_fd,buf,sizeof(buf))) > 0 ) {
+		n_out = write(out_fd,buf,n_in);
+		if( n_out != n_in ) {
+			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
+					 "'%s': %s\n", out, strerror(errno));
+			do_removal = false;
+		}
+	}
+
+	if( n_in == -1 ) {
+		dprintf( D_ALWAYS, "moveOutputFiles: failed to read '%s': "
+				 "%s\n", in, strerror(errno) );
+		do_removal = false;
+	}
+
+	close( in_fd );
+	close( out_fd );
+
+	if( do_removal && remove(in) == -1 ) {
+		dprintf( D_ALWAYS, "moveOutputFile: failed to remove '%s': "
+				 "%s\n", in, strerror(errno) );
+	}
+}
+
 
 void
 BaseShadow::terminateJob( void )
@@ -610,7 +579,7 @@ BaseShadow::terminateJob( void )
 	reason = getExitReason();
 
 	//move intermediate stdout/stderr if necessary
-	moveOutputFiles( reason );
+	moveOutputFiles();
 
 		// email the user
 	emailTerminateEvent( reason );
