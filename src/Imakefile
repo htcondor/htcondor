@@ -104,3 +104,6 @@ object_target(scripts)
 
 
 check_platform_target
+
+clean::
+	rm -rf Makefile */Makefile release_dir
