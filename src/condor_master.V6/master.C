@@ -387,14 +387,13 @@ sigchld_handler()
 	errno = 0;
 	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
 		if( pid == -1 ) {
-#if defined(Solaris)
+			// several UNIX's occasionally return -1 with ECHILD
+			// instead of returning 0....
 			if(errno == ECHILD)
 			{
 				break;
 			}
-#else
 			EXCEPT( "waitpid(), error # = %d", errno );
-#endif
 		}
 		if( WIFSTOPPED(status) ) {
 			continue;
