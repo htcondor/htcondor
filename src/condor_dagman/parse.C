@@ -621,8 +621,9 @@ static bool parse_vars(Dag *dag, char *filename, int lineNumber) {
 		}
 
 		// copy name char-by-char until we hit a symbol or whitespace
+		// names are limited to alphanumerics and underscores
 		char* nameWriter = name;
-		while(isalpha(*str) && nameWriter-name < maxLen)
+		while( (isalnum(*str) || *str == '_') && (nameWriter-name < maxLen) )
 			*nameWriter++ = *str++;
 		*nameWriter = '\0';
 
