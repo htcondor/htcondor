@@ -36,6 +36,10 @@ allocation time for solely the current run of the job.
 Additionally, the \Opt{-cputime} option can be used to view job CPU times as
 in earlier versions of Condor.
 
+\item \Condor{q} will display an error message if there is a timeout
+fetching the job queue listing from a \condor{schedd}.  Previously,
+\Condor{q} would simply list the queue as empty upon a communication error.
+
 \item The \condor{schedd} daemon has been updated to verify all queue access
 requests via Condor's IP/Host-Based Security mechanism (see
 section~\ref{sec:Host-Security}).
