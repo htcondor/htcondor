@@ -3,7 +3,7 @@
 	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
-	     "condor_pvmd", "condor_starter.pvm" );
+			 "condor_starter.std", "condor_pvmd", "condor_starter.pvm" );
 
 
 if ( ( $error = parse_command_line() )
@@ -76,6 +76,8 @@ sub do_submit() {
 
 	$GLOBUSENV .= "_condor_LOCAL_DIR=$localdir;";
 	$GLOBUSENV .= "_condor_SBIN=$archdir;";
+
+	$GLOBUSENV .= "_condor_CONDOR_ADMIN=$condor_admin;";
 
 		##if submitting to Condor scheduler under Globus, don't want "queue <n>"
 		##starting <n> copies, EACH asking for <n> CPUs, that would give us
@@ -181,10 +183,7 @@ sub gather_info() {
 				. "\"condor_status\" or \"condor_submit\" needed for setup" );
 	}
 
-	if ( defined( $CONDOR_ADMIN ) ) {
-		$condor_admin = $CONDOR_ADMIN;
-	}
-	else {
+	if ( !defined( $condor_admin ) ) {
 		chomp( $condor_admin = getlogin() . '@' . `$CONFIGVAL UID_DOMAIN`);
 	}
 
@@ -320,7 +319,7 @@ sub parse_command_line() {
 		"runtime=i" => \$globus_run_time,
 		"idletime=i" => \$idle_time,
 		"anybody" => \$anybody,
-		"admin=s" => \$CONDOR_ADMIN,
+		"admin=s" => \$condor_admin,
 		"genconfig" => \$gen_config,
 		"useconfig=s" => \$use_config,
 		"gensubmit" => \$gen_submit,
@@ -376,7 +375,7 @@ sub parse_command_line() {
 	}
 
 	if ( $gen_config ) {
-		gen_main_config();
+		gen_main_config($config);
 		exit( 0 );
 	}
 
@@ -401,14 +400,14 @@ sub silently {
 	return $?;
 }
 
-sub gen_main_config() {
+sub gen_main_config {
+	my $filename = shift(@_);
 	##generate the config files
-	open( CONDOR_CONFIG, ">$config");
+	open( CONDOR_CONFIG, ">$filename");
 	print CONDOR_CONFIG <<"EOF";
 
 	LOG = \$(LOCAL_DIR)/log
 	EXECUTE = \$(LOCAL_DIR)/execute
-	CONDOR_ADMIN = $condor_admin
 	HOSTALLOW_ADMINISTRATOR = \$(HOSTNAME), \$(GLIDEIN_HOST)
 
 	MAIL = /bin/mail
@@ -566,19 +565,20 @@ sub host_info()
 }
 
 sub do_remote_setup() {
-	$DAEMONS = join( ' ', @DAEMONS );
+	my $DAEMONS = join( ' ', @DAEMONS );
 
-	$remotedir = "/tmp";
+	my $remotedir = "/tmp";
 
 	# Why are we changing directories at all???
-	chomp($oldcwd = `pwd`);
+	my $oldcwd = `pwd`;
+	chomp($oldcwd);
 
 	if ( $use_config ne "" ) {
 		`cp $use_config $remotedir/$config`;
 		chdir $remotedir;
 	} else {
 		chdir $remotedir;
-		gen_main_config();
+		gen_main_config($config);
 	}
 
 	if ( ! -f $config ) {
