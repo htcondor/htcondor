@@ -208,6 +208,7 @@ Env::Merge( const char *delimitedString )
 			}
 		}
 	}
+	delete[] output;
 	return retval;
 }
 
