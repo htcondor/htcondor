@@ -1,0 +1,34 @@
+/***********************************************************************
+ First, include common settings across all compiler-specific Imakefiles
+************************************************************************/
+#include "Imakefile.common"
+#include "Imakefile.common.compiler"
+
+
+/***********************************************************************
+ Now, define make variables that are specific to this compiler
+************************************************************************/
+CC = CPP_COMPILER
+CPlusPlus = CPP_COMPILER
+CFLAGS	= $(BUILD_FLAGS) $(INCLUDE_FLAGS) -g 
+C_PLUS_FLAGS = $(CFLAGS)
+
+
+/***********************************************************************
+ Next, define tests that are specific to C++
+************************************************************************/
+
+DESC(job_ckpt_constructor_std,"Test C++ global and local constructors")
+CBUILD($(CC),job_ckpt_constructor_std,C)
+RUN(job_ckpt_constructor_std)
+TESTCLASS(job_ckpt_constructor_std,quick)
+
+
+
+/***********************************************************************
+  Finally, include all the tests that are common to both C and C++
+************************************************************************/
+#include "CImakefile.common"
+
+
+

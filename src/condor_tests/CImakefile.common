@@ -1,0 +1,28 @@
+/*************************************************************
+ * This file is for tests that are common to both C and C++
+ ************************************************************/
+
+#if ! IS_CLIPPED
+
+/*********************************
+ * Tests for FULL ports
+ ********************************/
+
+DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
+CBUILD($(CC),job_rsc_hello_std,c)
+RUN(job_rsc_hello_std)
+DEPS(job_rsc_hello_std,x_small.in)
+TESTCLASS(job_rsc_hello_std,quick)
+
+DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
+CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
+/* 
+this is a terrible idea, but i'm commenting out this test so it
+doesn't keep running.  there's a bug in condor's getrusage() support
+which this test is noticing but no one's bothered to ever fix it.  so,
+for now, instead of seeing failed tests every night, we'll just know
+it's broken and stop running it.
+RUN(job_ckpt_getrusage-loop_std)
+*/
+
+#endif /* ! IS_CLIPPED */

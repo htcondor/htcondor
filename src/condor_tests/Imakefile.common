@@ -1,0 +1,45 @@
+/***********************************************************************
+**  Common settings shared by *all* test-related Imakefiles
+***********************************************************************/
+
+CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR) 
+
+all:: run_list
+
+clean::
+	rm -f core CkptFile *.out *.err *.log *.o *.exe*
+
+x_large.in: 
+	/bin/rm -rf x_large.in
+	echo /etc/passwd > x_large.in
+
+x_small.in:
+	/bin/rm -rf x_small.in
+	echo "Hi there!!!" > x_small.in
+
+clean::
+	rm -f x_large.in x_small.in
+
+x_waste_second.o: x_waste_second.c x_my_bogokips.h x_waste_second.h
+	$(CC) -c x_waste_second.c $(CFLAGS)
+
+x_my_bogokips.h: x_compute_bogokips
+	./x_compute_bogokips x_my_bogokips.h
+
+x_compute_bogokips: x_compute_bogokips.o
+	$(CC) -o x_compute_bogokips x_compute_bogokips.o $(CFLAGS)
+
+x_compute_bogokips.o: x_compute_bogokips.c
+	$(CC) -c x_compute_bogokips.c $(CFLAGS)
+
+clean::
+	rm -f x_waste_second.o x_my_bogokips.h
+	rm -f x_compute_bogokips x_compute_bogokips.o
+
+run_list::
+	@touch run_list
+
+release::
+stripped::
+static::
+
