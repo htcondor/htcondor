@@ -65,10 +65,32 @@ int mode;
 void
 usage()
 {
-	fprintf( stderr,
-		"Usage: %s [-n schedd_name] [-a] { -constraint <constraint> |  cluster | cluster.proc | user } ... \n",
-		MyName
-	);
+	char word[10];
+	switch( mode ) {
+	case IDLE:
+		sprintf( word, "Releases" );
+		break;
+	case HELD:
+		sprintf( word, "Holds" );
+		break;
+	case REMOVED:
+		sprintf( word, "Removes" );
+		break;
+	default:
+		fprintf( stderr, "ERROR: Unknown mode: %d\n", mode );
+		exit( 1 );
+		break;
+	}
+	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
+	fprintf( stderr, " where [options] is one of:\n" );
+	fprintf( stderr, "  -help               Display this message\n" );
+	fprintf( stderr, "  -name <schedd_name> Connect to the given schedd\n" );
+	fprintf( stderr, " and where [constraints] is one or more of:\n" );
+	fprintf( stderr, "  <cluster.proc>      %s the given job\n", word );
+	fprintf( stderr, "  <cluster>           %s the given cluster of jobs\n", word );
+	fprintf( stderr, "  <user>              %s all jobs owned by <user>\n", word );
+	fprintf( stderr, "  -all                %s all jobs "
+			 "(Cannot be used with other constraints)\n", word );
 	exit( 1 );
 }
 
@@ -110,13 +132,15 @@ main( int argc, char *argv[] )
 #endif
 
 	for( argv++; arg = *argv; argv++ ) {
-		if( arg[0] == '-' && arg[1] == 'a' ) {
-			All = TRUE;
-		} else {
-			if( All ) {
+		if( arg[0] == '-' ) {
+			if( ! arg[1] ) {
 				usage();
 			}
-			if ( arg[0] == '-' && arg[1] == 'n' ) {
+			switch( arg[1] ) {
+			case 'a':
+				All = TRUE;
+				break;
+			case 'n': 
 				// use the given name as the schedd name to connect to
 				argv++;
 				if( ! *argv ) {
@@ -129,10 +153,20 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
-			} else {
-				args[nArgs] = arg;
-				nArgs++;
+				break;
+			default:
+					// This gets hit for "-h", too.
+				usage();
+				break;
 			}
+		} else {
+			if( All ) {
+					// If -all is set, there should be no other
+					// constraint arguments.
+				usage();
+			}
+			args[nArgs] = arg;
+			nArgs++;
 		}
 	}
 
