@@ -1,6 +1,8 @@
 #ifndef _Condor_Accountant_H_
 #define _Condor_Accountant_H_
 
+#include <iostream.h>
+
 #include "condor_classad.h"
 
 #include "HashTable.h"
@@ -12,9 +14,9 @@ class Accountant {
 
 public:
 
+  //--------------------------------------------------------
   // User Functions
-
-  void Reset();                  // Flush all tables
+  //--------------------------------------------------------
 
   double GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
@@ -22,13 +24,16 @@ public:
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceName); // remove a match
 
-  void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   void UpdatePriorities(); // update all the priorities
 
-  void LoadPriorities(); // Save to file
-  void SavePriorities(); // Read from file
+  void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
 
-  //----------------------------------------------------------------------
+  void LoadState(); // Save to file
+  void SaveState(); // Read from file
+
+  //--------------------------------------------------------
+  // Misc public functions
+  //--------------------------------------------------------
 
   static int HashFunc(const MyString& Key, int TableSize) {
     int count=0;
@@ -41,20 +46,33 @@ public:
                                                 
 private:
 
-  //---------------------------------------------
-  // Data structures & members
-  //---------------------------------------------
+  //--------------------------------------------------------
+  // Private Methods
+  //--------------------------------------------------------
 
-  typedef Set<MyString> StringSet;
+  void AddMatch(const MyString& CustomerName, const MyString& ResourceName, const Time& T); 
+  void RemoveMatch(const MyString& ResourceName, const Time& T);
+
+  //--------------------------------------------------------
+  // Configuration variables
+  //--------------------------------------------------------
+
+  double MinPriority;        // Minimum priority (if no resources used)
+  double Epsilon;            // used to compare priority to zero
+  double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
+  MyString PriorityFileName; // Name of priority file
+  MyString MatchFileName;    // Name of Match file
+
+  //--------------------------------------------------------
+  // Internal data types
+  //--------------------------------------------------------
+
   struct CustomerRecord {
     double Priority;
     double UnchargedTime;
-    StringSet ResourceNames;
+    Set<MyString> ResourceNames;
     CustomerRecord() { Priority=UnchargedTime=0; }
   };
-
-  typedef HashTable<MyString, CustomerRecord*> CustomerTable;
-  CustomerTable Customers;
 
   struct ResourceRecord {
     MyString CustomerName;
@@ -64,23 +82,23 @@ private:
     ~ResourceRecord() { if (Ad) delete Ad; }
   };
 
-  typedef HashTable<MyString, ResourceRecord*> ResourceTable;
-  ResourceTable Resources;
+  //--------------------------------------------------------
+  // Data members
+  //--------------------------------------------------------
 
-  // Configuration variables
+  HashTable<MyString, CustomerRecord*> Customers;
+  HashTable<MyString, ResourceRecord*> Resources;
 
-  double MinPriority;
-  double Epsilon;
-  double HalfLifePeriod; // The time in sec in which the priority is halved by aging
   Time LastUpdateTime;
-  MyString PriorityFile; // Name of priority file
 
   //--------------------------------------------------------
-  // Misc functions
+  // Utility functions
   //--------------------------------------------------------
 
-  MyString GetResourceName(ClassAd* Resource);
-  int NotClaimed(ClassAd* ResourceAd);
+  static MyString GetResourceName(ClassAd* Resource);
+  static int NotClaimed(ClassAd* ResourceAd);
+  static void WriteLogEntry(ofstream& os, int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T);
+  void LogAction(int AddMatch, const MyString& CustomerName, const MyString& ResourceName, const Time& T);
 
 };
 
