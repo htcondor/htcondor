@@ -60,6 +60,7 @@ const mode_t LOCAL_DIR_MODE =
 
 extern char	*Execute;			// Name of directory where user procs execute
 extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)
+extern int ExecTransferAttempts; // attempts at bringing over the initial exec.
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
@@ -278,22 +279,33 @@ int
 UserProc::transfer_executable( char *src, int &error_code )
 {
 	int		status;
+	int		attempts = 0;
+	int tmp_errno;
 
-	errno = 0;
-	status = get_file( src, cur_ckpt, EXECUTABLE_FILE_MODE );
+	dprintf( D_ALWAYS, "Going to try %d %s at getting the inital executable\n",
+		ExecTransferAttempts, ExecTransferAttempts==1?"attempt":"attempts" );
 
-	if( status < 0 ) {
-		dprintf( D_ALWAYS,
-			"Failed to fetch orig ckpt file \"%s\" into \"%s\", errno = %d\n",
-			src, cur_ckpt, errno
-		);
-	} else {
-		dprintf( D_ALWAYS,
-			"Fetched orig ckpt file \"%s\" into \"%s\"\n", src, cur_ckpt
-		);
+	do
+	{
+		errno = 0;
+		status = get_file( src, cur_ckpt, EXECUTABLE_FILE_MODE );
+		tmp_errno = errno;
+
+		attempts++;
+
+		if( status < 0 ) {
+			dprintf( D_ALWAYS,
+				"Failed to fetch orig ckpt file \"%s\" into \"%s\", "
+				"attempt = %d, errno = %d\n", src, cur_ckpt, attempts, errno );
+		} else {
+			dprintf( D_ALWAYS,
+				"Fetched orig ckpt file \"%s\" into \"%s\" with %d %s\n", 
+				src, cur_ckpt, attempts, attempts==1?"attempt":"attempts" );
+		}
 	}
+	while( (status < 0) && (attempts < ExecTransferAttempts) );
 
-	error_code = errno;
+	error_code = tmp_errno;
 	return status;
 }
 
