@@ -43,11 +43,31 @@ requirements as it did in previous releases.  You must set this if you
 don't upgrade your \Condor{pvmd} binary or if your jobs flock with pools
 that user an older \Condor{pvmd}.
 
+\item The NT release of Condor no longer contains debugging
+information.
+This drastically reduces the size of the binaries you must install.  
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item The configuration files shipped with version 6.1.15 contained a
+number of errors relating to host-based security, the configuration of
+the central manager, and a few other things.
+These errors have all been corrected.
+
+\item Fixed a memory management bug in the \Condor{schedd} that could
+cause it to crash under certain circumstances when machines were taken
+away from the schedd's control.
+
+\item Fixed a potential memory leak in a library used by the
+\Condor{startd} and \Condor{master} that could leak memory while
+Condor jobs were executing.
+
+\item Fixed a bug in the NT version of Condor that would result in
+faulty reporting of the load average.
 
 \item The \Condor{shadow.pvm} should now correctly return core files
 when a task or \Condor{pvmd} crashes.
@@ -59,6 +79,10 @@ when a task or \Condor{pvmd} crashes.
 debugging code we added that could cause the \Condor{pvmd} to crash.
 This release includes new \Condor{pvmd} binaries for all platforms
 with the problematic debugging code removed.
+
+\item Fixed a bug in the \opt{-unset} options to \Condor{config\_val}
+that was introduced in version 6.1.15.
+Both \opt{-unset} and \opt{-runset} work correctly, now.
 
 \end{itemize}
 
