@@ -1,0 +1,20 @@
+all_target( libCondorDrmaa.a )
+
+CFLAGS = $(STD_C_FLAGS)
+
+
+#define ObjectFiles \
+	libDrmaa.o auxDrmaa.o
+
+library_target(libCondorDrmaa.a,ObjectFiles)
+
+release_library(libCondorDrmaa.a,lib)
+strip_library(libCondorDrmaa.a,lib)
+static_library(libCondorDrmaa.a,lib)
+
+release_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
+strip_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
+static_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
+
+html_target( documentation )
+
