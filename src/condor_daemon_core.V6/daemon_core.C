@@ -1045,13 +1045,7 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-
-#if defined(HPUX9)
-		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, ptimer);
-#else
-		rv = select(FD_SETSIZE, &readfds, NULL, NULL, ptimer);
-#endif
-		
+		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, NULL, NULL, ptimer);
 		tmpErrno = errno;
 
 #ifndef WIN32
