@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	ClassAd  *classad;
 
 	string  xml = "<?xml version=\"1.0\"?>< c >"
-                  "<a n=\"A\"><s> Alain &quot;Aslag&quot; Roy</s></a>"
+                  "<a n=\"A\"><s> Alain &lt;Aslag&gt; Roy</s></a>"
                   "<a n=\"B\"><n> 3 </n></a>"
 		          "<a n=\"C\"><b v=\"t\"/></a>"
 		          "<a n=\"D\"><l><n>10</n><un/><er/><n>14</n></l></a>"
