@@ -78,3 +78,7 @@ TAR_CMD = @TarCmd@
 PURE_CACHE_DIR = @pure_cache_dir@
 #endif
 
+#define HAS_CONDOR_ANALYZE @has_condor_analyze@
+CONDOR_ANALYZE_RELEASE = @condor_analyze_release@
+CONDOR_ANALYZE_STATIC = @condor_analyze_static@
+CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
