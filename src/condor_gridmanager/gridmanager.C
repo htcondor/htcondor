@@ -51,6 +51,7 @@ struct ScheddUpdateAction {
 	GlobusJob *job;
 	int actions;
 	int request_id;
+	bool deleted;
 };
 
 struct OrphanCallback_t {
@@ -169,6 +170,7 @@ addScheddUpdateAction( GlobusJob *job, int actions, int request_id )
 		curr_action->job = job;
 		curr_action->actions = actions;
 		curr_action->request_id = request_id;
+		curr_action->deleted = false;
 
 		pendingScheddUpdates.insert( job->procID, curr_action );
 		RequestContactSchedd();
@@ -510,17 +512,23 @@ checkResources()
 int
 doContactSchedd()
 {
+	int rc;
 	Qmgr_connection *schedd;
 	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
 	ClassAd *next_ad;
 	char expr_buf[12000];
+	bool schedd_updates_complete = false;
+	bool schedd_deletes_complete = false;
+	bool add_remove_jobs_complete = false;
+	bool commit_transaction = true;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 //bool foo=false;while(!foo)sleep(1);
 
 	contactScheddTid = TIMER_UNSET;
 
+	// Write user log events before connection to the schedd
 	pendingScheddUpdates.startIterations();
 
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
@@ -584,9 +592,14 @@ doContactSchedd()
 		// Check the job status on the schedd to see if the job's been
 		// held or removed. We don't want to blindly update the status.
 		int job_status_schedd;
-		GetAttributeInt( curr_job->procID.cluster,
-						 curr_job->procID.proc,
-						 ATTR_JOB_STATUS, &job_status_schedd );
+		rc = GetAttributeInt( curr_job->procID.cluster,
+							  curr_job->procID.proc,
+							  ATTR_JOB_STATUS, &job_status_schedd );
+		if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		// If the job is marked as REMOVED or HELD on the schedd, don't
 		// change it. Instead, modify our state to match it.
@@ -595,22 +608,33 @@ doContactSchedd()
 			curr_job->ad->SetDirtyFlag( ATTR_JOB_STATUS, false );
 			curr_job->ad->SetDirtyFlag( ATTR_HOLD_REASON, false );
 		} else if ( curr_action->actions & UA_HOLD_JOB ) {
-			char *reason;
-			if ( GetAttributeStringNew( curr_job->procID.cluster,
+			char *reason = NULL;
+			rc = GetAttributeStringNew( curr_job->procID.cluster,
 										curr_job->procID.proc,
-										ATTR_RELEASE_REASON, &reason )
-				 >= 0 ) {
+										ATTR_RELEASE_REASON, &reason );
+			if ( rc >= 0 ) {
 				curr_job->UpdateJobAdString( ATTR_LAST_RELEASE_REASON,
 											 reason );
+			} else if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
 			}
-			free( reason );
+			if ( reason ) {
+				free( reason );
+			}
 			curr_job->UpdateJobAd( ATTR_RELEASE_REASON, "UNDEFINED" );
 			curr_job->UpdateJobAdInt( ATTR_ENTERED_CURRENT_STATUS,
 									  (int)time(0) );
 			int sys_holds = 0;
-			GetAttributeInt(curr_job->procID.cluster, 
-						curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
-						&sys_holds);
+			rc=GetAttributeInt(curr_job->procID.cluster, 
+							   curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+							   &sys_holds);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 			sys_holds++;
 			curr_job->UpdateJobAdInt( ATTR_NUM_SYSTEM_HOLDS, sys_holds );
 		} else {	// !UA_HOLD_JOB
@@ -651,8 +675,14 @@ doContactSchedd()
 			// The job has stopped an interval of running, add the current
 			// interval to the accumulated total run time
 			float accum_time = 0;
-			GetAttributeFloat(curr_job->procID.cluster, curr_job->procID.proc,
-							  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			rc = GetAttributeFloat(curr_job->procID.cluster,
+								   curr_job->procID.proc,
+								   ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 			accum_time += (float)( time(NULL) - shadowBirthdate );
 			curr_job->UpdateJobAdFloat( ATTR_JOB_REMOTE_WALL_CLOCK,
 										accum_time );
@@ -678,21 +708,67 @@ dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.clus
 			expr->RArg()->PrintToStr(attr_value);
 
 dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
-			SetAttribute( curr_job->procID.cluster,
-						  curr_job->procID.proc,
-						  attr_name,
-						  attr_value);
+			rc = SetAttribute( curr_job->procID.cluster,
+							   curr_job->procID.proc,
+							   attr_name,
+							   attr_value);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
 		}
 
 		curr_job->ad->ClearAllDirtyFlags();
 
+	}
+
+	if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
+	}
+
+	schedd_updates_complete = true;
+
+	pendingScheddUpdates.startIterations();
+
+	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
+
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
-dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster, curr_job->procID.proc);
-			CloseConnection();
+dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_action->job->procID.cluster, curr_action->job->procID.proc);
 			BeginTransaction();
-			DestroyProc(curr_job->procID.cluster,
-						curr_job->procID.proc);
+			if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			rc = DestroyProc(curr_action->job->procID.cluster,
+							 curr_action->job->procID.proc);
+			if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				commit_transaction = false;
+				goto contact_schedd_disconnect;
+			}
+			curr_action->deleted = true;
 		}
+
+	}
+
+	schedd_deletes_complete = true;
+
+//	if ( BeginTransaction() < 0 ) {
+	errno = 0;
+	BeginTransaction();
+	if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
 	}
 
 
@@ -750,52 +826,81 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 				resource_name[0] = '\0';
 				int must_expand = 0;
 
-					next_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-					if ( !must_expand ) {
-						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
-						if ( strstr(resource_name,"$$") ) {
-							must_expand = 1;
-						}
+				next_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+				if ( !must_expand ) {
+					next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+					if ( strstr(resource_name,"$$") ) {
+						must_expand = 1;
 					}
+				}
 
-					if (must_expand) {
-						// Get the expanded ClassAd from the schedd, which
-						// has the globus resource filled in with info from
-						// the matched ad.
-						delete next_ad;
-						next_ad = NULL;
-						next_ad = GetJobAd(procID.cluster,procID.proc);
-						ASSERT(next_ad);
-						resource_name[0] = '\0';
-						next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+				if (must_expand) {
+					// Get the expanded ClassAd from the schedd, which
+					// has the globus resource filled in with info from
+					// the matched ad.
+					delete next_ad;
+					next_ad = NULL;
+					next_ad = GetJobAd(procID.cluster,procID.proc);
+					if ( next_ad == NULL && errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
+					ASSERT(next_ad);
+					resource_name[0] = '\0';
+					next_ad->LookupString(ATTR_GLOBUS_RESOURCE, resource_name);
+				}
 
 				if ( resource_name[0] == '\0' ) {
 
 					const char *hold_reason =
 						"GlobusResource is not set in the job ad";	
 					char buffer[128];
-					char *reason;
+					char *reason = NULL;
 					dprintf( D_ALWAYS, "Job %d.%d has no Globus resource name!\n",
 							 procID.cluster, procID.proc );
 					// No GlobusResource, so put the job on hold
-					SetAttributeInt( procID.cluster,
-									 procID.proc,
-									 ATTR_JOB_STATUS,
-									 HELD );
-					if ( GetAttributeStringNew( procID.cluster, procID.proc,
-												ATTR_RELEASE_REASON, &reason )
-						 >= 0 ) {
-						SetAttributeString( procID.cluster, procID.proc,
-											ATTR_LAST_RELEASE_REASON, reason );
+					rc = SetAttributeInt( procID.cluster,
+										  procID.proc,
+										  ATTR_JOB_STATUS,
+										  HELD );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
-					free( reason );
-					SetAttribute( procID.cluster, procID.proc,
-								  ATTR_RELEASE_REASON, "UNDEFINED" );
-					SetAttributeString( procID.cluster,
-										procID.proc,
-										ATTR_HOLD_REASON,
-										hold_reason );
+					if ( next_ad->LookupString(ATTR_RELEASE_REASON, &reason)
+						     != 0 ) {
+						rc = SetAttributeString( procID.cluster, procID.proc,
+												 ATTR_LAST_RELEASE_REASON,
+												 reason );
+						free( reason );
+						if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+							delete next_ad;
+							commit_transaction = false;
+							goto contact_schedd_disconnect;
+						}
+					}
+					rc = SetAttribute( procID.cluster, procID.proc,
+									   ATTR_RELEASE_REASON, "UNDEFINED" );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
+					}
+					rc = SetAttributeString( procID.cluster,
+											 procID.proc,
+											 ATTR_HOLD_REASON,
+											 hold_reason );
+					if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+ 						goto contact_schedd_disconnect;
+					}
 					sprintf( buffer, "%s = \"%s\"", ATTR_HOLD_REASON,
 							 hold_reason );
 					next_ad->InsertOrUpdate( buffer );
@@ -827,10 +932,20 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 					num_ads++;
 
 					if ( !job_is_managed ) {
-						SetAttribute( new_job->procID.cluster,
-								  new_job->procID.proc,
-								  ATTR_JOB_MANAGED,
-								  "TRUE" );
+						// Set Managed to true in the local ad and leave it
+						// dirty so that if our update here to the schedd is
+						// aborted, the change will make it the first time
+						// the job tries to update anything on the schedd.
+						new_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 1 );
+						rc = SetAttribute( new_job->procID.cluster,
+										   new_job->procID.proc,
+										   ATTR_JOB_MANAGED,
+										   "TRUE" );
+						if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+							commit_transaction = false;
+							goto contact_schedd_disconnect;
+						}
 					}
 
 				}
@@ -844,11 +959,13 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
+		if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
-
-		firstScheddContact = false;
-		addJobsSignaled = false;
 	}	// end of handling add jobs
 
 	/////////////////////////////////////////////////////
@@ -882,14 +999,11 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
-				next_job->UpdateCondorState( curr_status );
-				num_ads++;
-
 				// Save the remove reason in our local copy of the job ad
 				// so that we can write it in the abort log event.
 				if ( curr_status == REMOVED ) {
 					int rc;
-					char *remove_reason;
+					char *remove_reason = NULL;
 					rc = GetAttributeStringNew( procID.cluster,
 												procID.proc,
 												ATTR_REMOVE_REASON,
@@ -897,9 +1011,21 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 					if ( rc == 0 ) {
 						next_job->UpdateJobAdString( ATTR_REMOVE_REASON,
 													 remove_reason );
+					} else if ( rc < 0 && errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						delete next_ad;
+						commit_transaction = false;
+						goto contact_schedd_disconnect;
 					}
-					free( remove_reason );
+					if ( remove_reason ) {
+						free( remove_reason );
+					}
 				}
+
+				// Don't update the condor state if a communications error
+				// kept us from getting a remove reason to go with it.
+				next_job->UpdateCondorState( curr_status );
+				num_ads++;
 
 			} else if ( curr_status == REMOVED ) {
 
@@ -912,7 +1038,13 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 						 procID.proc );
 				// Log the removal of the job from the queue
 				WriteAbortEventToUserLog( next_ad );
-				DestroyProc( procID.cluster, procID.proc );
+				rc = DestroyProc( procID.cluster, procID.proc );
+				if ( rc < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+					delete next_ad;
+					commit_transaction = false;
+					goto contact_schedd_disconnect;
+				}
 
 			} else {
 
@@ -925,14 +1057,33 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 			delete next_ad;
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}
+		if ( errno == ETIMEDOUT ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			commit_transaction = false;
+			goto contact_schedd_disconnect;
+		}
 
 		dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
-
-		removeJobsSignaled = false;
 	}
 	/////////////////////////////////////////////////////
 
-	DisconnectQ( schedd );
+	if ( CloseConnection() < 0 ) {
+dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		commit_transaction = false;
+		goto contact_schedd_disconnect;
+	}
+
+	add_remove_jobs_complete = true;
+
+ contact_schedd_disconnect:
+	DisconnectQ( schedd, commit_transaction );
+
+	if ( schedd_updates_complete == false ) {
+		dprintf( D_ALWAYS, "Schedd connection error during updates! Will retry\n" );
+		lastContactSchedd = time(NULL);
+		RequestContactSchedd();
+		return TRUE;
+	}
 
 	// Wake up jobs that had schedd updates pending and delete job
 	// objects that wanted to be deleted
@@ -943,28 +1094,34 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 		curr_job = curr_action->job;
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
-			if ( curr_job->jobContact != NULL ) {
-				JobsByContact.remove( HashKey( curr_job->jobContact ) );
-			}
-			JobsByProcID.remove( curr_job->procID );
-				// If wantRematch is set, send a reschedule now
-			if ( curr_job->wantRematch ) {
-				static DCSchedd* schedd_obj = NULL;
-				if ( !schedd_obj ) {
-					schedd_obj = new DCSchedd(NULL,NULL);
-					ASSERT(schedd_obj);
+
+			if ( (curr_action->actions & UA_DELETE_FROM_SCHEDD) ?
+				 curr_action->deleted == true :
+				 true ) {
+
+				if ( curr_job->jobContact != NULL ) {
+					JobsByContact.remove( HashKey( curr_job->jobContact ) );
 				}
-				schedd_obj->reschedule();
-			}
-			GlobusResource *resource = curr_job->GetResource();
-			delete curr_job;
+				JobsByProcID.remove( curr_job->procID );
+					// If wantRematch is set, send a reschedule now
+				if ( curr_job->wantRematch ) {
+					static DCSchedd* schedd_obj = NULL;
+					if ( !schedd_obj ) {
+						schedd_obj = new DCSchedd(NULL,NULL);
+						ASSERT(schedd_obj);
+					}
+					schedd_obj->reschedule();
+				}
+				GlobusResource *resource = curr_job->GetResource();
+				delete curr_job;
 
-			if ( resource->IsEmpty() ) {
-				ResourcesByName.remove( HashKey( resource->ResourceName() ) );
-				delete resource;
-			}
+				if ( resource->IsEmpty() ) {
+					ResourcesByName.remove( HashKey( resource->ResourceName() ) );
+					delete resource;
+				}
 
-			delete curr_action;
+				delete curr_action;
+			}
 		} else if ( curr_action->request_id != 0 ) {
 			completedScheddUpdates.insert( curr_job->procID, curr_action );
 			curr_job->SetEvaluateState();
@@ -976,6 +1133,12 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 
 	pendingScheddUpdates.clear();
 
+	if ( add_remove_jobs_complete == true ) {
+		firstScheddContact = false;
+		addJobsSignaled = false;
+		removeJobsSignaled = false;
+	}
+
 	// Check if we have any jobs left to manage. If not, exit.
 	if ( JobsByProcID.getNumElements() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
@@ -983,6 +1146,11 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 	}
 
 	lastContactSchedd = time(NULL);
+
+	if ( add_remove_jobs_complete == false ) {
+		dprintf( D_ALWAYS, "Schedd connection error! Will retry\n" );
+		RequestContactSchedd();
+	}
 
 dprintf(D_FULLDEBUG,"leaving doContactSchedd()\n");
 	return TRUE;
