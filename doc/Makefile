@@ -67,10 +67,10 @@ ref.html:
 
 release-html: 
 	make ref.html
-	mv -f /p/condor/public/html/manual/ref2 /p/condor/public/html/manual/ref2.old
-	mv -f /p/condor/public/html/manual/ref.new /p/condor/public/html/manual/ref2
+	mv -f /p/condor/public/html/manual/condor-V6-Manual /p/condor/public/html/manual/condor-V6-Manual.old
+	mv -f /p/condor/public/html/manual/ref.new /p/condor/public/html/manual/condor-V6-Manual
+	/p/condor/public/html/manual/links/human_header_links.pl
 	
-
 admin-man/startd-states.eps: admin-man/startd-states.fig
 	rm -f admin-man/startd-states.eps
 	fig2dev -L ps -m .6 admin-man/startd-states.fig > admin-man/startd-states.eps 
