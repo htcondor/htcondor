@@ -2291,7 +2291,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
 		}
 		cur = cur->next;
 	}
-	pidFamily[fam_index] = NULL;
+	pidFamily[fam_index] = (pid_t)0;
 	
 	return 0;
 #else
