@@ -346,6 +346,9 @@ Starter::spawn( start_info_t* info )
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT, resmgr->m_proc );
+		dprintf( D_PROCFAMILY, 
+				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
+		recompute_pidfamily();
 	}
 	return s_pid;
 }
@@ -533,6 +536,8 @@ void
 Starter::recompute_pidfamily() 
 {
 	if( !s_procfam ) {
+		dprintf( D_PROCFAMILY, 
+				 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
 		return;
 	}
 	s_procfam->takesnapshot();
