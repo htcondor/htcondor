@@ -90,7 +90,8 @@ ReliSock::listen()
 	if (_state != sock_bound) return FALSE;
 	if (::listen(_sock, 5) < 0) return FALSE;
 
-	dprintf( D_NETWORK, "LISTEN %s\n", sock_to_string(_sock) );
+	dprintf( D_NETWORK, "LISTEN %s fd=%d\n", sock_to_string(_sock),
+			 _sock );
 
 	_state = sock_special;
 	_special_state = relisock_listen;
@@ -161,9 +162,14 @@ ReliSock::accept( ReliSock	&c )
 	int on = 1;
 	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 
-	dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n", 
-					sock_to_string(_sock), _sock, 
-					sin_to_string(c.endpoint()) );
+	if( DebugFlags & D_NETWORK ) {
+		char* src = strdup(	sock_to_string(_sock) );
+		char* dst = strdup( sin_to_string(c.endpoint()) );
+		dprintf( D_NETWORK, "ACCEPT src=%s fd=%d dst=%s\n",
+				 src, c._sock, dst );
+		free( src );
+		free( dst );
+	}
 	
 	return TRUE;
 }
