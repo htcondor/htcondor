@@ -1199,14 +1199,18 @@ off_t lseek( int fd, off_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
+	sigset_t sigs = block_condor_signals();
+
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
+			restore_condor_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
+		restore_condor_sigmask(sigs);
                 return (off_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1218,6 +1222,8 @@ off_t lseek( int fd, off_t offset, int whence )
         } else {
                 rval = REMOTE_syscall( CONDOR_lseek, user_fd, offset, whence );
         }
+
+	restore_condor_sigmask(sigs);
 
         return (off_t)rval;
 }
@@ -1232,14 +1238,18 @@ llseek( int fd, offset_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
+	sigset_t sigs = block_condor_signals();
+
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
+			restore_condor_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
+		restore_condor_sigmask(sigs);
                 return (offset_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1252,6 +1262,7 @@ llseek( int fd, offset_t offset, int whence )
                 rval = REMOTE_syscall( CONDOR_llseek, user_fd, offset, whence );
         }
 
+	restore_condor_sigmask(sigs);
         return (offset_t)rval;
 }
 
@@ -1262,14 +1273,18 @@ lseek64( int fd, off64_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
+	sigset_t sigs = block_condor_signals();
+
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
+		    	restore_condor_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
+		restore_condor_sigmask(sigs);
                 return (off64_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1281,6 +1296,8 @@ lseek64( int fd, off64_t offset, int whence )
         } else {
                 rval = REMOTE_syscall( CONDOR_lseek64, user_fd, offset, whence );
         }
+
+	restore_condor_sigmask(sigs);
 
         return (off64_t)rval;
 }
@@ -1294,13 +1311,18 @@ ssize_t read( int fd, void *buf, size_t len )
         int     user_fd;
         int use_local_access = FALSE;
 
+	sigset_t sigs = block_condor_signals();
+
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
-		if( BufferGlueActive(f) )
+		if( BufferGlueActive(f) ) {
 			return BufferGlueRead( f, (char *)buf, len );
+			restore_condor_sigmask(sigs);
+		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
+		restore_condor_sigmask(sigs);
                 return (ssize_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1313,6 +1335,8 @@ ssize_t read( int fd, void *buf, size_t len )
                 rval = REMOTE_syscall( CONDOR_read, user_fd, buf, len );
         }
 
+	restore_condor_sigmask(sigs);
+
         return (ssize_t)rval;
 }
 
@@ -1322,13 +1346,19 @@ ssize_t write( int fd, const void *buf, size_t len )
         int     user_fd;
         int use_local_access = FALSE;
 
+	sigset_t sigs = block_condor_signals();
+
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
-		if( BufferGlueActive(f) )
+		if( BufferGlueActive(f) ) {
 			return BufferGlueWrite( f, (char *)buf, len );
+			restore_condor_sigmask(sigs);
+		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
+		restore_condor_sigmask(sigs);
+
                 return (ssize_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1340,6 +1370,8 @@ ssize_t write( int fd, const void *buf, size_t len )
         } else {
                 rval = REMOTE_syscall( CONDOR_write, user_fd, buf, len );
         }
+
+	restore_condor_sigmask(sigs);
 
         return (ssize_t)rval;
 }
@@ -1524,6 +1556,8 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
+	sigset_t sigs = block_condor_signals();
+
 	dprintf(D_FULLDEBUG, "Entering close(): fd=%d\n", fd);
 	if ( FileTab == NULL )
 		InitFileState();
@@ -1533,6 +1567,7 @@ close( int fd )
       int scm = SetSyscalls(SYS_LOCAL | SYS_MAPPED);
       int rval=ioserver_close(fd);
       SetSyscalls(scm);
+      restore_condor_sigmask(sigs);
       return rval;
     }
   
@@ -1544,19 +1579,24 @@ close( int fd )
 		// successfully, to allow sockets and pipes to be used
 		// successfully between checkpoints.
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
+			restore_condor_sigmask(sigs);
 			return syscall( SYS_close, fd );
 		}
 		dprintf(D_FULLDEBUG, "standalone close: fd=%d, rval = %d\n", fd, rval);
 		dprintf(D_FULLDEBUG, "Leaving close(): closing fd = %d\n", fd);
+		restore_condor_sigmask(sigs);
+
 		return rval;
 	} else {
 		if( LocalSysCalls() ) {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): closing fd = %d\n", fd);
+			restore_condor_sigmask(sigs);
 			return syscall( SYS_close, fd );
 		} else {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): remote closing fd = %d\n", fd);
+			restore_condor_sigmask(sigs);
 			return REMOTE_syscall( CONDOR_close, fd );
 		}
 	}
@@ -1622,6 +1662,8 @@ dup2( int old, int new_fd )
 {
 	int		rval;
 
+	sigset_t sigs = block_condor_signals();
+
 	if ( FileTab == NULL )
 		InitFileState();
 
@@ -1632,6 +1674,9 @@ dup2( int old, int new_fd )
 		// to use fds which we're not tracking between checkpoints.
 		if (MyImage.GetMode() == STANDALONE)
 			rval = syscall( SYS_dup2, old, new_fd );
+
+		restore_condor_sigmask(sigs);
+
 		return rval;
 	}
 
@@ -1640,6 +1685,8 @@ dup2( int old, int new_fd )
 	} else {
 		rval =  REMOTE_syscall( CONDOR_dup2, old, new_fd );
 	}
+
+	restore_condor_sigmask(sigs);
 
 	return rval;
 }
@@ -1657,6 +1704,8 @@ socket( int addr_family, int type, int protocol )
 		(unsigned long)protocol
 	};
 #endif
+
+	sigset_t sigs = block_condor_signals();
 
 	if ( FileTab == NULL )
 		InitFileState();
@@ -1683,6 +1732,8 @@ socket( int addr_family, int type, int protocol )
 	} else {
 		rval =  REMOTE_syscall( CONDOR_socket, addr_family, type, protocol );
 	}
+
+	restore_condor_sigmask(sigs);
 
 	return rval;
 }

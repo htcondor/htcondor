@@ -344,45 +344,22 @@ ssize_t BufferCache::write( File *owner, off_t offset, char *data, ssize_t lengt
 
 		// Is the needed block in the cache?
 		order = offset/block_size;
-		position = find_block(owner,order);
-		
-		if( position!=-1 ) {
-			// The block was found
-		} else if( (chunksize==block_size) ) {
-			// Or, we are writing a whole block
-			position = make_room();
-		// FIXME } else if((offset_in_block==0)&&(offset>=owner->get_size())) {
-		} else if((offset_in_block==0)&&(offset>=owner->getSize())) {
-		
-			// Or, we are appending in a new block
-			position = make_room();
-		} else {
-			// Or, we must modify a block not in the cache
-		}
+		position = find_or_load_block(owner,order);
 
+		// If not, make a clean block
 		if( position==-1 ) {
-
-			// This particular chunk is not in the cache,
-			// so we are forced to do a write.  We are
-			// performing a system call anyway, so we will
-			// cut our losses and write the rest of the
-			// buffer, excepting any partial last block.
-
-			chunksize = length - (length-chunksize)%block_size;
-			// FIXME owner->write(offset,data,chunksize);
-			REMOTE_syscall( CONDOR_lseekwrite, owner->real_fd, offset, SEEK_SET, data, chunksize );
-			invalidate(owner,offset,chunksize);
-
-		} else {
-
-			memcpy(&buffer[block_size*position+offset_in_block],data,chunksize);
-
-			// Update the block info
-			info[position].last_used = time++;
-			info[position].dirty = 1;
-			info[position].owner = owner;
-			info[position].order = order;
+			position = make_room();
+			memset( &buffer[block_size*position], 0, block_size );
 		}
+
+		// Record the data
+		memcpy(&buffer[block_size*position+offset_in_block],data,chunksize);
+
+		// Update the block info
+		info[position].last_used = time++;
+		info[position].dirty = 1;
+		info[position].owner = owner;
+		info[position].order = order;
 
 		// Push all the counters forward
 		length -= chunksize;
