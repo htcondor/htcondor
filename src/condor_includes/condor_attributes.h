@@ -248,5 +248,8 @@ const char ATTR_SERVER_TIME				 [] = "ServerTime";
 const char ATTR_SHADOW_BIRTHDATE		 [] = "ShadowBday";
 const char ATTR_HOLD_REASON				 [] = "HoldReason";
 const char ATTR_WANT_RESOURCE_AD		 [] = "WantResAd";
+const char ATTR_TOTAL_SUSPENSIONS        [] = "TotalSuspensions";
+const char ATTR_LAST_SUSPENSION_TIME     [] = "LastSuspensionTime";
+const char ATTR_CUMULATIVE_SUSPENSION_TIME[] = "CumulativeSuspensionTime";
 
 #endif
