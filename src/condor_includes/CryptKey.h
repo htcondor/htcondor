@@ -50,6 +50,8 @@ class KeyInfo {
     // Copy constructor
     //------------------------------------------
 
+    KeyInfo& operator=(const KeyInfo& copy);
+
     ~KeyInfo();
 
     unsigned char * getKeyData();
