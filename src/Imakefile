@@ -355,7 +355,7 @@ strip.tar: stripped
 all_tarballs: strip.tar StaticTar ckpt_server.tar eventd.tar dagman.tar PvmTar CondorGTar
 
 public: release all_tarballs
-	if test ! -d public; then mkdir public; fi
-	rm -f public/unstripped-release.tar.gz
-	cd release_dir; $(TAR_CMD) -zcvf ../public/unstripped-release.tar.gz *
-	perl condor_scripts/make_final_tarballs -sys $(SYSNAME) -cmd "$(TAR_CMD)" -target public
+	if test ! -d ../public; then mkdir ../public; fi
+	rm -f ../public/unstripped-release.tar.gz
+	cd release_dir; $(TAR_CMD) -zcvf ../../public/unstripped-release.tar.gz *
+	perl condor_scripts/make_final_tarballs -sys $(SYSNAME) -cmd "$(TAR_CMD)" -target ../public
