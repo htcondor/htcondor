@@ -537,7 +537,7 @@ int DestroyClusterByConstraint(const char* constraint)
 	char		key[_POSIX_PATH_MAX];
 	LogRecord	*log;
 	char		*ickpt_file_name;
-	int			prev_cluster = -1, match;
+	int			prev_cluster = -1;
     PROC_ID		job_id;
 
 	if(CheckConnection() < 0) {
@@ -549,25 +549,23 @@ int DestroyClusterByConstraint(const char* constraint)
 	while(JobQueue->table.iterate(ad) == 1) {
 		if (OwnerCheck(ad, active_owner)) {
 			if (EvalBool(ad, constraint)) {
-				if (match) {
-					ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster);
-					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
+				ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster);
+				ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
 
-					sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
-					log = new LogDestroyClassAd(key);
-					JobQueue->AppendLog(log);
-					flag = 0;
+				sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
+				log = new LogDestroyClassAd(key);
+				JobQueue->AppendLog(log);
+				flag = 0;
 
-					// notify schedd to abort job
-					// should probably wait until commit time to do this...
-					abort_job_myself( job_id );
+				// notify schedd to abort job
+				// should probably wait until commit time to do this...
+				abort_job_myself( job_id );
 
-					if (prev_cluster != job_id.cluster) {
-						ickpt_file_name =
-							gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
-						(void)unlink( ickpt_file_name );
-						prev_cluster = job_id.cluster;
-					}
+				if (prev_cluster != job_id.cluster) {
+					ickpt_file_name =
+						gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
+					(void)unlink( ickpt_file_name );
+					prev_cluster = job_id.cluster;
 				}
 			}
 		}
