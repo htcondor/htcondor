@@ -347,7 +347,13 @@ int Sock::bindWithin(const int low_port, const int high_port)
 			dprintf(D_NETWORK, "Sock::bindWithin - bound to %d...\n", this_trial-1);
 			return TRUE;
 		} else {
+#ifdef WIN32
+			int error = WSAGetLastError();
+			dprintf(D_NETWORK, 
+				"Sock::bindWithin - failed to bind: WSAError = %d\n", error );
+#else
 			dprintf(D_NETWORK, "Sock::bindWithin - failed to bind: %s\n", strerror(errno));
+#endif
 		}
 
 		if ( this_trial > high_port )
@@ -384,26 +390,26 @@ int Sock::bind(int port)
 	// an arbitrary free port. /* 07/27/2000 - sschang */
 	int lowPort, highPort;
 	if ( port == 0 && get_port_range(&lowPort, &highPort) == TRUE ) {
-		if ( bindWithin(lowPort, highPort) == TRUE ) {
-			_state = sock_bound;
-			return TRUE;
-		} else return FALSE;
-	}
-	// end of insertion /* 07/27/2000 - sschang */
+			// Bind in a specific port range.
+		if ( bindWithin(lowPort, highPort) != TRUE ) {
+			return FALSE;
+		}
+	} else {
+			// Bind to a dynamic port.
+		memset(&sin, 0, sizeof(sockaddr_in));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = htonl(my_ip_addr());
+		sin.sin_port = htons((u_short)port);
 
-	memset(&sin, 0, sizeof(sockaddr_in));
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(my_ip_addr());
-	sin.sin_port = htons((u_short)port);
-
-	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
-#ifdef WIN32
-		int error = WSAGetLastError();
-		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
-#else
-		dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
-#endif
-		return FALSE;
+		if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
+	#ifdef WIN32
+			int error = WSAGetLastError();
+			dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
+	#else
+			dprintf(D_NETWORK, "bind failed errno = %d\n", errno);
+	#endif
+			return FALSE;
+		}
 	}
 
 	_state = sock_bound;
