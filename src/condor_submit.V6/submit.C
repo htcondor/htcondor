@@ -3315,7 +3315,7 @@ queue(int num)
 #endif
 			
 			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						   proxy_file);
+						   full_path(proxy_file));
 			InsertJobExpr(buffer);	
 			free( proxy_file );
 		}
