@@ -44,11 +44,15 @@ the soft links.  The links will point back to Top/src/... */
 #endif
 #define CrtLibPath concat5(GccPath,/lib/gcc-lib/,GccArch,/,GccVersion)
 
+/*
+Compiler needs -fPIC to create objects that can be used
+in a shared library, even if they are stored in an archive library.
+*/
 
 #if MALLOC_DEBUG
-#define CFlags				-DMALLOC_DEBUG
+#define CFlags -fPIC -DMALLOC_DEBUG
 #else
-#define CFlags				/**/
+#define CFlags -fPIC
 #endif
 
 #define CondorAdministrator	condor-admin

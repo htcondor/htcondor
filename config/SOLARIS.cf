@@ -32,10 +32,6 @@
 #define YpLib
 #endif
 
-#ifndef CFlags
-#define CFlags
-#endif
-
 #ifndef StaticFlag
 #define StaticFlag -static
 #endif
