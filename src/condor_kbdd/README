@@ -1,0 +1,73 @@
+Notes on condor_kbdd
+March 13, 1999
+Tom Stanis
+
+Overview:
+
+The purpose of the condor_kbdd is to monitor keyboard and mouse activity on
+a given machine's console.  The console is simply the physical mouse and
+keyboard attached to the named computer.  Xterms and remote X connections
+are not currently monitored.
+
+Periodiclly the condor_kbdd for user activitiy (the mouse moves, mouse's
+buttons go up or down, keys go up or down), if user activity is detect, it 
+sends a simple UDP packet to the condor_startd, notifing it that the 
+machine's idle time is now 0.  During normal use circumstances, this will
+result in 1 packet per interval time being sent to the startd if the machine
+is being used constantly.
+
+Mechanisms:
+
+On Unix, we accomplish the task of monitoring via two seperate tasks: first
+connecting to the display, and second, monitoring XEvents.
+
+In order to connect to the display, we must have permission to connect.  In
+condor environments where daemons are not running as root, this is 
+accomplished with a simpl XOpenDisplay().  This call may fail if the person
+logged into the machine has enabled security on the display, or if xdm is
+running.  If it fails, the condor_kbdd will be ineffectual.  To get around
+this problem, it is preferable to run the daemon as user root.  The daemon
+will then attempt to figure out who is logged in and masquered as this person
+in order to open the display.  This is accomplished by cycling through
+utmp entries and optional XAUTHORITY_USERS config param and setting the 
+XAUTHORITY environment variable.  See the methods XInterface::NextEntry(),
+XInterface::TryUser(), and XInterface::Connect() in XInterface.cpp for more 
+information.
+
+Once connected to the display, we walk the tree of windows, notifing
+X that we want to receive KeyPress events that are bound for this window.
+This code is in XInterface::SelectEvents().  The specifics of how this works
+are not well known as they were stolen from xautolock.
+
+Every poll interval, XInterface::CheckActivity() is called.  This function
+checks to see if any XEvents have come in that would indicate activity,
+and looks for new windows that may have been created.  New windows are
+setup for event catching.  In order to watch the state of the mouse, the
+condor_kbdd simply keeps the last coordinates of the mouse in memory and 
+every poll interval checks to see if the coordinates are different.  If they
+are, the mouse has obviously moved.  Although it may be possible to thwart
+this detection scheme, the probabilities are extrodinarily low.
+
+There are some race conditions that are introduced with a window popping up
+very quickly and being destroyed right away.  When this happends, we start
+to select events on the new window that has been destroyed and end up
+causing an X IO error.  This error is caught in CatchIOFalseAlarm().  
+Unfortunately, X assumes that the process wants to exit after an error, so
+it calls exit().  We don't want this, so we simply long jump back into our
+code.  Very messy.
+
+Finally, the daemon sends a command to the startd if there has been activity.
+The command is of type X_EVENT_NOTIFICATION.  There is no included data.
+
+Future work:
+
+Currently, we attempt to attach to display localhost:0.0.  This should be
+unix:0.0.   I see no reason why this shouldn't work, but I have no committed
+it as I have not had time to test it.
+
+The window race condition is really messy and needs a better solution.  Perhaps
+a c++ exception, or maybe something even more clean.
+
+It would be nice if the condor_kbdd monitored remote X connections as well.
+In have no plan of attack for this at this time.
+
