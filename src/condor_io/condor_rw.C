@@ -177,6 +177,8 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 
 	while( nw < sz ) {
 
+		needs_select = true;
+
 		if( timeout > 0 ) {
 			while( needs_select ) {
 				if( cur_time == 0 ) {
