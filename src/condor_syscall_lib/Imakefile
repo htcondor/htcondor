@@ -151,7 +151,7 @@ CKPT_OBJ = syscall_mode.o eprintf.o
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
-COMPRESS_OBJ = malloc.o zimage.o _rem.o
+COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
 #else
 COMPRESS_OBJ = malloc.o zimage.o
 #endif
