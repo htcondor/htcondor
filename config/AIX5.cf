@@ -17,9 +17,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#undef WANT_MAN_PAGES
-#define WANT_MAN_PAGES  NO
-
 #define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
