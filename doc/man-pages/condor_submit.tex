@@ -413,9 +413,10 @@ execution environment for jobs which have not been linked with the
 Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
 submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
 parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
-should act as a metascheduler. The \Arg{globus} universe translates the
-submit description file to a Globus RSL string and passes it to 
-the \Prog{globusrun} program for execution.  The \Arg{mpi} universe is
+should act as a metascheduler.
+The \Arg{globus} universe uses the Globus
+GRAM API to contact the Globus resource specifed and requests it run the job.
+The \Arg{mpi} universe is
 for running mpi jobs made with the MPICH package.
 See the Condor User's Manual for more information about using Universe.
 
@@ -719,6 +720,16 @@ queue
 
 \item[globusrsl = $<$RSL-string$>$] Used to provide any additional Globus RSL
 string attributes which are not covered by regular submit file parameters.
+
+%%%%%%%%%%%%%%%%%%%
+%% Transfer_Executable
+%%%%%%%%%%%%%%%%%%%
+
+\item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
+\Arg{false}, then Condor look for the executable on the remote machine, and
+not transfer it over. This is useful if you have already pre-staged your
+executable, and wish to have Condor behave more like rsh. Defaults to \Arg{True}.
+This option is only used in the Globus universe.
 
 %%%%%%%%%%%%%%%%%%%
 % +
