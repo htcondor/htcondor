@@ -38,6 +38,8 @@ void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
+void printNestNormal(ClassAd *);
+void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
 void printState			(ClassAd *);
@@ -94,6 +96,14 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_CKPT_SRVR_NORMAL:
 				printCkptSrvrNormal(ad);
+				break;
+
+			  case PP_NEST_NORMAL:
+				printNestNormal(ad);
+				break;
+
+			  case PP_ANY_NORMAL:
+				printAnyNormal(ad);
 				break;
 
 			  case PP_CUSTOM:
@@ -404,6 +414,63 @@ printCkptSrvrNormal(ClassAd *ad)
 		}
 	}
 
+	pm.display (stdout, ad);
+}
+
+
+void
+printNestNormal(ClassAd *ad)
+{
+	static bool first = true;
+	static AttrListPrintMask pm;
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-30.30s %-9.9s %-11.11s\n\n", ATTR_NAME,
+					"AvailDisk", ATTR_SUBNET);
+			pm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
+			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
+			pm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
+			first = false;
+		}
+	}
+
+	pm.display (stdout, ad);
+}
+
+/*
+We can't use the AttrListPrintMask here, because the AttrList does not actually contain the MyType and TargetType fields that we want to display.  These are actually contained in the ClassAd.
+*/
+
+void
+printAnyNormal(ClassAd *ad)
+{
+	static bool first = true;
+	char name[ATTRLIST_MAX_EXPRESSION];
+	char *my_type, *target_type;
+
+	if (ad)
+	{
+		if (first)
+		{		
+			printf ("\n%-20.20s %-20.20s %-30.30s\n\n", ATTR_MY_TYPE, ATTR_TARGET_TYPE, ATTR_NAME );
+			first = false;
+		}
+		if(!ad->LookupString(ATTR_NAME,name)) {
+			strcpy(name,"[???]");
+		}
+
+		my_type = ad->GetMyTypeName();
+		if(!my_type[0]) my_type = "None";
+
+		target_type = ad->GetTargetTypeName();
+		if(!target_type[0]) target_type = "None";
+
+		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
+	}
 	pm.display (stdout, ad);
 }
 
