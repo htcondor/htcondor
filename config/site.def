@@ -70,7 +70,7 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
-#define WANT_KERBEROS   YES
+#define WANT_KERBEROS  NO 
 
 /*------------------------------------------
  * Condor Credential API related
