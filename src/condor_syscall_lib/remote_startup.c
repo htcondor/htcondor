@@ -219,6 +219,7 @@ void set_iwd();
 int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
+extern volatile int InRestart;
 
 int
 #if defined(HPUX9)
@@ -341,6 +342,7 @@ MAIN( int argc, char *argv[], char **envp )
 	open_std_file( 1 );
 	open_std_file( 2 );
 
+	InRestart = FALSE;
 		/* Now start running user code */
 #if defined(HPUX9)
 	exit(_start( argc, argv, envp ));
