@@ -110,6 +110,8 @@ DCCollector::reconfig( void )
 		}
 	}
 
+	StringList tcp_collectors;
+
 	switch( up_type ) {
 	case TCP:
 		use_tcp = true;
@@ -118,7 +120,21 @@ DCCollector::reconfig( void )
 		use_tcp = false;
 		break;
 	case CONFIG:
+		tmp = param( "TCP_UPDATE_COLLECTORS" );
+		if( tmp ) {
+			tcp_collectors.initializeFromString( tmp );
+			free( tmp );
+ 			if( _full_hostname && 
+				tcp_collectors.contains_anycase_withwildcard(_full_hostname) )
+			{	
+				use_tcp = true;
+				break;
+			}
+		}
 		tmp = param( "UPDATE_COLLECTOR_WITH_TCP" );
+		if( ! tmp ) {
+			tmp = param( "UPDATE_COLLECTORS_WITH_TCP" );
+		}		
 		if( tmp ) {
 			if( tmp[0] == 't' || tmp[0] == 'T' || 
 				tmp[0] == 'y' || tmp[0] == 'Y' )
