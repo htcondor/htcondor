@@ -42,6 +42,8 @@ char* GahpClient::m_callback_contact = NULL;
 void* GahpClient::m_user_callback_arg = NULL;
 globus_gram_client_callback_func_t GahpClient::m_callback_func = NULL;
 int GahpClient::m_callback_reqid = 0;
+bool GahpClient::poll_pending = false;
+bool Gahp_Args::skip_next_r = false;
 HashTable<int,GahpClient*> * GahpClient::requestTable = NULL;
 
 
@@ -239,6 +241,26 @@ Gahp_Args::read_argv(int readfd)
 				strcpy(argv[iargv],buf);
 			}
 			argc = iargv + 1;
+
+			// We are all done and about to return.  But first,
+			// check for a single "R".  This means we should check
+			// for results in gahp async mode.  
+			if ( argv[0] && argv[0][0] == 'R' ) {
+				if ( skip_next_r ) {
+					// we should not poll this time --- apparently we saw
+					// this R come through via our pipe handler.
+					skip_next_r = false;
+				} else {
+					GahpClient::poll_real_soon();
+				}
+				// now reset all our buffers and read the next line
+				free_argv();
+				argv = (char**)calloc(argv_size, sizeof(char*));
+				ibuf = 0;
+				iargv = 0;
+				continue;	// go back to the top of the for loop
+			}
+
 			return argv;
 		}
 
@@ -304,6 +326,7 @@ bool
 GahpClient::Initialize(const char *proxy_path, const char *input_path)
 {
 	char *gahp_path = NULL;
+	char *gahp_args = NULL;
 	int stdin_pipefds[2];
 	int stdout_pipefds[2];
 
@@ -319,6 +342,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		gahp_path = strdup(input_path);
 	} else {
 		gahp_path = param("GAHP");
+		gahp_args = param("GAHP_ARGS");
 	}
 
 	if (!gahp_path) return false;
@@ -337,10 +361,13 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 
 		// Create two pairs of pipes which we will use to 
 		// communicate with the GAHP server.
-	if ( (pipe(stdin_pipefds) < 0) || (pipe(stdout_pipefds) < 0) ) {
+	if ( (daemonCore->Create_Pipe(stdin_pipefds) == FALSE) ||
+		 (daemonCore->Create_Pipe(stdout_pipefds) == FALSE) ) 
+	{
 		dprintf(D_ALWAYS,"GahpClient::Initialize - pipe() failed, errno=%d\n",
 			errno);
 		free( gahp_path );
+		if (gahp_args) free(gahp_args);
 		return false;
 	}
 
@@ -351,7 +378,7 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 
 	m_gahp_pid = daemonCore->Create_Process(
 			gahp_path,		// Name of executable
-			NULL,			// Args
+			gahp_args,		// Args
 			PRIV_UNKNOWN,	// Priv State ---- keep the same 
 			m_reaperid,		// id for our registered reaper
 			FALSE,			// do not want a command port
@@ -366,18 +393,20 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		dprintf(D_ALWAYS,"Failed to start GAHP server (%s)\n",
 				gahp_path);
 		free( gahp_path );
+		if (gahp_args) free(gahp_args);
 		return false;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
 	}
 
 	free( gahp_path );
+	if (gahp_args) free(gahp_args);
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
 		// we want to keep in an object data member.
-	close( io_redirect[0] );
-	close( io_redirect[1] );
+	daemonCore->Close_Pipe( io_redirect[0] );
+	daemonCore->Close_Pipe( io_redirect[1] );
 	m_gahp_readfd = stdout_pipefds[0];
 	m_gahp_writefd = stdin_pipefds[1];
 
@@ -400,10 +429,25 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 		return false;
 	}
 
-		// set poll timer unless ASYNC command supported
-		// if  m_commands_supported->contains_anycase("ASYNC" ....
-	setPollInterval(m_pollInterval);
-
+		// try to turn on gahp async notification mode
+	if  ( !command_async_mode_on() ) {
+		// not supported, set a poll interval
+		setPollInterval(m_pollInterval);
+	} else {
+		// command worked... register the pipe and stop polling
+		int result = daemonCore->Register_Pipe(m_gahp_readfd,
+			"m_gahp_readfd",(PipeHandler)&Gahp_Args::pipe_ready,
+			"&Gahp_Args::pipe_ready");
+		if ( result == -1 ) {
+			// failed to register the pipe for some reason; fall 
+			// back on polling (yuck).
+			setPollInterval(m_pollInterval);
+		} else {
+			// pipe all registered.  stop polling.
+			setPollInterval(0);
+		}
+	}
+		
 	return true;
 }
 
@@ -412,6 +456,7 @@ GahpClient::setPollInterval(unsigned int interval)
 {
 	if (poll_tid != -1) {
 		daemonCore->Cancel_Timer(poll_tid);
+		poll_tid = -1;
 	}
 	m_pollInterval = interval;
 	if ( m_pollInterval > 0 ) {
@@ -467,6 +512,30 @@ GahpClient::globus_gram_client_set_credentials(const char *proxy_path)
 	}
 }
 
+void
+GahpClient::poll_real_soon()
+{	
+	// Poll for results asap via a timer, unless a request
+	// to poll for resuts is already pending.
+	if (!poll_pending) {
+		int tid = daemonCore->Register_Timer(0,
+			(TimerHandler)&GahpClient::poll,
+			"GahpClient:poll from poll_real_soon");
+		if ( tid != -1 ) {
+			poll_pending = true;
+		}
+	}
+}
+
+
+int
+Gahp_Args::pipe_ready()
+{
+	skip_next_r = true;
+	GahpClient::poll_real_soon();
+	return TRUE;
+}
+
 
 bool
 GahpClient::command_initialize_from_file(const char *proxy_path,
@@ -492,6 +561,27 @@ GahpClient::command_initialize_from_file(const char *proxy_path,
 			reason = "Unspecified error";
 		}
 		dprintf(D_ALWAYS,"GAHP command '%s' failed: %s\n",command,reason);
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+GahpClient::command_async_mode_on()
+{
+	static const char* command = "ASYNC_MODE_ON";
+
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	write_line(command);
+	Gahp_Args result;
+	char **argv = result.read_argv(m_gahp_readfd);
+	if ( argv[0] == NULL || argv[0][0] != 'S' ) {
+		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
 		return false;
 	}
 
@@ -1194,6 +1284,8 @@ GahpClient::poll()
 	GahpClient* entry;
 	ExtArray<Gahp_Args*> result_lines;
 	
+	poll_pending = false;
+
 		// First, send the RESULTS comand to the gahp server
 	write_line("RESULTS");
 

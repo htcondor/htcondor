@@ -21,8 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef CONDOR_GLOBUS_HELPER_H
-#define CONDOR_GLOBUS_HELPER_H
+#ifndef CONDOR_GAHP_CLIENT_H
+#define CONDOR_GAHP_CLIENT_H
 
 #include "globus_utils.h"
 
@@ -34,6 +34,9 @@
 				void free_argv();
 				char **argv;
 				int argc;
+				static int pipe_ready();
+			private:
+				static bool skip_next_r;
 		};
 
 		class Gahp_Buf {
@@ -171,7 +174,8 @@ class GahpClient : public Service {
 			@see setPollInterval
 		*/
 		static unsigned int getPollInterval() { return m_pollInterval; }
-		
+
+		static void poll_real_soon();
 		//@}
 					
 
@@ -277,6 +281,7 @@ class GahpClient : public Service {
 		bool command_initialize_from_file(const char *proxy_path,
 			const char *command=NULL);
 		bool command_commands();
+		bool command_async_mode_on();
 
 			// Private Data Members
 		static unsigned int m_reference_count;
@@ -305,6 +310,7 @@ class GahpClient : public Service {
 		static void Reaper(Service*,int pid,int status);
 		static unsigned int m_pollInterval;
 		static int poll_tid;
+		static bool poll_pending;
 		static char* m_callback_contact;	
 		static void* m_user_callback_arg;
 		static globus_gram_client_callback_func_t m_callback_func;
@@ -313,4 +319,4 @@ class GahpClient : public Service {
 };	// end of class GahpClient
 
 	
-#endif /* ifndef CONDOR_GLOBUS_HELPER_H */
+#endif /* ifndef CONDOR_GAHP_CLIENT_H */
