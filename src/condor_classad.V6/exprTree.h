@@ -36,18 +36,6 @@ class Sink;
 // structures pertaining to the classad domain
 #include "domain.h"
 
-/// The kinds of nodes in expression trees 
-enum NodeKind 
-{
-	/** Literal node (string, integer, real, boolean, undefined, error) */
-																LITERAL_NODE,
-	/** Attribute reference node (attr, .attr, expr.attr) */	ATTRREF_NODE,
-	/** Expression operation node (unary, binary, ternary) */ 	OP_NODE,
-	/** Function call node */									FN_CALL_NODE,
-	/** ClassAd node */											CLASSAD_NODE,
-	/** Expression list node */									EXPR_LIST_NODE
-};
-
 class EvalState {
 	public:
 		EvalState( );
