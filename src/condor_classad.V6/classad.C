@@ -47,9 +47,7 @@ ClassAd ()
 {
 	nodeKind = CLASSAD_NODE;
 	EnableDirtyTracking();
-#ifdef ALLOW_CHAINING
 	chained_parent_ad = NULL;
-#endif
 }
 
 
@@ -59,9 +57,7 @@ ClassAd (const ClassAd &ad)
 	AttrList::const_iterator itr;
 
 	EnableDirtyTracking();
-#ifdef ALLOW_CHAINING
 	chained_parent_ad = NULL;
-#endif
 	nodeKind = CLASSAD_NODE;
 	parentScope = ad.parentScope;
 	
@@ -80,9 +76,7 @@ CopyFrom( const ClassAd &ad )
 	Clear( );
 	nodeKind = CLASSAD_NODE;
 	parentScope = ad.parentScope;
-#ifdef ALLOW_CHAINING
 	chained_parent_ad = ad.chained_parent_ad;
-#endif
 	
 	DisableDirtyTracking();
 	for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
@@ -301,13 +295,9 @@ Lookup( const string &name ) const
 	itr = attrList.find( name );
 	if (itr != attrList.end()) {
 		tree = itr->second;
-	} 
-#ifdef ALLOW_CHAINING
-	else if (chained_parent_ad != NULL) {
+	} else if (chained_parent_ad != NULL) {
 		tree = chained_parent_ad->Lookup(name);
-	} 
-#endif
-    else {
+	} else {
 		tree = NULL;
 	}
 	return tree;
@@ -397,7 +387,6 @@ Delete( const string &name )
 		attrList.erase( itr );
 		deleted_attribute = true;
 	}
-#ifdef ALLOW_CHAINING
 	// If the attribute is in the chained parent, we delete define it
 	// here as undefined, whether or not it was defined here.  This is
 	// behavior copied from old ClassAds. It's also one reason you
@@ -410,7 +399,6 @@ Delete( const string &name )
 		deleted_attribute = true;
 		Insert(name, Literal::MakeLiteral(undefined_value));
 	}
-#endif
 
 	if (!deleted_attribute) {
 		CondorErrno = ERR_MISSING_ATTRIBUTE;
@@ -445,7 +433,6 @@ Remove( const string &name )
 		tree->SetParentScope( NULL );
 	}
 
-#ifdef ALLOW_CHAINING
 	// If the attribute is in the chained parent, we delete define it
 	// here as undefined, whether or not it was defined here.  This is
 	// behavior copied from old ClassAds. It's also one reason you
@@ -461,7 +448,6 @@ Remove( const string &name )
 		undefined_value.SetUndefinedValue();
 		Insert(name, Literal::MakeLiteral(undefined_value));
 	}
-#endif
 	return tree;
 }
 
@@ -586,9 +572,7 @@ Copy( ) const
 	if( !newAd ) return NULL;
 	newAd->nodeKind = CLASSAD_NODE;
 	newAd->parentScope = parentScope;
-#ifdef ALLOW_CHAINING
 	newAd->chained_parent_ad = chained_parent_ad;
-#endif
 
 	newAd->DisableDirtyTracking();
 
@@ -1355,7 +1339,6 @@ isValidIdentifier( const string &str )
 	return( *ch == '\0' );
 }
 
-#ifdef ALLOW_CHAINING
 void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)
 {
 	if (new_chain_parent_ad != NULL) {
@@ -1369,7 +1352,6 @@ void ClassAd::Unchain(void)
 	chained_parent_ad = NULL;
 	return;
 }
-#endif
 
 void ClassAd::ClearAllDirtyFlags(void)
 { 

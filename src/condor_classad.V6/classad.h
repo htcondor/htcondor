@@ -36,7 +36,7 @@ BEGIN_NAMESPACE( classad )
 #include "rectangle.h"
 #endif
 
-#if defined( CLASSAD_DEPRECATED )
+#ifdef CLASSAD_DEPRECATED
 #include "stream.h"
 #endif
 
@@ -505,10 +505,8 @@ e		*/
 		
 #endif
 
-#ifdef ALLOW_CHAINING
 	    void		ChainToAd(ClassAd *new_chain_parent_ad);
 		void		Unchain(void);
-#endif
 
 		void        EnableDirtyTracking(void)  { do_dirty_tracking = true;  }
 		void        DisableDirtyTracking(void) { do_dirty_tracking = false; }
@@ -556,9 +554,7 @@ e		*/
 		AttrList	  attrList;
 		DirtyAttrList dirtyAttrList;
 		bool          do_dirty_tracking;
-#ifdef ALLOW_CHAINING
-		ClassAd     *chained_parent_ad;
-#endif
+		ClassAd       *chained_parent_ad;
 };
 
 std::ostream& operator<<(std::ostream &os, ClassAd &ad);
