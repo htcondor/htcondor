@@ -60,7 +60,7 @@
 		globus starter.V6.1 shadow.V6.1
 
 #define Libraries \
-		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
+		util_lib c++_util procapi sysapi io classad.V6 daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
 		ckpt syscall_lib
@@ -226,7 +226,7 @@ object_target(submit.V6)
 object_target(ckpt)
 object_target(syscall_lib)
 object_target(io)
-object_target(classad)
+object_target(classad.V6)
 object_target(daemon_core.V6)
 #if WANT_PVM && HAS_PVM
    object_target(starter.jim)
