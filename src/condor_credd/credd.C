@@ -707,9 +707,9 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   strBuff="X509_USER_PROXY=";
   strBuff+=proxy->GetStorageName();
   myEnv.Put (strBuff.Value());
-  char *env_string = myEnv.getDelimitedString();	// return string from "new"
   dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
 
+  char *env_string = myEnv.getDelimitedString();	// return string from "new"
 
   // Get password (this will end up in stdin for myproxy-get-delegation)
   const char * myproxy_password =((X509Credential*)proxy->cred)->GetRefreshPassword();
@@ -821,17 +821,18 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   dprintf (D_ALWAYS, "Calling %s %s\n", myproxy_get_delegation_pgm, strArgs.Value());
 
   int pid = daemonCore->Create_Process (
-					myproxy_get_delegation_pgm,
-					strArgs.Value(),
-					PRIV_USER_FINAL,
-					myproxyGetDelegationReaperId,
-					FALSE,
-					env_string,
-					NULL,	// cwd
-					FALSE, // new proc group
-					NULL,  // socket inherit
-					arrIO); // in/out/err streams
-
+					myproxy_get_delegation_pgm,		// name
+					strArgs.Value(),				// args
+					PRIV_USER_FINAL,				// priv
+					myproxyGetDelegationReaperId,	// reaper_id
+					FALSE,							// want_command_port
+					env_string,						// env
+					NULL,							// cwd		
+					FALSE,							// new_process_group
+					NULL,							// sock_inherit_list
+					arrIO);							// in/out/err streams
+  													// nice_inc
+													// job_opt_mask
   free (myproxy_get_delegation_pgm);
   myproxy_get_delegation_pgm = NULL;
 
