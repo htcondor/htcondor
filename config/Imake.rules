@@ -565,3 +565,18 @@ clean::								@@\
 	rm -rf compiler						
 #endif
 
+#ifndef F_COMPILER_TARGET
+#define F_COMPILER_TARGET(compiler)			@@\
+all:: compiler						@@\
+							@@\
+all::							@@\
+	cd compiler; $(MAKE)				@@\
+							@@\
+compiler##:						@@\
+	mkdir compiler					@@\
+	cd compiler; ln -s ../FImakefile Imakefile	@@\
+	cd compiler; imake IMAKE_FLAGS -I../../../config -DF_COMPILER=##compiler @@\
+							@@\
+clean::							@@\
+	rm -rf compiler					
+#endif
