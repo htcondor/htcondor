@@ -14,18 +14,7 @@ enum AdTypes
     NUM_AD_TYPES
 };
 
-// collector commands
-const int UPDATE_STARTD_AD       = 0;
-const int UPDATE_SCHEDD_AD       = 1;
-const int UPDATE_MASTER_AD       = 2;
-const int UPDATE_GATEWAY_AD      = 3;
-const int UPDATE_CKPT_SRVR_AD  = 4;
-
-const int QUERY_STARTD_ADS       = 5;
-const int QUERY_SCHEDD_ADS       = 6;
-const int QUERY_MASTER_ADS       = 7;
-const int QUERY_GATEWAY_ADS      = 8;
-const int QUERY_CKPT_SRVR_ADS  = 9;
+#include "condor_commands.h"   // collector commands
 
 #endif // __COLLECTOR_H__
 
