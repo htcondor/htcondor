@@ -138,10 +138,14 @@ CMNT
 STARTER				= $(BIN)/condor_starter
 ALTERNATE_STARTER_0	= $(BIN)/condor_starter.pvm.mike
 ALTERNATE_STARTER_1	= $(BIN)/condor_starter.jim
-ALTERNATE_STARTER_2 = $(BIN)/condor_starter.V5.mike
+ALTERNATE_STARTER_2 = $(BIN)/condor_starter.V5
 STARTER_DEBUG		= D_NODATE
 MIN_CKPT_INTERVAL	= 1800
 MAX_CKPT_INTERVAL	= 7200
+
+CMNT CKPT_TIMEOUT is how long we have to checkpoint after a vacate request
+
+CKPT_TIMEOUT		= 300
 STARTER_LOG         = $(LOG)/StarterLog
 MAX_STARTER_LOG     = 64000
 STARTER_LOCAL_LOGGING = TRUE
