@@ -291,6 +291,9 @@ sysapi_translate_opsys( char *sysname, char *release )
 		if( !strcmp(release, "B.10.20") ) {
 			sprintf( tmp, "HPUX10" );
 		} 
+		else if( !strcmp(release, "B.11.00") ) {
+			sprintf( tmp, "HPUX11" );
+		} 
 		else {
 			sprintf( tmp, "HPUX%s", release );
 		}
@@ -398,6 +401,8 @@ get_hpux_arch( struct utsname *buf )
 		if( !tmparch ) {
 			EXCEPT( "Out of memory!" );
 		}
+	} else {
+		tmparch = strdup("Unknown");
 	}
 	return tmparch;
 }
