@@ -2674,6 +2674,15 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 
 	for(;;) {
         if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
+			if( errno == EINTR ) {
+					// Even though we're not supposed to be getting
+					// any signals inside DaemonCore methods,
+					// sometimes we get EINTR here.  In this case, we
+					// want to re-do the waitpid(), not break out of
+					// the loop, to make sure we're not leaving any
+					// zombies lying around.  -Derek Wright 2/26/99
+				continue;
+			}
 #if defined( GLIBC ) && defined( LINUX )
 				// For some weird reason, on GLIBC-LINUX, we get
 				// EAGAIN when there's nothing left to reap.
