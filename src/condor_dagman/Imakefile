@@ -28,11 +28,11 @@ pure_c_plus_target(condor_dagman.pure,$(OBJ),$(LIB))
 depend_target($(SRC) $(LIB))
 
 release_target(condor_dagman,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target(condor_dagman,$(STRIP_CONTRIB)/bin,EXECUTABLE_MODE)
-static_target(condor_dagman,$(OBJ),$(LIB),$(STATIC_CONTRIB)/bin)
+strip_target(condor_dagman,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_dagman,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
 
 release_target(condor_submit_dag,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_copy_target(condor_submit_dag,$(STRIP_CONTRIB)/bin, \
+strip_copy_target(condor_submit_dag,$(STRIP_DIR)/bin, \
 		condor_submit_dag,EXECUTABLE_MODE)
-static_copy_target(condor_submit_dag,$(STATIC_CONTRIB)/bin, \
+static_copy_target(condor_submit_dag,$(STATIC_DIR)/bin, \
 		condor_submit_dag,EXECUTABLE_MODE)
