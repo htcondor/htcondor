@@ -14,6 +14,10 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o
 
+#if HAS_OPENSSL
+DH_OBJ = condor_dh.o
+#endif
+
 CONLIBAPI_OBJ = $(API_OBJ) \
 	file_lock.o \
 	../condor_util_lib/dprintf_common.o \
@@ -32,7 +36,7 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	my_distribution.o \
 	libcondorapi_stubs.o \
 	strnewp.o \
-	condor_dh.o
+	$(DH_OBJ)
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
 	dc_schedd.o
@@ -56,7 +60,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
-	RegExer.o my_distribution.o condor_dh.o
+	RegExer.o my_distribution.o $(DH_OBJ)
 
 
 library_target( cplus_lib.a,$(OBJ))
