@@ -2674,18 +2674,6 @@ int DaemonCore::Create_Process(
 			exit(1); // Yes, we really want to exit here.
 		}
 
-#if defined( Solaris26 ) && defined( sun4m )  // if we're blackbird...:-)
-			/* The following will allow purify to pop up windows 
-			   for all daemons created with Create_Process().  The
-			   -program-name is so purify can find the executable, the
-			   display should point to your machine!
-			*/
-		char purebuf[256];
-		sprintf ( purebuf, "-program-name=%s\0", name );
-		SetEnv( "PUREOPTIONS", purebuf );
-		SetEnv( "DISPLAY", "antipholus:0.0" ); // change to your machine!
-#endif
-
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
 
 			// now head into the proper priv state...
