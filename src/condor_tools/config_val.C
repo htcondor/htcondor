@@ -36,11 +36,8 @@
 *
 ***********************************************************************/
 
-
-#include <stdio.h>
-#include "expr.h"
-
-char	*param(), *strdup();
+#include "condor_common.h"
+#include "condor_config.h"
 
 char	*MyName;
 
@@ -50,9 +47,7 @@ usage()
 	exit( 1 );
 }
 
-main( argc, argv )
-int		argc;
-char	*argv[];
+main( int argc, char* argv[] )
 {
 	char *value;
 	char	*tmp;
@@ -86,8 +81,3 @@ char	*argv[];
 	exit( 0 );
 }
 
-SetSyscalls( foo )
-int		foo;
-{
-	return foo;
-}
