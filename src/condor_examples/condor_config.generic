@@ -85,10 +85,38 @@ FILESYSTEM_DOMAIN	= your.domain
 ##--------------------------------------------------------------------
 ##  Flocking: Submitting jobs to more than one pool
 ##--------------------------------------------------------------------
-##  If you would like to run your jobs in other pools, add the central
-##  manager hosts for those pools here.  You must also add
-##  $(FLOCK_HOSTS) to HOSTALLOW_NEGOTIATOR_SCHEDD below.
-#FLOCK_HOSTS = condor.friendly.domain, condor.cs.wisc.edu
+##  Flocking allows you to run your jobs in other pools.  To enable
+##  flocking, you must define FLOCK_NEGOTIATOR_HOSTS and
+##  FLOCK_COLLECTOR_HOSTS.  You may also optionally define
+##  FLOCK_VIEW_SERVERS.
+  
+##  FLOCK_NEGOTIATOR_HOSTS should contain a list of hostnames of the
+##  negotiators in the pools to which you want your jobs to flock (not
+##  including the NEGOTIATOR_HOST machine.  You must also add
+##  $(FLOCK_NEGOTIATOR_HOSTS) to HOSTALLOW_NEGOTIATOR_SCHEDD below.
+#FLOCK_NEGOTIATOR_HOSTS = condor.cs.wisc.edu, condor-negotiator.friendly.domain
+
+##  FLOCK_COLLECTOR_HOSTS should contain a list of hostnames of the
+##  collectors in the pools to which you want your jobs to flock.  The
+##  collectors must be specified in order, corresponding to the
+##  FLOCK_NEGOTIATOR_HOSTS list.  In the typical case, where each pool
+##  has the collector and negotiator running on the same machine,
+##  FLOCK_COLLECTOR_HOSTS should have the same definition as
+##  FLOCK_NEGOTIATOR_HOSTS.
+#FLOCK_COLLECTOR_HOSTS = $(FLOCK_NEGOTIATOR_HOSTS)
+#FLOCK_COLLECTOR_HOSTS = condor.cs.wisc.edu, condor-collector.friendly.domain
+
+##  FLOCK_VIEW_SERVERS should contain a list of hostnames where the
+##  condor-view server is running in the pools to which you want your
+##  jobs to flock.  The order of this list must correspond to the
+##  order of the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS
+##  lists.  List items may be empty for pools which don't use a
+##  separate condor-view server.  FLOCK_VIEW_SERVER may be left
+##  undefined if no remote pools use separate condor-view servers.
+##  Note: It is required that the same hostname does not appear twice
+##  in the FLOCK_VIEW_SERVERS list and that the CONDOR_VIEW_HOST does
+##  not appear in the FLOCK_VIEW_SERVERS list.
+#FLOCK_VIEW_SERVERS = condor-view.cs.wisc.edu, , condor-view.friendly.domain
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
@@ -136,7 +164,7 @@ HOSTALLOW_OWNER = $(FULL_HOSTNAME), $(HOSTALLOW_ADMINISTRATOR)
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.
 HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
-#HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_HOSTS)
+#HOSTALLOW_NEGOTIATOR_SCHEDD = $(NEGOTIATOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
 
 ##--------------------------------------------------------------------
 ##  Network filesystem parameters:
