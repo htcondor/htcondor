@@ -840,7 +840,7 @@ format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 	host[i] = '\0';
 
 		// B.  Get the JOBMANAGER part
-	if ( jm = ) {
+	if ( jm ) {
 		i = 0;
 		while( *jm != ':' && i < sizeof(jobManager)-1 ) {
 				// make sure we don't overrun the end of the string
