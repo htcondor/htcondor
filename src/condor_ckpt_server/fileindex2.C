@@ -27,9 +27,9 @@ FileIndex::~FileIndex()
 int FileIndex::Hash(struct in_addr machine_IP)
 {
   int   val;
-  char* c_ptr;
+  unsigned char* c_ptr;
 
-  c_ptr = (char*) &machine_IP.s_addr;
+  c_ptr = (unsigned char*) &machine_IP.s_addr;
   val = *c_ptr + *(c_ptr+1) + *(c_ptr+2) + *(c_ptr+3);
   return val%MAX_HASH_SIZE;
 }
