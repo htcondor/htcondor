@@ -1,24 +1,11 @@
-#if !defined(OSF1) || defined(__GNUC__)
-#	define _POSIX_SOURCE
-#endif
-
 #if defined(Solaris)
-#	include "_condor_fix_types.h"
-#       include <sys/statfs.h>
-#	include <nfs/nfs.h>	/* for fhandle_t */
-#endif
-
-#if defined(HPUX9) || defined(Solaris)
-#	define sync		__hide_sync
+#	include <nfs/nfs.h>     /* for fhandle_t */
+/* b/c of a system header that this includes which defines MIN(), we
+   want to include it before condor_common.h, so we don't redefine it */
 #endif
 
 #include "condor_common.h"
 #include "condor_classad.h"
-
-#if	defined(HPUX9) || defined(Solaris)
-#	undef sync
-#endif
-
 #include "condor_debug.h"
 #include "condor_rsc.h"
 #include "condor_io.h"
@@ -28,31 +15,7 @@
 #include "startup.h"
 #include "pseudo_ops.h"
 
-#if defined(OSF1) && defined(__GNUC__ )
-#	include "condor_fdset.h"
-#endif
-
 #define MODE_T unsigned int	/* use 32 bits on all platforms */
-
-#include <sys/stat.h>
-#include "_condor_fix_resource.h"
-#include <sys/utsname.h>
-
-#if defined(SUNOS41)
-#	include "condor_fdset.h"
-#endif
-
-#if defined(ULTRIX42) || defined(OSF1)
-#	include <sys/param.h>
-#	include <sys/mount.h>
-#elif defined(ULTRIX43)
-#   include <errno.h>
-#	include <sys/param.h>
-#	include "condor_fix_timeval.h"
-#   include <nfs/nfs.h>
-#else 
-#	include <sys/mount.h>
-#endif
 
 #if defined(HPUX9)
 #   include <time.h>
@@ -70,6 +33,7 @@
 #	include <sys/file.h>  /* for flock() */
 #	include <linux/nfs.h>
 #	include <linux/ipc.h>
+#	include <dirent.h>
 	typedef struct fhandle fhandle_t;
 #endif
 
