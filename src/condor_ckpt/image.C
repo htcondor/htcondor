@@ -397,7 +397,6 @@ _condor_prestart( int syscall_mode )
 		// Install initial signal handlers
 	_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
 	_install_signal_handler( SIGUSR2, (SIG_HANDLER)Checkpoint );
-	_install_signal_handler( SIGUSR1, (SIG_HANDLER)Suicide );
 
 	calc_stack_to_save();
 
@@ -1466,22 +1465,36 @@ Checkpoint( int sig, int code, void *scp )
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
 
-		// We don't want to be interrupted by a signal during the
-		// checkpoint operation.
-	sigset_t omask = condor_block_signals();
+	/***** WARNING!!! DON'T PUT ANY CODE HERE!!  Read the below
+	 * comments carefully.  Then put new code down below after
+	 * we check the InRestart flag and after we call condor_block_signals().
+	*/
 
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
-		// WARNING: This test should be done before any other code in
+		// *** WARNING: This test should be done before any other code in
 		// the signal handler.
 	if( InRestart ) {
 		if ( sig == SIGTSTP )
 			Suicide();		// if we're supposed to vacate, kill ourselves
 		else {
-			condor_restore_sigmask(omask);
 			return;			// if periodic ckpt or we're currently ckpting
 		}
 	}
+		
+		// We don't want to be interrupted by a signal during the
+		// checkpoint operation.
+		// NOTE: We *must* do this _before_ we set the InRestart flag
+		// to true.
+		// NOTE: We first check InRestart and call Suicide() if InRestart is
+		// true *before* we call condor_block_signals().  Why?  because we have
+		// been very careful to make certain that Suicide() is 
+		// fully self-contained.
+		// But condor_block_signals() could call library functions which may not
+		// yet be mapped in if we received the checkpoint signal during restart.
+		// -Todd, 12/99
+	sigset_t omask = condor_block_signals();
+
 	InRestart = TRUE;	// not strictly true, but needed in our saved data
 	check_sig = sig;
 
@@ -1640,6 +1653,31 @@ Checkpoint( int sig, int code, void *scp )
 		condor_restore_sigstates();
 		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
+
+		// Here we check if we received checkpoint&exit signal
+		// while all this was going on.  
+		SetSyscalls(SYS_LOCAL | SYS_UNRECORDED);
+		sigset_t pending_sig_set;
+		sigpending( &pending_sig_set );
+		if ( sigismember(&pending_sig_set,SIGTSTP) ) {
+			dprintf(D_ALWAYS,
+				"Received a SIGTSTP while checkpointing or restarting.\n");
+			if ( do_full_restart ) {
+				// Here we were restarting, and while our checkpoint
+				// signal was perhaps blocked we were asked to checkpoint
+				// and exit.
+				// May as well do a suicide.
+				Suicide();
+			} else {
+				// Here we just completed a periodic checkpoint, and
+				// while our checkpoint signal was blocked we received
+				// a checkpoint and exit.  Since we just finished 
+				// writing out a checkpoint, we may as well exit with
+				// SIGUSR2 which tells the starter we exited OK after
+				// a checkpoint.
+				terminate_with_sig(SIGUSR2);
+			}
+		}
 
 		_condor_numrestarts++;
 		SetSyscalls( scm );
@@ -1810,9 +1848,18 @@ terminate_with_sig( int sig )
 
 		// Wait to die... and mask all sigs except the one to kill us; this
 		// way a user's sig won't sneak in on us - Todd 12/94
-	sigfillset( &mask );
-	sigdelset( &mask, sig );
-	sigsuspend( &mask );
+		// If sig is SIGKILL, we just busy loop since the sig will be SIGKILL
+		// if we are called from Suicide(), and Suicide() could be called
+		// from inside our restart code before sigfillset(), sigsuspend(), etc,
+		// have been mapped to anything (thus we'd exit with a SEGV instead). 
+		// -Todd 12/99, "5 yrs later I'm still messing with this f(*ing code!"
+	if( sig != SIGKILL && sig != SIGSTOP ) {
+		sigfillset( &mask );
+		sigdelset( &mask, sig );
+		sigsuspend( &mask );
+	} else {
+		while(1);
+	}
 
 		// Should never get here
 	EXCEPT( "Should never get here" );
