@@ -2163,6 +2163,8 @@ DedicatedScheduler::computeSchedule( void )
 				// safely delete the list.
 			delete candidates;
 			candidates = NULL;
+
+				// Go onto the next job.
 			continue;
 		}
 
@@ -2199,13 +2201,26 @@ DedicatedScheduler::computeSchedule( void )
 			if( ! unclaimed_resources->satisfyJob(job,
 												  unclaimed_needed, 
 												  un_candidates) ) {
-					// Couldn't satisfy it at all.  Give up and move
-					// on to the next job.
+					// Couldn't satisfy it at all.
 				delete un_candidates;
 				un_candidates = NULL;
 				delete candidates;
 				candidates = NULL;
-				continue;
+
+					// See if it'd be possible to ever service this
+					// job, and if so, stop scheduling.
+				if( isPossibleToSatisfy(job, max_hosts) ) {
+						// Yes, we could run it.  Stop here.
+					dprintf( D_FULLDEBUG, "Could satisfy job %d in the "
+							 "future.  Done computing schedule\n",
+							 cluster );
+					return true;
+				} else {
+					dprintf( D_FULLDEBUG, "Can't satisfy job %d with "
+							 "all possible resources... trying next job\n", 
+							 cluster );
+					continue;
+				}
 			}
 
 				// Cool, we could run it if we requested more
@@ -2268,22 +2283,34 @@ DedicatedScheduler::computeSchedule( void )
 
 				// Go onto the next job
 			continue;
-		} else {
-			dprintf( D_FULLDEBUG, "Have NO unclaimed resources\n" );
 		}
-		
-			// For now, just give up on this job, delete the
-			// candidates (since there weren't enough to satisfy the
-			// job and we therefore can't use them), and try to
-			// schedule another.
-			// NOTE: This algorithm can lead to starvation of large
-			// jobs in the face of lots of small jobs.
 
-			// TODO: Try to schedule the job in the future, so we
-			// avoid starvation, and don't schedule resources now that
-			// will be needed later for this job.
+			// These candidates are now useless to us.  Clean them out
+			// so we don't leak memory.
 		delete candidates;
-		candidates = NULL;
+		candidates = NULL;		
+
+			// Ok, we're in pretty bad shape.  We've got nothing
+			// available now, and we've got nothing unclaimed.  Do a
+			// final check to see if we could *ever* schedule this
+			// job, given all the dedicated resources we know about.
+			// If not, give up on it (for now), and move onto other
+			// jobs.  That way, we don't starve jobs that could run,
+			// just b/c someone messed up and submitted a job that's
+			// too big to run.  However, if we *could* schedule this
+			// job in the future, stop here, and stick to strict FIFO,
+			// so that we don't starve the big job at the front of the
+			// queue.  
+		if( isPossibleToSatisfy(job, max_hosts) ) {
+				// Yes, we could run it.  Stop here.
+			dprintf( D_FULLDEBUG, "Could satisfy job %d in the future, "
+					 "done computing schedule\n", cluster );
+			return true;
+		} else {
+			dprintf( D_FULLDEBUG, "Can't satisfy job %d with all possible "
+					 "resources... trying next job\n", cluster );
+			continue;
+		}
 	}
 	return true;
 }	
@@ -2856,6 +2883,36 @@ DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
 	return mrec;
 }
 
+
+bool
+DedicatedScheduler::isPossibleToSatisfy( ClassAd* job, int max_hosts ) 
+{
+	ClassAd* candidate;
+	int req;
+	
+	dprintf( D_FULLDEBUG, 
+			 "Trying to satisfy job with all possible resources\n" );
+
+	resources->Rewind();
+	int num_matches = 0;
+    while( (candidate = resources->Next()) ) {
+			// Make sure the job requirements are satisfied with this
+			// resource.
+		if( job->EvalBool(ATTR_REQUIREMENTS, candidate, req) == 0 ) { 
+				// If it's undefined, treat it as false.
+			req = 0;
+		}
+		if( req ) {
+			num_matches++;
+		}
+		if( num_matches == max_hosts ) {
+				// We've found all we need for this job
+			return true;
+		}
+	}
+	return false;
+}
+ 
 
 //////////////////////////////////////////////////////////////
 //  Utility functions
