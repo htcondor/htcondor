@@ -66,7 +66,7 @@ va_dcl
 
 	fmt = va_arg(pvar, char *);
 
-#if vax || i386 || bobcat || ibm032
+#if vax || (i386 && !LINUX) || bobcat || ibm032
 	{
 		FILE _strbuf;
 		int *argaddr = &va_arg(pvar, int);
@@ -77,9 +77,9 @@ va_dcl
 		_doprnt( fmt, argaddr, &_strbuf );
 		putc('\0', &_strbuf);
 	}
-#else vax || i386 || bobcat || ibm032
+#else vax || (i386 && !LINUX) || bobcat || ibm032
 	vsprintf( buf, fmt, pvar );
-#endif vax || i386 || bobcat || ibm032
+#endif vax || (i386 && !LINUX) || bobcat || ibm032
 
 	if( _EXCEPT_Errno < 0 ) {
 		_EXCEPT_Errno = -_EXCEPT_Errno;
