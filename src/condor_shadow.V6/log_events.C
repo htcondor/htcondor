@@ -275,12 +275,14 @@ log_except (char *msg)
 	// we want to log the events from the perspective of the
 	// user job, so if the shadow *sent* the bytes, then that
 	// means the user job *received* the bytes
+
 	event.recvd_bytes = BytesSent;
 	event.sent_bytes = BytesRecvd;
 	if (syscall_sock) {
 		event.recvd_bytes += syscall_sock->get_bytes_sent();
 		event.sent_bytes += syscall_sock->get_bytes_recvd();
 	}
+
 	if (!ULog.writeEvent (&event))
 	{
 		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");

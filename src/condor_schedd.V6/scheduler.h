@@ -20,14 +20,14 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////
 //
 // condor_sched.h
 //
 // Define class Scheduler. This class does local scheduling and then negotiates
 // with the central manager to obtain resources for jobs.
 //
-////////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////
 
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
@@ -46,7 +46,7 @@
 
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
-
+const   int         STARTD_CONTACT_TIMEOUT = 45;
 
 extern	char**		environ;
 
@@ -81,11 +81,20 @@ struct match_rec
 	int				num_exceptions;
 };
 
-enum
-{
+enum MrecStatus {
     M_ACTIVE,
     M_INACTIVE,
-    M_DELETED
+    M_DELETED,
+	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
+	M_DELETE_PENDING         // is set if we should delete, but in above state
+};
+
+// These are the args to contactStartd that get stored in the queue.
+struct contactStartdArgs {
+	char *capability;
+	char *owner;
+	char *host;
+	PROC_ID id;
 };
 
 class Scheduler : public Service
@@ -178,6 +187,16 @@ class Scheduler : public Service
 	int				StartJobTimer;
 	int				timeoutid;		// daemoncore timer id for timeout()
 	int				startjobsid;	// daemoncore timer id for StartJobs()
+
+	int             startJobsDelayBit;  // for delay when starting jobs.
+
+		// used so that we don't register too many Sockets at once & fd panic
+	int             numRegContacts;  
+		// Here we enqueue calls to 'contactStartd' when we can't just 
+		// call it any more.  See contactStartd and the call to it...
+	Queue<contactStartdArgs*> startdContactQueue;
+	int             checkContactQueue();
+	int             MAX_STARTD_CONTACTS;
 	
 	// useful names
 	char*			CondorViewHost;
@@ -210,7 +229,30 @@ class Scheduler : public Service
 	void			child_exit(int, int);
 	void			clean_shadow_recs();
 	void			preempt(int);
-	int				permission(char*, char*, char*, PROC_ID*);
+
+		/** We add a match record (AddMrec), then open a ReliSock to the
+			startd.  We push the capability and the jobAd, then register
+			the Socket with startdContactSockHandler and put the new mrec
+			into the daemonCore data pointer.  
+			@param capability AKA id, this identifies the mrec
+			@param user The submitting "owner@uiddomain"
+			@param server The startd to contact
+			@param jobId Put in the mrec and used to get the jobAd
+			@return 0 on failure and 1 on success
+		 */
+	int		 		contactStartd(char *capability , char *user, 
+								  char *server, PROC_ID *jobId   );
+
+		/** Registered in contactStartd, this function is called when
+			the startd replies to our request.  If it replies in the 
+			positive, the mrec->status is set to M_ACTIVE, else the 
+			mrec gets deleted.  The 'sock' is de-registered and deleted
+			before this function returns.
+			@param sock The sock with the startd's reply.
+			@return FALSE on denial/problems, TRUE on success
+		*/
+	int             startdContactSockHandler( Stream *sock );
+
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 	shadow_rec*		start_std(match_rec*, PROC_ID*);
 	shadow_rec*		start_pvm(match_rec*, PROC_ID*);

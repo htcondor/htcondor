@@ -599,6 +599,8 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 
 	// Make certain that entry i is empty.
 	if ( (*sockTable)[i].iosock ) {
+        dprintf ( D_ALWAYS, "Socket table fubar.  nSock = %d\n", nSock );
+        DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
@@ -670,7 +672,9 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	}
 
 	if ( i == -1 ) {
-		dprintf(D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
+		dprintf( D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
+		dprintf( D_ALWAYS,"Offending socket number %d\n", i ); 
+		DumpSocketTable( D_DAEMONCORE );
 		return FALSE;
 	}
 
@@ -683,7 +687,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 		curr_dataptr = NULL;
 
 	// Log a message
-	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s>\n",i,(*sockTable)[i].iosock_descrip);
+	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %x\n",
+			i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
 	
 	// Remove entry, move the last one in the list into this spot
 	(*sockTable)[i].iosock = NULL;
@@ -691,7 +696,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	(*sockTable)[i].iosock_descrip = NULL;
 	free_descrip( (*sockTable)[i].handler_descrip );
 	(*sockTable)[i].handler_descrip = NULL;
-	if ( i < nSock - 1 ) {	// if not the last entry in the table, move the last one here
+	if ( i < nSock - 1 ) {	
+            // if not the last entry in the table, move the last one here
 		(*sockTable)[i] = (*sockTable)[nSock - 1];
 		(*sockTable)[nSock - 1].iosock = NULL;
 		(*sockTable)[nSock - 1].iosock_descrip = NULL;
@@ -932,7 +938,8 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 				descrip1 = (*sockTable)[i].iosock_descrip;
 			if ( (*sockTable)[i].handler_descrip )
 				descrip2 = (*sockTable)[i].handler_descrip;
-			dprintf(flag, "%s%d: %s %s\n", indent, i, descrip1, descrip2);
+			dprintf(flag, "%s%d: %s %s\n", 
+					indent, i, descrip1, descrip2 );
 		}
 	}
 	dprintf(flag, "\n");
@@ -2202,7 +2209,7 @@ DCFindWindow(HWND hWnd, LPARAM p)
 }
 #endif	// of ifdef WIN32
 
-int DaemonCore::SetEnv(char *key, char *value)
+int DaemonCore::SetEnv( char *key, char *value)
 {
 	assert(key);
 	assert(value);
@@ -2292,15 +2299,21 @@ int DaemonCore::Create_Process(
 			char		*cwd,
 			int			new_process_group,
 			Stream		*sock_inherit_list[],
-			int			std[])
+			int			std[],
+            int         nice_inc
+            )
 {
 	int i;
 	char *ptmp;
-
+	int inheritSockFds[MAX_INHERIT_SOCKS];
+	int numInheritSockFds = 0;
 
 	char inheritbuf[_INHERITBUF_MAXSIZE];
-	ReliSock *rsock=new ReliSock;	// tcp command socket for new child
-	SafeSock *ssock=new SafeSock;	// udp command socket for new child
+		// note that these are on the stack; they go away nicely
+		// upon return from this function.
+	ReliSock rsock;
+	SafeSock ssock;
+
 	pid_t newpid;
 
 #ifdef WIN32  // sheesh, this shouldn't be necessary
@@ -2336,18 +2349,22 @@ int DaemonCore::Create_Process(
 			 (sock_inherit_list[i] != NULL) && (i < MAX_INHERIT_SOCKS) ; 
 			 i++) 
 		{
-			// check that this is not a virgin socket
-			if (((Sock *)sock_inherit_list[i])->_state == Sock::sock_virgin) {
-				dprintf( D_ALWAYS,
-						 "Create_Process: invalid inherit socket list, "
-						 "virgin entry=%d\n",i);
-				return FALSE;
-			}
-
-			// make certain that this socket is inheritable
-			if ( !( ((Sock *)sock_inherit_list[i])->set_inheritable(TRUE)) ) {
-				return FALSE;
-			 }
+                // PLEASE change this to a dynamic_cast when it
+                // becomes available!
+//            Sock *tempSock = dynamic_cast<Sock *>( sock_inherit_list[i] );
+            Sock *tempSock = ((Sock *) sock_inherit_list[i] );
+            if ( tempSock ) {
+                inheritSockFds[numInheritSockFds] = tempSock->get_file_desc();
+                numInheritSockFds++;
+                    // make certain that this socket is inheritable
+                if ( !(tempSock->set_inheritable(TRUE)) ) {
+                    return FALSE;
+                }
+            } 
+            else {
+                dprintf ( D_ALWAYS, "Dynamic cast failure!\n" );
+                EXCEPT( "dynamic_cast" );
+            }
 
 			// now place the type of socket into inheritbuf
 			 switch ( sock_inherit_list[i]->type() ) {
@@ -2377,11 +2394,11 @@ int DaemonCore::Create_Process(
 		inherit_handles = TRUE;
 		if ( want_command_port == TRUE ) {
 			// choose any old port (dynamic port)
-			if (!BindAnyCommandPort(rsock, ssock)) {
+			if (!BindAnyCommandPort(&rsock, &ssock)) {
 				// dprintf with error message already in BindAnyCommandPort
 				return FALSE;
 			}
-			if ( !rsock->listen() ) {
+			if ( !rsock.listen() ) {
 				dprintf( D_ALWAYS, "Create_Process:Failed to post listen "
 						 "on command ReliSock\n");
 				return FALSE;
@@ -2395,17 +2412,17 @@ int DaemonCore::Create_Process(
 			   we can be restarted and still bind ok back to 
 			   this same port. -Todd T, 11/97
 			*/
-			if( (!rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR, 
+			if( (!rsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 
 									(char*)&on, sizeof(on)))    ||
-				(!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR, 
+				(!ssock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 
 									(char*)&on, sizeof(on))) )
 		    {
 				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
 				return FALSE;
 			}
 
-			if ( (!rsock->listen( want_command_port)) ||
-				 (!ssock->bind( want_command_port)) ) {
+			if ( (!rsock.listen( want_command_port)) ||
+				 (!ssock.bind( want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
 						"on command socket(s)\n");
 				return FALSE;
@@ -2413,8 +2430,8 @@ int DaemonCore::Create_Process(
 		}
 
 		// now duplicate the underlying SOCKET to make it inheritable
-		if ( (!(rsock->set_inheritable(TRUE))) || 
-			 (!(ssock->set_inheritable(TRUE))) ) {
+		if ( (!(rsock.set_inheritable(TRUE))) || 
+			 (!(ssock.set_inheritable(TRUE))) ) {
 			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 					"socks inheritable\n");
 			return FALSE;
@@ -2422,13 +2439,17 @@ int DaemonCore::Create_Process(
 
 		// and now add these new command sockets to the inheritbuf
 		strcat(inheritbuf," ");
-		ptmp = rsock->serialize();
+		ptmp = rsock.serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;
 		strcat(inheritbuf," ");
-		ptmp = ssock->serialize();
+		ptmp = ssock.serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;		 
+
+            // now put the actual fds into the list of fds to inherit
+        inheritSockFds[numInheritSockFds++] = rsock.get_file_desc();
+        inheritSockFds[numInheritSockFds++] = ssock.get_file_desc();
 	}
 	strcat(inheritbuf," 0");
 	
@@ -2633,6 +2654,7 @@ int DaemonCore::Create_Process(
 			}
 		}
 
+		int openfds = getdtablesize();
 
 			// Here we have to handle re-mapping of std(in|out|err)
 		if ( std ) {
@@ -2661,6 +2683,42 @@ int DaemonCore::Create_Process(
 				close( std[2] );  // We don't need this in the child...
 			}
 		}
+        else {
+                // if we don't want to re-map these, close 'em.
+			dprintf ( D_DAEMONCORE, "Just closed fd " );
+            for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
+                if ( close ( q ) != -1 ) {
+                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", q );
+                }
+            }
+			dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
+        }
+
+        dprintf ( D_DAEMONCORE, "Printing fds to inherit: " );
+        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
+            dprintf ( D_DAEMONCORE | D_NOHEADER, 
+					  "%d ", inheritSockFds[a] );
+        }
+        dprintf (  D_DAEMONCORE | D_NOHEADER, "\n" );
+
+			// Now we want to close all fds that aren't in sock_inherit_list
+		bool found;
+		dprintf ( D_DAEMONCORE, "Just closed fd " );
+		for ( int j=3 ; j < openfds ; j++ ) {
+			found = FALSE;
+			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
+                if ( inheritSockFds[k] == j ) {
+					found = TRUE;
+					break;
+				}
+			}
+			if ( !found ) {
+				if ( close( j ) != -1 ) {
+                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", j );
+                }
+            }
+		}
+		dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
 
 			/* here we want to put all the unix_env stuff into the 
 			   environment.  We also want to drop CONDOR_INHERIT in.
@@ -2685,6 +2743,34 @@ int DaemonCore::Create_Process(
 					"CONDOR_INHERIT env.\n");
 			exit(1); // Yes, we really want to exit here.
 		}
+
+            /* Re-nice ourself */
+        if ( nice_inc > 0 && nice_inc < 20 ) {
+            dprintf ( D_FULLDEBUG, "calling nice(%d)\n", nice_inc );
+            nice( nice_inc );
+        }
+        else if ( nice_inc >= 20 ) {
+            dprintf ( D_FULLDEBUG, "calling nice(19)\n" );
+            nice( 19 );
+        }
+
+#if defined( Solaris ) && defined( sun4m )
+			/* The following will allow purify to pop up windows 
+			   for all daemons created with Create_Process().  The
+			   -program-name is so purify can find the executable.
+               Note the super-secret PURIFY_DISPLAY param.
+			*/
+
+        char *display;
+        display = param ( "PURIFY_DISPLAY" );
+        if ( display ) {
+            SetEnv( "DISPLAY", display );
+            free ( display );
+            char purebuf[256]; 
+            sprintf ( purebuf, "-program-name=%s", name );
+            SetEnv( "PUREOPTIONS", purebuf );
+        }
+#endif
 
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
 
@@ -2733,7 +2819,7 @@ int DaemonCore::Create_Process(
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = new_process_group;
 	if ( want_command_port != FALSE )
-		strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
+		strcpy(pidtmp->sinful_string,sock_to_string(rsock._sock));
 	else
 		pidtmp->sinful_string[0] = '\0';
 	pidtmp->is_local = TRUE;
@@ -2764,9 +2850,6 @@ int DaemonCore::Create_Process(
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.  Since these are on
 	// the stack (rsock and ssock), they will get closed when we return.
-
-	delete rsock;
-	delete ssock;
 	
 	return newpid;	
 }

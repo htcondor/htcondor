@@ -95,7 +95,6 @@ public:
 	int get_file(const char *destination);
     ///
 	int put_file(const char *source);
-
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///
@@ -144,10 +143,10 @@ public:
     ///
 	int isClient() { return is_client; };
 
-
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
+
 	/*
 	**	Types
 	*/

@@ -254,6 +254,10 @@ class DaemonCore : public Service
 				@param std An array of three file descriptors to map
 				   to stdin, stdout, stderr respectively.  If this array
 				   is NULL, don't perform remapping.
+                @param nice_inc The value to be passed to nice() in the
+                   child.  0 < nice < 20, and greater numbers mean
+                   less priority.  This is an addition to the current
+                   nice value.
 				@return The pid of the newly created process.
 			*/
 		int	Create_Process(
@@ -266,7 +270,8 @@ class DaemonCore : public Service
 			char		*cwd = NULL,
 			int			new_process_group = FALSE,
 			Stream		*sock_inherit_list[] = NULL,
-			int			std[] = NULL
+			int			std[] = NULL,
+            int         nice_inc = 0
 			);
 
 		// NULL terminated array of inherited sockets

@@ -62,9 +62,10 @@
 #define D_NETWORK		(1<<21)
 #define D_KEYBOARD		(1<<22)
 #define D_PROCFAMILY	(1<<23)
+#define D_FDS           (1<<(D_MAXFLAGS-3))
 #define D_SECONDS		(1<<(D_MAXFLAGS-2))
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
-#define D_ALL			(~(0))
+#define D_ALL			(~(0) & (~(D_NOHEADER)))
 
 #if defined(__cplusplus)
 extern "C" {

@@ -107,6 +107,10 @@ public:
         @return previous timeout
     */
 	int timeout(int sec);
+    
+	/*
+	**	Stream protocol
+	*/
 
     /// peer's port and IP address in a struct sockaddr_in.
 	struct sockaddr_in *endpoint();
@@ -136,6 +140,7 @@ public:
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
+
 
 	/*
 	**	Type definitions

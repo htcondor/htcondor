@@ -581,7 +581,7 @@ part_send_job(
   ASSERT( sock->end_of_message() );
   ports = stRec.ports;
   if( stRec.ip_addr ) {
-    host = stRec.server_name;
+	host = stRec.server_name;
 	if(name) {
 		*name = strdup(stRec.server_name);
 	}
@@ -595,7 +595,7 @@ part_send_job(
 	    host, ports.port1, ports.port2
 	    );
   }    
-	
+
   if( ports.port1 == 0 ) {
     dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
 	     host );
@@ -611,6 +611,10 @@ part_send_job(
   
   if( (sd2 = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
     EXCEPT( "connect to scheduler on \"%s\", port2 = %d", host, ports.port2 );
+  }
+
+  if ( stRec.server_name ) {
+	  free( stRec.server_name );
   }
 
   return 0;

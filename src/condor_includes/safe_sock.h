@@ -100,7 +100,6 @@ public:
     ///
 	virtual int peek(char &);
 
-
 //	PRIVATE INTERFACE TO SAFE SOCKS
 //
 protected:

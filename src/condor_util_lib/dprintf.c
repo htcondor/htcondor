@@ -87,7 +87,7 @@ char *DebugFlagNames[] = {
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
 	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
 	"D_KEYBOARD", "D_PROCFAMILY", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
-	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_SECONDS", "D_NOHEADER",
+	"D_UNDEF27", "D_UNDEF28", "D_FDS", "D_SECONDS", "D_NOHEADER",
 };
 
 #if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
@@ -215,6 +215,10 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 				} else {
 					fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
 						 tm->tm_mday, tm->tm_hour, tm->tm_min );
+				}
+
+				if ( (saved_flags|flags) & D_FDS ) {
+					fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
 				}
 
 				if( DebugId ) {
