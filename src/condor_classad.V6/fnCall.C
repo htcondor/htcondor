@@ -129,6 +129,7 @@ FunctionCall( )
 			// pattern matching (regular expressions) 
 #if defined USE_POSIX_REGEX || defined USE_PCRE
 		functionTable["regexp"		] =	(void*)matchPattern;
+        functionTable["regexpmember"] =	(void*)matchPatternMember;
 #endif
 
 			// conversion functions
@@ -752,18 +753,15 @@ boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
 }
 */
 
-// The size of a list.
+// The size of a list, ClassAd, etc. 
 bool FunctionCall::
 size(const char *name, const ArgumentList &argList, 
 	 EvalState &state, Value &val)
 {
-	Value             listElementValue, listVal;
-	const ExprTree    *listElement;
-	Value             numElements, result;
+	Value             arg;
 	const ExprList    *listToSize;
-	ExprListIterator  listIterator;
-	bool		      first;
-	int			      len;
+    ClassAd           *classadToSize;
+	int			      length;
 
 	// we accept only one argument
 	if (argList.size() != 1) {
@@ -771,41 +769,27 @@ size(const char *name, const ArgumentList &argList,
 		return( true );
 	}
 	
-	// argument must Evaluate to a list
-	if (!argList[0]->Evaluate(state, listVal)) {
+	if (!argList[0]->Evaluate(state, arg)) {
 		val.SetErrorValue();
 		return false;
-	} else if (listVal.IsUndefinedValue()) {
+	} else if (arg.IsUndefinedValue()) {
 		val.SetUndefinedValue();
 		return true;
-	} else if (!listVal.IsListValue(listToSize)) {
-		val.SetErrorValue();
-		return( true );
-	}
-
-	listIterator.Initialize(listToSize);
-	val.SetIntegerValue(0);
-	len = 0;
-	first = true;
-
-	// Walk over each element in the list.
-	for (listElement = listIterator.CurrentExpr();
-		 listElement != NULL;
-		 listElement = listIterator.NextExpr()) {
-		if (listElement != NULL) {
-			// Make sure this element is valid
-			// Should we actually do this, or just count?
-			if (!listElement->Evaluate(state, listElementValue)) {
-				val.SetErrorValue();
-				return false;
-			} else {
-				len++;
-			}
-		}
-	}
-	
-	val.SetIntegerValue(len);
-	return true;
+	} else if (arg.IsListValue(listToSize)) {
+        length = listToSize->size();
+        val.SetIntegerValue(length);
+        return true;
+	} else if (arg.IsClassAdValue(classadToSize)) {
+        length = classadToSize->size();
+        val.SetIntegerValue(length);
+        return true;
+    } else if (arg.IsStringValue(length)) {
+        val.SetIntegerValue(length);
+        return true;
+    } else {
+        val.SetErrorValue();
+        return true;
+    }
 }
 
 bool FunctionCall::
@@ -2118,6 +2102,10 @@ random( const char* name,const ArgumentList &argList,EvalState &state,
 }
 
 #if defined USE_POSIX_REGEX || defined USE_PCRE
+static bool regexp_helper(const char *pattern, const char *target,
+                          bool have_options, string options_string,
+                          Value &result);
+
 bool FunctionCall::
 matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
@@ -2126,8 +2114,6 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 	Value 		arg0, arg1, arg2;
 	const char	*pattern=NULL, *target=NULL;
     string      options_string;
-    int         options;
-	int			status;
 
 		// need two or three arguments: pattern, string, optional settings
 	if( argList.size() != 2 && argList.size() != 3) {
@@ -2169,29 +2155,137 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
     if( have_options && arg2.IsUndefinedValue( ) ) {
 		result.SetUndefinedValue( );
 		return( true );
+    } else if ( have_options && !arg2.IsStringValue( options_string ) ) {
+        result.SetErrorValue( );
+        return( true );
     }
 
-		// if either argument is not a string, the result is undefined
+		// if either argument is not a string, the result is an error
 	if( !arg0.IsStringValue( pattern ) || !arg1.IsStringValue( target ) ) {
 		result.SetErrorValue( );
 		return( true );
 	}
+    return regexp_helper(pattern, target, have_options, options_string, result);
+}
+
+bool FunctionCall::
+matchPatternMember( const char*,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+    bool            have_options;
+	Value 		    arg0, arg1, arg2;
+	const char	    *pattern=NULL, *target=NULL;
+    const ExprList	*target_list;
+    string          options_string;
+
+    // need two or three arguments: pattern, list, optional settings
+	if( argList.size() != 2 && argList.size() != 3) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    if (argList.size() == 2) {
+        have_options = false;
+    } else {
+        have_options = true;
+    }
+
+		// Evaluate args
+	if( !argList[0]->Evaluate( state, arg0 ) || 
+		!argList[1]->Evaluate( state, arg1 ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+    if( have_options && !argList[2]->Evaluate( state, arg2 ) ) {
+		result.SetErrorValue( );
+		return( false );
+    }
+
+		// if either arg is error, the result is error
+	if( arg0.IsErrorValue( ) || arg1.IsErrorValue( ) ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    if( have_options && arg2.IsErrorValue( ) ) {
+        result.SetErrorValue( );
+        return( true );
+    }
+
+		// if either arg is undefined, the result is undefined
+	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return( true );
+	}
+    if( have_options && arg2.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return( true );
+    } else if ( have_options && !arg2.IsStringValue( options_string ) ) {
+        result.SetErrorValue( );
+        return( true );
+    }
+
+		// if the arguments are not of the correct types, the result is an error
+	if( !arg0.IsStringValue( pattern ) || !arg1.IsListValue( target_list ) ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+    result.SetBooleanValue(false);
+    
+    ExprTree *target_expr;
+    ExprList::const_iterator list_iter = target_list->begin();
+    while (list_iter != target_list->end()) {
+        Value target_value;
+        Value have_match_value;
+        target_expr = *list_iter;
+        if (target_expr != NULL) {
+            if( !target_expr->Evaluate(state, target_value)) {
+                result.SetErrorValue();
+                return true;
+            }
+            if (!target_value.IsStringValue(target)) {
+                result.SetErrorValue();
+                return true;
+            } else {
+                bool have_match;
+                bool success = regexp_helper(pattern, target, have_options, options_string, have_match_value);
+                if (!success) {
+                    result.SetErrorValue();
+                    return true;
+                } else {
+                    if (have_match_value.IsBooleanValue(have_match) && have_match) {
+                        result.SetBooleanValue(true);
+                        return true;
+                    }
+                }
+            }
+        } else {
+            result.SetErrorValue();
+            return(false);
+        }
+        list_iter++;
+    }
+    return true;
+}
+
+static bool regexp_helper(
+    const char *pattern,
+    const char *target,
+    bool       have_options,
+    string     options_string,
+    Value      &result)
+{
+    int         options;
+	int			status;
 
 #if defined (USE_POSIX_REGEX)
 	regex_t		re;
 
     options = REG_EXTENDED | REG_NOSUB;
     if( have_options ){
-        if ( !arg2.IsStringValue( options_string ) ) {
-            result.SetErrorValue( );
-            return( true );
-        } else {
-            // We look for the options we understand, and ignore
-            // any others that we might find, hopefully allowing
-            // forwards compatibility.
-            if ( options_string.find( 'i' ) != string::npos ) {
-                options |= REG_ICASE;
-            }
+        // We look for the options we understand, and ignore
+        // any others that we might find, hopefully allowing
+        // forwards compatibility.
+        if ( options_string.find( 'i' ) != string::npos ) {
+            options |= REG_ICASE;
         }
     }
 
@@ -2227,26 +2321,20 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 
     options     = 0;
     if( have_options ){
-        if ( !arg2.IsStringValue( options_string ) ) {
-            result.SetErrorValue( );
-            return( true );
-        } else {
-            // We look for the options we understand, and ignore
-            // any others that we might find, hopefully allowing
-            // forwards compatibility.
-            if ( options_string.find( 'i' ) != string::npos ) {
-                options |= PCRE_CASELESS;
-            } 
-            if ( options_string.find( 'm' ) != string::npos ) {
-                options |= PCRE_MULTILINE;
-            }
-            if ( options_string.find( 's' ) != string::npos ) {
-                options |= PCRE_DOTALL;
-            }
-            if ( options_string.find( 'x' ) != string::npos ) {
-                options |= PCRE_EXTENDED;
-            }
-
+        // We look for the options we understand, and ignore
+        // any others that we might find, hopefully allowing
+        // forwards compatibility.
+        if ( options_string.find( 'i' ) != string::npos ) {
+            options |= PCRE_CASELESS;
+        } 
+        if ( options_string.find( 'm' ) != string::npos ) {
+            options |= PCRE_MULTILINE;
+        }
+        if ( options_string.find( 's' ) != string::npos ) {
+            options |= PCRE_DOTALL;
+        }
+        if ( options_string.find( 'x' ) != string::npos ) {
+            options |= PCRE_EXTENDED;
         }
     }
 

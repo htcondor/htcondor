@@ -183,7 +183,9 @@ class FunctionCall : public ExprTree
 	// pattern matching
 	static bool matchPattern(const char*,const ArgumentList&,EvalState&,
 							 Value&);
-	
+	static bool matchPatternMember(const char*,const ArgumentList &argList,EvalState &state,
+                              Value &result);
+
 	// type conversion
 	static bool convInt(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convReal(const char*,const ArgumentList&,EvalState&,Value&);
