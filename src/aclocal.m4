@@ -215,3 +215,40 @@ AC_DEFUN([GET_GCC_VALUE],
    AC_SUBST($3,$[_cv_[$3]])
  fi
 ])
+
+
+#######################################################################
+# CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG by <wright@cs.wisc.edu> 
+# When packaging Condor, we sometimes need to recursively copy files.
+# Hoewver, when we do, we want to dereference symlinks and copy what
+# they point to, not copy the links themselves.  Unfortunately, the
+# default behavior with GNU cp using "-r" is to copy the links, not 
+# dereference them.  So, we check in the configure script what option
+# works to both copy recursively and dereference symlinks.  This macro
+# is used inside that loop to do the actual testing.  
+# Arguments: 
+#  $1 the full path to cp to try
+#  $2 the command-line option to cp to test
+#  $3 the variable name to set to "none" if the flag failed, or to
+#     hold the flag itself if it worked.
+#######################################################################
+AC_DEFUN([CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG],
+[
+ # initialize the flag imagining we're going to fail.  we'll set it to
+ # the right thing if the flag really worked
+ [$3]="none";
+ ln -s aclocal.m4 _foolink > /dev/null 2>&1
+ $1 $2 _foolink _barlink > /dev/null 2>&1
+ if test -f "_barlink" ; then
+   perl -e 'exit -l "_barlink"' > /dev/null 2>&1
+   _is_link=$?
+   if test "$_is_link" = "0" ; then
+   # it's not a symlink!  this flag will work.
+     [$3]="$2";
+   fi
+ fi
+ # either way, clean up our test files
+ /bin/rm -f _foolink _barlink > /dev/null 2>&1
+])
+
+
