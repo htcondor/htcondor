@@ -833,6 +833,8 @@ dc_reconfig( bool is_full )
 			EXCEPT("FAILED TO DROP CORE");	
 	}
 
+    dc_reconfig_auth();
+
 	// call this daemon's specific main_config()
 	main_config( is_full );
 }
@@ -866,20 +868,13 @@ dc_config_auth()
     char buffer[1024];
     memset(buffer, 0, 1024);
     
-    // buffer overflow problem. Hao 
-    pbuf = param( STR_GSI_DAEMON_DIRECTORY );
-    if (pbuf) {
-        sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
-        putenv( strdup( buffer ) );
-        free(pbuf);
-	}
-
 	sprintf( buffer, "X509_RUN_AS_SERVER=1");
 	putenv (strdup(buffer));
 
+    // buffer overflow problem. Hao 
+    pbuf = param( STR_GSI_DAEMON_DIRECTORY );
+
 	if (get_my_uid()) {
-		// buffer overflow problem. Hao 
-		pbuf = param( STR_GSI_DAEMON_DIRECTORY );
 		if (pbuf) {
 			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
 			putenv( strdup( buffer ) );
@@ -905,6 +900,23 @@ dc_config_auth()
 				STR_GSI_DAEMON_DIRECTORY);
 		}
 	}
+    else { // running as root/condor, assuming host certificates
+        if (pbuf) {
+			sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
+			putenv( strdup( buffer ) );
+
+			sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
+			putenv( strdup( buffer ) );
+
+			sprintf( buffer, "%s=%s/hostcert.pem", STR_GSI_USER_CERT, pbuf);
+			putenv( strdup ( buffer ) );
+
+			sprintf(buffer,"%s=%s/hostkey.pem",STR_GSI_USER_KEY,pbuf);
+			putenv( strdup ( buffer  ) );
+
+            free( pbuf );
+        }
+    }
 
     pbuf = param( STR_GSI_MAPFILE );
     if (pbuf) {
