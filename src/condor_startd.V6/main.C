@@ -91,6 +91,7 @@ static char *_FileName_ = __FILE__;
 
 extern volatile int want_reconfig;
 extern int HasSigchldHandler;
+extern bool owner_state;		// see event.C
 
 
 /*
@@ -223,14 +224,22 @@ static void mainloop()
 		FD_ZERO(&readfds);
 		resmgr_setsocks(&readfds);
 		timer.tv_usec = 0;
-		timer.tv_sec = polling_freq -
-		    ((int)time((time_t *)0) - last_timeout);
+
+		if (owner_state) {
+			timer.tv_sec = owner_polling_freq -
+				((int)time((time_t *)0) - last_timeout);
+			if (timer.tv_sec > owner_polling_freq)
+				timer.tv_sec = 0;
+		} else {
+			timer.tv_sec = polling_freq -
+				((int)time((time_t *)0) - last_timeout);
+			if (timer.tv_sec > polling_freq)
+				timer.tv_sec = 0;
+		}
 
 		if(timer.tv_sec < 0)
 			timer.tv_sec = 0;
 
-		if (timer.tv_sec > polling_freq)
-			timer.tv_sec = 0;
 #if defined(AIX31) || defined(AIX32)
 		errno = EINTR;
 #endif
@@ -301,7 +310,7 @@ static void init_params()
 
 	tmp = param("OWNER_POLLING_FREQUENCY");
 	if (tmp == NULL) {
-		owner_polling_freq = 30;
+		owner_polling_freq = polling_freq;
 	} else {
 		owner_polling_freq = atoi(tmp);
 		free(tmp);

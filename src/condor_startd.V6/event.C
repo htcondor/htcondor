@@ -42,6 +42,13 @@ extern "C" void event_timeout(int sig);
 volatile int want_reconfig = 0;
 int polls = 0;
 
+// owner_state is true when the startd isn't running any jobs and
+// the is not available to run any jobs (i.e., is busy) --
+// the idea is that we should watch the machine status less closely
+// when in owner state (calculate load average less often, etc.)
+// to be less of a burden on the machine owner
+bool owner_state = true;
+
 static char *_FileName_ = __FILE__;
 
 void update_central_mgr(void);
@@ -51,10 +58,18 @@ static int eval_state(resource_info_t* rip)
 	int tmp;
 	int want_vacate, want_suspend;
 
-	resource_context(rip);
+	resource_context(rip);		// calculates dynamic info and builds classad
 	if (rip->r_state == SYSTEM)
 		resmgr_changestate(rip->r_rid, NO_JOB);
 	if (rip->r_state == NO_JOB)	{
+		if ((rip->r_context)->EvalBool(ATTR_REQUIREMENTS, NULL, tmp) == 0) {
+			// Requirements do not locally evaluate to FALSE
+			// so we're not in owner state
+			owner_state = false;
+		}
+		if (tmp == 1) {		// Requirements locally evaluate to TRUE
+			owner_state = false;
+		}
 		if(CondorPendingJobs::AreTherePendingJobs(rip->r_rid)) {
 			dprintf(D_ALWAYS,"Identified a pending job\n");
 			if(MatchInfo(rip,CondorPendingJobs::CapabString(rip->r_rid)))
@@ -86,6 +101,8 @@ static int eval_state(resource_info_t* rip)
 
 	if (!rip->r_jobcontext)
 		return 0;
+
+	owner_state = false;		// We're running a job.
  
 	if ( rip->r_universe == VANILLA ) {
 		if ((rip->r_context)->EvalBool("WANT_SUSPEND_VANILLA",
@@ -226,13 +243,17 @@ check_claims(resource_info_t* rip)
 void
 event_timeout(int sig)
 {
-	resmgr_walk(eval_state);
+	owner_state = true;			// default for owner_state is true
+	resmgr_walk(eval_state);	// conditionally set to false in eval_state
 	resmgr_walk(check_claims);
 	if (polls == 0)
 		update_central_mgr();
 	if (++polls >= polls_per_update)
 		polls = 0;
 	last_timeout = (int)time((time_t *)0);
+	if (owner_state) {
+		dprintf(D_FULLDEBUG,"in owner state; using OWNER_POLLING_FREQUENCY\n");
+	}
 }
 
 void
