@@ -92,13 +92,8 @@ main( void )
 	int 			command;
 	Value			value;
 	ClassAdParser	parser;
-	ClassAdUnParser	unparser;
+	PrettyPrint		unparser;
 	string			output;
-	FormatOptions	pp;
-
-		// set formatter options
-	pp.SetClassAdIndentation( true , 4 );
-	pp.SetListIndentation( true , 4 );
 
 #if !defined( STANDALONE )
 	config( 0 );
