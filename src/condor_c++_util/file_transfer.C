@@ -1084,6 +1084,13 @@ FileTransfer::DoDownload(ReliSock *s)
 		if( !s->code(p_filename) ) {
 			return_and_resetpriv( -1 );
 		}
+
+		// reset the priv state to the saved value (if there is one) before we
+		// overwrite it again.
+		if (saved_priv != PRIV_UNKNOWN) {
+			_set_priv(saved_priv,__FILE__,__LINE__,1);
+		}
+
 		if( final_transfer || IsClient() ) {
 			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 			if( want_priv_change ) {
