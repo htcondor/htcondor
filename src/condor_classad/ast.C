@@ -1600,6 +1600,7 @@ int Function::FunctionScript(
 	result->i = 0;
 	result->type = LX_ERROR;
 	eval_succeeded = TRUE;
+    script_directory = NULL;
 
 	if (   number_of_args >= 1 
 		&& evaluated_args[0].type == LX_STRING
@@ -1608,6 +1609,9 @@ int Function::FunctionScript(
 		command_line = script_directory;
 		command_line += '/';
 		command_line += evaluated_args[0].s;
+
+        free(script_directory);
+        script_directory = NULL;
 
 		struct stat stat_info;
 		if (stat(command_line.Value(), &stat_info)) {
@@ -1755,6 +1759,7 @@ int Function::FunctionSharedLibrary(
 				}
 
 				function(number_of_args, function_args, &function_result);
+                delete [] function_args;
 
 				switch (function_result.type) {
 				case ClassAdSharedType_Integer:
