@@ -123,20 +123,10 @@ int main( int argc, char** argv )
 	SafeSock* ssock = NULL;	// udp command socket
 
 #ifdef WIN32
-	// Call SetErrorMode so that Win32 "critical errors" and such do not open up a
-	// dialog window!
+		// Call SetErrorMode so that Win32 "critical errors" and such
+		// do not open up a dialog window!
 	::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
-#endif
-
-	// instantiate a daemon core
-	// have lots of pid table hash buckets if we're the SCHEDD, since the
-	// SCHEDD could have lots of children...
-	if ( strcmp(mySubSystem,"SCHEDD") == 0 )
-		daemonCore = new DaemonCore(500);
-	else
-		daemonCore = new DaemonCore();
-
-#ifndef WIN32
+#else // UNIX
 		// Handle Unix signals
 
 		// Block all signals now.  We'll unblock them right before we
@@ -152,9 +142,9 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler(SIGPIPE, SIG_IGN );
-#endif
+#endif // WIN32
 
-	// set myName to be argv[0] with the path stripped off
+		// set myName to be argv[0] with the path stripped off
 	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
 		ptmp=strrchr(argv[0],'\\');
 	if ( ptmp )
@@ -213,21 +203,9 @@ int main( int argc, char** argv )
 
 	// Set up logging
 	dprintf_config(mySubSystem,2);
+
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
-	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
-	dprintf(D_ALWAYS,"******************************************************\n");
-
-#ifndef WIN32
-	// Now that logging is setup, create a pipe to deal with unix
-	// async signals.  We do this after logging is setup so that
-	// we can EXCEPT (and really log something) on failure...
-	if ( pipe(daemonCore->async_pipe) == -1 ||
-		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
-		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
-			EXCEPT("Failed to create async pipe");
-	}
-#endif
 
 	// we want argv[] stripped of daemoncore options
 	ptmp = argv[0];			// save a temp pointer to argv[0]
@@ -271,7 +249,35 @@ int main( int argc, char** argv )
 #endif	// of else of ifdef WIN32
 	}	// if if !Foreground
 
-	// Now take care of inheriting resources from our parent
+
+		// Now that we've potentially forked, we have our real pid, so
+		// we can instantiate a daemon core and it'll have the right
+		// pid.  Have lots of pid table hash buckets if we're the
+		// SCHEDD, since the SCHEDD could have lots of children... 
+	if ( strcmp(mySubSystem,"SCHEDD") == 0 ) {
+		daemonCore = new DaemonCore(500);
+	} else {
+		daemonCore = new DaemonCore();
+	}
+
+		// Now that we have the daemonCore object, we can finally
+		// print out what our pid is.
+
+	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
+	dprintf(D_ALWAYS,"******************************************************\n");
+
+#ifndef WIN32
+		// Now that logging is setup, create a pipe to deal with unix 
+		// async signals.  We do this after logging is setup so that
+		// we can EXCEPT (and really log something) on failure...
+	if ( pipe(daemonCore->async_pipe) == -1 ||
+		 fcntl(daemonCore->async_pipe[0],F_SETFL,O_NONBLOCK) == -1 ||
+		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
+			EXCEPT("Failed to create async pipe");
+	}
+#endif
+
+		// Now take care of inheriting resources from our parent
 	daemonCore->Inherit(rsock,ssock);
 
 	// SETUP COMMAND SOCKET
