@@ -110,13 +110,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem that sometimes caused \Condor{dagman} to segfault while
-      parsing DAGs (as far as we know, only very large DAGs).
+\item Fixed a bug introduced in Condor version 6.6.2 that could cause
+      \Condor{dagman} to segfault while parsing some DAG files, or
+      fail to recognize already-completed nodes in a rescue DAG.
 
-\item Fixed an error in the \Condor{dagman} submit file parsing code:
-      submit files that do not have whitespace surrounding the equal sign
-      on the log file line were not correctly parsed, causing the DAG
-      to fail.
+\item Fixed a bug in \Condor{dagman}, whereby it could fail to
+      automatically discover a Condor job's userlog file if the job's
+      submit file did not have whitespace surrounding the equal sign
+      on the log file line.
 
 \item Fixed a bug in \Condor{submit} that appears to only have
   effected OSX machines.
@@ -148,7 +149,7 @@ have \verb@Log on Locally@ priviledges, even if the account was allowed
 to log in interactively. This has been fixed.
 
 \item Fixed a bug on Windows that would cause the \Condor{schedd} to
-crash if \Dflag{FULL\_DEBUG} was turned on, and the submitting user
+crash if \Dflag{FULLDEBUG} was turned on, and the submitting user
 account did not have Administrator access rights.
 
 \end{itemize}
@@ -157,7 +158,10 @@ account did not have Administrator access rights.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{dagman} can fail to detect a job's progress if another
+      job in the DAG specifies the same underlying userlog file using
+      a different path or filename (e.g., log=foo and log=./foo) in
+      its submit file.
 
 \end{itemize}
 
