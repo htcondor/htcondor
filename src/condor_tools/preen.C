@@ -57,7 +57,7 @@ char		*Log;				// dir for condor program logs
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
-char        *ValidLogFiles;     // well known files in the log dir
+char        *InvalidLogFiles;   // files we know we want to delete from log
 char		*MailPrg;			// what program to use to send email
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
@@ -466,15 +466,15 @@ check_log_dir()
 {
 	char	*f;
 	Directory dir(Log);
-	StringList well_known_list;
+	StringList invalid;
 
-	well_known_list.initializeFromString (ValidLogFiles);
+	invalid.initializeFromString (InvalidLogFiles);
 
 	while( f = dir.Next() ) {
-		if( well_known_list.contains(f) ) {
-			good_file( Log, f );
-		} else {
+		if( invalid.contains(f) ) {
 			bad_file( Log, f );
+		} else {
+			good_file( Log, f );
 		}
 	}
 }
@@ -516,8 +516,8 @@ init_params()
 		EXCEPT ( "VALID_SPOOL_FILES not specified in config file" );
 	}
 
-	if( (ValidLogFiles = param("VALID_LOG_FILES")) == NULL ) {
-		EXCEPT ( "VALID_LOG_FILES not specified in config file" );
+	if( (InvalidLogFiles = param("INVALID_LOG_FILES")) == NULL ) {
+		EXCEPT ( "INVALID_LOG_FILES not specified in config file" );
 	}
 
 	if( (MailPrg = param("MAIL")) == NULL ) {
