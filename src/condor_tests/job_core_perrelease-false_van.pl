@@ -17,7 +17,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for periodic_release cluster $cluster must run first\n";
+	die "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not RUN!\n";
 };
 
 $success = sub
@@ -25,7 +25,7 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	print "Good, job should complete trivially\n";
+	die "Bad. Job submitted on hold and NEVER released by periodic release policy... Should not Complete!\n";
 };
 
 $timed = sub
@@ -81,7 +81,10 @@ $abort = sub
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterTimed($testname, $timed, 3600);
+# Note we are never going to release this job if preriodic release
+# policy is false.... so eventually we simply remove it
+# Question is....... how long after submit do we wait to make sure
+CondorTest::RegisterTimed($testname, $timed, 480); # kill in queue 8 minutes
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

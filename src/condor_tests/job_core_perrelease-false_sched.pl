@@ -17,7 +17,7 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	print "Good. for periodic_release cluster $cluster must run first\n";
+	die "Bad. This job tests for policy to periodically release NEVER! Can't run!\n";
 };
 
 $success = sub
@@ -25,7 +25,7 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	print "Good, job should complete trivially\n";
+	die "Bad. This job tests for policy to periodically release NEVER! Can't complete!\n";
 };
 
 $timed = sub
@@ -68,7 +68,10 @@ $abort = sub
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExecute($testname, $executed);
-CondorTest::RegisterTimed($testname, $timed, 3600);
+# How long to wait for job submited on hold
+# testing policy for periodic release to never release it??????
+# lets say 8 minutes..... Is there another way?
+CondorTest::RegisterTimed($testname, $timed, 480);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
