@@ -642,6 +642,14 @@ SOURCE="..\src\condor_c++_util\Set.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\setenv.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\setenv.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\sig_name.C"
 # End Source File
 # Begin Source File

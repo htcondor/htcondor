@@ -425,6 +425,10 @@
 	"..\src\condor_c++_util\user_log.c++.h"\
 	
 
+"..\src\condor_c++_util\setenv.C" : \
+	"..\src\condor_c++_util\setenv.h"\
+	
+
 "..\src\condor_c++_util\stat_wrapper.C" : \
 	"..\src\condor_c++_util\stat_wrapper.h"\
 	
