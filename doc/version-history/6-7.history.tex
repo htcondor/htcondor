@@ -6,6 +6,35 @@ This is the development release series of Condor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-7-6}Version 6.7.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The \Attr{DAGManJobID} attribute which \condor{dagman} inserts
+into the classad of every job it submits now contains only its cluster
+ID (instead of a cluster.proc ID pair), so that it may be referenced
+as an integer in DAG job submit files.  This allows, for example, a
+user to automatically set the relative local queue priority of jobs
+based on the \condor{dagman} job that submitted them, so that jobs
+submitted by ``older'' DAGs will start before jobs submitted by
+``newer'' DAGs (assuming they are otherwise identical).
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-7-6}Version 6.7.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
