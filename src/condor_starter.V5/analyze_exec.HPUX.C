@@ -45,8 +45,9 @@ int magic_check( char *a_out )
 
 	close(exec_fd);
 
-	if ( exec_header.a_magic != SHARE_MAGIC ) {
-		dprintf(D_ALWAYS,"EXECUTEABLE %s HAS BAD MAGIC NUMBER\n",a_out);
+	if ( exec_header.a_magic != SHARE_MAGIC &&
+	   	 exec_header.a_magic != EXEC_MAGIC ) {
+		dprintf(D_ALWAYS,"EXECUTEABLE %s HAS BAD MAGIC NUMBER (0x%x)\n",a_out,exec_header.a_magic);
 		return -1;
 	}
 /****
