@@ -191,6 +191,7 @@ condor_restore_sigstates()
 	(void) SetSyscalls( scm );
 }
 
+#if defined (SYS_sigvec)
 #if defined(HPUX9)
 sigvector( sig, vec, ovec )
 #else
@@ -230,7 +231,10 @@ struct sigvec *ovec;
 			}
 #if defined(HPUX9)
 			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
-#elif defined(SYS_sigvec)
+#elif defined(SYS_sigvec) && !defined(SUNOS41)
+			/* even though SunOS 4.x has a SYS_sigvec kernel call, all the
+			 * trampoline code is setup in libc.a, not the kernel!  thus,
+			 * we cannot call syscall here on SunOS; call SIGVEC() below. */
 			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
 #else
 			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
@@ -241,8 +245,62 @@ struct sigvec *ovec;
 
 	return( rval );
 }
+#endif
 
+#if defined (SYS_sigvec)
+#if defined(HPUX9)
+_sigvector( sig, vec, ovec )
+#else
+_sigvec( sig, vec, ovec )
+#endif
+int sig;
+const struct sigvec *vec;
+struct sigvec *ovec;
+{
+	int rval;
+	struct	sigvec	nvec;
 
+	if( ! MappingFileDescriptors() ) {
+#if defined(HPUX9)
+			rval = syscall( SYS_sigvector, sig, vec, ovec );
+#elif defined(SYS_sigvec)
+			rval = syscall( SYS_sigvec, sig, vec, ovec );
+#else
+			rval = SIGVEC( sig, vec, ovec );
+#endif
+	} else {
+		switch (sig) {
+				/* disallow the special Condor signals */
+				/* this list could be shortened */
+		case SIGUSR1:
+		case SIGTSTP:
+		case SIGCONT:
+			rval = -1;
+			errno = EINVAL;
+			break;
+		default:
+			if (vec) {
+				bcopy( (char *) vec, (char *) &nvec, sizeof nvec );
+				/* while in the handler, block checkpointing */
+				nvec.sv_mask |= sigmask( SIGTSTP );
+				nvec.sv_mask |= sigmask( SIGUSR1 );
+			}
+#if defined(HPUX9)
+			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
+#elif defined(SYS_sigvec) && !defined(SUNOS41)
+			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
+#else
+			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
+#endif
+			break;
+		}
+	}
+
+	return( rval );
+}
+#endif
+
+#if defined(SYS_sigblock)
 MASK_TYPE 
 sigblock( mask )
 MASK_TYPE mask;
@@ -265,8 +323,9 @@ MASK_TYPE mask;
 #endif
 	return rval;
 }
+#endif
 
-
+#if defined(SYS_sigpause)
 MASK_TYPE 
 sigpause( mask )
 MASK_TYPE mask;
@@ -287,7 +346,9 @@ MASK_TYPE mask;
 #endif
 	return rval;
 }
+#endif
 
+#if defined(SYS_sigsetmask)
 MASK_TYPE 
 sigsetmask( mask )
 MASK_TYPE mask;
@@ -310,7 +371,9 @@ MASK_TYPE mask;
 #endif
 	return rval;
 }
+#endif
 
+#if defined(SYS_sigaction)
 int
 sigaction( sig, act, oact )
 int sig;
@@ -340,7 +403,9 @@ struct sigaction *oact;
 	return SIGACTION( sig, act, oact);
 #endif
 }
+#endif
 
+#if defined(SYS_sigprocmask)
 int
 sigprocmask(how,set,oset)
 int how;
@@ -360,7 +425,9 @@ sigset_t *oset;
 	SIGPROCMASK(how,set,oset);
 #endif
 }
+#endif
 
+#if defined (SYS_sigsuspend)
 int
 sigsuspend(set)
 #if defined(SUNOS41)
@@ -380,7 +447,9 @@ const sigset_t *set;
 	SIGSUSPEND(set);
 #endif
 }
+#endif
 
+#if defined(SYS_signal)
 #if defined(VOID_SIGNAL_RETURN)
 void (*
 #else
@@ -419,3 +488,5 @@ void (*func)(int);
 
 #endif
 }
+#endif
+
