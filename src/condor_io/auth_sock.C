@@ -52,6 +52,17 @@ gss_cred_id_t AuthSock::credential_handle = GSS_C_NO_CREDENTIAL;
 int 
 AuthSock::lookup_user( char *client_name ) { 
 	/* return -1 for error */
+	char filename[MAXPATHLEN];
+	char command[MAXPATHLEN+32];
+
+	sprintf( filename, "%s/index.txt", getenv( "X509_CERT_DIR" ) );
+	sprintf( command, "grep 'V.*%s' %s", client_name, filename );
+
+	if ( system( command ) ) {
+		dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
+				client_name, filename );
+		return -1;
+	}
 	return 0;
 }
 
@@ -228,7 +239,6 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 	int		 token_status = 0;
 	OM_uint32 ret_flags = 0;
 	gss_ctx_id_t context_handle = GSS_C_NO_CONTEXT;
-	long cuid;
 
 	if ( !authenticate_user() ) {
 		dprintf( D_ALWAYS, 
@@ -236,6 +246,7 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 		return FALSE;
 	}
 	 
+//get rid of authComms, it's no longer used
 	authComms.sock = &authsock;
 	authComms.buffer = NULL;
 	authComms.size = 0;
@@ -250,9 +261,11 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 	);
 
 
+dprintf(D_ALWAYS,"problem!\n" );
 	if ( (major_status != GSS_S_COMPLETE) ||
-			( ( cuid = lookup_user( client_name ) ) < 0 ) ) 
+			( ( lookup_user( client_name ) ) < 0 ) ) 
 	{
+dprintf(D_ALWAYS,"got failure\n" );
 		if (major_status != GSS_S_COMPLETE) {
 			dprintf(D_ALWAYS, "server: GSS authentication failure, status:0x%x\n",
 					major_status );
@@ -273,9 +286,6 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 	if ( client_name )
 		free( client_name );
 
-	/*
-	 * could return cuid if calling function needed cuid
-	 */
 	authsock.Set_conn_auth_state( auth_cert );
 	return TRUE;
 }
