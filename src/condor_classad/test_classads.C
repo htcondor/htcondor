@@ -1128,6 +1128,13 @@ test_not_in_references(
 	return;
 }
 
+/***************************************************************
+ *
+ * Function: test_dirty_attribute
+ * Purpose:  Test if dirty attributes (attributes modified after
+ *           the creation of the ClassAd) are properly maintained.
+ *
+ ***************************************************************/
 void 
 test_dirty_attribute(
 	TestResults  *results)     // OUT: Modified to reflect result of test
