@@ -49,7 +49,6 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
-#include "condor_mach_status.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "master.h"

@@ -48,6 +48,7 @@ extern "C" {
 #if defined(Solaris)
 #define __EXTENSIONS__
 #endif
+
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -57,7 +58,6 @@ extern "C" {
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_expressions.h"
-#include "condor_mach_status.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "master.h"
@@ -125,7 +125,6 @@ extern "C"
 	int 	detach();
 	int	boolean(char*, char*);
 	char*	strdup(const char*);
-	void	set_machine_status(int);
 	int	SetSyscalls( int );
 
 #if defined(LINUX) || defined(HPUX9)
@@ -796,7 +795,6 @@ sigquit_handler()
 	daemons.SignalAll(SIGQUIT);
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	set_machine_status( CONDOR_DOWN );
 	exit( 0 );
 }
 
@@ -814,7 +812,6 @@ sigterm_handler()
 	daemons.SignalAll(SIGTERM);
 	wait_all_children();
 	dprintf( D_ALWAYS, "All daemons have exited.\n" );
-	set_machine_status( CONDOR_DOWN );
 	exit( 0 );
 }
 
@@ -993,7 +990,7 @@ install_sig_handler( int sig, SIGNAL_HANDLER handler )
 	sigemptyset( &act.sa_mask );
 	act.sa_flags = 0;
 
-	if( sigaction(sig,&act,0) < 0 ) {
+	if( sigaction(sig,&act,NULL) < 0 ) {
 		EXCEPT( "Can't install handler for signal %d\n", sig );
 	}
 }
