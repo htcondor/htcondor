@@ -75,6 +75,10 @@ public:
     return capacity;
   }
 
+  const char *GetCStr() const {
+	  return Data;
+  }
+
   // Comparison operations
 
   friend int operator==(const MyString& S1, const MyString& S2) {
@@ -155,6 +159,16 @@ public:
     }
     strncat( Data, S.Data, capacity-Len );
 	Len += S.Len;
+    return *this;
+  }
+
+  MyString& operator+=(const char *s) {
+    int s_len = strlen(s);
+    if( s_len + Len > capacity ) {
+       reserve( Len + s_len );
+    }
+    strncat( Data, s, capacity-Len );
+	Len += s_len;
     return *this;
   }
 
