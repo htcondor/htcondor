@@ -88,6 +88,9 @@ while ( <IN> )
     elsif ( /ClusterNode\s+=\s+\"(.+?)\"/i )
     {
     }
+    elsif ( /NotSetup\s+=\s+\"(.+?)\"/i )
+    {
+    }
     elsif ( /Down\s+=\s+\"(.+?)\"(.*)/i )
     {
 	my $Host = $1;
