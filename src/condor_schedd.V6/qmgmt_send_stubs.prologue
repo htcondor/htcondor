@@ -1,11 +1,11 @@
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
-#include "condor_xdr.h"
+#include "condor_io.h"
 #include "condor_fix_assert.h"
 #include "qmgmt_constants.h"
 
-#define xdr_syscall xdr_qmgmt
+#define syscall_sock qmgmt_sock
 
 #if defined(assert)
 #undef assert
@@ -14,5 +14,9 @@
 #define assert(x) if (!(x)) return -1
 
 int CurrentSysCall;
-extern XDR *xdr_syscall;
+extern ReliSock *syscall_sock;
 int terrno;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif

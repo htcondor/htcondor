@@ -1,5 +1,5 @@
 /* 
-*e Copyright 1996 by Miron Livny and Jim Pruyne
+** Copyright 1996 by Miron Livny and Jim Pruyne
 ** 
 ** Permission to use, copy, modify, and distribute this software and its
 ** documentation for any purpose and without fee is hereby granted,
@@ -32,6 +32,7 @@
 
 #include "condor_common.h"
 #include "condor_xdr.h"
+#include "condor_io.h"
 #include <sys/stat.h>
 #include "_condor_fix_types.h"
 #include "condor_fix_socket.h"
@@ -61,7 +62,6 @@ extern "C" {
 	int	 upDown_GetUserPriority(char*, int*);
 	int	FileExists(char*, char*);
 	int	set_root_euid();
-	int	xdr_proc(XDR* xdrs, PROC* proc);
 	char *sin_to_string(struct sockaddr_in *sin);
 	int get_inet_address(struct in_addr* buffer);
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -69,9 +69,9 @@ extern "C" {
 }
 
 extern	int		Parse(const char*, ExprTree*&);
-static XDR *Q_XDRS;
+static ReliSock *Q_SOCK;
 
-int 	do_Q_request(XDR *);
+int		do_Q_request(ReliSock *);
 void	FindRunnableJob(int, int&);
 void	FindPrioJob(int&);
 int		Runnable(PROC_ID*);
@@ -296,33 +296,17 @@ AppendLog(LogRecord *log, Job *job, Cluster *cl)
 extern "C" {
 
 int
-handle_q(XDR *xdrs, struct sockaddr_in* = NULL)
+handle_q(ReliSock *sock, struct sockaddr_in* = NULL)
 {
 	int	rval;
 
 	tr = new Transaction;
-	Q_XDRS = xdrs;
-
-	// I think this has to be here because xdr_Init() (called in 
-	// qmgr_lib_support.c) does a skiprecord.
-	// HOWEVER, at least on IRIX 5.3, this endofrecord _cannot_ be
-	// here.  an XDR bug on IRIX, perhaps?  in any event, if qmgmt is
-	// broken look here first.  to save hassle tracking down a bizarre
-	// runtime bug, we flag a compile-time error for platforms we are
-	// not certain about.  hopefully this is all moot since condor v6.0
-	// ditches xdr anyway.  -Todd, 4/97
-#if defined(OSF1) || defined(Solaris) 
-	xdrrec_endofrecord(xdrs, TRUE);
-#elif defined(IRIX53)
-	/* xdrrec_endofrecord(xdrs, TRUE); */
-#else 
-#	error "Please determine if we need an xdr endofrecord here - see comment"
-#endif
+	Q_SOCK = sock;
 
 	InvalidateConnection();
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( xdrs );
+		rval = do_Q_request( sock );
 	} while(rval >= 0);
 	FreeConnection();
 
@@ -1886,7 +1870,7 @@ int Runnable(PROC_ID* id)
 	int		cur, max;					// current hosts and max hosts
 	int		status, universe;
 	
-	dprintf (D_FULLDEBUG, "Job %d.%d:");
+	dprintf (D_FULLDEBUG, "Job %d.%d:", id->cluster, id->proc);
 
 	if(id->cluster < 1 || id->proc < 0)
 	{

@@ -4,6 +4,7 @@
 #include "condor_xdr.h"
 
 #include "condor_classad.h"
+#include "condor_io.h"
 
 #define NEW_BORN	1
 #define DEATHS_DOOR	2
@@ -87,7 +88,7 @@ void PrintQ();
 extern "C" {
 #endif
 int ReadLog(char *);
-int handle_q(XDR *, struct sockaddr_in*);
+int handle_q(ReliSock *, struct sockaddr_in*);
 #if defined(__cplusplus)
 }
 #endif

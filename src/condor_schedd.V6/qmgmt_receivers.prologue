@@ -1,6 +1,6 @@
 #define _POSIX_SOURCE
 #include "condor_common.h"
-#include "condor_xdr.h"
+#include "condor_io.h"
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 
@@ -9,7 +9,7 @@
 #include "condor_qmgr.h"
 #include "qmgmt_constants.h"
 
-#define xdr_syscall xdr_qmgmt
+#define syscall_sock qmgmt_sock
 
 #if defined(assert)
 #undef assert
@@ -18,17 +18,14 @@
 #define assert(x) if (!(x)) return -1;
 
 int
-do_Q_request(XDR *xdr_syscall)
+do_Q_request(ReliSock *syscall_sock)
 {
 	int	request_num;
 	int	rval;
 
-	xdr_syscall->x_op = XDR_DECODE;
+	syscall_sock->decode();
 
-	if (!xdrrec_skiprecord(xdr_syscall)) {
-		return -1;
-	}
-	if (!xdr_int(xdr_syscall, &request_num)) {
+	if (!syscall_sock->code(request_num)) {
 		return -1;
 	}
 

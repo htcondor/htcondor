@@ -13,7 +13,7 @@
 #include "_condor_fix_types.h"
 #include "dgram_io_handle.h"
 #include "condor_classad.h"
-#include "condor_xdr.h"
+#include "condor_io.h"
 #include "proc.h"
 #include "condor_daemon_core.h"
 #include "sched.h"
@@ -77,14 +77,14 @@ class Scheduler : public Service
 	void			SetSockName(int);
 	
 	// negotiation
-	void			negotiate(XDR*, struct sockaddr_in*);
-	void			reschedule_negotiator(XDR*, struct sockaddr_in*);
-	void			vacate_service(XDR *, struct sockaddr_in*);
+	void			negotiate(ReliSock*, struct sockaddr_in*);
+	void			reschedule_negotiator(ReliSock*, struct sockaddr_in*);
+	void			vacate_service(ReliSock *, struct sockaddr_in*);
 
 	// job managing
-	void			abort_job(XDR*, struct sockaddr_in*);
-	void			send_all_jobs(XDR*, struct sockaddr_in*);
-	void			send_all_jobs_prioritized(XDR*, struct sockaddr_in*);
+	void			abort_job(ReliSock*, struct sockaddr_in*);
+	void			send_all_jobs(ReliSock*, struct sockaddr_in*);
+	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 	friend	int		count(int, int);
 	friend	void	job_prio(int, int);
 	void			display_shadow_recs();
@@ -149,7 +149,6 @@ class Scheduler : public Service
 	char*			AccountantName;
 
 	// connection variables
-	DGRAM_IO_HANDLE		CollectorHandle;
 	struct sockaddr_in	From;
 	int					Len; 
 

@@ -53,10 +53,11 @@
 #include "condor_debug.h"
 #include "proc.h"
 #include "exit.h"
-#include "dgram_io_handle.h"
 #include "condor_collector.h"
 #include "scheduler.h"
 #include "condor_attributes.h"
+#include "condor_classad.h"
+#include "condor_adtypes.h"
 #include "condor_string.h"
 #include "environ.h"
 #include "url_condor.h"
@@ -105,7 +106,7 @@ extern "C"
     void upDown_WriteToFile(const char*);
     void upDown_Display(void);
     void dprintf(int, char*...);
-	int	 xdr_proc_id(XDR*, PROC_ID*);
+	int  proc_id(XDR*, PROC_ID*);
 	int	 calc_virt_memory();
 	int	 rcv_int(XDR*, int*, int);
 	int	 snd_int(XDR*, int, int);
@@ -124,7 +125,7 @@ extern "C"
 	void	block_signal(int);
 	void	unblock_signal(int);
 	void	config(char*, CONTEXT*);
-	void	handle_q(XDR*, struct sockaddr_in*);
+	void	handle_q(ReliSock*, struct sockaddr_in*);
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int);
 	int		udp_unconnect();
 	char*	sin_to_string(struct sockaddr_in*);
@@ -197,7 +198,6 @@ Scheduler::Scheduler()
     CondorAdministrator = NULL;
     Mail = NULL;
     filename = NULL;
-    memset((char*)&CollectorHandle, 0, sizeof(CollectorHandle));
 	rec = new Mrec*[MAXMATCHES];
 	aliveFrequency = 0;
 	aliveInterval = 0;
@@ -415,9 +415,18 @@ void Scheduler::insert_owner(char* owner)
 
 void Scheduler::update_central_mgr()
 {
-	int		cmd = SCHEDD_INFO;
+	int			cmd = UPDATE_SCHEDD_AD;
+	ClassAd 	ad(MachineContext);
+	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
+
+	ad.SetMyTypeName (SCHEDD_ADTYPE);
+	ad.SetTargetTypeName("");
 	
-	send_context_to_machine(&CollectorHandle, cmd, MachineContext);
+	sock.attach_to_file_desc(UdpSock);
+	sock.encode();
+	sock.put(UPDATE_SCHEDD_AD);
+	ad.put(sock);
+	sock.end_of_message();
 }
 
 extern "C" {
@@ -455,57 +464,21 @@ void abort_job_myself(PROC_ID job_id)
 }
 }
 
-void Scheduler::abort_job(XDR* xdrs, struct sockaddr_in*)
+void Scheduler::abort_job(ReliSock* s, struct sockaddr_in*)
 {
 	PROC_ID	job_id;
+	char	*host;
+	int		i;
 
 
-	xdrs->x_op = XDR_DECODE;
-	if( !xdr_proc_id(xdrs,&job_id) ) {
+	s->decode();
+	if( !s->code(job_id) ) {
 		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
 		return;
 	}
 
 	abort_job_myself(job_id);
 }
-#if 0
-send_kill_command( host )
-char	*host;
-{
-	XDR		xdr, *xdrs = NULL;
-	int		sock = -1;
-	int		cmd;
-
-      /* Connect to the startd on the serving host */
-    if( (sock = do_connect(host, "condor_startd", START_PORT)) < 0 ) {
-        dprintf( D_ALWAYS, "Can't connect to startd on %s\n", host );
-        return;
-    }
-    xdrs = xdr_Init( &sock, &xdr );
-    xdrs->x_op = XDR_ENCODE;
-
-    cmd = KILL_FRGN_JOB;
-    if( !xdr_int(xdrs, &cmd) ) {
-		dprintf( D_ALWAYS, "Can't send KILL_FRGN_JOB cmd to schedd on %s\n",
-			host );
-		xdr_destroy( xdrs );
-		close( sock );
-		return;
-	}
-		
-	if( !xdrrec_endofrecord(xdrs,TRUE) ) {
-		dprintf( D_ALWAYS, "Can't send xdr end_of_record to schedd on %s\n",
-			host );
-		xdr_destroy( xdrs );
-		close( sock );
-		return;
-	}
-
-    dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB command to startd on %s\n", host );
-	xdr_destroy( xdrs );
-	close( sock );
-}
-#endif 
 
 #define RETURN \
 	if( context ) { \
@@ -520,11 +493,12 @@ char	*host;
 ** server which is capable of running it.  NOTE: We must keep job queue
 ** locked during this operation.
 */
-void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
+void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 {
 	int		i;
 	int		op;
 	CONTEXT	*context = NULL;
+	ClassAd	*ad = NULL;
 	PROC_ID	id;
 	char	*match= NULL;				// each match info received from cmgr
 	char*	capability;					// capability for each match made
@@ -603,7 +577,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 		for (host_cnt = cur_hosts; host_cnt < max_hosts;) {
 
 			/* Wait for manager to request job info */
-			if( !rcv_int(xdrs,&op,TRUE) ) {
+			if( !s->rcv_int(op,TRUE) ) {
 				dprintf( D_ALWAYS, "Can't receive request from manager\n" );
 				RETURN;
 			}
@@ -613,9 +587,9 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 				    mark_cluster_rejected( cur_cluster );
 					host_cnt = max_hosts + 1;
 					break;
-				case SEND_JOB_INFO:
+				case SEND_JOB_INFO: {
 					if( JobsStarted >= MaxJobStarts ) {
-						if( !snd_int(xdrs,NO_MORE_JOBS,TRUE) ) {
+						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS,
 									"Can't send NO_MORE_JOBS to mgr\n" );
 							RETURN;
@@ -629,7 +603,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 					   many shadows running, so compare here against
 					   NShadowRecs rather than JobsRunning as in the past. */
 					if( NShadowRecs >= MaxJobsRunning ) {
-						if( !snd_int(xdrs,NO_MORE_JOBS,TRUE) ) {
+						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
 							RETURN;
@@ -640,7 +614,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 						RETURN;
 					}
 					if( SwapSpaceExhausted ) {
-						if( !snd_int(xdrs,NO_MORE_JOBS,TRUE) ) {
+						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
 							RETURN;
@@ -651,7 +625,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 						RETURN;
 					}
 					if( JobsStarted >= start_limit_for_swap ) {
-						if( !snd_int(xdrs,NO_MORE_JOBS,TRUE) ) {
+						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
 							RETURN;
@@ -666,21 +640,37 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 					
 					/* Send a job description */
 					context = build_context( &id);
-					if( !snd_int(xdrs,JOB_INFO,FALSE) ) {
+					if( !s->snd_int(JOB_INFO,FALSE) ) {
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						RETURN;
 					}
+					ClassAd ad(context);
+					ad.SetMyTypeName (JOB_ADTYPE);
+					ad.SetTargetTypeName (STARTD_ADTYPE);
+					if( !ad.put(*s) ) {
+						dprintf( D_ALWAYS,
+								"1.Can't send job_context to mgr\n" );
+						RETURN;
+					}
+					if( !s->end_of_message() ) {
+						dprintf( D_ALWAYS,
+								"1.Can't send job_context to mgr\n" );
+						RETURN;
+					}
+/*
 					if( !snd_context(xdrs,context,TRUE) ) {
 						dprintf( D_ALWAYS,
 								"1.Can't send job_context to mgr\n" );
 						RETURN;
 					}
+*/
 					free_context( context );
 					context = NULL;
 					dprintf( D_FULLDEBUG,
 							"Sent job %d.%d\n", id.cluster, id.proc );
 					cur_cluster = id.cluster;
 					break;
+				}
 				case PERMISSION:
 					/*
 					 * Weiru
@@ -692,7 +682,12 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 					 * one negotiation cycle. Now these limits are  adopted to
 					 * apply to match records instead.
 					 */
-					if( !rcv_string(xdrs,&match,TRUE) ) {
+					if( !s->get(match) ) {
+						dprintf( D_ALWAYS,
+								"Can't receive host name from mgr\n" );
+						RETURN;
+					}
+					if( !s->end_of_message ) {
 						dprintf( D_ALWAYS,
 								"Can't receive host name from mgr\n" );
 						RETURN;
@@ -726,7 +721,7 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 
 
 		/* Out of jobs */
-	if( !snd_int(xdrs,NO_MORE_JOBS,TRUE) ) {
+	if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 		dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
 		RETURN;
 	}
@@ -744,12 +739,12 @@ void Scheduler::negotiate(XDR* xdrs, struct sockaddr_in*)
 #undef RETURN
 
 
-void Scheduler::vacate_service(XDR *xdrs, struct sockaddr_in*)
+void Scheduler::vacate_service(ReliSock *sock, struct sockaddr_in*)
 {
 	char	*capability = NULL;
 
 	dprintf (D_ALWAYS, "Got VACATE_SERVICE\n");
-	if (!rcv_string (xdrs, &capability, TRUE)) {
+	if (!sock->code(capability)) {
 		dprintf (D_ALWAYS, "Failed to get capability\n");
 		return;
 	}
@@ -920,15 +915,15 @@ void Scheduler::StartJobs()
 	dprintf(D_ALWAYS, "-------- Begin starting jobs --------\n");
 	for(i = 0; i < nMrec; i++)
 	{
-		dprintf(D_FULLDEBUG, "match (%s) ", rec[i]->id);
 		if(rec[i]->status == M_INACTIVE)
 		{
-			dprintf(D_FULLDEBUG | D_NOHEADER, "inactive\n");
+			dprintf(D_FULLDEBUG, "match (%s) inactive\n", rec[i]->id);
 			continue;
 		}
 		if(rec[i]->shadowRec)
 		{
-			dprintf(D_FULLDEBUG | D_NOHEADER, "already running a job\n");
+			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
+					rec[i]->id);
 			continue;
 		}
 
@@ -943,7 +938,7 @@ void Scheduler::StartJobs()
 		if(id.proc < 0)
 		// no more jobs to run
 		{
-			dprintf(D_FULLDEBUG | D_NOHEADER, "out of jobs\n");
+			dprintf(D_FULLDEBUG, "match (%s) out of jobs\n", rec[i]->id);
 			dprintf(D_ALWAYS,"Out of jobs (proc id %d); relinquishing\n",
 								id.proc);
 			Relinquish(rec[i]);
@@ -1006,7 +1001,7 @@ shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 
 shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 {
-	char	*argv[6];
+	char	*argv[7];
 	char	cluster[10], proc[10];
 	int		pid;
 	int		i, lim;
@@ -1551,40 +1546,28 @@ void Scheduler::preempt(int n)
 	}
 }
 
-#define RETURN \
-	if( xdrs ) { \
-		xdr_destroy( xdrs ); \
-	} \
-	if( sock >= 0 ) { \
-		close( sock ); \
-	}
 void send_vacate(Mrec* match,int cmd)
 {
-	int		sock = -1;
-	XDR		xdr, *xdrs = NULL;
+	ReliSock	sock(match->peer, START_PORT);
 
 	dprintf( D_ALWAYS, "Called send_vacate( %s, %d )\n", match->peer, cmd );
         /* Connect to the specified host */
-    if( (sock = do_connect(match->peer, "condor_startd", START_PORT)) < 0 ) {
-        dprintf( D_ALWAYS, "Can't connect to startd on %s\n", match->peer);
-		RETURN;
-    }
-    xdrs = xdr_Init( &sock, &xdr );
-    xdrs->x_op = XDR_ENCODE;
+	
+	sock.encode();
 
-    if( !xdr_int(xdrs, &cmd) ) {
-        dprintf( D_ALWAYS, "Can't initialize xdr sock to %s\n", match->peer);
-		RETURN;
+    if( !sock.code(cmd) ) {
+        dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+		return;
 	}
 
-    if( !snd_string(xdrs, match->id, FALSE) ) {
-        dprintf( D_ALWAYS, "Can't initialize xdr sock to %s\n", match->peer);
-		RETURN;
+    if( !sock.put(match->id) ) {
+        dprintf( D_ALWAYS, "Can't initialize sock to %s\n", match->peer);
+		return;
 	}
 
-    if( !xdrrec_endofrecord(xdrs,TRUE) ) {
-        dprintf( D_ALWAYS, "Can't send xdr EOF to %s\n", match->peer);
-		RETURN;
+    if( !sock.eom() ) {
+        dprintf( D_ALWAYS, "Can't send EOM to %s\n", match->peer);
+		return;
 	}
 
 	if( cmd == CKPT_FRGN_JOB ) {
@@ -1592,10 +1575,7 @@ void send_vacate(Mrec* match,int cmd)
 	} else {
 		dprintf( D_ALWAYS, "Sent KILL_FRGN_JOB to startd on %s\n", match->peer);
 	}
-	RETURN;
-
 }
-#undef RETURN
 
 void Scheduler::swap_space_exhausted()
 {
@@ -1992,7 +1972,6 @@ void Scheduler::Init()
         EXCEPT( "No Collector host specified in config file\n" );
     }
 	UdpSock = udp_unconnect();
-	fill_dgram_io_handle(&CollectorHandle, CollectorHost, UdpSock, COLLECTOR_UDP_PORT);
 
 	// Assume that we are still using machine names in the configuration file.
 	// If we move to ip address and port, this need to be changed.
@@ -2195,31 +2174,25 @@ void Scheduler::sighup_handler()
     timeout();
 }
 
-void Scheduler::reschedule_negotiator(XDR*, struct sockaddr_in*)
+void Scheduler::reschedule_negotiator(ReliSock*, struct sockaddr_in*)
 {
-    int     sock = -1;
-    int     cmd;
-    XDR     xdr, *xdrs = NULL;
+    int     	cmd = RESCHEDULE;
+	ReliSock	sock(NegotiatorHost, NEGOTIATOR_PORT);
 
     dprintf( D_ALWAYS, "Called reschedule_negotiator()\n" );
 
 	timeout();							// update the central manager now
 
-        /* Connect to the negotiator */
-    if( (sock=do_connect(NegotiatorHost,"condor_negotiator",NEGOTIATOR_PORT))
-                                                                    < 0 ) {
-        dprintf( D_ALWAYS, "Can't connect to CONDOR negotiator\n" );
-        return;
-    }
-    xdrs = xdr_Init( &sock, &xdr );
-    xdrs->x_op = XDR_ENCODE;
-
-    cmd = RESCHEDULE;
-    (void)xdr_int( xdrs, &cmd );
-    (void)xdrrec_endofrecord( xdrs, TRUE );
-
-    xdr_destroy( xdrs );
-    (void)close( sock );
+	sock.encode();
+	if (!sock.code(cmd)) {
+		dprintf( D_ALWAYS,
+				"failed to send RESCHEDULE command to negotiator\n");
+		return;
+	}
+	if (!sock.eom()) {
+		dprintf( D_ALWAYS,
+				"failed to send RESCHEDULE command to negotiator\n");
+	}
 
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
@@ -2311,71 +2284,53 @@ int Scheduler::MarkDel(char* id)
 
 void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequency)
 {
-    int     sock;                               /* socket to startd */
-    XDR     xdr, *xdrs;                         /* stream to startd */
-    int     attempt;                            /* # of attempts */
-    int     reply;                              /* reply from the startd */
-    int     flag = TRUE;
+    int     	attempt;                            /* # of attempts */
+    int     	reply;                              /* reply from the startd */
+    int     	flag = TRUE;
 
     for(attempt = 1; attempt <= 3; attempt++)
     {
         flag = TRUE;
-        if((sock = do_connect(server, "condor_startd", 0)) < 0)
-        {
-            flag = FALSE;
-            xdr_destroy(xdrs);
-            close(sock);
-            sleep(1);
-            continue;
-        }
-        xdrs = xdr_Init(&sock, &xdr);
+
+		ReliSock sock(server, 0);
+		
 		dprintf (D_PROTOCOL, "## 5. Requesting resource from %s ...\n", server);
-        if(!snd_int(xdrs, REQUEST_SERVICE, FALSE))
+		sock.encode();
+        if(!sock.put(REQUEST_SERVICE))
         {
             flag = FALSE;
-            xdr_destroy(xdrs);
-            close(sock);
             sleep(1);
             continue;
         }
-        if(!snd_string(xdrs, capability, TRUE))
+        if(!sock.code(capability) || !sock.eom())
         {
             flag = FALSE;
-            xdr_destroy(xdrs);
-            close(sock);
             sleep(1);
             continue;
         }
-        if(!rcv_int(xdrs, &reply, TRUE))
+        if(!sock.rcv_int(reply, TRUE))
         {
             flag = FALSE;
-            xdr_destroy(xdrs);
-            close(sock);
             sleep(1);
             continue;
         }
         if(reply == OK)
         {
 			dprintf (D_PROTOCOL, "(Request was accepted)\n");
-            if(!snd_string(xdrs, name, FALSE))
+			sock.encode();
+            if(!sock.code(name))
             {
                 flag = FALSE;
-                xdr_destroy(xdrs);
-                close(sock);
                 sleep(1);
                 continue;
             }
-            if(!snd_int(xdrs, aliveFrequency, TRUE))
+            if(!sock.snd_int(aliveFrequency, TRUE))
             {
                 flag = FALSE;
-                xdr_destroy(xdrs);
-                close(sock);
                 sleep(1);
                 continue;
             }
             dprintf(D_ALWAYS, "alive frequency %d secs\n", aliveFrequency);
-            xdr_destroy(xdrs);
-            close(sock);
             break;
         }
 		else
@@ -2388,8 +2343,6 @@ void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequ
 		{
 			flag = FALSE;
 		}
-        xdr_destroy(xdrs);
-        close(sock);
     }
     if(flag == TRUE)
     {
@@ -2437,96 +2390,69 @@ shadow_rec* Scheduler::FindSrecByPid(int pid)
  */
 void Scheduler::Relinquish(Mrec* mrec)
 {
-	int     sock;
-    XDR     xdr, *xdrs;
-	int		flag = FALSE;
+	ReliSock	*sock;
+	int	   		flag = FALSE;
 
 	// inform the startd
-    if((sock = do_connect(mrec->peer, "condor_startd", 0)) < 0)
-    {
-        dprintf(D_ALWAYS, "\tCan't relinquish startd. Match record is:\n");
-		dprintf(D_ALWAYS, "\t%s\t%s\n", mrec->id,	mrec->peer);
-    }
+
+	sock = new ReliSock(mrec->peer, 0);
+	sock->encode();
+	if(!sock->put(RELINQUISH_SERVICE))
+	{
+		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
+		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+	}
+	else if(!sock->put(mrec->id) || !sock->eom())
+	{
+		dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
+		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
+	}
 	else
 	{
-		xdrs = xdr_Init(&sock, &xdr);
-
-		if(!snd_int(xdrs, RELINQUISH_SERVICE, FALSE))
-		{
-			dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
-		}
-		else if(!snd_string(xdrs, mrec->id, TRUE))
-		{
-			dprintf(D_ALWAYS, "Can't relinquish startd. Match record is:\n");
-			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
-		}
-		else
-		{
-			xdr_destroy(xdrs);
-			close(sock);
-			dprintf(D_PROTOCOL,"## 7. Relinquished startd. Match record is:\n");
-			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
-			flag = TRUE;
-		}
+		dprintf(D_PROTOCOL,"## 7. Relinquished startd. Match record is:\n");
+		dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
+		flag = TRUE;
 	}
+	delete sock;
 
 	// inform the accountant
 	if(!AccountantName)
 	{
 		dprintf(D_PROTOCOL, "## 7. No accountant to relinquish\n");
 	}
-	else if((sock = do_connect(AccountantName, "condor_accountant", 0)) < 0)
-    {
-        dprintf(D_ALWAYS, "Can't relinquish accountant. Match record is:\n");
-		dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-    }
 	else
 	{
-		xdrs = xdr_Init(&sock, &xdr);
-
-		if(!snd_int(xdrs, RELINQUISH_SERVICE, FALSE))
+		sock = new ReliSock(AccountantName, 0);
+		sock->encode();
+		if(!sock->put(RELINQUISH_SERVICE))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
 		}
-		else if(!snd_string(xdrs, MySockName, FALSE))
+		else if(!sock->code(MySockName))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
 		}
-		else if(!snd_string(xdrs, mrec->id, FALSE))
+		else if(!sock->put(mrec->id))
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
 		}
-		else if(!snd_string(xdrs, mrec->peer, TRUE))
+		else if(!sock->put(mrec->peer) || !sock->eom())
 		// This is not necessary to send except for being an extra checking
 		// because capability uniquely identifies a match.
 		{
 			dprintf(D_ALWAYS,"Can't relinquish accountant. Match record is:\n");
 			dprintf(D_ALWAYS, "%s\t%s\n", mrec->id,	mrec->peer);
-			xdr_destroy(xdrs);
-			close(sock);
 		}
 		else
 		{
-			xdr_destroy(xdrs);
-			close(sock);
 			dprintf(D_PROTOCOL,"## 7. Relinquished acntnt. Match record is:\n");
 			dprintf(D_PROTOCOL, "\t%s\t%s\n", mrec->id,	mrec->peer);
 			flag = TRUE;
 		}
+		delete sock;
 	}
 	if(flag)
 	{
@@ -2573,9 +2499,8 @@ int Scheduler::AlreadyMatched(PROC_ID* id)
  */
 void Scheduler::send_alive()
 {
-    int     sock;
-    XDR     xdr, *xdrs;
-    int     i, j;
+	ReliSock	*sock;
+    int     	i, j;
 
 	if(aliveFrequency == 0)
 	/* no need to send alive message */
@@ -2595,23 +2520,15 @@ void Scheduler::send_alive()
             rec[i]->alive_countdown = aliveInterval;
 			dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
 			j++;
-            if((sock = do_connect(rec[i]->peer, "condor_startd", 0)) < 0)
-            /* can't connect to startd */
-            {
-                dprintf(D_PROTOCOL, "\t(Can't connect to %s)\n", rec[i]->peer);
-                continue;
-            }
-            xdrs = xdr_Init(&sock, &xdr);
-            if(!snd_int(xdrs, ALIVE, TRUE))
+			sock = new ReliSock(rec[i]->peer, 0);
+            if(!sock->snd_int(ALIVE, TRUE))
             {
                 dprintf(D_PROTOCOL, "\t(Can't send alive message to %d)\n",
                         rec[i]->peer);
-                xdr_destroy(xdrs);
-                close(sock);
+				delete sock;
                 continue;
             }
-            xdr_destroy(xdrs);
-            close(sock);
+			delete sock;
         }
     }
     dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",j);

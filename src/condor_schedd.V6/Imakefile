@@ -12,7 +12,7 @@ DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
 API_LIB = ../condor_c++_util/libapi.a
 
 QMGMT_SRC = qmgmt.C qmgmt_receivers.C qmgmt_transaction.C log.C \
-	qmgmt_log.C
+	qmgmt_log.C qmgr_lib_support.C
 QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_transaction.o log.o \
 	qmgmt_log.o qmgr_lib_support.o
 
@@ -55,10 +55,11 @@ qmgmt_receivers.C: qmgmt.tmpl stub_gen qmgmt_receivers.prologue qmgmt_receivers.
 	stub_gen -n syscheck -mode receivers -p qmgmt_receivers.prologue \
 	-e qmgmt_receivers.epilogue > qmgmt_receivers.C
 
-qmgmt_send_stubs.c: qmgmt.tmpl stub_gen qmgmt_send_stubs.prologue
+qmgmt_send_stubs.C: qmgmt.tmpl stub_gen qmgmt_send_stubs.prologue qmgmt_send_stubs.epilogue
 	$(CPP) -DSWITCHES  qmgmt.tmpl | \
 	stub_gen -mode send_stub -n syscheck -n localcalls \
-	-p qmgmt_send_stubs.prologue > qmgmt_send_stubs.c
+	-p qmgmt_send_stubs.prologue -e qmgmt_send_stubs.epilogue \
+	> qmgmt_send_stubs.C
 
 clean::
-	rm -f qmgmt_receivers.C qmgmt_send_stubs.c
+	rm -f qmgmt_receivers.C qmgmt_send_stubs.C

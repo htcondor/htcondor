@@ -245,7 +245,8 @@ main(int argc, char* argv[])
 	scheduler.Init();
 	scheduler.SetClassAd(myAd);
 	scheduler.Register(&core);
-	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port()));
+	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port(),
+									   CONDOR_IO_SOCK));
 	
 	scheduler.timeout();
 	
