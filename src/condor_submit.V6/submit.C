@@ -403,7 +403,13 @@ main( int argc, char *argv[] )
 
 //	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
 //this should go away, and the owner name be placed in ad by schedd!!!!!
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, my_username());
+	char* tmp = my_username();
+	if( tmp ) {
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, tmp);
+		free( tmp );
+	} else {
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, "unknown" );
+	}
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
