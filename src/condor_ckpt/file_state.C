@@ -805,6 +805,9 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
 
+	// Special case: always flush data on stderr
+	if(fd==2) f->flush();
+
 	// Update the offset by the amount written
 	fp->offset += actual;
 
