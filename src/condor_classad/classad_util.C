@@ -2,9 +2,9 @@
 #include <string.h>
 #include <assert.h>
 #include <iostream.h>
-#include "ast.h"
-#include "parser.h"
-#include "classad_util.h" 
+#include "condor_ast.h"
+#include "condor_parser.h"
+#include "condor_classad_util.h" 
 
 //
 // Given a ClassAd and a ClassAdList, a pointer to the first match in the 
