@@ -86,7 +86,7 @@ FileTransfer::FileTransfer()
 	last_download_time = 0;
 	ActiveTransferTid = -1;
 	TransferStart = 0;
-	ClientCallback = NULL;
+	ClientCallback = 0;
 	TransferPipe[0] = TransferPipe[1] = -1;
 	perm_obj = NULL;
 	bytesSent = 0.0;
