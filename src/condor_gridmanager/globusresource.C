@@ -96,7 +96,7 @@ dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsInProgress\n",job->procID.c
 	if ( submitsInProgress.Length() < submitLimit &&
 		 submitLimit == oldSubmitLimit && 
 		 submitsQueued.Length() > 0 ) {
-		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n");
+		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n",resourceName);
 	}
 	oldSubmitLimit = submitLimit;
 	if ( submitsInProgress.Length() < submitLimit ) {
