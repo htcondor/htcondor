@@ -162,12 +162,20 @@ file table, we'll provide this for now...
 
 int MapFd( int user_fd )
 {
-	return FileTab->map_fd_hack(user_fd);
+	if( MappingFileDescriptors() ) {
+		return FileTab->map_fd_hack(user_fd);
+	} else {
+		return user_fd;
+	}
 }
 
 int LocalAccess( int user_fd )
 {
-	return FileTab->local_access_hack(user_fd);
+	if( MappingFileDescriptors() ) {
+		return FileTab->local_access_hack(user_fd);
+	} else {
+		return LocalSysCalls();
+	}
 }
 
 void DumpOpenFds()
