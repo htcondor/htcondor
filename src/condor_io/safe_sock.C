@@ -48,6 +48,11 @@ SafeSock::SafeSock() 				/* virgin safesock	*/
 	init();
 }
 
+SafeSock::SafeSock(const SafeSock & orig) 
+{
+	init();
+	Sock::Sock(orig);
+}
 
 SafeSock::~SafeSock()
 {
@@ -306,29 +311,31 @@ int SafeSock::attach_to_file_desc(
 }
 #endif
 
+char * SafeSock::serialize() const
+{
+	// here we want to save our state into a buffer
+
+	// first, get the state from our parent class
+	char * parent_state = Sock::serialize();
+	// now concatenate our state
+	char * outbuf = new char[50];
+	sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
+	strcat(parent_state,outbuf);
+	delete []outbuf;
+	return( parent_state );
+}
 
 char * SafeSock::serialize(char *buf)
 {
 	char sinful_string[28];
 	char *ptmp;
 
-	if ( buf == NULL ) {
-		// here we want to save our state into a buffer
-
-		// first, get the state from our parent class
-		char * parent_state = Sock::do_serialize();
-		// now concatenate our state
-		char * outbuf = new char[50];
-		sprintf(outbuf,"*%d*%s",_special_state,sin_to_string(&_who));
-		strcat(parent_state,outbuf);
-		delete []outbuf;
-		return( parent_state );
-	}
+	assert(buf);
 
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
-	ptmp = Sock::do_serialize(buf);
+	ptmp = Sock::serialize(buf);
 	assert( ptmp );
 	sscanf(ptmp,"%d*%s",&_special_state,sinful_string);
 	string_to_sin(sinful_string, &_who);

@@ -38,6 +38,47 @@ Sock::Sock() : Stream() {
 	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
 }
 
+Sock::Sock(const Sock & orig) : Stream() {
+
+	// initialize everything in the new sock
+	_sock = INVALID_SOCKET;
+	_state = sock_virgin;
+	_timeout = 0;
+	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	memset(	&_endpoint_ip_buf, 0, _ENDPOINT_BUF_SIZE );
+
+	// now duplicate the underlying network socket
+#ifdef WIN32
+	// Win32
+	SOCKET DuplicateSock = INVALID_SOCKET;
+	WSAPROTOCOL_INFO sockstate;
+
+	dprintf(D_FULLDEBUG,"About to sock duplicate, old sock=%X new sock=%X state=%d\n",
+		orig._sock,_sock,_state);
+
+	if (WSADuplicateSocket(orig._sock,GetCurrentProcessId(),&sockstate) == 0)
+	{
+		// success on WSADuplicateSocket, now open it
+		DuplicateSock = WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,
+			FROM_PROTOCOL_INFO, &sockstate, 0, 0);
+	}
+	if ( DuplicateSock == INVALID_SOCKET ) {
+		EXCEPT("ERROR failed to duplicate socket, err=%d",
+				WSAGetLastError());
+	}
+	// if made it here, successful duplication
+	_sock = DuplicateSock;
+	dprintf(D_FULLDEBUG,"Socket duplicated, old sock=%X new sock=%X state=%d\n",
+		orig._sock,_sock,_state);
+#else
+	// Unix
+	_sock = dup(orig._sock);
+	if ( _sock < 0 ) {
+		// dup failed, we're screwed
+		EXCEPT("ERROR: dup() failed in Sock copy ctor");
+	}
+#endif
+}
 
 #if defined(WIN32)
 
@@ -494,21 +535,32 @@ int Sock::timeout(int sec)
 	return t;
 }
 
-char * Sock::do_serialize(char *buf)
+char * Sock::serialize() const
+{
+	// here we want to save our state into a buffer
+	char * outbuf = new char[100];
+	sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
+	return( outbuf );
+}
+
+char * Sock::serialize(char *buf)
 {
 	char *ptmp;
 	int i;
+	SOCKET passed_sock;
 
-	if ( buf == NULL ) {
-		// here we want to save our state into a buffer
-		char * outbuf = new char[100];
-		sprintf(outbuf,"%u*%d*%d",_sock,_state,_timeout);
-		return( outbuf );
-	}
-
+	assert(buf);
 
 	// here we want to restore our state from the incoming buffer
-	sscanf(buf,"%u*%d*%d",&_sock,&_state,&_timeout);
+	sscanf(buf,"%u*%d*%d",&passed_sock,&_state,&_timeout);
+
+	// replace _sock with the one from the buffer _only_ if _sock
+	// is currently invalid.  if it is not invalid, it has already
+	// been initialized (probably via the Sock copy constructor) and
+	// therefore we should _not mess with it_.
+	if ( _sock == INVALID_SOCKET ) {
+		_sock = passed_sock;
+	}
 
 	// call the timeout method to make certain socket state set via
 	// setsockopt() and/or ioctl() is restored.
