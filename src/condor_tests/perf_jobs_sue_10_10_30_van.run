@@ -1,0 +1,67 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+my $testname = 'Condor autogen scalability test';
+my $datafile = "perf_jobs_sue_10_10_30_van.data";
+my $testfile = 'x_perf_autoscale.pl';
+my $cmdfile = "perf_jobs_sue_10_10_30_van.cmd";
+my $testname = 'condor scalability test';
+
+CondorTest::verbose_system("rm -rf $datafile");
+CondorTest::verbose_system("touch $datafile");
+
+my $startjobs = 10;
+my $incrementjobs = 10;
+my $currenttestcount = $startjobs;
+my $maxjobs = 30;
+my $lastduration = 0; # this is our startjobs run
+my %statshash = ();
+
+ReadLastStats();
+
+my $configfile = CondorPersonal::StartCondor("x_perf_auto_param.sue");
+$ENV{CONDOR_CONFIG} = $configfile;
+
+while( $currenttestcount <= $maxjobs)
+{
+	print "Test $currenttestcount -- & lastduration --$lastduration--";
+	my $nostatus = CondorTest::verbose_system("$testfile $currenttestcount $incrementjobs $lastduration $datafile $cmdfile $testname");
+	ReadLastStats();
+	$lastduration = $statshash{"duration"};
+	$currenttestcount += $incrementjobs;
+}
+
+system("condor_off -master");
+
+if($nostatus != 0)
+{
+	print "scaling test failed at $currenttestcount\n";
+}
+
+sub ReadLastStats
+{
+	my $line = "";
+
+	my $count = 0;
+	my $lenght = 0;
+	my $unittime = 0;
+
+	open(DATAOUT,"<$datafile") || die "Can not open existing data file: $!\n";
+	while(<DATAOUT>)
+	{
+		chomp;
+		$line = $_;
+		if( $line =~ /^\s*Scaling\((\d+)\)\s+Duration\((\d+)\)\s+UnitTime\((\d*\.*\d*)\).*/ )
+		{
+			print "$line highlights scaling  $1 duration $2 UnitTime $3\n";
+			$statshash{"scaling"} = $1;
+			$statshash{"duration"} = $2;
+			$statshash{"unittime"} = $3;
+		}
+		else
+		{
+			print "Mismatch $line\n";
+		}
+	}
+}
+
