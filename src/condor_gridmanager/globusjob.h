@@ -61,6 +61,7 @@ class GlobusJob : public Service
 	GlobusResource *myResource;
 	int evaluateStateTid;
 	time_t lastProbeTime;
+	bool probeNow;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentGlobusState;
 	time_t lastSubmitAttempt;

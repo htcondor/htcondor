@@ -140,6 +140,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 	jmUnreachable = false;
 	lastProbeTime = 0;
+	probeNow = false;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentGlobusState = time(NULL);
 	lastSubmitAttempt = 0;
@@ -338,6 +339,16 @@ int GlobusJob::doEvaluateState()
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
+				// the job completed or failed while we were not around -- now
+				// the jobmanager is sitting in a state where all it will permit
+				// is a status query or a commit to exit.  switch into 
+				// GM_SUBMITTED state and do an immediate probe to figure out
+				// if the state is done or failed, and move on from there.
+				probeNow = true;
+				gmState = GM_SUBMITTED;
 				break;
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
@@ -552,6 +563,10 @@ int GlobusJob::doEvaluateState()
 					now = time(NULL);
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
+					}
+					if ( probeNow ) {
+						lastProbeTime = 0;
+						probeNow = false;
 					}
 					if ( now >= lastProbeTime + probeInterval ) {
 						rc = gahp.globus_gram_client_job_status( jobContact,
@@ -870,6 +885,10 @@ int GlobusJob::doEvaluateState()
 				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
+				}
+				if ( probeNow ) {
+					lastProbeTime = 0;
+					probeNow = false;
 				}
 				if ( now >= lastProbeTime + probeInterval ) {
 					rc = gahp.globus_gram_client_job_status( jobContact,
