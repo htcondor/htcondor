@@ -9,8 +9,11 @@ SRC =  \
 	summary.C vacate.c block_jobs.c custom.C custom_main.C  info.c\
 
 	jobQueueCheck.C 
-
+#if (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS)
 LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib KernLib SocketLib
+#else
+LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a 
+
 LIBDIRS =../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 
 PROGRAMS =  \
