@@ -321,8 +321,9 @@ email_open_implementation(char *Mailer, char *final_command)
 		execl("/bin/sh", "sh", "-c", final_command, NULL);
 
 		/* I hope this EXCEPT gets recorded somewhere */
-		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s with command %s because: %s.", 
-			"/bin/sh", final_command, strerror(errno));
+		EXCEPT("EMAIL PROCESS: Could not exec mailer using '%s' with command "
+			"'%s' because of error: %s.", "/bin/sh", 
+			(final_command==NULL)?"(null)":final_command, strerror(errno));
 	}
 
 	/* for completeness */
