@@ -341,6 +341,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 				val.Clear( );
 				rval = wantSig ? attrRef->Evaluate( state, val, sig )
 					: attrRef->Evaluate( state, val );
+				delete attrRef;
 				if( !rval ) {
 					return( EVAL_FAIL );
 				}
