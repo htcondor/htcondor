@@ -117,11 +117,11 @@ int Authentication::authenticate( char *hostAddr, int auth_method )
     dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d\n", firm);
 
     switch ( firm ) {
-#if defined(X509_AUTHENTICATION)
-    case CAUTH_X509:
+#if defined(GSI_AUTHENTICATION)
+    case CAUTH_GSI:
         auth = new Condor_Auth_X509(mySock);
       break;
-#endif /* X509_AUTHENTICATION */
+#endif /* GSI_AUTHENTICATION */
 
 #if defined(KERBEROS_AUTHENTICATION) 
     case CAUTH_KERBEROS:
@@ -597,9 +597,9 @@ int Authentication::handshake(int method_bitmask) {
 
 int Authentication::selectAuthenticationType( int methods ) {
 
-#if defined(X509_AUTHENTICATION)
-	if ( methods & CAUTH_X509 )  {
-		return CAUTH_X509;
+#if defined(GSI_AUTHENTICATION)
+	if ( methods & CAUTH_GSI )  {
+		return CAUTH_GSI;
 	}
 #endif
 	
