@@ -232,6 +232,37 @@ public:
     return S;
   }
     
+  // this function escapes characters by putting some other
+  // character before them.  it does NOT convert newlines to
+  // the two chars '\n'.
+
+  MyString EscapeChars(const MyString& Q, const char escape) const {
+
+	// create a result string.  may as well reserve the length to
+	// begin with so we don't recopy the string for EVERY character.
+	// this algorithm WILL recopy the string for each char that ends
+	// up being escaped.
+	MyString S;
+	S.reserve(Len);
+
+	// go through each char in this string
+	for (int i = 0; i < Len; i++) {
+
+		// if it is in the set of chars to escape,
+		// drop an escape onto the end of the result
+		if (Q.FindChar(Data[i]) >= 0) {
+			// this character needs escaping
+			S += escape;
+		}
+
+		// put this char into the result
+		S += Data[i];
+	}
+
+	// thats it!
+	return S;
+  }
+
   int FindChar(int Char, int FirstPos=0) const {
     if (FirstPos>=Len || FirstPos<0) return -1;
     char* tmp=strchr(Data+FirstPos,Char);
