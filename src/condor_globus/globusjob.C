@@ -28,7 +28,6 @@
 #include "environ.h"  // for Environ object
 
 #include "globus_gram_client.h"
-#include "globus_gram_error.h"
 #include "globus_duroc_control.h"
 
 #include "gm_common.h"
@@ -246,7 +245,7 @@ bool GlobusJob::start()
 	} else {
 
 		rc = globus_gram_client_job_request( rmContact, RSL,
-					GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
+					GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL, gramCallbackContact,
 					&job_contact );
 
 		if ( rc == GLOBUS_SUCCESS ) {
@@ -263,7 +262,7 @@ bool GlobusJob::start()
 			callbackRegistered = true;
 
 			return true;
-		} else if ( rc == GLOBUS_GRAM_CLIENT_ERROR_WAITING_FOR_COMMIT ) {
+		} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 			newJM = true;
 			jobContact = strdup( job_contact );
 			globus_gram_client_job_contact_free( job_contact );
@@ -296,7 +295,7 @@ bool GlobusJob::stop_job_manager()
 	ignore_callbacks = true;	
 
 	rc = globus_gram_client_job_signal( jobContact,
-								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STOP_MANAGER, NULL,
+								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER, NULL,
 								&status, &failure_code );
 	if ( rc == GLOBUS_SUCCESS ) {
 		return true;
@@ -315,11 +314,11 @@ bool GlobusJob::commit()
 
 	if ( restartingJM || jobState == G_UNSUBMITTED ) {
 		rc = globus_gram_client_job_signal( jobContact,
-								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT_REQUEST,
+								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &failure_code );
 	} else {
 		rc = globus_gram_client_job_signal( jobContact,
-								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT_END,
+								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 								NULL, &status, &failure_code );
 	}
 
@@ -373,20 +372,20 @@ bool GlobusJob::callback_register()
 	// would fail for the same reason. We want an all-or-nothing scenario:
 	// either the callback register succeedded and we know if it's an
 	// enhanced jobmanager, or the callback is not registered.
-	rc = globus_gram_client_job_signal( jobContact, (globus_gram_client_job_signal_t)0, NULL, &status,
+	rc = globus_gram_client_job_signal( jobContact, (globus_gram_protocol_job_signal_t)0, NULL, &status,
 										&failure_code );
-	if ( rc ==  GLOBUS_GRAM_CLIENT_ERROR_UNKNOWN_SIGNAL_TYPE ) {
+	if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_UNKNOWN_SIGNAL_TYPE ) {
 		rc = GLOBUS_SUCCESS;
 		newJM = true;
-	} else if ( rc == GLOBUS_GRAM_CLIENT_ERROR_INVALID_JOB_QUERY ||
-				rc == GLOBUS_GRAM_CLIENT_ERROR_JOB_QUERY_DENIAL ) {
+	} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_JOB_QUERY ||
+				rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
 		rc = GLOBUS_SUCCESS;
 		newJM = false;
 	}
 
 	if ( rc == GLOBUS_SUCCESS ) {
 		rc = globus_gram_client_job_callback_register( jobContact, 
-						GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
+						GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL, gramCallbackContact,
 						&status, &failure_code );
 	}
 
@@ -421,7 +420,7 @@ bool GlobusJob::callback_register()
 		}
 
 		rc = globus_gram_client_job_signal( jobContact,
-							GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STDIO_UPDATE,
+							GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE,
 							rsl, &status, &failure_code );
 
 	}
@@ -443,21 +442,21 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		return true;
 	}
 
-	if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_PENDING ) {
+	if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ) {
 		if ( jobState != G_PENDING ) {
 			jobState = G_PENDING;
 
 			stateChanged = true;
 			addJobUpdateEvent( this, JOB_UE_STATE_CHANGE );
 		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_ACTIVE ) {
+	} else if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ) {
 		if ( jobState != G_ACTIVE ) {
 			jobState = G_ACTIVE;
 
 			stateChanged = true;
 			addJobUpdateEvent( this, JOB_UE_RUNNING );
 		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED ) {
+	} else if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 		// Not sure what the right thing to do on a FAILED message from
 		// globus. For now, we usually treat it like a completed job.
 		// Note: we also get this message after the job was cancelled.
@@ -481,9 +480,9 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 				// asked to shutdown, ignore the error if we can
 				// restart the job manager.... and we'll simply
 				// restart it next time we need it.
-				if ( (error == GLOBUS_GRAM_CLIENT_ERROR_JM_STOPPED ||
-					  error == GLOBUS_GRAM_CLIENT_ERROR_TTL_EXPIRED ||
-					  error == GLOBUS_GRAM_CLIENT_ERROR_USER_PROXY_EXPIRED) &&
+				if ( (error == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
+					  error == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
+					  error == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED) &&
 					  newJM ) {
 
 						const char *err_str = 
@@ -515,7 +514,7 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 				jobContact = NULL;
 			}
 		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_DONE ) {
+	} else if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 
 		int fd;
 
@@ -568,14 +567,14 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 			jobContact = NULL;
 		}
 
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_SUSPENDED ) {
+	} else if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ) {
 		if ( jobState != G_SUSPENDED ) {
 			jobState = G_SUSPENDED;
 
 			stateChanged = true;
 			addJobUpdateEvent( this, JOB_UE_STATE_CHANGE );
 		}
-	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_UNSUBMITTED ) {
+	} else if ( state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 		commit();
 		jobState = G_UNSUBMITTED;
 		if ( jobContact ) {
@@ -729,10 +728,10 @@ bool GlobusJob::restart()
 	}
 
 	rc = globus_gram_client_job_request( rmContact, rsl,
-        GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
+        GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL, gramCallbackContact,
         &job_contact );
 
-	if ( rc == GLOBUS_GRAM_CLIENT_ERROR_WAITING_FOR_COMMIT ) {
+	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 		newJM = true;
 
 		rehashJobContact( this, jobContact, job_contact );
@@ -749,7 +748,7 @@ bool GlobusJob::restart()
 
 		return true;
 	} else {
-		if ( rc == GLOBUS_GRAM_CLIENT_ERROR_UNDEFINED_EXE ) {
+		if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 			newJM = false;
 		}
 		errorCode = rc;

@@ -28,7 +28,6 @@
 
 #if defined(GLOBUS_SUPPORT)
 #	include "globus_common.h"
-#	include "globus_rsl_assist.h"
 #endif
 
 #if defined(GSS_AUTHENTICATION)
@@ -83,7 +82,7 @@ x509_proxy_seconds_until_expire( char *proxy_file )
 
 	/* Load proxy */
 	if (!proxy_file)  {
-		proxy_get_filenames(1, NULL, NULL, &proxy_file, NULL, NULL);
+		proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
 		must_free_proxy_file = TRUE;
 	}
 

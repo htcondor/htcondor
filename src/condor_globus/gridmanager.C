@@ -40,7 +40,7 @@
 
 #include "sslutils.h"	// for proxy_get_filenames
 
-extern gss_cred_id_t globus_i_gram_http_credential;
+extern gss_cred_id_t globus_i_gram_protocol_credential;
 
 #define QMGMT_TIMEOUT 5
 
@@ -244,7 +244,7 @@ GridManager::Init()
 	// Find the location of our proxy file, if we don't already
 	// know (from the command line)
 	if (X509Proxy == NULL) {
-		proxy_get_filenames(1, NULL, NULL, &X509Proxy, NULL, NULL);
+		proxy_get_filenames(NULL, 1, NULL, NULL, &X509Proxy, NULL, NULL);
 	}
 	ASSERT(X509Proxy);
 
@@ -373,13 +373,13 @@ GridManager::checkProxy()
 		 */
     	OM_uint32	major_status;
     	OM_uint32 	minor_status;
-		gss_cred_id_t old_gram_credential = globus_i_gram_http_credential;
+		gss_cred_id_t old_gram_credential = globus_i_gram_protocol_credential;
 		static bool first_cred_refresh = true;
 		/* -- Now, acquire our new context.  We care about errors
 		 * here, but we have no good way of handling them.  Dooohh! */
     	major_status = globus_gss_assist_acquire_cred(&minor_status,
                         GSS_C_BOTH,
-                        &globus_i_gram_http_credential);
+                        &globus_i_gram_protocol_credential);
     	if (major_status != GSS_S_COMPLETE)
     	{
 			// If we failed, perhaps the proxy file was being changed
@@ -388,11 +388,11 @@ GridManager::checkProxy()
 			sleep(1);
     		major_status = globus_gss_assist_acquire_cred(&minor_status,
                         GSS_C_BOTH,
-                        &globus_i_gram_http_credential);
+                        &globus_i_gram_protocol_credential);
     		if (major_status != GSS_S_COMPLETE)
 			{
 				// We cannot read in the new proxy... revert to the old.
-				globus_i_gram_http_credential = old_gram_credential;
+				globus_i_gram_protocol_credential = old_gram_credential;
 			}
 		}
 
@@ -624,7 +624,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 						new_job->procID.cluster,new_job->procID.proc);
 			} else {
 				if ( new_job->errorCode ==
-					 GLOBUS_GRAM_CLIENT_ERROR_CONNECTION_FAILED ) {
+					 GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
 
 					// The machine is unreachable. Mark it dead and
 					// delay the submit.
@@ -666,7 +666,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 				if ( new_job->callback_register() == false ) {
 
 					if ( new_job->errorCode ==
-						 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+						 GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
 
 						// The jobmanager is unreachable. See if the same is
 						// true for the entire machine.
@@ -887,7 +887,7 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 			if ( curr_job->cancel() == false ) {
 
 				if ( curr_job->errorCode ==
-					 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+					 GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
 
 					// The jobmanager is unreachable. See if the same is
 					// true for the entire machine.
@@ -916,7 +916,7 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 					}
 
 				} else if ( curr_job->errorCode !=
-							GLOBUS_GRAM_CLIENT_ERROR_JOB_QUERY_DENIAL ) {
+							GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
 					// JOB_QUERY_DENIAL means the job is done and the
 					// jobmanager is cleaning up. In that case, wait for
 					// the final callback.
@@ -1013,7 +1013,7 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 		if ( curr_job->commit() == false ) {
 
 			if ( curr_job->errorCode ==
-				 GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+				 GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
 
 				// The jobmanager is unreachable. See if the same is
 				// true for the entire machine.
@@ -1202,7 +1202,7 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 		if ( curr_job->restart() == false ) {
 
 			if ( curr_job->errorCode ==
-				 GLOBUS_GRAM_CLIENT_ERROR_CONNECTION_FAILED ) {
+				 GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
 
 				// The machine is unreachable. Mark it dead and
 				// delay the restart.
@@ -1343,8 +1343,8 @@ GridManager::updateSchedd()
 				break;
 			}
 			if ( curr_event->event == JOB_UE_FAILED && 
-				 ( curr_job->jmFailureCode == GLOBUS_GRAM_CLIENT_ERROR_JOB_EXECUTION_FAILED ||
-				   curr_job->jmFailureCode == GLOBUS_GRAM_CLIENT_ERROR_INVALID_QUEUE ) ) {
+				 ( curr_job->jmFailureCode == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_EXECUTION_FAILED ||
+				   curr_job->jmFailureCode == GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_QUEUE ) ) {
 				// This error means the submission to the local scheduler
 				// failed. Treat it as a submission error.
 				curr_job->errorCode = curr_job->jmFailureCode;
@@ -1791,7 +1791,7 @@ GridManager::jobProbe()
 						 next_job->procID.cluster, next_job->procID.proc );
 
 			if ( next_job->probe() == false && next_job->errorCode ==
-				     GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+				     GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
 
 				dprintf( D_ALWAYS, 
 						"Globus Jobmanager unreachable for job %d.%d\n",
@@ -1891,7 +1891,7 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 
 	// If we get a failed while waiting to commit a job, then it timed out
 	// waiting for our commit signal. Remove the pending commit.
-	if(state==GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED){
+	if(state==GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED){
 		this_->JobsToCommit.Delete(this_job);
 	}
 

@@ -303,7 +303,7 @@ int X509_Credential :: check_x509_proxy( char *proxy_file )
 
 	/* Load proxy */
 	if (!proxy_file) 
-		proxy_get_filenames(1, NULL, NULL, &proxy_file, NULL, NULL);
+		proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
 
 	if (!proxy_file) {
 		fprintf(stderr,"ERROR: unable to determine proxy file name\n");

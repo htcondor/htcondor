@@ -198,37 +198,29 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-GLOBUS_DIR = /p/condor/workspaces/globus/devel
+GLOBUS_DIR = /unsup/globus-2.0-beta
 
 #if WANT_GLOBUS && HAS_GLOBUS
 
 # define GLOBUS_SUPPORT 1
 
-  /* GLOBUS_SUPPORT includes GSS_AUTHENTICATION as well */
-# undef GSS_AUTHENTICATION
-# define GSS_AUTHENTICATION 1
+  GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DNO_GSSAPI_CONFIG_H \
+    -I$(GLOBUS_DIR)/include/gcc32dbg
 
-  LDAP_DIR = /unsup/OpenLDAP-1.2.7-G
-
-  GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DLDAP_DEBUG -DLDAP_REFERRALS \
-    -I$(GLOBUS_DIR)/include -I$(LDAP_DIR)/include
-
-  GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_rsl_assist.a \
-    $(GLOBUS_DIR)/lib/libglobus_duroc_control.a \
-    $(GLOBUS_DIR)/lib/libglobus_rsl.a \
-    $(GLOBUS_DIR)/lib/libglobus_duct_control.a \
-    $(GLOBUS_DIR)/lib/libglobus_nexus.a \
-    $(GLOBUS_DIR)/lib/libglobus_mp.a \
-    $(GLOBUS_DIR)/lib/libglobus_dc.a \
-    $(GLOBUS_DIR)/lib/libglobus_gram_client.a \
-    $(GLOBUS_DIR)/lib/libglobus_gass_server_ez.a \
-    $(GLOBUS_DIR)/lib/libglobus_gass_transfer.a \
-    $(GLOBUS_DIR)/lib/libglobus_ftp_client.a \
-    $(GLOBUS_DIR)/lib/libglobus_ftp_control.a \
-    $(GLOBUS_DIR)/lib/libglobus_io.a \
-    $(GLOBUS_DIR)/lib/libglobus_common.a \
-    $(LDAP_DIR)/lib/libldap.a \
-    $(LDAP_DIR)/lib/liblber.a
+  GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_gass_server_ez_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_gass_transfer_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_duroc_control_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_duct_control_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_duroc_common_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_duct_common_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_rsl_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_gram_client_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_nexus_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_gram_protocol_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_dc_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_mp_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_io_gcc32dbg.a \
+    $(GLOBUS_DIR)/lib/libglobus_common_gcc32dbg.a
 
 # define IsCondorG -DCONDOR_G
 #else
@@ -246,9 +238,9 @@ GLOBUS_DIR = /p/condor/workspaces/globus/devel
                  -I$(GLOBUS_DIR)/include -I$(OpenSSLIncludePath)
 # endif
 
-  X509_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
-            $(GLOBUS_DIR)/lib/libglobus_gss.a \
-            $(GLOBUS_DIR)/lib/libglobus_gaa.a \
+  X509_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a \
+            $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_gcc32dbg.a \
+            $(GLOBUS_DIR)/lib/libglobus_ssl_utils_gcc32dbg.a \
             $(OpenSSL_LIB)
              /* OPENSSL_LIB is defined in site.def */
 #else
@@ -285,7 +277,7 @@ GLOBUS_DIR = /p/condor/workspaces/globus/devel
 ENCRYPTION_FLAGS = $(CONDOR_3DES_FLAGS) $(CONDOR_BLOWFISH_FLAGS) -I$(OpenSSLIncludePath)
 
 #if NEED_OPENSSL
-  ENCRYPTION_LIB = $(OpenSSL_LIB_PATH)/libssl.a $(OpenSSL_LIB_PATH)/libcrypto.a
+  ENCRYPTION_LIB = $(OpenSSL_LIB_PATH)/libssl_gcc32dbg.a $(OpenSSL_LIB_PATH)/libcrypto_gcc32dbg.a
 #else
   ENCRYPTION_LIB =
 #endif

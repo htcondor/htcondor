@@ -166,7 +166,7 @@ int Condor_Auth_X509 :: wrap(char*  data_in,
     if (!isValid())
         return GSS_S_FAILURE;	
     
-    input_token->value  = data_in;
+    input_token->value  = (void *)data_in;
     input_token->length = length_in;
     
     major_status = gss_wrap(&minor_status,
@@ -200,7 +200,7 @@ int Condor_Auth_X509 :: unwrap(char*  data_in,
         return GSS_S_FAILURE;
     }
     
-    input_token -> value = data_in;
+    input_token -> value = (void *)data_in;
     input_token -> length = length_in;
     
     major_status = gss_unwrap(&minor_status,
@@ -261,7 +261,7 @@ int Condor_Auth_X509::get_user_x509name(char *proxy_file, char* name)
     SSLeay_add_ssl_algorithms();
     /* Load proxy */
     if (!proxy_file)
-   	 proxy_get_filenames(1, NULL, NULL, &proxy_file, NULL, NULL);
+   	 proxy_get_filenames(NULL, 1, NULL, NULL, &proxy_file, NULL, NULL);
     if (!proxy_file)
     {
         dprintf(D_ALWAYS,"ERROR: unable to determine proxy file name\n");
