@@ -190,7 +190,7 @@ Initialize( const ExprList *el )
 	// initialize eval state
 	l = el;
 	state.cache.clear( );
-	state.curAd = l->parentScope;
+	state.curAd = (ClassAd*)l->parentScope;
 	state.SetRootScope( );
 
 	// initialize list iterator
