@@ -1,0 +1,153 @@
+/////////////////////////////////
+echo Testing basic math...
+eval x = (1 + 2)
+same $x, 3
+eval x = (3 - 1) 
+same $x, 2
+eval x = (2 * 3)
+same $x, 6
+eval x = (8 / 2)
+same $x, 4
+
+echo Testing extreme numbers...
+samerep real("INF"), "real(\"INF\")"
+samerep real("-INF"), "real(\"-INF\")"
+samerep real("NaN"), "real(\"NaN\")"
+diff real("NaN"), real("NaN")
+same real("INF"), real("INF")
+same real("-INF"), real("-INF")
+diff real("INF"), real("-INF")
+
+/////////////////////////////////
+echo Testing basic attributes in a ClassAd...
+eval x = [
+            a = 1;
+            b = 2.0;
+            c = "alain";
+            d = true;
+            atime = absTime("2004-01-01T");
+            rtime = relTime("2+25:14:16.123");
+            l = {1, 1, 2, 3, 5};
+            e = error;
+            u = undefined;
+         ]
+same $x.a, 1
+same $x.b, 2.0
+same $x.c, "alain"
+same $x.d, true
+same $x.atime, absTime("2004-01-01T");
+same $x.rtime, relTime("2+25:14:16.123");
+same $x.l, {1, 1, 2, 3, 5}
+same $x.l[4], 5
+same $x.e, error
+same $x.u, undefined
+same isinteger($x.a), true
+same isinteger($x.b), false
+same isreal($x.b), true
+same isreal($x.c), false
+same isstring($x.c), true
+same isstring($x.d), false
+same isboolean($x.d), true
+same isboolean($x.c), false
+same isabstime($x.atime), true
+same isabstime($x.rtime), false
+same isreltime($x.rtime), true
+same isreltime($x.atime), false
+same islist($x.l), true
+same islist($x.a), false
+same iserror($x.e), true
+same iserror($x.u), false
+same isundefined($x.u), true
+same isundefined($x.e), false
+
+// Note that testing XML relies on the ClassAd from
+// the above testing.
+echo Testing XML...
+eval y = [ a = 2; b = "Lisp rocks"; ]
+writexml tmp.xml {$x, $y}
+readxml z tmp.xml
+same $x, $z[0]
+same $y, $z[1]
+
+/////////////////////////////////
+echo Testing select on lists...
+eval x = {
+           [a = 3; b = "I see London"],
+           [a = 2; b = "I see France"],
+           [a = 1; b = "I see Alain's funky pants"]
+         }
+same $x.a, {3, 2, 1}
+same $x.b, {"I see London", "I see France", "I see Alain's funky pants"}
+same $x.c, {undefined, undefined, undefined}
+same {}.a, {}
+
+/////////////////////////////////
+echo Testing subscripts
+eval x = [
+           a = 3;
+           b = "alain";
+           ab = 4;
+         ]
+same $x["a"], 3
+same $x["b"], "alain"
+same $x["c"], undefined
+same $x[strcat("a", "b")], 4
+eval x = {"a", "b", "c"}
+same $x[0], "a"
+same $x[1], "b"
+same $x[2], "c"
+same $x[3], undefined
+
+/////////////////////////////////
+echo Testing functions...
+same int(3), 3
+same int(3.9), 3
+same int("3.9"), 3
+same int(absTime("1970-01-01T:00:00:01Z")), 1
+same int(reltime("01:00:01")), 3601
+
+same real(3), 3.0
+same real(3.9), 3.9
+same real("3.9"), 3.9
+same real(absTime("1970-01-01T:00:00:01Z")), 1.0
+same real(reltime("01:00:01")), 3601.0
+
+same string("alain"), "alain"
+same string(1), "1"
+
+same floor(3.9), 3
+same floor("3.9"), 3
+
+same ceiling(3.9), 4
+same ceiling("3.9"), 4
+
+same round(3.1), 3
+same round(3.9), 4
+
+same strcat("", "roy"), "roy"
+same strcat("alain", ""), "alain"
+same strcat("alain", "roy"), "alainroy"
+same strcat(14, " bottles of root beer"), "14 bottles of root beer"
+
+same substr("abcde", 1), "bcde"
+same substr("abcde", 4), "e"
+same substr("abcde", 5), ""
+same substr("abcde", 1, 2), "bc"
+same substr("abcde", 4, 2), "e"
+
+same strcmp("alain", "roy"), -1
+same strcmp("roy", "alain"), 1
+same strcmp("alain", "alain"), 0
+
+same stricmp("alain", "ALAIN"), 0
+same stricmp("alain", "roy"), -1
+
+same tolower("ALAIN"), "alain")
+same toupper("alain"), "ALAIN")
+
+same member(1, {1, 2, 3}), true
+same member(4, {1, 2, 3}), false
+
+same regexp("Alain.*Roy", "Alain Aslag Roy"), true
+same regexp("alain.*roy", "Alain Aslag Roy"), false
+same regexp("alain.*roy", "Alain Aslag Roy", "i"), true
