@@ -39,7 +39,6 @@
 
 
 // these are defined in master.C
-extern int		RestartsPerHour;
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
 extern int		master_exit(int);
