@@ -27,6 +27,21 @@ The details of each version are described below.
   This is useful in case you misplace or do not save the ClaimID
   returned to you from \Condor{cod\_request}.
 
+\item PVM: Added support for \Procedure{pvm\_export}.
+
+\item PVM: Added support for any tasks the Master spawns to also spawn other
+	tasks. Before this fix, only the master process could spawn tasks.
+
+\item PVM: Added the ability for multiple tasks to be run on a resource
+	simultaneously. 
+
+\item PVM: Added support for Condor-PVM to run multiple tasks under a single
+	Condor-PVM starter. Currently, this feature must be turned on
+	by a specific option in the submit description file.
+
+\item Added new option \Opt{-dagman} to \Condor{submit\_dag} which allows 
+specification of an alternate \Condor{dagman} executable. 
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -35,6 +50,11 @@ The details of each version are described below.
 
 \item Fixed the serious bug with periodic checkpointing that was
   introduced in version 6.5.2.
+
+\item PVM: Fixed the \Attr{Environment} attribute in the submit description 
+		to be honored by both the master process and the slave tasks.
+
+\item PVM: Fixed a few PVM deadlock scenarios during PVM startup.
 
 \end{itemize}
 
