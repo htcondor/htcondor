@@ -46,6 +46,7 @@
 #endif
 #include <limits.h>				/* for _POSIX_PATH_MAX */
 
+// If you modify this enum, you must also modify ULogEventNumberNames array
 enum ULogEventNumber
 {
 	ULOG_SUBMIT,				// Job submitted
@@ -62,7 +63,10 @@ enum ULogEventNumber
 	,ULOG_JOB_ABORTED				// Job terminated
 };
 
+/// For printing the enum value.  cout << ULogEventNumberNames[outcome];
+extern const char * ULogEventNumberNames[];
 
+// If you modify this enum, you must also modify ULogEventOutcomeNames array
 enum ULogEventOutcome
 {
 	ULOG_OK,
@@ -71,6 +75,8 @@ enum ULogEventOutcome
 	ULOG_UNK_ERROR
 };
 
+/// For printing the enum value.  cout << ULogEventOutcomeNames[outcome];
+extern const char * ULogEventOutcomeNames[];
 
 class ULogEvent
 {

@@ -30,6 +30,29 @@
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
+const char * ULogEventNumberNames[] = {
+	"ULOG_SUBMIT          ", // Job submitted
+	"ULOG_EXECUTE         ", // Job now running
+	"ULOG_EXECUTABLE_ERROR", // Error in executable
+	"ULOG_CHECKPOINTED    ", // Job was checkpointed
+	"ULOG_JOB_EVICTED     ", // Job evicted from machine
+	"ULOG_JOB_TERMINATED  ", // Job terminated
+	"ULOG_IMAGE_SIZE      ", // Image size of job updated
+	"ULOG_SHADOW_EXCEPTION"  // Shadow threw an exception
+#if defined(GENERIC_EVENT)
+	,"ULOG_GENERIC        "
+#endif	    
+	,"ULOG_JOB_ABORTED    "  // Job terminated
+};
+
+const char * ULogEventOutcomeNames[] = {
+  "ULOG_OK       ",
+  "ULOG_NO_EVENT ",
+  "ULOG_RD_ERROR ",
+  "ULOG_UNK_ERROR"
+};
+
+
 ULogEvent *
 instantiateEvent (ULogEventNumber event)
 {
