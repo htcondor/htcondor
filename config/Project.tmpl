@@ -236,21 +236,6 @@ DEBUG_FLAG = DebugFlag
  CONDOR_G_FLAGS =
 #endif /*HasGlobus && WantCondorG */
 
-GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gass_transfer_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duroc_control_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duct_control_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duroc_common_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duct_common_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_rsl_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gram_client_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_nexus_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gram_protocol_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_dc_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_mp_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_io_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
-
 /* GSI Authentication requires globus*/
 #if WANT_GSI && HAS_GSI
   #define NEEDS_GSI YES
@@ -311,9 +296,17 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
   #define NEEDS_OPENSSL YES
   GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
   GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
-	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libssl_$(GlobusFlavor).a \
+   	      $(GlobusPath)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_openssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a 
 #else
   GSI_FLAGS =
