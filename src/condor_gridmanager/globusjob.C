@@ -2435,42 +2435,33 @@ bool
 GlobusJob::JmShouldSleep()
 {
 	if ( jmVersion == GRAM_V_1_0 ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (0)\n",procID.cluster, procID.proc);
 		return false;
 	}
 	if ( jmProxyExpireTime < myProxy->expiration_time ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (0.5)\n",procID.cluster, procID.proc);
 		return false;
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (1)\n",procID.cluster, procID.proc);
 		return false;
 	}
 	if ( useGridJobMonitor == false ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (2)\n",procID.cluster, procID.proc);
 		return false;
 	}
 
 	if ( myResource->GridJobMonitorActive() == false ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (3)\n",procID.cluster, procID.proc);
 		return false;
 	}
 
 	switch ( globusState ) {
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING:
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning true (4)\n",procID.cluster, procID.proc);
 		return true;
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE:
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED:
 		if ( !streamOutput && !streamError ) {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning true (5)\n",procID.cluster, procID.proc);
 			return true;
 		} else {
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (6)\n",procID.cluster, procID.proc);
 			return false;
 		}
 	default:
-dprintf(D_ALWAYS,"(%d.%d) JmShouldSleep returning false (7)\n",procID.cluster, procID.proc);
 		return false;
 	}
 }

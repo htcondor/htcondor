@@ -303,7 +303,7 @@ int CheckProxies()
 	int now = time(NULL);
 	int next_check = CheckProxies_interval + now;
 	int rc;
-dprintf(D_ALWAYS,"CheckProxies called\n");
+dprintf(D_FULLDEBUG,"CheckProxies called\n");
 
 	if ( proxymanager_initialized == false ) {
 		daemonCore->Reset_Timer( CheckProxies_tid, CheckProxies_interval );
@@ -325,7 +325,7 @@ dprintf(D_ALWAYS,"CheckProxies called\n");
 
 		// Remove any proxies that are no longer being used by anyone
 		if ( next_proxy->num_references == 0 ) {
-dprintf(D_ALWAYS,"  removing old proxy %d\n",next_proxy->gahp_proxy_id);
+dprintf(D_FULLDEBUG,"  removing old proxy %d\n",next_proxy->gahp_proxy_id);
 			ProxiesByPath.remove( HashKey(next_proxy->proxy_filename) );
 			if ( my_gahp.uncacheProxy( next_proxy->gahp_proxy_id ) == false ) {
 				EXCEPT( "GAHP uncache command failed!" );
@@ -350,7 +350,7 @@ dprintf(D_ALWAYS,"  removing old proxy %d\n",next_proxy->gahp_proxy_id);
 			next_proxy->expiration_time = new_expiration;
 			next_proxy->near_expired = false;
 
-dprintf(D_ALWAYS,"  (re)caching proxy %d\n",next_proxy->gahp_proxy_id);
+dprintf(D_FULLDEBUG,"  (re)caching proxy %d\n",next_proxy->gahp_proxy_id);
 			if ( my_gahp.cacheProxyFromFile( next_proxy->gahp_proxy_id,
 											 next_proxy->proxy_filename ) == false ) {
 				// TODO is there a better way to react?
@@ -367,7 +367,7 @@ dprintf(D_ALWAYS,"  (re)caching proxy %d\n",next_proxy->gahp_proxy_id);
 			// This proxy has expired or is about to expire. Mark it
 			// as such and notify everyone who cares.
 			if ( next_proxy->near_expired == false ) {
-dprintf(D_ALWAYS,"  marking proxy %d as about to expire\n",next_proxy->gahp_proxy_id);
+dprintf(D_FULLDEBUG,"  marking proxy %d as about to expire\n",next_proxy->gahp_proxy_id);
 				next_proxy->near_expired = true;
 				int tid;
 				next_proxy->notification_tids.Rewind();
@@ -398,11 +398,11 @@ dprintf(D_ALWAYS,"  marking proxy %d as about to expire\n",next_proxy->gahp_prox
 	// everyone who cares
 	if ( new_master != NULL && SetMasterProxy( new_master ) == true ) {
 
-dprintf(D_ALWAYS,"  proxy %d is now the master proxy\n",new_master->gahp_proxy_id);
+dprintf(D_FULLDEBUG,"  proxy %d is now the master proxy\n",new_master->gahp_proxy_id);
 		if ( gahp_initialized == false ) {
 			// This is our first master proxy, perform the callback so that
 			// the GAHP can be intialized with it
-dprintf(D_ALWAYS,"  first master found, calling gahp init function\n");
+dprintf(D_FULLDEBUG,"  first master found, calling gahp init function\n");
 			if ( (*InitGahpFunc)( MasterProxy.proxy_filename ) == false ) {
 				EXCEPT( "GAHP initalization failed!" );
 			}
@@ -417,7 +417,7 @@ dprintf(D_ALWAYS,"  first master found, calling gahp init function\n");
 			gahp_initialized = true;
 		} else {
 			// Refresh the master proxy credentials in the GAHP
-dprintf(D_ALWAYS,"  refreshing master proxy in gahp\n");
+dprintf(D_FULLDEBUG,"  refreshing master proxy in gahp\n");
 			rc = my_gahp.globus_gram_client_set_credentials( MasterProxy.proxy_filename );
 			// TODO if set-credentials fails, what to do?
 			if ( rc != 0 ) {
@@ -449,7 +449,7 @@ dprintf(D_ALWAYS,"  refreshing master proxy in gahp\n");
 
 	// next_check is the absolute time of the next check, convert it to
 	// a relative time (from now)
-dprintf(D_ALWAYS,"  will call CheckProxies again in %d seconds\n",next_check-now);
+dprintf(D_FULLDEBUG,"  will call CheckProxies again in %d seconds\n",next_check-now);
 	daemonCore->Reset_Timer( CheckProxies_tid, next_check - now );
 
 	return TRUE;
