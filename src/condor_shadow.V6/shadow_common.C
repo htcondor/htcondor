@@ -561,7 +561,8 @@ part_send_job(
 
   /* Send the job info */
   if (!JobAd) {   // just get the job ad from the schedd once
-  	ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true);
+  	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true))
+		EXCEPT("Failed to connect to schedd!");
   	JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
   	DisconnectQ(NULL);
   }
