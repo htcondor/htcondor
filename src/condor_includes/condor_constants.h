@@ -42,4 +42,16 @@ static const int	DAY = 24 * 60 * 60;
 #ifndef MATCH
 static const int	MATCH = 0;
 #endif
+
+/*
+  These are the well known file descriptors used for remote system call and
+  logging functions.
+*/
+#ifndef CLIENT_LOG
+static const int CLIENT_LOG = 18;
+static const int RSC_SOCK = 17;
+#endif
+static const int REQ_SOCK = 16;
+static const int RPL_SOCK = 17;
+
 #endif
