@@ -30,6 +30,7 @@
 #include "user_proc.h"
 #include "io_proxy.h"
 #include "NTsenders.h"
+#include "condor_ver_info.h"
 
 void set_resource_limits();
 extern ReliSock *syscall_sock;
@@ -97,8 +98,8 @@ public:
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir; }
 
-		/** Return the version string of the Shadow */
-	const char *GetShadowVersion() const { return ShadowVersion; }
+		/** Return a pointer to the version object for the Shadow  */
+	CondorVersionInfo* GetShadowVersion() const { return ShadowVersion; }
 
 		/** Compare our own UIDDomain vs. the submitting host.  We
 			check in the given job ClassAd for ATTR_UID_DOMAIN.
@@ -116,13 +117,23 @@ public:
 		*/
 	bool InitUserPriv( ClassAd* jobAd );
 
+		/** Initialize our ShadowVersion object with the version of
+			the shadow we get out of the job ad.  If there's no shadow
+			version, we leave our ShadowVersion NULL.  If we know the
+			version, we instantiate a CondorVersionInfo object so we
+			can perform checks on the version in the various places in
+			the starter where we need to know this for compatibility.
+			@param jobAd ClassAd of the job we're trying to run
+		*/
+	void InitShadowVersion( ClassAd* jobAd );
+
 protected:
 	List<UserProc> JobList;
 
 private:
 	char *InitiatingHost;
-		/** The version string of the shadow if known; otherwise NULL */
-	char *ShadowVersion;
+		/** The version of the shadow if known; otherwise NULL */
+	CondorVersionInfo* ShadowVersion;
 	char *Execute;
 	char *UIDDomain;
 	char *FSDomain;

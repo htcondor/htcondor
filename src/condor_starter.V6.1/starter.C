@@ -65,7 +65,7 @@ CStarter::~CStarter()
 	if (Execute) free(Execute);
 	if (UIDDomain) free(UIDDomain);
 	if (FSDomain) free(FSDomain);
-	if (ShadowVersion) free(ShadowVersion);
+	if (ShadowVersion) delete ShadowVersion;
 }
 
 bool
@@ -182,6 +182,31 @@ CStarter::ShutdownFast(int)
 	return 0;
 }
 
+
+void
+CStarter::InitShadowVersion( ClassAd* jobAd )
+{
+	if( ! jobAd ) {
+		EXCEPT( "InitShadowVersion called with NULL jobAd" );
+	}
+
+	char* tmp = NULL;
+	if( ShadowVersion ) {
+		delete ShadowVersion;
+		ShadowVersion = NULL;
+	}
+	jobAd->LookupString( ATTR_SHADOW_VERSION, &tmp );
+	if( tmp ) {
+		dprintf( D_FULLDEBUG, "Version of Shadow is %s\n",
+				 tmp );
+		ShadowVersion = new CondorVersionInfo( tmp, "SHADOW" );
+	} else {
+		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.2)\n" ); 
+	}
+}
+
+
+
 bool
 CStarter::StartJob()
 {
@@ -203,13 +228,7 @@ CStarter::StartJob()
 	}
 
 		// Grab the version of the Shadow from the job ad
-
-	jobAd->LookupString(ATTR_SHADOW_VERSION,&ShadowVersion);
-	if ( !ShadowVersion ) {
-		dprintf(D_FULLDEBUG,"Version of Shadow unknown (pre v6.3.2)\n");
-	} else {
-		dprintf(D_FULLDEBUG,"Version of Shadow is %s\n",ShadowVersion);
-	}
+	InitShadowVersion( jobAd );
 
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
@@ -377,7 +396,7 @@ CStarter::InitUserPriv( ClassAd* jobAd )
 			// the logs with scary and misleading error messages.
 		if( ! init_user_ids_quiet(owner) ) { 
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
-			bool shadow_is_old = false;
+			bool shadow_is_old = true;
 			bool try_soft_uid = false;
 			char* soft_uid = param( "SOFT_UID_DOMAIN" );
 			if( soft_uid ) {
@@ -389,14 +408,9 @@ CStarter::InitUserPriv( ClassAd* jobAd )
 			if( try_soft_uid ) {
 					// first, see if the shadow is new enough to
 					// support the RSC we need to do...
-				if( GetShadowVersion() ) {
-					CondorVersionInfo ver(GetShadowVersion(), "SHADOW");
-					if( ! ver.built_since_version(6,3,2) ) {
-						shadow_is_old = true;
-					}
-				} else {
-						// Don't even know the shadow version...
-					shadow_is_old = true;
+				if( ShadowVersion && 
+					ShadowVersion->built_since_version(6,3,2) ) {
+						shadow_is_old = false;
 				}
 			} else {
 					// No soft_uid_domain or it's set to False.  No
