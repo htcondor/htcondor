@@ -33,6 +33,9 @@
 #include "condor_common.h"
 #include "condor_xdr.h"
 #include <sys/stat.h>
+#include "_condor_fix_types.h"
+#include "condor_fix_socket.h"
+#include <netinet/in.h>
 #include <sys/param.h>
 
 #include "condor_debug.h"
@@ -58,10 +61,13 @@ extern "C" {
 	int	FileExists(char*, char*);
 	int	set_root_euid();
 	int	xdr_proc(XDR* xdrs, PROC* proc);
+	char *sin_to_string(struct sockaddr_in *sin);
+	int get_inet_address(struct in_addr* buffer);
 	int	prio_compar(prio_rec*, prio_rec*);
 }
 
 extern	int		Parse(const char*, ExprTree*&);
+static XDR *Q_XDRS;
 
 int 	do_Q_request(XDR *);
 void	FindRunnableJob(int, int&);
@@ -111,23 +117,48 @@ FreeConnection()
 
 
 int
+UnauthenticatedConnection()
+{
+	dprintf( D_ALWAYS, "Unable to authenticate connection.  Setting owner"
+			" to \"nobody\"\n" );
+	active_owner_uid = get_user_uid( "nobody" );
+	if (active_owner != 0)
+		free(active_owner);
+	active_owner = strdup( "nobody" );
+	if (rendevous_file != 0)
+		free(rendevous_file);
+	rendevous_file = 0;
+	connection_state = CONNECTION_ACTIVE;
+	return 0;
+}
+
+
+int
 ValidateRendevous()
 {
 	struct stat stat_buf;
 
+	/* user "nobody" represents an unauthenticated user */
+	if (active_owner_uid == get_user_uid( "nobody" )) {
+		return 0;
+	}
+
 	if (rendevous_file == 0) {
-		return -1;
+		UnauthenticatedConnection();
+		return 0;
 	}
 
 	if (stat(rendevous_file, &stat_buf) < 0) {
-		return -1;
+		UnauthenticatedConnection();
+		return 0;
 	}
 
 	unlink(rendevous_file);
 
 	if (stat_buf.st_uid != active_owner_uid && stat_buf.st_uid != 0 &&
 		stat_buf.st_uid != get_condor_uid()) {
-		return -1;
+		UnauthenticatedConnection();
+		return 0;
 	}
 	connection_state = CONNECTION_ACTIVE;
 	return 0;
@@ -268,6 +299,7 @@ handle_q(XDR *xdrs, struct sockaddr_in* = NULL)
 	int	rval;
 
 	tr = new Transaction;
+	Q_XDRS = xdrs;
 
 	// I think this has to be here because xdr_Init() (called in 
 	// qmgr_lib_support.c) does a skiprecord.
@@ -635,6 +667,109 @@ NextAttribute(int cluster_id, int proc_id, char *attr_name)
 		return -1;
 	}
 	return job->NextAttributeName(attr_name);
+}
+
+int
+SendSpoolFile(char *filename, char *address)
+{
+	int sockfd, pid, len;
+	FILE *fp;
+	struct sockaddr_in addr;
+	char path[_POSIX_PATH_MAX];
+	struct in_addr myaddr;
+
+	if (strchr(filename, '/') != NULL) {
+		dprintf(D_ALWAYS, "ReceiveFile called with a path (%s)!\n",
+				filename);
+		return -1;
+	}
+
+	sprintf(path, "%s/%s", Spool, filename);
+
+	if ((fp = fopen(path, "w")) == NULL) {
+		dprintf(D_ALWAYS, "Failed to open file %s.\n",
+				path);
+		return -1;
+	}
+
+	if ((sockfd = socket(PF_INET,SOCK_STREAM,0)) < 0) {
+		dprintf(D_ALWAYS, "failed to create socket in ReceiveFile()\n");
+		EXCEPT("socket");
+	}
+
+	get_inet_address(&myaddr);
+	memset( (char *)&addr, 0,sizeof(addr));   /* zero out */
+	addr.sin_family = AF_INET;
+	addr.sin_addr = myaddr;
+	addr.sin_port = htons(0);
+
+     if(bind(sockfd,(struct sockaddr *)&addr, sizeof(addr))<0) {      
+		 dprintf(D_ALWAYS, "bind failed in ReceiveFile()\n");
+		 EXCEPT("bind");
+     }
+
+	len = sizeof(addr);
+	if (getsockname(sockfd, (struct sockaddr *)&addr, &len)<0) {
+		dprintf(D_ALWAYS, "getsockname failed in ReceiveFile()\n");
+		EXCEPT("getsockname");
+	}
+
+	strcpy(address, sin_to_string(&addr));
+	dprintf(D_FULLDEBUG, "receiving %s on %s\n", path, address);
+
+	if ((pid = fork()) < 0) {
+		dprintf(D_ALWAYS, "fork failed in ReceiveFile()\n");
+		EXCEPT("fork");
+	}
+
+	if (pid == 0) {				// child
+		char buf[4 * 1024];
+		struct sockaddr from;
+		int nbytes=0, written=0, total=0, xfersock, fromlen = sizeof(from);
+		int filesize;
+		if (listen(sockfd, 1) == -1) {
+			EXCEPT("listen");
+		}
+		if ((xfersock = accept(sockfd, (struct sockaddr *)&from,
+							   &fromlen)) == -1) {
+			EXCEPT("accept");
+		}
+		
+		if (read(xfersock, &filesize, sizeof(int)) < 0) {
+			EXCEPT("read");
+		}
+		filesize = ntohl(filesize);
+
+		while (total < filesize &&
+			   (nbytes = read(xfersock, &buf, sizeof(buf))) > 0) {
+			dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
+			if ((written = fwrite(&buf, sizeof(char), nbytes, fp)) < nbytes) {
+				dprintf(D_ALWAYS, "failed to write %d bytes (only wrote %d)\n",
+						nbytes, written);
+				EXCEPT("fwrite");
+			}
+			dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
+			total += written;
+		}
+		dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
+		total = htonl(total);
+		if (write(xfersock, &total, sizeof(int)) < 0) {
+			dprintf(D_ALWAYS, "failed to send ack in ReceiveFile()\n");
+			EXCEPT("write");
+		}
+		dprintf(D_FULLDEBUG, "successfully wrote %s (%d bytes)\n",
+				path, total);
+		exit(0);
+	}
+
+	if (fclose(fp) == EOF) {
+		EXCEPT("fclose");
+	}
+	if (close(sockfd) == -1) {
+		EXCEPT("close");
+	}
+
+	return 0;
 }
 
 } /* should match the extern "C" */

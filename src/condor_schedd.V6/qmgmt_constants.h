@@ -14,3 +14,4 @@
 #define CONDOR_FirstAttribute		10014
 #define CONDOR_NextAttribute		10015
 #define	CONDOR_DestroyClusterByConstraint	10016		/* weiru */
+#define CONDOR_SendSpoolFile		10017
