@@ -1,0 +1,138 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+use File::Temp qw/ :mktemp /;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my $ContactString;
+my $ProbePath;
+my $GlobusLocation;
+
+# Do it
+Init();
+RunIt();
+
+sub Init {
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+
+    # Get the contact string, verify it...
+    $ContactString = HawkeyeLib::ReadConfig(  "_Contact", "" );
+    if ( ( ! defined $ContactString ) || ( $ContactString eq "" )  )
+    {
+	$ContactString = $ENV{GLOBUS_CONTACT};
+    }
+    if (  ( ! defined $ContactString ) || ( $ContactString eq "" )  )
+    {
+	print STDERR "No valid Globus contact string found!!\n";
+	exit 1;
+    }
+
+    # Condor config var
+    my $Condor = HawkeyeLib::ReadConfig( "_condor_config", "" );
+    if ( ( defined $Condor ) && ( $Condor ne "" )  )
+    {
+	$Condor =~ s/\s//g;
+	$ENV{CONDOR_CONFIG} = $Condor;
+    }
+
+    # Globus location
+    my $Globus = HawkeyeLib::ReadConfig( "_globus_location", "" );
+    if ( ( defined $Globus ) && ( $Globus ne "" )  )
+    {
+	$Globus =~ s/\s//g;
+	$ENV{GLOBUS_LOCATION} = $Globus;
+    }
+    if ( ( ! defined $ENV{GLOBUS_LOCATION} ) ||
+	 ( $ENV{GLOBUS_LOCATION} eq "" ) )
+    {
+	print STDERR "No GLOBUS_LOCATION\n";
+	exit 1;
+    }
+    $GlobusLocation = $ENV{GLOBUS_LOCATION};
+
+    # Grid cert
+    my $X509 = HawkeyeLib::ReadConfig( "_X509_CERT_DIR", "" );
+    if ( ( defined $X509 ) && ( $X509 ne "" )  )
+    {
+	$X509 =~ s/\s//g;
+	$ENV{X509_CERT_DIR} = $X509;
+    }
+
+    # Get the Globus path info..
+    my $Path;
+    $Path = HawkeyeLib::ReadConfig( "_Path", "" );
+    if ( ( defined $Path ) && ( $Path ne "" )  )
+    {
+	$Path = $Path . ":" if ( ! $Path =~ /:$/ );
+	$Path =~ s/\s//g;
+	$ENV{PATH} = $Path . $ENV{PATH};
+    }
+
+    # The probe itself...
+    my $Probe = HawkeyeLib::ReadConfig( "_ProbePath", "" );
+    if ( ! defined $Probe )
+    {
+	$ProbePath = "";
+    }
+    else
+    {
+	$ProbePath = $Probe;
+    }
+}
+
+# Do the real work here...
+sub RunIt {
+
+    my ($Fh, $File) = mkstemp( "/tmp/tmpfileXXXXX" );
+    local(*FH) = $Fh;
+    print FH "GLOBUS_LOCATION=$GlobusLocation\n";
+    print FH "source $GlobusLocation/etc/globus-user-env.sh\n";
+    print FH "$ProbePath/test.pl --non-stop --contact \"$ContactString\"" .
+	" --skip-java --skip-chimera\n";
+    close( FH );
+
+    # Run a 'ps' and gather some info...
+    if ( open( PROBE, "/bin/sh $File|" ) )
+    {
+	while ( <PROBE> )
+	{
+	    chomp;
+	    if ( /^\s+test suite (\w+): (\w+)\s*(.*)/ )
+	    {
+		my $Test = $1;
+		my $Status = $2;
+		my $Description = $3;
+
+		$Hawkeye->Store( $Test, $Status );
+		if ( ( defined $Description ) && ( $Description ne "" ) )
+		{
+		    $Hawkeye->Store( $Test . "_Text", $Description );
+		}
+	    }
+	}
+	close( PROBE );
+    }
+
+    # Kill the temp script we made...
+    # unlink( $File );
+    print STDERR "$File\n";
+
+    # Let 'er rip!
+    $Hawkeye->Publish( );
+}
