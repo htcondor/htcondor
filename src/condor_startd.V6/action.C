@@ -73,7 +73,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		ABORT;
 	}
 
-	if( !stream->eom() ) {
+	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't receive eom from schedd-agent\n" );
 		ABORT;
 	}
