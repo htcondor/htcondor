@@ -251,19 +251,12 @@ StatInfo::make_dirpath( const char* dir )
 Directory::Directory( const char *name, priv_state priv ) 
 {
 	curr = NULL;
-
-#ifndef WIN32
-	// Unix
-	errno = 0;
-	dirp = opendir( name );
-	if( dirp == NULL ) {
-		EXCEPT( "Can't open directory \"%s\", errno: %d", name, errno );
-	}
-	rewinddir( dirp );
-#else
+#ifdef WIN32
 	dirp = -1;
+#else 
+	dirp = NULL;
+	owner_ids_inited = false;
 #endif
-	
 	curr_dir = strnewp(name);
 	ASSERT(curr_dir);
 
@@ -456,7 +449,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 				dprintf( D_FULLDEBUG, "warning: %s "
 						 "still exists after trying to remove it\n",
 						 path );
-				Directory subdir( path, desired_priv_state );
+				Directory subdir( path, PRIV_FILE_OWNER );
 				dprintf( D_FULLDEBUG, 
 						 "Attempting to chmod(0700) %s and all subdirs\n",
 						 path );
@@ -579,15 +572,17 @@ Directory::rmdirAsOwner( const char* path, bool is_curr )
 		gid = curr->GetGroup( );
 		fullpath = curr->FullPath( );
 	} else {
-		GetIds( path, &uid, &gid );
+		uid = 0;
+		gid = 0;
 		fullpath = path;
 	}
 
-		// !! Refuse to remove entries owned by root !!
-	if ( ( 0 == uid ) || ( 0 == gid ) ) {
-		dprintf( D_ALWAYS, "NOT Removing %s as with ids to %d.%d\n",
-				 fullpath, uid, gid );
-		dprintf( D_ALWAYS, "It's owned by root, I won't do that\n" );
+	priv = setOwnerPriv( fullpath, uid, gid );
+	if( priv == PRIV_UNKNOWN ) {
+		dprintf( D_ALWAYS, "Directory::rmdirAsOwner(): "
+				 "failed to find owner of \"%s\"\n", fullpath );
+			// if setOwnerPriv() returns PRIV_UNKNOWN, it didn't touch
+			// our priv state so we can safely just return here.
 		return false;
 	}
 
@@ -595,11 +590,6 @@ Directory::rmdirAsOwner( const char* path, bool is_curr )
 	dprintf( D_FULLDEBUG, 
 			 "Attempting to remove %s as file owner (%d.%d)\n",
 			 fullpath, uid, gid );
-
-		// Become the user who owns the directory
-	uninit_user_ids( );
-	set_user_ids( uid, gid );
-	priv = set_user_priv( );
 
 		// Finally, do the work
 #if DEBUG_DIRECTORY_CLASS
@@ -629,22 +619,90 @@ Directory::rmdirAsOwner( const char* path, bool is_curr )
 	}
 	return true;
 }
-#endif /* ! WIN32 */
 
 
-#ifndef WIN32
+priv_state
+Directory::setOwnerPriv( const char* path, uid_t user, gid_t group )
+{
+	uid_t	uid;
+	gid_t	gid;
+	bool is_root_dir = false;
+
+	if( ! strcmp(path, curr_dir) ) {
+		is_root_dir = true;
+	}
+	
+	if( is_root_dir && owner_ids_inited ) {
+		uid = owner_uid;
+		gid = owner_gid;
+	} else if( ! user || ! group ) {
+			// If we don't already know, figure out what user owns our
+			// parent directory...
+		if( ! GetIds( path, &uid, &gid ) ) {
+			dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
+					 "find owner of %s\n", path );
+			return PRIV_UNKNOWN;
+		}
+		if( is_root_dir ) {
+			owner_uid = uid;
+			owner_gid = gid;
+			owner_ids_inited = true;
+		}
+	} else {
+			// We were told (since presumably our caller already did
+			// the stat() for us), so just use that...
+		uid = user;
+		gid = group;
+	}
+
+		// !! Refuse to do anything as root !!
+	if ( (0 == uid) || (0 == gid) ) {
+		dprintf( D_ALWAYS, "Directory::setOwnerPriv(): NOT changing "
+				 "priv state to owner of \"%s\" (%d.%d), that's root!\n",
+				 path, (int)uid, (int)gid );
+		return PRIV_UNKNOWN;
+	}
+
+		// Become the user who owns the directory
+	uninit_file_owner_ids();
+	set_file_owner_ids( uid, gid );
+	return set_file_owner_priv();
+}
+
+
 bool
-Directory::chmodDirectories( mode_t mode )
+Directory::chmodDirectories( mode_t mode, uid_t user, gid_t group )
 {
 	const char* thefile = NULL;	
 	int chmod_rval;
 	bool rval = true;
+	uid_t uid;
+	gid_t gid;
+
+	priv_state priv = setOwnerPriv( GetDirectoryPath(), user, group );
+	if( priv == PRIV_UNKNOWN ) {
+		dprintf( D_ALWAYS, "Directory::chmodDirectories(): "
+				 "failed to find owner of \"%s\"\n",
+				 GetDirectoryPath() );
+			// if setOwnerPriv() returns PRIV_UNKNOWN, it didn't touch
+			// our priv state so we can safely just return here.
+		return false;
+	}
+	uid = get_file_owner_uid();
+	gid = get_file_owner_gid();
+
+		// Log what we're about to do
+	dprintf( D_FULLDEBUG, 
+			 "Attempting to chmod %s as file owner (%d.%d)\n",
+			 GetDirectoryPath(), uid, gid );
 
 		// First, change the mode on the parent directory itself.
 	chmod_rval = chmod( GetDirectoryPath(), mode );
+
 	if( chmod_rval < 0 ) {
 		dprintf( D_ALWAYS, "chmod(%s) failed: %s (errno %d)\n",
 				 GetDirectoryPath(), strerror(errno), errno );
+		set_priv( priv );
 		return false;
 	}
 
@@ -655,20 +713,17 @@ Directory::chmodDirectories( mode_t mode )
 	Rewind();
 	while( (thefile = Next()) ) {
 		if( IsDirectory() && !IsSymlink() ) {
-			chmod_rval = chmod( GetFullPath(), mode );
-			if( chmod_rval < 0 ) {
-				dprintf( D_ALWAYS, "chmod(%s) failed: %s (errno %d)\n",
-						 GetFullPath(), strerror(errno), errno );
-				return false;
-			}
 			Directory subdir( GetFullPath(), desired_priv_state );
-			if( ! subdir.chmodDirectories(mode) ) {
+			uid = curr->GetOwner();
+			gid = curr->GetGroup();
+			if( ! subdir.chmodDirectories(mode, uid, gid) ) {
 				rval = false;
 			}
 		}
 	}
 	return rval;
 }
+
 #endif /* ! WIN32 */
 
 
@@ -684,6 +739,50 @@ Directory::Rewind()
 
 #ifndef WIN32
 	// Unix
+	if( dirp == NULL ) {
+		errno = 0;
+		dirp = opendir( curr_dir );
+		if( dirp == NULL ) {
+				// This could only mean that a) we've been given a bad
+				// priv_state to try to go in or b) we're trying to do
+				// things as root on a root-squashing NFS directory.
+				// In either case, we can try again as the owner of
+				// this directory.  If that works, we should save this
+				// as our desired priv_state for future actions...
+			if( ! want_priv_change ) {
+				dprintf( D_ALWAYS, "Can't open directory \"%s\" as %s, "
+						 "errno: %d (%s)\n", curr_dir, 
+						 priv_to_string(get_priv()), errno, 
+						 strerror(errno) );
+				return_and_resetpriv(false);
+			}
+
+				// If we *DO* want to try priv-switching, try the owner
+			priv_state old_priv = setOwnerPriv( curr_dir );
+			if( old_priv == PRIV_UNKNOWN ) {
+					dprintf( D_ALWAYS, "Directory::Rewind(): "
+							 "failed to find owner of \"%s\"\n", curr_dir );
+						// we can just set our priv back to what it was
+						// before we called Set_Access_Priv()...
+				return_and_resetpriv(false);
+			}
+				// if we made it here, setOwnerPriv() worked so we 
+				// can try the opendir() again. 
+			errno = 0;
+			dirp = opendir( curr_dir );
+			if( dirp == NULL ) {
+				dprintf( D_ALWAYS, "Can't open directory \"%s\" as owner, "
+						 "errno: %d (%s)", curr_dir, errno, strerror(errno) );
+					// we can just set our priv back to what it was
+					// before we called Set_Access_Priv()...
+				return_and_resetpriv(false);
+			}
+				// if we're here, doing the opendir() as the owner
+				// worked, so we should save this as the priv state to
+				// use for the various operations we might perform...
+			desired_priv_state = PRIV_FILE_OWNER;
+		}
+	}
 	rewinddir( dirp );
 #else
 	// Win32
@@ -708,6 +807,9 @@ Directory::Next()
 	}
 
 #ifndef WIN32
+	if( dirp == NULL ) {
+		Rewind();
+	}
 	// Unix
 	struct dirent *dirent;
 	while( ! done && (dirent = readdir(dirp)) ) {
@@ -730,9 +832,9 @@ Directory::Next()
 				break;
 			case SIFailure:
 					// do_stat failed with an error!
-				dprintf( D_ALWAYS,
-						 "Directory:: stat() failed for file %s, errno: %d\n",
-						 path.Value(), curr->Errno() );
+				dprintf( D_FULLDEBUG,
+					 "Directory::stat() failed for \"%s\", errno: %d (%s)\n",
+					 path.Value(), curr->Errno(), strerror(curr->Errno()) );
 				delete curr;
 				curr = NULL;
 				break;
@@ -849,8 +951,8 @@ GetIds( const char *path, uid_t *owner, gid_t *group )
 		return false;
 		break;
 	case SIFailure:
-		dprintf( D_ALWAYS, "GetIds: Error in stat(%s), errno: %d\n", 
-				 path, si.Errno() );
+		dprintf( D_ALWAYS, "GetIds: Error in stat(%s), errno: %d (%s)\n", 
+				 path, si.Errno(), strerror(si.Errno()) );
 		return false;
 		break;
 	}

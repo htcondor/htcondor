@@ -344,8 +344,10 @@ public:
 			NOTE: This will call Rewind(), so it is NOT safe to use
 			this during another iteration over the directory.
 			@param mode The file mode you want to set directories to
+			@param user The uid of the parent (if already known)
+			@param group The gid of the parent (if already known)
 		*/
-	bool chmodDirectories( mode_t mode );
+	bool chmodDirectories( mode_t mode, uid_t owner = 0, gid_t group = 0 );
 
 #endif /* ! WIN32 */
 
@@ -361,6 +363,11 @@ private:
 #else
 	DIR *dirp;
 	bool rmdirAsOwner( const char* path, bool is_curr );
+	priv_state setOwnerPriv( const char* path, uid_t owner = 0,
+							 gid_t group = 0 );
+	uid_t owner_uid;
+	gid_t owner_gid;
+	bool owner_ids_inited;
 #endif
 };
 
