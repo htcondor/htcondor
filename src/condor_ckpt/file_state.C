@@ -15,7 +15,7 @@
 #define _POSIX_SOURCE
 
 #include <stdio.h>
-#include "condor_fix_fcntl.h"
+#include "fcntl.h"
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>

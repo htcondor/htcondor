@@ -1,6 +1,6 @@
 #define _POSIX_SOURCE
 
-#include "condor_fix_fcntl.h"
+#include "fcntl.h"
 #include <stdlib.h>
 
 #if defined(OSF1)
