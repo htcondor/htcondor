@@ -808,16 +808,18 @@ format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 {
 	static char result[64];
 	char	host[80], jobManager[80], exec[10240];
-	char	*tmp, *jm, *ex;
+	char    *tmp = NULL, *jm = NULL, *ex = NULL;
 	int		i, p;
 
 	strcpy( result, "[?????] [?????]\n" );
 
 	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
-		return( result );
-	} 
-
-	jm = tmp + 11; // 11==strlen("jobmanager-")
+		if ( (tmp = strstr( globusArgs, "jobmanager" ) ) == NULL ) {
+			return( result );
+		}
+	} else { 
+		jm = tmp + 11; // 11==strlen("jobmanager-")
+	}
 
 		// A.  Get the HOST part
 		// scan backwards until (')
@@ -838,34 +840,38 @@ format_globusHostJMAndExec( char  *globusArgs, AttrList * )
 	host[i] = '\0';
 
 		// B.  Get the JOBMANAGER part
-	i = 0;
-	while( *jm != ':' && i < sizeof(jobManager)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *jm == '\0' ) return( result );
-		jobManager[i] = *jm;
-		jm++;
-		i++;
+	if ( jm = ) {
+		i = 0;
+		while( *jm != ':' && i < sizeof(jobManager)-1 ) {
+				// make sure we don't overrun the end of the string
+			if( *jm == '\0' ) return( result );
+			jobManager[i] = *jm;
+			jm++;
+			i++;
+		}
+		jobManager[i] = '\0';
+	} else {
+		strcpy(jobManager, "fork" );
 	}
-	jobManager[i] = '\0';
 		
 		// C.  Get the globus executable
 	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
-		return( result );
-	}
-	ex = tmp + 13;	// 13==strlen("&(executable=")
-	i = 0;
-	p = 1;
-	while( p > 0 && i < sizeof(exec)-1 ) {
+		exec[0] = '\0';	
+	} else {
+		ex = tmp + 13;	// 13==strlen("&(executable=")
+		i = 0;
+		p = 1;
+		while( p > 0 && i < sizeof(exec)-1 ) {
 			// make sure we don't overrun the end of the string
-		if( *ex == '\0' ) return( result );
-		exec[i] = *ex;
-		ex++;
-		i++;
-		if( *ex == '(' ) p++;
-		if( *ex == ')' ) p--;
+			if( *ex == '\0' ) return( result );
+			exec[i] = *ex;
+			ex++;
+			i++;
+			if( *ex == '(' ) p++;
+			if( *ex == ')' ) p--;
+		}
+		exec[i] = '\0';
 	}
-	exec[i] = '\0';
-
 		// done --- pack components into the result string and return
 	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
 		basename(exec) );
