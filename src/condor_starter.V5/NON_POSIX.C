@@ -210,14 +210,6 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 	  case RUNNABLE:
 	  case NON_RUNNABLE:
 	  case CHECKPOINTING:
-#if defined(OSF1)
-		/*
-		  For bytestream checkpointing:
-		  the only way the process exits with its state set to CHECKPOINTING
-		  is if it has already transferred the checkpoint successfully.
-		*/
-		ckpt_trans = 1;
-#endif
 		if( ckpt_trans ) {
 			bsd_status.w_termsig = SIGQUIT;
 			dprintf( D_ALWAYS, "STATUS encoded as CKPT, *IS* TRANSFERRED\n" );
