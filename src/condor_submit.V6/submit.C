@@ -664,8 +664,12 @@ SetExecutable()
 	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_path(ename,false));
 	InsertJobExpr (buffer);
 
-	InsertJobExpr ("MinHosts = 1");
-	InsertJobExpr ("MaxHosts = 1");
+		/* MPI REALLY doesn't like these! */
+	if ( JobUniverse != MPI ) {
+		InsertJobExpr ("MinHosts = 1");
+		InsertJobExpr ("MaxHosts = 1");
+	}
+
 	InsertJobExpr ("CurrentHosts = 0");
 
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, IDLE);
@@ -2084,6 +2088,13 @@ queue(int num)
 			strcpy( GlobusArgs, GlobusExec );
 		}
 
+			/* For MPI only... we have to define $(NODE) to some string
+			   here so that we don't break the param parser.  In the 
+			   MPI shadow, we'll convert the string into an integer 
+			   corresponding to the mpi node's number. */
+		if ( JobUniverse == MPI ) {
+			set_condor_param ( "NODE", "#MpInOdE#" );
+		}
 
 		// Note: Due to the unchecked use of global variables everywhere in
 		// condor_submit, the order that we call the below Set* functions
@@ -2309,12 +2320,23 @@ void
 check_open( const char *name, int flags )
 {
 	int		fd;
-	char	*pathname;
+	char	*pathname, *temp;
 
 	/* No need to check for existence of the Null file. */
 	if (strcmp(name, NULL_FILE) == MATCH) return;
 
 	pathname = full_path(name);
+
+		/* This is only for MPI.  We test for our string that
+		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
+		   we will really only try and access the 0th file only */
+	if ( JobUniverse == MPI ) {
+		if ( (temp = strstr( pathname, "#MpInOdE#" ) ) != NULL ) {
+			*(temp++) = '0';
+			*temp = '\0';
+			memmove ( temp, temp+8, strlen(temp+8) );
+		}
+	}
 
 	if( (fd=open(pathname,flags,0664)) < 0 ) {
 		fprintf(stderr, "\nCan't open \"%s\"  with flags 0%o\n", pathname, flags );
