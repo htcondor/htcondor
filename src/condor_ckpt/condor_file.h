@@ -10,11 +10,11 @@ a file (local, remote, ioserver, etc.) are built by extending
 CondorFile.
 <p>
 <pre>
-                           CondorFile
-                          /     |    \
-                        /       |      \
-                      /         V        \  
-        CondorFileBasic CondorFileAgent CondorFileBuffer
+                           CondorFile-----------------\
+                          /     |    \                 \
+                        /       |      \                \
+                      /         V        \               \
+        CondorFileBasic CondorFileAgent CondorFileBuffer CondorFileCompress
          |         |
          V         V
 CondorFileRemote  CondorFileLocal
