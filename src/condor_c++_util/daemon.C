@@ -513,7 +513,7 @@ Daemon::getDaemonInfo( const char* subsys,
 		} else {
 			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 		}
-		query.addConstraint(buf);
+		query.addANDConstraint(buf);
 		query.fetchAds(ads, _pool);
 		ads.Open();
 		scan = ads.Next();
