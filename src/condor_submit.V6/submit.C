@@ -71,7 +71,7 @@ HashTable<MyString,MyString> forcedAttributes( 64, hashFunction );
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 ClassAd job;
-char    buffer[_POSIX_PATH_MAX + 64];
+char    buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
@@ -254,13 +254,9 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	MyName = argv[0];
-
 	// set up types of the ad
 	job.SetMyTypeName (JOB_ADTYPE);
 	job.SetTargetTypeName (STARTD_ADTYPE);
-
-	init_params();
 
 	DebugFlags |= D_EXPR;
 
@@ -1387,7 +1383,6 @@ check_requirements( char *orig )
 	char	*ptr;
 	static char	answer[2048];
 
-
 	for( ptr = orig; *ptr; ptr++ ) {
 		if( strincmp("Arch",ptr,4) == MATCH ) {
 			has_arch = TRUE;
@@ -1401,9 +1396,9 @@ check_requirements( char *orig )
 			break;
 		}
 	}
-
  
 	(void)strcpy( answer, orig );
+
 	if( !has_arch ) {
 		if( answer[0] ) {
 			(void)strcat( answer, " && (Arch == \"" );
@@ -1545,7 +1540,6 @@ void
 init_params()
 {
 	Architecture = param( "ARCH" );
-
 
 	if( Architecture == NULL ) {
 		EXCEPT( "ARCH not specified in config file" );
