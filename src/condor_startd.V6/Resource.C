@@ -1350,7 +1350,7 @@ Resource::publishDeathTime( ClassAd* cap )
     if ( !have_death_time ) {
         // If we don't have a death time, we'll leave forever.
         // Well, we'll live until Unix time runs out. 
-        relative_death_time = MAXINT;
+        relative_death_time = INT_MAX;
     } else {
         // We're publishing how much time we have to live. 
         // If we don't have any time left, then we should have died
