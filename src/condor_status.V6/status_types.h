@@ -41,6 +41,7 @@ enum ppOption {
 	PP_STORAGE_NORMAL,
 	PP_ANY_NORMAL,
     PP_VERBOSE,
+    PP_XML,
     PP_CUSTOM
 };
 

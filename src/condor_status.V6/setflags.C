@@ -49,6 +49,7 @@ getPPStyleStr ()
 		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_ANY_NORMAL:	return "Any";
     	case PP_VERBOSE:		return "Verbose";
+    	case PP_XML:		    return "XML";
     	case PP_CUSTOM:			return "Custom";
 		default:				return "<Unknown!>";
 	}
