@@ -92,6 +92,10 @@ extern int	UseAFS;
 extern int  UseNFS;
 extern int  UseCkptServer;
 extern int  StarterChoosesCkptServer;
+extern int  CompressPeriodicCkpt;
+extern int  CompressVacateCkpt;
+extern int	PeriodicSync;
+extern int  SlowCkptSpeed;
 extern char *Spool;
 extern ClassAd *JobAd;
 
@@ -1160,12 +1164,26 @@ pseudo_get_ckpt_name( char *path )
 int
 pseudo_get_ckpt_mode( int sig )
 {
+	int mode = 0;
 	if (sig == SIGTSTP) {
-		return 0;				// default mode
+		if (CompressVacateCkpt) mode |= CKPT_MODE_USE_COMPRESSION;
+		if (SlowCkptSpeed) mode |= CKPT_MODE_SLOW;
 	} else if (sig == SIGUSR2) { // periodic checkpoint 
-		return CKPT_MODE_USE_COMPRESSION;
+		if (CompressPeriodicCkpt) mode |= CKPT_MODE_USE_COMPRESSION;
+		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
+	} else {
+		mode = -1;
 	}
-	return -1;
+	return mode;
+}
+
+/*
+ Specify the speed of slow checkpointing in KB/s.
+*/
+int
+pseudo_get_ckpt_speed()
+{
+	return SlowCkptSpeed;
 }
 
 /*

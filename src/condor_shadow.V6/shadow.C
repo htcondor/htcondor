@@ -116,6 +116,10 @@ int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
 int  StarterChoosesCkptServer;
+int  CompressPeriodicCkpt;
+int  CompressVacateCkpt;
+int  PeriodicSync;
+int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
 
@@ -412,6 +416,38 @@ main(int argc, char *argv[], char *envp[])
 		free(tmp);
 	} else {
 		MaxDiscardedRunTime = 3600;
+	}
+
+	tmp = param( "COMPRESS_PERIODIC_CKPT" );
+	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
+		CompressPeriodicCkpt = TRUE;
+	} else {
+		CompressPeriodicCkpt = FALSE;
+	}
+	if (tmp) free(tmp);
+
+	tmp = param( "PERIODIC_MEMORY_SYNC" );
+	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
+		PeriodicSync = TRUE;
+	} else {
+		PeriodicSync = FALSE;
+	}
+	if (tmp) free(tmp);
+
+	tmp = param( "COMPRESS_VACATE_CKPT" );
+	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
+		CompressVacateCkpt = TRUE;
+	} else {
+		CompressVacateCkpt = FALSE;
+	}
+	if (tmp) free(tmp);
+
+	tmp = param( "SLOW_CKPT_SPEED" );
+	if (tmp) {
+		SlowCkptSpeed = atoi(tmp);
+		free(tmp);
+	} else {
+		SlowCkptSpeed = 0;
 	}
 
 	MailerPgm = param( "MAIL" );

@@ -626,6 +626,21 @@ QUEUE_SUPER_USERS	= root, condor
 ##  setting is only used if USE_CKPT_SERVER (from above) is True.
 #MAX_DISCARDED_RUN_TIME = 3600 
 
+##  Should periodic checkpoints be compressed?
+#COMPRESS_PERIODIC_CKPT = False
+
+##  Should vacate checkpoints be compressed?
+#COMPRESS_VACATE_CKPT = False
+
+##  Should we commit the application's dirty memory pages to swap
+##  space during a periodic checkpoint?
+#PERIODIC_MEMORY_SYNC = False
+
+##  Should we write vacate checkpoints slowly?  If nonzero, this
+##  parameter specifies the speed at which vacate checkpoints should
+##  be written, in kilobytes per second.
+#SLOW_CKPT_SPEED = 0
+
 
 ##--------------------------------------------------------------------
 ##  condor_shadow.pvm
