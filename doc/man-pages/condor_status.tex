@@ -67,7 +67,8 @@ options} may be specified.
 		(same as \Opt{-verbose})}
     \OptItem{\Opt{-total}}{(Display option) Display totals only}
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
-		expression}
+		expression.  See section~\ref{sec:classadref} for
+		details on writing expressions.}
     \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Register display 
 		format and attribute name.  The \Arg{fmt} string has the same format as 
 		\texttt{printf(3)}, and \Arg{attr} is the name of the attribute that 
@@ -166,6 +167,27 @@ vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
      INTEL/SOLARIS26        1     0       1         0       0          0
 
                Total        1     0       1         0       0          0
+\end{verbatim}
+
+\underline{Constraint option examples}
+
+To use the constraint option to see all machines with the \Attr{OpSys}
+of \AdStr{LINUX}, use
+\begin{verbatim}
+% condor_status -constraint OpSys==\"LINUX\"
+\end{verbatim}
+Note that quotation marks must be escaped with the backslash characters
+for most shells.
+
+To see all machines that are currently in the Idle state, use
+\begin{verbatim}
+% condor_status -constraint State==\"Idle\"
+\end{verbatim}
+
+To see all machines that are benchmarked to have a MIPS rating
+of more than 750, use
+\begin{verbatim}
+% condor_status -constraint 'Mips>750' 
 \end{verbatim}
 
 \ExitStatus
