@@ -467,7 +467,7 @@ int GlobusJob::doEvaluateState()
 				}
 			}
 			break;
-		case CHECK_OUTPUT:
+		case GM_CHECK_OUTPUT:
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_DONE_COMMIT;
 			} else {
