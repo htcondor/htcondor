@@ -56,14 +56,15 @@
 #endif
 
 #define Programs \
-		sysapi accountant.V6 ckpt_server \
+		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
 		GlobusProgs starter.V6.1 shadow.V6.1 dcskel
 
 #define Libraries \
-		util_lib c++_util procapi condor_sysapi/libsysapi.a io classad \
+		util_lib c++_util condor_procapi/libprocapi.a \
+		condor_sysapi/libsysapi.a io classad \
 		daemon_core.V6 \
 		condor_ckpt_server/ckpt_server_api.a \
 		condor_schedd.V6/libqmgmt.a condor_accountant.V6/libacct.a \
@@ -251,6 +252,7 @@ object_dir_target(html)
 object_dir_target(condor_bypass)
 object_dir_target(condor_sdk)
 
+single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
