@@ -714,7 +714,7 @@ sub RunIt( )
 
 	    # Unfortunately, the "State" field can be space separated, so
 	    # split screws it up (bad split, bad bad).
-	    # Here, we combine, say, (HawkeyePublish::TypeNumber "R") into "N R"...
+	    # Here, we combine, say, ("N" "R") into "N R"...
 	    # Note: This assumes that the next "valid" field cannot be a
 	    #   single non-digit
 	    my $State = $TopFields{state}{offset};
