@@ -90,7 +90,7 @@ while ( <IN> )
 {
     chomp;
     s/\s*\#.*$//g;
-    next if ( $_ eq "" );
+    next if ( /^\s*$/ );
     if ( /arch\s+=\s+\"(.+)\"/i )
     {
 	my ($t) = $1;
