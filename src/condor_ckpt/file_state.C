@@ -47,6 +47,9 @@
 
 #if defined(LINUX)
 #include <sys/socketcall.h>
+#	if defined(GLIBC)
+#		define SYS_SOCKET SOCKOP_socket
+#	endif
 #endif
 
 #include "condor_debug.h"
