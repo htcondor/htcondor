@@ -33,10 +33,10 @@ static_target(condor_list_cred,list_cred.o credential.o X509credential.o,$(LIB),
 pure_c_plus_target(condor_list_cred.pure,list_cred.o credential.o X509credential.o,$(LIB))
 
 OBJ = credd_main.o credential.o X509credential.o X509credentialWrapper.o credd.o
-c_plus_target(condor_credd,$(OBJ), $(DAEMONCORE_LIB) $(LIB))
+c_plus_target(condor_credd,$(OBJ),$(DAEMONCORE_LIB) $(LIB))
 release_target(condor_credd,sbin,EXECUTABLE_MODE)
 strip_target(condor_credd,sbin,EXECUTABLE_MODE)
-static_target(condor_credd,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+static_target(condor_credd,$(OBJ),$(DAEMONCORE_LIB) $(LIB),$(STATIC_DIR)/bin)
 pure_c_plus_target(condor_credd.pure,$(OBJ),$(LIB))
 
 html:
