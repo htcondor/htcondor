@@ -74,6 +74,41 @@ x509_error_string()
 	return _globus_error_message;
 }
 
+/* Activate the globus gsi modules for use by functions in this file.
+ * Returns zero if the modules were successfully activated. Returns -1 if
+ * something went wrong.
+ */
+static
+int
+activate_globus_gsi()
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+#else
+	static int globus_gsi_activated = 0;
+
+	if ( globus_gsi_activated != 0 ) {
+		return 0;
+	}
+
+/* This module is activated by GLOBUS_GSI_CREDENTIAL_MODULE
+	if ( globus_module_activate(GLOBUS_GSI_SYSCONFIG_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi sysconfig module";
+		return -1;
+	}
+*/
+
+	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi credential module";
+		return -1;
+	}
+
+	globus_gsi_activated = 1;
+	return 0;
+#endif
+}
+
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the
  * string returned must be freed with free().
@@ -85,7 +120,9 @@ get_x509_proxy_filename()
 #if defined(CONDOR_GSI)
     globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
 
-    globus_module_activate(GLOBUS_GSI_SYSCONFIG_MODULE);
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
+	}
 
     if (!GLOBUS_GSI_SYSCONFIG_GET_PROXY_FILENAME(&proxy_file, file_type)) {
         _globus_error_message = "unable to locate proxy file";
@@ -112,13 +149,10 @@ x509_proxy_subject_name( const char *proxy_file )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	int must_free_proxy_file = FALSE;
-	int deactivate_globus = FALSE;
 
-	if (globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE)) {
-		_globus_error_message = "problem during internal initialization0";
-		goto cleanup;
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
 	}
-	deactivate_globus = TRUE;
 
 	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
 		_globus_error_message = "problem during internal initialization1";
@@ -163,10 +197,6 @@ x509_proxy_subject_name( const char *proxy_file )
 		globus_gsi_cred_handle_destroy(handle);
 	}
 
-	if (deactivate_globus) {
-		globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
-	}
-
 	return subject_name;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
@@ -185,14 +215,11 @@ x509_proxy_expiration_time( const char *proxy_file )
     globus_gsi_cred_handle_t         handle       = NULL;
     globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	time_t expiration_time = -1;
-	int deactivate_globus = FALSE;
 	int must_free_proxy_file = FALSE;
 
-	if (globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE)) {
-        _globus_error_message = "problem during internal initializationAA";
-        goto cleanup;
+	if ( activate_globus_gsi() != 0 ) {
+		return -1;
 	}
-	deactivate_globus = TRUE;
 
     if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
         _globus_error_message = "problem during internal initializationA";
@@ -236,10 +263,6 @@ x509_proxy_expiration_time( const char *proxy_file )
     if (handle) {
         globus_gsi_cred_handle_destroy(handle);
     }
-
-	if (deactivate_globus) {
-		globus_module_deactivate(GLOBUS_GSI_CREDENTIAL_MODULE);
-	}
 
 	return expiration_time;
 
