@@ -1,3 +1,14 @@
+02/11/04 V6_6_1
+   The official 6.6.1 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2004-2-5" with a few minor modifications for
+   IRIX.  The tag lives on the V6_6-branch for the V6_6_ALL module,
+   and on the trunk for the V6_6_1_EXT module of the externals tree.
+   In NMI land most of the binaries/tarballs came from build ID 2732.
+   The test suite ran on most platforms as is reported on that build
+   ID.  IRIX was built manually due to various evil things.  
+   The version string for all platforms (except IRIX and maybe 
+   windows) is: "$CondorVersion: 6.6.1 Feb 5 2003 $"
+
 02/01/04 V6_6-merge-4
    The state of the V6_6-branch for another merge into V6_7-branch.
    Some final 6.6.1 bug fixes and other things we need before we make
