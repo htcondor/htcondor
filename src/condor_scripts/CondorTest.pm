@@ -76,13 +76,6 @@ sub RegisterEvictedWithCheckpoint
 
     $test{$handle}{"RegisterEvictedWithCheckpoint"} = $function_ref;
 }
-sub RegisterEvictedWithRequeue
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-
-    $test{$handle}{"RegisterEvictedWithRequeue"} = $function_ref;
-}
 sub RegisterEvictedWithoutCheckpoint
 {
     my $handle = shift || croak "missing handle argument";
@@ -125,50 +118,12 @@ sub RegisterAbort
 
     $test{$handle}{"RegisterAbort"} = $function_ref;
 }
-sub RegisterShadow
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-
-    $test{$handle}{"RegisterShadow"} = $function_ref;
-}
-sub RegisterWantError
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-
-    $test{$handle}{"RegisterWantError"} = $function_ref;
-}
-sub RegisterHold
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-
-    $test{$handle}{"RegisterHold"} = $function_ref;
-}
-sub RegisterRelease
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-
-    $test{$handle}{"RegisterRelease"} = $function_ref;
-}
 sub RegisterJobErr
 {
     my $handle = shift || croak "missing handle argument";
     my $function_ref = shift || croak "missing function reference argument";
 
     $test{$handle}{"RegisterJobErr"} = $function_ref;
-}
-
-sub RegisterTimed
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "missing function reference argument";
-	my $alarm = shift || croak "missing wait time argument";
-
-    $test{$handle}{"RegisterTimed"} = $function_ref;
-    $test{$handle}{"RegisterTimedWait"} = $alarm;
 }
 
 sub DefaultOutputTest
@@ -195,63 +150,15 @@ sub RunTest
 
     my $status           = -1;
 
-	# moved the reset to preserve callback registrations which includes
-	# an error callback at submit time..... Had to change timing
-	Condor::Reset();
-
     croak "too many arguments" if shift;
 
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    $Condor::submit_info{'handle'} = $handle;
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
-    #$Condor::submit_info{'handle'} = $handle;
-
-    # if we want a checkpoint, register a function to force a vacate
-    # and register a function to check to make sure it happens
-	if( $wants_checkpoint )
-	{
-		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
-	} else {
-		if(defined $test{$handle}{"RegisterExecute"}) {
-			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
-		}
-	}
-
-	CheckRegistrations();
-
     # submit the job and get the cluster id
-    $cluster = Condor::TestSubmit( $submit_file );
+    $cluster = Condor::Submit( $submit_file );
     
     # if condor_submit failed for some reason return an error
     return 0 if $cluster == 0;
 
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
-
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
-
-    return $retval;
-}
-
-sub RunDagTest
-{
-    $handle              = shift || croak "missing handle argument";
-    my $submit_file      = shift || croak "missing submit file argument";
-    my $wants_checkpoint = shift;
-	my $dagman_args = 	shift || croak "missing dagman args";
-
-    my $status           = -1;
-
-    croak "too many arguments" if shift;
-
-	# moved the reset to preserve callback registrations which includes
-	# an error callback at submit time..... Had to change timing
-	Condor::Reset();
-
-    # this is kludgey :: needed to happen sooner for an error message callback in runcommand
+    # this is kludgey
     $Condor::submit_info{'handle'} = $handle;
 
     # if we want a checkpoint, register a function to force a vacate
@@ -266,25 +173,6 @@ sub RunDagTest
 		}
 	}
 
-	CheckRegistrations();
-
-    # submit the job and get the cluster id
-    $cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
-    
-    # if condor_submit failed for some reason return an error
-    return 0 if $cluster == 0;
-
-    # monitor the cluster and return its exit status
-    $retval = Condor::Monitor();
-
-    die "$handle: FAILURE (job never checkpointed)\n"
-	if $wants_checkpoint && $checkpoints < 1;
-
-    return $retval;
-}
-
-sub CheckRegistrations
-{
     # any handle-associated functions with the cluster
     # or else die with an unexpected event
     if( defined $test{$handle}{"RegisterExitedSuccess"} )
@@ -322,16 +210,6 @@ sub CheckRegistrations
 	} );
     }
 
-    if( defined $test{$handle}{"RegisterShadow"} )
-    {
-	Condor::RegisterShadow( $test{$handle}{"RegisterShadow"} );
-    }
-
-    if( defined $test{$handle}{"RegisterWantError"} )
-    {
-	Condor::RegisterWantError( $test{$handle}{"RegisterWantError"} );
-    }
-
     if( defined $test{$handle}{"RegisterAbort"} )
     {
 	Condor::RegisterAbort( $test{$handle}{"RegisterAbort"} );
@@ -343,35 +221,6 @@ sub CheckRegistrations
 	    die "$handle: FAILURE (job aborted by user)\n";
 	} );
     }
-
-    if( defined $test{$handle}{"RegisterHold"} )
-    {
-	Condor::RegisterHold( $test{$handle}{"RegisterHold"} );
-    }
-    else
-    {
-	Condor::RegisterHold( sub {
-	    my %info = @_;
-	    die "$handle: FAILURE (job held by user)\n";
-	} );
-    }
-
-    if( defined $test{$handle}{"RegisterSubmit"} )
-    {
-	Condor::RegisterSubmit( $test{$handle}{"RegisterSubmit"} );
-    }
-
-    if( defined $test{$handle}{"RegisterRelease"} )
-    {
-	Condor::RegisterRelease( $test{$handle}{"RegisterRelease"} );
-    }
-    #else
-    #{
-	#Condor::RegisterRelease( sub {
-	    #my %info = @_;
-	    #die "$handle: FAILURE (job released by user)\n";
-	#} );
-    #}
 
     if( defined $test{$handle}{"RegisterJobErr"} )
     {
@@ -385,12 +234,6 @@ sub CheckRegistrations
 	} );
     }
 
-    # if we wanted to know about requeues.....
-    if( defined $test{$handle}{"RegisterEvictedWithRequeue"} )
-    {
-        Condor::RegisterEvictedWithRequeue( $test{$handle}{"RegisterEvictedWithRequeue"} );
-    } 
-
     # if evicted, call condor_resched so job runs again quickly
     if( !defined $test{$handle}{"RegisterEvicted"} )
     {
@@ -399,12 +242,14 @@ sub CheckRegistrations
 	Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
     }
 
-    if( defined $test{$handle}{"RegisterTimed"} )
-    {
-		Condor::RegisterTimed( $test{$handle}{"RegisterTimed"} , $test{$handle}{"RegisterTimedWait"});
-    }
-}
+    # monitor the cluster and return its exit status
+    $retval = Condor::Monitor();
 
+    die "$handle: FAILURE (job never checkpointed)\n"
+	if $wants_checkpoint && $checkpoints < 1;
+
+    return $retval;
+}
 
 sub CompareText
 {
@@ -413,7 +258,6 @@ sub CompareText
     my @skiplines = @_;
     my $linenum = 0;
 
-#	print "DEBUG opening file $file to compare to array of expected results\n";
     open( FILE, "<$file" ) || die "error opening $file: $!\n";
     
     while( <FILE> )
@@ -473,41 +317,4 @@ sub IsFileEmpty
 {
     my $file = shift || croak "missing file argument";
     return -z $file;
-}
-
-
-sub verbose_system 
-{
-	my @args = @_;
-	my $rc = 0xffff & system @args;
-
-	printf "system(%s) returned %#04x: ", @args, $rc;
-
-	if ($rc == 0) 
-	{
-		print "ran with normal exit\n";
-		return $rc;
-	}
-	elsif ($rc == 0xff00) 
-	{
-		print "command failed: $!\n";
-		return $rc;
-	}
-	elsif (($rc & 0xff) == 0) 
-	{
-		$rc >>= 8;
-		print "ran with non-zero exit status $rc\n";
-		return $rc;
-	}
-	else 
-	{
-		print "ran with ";
-		if ($rc &   0x80) 
-		{
-			$rc &= ~0x80;
-			print "coredump from ";
-			return $rc;
-		}
-		print "signal $rc\n"
-	}
 }
