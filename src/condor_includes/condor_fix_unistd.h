@@ -40,6 +40,10 @@ typedef struct fd_set fd_set;
 #	define __USE_BSD
 #endif
 
+#if defined(OSF1)
+#	define _XOPEN_SOURCE_EXTENDED
+#endif
+
 /**********************************************************************
 ** Actually include the file
 **********************************************************************/
@@ -75,6 +79,10 @@ typedef struct fd_set fd_set;
 #   undef idle
 #endif
 
+#if defined(OSF1)
+#	undef _XOPEN_SOURCE_EXTENDED
+#endif
+
 /**********************************************************************
 ** Things that should be defined in unistd.h that for whatever reason
 ** aren't defined on various platforms
@@ -89,7 +97,7 @@ extern "C" {
 	ssize_t write( int, const void *, size_t );
 #endif
 
-#if defined(SUNOS41) || defined(OSF1)
+#if defined(SUNOS41)
 	int symlink( const char *, const char * );
 	void *sbrk( ssize_t );
 	int gethostname( char *, int );
