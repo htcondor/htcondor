@@ -1,4 +1,4 @@
-Hawkeye v0.1 Release Notes
+Hawkeye v0.1.x Release Notes
 
 1. Hawkeye Installation instructions
 
@@ -140,8 +140,15 @@ Currently the following modules are available:
   w - Monitors the users, uptime, and load averages of the system
      (based on the "w" program)
   who - Monitors uses logged on the system (based on the "who"
-      program)
+     program)
   gdmphb - Monitors the status of GDMP for the US/CMS test bed
+  Condor Node - Monitors an individual Condor node
+  Condor Pool - Monitors the health of a Condor pool (Requires the
+     separate Condor-Absent contrib Condor module which should be
+     available soon).
+  Grid Probe - Designed to make monitoring a Grid easier (Requires
+     the separate Grid-Probe contrib module which should be available
+     soon).  It's the module being used to monitor the USCMS test bed.
 
 
 4. Creating modules
