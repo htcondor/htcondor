@@ -1,0 +1,25 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_rsc_getdirentries_std.cmd';
+$testname = 'getdirentries Test';
+
+
+@CondorTest::expected_output = ( 'ENTRY: .',
+'ENTRY: ..', 
+'ENTRY: first', 
+'ENTRY: second',
+'ENTRY: third', 
+'completed successfully' );
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
