@@ -189,7 +189,6 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-
 #if WANT_CLASSAD_FUNCTIONS && HAS_DLOPEN
 #   define CLASSAD_FUNCTIONS YES
 #endif
@@ -197,6 +196,15 @@ DEBUG_FLAG = DebugFlag
 #if WANT_DAGMAN_HELPER && HAS_DAGMAN_HELPER
 #   define DAGMAN_HELPER YES
 #endif 
+
+#if !defined(WANT_ORACLE_UNIVERSE)
+#   define WANT_ORACLE_UNIVERSE NO
+#endif
+
+#if !defined(WANT_NORDUGRID_UNIVERSE)
+#   define WANT_NORDUGRID_UNIVERSE NO
+#endif
+
 
 /**********************************************************************
 A whole bunch of settings related to things included in the Condor
