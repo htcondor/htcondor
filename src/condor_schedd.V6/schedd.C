@@ -342,8 +342,17 @@ Scheduler::count_jobs()
 				if (!strcmp(OldOwners[j].Name,Owners[i].Name)) {
 					Owners[i].FlockLevel = OldOwners[j].FlockLevel;
 					Owners[i].OldFlockLevel = OldOwners[j].OldFlockLevel;
-					Owners[i].NegotiationTimestamp =
-						OldOwners[j].NegotiationTimestamp;
+						// Remember our last negotiation time if we have
+						// idle jobs, so we can determine if the negotiator
+						// is ignoring us and we should flock.  If we don't
+						// have any idle jobs, we leave NegotiationTimestamp
+						// at its initial value (the current time), since
+						// we don't want any negotiations, and thus we don't
+						// want to timeout and increase our flock level.
+					if (Owners[i].JobsIdle) {
+						Owners[i].NegotiationTimestamp =
+							OldOwners[j].NegotiationTimestamp;
+					}
 				}
 			}
 			// if this owner hasn't received a negotiation in a long time,
@@ -352,6 +361,7 @@ Scheduler::count_jobs()
 			if ((current_time - Owners[i].NegotiationTimestamp >
 				 SchedDInterval*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
 				Owners[i].FlockLevel++;
+				Owners[i].NegotiationTimestamp = current_time;
 				dprintf(D_ALWAYS,
 						"Increasing flock level for %s to %d.\n",
 						Owners[i].Name, Owners[i].FlockLevel);
@@ -1623,6 +1633,7 @@ Scheduler::negotiate(int, Stream* s)
 					if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 						Owners[owner_num].FlockLevel == which_negotiator) { 
 						Owners[owner_num].FlockLevel++;
+						Owners[i].NegotiationTimestamp = time(0);
 						dprintf(D_ALWAYS,
 								"Increasing flock level for %s to %d.\n",
 								owner, Owners[owner_num].FlockLevel);
@@ -1675,6 +1686,7 @@ Scheduler::negotiate(int, Stream* s)
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 			Owners[owner_num].FlockLevel == which_negotiator) { 
 			Owners[owner_num].FlockLevel++;
+			Owners[i].NegotiationTimestamp = time(0);
 			dprintf(D_ALWAYS, "Increasing flock level for %s to %d.\n",
 					owner, Owners[owner_num].FlockLevel);
 			if (JobsStarted == 0) {
@@ -1684,11 +1696,13 @@ Scheduler::negotiate(int, Stream* s)
 	} else {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		Owners[owner_num].FlockLevel = which_negotiator;
-		timeout();				// invalidate our ads immediately
+		Owners[i].NegotiationTimestamp = time(0);
 
 		dprintf( D_ALWAYS,
 		"Out of jobs - %d jobs matched, %d jobs idle, flock level = %d\n",
 		 JobsStarted, jobs - JobsStarted, Owners[owner_num].FlockLevel );
+
+		timeout();				// invalidate our ads immediately
 	}
 
 	return KEEP_STREAM;
