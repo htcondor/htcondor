@@ -23,33 +23,44 @@
 #ifndef _FILE_TRANSFER_H
 #define _FILE_TRANSFER_H
 
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "MyString.h"
 #include "HashTable.h"
-#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "perm.h"
+
 
 class FileTransfer;	// forward declatation
 
 typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
 
-typedef int		(*FileTransferHandler)(FileTransfer *);
+typedef int		(Service::*FileTransferHandler)(FileTransfer *);
 
 class FileTransfer {
 
   public:
 
-	FileTransfer::FileTransfer();
+	FileTransfer();
 
-	FileTransfer::~FileTransfer();
+	~FileTransfer();
+
+	/** Initialize the object.  Must be called before any other methods.
+		@param Ad ClassAd containing all attributes needed by the object,
+		such as the list of files to transfer.  If this ad does not contain
+		a transfer key, then one is generated and this object is considered
+		to be a server.  If a transfer key exists in the ad, this object is
+		considered to be a client.
+		@param check_file_perms If true, before reading or writing to any file,
+		a check is perfomed to see if the ATTR_OWNER attribute defined in the
+		ClassAd has the neccesary read/write permission.
+		@return 1 on success, 0 on failure */
+	int Init(ClassAd *Ad, bool check_file_perms = false);
 
 	/** @return 1 on success, 0 on failure */
-	int FileTransfer::Init(ClassAd *Ad);
+	int DownloadFiles(bool blocking=true);
 
 	/** @return 1 on success, 0 on failure */
-	int FileTransfer::DownloadFiles(bool blocking=true);
-
-	/** @return 1 on success, 0 on failure */
-	int FileTransfer::UploadFiles(bool blocking=true);
+	int UploadFiles(bool blocking=true, bool final_transfer=true);
 
 		/** For non-blocking (i.e., multithreaded) transfers, the registered
 			handler function will be called on each transfer completion.  The
@@ -57,8 +68,11 @@ class FileTransfer {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void FileTransfer::RegisterCallback(FileTransferHandler handler)
-		{ ClientCallback = handler; }
+	void RegisterCallback(FileTransferHandler handler, Service* handlerclass)
+		{ 
+			ClientCallback = handler; 
+			ClientCallbackClass = handlerclass;
+		}
 
 	enum TransferType { NoType, DownloadFilesType, UploadFilesType };
 
@@ -74,49 +88,61 @@ class FileTransfer {
 
 	FileTransferInfo FileTransfer::GetInfo() { return Info; }
 
-	inline bool FileTransfer::IsServer() {return user_supplied_key == FALSE;}
+	inline bool IsServer() {return user_supplied_key == FALSE;}
 
-	inline bool FileTransfer::IsClient() {return user_supplied_key == TRUE;}
+	inline bool IsClient() {return user_supplied_key == TRUE;}
 
-	static int FileTransfer::HandleCommands(Service *,int command,Stream *s);
+	static int HandleCommands(Service *,int command,Stream *s);
 
-	static int FileTransfer::Reaper(Service *, int pid, int exit_status);
+	static int Reaper(Service *, int pid, int exit_status);
 
-	int FileTransfer::Suspend();
+	int Suspend();
 
-	int FileTransfer::Continue();
+	int Continue();
+
+	float TotalBytesSent() { return bytesSent; }
+
+	float TotalBytesReceived() { return bytesRcvd; };
 
   protected:
 
-	int FileTransfer::Download(ReliSock *s, bool blocking);
-	int FileTransfer::Upload(ReliSock *s, StringList *filelist, bool blocking);
-	static int FileTransfer::DownloadThread(void *arg, Stream *s);
-	static int FileTransfer::UploadThread(void *arg, Stream *s);
+	int Download(ReliSock *s, bool blocking);
+	int Upload(ReliSock *s, bool blocking);
+	static int DownloadThread(void *arg, Stream *s);
+	static int UploadThread(void *arg, Stream *s);
 
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
 		*/
-	static int FileTransfer::DoDownload(ReliSock *s, char *Iwd);
-	static int FileTransfer::DoUpload(ReliSock *s, StringList *filelist,
-									  char *Iwd, char *Exec);
+	int DoDownload(ReliSock *s);
+	int DoUpload(ReliSock *s);
+
+	void CommitFiles();
+	float bytesSent, bytesRcvd;
 
   private:
 
 	char* Iwd;
 	StringList* InputFiles;
 	StringList* OutputFiles;
+	StringList* IntermediateFiles;
+	StringList* FilesToSend;
 	char* ExecFile;
 	char* TransSock;
 	char* TransKey;
+	char* SpoolSpace;
+	char* TmpSpoolSpace;
 	int user_supplied_key;
 	bool upload_changed_files;
+	int m_final_transfer_flag;
 	time_t last_download_time;
 	int ActiveTransferTid;
 	time_t TransferStart;
 	int TransferPipe[2];
 	FileTransferHandler ClientCallback;
+	Service* ClientCallbackClass;
 	FileTransferInfo Info;
-
+	perm* perm_obj;
 		
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
