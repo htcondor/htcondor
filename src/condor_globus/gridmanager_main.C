@@ -24,7 +24,7 @@ GridManager gridmanager;
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-x]\n",
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
@@ -47,10 +47,6 @@ main_init( int argc, char **argv )
 				usage( argv[0] );
 			gridmanager.ScheddAddr = strdup( argv[i + 1] );
 			i++;
-			break;
-		case 'x':
-			// test mode
-			test_mode = 1;
 			break;
 		default:
 			usage( argv[0] );

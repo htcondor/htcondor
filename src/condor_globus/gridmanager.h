@@ -30,7 +30,10 @@ class GridManager : public Service
 	
 	// handlers
 	int ADD_JOBS_signalHandler( int );
+	int SUBMIT_JOB_signalHandler( int );
 	int REMOVE_JOBS_signalHandler( int );
+	int CANCEL_JOB_signalHandler( int );
+	int COMMIT_JOB_signalHandler( int );
 	int updateSchedd();
 	int globusPoll();
 	int jobProbe();
@@ -47,14 +50,18 @@ class GridManager : public Service
 	char *gramCallbackContact;
 	char *ScheddAddr;
 
+	HashTable <HashKey, GlobusJob *> *JobsByContact;
+	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;
+
+	List <GlobusJob> JobsToSubmit;
+	List <GlobusJob> JobsToRemove;
+	List <GlobusJob> JobsToCommit;
+
  private:
 
 	bool grabAllJobs;
 
 	char *Owner;
-
-	HashTable <HashKey, GlobusJob *> *JobsByContact;
-	HashTable <PROC_ID, GlobusJob *> *JobsByProcID;
 
 };
 

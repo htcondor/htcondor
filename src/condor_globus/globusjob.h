@@ -7,6 +7,8 @@
 #include "globus_utils.h"
 
 
+#define JM_COMMIT_TIMEOUT	60
+
 class GlobusJob
 {
  public:
@@ -17,6 +19,7 @@ class GlobusJob
 	~GlobusJob();
 
 	bool start();
+	bool commit();
 	bool callback( int state = 0, int error = 0 );
 	bool cancel();
 	bool probe();
@@ -28,17 +31,21 @@ class GlobusJob
 
 	PROC_ID procID;
 	char *jobContact;
-	char *old_jobContact;
 	int jobState;	// this is the Globus status, not Condor job status
 	char *RSL;
 	char *rmContact;
 	int errorCode;
 	char *userLogFile;
-	bool abortedByUser;
-	int exit_value;
+	bool removedByUser;
+	int exitValue;
+	bool executeLogged;
+	bool exitLogged;
+	bool stateChanged;
+	bool newJM;		// This means a jobmanager that supports restart
+					// and two-phase commit
 
  protected:
-	bool callback_already_registered;
+	bool callbackRegistered;
 	//Classad *ad;
 };
 

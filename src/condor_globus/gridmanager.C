@@ -49,9 +49,6 @@ extern GridManager gridmanager;
 List<JobUpdateEvent> JobUpdateEventQueue;
 static bool updateScheddTimerSet = false;
 
-// For developmental testing
-int test_mode = 0;
-
 // Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
@@ -67,6 +64,8 @@ template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class HashTable<PROC_ID, GlobusJob *>;
 template class HashBucket<PROC_ID, GlobusJob *>;
+template class List<GlobusJob>;
+template class Item<GlobusJob>;
 // template class List<GlobusJob *>;
 // template class Item<GlobusJob *>;
 template class List<JobUpdateEvent>;
@@ -85,21 +84,21 @@ addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
 	// to DONE, and there is already an event to set it to RUNNING,
 	// we may as well remove the earlier event so we do not waste
 	// the schedd's time.
-	if ( event == JOB_UE_UPDATE_STATE ||
-		 event == JOB_UE_UPDATE_CONTACT )
+#if 0
+	if ( event == JOB_UE_DONE ||
+		 event == JOB_UE_CANCELED )
 	{
 		JobUpdateEventQueue.Rewind();
 		while ( JobUpdateEventQueue.Next( curr_event ) ) {
-			if ( job == curr_event->job && 
-				event == curr_event->event &&
-				subtype == curr_event->subtype ) 
+			if ( curr_event->job == job && 
+				 curr_event->event == JOB_UE_RUNNING )
 			{
 				JobUpdateEventQueue.DeleteCurrent();
 				delete curr_event;
 			}
 		}
 	}
-
+#endif
 
 	JobUpdateEvent *new_event = new JobUpdateEvent;
 	new_event->job = job;
@@ -108,6 +107,18 @@ addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 )
 
 	JobUpdateEventQueue.Append( new_event );
 	setUpdate();
+}
+
+void removeJobUpdateEvents( GlobusJob *job ) {
+	JobUpdateEvent *curr_event;
+
+	JobUpdateEventQueue.Rewind();
+	while ( JobUpdateEventQueue.Next( curr_event ) ) {
+		if ( curr_event->job == job ) {
+			JobUpdateEventQueue.DeleteCurrent();
+			delete curr_event;
+		}
+	}
 }
 
 void
@@ -121,6 +132,18 @@ setUpdate()
 					(TimerHandlercpp)&GridManager::updateSchedd,
 					"updateSchedd", (Service*) &gridmanager );
 		updateScheddTimerSet = true;
+	}
+}
+
+void
+rehashJobContact( GlobusJob *job, const char *old_contact,
+				  const char *new_contact )
+{
+	if ( old_contact ) {
+		gridmanager.JobsByContact->remove(HashKey(old_contact));
+	}
+	if ( new_contact ) {
+		gridmanager.JobsByContact->insert(HashKey(new_contact), job);
 	}
 }
 
@@ -198,9 +221,21 @@ GridManager::Register()
 		(SignalHandlercpp)&GridManager::ADD_JOBS_signalHandler,
 		"ADD_JOBS_signalHandler", (Service*)this, WRITE );
 
+	daemonCore->Register_Signal( GRIDMAN_SUBMIT_JOB, "AddJobs",
+		(SignalHandlercpp)&GridManager::SUBMIT_JOB_signalHandler,
+		"SUBMIT_JOB_signalHandler", (Service*)this, WRITE );
+
 	daemonCore->Register_Signal( GRIDMAN_REMOVE_JOBS, "RemoveJobs",
 		(SignalHandlercpp)&GridManager::REMOVE_JOBS_signalHandler,
 		"REMOVE_JOBS_signalHandler", (Service*)this, WRITE );
+
+	daemonCore->Register_Signal( GRIDMAN_CANCEL_JOB, "CancelJob",
+		(SignalHandlercpp)&GridManager::CANCEL_JOB_signalHandler,
+		"CANCEL_JOB_signalHandler", (Service*)this, WRITE );
+
+	daemonCore->Register_Signal( GRIDMAN_COMMIT_JOB, "CommitJob",
+		(SignalHandlercpp)&GridManager::COMMIT_JOB_signalHandler,
+		"COMMIT_JOB_signalHandler", (Service*)this, WRITE );
 
 	daemonCore->Register_Timer( 0, GLOBUS_POLL_INTERVAL,
 		(TimerHandlercpp)&GridManager::globusPoll,
@@ -220,7 +255,6 @@ GridManager::reconfig()
 int
 GridManager::ADD_JOBS_signalHandler( int signal )
 {
-	ClassAdList new_ads;
 	ClassAd *next_ad;
 	char expr_buf[1024];
 	int num_ads = 0;
@@ -255,74 +289,103 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 
 	next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	while ( next_ad != NULL ) {
-		new_ads.Insert( next_ad );
-		num_ads++;
-		next_ad = GetNextJobByConstraint( expr_buf, 0 );
-	}
-
-	DisconnectQ( schedd );
-	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
-
-	grabAllJobs = false;
-
-	// Try to submit the new jobs
-	GlobusJob *new_job;
-	PROC_ID procID;
-	new_ads.Open();
-	while ( ( next_ad = new_ads.Next() ) != NULL ) {
+		PROC_ID procID;
+		GlobusJob *old_job;
+		ClassAd *old_ad;
 
 		next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 		next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-		new_job = NULL;
-		JobsByProcID->lookup( procID, new_job );
-		if (!new_job) {
-			// we have not seen this job before
-			new_job = new GlobusJob( next_ad );
+		if ( JobsByProcID->lookup( procID, old_job ) != 0 ) {
+
+			GlobusJob *new_job = new GlobusJob( next_ad );
 			ASSERT(new_job);
 			JobsByProcID->insert( new_job->procID, new_job );
+			JobsToSubmit.Append( new_job );
+			num_ads++;
+
 		}
 
+		delete next_ad;
 
-		if ( new_job->jobState == G_UNSUBMITTED ) {
-			dprintf(D_FULLDEBUG,"Attempting to submit job %d.%d\n",
+		next_ad = GetNextJobByConstraint( expr_buf, 0 );
+	}
+
+	DisconnectQ( schedd );
+	dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
+
+	grabAllJobs = false;
+
+	if ( !JobsToSubmit.IsEmpty() ) {
+		daemonCore->Block_Signal( GRIDMAN_ADD_JOBS );
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_SUBMIT_JOB );
+	}
+
+	return TRUE;
+}
+
+int
+GridManager::SUBMIT_JOB_signalHandler( int signal )
+{
+	// Try to submit the new jobs
+	GlobusJob *new_job = NULL;
+	PROC_ID procID;
+
+	dprintf(D_FULLDEBUG,"in SUBMIT_JOB_signalHandler\n");
+
+	if ( JobsToSubmit.IsEmpty() ) {
+		daemonCore->Unblock_Signal( GRIDMAN_ADD_JOBS );
+		return TRUE;
+	}
+
+	JobsToSubmit.Rewind();
+	JobsToSubmit.Next( new_job );
+
+	if ( new_job->jobState == G_UNSUBMITTED ) {
+		dprintf(D_FULLDEBUG,"Attempting to submit job %d.%d\n",
 				new_job->procID.cluster,new_job->procID.proc);
 
-			if ( new_job->start() == true ) {
-				JobsByContact->insert(HashKey(new_job->jobContact), new_job);
-				dprintf(D_ALWAYS,"Submited job %d.%d\n",
+		if ( new_job->start() == true ) {
+			dprintf(D_ALWAYS,"Submited job %d.%d\n",
 					new_job->procID.cluster,new_job->procID.proc);
-			} else {
-				dprintf(D_ALWAYS,"ERROR: Job %d.%d Submit failed because %s\n",
+		} else {
+			dprintf(D_ALWAYS,"ERROR: Job %d.%d Submit failed because %s\n",
 					new_job->procID.cluster,new_job->procID.proc,
 					new_job->errorString());
-				if (new_job->RSL) {
-					dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
+			if (new_job->RSL) {
+				dprintf(D_ALWAYS,"Job %d.%d RSL is: %s\n",
 						new_job->procID.cluster,new_job->procID.proc,
 						new_job->RSL);
-				}
-				// TODO : we just failed to submit a job; handle it better.
 			}
-		} else {
-			dprintf(D_FULLDEBUG,
+			// TODO : we just failed to submit a job; handle it better.
+		}
+	} else {
+		dprintf(D_FULLDEBUG,
 				"Job %d.%d already submitted to Globus\n",
 				new_job->procID.cluster,new_job->procID.proc);
-			// So here the job has already been submitted to Globus.
-			// We need to place the contact string into our hashtable,
-			// and setup to get async events.
-			if ( new_job->jobContact ) {
-				GlobusJob *tmp_job = NULL;
-				// see if this contact string already in our hash table
-				JobsByContact->lookup(HashKey(new_job->jobContact), tmp_job);
-				if ( tmp_job == NULL ) {
-					// nope, this string is not in our hash table.  insert it.
-					JobsByContact->insert(HashKey(new_job->jobContact), new_job);
-					new_job->callback_register();
-				}
+		// So here the job has already been submitted to Globus.
+		// We need to place the contact string into our hashtable,
+		// and setup to get async events.
+		if ( new_job->jobContact ) {
+			GlobusJob *tmp_job = NULL;
+			// see if this contact string already in our hash table
+			JobsByContact->lookup(HashKey(new_job->jobContact), tmp_job);
+			if ( tmp_job == NULL ) {
+				// nope, this string is not in our hash table. Register
+				// a callback for it (and insert it in the hash table).
+				new_job->callback_register();
 			}
 		}
+	}
 
-		new_ads.Delete( next_ad );
+	JobsToSubmit.DeleteCurrent();
+
+	if ( !JobsToSubmit.IsEmpty() ) {
+		dprintf(D_FULLDEBUG,"More jobs to submit. Resignaling SUBMIT_JOB\n");
+		daemonCore->Block_Signal( GRIDMAN_ADD_JOBS );
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_SUBMIT_JOB );
+	} else {
+		daemonCore->Unblock_Signal( GRIDMAN_ADD_JOBS );
 	}
 
 	return TRUE;
@@ -331,7 +394,6 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 int
 GridManager::REMOVE_JOBS_signalHandler( int signal )
 {
-	ClassAdList new_ads;
 	ClassAd *next_ad;
 	char expr_buf[1024];
 	int num_ads = 0;
@@ -356,65 +418,142 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 
 	next_ad = GetNextJobByConstraint( expr_buf, 1 );
 	while ( next_ad != NULL ) {
-		new_ads.Insert( next_ad );
-		num_ads++;
+		PROC_ID procID;
+		GlobusJob *next_job;
+
+		next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
+		next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+
+		if ( JobsByProcID->lookup( procID, next_job ) == 0 ) {
+			// Should probably skip jobs we already have marked for removal
+
+			JobsToSubmit.Delete( next_job );
+			next_job->removedByUser = true;
+			JobsToRemove.Append( next_job );
+			num_ads++;
+
+		} else {
+
+			// If we don't know about the job, remove it immediately
+			dprintf( D_ALWAYS, "Don't know about removed job %d.%d. Deleting it immediately\n", procID.cluster, procID.proc );
+			DestroyProc( procID.cluster, procID.proc );
+
+		}
+
+		delete next_ad;
 		next_ad = GetNextJobByConstraint( expr_buf, 0 );
 	}
 
 	DisconnectQ( schedd );
 	dprintf(D_FULLDEBUG,"Fetched %d job ads from schedd\n",num_ads);
 
-	// Try to cancel the jobs
-	new_ads.Open();
+	if ( !JobsToRemove.IsEmpty() ) {
+		daemonCore->Block_Signal( GRIDMAN_REMOVE_JOBS );
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_CANCEL_JOB );
+	}
 
-	PROC_ID curr_procid;
-	GlobusJob *curr_job;
-	while ( ( next_ad = new_ads.Next() ) != NULL ) {
+	return TRUE;
+}
 
-		next_ad->LookupInteger( ATTR_CLUSTER_ID, curr_procid.cluster );
-		next_ad->LookupInteger( ATTR_PROC_ID, curr_procid.proc );
+int
+GridManager::CANCEL_JOB_signalHandler( int signal )
+{
+	// Try to cancel a removed job
+	GlobusJob *curr_job = NULL;
+	PROC_ID procID;
 
-		curr_job = NULL;
-		JobsByProcID->lookup( curr_procid, curr_job );
-		if ( curr_job == NULL ) {
-			new_ads.Delete( next_ad );
-			continue;
-		}
+	dprintf( D_FULLDEBUG, "in CANCEL_JOB_signalHandler\n" );
 
-		if ( curr_job->jobContact != NULL ) {
+	if ( JobsToRemove.IsEmpty() ) {
+		daemonCore->Unblock_Signal( GRIDMAN_REMOVE_JOBS );
+		return TRUE;
+	}
 
-			dprintf(D_FULLDEBUG,"Attempting to remove job %d.%d\n",
+	JobsToRemove.Rewind();
+	JobsToRemove.Next( curr_job );
+
+	JobsToSubmit.Delete( curr_job );
+
+	if ( curr_job->jobContact != NULL ) {
+
+		dprintf(D_FULLDEBUG,"Attempting to remove job %d.%d\n",
 				curr_job->procID.cluster,curr_job->procID.proc);
-			
-			if ( curr_job->cancel() == false ) {
-				// Error
-				dprintf(D_ALWAYS,"ERROR: Job cancel failed because %s\n",
+
+		if ( curr_job->cancel() == false ) {
+			// Error
+			dprintf(D_ALWAYS,"ERROR: Job cancel failed because %s\n",
 					globus_gram_client_error_string(curr_job->errorCode));
 
-				// TODO what now?  try later ?
-			} else {
-				// Success.  We don't actually remove it until
-				// we receive the status update from the job manager.
-				dprintf(D_ALWAYS,"Removed job %d.%d\n",
-					curr_job->procID.cluster,curr_job->procID.proc);
-			}
-			/*
-			if ( curr_job->jobContact != NULL )
-				JobsByContact->remove( HashKey( curr_job->jobContact ) );
-			JobsByProcID->remove( curr_procid );
-			addJobUpdateEvent( curr_job, JOB_REMOVED );
-			*/
+			// TODO what now?  try later ?
 		} else {
+			// Success.  We don't actually remove it until
+			// we receive the status update from the job manager.
+			dprintf(D_ALWAYS,"Removed job %d.%d\n",
+					curr_job->procID.cluster,curr_job->procID.proc);
 
+			JobsToCommit.Delete( curr_job );
+			removeJobUpdateEvents( curr_job );
+		}
+		/*
+		  if ( curr_job->jobContact != NULL )
+		  JobsByContact->remove( HashKey( curr_job->jobContact ) );
+		  JobsByProcID->remove( curr_procid );
+		  addJobUpdateEvent( curr_job, JOB_REMOVED );
+		*/
+	} else {
+
+		// If the state is DONE or FAILED with no contact string, then
+		// the job is done and we just need to update the schedd. Allow
+		// the job to complete.
+		if ( curr_job->jobState != G_DONE && curr_job->jobState != G_FAILED ) {
 			// If there is no contact, remove the job now
-			addJobUpdateEvent( curr_job, JOB_UE_UPDATE_STATE );
-			addJobUpdateEvent( curr_job, JOB_UE_REMOVE_JOB );
-			addJobUpdateEvent( curr_job, JOB_UE_ULOG_ABORT );
-
+			dprintf(D_ALWAYS,"Removed job %d.%d (it had no contact string)\n",
+					curr_job->procID.cluster,curr_job->procID.proc);
+			removeJobUpdateEvents( curr_job );
+			addJobUpdateEvent( curr_job, JOB_UE_CANCELED );
 		}
 
-		new_ads.Delete( next_ad );
+	}
 
+	JobsToRemove.DeleteCurrent();
+
+	if ( !JobsToRemove.IsEmpty() ) {
+		dprintf(D_FULLDEBUG, "More jobs to cancel, Resignalling CANCEL_JOB\n");
+
+		daemonCore->Block_Signal( GRIDMAN_REMOVE_JOBS );
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_CANCEL_JOB );
+	} else {
+		daemonCore->Unblock_Signal( GRIDMAN_REMOVE_JOBS );
+	}
+
+	return TRUE;
+}
+
+int
+GridManager::COMMIT_JOB_signalHandler( int signal )
+{
+	// Try to commit a job submission or completion
+	GlobusJob *curr_job = NULL;
+	PROC_ID procID;
+
+	dprintf( D_FULLDEBUG, "in COMMIT_JOB_signalHandler\n" );
+
+	if ( JobsToCommit.IsEmpty() ) {
+		return TRUE;
+	}
+
+	JobsToCommit.Rewind();
+	JobsToCommit.Next( curr_job );
+
+	curr_job->commit();
+	// Need to deal with failure...
+
+	JobsToCommit.DeleteCurrent();
+
+	if ( !JobsToCommit.IsEmpty() ) {
+		dprintf(D_FULLDEBUG, "More jobs to commit, Resignalling COMMIT_JOB\n");
+
+		daemonCore->Send_Signal( daemonCore->getpid(), GRIDMAN_COMMIT_JOB );
 	}
 
 	return TRUE;
@@ -444,24 +583,34 @@ GridManager::updateSchedd()
 		handled = false;
 
 		switch ( curr_event->event) {
-		case JOB_UE_ULOG_EXECUTE:
-			WriteExecuteToUserLog( curr_job );
-			handled = true;
+		case JOB_UE_RUNNING:
+			if ( !curr_job->executeLogged ) {
+				WriteExecuteToUserLog( curr_job );
+				curr_job->executeLogged = true;
+			}
 			break;
-		case JOB_UE_ULOG_TERMINATE:
-			WriteTerminateToUserLog( curr_job );
-			handled = true;
+		case JOB_UE_DONE:
+		case JOB_UE_FAILED:
+			if ( curr_job->newJM && curr_job->jobContact != NULL ) {
+				break;
+			}
+			if ( !curr_job->executeLogged ) {
+				WriteExecuteToUserLog( curr_job );
+				curr_job->executeLogged = true;
+			}
+			if ( !curr_job->exitLogged ) {
+				WriteTerminateToUserLog( curr_job );
+				curr_job->exitLogged = true;
+			}
 			break;
-		case JOB_UE_ULOG_ABORT:
-			WriteAbortToUserLog( curr_job );
-			handled = true;
-			break;
-		case JOB_UE_EMAIL:
-			handled = true;
-			break;
-		case JOB_UE_CALLBACK:
-			curr_job->callback();
-			handled = true;
+		case JOB_UE_CANCELED:
+			if ( curr_job->newJM && curr_job->jobContact != NULL ) {
+				break;
+			}
+			if ( !curr_job->exitLogged ) {
+				WriteAbortToUserLog( curr_job );
+				curr_job->exitLogged = true;
+			}
 			break;
 		}
 
@@ -469,7 +618,6 @@ GridManager::updateSchedd()
 			JobUpdateEventQueue.DeleteCurrent();
 			delete curr_event;
 		}
-
 	}
 
 	// Any items left in the list at this point must be qmgmt ops.
@@ -492,73 +640,118 @@ GridManager::updateSchedd()
 	while ( JobUpdateEventQueue.Next( curr_event ) ) {
 
 		curr_job = curr_event->job;
+		handled = false;
 
-		switch ( curr_event->event) {
-		case JOB_UE_UPDATE_STATE:
+		if ( curr_job->stateChanged ) {
+
 			SetAttributeInt( curr_job->procID.cluster,
 							 curr_job->procID.proc,
 							 ATTR_GLOBUS_STATUS, curr_job->jobState );
 
+			int curr_status;
+			GetAttributeInt( curr_job->procID.cluster,
+							 curr_job->procID.proc,
+							 ATTR_JOB_STATUS, &curr_status );
+
 			switch ( curr_job->jobState ) {
+			case G_UNSUBMITTED:
+			case G_SUBMITTED:
 			case G_PENDING:
 				// Send new job state command
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, IDLE );
+				if ( curr_status != REMOVED ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, IDLE );
+				}
 				break;
 			case G_ACTIVE:
 				// Send new job state command
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, RUNNING );
+				if ( curr_status != REMOVED ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, RUNNING );
+				}
 				break;
 			case G_FAILED:
 //dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
 
 				// Send new job state command
-				if ( curr_job->abortedByUser ) {
+				if ( curr_job->removedByUser ) {
 //dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
 
 					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, REMOVED );
+				} else if ( curr_status != REMOVED || curr_job->exitLogged ) {
+//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
+
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, COMPLETED );
+				}
+				break;
+			case G_CANCELED:
+				// This shouldn't be necessary, but what the hell
+				SetAttributeInt( curr_job->procID.cluster,
 								 curr_job->procID.proc,
 								 ATTR_JOB_STATUS, REMOVED );
-				} else {
-//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
-
-					SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, COMPLETED );
-				}
 				break;
 			case G_DONE:
 				// Send new job state command
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, COMPLETED );
+				if ( curr_status != REMOVED || curr_job->exitLogged ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, COMPLETED );
+				}
 				break;
 			case G_SUSPENDED:
 				// Send new job state command
-				SetAttributeInt( curr_job->procID.cluster,
-								 curr_job->procID.proc,
-								 ATTR_JOB_STATUS, IDLE );
+				if ( curr_status != REMOVED ) {
+					SetAttributeInt( curr_job->procID.cluster,
+									 curr_job->procID.proc,
+									 ATTR_JOB_STATUS, IDLE );
+				}
 				break;
 			}
 
-			break;
-		case JOB_UE_UPDATE_CONTACT:
-			// Before calling SetAttributeString, make certain
-			// the jobContact string is not NULL.  This could be 
-			// the case if the job has already completed.
-			if ( curr_job->jobContact) {
-				SetAttributeString( curr_job->procID.cluster,
-								curr_job->procID.proc,
-								ATTR_GLOBUS_CONTACT_STRING,
-								curr_job->jobContact );
-			}
+			curr_job->stateChanged = false;
 
+		}
+
+		switch ( curr_event->event ) {
+		case JOB_UE_STATE_CHANGE:
+			handled = true;
 			break;
-		case JOB_UE_REMOVE_JOB:
+		case JOB_UE_SUBMITTED:
+			if ( curr_job->jobContact ) {
+				SetAttributeString( curr_job->procID.cluster,
+									curr_job->procID.proc,
+									ATTR_GLOBUS_CONTACT_STRING,
+									curr_job->jobContact );
+			}
+			// If the job state is G_UNSUBMITTED, then we're doing a 2-phase
+			// commit to the jobmanager. Leave the event unhandled so we can
+			// register a commit event after updating the schedd.
+			if ( curr_job->jobState != G_UNSUBMITTED ) {
+				handled = true;
+			}
+			break;
+		case JOB_UE_RUNNING:
+			// The job's been marked as running. Nothing else to do.
+			handled = true;
+			break;
+		case JOB_UE_FAILED:
+		case JOB_UE_DONE:
+		case JOB_UE_CANCELED:
+			// If we're dealing with a new jobmanager and the contact string
+			// isn't NULL, we need to commit the end of job execution
+			// before removing the job from the schedd's queue.
+			if ( curr_job->newJM && curr_job->jobContact != NULL ) {
+				break;
+			}
 			// Remove the job from the schedd queue
+			// (The differences between done and removed were already
+			//  handled above.)
 
 			// Before calling DestroyProc, first call
 			// CloseConnection().  This will commit the transaction.
@@ -575,30 +768,46 @@ GridManager::updateSchedd()
 						curr_job->procID.proc);
 
 			// Remove all knowledge we may have about this job
-			if ( curr_job->jobContact ) {
-				JobsByContact->remove(HashKey(curr_job->jobContact));
-			} else {
-				if ( curr_job->old_jobContact ) {
-					JobsByContact->remove(HashKey(curr_job->old_jobContact));
-				} 
-			}
 			JobsByProcID->remove( curr_job->procID );
+			JobsToRemove.Delete( curr_job );
 			delete curr_job;
 
-			break;
-		case JOB_UE_HOLD_JOB:
-			// put job on hold
-
+			handled = true;
 			break;
 		}
-		
-		JobUpdateEventQueue.DeleteCurrent();
-		delete curr_event;
+
+		if ( handled ) {
+			JobUpdateEventQueue.DeleteCurrent();
+			delete curr_event;
+		}
 	}
 
 	DisconnectQ( schedd );
 
+	JobUpdateEventQueue.Rewind();
 
+	while ( JobUpdateEventQueue.Next( curr_event ) ) {
+
+		curr_job = curr_event->job;
+		handled = false;
+
+		switch ( curr_event->event ) {
+		case JOB_UE_SUBMITTED:
+		case JOB_UE_DONE:
+		case JOB_UE_FAILED:
+		case JOB_UE_CANCELED:
+			JobsToCommit.Append( curr_job );
+			daemonCore->Send_Signal( daemonCore->getpid(),
+									 GRIDMAN_COMMIT_JOB );
+			handled = true;
+			break;
+		}
+
+		if ( handled ) {
+			JobUpdateEventQueue.DeleteCurrent();
+			delete curr_event;
+		}
+	}
 
 	return TRUE;
 }
@@ -616,6 +825,11 @@ GridManager::jobProbe()
 	GlobusJob *next_job;
 
 	//dprintf(D_FULLDEBUG,"in jobProbe elements=%d\n",JobsByContact->getNumElements() );
+	if ( JobsByProcID->getNumElements() == 0 ) {
+		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		return TRUE;
+	}
 
 	JobsByContact->startIterations();
 
@@ -626,7 +840,9 @@ GridManager::jobProbe()
 			dprintf(D_FULLDEBUG,"calling jobProbe for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
 
-			if ( next_job->probe() == false ) {
+			if ( next_job->probe() == false && next_job->errorCode ==
+				     GLOBUS_GRAM_CLIENT_ERROR_CONTACTING_JOB_MANAGER ) {
+
 				dprintf( D_ALWAYS, 
 						"Globus JobManager unreachable for job %d.%d\n",
 						 next_job->procID.cluster, next_job->procID.proc );
@@ -639,14 +855,20 @@ GridManager::jobProbe()
 				// If we can contact the gatekeeper, and not the jobmanager,
 				// we know the jobmanager is gone.  So either 
 				// resubmit the job or place it on hold.
+				// Note: It is possible to get the final callback from the
+				//   jobmanager inside the ping call. If we do, then the
+				//   jobmanager exitted normally and we shouldn't flag an
+				//   error. For now, we test this by seeing if jobContact
+				//   is still defined (meaning we still expect a running
+				//   jobmanager on the other end).
 				int err=globus_gram_client_ping(next_job->rmContact);
-				if ( err == GLOBUS_SUCCESS ) {
+				if ( err == GLOBUS_SUCCESS && next_job->jobContact != NULL ) {
 					// jobmanager definitely gone.
 					// make it appear like it exited with status 1
 					dprintf( D_ALWAYS, 
 						"Job %d.%d exiting with status 1 because JobManager gone\n",
 						 next_job->procID.cluster, next_job->procID.proc );
-					next_job->exit_value = 1;
+					next_job->exitValue = 1;
 					next_job->callback(GLOBUS_GRAM_CLIENT_JOB_STATE_DONE);
 				} 
 
@@ -682,19 +904,10 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 		return;
 	}
 
-	this_job->callback( state, errorcode );
+	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
+			 this_job->procID.proc );
 
-	if ( this_job->jobContact == NULL ) {
-		//dprintf(D_ALWAYS,"TODD DEUBG AAA 1 size=%d job_contact=%s\n",
-				//this_->JobsByContact->getNumElements(), job_contact);
-		this_->JobsByContact->remove( HashKey( job_contact ) );
-		//dprintf(D_ALWAYS,"TODD DEUBG AAA 2 size=%d job_contact=%s\n",
-				//this_->JobsByContact->getNumElements(), job_contact);
-	} else if ( strcmp( this_job->jobContact, job_contact ) != 0 ) {
-		this_->JobsByContact->remove( HashKey( job_contact ) );
-		this_->JobsByContact->insert( HashKey( this_job->jobContact ),
-									  this_job );
-	}
+	this_job->callback( state, errorcode );
 
 	dprintf(D_FULLDEBUG,"gramCallbackHandler() returning\n");
 }
@@ -712,9 +925,6 @@ GridManager::InitializeUserLog( GlobusJob *job )
 		return NULL;
 	}
 
-	dprintf( D_FULLDEBUG, "Writing record to user logfile=%s owner=%s\n",
-			 job->userLogFile, Owner );
-
 	UserLog *ULog = new UserLog();
 	ULog->initialize(Owner, job->userLogFile, job->procID.cluster,
 					 job->procID.proc, 0);
@@ -729,6 +939,9 @@ GridManager::WriteExecuteToUserLog( GlobusJob *job )
 		// User doesn't want a log
 		return true;
 	}
+
+	dprintf( D_FULLDEBUG, "Writing execute record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
 
 	int hostname_len = strcspn( job->rmContact, ":/" );
 
@@ -755,6 +968,9 @@ GridManager::WriteAbortToUserLog( GlobusJob *job )
 		return true;
 	}
 
+	dprintf( D_FULLDEBUG, "Writing abort record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
 	JobAbortedEvent event;
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
@@ -776,6 +992,9 @@ GridManager::WriteTerminateToUserLog( GlobusJob *job )
 		return true;
 	}
 
+	dprintf( D_FULLDEBUG, "Writing terminate record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
 	JobTerminatedEvent event;
 	event.coreFile[0] = '\0';
 	struct rusage r;
@@ -795,7 +1014,7 @@ GridManager::WriteTerminateToUserLog( GlobusJob *job )
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
 	event.normal = true;
-	event.returnValue = job->exit_value;
+	event.returnValue = job->exitValue;
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

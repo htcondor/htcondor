@@ -36,40 +36,46 @@
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
-	abortedByUser = copy.abortedByUser;
-	callback_already_registered = copy.callback_already_registered;
+	removedByUser = copy.removedByUser;
+	callbackRegistered = copy.callbackRegistered;
 	procID = copy.procID;
-	exit_value = copy.exit_value;
+	exitValue = copy.exitValue;
 	jobContact = (copy.jobContact == NULL) ? NULL : strdup( copy.jobContact );
-	old_jobContact = (copy.old_jobContact == NULL) ? NULL : strdup( copy.old_jobContact );
 	jobState = copy.jobState;
 	RSL = (copy.RSL == NULL) ? NULL : strdup( copy.RSL );
 	rmContact = (copy.rmContact == NULL) ? NULL : strdup( copy.rmContact );
 	errorCode = copy.errorCode;
 	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
+	executeLogged = copy.executeLogged;
+	exitLogged = copy.exitLogged;
+	stateChanged = copy.stateChanged;
+	newJM = copy.newJM;
 }
 
 GlobusJob::GlobusJob( ClassAd *classad )
 {
 	char buf[4096];
 
-	abortedByUser = false;
-	callback_already_registered = false;
+	removedByUser = false;
+	callbackRegistered = false;
 	classad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	classad->LookupInteger( ATTR_PROC_ID, procID.proc );
 	jobContact = NULL;
-	old_jobContact = NULL;
 	RSL = NULL;
 	rmContact = NULL;
 	userLogFile = NULL;
 	jobState = 0;
 	errorCode = 0;
-	exit_value = 0;
+	exitValue = 0;
+	executeLogged = false;
+	exitLogged = false;
+	stateChanged = false;
+	newJM = false;
 	// ad = NULL;
 
 	buf[0] = '\0';
 	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
-	if ( strlen(buf) > 5 ) {
+	if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
 		jobContact = strdup( buf );
 	}
 	classad->LookupInteger( ATTR_GLOBUS_STATUS, jobState );
@@ -92,9 +98,6 @@ GlobusJob::~GlobusJob()
 {
 	if ( jobContact ) {
 		free( jobContact );
-	}
-	if ( old_jobContact ) {
-		free( old_jobContact );
 	}
 	if ( RSL ) {
 		free( RSL );
@@ -120,18 +123,76 @@ bool GlobusJob::start()
         &job_contact );
 
     if ( rc == GLOBUS_SUCCESS ) {
+		newJM = false;
 		jobContact = strdup( job_contact );
 		globus_gram_client_job_contact_free( job_contact );
-		jobState = G_PENDING;
+		jobState = G_SUBMITTED;
 
-		addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
-		addJobUpdateEvent( this, JOB_UE_UPDATE_CONTACT );
+		rehashJobContact( this, NULL, jobContact );
 
-		callback_already_registered = true;
+		stateChanged = true;
+		addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+
+		callbackRegistered = true;
+
+		return true;
+	} else if ( rc == GLOBUS_GRAM_CLIENT_ERROR_WAITING_FOR_COMMIT ) {
+		newJM = true;
+		jobContact = strdup( job_contact );
+		globus_gram_client_job_contact_free( job_contact );
+		jobState = G_UNSUBMITTED;
+
+		rehashJobContact( this, NULL, jobContact );
+
+		stateChanged = true;
+		addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+
+		callbackRegistered = true;
 
 		return true;
 	} else {
 		errorCode = rc;
+		return false;
+	}
+}
+
+bool GlobusJob::commit()
+{
+	int rc;
+	int status;
+	int failure_code;
+
+	rc = globus_gram_client_job_signal( jobContact,
+								GLOBUS_GRAM_CLIENT_JOB_SIGNAL_COMMIT, NULL,
+								&status, &failure_code );
+	if ( rc == GLOBUS_SUCCESS ) {
+		if ( jobState == G_UNSUBMITTED ) {
+			jobState = G_SUBMITTED;
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+		} else if ( jobState == G_DONE ) {
+			rehashJobContact( this, jobContact, NULL );
+			free( jobContact );
+			jobContact = NULL;
+
+			addJobUpdateEvent( this, JOB_UE_DONE );
+		} else if ( jobState == G_FAILED ) {
+			rehashJobContact( this, jobContact, NULL );
+			free( jobContact );
+			jobContact = NULL;
+
+			addJobUpdateEvent( this, JOB_UE_FAILED );
+		} else if ( jobState == G_CANCELED ) {
+			rehashJobContact( this, jobContact, NULL );
+			free( jobContact );
+			jobContact = NULL;
+
+			addJobUpdateEvent( this, JOB_UE_CANCELED );
+		}
+
+		return true;
+	} else {
+		errorCode = failure_code;
 		return false;
 	}
 }
@@ -142,7 +203,7 @@ bool GlobusJob::callback_register()
 	int failure_code;
 	int rc;
 
-	if ( callback_already_registered ) {
+	if ( callbackRegistered ) {
 		// we're already done, probably because we called start()
 		return true;
 	}
@@ -151,8 +212,10 @@ bool GlobusJob::callback_register()
         GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
         &status, &failure_code );
 
+	rehashJobContact( this, NULL, jobContact );
+
     if ( rc == GLOBUS_SUCCESS ) {
-		callback_already_registered = true;
+		callbackRegistered = true;
 		return true;
 	} else {
 		errorCode = failure_code;
@@ -166,14 +229,15 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		if ( jobState != G_PENDING ) {
 			jobState = G_PENDING;
 
-			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_STATE_CHANGE );
 		}
 	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_ACTIVE ) {
 		if ( jobState != G_ACTIVE ) {
 			jobState = G_ACTIVE;
 
-			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
-			addJobUpdateEvent( this, JOB_UE_ULOG_EXECUTE );
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_RUNNING );
 		}
 	} else if ( state == GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED ) {
 		// Not sure what the right thing to do on a FAILED message from
@@ -185,15 +249,17 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		if ( jobState != G_FAILED ) {
 			jobState = G_FAILED;
 
-			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
-			addJobUpdateEvent( this, JOB_UE_REMOVE_JOB );
-	
+			stateChanged = true;
+
 			//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
-			if ( abortedByUser ) {
-				// we got here cuz user aborted the job with condor_rm
+			if ( removedByUser ) {
+				// we got here cuz user removed the job with condor_rm
 				// log this fact into the user log.
 			//dprintf(D_ALWAYS,"TODD DEBUGCHECK %s:%d\n",__FILE__,__LINE__);
-				addJobUpdateEvent( this, JOB_UE_ULOG_ABORT );
+				jobState = G_CANCELED;
+				addJobUpdateEvent( this, JOB_UE_CANCELED );
+			} else {
+				addJobUpdateEvent( this, JOB_UE_FAILED );
 			}
 
 			// TODO
@@ -204,8 +270,9 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 
 			// email saying that the job failed?
 
-			if ( jobContact ) {
-				old_jobContact = jobContact;
+			if ( !newJM ) {
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
 				jobContact = NULL;
 			}
 		}
@@ -215,14 +282,14 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		if ( jobState != G_DONE ) {
 			jobState = G_DONE;
 
-			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
-			addJobUpdateEvent( this, JOB_UE_REMOVE_JOB );
-			addJobUpdateEvent( this, JOB_UE_ULOG_TERMINATE );
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_DONE );
 
 			// email saying the job is done?
 
-			if ( jobContact ) {
-				old_jobContact = jobContact;
+			if ( !newJM ) {
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
 				jobContact = NULL;
 			}
 		}
@@ -230,7 +297,8 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 		if ( jobState != G_SUSPENDED ) {
 			jobState = G_SUSPENDED;
 
-			addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_STATE_CHANGE );
 		}
 	} else {
 		dprintf( D_ALWAYS, "Unknown globus job state %d for job %d.%d\n",
@@ -242,12 +310,14 @@ bool GlobusJob::callback( int state = 0, int error = 0 )
 
 bool GlobusJob::cancel()
 {
-	int rc;
+	int rc = GLOBUS_SUCCESS;
 
-	rc = globus_gram_client_job_cancel( jobContact );
+	if ( jobContact != NULL ) {
+		rc = globus_gram_client_job_cancel( jobContact );
+	}
 
 	if ( rc == GLOBUS_SUCCESS ) {
-		abortedByUser = true;
+		removedByUser = true;
 		return true;
 	} else {
 		errorCode = rc;
@@ -319,7 +389,8 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff ) {
+	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff &&
+		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdin=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
 			strcat( rsl, gassServerUrl );
@@ -331,7 +402,8 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff ) {
+	if ( classad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff &&
+		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stdout=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_OUTPUT, transfer ) || transfer ) {
 			strcat( rsl, gassServerUrl );
@@ -343,7 +415,8 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	if ( classad->LookupString(ATTR_JOB_ERROR, buff) && *buff ) {
+	if ( classad->LookupString(ATTR_JOB_ERROR, buff) && *buff &&
+		 strcmp( buff, NULL_FILE ) ) {
 		strcat( rsl, ")(stderr=" );
 		if ( !classad->LookupBool( ATTR_TRANSFER_ERROR, transfer ) || transfer ) {
 			strcat( rsl, gassServerUrl );
@@ -377,7 +450,8 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		}
 	}
 
-	strcat( rsl, ")" );
+	sprintf( buff, ")(save_state=yes)(two_phase=%d)", JM_COMMIT_TIMEOUT );
+	strcat( rsl, buff );
 
 	if ( classad->LookupString(ATTR_GLOBUS_RSL, buff) && *buff ) {
 		strcat( rsl, buff );
