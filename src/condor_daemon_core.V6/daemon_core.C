@@ -668,13 +668,24 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 	}
 
 	// Verify that this socket has not already been registered
-	for ( j=0; j < nSock; j++ ) {
+	int fd_to_register = ((Sock *)iosock)->get_file_desc();
+	for ( j=0; j < nSock; j++ ) 
+	{
 		if ( (*sockTable)[j].iosock == iosock ) {
 			EXCEPT("DaemonCore: Same socket registered twice");
         }
+		if ( (*sockTable)[j].iosock ) { 	// if valid entry
+			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() == 
+								fd_to_register ) 
+			{
+				EXCEPT("DaemonCore: Same socket fd registered twice (fd=%d)",
+									fd_to_register);
+			}
+		}
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
+	(*sockTable)[i].call_handler = false;
 	(*sockTable)[i].iosock = iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
@@ -1222,6 +1233,7 @@ void DaemonCore::Driver()
 		FD_ZERO(&exceptfds);
 		for (i = 0; i < nSock; i++) {
 			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
+					// Setup our fdsets
 				if ( (*sockTable)[i].is_connect_pending ) {
 						// we want to be woken when a non-blocking
 						// connect is ready to write.  when connect
@@ -1257,8 +1269,9 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
-								&writefds, &exceptfds, ptimer);
+		rv = select( FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, 
+					 (SELECT_FDSET_PTR) &writefds, 
+					 (SELECT_FDSET_PTR) &exceptfds, ptimer );
 		tmpErrno = errno;
 
 #ifndef WIN32
@@ -1288,7 +1301,8 @@ void DaemonCore::Driver()
 #endif
 		
 		if (rv > 0) {	// connection requested
-			// scan through the socket table to find which one select() set
+
+			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
 				
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
@@ -1296,7 +1310,7 @@ void DaemonCore::Driver()
 					// figure out if we should call a handler.  to do this,
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
-					bool call_handler = false;	
+					(*sockTable)[i].call_handler = false;	
 					if ( (*sockTable)[i].is_connect_pending ) {					
 						if ( (FD_ISSET((*sockTable)[i].sockd, &writefds)) ||
 							 (FD_ISSET((*sockTable)[i].sockd, &exceptfds)) ) 
@@ -1307,17 +1321,26 @@ void DaemonCore::Driver()
 							if ( ((Sock *)(*sockTable)[i].iosock)->
 											do_connect_finish() )
 							{
-								call_handler = true;
+								(*sockTable)[i].call_handler = true;
 							}
 						}
 					} else {
 						if (FD_ISSET((*sockTable)[i].sockd, &readfds)) 
 						{
-							call_handler = true;
+							(*sockTable)[i].call_handler = true;
 						}
 					}
+				}	// end of if valid sock entry
+			}	// end of for loop through all sock entries
 
-					if ( call_handler ) {
+			for(i = 0; i < nSock; i++) {
+				
+				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
+
+					if ( (*sockTable)[i].call_handler ) {
+
+						(*sockTable)[i].call_handler = false;
+
 						// ok, select says this socket table entry has new data.
 
 						// if this sock is a safe_sock, then call the method
@@ -3023,13 +3046,36 @@ int DaemonCore::Create_Process(
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
+			// Get the token for the user
+		HANDLE user_token = priv_state_get_handle();
+		ASSERT(user_token);
+
 			// making this a NULL string tells NT to dynamically
 			// create a new Window Station for the process we are about
 			// to create....
 		si.lpDesktop = "";
 
-		HANDLE user_token = priv_state_get_handle();
-		ASSERT(user_token);
+			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
+			// then run the job on the visible desktop, otherwise create
+			// a new non-visible desktop for the job.
+		char *use_visible = param("USE_VISIBLE_DESKTOP");
+		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
+				// user wants visible desktop.
+				// place the user_token into the proper access control lists.
+			int GrantDesktopAccess(HANDLE hToken);	// prototype
+			if ( GrantDesktopAccess(user_token) == 0 ) {
+					// Success!!  The user now has permission to use
+					// the visible desktop, so change si.lpDesktop
+				si.lpDesktop = "winsta0\\default";
+			} else {
+					// The system refuses to grant access to the visible 
+					// desktop.  Log a message & we'll fall back on using
+					// the dynamically created non-visible desktop.
+				dprintf(D_ALWAYS,
+					"Create_Process: Unable to use visible desktop\n");
+			}
+		} 
+		if (use_visible) free(use_visible);
 
 			// we need to make certain to specify CREATE_NEW_CONSOLE, because
 			// our ACLs will not let us use the current console which is
