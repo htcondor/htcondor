@@ -110,10 +110,13 @@ LIBDBM = DbmLibrary
 PLATFORM_C_FLAGS = -qsrcmsg
 #endif
 
+OS_FLAG = OperatingSystem
+ARCH_FLAG = Architecture
+
 
 
 STD_C_PLUS_FLAGS =  \
-	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D/**/Architecture -D/**/OperatingSystem -DNFSFIX DbmFlag SigFlag CompatFlags -g
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g
 STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
 STATIC = StaticFlag
 
