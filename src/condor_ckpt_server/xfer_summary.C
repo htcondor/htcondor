@@ -75,7 +75,7 @@ XferSummary::Result(transferinfo *tinfo)
 extern "C" {
 	CONTEXT *create_context();
 	EXPR *build_expr();
-	void store_stmt(EXPR *, CONTEXT *);
+	int store_stmt(EXPR *, CONTEXT *);
 	void free_context( CONTEXT *);
 }
 
