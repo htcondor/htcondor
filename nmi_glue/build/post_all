@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.2.2 2004-06-26 00:37:52 wright Exp $
+# $Id: post_all,v 1.1.2.3 2004-06-29 05:10:40 wright Exp $
 # Submit-side NMI build system infrastructure to save results after
 # all the platform-specific jobs have completed
 ######################################################################
@@ -39,6 +39,12 @@ close( TAR );
 if( $? ) {
     die "Tar failed with status $?\n";
 }
-
 print "tar completed successfully\n";
+print "Removing files:\n";
+foreach $file ("$vers_file", "$src_file") {
+    unlink( $file ) || die "Can't remove $file: $!\n";
+    print "  $file\n";
+}
+
+print "All steps completed successfully\n";
 exit 0;
