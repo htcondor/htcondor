@@ -879,13 +879,13 @@ dc_config_auth()
         sprintf( buffer, "X509_DIRECTORY=%s", pbuf);
         putenv( strdup( buffer ) );
 
-        sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
+        sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, DIR_DELIM_CHAR);
         putenv( strdup( buffer ) );
 
-        sprintf( buffer, "%s=%s/hostcert.pem", STR_GSI_USER_CERT, pbuf);
+        sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, DIR_DELIM_CHAR);
         putenv( strdup ( buffer ) );
 
-        sprintf(buffer,"%s=%s/hostkey.pem",STR_GSI_USER_KEY,pbuf);
+        sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, DIR_DELIM_CHAR);
         putenv( strdup ( buffer  ) );
 
         free( pbuf );
