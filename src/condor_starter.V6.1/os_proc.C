@@ -33,7 +33,7 @@
 #include "condor_attributes.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
-#include "classad_util.h"
+#include "classad_helpers.h"
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"

@@ -33,7 +33,7 @@
 #include "scheduler.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
-#include "classad_util.h"
+#include "classad_helpers.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_email.h"

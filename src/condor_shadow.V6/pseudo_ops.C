@@ -45,7 +45,7 @@
 #include "condor_ver_info.h"
 #include "string_list.h"
 #include "condor_socket_types.h"
-#include "classad_util.h"
+#include "classad_helpers.h"
 
 
 extern "C" {
