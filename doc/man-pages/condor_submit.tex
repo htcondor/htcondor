@@ -406,22 +406,28 @@ See the Condor User's Manual for more information about using Universe.
 \index{submit commands!on\_exit\_remove}
 is checked when the job exits and if true, then it allows the job to leave the
 queue normally. If false, then the job is placed back into the Idle state.
-If the user job is a vanilla job then it restarts from the beginning. If the
-user job is a standard job, then it restarts from the last checkpoint.
+If the user job runs under the vanilla universe,
+then the job restarts from the beginning.
+If the user job runs under the standard universe,
+then it continues from where it left off, using the last checkpoint.
 
-For example:
-Suppose you have a job that occasionally segfaults but you know if you run it
-again on the same data, chances are it will finish successfully. This is
-how you would represent that with \AdAttr{on\_exit\_remove}(assuming the
-signal identifier for segmentation fault is 4):
+For example,
+suppose you have a job that occasionally segfaults,
+but you know if you run the job again with the same data,
+chances are that the will finish successfully.
+This is
+how you would represent that with \AdAttr{on\_exit\_remove}
+(assuming the signal identifier for segmentation fault is 4):
 
 \begin{verbatim}
-	on_exit_remove = (ExitBySignal == True) && (ExitSignal != 4)
+	on_exit_remove = (ExitBySignal == False) && (ExitSignal != 4)
 \end{verbatim}
 
-The above expression will not let the job exit if it exited by a signal and
-that signal number was 4(representing segmentation fault). In any other case
-of the job exiting, it will leave the queue as it normally would have done.
+This expression will not let the job leave the queue,
+if the job exited by a signal and
+that signal number was 4 (representing segmentation fault).
+In any other case of the job exiting, 
+the job will leave the queue as it normally would have done.
 
 If left unspecified, this will default to \Expr{True}.
 
@@ -432,7 +438,8 @@ precedence over a \AdAttr{*\_remove} expressions.
 
 This expression is available for the vanilla and java universes.  It
 is additionally available, when submitted from a Unix machine, for the
-standard universe.  Note that the schedd, by default, only checks
+standard universe.  Note that the \Condor{schedd} daemon,
+by default, only checks
 these periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \Macro{PERIODIC\_EXPR\_INTERVAL} configuration macro.
@@ -455,7 +462,7 @@ hold and an e-mail notification sent,
 instead of being allowed to leave the queue.
 
 \begin{verbatim}
-	on_exit_hold = (CurrentTime - JobStartDate) > (60 * $(MINUTE))
+	on_exit_hold = (CurrentTime - JobStartDate) < (60 * $(MINUTE))
 \end{verbatim}
 
 This expression places the job on hold if it exits for any reason
