@@ -9,7 +9,7 @@
 #define MallocLib /**/
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /usr/lib/crt0.o
+#define Crt0 /usr/lib/crt1.o
 #define SyscallsExp /**/
 
 #define XLibPath /usr/X11R6/lib/libX11.a
@@ -38,8 +38,8 @@
 /*?????*/
 #define HAS_CP_PRESERVE			NO
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			NO
-#define HAS_FLOCK			YES	
+#define HAS_FORTRAN			YES
+#define HAS_FLOCK			YES
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
@@ -64,10 +64,10 @@
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
 
-#define CCompiler gcc -m386
-#define CPlusCompiler	g++ -m386
+#define CCompiler gcc -m486
+#define CPlusCompiler	g++ -m486
 #define StaticFlag	-static
-#define UnixName /zImage			/* pathname of the system executable */
+#define UnixName /vmlinuz			/* pathname of the system executable */
 #define syscall_lib syscall_lib
 #define PsAllFlag ps -ax				/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
@@ -81,7 +81,7 @@
 #define MkDepend Tilde/CONDOR.new/GENERIC/mdepend.sh
 #endif MkDepend
 
-#define TypicalMemory 8
+#define TypicalMemory 16
 #define ShadowSizeEstimate 400
 
 #define LINUX_INCLUDE_DIR /usr/include
