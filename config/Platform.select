@@ -76,3 +76,4 @@
 #undef alpha
 #undef hpux
 #undef linux
+#undef mips
