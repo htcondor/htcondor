@@ -32,6 +32,6 @@
            This defaults to 78 characters, which is a reasonable guess.
 */
 void print_wrapped_text(
-    char *text, 
+    const char *text, 
 	FILE *output, 
 	int chars_per_line = 78);

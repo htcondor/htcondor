@@ -25,7 +25,7 @@
 #include "print_wrapped_text.h"
 
 void print_wrapped_text(
-    char *text, 
+    const char *text, 
 	FILE *output, 
 	int chars_per_line)
 {
