@@ -135,29 +135,29 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
 	/* Get the schedd to handle Q ops. */
 
-    /* Get rid of all the code below
- 	qmgmt_sock->encode();
+    /* Get rid of all the code below */
 
-	if ( read_only ) {
-		rval = InitializeReadOnlyConnection( username );
-	} else {
-		rval = InitializeConnection( username );
-	}
+    if (!qmgmt_sock->isAuthenticated()) {
+        if ( read_only ) {
+            rval = InitializeReadOnlyConnection( username );
+        } else {
+            rval = InitializeConnection( username );
+        }
 
-	if (rval < 0) {
-		delete qmgmt_sock;
-		qmgmt_sock = NULL;
-		return 0;
-	}
+        if (rval < 0) {
+            delete qmgmt_sock;
+            qmgmt_sock = NULL;
+            return 0;
+        }
 
-	if ( !read_only ) {
-		if (!qmgmt_sock->authenticate()) {
-			delete qmgmt_sock;
-			qmgmt_sock = NULL;
-			return 0;
-		}
-	}
-    */
+        if ( !read_only ) {
+            if (!qmgmt_sock->authenticate()) {
+                delete qmgmt_sock;
+                qmgmt_sock = NULL;
+                return 0;
+            }
+        }
+    }
 
 	free( username );
 
