@@ -607,8 +607,9 @@ ReliSock::put_file( filesize_t *size, int fd )
 
 #if defined(WIN32)
 		// On Win32, if we don't need encryption, use the super-efficient Win32
-		// TransmitFile system call.
-		if ( !get_encryption() ) {
+		// TransmitFile system call. Also, TransmitFile does not support
+		// file sizes over 2GB, so we avoid that case as well.
+		if ( !get_encryption() && filesize < INT_MAX ) {
 
 			// First drain outgoing buffers
 			if ( !prepare_for_nobuffering(stream_encode) ) {
