@@ -540,6 +540,32 @@ etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
 line.  The \MacroU{Process} macro should not be used for PVM jobs.
 
+If you happen to want a ``\$'' as a literal character, then you must use
+\begin{verbatim}
+$(DOLLAR)
+\end{verbatim}
+
+In addition to the normal macro, there is also a special kind of macro
+called a ``\emph{Substitution Macro}'' that allows you to substitue
+expressions defined on the resource machine itself(gotten after a match
+to the machine has been performed) into specific expressions in your
+submit description file. The special substitution macro is of the form:
+\begin{verbatim} 
+$$(attribute)
+\end{verbatim}
+
+The substitution macro can only be used in three expressions in the
+submit description file: \Macro{executable}, \Macro{environment}, and
+\Macro{arguments}. The most common use of this macro is for heterogeneous
+submission of an executable:
+\begin{verbatim}
+executable = povray.$$(opsys).$$(arch)
+\end{verbatim}
+The \AdAttr{opsys} and \AdAttr{arch} attributes will be substituted at
+match time for any given resource. This will allow Condor to automatically
+choose the right executable for the right machine.
+
+
 \item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
 character are ignored by the submit-description file parser. 
 
