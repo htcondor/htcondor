@@ -563,6 +563,16 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
         return true;
     }
 
+#ifdef FLEXIBLE_MEMBER
+    if (arg0.IsListValue() && !arg1.IsListValue()) {
+        Value swap;
+
+        swap.CopyFrom(arg0);
+        arg0.CopyFrom(arg1);
+        arg1.CopyFrom(swap);
+    }
+#endif
+
 		// arg1 must be a list; arg0 must be comparable
     if( !arg1.IsListValue() || arg0.IsListValue() || arg0.IsClassAdValue() ) {
         val.SetErrorValue();

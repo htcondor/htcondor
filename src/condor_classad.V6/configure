@@ -22,10 +22,11 @@ print_usage()
 	cat <<EOF
 Use: configure [options]
 Where options are:
- --prefix  <dir>     The directory in which to install $project
- --enable-shlib      Allow user functions in shared libraries.
- --enable-namespace  Use the classad namespace
- --help              Show this message         
+ --prefix  <dir>           The directory in which to install $project
+ --enable-shlib            Allow user functions in shared libraries.
+ --enable-namespace        Use the classad namespace
+ --enable-flexible-member  Allow member function to be (list, X) or (X, list)
+ --help                    Show this message         
 Use configure.rerun to rerun configure with previously saved arguments.
 EOF
 	return
@@ -37,6 +38,7 @@ project="ClassAds"
 install_dir="/usr/local"
 enable_shlib=0
 enable_namespace=0
+enable_flexible_member=0
 
 while [ $# -gt 0 ]
 do
@@ -50,6 +52,9 @@ do
 			;;
 		--enable-namespace)
 			enable_namespace=1
+			;;
+		--enable-flexible-member)
+			enable_flexible_member=1
 			;;
 		-h | -help | --h | --help)
 			print_usage
@@ -97,6 +102,14 @@ if [ ${enable_shlib} = 1 ]
 then
 cat >> classad_features.h <<EOF
 #define ENABLE_SHARED_LIBRARY_FUNCTIONS
+
+EOF
+fi
+
+if [ ${enable_flexible_member} = 1 ]
+then
+cat >> classad_features.h <<EOF
+#define FLEXIBLE_MEMBER
 
 EOF
 fi
