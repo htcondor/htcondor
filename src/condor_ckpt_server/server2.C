@@ -82,22 +82,17 @@ Server::~Server()
 }
 
 
-void Server::Init(int max_new_xfers,
-				  int max_new_store_xfers,
-				  int max_new_restore_xfers)
+void Server::Init()
 {
 	struct stat log_stat;
 	char		*ckpt_server_dir, *level, *interval, *collection_log;
+	char		*tmp;
 #ifdef DEBUG
 	char        log_msg[256];
 	char        hostname[100];
 	int         buf_size, len;
 #endif
 	
-	max_xfers = max_new_xfers;
-	max_store_xfers = max_new_store_xfers;
-	max_restore_xfers = max_new_restore_xfers;
-	max_replicate_xfers = max_store_xfers/5;
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
 	num_replicate_xfers = 0;
@@ -153,6 +148,32 @@ void Server::Init(int max_new_xfers,
 	} else {
 		clean_interval = CLEAN_INTERVAL;
 	}
+
+	tmp = param( "CKPT_SERVER_MAX_PROCESSES" );
+	if (tmp) {
+		max_xfers = atoi(tmp);
+		free(tmp);
+	} else {
+		max_xfers = DEFAULT_XFERS;
+	}
+
+	tmp = param( "CKPT_SERVER_MAX_STORE_PROCESSES" );
+	if (tmp) {
+		max_store_xfers = atoi(tmp);
+		free(tmp);
+	} else {
+		max_store_xfers = max_xfers;
+	}
+
+	tmp = param( "CKPT_SERVER_MAX_RESTORE_PROCESSES" );
+	if (tmp) {
+		max_restore_xfers = atoi(tmp);
+		free(tmp);
+	} else {
+		max_restore_xfers = max_xfers;
+	}
+
+	max_replicate_xfers = max_store_xfers/5;
 
 	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
 	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
@@ -473,7 +494,8 @@ void Server::HandleRequest(int req_sd,
 		BlockSignals();
 		if ((num_store_xfers+num_restore_xfers == max_xfers) ||
 			((req == STORE_REQ) && (num_store_xfers == max_store_xfers)) ||
-			((req == RESTORE_REQ) && (num_restore_xfers == max_store_xfers)) ||
+			((req == RESTORE_REQ) &&
+			 (num_restore_xfers == max_restore_xfers)) ||
 			((req == REPLICATE_REQ) &&
 			 (num_replicate_xfers == max_replicate_xfers))) {
 			UnblockSignals();
@@ -2011,74 +2033,10 @@ void UnblockSignals()
 }
 
 
-int main(int   argc,
-	 char* argv[])
+int main()
 {
-	int xfers, sends, recvs;
-	int	wait_for_debug;
-
-	/* Consume a '-f' flag which the condor_master always gives to its
-	   children */
-	if (argc > 1 && argv[1][0] == '-' && argv[1][1] == 'f') {
-		argc--;
-		argv++;
-	}
-
 	set_condor_priv();
-
-	if ((argc != 1) && (argc != 2) && (argc != 4)) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: incorrect number of parameters" << endl;
-		cerr << "\tUsage: " << argv[0] << " <MAX TRANSFERS> {<MAX RECEIVE> "
-			<< "<MAX TRANSMIT>}" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
-		exit(BAD_PARAMETERS);
-	}
-	
-	if (argc > 1) {
-		xfers = atoi(argv[1]);
-	} else {
-		xfers = DEFAULT_XFERS;
-	}
-
-	if (xfers <= 0) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: the maximum number of transfers must be greater than " 
-			<< "zero" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl << endl;
-		exit(BAD_PARAMETERS);
-	}
-	if (argc == 2 || argc == 1) {
-		sends = xfers;
-		recvs = xfers;
-	} else {
-		recvs = atoi(argv[2]);
-		if ((recvs < 0) || (recvs > xfers)) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: illegal maximum number of storing transfers" 
-				<< endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
-			exit(BAD_PARAMETERS);
-		}
-		sends = atoi(argv[3]);
-		if ((sends < 0) || (sends > xfers)) {
-			cerr << endl << "ERROR:" << endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR: illegal maximum number of restoring transfers" 
-				<< endl;
-			cerr << "ERROR:" << endl;
-			cerr << "ERROR:" << endl << endl;
-			exit(BAD_PARAMETERS);
-		}      
-	}
-
-	server.Init(xfers, recvs, sends);
+	server.Init();
 	server.Execute();
 	return 0;                            // Should never execute
 }

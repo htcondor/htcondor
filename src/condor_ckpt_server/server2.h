@@ -94,9 +94,7 @@ class Server
   public:
     Server();
     ~Server();
-    void Init(int max_new_xfers,
-	      int max_new_store_xfers,
-	      int max_new_restore_xfers);
+    void Init();
     void Execute();
     void ChildComplete();
     void NoMore();
