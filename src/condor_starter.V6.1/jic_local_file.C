@@ -27,42 +27,59 @@
 #include "condor_string.h"
 #include "condor_attributes.h"
 
-#include "jic_local_stdin.h"
+#include "jic_local_file.h"
 
 
-JICLocalStdin::JICLocalStdin( const char* keyword, int cluster, 
-							  int proc, int subproc )
+JICLocalFile::JICLocalFile( const char* classad_filename, 
+							const char* keyword, 
+							int cluster, int proc, int subproc )
 	: JICLocalConfig( keyword, cluster, proc, subproc )
 {
-		// nothing else to do, just let the appropriate JICLocalConfig
-		// constructor do its thing
+	initFilename( classad_filename );
 }
 
 
-JICLocalStdin::JICLocalStdin( int cluster, int proc, int subproc )
+JICLocalFile::JICLocalFile( const char* classad_filename, 
+							int cluster, int proc, int subproc )
 	: JICLocalConfig( cluster, proc, subproc )
 {
-		// nothing else to do, just let the appropriate JICLocalConfig
-		// constructor do its thing
+	initFilename( classad_filename );
 }
 
 
-JICLocalStdin::~JICLocalStdin()
+JICLocalFile::~JICLocalFile()
 {
-		// nothing special
+	if( filename ) {
+		free( filename );
+	}
+}
+
+
+void
+JICLocalFile::initFilename( const char* path )
+{
+	if( ! path ) {
+		EXCEPT( "Can't instantiate a JICLocalFile without a filename!" );
+	}
+	if( path[0] == '-' && path[1] == '\0' ) {
+			// special case, treat '-' as STDIN
+		filename = NULL;
+	} else {
+		filename = strdup( path );
+	}
 }
 
 
 bool
-JICLocalStdin::getLocalJobAd( void )
+JICLocalFile::getLocalJobAd( void )
 { 
 	bool found_some = false;
-	dprintf( D_ALWAYS, "Reading job ClassAd from STDIN\n" );
+	dprintf( D_ALWAYS, "Reading job ClassAd from \"%s\"\n", fileName() );
 
-	if( ! readStdinClassAd() ) {
-		dprintf( D_ALWAYS, "No ClassAd data on STDIN\n" );
+	if( ! readClassAdFromFile() ) {
+		dprintf( D_ALWAYS, "No ClassAd data in \"%s\"\n", fileName() );
 	} else { 
-		dprintf( D_ALWAYS, "Found ClassAd data on STDIN\n" );
+		dprintf( D_ALWAYS, "Found ClassAd data in \"%s\"\n", fileName() );
 		found_some = true;
 	}
 
@@ -87,30 +104,59 @@ JICLocalStdin::getLocalJobAd( void )
 }
 
 
+char*
+JICLocalFile::fileName( void )
+{
+	if( filename ) {
+		return filename;
+	}
+	return "STDIN";
+} 
+
+
 bool
-JICLocalStdin::readStdinClassAd( void ) 
+JICLocalFile::readClassAdFromFile( void ) 
 {
 	bool read_something = false;
+	bool needs_close = true;
+	FILE* fp;
+
+	if( filename ) {
+		fp = fopen( filename, "r" );
+		if( ! fp ) {
+			dprintf( D_ALWAYS, "failed to open \"%s\" for reading: %s "
+					 "(errno %d)\n", filename, strerror(errno), errno );
+			return false;
+		}
+	} else {
+			// this is the STDIN special-case, if we were passed '-'
+			// on the command-line
+		fp = stdin;
+		needs_close = false;
+	}
 
     char buf[1024];
-	while( fgets(buf, 1024, stdin) ) {
+	while( fgets(buf, 1024, fp) ) {
         read_something = true;
 		chomp( buf );
 		if( DebugFlags & D_JOB ) {
-			dprintf( D_JOB, "STDIN: %s\n", buf );
+			dprintf( D_JOB, "FILE: %s\n", buf );
 		} 
         if( ! job_ad->Insert(buf) ) {
             dprintf( D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
                      "ignoring this line\n", buf );
         }
     }
-
+	
+	if( needs_close ) {
+		fclose( fp );
+	}
 	return read_something;
 }
 
 
 bool
-JICLocalStdin::getUniverse( void )
+JICLocalFile::getUniverse( void )
 {
 	int univ;
 

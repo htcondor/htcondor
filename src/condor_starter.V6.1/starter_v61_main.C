@@ -34,7 +34,7 @@
 
 #include "jic_shadow.h"
 #include "jic_local_config.h"
-#include "jic_local_stdin.h"
+#include "jic_local_file.h"
 
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
@@ -200,14 +200,16 @@ JobInfoCommunicator*
 parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
+	char* job_ad_path = NULL; 
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
 	int job_proc = -1;
 	int job_subproc = -1;
 	char* shadow_host = NULL;
-	bool job_on_stdin = false;
+
 
 	bool warn_multi_keyword = false;
+	bool warn_multi_path = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
@@ -215,11 +217,11 @@ parseArgs( int argc, char* argv [] )
 	char *opt, *arg;
 	int opt_len;
 
+	char _jobadpath[] = "-job_ad_path";
 	char _jobkeyword[] = "-job_keyword";
 	char _jobcluster[] = "-job_cluster";
 	char _jobproc[] = "-job_proc";
 	char _jobsubproc[] = "-job_subproc";
-	char _jobonstdin[] = "-job_on_stdin";
 	char _header[] = "-header";
 	char* target = NULL;
 
@@ -270,12 +272,11 @@ parseArgs( int argc, char* argv [] )
 			target = _jobkeyword;
 			break;
 
-		case 'o':
-			if( strncmp(_jobonstdin, opt, opt_len) ) {
+		case 'a':
+			if( strncmp(_jobadpath, opt, opt_len) ) {
 				invalid( opt );
 			} 
-			job_on_stdin = true;
-			continue;
+			target = _jobadpath;
 			break;
 
 		case 'p':
@@ -312,6 +313,12 @@ parseArgs( int argc, char* argv [] )
 				free( job_keyword );
 			}
 			job_keyword = strdup( arg );
+		} else if( target == _jobadpath ) {
+			if( job_ad_path ) {
+				warn_multi_path = true;
+				free( job_ad_path );
+			}
+			job_ad_path = strdup( arg );
 		} else if( target == _jobcluster ) {
 			if( job_cluster >= 0 ) {
 				warn_multi_cluster = true;
@@ -357,6 +364,11 @@ parseArgs( int argc, char* argv [] )
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _jobkeyword, job_keyword );
 	}
+	if( warn_multi_path ) {
+		dprintf( D_ALWAYS, "WARNING: "
+				 "multiple '%s' options given, using \"%s\"\n",
+				 _jobadpath, job_ad_path );
+	}
 	if( warn_multi_cluster ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%d\"\n",
@@ -385,28 +397,34 @@ parseArgs( int argc, char* argv [] )
 		return jic;
 	}
 
-	if( ! (job_keyword || job_on_stdin) ) {
+	if( ! (job_keyword || job_ad_path) ) {
 		dprintf( D_ALWAYS, "ERROR: You must specify either '%s' or '%s'\n",
-				 _jobkeyword, _jobonstdin ); 
+				 _jobkeyword, _jobadpath ); 
 		usage();
 	}
 
 		// If the user didn't specify it, use -1 for cluster and/or
 		// proc, and the JIC subclasses will know they weren't on the
 		// command-line.
-	if( job_on_stdin ) {
+	if( job_ad_path ) {
 		if( job_keyword ) {
-			jic = new JICLocalStdin( job_keyword, job_cluster, job_proc, 
-									 job_subproc );
+			jic = new JICLocalFile( job_ad_path, job_keyword, 
+									job_cluster, job_proc, job_subproc );
 		} else {
-			jic = new JICLocalStdin( job_cluster, job_proc, job_subproc );
+			jic = new JICLocalFile( job_ad_path, job_cluster, job_proc,
+									job_subproc );
 		}
 	} else {
 		ASSERT( job_keyword );
 		jic = new JICLocalConfig( job_keyword, job_cluster, job_proc, 
 								  job_subproc );
 	}
-	free( job_keyword );
+	if( job_keyword ) {
+		free( job_keyword );
+	}
+	if( job_ad_path ) {
+		free( job_ad_path );
+	}
 	return jic;
 }
 
