@@ -1001,11 +1001,17 @@ ReliSock::serialize() const
     strcat(parent_state, "*");
 
     const char * tmp = getFullyQualifiedUser();
+    char buf[5];
+    int len = 0;
     if (tmp) {
+        len = strlen(tmp);
+        sprintf(buf, "%d*", len);
+        strcat(parent_state, buf);
         strcat(parent_state, tmp);
     }
     else {
-        strcat(parent_state, " ");
+        sprintf(buf, "%d", len);
+        strcat(parent_state, buf);
     }
 
 	delete []outbuf;
@@ -1018,7 +1024,8 @@ ReliSock::serialize(char *buf)
 {
 	char sinful_string[28], fqu[256];
 	char *ptmp;
-	
+	int len = 0;
+
     ASSERT(buf);
     memset(fqu, 0, 256);
 	// here we want to restore our state from the incoming buffer
@@ -1037,19 +1044,28 @@ ReliSock::serialize(char *buf)
     ptmp = strchr(ptmp, '*');
     if (ptmp != NULL) {
         // We are 6.3
-        ptmp = serializeCryptoInfo(ptmp);
-        sscanf(ptmp, "%s", fqu);
-        if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
-            if (authob && (authob->getFullyQualifiedUser() != NULL)) {
-                // odd situation!
-                dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
+        ptmp = serializeCryptoInfo(++ptmp);
+        sscanf(ptmp, "%d", &len);
+        
+        if (len > 0) {
+            ptmp = strchr(ptmp, '*');
+            ptmp++;
+            sscanf(ptmp, "%s", fqu);
+            if ((fqu[0] != ' ') && (fqu[0] != '\0')) {
+                if (authob && (authob->getFullyQualifiedUser() != NULL)) {
+                    // odd situation!
+                    dprintf(D_SECURITY, "WARNING!!!! Trying to serialize a socket for user %s but the socket is identified with another user: %s", fqu, authob->getFullyQualifiedUser());
+                }
+                else {
+                    // We are cozy
+                    fqu_ = strdup(fqu);
+                }
             }
             else {
-                // We are cozy
-                fqu_ = strdup(fqu);
+                fqu_ = NULL;
             }
         }
-        else {
+       else {
             fqu_ = NULL;
         }
     }
