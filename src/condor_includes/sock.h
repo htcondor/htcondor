@@ -249,11 +249,6 @@ protected:
 	virtual void unAuthenticate();
     ///
 	virtual bool is_encrypt();
-	///
-	virtual int wrap(char*,int,char*& ,int&);
-	///
-	virtual	int unwrap(char*,int,char*&, int&);
-
 #ifdef WIN32
 	int set_inheritable( int flag );
 #else
@@ -277,10 +272,16 @@ private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
 	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high);
+	///
+	virtual int wrap(char*,int,char*& ,int&);
+	///
+	virtual	int unwrap(char*,int,char*&, int&);
+
+	
 	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
 
-		// struct to hold state info for do_connect() method
+	// struct to hold state info for do_connect() method
 	struct connect_state_struct {
 			int timeout_interval;
 			bool connect_failed, failed_once;
