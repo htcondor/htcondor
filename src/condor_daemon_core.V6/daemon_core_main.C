@@ -936,8 +936,6 @@ int main( int argc, char** argv )
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
-	ReliSock* rsock = NULL;	// tcp command socket
-	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
 	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
@@ -1300,138 +1298,10 @@ int main( int argc, char** argv )
 #endif
 
 		// Now take care of inheriting resources from our parent
-	daemonCore->Inherit(rsock,ssock);
+	daemonCore->Inherit();
 
 	// SETUP COMMAND SOCKET
-
-	if ( command_port != 0 ) {
-		dprintf(D_DAEMONCORE,"Setting up command socket\n");
-		
-		// we want a command port for this process, so create
-		// a tcp and a udp socket to listen on if we did not
-		// already inherit them above.
-		// If rsock/ssock are not NULL, it means we inherited them from our parent
-		if ( rsock == NULL && ssock == NULL ) {
-			rsock = new ReliSock;
-			ssock = new SafeSock;
-			if ( !rsock ) {
-				EXCEPT("Unable to create command Relisock");
-			}
-			if ( !ssock ) {
-				EXCEPT("Unable to create command SafeSock");
-			}
-			if ( command_port == -1 ) {
-				// choose any old port (dynamic port)
-				if (!BindAnyCommandPort(rsock, ssock)) {
-					EXCEPT("BindAnyCommandPort failed");
-				}
-				if ( !rsock->listen() ) {
-					EXCEPT("Failed to post listen on command ReliSock");
-				}
-			} else {
-				// use well-known port specified by command_port
-				int on = 1;
-	
-				// Set options on this socket, SO_REUSEADDR, so that
-				// if we are binding to a well known port, and we crash, we can be
-				// restarted and still bind ok back to this same port. -Todd T, 11/97
-				if( (!rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
-					(!ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
-					EXCEPT("setsockopt() SO_REUSEADDR failed\n");
-				}
-				
-				if ( (!rsock->listen(command_port)) ||
-					 (!ssock->bind(command_port)) ) {
-					EXCEPT("Failed to bind to or post listen on command socket(s)");
-				}
-				
-			}
-		}
-
-		// If we are the collector, increase the socket buffer size.  This
-		// helps minimize the number of updates (UDP packets) the collector
-		// drops on the floor.
-		if ( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
-			int desired_size;
-			char *tmp;
-
-			if ( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
-				desired_size = atoi(tmp);
-				free(tmp);
-			} else {
-				// default to 1 meg of buffers.  Gulp!  
-				desired_size = 1024000;
-			}		
-			
-			// set the UDP (ssock) read size to be large, so we do not
-			// drop incoming updates.
-			int final_size = ssock->set_os_buffers(desired_size);
-
-			// and also set the outgoing TCP write size to be large so the
-			// collector is not blocked on the network when answering queries
-			rsock->set_os_buffers(desired_size, true);				
-
-			dprintf(D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
-				final_size / 1024 );
-		}
-
-#ifdef WANT_NETMAN
-			// The negotiator gets a lot of UDP messages from schedds,
-			// shadows, and checkpoint servers reporting network
-			// usage.  We increase our UDP read buffers here so we
-			// don't drop those messages.
-		if ( strcmp(mySubSystem,"NEGOTIATOR") == 0 ) {
-			int desired_size;
-			char *tmp;
-
-			if ( (tmp=param("NEGOTIATOR_SOCKET_BUFSIZE")) ) {
-				desired_size = atoi(tmp);
-				free(tmp);
-			
-					// set the UDP (ssock) read size to be large, so we do not
-					// drop incoming updates.
-				int final_size = ssock->set_os_buffers(desired_size);
-
-				dprintf(D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
-						final_size / 1024 );
-
-			}		
-		}
-#endif
-
-		// now register these new command sockets.
-		// Note: In other parts of the code, we assume that the
-		// first command socket registered is TCP, so we must
-		// register the rsock socket first.
-		daemonCore->Register_Command_Socket( (Stream*)rsock );
-		daemonCore->Register_Command_Socket( (Stream*)ssock );
-
-		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-				 daemonCore->InfoCommandSinfulString());
-
-			// Now, drop this sinful string into a file, if
-			// mySubSystem_ADDRESS_FILE is defined.
-		drop_addr_file();
-
-		// now register any DaemonCore "default" handlers
-
-		// register the command handler to take care of signals
-		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
-			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
-				"HandleSigCommand()",daemonCore,IMMEDIATE_FAMILY);
-
-		// this handler receives process exit info
-		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
-			(CommandHandlercpp)&DaemonCore::HandleProcessExitCommand,
-				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
-
-		// this handler receives keepalive pings from our children, so
-		// we can detect if any of our kids are hung.
-		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
-			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-			"HandleChildAliveCommand",daemonCore,IMMEDIATE_FAMILY, 
-			D_FULLDEBUG );
-	}
+	daemonCore->InitCommandPort( command_port );
 	
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 
