@@ -61,7 +61,9 @@ MPIMasterProc::JobExit( int pid, int status )
 	if( port_file ) {
 		priv_state priv;
 		priv = set_user_priv();
-		unlink( port_file );
+		if( unlink( port_file ) < 0 ) {
+			dprintf( D_ALWAYS, "unlink(%s) failed!\n", port_file );
+		}
 		set_priv( priv );
 	}
 
