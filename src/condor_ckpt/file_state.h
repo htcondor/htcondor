@@ -141,9 +141,6 @@ public:
 	/** Display debug info */
 	void	dump();
 
-	/** Close all outstanding files */
-	void	close_all();
-
 	/** If in LocalSyscalls, just perform a UNIX open.  If in
 	    RemoteSyscalls, ask the shadow for the appropriate 
 	    access method, and then use that method for the open. */
