@@ -94,6 +94,8 @@ class FunctionCall : public ExprTree
 		static bool boundFrom(const char*,const ArgumentList&,EvalState&,
 					Value&);
 		*/
+		static bool size(const char*,const ArgumentList&,EvalState&,
+					Value&);
 		static bool sumAvg(const char*,const ArgumentList&,EvalState&,
 					Value&);
 		static bool minMax(const char*,const ArgumentList&,EvalState&,

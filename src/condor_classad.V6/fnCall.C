@@ -57,6 +57,7 @@ FunctionCall( )
 		functionTable["ismember"	] =	(void*)testMember;
 
 		// Some list functions, useful for lists as sets
+		functionTable["size"        ] = (void*)size;
 		functionTable["sum"         ] = (void*)sumAvg;
 		functionTable["avg"         ] = (void*)sumAvg;
 		functionTable["min"         ] = (void*)minMax;
@@ -552,6 +553,62 @@ boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
 }
 */
 
+// The size of a list.
+bool FunctionCall::
+size(const char *name, const ArgumentList &argList, 
+	 EvalState &state, Value &val)
+{
+	Value             listElementValue, listVal;
+	const ExprTree    *listElement;
+	Value             numElements, result;
+	const ExprList    *listToSize;
+	ExprListIterator  listIterator;
+	bool		      first;
+	int			      len;
+
+	// we accept only one argument
+	if (argList.size() != 1) {
+		val.SetErrorValue();
+		return( true );
+	}
+	
+	// argument must Evaluate to a list
+	if (!argList[0]->Evaluate(state, listVal)) {
+		val.SetErrorValue();
+		return false;
+	} else if (listVal.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	} else if (!listVal.IsListValue(listToSize)) {
+		val.SetErrorValue();
+		return( true );
+	}
+
+	listIterator.Initialize(listToSize);
+	val.SetIntegerValue(0);
+	len = 0;
+	first = true;
+
+	// Walk over each element in the list.
+	for (listElement = listIterator.CurrentExpr();
+		 listElement != NULL;
+		 listElement = listIterator.NextExpr()) {
+		if (listElement != NULL) {
+			// Make sure this element is valid
+			// Should we actually do this, or just count?
+			if (!listElement->Evaluate(state, listElementValue)) {
+				val.SetErrorValue();
+				return false;
+			} else {
+				len++;
+			}
+		}
+	}
+	
+	val.SetIntegerValue(len);
+	return true;
+}
+
 bool FunctionCall::
 sumAvg(const char *name, const ArgumentList &argList, 
 	   EvalState &state, Value &val)
@@ -795,8 +852,10 @@ listCompare(
 	// Finally, we decide what to do exactly, based on our name.
 	if (!strcasecmp(fn, "anycompare")) {
 		needAllMatch = false;
+		val.SetBooleanValue(false);
 	} else {
 		needAllMatch = true;
+		val.SetBooleanValue(true);
 	}
 
 	listIterator.Initialize(listToCompare);
@@ -819,8 +878,15 @@ listCompare(
 				Operation::Operate(comparisonOperator, listElementValue,
 								   compareVal, compareResult);
 				if (!compareResult.IsBooleanValue(b)) {
-					// We got an error or undefined
-					val.CopyFrom(compareResult);
+					if (compareResult.IsUndefinedValue()) {
+						if (needAllMatch) {
+							val.SetBooleanValue(false);
+							return true;
+						}
+					} else {
+						val.SetErrorValue();
+						return false;
+					}
 					return true;
 				} else if (b) {
 					if (!needAllMatch) {
