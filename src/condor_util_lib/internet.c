@@ -53,7 +53,8 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	/* allow strings of the form "<hostname:pppp>" */
 	colon = strchr(string, ':');
 	*colon = '\0';
-	if ((hostptr=gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET)
+	if ( is_ipaddr(string,NULL) != TRUE &&	// only call gethostbyname if not numbers
+		((hostptr=gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET) )
 	{
 			sin->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
 			string = colon + 1;
@@ -383,6 +384,15 @@ string_to_ip( const char* addr )
 int
 _condor_local_bind( int fd )
 {
+	/* Note: this function is completely WinNT screwed.  However,
+	 * only non-Cedar components call this function (ckpt-server,
+	 * old shadow) --- and these components are not destined for NT
+	 * anyhow.  So on NT, just pass back success so log file is not
+	 * full of scary looking error messages.
+	 *
+	 * This function should go away when everything uses CEDAR.
+	 */
+#ifndef WIN32
 	struct sockaddr_in sin;
 	memset( (char *)&sin, 0, sizeof(sin) );
 	sin.sin_family = AF_INET;
@@ -393,5 +403,6 @@ _condor_local_bind( int fd )
 				 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
 		return 0;
 	}
+#endif  /* of ifndef WIN32 */
 	return 1;
 }
