@@ -1,3 +1,13 @@
+Changes for version 0.9.8:
+* You can now do math with booleans. True is 1, False is 0. This lets
+  us do things like:
+
+  Rank = ((other.mips > 4000)*3) + ((other.ram > 1000)*2) +
+         (other.disk>1400)
+
+  This is frequently done in Condor, and we need this functionality in
+  order to be backwards compatible. 
+
 Changes for version 0.9.7: (released 28-Oct-2004) 
 
 * The ClassAd tarball (and corresponding directory within the tarball)
