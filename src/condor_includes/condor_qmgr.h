@@ -26,7 +26,7 @@ int NewProc( int );
 int DestroyProc(int, int);
 int DestroyCluster(int);
 int DestroyClusterByConstraint(const char*); 
-int SetAttribute(int, int, char *, char *);
+int SetAttribute(int, int, const char *, char *);
 int CloseConnection();
 
 int GetAttributeFloat(int, int, const char *, float *);

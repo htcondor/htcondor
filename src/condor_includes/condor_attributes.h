@@ -55,6 +55,7 @@ const char ATTR_KFLOPS                   [] = "KFlops";
 const char ATTR_KILL                     [] = "Kill";
 const char ATTR_LAST_HEARD_FROM          [] = "LastHeardFrom";
 const char ATTR_LAST_PERIODIC_CHECKPOINT [] = "LastPeriodicCheckpoint";
+const char ATTR_LAST_CKPT_SERVER		 [] = "LastCkptServer";
 const char ATTR_LOAD_AVG                 [] = "LoadAvg";
 const char ATTR_MACHINE                  [] = "Machine";
 const char ATTR_MAX_JOBS_RUNNING         [] = "MaxJobsRunning";
