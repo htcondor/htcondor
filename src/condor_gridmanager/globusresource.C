@@ -298,7 +298,7 @@ int GlobusResource::DoPing()
 
 	lastPing = time(NULL);
 
-	if ( rc != GLOBUS_SUCCESS ) {
+	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
 		ping_failed = true;
 	}
 
