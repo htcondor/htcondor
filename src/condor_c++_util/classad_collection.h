@@ -1,5 +1,5 @@
-#ifndef _ClassAdCollection_H
-#define _ClassAdCollection_H
+#ifndef _OldClassAdCollection_H
+#define _OldClassAdCollection_H
 
 //--------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ typedef HashTable<int,BaseCollection*> CollectionHashTable;
     @author Adiel Yoaz
 */
 
-class ClassAdCollection : private ClassAdLog {
+class OldClassAdCollection : private ClassAdLog {
 
 public:
 
@@ -44,19 +44,19 @@ public:
       empty repository.
     @return nothing
   */
-  ClassAdCollection();
+  OldClassAdCollection();
 
   /** Constructor (initialization). It reads the log file and initializes
       the class-ads (that are read from the log file) in memory.
     @param filename the name of the log file.
     @return nothing
   */
-  ClassAdCollection(const char* filename);
+  OldClassAdCollection(const char* filename);
 
   /** Destructor - frees the memory used by the collections
     @return nothing
   */
-  ~ClassAdCollection();
+  ~OldClassAdCollection();
 
   //@}
   //------------------------------------------------------------------------
@@ -317,7 +317,7 @@ private:
   bool RemoveCollection(int CoID, BaseCollection* Coll);
 
   ///
-  bool TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*));
+  bool TraverseTree(int CoID, bool (OldClassAdCollection::*Func)(int,BaseCollection*));
 
   ///
   static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
