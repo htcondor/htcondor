@@ -72,6 +72,7 @@ sysapi_load_avg_raw(void)
 	 */
   static int numcpus = 0;  
 
+  sysapi_internal_reconfig();
   if ( numcpus == 0 ) {
     numcpus = sysapi_ncpus();
 	if ( numcpus < 1 ) {
@@ -79,7 +80,6 @@ sysapi_load_avg_raw(void)
 	}
   }
 
-  sysapi_internal_reconfig();
   if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
     return (d.psd_avg_1_min * numcpus);
   }
@@ -88,7 +88,7 @@ sysapi_load_avg_raw(void)
   }
 }
 
-#elif defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
+#elif defined(IRIX53) || defined(IRIX62)
 
 #include "condor_uid.h"
 
@@ -176,6 +176,38 @@ kernel_load_avg(void)
 	set_priv(priv);
 
 	return ( (float)avenrun[0] / FSCALE );
+}
+
+/* just adding get_k_vars to avoid runtime errors */
+get_k_vars()
+{
+}
+
+#elif defined(IRIX65)
+
+/*
+** Where is FSCALE defined on IRIX ?  Apparently nowhere...
+** The SGI folks apparently use a scaled integer, but where is the scale
+** factor defined?  This is a wild guess that seems to work.
+*/
+#ifndef FSCALE
+#define FSCALE 1000
+#endif
+
+float
+sysapi_load_avg_raw(void)
+{
+	sgt_cookie_t cookie;
+	int avenrun[3];
+
+	SGT_COOKIE_INIT(&cookie);
+	SGT_COOKIE_SET_KSYM(&cookie, "avenrun");
+
+	/* this does not require root permissions */
+	sysget(SGT_KSYM, (char *)avenrun, sizeof(avenrun), SGT_READ, &cookie);
+
+	return (float)avenrun[0] / (float)FSCALE;
+
 }
 
 /* just adding get_k_vars to avoid runtime errors */
@@ -549,7 +581,7 @@ int main()
 /*----------------------------------------------------------------------*/
 /* only include this helper function on these architectures */
 
-#if defined(Solaris) || defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
+#if defined(Solaris) || defined(IRIX53) || defined(IRIX62)
 
 /*
  *  We will use uptime(1) to get the load average.  We will return the one
@@ -667,5 +699,5 @@ lookup_load_avg_via_uptime()
 	return DEFAULT_LOADAVG;
 }
 
-#endif /* #if defined(Solaris) || defined(IRIX53) || defined(IRIX62) || defined(IRIX(65) */
+#endif /* #if defined(Solaris) || defined(IRIX53) || defined(IRIX62) */
 
