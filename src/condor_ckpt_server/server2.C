@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_fdset.h"
 #include "xfer_summary.h"
 
 
@@ -295,7 +296,8 @@ void Server::Execute()
 		//   philosophy is that one does not need to reclaim a child process
 		//   until another is ready to start
 #if 1
-		while ((more) && ((num_sds_ready=select(max_req_sd_plus1, &req_sds, 
+		while ((more) && ((num_sds_ready=select(max_req_sd_plus1,
+												(int *)&req_sds, 
 												NULL, NULL, &poll)) > 0)) {
 #else
 		while ((more) && ((num_sds_ready=select(max_req_sd_plus1, &req_sds, 
