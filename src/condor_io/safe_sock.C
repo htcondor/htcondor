@@ -211,11 +211,30 @@ int SafeSock::connect(
  *	@returns: the number of bytes actually stored into _outMsg buffer,
  *	          including '0'
  */
-int SafeSock::put_bytes(const void *dta, int sz)
+int SafeSock::put_bytes(const void *data, int sz)
 {
-	int bytesPut;
+	int bytesPut, l_out;
+        char * dta = 0;
+
+        // Check to see if we need to encrypt
+        if (get_encryption()) {
+            if (wrap((unsigned char *)data, sz, (unsigned char *) dta , l_out)) { 
+                dprintf(D_SECURITY, "Encrypted size is %d\n", l_out);
+            }
+            else {
+                dprintf(D_SECURITY, "Encryption failed\n");
+                return -1;  // encryption failed!
+            }
+        }
+        else {
+            dta = (char *) malloc(sz);
+            memcpy(dta, data, sz);
+        }
 
 	bytesPut = _outMsg.putn((char *)dta, sz);
+
+        free(dta);
+
 	return bytesPut;
 }
 
@@ -264,15 +283,29 @@ int SafeSock::get_bytes(void *dta, int size)
 	}
 
 	char *tempBuf = (char *)malloc(size);
-	int readSize;
-	if(_longMsg) // long message
-		readSize = _longMsg->getn(tempBuf, size);
-	else // short message
-		readSize = _shortMsg.getn(tempBuf, size);
+	int readSize, length;
+        char * dec;
+
+	if(_longMsg) {
+            // long message 
+            readSize = _longMsg->getn(tempBuf, size);
+        }
+	else { // short message
+            readSize = _shortMsg.getn(tempBuf, size);
+        }
+
 	if(readSize == size) {
+            if (get_encryption()) {
+                unwrap((unsigned char *) tempBuf, readSize, (unsigned char *)dec, length);
+                memcpy(dta, dec, readSize);
+                free(dec);
+            }
+            else {
 		memcpy(dta, tempBuf, readSize);
-		free(tempBuf);
-		return readSize;
+            }
+
+            free(tempBuf);
+            return readSize;
 	} else {
 		free(tempBuf);
 		return -1;

@@ -1,7 +1,7 @@
 all_target(libcedar.a)
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS) 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(OpenSSLIncludePath)
 LIB = libcedar.a $(STD_LIBS)
 
 
@@ -11,7 +11,8 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_auth.o condor_auth_claim.o condor_auth_x509.o \
 		condor_auth_kerberos.o condor_auth_fs.o condor_auth_sspi.o \
 		authentication.o credential.o $(CONDOR_TYPE_OBJ) condor_rw.o \
-		SafeMsg.o
+		SafeMsg.o condor_crypt.o condor_crypt_blowfish.o condor_crypt_3des.o \
+		CryptKey.o
 #		autoTest.o manTest.o
 
 library_target(libcedar.a, $(OBJ))

@@ -26,6 +26,8 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+#include "condor_crypt_blowfish.h"
+#include "condor_crypt_3des.h"
 
 /* The macro definition and file was added for debugging purposes */
 
@@ -54,7 +56,20 @@ static int shipcount =0;
 **	CODE ROUTINES
 */
 
+Stream :: Stream(stream_code c) : 
+    _code(c), 
+    _coding(stream_encode),
+    crypto_(NULL),                // I love individual coding style!
+    encrypt_(false)               // You put _ in the front, I put in the
+    // back, very consistent, isn't it?
+{
+}
 
+Stream :: ~Stream()
+{
+    delete crypto_;
+    crypto_ = NULL;
+}
 
 int 
 Stream::code( char	&c)
@@ -1090,10 +1105,17 @@ Stream::put( char	*s)
 		case internal:
 		case external:
 			if (!s){
-				if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+                            len = 1;
+                            if (put(len) == FALSE) {
+                                return FALSE;
+                            }
+                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 			}
 			else{
 				len = strlen(s)+1;
+                                if (put(len) == FALSE) {
+                                    return FALSE;
+                                }
 				if (put_bytes(s, len) != len) return FALSE;
 			}
 			break;
@@ -1116,10 +1138,18 @@ Stream::put( char	*s, int		l)
 		case internal:
 		case external:
 			if (!s){
-				if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+                            int len = 1;
+                            if (put(len) == FALSE) {
+                                return FALSE;
+                            }
+
+                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 			}
 			else{
-				if (put_bytes(s, l) != l) return FALSE;
+                            if (put(l) == FALSE) {
+                                return FALSE;
+                            }
+                            if (put_bytes(s, l) != l) return FALSE;
 			}
 			break;
 
@@ -1539,30 +1569,42 @@ int
 Stream::get( char	*&s)
 {
 	char	c;
-	void	*tmp_ptr;
+	char 	*tmp_ptr = 0;
+        int     len;
+
+        if (tmp_ptr) {
+            free(tmp_ptr);
+            tmp_ptr = 0;
+        }
 
 	switch(_code){
 		case internal:
 		case external:
-			if (!peek(c)) return FALSE;
-			if (c == '\255'){
-				/* s = (char *)0; */
-				if (get_bytes(&c, 1) != 1) return FALSE;
-				if (s) s[0] = '\0';
+                    // First, get length
+                    if (get(len) == FALSE) {
+                        return FALSE;
+                    }
+
+                    tmp_ptr = (char *) malloc(len);
+                    if (get_bytes(tmp_ptr, len) != len) {
+                        return FALSE;
+                    }
+                    
+                    if (*tmp_ptr == '\255') {
+                        if (s) s[0] = '\0';
+                    }
+                    else {
+                        if (s) {
+                            strcpy(s, (char *)tmp_ptr);
+                            //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                        }
+                        else {
+                            s = strdup((char *)tmp_ptr);
+                            //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
 			}
-			else{
-				/* tmp_ptr = s; */
-				if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-				if (s) {
-					strcpy(s, (char *)tmp_ptr);
-					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-				}
-				else {
-					s = strdup((char *)tmp_ptr);
-					//cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
-				}
-			}
-			break;
+                    }
+                    free(tmp_ptr);
+                    break;
 
 		case ascii:
 			return FALSE;
@@ -1651,3 +1693,102 @@ Stream::rcv_int(
 
 	return TRUE;
 }
+
+bool Stream :: get_encryption()
+{
+    return (crypto_ != NULL);
+}
+
+bool Stream :: wrap(unsigned char* d_in,int l_in, 
+                    unsigned char*& d_out,int& l_out)
+{    
+    bool code = false;
+    if (get_encryption()) {
+        code = crypto_->encrypt(d_in, l_in, d_out, l_out);
+    }
+    return code;
+}
+
+bool Stream :: unwrap(unsigned char* d_in,int l_in,
+                      unsigned char*& d_out, int& l_out)
+{
+    bool code = false;
+    if (get_encryption()) {
+        code = crypto_->decrypt(d_in, l_in, d_out, l_out);
+    }
+    return code;
+}
+
+bool Stream :: initialize_crypto(KeyInfo * key) 
+{
+    delete crypto_;
+    crypto_ = 0;
+
+    // Will try to do a throw/catch later on
+    if (key) {
+        switch (key->getProtocol()) 
+        {
+        case CONDOR_BLOWFISH :
+            crypto_ = new Condor_Crypt_Blowfish(*key);
+            break;
+        case CONDOR_3DES:
+            crypto_ = new Condor_Crypt_3des(*key);
+            break;
+        default:
+            break;
+        }
+    }
+
+    return (crypto_ != 0);
+}
+
+
+bool Stream :: get_encryption_protocol(KeyInfo * key) 
+{
+    unsigned char data[key->getKeyLength()];
+    int code;
+
+    if (initialize_crypto(key)) {
+        code = get_bytes(data, key->getKeyLength());
+        
+        if (code > 0) {
+            if (memcmp(data, key->getKeyData(),  key->getKeyLength()) != 0) {
+                delete crypto_;
+                crypto_ = 0;
+                return false;
+            }
+        }
+        return (code > 0);
+    }
+    else {
+        return false;
+    }
+
+}
+
+bool Stream :: set_encryption_protocol(KeyInfo * key)
+{
+    int code;
+
+    if (initialize_crypto(key)) {
+
+        code = put_bytes(key->getKeyData(), key->getKeyLength());
+        
+        return (code > 0);
+    }
+    else {
+        return false;
+    }
+    
+}
+
+void Stream :: set_encryption_off()
+{
+    if (crypto_) {  // Not necessary
+        delete crypto_;
+    }
+    crypto_ = 0;
+}
+
+
+

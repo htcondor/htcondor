@@ -159,6 +159,39 @@ int Authentication::authenticate( char *hostAddr, int clientFlags )
   dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
 	  retval == 1 ? "Success" : "FAILURE" );
 
+  //char * key = param("ENCRYPTION_KEY");
+  //if (key) {
+  //    KeyInfo k = KeyInfo((unsigned char *)key, strlen(key), CONDOR_3DES);
+  //    mySock->set_encryption_protocol(&k);
+  //    free(key);
+  //}
+
+  // Testing encryption
+  if (retval == 1){
+      char keyData[] = "This is my secret, please copy it!";
+      int length = strlen(keyData);
+      int l, outlen;
+      char * data = 0;
+      KeyInfo key = KeyInfo((unsigned char *)keyData, length, CONDOR_3DES);
+
+      if (mySock->isClient()) {
+          mySock->set_encryption_protocol(&key);
+          mySock->encode();
+          mySock->put(keyData);
+          mySock->end_of_message();
+          dprintf(D_ALWAYS, "Sent message %s\n", keyData);
+      }
+      else {
+          mySock->get_encryption_protocol(&key);
+          mySock->decode();
+          mySock->get(data);
+          mySock->end_of_message();
+          dprintf(D_ALWAYS, "Received message %s\n", data);
+          free(data);
+      }
+      mySock->set_encryption_off();
+  }
+
   mySock->allow_one_empty_message();
   return ( retval );
 #endif /* SKIP_AUTHENTICATION */
@@ -428,16 +461,17 @@ int Authentication::handshake(int clientFlags)
 
     if ( mySock->isClient() ) {
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
-        //            if (!clientFlags) {
-        mySock->encode();
-        dprintf ( D_SECURITY, "HANDSHAKE: sending methods (canUse == %i) to server\n",
-                  canUse);
-        if ( !mySock->code( canUse ) ||
-             !mySock->end_of_message() )
-            {
-                return -1;
-            }
-        //            }
+        if (!clientFlags) {
+            mySock->encode();
+            dprintf ( D_SECURITY, "HANDSHAKE: sending methods (canUse == %i) to server\n",
+                      canUse);
+            if ( !mySock->code( canUse ) ||
+                 !mySock->end_of_message() )
+                {
+                    return -1;
+                }
+        }
+
         mySock->decode();
         if ( !mySock->code( shouldUseMethod ) ||
              !mySock->end_of_message() )  
@@ -450,18 +484,18 @@ int Authentication::handshake(int clientFlags)
     }
     else { //server
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the server\n");
-        //            if (!clientFlags) {
-        mySock->decode();
-        if ( !mySock->code( clientCanUse ) ||
-             !mySock->end_of_message() )
-            {
-                return -1;
-            }
-        dprintf ( D_SECURITY, "HANDSHAKE: client sent methods (clientCanUse == %i)\n",
-                  clientCanUse);
-        //            } else {
-        //                clientCanUse = clientFlags;
-        //            }
+        if (!clientFlags) {
+            mySock->decode();
+            if ( !mySock->code( clientCanUse ) ||
+                 !mySock->end_of_message() )
+                {
+                    return -1;
+                }
+            dprintf ( D_SECURITY, "HANDSHAKE: client sent methods (clientCanUse == %i)\n",
+                      clientCanUse);
+        } else {
+            clientCanUse = clientFlags;
+        }
         
         shouldUseMethod = selectAuthenticationType( clientCanUse );
         dprintf ( D_SECURITY, "HANDSHAKE: i picked a method (shouldUseMethod == %i)\n",
@@ -479,8 +513,7 @@ int Authentication::handshake(int clientFlags)
                   shouldUseMethod);
     }
 
-    dprintf(D_ALWAYS,
-            "ZKM: clientCanUse=%d,shouldUseMethod=%d\n",
+    dprintf(D_SECURITY, "HANDSHAKE: clientCanUse=%d,shouldUseMethod=%d\n",
             clientCanUse,shouldUseMethod);
     
     return( shouldUseMethod );

@@ -229,11 +229,26 @@ ReliSock::connect( char	*host, int port, bool non_blocking_flag )
 }
 
 int 
-ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
+ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 {
-	int i, result;
+	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
-	char * cur = buf;
+	char * cur;
+        char * buf = 0;
+        
+        // First, encrypt the data if necessary
+        if (get_encryption()) {
+            if (!wrap((unsigned char *) buffer, length, (unsigned char *) buf , l_out)) { 
+                dprintf(D_SECURITY, "Encryption failed\n");
+                goto error;
+            }
+        }
+        else {
+            buf = (char *) malloc(length);
+            memcpy(buf, buffer, length);
+        }
+
+        cur = buf;
 
 	// Tell peer how big the transfer is going to be, if requested.
 	// Note: send_size param is 1 (true) by default.
@@ -246,7 +261,7 @@ ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
 	// First drain outgoing buffers
 	if ( !prepare_for_nobuffering(stream_encode) ) {
 		// error flushing buffers; error message already printed
-		return -1;
+            goto error;
 	}
 
 	// Optimize transfer by writing in pagesized chunks.
@@ -256,9 +271,7 @@ ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
 		if( (length - i) < pagesize ) {
 			result = condor_write(_sock, cur, (length - i), _timeout);
 			if( result < 0 ) {
-				dprintf(D_ALWAYS, 
-					"ReliSock::put_bytes_nobuffer: Send failed.\n");
-				return -1;
+                                goto error;
 			}
 			cur += (length - i);
 			i += (length - i);
@@ -266,9 +279,7 @@ ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
 			// Send another page...
 			result = condor_write(_sock, cur, pagesize, _timeout);
 			if( result < 0 ) {
-				dprintf(D_ALWAYS, 
-					"ReliSock::put_bytes_nobuffer: Send failed.\n");
-				return -1;
+                            goto error;
 			}
 			cur += pagesize;
 			i += pagesize;
@@ -277,7 +288,16 @@ ReliSock::put_bytes_nobuffer( char *buf, int length, int send_size )
 	if (i > 0) {
 		_bytes_sent += i;
 	}
+        
+        free(buf);
+
 	return i;
+ error:
+        dprintf(D_ALWAYS, "ReliSock::put_bytes_nobuffer: Send failed.\n");
+
+        free(buf);
+
+        return -1;
 }
 
 int 
@@ -285,6 +305,7 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 {
 	int result;
 	int length;
+        char * buf = 0;
 
 	ASSERT(buffer != NULL);
 	ASSERT(max_length > 0);
@@ -302,26 +323,36 @@ ReliSock::get_bytes_nobuffer(char *buffer, int max_length, int receive_size)
 	// First drain incoming buffers
 	if ( !prepare_for_nobuffering(stream_decode) ) {
 		// error draining buffers; error message already printed
-		return -1;
+            goto error;
 	}
 
 
 	if( length > max_length ) {
 		dprintf(D_ALWAYS, 
 			"ReliSock::get_bytes_nobuffer: data too large for buffer.\n");
-		return -1;
+                goto error;
 	}
 
 	result = condor_read(_sock, buffer, length, _timeout);
+
 	
 	if( result < 0 ) {
 		dprintf(D_ALWAYS, 
 			"ReliSock::get_bytes_nobuffer: Failed to receive file.\n");
-		return -1;
-	} else {
-		_bytes_recvd += result;
-		return result;
+                goto error;
+	} 
+        else {
+            // See if it needs to be decrypted
+            if (get_encryption()) {
+                unwrap((unsigned char *) buffer, result, (unsigned char *)buf, length);  // I am reusing length
+                memcpy(buffer, buf, result);
+                free(buf);
+            }
+            _bytes_recvd += result;
+            return result;
 	}
+ error:
+        return -1;
 }
 
 int
@@ -568,10 +599,23 @@ ReliSock::end_of_message()
 
 
 int 
-ReliSock::put_bytes(const void *dta, int sz)
+ReliSock::put_bytes(const void *data, int sz)
 {
 	int		tw;
-	int		nw;
+	int		nw, l_out;
+        char * dta = 0;
+
+        // Check to see if we need to encrypt
+        if (get_encryption()) {
+            if (!wrap((unsigned char *)data, sz, (unsigned char *) dta , l_out)) { 
+                dprintf(D_SECURITY, "Encryption failed\n");
+                return -1;  // encryption failed!
+            }
+        }
+        else {
+            dta = (char *) malloc(sz);
+            memcpy(dta, data, sz);
+        }
 
 	ignore_next_encode_eom = FALSE;
 
@@ -588,7 +632,8 @@ ReliSock::put_bytes(const void *dta, int sz)
 		}
 		
 		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-			return -1;
+                    free(dta);
+                    return -1;
 		}
 		
 		nw += tw;
@@ -599,6 +644,8 @@ ReliSock::put_bytes(const void *dta, int sz)
 	if (nw > 0) {
 		_bytes_sent += nw;
 	}
+
+        free(dta);
 	return nw;
 }
 
@@ -606,7 +653,8 @@ ReliSock::put_bytes(const void *dta, int sz)
 int 
 ReliSock::get_bytes(void *dta, int max_sz)
 {
-	int		bytes;
+	int		bytes, length;
+        char * data = 0;
 
 	ignore_next_decode_eom = FALSE;
 
@@ -617,9 +665,16 @@ ReliSock::get_bytes(void *dta, int max_sz)
 	}
 
 	bytes = rcv_msg.buf.get(dta, max_sz);
+
 	if (bytes > 0) {
-		_bytes_recvd += bytes;
-	}
+            if (get_encryption()) {
+                unwrap((unsigned char *) dta, bytes, (unsigned char *)data, length);
+                memcpy(dta, data, bytes);
+                free(data);
+            }
+            _bytes_recvd += bytes;
+        }
+        
 	return bytes;
 }
 
@@ -922,23 +977,6 @@ bool ReliSock :: is_encrypt()
 	}
 	return FALSE;
 }
-
-int  ReliSock :: wrap(char* d_in,int l_in,char*& d_out,int& l_out)
-{
-	if ( authob ){
-		return(authob -> wrap(d_in,l_in,d_out,l_out));
-	}
-	return FALSE;
-}
-
-int ReliSock :: unwrap(char* d_in,int l_in,char*& d_out , int& l_out)
-{
-	if ( authob ){
-		return(authob -> unwrap(d_in,l_in,d_out,l_out));
-	}
-	return FALSE;
-}
-
 
 int ReliSock :: allow_one_empty_message()
 {
