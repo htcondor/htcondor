@@ -47,7 +47,6 @@ REMAP_THREE( sigprocmask, __sigprocmask, int, int, const sigset_t *, sigset_t * 
 /* REMAP_THREE( sigprocmask, _sigprocmask, int, int, const sigset_t *, sigset_t * ) */
 REMAP_ONE( sigsuspend, __sigsuspend, int, const sigset_t * )
 REMAP_ONE( sigsuspend, _sigsuspend, int, const sigset_t * )
-REMAP_ONE( __SIGSUSPEND, _SIGSUSPEND, int ,const sigset_t * );
 #endif
 
 /* These remaps fill out the rest of the remote syscalls */
