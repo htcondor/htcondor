@@ -212,8 +212,8 @@ DEBUG_FLAG = DebugFlag
 # undef GSS_AUTHENTICATION
 # define GSS_AUTHENTICATION 1
 
-  GLOBUS_DIR = /p/condor/workspaces/globus
-  LDAP_DIR = /p/condor/workspaces/ldap
+  GLOBUS_DIR = /unsup/globus-1.1.3
+  LDAP_DIR = /unsup/OpenLDAP-1.2.7-G
 
   GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DLDAP_DEBUG -DLDAP_REFERRALS \
     -I$(GLOBUS_DIR)/include -I$(LDAP_DIR)/include
@@ -239,7 +239,7 @@ DEBUG_FLAG = DebugFlag
           -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include
 #  define ImakeGssFlag -DGSS_AUTHENTICATION
 
-  SSL_DIR = /p/condor/workspaces/ssl
+  SSL_DIR = /unsup/SSLeay-0.9.0b
   AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
     $(GLOBUS_DIR)/lib/libglobus_gss.a \
     $(GLOBUS_DIR)/lib/libglobus_gaa.a \

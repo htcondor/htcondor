@@ -23,6 +23,8 @@
 #define		GccArch			sparc-sun-solaris2.7
 #define IS_EGCS_BUILD	YES
 #define EgcsPath /s/gcc-2.95.2/sun4x_57/lib/gcc-lib/sparc-sun-solaris2.7/2.95.2 
+
+#define HAS_GLOBUS YES
 #endif
 
 #ifndef SC_VERS
