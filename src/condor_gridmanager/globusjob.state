@@ -45,7 +45,7 @@ GM_STDIO_UPDATE
   if (other error)
     gm_state = GM_STOP_AND_RESTART
   UNSUBMITTED
-    gm_state = GM_SUBMIT_SAVED
+    gm_state = GM_SUBMIT_COMMIT
   other
     gm_state = GM_SUBMITTED
 
@@ -57,16 +57,16 @@ GM_UNSUBMITTED
   other
     submit()
     determine if jobmanager is new or old
-    gm_state = GM_SUBMIT_UNCOMMITTED
+    gm_state = GM_SUBMIT_SAVE
 
-GM_SUBMIT_UNCOMMITTED
+GM_SUBMIT_SAVE
   REMOVED/HELD
     gm_state = GM_CANCEL
   other
     update_schedd(contact string)
-    gm_state = GM_SUBMIT_SAVED (GM_SUBMITTED for old jm)
+    gm_state = GM_SUBMIT_COMMIT (GM_SUBMITTED for old jm)
 
-GM_SUBMIT_SAVED
+GM_SUBMIT_COMMIT
   REMOVED/HELD
     gm_state = GM_CANCEL
   other
@@ -76,45 +76,49 @@ GM_SUBMIT_SAVED
     gm_state = GM_SUBMITTED
 
 GM_SUBMITTED
-  REMOVED || HELD
-    gm_state = GM_CANCEL
-  other
-    UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
+  UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
+    REMOVED || HELD
+      gm_state = GM_CANCEL
+    other
       probe()
       if (other error)
         gm_state = GM_STOP_AND_RESTART
-    DONE
-      old jm
-        update_schedd(condor_state = COMPLETED); //don't wait
-        gm_state = GM_DELETE
-      new jm
-        // should stop retrying if this fails for several cycles
-        check_output() // skip if nothing transferred back
-        if (output complete)
-          gm_state = GM_DONE_UNCOMITTED
-        if (output incomplete)
-          gm_state = GM_STOP_AND_RESTART
-        if (other error)
-          gm_state = GM_STOP_AND_RESTART
-    FAILED
-      COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED/USER_PROXY_EXPIRED
-        gm_state = GM_RESTART
-      other
-        if (new jm)
-          commit(end)
-          if (other error)
-            gm_state = GM_STOP_AND_RESTART
-        gm_state = GM_CLEAR_REQUEST
+  DONE
+    old jm
+      gm_state = GM_DONE_SAVE
+    new jm
+      gm_state = GM_CHECK_OUTPUT
+  FAILED
+    gm_state = GM_FAILED
 
-GM_DONE_UNCOMITTED
-  update_schedd(condor_state = COMPLETED);
-  gm_state = GM_DONE_SAVED
+GM_CHECK_OUTPUT
+  REMOVED || HELD
+    gm_state = GM_DONE_COMMIT
+  other
+    // should stop retrying if this fails for several cycles
+    check_output() // skip if nothing transferred back  
+    if (output complete)
+      gm_state = GM_DONE_SAVE
+    if (output incomplete)
+      gm_state = GM_STOP_AND_RESTART
+    if (other error)
+      gm_state = GM_STOP_AND_RESTART
 
-GM_DONE_SAVED
-  commit(end)
-  if (other error)
-    gm_state = GM_STOP_AND_RESTART
-  gm_state = GM_DELETE
+GM_DONE_SAVE
+  if (!HELD && !REMOVED)
+    update_schedd(condor_state = COMPLETED);
+  gm_state = GM_DONE_COMMIT
+
+GM_DONE_COMMIT
+  new jm
+    commit(end)
+    if (other error)
+      gm_state = GM_STOP_AND_RESTART
+  either
+    COMPLETED/REMOVED
+      gm_state = GM_DELETE
+    other
+      gm_state = GM_CLEAR_REQUEST
 
 GM_STOP_AND_RESTART
   stop_jm()
@@ -131,13 +135,13 @@ GM_RESTART
       gm_state = GM_INIT
     if (other error)
       gm_state = GM_CLEAR_REQUEST
-    gm_state = GM_RESTART_UNCOMMITTED
+    gm_state = GM_RESTART_SAVE
 
-GM_RESTART_UNCOMMITTED
+GM_RESTART_SAVE
   update_schedd(contact string)
-  gm_state = GM_RESTART_SAVED
+  gm_state = GM_RESTART_COMMIT
 
-GM_RESTART_SAVED
+GM_RESTART_COMMIT
   commit(request)
   if (other error)
     gm_state = GM_STOP_AND_RESTART
@@ -162,25 +166,22 @@ GM_CANCEL_WAIT
     if (other error)
       gm_state = GM_CLEAR_REQUEST
   DONE
+    gm_state = GM_DONE_COMMIT
+  FAILED
+    gm_state = GM_FAILED
+
+GM_FAILED
+  COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED/USER_PROXY_EXPIRED
+    gm_state = GM_RESTART
+  other
     if (new jm)
       commit(end)
       if (other error)
-        gm_state = GM_CLEAR_REQUEST
+        gm_state = GM_STOP_AND_RESTART
     REMOVED
       gm_state = GM_DELETE
     other
       gm_state = GM_CLEAR_REQUEST
-  FAILED
-    COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED/USER_PROXY_EXPIRED
-      gm_state = GM_RESTART
-    other
-      commit(end)
-      if (other error)
-        gm_state = GM_CLEAR_REQUEST
-      REMOVED
-        gm_state = GM_DELETE
-      other
-        gm_state = GM_CLEAR_REQUEST
 
 GM_DELETE
   update_schedd(delete from schedd)

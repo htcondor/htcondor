@@ -45,19 +45,21 @@
 #define GM_REGISTER				1
 #define GM_STDIO_UPDATE			2
 #define GM_UNSUBMITTED			3
-#define GM_SUBMIT_UNCOMITTED	4
-#define GM_SUBMIT_SAVED			5
+#define GM_SUBMIT_SAVE			4
+#define GM_SUBMIT_COMMIT		5
 #define GM_SUBMITTED			6
-#define GM_DONE_UNCOMMITTED		7
-#define GM_DONE_SAVED			8
-#define GM_STOP_AND_RESTART		9
-#define GM_RESTART				10
-#define GM_RESTART_UNCOMMITTED	11
-#define GM_RESTART_SAVED		12
-#define GM_CANCEL				13
-#define GM_CANCEL_WAIT			14
-#define GM_DELETE				15
-#define GM_CLEAR_REQUEST		16
+#define GM_CHECK_OUTPUT			7
+#define GM_DONE_SAVE			8
+#define GM_DONE_COMMIT			9
+#define GM_STOP_AND_RESTART		10
+#define GM_RESTART				11
+#define GM_RESTART_SAVE			12
+#define GM_RESTART_COMMIT		13
+#define GM_CANCEL				14
+#define GM_CANCEL_WAIT			15
+#define GM_FAILED				16
+#define GM_DELETE				17
+#define GM_CLEAR_REQUEST		18
 
 bool durocControlInited = false;
 globus_duroc_control_t durocControl;
@@ -267,6 +269,15 @@ int GlobusJob::doEvaluateState()
 			if ( jobContact == NULL ) {
 				gmState = GM_UNSUBMITTED;
 			} else {
+				if ( globusState == PENDING || globusState == ACTIVE ||
+					 globusState == SUSPENDED || globusState == DONE ) {
+					submitLogged = true;
+				}
+				if ( globusState == ACTIVE || globusState == SUSPENDED ||
+					 globusState == DONE ) {
+					executeLogged = true;
+				}
+
 				rc = globus_gram_client_job_signal( jobContact,
 										(globus_gram_client_job_signal_t)0,
 										NULL, &status, &error );
@@ -312,13 +323,6 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			callbackRegistered = true;
-			if ( status == PENDING || status == ACTIVE ||
-				 status == SUSPENDED || status == DONE ) {
-				submitLogged = true;
-			}
-			if ( status == ACTIVE || status == SUSPENDED || status == DONE ) {
-				executeLogged = true;
-			}
 			UpdateGlobusState( status, error );
 /*
 			globusState = status;
@@ -372,7 +376,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( globusState == UNSUBMITTED ) {
-				gmState = GM_SUBMIT_SAVED;
+				gmState = GM_SUBMIT_COMMIT;
 			} else {
 				gmState = GM_SUBMITTED;
 			}
@@ -400,13 +404,13 @@ int GlobusJob::doEvaluateState()
 					callbackRegistered = true;
 					jobContact = strdup( job_contact );
 					globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_UNCOMMITTED;
+					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					newJM = true;
 					callbackRegistered = true;
 					jobContact = strdup( job_contact );
 					globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_UNCOMMITTED;
+					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
@@ -417,23 +421,23 @@ int GlobusJob::doEvaluateState()
 				}
 			}
 			break;
-		case GM_SUBMIT_UNCOMITTED:
+		case GM_SUBMIT_SAVE:
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
 				rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
-											GM_SUBMIT_UNCOMMITTED );
+											GM_SUBMIT_SAVE );
 				if ( rc == PENDING ) {
 					break;
 				}
 				if ( newJM ) {
-					gmState = GM_SUBMIT_SAVED;
+					gmState = GM_SUBMIT_COMMIT;
 				} else {
 					gmState = GM_SUBMITTED;
 				}
 			}
 			break;
-		case GM_SUBMIT_SAVED:
+		case GM_SUBMIT_COMMIT:
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
@@ -458,87 +462,17 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_SUBMITTED:
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
+			if ( globusState == DONE ) {
+				if ( newJM ) {
+					gmState = GM_CHECK_OUTPUT;
+				} else {
+					gmState = GM_DONE_SAVE;
+				}
+			} else if ( globusState == FAILED ) {
+				gmState = GM_FAILED;
 			} else {
-				if ( globusState == DONE ) {
-					if ( newJM ) {
-						if ( localOutput == NULL && localError == NULL ) {
-							gmState = GM_DONE_UNCOMMITTED;
-							break;
-						}
-						int output_size = -1;
-						int error_size = -1;
-						struct stat file_status;
-						char size_str[50];
-						if ( localOutput ) {
-							rc = stat( localOutput, &file_status );
-							if ( rc < 0 ) {
-								output_size = 0;
-							} else {
-								output_size = file_status.st_size;
-							}
-						}
-						if ( localError ) {
-							rc = stat( localError, &file_status );
-							if ( rc < 0 ) {
-								error_size = 0;
-							} else {
-								error_size = file_status.st_size;
-							}
-						}
-						sprintf( size_str, "%d %d", output_size, error_size );
-						rc = globus_gram_client_job_signal( jobContact,
-									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
-									size_str, &status, &error );
-						if ( rc == WOULD_CALL || rc == PENDING ) {
-							break;
-						}
-						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-							connect_failure = true;
-							break;
-						}
-						if ( rc == GLOBUS_SUCCESS ) {
-							gmState = GM_DONE_UNCOMMITTED;
-						} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
-							gmState = GM_STOP_AND_RESTART;
-						} else {
-							// unhandled error
-							LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
-							gmState = GM_STOP_AND_RESTART;
-						}
-					} else {
-						condorState = COMPLETED;
-						addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE );
-						gmState = GM_DELETE;
-					}
-				} else if ( globusState == FAILED ) {
-					if ( globusError == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
-						 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
-						 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
-						 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
-						gmState = GM_RESTART;
-					} else {
-						if ( newJM ) {
-							rc = globus_gram_client_job_signal( jobContact,
-									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error );
-							if ( rc == WOULD_CALL || rc == PENDING ) {
-								break;
-							}
-							if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-								connect_failure = true;
-								break;
-							}
-							if ( rc != GLOBUS_SUCCESS ) {
-								// unhandled error
-								LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-								gmState = GM_STOP_AND_RESTART;
-								break;
-							}
-						}
-						gmState = GM_CLEAR_REQUEST;
-					}
+				if ( condorState == REMOVED || condorState == HELD ) {
+					gmState = GM_CANCEL;
 				} else {
 					time_t now = time(NULL);
 					if ( lastProbeTime < enteredCurrentGmState ) {
@@ -574,32 +508,90 @@ int GlobusJob::doEvaluateState()
 				}
 			}
 			break;
-		case GM_DONE_UNCOMMITTED:
-			condorState = COMPLETED;
-			rc = addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE,
-										GM_DONE_UNCOMMITTED );
-			if ( rc == PENDING ) {
-				break;
+		case CHECK_OUTPUT:
+			if ( condorState == REMOVED || condorState == HELD ) {
+				gmState = GM_DONE_COMMIT;
+			} else {
+				if ( localOutput == NULL && localError == NULL ) {
+					gmState = GM_DONE_SAVE;
+					break;
+				}
+				int output_size = -1;
+				int error_size = -1;
+				struct stat file_status;
+				char size_str[50];
+				if ( localOutput ) {
+					rc = stat( localOutput, &file_status );
+					if ( rc < 0 ) {
+						output_size = 0;
+					} else {
+						output_size = file_status.st_size;
+					}
+				}
+				if ( localError ) {
+					rc = stat( localError, &file_status );
+					if ( rc < 0 ) {
+						error_size = 0;
+					} else {
+						error_size = file_status.st_size;
+					}
+				}
+				sprintf( size_str, "%d %d", output_size, error_size );
+				rc = globus_gram_client_job_signal( jobContact,
+									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
+									size_str, &status, &error );
+				if ( rc == WOULD_CALL || rc == PENDING ) {
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+					connect_failure = true;
+					break;
+				}
+				if ( rc == GLOBUS_SUCCESS ) {
+					gmState = GM_DONE_SAVE;
+				} else if ( rc ==  GLOBUS_GRAM_PROTOCOL_ERROR_STDIO_SIZE ) {
+					gmState = GM_STOP_AND_RESTART;
+				} else {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(STDIO_SIZE)", rc );
+					gmState = GM_STOP_AND_RESTART;
+				}
 			}
-			gmState = GM_DONE_SAVED;
 			break;
-		case GM_DONE_SAVED:
-			rc = globus_gram_client_job_signal( jobContact,
+		case GM_DONE_SAVE:
+			if ( condorState != HELD && condorState != REMOVED ) {
+				condorState = COMPLETED;
+				rc = addScheddUpdateAction( this, UA_UPDATE_CONDOR_STATE,
+											GM_DONE_SAVE );
+				if ( rc == PENDING ) {
+					break;
+				}
+			}
+			gmState = GM_DONE_COMMIT;
+			break;
+		case GM_DONE_COMMIT:
+			if ( newJM ) {
+				rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
-			if ( rc == WOULD_CALL || rc == PENDING ) {
-				break;
+				if ( rc == WOULD_CALL || rc == PENDING ) {
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+					connect_failure = true;
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+					gmState = GM_STOP_AND_RESTART;
+					break;
+				}
 			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-				connect_failure = true;
-				break;
-			}
-			if ( rc != GLOBUS_SUCCESS ) {
-				// unhandled error
-				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-				gmState = GM_STOP_AND_RESTART;
-			} else {
+			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
+			} else {
+				gmState = GM_CLEAR_REQUEST;
 			}
 			break;
 		case GM_STOP_AND_RESTART:
@@ -667,7 +659,7 @@ int GlobusJob::doEvaluateState()
 					newJM = true;
 					jobContact = strdup( job_contact );
 					globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_UNCOMMITTED;
+					gmState = GM_SUBMIT_SAVE;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
@@ -675,15 +667,15 @@ int GlobusJob::doEvaluateState()
 				}
 			}
 			break;
-		case GM_RESTART_UNCOMMITTED:
+		case GM_RESTART_SAVE:
 			rc = addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING,
-										GM_RESTART_UNCOMMITTED );
+										GM_RESTART_SAVE );
 			if ( rc == PENDING ) {
 				break;
 			}
-			gmState = GM_RESTART_SAVED;
+			gmState = GM_RESTART_COMMIT;
 			break;
-		case GM_RESTART_SAVED:
+		case GM_RESTART_COMMIT:
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
@@ -732,56 +724,9 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_CANCEL_WAIT:
 			if ( globusState == DONE ) {
-				if ( newJM ) {
-					rc = globus_gram_client_job_signal( jobContact,
-									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error );
-					if ( rc == WOULD_CALL || rc == PENDING ) {
-						break;
-					}
-					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-						connect_failure = true;
-						break;
-					}
-					if ( rc != GLOBUS_SUCCESS ) {
-						// unhandled error
-						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-					}
-				}
-				if ( condorState == REMOVED ) {
-					gmState = GM_DELETE;
-				} else {
-					gmState = GM_CLEAR_REQUEST;
-				}
+				gmState = GM_DONE_COMMIT;
 			} else if ( globusState == FAILED ) {
-				if ( globusError == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
-					 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
-					 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
-					 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
-					gmState = GM_RESTART;
-				} else {
-					if ( newJM ) {
-						rc = globus_gram_client_job_signal( jobContact,
-									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error );
-						if ( rc == WOULD_CALL || rc == PENDING ) {
-							break;
-						}
-						if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
-							connect_failure = true;
-							break;
-						}
-						if ( rc != GLOBUS_SUCCESS ) {
-							// unhandled error
-							LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-						}
-					}
-					if ( condorState == REMOVED ) {
-						gmState = GM_DELETE;
-					} else {
-						gmState = GM_CLEAR_REQUEST;
-					}
-				}
+				gmState = GM_FAILED;
 			} else {
 				time_t now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
@@ -810,6 +755,44 @@ int GlobusJob::doEvaluateState()
 								lastProbeTime + JOB_PROBE_INTERVAL,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );
+			}
+			break;
+		case GM_FAILED:
+			if ( globusError == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
+				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
+				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
+				 globusError == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+				gmState = GM_RESTART;
+			} else {
+				if ( newJM ) {
+					rc = globus_gram_client_job_signal( jobContact,
+									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
+									NULL, &status, &error );
+					if ( rc == WOULD_CALL || rc == PENDING ) {
+						break;
+					}
+					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ) {
+						connect_failure = true;
+						break;
+					}
+					if ( rc != GLOBUS_SUCCESS ) {
+						// unhandled error
+						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+						gmState = GM_STOP_AND_RESTART;
+						break;
+					}
+				}
+				// TODO: evaluate if the failure is permanent or temporary
+				//   if it's temporary, try a restart, but put a limit so
+				//   that we don't go into an infinite restart loop
+				// Note: Up through globus 2.0 beta, the FAILED state
+				//   following a cancel request has an error code of 0
+				//   instead of GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED
+				if ( condorState == REMOVED ) {
+					gmState = GM_DELETE;
+				} else {
+					gmState = GM_CLEAR_REQUEST;
+				}
 			}
 			break;
 		case GM_DELETE:
