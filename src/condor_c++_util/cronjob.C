@@ -577,8 +577,6 @@ CondorCronJob::StdoutHandler ( int pipe )
 		return -1;
 	}
 
-	// Flush the buffers
-	stdOutBuf->Flush();
 	return 0;
 }
 

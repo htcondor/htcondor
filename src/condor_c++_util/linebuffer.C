@@ -62,6 +62,7 @@ Buffer( const char ** buf, int *nptr )
 			return status;
 		}
 	}
+	*nptr = 0;
 	return 0;
 }
 
