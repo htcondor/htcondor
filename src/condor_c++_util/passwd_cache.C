@@ -85,7 +85,7 @@ bool passwd_cache::cache_groups(const char* user) {
 		return false;
 	} else { 
 
-		if ( !lookup_group(user, group_cache_entry) ) {
+		if ( group_table->lookup(user, group_cache_entry) < 0 ) {
 			init_group_entry(group_cache_entry);
 		}
 
@@ -167,7 +167,7 @@ passwd_cache::cache_uid(const struct passwd *pwent) {
 
 		index = pwent->pw_name;
 
-		if ( !lookup_uid(index.Value(), cache_entry) ) {
+		if ( uid_table->lookup(index.Value(), cache_entry) < 0 ) {
 				/* if we don't already have this entry, create a new one */
 			init_uid_entry(cache_entry);
 		}
