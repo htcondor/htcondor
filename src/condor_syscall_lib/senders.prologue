@@ -8,6 +8,8 @@
 
 #if defined(Solaris)
 #include "_condor_fix_types.h"
+#include <sys/statfs.h>
+#include <nfs/nfs.h>
 #endif
 
 #include "condor_common.h"
