@@ -1,3 +1,11 @@
+9/4/03 V6_5-dag-java-fix
+   The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
+   executable sent to Jens at Fermi (see condor-admin #7370).
+   "6.5.5 Sep  4 2003 PRE-RELEASE" is the version string.
+   This fixes a bug that caused DAGMan post scripts to be run with
+   the signal mask not fully open (resulting in java hanging when
+   run in a post script).
+
 8/25/03 V6_5-dag-crash-fix
    The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
    executable sent to Duncan and Scott at UW-Milwaukee (see condor-admin
