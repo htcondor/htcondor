@@ -149,7 +149,7 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 
 		// Insert entries for "tilde" and "hostname". Note that
 		// "hostname" ends up as just the machine name w/o the
-		// . separators
+		// . separators.  "full_hostname" is the full hostname. 
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	} else {
@@ -160,6 +160,7 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 	} else {
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
 	}
+	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
