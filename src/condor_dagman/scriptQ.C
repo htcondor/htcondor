@@ -61,12 +61,12 @@ ScriptQ::~ScriptQ()
 int
 ScriptQ::Run( Script *script )
 {
-	debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
-				  script->_post ? "POST" : "PRE", script->_job->GetJobName() );
-
 	// if we have no script limit, or we're under the limit, run now
 	if( _dag->_maxScriptsRunning == 0 ||
 		_numScriptsRunning < _dag->_maxScriptsRunning ) {
+		debug_printf( DEBUG_NORMAL, "Running %s script of Job %s...\n",
+					  script->_post ? "POST" : "PRE",
+					  script->_job->GetJobName() );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );
@@ -75,7 +75,7 @@ ScriptQ::Run( Script *script )
 			return 1;
 		}
 		// BackgroundRun() returned pid 0
-		else if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+		else if( DEBUG_LEVEL( DEBUG_NORMAL ) ) {
 			printf( "  error: daemonCore->Create_Process() failed; deferring "
 					"%s script of Job ", script->_post ? "POST" : "PRE" );
 			script->_job->Print();
@@ -83,7 +83,7 @@ ScriptQ::Run( Script *script )
 		}
 	}
 	// max scripts already running
-	debug_printf( DEBUG_DEBUG_1, "\tmax scripts (%d) already running; "
+	debug_printf( DEBUG_VERBOSE, "Max scripts (%d) already running; "
 				  "deferring %s script of Job %s\n", _dag->_maxScriptsRunning,
 				  script->_post ? "POST" : "PRE", script->_job->GetJobName() );
 
