@@ -1107,7 +1107,7 @@ readEvent (FILE *file)
 // ----- TerminatedEvent baseclass
 TerminatedEvent::TerminatedEvent()
 {
-	coreFile[0] = '\0';
+	core_file = NULL;
 	returnValue = signalNumber = -1;
 
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
@@ -1118,6 +1118,30 @@ TerminatedEvent::TerminatedEvent()
 
 TerminatedEvent::~TerminatedEvent()
 {
+	if( core_file ) {
+		delete [] core_file;
+		core_file = NULL;
+	}
+}
+
+
+void
+TerminatedEvent::setCoreFile( const char* core_name )
+{
+	if( core_file ) {
+		delete [] core_file;
+		core_file = NULL;
+	}
+	if( core_name ) {
+		core_file = strnewp( core_name );
+	}
+}
+
+
+const char*
+TerminatedEvent::getCoreFile( void )
+{
+	return core_file;
 }
 
 
@@ -1136,8 +1160,9 @@ TerminatedEvent::writeEvent( FILE *file, const char* header )
 					signalNumber) < 0 ) {
 			return 0;
 		}
-		if( coreFile[0] ) {
-			retval = fprintf( file, "\t(1) Corefile in: %s\n\t", coreFile );
+		if( core_file ) {
+			retval = fprintf( file, "\t(1) Corefile in: %s\n\t",
+							  core_file );
 		} else {
 			retval = fprintf( file, "\t(0) No core file\n\t" );
 		}
@@ -1192,8 +1217,14 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 			return 0;
 
 		if( gotCore ) {
-			if (fscanf (file, "Corefile in: %s", coreFile) != 1) 
+			if( fscanf(file, "Corefile in: ") == EOF ) {
 				return 0;
+			}
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+			chomp( buffer );
+			setCoreFile( buffer );
 		} else {
 			if (fgets (buffer, 128, file) == 0) 
 				return 0;

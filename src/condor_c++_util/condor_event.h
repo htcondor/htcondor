@@ -580,8 +580,8 @@ class TerminatedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signalNumber;
 
-    /// name of core file
-    char    coreFile[_POSIX_PATH_MAX];
+	const char* getCoreFile();
+	void setCoreFile( const char* );
 
     /** Local  usage for the run */    rusage  run_local_rusage;
     /** Remote usage for the run */    rusage  run_remote_rusage;
@@ -597,6 +597,11 @@ class TerminatedEvent : public ULogEvent
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
 	float total_recvd_bytes;
+
+ private:
+
+	char* core_file;
+
 };
 
 
