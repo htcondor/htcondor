@@ -374,6 +374,10 @@ readEvent (FILE *file)
 CheckpointedEvent::
 CheckpointedEvent()
 {
+#if !defined(WIN32)
+	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
+	run_remote_rusage = run_local_rusage;
+#endif
 	eventNumber = ULOG_CHECKPOINTED;
 }
 
@@ -410,7 +414,6 @@ readEvent (FILE *file)
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
 #endif
-
 	return 1;
 }
 		
@@ -424,6 +427,7 @@ JobEvictedEvent ()
 	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
 	run_remote_rusage = run_local_rusage;
 #endif
+	sent_bytes = recvd_bytes = 0.0;
 }
 
 JobEvictedEvent::
@@ -449,7 +453,12 @@ readEvent (FILE *file)
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
 #endif
-	
+
+	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) == 0)
+		return 1;				// backwards compatibility
+
 	return 1;
 }
 
@@ -475,6 +484,11 @@ writeEvent (FILE *file)
 		return 0;
 #endif
 
+	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
+				 recvd_bytes) < 0)
+		return 1;				// backwards compatibility
+	
 	return 1;
 }
 
@@ -526,6 +540,7 @@ JobTerminatedEvent ()
 	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
 	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
 #endif
+	sent_bytes = recvd_bytes = total_sent_bytes = total_recvd_bytes = 0.0;
 }
 
 JobTerminatedEvent::
@@ -569,7 +584,16 @@ writeEvent (FILE *file)
 		(fprintf (file, "  -  Total Local Usage\n") < 0))
 		return 0;
 #endif
-	
+
+	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
+				 recvd_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Total Bytes Sent By Job\n",
+				 total_sent_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Total Bytes Received By Job\n",
+				 total_recvd_bytes) < 0)
+		return 1;				// backwards compatibility
+
 	return 1;
 }
 
@@ -613,14 +637,23 @@ readEvent (FILE *file)
 
 #if !defined(WIN32)
 	// read in rusage values
-	if (readRusage(file,run_remote_rusage)  && fgets(buffer, 128, file) &&
-		readRusage(file,run_local_rusage)   && fgets(buffer, 128, file) &&
-		readRusage(file,total_remote_rusage)&& fgets(buffer, 128, file) &&
-		readRusage(file,total_local_rusage) && fgets(buffer, 128, file))
-		return 1;
+	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
+		!readRusage(file,run_local_rusage)   || !fgets(buffer, 128, file) ||
+		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
+		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
+		return 0;
 #endif
 	
-	return 0;
+	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Sent By Job\n",
+				&total_sent_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Received By Job\n",
+				&total_recvd_bytes) == 0)
+		return 1;				// backwards compatibility
+
+	return 1;
 }
 
 
@@ -663,6 +696,7 @@ ShadowExceptionEvent ()
 {
 	eventNumber = ULOG_SHADOW_EXCEPTION;
 	message[0] = '\0';
+	sent_bytes = recvd_bytes = 0.0;
 }
 
 ShadowExceptionEvent::
@@ -675,11 +709,18 @@ readEvent (FILE *file)
 {
 	if (fscanf (file, "Shadow exception!\n\t") == EOF)
 		return 0;
-	if (fgets(message, BUFSIZ, file) == NULL)
-		return 0;
+	if (fgets(message, BUFSIZ, file) == NULL) {
+		message[0] = '\0';
+		return 1;				// backwards compatibility
+	}
 
 	// remove '\n' from message
 	message[strlen(message)-1] = '\0';
+
+	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) == 0)
+		return 1;				// backwards compatibility
 
 	return 1;
 }
@@ -692,6 +733,11 @@ writeEvent (FILE *file)
 	if (fprintf (file, "%s\n", message) < 0)
 		return 0;
 
+	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
+				 recvd_bytes) < 0)
+		return 1;				// backwards compatibility
+	
 	return 1;
 }
 

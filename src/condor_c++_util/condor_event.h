@@ -447,6 +447,10 @@ class JobEvictedEvent : public ULogEvent
     /** Local  Usage for the run */ rusage  run_local_rusage;
     /** Remote Usage for the run */ rusage  run_remote_rusage;
 #endif
+	/// bytes sent by the job over network for the run
+	float sent_bytes;
+	/// bytes received by the job over the network for the run
+	float recvd_bytes;
 };
 
 
@@ -502,6 +506,15 @@ class JobTerminatedEvent : public ULogEvent
     /** Total Local  rusage      */    rusage  total_local_rusage;
     /** Total Remote rusage      */    rusage  total_remote_rusage;
 #endif
+	/// bytes sent by the job over network for the run
+	float sent_bytes;
+	/// bytes received by the job over the network for the run
+	float recvd_bytes;
+	/// total bytes sent by the job over network for the lifetime of the job
+	float total_sent_bytes;
+	/// total bytes received by the job over the network for the lifetime
+	/// of the job
+	float total_recvd_bytes;
 };
 
 
@@ -559,6 +572,10 @@ class ShadowExceptionEvent : public ULogEvent
 
 	/// exception message
 	char	message[BUFSIZ];
+	/// bytes sent by the job over network for the run
+	float sent_bytes;
+	/// bytes received by the job over the network for the run
+	float recvd_bytes;
 };
     
 #endif // __CONDOR_EVENT_H__
