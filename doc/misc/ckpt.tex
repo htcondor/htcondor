@@ -110,10 +110,12 @@ line.  The checkpointing library will print a message to let you know
 that checkpointing is enabled and to inform you of the default
 name for the checkpoint image. The message is of the form:
 
+\footnotesize
 \begin{verbatim}
 Condor: Notice: Will checkpoint to program_name.ckpt
 Condor: Notice: Remote system calls disabled.
 \end{verbatim}
+\normalsize
 
 To force the program to write a checkpoint image and stop, send it
 the SIGTSTP signal or press control-Z.  To force the program to 
@@ -160,9 +162,11 @@ behaviors in your program.  For example, if file \File{x}
 is opened for reading
 and writing, you will see:
 
+\footnotesize
 \begin{verbatim}
 Condor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
 \end{verbatim}
+\normalsize
 
 You may control how these messages are displayed with the
 \verb$-_condor_warning$ command-line argument.  This argument
