@@ -49,10 +49,8 @@ calc_idle_time( int & user_idle, int & console_idle )
 {
 	int tty_idle;
 	int now;
-#if defined(HPUX9) || defined(LINUX)
-	char devname[MAXPATHLEN];
-#endif
 #if defined(HPUX9)
+	char devname[MAXPATHLEN];
 	int i;
 #endif
 
@@ -69,8 +67,11 @@ calc_idle_time( int & user_idle, int & console_idle )
 	if (mouse_dev) {
 		tty_idle = tty_idle_time(mouse_dev);
 		user_idle = MIN(tty_idle, user_idle);
-		if (console_idle != -1)
+		if (console_idle != -1) {
 			console_idle = MIN(tty_idle, console_idle);
+		} else {
+			console_idle = tty_idle;
+		}
 	}
 /*
 ** On HP's "/dev/hil1" - "/dev/hil7" are mapped to input devices such as
@@ -94,17 +95,6 @@ calc_idle_time( int & user_idle, int & console_idle )
 	console_idle = MIN(tty_idle, console_idle); 
 
 	user_idle = MIN(console_idle, user_idle);
-#endif
-
-/*
- * Linux usally has a /dev/mouse linked to ttySx or psaux, etc.  Use it!
- *
- * stat() will follow the link to the apropriate device
- */
-#if defined(LINUX)
-	sprintf(devname, "mouse");
-	tty_idle = tty_idle_time(devname);
-	user_idle = MIN( tty_idle, user_idle );
 #endif
 
 	now = (int)time((time_t *)0);
