@@ -25,6 +25,7 @@
 
 class ClassAd;
 class Stream;
+class Resource;
 
 // Our utilities 
 void	cleanup_execute_dir(int pid);
@@ -37,8 +38,7 @@ int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose =
 		// Send given classads to the given sock.  If either pointer
 		// is NULL, the class ad is not sent.  
 int		send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
-
-
+Resource* stream_to_rip( Stream* );
 
 // Utils from the util_lib that aren't prototyped
 extern "C" {

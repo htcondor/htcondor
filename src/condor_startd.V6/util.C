@@ -238,3 +238,39 @@ send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA )
 	}
 	return TRUE;
 }
+
+
+/* 
+   This function reads of a capability string and an eom from the
+   given stream.  It looks up that capability in the resmgr to find
+   the corresponding Resource*.  If such a Resource is found, we
+   return the pointer to it, otherwise, we return NULL.
+*/
+Resource*
+stream_to_rip( Stream* stream )
+{
+	char* cap = NULL;
+	Resource* rip;
+
+	stream->decode();
+	if( ! stream->code(cap) ) {
+		dprintf( D_ALWAYS, "Can't read capability\n" );
+		free( cap );
+		return NULL;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( cap );
+		return NULL;
+	}
+	rip = resmgr->get_by_cur_cap( cap );
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with capability (%s)\n",
+				 cap );
+		free( cap );
+		return NULL;
+	}
+	free( cap );
+	return rip;
+}
