@@ -20,17 +20,17 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* Do not remove the following line! Required for SCCS. */
-static char sccsid[] = "@(#)virt_mem.c	4.3 9/18/91"; 
 
 #include "condor_common.h"
-
-#if defined(WIN32)
 
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
 */
+
+
+#if defined(WIN32)
+
 int
 calc_virt_memory()
 {
@@ -39,77 +39,9 @@ calc_virt_memory()
 	return (int)status.dwAvailPageFile/1024;
 }
 
-#else
+#elif defined(LINUX)
 
-#include "debug.h"
-#include "except.h"
-#include "condor_uid.h"
-
-/* Fix #3. work around problems with pclose if caller handle SIGCHLD. */
-int HasSigchldHandler = 0;
-
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
-
-/*
-*  Prototype for the pstat_swapspace function called everywhere within
-*  this file but nowhere outside.  -- Ajitk.
-*/
-
-int pstat_swapspace(void);
-
-
-/*
- *  executing_as_nonroot
- *
- *  Tells us whether root invoked it or someone else.
- */
-int     executing_as_nonroot = 1;
-
-/*
- *  pstat_path
- *
- *  Path to the pstat program.
- */
-#if !defined(Solaris)
-char    *pstat_path;
-#endif
-/*
- *  DEFAULT_SWAPSPACE
- *
- *  This constant is used when we can't get the available swap space through
- *  other means.  -- Ajitk
- */
-
-#define DEFAULT_SWAPSPACE       100000 /* ..dhaval 7/20 */
-
-
-#ifdef OSF1
-/*
-** Try to determine the swap space available on our own machine.  The answer
-** is in kilobytes.
-
-** Don't know how to do this one.  We just return the soft limit on data
-** space for any children of the calling process.
-*/
-close_kmem() {}
-calc_virt_memory()
-{
-	struct rlimit	lim;
-
-	if( getrlimit(RLIMIT_DATA,&lim) < 0 ) {
-		dprintf( D_ALWAYS, "getrlimit() failed - errno = %d", errno );
-		return -1;
-	}
-	return lim.rlim_cur / 1024;
-}
-#endif OSF1
-
-#ifdef LINUX
-/*
-** Try to determine the swap space available on our own machine.  The answer
-** is in kilobytes.
-*/
-close_kmem(){}
+/* On Linux, we just open /proc/meminfo and read the answer */
 calc_virt_memory()
 {
 	FILE	*proc;
@@ -119,8 +51,7 @@ calc_virt_memory()
 
 	proc = fopen("/proc/meminfo", "r");
 	if(!proc)	{
-		dprintf(D_ALWAYS, "Can't open /proc/meminfo to get free swap.");
-		return 0;
+		return -1;
 	}
 	
 	fscanf(proc, "%s %s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c, &tmp_c);
@@ -130,38 +61,34 @@ calc_virt_memory()
 
 	return free_swap / 1024;
 }
-#endif /*LINUX*/
 
-#ifdef HPUX
+#elif defined(HPUX)
+
 /* The HPUX code here grabs the amount of free swap in Kbyes.
  * This code doesn't require being root.  -Mike Yoder 7-16-98*/
-#include <pstat.h>
+#include <sys/pstat.h>
 
 int
 calc_virt_memory()
 {
-  int pagesize;
-  struct pst_static s;
-  struct pst_dynamic d;
+	int pagesize;
+	struct pst_static s;
+	struct pst_dynamic d;
   
-  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-    pagesize = s.page_size / 1024;   // it's right here....
-  }
-  else {
-    return -1;
-  }
-
-  if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
-    return d.psd_vm * pagesize;
-  }
-  else {
-    return -1;
-  }
+	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
+		pagesize = s.page_size / 1024;   /* it's right here.... */
+	} else {
+		return -1;
+	}
+  
+	if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
+		return d.psd_vm * pagesize;
+	} else {
+		return -1;
+	}	
 }
-#endif /* of the code for HPUX */
 
-
-#if defined(IRIX53)
+#elif defined(IRIX)
 
 #include <sys/stat.h>
 #include <sys/swap.h>
@@ -170,137 +97,25 @@ close_kmem() {}
 calc_virt_memory()
 {
 	int freeswap;
-
 	if( swapctl(SC_GETFREESWAP, &freeswap) == -1 ) {
-		return(-1);
+		return -1;
 	}
-
 	return( freeswap / 2 );
-
 }
 
-#endif /* of the code for IRIX 53 */
+#elif defined(OSF1)
 
-	
-#if !defined(LINUX) && !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1) && !defined(IRIX53)
-/*
-** Try to determine the swap space available on our own machine.  The answer
-** is in kilobytes.
-*/
-close_kmem() {}
+#include <net/route.h>
+#include <sys/mbuf.h>
+#include <sys/table.h>
+int
 calc_virt_memory()
 {
-	FILE			*fp, *popen();
-	char			buf[1024];
-	char			buf2[1024];
-	int				size = -1;
-	int				limit;
-	struct rlimit	lim;
-	int				read_error = 0;
-	int				configured, reserved;
-	priv_state		priv;
-
-/*
-** Have to be root to run pstat on some systems...
-*/
-	priv = set_root_priv();
-
-	buf[0] = '\0';
-#if defined(Solaris)
-    if( (fp=popen("/etc/swap -s","r")) == NULL ) {
-		set_priv(priv);
-		dprintf( D_FULLDEBUG, "popen(swap -s): errno = %d\n", errno );
+	struct tbl_swapinfo	swap;
+	if( table(TBL_SWAPINFO,-1,(char *)&swap,1,sizeof(swap)) < 0 ) {
 		return -1;
 	}
-#else
-	if( (fp=popen("/etc/pstat -s","r")) == NULL ) {
-		set_priv(priv);
-		dprintf( D_FULLDEBUG, "popen(pstat -s): errno = %d\n", errno );
-		return -1;
-	}
-#endif
-
-	set_priv(priv);
-
-#if defined(ULTRIX42) || defined(ULTRIX43)
-	(void)fgets( buf, sizeof(buf), fp );
-	(void)fgets( buf2, sizeof(buf2), fp );
-	configured = atoi( buf );
-	reserved = atoi( buf2 );
-	if( configured == 0 || reserved == 0 ) {
-		size = -1;
-	} else {
-		size = configured - reserved;
-	}
-#else
-	while( fgets(buf,sizeof(buf),fp) ) {
-		size = parse_pstat_line( buf );
-		if( size > 0 ) {
-			break;
-		}
-	}
-#endif
-	/*
-	 * Some programs which call this routine will have their own handler
-	 * for SIGCHLD.  In this case, don't cll pclose() because it calls 
-	 * wait() and will interfere with the other handler.
-	 * Fix #3 from U of Wisc. 
-	 */
-#if !defined(Solaris)
-	if ( HasSigchldHandler  ) {
-		fclose(fp);
-	}
-	else 
-#endif
-	{
-		pclose(fp);
-	}
-
-	if( size < 0 ) {
-		if( ferror(fp) ) {
-			dprintf( D_ALWAYS, "Error reading from pstat\n" );
-		} else {
-			dprintf( D_ALWAYS, "Can't parse pstat line \"%s\"\n", buf );
-		}
-		return DEFAULT_SWAPSPACE;
-	}
-
-	if( getrlimit(RLIMIT_DATA,&lim) < 0 ) {
-		dprintf( D_ALWAYS, "Can't do getrlimit()\n" );
-		return -1;
-	}
-	limit = lim.rlim_max / 1024;
-
-	if( limit < size ) {
-		return limit;
-	} else {
-		return size;
-	}
+	return (swap.free * NBPG) / 1024;
 }
-#endif
-
-#if  defined(Solaris)
-int parse_pstat_line( str )
-char    str[200]; /* large enough */
-{
-        char    *ptr,temp[200];
-        int count=0;
-
-ptr=str;
-while(*ptr!='\0') {ptr++;}
-
-while(*ptr!='k') {ptr--; }
-while(*ptr!=' ') {ptr--; }
-
-while(*ptr!='k'){
-temp[count++]=*ptr;
-ptr++;
-}
-
-count=atoi(temp);
-/*printf("Returning virtual memory size %d \n",count);*/
-return count;
-}
-#endif
 
 #endif /* !defined(WIN32) */
