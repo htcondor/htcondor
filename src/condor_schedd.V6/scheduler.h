@@ -72,6 +72,8 @@ class Scheduler : public Service
 	// maintainence
 	void			timeout(); 
 	void			sighup_handler();
+	void			sigterm_handler();
+	void			sigquit_handler();
 	void			sigint_handler();
 	void			SetClassAd(ClassAd*);
 	void			SetSockName(int);
@@ -132,6 +134,7 @@ class Scheduler : public Service
 	char*			Owners[1024];
 	int				N_Owners;
 	time_t			LastTimeout;
+	int				ExitWhenDone;  // Flag set for graceful shutdown
 	
 	// parameters controling updown algorithm
 	int				ScheddScalingFactor;
