@@ -141,7 +141,7 @@ You can install Condor as any user,
 however there are both serious security and performance consequences.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
 in the manual for the details and ramifications of
-on running Condor as a Unix user other than root.
+running Condor as a Unix user other than root.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Who will administer Condor?}
@@ -415,7 +415,7 @@ located on a shared file system, if possible.
      either put them in a well known location (such as
      \File{/usr/local/condor/bin}) which you have Condor users add to
      their \Env{PATH} environment variable, or copy those files
-     directly into a well known place already in user's PATHs (such as
+     directly into a well known place already in the user's PATHs (such as
      \File{/usr/local/bin}).  With the above examples, you could also
      leave the binaries in \File{/usr/local/condor/bin} and put in
      soft links from \File{/usr/local/bin} to point to each program.
@@ -713,7 +713,7 @@ what each step is for, and suggests how to answer the questions
      own domain.
 
      If you have a common \Macro{UID\_DOMAIN}, \condor{install} will
-     ask you if have a \Term{soft UID domain}, meaning that although
+     ask if you have a \Term{soft UID domain}, meaning that although
      you have unique UIDs, not every machine in your pool has all the
      users in their individual password files.  Please see the
      description of \Macro{SOFT\_UID\_DOMAIN} in
@@ -1036,3 +1036,4 @@ some user other than root, see section~\ref{sec:Non-Root} on
 page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
+
