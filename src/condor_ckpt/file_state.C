@@ -414,13 +414,9 @@ CondorFile * CondorFileTable::create_url_chain( char *url )
 		if(f) return new CondorFileAgent( f );
 		else return 0;
 	} else if( !strcmp( method, "compress" ) ) {
-#ifdef COMPRESS_FILES
 		f = create_url_chain( rest );
 		if(f) return new CondorFileCompress( f );
 		else return 0;
-#else /* COMPRESS_FILES */
-		_condor_error_fatal("File compression is not supported on this platform.");
-#endif /* COMPRESS_FILES */
 	} else {
 		return 0;
 	}

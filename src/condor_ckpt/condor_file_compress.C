@@ -1,6 +1,4 @@
 
-#ifdef COMPRESS_FILES
-
 #include "condor_file_compress.h"
 #include "condor_error.h"
 
@@ -475,5 +473,3 @@ int CondorFileCompress::is_file_local()
 {
 	return original->is_file_local();
 }
-
-#endif /* COMPRESS_FILES */

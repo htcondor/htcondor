@@ -1,8 +1,6 @@
 #ifndef CONDOR_FILE_COMPRESS_H
 #define CONDOR_FILE_COMPRESS_H
 
-#ifdef COMPRESS_FILES
-
 #include "condor_file.h"
 #include "condor_compress.h"
 
@@ -85,7 +83,5 @@ private:
 	// Accumulating checksum for writes
 	int crc;
 };
-
-#endif /* COMPRESS_FILES */
 
 #endif /* CONDOR_FILE_COMPRESS_H */
