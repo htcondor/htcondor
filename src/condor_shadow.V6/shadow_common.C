@@ -203,11 +203,10 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
 
         fprintf(mailer, "Your condor job\n" );
 #if defined(NEW_PROC)
-#if defined(Solaris)
-        fprintf(mailer, "\t%s\n", proc->cmd[0] );
-#else
-        fprintf(mailer, "\t%s %s\n", proc->cmd[0], proc->args[0] );
-#endif
+		if ( proc->args[0] )
+        	fprintf(mailer, "\t%s %s\n", proc->cmd[0], proc->args[0] );
+		else
+        	fprintf(mailer, "\t%s\n", proc->cmd[0] );
 #else
         fprintf(mailer, "\t%s %s\n", proc->cmd, proc->args );
 #endif
