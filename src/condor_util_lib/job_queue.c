@@ -287,6 +287,7 @@ int		(*func)();
 	PROC	proc;
 	int		proc_id;
 
+	bzero( (char *)&proc, sizeof(PROC) );
 
 	proc.id.cluster = cluster;
 	for( proc_id = 0; ;proc_id++) {
