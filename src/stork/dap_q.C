@@ -10,32 +10,46 @@
 #endif
 #include "classad_distribution.h"
 
+#define USAGE \
+"[stork_server]\n\
+stork_server\t\t\tstork server (deprecated)"
+
 int main(int argc, char **argv)
 {
-  char * hostname = NULL;
+	struct stork_global_opts global_opts;
+	config();	// read config file
 
-  //check number of arguments
-  if (argc < 2){
-    fprintf(stderr, "==============================================================\n");
-    fprintf(stderr, "USAGE: %s <host_name>\n", argv[0]);
-    fprintf(stderr, "==============================================================\n");
-    exit( 1 );
-  }
+	// Parse out stork global options.
+	stork_parse_global_opts(argc, argv, USAGE, &global_opts, true);
 
-  hostname = strdup (argv[1]);
+	//check number of arguments
+	switch (argc) {
+		case 1:
+			// do nothing
+			break;
+		case 2:
+			// heritage positional parameter to specify remote server.
+			if (argv[1][0] == '-') {
+				// an invalid option argument
+				fprintf(stderr, "unknown option: '%s'\n", argv[1]);
+				stork_print_usage(stderr, argv[0], USAGE, true);
+				exit(1);
+			}
+			global_opts.server = argv[1];
+			break;
+		default:
+			fprintf(stderr, "too many arguments\n");
+			stork_print_usage(stderr, argv[0], USAGE, true);
+			exit(1);
+	}
 
 
-  config();
-
-  char * stork_host = get_stork_sinful_string (hostname);
-  printf ("Sending request to server %s\n", stork_host);
-  
   char * error_reason = NULL;
   int result_size = 0;
   classad::ClassAd ** result = NULL;
 
   int rc =
-	  stork_list ( stork_host,
+	  stork_list ( global_opts.server,
 				 result_size,
 				   result,
 				   error_reason);

@@ -13,6 +13,13 @@
 #endif
 #include "classad_distribution.h"
 
+#define USAGE \
+"[stork_server] submit_file\n\
+stork_server\t\t\tspecify explicit stork server (deprecated)\n\
+submit_file\t\t\tstork submit file\n\
+\t-lognotes \"notes\"\tadd lognote to submit file before processing\n\
+\t-stdin\t\t\tread submission from stdin instead of a file"
+
 int check_dap_format(classad::ClassAd *currentAd)
 {
   char dap_type[MAXSTR];
@@ -56,28 +63,18 @@ int check_dap_format(classad::ClassAd *currentAd)
   return 1;
 }
 //============================================================================
-void Usage(char *argv0)
-{
-  fprintf(stderr, "USAGE: %s [options] <host_name|agent> <submit_file>\n"
-	"Valid options:\n"
-	"\t-help\t\t\tThis screeen\n"
-	"\t-debug\t\t\tDisplay debugging info to console\n"
-	"\t-lognotes \"notes\"\tadd lognote to submit file before processing\n"
-	"\t-stdin\t\t\tread submission from stdin instead of a file\n"
-	,argv0);
-  exit( 1 );
-}
-
 void MissingArgument(char *argv0,char *arg)
 {
   fprintf(stderr,"Missing argument: %s\n",arg);
-  Usage(argv0);  // this function calls exit()
+  stork_print_usage(stderr, argv0, USAGE, true);
+  exit(1);
 }
 
 void IllegalOption(char *argv0,char *arg)
 {
   fprintf(stderr,"Illegal option: %s\n",arg);
-  Usage(argv0);  // this function calls exit()
+  stork_print_usage(stderr, argv0, USAGE, true);
+  exit(1);
 }
 
 /* ============================================================================
@@ -91,28 +88,29 @@ int main(int argc, char **argv)
   classad::ClassAd *currentAd = NULL;
   int leftparan = 0;
   FILE *adfile;
-  char fname[MAXSTR], hostname[MAXSTR];
+  char fname[_POSIX_PATH_MAX];
   char *lognotes = NULL;
   int read_from_stdin = 0;
+  struct stork_global_opts global_opts;
+
+  config();	// read config file
+
+  // Parse out stork global options.
+  stork_parse_global_opts(argc, argv, USAGE, &global_opts, true);
 
   for(i=1;i<argc;i++) {
     char *arg = argv[i];
     if(arg[0] != '-') {
       break; //this must be a positional argument
     }
-    else if(!strcmp(arg,"-lognotes")) {
+#define OPT_LOGNOTES	"-l"	// -lognotes
+    else if(!strncmp(arg,OPT_LOGNOTES,strlen(OPT_LOGNOTES) ) ) {
       if(i+1 >= argc) MissingArgument(argv[0],arg);
       lognotes = argv[++i];
     }
-    else if(!strcmp(arg,"-stdin")) {
+#define OPT_STDIN	"-s"	// -stdin
+    else if(!strncmp(arg,OPT_STDIN,strlen(OPT_STDIN) ) ) {
       read_from_stdin = 1;
-    }
-    else if(!strcmp(arg,"-debug")) {
-      Termlog = 1;
-      dprintf_config ("TOOL", 2 );
-    }
-    else if(!strcmp(arg,"-h")) {
-      Usage(argv[0]);  // this function calls exit()
     }
     else if(!strcmp(arg,"--")) {
       //This causes the following arguments to be positional, even if they
@@ -127,50 +125,37 @@ int main(int argc, char **argv)
     }
   }
 
-  config();
 
-  if(i >= argc) MissingArgument(argv[0],"<host name>");
-  strcpy(hostname,argv[i++]);
-
-  
-  char * stork_host = get_stork_sinful_string (hostname);
-  printf ("Sending request to server %s\n", stork_host);
-
-
-  if(read_from_stdin) {
-    strcpy(fname, "stdin");
+	int num_positional_args = argc - i;
+	switch (num_positional_args) {
+		case 0:
+			if(! read_from_stdin) {
+			  stork_print_usage(stderr, argv[0], USAGE, true);
+			  exit(1);
+			}
+		case 1:
+			if(read_from_stdin) {
+				strcpy(fname, "stdin");
+				global_opts.server = argv[i];
+			} else {
+				strcpy(fname, argv[i]);
+			}
+		  break;
+	  case 2:
+			global_opts.server = argv[i++];
+			strcpy(fname, argv[i]);
+		  break;
+	  default:
+		  stork_print_usage(stderr, argv[0], USAGE, true);
+		  exit(1);
   }
-  else {
-    if(i >= argc) MissingArgument(argv[0],"<submit_file>");
-    strcpy(fname, argv[i++]);
-  }
-
-  //for backwards compatibility, read a trailing -lognotes option:
-  for(;i<argc;i++) {
-    if (!strcmp("-lognotes", argv[i])) {
-      i++;
-      if (argc <= i) {
-	fprintf(stderr, "No line to add to the submit file specified!\n" );
-	Usage(argv[0]);
-      }
-      fprintf(stdout, "LogNotes: %s\n",argv[i]);
-      
-      lognotes = (char*) malloc(MAXSTR * sizeof(char));
-      snprintf(lognotes, MAXSTR, "\"%s\"",argv[i]);
-    }
-    else{
-      Usage(argv[0]);
-    }
-    
-  }
-  
 
   //open the submit file
   if(read_from_stdin) adfile = stdin;
   else {
     adfile = fopen(fname,"r");
     if (adfile == NULL) {
-      fprintf(stderr, "Cannot open file:%s\n",fname);
+      fprintf(stderr, "Cannot open submit file %s: %s\n",fname, strerror(errno) );
       exit(1);
     }
   }
@@ -262,7 +247,7 @@ int main(int argc, char **argv)
 	char * job_id = NULL;
 	char * error_reason = NULL;
 	int rc = stork_submit (currentAd,
-						 stork_host, 
+						 global_opts.server,
 						 proxy, 
 						 proxy_size, 
 						 job_id,

@@ -99,4 +99,62 @@ given a host name. This string is what needs to be passed to dap_* commands.
 char * 
 get_stork_sinful_string (const char * hostname);
 
+/** stork_version(void)
+	Print Stork version information.
+*/
+
+void
+stork_version(void);
+
+/** stork_print_usage()
+	Print Stork usage.
+    @param stream - in-parameter specifying output stream
+    @param name - in-parameter specifying program name.  Leading
+		directory path is stripped off, if present.
+    @param usage - in-parameter usage text, which is printed to the
+		output stream.  Global options are automatically appended.
+    @param remote_connect - in-parameter, true if tool connects to a
+		remote stork server.
+*/
+
+void
+stork_print_usage(
+	FILE *stream,
+	const char *argv0,
+	const char *usage,
+	bool remote_connect=false
+);
+
+// stork_parse_global_opts() parses global options here.
+struct stork_global_opts {
+	const char *server;
+	// add more parsed stork global options here
+};
+
+/** stork_parse_global_opts()
+	Parse and handle stork tool global options.  All global options
+	are removed from the argument list before this function returns.
+    @param argc - an in-out-parameter indicating argument count,
+		including program name.  argc will be reduced by number of
+		global options processed.
+    @param argv - an in-out-parameter indicating argument vector,
+		including program name.  argv will be reduced by number of
+		global options processed.
+    @param usage - in-parameter usage text, which is printed to the
+		output stream.  Global options are automatically appended.
+    @param opts - in-parameter, pointing to output parsed options
+		structure
+    @param remote_connect - in-parameter, true if tool connects to a
+		remote stork server.  Defaults to false.
+*/
+
+void
+stork_parse_global_opts(
+	int & argc,
+	char *argv[],
+	const char *usage,
+	struct stork_global_opts *parsed,
+	bool remote_connect=false
+);
+
 #endif

@@ -8,6 +8,8 @@
 #include "daemon_types.h"
 #include "daemon.h"
 #include "dap_server_interface.h"
+#include "condor_version.h"
+#include "condor_debug.h"
 
 char * 
 get_stork_sinful_string (const char * hostname) {
@@ -41,17 +43,102 @@ get_stork_sinful_string (const char * hostname) {
   return stork_host;
 }
 
+void
+stork_version()
+{
+    printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+	return;
+}
+
+void
+stork_print_usage(
+	FILE *stream,
+	const char *argv0,
+	const char *usage,
+	bool remote_connect
+)
+{
+	char *my_name = NULL;
+	my_name = strrchr( argv0, DIR_DELIM_CHAR );
+	if( !my_name ) {
+		my_name = (char *)argv0;
+	} else {
+		my_name++;
+	}
+	fprintf( stream, "usage: %s  [option]... %s\n", my_name, usage);
+	fprintf( stream, "\t-help\t\t\tprint this help information\n");
+	fprintf( stream, "\t-version\t\tprint version information\n");
+	if (remote_connect) {
+	fprintf( stream, "\t-debug\t\t\tprint debugging information to console\n");
+	fprintf( stream, "\t-name stork_server\tstork server\n");
+	}
+	return;
+}
+
+void
+stork_parse_global_opts(
+	int  & argc,
+	char *argv[],
+	const char *usage,
+	struct stork_global_opts *parsed,
+	bool remote_connect
+)
+{
+	const char *argv0 = argv[0];
+	int local_argc = 0;	// count of args that are not global
+	memset(parsed, 0, sizeof(*parsed) );	// clear parsed opts.
+	char **tmp1 = argv;
+
+	for( tmp1++; *tmp1; tmp1++ ) {
+		if ( (*tmp1)[0] != '-' ) {
+			// If it doesn't start with '-', skip it
+			argv[ ++local_argc ] = *tmp1;	// retain this argument
+			continue;
+        }
+		switch( (*tmp1)[1] ) {
+			case 'h':
+				// -help
+				stork_print_usage(stdout, argv0, usage, remote_connect);
+				exit(0);
+			case 'v':
+				stork_version();
+				exit(0);
+			case 'd':
+				// -debug
+				Termlog = 1;
+				dprintf_config ("TOOL", 2 );
+				argc--;	// Account for one global arg processed
+				break;
+			case 'n':
+				if (remote_connect) {
+					// -name remoteServerName
+					argc--;	// Account for one global arg processed
+					tmp1++;
+					if ( tmp1 && *tmp1 ) {
+						parsed->server = *tmp1;
+						argc--;	// Account for one global arg processed
+					} else {
+						fprintf(stderr, "-name requires another argument\n");
+						stork_print_usage(stderr,argv0,usage,remote_connect);
+						exit(1);
+					}
+				} else {
+					argv[ ++local_argc ] = *tmp1;	// retain this argument
+				}
+				break;
+			default:
+				argv[ ++local_argc ] = *tmp1;	// retain this argument
+				break;
+		}
+	}
+	argv[ ++local_argc ] = NULL;
+}
 
 Sock *
 start_stork_command_and_authenticate (
 					 const char * stork_host,
 					 const int command,
 					 MyString & error_reason) {
-
-	if (stork_host == NULL) {
-		error_reason.sprintf ("Invalid host %s", stork_host);
-		return NULL;
-	}
 
 	Daemon my_stork(DT_STORK, stork_host, NULL);
 
