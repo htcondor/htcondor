@@ -2,193 +2,337 @@
 \index{Condor!Frequently Asked Questions|(}
 \index{FAQ|(}
 \index{Frequently Asked Questions|(}
-This section is the where you can find quick answers to some commonly
-asked questions that are asked about Condor.
-\index{Condor!FAQ|)}
-\index{Condor!Frequently Asked Questions|)}
-\index{FAQ|)}
-\index{Frequently Asked Questions|)}
 
-\section{FAQ: Obtaining Condor Distributions}
+This is where you can find quick answers to some commonly asked
+questions about Condor.
 
-\subsection{\index{Condor!Downloading|(}Where can I download Condor?}
-Condor can be downloaded from \Url{http://www.cs.wisc.edu/condor/downloads/} or from
-\Url{http://www.bo.infn.it/condor-mirror/downloads/}.
-\index{Condor!Downloading|)}
+\section{Obtaining \& Installing Condor}
+\index{Condor!downloading|(}
+\index{Condor!distribution|(}
+\index{Condor!getting|(}
+\index{Condor!binaries|(}
 
-\subsection{If I try to download Condor, it sends me back to the downloads page!}
+\subsection{Where can I download Condor?}
 
-If you are try to download Condor with a "junk-busting" web-proxy, try disabling it.
-We follow the path you take through our download menus, and sometimes these proxies strip off necessary information.
+Condor can be downloaded from
+\Url{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
+USA) or \Url{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
+site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy).
 
-\subsection{\index{Condor!Mirror Sites|(}Do you have any web site mirrors?}
+\subsection{When I click to download Condor, it sends me back to the downloads page!}
 
-Yes.  We have our main site at \Url{http://www.cs.wisc.edu/condor/}
-which is located in Madison, Wisconsin, USA.  We also operate a mirror
-site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy
-at \Url{http://www.bo.infn.it/condor-mirror/}.  Currently we have the 
-binary distributions of Condor and the Condor Manual available on the
-mirror site.
-
-\index{Condor!Mirror Sites|)}
+If you are trying to download Condor through a web proxy, try
+disabling it.
+Our web site uses the ``referring page'' as you navigate through our
+download menus in order to give you the right version of Condor, but
+sometimes proxies block this information from reaching our web site.
 
 \subsection{What platforms do you support?}
 
-See Section~\ref{sec:Availability}, on page~\pageref{sec:Availability}.
+See Section~\ref{sec:Availability}, on
+page~\pageref{sec:Availability}.
 
-\subsection{\index{Condor!source code|(}Do you distribute source code?}
+\index{Condor!binaries|)}
 
-At this time we do \Bold{not} distribute source code.
-Even so, if you need the source code, email us at \Email{condor-admin@cs.wisc.edu} and tell us why.
+\subsection{Do you distribute source code?}
+\index{Condor!source code|(}
+
+At this time we do \Bold{not} distribute source code publicly, but
+instead consider requests on a case-by-case basis.
+If you need the source code, please email us at
+\Email{condor-admin@cs.wisc.edu} explaining why, and we'll get back to
+you.
+
 \index{Condor!source code|)}
 
-\subsection{\index{Personal Condor|(}What is Personal Condor?}
+\subsection{What is ``Personal Condor''?}
+\index{Condor!Personal|(}
+\index{Personal Condor|(}
 
-Personal Condor is a term used for a specific style of installing Condor.
-A Personal Condor is a one-machine pool.  When you use flocking to bind
-them together, its simular to a normal Condor pool, except that you are restricted
-to "standard" jobs, and you are running additional \condor{collector} and \condor{negotiator} 
-daemons.
+Personal Condor is a term used to describe a specific style of Condor
+installation suited for individual users who do not have their own
+pool of machines, but want to submit Condor jobs to run elsewhere.
+
+A Personal Condor is essentially a one-machine, self-contained Condor
+pool which can use ``flocking'' to access resources in other Condor
+pools.
+See Section~\ref{sec:Flocking}, on page~\pageref{sec:Flocking} for
+more information on flocking.
+
 \index{Personal Condor|)}
+\index{Condor!Personal|)}
+\index{Condor!downloading|)}
+\index{Condor!distribution|)}
+\index{Condor!getting|)}
 
-\subsection{Do you support submitting to Globus?}
-
-Yes, we do.  At this time, however, we have not released it (yet!)
-
-
-
-\section{FAQ: Setting up Condor}
-
+\section{Setting up Condor}
 
 \subsection{How do I get more than one job to run on my SMP machine?}
 
-Starting with Condor version 6.1, Condor will recognize a SMP machine and advertise each CPU of the
-machine separately.  For more details, see section~\ref{sec:Configuring-SMP} on page~\pageref{sec:Configuring-SMP}.
+Condor will automatically recognize a SMP machine and advertise each
+CPU of the machine separately.
+For more details, see section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP}.
 
-Support for SMP machines in Condor Version 6.0 is available as a contrib module from the download site.
+\subsection{How do I set up my machines so that only certain users's
+jobs will run on them?}
 
-\subsection{How do I configure Condor to only run my jobs at certain times of the day?}
+Restrictions on what jobs will run on a given resource can be easily
+specified in the resource's Requirements statement.
 
-\Todo
+To specify that a given machine should only run certain users's jobs,
+for example, you could add the following Requirements entry to the
+machine's Condor configuration file:
 
-\subsection{How do I configure my pool to run vanilla jobs or to use a "clipped" port of Condor?}
+\begin{verbatim}Requirements = (RemoteUser == "userfoo@baz.edu" || RemoteUser == "userbar@baz.edu" )\end{verbatim}
 
-\Todo
+To configure multiple machines to do so, simply create a common
+configuration file containing this requirement for them to share.
 
-\section{FAQ: Running Condor Jobs}
+\subsection{How do I configure Condor to run my jobs only on machines
+that have the right packages installed?}
+\index{running a job!on only certain machines|(}
 
+This is a two-step process.
+First, you need to tell the machines to report that they have special
+software instaled, and second, you need to tell the jobs to require
+machines that have that software.
 
-\subsection{I'm at the University of Wisconsin--Madison, Computer Science department, and I am having problems!}
+To tell the machines to report the presence of special software, first
+add a parameter to their configuration files like so:
 
-First, please read the web page \Url{http://www.cs.wisc.edu/condor/uwcs/} before proceeding!
-Specifically, your home directory is in AFS, which causes Condor some specific problems.
-The above URL will contain the way to fix things here at UWCS.
+\begin{verbatim}HAS_MY_SOFTWARE = True\end{verbatim}
 
-\subsection{I'm getting a lot of email from Condor, can I just delete all of it?}
+And then, if there are already STARTD\_EXPRS defined in that file, add
+HAS\_MY\_SOFTWARE to them, or, if not, add the line:
 
-Generally you shouldn't ignore all of the mail Condor sends.  Often,
-Condor will be sending important email regarding errors that your
-jobs are reporting.  To reduce the amount email that a job will send
-you, see the notification parameter under the the \condor{q} man page
-on page~\pageref{man-condor-submit-notification} of this manual.
+\begin{verbatim}STARTD_EXPRS = HAS_MY_SOFTWARE\end{verbatim}
 
-Most of the time if you want to reduce the amount of email you receive
-from Condor, set notification = error.  If notification is set to
-error, then you will only receive email from Condor if it is encountering
-errors.
+\Note For these changes to take effect, each \Condor{startd} you update
+needs to be reconfigured with \Condor{reconfig} -startd.
 
-\subsection{Why do my vanilla jobs only run on the machine where I submitted them from?}
-Consider the following:
+Next, to tell your jobs to only run on machines that have this
+software, add a requirements statement to their submit files like so:
+
+\begin{verbatim}Requirements = (HAS_MY_SOFTWARE =?= True)\end{verbatim}
+
+\Note Be sure to use =?= instead of == so that if a machine doesn't have
+the HAS\_MY\_SOFTWARE parameter defined, the job's Requirements
+expression will not evaluate to ``undefined'', preventing it from
+running anywhere!
+
+\index{running a job!on only certain machines|)}
+
+\section{Running Condor Jobs}
+
+\subsection{I'm at the University of Wisconsin-Madison Computer
+Science Dept., and I am having problems!}
+
+Please see the web page \Url{http://www.cs.wisc.edu/condor/uwcs}.
+As
+it explains, your home directory is in AFS, which by default has
+access control restrictions which can prevent Condor jobs from running
+properly.
+The above URL will explain how to solve the problem.
+
+\subsection{I'm getting a lot of email from Condor.  Can I just delete it all?}
+
+Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
+but you can reduce the amount you get by telling Condor that you don't
+want to be notified every time a job successfully completes, only when
+a job experiences an error.
+To do this, include a line in your submit file like the following:
+
+\begin{verbatim}Notification = Error\end{verbatim}
+
+See the Notification parameter in the \Condor{q} man page on
+page~\pageref{man-condor-submit-notification} of this manual for more
+information.
+
+\subsection{Why will my vanilla jobs only run on the machine where I
+submitted them from?}
+
+Check the following:
 \begin {enumerate}
-\item{Did you set the special requirements expressions for
-your vanilla jobs?}
 
-See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+\item{Did you submit the job from a local filesystem that other
+computers can't access?}
 
-\item{Did you submit the job from a shared file-system?}
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
+page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
 
-See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+\item{Did you set a special requirements expression for 
+vanilla jobs that's preventing them from running but not other jobs?}
 
-\item{Is Condor running as root?}
+See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
+page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
+
+\item{Is Condor running as a non-root user?}
 
 See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
 
-\subsection{Why won't my jobs run?}
+\subsection{My job starts but exits right away with signal 9.}
 
-Common problems that are often reported to us are that no jobs are running, or
-something like:
+\index{job!exiting!signal 9 \(Unix\)|(}
+
+This can occur when the machine your job is running on is missing a
+shared library required by your program.
+One solution is to install the shared library on all machines the job
+may execute on.
+Another, easier, solution is to try to re-link your program statically
+so it contains all the routines it needs.
+
+\index{job!exiting!signal 9 \(Unix\)|)}
+
+\subsection{Why aren't any or all of my jobs running?}
+
+Problems like the following are often reported to us:
 
 \begin{verbatim}
-> I have submitted 100 jobs to my pool, and only 18 appear to be running,
-> and there are plenty of resources available.  What should I do to
-> investigate the reason why this happens?
+> I have submitted 100 jobs to my pool, and only 18 appear to be
+> running, but there are plenty of machines available.
+What should I
+> do to investigate the reason why this happens?
 \end{verbatim}
 
-Start by using the following steps to solve this problem:
+Start by following these steps to understand the problem:
 
 \begin{enumerate}
-\item Try \condor{q} -analyze 
 
-\item Look at the User Log file (whatever you specify "log = XXX" in the
-submit file).  See if the jobs are starting to run and then exit right
-away, or if they never even start to run.
+\item Run \Condor{q} -analyze and see what it says.
+
+\item Look at the User Log file (whatever you specified as "log = XXX"
+in the submit file).
+
+See if the jobs are starting to run but then exiting right away, or if
+they never even start.
 
 \item Look at the SchedLog on the submit machine after it negotiates
-for this user.  Often if a user doesn't have enough priority to get
-more machines, and if so, the SchedLog will have a message with something
-like "lost priority, no more jobs".
+for this user.
+If a user doesn't have enough priority to get more machines the
+SchedLog will contain a message like "lost priority, no more jobs".
 
-\item If the jobs are getting matched, they might be dying right away due
-to permission problems or something like that.  Check the ShadowLog on
-the submit machine for warnings or errors.
+\item If jobs are successfully being matched with machines, they
+still might be dying when they try to execute due to file permission
+problems or the like.
+Check the ShadowLog on the submit machine for warnings or errors.
 
 \item Look at the NegotiatorLog during the negotiation for the user.
-Look for similar messages about priority, "no more machines", or
-something like this.  
+Look for messages about priority, "no more machines", or similar.
 
 \end{enumerate}
 
-\section{FAQ: Troubleshooting}
+\section{Condor on Windows NT / Windows 2000}
 
+\subsection{When I run \Condor{status} I get a communication error, or the
+Condor daemon log files report a failure to bind.}
+
+Condor uses the first network interface it sees on your machine.
+This problem usually means you have an extra, inactive network
+interface (such as a RAS dialup interface) defined before to your
+regular network interface.
+
+To solve this problem, either change the order of your network
+interfaces in the Control Panel, or explicity set which network
+interface Condor should use by adding the following parameter to your
+Condor config file:
+
+\begin{verbatim}NETWORK_INTERFACE = ip-address\end{verbatim}
+
+Where ``ip-address'' is the IP address of the interface you wish
+Condor to use.
+
+\subsection{My job starts but exits right away with status 128.}
+\index{job!exiting!status 128 \(NT\)|(}
+
+This can occur when the machine your job is running on is missing a
+DLL (Dynamically Linked Library) required by your program.
+The solution is to find the DLL file the program needs and put it in
+the TRANSFER\_INPUT\_FILES list in the job's submit file.
+
+To find out what DLLs your program depends on, right-click the program
+in Explorer, choose Quickview, and look under ``Import List''.
+
+\index{job!exiting!status 128 \(NT\)|)}
+
+\section{Troubleshooting}
 
 \subsection{What happens if the central manager crashes?} 
+\index{crashes|(}
+\index{recovery from crashes|(}
 
-If the central manager crashes, all running jobs will continue to
-run. All queued jobs will simply remain in the queues until the central
-manager comes up and begins matchmaking again.  Nothing special needs
-to be done when the central manager is brought back online. 
+If the central manager crashes, jobs that are already running will
+continue to run unaffected.
+Queued jobs will remain in the queue unharmed, but can not begin
+running until the central manager is restarted and begins matchmaking
+again.
+Nothing special needs to be done after the central manager is brought
+back online.
 
+\index{crashes|)}
+\index{recovery from crashes|)}
 
-\section{FAQ: Other questions}
+\section{Other questions}
 
+\subsection{Is Condor Y2K-compliant?}
+\index{Condor!Y2K|(}
+\index{Y2K|(}
 
-\subsection{\index{Condor!Y2K compliance}Is Condor Y2K compliant?}
+Yes.
+Internally, Condor uses the standard UNIX time representation (the
+number of seconds since 1/1/1970) and is not affected by the Y2K bug.
+In addition, the Condor tools now correctly display the four-digit
+year in their output.
 
-Internally:  yes.
+The output of Condor tools from some older versions (pre-6.2) may
+display years incorrectly, but their internal representation is still
+correct and their display bugs do not affect the operation of Condor.
 
-Externally:  Apparently not.  We've found that sometimes Condor's
-date-formatting mechanism prints human-readable years as "100" instead
-of "00" as in \Condor{userprio -usage}.  Since this is only at the
-stage where data is printed to the screen, however, Condor is still
-internally Y2K compliant.  We use the standard UNIX time formatting
-scheme -- the number of seconds since 1/1/1970.
+\index{Condor!Y2K|)}
+\index{Y2K|)}
 
-\subsection{\index{Condor!mailing list|(}Is there a Condor mailing list?}
+\subsection{Is there a Condor mailing-list?}
+\index{Condor!mailing-list|(}
+\index{Condor!new versions, notification of|(}
 
-Yes.  We run an extremely low traffic mailing list that announces new versions of Condor.
-To subscribe email
-\Email{majordomo@cs.wisc.edu}
-with the message body of
-\begin{verbatim}
-subscribe condor-world
-\end{verbatim}
+Yes.
+We run an extremely low traffic mailing list solely to announce new
+versions of Condor.
+To subscribe, email \Email{majordomo@cs.wisc.edu} with a message body
+of:
+
+\begin{verbatim}subscribe condor-world\end{verbatim}
+
 \index{Condor!mailing list|)}
+\index{Condor!new versions, notification of|)}
+
+\subsection{Do you support Globus?}
+\index{Globus|(}
+
+Yes, we support a variety of interactions with Globus software,
+including running Condor jobs on Globus-managed resources.
+At this time, however, we have not released this software publicly.
+If you are interested in using Condor with Globus, please send email
+to \Email{condor-admin@cs.wisc.edu} and we can provide you with more
+information.
+
+\index{Globus|)}
 
 \subsection{My question isn't in the FAQ!}
 
-If you have any questions that are not listed here in the FAQ, try
-looking through the rest of the manual.
-If you still can't find the answer to your question, feel free to
-contact us at \Email{condor-admin@cs.wisc.edu}.
+If you have any questions that are not listed in this FAQ, try looking
+through the rest of the manual.
+If you still can't find an answer, feel free to contact us at
+\Email{condor-admin@cs.wisc.edu}.
+
+Note that Condor's free email support is provided on a best-effort
+basis, and at times we may not be able to provide a timely response.
+If guaranteed support is important to you, please inquire about our
+paid support services.
+
+\index{Condor!FAQ|)}
+\index{Condor!Frequently Asked Questions|)}
+\index{FAQ|)}
+\index{Frequently Asked Questions|)}
