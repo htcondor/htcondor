@@ -464,12 +464,14 @@ XCOMM End translation of func(strip_copy_target)
 ** Stripped target is released by recursive copying
 */
 #ifndef strip_recursive_copy_target
-#define strip_recursive_copy_target( src, dest )	@@\
-stripped:: $(STRIP_DIR)/##dest	     			@@\
-							@@\
-$(STRIP_DIR)/##dest##: src				@@\
-	/bin/rm -rf $(STRIP_DIR)/##dest			@@\
-	$(CP_CMD) src $(STRIP_DIR)/##dest
+#define strip_recursive_copy_target(src,dest)			@@\
+XCOMM Begin translation of func(strip_recursive_copy_target)	@@\
+stripped:: $(STRIP_DIR)/dest					@@\
+								@@\
+$(STRIP_DIR)/dest: src						@@\
+	/bin/rm -rf $(STRIP_DIR)/dest				@@\
+	$(CP_CMD) src $(STRIP_DIR)/dest				@@\
+XCOMM End translation of func(strip_recursive_copy_target)
 #endif /* strip_recursive_copy_target */
 
 
@@ -595,12 +597,14 @@ XCOMM End translation of func(static_copy_target)
 ** Static target is released by recursive copying
 */
 #ifndef static_recursive_copy_target
-#define static_recursive_copy_target( src, dest )	@@\
-static:: $(STATIC_DIR)/##dest	      			@@\
-							@@\
-$(STATIC_DIR)/##dest##: src				@@\
-	/bin/rm -rf $(STATIC_DIR)/##dest		@@\
-	$(CP_CMD) src $(STATIC_DIR)/##dest
+#define static_recursive_copy_target(src,dest)			@@\
+XCOMM Begin translation of func(strip_recursive_copy_target)	@@\
+static:: $(STATIC_DIR)/dest					@@\
+								@@\
+$(STATIC_DIR)/dest: src						@@\
+	/bin/rm -rf $(STATIC_DIR)/dest				@@\
+	$(CP_CMD) src $(STATIC_DIR)/dest			@@\
+XCOMM End translation of func(strip_recursive_copy_target)
 #endif /* static_recursive_copy_target */
 
 
@@ -1339,14 +1343,35 @@ depend:	ALWAYS				               @@\
 XCOMM End translation of func(depend_c_objects_target)
 #endif /* depend_c_objects_target */
 
+#ifndef man_full_target
+#define man_full_target(name,type)				@@\
+XCOMM BEGIN translation of func(man_full_target)		@@\
+manpages:: sufdir(type)/man/man1/name				@@\
+sufdir(type)/man/man1/name: $(EXT_TRIGGER)/man-current		@@\
+	/bin/rm -f sufdir(type)/man/man1/name			@@\
+	cp $(MAN_DIR)/man1/name sufdir(type)/man/man1/name	@@\
+	chmod 0644 sufdir(type)/man/man1/name			@@\
+XCOMM End translation of func(man_full_target)
+#endif /* ifndef man_full_target */
+
+
 #ifndef man_target
-#define man_target(name)          @@\
-XCOMM BEGIN translation of func(man_target) @@\
-release_copy_target($(MAN_DIR)/man1/name,man/man1,name,OBJECT_MODE) @@\
-static_copy_target($(MAN_DIR)/man1/name,man/man1,name,OBJECT_MODE) @@\
-strip_copy_target($(MAN_DIR)/man1/name,man/man1,name,OBJECT_MODE) @@\
+#if HAS_STATIC
+#define man_target(name)				@@\
+XCOMM BEGIN translation of func(man_target)		@@\
+man_full_target(name,strip)				@@\
+man_full_target(name,static)				@@\
+man_full_target(name,release)				@@\
 XCOMM End translation of func(man_target)
-#endif
+#else /* HAS_STATIC */
+#define man_target(name)				@@\
+XCOMM BEGIN translation of func(man_target)		@@\
+man_full_target(name,strip)				@@\
+man_full_target(name,release)				@@\
+XCOMM End translation of func(man_target)
+#endif /* HAS_STATIC */
+#endif /* ifndef man_target */
+
 
 /*
 ** Externals build rule
