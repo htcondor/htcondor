@@ -2717,7 +2717,6 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 #define BAILOUT               \
 		DelMrec( mrec );      \
 		checkContactQueue();  \
-        delete sock;          \
 		return FALSE;
 
 int
