@@ -20,6 +20,7 @@ void chirp_client_disconnect( struct chirp_client *c );
 
 int chirp_client_cookie( struct chirp_client *c, const char *cookie );
 
+int chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url );
 int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode );
 int chirp_client_close( struct chirp_client *c, int fd );
 int chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length );

@@ -272,6 +272,23 @@ public class ChirpClient {
 		simple_command("fsync "+fd+"\n");
 	}
 
+	public int version() throws IOException {
+		return simple_command("version\n");
+	}
+
+	public String lookup( String path ) throws IOException {
+		String url = null;
+		int response = simple_command("lookup "+ChirpWord(path)+"\n");
+		if(response>0) {
+			byte [] buffer = new byte[response];
+			int actual = fullRead(buffer,0,response);
+			if(actual!=response) throw new ChirpError("server disconnected");
+			url = new String(buffer,0,response,encoding);
+		}
+		returnOrThrow(response);
+		return url;
+	}
+
 	private int simple_command( String cmd ) throws IOException {
 		int response;
 		try {

@@ -226,6 +226,27 @@ chirp_client_login( struct chirp_client *c, const char *name, const char *passwo
 }
 
 int
+chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **url )
+{
+	int result;
+	int actual;
+
+	result = simple_command(c,"lookup %s\n",logical_name);
+
+	if(result>0) {
+		*url = malloc(result);
+		if(*url) {
+			actual = fread(*url,1,result,c->stream);
+			if(actual!=result) chirp_fatal_request("lookup");
+		} else {
+			chirp_fatal_request("lookup");
+		}
+	}
+
+	return result;
+}
+
+int
 chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
 	return simple_command(c,"open %s %s %d\n",path,flags,mode);

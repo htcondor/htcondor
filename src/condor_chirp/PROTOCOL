@@ -1,5 +1,5 @@
 
-Chirp Version 1
+Chirp Version 2
 
 INTRODUCTION
 
@@ -118,6 +118,18 @@ lseek  <decimal:fd> <decimal:offset> <decimal:whence>
 
 	Returns the current seek position.
 
+lookup <string:name>
+
+	Perform a simple mapping on the given name.
+	If successful, the server returns the length of the
+	resulting name as an integer, followed by a string
+	of that length.  The resulting string is another name
+	describing where the resource name may be found.
+	The syntax and semantics of names both given and
+	received is implementation dependent.  A typical
+	use of lookup would be to map ordinary file names
+	into fully-qualified urls.
+		
 mkdir  <string:name> <decimal:mode>
 
 	Create a new directory by this name.
