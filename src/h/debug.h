@@ -51,6 +51,7 @@
 #define D_PROTOCOL	(1<<17)
 #define D_PRIV		(1<<18)
 #define D_TAPENET	(1<<19)
+#define D_DAEMONCORE (1<<20)
 #define D_MAXFLAGS	32
 
 #define D_ALL		(~D_NOHEADER)
