@@ -893,7 +893,7 @@ Claim::makeCODStarterArgs( void )
 	}
 
 	if( c_has_job_ad ) { 
-		args += " -job_on_stdin ";
+		args += " -job_ad_path - ";
 	}
 
 	return strdup( args.Value() );
