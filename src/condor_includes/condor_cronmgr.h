@@ -33,6 +33,7 @@ class CondorCronMgr : public Service
   public:
 	CondorCronMgr( const char *name );
 	virtual ~CondorCronMgr( );
+	int Initialize( void );
 	int Reconfig( void );
 	int KillAll( bool force );
 	bool IsAllIdle( void );
@@ -51,6 +52,7 @@ class CondorCronMgr : public Service
 	const char	*ParamBase;		// Used for base of calls to param()
 
 	// Private member functions
+	int DoConfig( bool initial = false );
 	int ParseJobList( const char *JobListString );
 	char *NextTok( char *cur, const char *tok );
 	char *GetParam( const char *paramName, 

@@ -206,7 +206,7 @@ main_init( int, char* argv[] )
 
 	// Startup Cron
 	Cronmgr = new StartdCronMgr( );
-	Cronmgr->Reconfig( );
+	Cronmgr->Initialize( );
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
@@ -377,7 +377,7 @@ finish_main_config( void )
 	resmgr->reset_timers();
 
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
-	Cronmgr->Reconfig( );
+	Cronmgr->Reconfig(  );
 	resmgr->starter_mgr.init();
 
 		// Re-evaluate and update the CM for each resource (again, we

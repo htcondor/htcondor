@@ -132,7 +132,7 @@ CronJobErr::CronJobErr( class CondorCronJob *job ) :
 int
 CronJobErr::Output( const char *buf, int len )
 {
-	dprintf( D_ALWAYS, "%s: %s\n", job->GetName( ), buf );
+	dprintf( D_FULLDEBUG, "%s: %s\n", job->GetName( ), buf );
 
 	// Done
 	return 0;
@@ -150,6 +150,7 @@ CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
 	killTimer = -1;
 	childFds[0] = childFds[1] = childFds[2] = -1;
 	stdOut = stdErr = -1;
+	numOutputs = 0;							// No data produced yet
 	eventHandler = NULL;
 	eventService = NULL;
 
@@ -177,8 +178,10 @@ CondorCronJob::CondorCronJob( const char *mgrName, const char *jobName )
 // CronJob destructor
 CondorCronJob::~CondorCronJob( )
 {
-	dprintf( D_FULLDEBUG, "Cron: Deleting timer '%s'; ID = %d, path = '%s'\n",
-			 GetName(), runTimer, GetPath() );
+	dprintf( D_ALWAYS, "Cron: Deleting job '%s' (%s)\n", GetName(),
+			 GetPath() );
+	dprintf( D_FULLDEBUG, "Cron: Deleting timer for '%s'; ID = %d\n",
+			 GetName(), runTimer );
 
 	// Delete the timer FIRST
 	if ( runTimer >= 0 ) {
@@ -203,6 +206,9 @@ CondorCronJob::Initialize( )
 
 	// Update our state to idle..
 	state = CRON_IDLE;
+
+	dprintf( D_ALWAYS, "Cron: Initializing job '%s' (%s)\n", 
+			 GetName(), GetPath() );
 
 	// Schedule & see if we should run...
 	return Schedule( );
@@ -273,6 +279,14 @@ CondorCronJob::SetKill( bool kill )
 	return 0;
 }
 
+// Set job characteristics: Reconfig option
+int
+CondorCronJob::SetReconfig( bool reconfig )
+{
+	optReconfig = reconfig;
+	return 0;
+}
+
 // Add to the job's path
 int
 CondorCronJob::AddPath( const char *newPath )
@@ -328,7 +342,7 @@ int
 CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 {
 	// Verify that the mode seleted is valid
-	if (  ( CRON_CONTINUOUS != newMode ) && ( CRON_PERIODIC != newMode )  ) {
+	if (  ( CRON_WAIT_FOR_EXIT != newMode ) && ( CRON_PERIODIC != newMode )  ) {
 		dprintf( D_ALWAYS, "Cron: illegal mode selected for job '%s'\n",
 				 GetName() );
 		return -1;
@@ -362,14 +376,25 @@ CondorCronJob::SetPeriod( CronJobMode newMode, unsigned newPeriod )
 int
 CondorCronJob::Reconfig( void )
 {
-	// Only do this to running continuous jobs
-	if (  ( CRON_CONTINUOUS != mode ) || ( CRON_RUNNING != state )  ) {
+	// Only do this to running jobs with the reconfig option set
+	if (  ( ! optReconfig ) || ( CRON_RUNNING != state )  ) {
+		return 0;
+	}
+
+	// Don't send the HUP before it's first output block
+	if ( ! numOutputs ) {
+		dprintf( D_ALWAYS,
+				 "Not HUPing '%s' pid %d before it's first output\n",
+				 GetName(), pid );
 		return 0;
 	}
 
 	// HUP it; if it dies it'll get the new config when it restarts
-	if ( pid )
+	if ( pid >= 0 )
 	{
+			// we want this D_ALWAYS, since it's pretty rare anyone
+			// actually wants a SIGHUP, and to aid in debugging, it's
+			// best to always log it when we do so everyone sees it.
 		dprintf( D_ALWAYS, "Cron: Sending HUP to '%s' pid %d\n",
 				 GetName(), pid );
 		return daemonCore->Send_Signal( pid, SIGHUP );
@@ -392,7 +417,7 @@ CondorCronJob::Schedule( void )
 	int	status = 0;
 
 	// It's not a periodic -- just start it
-	if ( CRON_CONTINUOUS == mode ) {
+	if ( CRON_WAIT_FOR_EXIT == mode ) {
 		status = StartJob( );
 
 	} else {				// Periodic
@@ -432,7 +457,7 @@ CondorCronJob::RunJob( void )
 	}
 
 	// Job not running, just start it
-	dprintf( D_JOB, "Cron: Running job '%s', path '%s'\n",
+	dprintf( D_JOB, "Cron: Running job '%s' (%s)\n",
 			 GetName(), GetPath() );
 
 	// Start it up
@@ -445,7 +470,7 @@ CondorCronJob::KillHandler( void )
 {
 
 	// Log that we're here
-	dprintf( D_ALWAYS, "Cron: KillHandler for job '%s'\n", GetName() );
+	dprintf( D_FULLDEBUG, "Cron: KillHandler for job '%s'\n", GetName() );
 
 	// If we're idle, we shouldn't be here.
 	if ( CRON_IDLE == state ) {
@@ -465,7 +490,7 @@ CondorCronJob::StartJob( void )
 		dprintf( D_ALWAYS, "Cron: Job '%s' not idle!\n", GetName() );
 		return 0;
 	}
-	dprintf( D_JOB, "Cron: Starting job '%s', path '%s'\n",
+	dprintf( D_JOB, "Cron: Starting job '%s' (%s)\n",
 			 GetName(), GetPath() );
 
 	// Check output queue!
@@ -481,8 +506,13 @@ CondorCronJob::StartJob( void )
 int
 CondorCronJob::Reaper( int exitPid, int exitStatus )
 {
-	dprintf( D_ALWAYS, "Cron: Job '%s' (pid %d) exit status=%d, state=%s\n",
-			 GetName(), exitPid, exitStatus, StateString( ) );
+	if( WIFSIGNALED(exitStatus) ) {
+		dprintf( D_FULLDEBUG, "Cron: '%s' (pid %d) exit_signal=%d\n",
+				 GetName(), exitPid, WTERMSIG(exitStatus) );
+	} else {
+		dprintf( D_FULLDEBUG, "Cron: '%s' (pid %d) exit_status=%d\n",
+				 GetName(), exitPid, WEXITSTATUS(exitStatus) );
+	}
 
 	// What if the PIDs don't match?!
 	if ( exitPid != pid ) {
@@ -508,10 +538,10 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 		// Normal death
 	case CRON_RUNNING:
 		state = CRON_IDLE;				// Note it's death
-		if ( CRON_CONTINUOUS == mode ) {
-			if ( 0 == period ) {			// Continuous, no delay
+		if ( CRON_WAIT_FOR_EXIT == mode ) {
+			if ( 0 == period ) {			// ExitTime mode, no delay
 				StartJob( );
-			} else {						// Continuous with delay
+			} else {						// ExitTime mode with delay
 				SetTimer( period, TIMER_NEVER );
 			}
 		}
@@ -539,9 +569,9 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 		// Re-start the job
 		if ( CRON_PERIODIC == mode ) {		// Periodic
 			RunJob( );
-		} else if ( 0 == period ) {			// Continuous, no delay
+		} else if ( 0 == period ) {			// ExitTime mode, no delay
 			StartJob( );
-		} else {							// Continuous with delay
+		} else {							// ExitTime mode with delay
 			SetTimer( period, TIMER_NEVER );
 		}
 		break;
@@ -597,7 +627,9 @@ ProcessOutputQueue( void )
 			dprintf( D_ALWAYS, "%s: Queue reports %d lines remain!\n",
 					 GetName(), tmp );
 		} else {
+			// The NULL output means "end of block", so go publish
 			ProcessOutput( NULL );
+			numOutputs++;				// Increment # of valid output blocks
 		}
 	}
 	return 0;
@@ -619,7 +651,6 @@ int
 CondorCronJob::
 RunProcess( void )
 {
-	dprintf( D_ALWAYS, "Running '%s'\n", GetName() );
 
 	// Create file descriptors
 	if ( OpenFds( ) < 0 ) {
@@ -689,11 +720,12 @@ RunProcess( void )
 	CleanFd( &childFds[2] );
 
 	// Did it work?
-	if ( pid < 0 ) {
+	if ( pid <= 0 ) {
 		dprintf( D_ALWAYS, "Cron: Error running job '%s'\n", GetName() );
 		if ( NULL != argBuf ) {
 			free( argBuf );
 		}
+		CleanAll( );
 		return -1;
 	}
 
@@ -751,7 +783,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 
 		// Zero means it closed
 		if ( bytes == 0 ) {
-			dprintf( D_ALWAYS, "Cron: STDOUT closed for '%s'\n", GetName() );
+			dprintf(D_FULLDEBUG, "Cron: STDOUT closed for '%s'\n", GetName());
 			daemonCore->Close_Pipe( stdOut );
 			stdOut = -1;
 		}
@@ -815,7 +847,7 @@ CondorCronJob::StderrHandler ( int pipe )
 	// Zero means it closed
 	if ( bytes == 0 )
 	{
-		dprintf( D_ALWAYS, "Cron: STDERR closed for '%s'\n", GetName() );
+		dprintf( D_FULLDEBUG, "Cron: STDERR closed for '%s'\n", GetName() );
 		daemonCore->Close_Pipe( stdErr );
 		stdErr = -1;
 	}
@@ -931,6 +963,13 @@ CondorCronJob::KillJob( bool force )
 		return 0;
 	}
 
+	// Not running?
+	if ( pid <= 0 ) {
+		dprintf( D_ALWAYS, "Cron: '%s': Trying to kill illegal PID %d\n",
+				 GetName(), pid );
+		return -1;
+	}
+
 	// Kill the process *hard*?
 	if ( ( force ) || ( CRON_TERMSENT == state )  ) {
 		dprintf( D_JOB, "Cron: Killing job '%s' with SIGKILL, pid = %d\n", 
@@ -967,8 +1006,13 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 	if ( runTimer >= 0 )
 	{
 		daemonCore->Reset_Timer( runTimer, first, period );
-		dprintf( D_FULLDEBUG, "Cron: timer ID %d reset to %u/%u\n", 
-				 runTimer, first, period );
+		if( period == TIMER_NEVER ) {
+			dprintf( D_FULLDEBUG, "Cron: timer ID %d reset to first: %u, "
+					 "period: NEVER\n", runTimer, first );
+		} else {
+			dprintf( D_FULLDEBUG, "Cron: timer ID %d reset to first: %u, "
+					 "period: %u\n", runTimer, first, period );
+		}
 	}
 
 	// Create a periodic timer
@@ -978,7 +1022,7 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 		dprintf( D_FULLDEBUG, 
 				 "Cron: Creating timer for job '%s'\n", GetName() );
 		TimerHandlercpp handler =
-			(  ( CRON_CONTINUOUS == mode ) ? 
+			(  ( CRON_WAIT_FOR_EXIT == mode ) ? 
 			   (TimerHandlercpp)& CondorCronJob::StartJob :
 			   (TimerHandlercpp)& CondorCronJob::RunJob );
 		runTimer = daemonCore->Register_Timer(
@@ -991,8 +1035,13 @@ CondorCronJob::SetTimer( unsigned first, unsigned period )
 			dprintf( D_ALWAYS, "Cron: Failed to create timer\n" );
 			return -1;
 		}
-		dprintf( D_FULLDEBUG, "Cron: new timer ID = %d set to %u/%u\n", 
-				 runTimer, first, period );
+		if( period == TIMER_NEVER ) {
+			dprintf( D_FULLDEBUG, "Cron: new timer ID %d set to first: %u, "
+					 "period: NEVER\n", runTimer, first );
+		} else {
+			dprintf( D_FULLDEBUG, "Cron: new timer ID %d set to first: %u, "
+					 "period: %u\n", runTimer, first, period );
+		}
 	} 
 
 	return 0;

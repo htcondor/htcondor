@@ -2,6 +2,16 @@
    The state of the V6_7-branch before merging in the V6_7-mirror-2-branch
    as tagged at V6_7-mirror-2-merge-2 
 
+03/02/04 V6_7-mirror-2-merge-2
+   The state of the V6_7-mirror-2-branch before another merge into the
+   V6_7-branch 
+
+03/02/04 V6_7-mirror-2-CORE_snapshot2
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE.  Mostly, this includes bug fixes to hawkeye
+   features.  The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot2 $
+
 02/19/04 V6_7-post_merge-V6_7-mirror-2-merge-1
    The state of the V6_7-branch after merging in the V6_7-mirror-2-branch
    as tagged at V6_7-mirror-2-merge-1
@@ -9,6 +19,10 @@
 02/19/04 V6_7-pre_merge-V6_7-mirror-2-merge-1
    The state of the V6_7-branch before merging in the V6_7-mirror-2-branch
    as tagged at V6_7-mirror-2-merge-1 
+
+02/19/04 V6_7-mirror-2-merge-1
+   The state of the V6_7-mirror-2-branch before merging into the 
+   V6_7-branch
 
 02/19/04 V6_7-post_merge-V6_6-infn-merge-1
    The state of the V6_7-branch after merging in the V6_6-infn-branch
@@ -65,18 +79,6 @@
    The version string for all platforms (except IRIX and maybe 
    windows) is: "$CondorVersion: 6.6.1 Feb 5 2003 $"
 
-02/01/04 V6_7-mirror-2-branch
-   A new branch off of V6_7-branch for the final product we're sending
-   to CORE.  It will contain all of the HighAvailability locking stuff
-   along with the Condor-C-style schedding mirroring, so that CORE can
-   decide which solution they want to use.  The V6_7-mirror-branch
-   will be merged directly into this one and then abandoned.  Created
-   from the V6_7-mirror-2-root tag.
-
-02/19/04 V6_7-mirror-2-merge-1
-   The state of the V6_7-mirror-2-branch before merging into the 
-   V6_7-branch
-
 02/02/04 V6_7-mirror-2-CORE_snapshot1
    The state of the V6_7-mirror-2-branch for the first snapshot
    release given to CORE for the schedd-failover features.  The
@@ -91,6 +93,14 @@
 02/01/04 V6_7-mirror-2-pre_merge-V6_7-mirror-merge-1
    The state of the V6_7-mirror-2-branch before merging in the
    V6_7-mirror-branch as tagged at V6_7-mirror-merge-1.
+
+02/01/04 V6_7-mirror-2-branch
+   A new branch off of V6_7-branch for the final product we're sending
+   to CORE.  It will contain all of the HighAvailability locking stuff
+   along with the Condor-C-style schedding mirroring, so that CORE can
+   decide which solution they want to use.  The V6_7-mirror-branch
+   will be merged directly into this one and then abandoned.  Created
+   from the V6_7-mirror-2-root tag.
 
 02/01/04 V6_7-mirror-merge-1
    The state of the V6_7-mirror-branch when it was merged into the 
