@@ -86,6 +86,43 @@ ClassAd (const ClassAd &ad) : attrList( 32 )
 }	
 
 
+bool ClassAd::
+CopyFrom( ClassAd &ad )
+{
+	Clear( );
+	nodeKind = CLASSAD_NODE;
+	schema = ad.schema;
+	last = ad.last;
+	parentScope = ad.parentScope;
+	
+
+	for( int i = 0 ; i < last ; i++ ) {
+		if( ad.attrList[i].valid ) {
+			if( ad.attrList[i].attrName ) {
+				attrList[i].attrName = strnewp( ad.attrList[i].attrName );
+				if( !attrList[i].attrName ) {
+					Clear( );
+					return( false );
+				}
+			} else {
+				attrList[i].attrName = NULL;
+			}
+			attrList[i].expression = ad.attrList[i].expression->Copy();
+			if( !attrList[i].expression ) {
+				Clear( );
+				return( false );
+			}
+			attrList[i].valid = true;
+		} else {
+			attrList[i].valid = false;
+			attrList[i].attrName = NULL;
+			attrList[i].expression = NULL;
+		}
+	}
+	return( true );
+}
+
+
 ClassAd::
 ~ClassAd ()
 {
@@ -868,13 +905,16 @@ _GetDeepScope( const char *scopeExpr )
 {
 	Source 		src;
 	ExprTree 	*tree;
+	ClassAd		*rval;
 
 	if( !scopeExpr ) return( NULL );
 	src.SetSource( scopeExpr );
 	if( !src.ParseExpression( tree ) || !tree ) {
 		return( NULL );
 	}
-	return( _GetDeepScope( tree ) );
+	rval = _GetDeepScope( tree );
+	delete tree;
+	return( rval );
 }
 
 

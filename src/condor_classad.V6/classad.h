@@ -550,6 +550,8 @@ class ClassAd : public ExprTree
 		void Update( const ClassAd& ad );	
 		bool Modify( ClassAd& ad );
 
+		bool CopyFrom( ClassAd &ad );
+
 		/** Flattens the Classad.
 			@param expr The expression to be flattened.
 			@param val The value after flattening, if the expression was 
