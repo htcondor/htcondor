@@ -5623,7 +5623,16 @@ Scheduler::child_exit(int pid, int status)
 	job_id.proc = srec->job_id.proc;
 
 	if (IsSchedulerUniverse(srec)) {
-		// scheduler universe process
+		// scheduler universe process 
+		if ( daemonCore->Was_Not_Responding(pid) ) {
+			// this job was killed by daemon core because it was hung.
+			// just restart the job.
+			dprintf(D_ALWAYS,
+				"Scheduler universe job pid %d killed because "
+				"it was hung - will restart\n"
+				,pid);
+			set_job_status( job_id.cluster, job_id.proc, IDLE ); 
+		} else 
 		if(WIFEXITED(status)) {
 			dprintf( D_FULLDEBUG,
 					 "scheduler universe job (%d.%d) pid %d "
@@ -5646,7 +5655,8 @@ Scheduler::child_exit(int pid, int status)
 					// we don't have to change anything else...
 				WriteEvictToUserLog( job_id );
 			}
-		} else if(WIFSIGNALED(status)) {
+		} else 
+		if(WIFSIGNALED(status)) {
 			dprintf( D_ALWAYS,
 					 "scheduler universe job (%d.%d) pid %d died "
 					 "with %s\n", job_id.cluster, job_id.proc, pid, 
