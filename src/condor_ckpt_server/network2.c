@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include "debug.h"
 
 /* P R O T O T Y P E S */
 char *param();
@@ -319,7 +320,7 @@ char* getserveraddr()
 	if (server) {
 		h = gethostbyname(server);
 	} else {
-		fprintf(stderr, "\"CKPT_SERVER\" Not defined in the config file!\n");
+		dprintf(D_ALWAYS, "\"CKPT_SERVER\" Not defined in the config file!\n");
 		return NULL;
 	}
 	if (h == NULL) {
