@@ -1,4 +1,3 @@
-#include "caseSensitivity.h"
 #include "exprTree.h"
 
 static int fnHashFcn( const MyString& , int numBkts );
@@ -16,7 +15,6 @@ FunctionCall () : arguments( 4 )
 	numArgs = 0;
 
 	if( !initialized ) {
-#ifdef CLASSAD_FN_CALL_CASE_INSENSITIVE
 		// load up the function dispatch table
 		functionTable.insert( "isundefined", 	isUndefined );
 		functionTable.insert( "iserror",	 	isError );
@@ -31,22 +29,6 @@ FunctionCall () : arguments( 4 )
 		functionTable.insert( "avgfrom",		avgFrom );
 		functionTable.insert( "maxfrom",		boundFrom );
 		functionTable.insert( "minfrom",		boundFrom );
-#else
-		// load up the function dispatch table
-		functionTable.insert( "isUndefined", 	isUndefined );
-		functionTable.insert( "isError",	 	isError );
-		functionTable.insert( "isString",	 	isString );
-		functionTable.insert( "isInteger",	 	isInteger );
-		functionTable.insert( "isReal",		 	isReal );
-		functionTable.insert( "isList",		 	isList );
-		functionTable.insert( "isClassAd",	 	isClassAd );
-		functionTable.insert( "isMember",	 	isMember );
-		functionTable.insert( "isExactMember",	isExactMember );
-		functionTable.insert( "sumFrom",		sumFrom );
-		functionTable.insert( "avgFrom",		avgFrom );
-		functionTable.insert( "maxFrom",		boundFrom );
-		functionTable.insert( "minFrom",		boundFrom );
-#endif
 		initialized = true;
 	}
 }
@@ -95,7 +77,7 @@ _copy( CopyMode cm )
 
 
 void FunctionCall::
-setParentScope( ClassAd* parent )
+_setParentScope( ClassAd* parent )
 {
 	for( int i = 0; i < numArgs ; i++) {
 		arguments[i]->setParentScope( parent );
@@ -128,22 +110,17 @@ setFunctionName (char *fnName)
 	if (functionName) free (functionName);
 	functionName = strdup (fnName);
 
-#ifdef CLASSAD_FN_CALL_CASE_INSENSITIVE
-	{
-		int len = strlen( fnName );
-		for( int i = 0 ; i < len ; i++ ) {
-			functionName[i] = tolower( functionName[i] );
-		}
+	// convert to lower case (Case insensitive for function names)
+	int len = strlen( fnName );
+	for( int i = 0 ; i < len ; i++ ) {
+		functionName[i] = tolower( functionName[i] );
 	}
-#endif
 
 	function = (functionTable.lookup( functionName , fn )==-1) ? NULL : fn ;
 
-#ifdef CLASSAD_FN_CALL_CASE_INSENSITIVE
-	// we preserve the capitalization of the lexical token for external
+	// preserve the capitalization of the lexical token for external
 	// representation purposes
 	strcpy( functionName , fnName );
-#endif
 }
 
 
@@ -154,29 +131,39 @@ appendArgument( ExprTree *tree )
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 _evaluate (EvalState &state, Value &value)
 {
-	if( function )
-		(*function)( functionName , arguments , state , value );
-	else
+	if( function ) {
+		return( (*function)( functionName , arguments , state , value ) );
+	} else {
 		value.setErrorValue();
+		return( true );
+	}
 }
 
-void FunctionCall::
+bool FunctionCall::
 _evaluate( EvalState &state, Value &value, ExprTree *& tree )
 {
 	FunctionCall *tmpSig = new FunctionCall;
 	Value		tmpVal;
 	ExprTree	*argSig;
+	bool		rval;
 
-	_evaluate( state, value );
+	if( !tmpSig || !_evaluate( state, value ) ) {
+		return false;
+	}
+
 	tmpSig->setFunctionName( functionName );
-	for( int i = 0 ; i < numArgs ; i++ ) {
-		arguments[i]->evaluate( state, tmpVal, argSig );
-		tmpSig->appendArgument( argSig );
+	rval = true;
+	for( int i = 0 ; rval && i < numArgs ; i++ ) {
+		rval = arguments[i]->evaluate( state, tmpVal, argSig );
+		if( rval ) tmpSig->appendArgument( argSig );
 	}
 	tree = tmpSig;
+
+	if( !rval ) delete tree;
+	return( rval );
 }
 
 bool FunctionCall::
@@ -224,8 +211,10 @@ _flatten( EvalState &state, Value &value, ExprTree*&tree, OpKind* )
 	
 	// assume all functions are "pure" (i.e., side-affect free)
 	if( fold ) {
-		(*function)( functionName , arguments , state , value );
 		tree = NULL;
+		if( !(*function)( functionName , arguments , state , value ) ) {
+			return false;
+		}
 	} else {
 		tree = newCall;
 	}
@@ -245,7 +234,7 @@ static int fnHashFcn( const MyString &fnName , int numBkts )
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isUndefined (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -253,17 +242,21 @@ isUndefined (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate( state, arg );
+    if( !argList[0]->evaluate( state, arg ) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was undefined or not
     val.setBooleanValue (arg.isUndefinedValue());
+	return( true );
 }
 
-void FunctionCall::
+bool FunctionCall::
 isError (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -271,17 +264,21 @@ isError (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was error or not
     val.setBooleanValue (arg.isErrorValue());
+	return( true );
 }
 
-void FunctionCall::
+bool FunctionCall::
 isInteger (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -289,18 +286,22 @@ isInteger (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was integer or not
     val.setBooleanValue (arg.isIntegerValue());
+	return( true );
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isReal (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -308,18 +309,22 @@ isReal (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was real or not
     val.setBooleanValue (arg.isRealValue());
+	return( true );
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isString (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -327,18 +332,22 @@ isString (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was string or not
     val.setBooleanValue (arg.isStringValue());
+	return( true );
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isList (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -346,18 +355,22 @@ isList (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was a list or not
     val.setBooleanValue (arg.isListValue());
+	return( true );
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isClassAd (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value   arg;
@@ -365,18 +378,22 @@ isClassAd (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need a single argument
     if (argList.getlast() != 0) {
         val.setErrorValue ();
-        return;
+        return( true );
     }
 
     // evaluate the argument
-    argList[0]->evaluate (state, arg);
+    if( !argList[0]->evaluate (state, arg) ) {
+		val.setErrorValue( );
+		return false;
+	}
 
     // check if the value was classad or not
     val.setBooleanValue (arg.isClassAdValue());
+	return true;
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isMember (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value     	arg0, arg1, cArg;
@@ -387,40 +404,45 @@ isMember (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need two arguments
     if (argList.getlast() != 1) {
         val.setErrorValue();
-        return;
+        return( true );
     }
 
     // evaluate the arg list
-    argList[0]->evaluate (state, arg0);
-    argList[1]->evaluate (state, arg1);
+    if( !argList[0]->evaluate(state,arg0) || !argList[1]->evaluate(state,arg1)){
+		val.setErrorValue( );
+		return false;
+	}
 
-    if (arg0.isErrorValue() || arg1.isErrorValue() || !arg0.isListValue(el) ) {
-        val.setErrorValue();
-        return;
+    if( arg0.isUndefinedValue() || arg1.isUndefinedValue() ) {
+        val.setUndefinedValue();
+        return true;
     }
 
-    if (arg0.isUndefinedValue() || arg1.isUndefinedValue() || 
-		arg1.isClassAdValue() || arg1.isListValue() ) {
-        val.setUndefinedValue();
-        return;
+    if (arg0.isErrorValue() || !arg0.isListValue() ||
+		arg1.isErrorValue() || arg1.isListValue() || arg1.isClassAdValue() ) {
+        val.setErrorValue();
+        return true;
     }
 
     // check for membership
 	el->rewind( );
 	while( ( tree = el->next( ) ) ) {
-		tree->evaluate( state, cArg );
+		if( !tree->evaluate( state, cArg ) ) {
+			val.setErrorValue( );
+			return( false );
+		}
 		Operation::operate( EQUAL_OP, cArg, arg1, val );
 		if( val.isBooleanValue( b ) && b ) {
-			return;
+			return true;
 		}
 	}
 	val.setBooleanValue( false );	
 
-    return;
+    return true;
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 isExactMember (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
     Value     	arg0, arg1, cArg;
@@ -431,40 +453,44 @@ isExactMember (char *, ArgumentList &argList, EvalState &state, Value &val)
     // need two arguments
     if (argList.getlast() != 1) {
         val.setErrorValue();
-        return;
+        return( true );
     }
 
     // evaluate the arg list
-    argList[0]->evaluate (state, arg0);
-    argList[1]->evaluate (state, arg1);
+    if( !argList[0]->evaluate(state,arg0) || !argList[1]->evaluate(state,arg1)){
+		val.setErrorValue( );
+		return false;
+	}
 
-    if (arg0.isErrorValue() || arg1.isErrorValue() || !arg0.isListValue(el) ) {
-        val.setErrorValue();
-        return;
+    if( arg0.isUndefinedValue( ) ) {
+        val.setUndefinedValue();
+        return true;
     }
 
-    if (arg0.isUndefinedValue() || arg1.isUndefinedValue() || 
-		arg1.isClassAdValue() || arg1.isListValue() ) {
-        val.setUndefinedValue();
-        return;
+    if( !arg0.isListValue( ) || arg1.isClassAdValue( ) || arg1.isListValue( ) ){
+        val.setErrorValue();
+        return true;
     }
 
     // check for membership
 	el->rewind( );
 	while( ( tree = el->next( ) ) ) {
-		tree->evaluate( state, cArg );
+		if( !tree->evaluate( state, cArg ) ) {
+			val.setErrorValue( );
+			return( false );
+		}
 		Operation::operate( IS_OP, cArg, arg1, val );
 		if( val.isBooleanValue( b ) && b ) {
-			return;
+			return true;
 		}
 	}
 	val.setBooleanValue( false );	
 
-    return;
+    return true;
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 sumFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
 	Value		caVal, listVal;
@@ -477,25 +503,34 @@ sumFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 	// need two arguments
 	if( argList.getlast() != 1 ) {
 		val.setErrorValue();
-		return;
+		return true;
 	}
 
 	// first argument must evaluate to a list
-	argList[0]->evaluate( state, listVal );
-	if( !listVal.isListValue( el ) ) {
+	if( !argList[0]->evaluate( state, listVal ) ) {
+		val.setErrorValue( );
+		return( false );
+	} else if( listVal.isUndefinedValue() ) {
+		val.setUndefinedValue( );
+		return( true );
+	} else if( !listVal.isListValue( el ) ) {
 		val.setErrorValue();
-		return;
+		return( true );
 	}
 
 	el->rewind();
 	result.setUndefinedValue();
 	while( ( ca = el->next() ) ) {
-		ca->evaluate( state, caVal );
-		if( !caVal.isClassAdValue( ad ) ) {
+		if( !ca->evaluate( state, caVal ) ) {
+			val.setErrorValue( );
+			return( false );
+		} else if( !caVal.isClassAdValue( ad ) ) {
 			val.setErrorValue();
-			return;
+			return( true );
+		} else if( !ad->evaluateExpr( argList[1], tmp ) ) {
+			val.setErrorValue( );
+			return( false );
 		}
-		ad->evaluateExpr( argList[1], tmp );
 		if( first ) {
 			result.copyFrom( tmp );
 			first = false;
@@ -506,11 +541,11 @@ sumFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 	}
 
 	val.copyFrom( result );
-	return;
+	return true;
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 avgFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 {
 	Value		caVal, listVal;
@@ -524,25 +559,34 @@ avgFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 	// need two arguments
 	if( argList.getlast() != 1 ) {
 		val.setErrorValue();
-		return;
+		return true;
 	}
 
 	// first argument must evaluate to a list
-	argList[0]->evaluate( state, listVal );
-	if( !listVal.isListValue( el ) ) {
+	if( !argList[0]->evaluate( state, listVal ) ) {
+		val.setErrorValue( );
+		return( false );
+	} else if( listVal.isUndefinedValue() ) {
+		val.setUndefinedValue( );
+		return( true );
+	} else if( !listVal.isListValue( el ) ) {
 		val.setErrorValue();
-		return;
+		return( true );
 	}
 
 	el->rewind();
 	result.setUndefinedValue();
 	while( ( ca = el->next() ) ) {
-		ca->evaluate( state, caVal );
-		if( !caVal.isClassAdValue( ad ) ) {
+		if( !ca->evaluate( state, caVal ) ) {
+			val.setErrorValue( );
+			return( false );
+		} else if( !caVal.isClassAdValue( ad ) ) {
 			val.setErrorValue();
-			return;
+			return( true );
+		} else if( !ad->evaluateExpr( argList[1], tmp ) ) {
+			val.setErrorValue( );
+			return( false );
 		}
-		ad->evaluateExpr( argList[1], tmp );
 		if( first ) {
 			result.copyFrom( tmp );
 			first = false;
@@ -561,11 +605,11 @@ avgFrom (char *, ArgumentList &argList, EvalState &state, Value &val)
 	}
 
 	val.copyFrom( result );
-	return;
+	return true;
 }
 
 
-void FunctionCall::
+bool FunctionCall::
 boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 {
 	Value		caVal, listVal, cmp;
@@ -578,14 +622,19 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 	// need two arguments
 	if( argList.getlast() != 1 ) {
 		val.setErrorValue();
-		return;
+		return( true );
 	}
 
 	// first argument must evaluate to a list
-	argList[0]->evaluate( state, listVal );
-	if( !listVal.isListValue( el ) ) {
+	if( !argList[0]->evaluate( state, listVal ) ) {
+		val.setErrorValue( );
+		return( false );
+	} else if( listVal.isUndefinedValue ) {
+		val.setUndefinedValue( );
+		return( true );
+	} else if( !listVal.isListValue( el ) ) {
 		val.setErrorValue();
-		return;
+		return( true );
 	}
 
 	// fn is either "min..." or "max..."
@@ -594,12 +643,16 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 	el->rewind();
 	result.setUndefinedValue();
 	while( ( ca = el->next() ) ) {
-		ca->evaluate( state, caVal );
-		if( !caVal.isClassAdValue( ad ) ) {
+		if( !ca->evaluate( state, caVal ) ) {
+			val.setErrorValue( );
+			return false;
+		} else if( !caVal.isClassAdValue( ad ) ) {
 			val.setErrorValue();
-			return;
+			return( true );
+		} else if( !ad->evaluateExpr( argList[1], tmp ) ) {
+			val.setErrorValue( );
+			return( true );
 		}
-		ad->evaluateExpr( argList[1], tmp );
 		if( first ) {
 			result.copyFrom( tmp );
 			first = false;
@@ -612,5 +665,5 @@ boundFrom (char *fn, ArgumentList &argList, EvalState &state, Value &val)
 	}
 
 	val.copyFrom( result );
-	return;
+	return true;
 }
