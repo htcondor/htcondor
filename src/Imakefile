@@ -14,17 +14,28 @@ CFLAGS = $(STD_C_FLAGS)
 #define test_suite_C
 #endif
 
-#if !IS_SPARC_CMOS
-#define cmos_specials
-#define test_suite_CMOS
+#if WANT_PVM && HAS_PVM
+PVM_LIBRARY = pvmd
 #endif
 
-#define Libraries	c++_util util_lib xdr_lib $(SYSCALL_LIB)
-#define Programs \
-	scripts standalone tools shadow starter startd \
-	schedd kbdd  negotiator collector globalq master prio q rm \
-	submit.v2 submit.v3  on off \
-	cmos_specials test_suite_CMOS test_suite_C test_suite_F
+
+
+#if IS_ALPHA_OSF1
+#	define Programs \
+		scripts tools shadow.Alpha starter.Alpha startd \
+		schedd kbdd  negotiator collector globalq master prio q rm \
+		submit.v3  on off test_suite
+#		define Libraries	c++_util util_lib xdr_lib ckpt syscall_lib
+#else
+#	define Programs \
+		scripts standalone tools shadow starter startd \
+		schedd kbdd  negotiator collector globalq master prio q rm \
+		submit.v2 submit.v3  on off \
+		test_suite_C test_suite_F
+#		define Libraries	c++_util util_lib xdr_lib $(SYSCALL_LIB) $(PVM_LIBRARY)
+#endif
+
+
 #define Directories release_dir release_dir/bin release_dir/lib
 all: makefiles Directories Libraries Programs
 release:: makefiles Directories
@@ -36,15 +47,33 @@ object_target(util_lib)
 object_target(c++_util)
 object_target(xdr_lib)
 object_target($(SYSCALL_LIB))
-#if DOES_CHECKPOINTING
-object_target(standalone)
-#endif
-object_target(submit.v2)
-object_target(submit.v3)
 
+#if WANT_PVM && HAS_PVM
+	object_target($(PVM_LIBRARY))
+#endif
+
+
+object_target(submit.v3)
 object_target(tools)
-object_target(shadow)
-object_target(starter)
+
+#if IS_ALPHA_OSF1
+	object_target(shadow.Alpha)
+	object_target(starter.Alpha)
+	object_target(test_suite)
+	object_target(ckpt)
+#else
+	object_target(shadow)
+	object_target(starter)
+	object_target(submit.v2)
+#	if DOES_CHECKPOINTING
+		object_target(standalone)
+		object_target(test_suite_C)
+#		if HAS_FORTRAN
+			object_target(test_suite_F)
+#		endif
+#	endif
+#endif
+
 object_target(startd)
 object_target(schedd)
 #if HAS_X
@@ -61,16 +90,7 @@ object_target(on)
 object_target(off)
 object_target(scripts)
 
-#if IS_SPARC_CMOS
-object_target(cmos_specials)
-object_target(test_suite_CMOS)
-#endif
 
-#if DOES_CHECKPOINTING
-object_target(test_suite_C)
-#if HAS_FORTRAN
-object_target(test_suite_F)
-#endif
-#endif
+
 
 check_platform_target
