@@ -408,6 +408,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 	fd_set  		readfds;
 	struct timeval 	timer;
 	struct sockaddr dummy;
+	int				newsock;
 
     timer.tv_sec = timeout;
     timer.tv_usec = 0;
@@ -436,7 +437,13 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
     if( count == 0 ) {
 		return -2;
     } else if( FD_ISSET(ConnectionSock,&readfds) ) {
-		return (  accept( ConnectionSock, (struct sockaddr *)sin, len)  );
+		newsock =  accept( ConnectionSock, (struct sockaddr *)sin, len);
+		if ( newsock > -1 ) {
+			int on = 1;
+			setsockopt( newsock, SOL_SOCKET, SO_KEEPALIVE, (char*)&on,
+				sizeof(on) );
+		}
+		return (newsock);
     } else {
 		EXCEPT( "select: unknown connection, readfds = 0x%x, count = %d",
 			   readfds, count );
