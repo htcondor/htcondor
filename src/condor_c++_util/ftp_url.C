@@ -27,7 +27,6 @@
 */ 
 
 #include "condor_common.h"
-#include "condor_fix_socket.h"
 #include "url_condor.h"
 #include "condor_debug.h"
 
