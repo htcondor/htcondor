@@ -96,6 +96,7 @@ class AttrList : public AttrListAbstract
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 
+        int        	Insert(char*);			// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
         int			Delete(char*);			// delete the expr with the name
 
