@@ -91,8 +91,7 @@ ParseExpression( ExprTree *&tree, bool full )
 	Operation 	*newTree;
 
 	if( !parseLogicalORExpression (tree) ) return false;
-	if( ( tt  = lexer.PeekToken() ) == LEX_QMARK)
-	{
+	if( ( tt  = lexer.PeekToken() ) == LEX_QMARK) {
 		newTree = new Operation();
 		lexer.ConsumeToken();
 		treeL = tree;
@@ -861,7 +860,7 @@ parseArgumentList( FunctionCall *fncall )
 
 //  ClassAd       ::= '[' AttributeList ']'
 //  AttributeList ::= (epsilon)
-//                  | AttributeList ';' Attribute
+//                  | Attribute ';' AttributeList
 //  Attribute     ::= Identifier '=' Expression
 bool Source::
 ParseClassAd( ClassAd *&ad, bool full )
@@ -939,7 +938,7 @@ ParseClassAd( ClassAd &ad , bool full )
 
 //  ExprList          ::= '{' ListOfExpressions '}'
 //  ListOfExpressions ::= (epsilon)
-//                      | ListOfExpressions ',' Expression
+//                      | Expression ',' ListOfExpressions
 bool Source::
 ParseExprList( ExprList *&list , bool full )
 {
