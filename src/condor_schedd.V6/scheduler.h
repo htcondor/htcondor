@@ -36,6 +36,13 @@ struct shadow_rec
     int             conn_fd;
 };
 
+struct OwnerData {
+  char* Name;
+  int JobsRunning;
+  int JobsIdle;
+  OwnerData() { Name=NULL; JobsRunning=JobsIdle=0; }
+};
+
 struct Mrec
 {
     Mrec(char*, char*, PROC_ID*);
@@ -135,7 +142,7 @@ class Scheduler : public Service
 	int				BadProc;
 	int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	int				N_RejectedClusters;
-	char*			Owners[MAX_NUM_OWNERS];
+        OwnerData			Owners[MAX_NUM_OWNERS];
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
@@ -154,6 +161,7 @@ class Scheduler : public Service
 	char*			Mail;
 	char*			filename;					// save UpDown object
 	char*			AccountantName;
+        char*                   UidDomain;
 
 	// connection variables
 	struct sockaddr_in	From;
@@ -166,7 +174,7 @@ class Scheduler : public Service
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
 	void			update_central_mgr();
-	void			insert_owner(char*);
+	int			insert_owner(char*);
 	void			reaper(int, int, struct sigcontext*);
 	void			clean_shadow_recs();
 	void			preempt(int);

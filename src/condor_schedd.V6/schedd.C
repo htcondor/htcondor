@@ -238,7 +238,7 @@ Scheduler::timeout()
 	upDown_Display();        /* UPDOWN */
 	upDown_WriteToFile(filename);    /* UPDOWN */
 
-	update_central_mgr();
+	//	update_central_mgr();
 
 		/* Neither of these should be needed! */
 	reaper( 0, 0, 0 );
@@ -259,13 +259,21 @@ Scheduler::count_jobs()
 {
 	int		i;
 	int		prio_compar();
-	char	tmp[200];
+	char	tmp[512];
 
 	N_Owners = 0;
 	JobsRunning = 0;
 	JobsIdle = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
+
+	// clear out the table ... (WHY? --RR)
+	for ( i=0; i<MAX_NUM_OWNERS; i++) {
+		if (Owners[i].Name) FREE( Owners[i].Name );
+		Owners[i].Name = NULL;
+		Owners[i].JobsRunning = 0;
+		Owners[i].JobsIdle = 0;
+	}
 
 	WalkJobQueue((int(*)(int, int)) count );
 
@@ -284,22 +292,37 @@ Scheduler::count_jobs()
 	// large enough.  this keeps us from guessing to small and constantly
 	// growing PrioRec... Add 5 just to be sure... :^) -Todd 8/97
 	grow_prio_recs( JobsRunning + JobsIdle + 5 );
-
-	for ( i=0; i<N_Owners; i++) {
-		FREE( Owners[i] );
-	}
-
-	sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, JobsRunning);
-	ad->InsertOrUpdate(tmp);
-
-	sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, JobsIdle);
-	ad->InsertOrUpdate(tmp);
-
+	
 	sprintf(tmp, "%s = %d", ATTR_NUM_USERS, N_Owners);
 	ad->InsertOrUpdate(tmp);
-
+	
 	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 	ad->InsertOrUpdate(tmp);
+	
+    sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
+    dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+    ad->InsertOrUpdate(tmp);
+	ad->Delete (ATTR_IDLE_JOBS);
+	update_central_mgr();  // Send even if no owners
+	dprintf (D_ALWAYS, "Sent HEART BEAT ad to central mgr: N_Owners=%d\n",N_Owners);
+
+	for ( i=0; i<N_Owners; i++) {
+
+	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
+	  dprintf (D_ALWAYS, "Changed attribute: %s\n", tmp);
+	  ad->InsertOrUpdate(tmp);
+
+	  update_central_mgr();
+	}
+
 	return 0;
 }
 
@@ -332,7 +355,12 @@ count( int cluster, int proc )
 	} else {
 		sched->JobsRunning += cur_hosts;
 		sched->JobsIdle += (max_hosts - cur_hosts);
-		sched->insert_owner( owner );
+
+		// Per owner info
+		int OwnerNum = sched->insert_owner( owner );
+		sched->Owners[OwnerNum].JobsRunning += cur_hosts;
+		sched->Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+
 		if ( status == RUNNING ) {	/* UPDOWN */
 			upDown_UpdateUserInfo(owner,UpDownRunning);
 		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
@@ -342,20 +370,21 @@ count( int cluster, int proc )
 	return 0;
 }
 
-void
+int
 Scheduler::insert_owner(char* owner)
 {
 	int		i;
 	for ( i=0; i<N_Owners; i++ ) {
-		if( strcmp(Owners[i],owner) == MATCH ) {
-			return;
+		if( strcmp(Owners[i].Name,owner) == MATCH ) {
+			return i;
 		}
 	}
-	Owners[i] = strdup( owner );
+	Owners[i].Name = strdup( owner );
 	N_Owners +=1;
 	if ( N_Owners == MAX_NUM_OWNERS ) {
 		EXCEPT( "Reached MAX_NUM_OWNERS" );
 	}
+	return i;
 }
 
 void
@@ -1936,6 +1965,11 @@ Scheduler::Init()
 		ScheddHeavyUserTime = atoi( tmp );
 		free( tmp );
 	}
+
+    UidDomain = param( "UID_DOMAIN" );
+    if( NegotiatorHost == NULL ) {
+        EXCEPT( "No UID_DOMAIN specified in config file\n" );
+    }
 
     Step                    = SchedDInterval/ScheddScalingFactor;
     ScheddHeavyUserPriority = Step * ScheddHeavyUserTime;
