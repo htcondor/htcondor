@@ -303,7 +303,9 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
   GSI_FLAGS = -DCONDOR_GSI
   GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
-	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a
+	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_openssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a 
 #else
   GSI_FLAGS =
   GSI_LIB   =
