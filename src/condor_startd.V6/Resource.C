@@ -56,7 +56,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr = cap;
 	r_attr->attach( this );
 
-	r_load_num_called = 8;
 	kill_tid = -1;
 	update_tid = -1;
 	r_is_deactivating = false;
@@ -306,6 +305,32 @@ Resource::starter_exited( void )
 		change_state( owner_state );
 		break;
 	}
+}
+
+
+int
+Resource::spawn_starter( start_info_t* info, time_t now )
+{
+	int rval;
+	if( ! r_starter ) {
+			// Big error!
+		dprintf( D_ALWAYS, "ERROR! Resource::spawn_starter() called "
+				 "w/ no Starter object! Returning failure\n" );
+		return 0;
+	}
+
+	rval = r_starter->spawn( info, now );
+
+		// Fake ourselves out so we take another snapshot in 15
+		// seconds, once the starter has had a chance to spawn the
+		// user job and the job as (hopefully) done any initial
+		// forking it's going to do.  If we're planning to check more
+		// often that 15 seconds, anyway, don't bother with this.
+	if( pid_snapshot_interval > 15 ) {
+		r_starter->set_last_snapshot( (now + 15) -
+									  pid_snapshot_interval );
+	} 
+	return rval;
 }
 
 
@@ -987,10 +1012,9 @@ Resource::compute_condor_load( void )
 	int i;
 
 	if( r_starter->active() ) { 
-		r_load_num_called++;
-		if( r_load_num_called >= 10 ) {
-			r_starter->recompute_pidfamily();
-			r_load_num_called = 0;
+		time_t now = time(NULL);
+		if( now - r_starter->last_snapshot() >= pid_snapshot_interval ) { 
+			r_starter->recompute_pidfamily( now );
 		}
 
 		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
