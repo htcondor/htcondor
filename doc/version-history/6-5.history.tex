@@ -44,6 +44,10 @@ The details of each version are described below.
 \item Added new option \Opt{-dagman} to \Condor{submit\_dag} which allows 
 specification of an alternate \Condor{dagman} executable. 
 
+\item Improved \Arg{-config} option to \Condor{config\_val} to print
+      descriptive lines to stderr and filenames to stdout, so that its
+      output can be cleanly piped into tools like xargs.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -146,7 +150,9 @@ Configuration files they are using, right after the startup banner.
 
 \item The \Condor{config\_val} program now has a \Arg{-verbose} option
   which will tell you in which configuration file and line number a
-  condor configuration parameter is defined.
+  condor configuration parameter is defined, and a \Arg{-config}
+  option which will simply list all of the configuration files in use
+  by Condor.
 
 \item There are new attributes to control Condor's file transfer
   mechanism.
