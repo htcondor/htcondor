@@ -78,7 +78,7 @@ main (int argc, char *argv[])
 
 	// initialize to read from config file
 	myName = argv[0];
-	config ((ClassAd*)NULL);
+	config();
 
 	// The arguments take two passes to process --- the first pass
 	// figures out the mode, after which we can instantiate the required
