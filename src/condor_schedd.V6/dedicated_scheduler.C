@@ -2264,6 +2264,7 @@ DedicatedScheduler::computeSchedule( void )
 	CandidateList *unclaimed_candidates = NULL;
 	CAList *unclaimed_candidates_jobs = NULL;
 
+	int *nodes_per_proc = NULL;
 	match_rec* mrec;
 	int i, l;
 
@@ -2522,7 +2523,7 @@ DedicatedScheduler::computeSchedule( void )
 			int nodes;
 			int proc;
 
-			int nodes_per_proc[nprocs];
+			nodes_per_proc = new int[nprocs];
 			for (int ni = 0; ni < nprocs; ni++) {
 				nodes_per_proc[ni] = 0;
 			}
@@ -2742,6 +2743,9 @@ DedicatedScheduler::computeSchedule( void )
 			}
 
 			delete jobs;
+			if( nodes_per_proc ) {
+					delete [] nodes_per_proc;
+			}
 			return true;
 		} else {
 			dprintf( D_FULLDEBUG, "Can't satisfy job %d with all possible "
@@ -2776,6 +2780,9 @@ DedicatedScheduler::computeSchedule( void )
 		}
 	}
 	delete jobs;
+	if( nodes_per_proc ) {
+			delete [] nodes_per_proc;
+	}
 	return true;
 }
 
