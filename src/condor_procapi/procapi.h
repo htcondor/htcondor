@@ -44,10 +44,10 @@
 
 #ifndef HPUX               // neither of these are in hpux.
 
-#if defined(Solaris26) || defined(Solaris27)
-#include <procfs.h>        // /proc stuff for Solaris 2.6 and 2.7
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
+#include <procfs.h>        // /proc stuff for Solaris 2.6, 2.7, 2.8
 #else
-#include <sys/procfs.h>    // /proc stuff for everything else
+#include <sys/procfs.h>    // /proc stuff for everything else and
 #endif
 
 #endif /* ! HPUX */
