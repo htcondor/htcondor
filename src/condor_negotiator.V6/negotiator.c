@@ -172,9 +172,7 @@ char	*argv[];
 	char	**ptr;
 	fd_set	readfds;
 	struct timeval timer;
-	int		i;
-
-
+	
 #ifdef NFSFIX
 	/* Must be condor to write to log files. */
 	set_condor_euid(__FILE__,__LINE__);
@@ -189,14 +187,13 @@ char	*argv[];
 		}
 		switch( ptr[0][1] ) {
 			case 'f':
-				Foreground++;
+				Foreground = 1;
 				break;
 			case 't':
 				Termlog++;
 				break;
 			case 'c':
 				strcpy(config_file, *(++ptr));
-				ptr++;
 				break; 
 			default:
 				usage( argv[0] );
@@ -538,15 +535,15 @@ init_params()
 	struct servent 		*servp;
 	char				*tmp;
 	struct hostent      *Collector_Hostentp;
-
+	
 	tmp = param( "NEGOTIATOR_DEBUG" );
 	if( tmp == NULL ) {
 		EXCEPT( "NEGOTIATOR_DEBUG not specified in config file\n" );
 	} else {
 		free( tmp );
 	}
-	Foreground = boolean( "NEGOTIATOR_DEBUG", "Foreground" );
-
+	Foreground += boolean( "NEGOTIATOR_DEBUG", "Foreground" );
+	
 	Log = param( "LOG" );
 	if( Log == NULL )  {
 		EXCEPT( "No log directory specified in config file\n" );
