@@ -151,6 +151,14 @@ class DedicatedScheduler : public Service {
 	bool DelMrec( char* cap );
 	bool DelMrec( match_rec* rec );
 
+		/** Remove the given shadow record from any match records that
+			point to it by setting the shadowRec field to NULL.
+			@param shadow Pointer to the shadow record to remove
+			@return true if any match records point to that shadow,
+			        false if not.
+		*/
+	bool removeShadowRecFromMrec( shadow_rec* shadow );
+
 	char* name( void ) { return ds_name; };
 	char* owner( void ) { return ds_owner; };
 
