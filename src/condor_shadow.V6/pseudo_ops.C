@@ -488,9 +488,10 @@ is_ickpt_file(const char path[])
 
 /*
    rename() becomes a psuedo system call because the file may be a checkpoint
-   stored on the checkpoint server.  Will try the local call first (in case
-   it is just a rename being call ed by a user job), but if that fails, we'll
-   see if the checkpoint server can do it for us.
+   stored on the checkpoint server.  If it is a checkpoint file and we're
+   using the checkpoint server, then we send the rename command to the
+   checkpoint server.  Also, if it is a checkpoint file, we commit the
+   job's rusage here.
 
    Also, be sure we've got a reasonable umask() when we twiddle
    checkpoint files, since the user job might have called umask(),
@@ -518,22 +519,41 @@ pseudo_rename(char *from, char *to)
 		if (CkptFile) {
 			(void)umask( omask );
 			set_priv(priv);
-			commit_rusage();
+			if (rval == 0) {	// if the rename was successful
+				LastCkptTime = time(0);
+				NumCkpts++;
+				commit_rusage();
+					// We just successfully wrote a local checkpoint,
+					// so we should remove the checkpoint we left on
+					// a checkpoint server, if any.
+				if (LastCkptServer) {
+					SetCkptServerHost(LastCkptServer);
+					RemoveRemoteFile(p->owner, to);
+					free(LastCkptServer);
+					LastCkptServer = NULL; // stored ckpt file on local disk
+				}
+			}
 		}
 
-		if (rval == 0 || rval == -1 && errno != ENOENT) {
-			return rval;
-		}
+		return rval;
 
-	}
-	
-	if (CkptFile) {
+	} else {
+
 		if (RenameRemoteFile(p->owner, from, to) < 0)
 			return -1;
-		// if we just wrote a checkpoint to a new checkpoint server,
-		// we should remove the checkpoint we left on the previous server.
-		if (LastCkptServer &&
-			same_host(LastCkptServer, CkptServerHost) == FALSE) {
+			// if we just wrote a checkpoint to a new checkpoint server,
+			// we should remove any previous checkpoints we left around.
+		if (!LastCkptServer) {
+				// previous checkpoint is on the local disk
+			priv = set_condor_priv();
+			omask = umask( 022 );
+			unlink(from);
+			unlink(to);
+			(void)umask( omask );
+			set_priv(priv);
+		} else if (LastCkptServer &&
+				   same_host(LastCkptServer, CkptServerHost) == FALSE) {
+				// previous checkpoint is on a different ckpt server
 			SetCkptServerHost(LastCkptServer);
 			RemoveRemoteFile(p->owner, to);
 			SetCkptServerHost(CkptServerHost);
@@ -543,29 +563,12 @@ pseudo_rename(char *from, char *to)
 		LastCkptTime = time(0);
 		NumCkpts++;
 		commit_rusage();
+		return 0;
+
 	}
 
-	return 0;
+	return -1;					// should never get here
 }
-
-void
-set_last_ckpt_server()
-{
-	if (!LastCkptServer) {
-		LastCkptServer = (char *)malloc(_POSIX_PATH_MAX);
-		if (JobAd->LookupString(ATTR_LAST_CKPT_SERVER,
-								LastCkptServer) == 0) {
-			free(LastCkptServer);
-			LastCkptServer = NULL;
-		}
-		if (LastCkptServer) {
-			SetCkptServerHost(LastCkptServer);
-		} else {
-			SetCkptServerHost(CkptServerHost);
-		}
-	}
-}
-
 
 /*
   Provide a process which will serve up the requested file as a
@@ -598,9 +601,11 @@ pseudo_get_file_stream(
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 
 	*len = 0;
-		/* open the file */
-	if (CkptFile && UseCkptServer) {
-		set_last_ckpt_server();
+
+	if (CkptFile && LastCkptServer) {
+			// If LastCkptServer is not NULL, we stored our last checkpoint
+			// file on the checkpoint server.
+		SetCkptServerHost(LastCkptServer);
 		retry_wait = 5;
 		do {
 			rval = RequestRestore(p->owner,file,len,
@@ -615,112 +620,85 @@ pseudo_get_file_stream(
 				}
 			}
 		} while (rval);
-	} else {
-		rval = -1;
-	}
-
-	// need Condor privileges to access checkpoint files
-	if (CkptFile || ICkptFile) {
-		priv = set_condor_priv();
-	}
-
-	if (CkptFile) NumRestarts++;
-
-	if( ((file_fd=open(file,O_RDONLY)) < 0) || 
-	   (rval != 1 && rval != 73 && rval != -1 && rval != -121)) {
-		/* If it isn't here locally, maybe it is on the checkpoint server */
-		/* And, maybe the checkpoint server still is working on the old one
-		   so, if the return val is 1 (which indicates a locked file), we 
-		   try again */
-		if (file_fd >= 0) {
-			close(file_fd);
-		}
-		if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
-		retry_wait = 5;
-		while (rval == 1) {
-			rval = RequestRestore(p->owner,file,len,(struct in_addr*)ip_addr,port);
-			if (rval == 1) {
-				dprintf(D_ALWAYS, "ckpt server says file is locked, trying"
-						" again in %d seconds\n", retry_wait);
-				sleep(retry_wait);
-				retry_wait *= 2;
-				if (retry_wait > MaxRetryWait) {
-					EXCEPT("ckpt server restore failed");
-				}
-			}
-		} 
 
 		*ip_addr = ntohl( *ip_addr );
 		display_ip_addr( *ip_addr );
 		*port = ntohs( *port );
 		dprintf( D_ALWAYS, "RestoreRequest returned %d using port %d\n", 
 				rval, *port );
-		if ( rval ) {
-			/* Oops, couldn't find it on the checkpoint server either */
-			errno = ENOENT;
-			return -1;
-		} else {
-			BytesSent += *len;
-			return 0;
-		}
-	} else {
-
-		*len = file_size( file_fd );
-		dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
 		BytesSent += *len;
+		NumRestarts++;
+		return 0;
+	}
 
-		get_host_addr( ip_addr );
-		display_ip_addr( *ip_addr );
+		// need Condor privileges to access checkpoint files
+	if (CkptFile || ICkptFile) {
+		priv = set_condor_priv();
+	}
 
-		create_tcp_port( port, &connect_sock );
-		dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
+	file_fd=open(file,O_RDONLY);
+
+	if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
+
+	if (file_fd < 0) return -1;
+
+	if (CkptFile) NumRestarts++;
+
+	*len = file_size( file_fd );
+	dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
+	BytesSent += *len;
+
+	get_host_addr( ip_addr );
+	display_ip_addr( *ip_addr );
+
+	create_tcp_port( port, &connect_sock );
+	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
 		
-		switch( child_pid = fork() ) {
-		    case -1:	/* error */
-			    dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
-				if (CkptFile || ICkptFile) set_priv(priv);
-				return -1;
-			case 0:	/* the child */
-				data_sock = connect_file_stream( connect_sock );
-				if( data_sock < 0 ) {
-					exit( 1 );
-				}
-				dprintf( D_FULLDEBUG, "\tShould Send %d bytes of data\n", 
-						*len );
-				bytes_sent = stream_file_xfer( file_fd, data_sock, *len );
-				if (bytes_sent != *len) {
-					dprintf(D_ALWAYS,
-							"Failed to transfer %d bytes (only sent %d)\n",
-							*len, bytes_sent);
-					exit(1);
-				}
+	switch( child_pid = fork() ) {
+	case -1:	/* error */
+		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
+		if (CkptFile || ICkptFile) set_priv(priv);
+		return -1;
+	case 0:	/* the child */
+		data_sock = connect_file_stream( connect_sock );
+		if( data_sock < 0 ) {
+			exit( 1 );
+		}
+		dprintf( D_FULLDEBUG, "\tShould Send %d bytes of data\n", 
+				 *len );
+		bytes_sent = stream_file_xfer( file_fd, data_sock, *len );
+		if (bytes_sent != *len) {
+			dprintf(D_ALWAYS,
+					"Failed to transfer %d bytes (only sent %d)\n",
+					*len, bytes_sent);
+			exit(1);
+		}
 
 #if 0	/* For compressed checkpoints, we need to close the socket
 		   so the client knows we are done sending (i.e., so the client's
 		   read will return), so we no longer require this confirmation. */
-				/*
-				 Here we should get a confirmation that our peer was able to
-				 read the same number of bytes we sent, but the starter doesn't
-				 send it, so if our peer just closes his end, we let that go.
-				 */
-				bytes_read = read( data_sock, &status, sizeof(status) );
-				if( bytes_read == 0 ) {
-					exit( 0 );
-				}
+			/*
+			  Here we should get a confirmation that our peer was able to
+			  read the same number of bytes we sent, but the starter doesn't
+			  send it, so if our peer just closes his end, we let that go.
+			*/
+		bytes_read = read( data_sock, &status, sizeof(status) );
+		if( bytes_read == 0 ) {
+			exit( 0 );
+		}
 				
-				assert( bytes_read == sizeof(status) );
-				status = ntohl( status );
-				assert( status == *len );
-				dprintf( D_ALWAYS,
-						"\tSTREAM FILE SENT OK (%d bytes)\n", status );
+		assert( bytes_read == sizeof(status) );
+		status = ntohl( status );
+		assert( status == *len );
+		dprintf( D_ALWAYS,
+				 "\tSTREAM FILE SENT OK (%d bytes)\n", status );
 #endif
-				exit( 0 );
-			default:	/* the parent */
-				close( file_fd );
-				close( connect_sock );
-				if (CkptFile || ICkptFile) set_priv(priv);
-				return 0;
-			}
+		exit( 0 );
+	default:	/* the parent */
+		close( file_fd );
+		close( connect_sock );
+		if (CkptFile || ICkptFile) set_priv(priv);
+		return 0;
 	}
 
 		/* Can never get here */
@@ -1637,9 +1615,9 @@ has_ckpt_file()
 		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
 	do {
-		set_last_ckpt_server();
+		SetCkptServerHost(LastCkptServer);
 		rval = FileExists(RCkptName, p->owner);
-		if (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime) {
+		if(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime) {
 			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
 					" in %d seconds\n", retry_wait);
 			sleep(retry_wait);
@@ -1648,7 +1626,7 @@ has_ckpt_file()
 				EXCEPT("failed to contact ckpt server");
 			}
 		}
-	} while (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime);
+	} while(rval == -1 && LastCkptServer && accum_usage > MaxDiscardedRunTime);
 	if (rval == -1) { /* not on local disk & not using ckpt server */
 		rval = FALSE;
 	}

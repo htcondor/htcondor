@@ -414,6 +414,17 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
+		// Initialize location of our checkpoint file.  If we stored it
+		// on a checkpoint server then set LastCkptServer.  Otherwise,
+		// LastCkptServer should be NULL to indicate that we should
+		// look on the local disk for our checkpoint file.
+	LastCkptServer = (char *)malloc(_POSIX_PATH_MAX);
+	if (JobAd->LookupString(ATTR_LAST_CKPT_SERVER,
+							LastCkptServer) == 0) {
+		free(LastCkptServer);
+		LastCkptServer = NULL;
+	}
+
 	tmp = param( "MAX_DISCARDED_RUN_TIME" );
 	if (tmp) {
 		MaxDiscardedRunTime = atoi(tmp);
@@ -783,10 +794,6 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							 ATTR_LAST_VACATE_TIME, time(0) );
 		}
 
-		if (LastCkptServer) {
-			SetAttributeString(Proc->id.cluster, Proc->id.proc,
-							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
-		}
 		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
@@ -808,6 +815,17 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			if (Executing_OpSys) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 								   ATTR_CKPT_OPSYS, Executing_OpSys);
+			}
+				// If we wrote a checkpoint, store the location in the
+				// LastCkptServer attribute.  If we didn't use a checkpoint
+				// server (i.e., we stored it locally), then make sure
+				// no LastCkptServer attribute is set.
+			if (LastCkptServer) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+								   ATTR_LAST_CKPT_SERVER, LastCkptServer);
+			} else {
+				DeleteAttribute(Proc->id.cluster, Proc->id.proc,
+								   ATTR_LAST_CKPT_SERVER);
 			}
 		}
 		// if the job completed, we should include the run-time in
