@@ -1,0 +1,64 @@
+In order to take advantage of two major condor features: checkpointing and
+remote system calls, users of the condor system need to relink their
+binaries.  The condor system can be set up in such a way that this can be made
+nearly transparent to users.  
+
+The basic idea here is to replace the system linker (ld) with the condor
+linker.  Then, when a program is to be linked, the condor linker figures out
+whether this binary will be for condor, or for a normal binary.  If it is to
+be a normal compile, the old ld is called.  If this binary is to be linked for
+condor, the script performs the necessary operations in order to prepare a
+binary that can be used with condor.  In order to differentiate between normal
+builds and condor builds, all a user need do is prefix condor_compile before
+there build command whether that be make, gcc, or any other command.
+
+In order to install this condor_compile facility, the following steps need
+to be followed.
+	
+	1. Rename the system linker from ld to ld.real.
+	2. Copy the condor linker to the location of the previous ld.
+	3. Set the owner of the linker to root.
+	4. Set the permissions on the new linker to 755.
+
+The actual commands that you must execute depend upon the system that you
+are on.  The location of the system linker (ld), is as follows:
+
+	Operating System              Location of ld (ld-path)
+	Linux                         /usr/bin
+	Solaris 2.X, HP-UX 10.x       /usr/ccs/bin
+	OSF/1 (Digital Unix)          /usr/lib/cmplrs/cc
+
+On these platforms, issue the following commands (as root), where [ld-path] is
+replaced by the path to your systems linker.
+
+	mv /[ld-path]/ld /[ld-path]/ld.real
+        cp /usr/local/condor/lib/ld /[ld-path]/ld
+        chown root /[ld-path]/ld
+        chmod 755 /[ld-path]/ld
+
+On IRIX, things are more complicated in that there are multiple ld binaries
+that need to be moved, and symbolic links need to be made in order to convince
+the linker to work, since it looks at the name of it's own binary in order
+to figure out what to do.
+
+	mv /usr/lib/ld /usr/lib/ld.real
+        mv /usr/lib/uld /usr/lib/uld.real
+        cp /usr/local/condor/lib/ld /usr/lib/ld
+        ln /usr/lib/ld /usr/lib/uld
+        chown root /usr/lib/ld /usr/lib/uld
+        chmod 755 /usr/lib/ld /usr/lib/uld
+        mkdir /usr/lib/condor
+        chown root /usr/lib/condor
+        chmod 755 /usr/lib/condor
+        ln -s /usr/lib/uld.real /usr/lib/condor/uld
+        ln -s /usr/lib/uld.real /usr/lib/condor/old_ld
+
+If you remove condor from your system latter on, linking will continue to
+work, since the condor linker will always resolve that you are compiling
+normal binaries and simply call the real ld.  In the interest of simplicity,
+it is recomended that you reverse the above changes by moving your ld.real
+linker back to it's former position as ld, overwriting the condor linker.  On
+IRIX, you need to do this for both linkers, and you will probably want to
+remove the symbolic links as well.
+
+
