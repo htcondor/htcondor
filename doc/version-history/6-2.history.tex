@@ -17,6 +17,8 @@ The details of each version are described below.
 \noindent New Features:
 \begin{itemize}
 
+\item Man pages are now included in the Condor distribution for UNIX.
+
 \item Condor administrators can now specify
 \MacroNI{CONDOR\_SUPPORT\_EMAIL} in their config file.
 This address is included at the bottom of all email Condor sends out.
@@ -158,7 +160,14 @@ searching the other locations.
 
 \noindent Known Bugs:
 \begin{itemize}
-\item None.
+\item \Condor{compile} on DIGITAL UNIX 4.0 with the Vendor cc compiler now 
+passes a different option to specify the path to find the Condor libraries. We 
+believe that this new option is correct for all versions of the compiler, but
+do not have enough testing options to confirm this.
+
+\item Condor does not work on international version of Windows 2000. It has
+only been tested with the US version.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
