@@ -253,14 +253,17 @@ struct procHashNode {
     non-NULL pointer into a member function.  Don't forget to deallocate
     the procInfo structure when done!
 
+	<p>
+	Note: Since there is no need to instantiate multiple copies of
+	this class, the whole class is static, and should just never be
+	instantiated at all.
+
     @author Mike Yoder
     @see procInfo
  */
 
 class ProcAPI {
  public:
-  /** Default constructor. */
-  ProcAPI();
   /** Destructor */
   ~ProcAPI();
 
@@ -274,7 +277,7 @@ class ProcAPI {
       @return A -1 is returned on failure, 0 otherwise.
       @see procInfo
   */
-  int getProcInfo ( pid_t pid, piPTR& pi );
+  static int getProcInfo ( pid_t pid, piPTR& pi );
 
   /** getProcSetInfo gets information on a set of pids.  These pids are 
       specified by an array of pids that has 'numpids' elements.  The
@@ -286,7 +289,7 @@ class ProcAPI {
       @return A -1 is returned if a pid's info can't be returned, 0 otherwise.
       @see procInfo
   */
-  int getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi );
+  static int getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi );
 
   /** getFamilyInfo returns a procInfo struct for a process and all
       processes which are descended from that process ( children, children
@@ -297,7 +300,7 @@ class ProcAPI {
       @return A -1 is returned on failure, 0 otherwise.
       @see procInfo
   */
-  int getFamilyInfo ( pid_t pid, piPTR& pi );
+  static int getFamilyInfo ( pid_t pid, piPTR& pi );
 
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
@@ -305,7 +308,7 @@ class ProcAPI {
       @return nothing
       @see procInfo
    */
-  void printProcInfo ( piPTR pi );
+  static void printProcInfo ( piPTR pi );
 
   /** The next function, getMemInfo, has a different implementation for 
       each *&^%$#@! OS.  The numbers returned for total & free mem are 
@@ -315,7 +318,7 @@ class ProcAPI {
       @param freemem  Free memory
       @return A -1 is returned on failure, 0 otherwise.
   */
-  int getMemInfo ( int& totalmem, int& freemem );
+  static int getMemInfo ( int& totalmem, int& freemem );
 
   /** This function returns a list of pids that are 'descendents' of that pid.
       I call this a 'family' of pids.  This list is put into pidFamily, which
@@ -326,11 +329,11 @@ class ProcAPI {
       @param pidFamily An array for holding pids in the family
       @return A -1 is returned on failure, 0 otherwise.
   */
-  int getPidFamily( pid_t pid, pid_t *pidFamily );
+  static int getPidFamily( pid_t pid, pid_t *pidFamily );
 
 #ifdef WANT_STANDALONE_DEBUG
   /** This is a menu driver for tests 1-7.  Please don't try and break it. */
-  void runTests();
+  static void runTests();
 
   /** This first test demonstrates the creation and monitoring of
       a simple family of processes.  This process forks off copies
@@ -339,32 +342,32 @@ class ProcAPI {
       deallocate the memory they allocated. They then sleep for a
       minute and exit.  These children are monitored individually
       and as a family of processes. */
-  void test1();
+  static void test1();
 
   /** This test is similar to test 1, except that the children are
       forked off in a different way.  In this case, the parent forks
       a child, which itself forks a child, which forks a child, etc.  It
       is still possible to monitor this group by getting the
       family info for the parent pid.  */
-  void test2();
+  static void test2();
   
   /** This test determines if you can get information on processes
       other than those you own.  If you get a summary of all the
       processes in the system ( parent=1 ) then you can. */
-  void test3();
+  static void test3();
 
   /** This test checks the getProcSetInfo() function.  The user is 
       asked for pids, and the sum of their information is returned. */
-  void test4();
+  static void test4();
   
   /** This is a quick test of getPidFamily().  It forks off some
       processes and it'll print out the pids associated with these children */
-  void test5();
+  static void test5();
 
   /** Here's the test of cpu usage monitoring over time.  I'll
       fork off a process, which will alternate between sleeping
       and working.  I'll return info on that process. */
-  void test6();
+  static void test6();
 
   /** This is the nifty test.  Given a name of an executable, this test
       does and fork() and then an exec(), basically starting up a child
@@ -372,85 +375,92 @@ class ProcAPI {
       are monitored once every 10 seconds and the results printed out.
       I have had success with all sorts of programs, even a monster like
       Netscape ( /s/netscape-4/bin/netscape ) */
-  void test_monitor ( char * jobname );
+  static void test_monitor ( char * jobname );
 #endif  // of WANT_STANDALONE_DEBUG
 
  private:
-  void initpi ( piPTR& );                  // initialization of pi.
-  int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
+
+  /** Default constructor.  It's private so that no one really
+	  instantiates a ProcAPI object anywhere. */
+  ProcAPI() {};		
+
+  static void initpi ( piPTR& );                  // initialization of pi.
+  static int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
 #ifndef WIN32
 	  // works with the hashtable; finds cpuusage, maj/min page faults.
-  void do_usage_sampling( piPTR&, double, long, long);
-  int buildPidList();                      // just what it says
-  int buildProcInfoList();                 // ditto.
-  int buildFamily( pid_t );                // builds + sums procInfo list
-  int getNumProcs();                       // guess.
-  long secsSinceEpoch();                   // used for wall clock age
-  double convertTimeval ( struct timeval );// convert timeval to double
-  pid_t getAndRemNextPid();                // used in pidList deconstruction
-  void deallocPidList();                   // these deallocate their
-  void deallocAllProcInfos();              // respective lists.
-  void deallocProcFamily();
+  static void do_usage_sampling( piPTR&, double, long, long);
+  static int buildPidList();                      // just what it says
+  static int buildProcInfoList();                 // ditto.
+  static int buildFamily( pid_t );                // builds + sums procInfo list
+  static int getNumProcs();                       // guess.
+  static long secsSinceEpoch();                   // used for wall clock age
+  static double convertTimeval ( struct timeval );// convert timeval to double
+  static pid_t getAndRemNextPid();                // used in pidList deconstruction
+  static void deallocPidList();                   // these deallocate their
+  static void deallocAllProcInfos();              // respective lists.
+  static void deallocProcFamily();
 #endif // not defined WIN32
 
 #ifdef WANT_STANDALONE_DEBUG
-  void sprog1 ( pid_t *, int, int );       // used by test1.
-  void sprog2 ( int, int );                // used by test2.
+  static void sprog1 ( pid_t *, int, int );       // used by test1.
+  static void sprog2 ( int, int );                // used by test2.
 #endif  // of WANT_STANDALONE_DEBUG
 
 #ifdef WIN32 // some windoze-specific thingies:
 	//Todd's system info class, for getting parent:
-  CSysinfo ntSysInfo;
+  static CSysinfo ntSysInfo;
 
-  void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
-				 pid_t* &fampids, int &famsize );
-  void getAllPids( pid_t* &pids, int &numpids );
-  int multiInfo ( pid_t *pidlist, int numpids, piPTR &pi );
-  int isinlist( pid_t pid, pid_t *pidlist, int numpids ); 
-  DWORD GetSystemPerfData ( LPTSTR pValue );
-  double LI_to_double ( LARGE_INTEGER );
-  PPERF_OBJECT_TYPE firstObject( PPERF_DATA_BLOCK pPerfData );
-  PPERF_OBJECT_TYPE nextObject( PPERF_OBJECT_TYPE pObject );
-  PERF_COUNTER_DEFINITION *firstCounter( PERF_OBJECT_TYPE *pObjectDef );
-  PERF_COUNTER_DEFINITION *nextCounter( PERF_COUNTER_DEFINITION *pCounterDef);
-  PERF_INSTANCE_DEFINITION *firstInstance( PERF_OBJECT_TYPE *pObject );
-  PERF_INSTANCE_DEFINITION *nextInstance(PERF_INSTANCE_DEFINITION *pInstance);
+  static void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
+						  pid_t* &fampids, int &famsize );
+  static void getAllPids( pid_t* &pids, int &numpids );
+  static int multiInfo ( pid_t *pidlist, int numpids, piPTR &pi );
+  static int isinlist( pid_t pid, pid_t *pidlist, int numpids ); 
+  static DWORD GetSystemPerfData ( LPTSTR pValue );
+  static double LI_to_double ( LARGE_INTEGER );
+  static PPERF_OBJECT_TYPE firstObject( PPERF_DATA_BLOCK pPerfData );
+  static PPERF_OBJECT_TYPE nextObject( PPERF_OBJECT_TYPE pObject );
+  static PERF_COUNTER_DEFINITION *firstCounter( PERF_OBJECT_TYPE *pObjectDef );
+  static PERF_COUNTER_DEFINITION *nextCounter( PERF_COUNTER_DEFINITION *pCounterDef);
+  static PERF_INSTANCE_DEFINITION *firstInstance( PERF_OBJECT_TYPE *pObject );
+  static PERF_INSTANCE_DEFINITION *nextInstance(PERF_INSTANCE_DEFINITION *pInstance);
   
-  void grabOffsets ( PPERF_OBJECT_TYPE );
+  static void grabOffsets ( PPERF_OBJECT_TYPE );
       // pointer to perfdata block - where all the performance data lives.
-  PPERF_DATA_BLOCK pDataBlock;
+  static PPERF_DATA_BLOCK pDataBlock;
   
-  struct Offset *offsets;
+  static struct Offset *offsets;
   
 #endif // WIN32 poop.
 
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
-  HashTable <pid_t, procHashNode *> *procHash;
+  static HashTable <pid_t, procHashNode *> *procHash;
   friend int hashFunc ( const pid_t& pid, int numbuckets );
 
 #ifndef WIN32 // these aren't used by the NT version...
 
   // private data structures:
-  pidlistPTR pidList;      // this will be a linked list of all processes
+  static pidlistPTR pidList;      // this will be a linked list of all processes
                            // in the system.  Built by buildpidlist()
 
-  piPTR      allProcInfos; // this will be a linked list of 
+  static piPTR allProcInfos; // this will be a linked list of 
                            // procinfo structures, one for each process
                            // whose /proc information is available.
 
-  piPTR      procFamily;   // a linked list ( using links in the procInfo
+  static piPTR procFamily; // a linked list ( using links in the procInfo
                            // struct ) of processes in the desired 'family'
                            // (a process + its descendants)
 
-  int pagesize;            // pagesize is the size of memory pages, in k.
+  static int pagesize;     // pagesize is the size of memory pages, in k.
                            // It's here so the call getpagesize() only needs
                            // to be called once.
 
 #ifdef LINUX
-  long unsigned boottime;  // this is used only in linux.  It represents the 
-                           // number of seconds after the epoch that the
-                           // machine was booted.  Used in age calculation
+
+  static long unsigned boottime; // this is used only in linux.  It
+		// represents the number of seconds after the epoch that the
+		// machine was booted.  Used in age calculation.
+
 #endif // LINUX
 
 #endif // not defined WIN32

@@ -25,27 +25,21 @@
 #include "procapi.h"
 #include "condor_debug.h"
 
-
-ProcAPI::ProcAPI() {
-
-        // use condor's hashtable
-    procHash = new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );
-
+HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
+    new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
 #ifndef WIN32
-    allProcInfos = NULL;
-    procFamily   = NULL;
-    pidList      = NULL;
-    pagesize     = 0;
+piPTR ProcAPI::procFamily	= NULL;
+piPTR ProcAPI::allProcInfos = NULL;
+pidlistPTR ProcAPI::pidList	= NULL;
+int ProcAPI::pagesize		= 0;
 #ifdef LINUX
-    boottime     = 0;
-#endif
-#endif // ndef WIN32
+long unsigned ProcAPI::boottime	= 0;
+#endif // LINUX
+#else // WIN32
+PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
+struct Offset * ProcAPI::offsets		= NULL;
+#endif // WIN32
 
-#ifdef WIN32
-    pDataBlock = NULL;
-    offsets = NULL;
-#endif
-}
 
 ProcAPI::~ProcAPI() {
         // deallocate stuff like crazy.
@@ -1707,7 +1701,7 @@ ProcAPI::deallocPidList() {
 	}
 }
 
-void
+void 
 ProcAPI::deallocAllProcInfos() {
 	if( allProcInfos != NULL ) {
 		piPTR prev;
