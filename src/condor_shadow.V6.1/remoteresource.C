@@ -544,6 +544,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
 
+	if( DebugFlags & D_MACHINE ) {
+		dprintf( D_MACHINE, "Update ad:\n" );
+		update_ad->dPrint( D_MACHINE );
+		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
+	}
+
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
 	}
