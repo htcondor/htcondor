@@ -198,9 +198,9 @@ getrusage( int who, struct rusage *rusage )
  	 */
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		
-#ifdef SYS_getrusage
+#if defined( SYS_getrusage )
 		rval1 = syscall( SYS_getrusage, who, rusage);
-#elif DL_EXTRACT
+#elif defined( DL_EXTRACT )
 		{
         void *handle;
         int (*fptr)(int,struct rusage *);
@@ -256,10 +256,11 @@ getrusage( int who, struct rusage *rusage )
 		}
 	}
 
-	if ( rval == 0  && rval1 == 0 ) 
+	if ( rval == 0  && rval1 == 0 ) {
 		return 0;
-	else
+	} else {
 		return -1;
+	}
 }
 
 /*
