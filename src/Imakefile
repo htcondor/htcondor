@@ -43,7 +43,7 @@ release:: all
 	sbin/condor_shadow sbin/condor_preen sbin/condor_vacate \
 	sbin/condor_checkpoint sbin/condor_off sbin/condor_on \
 	sbin/condor_reconfig sbin/condor_reconfig_schedd \
-	sbin/condor_reschedule sbin/condor_restart sbin/condor.generic
+	sbin/condor_reschedule sbin/condor_restart
 
 release.tar: stripped
 	cd release_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
