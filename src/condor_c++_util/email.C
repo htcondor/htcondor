@@ -54,9 +54,9 @@ FILE *
 email_user_open_id( ClassAd *jobAd, int cluster, int proc, 
 					const char *subject )
 {
-    char email_addr[256];
-    email_addr[0] = '\0';
-
+	FILE* fp = NULL;
+    char* email_addr = NULL;
+    char* email_full_addr = NULL;
     int notification = NOTIFY_COMPLETE; // default
 
 	ASSERT(jobAd);
@@ -86,45 +86,99 @@ email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 	  Job may have an email address to whom the notification
 	  message should go.  This info is in the classad.
     */
-    if ( (!jobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) ||
-         (email_addr[0] == '\0') ) {
+    if( ! jobAd->LookupString(ATTR_NOTIFY_USER, &email_addr) ) {
 			// no email address specified in the job ad; try owner 
-		if ( (!jobAd->LookupString(ATTR_OWNER, email_addr)) ||
-			 (email_addr[0] == '\0') ) {
+		if( ! jobAd->LookupString(ATTR_OWNER, &email_addr) ) {
 				// we're screwed, give up.
 			return NULL;
 		}
 	}
+		// make sure we've got a valid address with a domain
+	email_full_addr = email_check_domain( email_addr, jobAd );
+	fp = email_open( email_full_addr, subject );
+	free( email_addr );
+	free( email_full_addr );
+	return fp;
+}
 
-    if ( strchr(email_addr,'@') == NULL ) {
-			// No host name specified; add a domain. 
-		char* domain = NULL;
 
-			// First, we check for EMAIL_DOMAIN in the config file
-		domain = param( "EMAIL_DOMAIN" );
+void
+email_custom_attributes( FILE* mailer, ClassAd* job_ad )
+{
+	if( !mailer || !job_ad ) {
+		return;
+	}
 
-			// If that's not defined, we look for UID_DOMAIN in the
-			// job ad
-		if( ! domain ) {
-			jobAd->LookupString( ATTR_UID_DOMAIN, &domain );
+	bool first_time = true;
+	char *attr_str = NULL, *tmp = NULL;
+	job_ad->LookupString( ATTR_EMAIL_ATTRIBUTES, &tmp );
+	if( ! tmp ) {
+		return;
+	}
+	StringList email_attrs;
+	email_attrs.initializeFromString( tmp );
+	free( tmp );
+	tmp = NULL;
+		
+	ExprTree* expr_tree;
+	email_attrs.rewind();
+	while( (tmp = email_attrs.next()) ) {
+		expr_tree = job_ad->Lookup(tmp);
+		if( ! expr_tree ) {
+			continue;
 		}
+		if( first_time ) {
+			fprintf( mailer, "\n\n" );
+			first_time = false;
+		}
+		expr_tree->PrintToNewStr( &attr_str );
+		fprintf( mailer, "%s\n", attr_str );
+		free( attr_str );
+		attr_str = NULL;
+	}
+}
 
-			// If that's not there, look for UID_DOMAIN in the config
-			// file
-		if( ! domain ) {
-			domain = param( "UID_DOMAIN" );
-		} 
 
-			// Now, we can append the domain to our address.
-        strcat( email_addr, "@" );
-        strcat( email_addr, domain );
+char*
+email_check_domain( const char* addr, ClassAd* job_ad )
+{
+	MyString full_addr = addr;
 
-			// No matter what method we used above to find the domain,
-			// we've got to free() it now so we don't leak memory.
-		free( domain );
-    }
+	if( full_addr.FindChar('@') >= 0 ) {
+			// Already has a domain, we're done
+		return strdup( addr );
+	}
 
-    return email_open( email_addr, subject );
+		// No host name specified; add a domain. 
+	char* domain = NULL;
+
+		// First, we check for EMAIL_DOMAIN in the config file
+	domain = param( "EMAIL_DOMAIN" );
+
+		// If that's not defined, we look for UID_DOMAIN in the job ad
+	if( ! domain ) {
+		job_ad->LookupString( ATTR_UID_DOMAIN, &domain );
+	}
+
+		// If that's not there, look for UID_DOMAIN in the config file
+	if( ! domain ) {
+		domain = param( "UID_DOMAIN" );
+	} 
+	
+	if( ! domain ) {
+			// we're screwed, we can't append a domain, just return
+			// the username again... 
+		return strdup( addr );
+	}
+	
+	full_addr += '@';
+	full_addr += domain;
+
+		// No matter what method we used above to find the domain,
+		// we've got to free() it now so we don't leak memory.
+	free( domain );
+
+	return strdup( full_addr.Value() );
 }
 
 

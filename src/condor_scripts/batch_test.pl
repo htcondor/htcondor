@@ -5,6 +5,8 @@
 # V2.1 / 2004-Apr-29 / Becky Gietzel / bgietzel@cs.wisc.edu  
 # Dec 03 : Added an xml output format, triggered by a command line switch, -xml
 # Feb 04 : now you don't need to list all compilers to run/skip for a test, just add the test 
+# Feb 05 : bt Explicit removal of . from the path and explicit addition
+#	of test and sub test directories(during use only) in.
 # make sure tests are called testname.run for skip and run files
 # can use multiple command line options now
 
@@ -24,6 +26,11 @@ $num_success = 0;
 $num_failed = 0;
 $isXML = 0;  # are we running tests with XML output
 my $BaseDir = getcwd();
+
+# remove . from path
+CleanFromPath(".");
+# yet add in base dir of all tests and compiler directories
+$ENV{PATH} = $ENV{PATH} . ":" . $Basedir;
 
 #
 # the args:
@@ -153,6 +160,9 @@ foreach $compiler (@compilers)
       system ("mkdir -p $ResultDir/$compiler");
     } 
     chdir $compiler || die "error switching to directory $compiler: $!\n";
+	my $compilerdir = getcwd();
+	# add in compiler dir to the current path
+	$ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
 
     # fork a child to run each test program
     print "submitting $compiler tests";
@@ -246,6 +256,8 @@ foreach $compiler (@compilers)
 
     print "\n";
     chdir ".." || die "error switching to directory ..: $!\n";
+	# remove compiler directory from path
+	CleanFromPath("$compilerdir");
 } # end foreach compiler dir
 
 if ($isXML){
@@ -274,3 +286,17 @@ close OUTF;
 
 exit $num_failed;
 
+sub CleanFromPath
+{
+	my $pulldir = shift;
+	my $path = $ENV{PATH};
+	my $newpath = "";
+	my @pathcomponents = split /:/, $path;
+	foreach my $spath ( @pathcomponents)
+	{
+		if($spath ne "$pulldir")
+		{
+			$newpath = $newpath . ":" . $spath;
+		}
+	}
+}

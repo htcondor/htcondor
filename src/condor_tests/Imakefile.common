@@ -12,7 +12,7 @@ CONDOR_COMPILE_FLAGS = $(LIB_DIR) $(LD_DIR)
    the like).  This way, we can catch errors right away, and we get
    all that stuff out of the way early in the build.
 */
-all:: all_lists
+all:: $(PRE_BUILT_RELEASE)/lib $(PRE_BUILT_RELEASE)/bin all_lists 
 all_lists:: list_all
 
 
@@ -30,6 +30,7 @@ TESTCLASS_DECL(performance)
 TESTCLASS_DECL(condorc)
 TESTCLASS_DECL(core)
 TESTCLASS_DECL(lib)
+TESTCLASS_DECL(btdebug)
 
 
 /***************************************************

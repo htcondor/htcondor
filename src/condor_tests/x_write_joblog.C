@@ -38,6 +38,7 @@ int writeJobHeldEvent();
 int writeJobReleasedEvent(); 
 int writeNodeExecuteEvent(); 
 
+int
 main(int argc, char **argv)
 {
 	writeSubmitEvent();
@@ -61,6 +62,7 @@ main(int argc, char **argv)
 	writeJobHeldEvent(); 
 	writeJobReleasedEvent(); 
 	writeNodeExecuteEvent(); 
+	exit(0);
 }
 
 int writeSubmitEvent()
@@ -73,6 +75,7 @@ int writeSubmitEvent()
 		printf("Complain about bad submit write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeExecuteEvent()
@@ -83,6 +86,7 @@ int writeExecuteEvent()
 		printf("Complain about bad execute write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeExecutableErrorEvent()
@@ -93,6 +97,7 @@ int writeExecutableErrorEvent()
 		printf("Complain about bad executeerror write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeCheckpointedEvent()
@@ -102,6 +107,7 @@ int writeCheckpointedEvent()
 		printf("Complain about bad checkpoint write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeRemoteErrorEvent()
@@ -115,6 +121,7 @@ int writeRemoteErrorEvent()
 	        printf("Complain about bad remoteerror write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeJobAbortedEvent()
@@ -125,6 +132,7 @@ int writeJobAbortedEvent()
 	        printf("Complain about bad jobabort write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeJobEvictedEvent()
@@ -136,6 +144,7 @@ int writeJobEvictedEvent()
 	        printf("Complain about bad jobevicted write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeJobTerminatedEvent()
@@ -157,6 +166,7 @@ int writeJobTerminatedEvent()
 	        printf("Complain about bad jobterminated write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeNodeTerminatedEvent()
@@ -179,12 +189,11 @@ int writeNodeTerminatedEvent()
 	        printf("Complain about bad nodeterminated write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writePostScriptTerminatedEvent()
 {
-	struct rusage ru;
-
 	PostScriptTerminatedEvent postscriptterminated;
 	postscriptterminated.normal = false;
 	postscriptterminated.signalNumber = 9;
@@ -193,12 +202,11 @@ int writePostScriptTerminatedEvent()
 	        printf("Complain about bad postscriptterminated write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeGlobusSubmitEvent()
 {
-	struct rusage ru;
-
 	GlobusSubmitEvent globussubmitevent;
 	globussubmitevent.rmContact = strdup("ResourceManager");;
 	globussubmitevent.jmContact = strdup("JobManager");;
@@ -207,42 +215,40 @@ int writeGlobusSubmitEvent()
 	        printf("Complain about bad globussubmitevent write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeGlobusSubmitFailedEvent()
 {
-	struct rusage ru;
-
 	GlobusSubmitFailedEvent globussubmitfailedevent;
 	globussubmitfailedevent.reason = strdup("Cause it could");;
 	if ( !log.writeEvent(&globussubmitfailedevent) ) {
 	        printf("Complain about bad globussubmitfailedevent write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeGlobusResourceUpEvent()
 {
-	struct rusage ru;
-
 	GlobusResourceUpEvent globusresourceupevent;
 	globusresourceupevent.rmContact = strdup("ResourceUp");;
 	if ( !log.writeEvent(&globusresourceupevent) ) {
 	        printf("Complain about bad globusresourceupevent write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeGlobusResourceDownEvent()
 {
-	struct rusage ru;
-
 	GlobusResourceDownEvent globusresourcedownevent;
 	globusresourcedownevent.rmContact = strdup("ResourceDown");;
 	if ( !log.writeEvent(&globusresourcedownevent) ) {
 	        printf("Complain about bad globusresourcedownevent write\n");
 			exit(1);
 	}
+	return(0);
 }
 
 int writeJobImageSizeEvent()
@@ -253,6 +259,7 @@ int writeJobImageSizeEvent()
 		printf("Complain about bad jobimagesizeevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 
@@ -267,6 +274,7 @@ int writeShadowExceptionEvent()
 		printf("Complain about bad shadowexceptionevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 
@@ -278,6 +286,7 @@ int writeJobSuspendedEvent()
 		printf("Complain about bad jobsuspendevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeJobUnsuspendedEvent()
@@ -288,6 +297,7 @@ int writeJobUnsuspendedEvent()
 		printf("Complain about bad jobunsuspendevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeJobHeldEvent() 
@@ -300,6 +310,7 @@ int writeJobHeldEvent()
 		printf("Complain about bad jobheldevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeJobReleasedEvent() 
@@ -310,6 +321,7 @@ int writeJobReleasedEvent()
 		printf("Complain about bad jobreleasedevent write\n");
 		exit(1);
 	}
+	return(0);
 }
 
 int writeNodeExecuteEvent()
@@ -322,4 +334,5 @@ int writeNodeExecuteEvent()
 		printf("Complain about bad nodeexecuteevent write\n");
 		exit(1);
 	}
+	return(0);
 }

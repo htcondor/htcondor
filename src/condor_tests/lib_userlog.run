@@ -35,7 +35,14 @@ system("rm -f local.log");
 my $stats = system("x_write_joblog.exe");
 if($stats != 0)
 {
-	die "Write Log... failed.....\n";
+	if( -e "x_write_joblog.exe" )
+	{
+		die "Write Log... failed.....\n";
+	}
+	else
+	{
+		die "Build failed and x_write_joblog.exe does not exist\n";
+	}
 }
 
 $ExitSuccess = sub {

@@ -2,9 +2,9 @@
 **  Common settings shared by all compiler-specific Imakefiles
 ***********************************************************************/
 
-LD_DIR = -condor_ld_dir ../../condor_scripts
-LIB_DIR = -condor_lib ../../condor_syscall_lib
-INCLUDE_FLAGS = -I.. -I../../condor_includes -I../../h -I../../condor_c++_util
+LD_DIR = -condor_ld_dir $(PRE_BUILT_RELEASE)/lib
+LIB_DIR = -condor_lib $(PRE_BUILT_RELEASE)/lib
+INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I.. -I../../condor_includes -I../../h -I../../condor_c++_util
 BUILD_FLAGS = dollar_paren(FLAGS_MACRO_NAME)
 
 all_symlink_target(../../condor_scripts/Condor.pm,Condor.pm)

@@ -19,6 +19,12 @@ $CheckCoreFiles = sub {
     my $core_file_found = 0;
     my @expected_output;
 
+	my %listoftests; 
+	$listoftests{"corename"} = "job_core_coredump_std";
+	$listoftests{"tests"} = [ "job_core_coredump-yes_std", "job_core_coredump-none_std"];
+	$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+	CondorTest::MergeOutputFiles(\%listoftests);
+
     print "Checking for $core...";
     if( $core ne "" && (-e $core) ) {
 	print "yes.\n";
@@ -58,12 +64,6 @@ if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
 } else {
     die "$handle2: CondorTest::RunTest() failed\n";
 }
-
-my %listoftests; 
-$listoftests{"corename"} = "job_core_coredump_std";
-$listoftests{"tests"} = [ "job_core_coredump-yes_std", "job_core_coredump-none_std"];
-$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
-CondorTest::MergeOutputFiles(\%listoftests);
 
 exit(0);
 

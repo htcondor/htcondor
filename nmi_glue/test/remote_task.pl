@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.4.3 2005-02-25 01:06:31 stolley Exp $
+# $Id: remote_task.pl,v 1.1.4.4 2005-03-07 08:35:28 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -57,6 +57,8 @@ if( $compiler ) {
 
 chdir( "$targetdir" ) || c_die("Can't chdir($targetdir): $!\n");
 
+print "Attempting to build test in: $targetdir\n";
+print "Invoking \"make $testname\"\n";
 open( TESTBUILD, "make $testname 2>&1 |" ) || 
     c_die("Can't run make $testname\n");
 while( <TESTBUILD> ) {
@@ -89,6 +91,10 @@ if( $? >> 8 ) {
 system( "make Condor.pm" );
 if( $? >> 8 ) {
     c_die("Can't build Condor.pm\n");
+}
+system( "make CondorPersonal.pm" );
+if( $? >> 8 ) {
+    c_die("Can't build CondorPersonal.pm\n");
 }
 
 open(BATCHTEST, "perl ./batch_test.pl -d $compiler -t $testname 2>&1 |" ) || 

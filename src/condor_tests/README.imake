@@ -166,11 +166,14 @@ BUILD(cmplr,testname,extension)
 
    Tells the build system how to compile the test into a valid
    executable.  The file "testname.extension" is compiled with the
-   given "cmplr" and told to produce an executable "testname.exe". 
-   Additional dependencies are added in case a BUILD() rule is placed
-   in a compiler-specific Imakefile, in which case the compiling and
-   linking is done in a subdirectory of condor_tests, and the source
-   file lives in the parent directory. 
+   given compiler ("cmplr") and told to produce an executable
+   "testname.exe".  Additional dependencies are added in case a
+   BUILD() rule is placed in a compiler-specific Imakefile, in which
+   case the compiling and linking is done in a subdirectory of
+   condor_tests, and the source file lives in the parent directory.
+   In that case, the BUILD() rule will automatically add make targets
+   and dependencies to ensure that a symlink to the source file in the
+   parent directory is added in the compiler-specific subdirectory.
 
 
 BUILD_DEP(cmplr,testname,extension,deps)
@@ -180,6 +183,23 @@ BUILD_DEP(cmplr,testname,extension,deps)
    the additional linker dependencies specified with "deps" are
    included.  The "deps" should be a space-separated list of .o files
    to link in, along with testname.o (which is done automatically).
+   Any dependencies listed in the "deps" field will be removed on a
+   "make clean".  If this is not the behavior you want, see
+   BUILD_DEP_LIB() below...
+
+
+BUILD_DEP_LIB(cmplr,testname,extension,deps,libs)
+
+   This rule is identical to the BUILD_DEP() rule described above,
+   except that when the program is finally being linked into
+   testname.exe, the additional libraries specified with "libs" are
+   included.  The "libs" field should be a space-separated list of
+   arguments identifying the libraries you want to use, and can either
+   be full paths to the corresponding .a files or "-lXXX" style
+   arguments.  These libraries are *NOT* included as make dependencies
+   for the test name (they are assumed to exist already, and this
+   allows you to identify libraries with "-lXXX") and they are not
+   removed on a "make clean".
 
 
 CBUILD(cmplr,testname,extension)

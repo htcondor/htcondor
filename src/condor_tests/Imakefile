@@ -22,9 +22,9 @@ all_lists:: compiler_list
    and that deal with the testing build framework itself.
 ************************************************************************/
 
-LD_DIR = -condor_ld_dir ../condor_scripts
-LIB_DIR = -condor_lib ../condor_syscall_lib
-INCLUDE_FLAGS = -I../condor_includes -I../h -I../condor_c++_util
+LD_DIR = -condor_ld_dir $(PRE_BUILT_RELEASE)/lib
+LIB_DIR = -condor_lib $(PRE_BUILT_RELEASE)/lib
+INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I../condor_includes -I../h -I../condor_c++_util
 BUILD_FLAGS = $(TESTSUITE_FLAGS_GCC)
 CC = gcc
 CPlusPlus = g++
@@ -40,32 +40,38 @@ all_symlink_target(../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 
 BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
-BUILD_DEP($(CC),x_dumpcore,c,x_dumpcore.o)
-BUILD_DEP($(CC),x_trapsig,c,x_trapsig.o)
-
+BUILD($(CC),x_dumpcore,c)
+BUILD($(CC),x_trapsig,c)
 
 /************************************************************************
    Rules for all the single-compiler (or no compiler) tests
 ************************************************************************/
 
-BUILD($(CC),x_dumpcore,c)
-BUILD($(CC),x_trapsig,c)
-
 /* Library tests */
 
 /* Chirp */
 
-BUILD_DEP($(CC),lib_chirpio,c,../release_dir/lib/libchirp_client.a)
 DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
+BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
+DEPS(lib_chirpio_van,lib_chirpio.exe)
 RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
 
 /* User log and log reader used by dagman tests */
 
-BUILD_DEP($(CPlusPlus),x_read_joblog,C,../release_dir/lib/libcondorapi.a -ldl)
-BUILD_DEP($(CPlusPlus),x_write_joblog,C,../release_dir/lib/libcondorapi.a -ldl)
+/* NOTE: since we're linking these with external libraries, we need
+the BUILD_DEP_LIB() rule, which provides maximum flexibility.  but, in
+this case, we only need to specify libs, not dependent .o files, so we
+leave the 4th argument empty...
+*/
+
+BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
+BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
+
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
+DEPS(lib_userlog,x_read_joblog.exe)
+DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 
 /* Condor-C Tests */
@@ -140,32 +146,23 @@ TESTCLASS(lib_userlog,lib)
 **
 */
 
-/* Tests which fail in reliability */
 
-/*
-** These tests fail reliabably on Solaris 2.8 and 2.9
-** because the transfer_output file(s) do not exist, and thus
-** Condor tries to rerun the job forever.  Why it works on other
-** platforms but always fails (in the NWO) on Solaris platforms
-** is a mystery that Bill needs to solve.  :)
-** 
-** DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
-** RUN(job_filexfer_basic_van)
-** TESTCLASS(job_filexfer_basic_van,filexfer)
-** 
-** DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
-** RUN(job_filexfer_minus1_van)
-** TESTCLASS(job_filexfer_minus1_van,filexfer)
-** 
-** DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
-** RUN(job_filexfer_output-withvacate_van)
-** TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
-** 
-** DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
-** RUN(job_filexfer_trans-nodflts_van)
-** TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
-** 
-*/
+DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
+RUN(job_filexfer_basic_van)
+TESTCLASS(job_filexfer_basic_van,filexfer)
+
+DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
+RUN(job_filexfer_minus1_van)
+TESTCLASS(job_filexfer_minus1_van,filexfer)
+
+DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
+RUN(job_filexfer_output-withvacate_van)
+TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
+
+DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
+RUN(job_filexfer_trans-nodflts_van)
+TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
+
 
 
 /*
@@ -216,32 +213,25 @@ TESTCLASS(lib_userlog,lib)
 **RUN(job_core_matchlist_van)
 **TESTCLASS(job_core_matchlist_van,core)
 **
-**DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
-**RUN(job_core_priority_van)
-**TESTCLASS(job_core_priority_van,core)
-**
-**DESC(job_core_leaveinqueue_van,"Vanilla: verify true and false classads do leave_in_queue right")
-**RUN(job_core_leaveinqueue_van)
-**TESTCLASS(job_core_leaveinqueue_van,core)
-**
-**DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
-**RUN(job_core_niceuser_van)
-**TESTCLASS(job_core_niceuser_van,core)
 **
 */
 
 
 /* runable core coverage tests */
 
+#if ! IS_CLIPPED
 CBUILD($(CC),job_core_compressfiles,c)
 DESC(job_core_compressfiles_std,"Do we handle compressed files made by standard jobs?")
 DEPS(job_core_compressfiles_std,job_core_compressfiles.cndr.exe)
 RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
+#endif /* ! IS_CLIPPED */
 
+/* Test can hang now - offline for work 3/1/05
 DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
+*/
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
@@ -307,9 +297,17 @@ DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do l
 RUN(job_core_leaveinqueue_sched)
 TESTCLASS(job_core_leaveinqueue_sched,core)
 
+DESC(job_core_leaveinqueue_van,"Vanilla: verify true and false classads do leave_in_queue right")
+RUN(job_core_leaveinqueue_van)
+TESTCLASS(job_core_leaveinqueue_van,core)
+
 DESC(job_core_macros_sched,"Scheduler: a number of macros get passed in as args") 
 RUN(job_core_macros_sched)
 TESTCLASS(job_core_macros_sched,core)
+
+DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
+RUN(job_core_niceuser_van)
+TESTCLASS(job_core_niceuser_van,core)
 
 DESC(job_core_onexitrem_van,"Vanilla: Verify true and false triggers of on_exit_remove")
 RUN(job_core_onexitrem_van)
@@ -323,9 +321,12 @@ DESC(job_core_output_van,"Vanilla: Verify trivially simple output from an input 
 RUN(job_core_output_van)
 TESTCLASS(job_core_output_van,core)
 
+/* manual says we do not support this for scheduler universe
+** yet it seemed to have run and worked on rh8 but fail on rh 7.2 & 9.0
 DESC(job_core_perhold_sched,"Scheduler: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_sched)
 TESTCLASS(job_core_perhold_sched,core)
+*/
 
 DESC(job_core_perrelease_sched,"Scheduler: verify a policy of true/false for periodic release does the right thing")
 RUN(job_core_perrelease_sched)
@@ -347,6 +348,10 @@ DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
 RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
 
+DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
+RUN(job_core_priority_van)
+TESTCLASS(job_core_priority_van,core)
+
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
 RUN(job_core_queue_sched)
 TESTCLASS(job_core_queue_sched,core)
@@ -365,9 +370,12 @@ DESC(job_filexfer_base_van,"Vanilla: Is executable moved correctly to initialdir
 RUN(job_filexfer_base_van)
 TESTCLASS(job_filexfer_base_van,filexfer)
 
-DESC(job_filexfer_basic_sched,"Scheduler: exercise of file transfer via cp in to out")
-RUN(job_filexfer_basic_sched)
-TESTCLASS(job_filexfer_basic_sched,filexfer)
+/* On solaris we run into /bin/cp not having and arg 0 which matches
+** solaris expectation so it fails...
+**DESC(job_filexfer_basic_sched,"Scheduler: exercise of file transfer via cp in to out")
+**RUN(job_filexfer_basic_sched)
+**TESTCLASS(job_filexfer_basic_sched,filexfer)
+*/
 
 DESC(job_filexfer_input-onegone_van,"Vanilla: test for failure when specified input file is missing")
 RUN(job_filexfer_input-onegone_van)
@@ -404,10 +412,12 @@ TESTCLASS(job_filexfer_md5_van,filexfer)
 /* Dagman Tests */
 
 DESC(job_dagman_comlog,"Run a dag with multiple nodes sharing a common log")
+DEPS(job_dagman_comlog,x_read_joblog.exe)
 RUN(job_dagman_comlog)
 TESTCLASS(job_dagman_comlog,dagman)
 
 DESC(job_dagman_fullremove,"Ensure a removed dag is completely removed")
+DEPS(job_dagman_fullremove,x_read_joblog.exe)
 RUN(job_dagman_fullremove)
 TESTCLASS(job_dagman_fullremove,dagman)
 
@@ -428,21 +438,32 @@ RUN(job_dagman_prepost)
 TESTCLASS(job_dagman_prepost,dagman)
 
 DESC(job_dagman_retry,"Make sure a retry dag runs correctly.")
+DEPS(job_dagman_retry,x_read_joblog.exe)
 RUN(job_dagman_retry)
 TESTCLASS(job_dagman_retry,dagman)
 
 DESC(job_dagman_throttle,"Test Dagman throttling ability")
+DEPS(job_dagman_throttle,x_read_joblog.exe)
 RUN(job_dagman_throttle)
 TESTCLASS(job_dagman_throttle,dagman)
 
 DESC(job_dagman_uncomlog,"Test Dagmans ability to have sepaarate job log files")
+DEPS(job_dagman_uncomlog,x_read_joblog.exe)
 RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
 
+/* Valid starting v6_7 branch......
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
+DEPS(job_dagman_unlessexit,x_read_joblog.exe)
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
+*/
 
+/*
+******************************
+** Condor BUG!
+** job_dagman_xmlcomlog and job_dagman_xmluncomlog
+** are disabled until GNATS #430 has been fixed
 DESC(job_dagman_xmlcomlog,"Look at Dagmans ability to handle a common XML based log file")
 RUN(job_dagman_xmlcomlog)
 TESTCLASS(job_dagman_xmlcomlog,dagman)
@@ -450,6 +471,8 @@ TESTCLASS(job_dagman_xmlcomlog,dagman)
 DESC(job_dagman_xmluncomlog,"Look at Dagmans ability to handle uncommon XML based log files")
 RUN(job_dagman_xmluncomlog)
 TESTCLASS(job_dagman_xmluncomlog,dagman)
+******************************
+*/
 
 /* Sample performance tests */
 
@@ -507,10 +530,12 @@ DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
 RUN(job_core_coredump_std)
 TESTCLASS(job_core_coredump_std,quick)
 #endif /* ! IS_CLIPPED */
-DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
-DEPS(job_core_coredump_van,job_core_coredump.exe)
-RUN(job_core_coredump_van)
-TESTCLASS(job_core_coredump_van,quick)
+/* This test fails constantly and is off for now
+**DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
+**DEPS(job_core_coredump_van,job_core_coredump.exe)
+**RUN(job_core_coredump_van)
+**TESTCLASS(job_core_coredump_van,quick)
+*/
 
 
 /************************************************************************

@@ -1083,9 +1083,11 @@ XCOMM End translation of func(c_plus_public_target)
 #ifdef FLAGS_MACRO_NAME
 CONDOR_COMPILE = ../../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../../condor_scripts/condor_arch_link
+PRE_BUILT_RELEASE = ../../release_dir
 #else
 CONDOR_COMPILE = ../condor_scripts/condor_compile
 CONDOR_ARCH_LINK = perl ../condor_scripts/condor_arch_link
+PRE_BUILT_RELEASE = ../release_dir
 #endif
 
 /*
@@ -1103,7 +1105,7 @@ XCOMM Begin translation of func(CLINK)		@@\
 all:: name.cndr.exe				@@\
 name:: name.cndr.exe				@@\
        @$(TRUE)					@@\
-name.cndr.exe: obj				@@\
+name.cndr.exe: $(CONDOR_COMPILE) $(PRE_BUILT_RELEASE)/lib obj	@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
 clean::						@@\
@@ -1138,15 +1140,27 @@ XCOMM End translation of func(CLINK_NOSTD)
 #ifndef LINK
 #define LINK(compiler,name,obj)			@@\
 XCOMM Begin translation of func(LINK)		@@\
+LINK_LIB(compiler,name,obj,)			@@\
+XCOMM End translation of func(LINK)
+#endif /* LINK */
+
+/*
+** Link a program to run normally (no condor libraries at all)
+** This takes a final argument for libraries to link with which 
+** we do NOT attempt to remove in make clean...
+*/
+#ifndef LINK_LIB
+#define LINK_LIB(compiler,name,obj,lib)		@@\
+XCOMM Begin translation of func(LINK_LIB)	@@\
 all:: name.exe					@@\
 name:: name.exe					@@\
        @$(TRUE)					@@\
 name.exe: obj					@@\
-	compiler -o name.exe obj $(TEST_LDFLAGS)  @@\
+	compiler -o name.exe obj lib $(TEST_LDFLAGS)  @@\
 clean::						@@\
 	rm -f name.exe obj			@@\
-XCOMM End translation of func(LINK)
-#endif /* LINK */
+XCOMM End translation of func(LINK_LIB)
+#endif /* LINK_LIB */
 
 
 /***********************************************************************
@@ -1315,6 +1329,14 @@ DEP_SYMLINK_EXT(name,ext)		@@\
 LINK(cmplr,name,name.o dep)		@@\
 XCOMM End translation of func(BUILD_DEP)
 #endif /* BUILD_DEP */
+
+#ifndef BUILD_DEP_LIB
+#define BUILD_DEP_LIB(cmplr,name,ext,dep,lib)	@@\
+XCOMM Begin translation of func(BUILD_DEP_LIB)	@@\
+DEP_SYMLINK_EXT(name,ext)			@@\
+LINK_LIB(cmplr,name,name.o dep,lib)		@@\
+XCOMM End translation of func(BUILD_DEP_LIB)
+#endif /* BUILD_DEP_LIB */
 
 #ifndef CBUILD
 #define CBUILD(cmplr,name,ext)		@@\

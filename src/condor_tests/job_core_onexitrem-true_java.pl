@@ -16,7 +16,8 @@ my $cluster;
 
 $abnormal = sub {
 
-	die "Want to see only submit and abort events for periodic remove test\n";
+	print "Want to see only submit and abort events for periodic remove test\n";
+	exit(1);
 };
 
 $aborted = sub {

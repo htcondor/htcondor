@@ -29,22 +29,20 @@ my @skiplines = ();
 
 
 my $doonlyonce = "";
-
+my $count = 6;  # have to wait for a 6 to complete
 
 $ExitSuccess = sub 
 {
 	my %info = @_;
 
-	if( $doonlyonce eq "done" )
+	$count = $count - 1;
+
+	if( $count != 0 )
 	{
 		return(0);
 	}
 
-	$doonlyonce = "done";
-	#allow all jobs to complete
-	sleep 20;
-
-	CondorTest::CompareText( $datafile, \@sdata, @skiplines );
+	CondorTest::CompareText( $datafile, \@vdata, @skiplines );
 };
 
 system("rm -rf job_core_priority_sched.data");

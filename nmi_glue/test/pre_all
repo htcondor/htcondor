@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.4.7 2004-09-16 18:08:08 wright Exp $
+# $Id: pre_all,v 1.1.4.8 2005-03-07 08:35:28 wright Exp $
 # Submit-side NMI build system infrastructure to setup source
 # input for test jobs before the platform-specific stuff is called.
 # All we have to do is untar the common/results.tar.gz file so that
@@ -10,27 +10,118 @@
 # We assume we're born inside the "common" directory...
 ######################################################################
 
+use Getopt::Long;
+
 # autoflush our STDOUT
 $| = 1;
 
+GetOptions (
+    'src=s'           => $opt_src,
+);
+
+# this is the default platform-independent input that's going to come
+# with whatever build id we're testing against.  we'll use that as the
+# source for the test suite unless we were told on the command-line to
+# use a different tarball...
 my $results = "results.tar.gz";
--f $results || die "$results does not exist!\n";
 
-print "Unpacking platform independent results.tar.gz\n";
-open( UNTAR, "tar -zxvf $results|" ) || 
-    die "Can't open tar -zxvf $results: $!\n";
-while( <UNTAR> ) {
-    print;
+if( defined($opt_src) ) {
+    setupCustomSrc( $opt_src );
+} else {
+    setupDefaultSrc();
 }
-close( UNTAR );
-if( $? ) {
-    die "'tar -zxvf $results' failed with status $?\n";
-}
-print "Untar completed successfully\n";
 
-# Now, unlink results.tar.gz so that it doesn't clobber anything
+# Either we already unpacked the contents of results.tar.gz or we're
+# not using it... in both cases we want to unlink it now so that it
+# doesn't clobber anything when the framework copies the contents of
+# common into each platform-specific directory.
 print "Removing $results\n";
 unlink( $results ) || die "Can't unlink($results): $!\n";
 
 print "All steps completed successfully\n";
 exit 0;
+
+
+# Setup the test run using the default source tarball from the build
+sub setupDefaultSrc()
+{
+    -f $results || die "$results does not exist!\n";
+
+    print "Unpacking platform independent results.tar.gz\n";
+    open( UNTAR, "tar -zxvf $results|" ) || 
+        die "Can't open tar -zxvf $results: $!\n";
+    while( <UNTAR> ) {
+        print;
+    }
+    close( UNTAR );
+    if( $? ) {
+        die "'tar -zxvf $results' failed with status $?\n";
+    }
+    print "Untar completed successfully\n";
+}
+
+
+# Setup the test run using a custom source tarball
+sub setupCustomSrc()
+{
+    my( $tarball ) = @_;
+    my $vers;
+    my $check_vers;
+    my $vers_file = "CONDOR-VERSION";
+
+    if( ! -f $tarball ) {
+        die "file specified with --src=\"$tarball\" does not exist!\n";
+    } else {
+        print "Attempting to setup tests with tarball \"$tarball\"\n";
+    }
+
+    # make sure the filename includes a version number, so the rest of
+    # the test glue doesn't get too confused...
+    if( $tarball =~ /condor-(\d+)\.(\d+)\.(\d+)\.tar\.gz/ ) {
+        $vers = "$1.$2.$3";
+    } else {
+        print STDERR "Tarball specified with --src has invalid name\n";
+        print STDERR "Must have the form \"condor-X.Y.Z.tar.gz\"\n";
+        die "Invalid tarball name used with --src\n";
+    }
+
+    # make sure the CONDOR-VERSION file exists and is correct.  if
+    # it's not there already, make a correct one automatically... 
+    if( ! -f $vers_file ) {
+        print "version file $vers_file does not exist, writing \"$vers\"\n";
+        open( VERS, ">$vers_file" ) 
+            || die "Can't open $vers_file for writing: $!\n";
+        print VERS "$vers\n";
+        close VERS;
+    } else {
+        print "version file $vers_file already exists, verifying... ";
+        open( VERS, "$vers_file" ) 
+            || die "\nCan't open $vers_file for reading: $!\n";
+        while( <VERS> ) {
+            chomp;
+            $check_vers = $_;
+        }
+        close( VERS );
+        if( ! $check_vers ) {
+            die "\nCan't find Condor version in $vers_file!\n";
+        }
+        if( $check_vers eq $vers ) {
+            print "correct\n";
+        } else {
+            print "MISMATCH\n";
+            die "$vers_file contains: $check_vers, tarball is: $tarball\n";
+        }
+    }
+
+    # now that the common directory has a source tarball and a
+    # CONDOR_VERSION file, we're basically done.  that is all the
+    # build's platform independent results.tar.gz contains, anyway.
+    # if i had more time i'd make this process even more foolproof
+    # (always a good idea) by trying to verify that the given source
+    # tarball is valid (e.g. has the right directory structure,
+    # already contains a configure script, etc).  but, for now, i'm
+    # just going to punt and assume that people using this option know
+    # what they're doing...  so long as they use the build's pre_all
+    # script to prepare their tarball, they should be in good shape. 
+}
+

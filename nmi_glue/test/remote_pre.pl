@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre.pl,v 1.1.4.4 2005-01-06 01:41:54 wright Exp $
+# $Id: remote_pre.pl,v 1.1.4.5 2005-03-07 08:35:28 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -154,29 +154,39 @@ print "PERSONAL CONDOR installed!\n";
 
 ######################################################################
 # setup the src tree so the test suite finds condor_compile and its
-# other dependencies.  
+# other dependencies.  we do this by setting up a "release_dir" that
+# just contains symlinks to everything in the pre-built release
+# directory (what we unpacked into "$BaseDir/condor").
 ######################################################################
 
-chdir( "$SrcDir/condor_syscall_lib" )
-    || die "Can't chdir($SrcDir/condor_syscall_lib): $!\n";
-opendir( DIR, "$BaseDir/condor/lib" ) ||
-  die "can't opendir $BaseDir/condor/lib for condor_syscall_lib: $!\n";
+chdir( "$SrcDir" ) || die "Can't chdir($SrcDir): $!\n";
+mkdir( "$SrcDir/release_dir" );  # don't die, it might already exist...
+-d "$SrcDir/release_dir" || die "$SrcDir/release_dir does not exist!\n";
+chdir( "$SrcDir/release_dir" )
+    || die "Can't chdir($SrcDir/release_dir): $!\n";
+opendir( DIR, "$BaseDir/condor" ) ||
+    die "can't opendir $BaseDir/condor for release_dir symlinks: $!\n";
 @files = readdir(DIR);
 closedir DIR;
 foreach $file ( @files ) {
-    if( $file =~ /.*\.[oa]/ ) {
-	symlink( "$BaseDir/condor/lib/$file", "$file" ) ||
-	    die "Can't symlink($BaseDir/condor/lib/$file): $!\n";
+    if( $file =~ /\.(\.)?/ ) {
+        next;
     }
+    symlink( "$BaseDir/condor/$file", "$file" ) ||
+        die "Can't symlink($BaseDir/condor/$file): $!\n";
 }
 
+# this is a little weird, but so long as we've still got the OWO test
+# suites to support with our build system, Imake is going to have the
+# path to condor_compile hard-coded to find it in condor_scripts.  so,
+# we'll leave this cruft here to manually remove the old copy and add
+# a symlink to the one in our pre-built tarball.  whenever we remove
+# the OWO, condor_test_suite_C.V5 and friends, we can rip this out,
+# and change the definition of the "CONDOR_COMPILE" macro in
+# Imake.rules to point somewhere else (if we want).
 chdir( "$SrcDir/condor_scripts" ) || 
     die "Can't chdir($SrcDir/condor_scripts): $!\n";
-
 unlink( "condor_compile" ) || die "Can't unlink(condor_compile): $!\n";
-unlink( "ld" ) || die "Can't unlink(ld): $!\n";
-symlink( "$BaseDir/condor/lib/ld", "ld" ) ||
-    die "Can't symlink($BaseDir/condor/lib/ld): $!\n";
 symlink( "$BaseDir/condor/bin/condor_compile", "condor_compile" ) ||
     die "Can't symlink($BaseDir/condor/lib/condor_compile): $!\n";
 

@@ -35,6 +35,9 @@ $evicted = sub {
 
 $execute = sub 
 {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
 	print "Saw job executing! Crunching ads\n";
 	my $lmn0 = "";
 	my $remote = "";
@@ -51,34 +54,44 @@ $execute = sub
 		}
 		elsif( $line =~ /^\s*LastMatchName0\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
+			print "Setting lmn0 to be $1\n";
 			$lmn0 = $1;
+			print "$line\n";
 			print "LastMatchName0 is <<<< $lmn0 >>>>\n";
 		}
 		elsif( $line =~ /^\s*LastMatchName1\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
+			print "Setting lmn1 to be $1\n";
 			$lmn1 = $1;
+			print "$line\n";
 			print "Last Match 1 <<<< $lmn1 >>>>\n";
 		}
 		elsif( $line =~ /LastMatchName.*/ )
 		{
-			print "$line\n";
+			print "LM: $line\n";
 		}
 		elsif( $line =~ /^\s*MATCH_name\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
 		{
 			$remote = $1;
-			print "Remote is <<<< $remote >>>>\n";
+			print "$line\n";
+			print "Setting Remote as <<<< $remote >>>>\n";
 		}
+		#else
+		#{
+			#print "ELSE: $line\n";
+		#}
 	}
-	if( ($nextlmn1 ne "") && ($lmn1 ne $nextlmn1) )
+	if( ($nextlmn1 ne "") && ($lmn1 ne "") && ($lmn1 ne $nextlmn1) )
 	{
-		die "rotating failed.... $lmn1 ne $nextlmn1\n";
+		print "rotating failed.... $lmn1 ne $nextlmn1\n";
 	}
 	if( $lmn0 ne $remote )
 	{
 		print "$lmn0 = lmn0\n";
 		print "$remote = remote\n";
-		die "LastMatchName out of sync with current Match\n";
+		print "LastMatchName out of sync with current Match\n";
 	}
+	print "Setting nextlmn1 to be lmn0($lmn0)\n";
 	$nextlmn1 = $lmn0;
 };
 

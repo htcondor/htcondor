@@ -1,5 +1,5 @@
 universe   = scheduler
-executable = /bin/sleep
+executable = x_sleep.pl
 log = job_core_perrelease-false_sched.log
 output = job_core_perrelease-false_sched.out
 error = job_core_perrelease-false_sched.err

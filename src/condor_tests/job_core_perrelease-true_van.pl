@@ -8,14 +8,16 @@ $aborted = sub {
 	my %info = @_;
 	my $done;
 	print "Abort event not expected!\n";
-	die "Want to see only submit, release and successful completion events for periodic release test\n";
+	print "Want to see only submit, release and successful completion events for periodic release test\n";
+	exit(1);
 };
 
 $held = sub {
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	die "Held event not expected.....\n";
+	print "Held event not expected.....\n";
+	exit(1);
 };
 
 $executed = sub

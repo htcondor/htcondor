@@ -287,7 +287,7 @@ sub gen_autoscale_cmd
 		}
 		elsif(( $universe eq "vanilla" ) || ( $universe eq "scheduler" ))
 		{
-			print NEWCMDFILE "executable = /bin/sleep\n";
+			print NEWCMDFILE "executable = x_sleep.pl\n";
 			print NEWCMDFILE "arguments = $duration\n";
 		}
 		else

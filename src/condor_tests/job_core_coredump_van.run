@@ -2,7 +2,7 @@
 
 use CondorTest;
 
-$cmd1 = 'job_core_coredump_van.cmd';
+$cmd1 = 'job_core_coredump-yes_van.cmd';
 $handle1 = 'Create Core File';
 $wants_core{$handle1} = 1;
 
@@ -14,6 +14,7 @@ $cmd3 = 'job_core_coredump-none_van.cmd';
 $handle3 = 'No Core File';
 $wants_core{$handle3} = 0;
 
+
 $core_file = 'core';
 
 $CheckCoreFiles = sub {
@@ -22,6 +23,17 @@ $CheckCoreFiles = sub {
     my $handle = $info{"handle"};
     my $core_file_found = 0;
     my @expected_output;
+
+	# Actual output files
+	#$cmd1 = 'job_core_coredump-yes_van.cmd';
+	#$cmd2 = 'job_core_coredump-xfer_van.cmd';
+	#$cmd3 = 'job_core_coredump-none_van.cmd';
+	
+	my %listoftests; 
+	$listoftests{"corename"} = "job_core_coredump_van";
+	$listoftests{"tests"} = [ "job_core_coredump-yes_van", "job_core_coredump-none_van", "job_core_coredump-xfer_van"];
+	$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+	CondorTest::MergeOutputFiles(\%listoftests);
 
     print "Checking for $core...";
     if( $core ne "" && (-e $core) ) {

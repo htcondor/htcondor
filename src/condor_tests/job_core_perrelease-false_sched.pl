@@ -17,7 +17,8 @@ $executed = sub
 	%info = @_;
 	$cluster = $info{"cluster"};
 
-	die "Bad. This job tests for policy to periodically release NEVER! Can't run!\n";
+	print "Bad. This job tests for policy to periodically release NEVER! Can't run!\n";
+	exit(1);
 };
 
 $success = sub
@@ -25,7 +26,8 @@ $success = sub
 	my %info = @_;
 	my $cluster = $info{"cluster"};
 
-	die "Bad. This job tests for policy to periodically release NEVER! Can't complete!\n";
+	print "Bad. This job tests for policy to periodically release NEVER! Can't complete!\n";
+	exit(1);
 };
 
 $timed = sub
@@ -50,7 +52,8 @@ $submit = sub
 	print "It better be on hold... status is $status(5 is correct)";
 	if($status != HELD)
 	{
-		die "Cluster $cluster failed to go on hold\n";
+		print "Cluster $cluster failed to go on hold\n";
+		exit(1);
 	}
 
 
