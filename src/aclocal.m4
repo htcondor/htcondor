@@ -237,10 +237,10 @@ AC_DEFUN([CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG],
  # initialize the flag imagining we're going to fail.  we'll set it to
  # the right thing if the flag really worked
  [$3]="none";
- ln -s aclocal.m4 _foolink > /dev/null 2>&1
- $1 $2 _foolink _barlink > /dev/null 2>&1
- if test -f "_barlink" ; then
-   perl -e 'exit -l "_barlink"' > /dev/null 2>&1
+ ln -s aclocal.m4 conftest_link > /dev/null 2>&1
+ $1 $2 conftest_link conftest_file > /dev/null 2>&1
+ if test -f "conftest_file" ; then
+   perl -e 'exit -l "conftest_file"' > /dev/null 2>&1
    _is_link=$?
    if test "$_is_link" = "0" ; then
    # it's not a symlink!  this flag will work.
@@ -248,7 +248,7 @@ AC_DEFUN([CONDOR_TRY_CP_RECURSIVE_SYMLINK_FLAG],
    fi
  fi
  # either way, clean up our test files
- /bin/rm -f _foolink _barlink > /dev/null 2>&1
+ /bin/rm -f conftest_link conftest_file > /dev/null 2>&1
 ])
 
 
