@@ -5,7 +5,7 @@
 		typedef ushort_t    ushort;
 #	endif
 #	include <fcntl.h>
-#elif defined(HPUX9)						/* HPUX 9 */
+#elif defined(HPUX9) | defined(OSF1)
 #	define fcntl __condor_hide_fcntl
 #	include <fcntl.h>
 #	undef fcntl
