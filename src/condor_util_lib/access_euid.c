@@ -63,8 +63,7 @@ access_euid(const char *path, int mode)
 		if (stat(path, &buf) < 0) {
 			return -1;
 		}
-		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)))
-		{
+		if (!(buf.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))) {
 			return -1;
 		}
 	}
