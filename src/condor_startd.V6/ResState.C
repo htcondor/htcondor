@@ -155,7 +155,9 @@ ResState::change( State new_state )
 int
 ResState::eval( void )
 {
-		// Recompute attributes needed at every timeout and refresh classad 
+		// Refresh our internal classad with attributes needed at
+		// every timeout.  The values were already recomputed by the
+		// ResMgr before it asked us to evaluate our state.
 	rip->timeout_classad();
 
 	int want_suspend;
