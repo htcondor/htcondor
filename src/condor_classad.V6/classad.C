@@ -32,8 +32,6 @@ extern "C" void to_lower (char *);	// from util_lib (config.c)
 
 BEGIN_NAMESPACE( classad )
 
-static bool isValidIdentifier( const string & );
-
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
@@ -56,42 +54,65 @@ ClassAd (const ClassAd &ad)
 {
 	AttrList::const_iterator itr;
 
-	EnableDirtyTracking();
-	chained_parent_ad = NULL;
-	nodeKind = CLASSAD_NODE;
-	parentScope = ad.parentScope;
+	DisableDirtyTracking();
+	nodeKind          = CLASSAD_NODE;
+	parentScope       = ad.parentScope;
+	chained_parent_ad = ad.chained_parent_ad;
 	
 	for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
-		attrList[itr->first] = itr->second->Copy( );
+		ExprTree *tree = itr->second->Copy( );
+
+		if (tree == NULL) {
+			CondorErrno = ERR_MEM_ALLOC_FAILED;
+			CondorErrMsg = "Couldn't copy attribute in copy constructor";
+			return;
+		}
+		tree->SetParentScope(this);
+		attrList[itr->first] = tree;
 	}
+	EnableDirtyTracking();
+	return;
 }	
 
+
+ClassAd &ClassAd::
+operator=(const ClassAd &rhs)
+{
+	if (this != &rhs) {
+		CopyFrom(rhs);
+	}
+	return *this;
+}
 
 bool ClassAd::
 CopyFrom( const ClassAd &ad )
 {
 	AttrList::const_iterator	itr;
 	ExprTree 					*tree;
+	bool                        succeeded;
 
-	Clear( );
-	nodeKind = CLASSAD_NODE;
-	parentScope = ad.parentScope;
-	chained_parent_ad = ad.chained_parent_ad;
-	
-	DisableDirtyTracking();
-	for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
-		if( !( tree = itr->second->Copy( ) ) ) {
-			Clear( );
-			CondorErrno = ERR_MEM_ALLOC_FAILED;
-			CondorErrMsg = "";
-			return( false );
+	if (this == &ad) {
+		succeeded = false;
+	} else {
+		Clear( );
+		nodeKind = CLASSAD_NODE;
+		parentScope = ad.parentScope;
+		chained_parent_ad = ad.chained_parent_ad;
+		
+		DisableDirtyTracking();
+		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
+			if( !( tree = itr->second->Copy( ) ) ) {
+				Clear( );
+				CondorErrno = ERR_MEM_ALLOC_FAILED;
+				CondorErrMsg = "";
+				return( false );
+			}
+			tree->SetParentScope(this); // ajr
+			attrList[itr->first] = tree;
 		}
-		tree->SetParentScope(this); // ajr
-		attrList[itr->first] = tree;
+		EnableDirtyTracking();
 	}
-	EnableDirtyTracking();
-
-	return( true );
+	return succeeded;
 }
 
 
@@ -251,11 +272,6 @@ Insert( const string &name, ExprTree *tree )
 		CondorErrMsg = "no expression when inserting attribute " + name +
 				" in classad";
 		return( false );
-	}
-	if( !isValidIdentifier( name ) ) {
-		CondorErrno = ERR_INVALID_IDENTIFIER;
-		CondorErrMsg = "attribute name " +name+ " is not a valid identifier";
-		return false;
 	}
 
 	// parent of the expression is this classad
@@ -1342,25 +1358,7 @@ CurrentAttribute (string &attr, const ExprTree *&expr) const
 	return true;	
 }
 
-static bool 
-isValidIdentifier( const string &str )
-{
-	const char *ch = str.c_str( );
 
-		// must start with [a-zA-Z_]
-	if( !isalpha( *ch ) && *ch != '_' ) {
-		return( false );
-	}
-
-		// all other characters must be [a-zA-Z0-9_]
-	ch++;
-	while( isalnum( *ch ) || *ch == '_' ) {
-		ch++;
-	}
-
-		// valid if terminated at end of string
-	return( *ch == '\0' );
-}
 
 void ClassAd::ChainToAd(ClassAd *new_chain_parent_ad)
 {
