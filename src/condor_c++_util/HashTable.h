@@ -58,7 +58,17 @@ class HashTable {
   int  iterate (Value &value);
   int  getCurrentKey (Index &index);
   int  iterate (Index &index, Value &value);
-    
+
+  /*
+  Walk the table, calling walkfunc() on every member.
+  If walkfunc() ever returns zero, the walk is stopped.
+  Returns true if all walkfuncs() succeed, false
+  if stopped. Walk() is provided so that multiple walks
+  can be done even if a startIterations() is in progress.
+  */
+
+  int walk( int (*walkfunc) ( Value value ) );
+
  private:
 #ifdef DEBUGHASH
   void dump();                                  // dump contents of hash table
@@ -488,6 +498,22 @@ iterate (Index &index, Value &v)
 		return 1;
 	}
 }
+
+template <class Index, class Value>
+int HashTable<Index,Value>::walk( int (*walkfunc) ( Value value ) )
+{
+	HashBucket<Index,Value> *current;
+	int i;
+
+	for( i=0; i<tableSize; i++ ) {
+		for( current=ht[i]; current; current=current->next ) {
+			if(!walkfunc( current->value )) return 0;
+		}
+	}
+
+	return 1;
+}
+
 
 // Delete hash table by deallocating hash buckets in table and then
 // deleting table itself.
