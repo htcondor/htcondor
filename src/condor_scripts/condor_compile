@@ -86,9 +86,14 @@ invoke_linker () {
 		if [ ! -f "$CONDOR_LD_IN_USE_FILE" ]; then
 			echo 'ERROR: Internal ld was not invoked!'
 			echo 'ERROR: Executable may not be linked properly for Condor!'
+			echo 'ERROR: For users of Condor on Linux, we highly recommend'
+			echo 'ERROR: using the default compiler that came with the'
+			echo 'ERROR: distribution. Usually placing /usr/bin first in'
+			echo 'ERROR: your path will remedy this error.'
 			echo 'ERROR: To learn more about this error, visit this web page:'
 			echo 'ERROR: http://www.cs.wisc.edu/condor/manual/faq.html'
-			echo 'ERROR: and read the FAQ entry about this problem.'
+			echo 'ERROR: and read the FAQ entry about this problem for your'
+			echo 'ERROR: revision of Condor.'
 			rm -f $CONDOR_LD_IN_USE_FILE
 			exit 1;
 		fi
