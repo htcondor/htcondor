@@ -31,7 +31,7 @@
 #include "list.h"                // List class
 #include "internet.h"            // sinful->hostname stuff
 #include "daemon.h"
-#include "Env.h"
+#include "env.h"
 
 
 MPIShadow::MPIShadow() {
