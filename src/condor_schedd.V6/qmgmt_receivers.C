@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 #include "condor_secman.h"
+#include "condor_attributes.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -236,10 +237,18 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+			errno = 0;
+			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
+			rval = 0;
+			terrno = errno;
+		} else {
+
+			errno = 0;
+			rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -271,10 +280,23 @@ do_Q_request(ReliSock *syscall_sock)
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);
 		assert( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		// ckireyev:
+		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
+		// I'm not sure if this is the best place to do this, but....
+		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+			errno = 0;
+			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
+			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			terrno = errno;
+		}
+		else {
+			errno = 0;
+
+			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value );
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
