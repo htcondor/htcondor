@@ -32,6 +32,7 @@
 #include "condor_attributes.h"
 #include "iso_dates.h"
 #include "condor_xml_classads.h"
+#include "condor_string.h" // for strnewp()
 
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -44,7 +45,7 @@ extern char* mySubSystem;
 AttrListElem::AttrListElem(ExprTree* expr)
 {
     tree = expr;
-    // dirty = FALSE;
+    dirty = false;
     name = ((Variable*)expr->LArg())->Name();
     next = NULL;
 }
@@ -59,7 +60,7 @@ AttrListElem::AttrListElem(AttrListElem& oldNode)
     // this->tree = oldNode.tree;
 	// So we do the new DeepCopy():
 	this->tree = oldNode.tree->DeepCopy();
-    //this->dirty = FALSE;
+    this->dirty = false;
     this->name = ((Variable*)tree->LArg())->Name();
     next = NULL;
 }
@@ -200,6 +201,8 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 			empty = FALSE;
 		}
 	}
+	ClearAllDirtyFlags();
+	return;
 }
 
 //
@@ -307,6 +310,8 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 		}
 		i++;
     }
+	ClearAllDirtyFlags();
+	return;
 }
 
 ExprTree* ProcToTree(char*, LexemeType, int, float, char*);
@@ -775,8 +780,9 @@ int AttrList::Insert(ExprTree* expr)
 		Delete(((Variable*)expr->LArg())->Name());
 	}
 
-
     AttrListElem* newNode = new AttrListElem(expr);
+
+	newNode->SetDirty(true);
 
     if(!tail)
     {
@@ -896,24 +902,21 @@ int AttrList::Delete(const char* name)
     return found; 
 }
 
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // Reset the dirty flags for each expression tree in the AttrList.
-////////////////////////////////////////////////////////////////////////////////
-// This has been removed: it seems to be useless right now: the dirty flags are
-// set but never used. 
-#if 0 
-void AttrList::ResetFlags()
-{
-    AttrListElem*	tmpElem;	// working variable
+///////////////////////////////////////////////////////////////////////////////
 
-    tmpElem = exprList;
-    while(tmpElem)
-    {
-	tmpElem->dirty = FALSE;
-	tmpElem = tmpElem->next;
+void AttrList::ClearAllDirtyFlags()
+{
+    AttrListElem *current;
+
+    current = exprList;
+    while (current != NULL) {
+		current->SetDirty(false);
+		current = current->next;
     }
+	return;
 }
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Find an attibute and replace its value with a new value.
@@ -968,6 +971,24 @@ ExprTree* AttrList::NextExpr()
     }
 }
 
+ExprTree* AttrList::NextDirtyExpr()
+{
+	ExprTree *expr;
+
+	expr = NULL;
+	// Loop until we find a dirty attribute
+	while (ptrExpr != NULL && !ptrExpr->IsDirty()) {
+		ptrExpr = ptrExpr->next;
+	}
+	// If we found a dirty attribute, pull out its expression tree
+	// and set us up for the next call to NextDirtyExpr()
+	if (ptrExpr != NULL) {
+		expr    = ptrExpr->tree;
+		ptrExpr = ptrExpr->next;
+	}
+	return expr;
+}
+
 char* AttrList::NextName()
 {
     if(!this->ptrName)
@@ -981,6 +1002,25 @@ char* AttrList::NextName()
 	ptrName = ptrName->next;
 	return tmp;
     }
+}
+
+char *AttrList::NextDirtyName()
+{
+	char *name;
+
+	name = NULL;
+
+	// Loop until we find a dirty attribute
+	while (ptrName != NULL && !ptrName->IsDirty()) {
+		ptrName = ptrName->next;
+	}
+	// If we found a dirty attribute, pull out its name
+	// and set us up for the next call to NextDirtyName()
+	if (ptrName != NULL) {
+		name    = strnewp(ptrName->name);
+		ptrName = ptrName->next;
+	}
+	return name;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
