@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     /* ----- Shared library function support ----- */
     cout << "  Shared library function support: ";
 #if defined ENABLE_SHARED_LIBRARY_FUNCTIONS
-    cout << "yes\n;"
+    cout << "yes\n";
 #else
     cout << "no\n";
 #endif
