@@ -27,20 +27,20 @@
 
 class ExceptionHandler {
 	public:            
-	ExceptionHandler( );      
-	~ExceptionHandler( );
-	void SetLogFileName( PTSTR pszLogFileName );  
-    void TurnOff( );
-	void TurnOn( );
-
-     private:
+		ExceptionHandler( );      
+		~ExceptionHandler( );
+		void SetLogFileName( PTSTR pszLogFileName );  
+		void TurnOff( );
+		void TurnOn( );
+		static LPTSTR GetExceptionString( DWORD dwCode );
+    
+	private:
       // entry point where control comes on an unhandled exception
       static LONG WINAPI MSJUnhandledExceptionFilter(
                                            PEXCEPTION_POINTERS pExceptionInfo );
       // where report info is extracted and generated    
       static void GenerateExceptionReport( PEXCEPTION_POINTERS pExceptionInfo );
       // Helper functions      
-	  static LPTSTR GetExceptionString( DWORD dwCode );
       static BOOL GetLogicalAddress(PVOID addr, PTSTR szModule, DWORD len,
                                     DWORD& section, DWORD& offset );
       static void IntelStackWalk( PCONTEXT pContext );

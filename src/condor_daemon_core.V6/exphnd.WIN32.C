@@ -150,7 +150,8 @@ void ExceptionHandler::GenerateExceptionReport(
     _tprintf( _T("Flags:%08X\n"), pCtx->EFlags );    
 #endif
     if ( !InitImagehlpFunctions() )    {
-        // dprintf(D_ALWAYS,"IMAGEHLP.DLL or its exported procs not found\n");
+        //dprintf(D_ALWAYS,"IMAGEHLP.DLL or its exported procs not found\n");
+		//dprintf(D_ALWAYS," ----> GetLastError = %d\n",GetLastError() );
 #ifdef _M_IX86  // Intel Only!
         // Walk the stack using x86 specific code        
 		IntelStackWalk( pCtx );
@@ -308,6 +309,7 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
         // pSymbol->SizeOfStruct = sizeof(symbolBuffer);
 		pSymbol->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL);
         pSymbol->MaxNameLength = 511;
+		pSymbol->Name[0] = '\0';
         DWORD symDisplacement = 0;  // Displacement of the input address,
                                     // relative to the start of the symbol
         if ( _SymGetSymFromAddr(GetCurrentProcess(), sf.AddrPC.Offset,
@@ -315,6 +317,12 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
             _tprintf( _T("%hs+%X\n"), pSymbol->Name, symDisplacement );
 		} else {
 			// No symbol found.  Print out the logical address instead.
+			//DWORD thelasterr = GetLastError();
+			//char nambuf[50];
+			//DWORD namebuflen=49;
+			//GetUserName(nambuf,&namebuflen);
+			//dprintf(D_ALWAYS,"exphnd: Could not find sym %s, err=%d, user=%s\n",
+			//	pSymbol->Name, thelasterr, nambuf );
             TCHAR szModule[MAX_PATH] = _T("");
             DWORD section = 0, offset = 0;
             GetLogicalAddress(  (PVOID)sf.AddrPC.Offset,
@@ -369,7 +377,8 @@ BOOL ExceptionHandler::InitImagehlpFunctions( void ) {
                                                               "SymGetSymFromAddr" );
     if ( !_SymGetSymFromAddr )     
 		return FALSE;
-    if ( !_SymInitialize( GetCurrentProcess(), 0, TRUE ) )
+
+    if ( !_SymInitialize( GetCurrentProcess(), NULL, TRUE ) )
 		return FALSE;
 
     return TRUE; 
