@@ -280,9 +280,13 @@ GetValue( Value& val, const ExprTree *tree, EvalState *es )
     // Evaluate() will eval to undef rather than loop
 
 	cv.SetUndefinedValue( );
-	currentState->cache[ tree ] = cv;
 
+	currentState->cache[ tree ] = cv;
+	
+	const ClassAd *tmpScope = es->curAd;
+	es->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val );
+	es->curAd = (ClassAd*) tmpScope;
 
 	// replace temporary cached value (above) with actual evaluation
 	currentState->cache[ tree ] = val;
@@ -339,7 +343,10 @@ GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es )
 	cv.SetUndefinedValue( );
 	currentState->cache[ tree ] = cv;
 
+	const ClassAd *tmpScope = es->curAd;
+	es->curAd = (ClassAd*) tree->GetParentScope();
 	tree->Evaluate( *currentState, val, sig );
+	es->curAd = (ClassAd*) tmpScope;
 
 	// replace temporary cached value (above) with actual evaluation
 	currentState->cache[ tree ] = val;
