@@ -138,6 +138,10 @@ SOURCE=..\src\condor_util_lib\phys_mem.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\setsyscalls.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\uids.c
 # End Source File
 # Begin Source File
