@@ -130,6 +130,7 @@ int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
+int  CommittedTime = 0;			// run-time committed in checkpoints
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -382,7 +383,7 @@ main(int argc, char *argv[], char *envp[])
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
 	tmp = (char *)malloc(_POSIX_PATH_MAX);
-	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER_HOST, tmp) == 1) {
+	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER, tmp) == 1) {
 		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
 		CkptServerHost = strdup(tmp);
@@ -926,15 +927,15 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			SetAttributeString(Proc->id.cluster, Proc->id.proc,
 							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
 		}
-		if (LastCkptTime > 0) {
+		if (LastCkptTime > LastRestartTime) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
-			int ckpt_time=0;
+			CommittedTime=0;
 			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
-							ATTR_JOB_COMMITTED_TIME, &ckpt_time);
-			ckpt_time += LastCkptTime - LastRestartTime;
+							ATTR_JOB_COMMITTED_TIME, &CommittedTime);
+			CommittedTime += LastCkptTime - LastRestartTime;
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
-							ATTR_JOB_COMMITTED_TIME, ckpt_time);
+							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 			LastRestartTime = LastCkptTime;
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_NUM_CKPTS, NumCkpts);
@@ -953,12 +954,12 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		// committed time, since it contributed to the completion of
 		// the job
 		if (Proc->status == COMPLETED) {
-			int ckpt_time = 0;
+			CommittedTime = 0;
 			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
-							ATTR_JOB_COMMITTED_TIME, &ckpt_time);
-			ckpt_time += Proc->completion_date - LastRestartTime;
+							ATTR_JOB_COMMITTED_TIME, &CommittedTime);
+			CommittedTime += Proc->completion_date - LastRestartTime;
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
-							ATTR_JOB_COMMITTED_TIME, ckpt_time);
+							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 		}
 	}
 
