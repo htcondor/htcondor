@@ -95,13 +95,28 @@ void ExecuteOnTmpStk( void (*func)() )
 			// when StackGrowsDown, set the stack pointer inside the
 			// TmpStack and give some padding -- previously values
 			// were getting overwritten above the stack -- Jim B. 2/7/96
+
+			/* XXX must explore the ramifications of that long cast on other
+				platforms, it breaks under IRIX because pointers are 64 bit.
+				-pete 01/19/00 */
+#if defined(IRIX)
+			JMP_BUF_SP(env) = (TmpStack + TmpStackSize - 2);
+#else
 			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize - 2);
+#endif
 		} else {
+#if defined(IRIX)
+			JMP_BUF_SP(env) = TmpStack;
+#else
 			JMP_BUF_SP(env) = (long)TmpStack;
+#endif
 		}
+		dprintf(D_CKPT, "About to execute on tmpstack.\n");
 		LONGJMP( env, 1 );
+		dprintf(D_CKPT, "How did I get here after LONGJMP()!?!\n");
 	} else {
 			// Second time through - call the function
+		dprintf(D_CKPT, "Beginning Execution on TmpStack.\n");
 		SaveFunc();
 	}
 
