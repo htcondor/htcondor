@@ -1396,7 +1396,7 @@ variables for the job's environment by using the
 See the \Condor{submit} manual page at
 section~\ref{man-condor-submit} for more details about this command.
 
-The submitter's entire environment can be copied into the job
+The submittor's entire environment can be copied into the job
 ClassAd for the job at job submission.
 The \Opt{getenv} command within the submit description file
 does this.
@@ -1944,7 +1944,7 @@ process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
 running under the real UID of root may switch its effective UID.
 (See the \Cmd{seteuid}{2} man page.)
 For security reasons, the daemons
-only set the effective uid to root when absolutely necessary
+only set the effective UID to root when absolutely necessary
 (to perform a privileged operation).
 
 If they are not running with root access, you need to make any/all files

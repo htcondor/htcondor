@@ -346,8 +346,8 @@ total disk space required by the job in kilobytes.
 Condor automatically updates the \AdAttr{DiskUsage} attribute
 approximately every 20 minutes while the job runs with the
 amount of space being used by the job on the execute machine.  
-	\item VirtualMemory $>=$ ImageSize.  To ensure the target machine
-has enough virtual memory to run your job.
+	\item (Memory * 1024) $>=$ ImageSize.  To ensure the target machine
+has enough memory to run your job.
 	\item If Universe is set to Vanilla, FileSystemDomain is set equal to
 the submit machine's FileSystemDomain.
 \end{enumerate}

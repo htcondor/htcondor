@@ -378,12 +378,30 @@ system.
   \Macro{COLLECTOR\_HOST} must be defined for your pool to work
   properly.
 
+  In addition to defining the hostname, this setting can optionally be
+  used to specify the network port that the \Condor{collector} should
+  use.
+  The port is seperated from the hostname by a ':' symbol.
+  For example, \verb@COLLECTOR_HOST = $(CONDOR_HOST):1234@.
+  If no port is specified, the default port of 9618 is used.
+  Using the default port is recommended for most sites.
+  This should only be modified if there is a conflict with another
+  service listening on the same network port.
+  For more information about specifying a non-standard port for the
+  \Condor{collector}, see section~\ref{sec:Ports-NonStandard} on
+  page~\pageref{sec:Ports-NonStandard}.
+
+
 \item[\Macro{NEGOTIATOR\_HOST}] \label{param:NegotiatorHost} The
   hostname of the machine where the \Condor{negotiator} is running for
   your pool.  Normally it is defined with the \MacroUNI{CONDOR\_HOST}
   macro described above.  There is no default value for this macro;
   \Macro{NEGOTIATOR\_HOST} must be defined for your pool to work
   properly.
+  This setting also be used to optionally define a network port for
+  the \Condor{negotatior}.
+  For more information, see the \MacroNI{COLLECTOR\_HOST} setting
+  above.
 
 \item[\Macro{CONDOR\_VIEW\_HOST}] \label{param:CondorViewHost} The
   hostname of the machine where the CondorView server is running.
@@ -1597,6 +1615,14 @@ These macros control the \Condor{master}.
 \begin{verbatim}
         DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
+
+  \Note This configuration variable cannot be changed 
+  by using \Condor{reconfig} or 
+  by sending a SIGHUP.
+  To change this configuration variable, restart the
+  \Condor{master} daemon
+  by using \Condor{restart}.
+  Only then will the change take effect.
 
   \Note On your central manager, your \MacroUNI{DAEMON\_LIST}
   will be different from your regular pool, since it will include

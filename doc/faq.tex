@@ -45,7 +45,7 @@ Also, you might want to read the platform-specific information in
 Chapter~\ref{platforms} on page~\pageref{platforms}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What versions of RedHat Linux does Condor supprt?}
+\subsection*{What versions of Red Hat Linux does Condor support?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 See Section~\ref{sec:platform-linux} on
@@ -626,7 +626,7 @@ information.
 Check the following:
 \begin {enumerate}
 
-\item{Did you submit the job from a local filesystem that other
+\item{Did you submit the job from a local file system that other
 computers can't access?}
 
 See Section~\ref{sec:Shared-Filesystem-Config-File-Entries}, on
@@ -860,6 +860,44 @@ No.  Although normal executables are binary compatible, technical details
 of taking checkpoints currently prevents this particular combination.
 Note that this applies to standard universe jobs only.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Why have standard universe jobs in Condor 6.6.x have begun unexpectedly segmentation faulting during a checkpoint after an upgrade of Redhat Enterprise Linux 3 to current update levels?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Redhat has apparently backported a 2.6 kernel feature called
+``exec\_shield'' to the current patch levels of the RHEL3 product line. 
+This feature is designed to make buffer overflow attacks incredibly difficult
+to exploit. 
+However, it has the unfortunate side effect of completely breaking all
+user land checkpointing algorithms including the one Condor utilizes.
+The solution is to turn off the kernel feature for each execution of a 
+standard universe job in the Condor system.
+The method employed to do this is with \Expr{USER\_JOB\_WRAPPER} and a shell
+script that looks much like this one:
+
+\begin{verbatim}
+#! /bin/sh
+
+sa="/usr/bin/setarch"
+
+if [ -f $sa ]; then
+    exec $sa i386 ${1+"$@"}
+fi
+
+exec ${1+"$@"}
+\end{verbatim}
+
+Place this shell script into the \Expr{\$(SBIN)} directory of your Condor
+installation with the name of \Prog{fix\_std\_univ} and make sure to 
+\Prog{chmod 755 fix\_std\_univ} it. 
+Then, set \Expr{USER\_JOB\_WRAPPER = \$(SBIN)/fix\_std\_univ} in your
+global config file(or the config files which will affect your Linux install
+of Condor).
+Then do a \Condor{reconfig} of your pool.
+When a standard universe job is run on a machine, if the \Prog{setarch} 
+program is available (under Linux with the ``exec\_shield'' feature), then it
+will run the executable in the i386 personality, which turns off the 
+``exec\_shield'' kernel feature.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why do my vanilla jobs keep cycling between suspended and unsuspended?}
@@ -946,7 +984,7 @@ SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
 \end{verbatim}
 \normalsize
 
-The above policy says to only suspend the job if the cpu has been busy
+The above policy says to only suspend the job if the CPU has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
@@ -1377,7 +1415,7 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{Why does the startd crash on CondorNT with the error\\
+\subsection*{Why does the startd crash on Condor NT with the error\\
 "caInsert: Can't insert CpuBusy into target classad."?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{decimal point!problems with}
@@ -1582,7 +1620,7 @@ EVERYONE  to synchronize on it.
 
 [ Technical note: Crun adds "C:\WINNT\SYSTEM32\CMD.EXE /C" to the start of 
 the command line. This is because the process is created with the network 
-context of the caller i.e. LOCALSYSTEM. Prepending cmd.exe gets round any 
+context of the caller i.e. LOCALSYSTEM. Pre-pending cmd.exe gets round any 
 unexpected "Access Denied" errors. ]
 
 If Crun gets a WM_CLOSE (CTRL_CLOSE_EVENT) while the job is running it 
@@ -2016,18 +2054,21 @@ Use the solutions given above.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Is there a Condor mailing-list?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!mailing-list}
+\index{Condor!mailing lists}
+\index{mailing lists}
 \index{Condor!new versions, notification of}
+\index{Condor!contact information}
 
-Yes.
-We run an extremely low traffic mailing list solely to announce new
+Yes. There are two useful mailing lists.
+First, we run an extremely low traffic mailing list solely to announce new
 versions of Condor.
-To subscribe, e-mail \Email{majordomo@cs.wisc.edu} with a message body
-of:
-
-\begin{verbatim}
-subscribe condor-world
-\end{verbatim}
+Follow the instructions for Condor World at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+Second, our users can be extremely knowledgeable,
+and they help each other solve problems
+using the Condor Users mailing list.
+Again, follow the instructions for Condor Users at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 
 
 
@@ -2037,6 +2078,10 @@ subscribe condor-world
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
+Try joining the Condor Users mailing list, where our users
+support each other in finding answers to problems.
+Follow the instructions at
+\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
 If you still can't find an answer, feel free to contact us at
 \Email{condor-admin@cs.wisc.edu}.
 

@@ -16,7 +16,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Most of the fixes included in this release were also included in
+  version 6.7.3.
+  However, at the end of this section, a few fixes there were added to
+  6.6.8 after 6.7.3 was released are mentioned separately.
 
 \end{itemize}
 
@@ -33,9 +36,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item In version 6.6.7, we fixed a number of bugs related to the
+\item In version 6.6.7, we fixed bugs related to the
   \Opt{-format} option to various Condor tools.
-  However, some sites were using \Opt{-format} in ways we didn't
+  However, some sites were using \Opt{-format} in ways we did not
   expect, by not specifying any '%' conversion string in the format
   string at all.
   This used to work, given the old buggy code that handled
@@ -65,8 +68,13 @@ raven.cs.wisc.edu
 shutdown user jobs that are console applications (including batch
 scripts).
 
-\item Fixed an issue that would prevent \Condor{store\_cred} to succeed
+\item Fixed an issue that would cause \Condor{store\_cred} to fail
 if the user did not have \verb@NETWORK@ logon rights.
+
+\item \Condor{store\_cred} \Opt{query} command would appear to succeed,
+even if the stored credential was invalid (e.g. the password was changed
+but the password stash was not updated). This has been fixed.
+
 
 \item Fixed a bug that would cause the \Condor{startd} to crash under
 certain conditions during job eviction. This bug was introduced in Condor
@@ -75,7 +83,29 @@ version 6.6.6.
 \item Fixed a bug that would cause \Condor{dagman} to crash if it was
 submitted as a non-Administrator user.
 
+\item Fixed a bug that would cause Condor to occasionally kill processes
+that didn't belong to it during job eviction or daemon restarts.
+
+\item On startup, the \Condor{master} would occasionally fail to add the
+daemons to the Windows XP firewall exception list because of a race with
+the Windows SharedAccess service. This bug has been fixed.
+
+\item If a user submitted a job with an invalid executable, the starter
+would often wedge until the job was preempted. Now, the starter attempts
+to detect invalid executables and prevent wedging.
+
 \end{itemize}
+
+\item Starting with RedHat 9, newer versions of Linux began to produce
+  core files named \File{core.<pid>}.
+  This broke functionality in Condor that managed and transfered back
+  any core file created by the job, since the \Condor{starter} was
+  unable to locate the proper file.
+  Now, Condor will correctly transfer back core files, even if they
+  are created as \File{core.<pid>}.
+  This functionality works in all universes, and is independent of
+  Condor's file transfer mechanism.
+
 
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
 with the message, "caInsert: Can't insert CpuBusy into target classad."
@@ -92,6 +122,43 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   sockets, even with \MacroNI{LOWPORT} and \MacroNI{HIGHPORT}
   defined. 
 
+\item Fixed a bug that caused \Condor{rm} \Opt{-forcex} to not remove
+  jobs that make use of \AdAttr{leave\_in\_queue}.
+  If invoked using a cluster id, username, or constraint expression,
+  \Condor{rm} would report success but the jobs would remain in the queue.
+  Now, the jobs will leave the queue.
+
+\item When a held job is released, job ad attributes HoldReasonCode and
+  HoldReasonSubCode are now properly moved to LastHoldReasonCode and
+  LastHoldReasonSubCode.
+
+\item Fixed a bug that would cause the \Attr{RemoveReason} attribute
+  for a job 
+  to be set incorrectly in some circumstances.
+  Specifically, this was when a job
+  was not running and a \AdAttr{periodic\_remove} expression
+  caused the job to be cancelled.
+
+\item Fixed \Condor{submit} such that submit description file
+  commands written with syntax both of
+  \verb@ThisStyle@ and \verb@this_style@ will work.
+
+\item Fixed a very rare but serious bug in Condor that was originally
+  introduced in version 6.3.0.
+  Under exceptional circumstances (a very heavily loaded machine where
+  a huge number of processes are being spawned all the time, and where
+  the \Condor{schedd} is managing many thousands of jobs in the
+  queue), it was possible for the \Condor{schedd} to run a job twice.
+  We have fixed the underlying problem that lead to the
+  \Condor{schedd} making this mistake, rendering this error
+  impossible.
+
+\item Fixed a bug that occured when submitted Condor-G jobs while
+  using the grid monitor. If the grid job monitor returned a FAILED
+  status for a job while the jobmanager is asleep, the gridmanager
+  could sometimes end up in a loop, continuously restarting the remote
+  Globus jobmanager then putting it back to sleep.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -99,6 +166,36 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+\noindent Bugs fixed that are not included in version 6.7.3:
+
+\begin{itemize}
+
+\item Fixed a discrepancy in the \Macro{SUBSYS\_ADDRESS\_FILE}
+  setting.
+  Previously, this setting did not work for \MacroNI{SUBSYS} values of
+  \ShortExpr{COLLECTOR} or \ShortExpr{NEGOTIATOR} (for example, defining
+  \MacroNI{COLLECTOR\_ADDRESS\_FILE} had no effect).
+  Now, if either of these is defined in the configuration file,
+  the corresponding Condor daemon will write out the address
+  and port it is using to the specified file.
+  Normally, the \Condor{collector} and \Condor{negotiator} listen on a
+  well-known, fixed port.
+  However, on single-machine, Personal Condor installations,
+  these address files allow all of the Condor daemons and tools to locate
+  the \Condor{collector} and \Condor{negotiator}, even if they are
+  using a dynamically assigned port.
+  For more information about the \MacroNI{SUBSYS\_ADDRESS\_FILE}
+  setting, please see the description in
+  section~\ref{param:SubsysAddressFile} on
+  page~\pageref{param:SubsysAddressFile}.
+  For more information about using non-standard ports for the
+  \Condor{collector} and \Condor{negotiator}, please see the
+  description of ``Non Standard Ports for Central Managers'' in
+  section~\ref{sec:Ports-NonStandard} on
+  page~\pageref{sec:Ports-NonStandard}.
 
 \end{itemize}
 

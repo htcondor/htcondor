@@ -57,7 +57,7 @@ currently hosting a Condor job, \AdAttr{CurrentRank} is -1.0.
 %
 \index{ClassAd machine attribute!Disk}
 \item[\AdAttr{Disk}] : The amount of disk space on this machine available for
-the job in kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
+the job in Kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
 is the amount of disk space available in the directory specified in
 the Condor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
@@ -203,7 +203,7 @@ For non-SMP machines with one virtual machine, the value will be 1.
 %
 \index{ClassAd machine attribute!VirtualMemory}
 \item[\AdAttr{VirtualMemory}] : The amount of currently available virtual memory 
-(swap space) expressed in kbytes.
+(swap space) expressed in Kbytes.
 
 \end{description}
 
@@ -279,14 +279,14 @@ attributes will be defined.
 on the submitting machine.
 
 \index{ClassAd machine attribute (when running)!JobStart}
-\item[\AdAttr{JobStart}] : The timestamp in integer seconds of when the job began
+\item[\AdAttr{JobStart}] : The time stamp in integer seconds of when the job began
 executing, since the Unix epoch (00:00:00 UTC, Jan 1, 1970).  For idle
 machines, the value is UNDEFINED.
 
 \index{ClassAd machine attribute (when running)!LastPeriodicCheckpoint}
 \item[\AdAttr{LastPeriodicCheckpoint}] : If the job has performed a
 periodic checkpoint, this attribute will be defined and will hold the
-timestamp of when the last periodic checkpoint was begun.
+time stamp of when the last periodic checkpoint was begun.
 If the job has yet to perform a periodic checkpoint, or cannot
 checkpoint at all, the \AdAttr{LastPeriodicCheckpoint} attribute will
 not be defined.

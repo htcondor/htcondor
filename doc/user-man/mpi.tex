@@ -118,19 +118,19 @@ of the computation.
 In this example, it is used to give unique names to input
 and output files.
 
-If your site does NOT have a shared filesystem across all the nodes
+If your site does NOT have a shared file system across all the nodes
 where your MPI computation will execute, you can use Condor's file
 transfer mechanism.
 You can find out more details about these settings by reading the
 \Condor{submit} man page or section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}. 
 Assuming your job only reads input from STDIN, here is an example
-submit file for a site without a shared filesystem:
+submit file for a site without a shared file system:
 
 \begin{verbatim}
 ######################################
 ## MPI example submit description file
-## without using a shared filesystem
+## without using a shared file system
 ######################################
 universe = MPI
 executable = simplempi
