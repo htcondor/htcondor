@@ -40,6 +40,7 @@
 #include "string_list.h"
 #include "get_daemon_addr.h"
 #include "daemon_types.h"
+#include "strupr.h"
 
 #ifdef WIN32
 extern void register_service();
@@ -573,6 +574,9 @@ init_daemon_list()
 
 	char* daemon_list = param("DAEMON_LIST");
 	if( daemon_list ) {
+			// Make DAEMON_LIST case insensitive by always converting
+			// what we get to uppercase.
+		daemon_list = strupr( daemon_list );
 		daemon_names.initializeFromString(daemon_list);
 		free( daemon_list );
 
@@ -602,6 +606,11 @@ check_daemon_list()
 			// different than what we've got now.
 		return;
 	}
+
+		// Make DAEMON_LIST case insensitive by always converting what
+		// we get to uppercase.
+	daemon_list = strupr( daemon_list );
+
 	daemon_names.initializeFromString(daemon_list);
 	free( daemon_list );
 
