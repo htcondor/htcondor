@@ -57,11 +57,9 @@ email_open( const char *email_addr, const char *subject )
 	char *Mailer;
 	char *temp;
 	FILE *mailerstream;
-	priv_state priv;
 	char RelayHost[150];
 	const char *FinalSubject = "\0";
 	char final_command[2000];
-	int prev_umask;
 
 	RelayHost[0] = '\0';
 
