@@ -37,7 +37,9 @@ nice-user.condor@cs.                 6                504                  0
 \end{verbatim}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Checking on the progress of jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 At any time, you can check on the status of your jobs with the \Condor{q}
 command.
 \index{Condor commands!condor\_q}
@@ -60,6 +62,7 @@ An example of the output from \Condor{q} is
 This output contains many columns of information about the
 queued jobs.
 \index{status!of queued jobs}
+\index{job!state}
 The \verb@ST@ column (for status) shows the status of
 current jobs in the queue. An \verb@R@ in the status column
 means the the job is currently running.
@@ -68,12 +71,16 @@ now, because it is waiting for a machine to become available.
 The status
 \verb@H@ is the hold state. In the hold state,
 the job will not be scheduled to
-run until it is released (see condor\_hold and condor\_release man pages).
+run until it is released (see the \Condor{hold}
+reference page located on page~\pageref{man-condor-hold}
+and the \Condor{release}
+reference page located on page~\pageref{man-condor-release}).
 Older versions of Condor used a
 \verb@U@ in the status column to stand for unexpanded.
 In this state,
 a job has never 
-checkpointed and when it starts running, it will start running from the
+produced a checkpoint,
+and when the job starts running, it will start running from the
 beginning.
 Newer versions of Condor do not use the \verb@U@ state.
 
@@ -153,7 +160,9 @@ bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
 \end{verbatim}
 \normalsize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Removing a job from the queue}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 A job can be removed from the queue at any time by using the \Condor{rm}
 \index{Condor commands!condor\_rm}
 command.  If the job that is being removed is currently running, the job
@@ -183,6 +192,34 @@ Job 132.0 removed.
 1 jobs; 1 idle, 0 running, 0 held
 \end{verbatim}
 \normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Placing a job on hold}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor commands!condor\_hold}
+\index{Condor commands!condor\_release}
+\index{job!state}
+A job in the queue may be placed on hold by running the command
+\Condor{hold}.
+A job in the hold state remains in the hold state until later released
+for execution by the command \Condor{release}.
+
+Use of the \Condor{hold} command causes a hard kill signal to be sent
+to a currently running job (one in the running state).
+For a standard universe job, this means that no checkpoint is
+generated before the job stops running and enters the hold state.
+When released, this standard universe job continues its execution
+using the most recent checkpoint available.
+
+Jobs in universes other than the standard universe that are running
+when placed on hold will start over from the beginning when 
+released.
+
+The manual page for \Condor{hold}
+on page~\pageref{man-condor-hold}
+and the manual page for \Condor{release}
+on page~\pageref{man-condor-release}
+contain usage details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-prio}Changing the priority of jobs}

@@ -10,8 +10,23 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-4-6}Version 6.4.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent New Features:
+\begin{itemize}
+
+\item Clarified the output of \Condor{q} -analyze.
+
+\end{itemize}
+
 \noindent Bugs Fixed:
 \begin{itemize}
+
+\item Fixed a major bug that caused standard universe Condor jobs to
+crash whenever they ran in a pool with the \Macro{LOWPORT} and
+\Macro{HIGHPORT} config file settings enabled.
+These settings restrict what ports Condor will use in your pool.
+To allow standard universe jobs to run in such a pool, you must relink
+your executable with \Condor{compile} after the 6.4.6 condor libraries
+are installed in your Condor \File{lib} directory.
 
 \item When more than 512 distinct users submit to Condor or Condor-G,
 the \Condor{schedd} no longer crashes. 
@@ -20,6 +35,53 @@ the \Condor{schedd} no longer crashes.
 which contain two nodes with the same name; in the past DAGMan
 did not detect this, and would not exit even when the DAG was
 complete.
+
+\item The \Opt{-format} option to \Condor{q} and \Condor{status} can
+now be used to print out boolean expressions in ClassAds, not just
+strings, integers and floating point numbers.
+Any boolean expression will now be treated like a string, so be sure
+to use \verb@%s@ as the conversion character in the formatting string
+you pass to \Opt{-format}.
+
+\item If no \Attr{Rank} is specified in the job description file, or
+in the \Macro{DEFAULT\_RANK} config file variable, the default value
+is now ``0.0'' not just ``0''.
+Since \Attr{Rank} is supposed to be a floating point value, the
+``0.0'' ensures that the \Opt{-format} option to tools like \Condor{q}
+and \Condor{status} will always treat this variable as a float.
+
+\item Fixed the help message for the \Condor{rm}, \Condor{hold} and
+\Condor{release} tools to be more helpful, and to mention the
+\Opt{-constraint} option.
+
+\item When you ran \Condor{q} in a way that it needed to query the
+\Condor{collector} and that query failed, the error message used to be
+very short and cryptic.
+Now, there is a verbose message that explains what went wrong and
+possible ways you can fix the problem.
+Also fixed a misleading error message in \Condor{q} that was
+displayed under very rare circumstances.
+
+\end{itemize}
+
+\noindent Packaging Changes:
+
+\begin{itemize}
+
+\item Begining with Condor version 6.4.6, all of the Condor-G related
+binaries (\Condor{gridmanager}, \Condor{glidein}, and
+\Prog{gahp\_server}) are also included in the full release of Condor.
+So, if you are using the full Condor system and want to use Condor's
+grid-enabled functionality, you no longer need to download and install
+a separate ``contrib module''.  
+However, if all you want is Condor-G, the contrib module is still
+available.
+For more information, please the chapter on ``Grid Computing'' on
+page~\pageref{grid-computing}.
+
+\item Fixed a process family managment bug in the \Condor{startd} on 
+Windows. This bug was preventing the \Condor{startd} from detecting
+the \Condor{starter} as a member of its process family.
 
 \end{itemize}
 

@@ -2,11 +2,13 @@
 {release held jobs in the Condor queue}
 \Synopsis \SynProg{\Condor{release}}
 \ToolArgsBase 
-\ToolLocate
-\ToolJobs
 
 \SynProg{\Condor{release}}
-\ToolArgsBase 
+\ToolLocate
+\ToolJobs
+$|$ \OptArg{-constraint}{expression} \Dots
+
+\SynProg{\Condor{release}}
 \ToolLocate
 \ToolAll
 
@@ -15,7 +17,7 @@
 
 \Description
 
-\Condor{release} releases one or more jobs from the Condor job queue that were 
+\Condor{release} releases jobs from the Condor job queue that were 
 previously placed in hold state.  
 If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
@@ -31,6 +33,8 @@ For any given job, only the owner of the job or one of the queue super users
 	\OptItem{\Arg{cluster}}{Release all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Release the specific job in the cluster}
 	\OptItem{\Arg{user}}{Release jobs belonging to specified user}
+	\OptItem{\OptArg{-constraint}{expression}} {Release all jobs which match
+	                the job ClassAd expression constraint}
         \OptItem{\Arg{-all}}{Release all the jobs in the queue}
 \end{Options}
 
@@ -44,6 +48,14 @@ job cluster.  (In the PVM universe, each PVM job is assigned its own
 cluster number, and each machine class is assigned a ``process''
 number in the job's cluster.)  Releasing a subset of the machine
 classes for a PVM job is not supported.
+
+\Examples
+To release all of the jobs of a user named Mary:
+\footnotesize
+\begin{verbatim}
+% condor_release Mary 
+\end{verbatim}
+\normalsize
 
 \ExitStatus
 
