@@ -1721,15 +1721,14 @@ doRunAnalysisToBuffer( ClassAd *request )
 	}
 	startdAds.Close();
 
-	sprintf( return_buff,
-		"%s---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n" 
-		"\t%5d do not satisfy the request's constraints\n"
-		"\t%5d resource offer constraints are not satisfied by this request\n"
-		"\t%5d are serving equal or higher priority customers%s\n" 
-		"\t%5d do not prefer this job\n"
-		"\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
-		"\t%5d are available to service your request\n",
-
+	sprintf( return_buff, 
+		 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
+		 "  %5d are rejected by your job's requirements\n"
+		 "  %5d reject your job because of their own requirements\n"
+		 "  %5d match, but are serving users with a better priority in the pool%s\n"
+		 "  %5d match, but prefer another specific job despite its worse user-priority\n"
+		 "  %5d match, but cannot currently preempt their existing job\n"
+		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint,
 		fOffConstraint,
