@@ -1129,8 +1129,9 @@ void DaemonCore::Driver()
 		// sockets, and 2) it ain't that expensive....
 		FD_ZERO(&readfds);
 		for (i = 0; i < nSock; i++) {
-			if ( (*sockTable)[i].iosock )	// if a valid entry....
+			if ( (*sockTable)[i].iosock ) {	// if a valid entry....
 				FD_SET( (*sockTable)[i].sockd,&readfds);
+            }
 		}
 
 		
@@ -1138,6 +1139,7 @@ void DaemonCore::Driver()
 		// Add the read side of async_pipe to the list of file descriptors to
 		// select on.  We write to async_pipe if a unix async signal is delivered
 		// after we unblock signals and before we block on select.
+
 		FD_SET(async_pipe[0],&readfds);
 
 		// Set aync_sigs_unblocked flag to true so that Send_Signal()
@@ -2890,11 +2892,6 @@ int DaemonCore::Create_Process(
 
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
 
-			// now head into the proper priv state...
-		if ( priv != PRIV_UNKNOWN ) {
-			set_priv(priv);
-		}
-
 			// switch to the cwd now that we are in user priv state
 		if ( cwd && cwd[0] ) {
 			dprintf ( D_DAEMONCORE, "Changing directory to %s\n", cwd );
@@ -2906,13 +2903,24 @@ int DaemonCore::Create_Process(
 			}
 		}
 
+			// now head into the proper priv state...
+		if ( priv != PRIV_UNKNOWN ) {
+			set_priv(priv);
+		}
+
+			// Unblock all signals if we're starting a regular process!
+		if ( !want_command_port ) {
+			sigset_t emptySet;
+			sigemptyset( &emptySet );
+			sigprocmask( SIG_SETMASK, &emptySet, NULL );
+		}
+
 			// and ( finally ) exec:
 		if( execv(name, unix_args) == -1 )
 		{
-				// warning: I have had exec failures, but no dprintf...(MEY)
-			dprintf(D_ALWAYS, "Create_Process: execv() failed: %s (%d)\n",
-					strerror(errno), errno );
-			exit(1); // Yes, we really want to exit here.
+				// We no longer have privs to dprintf. :-(.
+				// Let's exit with our errno.
+			exit(13); // Yes, we really want to exit here.
 		}		
 	}
 	else if( newpid > 0 ) // Parent Process
