@@ -25,8 +25,9 @@
 #define __DUMPER_H__
 
 #include "classad_io.h"
+#include "formatOptions.h"
 
-class FormatOptions;
+class ClassAdCollection;
 
 /**
 	Defines an abstraction for the output sink into which expressions and 
@@ -126,6 +127,7 @@ class Sink
 		friend class FunctionCall;
 		friend class ExprList;
 		friend class FormatOptions;
+		friend class ClassAdCollection;
 
 		FormatOptions *pp;
 
@@ -135,96 +137,5 @@ class Sink
 		// sink types
 		ByteSink	*sink;
 };
-
-/** Options to set formats of external representations */
-class FormatOptions
-{
-	public:
-		/// Constructor
-		FormatOptions( );
-
-		/// Destructor
-		~FormatOptions( );
-
-		/** Sets the option for indented classads.
-			@param i true if indented classads are required; false otherwise.
-			@param len the indentation length (ignored if i is false)
-		*/
-		void SetClassAdIndentation( bool i=true, int len=4 );
-
-		/** Gets the current classad indentation options.
-		 	@param i true if indentation is set, false otherwise
-			@param len The indentation length if i is true, undefined otherwise
-		*/
-		void GetClassAdIndentation( bool &i, int &len );
-
-		/** Sets the option for indented lists.
-			@param i true if indented lists are required; false otherwise.
-			@param len the indentation length
-		*/
-		void SetListIndentation( bool i=true, int len=4 );
-
-		/** Gets the current list indentation options.
-		 	@param i true if indentation is set, false otherwise
-			@param len The indentation length if i is true, undefined otherwise
-		*/
-		void GetListIndentation( bool &i, int &len );
-
-		/** Sets option if string literals should be wrapped with quotes.  This
-		 	option is useful for display purposes.  Note that an expression
-			that is unparsed to a sink with this option off cannot (in general)
-			be parsed back into an expression.
-			@param w True if quotes are required, false otherwise.
-		*/
-		void SetWantQuotes( bool );
-
-		/** Gets the current quote display option setting
-		 	@return true if quotes are required, false otherwise
-		*/
-		bool GetWantQuotes( );
-
-		/** Sets option for display with minimal parentheses.
-		 	@param m true if minimal parentheses are required, false otherwise.
-		*/
-		void SetMinimalParentheses( bool );
-
-		/** Gets current minimal parentheses option setting
-		 	@return true if minimal parentheses will be displayed, false 
-				otherwise.
-		*/
-		bool GetMinimalParentheses( );
-
-		// unimplemented --- experimental
-		void SetMarginWrap( int cols, int indentLen );
-		void GetMarginWrap( int &cols, int &indentLen );
-	private:
-		friend class ExprTree;
-		friend class ClassAd;
-		friend class AttributeReference;
-		friend class ExprList;
-		friend class FunctionCall;
-		friend class Operation;
-		friend class Literal;
-		friend class Value;
-
-		void SetIndentLevel( int );
-		int  GetIndentLevel( );
-		bool Indent( Sink& );
-
-		void SetPrecedenceLevel( int );
-		int	 GetPrecedenceLevel( void );
-
-		bool	indentClassAds;
-		bool	indentLists;
-		int 	indentLevel;
-		int		classadIndentLen;
-		int		listIndentLen;
-		bool	wantQuotes;
-		bool	minimalParens;
-		int		precedenceLevel;
-		int		marginWrapCols;
-		int		marginIndentLen;
-};
-
 
 #endif//__DUMPER_H__
