@@ -1617,11 +1617,17 @@ MyString *GT4Job::buildSubmitRSL()
 		
 		create_remote_iwd = true;
 		ASSERT (submit_id);	// append submit_id for uniqueness, fool
+		char *my_submit_id = submit_id;
+			// Avoid having a colon in our job scratch directory name, for
+			// any systems that may not like that.
+		if ( strncmp( my_submit_id, "uuid:", 5 ) == 0 ) {
+			my_submit_id = &my_submit_id[5];
+		}
 		// The GT4 server expects a leading slash *before* variable
 		// substitution is completed for some reason. See globus bugzilla
 		// ticket 2846 for details. To keep it happy, throw in an extra
 		// slash, even though this'll result in file:////....
-		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", submit_id);
+		remote_iwd.sprintf ("/${GLOBUS_SCRATCH_DIR}/job_%s", my_submit_id);
 	}
 
 	if ( remote_iwd[remote_iwd.Length()-1] != '/' ) {
