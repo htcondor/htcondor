@@ -520,14 +520,6 @@ int Authentication::default_auth_methods() {
 	    	bitmask |= (int) CAUTH_FILESYSTEM_REMOTE;
         }
 #endif
-
-#if defined( GSS_AUTHENTICATION )
-        bitmask |= (int) CAUTH_GSS;
-#endif
-
-#if defined(KERBEROS_AUTHENTICATION)
-        bitmask |= (int) CAUTH_KERBEROS;
-#endif
 	}
 
 	return bitmask;
