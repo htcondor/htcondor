@@ -51,9 +51,14 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr->attach( this );
 
 	r_load_num_called = 8;
-
 	kill_tid = -1;
-	dprintf( D_ALWAYS, "New machine resource allocated\n" );
+
+	if( r_attr->type() ) {
+		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
+				 r_attr->type() );
+	} else { 
+		dprintf( D_ALWAYS, "New machine resource allocated\n" );
+	}
 }
 
 
