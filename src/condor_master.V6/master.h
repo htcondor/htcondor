@@ -66,7 +66,6 @@ public:
 	int		StartDaemon(char* name);      // retuns pid
 	void	Restart(int pid);              // process pid got killed somehow
 	void    RestartMaster();      	// PVMD??
-	void    Vacate();				// send vacate to startd
 	void	SignalAll(int signal);	       // send signal to all :PVMD??
 	char*   DaemonName(int pid);	       // full process path name
 	char*	DaemonLog(int pid);	       // full log file path name
@@ -74,6 +73,8 @@ public:
 	int		NumberRestarts(int pid);        // number of restarts
 	int		IsDaemon(int pid);	       // returns 1 if pid is a daemon
 	void	CheckForNewExecutable();
+	int 	NumDaemons(){ return( no_daemons - 1 ); };  
+	//	Returns the number of daemons this master has registered.
 };
 
 

@@ -298,10 +298,8 @@ void Daemons::InitParams()
 	char	*tmp;
 
 	for ( int i =0; i < no_daemons; i++) {
-		daemon_ptr[i]->process_name = 
-			param(daemon_ptr[i]->name_in_config_file);
-		if(daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->daemon_name)
-		{
+		daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
+		if(daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->daemon_name) {
 			*(daemon_ptr[i]->daemon_name - 2) = '\0'; 
 			daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
 			*(daemon_ptr[i]->daemon_name - 2) = '_';
@@ -525,6 +523,11 @@ void Daemons::Restart(int pid)
 						daemon_ptr[i]->name_in_config_file,pid);
 			daemon_ptr[i]->pid = 0; 
 			do_killpg( pid, SIGKILL ) ;
+			// This is ok, since we're only calling Restart() when a
+			// daemon has already exited.  So, killing the process
+			// group with SIGKILL shouldn't do any harm and will clean
+			// up any dead/hung processes that are children of the
+			// daemon that died.  -Derek Wright 7/29/97
 
 			// restart
 			daemon_ptr[i]->Restart();
@@ -548,10 +551,12 @@ void Daemons::RestartMaster()
 	dprintf(D_ALWAYS, "RESTARTING MASTER (new executable)\n");
 	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN);
 
+		/* Send SIGTERM to all daemons (NOT process groups) and let
+		   them do their own clean up.  -Derek Wright 7/29/97 */
 	for ( int i=0; i < no_daemons; i++) {
 		if ((daemon_ptr[i]->flag == TRUE )&& ( daemon_ptr[i]->pid )
 				&& ( index != i)) {
-			do_killpg(daemon_ptr[i]->pid, SIGKILL);
+			do_kill(daemon_ptr[i]->pid, SIGTERM);
 			dprintf(D_ALWAYS, "Killed %s pid = %d\n",
 				daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
 		}
@@ -608,42 +613,18 @@ void Daemons::CheckForNewExecutable()
 									&daemon_ptr[i]->timeStamp)) {
 			daemon_ptr[i]->restarts = 0;
 			daemon_ptr[i]->newExec = TRUE;
-			if(daemon_ptr[i]->pid > 0)
-			{
-				dprintf(D_ALWAYS,"%s was modified.Killing %d\n", 
+			if(daemon_ptr[i]->pid > 0) {
+				dprintf(D_ALWAYS,"%s was modified.  Killing %d\n", 
 						daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);
-				do_killpg( daemon_ptr[i]->pid, SIGKILL );
-			}
-			else
-			{
+				do_kill( daemon_ptr[i]->pid, SIGTERM );
+			} else {
 				daemon_ptr[i]->StartDaemon(); 
 			}
 		} 
 	}
 
 	dprintf(D_FULLDEBUG, "exit Daemons::CheckForNewExecutable\n");
-
-#if 0
-        // do this every time for testing
-    hourly_housekeeping();
-#endif
-
 }
-
-void Daemons::Vacate()
-{
-	int startd_index = GetIndex( "STARTD" );
-	if(startd_index >= 0)
-	{
-		do_kill( daemon_ptr[startd_index]->pid, SIGTERM );
-	}
-	else
-	{
-		DoCleanup();
-        set_machine_status( CONDOR_DOWN );
-        exit( 0 );
-	} 
-} 
 
 
 char* Daemons::DaemonLog( int pid )
@@ -694,7 +675,7 @@ void Daemons::SignalAll(int signal)
 	for ( int i=0; i < no_daemons; i++)
 		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
 		  && ( strcmp(daemon_ptr[i]->name_in_config_file,"MASTER") != 0))
-			do_killpg(daemon_ptr[i]->pid, signal);
+			do_kill(daemon_ptr[i]->pid, signal);
 }
 
 

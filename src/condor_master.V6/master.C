@@ -109,13 +109,13 @@ extern "C"
 #endif
 #elif defined(IRIX53)
 	int	vfork();
-	/* The following got clobbered when _POSIX_SOURCE was defined
-	   before stdio.h was included */
+		/* The following got clobbered when _POSIX_SOURCE was defined
+		   before stdio.h was included */
 	FILE *popen (const char *command, const char *type);
 	int pclose(FILE *stream);
 #endif
 
-	/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
+		/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
 #if defined(IRIX62)
 	int	killpg(long pgrp, int sig);
 #else
@@ -150,11 +150,11 @@ extern "C"
 
 extern	int		Parse(const char*, ExprTree*&);
 char	*param(char*) ;
-void		sigchld_handler(),  sigint_handler(),
-sigquit_handler(),  sighup_handler();
+void	sigchld_handler(), sigquit_handler(),  sighup_handler();
 void	RestartMaster();
 void	siggeneric_handler(int); 
-void 	vacate_machine(), vacate_machine_part_two();
+void 	sigterm_handler(), wait_all_daemons_and_exit();
+
 // local function prototypes
 void	init_params();
 int 	collector_runs_here();
@@ -284,11 +284,10 @@ main( int argc, char* argv[] )
 	// a sigchld handler is not installed.
 	install_sig_handler( SIGILL, dump_core );
 	install_sig_handler( SIGCHLD, sigchld_handler );
-	install_sig_handler( SIGINT, sigint_handler );
 	install_sig_handler( SIGQUIT, sigquit_handler );
 	install_sig_handler( SIGHUP, sighup_handler );
 	install_sig_handler( SIGUSR1, RestartMaster );
-	install_sig_handler( SIGTERM, vacate_machine );
+	install_sig_handler( SIGTERM, sigterm_handler );
 	install_sig_handler( SIGSEGV, (void(*)())siggeneric_handler );
 	install_sig_handler( SIGBUS, (void(*)())siggeneric_handler );
 
@@ -395,7 +394,7 @@ sigchld_handler()
 			}
 			continue;
 		}
-		if( WTERMSIG(status) != SIGKILL && PublishObituaries ) {
+		if( PublishObituaries ) {
 			obituary( pid, status );
 		}
 		daemons.Restart( pid );
@@ -537,59 +536,6 @@ init_params()
 	daemons.InitParams();
 }
 
-
-#if 0
-collector_runs_here()
-{
-	char	hostname[512];
-	char	*my_host_name;
-	char	*mgr_host_name;
-	struct hostent	*hp;
-	
-	/* Get the "official" name of our own host */
-	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-		EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
-	}
-	if( (hp=gethostbyname(hostname)) == NULL ) {
-		EXCEPT( "gethostbyname(%s)", hostname );
-	}
-	my_host_name = strdup( hp->h_name );
-
-	/* Get the "official" name of the collector host */
-	if( (hp=gethostbyname(CollectorHost)) == NULL ) {
-		EXCEPT( "gethostbyname(%s)", CollectorHost );
-	}
-	mgr_host_name = strdup( hp->h_name );
-
-	return strcmp(my_host_name,mgr_host_name) == MATCH;
-}
-
-negotiator_runs_here()
-{
-	char	hostname[512];
-	char	*my_host_name;
-	char	*mgr_host_name;
-	struct hostent	*hp;
-	
-	/* Get the "official" name of our own host */
-	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-		EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
-	}
-	if( (hp=gethostbyname(hostname)) == NULL ) {
-		EXCEPT( "gethostbyname(%s)", hostname );
-	}
-	my_host_name = strdup( hp->h_name );
-
-	/* Get the "official" name of the negotiator host */
-	if( (hp=gethostbyname(NegotiatorHost)) == NULL ) {
-		EXCEPT( "gethostbyname(%s)", NegotiatorHost );
-	}
-	mgr_host_name = strdup( hp->h_name );
-
-	return strcmp(my_host_name,mgr_host_name) == MATCH;
-}
-#endif
-
 void
 obituary( int pid, int status )
 {
@@ -636,7 +582,7 @@ obituary( int pid, int status )
         EXCEPT( "popen(\"%s\",\"w\")", cmd );
     }
 
-    fprintf( mailer, "To: %s\n", CondorAdministrator );
+//    fprintf( mailer, "To: %s\n", CondorAdministrator );
     fprintf( mailer, "Subject: CONDOR Problem\n" );
     fprintf( mailer, "\n" );
 
@@ -820,69 +766,68 @@ do_kill( int pid, int sig )
 void
 sighup_handler()
 {
-	dprintf( D_ALWAYS, "Re reading config file\n" );
-	config( &ad );
+	dprintf( D_ALWAYS, "Re-reading master config file\n" );
+	config_master( &ad );
 	init_params();
+	dprintf_config( "MASTER", 2 );
+	dprintf( D_ALWAYS, "Sending all daemons a SIGHUP\n" );
 	daemons.SignalAll(SIGHUP);
 	dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 }
 
-/*
- ** Kill and restart all daemons.
- */
-void
-sigint_handler()
-{
-	dprintf( D_ALWAYS, "Killing all daemons\n" );
-	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-	daemons.SignalAll(SIGKILL);
-	dprintf( D_ALWAYS, "Restarting all daemons\n" );
-	sleep( 5 );	/* NOT a good way to do this... */
-	install_sig_handler( SIGCHLD ,sigchld_handler );
-	daemons.StartAllDaemons();
-}
 /*
  ** Kill all daemons and go away.
  */
 void
 sigquit_handler()
 {
-	dprintf( D_ALWAYS, "Killed by SIGQUIT\n" );
-	DoCleanup();
-	set_machine_status( CONDOR_DOWN );
-	exit( 0 );
+	dprintf( D_ALWAYS, "Killed by SIGQUIT.  Performing quick shut down.\n" );
+	install_sig_handler( SIGCHLD, wait_all_daemons_and_exit );
+	dprintf( D_ALWAYS, "Sending all daemons a SIGQUIT\n" );
+	daemons.SignalAll(SIGQUIT);
 }
 
 /*
- ** Cause job(s) to vacate and kill all daemons.
+ ** Cause job(s) to vacate, kill all daemons and go away.
  */
 void
-vacate_machine()
+sigterm_handler()
 {
-	dprintf( D_ALWAYS, "Vacating machine\n" );
-	install_sig_handler( SIGCHLD, vacate_machine_part_two );
-	daemons.Vacate();
+	dprintf( D_ALWAYS, "Killed by SIGTERM.  Performing graceful shut down.\n" );
+	install_sig_handler( SIGCHLD, wait_all_daemons_and_exit );
+	dprintf( D_ALWAYS, "Sending all daemons a SIGTERM\n" );
+	daemons.SignalAll(SIGTERM);
 }
 
 void
-vacate_machine_part_two()
+wait_all_daemons_and_exit()
 {
 	int pid = 0;
 	int status;
+		/* 
+		   NumDaemons returns the total number of daemons this master
+		   is trying to keep track of, including the master itself.
+		   We want one less since we're not waiting for the master to
+		   exit.  Derek Wright 7/28/97
+		 */
+	static int num_left = daemons.NumDaemons() - 1;
 
 	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
 		if( pid == -1 ) {
-			EXCEPT( "waitpid()" );
+			if( errno = ECHILD) {
+				continue;
+			}
+			EXCEPT( "waitpid(), error # = %d", errno );
 		}
 		if( WIFSTOPPED(status) ) {
 			continue;
 		}
 		if( daemons.IsDaemon(pid) ) {
+			num_left--;
+		}
+		if( num_left <= 0 ) {
 			dprintf( D_ALWAYS,
-					"Job(s) should now be gone.  Shutting down daemons.\n" );
-			install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
-			daemons.SignalAll(SIGKILL);
-			dprintf( D_ALWAYS, "Goodbye.\n" );
+					"All daemons have exited.\n" );
 			set_machine_status( CONDOR_DOWN );
 			exit( 0 );
 		}
