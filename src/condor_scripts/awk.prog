@@ -1,6 +1,0 @@
-{
-	if( copy ) print
-}
-/awk uses it/	{
-	copy = 1
-}

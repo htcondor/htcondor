@@ -1,6 +1,0 @@
-condor_throttle
-config_on
-condor_config
-config_off
-daemons_off
-condor_init

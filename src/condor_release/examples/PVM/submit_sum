@@ -1,7 +1,0 @@
-universe = PVM
-executable = master_sum
-input = in_sum
-output = out_sum
-error = err_sum
-machine_count = 1..1
-queue

@@ -1,9 +1,0 @@
-/* Things specific to SUN4X Solaris machines (all versions) */
-
-#define		Architecture		sun4m
-/* This is lame, it should really be "sun4x" */
-
-#define		IS_SUN4X		YES
-#define		IS_SUN4X_SOLARIS	YES
-
-#define		PVM_ARCH		SUN4SOL2

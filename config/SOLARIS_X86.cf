@@ -1,9 +1,0 @@
-/* Things specific to Intel Solaris machines (all versions) */
-
-#define		Architecture		X86
-
-#define		IS_X86			YES
-#define		IS_X86_SOLARIS		YES
-
-#define		PVM_ARCH		X86SOL2
-
