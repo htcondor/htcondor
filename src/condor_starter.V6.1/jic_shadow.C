@@ -166,7 +166,11 @@ JICShadow::init( void )
 	}
 
 		// If the user wants it, initialize our io proxy
+		// Must have user priv to drop the config info	
+		// into the execute dir.
+        priv_state priv = set_user_priv();
 	initIOProxy();
+	priv = set_priv(priv);
 
 		// Now that the user priv is setup and the temp execute dir
 		// exists, we can initialize the LocalUserLog.  if the job
