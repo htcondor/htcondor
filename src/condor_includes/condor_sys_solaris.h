@@ -91,6 +91,7 @@ END_C_DECLS
 #define SYNC_RETURNS_VOID		1
 
 #if defined(Solaris26) 
+	#define HAS_64BIT_SYSCALLS	1
 	#define HAS_64BIT_STRUCTS	1
 	#define HAS_F_DUP2FD		1
 #elif defined(Solaris251)
