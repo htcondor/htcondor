@@ -2193,19 +2193,29 @@ cleanup_ckpt_files(int cluster, int proc, char *owner)
 		 * the owner's name.  If not passed in, look it up now.
   		 */
 	if ( owner == NULL ) {
-		if ( GetAttributeString(cluster,proc,ATTR_OWNER,buf) < 0 )
-			owner = "nobody";
-		else
+		if ( GetAttributeString(cluster,proc,ATTR_OWNER,buf) < 0 ) {
+			dprintf(D_ALWAYS,"ERROR: cleanup_ckpt_files(): cannot determine owner for job %d.%d\n",cluster,proc);
+		} else {
 			owner = buf;
+		}
 	}
 
-        /* Remove any checkpoint files */
+        /* Remove any checkpoint files.  If for some reason we do 
+		 * not know the owner, don't bother sending to the ckpt
+		 * server.
+		 */
     strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
-	RemoveLocalOrRemoteFile(owner,ckpt_name);
+	if ( owner )
+		RemoveLocalOrRemoteFile(owner,ckpt_name);
+	else
+		unlink(ckpt_name);
 
         /* Remove any temporary checkpoint files */
     strcat( ckpt_name, ".tmp");
-	RemoveLocalOrRemoteFile(owner,ckpt_name);
+	if ( owner )
+		RemoveLocalOrRemoteFile(owner,ckpt_name);
+	else
+		unlink(ckpt_name);
 }
 
 void

@@ -511,14 +511,14 @@ int DestroyProc(int cluster_id, int proc_id)
 		return -1;
 	}
 
+	// Remove checkpoint files
+	cleanup_ckpt_files(cluster_id,proc_id,active_owner);
+
     // Append to history file
     AppendHistory(ad);
 
 	log = new LogDestroyClassAd(key);
 	JobQueue->AppendLog(log);
-
-	// Remove checkpoint files
-	cleanup_ckpt_files(cluster_id,proc_id,active_owner);
 
 	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
 		// We've seen this cluster_num go by before; increment proc count
