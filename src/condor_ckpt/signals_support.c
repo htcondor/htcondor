@@ -88,9 +88,6 @@ condor_save_sigstates()
 
     scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
-	/* Save the user's signal mask */
-	sigprocmask(SIG_SETMASK,(sigset_t *)0L,&(signal_states.user_mask));
-
 	/* Save pending signal information */
 	sigpending( &(signal_states.pending) );
 
@@ -158,7 +155,6 @@ condor_restore_sigstates()
 		switch (sig) {
 			/* Do not fiddle with the special Condor signals under
 			 * any circumstance! */
-			case SIGUSR1:
 			case SIGUSR2:
 			case SIGTSTP:
 			case SIGKILL:
@@ -169,19 +165,6 @@ condor_restore_sigstates()
 		sigaction(sig, &(signal_states.actions[sig]), NULL);
 	}
 
-	/* Restore signal mask, making _certain_ that Condor & special
-	   signals are not blocked */
-	/* seems to me my logic here is flawed, since this is running as 
-	 * a TSTP signal handler right now, and as soon as this signal
-	 * handler returns, the previous mask will be replaced. So this
-	 * probably need not be here....  -Todd 12/94 */
-	sigdelset(&(signal_states.user_mask),SIGUSR1);
-	sigdelset(&(signal_states.user_mask),SIGUSR2);
-	sigdelset(&(signal_states.user_mask),SIGTSTP);
-	sigdelset(&(signal_states.user_mask),SIGKILL);
-	sigdelset(&(signal_states.user_mask),SIGSTOP);
-	sigdelset(&(signal_states.user_mask),SIGCONT);
-	sigprocmask(SIG_SETMASK,&(signal_states.user_mask),NULL);
 
 	/* Restore signal stack pointer */
 #if defined(Solaris) || defined(IRIX)
@@ -196,7 +179,6 @@ condor_restore_sigstates()
 		switch (sig) {
 			/* Do not fiddle with the special Condor signals under
 			 * any circumstance! */
-			case SIGUSR1:
 			case SIGUSR2:
 			case SIGTSTP:
 			case SIGKILL:
@@ -238,7 +220,6 @@ struct sigvec *ovec;
 		switch (sig) {
 				/* disallow the special Condor signals */
 				/* this list could be shortened */
-		case SIGUSR1:
 		case SIGUSR2:
 		case SIGTSTP:
 		case SIGCONT:
@@ -251,11 +232,9 @@ struct sigvec *ovec;
 				/* while in the handler, block checkpointing */
 #if defined(LINUX)
 				nvec.sv_mask |= __sigmask( SIGTSTP );
-				nvec.sv_mask |= __sigmask( SIGUSR1 );
 				nvec.sv_mask |= __sigmask( SIGUSR2 );
 #else
 				nvec.sv_mask |= sigmask( SIGTSTP );
-				nvec.sv_mask |= sigmask( SIGUSR1 );
 				nvec.sv_mask |= sigmask( SIGUSR2 );
 #endif
 			}
@@ -303,10 +282,10 @@ MASK_TYPE mask;
 	} else {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -333,10 +312,10 @@ MASK_TYPE mask;
 	if ( MappingFileDescriptors() ) {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -359,10 +338,10 @@ MASK_TYPE mask;
 	} else {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
+		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -405,7 +384,6 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 
 	if ( MappingFileDescriptors() && act ) {		/* called by User code */
 		switch (sig) {
-			case SIGUSR1:
 			case SIGUSR2:
 			case SIGTSTP:
 			case SIGCONT: /* don't let user code mess with these signals */
@@ -458,7 +436,6 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 
 	if ( MappingFileDescriptors() && set ) {
 		if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
-			sigdelset(my_set,SIGUSR1);
 			sigdelset(my_set,SIGUSR2);
 			sigdelset(my_set,SIGTSTP);
 			sigdelset(my_set,SIGCONT);
@@ -483,7 +460,6 @@ const sigset_t *set;
 {
 	sigset_t	my_set = *set;
 	if ( MappingFileDescriptors() ) {
-		sigdelset(&my_set,SIGUSR1);
 		sigdelset(&my_set,SIGUSR2);
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
@@ -509,7 +485,6 @@ void (*func)(int);
 	if ( MappingFileDescriptors() ) {	
 		switch (sig) {
 			/* don't let user code mess with these signals */
-			case SIGUSR1:
 			case SIGUSR2:
 			case SIGTSTP:
 			case SIGCONT:
