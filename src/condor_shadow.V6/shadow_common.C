@@ -51,7 +51,6 @@ extern "C" {
 	void HoldJob( const char* buf );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
-	void rm();
 	int whoami();
 	void MvTmpCkpt();
 	void get_local_rusage( struct rusage *bsd_rusage );
@@ -67,7 +66,6 @@ extern "C" {
         V2_PROC *Proc;
 #endif
 
-extern int ChildPid;
 extern int ExitReason;
 extern int JobExitStatus;
 extern char    ICkptName[];
@@ -335,29 +333,6 @@ unlink_local_or_ckpt_server( char *file )
         }
 }
 
-
-void
-rm()
-{
-        dprintf( D_ALWAYS, "Shadow: Got RM command *****\n" );
-
-        if( ChildPid ) {
-                (void) kill( ChildPid, SIGKILL );
-        }
-
-        if( strcmp(Proc->rootdir, "/") != 0 ) {
-                (void)sprintf( TmpCkptName, "%s/job%06d.ckpt.%d",
-                                        Proc->rootdir, Proc->id.cluster, Proc->id.proc );
-        }
-
-		if( TmpCkptName[0] != '\0' ) {
-			dprintf(D_ALWAYS, "Shadow: DoCleanup: unlinking TmpCkpt '%s'\n",
-					TmpCkptName);
-			(void) unlink_local_or_ckpt_server( TmpCkptName );
-		}
-
-        exit( JOB_KILLED );
-}
 
 /*
 ** Print an identifier saying who we are.  This function gets handed to
@@ -743,7 +718,11 @@ part_send_job(
   return 0;
 }
 
-// takes sinful address of startd and sends it a cmd
+
+/*
+  Takes sinful address of startd and sends it the given cmd, along
+  with the capability and an end_of_message.
+*/
 int
 send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 {
