@@ -1410,7 +1410,10 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	}
 
 	// For the sake of buffering, write-only must translate to read-and-write
-	if( creat_mode==O_WRONLY ) creat_mode=O_RDWR;
+	if( flags & O_WRONLY ) {
+		flags = flags & ~O_WRONLY;
+		flags = flags | O_RDWR;
+	}
 
 	if( LocalSysCalls() ) {
 		fd = syscall( SYS_open, path, flags, creat_mode );
