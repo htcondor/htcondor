@@ -50,7 +50,7 @@ Global G;
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
-            "\t\t[-Debug <level>]\n"
+		  "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
 	    "\t\t-Daplog <dap_userlog>\n"                       //-->DAP
 	    "\t\t-Dapserver <dap server name>\n"                //-->DAP
@@ -338,7 +338,7 @@ int main_init (int argc, char ** const argv) {
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "* Parsing %s ...\n", G.datafile);
     if (!parse (G.datafile, G.dag)) {
       debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
     }

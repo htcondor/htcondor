@@ -69,7 +69,7 @@ class Dag {
 
     Dag( const char* condorLogName, const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 const char *dapLogName );
+		 const char* dapLogName );
 
     ///
     ~Dag();
