@@ -21,22 +21,17 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "authentication.h"
-#include "condor_debug.h"
-#include "condor_string.h"
-#include "condor_config.h"
-#include "internet.h"
-#include "condor_uid.h"
-#include "my_username.h"
-#include "string_list.h"
-
+#if !defined(SKIP_AUTHENTICATION)
+#   include "condor_debug.h"
+#   include "condor_string.h"
+#   include "condor_config.h"
+#   include "internet.h"
+#   include "condor_uid.h"
+#   include "my_username.h"
+#   include "string_list.h"
+#endif /* !defined(SKIP_AUTHENTICATION) */
 
 #if defined(GSS_AUTHENTICATION)
 gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
@@ -85,7 +80,7 @@ Authentication::authenticate( char *hostAddr )
 			auth_status = CAUTH_GSS;
 		}
 		break;
-#endif
+#endif /* GSS_AUTHENTICATION */
 
 #if defined(WIN32)
 	 case CAUTH_NTSSPI:
@@ -100,7 +95,7 @@ Authentication::authenticate( char *hostAddr )
 			auth_status = CAUTH_FILESYSTEM;
 		}
 		break;
-#endif
+#endif /* !defined(WIN32) */
 	 case CAUTH_CLAIMTOBE:
 		if( authenticate_claimtobe() ) {
 			auth_status = CAUTH_CLAIMTOBE;
@@ -119,7 +114,7 @@ Authentication::authenticate( char *hostAddr )
 	dprintf(D_FULLDEBUG, "Authentication::auth returning %d (TRUE on success)\n",
 			retval );
 	return ( retval );
-#endif SKIP_AUTHENTICATION
+#endif /* SKIP_AUTHENTICATION */
 }
 
 
@@ -131,7 +126,17 @@ Authentication::isAuthenticated()
 #else
 	return( auth_status != CAUTH_NONE );
 #endif
-};
+}
+
+
+void
+Authentication::unAuthenticate()
+{
+#if !defined(SKIP_AUTHENTICATION)
+	auth_status = CAUTH_NONE;
+	setOwner( NULL );
+#endif
+}
 
 
 void
@@ -159,7 +164,7 @@ Authentication::setOwner( char *owner )
 		claimToBe = strnewp( owner );
 	}
 	return 1;
-#endif SKIP_AUTHENTICATION
+#endif /* SKIP_AUTHENTICATION */
 }
 
 char *
@@ -370,15 +375,6 @@ Authentication::handshake()
 }
 
 
-void
-Authentication::unAuthenticate()
-{
-#if !defined(SKIP_AUTHENTICATION)
-	auth_status = CAUTH_NONE;
-	setOwner( NULL );
-#endif
-}
-
 #if !defined(WIN32)
 int
 Authentication::authenticate_filesystem()
@@ -460,7 +456,7 @@ Authentication::authenticate_filesystem()
 	free( new_file );
 	return( retval == 0 );
 }
-#endif
+#endif /* !defined(WIN32) */
 
 int
 Authentication::selectAuthenticationType( int clientCanUse ) 
