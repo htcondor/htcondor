@@ -14,3 +14,7 @@
 #ifdef LINUX
 #include "switches.remap-LINUX.h"
 #endif
+
+#ifdef OSF1
+#include "switches.remap-DUX4.h"
+#endif
