@@ -120,8 +120,8 @@ public:
 #endif
 	int		NumberOfChildren();
 
-	int		AllReaper(Service*, int, int);
-	int		DefaultReaper(Service*, int, int);
+	int		AllReaper(int, int);
+	int		DefaultReaper(int, int);
 	void	SetAllReaper();
 	void	SetDefaultReaper();
 
