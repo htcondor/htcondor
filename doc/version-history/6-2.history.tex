@@ -93,6 +93,15 @@ Now, to see the periodic messages printing out the current load
 averages, you must include \Dflag{LOAD} in \Macro{STARTD\_DEBUG}, and
 to see the messages about idle time, you must include \Dflag{IDLE}.
 
+\item In most of the Condor tools (\Condor{on}, \Condor{off},
+\Condor{restart}, \Condor{vacate}, \Condor{checkpoint},
+\Condor{reconfig}, \Condor{reschedule}), if you used \Opt{-pool} to
+specify which pool to query to find specific daemons, but did not
+specify any daemons or machines, the tool would just act on the local
+host.
+Now, if you specify \Opt{-pool} and do not list any machines, these
+Condor tools will print an error message and exit.
+
 \end{itemize}
 
 \noindent Known Bugs:
