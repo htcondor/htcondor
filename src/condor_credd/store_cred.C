@@ -9,11 +9,16 @@
 #include "sslutils.h"
 #include "internet.h"
 #include "client_common.h"
+#include <unistd.h>
 
 const char * MyName = "condor_store_cred";
+char Myproxy_pw[512];	// pasaword for credential access from MyProxy
+// Read MyProxy password from terminal, or stdin.
+bool Read_Myproxy_pw_terminal = true;
 
 int parseMyProxyArgument(const char*, char*&, char*&, int&);
 char * prompt_password (const char *);
+char * stdin_password (const char *);
 
 void
 usage()
@@ -30,6 +35,7 @@ usage()
 	fprintf( stderr, "      \t(e.g. \"-m wright@myproxy.cs.wisc.edu:1234\")\n\n");
 	fprintf( stderr, "      -D <DN>\tspecify myproxy server DN (if not standard)\n" );
 	fprintf( stderr, "      \t(e.g. \"-D \'/CN=My/CN=Proxy/O=Host\'\")\n\n" );
+	fprintf( stderr, "      -S\tread MyProxy password from standard input\n\n");
 	fprintf( stderr, "      -h\tprint this message\n\n");
 	exit( 1 );
 }
@@ -66,6 +72,13 @@ int main(int argc, char **argv)
 					// dprintf to console
 				Termlog = 1;
 				dprintf_config ("TOOL", 2 );
+
+				break;
+			case 'S':
+
+					// dprintf to console
+				Termlog = 1;
+				Read_Myproxy_pw_terminal = false;
 
 				break;
 			case 's':
@@ -188,7 +201,16 @@ int main(int argc, char **argv)
 			cred->SetMyProxyServerDN (myproxy_dn);
 		}
 
-		char * myproxy_password = prompt_password( "Please enter the MyProxy password:" );
+		char * myproxy_password;
+		if ( Read_Myproxy_pw_terminal ) {
+			myproxy_password = 
+				prompt_password(
+					"Please enter the MyProxy password:" );
+		} else {
+			myproxy_password = 
+				stdin_password(
+				"Please enter the MyProxy password from the standard input\n");
+		}
 		if (myproxy_password) {
 			cred->SetRefreshPassword ( myproxy_password );
 		}
@@ -273,11 +295,35 @@ parseMyProxyArgument (const char * arg,
 
 char *
 prompt_password(const char * prompt) {
-	char pass_buff[500];
-	int rc = des_read_pw_string (pass_buff, 499, prompt, 1);
+	int rc =
+		// Read password from terminal.  Disable terminal echo.
+		des_read_pw_string (
+			Myproxy_pw,					// buffer
+			sizeof ( Myproxy_pw ) - 1,	// length
+			prompt,						// prompt
+			true						// verify
+		);
 	if (rc) {
 		return NULL;
 	}
 
-	return strdup(pass_buff);
+	return Myproxy_pw;
+}
+
+char *
+stdin_password(const char * prompt) {
+	int nbytes;
+	printf("%s", prompt);
+	nbytes =
+		// Read password from stdin.
+		read (
+			0,							// file descriptor = stdin
+			Myproxy_pw,					// buffer
+			sizeof ( Myproxy_pw ) - 1	// length
+		);
+	if ( nbytes <= 0 ) {
+		return NULL;
+	}
+
+	return Myproxy_pw;
 }

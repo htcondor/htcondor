@@ -2,15 +2,20 @@
 
 Credential::Credential(const classad::ClassAd& _class_ad) {
   attr_list = new classad::ClassAd (_class_ad);
+  data = NULL;
 }
 
 Credential::Credential() {
   attr_list = new classad::ClassAd();
+  data = NULL;
 }
 
 Credential::~Credential() {
   if (attr_list)
     delete attr_list;
+  if (data != NULL) {
+	  free (data);
+  }
 }
 
 const char * 
@@ -40,6 +45,9 @@ Credential::GetDataSize() {
 
 void
 Credential::SetData (const void * buff, int buff_size) {
+  if (data != NULL) {
+	  free (data);
+  }
   data = malloc(buff_size);
   memcpy (data, buff, buff_size);
   SetDataSize (buff_size);

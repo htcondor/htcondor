@@ -41,7 +41,7 @@ extern StringList super_users;
 extern "C" int display_dprintf_header(FILE *fp);
 
 int CheckCredentials_tid = -1;
-int CheckCredentials_interval = 60;
+extern int CheckCredentials_interval;
 
 int myproxyGetDelegationReaperId = -1;
 

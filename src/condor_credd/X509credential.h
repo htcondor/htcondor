@@ -2,6 +2,7 @@
 #define __X509CREDENTIAL_H__
 #include "credential.h"
 
+// The X509credential object is for client-side use of X509 credentials.
 class X509Credential : public Credential {
 public:
 
