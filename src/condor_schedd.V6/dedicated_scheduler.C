@@ -2006,6 +2006,13 @@ DedicatedScheduler::computeSchedule( void )
 	int i, l, last;
 	MRecArray* new_matches;
 
+		// Clear out the "scheduled" flag in all of our match_recs,
+		// since we'll reset those as we create the new schedule.
+	all_matches->startIterations();
+    while( all_matches->iterate( mrec ) ) {
+		mrec->scheduled = false;
+    }
+
 		// For each job, try to satisfy it as soon as possible.
 	l = idle_clusters->getlast();
 	for( i=0; i<=l; i++ ) {
@@ -2094,7 +2101,9 @@ DedicatedScheduler::computeSchedule( void )
 					(*new_matches)[last] = mrec;
 					last++;
 				}
-					// Also, mark that this mrec is allocated.
+					// Also, mark that this mrec is both scheduled and
+					// allocated.
+				mrec->scheduled = true;
 				mrec->allocated = true;
 
 					// Put the right cluster + proc into the mrec,
@@ -2229,8 +2238,22 @@ DedicatedScheduler::computeSchedule( void )
 				ASSERT( cur->time == 0 );
 
 				candidates->Rewind();
+				char buf[512];
 				while( (ad = candidates->Next()) ) {
+						// First, remove it from the list of available 
+						// resources
 					avail_time_list->removeResource( ad, cur );
+
+						// In addition, mark the match record for this
+						// resource that it's been scheduled, so we
+						// don't decide it's unused and release it.
+					mrec = getMrec( ad, buf );
+					if( ! mrec ) {
+						EXCEPT( "no match for %s in all_matches table, "
+								"yet listed in available resources!",
+								buf );
+					}
+					mrec->scheduled = true;
 				}
 			}
 
@@ -2786,6 +2809,11 @@ DedicatedScheduler::checkSanity( void )
 int
 DedicatedScheduler::getUnusedTime( match_rec* mrec )
 {
+	if( mrec->scheduled || mrec->allocated ) {
+			// We're either using this mrec now, or planning to in the
+			// near future, so say it's being used.
+		return 0;
+	}
 	switch( mrec->status ) {
 	case M_UNCLAIMED:
 	case M_STARTD_CONTACT_LIMBO:
@@ -3000,6 +3028,7 @@ deallocMatchRec( match_rec* mrec )
 		return;
 	}
 	mrec->allocated = false;
+	mrec->scheduled = false;
 	mrec->cluster = -1;
 	mrec->proc = -1;
 	mrec->shadowRec = NULL;
