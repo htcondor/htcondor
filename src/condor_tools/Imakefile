@@ -1,25 +1,24 @@
 SRC_DIR = $(SRC_TREE)/condor_tools
-CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) 
 
 #if IS_SGI_IRIX53 || IS_SGI_IRIX62
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)  
 #else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fno-implicit-templates
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
 #endif
 
-#remove static for libdl.so
-LDFLAGS = $(LIBDBM)
+LDFLAGS = RpcLib KernLib SocketLib
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 
-SRC =  \
-	config_val.C preen.C user_prio.C history.C tool.C view.C
 
-LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib
+SRC = config_val.C preen.C user_prio.C history.C tool.C view.C
+
+
+LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a 
 LIBDIRS =../condor_util_lib ../condor_c++_util
-PROGRAMS =  \
-	condor_config_val condor_preen condor_view \
-	condor_userprio condor_history condor test_calc
+PROGRAMS =  	condor_config_val condor_preen condor_view \
+		condor_userprio condor_history condor test_calc
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -31,11 +30,10 @@ release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
+c_plus_target(condor_view,view.o,$(LIB))
+
 c_plus_target(condor_userprio,user_prio.o,$(LIB))
 release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-
-c_plus_target(condor_view,view.o,$(LIB))
-release_target(condor_view,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
