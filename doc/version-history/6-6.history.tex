@@ -9,6 +9,55 @@ in the 6.6 series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-10}Version 6.6.10}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Most of the fixes included in this release were also included in
+  version 6.7.7.
+
+\end{itemize}
+
+%\noindent New Features:
+%
+%\begin{itemize}
+%
+%\item None.
+%
+%\end{itemize}
+
+\noindent Bugs fixed that are included in version 6.7.7:
+
+\begin{itemize}
+
+\item Fixed a bug in the \Condor{collector} that could cause it to
+crash when parsing certain types of invalid ClassAds.  In particular, if
+a Machine, Schedd or License ClassAd sent to the \Condor{collector} has
+an IP address field which is empty (which should never happen), the
+\Condor{collector} will crash.
+
+\end{itemize}
+
+\noindent Bugs fixed that are NOT included in version 6.7.7:
+
+\begin{itemize}
+
+\item None
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-9}Version 6.6.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
