@@ -12,10 +12,7 @@
 #	define _DEFINE_FD_SET
 	typedef long fd_mask;
 #elif defined( OSF1 )
-#	define	FD_SETSIZE	4096
-#	define NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
-#	define _DEFINE_FD_SET
-	typedef int	fd_mask;
+#	include <sys/select.h>
 #elif defined( SUNOS41 )
 #	define	FD_SETSIZE	256
 #	define NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
