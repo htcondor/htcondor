@@ -113,7 +113,6 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
             EXCEPT("Warning : you ran out of space");
 		}
     }
-    delete tree;
 
 	if(!(tree = Lookup("TargetType")))
     {
@@ -132,7 +131,6 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
             EXCEPT("Warning : you ran out of space");
 		}
     }
-    delete tree;
 
     if(val)
     {

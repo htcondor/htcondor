@@ -1598,7 +1598,6 @@ int AttrList::get(Stream& s)
         
         Insert(tree);
         strcpy(line, "");
-        delete tree;
     }
     delete [] line;
 

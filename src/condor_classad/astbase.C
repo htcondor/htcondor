@@ -853,38 +853,40 @@ int AssignOpBase::RequireClass(ExprTree* tree)
 ////////////////////////////////////////////////////////////////////////////////
 // Increment the reference counter of the whole tree                          //
 ////////////////////////////////////////////////////////////////////////////////
-void ExprTree::Copy()
+ExprTree* ExprTree::Copy()
 {
     if(this->cardinality > 0)
     // binary operator, copy children first
     {
-	if(((BinaryOpBase*)this)->lArg)
-	{
-	    ((BinaryOpBase*)this)->lArg->Copy();
-	}
-	if(((BinaryOpBase*)this)->rArg)
-	{
-	    ((BinaryOpBase*)this)->rArg->Copy();
-	}
+		if(((BinaryOpBase*)this)->lArg)
+		{
+			((BinaryOpBase*)this)->lArg->Copy();
+		}
+		if(((BinaryOpBase*)this)->rArg)
+		{
+			((BinaryOpBase*)this)->rArg->Copy();
+		}
     }
     this->ref++;
+	return this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Increment reference counter                                                //
 ////////////////////////////////////////////////////////////////////////////////
 
-void BinaryOpBase::Copy()
+ExprTree* BinaryOpBase::Copy()
 {
     this->ref++;
     if(this->lArg)
     {
-	this->lArg->Copy();
+		this->lArg->Copy();
     }
     if(this->rArg)
     {
-	this->rArg->Copy();
+		this->rArg->Copy();
     }
+	return this;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
