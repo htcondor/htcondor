@@ -182,14 +182,20 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 		nwo = send(fd, &buf[nw], sz - nw, 0);
 
 		if( nwo <= 0 ) {
-			dprintf( D_ALWAYS, 
-					"send returned %d, errno = %d. Assuming failure.\n",
-					nwo, 
+			int the_error;
 #ifdef WIN32
-					WSAGetLastError() );
+			the_error = WSAGetLastError();
+			if ( the_error == WSAEWOULDBLOCK ) {
+				dprintf(D_FULLDEBUG,"send return WSAEWOULDBLOCK, try again\n");
+				continue;
+			}
 #else
-					errno );
+			the_error = errno;
 #endif
+
+			dprintf( D_ALWAYS, 
+					"send returned %d, timeout=%d, errno=%d. Assuming failure.\n",
+					nwo, timeout, the_error);
 			return -1;
 		}
 		
