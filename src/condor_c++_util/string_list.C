@@ -44,7 +44,7 @@ StringList::isSeparator( char x )
 	return 0;
 }
 
-StringList::StringList(char *s, char *delim ) 
+StringList::StringList(const char *s, const char *delim ) 
 {
 	delimiters = strnewp( delim );
 	if ( s ) {
@@ -53,10 +53,10 @@ StringList::StringList(char *s, char *delim )
 }
 
 void
-StringList::initializeFromString (char *s)
+StringList::initializeFromString (const char *s)
 {
 	char buffer[1024];
-	char *ptr = s;
+	char *ptr = (char*)s;
 	int  index = 0;
 
 	while (*ptr != '\0')

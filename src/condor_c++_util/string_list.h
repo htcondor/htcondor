@@ -33,9 +33,9 @@
 */
 class StringList {
 public:
-	StringList(char *s = NULL, char *delim = " ," ); 
+	StringList(const char *s = NULL, const char *delim = " ," ); 
 	~StringList();
-	void initializeFromString (char *);
+	void initializeFromString (const char *);
 	BOOLEAN contains( const char * );
 	BOOLEAN substring( const char * );	
 	BOOLEAN contains_anycase( const char * );
