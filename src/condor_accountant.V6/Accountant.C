@@ -31,6 +31,8 @@
 #include "condor_state.h"
 #include "condor_attributes.h"
 
+static char *_FileName_ = __FILE__;     // Used by EXCEPT (see condor_debug.h)
+
 //------------------------------------------------------------------
 // Constructor - One time initialization
 //------------------------------------------------------------------
