@@ -21,15 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
-
-#if defined(Solaris) && !defined(Solaris251)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h"
@@ -74,7 +65,6 @@ extern char	*Execute;			// Name of directory where user procs execute
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
-	int free_fs_blocks(char *filename);
 	void killkids(pid_t, int);
 }
 void open_std_file( int which );
