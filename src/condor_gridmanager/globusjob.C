@@ -80,8 +80,9 @@ char *GMStateNames[] = {
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
-			"gmState %s, globusState %d: %s returned Globus error %d\n", \
-            GMStateNames[gmState],globusState,func,error)
+		"(%d.%d) gmState %s, globusState %d: %s returned Globus error %d\n", \
+        procID.cluster,procID.proc,GMStateNames[gmState],globusState, \
+        func,error)
 
 int GlobusJob::probeInterval = 300;		// default value
 
@@ -810,27 +811,35 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( localOutput && truncate( localOutput, 0 ) < 0 ) {
 				dprintf(D_ALWAYS,
-						"truncate failed for job %d.%d's output file %s (errno=%d)\n",
+						"(%d.%d) truncate failed for output file %s (errno=%d)\n",
 						procID.cluster, procID.proc, localOutput, errno );
 			}
 			if ( localError && truncate( localError, 0 ) < 0 ) {
 				dprintf(D_ALWAYS,
-						"truncate failed for job %d.%d's error file %s (errno=%d)\n",
+						"(%d.%d) truncate failed for error file %s (errno=%d)\n",
 						procID.cluster, procID.proc, localError, errno );
 			}
 			gmState = GM_UNSUBMITTED;
 			break;
 		default:
-			EXCEPT( "Unknown gmState %d!", gmState );
+			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,
+					gmState );
 		}
 
 		if ( gmState != old_gm_state || globusState != old_globus_state ) {
 			reevaluate_state = true;
 		}
 		if ( globusState != old_globus_state ) {
+			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
+					procID.cluster, procID.proc,
+					GlobusJobStatusName(old_globus_state),
+					GlobusJobStatusName(globusState));
 			enteredCurrentGlobusState = time(NULL);
 		}
 		if ( gmState != old_gm_state ) {
+			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
+					procID.cluster, procID.proc, GMStateNames[old_gm_state],
+					GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
 			gahp.purgePendingRequests();
 		}
@@ -895,6 +904,11 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 		// where to put logging of events: here or in EvaluateState?
 		int update_actions = UA_UPDATE_GLOBUS_STATE;
 
+		dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
+				procID.cluster, procID.proc,
+				GlobusJobStatusName(globusState),
+				GlobusJobStatusName(new_state));
+
 		if ( !submitLogged && new_state !=
 			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 			if ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
@@ -936,7 +950,7 @@ int GlobusJob::syncIO()
 		rc = stat( localOutput, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
-				"stat failed for job %d.%d's output file %s (errno=%d)\n",
+				"(%d.%d) stat failed for output file %s (errno=%d)\n",
 				procID.cluster, procID.proc, localOutput, errno );
 			file_status.st_size = 0;
 		}
@@ -946,17 +960,17 @@ int GlobusJob::syncIO()
 			fd = open( localOutput, O_WRONLY );
 			if ( fd < 0 ) {
 				dprintf( D_ALWAYS,
-						 "open failed for job %d.%d's output file %s (errno=%d)\n",
+						 "(%d.%d) open failed for output file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localOutput, errno );
 			}
 			if ( fd >= 0 && fsync( fd ) < 0 ) {
 				dprintf( D_ALWAYS,
-						 "fsync failed for job %d.%d's output file %s (errno=%d)\n",
+						 "(%d.%d) fsync failed for output file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localOutput, errno );
 			}
 			if ( fd >= 0 && close( fd ) < 0 ) {
 				dprintf( D_ALWAYS,
-						 "close failed for job %d.%d's output file %s (errno=%d)\n",
+						 "(%d.%d) close failed for output file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localOutput, errno );
 			}
 			if ( errno == 0 ) {
@@ -970,7 +984,7 @@ int GlobusJob::syncIO()
 		rc = stat( localError, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
-				"stat failed for job %d.%d's error file %s (errno=%d)\n",
+				"(%d.%d) stat failed for error file %s (errno=%d)\n",
 				procID.cluster, procID.proc, localError, errno );
 			file_status.st_size = 0;
 		}
@@ -980,17 +994,17 @@ int GlobusJob::syncIO()
 			fd = open( localError, O_WRONLY );
 			if ( fd < 0 ) {
 				dprintf( D_ALWAYS,
-						 "open failed for job %d.%d's error file %s (errno=%d)\n",
+						 "(%d.%d) open failed for error file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localError, errno );
 			}
 			if ( fd >= 0 && fsync( fd ) < 0 ) {
 				dprintf( D_ALWAYS,
-						 "fsync failed for job %d.%d's error file %s (errno=%d)\n",
+						 "(%d.%d) fsync failed for error file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localError, errno );
 			}
 			if ( fd >= 0 && close( fd ) < 0 ) {
 				dprintf( D_ALWAYS,
-						 "close failed for job %d.%d's error file %s (errno=%d)\n",
+						 "(%d.%d) close failed for error file %s (errno=%d)\n",
 						 procID.cluster, procID.proc, localError, errno );
 			}
 			if ( errno == 0 ) {
