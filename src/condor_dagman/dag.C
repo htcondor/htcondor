@@ -311,8 +311,9 @@ bool Dag::ProcessLogEvents (bool recovery) {
 										"signal %d.\n", job->GetJobName(),
 										termEvent->signalNumber );
 					  }
-
-					  if( run_post_on_failure == FALSE ) {
+ 
+					  if( job->_scriptPost == NULL ||
+						  run_post_on_failure == FALSE ) {
 						  break;
 					  }
                   }
@@ -550,9 +551,15 @@ Dag::PostScriptReaper( Job* job, int status )
                       job->GetJobName(),
                       daemonCore->GetExceptionString(status) );
 		job->_Status = Job::STATUS_ERROR;
-		_numJobsFailed++;
-        sprintf( job->error_text, "POST Script died on %s",
-                 daemonCore->GetExceptionString(status) );
+		// if the job itself failed, we already incremented
+		// _numJobsFailed, and we want the job failure in error_text,
+		// not the POST script's failure, so do this only if the job
+		// succeeded and this POST script is causing the node to fail
+		if( job->retval == 0 ) {
+			_numJobsFailed++;
+			sprintf( job->error_text, "POST Script died on %s",
+					 daemonCore->GetExceptionString(status) );
+		}
 	}
 	else if ( WEXITSTATUS( status ) != 0 ) {
         debug_printf( DEBUG_QUIET, "POST Script of Job %s failed with status "
