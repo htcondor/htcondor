@@ -122,6 +122,9 @@ void ViewServer::Init()
 	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
+	// set up so that private ads from startds are collected as well
+	collector.wantStartdPrivateAds(false);
+
 	return;
 }
 
