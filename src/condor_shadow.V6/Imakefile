@@ -42,6 +42,7 @@ depend_target($(SRC))
 
 c_plus_target(condor_shadow,$(OBJ),$(LIB))
 release_target(condor_shadow,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+pure_c_plus_target(condor_shadow.pure,$(OBJ), $(LIB) )
 
 #if IS_SGI_CRAP
 CMNT
