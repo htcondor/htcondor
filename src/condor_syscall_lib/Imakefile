@@ -110,43 +110,20 @@ SRC = \
 	receivers.epilogue \
 	receivers.prologue \
 	remote_startup.c \
-	remote_syscall.c \
+	remote_syscall.C \
 	senders.epilogue \
 	senders.prologue \
 	switches.prologue \
+	switches.epilogue \
 	switches.special.c \
 	syscall.tmpl \
-	syscall_connect.c \
+	syscall_connect.C \
 	syscall_numbers.c \
 	xfer_file.c \
-	file_stream.c \
+	file_stream.c
         ios_stub.C \
         ios_msg.C
 	 
-
-#if IS_ALPHA_OSF1
-XDR_STATFS_OBJ = xdr_statfs.OSF1.o
-#else
-XDR_STATFS_OBJ = xdr_statfs.GEN.o
-#endif
-
-XDR_OBJ = \
- 	xdr_rusage.o \
- 	xdr_proc.o \
-	xdr_strings.o \
-	xdr_stat.o \
- 	$(XDR_STATFS_OBJ) \
- 	xdr_timeval.o \
- 	xdr_timezone.o \
- 	xdr_rlimit.o \
-	xdr_startup_info.o \
-	xdr_open_flags_t.o \
-	xdr_sig_num.o
-
-#if 0
- 	xdr_utsname.o
-#endif
-
 #if IS_R6000_AIX32
 LONGJMP = _longjmp.AIX32.o
 #endif
@@ -166,10 +143,14 @@ CKPT_OBJ = syscall_mode.o
 AIX_OBJ = $(LIB_DIR)/syscall.shr.o $(LIB_DIR)/syscall.exp $(LIB_DIR)/libfort.a
 #endif
 
-SYSCALL_SUPPORT_OBJ=senders.o receivers.c syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
+SYSCALL_SUPPORT_OBJ=senders.o receivers.C syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
 UTIL_OBJ =  dprintf.o dprintf_config.o except.o update_rusage.o \
 			condor_errlst.o $(HP_SPECIFIC_FILES)
+
+CONDOR_TYPE_OBJ = sig_num.o proc.o
+
+IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
 		$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS)
@@ -178,12 +159,12 @@ SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) receivers.c $(SIMPLE_OBJ) $(AIX_OBJ))
+all_target($(SYSCALL_LIB) receivers.C $(SIMPLE_OBJ) $(AIX_OBJ))
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ))
 #endif
 
-stubs: switches.c senders.c receivers.c
+stubs: switches.c senders.C receivers.C
 
 ToUpper:
 	ln -s ../condor_ckpt/ToUpper ToUpper
@@ -269,23 +250,23 @@ switches.c: syscall.tmpl switches.prologue stub_gen
 	> switches.c
 #endif
 
-senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
+senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
-	> senders.c
+	> senders.C
 
 #if IS_SGI_IRIX53 
 CMNT
 CMNT Bypass a bug in gcc.
 CMNT
-senders.o: senders.c
-	cc -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.c
+senders.o: senders.C
+	CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.C
 #endif
 
-receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
+receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
-	> receivers.c
+	> receivers.C
 
 
 
@@ -337,13 +318,13 @@ uppercase_target(../condor_util_lib/util_lib.a,getwd.o,GETWD.o,getwd,GETWD)
 #endif
 
 clean::
-	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
+	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.C receivers.C *.o
 
 depend_target($(SRC))
 
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_xdr_lib,$(XDR_OBJ))
+import(../condor_io,$(IO_OBJ))
 import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
