@@ -485,6 +485,9 @@ open_debug_file( int flags)
 		if( errno == EMFILE ) {
 			fd_panic( __LINE__, __FILE__ );
 		}
+		if (DebugFP == 0) {
+			DebugFP = stderr;
+		}
 		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile );
 		perror( "open" );
 		exit( errno );
