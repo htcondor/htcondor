@@ -45,6 +45,9 @@ main(int argc, char* argv[])
       i++;
 	  JobHistoryFileName=argv[i];
     }
+    else if (strcmp(argv[i],"-help")==0) {
+	  Usage(argv[0]);
+    }
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
       if (constraint) break;
       sprintf (tmp, "((%s == %d) && (%s == %d))", 
@@ -71,7 +74,7 @@ main(int argc, char* argv[])
 
   FILE* LogFile=fopen(JobHistoryFileName,"r");
   if (!LogFile) {
-    fprintf(stderr,"No jobs logged in the history file.\n");
+    fprintf(stderr,"History file not found or empty.\n");
     exit(1);
   }
 
