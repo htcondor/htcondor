@@ -510,6 +510,8 @@ int rename( const char *from, const char *to ) : pseudo {
 		ALLOC_PATH( path );
 	}
 
+	int get_ckpt_mode( signal_t sig ) : pseudo;
+
 	int get_a_out_name( char *path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );
