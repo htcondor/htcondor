@@ -30,8 +30,6 @@
 
 #include "condor_debug.h"
 
-static char *_FileName_ = __FILE__;  // used by EXCEPT 
-
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
 
@@ -678,7 +676,7 @@ int main( int argc, char** argv )
 				dcargs += 2;
 				ptmp1 = (char *)malloc( strlen(ptmp) + 25 );
 				if ( ptmp1 ) {
-					sprintf(ptmp1,"CONDOR_CONFIG=%s\0",ptmp);
+					sprintf(ptmp1,"CONDOR_CONFIG=%s",ptmp);
 					putenv(ptmp1);
 				}
 			} else {
@@ -1042,12 +1040,12 @@ int main( int argc, char** argv )
 
 		// register the command handler to take care of signals
 		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
-				(CommandHandlercpp)daemonCore->HandleSigCommand,
+				(CommandHandlercpp)&(daemonCore->HandleSigCommand),
 				"HandleSigCommand()",daemonCore,IMMEDIATE_FAMILY);
 
 		// this handler receives process exit info
 		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
-				(CommandHandlercpp)daemonCore->HandleProcessExitCommand,
+				(CommandHandlercpp)&(daemonCore->HandleProcessExitCommand),
 				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
 
 		// this handler receives keepalive pings from our children, so
