@@ -187,6 +187,7 @@ void FreeJobAd(ClassAd *&ad);
 int SendSpoolFile(char *filename);
 /** Actually transfer the initial checkpoint file (the executable).
 	@param filename Name of initial checkpoint file source.
+*/
 int SendSpoolFileBytes(char *filename);
 
 void WalkJobQueue(scan_func);
