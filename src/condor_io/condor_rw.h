@@ -29,5 +29,8 @@
 
 int condor_read(SOCKET fd, char *buf, int sz, int timeout);
 int condor_write(SOCKET fd, char *buf, int sz, int timeout);
-
+int condor_mux_read(SOCKET fd, SOCKET mfd, char *buf,
+                    int sz, int timeout, bool &ready);
+int condor_mux_write(SOCKET fd, SOCKET mfd, char *buf, int sz, int timeout,
+                     int thresh, bool &congested, bool &ready);
 #endif

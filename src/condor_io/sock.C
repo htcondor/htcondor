@@ -362,7 +362,8 @@ int Sock::bindWithin(const int low_port, const int high_port)
 int Sock::bind(int port)
 {
 	sockaddr_in		sin;
-
+	socklen_t		addrLen = sizeof(sockaddr_in);
+	
 	// Following lines are added because some functions in condor call
 	// this method without checking the port numbers returned from
 	// such as 'getportbyserv'
@@ -394,7 +395,7 @@ int Sock::bind(int port)
 	sin.sin_addr.s_addr = htonl(my_ip_addr());
 	sin.sin_port = htons((u_short)port);
 
-	if (::bind(_sock, (sockaddr *)&sin, sizeof(sockaddr_in)) < 0) {
+	if (::bind(_sock, (sockaddr *)&sin, addrLen) < 0) {
 #ifdef WIN32
 		int error = WSAGetLastError();
 		dprintf( D_ALWAYS, "bind failed: WSAError = %d\n", error );
@@ -461,7 +462,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 			attempt_size = desired_size;
 		}
 		ret_val = setsockopt(SOL_SOCKET,command,
-			(char*)&attempt_size,sizeof(int));
+			(char*)&attempt_size, sizeof(int));
 		if ( ret_val < 0 )
 			continue;
 		previous_size = current_size;
@@ -581,6 +582,7 @@ int Sock::do_connect(
 				}
 				break;
 			default:
+                if(errno == EINTR) continue;
 				if (!connect_state.failed_once) {
 					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
 							 nfound );

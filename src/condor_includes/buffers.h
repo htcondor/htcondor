@@ -53,10 +53,18 @@ public:
 	inline int consumed() const { return _dta_pt == _dta_sz; }
 
 
-	int write(SOCKET sockd, int sz=-1, int timeout=0);
+	int write(SOCKET dataSock,
+	          SOCKET mngSock,
+			  int sz,
+			  int timeout,
+              int threshold,
+			  bool &congested,
+			  bool &ready);
 	int read(SOCKET sockd, int sz=-1, int timeout=0);
 
-	int flush(SOCKET sockd, void * hdr=0, int sz=0, int timeout=0);
+	int flush(SOCKET sockd, SOCKET mngSock,
+	          void *hdr, int sz, int timeout,
+			  int threshold, bool &congested, bool &ready);
 
 	int put_max(const void *, int);
 	int get_max(void *, int);

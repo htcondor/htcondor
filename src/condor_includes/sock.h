@@ -247,7 +247,7 @@ protected:
 	SOCKET			_sock;
 	sock_state		_state;
 	int				_timeout;
-	struct sockaddr_in _who;	// endpoint of "connection"
+	struct sockaddr_in _who;	// the endpoint of "connection"
 
 private:
 	int bindWithin(const int low, const int high);
