@@ -190,7 +190,7 @@ signal identifier for segmentation fault is 4):
 \end{verbatim}
 
 The above expression will not let the job exit if it exited by a signal and
-that signal number was 4(representing segmentaion fault). In any other case
+that signal number was 4(representing segmentation fault). In any other case
 of the job exiting, it will leave the queue as it normally would have done.
 
 If left unspecified, this will default to \Expr{True}.
@@ -253,13 +253,13 @@ job is more than half of the run time of the job.
 
 The above expression will remove the job once the conditions have become true.
 
-\Notice{Currently, this option will force a ``terminate'' event in the user
+\emph{Note:}Currently, this option will force a ``terminate'' event in the user
 log of the job and it will report a successful termination of the job. This
 reporting of this event will be changed in a future version of Condor to
-be a ``job aborted event'' with descriptions of who intitated the event. As
+be a ``job aborted event'' with descriptions of who initiated the event. As
 it stands now, someone looking at the user log termination event wouldn't be
 able to tell the difference between a job that legitimately ended successfully
-and a job where the \AdAttr{periodic\_remove} expression had become true.} 
+and a job where the \AdAttr{periodic\_remove} expression had become true. 
 
 periodic\_$*$ expressions(defined elsewhere in this man page) take
 precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
@@ -428,7 +428,7 @@ submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
 parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
 should act as a metascheduler.
 The \Arg{globus} universe uses the Globus
-GRAM API to contact the Globus resource specifed and requests it run the job.
+GRAM API to contact the Globus resource specified and requests it run the job.
 The \Arg{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \Arg{java} Universe is for programs written to the Java Virtual Machine.
@@ -495,7 +495,7 @@ specified in the command file, the system's user resource limit
 becomes available to Condor, Condor decides which job to run based upon
 user and job priorities. Setting \Opt{nice\_user} equal to \Arg{True}
 tells Condor not to use your regular user priority, but that this job
-should have last priority amongst all users and all jobs. So jobs
+should have last priority among all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
 non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
 handy if a user has some jobs they wish to run, but do not wish to use
@@ -613,7 +613,7 @@ specified by separating each with a semicolon.
 This option only applies to standard-universe jobs.
 
 If you wish to remap file names that contain equals signs or semicolons,
-these special chracaters may be escaped with a backslash.
+these special characters may be escaped with a backslash.
 
 This option only applies to standard-universe jobs.
 
@@ -855,12 +855,16 @@ AUTHENTICATION\_METHODS configuration setting to enable remote file system
 
 \OptItem{\Opt{-d}}{Disable file permission checks.}
 
-\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit file
-with the given command. This command will be considered to immediately
-precede the Queue command in the submit file and come after all other
-previous commands. The submit file is not modified. You can append
-multiple commands by using the -a option multiple times. If your
-command has spaces in it, make sure you quote it.}
+\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit 
+description file with the given command.
+This command will be considered to immediately precede the Queue
+command within the submit description file, and come after all other
+previous commands.
+The submit description file is not modified.
+Multiple commands are specified by using the \Opt{-a} option multiple times.
+Each new command is given in a separate \Opt{-a} option.
+Commands with spaces in them will need to be enclosed in double quote
+marks.}
 
 \OptItem{submit description file}{The pathname to the submit description
 file. If this optional argument is missing, then the commands are
@@ -875,7 +879,8 @@ non-zero value upon failure.
 
 \Examples
 
-\underline{Example 1}: The below example queues three jobs for
+\begin{itemize} 
+\item{Submit Description File Example 1:} This example queues three jobs for
 execution by Condor. The first will be given command line arguments of
 \Arg{15} and \Arg{2000}, and it will write its standard output
 to \File{foo.out1}.
@@ -892,7 +897,7 @@ appear in \File{foo.error}.
       ####################
       #
       # submit description file
-      # Example 1: queueing multiple jobs with differing
+      # Example 1: queuing multiple jobs with differing
       # command line arguments and output files.
       #                                                                      
       ####################                                                   
@@ -915,7 +920,8 @@ appear in \File{foo.error}.
       Queue                   
 \end{verbatim}
 
-\underline{Example 2}: This submit description file example queues 150
+\item{Submit Description File Example 2:} This submit description file
+example queues 150
 runs of program \Prog{foo} which must have been compiled and linked for
 Silicon Graphics workstations running IRIX 6.x.
 Condor will not attempt
@@ -952,6 +958,18 @@ in this cluster will be written into file \File{foo.log}.
       Queue 150
 \end{verbatim}
 
+\item{Command Line example:} The following command uses the
+\Opt{-a} option to add two commands before the job(s) is queued.
+A log file and an error log file are specified.
+The submit description file is unchanged.
+\begin{verbatim}
+condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
+\end{verbatim}
+Note that each of the added commands is contained within quote marks
+because there are space characters within the command.
+\end{itemize} 
+
+
 \GenRem
 \begin{itemize}
 
@@ -965,7 +983,7 @@ less than 256 characters in length, and command line arguments must be
 less than 4096 characters in length; otherwise, \Condor{submit} gives a
 warning message but the jobs will not execute properly. 
 
-\item Somewhat understandably, behavior gets bizzare if the user makes
+\item Somewhat understandably, behavior gets bizarre if the user makes
 the mistake of requesting multiple Condor jobs to write to the
 same file, and/or if the user alters any files that need to be accessed
 by a Condor job which is still in the queue.
