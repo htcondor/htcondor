@@ -48,6 +48,8 @@ int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
 bool GlobusResource::enableGridMonitor = false;
 
+static unsigned int g_MonitorUID = 0;
+
 GlobusResource::GlobusResource( const char *resource_name )
 {
 	resourceDown = false;
@@ -68,8 +70,6 @@ GlobusResource::GlobusResource( const char *resource_name )
 
 	checkMonitorTid = TIMER_UNSET;
 	monitorActive = false;
-
-	monitorUID = 0;
 
 	monitorJobStatusFile = 0;
 	monitorLogFile = 0;
@@ -652,16 +652,17 @@ GlobusResource::SubmitMonitorJob()
 	
 	/* Create monitor file names */
 	{
-		monitorUID++;
+		g_MonitorUID++;
 		MyString buff;
 
 		buff.sprintf( "%s/grid-monitor-job-status.%s.%d.%d",
+gahp_server.
 		              GridmanagerScratchDir,
-		              resourceName, getpid(), monitorUID );
+		              resourceName, getpid(), g_MonitorUID );
 		monitorJobStatusFile = strdup( buff.Value() );
 
-		buff.sprintf( "%s/grid-monitor-log.%s.%d.%d", GridmanagerScratchDir,
-					  resourceName, getpid(), monitorUID );
+		buff.sprintf( "%s/grid-monitor-log.%s.%d.%u", GridmanagerScratchDir,
+					  resourceName, getpid(), g_MonitorUID );
 		monitorLogFile = strdup( buff.Value() );
 	}
 
