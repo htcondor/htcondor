@@ -6042,6 +6042,8 @@ _mark_job_running(PROC_ID* job_id)
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 	SetAttributeInt(job_id->cluster, job_id->proc,
 					ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+	SetAttributeInt(job_id->cluster, job_id->proc,
+					ATTR_LAST_SUSPENSION_TIME, 0 );
 
 	// Also clear out ATTR_SHADOW_BIRTHDATE.  We'll set it to be the
 	// current time when we actually start the shadow (in add_shadow_rec), 
@@ -6094,6 +6096,8 @@ _mark_job_stopped(PROC_ID* job_id)
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+		SetAttributeInt( job_id->cluster, job_id->proc,
+						 ATTR_LAST_SUSPENSION_TIME, 0 );
 
 		if (had_orig >= 0) {
 			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
@@ -6579,6 +6583,8 @@ set_job_status(int cluster, int proc, int status)
 				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 								 ATTR_ENTERED_CURRENT_STATUS,
 								 (int)time(0) ); 
+				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 			}
 			ad = GetNextJob(0);
 		}
@@ -6586,6 +6592,8 @@ set_job_status(int cluster, int proc, int status)
 		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
 		SetAttributeInt( cluster, proc, ATTR_ENTERED_CURRENT_STATUS,
 						 (int)time(0) );
+		SetAttributeInt( cluster, proc,
+						 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 	}
 }
 
@@ -8449,6 +8457,11 @@ holdJobRaw( int cluster, int proc, const char* reason,
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}
 
+	if( SetAttributeInt(cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0) < 0 ) {
+		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
+				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
+	}
+
 	if ( system_hold ) {
 		system_holds++;
 		SetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, system_holds);
@@ -8596,6 +8609,11 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 						(int)time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_LAST_SUSPENSION_TIME, 0 ) < 0 ) {
+		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
+				 ATTR_LAST_SUSPENSION_TIME, cluster, proc );
 	}
 
 	if ( write_to_user_log ) {
