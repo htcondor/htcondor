@@ -359,6 +359,7 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
+
 	// Need X509_CERT_DIR set before connectQ if in submit file
 
 	//  Parse the file, stopping at "queue" command
@@ -565,6 +566,7 @@ SetExecutable()
 	  break;
 	case VANILLA:
 	case SCHED_UNIVERSE:
+	case MPI:  // for now
 	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 	  InsertJobExpr (buffer);
 	  (void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
@@ -627,6 +629,30 @@ SetUniverse()
 		}
 		return;
 	};
+
+	if( univ && stricmp(univ,"mpi") == MATCH ) {
+		JobUniverse = MPI;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, MPI);
+		InsertJobExpr (buffer);
+		InsertJobExpr ("Checkpoint = 0");
+		
+		mach_count = condor_param( MachineCount );
+		
+		int tmp;
+		if ( mach_count != NULL ) {
+			tmp = atoi(mach_count);
+		}
+		else {
+			EXCEPT( "No machine_count specified!\n" );
+		}
+
+		(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
+		InsertJobExpr (buffer);
+		(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
+		InsertJobExpr (buffer);
+
+		return;
+	}
 
 	if( univ && stricmp(univ,"pipe") == MATCH ) {
 		JobUniverse = PIPE;
@@ -1586,7 +1612,7 @@ check_requirements( char *orig )
 		(void)strcat( answer, " && (VirtualMemory >= ImageSize)" );
 	}
 
-	if (JobUniverse == PVM) {
+	if ( (JobUniverse == PVM) || (JobUniverse == MPI) ) {
 		(void)strcat( answer, " && (Machine != \"" );
 		(void)strcat( answer, my_full_hostname() );
 		(void)strcat( answer, "\")" );
