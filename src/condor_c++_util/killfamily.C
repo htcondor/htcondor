@@ -55,7 +55,9 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_user_time = 0;
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
+#ifdef WITH_DAEMONCORE
 	dc_tid = -1;
+#endif
 	dprintf( D_PROCFAMILY, 
 			 "Created new ProcFamily w/ pid %d as parent\n", daddy_pid );
 }
@@ -66,9 +68,11 @@ ProcFamily::~ProcFamily()
 	if ( old_pids ) {
 		delete old_pids;
 	}
+#ifdef WITH_DAEMONCORE
 	if( dc_tid >= 0 ) {
 		daemonCore->Cancel_Timer( dc_tid );
 	}
+#endif
 	dprintf( D_PROCFAMILY,
 			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid ); 
 }
@@ -397,6 +401,9 @@ ProcFamily::display()
 }
 
 
+#ifdef WITH_DAEMONCORE
+// This can't exist until everything that uses ProcFamily links with 
+// DaemonCore, and the V5 starter breaks that.  
 bool
 ProcFamily::takePeriodicSnapshot( int start, int period )
 {
@@ -414,3 +421,5 @@ ProcFamily::takePeriodicSnapshot( int start, int period )
 	}
 	return true;
 }
+#endif /* WITH_DAEMONCORE */
+
