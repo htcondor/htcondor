@@ -502,11 +502,13 @@ ELEM	*elem;
 	free (tmpIn);
 
 
-	if( strcmp(elem->s_val,"T") == MATCH ) {
+	if( stricmp(elem->s_val,"T") == MATCH || 
+	   stricmp(elem->s_val,"TRUE") == MATCH) {
 		FREE( elem->s_val );
 		elem->type = BOOL;
 		elem->b_val = 1;
-	} else if( strcmp(elem->s_val,"F") == MATCH ) {
+	} else if( stricmp(elem->s_val,"F") == MATCH ||
+			   stricmp(elem->s_val,"FALSE") == MATCH ) {
 		FREE( elem->s_val );
 		elem->type = BOOL;
 		elem->b_val = 0;
