@@ -151,14 +151,14 @@ public:
 	void IncreBufCount( int i )        { bufCount += i; }
 	BOOL IsReadable(int i)             { return file[i].isReadable(); }
 	BOOL IsWriteable(int i)            { return file[i].isWriteable(); }
-	int InsertR( int, void *, int, int, int, BufElem *, BufElem * );
-	int InsertW( int, const void *, int, int, BufElem *, BufElem * );
-	int OverlapR1( int, void *, int, int, int, BufElem *, BufElem * );
-	int OverlapR2( int, void *, int, int, int, BufElem *, BufElem * );
-	int OverlapW1( int, const void *, int, int, BufElem *, BufElem * );
-	int OverlapW2( int, const void *, int, int, BufElem *, BufElem * );
-	int PreFetch( int, void *, size_t );
-	int Buffer( int, const void *, size_t );
+	ssize_t InsertR( int, void *, int, int, int, BufElem *, BufElem * );
+	ssize_t InsertW( int, const void *, int, int, BufElem *, BufElem * );
+	ssize_t OverlapR1( int, void *, int, int, int, BufElem *, BufElem * );
+	ssize_t OverlapR2( int, void *, int, int, int, BufElem *, BufElem * );
+	ssize_t OverlapW1( int, const void *, int, int, BufElem *, BufElem * );
+	ssize_t OverlapW2( int, const void *, int, int, BufElem *, BufElem * );
+	ssize_t PreFetch( int, void *, size_t );
+	ssize_t Buffer( int, const void *, size_t );
 	void FlushBuf();
 	void DisplayBuf();
 	int find_avail( int start );
