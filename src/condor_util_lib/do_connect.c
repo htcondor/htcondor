@@ -42,13 +42,22 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 extern int	errno;
 
+#if defined(__STDC__)
+unsigned short find_port_num( char *service_name, unsigned short dflt_port );
+char *mk_config_name( const char *service_name );
+char *param( const char *name );
+#else
+unsigned short find_port_num();
+char *mk_config_name();
+char *param();
+#endif
+
 do_connect( host, service, port )
 char	*host, *service;
 u_short		port;
 {
 	struct sockaddr_in	sin;
 	struct hostent		*hostentp;
-	struct servent		*servp;
 	int					status;
 	int					fd;
 	int					true = 1;
@@ -63,12 +72,8 @@ u_short		port;
 		return( -1 );
 	}
 
-	if( service ) {
-		servp = getservbyname(service, "tcp");
-		if( servp != NULL ) {
-			port = servp->s_port;
-		}
-	}
+	port = find_port_num( service, port );
+
 
 	if( (fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
 		EXCEPT( "socket" );
@@ -134,4 +139,74 @@ char	*host;
 	}
 
 	return sock;
+}
+
+unsigned short
+find_port_num( service_name, dflt_port )
+char	*service_name;
+unsigned short	dflt_port;
+{
+	struct servent		*servp;
+	char				*config_name;
+	char				*pval;
+
+	if( service_name == NULL || service_name[0] == '\0' ) {
+		return dflt_port;
+	}
+
+		/* Try to look up port number in config file */
+	config_name = mk_config_name( service_name );
+	pval = param( config_name );
+	if( pval != NULL ) {
+		return (unsigned short)atoi( pval );
+	}
+
+		/* Try to find in "/etc/services" */
+	if( service_name && service_name[0] ) {
+		servp = getservbyname(service_name, "tcp");
+		if( servp != NULL ) {
+			return servp->s_port;
+		}
+	}
+
+		/* Fall back on the default */
+	return dflt_port;
+}
+
+/*
+  Convert a condor service name which looks like:
+
+	condor_schedd
+
+  to a macro name for a port number which we can look up in our config
+  file.  The macro name looks like:
+
+	SCHEDD_PORT
+
+*/
+char *
+mk_config_name( service_name )
+char *service_name;
+{
+	static char answer[ 512 ];
+	char	*ptr;
+
+		/* Copy part after the '_' to our answer */
+	ptr = strchr( service_name, '_' );
+	if( ptr == NULL ) {
+		return NULL;
+	}
+	strcpy( answer, ptr + 1 );
+
+		/* Transform it to upper case */
+	for( ptr=answer; *ptr; ptr++ ) {
+		if( islower(*ptr) ) {
+			*ptr = toupper(*ptr);
+		}
+	}
+
+		/* add on the last part */
+	strcat( answer, "_PORT" );
+
+	return answer;
 }
