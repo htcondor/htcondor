@@ -118,6 +118,7 @@ template <class ObjType> class Item;
 
 template <class ObjType>
 class List {
+friend class ListIterator<ObjType>;
 public:
 		// General
 	List();
@@ -149,6 +150,7 @@ private:
 template <class ObjType>
 class Item {
 friend class List<ObjType>;
+friend class ListIterator<ObjType>;
 public:
 	Item( ObjType *obj = 0 );
 	~Item();
@@ -157,6 +159,32 @@ private:
 	Item<ObjType>	*prev;
 	ObjType	*obj;
 };
+
+template <class ObjType>
+class ListIterator {
+public:
+	ListIterator( );
+	ListIterator( const List<ObjType>& );
+	~ListIterator( );
+
+	void initialize( const List<ObjType>& );
+	void toBeforeFirst( );
+	void toAfterLast( );
+	bool next( ObjType& );
+	ObjType* next( );
+	bool current( ObjType& );
+	ObjType* current( );
+	bool prev( ObjType& );
+	ObjType* prev( );
+	
+	bool isBeforeFirst( );
+	bool isAfterLast( );
+
+private:
+	const List<ObjType>* list;
+	Item<ObjType>* cur;
+};
+	
 
 /*
   Implementation of the List class begins here.  This is so that every
@@ -438,5 +466,134 @@ List<ObjType>::DeleteCurrent()
 	current = current->prev;
 	RemoveItem( current->next );
 }
+
+template <class ObjType>
+ListIterator<ObjType>::ListIterator( )
+{
+	list = NULL;
+	cur = NULL;
+}
+
+template <class ObjType>
+ListIterator<ObjType>::ListIterator( const List<ObjType>& obj )
+{
+	list = &obj;
+	cur = obj.dummy;
+}
+
+template <class ObjType>
+ListIterator<ObjType>::~ListIterator( )
+{
+}
+
+template <class ObjType> 
+void
+ListIterator<ObjType>::initialize( const List<ObjType>& obj )
+{
+	list = &obj;
+	cur = list->dummy;
+}
+
+template <class ObjType>
+void
+ListIterator<ObjType>::toBeforeFirst( )
+{
+	if( list ) cur = list->dummy;
+}
+
+template <class ObjType>
+void
+ListIterator<ObjType>::toAfterLast( )
+{
+	cur = NULL;
+}
+
+template <class ObjType>
+bool
+ListIterator<ObjType>::next( ObjType& obj)
+{
+	if( cur ) {
+		if( ( cur = cur->next ) ) {
+			obj = *(cur->obj);
+			return true;
+		}
+	} 
+	return false;
+}
+		
+template <class ObjType>
+ObjType*
+ListIterator<ObjType>::next( )
+{
+	if( cur ) {
+		if( ( cur = cur->next ) ) {
+			return( cur->obj );
+		}
+	}
+	return NULL;
+}
+
+template <class ObjType>
+bool
+ListIterator<ObjType>::current( ObjType& obj )
+{
+	if( list && cur && cur != list->dummy ) {
+		obj = *(cur->obj);
+		return true;
+	}
+	return false;
+}
+
+template <class ObjType>
+ObjType*
+ListIterator<ObjType>::current( )
+{
+	if( list && cur && cur != list->dummy ) {
+		return( cur->obj );
+	} 
+	return NULL;
+}
+
+
+template <class ObjType>
+bool
+ListIterator<ObjType>::prev( ObjType& obj ) 
+{
+	if( cur && cur != list->dummy ) {
+		if( ( cur = cur->prev ) ) {
+			obj = *(cur->obj);
+			return true;
+		}
+	} 
+	return false;
+}
+
+
+template <class ObjType>
+ObjType*
+ListIterator<ObjType>::prev( )
+{
+	if( cur && cur != list->dummy ) {
+		if( ( cur = cur->prev ) ) {
+			return( cur->obj );
+		}
+	}
+	return NULL;
+}
+	
+template <class ObjType>
+bool
+ListIterator<ObjType>::isBeforeFirst( ) 
+{
+	return( list && list->dummy == cur );
+}
+
+template <class ObjType>
+bool
+ListIterator<ObjType>::isAfterLast( ) 
+{
+	return( list && cur == NULL );
+}
+
 
 #endif /* LIST_H */
