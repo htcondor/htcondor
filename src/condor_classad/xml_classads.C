@@ -617,7 +617,7 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer)
 
 	if (_output_target_type) {
 		mytarget = classad->GetTargetTypeName();
-		if (*mytype != 0) {
+		if (*mytarget != 0) {
 			MyString  target_expr_string("TargetType = \"");
 			ExprTree  *target_expr;
 			
