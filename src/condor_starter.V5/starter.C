@@ -646,11 +646,15 @@ terminate_all()
 		// Cancel alarm
 	MyAlarm.cancel();
 
+#if 0
 	if( XferCkpts ) {
 		return DO_XFER;
 	} else {
 		return DONT_XFER;
 	}
+#else
+	return DEFAULT;
+#endif
 }
 
 /*

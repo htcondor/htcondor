@@ -362,8 +362,12 @@ Transition TransTab[] = {
 { GET_EXEC,			CKPT_and_VACATE,	TERMINATE,		req_vacate			},
 
 { TERMINATE,		DO_WAIT,			TERMINATE_WAIT,	0					},
+#if 0
 { TERMINATE,		DONT_XFER,			SEND_STATUS_ALL,0					},
 { TERMINATE,		DO_XFER,			SEND_CKPT_ALL,	0					},
+#else
+{ TERMINATE,		DEFAULT,			SEND_STATUS_ALL,0					},
+#endif
 
 { TERMINATE_WAIT,	SUSPEND,			0,				susp_self			},
 { TERMINATE_WAIT,	DIE,				0,				unset_xfer			},
