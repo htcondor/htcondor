@@ -2013,37 +2013,6 @@ They ought to be greater than 1024 in order to avoid port restrictions
 on your machine, in the case that these daemons are not run as root.
 Also, they need to be ports that are not in use,
 or the daemons will get very unhappy and pout.
-There are four ports you can affect:
-
-\begin{itemize}
- \item \Macro{COLLECTOR\_PORT}
- The port that the collector uses. Defaults to 9618.
- \item \Macro{NEGOTIATOR\_PORT}
- The port that the negotiator uses. Defaults to 9614.
- \item \Macro{CONDOR\_VIEW\_PORT}
- The port that the Condor View Collector runs on. Defaults to 9618.
- See section~\ref{sec:CondorView-Client-Install}
- and
- section~\ref{sec:Contrib-CondorView-Install}
- for more information about the Condor View Collector.
- \item \Macro{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}
- The port that the Developers Collector runs on.
- Defaults to 9618.
- This is used for the updates to the Condor Developer's collector,
- which is normally condor.cs.wisc.edu.
- Configure this to be a different machine with
- \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR},
- and a different port with \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}.
- We recommend that you leave both of these alone;
- they allow the Condor team to get a feeling for how
- many active Condor pools are in the world,
- and the team can report this
- information to funding agencies to convince them to give us more money.
- Set \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} to NONE to
- eliminate reporting.
- Theoretically, you could set up your own Developer's Collector,
- if you had a \Condor{collector} that you set up to monitor several pools.
-\end{itemize}
 
 Many more details on port usage are located in
 section~\ref{sec:Port-Details}.
