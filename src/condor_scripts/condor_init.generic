@@ -2,13 +2,12 @@
 CSH
 
 set CHMOD=/bin/chmod
-#if IS_HPPAR_HPUX8
+#if IS_HPPAR_HPUX8 || IS_ALPHA_OSF1
 set CHOWN=/bin/chown
 #else
 set CHOWN=/etc/chown
 #endif
 set CHGRP=/bin/chgrp
-set RELEASEDIR = InstallDir
 set CONFIG_VAL=$RELEASEDIR/bin/config_val
 
 rm -f ~condor/condor_config

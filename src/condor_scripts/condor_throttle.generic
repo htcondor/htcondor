@@ -6,7 +6,6 @@ if ( $#argv != 1 ) then
     exit
 endif
 
-set RELEASEDIR = InstallDir
 set CONFIG_VAL=$RELEASEDIR/bin/config_val
 eval `$CONFIG_VAL LOCAL_CONFIG_FILE`
 

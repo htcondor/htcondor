@@ -6,25 +6,9 @@ ARCH = Architecture
 OPSYS = OperatingSystem
 
 CMNT
-CMNT Administrivia
-CMNT
-CONDOR_HOST	= CentralMgrHost		/* Host to run collector & negotiator */
-CONDOR_ADMIN= CondorAdministrator	/* Whom to mail when there's trouble */
-CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
-
-CMNT
 CMNT   Local stuff.
 CMNT
-#ifdef LocalDir
-LOCAL_DIR = LocalDir
-#else
-LOCAL_DIR = $(TILDE)
-#endif
-#ifdef LocalConfigFile
-LOCAL_CONFIG_FILE = LocalConfigFile
-#else
 LOCAL_CONFIG_FILE = $(LOCAL_DIR)/condor_config.local
-#endif
 
 CMNT
 CMNT	The right thing to do is to get this value out of the kernel.
@@ -48,7 +32,6 @@ CMNT
 CMNT
 CMNT	Pathnames
 CMNT
-RELEASEDIR	= InstallDir
 ROSTER_FILE	= $(LOCAL_DIR)/roster
 LOG		= $(LOCAL_DIR)/log
 SPOOL		= $(LOCAL_DIR)/spool
@@ -148,7 +131,11 @@ CMNT
 CMNT Starter Macros
 CMNT
 STARTER				= $(BIN)/condor_starter
+#if IS_ALPHA_OSF1
+ALTERNATE_STARTER_0	= $(BIN)/condor_starter
+#else
 ALTERNATE_STARTER_0	= $(BIN)/condor_starter.pvm.mike
+#endif
 ALTERNATE_STARTER_1	= /net/cabrales/var/home/public/condor/bin/condor_starter
 STARTER_DEBUG		= D_NODATE
 MIN_CKPT_INTERVAL	= 1800
