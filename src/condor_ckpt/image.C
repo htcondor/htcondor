@@ -273,6 +273,12 @@ SegMap::Contains( void *addr )
 }
 
 
+#if defined(PVM_CHECKPOINTING)
+extern "C" user_restore_pre();
+extern "C" user_restore_post(int);
+
+int		global_user_data;
+#endif
 
 /*
   Given an "image" object containing checkpoint information which we have
@@ -282,7 +288,11 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
+	int		user_data;
 
+#if defined(PVM_CHECKPOINTING)
+	user_data = user_restore_pre();
+#endif
 		// Overwrite our data segment with the one saved at checkpoint
 		// time.
 	RestoreSeg( "DATA" );
@@ -291,6 +301,10 @@ Image::Restore()
 		// we are working with has been overwritten too.  Fortunately,
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
+
+#if defined(PVM_CHECKPOINTING)
+	global_user_data = user_data;
+#endif
 
 		// Now we're going to restore the stack, so we move our execution
 		// stack to a temporary area (in the data segment), then call
@@ -348,6 +362,10 @@ RestoreStack()
 	} else {
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
+
+#if defined(PVM_CHECKPOINTING)
+	user_restore_post(global_user_data);
+#endif
 
 	LONGJMP( Env, 1 );
 }
