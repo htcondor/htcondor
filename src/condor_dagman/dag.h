@@ -16,21 +16,6 @@ extern bool run_post_on_failure;
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
 
-// Termination Queue Item (TQI).
-class TQI {
-  public:
-    inline TQI () : parent(NULL) {}
-    inline TQI (Job * p) : parent(p) {}
-    inline TQI (Job * p, const SimpleList<JobID_t> & c) :
-        parent(p), children(c) {}
-
-    void Print () const;
-
-    Job                 * parent;   // The job that terminated
-    SimpleList<JobID_t>   children; // Children net yet seen in log
-};
-
-
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
     and the state of jobs as they are running. Jobs are run by
@@ -110,9 +95,6 @@ class Dag {
     void PrintJobList() const;
     void PrintJobList( Job::status_t status ) const;
 
-    //
-    void Print_TermQ () const;
-
     /** @return the total number of jobs in the DAG
      */
     inline int NumJobs() const { return _jobs.Number(); }
@@ -155,27 +137,18 @@ class Dag {
 	int PreScriptReaper( Job* job, int status );
 	int PostScriptReaper( Job* job, int status );
 
+	void PrintReadyQ( debug_level_t level ) const;
+
 	// max number of PRE & POST scripts to run at once (0 means no limit)
     int _maxScriptsRunning;
 
   protected:
 
     /* Prepares to submit job by running its PRE Script if one exists,
-       otherwise calls SubmitCondor() directly
+       otherwise adds job to _readyQ and calls SubmitReadyJobs()
 	   @return true on success, false on failure
     */
     bool Submit (Job * job);
-
-    /*  Submit job with ID jobID to Condor
-        @return true on success, false on failure
-    */
-    // bool Submit (JobID_t jobID);
-
-    /*  Submit job to Condor.  If job is not submittable (!job->CanSubmit())
-        then function will return false for failure
-        @return true on success, false on failure
-    */
-	bool SubmitCondor( Job* job );
 
     // add job to termination queue and report termination to all
     // child jobs by removing job ID from each child's waiting queue
@@ -193,9 +166,9 @@ class Dag {
     Job * GetSubmittedJob (bool recovery);
 
     /*  Submit all ready jobs, provided they are not waiting on a parent job.
-        @return true: success, false: fatal error
+        @return number of jobs successfully submitted
     */
-    bool SubmitReadyJobs ();
+    int SubmitReadyJobs();
   
     // name of consolidated condor log
     char        * _condorLogName;
@@ -217,9 +190,6 @@ class Dag {
     /// List of Job objects
     List<Job>     _jobs;
 
-    //
-    List<TQI>    _termQ;
-
     // Number of Jobs that are done (completed execution)
     int _numJobsDone;
     
@@ -234,7 +204,10 @@ class Dag {
     */
     int _maxJobsSubmitted;
 
-	// list of submitted jobs not yet matched with submit events in
+	// queue of jobs ready to be submitted to Condor
+	SimpleList<Job*>* _readyQ;
+
+	// queue of submitted jobs not yet matched with submit events in
 	// the Condor job log
     Queue<Job*>* _submitQ;
 
