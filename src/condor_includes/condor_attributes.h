@@ -389,7 +389,8 @@ const char ATTR_MULTIPLE_TASKS_PER_PVMD  [] = "MultipleTasksPerPvmd";
 
 const char ATTR_UPDATESTATS_TOTAL		 [] = "UpdatesTotal";
 const char ATTR_UPDATESTATS_SEQUENCED	 [] = "UpdatesSequenced";
-const char ATTR_UPDATESTATS_LOST		 [] = "UpdatesLost";
+const char ATTR_UPDATESTATS_LOST			 [] = "UpdatesLost";
+const char ATTR_UPDATESTATS_HISTORY		 [] = "UpdatesHistory";
 
 // Enumerate the ones that can't be constant strings..
 typedef enum
