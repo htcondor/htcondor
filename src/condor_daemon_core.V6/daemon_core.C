@@ -2253,8 +2253,8 @@ int DaemonCore::HandleReq(int socki)
 	user[0] = '\0';
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
-    string				the_sid;
-    string 				who;   // Remote user
+    std::string			the_sid;
+    std::string 		who;   // Remote user
 
 	insock = (*sockTable)[socki].iosock;
 
@@ -2544,7 +2544,7 @@ int DaemonCore::HandleReq(int socki)
 	
 		if (DebugFlags & D_FULLDEBUG) {
 			PrettyPrint pp;
-			string      buf;
+			std::string buf;
 			pp.Unparse ( buf, &auth_info );
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n%s\n", buf.data());
 		}
@@ -2600,7 +2600,7 @@ int DaemonCore::HandleReq(int socki)
 		bool valid_cookie		= false;
 
 		// check if we are using a cookie
-		string incoming_cookie;
+		std::string incoming_cookie;
 		if( auth_info.EvaluateAttrString(ATTR_SEC_COOKIE, incoming_cookie)) {
 			// compare it to the one we have internally
 
@@ -2641,7 +2641,7 @@ int DaemonCore::HandleReq(int socki)
 					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
 							   "invalid session %s, failing.\n", the_sid.data());
 
-					string return_addr = NULL;
+					std::string return_addr = NULL;
 					if( auth_info.EvaluateAttrString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr)) {
 						sec_man->send_invalidate_packet( (char*)return_addr.data(), (char*)the_sid.data() );
 					}
@@ -2673,7 +2673,7 @@ int DaemonCore::HandleReq(int socki)
 
 				// grab the user out of the policy.
 				if (the_policy) {
-					string the_user;
+					std::string the_user;
 					the_policy->EvaluateAttrString( ATTR_SEC_USER, the_user);
 
 					if (the_user != "") {
@@ -2744,7 +2744,7 @@ int DaemonCore::HandleReq(int socki)
 
 					if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
 
-						string crypto_method;
+						std::string crypto_method;
 						if (!the_policy->EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
 							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
 							result = FALSE;
@@ -2867,7 +2867,7 @@ int DaemonCore::HandleReq(int socki)
 
 					// we know the ..METHODS_LIST attribute exists since it was put
 					// in by us.  pre 6.5.0 protocol does not put it in.
-					string auth_methods;
+					std::string auth_methods;
 					the_policy->EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods);
 
 					if (auth_methods == "") {
@@ -3009,7 +3009,7 @@ int DaemonCore::HandleReq(int socki)
 					}
 
 					// extract the session duration
-					string dur;
+					std::string dur;
 					the_policy->EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur);
 
 					int expiration_time = time(0) + atoi(dur.data());

@@ -205,7 +205,11 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
-	ClassAdLookupRegister( process_global_query, this );
+    // This function existed as part of Condor before we had new ClassAds
+    // It doesn't exist anymore. It's also not used--Doug added it for his
+    // research. We may want something like it in the future, but we don't
+    // need it. So for now, we comment it out.
+	// ClassAdLookupRegister( process_global_query, this );
 
 	forkQuery.Initialize( );
 }
