@@ -26,6 +26,7 @@
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_daemon_client.h"
 #include "condor_classad.h"
 #include "reli_sock.h"
 #include "baseshadow.h"
@@ -91,14 +92,6 @@ class RemoteResource : public Service {
 		*/
 	RemoteResource( BaseShadow *shadow );
 
-		/** Constructor with parameters.
-			@param shadow A pointer to the shadow which created this instance.
-			@param executingHost The sinful string for the remote startd.
-			@param capability The capability that the remote startd wants.
-		*/
-	RemoteResource( BaseShadow *shadow, const char * executingHost, 
-					const char * capability );
-
 		/// Destructor
 	virtual ~RemoteResource();
 
@@ -136,11 +129,6 @@ class RemoteResource : public Service {
 		*/
 	virtual int handleSysCalls( Stream *sock );
 
-		/** Return the sinful string of the remote host.
-			@param executingHost Will contain the host's sinful string.
-		*/ 
-	void getExecutingHost( char *& executingHost );
-
 		/** Return the machine name of the remote host.
 			@param machineName Will contain the host's machine name.
 		*/ 
@@ -156,15 +144,25 @@ class RemoteResource : public Service {
 		*/
 	void getUidDomain( char *& uidDomain );
 
-		/** Return the capability for talking to the host.
-			@param capability Will contain the capability for the host.
-		*/ 
-	void getCapability( char *& capability );
-	
 		/** Return the sinful string of the starter.
 			@param starterAddr Will contain the starter's sinful string.
 		*/
 	void getStarterAddress( char *& starterAddr );
+
+		/** Return the sinful string of the remote startd.
+			@param sinful Will contain the host's sinful string.  If
+			NULL, this will be a string allocated with new().  If
+			sinful already exists, we assume it's a buffer and print
+			into it.
+       */ 
+   void getStartdAddress( char *& sinful );
+
+		/** Return the capability string of the remote startd.
+			@param cap Will contain the capability string.  If NULL,
+			this will be a string allocated with new().  If cap
+			already exists, we assume it's a buffer and print into it.
+       */
+   void getCapability( char *& cap );
 
 		/** Return the arch string of the starter.
 			@param arch Will contain the starter's arch string.
@@ -191,15 +189,12 @@ class RemoteResource : public Service {
 		*/ 
 	int  getExitStatus();
 	
-		/** Set the sinful string for this host.
-			@param executingHost The sinful string for this host.
+		/** Set the sinful string and capability for the startd
+			associated with this remote resource.
+			@param sinful The sinful string for the startd
+			@param capability The capability string for the startd
 		*/
-	void setExecutingHost( const char *executingHost );
-
-		/** Set the capability for this host.
-			@param cabability The capability of this host.
-		*/
-	void setCapability( const char *capability );
+	void setStartdInfo( const char *sinful, const char* capability );
 
 		/** Set the address (sinful string).
 			@param The starter's sinful string 
@@ -294,13 +289,6 @@ class RemoteResource : public Service {
 
  protected:
 
-		/** Set the claimSock associated with this host.  
-			XXX is this needed at all?  Time will tell.
-			@param claimSock The socket used for communication with
-			                 this host.
-		*/
-	void setClaimSock( ReliSock* claimSock);
-
 		/** The jobAd for this resource.  Why is this here and not
 			in the shadow?  Well...if we're an MPI job, say, and we
 			want the different nodes to have a slightly different ad
@@ -309,15 +297,13 @@ class RemoteResource : public Service {
 	ClassAd *jobAd;
 
 		/* internal data: if you can't figure the following out.... */
-	char *executingHost;
 	char *machineName;
-	char *capability;
 	char *starterAddress;
 	char *starterArch;
 	char *starterOpsys;
 	char *fs_domain;
 	char *uid_domain;
-	ReliSock *claimSock;
+	ReliSock *claim_sock;
 	int exitReason;
 	int exitStatus;
 
@@ -336,12 +322,11 @@ class RemoteResource : public Service {
 	int 			image_size;
 	int 			disk_usage;
 
+	DCStartd* dc_startd;
+
 	ResourceState state;
 
  private:
-
-		// initialization done in both constructors.
-	void init ( BaseShadow *shad );
 
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for
