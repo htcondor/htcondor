@@ -875,17 +875,17 @@ dc_config_auth()
         sprintf( buffer, "X509_RUN_AS_SERVER=1");
         putenv (strdup(buffer));
 
-        sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
-        putenv( strdup( buffer ) );
+        //sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
+        //putenv( strdup( buffer ) );
 
-        sprintf( buffer, "%s=%s/usercert.pem", STR_GSI_USER_CERT, pbuf);
-        putenv( strdup ( buffer ) );
+        //sprintf( buffer, "%s=%s/usercert.pem", STR_GSI_USER_CERT, pbuf);
+        //putenv( strdup ( buffer ) );
 
-        sprintf(buffer,"%s=%s/userkey.pem",STR_GSI_USER_KEY,pbuf);
-        putenv( strdup ( buffer  ) );
+        //sprintf(buffer,"%s=%s/userkey.pem",STR_GSI_USER_KEY,pbuf);
+        //putenv( strdup ( buffer  ) );
 
-        sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
-        putenv( strdup ( buffer ) );
+        //sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
+        //putenv( strdup ( buffer ) );
 
         free(pbuf);
     }
