@@ -40,43 +40,83 @@ int Condor_Auth_Claim :: authenticate(const char * remoteHost)
 {
     int retval = 0;
     char *tmpOwner = NULL;
+	int fail = 0;
     
     if ( mySock_->isClient() ) {
         mySock_->encode();
         if ( tmpOwner = my_username() ) {
             //send 1 and then username
             retval = 1;
-            mySock_->code( retval );
-            mySock_->code( tmpOwner );
+            if (!mySock_->code( retval ) || 
+            	!mySock_->code( tmpOwner ))
+			{ 
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				free(tmpOwner);
+				return fail; 
+			}
             setRemoteUser( tmpOwner );
             free( tmpOwner );
-            mySock_->end_of_message();
+            if (!mySock_->end_of_message()) { 
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				return fail;
+			}
             mySock_->decode();
-            mySock_->code( retval );
+            if (!mySock_->code( retval )) {
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				return fail; 
+			}
         } else {
             //send 0
-            mySock_->code( retval );
+            if (!mySock_->code( retval )) { 
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				return fail; 
+			}
         }
     } else { //server side
         mySock_->decode();
-        mySock_->code( retval );
+        if (!mySock_->code( retval )) { 
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+				__FUNCTION__, __LINE__);
+			return fail; 
+		}
         //if 1, receive owner and send back ok
         if( retval == 1 ) {
-            mySock_->code( tmpOwner );
-            mySock_->end_of_message();
+            if (!mySock_->code( tmpOwner ) ||
+            	!mySock_->end_of_message())
+			{
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				if (tmpOwner != NULL)
+				{
+					free(tmpOwner);
+				}
+				return fail;
+			}
             mySock_->encode();
             if( tmpOwner ) {
                 retval = 1;
                 setRemoteUser( tmpOwner );
-                delete [] tmpOwner;
+				free(tmpOwner);
             } else {
                 retval = 0;
             }
-            mySock_->code( retval );
+            if (!mySock_->code( retval )) { 
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+					__FUNCTION__, __LINE__);
+				return fail;
+			}
         }
     }
     
-    mySock_->end_of_message();
+    if (!mySock_->end_of_message()) { 
+		dprintf(D_SECURITY, "Protocol failure at %s, %d!\n", 
+			__FUNCTION__, __LINE__);
+		return fail; 
+	}
     return retval;
 }
 

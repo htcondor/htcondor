@@ -45,30 +45,69 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
     int fd = -1;
     char *owner = NULL;
     int retval = -1;
+	int fail = -1 == 0;
     
     if ( mySock_->isClient() ) {
         if ( remote_ ) {
             //send over the directory
             mySock_->encode();
-            mySock_->code( RendezvousDirectory );
-            mySock_->end_of_message();
+            if (!mySock_->code( RendezvousDirectory ) ||
+            	!mySock_->end_of_message())
+			{
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+					__FUNCTION__, __LINE__);
+				return fail; 
+			}
         }
         mySock_->decode();
-        mySock_->code( new_file );
+        if (!mySock_->code( new_file )) { 
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+			return fail; 
+		}
         if ( new_file ) {
+			/* XXX hope we aren't root when we do this test */
             fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
-            ::close(fd);
+			if (fd >= 0) {
+            	::close(fd);
+			}
         }
-        mySock_->end_of_message();
+        if (!mySock_->end_of_message()) { 
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+        	if ( new_file ) {
+            	unlink( new_file ); /* XXX hope we aren't root */
+            	free( new_file );
+        	}
+			return fail; 
+		}
         mySock_->encode();
         //send over fd as a success/failure indicator (-1 == failure)
-        mySock_->code( fd );
-        mySock_->end_of_message();
+        if (!mySock_->code( fd ) || 
+        	!mySock_->end_of_message()) 
+		{
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+        	if ( new_file ) {
+            	unlink( new_file ); /* XXX hope we aren't root */
+            	free( new_file );
+        	}
+			return fail; 
+		}
         mySock_->decode();
-        mySock_->code( retval );
-        mySock_->end_of_message();
+        if (!mySock_->code( retval ) || 
+       		!mySock_->end_of_message()) 
+		{ 
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+        	if ( new_file ) {
+            	unlink( new_file ); /* XXX hope we aren't root */
+            	free( new_file );
+        	}
+			return fail; 
+		}
         if ( new_file ) {
-            unlink( new_file );
+            unlink( new_file ); /* XXX hope we aren't root */
             free( new_file );
         }
     }
@@ -78,8 +117,13 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
         if ( remote_ ) {
 	    //get RendezvousDirectory from client
             mySock_->decode();
-            mySock_->code( RendezvousDirectory );
-            mySock_->end_of_message();
+            if (!mySock_->code( RendezvousDirectory ) ||
+            	!mySock_->end_of_message()) 
+			{ 
+				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+					__FUNCTION__, __LINE__);
+				return fail; 
+			}
             dprintf(D_FULLDEBUG,"RendezvousDirectory: %s\n", RendezvousDirectory );
             new_file = tempnam( RendezvousDirectory, "qmgr_");
         }
@@ -89,11 +133,25 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
         //now, send over filename for client to create
         // man page says string returned by tempnam has been malloc()'d
         mySock_->encode();
-        mySock_->code( new_file );
-        mySock_->end_of_message();
+        if (!mySock_->code( new_file ) ||
+        	!mySock_->end_of_message())
+		{
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+			if (new_file != NULL) {
+				free(new_file);
+			}
+			return fail;
+		}
         mySock_->decode();
-        mySock_->code( fd );
-        mySock_->end_of_message();
+        if (!mySock_->code( fd ) ||
+        	!mySock_->end_of_message())
+		{
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+			free(new_file);
+			return fail;
+		}
         mySock_->encode();
         
         retval = 0;
@@ -129,8 +187,14 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
                     new_file ? new_file : "(null)" );
         }
         
-        mySock_->code( retval );
-        mySock_->end_of_message();
+        if (!mySock_->code( retval ) || 
+        	!mySock_->end_of_message())
+		{
+			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
+				__FUNCTION__, __LINE__);
+			free(new_file);
+			return fail;
+		}
         free( new_file );
     }
     dprintf( D_FULLDEBUG, "authentcate_filesystem%s status: %d\n", 
