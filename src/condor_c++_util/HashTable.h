@@ -140,6 +140,10 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
 {
   int temp;
   int idx = hashfcn(index, tableSize);
+  // do sanity check on return value from hash func
+  if ( (idx < 0) || (idx >= tableSize) ) {
+    return -1;
+  }
 
   HashBucket<Index, Value> *bucket;
   if (!(bucket = new HashBucket<Index, Value>)) {
@@ -177,6 +181,10 @@ template <class Index, class Value>
 int HashTable<Index,Value>::lookup(const Index &index, Value &value)
 {
   int idx = hashfcn(index, tableSize);
+  // do sanity check on return value from hash func
+  if ( (idx < 0) || (idx >= tableSize) ) {
+    return -1;
+  }
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -205,6 +213,10 @@ template <class Index, class Value>
 int HashTable<Index,Value>::lookup(const Index &index, Value* &value )
 {
   int idx = hashfcn(index, tableSize);
+  // do sanity check on return value from hash func
+  if ( (idx < 0) || (idx >= tableSize) ) {
+    return -1;
+  }
 
   HashBucket<Index, Value> *bucket = ht[idx];
   while(bucket) {
@@ -240,6 +252,10 @@ int HashTable<Index,Value>::getNext(Index &index, void *current,
 
   if (!current) {
     int idx = hashfcn(index, tableSize);
+  	// do sanity check on return value from hash func
+  	if ( (idx < 0) || (idx >= tableSize) ) {
+   		return -1;
+  	}
     bucket = ht[idx];
   } else {
     bucket = (HashBucket<Index, Value> *)current;
@@ -270,6 +286,11 @@ int HashTable<Index,Value>::remove(const Index &index)
 {
   	int idx = hashfcn(index, tableSize);
 	int i;
+
+  	// do sanity check on return value from hash func
+  	if ( (idx < 0) || (idx >= tableSize) ) {
+   		return -1;
+  	}
 
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
