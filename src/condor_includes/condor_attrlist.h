@@ -128,9 +128,9 @@ class AttrList : public AttrListAbstract
 		AttrList& operator=(const AttrList& other);
 
 		// insert expressions into the ad
-        int        	Insert(char*);			// insert at the tail
+        int        	Insert(const char*);	// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
-		int			InsertOrUpdate(char*expr) { return Insert(expr); }
+		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
