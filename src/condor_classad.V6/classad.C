@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "caseSensitivity.h"
 #include "condor_string.h"
 #include "classad.h"
 
@@ -34,7 +33,6 @@ ClassAd () : attrList( 32 )
 	// initialize additional internal state
 	schema = NULL;
 	last = 0;
-	parentScope = NULL;
 }
 
 
@@ -55,7 +53,6 @@ ClassAd (char *domainName) : attrList( 32 )
 	attr.expression = NULL;
 	attrList.fill (attr);
 	last = 0;	
-	parentScope = NULL;
 }
 
 
@@ -65,7 +62,8 @@ ClassAd (const ClassAd &ad) : attrList( 32 )
 	nodeKind = CLASSAD_NODE;
 	schema = ad.schema;
 	last = ad.last;
-	parentScope = ad.parentScope;;
+	parentScope = ad.parentScope;
+	
 
 	for( int i = 0 ; i < last ; i++ ) {
 		if( ad.attrList[i].valid ) {
@@ -136,7 +134,8 @@ insert (char *name, ExprTree *tree)
 	} else {
 		// use the attrlist as a standard unordered list
 		for (index = 0; index < last; index ++) {
-			if (CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name) == 0)
+			// Case insensitive to attribute names
+			if (strcasecmp(attrList[index].attrName, name) == 0)
 				break;
 		}
 		if (index == last) {
@@ -195,12 +194,102 @@ lookup (char *name)
     } else {
         // use the attrlist as a standard unordered list
         for (index = 0; index < last; index ++) {
-            if (CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name) == 0) 
+			// Case insensitive to attribute names
+            if (strcasecmp(attrList[index].attrName, name) == 0) 
 				break;
         }
     }
 
 	return( attrList[index].valid ? attrList[index].expression : 0 );
+}
+
+
+ExprTree *ClassAd::
+lookupInScope( char* name, ClassAd *&ad ) 
+{
+	EvalState	state;
+	ExprTree	*tree;
+	int			rval;
+
+	state.setScopes( this );
+	rval = lookupInScope( name, tree, state );
+	if( rval == EVAL_OK ) {
+		ad = state.curAd;
+		return( tree );
+	}
+
+	ad = NULL;
+	return( NULL );
+}
+
+
+int ClassAd::
+lookupInScope( char* name, ExprTree*& expr, EvalState &state )
+{
+	extern int exprHash( ExprTree* const&, int );
+	HashTable<ExprTree*,bool> superChase( 16, &exprHash );
+	ClassAd 	*current = this, *parent;
+	ExprTree	*super;
+	bool		visited = false;
+	Value		val;
+
+	expr = NULL;
+
+	while( !expr && current ) {
+		// lookups/eval's being done in the 'current' ad
+		state.curAd = current;
+
+		// have we already visited this scope?
+		if( superChase.lookup( current, visited ) < 0 ) {
+			// not yet visited until now --- mark as visited
+			if( superChase.insert( current, true ) < 0 ) {
+				return( EVAL_ERROR );
+			}
+		} else if( visited ) {
+			// have already visited this scope
+			return( EVAL_UNDEF );
+		}
+
+		// lookup in current scope
+		if( ( expr = current->lookup( name ) ) ) {
+			return( EVAL_OK );
+		}
+
+		// not in current scope; try parent
+		if( !( super = lookup( "super" ) ) ) {
+			// no explicit super attribute; get lexical parent
+			parent = current->parentScope;
+		} else {
+			// explicit super attribute
+			if( !super->evaluate( state, val ) ) {
+				return( EVAL_FAIL );
+			}
+
+			if( !val.isClassAdValue( parent ) ) {
+				return( val.isUndefinedValue( ) ? EVAL_UNDEF : EVAL_ERROR );
+			}
+		}
+
+		// Case insensitive to "reserved keywords"
+		if( strcasecmp( name, "super" ) == 0 ) {
+			// if the "super" attribute was requested ...
+			expr = parent;
+			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else if( strcasecmp( name, "toplevel" ) == 0 ) {
+			// if the "toplevel" attribute was requested ...
+			expr = state.rootAd;
+			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else if( strcasecmp( name, "self" ) == 0 ) {
+			// if the "self" ad was requested
+			expr = state.curAd;
+			return( expr ? EVAL_OK : EVAL_UNDEF );
+		} else {
+			// continue searching from the parent scope ...
+			current = parent;
+		}
+	}	
+
+	return( EVAL_UNDEF );
 }
 
 
@@ -219,7 +308,8 @@ remove (char *name)
     } else {
         // use the attrlist as a standard unordered list
         for (index = 0; index < last; index ++) {
-            if( CLASSAD_ATTR_NAMES_STRCMP(attrList[index].attrName, name)==0 ) {
+			// Case insensitive to attribute names
+            if( strcasecmp(attrList[index].attrName, name)==0 ) {
 				free (attrList[index].attrName);
 				attrList[last] = attrList[index];
 				attrList[index]= attrList[last-1];
@@ -243,10 +333,12 @@ remove (char *name)
 
 
 void ClassAd::
-setParentScope( ClassAd* parent )
+_setParentScope( ClassAd* )
 {
-	parentScope = parent;
+	// already set by base class for this node; we shouldn't propagate 
+	// the call to sub-expressions because this is a new scope
 }
+
 
 bool ClassAd::
 toSink (Sink &s)
@@ -328,18 +420,19 @@ _copy( CopyMode cm )
 }
 
 
-void ClassAd::
+bool ClassAd::
 _evaluate( EvalState&, Value& val )
 {
 	val.setClassAdValue( this );
+	return( this );
 }
 
 
-void ClassAd::
+bool ClassAd::
 _evaluate( EvalState&, Value &val, ExprTree *&tree )
 {
 	val.setClassAdValue( this );
-	tree = copy();
+	return( !( tree = copy( ) ) );
 }
 
 
@@ -349,10 +442,10 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 	ClassAd 	*newAd = new ClassAd();
 	Value		eval;
 	ExprTree	*etree;
-	EvalState	intermState;
+	ClassAd		*oldAd;
 
-	intermState.curAd = this;
-	intermState.rootAd = state.rootAd ? state.rootAd : this;
+	oldAd = state.curAd;
+	state.curAd = this;
 
 	for( int i = 0 ; i < last ; i++ ) {
 		if( attrList[i].valid ) {
@@ -364,10 +457,11 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 			}
 
 			// flatten expression
-			if( !attrList[i].expression->flatten( intermState, eval, etree ) ) {
+			if( !attrList[i].expression->flatten( state, eval, etree ) ) {
 				delete newAd;
 				tree = NULL;
 				eval.clear();
+				state.curAd = oldAd;
 				return false;
 			}
 
@@ -378,6 +472,7 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 					delete newAd;
 					tree = NULL;
 					eval.clear();
+					state.curAd = oldAd;
 					return false;
 				}
 			}
@@ -393,7 +488,7 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 
 	newAd->last = last;
 	tree = newAd;
-
+	state.curAd = oldAd;
 	return true;
 }
 
@@ -419,20 +514,30 @@ augmentFromSource (Source &s, ClassAd &ad)
 }
 
 
-void ClassAd::
+bool ClassAd::
 evaluateAttr( char *attr , Value &val )
 {
 	EvalState	state;
 	ExprTree	*tree;
 
-	state.curAd  = this;
-	state.rootAd = this;
+	state.setScopes( this );
+	switch( lookupInScope( attr, tree, state ) ) {	
+		case EVAL_FAIL:
+			return false;
 
-	if( ( tree = lookup( attr ) ) ) {
-		tree->evaluate( state , val );
-		return;
-	} else {
-		val.setUndefinedValue();
+		case EVAL_OK:
+			return( tree->evaluate( state , val ) );
+
+		case EVAL_UNDEF:
+			val.setUndefinedValue( );
+			return( true );
+
+		case EVAL_ERROR:
+			val.setErrorValue( );
+			return( true );
+
+		default:
+			return false;
 	}
 }
 
@@ -440,8 +545,9 @@ evaluateAttr( char *attr , Value &val )
 bool ClassAd::
 evaluateExpr( char *expr , Value &val , int len )
 {
-	static Source	src;
-	ExprTree		*tree;
+	Source		src;
+	ExprTree	*tree;
+	bool		rval;
 
 	if( len == -1 ) len = strlen( expr );
 	src.setSource( expr , len );
@@ -450,78 +556,70 @@ evaluateExpr( char *expr , Value &val , int len )
 		val.setErrorValue();
 		return false;
 	}
-	evaluateExpr( tree , val );
+	rval = evaluateExpr( tree , val );
 	delete tree;
-	return true;	
+	return( rval );	
 }
 
 
-void ClassAd::
+bool ClassAd::
 evaluateExpr( ExprTree *tree , Value &val )
 {
 	EvalState	state;
 
-	state.curAd  = this;
-	state.rootAd = this;
-	tree->evaluate( state , val );
+	state.setScopes( this );
+	return( tree->evaluate( state , val ) );
 }
 
-void ClassAd::
+bool ClassAd::
 evaluateExpr( ExprTree *tree , Value &val , ExprTree *&sig )
 {
 	EvalState	state;
 
-	state.curAd  = this;
-	state.rootAd = this;
-	tree->evaluate( state , val , sig );
+	state.setScopes( this );
+	return( tree->evaluate( state , val , sig ) );
 }
 
 bool ClassAd::
 evaluateAttrInt( char *attr, int &i ) 
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isIntegerValue( i ) );
+	return( evaluateAttr( attr, val ) && val.isIntegerValue( i ) );
 }
 
 bool ClassAd::
 evaluateAttrReal( char *attr, double &r ) 
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isRealValue( r ) );
+	return( evaluateAttr( attr, val ) && val.isRealValue( r ) );
 }
 
 bool ClassAd::
 evaluateAttrNumber( char *attr, int &i ) 
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isNumber( i ) );
+	return( evaluateAttr( attr, val ) && val.isNumber( i ) );
 }
 
 bool ClassAd::
 evaluateAttrNumber( char *attr, double &r ) 
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isNumber( r ) );
+	return( evaluateAttr( attr, val ) && val.isNumber( r ) );
 }
 
 bool ClassAd::
 evaluateAttrString( char *attr, char *buf, int len )
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isStringValue( buf, len ) );
+	return( evaluateAttr( attr, val ) && val.isStringValue( buf, len ) );
 }
 
 bool ClassAd::
 evaluateAttrString( char *attr, char *&str )
 {
 	Value val;
-	evaluateAttr( attr, val );
-	return( val.isStringValue( str ) );
+	return( evaluateAttr( attr, val ) && val.isStringValue( str ) );
 }
 
 bool ClassAd::
@@ -529,8 +627,7 @@ flatten( ExprTree *tree , Value &val , ExprTree *&fexpr )
 {
 	EvalState	state;
 
-	state.curAd  = this;
-	state.rootAd = this;
+	state.setScopes( this );
 	return( tree->flatten( state , val , fexpr ) );
 }
 
@@ -557,6 +654,18 @@ previousAttribute (char *&attr, ExprTree *&expr)
     index--;
     while (index > -1 && !(ad->attrList[index].valid)) index--;
     if (index == -1) return false;
+	attr = (ad->schema) ? ad->attrList[index].canonicalAttrName.getCharString()
+					: ad->attrList[index].attrName;
+    expr = ad->attrList[index].expression;
+	return true;	
+}
+
+
+bool ClassAdIterator::
+currentAttribute (char *&attr, ExprTree *&expr)
+{
+	if (!ad || !ad->attrList[index].valid ) return false;
+
 	attr = (ad->schema) ? ad->attrList[index].canonicalAttrName.getCharString()
 					: ad->attrList[index].attrName;
     expr = ad->attrList[index].expression;
