@@ -86,6 +86,7 @@ void JavaInfo::query_create()
 {
 	char java[_POSIX_PATH_MAX];
 	char java_args[_POSIX_ARG_MAX];
+	char real_args[_POSIX_ARG_MAX];
 	int output_fd=-1, error_fd=-1;
 	int fds[3];
 
@@ -128,7 +129,7 @@ void JavaInfo::query_create()
 	fds[1] = output_fd;
 	fds[2] = error_fd;
 
-	sprintf(args,"%s %s %s CondorJavaInfo old",java,classpath_argument,classpath);
+	sprintf(real_args,"%s %s CondorJavaInfo old",java,java_args);
 
 	/*
 	We must run this as a normal user.
@@ -140,7 +141,7 @@ void JavaInfo::query_create()
 
 	init_user_ids("nobody");
 
-	query_pid = daemonCore->Create_Process(java,args,PRIV_USER_FINAL,reaper_id,
+	query_pid = daemonCore->Create_Process(java,real_args,PRIV_USER_FINAL,reaper_id,
 		FALSE,NULL,NULL,FALSE,NULL,fds);
 	if(query_pid==FALSE) {
 		dprintf( D_ALWAYS, "JavaInfo: Unable to create query process!\n" );
