@@ -63,6 +63,8 @@ PermString( DCpermission perm )
 		return "OWNER";
 	case CONFIG_PERM:
 		return "CONFIG";
+	default:
+		return "Unknown";
 	}
 	return "Unknown";
 };
