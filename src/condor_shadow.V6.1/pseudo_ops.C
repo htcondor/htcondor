@@ -30,6 +30,7 @@
 #include "shadow.h"
 #include "pseudo_ops.h"
 #include "exit.h"
+#include "condor_version.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -57,6 +58,14 @@ pseudo_get_job_info(ClassAd *&ad)
 	ASSERT( the_ad );
 
 	thisRemoteResource->filetrans.Init( the_ad, true, PRIV_USER );
+
+	// let the starter know the version of the shadow
+	int size = 10 + strlen(CondorVersion()) + strlen(ATTR_SHADOW_VERSION);
+	char *shadow_ver = (char *) malloc(size);
+	ASSERT(shadow_ver);
+	sprintf(shadow_ver,"%s=\"%s\"",ATTR_SHADOW_VERSION,CondorVersion());
+	the_ad->Insert(shadow_ver);
+	free(shadow_ver);
 
 	ad = the_ad;
 	return 0;
