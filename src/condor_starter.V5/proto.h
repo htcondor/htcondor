@@ -42,7 +42,6 @@ extern "C" {
 	void InitStaticFile( int, int );
 	void set_debug_flags( char * );
 	ReliSock *RSC_Init( int rscsock, int errsock );
-	int xdr_proc( XDR *xdrs, PROC *proc );
 	int get_file( char *remote, char *local, int mode );
 	int send_file( char *local_name, char *remote_name, int mode );
 }
