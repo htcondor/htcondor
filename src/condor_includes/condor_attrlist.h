@@ -61,7 +61,9 @@ class AttrListElem
     private :
 
         ExprTree*		tree;	// the tree pointed to by this element
-		int				dirty;	// has this tree been changed?
+	    // The dirty flag has been removed to save memory, since
+	    // it seems that it is never used. 
+	    //int				dirty;	// has this tree been changed?
 		char*			name;	// the name of the tree
         class AttrListElem*	next;	// next element in the list
 };
@@ -128,8 +130,8 @@ class AttrList : public AttrListAbstract
         int			Delete(const char*); 	// delete the expr with the name
 
 		// to update expression trees
-		void		ResetFlags();			// reset the all the dirty flags
 #if 0
+		void		ResetFlags();			// reset the all the dirty flags
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 		int			UpdateExpr(ExprTree*);
 #endif
