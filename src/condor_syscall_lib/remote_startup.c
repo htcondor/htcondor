@@ -156,10 +156,17 @@
 #include "condor_file_info.h"
 static char *_FileName_ = __FILE__;
 
+#ifndef TRUE
+#define TRUE 1
+#endif
 
-const int TRUE = 1;
-const int FALSE = 0;
-const int MATCH = 0; /* for strcmp */
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#ifndef MATCH
+#define MATCH 0   /* for strcmp */
+#endif
 
 enum result { NOT_OK = 0, OK = 1, END };
 
