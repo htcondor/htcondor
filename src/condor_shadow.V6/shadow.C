@@ -790,8 +790,9 @@ Wrapup( )
      * should go.  this info is in the classad, and must be gotten from the
      * Qmgr *before* the job status is updated (i.e., classad is dequeued).
      */
-    if (!ConnectQ (schedd, SHADOW_QMGMT_TIMEOUT))
+    if (!ConnectQ (schedd, SHADOW_QMGMT_TIMEOUT)) {
 		EXCEPT("Failed to connect to schedd!");
+	}
     if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                 email_addr))
     {
@@ -853,8 +854,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	float stime = 0.0;
 
 	//new syntax, can use filesystem to authenticate
-	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT))
+	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
 		EXCEPT("Failed to connect to schedd!");
+	}
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 
 	if( status == REMOVED ) {
@@ -1033,8 +1035,9 @@ start_job( char *cluster_id, char *proc_id )
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
-	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true))
+	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
 		EXCEPT("Failed to connect to schedd!");
+	}
 #ifdef CARMI_OPS
 	if (GetProc(cluster_num, proc_num, &(Proc->proc)) < 0) {
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
@@ -1139,8 +1142,9 @@ DoCleanup()
 	}
 
 	if( Proc->id.cluster ) {
-		if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT))
+		if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
 			EXCEPT("Failed to connect to schedd!");
+		}
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 ATTR_JOB_STATUS, &status);
 
