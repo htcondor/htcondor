@@ -48,7 +48,6 @@ gss_cred_id_t AuthSock::credential_handle = GSS_C_NO_CREDENTIAL;
 
 /*******************************************************************/
 
-/* CHANGE this to do SOME kind of user/server name lookup */
 int 
 AuthSock::lookup_user( char *client_name ) { 
 	/* return -1 for error */
@@ -56,7 +55,8 @@ AuthSock::lookup_user( char *client_name ) {
 	char command[MAXPATHLEN+32];
 
 	sprintf( filename, "%s/index.txt", getenv( "X509_CERT_DIR" ) );
-	sprintf( command, "grep 'V.*%s' %s", client_name, filename );
+//fix this to do a better job, this is just a quick hack!
+	sprintf( command, "grep -q 'V.*%s' %s", client_name, filename );
 
 	if ( system( command ) ) {
 		dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
@@ -196,9 +196,9 @@ AuthSock::auth_connection_client()
 		return FALSE;
 	}
 
-	authComms.sock = this;
-	authComms.buffer = NULL;
-	authComms.size = 0;
+//	authComms.sock = this;
+//	authComms.buffer = NULL;
+//	authComms.size = 0;
 
 	major_status = globus_gss_assist_init_sec_context(&minor_status,
 		  credential_handle, &context_handle,
@@ -217,12 +217,15 @@ AuthSock::auth_connection_client()
 		return FALSE;
 	}
 
+//	decode();
+//	code( GSSClientname );
+//	end_of_message();
+
 	/* 
 	 * once connection is authenticated, don't need sec_context any more
 	 * ???might need sec_context for PROXIES???
 	 */
 	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
-
 
 	conn_auth_state = auth_cert;
 	return TRUE;
@@ -232,7 +235,6 @@ AuthSock::auth_connection_client()
 int 
 AuthSock::auth_connection_server( AuthSock &authsock)
 {
-	char *client_name = NULL;
 	int rc;
 	OM_uint32 major_status = 0;
 	OM_uint32 minor_status = 0;
@@ -245,15 +247,18 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 			"failure authenticating server from auth_connection_server\n" );
 		return FALSE;
 	}
+	if ( authsock.GSSClientname ) 
+		free ( GSSClientname );
+	authsock.GSSClientname = NULL;
 	 
 //get rid of authComms, it's no longer used
-	authComms.sock = &authsock;
-	authComms.buffer = NULL;
-	authComms.size = 0;
+//	authComms.sock = &authsock;
+//	authComms.buffer = NULL;
+//	authComms.size = 0;
 
 	major_status = globus_gss_assist_accept_sec_context(&minor_status,
 				 &context_handle, credential_handle,
-				 &client_name,
+				 &authsock.GSSClientname,
 				 &ret_flags, NULL, /* don't need user_to_user */
 				 &token_status,
 				 authsock_get, (void *) &authComms,
@@ -262,7 +267,7 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 
 
 	if ( (major_status != GSS_S_COMPLETE) ||
-			( ( lookup_user( client_name ) ) < 0 ) ) 
+			( ( lookup_user( authsock.GSSClientname ) ) < 0 ) ) 
 	{
 		if (major_status != GSS_S_COMPLETE) {
 			dprintf(D_ALWAYS, "server: GSS authentication failure, status:0x%x\n",
@@ -270,19 +275,22 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 		}
 		else
 			dprintf( D_ALWAYS, "server: user lookup failure.\n:" );
-		if ( client_name )
-			free( client_name );
+		if ( authsock.GSSClientname ) {
+			free( authsock.GSSClientname );
+			authsock.GSSClientname = NULL;
+		}
 		return FALSE;
 	}
+
+//	authsock.encode();
+//	authsock.code( authsock.GSSClientname );
+//	authsock.end_of_message();
 
 	/* 
 	 * once connection is authenticated, don't need sec_context any more
 	 * ???might need sec_context for PROXIES???
 	 */
 	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
-
-	if ( client_name )
-		free( client_name );
 
 	authsock.Set_conn_auth_state( auth_cert );
 	return TRUE;
@@ -346,6 +354,7 @@ AuthSock::AuthSock(
 /*******************************************************************/
 AuthSock::~AuthSock()
 {
+	if ( GSSClientname ) free ( GSSClientname );
 	close();
 }
 
@@ -411,6 +420,7 @@ int AuthSock::authenticate() {
 void AuthSock::auth_setup() {
 	authComms.buffer = NULL;
 	authComms.size = 0;
+GSSClientname = NULL;
 }
 
 #endif //#!defined GSS_AUTHENTICATION
