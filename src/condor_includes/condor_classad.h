@@ -14,7 +14,6 @@
 #include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
-#include "proc_obj.h"
 #include "condor_attrlist.h"
 
 #define		CLASSAD_MAX_ADTYPE			50
@@ -37,7 +36,7 @@ class ClassAd : public AttrList
     public :
 
 		ClassAd();								// No associated AttrList list
-		ClassAd(ProcObj*);						// create from a proc object
+//		ClassAd(ProcObj*);						// create from a proc object
 		ClassAd(const CONTEXT*);				// create from a CONTEXT
         ClassAd(FILE *, char *, int &);			// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.

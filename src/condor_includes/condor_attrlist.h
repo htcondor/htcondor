@@ -13,7 +13,6 @@
 #include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
-#include "proc_obj.h"
 
 //for the shipping functions
 #include <rpc/types.h>
@@ -94,7 +93,7 @@ class AttrList : public AttrListAbstract
 		AttrList();							// No associated AttrList list
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE *, char *, int &);	// Constructor, read from file.
-		AttrList(class ProcObj*);			// create from a proc object
+//		AttrList(class ProcObj*);			// create from a proc object
 		AttrList(CONTEXT*);					// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.
         AttrList(AttrList&);				// copy constructor

@@ -81,6 +81,7 @@ ClassAd::ClassAd() : AttrList()
 	SetRequirements ("Requirements = TRUE");
 }
 
+#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
 ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 {
 	myType = NULL;
@@ -88,6 +89,7 @@ ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
     SetRankExpr ("Rank = 0");
 	SetRequirements ("Requirements = TRUE");
 }
+#endif
 
 ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {

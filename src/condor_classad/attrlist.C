@@ -319,6 +319,7 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 
 ExprTree* ProcToTree(char*, LexemeType, int, float, char*);
 
+#if 0 /* don't want to link with ProcObj class; we shouldn't need this */
 ////////////////////////////////////////////////////////////////////////////////
 // Create a AttrList from a proc object.
 ////////////////////////////////////////////////////////////////////////////////
@@ -410,6 +411,7 @@ AttrList::AttrList(ProcObj* procObj) : AttrListAbstract(ATTRLISTENTITY)
 	}
 	Insert(tmpTree);
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Converts a (key word, value) pair from a proc structure to a tree.
