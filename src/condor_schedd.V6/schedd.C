@@ -714,6 +714,7 @@ Scheduler::negotiate(int, Stream* s)
 		{
 			dprintf( D_FULLDEBUG, "Job %d.%d skipped ---  belongs to %s\n", 
 				PrioRec[i].id.cluster, PrioRec[i].id.proc, tmpstr);
+			jobs--;
 			continue;
 		}
 
@@ -1013,6 +1014,7 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 
         default:    /* the parent */
 
+			dprintf(D_FULLDEBUG,"Forked Agent with pid=%d for job=%d.%d\n",pid,jobId->cluster,jobId->proc);
             mrec->agentPid = pid;
 			FreeJobAd(jobAd);
 			delete jobAdCopy;	// THREAD SHARED MEMORY WARNING
@@ -1189,6 +1191,7 @@ void Scheduler::StartJobHandler() {
 		if (!mrec) {
 			dprintf(D_ALWAYS,"match for job %d.%d was deleted - not forking a shadow\n",job_id->cluster,job_id->proc);
 			mark_job_stopped(job_id);
+			delete srec;
 		}
 	}
 
@@ -1257,6 +1260,7 @@ void Scheduler::StartJobHandler() {
 				dprintf(D_ALWAYS, "fork() failed, errno = %d\n" );
 			}
 			mark_job_stopped(job_id);
+			delete srec;
 			break;
 		case 0:		/* the child */
 			
@@ -1650,7 +1654,6 @@ Scheduler::delete_shadow_rec(int pid)
 	}
 	dprintf( D_ALWAYS, "Exited delete_shadow_rec( %d )\n", pid );
 }
-
 
 void
 Scheduler::mark_job_running(PROC_ID* job_id)
@@ -2170,6 +2173,9 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                                                 pid, WTERMSIG(status) );
             }
 			delete_shadow_rec( pid );
+		} else {
+			// mrec and srec are NULL - agent dies after deleting match
+			StartJobsFlag=FALSE;
         }  // big if..else if...
     } // for loop
     if( sig == 0 ) {
