@@ -2,23 +2,45 @@
 use CondorTest;
 
 $cmd = 'job_core_streamerr-true_van.cmd';
+$err = 'job_core_streamerr-true_van.err';
 $testname = 'Environment is preserved - vanilla U';
 
+$submitted = sub
+{
+	my %info = @_;
+	my $name = $info{"error"};
+	system("rm $name");
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. file streaming error file broken!\n";
+};
 
 $execute = sub
 {
 	my %info = @_;
 	my $name = $info{"error"};
+	CondorTest::RegisterTimed($testname, $timed, 180);
 	my $size1 = -s $name;
-	print "Size 1 of $name is $size1\n";
-	sleep 2;
-	my $size2 = -s $name;
-	print "Size 2 of $name is $size2\n";
-	if( $size1 == $size2 )
+	#print "Size 1 of $name is $size1\n";
+
+	while( $size1 == 0 )
 	{
-		print "Error size should vary if streaming\n";
-		exit(1);
+		$size1 = -s $name;
+		#print "Size 1 of $name is $size1\n";
 	}
+	print "Size 1 of $name is $size1\n";
+
+	my $size2 = -s $name;
+	#print "Size 2 of $name is $size2\n";
+	while( $size1 == $size2 )
+	{
+		#print "keep checking: size should vary if streaming\n";
+		$size2 = -s $name;
+		#print "Size 2 of $name is $size2\n";
+	}
+	print "Size 2 of $name is $size2\n";
 };
 
 $ExitSuccess = sub {
@@ -30,6 +52,7 @@ $ExitSuccess = sub {
 
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterSubmit( $testname, $submitted );
 
 #empty local environment and add only a few things that way......
 my $path = $ENV{"PATH"};

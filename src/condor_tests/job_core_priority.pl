@@ -15,6 +15,8 @@ while(<OLDOUT>)
 	print NEWOUT "$_\n";
 }
 print NEWOUT "$arg\n";
+# make it run long enough to remove overhead variance
+# from matching to running
 sleep 40;
 
 close(OLDOUT);

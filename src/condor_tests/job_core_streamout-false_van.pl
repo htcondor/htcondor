@@ -4,14 +4,24 @@ use CondorTest;
 $cmd = 'job_core_streamout-false_van.cmd';
 $testname = 'Environment is preserved - vanilla U';
 
+$timed = sub
+{
+	die "Test should have eneded by now.... stuck!\n";
+};
 
 $execute = sub
 {
 	my %info = @_;
 	my $name = $info{"output"};
+	CondorTest::RegisterTimed($testname, $timed, 180);
 	my $size1 = -s $name;
+	#print "Size 1 of $name is $size1\n";
+	while($size1 == 0)
+	{
+		#print "Size 1 of $name is $size1\n";
+		$size1 = -s $name;
+	}
 	print "Size 1 of $name is $size1\n";
-	sleep 2;
 	my $size2 = -s $name;
 	print "Size 2 of $name is $size2\n";
 	if( $size1 != $size2 )

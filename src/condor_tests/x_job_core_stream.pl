@@ -3,7 +3,7 @@
 my $target = $ARGV[0];
 my $count = $ARGV[1];
 
-
+sleep 1;
 if( $target eq "stderr" )
 {
 	while( $count > 0 )
