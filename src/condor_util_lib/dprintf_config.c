@@ -93,6 +93,7 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 		} else {
 			DebugFP = fdopen( open_debug_file(O_CREAT|O_WRONLY), "a" );
 		}
+		free(pval); 	/* BUG: Ashish */
 
 		if( DebugFP == NULL ) {
 			EXCEPT("Cannot open log file '%s'", DebugFile);
@@ -114,6 +115,7 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 		pval = param(pname);
 		if( pval != NULL ) {
 			MaxLog = atoi( pval );
+			free(pval);
 		}
 
 		if( MaxLog == 0 ) {
@@ -121,6 +123,11 @@ int logfd;		/* The descriptor to use if the log output goes to a tty */
 		}
 
 		(void)sprintf(pname, "%s_LOCK", subsys);
+		/* BUG FIXED: Harit */
+		if (DebugLock)
+		{
+			free(DebugLock);
+		}
 		DebugLock = param(pname);
 	} else {
 		if( fileno(stderr) != logfd ) {
