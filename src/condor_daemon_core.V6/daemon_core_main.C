@@ -833,8 +833,6 @@ dc_reconfig( bool is_full )
 			EXCEPT("FAILED TO DROP CORE");	
 	}
 
-    dc_reconfig_auth();
-
 	// call this daemon's specific main_config()
 	main_config( is_full );
 }
