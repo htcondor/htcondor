@@ -94,6 +94,7 @@ out					return grab( OUT );
 alloc				return grab( ALLOC );
 return				return grab( RETURN );
 extract				return grab( EXTRACT );
+dl_extract			return grab( DL_EXTRACT );
 pseudo				return grab( PSEUDO );
 not_supported		return grab( NOSUPP );
 ignored				return grab( IGNORE );

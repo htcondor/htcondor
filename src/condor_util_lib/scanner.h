@@ -54,6 +54,7 @@ struct node {
 	int		in_param;
 	int		out_param;
 	int		extract;
+	int		dl_extract;
 	int		pseudo;
 	struct node	*next;
 	struct node *prev;
