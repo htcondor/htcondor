@@ -1,12 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_util_lib
 
-#if IS_V5 || IS_V6
-VFLAG = -DV5
-#else
-VFLAG = -DV4
-#endif
-
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC $(VFLAG) 
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
 #if IS_ALPHA_OSF1
 VIRT_MEM_SRC = virt_mem.Alpha.c
@@ -96,7 +90,7 @@ GETMNT_OBJ = getmnt.o
 	free_fs_blocks.c $(FLOCK_SRC) $(SETREUID_SRC) $(GETDTABLESIZE_SRC) \
 	$(SETRGID_SRC) $(SETREGID_SRC) $(SETEGID_SRC) $(SETEUID_SRC) \
 	$(GETPAGESIZE_SRC) $(SETLINEBUF_SRC) $(GETWD_SRC) $(INSQUE_SRC) \
-	$(MALLOC_SRC) disk_req.c env_param.c ckpt_name.c lock_file.NON_POSIX.c \
+	$(MALLOC_SRC) env_param.c ckpt_name.c lock_file.NON_POSIX.c \
 	my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
 	sig_install.c internet.c startup_info.c get_random_num.c escapes.c\
 	ckpt_server_api_stubs.c ckpt_util.c fdprintf.c setsyscalls.c sleep.c \
@@ -113,7 +107,7 @@ GETMNT_OBJ = getmnt.o
 	$(SETREUID_OBJ) \
 	$(GETDTABLESIZE_OBJ) $(SETRGID_OBJ) $(SETREGID_OBJ) $(MALLOC_OBJ)\
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
-	$(GETWD_OBJ) $(INSQUE_OBJ) disk_req.o env_param.o ckpt_name.o \
+	$(GETWD_OBJ) $(INSQUE_OBJ) env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_server_api_stubs.o ckpt_util.o get_random_num.o fdprintf.o \
