@@ -918,16 +918,14 @@ do this.  This issue will eventually need to be addressed.
 	#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		/* Why is this commented out? */
-		/* in code_bytes_bool( times, TIMEVAL_SIZE );*/
+		in code( times );
 		alloc( times, TIMEVAL_SIZE );
 	}
 
 	int utime( const char *path, const struct utimbuf *buf) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		/* Why is this commented out? */
-		/* in code_bytes_bool( buf, UTIMBUF_SIZE ); */
+		in code( buf );
 		alloc( buf, UTIMBUF_SIZE );
 	}
 #endif /* REMOTE_SYSCALLS and not CLIP */
