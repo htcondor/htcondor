@@ -46,14 +46,6 @@ extern char *Spool;
 extern char* JobHistoryFileName;
 
 extern "C" {
-/*
-	char *gen_ckpt_name(char *, int, int, int);
-	int  RemoveRemoteFile(char *, char *);
-	int	 upDown_GetUserPriority(char*, int*);
-	int	FileExists(char*, char*);
-	char *sin_to_string(struct sockaddr_in *sin);
-	int get_inet_address(struct in_addr* buffer);
-*/
 	int	prio_compar(prio_rec*, prio_rec*);
 }
 
