@@ -1621,6 +1621,11 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char *big_return_buff = new char[16384];
 	big_return_buff[0]='\0';
 
+	ExprTree *rankExpr = request->Lookup( ATTR_RANK );
+	ExprTree *newRankExpr = NULL;
+	request->AddExplicitConditionals( rankExpr, newRankExpr );
+	request->Insert( ATTR_RANK, newRankExpr );
+
 	mad.ReplaceLeftAd( request );	// NAC
 
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
