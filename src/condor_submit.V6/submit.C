@@ -109,6 +109,7 @@ int		ActiveQueueConnection = FALSE;
 bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
+bool    UseXMLInLog = false;
 bool never_transfer = false;  // never transfer files or do transfer files
 
 // environment vars in the ClassAd attribute are seperated via
@@ -156,6 +157,7 @@ char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
 char	*ExitRequirements = "exit_requirements";
 char	*UserLogFile	= "log";
+char    *UseLogUseXML   = "log_xml";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 
@@ -227,6 +229,7 @@ void	SetRank();
 void 	SetIWD();
 void 	ComputeIWD();
 void	SetUserLog();
+void    SetUserLogXML();
 void	SetCoreSize();
 void	SetFileOptions();
 #if !defined(WIN32)
@@ -421,7 +424,12 @@ main( int argc, char *argv[] )
 
 	// Initialize env_delimiter string... note that 
 	// const char env_delimiter is defined in condor_constants.h
-	sprintf(env_delimiter_string,"%c\0",env_delimiter);
+	//sprintf(env_delimiter_string,"%c\0",env_delimiter);
+	// gcc gives a warning for the \0, so we do it in two quick
+	// steps instead. (Why is the \0 there anyway? sprintf
+	// always terminates with a \0, right?)
+	*(env_delimiter_string) = env_delimiter;
+	*(env_delimiter_string+1) = 0;
 
 	setbuf( stdout, NULL );
 
@@ -2226,6 +2234,25 @@ SetUserLog()
 	}
 }
 
+void
+SetUserLogXML()
+{
+	char *use_xml = condor_param(UseLogUseXML,
+								 ATTR_ULOG_USE_XML);
+
+	if (use_xml) {
+		if ('T' == *use_xml || 't' == *use_xml) {
+			UseXMLInLog = true;
+			sprintf(buffer, "%s = TRUE", ATTR_ULOG_USE_XML);
+			InsertJobExpr( buffer );
+		} else {
+			sprintf(buffer, "%s = FALSE", ATTR_ULOG_USE_XML);
+		}
+		free(use_xml);
+	}
+	return;
+}
+
 #if defined(ALPHA)
 	char	*CoreSizeFmt = "CONDOR_CORESIZE=%ld";
 #else
@@ -2324,7 +2351,7 @@ SetGlobusParams()
 			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
 	InsertJobExpr (buffer, false );
 
-	if ( tmp = condor_param(GlobusRSL) ) {
+	if ( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buff, false );
@@ -2769,6 +2796,7 @@ queue(int num)
 		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetUserLog();
+		SetUserLogXML();
 		SetCoreSize();
 #if !defined(WIN32)
 		SetKillSig();
@@ -3344,6 +3372,8 @@ log_submit()
 	 char	 *simple_name;
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
+
+	 usr_log.setUseXML(UseXMLInLog);
 
 	if( Quiet ) {
 		fprintf(stdout, "Logging submit event(s)");
