@@ -1,3 +1,9 @@
+07/18/04 V6_6-merge-15
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This should basically be the last of the 6.6.6
+   release candidate bug fixes, along with some test suite
+   improvements. 
+
 06/16/04 V6_6-merge-14
 	The state of the V6_6-branch for yet another exciting merge into 
 V6_7-branch.
