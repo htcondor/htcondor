@@ -42,6 +42,12 @@ a Machine, Schedd or License ClassAd sent to the \Condor{collector} has
 an IP address field which is empty (which should never happen), the
 \Condor{collector} will crash.
 
+\item Fixed a minor bug if \Macro{JOB\_START\_DELAY} was set to 0 that
+   would prevent the \Condor{schedd} from correctly cleaning up during
+   graceful shutdown (\verb@SIGTERM@, or \Condor{off}).
+   Now, the \Condor{schedd} will properly shutdown, even if
+   \MacroNI{JOB\_START\_DELAY} is set to 0.
+
 \end{itemize}
 
 \noindent Bugs fixed that are NOT included in version 6.7.7:
