@@ -1,28 +1,104 @@
-\begin{ManPage}{\Condor{userprio}}{1}{Manage user priorities} 
+\begin{ManPage}{\Condor{userprio}}{1}{Display and manage user priorities}
 \label{man-condor-userprio}
 \Synopsis \SynProg{\Condor{userprio}}
-\oOpt{-res}
-\oOptArg{-set}{username priority}
+\oOptArg{-pool}{hostname}
+\oOpt{-all}
+\oOpt{-usage}
+\oOptArg{-setprio}{username value}
+\oOptArg{-setfactor}{username value}
+\oOptArg{-resetusage}{username}
+\oOpt{-resetall}
+\oOptArg{-getreslist}{username}
+\oOpt{-allusers}
+\oOptArg{-activefrom}{month day year}
+\oOpt{-l}
 
 \Description 
-\Condor{userprio} with no arguments, lists the priorities of all
-the users that have a priority value larger than the minimum (The minimum
-priority value is 0.5, and it corresponds to the highest possible
-priority). The -set option is used to change a user's priority, and requires
-special privilage.
+\Condor{userprio} with no arguments, lists the active users (see below) along with their
+priorities, in increasing priority order. The -all option can be used to display
+more detailed information about each user, which includes the following columns:
 
-A user's priority changes according to his usage of resources. The central
-manager uses this value during the negotiation phase to decide how many
-resources to allocate to each user.
+\begin{description}
+\item[Effective Priority] The effective priority value of the user, which is used to
+calculate the user's share when allocating resources. A lower value means a higher
+priority, and the minimum value (highest priority) is 0.5. The effective priority is
+calculated by multiplying the real priority by the priority factor.
+\item[Real Priority] The value of the real priority of the user. This value follows the
+user's resource usage.
+\item[Priority Factor] The system administrator can set this value for each user, thus 
+controlling a user's effective priority relative to other users. This can be used to
+create different classes of users.
+\item[Res Used] The number of resources currently used (e.g. the number of running jobs
+for that user).
+\item[Accumulated Usage] The accumulated number of resource-hours used by the user since
+the usage start time.
+\item[Usage Start Time] The time since when usage has been recorded for the user. This time
+is set when a user job runs for the first time. It is reset to the present time when the
+usage for the user is reset (with the -resetusage or -resetall options).
+\item[Last Usage Time] The most recent time a resource usage has been recorded for the user.
+\end{description}
+
+The -usage option displays the username, accumulated usage, usage start time and last usage time
+for each user, sorted on accumulated usage.
+
+The -setprio, -setfactor options are used to change a user's real priority and priority factor.
+The -resetusage and -resetall options are used to reset the accumulated usage for users. The
+usage start time is set to the current time when the accumulated usage is reset. These
+options require administrator privilages.
+
+By default only users for whom usage was recorded in the last 24 hours or whose priority is
+greater than the minimum are listed. The -activefrom and -allusers options can be used
+to display users who had some usage since a specified date, or ever. The summary line for 
+last usage time will show this date.
+
+The -getreslist option is used to display the resources currently used by a user. The
+output includes the start time (the time the resource was allocated to the user), and
+the match time (how long has the resource been allocated to the user).
+
+Note that when specifying usernames on the command line, the name must include the
+uid domain (e.g. user@uid-domain - exactly the same way usernames are listed by the
+userprio command).
+
+The -pool option can be used to contact a different central-manager instead of
+the local one (the default).
 
 \begin{Options}
 
-\OptItem{\Opt{-res}}{Also display the number of resources used by each
-    user. Note that this value reflects the number of resources used at the
-    end of the last negotiation cycle.}
+\OptItem{\OptArg{-pool}{hostname}}
+	{Contact the specified hostname instead of the local central manager. This
+can be used to check other pools.}
 
-\OptItem{\OptArg{-set}{username priority}}
-	{Change priority of the specified user}
+\OptItem{\Opt{-all}}
+	{Display detailed information about each user.}
+
+\OptItem{\Opt{-usage}}
+	{Display usage information for each user.}
+
+\OptItem{\OptArg{-setprio}{username value}}
+	{Set the real priority of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setpfactor}{username value}}
+	{Set the priority factor of the specified user to the specified value.}
+
+\OptItem{\OptArg{-resetusage}{username}}
+	{Reset the accumulated usage of the specified user to zero.}
+
+\OptItem{\Opt{-resetall}}
+	{Reset the accumulated usage of all the users to zero.}
+
+\OptItem{\OptArg{-getreslist}{username}}
+	{Display all the resources currently allocated to the specified user.}
+
+\OptItem{\Opt{-allusers}}
+	{Display information for all the users who have some recorded accumulated usage.}
+
+\OptItem{\OptArg{-activefrom}{month day year}}
+	{Display information for users who have some recorded accumulated usage since
+the specified date.}
+
+\OptItem{\Opt{-l}}
+	{Show the class-ad which was received from the central-manager in long format.}
+
 \end{Options}
 
 \end{ManPage}
