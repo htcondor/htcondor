@@ -36,7 +36,6 @@
 #include "condor_debug.h"
 
 
-
 SafeSock::SafeSock(					/* listen on port		*/
 	int		port
 	)
@@ -57,10 +56,12 @@ SafeSock::SafeSock(					/* listen on serv		*/
 
 SafeSock::SafeSock(
 	char	*host,
-	int		port
+	int		port,
+	int		timeout_val
 	)
 	: Sock()
 {
+	timeout(timeout_val);
 	connect(host, port);
 }
 
@@ -68,10 +69,12 @@ SafeSock::SafeSock(
 
 SafeSock::SafeSock(
 	char	*host,
-	char	*serv
+	char	*serv,
+	int		timeout_val
 	)
 	: Sock()
 {
+	timeout(timeout_val);
 	connect(host, serv);
 }
 
@@ -96,19 +99,6 @@ int SafeSock::listen()
 
 	return TRUE;
 }
-
-
-
-int SafeSock::close()
-{
-	if (_state == sock_virgin) return FALSE;
-
-	if (::close(_sock) < 0) return FALSE;
-
-	_state = sock_virgin;
-	return TRUE;
-}
-
 
 
 int SafeSock::handle_incoming_packet()
@@ -280,45 +270,6 @@ int SafeSock::peek(
 	return rcv_msg.buf.peek(c);
 }
 
-int SafeSock::snd_int(
-	int val, 
-	int end_of_record
-	)
-{
-	encode();
-	if (!code(val)) {
-		return FALSE;
-	}
-
-	if (end_of_record) {
-		if (!end_of_message()) {
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-int SafeSock::rcv_int(
-	int &val,
-	int end_of_record
-	)
-{
-	decode();
-	if (!code(val)) {
-		return FALSE;
-	}
-
-	if (end_of_record) {
-		if (!end_of_message()) {
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-
 int SafeSock::rcv_packet(
 	int	_sock
 	)
@@ -376,6 +327,7 @@ int SafeSock::get_port()
 }
 
 
+
 int SafeSock::get_file_desc()
 {
 	return _sock;
@@ -392,6 +344,7 @@ int SafeSock::attach_to_file_desc(
 	_state = sock_connect;
 	return TRUE;
 }
+
 
 struct sockaddr_in *SafeSock::endpoint()
 {

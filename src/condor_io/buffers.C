@@ -41,16 +41,45 @@ Buf::~Buf()
 
 
 
-int Buf::write_to_fd(
-	int		fd,
-	int		sz
+int Buf::write(
+	SOCKET	sockd,
+	int		sz,
+	int		timeout
 	)
 {
 	int	nw;
 
 	if (sz < 0 || sz > num_untouched()) sz = num_untouched();
 
-	nw = write(fd, &_dta[num_touched()], sz);
+	if (timeout > 0) {
+		struct timeval	timer;
+		fd_set			writefds;
+		int				nfds=0, nfound;
+		timer.tv_sec = timeout;
+		timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+		nfds = sockd + 1;
+#endif
+		FD_ZERO( &writefds );
+		FD_SET( sockd, &writefds );
+
+		nfound = select( nfds, 0, &writefds, 0, &timer );
+
+		switch(nfound) {
+		case 0:
+			return -1;
+			break;
+		case 1:
+			break;
+		default:
+			dprintf( D_ALWAYS, "select returns %d, send failed\n",
+				nfound );
+			return -1;
+			break;
+		}
+	}
+
+	nw = send(sockd, &_dta[num_touched()], sz, 0);
 	if (nw <= 0) return -1;
 
 	_dta_pt += nw;
@@ -58,13 +87,16 @@ int Buf::write_to_fd(
 }
 
 
-int Buf::flush_to_fd(
-	int		fd,
+int Buf::flush(
+	SOCKET	sockd,
 	void	*hdr,
-	int		sz
+	int		sz,
+	int		timeout
 	)
 {
+/* DEBUG SESSION
 	int		dbg_fd;
+*/
 
 	if (sz > max_size()) return -1;
 	if (hdr && sz > 0){
@@ -87,16 +119,17 @@ int Buf::flush_to_fd(
 */
 
 
-	sz = write_to_fd(fd);
+	sz = write(sockd, -1, timeout);
 	reset();
 
 	return sz;
 }
 
 
-int Buf::read_frm_fd(
-	int		fd,
-	int		sz
+int Buf::read(
+	SOCKET	sockd,
+	int		sz,
+	int		timeout
 	)
 {
 	int	nr;
@@ -110,7 +143,35 @@ int Buf::read_frm_fd(
 
 	for(nr=0;nr <sz;){
 
-		nro = read(fd, &_dta[num_used()+nr], sz-nr);
+		if (timeout > 0) {
+			struct timeval	timer;
+			fd_set			readfds;
+			int				nfds=0, nfound;
+			timer.tv_sec = timeout;
+			timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+			nfds = sockd + 1;
+#endif
+			FD_ZERO( &readfds );
+			FD_SET( sockd, &readfds );
+
+			nfound = select( nfds, &readfds, 0, 0, &timer );
+
+			switch(nfound) {
+			case 0:
+				return -1;
+				break;
+			case 1:
+				break;
+			default:
+				dprintf( D_ALWAYS, "select returns %d, recv failed\n",
+					nfound );
+				return -1;
+				break;
+			}
+		}
+
+		nro = recv(sockd, &_dta[num_used()+nr], sz-nr, 0);
 
 		if (nro <= 0) return -1;
 
@@ -230,7 +291,6 @@ int ChainBuf::get(
 {
 	int		last_incr;
 	int		nr;
-	int		i;
 
 	if (dbg_count++ > 307){
 		dbg_count--;

@@ -60,10 +60,12 @@ ReliSock::ReliSock(					/* listen on serv		*/
 
 ReliSock::ReliSock(
 	char	*host,
-	int		port
+	int		port,
+	int		timeout_val
 	)
 	: Sock()
 {
+	timeout(timeout_val);
 	if (!connect(host, port))
 		dprintf(D_ALWAYS, "failed to connect to %s:%d!\n", host, port);
 }
@@ -72,10 +74,12 @@ ReliSock::ReliSock(
 
 ReliSock::ReliSock(
 	char	*host,
-	char	*serv
+	char	*serv,
+	int		timeout_val
 	)
 	: Sock()
 {
+	timeout(timeout_val);
 	if (!Sock::connect(host, serv))
 		dprintf(D_ALWAYS, "failed to connect to %s:%s!\n", host, serv);
 }
@@ -117,6 +121,34 @@ int ReliSock::accept(
 													c._state != sock_virgin)
 		return FALSE;
 
+	if (_timeout > 0) {
+		struct timeval	timer;
+		fd_set			readfds;
+		int				nfds=0, nfound;
+		timer.tv_sec = _timeout;
+		timer.tv_usec = 0;
+#if !defined(WIN32) // nfds is ignored on WIN32
+		nfds = _sock + 1;
+#endif
+		FD_ZERO( &readfds );
+		FD_SET( _sock, &readfds );
+
+		nfound = select( nfds, &readfds, 0, 0, &timer );
+
+		switch(nfound) {
+		case 0:
+			return FALSE;
+			break;
+		case 1:
+			break;
+		default:
+			dprintf( D_ALWAYS, "select returns %d, connect failed\n",
+				nfound );
+			return FALSE;
+			break;
+		}
+	}
+
 	addr_sz = sizeof(addr);
 	if ((c_sock = ::accept(_sock, (sockaddr *)&addr, &addr_sz)) < 0)
 		return FALSE;
@@ -134,7 +166,6 @@ int ReliSock::accept(
 	ReliSock	*c
 	)
 {
-	if (!valid()) return FALSE;
 	if (!c) return FALSE;
 
 	return accept(*c);
@@ -146,37 +177,16 @@ ReliSock *ReliSock::accept()
 {
 	ReliSock	*c_rs;
 	int			c_sock;
-	sockaddr	addr;
-	int			addr_sz;
-
-	if (!valid()) return (ReliSock *)0;
-	if (_state != sock_special || _special_state != relisock_listen)
-		return (ReliSock *)0;
 
 	if (!(c_rs = new ReliSock())) return (ReliSock *)0;
 
-	if ((c_sock = ::accept(_sock, (sockaddr *)&addr, &addr_sz)) < 0)
+	if ((c_sock = accept(*c_rs)) < 0) {
+		delete c_rs;
 		return (ReliSock *)0;
-
-	c_rs->_sock = c_sock;
-	c_rs->_state = sock_connect;
-	c_rs->decode();
+	}
 
 	return c_rs;
 }
-
-
-
-int ReliSock::close()
-{
-	if (_state == sock_virgin) return FALSE;
-
-	if (::close(_sock) < 0) return FALSE;
-
-	_state = sock_virgin;
-	return TRUE;
-}
-
 
 
 int ReliSock::handle_incoming_packet()
@@ -189,7 +199,7 @@ int ReliSock::handle_incoming_packet()
 	/* but return 1, because old message can still be read.	               */
 	if (rcv_msg.ready) return TRUE;
 
-	if (!rcv_msg.rcv_packet(_sock)) return FALSE;
+	if (!rcv_msg.rcv_packet(_sock, _timeout)) return FALSE;
 
 	return TRUE;
 }
@@ -203,7 +213,7 @@ int ReliSock::end_of_message()
 	switch(_coding){
 		case stream_encode:
 			if (!snd_msg.buf.empty()){
-				return snd_msg.snd_packet(_sock, TRUE);
+				return snd_msg.snd_packet(_sock, TRUE, _timeout);
 			}
 			break;
 
@@ -248,7 +258,7 @@ int ReliSock::put_bytes(
 	for(nw=0;;){
 
 		if (snd_msg.buf.full()){
-			if (!snd_msg.snd_packet(_sock, FALSE)) return FALSE;
+			if (!snd_msg.snd_packet(_sock, FALSE, _timeout)) return FALSE;
 		}
 		if (snd_msg.buf.empty()){
 			snd_msg.buf.seek(5);
@@ -309,46 +319,9 @@ int ReliSock::peek(
 	return rcv_msg.buf.peek(c);
 }
 
-int ReliSock::snd_int(
-	int val, 
-	int end_of_record
-	)
-{
-	encode();
-	if (!code(val)) {
-		return FALSE;
-	}
-
-	if (end_of_record) {
-		if (!end_of_message()) {
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
-int ReliSock::rcv_int(
-	int &val,
-	int end_of_record
-	)
-{
-	decode();
-	if (!code(val)) {
-		return FALSE;
-	}
-
-	if (end_of_record) {
-		if (!end_of_message()) {
-			return FALSE;
-		}
-	}
-
-	return TRUE;
-}
-
 int ReliSock::RcvMsg::rcv_packet(
-	int	_sock
+	int	_sock,
+	int _timeout
 	)
 {
 	Buf		*tmp;
@@ -359,7 +332,7 @@ int ReliSock::RcvMsg::rcv_packet(
 
     len = 0;
     while (len < 5) {
-        tmp_len = read(_sock, hdr+len, 5-len);
+        tmp_len = recv(_sock, hdr+len, 5-len, 0);
         if (tmp_len <= 0)
             return FALSE;
         len += tmp_len;
@@ -377,7 +350,7 @@ int ReliSock::RcvMsg::rcv_packet(
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
-	if ((tmp_len = tmp->read_frm_fd(_sock, len)) != len){
+	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
 				tmp_len, len);
@@ -397,7 +370,8 @@ int ReliSock::RcvMsg::rcv_packet(
 
 int ReliSock::SndMsg::snd_packet(
 	int		_sock,
-	int		end
+	int		end,
+	int		_timeout
 	)
 {
 	char	hdr[5];
@@ -410,7 +384,7 @@ int ReliSock::SndMsg::snd_packet(
 	len = (int) htonl(ns);
 
 	memcpy(&hdr[1], &len, 4);
-	if (buf.flush_to_fd(_sock, hdr, 5) != (ns+5)){
+	if (buf.flush(_sock, hdr, 5, _timeout) != (ns+5)){
 		return FALSE;
 	}
 
@@ -418,8 +392,16 @@ int ReliSock::SndMsg::snd_packet(
 	return TRUE;
 }
 
+struct sockaddr_in * ReliSock::endpoint()
+{
+	int addr_len;
 
+	if (getpeername(_sock, (struct sockaddr *) &_who, &addr_len) < 0) 
+		return NULL;	// socket not connected
 
+	return &_who;
+}
+		
 int ReliSock::get_port()
 {
 	sockaddr_in	addr;
@@ -431,6 +413,7 @@ int ReliSock::get_port()
 
 	return (int) ntohs(addr.sin_port);
 }
+
 
 
 int ReliSock::get_file_desc()

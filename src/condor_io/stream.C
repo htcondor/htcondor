@@ -284,26 +284,6 @@ int Stream::code_bytes(void *p, int l)
 
 #define STREAM_ASSERT(cond) if (!(cond)) { return FALSE; }
 
-extern "C" int sig_num_encode( int sig_num );
-extern "C" int sig_num_decode( int sig_num );
-
-int Stream::signal(int &sig_num)
-{
-	int real_sig_num, rval;
-	
-	if (_coding == stream_encode) {
-		real_sig_num = sig_num_encode(sig_num);
-	}
-
-	rval = code(real_sig_num);
-
-	if (_coding == stream_decode) {
-		sig_num = sig_num_decode(real_sig_num);
-	}
-
-	return rval;
-}
-
 int Stream::code(PROC_ID &id)
 {
 	STREAM_ASSERT(code(id.cluster));
@@ -312,28 +292,6 @@ int Stream::code(PROC_ID &id)
 	return TRUE;
 }
 
-
-int Stream::code(struct rusage &r)
-{
-	STREAM_ASSERT(code(r.ru_utime));
-	STREAM_ASSERT(code(r.ru_stime));
-	STREAM_ASSERT(code(r.ru_maxrss));
-	STREAM_ASSERT(code(r.ru_ixrss));
-	STREAM_ASSERT(code(r.ru_idrss));
-	STREAM_ASSERT(code(r.ru_isrss));
-	STREAM_ASSERT(code(r.ru_minflt));
-	STREAM_ASSERT(code(r.ru_majflt));
-	STREAM_ASSERT(code(r.ru_nswap));
-	STREAM_ASSERT(code(r.ru_inblock));
-	STREAM_ASSERT(code(r.ru_oublock));
-	STREAM_ASSERT(code(r.ru_msgsnd));
-	STREAM_ASSERT(code(r.ru_msgrcv));
-	STREAM_ASSERT(code(r.ru_nsignals));
-	STREAM_ASSERT(code(r.ru_nvcsw));
-	STREAM_ASSERT(code(r.ru_nivcsw));
-
-	return TRUE;
-}
 
 /* extern int stream_proc_vers2( Stream *s, V2_PROC *proc ); */
 extern int stream_proc_vers3( Stream *s, PROC *proc );
@@ -363,10 +321,12 @@ int Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.cluster));
 	STREAM_ASSERT(code(start.proc));
 	STREAM_ASSERT(code(start.job_class));
+#if !defined(WIN32)	// don't know how to port these yet
 	STREAM_ASSERT(code(start.uid));
 	STREAM_ASSERT(code(start.gid));
 	STREAM_ASSERT(code(start.virt_pid));
 	STREAM_ASSERT(signal(start.soft_kill_sig));
+#endif
 	STREAM_ASSERT(code(start.cmd));
 	STREAM_ASSERT(code(start.args));
 	STREAM_ASSERT(code(start.env));
@@ -375,6 +335,93 @@ int Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.is_restart));
 	STREAM_ASSERT(code(start.coredump_limit_exists));
 	STREAM_ASSERT(code(start.coredump_limit));
+
+	return TRUE;
+}
+
+int Stream::code(PORTS &p)
+{
+	STREAM_ASSERT(code(p.port1));
+	STREAM_ASSERT(code(p.port2));
+
+	return TRUE;
+}
+
+int Stream::code(StartdRec &rec)
+{
+	if ( !code(rec.version_num)) return FALSE;
+
+	dprintf(D_ALWAYS, "Version = %d\n", rec.version_num);
+	if ( rec.version_num >=0 )
+	{
+		/* we are talking with a startd of an old version which sends just
+		   two port numbers */
+		rec.ports.port1 = rec.version_num;
+		if ( !code(rec.ports.port2) ) return FALSE;
+		dprintf(D_ALWAYS, "Port2 = %d\n", rec.ports.port2);
+		return TRUE;
+	}
+	if ( !code(rec.ports)) return FALSE;
+	if ( !code(rec.ip_addr)) return FALSE;
+	dprintf(D_ALWAYS, "IP-addr = 0x%x\n", rec.ip_addr);
+
+	if ( is_encode() ) 
+	{
+		if ( !code(rec.server_name)) return FALSE;
+		dprintf(D_ALWAYS, "Send server_name = %s\n", rec.server_name);
+	}
+	else if ( is_decode() ) 
+	{
+		if ( !code(rec.server_name)) return FALSE;
+		dprintf(D_ALWAYS, "Received server_name = %s\n", rec.server_name);
+	}
+	return TRUE;
+}
+
+#if !defined(WIN32)
+
+/*
+**	UNIX TYPES
+*/
+
+extern "C" int sig_num_encode( int sig_num );
+extern "C" int sig_num_decode( int sig_num );
+
+int Stream::signal(int &sig_num)
+{
+	int real_sig_num, rval;
+	
+	if (_coding == stream_encode) {
+		real_sig_num = sig_num_encode(sig_num);
+	}
+
+	rval = code(real_sig_num);
+
+	if (_coding == stream_decode) {
+		sig_num = sig_num_decode(real_sig_num);
+	}
+
+	return rval;
+}
+
+int Stream::code(struct rusage &r)
+{
+	STREAM_ASSERT(code(r.ru_utime));
+	STREAM_ASSERT(code(r.ru_stime));
+	STREAM_ASSERT(code(r.ru_maxrss));
+	STREAM_ASSERT(code(r.ru_ixrss));
+	STREAM_ASSERT(code(r.ru_idrss));
+	STREAM_ASSERT(code(r.ru_isrss));
+	STREAM_ASSERT(code(r.ru_minflt));
+	STREAM_ASSERT(code(r.ru_majflt));
+	STREAM_ASSERT(code(r.ru_nswap));
+	STREAM_ASSERT(code(r.ru_inblock));
+	STREAM_ASSERT(code(r.ru_oublock));
+	STREAM_ASSERT(code(r.ru_msgsnd));
+	STREAM_ASSERT(code(r.ru_msgrcv));
+	STREAM_ASSERT(code(r.ru_nsignals));
+	STREAM_ASSERT(code(r.ru_nvcsw));
+	STREAM_ASSERT(code(r.ru_nivcsw));
 
 	return TRUE;
 }
@@ -427,44 +474,7 @@ int Stream::code(struct rlimit &rl)
 	return TRUE;
 }
 
-int Stream::code(PORTS &p)
-{
-	STREAM_ASSERT(code(p.port1));
-	STREAM_ASSERT(code(p.port2));
-
-	return TRUE;
-}
-
-int Stream::code(StartdRec &rec)
-{
-	if ( !code(rec.version_num)) return FALSE;
-
-	dprintf(D_ALWAYS, "Version = %d\n", rec.version_num);
-	if ( rec.version_num >=0 )
-	{
-		/* we are talking with a startd of an old version which sends just
-		   two port numbers */
-		rec.ports.port1 = rec.version_num;
-		if ( !code(rec.ports.port2) ) return FALSE;
-		dprintf(D_ALWAYS, "Port2 = %d\n", rec.ports.port2);
-		return TRUE;
-	}
-	if ( !code(rec.ports)) return FALSE;
-	if ( !code(rec.ip_addr)) return FALSE;
-	dprintf(D_ALWAYS, "IP-addr = 0x%x\n", rec.ip_addr);
-
-	if ( is_encode() ) 
-	{
-		if ( !code(rec.server_name)) return FALSE;
-		dprintf(D_ALWAYS, "Send server_name = %s\n", rec.server_name);
-	}
-	else if ( is_decode() ) 
-	{
-		if ( !code(rec.server_name)) return FALSE;
-		dprintf(D_ALWAYS, "Received server_name = %s\n", rec.server_name);
-	}
-	return TRUE;
-}
+#endif // !defined(WIN32)
 
 /*
 **	PUT ROUTINES
@@ -530,7 +540,7 @@ int Stream::put(
 			if (put_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
 
-		case external:
+		case external: {
 			tmp = htonl(i);
 			pad = (i >= 0) ? 0 : 0xff; // sign extend value
 			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
@@ -538,6 +548,7 @@ int Stream::put(
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
+		}
 
 		case ascii:
 			return FALSE;
@@ -564,7 +575,7 @@ int Stream::put(
 			if (put_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
 
-		case external:
+		case external: {
 			tmp = htonl(i);
 			pad = 0;
 			for (int s=0; s < INT_SIZE-sizeof(int); s++) {
@@ -572,6 +583,7 @@ int Stream::put(
 			}
 			if (put_bytes(&tmp, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
+		}
 
 		case ascii:
 			return FALSE;
@@ -910,7 +922,7 @@ int Stream::get(
 			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
 
-		case external:
+		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(&pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
@@ -926,6 +938,7 @@ int Stream::get(
 				}
 			}
 			break;
+		}
 
 		case ascii:
 			return FALSE;
@@ -952,7 +965,7 @@ int Stream::get(
 			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
 			break;
 
-		case external:
+		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
 				if (get_bytes(&pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
@@ -967,6 +980,7 @@ int Stream::get(
 				}
 			}
 			break;
+		}
 
 		case ascii:
 			return FALSE;
@@ -1031,7 +1045,7 @@ int Stream::get(
 	)
 {
 	unsigned int		i;
-	char	pad[INT_SIZE-sizeof(long)], sign;
+	char	pad[INT_SIZE-sizeof(long)];
 
 	if (!valid()) return FALSE;
 
@@ -1251,5 +1265,45 @@ int Stream::get(
 			return FALSE;
 	}
         NETWORK_TRACE("get string and int " <<   l);
+	return TRUE;
+}
+
+
+int Stream::snd_int(
+	int val, 
+	int end_of_record
+	)
+{
+	encode();
+	if (!code(val)) {
+		return FALSE;
+	}
+
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
+
+int Stream::rcv_int(
+	int &val,
+	int end_of_record
+	)
+{
+	decode();
+	if (!code(val)) {
+		return FALSE;
+	}
+
+	if (end_of_record) {
+		if (!end_of_message()) {
+			return FALSE;
+		}
+	}
+
 	return TRUE;
 }
