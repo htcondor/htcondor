@@ -286,9 +286,16 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
-			mkdir(SpoolSpace,0660);
-			mkdir(TmpSpoolSpace,0660);
-			
+			if( (mkdir(SpoolSpace,0777) < 0) ) {
+				dprintf( D_ALWAYS, 
+						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
+						 SpoolSpace, errno );
+			}
+			if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
+				dprintf( D_ALWAYS, 
+						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
+						 TmpSpoolSpace, errno );
+			}
 			source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
 			free(Spool);
 			if ( access(source,F_OK | X_OK) >= 0 ) {
@@ -766,29 +773,34 @@ FileTransfer::DoDownload(ReliSock *s)
 			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);			
 		}
 	
-#ifndef WIN32
-		if ( ((bytes = s->get_file(fullname,want_fsync)) < 0) )
-			return -1;
-#else
-		// On WinNT, even doing an fsync on the file does not get 
-		// rid of the lazy-write behavior which in the modification
-		// time being set a few seconds into the future.  Instead of 
-		// sleeping for 30+ seconds here in the starter & thus delaying
-		// the start of the job, we call _utime to manually set the 
-		// modification time of the file we just wrote backwards in time
-		// by a few minutes!  MLOP!! Since we are doing this, we may
-		// as well not bother to fsync every file.
+		// On WinNT and apparently, some Unix, too, even doing an
+		// fsync on the file does not get rid of the lazy-write
+		// behavior which in the modification time being set a few
+		// seconds into the future.  Instead of sleeping for 30+
+		// seconds here in the starter & thus delaying the start of
+		// the job, we call _utime to manually set the modification
+		// time of the file we just wrote backwards in time by a few
+		// minutes!  MLOP!! Since we are doing this, we may as well
+		// not bother to fsync every file.
 		if ( ((bytes = s->get_file(fullname)) < 0) )
 			return -1;
 
 		if ( want_fsync ) {
+#ifdef WIN32
 			struct _utimbuf timewrap;
+#else
+			struct utimbuf timewrap;
+#endif
 			time_t current_time = time(NULL);
 			timewrap.actime = current_time;		// set access time to now
 			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
+#ifdef WIN32
 			_utime(fullname,&timewrap);
-		}
+#else
+			utime(fullname,&timewrap);
 #endif
+
+		}
 
 		if ( !s->end_of_message() )
 			return -1;
