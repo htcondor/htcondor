@@ -29,7 +29,6 @@
 
 #include "buffers.h"
 #include "sock.h"
-#include "condor_classad.h"
 //#include "authentication.h"
 #include "condor_adtypes.h"
 
@@ -119,7 +118,6 @@ public:
 	void canTryFilesystem();
 
 	int isClient() { return is_client; };
-//	ClassAd * getStateAd();
 
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
