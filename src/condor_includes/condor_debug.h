@@ -44,6 +44,7 @@ extern "C" {
 #endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
+extern int Termlog;		/* Are we logging to a terminal? */
 
 #if defined(__STDC__) || defined(__cplusplus)
 void dprintf_init ( int fd );
