@@ -3,7 +3,7 @@ directory: /local.chopin/nleroy/Hawkeye-Release/modules
 test-directory: /scratch.1/nleroy/Hawkeye-Release-test/modules
 
 target: all
-version: 1.0.rc8
+version: 1.0.rc9
 os: Unix-Any
 +condor_jobhist
 +condor_node
@@ -90,7 +90,7 @@ version: 1.0.rc3
 
 target: top
 os: Unix-Any
-version: 1.0.rc4
+version: 1.0.rc5
 +top
 
 target: uptime
