@@ -1,12 +1,22 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.2.1 2004-06-25 06:00:16 wright Exp $
+# $Id: remote_post.pl,v 1.1.2.2 2004-06-25 06:10:01 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
 my $exit_status = 0;
+
+# This is debugging output for the sake of the NWO infrastructure.
+# However, it might be useful to us some day so we can see what's
+# going on in case of failures...
+if( defined $ENV{_NMI_STEP_FAILED} ) { 
+    my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
+    print "The value of _NMI_STEP_FAILED is: '$nmi_task_failure'\n";
+} else {
+    print "The _NMI_STEP_FAILED variable is not set\n";
+}
 
 
 ######################################################################
