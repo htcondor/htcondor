@@ -223,7 +223,7 @@ struct sockaddr_in  *from;
 }
 
 char *
-calc_subnet_name()
+calc_subnet_name(char* host)
 {
 	struct hostent	*hostp;
 	char			hostname[MAXHOSTNAMELEN];
@@ -233,10 +233,18 @@ calc_subnet_name()
 	int				subnet_length;
 	struct in_addr	in;
 
-	if( gethostname(hostname, sizeof(hostname)) == -1 ) {
-		dprintf( D_ALWAYS, "Gethostname failed");
-		return strdup("");
+	if(!host)
+	{
+		if( gethostname(hostname, sizeof(hostname)) == -1 ) {
+			dprintf( D_ALWAYS, "Gethostname failed");
+			return strdup("");
+		}
 	}
+	else
+	{
+		strcpy(hostname, host);
+	}
+	
 	if( (hostp = gethostbyname(hostname)) == NULL ) {
 		dprintf( D_ALWAYS, "Gethostbyname failed");
 		return strdup("");
