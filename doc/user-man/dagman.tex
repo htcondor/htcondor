@@ -37,7 +37,7 @@ The following sections specify the use of DAGMan.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!input file example}
-The input file used by DAGMan specifies five items:
+The input file used by DAGMan specifies six items:
 \begin{enumerate}
 \item
 A list of the programs in the DAG. This serves to name each program
@@ -45,13 +45,15 @@ and specify each program's Condor submit description file.
 \item
 Processing that takes place before submission of
 any program in the DAG to Condor or after Condor has completed execution
-of any program in the DAG.
+of any program in the DAG (optional).
 \item
 Description of the dependencies in the DAG.
 \item
-Number of times to retry if a node within the DAG fails.
+Number of times to retry if a node within the DAG fails (optional).
 \item
-The definition of macros associated with a node.
+The definition of macros associated with a node (optional).
+\item
+A node exit value that will abort the entire DAG (optional).
 \end{enumerate}
 
 Comments may be placed in the input file that describes the DAG.
@@ -77,6 +79,8 @@ An example input file for DAGMan is
 	PARENT A CHILD B C
 	PARENT B C CHILD D
 	Retry  C 3
+	VARS A state="Wisconsin"
+	ABORT-DAG-ON C 10
 \end{verbatim}
 
 This input file describes the DAG shown in 
@@ -88,7 +92,9 @@ Figure~\ref{fig:dagman-diamond}.
 \caption{\label{fig:dagman-diamond}Diamond DAG}
 \end{figure}
 
+Each DAG file keyword is described below.
 
+\subsubsection{JOB}
 
 \index{DAGMan!Job Entry (names node of DAG)}
 The first section of the input file lists
@@ -118,6 +124,8 @@ DAGMan generates a Rescue DAG, a DAGMan input file that can be
 used to restart and complete a DAG without re-executing
 completed programs.
 
+\subsubsection{SCRIPT}
+
 The second type of item in a DAGMan input file enumerates
 processing that is done either before a program within
 the DAG is submitted to Condor for execution
@@ -127,7 +135,7 @@ the DAG completes its execution.
 \index{DAGMan!PRE script}
 Processing done before a program is submitted to Condor is
 called a \Arg{PRE} script.
-Processing done after a program successfully completes
+Processing done after a program completes
 its execution under Condor is
 \index{DAGMan!POST script}
 called a \Arg{POST} script.
@@ -135,7 +143,7 @@ A node in the DAG is comprised of the program together with
 \Arg{PRE} and/or \Arg{POST} scripts.
 The dependencies in the DAG are enforced based on nodes.
 
-Syntax for \Arg{PRE} and \Arg{POST} script lines within the input file
+Syntax for \Arg{PRE} and \Arg{POST} script lines within the input file:
 
 \Arg{SCRIPT} \Arg{PRE} \Arg{JobName} \Arg{ExecutableName} \oArg{arguments}
 
@@ -154,7 +162,8 @@ case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
-to which the DAG is submitted.
+to which the DAG is submitted (not necessarily
+the machine on which the node's program is run).
 
 The PRE and POST scripts are commonly used
 when files must be placed into a staging area for the job to use,
@@ -223,6 +232,8 @@ The script \File{pre.csh} may use these arguments
 % $ % this comment just has a dollar sign so that emacs will not think
 %	  we're inside of a math section and will draw things more nicely
 
+\subsubsection{PARENT...CHILD}
+
 The third type of item in the DAG input file describes the
 dependencies within the DAG.
 \index{DAGMan!describing dependencies}
@@ -255,6 +266,8 @@ produces four dependencies:
 \item{\verb@p2@ to \verb@c2@}
 \end{enumerate}
 
+\subsubsection{RETRY}
+
 The fourth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
@@ -285,6 +298,8 @@ the PRE script.
 Failure of the node is then determined by the return value of
 the program, the existence and return value of a POST script.
 
+\subsubsection{VARS}
+
 \index{DAGMan!VARS}
 \index{VARS}
 The fifth type of item in the DAG input file provides a
@@ -309,6 +324,38 @@ To add the backslash character itself, use two backslashes (\verb@\\@).
 
 % for version 6.5.3, the VARS are not propogated into rescue dags.
 
+\subsubsection{ABORT-DAG-ON}
+
+The sixth type of item in the DAG input file provides a way
+to abort the entire DAG if a given node returns a specific exit
+code.  The syntax for ABORT-DAG-ON is:
+
+\Arg{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
+
+If the specified node returns the specified abort exit value, the
+DAG is immediately aborted.  The main difference between a node
+failure and a DAG abort is that
+in the case of an abort, the DAG is stopped immediately, including
+removing nodes that are currently running.  In the case of a node
+failure, the DAG will continue to run until no more progress can
+be made because of the DAG dependencies.
+
+PRE and POST scripts:
+If a node has a PRE script and the PRE
+script returns the abort exit value, the DAG is aborted.  If the
+node has no POST script, or \Arg{-NoPostFail} was passed to
+\Condor{submit\_dag}, and the
+job returns the abort exit value, the DAG is aborted.  If the
+node has a POST script and \Arg{-NoPostFail} was not passed
+to \Condor{submit\_dag}, the POST
+script is run, and the DAG is aborted if the POST script returns
+the abort exit value.
+
+An abort overrides node retries -- if a
+node returns the abort exit value, the DAG is aborted, even if
+the node has retries specified.
+
+Zero is not allowed as an abort exit value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Condor Submit Description File}
@@ -737,7 +784,7 @@ More than one level of nested DAGs is supported.
 One item to get right:
 to locate the log files used in ordering the DAG,
 DAGMan either needs a completely flat directory structure
-(\emph{all} files for outer and inner DAGS within the same directory)
+(\emph{all} files for outer and inner DAGs within the same directory)
 or
 it needs full pathnames to all log files.
 \index{DAGMan|)}
