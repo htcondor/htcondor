@@ -28,7 +28,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top           /p/condor/workspaces/wright/V6
+#define Top		/p/condor/workspaces/wright/V6
 
 #define TmpDir		/tmp
 
@@ -57,5 +57,7 @@ the soft links.  The links will point back to Top/src/... */
 #define YpLib
 
 #define WANT_PVM	YES
+
+#define WANT_GLOBUS	NO
 
 #endif  /* AfterVendorCF */

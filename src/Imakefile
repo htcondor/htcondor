@@ -54,12 +54,18 @@
 #define PvmProgs
 #endif
 
+#if WANT_GLOBUS && HAS_GLOBUS
+#define GlobusProgs globus
+#else
+#define GlobusProgs
+#endif
+
 #define Programs \
 		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		globus starter.V6.1 shadow.V6.1
+		GlobusProgs starter.V6.1 shadow.V6.1
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \

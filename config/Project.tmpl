@@ -204,27 +204,50 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-#if !defined( GSS_AUTHENTICATION )
+#if WANT_GLOBUS && HAS_GLOBUS
 
-#  define GssAuthentication
-#  define ImakeGssFlag
+# define GLOBUS_SUPPORT 1
 
-#else
+  /* GLOBUS_SUPPORT includes GSS_AUTHENTICATION as well */
+# undef GSS_AUTHENTICATION
+# define GSS_AUTHENTICATION 1
 
-#  define GssAuthentication -DGSS_AUTHENTICATION \
-          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
+  GLOBUS_DIR = /p/condor/workspaces/globus
+  LDAP_DIR = /p/condor/workspaces/ldap
+
+  GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DLDAP_DEBUG -DLDAP_REFERRALS \
+    -I$(GLOBUS_DIR)/include -I$(LDAP_DIR)/include
+
+  GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_rsl_assist.a \
+    $(GLOBUS_DIR)/lib/libglobus_rsl.a \
+    $(GLOBUS_DIR)/lib/libglobus_gram_client.a \
+    $(GLOBUS_DIR)/lib/libglobus_io.a \
+    $(GLOBUS_DIR)/lib/libglobus_common.a \
+    $(LDAP_DIR)/lib/libldap.a \
+    $(LDAP_DIR)/lib/liblber.a
+
+#endif
+
+#if defined( GSS_AUTHENTICATION )
+
+#  define GssAuthFlags -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
+          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include
 #  define ImakeGssFlag -DGSS_AUTHENTICATION
 
   SSL_DIR = /p/condor/workspaces/ssl
-  GLOBUS_DIR = /p/condor/workspaces/globus
   AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
     $(GLOBUS_DIR)/lib/libglobus_gss.a \
     $(GLOBUS_DIR)/lib/libglobus_gaa.a \
-    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
+    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a
+
+#else
+
+#  define GssAuthFlags
+#  define ImakeGssFlag
 
 #endif /* !defined( GSS_AUTHENTICATION ) */
 
-AUTH_FLAGS = GssAuthentication
+AUTH_FLAGS = GssAuthFlags
 
 #define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
 #define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
@@ -285,6 +308,7 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
+  $(GLOBUS_LIB) \
   $(AUTH2_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
