@@ -27,6 +27,48 @@ COLLECTOR_HOST = $(CONDOR_HOST):9650
 NEGOTIATOR_HOST = $(CONDOR_HOST):9651
 \end{verbatim}
 
+If a non-standard port is defined, the same value of
+\MacroNI{COLLECTOR\_HOST} (including the port) must be used for all
+machines in the Condor pool.
+Therefore, this setting should be modified in the global
+\File{condor\_config} file, or the value should be duplicated across
+all configuration files in the pool if a single \File{condor\_config}
+is not being shared.
+
+On pools that are made up from only one machine, you can configure the
+\Condor{collector} and \Condor{negotiator} to use a dynamically
+assigned port given out by the operating system.
+This prevents any possible port conflict with other services on the
+same machine.
+However, dynamically assigned ports should only be used on
+single-machine Condor pools, and only if the
+\Macro{COLLECTOR\_ADDRESS\_FILE} and \Macro{NEGOTIATOR\_ADDRESS\_FILE}
+settings have also been enabled.
+This mechanism allows all of the Condor daemons and tools running on
+the same machine to find the real port for the \Condor{collector} and
+\Condor{negotiator}, even if these ports are not defined in the
+configuration file and are not known in advance.
+
+To enable these daemons to use a dynamic port, the port number should
+be set to 0 in the \Macro{COLLECTOR\_HOST} and
+\Macro{NEGOTIATOR\_HOST} settings.
+For example:
+\begin{verbatim}
+COLLECTOR_HOST = $(CONDOR_HOST):0
+NEGOTIATOR_HOST = $(CONDOR_HOST):0
+COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+NEGOTIATOR_ADDRESS_FILE = $(LOG)/.negotiator_address
+\end{verbatim}
+
+For more information about the \MacroNI{COLLECTOR\_ADDRESS\_FILE}
+setting, see section~\ref{param:SubsysAddressFile} on
+page~\pageref{param:SubsysAddressFile}.
+For more information about the \MacroNI{COLLECTOR\_HOST} or
+\MacroNI{NEGOTIATOR\_HOST} settings, please see
+section~\ref{param:CollectorHost} on
+page~\pageref{param:CollectorHost}.
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Ports-Firewalls}Firewalls}
