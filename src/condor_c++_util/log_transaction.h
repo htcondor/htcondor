@@ -18,6 +18,7 @@
 class LogPtrListEntry {
 public:
 	LogPtrListEntry(LogRecord *my_ptr) { ptr = my_ptr; next = 0; }
+	~LogPtrListEntry() { delete ptr; }
 	LogRecord *GetPtr() { return ptr; }
 	LogPtrListEntry *GetNext() { return next; }
 	void SetNext(LogPtrListEntry *n) { next = n; }
