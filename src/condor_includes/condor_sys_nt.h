@@ -66,6 +66,7 @@ typedef DWORD pid_t;
 #define strdup _strdup
 #define strupr _strupr
 #define strlwr _strlwr
+#define snprintf _snprintf
 #define chdir _chdir
 #define fsync _commit
 #define access _access
