@@ -109,8 +109,15 @@ initialize( const char *file, int c, int p, int s )
 	strcpy( path, file );
 	in_block = FALSE;
 
-	if (fp) fclose(fp);
-
+	if( fp ) {
+		if( fclose( fp ) != 0 ) {
+			dprintf( D_ALWAYS,
+					 "UserLog::initialize: fclose(\"%s\") failed (%s)",
+					 path, strerror( errno ) );
+		}
+		fp = NULL;
+	}
+	
 #ifndef WIN32
 	// Unix
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
