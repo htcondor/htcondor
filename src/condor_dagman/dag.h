@@ -103,6 +103,12 @@ class Dag {
     ///
     inline int NumJobsDone() const { return _numJobsDone; }
 
+    ///
+    inline int NumJobsFailed() const { return _numJobsFailed; }
+
+    ///
+    inline int NumJobsRunning() const { return _numJobsRunning; }
+
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -112,9 +118,12 @@ class Dag {
     */
     void RemoveRunningJobs () const;
 
-  protected:
+    /** Creates a DAG file based on the DAG in memory, except all
+        completed jobs are premarked as DONE.
+    */
+    void Rescue (const char * rescue_file, const char * datafile) const;
 
-    void run_popen (char * cmd) const;
+  protected:
 
     /** Submit job to Condor.  If job is not submittable (!job->CanSubmit())
         then function will return false for failure
@@ -175,6 +184,9 @@ class Dag {
     /// Number of Jobs that are done (completed execution)
     int _numJobsDone;
     
+    /// Number of Jobs that failed (or their PRE or POST script failed).
+    int _numJobsFailed;
+
     /// Number of Jobs currently running (submitted to Condor)
     int _numJobsRunning;
 

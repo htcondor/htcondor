@@ -1,90 +1,90 @@
 #include "job.h"
+#include "condor_string.h"
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 
 //---------------------------------------------------------------------------
 const char *Job::queue_t_names[] = {
-  "QUEUE_INCOMING",
-  "QUEUE_WAITING ",
-  "QUEUE_OUTGOING",
+    "QUEUE_INCOMING",
+    "QUEUE_WAITING ",
+    "QUEUE_OUTGOING",
 };
 
 //---------------------------------------------------------------------------
 const char * Job::status_t_names[] = {
-  "STATUS_READY    ",
-  "STATUS_SUBMITTED",
-  "STATUS_DONE     ",
+    "STATUS_READY    ",
+    "STATUS_SUBMITTED",
+    "STATUS_DONE     ",
+    "STATUS_ERROR    ",
 };
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-  delete _cmdFile;
-  delete _jobName;
+    delete [] _cmdFile;
+    delete [] _jobName;
 }
 
 //---------------------------------------------------------------------------
 Job::Job (const char *jobName, const char *cmdFile):
-  _Status(STATUS_READY) {
+    _scriptPre  (NULL),
+    _scriptPost (NULL),
+    _Status     (STATUS_READY)
+{
 
-  // JobID will be assigned when the Job class is linked to the Joblist
+    _jobName = strnewp (jobName);
+    _cmdFile = strnewp (cmdFile);
 
-  _jobName = new char[strlen(jobName)+1];
-  strcpy(_jobName, jobName);
+    // _condorID struct initializes itself
 
-  _cmdFile = new char[strlen(cmdFile)+1];
-  strcpy(_cmdFile, cmdFile);
-
-  // _condorID struct initializes itself
-
-  // jobID is a primary key (a database term).  All should be unique
-  _jobID = _jobID_counter++;
+    // jobID is a primary key (a database term).  All should be unique
+    _jobID = _jobID_counter++;
 }
 
 //---------------------------------------------------------------------------
 bool Job::Remove (const queue_t queue, const JobID_t jobID) {
-  _queues[queue].Rewind();
-  JobID_t currentJobID;
-  while(_queues[queue].Next(currentJobID)) {
-    if (currentJobID == jobID) {
-	  _queues[queue].DeleteCurrent();
-	  return true;
-	}
-  }
-  return false;   // Element Not Found
+    _queues[queue].Rewind();
+    JobID_t currentJobID;
+    while(_queues[queue].Next(currentJobID)) {
+        if (currentJobID == jobID) {
+            _queues[queue].DeleteCurrent();
+            return true;
+        }
+    }
+    return false;   // Element Not Found
 }  
 
 //---------------------------------------------------------------------------
 void Job::Dump () const {
-  printf ("Job -------------------------------------\n");
-  printf ("          JobID: %d\n", _jobID);
-  printf ("       Job Name: %s\n", _jobName);
-  printf ("     Job Status: %s\n", status_t_names[_Status]);
-  printf ("       Cmd File: %s\n", _cmdFile);
-  printf ("      Condor ID: ");
-  _CondorID.Print();
-  putchar('\n');
+    printf ("Job -------------------------------------\n");
+    printf ("          JobID: %d\n", _jobID);
+    printf ("       Job Name: %s\n", _jobName);
+    printf ("     Job Status: %s\n", status_t_names[_Status]);
+    printf ("       Cmd File: %s\n", _cmdFile);
+    printf ("      Condor ID: ");
+    _CondorID.Print();
+    putchar('\n');
   
-  for (int i = 0 ; i < 3 ; i++) {
-    printf ("%15s: ", queue_t_names[i]);
-    SimpleListIterator<JobID_t> iList (_queues[i]);
-    JobID_t jobID;
-    while (iList.Next(jobID)) printf ("%d, ", jobID);
-    printf ("<END>\n");
-  }
+    for (int i = 0 ; i < 3 ; i++) {
+        printf ("%15s: ", queue_t_names[i]);
+        SimpleListIterator<JobID_t> iList (_queues[i]);
+        JobID_t jobID;
+        while (iList.Next(jobID)) printf ("%d, ", jobID);
+        printf ("<END>\n");
+    }
 }
 
 //---------------------------------------------------------------------------
 void Job::Print (bool condorID) const {
-  printf ("ID: %4d Name: %s", _jobID, _jobName);
-  if (condorID) {
-    printf ("  CondorID: ");
-    _CondorID.Print();
-  }
+    printf ("ID: %4d Name: %s", _jobID, _jobName);
+    if (condorID) {
+        printf ("  CondorID: ");
+        _CondorID.Print();
+    }
 }
 
 //---------------------------------------------------------------------------
 void job_print (Job * job, bool condorID = false) {
-  if (job == NULL) printf ("(UNKNOWN)");
-  else job->Print(condorID);
+    if (job == NULL) printf ("(UNKNOWN)");
+    else job->Print(condorID);
 }

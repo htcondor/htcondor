@@ -19,6 +19,6 @@
     @return true on success, false on failure
 */
 
-void submit_submit (const char * cmdFile, CondorID & condorID);
+bool submit_submit (const char * cmdFile, CondorID & condorID);
 
 #endif /* #ifndef CONDOR_SUBMIT_H */

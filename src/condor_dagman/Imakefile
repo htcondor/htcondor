@@ -6,8 +6,8 @@ CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -Wall
 
 LDFLAGS = SocketLib
 
-SRC = main.C submit.C dag.C job.C util.C parse.C debug.c types.C
-OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o
+SRC = main.C submit.C dag.C job.C util.C parse.C debug.c types.C script.C
+OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o script.o
 
 LIB = ../condor_daemon_core.V6/daemon_core.a \
       ../condor_c++_util/cplus_lib.a \

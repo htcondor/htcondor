@@ -64,7 +64,7 @@ static bool submit_try (const char *exe,
 }
 
 //-------------------------------------------------------------------------
-void submit_submit (const char * cmdFile, CondorID & condorID) {
+bool submit_submit (const char * cmdFile, CondorID & condorID) {
   // the '-p' parameter to condor_submit will now cause condor_submit
   // to pause ~4 seconds after a successfull submit.  this prevents
   // the race condition of condor_submit finishing before dagman
@@ -95,13 +95,11 @@ void submit_submit (const char * cmdFile, CondorID & condorID) {
       sleep(wait);
     }
   }
-  if (!success) {
-    debug_println (DEBUG_QUIET, "condor_submit failed after %d tries.", tries);
-    debug_println (DEBUG_QUIET, "Submit command was: %s", command);
-    delete [] command;
-    debug_error   (1, DEBUG_QUIET, "Rerun %s after %s is fixed",
-                   debug_progname, exe);
+  if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
+    printf ("condor_submit failed after %d tries.\n", tries);
+    printf ("Submit command was: %s\n", command);
   }
   delete [] command;
+  return success;
 }
 

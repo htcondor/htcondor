@@ -1,5 +1,6 @@
 // Function to Parse the DagMan initialization file
 
+#include "job.h"
 #include "parse.h"
 #include "util.h"
 #include "debug.h"
@@ -8,199 +9,342 @@
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
-static const char * SIG        = "### DAGMan 6.1.0";
 
-//---------------------------------------------------------------------------
+static const unsigned int numSigs = 2;
+
+static const char * SigString[numSigs] = {
+    "### DAGMan 6.1.0",
+    "### DAGMan 6.1.1",
+};
+
+enum SigIndex {
+    SigInvalid   = -1,
+    DAGMAN_610,
+    DAGMAN_611
+};
+
+//-----------------------------------------------------------------------------
+void exampleSyntax (const char * example) {
+    debug_println (DEBUG_QUIET, "Example syntax is: %s", example);
+}
+
+//-----------------------------------------------------------------------------
+bool isKeyWord (char *token) {
+    const unsigned int numKeyWords = 6;
+    const char * keywords[numKeyWords] = {
+        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE"
+    };
+    for (unsigned int i = 0 ; i < numKeyWords ; i++) {
+        if (!strcasecmp (token, keywords[i])) return true;
+    }
+    return false;
+}
+
+//-----------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
 
-  assert (dag != NULL);
+    assert (dag != NULL);
   
-  FILE *fp = fopen(filename, "r");
-  if (fp == NULL) {
-    if (DEBUG_LEVEL(DEBUG_QUIET)) {
-      debug_println (DEBUG_QUIET, "Could not open file %s for input",
-                     filename);
-      return false;
-    }
-  }
-
-  char line [MAX_LENGTH + 1];
-  
-  int lineNumber = 0;
-  
-  //
-  // This loop will read every line of the input file
-  //
-  int len;
-  bool done = false;
-
-  while (!done && (len = util_getline(fp, line, MAX_LENGTH)) >= 0) {
-    lineNumber++;
-
-    if (lineNumber == 1) {
-        if (strcmp (line, SIG)) {
-            debug_println (DEBUG_QUIET, "First line of %s must be the "
-                           "signature \"%s\"", filename, SIG);
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        if (DEBUG_LEVEL(DEBUG_QUIET)) {
+            debug_println (DEBUG_QUIET, "Could not open file %s for input",
+                           filename);
             return false;
         }
     }
-      
-    if (len == 0) continue;     // Ignore blank lines
 
+    char line [MAX_LENGTH + 1];
+  
+    int lineNumber = 0;
+  
     //
-    // Ignore comments
+    // This loop will read every line of the input file
     //
-    if (line[0] == COMMENT) continue;
+    int len;
+    bool done = false;
+
+    SigIndex   sigIndex  = SigInvalid; // Default invalid signature index
     
-    char *token = strtok(line, DELIMITERS);
+    while (!done && (len = util_getline(fp, line, MAX_LENGTH)) >= 0) {
+        lineNumber++;
+
+        //
+        // Find the terminating '\0'
+        //
+        char * endline = line;
+        while (*endline != '\0') endline++;
+
+        //
+        //  Detect the Signature line
+        //
+        if (lineNumber == 1) {
+            for (unsigned int i = 0 ; i < numSigs ; i++) {
+                if (!strcmp (line, SigString[i])) {
+                    sigIndex = (SigIndex) i;
+                    break;
+                }
+            }
+            if (sigIndex == SigInvalid) {
+                debug_printf (DEBUG_QUIET,
+                              "First line of %s must be one of the following"
+                              "signatures:\n", filename);
+                for (unsigned int i = 0 ; i < numSigs ; i++) {
+                    printf ("\t%s\n", SigString[i]);
+                }
+                fclose(fp);
+                return false;
+            }
+        }
+
+        assert (sigIndex != SigInvalid);
       
-    //
-    // Handle a Job token
-    //
-    // Example Syntax is:  JOB j1 j1.condor
-    //
-    if (strcasecmp(token, "JOB") == 0) {
+        if (len == 0) continue;            // Ignore blank lines
+        if (line[0] == COMMENT) continue;  // Ignore comments
 
-      char *jobName = strtok(NULL, DELIMITERS);
-      if (jobName == NULL) {
-        debug_println (DEBUG_QUIET, "%s(%d): Missing job name",
-                       filename, lineNumber);
-        debug_println (DEBUG_QUIET, "Example syntax is:  JOB j1 j1.condor");
-        fclose(fp);
-        return false;
-      }
-	  
-      // Next token is the condor command file
-      char *cmd = strtok(NULL, DELIMITERS);
-      if (cmd == NULL) {
-        debug_println (DEBUG_QUIET, "%s(%d): Missing condor cmd file",
-                       filename, lineNumber);
-        debug_println (DEBUG_QUIET, "Example syntax is:  JOB j1 j1.condor");
-        continue;
-      }
-	  
-      Job * job = new Job (jobName, cmd);
-      if (job == NULL) debug_error (1, DEBUG_QUIET, "Out of Memory");
-	  
-      // Check if the user has pre-definied a Job as being done
-	  
-      char *done = strtok(0, DELIMITERS);
-      if (done != NULL && strcasecmp(done, "DONE") == 0) {
-        job->_Status = Job::STATUS_DONE;
-      }
-
-      if (!dag->Add (*job)) {
-        if (DEBUG_LEVEL(DEBUG_QUIET)) {
-          printf ("ERROR adding JOB ");
-          job->Print();
-          printf (" to Dag\n");
-        }
-        return false;
-      } else if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
-        printf ("%s: Added JOB: ", __FUNCTION__);
-        job->Print();
-        putchar('\n');
-      }
-    }
+        char *token = strtok(line, DELIMITERS);
       
-    //
-    // Handle a Dependency token
-    //
-    // Example Syntax is:  PARENT p1 p2 p3 ... CHILD c1 c2 c3 ...
-    //
-    else if (strcasecmp(token, "PARENT") == 0) {
+        //
+        // Handle a Job token
+        //
+        // Example Syntax is:  JOB j1 j1.condor [DONE]
+        //
+        if (strcasecmp(token, "JOB") == 0) {
+            const char * example = "JOB j1 j1.condor";
 
-      List<Job> parents;
+            char *jobName = strtok(NULL, DELIMITERS);
+            if (jobName == NULL) {
+                debug_println (DEBUG_QUIET, "%s(%d): Missing job name",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
 
-      char *jobName;
+            // The JobName cannot be a keyword
+            //
+            if (isKeyWord(jobName)) {
+                debug_println (DEBUG_QUIET,
+                               "%s(%d): JobName cannot be a keyword.",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
 
-      while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
-             strcasecmp (jobName, "CHILD") != 0) {
-        Job * job = dag->GetJob(jobName);
-        if (job == NULL) {
-          debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
-                         filename, lineNumber, jobName);
-          return false;
+            // Next token is the condor command file
+            //
+            char *cmd = strtok(NULL, DELIMITERS);
+            if (cmd == NULL) {
+                debug_println (DEBUG_QUIET, "%s(%d): Missing condor cmd file",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
+	  
+            Job * job = new Job (jobName, cmd);
+            if (job == NULL) debug_error (1, DEBUG_QUIET, "Out of Memory");
+	  
+            // Check if the user has pre-definied a Job as being done
+            //
+            char *done = strtok(0, DELIMITERS);
+            if (done != NULL && strcasecmp(done, "DONE") == 0) {
+                job->_Status = Job::STATUS_DONE;
+            }
+
+            if (!dag->Add (*job)) {
+                if (DEBUG_LEVEL(DEBUG_QUIET)) {
+                    printf ("ERROR adding JOB ");
+                    job->Print();
+                    printf (" to Dag\n");
+                }
+                fclose(fp);
+                return false;
+            } else if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
+                printf ("%s: Added JOB: ", __FUNCTION__);
+                job->Print();
+                putchar('\n');
+            }
         }
-        parents.Append (job);
-      }
+      
+        //
+        // Handle a SCRIPT token
+        //
+        // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
+        //
+        else if (sigIndex == DAGMAN_611 &&
+                 strcasecmp(token, "SCRIPT") == 0) {
+            const char * example = "SCRIPT (PRE|POST) JobName Script Args ...";
+            Job * job = NULL;
 
-      // There must be one or more parent job names before the CHILD token
-      if (parents.Number() < 1) {
-        debug_println (DEBUG_QUIET, "%s(%d): Missing Parent Job names",
-                       filename, lineNumber);
-        debug_println (DEBUG_QUIET, "Example syntax is: "
-                       "PARENT p1 p2 p3 CHILD c1 c2 c3");
-        fclose(fp);
-        return false;
-      }
+            //
+            // Second keyword is either PRE or POST
+            //
+            bool   post;
+            char * prepost = strtok (NULL, DELIMITERS);
+            if (prepost == NULL) goto MISSING_PREPOST;
+            else if (!strcasecmp (prepost, "PRE" )) post = false;
+            else if (!strcasecmp (prepost, "POST")) post = true;
+            else {
+              MISSING_PREPOST:
+                debug_println (DEBUG_QUIET, "%s(%d): Expected PRE or POST",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
+            
+            //
+            // Third token is the JobName
+            //
+            char *jobName = strtok(NULL, DELIMITERS);
+            if (jobName == NULL) {
+                debug_println (DEBUG_QUIET, "%s(%d): Missing job name",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            } else if (isKeyWord(jobName)) {
+                debug_println (DEBUG_QUIET,
+                               "%s(%d): JobName cannot be a keyword.",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            } else {
+                job = dag->GetJob(jobName);
+                if (job == NULL) {
+                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                                   filename, lineNumber, jobName);
+                    fclose(fp);
+                    return false;
+                }
+            }
 
-      if (jobName == NULL) {
-        debug_println (DEBUG_QUIET, "%s(%d): Expected CHILD token",
-                       filename, lineNumber);
-        debug_println (DEBUG_QUIET, "Example syntax is: "
-                       "PARENT p1 p2 p3 CHILD c1 c2 c3");
-        fclose(fp);
-        return false;
-      }
+            //
+            // Make sure this job doesn't already have a script
+            //
+            if (post ? job->_scriptPost != NULL : job->_scriptPre  != NULL) {
+                debug_println (DEBUG_QUIET, "%s(%d): Job previously assigned "
+                               "a %s script.", filename, lineNumber,
+                               post ? "POST" : "PRE");
+                fclose(fp);
+                return false;
+            }
 
-      List<Job> children;
+            //
+            // The rest of the line is the script and args
+            //
+            char * rest = jobName;
+            while (*rest != '\0') rest++;
+            if (rest < endline)   rest++;
 
-      while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
-        Job * job = dag->GetJob(jobName);
-        if (job == NULL) {
-          debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
-                         filename, lineNumber, jobName);
-          return false;
+            if (post) job->_scriptPost = new Script (post, rest, job);
+            else      job->_scriptPre  = new Script (post, rest, job);
         }
-        children.Append (job);
-      }
 
-      if (children.Number() < 1) {
-        debug_println (DEBUG_QUIET, "%s(%d): Missing Child Job names",
-                       filename, lineNumber);
-        debug_println (DEBUG_QUIET, "Example syntax is: "
-                       "PARENT p1 p2 p3 CHILD c1 c2 c3");
-        fclose(fp);
-        return false;
-      }
+        //
+        // Handle a Dependency token
+        //
+        // Example Syntax is:  PARENT p1 p2 p3 ... CHILD c1 c2 c3 ...
+        //
+        else if (strcasecmp(token, "PARENT") == 0) {
+            const char * example = "PARENT p1 p2 p3 CHILD c1 c2 c3";
+            
+            List<Job> parents;
 
-      //
-      // Now add all the dependencies
-      //
+            char *jobName;
 
-      Job *parent;
-      parents.Rewind();
-      while ((parent = parents.Next()) != NULL) {
-        Job *child;
-        children.Rewind();
-        while ((child = children.Next()) != NULL) {
-          if (!dag->AddDependency (parent, child)) {
-            debug_println (DEBUG_QUIET, "Failed to add dependency to dag");
+            while ((jobName = strtok (NULL, DELIMITERS)) != NULL &&
+                   strcasecmp (jobName, "CHILD") != 0) {
+                Job * job = dag->GetJob(jobName);
+                if (job == NULL) {
+                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                                   filename, lineNumber, jobName);
+                    fclose(fp);
+                    return false;
+                }
+                parents.Append (job);
+            }
+
+            // There must be one or more parent job names before
+            // the CHILD token
+            if (parents.Number() < 1) {
+                debug_println (DEBUG_QUIET, "%s(%d): Missing Parent Job names",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
+
+            if (jobName == NULL) {
+                debug_println (DEBUG_QUIET, "%s(%d): Expected CHILD token",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
+
+            List<Job> children;
+
+            while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
+                Job * job = dag->GetJob(jobName);
+                if (job == NULL) {
+                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                                   filename, lineNumber, jobName);
+                    fclose(fp);
+                    return false;
+                }
+                children.Append (job);
+            }
+
+            if (children.Number() < 1) {
+                debug_println (DEBUG_QUIET, "%s(%d): Missing Child Job names",
+                               filename, lineNumber);
+                exampleSyntax (example);
+                fclose(fp);
+                return false;
+            }
+
+            //
+            // Now add all the dependencies
+            //
+
+            Job *parent;
+            parents.Rewind();
+            while ((parent = parents.Next()) != NULL) {
+                Job *child;
+                children.Rewind();
+                while ((child = children.Next()) != NULL) {
+                    if (!dag->AddDependency (parent, child)) {
+                        debug_println (DEBUG_QUIET,
+                                       "Failed to add dependency to dag");
+                        fclose(fp);
+                        return false;
+                    }
+                    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
+                        printf ("%s: Added Dependency PARENT: ", __FUNCTION__);
+                        parent->Print();
+                        printf ("  CHILD: ");
+                        child->Print();
+                        putchar ('\n');
+                    }
+                }
+            }
+
+        } else {
+            //
+            // Bad token in the input file
+            //
+            debug_println (DEBUG_QUIET,
+                           "%s(%d): Expected JOB %sor PARENT token",
+                           filename, lineNumber,
+                           sigIndex == DAGMAN_611 ? ", SCRIPT, " : "");
             fclose(fp);
             return false;
-          }
-          if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
-            printf ("%s: Added Dependency PARENT: ", __FUNCTION__);
-            parent->Print();
-            printf ("  CHILD: ");
-            child->Print();
-            putchar ('\n');
-          }
         }
-      }
-
-    } else {
-      //
-      // Ignore bad tokens in the input file
-      //
-      debug_println (DEBUG_QUIET,
-                     "%s(%d): Expected JOB or PARENT token",
-                     filename, lineNumber);
-      fclose(fp);
-      return false;
-    }
 	
-  }
-  return true;
+    }
+    return true;
 }

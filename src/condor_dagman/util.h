@@ -21,4 +21,10 @@ const int UTIL_MAX_LINE_LENGTH = 1024;
 */ 
 extern "C" int util_getline (FILE *fp, char *line, int max);
 
+/** Execute a command, printing verbose messages and failure warnings.
+    @param cmd The command or script to execute
+    @return The return status of the command
+*/
+extern "C" int util_popen (const char * cmd);
+
 #endif /* #ifndef _UTIL_H_ */

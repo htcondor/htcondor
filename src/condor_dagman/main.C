@@ -14,27 +14,34 @@ extern "C" int SetSyscalls() { return 0; }
 
 class Global {
   public:
-    inline Global (): dag(NULL), maxJobs(0) {}
+    inline Global ():
+        dag          (NULL),
+        maxJobs      (0),
+        rescue_file  (NULL),
+        datafile     (NULL) {}
     inline void CleanUp () { delete dag; }
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
+    char *rescue_file;
+    char *datafile;
 };
 
 Global G;
 
+
 //---------------------------------------------------------------------------
 static void Usage() {
-    debug_printf
-        (DEBUG_SILENT,
-         "Usage: condor_dagman -f -t -l .\n"
-         "\t\t[-Debug <level>]\n"
-         "\t\t-Condorlog <NAME.dag.condor.log>\n"
-         "\t\t-Lockfile <NAME.dag.lock>\n"
-         "\t\t-Dag <NAME.dag>\n"
-         "\t\t[-MaxJobs] <int N>\n\n"
-         "\twhere NAME is the name of your DAG.\n"
-         "\twhere N is Maximum # of Jobs to run at once (0 means unlimited)\n"
-         "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
+    printf ("\nUsage: condor_dagman -f -t -l .\n"
+            "\t\t[-Debug <level>]\n"
+            "\t\t-Condorlog <NAME.dag.condor.log>\n"
+            "\t\t-Lockfile <NAME.dag.lock>\n"
+            "\t\t-Dag <NAME.dag>\n"
+            "\t\t-Rescue <Rescue.dag>\n"
+            "\t\t[-MaxJobs] <int N>\n\n"
+            "\twhere NAME is the name of your DAG.\n"
+            "\twhere N is Maximum # of Jobs to run at once "
+            "(0 means unlimited)\n"
+            "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
     DC_Exit(1);
 }
 
@@ -82,29 +89,14 @@ int main_init (int argc, char **argv) {
     // The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal (DC_SIGUSR1, "DC_SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
-                                 "main_shutdown_remove", NULL, IMMEDIATE_FAMILY);
+                                 "main_shutdown_remove", NULL,
+                                 IMMEDIATE_FAMILY);
 
     debug_progname = basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
-    // I assume this is not needed with Daemon Core Present
-    //#if !defined(WIN32)
-    //  // the following is used to avoid 'broken pipe' messages
-    //  install_sig_handler (SIGPIPE, SIG_IGN);
-    //#endif
-  
-    char *condorLogName = NULL;
-    char *lockFileName = NULL;
-  
-    // DagMan recovery occurs if the file pointed to by 
-    // lockFileName exists. This file is deleted on normal 
-    // completion of condor_dagman
-
-    // DAG_LOG is used for DagMan to maintain the order of events 
-    // Recovery only uses the condor log
-    // In this version, the DAG_LOG is not used
-
-    char *datafile = NULL;
+    char *condorLogName  = NULL;
+    char *lockFileName   = NULL;
 
     for (int i = 0 ; i < argc ; i++) {
         printf ("argv[%d] == \"%s\"\n", i, argv[i]);
@@ -145,7 +137,14 @@ int main_init (int argc, char **argv) {
                 debug_println (DEBUG_SILENT, "No DAG specified");
                 Usage();
             }
-            datafile = argv[i];
+            G.datafile = argv[i];
+        } else if (!strcmp("-Rescue", argv[i])) {
+            i++;
+            if (argc <= i) {
+                debug_println (DEBUG_SILENT, "No Rescue DAG specified");
+                Usage();
+            }
+            G.rescue_file = argv[i];
         } else if (!strcmp("-MaxJobs", argv[i])) {
             i++;
             if (argc <= i) {
@@ -156,15 +155,11 @@ int main_init (int argc, char **argv) {
         } else Usage();
     }
   
-    debug_println (DEBUG_VERBOSE,
-                   "This Dagman executable was compiled on %s at %s",
-                   __DATE__, __TIME__);
-
     //
     // Check the arguments
     //
 
-    if (datafile == NULL) {
+    if (G.datafile == NULL) {
         debug_println (DEBUG_SILENT, "No DAG file was specified");
         Usage();
     }
@@ -185,7 +180,12 @@ int main_init (int argc, char **argv) {
                    condorLogName);
     debug_println (DEBUG_VERBOSE,"DAG Lockfile will be written to %s",
                    lockFileName);
-    debug_println (DEBUG_VERBOSE,"DAG Input file is %s", datafile);
+    debug_println (DEBUG_VERBOSE,"DAG Input file is %s", G.datafile);
+
+    if (G.rescue_file != NULL) {
+        debug_println (DEBUG_VERBOSE,"Rescue DAG will be written to %s",
+                       G.rescue_file);
+    }
 
     {
         char *temp;
@@ -206,9 +206,9 @@ int main_init (int argc, char **argv) {
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_println (DEBUG_VERBOSE, "Parsing %s ...", datafile);
-    if (!parse (datafile, G.dag)) {
-        debug_error (1, DEBUG_QUIET, "Failed to parse %s", datafile);
+    debug_println (DEBUG_VERBOSE, "Parsing %s ...", G.datafile);
+    if (!parse (G.datafile, G.dag)) {
+        debug_error (1, DEBUG_QUIET, "Failed to parse %s", G.datafile);
     }
 
     debug_println (DEBUG_VERBOSE, "Dag contains %d total jobs",
@@ -280,12 +280,33 @@ void main_timer () {
     if (G.dag->DetectLogGrowth()) {
         if (G.dag->ProcessLogEvents() == false) {
             if (DEBUG_LEVEL(DEBUG_DEBUG_1)) G.dag->Print_TermQ();
-            debug_error (1, DEBUG_QUIET, "ERROR while processing condor log!");
+            debug_println (DEBUG_QUIET, "Aborting DAG..."
+                           "removing running jobs");
+            G.dag->RemoveRunningJobs();
+            G.CleanUp();
+            DC_Exit(0);
         }
     }
   
+    assert (G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs());
+
+    //
+    // If DAG is complete, hurray, and exit.
+    //
     if (G.dag->NumJobsDone() >= G.dag->NumJobs()) {
+        assert (G.dag->NumJobsRunning() == 0);
         debug_println (DEBUG_NORMAL, "All jobs Completed!");
+        G.CleanUp();
+        DC_Exit(0);
+    }
+
+    //
+    // If no jobs are running, but the dag is not complete,
+    // then at least one job failed, or a cycle exists.
+    // 
+    if (G.dag->NumJobsRunning() == 0 && G.rescue_file != NULL) {
+        debug_println (DEBUG_NORMAL, "Writing Rescue DAG file...");
+        G.dag->Rescue(G.rescue_file, G.datafile);
         G.CleanUp();
         DC_Exit(0);
     }
