@@ -59,6 +59,8 @@
 
 extern char *gen_ckpt_name();
 
+extern GridUniverseLogic* _gridlogic;
+
 #include "condor_qmgr.h"
 #include "qmgmt.h"
 
@@ -216,6 +218,7 @@ Scheduler::Scheduler()
 	ManageBandwidth = false;
 	RejectedClusters.setFiller(0);
 	RejectedClusters.resize(MAX_REJECTED_CLUSTERS);
+	_gridlogic = NULL;
 }
 
 Scheduler::~Scheduler()
@@ -278,6 +281,9 @@ Scheduler::~Scheduler()
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
 
+
+	if (_gridlogic)
+		delete _gridlogic;
 }
 
 void
@@ -746,7 +752,7 @@ count( ClassAd *job )
 			// per owner.
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 			globus_status = G_UNSUBMITTED;
-			job->LookupInteger(ATTR_JOB_UNIVERSE, globus_status);
+			job->LookupInteger(ATTR_GLOBUS_STATUS, globus_status);
 			if ( globus_status == G_UNSUBMITTED ) 
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 		}
@@ -2793,7 +2799,6 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 }
 
 
-
 shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
 {
@@ -4010,7 +4015,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	// thus we do not have to link in the ckpt_server_api.
 #include "directory.h"
 int 
-RemoveLocalOrRemoteFile(const char *, const char *)
+RemoveLocalOrRemoteFile(const char *, const char *, const char *)
 {
 	return 0;
 }
@@ -4512,7 +4517,11 @@ Scheduler::Register()
 								 "reaper", this );
 #endif
 
+	// register all the timers
 	RegisterTimers();
+
+	// Now is a good time to instantiate the GridUniverse
+	_gridlogic = new GridUniverseLogic;
 }
 
 void
