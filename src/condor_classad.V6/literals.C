@@ -123,7 +123,7 @@ MakeRelTime( time_t secs )
 
 	if( secs<0 ) {
 		time(&secs );
-		localtime_r( &secs, &lt );
+		FunctionCall::getLocalTime( &secs, &lt );
 	}
 	val.SetRelativeTimeValue( lt.tm_hour*3600 + lt.tm_min*60 + lt.tm_sec );
 	return( MakeLiteral( val ) );
