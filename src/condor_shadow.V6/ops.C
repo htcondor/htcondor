@@ -198,7 +198,8 @@ HandleLog()
 	for(;;) {
 		errno = 0;
 
-		if ( (len=read(LogSock,buf,sizeof(buf)-1)) == -1 ) {
+		len=read(LogSock,buf,sizeof(buf)-1);
+		if ( len < 0 ) {
 			if ( errno == EINTR )
 				continue;	// interrupted by signal; just continue
 			if ( errno == EAGAIN )
@@ -206,6 +207,9 @@ HandleLog()
 
 			dprintf(D_FULLDEBUG,"HandleLog() read FAILED, errno=%d\n",errno );
 			return -1; 		// anything other than EINTR or EAGAIN is error
+		}
+		if ( len == 0 ) {
+			return 0;
 		}
 
 		nlp = buf;
@@ -232,7 +236,7 @@ HandleLog()
 		if ( !done ) {
 			/* we did not receive the entire line - store the first part */
 			buf[ BUFSIZ - 1 ]  = '\0';  /* make certain strcpy does not SEGV */
-			strcpy(oldbuf,newbuf);
+			strcpy(oldbuf,buf);
 		}
 
 	}
