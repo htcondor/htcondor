@@ -73,6 +73,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_startd.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
+	-@erase "$(INTDIR)\domain_tools.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
 	-@erase "$(INTDIR)\email_cpp.obj"
 	-@erase "$(INTDIR)\enum_utils.obj"
@@ -218,6 +219,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\domain_tools.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\lower_case.obj"
 
@@ -271,6 +273,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_startd.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
+	-@erase "$(INTDIR)\domain_tools.obj"
 	-@erase "$(INTDIR)\dynuser.obj"
 	-@erase "$(INTDIR)\email_cpp.obj"
 	-@erase "$(INTDIR)\enum_utils.obj"
@@ -415,6 +418,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\domain_tools.obj" \
 	"$(INTDIR)\get_daemon_name.obj" \
 	"$(INTDIR)\lower_case.obj"
 
@@ -703,6 +707,12 @@ SOURCE="..\src\condor_c++_util\directory.C"
 SOURCE="..\src\condor_c++_util\distribution.C"
 
 "$(INTDIR)\distribution.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\domain_tools.C"
+
+"$(INTDIR)\domain_tools.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

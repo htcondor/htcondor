@@ -42,7 +42,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
@@ -71,7 +71,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -79,6 +78,7 @@
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\condor_holdcodes.h"\
 	"..\src\condor_c++_util\environ.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -132,7 +132,8 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_parameters.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
@@ -161,7 +162,6 @@
 	"..\src\h\globus_utils.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -214,7 +214,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
@@ -242,7 +242,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	
 
@@ -307,6 +306,7 @@
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
@@ -338,7 +338,6 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	"..\src\h\util_lib_proto.h"\
 	
@@ -392,7 +391,7 @@
 	"..\src\condor_includes\condor_io.h"\
 	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
-	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
@@ -420,6 +419,5 @@
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
 	"..\src\h\startup.h"\
 	

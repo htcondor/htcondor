@@ -341,6 +341,14 @@ SOURCE="..\src\condor_c++_util\distribution.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\domain_tools.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\domain_tools.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\dynuser.C"
 # End Source File
 # Begin Source File
@@ -421,6 +429,14 @@ SOURCE="..\src\condor_c++_util\generic_query.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\get_daemon_name.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\get_daemon_name.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\get_full_hostname.C"
 # End Source File
 # Begin Source File
@@ -494,6 +510,11 @@ SOURCE="..\src\condor_c++_util\log_transaction.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\log_transaction.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\lower_case.C"
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
