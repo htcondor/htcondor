@@ -287,7 +287,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
-			//priv_state priv = set_condor_priv();
+			priv_state priv = set_condor_priv();
 			if( (mkdir(SpoolSpace,0777) < 0) ) {
 				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
@@ -304,7 +304,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 				// we can access an executable in the spool dir
 				ExecFile = strdup(source);
 			}
-			//set_priv(priv);
+			set_priv(priv);
 
 		}
 		if ( !ExecFile ) {
