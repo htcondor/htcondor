@@ -29,7 +29,7 @@ FLOCK_OBJ = ../condor_util_lib/flock.o
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
-library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf_common.o ../condor_util_lib/dprintf.o ../condor_util_lib/mkargv.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/condor_errlst.o ../condor_util_lib/setsyscalls.o uids.o)
+library_target( libcondorapi.a,$(API_OBJ) file_lock.o ../condor_util_lib/dprintf_common.o ../condor_util_lib/dprintf.o ../condor_util_lib/mkargv.o ../condor_util_lib/except.o ../condor_util_lib/lock_file.NON_POSIX.o $(FLOCK_OBJ) ../condor_util_lib/setsyscalls.o uids.o)
 
 c_plus_target(test_locks,test_locks.o,$(LIB))
 
