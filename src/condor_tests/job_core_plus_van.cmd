@@ -1,5 +1,5 @@
 universe   = vanilla
-executable = /bin/sleep
+executable = x_sleep.pl
 log = job_core_plus_van.log
 output = job_core_plus_van.out
 error = job_core_plus_van.err

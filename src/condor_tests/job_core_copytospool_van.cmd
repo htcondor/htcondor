@@ -1,5 +1,5 @@
 
-Executable           = /bin/sleep
+Executable           = x_sleep.pl
 Universe             = vanilla
 log = job_core_copytospool_van.log
 output = job_core_copytospool_van.out
