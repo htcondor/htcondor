@@ -380,7 +380,6 @@ PREEN_ARGS			= -m -r
 ##  Where are the various shadow binaries installed?
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
-SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
 SHADOW_NT		= $(SBIN)/condor_shadow.v63
 
 ##  When the schedd starts up, it can place it's address (IP and port)
