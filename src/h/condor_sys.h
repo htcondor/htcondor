@@ -79,9 +79,7 @@ extern char *_condor_syscall_name(int);
 }
 #endif
 
-#if !defined(WIN32)
 #include "syscall_numbers.h"
-#endif
 
 #define NFAKESYSCALLS    22
 
