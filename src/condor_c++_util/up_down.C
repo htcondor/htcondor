@@ -42,10 +42,10 @@ void UpDown::UpdateUserInfo(const char* userName, const int status)
 				// for this user in table
 {
 	char flag = 0;
-/*	int i=0; /* Pentium specific change ..dhaval 6/27 */
+	int i=0; 
 
 	// search if this user is already existing
-	for ( int i=0; i < activeUsers; i++)
+	for (i=0; i < activeUsers; i++)
 	  if ( strncmp(table[i].name,userName,MaxUserNameSize-1) == 0 )
 	  {
 		flag = 1;

@@ -36,6 +36,10 @@
 #include "condor_fix_timeval.h"
 #include "selector.h"
 
+#if defined(IRIX53)
+#	include<bstring.h>
+#endif
+
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 
@@ -45,6 +49,7 @@ void display_fd_set( char *msg, fd_set *set, int max );
 
 Selector::Selector()
 {
+
 	state = VIRGIN;
 	timeout_wanted = FALSE;
 	max_fd = -1;

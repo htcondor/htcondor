@@ -16,6 +16,8 @@ Aix		ptype;
 Linux		ptype;
 #elif		defined(Solaris)
 solaris		ptype;
+#elif		defined(IRIX53)
+Irix		ptype;
 #endif
 
 BaseOs*     platform =  &ptype;

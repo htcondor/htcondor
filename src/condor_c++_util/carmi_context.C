@@ -14,6 +14,10 @@
 #include "condor_debug.h"
 #include "sched.h"
 
+#if defined(IRIX53)
+#	include <time.h>
+#endif
+
 #undef ASSERT
 #define ASSERT(x) x
 
