@@ -26,7 +26,7 @@ See \Url{http://www.globus.org} for information.
 \item Testing the Globus requirements:
 \begin{verbatim}
      --You can run globusrun -version to display the version number.
-     --You can run globusrun -a -r $<$FQHN$>$/jobmanager-fork to authenticate 
+     --You can run globusrun -a -r <FQHN>/jobmanager-fork to authenticate 
        to the host, as well as testing the validity of your credentials 
        and environment variables.
 \end{verbatim}
@@ -45,22 +45,22 @@ See \Url{http://www.globus.org} for information.
   All machines in the pool must be sent a reconfigure command when
   changes are made to the \Macro{HOSTALLOW\_WRITE} list.
 
+\item Your Condor pool's configuration file(s) must set the \Macro{GLOBUSRUN}
+and \Macro{SHADOW\_GLOBUS} values to be the path of the \Prog{globusrun} and
+\Condor{shadow.globus}, respectively.
 
-\item You must have the common user programs (/bin), globus tools, and Condor
-  tools included in your PATH.
+
+\item You must have the common user programs directory (/bin), globus tools, 
+and Condor user program directory (.../bin) included in your PATH.
+
+\item You must have \Env{X509\_USER\_PROXY} set in your environment, pointing to a valid user proxy.
+
 \end{enumerate}
 
 \subsection{Requirements for running \Condor{glidein} as a Condor job}
 \begin{enumerate}
-\item You must have \Env{X509\_USER\_PROXY} set in your environment, pointing to a valid user proxy.
-
 \item The proxy (located by \Env{X509\_USER\_PROXY} env var) must be readable by
-Condor. At sites using an AFS filesystem, that means that AFS acls apply, and must be readable by the Condor programs.
-
-\item Files must be prestaged (once per machine, not each time) by running
-\Condor{glidein} --setuponly $<$FQHN$>$ outside of Condor.
-
-\item Use the --runonly option.
+Condor. At sites using an AFS filesystem, that means that AFS ACLs apply, and must be readable by the Condor programs.
 
 \item Run \Condor{glidein} as a vanilla universe job or as a scheduler universe 
 job. Since scheduler universe jobs run on the submitting machine, some potential
@@ -68,12 +68,20 @@ PATH and \Env{X509\_USER\_PROXY} problems might be avoided by running as schedul
 
 \item The environment variables \Env{GLOBUS\_INSTALL\_PATH}  \Env{GLOBUS\_DEPLOY\_PATH}, \Env{PATH}, \Env{X509\_USER\_PROXY}, and \Env{HOME} must be exported using the submit description file options of Getenv = True, or by setting these values with the Environment option.
 
+\item Since \Condor{glidein} is a script which itself submits job(s) to Condor, 
+the \Condor{glidein} script exits normally once the submission completes on
+the remote machine. Because of this, even sucessful glideins will not show up
+when running \Condor{queue}, because \Condor{glidein} has completed, and the
+\Prog{globusrun} program is running on another machine in the pool. Do not
+worry, though-- the glided-in daemons will shut down gracefully after the
+time interval specified with the \Opt{runfor} option [default 20 minutes].
+
 Here is a sample submit description file:
 
 \begin{verbatim}
    universe = vanilla
    Executable = /unsup/condor/bin/condor_glidein
-   arguments = --runonly pitcairn.mcs.anl.gov
+   arguments = denali.mcs.anl.gov
 
    environment = \
    PATH=/bin:/unsup/condor/bin:/p/condor/workspaces/globus/bin;\
@@ -96,11 +104,11 @@ Argonne, and wants to add the resources to his local Condor pool.
 
 \begin{enumerate}
 
-\item From his local machine (e.g., monterey6@cs.wisc.edu) the user runs 
+\item From his local machine (e.g., froth@cs.wisc.edu) the user runs 
    the \Condor{glidein} script specifying the remote resource he wants 
    to acquire:
 
-monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
+mikeu@froth\% \Condor{glidein} denali.mcs.anl.gov
 
 \item The remote node is checked to see if the user has permission to
    use the remote node as a resource. The remote node is also checked
@@ -112,8 +120,10 @@ monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
    After a couple of seconds you can see the remote resources in your 
    local Condor pool, e.g.:
 
-   monterey6@cs.wisc.edu\% \Condor{status} | grep goshen
-      vm1@goshen.mc SOLARIS26   SUN4u  Unclaimed  Idle       0.000   128 ...
+\begin{verbatim}
+mikeu@froth\% \Condor{status} | grep denal
+7591386@denal IRIX65      SGI    Unclaimed  Idle       3.700  24064  0+00:06:35
+\end{verbatim}
 
 \item \Condor{glidein} offers you several options to manage the remote resource
    Use "\Condor{glidein} --help" for details.
@@ -123,11 +133,11 @@ monterey6@cs.wisc.edu\% \Condor{glidein} goshen.mcs.anl.gov
    specify the remote node as a machine requirement in your Condor submit
    file: 
 \begin{verbatim}
-      requirements = ( machine == "goshen.mcs.anl.gov" ) \
+      requirements = ( machine == "denali.mcs.anl.gov" ) \
          && FileSystemDomain != "" \
          && Arch != "" && OpSys != ""
 \end{verbatim}
-   (This example requires that the job run only on goshen.mcs.anl.gov, and
+   (This example requires that the job run only on denali.mcs.anl.gov, and
    prevents Condor from inserting the filesystem domain, architecture, and 
    operating system attributes as requirements in the matchmaking process,
    since it is likely you may submit Condor jobs from a machine whose
@@ -151,7 +161,7 @@ it runs the Condor executables by creating a submit description file for
 \Condor{submit}, which, in turn runs the \Condor{master} under the Globus 
 universe.
 The Condor daemons exit gracefully when no jobs run on the daemons for a 
-configurable period of time. The default length of time is 15 minutes.
+configurable period of time. The default length of time is 20 minutes.
 
 The Condor executables on the remote node contact the local pool and
 attempt to join the pool (see Condor requirements above). The START
@@ -163,7 +173,7 @@ submitted through Condor. This can be overridden with the 'anybody' option.
 \begin{description}
 \item[\Arg{--basedir $<$name$>$}]
 	Specify the remote base directory for staging files, daemons, etc. 
-	This defaults to \$HOME/\Condor{glidein} on the remote node.
+	This defaults to \$HOME/Condor\_glidein on the remote node.
 
 \item[\Arg{--archdir $<$name$>$}]
 	Specify the remote directory for the executables, 
@@ -175,10 +185,10 @@ submitted through Condor. This can be overridden with the 'anybody' option.
 
 \item[\Arg{--localdir $<$name$>$}]
 	Specify the remote directory in which to create log and execution 
-	subdirectories needed by Condor. If you have limited disk quota in
-	your HOME or BASEDIR (see above) directories on the remote machine,
-	setting this value to "/tmp" or "/scratch/LOGINAME" will create the
-	directories in (usually) large temporary space.
+	subdirectories needed by Condor. If you have limited disk quota in your 
+	HOME or BASEDIR (see above) directories on the remote machine, setting 
+	this value to a large temporary space, e.g., "/tmp" or "/scratch" 
+	will allow the jobs to run with fewer disk quota problems.
 
 \item[\Arg{--contactfile $<$file$>$}]
 	Allows the use of a file of contact strings, rather than a single
@@ -213,6 +223,7 @@ submitted through Condor. This can be overridden with the 'anybody' option.
 	How long the glided-in Condor daemons should remain idle before the
 	glidein shuts itself down. A value of 0 (zero) means no automatic shutdown,
 	in which case the daemons will run until killed with a \Condor{rm}.
+	If this option is not specified, the default value of 20 minutes is used.
 
 \item[\Arg{--anybody}]
 	Overrides the default Condor start expression to allow any user job which

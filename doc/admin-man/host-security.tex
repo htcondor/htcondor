@@ -367,19 +367,19 @@ connections in web browsers, i.e., SSL authentication with X.509 certificates.
 SSL, an abbreviation for "secure sockets layer", was developed in the 
 Netscape web browser and has since become a de-facto industry standard.
 Versions of Condor which include this technology supports the authentication
-method \Macro{GSS}, an abbreviation of "Generic Security Services". The
+method GSS, an abbreviation of "Generic Security Services". The
 primary difference between SSL and GSS is that GSS is a security API which
 uses the underlying mechanisms of SSL to accomplish such tasks as user
 authentication, key exchange, and secure communication. The implementation
-of SSL used is SSL-Eay, which is written in Australia, and therefore not
+of SSL used is SSLeay, which is written in Australia, and therefore not
 subject to the U.S. encryption technology export guidelines. The maintenance
-of SSL-Eay was adopted by the OpenSSL group, which oversees its continuing
+of SSLeay was adopted by the OpenSSL group, which oversees its continuing
 development and documentation. However, the implementation of GSS used in
 Condor is part of the Globus software \Url{www.globus.org}, which uses the 
-older SSL-Eay technology. The export restrictions in effect at the time of
+older SSLeay technology. The export restrictions in effect at the time of
 this writing precludes the Condor team from making this capability available
 to the general public, and can only be distributed on a case-by-case basis.
-Email \Url{mailto:condor-admin@cs.wisc.edu} for information.
+Email \Email{condor-admin@cs.wisc.edu} for information.
 
 These technologies use an X.509 certificate hierarchy with public-key 
 cryptography to accomplish two tasks- Key Distribution and User Authentication.
@@ -436,4 +436,68 @@ responsibility of a CA. The CA may perform several tasks, including:
 as to sign host and user certificate requests. The \Condor{ca} utility
 is a script which automates, configures and simplifies several of the complex
 tasks in the setup and maintenance of a CA. 
+\end{enumerate}
+
+
+Instructions for installing SSLeay and creating a Condor CA
+\begin{enumerate}
+\item Download and install SSLeay. See \Url{http://www2.psy.uq.edu.au/~ftp/Crypto/\#Where to get SSLeay - FTP site list} for download sites. See \Url{http://www2.psy.uq.edu.au/~ftp/Crypto/} for general information.
+\Note{There is an error in the SSLeay Makefile. For compilation on Solaris, you have to add -lsocket -nsl to the EX\_LIB line in Makefile.ssl}
+
+\item The SSL executables \Prog{ssleay} and \Prog{c\_hash} must be in the path of the administrator and any users who want to create certificate requests. If not already normally installed at your site, just symlink these files to the condor bin directory.
+
+\item Use \Prog{perl} to run the \Prog{create\_ca} script, providing the fully-qualified pathname of the install directory (e.g., perl create\_ca /usr/local/condor/ca).
+This will create the install directory and install several needed files there.
+\Note{During installation, you will be asked to create a pass-phrase, verify it, and then enter it when your key is used to generate the CA certificate. If you mistype your passphrase, the SSL programs die in a messy manner. This script tries to at least do some graceful cleanup.}
+
+\item Create a symbolic link from <CA install directory>/condor\_cert to a directory in the user's path, preferably the condor bin directory
+
+\item Create certificate directories for daemons using authentication by running: <CA install directory>/\Condor{ca} -daemon <daemon certificate directory>
+\Note{Daemon names in the certificate must be of the form: schedd$@$$<$fully qualfied host name$>$}
+
+\item Sign certificate requests ONLY when you are VERY sure of the identity
+of the requestor. For example, have the user email you their certificate
+request, and verify their existance with out of band means.
+to sign certificates: 
+\begin{verbatim}
+	condor_ca <in cert request> <out signed cert file>
+\end{verbatim}
+
+\item Add a line to the local condor configuation file defining
+\begin{verbatim}
+	CONDOR_CERT_DIR = <full path of this daemon's certificate directory>.
+\end{verbatim}
+
+\item The local condor configuration file must also have the \Macro{AUTHENTICATION\_METHODS} value defined, and it must include the value GSS.
+
+\item Restart the daemon.
+\end{enumerate}
+
+Instructions for Acquiring User Certificates for X.509 Authentication
+
+\begin{enumerate}
+\item The SSL executables \Prog{ssleay} and \Prog{c\_hash} must be in the path of the administrator and any users who want to create certificate requests. If not already normally installed at your site, just symlink these files to the condor bin directory.
+
+\item
+\begin{verbatim}
+run: condor_cert <certificate directory to create> 
+	[suggested directory: $HOME/.globus]
+\end{verbatim}
+
+\item Upon success, mail the certificate request (<cert dir>/usercert\_request.pem) to your condor admin account (at cs.wisc.edu, it's "condorca")
+
+\item If approved, the admin will send you a signed certificate, which you must save as <cert dir>/usercert.pem
+
+\item Authenticated submissions require a variable "cert\_dir" to be specified
+in the submit file, which is set to the full path of their certificate
+directory.  Under the current configuration, the new schedd will allow
+remote submission.  Here is a sample submission file:
+\begin{verbatim}
+   cert_dir = /home/yourname/.condorcerts
+   notify_user = mikeu@cs.wisc.edu
+   executable = testit
+   input = in.$(Process)
+   output = out.$(Process)
+   queue 2
+\end{verbatim}
 \end{enumerate}
