@@ -3279,8 +3279,7 @@ Scheduler::StartJobHandler()
 			mark_job_stopped(job_id);
 			RemoveShadowRecFromMrec(srec);
 			holdJob( job_id->cluster, job_id->proc, 
-					 "No condor_shadow installed at your submit machine "
-					 "that supports WIN32 jobs", 
+					 "No condor_shadow installed that supports WIN32 jobs", 
 					 true, true, true, true );
 			delete srec;
 			srec = NULL;
@@ -3304,8 +3303,8 @@ Scheduler::StartJobHandler()
 				mark_job_stopped(job_id);
 				RemoveShadowRecFromMrec(srec);
 				holdJob( job_id->cluster, job_id->proc, 
-                         "No condor_shadow installed at your submit machine "
-						 "that supports standard universe jobs", 
+                         "No condor_shadow installed that supports "
+						 "standard universe jobs", 
                          true, true, true, true );
 				delete srec;
 				srec = NULL;
@@ -3351,8 +3350,7 @@ Scheduler::StartJobHandler()
 				mark_job_stopped(job_id);
 				RemoveShadowRecFromMrec(srec);
 				holdJob( job_id->cluster, job_id->proc, 
-                         "No condor_shadow installed at your submit machine "
-						 "that supports JAVA jobs", 
+                         "No condor_shadow installed that supports JAVA jobs",
                          true, true, true, true );
 				delete srec;
 				srec = NULL;
@@ -3559,8 +3557,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 					 "can't spawn PVM jobs, aborting\n", ATTR_HAS_PVM );
 			RemoveShadowRecFromMrec(srp);
 			holdJob( job_id->cluster, job_id->proc, 
-					 "No condor_shadow installed at your submit machine "
-					 "that supports PVM jobs", 
+					 "No condor_shadow installed that supports PVM jobs", 
                      true, true, true, true );
 			delete srp;
 			return NULL;
