@@ -125,7 +125,7 @@ extern "C" {
 	printf( "%s%s = " #fmt "\n", leader, #name, name )
 
 
-#include "setjmp.h"
+#include "condor_fix_setjmp.h"
 extern "C" {
 	int SETJMP( jmp_buf env );
 	void LONGJMP( jmp_buf env, int retval );
