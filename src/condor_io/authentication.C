@@ -566,12 +566,9 @@ Authentication::setupEnv( char *hostAddr )
 		canUseFlags |= (int) CAUTH_FILESYSTEM;
 
 			//RendezvousDirectory is for use by shared-filesystem filesys auth.
+			//if user specfied RENDEZVOUS_DIRECTORY, extract it
 		char *tmpDir = NULL;
-			//if user specfied RENDEZVOUS_DIRECTORY, extract it, else use $HOME
-		if ( !(tmpDir = getenv( "RENDEZVOUS_DIRECTORY" ) ) ) {
-			tmpDir = getenv( "HOME" );
-		}
-		if ( tmpDir ) {
+		if ( (tmpDir = getenv( "RENDEZVOUS_DIRECTORY" ) ) ) {
 			RendezvousDirectory = strnewp( tmpDir );
 			canUseFlags |= (int) CAUTH_FILESYSTEM_REMOTE;
 		}
