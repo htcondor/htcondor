@@ -178,12 +178,20 @@ void ExtArray<Element>::
 resize (int newsz) {
 	Element *newarray = new Element[newsz];
 	int		index = (size < newsz) ? size : newsz;
+	int i;
 
 	// check if memory allocation was successful
 	if (!newarray) 
 	{
 		dprintf (D_ALWAYS, "ExtArray: Out of memory");
 		exit (1);
+	}
+
+	// if the new array is larger, and a 'filler' value is
+	// defined, initialize with the filler
+	for (i=index;i<newsz;i++) 
+	{
+		newarray[i] = filler;
 	}
 
 	// copy elements over to new array
