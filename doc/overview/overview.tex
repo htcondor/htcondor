@@ -343,6 +343,54 @@ various operating systems, see Chapter~\ref{platforms} on
 page~\pageref{platforms}. 
 
 
+
+Jobs submitted to the standard universe utilize \Condor{compile}
+to relink programs with libraries provided by Condor.
+Table~\ref{supported-compile} lists supported compilers by
+platform.
+Other compilers may work, but are not supported.
+
+\index{Condor commands!condor\_compile!list of supported compilers}
+\index{condor\_compile command!list of supported compilers}
+\index{compilers!supported with condor\_compile}
+
+% condor_compile works on. . .
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|ll|l}
+\textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
+Solaris (all versions) on SPARC \\ 
+& gcc, g++, and g77 & The entire GNU compiler suite must be versions 2.95.3 or 2.95.4. \\ 
+& cc, CC & use the standard, native compiler \\ 
+& f77, f90 & use the standard, native compiler \\ 
+\hline
+Red Hat Linux, versions 7.1, 7.2, and 7.3 on Intel x86 \\ 
+& gcc, g++, and g77 & as shipped \\ 
+& pgf77 and pgf90, version 5.0 & Portland Group compilers \\ 
+& pghpf, version 5.0 & Portland Group high performace Fortran compiler \\ 
+& pgcc, version 5.0 \\ 
+\hline
+HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
+& gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+& cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
+\hline
+IRIX 6.5 on Silicon Graphics MIPS (R5000, R8000, and R10000)\\ 
+& cc, CC, and c89 \\ 
+& f77 and f90 \\ 
+& gcc, g++, and g77;  version egcs-1.1.2 for mips4 & We plan to support newer versions of the GNU compiler collection in the near future.  mips4 executables will \emph{not} run on a mips3-only architecture, but
+ a mips4 architecture will run a mips3 executable.\\ 
+\hline
+Digitial Unix 4.0 on ALPHA \\ 
+& cc, CC, cxx, and c89 \\ 
+& KCC \\ 
+& gcc, g++, and g77;  version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+\hline
+\end{tabular}
+\caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
+\end{table}
+\end{center}
+
+
 \section{\label{contact-info}Contact Information}
 
 \index{Condor!contact information}

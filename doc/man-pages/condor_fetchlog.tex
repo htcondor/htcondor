@@ -1,63 +1,84 @@
 \begin{ManPage}{\label{man-condor-fetchlog}\Condor{fetchlog}}{1}
 {Retrieve a log file that is located on another computer}
+
 \Synopsis 
 \SynProg{\Condor{fetchlog}}
 \ToolArgsBase
-\Optnm{-pool centralmanagerhostname[:portnumber]}
+
+\SynProg{\Condor{fetchlog}}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \ToolArgsAffect
-\oArg{log file name}
+\Arg{machine-name}
+\Arg{log-file-name}
 
 \index{Condor commands!condor\_fetchlog}
 \index{condor\_fetchlog command}
 
 \Description 
 
-\Condor{fetchlog} will contact Condor running on a machine and ask it
-to return a log file from that machine. This can simplify your life by
-not requiring you to log into the machine to get that log file. 
+\Condor{fetchlog} contacts Condor running on the machine specified
+by \Arg{machine-name}, and asks it
+to return a log file from that machine. This simplifies the
+retrieval of log file by bypassing the need 
+to log on to the machine in order to get the log file. 
 
-For security purposes (authentication and authorization), this command
-requires an administrator's level of access. See section~\ref{sec:Config-Security} 
+For security purposes of authentication and authorization, 
+this command requires an administrator's level of access.
+See section~\ref{sec:Config-Security} 
 on page~\pageref{sec:Config-Security} for more details about Condor's
 security mechanisms.
 
+The \Arg{log-file-name} argument identifies the log file to retrieve.
+It is defined by the name
+given in the configuration file, without the "\_LOG" suffix.
+For \MacroNI{COLLECTOR\_LOG}, it is \MacroNI{COLLECTOR}.
+The complete list of log files are defined by
+\begin{verbatim}
+  MASTER
+  COLLECTOR
+  NEGOTIATOR
+  NEGOTIATOR_MATCH
+  SCHEDD
+  SHADOW
+  STARTD
+  STARTER
+\end{verbatim}
+
 \begin{Options}
-	\ToolArgsBaseDesc
-    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
-	central manager's hostname and an optional port number}
-	\ToolArgsAffectDesc
-    \OptItem{log file name}{Which log to get. It should be the name
-    you see in the condor\_config file, without the \_LOG. For
-    COLLECTOR\_LOG, it is collector. Currently, this means you can
-    specify MASTER, COLLECTOR, NEGOTIATOR, NEGOTIATOR\_MATCH, SCHEDD,
-    SHADOW, STARTD, or STARTER. }
+    \ToolArgsBaseDesc
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Specify a pool by giving the central manager's host name
+    and an optional port number}
+    \ToolArgsAffectDesc
 \end{Options}
 
-\ExitStatus
-\Condor{fetchlog} will exit with a status value of 0 (zero) upon success,
-and it will exit with the value 1 (one) upon failure.
-
 \Examples
-To get the condor\_negotiator's log from a host named head.example.com
-in your current pool:
+To get the \Condor{negotiator} daemon's log from a host named 
+\File{head.example.com} from within the current pool:
 \begin{verbatim}
 condor_fetchlog head.example.com NEGOTIATOR
 \end{verbatim}
 
-To get the condor\_startd's log from a host named execute.example.com
-in your current pool:
+To get the \Condor{startd} daemon's log from a host named
+\File{execute.example.com} from within the current pool:
 \begin{verbatim}
 condor_fetchlog execute.example.com STARTD
 \end{verbatim}
 
-This command requested the condor\_startd's log from the
-condor\_master. However, in extreme circumstances, the condor\_master
-may have crashed or be unresponsive, so you can ask another daemon
-running on that computer to return the log. For instance, you can ask
-the condor\_startd to return it's log:
+This command requested the \Condor{startd} daemon's log from the
+\Condor{master}.
+If the \Condor{master} has crashed or is unresponsive,
+ask another daemon
+running on that computer to return the log.
+For example, ask the \Condor{startd} daemon to return the
+\Condor{master}'s log:
 
 \begin{verbatim}
-condor_fetchlog -startd execute.example.com STARTD
+condor_fetchlog -startd execute.example.com MASTER
 \end{verbatim}
+
+\ExitStatus
+\Condor{fetchlog} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}

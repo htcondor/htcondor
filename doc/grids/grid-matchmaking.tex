@@ -3,7 +3,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{universe!Globus}
 \index{Globus}
-\index{matchmaking!Grid}
+\index{matchmaking!on the Grid}
+\index{grid computing!matchmaking}
 
 In it simplest usage, Condor-G allows users to specify the single
 grid site they wish to submit their job to.
@@ -43,7 +44,7 @@ type of grid site can be used, instead of identifying a specific grid site.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Each grid site that is available for matching purposes needs to be
-advertisted to the \Condor{collector}. Normally in Condor this is done
+advertised to the \Condor{collector}. Normally in Condor this is done
 with the \Condor{startd} daemon, and you do not normally need to be
 aware of the contents of this advertisement. Currently, there is no
 equivalent to the \Condor{startd} daemon for advertising grid sites,
@@ -186,7 +187,7 @@ it is not used, but should be set to 0.
 WantAdRevaluate       = True
 \end{verbatim}
 
-The ``WantAdRevluate'' attribute is what distinguishes grid site
+The ``WantAdRevaluate'' attribute is what distinguishes grid site
 ClassAds from normal machine ClassAds and allows multiple matches to
 be made against a single site. It should be in your ad and should be
 true. Note that True is not in quotes, and it should not be.
@@ -210,7 +211,7 @@ the \Condor{collector}. For this, you can use the \Condor{advertise}
 program. We recommend that you write a script to create the file
 containing the ClassAd, then run the script every five minutes with
 cron. The script should probably update the CurMatches variable if you
-want to restict the number of grid jobs that can be submitted at one
+want to restrict the number of grid jobs that can be submitted at one
 time. 
 
 For \Condor{advertise} you will need to specify UPDATE\_STARTD\_AD for
@@ -299,7 +300,7 @@ will allow the job to be run there if there is no other option.
 
 When you specify match\_list\_length, you provide an integer N, and
 Condor will keep track of the last N matches. The oldest match will be
-LastMatchName0, and next oldest will be LastMachName1, and so on. (See
+LastMatchName0, and next oldest will be LastMatchName1, and so on. (See
 the \Condor{submit} manual page for more details.) The Rank expression
 allows you to specify a numerical ranking for different matches. When
 combined with match\_list\_length, you can prefer to avoid sites that

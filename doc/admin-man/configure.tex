@@ -112,6 +112,14 @@ expanded.
 If it were not, then the definition would be impossible to
 evaluate.
 
+Recursively defined macros such as
+\begin{verbatim}
+    A = $(B)
+    B = $(A)
+\end{verbatim}
+are not allowed.
+They create definitions that Condor refuses to parse. 
+
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
@@ -146,6 +154,7 @@ configurations.
 However, they can sometimes be useful in custom configurations.
 
 \index{RANDOM\_CHOICE() macro!use in configuration file}
+\index{\$RANDOM\_CHOICE()!in configuration}
 \index{configuration macro!RANDOM\_CHOICE() macro}
 This same syntax is used to allow a random choice of a parameter
 within a configuration file.
@@ -188,6 +197,16 @@ and
                         bigbird.cs.wisc.edu
         HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
 \end{verbatim}
+
+Note that a line continuation character may currently be used within
+a comment, so the following example does \emph{not} set the
+configuration variable \MacroNI{FOO}:
+\begin{verbatim}
+	# This comment includes the following line, so FOO is NOT set \
+        FOO = BAR
+\end{verbatim}
+It is a poor idea to use this functionality, as it is likely to
+stop working in future Condor releases.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Pre-Defined-Macros}
@@ -1040,6 +1059,10 @@ server, shadow, and starter, none of which use DaemonCore yet).
   expressions from the configuration file in its ClassAd.  Give the
   comma-separated list of entries from the configuration file you want in the
   given daemon's ClassAd.
+  Frequently used to add attributes to machines so that the
+  machines can discriminate between other machines in a job's 
+  \Opt{rank}
+    and \Opt{requirements}.
   
   \Note The \Condor{negotiator} and \Condor{kbdd} do not send
   ClassAds now, so this entry does not affect them.  The
@@ -3131,6 +3154,39 @@ the job will be put on hold.
 Defaults to 5 days (in seconds).
 
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:GridMonitor-Config-File-Entries}
+\Prog{grid\_monitor} Configuration File Entries}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!grid\_monitor configuration variables}
+These macros affect the \Prog{grid\_monitor}.
+\begin{description}
+
+\item[\Macro{ENABLE\_GRID\_MONITOR}] \label{param:EnableGridMonitor}
+  When set to \Expr{True} enables the \Prog{grid\_monitor} tool.  The
+  \Prog{grid\_monitor} tool is used to reduce load on Globus gatekeepers.
+  This parameter only affects globus universe jobs.
+  \MacroNI{GRID\_MONITOR} must also be correctly configured.
+  Defaults to \Expr{False}.
+  See section~\ref{sec:Condor-G-GridMonitor} on
+  page~\pageref{sec:Condor-G-GridMonitor}
+  for more information.
+
+\item[\Macro{GRID\_MONITOR}] \label{param:GridMonitor}
+  The complete pathname of the \Prog{grid\_monitor} tool used to reduce load on
+  Globus gatekeepers.  This parameter only affects globus
+  universe jobs.  This parameter is not referenced unless
+  \MacroNI{ENABLE\_GRID\_MONITOR} is set to \Expr{True}. 
+  See section~\ref{sec:Condor-G-GridMonitor} on
+  page~\pageref{sec:Condor-G-GridMonitor}
+  for more information.
+
+\end{description}
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Config-File-Entries}

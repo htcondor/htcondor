@@ -201,11 +201,57 @@ page~\pageref{param:PasswdCacheRefresh} for more details.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{preen} program does not know about Computing on
+  Demand (COD) claims.
+  If there are no regular Condor jobs on a given machine, but there
+  are COD claims, and \Condor{preen} is spawned, it will remove files
+  related to the COD claims.
+  In version 6.6.0, sites using COD are encouraged to disable
+  \Condor{preen} by commenting out the \MacroNI{PREEN} setting in the
+  config files.
+  This bug has been fixed in Condor version 6.6.1.
+
+\item Normally, if a user's job crashes and creates a core file on a
+  remote execution machine, the \Condor{starter} will automatically
+  transfer the core file back to the submit machine.
+  However, beginning in Condor version 6.5.2, if a vanilla, Java, or
+  MPI universe job creates a core file, the \Condor{starter} will fail
+  to transfer it back.
+  This bug will be fixed in version 6.6.1.
+  
+\item There are a few bugs related to Condor tools failing to
+  correctly locate the \Condor{negotiator} daemon.
+  These bugs usually show up if a site is using non-standard ports for
+  the central manager daemon.
+  However, some of the bugs show up regardless of if the negotiator is
+  listening on the standard port or not. 
+
+  \begin{itemize}
+    \item \verb@condor_config_val -negotitator@ queries the
+          \Condor{collector}, instead of querying the
+          \Condor{negotiator} like it should.  
+
+    \item Using the \Opt{-pool} option to \verb@condor_q -analyze@
+          will not work.
+          The tool will fail to find and query the \Condor{negotiator}
+          for user priorities which it needs to determine why jobs may
+          not be running.
+
+    \item The Condor tools that support either the \Opt{-negotiator}
+          or \Opt{-collector} options do not work when a user also
+          specifies the \Opt{-pool} to define a remote pool to
+          communicate with.
+          The tools print a somewhat confusing message in this case.
+
+    \item Most Condor tools that support \verb@-pool hostname@ will
+          also recogize \verb@-pool hostname:port@ if the remote
+          \Condor{collector} is listening on a non-standard port.
+          However, the \Condor{findhost} tool does not work if given a
+          \Opt{-pool} option that includes a port.
+
+  \end{itemize}
 
 \end{itemize}
-
-
 
 \begin{center}
 \begin{table}[hbt]

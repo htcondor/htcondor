@@ -9,6 +9,7 @@
 \oOpt{-analyze}
 \oOpt{-run}
 \oOpt{-hold}
+\oOpt{-globus}
 \oOpt{-goodput}
 \oOpt{-io}
 \oOpt{-dag}
@@ -93,6 +94,34 @@ columns are replaced with:
 host count is displayed instead.
 \end{description}
 
+If the \Opt{-globus} option is specified, the ST, PRI, SIZE, and CMD
+columns are replaced with:
+\begin{description}
+\item[STATUS] The state that Condor-G believes the job is in.
+Possible values are
+  \begin{description}
+    \item[PENDING]
+    \item[ACTIVE]
+    \item[FAILED]
+    \item[DONE]
+    \item[SUSPENDED]
+    \item[UNSUBMITTED]
+    \item[STAGE\_IN]
+    \item[STAGE\_OUT]
+    \item[UNKNOWN]
+  \end{description}
+\item[MANAGER] 
+A guess at what remote batch system is running the job.
+It is a guess because Condor looks at the Globus jobmanager contact
+string to attempt identification.
+If the value is fork, the job is running on the
+remote host without a jobmanager.
+Values may also be condor, lsf, or pbs.
+\item[HOST] The host to which the job was submitted.
+\item[EXECUTABLE] The job as specified as the executable in the
+submit description file.
+\end{description}
+
 If the \Opt{-goodput} option is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 
@@ -161,6 +190,8 @@ per machine basis.
 	\OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
 	        Also displays the time the job was placed into the hold state
 		and the reason why the job was placed in the hold state.}
+	\OptItem{\Opt{-globus}}{Get information only about jobs submitted
+	        to the globus universe.}
 	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
 	\OptItem{\Opt{-io}}{Display job input/output summaries.}
 	\OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
@@ -231,6 +262,22 @@ be listed, the following example works well.
 27 . 3
 27 . 4
 27 . 7
+\end{verbatim}
+
+An example that shows the difference (first set of output)
+between not using an option to \Condor{q} and (second
+set of output) using the \Opt{-globus} option:
+\begin{verbatim}
+
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
+ 100.0   smith          12/11 13:20   0+00:00:02 R  0   0.0  sleep 10
+
+1 jobs; 0 idle, 1 running, 0 held
+
+
+
+ ID      OWNER          STATUS  MANAGER  HOST                EXECUTABLE
+ 100.0   smith         ACTIVE fork     grid.example.com       /bin/sleep
 \end{verbatim}
 
 \ExitStatus

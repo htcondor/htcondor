@@ -198,6 +198,13 @@ Itanium & Red Hat Linux 7.2 (clipped) \\
 
 \begin{itemize}
 
+\item Added support for \$RANDOM\_CHOICE(xxx,yyy,...) in
+   the configuration file parsing and in the submit description file,
+   so we can now do things like:
+\begin{verbatim}
+   CKPT_SERVER_HOST = $RANDOM_CHOICE(check1.example.com,check2.example.com)
+\end{verbatim}
+
 \item Added a new installation and configuration tool to Condor.
   Instead of using the complicated \Condor{install} script to install
   and configure Condor, users can now try the simplified

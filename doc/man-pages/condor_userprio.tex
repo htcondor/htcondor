@@ -74,9 +74,14 @@ for further explanation.
 \begin{Options}
 
 \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-	{Contact specified \Arg{centralmanagerhostname} with an optional
-	port number instead of the local central manager. This
-can be used to check other pools.}
+	{Contact specified \Arg{centralmanagerhostname} with an
+	optional port number instead of the local central
+	manager. This can be used to check other pools.  NOTE: The
+	hostname (and optionally port) specified refer to the hostname
+	(and port) of the \Condor{negotiator} to query for user
+	priorities.  This is slightly different than most Condor tools
+	that support -pool, which expect the hostname (and optionally
+	port) of the \Condor{collector}, instead.}
 
 \OptItem{\Opt{-all}}
 	{Display detailed information about each user.}

@@ -445,6 +445,8 @@ page~\pageref{sec:Policy-Examples}.
 \subsection*{How do I configure Condor such that all machines do not produce checkpoints at the same time?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:randomchoiceusage}
+\index{\$RANDOM\_CHOICE()}
+\index{RANDOM\_CHOICE() macro!use in configuration}
 If machines are configured to produce checkpoints at fixed intervals,
 a large number of jobs are queued (submitted) at the same time,
 and these jobs start on machines at about the same time,

@@ -344,6 +344,16 @@ is transferred
 from the remote machine to the local machine as it is produced.
 This implies that these files may be incomplete in the case
 where the executable does not finish running on the remote resource.
+The ability to transfer standard output and standard error as
+they are produced may be disabled by adding to the submit
+description file:
+\begin{verbatim}
+stream_output = False
+stream_error  = False
+\end{verbatim}
+As a result, standard output and standard error will be transferred
+only after the job completes.
+
 The job log file is maintained on the local machine.
 
 To submit this job to Condor-G for execution on the

@@ -243,7 +243,8 @@ This command forms an explicit list of output files to be transferred
 back from the temporary working directory on the execute machine to
 the submit machine.
 Most of the time, there is no need to use this command.
-If \Opt{transfer\_output\_files} is not specified,
+Other than for globus universe jobs,
+if \Opt{transfer\_output\_files} is not specified,
 Condor will automatically transfer back all files in the job's
 temporary working directory which have been
 modified or created by the job.
@@ -256,6 +257,14 @@ If there are multiple files, they must be delimited with commas.
 submit description file unless there is a really good reason -- it is
 best to let Condor figure things out by itself based upon what
 the job produces.
+
+For globus universe jobs,
+to have files other than standard output and standard error transferred
+from the execute machine back to the submit machine,
+do use \Opt{transfer\_output\_files}, listing
+all files to be transferred.
+These files are found on the execute machine in the
+working directory of the job.
 
 For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
@@ -591,6 +600,7 @@ will skip this step.  Defaults to \Expr{True}.
 
 \item[getenv = $<$True \Bar\ False$>$] If \Opt{getenv} is set to
 \index{submit commands!getenv}
+\index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
 shell environment variables at the time of job submission into the job
 ClassAd. The job will therefore execute with the same set of environment
@@ -617,6 +627,7 @@ Defaults to false.
 
 \item[environment = $<$parameter\_list$>$] List of environment variables
 \index{submit commands!environment}
+\index{environment variables!setting, for a job}
 of the form :
 \begin{verbatim}
         <parameter>=<value>
@@ -1107,6 +1118,7 @@ If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
 by the \Opt{output} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_input
@@ -1121,6 +1133,7 @@ The name of the file that is transferred is given by the
 If \Expr{False}, then the job's input is taken from a pre-staged
 file on the remote machine, and
 the name of the file is given by the \Opt{input} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_error
@@ -1136,6 +1149,7 @@ If \Expr{False}, no transfer takes place (from the remote machine
 to submit machine),
 and the name of the file is given
 by the \Opt{error} command.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_executable
@@ -1150,6 +1164,7 @@ does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
 Defaults to \Expr{True}.
+The default value is \Expr{True}.
 
 %%%%%%%%%%%%%%%%%%%
 %% remote_initialdir
