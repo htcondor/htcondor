@@ -339,7 +339,7 @@ int Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.uid));
 	STREAM_ASSERT(code(start.gid));
 	STREAM_ASSERT(code(start.virt_pid));
-	STREAM_ASSERT(signal(start.soft_kill_sig));
+	STREAM_ASSERT(code((signal_t &)start.soft_kill_sig));
 #endif
 	STREAM_ASSERT(code(start.cmd));
 	STREAM_ASSERT(code(start.args));
@@ -401,18 +401,38 @@ int Stream::code(StartdRec &rec)
 extern "C" int sig_num_encode( int sig_num );
 extern "C" int sig_num_decode( int sig_num );
 
-int Stream::signal(int &sig_num)
+int Stream::code(signal_t &sig_num)
 {
 	int real_sig_num, rval;
 	
 	if (_coding == stream_encode) {
-		real_sig_num = sig_num_encode(sig_num);
+		real_sig_num = sig_num_encode((int)sig_num);
 	}
 
 	rval = code(real_sig_num);
 
 	if (_coding == stream_decode) {
-		sig_num = sig_num_decode(real_sig_num);
+		sig_num = (signal_t)sig_num_decode(real_sig_num);
+	}
+
+	return rval;
+}
+
+extern "C" int open_flags_encode( int flags );
+extern "C" int open_flags_decode( int flags );
+
+int Stream::code(open_flags_t &flags)
+{
+	int real_flags, rval;
+
+	if (_coding == stream_encode) {
+		real_flags = open_flags_encode((int)flags);
+	}
+
+	rval = code(real_flags);
+
+	if (_coding == stream_decode) {
+		flags = (open_flags_t)open_flags_decode((int)real_flags);
 	}
 
 	return rval;

@@ -169,6 +169,14 @@
 
 #endif // !defined(WIN32)
 
+/* We need to define a special code() method for certain integer arguments.
+   To take advantage of overloading, we need make these arguments have a
+   new type.  Since typedef doesn't actually create a new type in C++, we
+   use enum.  Note that we explicitly define MAXINT as an allowable value
+   for the enum to make sure sizeof(enum) == sizeof(int). */
+enum signal_t { __signal_t_dummy_value = INT_MAX };
+enum open_flags_t { __open_flags_t_dummy_value = INT_MAX };
+
 class Stream {
 
 /*
@@ -235,8 +243,8 @@ public:
 
 	//  UNIX types
 
-	int signal(int &);
-
+	int code(signal_t &);
+	int code(open_flags_t &);
 	int code(struct rusage &);
 	int code(struct stat &);
 	int code(struct statfs &);
@@ -265,7 +273,8 @@ public:
 
 #if !defined(WIN32)
 	
-	int signal(int *x)				{ return signal(*x); }
+	int code(signal_t *x)			{ return code(*x); }
+	int code(open_flags_t *x)		{ return code(*x); }
 
 	int code(struct rusage *x)		{ return code(*x); }
 	int code(struct stat *x)		{ return code(*x); }
