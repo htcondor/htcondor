@@ -204,7 +204,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 		// now clear curr_regdataptr; the above NewTimer should appear "transparent"
 		// as far as the user code/API is concerned
 		daemonCore->curr_regdataptr = NULL;
-		// set flag letting Timeout() know if a timer handler reset itself
+		// set flag letting Timeout() know if a timer handler reset itself.  note
+		// this is probably redundant since our call to NewTimer above called
+		// CancelTimer, and CancelTimer already set the did_reset flag.  But
+		// what the hell.
 		if ( did_reset == id )
 			did_reset = -1;
 		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
@@ -268,7 +271,10 @@ int TimerManager::CancelTimer(int id)
 
 	delete timer_ptr;
 	
-	// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+	// set flag letting Timeout() know if a timer handler reset itself
+	if ( did_reset == id ) {
+		did_reset = -1;
+	}
 
 	return 0;
 }
