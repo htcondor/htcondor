@@ -28,6 +28,7 @@ extern "C" {
 #endif
 
 extern	char*	my_arch();
+extern	char*	my_uname_arch();
 extern	char*	my_opsys();
 
 #if defined( __cplusplus )

@@ -59,6 +59,14 @@ my_arch()
 	return answer;
 }
 
+
+char *
+my_uname_arch() 
+{
+	return my_arch();
+}
+
+
 char *
 my_opsys()
 {
@@ -91,6 +99,7 @@ my_opsys()
 
 static int arch_inited = FALSE;
 static char* arch = NULL;
+static char* uname_arch = NULL;
 static char* opsys = NULL;
 
 #ifdef HPUX
@@ -105,6 +114,11 @@ init_arch()
 
 	if( uname(&buf) < 0 ) {
 		return;
+	}
+
+	uname_arch = strdup( buf.machine );
+	if( !uname_arch ) {
+		EXCEPT( "Out of memory!" );
 	}
 
 #ifdef HPUX
@@ -142,11 +156,11 @@ init_arch()
 		sprintf( tmp, buf.machine );
 	}
 	arch = strdup( tmp );
-#endif /* HPUX */
-
 	if( !arch ) {
 		EXCEPT( "Out of memory!" );
 	}
+
+#endif /* HPUX */
 
 		// Get OPSYS
 	if( !strcmp(buf.sysname, "Linux") ) {
@@ -210,6 +224,17 @@ my_opsys()
 	return opsys;
 }
 
+
+char *
+my_uname_arch()
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return uname_arch;
+}
+
+
 #if defined(HPUX)
 char*
 get_hpux_arch( struct utsname *buf )
@@ -244,11 +269,10 @@ get_hpux_arch( struct utsname *buf )
 		} else {
 		    arch = strdup( "HPPA1" );
 		}
-	} else {
-	    // If we didn't find it, it's probably an ancient machine, so 
-	    // just assume we're HPPA1.
-	    arch = strdup( "HPPA1" );
-	}	  
+		if( !arch ) {
+			EXCEPT( "Out of memory!" );
+		}
+	}
 	return arch;
 }
 #endif /* HPUX */
