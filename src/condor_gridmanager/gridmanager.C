@@ -43,6 +43,8 @@
 // timer id values that indicates the timer is not registered
 #define TIMER_UNSET		-1
 
+extern char *myUserName;
+
 struct ScheddUpdateAction {
 	GlobusJob *job;
 	int actions;
@@ -58,6 +60,7 @@ struct OrphanCallback_t {
 // Stole these out of the schedd code
 int procIDHash( const PROC_ID &procID, int numBuckets )
 {
+	//dprintf(D_ALWAYS,"procIDHash: cluster=%d proc=%d numBuck=%d\n",procID.cluster,procID.proc,numBuckets);
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
@@ -664,8 +667,8 @@ doContactSchedd()
 	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
 	ClassAd *next_ad;
-	char expr_buf[_POSIX_PATH_MAX];
-	char owner_buf[_POSIX_PATH_MAX];
+	char owner_buf[1200];
+	char expr_buf[12000];
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
 
@@ -868,12 +871,24 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 
 
 	// setup for AddJobs and RemoveJobs
+	if ( myUserName ) {
+		if ( strchr(myUserName,'@') ) {
+			// we were given a full name : owner@uid-domain
+			sprintf(owner_buf, "%s == \"%s\"", ATTR_USER, myUserName);
+		} else {
+			// we were just give an owner name without a domain
+			sprintf(owner_buf, "%s == \"%s\"", ATTR_OWNER, myUserName);
+		}
+	} else {
+		sprintf(owner_buf, "%s == \"%s\"", ATTR_OWNER, Owner);
+	}
+
+	int obuflen = strlen(owner_buf);
 	if(useDefaultProxy == false) {
-		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
+		sprintf(&(owner_buf[obuflen]), " && %s =?= \"%s\" ", 
 				ATTR_X509_USER_PROXY, X509Proxy);
 	} else {
-		sprintf(owner_buf, "%s == \"%s\" && %s =?= UNDEFINED ", ATTR_OWNER, 
-						Owner, ATTR_X509_USER_PROXY);
+		sprintf(&(owner_buf[obuflen]), " && %s =?= UNDEFINED ", ATTR_X509_USER_PROXY);
 	}
 
 	// AddJobs
@@ -905,7 +920,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
 					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		}
-
+		dprintf( D_FULLDEBUG,"Using constraint %s\n",expr_buf);
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
@@ -1001,6 +1016,7 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 					GlobusJob *new_job = new GlobusJob( next_ad, resource );
 					ASSERT(new_job);
 					new_job->SetEvaluateState();
+					dprintf(D_ALWAYS,"Found job %d.%d --- inserting\n",new_job->procID.cluster,new_job->procID.proc);
 					JobsByProcID.insert( new_job->procID, new_job );
 					num_ads++;
 
