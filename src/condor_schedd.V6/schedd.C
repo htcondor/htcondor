@@ -7208,9 +7208,9 @@ fixReasonAttrs( PROC_ID job_id, int action )
 	case JA_RELEASE_JOBS:
 		moveStrAttr( job_id, ATTR_HOLD_REASON, ATTR_LAST_HOLD_REASON,
 					 true );
-		moveStrAttr( job_id, ATTR_HOLD_REASON_CODE, 
+		moveIntAttr( job_id, ATTR_HOLD_REASON_CODE, 
 					 ATTR_LAST_HOLD_REASON_CODE, true );
-		moveStrAttr( job_id, ATTR_HOLD_REASON_SUBCODE, 
+		moveIntAttr( job_id, ATTR_HOLD_REASON_SUBCODE, 
 					 ATTR_LAST_HOLD_REASON_SUBCODE, true );
 		DeleteAttribute(job_id.cluster,job_id.proc,
 					 ATTR_JOB_STATUS_ON_RELEASE);
@@ -7246,6 +7246,39 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 	new_value += '"';
 	free( value );
 	value = NULL;
+
+	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
+						 new_value.Value() ); 
+
+	if( rval < 0 ) { 
+		if( verbose ) {
+			dprintf( D_FULLDEBUG, "Can't set %s for job %d.%d\n",
+					 new_attr, job_id.cluster, job_id.proc );
+		}
+		return false;
+	}
+		// If we successfully set the new attr, we can delete the old. 
+	DeleteAttribute( job_id.cluster, job_id.proc, old_attr );
+	return true;
+}
+
+bool
+moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
+			 bool verbose )
+{
+	int value;
+	MyString new_value;
+	int rval;
+
+	if( GetAttributeInt(job_id.cluster, job_id.proc, old_attr, &value) < 0 ) {
+		if( verbose ) {
+			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
+					 old_attr, job_id.cluster, job_id.proc );
+		}
+		return false;
+	}
+	
+	new_value += value;
 
 	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
 						 new_value.Value() ); 
