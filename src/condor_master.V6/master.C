@@ -1030,7 +1030,7 @@ daily_housekeeping(void)
 		execl( Shell, "sh", "-c", FS_Preen, 0 );
 		_exit( 127 );
 	} else {				/* The parent */
-		dprintf( D_ALWAYS, "Shell pid is %d\n", child_pid );
+		dprintf( D_ALWAYS, "Shell (preen) pid is %d\n", child_pid );
 		return 0;
 	}
 
@@ -1066,7 +1066,7 @@ hourly_housekeeping(void)
 		execl( Shell, "sh", "-c", FS_CheckJobQueue, 0 );
 		_exit( 127 );
 	} else {				/* The parent */
-		dprintf( D_ALWAYS, "Shell pid is %d\n", child_pid );
+		dprintf( D_ALWAYS, "Shell (CheckJobQueue) pid is %d\n", child_pid );
 		return 0;
 	}
 	dprintf(D_FULLDEBUG, "exit hourly_housekeeping\n");
