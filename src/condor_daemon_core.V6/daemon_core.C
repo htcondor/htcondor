@@ -1433,8 +1433,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	char tbuf[16];
 
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || 
-						(comTable[i].handlercpp != NULL)) 
+		if ( ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) &&
+			 ( comTable[i].perm == perm ) )
 		{
 
 			sprintf (tbuf, "%i", comTable[i].num);
