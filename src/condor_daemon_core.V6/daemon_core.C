@@ -2710,6 +2710,20 @@ int DaemonCore::Create_Process(
 #else
 	// START A NEW PROCESS ON UNIX
 
+		// We have to do some checks on the executable name and the
+		// cwd before we fork.  We want to do these in priv state
+		// specified, but in the user priv if PRIV_USER_FINAL specified.
+		// Don't do anything in PRIV_UNKNOWN case.
+	
+	priv_state current_priv;
+	if ( priv != PRIV_UNKNOWN ) {
+		if ( priv == PRIV_USER_FINAL ) {
+			current_priv = set_user_priv();
+		} else {
+			current_priv = set_priv( priv );
+		}
+	}
+
 	// First, check to see that the specified executable exists.
 	if( access(name,F_OK | X_OK) < 0 ) {
 		dprintf(D_ALWAYS, 
@@ -2729,6 +2743,11 @@ int DaemonCore::Create_Process(
 		}
 	}
 
+		// Change back to the priv we came from:
+	if ( priv != PRIV_UNKNOWN ) {
+		set_priv( current_priv );
+	}
+
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
@@ -2737,7 +2756,8 @@ int DaemonCore::Create_Process(
 			   fail.  One is after the exec(), if the binary file
 			   is not a good binary.  There we exit with the errno - 
 			   number 8 (ENOEXEC).  This will actually show up as a normal 
-			   exit(), with an exit status of 8. */
+			   exit(), with an exit status of 8.  Yes, this sucks and 
+			   we should do something better.  */
 
 			// make the args / env  into something we can use:
 
@@ -2780,8 +2800,7 @@ int DaemonCore::Create_Process(
 	
 			// if we're given a relative path (in name) AND we want to cwd 
 			// here, we have to prepend stuff to name make it the full path.  
-			// Otherwise, we change directory and execv fails (and doesn't 
-			// return a #$%^&* error, it just #$%^&* dies )
+			// Otherwise, we change directory and execv fails.
 		
 		if( cwd && (cwd[0] != '\0') ) {
 
@@ -2923,20 +2942,18 @@ int DaemonCore::Create_Process(
 
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
 
-			// switch to the cwd now that we are in user priv state
-		if ( cwd && cwd[0] ) {
-			dprintf ( D_DAEMONCORE, "Changing directory to %s\n", cwd );
-
-			if( chdir(cwd) == -1 ) {
-				dprintf(D_ALWAYS, "Create_Process: chdir(%s) failed: %s\n",
-						cwd, strerror(errno) );
-				exit(errno); // Let's exit.
-			}
-		}
-
 			// now head into the proper priv state...
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv(priv);
+		}
+
+			/* No dprintfs allowed after this! */
+
+			// switch to the cwd now that we are in user priv state
+		if ( cwd && cwd[0] ) {
+			if( chdir(cwd) == -1 ) {
+				exit(errno); // Let's exit.
+			}
 		}
 
 			// Unblock all signals if we're starting a regular process!
