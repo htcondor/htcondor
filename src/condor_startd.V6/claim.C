@@ -60,6 +60,11 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_is_cod = is_cod;
 	c_pending_cmd = -1;
 	c_wants_remove = false;
+		// to make purify happy, we want to initialize this to
+		// something.  however, we immediately set it to UNCLAIMED
+		// (which is what it should really be) by using changeState()
+		// so we get all the nice functionality that method provides.
+	c_state = CLAIM_IDLE;
 	changeState( CLAIM_UNCLAIMED );
 }
 
