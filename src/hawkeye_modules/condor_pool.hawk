@@ -61,3 +61,17 @@ accomplished using the HAWKEYE_POOL_ENV param (above)
 parameter: Hawkeye_pool_ckpt = false
 Specify whether to report on the health of the Condor checkpoint
 servers
+
+parameter: Hawkeye_pool_job_history = false
+HAWKEYE_POOL_JOB_HISTORY = true/false
+Enable / disable the Condor pool job history output
+
+parameter: Hawkeye_pool_job_history_long = false
+HAWKEYE_POOL_JOB_HISTORY_LONG = true/false
+If Hawkeye_pool_job_history is enabled (true), this parameter controls
+whether it should generate per-job data.
+
+parameter: Hawkeye_pool_job_history_const =
+If Hawkeye_pool_job_history is enabled (true), this parameter specifies
+a constraint that, if specified, is passed to 'condor_history' to
+constrain the list of jobs queried.
