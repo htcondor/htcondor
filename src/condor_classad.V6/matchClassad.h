@@ -38,7 +38,7 @@ BEGIN_NAMESPACE( classad )
 |      rightRankValue   = adcr.ad.rank;
 |      adcl             =
 |          [
-|              other    = .adcr.ad;
+|              other    = adcr.ad;
 |              my       = ad;       // for condor backwards compatibility
 |              target   = other;    // for condor backwards compatibility
 |              ad       = 
@@ -48,7 +48,7 @@ BEGIN_NAMESPACE( classad )
 |   	   ];
 |      adcr             =
 |          [
-|              other    = .adcl.ad;
+|              other    = adcl.ad;
 |              my       = ad;       // for condor backwards compatibility
 |              target   = other;    // for condor backwards compatibility
 |              ad       = 
