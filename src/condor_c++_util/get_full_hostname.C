@@ -22,18 +22,22 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_string.h"
 #include "condor_config.h"
 
-// Returns the full hostname of the given host in a static buffer.
-// If the optional 2nd arg is non-NULL, set it to point to the hostent
-// we get back. 
+
+// Returns the full hostname of the given host in a newly allocated
+// string, which should be de-allocated with delete [].  If the
+// optional 2nd arg is non-NULL, set it to point to the hostent we get
+// back.  WARNING: Using the 2nd arg is _not_ thread-safe.
+
 char*
 get_full_hostname( const char* host, struct hostent **host_ptrp) 
 {
-	static char full_host[MAXHOSTNAMELEN];
+	char* full_host;
 	char* tmp;
 	struct hostent *host_ptr;
-	int i;
+	int h, i;
 
 	if( (host_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
@@ -50,7 +54,7 @@ get_full_hostname( const char* host, struct hostent **host_ptrp)
 	if( host_ptr->h_name && 
 		(tmp = strchr(host_ptr->h_name, '.')) ) { 
 			// There's a '.' in the "name", use that as full.
-		strcpy( full_host, host_ptr->h_name );
+		full_host = strnewp( host_ptr->h_name );
 		return full_host;
 	}
 
@@ -58,16 +62,21 @@ get_full_hostname( const char* host, struct hostent **host_ptrp)
 		// until we find one with a '.'
 	for( i=0; host_ptr->h_aliases[i]; i++ ) {
 		if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
-			strcpy( full_host, host_ptr->h_aliases[i] );
+			full_host = strnewp( host_ptr->h_aliases[i] );
 			return full_host;
 		}
 	}
 
 		// Still haven't found it, try to param for the domain.
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
+		h = strlen( host );
+		i = strlen( tmp );
 		if( tmp[0] == '.' ) {
+			full_host = new char[h+i+1];
 			sprintf( full_host, "%s%s", host, tmp );
 		} else {
+				// There's no . at the front, so we have to add that.
+			full_host = new char[h+i+2];
 			sprintf( full_host, "%s.%s", host, tmp );
 		}
 		free( tmp );
@@ -75,6 +84,6 @@ get_full_hostname( const char* host, struct hostent **host_ptrp)
 	}
 
 		// Still can't find it, just give up.
-	strcpy( full_host, host );
+	full_host = strnewp( host );
 	return full_host;
 }
