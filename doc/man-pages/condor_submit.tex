@@ -420,6 +420,23 @@ treated as a running log instead of a precise result.
 This option only applies to standard-universe jobs.
 
 %%%%%%%%%%%%%%%%%%%
+%% local_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[local\_files = file1, file2, ...]
+
+If your job attempts to access a file mentioned in this list,
+Condor will cause it to be read or written at the execution machine.
+This is most useful for temporary files not used for input or output.
+This list uses the same syntax as compress\_files, shown above.
+
+\begin{verbatim}
+local_files = /tmp/*
+\end{verbatim}
+
+This option only applies to standard-universe jobs.
+
+%%%%%%%%%%%%%%%%%%%
 %% file_remaps
 %%%%%%%%%%%%%%%%%%%
 
