@@ -107,6 +107,7 @@ class GlobusJob : public Service
 
 	bool increment_globus_submits;
 	int wantResubmit;
+	int doResubmit;
 	int numGlobusSubmits;
 
  protected:

@@ -206,7 +206,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 		RSL = buildRSL( classad );
 	}
 
-	wantResubmit = 0;
+	doResubmit = 0;		// set if gridmanager wants to resubmit job
+	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
 	classad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 	increment_globus_submits = false;
 	numGlobusSubmits = 0;
@@ -294,7 +295,7 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
-			} else if ( wantResubmit ) {
+			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAN_JOBMANAGER;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -794,6 +795,25 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE &&
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) 
+				{
+						// Here we tried to restart, but the jobmanager claimed
+						// there was no state file.  
+						// If we still think we are in UNSUBMITTED state, the
+						// odds are overwhelming that the jobmanager bailed
+						// out and deleted the state file before we sent 
+						// a commit signal.  So resubmit.
+						// HOWEVER ---- this is evil and wrong!!!  What
+						// should really happen is the Globus jobmanager
+						// should *not* delete the state file if it fails
+						// to receive the commit within 5 minutes.  
+						// Don't understand why?  
+						// Ask Todd T <tannenba@cs.wisc.edu>
+					gmState = GM_CLEAR_REQUEST;
+					doResubmit = 1;
+					break;
+				}
 				// TODO: What should be counted as a restart attempt and
 				// what shouldn't?
 				numRestartAttempts++;
@@ -1076,7 +1096,8 @@ int GlobusJob::doEvaluateState()
 			// expressed in the job ad.
 			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 ) {
+					 && wantResubmit == 0 
+					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1085,6 +1106,12 @@ int GlobusJob::doEvaluateState()
 				dprintf(D_ALWAYS,
 					"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
+			}
+			if ( doResubmit ) {
+				doResubmit = 0;
+				dprintf(D_ALWAYS,
+					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
+						procID.cluster, procID.proc );
 			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
