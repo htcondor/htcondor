@@ -479,8 +479,8 @@ class ClassAd : public ExprTree
 		int         EvalBool  (const char *, class ClassAd *, int &);
 
 		// chaining
-//	    void		ChainToAd( ClassAd * );
-//		void		unchain( void );
+	    void		ChainToAd( ClassAd * ) { }
+		void		unchain( void ) { }
 
 // ClassAd methods
 
