@@ -24,16 +24,22 @@ and known bugs of each version are described below in detail.
 \subsubsection{\label{sec:New-6-3-1}Version 6.3.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent New Features:
 \begin{itemize}
 
 \item
 Added support for an \AdAttr{x509proxy} option in \Condor{submit}. There is 
-now a seperate \Condor{GridManager} for each user and proxy pair. 
+now a seperate \Condor{GridManager} for each user and proxy pair. This will
+be detailed in a future release of Condor.
  
 \item
 More Condor DAGMan improvements and bug fixes:
 
 \begin{itemize}
+
+\item 
+Added a \oArgnm{-dag} flag to \Condor{q} to more succinctly display dags
+and their ownership.
 
 \item
 Added a new event to the Condor userlog at the completion of a POST
@@ -70,8 +76,107 @@ jobs it didn't submit.
 
 \end{itemize}
 
+\item Added port restriction capabilities to Condor so you can specify a range
+of ports to use for the communication between Condor Daemons.
+
+\item To improve performance: if there's no \Macro{HISTORY} file
+specified, don't connect back to the schedd to report your exit info on
+successful compeletion, since the schedd is simply going to discard that
+info anyway.
+
+\item Added the macro \Macro{SECONDARY\_COLLECTOR\_LIST} to tell the
+master to send classads to an additional list of collectors so you can
+do administration commands when the primary collector is down.
+
+\item When a job checkpoints it askes the shadow whether or not it
+should and if so where. This fixes some flocking bugs and increases
+performance of the pool.
+
+\item Added match rejection diagnostics in \Condor{q} \oArgnm{-analyze} to
+give more information on why a particular job hasn't started up yet.
+
+\item Added \oArgnm{--vms} argument to \Condor{glidein} that enables the
+control of how many virtual machines to start up on the target platform.
+
+\item Added capability to the config file language to retrieve environment
+variables while being processed.
+
+\item Added capability to make default user user priority factor configurable
+with the \Macro{DEFAULT\_PRIORITY\_FACTOR} macro in the config files.
+
+\item Added full support for RedHat 7.1 and the gcc 2.96 compiler. However,
+the standard universe binaries must still be statically linked.
+
+\item When jobs are suspended or unsuspended, an event is now written into
+the user job log.
+
+\item Added \oArgnm{-a} flag to \Condor{submit} to add/override attributes
+specified in the submit file.
+
+\item Under Unix, added the ability for a submittor of a job to describe when
+and how a job is allowed/not allowed to leave the queue. For example, if
+a job has only run for 5 minutes, but it was supposed to have run an hour 
+minimum, then do not let the job leave the queue but restart it instead.
+
+\item New environment variable available CONDOR\_SCRATCH\_DIR available
+in a standard or vanilla job's environment that denotes temporary space
+the job can use that will be cleaned up automatically when the job leaves
+from the machine.
+
+\item Not exactly a new feature, but some internal parts of Condor had been
+fixed up to try and improve the memory footprint of a few of our daemons.
+
 \end{itemize}
 
+\noindent Bugs Fixed:
+\begin{itemize}
+
+\item Fixed a bug where \Condor{q} would produce wildly inaccurate run time
+reports of jobs in the queue.
+
+\item Fixed it so that if the condor scheduler fails to notify the
+administrator through email, just print a warning and do not except.
+
+\item Fixed a bug where \Condor{submit} would incorrectly create the user
+log file.
+
+\item Fixed a bug where a job queue sorted by date with \Condor{q} would
+be displayed in descending instead of ascending order.
+
+\item Fixed and improved error handling when \Condor{submit} fails.
+
+\item Numerous fixes in the Condor User Log System.
+
+\item Fixed a bug where when Condor inspects its on disk job queue log,
+it would do it with case sensitivity. Now there is no case sensitivity.
+
+\item Fixed a bug in \Condor{glidein} where it have trouble figuring out
+the architecture of a minimally installed HP-UX machine.
+
+\item Fixed it so that email to the user has the word ``condor'' capitalized
+in the subject.
+
+\item Fixed a situation where when a user has multiple schedulers submitting
+to the same pool, the Negotiator would starve some of the schedulers.
+
+\item Added a feature whereby if a transfer of an executable
+from a submission machine to an execute machine fails, Condor
+will retry a configurable numbers of times denotated by the
+\Macro{EXEC\_TRANSFER\_ATTEMPTS} macro. This macro defaults to three if
+left undefined. This macro exists only for the Unix port of Condor.
+
+\item Fixed a bug where if a schedd had too many rejected clusters during a
+match phase, it would ``except'' and have to be restarted by the master.
+
+\end{itemize}
+
+\noindent Known Bugs:
+\begin{itemize}
+\item The HP-UX Vendor C++ CFront compiler does not work with \Condor{compile}
+if exception handling is enabled with +eh.
+
+\item The HP-UX Vendor aCC compiler does not work at all with Condor.
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-3-0}Version 6.3.0}
