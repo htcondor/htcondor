@@ -6,7 +6,7 @@ ENGINE_SRC = hashkey.C collector_engine.C
 ENGINE_OBJ = hashkey.o collector_engine.o
 
 SRC = initialize.C collector.C 
-OBJ = initialize.o collector.o
+OBJ = initialize.o collector.o totals.o
 LIB = ../condor_daemon_core.V6/daemon_core.a collector_engine.a \
 		../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a \
 	  ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
@@ -22,3 +22,7 @@ tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 library_target(collector_engine.a, $(ENGINE_OBJ))
 release_target(condor_collector,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_status.V6,totals.o)
+

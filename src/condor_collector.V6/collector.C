@@ -13,6 +13,8 @@
 #include "condor_attributes.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "../condor_status.V6/status_types.h"
+#include "../condor_status.V6/totals.h"
 
 #include "condor_collector.h"
 #include "collector_engine.h"
@@ -239,27 +241,27 @@ receive_invalidation(Service* s, int command, Stream* sock)
     switch (command)
     {
 	  case INVALIDATE_STARTD_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_STARTD_ADS\n");
+		dprintf (D_ALWAYS, "Got INVALIDATE_STARTD_ADS\n");
 		whichAds = STARTD_AD;
 		break;
 		
 	  case INVALIDATE_SCHEDD_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
+		dprintf (D_ALWAYS, "Got INVALIDATE_SCHEDD_ADS\n");
 		whichAds = SCHEDD_AD;
 		break;
 		
 	  case INVALIDATE_SUBMITTOR_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
+		dprintf (D_ALWAYS, "Got INVALIDATE_SUBMITTOR_ADS\n");
 		whichAds = SUBMITTOR_AD;
 		break;
 
 	  case INVALIDATE_MASTER_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
+		dprintf (D_ALWAYS, "Got INVALIDATE_MASTER_ADS\n");
 		whichAds = MASTER_AD;
 		break;
 		
 	  case INVALIDATE_CKPT_SRVR_ADS:
-		dprintf (D_ALWAYS, "Got QUERY_CKPT_SRVR_ADS\n");
+		dprintf (D_ALWAYS, "Got INVALIDATE_CKPT_SRVR_ADS\n");
 		whichAds = CKPT_SRVR_AD;	
 		break;
 		
@@ -424,40 +426,38 @@ process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
 }	
 
 #ifndef WIN32
-int 	__mailer__;
+static TrackTotals	*normalTotals;
+int
+reportStartdScanFunc( ClassAd *ad )
+{
+	return normalTotals->update( ad );
+}
+
+static int submittorRunningJobs;
+static int submittorIdleJobs;
 
 int
-reportScanFunc (ClassAd *ad)
+reportSubmittorScanFunc( ClassAd *ad )
 {
-	char buffer[2048];
-	int	 x;
-
-	if (!ad->LookupString (ATTR_NAME, buffer)) return 0;
-	fdprintf (__mailer__, "%15s", buffer);
-
-	if (!ad->LookupString (ATTR_ARCH, buffer)) return 0;
-	fdprintf (__mailer__, "%8s", buffer);
-
-	if (!ad->LookupString (ATTR_OPSYS, buffer)) return 0;
-	fdprintf (__mailer__, "%14s", buffer);
-
-	if (!ad->LookupInteger (ATTR_MIPS, x)) x = -1;
-	fdprintf (__mailer__, "%4d", x);
-
-	if (!ad->LookupInteger (ATTR_KFLOPS, x)) x = -1;
-	fdprintf (__mailer__, "%7d", x);
-
-	if (!ad->LookupString (ATTR_STATE, buffer)) return 0;
-	fdprintf (__mailer__, "%10s\n", buffer);
+	int tmp1, tmp2;
+	if( !ad->LookupInteger( ATTR_RUNNING_JOBS , tmp1 ) ||
+		!ad->LookupInteger( ATTR_IDLE_JOBS, tmp2 ) )
+			return 0;
+	submittorRunningJobs += tmp1;
+	submittorIdleJobs	 += tmp2;
 
 	return 1;
 }
+
 
 void
 reportToDevelopers (void)
 {
 	char	whoami[128];
 	char	buffer[128];
+	FILE	*mailer;
+	int		mailfd;
+	TrackTotals	totals( PP_STARTD_NORMAL );
 
 	if (get_machine_name (whoami) == -1) {
 		dprintf (D_ALWAYS, "Unable to get_machine_name()\n");
@@ -465,16 +465,36 @@ reportToDevelopers (void)
 	}
 
 	sprintf (buffer, "Condor Collector (%s):  Monthly report\n", whoami);
-	if ((__mailer__ = email (buffer, CondorDevelopers)) < 0) {
+	if( ( mailfd = email( buffer, CondorDevelopers ) ) < 0	||
+		( mailer = fdopen( mailfd, "w" ) ) == NULL ) {
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open url)\n");
+		close( mailfd );
 		return;
 	}
 
-	if (!collector.walkHashTable (STARTD_AD, reportScanFunc)) {
-		dprintf (D_ALWAYS, "Error sending monthly report\n");
-	}	
+	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
+		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
+		return;
+	}
+
+	normalTotals = &totals;
+	if (!collector.walkHashTable (STARTD_AD, reportStartdScanFunc)) {
+		dprintf (D_ALWAYS, "Error making monthly report (startd scan) \n");
+	}
 		
-	close (__mailer__);
+	// output totals summary to the mailer
+	totals.displayTotals( mailer, 20 );
+
+	// now output information about submitted jobs
+	submittorRunningJobs = 0;
+	submittorIdleJobs = 0;
+	if( !collector.walkHashTable( SUBMITTOR_AD, reportSubmittorScanFunc ) ) {
+		dprintf( D_ALWAYS, "Error making monthly report (submittor scan)\n" );
+	}
+	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
+	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
+	
+	fclose( mailer );
 	return;
 }
 #endif  // of ifndef WIN32
