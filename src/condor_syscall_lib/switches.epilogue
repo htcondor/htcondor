@@ -10,3 +10,7 @@
 #ifdef IRIX53
 #include "switches.remap-IRIX62.h"
 #endif
+
+#ifdef LINUX
+#include "switches.remap-LINUX.h"
+#endif
