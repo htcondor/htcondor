@@ -208,6 +208,8 @@ class BaseShadow : public Service
 
 	virtual struct rusage getRUsage( void ) = 0;
 
+	virtual bool setMpiMasterInfo( char* str ) = 0;
+
 		// make UserLog static so it can be accessed by EXCEPTION handler
 	static UserLog uLog;
 
