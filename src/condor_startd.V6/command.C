@@ -496,8 +496,14 @@ accept_request_claim( Resource* rip )
 		dprintf( D_ALWAYS, "Remote user is NULL\n" );
 			// What else should we do here???
 	}		
+		// Since we're done talking to this schedd agent, delete the stream.
+	rip->r_cur->setagentstream( NULL );
+
 	rip->change_state( claimed_state );
-	return TRUE;
+
+		// Want to return KEEP_STREAM so that daemon core doesn't try
+		// to delete the stream we've already deleted.
+	return KEEP_STREAM;
 }
 #undef ABORT
 
