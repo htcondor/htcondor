@@ -708,9 +708,9 @@ extract_idle_time(
 #if defined(Solaris28) || defined(Solaris29)
 static time_t solaris_kbd_idle(void)
 {
-	kstat_ctl_t     *kc;  /* libkstat cookie */ 
-	kstat_t         *kbd_ksp; 
-	void *p;
+	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
+	kstat_t         *kbd_ksp = NULL; 
+	void *p = NULL;
 	time_t answer;
 
 	/* open the kstat device */
@@ -790,6 +790,16 @@ static time_t solaris_kbd_idle(void)
 		return (time_t)0;
 	}
 
+	/* ok sanity check it, and look at the value BEFORE I do a kstat_close */
+	answer = ((kstat_named_t *)p)->value.l;
+	if (answer < (time_t)0)
+	{
+		dprintf(D_FULLDEBUG,
+			"solaris_kbd_idle(): WARNING! Fixing a negative idle time!\n");
+			
+		answer = 0;
+	}
+
 	/* close kstat */
 	if (kstat_close(kc) != 0)
 	{
@@ -799,26 +809,16 @@ static time_t solaris_kbd_idle(void)
 			"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
 			errno, strerror(errno));
 	}
-
-	/* ok sanity check it */
-	answer = ((kstat_named_t *)p)->value.l;
-	if (answer < (time_t)0)
-	{
-		dprintf(D_FULLDEBUG,
-			"solaris_kbd_idle(): WARNING! Fixing a negative idle time!\n");
-			
-		answer = 0;
-	}
 	
 	return answer;
 }
 
 static time_t solaris_mouse_idle(void)
 {
-	kstat_ctl_t     *kc;  /* libkstat cookie */ 
-	kstat_t         *ms_ksp; 
+	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
+	kstat_t         *ms_ksp = NULL; 
 	time_t answer;
-	void *p;
+	void *p = NULL;
 
 	/* open kstat */
 	if ((kc = kstat_open()) == NULL) {
@@ -899,6 +899,16 @@ static time_t solaris_mouse_idle(void)
 		return (time_t)0;
 	}
 
+	/* ok, sanity check the result */
+	answer = ((kstat_named_t *)p)->value.l;
+	if (answer < (time_t)0)
+	{
+		dprintf(D_FULLDEBUG,
+			"solaris_mouse_idle(): WARNING! Fixing a negative idle time!\n");
+			
+		answer = 0;
+	}
+
 	/* close kstat */
 	if (kstat_close(kc) != 0)
 	{
@@ -909,16 +919,6 @@ static time_t solaris_mouse_idle(void)
 			errno, strerror(errno));
 	}
 
-	/* ok, sanity check the result */
-	answer = ((kstat_named_t *)p)->value.l;
-	if (answer < (time_t)0)
-	{
-		dprintf(D_FULLDEBUG,
-			"solaris_mouse_idle(): WARNING! Fixing a negative idle time!\n");
-			
-		answer = 0;
-	}
-	
 	return answer;
 }
 
