@@ -672,6 +672,7 @@ negotiationTime ()
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
+					sockCache->invalidateSock( scheddAddr );
 					scheddAds.Delete( schedd );
 			}
 		}
@@ -875,11 +876,14 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		sock = schedd.reliSock( NegotiatorTimeout );
 		if( ! sock ) {
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
+				// invalidateSock() might be unecessary, but doesn't hurt...
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 		if( ! schedd.startCommand(NEGOTIATE, sock, NegotiatorTimeout) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
 					 scheddAddr );
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 			// finally, add it to the cache for later...
@@ -1006,6 +1010,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
 					ATTR_CLUSTER_ID, ATTR_PROC_ID);
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
@@ -1492,6 +1497,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	{
 		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
 		dprintf( D_FULLDEBUG, "      (Capability is \"%s\")\n", capability);
+		sockCache->invalidateSock( scheddAddr );
 		return MM_ERROR;
 	}
 

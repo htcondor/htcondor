@@ -108,6 +108,11 @@ class Job {
     */
     static const char *queue_t_names[];
   
+		/** Returns how many direct parents a node has.
+			@return number of parents
+		*/
+	const int NumParents();
+
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.

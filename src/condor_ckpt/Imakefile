@@ -300,7 +300,7 @@ condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#elif IS_GLIBC22
+#elif IS_GLIBC22 || IS_GLIBC23
 condor_rt0.o: $(CRT_BEGIN) ToUpper
 	./ToUpper $(CRT_BEGIN) tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main

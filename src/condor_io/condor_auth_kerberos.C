@@ -100,10 +100,6 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
 
 int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* errstack)
 {
-    //temporarily change timeout to 5 minutes so the user can type passwd
-    //MUST do this even on server side, since client side might call
-    
-    int time = mySock_->timeout(60 * 5); 
     int status = 0;
     char * principal = NULL;
     
@@ -153,8 +149,6 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* e
         }
     }
 
-    mySock_->timeout(time); //put it back to what it was before
-    
     return( status );
 }
 
@@ -779,6 +773,10 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
         goto error;
     } 
     else {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf( D_SECURITY, "krb5_unparse_name: %s\n", client );
+		}
+
         // We need to parse it right now. from userid@domain
         // to just user id
         char *tmp, * domain;

@@ -315,6 +315,12 @@ private:
 */
 bool IsDirectory( const char* path );
 
+/** Determine if the given file is the name of a symlink.
+  @param path The full path to the file to test
+  @return true if given file is a symlink, false if not
+*/
+bool IsSymlink( const char* path );
+
 /** Take two strings, a directory path, and a filename, and
   concatenate them together.  If the directory path doesn't end with
   the appropriate directory deliminator for this platform, this

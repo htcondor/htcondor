@@ -3,7 +3,7 @@ directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
 prefix: Hawkeye_modules_
 
 target: all
-version: 1.0.rc4
+version: 1.0.rc5
 os: Unix-Any
 +condor_jobhist
 +condor_node
@@ -36,6 +36,11 @@ target: condor_pool
 os: Unix-Any
 version: 1.0.rc3
 +condor_pool
+
+target: cvs_locks
+os: Unix-Any
+version: 1.0.rc1
++cvs_locks
 
 target: downlist
 os: Unix-Any

@@ -123,7 +123,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
-	#if defined(GLIBC22)
+	#if defined(GLIBC22) || defined(GLIBC23)
 		#define SOCKET_COUNT_TYPE int
 	#else
 		#define SOCKET_COUNT_TYPE unsigned int

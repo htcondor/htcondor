@@ -1,37 +1,22 @@
 EXT_ROOT = @ext_root@
-EXT_INSTALL = $(EXT_ROOT)/install
-EXT_BUNDLE = $(EXT_ROOT)/bundles
-EXT_BUILD = $(EXT_ROOT)/build
 EXT_TRIGGER = $(EXT_ROOT)/triggers
+EXT_INSTALL = $(EXT_ROOT)/install
+EXT_CONFIG_SH = @_cv_ext_config_sh@
 
 
-EXT_KERBEROS_VERSION = krb5-1.2.5
-#ifdef IS_DARWIN
-EXT_GLOBUS_VERSION = globus-2.4.3
-#else
-EXT_GLOBUS_VERSION = globus-2.2.4
-#endif
-EXT_GAHP_VERSION = gahp-6.5
-EXT_ZLIB_VERSION = zlib-1.1.3
-EXT_GPT_VERSION = gpt-3.0
-EXT_PVM_VERSION = pvm-3.4.2
+EXT_KERBEROS_VERSION = @ext_kerberos_version@
+EXT_GLOBUS_VERSION = @ext_globus_version@
+EXT_GPT_VERSION = @ext_gpt_version@
+EXT_GAHP_VERSION = @ext_gahp_version@
+EXT_ZLIB_VERSION = @ext_zlib_version@
+EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
 
-/* Select the approporiate external glibc package */
-#if IS_GLIBC && ! IS_CLIPPED
-#if IS_GLIBC_2_2_4
-EXT_GLIBC_VERSION = glibc-2.2.2
-#elif IS_GLIBC_2_2_5
-EXT_GLIBC_VERSION = glibc-2.2.2
-#elif IS_GLIBC_2_2_93
-EXT_GLIBC_VERSION = glibc-2.2.93
-#else
-#error Condor does NOT know what externals version of glibc to use!
-#endif
+#define WANT_EXT_GLIBC @want_ext_glibc@
+#if WANT_EXT_GLIBC
+EXT_GLIBC_VERSION = @ext_glibc_version@
 GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC_VERSION)/lib
-#define NEEDS_EXT_GLIBC YES
-#endif /* IS_GLIBC && ! IS_CLIPPED */
-
+#endif
 
 MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
 

@@ -514,7 +514,7 @@ Claim::setaliveint( int alive )
 		// for now, set our lease_duration, too, just so it's
 		// initalized to something reasonable.  once we get the job ad
 		// we'll reset it to the real value if it's defined.
-	c_lease_duration = 3 * alive;
+	c_lease_duration = max_claim_alives_missed * alive;
 }
 
 
@@ -553,9 +553,11 @@ Claim::saveJobInfo( ClassAd* request_ad )
 				 "Resetting ClaimLease timer (%d) with new duration\n", 
 				 c_lease_tid );
 	} else {
-		c_lease_duration = 3 * c_aliveint;
-		dprintf( D_FULLDEBUG, "%s not defined: using default %d\n", 
-				 ATTR_JOB_LEASE_DURATION, c_lease_duration );
+		c_lease_duration = max_claim_alives_missed * c_aliveint;
+		dprintf( D_FULLDEBUG, "%s not defined: using %d ("
+				 "alive_interval [%d] * max_missed [%d]\n", 
+				 ATTR_JOB_LEASE_DURATION, c_lease_duration,
+				 c_aliveint, max_claim_alives_missed );
 	}
 		/* 
 		   This resets the timer for us, and also, we should consider
@@ -572,7 +574,7 @@ Claim::startLeaseTimer()
 	if( c_lease_duration < 0 ) {
 		dprintf( D_ALWAYS, "Warning: starting ClaimLease timer before "
 				 "lease duration set.\n" );
-		c_lease_duration = 300;
+		c_lease_duration = 1200;
 	}
 	if( c_lease_tid != -1 ) {
 	   EXCEPT( "Claim::startLeaseTimer() called w/ c_lease_tid = %d", 
@@ -634,6 +636,7 @@ Claim::leaseExpired()
 void
 Claim::alive()
 {
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", id() );
 		// Process a keep alive command
 	daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
 }

@@ -98,6 +98,8 @@ sub RunIt {
 	    if ( /(.*)\/\#cvs\.(\w+)\.(.*)\.(\d+)$/ )
 	    {
 		my @Stat = stat( $_ );
+		next if ( $#Stat < 9 );
+
 		my $Lock = ();
 		$Lock->{Dir} = $1;
 		$Lock->{Type} = $2;

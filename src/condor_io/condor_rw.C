@@ -118,6 +118,19 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 
 		nro = recv(fd, &buf[nr], sz - nr, 0);
 		if( nro <= 0 ) {
+
+				// If timeout > 0, and we made it here, then
+				// we know we were woken by select().  Now, if
+				// select() wakes up on a read fd, and then recv() 
+				// subsequently returns 0, that means that the
+				// socket has been closed by our peer.
+			if ( timeout > 0 && nro == 0 ) {
+				dprintf( D_ALWAYS, "condor_write(): "
+						 "Socket closed when trying "
+						 "to read buffer\n" );
+				return -1;
+			}
+
 			int the_error;
 #ifdef WIN32
 			the_error = WSAGetLastError();

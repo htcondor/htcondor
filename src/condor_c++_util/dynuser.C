@@ -441,14 +441,15 @@ void dynuser::createpass() {
 	for ( int i = 0; i < 14; i++ ) {
 		char c = (char) ( rand() % 256 );
 
-		if ( !isprint( c ) ) { // For sanity.  This leaves many characters to chose from.
+		if ( !isprint( c ) ) { // For sanity.  This leaves many characters 
+							   // to chose from.
 			i--;
 		} else {
 			password[i] = c;
 		}
 	}
 
-	password[14] = 0;
+	password[14] = '\0';
 	
 	// cout << "Shhhh... the password is "<<password<<endl;
 }
@@ -456,12 +457,18 @@ void dynuser::createpass() {
 
 void dynuser::update_t() {
 	if ( accountname && accountname_t ) {
-		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, accountname, -1, accountname_t, 100)) {
+		if (!MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
+					accountname, -1, accountname_t, 100)) {
+			dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
+					"error=%li\n", GetLastError());
 			EXCEPT("Unexpected failure in dynuser:update_t\n");
 		}
 	}
 	if ( password && password_t ) {
-		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, password, -1, password_t, 100)) {
+		if (!MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
+					password, -1, password_t, 100)) {
+			dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
+					"error=%li\n", GetLastError());
 			EXCEPT("Unexpected failure in dynuser:update_t\n");
 		}
 	}

@@ -97,3 +97,6 @@ CONDOR_ANALYZE_RELEASE = @condor_analyze_release@
 CONDOR_ANALYZE_STATIC = @condor_analyze_static@
 CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
 
+#define HAS_STATIC @_cv_has_static@
+
+GlobusFlavor = @globus_flavor@

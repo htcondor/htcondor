@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 
 #include "authentication.h"
 #include "condor_string.h"
@@ -394,7 +395,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
 	if (!paramer) {
 		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
-		dprintf ( D_SECURITY, "getDefCryptoMeth -> %s\n", paramer);
 	}
 
 	if (paramer) {
@@ -419,7 +419,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
 			 SecMan::sec_req_rev[sec_negotiation] );
 	ad->Insert(buf);
-	dprintf (D_SECURITY, "ad->Insert(%s)\n", buf);
 
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
 			 SecMan::sec_req_rev[sec_authentication] ); 
@@ -444,18 +443,38 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
-	paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+
+	// first try the form SEC_<subsys>_<authlev>_SESSION_DURATION
+	// if that does not exist, fall back to old form of
+	// SEC_<authlev>_SESSION_DURATION.
+	char fmt[128];
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	paramer = SecMan::getSecSetting(fmt, auth_level);
+	if (!paramer) {
+		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+	}
 
 	if (paramer) {
+		// take whichever value we found and put it in the ad.
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SESSION_DURATION, paramer);
 		free( paramer );
 		paramer = NULL;
 
 		ad->Insert(buf);
 	} else {
-		// default: 100 days.  this is a temporary workaround for 6.6.0
-		sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
-
+		// no value defined, use defaults.
+		if (strcmp(mySubSystem, "TOOL") == 0) {
+			// default for tools is 1 minute.
+			sprintf(buf, "%s=\"60\"", ATTR_SEC_SESSION_DURATION);
+		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+			// default for submit is 1 hour.  yeah, that's a long submit
+			// but you never know with file transfer and all.
+			sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
+		} else {
+			// default for daemons is 100 days.  this is a temporary workaround
+			// for 6.6.X until automatic re-negotiation is implemented.
+			sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
+		}
 		ad->Insert(buf);
 	}
 
@@ -1017,6 +1036,21 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		}
 	}
 
+	// extract the version attribute current in the classad - it is
+	// the version of the remote side.
+	MyString remote_version;
+	char * rvtmp = NULL;
+	auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
+	if (rvtmp) {
+		remote_version = rvtmp;
+		free(rvtmp);
+	} else {
+		remote_version = "unknown";
+	}
+
+	// fill in our version
+	sprintf(buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
+	auth_info.InsertOrUpdate(buf);
 
 	// fill in return address, if we are a daemon
 	char* dcss = global_dc_sinful();
@@ -1028,13 +1062,11 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 	// fill in command
 	sprintf(buf, "%s=%i", ATTR_SEC_COMMAND, cmd);
 	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 
 	if (cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
 		sprintf(buf, "%s=%i", ATTR_SEC_AUTH_COMMAND, subCmd);
 		auth_info.Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 	}
 
 
@@ -1262,7 +1294,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				auth_response.dPrint( D_SECURITY );
 			}
 
-			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
+			// it makes a difference if the version is empty, so we must
+			// explicitly delete it before we copy it.
+			auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
+			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
@@ -1301,6 +1336,32 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing");
 			return false;
+		}
+
+		// protocol fix:
+		//
+		// up to and including 6.6.0, will_authenticate would be set to true
+		// if we are resuming a session that was authenticated.  this is not
+		// necessary.
+		//
+		// so, as of 6.6.1, if we are resuming a session (as determined
+		// by the expression (!new_session), AND the other side is 6.6.1
+		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
+		//
+		// we can tell easily if the other side is 6.6.1 or higher by the
+		// mere presence of the version, since that is when it was added.
+
+		if ((will_authenticate == SEC_FEAT_ACT_YES)) {
+			if ((!new_session)) {
+				if (remote_version != "unknown") {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", remote_version.Value() );
+					will_authenticate = SEC_FEAT_ACT_NO;
+				} else {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n", remote_version.Value() );
+				}
+			} else {
+				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+			}
 		}
 
 		

@@ -26,12 +26,6 @@ NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
 DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 
-#ifdef GLOBUS_FLAVOR
-GlobusFlavor = GLOBUS_FLAVOR
-#else
-GlobusFlavor = gcc32dbg
-#endif
-
 #ifdef NEED_SNPRINTF
 SNPRINTF_FLAGS = -DNEED_SNPRINTF
 #else
@@ -88,7 +82,7 @@ endif
 JAVAC = JavaCompiler
 JAR = JarTool
 
-STATIC	= StaticFlag
+STATIC	= -static
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags

@@ -1479,7 +1479,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				}
 				UpdateGlobusState( status, error );
 				ClearCallbacks();
-				lastProbeTime = now;
+				lastProbeTime = time(NULL);
 				gmState = GM_SUBMITTED;
 			}
 			} break;

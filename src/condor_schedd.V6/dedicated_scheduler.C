@@ -1697,6 +1697,9 @@ DedicatedScheduler::handleDedicatedJobs( void )
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
+	    // NOTE: this _is_ intended to be checked into CVS.  It may
+	    // as well remain this way until the scheduler is improved
+	    // to actually care about this value in any meaningful way.
 	now = 0;
 
 		// first, make sure we've got a shadow that can handle mpi

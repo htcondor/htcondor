@@ -39,9 +39,6 @@
 #define DO_BENCHMARKING			YES
 #define WANT_PVM			YES
 #define PVM_ARCH			HPPA
-#define HAS_STATIC			YES
-
-#define StaticFlag -static
 
 #define ShadowSizeEstimate 200
 

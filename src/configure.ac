@@ -340,6 +340,20 @@ AC_SUBST(_cv_libc_majmin,$_cv_libc_majmin)
 AC_SUBST(_cv_libc_is_kind,$_cv_libc_is_kind)
 
 
+#########
+# See what directory we're being run in, since we need this info for
+# various other things.  however, instead of using "`pwd`/..", we use
+# AS_DIRNAME to strip off the "src" part of `/bin/pwd`.  This should
+# get things right, even if there are weird symlinks going on.
+#########
+_src_dir=`/bin/pwd`
+_root_dir=`AS_DIRNAME(["$_src_dir"])`
+
+CONDOR_VERIFY_CONFIG_DIR([$_root_dir/config],
+                         [config directory is not valid])
+AC_SUBST(_cv_ext_config_sh,"$_root_dir/config/config.sh") 
+
+
 ############################################################
 # Check for command-line arguments and environment variables
 ############################################################
@@ -355,16 +369,8 @@ AC_ARG_WITH(externals,
     [directory specified with --with-externals ($withval) is not valid])
  ],
  [
-  # nothing specified, try ../externals.  however, instead of using
-  # "`pwd`/../externals", we use AS_DIRNAME to strip off the "src"
-  # part of `pwd` and then tack on "/externals".  This doesn't get
-  # things right if there are weird symlinks going on, but it wouldn't
-  # work if we were using "../externals", either.  In the general case
-  # where there's a real parent directory holding src, config and
-  # externals, everything works great, and using this as a default
+  # nothing specified, try ../externals.  using this as a default
   # makes it possible to just run "./configure" most of the time.
-  _cur_pwd=`pwd`
-  _root_dir=`AS_DIRNAME(["$_cur_pwd"])`
   _local_ext_dir="$_root_dir/externals"
   if test -d $_local_ext_dir ; then 
     CONDOR_VERIFY_EXTERNALS_DIR([$_local_ext_dir],
@@ -532,6 +538,18 @@ case "$gcc_vers" in
     CompilerMajor="3"
     CompilerMinor="3"
     CompilerPatch="0"
+    ;;
+ "3.3.1" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="1"
+    ;;
+ "3.3.2" )
+    CompilerKind="GCC"
+    CompilerMajor="3"
+    CompilerMinor="3"
+    CompilerPatch="2"
     ;;
  * )
    AC_MSG_RESULT([ERROR])
@@ -1024,11 +1042,135 @@ fi
 
 # checks for system services
 
+# checks for platform-specific settings we don't yet auto-detect
+
+AC_MSG_CHECKING([if Condor can also build a statically linked release])
+case "$os" in
+  "HP-UX" )
+    if test "x$_cv_opsys_vers" = "xHPUX11" ; then
+    # Grrr.... libxnet.so (the XOpen interface) does NOT have a .a version
+      _cv_has_static=no
+    else
+      _cv_has_static=yes
+    fi
+    ;;
+  "OSF1" )
+    _cv_has_static=yes
+    ;;
+  "Linux" )
+    _cv_has_static=yes
+    ;;
+  "SunOS" )
+    _cv_has_static=no
+    ;;
+  "IRIX" )
+    _cv_has_static=no
+    ;;
+  "Darwin" )
+    _cv_has_static=no
+    ;;
+  * )
+    AC_MSG_RESULT([error])
+    AC_MSG_ERROR([Unrecognized platform: $os])
+esac
+AC_MSG_RESULT([$_cv_has_static])
+if test "$_cv_has_static" = "yes" ; then
+  AC_SUBST(_cv_has_static,YES)
+else
+  AC_SUBST(_cv_has_static,NO)
+fi
+
+
+############################################################
+# What versions of what externals do we need
+############################################################
+AC_MSG_NOTICE([determining versions of external packages])
+
+
+# For now, we hardcode that non-i386 platforms are clipped and don't
+# need an external glibc for anything...
+if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
+  AC_MSG_CHECKING([glibc])
+  _cv_libc_full_vers="$_cv_libc_major.$_cv_libc_minor.$_cv_libc_patch"
+  case "$_cv_libc_full_vers" in
+  "2.2.4" )
+    _cv_ext_glibc_version="glibc-2.2.2"
+    ;;
+  "2.2.5" )
+    _cv_ext_glibc_version="glibc-2.2.2"
+    ;;
+  "2.2.93" )
+    _cv_ext_glibc_version="glibc-2.2.93"
+    ;;
+  "2.3.2" )
+    _cv_ext_glibc_version="glibc-2.3.2"
+    ;;
+  * )  
+    AC_MSG_RESULT([ERROR])
+    AC_MSG_ERROR([Condor does NOT know what glibc external to use with glibc-$_cv_libc_full_vers])
+  esac
+  AC_MSG_RESULT([$_cv_ext_glibc_version])
+  AC_SUBST(ext_glibc_version,$_cv_ext_glibc_version)
+  AC_SUBST(want_ext_glibc,YES)
+else
+  AC_SUBST(want_ext_glibc,NO)
+  AC_SUBST(ext_glibc_version,UNUSED)
+fi
+
+
+AC_MSG_CHECKING([kerberos])
+_cv_ext_kerberos_version="krb5-1.2.5"
+AC_MSG_RESULT([$_cv_ext_kerberos_version])
+AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
+
+
+AC_MSG_CHECKING([globus])
+if test "$os" = "Darwin"; then
+  _cv_ext_globus_version="globus-2.4.3"
+else
+  _cv_ext_globus_version="globus-2.2.4"
+fi
+AC_MSG_RESULT([$_cv_ext_globus_version])
+AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
+
+AC_MSG_CHECKING([globus flavor])
+_cv_globus_flavor=gcc32dbg
+if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
+  _cv_globus_flavor=gcc64dbg
+fi
+AC_MSG_RESULT([$_cv_globus_flavor])
+AC_SUBST(globus_flavor,$_cv_globus_flavor)
+
+
+AC_MSG_CHECKING([gpt])
+_cv_ext_gpt_version="gpt-3.0"
+AC_MSG_RESULT([$_cv_ext_gpt_version])
+AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
+
+
+AC_MSG_CHECKING([gahp])
+_cv_ext_gahp_version="gahp-6.5"
+AC_MSG_RESULT([$_cv_ext_gahp_version])
+AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
+
+
+AC_MSG_CHECKING([zlib])
+_cv_ext_zlib_version="zlib-1.1.3"
+AC_MSG_RESULT([$_cv_ext_zlib_version])
+AC_SUBST(ext_zlib_version,$_cv_ext_zlib_version)
+
+
+AC_MSG_CHECKING([pvm])
+_cv_ext_pvm_version="pvm-3.4.2"
+AC_MSG_RESULT([$_cv_ext_pvm_version])
+AC_SUBST(ext_pvm_version,$_cv_ext_pvm_version)
+
 
 ############################################################
 # Configure-generated output
 ############################################################
-AC_CONFIG_FILES(../config/configure.cf ../config/externals.cf)
+AC_CONFIG_FILES( ../config/configure.cf ../config/externals.cf
+                 ../config/config.sh )
 AC_OUTPUT
 
 # Finally, call Condor's imake script to generate Makefile using imake

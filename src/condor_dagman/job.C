@@ -451,3 +451,11 @@ const char* Job::JobIdString() const
 
 }
 */
+
+
+const int
+Job::NumParents()
+{
+	int n = _queues[Q_PARENTS].Number();
+	return n;
+}

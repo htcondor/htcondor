@@ -461,7 +461,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 				  else {
 					  TerminateJob( job, recovery );
 				  }
-				  SubmitReadyJobs();
 				  PrintReadyQ( DEBUG_DEBUG_2 );
 
 				  break;
@@ -712,7 +711,6 @@ Dag::StartNode( Job *node )
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	_readyQ->Append( node );
-	SubmitReadyJobs();
 	return TRUE;
 }
 
@@ -738,14 +736,6 @@ Dag::SubmitReadyJobs()
         return 0;
     }
 
-        // Sleep for one second here, so we can be sure that this submit
-		// event is unambiguously later than the termination event of the
-		// previous job, given that the logs only have a resolution of
-		// one second.  (Because of the new feature of allowing separate
-		// logs for each job, we can't just rely on the physical order
-		// in a single log file.)  wenger 2003-04-12.
-	sleep(1);
-
 	// remove & submit first job from ready queue
 	Job* job;
 	_readyQ->Rewind();
@@ -753,6 +743,21 @@ Dag::SubmitReadyJobs()
 	_readyQ->DeleteCurrent();
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
+
+	if( job->NumParents() > 0 ) {
+			// Sleep for one second here, so we can be sure that this
+			// job's submit event is unambiguously later than the
+			// termination events of its parents, given that userlogs
+			// only have a resolution of one second.  (Because of the
+			// new feature allowing distinct userlogs for each job, we
+			// can't just rely on the physical order in a single log
+			// file.)
+
+			// TODO: as an optimization, check if, for all parents,
+			// the logfile is the same as the child -- if yes, we can
+			// skip the sleep...
+		sleep( 1 );
+	}
 
 	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
 				  job->JobTypeString(), job->GetJobName() );
@@ -883,7 +888,6 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
 		_readyQ->Append( job );
-		SubmitReadyJobs();
 	}
 	return true;
 }

@@ -2,6 +2,26 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-3.
 
+01/16/04 V6_6-merge-3
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This gets some important build system changes and various 6.6.1 bug
+   fixes discovered via the CDF work that we want in the V6_7-branch
+   before we make V6_7-core-2-branch
+
+01/14/04 V6_6-post_merge-V6_6-full_redhat9_port-merge-1
+	This is state of the V6_6-branch AFTER I had merged in the
+	V6_6-full_redhat9_port-branch into V6_6-branch as tagged at
+	V6_6-full_redhat9_port-merge-1
+
+01/14/04 V6_6-pre_merge-V6_6-full_redhat9_port-merge-1
+	This is the premerge tag on the V6_6-branch which is BEFORE I checked
+	in the merge arena of V6_6-full_redhat9_port-branch into V6_6-branch 
+	workspace.
+
+01/14/04 V6_6-full_redhat9_port-merge-1
+	The state of the V6_6-full_redhat9_port-branch just before it 
+	is merged into the V6_6-branch.
+
 01/14/04 V6_7-post_merge-V6_7-core-merge-1
    The state of the V6_7-branch after merging in the V6_7-core-branch
    as tagged at V6_7-core-merge-1.
@@ -19,6 +39,15 @@
    A new branch off of V6_7-branch for Nandita's work to save and
    query historical classad information, particularly startd ads.
    Created from the V6_7-classad_history-root tag.  
+
+12/23/03 V6_6-full_redhat9_port-branch 
+   A new branch off the end of the V6_6-branch for the redhat 9 full port.
+   Created from the V6_6-full_redhat9_port-root tag.  Includes the
+   doc directory.
+
+12/23/03 V6_6-full_redhat9_port-root
+    The state of the V6_6-branch on 12/23/03. This is the root tag
+    for the V6_6-full_redhat9_port-branch tag and subsequent branch.
 
 12/22/03 V6_7_0-core_snapshot_0
    The state of the V6_7-core-branch that was given to CORE as

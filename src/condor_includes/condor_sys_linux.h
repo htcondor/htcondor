@@ -33,6 +33,15 @@
 # endif
 #endif
 
+#if defined(GLIBC23)
+/* the glibc in redhat 9, and the fortran compiler in particular use 
+	the 64 bit interfaces that we have to worry about */
+/*#define _LARGEFILE64_SOURCE*/
+/*#define _FILE_OFFSET_BITS 64*/
+/*#define HAS_64BIT_SYSCALLS      1*/
+/*#define HAS_64BIT_STRUCTS      1*/
+#endif
+
 #include <sys/types.h>
 
 #include "condor_fix_sys_stat.h"
@@ -111,7 +120,7 @@ END_C_DECLS
 #endif /* GLIBC */
 
 
-#if defined(LINUX) && defined(GLIBC22)
+#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
 #include <search.h>
 #endif
 
@@ -132,7 +141,7 @@ END_C_DECLS
 #define HAS_U_TYPES	1
 #define SIGSET_CONST	/* nothing */
 
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 	#define SYNC_RETURNS_VOID 1
 #endif
 

@@ -9,6 +9,3 @@
 #define HAS_OPENSSL 	YES
 
 #define WANT_PVM	NO
-
-#undef GLOBUS_FLAVOR
-#define GLOBUS_FLAVOR gcc64dbg

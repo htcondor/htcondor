@@ -195,8 +195,12 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   if [ $os = "Linux" ]; then
 		# some redunancy here, not sure why. But it doesn't hurt anything.
         libc=`condor_version -syscall -libc`
-        if [ $libc = "GLIBC22" ]; then
+        if [ $libc = "GLIBC23" ]; then
+                LINUX_LIB="glibc23"
+        elif [ $libc = "GLIBC22" ]; then
                 LINUX_LIB="glibc22"
+        elif [ -f /lib/libc-2.3* ]; then
+                LINUX_LIB="glibc23"
         elif [ -f /lib/libc-2.2* ]; then
                 LINUX_LIB="glibc22"
         elif [ $libc = "GLIBC21" ]; then
@@ -297,6 +301,12 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		if [ $os = "Linux" -a $is_gcc3 = 1 ]; then
 			tmp=`echo $argument | sed -e 's/crtbegin\.o/crtbeginT\.o/'`
 				ldargs=`echo $ldargs $tmp`
+		else
+			# otherwise just propogate what we find if it is just a gcc 2.96
+			# (or anything else) compiler which has a crtbegin.o and, via
+			# manual inspection, not a crtbeginT.o. This is apparently in 
+			# order to make c++ exceptions work.
+			ldargs=`echo $ldargs $argument`
 		fi
 		;;
 		
@@ -357,7 +367,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               else
 				if [ $os = "OSF1" ]; then				
 					ldargs=`echo $ldargs -lm -lc`
-				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" ]; then
+				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" -o $LINUX_LIB = "glibc23" ]; then
 
 					ldargs=`echo -L$CONDOR_LIBDIR $ldargs -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv -lc`
 				else

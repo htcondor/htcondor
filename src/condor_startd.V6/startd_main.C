@@ -61,6 +61,8 @@ int		match_timeout;		// How long you're willing to be
 int		killing_timeout;	// How long you're willing to be in
 							// preempting/killing before you drop the
 							// hammer on the starter
+int		max_claim_alives_missed;  // how many keepalives can we miss
+								  // until we timeout the claim
 time_t	startd_startup;		// Time when the startd started up
 
 int		console_vms = 0;	// # of nodes in an SMP that care about
@@ -465,6 +467,14 @@ init_params( int first_time)
 		killing_timeout = 30;
 	} else {
 		killing_timeout = atoi( tmp );
+		free( tmp );
+	}
+
+	tmp = param( "MAX_CLAIM_ALIVES_MISSED" );
+	if( !tmp ) {
+		max_claim_alives_missed = 3;
+	} else {
+		max_claim_alives_missed = atoi( tmp );
 		free( tmp );
 	}
 

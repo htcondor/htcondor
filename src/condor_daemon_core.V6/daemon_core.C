@@ -58,6 +58,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_secman.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_version.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "condor_fix_assert.h"
@@ -1582,9 +1583,6 @@ DaemonCore::ReInit()
 		// Reset our IpVerify object
 	ipverify.Init();
 
-		// Reset our SecMan object (clears the cached info)
-    invalidateSessionCache();
-
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
 		// 8 hours from now.  The reason we don't do this as a simple
@@ -2318,7 +2316,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -2336,7 +2334,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2412,7 +2410,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
@@ -2429,7 +2427,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2694,6 +2692,10 @@ int DaemonCore::HandleReq(int socki)
 					}
 				}
 
+				// add our version to the policy to be sent over
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
+				the_policy->InsertOrUpdate(buf);
+				
 				// handy policy vars
 				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
@@ -2799,6 +2801,38 @@ int DaemonCore::HandleReq(int socki)
 				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
 				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+
+				// protocol fix:
+				//
+				// up to and including 6.6.0, will_authenticate would be set to
+				// true if we are resuming a session that was authenticated.
+				// this is not necessary.
+				//
+				// so, as of 6.6.1, if we are resuming a session (as determined
+				// by the expression (!new_session), AND the other side is
+				// 6.6.1 or higher, we will force will_authenticate to
+				// SEC_FEAT_ACT_NO.
+
+				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+					if ((!new_session)) {
+						char * remote_version = NULL;
+						the_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
+						if(remote_version) {
+							// this attribute was added in 6.6.1.  it's mere
+							// presence means that the remote side is 6.6.1 or
+							// higher, so no need to instantiate a CondorVersionInfo.
+							dprintf( D_SECURITY, "SECMAN: other side is %s, NOT reauthenticating.\n", remote_version );
+							will_authenticate = SecMan::SEC_FEAT_ACT_NO;
+
+							free (remote_version);
+						} else {
+							dprintf( D_SECURITY, "SECMAN: other side is pre 6.6.1, reauthenticating.\n" );
+						}
+					} else {
+						dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+					}
+				}
 
 
 
@@ -2939,10 +2973,17 @@ int DaemonCore::HandleReq(int socki)
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					// it matters if the version is empty, so we must explicitly delete it
+					the_policy->Delete( ATTR_SEC_REMOTE_VERSION );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_REMOTE_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
 
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
+						pa_ad.dPrint( D_SECURITY );
+					}
 
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
@@ -2964,6 +3005,10 @@ int DaemonCore::HandleReq(int socki)
 					KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
+					if (DebugFlags & D_FULLDEBUG) {
+						the_policy->dPrint(D_SECURITY);
+					}
+
 					free( dur );
 					dur = NULL;
 				}
@@ -3582,7 +3627,14 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 		if ( hwinsta && hdesk ) {
 			// Enumerate all winsta's to find the one with the job
-			EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+			// We kick this off in a separate thread, and block until
+			// it returns.
+
+			HANDLE threadHandle;
+			DWORD threadID;
+			threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+			WaitForSingleObject(threadHandle, INFINITE);
 
 			if ( pidinfo->hWnd == NULL ) {
 				// Did not find it.  This could happen because WinNT has a 
@@ -3590,8 +3642,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				// show up when you enumerate all the winstas.  Sometimes
 				// it takes a few seconds.  So lets sleep a while and try again.
 				sleep(4);
-				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, 
-								(LPARAM)pidinfo);
+				threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+				WaitForSingleObject(threadHandle, INFINITE);
 			}
 
 			// Set winsta and desktop back to the service desktop (or wherever)
@@ -4104,6 +4157,17 @@ int DaemonCore::SetFDInheritFlag(int fh, int flag)
 	return TRUE;
 }
 
+// This is the thread function we use to call EnumWindowStations(). We
+// found  that calling EnumWindowStations() from the main thread would 
+// later cause SetThreadDesktop() to fail, due to existing Windows or
+// hooks on the "current" desktop that were owned by the main thread.  
+// By kicking it off in its own thread, we ensure that this doesn't happen.
+DWORD WINAPI
+FindWinstaThread( LPVOID pidinfo ) {
+
+	return EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+}
+
 // Callback function for EnumWindowStationProc call to find hWnd for a pid
 BOOL CALLBACK
 DCFindWinSta(LPTSTR winsta_name, LPARAM p)
@@ -4133,10 +4197,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		}
 	}
 	
-	// must try to open winsta as the user
-	priv = set_user_priv();
+	// we used to set_user_priv() here, but we found that its not 
+	// needed, and worse still, would cause the startd to EXCEPT().
 	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
-	set_priv(priv);
 
 	if ( hwinsta == NULL ) {
 		//dprintf(D_FULLDEBUG,"Error: Failed to open WinSta %s err=%d\n",
@@ -4156,10 +4219,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		return TRUE;    
 	}
 
-	// must try to open desktop as the user
-	set_user_priv();
+	// We used to set_user_priv() here, but we found it wasn't needed.
+	// Worse still, it would cause the startd to EXCEPT(). 
 	HDESK hdesk = OpenDesktop( "default", 0, FALSE, MAXIMUM_ALLOWED );
-	set_priv(priv);
 
 	if (hdesk == NULL) {
 			// failed; so close the handle and return TRUE to continue

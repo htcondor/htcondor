@@ -180,6 +180,12 @@ class Dag {
 
 	inline bool Done() const { return NumJobsDone() == NumJobs(); }
 
+		/** Submit all ready jobs, provided they are not waiting on a
+			parent job or being throttled.
+			@return number of jobs successfully submitted
+		*/
+    int SubmitReadyJobs();
+  
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -245,11 +251,6 @@ class Dag {
     */
     Job * GetSubmittedJob (bool recovery);
 
-    /*  Submit all ready jobs, provided they are not waiting on a parent job.
-        @return number of jobs successfully submitted
-    */
-    int SubmitReadyJobs();
-  
 	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
 					 CondorID condorID );
 
