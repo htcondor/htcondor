@@ -83,6 +83,17 @@ function to track mouse activity that does not have a tendancy to fail.
       immediately without submitting and then removing these
       unnecessary jobs.
 
+\item Fixed a potential security problem that was introduced in Condor
+  version 6.5.5 when the \Macro{REQUIRE_LOCAL_CONFIG_FILE}
+  configuration setting was added.
+  This setting used to default to FALSE if it was not defined in the
+  configuration files.
+  It now defaults to TRUE.
+  If administrators define local configuration files for the machines
+  in their pool, it should be a fatal error if those files don't exist
+  unless the administrators actively disable this check by defining 
+  \MacroNI{REQUIRE_LOCAL_CONFIG_FILE} to be FALSE.
+
 \end{itemize}
 
 \noindent Known Bugs:
