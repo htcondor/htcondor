@@ -58,6 +58,20 @@ char*	addrFile = NULL;
 int line_where_service_stopped = 0;
 #endif
 
+#ifndef WIN32
+// This function polls our parent process; if it is gone, shutdown.
+void
+check_parent()
+{
+	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
+		// our parent is gone!
+		dprintf(D_ALWAYS,
+			"Our parent process (pid %d) went away; shutting down\n",
+			daemonCore->getppid());
+		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+	}
+}
+#endif
 
 void
 clean_files()
@@ -895,14 +909,6 @@ int main( int argc, char** argv )
 		daemonCore = new DaemonCore();
 	}
 
-		//if specified on command line, set timer to gracefully exit
-	if ( runfor ) {
-		daemonCore->Register_Timer( runfor * 60, 0, 
-				(TimerHandler)main_shutdown_graceful, "main_shutdown_graceful" );
-		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
-				runfor );
-	}
-
 		// Now that we have the daemonCore object, we can finally
 		// print out what our pid is.
 
@@ -1073,6 +1079,26 @@ int main( int argc, char** argv )
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
 								 (SignalHandlercpp)&DaemonCore::HandleDC_SIGCHLD,
 								 "HandleDC_SIGCHLD()",daemonCore,IMMEDIATE_FAMILY);
+#endif
+
+		// Install DaemonCore timers common to all daemons.
+
+		//if specified on command line, set timer to gracefully exit
+	if ( runfor ) {
+		daemonCore->Register_Timer( runfor * 60, 0, 
+				(TimerHandler)handle_dc_sigterm, "handle_dc_sigterm" );
+		dprintf(D_ALWAYS,"Registered Timer for graceful shutdown in %d minutes\n",
+				runfor );
+	}
+
+#ifndef WIN32
+		// This timer checks if our parent is dead; if so, we shutdown.
+		// We only do this on Unix; on NT we watch our parent via a different mechanism.
+		// Also note: we do not want the master to exibit this behavior!
+	if ( ! is_master ) {
+		daemonCore->Register_Timer( 15, 120, 
+				(TimerHandler)check_parent, "check_parent" );
+	}
 #endif
 
 		// Install DaemonCore command handlers common to all daemons.
