@@ -49,6 +49,7 @@ class GlobusJob : public Service
 	void Reconfig();
 	void SetEvaluateState();
 	int doEvaluateState();
+	int CommunicationTimeout();
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	void UpdateCondorState( int new_state );
@@ -89,6 +90,7 @@ class GlobusJob : public Service
 	bool jmUnreachable;
 	GlobusResource *myResource;
 	int evaluateStateTid;
+	int communicationTimeoutTid;
 	time_t lastProbeTime;
 	bool probeNow;
 	time_t enteredCurrentGmState;
