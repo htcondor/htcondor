@@ -2960,6 +2960,63 @@ Scheduler::negotiate(int, Stream* s)
 
 					if ( my_match_ad ) {
 						dprintf(D_PROTOCOL,"Received match ad\n");
+
+							// Look to see if the job wants info about 
+							// old matches.  If so, store info about old
+							// matches in the job ad as:
+							//   LastMatchName0 = "some-startd-ad-name"
+							//   LastMatchName1 = "some-other-startd-ad-name"
+							//   ....
+							// LastMatchName0 will hold the most recent.  The
+							// list will be rotated with a max length defined
+							// by attribute ATTR_JOB_LAST_MATCH_LIST_LENGTH, which
+							// has a default of 0 (i.e. don't keep this info).
+						int c = -1;
+						int p = -1;
+						int list_len = 0;
+						ad->LookupInteger(ATTR_LAST_MATCH_LIST_LENGTH,list_len);
+						if ( list_len > 0 ) {								
+							int list_index;
+							char attr_buf[100];
+							char *last_match = NULL;
+							my_match_ad->LookupString(ATTR_NAME,&last_match);
+							for (list_index=0; 
+								 last_match && (list_index < list_len); 
+								 list_index++) 
+							{
+								char *curr_match = last_match;
+								last_match = NULL;
+								sprintf(attr_buf,"%s%d",
+									ATTR_LAST_MATCH_LIST_PREFIX,list_index);
+								ad->LookupString(attr_buf,&last_match);
+								if ( c == -1 ) {
+									ad->LookupInteger(ATTR_CLUSTER_ID, c);
+									ad->LookupInteger(ATTR_PROC_ID, p);
+									ASSERT( c != -1 );
+									ASSERT( p != -1 );
+									BeginTransaction();
+								}
+								SetAttributeString(c,p,attr_buf,curr_match);
+								free(curr_match);
+							}
+							if (last_match) free(last_match);
+						}
+							// Increment ATTR_NUM_MATCHES
+						int num_matches = 0;
+						ad->LookupInteger(ATTR_NUM_MATCHES,num_matches);
+						num_matches++;
+							// If a transaction is already open, may as well
+							// use it to store ATTR_NUM_MATCHES.  If not,
+							// don't bother --- just update in RAM.
+						if ( c != -1 && p != -1 ) {
+							SetAttributeInt(c,p,ATTR_NUM_MATCHES,num_matches);
+							CommitTransaction();
+						} else {
+							char tbuf[200];
+							sprintf(tbuf,"%s=%d",
+										ATTR_NUM_MATCHES,num_matches);
+							ad->Insert(tbuf);
+						}
 					}
 
 					if ( stricmp(capability,"null") == 0 ) {
