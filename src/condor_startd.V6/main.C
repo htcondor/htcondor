@@ -152,6 +152,7 @@ main_config()
 {
 	resmgr->walk( config_classad );
 	init_params(0);
+	return TRUE;
 }
 
 
@@ -259,6 +260,7 @@ init_params( int first_time)
 	}
 	mouse_dev = param("MOUSE_DEVICE");
 
+	return TRUE;
 }
 
 
@@ -268,6 +270,7 @@ main_shutdown_fast()
 		// Quickly kill all the starters that are running
 	resmgr->walk( kill_claim );
 	exit(0);
+	return TRUE;
 }
 
 
@@ -282,13 +285,11 @@ main_shutdown_graceful()
 		// Release all claims, active or not
 	resmgr->walk( release_claim );
 
-	if( resmgr->in_use() ) {
-			// There are still claims, we need to return.
-		return 0;
-	} else {
+	if( !resmgr->in_use() ) {
 			// Machine is free, we can just exit right away.
 		exit(0);
 	}
+	return TRUE;
 }
 
 
@@ -332,9 +333,8 @@ shutdown_sigchld( Service*, int )
 	reaper_loop();
 	if( ! resmgr->in_use() ) {
 		exit(0);
-	} else {
-		return TRUE;
-	}
+	} 
+	return TRUE;
 }
 
 
