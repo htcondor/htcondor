@@ -1078,6 +1078,17 @@ Concat(run_list_,name):: safe_append.pl name.run	@@\
 XCOMM End translation of func(RUN)
 #endif /* RUN */
 
+#ifndef RUN_DEPS
+#define RUN_DEPS(name,deps)	@@\
+XCOMM Begin translation of func(RUN_DEPS)	@@\
+all:: deps					@@\
+name:: deps					@@\
+       @/bin/true				@@\
+clean::						@@\
+	rm -f deps				@@\
+XCOMM End translation of func(RUN_DEPS)
+#endif /* RUN */
+
 
 /***********************************************************************
 ** Doc++ rules  
