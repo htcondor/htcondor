@@ -576,8 +576,7 @@ version.
 
 	#if defined(HAS_64BIT_SYSCALLS)
 
-	/* XXX I am revisiting this very quickly psilord */
-	#if 0
+	#if defined(Solaris26)
 		int fstat64( map(int fd), struct stat64 *buf ) :
 			#if defined(IRIX)
 			no_sys_chk,
