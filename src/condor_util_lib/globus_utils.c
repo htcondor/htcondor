@@ -49,57 +49,67 @@ char *GlobusJobStatusNames[] = {
 	"CANCELED"
 };
 
+static char * _globus_error_message = NULL;
+
+const char *
+x509_error_string()
+{
+	return _globus_error_message;
+}
+
+/* Return the number of seconds until the supplied proxy
+ * file will expire.  
+ * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+ */
 int
-check_x509_proxy( char *proxy_file )
+x509_proxy_seconds_until_expire( char *proxy_file )
 {
 #if !defined(GSS_AUTHENTICATION)
-
-	fprintf( stderr, "This version of Condor doesn't support X509 authentication!\n" );
-	return 1;
-
+	return -1;
 #else
 
-	char *min_time_left_param = NULL;
-	int min_time_left;
 	proxy_cred_desc *pcd = NULL;
 	time_t time_after;
 	time_t time_now;
 	time_t time_diff;
 	ASN1_UTCTIME *asn1_time = NULL;
 	struct stat stx;
+	int result;
+	int must_free_proxy_file = FALSE;
 
 	/* initialize SSLeay and the error strings */
 	ERR_load_prxyerr_strings(0);
 	SSLeay_add_ssl_algorithms();
 
 	/* Load proxy */
-	if (!proxy_file) 
+	if (!proxy_file)  {
 		proxy_get_filenames(1, NULL, NULL, &proxy_file, NULL, NULL);
-
-	if (!proxy_file) {
-		fprintf(stderr,"ERROR: unable to determine proxy file name\n");
-		return 1;
+		must_free_proxy_file = TRUE;
 	}
 
-	if (stat(proxy_file,&stx) != 0) {
-		fprintf(stderr, "ERROR: file %s not found\n",proxy_file);
-		return 1;
+	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
+		_globus_error_message = "unable to find proxy file";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return -1;
 	}
 
 	pcd = proxy_cred_desc_new();
 	if (!pcd) {
-		fprintf(stderr,"ERROR: problem during internal initialization\n");
-		return 1;
+		_globus_error_message = "problem during internal initialization";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return -1;
 	}
 
 	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
-		fprintf(stderr,"ERROR: unable to load proxy");
-		return 1;
+		_globus_error_message = "unable to load proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return -1;
 	}
 
 	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
-		fprintf(stderr,"ERROR: unable to load public key from proxy");
-		return 1;
+		_globus_error_message = "unable to load public key from proxy";
+		if ( must_free_proxy_file ) free(proxy_file);
+		return -1;
 	}
 
 	/* validity: set time_diff to time to expiration (in seconds) */
@@ -109,23 +119,57 @@ check_x509_proxy( char *proxy_file )
 	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
 	time_diff = time_after - time_now ;
 
+	if ( time_diff < 0 ) {
+		time_diff = 0;
+	}
+
+
+	result = (int) time_diff;
+
+	if ( must_free_proxy_file ) free(proxy_file);
+
+	return result;
+
+#endif
+}
+
+int
+check_x509_proxy( char *proxy_file )
+{
+#if !defined(GSS_AUTHENTICATION)
+
+	_globus_error_message = "This version of Condor doesn't support X509 authentication!" ;
+	return 1;
+
+#else
+	char *min_time_left_param = NULL;
+	int min_time_left;
+	int time_diff;
+
+	time_diff = x509_proxy_seconds_until_expire( proxy_file );
+
+	if ( time_diff < 0 ) {
+		/* Error! Don't set error message, it is already set */
+		return 1;
+	}
+
 	/* check validity */
 	min_time_left_param = param( "CRED_MIN_TIME_LEFT" );
 
 	if ( min_time_left_param != NULL ) {
 		min_time_left = atoi( min_time_left_param );
+		free(min_time_left_param);
 	} else {
 		min_time_left = DEFAULT_MIN_TIME_LEFT;
 	}
 
-	if ( time_diff < 0 ) {
-		fprintf(stderr,"ERROR: proxy has expired\n");
+	if ( time_diff == 0 ) {
+		_globus_error_message =	"proxy has expired";
 		return 1;
 	}
 
 	if ( time_diff < min_time_left ) {
-		fprintf(stderr,"ERROR: proxy lifetime too short\n");
-		dprintf(D_ALWAYS,"ERROR: proxy lifetime too short\n");
+		_globus_error_message =	"proxy lifetime too short";
 		return 1;
 	}
 
