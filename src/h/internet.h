@@ -31,8 +31,6 @@
 #ifndef INTERNET_H
 #define INTERNET_H
 
-#include "proc.h"
-#include "expr.h"
 
 #if !defined(SOCKET) && !defined(WIN32)
 #define SOCKET int
@@ -40,12 +38,6 @@
 
 /* maximum length of a machine name */
 #define  MAXHOSTLEN     1024	
-
-typedef struct job_id
-{
-	struct in_addr	inet_addr;
-	PROC_ID			id;
-} JOB_ID;
 
 #if defined(__cplusplus)
 extern "C" {
@@ -88,4 +80,4 @@ int _condor_local_bind( int fd );
 }
 #endif
 
-#endif INTERNET_H
+#endif /* INTERNET_H */
