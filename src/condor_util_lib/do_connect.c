@@ -41,7 +41,6 @@
 #include "clib.h"
 #include <string.h>
 #include "dgram_io_handle.h"
-#include "condor_fdset.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -328,7 +327,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
 	nfds = sockfd + 1;
 	FD_ZERO( &writefds );
 	FD_SET( sockfd, &writefds );
-	nfound = select( nfds, (int *)0, (int *)&writefds, (int *)0,
+	nfound = select( nfds, (int *)0, (int *) &writefds, (int *)0,
 					(struct timeval *)&timer );
 	switch( nfound ) {
 	    case 0:
@@ -388,13 +387,13 @@ int tcp_accept_timeout(int ConnectionSock, struct sockadrr *sin, int *len,
 	 ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count) );	
 	 */
 
-    if( NFDS(count) == 0 ) {
+    if( count == 0 ) {
 		return -2;
     } else if( FD_ISSET(ConnectionSock,&readfds) ) {
 		return (  accept( ConnectionSock, (struct sockaddr *)sin, len)  );    
     } else {
 		EXCEPT( "select: unknown connection, readfds = 0x%x, count = %d",
-			   readfds, NFDS(count) );
+			   readfds, count );
     }
    
     return -1; 
