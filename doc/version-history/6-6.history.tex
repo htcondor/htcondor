@@ -60,6 +60,13 @@ The details of each version are described below.
 \item Removed some settings from the default configuation files
   shipped with Condor that are no longer used in the code.
 
+\item Fixed bugs in DAGMan parsing of submit files (to determine
+  node log files).  Previously, a submit file line begining with
+  "log" (e.g., "LogLock = True") would be interpreted as a log file
+  line.  Also, if "log" was defined twice in the submit file,
+  DAGMan would incorrectly use the first definition, rather than
+  the last.
+
 \end{itemize}
 
 
