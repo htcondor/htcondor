@@ -1,11 +1,11 @@
 
 #include "condor_file_agent.h"
-#include "condor_syscall_mode.h"
+#include "condor_file_local.h"
 #include "condor_debug.h"
 #include "condor_error.h"
 
 #define KB 1024
-#define TRANSFER_BLOCK_SIZE (512*KB)
+#define TRANSFER_BLOCK_SIZE (32*KB)
 
 static char buffer[TRANSFER_BLOCK_SIZE];
 
@@ -19,109 +19,206 @@ CondorFileAgent::~CondorFileAgent()
 	delete original;
 }
 
-int CondorFileAgent::open( const char *url_in, int flags, int mode )
+int CondorFileAgent::open( const char *url, int flags, int mode )
 {
-	strcpy(url,url_in);
+	int pos=0, chunk=0, result=0;
+	int local_flags;
 
-	// Open the original file
-	int result = original->open(url,flags,mode);
+	// First, fudge the flags.  Even if the file is opened
+	// write-only, we must open it read/write to get the 
+	// original data.
+
+	// We need not worry especially about O_CREAT and O_TRUNC
+	// because these will be applied at the original open,
+	// and their effects will be preserved through pull_data().
+	
+	if( flags&O_WRONLY ) {
+		flags = flags&~O_WRONLY;
+		flags = flags|O_RDWR;
+	}
+
+	// The local copy is created anew, opened read/write.
+
+	local_flags = O_RDWR|O_CREAT|O_TRUNC;
+
+	// O_APPEND is a little tricky.  In this case, it is applied
+	// to both the original and the copy, but the data must not
+	// be pulled.
+
+	if( flags&O_APPEND ){
+		local_flags = local_flags|O_APPEND;
+	}
+
+	// Open the original file.
+
+	result = original->open(url,flags,mode);
 	if(result<0) return -1;
 
-	// Make my info match
-	readable = original->is_readable();
-	writeable = original->is_writeable();
-	size = original->get_size();
+	// Choose where to store the file.
+	// Eventually, this should be in a Condor spool directory.
 
-	// And make the local copy
-	open_temp();
-	pull_data();
+	tmpnam(local_filename);
+	sprintf(local_url,"local:%s\n",local_filename);
 
-	return fd;
+	// Open the local copy, with a private mode.
+
+	local_copy = new CondorFileLocal;
+	result = local_copy->open(local_url,local_flags,0700);
+	if(result<0) _condor_error_retry("Couldn't create temporary file '%s'!",local_url);
+
+	// Now, delete the file right away.
+	// If we get into trouble and can't clean up properly,
+	// the file system will free it for us.
+
+	unlink( local_filename );
+
+	// If the file has not been opened for append,
+	// then yank all of the data in.
+
+	dprintf(D_ALWAYS,"CondorFileAgent: Copying %s into %s\n",original->get_url(),local_copy->get_url());
+
+	if( !(flags&O_APPEND) ){
+		do {
+			chunk = original->read(pos,buffer,TRANSFER_BLOCK_SIZE);
+			if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",original->get_url());
+
+			result = local_copy->write(pos,buffer,chunk);
+			if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",local_url);
+		
+			pos += chunk;
+		} while(chunk==TRANSFER_BLOCK_SIZE);		
+	}
+
+	local_copy->set_size( original->get_size());
+
+	// Return success!
+
+	return 1;
 }
 
 int CondorFileAgent::close()
 {
-	push_data();
-	close_temp();
-	return original->close();
+	int pos=0, chunk=0, result=0;
+
+	// If the original file was opened for writing, then
+	// push the local copy back out.  if the original file
+	// was opened append-only, then the data is simply appended
+	// by the operating system at the other end.
+
+	if( original->is_writeable() ) {
+
+		dprintf(D_ALWAYS,"CondorFileAgent: Copying %s back into %s\n",local_copy->get_url(),original->get_url());
+
+		original->ftruncate(local_copy->get_size());
+		original->set_size(local_copy->get_size());
+
+		do {
+			chunk = local_copy->read(pos,buffer,TRANSFER_BLOCK_SIZE);
+			if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",local_url);
+	
+			result = original->write(pos,buffer,chunk);
+			if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",original->get_url());
+				
+			pos += chunk;
+		} while(chunk==TRANSFER_BLOCK_SIZE);
+	}
+
+	// Close the original file.  This must happen before the
+	// local copy is closed, so that any failure can be reported
+	// before the local copy is lost.
+
+	result = original->close();
+	if(result<0) return result;
+
+	// Finally, close and delete the local copy.
+	// There is nothing reasonable we can do if the local close fails.
+
+	result = local_copy->close();
+	delete local_copy;
+
+	return 0;
 }
 
-void CondorFileAgent::open_temp()
+int CondorFileAgent::read( int offset, char *data, int length )
 {
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	tmpnam(local_name);
-	SetSyscalls(scm);
-
-	dprintf(D_ALWAYS,"CondorFileAgent: %s is local copy of %s\n",
-		local_name, original->get_url() );
-
-	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	fd = ::open( local_name, O_RDWR|O_CREAT|O_TRUNC, 0700 );
-	if(fd<0) _condor_error_retry("Couldn't create temporary file '%s'!",local_name);
-	SetSyscalls(scm);
+	if( is_readable() ) {
+		return local_copy->read( offset, data, length );
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
 }
 
-void CondorFileAgent::close_temp()
+int CondorFileAgent::write( int offset, char *data, int length )
 {
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-	::close(fd);
-	SetSyscalls(scm);
-
-	fd = -1;
-
-	dprintf(D_ALWAYS,"CondorFileAgent: %s is closed.\n",local_name);
+	if( is_writeable() ) {
+		return local_copy->write( offset,data, length );
+	} else {
+		errno = EINVAL;
+		return -1;
+	}
 }
 
-void CondorFileAgent::pull_data()
+int CondorFileAgent::fcntl( int cmd, int arg )
 {
-	if(!original->is_readable()) return;
-
-	dprintf(D_ALWAYS,"CondorFileAgent: Loading %s with %s\n",
-		local_name, original->get_url() );
-
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-
-	int pos=0,chunk=0,result=0;
-
-	do {
-		chunk = original->read(pos,buffer,TRANSFER_BLOCK_SIZE);
-		if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",original->get_url());
-
-		if(chunk==0) break;
-
-		result = ::write(fd,buffer,chunk);
-		if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",local_name);
-		
-		pos += chunk;
-	} while(chunk==TRANSFER_BLOCK_SIZE);
-
-	SetSyscalls(scm);
+	return local_copy->fcntl(cmd,arg);
 }
 
-void CondorFileAgent::push_data()
+int CondorFileAgent::ioctl( int cmd, int arg )
 {
-	if(!original->is_writeable()) return;
-
-	dprintf(D_ALWAYS,"CondorFileAgent: Putting %s back into %s.\n",
-		local_name, original->get_url() );
-
-	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
-
-	::lseek(fd,0,SEEK_SET);
-
-	int pos=0,chunk=0,result=0;
-
-	do {
-		chunk = ::read(fd,buffer,TRANSFER_BLOCK_SIZE);
-		if(chunk<0) _condor_error_retry("CondorFileAgent: Couldn't read from '%s'",local_name);
-
-		if(chunk==0) break;
-
-		result = original->write(pos,buffer,chunk);
-		if(result<0) _condor_error_retry("CondorFileAgent: Couldn't write to '%s'",original->get_url());
-			
-		pos += chunk;
-	} while(chunk==TRANSFER_BLOCK_SIZE);
-
-	SetSyscalls(scm);
+	return local_copy->ioctl(cmd,arg);
 }
+
+int CondorFileAgent::ftruncate( size_t length )
+{
+	return local_copy->ftruncate( length );
+}
+
+int CondorFileAgent::fsync()
+{
+	return local_copy->fsync();
+}
+
+int CondorFileAgent::is_readable()
+{
+	return original->is_readable();
+}
+
+int CondorFileAgent::is_writeable()
+{
+	return original->is_writeable();
+}
+
+void CondorFileAgent::set_size(size_t size)
+{
+	local_copy->set_size(size);
+}
+
+int CondorFileAgent::get_size()
+{
+	return local_copy->get_size();
+}
+
+char * CondorFileAgent::get_url()
+{
+	return original->get_url();
+}
+
+int CondorFileAgent::get_unmapped_fd()
+{
+	return local_copy->get_unmapped_fd();
+}
+
+int CondorFileAgent::is_file_local()
+{
+	return 1;
+}
+
+
+
+
+
+
+
+
+
