@@ -39,16 +39,14 @@ XDR *RSC_Init( int, int );
 */
 extern int InDebugMode;
 
+
 XDR *
-init_syscall_connection( int syscall_mode, int want_debug_mode )
+init_syscall_connection( int want_debug_mode )
 {
 	XDR	*answer;
 
-	if( MappingFileDescriptors() ) {
-		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
-	} else {
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	}
+	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
 	if( want_debug_mode ) {
 		open_named_pipe( "/tmp/syscall_req", O_WRONLY, REQ_SOCK );
 		pre_open( REQ_SOCK, FALSE, TRUE );
@@ -57,12 +55,15 @@ init_syscall_connection( int syscall_mode, int want_debug_mode )
 		open_named_pipe( "/tmp/log", O_WRONLY, CLIENT_LOG );
 		pre_open( CLIENT_LOG, FALSE, TRUE );
 		InDebugMode = TRUE;
+	} else {
+		pre_open( RSC_SOCK, TRUE, TRUE );
+		pre_open( CLIENT_LOG, FALSE, TRUE );
 	}
+
 	answer = RSC_Init( RSC_SOCK, CLIENT_LOG );
 	dprintf_init( CLIENT_LOG );
 	DebugFlags = D_ALWAYS | D_NOHEADER;
 
-	SetSyscalls( syscall_mode );
 	return answer;
 }
 
