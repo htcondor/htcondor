@@ -953,7 +953,7 @@ XCOMM Begin translation of func(CLINK)		@@\
 all:: name.cndr.exe				@@\
 name:: name.cndr.exe				@@\
        @$(TRUE)					@@\
-name.cndr.exe: obj				@@\
+name.cndr.exe: $(CONDOR_COMPILE) $(PRE_BUILT_RELEASE)/lib obj	@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o name.cndr.exe obj $(TEST_LDFLAGS) @@\
 	$(CONDOR_ARCH_LINK) name.cndr.exe		@@\
 clean::						@@\
