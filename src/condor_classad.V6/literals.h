@@ -49,7 +49,7 @@ class Literal : public ExprTree
 		 D => non-digit, d=> digit
 		 Ex - 2003-01-25T09:00:00-0600
 		*/
-		static Literal* MakeAbsTime(string timestr);
+		static Literal* MakeAbsTime( std::string timestr);
 
 		/** Create a relative time literal.
 		 * @param secs The number of seconds.  If a value of -1 is passed in
@@ -71,12 +71,12 @@ class Literal : public ExprTree
 		 *parsing it as [[[days+]hh:]mm:]ss
 		 * Ex - 1+00:02:00
 		*/		
-		static Literal* MakeRelTime(string str);
+		static Literal* MakeRelTime(std::string str);
 
 		/* Creates a Real literal, from the string realstr,
 		 * according to the ieee754 norms
 		 */
-		static Literal* MakeReal(string realstr);
+		static Literal* MakeReal(std::string realstr);
 
 		/// Make a deep copy
 		virtual Literal* Copy( ) const;
