@@ -43,17 +43,25 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
+#if DBM_QUEUE
 DBM		*Q;
+#else
+#include "condor_qmgr.h"
+#endif
 
 char	*param();
 char	*MyName;
+#if DBM_QUEUE
 char	*Spool;
+#endif
 
 int		PrioAdjustment;
 int		NewPriority;
 int		PrioritySet;
 int		AdjustmentSet;
+#if DBM_QUEUE
 ProcFilter	*PFilter = new ProcFilter();
+#endif
 int		InvokingUid;		// user id of person ivoking this program
 char	*InvokingUserName;	// user name of person ivoking this program
 
@@ -63,33 +71,54 @@ const int MAX_PRIO = 20;
 	// Prototypes of local interest only
 void usage();
 int compute_adj( char * );
+#if DBM_QUEUE
 void init_params();
 void do_it( ProcObj * );
+#else
+void ProcArg( const char * );
+#endif
 int calc_prio( int old_prio );
 void init_user_credentials();
+
+#if !DBM_QUEUE
+extern "C" int gethostname(char*, int);
+#endif
+
+char	hostname[512];
 
 	// Tell folks how to use this program
 void
 usage()
 {
 	fprintf( stderr, "Usage: %s [{+|-}priority ] [-p priority] ", MyName );
-	fprintf( stderr, "[ -a ] [user | cluster | cluster.proc] ...\n" );
+	fprintf( stderr, "[ -a ] [-r host] [user | cluster | cluster.proc] ...\n");
 	exit( 1 );
 }
 
 int
 main( int argc, char *argv[] )
 {
+#if DBM_QUEUE
 	char	queue_name[_POSIX_PATH_MAX];
+#endif
 	char	*arg;
 	int		prio_adj;
+#if DBM_QUEUE
 	List<ProcObj>	*proc_list;
 	ProcObj			*p;
+#else
+	char			*args[argc - 1];
+	int				nArgs = 0;
+	int				i;
+	Qmgr_connection	*q;
+#endif
 
 	MyName = argv[0];
 
 	config( MyName, (CONTEXT *)0 );
+#if DBM_QUEUE
 	init_params();
+#endif
 
 	if( argc < 2 ) {
 		usage();
@@ -98,6 +127,7 @@ main( int argc, char *argv[] )
 	PrioritySet = 0;
 	AdjustmentSet = 0;
 
+	hostname[0] = '\0';
 	for( argv++; arg = *argv; argv++ ) {
 		if( (arg[0] == '-' || arg[0] == '+') && isdigit(arg[1]) ) {
 			PrioAdjustment = compute_adj(arg);
@@ -106,10 +136,19 @@ main( int argc, char *argv[] )
 			argv++;
 			NewPriority = atoi(*argv);
 			PrioritySet = TRUE;
+		} else if( arg[0] == '-' && arg[1] == 'r' ) {
+			// use the given name as the host name to connect to
+			argv++;
+			strcpy (hostname, *argv);
 		} else {
+#if DBM_QUEUE
 			if( !PFilter->Append(arg) ) {
 				usage();
 			}
+#else	
+			args[nArgs] = arg;
+			nArgs++;
+#endif
 		}
 	}
 
@@ -128,6 +167,7 @@ main( int argc, char *argv[] )
 	}
 
 		/* Open job queue */
+#if DBM_QUEUE
 	(void)sprintf( queue_name, "%s/job_queue", Spool );
 	if( (Q=OpenJobQueue(queue_name,O_RDWR,0)) == NULL ) {
 		EXCEPT( "OpenJobQueue(%s)", queue_name );
@@ -151,6 +191,25 @@ main( int argc, char *argv[] )
 	CloseJobQueue( Q );
 	ProcObj::delete_list( proc_list );
 	delete PFilter;
+#else
+	if (hostname[0] == '\0')
+	{
+		// hostname was not set at command line; obtain from system
+		if(gethostname(hostname, 200) < 0)
+		{
+			EXCEPT("gethostname failed, errno = %d", errno);
+		}
+	}
+	if((q = ConnectQ(hostname)) == 0)
+	{
+		EXCEPT("Failed to connect to qmgr on host %s", hostname);
+	}
+	for(i = 0; i < nArgs; i++)
+	{
+		ProcArg(args[i]);
+	}
+	DisconnectQ(q);
+#endif	
 
 #if defined(ALLOC_DEBUG)
 	print_alloc_stats();
@@ -204,6 +263,7 @@ compute_adj( char *arg )
 
 extern "C" int SetSyscalls( int foo ) { return foo; }
 
+#if DBM_QUEUE
 void
 init_params()
 {
@@ -231,3 +291,91 @@ do_it( ProcObj *p )
 		);
 	}
 }
+#else
+void UpdateJobAd(int cluster, int proc)
+{
+	int old_prio, new_prio;
+	if (GetAttributeInt(cluster, proc, "Prio", &old_prio) < 0)
+	{
+		fprintf(stderr, "Couldn't retrieve current prio for %d.%d.\n",
+				cluster, proc);
+		return;
+	}
+	new_prio = calc_prio( old_prio );
+	SetAttributeInt(cluster, proc, "Prio", new_prio);
+}
+
+void ProcArg(const char* arg)
+{
+	int		cluster, proc;
+	char	*tmp;
+
+	if(isdigit(*arg))
+	// set prio by cluster/proc #
+	{
+		cluster = strtol(arg, &tmp, 10);
+		if(cluster <= 0)
+		{
+			fprintf(stderr, "Invalid cluster # from %s\n", arg);
+			return;
+		}
+		if(*tmp == '\0')
+		// update prio for all jobs in the cluster
+		{
+			int next_cluster = cluster;
+			proc = -1;
+			while(next_cluster == cluster) {
+				if (GetNextJob(cluster, proc, &next_cluster, &proc) < 0) {
+					return;
+				}
+				UpdateJobAd(cluster, proc);
+			}
+			return;
+		}
+		if(*tmp == '.')
+		{
+			proc = strtol(tmp + 1, &tmp, 10);
+			if(proc < 0)
+			{
+				fprintf(stderr, "Invalid proc # from %s\n", arg);
+				return;
+			}
+			if(*tmp == '\0')
+			// update prio for proc
+			{
+				UpdateJobAd(cluster, proc);
+				return;
+			}
+			fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+			return;
+		}
+		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+	}
+	else if(isalpha(*arg) || (arg[0] == '-' && arg[1] == 'a'))
+	// update prio by user name
+	{
+		char	owner[1000];
+
+		cluster = proc = -1;
+		while (GetNextJob(cluster, proc, &cluster, &proc) >= 0) {
+			if (arg[0] == '-' && arg[1] == 'a') {
+				UpdateJobAd(cluster, proc);
+			}
+			else {
+				if (GetAttributeString(cluster, proc, "Owner", owner) < 0) {
+					fprintf(stderr, "Couldn't retrieve owner attribute for "
+							"%d.%d\n", cluster, proc);
+					return;
+				}
+				if (strcmp(owner, arg) == MATCH) {
+					UpdateJobAd(cluster, proc);
+				}
+			}
+		}
+	}
+	else
+	{
+		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
+	}
+}
+#endif
