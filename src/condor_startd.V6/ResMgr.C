@@ -92,7 +92,7 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "WANT_VACATE", true );
 
 		// Now, bring in things that we might need
-	configInsert( config_classad, "PERIODIC_CHECPOINT", false );
+	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
 	configInsert( config_classad, "RunBenchmarks", false );
 	configInsert( config_classad, "Rank", false );
 	configInsert( config_classad, "SUSPEND_VANILLA", false );
