@@ -77,6 +77,7 @@ struct match_rec
     int     		agentPid;
 	shadow_rec*		shadowRec;
 	int				alive_countdown;
+	int				num_exceptions;
 };
 
 enum
@@ -215,6 +216,7 @@ class Scheduler : public Service
 	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 	shadow_rec*		add_shadow_rec(shadow_rec*);
 	void			NotifyUser(shadow_rec*, char*, int, int);
+	void			HadException( match_rec* );
 	
 #ifdef CARMI_OPS
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
@@ -227,6 +229,7 @@ class Scheduler : public Service
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
     int         	aliveInterval;             // how often to broadcast alive
+	int				MaxExceptions;		// Max shadow exceptions before we relinquish
 };
 	
 #endif

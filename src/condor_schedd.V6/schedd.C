@@ -95,9 +95,6 @@ shadow_rec*     find_shadow_rec(PROC_ID*);
 shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
 
-
-
-
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
@@ -127,6 +124,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id)
 	agentPid = -1;
 	shadowRec = NULL;
 	alive_countdown = 0;
+	num_exceptions = 0;
 }
 
 Scheduler::Scheduler()
@@ -2270,8 +2268,10 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 					}
 					break;
 				case JOB_EXCEPTION:
-					/* some exception happened in this job -- if this keeps
-					   happening, we should put the job in the hold state */
+					/* some exception happened in this job -- record
+					   that we had one.  This function will relinquish
+					   the match if we get too many exceptions */
+					HadException(srec->match);
 					break;
 				case JOB_SHADOW_USAGE:
 					EXCEPT("shadow exited with incorrect usage!\n");
@@ -2570,6 +2570,15 @@ Scheduler::Init()
 		aliveInterval = 300;
     } else {
         aliveInterval = atoi(tmp);
+        free(tmp);
+	}
+
+
+	tmp = param("MAX_SHADOW_EXCEPTIONS");
+    if(!tmp) {
+		MaxExceptions = 5;
+    } else {
+        MaxExceptions = atoi(tmp);
         free(tmp);
 	}
 
@@ -3145,4 +3154,18 @@ void
 job_prio(ClassAd *ad)
 {
 	scheduler.JobsRunning += get_job_prio(ad);
+}
+
+
+void
+Scheduler::HadException( match_rec* mrec ) 
+{
+	mrec->num_exceptions++;
+	if( mrec->num_exceptions >= MaxExceptions ) {
+		dprintf( D_ALWAYS, 
+				 "Match for cluster %d has had %d shadow exceptions, relinquishing.\n",
+				 mrec->cluster, mrec->num_exceptions );
+		Relinquish(mrec);
+		DelMrec(mrec);
+	}
 }
