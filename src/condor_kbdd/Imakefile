@@ -3,7 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) -Wall 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
-LIB = $(STD_LIBS) 
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
 #if IS_SGI_IRIX53
 X_LIB = -lX11 -lXext
 #else
