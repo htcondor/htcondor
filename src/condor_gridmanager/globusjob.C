@@ -317,11 +317,6 @@ int GlobusJob::doEvaluateState()
 			}
 			callbackRegistered = true;
 			UpdateGlobusState( status, error );
-/*
-			globusState = status;
-			globusError = error;
-			addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE );
-*/
 			if ( newJM ) {
 				gmState = GM_STDIO_UPDATE;
 			} else {
@@ -487,15 +482,11 @@ int GlobusJob::doEvaluateState()
 							gmState = GM_STOP_AND_RESTART;
 							break;
 						}
-						if ( globusState != state ) {
-							globusState = state;
-							enteredCurrentGlobusState = now;
-						}
-						globusError = error;
+						UpdateGlobusState( state, error );
 						lastProbeTime = now;
 					}
 					evaluateStateTid = daemonCore->Register_Timer(
-								lastProbeTime + JOB_PROBE_INTERVAL,
+								(lastProbeTime + JOB_PROBE_INTERVAL) - now,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );
 				}
@@ -741,12 +732,11 @@ int GlobusJob::doEvaluateState()
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
 						gmState = GM_CLEAR_REQUEST;
 					}
-					globusState = state;
-					globusError = error;
+					UpdateGlobusState( state, error );
 					lastProbeTime = now;
 				}
 				evaluateStateTid = daemonCore->Register_Timer(
-								lastProbeTime + JOB_PROBE_INTERVAL,
+								(lastProbeTime + JOB_PROBE_INTERVAL) - now,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );
 			}
@@ -908,7 +898,6 @@ const char *GlobusJob::errorString()
 {
 	return globus_gram_client_error_string( globusError );
 }
-
 
 char *GlobusJob::buildRSL( ClassAd *classad )
 {
