@@ -372,6 +372,27 @@ pseudo_work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig
 
 
 /*
+  Returns true if this path points to the executable or checkpoint
+  file for this job.  Used to determine if we should switch to 
+  Condor privileges to access the file.
+*/
+bool
+is_ckpt_file(const char path[])
+{
+	char *test_path;
+
+	test_path = gen_ckpt_name( Spool, Proc->id.cluster, ICKPT, 0 );
+	if (strcmp(path, test_path) == 0) return true;
+	test_path = gen_ckpt_name( Spool, Proc->id.cluster, Proc->id.proc, 0 );
+	if (strcmp(path, test_path) == 0) return true;
+	strcat(test_path, ".tmp");
+	if (strcmp(path, test_path) == 0) return true;
+	return false;
+}
+
+
+
+/*
    rename() becomes a psuedo system call because the file may be a checkpoint
    stored on the checkpoint server.  Will try the local call first (in case
    it is just a rename being call ed by a user job), but if that fails, we'll
@@ -383,16 +404,29 @@ pseudo_rename(char *from, char *to)
 {
 	int		rval;
 	PROC *p = (PROC *)Proc;
+	bool	CkptFile = is_ckpt_file(from) && is_ckpt_file(to);
+	priv_state	priv;
+
+	if (CkptFile) {
+		priv = set_condor_priv();
+	}
 
 	rval = rename(from, to);
+
+	if (CkptFile) {
+		set_priv(priv);
+	}
+
 	if (rval == 0 || rval == -1 && errno != ENOENT) {
 		return rval;
 	}
 	
-	RenameRemoteFile(p->owner, from, to);
+	if (CkptFile) {
+		RenameRemoteFile(p->owner, from, to);
+	}
+
 	return 0;
 }
-
 
 
 /*
@@ -418,16 +452,23 @@ pseudo_get_file_stream(
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait = 1;
+	bool	CkptFile = is_ckpt_file(file);
+	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 
 	*len = 0;
 		/* open the file */
-	if (UseCkptServer)
+	if (CkptFile && UseCkptServer)
 		rval = RequestRestore(p->owner,file,len,ip_addr,port);
 	else
 		rval = -1;
+
+	// need Condor privileges to access checkpoint files
+	if (CkptFile) {
+		priv = set_condor_priv();
+	}
 
 	if( ((file_fd=open(file,O_RDONLY)) < 0) || 
 	   (rval != 1 && rval != 73 && rval != -1 && rval != -121)) {
@@ -438,6 +479,7 @@ pseudo_get_file_stream(
 		if (file_fd >= 0) {
 			close(file_fd);
 		}
+		if (CkptFile) set_priv(priv);	// restore user privileges
 		while (rval == 1 && retry_wait < 20) {
 			rval = RequestRestore(p->owner,file,len,&ip_addr,port);
 			if (rval == 1) {
@@ -472,6 +514,7 @@ pseudo_get_file_stream(
 		switch( child_pid = fork() ) {
 		    case -1:	/* error */
 			    dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
+				if (CkptFile) set_priv(priv);	// restore user privileges
 				return -1;
 			case 0:	/* the child */
 				data_sock = connect_file_stream( connect_sock );
@@ -508,6 +551,7 @@ pseudo_get_file_stream(
 			default:	/* the parent */
 				close( file_fd );
 				close( connect_sock );
+				if (CkptFile) set_priv(priv);	// restore user privileges
 				return 0;
 			}
 	}
@@ -533,6 +577,8 @@ pseudo_put_file_stream(
 	pid_t	child_pid;
 	int		rval;
 	PROC *p = (PROC *)Proc;
+	bool	CkptFile = is_ckpt_file(file);
+	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
@@ -543,8 +589,7 @@ pseudo_put_file_stream(
 	display_ip_addr( *ip_addr );
 
 		/* open the file */
-	if ((strncmp(file, "core", 4) != MATCH) &&
-		(strstr(file, "/core") == NULL) && UseCkptServer) {
+	if (CkptFile && UseCkptServer) {
 		rval = RequestStore(p->owner, file, len, ip_addr, port);
 		display_ip_addr( *ip_addr );
 #if !defined(LINUX) /* FIX ME GREGER */
@@ -561,8 +606,14 @@ pseudo_put_file_stream(
 		/* Checkpoint server says ok */
 		return 0;
 	}
-		
+
+	// need Condor privileges to access checkpoint files
+	if (CkptFile) {
+		priv = set_condor_priv();
+	}
+
 	if( (file_fd=open(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
+		if (CkptFile) set_priv(priv);	// restore user privileges
 		return -1;
 	}
 
@@ -575,6 +626,7 @@ pseudo_put_file_stream(
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
+		if (CkptFile) set_priv(priv);	// restore user privileges
 		return -1;
 	  case 0:	/* the child */
 		data_sock = connect_file_stream( connect_sock );
@@ -594,6 +646,7 @@ pseudo_put_file_stream(
 	  default:	/* the parent */
 	    close( file_fd );
 		close( connect_sock );
+		if (CkptFile) set_priv(priv);	// restore user privileges
 		return 0;
 	}
 
@@ -904,11 +957,9 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	dprintf( D_SYSCALLS, "\textern_path = \"%s\"\n", extern_path );
 	dprintf( D_SYSCALLS, "\tSpool = \"%s\"\n", Spool );
 
-	// this first one is a special case: if the full_path looks like
-	// it is in our Spool directory, we are likely transferring a
-	// checkpoint, so ALWAYS transfer via a Remote System call.
-	if(strlen(Spool) < strlen(full_path) &&
-	   strncmp(Spool, full_path, strlen(Spool)) == MATCH) {
+	// this first one is a special case: if the full_path is a 
+	// checkpoint, ALWAYS transfer via Remote System Call.
+	if(is_ckpt_file(full_path)) {
 		answer = IS_RSC;
 		dprintf( D_SYSCALLS, "\tanswer = IS_RSC\n" );
 	} else if( access_via_afs(full_path) ) {
@@ -1115,30 +1166,14 @@ access_via_nfs( const char *file )
 int
 has_ckpt_file()
 {
-	struct stat	buf;
 	int		rval;
-	PROC	*p = (PROC *) Proc;
+	PROC *p = (PROC *)Proc;
+	priv_state	priv;
 
-	return FileExists(RCkptName, p->owner);
-
-#if 0
-		/* see if we can stat the ckpt file */
-	if( stat(RCkptName,&buf) == 0 ) {
-		return TRUE;
-	}
-
-		/* reason ought to be that there wasn't one, not some other error */
-	if( errno == ENOENT ) {
-		rval = FileOnServer(p->owner, RCkptName);
-		if (rval == 0) {
-			return TRUE;
-		} else {
-			return FALSE;
-		}
-	}
-
-	EXCEPT( "Can't stat checkpoint file \"%s\"", RCkptName );
-#endif
+	priv = set_condor_priv();
+	rval = FileExists(RCkptName, p->owner);
+	set_priv(priv);
+	return rval;
 }
 
 /*
