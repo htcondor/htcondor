@@ -43,6 +43,7 @@ CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
 char		*myName;
+ExprTree	*sortExpr = NULL;
 
 // function declarations
 void usage 		();
@@ -51,6 +52,7 @@ void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *);
 int  lessThanFunc(ClassAd*,ClassAd*,void*);
+int  customLessThanFunc(ClassAd*,ClassAd*,void*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -187,8 +189,12 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	// sort the ad by ATTR_NAME
-	result.Sort ((SortFunctionType)lessThanFunc);
+	// sort the ad 
+	if( sortExpr ) {
+		result.Sort((SortFunctionType) customLessThanFunc );
+	} else {
+		result.Sort ((SortFunctionType)lessThanFunc);
+	}
 
 	// output result
 	prettyPrint (result, &totals);
@@ -221,9 +227,10 @@ usage ()
 		"\t-startd\t\t\tDisplay resource attributes\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
-//		"\t-world\t\t\tDisplay all pools reporting to UW collector\n", 
+//		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
 		"    and [display-opt] is one of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
+		"\t-sort <attr>\t\tSort entries by named attribute\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n" 
 		"    and [custom-opts ...] are one or more of\n"
@@ -286,6 +293,22 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-schedd")) {
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i], "-sort")) {
+			char	lessThanExpr[1024];
+			lessThanExpr[0] = '\0';
+			if( sortExpr != NULL ) {
+				sortExpr->PrintToStr( lessThanExpr );
+				fprintf( stderr, "Error:  Sort expression already set: %s\n", 
+						lessThanExpr );
+				exit( 1 );
+			}
+			sprintf( lessThanExpr, "MY.%s < TARGET.%s", argv[i+1], argv[i+1] );
+			if( Parse( lessThanExpr, sortExpr ) ) {
+				fprintf( stderr, "Error:  Parse error of: %s\n", lessThanExpr );
+				exit( 1 );
+			}
+			i++;
+		} else
 		if (matchPrefix (argv[i], "-submitters")) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
 		} else
@@ -319,7 +342,7 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
-		if (matchPrefix (argv[i], "-pool")) {
+		if (matchPrefix (argv[i], "-pool") || matchPrefix( argv[i], "-sort")) {
 			i++;
 			continue;
 		}
@@ -407,4 +430,14 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 			return 0;
 
 	return (strcmp (name1, name2) < 0);
+}
+
+int
+customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
+{
+	EvalResult result;
+
+	return( sortExpr && 
+			sortExpr->EvalTree( ad1, ad2, &result ) &&
+			(result.type == LX_INTEGER && result.i ) );
 }
