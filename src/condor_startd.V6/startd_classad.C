@@ -21,6 +21,8 @@ send_classad_to_negotiator(DGRAM_IO_HANDLE *handle, CONTEXT *cp)
 	ClassAd *ad;
 
 	ad = new ClassAd(cp);
+	ad->SetMyTypeName ("Machine");
+	ad->SetTargetTypeName ("Job");
 	
 	ret = send_classad_to_machine(handle, UPDATE_STARTD_AD, ad);
 	delete ad;
