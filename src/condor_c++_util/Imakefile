@@ -10,7 +10,7 @@ URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 			condor_event.o user_log.o strnewp.o
 
-DAEMON_CLIENT_OBJ = daemon.o daemon_types.o
+DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o
 
 #if WANT_KERBEROS
 KERBEROS_OBJ = condor_cred_kerberos.o
