@@ -20,8 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef __CONDOR_MASTER
-#define __CONDOR_MASTER
+#ifndef _CONDOR_MASTER_H
+#define _CONDOR_MASTER_H
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "daemon.h"
@@ -64,6 +64,7 @@ public:
 	void	Exited( int );
 	void	Obituary( int );
 	void	CancelAllTimers();
+	void	CancelRestartTimers();
 	void	Kill( int );
 	void	Killpg( int );
 	void	Reconfig();
@@ -134,6 +135,8 @@ public:
 	void	AllDaemonsGone();
 	void	SetAllGoneAction( AllGoneT a ) {all_daemons_gone_action=a;};
 	void	StartTimers();
+	void	CancelRestartTimers();
+
 	int		immediate_restart;
 	int		immediate_restart_master;
 
@@ -155,4 +158,4 @@ private:
 
 };
 
-#endif /* __CONDOR_MASTER */
+#endif /* _CONDOR_MASTER_H */
