@@ -534,7 +534,11 @@ default values. See section~\ref{sec:X509-Authentication} for more info.
 pathname for X509 user certificates. The default location for X509 proxies
 is the /tmp directory, which is generally a local filesystem. Setting
 this value would allow Condor to access the proxy in a shared filesystem
-(e.g., AFS).  See section~\ref{sec:X509-Authentication} for more info.
+(e.g., AFS). Condor will use the proxy specified in the submit file
+first. If nothing is specified in the submit file, it will use the
+environment variable X509\_USER\_CERT. If that variable is not present,
+it will search in the default location. See 
+section~\ref{sec:X509-Authentication} for more info.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
