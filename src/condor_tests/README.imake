@@ -154,6 +154,14 @@ TESTCLASS(testname,test_class)
    TESTCLASS rules for each test.
 
 
+TESTCLASS_DECL(test_class)
+
+   This rule declares a new test "class", or category.  See
+   "README.testclasses" for details.  These rules should always go
+   into Imakefile.common, so they can be shared across all the other
+   Imakefiles. 
+
+
 BUILD(cmplr,testname,extension)
 
    Tells the build system how to compile the test into a valid
