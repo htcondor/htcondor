@@ -966,7 +966,8 @@ int DestroyClusterByConstraint(const char* constraint)
 
 
 int
-SetAttributeByConstraint(const char *constraint, const char *attr_name, char *attr_value)
+SetAttributeByConstraint(const char *constraint, const char *attr_name,
+						 const char *attr_value)
 {
 	ClassAd	*ad;
 	int cluster_num, proc_num;	
@@ -999,7 +1000,8 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 }
 
 int
-SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_value)
+SetAttribute(int cluster_id, int proc_id, const char *attr_name,
+			 const char *attr_value)
 {
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];

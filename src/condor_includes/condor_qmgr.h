@@ -84,7 +84,7 @@ int DestroyCluster(int cluster_id);
 	@return -1 on failure; 0 on success
 */
 int SetAttributeByConstraint(const char *constraint, const char *attr,
-							 char *value);
+							 const char *value);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
@@ -105,13 +105,13 @@ int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
 	@return -1 on failure; 0 on success
 */
 int SetAttributeStringByConstraint(const char *constraint, const char *attr,
-								   char *value);
+								   const char *value);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttribute(int cluster, int proc, const char *attr, char *value);
+int SetAttribute(int cluster, int proc, const char *attr, const char *value);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
@@ -129,7 +129,8 @@ int SetAttributeFloat(int cluster, int proc, const char *attr, float value);
 	quotes)
 	@return -1 on failure; 0 on success
 */
-int SetAttributeString(int cluster, int proc, const char *attr, char *value);
+int SetAttributeString(int cluster, int proc, const char *attr,
+					   const char *value);
 
 int CloseConnection();
 void BeginTransaction();
