@@ -1274,7 +1274,6 @@ Scheduler::contactStartd( char* capability, char *user,
 				jobId->cluster, jobId->proc);
 		return 0;
 	}
-
 	// add User = "owner@uiddomain" to ad
 	{
 		char temp[512];
@@ -1765,6 +1764,7 @@ shadow_rec*
 Scheduler::start_mpi(match_rec* mrec, PROC_ID *job_id)
 {
 // more to come...
+	return NULL;	// just to keep compiler happy....
 }
 
 shadow_rec*
@@ -2598,9 +2598,19 @@ Scheduler::child_exit(int pid, int status)
 		delete_shadow_rec( pid );
 	} else if (srec) {
 		// A real shadow
-		if( WIFEXITED(status) ) {
-			dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
-					 pid, WEXITSTATUS(status) );
+		if ( daemonCore->Was_Not_Responding(pid) ) {
+			// this shadow was killed by daemon core because it was hung.
+			// make the schedd treat this like a Shadow Exception so job
+			// just goes back into the queue as idle, but if it happens
+			// to many times we relinquish the match.
+			dprintf(D_FULLDEBUG,
+				"Shadow pid %d successfully killed because it was hung.\n"
+				,pid);
+			status = JOB_EXCEPTION;
+		}
+		if( WIFEXITED(status) ) {			
+            dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
+                                               pid, WEXITSTATUS(status) );
 			switch( WEXITSTATUS(status) ) {
 			case JOB_NO_MEM:
 				swap_space_exhausted();
