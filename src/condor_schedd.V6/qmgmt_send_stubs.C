@@ -174,6 +174,7 @@ DestroyCluster( int cluster_id )
 }
 
 
+#if 0
 int
 DestroyClusterByConstraint( char *constraint )
 {
@@ -198,6 +199,7 @@ DestroyClusterByConstraint( char *constraint )
 
 	return rval;
 }
+#endif
 
 
 int

@@ -166,6 +166,7 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+#if 0
 	case CONDOR_DestroyClusterByConstraint:
 	  {
 		char *constraint=NULL;
@@ -188,6 +189,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
+#endif
 
 	case CONDOR_SetAttributeByConstraint:
 	  {
