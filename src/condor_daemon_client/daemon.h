@@ -95,6 +95,13 @@ public:
 	Daemon( daemon_t type, const char* name = NULL, 
 				const char* pool = NULL );
 
+		/** Another version of the constructor that takes a ClassAd
+			and gets all the info out of that instead of having to
+			query a collector to locate it.  You can also optionally
+			pass in the name of the collector you got it from.
+		*/
+	Daemon( ClassAd* ad, daemon_t type, const char* pool );
+
 		/// Destructor.
 	virtual ~Daemon();
 

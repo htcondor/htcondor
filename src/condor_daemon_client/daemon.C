@@ -92,6 +92,87 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 }
 
 
+Daemon::Daemon( ClassAd* ad, daemon_t type, const char* pool ) 
+{
+	if( ! ad ) {
+		EXCEPT( "Daemon constructor called with NULL ClassAd!" );
+	}
+
+	common_init();
+	_type = type;
+
+	switch( _type ) {
+	case DT_MASTER:
+		_subsys = strnewp( "MASTER" );
+		break;
+	case DT_STARTD:
+		_subsys = strnewp( "STARTD" );
+		break;
+	case DT_SCHEDD:
+		_subsys = strnewp( "SCHEDD" );
+		break;
+	default:
+		EXCEPT( "Invalid daemon_type %d (%s) in ClassAd version of "
+				"Daemon object", (int)_type, daemonString(_type) );
+	}
+
+	if( pool ) {
+		_pool = strnewp( pool );
+	} else {
+		_pool = NULL;
+	}
+
+		// construct the appropriate IP_ADDR attribute
+	MyString addr_attr = _subsys;
+	addr_attr += "IpAddr";
+
+	char *tmp = NULL;
+	ad->LookupString( ATTR_NAME, &tmp );
+	if( tmp ) {
+		_name = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+	} 
+
+	ad->LookupString( addr_attr.GetCStr(), &tmp );
+	if( tmp ) {
+		_addr = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		_tried_locate = true;		
+	} 
+
+	ad->LookupString( ATTR_MACHINE, &tmp );
+	if( tmp ) {
+		_full_hostname = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		initHostnameFromFull();
+		_tried_init_hostname = false;
+	} 
+
+	ad->LookupString( ATTR_VERSION, &tmp );
+	if( tmp ) {
+		_version = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+		_tried_init_version = true;
+	} 
+
+	ad->LookupString( ATTR_PLATFORM, &tmp );
+	if( tmp ) {
+		_platform = strnewp( tmp );
+		free( tmp );
+		tmp = NULL;
+	} 
+
+	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
+			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
+			 _name ? _name : "NULL", _pool ? _pool : "NULL",
+			 _addr ? _addr : "NULL" );
+}
+
+
 Daemon::~Daemon() 
 {
 	if( DebugFlags & D_HOSTNAME ) {
