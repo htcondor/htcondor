@@ -20,6 +20,7 @@
 #		define _BSD
 #	endif
 #	define _POSIX_SOURCE
+typedef pid_t		id_t;
 #	include <sys/wait.h>
 #endif
 
