@@ -704,10 +704,22 @@ JICShadow::initJobInfo( void )
 		return false;
 	}
 
-	if( job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) < 1 ) {
+	if( ! job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
 		job_universe = CONDOR_UNIVERSE_VANILLA;
+	}
+
+	if( ! job_ad->LookupInteger(ATTR_CLUSTER_ID, job_cluster) ) { 
+		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
+				 "Can't find %s in job ad\n", ATTR_CLUSTER_ID );
+		return false;
+	}
+
+	if( ! job_ad->LookupInteger(ATTR_PROC_ID, job_proc) ) { 
+		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
+				 "Can't find %s in job ad\n", ATTR_PROC_ID );
+		return false;
 	}
 
 		// figure out if we're going to be using file transfer, and
