@@ -1,3 +1,9 @@
+3/15/00 V6_1_12-diff-ckpt-branch
+	A branch for Greg Bronner <gbronner> and John Bent <johnbent>
+	to work on experimental code to only checkpoint diffs instead
+	of the whole memory image.  Branched from the trunk, somewhere
+	between 6.1.12 and 6.1.13.
+
 3/6/00 V6_1_12
 	The 6.1.12 release tag, which lives on the trunk.
 
