@@ -332,6 +332,11 @@ all_pty_idle_time( time_t now )
 	return answer;
 }
 
+#ifdef LINUX
+#include <sys/sysmacros.h>  /* needed for major() below */
+#else
+#include <sys/mkdev.h>
+#endif
 
 time_t
 dev_idle_time( char *path, time_t now )
@@ -342,7 +347,7 @@ dev_idle_time( char *path, time_t now )
 	static int null_major_device = -1;
 
 	if ( !path || path[0]=='\0' ||
-		 strncmp(path,"unix:",5) != 0 ) {
+		 strncmp(path,"unix:",5) == 0 ) {
 		// we don't have a valid path, or it is
 		// a bullshit path setup by the X server
 		return now;
@@ -381,7 +386,7 @@ dev_idle_time( char *path, time_t now )
 	if( answer < 0 ) {
 		answer = 0;
 	}
-		// dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+	dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
 	return answer;
 }
 
