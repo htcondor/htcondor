@@ -997,6 +997,25 @@ generated even in the "clipped" version.
 
 
 /*
+These are speical operations performed by the syscall lib.  Since they
+are special Condor operations, not system calls, we don't need a
+switch for them.  However, we only need to generate these if we're
+doing remote system calls.
+*/
+#if defined(REMOTE_SYSCALLS) && !defined( SWITCH )
+	/*
+	  This psuedo call is used by the syscall lib to register its
+	  version string with the shadow so we can check for
+	  compatibility.
+	*/
+	int register_syscall_version( const char *version ) : pseudo {
+		SEND_PATH( version );
+		ALLOC_PATH( version );
+	}
+#endif /* REMOTE_SYSCALLS and not SWITCH */
+
+
+/*
 These are speical operations performed by the starter, but have
 no meaning in local mode.  Since they are special Condor operations,
 they are generally used by Condor daemons, not user programs.  Thus,
