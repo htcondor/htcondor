@@ -63,6 +63,11 @@ The details of each version are described below.
   local path (in the execute directory) for the jarfiles, instead of
   the original path specified in the submit file.
 
+\item Previously, if a scheduler universe job died with a signal, the
+  \Condor{schedd} would write multiple (conflicting) events into the
+  UserLog file: a terminate event and an abort event.
+  Now, only the terminate event is written, not the abort event.
+
 \item Fixed a minor bug where if the \Condor{schedd} crashed or was
   killed at just the wrong moment while a job was being removed
   because the \Attr{periodic\_remove} expression had evaluated to
