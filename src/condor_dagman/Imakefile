@@ -2,11 +2,10 @@ NAME = condor_dagman
 all_target($(NAME) t_helper)
 
 C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
-	-I$(CLASSADS_ROOT)/include -DWANT_NAMESPACES \
 	-I../condor_daemon_core.V6 \
 	-I../condor_includes -I- -Wall
 CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(CLASSADS_ROOT)/lib/libclassad.a $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
 	script.o scriptQ.o helper.o dagman_instantiate.o
