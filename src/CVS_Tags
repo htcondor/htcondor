@@ -1,3 +1,7 @@
+04/17/03 V6_5-gridmanager_reorg-branch
+    A new branch off of V6_5-branch for Jaime's overhaul of the gridmanager
+    to allow it to handle multiple job types (Globus, Oracle, NorduGrid, etc).
+
 04/11/03 HAWKEYE_V1_0_RC2
     Release Candidate 2 of Hawkeye 1.0.
 
