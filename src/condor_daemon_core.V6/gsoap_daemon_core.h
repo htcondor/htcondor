@@ -3,10 +3,6 @@
 //gsoap condor service style: document
 //gsoap condor service encoding: literal
 
-int condor__getInfoAd(void *_,
-					  struct condor__getInfoAdResponse {
-						  struct condor__ClassAdStructAndStatus response;
-					  } & ad);
 int condor__getVersionString(void *_,
 							 struct condor__getVersionStringResponse {
 								 struct condor__StringAndStatus response;
