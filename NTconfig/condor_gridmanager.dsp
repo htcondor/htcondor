@@ -156,6 +156,22 @@ SOURCE=..\src\condor_gridmanager\gt3resource.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\mirrorjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\mirrorjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\mirrorresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\mirrorresource.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_gridmanager\proxymanager.C
 # End Source File
 # Begin Source File

@@ -60,6 +60,8 @@ CLEAN :
 	-@erase "$(INTDIR)\gridmanager_main.obj"
 	-@erase "$(INTDIR)\gt3job.obj"
 	-@erase "$(INTDIR)\gt3resource.obj"
+	-@erase "$(INTDIR)\mirrorjob.obj"
+	-@erase "$(INTDIR)\mirrorresource.obj"
 	-@erase "$(INTDIR)\proxymanager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -78,16 +80,18 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=imagehlp.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_gridmanager.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" /pdbtype:sept 
 LINK32_OBJS= \
+	"$(INTDIR)\basejob.obj" \
+	"$(INTDIR)\baseresource.obj" \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
 	"$(INTDIR)\gridmanager.obj" \
 	"$(INTDIR)\gridmanager_main.obj" \
-	"$(INTDIR)\proxymanager.obj" \
-	"$(INTDIR)\basejob.obj" \
-	"$(INTDIR)\baseresource.obj" \
 	"$(INTDIR)\gt3job.obj" \
 	"$(INTDIR)\gt3resource.obj" \
+	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\mirrorjob.obj" \
+	"$(INTDIR)\mirrorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -133,6 +137,8 @@ CLEAN :
 	-@erase "$(INTDIR)\gridmanager_main.obj"
 	-@erase "$(INTDIR)\gt3job.obj"
 	-@erase "$(INTDIR)\gt3resource.obj"
+	-@erase "$(INTDIR)\mirrorjob.obj"
+	-@erase "$(INTDIR)\mirrorresource.obj"
 	-@erase "$(INTDIR)\proxymanager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_gridmanager.exe"
@@ -149,16 +155,18 @@ BSC32_SBRS= \
 LINK32=link.exe
 LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_gridmanager.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" 
 LINK32_OBJS= \
+	"$(INTDIR)\basejob.obj" \
+	"$(INTDIR)\baseresource.obj" \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
 	"$(INTDIR)\gridmanager.obj" \
 	"$(INTDIR)\gridmanager_main.obj" \
-	"$(INTDIR)\proxymanager.obj" \
-	"$(INTDIR)\basejob.obj" \
-	"$(INTDIR)\baseresource.obj" \
 	"$(INTDIR)\gt3job.obj" \
 	"$(INTDIR)\gt3resource.obj" \
+	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\mirrorjob.obj" \
+	"$(INTDIR)\mirrorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -449,6 +457,18 @@ SOURCE=..\src\condor_gridmanager\gt3job.C
 SOURCE=..\src\condor_gridmanager\gt3resource.C
 
 "$(INTDIR)\gt3resource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\mirrorjob.C
+
+"$(INTDIR)\mirrorjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\mirrorresource.C
+
+"$(INTDIR)\mirrorresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
