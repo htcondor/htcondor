@@ -1,6 +1,6 @@
 
-#ifdef HPUX10
-#include "switches.remap-HPUX10.h"
+#ifdef HPUX
+#include "switches.remap-HPUX.h"
 #endif 
 
 #ifdef Solaris
