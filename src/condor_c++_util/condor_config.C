@@ -971,7 +971,7 @@ process_runtime_configs(ClassAd *classAd)
 							EXPAND_LAZY );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
-					 "while reading runtime config file: %s %s\n",
+					 "while reading runtime config file: %s\n",
 					 ConfigLineNo, filename );
 			exit(1);
 		}
