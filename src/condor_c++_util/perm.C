@@ -17,7 +17,6 @@ int perm::get_permissions( const char *file_name ) {
 	BOOL acl_present = FALSE;
 	BOOL acl_defaulted = FALSE;
 
-
 	// Do the call first to find out how much space is needed.
 
 	pSD = NULL;
@@ -124,6 +123,7 @@ perm::perm() {
 	psid =(PSID) &sidBuffer;
 	sidBufferSize = 100;
 	domainBufferSize = 80;
+	must_freesid = false;
 /*  These shouldn't be needed...
 	perm_read = FILE_GENERIC_READ;
 	perm_write = FILE_GENERIC_WRITE;
@@ -131,8 +131,18 @@ perm::perm() {
 */
 }
 
-bool perm::init( char *accountname, char *domain ) {
+perm::~perm() {
+	if ( psid && must_freesid ) FreeSid(psid);
+}
+
+bool perm::init( char *accountname, char *domain ) 
+{
 	SID_NAME_USE snu;
+
+	if ( psid && must_freesid ) FreeSid(psid);
+	must_freesid = false;
+
+	psid = (PSID) &sidBuffer;
 
 	if ( !LookupAccountName( domain,		// Domain
 		accountname,						// Acocunt name
@@ -140,11 +150,26 @@ bool perm::init( char *accountname, char *domain ) {
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
-		cout << "Lookup Account Name failed!"<< endl;
-		return 0;
+		dprintf(D_ALWAYS,
+			"perm::init: Lookup Account Name %s failed, using Everyone\n",
+			accountname);
+		
+		// SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_NT_AUTHORITY;
+		SID_IDENTIFIER_AUTHORITY  NTAuth = SECURITY_WORLD_SID_AUTHORITY;
+		if ( !AllocateAndInitializeSid(&NTAuth,1,
+						SECURITY_WORLD_RID,
+						0,
+						0,0,0,0,0,0,&psid) ) 
+		{	
+			EXCEPT("Failed to find group EVERYONE");
+		}
+		must_freesid = true;
+	} else {
+		dprintf(D_FULLDEBUG,"perm::init: Found Account Name %s\n",
+			accountname);
 	}
 
-	return 1;
+	return true;
 }
 
 
@@ -152,6 +177,10 @@ bool perm::init( char *accountname, char *domain ) {
 // -1 == unknown (error), 0 == no, 1 == yes.
 
 int perm::read_access( const char * filename ) {
+	if ( !volume_has_acls(filename) ) {
+		return 1;
+	}
+
 	int p = get_permissions( filename );
 
 	if ( p < 0 ) return -1;
@@ -159,6 +188,10 @@ int perm::read_access( const char * filename ) {
 }
 
 int perm::write_access( const char * filename ) {
+	if ( !volume_has_acls(filename) ) {
+		return 1;
+	}
+
 	int p = get_permissions( filename );
 
 	if ( p < 0 ) return -1;
@@ -166,12 +199,60 @@ int perm::write_access( const char * filename ) {
 }
 
 int perm::execute_access( const char * filename ) {
+	if ( !volume_has_acls(filename) ) {
+		return 1;
+	}
+
 	int p = get_permissions( filename );
 
 	if ( p < 0 ) return -1;
 	return ( p & FILE_GENERIC_EXECUTE ) == FILE_GENERIC_EXECUTE;
 }
 
+
+// volume_has_acls() returns true if the filename exists on an NTFS
+// volume or some other file system which preserves ACLs on files.  
+// false if otherwise (i.e. FAT, FAT32, CDFS, HPFS, etc) or error.
+bool perm::volume_has_acls( const char *filename )
+{
+	char path_buf[5];
+	char *root_path = path_buf;
+	DWORD foo,fsflags;
+
+	path_buf[0] = '\0';
+
+	// This function will not work with UNC paths... yet.
+	if ( !filename || (filename[0]=='\\' && filename[1]=='\\') ) {
+		EXCEPT("UNC pathnames not supported yet");
+	}
+
+	if ( filename[1] == ':' ) {
+		root_path[0] = filename[0];
+		root_path[1] = ':';
+		root_path[2] = '\\';
+		root_path[3] = '\0';
+	} else {
+		root_path = NULL;
+	}
+
+	if ( !GetVolumeInformation(root_path,NULL,0,NULL,&foo,&fsflags,
+			NULL,0) ) 
+	{
+		dprintf(D_ALWAYS,
+			"perm: GetVolumeInformation on volume %s FAILED err=%d\n",
+			path_buf,
+			GetLastError());
+		return false;
+	}
+
+	if ( fsflags & FS_PERSISTENT_ACLS )		// note: single & (bit comparison)
+		return true;
+	else {
+
+		dprintf(D_FULLDEBUG,"perm: volume %s does not have ACLS\n",path_buf);
+		return false;
+	}
+}
 
 // set_acls sets the acls on the filename (typically a directory).
 // This is currently set to add GENERIC_ALL (otherwise known
@@ -195,9 +276,18 @@ int perm::set_acls( const char *filename )
   ACL_SIZE_INFORMATION aclSize;
   ACCESS_ALLOWED_ACE *pace;
 
+    // If this is not on an NTFS volume, we're done.  In fact, we'll
+	// likely crash if we try all the below ACL crap on a volume which
+	// does not support ACLs. Dooo!
+    if ( !volume_has_acls(filename) ) {
+		dprintf(D_FULLDEBUG, "perm::set_acls(%s): volume has no ACLS\n",filename);
+		return 1;
+	}
+
 	// Make sure we have the sid.
 
 	if ( psid == NULL ) {
+		dprintf(D_ALWAYS, "perm::set_acls(%s): do not have SID for user\n",filename);
 		return -1;
 	}
 
@@ -210,7 +300,7 @@ int perm::set_acls( const char *filename )
 	if (GetFileSecurity( filename,
 		DACL_SECURITY_INFORMATION,
 		NULL, 0, &sizeRqd )) {
-		cout << "Unable to get SD size.\n";
+		dprintf(D_ALWAYS,"perm::set_acls() Unable to get SD size.\n");
 		return -1;
 	}
 
