@@ -1104,9 +1104,17 @@ int AttrList::EvalBool (const char *name, AttrList *target, int &value)
         }
     }
 
-    if (tree && tree->EvalTree (this, target, &val) && val.type == LX_BOOL)
+    if (tree && tree->EvalTree (this, target, &val))
     {
-        value = val.b;
+ 		switch (val.type)
+		{
+			case LX_BOOL: value = val.b; break;
+			case LX_INTEGER: value = (val.i ? 1 : 0); break;
+			case LX_FLOAT: value = (val.f ? 1 : 0); break;
+
+			default:
+				return 0;
+		}
         return 1;
     }
 
