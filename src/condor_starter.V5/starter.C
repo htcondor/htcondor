@@ -21,10 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if defined(IRIX53)
-#include "condor_fix_limits.h"
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
@@ -50,11 +46,6 @@
 #if !defined(X86)
 typedef List<UserProc> listuserproc; 
 #endif 
-
-
-#if defined(AIX32)
-#	include <sys/id.h>
-#endif
 
 extern "C" {
 int free_fs_blocks(const char *);
