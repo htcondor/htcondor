@@ -179,7 +179,7 @@ clean:: 															@@\
 
 
 #if IS_SPARC_SUNOS41
-#define	pure_cplus_targ(program, objlist, libs, rel)	@@\
+#define	pure_cplus_target(program, objlist, libs, rel)	@@\
 ##program: objlist libs									@@\
 	purify -collector=$(TILDE)/bin/collect2 -linker=$(TILDE)/bin/ld $(CPlusPlus) -o program objlist libs $(LDFLAGS)						@@\
 clean:: 												@@\
@@ -187,8 +187,15 @@ clean:: 												@@\
 ##rel::													@@\
 	/bin/rm -f $(RELEASE_DIR)/bin/##program				@@\
 	cp program $(RELEASE_DIR)/bin
+#elif IS_HPPAR_HPUX9 || IS_SUN4M_SOLARIS251
+#define PureCollector concat3(-collector=,CrtLibPath,/ld)
+#define	pure_c_plus_target(program, objlist, libs)	@@\
+##program: objlist libs									@@\
+	purify -g++=yes -collector=PureCollector $(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS)						@@\
+clean:: 												@@\
+	rm -f program objlist
 #else
-#define	pure_cplus_targ(program, objlist, libs, rel)	/* NULL MACRO */
+#define	pure_cplus_target(program, objlist, libs, rel)	/* NULL MACRO */
 #endif	/* pure_cplus_targ */
 
 /*
