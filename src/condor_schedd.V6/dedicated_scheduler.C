@@ -2139,12 +2139,36 @@ DedicatedScheduler::DelMrec( char* cap )
 	HashKey key2( name_buf );
 	all_matches->remove(key2);
 
+		// If this match record is associated with a shadow record,
+		// clear out the match record from that shadow record to avoid
+		// a dangling pointer.
+	if( rec->shadowRec ) {
+		rec->shadowRec->match = NULL;
+	}
+
 		// Finally, delete the match rec itself.
 	delete rec;
 
 	dprintf( D_FULLDEBUG, "Deleted match rec for %s\n", name_buf );
 
 	return true;
+}
+
+
+bool
+DedicatedScheduler::removeShadowRecFromMrec( shadow_rec* shadow )
+{
+	bool		found = false;
+	match_rec	*mrec;
+
+	all_matches->startIterations();
+    while( all_matches->iterate( mrec ) ) {
+		if( mrec->shadowRec == shadow ) {
+			deallocMatchRec( mrec );
+			found = true;
+		}
+	}
+	return found;
 }
 
 
