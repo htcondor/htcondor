@@ -2914,11 +2914,12 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_DAEMON\_STATS}]
   \label{param:CollectorDaemonStats}
   This macro controls whether or not the Collector keeps update
-  statistics on incoming updates.  The default value is FALSE.  If
-  defined, the collector will insert several attributes into ClassAds
-  that it stores and sends.  ClassAds without the
+  statistics on incoming updates.  The default value is True.  If
+  this option is enabled, the collector will insert several attributes
+  into ClassAds that it stores and sends.  ClassAds without the
   ``UpdateSequenceNumber'' and ``DaemonStartTime'' attributes will not
-  be counted, and will not have attributes inserted.
+  be counted, and will not have attributes inserted (all modern Condor
+  daemons which publish ClassAds publish these attributes).
 
   The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
   and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
@@ -2932,9 +2933,10 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
   \label{param:CollectorDaemonHistorySize} This macro controls the
   size of the published update history that the Collector inserts into
-  the ClassAds it stores and sends.  The default value is zero.  This
-  macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS} is not
-  enabled.
+  the ClassAds it stores and sends.  The default value is 128, which
+  means that history is stored and published for the latest 128
+  updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
+  is not enabled.
 
   If this has a non-zero value, the Collector will insert
   ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
@@ -2950,7 +2952,10 @@ These macros affect the \Condor{collector}.
   the previous two not, the bitmap would be 0100, and the matching hex
   digit would be ``4''.  Note that the MSB can never be marked as lost
   because it's loss can only be detected by a non-lost update (a
-  ``gap'' is found in the sequence numbers).
+  ``gap'' is found in the sequence numbers).  Thus, UpdatesHistory =
+  "0x40" would be the history for the last 8 updates.  If the next
+  updates are all successful, the values published, after each update,
+  would be: 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00.
 
 \item[\Macro{COLLECTOR\_CLASS\_HISTORY\_SIZE}]
   \label{param:CollectorClassHistorySize} This macro controls the
