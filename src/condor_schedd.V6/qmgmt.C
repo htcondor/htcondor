@@ -29,10 +29,10 @@
 ** 
 */ 
 
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_io.h"
+#include "string_list.h"
+
 #include <sys/stat.h>
 #include "condor_fix_socket.h"
 #if !defined(WIN32)
@@ -116,6 +116,66 @@ static inline int compute_clustersize_hash(const int &key,int numBuckets) {
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 
+static char	**super_users = NULL;
+static int	num_super_users = 0;
+static char *default_super_users[] = {
+#if defined(WIN32)
+	"Administrator",
+#else
+	"root",
+#endif
+	"condor"	
+};
+static int allow_remote_submit = FALSE;
+
+// Read out any parameters from the config file that we need and
+// initialize our internal data structures.
+void
+InitQmgmt()
+{
+	static int is_default = FALSE;
+	StringList s_users;
+	char* tmp;
+	int i;
+
+	if( super_users && !is_default ) {
+		delete [] super_users;
+	}
+	tmp = param( "QUEUE_SUPER_USERS" );
+	if( tmp ) {
+		is_default = FALSE;
+		s_users.initializeFromString( tmp );
+		free( tmp );
+		num_super_users = s_users.number();
+		super_users = new char* [ num_super_users ];
+		s_users.rewind();
+		i = 0;
+		while( (tmp = s_users.next()) ) {
+			super_users[i] = new char[ sizeof( tmp ) ];
+			strcpy( super_users[i], tmp );
+			i++;
+		}
+	} else {
+		is_default = TRUE;
+		super_users = default_super_users;
+		num_super_users = 2;
+	}
+	dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
+	for( i=0; i<num_super_users; i++ ) {
+		dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
+	}
+
+	allow_remote_submit = FALSE;
+	tmp = param( "ALLOW_REMOTE_SUBMIT" );
+	if( tmp ) {
+		if( *tmp == 'T' || *tmp == 't' ) {
+			allow_remote_submit = TRUE;
+		}			
+		free( tmp );
+	}
+}
+
+
 void
 InitJobQueue(const char *job_queue_name)
 {
@@ -176,7 +236,6 @@ InitJobQueue(const char *job_queue_name)
 		}
 		next_cluster_num = stored_cluster_num;
 	}
-
 }
 
 
@@ -306,8 +365,7 @@ ValidateRendevous()
 	unlink(rendevous_file);
 
 #if !defined(WIN32)
-	if (stat_buf.st_uid != active_owner_uid && stat_buf.st_uid != 0 &&
-		stat_buf.st_uid != get_condor_uid()) {
+	if( stat_buf.st_uid != active_owner_uid ) {
 		UnauthenticatedConnection();
 		return 0;
 	}
@@ -316,16 +374,8 @@ ValidateRendevous()
 	return 0;
 }
 
-// Test if this owner matches my owner, so they're allowed to update me.
-char	*super_users[] = {
-#if defined(WIN32)
-	"Administrator"
-#else
-	"root",
-#endif
-	"condor"
-};
 
+// Test if this owner matches my owner, so they're allowed to update me.
 int
 OwnerCheck(ClassAd *ad, char *test_owner)
 {
@@ -338,19 +388,49 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 		return 1;
 	}
 
-	// root, and condor always allowed to do updates.  Could maybe put
-	// super_users in the config. file to give more flexibility to admins.
-
-	for (i = 0; i < sizeof(super_users) / sizeof(super_users[0]); i++) {
-		if (strcmp(test_owner, super_users[i]) == 0) {
+	// The super users are always allowed to do updates.  They are
+	// specified with the "SUPER_USERS" string list in the config
+	// file.  Defaults to root and condor.
+	for( i=0; i<num_super_users; i++) {
+		if( strcmp( test_owner, super_users[i] ) == 0 ) {
 			return 1;
 		}
 	}
 
-	// If we don't have an Owner attribute, how can we deny service?
-	if (ad->LookupString(ATTR_OWNER, my_owner) == 0) {
+#if !defined(WIN32) 
+		// If we're not root or condor, only allow qmgmt writes from
+		// the UID we're running as.
+	uid_t 	my_uid = get_my_uid();
+	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
+		if( active_owner_uid == my_uid ) {
+			return 1;
+		} else {
+#if !defined(WIN32)
+			errno = EACCES;
+#endif
+			return 0;
+		}
+	}
+#endif
+
+	if( !allow_remote_submit && !strcmp(test_owner, "nobody") ) {
+#if !defined(WIN32)
+		errno = EACCES;
+#endif
+		return 0;
+	} 
+
+		// If we don't have an Owner attribute (or classad) and we've 
+		// gotten this far, how can we deny service?
+	if( !ad ) {
 		return 1;
 	}
+	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
+		return 1;
+	}
+
+		// Finally, compare the owner of the ad with the entity trying
+		// to connect to the queue.
 	if (strcmp(my_owner, test_owner) != 0) {
 #if !defined(WIN32)
 		errno = EACCES;
@@ -445,6 +525,10 @@ NewCluster()
 		return -1;
 	}
 
+	if( !OwnerCheck(NULL, active_owner) ) {
+		return -1;
+	}
+
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num++;
 	sprintf(cluster_str, "%d", next_cluster_num);
@@ -465,6 +549,11 @@ NewProc(int cluster_id)
 	if (CheckConnection() < 0) {
 		return -1;
 	}
+
+	if( !OwnerCheck(NULL, active_owner) ) {
+		return -1;
+	}
+
 	if ((cluster_id != active_cluster_num) || (cluster_id < 1)) {
 #if !defined(WIN32)
 		errno = EACCES;
@@ -669,7 +758,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 {
 	ClassAd	*ad;
 	int cluster_num, proc_num;	
-	int found_one = 0;
+	int found_one = 0, had_error = 0;
 
 	if(CheckConnection() < 0) {
 		return -1;
@@ -682,17 +771,21 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 			(ad->LookupInteger(ATTR_PROC_ID, proc_num) == 1) &&
 			EvalBool(ad, constraint)) {
 			found_one = 1;
-			SetAttribute(cluster_num,proc_num,attr_name,attr_value);
+			if( SetAttribute(cluster_num,proc_num,attr_name,attr_value) < 0 ) {
+				had_error = 1;
+			}
 			FreeJobAd(ad);	// a no-op on the server side
 		}
 	}
 
-	// return success (0) if any job matched the constraint, else return
+		// If we couldn't find any jobs that matched the constraint,
+		// or we could set the attribute on any of the ones we did
+		// find, return error (-1).
 	// failure (-1)
-	if ( found_one )
-		return 0;
-	else
+	if ( had_error || !found_one )
 		return -1;
+	else
+		return 0;
 }
 
 int
