@@ -194,6 +194,7 @@ UTIL	-a src/condor_c++_util \
 
 V6_CODE		-a TOOLS V6_SRC
 V6_NT_CODE	-a NTconfig V6_SRC
+V6_ALL		-a DOC V6_SRC 
 V562_CODE	-a TOOLS V562_SRC
 V5_CODE		-a TOOLS V5_SRC
 V5_ALL		-a DOC V5_CODE
