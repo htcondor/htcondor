@@ -31,6 +31,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "exit.h"
 #include "my_hostname.h"
+#include "condor_email.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -44,8 +45,10 @@ extern int		check_new_exec_interval;
 extern int		preen_interval;
 extern int		new_bin_delay;
 extern char*	FS_Preen;
-extern ClassAd*	ad;
+extern			ClassAd* ad;
 extern char*	CollectorHost;
+extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
+
 
 #if 0
 extern int		doConfigFromServer; 
@@ -91,8 +94,6 @@ extern float		e_factor;					// exponential factor
 extern int			r_factor;					// recovering factor
 extern int			shutdown_graceful_timeout;
 extern int			shutdown_fast_timeout;
-extern char*		CondorAdministrator;
-extern char*		MailerPgm;
 extern int			Lines;
 extern int			PublishObituaries;
 extern int			StartDaemons;
@@ -388,11 +389,13 @@ daemon::Start()
 				TRUE);			// new_process_group flag; we want a new group
 
 	if ( pid == FALSE ) {
-			// Create_Process failed!
+		// Create_Process failed!
 		dprintf( D_ALWAYS,
-				 "ERROR: Create_Process failed, trying to start %s\n",
+				 "ERROR: Create_Process failed trying to start %s\n",
 				 process_name);
 		pid = 0;
+		// Schedule to try and start it a litle later
+		Restart();
 		return 0;
 	}
 
@@ -579,8 +582,6 @@ daemon::Exited( int status )
 void
 daemon::Obituary( int status )
 {
-#if !defined(WIN32)		// until we add email support to WIN32 port...
-    char    cmd[512];
     FILE    *mailer;
 
 	/* If daemon with a serious bug gets installed, we may end up
@@ -595,12 +596,14 @@ daemon::Obituary( int status )
         return;
 	}
 
+#ifndef WIN32
 	// Just return if process was killed with SIGKILL.  This means the
 	// admin did it, and thus no need to send email informing the
 	// admin about something they did...
 	if ( (WIFSIGNALED(status)) && (WTERMSIG(status) == SIGKILL) ) {
 		return;
 	}
+#endif
 
 	// Just return if process exited with status 0.  If everthing's
 	// ok, why bother sending email?
@@ -610,18 +613,12 @@ daemon::Obituary( int status )
 		return;
 	}
 
-    dprintf( D_ALWAYS, "Sending obituary for \"%s\" to \"%s\"\n",
-			process_name, CondorAdministrator );
+    dprintf( D_ALWAYS, "Sending obituary for \"%s\"\n",
+			process_name);
 
-	(void)sprintf( cmd, "%s -s \"%s\" %s", MailerPgm, 
-				   "CONDOR Problem",
-				   CondorAdministrator );
-
-    if( (mailer=popen(cmd,"w")) == NULL ) {
-        EXCEPT( "popen(\"%s\",\"w\")", cmd );
+    if( (mailer=email_admin_open("Problem")) == NULL ) {
+        return;
     }
-
-    fprintf( mailer, "\n" );
 
     if( WIFSIGNALED(status) ) {
         fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
@@ -637,23 +634,10 @@ daemon::Obituary( int status )
     }
 
 	if( log_name ) {
-		tail_log( mailer, log_name, Lines );
+		email_asciifile_tail( mailer, log_name, Lines );
 	}
 
-	/* Don't do a pclose here, it wait()'s, and may steal an
-	 ** exit notification of one of our daemons.  Instead we'll clean
-	 ** up popen's child in our SIGCHLD handler.
-	 */
-#if defined(HPUX)
-    /* on HPUX, however, do a pclose().  This is because pclose() on HPUX
-	 ** will _not_ steal an exit notification, and just doing an fclose
-	 ** can cause problems the next time we try HPUX's popen(). -Todd */
-    pclose(mailer);
-#else
-    (void)fclose( mailer );
-#endif
-
-#endif	// of !defined(WIN32)
+	email_close(mailer);
 }
 
 
@@ -1009,9 +993,6 @@ Daemons::InitMaster()
 void
 Daemons::RestartMaster()
 {
-#ifdef WANT_DC_PM
-	dprintf(D_ALWAYS, "Restarting master not yet supported with WANT_DC_PM\n");
-#else
 	immediate_restart_master = immediate_restart;
 	if( NumberOfChildren() == 0 ) {
 		FinishRestartMaster();
@@ -1019,7 +1000,6 @@ Daemons::RestartMaster()
 	all_daemons_gone_action = MASTER_RESTART;
 	StartDaemons = FALSE;
 	StopAllDaemons();
-#endif
 }
 
 // This function is called when all the children have finally exited
@@ -1047,9 +1027,11 @@ Daemons::FinishRestartMaster()
 void
 Daemons::FinalRestartMaster()
 {
-#ifndef WANT_DC_PM
-	int 		i, max_fds = getdtablesize();
+	int i;
+#ifndef WIN32
+	int	max_fds = getdtablesize();
 
+		// Release file lock on the log file.
 	if ( MasterLock->release() == FALSE ) {
 		dprintf( D_ALWAYS,
 				 "Can't remove lock on \"%s\"\n",daemon_ptr[master]->log_name);
@@ -1059,9 +1041,19 @@ Daemons::FinalRestartMaster()
 
 		// Now close all sockets and fds so our new invocation of
 		// condor_master does not inherit them.
+		// Note: Not needed (or wanted) on Win32, as CEDAR creates 
+		//		Winsock sockets as non-inheritable by default.
 	for (i=0; i < max_fds; i++) {
 		close(i);
 	}
+#endif
+
+		// Get rid of the CONDOR_INHERIT env variable.  If it is there,
+		// when the master restarts daemon core will think it's parent
+		// is a daemon core process.  but, its parent is gone ( we are doing
+		// an exec, so we disappear), thus we must blank out the 
+		// CONDOR_INHERIT env variable.
+	putenv("CONDOR_INHERIT=");
 
 		// Make sure the exec() of the master works.  If it fails,
 		// we'll fall past the execl() call, and hit the exponential
@@ -1069,21 +1061,40 @@ Daemons::FinalRestartMaster()
 	while(1) {
 		dprintf( D_ALWAYS, "Doing exec( \"%s\" )\n", 
 				 daemon_ptr[master]->process_name);
-		if( MasterName ) {
-			(void)execl(daemon_ptr[master]->process_name, 
-						"condor_master", "-f", "-n", MasterName, 0);
+
+		// On Win32, if we are running as an NT service,
+		// we cannot just exec ourselves again.  This is because
+		// the SCM (Service Control Manager) needs to know our PID,
+		// and doing an exec() will change our PID on NT.  So, we
+		// exec cmd.exe (which is the NT Command interpreter, i.e. the
+		// default shell) and issue a "net stop" and "net start" command.
+		if ( NT_ServiceFlag == TRUE ) {
+			char systemshell[MAX_PATH];
+
+			::GetSystemDirectory(systemshell,MAX_PATH);
+			strcat(systemshell,"\\cmd.exe");
+			(void)execl(systemshell, "/Q", "/C",
+				"net stop Condor & net start Condor", 0);
 		} else {
-			(void)execl(daemon_ptr[master]->process_name, 
-						"condor_master", "-f", 0);
+			if( MasterName ) {
+				(void)execl(daemon_ptr[master]->process_name, 
+							"condor_master", "-f", "-n", MasterName, 0);
+			} else {
+				(void)execl(daemon_ptr[master]->process_name, 
+							"condor_master", "-f", 0);
+			}
 		}
 		daemon_ptr[master]->restarts++;
+		if ( NT_ServiceFlag == TRUE && daemon_ptr[master]->restarts > 7 ) {
+			dprintf(D_ALWAYS,"Unable to restart Condor service, aborting.\n");
+			master_exit(1);
+		}
 		i = daemon_ptr[master]->NextStart();
 		dprintf( D_ALWAYS, 
-				 "Cannot execute condor_master, will try again in %d seconds\n", 
-				 i );
+				 "Cannot execute condor_master (errno=%d), will try again in %d seconds\n", 
+				 errno, i );
 		sleep(i);
 	}
-#endif
 }
 
 
@@ -1130,7 +1141,7 @@ int Daemons::NumberOfChildren()
 
 
 int
-Daemons::AllReaper(Service *, int pid, int status)
+Daemons::AllReaper(int pid, int status)
 {
 		// find out which daemon died
 	for( int i=0; i < no_daemons; i++) {
@@ -1148,7 +1159,7 @@ Daemons::AllReaper(Service *, int pid, int status)
 
 
 int
-Daemons::DefaultReaper(Service *, int pid, int status)
+Daemons::DefaultReaper(int pid, int status)
 {
 	for( int i=0; i < no_daemons; i++) {
 		if( pid == daemon_ptr[i]->pid ) {
@@ -1193,14 +1204,23 @@ Daemons::SetAllReaper()
 void
 Daemons::SetDefaultReaper()
 {
+	static int already_registered_reaper = 0;
+
 	if( reaper == DEFAULT_R ) {
 			// The default reaper is already set.
 		return;
 	}
 #ifdef WANT_DC_PM
-	daemonCore->Register_Reaper( "default daemon reaper",
-								 (ReaperHandlercpp)Daemons::DefaultReaper,
+	if ( already_registered_reaper ) {
+		daemonCore->Reset_Reaper( 1, "Default Daemon Reaper",
+							  (ReaperHandlercpp)&Daemons::DefaultReaper,
+							  "Daemons::DefaultReaper()",this);
+	} else {
+		already_registered_reaper = 1;
+		daemonCore->Register_Reaper( "Default Daemon Reaper",
+								 (ReaperHandlercpp)&Daemons::DefaultReaper,
 								 "Daemons::DefaultReaper()", this );
+	}
 #else
 	daemonCore->Cancel_Signal( DC_SIGCHLD );
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD",
