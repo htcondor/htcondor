@@ -1762,7 +1762,21 @@ MyString *GlobusJob::buildSubmitRSL()
 	}
 
 	//We're assuming all job clasads have a command attribute
-	ad->LookupString( ATTR_JOB_CMD, &attr_value );
+	//First look for executable in the spool area.
+	char *spooldir = param("SPOOL");
+	if ( spooldir ) {
+		char *source = gen_ckpt_name(Spool,procID.cluster,ICKPT,0);
+		free(spooldir);
+		if ( access(source,F_OK | X_OK) >= 0 ) {
+				// we can access an executable in the spool dir
+			attr_value = strdup(source);
+		}
+	}
+	if ( attr_value == NULL ) {
+			// didn't find any executable in the spool directory,
+			// so use what is explicitly stated in the job ad
+		ad->LookupString( ATTR_JOB_CMD, &attr_value );
+	}
 	*rsl += "(executable=";
 	if ( !ad->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer ) || transfer ) {
 		buff = "$(GRIDMANAGER_GASS_URL)";
