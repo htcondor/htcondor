@@ -1,3 +1,11 @@
+11/03/04 V6_7-mirror-2-CORE_snapshot6
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE, for RUST condor-support 1161.  Changes include: 1).
+   added new STARTD_CONTACT_TIMEOUT config parameter.  2). Fixed broken
+   $$() macro expansion passed to job environment.  The version string
+   in this release looks like this:
+   $CondorVersion: 6.7.0 Nov 3 2004 MIRROR-2-BRANCH CORE_snapshot6 $
+
 10/28/04 V6_7-local_univ-branch
    Branch for "local universe" development, which is basically the
    scheduler universe but with a starter under the schedd.  Created
