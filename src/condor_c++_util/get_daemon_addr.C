@@ -70,4 +70,8 @@ char* get_startd_addr(const char* name)
 {
 	return get_daemon_addr(name, STARTD_AD, ATTR_STARTD_IP_ADDR);
 } 
+char* get_master_addr(const char* name)
+{
+	return get_daemon_addr(name, MASTER_AD, ATTR_MASTER_IP_ADDR);
+} 
 }
