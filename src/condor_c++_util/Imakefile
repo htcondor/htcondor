@@ -60,7 +60,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C carmi_context.C \
 	instantiate.C string_list.C condor_event.C $(URL_SRC) get_daemon_addr.C \
 	user_log.C config.C condor_config.C stringSpace.C condor_state.C $(API_SRC) \
-	classad_hashtable.C classad_log.C log_transaction.C log.C
+	classad_hashtable.C classad_log.C log_transaction.C log.C get_full_hostname.C 
 
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
@@ -69,7 +69,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o carmi_context.o \
 	instantiate.o string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ) \
-	classad_hashtable.o classad_log.o log_transaction.o log.o
+	classad_hashtable.o classad_log.o log_transaction.o log.o get_full_hostname.o
 
 #if IS_R6000_AIX32
 TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
