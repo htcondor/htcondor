@@ -70,6 +70,7 @@ enum ULogEventNumber {
     /** Node executed   	      */  ULOG_NODE_EXECUTE,
     /** Node terminated	    	  */  ULOG_NODE_TERMINATED,
     /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED,
+	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -622,6 +623,43 @@ class PostScriptTerminatedEvent : public ULogEvent
 
     /// terminating signal (valid only on abnormal exit)
     int signalNumber;
+};
+
+
+//----------------------------------------------------------------------------
+/** Framework for a GlobusSubmitEvent object.  Occurs when a Globus Universe
+    job is actually submitted to a Globus Gatekeeper (and the submit is 
+	committed if using a recent version of Globus which understands the
+	two-phase commit protocol).
+*/
+class GlobusSubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusSubmitEvent();
+    ///
+    ~GlobusSubmitEvent();
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+	/// Globus Job Manager Contact String
+    char* jmContact;
+
+	/// If true, then the JobManager supports restart recovery
+	bool restartableJM;
 };
 
 

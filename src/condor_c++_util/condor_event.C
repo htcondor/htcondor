@@ -56,6 +56,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_NODE_EXECUTE",  			// MPI Node executing
 	"ULOG_NODE_TERMINATED",  		// MPI Node terminated
 	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
+	"ULOG_GLOBUS_SUBMIT"			// Job Submitted to Globus
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -123,6 +124,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_POST_SCRIPT_TERMINATED:
 		return new PostScriptTerminatedEvent;
+
+	case ULOG_GLOBUS_SUBMIT:
+		return new GlobusSubmitEvent;
 
 	  default:
         EXCEPT( "Invalid ULogEventNumber" );
@@ -275,6 +279,110 @@ readEvent (FILE *file)
     }
 	submitEventLogNotes = strnewp( s );
     return 1;
+}
+
+// ----- the GlobusSubmitEvent class
+GlobusSubmitEvent::
+GlobusSubmitEvent()
+{	
+	eventNumber = ULOG_GLOBUS_SUBMIT;
+	rmContact = NULL;
+	jmContact = NULL;
+	restartableJM = false;
+}
+
+GlobusSubmitEvent::
+~GlobusSubmitEvent()
+{
+    if( rmContact ) {
+        delete[] rmContact;
+    }
+    if( jmContact ) {
+        delete[] jmContact;
+    }
+}
+
+int GlobusSubmitEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+	const char * jm = unknown;
+
+	int retval = fprintf (file, "Job submitted to Globus\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+	if ( jmContact ) jm = jmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	retval = fprintf( file, "    JM-Contact: %.8191s\n", jm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	int newjm = 0;
+	if ( restartableJM ) { 
+		newjm = 1;
+	}
+	retval = fprintf( file, "    Can-Restart-JM: %d\n", newjm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusSubmitEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	if ( rmContact ) {
+		delete [] rmContact;
+	} 
+	if ( jmContact ) {
+		delete [] jmContact;
+	}
+	int retval = fscanf (file, "Job submitted to Globus\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	retval = fscanf( file, "    RM-Contact: %.8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);
+	retval = fscanf( file, "    JM-Contact: %.8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	jmContact = strnewp(s);
+	
+	int newjm = 0;
+	retval = fscanf( file, "    Can-Restart-JM: %d\n", &newjm );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	if ( newjm ) {
+		restartableJM = true;
+	} else {
+		restartableJM = false;
+	}
+    
+	
+	return 1;
 }
 
 
