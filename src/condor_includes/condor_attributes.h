@@ -202,6 +202,7 @@ const char ATTR_JOB_STATE                [] = "JobState";
 const char ATTR_JOB_STATUS               [] = "JobStatus";
 const char ATTR_JOB_STATUS_ON_RELEASE    [] = "JobStatusOnRelease";
 const char ATTR_JOB_UNIVERSE             [] = "JobUniverse";
+const char ATTR_JOB_SUBUNIVERSE			 [] = "JobSubUniverse";
 const char ATTR_JOB_WALL_CLOCK_CKPT		 [] = "WallClockCheckpoint";
 const char ATTR_KEYBOARD_IDLE            [] = "KeyboardIdle";
 const char ATTR_KFLOPS                   [] = "KFlops";
