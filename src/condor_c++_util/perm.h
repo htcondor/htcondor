@@ -16,7 +16,7 @@ public:
 	
 	// On Unix, make everything a stub saying sucesss
 
-	bool init ( char *username, char *domain = 0 ) { return true;}
+	bool init ( const char *username, char *domain = 0 ) { return true;}
 	int read_access( const char *filename ) { return 1; }
 	int write_access( const char *filename ) { return 1; }
 	int execute_access( const char *filename ) { return 1; }
@@ -26,7 +26,7 @@ public:
 
 	// Windows
 	
-	bool init ( char *username, char *domain = 0 );
+	bool init ( const char *username, char *domain = 0 );
 
 	// External functions to ask permissions questions: 1 = true, 0 = false, -1 = unknown
 	int read_access( const char *filename );

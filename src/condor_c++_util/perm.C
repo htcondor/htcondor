@@ -576,7 +576,7 @@ perm::~perm() {
 	}
 }
 
-bool perm::init( char *accountname, char *domain ) 
+bool perm::init( const char *accountname, char *domain ) 
 {
 	SID_NAME_USE snu;
 	
