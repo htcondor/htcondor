@@ -84,7 +84,7 @@
 #define PCKPT_ALL_JOBS		(SCHED_VERS+46)
 #define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
 #define GIVE_STATE			(SCHED_VERS+48)
-
+#define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
 
 
 
