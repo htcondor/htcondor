@@ -83,9 +83,15 @@ eval_timeout_state(resource_info_t* rip)
 			}
 		}
 	}
+
+#if 0
+		// This is no reason to EXCEPT.  We could have just
+		// relinquished the match but the starter may not have exited
+		// yet, so we still have a valid r_pid.
 	if( rip->r_pid != NO_PID && !rip->r_jobclassad ) {
-		EXCEPT("resource allocated, but no job classad.\n");
+		EXCEPT("resource allocated, but no job classad.");
 	}
+#endif
 
 	if( !rip->r_jobclassad ) {
 		return 0;
@@ -119,12 +125,12 @@ eval_timeout_state(resource_info_t* rip)
 			if( ((rip->r_classad)->EvalBool("KILL_VANILLA",
 											rip->r_jobclassad,tmp))==0 ) {
 				if( ((rip->r_classad)->EvalBool("KILL",rip->r_classad,tmp))==0 ) {
-					EXCEPT("Can't evaluate KILL\n");
+					EXCEPT("Can't evaluate KILL");
 				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("KILL",rip->r_jobclassad,tmp))==0 )	{
-				EXCEPT("Can't evaluate KILL\n");
+				EXCEPT("Can't evaluate KILL");
 			}
 		}
 		if( tmp ) {
@@ -140,13 +146,13 @@ eval_timeout_state(resource_info_t* rip)
 											 rip->r_jobclassad,tmp))==0 ) {
 				if( ((rip->r_classad)->EvalBool("VACATE",
 												rip->r_jobclassad,tmp))==0 ) {
-					EXCEPT("Can't evaluate VACATE\n");
+					EXCEPT("Can't evaluate VACATE");
 				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("VACATE",
 											rip->r_jobclassad,tmp))==0 ) {
-				EXCEPT("Can't evaluate VACATE\n");
+				EXCEPT("Can't evaluate VACATE");
 			}
 		}
 		if( tmp ) {
@@ -161,13 +167,13 @@ eval_timeout_state(resource_info_t* rip)
 											rip->r_jobclassad,tmp))==0 ) {
 				if( ((rip->r_classad)->EvalBool("SUSPEND",
 												rip->r_jobclassad,tmp))==0 ) {
-					EXCEPT("Can't evaluate SUSPEND\n");
+					EXCEPT("Can't evaluate SUSPEND");
 				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("SUSPEND",
 										   rip->r_jobclassad,tmp))==0 ) {
-				EXCEPT("Can't evaluate SUSPEND\n");
+				EXCEPT("Can't evaluate SUSPEND");
 			}
 		}
 		if( tmp ) {
@@ -182,13 +188,13 @@ eval_timeout_state(resource_info_t* rip)
 											rip->r_jobclassad,tmp))==0 ) {
 				if( ((rip->r_classad)->EvalBool("CONTINUE",
 											 rip->r_jobclassad,tmp))==0 ) {
-					EXCEPT("Can't evaluate CONTINUE\n");
+					EXCEPT("Can't evaluate CONTINUE");
 				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("CONTINUE",
 											rip->r_jobclassad,tmp))==0 ) {
-				EXCEPT("Can't evaluate CONTINUE\n");
+				EXCEPT("Can't evaluate CONTINUE");
 			}
 		}
 		if( tmp ) {
