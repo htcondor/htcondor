@@ -24,7 +24,13 @@
 #include "condor_distribution.h"
 
 // Constructor
-Distribution::Distribution( int argc, char **argv )
+Distribution::Distribution()
+{
+	// Are we 'Condor' or 'Hawkeye'?
+		SetDistribution( "condor" );
+}
+
+int Distribution::Init( int argc, char **argv )
 {
 	char	*argv0 = argv[0];
 
@@ -36,12 +42,16 @@ Distribution::Distribution( int argc, char **argv )
 	} else {
 		SetDistribution( "condor" );
 	}
+
+	return 1;
 }
 
 // Destructor (does nothing for now)
 Distribution::~Distribution( )
 {
 }
+
+IMPLEMENT_SINGLETON(Distribution);
 
 // Set my actual distro name
 void Distribution :: SetDistribution( const char *name )
@@ -69,3 +79,4 @@ void Distribution :: SetDistribution( const char *name )
 	distribution_length = strlen( distribution );
 	
 }
+
