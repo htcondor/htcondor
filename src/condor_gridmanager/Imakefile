@@ -1,5 +1,5 @@
 NAME=condor_gridmanager
-all_target($(NAME))
+all_target($(NAME) grid_monitor.sh)
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
