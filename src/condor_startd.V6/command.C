@@ -536,7 +536,6 @@ activate_claim( Resource* rip, Stream* stream )
 	char official_name[MAXHOSTLEN];
 	StartdRec stRec;
 	start_info_t ji;	/* XXXX */
-	char JobId[80];
 	int universe, job_cluster, job_proc, starter;
 	char* shadow_addr = strdup( sin_to_string( stream->endpoint() ));
 
@@ -724,12 +723,12 @@ activate_claim( Resource* rip, Stream* stream )
 
 	req_classad->EvalInteger( ATTR_CLUSTER_ID, req_classad, job_cluster );
 	req_classad->EvalInteger( ATTR_PROC_ID, req_classad, job_proc );
-	sprintf( JobId, "%d.%d", job_cluster, job_proc );
-	sprintf(tmp, "%s=\"%s\"", ATTR_JOB_ID, JobId );
-	(rip->r_classad)->Insert( tmp );
-	dprintf( D_ALWAYS, "Remote job ID is %s\n", JobId );
+	rip->r_cur->setproc( job_proc );
+	rip->r_cur->setcluster( job_cluster );
+	dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster, job_proc );
 
 	rip->r_cur->setad( req_classad );
+
 	if( !rip->r_cur->ad() ||
 		((rip->r_cur->ad())->EvalInteger( ATTR_JOB_UNIVERSE,
 										  rip->r_classad,universe)==0) ) {
@@ -747,27 +746,19 @@ activate_claim( Resource* rip, Stream* stream )
 		dprintf( D_ALWAYS, "Startd using standard control params.\n" );
 	}
 	rip->r_cur->setuniverse(universe);
-	/*
-	 * Put the JobUniverse into the machine classad so that the negotiator
-	 * can take it into account for preemption (i.e. dont preempt vanilla
-	 * jobs).
-	 */
-	sprintf( tmp, "%s=%d", ATTR_JOB_UNIVERSE, universe );
-	(rip->r_classad)->Insert( tmp );
 
 		// Actually spawn the starter
 	rip->r_starter->setname( RealStarter );
 	rip->r_starter->spawn( &ji );
 
-	rip->change_state( busy_act );
-
 	int now = (int)time( NULL );
+	rip->r_cur->setjobstart(now);	
+	rip->r_cur->setlastpckpt(now);	
 
-	sprintf(tmp, "%s=%d", ATTR_JOB_START, now );
-	(rip->r_classad)->Insert( tmp );
+		// Finally, update all these things into the resource classad.
+	rip->r_cur->update( rip->r_classad );
 
-	sprintf(tmp, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, now );
-	(rip->r_classad)->Insert( tmp );
+	rip->change_state( busy_act );
 
 	free( shadow_addr );
 #endif

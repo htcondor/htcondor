@@ -43,6 +43,10 @@ Match::Match()
 	m_match_tid = -1;
 	m_claim_tid = -1;
 	m_aliveint = -1;
+	m_cluster = -1;
+	m_proc = -1;
+	m_job_start = -1;
+	m_last_pckpt = -1;
 }
 
 
@@ -110,10 +114,9 @@ Match::send_accountant( int cmd )
 void
 Match::update( ClassAd* ad )
 {
-	char line[1024];
+	char line[256];
 	char* tmp;
 
-			// Update the current rank value
 	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, m_rank );
 	ad->Insert( line );
 
@@ -128,6 +131,26 @@ Match::update( ClassAd* ad )
 			sprintf( line, "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
 			ad->Insert( line );
 		}
+	}
+
+	if( (m_cluster > 0) && (m_proc >= 0) ) {
+		sprintf( line, "%s=\"%d.%d\"", ATTR_JOB_ID, m_cluster, m_proc );
+		ad->Insert( line );
+	}
+
+	if( m_job_start > 0 ) {
+		sprintf(line, "%s=%d", ATTR_JOB_START, m_job_start );
+		ad->Insert( line );
+	}
+
+	if( m_last_pckpt > 0 ) {
+		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, m_last_pckpt );
+		ad->Insert( line );
+	}
+
+	if( m_universe > 0 ) {
+		sprintf( line, "%s=%d", ATTR_JOB_UNIVERSE, m_universe );
+		ad->Insert( line );
 	}
 }	
 

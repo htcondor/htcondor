@@ -101,6 +101,10 @@ public:
 	ClassAd*	ad() 			{return m_ad;};
 	int			universe()		{return m_universe;};
 	Stream*		agentstream()	{return m_agentstream;};
+	int			cluster()		{return m_cluster;};
+	int			proc()			{return m_proc;};
+	int			job_start() 	{return m_job_start;};
+	int			last_pckpt() 	{return m_last_pckpt;};
 
 		// Functions that set the values of data
 	void setrank(float rank)	{m_rank=rank;};
@@ -110,6 +114,10 @@ public:
 	void setuniverse(int universe)	{m_universe=universe;};
 	void setagentstream(Stream* stream);	
 	void setaliveint(int alive)		{m_aliveint=alive;};
+	void setproc(int proc) 			{m_proc=proc;};
+	void setcluster(int cluster)	{m_cluster=cluster;};
+	void setlastpckpt(int lastckpt) {m_last_pckpt=lastckpt;};
+	void setjobstart(int jobstart) 	{m_job_start=jobstart;};
 
 private:
 	Client 		*m_client;
@@ -118,6 +126,10 @@ private:
 	float		m_rank;
 	float		m_oldrank;
 	int			m_universe;
+	int			m_proc;
+	int			m_cluster;
+	int			m_job_start;
+	int			m_last_pckpt;
 	Stream*		m_agentstream;	// cedar sock that the schedd agent is
 								// waiting for a response on
 
