@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include <iostream.h>
 #include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
@@ -22,14 +21,26 @@ static char encode_status( int status );
 
 //------------------------------------------------------------------------
 
-main()
+static void Usage(char* name) 
 {
+  printf("Usage: %s [-v]\n",name);
+}
+
+//------------------------------------------------------------------------
+
+main(int argc, char* argv[])
+{
+  if (argc>2 || (argc==2 && strcmp(argv[1],"-v")!=0)) {
+    Usage(argv[0]);
+    exit(1);
+  }
+ 
   config( 0 );
   MyString LogFileName=param("SPOOL");
   LogFileName+="/job_history.log";
   FILE* LogFile=fopen(LogFileName,"r");
   if (!LogFile) {
-    cerr << "No jobs logged in the history file." << endl;
+    fprintf(stderr,"No jobs logged in the history file.\n");
     exit(1);
   }
   
@@ -37,7 +48,8 @@ main()
   short_header();
   while(!EndFlag) {
     ClassAd* ad=new ClassAd(LogFile,"***",EndFlag);
-    displayJobShort(ad);
+    if (argc==1) displayJobShort(ad);
+    else { ad->fPrint(stdout); printf("\n"); }
   }
  
   fclose(LogFile);
