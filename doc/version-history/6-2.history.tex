@@ -9,12 +9,24 @@ New releases of 6.2.0 should happen infrequently and will only include
 bug fixes and support for new platforms.
 New features will be added and tested in the 6.3 development series. 
 The details of each version are described below.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-2-1}Version 6.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent New Features:
 \begin{itemize}
-\item None.
+
+\item Condor administrators can now specify
+\MacroNI{CONDOR\_SUPPORT\_EMAIL} in their config file.
+This address is included at the bottom of all email Condor sends out.
+Previously, the \MacroNI{CONDOR\_ADMIN} setting was used for this, but
+at many sites, the address where the Condor daemons should send email
+about administrative problems is not the same address that users
+should use for technical support.
+If your site has different addresses for these two things, you can now
+specify them properly.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
