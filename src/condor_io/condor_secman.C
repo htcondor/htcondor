@@ -413,7 +413,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		free(paramer);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_AUTHENTICATION_METHODS), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, buf);
 		if (DebugFlags & D_FULLDEBUG ) {
 			dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 		}
@@ -452,7 +452,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		free(paramer);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_CRYPTO_METHODS), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_CRYPTO_METHODS, buf);
 		if (DebugFlags & D_FULLDEBUG ) {
 			dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 		}
@@ -479,52 +479,52 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		sprintf (buf, "%s", SecMan::sec_req_rev[sec_negotiation]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_NEGOTIATION), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_NEGOTIATION, buf);
 
 		sprintf (buf, "%s", SecMan::sec_req_rev[sec_authentication]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);
 
 		sprintf (buf, "%s", SecMan::sec_req_rev[sec_encryption]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
 
 		sprintf (buf, "%s", SecMan::sec_req_rev[sec_integrity]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));	
+		ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);	
 
 		sprintf (buf, "%s", "NO");
 		v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));	
+		ad->InsertAttr(ATTR_SEC_ENACT, buf);	
 	} else {
 		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_NEGOTIATION), Literal::MakeLiteral(v));	
+		ad->InsertAttr(ATTR_SEC_NEGOTIATION, buf);	
 
 		sprintf (buf, "%s",SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));	
+		ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);	
 
 		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
 
 		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]);
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);
 		
 		sprintf (buf, "%s", "YES");
         v.Clear();
         v.SetStringValue(buf);
-		ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));
+		ad->InsertAttr(ATTR_SEC_ENACT, buf);
 	}
 
 
@@ -532,7 +532,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf(buf, "%s", mySubSystem);
     v.Clear();
     v.SetStringValue(buf);
-	ad->Insert(string(ATTR_SEC_SUBSYSTEM), Literal::MakeLiteral(v));
+	ad->InsertAttr(ATTR_SEC_SUBSYSTEM, buf);
 
 
 	// key duration
@@ -555,7 +555,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
     v.Clear();
 	v.SetIntegerValue(sessdur);
-    ad->Insert(string(ATTR_SEC_SESSION_DURATION), Literal::MakeLiteral(v));
+    ad->InsertAttr(ATTR_SEC_SESSION_DURATION, sessdur);
 
 	if (DebugFlags & D_FULLDEBUG ) {
     	dprintf ( D_SECURITY, "SECMAN: inserted '%s = %d'\n",
@@ -765,17 +765,17 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	sprintf (buf, "%s", SecMan::sec_feat_act_rev[authentication_action]);
     v.Clear();
     v.SetStringValue(buf);
-	action_ad->Insert(string(ATTR_SEC_AUTHENTICATION), Literal::MakeLiteral(v));
+	action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);
 
 	sprintf (buf, "%s", SecMan::sec_feat_act_rev[encryption_action]);
 	v.Clear();
     v.SetStringValue(buf);
-	action_ad->Insert(string(ATTR_SEC_ENCRYPTION), Literal::MakeLiteral(v));
+	action_ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
 
 	sprintf (buf, "%s", SecMan::sec_feat_act_rev[integrity_action]);
 	v.Clear();
     v.SetStringValue(buf);
-	action_ad->Insert(string(ATTR_SEC_INTEGRITY), Literal::MakeLiteral(v));
+	action_ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);
 
 
 	string cli_methods, srv_methods;
@@ -787,7 +787,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 			sprintf (buf, "%s", the_method);
 			v.Clear();
             v.SetStringValue(buf);
-            action_ad->Insert(string(ATTR_SEC_AUTHENTICATION_METHODS), Literal::MakeLiteral(v));
+            action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, buf);
 			free( the_method );
 		}
 	}
@@ -800,7 +800,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 			sprintf (buf, "%s", the_method);
 			v.Clear();
             v.SetStringValue(buf);
-            action_ad->Insert(string(ATTR_SEC_CRYPTO_METHODS), Literal::MakeLiteral(v));
+            action_ad->InsertAttr(ATTR_SEC_CRYPTO_METHODS, buf);
 			free( the_method );
 		}
 	}
@@ -817,13 +817,14 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	v.Clear();
     v.SetIntegerValue(cli_duration < srv_duration ?
 					  cli_duration : srv_duration);
-    action_ad->Insert(string(ATTR_SEC_SESSION_DURATION),
-					  Literal::MakeLiteral(v));
+    action_ad->InsertAttr(ATTR_SEC_SESSION_DURATION,
+					  cli_duration < srv_duration ?
+					  cli_duration : srv_duration);
 
 
 	v.Clear();
     v.SetStringValue("YES");
-    action_ad->Insert(string(ATTR_SEC_ENACT), Literal::MakeLiteral(v));
+    action_ad->InsertAttr(ATTR_SEC_ENACT, "YES");
 
 	return action_ad;
 
@@ -921,7 +922,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			new_session = true;
 			v.Clear();
             v.SetStringValue("YES");
-            auth_info.Insert(string(ATTR_SEC_NEW_SESSION), Literal::MakeLiteral(v));
+            auth_info.InsertAttr(ATTR_SEC_NEW_SESSION, "YES");
 		}
 	}
 
@@ -1095,7 +1096,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	// fill in command
     v.Clear();  
     v.SetIntegerValue(cmd);
-    auth_info.Insert(string(ATTR_SEC_COMMAND), Literal::MakeLiteral(v));
+    auth_info.InsertAttr(ATTR_SEC_COMMAND, cmd);
 	dprintf(D_SECURITY, "SECMAN: inserted '%s = %d'\n", ATTR_SEC_COMMAND, cmd);
 
 
@@ -1103,7 +1104,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		// fill in sub-command
 		v.Clear();  
         v.SetIntegerValue(subCmd);
-        auth_info.Insert(string(ATTR_SEC_AUTH_COMMAND), Literal::MakeLiteral(v));
+        auth_info.InsertAttr(ATTR_SEC_AUTH_COMMAND, subCmd);
 		dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 	}
 
@@ -1299,7 +1300,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
             v.Clear();
             v.SetStringValue("YES");
-			auth_info.Insert(string(ATTR_SEC_USE_SESSION), Literal::MakeLiteral(v));
+			auth_info.InsertAttr(ATTR_SEC_USE_SESSION, "YES");
 
 			sock->encode();
 
