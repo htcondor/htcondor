@@ -9,10 +9,7 @@
 static char *_FileName_ = __FILE__;
 
 time_t dev_idle_time( const char *path, time_t current_time );
-extern "C" time_t tty_pty_idle_time();
 
-
-extern "C" {
 time_t
 tty_pty_idle_time()
 {
@@ -40,7 +37,7 @@ tty_pty_idle_time()
 	}
 	return answer;
 }
-}
+
 
 time_t
 dev_idle_time( const char *path, time_t current_time )
