@@ -126,7 +126,7 @@ chirp_client_close( struct chirp_client *c, int fd )
 }
 
 int
-chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length )
+chirp_client_read( struct chirp_client *c, int fd, void *buffer, int length )
 {
 	int result;
 	int actual;
@@ -135,14 +135,14 @@ chirp_client_read( struct chirp_client *c, int fd, char *buffer, int length )
 
 	if( result>0 ) {
 		actual = fread(buffer,1,result,c->stream);
-		if(actual!=result) chirp_fatal_response("read");
+		if(actual!=result) chirp_fatal_request("read");
 	}
 
 	return result;
 }
 
 int
-chirp_client_write( struct chirp_client *c, int fd, const char *buffer, int length )
+chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int length )
 {
 	int actual;
 	int result;
