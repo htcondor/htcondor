@@ -15,6 +15,7 @@ public:
 	CondorFileFD();
 	virtual ~CondorFileFD();
 	virtual int open( const char *url, int flags, int mode );
+	virtual int close();
 };
 
 #endif
