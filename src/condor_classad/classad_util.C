@@ -20,8 +20,8 @@ int FirstMatch(ClassAd *ad, ClassAdList *adList, ClassAd * &returnAd)
         returnAd = NULL;                     // no match.
         return 0;
     }
-    adList->OpenList();
-    for(temp = (ClassAd*)adList->NextAttrList(); temp; temp = (ClassAd*)adList->NextAttrList())
+    adList->Open();
+    for(temp = (ClassAd*)adList->Next(); temp; temp = (ClassAd*)adList->Next())
     {
         if(ad->IsAMatch(temp))
 	{                                    // match found.
@@ -29,7 +29,7 @@ int FirstMatch(ClassAd *ad, ClassAdList *adList, ClassAd * &returnAd)
 	    return 1;
 	}
     }
-    adList->CloseList();
+    adList->Close();
     
     returnAd = NULL;                         // match not found.
     return 0;
@@ -50,8 +50,8 @@ int AllMatch(ClassAd *ad, ClassAdList *adList, ClassAdList *&returnList)
         return 0;                            // no match.
     }
     
-    adList->OpenList();
-    for(temp = (ClassAd*)adList->NextAttrList(); temp; temp = (ClassAd*)adList->NextAttrList())
+    adList->Open();
+    for(temp = (ClassAd*)adList->Next(); temp; temp = (ClassAd*)adList->Next())
     {
         if(ad->IsAMatch(temp))
 	{                                    // match found.
@@ -67,7 +67,7 @@ int AllMatch(ClassAd *ad, ClassAdList *adList, ClassAdList *&returnList)
 	    returnList->Insert(temp);        // make up the returned list.
 	}
     }
-    adList->CloseList();
+    adList->Close();
     
     if(returnList)
     {
@@ -194,10 +194,9 @@ void SortClassAdList(ClassAdList *adList1, ClassAdList *&adList2, char *constrai
     int index;
     for(i = 0; i < adList1->MyLength(); i++)
     {
-        adList1->OpenList();
+        adList1->Open();
 	min = NULL;
-	for(temp = (ClassAd*)adList1->NextAttrList(), j = 0; temp;
-	    temp = (ClassAd*)adList1->NextAttrList(), j++)
+	for(temp = (ClassAd*)adList1->Next(), j = 0; temp; temp = (ClassAd*)adList1->Next(), j++)
 	{
 	    if(mark[j])
 	    {                                // skip if already selected.
