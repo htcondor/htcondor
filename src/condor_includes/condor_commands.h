@@ -212,10 +212,11 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 /*
 *** Daemon Core Commands
 */
-#define DC_BASE 60000
-#define DC_RAISESIGNAL (DC_BASE+0)
-#define DC_PROCESSEXIT (DC_BASE+1)
-#define DC_CONFIG_PERSIST (DC_BASE+2)
-#define DC_CONFIG_RUNTIME (DC_BASE+3)
+#define DC_BASE	60000
+#define DC_RAISESIGNAL		(DC_BASE+0)
+#define DC_PROCESSEXIT		(DC_BASE+1)
+#define DC_CONFIG_PERSIST	(DC_BASE+2)
+#define DC_CONFIG_RUNTIME	(DC_BASE+3)
+#define DC_RECONFIG			(DC_BASE+4)
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

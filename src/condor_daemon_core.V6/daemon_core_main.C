@@ -300,6 +300,14 @@ check_core_files()
 
 
 int
+handle_reconfig( Service*, int, Stream* )
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+	return TRUE;
+}
+	
+
+int
 handle_config_val( Service*, int, Stream* stream ) 
 {
 	char *param_name = NULL, *tmp;
@@ -978,7 +986,11 @@ int main( int argc, char** argv )
 								 "HandleDC_SIGCHLD",daemonCore,IMMEDIATE_FAMILY);
 #endif
 
-		// Install handler for the CONFIG_VAL 
+		// Install DaemonCore command handlers common to all daemons.
+	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
+								  (CommandHandler)handle_reconfig,
+								  "handle_reconfig()", 0, ADMINISTRATOR );
+
 	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
 								  (CommandHandler)handle_config_val,
 								  "handle_config_val()", 0, ADMINISTRATOR );
