@@ -24,7 +24,7 @@
 #if !defined(_CLASSAD_COLLECTION_OPS)
 #define _CLASSAD_COLLECTION_OPS
 
-#include "condor_classad.h"
+#include "exprTree.h"
 #include "log.h"
 
 #define CondorLogOp_CollNewClassAd          201

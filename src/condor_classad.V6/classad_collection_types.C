@@ -1,7 +1,10 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "condor_classad.h"
+#include "common.h"
+#include "exprTree.h"
+#include "matchClassad.h"
+#include "classad_collection_types.h"
 
 BaseCollection::
 BaseCollection(BaseCollection* parent, const MyString& rank) : childItors( 4 ), contentItors( 4 )
