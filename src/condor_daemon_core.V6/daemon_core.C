@@ -47,7 +47,6 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "internet.h"
 #include "KeyCache.h"
 #include "condor_debug.h"
-#include "get_daemon_addr.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "condor_commands.h"
@@ -1566,16 +1565,15 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 int
 DaemonCore::ReInit()
 {
-	char *addr;
 	struct sockaddr_in sin;
 	char *tmp;
 	char buf[50];
 	static int tid = -1;
 
+	Daemon nego( DT_NEGOTIATOR );
 	// Fetch the negotiator address for the Verify method to use
-	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
-	if ( addr ) {
-		string_to_sin(addr,&sin);
+	if( nego.locate() ) {
+		string_to_sin( nego.addr(), &sin );
 		memcpy(&negotiator_sin_addr,&(sin.sin_addr),
 						sizeof(negotiator_sin_addr));
 	} else {
