@@ -83,11 +83,13 @@ void dprintf ( int flags, char *fmt, ... );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
+void dprintf_config( char* subsys, int logfd );
 #else
 void config ();
 char * param ();
 void _EXCEPT_ ();
 void dprintf ();
+void dprintf_config ();
 #endif
 
 /*
