@@ -8,7 +8,12 @@
 #include "condor_fix_fcntl.h"
 #include "image.h"
 
-#if !defined(HPUX9)	// HPUX-9 has this in <unistd.h>
+#if defined(SOLARIS2)
+#include <sys/systeminfo.h>
+#define gethostname(buf,len) sysinfo( SI_HOSTNAME, buf, len)
+#endif
+
+#if !defined(HPUX9) && !defined(SOLARIS2)	// HPUX-9 has this in <unistd.h>
 extern "C" int gethostname( char *, int );
 #endif
 
