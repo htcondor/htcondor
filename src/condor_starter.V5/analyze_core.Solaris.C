@@ -36,8 +36,12 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
   #define NBPG 0x1000   /*couldnt get this val from header files. Rough
 		        estimate from Suns header files - Raghu */
   #undef CORE_MAGIC
+  #if defined(X86)
   #define CORE_MAGIC 0x7f454c46  /* at least, this is the magic for my
 									core file - Jim B. */
+  #else
+  #define CORE_MAGIC 0x464c457f
+  #endif
 #endif
 
 const int       UAREA_SIZE = UPAGES * NBPG;
