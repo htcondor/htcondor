@@ -29,6 +29,4 @@ SYSNAME = sun4x_59
 #define PlatformFlags	-DSolaris29=Solaris29
 
 #define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
-	-Bstatic -lstdc++ -lgcc -Bdynamic
-/*   -Xlinker -B -Xlinker static -lstdc++ -lgcc  */
-
+$(GCC_STATIC_LIBS)

@@ -26,4 +26,4 @@ SYSNAME = sun4x_58
 #define PlatformFlags	-DSolaris28=Solaris28
 
 #define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
-$(LIB_STDCPP)
+$(GCC_STATIC_LIBS)
