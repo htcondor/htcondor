@@ -279,12 +279,23 @@ AttrList::AttrList(char *AttrList, char delimitor) : AttrListAbstract(ATTRLISTEN
 		{                                    // fill in the buffer.
 			if(current >= (buffer_size - 1))        
 			{
+				int  old_buffer_size;
+				char *new_buffer;
+				
+				old_buffer_size = buffer_size;
 				buffer_size *= 2;
-				buffer = (char *) realloc(buffer, buffer_size*sizeof(char));
-				if(!buffer)
+				// Can you believe, someone called realloc on 
+				// a buffer that had been new-ed? Now we call
+				// new and copy it over with memcpy.--Alain, 23-Sep-2001
+				new_buffer = new char[buffer_size];
+				if(!new_buffer)
 				{
 					EXCEPT("Warning: you ran out of memory");
 				}
+				memset(new_buffer, 0, buffer_size);
+				memcpy(new_buffer, buffer, old_buffer_size * sizeof(char));
+				delete [] buffer;
+				buffer = new_buffer;
 			}
 			buffer[current] = c;
 			current++;
