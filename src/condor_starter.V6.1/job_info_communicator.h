@@ -69,6 +69,10 @@ public:
 		 */
 	virtual void setupJobEnvironment( void ) = 0;
 
+	void setStdin( const char* path );
+	void setStdout( const char* path );
+	void setStderr( const char* path );
+
 		// // // // // // // // // // // //
 		// Information about the job 
 		// // // // // // // // // // // //

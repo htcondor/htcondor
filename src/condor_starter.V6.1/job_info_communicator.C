@@ -84,6 +84,36 @@ JobInfoCommunicator::~JobInfoCommunicator()
 }
 
 
+void
+JobInfoCommunicator::setStdin( const char* path )
+{
+	if( job_input_name ) {
+		free( job_input_name );
+	}
+	job_input_name = strdup( path );
+}
+
+
+void
+JobInfoCommunicator::setStdout( const char* path )
+{
+	if( job_output_name ) {
+		free( job_output_name );
+	}
+	job_output_name = strdup( path );
+}
+
+
+void
+JobInfoCommunicator::setStderr( const char* path )
+{
+	if( job_error_name ) {
+		free( job_error_name );
+	}
+	job_error_name = strdup( path );
+}
+
+
 const char*
 JobInfoCommunicator::jobInputFilename( void )
 {
