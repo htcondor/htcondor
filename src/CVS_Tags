@@ -1,3 +1,7 @@
+03/10/04 V6_7-condorc-branch
+   A new branch off of V6_7-branch created from the V6_7-condorc-root
+   tag. This will hold work to implement Condor-C.
+
 03/02/04 V6_7-post_merge-V6_7-mirror-2-merge-2
    The state of the V6_7-branch after merging in the V6_7-mirror-2-branch
    as tagged at V6_7-mirror-2-merge-2 
