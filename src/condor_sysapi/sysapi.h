@@ -68,6 +68,11 @@ void sysapi_last_xevent(void);
 float sysapi_load_avg_raw(void);
 float sysapi_load_avg(void);
 
+/* return information about the arch and operating system */
+char* sysapi_condor_arch(void);
+char* sysapi_uname_arch(void);
+char* sysapi_opsys(void);
+
 END_C_DECLS
 
 #endif

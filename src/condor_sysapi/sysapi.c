@@ -26,7 +26,7 @@
 /* 
 	this is a temporary file to map all of the old function names to the new
 	API system before I go through all of the old code and replace them.
-	The sysapi is a comletely c linkaged entity.
+	The sysapi is a completely c linkaged entity.
 */
 
 /* also note that these return the cooked versions of the functions */
@@ -73,5 +73,22 @@ calc_load_avg()
 	return sysapi_load_avg();
 }
 
+char*
+my_arch()
+{
+	return sysapi_condor_arch();
+}
+
+char*
+my_uname_arch()
+{
+	return sysapi_uname_arch();
+}
+
+char*
+my_opsys()
+{
+	return sysapi_opsys();
+}
 
 
