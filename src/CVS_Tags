@@ -85,3 +85,7 @@
 6/9/94 DecAlpha_a4
 	Fixes memory leak in schedd and problem where condor_rm didn't kill
 	remotely running process.
+6/14/94 DecAlpha_a5
+	Supports generation of "examples" and "doc" directories for binary
+	distribution.
+	
