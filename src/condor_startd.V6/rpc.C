@@ -35,7 +35,6 @@ static char *_FileName_ = __FILE__;
 struct sockaddr_in From;
 extern char *IP;
 extern char *AccountantHost;
-extern char *client;
 
 extern "C" Sock *sock_Udp_Init __P((int *, SafeSock *));	/* XXX */
 extern "C" char *sin_to_string __P((struct sockaddr_in *));
@@ -238,10 +237,10 @@ vacate_client(resource_id_t rid)
 	if (!(rip = resmgr_getbyrid(rid)))
 		return;
 
-	dprintf(D_FULLDEBUG, "vacate_client %s...\n", client);
-	if ((sd = do_connect(client, "condor_schedd", 0)) < 0)
+	dprintf(D_FULLDEBUG, "vacate_client %s...\n", rip->r_client);
+	if ((sd = do_connect(rip->r_client, "condor_schedd", 0)) < 0)
 	{
-		dprintf(D_ALWAYS, "Can't connect to schedd (%s)\n", client);
+		dprintf(D_ALWAYS, "Can't connect to schedd (%s)\n", rip->r_client);
 	}
 	else
 	{
@@ -261,8 +260,10 @@ vacate_client(resource_id_t rid)
 	/* send VACATE_SERVICE and capability to accountant */
 	if (!AccountantHost)
 	{
-		free(client);
-		client = NULL;
+		free(rip->r_client);
+		rip->r_client = NULL;
+		free(rip->r_client);
+		rip->r_client = NULL;
 		free(rip->r_capab);
 		rip->r_capab = NULL;
 		rip->r_claimed = FALSE;
@@ -290,7 +291,7 @@ vacate_client(resource_id_t rid)
 	free(rip->r_capab);
 	rip->r_capab = NULL;
 	rip->r_claimed = FALSE;
-	dprintf(D_ALWAYS, "Done vacating client %s\n", client);
-	free(client);
-	client = NULL;
+	dprintf(D_ALWAYS, "Done vacating client %s\n", rip->r_client);
+	free(rip->r_client);
+	rip->r_client = NULL;
 }
