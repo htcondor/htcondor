@@ -123,7 +123,9 @@ char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
 char    *UserLogFile    = "log";
 char	*CoreSize		= "coresize";
+#if !defined(WIN32)
 char	*KillSig		= "kill_sig";
+#endif
 #if defined(WIN32)
 char	*NullFile		= "NUL";
 #else
@@ -149,7 +151,9 @@ void	SetRank();
 void 	SetIWD();
 void	SetUserLog();
 void	SetCoreSize();
+#if !defined(WIN32)
 void	SetKillSig();
+#endif
 void 	check_iwd( char *iwd );
 int 	read_condor_file( FILE *fp );
 char * 	condor_param( char *name );
@@ -723,7 +727,6 @@ void
 SetArguments()
 {
 	char	*args = condor_param(Arguments);
-	char	argbuf[_POSIX_ARG_MAX + 64];
 
 	if( args == NULL ) {
 		args = "";
@@ -1004,6 +1007,7 @@ SetCoreSize()
 	InsertJobExpr(buffer);
 }
 
+#if !defined(WIN32)
 struct SigTable { int v; char *n; };
 
 static struct SigTable SigNameArray[] = {
@@ -1064,6 +1068,7 @@ SetKillSig()
 	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
 	InsertJobExpr(buffer);
 }
+#endif
 
 int
 read_condor_file( FILE *fp )
@@ -1231,7 +1236,7 @@ strcmpnull(const char *str1, const char *str2)
 void
 queue(int num)
 {
-	char tmp[ BUFSIZ ], *ename, *logfile;
+	char tmp[ BUFSIZ ], *logfile;
 	int		rval;
 
 	/* queue num jobs */
@@ -1268,7 +1273,9 @@ queue(int num)
 		SetNotifyUser();
 		SetUserLog();
 		SetCoreSize();
+#if !defined(WIN32)
 		SetKillSig();
+#endif
 		SetRequirements();
 		SetRank();
 		SetStdFile( 0 );
