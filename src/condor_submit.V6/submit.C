@@ -149,6 +149,7 @@ char	*X509Directory	= "x509directory";
 char	*GlobusScheduler = "globusscheduler";
 char	*GlobusArguments = "globusarguments";
 char	*GlobusExecutable = "globusexecutable";
+char	*GlobusRSL = "globusrsl";
 char	*RendezvousDir	= "rendezvousdir";
 char	*SsleayConf	= "ssleayconf";
 
@@ -1314,6 +1315,11 @@ SetArguments()
 
 #if !defined(WIN32)
 	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		char *rsl;
+		if ( rsl = condor_param(GlobusRSL) ) {
+			strcat( GlobusArgs, rsl );
+			free( rsl );
+		}
 			//put specified args into RSL, then insert GlobusArgs into Ad
 		if ( strcmp( args, "" ) ) {
 				//handle args in either Condor format or Globus RSL format
