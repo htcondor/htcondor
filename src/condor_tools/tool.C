@@ -69,6 +69,11 @@ int cmd_set = 0;
 void
 usage( char *str )
 {
+	if( ! str ) {
+		fprintf( stderr, "Use \"-help\" to see usage information\n" );
+		exit( 1 );
+	}
+
 	char* tmp = strchr( str, '_' );
 	if( !tmp ) {
 		fprintf( stderr, "Usage: %s [command] ", str );
@@ -80,37 +85,41 @@ usage( char *str )
 	if( takes_subsys ) {
 		fprintf( stderr, " [subsystem]" );
 	}
-	fprintf( stderr, "\nwhere [general-options] can be one or more of:\n" );
-	fprintf( stderr, "  -help\t\t\tgives this usage information\n" );
-	fprintf( stderr, "  -version\t\tprints the version\n" );
+	fprintf( stderr, "\nwhere [general-options] can be zero or more of:\n" );
+	fprintf( stderr, "    -help\t\tgives this usage information\n" );
+	fprintf( stderr, "    -version\t\tprints the version\n" );
 	fprintf( stderr, 
-			 "  -pool hostname\tuse the given central manager to find daemons\n" );
+			 "    -pool hostname\tuse the given central manager to find daemons\n" );
 	if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF || cmd == RESTART ) {
-		fprintf( stderr, "  -graceful\t\tgracefully shutdown daemons %s\n", 
+		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
 				 "(the default)" );
-		fprintf( stderr, "  -fast\t\t\tquickly shutdown daemons\n" );
+		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
 	}
-	fprintf( stderr, "where [targets] can be one or more of:\n" );
+	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 #if 0
 		// This isn't supported yet, so don't mention it now.
 	fprintf( stderr, 
 			 "  -all\t\t\tall hosts in your pool (overrides other targets)\n" );
 #endif
-	fprintf( stderr, "  hostname\t\tgiven host\n" );
-	fprintf( stderr, "  <ip.address:port>\tgiven \"sinful string\"\n" );
-	fprintf( stderr, "  (if no target is specified, the local host is used)\n" );
+	fprintf( stderr, "    hostname\t\tgiven host\n" );
+	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
+	fprintf( stderr,
+			 "  (for compatibility with other Condor tools, you can also use:)\n" );
+	fprintf( stderr, "    -name hostname\tgiven host\n" );
+	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
+	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
 	if( takes_subsys ) {
 		fprintf( stderr, "where [subsystem] can be one of:\n" );
 		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
-			fprintf( stderr, "  -master\n" );
+			fprintf( stderr, "    -master\n" );
 		} else {
-			fprintf( stderr, "  -master\t\t(the default)\n" );
+			fprintf( stderr, "    -master\t\t(the default)\n" );
 		}
-		fprintf( stderr, "  -startd\n" );
-		fprintf( stderr, "  -schedd\n" );
-		fprintf( stderr, "  -collector\n" );
-		fprintf( stderr, "  -negotiator\n" );
-		fprintf( stderr, "  -kbdd\n" );
+		fprintf( stderr, "    -startd\n" );
+		fprintf( stderr, "    -schedd\n" );
+		fprintf( stderr, "    -collector\n" );
+		fprintf( stderr, "    -negotiator\n" );
+		fprintf( stderr, "    -kbdd\n" );
 	}
 	fprintf( stderr, "\n" );
 
@@ -146,9 +155,12 @@ usage( char *str )
 				 "and initiate a new negotiation cycle." );
 		break;
 	case VACATE_CLAIM:
-		fprintf( stderr, "  %s %s\n  %s\n", str, 
-				 "causes the condor_startd to checkpoint the running job",
-				 "on specific (possibly virtual) machines." );
+		fprintf( stderr, 
+				 "  %s causes the condor_startd to checkpoint the running\n"
+				 "  job(s) on specific machines.  If you specify a virtual machine\n"
+				 "  (for example, \"vm1@hostname\"), only that machine will be\n"
+				 "  vacated.  If you specify just a hostname, all jobs running under\n"
+				 "  any virtual machine at that host will be vacated.\n", str );
 		break;
 	case VACATE_ALL_CLAIMS:
 		fprintf( stderr, "  %s %s\n  %s\n", str, 
@@ -276,6 +288,8 @@ main( int argc, char *argv[] )
 
 			// If argv[1] begins with '-', print usage, don't append.
 		if( argv[1][0] == '-' ) { 
+				// The one exception is if we got a "condor -v", we
+				// should print the version, not give an error.
 			if( argv[1][1] == 'v' ) {
 				version();
 			} else {
@@ -322,59 +336,140 @@ main( int argc, char *argv[] )
 		cmd = SQUAWK;
 		takes_subsys = 1;
 	} else {
-		fprintf( stderr, "Error: unknown command %s\n", MyName );
+		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
 	}
 	
 		// First, deal with options (begin with '-')
 	tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
-		if( (*tmp)[0] == '-' ) {
-			switch( (*tmp)[1] ) {
-			case 'v':
-				version();
-				break;
-			case 'p':
-				tmp++;
-				if( tmp && *tmp ) {
-					if( (pool = get_full_hostname((const char *)(*tmp))) == NULL ) {
-						fprintf( stderr, "%s: unknown host %s\n", 
-								 MyName, *tmp );
-						exit( 1 );	
-					}
-				} else {
-					usage( MyName );
+		if( (*tmp)[0] != '-' ) {
+				// If it doesn't start with '-', skip it
+			continue;
+		}
+		switch( (*tmp)[1] ) {
+		case 'v':
+			version();
+			break;
+		case 'h':
+			usage( MyName );
+			break;
+		case 'p':
+			tmp++;
+			if( tmp && *tmp ) {
+				if( (pool = get_full_hostname((const char *)(*tmp))) == NULL ) {
+					fprintf( stderr, "%s: unknown host %s\n", MyName, *tmp );
+					exit( 1 );	
 				}
+			} else {
+				fprintf( stderr, "ERROR: -pool requires another argument\n" );
+				usage( NULL );
+			}
+			break;
+		case 'f':
+			fast = 1;
+			switch( cmd ) {
+			case DAEMONS_OFF:
+			case DC_OFF_GRACEFUL:
+			case RESTART:
 				break;
-			case 'f':
-				fast = 1;
-				switch( cmd ) {
-				case DAEMONS_OFF:
-				case DC_OFF_GRACEFUL:
-				case RESTART:
+			default:
+				fprintf( stderr, "ERROR: \"-fast\" is not valid with %s\n",
+						 MyName );
+				usage( NULL );
+			}
+			break;
+		case 'g':
+			fast = 0;
+			break;
+		case 'a':
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'd':
+						// We got a -addr, make sure we've got 
+						// something else after it
+					tmp++;
+					if( ! (tmp && *tmp) ) {
+						fprintf( stderr, 
+								 "ERROR: -addr requires another argument\n" ); 
+						usage( NULL );
+					}
+					break;
+				case 'l':
+						// We got a "-all", remember that
+					all = 1;
 					break;
 				default:
-					fprintf( stderr, "ERROR: \"-fast\" is not valid with %s\n",
-							 MyName );
-					usage( MyName );
+					fprintf( stderr, 
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp ); 
+					usage( NULL );
+					break;
 				}
-				break;
-			case 'g':
-				fast = 0;
-				break;
-			case 'a':
-				all = 1;
-				break;
-			case 'm':
-				subsys_check( MyName );
-				dt = DT_MASTER;
-				break;
-			case 'n':
-				subsys_check( MyName );
-				dt = DT_NEGOTIATOR;
-				break;
-			case 'c':
-				if( (*tmp)[2] && (*tmp)[2] == 'm' ) {	
+			} else {
+					// Until "-all" works, "-a" is not ambiguous,
+					// just treat it as "-addr".
+#if 0
+				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"%s\"\n",
+						 *tmp ); 
+				fprintf( stderr, 
+						 "Please specify \"-addr\" or \"-all\"\n" );
+				usage( NULL );
+#else
+				tmp++;
+				if( ! (tmp && *tmp) ) {
+					fprintf( stderr, 
+							 "ERROR: -addr requires another argument\n" ); 
+					usage( NULL );
+				}
+#endif
+			}
+			break;
+		case 'n':
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'a': 
+						// We got a "-name", make sure we've got 
+						// something else after it
+					tmp++;
+					if( ! (tmp && *tmp) ) {
+						fprintf( stderr, 
+								 "ERROR: -name requires another argument\n" );
+						usage( NULL );
+					}
+					break;
+				case 'e':
+						// We got a "-negotiator"
+					subsys_check( MyName );
+					dt = DT_NEGOTIATOR;
+					break;
+				default:
+					fprintf( stderr, 
+							 "ERROR: invalid option: \"%s\"\n",
+							 *tmp );  
+					usage( NULL );
+					break;
+				}
+			} else {
+				fprintf( stderr, 
+						 "ERROR: ambiguous option: \"%s\"\n",
+						 *tmp ); 
+				fprintf( stderr, 
+						 "Please specify \"-name\" or \"-negotiator\"\n" );
+				usage( NULL );
+			}
+			break;
+		case 'm':
+			subsys_check( MyName );
+			dt = DT_MASTER;
+			break;
+		case 'c':
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'm': 
+						// We got a "-cmd", make sure we've got 
+						// something else after it
 					tmp++;
 					if( tmp && *tmp ) {
 						cmd = atoi( *tmp );
@@ -386,45 +481,70 @@ main( int argc, char *argv[] )
 							exit( 1 );
 						}
 					} else {
-						fprintf( stderr, "ERROR: -cmd requires another argument\n" );
+						fprintf( stderr, 
+								 "ERROR: -cmd requires another argument\n" ); 
 						exit( 1 );
 					}
 					break;
+				case 'o':
+					subsys_check( MyName );
+					dt = DT_COLLECTOR;
+					break;
+				default:
+					fprintf( stderr, 
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp );  
+					usage( NULL );
+					break;
 				}
+			} else {
+					// Since -cmd is a developer-only, hidden
+					// option, just treat "-c" as "-collector". 
+#if 0
+				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"%s\"\n",
+						 *tmp ); 
+				usage( NULL );
+#else
 				subsys_check( MyName );
 				dt = DT_COLLECTOR;
-				break;
-			case 'k':
-				subsys_check( MyName );
-				dt = DT_KBDD;
-				break;
-			case 's':
-				subsys_check( MyName );
-				if( (*tmp)[2] ) {
-					if( (*tmp)[2] == 'c' ) {	
-						dt = DT_SCHEDD;
-						break;
-					}
-					if( (*tmp)[2] == 't' ) {	
-						dt = DT_STARTD;
-						break;
-					}
+#endif
+			}
+			break;
+		case 'k':
+			subsys_check( MyName );
+			dt = DT_KBDD;
+			break;
+		case 's':
+			subsys_check( MyName );
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'c':
+					dt = DT_SCHEDD;
+					break;
+				case 't':
+					dt = DT_STARTD;
+					break;
+				default: 
 					fprintf( stderr, 
 							 "ERROR: invalid subsystem argument \"%s\"\n",
 							 *tmp );
-					usage( MyName );
-				} else {
-					fprintf( stderr, 
-							 "ERROR: ambiguous subsystem argument \"%s\"\n",
-							 *tmp );
-					usage( MyName );
+					usage( NULL );
+					break;
 				}
-				break;
-			default:
-				fprintf( stderr, "ERROR: invalid argument \"%s\"\n",
+			} else {
+				fprintf( stderr, 
+						 "ERROR: ambiguous subsystem argument \"%s\"\n",
 						 *tmp );
-				usage( MyName );
+				fprintf( stderr, 
+						 "Please specify \"-startd\" or \"-schedd\"\n" );
+				usage( NULL );
 			}
+			break;
+		default:
+			fprintf( stderr, "ERROR: invalid argument \"%s\"\n",
+					 *tmp );
+			usage( MyName );
 		}
 	}
 
@@ -464,7 +584,8 @@ main( int argc, char *argv[] )
 				// Some command-line arg we already dealt with
 			if( (*argv)[1] == 'p' || 
 				((*argv)[1] == 'c' && (*argv)[2] == 'm') ) {
-					// If it's -pool or -cmd, we want to skip the next arg, too.
+					// If it's -pool or -cmd, we want to skip the next
+					// arg, too.
 				argv++;
 			}
 			continue;
@@ -693,7 +814,7 @@ void
 version()
 {
 	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
-	exit(0);
+	exit( 0 );
 }
 
 
@@ -738,6 +859,8 @@ void
 handleAll()
 {
 		// Todo *grin*
+	fprintf( stderr, "ERROR: The -all option is not yet implemented\n" );
+	exit( 1 );
 }
 
 void
