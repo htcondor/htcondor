@@ -721,7 +721,7 @@ obtainAdsFromCollector (
 	QueryResult result;
 	ClassAd *ad, *oldAd;
 	MapEntry *oldAdEntry;
-	int newSequence, oldSequence, MaxMatches;
+	int newSequence, oldSequence, MaxMatches, reevaluate_ad;
 	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
@@ -743,9 +743,15 @@ obtainAdsFromCollector (
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
 		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
+
+			// first, let's make sure that will want to actually use this
+			// ad, and if we can use it (old startds had no seq. number)
+			reevaluate_ad = false; 
+			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad) 
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
-			if( newSequence != -1) {
+
+			if( reevaluate_ad && newSequence != -1 ) {
 				ad->LookupString(ATTR_NAME, remoteHost);
 				oldAd = NULL;
 				oldAdEntry = NULL;
@@ -769,6 +775,18 @@ obtainAdsFromCollector (
 					me->oldAd = new ClassAd(*ad); 
 					stashedAds->insert(rhost, me); 
 				} else {
+					/*
+					  We have a stashed copy of this ad, and it's the
+					  the same or a more recent sequence number, and we
+					  we don't want to use the one in allAds. However, 
+					  we need to make sure that the "stashed" ad gets into
+					  allAds for this negotiation cycle, but we don't want 
+					  to get stuck in a loop evaluating the, so we remove
+					  the sequence number before we put it into allAds - this
+					  way, when we encounter it a few iteration later we
+					  won't reconsider it
+					*/
+
 					allAds.Delete(ad);
 					ad = new ClassAd(*(oldAdEntry->oldAd));
 					ad->Delete(ATTR_UPDATE_SEQUENCE_NUMBER);
@@ -1549,7 +1567,7 @@ reeval(ClassAd *ad)
 
 	ad->LookupString(ATTR_NAME, remoteHost);
 	MyString rhost(remoteHost);
-    stashedAds->lookup( rhost, oldAdEntry);
+	stashedAds->lookup( rhost, oldAdEntry);
 		
 	cur_matches++;
 	ad->InsertOrUpdate(buffer);
