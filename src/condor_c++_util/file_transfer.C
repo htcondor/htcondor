@@ -200,7 +200,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 		set_seed( time(NULL) + (unsigned)this + (unsigned)Ad );
 	}
 
-	if (Ad->LookupString(ATTR_TRANSFER_KEY, buf) != 1) {
+	if (Ad->EvaluateAttrString(ATTR_TRANSFER_KEY, buf, ATTRLIST_MAX_EXPRESSION) != 1) {
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
@@ -208,15 +208,13 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			get_random_int(),get_random_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
-		Ad->InsertOrUpdate(tempbuf);
+		Ad->InsertAttr(ATTR_TRANSFER_KEY,TransKey);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
 		char *mysocket = daemonCore->InfoCommandSinfulString();
 		ASSERT(mysocket);
-		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_SOCKET,mysocket);
-		Ad->InsertOrUpdate(tempbuf);
+		Ad->InsertAttr(ATTR_TRANSFER_SOCKET,mysocket);
 	} else {
 		// Here the ad we were given already has a Transfer Key.
 		TransKey = strdup(buf);
@@ -224,7 +222,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	}
 
 	// user must give us an initial working directory.
-	if (Ad->LookupString(ATTR_JOB_IWD, buf) != 1) {
+	if (!Ad->EvaluateAttrString(ATTR_JOB_IWD, buf, ATTRLIST_MAX_EXPRESSION)) {
 		return 0;
 	}
 	Iwd = strdup(buf);
@@ -232,7 +230,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	// if the user want us to check file permissions, pull out the Owner
 	// from the classad and instantiate a perm object.
 	if ( want_check_perms ) {
-		if (Ad->LookupString(ATTR_OWNER, buf) != 1) {
+		if (!Ad->EvaluateAttrString(ATTR_OWNER, buf, ATTRLIST_MAX_EXPRESSION)) {
 			// no owner specified in ad
 			return 0;		
 		}
@@ -240,7 +238,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 		// lookup the domain
 		char ntdomain[80];
 		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain) != 1) {
+		if (!Ad->EvaluateAttrString(ATTR_NT_DOMAIN, ntdomain)) {
 			// no nt domain specified in the ad; assume local account
 			p_ntdomain = NULL;
 		}
@@ -257,19 +255,19 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 
 	// Set InputFiles to be ATTR_TRANSFER_INPUT_FILES plus 
 	// ATTR_JOB_INPUT, ATTR_JOB_CMD.
-	if (Ad->LookupString(ATTR_TRANSFER_INPUT_FILES, buf) == 1) {
+	if (Ad->EvaluateAttrString(ATTR_TRANSFER_INPUT_FILES, buf, ATTRLIST_MAX_EXPRESSION)) {
 		InputFiles = new StringList(buf,",");
 	} else {
 		InputFiles = new StringList(NULL,",");
 	}
-	if (Ad->LookupString(ATTR_JOB_INPUT, buf) == 1) {
+	if (Ad->EvaluateAttrString(ATTR_JOB_INPUT,buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( strcmp(buf,NULL_FILE) != 0 ) {			
 			if ( !InputFiles->contains(buf) )
 				InputFiles->append(buf);			
 		}
 	}
-	if ( IsServer() && (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) {
+	if ( IsServer() && Ad->EvaluateAttrString(ATTR_JOB_CMD, buf, ATTRLIST_MAX_EXPRESSION) ) {
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
 		// client machine.  if an executable for this cluster exists
@@ -279,8 +277,8 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 		int Cluster = 0;
 		int Proc = 0;
 
-		Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
-		Ad->LookupInteger(ATTR_PROC_ID, Proc);
+		Ad->EvaluateAttrInt(ATTR_CLUSTER_ID, Cluster);
+		Ad->EvaluateAttrInt(ATTR_PROC_ID, Proc);
 		Spool = param("SPOOL");
 		if ( Spool ) {
 
@@ -328,14 +326,14 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	// Set OutputFiles to be ATTR_TRANSFER_OUTPUT_FILES if specified.
 	// If not specified, set it to send whatever files have changed.
 	// Also add in ATTR_JOB_OUPUT plus ATTR_JOB_ERROR.
-	if (Ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, buf) == 1) {
+	if (Ad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES, buf, ATTRLIST_MAX_EXPRESSION)) {
 		OutputFiles = new StringList(buf,",");
 	} else {
 		// send back new/changed files after the run
 		upload_changed_files = true;
 	}
 	// and now check stdout/err
-	if (Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1) {
+	if (Ad->EvaluateAttrString(ATTR_JOB_OUTPUT, buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
@@ -345,7 +343,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 				OutputFiles = new StringList(buf,",");
 		}
 	}
-	if (Ad->LookupString(ATTR_JOB_ERROR, buf) == 1) {
+	if (Ad->EvaluateAttrString(ATTR_JOB_ERROR, buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
@@ -357,7 +355,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	}
 
 
-	if (Ad->LookupString(ATTR_TRANSFER_SOCKET, buf) != 1) {
+	if (Ad->EvaluateAttrString(ATTR_TRANSFER_SOCKET, buf, ATTRLIST_MAX_EXPRESSION)) {
 		return 0;		
 	}
 	TransSock = strdup(buf);

@@ -221,8 +221,9 @@ VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 $(SITE_C_FLAGS) $(AUTH_FLAGS)
 
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
-STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
-INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
+STD_C_PLUS_FLAGS  = $(STD_C_FLAGS)
+INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
+NON_INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -fno-implicit-templates
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
@@ -234,7 +235,7 @@ TESTSUITE_FLAGS_F77 = -g $(VENDOR_C_FLAGS) VendorFTestFlags PlatformFlags
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad/libclassad.a
+CLASSAD_LIB = ../condor_classad.V6/libclassad.a
 IO_LIB = ../condor_io/libcedar.a
 CUTIL_LIB = ../condor_util_lib/util_lib.a
 CPLUS_LIB = ../condor_c++_util/cplus_lib.a

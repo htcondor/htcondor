@@ -27,13 +27,6 @@ alarm.h
     Defines Alarm object. It can be used to set an alarm timer,
     suspend the timer, resume timing, or cancel the alarm.
 
-alloc.C
-alloc.h
-
-    Defines operators new and delete which call malloc and free
-    respectively. Also keeps track of the number of news or deletes
-    called.
-
 carmi_context.C
 carmi_context.h
 

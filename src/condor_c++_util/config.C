@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "condor_classad.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -60,10 +61,12 @@ condor_isalnum(int c)
 int Read_config( char* config_file, BUCKET** table, 
 				 int table_size, int expand_flag )
 {
-  	FILE	*conf_fp;
-	char	*name, *value, *rhs;
-	char	*ptr;
-	char	op;
+  	FILE			*conf_fp;
+	char			*name, *value, *rhs;
+	char			*ptr;
+	char			op;
+	ClassAdParser	parser;
+	ExprTree		*expr;
 
 	ConfigLineNo = 0;
 
@@ -199,7 +202,7 @@ int Read_config( char* config_file, BUCKET** table,
 ** 0 <= value < size 
 */
 int
-hash( register char *string, register int size )
+config_hash( register char *string, register int size )
 {
 	register unsigned int		answer;
 
@@ -228,7 +231,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 		/* Make sure not already in hash table */
 	strcpy( tmp_name, name );
 	lower_case( tmp_name );
-	loc = hash( tmp_name, table_size );
+	loc = config_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
 			FREE( ptr->value );
@@ -491,7 +494,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 
 	strcpy( tmp_name, name );
 	lower_case( tmp_name );
-	loc = hash( tmp_name, table_size );
+	loc = config_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {
 			return ptr->value;

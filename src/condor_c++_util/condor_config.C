@@ -60,7 +60,6 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
-#include "condor_scanner.h"		// for MAXVARNAME, etc
 
 extern "C" {
 	
@@ -93,19 +92,21 @@ BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
 extern char **environ;
 
+static char* _FileName_ = __FILE__;
 
 // Function implementations
 
 void
 config_fill_ad( ClassAd* ad )
 {
-	char 		buffer[1024];
-	char 		*tmp;
-	char		*expr;
-	StringList	reqdExprs;
+	char 			buffer[1024];
+	char 			*tmp;
+	char			*expr;
+	StringList		reqdExprs;
+	ClassAdParser	parser;
+	ExprTree		*exprTree;
 	
 	if( !ad ) return;
-
 	sprintf (buffer, "%s_EXPRS", mySubSystem);
 	tmp = param (buffer);
 	if( tmp ) {
@@ -116,8 +117,10 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			sprintf (buffer, "%s = %s", tmp, expr);
-			ad->Insert (buffer);
+			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
+				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
+			}
+			ad->Insert (tmp, exprTree);
 			free (expr);
 		}	
 	}
@@ -132,18 +135,30 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			sprintf (buffer, "%s = %s", tmp, expr);
-			ad->Insert (buffer);
+			if( !( exprTree = parser.ParseExpression( expr ) ) ) {
+				EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
+			}
+			ad->Insert (tmp, exprTree);
 			free (expr);
 		}	
 	}
+	if( !( tmp = param (buffer) ) ) return;
+	reqdExprs.initializeFromString (tmp);	
+	free (tmp);
+
+	reqdExprs.rewind();
+	while ((tmp = reqdExprs.next())) {
+		if( ( expr = param(tmp) ) == NULL ) continue;
+		if( !parser.ParseExpression( expr, exprTree ) ) {
+			EXCEPT( "Error parsing: %s (%s)\n",expr,CondorErrMsg.c_str() );
+		}
+		ad->Insert( tmp, exprTree );
+		free (expr);
+	}
 	
 	/* Insert the version into the ClassAd */
-	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
-	ad->Insert(buffer);
-
-	sprintf(buffer,"%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
-	ad->Insert(buffer);
+	ad->InsertAttr(ATTR_VERSION, CondorVersion( ));
+	ad->InsertAttr(ATTR_PLATFORM, CondorPlatform( ));
 }
 
 
@@ -267,7 +282,7 @@ real_config(char* host, int wantsQuiet)
 		// Now, insert any macros defined in the environment.  Note we do
 		// this before the root config file!
 	{
-		char varname[MAXVARNAME];
+		char varname[10240];
 		char *thisvar;
 		int i,j;
 		char *varvalue;

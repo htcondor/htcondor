@@ -4,7 +4,7 @@
 .SUFFIXES: .C
 
 .C.o:
-	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
+	$(CPlusPlus) $(NON_INST_C_PLUS_FLAGS) -c $<
 
 .f.o:
 	$(Fortran) $(FFLAGS) -c $<
@@ -71,9 +71,9 @@ all:: targetlist
 #define library_target( libname, objlist )		@@\
 libname: objlist					@@\
 	rm -f libname					@@\
-	AR_REPLACE( libname, objlist )			@@\
+	AR_REPLACE( libname, objlist )	@@\
 clean::							@@\
-	rm -f libname objlist
+	rm -f libname 
 #endif /* library_target */
 
 
@@ -85,8 +85,8 @@ clean::							@@\
 program: objlist libs						@@\
 	$(C_LINK) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::								@@\
-	rm -f program objlist
-#endif  program_target
+	rm -f program 
+#endif  /* program_target */
 
 
 /*
@@ -95,11 +95,11 @@ clean::								@@\
 #ifndef c_plus_target
 #define	c_plus_target( program, objlist, libs )			@@\
 program: objlist libs						@@\
-	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
+	$(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
 clean::								@@\
 	rm -f program objlist
-#endif  c_plus_target
+#endif  /* c_plus_target */
 
 
 /*
@@ -293,7 +293,7 @@ dir##/##program: program##.static				@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
 	$(STRIP) dir##/##program				@@\
 program##.static: objlist libs					@@\
-	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
+	$(CC_LINK) $(STATIC)  $(NON_INST_C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
 clean:: 							@@\
 	rm -f program##.static objlist				@@\
 static:: dir##/##program
@@ -503,20 +503,20 @@ static_dir/##name##: static					@@\
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purecov -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
+	purecov -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs						@@\
-	quantify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
+	quantify -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
 clean::		 						@@\
 	rm -f program objlist
 

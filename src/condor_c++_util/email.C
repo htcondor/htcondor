@@ -38,9 +38,9 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	int cluster = 0, proc = 0;
     int notification = NOTIFY_COMPLETE; // default
 
-    jobAd->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
-	jobAd->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	jobAd->LookupInteger( ATTR_PROC_ID, proc );
+    jobAd->EvaluateAttrInt( ATTR_JOB_NOTIFICATION, notification );
+	jobAd->EvaluateAttrInt( ATTR_CLUSTER_ID, cluster );
+	jobAd->EvaluateAttrInt( ATTR_PROC_ID, proc );
 
     switch( notification ) {
 	case NOTIFY_NEVER:
@@ -65,10 +65,10 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	  Job may have an email address to whom the notification
 	  message should go.  This info is in the classad.
     */
-    if ( (!jobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) ||
+    if ( (!jobAd->EvaluateAttrString(ATTR_NOTIFY_USER, email_addr, 256)) ||
          (email_addr[0] == '\0') ) {
 			// no email address specified in the job ad; try owner 
-		if ( (!jobAd->LookupString(ATTR_OWNER, email_addr)) ||
+		if ( (!jobAd->EvaluateAttrString(ATTR_OWNER, email_addr, 256)) ||
 			 (email_addr[0] == '\0') ) {
 				// we're screwed, give up.
 			return NULL;
@@ -80,7 +80,7 @@ email_user_open( ClassAd *jobAd, const char *subject )
 			// Note: UID_DOMAIN is set to the fullhostname by default.
 		char domain[256];
 		domain[0] = '\0';
-		if ( (!jobAd->LookupString(ATTR_UID_DOMAIN, domain)) ||
+		if ( (!jobAd->EvaluateAttrString(ATTR_UID_DOMAIN, domain, 256)) ||
 			 (domain[0] == '\0') ) {
 				// No uid domain!  Use fullhostname
 			strcat( domain, my_full_hostname() );

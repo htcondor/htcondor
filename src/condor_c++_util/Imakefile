@@ -7,21 +7,21 @@ LIB = $(STD_LIBS)
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
-API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
-			condor_event.o user_log.o
+API_OBJ = /* generic_query.o condor_query.o condor_q.o ad_printmask.o \
+			condor_event.o user_log.o */
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-	alarm.o alloc.o \
+	alarm.o \
 	directory.o my_hostname.o file_lock.o \
 	email.o environ.o c++_util_instantiate.o \
 	string_list.o condor_event.o $(URL_OBJ) get_daemon_addr.o \
 	user_log.o config.o condor_config.o stringSpace.o condor_state.o $(API_OBJ)\
-	classad_hashtable.o classad_log.o log_transaction.o log.o \
-	classad_collection.o usagemon.o \
+	usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	daemon.o uids.o metric_units.o condor_ver_info.o
+	/* daemon.o */ \
+	uids.o metric_units.o condor_ver_info.o
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -47,6 +47,7 @@ c_plus_target(my_hostname.t, my_hostname.t.o, $(LIB))
 pure_c_plus_target(my_hostname.t.pure, my_hostname.t.o, $(LIB))
 purecov_c_plus_target(my_hostname.t.pc, my_hostname.t.o, $(LIB))
 
+template_inst( c++_util_instantiate.C, c++_util_instantiate.o )
 html_target( documentation )
 
 all-tests: access.t killfamily.t daemon.t test_locks my_hostname.t

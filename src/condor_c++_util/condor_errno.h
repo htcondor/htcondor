@@ -20,37 +20,25 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef __CLASSAD_PACKAGE_H__
-#define __CLASSAD_PACKAGE_H__
 
-#include "../condor_classad.V6/common.h"
-#include "../condor_classad.V6/exprTree.h"
-#include "../condor_classad.V6/matchClassad.h"
-#include "../condor_classad.V6/collectionServer.h"
-#include "../condor_classad.V6/collectionClient.h"
-#include "../condor_classad.V6/query.h"
+#ifndef __CONDOR_ERRNO_H__
+#define __CONDOR_ERRNO_H__
 
-// The following code is only temporary, and should be removed after the
-// rest of condor code starts explicitly using namespaces such as classad::
-// and condor:: and dagman:: in class names and meathods.
-#if defined( WANT_NAMESPACES )
-using namespace classad;
+
+extern int 		CondorErrno;
+
+#ifdef __cplusplus
+#include <string> 
+extern string	CondorErrMsg;
 #endif
 
-#include "condor_attributes.h"
-#include "condor_adtypes.h"
-#include "condor_io.h"
+static const int ERR_OK = 0;
 
-BEGIN_NAMESPACE( classad )
+/* Error numbers 1--255 reserved for general system level errors */
+static const int ERR_MEM_ALLOC_FAILED = 1;	// if malloc() or new() fails
 
-void printClassAdExpr( ExprTree * );
-void printClassAdValue( Value & );
-ClassAd* getOldClassAd( Stream* );
-bool getOldClassAd( Stream*, ClassAd& );
-bool putOldClassAd( Stream*, ClassAd& );
+/* Error numbers 255--1024 reserved for classad/classad collection errors */
+#include "../condor_classad.V6/classadErrno.h"
 
-static const int ATTRLIST_MAX_EXPRESSION = 10240;
-
-END_NAMESPACE
 
 #endif

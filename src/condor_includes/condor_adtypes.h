@@ -29,15 +29,15 @@
 /* these should really be const, but that causes problems with 
    ClassAd::SetMyTypeName and ClassAd::SetTargetTypeName.  -Jim B. */
 
-static char STARTD_ADTYPE		[] = "Machine";
-static char SCHEDD_ADTYPE		[] = "Scheduler";
-static char MASTER_ADTYPE		[] = "DaemonMaster";
-static char CKPT_SRVR_ADTYPE	[] = "CkptServer";
-static char JOB_ADTYPE	 		[] = "Job";
-static char QUERY_ADTYPE		[] = "Query";
-static char COLLECTOR_ADTYPE	[] = "Collector";
-static char CKPT_FILE_ADTYPE	[] = "CkptFile";
-static char USERAUTH_ADTYPE   [] = "Authentication"; //mikeu added 
-static char LICENSE_ADTYPE		[] = "License";
+static const char STARTD_ADTYPE		[] = "Machine";
+static const char SCHEDD_ADTYPE		[] = "Scheduler";
+static const char MASTER_ADTYPE		[] = "DaemonMaster";
+static const char CKPT_SRVR_ADTYPE	[] = "CkptServer";
+static const char JOB_ADTYPE	 	[] = "Job";
+static const char QUERY_ADTYPE		[] = "Query";
+static const char COLLECTOR_ADTYPE	[] = "Collector";
+static const char CKPT_FILE_ADTYPE	[] = "CkptFile";
+static const char USERAUTH_ADTYPE   [] = "Authentication"; //mikeu added 
+static const char LICENSE_ADTYPE	[] = "License";
 
 #endif
