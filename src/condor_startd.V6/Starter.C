@@ -405,9 +405,7 @@ Starter::spawn( start_info_t* info )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
-		s_procfam = new ProcFamily( s_pid, PRIV_ROOT, resmgr->m_proc );
-		dprintf( D_PROCFAMILY, 
-				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
+		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
 		recompute_pidfamily();
 	}
 	return s_pid;

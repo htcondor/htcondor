@@ -820,10 +820,9 @@ Resource::compute_condor_load( void )
 			::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 		}
 
-		if( (resmgr->m_proc->
-			 getProcSetInfo(r_starter->pidfamily(), 
-							r_starter->pidfamily_size(),  
-							pinfo) < -1) ) {
+		if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
+									  r_starter->pidfamily_size(),  
+									  pinfo) < -1) ) {
 				// If we failed, it might be b/c our pid family has
 				// stale info, so before we give up for real,
 				// recompute and try once more.
@@ -838,10 +837,9 @@ Resource::compute_condor_load( void )
 				::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 			}
 
-			if( (resmgr->m_proc->
-				 getProcSetInfo(r_starter->pidfamily(), 
-								r_starter->pidfamily_size(),  
-								pinfo) < -1) ) {
+			if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
+										  r_starter->pidfamily_size(),  
+										  pinfo) < -1) ) {
 				EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
 			}
 		}

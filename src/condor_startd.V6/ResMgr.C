@@ -34,7 +34,6 @@ ResMgr::ResMgr()
 	up_tid = -1;
 	poll_tid = -1;
 
-	m_proc = new ProcAPI;
 	m_attr = new MachAttributes;
 	id_disp = NULL;
 
@@ -52,7 +51,6 @@ ResMgr::~ResMgr()
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
 	delete m_attr;
-	delete m_proc;
 	delete coll_sock;
 	if( view_sock ) {
 		delete view_sock;

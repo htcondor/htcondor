@@ -131,8 +131,6 @@ public:
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
 	
-	ProcAPI*		m_proc;		// Info from /proc about this machine 
-
 	ClassAd*	totals_classad;
 	ClassAd*	config_classad;
 
