@@ -94,7 +94,7 @@ CONTEXT	*context;
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 	if( (pw=getpwnam(USER_NAME)) == NULL ) {
-		printf( "Can't find user \"condor\" in passwd file!\n" );
+		printf( "Can't find user \"%s\" in passwd file!\n", USER_NAME );
 		exit( 1 );
 	}
 	(void)endpwent();
