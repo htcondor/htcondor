@@ -59,7 +59,7 @@ class StatTable {
 
 */
 
-enum {RANGE, FIXED};            // used by VarTypeTable and Sel_best_mach()
+enum {RANGE, VTAB_FIXED};            // used by VarTypeTable and Sel_best_mach()
 
 class VTableEntry {
 
