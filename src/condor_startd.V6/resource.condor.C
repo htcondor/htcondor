@@ -22,9 +22,6 @@
 #include "event.h"
 
 extern int Last_X_Event;
-extern int polls;
-extern int polls_per_update_load;
-extern int polls_per_update_kbdd;
 extern char *exec_path;
 extern char *Starter;
 extern int run_benchmarks;
@@ -172,7 +169,7 @@ resource_params(resource_id_t rid, job_id_t jid, task_id_t tid,
 		return -1;
 
 	if (rid != NO_RID) {
-		old->res.res_load = get_load_avg();
+		old->res.res_load = calc_load_avg();
 		dprintf(D_FULLDEBUG, "load avg: %f\n", old->res.res_load);
 		old->res.res_memavail = calc_virt_memory();
 		old->res.res_diskavail = calc_disk();
@@ -725,7 +722,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 	int now;
 	struct utmp utmp;
 	ELEM temp;
-	static int oldval = 0, console_oldval = 0, kbdd_counter = 0;
 #if defined(HPUX9) || defined(LINUX)	/*Linux uses /dev/mouse	*/
 	int i;
 	char devname[MAXPATHLEN];
@@ -733,14 +729,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 
 	console_idle = -1;  // initialize
 
-	if (oldval != 0 && (rip == NULL || rip->r_state != JOB_RUNNING) &&
-		++kbdd_counter != polls_per_update_kbdd) {
-		user_idle = oldval;
-		console_idle = console_oldval;
-		return;
-	}
-
-	kbdd_counter = 0;
 	user_idle = tty_pty_idle_time();
 	dprintf( D_FULLDEBUG, "ttys/ptys idle %d seconds\n",  user_idle );
 
@@ -809,8 +797,6 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 
 	dprintf(D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
 			user_idle,console_idle);
-	oldval = user_idle;
-	console_oldval = console_idle;
 	return;
 }
 
@@ -908,33 +894,28 @@ static void init_static_info(resource_info_t* rip)
 	config_context->Insert(tmp);
   
 	host_cell = get_host_cell();
-	if(host_cell)
-		{
-			sprintf(tmp,"AFS_CELL=\"%s\"",host_cell);
-			config_context->Insert(tmp);
-			dprintf(D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell);
-		}
-	else
-		{
-			dprintf(D_ALWAYS, "AFS_Cell not set\n");
-		}
+	if(host_cell) {
+		sprintf(tmp,"AFS_CELL=\"%s\"",host_cell);
+		config_context->Insert(tmp);
+		dprintf(D_ALWAYS, "AFS_Cell = \"%s\"\n", host_cell);
+	} else {
+		dprintf(D_ALWAYS, "AFS_Cell not set\n");
+	}
   
 	/*
 	 * If the uid domain is not defined, accept uid's only from this
 	 * machine.
 	 */
-	if ((ptr = param("UID_DOMAIN")) == NULL) 
-		{
-			ptr = get_full_hostname();
-		}
+	if ((ptr = param("UID_DOMAIN")) == NULL) {
+		ptr = get_full_hostname();
+	}
   
 	/*
 	 * If the uid domain is defined as "*", accept uid's from anybody.
 	 */
-	if( ptr[0] == '*' ) 
-		{
-			ptr = "";
-		}
+	if( ptr[0] == '*' ) {
+		ptr = "";
+	}
 
 	dprintf(D_ALWAYS, "UidDomain = \"%s\"\n", ptr);
   
@@ -945,10 +926,9 @@ static void init_static_info(resource_info_t* rip)
 	 * If the filesystem domain is not defined, we share files only
 	 * with our own machine.
 	 */
-	if ((ptr = param("FILESYSTEM_DOMAIN")) == NULL) 
-		{
-			ptr = get_full_hostname();
-		}
+	if ((ptr = param("FILESYSTEM_DOMAIN")) == NULL) {
+		ptr = get_full_hostname();
+	}
   
 	/*
 	 * If the filesystem domain is defined as "*", assume we share
@@ -981,11 +961,10 @@ static void init_static_info(resource_info_t* rip)
   
 	phys_memory = calc_phys_memory();
 
-	if (phys_memory > 0) 
-		{
-			sprintf(tmp,"Memory=%d",phys_memory);
-			config_context->Insert(tmp);
-		}
+	if (phys_memory > 0) {
+		sprintf(tmp,"Memory=%d",phys_memory);
+		config_context->Insert(tmp);
+	}
   
 	addrname = (char *)malloc(32);
 	getsockname(rip->r_sock, (struct sockaddr *)&sin, &len);
@@ -1022,22 +1001,6 @@ get_full_hostname()
 	strcpy(answer, host_ptr->h_name);
 
 	return answer;
-}
-
-static float
-get_load_avg()
-{
-	static int first = 1;
-	static float oldval;
-	static int load_counter = 0;
-
-	if (++load_counter != polls_per_update_load && !first)
-		return oldval;
-	first = 0;
-	load_counter = 0;
-	oldval = calc_load_avg();
-	dprintf(D_ALWAYS, "calc_load_avg -> %f\n", oldval);
-	return oldval;
 }
 
 static int
