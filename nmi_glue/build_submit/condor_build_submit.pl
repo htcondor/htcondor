@@ -60,6 +60,10 @@ else {
     $notify = "condor-build\@cs.wisc.edu";
 }
 
+my $cwd = &getcwd();
+mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+chdir($workspace) || die "Can't chdir($workspace): $!\n";
+
 if ( defined($opt_tag) or defined($opt_module) ) {
     print "You specified --tag=$opt_tag and --module-$opt_module\n";
     if ( defined ($opt_tag) and defined($opt_module) ) {
@@ -67,6 +71,8 @@ if ( defined($opt_tag) or defined($opt_module) ) {
     } else {
         print "ERROR: You need to specify both --tag and --module\n";
 	CondorGlue::printBuildUsage();
+        chdir($cwd);
+        CondorGlue::run("rm -rf $workspace", 0);
         exit 1;
     }
 }
@@ -76,13 +82,11 @@ elsif ( defined($opt_nightly) ) {
 else {
     print "You need to have --tag with --module or --nightly\n";
     CondorGlue::printBuildUsage();
+    chdir($cwd);
+    CondorGlue::run("rm -rf $workspace", 0);
     exit 1;
 }
 
-
-my $cwd = &getcwd();
-mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
-chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 while ( my($tag, $module) = each(%tags) ) {
     my $cmdfile = &generate_cmdfile($tag, $module);
