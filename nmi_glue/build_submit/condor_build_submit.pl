@@ -55,6 +55,10 @@ sub customizeCmdFile() {
     #print $fh "post_all = nmi_glue/build/post_all\n";
     #print $fh "post_all_args = $tag $module\n";
 
+    # print the tag and module in the cmdfile as the user variables
+    print $fh "tag = $tag\n";
+    print $fh "module = $module\n";
+
     # misc administrative stuff
     CondorGlue::printPrereqs( *$fh );
 }
