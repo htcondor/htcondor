@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "HashTable.h"
 #include "hashkey.h"
-#include "sched.h"
 #include "condor_attributes.h"
 
 #ifndef WIN32

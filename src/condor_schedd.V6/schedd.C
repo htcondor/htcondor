@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "sched.h"
 #include "dedicated_scheduler.h"
 #include "condor_config.h"
 #include "condor_debug.h"

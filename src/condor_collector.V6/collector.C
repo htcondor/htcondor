@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_parser.h"
-#include "sched.h"
 #include "condor_status.h"
 #include "condor_debug.h"
 #include "condor_config.h"

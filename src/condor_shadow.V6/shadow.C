@@ -33,6 +33,7 @@
 #include "condor_adtypes.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
+#include "condor_commands.h"
 #include "condor_config.h"
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
@@ -48,7 +49,6 @@
 #include "syscall.aix.h"
 #endif
 
-#include "sched.h"
 #include "debug.h"
 #include "fileno.h"
 #include "exit.h"

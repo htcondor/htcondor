@@ -1,7 +1,6 @@
 #ifndef _COLLECTOR_DAEMON_H_
 #define _COLLECTOR_DAEMON_H_
 
-//#include "sched.h"
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "../condor_status.V6/totals.h"

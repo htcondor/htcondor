@@ -30,7 +30,6 @@
 #include "my_hostname.h"
 #include "get_daemon_name.h"
 
-#include "sched.h"
 #include "exit.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"

@@ -30,11 +30,14 @@
 #include "fake_flock.h"
 #endif
 
+/*
 typedef struct {
 	int		p_disk_avail;
 	char	*p_host;
 } PERM;
+*/
 
+/*
 typedef struct {
 	int		s_users;
 	int		s_wanting;
@@ -43,11 +46,14 @@ typedef struct {
 	int		s_disk_avail;
 	int		s_disk_wanted;
 } STATUS;
+*/
+
 
 typedef struct {
 	int		port1;
 	int		port2;
 } PORTS;
+
 
 #ifdef JUNK
 typedef struct {
@@ -68,20 +74,25 @@ typedef struct {
 	STATE_CHANGE	*changes;
 } STATISTICS;
 
+#error Junk is defined!
+
 typedef struct {
 	int		add_flags;
 	int		del_flags;
 } FLAGS;
 #endif /* JUNK */
 
+/*
 typedef struct {
 	int		pid;
 	int		job_id;
 	int		umbilical;
 } SHADOW_REC;
+*/
 
 #if !defined(WIN32)	// no time_t in WIN32
 
+/*
 typedef struct {
 	int		clusterId;
 	int		procId;
@@ -92,17 +103,23 @@ typedef struct {
 	time_t	cpuTime;
 } COMPLETED_JOB_INFO;
 
+*/
+
+/*
 typedef struct {
 	char*       capability;
 	char*       server;
 } FIN_MATCHES;
+*/
 
+/*
 typedef struct {
 	int		clusterID;
 	int		procID;
 	time_t	startTime;
 	char*	host;
 } RUNNING_JOB_INFO;
+*/
 
 #endif // if !defined(WIN32)
 
@@ -113,7 +130,10 @@ typedef struct {        /* record sent by startd to shadow */
 	char*   server_name;/* name of executing machine */
 } StartdRec;
 	/* Startd version numbers : always negative  */
+
 #define VERSION_FOR_FLOCK   -1
+
+#if 0
 
 #include "condor_commands.h" /* for command id constants */
 
@@ -163,4 +183,6 @@ typedef struct {        /* record sent by startd to shadow */
 #define	MATCH_ACTIVE		1					/* match record status */
 #define	NOTMATCHED			0
 
+#error This should all be shut off
+#endif
 #endif

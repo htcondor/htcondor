@@ -41,6 +41,7 @@
 #include "condor_common.h"
 #include "reli_sock.h"
 #include "condor_attributes.h"
+#include "condor_commands.h"
 #include "condor_classad.h"  // god only knows why I must include this!
 #include "condor_distribution.h"
 #include "condor_environ.h"

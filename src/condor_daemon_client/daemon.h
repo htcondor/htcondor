@@ -29,6 +29,7 @@
 #include "condor_classad.h"
 #include "condor_collector.h"
 #include "condor_secman.h"
+#include "condor_network.h" // For the port numbers...
 #include "daemon_types.h"
 #include "KeyCache.h"
 

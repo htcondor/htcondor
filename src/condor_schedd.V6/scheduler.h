@@ -38,7 +38,6 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
-#include "sched.h"
 #include "prio_rec.h"
 #include "HashTable.h"
 #include "string_list.h"
@@ -86,6 +85,7 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
+#define SIZE_OF_CAPABILITY_STRING 40 /* see also matchmater.C */
 class match_rec
 {
  public:
