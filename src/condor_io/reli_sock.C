@@ -1090,7 +1090,11 @@ int ReliSock::RcvMsg::rcv_packet(SOCKET _sock,
         }
         if(FD_ISSET(_sock, &rdfds)) {
             tmp_len = recv(_sock, hdr+len, 5-len, 0);
-            if (tmp_len <= 0) {
+            if (tmp_len == 0) {
+                if(timer) free(timer);
+                dprintf(D_ALWAYS, "ReliSock::rcv_packet: peer closed prematurely\n");
+                return FALSE;
+            } else if (tmp_len <= 0) {
                 if(timer) free(timer);
                 dprintf(D_ALWAYS, "ReliSock::rcv_packet: recv failed %s\n", strerror(errno));
                 return FALSE;
