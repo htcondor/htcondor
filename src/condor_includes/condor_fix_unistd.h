@@ -148,7 +148,7 @@ extern "C" {
 	int getdtablesize();
 	int getpriority( int, id_t );
 	int setpriority( int, id_t, int );
-#if defined(Solaris27)
+#if defined(Solaris27) || defined(Solaris28)
 	int utimes( const char*, const struct timeval* );
 #else
 	int utimes( const char*, struct timeval* );
