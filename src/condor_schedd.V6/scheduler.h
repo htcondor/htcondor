@@ -81,12 +81,12 @@ class Scheduler : public Service
  
 	// maintainence
 	void			timeout(); 
-	void			sighup_handler();
-	void			sigterm_handler();
-	void			sigquit_handler();
 	void			sigint_handler();
 	void			SetClassAd(ClassAd*);
 	void			SetCommandPort(int);
+	void			reconfig();
+	void			shutdown_fast();
+	void			shutdown_graceful();
 	
 	// negotiation
 	void			negotiate(int, Stream *);

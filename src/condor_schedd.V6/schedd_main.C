@@ -193,20 +193,20 @@ void Init()
 int
 main_config()
 {
-	return TRUE;
+	scheduler.reconfig();
 }
 
 
 int
 main_shutdown_fast()
 {
-	return TRUE;
+	scheduler.shutdown_fast();
 }
 
 
 int
 main_shutdown_graceful()
 {
-	return TRUE;
+	scheduler.shutdown_graceful();
 }
 
