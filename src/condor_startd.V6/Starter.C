@@ -226,7 +226,7 @@ Starter::reallykill( int signo, int type )
 		// If we're just doing a plain kill, and the signal we're
 		// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the
 		// starter just for good measure.
-	if (sig != SIGSTOP && sig != SIGCONT) {
+	if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 		if( type == 1 ) { 
 			ret = ::kill( -(s_pid), SIGCONT );
 		} else if( type == 0 ) {
@@ -279,6 +279,13 @@ Starter::spawn( start_info_t* info )
 void
 Starter::exited()
 {
+		// Just as a safety precaution, when the starter exits, we try
+		// to kill it's process group in the hopes that we might catch
+		// some random children that it didn't kill.
+	this->killpg( DC_SIGKILL );
+
+		// Now that the process group has been killed, we can clear
+		// out all our data structures associated with this starter. 
 	s_pid = -1;
 	free( s_name );
 	s_name = NULL;
