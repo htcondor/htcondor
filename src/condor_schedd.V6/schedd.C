@@ -2264,10 +2264,15 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 					}
 					break;
 				case JOB_EXCEPTION:
-					/* some exception happened in this job -- record
-					   that we had one.  This function will relinquish
-					   the match if we get too many exceptions */
-					HadException(srec->match);
+						// some exception happened in this job --  
+						// record that we had one.  This function will
+						// relinquish the match if we get too many
+						// exceptions 
+					if( !srec->removed ) {
+							// Only if this job wasn't removed, do we
+							// have anything to do. 
+						HadException(srec->match);
+					}
 					break;
 				case JOB_SHADOW_USAGE:
 					EXCEPT("shadow exited with incorrect usage!\n");
@@ -3156,6 +3161,10 @@ job_prio(ClassAd *ad)
 void
 Scheduler::HadException( match_rec* mrec ) 
 {
+	if( !mrec ) {
+			// If there's no mrec, we can't do anything.
+		return;
+	}
 	mrec->num_exceptions++;
 	if( mrec->num_exceptions >= MaxExceptions ) {
 		dprintf( D_ALWAYS, 
