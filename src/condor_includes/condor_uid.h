@@ -48,12 +48,17 @@
 extern "C" {
 #endif
 
+/*
+  Our code depends on _priv_state_threshold being last, so if you add
+  another priv state here, put it *BEFORE* _priv_state_threshold!!!!
+*/
 typedef enum {
 	PRIV_UNKNOWN,
 	PRIV_ROOT,
 	PRIV_CONDOR,
 	PRIV_USER,
-	PRIV_USER_FINAL
+	PRIV_USER_FINAL,
+	_priv_state_threshold
 } priv_state;
 
 #define set_priv(s)	_set_priv(s, __FILE__, __LINE__, 1)
@@ -80,6 +85,7 @@ priv_state _set_priv(priv_state s, char file[], int line, int dologging);
 uid_t get_my_uid();
 gid_t get_my_gid();
 priv_state get_priv();
+const char* priv_to_string( priv_state s );
 
 #if !defined(WIN32)
 uid_t get_condor_uid();
