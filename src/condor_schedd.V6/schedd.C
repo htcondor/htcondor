@@ -920,6 +920,31 @@ count( ClassAd *job )
 		return 0;
 	}
 
+	int noop = 0;
+	job->LookupBool(ATTR_JOB_NOOP, noop);
+	if (noop && status != COMPLETED) {
+		int cluster = 0;
+		int proc = 0;
+		int noop_status = 0;
+		int temp = 0;
+		PROC_ID job_id;
+		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_SIGNAL, temp) != 0) {
+			noop_status = generate_exit_signal(temp);
+		}	
+		if(job->LookupInteger(ATTR_JOB_NOOP_EXIT_CODE, temp) != 0) {
+			noop_status = generate_exit_code(temp);
+		}	
+		job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+		job->LookupInteger(ATTR_PROC_ID, proc);
+		dprintf(D_FULLDEBUG, "Job %d.%d is a no-op with status %d\n",
+				cluster,proc,noop_status);
+		job_id.cluster = cluster;
+		job_id.proc = proc;
+		set_job_status(cluster, proc, COMPLETED);
+		scheduler.WriteTerminateToUserLog( job_id, noop_status );
+		return 0;
+	}
+
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}

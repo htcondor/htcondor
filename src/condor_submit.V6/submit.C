@@ -207,6 +207,9 @@ char	*PeriodicReleaseCheck = "periodic_release";
 char	*PeriodicRemoveCheck = "periodic_remove";
 char	*OnExitHoldCheck = "on_exit_hold";
 char	*OnExitRemoveCheck = "on_exit_remove";
+char	*Noop = "noop_job";
+char	*NoopExitSignal = "noop_job_exit_signal";
+char	*NoopExitCode = "noop_job_exit_code";
 
 char	*GlobusResubmit = "globus_resubmit";
 char	*GlobusRematch = "globus_rematch";
@@ -291,6 +294,9 @@ void	SetPeriodicHoldCheck(void);
 void	SetPeriodicRemoveCheck(void);
 void	SetExitHoldCheck(void);
 void	SetExitRemoveCheck(void);
+void	SetNoopJob(void);
+void	SetNoopJobExitSignal(void);
+void	SetNoopJobExitCode(void);
 void SetDAGNodeName();
 void SetMatchListLen();
 void SetDAGManJobId();
@@ -2347,6 +2353,66 @@ SetExitRemoveCheck(void)
 }
 
 void
+SetNoopJob(void)
+{
+	char *noop = condor_param(Noop, ATTR_JOB_NOOP);
+
+	if (noop == NULL)
+	{	
+		/* user didn't want one, so just return*/
+		return;
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP, noop );
+		free(noop);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
+SetNoopJobExitSignal(void)
+{
+	char *noop = condor_param(NoopExitSignal, ATTR_JOB_NOOP_EXIT_SIGNAL);
+
+	if (noop == NULL)
+	{	
+		/* user didn't want one, so just return*/
+		return;
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP_EXIT_SIGNAL, noop );
+		free(noop);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
+SetNoopJobExitCode(void)
+{
+	char *noop = condor_param(NoopExitCode, ATTR_JOB_NOOP_EXIT_CODE);
+
+	if (noop == NULL)
+	{	
+		/* user didn't want one, so just return*/
+		return;
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_JOB_NOOP_EXIT_CODE, noop );
+		free(noop);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
 SetNotification()
 {
 	char *how = condor_param( Notification, ATTR_JOB_NOTIFICATION );
@@ -3749,6 +3815,9 @@ queue(int num)
 		SetPeriodicRemoveCheck();
 		SetExitHoldCheck();
 		SetExitRemoveCheck();
+		SetNoopJob();
+		SetNoopJobExitSignal();
+		SetNoopJobExitCode();
 		SetLeaveInQueue();
 			//SetArguments needs to be last for Globus universe args
 		SetArguments();

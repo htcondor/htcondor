@@ -22,10 +22,13 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
+#ifndef CONDOR_EXIT_UTILS_H
+#define CONODR_EXIT_UTILS_H
 
 
 /*
 **	Shadow exit statuses which reflect the exit status of the job
+**  Also, routines to create an exit status
 */
 
 /* ok, because of strange exit codes from the util lib and such(which
@@ -97,4 +100,11 @@
 /* There is a fatal error with dprintf() */
 #define DPRINTF_ERROR 44
 
+BEGIN_C_DECLS
+int generate_exit_code( int input_code );
 
+int generate_exit_signal( int input_signal );
+
+END_C_DECLS
+
+#endif /*CONDOR_EXIT_UTILS*/
