@@ -87,5 +87,13 @@ const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
 const char ATTR_VACATE                   [] = "Vacate";
 const char ATTR_VIRTUAL_MEMORY           [] = "VirtualMemory";
 const char ATTR_LAST_UPDATE				 [] = "LastUpdate";
+const char ATTR_CURRENT_HOSTS			 [] = "CurrentHosts";
+const char ATTR_MAX_HOSTS				 [] = "MaxHosts";
+const char ATTR_JOB_INPUT				 [] = "In";
+const char ATTR_JOB_OUTPUT				 [] = "Out";
+const char ATTR_JOB_ERROR				 [] = "Err";
+const char ATTR_JOB_ENVIRONMENT			 [] = "Env";
+const char ATTR_JOB_ARGUMENTS			 [] = "Args";
+const char ATTR_JOB_IWD					 [] = "Iwd";
 
 #endif
