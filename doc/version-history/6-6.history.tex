@@ -33,12 +33,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Under Tru64, Condor would sometimes fail to start a job while
-	setting the resource limits on behalf of the job.
-	This error appears to be the result of a kernel issue.
-	A workaround has been implemented which will leave the limits
-	of the job unmodified and run the job when this specific error
-	situation arises.
+\item When Condor transfers the job executable using the file transfer
+  mechanism, it used to leave the binary sitting as a world-writeable
+  file inside the execute directory on UNIX.
+  Now, executable files transfered by Condor have the proper
+  permissions (mode 0755).
 
 \item Fixed an important bug in the low-level code that Condor uses to
   transfer files across a network.
@@ -80,6 +79,13 @@ overridden with the \Opt{-AllowLogError} command-line option.
 (such as getting multiple terminate events for a single job).  This
 checking can be disabled with the \Opt{-NoEventChecks} command-line
 option.
+
+\item Under Tru64, Condor would sometimes fail to start a job while
+	setting the resource limits on behalf of the job.
+	This error appears to be the result of a kernel issue.
+	A workaround has been implemented which will leave the limits
+	of the job unmodified and run the job when this specific error
+	situation arises.
 
 \end{itemize}
 
