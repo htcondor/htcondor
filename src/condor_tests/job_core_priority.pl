@@ -15,6 +15,7 @@ while(<OLDOUT>)
 	print NEWOUT "$_\n";
 }
 print NEWOUT "$arg\n";
+sleep 40;
 
 close(OLDOUT);
 close(NEWOUT);
