@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/swap.h>
@@ -30,8 +28,6 @@
 
 int calc_virt_memory();
 int ctok(int clicks);
-
-int close_kmem(){};
 
 /*
  *  DEFAULT_SWAPSPACE
@@ -41,11 +37,6 @@ int close_kmem(){};
  */
 
 #define DEFAULT_SWAPSPACE       100000 /* ..dhaval 7/20 */
-
-
-/* EVIL!!  This shouldn't have to be here! -Derek 7/30/97 */
-int HasSigchldHandler = 0;
-
 
 /*
 ** Try to determine the swap space available on our own machine.  The answer
