@@ -500,3 +500,12 @@ ioctl( int fd, int request, caddr_t arg )
 
 void ldr_atexit() {}
 #endif
+
+/* This has been added to solve the problem with the printf and fprintf 
+statements on alphas but have not enclosed it in ifdefs since it will not
+harm to other platforms */
+
+__write(int fd, char *buf, int size)
+{
+return write(fd,buf,size);
+}
