@@ -10,6 +10,7 @@
 #define LibC SimpleLibC
 #define Crt0 /usr/lib/cmplrs/cc/crt0.o
 #define SyscallsExp /**/
+#define SocketLib /**/
 
 #define XLibPath /usr/lib/libX11.a /usr/lib/libdnet_stub.a
 #define XExtLibPath /usr/lib/libXext.a
