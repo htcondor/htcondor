@@ -80,13 +80,17 @@ void SelfMonitorData::CollectData(void)
     // Use ProcAPI to get what we can
     piPTR my_process_info = NULL;
 
-    dprintf(D_ALWAYS, "Getting monitoring info for pid %d\n", getpid());
+    dprintf(D_FULLDEBUG, "Getting monitoring info for pid %d\n", getpid());
     ProcAPI::getProcInfo(getpid(), my_process_info);
 
-    cpu_usage  = my_process_info->cpuusage;
-    image_size = my_process_info->imgsize;
-    rs_size    = my_process_info->rssize;
-    age        = my_process_info->age;
+    if (my_process_info != NULL) {
+        cpu_usage  = my_process_info->cpuusage;
+        image_size = my_process_info->imgsize;
+        rs_size    = my_process_info->rssize;
+        age        = my_process_info->age;
+
+        delete my_process_info;
+    }
 
     // Collect CEDAR's monitoring data
     // This is yet to be done
