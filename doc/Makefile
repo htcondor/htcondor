@@ -158,7 +158,7 @@ $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps admin-man/machine-activities.eps admin-man/machine-states.eps
+	rm -rf ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps admin-man/machine-activities.eps admin-man/machine-states.eps *.out
 
 reallyclean: clean
 	rm -rf $(TARGETDIR)
