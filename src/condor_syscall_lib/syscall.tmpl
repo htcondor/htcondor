@@ -238,6 +238,13 @@ int rename( const char *from, const char *to ) {
 		alloc( use_p, RUSAGE_SIZE );
 		return( NEG_ONE );
 	}
+	int subproc_status(int id,int *status,struct rusage *use_p) : pseudo {
+		in xdr_int( status );
+		alloc( status, INT_SIZE );
+		in xdr_rusage( use_p );
+		alloc( use_p, RUSAGE_SIZE );
+		return( NEG_ONE );
+	}
 	int image_size( int kbytes ) : pseudo;
 	int send_rusage( struct rusage *use_p ) : pseudo {
 		in xdr_rusage( use_p );
@@ -293,7 +300,7 @@ int rename( const char *from, const char *to ) {
 	}
 
 
-#if !defined (SWITCH) && !defined(RECEIVER)
+#if !defined (SWITCH)
 	int pvm_info( const char *response, int mytid ) : pseudo {
 		SEND_PATH( response );
 		ALLOC_PATH( response );
