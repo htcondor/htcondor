@@ -146,32 +146,23 @@ TESTCLASS(lib_userlog,lib)
 **
 */
 
-/* Tests which fail in reliability */
 
-/*
-** These tests fail reliabably on Solaris 2.8 and 2.9
-** because the transfer_output file(s) do not exist, and thus
-** Condor tries to rerun the job forever.  Why it works on other
-** platforms but always fails (in the NWO) on Solaris platforms
-** is a mystery that Bill needs to solve.  :)
-** 
-** DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
-** RUN(job_filexfer_basic_van)
-** TESTCLASS(job_filexfer_basic_van,filexfer)
-** 
-** DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
-** RUN(job_filexfer_minus1_van)
-** TESTCLASS(job_filexfer_minus1_van,filexfer)
-** 
-** DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
-** RUN(job_filexfer_output-withvacate_van)
-** TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
-** 
-** DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
-** RUN(job_filexfer_trans-nodflts_van)
-** TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
-** 
-*/
+DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
+RUN(job_filexfer_basic_van)
+TESTCLASS(job_filexfer_basic_van,filexfer)
+
+DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
+RUN(job_filexfer_minus1_van)
+TESTCLASS(job_filexfer_minus1_van,filexfer)
+
+DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
+RUN(job_filexfer_output-withvacate_van)
+TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
+
+DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
+RUN(job_filexfer_trans-nodflts_van)
+TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
+
 
 
 /*
