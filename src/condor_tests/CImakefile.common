@@ -106,6 +106,11 @@ CBUILD($(CC),job_ckpt_io-async_std,c)
 DEP_SYMLINK_EXT(job_ckpt_io-async_std,cmd)
 RUN(job_ckpt_io-async_std)
 
+DESC(job_ckpt_io-buffer-async_std,"file buffing during async ckpt/restore")
+CBUILD_DEP($(CC),job_ckpt_io-buffer-async_std,c,x_waste_second.o)
+DEP_SYMLINK_EXT(job_ckpt_io-buffer-async_std,cmd)
+RUN(job_ckpt_io-buffer-async_std)
+
 DESC(job_ckpt_stack_std,"ckpt/restore function call stack")
 CBUILD($(CC),job_ckpt_stack_std,c)
 DEP_SYMLINK_EXT(job_ckpt_stack_std,cmd)
