@@ -82,6 +82,11 @@ template hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
 template hash_map<string, ClassAdProxy, StringHash>;
 template hash_map<string, ClassAdProxy, StringHash>::iterator;
 
+// index file
+template map<string, int>;
+template hash_map<string,int,StringHash>;
+template hash_map<string,int,StringHash>::iterator;
+
 // transaction registry
 template hash_map<string, ServerTransaction*, StringHash>;
 template hash_map<string, ServerTransaction*, StringHash>::iterator;
