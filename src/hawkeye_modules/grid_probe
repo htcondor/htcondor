@@ -24,6 +24,7 @@ my $Hawkeye;
 
 # Config info
 my %Config = (
+	      Description	=> "",
 	      NumContacts	=> 0,
 	      CondorHost	=> "",
 	      ProbePath		=> "",
@@ -61,7 +62,7 @@ sub Init (){
 	}
 	elsif ( $Arg =~ /^-c$/ )
 	{
-	    $Config{CleanLog} = 0;
+	    $Config{CleanLog} = 1;
 	}
 	elsif ( $Arg =~ /^-t=(.+)$/ )
 	{
@@ -158,6 +159,9 @@ sub Init (){
 	print STDERR "Path now $ENV{PATH}\n";
     }
 
+    # A textual description of what we're monitoring..
+    $Config{Description} = HawkeyeLib::ReadConfig( "_description", "" );
+
     # Condor host for condor_status
     $Config{CondorHost} = HawkeyeLib::ReadConfig( "_condor_host", "" );
 
@@ -241,23 +245,32 @@ sub RunIt ( )
     }
 
     # Log file?
+    my $Log = 0;
     if ( $Config{LogFile} ne "" )
     {
 	unlink( $Config{LogFile} ) if ( $Config{CleanLog} );
-	open( LOG, ">>$Config{LogFile}" ) ||
-	    print STDERR "Can't log to $Config{LogFile}\n";
-	my $oldfh = select( LOG ); $| = 1; select $oldfh;
-	if ( open( TMP, $File ) )
+	if ( ! open( LOG, ">>$Config{LogFile}" ) )
 	{
-	    print LOG "-- Begin $File --\n";
-	    while( <TMP> )
-	    {
-		print LOG;
-	    }
-	    close( TMP );
-	    print LOG "-- End $File --\n";
+	    print STDERR "Can't log to $Config{LogFile}\n";
 	}
-	print LOG "Path now $ENV{PATH}\n";
+	else
+	{
+	    $Log = 1;
+	    my $oldfh = select( LOG ); $| = 1; select $oldfh;
+	    if ( open( TMP, $File ) )
+	    {
+		print LOG "============================================\n";
+		$_ = `/bin/date`; chomp; print LOG "Started at $_\n";
+		print LOG "-- Begin $File --\n";
+		while( <TMP> )
+		{
+		    print LOG;
+		}
+		close( TMP );
+		print LOG "-- End $File --\n";
+	    }
+	    print LOG "Path now $ENV{PATH}\n";
+	}
     }
 
     # Run the script, and wade through its (wordy) output
@@ -282,7 +295,7 @@ sub RunIt ( )
     {
 	while ( <PROBE> )
 	{
-	    print LOG;
+	    print LOG if ( $Log );
 	    chomp;
 	    if ( /^\s+test suite (\w+): (\w+)\s*(.*)/ )
 	    {
@@ -346,7 +359,14 @@ sub RunIt ( )
     {
 	unlink( $File );
     }
-    close( LOG );
+
+    # Close log
+    if ( $Log )
+    {
+	$_ = `/bin/date`; chomp; print LOG "Finished at $_\n";
+	print LOG "============================================\n";
+	close( LOG );
+    }
 
     # Store the contact info...
     foreach my $Contact ( keys %{$Config{ContactStrings}} )
@@ -358,6 +378,10 @@ sub RunIt ( )
     }
     $Hawkeye->Store( "Contacts", join(" ", keys %{$Config{ContactStrings}} ) );
     $Hawkeye->Store( "GlobalFields", join( " ", keys ( %GlobalFields ) ) );
+
+    # Plug in the descriptive text (if provided)
+    $Hawkeye->Store( "Description", $Config{Description} )
+	if ( $Config{Description} ne "" );
 
     # Create fields
     $Hawkeye->Store( "FIELDS" , join( " ", keys(%Fields) )  );
