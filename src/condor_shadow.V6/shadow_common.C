@@ -46,7 +46,6 @@
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
-#include "files.h"
 #include "exit.h"
 #include "shadow.h"
 #include "job_report.h"

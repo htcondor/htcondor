@@ -51,7 +51,6 @@
 #include "sched.h"
 #include "debug.h"
 #include "fileno.h"
-#include "files.h"
 #include "exit.h"
 
 #if defined(AIX32)

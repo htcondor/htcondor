@@ -41,7 +41,6 @@
 #include "condor_parser.h"
 #include "condor_scanner.h"
 #include "condor_distribution.h"
-#include "files.h"
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>

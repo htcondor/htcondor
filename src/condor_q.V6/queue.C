@@ -37,7 +37,6 @@
 #include "get_full_hostname.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "files.h"
 #include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
