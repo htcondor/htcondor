@@ -555,7 +555,11 @@ UserProc::linked_for_condor()
 	}
 
 	// Don't look for sym tab in ckpt files or PVM processes
+#if 0
 	if( this->is_restart() && job_class != PVM ) {	
+#else
+	if( job_class != PVM && job_class != VANILLA ) {	
+#endif
 		if( symbol_main_check(cur_ckpt) < 0 ) {
 			state = BAD_LINK;
 			dprintf( D_ALWAYS, "symbol_main_check() failed\n" );
