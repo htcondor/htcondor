@@ -35,6 +35,7 @@
 #include <fcntl.h>		// for open()
 #include <unistd.h>		// for getpid()
 #include <stdlib.h>		// for malloc() and free()
+#include <string.h>				// for strerror()
 #include "condor_debug.h"
 #include "condor_syscalls.h"
 
@@ -184,8 +185,8 @@ num_segments( )
 	}
 	SYSCALL(SYS_ioctl, fd, PIOCNMAP, &prmap_count);
 	if (prmap_count > MAX_SEGS) {
-		fprintf( stderr, "Don't know how to grow segment map yet!\n" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "Don't know how to grow segment map yet!\n" );
+		Suicide();
 	}		
 /*	if (my_map != NULL) {
 		free(my_map);
@@ -205,8 +206,7 @@ num_segments( )
 	heap_loc = find_map_for_addr((caddr_t) data_start_addr());
 //	mmap_loc = find_map_for_addr((caddr_t) mmap);
 	if (SYSCALL(SYS_close, fd) < 0) {
-		perror("close");
-		exit(4);
+		dprintf(D_ALWAYS, "close: %s", strerror(errno));
 	}
 	SetSyscalls( scm );
 	return prmap_count;

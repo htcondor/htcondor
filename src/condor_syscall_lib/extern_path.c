@@ -112,8 +112,9 @@ int		bufsize;
 
 		/* Find out what "device" file is on */
 	if( stat(local_name,&st_buf) < 0 ) {
-		perror( "stat" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "stat failed in external_name: %s\n",
+				 strerror(errno) );
+		Suicide();
 	}
 	file_dev = st_buf.st_dev;
 
@@ -156,13 +157,15 @@ init()
 	int		start = 0;
 
 	if( gethostname(Hostname,sizeof(Hostname)) < 0 ) {
-		perror( "gethostname" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "gethostname failed in extern_path.c: %s\n",
+				 strerror(errno) );
+		Suicide();
 	}
 
 	if( (N_Sys=getmnt(&start,FS_Buf,sizeof(FS_Buf),NOSTAT_MANY,0)) < 0 ) {
-		perror( "getmnt" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "getmnt failed in extern_path.c: %s\n",
+				 strerror(errno));
+		Suicide();
 	}
 
 	InitDone = TRUE;
@@ -229,11 +232,10 @@ char	*name;
 		
 		if( lstat(path,&st_buf) < 0 ) {
 			if( errno == EFAULT ) {
-				perror( "stat" );
-				exit( 1 );
-			} else {
-				return NULL;
+				dprintf(D_ALWAYS, "lstat failed in xlate_link: %s\n",
+						strerror(errno));
 			}
+			return NULL;
 		}
 		if( (st_buf.st_mode & S_IFMT) == S_IFLNK ) {
 			done = FALSE;

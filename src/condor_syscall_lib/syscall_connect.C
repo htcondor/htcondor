@@ -125,7 +125,9 @@ open_named_pipe( const char *name, int access_mode, int target_fd )
 	int		fd;
 
 	if( (fd=open(name,access_mode)) < 0 ) {
-		assert( fd >= 0 );
+		dprintf( D_ALWAYS, "failed to open named pipe %s: %s\n", name,
+				 strerror(errno) );
+		Suicide();
 	}
 
 	if( fd != target_fd ) {

@@ -71,6 +71,7 @@ extern OpenFileTable   *FileTab;
      
 */
   
+extern "C"
 int ioserver_open(const char *path, int oflag, mode_t mode)
 {
  int i; 
@@ -109,8 +110,6 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
      if ((address = gethostbyname(server_host))==NULL) 
        {
 	 dprintf(D_ALWAYS,"invalid server name\n");
-
-	 perror("invalid server name\n");
 	 return -1;
        }
 
@@ -123,7 +122,6 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
      if (SRVR_ADDR == NULL)
        { 
 	 dprintf(D_ALWAYS,"invalid server name");
-	 perror("invalid server name");
 	 return -1;
        } 
      
@@ -141,7 +139,6 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
      if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0)
        {
 	 dprintf(D_ALWAYS,"sockfd to server %d\n",sockfd);
-	 perror("unable to open socket\n");
 	 SetSyscalls(scm); 
 	 return -1;
        }  
@@ -151,7 +148,6 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
      if (connect(sockfd, (struct sockaddr *)&srvr_IP, sizeof(srvr_IP)) < 0)
        {
 	 dprintf(D_ALWAYS,"unable to connect\n");
-	 perror("unable to connect\n");
 	 req_type = SERVER_DOWN ;
 	 status = REMOTE_syscall(CONDOR_get_IOServerAddr, &req_type, path, server_host, &server_port);
 	 dprintf(D_ALWAYS,"server %s, %d\n",server_host, server_port);
@@ -234,6 +230,7 @@ int ioserver_open(const char *path, int oflag, mode_t mode)
    }
 }
 
+extern "C"
 int ioserver_close(int filedes)
 {
   int i; 
@@ -259,13 +256,10 @@ int ioserver_close(int filedes)
   
   if (i <= 0)
     {
-      perror ("unable to receive data while closing\n");
+      dprintf (D_ALWAYS, "unable to receive data while closing\n");
       FileTab->DoClose(FileTab->getSockFd(filedes));
       FileTab->DoClose(filedes);
       return 0;
-      // in this case, we don't care to contact the shadow again..
-      return 0;
-      exit(1);
     }
   
   switch (*buf)
@@ -342,7 +336,7 @@ int reopen(int filedes)
       
       if ((address = gethostbyname(server_host))==NULL) 
 	{ 
-	  perror("invalid server name\n");
+	  dprintf(D_ALWAYS, "invalid server name\n");
 	  return -1;
 	}
       dprintf(D_ALWAYS,"reopen ..get host by name successful \n");
@@ -353,7 +347,7 @@ int reopen(int filedes)
       
       if (SRVR_ADDR == NULL)
 	{ 
-	  perror("invalid server name");
+	  dprintf(D_ALWAYS, "invalid server name");
 	  return -1;
 	} 
       
@@ -371,10 +365,7 @@ int reopen(int filedes)
       if ((sockfd = socket(AF_INET,SOCK_STREAM,0)) < 0)
 	{ 
 	  dprintf(D_ALWAYS, "reopen .. socket failed \n");
-	  
-	  perror("unable to open socket\n");
 	  SetSyscalls(scm); 
-
 	  return -1;
 	}  
 
@@ -386,13 +377,9 @@ int reopen(int filedes)
       if (connect(sockfd, (struct sockaddr *)&srvr_IP, sizeof(srvr_IP)) < 0)
 	{
 	  dprintf(D_ALWAYS, "reopen.. unable to connect \n");
-	  
-	  perror("unable to connect\n");
 	  req_type = SERVER_DOWN ;
 	  status = REMOTE_syscall(CONDOR_get_IOServerAddr, &req_type, path, server_host, &server_port);
 	  dprintf(D_ALWAYS,"server %s, %d\n",server_host, server_port);
-	  // here, contact shadow again.... get another server and repeat...
-	  // return -1;
 	}
       else
 	{
@@ -496,7 +483,7 @@ off_t ioserver_lseek(int filedes, off_t offset, int whence)
    { 
      int fd;
      
-     perror ("unable to receive data in seek..");
+     dprintf (D_ALWAYS, "unable to receive data in seek..");
 
      fd = reopen(filedes);
      if (fd == filedes)
@@ -557,7 +544,7 @@ ssize_t ioserver_read(int filedes, char *ret_buf, unsigned int size)
      int fd;
      int offset = FileTab->getOffset(filedes);
      
-     perror ("unable to receive data in read..");
+     dprintf (D_ALWAYS, "unable to receive data in read..");
 
      fd = reopen(filedes);
      if (fd == filedes)
@@ -628,7 +615,7 @@ ssize_t ioserver_write(int filedes, const char *buffer, unsigned int size)
      int fd;
      int offset = FileTab->getOffset(filedes);
      
-     perror ("unable to receive data in write..");
+     dprintf (D_ALWAYS, "unable to receive data in write..");
 
      fd = reopen(filedes);
 

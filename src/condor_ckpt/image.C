@@ -62,6 +62,7 @@ extern "C" {
 #include <sys/syscall.h>        // for syscall()
 #include <sys/time.h>
 #include <values.h>
+#include <string.h>				// for strerror()
 #endif
 #include <sys/stat.h>
 #include <sys/times.h>
@@ -117,7 +118,6 @@ extern "C" int _sigreturn();
 #endif
 
 void terminate_with_sig( int sig );
-void Suicide();
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
 static void calc_stack_to_save();
@@ -250,7 +250,9 @@ _condor_prestart( int syscall_mode )
 #if defined(sun4m)
 	float x=23, y=14, z=256;
 	if ((x+y)>z) {
-		EXCEPT( "Internal error: Solaris floating point test failed\n");
+		dprintf(D_ALWAYS,
+				"Internal error: Solaris floating point test failed\n");
+		Suicide();
 	}
 	z=x*y;
 #endif
@@ -285,8 +287,9 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 #endif
 
 	if( sigaction(sig,&action,NULL) < 0 ) {
-		perror( "sigaction" );
-		exit( 1 );
+		dprintf(D_ALWAYS, "can't install sighandler for sig %d: %s\n",
+				sig, strerror(errno));
+		Suicide();
 	}
 
 	SetSyscalls( scm );
@@ -371,8 +374,8 @@ Image::Save()
 		rtn = segment_bounds(i, addr_start, addr_end, prot);
 		switch (rtn) {
 		case -1:
-			EXCEPT( "Internal error, segment_bounds"
-				"returned -1");
+			dprintf( D_ALWAYS, "Internal error, segment_bounds returned -1");
+			Suicide();
 			break;
 		case 0:
 #if defined(LINUX)
@@ -388,8 +391,9 @@ Image::Save()
 		case 3:
 			break;		// don't add DATA segment again
 		default:
-			EXCEPT( "Internal error, segment_bounds"
-				"returned unrecognized value");
+			dprintf( D_ALWAYS, "Internal error, segment_bounds"
+					 "returned unrecognized value");
+			Suicide();
 		}
 	}	
 	// now add stack segment
@@ -409,7 +413,8 @@ Image::Save()
 	}
 
 	if( pos < 0 ) {
-		EXCEPT( "Internal error, ckpt size calculated is %d", pos );
+		dprintf( D_ALWAYS, "Internal error, ckpt size calculated is %d", pos );
+		Suicide();
 	}
 
 	dprintf( D_ALWAYS, "Size of ckpt image = %d bytes\n", pos );
@@ -447,8 +452,8 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 	int idx = head.N_Segs();
 
 	if( idx >= MAX_SEGS ) {
-		fprintf( stderr, "Don't know how to grow segment map yet!\n" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "Don't know how to grow segment map yet!\n" );
+		Suicide();
 	}
 	head.IncrSegs();
 	map[idx].Init( name, start, len, prot );
@@ -496,15 +501,10 @@ Image::Restore()
 #if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
 #endif
-		// Overwrite our data segment with the one saved at checkpoint
-		// time.
-//	RestoreSeg( "DATA" );
 
 		// Overwrite our data segment with the one saved at checkpoint
 		// time *and* restore any saved shared libraries.
 	RestoreAllSegsExceptStack();
-
-
 
 		// We have just overwritten our data segment, so the image
 		// we are working with has been overwritten too.  Fortunately,
@@ -521,8 +521,8 @@ Image::Restore()
 	ExecuteOnTmpStk( RestoreStack );
 
 		// RestoreStack() also does the jump back to user code
-	fprintf( stderr, "Error, should never get here\n" );
-	exit( 1 );
+	dprintf( D_ALWAYS, "Error: reached code past the restore point!\n" );
+	Suicide();
 }
 
 /* don't assume we have libc.so in a good state right now... - Jim B. */
@@ -543,14 +543,16 @@ Image::RestoreSeg( const char *seg_name )
 	for( i=0; i<head.N_Segs(); i++ ) {
 		if( mystrcmp(seg_name,map[i].GetName()) == 0 ) {
 			if( (pos = map[i].Read(fd,pos)) < 0 ) {
-				perror( "SegMap::Read()" );
-				exit( 1 );
+				dprintf(D_ALWAYS, "SegMap::Read() failed!\n");
+				Suicide();
 			} else {
 				return;
 			}
 		}
 	}
 	dprintf( D_ALWAYS, "Can't find segment \"%s\"\n", seg_name );
+	fprintf( stderr, "CONDOR ERROR: can't find segment \"%s\" on restart\n",
+			 seg_name );
 	exit( 1 );
 }
 
@@ -566,13 +568,15 @@ void Image::RestoreAllSegsExceptStack()
 	for( i=0; i<head.N_Segs(); i++ ) {
 		if( mystrcmp("STACK",map[i].GetName()) != 0 ) {
 			if( (pos = map[i].Read(fd,pos)) < 0 ) {
-				perror( "SegMap::Read()" );
-				exit( 1 );
+				dprintf(D_ALWAYS, "SegMap::Read() failed!\n" );
+				Suicide();
 			}
 		}
 		else if (i<head.N_Segs()-1) {
 			dprintf( D_ALWAYS, "Checkpoint file error: STACK is not the "
 					"last segment in ckpt file.\n");
+			fprintf( stderr, "CONDOR ERROR: STACK is not the last segment "
+					 " in ckpt file.\n" );
 			exit( 1 );
 		}
 		fd = save_fd;
@@ -670,8 +674,9 @@ Image::Write( const char *ckpt_file )
 				return -1;
 			}
 			else {
-				perror( "open_ckpt_file" );
-				exit( 1 );
+				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
+						 strerror(errno));
+				Suicide();
 			}
 		}	
 	// }  // this is the matching brace to the open_url; see comment above
@@ -702,8 +707,8 @@ Image::Write( const char *ckpt_file )
 				return -1;
 			}
 			else {
-				perror( "rename" );
-				exit( 1 );
+				dprintf( D_ALWAYS, "ckpt rename failed: %s", strerror(errno) );
+				Suicide();
 			}
 		}
 		dprintf( D_ALWAYS, "Renamed OK\n" );
@@ -768,12 +773,14 @@ Image::Write( int fd )
 	if( _condor_in_file_stream ) {
 		status = net_read( fd, &ack, sizeof(ack) );
 		if( status < 0 ) {
-			EXCEPT( "Can't read final ack from the shadow" );
+			dprintf( D_ALWAYS, "Can't read final ack from the shadow" );
+			Suicide();
 		}
 
 		ack = ntohl( ack );		// Ack is in network byte order, fix here
 		if( ack != len ) {
-			EXCEPT( "Ack - expected %d, but got %d\n", len, ack );
+			dprintf( D_ALWAYS, "Ack - expected %d, but got %d\n", len, ack );
+			Suicide();
 		}
 	}
 
@@ -798,8 +805,9 @@ Image::Read()
 	if( fd < 0 && file_name && file_name[0] ) {
 //		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
 			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
-				perror( "open_ckpt_file" );
-				exit( 1 );
+				dprintf( D_ALWAYS, "open_ckpt_file failed: %s",
+						 strerror(errno));
+				Suicide();
 			}
 //		}		// don't use URL library -- Jim B.
 	}
@@ -828,8 +836,7 @@ void
 Image::Close()
 {
 	if( fd < 0 ) {
-		fprintf( stderr, "Image::Close - file not open\n" );
-		abort();
+		dprintf( D_ALWAYS, "Image::Close - file not open!\n" );
 	}
 	close( fd );
 	/* The next checkpoint is going to assume the fd is -1, so set it here */
@@ -850,8 +857,9 @@ SegMap::Read( int fd, ssize_t pos )
 	RAW_ADDR	saved_core_loc = core_loc;
 
 	if( pos != file_loc ) {
-		fprintf( stderr, "Checkpoint sequence error\n" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n", pos,
+				 file_loc );
+		Suicide();
 	}
 
 	if( mystrcmp(name,"DATA") == 0 ) {
@@ -866,9 +874,10 @@ SegMap::Read( int fd, ssize_t pos )
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
-			fprintf( stderr, "Unable to open /dev/zero in read/write mode.\n");
-			perror("open");
-			exit( 1 );
+			dprintf( D_ALWAYS,
+					 "Unable to open /dev/zero in read/write mode.\n");
+			dprintf( D_ALWAYS, "open: %s", strerror(errno));
+			Suicide();
 		}
 
 	  /* Some notes about mmap:
@@ -904,13 +913,13 @@ SegMap::Read( int fd, ssize_t pos )
 				MAP_PRIVATE|MAP_FIXED, zfd,
 				(off_t)0)) == -1) {
 #endif
-			perror("mmap");
-			fprintf(stderr, "Attempted to mmap /dev/zero at "
+			dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
+			dprintf(D_ALWAYS, "Attempted to mmap /dev/zero at "
 				"address 0x%lx, size 0x%lx\n", saved_core_loc,
 				segSize);
-			fprintf(stderr, "Current segmap dump follows\n");
+			dprintf(D_ALWAYS, "Current segmap dump follows\n");
 			display_prmap();
-			exit(1);
+			Suicide();
 		}
 
 		/* WARNING: We have potentially just overwritten libc.so.  Do
@@ -919,9 +928,10 @@ SegMap::Read( int fd, ssize_t pos )
 		   the checkpoint (i.e., use mystrcmp and SYSCALL).  -Jim B. */
 
 		if (SYSCALL(SYS_close, zfd) < 0) {
-			fprintf( stderr, "Unable to close /dev/zero file descriptor.\n" );
-			perror("close");
-			exit(1);
+			dprintf( D_ALWAYS,
+					 "Unable to close /dev/zero file descriptor.\n" );
+			dprintf( D_ALWAYS, "close: %s", strerror(errno));
+			Suicide();
 		}
 	}		
 #endif		
@@ -942,9 +952,9 @@ SegMap::Read( int fd, ssize_t pos )
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
 #endif
 		if( nbytes < 0 ) {
-			fprintf(stderr, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
+			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
-			fprintf(stderr, "Error=%d, core_loc=%x\n", errno, core_loc);
+			dprintf(D_ALWAYS, "Error=%d, core_loc=%x\n", errno, core_loc);
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -958,7 +968,9 @@ ssize_t
 SegMap::Write( int fd, ssize_t pos )
 {
 	if( pos != file_loc ) {
-		fprintf( stderr, "Checkpoint sequence error\n" );
+		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n",
+				 pos, file_loc );
+		Suicide();
 	}
 	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
 			fd, core_loc, len );
@@ -1229,7 +1241,9 @@ terminate_with_sig( int sig )
 		act.sa_flags = 0;
 		errno = 0;
 		if( sigaction(sig,&act,0) < 0 ) {
-			EXCEPT( "sigaction" );
+			if (!InRestart) dprintf(D_ALWAYS, "sigaction: %s\n",
+									strerror(errno));
+			Suicide();
 		}
 	}
 

@@ -180,8 +180,9 @@ get_time()
 	int				scm;
 
 	if( gettimeofday( &tv, 0 ) < 0 ) {
-		perror( "gettimeofday()" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "gettimeofday failed in get_time(): %s\n",
+				 strerror(errno) );
+		Suicide();
 	}
 
 	return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0;

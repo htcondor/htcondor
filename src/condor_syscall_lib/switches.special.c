@@ -189,8 +189,8 @@ store_working_directory()
 
 		/* This routine returns 0 on error! */
 	if( !status ) {
-		fprintf( stderr, tbuf );
-		abort();
+		dprintf( D_ALWAYS, "getwd failed in store_working_directory()!\n" );
+		Suicide();
 	}
 
 		/* Ok - everything worked */

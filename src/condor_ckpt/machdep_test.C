@@ -43,6 +43,12 @@ void test_func();
 int		GlobalDataObj;
 long	SomeDataAddr = (long)&GlobalDataObj;
 
+void
+Suicide()
+{
+	exit(1);
+}
+
 int
 main( int argc, char *argv )
 {

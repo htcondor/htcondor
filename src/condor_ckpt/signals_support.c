@@ -108,8 +108,10 @@ condor_save_sigstates()
 		while ( sigismember(&mask,sig) != -1 ) sig++;
 		signal_states.nsigs = sig;
 		if ( sig > NUM_SIGS ) {
-			EXCEPT("must recompile to support %d signals; current max=%d\n",
+			dprintf(D_ALWAYS,
+					"must recompile to support %d signals; current max=%d\n",
 					sig, NUM_SIGS);
+			Suicide();
 		}
 #endif
 	}

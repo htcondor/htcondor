@@ -53,8 +53,8 @@ init_addr_tab()
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	if( getaddressconf(AddrTab,AddrTabSize) != AddrTabSize ) {
 		SetSyscalls( scm );
-		perror( "getaddressconf" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "getaddressconf", strerror(errno) );
+		Suicide();
 	}
 	SetSyscalls( scm );
 }

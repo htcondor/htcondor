@@ -50,7 +50,7 @@ typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
-const int  MAX_SEGS = 50;
+const int  MAX_SEGS = 200;
 
 class Header {
 public:
@@ -127,11 +127,12 @@ extern "C" void Checkpoint( int, int, void * );
 #endif
 
 extern "C" {
-void ckpt();
-extern "C" void restart();
-extern "C" void init_image_with_file_name( char *ckpt_name );
-extern "C" void init_image_with_file_descriptor( int ckpt_fd );
-extern "C" void _condor_prestart( int syscall_mode );
+	void ckpt();
+	void restart();
+	void init_image_with_file_name( char *ckpt_name );
+	void init_image_with_file_descriptor( int ckpt_fd );
+	void _condor_prestart( int syscall_mode );
+	void Suicide();
 }
 
 #define DUMP( leader, name, fmt ) \

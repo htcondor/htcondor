@@ -201,3 +201,21 @@ void restore_condor_sigmask(sigset_t omask)
 		EXCEPT( "sigprocmask" );
 	}
 }	
+
+int
+ioserver_open(const char *path, int oflag, mode_t mode)
+{
+	return -1;
+}
+
+off_t
+ioserver_lseek(int filedes, off_t offset, int whence)
+{
+	return -1;
+}
+
+int
+ioserver_close(int filedes)
+{
+	return -1;
+}

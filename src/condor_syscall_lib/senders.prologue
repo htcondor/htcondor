@@ -122,7 +122,8 @@ block_condor_signals()
 	sigaddset( &mask, SIGTSTP );
 	sigaddset( &mask, SIGUSR1 );
 	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
-		EXCEPT( "sigprocmask" );
+		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
+		Suicide();
 	}
 	SetSyscalls( sigscm );
 	return omask;
@@ -135,7 +136,8 @@ void restore_condor_sigmask(sigset_t omask)
 	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	/* Restore previous signal mask - generally unblocks TSTP and USR1 */
 	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
-		EXCEPT( "sigprocmask" );
+		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
+		Suicide();
 	}
 	SetSyscalls( sigscm );
 }	

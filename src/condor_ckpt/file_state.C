@@ -80,11 +80,11 @@ static char *_FileName_ = __FILE__;
 #include "image.h"
 extern Image MyImage;
 
+extern "C" {
 extern int ioserver_open(const char *path, int oflag, mode_t mode);
 
 extern int ioserver_close(int filedes);
 
-extern "C" {
 extern off_t ioserver_lseek(int filedes, off_t offset, int whence);
 
 extern ssize_t ioserver_read(int filedes, char *buf, unsigned int size);
@@ -671,8 +671,9 @@ OpenFileTable::Save()
 				pos = (off_t)0;		// probably it's a tty
 			}
 			if( pos < (off_t)0 ) {
-				perror( "lseek" );
-				abort();
+				dprintf(D_ALWAYS, "lseek failed for %d: %s\n", f->real_fd,
+						strerror(errno));
+				Suicide();
 			}
 			f->offset = pos;
 
@@ -809,9 +810,9 @@ OpenFileTable::Restore()
 			else
 			  f->real_fd = open( f->pathname, mode );
 			if( f->real_fd < 0 ) {
-			  fprintf(stderr, "i=%d, filename=%s\n", i, f->pathname);
-			  perror( "open" );
-			  abort();
+			  dprintf(D_ALWAYS, "i=%d, filename=%s\n", i, f->pathname);
+			  dprintf(D_ALWAYS, "open: %s", strerror(errno) );
+			  Suicide();
 			}
 			
 			// the open above saved in a global variable whether or not
@@ -859,8 +860,8 @@ OpenFileTable::Restore()
 
 			  
 			  if( pos != f->offset ) {
-			    perror( "lseek" );
-			    abort();
+			    dprintf( D_ALWAYS,  "ioserver lseek: %s", strerror(errno) );
+				Suicide();
 			  }
 			}
 			
@@ -971,7 +972,8 @@ OpenFileTable::InsertR( int user_fd, void *buf, int tempPos, int tempRead, int t
 	 
 	newBuf = new BufElem;
 	if( !newBuf ) {
-		exit( 1 );
+		dprintf(D_ALWAYS, "failed to alloc new BufElem!\n");
+		Suicide();
 	}
 		
 	if( !prevP ) {
@@ -984,7 +986,8 @@ OpenFileTable::InsertR( int user_fd, void *buf, int tempPos, int tempRead, int t
 
 	newBuf->buf = new char[tempFetch+1];
 	if( !newBuf->buf ) {
-		exit( 1 );
+		dprintf(D_ALWAYS, "failed to alloc file buffer!\n");
+		Suicide();
 	}
 	rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, (void *)newBuf->buf, tempFetch );
 	if( rval != tempFetch ) {
@@ -1035,7 +1038,8 @@ OpenFileTable::OverlapR1( int user_fd, void *buf, int tempPos, int tempRead, int
 	        tempFetch = afterP->offset - tempPos;     
 		char *fetch = new char[tempFetch+1];
 		if( !fetch ) {
-			exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 		}
 		rval = REMOTE_syscall( CONDOR_lseekread, real_fd, tempPos, SEEK_SET, fetch, tempFetch );
 		if( rval != tempFetch ) {
@@ -1055,7 +1059,8 @@ OpenFileTable::OverlapR1( int user_fd, void *buf, int tempPos, int tempRead, int
 		}
 		char *newbuf = new char[tempFetch+afterP->len+1];
 		if( !newbuf ) {
-			exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 		}
 		char *tempP = newbuf;
 		strncpy( newbuf, fetch, tempFetch );
@@ -1099,7 +1104,8 @@ OpenFileTable::OverlapR2( int user_fd, void *buf, int tempPos, int tempRead, int
 
 	    char *fetch = new char[tempFetch+1];
 	    if( !fetch ) {
-		exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 	    }
 	    rval = REMOTE_syscall( CONDOR_lseekread, real_fd, prevP->offset + prevP->len, SEEK_SET, fetch, tempFetch );
 	    if( rval != tempFetch ) {
@@ -1122,7 +1128,8 @@ OpenFileTable::OverlapR2( int user_fd, void *buf, int tempPos, int tempRead, int
 
 	    char *newbuf = new char[tempFetch+prevP->len+1];
 	    if( !newbuf ) {
-       		exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 	    }
 	    char *tempP = newbuf;
 	    strncpy( newbuf, prevP->buf, prevP->len );
@@ -1140,7 +1147,8 @@ OpenFileTable::OverlapR2( int user_fd, void *buf, int tempPos, int tempRead, int
 
 	    char *fetch = new char[tempFetch+1];
 	    if( !fetch ) {
-		exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 	    }
 	    rval = REMOTE_syscall( CONDOR_lseekread, real_fd, prevP->offset + prevP->len, SEEK_SET, fetch, tempFetch );
 	    if( rval != tempFetch ) {
@@ -1172,7 +1180,8 @@ OpenFileTable::OverlapR2( int user_fd, void *buf, int tempPos, int tempRead, int
 
 	    char *newbuf = new char[afterP->offset+afterP->len-prevP->offset+1];
 	    if( !newbuf ) {
-		exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 	    }
 	    char *tempP = newbuf;
 	    strncpy( newbuf, prevP->buf, prevP->len );
@@ -1434,7 +1443,8 @@ OpenFileTable::InsertW( int user_fd, const void *buf, int tempPos, int len, BufE
 	 
 	newBuf = new BufElem;
 	if( !newBuf ) {
-		exit( 1 );
+		dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+		Suicide();
 	}
 		
 	if( !prevP ) {
@@ -1447,7 +1457,8 @@ OpenFileTable::InsertW( int user_fd, const void *buf, int tempPos, int len, BufE
 
 	newBuf->buf = new char[len+1];
 	if( !newBuf->buf ) {
-      		exit( 1 );
+		dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+		Suicide();
 	}
 	newBuf->offset = tempPos;
 	newBuf->len = len;
@@ -1494,7 +1505,8 @@ OpenFileTable::OverlapW1( int user_fd, const void *buf, int tempPos, int len, Bu
 	     
 		char *newbuf = new char[tempWrite+len+1];
 		if( !newbuf ) {
-			exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 		}
 		char *tempP = newbuf;
 		strncpy( newbuf, ( char * )buf, len );
@@ -1537,7 +1549,8 @@ OpenFileTable::OverlapW2( int user_fd, const void *buf, int tempPos, int len, Bu
 
 	    char *newbuf = new char[tempWrite+len+1];
 	    if( !newbuf ) {
-		exit( 1 );
+			dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+			Suicide();
 	    }
 	    char *tempP = newbuf;
 	    strncpy( newbuf, prevP->buf, tempWrite );
@@ -1552,7 +1565,8 @@ OpenFileTable::OverlapW2( int user_fd, const void *buf, int tempPos, int len, Bu
         } else {                                // case III
 	    char *newbuf = new char[afterP->offset+afterP->len-prevP->offset+1];
 	    if( !newbuf ) {
-		exit( 1 );
+		dprintf( D_ALWAYS, "failed to alloc new file buffer\n");
+		Suicide();
 	    }
 	    char *tempP = newbuf;
 	    strncpy( newbuf, prevP->buf, tempPos-prevP->offset );
@@ -1686,16 +1700,18 @@ OpenFileTable::FlushBuf()
 			file[i].firstBuf = tempBuf->next;
 			tempBuf->next = NULL;
 			if( ( real_fd=MapFd( i ) ) < 0 ) {
-			    exit( 1 );  
+				dprintf(D_ALWAYS,
+						"failed to MapFd in OpenFileTable::FlushBuf()!\n");
 			}
 			rval = REMOTE_syscall( CONDOR_lseekwrite, real_fd, tempBuf->offset, SEEK_SET, tempBuf->buf, tempBuf->len );
 			if( rval != tempBuf->len ) {
-			        exit( 1 );
+				dprintf(D_ALWAYS,
+						"lseekwrite failed in OpenFileTable::FlushBuf()!\n");
 			}
 			delete tempBuf;
 		    }
 		} else {
-		    exit( 1 ) ; 
+			dprintf(D_ALWAYS, "invalid case in OpenFileTable::FlushBuf()!\n");
 		}
 	    }
 	}
@@ -1722,7 +1738,7 @@ OpenFileTable::DisplayBuf()
 		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
 		    printf( "%s%d%s\n", "\nWRONLY file ", i, " : " );
 		} else {
-		    exit( 1 ) ; 
+		    dprintf(D_ALWAYS, "invalid case in OpenFileTable::DisplayBuf()\n");
 		}
 		
 		int j = 1;
@@ -2057,7 +2073,8 @@ open( const char *path, int flags, ... )
 	} else {
 		status = REMOTE_syscall( CONDOR_file_info, path, &pipe_fd, local_path );
 		if( status < 0 ) {
-			EXCEPT( "CONDOR_file_info" );
+			dprintf( D_ALWAYS, "CONDOR_file_info failed" );
+			Suicide();
 		}
 		switch( status ) {
 		  case IS_PRE_OPEN:
@@ -2115,48 +2132,46 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 	EXCEPT( "Should never get here" );
 }
 
-#if defined(OSF1) || defined(Solaris) || defined(IRIX53)
-	int
-	_open( const char *path, int flags, ... )
-	{
-		va_list ap;
-		int		creat_mode = 0;
+int
+_open( const char *path, int flags, ... )
+{
+	va_list ap;
+	int		creat_mode = 0;
 
-		if( flags & O_CREAT ) {
-			va_start( ap, flags );
-			creat_mode = va_arg( ap, int );
-			return open( path, flags, creat_mode );
-		} else {
-			return open( path, flags );
-		}
-
+	if( flags & O_CREAT ) {
+		va_start( ap, flags );
+		creat_mode = va_arg( ap, int );
+		return open( path, flags, creat_mode );
+	} else {
+		return open( path, flags );
 	}
-#endif
+
+}
+
+__open( const char *path, int flags, ... )
+{
+	va_list ap;
+	int		creat_mode = 0;
+
+	if( flags & O_CREAT ) {
+		va_start( ap, flags );
+		creat_mode = va_arg( ap, int );
+		return open( path, flags, creat_mode );
+	} else {
+		return open( path, flags );
+	}
+
+}
 
 #if defined(OSF1)
-	__open( const char *path, int flags, ... )
-	{
-		va_list ap;
-		int		creat_mode = 0;
-
-		if( flags & O_CREAT ) {
-			va_start( ap, flags );
-			creat_mode = va_arg( ap, int );
-			return open( path, flags, creat_mode );
-		} else {
-			return open( path, flags );
-		}
-
-	}
-
-	/* Force isatty() to be undefined so programs that use it get it from
-	   the condor library rather than libc.a.
-	*/
-	int
-	not_used()
-	{
-		return isatty(0);
-	}
+/* Force isatty() to be undefined so programs that use it get it from
+   the condor library rather than libc.a.
+*/
+int
+not_used()
+{
+	return isatty(0);
+}
 #endif
 
 #if defined(AIX32)
@@ -2208,21 +2223,16 @@ close( int fd )
 /* these definitions of _close and __close match definitions of
    _open and __open above */
 
-#if defined(OSF1) || defined(Solaris) || defined(IRIX53)
 int
 _close( int fd )
 {
 	return close( fd );
 }
-#endif
-
-#if defined(OSF1)
 int
 __close( int fd )
 {
 	return close( fd );
 }
-#endif
 
 #endif
 

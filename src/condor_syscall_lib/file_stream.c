@@ -87,10 +87,14 @@ open_file_stream( const char *file, int flags, size_t *len )
 	SetSyscalls( scm );
 
 	if( mode < 0 ) {
-		EXCEPT( "CONDOR_file_info" );
+		dprintf( D_ALWAYS, "CONDOR_file_info failed in open_file_stream: %s\n",
+				 strerror(errno) );
+		Suicide();
 	}
 
 	if( mode == IS_PRE_OPEN ) {
+		fprintf( stderr, "CONDOR ERROR: The shadow says a stream file "
+				 "is a pre-opened pipe!\n" );
 		EXCEPT( "The shadow says a stream file is a pre-opened pipe!\n" );
 	}
 

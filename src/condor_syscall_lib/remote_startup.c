@@ -339,12 +339,13 @@ MAIN( int argc, char *argv[], char **envp )
 		cmd_fd = open( argv[2], O_RDONLY);
 		if( cmd_fd < 0 ) {
 			dprintf( D_ALWAYS, "Can't read cmd file \"%s\"\n", argv[2] );
-			exit( 1 );
+			Suicide();
 		}
 
 		/* Some error in the command line syntax */
 	} else {
-		assert( FALSE );
+		dprintf( D_ALWAYS, "Error in command line syntax\n" );
+		Suicide();
 	}
 
 #if 0
@@ -415,7 +416,7 @@ _condor_interp_cmd_stream( int fd )
 		}
 	}
 	dprintf( D_ALWAYS, "ERROR: EOF on command stream\n" );
-	exit( 1 );
+	Suicide();
 }
 
 static void
@@ -511,54 +512,8 @@ condor_iwd( const char *path )
 static BOOLEAN
 condor_fd( const char *num, const char *path, const char *open_mode )
 {
-	char	*extra;
-	long	n;
-	int		mode;
-	int		remote_fd;
-	int		scm;
-
-#if 1				/* no longer used  - ignore */
+	/* no longer used  - ignore */
 	return TRUE;
-#else
-#	if 0
-	dprintf( D_ALWAYS, "condor_fd( %s, %s, %s\n", num, path, open_mode );
-	delay();
-#	endif
-	n = strtol( num, &extra, 0 );
-	assert( extra[0] == '\0' );
-	if( strcmp("O_RDONLY",open_mode) == MATCH ) {
-		mode = O_RDONLY;
-	} else if(strcmp("O_WRONLY",open_mode) == MATCH ) {
-		mode = O_WRONLY;
-	} else if( strcmp("O_RDWR",open_mode) == MATCH ) {
-		mode = O_RDWR;
-	} else {
-		dprintf( D_ALWAYS, "Unknown file opening mode (%s)\n", open_mode );
-		assert( FALSE );
-	}
-
-	dprintf( D_ALWAYS,
-		"condor_fd: fd_number = %d, file = \"%s\",  mode = 0%o\n",
-		n, path, mode
-	);
-	delay();
-
-	scm = SetSyscalls( SYS_REMOTE | SYS_MAPPED );
-	remote_fd = open( path, mode );
-	assert( remote_fd >= 0 );
-	dprintf( D_FULLDEBUG, "remote_fd = %d, n = %d\n", remote_fd, n );
-	if( remote_fd != n ) {
-		int		status;
-		status = dup2(remote_fd,n);
-		assert( status == n );
-
-		status =  close(remote_fd);
-		assert( status == 0 );
-	}
-	SetSyscalls( scm );
-
-	return TRUE;
-#endif
 }
 
 static BOOLEAN
@@ -671,8 +626,9 @@ unblock_signals()
 		/* unblock signals */
 	sigfillset( &sig_mask );
 	if( sigprocmask(SIG_UNBLOCK,&sig_mask,0) < 0 ) {
-		perror( "sigprocmask" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "sigprocmask failed in unblock_signals: %s",
+				 strerror(errno));
+		Suicide();
 	}
 
 	SetSyscalls( scm );
@@ -769,7 +725,8 @@ open_std_file( int which )
 	if( answer < 0 ) {
 		sprintf( buf, "Can't open \"%s\"", name );
 		REMOTE_syscall(CONDOR_perm_error, buf );
-		exit( 4 );
+		dprintf( D_ALWAYS, buf );
+		Suicide();
 	} else {
 		if( answer != which ) {
 			dup2( answer, which );
@@ -788,12 +745,14 @@ set_iwd()
 			CONDOR_perm_error,
 			"Can't determine initial working directory"
 		);
-		exit( 4 );
+		dprintf( D_ALWAYS, "Can't determine initial working directory\n" );
+		Suicide();
 	}
 	if( REMOTE_syscall(CONDOR_chdir,iwd) < 0 ) {
 		sprintf( buf, "Can't open working directory \"%s\"", iwd );
 		REMOTE_syscall( CONDOR_perm_error, buf );
-		exit( 4 );
+		dprintf( D_ALWAYS, "Can't chdir(%s)\n", iwd );
+		Suicide();
 	}
 	Set_CWD( iwd );
 }
@@ -806,7 +765,8 @@ get_ckpt_name()
 
 	status = REMOTE_syscall( CONDOR_get_ckpt_name, ckpt_name );
 	if( status < 0 ) {
-		EXCEPT( "Can't get checkpoint file name" );
+		dprintf( D_ALWAYS, "Can't get checkpoint file name!\n" );
+		Suicide(0);
 	}
 	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", ckpt_name );
 	init_image_with_file_name( ckpt_name );

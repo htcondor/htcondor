@@ -150,8 +150,8 @@ num_segments( )
 	}
 	SYSCALL(SYS_ioctl, fd, PIOCNMAP, &prmap_count);
 	if (prmap_count > MAX_SEGS) {
-		fprintf( stderr, "Don't know how to grow segment map yet!\n" );
-		exit( 1 );
+		dprintf( D_ALWAYS, "Don't know how to grow segment map yet!\n" );
+		Suicide();
 	}		
 	SYSCALL(SYS_ioctl, fd, PIOCMAP, my_map);
 	/* find the text segment by finding where this function is
@@ -166,8 +166,7 @@ num_segments( )
 		stack_loc = find_map_for_addr((caddr_t) stack_start_addr());
 	heap_loc = find_map_for_addr((caddr_t) data_start_addr());
 	if (SYSCALL(SYS_close, fd) < 0) {
-		perror("close");
-		exit(4);
+		dprintf(D_ALWAYS, "close: %s", strerror(errno));
 	}
 	SetSyscalls( scm );
 	return prmap_count;
