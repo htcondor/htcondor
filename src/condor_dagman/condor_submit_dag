@@ -177,7 +177,7 @@ sub parse_dag_file {
 			$nextdl =~ s/^\s*//;			# remove the beginning whitespace
 			$_ = $thisdl ." ". $nextdl;		# slam them together
 		}
-	if( /^job\s*(\S*)\s*(\S*)$/i ) {
+	if( /^job\s+(\S+)\s+(\S+)/i ) {
 	    $cmd_files{$2} = 1;
 	}
     }
