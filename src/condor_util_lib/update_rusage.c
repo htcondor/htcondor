@@ -27,10 +27,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include "condor_debug.h"
-/* Solaris specific change ..dhaval 6/24 */
-#if defined(Solaris) && !defined(Solaris251)
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
 
 
 static char *_FileName_ = __FILE__;
