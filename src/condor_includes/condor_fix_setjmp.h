@@ -35,7 +35,17 @@
 
 #if !defined(AIX32)
 
+#if defined(LINUX) && defined(__FAVOR_BSD)
+#	define CONDOR_FAVOR_BSD
+#	undef __FAVOR_BSD
+#endif
+
 #include <setjmp.h>
+
+#if defined(LINUX) && defined(CONDOR_FAVOR_BSD)
+#	undef CONDOR_FAVOR_BSD
+#	define __FAVOR_BSD
+#endif
 
 #ifdef IRIX53
 #undef _POSIX90
