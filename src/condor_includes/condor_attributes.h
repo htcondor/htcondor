@@ -81,6 +81,7 @@ const char ATTR_CPU_BUSY_TIME            [] = "CpuBusyTime";
 const char ATTR_CPU_IS_BUSY              [] = "CpuIsBusy";
 const char ATTR_CPUS                     [] = "Cpus";
 const char ATTR_CURRENT_HOSTS			 [] = "CurrentHosts";
+const char ATTR_CURRENT_JOBS_RUNNING     [] = "CurrentJobsRunning";
 const char ATTR_CURRENT_RANK			 [] = "CurrentRank";
 const char ATTR_DAEMON_START_TIME		 [] = "DaemonStartTime";
 const char ATTR_DAG_NODE_NAME			 [] = "DAGNodeName";
@@ -329,6 +330,7 @@ const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
 const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
+const char ATTR_MAX_RUNNING_JOBS			 [] = "MaxRunningJobs";
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 const char ATTR_SHADOW_VERSION			 [] = "ShadowVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
