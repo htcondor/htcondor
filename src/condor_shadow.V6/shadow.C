@@ -355,7 +355,7 @@ main(int argc, char *argv[], char *envp[])
 	if( my_fs_domain ) {
 		strcpy( My_Filesystem_Domain, my_fs_domain );
 	} else {
-		get_machine_name( My_Filesystem_Domain );
+		strcpy( My_Filesystem_Domain, my_full_hostname() );
 	}
 	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", My_Filesystem_Domain );
 
@@ -363,7 +363,7 @@ main(int argc, char *argv[], char *envp[])
 	if( (my_uid_domain) && (strcasecmp(my_uid_domain,"none") != 0) ) {
 		strcpy( My_UID_Domain, my_uid_domain );
 	} else {
-		get_machine_name( My_UID_Domain );
+		strcpy( My_UID_Domain, my_full_hostname() );
 	}
 	dprintf( D_ALWAYS, "My_UID_Domain = \"%s\"\n", My_UID_Domain );
 
