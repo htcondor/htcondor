@@ -119,7 +119,8 @@ If your site does NOT have a shared filesystem across all the nodes
 where your MPI computation will execute, you can use Condor's file
 transfer mechanism.
 You can find out more details about these settings by reading the
-\Condor{submit} man page.
+\Condor{submit} man page or section~\ref{sec:file-transfer} on
+page~\pageref{sec:file-transfer}. 
 Assuming your job only reads input from STDIN, here is an example
 submit file for a site without a shared filesystem:
 
@@ -135,7 +136,8 @@ input = infile.$(NODE)
 output = outfile.$(NODE)
 error = errfile.$(NODE)
 machine_count = 4
-transfer_files = on_exit
+should_transfer_files = yes
+when_to_transfer_output = on_exit
 queue
 \end{verbatim}
 
