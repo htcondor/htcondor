@@ -671,15 +671,39 @@ JICShadow::initUserPriv( void )
 		}
 	} else {
 		dprintf( D_FULLDEBUG, "Submit host is in different UidDomain\n" ); 
+
+       // first see if we define VMx_USER in the config file
+        char *nobody_user;
+        char paramer[20];
+        sprintf(paramer, "VM%d_USER", Starter->getMyVMNumber());
+        nobody_user = param(paramer);
+
+        if ( nobody_user != NULL ) {
+            if ( strcmp(nobody_user, "root") == MATCH ) {
+                dprintf(D_ALWAYS, "WARNING: %s set to root, which is not "
+                       "allowed. Ignoring.\n", paramer);
+                free(nobody_user);
+                nobody_user = strdup("nobody");
+            } else {
+                dprintf(D_ALWAYS, "%s set, so running job as %s\n",
+                        paramer, nobody_user);
+            }
+        } else {
+            nobody_user = strdup("nobody");
+        }
+
 			// passing NULL for the domain is ok here since this is
 			// UNIX code
-		if( ! init_user_ids("nobody", NULL) ) { 
+		if( ! init_user_ids(nobody_user, NULL) ) { 
 			dprintf( D_ALWAYS, "ERROR: Could not initialize user_priv "
-					 "as \"nobody\"\n" );
+					 "as \"%s\"\n", nobody_user );
 			free( owner );
+			free( nobody_user );
 			return false;
 		} else {
-			dprintf( D_FULLDEBUG, "Initialized user_priv as \"nobody\"\n" );
+			dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n",
+				  nobody_user );
+			free( nobody_user );
 		}			
 	}
 		// deallocate owner string so we don't leak memory.

@@ -139,30 +139,25 @@ VanillaProc::StartJob()
 		family = new ProcFamily(JobPid,PRIV_USER);
 		ASSERT(family);
 
-#ifdef WIN32
+		const char* run_jobs_as = NULL;
+		bool dedicated_account = false;
+
+		run_jobs_as = get_user_loginname();
+
+		// See if we want our family built by login if we're using
+		// specific run accounts. (default is no)
+		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED", false);
 
 		// we support running the job as other users if the user
 		// is specifed in the config file, and the account's password
 		// is properly stored in our credential stash.
 
-		char vm_user[255];
-		int vm_num = Starter->getMyVMNumber();
-
-		sprintf(vm_user, "VM%d_USER", vm_num);
-		char *run_jobs_as = param(vm_user);
-		if (run_jobs_as) {
-			char *domain, *name;
-				// set ProcFamily to find decendants via a common login name
-			getDomainAndName(run_jobs_as, domain, name);
-				// don't set family login since we want to use procapi for now
-			// family->setFamilyLogin(name);
-			free(run_jobs_as);
-		} else {
-			
+		if (dedicated_account) {
 			// set ProcFamily to find decendants via a common login name
-			family->setFamilyLogin(myDynuser->get_accountname());
+			dprintf(D_FULLDEBUG, "Building procfamily by login \"%s\"\n",
+					run_jobs_as);
+			family->setFamilyLogin(run_jobs_as);
 		}
-#endif
 
 		// take a snapshot of the family every 15 seconds
 		snapshot_tid = daemonCore->Register_Timer(2, 15, 
