@@ -26,10 +26,6 @@
 **
 */ 
 
-#ifdef __GNUG__
-#pragma implementation "list.h"
-#endif
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -43,6 +39,9 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 #include "condor_qmgr.h"
+
+template class List<PROC_ID>;
+template class Item<PROC_ID>;
 
 char	*MyName;
 BOOLEAN	TroubleReported;

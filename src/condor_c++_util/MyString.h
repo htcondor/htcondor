@@ -63,6 +63,12 @@ public:
     return Data[pos];
   }
 
+  char& operator[](int pos) {
+	static char dummy;
+	if (pos>=Len) return dummy;
+	return Data[pos];
+  }
+
   MyString& operator+=(const MyString& S) {
     if (S.Len>0) {
       Len+=S.Len;

@@ -1,5 +1,3 @@
-#pragma implementation "proc_obj_tmpl.h"
-
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow
 ** 
@@ -920,11 +918,6 @@ GENERIC_PROC
   define a couple of global variables here to allow this function to
   build the list.
 */
-
-#if defined(OSF1)
-#pragma define_template List<ProcObj>
-#pragma define_template Item<ProcObj>
-#endif
 
 	// The list we are building
 static List<ProcObj>	*MyList;

@@ -34,10 +34,6 @@
 #ifndef _SMPL_LIST_H_
 #define _SMPL_LIST_H_
 
-#if !defined(WIN32)
-#pragma interface
-#endif
-
 #include <iostream.h>
 
 template <class ObjType>

@@ -110,6 +110,48 @@ scheduleHousekeeper (int timeout)
 
 
 int CollectorEngine::
+invokeHousekeeper (AdTypes adtype)
+{
+	time_t now;
+   
+	(void) time (&now);
+	if (now == (time_t) -1)
+	{
+		dprintf (D_ALWAYS, "Error in reading system time --- aborting\n");
+		return FALSE;
+	}
+
+	switch (adtype)
+	{
+		case STARTD_AD: 
+			cleanHashTable (StartdAds, now, makeStartdAdHashKey);
+			break;
+
+		case SCHEDD_AD:
+			cleanHashTable (ScheddAds, now, makeScheddAdHashKey);
+			break;
+
+		case MASTER_AD:
+			cleanHashTable (MasterAds, now, makeMasterAdHashKey);
+			break;
+
+		case STARTD_PVT_AD:
+			cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
+			break;
+
+		case SUBMITTOR_AD:
+			cleanHashTable (SubmittorAds, now, makeScheddAdHashKey);
+			break;
+
+		default:
+			return 0;
+	}
+
+	return 1;
+}
+
+
+int CollectorEngine::
 scheduleDownMasterCheck (int timeout)
 {
 	// cancel outstanding check requests
@@ -352,9 +394,16 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
+	  case QUERY_GATEWAY_ADS:
 	  case QUERY_SUBMITTOR_ADS:
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
+	  case INVALIDATE_STARTD_ADS:
+	  case INVALIDATE_SCHEDD_ADS:
+	  case INVALIDATE_MASTER_ADS:
+	  case INVALIDATE_GATEWAY_ADS:
+	  case INVALIDATE_CKPT_SRVR_ADS:
+	  case INVALIDATE_SUBMITTOR_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;

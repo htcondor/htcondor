@@ -1,6 +1,5 @@
 /*#ifndef _PROC_OBJ_TMPL_H
 #define _PROC_OBJ_TMPL_H */
-#pragma interface
 
 /*
   Copy an array of some scalar type object.  We're given a pointer by

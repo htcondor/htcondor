@@ -1,9 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
-#endif
 #include "HashTable.h"
 #include "hashkey.h"
 #include "sched.h"

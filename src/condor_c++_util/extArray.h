@@ -3,10 +3,6 @@
 
 #include "condor_debug.h"
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
 template <class Element>
 class ExtArray 
 {
@@ -22,7 +18,8 @@ class ExtArray
 	Element &operator[] (int);
 
 	// control functions
-	int	getsize (void);
+	int	getsize (void) const;
+	int	getlast (void) const;
 	Element *getarray (void);
 	void resize (int);
 	void fill (Element);
@@ -31,6 +28,7 @@ class ExtArray
 
 	Element *array;
 	int 	size;
+	int		last;
 	Element filler;
 };
 
@@ -41,6 +39,7 @@ ExtArray (int sz)
 {
 	// create array of required size
 	size = sz;
+	last = 0;
 	array = new Element[size];
 	if (!array)
 	{
@@ -61,6 +60,7 @@ ExtArray (const ExtArray &old)
 	// establish new array of required size;
 	delete [] array;
 	size = old.size;
+	last = old.last;
 	array = new Element[size];
 	if (!array) 
 	{
@@ -122,17 +122,25 @@ operator[] (int i)
 	}
 
 	// index array
+	if( i > last ) last = i;
 	return array[i];
 }
 
 
 template <class Element>
 inline int ExtArray<Element>::
-getsize (void) 
+getsize (void) const
 {
 	return size;
 }
 
+
+template <class Element>
+inline int ExtArray<Element>::
+getlast (void) const
+{
+	return last;
+}
 
 template <class Element>
 inline Element *ExtArray<Element>::

@@ -1,25 +1,21 @@
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
-#endif
-
-
 #include "HashTable.h"
-
-#include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "sched.h"
-#include "condor_config.h"
-#include "condor_debug.h"
+#include "scheduler.h"
 #include "proc.h"
-#include "exit.h"
-#include "condor_collector.h"
+
+template class HashTable<int, int>;
+template class HashBucket<int,int>;
+template class HashTable<int, shadow_rec *>;
+template class HashBucket<int,shadow_rec *>;
+template class HashTable<HashKey, match_rec *>;
+template class HashBucket<HashKey,match_rec *>;
+template class HashTable<PROC_ID, shadow_rec *>;
+template class HashBucket<PROC_ID,shadow_rec *>;
+template class Queue<shadow_rec*>;
+template class List<PROC_ID>;
+template class Item<PROC_ID>;
 
 bool operator==(const PROC_ID a, const PROC_ID b)
 {
 	return a.cluster == b.cluster && a.proc == b.proc;
 }
-
-#include "scheduler.h"
-typedef HashTable<int, int> ClusterSizeHashTable_t;
-
-

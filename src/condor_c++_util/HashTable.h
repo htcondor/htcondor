@@ -1,10 +1,6 @@
 #ifndef HASH_H
 #define HASH_H
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
 #include "condor_common.h"
 #include <iostream.h>
 

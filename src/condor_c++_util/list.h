@@ -1,7 +1,3 @@
-#if !defined(WIN32)
-#pragma interface
-#endif
-
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow
 ** 
@@ -122,8 +118,8 @@
 // const int	TRUE = 1;
 // const int	FALSE = 0;
 
-template <class ObjType> class Item;
 
+template <class ObjType> class Item;
 
 template <class ObjType>
 class List {

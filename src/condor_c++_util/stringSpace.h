@@ -67,6 +67,7 @@ class StringSpace
 	~StringSpace ();
 
 	// principal member functions
+	void 	setCaseSensitive( bool );
 	int		getCanonical(char*,SSString&, int=SS_DUP);
 	int		getCanonical(char*,SSString*&,int=SS_DUP);
     int     getCanonical(char*,int=SS_DUP); // insert string without reference
@@ -90,6 +91,7 @@ class StringSpace
 	HashTable<MyString,int> stringSpace;	
 	ExtArray<SSStringEnt> strTable;
 	int					  current;
+	bool				  caseSensitive;
 };
 
 

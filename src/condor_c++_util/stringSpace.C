@@ -1,12 +1,13 @@
 #include <condor_common.h>
 #include <strings.h>
 #include <ctype.h>
-#pragma implementation "HashTable.h"
 #include "HashTable.h"
 #include "stringSpace.h"
 #include "condor_debug.h"
 
-template class HashTable<char *, int>;
+// explicit template instantiation
+template class HashTable<MyString, int>;
+template class HashBucket<MyString,int>;
 
 // hash function for strings
 static int 
@@ -15,11 +16,7 @@ hashFunction (MyString &str, int numBuckets)
 	int i = str.Length() - 1, hashVal = 0;
 	while (i >= 0) 
 	{
-#ifdef CLASSAD_CASE_INSENSITIVE
-		hashVal += tolower(str[i]);
-#else
 		hashVal += str[i];
-#endif
 		i--;
 	}
 	return (hashVal % numBuckets);
@@ -92,6 +89,13 @@ getCanonical (char *str, int adopt)
 
 	// sanity check
 	if (!str) return -1;
+
+	// if case insensitive, convert to lower case
+	if( !caseSensitive ) {
+		for( int i = myStr.Length(); i >= 0 ; i++ ) {
+			myStr[i] = tolower( myStr[i] );
+		}
+	}
 
 	// case 1:  already exists in space
 	if (stringSpace.lookup (myStr, index) == 0) 

@@ -25,6 +25,7 @@ class CollectorEngine : public Service
 
 	// interval to clean out ads
 	int scheduleHousekeeper (int = 300);
+	int invokeHousekeeper (AdTypes);
 
 	// interval to check for down masters
 	int scheduleDownMasterCheck (int = 10800);

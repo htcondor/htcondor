@@ -1,6 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_negotiator
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates -Wall
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a

@@ -1,6 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_rm
 CFLAGS = $(STD_C_FLAGS)  $(PLATFORM_C_FLAGS)
-C_PLUS_FLAGS = -I../condor_schedd $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fexternal-templates
+C_PLUS_FLAGS = -I../condor_schedd $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fno-implicit-templates
 LDFLAGS = $(LIBDBM)
 
 SRC = rm.C

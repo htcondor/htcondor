@@ -35,9 +35,6 @@
 ** Cleaned up for V6 by Derek Wright 7/8/97
 ** 
 */ 
-#pragma implementation "list.h"
-#pragma implementation "Queue.h"
-
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "sched.h"
@@ -85,6 +82,7 @@ extern "C"
 extern	int		get_job_prio(ClassAd *ad);
 extern	void	FindRunnableJob(int, int&);
 extern	int		Runnable(PROC_ID*);
+extern 	bool	operator==( PROC_ID, PROC_ID );
 
 extern	char*		Spool;
 extern	char*		Name;

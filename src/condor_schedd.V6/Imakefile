@@ -1,10 +1,5 @@
 SRC_DIR = $(SRC_TREE)/condor_schedd
-
-#if IS_SGI_IRIX53 || IS_SGI_IRIX62
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
-#else
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates
-#endif
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates
 
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
@@ -39,7 +34,6 @@ tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 c_plus_target(condor_schedd,$(OBJ),$(LIB))
 pure_c_plus_target(condor_schedd.pure,$(OBJ),$(LIB))
-purecov_c_plus_target(condor_schedd.pc,$(OBJ),$(LIB))
 c_plus_target(qmgr,$(QMGR_OBJ), $(CLASS_AD_LIB) $(QMGR_LIB))
 library_target(libqmgmt.a,$(QMGMT_LIB_OBJ))
 release_target(condor_schedd,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -48,14 +42,3 @@ c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
 CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
 
 IMPORT_LINKS = ../../config/import_links
-
-#if IS_SGI_IRIX53 || IS_SGI_IRIX62
-CMNT On IRIX g++ external-templates option breaks things but we need
-CMNT it for instantiate.o and schedd.o 
-instantiate.o: instantiate.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -fexternal-templates -c instantiate.C
-
-schedd.o: schedd.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -fexternal-templates -c schedd.C
-#endif
-

@@ -1,6 +1,6 @@
 SRC_DIR = $(SRC_TREE)/condor_kbdd
 CFLAGS = $(STD_C_FLAGS) -g -Wall 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates -Wall
 
 SRC = kbdd.C XInterface.C
 OBJ = kbdd.o XInterface.o

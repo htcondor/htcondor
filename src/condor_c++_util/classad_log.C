@@ -28,15 +28,15 @@
 
 #define _POSIX_SOURCE
 
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
-#endif
-
 #include "condor_common.h"
 #include "classad_log.h"
 #include "condor_debug.h"
 
 static char *_FileName_ = __FILE__;	/* Used by EXCEPT (See condor_debug.h) */
+
+// explicitly instantiate the HashTable template
+template class HashTable<HashKey, ClassAd*>;
+template class HashBucket<HashKey,ClassAd*>;
 
 ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {

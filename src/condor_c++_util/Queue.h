@@ -1,10 +1,6 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
 //--------------------------------------------------------------------
 // Queue template
 // Written by Adiel Yoaz (1998)

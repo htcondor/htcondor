@@ -46,8 +46,10 @@ extern int errno;
 
 // internal function prototypes
 void houseKeeper(void);
+int receive_invalidation(Service*, int, Stream*);
 int receive_update(Service*, int, Stream*);
 int receive_query(Service*, int, Stream*);
+void process_invalidation(AdTypes, ClassAd &, Stream *);
 void process_query(AdTypes, ClassAd &, Stream *);
 int sigint_handler(Service*, int);
 int sighup_handler(Service*, int);
@@ -116,6 +118,20 @@ main_init(int argc, char *argv[])
 	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
+	// install command handlers for invalidations
+	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,READ);
+	daemonCore->Register_Command(INVALIDATE_CKPT_SRVR_ADS,
+		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,READ);
+	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
+		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,READ);
+
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
@@ -198,6 +214,73 @@ receive_query(Service* s, int command, Stream* sock)
     // all done; let daemon core will clean up connection
 	return TRUE;
 }
+
+int
+receive_invalidation(Service* s, int command, Stream* sock)
+{
+    struct sockaddr_in *from;
+	AdTypes whichAds;
+	ClassAd ad;
+
+	from = sock->endpoint();
+
+	sock->decode();
+	sock->timeout(ClientTimeout);
+    if (!ad.get((Stream &)*sock) || !sock->eom())
+    {
+        dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
+        return FALSE;
+    }
+
+    // cancel timeout --- collector engine sets up its own timeout for
+    // collecting further information
+    sock->timeout(0);
+
+    switch (command)
+    {
+	  case INVALIDATE_STARTD_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_STARTD_ADS\n");
+		whichAds = STARTD_AD;
+		break;
+		
+	  case INVALIDATE_SCHEDD_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_SCHEDD_ADS\n");
+		whichAds = SCHEDD_AD;
+		break;
+		
+	  case INVALIDATE_SUBMITTOR_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_SUBMITTOR_ADS\n");
+		whichAds = SUBMITTOR_AD;
+		break;
+
+	  case INVALIDATE_MASTER_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_MASTER_ADS\n");
+		whichAds = MASTER_AD;
+		break;
+		
+	  case INVALIDATE_CKPT_SRVR_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_CKPT_SRVR_ADS\n");
+		whichAds = CKPT_SRVR_AD;	
+		break;
+		
+	  default:
+		dprintf(D_ALWAYS,"Unknown command %d in receive_invalidation()\n", 
+			command);
+		whichAds = (AdTypes) -1;
+    }
+   
+    if (whichAds != (AdTypes) -1)
+		process_invalidation (whichAds, ad, sock);
+
+	// if the invalidation was for the STARTD ads, also invalidate startd
+	// private ads with the same query ad
+	if (command == INVALIDATE_STARTD_ADS)
+		process_invalidation (STARTD_PVT_AD, ad, sock);
+
+    // all done; let daemon core will clean up connection
+	return TRUE;
+}
+
 
 int
 receive_update(Service *s, int command, Stream* sock)
@@ -293,6 +376,51 @@ process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
 	}
 
 	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
+}	
+
+int
+invalidation_scanFunc (ClassAd *ad)
+{
+	static char buffer[64];
+	
+	sprintf( buffer, "%s = -1", ATTR_LAST_HEARD_FROM );
+
+	if (ad < THRESHOLD) return 1;
+
+    if ((*ad) >= (*__query__))
+    {
+		ad->Insert( buffer );			
+        __numAds__++;
+    }
+
+    return 1;
+}
+
+void
+process_invalidation (AdTypes whichAds, ClassAd &query, Stream *sock)
+{
+	int		more;
+
+	// here we set up a network timeout of a longer duration
+	sock->timeout(QueryTimeout);
+
+	// set up for hashtable scan
+	__query__ = &query;
+	__numAds__ = 0;
+	__sock__ = sock;
+	sock->encode();
+	if (!sock->put(0) || !sock->end_of_message()) {
+		dprintf( D_ALWAYS, "Unable to acknowledge invalidation\n" );
+		return;
+	}
+
+	// first set all the "LastHeardFrom" attributes to low values ...
+	collector.walkHashTable (whichAds, invalidation_scanFunc);
+
+	// ... then invoke the housekeeper
+	collector.invokeHousekeeper (whichAds);
+
+	dprintf (D_ALWAYS, "(Invalidated %d ads)\n", __numAds__);
 }	
 
 #ifndef WIN32
