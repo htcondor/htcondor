@@ -197,6 +197,10 @@ class ExprListIterator
 		const ExprList				*l;
 		EvalState					state;
 		vector<ExprTree*>::const_iterator itr;
+
+    	bool GetValue( Value& v, const ExprTree *tree, EvalState *es=NULL );
+		bool GetValue( Value& v, ExprTree*& t, const ExprTree *tree, EvalState *es=NULL );
+
 };	
 
 

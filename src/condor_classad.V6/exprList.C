@@ -254,34 +254,94 @@ PrevExpr( )
 
 
 bool ExprListIterator::
-NextValue( Value& val, EvalState *es )
+GetValue( Value& val, const ExprTree *tree, EvalState *es )
 {
-	const ExprTree *tree = NextExpr( );
+	Value				cv;
+	EvalState			*currentState;
+    EvalCache::iterator	itr;
 
 	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val );
+
+	// if called from user code, es == NULL so we use &state instead
+	currentState = es ? es : &state;
+
+	// lookup in cache
+	itr = currentState->cache.find( tree );
+
+	// if found, return cached value
+	if( itr != currentState->cache.end( ) ) {
+		val.CopyFrom( itr->second );
+		return true;
+	} 
+
+	// temporarily cache value as undef, so any circular refs in
+    // Evaluate() will eval to undef rather than loop
+
+	cv.SetUndefinedValue( );
+	currentState->cache[ tree ] = cv;
+
+	tree->Evaluate( *currentState, val );
+
+	// replace temporary cached value (above) with actual evaluation
+	currentState->cache[ tree ] = val;
+
 	return true;
+}
+
+
+bool ExprListIterator::
+NextValue( Value& val, EvalState *es )
+{
+	return GetValue( val, NextExpr( ), es );
 }
 
 
 bool ExprListIterator::
 CurrentValue( Value& val, EvalState *es ) const
 {
-	const ExprTree *tree = CurrentExpr( );
-
-	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val );
-	return true;
+	return GetValue( val, CurrentExpr( ), es );
 }
 
 
 bool ExprListIterator::
 PrevValue( Value& val, EvalState *es )
 {
-	const ExprTree *tree = PrevExpr( );
+	return GetValue( val, PrevExpr( ), es );
+}
+
+
+bool ExprListIterator::
+GetValue( Value& val, ExprTree*& sig, const ExprTree *tree, EvalState *es ) 
+{
+	Value				cv;
+	EvalState			*currentState;
+    EvalCache::iterator	itr;
 
 	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val );
+
+	// if called from user code, es == NULL so we use &state instead
+	currentState = es ? es : &state;
+
+	// lookup in cache
+	itr = currentState->cache.find( tree );
+
+	// if found, return cached value
+	if( itr != currentState->cache.end( ) ) {
+		val.CopyFrom( itr->second );
+		return true;
+	} 
+
+	// temporarily cache value as undef, so any circular refs in
+    // Evaluate() will eval to undef rather than loop
+
+	cv.SetUndefinedValue( );
+	currentState->cache[ tree ] = cv;
+
+	tree->Evaluate( *currentState, val, sig );
+
+	// replace temporary cached value (above) with actual evaluation
+	currentState->cache[ tree ] = val;
+
 	return true;
 }
 
@@ -289,33 +349,21 @@ PrevValue( Value& val, EvalState *es )
 bool ExprListIterator::
 NextValue( Value& val, ExprTree*& sig, EvalState *es )
 {
-	const ExprTree *tree = NextExpr( );
-
-	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val, sig );
-	return true;
+	return GetValue( val, sig, NextExpr( ), es );
 }
 
 
 bool ExprListIterator::
 CurrentValue( Value& val, ExprTree*& sig, EvalState *es ) const
 {
-	const ExprTree *tree = CurrentExpr( );
-
-	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val, sig );
-	return true;
+	return GetValue( val, sig, CurrentExpr( ), es );
 }
 
 
 bool ExprListIterator::
 PrevValue( Value& val, ExprTree*& sig, EvalState *es )
 {
-	const ExprTree *tree = PrevExpr( );
-
-	if( !tree ) return false;
-	tree->Evaluate( es?*es:state, val, sig );
-	return true;
+	return GetValue( val, sig, PrevExpr( ), es );
 }
 
 

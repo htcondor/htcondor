@@ -45,53 +45,13 @@ ExprTree::
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {
-	Value 				cv;
-	bool				rval;
-	EvalCache::iterator	itr = state.cache.find( this );
-
-	if( itr != state.cache.end( ) ) {
-		// found in cache; return cached value
-		val.CopyFrom( itr->second );
-		return true;
-	} 
-
-	// not found in cache; insert a cache entry
-	cv.SetUndefinedValue( );
-	state.cache[ this ] = cv;
-
-	// evaluate the expression
-	rval = _Evaluate( state, val );
-
-	// replace undefined value with actual value 
-	state.cache[ this ] = val;
-
-	return( rval );
+	return( _Evaluate( state, val ) );
 }
 
 bool ExprTree::
 Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	Value 				cv;
-	bool				rval;
-	EvalCache::iterator	itr = state.cache.find( this );
-
-	if( itr != state.cache.end( ) ) {
-		// found in cache; return cached value
-		val.CopyFrom( itr->second );
-		return true;
-	} 
-
-	// not found in cache; insert a cache entry
-	cv.SetUndefinedValue( );
-	state.cache[ this ] = cv;
-
-	// evaluate the expression
-	rval = _Evaluate( state, val, sig );
-
-	// replace undefined value with actual value 
-	state.cache[ this ] = val;
-
-	return( rval );
+	return( _Evaluate( state, val, sig ) );
 }
 
 

@@ -96,9 +96,11 @@ GetComponents( ExprTree *&tree, string &attr, bool &abs ) const
 bool AttributeReference::
 _Evaluate (EvalState &state, Value &val) const
 {
-	ExprTree		*tree, *dummy;
-	const ClassAd	*curAd;
-	bool			rval;
+	ExprTree			*tree, *dummy;
+	Value				cv;
+	const ClassAd		*curAd;
+	bool				rval;
+	EvalCache::iterator	itr;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
@@ -119,7 +121,28 @@ _Evaluate (EvalState &state, Value &val) const
 			return true;
 
 		case EVAL_OK:
+			// lookup in cache
+			itr = state.cache.find( tree );
+
+			// if found, return cached value
+			if( itr != state.cache.end( ) ) {
+				val.CopyFrom( itr->second );
+				return true;
+			} 
+
+			// temporarily cache value as undef, so any circular refs
+			// in Evaluate() will eval to undef rather than loop
+
+			cv.SetUndefinedValue( );
+			state.cache[ tree ] = cv;
+
 			rval = tree->Evaluate( state , val );
+
+			// replace cached undef with actual evaluation
+			// *** if Evaluate() just returned false, is this still ok? ***
+			state.cache[ tree ] = val;
+
+			// *** if Evaluate() just returned false, is this still ok? ***
 			state.curAd = curAd;
 			return rval;
 
@@ -132,9 +155,11 @@ _Evaluate (EvalState &state, Value &val) const
 bool AttributeReference::
 _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	ExprTree		*tree, *exprSig;
-	const ClassAd	*curAd;
-	bool			rval;
+	ExprTree			*tree, *exprSig;
+	Value 				cv;
+	const ClassAd		*curAd;
+	bool				rval;
+	EvalCache::iterator	itr;
 
 	curAd = state.curAd;
 	exprSig = NULL;
@@ -156,7 +181,27 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 			break;
 
 		case EVAL_OK:
+
+			// lookup in cache
+			itr = state.cache.find( tree );
+
+			// if found in cache, return cached value
+			if( itr != state.cache.end( ) ) {
+				val.CopyFrom( itr->second );
+				return true;
+			} 
+
+			// temporarily cache value as undef, so any circular refs
+			// in Evaluate() will eval to undef rather than loop
+
+			cv.SetUndefinedValue( );
+			state.cache[ tree ] = cv;
+
 			rval = tree->Evaluate( state, val );
+
+			// replace undef in cache with actual evaluation
+			state.cache[ tree ] = val;
+
 			break;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
@@ -179,6 +224,7 @@ bool AttributeReference::
 _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 {
 	ExprTree		*tree, *dummy;
+	Value			cv;
 	const ClassAd	*curAd;
 	bool			rval;
 
@@ -205,13 +251,25 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 			return true;
 
 		case EVAL_OK:
+
+			// temporarily cache value as undef, so any circular refs
+			// in Evaluate() will eval to undef rather than loop
+
+			cv.SetUndefinedValue( );
+			state.cache[ tree ] = cv;
+
 			rval = tree->Flatten( state, val, ntree );
-				// don't inline if it didn't flatten to a value
+
+			// don't inline if it didn't flatten to a value, and clear cache
 			if( ntree ) {
 				delete ntree;
 				ntree = Copy( );
 				val.SetUndefinedValue( );
+				state.cache.erase( tree );
+			} else {
+				state.cache[ tree ] = val;
 			}
+
 			state.curAd = curAd;
 			return rval;
 
