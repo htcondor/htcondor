@@ -30,6 +30,9 @@
 **     notes: BANDWIDTH is in Mb/s, CONSTRAINT is on startd ads
 */
 
+#if !defined(__SCHEDULED_EVENT_H)
+#define __SCHEDULED_EVENT_H
+
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
 
@@ -100,3 +103,5 @@ private:
 	static int SlowStartInterval;
 	static int EventInterval;
 };
+
+#endif

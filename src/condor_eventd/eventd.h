@@ -21,6 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#if !defined(__EVENTD_H)
+#define __EVENTD_H
+
 #include "scheduled_event.h"
 
 class EventDaemon : public Service {
@@ -39,3 +42,5 @@ private:
 };
 
 extern EventDaemon *EventD;
+
+#endif
