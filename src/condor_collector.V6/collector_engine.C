@@ -671,9 +671,6 @@ updateClassAd (CollectorHashTable &hashTable,
 		// yes ... old ad must be updated
 		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
 
-		// Update statistics
-		collectorStats->update( label, old_ad, new_ad );
-
 		// check if it has special status (master ads)
 		if (old_ad < CollectorEngine::THRESHOLD)
 		{
@@ -683,9 +680,15 @@ updateClassAd (CollectorHashTable &hashTable,
 			{
 				EXCEPT ("Error updating ad (probably out of memory)");
 			}
+
+			// Update statistics
+			collectorStats->update( label, NULL, new_ad );
 		}
 		else
 		{
+			// Update statistics
+			collectorStats->update( label, old_ad, new_ad );
+
 			// Now, finally, store the new ClassAd
 			old_ad->ExchangeExpressions (new_ad);
 			delete new_ad;
