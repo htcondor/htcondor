@@ -66,7 +66,7 @@ GridUniverseLogic::GridUniverseLogic()
 
 GridUniverseLogic::~GridUniverseLogic()
 {
-	if ( gman_pid_table ) {
+	if ( gman_pid_table && daemonCore) {
 		gman_node_t * node;
 		gman_pid_table->startIterations();
 		while (gman_pid_table->iterate( node ) == 1 ) {
