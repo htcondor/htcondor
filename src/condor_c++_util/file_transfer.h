@@ -107,6 +107,16 @@ class FileTransfer {
 
 	float TotalBytesReceived() { return bytesRcvd; };
 
+		/** Add the given filename to our list of output files to
+			transfer back.  If we're not managing a list of output
+			files, we return failure.  If we already have this file,
+			we immediately return success.  Otherwise, we append the
+			given filename to our list and return success.
+			@param filename Name of file to add to our list
+			@return false if we don't have a list, else true
+		*/
+	bool addOutputFile( const char* filename );
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);

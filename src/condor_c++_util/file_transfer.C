@@ -1200,3 +1200,19 @@ FileTransfer::Continue()
 
 	return result;
 }
+
+
+bool
+FileTransfer::addOutputFile( const char* filename )
+{
+	if( ! OutputFiles ) {
+		return false;
+	}
+	if( OutputFiles->contains(filename) ) {
+		return true;
+	}
+	OutputFiles->append( filename );
+	return true;
+}
+
+
