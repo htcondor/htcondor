@@ -1911,11 +1911,6 @@ Scheduler::contactStartd( char* capability, char *user,
 		return 0;
 	}
 
-	// add User = "owner@uiddomain" to ad
-    char temp[512];
-    sprintf (temp, "%s = \"%s\"", ATTR_USER, user);
-    jobAd->Insert (temp);
-
 	if( claimStartd(mrec, jobAd, false) ) {
 		return 1;
 	} else {
