@@ -68,6 +68,9 @@ get_daemon_name( const char* name )
 	char *tmp, *fullname, *tmpname, *daemon_name = NULL;
 	int size;
 
+	dprintf( D_HOSTNAME, "Finding the proper daemon name for \"%s\"\n",
+			 name ); 
+
 		// First, check for a '@' in the name.
 	tmpname = strdup( name );
 	tmp = strchr( tmpname, '@' );
@@ -78,8 +81,12 @@ get_daemon_name( const char* name )
 		if( *tmp ) {
 				// There was something after the @, try to resolve it
 				// as a full hostname:
+			dprintf( D_HOSTNAME, "Daemon name has data after the '@', "
+					 "trying to resolve \"%s\"\n", tmp ); 
 			fullname = get_full_hostname( tmp );
 		} else {
+			dprintf( D_HOSTNAME, "Daemon name has no data after the '@', "
+					 "trying to use the local host\n" ); 
 				// There was nothing after the @, use localhost:
 			fullname = strnewp( my_full_hostname() );
 		}
@@ -91,10 +98,19 @@ get_daemon_name( const char* name )
 		} 
 	} else {
 			// There's no '@', just try to resolve the hostname.
+		dprintf( D_HOSTNAME, "Daemon name contains no '@', treating as a "
+				 "regular hostname\n" );
 		daemon_name = get_full_hostname( tmpname );
 	}
 	free( tmpname );
+
 		// If there was an error, this will still be NULL.
+	if( daemon_name ) { 
+		dprintf( D_HOSTNAME, "Returning daemon name: \"%s\"\n", daemon_name );
+	} else {
+		dprintf( D_HOSTNAME, "Failed to construct daemon name, "
+				 "returning NULL\n" );
+	}
 	return daemon_name;
 }
 
