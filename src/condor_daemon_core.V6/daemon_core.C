@@ -56,6 +56,8 @@ extern "C"
 	char*			sin_to_string(struct sockaddr_in*);
 }
 
+extern char* mySubSystem;	// the subsys ID, such as SCHEDD
+
 
 TimerManager DaemonCore::t;
 
@@ -2845,8 +2847,27 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// Fetch the PidEntry for this pid from our hash table.
 	if ( pidTable->lookup(pid,pidentry) == -1 ) {
 		// we did not find this pid... probably popen finished.
-		dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
-		return FALSE;
+		// log a message and return FALSE.
+
+		// temporary hack: if we are the startd, and we do not want DC_PM,
+		// then create a temp pidentry to call reaper #1.  This hack should
+		// be removed once the startd is switched over to use DC_PM.
+#ifndef WANT_DC_PM
+		if ( strcmp(mySubSystem,"STARTD") == 0 ) {
+			pidentry = new PidEntry;
+			ASSERT(pidentry);
+			pidentry->parent_is_local = TRUE;
+			pidentry->reaper_id = 1;
+		}
+		else {
+#else
+		// here we want DC_PM
+		{
+#endif
+			dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
+			return FALSE;
+		}
+			
 	}
 
 	// If process is Unix, we are passed the exit status.
