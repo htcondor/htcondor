@@ -7,3 +7,5 @@
 #define		IS_SUN4X_SOLARIS	YES
 
 #define		PVM_ARCH		SUN4SOL2
+
+#define		HAS_PURIFY		YES

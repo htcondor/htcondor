@@ -55,8 +55,7 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-
-#define HAS_PVM				YES
+#define WANT_PVM			YES
 #define PVM_ARCH			SGI64
 #define HAS_DLOPEN			NO
 #define HAS_DAGMAN_HELPER   NO
@@ -66,17 +65,7 @@
 #define HAS_UTMPX			YES
 
 #define StaticFlag /**/
-#define UnixName /unix			/* pathname of the system executable */
-#define PsAllFlag /sbin/ps -ef		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
 
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend /usr/sbin/mkdepend
-#endif MkDepend
 
 /**************************************************************************
 ** Include OS version-specific config files

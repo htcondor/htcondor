@@ -57,9 +57,6 @@ statically linked to avoid problems */
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
 
-#define XLibPath /usr/X11R6/lib/libX11.a
-#define XExtLibPath /usr/X11R6/lib/libXext.a
-
 #define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
 #define DOES_COMPRESS_CKPT		YES
@@ -102,25 +99,12 @@ statically linked to avoid problems */
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-#define HAS_PVM				YES
-#define PVM_ARCH			LINUX
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
 #define HAS_STATIC			YES
 #define HAS_DLOPEN			YES
 
 #define StaticFlag	-static
-#define UnixName /vmlinuz		/* pathname of the system executable */
-#define PsAllFlag ps -ax		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend Tilde/CONDOR.new/GENERIC/mdepend.sh
-#endif MkDepend
 
 #define YACC byacc
 

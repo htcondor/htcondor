@@ -1,0 +1,80 @@
+EXT_ROOT = @ext_root@
+EXT_INSTALL = $(EXT_ROOT)/install
+EXT_BUNDLE = $(EXT_ROOT)/bundles
+EXT_BUILD = $(EXT_ROOT)/build
+EXT_TRIGGER = $(EXT_ROOT)/triggers
+
+EXT_KERBEROS_VERSION = krb5-1.2.5
+#ifdef IS_DARWIN
+EXT_GLOBUS_VERSION = globus-2.4.3
+#else
+EXT_GLOBUS_VERSION = globus-2.2.4
+#endif
+EXT_GAHP_VERSION = gahp-6.5
+EXT_GLIBC22_VERSION = glibc-2.2.2
+EXT_GLIBC21_VERSION = glibc-2.1.1
+EXT_ZLIB_VERSION = zlib-1.1.3
+EXT_GPT_VERSION = gpt-3.0
+EXT_PVM_VERSION = pvm-3.4.2
+EXT_MAN_VERSION = man-current
+
+MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
+
+OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
+GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
+GAHP_DIR = $(EXT_INSTALL)/$(EXT_GAHP_VERSION)/bin
+
+#if WANT_NEST
+NEST_DIR = /p/condor/workspaces/nest
+NEST_LIB = $(NEST_DIR)/lib
+NEST_INC = $(NEST_DIR)/include
+#endif /* WANT_NEST */
+
+KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
+#if WANT_KERBEROS
+KERBEROS_INC = $(KERBEROS_DIR)/include
+/* so long as we're building it ourselves, we know it's krb5, so we
+   probably don't need to keep this variable around.  however, for
+   now, just turn it on in all cases. */ 
+#ifndef KERBEROS_K5
+#define KERBEROS_K5 YES
+#endif
+#if KERBEROS_K5
+KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
+   $(KERBEROS_DIR)/lib/libk5crypto.a \
+   $(KERBEROS_DIR)/lib/libcom_err.a
+#else
+KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
+   $(KERBEROS_DIR)/lib/libcrypto.a \
+   $(KERBEROS_DIR)/lib/libcom_err.a
+#endif /* KERBEROS_K5 */
+
+#else /* WANT_KERBEROS */
+KERBEROS_LIB = 
+KERBEROS_INC = 
+#endif
+
+
+ZLIB_DIR = $(EXT_INSTALL)/$(EXT_ZLIB_VERSION)
+ZLIB_LIB = $(ZLIB_DIR)/lib
+ZLIB_INC = $(ZLIB_DIR)/include
+
+/* Set up where I get the glibc libraries for packaging with the release */
+#if IS_GLIBC21
+GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC21_VERSION)/lib
+#elif IS_GLIBC22
+GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC22_VERSION)/lib
+#elif IS_GLIBC23
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
+#endif
+
+PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
+
+TMP_DIR = @TMPDIR@
+
+TAR_CMD = @TarCmd@
+
+#if HAS_PURIFY
+PURE_CACHE_DIR = @pure_cache_dir@
+#endif
+

@@ -1,7 +1,6 @@
 /* AIX 5 Specific stuff */
 
 #define Platform			PPC-AIX5
-#define GccArch				powerpc-ibm-aix5.1.0.0
 #define PlatformFlags		-DAIX5=AIX5 -Wno-deprecated
 
 /* XXX This stuff is borkened */
@@ -40,9 +39,6 @@
 #define WANT_DAGMAN_HELPER     YES
 
 #define IS_CLIPPED	YES
-
-#define UnixName /unix		/* pathname of the system executable */
-
 
 #define VendorCTestFlags 
 #define VendorCPPTestFlags 

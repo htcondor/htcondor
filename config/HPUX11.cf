@@ -3,7 +3,7 @@
 #define IS_HPUX11			YES
 #define IS_HPPAR_HPUX11			YES
 #define Platform			HPPA-HPUX11
-#define GccArch				hppa64-hp-hpux11.00
+SYSNAME = hp_ux110
 #define PlatformFlags		-DHPUX11=HPUX11 -Wno-deprecated -L/usr/lib/pa20_64
 /* -lxnet is to allow use of the XOpen/Unix98 functions with a 64bit compiler */
 #define PlatformLdFlags		-lxnet
@@ -36,15 +36,9 @@
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
 
-#define UnixName /stand/vmunix		/* pathname of the system executable */
+#define WANT_PVM			NO
 
-#define TypicalMemory 64
-
-#undef IS_CLIPPED
 #define IS_CLIPPED YES
-
-#undef HAS_PVM
-#define HAS_PVM NO
 
 #undef WANT_MAN_PAGES
 #define WANT_MAN_PAGES		NO

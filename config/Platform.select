@@ -112,6 +112,7 @@
 #undef sun
 #undef sparc
 #undef i386		
+#undef i686
 #undef hp9000s800
 #undef __alpha
 #undef sgi
@@ -120,3 +121,4 @@
 #undef linux
 #undef mips
 #undef aix
+#undef ia64

@@ -1,6 +1,5 @@
 #define Platform	ALPHA-DUX5
-#define GccArch		alpha-dec-osf5.0
-
+SYSNAME = alpha_dux51
 #define PlatformFlags	-DDUX=DUX -DDUX5=DUX5 -Wno-deprecated
 
 #define IS_ALPHA_OSF1	YES
@@ -9,11 +8,7 @@
 
 #define IS_CLIPPED	YES
 
-#undef  HAS_PVM
-#define HAS_PVM		NO
-#define HAS_GLOBUS	YES
-#define HAS_GSI		YES
-#define HAS_OPENSSL	YES
+#define WANT_PVM	NO
 
 #undef NEED_SNPRINTF	NO
 
