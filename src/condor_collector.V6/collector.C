@@ -807,9 +807,7 @@ void CollectorDaemon::Config()
 			delete updateCollector;
 			updateCollector = NULL;
         }
-		int collector_port = param_get_condor_developers_collector_port();
-		updateCollector = new DCCollector( tmp, collector_port, 
-										   DCCollector::UDP );
+		updateCollector = new DCCollector( tmp, DCCollector::UDP );
 		if( UpdateTimerId < 0 ) {
 			UpdateTimerId = daemonCore->
 				Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
@@ -851,9 +849,8 @@ void CollectorDaemon::Config()
     tmp = param("CONDOR_VIEW_HOST");
     if(tmp) {
        if(!same_host(my_full_hostname(), tmp) ) {
-		   int view_port = param_get_condor_view_port();
            dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
-           View_Collector = new Daemon(tmp, view_port);
+           View_Collector = new DCCollector( tmp );
        } 
        free(tmp);
        if(View_Collector) {
