@@ -4698,16 +4698,99 @@ char *DaemonCore::ParseEnvArgsString(char *incoming, char *inheritbuf)
 	if ( incoming == NULL )
 		return NULL;
 
+	char envbuf[200];
+	MyString sys_env_vars;
+
+	// Add in a bunch of environment variables to the job
+	// that should be present for every process on Win32.
+	envbuf[0]='\0';
+	GetEnvironmentVariable("SystemDrive",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|SystemDrive=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("SystemRoot",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|SystemRoot=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("COMPUTERNAME",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|COMPUTERNAME=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("NUMBER_OF_PROCESSORS",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|NUMBER_OF_PROCESSORS=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("OS",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|OS=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("PROCESSOR_ARCHITECTURE",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|PROCESSOR_ARCHITECTURE=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("PROCESSOR_IDENTIFIER",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|PROCESSOR_IDENTIFIER=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("PROCESSOR_LEVEL",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|PROCESSOR_LEVEL=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("PROCESSOR_REVISION",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|PROCESSOR_REVISION=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("PROGRAMFILES",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|PROGRAMFILES=";
+		sys_env_vars += envbuf;
+	}
+	
+	envbuf[0]='\0';
+	GetEnvironmentVariable("WINDIR",envbuf,sizeof(envbuf));
+	if (envbuf[0]) {
+		sys_env_vars += "|WINDIR=";
+		sys_env_vars += envbuf;
+	}
+
 	if ( inheritbuf ) {
-		len = strlen(incoming) + strlen(inheritbuf) + 20;
-		answer = (char *)malloc(len);
-		strcpy(answer,incoming);
-		strcat(answer,"|CONDOR_INHERIT=");
-		strcat(answer,inheritbuf);
-	} else {
-		len = strlen(incoming) + 2;
-		answer = (char *)malloc(len);
-		strcpy(answer,incoming);		
+		sys_env_vars += "|CONDOR_INHERIT=" ;
+		sys_env_vars += inheritbuf ;
+	}
+
+	len = strlen(incoming) + sys_env_vars.Length() +  2;
+	answer = (char *)malloc(len);
+	ASSERT(answer);
+	strcpy(answer,incoming);		
+	if ( sys_env_vars.Length() > 0 ) {
+		strcat(answer,sys_env_vars.Value());
 	}
 	answer[ strlen(answer)+1 ] = '\0';
 
