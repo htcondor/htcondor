@@ -192,7 +192,43 @@ before exiting.
 
 \begin{itemize}
 
-\item None.
+\item The \Syscall{getrusage} call does not work properly inside
+``standard'' jobs.  
+If your program uses \Syscall{getrusage}, it will not report correct values
+across a checkpoint and restart.
+If your program relies on proper reporting from \Syscall{getrusage}, you
+should either use version 6.0.3 or 6.1.10.
+
+\item While Condor now supports many networking calls such as
+\Syscall{socket} and \Syscall{connect}, (see the description below of this
+new feature added in 6.1.11), on Linux, we cannot at this time support
+\Syscall{gethostbyname} and a number of other database lookup calls.
+The reason is that on Linux, these calls are implemented by bringing in a
+shared library that defines them, based on whether the machine is using
+DNS, NIS, or some other database method.
+Condor does not support the way in which the C library tries to explicitly
+bring in these shared libraries and use them.
+There are a number of possible solutions to this problem, but the Condor
+developers are not yet agreed on the best one, so this limitation might not
+be resolved by 6.1.14.
+
+\item In HP-UX 10.20, \Condor{compile} will not work correctly with HP's
+C++ compiler. 
+The jobs might link, but they will produce incorrect output, or die with
+a signal such as SIGSEGV during restart after a checkpoint/vacate cycle.
+However, the GNU C/C++ and the HP C compilers work just fine.
+
+\item When writing output to a file, \Syscall{stat}--and variant calls,
+will return zero for the size of the file if the program has not yet
+read from the file or flushed the file descriptors,
+This is a side effect of the file buffering code in Condor and will be
+corrected to the expected semantic.
+
+\item On IRIX 6.2, C++ programs compiled with GNU C++ (g++) 2.7.2 and
+linked with the Condor libraries (using \Condor{compile}) will not
+execute the constructors for any global objects.
+There is a work-around for this bug, so if this is a problem for you,
+please send email to \Email{condor-admin@cs.wisc.edu}.
 
 \end{itemize}
 
