@@ -46,7 +46,6 @@ pseudo_register_machine_info(char *uiddomain, char *fsdomain,
 	thisRemoteResource->setFilesystemDomain( fsdomain );
 	thisRemoteResource->setStarterAddress( starterAddr );
 	thisRemoteResource->setMachineName( full_hostname );
-
 	return 0;
 }
 
@@ -95,6 +94,13 @@ pseudo_register_starter_info( ClassAd* ad )
 	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
 		thisRemoteResource->setStarterOpsys( tmp );
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
+		thisRemoteResource->setStarterVersion( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, tmp ); 
 		free( tmp );
 		tmp = NULL;
 	}
