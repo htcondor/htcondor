@@ -1657,7 +1657,11 @@ main( int argc, char** argv)
 			break;		// break out of for loop
 		}
 	}
-	if ( (Foreground != 1) && (strcmp(mySubSystem,"MASTER") == 0) ) {
+	if ( (Foreground != 1) && 
+			// the starter sets mySubSystem in main_pre_dc_init(), so 
+			// be careful when handling it this early in the game.
+			( mySubSystem != NULL && 
+			(strcmp(mySubSystem,"MASTER") == 0)) ) {
 		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
 		return 1;
 	} else {
