@@ -1092,7 +1092,14 @@ readEvent (FILE *file)
 		return 1;	// backwards compatibility
 	}
 	chomp( reason_buf );  // strip the newline, if it's there.
-	reason = strnewp( reason_buf );
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		reason = strnewp( &reason_buf[1] );
+	} else {
+		reason = strnewp( reason_buf );
+	}
 	return 1;
 }
 
@@ -1457,7 +1464,14 @@ JobHeldEvent::readEvent( FILE *file )
 		return 1;		// fake it :)
 	}
 	chomp( reason_buf );  // strip the newline
-	reason = strnewp( reason_buf );
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		reason = strnewp( &reason_buf[1] );
+	} else {
+		reason = strnewp( reason_buf );
+	}
 	return 1;
 }
 
@@ -1534,7 +1548,14 @@ JobReleasedEvent::readEvent( FILE *file )
 		return 1;		// fake it :)
 	}
 	chomp( reason_buf );  // strip the newline
-	reason = strnewp( reason_buf );
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		reason = strnewp( &reason_buf[1] );
+	} else {
+		reason = strnewp( reason_buf );
+	}
 	return 1;
 }
 
