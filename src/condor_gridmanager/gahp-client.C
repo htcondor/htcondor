@@ -461,7 +461,9 @@ GahpClient::Initialize(const char *proxy_path, const char *input_path)
 			setPollInterval(m_pollInterval);
 		} else {
 			// pipe all registered.  stop polling.
-			setPollInterval(0);
+//			setPollInterval(0);
+		        // temporary kludge to work around gahp server hanging
+		        setPollInterval(m_pollInterval * 12);
 		}
 	}
 		
