@@ -155,6 +155,13 @@ main( int argc, char* argv[] ) {
 
   char * unix_env [] = {classpath_buff, (char*)0};  
 
+  // Changed to the gt3 directory
+  // This is cruicial believe it or not !!!!
+  if (chdir (gt3location) < 0 ) {
+    fprintf (stderr, "ERROR: Unable to cd into %s!\n", gt3location);
+    exit (1);
+  }
+
   // Invoke "java condor.gahp.Gahp"
   int rc = execve ( java, params, unix_env);  
 
