@@ -1015,7 +1015,7 @@ daemon::SetupHighAvailability( void )
 	name.sprintf( "HA_%s_LOCK_HOLD_TIME" );
 	tmp = param( name.Value( ) );
 	if ( ! tmp ) {
-		tmp = param( "HA_LOC_HOLD_TIME" );
+		tmp = param( "HA_LOCK_HOLD_TIME" );
 	}
 	if ( tmp ) {
 		if ( !isdigit( tmp[0] ) ) {
