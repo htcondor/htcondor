@@ -328,6 +328,9 @@ Resource::update_classad()
 		// Put in requirement expression info
 	r_reqexp->update( r_classad );
 
+		// Update info from the current Match object 
+	r_cur->update( r_classad );
+
 		// Add currently useful capability.  If r_pre exists, we
 		// need to advertise it's capability.  Otherwise, we should
 		// get the capability from r_cur.
@@ -336,10 +339,6 @@ Resource::update_classad()
 	} else {
 		sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
 	}		
-	r_classad->Insert( line );
-
-		// Update current rank expression in local and public ads.
-	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, r_cur->rank() );
 	r_classad->Insert( line );
 }
 

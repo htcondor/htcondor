@@ -107,6 +107,31 @@ Match::send_accountant( int cmd )
 
 
 void
+Match::update( ClassAd* ad )
+{
+	char line[1024];
+	char* tmp;
+
+			// Update the current rank value
+	sprintf( line, "%s = %f", ATTR_CURRENT_RANK, m_rank );
+	ad->Insert( line );
+
+	if( m_client ) {
+		tmp = m_client->name();
+		if( tmp ) {
+			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+			ad->Insert( line );
+		}
+		tmp = m_client->host();
+		if( tmp ) {
+			sprintf( line, "%s=\"%s\"", ATTR_CLIENT_MACHINE, tmp );
+			ad->Insert( line );
+		}
+	}
+}	
+
+
+void
 Match::start_match_timer()
 {
 	m_match_tid = 

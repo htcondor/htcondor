@@ -423,19 +423,8 @@ ResState::enter_action( State s, Activity a,
 		if( statechange ) {
 			rip->start_poll_timer();
 			rip->r_cur->start_claim_timer();	
-			
-				// Put attributes in our classad for this claim
-			{
-				char tmp[1024];
-
-				sprintf( tmp, "%s=\"%s\"", ATTR_REMOTE_USER,
-						 rip->r_cur->client()->name() );
-				(rip->r_classad)->Insert( tmp );
-				sprintf( tmp, "%s=\"%s\"", ATTR_CLIENT_MACHINE,
-						 rip->r_cur->client()->host() );
-				(rip->r_classad)->Insert( tmp );
-			}
-
+				// Update important attributes into the classad.
+			rip->r_cur->update( rip->r_classad );
 				// Generate a preempting match object
 			rip->r_pre = new Match;
 		}
