@@ -114,6 +114,11 @@ char My_UID_Domain[ SMALL_STRING ];
 int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
+int  StarterChoosesCkptServer;
+char *CkptServerHost = NULL;
+char *LastCkptServer = NULL;
+
+extern char *Executing_Arch, *Executing_OpSys;
 
 int		MyPid;
 int		LogPipe;
@@ -203,6 +208,8 @@ extern ScheddLIST* ScheddList;
 extern SpawnLIST* SpawnList;
 #endif
 
+extern ClassAd *JobAd;
+
 char*		schedd;
 
 /*ARGSUSED*/
@@ -212,7 +219,7 @@ main(int argc, char *argv[], char *envp[])
 	int		reserved_swap, free_swap;
 	char	*host, *cluster, *proc;
 	char	*my_cell, *my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
-	char	*use_ckpt_server, *ckpt_server_host;
+	char	*use_ckpt_server;
 	char	*max_discarded_run_time;
 	char	*capability;
 	int		i;
@@ -363,13 +370,33 @@ main(int argc, char *argv[], char *envp[])
 		UseNFS = FALSE;
 	}
 
-	use_ckpt_server = param( "USE_CKPT_SERVER" );
-	ckpt_server_host = param( "CKPT_SERVER_HOST" );
-	if( ckpt_server_host && use_ckpt_server &&
-	   (use_ckpt_server[0] == 'T' || use_ckpt_server[0] == 't') ) {
+	// if job specifies a checkpoint server host, this overrides
+	// the config file parameters
+	tmp = (char *)malloc(_POSIX_PATH_MAX);
+	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER_HOST, tmp) == 1) {
+		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
+		CkptServerHost = strdup(tmp);
+		StarterChoosesCkptServer = FALSE;
+		free(tmp);
 	} else {
-		UseCkptServer = FALSE;
+		free(tmp);
+		use_ckpt_server = param( "USE_CKPT_SERVER" );
+		if (CkptServerHost) free(CkptServerHost);
+		CkptServerHost = param( "CKPT_SERVER_HOST" );
+		if( CkptServerHost && use_ckpt_server &&
+			(use_ckpt_server[0] == 'T' || use_ckpt_server[0] == 't') ) {
+			UseCkptServer = TRUE;
+		} else {
+			UseCkptServer = FALSE;
+		}
+		tmp = param( "STARTER_CHOOSES_CKPT_SERVER" );
+		if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
+			StarterChoosesCkptServer = TRUE;
+		} else {
+			StarterChoosesCkptServer = FALSE;
+		}
+		if (tmp) free(tmp);
 	}
 
 	max_discarded_run_time = param( "MAX_DISCARDED_RUN_TIME" );
@@ -713,7 +740,6 @@ Wrapup( )
      * should go.  this info is in the classad, and must be gotten from the
      * Qmgr *before* the job status is updated (i.e., classad is dequeued).
      */
-#ifndef DBM_QUEUE
     ConnectQ (schedd);
     if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                 email_addr))
@@ -729,10 +755,10 @@ Wrapup( )
                                 Proc->id.cluster, Proc->id.proc);
         strcpy (email_addr, Proc->owner);
     }
+	DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
+	SetAttributeString(Proc->id.cluster, Proc->id.proc,
+					   ATTR_LAST_REMOTE_HOST, ExecutingHost);
     DisconnectQ (NULL);
-#else
-    strcpy (email_addr, Proc->owner);
-#endif
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
 	 * we call update_job_status the exit status is written into the job queue,
@@ -838,6 +864,18 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
 		// dprintf( D_ALWAYS, "Shadow: marked job status %s\n", JobStatusNames[Proc->status] );
+		if (LastCkptServer) {
+			SetAttributeString(Proc->id.cluster, Proc->id.proc,
+							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
+			if (Executing_Arch) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+								   ATTR_CKPT_ARCH, Executing_Arch);
+			}
+			if (Executing_OpSys) {
+				SetAttributeString(Proc->id.cluster, Proc->id.proc,
+								   ATTR_CKPT_OPSYS, Executing_OpSys);
+			}
+		}
 	}
 
 	DisconnectQ(0);
@@ -938,6 +976,8 @@ start_job( char *cluster_id, char *proc_id )
 	}
 #endif
 
+	dprintf(D_ALWAYS, "Setting %s=%s\n", ATTR_REMOTE_HOST, ExecutingHost);
+	SetAttributeString(cluster_num, proc_num, ATTR_REMOTE_HOST, ExecutingHost);
 	DisconnectQ(0);
 
 #define TESTING
@@ -1050,8 +1090,9 @@ DoCleanup()
 
 		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
 		//				status);
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
-						ImageSize);
+		DeleteAttribute(Proc->id.cluster, Proc->id.proc, ATTR_REMOTE_HOST);
+		SetAttributeString(Proc->id.cluster, Proc->id.proc,
+						   ATTR_LAST_REMOTE_HOST, ExecutingHost);
 
 		DisconnectQ(0);
 		// dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );
