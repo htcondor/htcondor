@@ -16,7 +16,8 @@ SRC = config_val.C preen.C user_prio.C history.C tool.C view.C
 LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a 
 LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  	condor_config_val condor_preen condor_view \
-		condor_userprio condor_history condor test_calc
+		condor_userprio condor_history condor test_calc \
+		condor_master_on condor_kill
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -25,22 +26,27 @@ depend_target($(SRC))
 c_plus_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB))
 release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_preen,preen.o,../condor_schedd.V6/libqmgmt.a $(LIB),$(STATIC_DIR)/sbin)
 
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_config_val,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_config_val,config_val.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_userprio,user_prio.o,$(LIB))
 release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_userprio,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_userprio,user_prio.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_history,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_history,history.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor,tool.o,$(LIB))
 release_target(condor,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor,tool.o,$(LIB),$(STATIC_DIR)/sbin)
 
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_on)
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_off)
@@ -62,6 +68,25 @@ link_tostrip_target($(STRIP_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
 link_tostrip_target($(STRIP_DIR)/sbin/condor,sbin,condor_reschedule)
 link_tostrip_target($(STRIP_DIR)/sbin/condor,sbin,condor_master_off)
 
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_on)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_off)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_checkpoint)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_vacate)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_restart)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_reconfig)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_reschedule)
+link_tostatic_target($(STATIC_DIR)/sbin/condor,sbin,condor_master_off)
+
 c_plus_target(condor_view,view.o,$(LIB))
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
+
+condor_master_on: master_on.c
+	gcc -o condor_master_on master_on.c
+
+condor_kill: kill.C
+	g++ -o condor_kill kill.C -I../condor_c++_util
+
+clean::
+	rm -f condor_kill condor_master_on
