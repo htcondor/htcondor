@@ -47,6 +47,7 @@ ref.dvi:
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
+	makeindex ref
 
 ref.ps: ref.dvi
 	dvips ref.dvi
