@@ -6,7 +6,7 @@
 #define KernLib /usr/lib/libkstat.so /usr/lib/libelf.so
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-#define SocketLib /usr/lib/libsocket.so /usr/lib/libnsl.so
+#define SocketLib -lresolv -lnsl -lsocket 
 
 #ifndef CrtLibPath
 #if HasGcc
@@ -117,10 +117,6 @@
 #define DO_BENCHMARKING			YES
 #endif
 
-#ifndef HAS_PVM
-#define HAS_PVM				NO
-#endif
-
 #define DOES_CHECKPOINTING      YES /* jbasney */
 #define DOES_REMOTE_SYSCALLS    YES 
 #define DOES_SAVE_SIGSTATE		YES /* ask Jim */
@@ -158,6 +154,8 @@
 #define HAS_SETEUID				YES
 #define HAS_GETWD				YES
 #define HAS_INSQUE				YES
+
+#define HAS_PVM				YES
 #define PVM_ARCH			SUN4SOL2
 
 
