@@ -15,6 +15,7 @@
 #include "condor_astbase.h"
 
 //for the shipping functions -- added by Lei Cao
+#include <rpc/types.h>
 #include <rpc/xdr.h>
 #include "stream.h"
 
