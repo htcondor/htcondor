@@ -148,6 +148,11 @@ main_shutdown_graceful()
 	return TRUE;	// to satify c++
 }
 
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+
 // This function is called by dprintf - always display our pid in our
 // log entries. 
 extern "C" 
