@@ -27,7 +27,8 @@ BEGIN {
 use lib "$LIBDIR";
 use CondorGlue;
 
-use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify/;
+use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify
+     $opt_platforms/;
 
 $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
              . $ENV{PATH};
@@ -38,25 +39,31 @@ GetOptions (
     'tag=s'             => $opt_tag,
     'module=s'          => $opt_module,
     'notify=s'          => $opt_notify,
+    'platforms=s'       => $opt_platforms,
 );
 
 my $NMIDIR = "/nmi/run";
-
-my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2, ppc_macosx";
-
-my $notify;
-my %tags;
 my $workspace = "/tmp/condor_build." . "$$";
+
+my %tags;
+my $notify;
+my $platforms;
+
 
 if ( defined($opt_help) ) {
     CondorGlue::printBuildUsage();
     exit 0;
 }
 
+if ( defined($opt_platforms) ) {
+    $platforms = "$opt_platforms";
+} else {
+    $platforms = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2, ppc_macosx";
+}
+
 if ( defined($opt_notify) ) {
     $notify = "$opt_notify";
-}
-else {
+} else {
     $notify = "condor-build\@cs.wisc.edu";
 }
 
@@ -139,7 +146,7 @@ sub generate_cmdfile() {
     print CMDFILE "post_all_args = $tag $module\n";
 
     # misc administrative stuff
-    print CMDFILE "platforms = $PLATFORMS\n";
+    print CMDFILE "platforms = $platforms\n";
     CondorGlue::printPrereqs( *CMDFILE );
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
