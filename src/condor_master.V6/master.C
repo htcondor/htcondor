@@ -126,6 +126,8 @@ extern "C"
 	int		sigsetmask(int);
 	int		udp_connect(char*, int);
 	int		snd_int(XDR*, int, int);
+	char*	get_arch();
+	char*	get_op_sys(); 
 }
 
 extern	int		Parse(const char*, ExprTree*&);
@@ -156,7 +158,7 @@ void 	dump_core();
 void	usage(const char* );
 int		hourly_housekeeping(void);
 void	report_to_collector();
-int		GetConfig(char*);
+int		GetConfig(char*, char*);
 int		IsSameHost(const char*);
 void	StartConfigServer();
 
@@ -232,7 +234,7 @@ int
 main( int argc, char* argv[] )
 {
 	struct passwd		*pwd;
-	char				**ptr, *startem;
+	char			**ptr, *startem;
 	
 	MyName = argv[0];
 
@@ -260,12 +262,24 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	** most of the time.
 	*/
 	set_condor_euid();
+	
+	// I moved these here because I might start config server earlier than any
+	// other daemon and if the config server dies it will kill the master if
+	// a sigchld handler is not installed.
+	install_sig_handler( SIGILL, dump_core );
+	install_sig_handler( SIGCHLD, sigchld_handler );
+	install_sig_handler( SIGINT, sigint_handler );
+	install_sig_handler( SIGQUIT, sigquit_handler );
+//	install_sig_handler( SIGTERM, sigquit_handler );
+	install_sig_handler( SIGHUP, sighup_handler );
+	install_sig_handler( SIGUSR1, RestartMaster );
+	install_sig_handler( SIGTERM, vacate_machine );
 
 	// Weiru
 	// Look for the master configuration file condor_config.master. If found,
 	// get configuration files from the configuration server. Use default
 	// otherwise.
-	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, 20,
+	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
 				   EXPAND_LAZY) < 0)
 	// use default configuration files
 	{
@@ -298,13 +312,13 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			// config server come back up sometime in the future it will
 			// notify this master to get new configuration files if there are
 			// any.
-			if(GetConfig(configServer) < 0)
+			if(GetConfig(configServer, pwd->pw_dir) < 0)
 			{
 				config(MyName, (CONTEXT*)0);
 			}
 			else
 			{
-				config_from_server(MyName, NULL);
+				config_from_server(pwd->pw_dir, MyName, NULL);
 			}
 		}
 	}
@@ -380,15 +394,6 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	dprintf( D_ALWAYS,"***               PID = %-6d                ***\n",
 																	getpid() );
 	dprintf( D_ALWAYS,"*************************************************\n" );
-
-	install_sig_handler( SIGILL, dump_core );
-	install_sig_handler( SIGCHLD, sigchld_handler );
-	install_sig_handler( SIGINT, sigint_handler );
-	install_sig_handler( SIGQUIT, sigquit_handler );
-//	install_sig_handler( SIGTERM, sigquit_handler );
-	install_sig_handler( SIGHUP, sighup_handler );
-	install_sig_handler( SIGUSR1, RestartMaster );
-	install_sig_handler( SIGTERM, vacate_machine );
 
 
 		// once a day at 3:30 a.m.
@@ -1135,9 +1140,9 @@ void report_to_collector()
 const	char	DELIMITOR	=	'#';
 const	char*	DELIMITOR_STRING = "#";
 
-int GetConfig(char* config_server_name)
+int GetConfig(char* config_server_name, char* condor_dir)
 {
-	char*	hostname;
+	char	hostname[MAXPATHLEN];
 	char	cond[100]; 
 	char*	arch;
 	char*	opSys;
@@ -1155,25 +1160,41 @@ int GetConfig(char* config_server_name)
 	int		len, len1;
 	char	macronames[200];
 	char	macroname[100];
+	char*	port;
+	int		portNum;
+	int		doFreeArch = TRUE, doFreeOpSys = TRUE;
+	char	outputName[MAXPATHLEN];
+	int		timer;
 	
 	// prepare request
-	hostname = param("hostname");
-	if(!hostname)
+	if(gethostname(hostname, MAXHOSTNAMELEN) < 0)
 	{
-		fprintf(stderr, "Can't find host name\n");
-		exit(1);
+		EXCEPT("Can't find host name\n");
 	}
 	arch = param("ARCH");
+	if(!arch)
+	{
+		arch = get_arch();
+		doFreeArch = FALSE; 
+	} 
 	opSys = param("OPSYS");
-	sprintf(reqAd, "MyType = \"machine\"%sTargetType = \"config\"%sRequirement = MY.Host == \"%s\"", DELIMITOR_STRING, DELIMITOR_STRING, hostname);
-	free(hostname);
+	if(!opSys)
+	{
+		opSys = get_op_sys();
+		doFreeOpSys = FALSE; 
+	}
+	
+	sprintf(reqAd, "MyType = \"machine\"%sTargetType = \"config\"%sHost = \"%s\"%sRequirement = True", DELIMITOR_STRING, DELIMITOR_STRING, hostname, DELIMITOR_STRING);
 	if(arch)
 	{
 		strcat(reqAd, DELIMITOR_STRING);
 		strcat(reqAd, "Arch = \"");
 		strcat(reqAd, arch);
 		strcat(reqAd, "\"");
-		free(arch);
+		if(doFreeArch)
+		{
+			free(arch);
+		} 
 	}
 	if(opSys)
 	{
@@ -1181,18 +1202,32 @@ int GetConfig(char* config_server_name)
 		strcat(reqAd, "OpSys = \"");
 		strcat(reqAd, opSys);
 		strcat(reqAd, "\"");
-		free(opSys);
-	}
+		if(doFreeOpSys)
+		{
+			free(opSys);
+		}
+	} 
 
 	sprintf(tmp, "%s = 0", ATTR_LAST_UPDATE);
 
 	// connect to config server
-	if(!config_server_connect(config_server_name, CONFIG_SERVER_PORT))
+	port = param("CONFIG_SERVER_PORT");
+	if(!port)
+	{
+		portNum = DEFAULT_CONFIG_SERVER_PORT;
+	}
+	else
+	{
+		portNum = atoi(port);
+		free(port);
+	}
+	
+	if(!config_server_connect(config_server_name, portNum))
 	{
 		ad.Insert(tmp);
 		return -1;
 	}
-	tMgr.NewTimer(NULL, 60, (void*)config_server_disconnect, 0);
+	timer = tMgr.NewTimer(NULL, 60, (void*)config_server_disconnect, 0);
 	reqNum = send_request(CONDOR_MASTER, ACTION_GET, reqAd, DELIMITOR, "", 0);
 	if(!reqNum)
 	{
@@ -1200,6 +1235,8 @@ int GetConfig(char* config_server_name)
 		return -1;
 	}
 	reqFor = get_response(id, &status, configList, DELIMITOR, reason, &timestamp);
+	tMgr.CancelTimer(timer);
+	
 	if(!reqFor)
 	{
 		ad.Insert(tmp);
@@ -1283,7 +1320,8 @@ int GetConfig(char* config_server_name)
 
 
     /* write configs to local file */
-    conf_fp = fopen(SERVER_CONFIG, "w");
+	sprintf(outputName, "%s/%s", condor_dir, SERVER_CONFIG); 
+    conf_fp = fopen(outputName, "w");
     if( conf_fp == NULL) {
 		fprintf(stderr, "Cannot open %s, errno = %d\n", SERVER_CONFIG, errno);
 		ad.Insert(tmp);
@@ -1326,7 +1364,27 @@ void StartConfigServer()
 	daemon*			newDaemon;
 	
 	newDaemon = new daemon("CONFIG_SERVER");
-	init_params();
+	newDaemon->process_name = param(newDaemon->name_in_config_file);
+	if(newDaemon->process_name == NULL && newDaemon->flag)
+	{
+		dprintf(D_ALWAYS, "Process not found in config file: %s\n",
+				newDaemon->name_in_config_file);
+		EXCEPT("Can't continue...");
+	}
+	newDaemon->config_file = param("CONFIG_SERVER_FILE");
+	newDaemon->port = param("CONFIG_SERVER_PORT");
+
+	// check that log file is necessary
+	if(newDaemon->log_filename_in_config_file != NULL)
+	{
+		newDaemon->log_name = param(newDaemon->log_filename_in_config_file);
+		if(newDaemon->log_name == NULL && newDaemon->flag)
+		{
+			dprintf(D_ALWAYS, "Log file not found in config file: %s\n",
+					newDaemon->log_filename_in_config_file);
+		}
+	}
+
 	newDaemon->StartDaemon();
 	newDaemon->timeStamp = GetTimeStamp(newDaemon->process_name);
 	

@@ -25,7 +25,9 @@ public:
 
 	int		Restart();
 	int		StartDaemon();
-
+	char*	port;				 	// for config server
+	char*	config_file;				// for config server
+	
 private:
 	int		runs_on_this_host();
 	void	Recover();

@@ -122,20 +122,7 @@ extern "C"
 // if this machine is a world-machine, then the standard schedd and
 // startd are not started.
 
-#if 0
-daemon Daemons::daemon_ptr[] = 
-	{
-	{"MASTER", 		"MASTER_LOG", 				    0,0,0,FALSE,0,0,0},
-	{"COLLECTOR",	"COLLECTOR_LOG", "COLLECTOR_HOST",0,0,TRUE, 0,0,0},
-	{"NEGOTIATOR",	"NEGOTIATOR_LOG","NEGOTIATOR_HOST",0,0,TRUE, 0,0,0},
-	{"STARTD",		"STARTD_LOG" , 	 				0,0,0,TRUE, 0,0,0},
-	{"SCHEDD",		"SCHEDD_LOG", 	 				0,0,0,TRUE, 0,0,0},
-	{"KBDD",		"KBDD_LOG",    "BOOL_X_RUNS_HERE",0,0,TRUE, 0,0,0},
-	{"W_STARTD",	"W_STARTD_LOG",   "WORLD_MACHINE",0,0,TRUE, 0,0,0},
-	{"W_SCHEDD",	"W_SCHEDD_LOG",   "WORLD_MACHINE",0,0,TRUE, 0,0,0},
-	{"CKPT_SERVER",	"CKPT_SERVER_LOG","CKPT_SERVER_HOST",0,0,TRUE, 0,0,0}
-	};
-#endif
+
 
 extern Daemons 		daemons;
 extern int			ceiling;
@@ -164,6 +151,8 @@ daemon::daemon(char *name)
 	restarts = 0;
 	timeStamp = 0;
 	recoverTimer = -1;
+	port = NULL;
+	config_file = NULL;
 	daemons.RegisterDaemon(this);
 }
 
@@ -410,6 +399,9 @@ int daemon::StartDaemon()
 		if(getuid()==0) {
 			set_condor_euid();
 		}
+
+		//int		i = 1;		  
+		//while(i);
 		
 		pid = getpid();
 		if( setsid() == -1 ) {
@@ -417,7 +409,29 @@ int daemon::StartDaemon()
 		}
 		// dprintf(D_ALWAYS, "uid=%d, euid=%d, gid=%d, egid=%d\n",
 		//		getuid(), geteuid(), getgid(), getegid());
-		(void)execl( process_name, shortname, "-f", 0 );
+		if(strcmp(name_in_config_file, "CONFIG_SERVER") == 0)
+		{
+			if(port && config_file)
+			{
+				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, "-c", config_file, 0 );
+			}
+			else if(port)
+			{
+				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, 0 );
+			}
+			else if(config_file)
+			{
+				(void)execl( process_name, shortname, "-f", "-l", log_name, "-c", config_file, 0 );
+			}
+			else
+			{
+				(void)execl( process_name, shortname, "-f", "-l", log_name, 0 );
+			}
+		}
+		else
+		{
+			(void)execl( process_name, shortname, "-f", 0 );
+		}
 		/* Must be condor to write to log files. */
 		EXCEPT( "execl( %s, %s, -f, 0 )", process_name, shortname );
 		return 0;
