@@ -69,6 +69,8 @@ int		startd_noclaim_shutdown = 0;
 
 char* Name = NULL;
 
+int		pid_snapshot_interval = 50;
+    // How often do we take snapshots of the pid families? 
 
 char*	mySubSystem = "STARTD";
 
@@ -515,6 +517,12 @@ init_params( int first_time)
 		}
 		Name = build_valid_daemon_name( tmp );
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
+		free( tmp );
+	}
+
+	tmp = param( "PID_SNAPSHOT_INTERVAL" );
+	if( tmp ) {
+		pid_snapshot_interval = atoi( tmp );
 		free( tmp );
 	}
 

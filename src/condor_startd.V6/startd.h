@@ -122,6 +122,9 @@ extern	int		startd_noclaim_shutdown;
 
 extern	char*	Name;			// The startd's name
 
+extern	int		pid_snapshot_interval;	
+    // How often do we take snapshots of the pid families? 
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 #endif /* _CONDOR_STARTD_H */
