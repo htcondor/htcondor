@@ -869,7 +869,7 @@ format_globusStatus( int globusStatus, AttrList *ad )
 {
 	static char result[64];
 
-fprintf(stderr,"status is %d\n", globusStatus);
+
 	switch ( globusStatus ) {
 	case G_UNSUBMITTED:
 		strcpy( result, GlobusJobStatusNames[G_UNSUBMITTED] );
