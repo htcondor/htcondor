@@ -33,6 +33,10 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#if defined(OSF1)
+#define _OSF_SOURCE
+#define _BSD
+#endif
 #include <sys/wait.h>
 #include "proc.h"
 #include "debug.h"
@@ -443,11 +447,7 @@ PROC	*proc_template;
 		FREE( proc );
 		return NULL;
 	}
-#if defined(OSF1)
-	proc->exit_status = (int *) MALLOC( sizeof(int) * n_cmds );
-#else
-	proc->exit_status = (union wait *) MALLOC( sizeof(union wait) * n_cmds );
-#endif
+	proc->exit_status = (int *) MALLOC( sizeof(union wait) * n_cmds );
 	if ( proc->err == NULL) {
 		FREE( proc->cmd );
 		FREE( proc->args );
