@@ -567,13 +567,20 @@ sub condor_init {
 
 #    chomp ($local_dir=`pushd $local_dir >> /dev/null && pwd && popd >> /dev/null`);
     
-    my @subdirs=("log", "execute", "spool");
-
-    foreach $_ (@subdirs) {
-	(-d "$local_dir/$_") || 
-	mkdir("$local_dir/$_", 0777) || 
-	    die "\nCan't create \"$local_dir/$_\"\n\n";
+    unless (-d "$local_dir/log") { 
+	mkdir ("$local_dir/log", 0755) || die "\nCan't create \"$local_dir/log\"\n\n"; 
     }
+    unless (-d "$local_dir/spool") {
+	mkdir ("$local_dir/spool", 0755) || die "\nCan't create \"$local_dir/spool\"\n\n";
+    }
+    unless (-d "$local_dir/execute") {
+ 	mkdir ("$local_dir/execute", 1777) || die "\nCan't create \"$local_dir/execute\"\n\n";
+    }
+
+    # I know this is redundant but I've had trouble with Perl's mkdir    
+    system ("chmod 755 $local_dir/log");
+    system ("chmod 755 $local_dir/spool");
+    system ("chmod 1777 $local_dir/execute");
 
     system ("chown -R $owner $local_dir");
 
