@@ -771,7 +771,7 @@ inTimeUnits( char* name, ArgumentList &argList, EvalState &state, Value &val )
 {
 	Value 	arg;
 	int		asecs=0, rsecs=0;
-	double	secs;
+	double	secs=0.0;
 
     if( argList.getlast( ) != 0 ) {
         val.SetErrorValue( );
@@ -822,7 +822,7 @@ strCat( char*, ArgumentList &argList, EvalState &state, Value &result )
 	char		*buf=0;
 	int			alen;
 	Value		val;
-	bool		errorFlag=false, undefFlag=false, rval;
+	bool		errorFlag=false, undefFlag=false, rval=true;
 
 	pp.SetWantQuotes( false );
 	sink.SetSink( buf, alen, false );
@@ -842,7 +842,7 @@ strCat( char*, ArgumentList &argList, EvalState &state, Value &result )
 			val.ToSink( sink );
 		}
 	}
-	sink.FlushSink( );
+	sink.Terminate( );
 	
 		// failed evaluating some argument
 	if( !rval ) {
@@ -1183,7 +1183,7 @@ convString( char*, ArgumentList &argList, EvalState &state, Value &result )
 					result.SetErrorValue( );
 					return( false );
 				}
-				snk.FlushSink( );
+				snk.Terminate( );
 				result.SetStringValue( str );
 				return( true );
 			}
