@@ -5,7 +5,7 @@ Configuring The Startd Policy}
 
 \index{configuration!startd policy}
 \index{startd!configuration}
-\index{daemon!\Condor{startd}}
+\index{daemon!condor\_startd@\Condor{startd}}
 This section describes the configuration of the \Condor{startd} to
 implement the desired policy for when remote jobs should start, be
 suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
@@ -15,7 +15,7 @@ between the needs and wishes of resource owners (machine owners) and
 resource users (people submitting their jobs to Condor).
 Please read
 this section carefully if you plan to change any of the settings
-described here, as getting it wrong can have a severe impact on
+described here, as a wrong setting can have a severe impact on
 either the owners of machines in your pool (they may
 ask to be removed from the pool entirely) or the users of your pool
 (they may stop using Condor).
@@ -26,27 +26,27 @@ Before we get into the details, there are a few things to note:
 probably want to read through section~\ref{classad-reference} on
 ClassAd expressions before continuing with this.
 
-\item If you are familiar with the version 6.0 policy expressions and
-what they do, you read
+\item If you are primarily familiar with the version 6.0 policy
+expressions and what they do, read
 section~\ref{sec:V60-Policy-diffs} on
-page~\pageref{sec:V60-Policy-diffs} which explains the differences
+page~\pageref{sec:V60-Policy-diffs}.  This section explains the differences
 between the version 6.0 policy expressions and later versions.  
 
-\item If you are defining the policy for an SMP (multi-CPU) machine,
-also read section~\ref{sec:Configuring-SMP} on
-Configuring The Startd for SMP Machines.  
-Each \Term{virtual machine} represented by the \condor{startd} on an
-SMP machine will have its own \Term{state} and \Term{activity}
-(described below). 
+\item If you are defining the policy for an SMP machine
+(a multi-CPU machine),
+also read section~\ref{sec:Configuring-SMP} for specific information on
+configuring the \Condor{startd} for SMP machines.  
+Each \Term{virtual machine} represented by the \Condor{startd} on an
+SMP machine has its own \Term{state} and \Term{activity}
+(as described below). 
 In the future, each virtual machine will be able to have its
-own policy expressions defined.
-For the rest of this section, the word ``machine''
-means an individual virtual machine, for
-an SMP machine that is showing up as multiple virtual
-machines in your pool.  
+own individual policy expressions defined.
+Within this manual section, the word ``machine''
+refers to an individual virtual machine within
+an SMP machine.
 \end{itemize}
 
-To define your policy, you set expressions in
+To define your policy, set expressions in
 the configuration file (see section~\ref{sec:Configuring-Condor} on
 Configuring Condor for an introduction to Condor's
 configuration files).
@@ -55,17 +55,17 @@ and a job ClassAd.
 The expressions can therefore reference attributes from either
 ClassAd. 
 Listed in this section are
-the attributes that are included in the machine's ClassAd and
+both the attributes that are included in the machine's ClassAd and
 the attributes that are included in a job ClassAd. 
 \index{START@\Expr{START} expression}
 \index{configuration!START@\Expr{START} expression}
-The \Expr{START} expression, which describes
-to Condor what conditions must be met for a machine to start a job
-are explained.
+The \Expr{START} expression is explained.
+It describes the conditions that must be met for a machine to
+start a job.
 The \Expr{RANK} expression is described.
 It allows the specification of
 the kinds of jobs a machine prefers to run.
-A final discussion details how the \Condor{startd} works.
+A final discussion details how the \Condor{startd} daemon works.
 Included are
 the machine \Term{states} and \Term{activities}, to give
 an idea of what is possible in policy decisions.
@@ -76,13 +76,16 @@ Two example policy settings are presented.
 Startd ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{\condor{startd}}
-The \Condor{startd} represents the machine on which it is running to
-the Condor pool.  It publishes characteristics about the
-machine in its ClassAd to aid matchmaking with resource requests.
-The values of these attributes can be found by using
+\index{condor\_startd daemon@\condor{startd} daemon}
+\index{daemon!condor\_startd@\Condor{startd}}
+\index{Condor daemon!condor\_startd@\Condor{startd}}
+The \Condor{startd} daemon represents the machine on which it is running to
+the Condor pool.  
+The daemon publishes characteristics about the
+machine in the machine's ClassAd to aid matchmaking with resource requests.
+The values of these attributes may be listed by using the command:
 \Prog{\condor{status} -l hostname}.
-On an SMP machine, the startd will break the machine up and advertise
+On an SMP machine, the \Condor{startd} will break the machine up and advertise
 it as separate virtual machines, each with its own name and ClassAd.
 The attributes themselves and what they represent are described below:
 
@@ -101,26 +104,25 @@ The \Expr{START} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{expression!\Expr{START}}
-The most important expression in the startd (and possibly in all of
-Condor) is the \Expr{START} expression.  
-This expression describes the conditions to must be met for a
-machine to service a resource request (in other words, to start a
-job). 
-This expression (like other expressions) can reference attributes
+The most important expression to the \Condor{startd}
+is the \Expr{START} expression.  
+This expression describes the conditions that must be met for a
+machine to run a job. 
+This expression can reference attributes
 in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
 or attributes in a job ClassAd (such as
-\Attr{Owner}, \Attr{Imagesize}, and even \Attr{Cmd}, the name of the
-executable the requester wants to run).
-What the \Expr{START} expression evaluates to plays a crucial role in
+\Attr{Owner}, \Attr{Imagesize}, and \Attr{Cmd}, the name of the
+executable the job will run).
+The value after \Expr{START} expression evaluation plays a crucial role in
 determining the state and activity of a machine.
 
-It is the \Expr{Requirements} expression that is used for
-matching with other jobs.
-The startd defines the
-\Expr{Requirements} expression as the \Expr{START} expression.
-However, in situations where a machine wants to make itself
-unavailable for further matches, it sets its \Expr{Requirements}
-expression to FALSE, not its \Expr{START} expression.  
+The \Expr{Requirements} expression is used for
+matching machines with jobs.
+The \Condor{startd} defines the
+\Expr{Requirements} expression by using the \Expr{START} expression.
+In situations where a machine wants to make itself
+unavailable for further matches, the \Expr{Requirements}
+expression is set to FALSE.  
 When the \Expr{START} expression locally evaluates to TRUE, the
 machine advertises the \Expr{Requirements} expression as TRUE and
 does not publish the \Expr{START} expression.
