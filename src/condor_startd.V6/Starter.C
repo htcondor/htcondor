@@ -46,7 +46,9 @@ Starter::Starter( Resource* rip )
 
 Starter::~Starter()
 {
-	free( s_name );
+	if (s_name) {
+		free( s_name );
+	}
 	if( s_procfam ) {
 		delete s_procfam;
 	}
@@ -433,7 +435,10 @@ Starter::exited()
 
 		// Finally, we can free up our memory and data structures.
 	s_pid = 0;
-	free( s_name );
+	if ( s_name ) {
+		free( s_name );
+		s_name = NULL;
+	}
 	s_name = NULL;
 
 	if( s_procfam ) {
