@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "JavaInfo.h"
-#include "config_util.h"
+
 
 MachAttributes::MachAttributes()
 {
@@ -108,14 +108,14 @@ MachAttributes::compute( amask_t how_much )
 		if( m_uid_domain ) {
 			free( m_uid_domain );
 		}
-		m_uid_domain = get_uid_domain();
+		m_uid_domain = param( "UID_DOMAIN" );
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_UID_DOMAIN,
 				 m_uid_domain );
 
 		if( m_filesystem_domain ) {
 			free( m_filesystem_domain );
 		}
-		m_filesystem_domain = get_file_system_domain();
+		m_filesystem_domain = param( "FILESYSTEM_DOMAIN" );
 		dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_FILE_SYSTEM_DOMAIN,
 				 m_filesystem_domain );
 

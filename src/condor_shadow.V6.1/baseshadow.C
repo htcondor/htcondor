@@ -29,7 +29,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_config.h"       // for param()
 #include "condor_email.h"        // for (you guessed it) email stuff
-#include "config_util.h"
+
 // these are declared static in baseshadow.h; allocate space here
 UserLog BaseShadow::uLog;
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -147,13 +147,13 @@ void BaseShadow::config()
 	}
 
 	if (fsDomain) free(fsDomain);
-	fsDomain = get_file_system_domain();
+	fsDomain = param( "FILESYSTEM_DOMAIN" );
 	if (!fsDomain) {
 		EXCEPT("FILESYSTEM_DOMAIN not specified in config file.");
 	}
 
 	if (uidDomain) free(uidDomain);
-	uidDomain = get_uid_domain();
+	uidDomain = param( "UID_DOMAIN" );
 	if (!uidDomain) {
 		EXCEPT("UID_DOMAIN not specified in config file.");
 	}

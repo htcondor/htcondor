@@ -29,7 +29,7 @@
 #include "condor_uid.h"
 #include "shadow.h"
 #include "pseudo_ops.h"
-#include "config_util.h"
+#include "condor_config.h"
 #include "exit.h"
 #include "condor_version.h"
 
@@ -124,7 +124,7 @@ pseudo_get_job_info(ClassAd *&ad)
 
 		// Also, try to include our value for UidDomain, so that the
 		// starter can properly compare them...
-	char* uid_domain = get_uid_domain();
+	char* uid_domain = param( "UID_DOMAIN" );
 	if( uid_domain ) {
 		size = 10 + strlen(uid_domain) + strlen(ATTR_UID_DOMAIN);
 		char* uid_domain_expr = (char*) malloc( size );
