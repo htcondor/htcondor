@@ -764,6 +764,12 @@ UserProc::execute()
 		switch( job_class ) {
 		  
 		  case STANDARD:
+			if( chdir(local_dir) < 0 ) {
+				EXCEPT( "chdir(%s)", local_dir );
+			}
+			close( pipe_fds[WRITE_END] );
+			break;
+
 		  case PVM:
 		  case PIPE:
 			if( chdir(local_dir) < 0 ) {
