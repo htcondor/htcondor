@@ -19,6 +19,7 @@
 #include "condor_constants.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
+#include "startup.h"
 #if defined(OSF1) && defined(__GNUC__)
 #	include "condor_fdset.h"
 #endif
