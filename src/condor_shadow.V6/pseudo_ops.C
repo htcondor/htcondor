@@ -27,6 +27,8 @@
 */ 
 
 #include "condor_common.h"
+#include "condor_classad.h"
+#include "condor_attributes.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
 #include "condor_io.h"
@@ -84,6 +86,7 @@ extern int	UseAFS;
 extern int  UseNFS;
 extern int  UseCkptServer;
 extern char *Spool;
+extern ClassAd *JobAd;
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -789,7 +792,7 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 		*/
 	s->virt_pid = -1;
 
-	s->soft_kill_sig = SIGUSR1;
+	JobAd->LookupInteger(ATTR_KILL_SIG, s->soft_kill_sig);
 
 	s->cmd = Strdup( p->cmd[0] );
 	s->args = Strdup( p->args[0] );
@@ -798,25 +801,14 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 
 	s->is_restart = has_ckpt_file();
 
-		/* If user has supplied environment variable "CHECKPOINT = FALSE"
-		   then we don't do checkpointing, otherwise we assume it's wanted */
-	env_string = find_env( "CHECKPOINT", s->env );
-	if( env_string && stricmp("false",env_string) == MATCH ) {
-		s->ckpt_wanted = FALSE;
-	} else {
+	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
 		s->ckpt_wanted = TRUE;
 	}
 
-		/* If user has supplied environment variable "CONDOR_CORESIZE = nnn"
-		   then we honor that limit, otherwise the core dump size is
-		   unlimited.
-		*/
-	if( env_string = find_env("CONDOR_CORESIZE",s->env) ) {
+	if (JobAd->LookupInteger(ATTR_CORE_SIZE, s->coredump_limit) == 1) {
 		s->coredump_limit_exists = TRUE;
-		s->coredump_limit = atoi(env_string);
 	} else {
 		s->coredump_limit_exists = FALSE;
-		s->coredump_limit = -1;
 	}
 
 	display_startup_info( s, D_SYSCALLS );
