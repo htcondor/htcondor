@@ -30,6 +30,10 @@
 
 \SynProg{\Condor{config\_val}}
 \oArg{options}
+\Opt{-config}
+
+\SynProg{\Condor{config\_val}}
+\oArg{options}
 \OptArg{-verbose}{variable\Dots}
 
 \index{Condor commands!condor\_config\_val}
@@ -55,7 +59,7 @@ restarted.  In general, modifying a host's configuration with
 requires the \DCPerm{CONFIG} access level, which is disabled on all
 hosts by default.  See section~\ref{sec:Security-access-levels} on
 page~\pageref{sec:Security-access-levels} for more details.
-Begining with Condor version 6.3.2, administrators have more
+Beginning with Condor version 6.3.2, administrators have more
 fine-grained control over which access levels can modify which
 settings.
 See section~\ref{sec:Config-Security} on
@@ -99,6 +103,8 @@ cause all the Condor daemons in your pool to exit.
 	directory. }
 	\OptItem{\Opt{-owner}}{ Return the owner of the
 	\Condor{config\_val} process. }
+	\OptItem{\Opt{-config}}{ Print the current configuration files
+	in use. }
 	\OptItem{\OptArg{-verbose}{variable\Dots}}{ Returns the configuration
 	file name and line number where a configuration variable is defined.}
 	\OptItem{\Opt{variable\Dots}}{The variables to query. }
