@@ -56,7 +56,6 @@ static char	*Universe[] = {
 static CurIndent;				// current indent level for display functions
 static int	InvokingUid;		// user id of person ivoking this program
 static char	*InvokingUserName;	// user name of person ivoking this program
-const int MATCH = 0;			// use with strcmp(), etc.
 
 
 static char	*format_time( int secs );
