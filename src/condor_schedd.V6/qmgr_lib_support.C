@@ -43,11 +43,7 @@ static Qmgr_connection connection;
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
-	int		rval, fd, cmd, ok, is_local = FALSE;
-	char	tmp_file[255];
-#if !defined(WIN32)
-	struct  passwd *pwd;
-#endif
+	int		rval, cmd, ok, is_local = FALSE;
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
 
@@ -215,8 +211,6 @@ WalkJobQueue(scan_func func)
 int
 rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
-	float rval;
-
 	if ( utime )
 		*utime = (float) ru.ru_utime.tv_sec;
 

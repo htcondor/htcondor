@@ -45,8 +45,6 @@ extern "C" {
 int
 InitializeConnection( const char *owner )
 {
-	int	rval;
-
 	CurrentSysCall = CONDOR_InitializeConnection;
 
 	qmgmt_sock->encode();
@@ -59,8 +57,6 @@ InitializeConnection( const char *owner )
 int
 InitializeReadOnlyConnection( const char *owner )
 {
-	int	rval;
-
 	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
 
 	qmgmt_sock->encode();
