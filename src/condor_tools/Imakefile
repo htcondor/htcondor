@@ -40,3 +40,15 @@ link_torelease_target($(RELEASE_DIR)/sbin/condor_on,sbin,condor_reschedule)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+stripped: condor
+	cp -f condor $(RELEASE_DIR)/sbin/condor_on
+	cd $(RELEASE_DIR)/sbin; strip condor_on
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_off
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_checkpoint
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_vacate
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_restart
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reconfig
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reconfig_schedd
+	cd $(RELEASE_DIR)/sbin; ln condor_on condor_reschedule
+
