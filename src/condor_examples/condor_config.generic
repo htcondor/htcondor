@@ -644,6 +644,22 @@ RESERVED_DISK		= 5
 ##  this to true.
 #RESERVE_AFS_CACHE	= False
 
+##  By default, if a user does not specify "notify_user" in the submit
+##  description file, any email Condor sends about that job will go to
+##  "username@UID_DOMAIN".  If your machines all share a common UID
+##  domain (so that you would set UID_DOMAIN to be the same across all
+##  machines in your pool), *BUT* email to user@UID_DOMAIN is *NOT*
+##  the right place for Condor to send email for your site, you can
+##  define the default domain to use for email.  A common example
+##  would be to set EMAIL_DOMAIN to the fully qualified hostname of
+##  each machine in your pool, so users submitting jobs from a
+##  specific machine would get email sent to user@machine.your.domain,
+##  instead of user@your.domain.  In general, you should leave this
+##  setting commented out unless two things are true: 1) UID_DOMAIN is
+##  set to your domain, not $(FULL_HOSTNAME), and 2) email to
+##  user@UID_DOMAIN won't work.
+#EMAIL_DOMAIN = $(FULL_HOSTNAME)
+
 
 ######################################################################
 ##  Daemon-specific settings:
