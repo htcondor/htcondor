@@ -32,6 +32,10 @@ The details of each version are described below.
   files related to a valid Computing on Demand (COD) claim on an
   otherwise idle machine.
 
+\item Fixed the faulty argument parsing in condor_rm, condor_release,
+  and condor_hold. Before you could accidentally type ``condor_rm
+  -analyze'', and it would remove all of your jobs. Now it gives an error.
+
 \end{itemize}
 
 \noindent Known Bugs:
