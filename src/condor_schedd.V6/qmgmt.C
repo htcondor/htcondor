@@ -2118,6 +2118,9 @@ void FindPrioJob(PROC_ID & job_id)
 
 static void AppendHistory(ClassAd* ad)
 {
+  bool failed = false;
+  static bool sent_mail_about_bad_history = false;
+
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
@@ -2130,16 +2133,41 @@ static void AppendHistory(ClassAd* ad)
   FILE* LogFile=fopen(JobHistoryFileName,"a");
   if ( !LogFile ) {
 	dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
+	failed = true;
+  } else {
+	  if (!ad->fPrint(LogFile)) {
+		dprintf(D_ALWAYS, 
+			"ERROR: failed to write job class ad to history file %s\n",
+			JobHistoryFileName);
+		if (LogFile) fclose(LogFile);
+		failed = true;
+	  } else {
+		fprintf(LogFile,"***\n");   // separator
+		fclose(LogFile);
+	  }
   }
 
-  if (!ad->fPrint(LogFile)) {
-    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",JobHistoryFileName);
-	fclose(LogFile);
-    return;
+  if ( failed ) {
+	  if ( !sent_mail_about_bad_history ) {
+		  FILE* email_fp = email_admin_open("Failed to write to HISTORY file");
+		  if ( email_fp ) {
+			sent_mail_about_bad_history = true;
+			fprintf(email_fp,
+			 "Failed to write completed job class ad to HISTORY file:\n"
+			 "      %s\n"
+			 "If you do not wish for Condor to save completed job ClassAds\n"
+			 "for later viewing via the condor_history command, you can \n"
+			 "remove the 'HISTORY' parameter line specified in the condor_config\n"
+			 "file(s) and issue a condor_reconfig command.\n"
+			 ,JobHistoryFileName);
+			email_close(email_fp);
+		  }
+	  }
+  } else {
+	  // did not fail, reset our email flag.
+	  sent_mail_about_bad_history = false;
   }
   
-  fprintf(LogFile,"***\n");   // separator
-  fclose(LogFile);
   return;
 }
 
