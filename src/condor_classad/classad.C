@@ -542,7 +542,6 @@ int ClassAd::put(Stream& s)
 
 int ClassAd::get(Stream& s)
 {
-    ExprTree*       tree;
     char*           name;
     char*           line;
     int             numExprs;
