@@ -110,6 +110,11 @@ However, you will no longer see user logs that contain a ``shadow
 exception'' or ``job evicted'' message without a ``job executing''
 event, first.
 
+\item \Syscall{stat} and varient calls now go through the file table to
+get the correct logical size and access times of buffered files.
+Before, \Syscall{stat} used to return zero size on a buffered file that had
+not yet been synced to disk.
+
 \end{itemize}
 
 \noindent Known Bugs:
