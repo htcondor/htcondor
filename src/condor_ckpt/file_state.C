@@ -88,6 +88,12 @@ File::Init()
 	pathname = 0;
 }
 
+#if defined(Solaris)
+extern "C" char *getcwd( char *, size_t size);
+#else
+extern "C" char *getwd( char * );
+#endif
+
 void
 OpenFileTable::Init()
 {
@@ -106,7 +112,11 @@ OpenFileTable::Init()
 #endif
 	}
 
-	// getcwd( Condor_CWD, sizeof(Condor_CWD) );
+#if defined(Solaris)
+	getcwd( Condor_CWD, sizeof(Condor_CWD) );
+#else
+	getwd( Condor_CWD );
+#endif
 	PreOpen( 0, TRUE, FALSE, FALSE );
 	PreOpen( 1, FALSE, TRUE, FALSE );
 	PreOpen( 2, FALSE, TRUE, FALSE );
@@ -270,6 +280,12 @@ OpenFileTable::DoClose( int fd )
 		// those are in use by duplicates.
 	file[fd].open = FALSE;
 
+	// If in standalone mode, close this fd.  The dup is an actual dup.
+	if (MyImage.GetMode() == STANDALONE) {
+		file[new_base_file].real_fd = new_base_file;
+		return syscall( SYS_close, fd );
+	}
+
 	return 0;
 }
 
@@ -375,9 +391,16 @@ OpenFileTable::DoDup( int user_fd )
 		return -1;
 	}
 
-	if( (new_fd=find_avail(0)) < 0 ) {
-		errno = EMFILE;
-		return -1;
+	// If STANDALONE mode, make an actual dup of the fd, and make
+	// sure to return that fd to the caller.
+	if (MyImage.GetMode() == STANDALONE) {
+		new_fd = syscall( SYS_dup, user_fd );
+	} 
+	else {
+		if( (new_fd=find_avail(0)) < 0 ) {
+			errno = EMFILE;
+			return -1;
+		}
 	}
 
 	return DoDup2( user_fd, new_fd );
@@ -434,6 +457,7 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 }
 
 
+#if defined(SYS_accept)
 int
 OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
 {
@@ -476,9 +500,14 @@ OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
 	file[user_fd].pathname = (char *) 0;
 	return user_fd;
 }
+#else
+int
+OpenFileTable::DoAccept(int s, struct sockaddr *addr, int *addrlen )
+{
+	return -1;
+}
+#endif
 
-
-extern "C" char *getwd( char * );
 
 void
 OpenFileTable::Save()
@@ -487,7 +516,12 @@ OpenFileTable::Save()
 	off_t	pos;
 	File	*f;
 
+#if defined(Solaris)
+	getcwd( cwd, sizeof(cwd) );
+#else
 	getwd( cwd );
+#endif
+
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
 		if( f->isOpen() && !f->isDup() ) {
@@ -533,6 +567,15 @@ OpenFileTable::fix_dups( int user_fd  )
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		if( file[i].isOpen() && file[i].isDup() && file[i].dup_of == user_fd ) {
 			file[i].real_fd = file[user_fd].real_fd;
+			// If we're in STANDALONE mode, this must be an actual dup
+			// of the fd.  -Jim B.
+			if (MyImage.GetMode() == STANDALONE) {
+#if defined(SYS_dup2)
+				syscall( SYS_dup2, user_fd, i );
+#else
+				dup2( user_fd, i );
+#endif
+			}
 		}
 	}
 }
@@ -585,7 +628,11 @@ OpenFileTable::Restore()
 			// previously given to the App.  JCP 8/96
 
 			if (MyImage.GetMode() == STANDALONE && f->real_fd != i) {
+#if defined(SYS_dup2)
 				syscall( SYS_dup2, f->real_fd, i);
+#else
+				dup2(f->real_fd, i);
+#endif
 				syscall( SYS_close, f->real_fd );
 				f->real_fd = i;
 			}
@@ -829,6 +876,9 @@ dup2( int old, int new_fd )
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoDup2( old, new_fd );
+		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
+		if (rval == new_fd && MyImage.GetMode() == STANDALONE)
+			rval = syscall( SYS_dup2, old, new_fd );
 		return rval;
 	}
 
