@@ -59,6 +59,7 @@
 #include "file_table_interf.h"
 #include <assert.h>
 #include "condor_sys.h"
+#include "condor_file_info.h"
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -147,24 +148,11 @@ File::Display()
 	}
 }
 
-int
-OpenFileTable::DoOpen( const char *path, int flags, int mode )
+OpenFileTable::DoOpen(
+	const char *path, int flags, int real_fd, int is_remote )
 {
 	int	user_fd;
-	int	real_fd;
 	char	buf[ _POSIX_PATH_MAX ];
-
-		// Try to open the file
-	if( LocalSysCalls() ) {
-		real_fd = syscall( SYS_open, path, flags, mode );
-	} else {
-		real_fd = REMOTE_syscall( CONDOR_open, path, flags, mode );
-	}
-
-		// Stop here if there was an error
-	if( real_fd < 0 ) {
-		return -1;
-	}
 
 		// find an unused fd
 	if( (user_fd = find_avail(0)) < 0 ) {
@@ -194,7 +182,7 @@ OpenFileTable::DoOpen( const char *path, int flags, int mode )
 	file[user_fd].open = TRUE;
 	file[user_fd].duplicate = FALSE;
 	file[user_fd].pre_opened = FALSE;
-	file[user_fd].remote_access = RemoteSysCalls();
+	file[user_fd].remote_access = is_remote;
 	file[user_fd].shadow_sock = FALSE;
 	file[user_fd].offset = 0;
 	file[user_fd].real_fd = real_fd;
@@ -504,7 +492,7 @@ OpenFileTable::Restore()
 				// No need to seek if offset is 0, but more importantly, this
 				// fd could be a tty if offset is 0.
 			if( f->offset != 0 ) {
-				if( RemoteSysCalls() ) {
+				if( f->isRemoteAccess() ) {
 					pos = REMOTE_syscall( CONDOR_lseek,
 						  f->real_fd, f->offset, SEEK_SET );
 				} else {
@@ -578,28 +566,75 @@ extern "C" {
 
 int AvoidNFS;
 
+#if 1
+	void debug_msg( const char *msg );
+#endif
+
+int open_stream( const char *local_path, int flags, int *_FileStreamLen );
+int _FileStreamWanted;
+int _FileStreamLen;
+
 int
 open( const char *path, int flags, ... )
 {
 	va_list ap;
 	int		creat_mode = 0;
+	char	local_path[ _POSIX_PATH_MAX ];	// pathname on this machine
+	int		pipe_fd;	// fd number if this file is already open as a pipe
+	int		fd;
+	int		status;
+	int		is_remote = FALSE;
 
 	if( flags & O_CREAT ) {
 		va_start( ap, flags );
 		creat_mode = va_arg( ap, int );
 	}
 
-	if( MappingFileDescriptors() ) {
-		return FileTab->DoOpen( path, flags, creat_mode );
+	if( LocalSysCalls() ) {
+		fd = syscall( SYS_open, path, flags, creat_mode );
 	} else {
-		if( LocalSysCalls() ) {
-			return syscall( SYS_open, path, flags, creat_mode );
-		} else {
-			return REMOTE_syscall( CONDOR_open, path, flags, creat_mode );
+		status = REMOTE_syscall( CONDOR_file_info, path, &pipe_fd, local_path );
+		if( status < 0 ) {
+			EXCEPT( "CONDOR_file_info" );
+		}
+		switch( status ) {
+		  case IS_PRE_OPEN:
+			fd = pipe_fd;
+			break;
+		  case IS_NFS:
+		  case IS_AFS:
+			fd = syscall( SYS_open, local_path, flags, creat_mode );
+			if( fd >= 0 ) {
+				break;
+			} // else fall through, and try by remote syscalls anyway
+		  case IS_RSC:
+			if( _FileStreamWanted ) {
+				fd = open_stream( local_path, flags, &_FileStreamLen );
+			} else {
+				fd = REMOTE_syscall(CONDOR_open, local_path, flags, creat_mode);
+			}
+			is_remote = TRUE;
+			break;
 		}
 	}
+
+	if( fd < 0 ) {
+		return -1;
+	}
+
+	if( MappingFileDescriptors() ) {
+		fd = FileTab->DoOpen( local_path, flags, fd, is_remote );
+	}
+
+	return fd;
 }
 #endif
+
+int
+open_stream( const char *local_path, int flags, int *_FileStreamLen )
+{
+	EXCEPT( "Should never get here" );
+}
 
 #if defined(OSF1)
 	int
@@ -639,7 +674,7 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 	}
 
 	if( MappingFileDescriptors() ) {
-		return FileTab->DoOpen( path, flags, creat_mode );
+		return FileTab->DoOpen( path, flags );
 	} else {
 		if( LocalSysCalls() ) {
 			return syscall( SYS_openx, path, flags, creat_mode, ext );
@@ -778,6 +813,12 @@ int
 pre_open( int fd, BOOL readable, BOOL writeable, BOOL shadow_connection )
 {
 	return FileTab->PreOpen( fd, readable, writeable, shadow_connection );
+}
+
+int
+MarkOpen( const char *path, int flags, int real_fd, int is_remote )
+{
+	return FileTab->DoOpen( path, flags, real_fd, is_remote );
 }
 
 } // end of extern "C"

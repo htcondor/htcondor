@@ -71,7 +71,11 @@ public:
 	void Save();
 	void Restore();
 	int PreOpen( int fd, BOOL readable, BOOL writeable, BOOL shadow_connection);
-	int DoOpen( const char *path, int flags, int mode );
+#if 0
+	int DoOpen( const char *path, int flags, int mode, int fd, int is_remote );
+#else
+	int DoOpen( const char *path, int flags, int fd, int is_remote );
+#endif
 	int DoClose( int fd );
 	int DoDup( int fd );
 	int DoDup2( int fd, int dupfd );
