@@ -3,12 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <signal.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include "image.h"
 #include "stubs.h"
+
+#ifndef SIG_DFL
+#include <signal.h>
+#endif
 
 
 static Image MyImage;
