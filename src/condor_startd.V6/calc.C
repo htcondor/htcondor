@@ -205,9 +205,7 @@ tty_idle_time(char* file)
 }
 #endif /* defined(WIN32) */
 
-#if defined(LINUX)
-#include <linux/smp.h>
-#endif
+
 #if defined(IRIX53)
 #include <sys/sysmp.h>
 #endif
@@ -238,7 +236,59 @@ calc_ncpus()
 	GetSystemInfo(&info);
 	return info.dwNumberOfProcessors;
 #elif defined(LINUX)
-	return smp_num_cpus;
+
+	FILE        *proc;
+	char 		buf[256];
+	int 		num_cpus = 0;
+
+	proc = fopen( "/proc/cpuinfo", "r" );
+	if( !proc ) {
+		return 1;
+	}
+
+/*
+/proc/meminfo looks something like this:
+(For 1 cpu machines, there's only 1 entry).
+
+processor       : 0
+cpu             : 686
+model           : 3
+vendor_id       : GenuineIntel
+stepping        : 4
+fdiv_bug        : no
+hlt_bug         : no
+f00f_bug        : no
+fpu             : yes
+fpu_exception   : yes
+cpuid           : yes
+wp              : yes
+flags           : fpu vme de pse tsc msr pae mce cx8 apic 11 mtrr pge mca cmov mmx
+bogomips        : 298.19
+
+processor       : 1
+cpu             : 686
+model           : 3
+vendor_id       : GenuineIntel
+stepping        : 4
+fdiv_bug        : no
+hlt_bug         : no
+f00f_bug        : no
+fpu             : yes
+fpu_exception   : yes
+cpuid           : yes
+wp              : yes
+flags           : fpu vme de pse tsc msr pae mce cx8 apic 11 mtrr pge mca cmov mmx
+bogomips        : 299.01
+*/
+	// Count how many lines begin with the string "processor".
+	while( fgets( buf, 256, proc) ) {
+		if( !strncmp( buf, "processor", 9 ) ) {
+			num_cpus++;
+		}
+	}
+	fclose( proc );
+	return num_cpus;
+
 #else sequent
 	return 1;
 #endif sequent
