@@ -94,7 +94,7 @@ int TerminateProc ( DBM *Q, PROC_ID *pid, int status );
 CLUSTER_LIST * fetch_cluster_list ( DBM *Q );
 int data_too_big ( int size );
 #if 0
-#if defined(LINUX)
+#if defined(LINUX) || defined(HPUX9)
 DBM * dbm_open ( const char *file, int flags, int mode );
 #else
 DBM * dbm_open ( char *file, int flags, int mode );
@@ -233,6 +233,9 @@ int display_proc_long ();
 int display_v2_proc_long ();
 int setegid ();
 int seteuid ();
+#ifndef HPUX9
+int setlinebuf ();
+#endif
 int setregid ();
 int setreuid ();
 int setrgid ();
