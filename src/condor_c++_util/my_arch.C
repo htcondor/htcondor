@@ -93,6 +93,10 @@ static int arch_inited = FALSE;
 static char* arch = NULL;
 static char* opsys = NULL;
 
+#ifdef HPUX
+char* get_hpux_arch( struct utsname* );
+#endif
+
 void
 init_arch() 
 {
@@ -103,6 +107,17 @@ init_arch()
 		return;
 	}
 
+#ifdef HPUX
+	/*
+	  On HPUX, to figure out if we're HPPA1 or HPPA2, we have to
+	  lookup what we get back from uname in a file that lists all the
+	  different HP models and what kinds of CPU each one has.  We do
+	  this in a seperate function to keep this function somewhat
+	  readable.   -Derek Wright 7/20/98
+	*/
+
+	arch = get_hpux_arch( &buf );
+#else 
 		// Get ARCH
 	if( !strcmp(buf.machine, "alpha") ) {
 		sprintf( tmp, "ALPHA" );
@@ -122,13 +137,13 @@ init_arch()
 		sprintf( tmp, "SUN4x" );
 	} else if( !strcmp(buf.machine, "sun4c") ) {
 		sprintf( tmp, "SUN4x" );
-	} else if( !strcmp(buf.machine, "9000/735") ) {
-		sprintf( tmp, "HPPA1" );
 	} else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, buf.machine );
 	}
 	arch = strdup( tmp );
+#endif /* HPUX */
+
 	if( !arch ) {
 		EXCEPT( "Out of memory!" );
 	}
@@ -172,8 +187,8 @@ init_arch()
 	if( !opsys ) {
 		EXCEPT( "Out of memory!" );
 	}
+	arch_inited = TRUE;
 }
-
 
 
 char *
@@ -185,6 +200,7 @@ my_arch()
 	return arch;
 }
 
+
 char *
 my_opsys()
 {
@@ -193,6 +209,49 @@ my_opsys()
 	}
 	return opsys;
 }
+
+#if defined(HPUX)
+char*
+get_hpux_arch( struct utsname *buf )
+{
+    FILE* fp;
+	static char *file = "/opt/langtools/lib/sched.models";
+	char machinfo[4096], line[128];
+	char *model;
+	char cputype[128], cpumodel[128];
+	int len, found_it = FALSE;
+
+	model = strchr( buf->machine, '/' );
+	model++;
+	len = strlen( model );
+
+	fp = fopen( file, "r" );
+	if( ! fp ) {
+	    return NULL;
+	}	
+	while( ! feof(fp) ) {
+	    fgets( line, 128, fp );
+		if( !strncmp(line, model, len) ) {
+		    found_it = TRUE;
+		    break;
+		}
+	}
+	fclose( fp );
+	if( found_it ) {
+  	    sscanf( line, "%s\t%s", cpumodel, cputype );
+		if( !strcmp(cputype, "2.0") ) {
+		    arch = strdup( "HPPA2" );
+		} else {
+		    arch = strdup( "HPPA1" );
+		}
+	} else {
+	    // If we didn't find it, it's probably an ancient machine, so 
+	    // just assume we're HPPA1.
+	    arch = strdup( "HPPA1" );
+	}	  
+	return arch;
+}
+#endif /* HPUX */
 
 #endif /* ! WIN32 */
 
