@@ -26,12 +26,13 @@
 
 #include "common.h"
 #include "list.h"
-#include "sink.h"
 
 BEGIN_NAMESPACE( classad )
 
 class Value;
 class Literal;
+class ExprList;
+class ClassAd;
 
 /// Represents the result of an evaluation.
 class Value 
@@ -320,7 +321,7 @@ IsClassAdValue(const ClassAd *&ad) const
 }
 
 inline bool Value:: 
-IsClassAdValue()  const
+IsClassAdValue() const
 {
 	return( valueType == CLASSAD_VALUE );	
 }
