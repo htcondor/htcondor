@@ -47,10 +47,12 @@ extern ClassAd *JobAd;
 
 extern ReliSock *syscall_sock;
 
-// count of network bytes send and received for this job so far
+// count of total network bytes previously send and received for this
+// job from previous runs (i.e., includes ckpt transfers)
 float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
 
-// count of network bytes send and received outside of CEDAR RSC socket
+// count of network bytes send and received outside of CEDAR RSC
+// socket during this run
 float	BytesSent = 0.0, BytesRecvd = 0.0;
 
 extern "C" void 
@@ -119,8 +121,8 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 				event.recvd_bytes += syscall_sock->get_bytes_sent();
 				event.sent_bytes += syscall_sock->get_bytes_recvd();
 			}
-			event.total_recvd_bytes = TotalBytesSent;
-			event.total_sent_bytes = TotalBytesRecvd;
+			event.total_recvd_bytes = TotalBytesSent + event.recvd_bytes;
+			event.total_sent_bytes = TotalBytesRecvd + event.sent_bytes;
 			if (!ULog.writeEvent (&event))
 			{
 				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");

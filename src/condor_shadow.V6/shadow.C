@@ -158,15 +158,16 @@ char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
 char	*MailerPgm = NULL;
 
-// count of network bytes send and received for this job so far
+// count of total network bytes previously send and received for this
+// job from previous runs (i.e., includes ckpt transfers)
 extern float	TotalBytesSent, TotalBytesRecvd;
 
-// count of network bytes previously sent and received for RSC only;
-// unlike TotalBytesSent and TotalBytesRecvd, these counts do not
-// include any network usage in this current run
+// count of network bytes previously sent and received for RSC only
+// from previous runs
 float RSCBytesSent = 0.0, RSCBytesRecvd = 0.0;
 
-// count of network bytes send and received outside of CEDAR RSC socket
+// count of network bytes send and received outside of CEDAR RSC
+// socket during this run
 extern float	BytesSent, BytesRecvd;
 
 #include "condor_qmgr.h"
@@ -773,12 +774,14 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 				Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
 		if( sock_RSC1 ) {
-			TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
-			TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
+			float TotalBytesSentUpdate =
+				TotalBytesSent + sock_RSC1->get_bytes_sent() + BytesSent;
+			float TotalBytesRecvdUpdate =
+				TotalBytesRecvd + sock_RSC1->get_bytes_recvd() + BytesRecvd;
 			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-							   ATTR_BYTES_SENT, TotalBytesSent );
+							   ATTR_BYTES_SENT, TotalBytesSentUpdate );
 			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-							   ATTR_BYTES_RECVD, TotalBytesRecvd );
+							   ATTR_BYTES_RECVD, TotalBytesRecvdUpdate );
 			float RSCBytesSentUpdate =
 				sock_RSC1->get_bytes_sent() + RSCBytesSent;
 			float RSCBytesRecvdUpdate = 

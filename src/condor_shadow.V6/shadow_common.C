@@ -81,6 +81,8 @@ extern int CommittedTime;
 extern int NumCkpts;
 extern int NumRestarts;
 extern float TotalBytesSent, TotalBytesRecvd;
+extern float BytesSent, BytesRecvd;
+extern ReliSock *syscall_sock;
 
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
@@ -235,13 +237,25 @@ NotifyUser( char *buf, PROC *proc )
 		fprintf(mailer, "Checkpoint restarts: %d\n", NumRestarts);
 	}
 
-	if (TotalBytesSent > 0.0) {
 		// TotalBytesSent and TotalBytesRecvd are from the shadow's
 		// perspective, and we want to display the stats from the job's
-		// perspective.
+		// perspective.  Note also that TotalBytesSent and TotalBytesRecvd
+		// don't include our current run, so we need to include the
+		// stats from our syscall_sock (if we have one) and the BytesSent
+		// and BytesRecvd variables.  This is ugly and confusing, which
+		// explains why I keep getting it wrong.  :-(
+	float network_bytes = TotalBytesSent + BytesSent;
+	if (syscall_sock) {
+		network_bytes += syscall_sock->get_bytes_sent();
+	}
+	if (network_bytes > 0.0) {
 		fprintf(mailer,"\nNetwork:\n");
-		fprintf(mailer,"\t%s read\n",metric_units(TotalBytesSent));
-		fprintf(mailer,"\t%s written\n",metric_units(TotalBytesRecvd));
+		fprintf(mailer,"\t%s read\n",metric_units(network_bytes));
+		network_bytes = TotalBytesRecvd + BytesRecvd;
+		if (syscall_sock) {
+			network_bytes += syscall_sock->get_bytes_recvd();
+		}
+		fprintf(mailer,"\t%s written\n",metric_units(network_bytes));
 	}
 
 	if (JobIsStandard()) {
