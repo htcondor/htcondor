@@ -20,7 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
- 
+
+#define MAXVARNAME 256  // formerly in condor_scanner.h
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -39,7 +40,7 @@
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_parser.h"
-#include "condor_scanner.h"
+//#include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "files.h"
 #if !defined(WIN32)
