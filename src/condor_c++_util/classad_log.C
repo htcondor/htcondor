@@ -454,12 +454,10 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	int rval;
 	ClassAd *ad;
-    Value v;
 
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-    v.SetStringValue(value);
-	rval = ad->Insert( string(name), Literal::MakeLiteral(v));
+	rval = ad->InsertAttr( string(name), value );
 
 	return rval;
 }
