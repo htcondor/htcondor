@@ -12,6 +12,8 @@ fi
 # If it doesn't yet exist, build it.
 ##################################################
 
+IMAKE=imake
+if [ X$USE_OLD_IMAKE = X ] ; then
 if [ -d ../imake ] ; then
     IMAKEROOT="../imake"
 elif [ -d ../../imake ] ; then
@@ -53,6 +55,8 @@ if [ ! -x $IMAKECPP ] ; then
 fi
 export IMAKECPP
 
+# end of USE_OLD_IMAKE
+fi
 
 ##################################################
 # Figure out the flags for imake to build Makefile
