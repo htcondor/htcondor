@@ -32,7 +32,9 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "condor_rw.h"
 
+static char _FileName_[] = __FILE__;
 
 ReliSock::ReliSock(					/* listen on port		*/
 	int		port
@@ -88,6 +90,71 @@ ReliSock::~ReliSock()
 }
 
 
+int ReliSock::SendFile(char *file, int length)
+{
+	int i, result;
+	int pagesize = 4096;  // Optimize large writes to be page sized.
+	char *cur = file;
+
+	// Tell peer how big the file is going to be.
+	this->encode();
+	ASSERT( this->code(length) != FALSE );
+	ASSERT( this->end_of_message() != FALSE );
+
+	// Optimize file transfer by writing in pagesized chunks.
+	for(i = 0; i < length;)
+	{
+		// If there is less then a page left.
+		if( (length - i) < pagesize ) {
+			result = condor_write(_sock, cur, (length - i), _timeout);
+			if( result < 0 ) {
+				dprintf(D_ALWAYS, "Send file failed.\n");
+				return -1;
+			}
+			cur += (length - i);
+			i += (length - i);
+		} else {  
+			// Send another page...
+			result = condor_write(_sock, cur, pagesize, _timeout);
+			if( result < 0 ) {
+				dprintf(D_ALWAYS, "Send file failed.\n");
+				return -1;
+			}
+			cur += pagesize;
+			i += pagesize;
+		}
+	}
+	return i;
+}
+
+int ReliSock::RecvFile(char *buffer, int max_length)
+{
+	bool turned_off_buffering = false;
+	int result;
+	int length;
+
+	ASSERT(buffer != NULL);
+	ASSERT(max_length > 0);
+
+	// Find out how big the file is going to be.
+	this->decode();
+	ASSERT( this->code(length) != FALSE );
+	ASSERT( this->end_of_message() != FALSE );
+
+	if( length > max_length ) {
+		dprintf(D_ALWAYS, "File is too large for buffer.\n");
+		return -1;
+	}
+
+	result = condor_read(_sock, buffer, length, _timeout);
+	
+	if( result < 0 ) {
+		dprintf(D_ALWAYS, "Failed to receive file.\n");
+		return -1;
+	} else {
+		return result;
+	}
+}
 
 int ReliSock::listen()
 {
@@ -212,7 +279,7 @@ int ReliSock::end_of_message()
 
 	switch(_coding){
 		case stream_encode:
-			if (!snd_msg.buf.empty()){
+			if (!snd_msg.buf.empty()) {
 				return snd_msg.snd_packet(_sock, TRUE, _timeout);
 			}
 			break;
@@ -245,39 +312,37 @@ int ReliSock::connect(
 
 
 
-int ReliSock::put_bytes(
-	const void	*dta,
-	int			sz
-	)
+int ReliSock::put_bytes(const void *dta, int sz)
 {
+	int result;
 	int		tw;
 	int		nw;
 
 	if (!valid()) return -1;
 
-	for(nw=0;;){
 
-		if (snd_msg.buf.full()){
+	for(nw=0;;) {
+		
+		if (snd_msg.buf.full()) {
 			if (!snd_msg.snd_packet(_sock, FALSE, _timeout)) return FALSE;
 		}
-		if (snd_msg.buf.empty()){
+		
+		if (snd_msg.buf.empty()) {
 			snd_msg.buf.seek(5);
 		}
-
-		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0)
+		
+		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
 			return -1;
+		}
+		
 		nw += tw;
 		if (nw == sz) break;
 	}
-
 	return nw;
 }
 
 
-int ReliSock::get_bytes(
-	void		*dta,
-	int			max_sz
-	)
+int ReliSock::get_bytes(void *dta, int max_sz)
 {
 	if (!valid()) return -1;
 
@@ -286,7 +351,7 @@ int ReliSock::get_bytes(
 			return FALSE;
 		}
 	}
-
+	
 	return rcv_msg.buf.get(dta, max_sz);
 }
 
@@ -330,68 +395,70 @@ int ReliSock::RcvMsg::rcv_packet(
 	int		len, len_t;
 	int		tmp_len;
 
-    len = 0;
-    while (len < 5) {
-		if (_timeout > 0) {
-			struct timeval	timer;
-			fd_set			readfds;
-			int				nfds=0, nfound;
-			timer.tv_sec = _timeout;
-			timer.tv_usec = 0;
+
+		len = 0;
+		while (len < 5) {
+			if (_timeout > 0) {
+				struct timeval	timer;
+				fd_set			readfds;
+				int				nfds=0, nfound;
+				timer.tv_sec = _timeout;
+				timer.tv_usec = 0;
 #if !defined(WIN32) // nfds is ignored on WIN32
-			nfds = _sock + 1;
+				nfds = _sock + 1;
 #endif
-			FD_ZERO( &readfds );
-			FD_SET( _sock, &readfds );
-
-			nfound = select( nfds, &readfds, 0, 0, &timer );
-
-			switch(nfound) {
-			case 0:
-				return FALSE;
-				break;
-			case 1:
-				break;
-			default:
-				dprintf( D_ALWAYS, "select returns %d, recv failed\n",
-					nfound );
-				return FALSE;
-				break;
+				FD_ZERO( &readfds );
+				FD_SET( _sock, &readfds );
+				
+				nfound = select( nfds, &readfds, 0, 0, &timer );
+				
+				switch(nfound) {
+				  case 0:
+					return FALSE;
+					break;
+				  case 1:
+					break;
+				  default:
+					dprintf( D_ALWAYS, "select returns %d, recv failed\n",
+							 nfound );
+					return FALSE;
+					break;
+				}
 			}
+			tmp_len = recv(_sock, hdr+len, 5-len, 0);
+			if (tmp_len <= 0)
+				return FALSE;
+			len += tmp_len;
 		}
-        tmp_len = recv(_sock, hdr+len, 5-len, 0);
-        if (tmp_len <= 0)
-            return FALSE;
-        len += tmp_len;
-    }
-	end = (int) ((char *)hdr)[0];
-	memcpy(&len_t,  &hdr[1], 4);
-	len = (int) ntohl(len_t);
+		end = (int) ((char *)hdr)[0];
+		memcpy(&len_t,  &hdr[1], 4);
+		len = (int) ntohl(len_t);
+		
+		if (!(tmp = new Buf)){
+			dprintf(D_ALWAYS, "IO: Out of memory\n");
+			return FALSE;
+		}
+		if (len > tmp->max_size()){
+			delete tmp;
+			dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
+			return FALSE;
+		}
+		if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
+			delete tmp;
+			dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
+					tmp_len, len);
+			return FALSE;
+		}
+		if (!buf.put(tmp)) {
+			delete tmp;
+			dprintf(D_ALWAYS, "IO: Packet storing failed\n");
+			return FALSE;
+		}
+		
+		if (end) ready = TRUE;
 
-	if (!(tmp = new Buf)){
-		dprintf(D_ALWAYS, "IO: Out of memory\n");
-		return FALSE;
-	}
-	if (len > tmp->max_size()){
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
-		return FALSE;
-	}
-	if ((tmp_len = tmp->read(_sock, len, _timeout)) != len){
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
-				tmp_len, len);
-		return FALSE;
-	}
-	if (!buf.put(tmp)) {
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
-		return FALSE;
-	}
-
-	if (end) ready = TRUE;
-
-	return TRUE;
+		return TRUE;
+		
 }
 
 
