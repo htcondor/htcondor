@@ -53,6 +53,7 @@ class CSysinfo
 	pid_t FindThreadProcess (DWORD find_tid);
 	DWORD GetHandleCount (pid_t pid);
 	DWORD GetParentPID (pid_t pid);
+	int GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 );
 	void CloseThread (HANDLE hthread);
 	bool IsWin2korXP() { return IsWin2k; }
 #if 0
