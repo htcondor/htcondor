@@ -1028,7 +1028,7 @@ int DaemonCore::HandleReq(int socki)
 
 		// if the connection was received on a listen socket, do an accept.
 		if ( ((ReliSock *)insock)->_state == Sock::sock_special &&
-			((ReliSock *)insock)->_special_state != ReliSock::relisock_listen ) {
+			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen ) {
 			stream = (Stream *) ((ReliSock *)insock)->accept();
 			if ( !stream ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
