@@ -85,6 +85,7 @@ extern "C" {
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
+	void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();
 	int unlink_local_or_ckpt_server( char* );
 	int update_rusage( struct rusage*, struct rusage* );
@@ -94,6 +95,8 @@ extern int part_send_job( int test_starter, char *host, int &reason,
 			  char *capability, char *schedd, PROC *proc, int &sd1,
 	      		  int &sd2, char **name);
 extern int send_cmd_to_startd(char *sin_host, char *capability, int cmd);
+extern int InitJobAd(int cluster, int proc);
+extern int MakeProc(ClassAd *ad, PROC *p);
 
 extern int do_REMOTE_syscall();
 extern int do_REMOTE_syscall1(int);
@@ -125,6 +128,8 @@ char *LastCkptServer = NULL;
 int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 								// or completed a periodic ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
+int  NumCkpts = 0;				// count of completed checkpoints
+int  NumRestarts = 0;			// count of attempted checkpoint restarts
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -223,7 +228,7 @@ extern SpawnLIST* SpawnList;
 
 extern ClassAd *JobAd;
 
-char*		schedd;
+char*		schedd = NULL;
 
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
@@ -307,7 +312,6 @@ main(int argc, char *argv[], char *envp[])
 	if( argc != 6 ) {
 		usage();
 	}
-
 
 #ifdef WAIT_FOR_DEBUGGER
 	int x = 1;
@@ -781,23 +785,16 @@ Wrapup( )
 	}
 
 	if( sock_RSC1 ) {
-		TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
-		TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
 	} 
 
 	/*
 	 * the job may have an email address to whom the notification message
-     * should go.  this info is in the classad, and must be gotten from the
-     * Qmgr *before* the job status is updated (i.e., classad is dequeued).
+     * should go.  this info is in the job classad
      */
-    if (!ConnectQ (schedd, SHADOW_QMGMT_TIMEOUT)) {
-		EXCEPT("Failed to connect to schedd!");
-	}
-    if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
-                email_addr))
-    {
+	email_addr[0] = '\0';
+	if (!JobAd->LookupString(ATTR_NOTIFY_USER, email_addr)) {
         dprintf (D_ALWAYS, "Job %d.%d did not have 'NotifyUser'\n",
-                                Proc->id.cluster, Proc->id.proc);
+				 Proc->id.cluster, Proc->id.proc);
         strcpy (email_addr, Proc->owner);
     }
     else if (!email_addr[0])
@@ -807,18 +804,6 @@ Wrapup( )
                                 Proc->id.cluster, Proc->id.proc);
         strcpy (email_addr, Proc->owner);
     }
-
-	if( sock_RSC1 ) {
-		SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-						   ATTR_BYTES_SENT, TotalBytesSent );
-		SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-						   ATTR_BYTES_RECVD, TotalBytesRecvd );
-	}
-	if( ExitReason == JOB_CKPTED || ExitReason == JOB_NOT_CKPTED ) {
-		SetAttributeInt( Proc->id.cluster, Proc->id.proc,
-						 ATTR_LAST_VACATE_TIME, time(0) );
-	}
-    DisconnectQ (NULL);
 
 	/* fill in the Proc structure's exit_status with JobStatus, so that when
 	 * we call update_job_status the exit status is written into the job queue,
@@ -843,12 +828,43 @@ Wrapup( )
 }
 
 void
+update_job_rusage( struct rusage *localp, struct rusage *remotep )
+{
+	static struct rusage tstartup_local, tstartup_remote;
+	static int tstartup_flag = 0;
+
+	/* Here we keep usage info on the job when the Shadow first starts in
+		 * tstartup_local/remote, so we can "reset" it back each subsequent
+		 * time we are called so that update_rusage always adds up correctly.
+		 * We are called by pseudo calls really_exit and update_rusage, and 
+		 * both of these are passing in times _since_ the remote job started, 
+		 * NOT since the last time this function was called.  Thus this code 
+		 * here.... -Todd */
+	if (tstartup_flag == 0 ) {
+		tstartup_flag = 1;
+		memcpy(&tstartup_local, &Proc->local_usage, sizeof(struct rusage));
+		memcpy(&tstartup_remote, &Proc->remote_usage[0],
+			   sizeof(struct rusage));
+	} else {
+		memcpy(&Proc->local_usage,&tstartup_local,sizeof(struct rusage));
+		/* Now only copy if time in remotep > 0.  Otherwise, we'll
+		 * erase the time updates from any periodic checkpoints if
+		 * the job ends up exiting without a checkpoint on this
+		 * run.  -Todd, 6/97.  */
+		if ( remotep->ru_utime.tv_sec + remotep->ru_stime.tv_sec > 0 )
+			memcpy(&Proc->remote_usage[0],&tstartup_remote,
+				   sizeof(struct rusage) );
+	}
+
+	update_rusage( &Proc->local_usage, localp );
+	update_rusage( &Proc->remote_usage[0], remotep );
+}
+
+void
 update_job_status( struct rusage *localp, struct rusage *remotep )
 {
 	PROC	my_proc;
 	PROC	*proc = &my_proc;
-	static struct rusage tstartup_local, tstartup_remote;
-	static int tstartup_flag = 0;
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
@@ -864,39 +880,8 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 				 "by condor_rm\n", Proc->id.cluster, Proc->id.proc );
 	} else {
 
-		dprintf(D_FULLDEBUG,"TIME DEBUG 1 USR remotep=%lu Proc=%lu utime=%f\n",
-				remotep->ru_utime.tv_sec,
-				Proc->remote_usage[0].ru_utime.tv_sec, utime);
+		update_job_rusage( localp, remotep );
 
-		dprintf(D_FULLDEBUG,"TIME DEBUG 2 SYS remotep=%lu Proc=%lu utime=%f\n",
-				remotep->ru_stime.tv_sec,
-				Proc->remote_usage[0].ru_stime.tv_sec, stime);
-
-		/* Here we keep usage info on the job when the Shadow first starts in
-		 * tstartup_local/remote, so we can "reset" it back each subsequent
-		 * time we are called so that update_rusage always adds up correctly.
-		 * We are called by pseudo calls really_exit and update_rusage, and 
-		 * both of these are passing in times _since_ the remote job started, 
-		 * NOT since the last time this function was called.  Thus this code 
-		 * here.... -Todd */
-		if (tstartup_flag == 0 ) {
-			tstartup_flag = 1;
-			memcpy(&tstartup_local, &Proc->local_usage, sizeof(struct rusage));
-			memcpy(&tstartup_remote, &Proc->remote_usage[0],
-				   sizeof(struct rusage));
-		} else {
-			memcpy(&Proc->local_usage,&tstartup_local,sizeof(struct rusage));
-			/* Now only copy if time in remotep > 0.  Otherwise, we'll
-			 * erase the time updates from any periodic checkpoints if
-			 * the job ends up exiting without a checkpoint on this
-			 * run.  -Todd, 6/97.  */
-			if ( remotep->ru_utime.tv_sec + remotep->ru_stime.tv_sec > 0 )
-				memcpy(&Proc->remote_usage[0],&tstartup_remote,
-					   sizeof(struct rusage) );
-		}
-
-		update_rusage( &Proc->local_usage, localp );
-		update_rusage( &Proc->remote_usage[0], remotep );
 		Proc->image_size = ImageSize;
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
@@ -923,20 +908,38 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 				remotep->ru_stime.tv_sec,
 				Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
+		if( sock_RSC1 ) {
+			TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
+			TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
+			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
+							   ATTR_BYTES_SENT, TotalBytesSent );
+			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
+							   ATTR_BYTES_RECVD, TotalBytesRecvd );
+		}
+
+		if( ExitReason == JOB_CKPTED || ExitReason == JOB_NOT_CKPTED ) {
+			SetAttributeInt( Proc->id.cluster, Proc->id.proc,
+							 ATTR_LAST_VACATE_TIME, time(0) );
+		}
+
 		if (LastCkptServer) {
 			SetAttributeString(Proc->id.cluster, Proc->id.proc,
 							   ATTR_LAST_CKPT_SERVER, LastCkptServer);
+		}
+		if (LastCkptTime > 0) {
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_LAST_CKPT_TIME, LastCkptTime);
-			if (LastCkptTime > 0) {
-				int ckpt_time;
-				GetAttributeInt(Proc->id.cluster, Proc->id.proc,
-								ATTR_JOB_COMMITTED_TIME, &ckpt_time);
-				ckpt_time += LastCkptTime - LastRestartTime;
-				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
-								ATTR_JOB_COMMITTED_TIME, ckpt_time);
-				LastRestartTime = LastCkptTime;
-			}
+			int ckpt_time;
+			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_JOB_COMMITTED_TIME, &ckpt_time);
+			ckpt_time += LastCkptTime - LastRestartTime;
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_JOB_COMMITTED_TIME, ckpt_time);
+			LastRestartTime = LastCkptTime;
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_NUM_CKPTS, NumCkpts);
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_NUM_RESTARTS, NumRestarts);
 			if (Executing_Arch) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 								   ATTR_CKPT_ARCH, Executing_Arch);
@@ -1035,23 +1038,22 @@ start_job( char *cluster_id, char *proc_id )
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
-	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
-		EXCEPT("Failed to connect to schedd!");
-	}
+	InitJobAd(cluster_num, proc_num); // make sure we have the job classad
+
 #ifdef CARMI_OPS
-	if (GetProc(cluster_num, proc_num, &(Proc->proc)) < 0) {
-		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
+	if (MakeProc(JobAd, &(Proc->proc)) < 0) {
+		EXCEPT("MakeProc()");
 	}
 #else
-	if (GetProc(cluster_num, proc_num, Proc) < 0) {
-		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
+	if (MakeProc(JobAd, Proc) < 0) {
+		EXCEPT("MakeProc()");
 	}
 #endif
 
-	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_SENT, &TotalBytesSent);
-	GetAttributeFloat(cluster_num, proc_num, ATTR_BYTES_RECVD,
-					  &TotalBytesRecvd);
-	DisconnectQ(0);
+	JobAd->LookupFloat(ATTR_BYTES_SENT, TotalBytesSent);
+	JobAd->LookupFloat(ATTR_BYTES_RECVD, TotalBytesRecvd);
+	JobAd->LookupInteger(ATTR_NUM_CKPTS, NumCkpts);
+	JobAd->LookupInteger(ATTR_NUM_RESTARTS, NumRestarts);
 
 #define TESTING
 #if !defined(HPUX) && !defined(TESTING)
@@ -1139,40 +1141,6 @@ DoCleanup()
 		dprintf(D_ALWAYS, "Shadow: DoCleanup: unlinking TmpCkpt '%s'\n",
 															TmpCkptName);
 		(void) unlink_local_or_ckpt_server( TmpCkptName );
-	}
-
-	if( Proc->id.cluster ) {
-		if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
-			EXCEPT("Failed to connect to schedd!");
-		}
-		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
-									 ATTR_JOB_STATUS, &status);
-
-		if ( fetch_rval >= 0 && status == REMOVED ) {
-			dprintf(D_ALWAYS, 
-				"DoCleanup(): Job %d.%d has been removed by condor_rm\n",
-				Proc->id.cluster, Proc->id.proc );
-		}
-
-		if( fetch_rval < 0 || status == REMOVED ) {
-			DisconnectQ(0);
-			return 0;
-		}
-			
-		Proc->image_size = ImageSize;
-		Proc->status = status;
-
-		if( sock_RSC1 ) {
-			TotalBytesSent += sock_RSC1->get_bytes_sent() + BytesSent;
-			TotalBytesRecvd += sock_RSC1->get_bytes_recvd() + BytesRecvd;
-
-			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-							   ATTR_BYTES_SENT, TotalBytesSent );
-			SetAttributeFloat( Proc->id.cluster, Proc->id.proc,
-							   ATTR_BYTES_RECVD, TotalBytesRecvd );
-		}
-
-		DisconnectQ(0);
 	}
 
 	return 0;
