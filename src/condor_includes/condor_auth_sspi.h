@@ -24,13 +24,13 @@
 #ifndef CONDOR_AUTH_NTSSPI
 #define CONDOR_AUTH_NTSSPI
 
-#if !defined(SKIP_AUTHENTICATION) && defined(WN32)
+#if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
 
 #define	SECURITY_WIN32 1
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "sspi.NT.h"
 
-class Condro_Auth_SSPI : public Condor_Auth_Base {
+class Condor_Auth_SSPI : public Condor_Auth_Base {
  public:
     Condor_Auth_SSPI(ReliSock * sock);
     //------------------------------------------
