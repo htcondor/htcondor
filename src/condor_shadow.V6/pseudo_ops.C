@@ -1243,13 +1243,13 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 	/* The incoming logical name might be a simple, relative, or complete path */
 	/* We need to examine both the full path and the simple name. */
 
-	filename_split( logical_name, split_dir, split_file );
+	filename_split( (char*) logical_name, split_dir, split_file );
 	complete_path( logical_name, full_path );
 
 	/* Any name comparisons must check the logical name, the simple name, and the full path */
 
 	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list) &&
-	  (filename_remap_find( remap_list, logical_name, remap ) ||
+	  (filename_remap_find( remap_list, (char*) logical_name, remap ) ||
 	   filename_remap_find( remap_list, split_file, remap ) ||
 	   filename_remap_find( remap_list, full_path, remap ))) {
 
