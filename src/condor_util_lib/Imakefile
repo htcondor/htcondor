@@ -73,7 +73,8 @@ GETMNT_OBJ = getmnt.o
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_util.o get_random_num.o fdprintf.o rotate_file.o \
-	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o
+	setsyscalls.o match_prefix.o sleep.o basename.o strcmp_until.o\
+	filename_tools.o
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
