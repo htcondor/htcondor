@@ -7,3 +7,4 @@ strip_copy_target(condor_glidein,$(STRIP_CONTRIB)/bin,condor_glidein,EXECUTABLE_
 static_copy_target(condor_glidein,$(STATIC_CONTRIB)/bin,condor_glidein,EXECUTABLE_MODE)
 
 html:
+clean:
