@@ -23,14 +23,13 @@
 #include "condor_common.h"
 #include "condor_state.h"
 
-static char *_FileName_ = __FILE__;
+static char* condor_states [] = 
+{ "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
+  "Shutdown", "Delete" };
 
-static char* condor_states [] = { "Owner", "Unclaimed", "Matched",
-								  "Claimed", "Preempting" };
-
-static char* condor_activities [] = { "Idle", "Busy", "Vacating",
-									  "Suspended", "Benchmarking",
-									  "Killing" };
+static char* condor_activities [] = 
+{ "None", "Idle", "Busy", "Vacating", "Suspended", "Benchmarking",
+  "Killing" };
 
 State 
 string_to_state(char* state_string) 
