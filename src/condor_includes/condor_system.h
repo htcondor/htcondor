@@ -166,12 +166,12 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <rpc/types.h>
-#if !defined(BSD)
+#if !defined(CONDOR_DARWIN)
 #include <values.h>
 #endif
 #include <math.h>
 #include <utime.h>
-#if !defined(BSD)
+#if !defined(CONDOR_DARWIN)
 #include <sys/poll.h>
 #endif
 

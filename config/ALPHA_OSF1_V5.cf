@@ -11,10 +11,9 @@
 
 #undef  HAS_PVM
 #define HAS_PVM		NO
-#define HAS_GLOBUS	NO
-#define HAS_GSI		NO
-#define HAS_OPENSSL	NO
+#define HAS_GLOBUS	YES
+#define HAS_GSI		YES
+#define HAS_OPENSSL	YES
 
 #undef NEED_SNPRINTF	NO
 
-#undef WANT_MAN_PAGES

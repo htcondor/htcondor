@@ -125,4 +125,16 @@ KERBEROS_LIB =
 KERBEROS_INCLUDE = 
 #endif
 
+/* Set up where I get the glibc libraries for packaging with the release */
+#if IS_GLIBC21
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
+#elif IS_GLIBC22
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
+#elif IS_GLIBC23
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
+#endif
+
+MANDIR = /p/condor/workspaces/man/v6.5
+PVM_DIR = /afs/cs.wisc.edu/p/condor/workspaces/pvm/pvm3.4.2
+
 #endif  /* AfterVendorCF */

@@ -255,7 +255,7 @@ sysapi_swap_space_raw()
 	}
 }
 
-#elif defined(BSD)
+#elif defined(CONDOR_DARWIN)
 #include <sys/sysctl.h>
 int
 sysapi_swap_space_raw() {

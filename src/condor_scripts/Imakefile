@@ -2,18 +2,6 @@ all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
-/* Set up where I get the glibc libraries for packaging with the release */
-#if IS_GLIBC21
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
-#elif IS_GLIBC22
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
-#elif IS_GLIBC23
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
-#endif
-
-MANDIR = /p/condor/workspaces/man/v6.4
-
-
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
 release_copy_target(condor_configure,$(RELEASE_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)

@@ -486,7 +486,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 ) || defined(BSD)
+#elif defined( OSF1 ) || defined(CONDOR_DARWIN)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>

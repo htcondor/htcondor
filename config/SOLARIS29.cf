@@ -21,9 +21,9 @@
 #define		GccArch			sparc-sun-solaris2.9
 #define IS_EGCS_BUILD	YES
 #define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.9/2.95.3/
-#define HAS_GLOBUS 			NO
-#define HAS_GSI				NO
-#define HAS_OPENSSL			NO
+#define HAS_GLOBUS 			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 #endif
 
 #ifndef SC_VERS

@@ -11,9 +11,3 @@ bin/condor_rm
 bin/condor_submit
 bin/condor_reschedule
 bin/condor_vacate
-var/log
-var/condor
-var/condor/log
-var/condor/spool
-var/condor/execute
-var/condor/log/GridLogs

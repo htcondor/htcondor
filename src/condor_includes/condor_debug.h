@@ -104,7 +104,7 @@ void _condor_fd_panic( int line, char *file );
 **	Important external variables in libc
 */
 extern DLL_IMPORT_MAGIC int		errno;
-#if !( defined(LINUX) && defined(GLIBC) || defined(BSD) )
+#if !( defined(LINUX) && defined(GLIBC) || defined(CONDOR_DARWIN) )
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 extern DLL_IMPORT_MAGIC char		*sys_errlist[];
 #endif

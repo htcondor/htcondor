@@ -147,6 +147,6 @@ PlatformFlags is used by the vendor compiler in the test suite */
 
 #define PlatformFlags VersionPlatformFlags MipsFlags
 
-#define PlatformLdFlags -lelf
+#define PlatformLdFlags -lelf -lgen
 
 

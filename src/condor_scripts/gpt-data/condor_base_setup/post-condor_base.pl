@@ -195,7 +195,13 @@ sub find_owner {
 
     if( $condor_uid ) {
 	$ownerret = $condor_uid;
-    } else {
+    } elsif (@pwdent = getpwnam ("daemon")) {
+	$ownerret=$pwdent[2];
+	print "Condor is being configured to use the daemon user, which "
+			. "will work, but usually isn't "
+			. "what you want. Usually it's the condor user, which doesn't "
+			. "exist on this system. \n";
+    } else{
 	print "There's no \"condor\" account on this machine and the CONDOR_IDS ",
 	"environment\nvariable is not set.  Please create a condor account, or ",
 	"set the CONDOR_IDS\nenvironment variable to the uid.gid pair that ",
