@@ -320,13 +320,15 @@ lsa_mgr::loadDataFromRegistry() {
 		// (but next time we store it, it'll be encrypted)
 		
 		DATA_BLOB DataIn, DataOut;
+		LPWSTR pDescrOut =  NULL;
 
+		DataOut.pbData = NULL;
 		DataIn.pbData = (BYTE*)DataBuffer->Buffer;
 		DataIn.cbData = DataBuffer->Length;
 
 		if (!CryptUnprotectData(
 			&DataIn,
-			NULL,				// Description string
+			&pDescrOut,			// Description string
 			NULL,				// Optional Entropy,
 			NULL,				// Reserved
 			NULL,				// optional promptstruct
@@ -355,7 +357,14 @@ lsa_mgr::loadDataFromRegistry() {
 		}
 		
 		extractDataString();
-		LocalFree(DataOut.pbData);
+
+		if ( DataOut.pbData != NULL ) {
+			LocalFree(DataOut.pbData);
+		}
+
+		if ( pDescrOut != NULL ) {
+			LocalFree(pDescrOut);
+		}
 
 		return true;
 	} else {
@@ -383,7 +392,8 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 		);
 
 	if (ntsResult != ERROR_SUCCESS) {
-		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		dprintf(D_ALWAYS, "OpenPolicy returned %lu\n", 
+			LsaNtStatusToWinError(ntsResult));
 		return NULL;
 	}
 
@@ -393,13 +403,13 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 	// Encrypt data before storing it
 	DATA_BLOB DataIn, DataOut;
 
+	DataOut.pbData = NULL;
 	DataIn.pbData = (BYTE*) lsaString->Buffer;
 	DataIn.cbData = lsaString->Length;
-	
 
 	if(!CryptProtectData(
         &DataIn,
-        NULL,				// A description sting. 
+        L"Condor",			// A description sting. 
         NULL,				// Optional entropy not used
         NULL,				// Reserved
         NULL,				// a promptstruct
@@ -407,13 +417,15 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
         &DataOut)){
     
 		// The function failed. Report the error.   
-		printf("Encryption error! errorcode=%lu \n",GetLastError());
+		dprintf(D_ALWAYS, "Encryption error! errorcode=%lu \n",
+			GetLastError());
     }
 
 	lsaString->Buffer = (USHORT*)DataOut.pbData;
 	lsaString->Length = DataOut.cbData;
 
-	printf("Attempting to store %d bytes to reg key...\n", lsaString->Length);
+	dprintf(D_FULLDEBUG, "Attempting to store %d bytes to reg key...\n",
+		 lsaString->Length);
 	
 	// now we can (finally) grab the private data
 	ntsResult = LsaStorePrivateData(
@@ -426,7 +438,9 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 	LsaClose(policyHandle);
 
 	// clean up our encrypted data
-	LocalFree(DataOut.pbData);
+	if ( DataOut.pbData != NULL ) {
+		LocalFree(DataOut.pbData);
+	}
 
 	return (ntsResult == ERROR_SUCCESS);
 }
@@ -457,7 +471,8 @@ lsa_mgr::extractDataString() {
 		wcsncpy( Data_string, DataBuffer->Buffer, strlength );
 		Data_string[strlength] = L'\0'; // make sure it's null terminated
 	} else {
-		printf("lsa_mgr::extractDataString() has been called with no data\n");
+		dprintf(D_ALWAYS, "lsa_mgr::extractDataString() has been "
+			"called with no data\n");
 	}
 }
 
