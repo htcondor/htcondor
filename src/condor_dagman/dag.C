@@ -210,7 +210,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   // If this is one of our jobs, then we must inform the user
                   // that UNDO is not yet handled
                   if (job != NULL) {
-					  _numJobsRunning--;
                       if (DEBUG_LEVEL(DEBUG_QUIET)) {
                           printf ("\n------------------------------------\n");
                           job->Print(true);
@@ -330,9 +329,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
                     break;
                 } else {
                     job->_CondorID = condorID;
-					_numJobsRunning++;
-					assert (_numJobsRunningMax >= 0 ||
-							_numJobsRunning <= _numJobsRunningMax);
                     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
                         job_print (job, true);
                         putchar ('\n');
@@ -409,6 +405,8 @@ bool Dag::Submit (Job * job) {
     }
 
     job->_Status = Job::STATUS_SUBMITTED;
+    _numJobsRunning++;
+    assert (_numJobsRunningMax >= 0 || _numJobsRunning <= _numJobsRunningMax);
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf (", ");
