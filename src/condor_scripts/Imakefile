@@ -9,7 +9,7 @@ GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
 GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
 #endif
 
-MANDIR = /p/condor/workspaces/man/v6.3
+MANDIR = /p/condor/workspaces/man/v6.4
 
 
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
