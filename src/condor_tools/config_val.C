@@ -34,13 +34,15 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_io.h"
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
-
+#include "get_daemon_addr.h"
 
 char	*MyName;
 char	*mySubSystem = NULL;
+StringList params;
 
 usage()
 {
@@ -54,11 +56,12 @@ usage()
 
 enum PrintType {CONDOR_OWNER, CONDOR_TILDE, CONDOR_NONE};
 
+char* GetRemoteParam( char* name, char* param_name );
+
 main( int argc, char* argv[] )
 {
-	char	*value, *tmp, *host = NULL;
+	char	*value, *tmp, *host = NULL, *name = NULL, *pool = NULL;
 	int		i;
-	StringList params;
 	
 	PrintType pt = CONDOR_NONE;
 
@@ -81,10 +84,29 @@ main( int argc, char* argv[] )
 			} else {
 				usage();
 			}
+		} else if( match_prefix( argv[i], "-name" ) ) {
+			if( argv[i + 1] ) {
+				i++;
+				if( (tmp = get_daemon_name(argv[i])) == NULL ) {
+					fprintf( stderr, "%s: unknown host %s\n", MyName, 
+							 get_host_part(argv[i]) );
+					continue;
+				}
+				name = strdup( tmp );
+			} else {
+				usage();
+			}
+		} else if( match_prefix( argv[i], "-pool" ) ) {
+			if( argv[i + 1] ) {
+				pool = strdup( argv[i+1] );
+			} else {
+				usage();
+			}
 		} else if( match_prefix( argv[i], "-owner" ) ) {
 			pt = CONDOR_OWNER;
 		} else if( match_prefix( argv[i], "-tilde" ) ) {
 			pt = CONDOR_TILDE;
+
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -123,7 +145,11 @@ main( int argc, char* argv[] )
 
 	params.rewind();
 	while( (tmp = params.next()) ) {
-		value = param( tmp );
+		if( name ) {
+			value = GetRemoteParam( name, tmp );
+		} else {
+			value = param( tmp );
+		}
 		if( value == NULL ) {
 			fprintf(stderr, "Not defined: %s\n", tmp);
 			exit( 1 );
@@ -135,3 +161,47 @@ main( int argc, char* argv[] )
 	exit( 0 );
 }
 
+
+char*
+GetRemoteParam( char* name, char* param_name ) 
+{
+	ReliSock s;
+	s.timeout( 30 );
+	char *addr, *val = NULL;
+	int cmd = CONFIG_VAL;
+
+	if( !is_valid_sinful(name) ) {
+		addr = get_master_addr( name );
+	} else {
+		addr = name;
+	}
+
+	if( ! s.connect( addr, 0 ) ) {
+		fprintf( stderr, "Can't connect to %s (%s)\n", name, addr );
+		exit(1);
+	}
+
+	s.encode();
+	if( !s.code(cmd) ) {
+		fprintf( stderr, "Can't send command CONFIG_VAL (%d)\n", cmd );
+		return NULL;
+	}
+	if( !s.code(param_name) ) {
+		fprintf( stderr, "Can't send request (%s)\n", param_name );
+		return NULL;
+	}
+	if( !s.end_of_message() ) {
+		fprintf( stderr, "Can't send end of message\n" );
+		return NULL;
+	}
+	s.decode();
+	if( !s.code(val) ) {
+		fprintf( stderr, "Can't receive reply\n" );
+		return NULL;
+	}
+	if( !s.end_of_message() ) {
+		fprintf( stderr, "Can't receive end of message\n" );
+		return NULL;
+	}
+	return val;
+}
