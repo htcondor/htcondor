@@ -878,25 +878,29 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 }
 
 int
-find_idle_sched_universe_jobs( int cluster, int proc )
+find_idle_sched_universe_jobs( ClassAd *job )
 {
 	int	status;
 	int	cur_hosts;
 	int	max_hosts;
 	int	universe;
+	int cluster, proc;
 	bool already_found = false;
 
-	if (GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe) < 0) {
+	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+	job->LookupInteger(ATTR_PROC_ID, proc);
+
+	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) != 1) {
 		universe = STANDARD;
 	}
 
 	if (universe != SCHED_UNIVERSE) return 0;
 
-	GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
-	if (GetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) != 1) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
-	if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
+	if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) != 1) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
 
@@ -1764,7 +1768,7 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
-						"Notification", &notification) < 0) {
+						ATTR_JOB_NOTIFICATION, &notification) < 0) {
 		dprintf(D_ALWAYS, "GetAttributeInt() failed "
 				"-- presumably job was just removed\n");
 		return;
@@ -1787,7 +1791,7 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 	}
 
 	if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
-						   "NotifyUser", owner) < 0) {
+						   ATTR_NOTIFY_USER, owner) < 0) {
 		if (GetAttributeString(srec->job_id.cluster, srec->job_id.proc,
 							   ATTR_OWNER, owner) < 0) {
 			EXCEPT("GetAttributeString(%d, %d, \"%s\")",
@@ -1813,11 +1817,11 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
 	}
 
-	sprintf(buf, "From: Condor\n");
-	write(fd, buf, strlen(buf));
-	sprintf(buf, "To: %s\n", owner);
-	write(fd, buf, strlen(buf));
-	sprintf(buf, "Subject: Condor Job %d.%d\n", srec->job_id.cluster,
+//	sprintf(buf, "From: Condor\n");
+//	write(fd, buf, strlen(buf));
+//	sprintf(buf, "To: %s\n", owner);
+//	write(fd, buf, strlen(buf));
+	sprintf(buf, "Subject: Condor Job %d.%d\n\n", srec->job_id.cluster,
 			srec->job_id.proc);
 	write(fd, buf, strlen(buf));
 	sprintf(buf, "Your condor job\n\t");
