@@ -29,9 +29,9 @@ Condor's config files are found.
 Each condor program will, as part of its initialization process,
 ``configure'' itself by calling a library routine which parses the
 various config files that might be used including pool-wide,
-machine-specific, and root-owner config files.  The result is a list
-of constants and expressions which the program may evaluate as needed
-at run time.
+platform-specific, machine-specific, and root-owned config files.  The
+result is a list of constants and expressions which the program may
+evaluate as needed at run time.
 
 Definitions in the configuration file come in two flavors, macros and
 expressions.  Macros provide string valued constants which remain
@@ -39,6 +39,12 @@ static throughout the execution of the program.  Expressions can be
 arithmetic, boolean, or string valued, and can be evaluated
 dynamically at run time.
 
+The order in which Macros and Expressions are defined is important,
+since you cannot define anything in terms of something else that
+hasn't been defined yet.  This is particularly important if you break
+up your config files using the \Macro{LOCAL\_CONFIG\_FILE} setting
+described in sections~\ref{sec:Condor-wide-Config-File-Entries}
+and~\ref{sec:Multiple-Platforms} below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Config File Macros}
@@ -112,7 +118,7 @@ evaluated.
 
 Note that expression which contain references to other expressions are
 bound to the expressions definition, not its current value, but
-functions which contain macro invocations are bound to the current
+expressions which contain macro invocations are bound to the current
 value of the macro.  Thus
 
 \begin{verbatim}
@@ -180,19 +186,65 @@ the library routine which parses the config files.
   date defined by UNIX as the ``beginning of time'', hereafter
   referred to as the \Term{UNIX date}.
   
-\item[\MacroU{full\_hostname}] \label{param:FullHostname} This is the
+\item[\MacroU{FULL\_HOSTNAME}] \label{param:FullHostname} This is the
   fully qualified hostname of the local machine (hostname plus domain
   name).
   
-\item[\MacroU{hostname}] \label{param:Hostname} This is just the
+\item[\MacroU{HOSTNAME}] \label{param:Hostname} This is just the
   hostname of the local machine (no domain name).
   
-\item[\MacroU{tilde}] \label{param:Tilde} This is the full path to the
+\item[\MacroU{TILDE}] \label{param:Tilde} This is the full path to the
   home directory of user ``condor'', if such a user exists on the
   local machine.
 
+\item[\MacroU{SUBSYSTEM}] \label{param:Subsystem} This ``subsystem''
+  name of the daemon or tool that is evaluating the macro.  The
+  different subsystem names are described in
+  section~\ref{sec:Condor-Subsystem-Names} below.
+
 \end{description}
 
+The final set are entries whose default values are determined
+automatically at runtime but which can be overridden.  
+
+\begin{description}
+
+\item[\MacroU{ARCH}] \label{param:Arch} This setting defines the string
+  used to identify the architecture of the local machine to Condor.
+  The \Condor{startd} will advertise itself with this attribute so
+  that users can submit binaries compiled for a given platform and
+  force them to run on the correct machines.  \Condor{submit} will
+  automatically append a requirement to the job ClassAd that it must
+  run on the same \Macro{ARCH} and \Macro{OPSYS} of the machine where
+  it was submitted, unless the user specifies \Macro{ARCH} and/or
+  \Macro{OPSYS} explicitly in their submit file.  See the
+  \Cmd{\condor{submit}}{1} man page for details.  
+
+\item[\MacroU{OPSYS}] \label{param:OpSys} This setting defines the
+  string used to identify the operating system of the local machine to
+  Condor.  See the entry on \Macro{ARCH} above for more information.
+  If this setting is not defined in the config file, Condor will
+  automatically insert the operating system of this machine as
+  determined by\Prog{uname}.  
+
+\item[\MacroU{FILESYSTEM\_DOMAIN}] This parameter defaults to the fully
+  qualified hostname of the machine it is evaluated on.  See
+  section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
+  Filesystem Config File Entries'' below for the full description of
+  its use and under what conditions you would want to override it.
+
+\item[\MacroU{UID\_DOMAIN}] This parameter defaults to the fully
+  qualified hostname of the machine it is evaluated on.  See
+  section~\ref{sec:Shared-Filesystem-Config-File-Entries} on ``Shared
+  Filesystem Config File Entries'' below for the full description of
+  its use and under what conditions you would want to override it.
+
+\end{description}
+
+Since \Macro{ARCH} and \Macro{OPSYS} will automatically be set to the
+right things, we recomend that you do not override them yourself.
+Only do so if you know what you are doing.
+  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Condor Subsystem Names}
 \label{sec:Condor-Subsystem-Names}
@@ -213,6 +265,7 @@ Condor system.  The possible subsystem names are:
 \item SHADOW
 \item STARTER
 \item CKPT\_SERVER
+\item SUBMIT
 \label{list:subsystem names}
 \end{itemize}
 
@@ -348,6 +401,19 @@ system.
         LOCAL_CONFIG_FILE = /full/path/to/configs/$(hostname).local
 \end{verbatim}
   
+  Begining with Condor version 6.0.1, the \Macro{LOCAL\_CONFIG\_FILE}
+  is treated as a list of files, not a single file.  So, you can use
+  either a comma or space seperated list of files as its value.  This
+  allows you to specify multiple files as the ``local config file''
+  and each one will be processed in order (with parameters set in
+  later files overridding values from previous files).  This allows
+  you use one global config file for multiple platforms in your pool,
+  define a platform-specific config file for each platform, and
+  finally use a local config file for each machine.  For more
+  information on this, see section~\ref{sec:Multiple-Platforms} on
+  ``Configuring Condor for Multiple Platforms'' on
+  page~\pageref{sec:Multiple-Platforms}.
+
 \item[\Macro{CONDOR\_ADMIN}] \label{param:CondorAdmin} This is the email
   address that Condor will send mail to when something goes wrong in
   your pool.  For example, if a daemon crashes, the \Condor{master}
@@ -374,28 +440,6 @@ system.
   a given partition on your machine, it will always subtract this
   amount.  For example, the \Condor{startd} advertises the amount of
   free space in the \Macro{EXECUTE} directory described above.
-  
-\item[\Macro{ARCH}] \label{param:Arch} This setting defines the string
-  used to identify the architecture of the local machine to Condor.
-  The \Condor{startd} will advertise itself with this attribute so
-  that users can submit binaries compiled for a given platform and
-  force them to run on the correct machines.  \Condor{submit} will
-  automatically append a requirement to the job ClassAd that it must
-  run on the same \Macro{ARCH} and \Macro{OPSYS} of the machine where
-  it was submitted, unless the user specifies \Macro{ARCH} and/or
-  \Macro{OPSYS} explicitly in their submit file.  The the
-  \Cmd{\condor{submit}}{1} man page for details.  If this setting is
-  not defined in the config file, Condor will automatically insert the
-  architecture of this machine as determined by \Prog{uname -m}
-  (machine).
-
-\item[\Macro{OPSYS}] \label{param:OpSys} This settings defines the
-  string used to identify the operating system of the local machine to
-  Condor.  See the entry on \Macro{ARCH} above for more information.
-  If this setting is not defined in the config file, Condor will
-  automatically insert the operating system of this machine as
-  determined by the concatenation of \Prog{uname -s} and \Prog{uname
-    -r} (system and release).
   
 \item[\Macro{LOCK}] \label{param:Lock} Condor needs to create a few
   lock files to synchronize access to various log files.  Because of
@@ -619,6 +663,12 @@ server, shadow, and starter, none of which use DaemonCore yet).
   \Condor{collector} do send ClassAds, so those would be valid
   subsystems to set this entry for.
   
+  \textbf{OTHER NOTE:} Setting \Macro{SUBMIT\_EXPRS} has the slightly
+  different effect of having the named expressions inserted into all
+  the job ClassAds that \Condor{submit} creates.  This is equivalent
+  to the ``+'' syntax in submit files.  See the
+  \Cmd{\condor{submit}}{1} man page for details.  
+
   \textbf{OTHER NOTE:} Because of the different syntax of the config
   file and ClassAds, you might have to do a little extra work to get a
   given entry into the ClassAd.  In particular, ClassAds require quote
@@ -699,11 +749,11 @@ AFS''
   the same login name in the passwd file for a given UID, and the
   \Macro{UID\_DOMAIN} claimed by the submit machine is indeed found to
   be a subset of what an inverse lookup to a DNS (domain name server)
-  reports as the fully qualified domain name for the submit machine's
-  IP address (this security measure safeguards against the submit
-  machine from simply lying), \textbf{THEN} the job will run with the
-  same UID as the user who submitted the job.  Otherwise it will run
-  as user ``nobody''.
+  or NIS reports as the fully qualified domain name for the submit
+  machine's IP address (this security measure safeguards against the
+  submit machine from simply lying), \textbf{THEN} the job will run
+  with the same UID as the user who submitted the job.  Otherwise it
+  will run as user ``nobody''.
           
   Note: the \Macro{UID\_DOMAIN} parameter is also used when Condor
   sends email back to the user about a completed job; the address
@@ -711,6 +761,16 @@ AFS''
   is ``none'', in which case \texttt{Job-Owner@submit-machine} is
   used.
   
+\item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain} This
+  setting is used in conjuction with the \Macro{UID\_DOMAIN} setting
+  described above.  If the \Macro{UID\_DOMAIN} settings match on both
+  the execute and submit machines, but the uid of the user who
+  submitted the job isn't in the passwd file (or password info if NIS
+  is being used) of the execute machine, the \Condor{starter} will
+  normally exit with an error.  If you set \Macro{SOFT\_UID\_DOMAIN}
+  to be ``True'', Condor will simply start the job with the specified
+  uid, even if it's not in the passwd file.
+
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain} This
   setting is similar in concept to \Macro{UID\_DOMAIN}, but here we
   need the Internet/DNS domain name where all the machines within that
@@ -1065,6 +1125,23 @@ The moral of the story is that this is some relatively complicated
 stuff.  The defaults we have work quite well, and you probably 
 won't want to change them for any reason.
 
+\begin{description}
+
+\item[\Macro{MASTER\_EXPRS}] \label{param:MasterExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{MASTER\_DEBUG}] \label{param:MasterDebug} This setting
+  (and other settings related to debug logging in the master) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{MASTER\_ADDRESS\_FILE}] \label{param:MasterAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\condor{startd} Config File Entries}
@@ -1152,6 +1229,20 @@ section`\ref{sec:Configuring-Policy}.
   Just list the attribute names you want advertised.  Note: since
   these are already ClassAd expressions, you don't have to do anything
   funny with strings, etc.
+
+\item[\Macro{STARTD\_EXPRS}] \label{param:StartdExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{STARTD\_DEBUG}] \label{param:StartdDebug} This setting
+  (and other settings related to debug logging in the startd) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{STARTD\_ADDRESS\_FILE}] \label{param:StartdAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
 
 \end{description}
 
@@ -1271,6 +1362,20 @@ These settings control the \Condor{schedd}.
   setting, be sure to change the \Macro{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
+\item[\Macro{SCHEDD\_EXPRS}] \label{param:ScheddExprs} This setting is
+  described above in section~\ref{param:SubsysExprs} as
+  \Macro{SUBSYS\_EXPRS}.
+
+\item[\Macro{SCHEDD\_DEBUG}] \label{param:ScheddDebug} This setting
+  (and other settings related to debug logging in the schedd) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
+\item[\Macro{SCHEDD\_ADDRESS\_FILE}] \label{param:ScheddAddressFile}
+  This setting is described above in
+  section~\ref{param:SubsysAddressFile} as
+  \Macro{SUBSYS\_ADDRESS\_FILE} 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1300,6 +1405,11 @@ This setting effects the \Condor{shadow}
   setting, be sure to change the \Macro{VALID\_LOG\_FILES} entry that
   \Condor{preen} uses as well.
 
+\item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This setting
+  (and other settings related to debug logging in the shadow) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1324,6 +1434,11 @@ Condor'' for details.
   Daemon, which is needed to support PVM groups.  This daemon is
   installed in the regular Condor release directory by default, so the
   macro is usually defined in terms of \MacroU{SBIN}.
+
+\item[\Macro{SHADOW\_DEBUG}] \label{param:ShadowDebug} This setting
+  (and other settings related to debug logging in the shadow) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -1357,6 +1472,11 @@ This setting effects the \Condor{starter}.
   starter should do local logging to its own log file, or send debug
   information back to the \Condor{shadow} where it will end up in the
   ShadowLog.  It defaults to ``True''
+
+\item[\Macro{STARTER\_DEBUG}] \label{param:StarterDebug} This setting
+  (and other settings related to debug logging in the starter) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
 
 \end{description}
 
@@ -1498,6 +1618,23 @@ These settings control the \Condor{collector}.
   It should be about 20 characters long.  For example, the name of the
   UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
 
+\item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
+  \label{param:CondorDevelopersCollector} By default, every pool sends
+  periodic updates to a central \Condor{collector} at UW-Madison with
+  basic information about the status of your pool.  This includes only
+  the number of total machines, the number of jobs submitted, the
+  number of machines running jobs, the hostname of your central
+  manager, and the \Macro{COLLECTOR\_NAME} specified above.  These
+  updates help us see how Condor is being used around the world.  By
+  default, they will be sent to condor.cs.wisc.edu.  If you don't want
+  these updates to be sent from your pool, set this entry to
+  ``NONE''. 
+
+\item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This setting
+  (and other settings related to debug logging in the collector) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1530,4 +1667,10 @@ These settings control the \Condor{negotiator}.
   This helps prevents thrashing.  The default is to wait 2 hours
   before preempting any job.
 
+\item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This setting
+  (and other settings related to debug logging in the negotiator) is
+  described above in section~\ref{param:SubsysDebug} as
+  \Macro{SUBSYS\_DEBUG}.
+
 \end{description}
+

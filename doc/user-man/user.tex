@@ -623,7 +623,7 @@ machines in the pool.
 \section{Priorities in Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor has two independendant priority controls: \Term{job}
+Condor has two independent priority controls: \Term{job}
 priorities and \Term{user} priorities.  
 
 \subsection{Job Priority}
@@ -670,7 +670,7 @@ according to user priority both when allocating machines which become
 available and by priority preemption of currently allocated machines.
 For instance, if a low priority user is utilizing all available machines
 and suddenly a higher priority user submits jobs, Condor will
-immediately checkpoint and vacate jobs belonging to the lower priority
+imediately checkpoint and vacate jobs belonging to the lower priority
 user. This will free up machines that Condor will then give over to the
 higher priority user. Condor will not starve the lower priority user; it
 will preempt only enough jobs so that the higher priority user's fair
@@ -716,7 +716,7 @@ accounts would only use cycles not wanted by other users of the system.
 
 When Condor needs to vacate a job from a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig''
-attribute of the job's classad.  The value of this attribute can be specifed by
+attribute of the job's classad.  The value of this attribute can be specified by
 the user at submit time by placing the \Arg{kill\_sig} command in the
 \Condor{submit} submit-description command file.  
 
@@ -816,23 +816,27 @@ running as root on a given machine, enter the following command:
 \begin{verbatim}
         condor_status -master -l <machine-name>
 \end{verbatim}
-where \Opt{machine-name} is the name of the machine you want to inspect.
-This command will display a \condor{master} ClassAd; if the attribute ``RealUid'' equals
-zero, then the Condor daemons are indeed running with root access and
-you can skip this section.  If the ``RealUid'' attribute is not zero,
-then the Condor daemons do not have root access, and you should read
-on.
 
-Please realize that using ``ps'' is
-\textu{not} an effective method of determining if Condor is running with
-root access.  When using the "ps" command, it may often appear that the daemons are
+where \Opt{machine-name} is the name of the machine you want to
+inspect.  This command will display a \condor{master} ClassAd; if the
+attribute ``RealUid'' equals zero, then the Condor daemons are indeed
+running with root access and you can skip this section.  If the
+``RealUid'' attribute is not zero, then the Condor daemons do not have
+root access, and you should read on.
+
+Please realize that using ``ps'' is \underline{not} an effective
+method of determining if Condor is running with root access.  When
+using the "ps" command, it may often appear that the daemons are
 running as the condor user instead of root.  However, note that the
-``ps'' command shows the current \emph{effective}
-owner of the process, not the \emph{real} owner.  (See the \verbatim{getuid(2)} and
-\verbatim{geteuid(2)} Unix man pages for details.)  In Unix, a process running
-under the real uid of root may switch its effective uid.  (See the
-\verbatim{seteuid(2)} man page.)  For security reasons, the daemons only set effective uid to
-root when absolutely necessary (to perform a privileged operation).
+``ps'' command shows the current \emph{effective} owner of the
+process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
+\Cmd{geteuid}{2} Unix man pages for details.)  In Unix, a process
+running under the real uid of root may switch its effective uid.  (See
+the \Cmd{seteuid}{2} man page.)  For security reasons, the daemons
+only set effective uid to root when absolutely necessary (to perform a
+privileged operation).
+
+
 
 If they are not running with root access, you need to make any/all files
 and/or directories that your job will touch readable and/or writable by

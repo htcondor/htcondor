@@ -31,7 +31,7 @@ by any optional information that the protocol requires at that point
 up, they register which commands they are willing to accept, what to
 do with them when they arrive, and what access level is required for
 that command.  When a command comes in, Condor sees what access level
-is required, and then checks the ip address of the machine that sent
+is required, and then checks the IP address of the machine that sent
 the command and makes sure it passes the various allow/deny settings
 in your config file for that access level.  If permission is granted,
 the command continues.  If not, the command is aborted.

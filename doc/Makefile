@@ -5,7 +5,9 @@ ref.pdf:
 	rm -f timesfont.tex
 	echo "\usepackage{times}" > timesfont.tex
 	rm -f fontsize.tex
+	rm -f symbol.tex
 	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-postscript.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
@@ -28,7 +30,9 @@ ref.dvi:
 	rm -f timesfont.tex
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
+	rm -f symbol.tex
 	ln -s smallfont.tex fontsize.tex
+	ln -s symbol-postscript.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
@@ -52,7 +56,9 @@ ref.html:
 	rm -f timesfont.tex
 	echo "% do not want times" > timesfont.tex
 	rm -f fontsize.tex
+	rm -f symbol.tex
 	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
 	rm -rf *.dvi *.ps *.log *.aux *.toc
 	make figures
 	latex ref.tex
@@ -60,17 +66,17 @@ ref.html:
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
-	latex2html -split 4 -link 2 -show_section_numbers ref.tex
+	latex2html -address condor-team@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
 	rm -f ref.dvi
 	mv ref ref.new
 	mv -f ref.new  /p/condor/public/html/manual
 
 release-html: 
 	make ref.html
-	mv -f /p/condor/public/html/manual/ref2 /p/condor/public/html/manual/ref2.old
-	mv -f /p/condor/public/html/manual/ref.new /p/condor/public/html/manual/ref2
+	mv -f /p/condor/public/html/manual/condor-V6-Manual /p/condor/public/html/manual/condor-V6-Manual.old
+	mv -f /p/condor/public/html/manual/ref.new /p/condor/public/html/manual/condor-V6-Manual
+	/p/condor/public/html/manual/links/human_header_links.pl
 	
-
 admin-man/startd-states.eps: admin-man/startd-states.fig
 	rm -f admin-man/startd-states.eps
 	fig2dev -L ps -m .6 admin-man/startd-states.fig > admin-man/startd-states.eps 
