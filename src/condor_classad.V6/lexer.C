@@ -663,6 +663,8 @@ tokenizePunctOperator (void)
 {
 	// save character; may need to lookahead
 	int oldch = ch;
+	int extra_lookahead;
+
 	mark( );
 	wind ();
 	switch (oldch) {
@@ -844,14 +846,14 @@ tokenizePunctOperator (void)
 					break;
 
 				case '!':
-					tokenType = LEX_META_NOT_EQUAL;
-					wind ();
-
-					// ensure trailing '=' of the '=!=' combination
-					if (ch != '=')
-						tokenType = LEX_TOKEN_ERROR;
-
-					wind ();
+					extra_lookahead = lexSource->ReadCharacter();
+					if (extra_lookahead == '=') {
+						tokenType = LEX_META_NOT_EQUAL;
+						wind();
+						wind();
+					} else {
+						lexSource->UnreadCharacter();
+					}
 					break;
 
 				default:
