@@ -251,6 +251,7 @@ SecMan::sec_param( char* pname, sec_req def) {
 
 
 
+
 // params() for a bunch of stuff and sets up a class ad describing our security
 // preferences/requirements.  returns true if the security policy is valid, and
 // false otherwise.
@@ -884,12 +885,13 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 
 	// find out our negotiation policy.
-	sec_feat_act negotiate = sec_lookup_feat_act( *auth_info, ATTR_SEC_NEGOTIATION );
-	if (negotiate == SEC_FEAT_ACT_UNDEFINED) {
-		negotiate =  SEC_FEAT_ACT_YES;
-		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming YES.");
+	sec_req negotiation = sec_lookup_req( *auth_info, ATTR_SEC_NEGOTIATION );
+	if (negotiation == SEC_REQ_UNDEFINED) {
+		negotiation = SEC_REQ_OPTIONAL;
+		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming OPTIONAL.\n");
 	}
 
+	sec_feat_act negotiate = sec_req_to_feat_act(negotiation);
 	if (negotiate == SEC_FEAT_ACT_NO) {
 		// old way:
 		// code the int and be done.  there is no easy way to try the
@@ -899,6 +901,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		dprintf(D_SECURITY, "SECMAN: sending unauthenticated command (%i)\n", cmd);
 
 		// just code the command and be done
+		sock->encode();
 		sock->code(cmd);
 
 		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
@@ -1393,14 +1396,16 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			// stick the key in the cache
 			session_cache->insert(tmp_key);
 
+
 			// now add entrys which map all the {<sinful_string>,<command>} pairs
 			// to the same key id (which is in the variable sid)
 
-			char *p = strrchr(cmd_list, ',');
-			while (p > cmd_list) {
-				*p++ = 0;
+			StringList coms(cmd_list);
+			char *p;
+
+			coms.rewind();
+			while (p = coms.next() ) {
 				sprintf (keybuf, "{%s,<%s>}", sin_to_string(sock->endpoint()), p);
-				p = strrchr(cmd_list, ',');
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
 				if (command_map->insert(keybuf, sid) == 0) {
@@ -1421,27 +1426,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 					} else {
 						dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf, sid);
 					}
-				}
-			}
-			sprintf (keybuf, "{%s,<%s>}", sin_to_string(sock->endpoint()), cmd_list);
-			// NOTE: HashTable returns ZERO on SUCCESS!!!
-			if (command_map->insert(keybuf, sid) == 0) {
-				// success
-				dprintf (D_SECURITY, "SECMAN: command %s mapped to session %s.\n", keybuf, sid);
-			} else {
-				// perhaps there is an old entry under the same name.  we should
-				// delete the old one and insert the new one.
-
-				// NOTE: HashTable's remove returns ZERO on SUCCESS!!!
-				if (command_map->remove(keybuf) == 0) {
-					// now let's try to insert again (zero on success)
-					if (command_map->insert(keybuf, sid) == 0) {
-						dprintf (D_SECURITY, "SECMAN: command %s remapped to session %s!\n", keybuf, sid);
-					} else {
-						dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (insert failed!)\n", keybuf, sid);
-					}
-				} else {
-					dprintf (D_SECURITY, "SECMAN: command %s NOT mapped (remove failed!)\n", keybuf, sid);
 				}
 			}
 			
