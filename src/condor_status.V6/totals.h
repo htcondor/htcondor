@@ -118,7 +118,7 @@ class StartdServerTotal : public ClassTotal
 		int machines;
 		int avail;
 		int memory;
-		int disk;
+		unsigned long disk;
 		int condor_mips;
 		int kflops;
 };
@@ -204,7 +204,7 @@ class CkptSrvrNormalTotal : public ClassTotal
 
 	protected:
 		int numServers;
-		int disk;
+		unsigned long disk;
 };
 
 int getCODInt( ClassAd* ad, const char* id, const char* attr,
