@@ -235,7 +235,7 @@ int unlink( const char *path ) {
 	SEND_PATH( path );
 	ALLOC_PATH( path );
 }
-int rename( const char *from, const char *to ) {
+int rename( const char *from, const char *to ) : pseudo {
 	SEND_PATH( from );
 	SEND_PATH( to );
 	ALLOC_PATH( from );
