@@ -359,6 +359,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	long i;
 	int rval = 0;
 	unsigned long u;
+	unsigned long proc_flags;
 	char c;
 	char s[256], junk[16];
 
@@ -380,7 +381,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				"%ld %ld %ld %ld %lu",
 				&pi->pid, s, &c, &pi->ppid, 
 				&i, &i, &i, &i, 
-				&u, &nowminf, &u, &nowmajf, &u, 
+				&proc_flags, &nowminf, &u, &nowmajf, &u, 
 				&usert, &syst, &i, &i, &i, &i, 
 				&u, &u, &jiffie_start_time, &vsize, &rss, &u, &u, &u, 
 				&u, &u, &u, &i, &i, &i, &i, &u );
@@ -389,8 +390,44 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			pi->owner = getFileOwner(fileno(fp));
 			
 			fclose( fp );
-			// Perform sanity check on the data we just read, as
-			// sometimes Linux screws it up.  
+
+			//Next, zero out thread memory, because Linux (as of
+			//kernel 2.4) shows one process per thread, with the mem
+			//stats for each thread equal to the memory usage of the
+			//entire process.  This causes ImageSize to be far bigger
+			//than reality when there are many threads, so if the job
+			//gets evicted, it might never be able to match again.
+
+			//There is no perfect method for knowing if a given
+			//process entry is actually a thread.  One way is to
+			//compare the memory usage to the parent process, and if
+			//they are identical, it is probably a thread.  However,
+			//there is a small race condition if one of the entries is
+			//updated between reads; this could cause threads not to
+			//be weeded out every now and then, which can cause the
+			//ImageSize problem mentioned above.
+
+			//So instead, we use the PF_FORKNOEXEC (64) process flag.
+			//This is always turned on in threads, because they are
+			//produced by fork (actually clone), and they continue on
+			//from there in the same code, i.e.  there is no call to
+			//exec.  In some rare cases, a process that is not a
+			//thread will have this flag set, because it has not
+			//called exec, and it was created by a call to fork (or
+			//equivalently clone with options that cause memory not to
+			//be shared).  However, not only is this rare, it is not
+			//such a lie to zero out the memory usage, because Linux
+			//does copy-on-write handling of the memory.  In other
+			//words, memory is only duplicated when the forked process
+			//writes to it, so we are once again in danger of over-counting
+			//memory usage.  When in doubt, zero it out!
+
+			if (proc_flags & 64) { //PF_FORKNOEXEC
+				//zero out memory usage
+				vsize = 0;
+				rss = 0;
+			}
+
 			if ( pid == pi->pid ) {
 					// data looks ok.  set rval to success.
 					rval = 0;
