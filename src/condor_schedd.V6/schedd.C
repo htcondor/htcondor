@@ -909,7 +909,9 @@ count( ClassAd *job )
 	if (job->LookupString(ATTR_OWNER, buf) < 0) {
 		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 				ATTR_OWNER);
-		free(x509userproxy);
+		if (x509userproxy != NULL) {
+			free(x509userproxy);
+		}
 		return 0;
 	}
 	owner = buf;
@@ -958,7 +960,9 @@ count( ClassAd *job )
 
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
-		free(x509userproxy);
+		if (x509userproxy != NULL) {
+			free(x509userproxy);
+		}
 		return 0;
 	} 
 
@@ -1020,7 +1024,9 @@ count( ClassAd *job )
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
 		if (!want_service) {
-			free(x509userproxy);
+			if (x509userproxy != NULL) {
+				free(x509userproxy);
+			}
 			return 0;
 		}
 		status = real_status;	// set status back for below logic...
@@ -1039,7 +1045,9 @@ count( ClassAd *job )
 		scheduler.JobsRemoved++;
 	}
 
-	free(x509userproxy);
+	if (x509userproxy != NULL) {
+		free(x509userproxy);
+	}
 	return 0;
 }
 
