@@ -6,6 +6,7 @@
 %token EXTRACT
 %token DL_EXTRACT
 %token PSEUDO
+%token NO_SYS_CHK
 %token ARRAY
 %token IN
 %token OUT
@@ -19,7 +20,7 @@
 %type <node> stub_body action_func_list
 %type <node> action_param action_param_list action_func xfer_func alloc_func
 %type <node> return_func
-%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP DL_EXTRACT ARRAY opt_mult
+%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN MAP DL_EXTRACT NO_SYS_CHK ARRAY opt_mult
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array
 %type <bool> opt_reference
 %type <param_mode> use_type
@@ -83,6 +84,7 @@ int ErrorEncountered = 0;
 int IsExtracted = FALSE;
 int IsDLExtracted = FALSE;
 int IsPseudo = FALSE;
+int DoSysChk = TRUE;
 
 
 #if 0
@@ -310,6 +312,11 @@ pseudo_or_extract
 		{
 		Trace( "pseudo_or_extract (3)" );
 		IsDLExtracted = TRUE;
+		}
+	|  NO_SYS_CHK
+		{
+		Trace( "pseudo_or_extract (3)" );
+		DoSysChk = FALSE;
 		}
 	;
 
@@ -584,6 +591,8 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	IsExtracted = FALSE;
 	answer->dl_extract = IsDLExtracted;
 	IsDLExtracted = FALSE;
+	answer->sys_chk = DoSysChk;
+	DoSysChk = TRUE;
 	answer->pseudo = IsPseudo;
 	IsPseudo = FALSE;
 	answer->param_list = p_list;
@@ -950,7 +959,7 @@ output_receiver( struct node *n )
 
 	assert( n->node_type == FUNC );
 
-	if( !n->pseudo && Do_SYS_check) {
+	if( !n->pseudo && Do_SYS_check && n->sys_chk ) {
 		printf( "#if defined( SYS_%s )\n", n->id );
 	}
 
@@ -976,12 +985,10 @@ output_receiver( struct node *n )
 		calling routine.
 		*/
 	for( p=param_list->next; p != param_list; p = p->next ) {
-			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
 		if( p->is_ptr || p->is_array ) {
 			continue;
 		}
-		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
-			abbreviate(p->type_name),
+		printf( "\t\tassert( syscall_sock->code(%s) );\n",
 			p->id 
 		);
 		if ((strcmp(p->type_name, "int") == MATCH) ||
@@ -1018,11 +1025,10 @@ output_receiver( struct node *n )
 		if( p->node_type != XFER_FUNC || p->in_param == FALSE ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		printf( "\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
+			printf( "%s%s", 
 				q->id,
 				q->next->node_type == DUMMY ? "" : ", "
 			);
@@ -1035,6 +1041,7 @@ output_receiver( struct node *n )
 			);
 		}
 	}
+	printf( "\t\tassert( syscall_sock->end_of_message() );;\n" );
 
 		/* Invoke the system call */
 	printf( "\n" );
@@ -1062,10 +1069,10 @@ output_receiver( struct node *n )
 
 
 		/* Send system call return value, and errno if needed */
-	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
-	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
+	printf( "\t\tsyscall_sock->encode();\n" );
+	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
 	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
 	printf( "\t\t}\n" );
 
 		/*
@@ -1078,11 +1085,10 @@ output_receiver( struct node *n )
 			if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
 				continue;
 			}
-			printf( "\t\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+			printf( "\t\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 			for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 				assert( q->node_type == ACTION_PARAM );
-				printf( "%s%s%s", 
-					q->is_ref ? "&" : "",
+				printf( "%s%s", 
 					q->id,
 					q->next->node_type == DUMMY ? "" : ", "
 				);
@@ -1103,7 +1109,7 @@ output_receiver( struct node *n )
 		printf( "\t\tfree( (char *)%s );\n", var->id );
 	}
 
-	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );;\n" );
+	printf( "\t\tassert( syscall_sock->end_of_message() );;\n" );
 
 		/*
 		Check for special return value
@@ -1121,7 +1127,7 @@ output_receiver( struct node *n )
 
 	printf( "\t}\n" );
 
-	if( n->pseudo || !Do_SYS_check) {
+	if( n->pseudo || !Do_SYS_check || !n->sys_chk) {
 		printf( "\n" );
 	} else {
 		printf( "#endif\n\n" );
@@ -1169,8 +1175,9 @@ output_sender( struct node *n )
 	printf( "\n" );
 
 		/* Send system call number */
-	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
-	printf( "\t\tassert(xdr_int(xdr_syscall,&CurrentSysCall) );\n" );
+	printf( "\t\tsyscall_sock->encode();\n" );
+	printf( "\t\tassert( syscall_sock->code(CurrentSysCall) );\n" );
+
 
 		/*
 		Send all call by value parameters - these must be IN parameters
@@ -1178,12 +1185,10 @@ output_sender( struct node *n )
 		calling routine.
 		*/
 	for( p=param_list->next; p != param_list; p = p->next ) {
-			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
 		if( p->is_ptr || p->is_array ) {
 			continue;
 		}
-		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
-			abbreviate(p->type_name),
+		printf( "\t\tassert( syscall_sock->code(%s) );\n",
 			p->id 
 		);
 	}
@@ -1196,11 +1201,10 @@ output_sender( struct node *n )
 		if( p->node_type != XFER_FUNC || p->in_param == FALSE ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		printf( "\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
+			printf( "%s%s", 
 				q->id,
 				q->next->node_type == DUMMY ? "" : ", "
 			);
@@ -1209,13 +1213,14 @@ output_sender( struct node *n )
 	}
 
 		/* Complete the XDR record, and flush */
-	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );\n\n" );
+	printf( "\t\tassert( syscall_sock->end_of_message() );\n\n" );
 
-	printf( "\t\txdr_syscall->x_op = XDR_DECODE;\n" );
-	printf( "\t\tassert( xdrrec_skiprecord(xdr_syscall) );\n" );
-	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
+    printf( "\t\tsyscall_sock->decode();\n" );
+	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
+	
 	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t\terrno = terrno;\n" );
 	printf( "\t\t\tbreak;\n" );
 	printf( "\t\t}\n" );
@@ -1228,17 +1233,18 @@ output_sender( struct node *n )
 		if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		printf( "\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
+			printf( "%s%s", 
 				q->id,
 				q->next->node_type == DUMMY ? "" : ", "
 			);
 		}
 		printf( ") );\n" );
 	}
+
+	printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
 
 	printf( "\t\tbreak;\n" );
 
@@ -1255,7 +1261,7 @@ output_switch( struct node *n )
 {
 	assert( n->node_type == FUNC );
 
-	if( !n->pseudo && Do_SYS_check ) {
+	if( !n->pseudo && Do_SYS_check && n->sys_chk ) {
 		printf( "#if defined( SYS_%s )\n", n->id );
 	}
 	if( n->is_ptr ) {
@@ -1298,7 +1304,7 @@ output_switch( struct node *n )
 	}
 	printf( "}\n" );
 
-	if( n->pseudo || !Do_SYS_check) {
+	if( n->pseudo || !Do_SYS_check || !n->sys_chk ) {
 		printf( "\n" );
 	} else {
 		printf( "#endif\n\n" );
@@ -1327,20 +1333,18 @@ output_send_stub( struct node *n )
 
 		/* Set up system call number */
 	printf( "\t\tCurrentSysCall = CONDOR_%s;\n\n", n->id  );
-	printf( "\t\txdr_syscall->x_op = XDR_ENCODE;\n" );
-	printf( "\t\tassert( xdr_int(xdr_syscall, &CurrentSysCall) );\n");
+	printf( "\t\tsyscall_sock->encode();\n" );
+	printf( "\t\tassert( syscall_sock->code(CurrentSysCall) );\n");
 		/*
 		Send all call by value parameters - these must be IN parameters
 		to the syscall, since they cannot return a value to the
 		calling routine.
 		*/
 	for( p=param_list->next; p != param_list; p = p->next ) {
-			/* assert( xdr_<type_name>(xdr_syscall,&<id>) ); */
 		if( p->is_ptr || p->is_array ) {
 			continue;
 		}
-		printf( "\t\tassert( xdr_%s(xdr_syscall,&%s) );\n",
-			abbreviate(p->type_name),
+		printf( "\t\tassert( syscall_sock->code(%s) );\n",
 			p->id 
 		);
 	}
@@ -1353,11 +1357,10 @@ output_send_stub( struct node *n )
 		if( p->node_type != XFER_FUNC || p->in_param == FALSE ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		printf( "\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
+			printf( "%s%s", 
 				q->id,
 				q->next->node_type == DUMMY ? "" : ", "
 			);
@@ -1366,13 +1369,13 @@ output_send_stub( struct node *n )
 	}
 
 		/* Complete the XDR record, and flush */
-	printf( "\t\tassert( xdrrec_endofrecord(xdr_syscall,TRUE) );\n\n" );
+	printf( "\t\tassert( syscall_sock->end_of_message() );\n\n" );
 
-	printf( "\t\txdr_syscall->x_op = XDR_DECODE;\n" );
-	printf( "\t\tassert( xdrrec_skiprecord(xdr_syscall) );\n" );
-	printf( "\t\tassert( xdr_int(xdr_syscall,&rval) );\n" );
+	printf( "\t\tsyscall_sock->decode();\n" );
+	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
 	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( xdr_int(xdr_syscall,&terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+	printf( "\t\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t\terrno = terrno;\n" );
 	printf( "\t\t\treturn rval;\n" );
 	printf( "\t\t}\n" );
@@ -1385,17 +1388,18 @@ output_send_stub( struct node *n )
 		if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
 			continue;
 		}
-		printf( "\t\tassert( %s(xdr_syscall,", p->XDR_FUNC );
+		printf( "\t\tassert( syscall_sock->%s(", p->SOCK_FUNC );
 		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
 			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s%s", 
-				q->is_ref ? "&" : "",
+			printf( "%s%s", 
 				q->id,
 				q->next->node_type == DUMMY ? "" : ", "
 			);
 		}
 		printf( ") );\n" );
 	}
+
+	printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
 
 	if( strcmp(n->type_name,"void") != 0 ) {
 		printf( "\n" );

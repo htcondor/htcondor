@@ -55,6 +55,7 @@ struct node {
 	int		out_param;
 	int		extract;
 	int		dl_extract;
+	int		sys_chk;
 	int		pseudo;
 	struct node	*next;
 	struct node *prev;
@@ -63,6 +64,7 @@ struct node {
 };
 
 #define XDR_FUNC id
+#define SOCK_FUNC id
 
 struct p_mode {
 	int		in;
