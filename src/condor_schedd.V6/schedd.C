@@ -610,10 +610,10 @@ abort_job_myself(PROC_ID job_id)
 		 }
 	} else {
 		// We did not find a shadow for this job; just remove it.
-		if (!scheduler.WriteAbortToUserLog(job_id)) {
-			dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
-		}
 		if (mode == REMOVED) {
+			if (!scheduler.WriteAbortToUserLog(job_id)) {
+				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
+			}
 			DestroyProc(job_id.cluster,job_id.proc);
 		}
 	}
@@ -1958,7 +1958,6 @@ mark_job_stopped(PROC_ID* job_id)
 	int		status;
 	int		orig_max;
 	int		had_orig;
-	char	ckpt_name[MAXPATHLEN];
 	char	owner[_POSIX_PATH_MAX];
 	float 	cpu_time;
 
@@ -1970,28 +1969,18 @@ mark_job_stopped(PROC_ID* job_id)
 	// if job isn't RUNNING, then our work is already done
 	if (status == RUNNING) {
 
-		strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
 		if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
 			strcpy(owner,"nobody");
 
-	// set job status to either IDLE or UNEXPANDED depending upon CPU time.
-		cpu_time = 0.0;
-		GetAttributeFloat(job_id->cluster,job_id->proc,ATTR_JOB_REMOTE_USER_CPU,&cpu_time);
-		if ( cpu_time ) {
-			status = IDLE;
-		} else {
-			status = UNEXPANDED;
-		}
-
-		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
+		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
 		if (had_orig >= 0) {
 			SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
 							orig_max);
 		}
 	
-		dprintf( D_FULLDEBUG, "Marked job %d.%d as %s\n", job_id->cluster,
-				 job_id->proc, status==IDLE?"IDLE":"UNEXPANDED" );
+		dprintf( D_FULLDEBUG, "Marked job %d.%d as IDLE\n", job_id->cluster,
+				 job_id->proc );
 	}	
 }
 
@@ -2544,13 +2533,13 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
  
     int     status;
 
-    dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x )\n", pid, job_id );
-
     if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0){
         dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
 		return;
     }
+
+    dprintf( D_FULLDEBUG, "Entered check_zombie( %d, 0x%x, st=%d )\n", pid, job_id, status );
 
 	// set cur-hosts to zero
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
@@ -2957,7 +2946,6 @@ prio_compar(prio_rec* a, prio_rec* b)
         return ( 1);
     if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
         return (-1);
-
 
     /* check for job submit times */
     if( a->qdate < b->qdate ) {

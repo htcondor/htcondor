@@ -1276,13 +1276,11 @@ int get_job_prio(ClassAd *job)
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
 
+	
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
-    if (cur_hosts >= max_hosts) {
-		//dprintf (D_FULLDEBUG,"In get_job_prio() cur_hosts(%d)>=max_hosts(%d)\n",
-		//						cur_hosts, max_hosts);
+    if (cur_hosts>=max_hosts || job_status==HELD)
         return cur_hosts;
-    }
 
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
@@ -1290,13 +1288,6 @@ int get_job_prio(ClassAd *job)
     PrioRec[N_PrioRecs].qdate    = q_date;
 
 	strcpy(PrioRec[N_PrioRecs].owner,owner);
-/*
-	if ( PrioRec[N_PrioRecs].owner ) {
-		free( PrioRec[N_PrioRecs].owner );
-		PrioRec[N_PrioRecs].owner=NULL;
-	}
-	PrioRec[N_PrioRecs].owner = strdup( owner );
-*/
 
 	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
@@ -1314,25 +1305,23 @@ int mark_idle(ClassAd *job)
     int     status, cluster, proc;
 	PROC_ID	job_id;
 
-    job->LookupInteger(ATTR_JOB_STATUS, status);
-
-    if( status != RUNNING && status != REMOVED ) {
-        return 0;
-    }
-
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
-
-	if ( status == REMOVED ) {
-		DestroyProc(cluster,proc);
-		return 1;
-	}
+    job->LookupInteger(ATTR_JOB_STATUS, status);
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	mark_job_stopped(&job_id);
-
+	if ( status == COMPLETED || status == REMOVED ) {
+		DestroyProc(cluster,proc);
+	}
+	else if ( status == UNEXPANDED ) {
+		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
+	}
+	else if ( status == RUNNING ) {
+		mark_job_stopped(&job_id);
+	}
+		
 	return 1;
 }
 
