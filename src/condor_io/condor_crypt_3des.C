@@ -27,6 +27,7 @@
 #include <assert.h>
 
 Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
+#if !defined(SKIP_AUTHENTICATION)
     : Condor_Crypt_Base(CONDOR_3DES, key),
       num_             (0)
 {
@@ -42,6 +43,10 @@ Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
     // initialize ivsec
     memset(ivec_, 0, 8);
 }
+#else
+{
+}
+#endif
 
 Condor_Crypt_3des :: ~Condor_Crypt_3des()
 {
@@ -52,6 +57,7 @@ bool Condor_Crypt_3des :: encrypt(unsigned char *  input,
                                   unsigned char *& output, 
                                   int&             output_len)
 {
+#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(input_len);
@@ -65,6 +71,9 @@ bool Condor_Crypt_3des :: encrypt(unsigned char *  input,
     else {
         return false;
     }
+#else
+	return true;
+#endif
 }
 
 bool Condor_Crypt_3des :: decrypt(unsigned char *  input, 
@@ -72,6 +81,7 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
                                   unsigned char *& output, 
                                   int&             output_len)
 {
+#if !defined(SKIP_AUTHENTICATION)
     output = (unsigned char *) malloc(input_len);
 
     if (output) {
@@ -86,6 +96,9 @@ bool Condor_Crypt_3des :: decrypt(unsigned char *  input,
     else {
         return false;
     }
+#else
+	return true;
+#endif
 }
 
 Condor_Crypt_3des :: Condor_Crypt_3des()

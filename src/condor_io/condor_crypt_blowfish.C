@@ -26,6 +26,7 @@
 #include <malloc.h>
 
 Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
+#if !defined(SKIP_AUTHENTICATION)
     : Condor_Crypt_Base(CONDOR_BLOWFISH, key),
       num_             (0)
 {
@@ -36,6 +37,10 @@ Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
     KeyInfo k(key);
     BF_set_key(&key_, k.getKeyLength(), k.getKeyData());
 }
+#else
+{
+}
+#endif
 
 Condor_Crypt_Blowfish :: ~Condor_Crypt_Blowfish()
 {
@@ -46,6 +51,7 @@ bool Condor_Crypt_Blowfish :: encrypt(unsigned char *  input,
                                       unsigned char *& output, 
                                       int&             output_len)
 {
+#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
@@ -58,6 +64,9 @@ bool Condor_Crypt_Blowfish :: encrypt(unsigned char *  input,
     else {
         return false;
     }
+#else
+	return true;
+#endif
 }
 
 bool Condor_Crypt_Blowfish :: decrypt(unsigned char *  input, 
@@ -65,6 +74,7 @@ bool Condor_Crypt_Blowfish :: decrypt(unsigned char *  input,
                                       unsigned char *& output, 
                                       int&             output_len)
 {
+#if !defined(SKIP_AUTHENTICATION)
     output_len = input_len;
 
     output = (unsigned char *) malloc(output_len);
@@ -77,6 +87,9 @@ bool Condor_Crypt_Blowfish :: decrypt(unsigned char *  input,
     else {
         return false;
     }
+#else
+	return true;
+#endif
 }
 
 

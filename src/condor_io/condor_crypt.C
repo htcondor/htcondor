@@ -27,10 +27,14 @@
 #include <assert.h>
 
 Condor_Crypt_Base :: Condor_Crypt_Base(Protocol protocol, const KeyInfo& keyInfo)
+#if !defined(SKIP_AUTHENTICATION)
     : keyInfo_ (keyInfo)
 {
     assert(keyInfo_.getProtocol() == protocol);
 }
+#else
+{}
+#endif
 
 
 Condor_Crypt_Base :: Condor_Crypt_Base()
@@ -44,17 +48,26 @@ Condor_Crypt_Base :: ~Condor_Crypt_Base()
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
 {
+#if !defined(SKIP_AUTHENTICATION)
     int size = inputLength % blockSize;
     return (inputLength + ((size == 0) ? blockSize : (blockSize - size)));
+#else
+	return 0;
+#endif
 }
 
 Protocol Condor_Crypt_Base :: protocol()
 {
+#if !defined(SKIP_AUTHENTICATION)
     return keyInfo_.getProtocol();
+#else
+	return (Protocol)0;
+#endif
 }
 
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
+#if !defined(SKIP_AUTHENTICATION)
     char * file = NULL;
     int size = 4096;
     if (count_ == 0) {
@@ -93,6 +106,9 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     RAND_bytes(key, length);
 
     return key;
+#else
+	return NULL;
+#endif
 }
 
 int Condor_Crypt_Base :: count_ = 0;
