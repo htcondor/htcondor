@@ -29,18 +29,6 @@
 */
 
 #include "condor_common.h"
-
-#include <stdio.h>
-
-#if !defined(WIN32)
-#include <sys/time.h>
-#include <netdb.h>
-#include <sys/param.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#endif
-
 #include "condor_debug.h"
 #include "except.h"
 #include "proc.h"
@@ -263,14 +251,16 @@ sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 	}
 
     if( (hp=gethostbyaddr((char *)&from->sin_addr,
-                sizeof(struct in_addr), from->sin_family)) == NULL ) {
+                sizeof(struct in_addr), AF_INET)) == NULL ) {
 		// could not find a name for this address
         return NULL;
     } else {
 		// CAREFULL: we are returning a staic buffer from gethostbyaddr.
 		// The caller had better use the result immediately or copy it.
 		// Also note this is not thread safe.  (as are lots of things in internet.c).
-		*aliases = hp->h_aliases;
+		if( aliases ) {
+			*aliases = hp->h_aliases;
+		}
 		return hp->h_name;
     }
 }
@@ -291,7 +281,7 @@ struct sockaddr_in  *from;
 	}
 
     if( (hp=gethostbyaddr((char *)&from->sin_addr,
-                sizeof(struct in_addr), from->sin_family)) == NULL ) {
+                sizeof(struct in_addr), AF_INET)) == NULL ) {
         dprintf( D_ALWAYS, "from (%s), port %d\n",
             inet_ntoa(from->sin_addr), ntohs(from->sin_port) );
     } else {
