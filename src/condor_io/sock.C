@@ -676,23 +676,23 @@ Sock::endpoint_ip_int()
 char *
 Sock::endpoint_ip_str()
 {
-		// If we don't have our answer yet, figure it out now. 
-	if( ! _endpoint_ip_buf[0] ) {
-		int             i;
-		char			*cur_byte;
-		char			tmp_buf[10];
-		unsigned char   this_byte;
+	int             i;
+	char			*cur_byte;
+	char			tmp_buf[10];
+	unsigned char   this_byte;
 
-		cur_byte = (char *) &(_who.sin_addr);
-		for (i = 0; i < sizeof(_who.sin_addr); i++) {
-			this_byte = (unsigned char) *cur_byte;
-			sprintf(tmp_buf, "%u.", this_byte);
-			cur_byte++;
-			strcat(_endpoint_ip_buf, tmp_buf);
-		}
-			// Chop off the trailing '.' and terminate our string.
-		_endpoint_ip_buf[strlen(_endpoint_ip_buf) - 1] = '\0';
-	} 
+		// We need to recompute this each time because _who might have changed.
+	_endpoint_ip_buf[0] = '\0';
+
+	cur_byte = (char *) &(_who.sin_addr);
+	for (i = 0; i < sizeof(_who.sin_addr); i++) {
+		this_byte = (unsigned char) *cur_byte;
+		sprintf(tmp_buf, "%u.", this_byte);
+		cur_byte++;
+		strcat(_endpoint_ip_buf, tmp_buf);
+	}
+		// Chop off the trailing '.' and terminate our string.
+	_endpoint_ip_buf[strlen(_endpoint_ip_buf) - 1] = '\0';
 
 	return &(_endpoint_ip_buf[0]);
 }
