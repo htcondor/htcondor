@@ -25,11 +25,12 @@ CONDOR_COMPILE=yes
 export CONDOR_COMPILE
 
 # Handle any command-line args
-while [ A = A  ]
+while [ A = A ]
 do
 	if [ $# = 0 ]; then
 		break;
 	fi
+
 
 	if [ $1 = "-condor_syscall_lib" ]; then
 		shift
@@ -182,25 +183,42 @@ if [ $CONDOR_FULLINSTALL = true ]; then
 	exec $*
 fi
 
-# If not fully installed, add options to force the compiler to use
-# our special ld
+# If we were passed a -c, we're not going to be used for linking, so
+# we don't have to do anything special to make sure our special ld is
+# used.  
+ARGS=$*
+NAME=$1
+while [ A = A ]
+do
+	if [ $# = 0 ]; then
+		break;
+	fi
+	if [ $1 = "-c" ]; then
+		exec $ARGS;
+	fi
+	shift
+done
+
+
+# If not fully installed, and we didn't see a -c, add options to force
+# the compiler to use our special ld
 
 # First of all, we need to strip off any path from our (now) first
 # argument, so we can compare it different names, even if the user
 # specified a full path to the program.
-myname=`echo $1 | sed "s/.*\///"`
+myname=`echo $NAME | sed "s/.*\///"`
 
 # Handle GNU compilers
 if [ $myname = "gcc" ]; then
-	exec $* -B$CONDOR_LD_DIR/
+	exec $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "g++" ]; then
-	exec $* -B$CONDOR_LD_DIR/
+	exec $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 if [ $myname = "g77" ]; then
-	exec $* -B$CONDOR_LD_DIR/
+	exec $ARGS -B$CONDOR_LD_DIR/
 fi 
 
 # Handle ld (linker).  Since the user might have specified a full path
@@ -208,7 +226,7 @@ fi
 # call our ld directly with the remaining arguments.
 if [ $myname = "ld" ]; then
 	shift;
-	exec $CONDOR_LD_DIR/ld $*
+	exec $CONDOR_LD_DIR/ld $ARGS
 fi
 
 # Handle all the vendor system compilers ---------------
@@ -220,27 +238,27 @@ case $os in
 
 	IRIX | IRIX62 | IRIX63 | IRIX64 | OSF1 )
 		if [ $myname = "cc" ]; then
-			exec $* -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $* -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $* -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $* -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi 
 	
 		if [ $myname = "f90" -a $os = "OSF1" ]; then	
-			exec $* -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi 
 
 		if [ $myname = "KCC" -a $os = "OSF1" ]; then	
-			exec $* --backend -tul --backend \
+			exec $ARGS --backend -tul --backend \
 			-h$CONDOR_LD_DIR --backend -B
 		fi 
 
@@ -248,23 +266,23 @@ case $os in
 
 	HP-UX )
 		if [ $myname = "cc" ]; then
-			exec $* -tl,$CONDOR_LD_DIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $* -tl,$CONDOR_LD_DIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $* -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LIBDIR/ld
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $* -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LIBDIR/ld
 		fi 
 
 		if [ $myname = "fort77" ]; then
-			exec $* -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LIBDIR/ld
 		fi 
 		
 		;;
@@ -272,26 +290,26 @@ case $os in
 	SunOS )
 		use_qpath=`cc -help -flags | grep Qpath | wc -l`
 		if [ $myname = "cc" -a $use_qpath = 0 ]; then
-			exec $* -Yl,$CONDOR_LD_DIR
+			exec $ARGS -Yl,$CONDOR_LD_DIR
 		fi
 		if [ $myname = "cc" -a $use_qpath != 0 ]; then
-			exec $* -Qpath $CONDOR_LD_DIR
+			exec $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "acc" ]; then
-			exec $* -Qpath $CONDOR_LD_DIR
+			exec $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $* -Qpath $CONDOR_LD_DIR
+			exec $ARGS -Qpath $CONDOR_LD_DIR
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $* -Qpath $CONDOR_LD_DIR
+			exec $ARGS -Qpath $CONDOR_LD_DIR
 		fi 
 		
 		if [ $myname = "f90" ]; then
-			exec $* -Qpath $CONDOR_LD_DIR
+			exec $ARGS -Qpath $CONDOR_LD_DIR
 		fi 
 		
 		;;
@@ -299,15 +317,15 @@ case $os in
 	Linux )
 		# Linux's system compilers are GNU 
 		if [ $myname = "cc" ]; then
-			exec $* -B$CONDOR_LD_DIR/
+			exec $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
 		if [ $myname = "c++" ]; then
-			exec $* -B$CONDOR_LD_DIR/
+			exec $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
 		if [ $myname = "f77" ]; then
-			exec $* -B$CONDOR_LD_DIR/
+			exec $ARGS -B$CONDOR_LD_DIR/
 		fi 
 		
 		;;
