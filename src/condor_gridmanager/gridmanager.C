@@ -425,6 +425,15 @@ checkProxy()
 		Proxy_Expiration_Time = current_expiration_time;
 
 		GahpMain.globus_gram_client_set_credentials( X509Proxy );
+
+		// signal every job
+		GlobusJob *next_job;
+
+		JobsByProcID.startIterations();
+
+		while ( JobsByProcID.iterate( next_job ) != 0 ) {
+			next_job->SetEvaluateState();
+		}
 	}
 
 	// Verify our proxy is longer than the minimum allowed

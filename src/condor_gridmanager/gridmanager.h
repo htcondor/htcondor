@@ -32,6 +32,8 @@ extern char *ScheddAddr;
 extern char *X509Proxy;
 extern bool useDefaultProxy;
 
+extern time_t Proxy_Expiration_Time;
+
 extern GahpClient GahpMain;
 
 extern char *gassServerUrl;

@@ -54,6 +54,7 @@
 #define GM_DELETE				18
 #define GM_CLEAR_REQUEST		19
 #define GM_HOLD					20
+#define GM_PROXY_EXPIRED		21
 
 char *GMStateNames[] = {
 	"GM_INIT",
@@ -75,11 +76,18 @@ char *GMStateNames[] = {
 	"GM_CANCEL_WAIT",
 	"GM_FAILED",
 	"GM_DELETE",
-	"GM_CLEAR_REQUEST"
+	"GM_CLEAR_REQUEST",
+	"GM_HOLD",
+	"GM_PROXY_EXPIRED"
 };
 
 // GAHP call timeout
 #define GAHP_CALL_TIMEOUT	120
+
+// TODO: once we can set the jobmanager's proxy timeout, we should either
+// let this be set in the config file or set it to
+// GRIDMANAGER_MINIMUM_PROXY_TIME + 60
+#define JM_MIN_PROXY_TIME	300
 
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
@@ -158,7 +166,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	buf[0] = '\0';
 	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
-	if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
+	if ( buf[0] != '\0' && strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
 		rehashJobContact( this, jobContact, buf );
 		jobContact = strdup( buf );
 	}
@@ -385,6 +393,10 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
+					break;
+				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
 				numSubmitAttempts++;
@@ -643,6 +655,10 @@ int GlobusJob::doEvaluateState()
 					connect_failure = true;
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+					gmState = GM_PROXY_EXPIRED;
+					break;
+				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					newJM = false;
 					gmState = GM_CLEAR_REQUEST;
@@ -764,9 +780,10 @@ int GlobusJob::doEvaluateState()
 		case GM_FAILED:
 			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
 				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
-				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ||
-				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
 				gmState = GM_RESTART;
+			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
+				gmState = GM_PROXY_EXPIRED;
 			} else {
 				if ( newJM ) {
 					rc = gahp.globus_gram_client_job_signal( jobContact,
@@ -889,6 +906,20 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			DeleteJob( this );
+			break;
+		case GM_PROXY_EXPIRED:
+			now = time(NULL);
+			if ( condorState == HELD ) {
+				DeleteJob( this );
+			} else if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
+				if ( jobContact ) {
+					gmState = GM_RESTART;
+				} else {
+					gmState = GM_UNSUBMITTED;
+				}
+			} else {
+				// Do nothing. Our proxy is about to expire.
+			}
 			break;
 		default:
 			EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster,procID.proc,

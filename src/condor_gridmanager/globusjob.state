@@ -59,6 +59,8 @@ GM_UNSUBMITTED
 
 GM_SUBMIT
   submit()
+  if (USER_PROXY_EXPIRED)
+    gm_state = GM_PROXY_EXPIRED
   if (other error)
     gm_state = GM_UNSUBMITTED
   determine if jobmanager is new or old
@@ -137,6 +139,8 @@ GM_RESTART
     gm_state = GM_CLEAR_REQUEST
   other
     restart()
+    if (USER_PROXY_EXPIRED)
+      gm_state = GM_PROXY_EXPIRED
     if (JM_ALREADY_RUNNING error)
       gm_state = GM_INIT
     if (other error)
@@ -177,7 +181,9 @@ GM_CANCEL_WAIT
     gm_state = GM_FAILED
 
 GM_FAILED
-  COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED/USER_PROXY_EXPIRED
+  USER_PROXY_EXPIRED
+    gm_state = GM_PROXY_EXPIRED
+  COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED
     gm_state = GM_RESTART
   other
     if (new jm)
@@ -203,3 +209,15 @@ GM_HOLD
   condor_state = HELD
   update_schedd(put_on_hold)
   kill_me()
+
+GM_PROXY_EXPIRED
+  HELD
+    kill_me()
+  other
+    if (proxy_expire_time < now + jm_min_proxy_time)
+      // do nothing
+    else
+      <no contact string>
+        gm_state = GM_UNSUBMITTED
+      other
+        gm_state = GM_RESTART
