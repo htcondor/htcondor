@@ -821,7 +821,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf(D_FULLDEBUG,"TIME DEBUG 3 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
 		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
-		dprintf( D_ALWAYS, "Shadow: marked job status %s\n", JobStatusNames[Proc->status] );
+		// dprintf( D_ALWAYS, "Shadow: marked job status %s\n", JobStatusNames[Proc->status] );
 	}
 
 	DisconnectQ(0);
@@ -1043,7 +1043,7 @@ DoCleanup()
 						ImageSize);
 
 		DisconnectQ(0);
-		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );
+		// dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );
 	}
 
 	return 0;
