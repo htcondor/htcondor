@@ -1,3 +1,9 @@
+6/19/02 V6_4_0
+	The 6.4.0 Release tag, which lives on the V6_3-bracnh. NMI-R1 and 6.4.0
+were both built from this tag, with identical flags
+
+6/19/02 V6_2_3
+	The 6.2.3 Release tag, which lives on the V6_2-bracnh
 
 6/17/02 V6_3-dzero-branch
 	A new branch to hold the changes to Condor-G for DZero.  
