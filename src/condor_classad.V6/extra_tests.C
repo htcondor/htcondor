@@ -554,7 +554,8 @@ static void test_dirty(void)
 static void test_user_functions(void)
 {
 	string name = "triple";
-	string classad_text = "[ Test1 = 3 + triple(9); Test2 = 3 + double(9) ]";
+	string classad_text = "[ Test1 = 3 + triple(9); Test2 = 3 + double(9); "
+		                  "Test3 = todays_date(); ]";
 	ClassAd        *classad;
 	ClassAdParser  parser;
 
@@ -603,16 +604,26 @@ static void test_user_functions(void)
 			cout << test << ") correctly.\n";
 		}
 
-		// Then we test the function that comes from the shared library.
+		// Then we test one function that comes from the shared library.
 		if (!classad->EvaluateAttrInt("Test2", test) || test != 21) {
-			cout << "  Failed: Couldn't evaluate internal user function double " 
+			cout << "  Failed: Couldn't evaluate shared user function double " 
 				 << " (" << test << ") correctly." << endl;
 			if (!classad->EvaluateAttrInt("Test2", test)) {
-				cout << "  Couldn't even evaluate it correctly." << endl;
+				cout << "  Couldn't even evaluate it at all." << endl;
 			}
 		} else {
-			cout << "  OK: Evaluated internal user function double (";
+			cout << "  OK: Evaluated shared user function double (";
 			cout << test << ") correctly.\n";
+		}
+
+		// Then we test another function that comes from the shared library.
+		string date;
+		if (!classad->EvaluateAttrString("Test3", date)) {
+			cout << "  Failed: Couldn't evaluate shared user function " 
+				 << " todays_date (" << test << ") correctly." << endl;
+		} else {
+			cout << "  OK: Evaluated shared function todays_date: ";
+			cout << date << endl;
 		}
 		
 	}
