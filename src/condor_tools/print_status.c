@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/time.h>
+#include <string.h>
 #include "condor_types.h"
 #include "expr.h"
 #include "manager.h"
