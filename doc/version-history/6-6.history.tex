@@ -96,6 +96,28 @@ accepting new transfer requests, producing a variety of errors.
   submit cannot run for more than an hour; it only affects memory
   usage.
 
+\item Added new configuration setting
+  \Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}.
+  If this many
+  seconds pass without hearing from the grid\_monitor, it is
+  assumed to be dead.  Defaults to 300 (5 minutes).  Increasing
+  this number will improve the ability of the grid\_monitor to
+  survive in the face of transient problems but will also
+  increase the time before Condor notices a problem.  Prior to
+  this change the gridmanager always waited 5 minutes, the user
+  could not change the setting.
+
+\item Added new configuration setting
+  \Macro{GRID\_MONITOR\_RETRY\_DURATION}.  
+  If something goes wrong
+  with the grid\_monitor at a particular site (like
+  \MacroNI{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT} expiring), it will be retried
+  for this many seconds.  Defaults to 900 (15 minutes).  If we
+  can't successfully get it going again the grid monitor will be
+  disabled for that site until 60 minutes have passed.  Prior to
+  this change the condor\_gridmanger wait 60 minutes after any
+  failure.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -248,6 +270,23 @@ gahp\_server.
 
 \item Fixed bug in userlog code in the CondorAPI library to prevent
   segmentation faults.
+
+\item Clarified log messages for Condor-G's GridmanagerLog,
+  especially those relating to the grid monitor.
+
+\item Fixed potential race condition when using the grid monitor.  
+  Condor-G now identifies partial grid monitor status updates and 
+  waits for the update to complete.
+
+
+\item The grid\_monitor is slightly more robust in the face of
+  unexpected behavior by the Globus jobmanager.  This is only a
+  partial fix, for complete success you really need the Globus
+  patch at
+  \URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=1425}
+
+\item Internal timeouts in the grid\_monitor have been increased,
+  increasing robustness during transient errors.
 
 \end{itemize}
 
