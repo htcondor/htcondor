@@ -225,10 +225,9 @@ parse_job(
 		return false;
 	}
 	
-	Job * job = new Job (jobName, cmd);
+	Job* job = new Job( jobName, cmd );
 	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
 	
-    	job->job_type = Job::CONDOR_JOB; //--> DAP
 	
 	// Check if the user has pre-definied a Job as being done
 	//
@@ -301,12 +300,9 @@ parse_dap(
 		return false;
 	}
 	
-	Job * job = new Job (jobName, cmd);
+	Job* job = new Job( Job::TYPE_STORK, jobName, cmd );
 	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
 	
-    	job->job_type = Job::DAP_JOB;  //--> DAP
-	
-
 	// Check if the user has pre-definied a Job as being done
 	//
 	char *done = strtok(0, DELIMITERS);

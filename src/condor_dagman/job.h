@@ -66,16 +66,14 @@
      queue) are put on the DAG's ready list.  */
 class Job {
   public:
-  
-  //--> DAP
-  enum job_type_t{
-    CONDOR_JOB,
-    DAP_JOB
-  };
-  
-  job_type_t job_type;
-  
-  //<-- DAP
+
+        // possible kinds of job (e.g., Condor, Stork, etc.)
+        // NOTE: must be kept in sync with _job_type_strings[]
+	typedef enum {
+		TYPE_CONDOR,
+		TYPE_STORK,
+		TYPE_NOOP,	// TODO: yet to be implemented...
+	 } job_type_t;
   
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
@@ -132,13 +130,17 @@ class Job {
 	char error_text[JOB_ERROR_TEXT_MAXLEN];
   
     /** Constructor
+        @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
     */
-    Job (const char *jobName, const char *cmdFile);
+    Job( const job_type_t jobType, const char* jobName, const char* cmdFile );
+		// alternate (old) constructor defaults to Condor job type
+    Job( const char* jobName, const char* cmdFile );
   
-    ///
     ~Job();
+
+	void Init( const char* jobName, const char* cmdFile );
   
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -147,6 +149,8 @@ class Job {
 	inline const int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+	const char* JobTypeString() const;
+	const job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
@@ -274,6 +278,12 @@ class Job {
 private:
   
 	bool AddDependency( Job* parent, Job* child );
+
+        // strings for job_type_t (e.g., "Condor, "Stork", etc.)
+    static const char* _job_type_names[];
+
+		// type of job (e.g., Condor, Stork, etc.)
+	job_type_t _jobType;
 
     // filename of condor submit file
     char * _cmdFile;

@@ -48,6 +48,13 @@ const char * Job::status_t_names[] = {
     "STATUS_ERROR    ",
 };
 
+// NOTE: must be kept in sync with the job_type_t enum
+const char* Job::_job_type_names[] = {
+    "Condor",
+    "Stork",
+    "No-Op",
+};
+
 //---------------------------------------------------------------------------
 Job::~Job() {
 	delete [] _cmdFile;
@@ -57,17 +64,34 @@ Job::~Job() {
 	delete varValsFromDag;
 }
 
-//---------------------------------------------------------------------------
-Job::Job (const char *jobName, const char *cmdFile):
-	job_type (CONDOR_JOB),
-    _scriptPre  (NULL),
-    _scriptPost (NULL),
-    _Status     (STATUS_READY),
-	countedAsDone (false),
-	_waitingCount (0)
+Job::
+Job( const char* jobName, const char* cmdFile ) :
+	_jobType( TYPE_CONDOR )
+{
+	Init( jobName, cmdFile );
+}
+
+
+Job::
+Job( const job_type_t jobType, const char* jobName, const char* cmdFile ) :
+	_jobType( jobType )
+{
+	Init( jobName, cmdFile );
+}
+
+
+void Job::
+Init( const char* jobName, const char* cmdFile )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
+
+    _scriptPre = NULL;
+    _scriptPost = NULL;
+    _Status = STATUS_READY;
+	countedAsDone = false;
+	_waitingCount = 0;
+
     _jobName = strnewp (jobName);
     _cmdFile = strnewp (cmdFile);
 
@@ -85,6 +109,8 @@ Job::Job (const char *jobName, const char *cmdFile):
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
+
+	return;
 }
 
 //---------------------------------------------------------------------------
@@ -120,28 +146,14 @@ void Job::Dump () const {
 	if( retry_max > 0 ) {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
-	//-->DAP
 	if( _CondorID._cluster == -1 ) {
-	  if (job_type == CONDOR_JOB){
-	    dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
-	  }
-	  else if (job_type == DAP_JOB){
-	    dprintf( D_ALWAYS, "     DaP Job ID: [not yet submitted]\n" );
-	  }
+		dprintf( D_ALWAYS, "%8s Job ID: [not yet submitted]\n",
+				 JobTypeString() );
 	}
 	else {
-	  if (job_type == CONDOR_JOB){
-	  dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
-		   _CondorID._proc, _CondorID._subproc );
-	  }
-	  else if (job_type == DAP_JOB){
-	    dprintf( D_ALWAYS, "     DaP Job ID: (%d)\n", _CondorID._cluster);
-	  }
+		dprintf( D_ALWAYS, "%7s Job ID: (%d.%d.%d)\n", JobTypeString(),
+				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
 	}
-	//<--DAP
-
-
-
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
@@ -407,3 +419,25 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 	whynot = "no such dependency";
 	return false;
 }
+
+
+const Job::job_type_t
+Job::JobType() const
+{
+    return _jobType;
+}
+
+
+const char*
+Job::JobTypeString() const
+{
+    return _job_type_names[_jobType];
+}
+
+
+/*
+const char* Job::JobIdString() const
+{
+
+}
+*/

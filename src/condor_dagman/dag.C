@@ -739,14 +739,8 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if (job->job_type == Job::CONDOR_JOB){
-	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
-			job->GetJobName() );
-	}
-	else if (job->job_type == Job::DAP_JOB){
-	  debug_printf( DEBUG_VERBOSE, "Submitting DaP Job %s ...\n",
-			job->GetJobName() );
-	}
+	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
+				  job->JobTypeString(), job->GetJobName() );
 
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
@@ -780,7 +774,7 @@ Dag::SubmitReadyJobs()
     }
 #endif //BUILD_HELPER
 
-    if (job->job_type == Job::CONDOR_JOB){
+    if( job->JobType() == Job::TYPE_CONDOR ) {
       if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName(),
                            job->varNamesFromDag, job->varValsFromDag ) ) {
 	// NOTE: this failure does not observe the "retry" feature
@@ -793,7 +787,7 @@ Dag::SubmitReadyJobs()
       }
     } //job ==  condor_job
     
-    else if (job->job_type == Job::DAP_JOB) {
+    else if( job->JobType() == Job::TYPE_STORK ) {
       if( ! dap_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
@@ -814,14 +808,8 @@ Dag::SubmitReadyJobs()
     job->_Status = Job::STATUS_SUBMITTED;
     _numJobsSubmitted++;
     
-    if (job->job_type == Job::CONDOR_JOB){
-	debug_printf( DEBUG_VERBOSE, "\tassigned Condor ID (%d.%d.%d)\n",
-		      condorID._cluster, condorID._proc, condorID._subproc );
-    }
-    else{
-      debug_printf( DEBUG_VERBOSE, "\tassigned DaP ID (%d)\n",
-		    condorID._cluster);
-    }
+	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",
+				  job->JobTypeString(), condorID._cluster, condorID._proc );
     
     return SubmitReadyJobs() + 1;
 }
@@ -965,12 +953,12 @@ void Dag::RemoveRunningJobs () const {
     while (iList.Next(job)) {
 		// if the job has been submitted, remove it
         if (job->GetStatus() == Job::STATUS_SUBMITTED) {
-			switch(job->job_type) {
-			case Job::CONDOR_JOB:
+			switch( job->JobType() ) {
+			case Job::TYPE_CONDOR:
 				sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
 				util_popen( cmd );
 				break;
-			case Job::DAP_JOB:
+			case Job::TYPE_STORK:
 				sprintf( cmd, "dap_rm %d", job->_CondorID._cluster );
 				util_popen( cmd );
 				break;
@@ -1032,16 +1020,14 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
-      //-->DAP
-      if (job->job_type == Job::CONDOR_JOB){
+		if( job->JobType() == Job::TYPE_CONDOR ) {
 	fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
                  job->_Status == Job::STATUS_DONE ? "DONE" : "");
       }
-      else if (job->job_type == Job::DAP_JOB){
+		else if( job->JobType() == Job::TYPE_STORK ) {
 	fprintf (fp, "DAP %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
                  job->_Status == Job::STATUS_DONE ? "DONE" : "");
       }
-      //<--DAP
       if (job->_scriptPre != NULL) {
 	fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
 		 job->_scriptPre->GetCmd());
@@ -1158,26 +1144,16 @@ void Dag::
 PrintEvent( debug_level_t level, const char* eventName, Job* job,
 			CondorID condorID )
 {
-
- //--> DAP
 	if( job ) {
-	  if (job->job_type == Job::CONDOR_JOB){
-	    debug_printf( level, "Event: %s for Condor Job %s (%d.%d.%d)\n", eventName,
-			  job->GetJobName(), job->_CondorID._cluster,
-			  job->_CondorID._proc, job->_CondorID._subproc );
-	  }
-	  else if (job->job_type == Job::DAP_JOB){
-	    debug_printf( level, "Event: %s for DaP Job %s (%d)\n", eventName,
-			  job->GetJobName(), job->_CondorID._cluster);
-	  }
-	  
-	  
+	    debug_printf( level, "Event: %s for %s Job %s (%d.%d)\n", eventName,
+					  job->JobTypeString(), job->GetJobName(),
+					  job->_CondorID._cluster, job->_CondorID._proc );
 	} else {
-        debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
+        debug_printf( level, "Event: %s for Unknown Job (%d.%d): "
 					  "ignoring...\n", eventName, condorID._cluster,
-					  condorID._proc, condorID._subproc );
+					  condorID._proc );
 	}
-	//<-- DAP
+	return;
 }
 
 void
