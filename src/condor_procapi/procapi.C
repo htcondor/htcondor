@@ -368,7 +368,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 #ifdef LINUX
 int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   char path[64];
-  FILE *fd;
+  FILE *fp;
 
   long usert, syst, start_time;
 
@@ -384,9 +384,9 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
 
   sprintf ( path, "/proc/%d/stat", pid );
 
-  if ( ( fd = fopen( path, "r" ) ) >= 0 ) {
+  if ( ( fp = fopen( path, "r" ) ) >= 0 ) {
     
-    fscanf ( fd, "%d %s %c %d "
+    fscanf ( fp, "%d %s %c %d "
                  "%d %d %d %d "
                  "%u %u %u %u %u "
                  "%ld %ld %ld %ld %d %d "
@@ -399,7 +399,7 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
              &u, &u, &start_time, &vsize, &rss, &u, &u, &u, &u, &u, &u, 
              &i, &i, &i, &i, &u );
 
-    fclose ( fd );
+    fclose ( fp );
   }
   else {
     dprintf (D_FULLDEBUG, "Problem opening %s.", path );
@@ -425,13 +425,13 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   // check to see if we've gotten the system boot time before, and 
   // if not, get it:
   if ( boottime == 0 ) {
-    if ( ( fd = fopen ( "/proc/stat", "r" ) ) >= 0 ) {
-      fgets ( s, 256, fd );
+    if ( ( fp = fopen ( "/proc/stat", "r" ) ) >= 0 ) {
+      fgets ( s, 256, fp );
       while ( strstr ( s, "btime" ) == NULL )
-        fgets ( s, 256, fd );
+        fgets ( s, 256, fp );
       
       sscanf ( s, "%s %lu", junk, &boottime );
-	  close( fd );
+	  fclose( fp );
     }
     else {
       dprintf (D_FULLDEBUG, "Problem opening /proc/stat for btime.\n" );
