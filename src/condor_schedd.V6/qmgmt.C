@@ -203,11 +203,12 @@ InitJobQueue(const char *job_queue_name)
 	ClassAd *ad;
 	ClassAd *clusterad;
 	HashKey key;
-	int 	cluster_num;
+	int 	cluster_num, cluster, proc;
 	int		stored_cluster_num;
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
+	char	owner[_POSIX_PATH_MAX];
 
 	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
@@ -241,6 +242,38 @@ InitJobQueue(const char *job_queue_name)
 			sprintf(cluster_str,"0%d.-1",cluster_num);
 			if ( JobQueue->LookupClassAd(cluster_str,clusterad) ) {
 				ad->ChainToAd(clusterad);
+			}
+
+			if (!ad->LookupString(ATTR_OWNER, owner)) {
+				dprintf(D_ALWAYS,
+						"Job %s has no %s attribute.  Removing....\n",
+						tmp, ATTR_OWNER);
+				JobQueue->DestroyClassAd(tmp);
+				continue;
+			}
+
+			if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+				dprintf(D_ALWAYS,
+						"Job %s has no %s attribute.  Removing....\n",
+						tmp, ATTR_CLUSTER_ID);
+				JobQueue->DestroyClassAd(tmp);
+				continue;
+			}
+
+			if (cluster != cluster_num) {
+				dprintf(D_ALWAYS,
+						"Job %s has invalid cluster number %d.  Removing...\n",
+						tmp, cluster);
+				JobQueue->DestroyClassAd(tmp);
+				continue;
+			}
+
+			if (!ad->LookupInteger(ATTR_PROC_ID, proc)) {
+				dprintf(D_ALWAYS,
+						"Job %s has no %s attribute.  Removing....\n",
+						tmp, ATTR_PROC_ID);
+				JobQueue->DestroyClassAd(tmp);
+				continue;
 			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
