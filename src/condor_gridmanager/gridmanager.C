@@ -823,11 +823,12 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 		curr_job->ad->ClearAllDirtyFlags();
 
 		if ( curr_action->actions & UA_FORGET_JOB ) {
+			int dummy;
 			SetAttribute( curr_job->procID.cluster,
 						  curr_job->procID.proc,
 						  ATTR_JOB_MANAGED,
 						  "FALSE" );
-			if ( curr_job->ad->Lookup( ATTR_JOB_MATCHED ) != NULL ) {
+			if ( curr_job->ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
 				SetAttribute( curr_job->procID.cluster,
 							  curr_job->procID.proc,
 							  ATTR_JOB_MATCHED,
