@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -50,8 +50,6 @@
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
-extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
-							int, const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 static  bool process_buffer_line( ClassAd * );
@@ -67,7 +65,7 @@ static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine)
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
 static 	int malformed, unexpanded, running, idle, held;
 
 static	CondorQ 	Q;
@@ -76,16 +74,29 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static char* format_owner( char*, AttrList* );
+
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
 //    orderly manner (and don't need to rely on the cluster.proc to be
 //    available....)
 
-typedef struct {
+class clusterProcString {
+public:
+	clusterProcString();
+	int parent_cluster;
+	int parent_proc;
 	int cluster;
 	int proc;
 	char * string;
-} clusterProcString;
+};
+
+clusterProcString::
+clusterProcString() {
+	// these need to be initialized so that sorting works
+	parent_cluster = 0;
+	parent_proc = 0;
+}
 
 static  ExtArray<clusterProcString *> *output_buffer;
 static	bool		output_buffer_empty = true;
@@ -465,13 +476,19 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
-			cputime = false;
+			// goodput, cputime and show_io all require the same
+			// column real-estate, so they're mutually exclusive
 			goodput = true;
+			cputime = false;
+			show_io = false;
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
+			// goodput, cputime and show_io all require the same
+			// column real-estate, so they're mutually exclusive
 			cputime = true;
 			goodput = false;
+			show_io = false;
 			JOB_TIME = "CPU_TIME";
 		}
 		else
@@ -485,7 +502,14 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix(arg,"io")) {
+			// goodput, cputime and show_io all require the same
+			// column real-estate, so they're mutually exclusive
 			show_io = true;
+			goodput = false;
+			cputime = false;
+		}   
+		else if( match_prefix( arg, "dag" ) ) {
+			dag = true;
 		}   
 		else {
 			// assume name of owner of job
@@ -542,11 +566,6 @@ job_time(float cpu_time,ClassAd *ad)
 	return total_wall_time;
 }
 
-static void io_header()
-{
-	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLKSIZE");
-}
-
 static void
 io_display(ClassAd *ad)
 {
@@ -574,14 +593,15 @@ buffer_io_display( ClassAd *ad )
 	ad->EvalInteger(ATTR_BUFFER_SIZE,NULL,buffer_size);
 	ad->EvalInteger(ATTR_BUFFER_BLOCK_SIZE,NULL,block_size);
 
-	sprintf(return_buff, "%4d.%-3d %-8s",cluster,proc,owner);
+	sprintf( return_buff, "%4d.%-3d %-14s", cluster, proc,
+			 format_owner( owner, ad ) );
 
 	/* If the jobAd values are not set, OR the values are all zero,
 	   report no data collected.  This could be true for a vanilla
 	   job, or for a standard job that has not checkpointed yet. */
 
 	if(wall_clock<0 || (!read_bytes && !write_bytes && !seek_count) ) {
-		strcat(return_buff, "          [ no i/o data collected yet ]\n");
+		strcat(return_buff, "   [ no i/o data collected ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
 
@@ -643,8 +663,18 @@ bufferJobShort( ClassAd *ad ) {
 		sprintf( buffer, "%s", basename(cmd) );
 	}
 	utime = job_time(utime,ad);
-	short_print_to_buffer (return_buff, cluster, proc, owner, date, (int)utime,
-					status, prio, image_size, buffer); 
+
+	sprintf( return_buff,
+			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 cluster,
+			 proc,
+			 format_owner( owner, ad ),
+			 format_date( (time_t)date ),
+			 format_time( utime ),
+			 encode_status( status ),
+			 prio,
+			 (image_size / 1024.0),
+			 buffer );
 
 	switch (status)
 	{
@@ -659,19 +689,20 @@ bufferJobShort( ClassAd *ad ) {
 static void 
 short_header (void)
 {
-	if ( goodput || run ) {
-		printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
-				"SUBMITTED", JOB_TIME,
-				run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
+	printf( " %-7s %-14s ", "ID", dag ? "OWNER/NODENAME" : "OWNER" );
+	if( goodput ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME,
+				"GOODPUT CPU_UTIL   Mb/s" );
 	} else if ( globus ) {
-		printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
-			"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+		printf( "%-7s %-8s %-18s  %-18s\n", "STATUS",
+				"MANAGER", "HOST", "EXECUTABLE" );
 	} else if ( show_io ) {
-		io_header();
+		printf( "%8s %8s %8s %10s %8s %8s\n",
+				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
+	} else if( run ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME, "HOST(S)" );
 	} else {
-		printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
-			"ID",
-			"OWNER",
+		printf( "%11s %12s %-2s %-3s %-4s %-18s\n",
 			"SUBMITTED",
 			JOB_TIME,
 			"ST",
@@ -789,7 +820,30 @@ format_cpu_util (float utime, AttrList *ad)
 static char *
 format_owner (char *owner, AttrList *ad)
 {
-	static char result[15];
+	static char result[15] = "";
+
+	// [this is a somewhat kludgey place to implement DAG formatting,
+	// but for a variety of reasons (maintainability, allowing future
+	// changes to be made in only one place, etc.), Todd & I decided
+	// it's the best way to do it given the existing code...  --pfc]
+
+	// if -dag is specified, check whether this job was started by a
+	// DAGMan (by seeing if it has a valid DAGManJobId attribute), and
+	// if so, print DAGNodeName in place of owner
+
+	// (we need to check that the DAGManJobId is valid because DAGMan
+	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
+	// pre-v6.3 schedd)
+
+	char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
+	char dag_node_name[ATTRLIST_MAX_EXPRESSION];
+	if( dag && ad->LookupString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
+//		strstr( dagman_job_id, "unknown" ) != dagman_job_id &&
+		ad->LookupString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
+		sprintf( result, " |-%-11.11s", dag_node_name );
+		return result;
+	}
+
 	int niceUser;
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
 		char tmp[100];
@@ -917,6 +971,15 @@ output_sorter( const void * va, const void * vb ) {
 	a = ( clusterProcString ** ) va;
 	b = ( clusterProcString ** ) vb;
 
+	// when -dag is specified, we want to display DAG jobs under the
+	// DAGMan that started them, so we sort first by parent_cluster,
+	// which is zero for non-DAG jobs (and the DAGMan jobs themselves)
+
+	if ((*a)->parent_cluster < (*b)->parent_cluster ) { return -1; }
+	if ((*a)->parent_cluster > (*b)->parent_cluster ) { return  1; }
+	if ((*a)->parent_proc    < (*b)->parent_proc    ) { return -1; }
+	if ((*a)->parent_proc    > (*b)->parent_proc    ) { return  1; }
+
 	if ((*a)->cluster < (*b)->cluster ) { return -1; }
 	if ((*a)->cluster > (*b)->cluster ) { return  1; }
 	if ((*a)->proc    < (*b)->proc    ) { return -1; }
@@ -952,7 +1015,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
 								  ATTR_JOB_REMOTE_USER_CPU,
 								  "[??????????]");
-			if ( run ) {
+			if( run && !goodput ) {
 				mask.registerFormat(" ", "*bogus*", " "); // force space
 				// We send in ATTR_OWNER since we know it is always
 				// defined, and we need to make sure
@@ -1004,6 +1067,17 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		delete output_buffer;
 
 		return false;
+	}
+
+	// before sorting, for non-DAGMan-spawned jobs (i.e., those whose
+	// parent_cluster is zero), set parent_cluster equal to cluster so
+	// that they sort properly against parent DAGMan jobs
+	for( int i = 0; i <= output_buffer->getlast(); i++ ) {
+		clusterProcString* cps = (*output_buffer)[i];
+		if( cps && cps->parent_cluster == 0 ) {
+			cps->parent_cluster = cps->cluster;
+			cps->parent_proc = cps->proc;
+		}
 	}
 
 	// If this is a global, don't print anything if this schedd is empty.
@@ -1199,7 +1273,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			}
 			mask.display(stdout, &jobs);
 		} else if( show_io ) {
-			io_header();
+			short_header();
 			jobs.Open();
 			while( (job=jobs.Next()) ) {
 				io_display( job );
