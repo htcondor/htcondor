@@ -86,6 +86,10 @@ SOURCE=..\src\condor_includes\_condor_fix_types.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\blankline.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\clib.h
 # End Source File
 # Begin Source File
@@ -106,6 +110,10 @@ SOURCE=..\src\condor_includes\condor_expressions.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_includes\condor_string.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\h\condor_sys.h
 # End Source File
 # Begin Source File
@@ -119,6 +127,10 @@ SOURCE=..\src\h\debug.h
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\dprintf.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\dprintf_config.c
 # End Source File
 # Begin Source File
 
@@ -143,6 +155,14 @@ SOURCE=..\src\condor_util_lib\internet.c
 # Begin Source File
 
 SOURCE=..\src\h\internet.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\ltrunc.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_util_lib\mkargv.c
 # End Source File
 # Begin Source File
 
