@@ -251,6 +251,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	Default_Priv_State = PRIV_CONDOR;
 	
+	_cookie_len = 0;
+	_cookie_data = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -350,6 +352,10 @@ DaemonCore::~DaemonCore()
 		delete( pipeTable );
 	}
 	t.CancelAllTimers();
+
+	if (_cookie_data) {
+		free(_cookie_data);
+	}
 
 #ifdef WIN32
 	 DeleteCriticalSection(&Big_fat_mutex);
@@ -2563,385 +2569,411 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 		bool new_session        = false;
+		bool using_cookie       = false;
 
+		// check if we are using a cookie
+		char *incoming_cookie   = NULL;
+		if( auth_info.LookupString(ATTR_SEC_COOKIE, &incoming_cookie)) {
+			// compare it to the one we have internally
+			char *real_cookie       = NULL;
+			int   len = 0;
+			get_cookie( len, (unsigned char*)real_cookie );
+
+			MyString t1 = incoming_cookie;
+			MyString t2 = real_cookie;
+
+			free (incoming_cookie);
+			free (real_cookie);
+			set_cookie( 0, NULL );
+
+			if ( t1 == t2 ) {
+				// we have a match... trust this command.
+				using_cookie = true;
+			} else {
+				// bad cookie!!!
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie!!!\n");
+				result = FALSE;
+				goto finalize;
+			}
+		}
 
 		// check if we are restarting a cached session
 		
-		if ( sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_USE_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+		if (!using_cookie) {
 
-			KeyCacheEntry *session = NULL;
+			if ( sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_USE_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
 
-			if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
-				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-						   "extract auth_info.%s!\n", ATTR_SEC_SID);
-				result = FALSE;	
-				goto finalize;
-			}
+				KeyCacheEntry *session = NULL;
 
-			// lookup the suggested key
-			if (!sec_man->session_cache->lookup(the_sid, session)) {
-
-				// the key id they sent was not in our cache.  this is a
-				// problem.
-
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-						   "invalid session %s, failing.\n", the_sid);
-
-				char * return_addr = NULL;
-				if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
-					sec_man->send_invalidate_packet( return_addr, the_sid );
-					free (return_addr);
+				if( ! auth_info.LookupString(ATTR_SEC_SID, &the_sid)) {
+					dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+							   "extract auth_info.%s!\n", ATTR_SEC_SID);
+					result = FALSE;	
+					goto finalize;
 				}
 
+				// lookup the suggested key
+				if (!sec_man->session_cache->lookup(the_sid, session)) {
 
-				// close the connection.
-				result = FALSE;
-				goto finalize;
+					// the key id they sent was not in our cache.  this is a
+					// problem.
 
-			} else {
-				// the session->id() and the_sid strings should be identical.
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
+							   "invalid session %s, failing.\n", the_sid);
 
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
-							session->id(), sin_to_string(session->addr()));
-			}
+					char * return_addr = NULL;
+					if( auth_info.LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, &return_addr)) {
+						sec_man->send_invalidate_packet( return_addr, the_sid );
+						free (return_addr);
+					}
 
-			if (session->key()) {
-				// copy this to the HandleReq() scope
-				the_key = new KeyInfo(*session->key());
-			}
+					// close the connection.
+					result = FALSE;
+					goto finalize;
 
-			if (session->policy()) {
-				// copy this to the HandleReq() scope
-				the_policy = new ClassAd(*session->policy());
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
-					the_policy->dPrint (D_SECURITY);
+				} else {
+					// the session->id() and the_sid strings should be identical.
+
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
+								session->id(), sin_to_string(session->addr()));
 				}
-			}
 
-			// grab the user out of the policy.
-			if (the_policy) {
-				char *the_user  = NULL;
-				the_policy->LookupString( ATTR_SEC_USER, &the_user);
-
-				if (the_user) {
+				if (session->key()) {
 					// copy this to the HandleReq() scope
-					strcpy (user, the_user);
-					free( the_user );
-					the_user = NULL;
-				}
-			}
-			new_session = false;
-
-		} else {
-				// they did not request a cached session.  see if they
-				// want to start one.  look at our security policy.
-			ClassAd our_policy;
-			if( ! sec_man->FillInSecurityPolicyAd( 
-				  PermString(comTable[cmd_index].perm), &our_policy) ) { 
-					// our policy is invalid even without the other
-					// side getting involved.
-				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
-						 "Our security policy is invalid!\n" );
-				result = FALSE;
-				goto finalize;
-			}
-
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-				our_policy.dPrint(D_SECURITY);
-			}
-			
-			// reconcile.  if unable, close socket.
-			the_policy = sec_man->ReconcileSecurityPolicyAds( auth_info,
-															  our_policy ); 
-
-			if (!the_policy) {
-				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
-				result = FALSE;
-				goto finalize;
-			} else {
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
-					the_policy->dPrint(D_SECURITY);
-				}
-			}
-
-			// handy policy vars
-			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
-			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
-
-			if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
-
-				// generate a new session
-
-				int    mypid = 0;
-#ifdef WIN32
-				mypid = ::GetCurrentProcessId();
-#else
-				mypid = ::getpid();
-#endif
-
-				// generate a unique ID.
-				sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
-						 (int)time(0), ZZZ_always_increase() );
-				assert (the_sid == NULL);
-				the_sid = strdup(buf);
-
-				if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
-
-					char *crypto_method = NULL;
-					if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
-						dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
-						result = FALSE;
-						goto finalize;
-					}
-
-					unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
-					unsigned char  rbuf[24];
-					if (rkey) {
-						memcpy (rbuf, rkey, 24);
-						// this was malloced in randomKey
-						free (rkey);
-					} else {
-						memset (rbuf, 0, 24);
-						dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
-						result = FALSE;
-						free( crypto_method );
-						crypto_method = NULL;
-						goto finalize;
-					}
-
-					switch (toupper(crypto_method[0])) {
-						case 'B': // blowfish
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid);
-							the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
-							break;
-						case '3': // 3des
-						case 'T': // Tripledes
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid);
-							the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
-							break;
-						default:
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
-							break;
-					}
-
-					free( crypto_method );
-					crypto_method = NULL;
-
-					if (!the_key) {
-						result = FALSE;
-						goto finalize;
-					}
-
-#ifdef SECURITY_HACK_ENABLE
-					zz2printf (the_key);
-#endif
+					the_key = new KeyInfo(*session->key());
 				}
 
-				new_session = true;
-			}
-
-			// if they asked, tell them
-			if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
-					the_policy->dPrint( D_SECURITY );
-				}
-				sock->encode();
-				if (!the_policy->put(*sock) ||
-					!sock->eom()) {
-					dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
-					result = FALSE;
-					goto finalize;
-				}
-				sock->decode();
-			} else {
-				dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
-					SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
-			}
-
-		}
-
-        if (is_tcp) {
-
-			// do what we decided
-
-			// handy policy vars
-			SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
-			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
-			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
-
-
-
-			if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
-
-				// we are going to authenticate.  this could one of two ways.
-				// the "real" way or the "quick" way which is by presenting a
-				// session ID.  the fact that the private key matches on both
-				// sides proves the authenticity.  if the key does not match,
-				// it will be detected as long as some crypto is used.
-
-
-				// we know the ..METHODS_LIST attribute exists since it was put
-				// in by us.  pre 6.5.0 protocol does not put it in.
-				char * auth_methods = NULL;
-				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
-
-				if (!auth_methods) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
-					result = FALSE;
-					goto finalize;
-				}
-
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-				}
-
-				if (!sock->authenticate(the_key, auth_methods)) {
-					free( auth_methods );
-					dprintf( D_ALWAYS, 
-							 "DC_AUTHENTICATE: authenticate failed\n" );
-					result = FALSE;
-					goto finalize;
-				}
-				free( auth_methods );
-
-				// check to see if the auth IP is the same
-				// as the socket IP.  this cast is safe because
-				// we return above if sock is not a ReliSock.
-				if ( ((ReliSock*)sock)->authob ) {
-
-					// after authenticating, update the classad to reflect
-					// which method we actually used.
-					char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
-					sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
-					the_policy->InsertOrUpdate(buf);
-
-					const char* sockip = sin_to_string(sock->endpoint());
-					const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
-
-					result = !strncmp (sockip + 1, authip, strlen(authip) );
-
-					if (!result) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
-
-						result = FALSE;
-						goto finalize;
-
-					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", authip);
+				if (session->policy()) {
+					// copy this to the HandleReq() scope
+					the_policy = new ClassAd(*session->policy());
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
+						the_policy->dPrint (D_SECURITY);
 					}
 				}
+
+				// grab the user out of the policy.
+				if (the_policy) {
+					char *the_user  = NULL;
+					the_policy->LookupString( ATTR_SEC_USER, &the_user);
+
+					if (the_user) {
+						// copy this to the HandleReq() scope
+						strcpy (user, the_user);
+						free( the_user );
+						the_user = NULL;
+					}
+				}
+				new_session = false;
 
 			} else {
+					// they did not request a cached session.  see if they
+					// want to start one.  look at our security policy.
+				ClassAd our_policy;
+				if( ! sec_man->FillInSecurityPolicyAd( 
+					  PermString(comTable[cmd_index].perm), &our_policy) ) { 
+						// our policy is invalid even without the other
+						// side getting involved.
+					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+							 "Our security policy is invalid!\n" );
+					result = FALSE;
+					goto finalize;
+				}
+
 				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
+					our_policy.dPrint(D_SECURITY);
 				}
-			}
+				
+				// reconcile.  if unable, close socket.
+				the_policy = sec_man->ReconcileSecurityPolicyAds( auth_info,
+																  our_policy ); 
 
-
-			if (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
-
-				if (!the_key) {
-					// uhm, there should be a key here!
+				if (!the_policy) {
+					dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
 					result = FALSE;
 					goto finalize;
-				}
-
-				sock->decode();
-				if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
-					result = FALSE;
-					goto finalize;
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid);
-#ifdef SECURITY_HACK_ENABLE
-					zz2printf (the_key);
-#endif
-				}
-			}
-
-
-			if (will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
-
-				if (!the_key) {
-					// uhm, there should be a key here!
-					result = FALSE;
-					goto finalize;
-				}
-
-				sock->decode();
-				if (!sock->set_crypto_key(the_key) ) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
-					result = FALSE;
-					goto finalize;
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid);
-				}
-			}
-
-
-			if (new_session) {
-				// clear the buffer
-				sock->decode();
-				sock->eom();
-
-				// ready a classad to send
-				ClassAd pa_ad;
-
-				// session user
-				const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
-				if ( fully_qualified_user ) {
-					sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER, 
-							fully_qualified_user);
-					pa_ad.Insert(buf);
-				}
-
-				// session id
-				sprintf (buf, "%s=\"%s\"", ATTR_SEC_SID, the_sid);
-				pa_ad.Insert(buf);
-
-				// other commands this session is good for
-				sprintf (buf, "%s=\"%s\"", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
-				pa_ad.Insert(buf);
-
-				// also put some attributes in the policy classad we are caching.
-				sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
-
-
-				sock->encode();
-				if (! pa_ad.put(*sock) ||
-					! sock->eom() ) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
 				} else {
 					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
+						dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
+						the_policy->dPrint(D_SECURITY);
 					}
 				}
 
-				// extract the session duration
-				char *dur = NULL;
-				the_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+				// handy policy vars
+				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
 
-				int expiration_time = time(0) + atoi(dur);
+				if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
 
-				// add the key to the cache
-				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
-				sec_man->session_cache->insert(tmp_key);
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
-				free( dur );
-				dur = NULL;
+					// generate a new session
+
+					int    mypid = 0;
+#ifdef WIN32
+					mypid = ::GetCurrentProcessId();
+#else
+					mypid = ::getpid();
+#endif
+
+					// generate a unique ID.
+					sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
+							 (int)time(0), ZZZ_always_increase() );
+					assert (the_sid == NULL);
+					the_sid = strdup(buf);
+
+					if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
+
+						char *crypto_method = NULL;
+						if (!the_policy->LookupString(ATTR_SEC_CRYPTO_METHODS, &crypto_method)) {
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+							result = FALSE;
+							goto finalize;
+						}
+
+						unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
+						unsigned char  rbuf[24];
+						if (rkey) {
+							memcpy (rbuf, rkey, 24);
+							// this was malloced in randomKey
+							free (rkey);
+						} else {
+							memset (rbuf, 0, 24);
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
+							result = FALSE;
+							free( crypto_method );
+							crypto_method = NULL;
+							goto finalize;
+						}
+
+						switch (toupper(crypto_method[0])) {
+							case 'B': // blowfish
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid);
+								the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
+								break;
+							case '3': // 3des
+							case 'T': // Tripledes
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid);
+								the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
+								break;
+							default:
+								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method );
+								break;
+						}
+
+						free( crypto_method );
+						crypto_method = NULL;
+
+						if (!the_key) {
+							result = FALSE;
+							goto finalize;
+						}
+
+#ifdef SECURITY_HACK_ENABLE
+						zz2printf (the_key);
+#endif
+					}
+
+					new_session = true;
+				}
+
+				// if they asked, tell them
+				if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
+						the_policy->dPrint( D_SECURITY );
+					}
+					sock->encode();
+					if (!the_policy->put(*sock) ||
+						!sock->eom()) {
+						dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+						result = FALSE;
+						goto finalize;
+					}
+					sock->decode();
+				} else {
+					dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
+						SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
+				}
+
+			}
+
+			if (is_tcp) {
+
+				// do what we decided
+
+				// handy policy vars
+				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
+				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+
+
+				if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+
+					// we are going to authenticate.  this could one of two ways.
+					// the "real" way or the "quick" way which is by presenting a
+					// session ID.  the fact that the private key matches on both
+					// sides proves the authenticity.  if the key does not match,
+					// it will be detected as long as some crypto is used.
+
+
+					// we know the ..METHODS_LIST attribute exists since it was put
+					// in by us.  pre 6.5.0 protocol does not put it in.
+					char * auth_methods = NULL;
+					the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods);
+
+					if (!auth_methods) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
+						result = FALSE;
+						goto finalize;
+					}
+
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+					}
+
+					if (!sock->authenticate(the_key, auth_methods)) {
+						free( auth_methods );
+						dprintf( D_ALWAYS, 
+								 "DC_AUTHENTICATE: authenticate failed\n" );
+						result = FALSE;
+						goto finalize;
+					}
+					free( auth_methods );
+
+					// check to see if the auth IP is the same
+					// as the socket IP.  this cast is safe because
+					// we return above if sock is not a ReliSock.
+					if ( ((ReliSock*)sock)->authob ) {
+
+						// after authenticating, update the classad to reflect
+						// which method we actually used.
+						char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
+						sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
+						the_policy->InsertOrUpdate(buf);
+
+						const char* sockip = sin_to_string(sock->endpoint());
+						const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
+
+						result = !strncmp (sockip + 1, authip, strlen(authip) );
+
+						if (!result) {
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
+
+							result = FALSE;
+							goto finalize;
+
+						} else {
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", authip);
+						}
+					}
+
+				} else {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+					}
+				}
+
+
+				if (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
+
+					if (!the_key) {
+						// uhm, there should be a key here!
+						result = FALSE;
+						goto finalize;
+					}
+
+					sock->decode();
+					if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
+						result = FALSE;
+						goto finalize;
+					} else {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid);
+#ifdef SECURITY_HACK_ENABLE
+						zz2printf (the_key);
+#endif
+					}
+				}
+
+
+				if (will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
+
+					if (!the_key) {
+						// uhm, there should be a key here!
+						result = FALSE;
+						goto finalize;
+					}
+
+					sock->decode();
+					if (!sock->set_crypto_key(the_key) ) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+						result = FALSE;
+						goto finalize;
+					} else {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid);
+					}
+				}
+
+
+				if (new_session) {
+					// clear the buffer
+					sock->decode();
+					sock->eom();
+
+					// ready a classad to send
+					ClassAd pa_ad;
+
+					// session user
+					const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
+					if ( fully_qualified_user ) {
+						sprintf (buf, "%s=\"%s\"", ATTR_SEC_USER, 
+								fully_qualified_user);
+						pa_ad.Insert(buf);
+					}
+
+					// session id
+					sprintf (buf, "%s=\"%s\"", ATTR_SEC_SID, the_sid);
+					pa_ad.Insert(buf);
+
+					// other commands this session is good for
+					sprintf (buf, "%s=\"%s\"", ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+					pa_ad.Insert(buf);
+
+					// also put some attributes in the policy classad we are caching.
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
+
+
+					sock->encode();
+					if (! pa_ad.put(*sock) ||
+						! sock->eom() ) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid);
+					} else {
+						if (DebugFlags & D_FULLDEBUG) {
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid);
+						}
+					}
+
+					// extract the session duration
+					char *dur = NULL;
+					the_policy->LookupString(ATTR_SEC_SESSION_DURATION, &dur);
+
+					int expiration_time = time(0) + atoi(dur);
+
+					// add the key to the cache
+					KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key, the_policy, expiration_time);
+					sec_man->session_cache->insert(tmp_key);
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid, dur);
+					free( dur );
+					dur = NULL;
+				}
 			}
 		}
-
-
 
 		if (real_cmd == DC_AUTHENTICATE) {
 			result = TRUE;
@@ -6639,3 +6671,41 @@ void DaemonCore :: invalidateSessionCache()
         sec_man->invalidateAllCache();
     }
 }
+
+
+bool DaemonCore :: set_cookie( int len, unsigned char* data ) {
+	if (_cookie_data) {
+		free(_cookie_data);
+		_cookie_data = NULL;
+		_cookie_len = 0;
+	}
+	if (data) {
+		_cookie_data = (unsigned char*) malloc (len);
+		if (!_cookie_data) {
+			// out of mem
+			return false;
+		}
+		_cookie_len = len;
+		memcpy (_cookie_data, data, len);
+	}
+
+	return true;
+}
+
+bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
+	if (data != NULL) {
+		return false;
+	}
+	data = (unsigned char*) malloc (_cookie_len);
+	if (!data) {
+		// out of mem
+		return false;
+	}
+
+	len = _cookie_len;
+	memcpy (data, _cookie_data, _cookie_len);
+
+	return true;
+}
+
+

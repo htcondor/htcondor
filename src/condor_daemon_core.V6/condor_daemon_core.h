@@ -863,6 +863,10 @@ class DaemonCore : public Service
      */
     void invalidateSessionCache();
 
+	/* manage the secret cookie data */
+	bool set_cookie( int len, unsigned char* data );
+	bool get_cookie( int &len, unsigned char* &data );
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket
@@ -1074,6 +1078,8 @@ class DaemonCore : public Service
 
 	SecMan	    		*sec_man;
 
+	int					_cookie_len;
+	unsigned char*		_cookie_data;
 
     IpVerify            ipverify;   
 

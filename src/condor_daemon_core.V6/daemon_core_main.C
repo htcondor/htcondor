@@ -95,6 +95,14 @@ check_session_cache()
 	daemonCore->getSecMan()->invalidateExpiredCache();
 }
 
+bool global_dc_set_cookie(int len, unsigned char* data) {
+	if (daemonCore) {
+		return daemonCore->set_cookie(len, data);
+	} else {
+		return false;
+	}
+}
+
 char* global_dc_sinful() {
 	if (daemonCore) {
 		return daemonCore->InfoCommandSinfulString();
