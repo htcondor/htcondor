@@ -84,7 +84,7 @@ long timezone_offset(void)
 
     extern DLL_IMPORT_MAGIC long timezone;
 
-    return timezone;
+    return ::timezone;
 #endif
 }
 
