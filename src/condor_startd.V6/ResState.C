@@ -251,7 +251,7 @@ ResState::eval( void )
 
 	default:
 		EXCEPT( "eval_state: ERROR: unknown state (%d)",
-				(int)rip->r_state );
+				(int)rip->state() );
 	}
 	return 0;
 }
