@@ -27,15 +27,15 @@ MyString
 which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 {
 	MyString strPath = getenv("PATH");
-	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.GetCStr());
+	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.Value());
 
 	char path_delim[3];
 	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
-	StringList listDirectoriesInPath( strPath.GetCStr(), path_delim );
+	StringList listDirectoriesInPath( strPath.Value(), path_delim );
 
 #ifdef WIN32
 	int iLength = strFilename.Length();
-	if (!stricmp(strFilename.Substr(iLength - 4, iLength - 1).GetCStr(), ".dll"))
+	if (!stricmp(strFilename.Substr(iLength - 4, iLength - 1).Value(), ".dll"))
 	{	// if the filename ends in ".dll"
 		
 		// in order to mimic the behavior of LoadLibrary
@@ -91,7 +91,7 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 	listDirectoriesInPath.next();
 
 	if( strAdditionalSearchDir != "" ) {
-		listDirectoriesInPath.insert(strAdditionalSearchDir.GetCStr());
+		listDirectoriesInPath.insert(strAdditionalSearchDir.Value());
 	}
 	
 	listDirectoriesInPath.rewind();
@@ -101,11 +101,11 @@ which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 	{
 		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
-		char *psFullDir = dircat(psDir, strFilename.GetCStr());
+		char *psFullDir = dircat(psDir, strFilename.Value());
 		MyString strFullDir = psFullDir;
 		delete [] psFullDir;
 
-		StatInfo info(strFullDir.GetCStr());
+		StatInfo info(strFullDir.Value());
 		if( info.Error() == SIGood ) {
 			return strFullDir;
 		}
