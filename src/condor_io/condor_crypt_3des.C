@@ -23,9 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_crypt_3des.h"
-#include <malloc.h>
-#include <string.h>
-#include <assert.h>
 
 Condor_Crypt_3des :: Condor_Crypt_3des(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)

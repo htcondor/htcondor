@@ -24,6 +24,7 @@
 #if defined(CONDOR_3DES_ENCRYPTION) && !defined(CONDOR_CRYPTO_3DES)
 #define CONDOR_CRYPTO_3DES
 
+#include "condor_common.h"
 #include "condor_crypt.h"          // base class
 #include <des.h>
 
