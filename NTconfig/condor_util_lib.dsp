@@ -41,7 +41,7 @@ CPP=cl.exe
 # PROP Intermediate_Dir "..\src\condor_util_lib"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX"..\src\condor_includes\condor_common.h" /FD /c
+# ADD CPP /nologo /MT /W3 /Gi- /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_util_lib/condor_common.pch" /Yu"condor_common.h" /FD /c
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -62,7 +62,7 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "..\src\condor_util_lib"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /YX"..\src\condor_includes\condor_common.h" /FD /c
+# ADD CPP /nologo /MTd /W3 /Gi- /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /FR /Fp"..\src\condor_util_lib/condor_common.pch" /Yu"condor_common.h" /FD /c
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -86,6 +86,11 @@ SOURCE=..\src\condor_util_lib\ckpt_name.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_util_lib\condor_common.C
+# ADD CPP /Yc"condor_common.h"
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_util_lib\condor_errlst.c
 # End Source File
 # Begin Source File
@@ -103,6 +108,7 @@ SOURCE=..\src\condor_util_lib\dprintf_config.c
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\escapes.c
+# ADD CPP /Yu
 # End Source File
 # Begin Source File
 
@@ -115,6 +121,7 @@ SOURCE=..\src\h\except.h
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\free_fs_blocks.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
@@ -143,18 +150,22 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\phys_mem.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\setsyscalls.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\signames.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\uids.c
+# SUBTRACT CPP /YX /Yc /Yu
 # End Source File
 # Begin Source File
 
