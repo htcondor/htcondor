@@ -64,6 +64,11 @@ public:
 
   operator double() const { return Sec; }
 
+  const char* Asc() const {
+    long l=(long) Sec;
+    return asctime(localtime(&l));
+  } 
+
 };
 
 #endif
