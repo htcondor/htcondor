@@ -405,12 +405,16 @@ KBDD				= $(SBIN)/condor_kbdd
 ##  feature can be turned off by commenting out this setting.
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
-##  Where should the master find the condor_preen binary and how do
-##  you want preen to behave?  The "-m" means you want email about
-##  files preen finds that it thinks it should remove.  The "-r" means
-##  you want preen to actually remove these files.  If you don't want
-##  preen to run at all, just comment out this setting.
-PREEN				= $(SBIN)/condor_preen -m -r
+##  Where should the master find the condor_preen binary? If you don't
+##  want preen to run at all, just comment out this setting.
+PREEN				= $(SBIN)/condor_preen
+
+##  How do you want preen to behave?  The "-m" means you want email
+##  about files preen finds that it thinks it should remove.  The "-r"
+##  means you want preen to actually remove these files.  If you don't
+##  want either of those things to happen, just remove the appropriate
+##  one from this setting.
+PREEN_ARGS			= -m -r
 
 ##  How often should the master start up condor_preen? (once a day)
 #PREEN_INTERVAL			= 86400
