@@ -575,7 +575,6 @@ Stream::put( char	c)
 {
   getcount =0;
   NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -595,7 +594,6 @@ Stream::put( unsigned char	c)
 {
   getcount =0;
   NETWORK_TRACE("put char " << c << " c(" << ++putcount << ") ");
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -618,7 +616,6 @@ Stream::put( int		i)
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -652,7 +649,6 @@ Stream::put( unsigned int		i)
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -741,7 +737,6 @@ Stream::put( long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long " << l);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -779,7 +774,6 @@ Stream::put( unsigned long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long " << l);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -816,7 +810,6 @@ Stream::put( long long	l)
 {
 	char	pad;
   NETWORK_TRACE("put long long" << l);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -854,7 +847,6 @@ Stream::put( long long unsigned	l)
 {
 	char	pad;
   NETWORK_TRACE("put long long" << l);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -891,7 +883,6 @@ int
 Stream::put( short	s)
 {
   NETWORK_TRACE("put short " << s);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -914,7 +905,6 @@ int
 Stream::put( unsigned short	s)
 {
   NETWORK_TRACE("put short " << s);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -937,7 +927,6 @@ int
 Stream::put( float	f)
 {
   NETWORK_TRACE("put float " << f);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -962,7 +951,6 @@ Stream::put( double	d)
   NETWORK_TRACE("put double " << d);
 	int		frac, exp;
 
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -989,7 +977,6 @@ Stream::put( char	*s)
 	int		len;
 
   NETWORK_TRACE("put string " << s);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1016,7 +1003,6 @@ int
 Stream::put( char	*s, int		l)
 {
     NETWORK_TRACE("put string \"" << s << "\" and int " <<   l);
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1050,7 +1036,6 @@ int
 Stream::get( char	&c)
 {
    putcount =0;
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1069,7 +1054,6 @@ int
 Stream::get( unsigned char	&c)
 {
    putcount =0;
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1089,8 +1073,6 @@ Stream::get( int		&i)
 {
 	int		tmp;
 	char	pad[INT_SIZE-sizeof(int)], sign;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1132,8 +1114,6 @@ Stream::get( unsigned int	&i)
 	unsigned int	tmp;
 	char			pad[INT_SIZE-sizeof(int)];
 
-	if (!valid()) return FALSE;
-
 	switch(_code){
 		case internal:
 			if (get_bytes(&i, sizeof(int)) != sizeof(int)) return FALSE;
@@ -1172,8 +1152,6 @@ Stream::get( long	&l)
 {
 	int		i;
 	char	pad[INT_SIZE-sizeof(long)], sign;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1219,8 +1197,6 @@ Stream::get( unsigned long	&l)
 	unsigned int		i;
 	char	pad[INT_SIZE-sizeof(long)];
 
-	if (!valid()) return FALSE;
-
 	switch(_code){
 		case internal:
 			if (get_bytes(&l, sizeof(long)) != sizeof(long)) return FALSE;
@@ -1262,8 +1238,6 @@ Stream::get( long long	&l)
 {
 	int		i;
 	char	pad[INT_SIZE-sizeof(long long)], sign;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1309,8 +1283,6 @@ Stream::get( unsigned long long	&l)
 	unsigned int		i;
 	char	pad[INT_SIZE-sizeof(long long)];
 
-	if (!valid()) return FALSE;
-
 	switch(_code){
 		case internal:
 			if (get_bytes(&l, sizeof(long long)) != sizeof(long long)) return FALSE;
@@ -1353,8 +1325,6 @@ Stream::get( short	&s)
 {
 	int		i;
 
-	if (!valid()) return FALSE;
-
 	switch(_code){
 		case internal:
 			if (get_bytes(&s, sizeof(short)) != sizeof(short)) return FALSE;
@@ -1378,8 +1348,6 @@ int
 Stream::get( unsigned short	&s)
 {
 	unsigned int		i;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1405,8 +1373,6 @@ Stream::get( float	&f)
 {
 	double	d;
 
-	if (!valid()) return FALSE;
-
 	switch(_code){
 		case internal:
 			if (get_bytes(&f, sizeof(float)) != sizeof(float)) return FALSE;
@@ -1430,8 +1396,6 @@ int
 Stream::get( double	&d)
 {
 	int		frac, exp;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1458,8 +1422,6 @@ Stream::get( char	*&s)
 {
 	char	c;
 	void	*tmp_ptr;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
@@ -1496,8 +1458,6 @@ Stream::get( char	*&s, int		&l)
 {
 	char	c;
 	void	*tmp_ptr;
-
-	if (!valid()) return FALSE;
 
 	switch(_code){
 		case internal:
