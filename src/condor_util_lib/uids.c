@@ -68,12 +68,12 @@ static int fatal_uid_sets = TRUE;
 
 int
 set_fatal_uid_sets(flag)
-int		flag;
+int     flag;
 {
-	int old_val;
-	old_val = fatal_uid_sets;
-	fatal_uid_sets = flag;
-	return old_val;
+    int old_val;
+    old_val = fatal_uid_sets;
+    fatal_uid_sets = flag;
+    return old_val;
 }
 
 
@@ -112,61 +112,37 @@ get_condor_uid()
 
 set_condor_euid()
 {
-	int		rval;
-
 	if( !CondorUidInited ) {
 		init_condor_uid();
 	}
 
-	rval = SET_EFFECTIVE_ID(CondorUid);
-	if( rval < 0) {
-		if (fatal_uid_sets) {
-			EXCEPT( "SET_EFFECTIVE_ID(%d)", CondorUid);
-		}
+	if( SET_EFFECTIVE_ID(CondorUid) < 0 ) {
+        EXCEPT( "SET_EFFECTIVE_ID(%d)", CondorUid);
     }
-	return rval;
 }
 
 set_condor_ruid()
 {
-	int		rval;
-
 	if( !CondorUidInited ) {
 		init_condor_uid();
 	}
 
-	rval = SET_REAL_ID(CondorUid);
-	if( rval < 0 ) {
-		if (fatal_uid_sets) {
-			EXCEPT( "SET_REAL_ID(%d)", CondorUid );
-		}
+	if( SET_REAL_ID(CondorUid) < 0 ) {
+		EXCEPT( "SET_REAL_ID(%d)", CondorUid );
 	}
-	return rval;
 }
 
 set_root_euid()
 {
-	int		rval;
-
-	rval = SET_EFFECTIVE_ID(ROOT);
-	if( rval < 0 ) {
-		if (fatal_uid_sets) {
-			EXCEPT( "SET_EFFECTIVE_ID(%d)", ROOT );
-		}
+	if( SET_EFFECTIVE_ID(ROOT) < 0 ) {
+		EXCEPT( "SET_EFFECTIVE_ID(%d)", ROOT );
 	}
-	return rval;
 }
 
 
 set_effective_uid(uid_t new_uid)
 {
-	int		rval;
-
-	rval = SET_EFFECTIVE_ID(new_uid);
-	if( rval < 0 ) {
-		if (fatal_uid_sets) {
-			EXCEPT( "SET_EFFECTIVE_ID(%d)", new_uid );
-		}
+	if( SET_EFFECTIVE_ID(new_uid) < 0 ) {
+		EXCEPT( "SET_EFFECTIVE_ID(%d)", new_uid );
 	}
-	return rval;
 }
