@@ -807,30 +807,103 @@ if test $ac_ar = no; then
     AC_MSG_ERROR( [ar is required] )
 fi
 
-# strip is used in the packaging of Condor for all released binaries
-# we require GNU strip since it does a much better job of shrinking
-# the size of our binaries, given that they're all built with GNU CC.
-# however, on OSX, there's no such thing as GNU strip, so we leave
-# that alone for now...
-CHECK_PROG_IS_GNU(STRIP, strip)
-if test "$_cv_strip_is_gnu" = "no"; then
-   case `uname -s` in 
-   "Darwin" )
-      AC_MSG_WARN( [GNU strip is prefered, but OSX doesn't have it] ) ;;
-
-   "OSF1" ) 
-      if test `uname -r` != "V5.1" ; then
-         AC_MSG_ERROR( [GNU strip is required] )
-      fi ;; 
-
-   * )
-      AC_MSG_ERROR( [GNU strip is required] ) ;;
-   esac
+# strip is used in the packaging of Condor for all released binaries.
+# We want to see if we can find GNU strip since it usually does a much
+# better job of shrinking the size of our binaries, given that they're
+# all built with GNU CC/C++.  however, on OSX, there's no such thing
+# as GNU strip.  Also, on other platforms, even if we find GNU strip,
+# it might not work properly.  We search for GNU strip, and if we find
+# it, we see if it works.  Then we search for a non-GNU vendor strip,
+# and see if it works.  If we only found 1 working version, we use it.
+# If both versions exist and both work, we see which one produced the
+# smallest output program and use that.
+AC_MSG_CHECKING([for GNU strip]) 
+_cv_gnu_strip="no"
+_cv_gnu_strip_works="no"
+_try_gnu_strip="$STRIP strip gstrip gnustrip"
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH ; do
+  IFS=$as_save_IFS
+  for a in $_try_gnu_strip ; do
+    _try="$as_dir/$a"
+    if ( sh -c "$_try --version" 2> /dev/null | grep GNU 2>&1 > /dev/null );
+    then
+      AC_MSG_RESULT([$_try])
+      _cv_gnu_strip="$_try";
+      break;
+    fi
+  done;
+  if ! test "$_cv_gnu_strip" = "no" ; then
+    break;
+  fi
+done;
+if test "$_cv_gnu_strip" = "no" ; then
+  AC_MSG_RESULT([no]) 
+  if ! test "$os" = "Darwin" && ! test "$os" = "OSF1" ; then 
+    AC_MSG_WARN([GNU strip is recommended]) 
+  fi
 else
-   if test `uname -s` = "OSF1" && test `uname -r` = "V5.1" ; then
-      AC_MSG_ERROR( [GNU strip will not work on DUX 5.1] )
-   fi
+  CONDOR_TEST_STRIP([GNU strip], [_cv_gnu_strip]) 
+  if test "$_cv_gnu_strip_works" = "no" ; then
+    AC_MSG_WARN([GNU strip is installed but doesn't work]) 
+  fi
 fi
+
+AC_MSG_CHECKING([for vendor strip]) 
+_cv_vendor_strip="no"
+_try_vendor_strip="$STRIP strip"
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH ; do
+  IFS=$as_save_IFS
+  for a in $_try_vendor_strip ; do
+    _try="$as_dir/$a"
+    if ( sh -c "$_try --version" 2>/dev/null | grep GNU 2>&1 >/dev/null );
+    then
+      continue;
+    fi
+    if test -x "$_try" ; then 
+      AC_MSG_RESULT([$_try])
+      _cv_vendor_strip="$_try";
+      break;
+    fi
+  done;
+  if ! test "$_cv_vendor_strip" = "no" ; then
+    break;
+  fi
+done;
+if test "$_cv_vendor_strip" = "no" ; then
+  AC_MSG_RESULT([no]) 
+else
+  CONDOR_TEST_STRIP([vendor strip], [_cv_vendor_strip]) 
+fi
+
+AC_MSG_CHECKING([which strip we should use])
+# now, based on all the tests, figure out the best one to use:
+if test "$_cv_gnu_strip_works" = "no" ; then
+  if test "$_cv_vendor_strip_works" = "no" ; then
+    AC_MSG_RESULT( [none available] )
+    AC_MSG_ERROR( [strip is required] )
+  else
+    # no GNU, but there is a vendor, we'll just use it.
+    STRIP=$_cv_vendor_strip
+  fi
+else
+  if test "$_cv_vendor_strip" = "no" ; then
+    # no vendor, but we have a working GNU, just use it
+    STRIP=$_cv_gnu_strip
+  else
+    # have both versions and both work, see which one does a better
+    # job of shriking the output.  in case of a tie, use vendor strip
+    if test "$_cv_gnu_strip_outsize" -lt "$_cv_vendor_strip_outsize" ; 
+    then
+      STRIP=$_cv_gnu_strip
+    else
+      STRIP=$_cv_vendor_strip
+    fi
+  fi
+fi
+AC_MSG_RESULT([$STRIP])
+AC_SUBST([STRIP],[$STRIP])
 
 # We depend on some GNU-specific options to tar.  We also depend on
 # using --owner and --group, and want those to set the ownerships of
