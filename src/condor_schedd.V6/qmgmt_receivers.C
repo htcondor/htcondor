@@ -606,7 +606,13 @@ do_Q_request(ReliSock *syscall_sock)
 
 		assert( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
-		assert( syscall_sock->code(constraint) );
+		if ( !(syscall_sock->code(constraint)) ) {
+			if (constraint != NULL) {
+				free(constraint);
+				constraint = NULL;
+			}
+			return -1;
+		}
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
