@@ -325,17 +325,18 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 							   CA_INVALID_REQUEST, err_msg.Value() );
 	}
 
-	char* keyword = NULL;
-	if( ! req->LookupString(ATTR_JOB_KEYWORD, &keyword) ) {
-		err_msg = "Request does not contain ";
+		// verify the ClassAd to make sure it's got what we need to
+		// spawn the COD job 
+	if( ! claim->verifyCODAttrs(req) ) {
+		err_msg = "Request contains neither ";
 		err_msg += ATTR_JOB_KEYWORD;
-		err_msg += ", so server cannot find job in config file\n";
+		err_msg += " nor ";
+		err_msg += ATTR_HAS_JOB_AD;
+		err_msg += ", so server has no way to find job information\n";
 		delete tmp_starter;
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 							   CA_INVALID_REQUEST, err_msg.Value() ); 
 	}
-	tmp_starter->setCODArgs( keyword );
-	free( keyword );
 
 		// we need to make a copy of this, since the original is on
 		// the stack in command.C:command_classad_handler().
@@ -344,7 +345,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	ClassAd* new_req_ad = new ClassAd( *req );
 
 		// Save the request ClassAd, so we can use it to spawn the
-		// starter.  This also grab the job ID so we can use it to
+		// starter.  This also grabs the job ID so we can use it to
 		// spawn the starter with the right args if needed...
 	claim->saveJobInfo( new_req_ad );
 
