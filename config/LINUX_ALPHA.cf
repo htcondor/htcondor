@@ -24,5 +24,13 @@
 /* For now, try a "clipped" version */
 #define IS_CLIPPED YES
 
+#if defined( IS_GLIBC )
+        /* this is a bit wonky here, but otherwise the i686 in the path below
+                becomes a ' 1 ' on glib machines with egcs. I don't think i686
+                is used for anything important, so away it goes. */
+#       undef i686
+#   define EgcsLibc /usr/local/lib/gcc-lib/alphaev5-unknown-linux-gnu/2.95.2/libgcc.a
+#endif
+
 #undef HAS_PVM
 #define HAS_PVM NO
