@@ -14,14 +14,6 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-2-1}Version 6.2.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
 \noindent Bugs Fixed:
 
 \begin{itemize}
@@ -36,6 +28,19 @@ dash would be interpreted as if the dash were present, making it
 impossible to specify ``pool'' or ``globus'' or ``run'' as an owner
 argument.
 
+\item Fixed bug in \Condor{submit} that would cause certain submit
+file directives to be silently ignored if you used the wrong attribute
+name.  
+Now, all submit file attributes can use the same names you see in the
+job ClassAd (what you'd see with \begin{verbatim}condor\_q
+-long\end{verbatim}).
+For example, you can now use \begin{verbatim}CoreSize =
+0\end{verbatim} or \begin{verbatim}core_size = 0\end{verbatim} in your 
+submit file, and either one would be recognized.
+
+\item Fixed some of the error messages in \Condor{submit} so that they
+are all consistently formatted.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -45,7 +50,6 @@ argument.
 \item None.
 
 \end{itemize}
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -92,6 +96,12 @@ of the system.
 
 \item Added a \Condor{glidein} man page to the manual.
 
+\item Some of the log messages in the \Condor{startd} were modified to
+be more clear and to provide more information.
+
+\item Added a new attribute to the \Condor{startd} ClassAd when the
+machine is claimed, \AdAttr{RemoteOwner}.
+
 \end{itemize}
 
 \noindent Bugs fixed since 6.1.17
@@ -106,6 +116,10 @@ servicing jobs. This has been fixed.
 \item When doing a \Condor{hold} under NT, the job was removed instead of
 held. This has been fixed.
 
+\item When using the \Arg{-master} argument to\Condor{restart}, the
+\Condor{master} used to exit instead of restarting.
+Now, the \Condor{master} correctly restarts itself in this case.
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -116,4 +130,3 @@ held. This has been fixed.
 need to do this normally.
 
 \end{itemize}
-
