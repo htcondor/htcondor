@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.9 2004-06-25 00:23:40 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.10 2004-06-25 01:44:29 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -16,7 +16,12 @@
 ###### use the special c_die() method so we return 3!!!!        ######
 ######################################################################
 
-my $fulltestname = $ARGV[0] || c_die("Task name not passed as argument!\n");
+my $fulltestname = $ENV{_NMI_TASKNAME};
+if( ! $fulltestname ) {
+    # if we have no task, just return success immediately
+    print "No tasks specified, returning SUCCESS\n";
+    exit 0;
+}
 
 my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
 my $SrcDir = $ENV{SRC_DIR} || c_die("SRC_DIR is not in environment!\n");
@@ -70,7 +75,7 @@ if( $buildstatus != 0 ) {
 # run the test using batch_test.pl
 ######################################################################
 
-print "RUNNING $compiler/$testname\n";
+print "RUNNING $compiler.$testname\n";
 chdir("$SrcDir/$testdir") || c_die("Can't chdir($SrcDir/$testdir): $!\n");
 
 system( "make batch_test.pl" );
