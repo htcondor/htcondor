@@ -35,6 +35,7 @@ my %Config = (
 	     );
 my $Program = $0;
 my @DownList;
+my $CommandLine = join( " ", $0, @ARGV );
 foreach my $Arg ( @ARGV )
 {
     if ( $Arg =~ /^-ping$/ )
@@ -481,6 +482,7 @@ print ", $ReservedCount reserved" if ( $Config{DoReserved} );
 print ", " . ($#ClusterDown + 1) . " down" if ( $Config{DoClusterCheck} );
 print ", $ClusterAbsent absent";
 print "\n#   $AbsentCount hosts absent\n";
+print "\n# $CommandLine\n";
 
 # ******************************************************
 # Dump out usage
