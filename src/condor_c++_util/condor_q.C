@@ -120,7 +120,7 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 	if (ad == 0)
 	{
 		// local case
-		if (!(qmgr = ConnectQ (0)))
+		if (!(qmgr = ConnectQ (0,20,true)))
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 	else
@@ -129,7 +129,7 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
 			return Q_NO_SCHEDD_IP_ADDR;
 
-		if (!(qmgr = ConnectQ (scheddString)))
+		if (!(qmgr = ConnectQ (scheddString,20,true)))
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 
@@ -155,8 +155,14 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 	filterAd.SetMyTypeName ("Query");
 	filterAd.SetTargetTypeName ("Job");
 
-	// connect to the Q manager
-	if (!(qmgr = ConnectQ (host)))
+	/*
+	 connect to the Q manager.
+	 use a timeout of 20 seconds, and a read-only connection.
+	 why 20 seconds?  because careful research by Derek has shown
+	 that whenever one needs a periodic time value, 20 is always
+	 optimal.  :^).
+	*/
+	if (!(qmgr = ConnectQ (host,20,true)))
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them
