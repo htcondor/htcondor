@@ -98,7 +98,7 @@ get_env_val( const char *str )
     return answer;
 }
 
-void UserLog::
+bool UserLog::
 initialize( const char *file, int c, int p, int s )
 {
 	int 			fd;
@@ -122,19 +122,21 @@ initialize( const char *file, int c, int p, int s )
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
 		dprintf( D_ALWAYS, 
 			"UserLog::initialize: open(%s) failed - errno %d\n", path, errno );
-		return;
+		return false;
 	}
 
 		// attach it to stdio stream
 	if( (fp = fdopen(fd,"a")) == NULL ) {
 		dprintf( D_ALWAYS, 
 			"UserLog::initialize: fdopen(%i) failed - errno %d\n", fd, errno );
+		// should return here?
 	}
 #else
 	// Windows (Visual C++)
 	if( (fp = fopen(path,"a+tc")) == NULL ) {
 		dprintf( D_ALWAYS, 
 			"UserLog::initialize: fopen(%s) failed - errno %d\n", path, errno );
+		return false;
 	}
 
 	fd = _fileno(fp);
@@ -148,10 +150,10 @@ initialize( const char *file, int c, int p, int s )
 	// prepare to lock the file
 	lock = new FileLock( fd );
 
-	initialize(c, p, s);
+	return initialize(c, p, s);
 }
 
-void UserLog::
+bool UserLog::
 initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	priv_state		priv;
@@ -162,18 +164,21 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 	priv = set_user_priv();
 
 		// initialize log file
-	initialize(file,c,p,s);
+	bool res = initialize(file,c,p,s);
 
 		// get back to whatever UID and GID we started with
 	set_priv(priv);
+
+	return res;
 }
 
-void UserLog::
+bool UserLog::
 initialize( int c, int p, int s )
 {
 	cluster = c;
 	proc = p;
 	subproc = s;
+	return true;
 }
 
 UserLog::~UserLog()

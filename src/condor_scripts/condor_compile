@@ -4,6 +4,19 @@
 #	Copyright 1997 by the Condor Team, All Rights Reserved.
 #	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
 # --------------------------------------------------
+
+
+# First, make sure we can find condor_config_val.  If not, print 
+# out an error message so the user can fix the problem, instead of
+# having condor_compile fail in mysterious ways.
+CONDOR_LIBDIR=`condor_config_val LIB 2> /dev/null`
+if [ $? != 0 ]; then
+    echo "ERROR: Cannot execute condor_config_val"
+    echo "You must put the directory that contains condor_config_val"
+    echo "in your \$PATH for condor_compile to work."
+    exit 1
+fi
+
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be

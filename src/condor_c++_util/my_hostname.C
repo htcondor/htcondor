@@ -82,14 +82,14 @@ my_sin_addr()
 	return &sin_addr;
 }
 
-char *
+
+char*
 my_ip_string()
 {
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
-
-	return inet_ntoa(sin_addr);	
+	return inet_ntoa(sin_addr);
 }
 
 void

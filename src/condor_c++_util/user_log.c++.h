@@ -95,16 +95,18 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(const char *owner, const char *file, int c, int p, int s);
+    bool initialize(const char *owner, const char *file, int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(const char *file, int c, int p, int s);
+    bool initialize(const char *file, int c, int p, int s);
     
     /** Initialize the condorID, which will fill in the condorID
         for each ULogEvent passed to writeEvent().
@@ -112,8 +114,9 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(int c, int p, int s);
+    bool initialize(int c, int p, int s);
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
