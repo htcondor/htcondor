@@ -9,13 +9,13 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \\
+\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \oOptnm{ $|$ -all} \\
 }
 
 %% for checkpoint, off, on, reconfig, reschedule, restart and vacate
 \newcommand{\ToolWhere}{
 \Optnm{-pool centralmanagerhostname[:portnumber]}\\
-\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \\
+\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \oOptnm{ $|$ -all} \\
 }
 
 %% Alternative to locate the machines with which you want to mess.
@@ -65,6 +65,8 @@
 	to a machine's master located at \Arg{"\SinfulAny"}}
 \OptItem{\Opt{"\SinfulAny"}}{Send the command
 	to a machine located at \Opt{"\SinfulAny"}}
+\OptItem{\Opt{-all}}{Send the command
+	to all machines in the pool}
 }
 
 
