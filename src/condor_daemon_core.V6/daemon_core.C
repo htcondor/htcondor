@@ -5229,8 +5229,8 @@ int DaemonCore::Create_Process(
 
 			// Place inheritbuf into the environment as 
 			// env variable CONDOR_INHERIT
-		char	*env = strdup( EnvGetName( ENV_INHERIT ) );
-		if( !SetEnv( env, inheritbuf) ) {
+			// SetEnv makes a copy of everything.
+		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
 					EnvGetName( ENV_INHERIT ) );
 				// before we exit, make sure our parent knows something
