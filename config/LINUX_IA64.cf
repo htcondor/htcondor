@@ -1,13 +1,11 @@
 /* Things specific to IA64_LINUX machines (all versions) */
 
-
 /* Under SuSE linux, this must be yacc, but under Redhat linux, it must be
 	byacc */
 #undef YACC
 #define  YACC yacc
 
-/* XXX This is bad, bad, bad, bad, bad, bad, bad, bad, BAD! */
-#define	ArchOptimizeFlag -Wno-deprecated
+#define	ArchOptimizeFlag
 
 #define IS_CLIPPED YES
 
