@@ -418,12 +418,11 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #endif
 
 #if defined(Solaris)
-int
-ioctl( int fd, int request, ...)
+/* int
+ioctl( int fd, int request, ...) */
 #else
 int
 ioctl( int fd, int request, caddr_t arg )
-#endif
 {
 	switch( request ) {
 #if defined(SUNOS41)
@@ -440,6 +439,7 @@ ioctl( int fd, int request, caddr_t arg )
 		return -1;
 	}
 }
+#endif
 
 #if defined(AIX32)
 	char *
@@ -525,3 +525,28 @@ __write(int fd, char *buf, int size)
 {
 return write(fd,buf,size);
 }
+
+/* These are similar additions as above.  This problem cropped up for 
+   FORTRAN programs on Solaris 2.4.  -Jim B. */
+
+#if defined( SYS_write )
+_write( int fd, const void *buf, size_t len )
+{
+	return write(fd,buf,len);
+}
+#endif
+
+#if defined( SYS_read )
+_read( int fd, void *buf, size_t len )
+{
+	return read(fd,buf,len);
+}
+#endif
+
+#if defined( SYS_lseek )
+off_t
+_lseek( int fd, off_t offset, int whence )
+{
+	return lseek(fd,offset,whence);
+}
+#endif
