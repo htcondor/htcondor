@@ -639,8 +639,14 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
 
 					// Get rid of the current claim.
-				rip->dprintf( D_ALWAYS, 
-						 "State change: preempting claim based on machine rank\n" );
+				if( rank > rip->r_cur->rank() ) {
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on machine rank\n" );
+				} else {
+					ASSERT( rank == rip->r_cur->rank() );
+					rip->dprintf( D_ALWAYS, 
+					 "State change: preempting claim based on user priority\n" );
+				}
 				rip->release_claim();
 
 					// Tell daemon core not to do anything to the stream.
