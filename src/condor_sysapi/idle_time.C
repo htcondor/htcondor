@@ -565,7 +565,11 @@ dev_idle_time( char *path, time_t now )
 		for the access time no matter what. */
 
 	#if defined(Solaris28) || defined(Solaris29)
-		/* check to see if it is the special device I care about */
+	
+		/* if I happen not to be dealing with a console device, we better 
+			choose what the stat() answer would have been, so initialize this
+			to zero for force it when the MAX macro gets used */
+		kstat_answer = 0;
 
 		if (strstr(path, "kbd") != NULL)
 		{
