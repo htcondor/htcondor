@@ -2674,8 +2674,22 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 
 	for(;;) {
         if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
-            dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
-                                                            pid, errno );
+#if defined( GLIBC ) && defined( LINUX )
+				// For some weird reason, on GLIBC-LINUX, we get
+				// EAGAIN when there's nothing left to reap.
+			if( errno != EAGAIN ) {
+#else
+				// On every other platform, we're expecting waitpid()
+				// to return ECHILD.
+			if( errno != ECHILD ) {
+#endif
+					// If it's not what we expect, we want D_ALWAYS 
+				dprintf( D_ALWAYS, "waitpid() returned %d, errno = %d\n",
+						 pid, errno );
+			} else {
+				dprintf( D_FULLDEBUG, 
+						 "DaemonCore: No more children processes to reap.\n" ); 
+			}
             break;
         }
 		HandleProcessExit(pid, status);
@@ -2683,6 +2697,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	return TRUE;
 }
 #endif // of ifndef WIN32
+
 
 #ifdef WIN32
 // This function runs in a seperate thread and wathces over children
