@@ -309,6 +309,9 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
     _tprintf( _T("\nCall stack:\n") );    
 //	_tprintf( _T(_SymGetLineFromAddr ? "(Line number api available)\n" : "(Line number api not available)\n"));
 	_tprintf( _T("Address   Frame\n") );
+
+	SymSetOptions(SYMOPT_LOAD_LINES);
+
     // Could use SymSetOptions here to add the SYMOPT_DEFERRED_LOADS flag
     STACKFRAME sf;    
 	memset( &sf, 0, sizeof(sf) );
@@ -406,7 +409,7 @@ int __cdecl ExceptionHandler::_tprintf(const TCHAR * format, ...) {
 // Load IMAGEHLP.DLL and get the address of functions in it that we'll use 
 //=========================================================================
 BOOL ExceptionHandler::InitImagehlpFunctions( void ) {
-    HMODULE hModImagehlp = LoadLibrary( _T("IMAGEHLP.DLL") );
+    HMODULE hModImagehlp = LoadLibrary( _T("condor_IMAGEHLP.DLL") );
     if ( !hModImagehlp )        
 		return FALSE;
     _SymInitialize = (SYMINITIALIZEPROC)GetProcAddress( hModImagehlp,
