@@ -310,23 +310,7 @@ CleanJobQueue()
 {
 	if (JobQueueDirty) {
 		dprintf(D_ALWAYS, "Cleaning job queue...\n");
-		priv_state old_priv = set_condor_priv();  // Be sure we're Condor.
-		if( old_priv != PRIV_CONDOR ) {
-			dprintf( D_ALWAYS, 
-					 "ERROR: Entered CleanJobQueue() with priv state %d\n", 
-					 old_priv );
-			dprintf( D_ALWAYS, "History of priv-state changes:\n" );
-			display_priv_log();
-			char* tmp = param( "EXCEPT_ON_ERROR" );
-			if( tmp ) {
-				if( tmp[0] == 'T' || tmp[0] == 't' ) {
-					EXCEPT( "Priv-state error in CleanJobQueue()" );
-				}
-				free( tmp );
-			}
-		}
 		JobQueue->TruncLog();
-		set_priv( old_priv ); 					  // Return to normal.
 		JobQueueDirty = false;
 	} else {
 		dprintf(D_ALWAYS,
