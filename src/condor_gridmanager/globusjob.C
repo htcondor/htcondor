@@ -100,7 +100,8 @@ char *GMStateNames[] = {
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
-#define JM_MIN_PROXY_TIME		(minProxy_time + 60)
+// #define JM_MIN_PROXY_TIME		(minProxy_time + 60)
+#define JM_MIN_PROXY_TIME		(180 + 60)
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -1684,7 +1685,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				break;
 			}
 			now = time(NULL);
-			if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+			// if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+			if ( myProxy->expiration_time > (minProxy_time + 60) + now ) {
 				// resume handling the job.
 				gmState = GM_INIT;
 			} else {
