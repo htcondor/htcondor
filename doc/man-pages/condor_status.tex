@@ -79,6 +79,64 @@ options} may be specified.
 	\emph{not} the amount of time that the machine has been idle.  See the
 	section on \Condor{startd} states in the \emph{Administrator's Manual}
 	for more information.
+
+	\item When using \Condor{status} on a pool with SMP machines,
+	you can either provide the hostname, in which case you will
+	get back information about all virtual machines that are
+	represented on that host, or you can list specific virtual
+	machines by name.  
+	See the examples below for details.
+
+	\item If you specify hostnames, without domains, Condor will
+	automatically try to resolve those hostnames into fully
+	qualified hostnames for you.
+	This also works when specifying specific nodes of an SMP
+	machine.
+	In this case, everything after the ``@'' sign is treated as a
+	hostname and that is what is resolved.
 \end{itemize}
 
+\Examples
+
+\underline{Example 1} To view information from all nodes of an SMP
+machine, just use the hostname.
+For example, if you had a 4-CPU machine, named
+``vulture.cs.wisc.edu'', here's what you might see:
+\begin{verbatim}
+% condor_status vulture
+
+Name          OpSys       Arch   State      Activity   LoadAv Mem   ActvtyTime
+
+vm1@vulture.c SOLARIS26   INTEL  Owner      Idle       0.020  128   0+00:57:13
+vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
+vm3@vulture.c SOLARIS26   INTEL  Claimed    Busy       0.978  128   0+03:32:53
+vm4@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.001  128   0+02:21:07
+
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+     INTEL/SOLARIS26        4     0       4         0       0          0
+
+               Total        4     0       4         0       0          0
+\end{verbatim}
+
+\underline{Example 2} To view information from a specific nodes of an
+SMP machine, specify the node directly.
+You do this by providing the name of the \Term{virtual machine}.
+This has the form \texttt{vm\#@hostname}.
+For example:
+\begin{verbatim}
+% condor_status vm2@vulture
+
+Name          OpSys       Arch   State      Activity   LoadAv Mem   ActvtyTime
+
+vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
+
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+     INTEL/SOLARIS26        1     0       1         0       0          0
+
+               Total        1     0       1         0       0          0
+\end{verbatim}
+
 \end{ManPage}
+
