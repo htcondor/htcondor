@@ -142,10 +142,7 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
 		// finally, we can attempt to activate our claim.
-	if( remRes->activateClaim() ) {
-			// success, log an execute event
-		logExecuteEvent();
-	} else {
+	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
 	}
@@ -343,6 +340,17 @@ int
 UniShadow::exitCode( void )
 {
 	return remRes->exitCode();
+}
+
+
+void
+UniShadow::resourceBeganExecution( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+		// We've only got one remote resource, so if it's started
+		// executing, we can safely log our execute event
+	logExecuteEvent();
 }
 
 
