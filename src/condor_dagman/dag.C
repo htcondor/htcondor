@@ -665,7 +665,14 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-		ASSERT( job->GetStatus() == Job::STATUS_POSTRUN );
+			// Note: "|| recovery" below is somewhat of a "quick and dirty"
+			// fix to Gnats PR 357.  The first part of the assert can fail
+			// in recovery mode because if any retries of a node failed
+			// because the post script failed, they don't show up in the
+			// user log.  Therefore, condor_dagman doesn't know abou them,
+			// and can think the post script was run before all retries
+			// were exhausted.  wenger 2004-11-23.
+		ASSERT( job->GetStatus() == Job::STATUS_POSTRUN || recovery );
 
 		PostScriptTerminatedEvent *termEvent =
 			(PostScriptTerminatedEvent*) event;
