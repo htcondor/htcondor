@@ -43,7 +43,7 @@
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "condor_state.h"
-
+#include "sig_install.h"
 State get_machine_state();
 
 
