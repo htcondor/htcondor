@@ -68,11 +68,38 @@ begins processing the next message.
 
 The Sock class defines an interface for connection establishment.
 This interface is implemented with TCP in the ReliSock class and with
-UDP in the SafeSock class.  ReliSock and SafeSock are the only Cedar
-classes which should be instantiated; however, pointers to the Stream
-base class are often used at points in the application where it is not
-important if the underlying medium is TCP or UDP (for example, in a
-daemon which handles the same commands over both TCP and UDP).
+UDP in the SafeSock class.  The ReliSock class also includes listen()
+and accept() methods.  The following example shows ReliSock connection
+establishment in action:
+
+	/* Process A */			/* Process B */
+	ReliSock ls;
+	ls.listen(port);		ReliSock s;
+	ReliSock *s = ls.accept();	s.connect(hostname, port);
+	handshake(s);			handshake(&s);
+	delete s;
+
+The following example shows SafeSock connection establishment in
+action:
+
+	/* Process A */			/* Process B */
+	SafeSock s;			SafeSock s;
+	s.bind(port);			s.connect(hostname, port);
+	handshake(&s);			handshake(&s);
+
+The SafeSock object remembers the address of the sender of the last
+message received, so after receiving a message, the process can
+immediately encode a reply to the sender.  In other words, a two-way
+connection is established between the SafeSocks.  Unlike ReliSock,
+SafeSock does not guarantee reliable, in-order delivery of messages,
+and messages from different senders may be interleaved (on message
+boundaries) at the receiver.
+
+ReliSock and SafeSock are the only Cedar classes which should be
+instantiated; however, pointers to the Stream base class are often
+used at points in the application where it is not important if the
+underlying medium is TCP or UDP (for example, in a daemon which
+handles the same commands over both TCP and UDP).
 
 Further details of the Cedar C++ interface can be found in the header
 files for these classes.
