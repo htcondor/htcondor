@@ -204,7 +204,8 @@ char	*pattern;
 	char	*tmp;
 
 		/* Look up the parameter and break its value into an argv */
-	tmp = strdup( param(parameter) );
+	/* tmp = strdup( param(parameter) ); */
+	tmp = param(parameter);
 	mkargv( &argc, argv, tmp );
 
 		/* Search for the given pattern */

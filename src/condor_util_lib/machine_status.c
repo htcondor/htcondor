@@ -132,6 +132,7 @@ int		mode;
 	if( fd < 0 &&  (flags & O_CREAT) == O_CREAT ) {
 		EXCEPT( "open(%s,0%o,0%o)", name, flags, mode );
 	}
+	free( name );
 
 	return fd;
 }

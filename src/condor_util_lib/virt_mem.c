@@ -123,59 +123,57 @@ calc_virt_memory()
         static char errstr [] = "virt_mem.c";
         struct nlist nl[2];
         struct anoninfo a_info;
-        kvm_t *kd;
+        static kvm_t *kd = (kvm_t *)NULL;
         int result, vm_free;
+
+			/* Operate as root to read /dev/kmem */
+		set_root_euid();
 
         /*
          * First time in this call, get the offset to the anon structure.
          * and page to kbyte conversion.
          */
         if ( !initialized ) {
-                initialized = 1;
                 namelist = corefile = swapfile = (char *) NULL;
                 nl [0].n_name = s_anon;
                 nl [1].n_name = (char *) NULL;
-                set_root_euid();
                 kd = kvm_open (namelist, corefile, swapfile, O_RDONLY, errstr);
                 if ( kd == (kvm_t *) NULL) {
-                    dprintf (D_ALWAYS, "Open failure on kernel. First call\n");
                     set_condor_euid();
+                    dprintf (D_ALWAYS, "Open failure on kernel. First call\n");
                     return (-1);
                 }
                 if (kvm_nlist (kd, nl) != 0) {
+						(void)kvm_close( kd );
+						kd = (kvm_t *)NULL;
+                        set_condor_euid();
                         dprintf (D_ALWAYS, "kvm_nlist failed. First call.\n");
-                        set_condor_euid();
-                        return (-1);
-                }
-                if (kvm_close (kd) != 0) {
-                        dprintf (D_ALWAYS, "kvm_close failure. First call.\n");
-                        set_condor_euid();
                         return (-1);
                 }
                 offset = nl[0].n_value;
                 page_to_k = getpagesize () / 1024;
+                initialized = 1;
         }
-        set_root_euid();
-        kd = kvm_open (namelist, corefile, swapfile, O_RDONLY, errstr);
-        if ( kd == (kvm_t *) NULL) {
-                dprintf (D_ALWAYS, "Open failure on kernel.\n");
-                set_condor_euid();
-                return (-1);
-        }
+		if( !kd ) {
+			kd = kvm_open (namelist, corefile, swapfile, O_RDONLY, errstr);
+			if ( kd == (kvm_t *) NULL) {
+					set_condor_euid();
+					dprintf (D_ALWAYS, "Open failure on kernel.\n");
+					return (-1);
+			}
+		}
         result = kvm_read (kd, offset, &a_info, sizeof (a_info));
         if (result != sizeof (a_info)) {
-                dprintf (D_ALWAYS, "kvm_read error.\n");
+				kvm_close( kd );
+				kd = (kvm_t *)NULL;
                 set_condor_euid();
+                dprintf (D_ALWAYS, "kvm_read error.\n");
                 return (-1);
         }
-        if (kvm_close (kd) != 0) {
-                dprintf (D_ALWAYS, "kvm_close failure.\n");
-                set_condor_euid ();
-                return (-1);
-        }
-        set_condor_euid ();
         vm_free = (int) (a_info.ani_max - a_info.ani_resv);
         vm_free *= page_to_k;
+
+        set_condor_euid ();
         return (vm_free);
 }
 #endif /* SunOS4.0 and SunOS4.1 code */

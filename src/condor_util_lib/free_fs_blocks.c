@@ -98,6 +98,9 @@ reserve_for_afs_cache()
 		} else {
 			do_it = FALSE;
 		}
+		if( str ) {
+			free( str );
+		}
 	}
 
 		/* If we're not configured to deal with AFS cache, just return 0 */
@@ -143,6 +146,7 @@ reserve_for_fs()
 		str = param( "RESERVED_DISK" );
 		if( str ) {
 			answer = atoi( str ) * 1024;	/* Parameter is in meg */
+			free( str );
 		}
 		if( answer < 0 ) {
 			answer = 0;
