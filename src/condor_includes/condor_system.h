@@ -67,7 +67,7 @@
 #elif defined(AIX)
 #	include "condor_sys_aix.h"
 #else
-#   error "Don't know what Unix this is!"
+#   error "condor_system.h: Don't know what Unix this is!"
 #endif
 
 
