@@ -19,7 +19,7 @@ The details of each version are described below.
 \item Most of the fixes included in this release were also included in
   version 6.7.3.
   However, at the end of this section, a few fixes there were added to
-  6.6.8 after 6.7.3 was released are mentioned seperately.
+  6.6.8 after 6.7.3 was released are mentioned separately.
 
 \end{itemize}
 
@@ -36,9 +36,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item In version 6.6.7, we fixed a number of bugs related to the
+\item In version 6.6.7, we fixed bugs related to the
   \Opt{-format} option to various Condor tools.
-  However, some sites were using \Opt{-format} in ways we didn't
+  However, some sites were using \Opt{-format} in ways we did not
   expect, by not specifying any '%' conversion string in the format
   string at all.
   This used to work, given the old buggy code that handled
@@ -97,14 +97,14 @@ to detect invalid executables and prevent wedging.
 \end{itemize}
 
 \item Starting with RedHat 9, newer versions of Linux began to produce
-  core files named ``core.<pid>''.
+  core files named \File{core.<pid>}.
   This broke functionality in Condor that managed and transfered back
   any core file created by the job, since the \Condor{starter} was
   unable to locate the proper file.
   Now, Condor will correctly transfer back core files, even if they
-  are created as ``core.<pid>''.
-  This functionality works in all universes, and regardless of if
-  Condor's file transfer mechanism is in use or not.
+  are created as \File{core.<pid>}.
+  This functionality works in all universes, and is independent of
+  Condor's file transfer mechanism.
 
 
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
@@ -169,22 +169,22 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
 
 \end{itemize}
 
-\noindent Bugs fixed that are not included in version 6.7.3
+\noindent Bugs fixed that are not included in version 6.7.3:
 
 \begin{itemize}
 
 \item Fixed a discrepancy in the \Macro{SUBSYS\_ADDRESS\_FILE}
   setting.
-  Previously, this setting did not work for SUBSYS values of
-  \verb@COLLECTOR@ or \verb@NEGOTIATOR@ (for example, defining
+  Previously, this setting did not work for \MacroNI{SUBSYS} values of
+  \ShortExpr{COLLECTOR} or \ShortExpr{NEGOTIATOR} (for example, defining
   \MacroNI{COLLECTOR\_ADDRESS\_FILE} had no effect).
-  Now, if either of these settings is defined in the config file, the
-  corresponding Condor daemon will write out the address and port it
-  is using to the specified file.
+  Now, if either of these is defined in the configuration file,
+  the corresponding Condor daemon will write out the address
+  and port it is using to the specified file.
   Normally, the \Condor{collector} and \Condor{negotiator} listen on a
   well-known, fixed port.
-  However, on single-machine ``personal Condor'' installations, these
-  address files allow all of the Condor daemons and tools to locate
+  However, on single-machine, Personal Condor installations,
+  these address files allow all of the Condor daemons and tools to locate
   the \Condor{collector} and \Condor{negotiator}, even if they are
   using a dynamically assigned port.
   For more information about the \MacroNI{SUBSYS\_ADDRESS\_FILE}
