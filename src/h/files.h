@@ -37,3 +37,5 @@
 #define CONFIG_TEST			"condor_config_t"
 #define LOCAL_CONFIG		"condor_config.local"
 #define LOCAL_CONFIG_TEST	"condor_config_t.local"
+#define MASTER_CONFIG		"condor_config.master"
+#define SERVER_CONFIG		"condor_config.fromserver"
