@@ -363,6 +363,8 @@ handle_q(Service *, int, Stream *sock)
 {
 	int	rval;
 
+	sock->end_of_message();
+
 	trans = new Transaction;
 	Q_SOCK = (ReliSock *)sock;
 
@@ -936,7 +938,7 @@ Job::SetAttribute(const char *name, char *value)
 		
 	Parse(tmp_expr, expr_tree);
 		
-	delete []tmp_expr;
+	delete tmp_expr;
 
 	ad->Insert(expr_tree);
 	return 0;
@@ -1073,7 +1075,6 @@ Job::NextAttributeName(char *attr_name)
 		return -1;
 	}
 	strcpy(attr_name, this_name);
-	delete [] this_name;
 	return 0;
 }
 
@@ -1551,6 +1552,7 @@ int get_job_prio(int cluster, int proc)
         return cur_hosts;
     }
 
+#ifdef 0
     prio = upDown_GetUserPriority(owner,&status); /* UPDOWN */
     if ( status  == Error )
     {
@@ -1562,18 +1564,27 @@ int get_job_prio(int cluster, int proc)
         prio = 0;
     }
 
-    PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].prio     = prio;
+#endif
+
+    PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
+
+#ifdef 0
     if ( DebugFlags & D_UPDOWN )
     {
+#endif
 		if ( PrioRec[N_PrioRecs].owner ) {
 			free( PrioRec[N_PrioRecs].owner );
 		}
         PrioRec[N_PrioRecs].owner = strdup( owner );
+
+#ifdef 0
     }
+#endif
+
 	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
 	if ( N_PrioRecs == MAX_PRIO_REC ) {
@@ -1605,6 +1616,8 @@ all_job_prio(int cluster, int proc)
     owner = own_buf;
     job_id.cluster = cluster;
     job_id.proc = proc;
+
+#ifdef 0
     prio = upDown_GetUserPriority(owner, &status);
     if ( status == Error ) {
         dprintf( D_ALWAYS,
@@ -1612,8 +1625,10 @@ all_job_prio(int cluster, int proc)
                 owner );
         prio = 0;
     }
-    PrioRec[N_PrioRecs].id = job_id;
     PrioRec[N_PrioRecs].prio = prio;
+#endif
+
+    PrioRec[N_PrioRecs].id = job_id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status = job_status;
     PrioRec[N_PrioRecs].qdate = job_q_date;
