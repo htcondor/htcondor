@@ -17,7 +17,7 @@
 #include "condor_ast.h"
 #include "condor_scanner.h"
 
-const int TABLESIZE = 20;
+const int PARSER_TABLESIZE = 20;
 
 static	Token*	nextToken = NULL;
 static	int		alreadyRead;
@@ -542,4 +542,9 @@ int Parse(const char* s, ExprTree*& tree)
 	delete nextToken;
 	delete str;
     return count;
+}
+
+int Parse(char* s, ExprTree*& tree)
+{
+	return Parse((const char *)s, tree);
 }
