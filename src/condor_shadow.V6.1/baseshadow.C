@@ -265,17 +265,8 @@ BaseShadow::shutDown( int reason )
 		return;
 	}
 
-	if( reason == JOB_KILLED ) {
-			/*
-			  We're shutting down b/c of condor_rm or condor_hold.  we
-			  do *NOT* want to evaluate the user job policy exprs,
-			  send email, etc, etc, we just want to do some basic
-			  cleanup and exit.  Just call our abortJob(), which will
-			  eventually call DC_Exit() for us.
-			*/
-		abortJob(); 
-	}
-
+		// Only if the job is trying to leave the queue should we
+		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
 			// This will not return.  it'll take all desired actions
 			// and will eventually call DC_Exit()...
@@ -283,8 +274,8 @@ BaseShadow::shutDown( int reason )
 	}
 
 		// if we aren't trying to evaluate the user's policy, we just
-		// want to terminate this job.
-	terminateJob( reason );
+		// want to evict this job.
+	evictJob( reason );
 }
 
 
@@ -364,7 +355,7 @@ BaseShadow::removeJob( const char* reason )
 
 
 void
-BaseShadow::terminateJob( int exit_reason )
+BaseShadow::terminateJob( void )
 {
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
@@ -374,11 +365,7 @@ BaseShadow::terminateJob( int exit_reason )
 	cleanUp();
 
 	int reason;
-	if( exit_reason < 0 ) {
-		reason = getExitReason();
-	} else {
-		reason = exit_reason;
-	}
+	reason = getExitReason();
 
 		// email the user
 	emailTerminateEvent( reason );
@@ -390,6 +377,36 @@ BaseShadow::terminateJob( int exit_reason )
 		// attributes so we know what happened to the job when using
 		// condor_history...
 	if( !updateJobInQueue(U_TERMINATE) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+		// does not return.
+	DC_Exit( reason );
+}
+
+
+void
+BaseShadow::evictJob( int reason )
+{
+	dprintf( D_ALWAYS, "Job %d.%d is being evicted\n",
+			 getCluster(), getProc() );
+
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In evictJob() w/ NULL JobAd!" );
+		DC_Exit( reason );
+	}
+
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+		// write stuff to user log:
+	logEvictEvent( reason );
+
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
+	if( !updateJobInQueue(U_EVICT) ) {
 			// trouble!  TODO: should we do anything else?
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
@@ -435,31 +452,6 @@ BaseShadow::requeueJob( const char* reason )
 
 		// does not return.
 	DC_Exit( JOB_SHOULD_REQUEUE );
-}
-
-
-void
-BaseShadow::abortJob( void )
-{
-	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In abortJob() w/ NULL JobAd!" );
-		DC_Exit( JOB_KILLED );
-	}
-
-	dprintf( D_ALWAYS, 
-			 "Job %d.%d is being aborted at the user's request\n",
-			 getCluster(), getProc() );
-
-		// cleanup this shadow (kill starters, etc)
-	cleanUp();
-
-	if( !updateJobInQueue(U_ABORT) ) {
-			// trouble!  TODO: should we do anything else?
-		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
-	}
-
-		// does not return.
-	DC_Exit( JOB_KILLED );
 }
 
 
@@ -603,6 +595,55 @@ void BaseShadow::initUserLog()
 void
 BaseShadow::logTerminateEvent( int exitReason )
 {
+	if( !(exitReason == JOB_EXITED)||(exitReason == JOB_COREDUMPED) ) {
+		EXCEPT( "logTerminateEvent called with %d reason!", 
+				exitReason );  
+	}
+
+	struct rusage run_remote_rusage;
+	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+
+	run_remote_rusage = getRUsage();
+	
+	JobTerminatedEvent event;
+	if( exitedBySignal() ) {
+		event.normal = false;
+		event.signalNumber = exitSignal();
+	} else {
+		event.normal = true;
+		event.returnValue = exitCode();
+	}
+	
+		// TODO: fill in local/total rusage
+		// event.run_local_rusage = r;
+	event.run_remote_rusage = run_remote_rusage;
+		// event.total_local_rusage = r;
+	event.total_remote_rusage = run_remote_rusage;
+	
+		/*
+		  we want to log the events from the perspective of the user
+		  job, so if the shadow *sent* the bytes, then that means the
+		  user job *received* the bytes
+		*/
+	event.recvd_bytes = bytesSent();
+	event.sent_bytes = bytesReceived();
+
+		// TODO: total sent and recvd
+	event.total_recvd_bytes = bytesSent();
+	event.total_sent_bytes = bytesReceived();
+	
+		// TODO: deal w/ coredump and corefile name
+	
+	if (!uLog.writeEvent (&event)) {
+		dprintf (D_ALWAYS,"Unable to log "
+				 "ULOG_JOB_TERMINATED event\n");
+	}
+}
+
+
+void
+BaseShadow::logEvictEvent( int exitReason )
+{
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
 
@@ -611,67 +652,35 @@ BaseShadow::logTerminateEvent( int exitReason )
 	switch( exitReason ) {
 	case JOB_CKPTED:
 	case JOB_NOT_CKPTED:
-			// A vacate was performed on the resource, and the job
-			// was thrown off either with or without a checkpoint.
-		{
-			JobEvictedEvent event;
-			event.checkpointed = (exitReason == JOB_CKPTED);
-			
-				// TODO: fill in local rusage
-				// event.run_local_rusage = ???
-			
-				// remote rusage
-			event.run_remote_rusage = run_remote_rusage;
-			
-				// we want to log the events from the perspective of the
-				// user job, so if the shadow *sent* the bytes, then that
-				// means the user job *received* the bytes
-			event.recvd_bytes = bytesSent();
-			event.sent_bytes = bytesReceived();
-			
-			if (!uLog.writeEvent (&event)) {
-				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
-			}
-		}
+	case JOB_KILLED:
 		break;
+	default:
+		dprintf( D_ALWAYS, 
+				 "logEvictEvent with unknown reason (%d), aborting",
+				 exitReason ); 
+		return;
+	}
 
-	case JOB_EXITED:	
-			// Job exited on its own, normally or abnormally
-		{
-			JobTerminatedEvent event;
-			if( exitedBySignal() ) {
-				event.normal = false;
-				event.signalNumber = exitSignal();
-			} else {
-				event.normal = true;
-				event.returnValue = exitCode();
-			}
+	JobEvictedEvent event;
+	event.checkpointed = (exitReason == JOB_CKPTED);
+	
+		// TODO: fill in local rusage
+		// event.run_local_rusage = ???
 			
-				// TODO: fill in local/total rusage
-				// event.run_local_rusage = r;
-			event.run_remote_rusage = run_remote_rusage;
-				// event.total_local_rusage = r;
-			event.total_remote_rusage = run_remote_rusage;
-
-			/* we want to log the events from the perspective 
-			   of the user job, so if the shadow *sent* the 
-			   bytes, then that means the user job *received* 
-			   the bytes */
-			event.recvd_bytes = bytesSent();
-			event.sent_bytes = bytesReceived();
-				// TODO: total sent and recvd
-			event.total_recvd_bytes = bytesSent();
-			event.total_sent_bytes = bytesReceived();
-			
-				// TODO: deal w/ coredump and corefile name
-
-			if (!uLog.writeEvent (&event)) {
-				dprintf (D_ALWAYS,"Unable to log "
-						 "ULOG_JOB_TERMINATED event\n");
-			}
-		}
-		break;	
-	}	// end of switch
+		// remote rusage
+	event.run_remote_rusage = run_remote_rusage;
+	
+		/*
+		  we want to log the events from the perspective of the user
+		  job, so if the shadow *sent* the bytes, then that means the
+		  user job *received* the bytes
+		*/
+	event.recvd_bytes = bytesSent();
+	event.sent_bytes = bytesReceived();
+	
+	if (!uLog.writeEvent (&event)) {
+		dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
+	}
 }
 
 
@@ -806,7 +815,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		job_queue_attrs = terminate_job_queue_attrs;
 		final_update = true;
 		break;
-	case U_ABORT:
+	case U_EVICT:
 			// No special attributes needed...
 		break;
 	case U_PERIODIC:
