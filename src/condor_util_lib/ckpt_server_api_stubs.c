@@ -35,9 +35,22 @@
    server.
 */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 typedef unsigned long int u_lint;
-typedef unsigned short u_short;
 typedef int service_type;
+
+int FileExists(const char *filename, const char *owner)
+{
+	struct stat file_stat;
+	
+	if (stat(filename, &file_stat) == 0)
+		return TRUE;
+	else
+		return FALSE;
+}
+
 
 int RequestRestore(const char*     owner,
 				   const char*     filename,
