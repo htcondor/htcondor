@@ -1,12 +1,10 @@
 # Microsoft Developer Studio Generated NMAKE File, Based on condor_util_lib.dsp
 !IF "$(CFG)" == ""
 CFG=condor_util_lib - Win32 Debug
-!MESSAGE No configuration specified. Defaulting to condor_util_lib - Win32\
- Debug.
+!MESSAGE No configuration specified. Defaulting to condor_util_lib - Win32 Debug.
 !ENDIF 
 
-!IF "$(CFG)" != "condor_util_lib - Win32 Release" && "$(CFG)" !=\
- "condor_util_lib - Win32 Debug"
+!IF "$(CFG)" != "condor_util_lib - Win32 Release" && "$(CFG)" != "condor_util_lib - Win32 Debug"
 !MESSAGE Invalid configuration "$(CFG)" specified.
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
@@ -15,10 +13,8 @@ CFG=condor_util_lib - Win32 Debug
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_util_lib - Win32 Release" (based on\
- "Win32 (x86) Static Library")
-!MESSAGE "condor_util_lib - Win32 Debug" (based on\
- "Win32 (x86) Static Library")
+!MESSAGE "condor_util_lib - Win32 Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "condor_util_lib - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 !ERROR An invalid configuration is specified.
 !ENDIF 
@@ -37,15 +33,8 @@ INTDIR=.\..\src\condor_util_lib
 OutDir=.\..\src\condor_util_lib
 # End Custom Macros
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "$(OUTDIR)\condor_util.lib"
 
-!ELSE 
-
-ALL : "$(OUTDIR)\condor_util.lib"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\basename.obj"
@@ -53,9 +42,10 @@ CLEAN :
 	-@erase "$(INTDIR)\ckpt_name.obj"
 	-@erase "$(INTDIR)\condor_common.obj"
 	-@erase "$(INTDIR)\condor_common.pch"
-	-@erase "$(INTDIR)\condor_errlst.obj"
 	-@erase "$(INTDIR)\cronos.obj"
+	-@erase "$(INTDIR)\d_format_time.obj"
 	-@erase "$(INTDIR)\dprintf.obj"
+	-@erase "$(INTDIR)\dprintf_common.obj"
 	-@erase "$(INTDIR)\dprintf_config.obj"
 	-@erase "$(INTDIR)\email.obj"
 	-@erase "$(INTDIR)\email_file.obj"
@@ -72,50 +62,46 @@ CLEAN :
 	-@erase "$(INTDIR)\setsyscalls.obj"
 	-@erase "$(INTDIR)\signames.obj"
 	-@erase "$(INTDIR)\strcmp_until.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_util.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
- "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\"\
- /Fd"$(INTDIR)\\" /FD /c 
-CPP_OBJS=..\src\condor_util_lib/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_util_lib.bsc" 
 BSC32_SBRS= \
@@ -127,9 +113,10 @@ LIB32_OBJS= \
 	"$(INTDIR)\blankline.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
 	"$(INTDIR)\condor_common.obj" \
-	"$(INTDIR)\condor_errlst.obj" \
 	"$(INTDIR)\cronos.obj" \
+	"$(INTDIR)\d_format_time.obj" \
 	"$(INTDIR)\dprintf.obj" \
+	"$(INTDIR)\dprintf_common.obj" \
 	"$(INTDIR)\dprintf_config.obj" \
 	"$(INTDIR)\email.obj" \
 	"$(INTDIR)\email_file.obj" \
@@ -160,15 +147,8 @@ INTDIR=.\..\src\condor_util_lib
 OutDir=.\..\src\condor_util_lib
 # End Custom Macros
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "$(OUTDIR)\condor_util.lib"
 
-!ELSE 
-
-ALL : "$(OUTDIR)\condor_util.lib"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\basename.obj"
@@ -176,9 +156,10 @@ CLEAN :
 	-@erase "$(INTDIR)\ckpt_name.obj"
 	-@erase "$(INTDIR)\condor_common.obj"
 	-@erase "$(INTDIR)\condor_common.pch"
-	-@erase "$(INTDIR)\condor_errlst.obj"
 	-@erase "$(INTDIR)\cronos.obj"
+	-@erase "$(INTDIR)\d_format_time.obj"
 	-@erase "$(INTDIR)\dprintf.obj"
+	-@erase "$(INTDIR)\dprintf_common.obj"
 	-@erase "$(INTDIR)\dprintf_config.obj"
 	-@erase "$(INTDIR)\email.obj"
 	-@erase "$(INTDIR)\email_file.obj"
@@ -195,50 +176,46 @@ CLEAN :
 	-@erase "$(INTDIR)\setsyscalls.obj"
 	-@erase "$(INTDIR)\signames.obj"
 	-@erase "$(INTDIR)\strcmp_until.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_util.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
- /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\"\
- /Fd"$(INTDIR)\\" /FD /c 
-CPP_OBJS=..\src\condor_util_lib/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_util_lib.bsc" 
 BSC32_SBRS= \
@@ -250,9 +227,10 @@ LIB32_OBJS= \
 	"$(INTDIR)\blankline.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
 	"$(INTDIR)\condor_common.obj" \
-	"$(INTDIR)\condor_errlst.obj" \
 	"$(INTDIR)\cronos.obj" \
+	"$(INTDIR)\d_format_time.obj" \
 	"$(INTDIR)\dprintf.obj" \
+	"$(INTDIR)\dprintf_common.obj" \
 	"$(INTDIR)\dprintf_config.obj" \
 	"$(INTDIR)\email.obj" \
 	"$(INTDIR)\email_file.obj" \
@@ -278,137 +256,41 @@ LIB32_OBJS= \
 !ENDIF 
 
 
-!IF "$(CFG)" == "condor_util_lib - Win32 Release" || "$(CFG)" ==\
- "condor_util_lib - Win32 Debug"
+!IF "$(NO_EXTERNAL_DEPS)" != "1"
+!IF EXISTS("condor_util_lib.dep")
+!INCLUDE "condor_util_lib.dep"
+!ELSE 
+!MESSAGE Warning: cannot find "condor_util_lib.dep"
+!ENDIF 
+!ENDIF 
+
+
+!IF "$(CFG)" == "condor_util_lib - Win32 Release" || "$(CFG)" == "condor_util_lib - Win32 Debug"
 SOURCE=..\src\condor_util_lib\basename.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_BASEN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\basename.obj" : $(SOURCE) $(DEP_CPP_BASEN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\basename.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_BASEN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\basename.obj" : $(SOURCE) $(DEP_CPP_BASEN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\blankline.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_BLANK=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\blankline.obj" : $(SOURCE) $(DEP_CPP_BLANK) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\blankline.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_BLANK=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\blankline.obj" : $(SOURCE) $(DEP_CPP_BLANK) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\ckpt_name.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_CKPT_=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	
-
-"$(INTDIR)\ckpt_name.obj" : $(SOURCE) $(DEP_CPP_CKPT_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\ckpt_name.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_CKPT_=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	
-
-"$(INTDIR)\ckpt_name.obj" : $(SOURCE) $(DEP_CPP_CKPT_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\condor_common.C
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-DEP_CPP_CONDO=\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"$(INTDIR)\condor_common.pch" /Yc"condor_common.h" /Fo"$(INTDIR)\\"\
- /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yc"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\condor_common.obj"	"$(INTDIR)\condor_common.pch" : $(SOURCE)\
- $(DEP_CPP_CONDO) "$(INTDIR)"
+"$(INTDIR)\condor_common.obj"	"$(INTDIR)\condor_common.pch" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -416,314 +298,65 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-DEP_CPP_CONDO=\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_macros.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_system.h"\
-	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
- "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
- "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yc"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yc"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\condor_common.obj"	"$(INTDIR)\condor_common.pch" : $(SOURCE)\
- $(DEP_CPP_CONDO) "$(INTDIR)"
+"$(INTDIR)\condor_common.obj"	"$(INTDIR)\condor_common.pch" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
-
-
-!ENDIF 
-
-SOURCE=..\src\condor_util_lib\condor_errlst.c
-
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_CONDOR=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\condor_errlst.obj" : $(SOURCE) $(DEP_CPP_CONDOR) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_CONDOR=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\condor_errlst.obj" : $(SOURCE) $(DEP_CPP_CONDOR) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 !ENDIF 
 
 SOURCE=..\src\condor_util_lib\cronos.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_CRONO=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\cronos.obj" : $(SOURCE) $(DEP_CPP_CRONO) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\cronos.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+SOURCE=..\src\condor_util_lib\d_format_time.c
 
-DEP_CPP_CRONO=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\cronos.obj" : $(SOURCE) $(DEP_CPP_CRONO) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\d_format_time.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\dprintf.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_DPRIN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\h\clib.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\except.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\syscall_numbers.h"\
-	
-
-"$(INTDIR)\dprintf.obj" : $(SOURCE) $(DEP_CPP_DPRIN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\dprintf.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
+SOURCE=..\src\condor_util_lib\dprintf_common.c
 
-DEP_CPP_DPRIN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\h\clib.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\except.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\syscall_numbers.h"\
-	
-
-"$(INTDIR)\dprintf.obj" : $(SOURCE) $(DEP_CPP_DPRIN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\dprintf_common.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\dprintf_config.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_DPRINT=\
-	"..\src\condor_includes\basename.h"\
-	"..\src\condor_includes\condor_ckpt_name.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_getmnt.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_status.h"\
-	"..\src\condor_includes\condor_string.h"\
-	"..\src\h\clib.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\condor_types.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\except.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\syscall_numbers.h"\
-	"..\src\h\util_lib_proto.h"\
-	
-
-"$(INTDIR)\dprintf_config.obj" : $(SOURCE) $(DEP_CPP_DPRINT) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\dprintf_config.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_DPRINT=\
-	"..\src\condor_includes\basename.h"\
-	"..\src\condor_includes\condor_ckpt_name.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_getmnt.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_status.h"\
-	"..\src\condor_includes\condor_string.h"\
-	"..\src\h\clib.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\condor_types.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\except.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\syscall_numbers.h"\
-	"..\src\h\util_lib_proto.h"\
-	
-
-"$(INTDIR)\dprintf_config.obj" : $(SOURCE) $(DEP_CPP_DPRINT) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\email.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_EMAIL=\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\email.obj" : $(SOURCE) $(DEP_CPP_EMAIL) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\email.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_EMAIL=\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\email.obj" : $(SOURCE) $(DEP_CPP_EMAIL) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\email_file.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_EMAIL_=\
-	"..\src\condor_includes\basename.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\email_file.obj" : $(SOURCE) $(DEP_CPP_EMAIL_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\email_file.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_EMAIL_=\
-	"..\src\condor_includes\basename.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_email.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\debug.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\email_file.obj" : $(SOURCE) $(DEP_CPP_EMAIL_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\escapes.c
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-DEP_CPP_ESCAP=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\"\
- /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\escapes.obj" : $(SOURCE) $(DEP_CPP_ESCAP) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\escapes.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -731,20 +364,9 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-DEP_CPP_ESCAP=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
- "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
- "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\escapes.obj" : $(SOURCE) $(DEP_CPP_ESCAP) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\escapes.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -754,335 +376,63 @@ CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
 
 SOURCE=..\src\condor_util_lib\except.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_EXCEP=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\exit.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\syscall_numbers.h"\
-	
-
-"$(INTDIR)\except.obj" : $(SOURCE) $(DEP_CPP_EXCEP) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\except.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_EXCEP=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\condor_sys.h"\
-	"..\src\h\exit.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\syscall_numbers.h"\
-	
-
-"$(INTDIR)\except.obj" : $(SOURCE) $(DEP_CPP_EXCEP) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\fdprintf.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_FDPRI=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\fdprintf.obj" : $(SOURCE) $(DEP_CPP_FDPRI) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\fdprintf.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_FDPRI=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\fdprintf.obj" : $(SOURCE) $(DEP_CPP_FDPRI) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\get_random_num.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_GET_R=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\get_random_num.obj" : $(SOURCE) $(DEP_CPP_GET_R) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\get_random_num.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_GET_R=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\get_random_num.obj" : $(SOURCE) $(DEP_CPP_GET_R) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\internet.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_INTER=\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\except.h"\
-	"..\src\h\expr.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\internet.h"\
-	"..\src\h\proc.h"\
-	
-
-"$(INTDIR)\internet.obj" : $(SOURCE) $(DEP_CPP_INTER) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\internet.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_INTER=\
-	"..\src\condor_c++_util\my_hostname.h"\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\except.h"\
-	"..\src\h\expr.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	"..\src\h\internet.h"\
-	"..\src\h\proc.h"\
-	
-
-"$(INTDIR)\internet.obj" : $(SOURCE) $(DEP_CPP_INTER) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\lock_file.WIN32.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_LOCK_=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\lock_file.WIN32.obj" : $(SOURCE) $(DEP_CPP_LOCK_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\lock_file.WIN32.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_LOCK_=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\lock_file.WIN32.obj" : $(SOURCE) $(DEP_CPP_LOCK_) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\ltrunc.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_LTRUN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\ltrunc.obj" : $(SOURCE) $(DEP_CPP_LTRUN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\ltrunc.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_LTRUN=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\ltrunc.obj" : $(SOURCE) $(DEP_CPP_LTRUN) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\match_prefix.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_MATCH=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\match_prefix.obj" : $(SOURCE) $(DEP_CPP_MATCH) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\match_prefix.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_MATCH=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\match_prefix.obj" : $(SOURCE) $(DEP_CPP_MATCH) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\mkargv.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_MKARG=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\mkargv.obj" : $(SOURCE) $(DEP_CPP_MKARG) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\mkargv.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_MKARG=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\mkargv.obj" : $(SOURCE) $(DEP_CPP_MKARG) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\rotate_file.c
 
-!IF  "$(CFG)" == "condor_util_lib - Win32 Release"
-
-DEP_CPP_ROTAT=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\rotate_file.obj" : $(SOURCE) $(DEP_CPP_ROTAT) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\rotate_file.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
-
-DEP_CPP_ROTAT=\
-	"..\src\condor_includes\condor_constants.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
-	"..\src\h\file_lock.h"\
-	
-
-"$(INTDIR)\rotate_file.obj" : $(SOURCE) $(DEP_CPP_ROTAT) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_util_lib\setsyscalls.c
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
 "$(INTDIR)\setsyscalls.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1092,9 +442,7 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
- "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
- "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
 "$(INTDIR)\setsyscalls.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1108,9 +456,7 @@ SOURCE=..\src\condor_util_lib\signames.c
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
 "$(INTDIR)\signames.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1120,9 +466,7 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
- "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
- "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
 "$(INTDIR)\signames.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<
@@ -1136,13 +480,9 @@ SOURCE=..\src\condor_util_lib\strcmp_until.c
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\"\
- /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
-"$(INTDIR)\strcmp_until.obj" : $(SOURCE) "$(INTDIR)"\
- "$(INTDIR)\condor_common.pch"
+"$(INTDIR)\strcmp_until.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) @<<
   $(CPP_SWITCHES) $(SOURCE)
 <<
@@ -1150,9 +490,7 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes"\
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-CPP_SWITCHES=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I\
- "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D\
- "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
+CPP_SWITCHES=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /c 
 
 "$(INTDIR)\strcmp_until.obj" : $(SOURCE) "$(INTDIR)"
 	$(CPP) @<<

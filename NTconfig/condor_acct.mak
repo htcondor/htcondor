@@ -4,8 +4,7 @@ CFG=condor_acct - Win32 Debug
 !MESSAGE No configuration specified. Defaulting to condor_acct - Win32 Debug.
 !ENDIF 
 
-!IF "$(CFG)" != "condor_acct - Win32 Release" && "$(CFG)" !=\
- "condor_acct - Win32 Debug"
+!IF "$(CFG)" != "condor_acct - Win32 Release" && "$(CFG)" != "condor_acct - Win32 Debug"
 !MESSAGE Invalid configuration "$(CFG)" specified.
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
@@ -34,62 +33,51 @@ INTDIR=.\..\src\condor_accountant.V6
 OutDir=.\..\src\condor_accountant.V6
 # End Custom Macros
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "$(OUTDIR)\condor_acct.lib"
 
-!ELSE 
-
-ALL : "$(OUTDIR)\condor_acct.lib"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\Accountant.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_acct.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
- "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=..\src\condor_accountant.V6/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_acct.bsc" 
 BSC32_SBRS= \
@@ -112,62 +100,51 @@ INTDIR=.\..\src\condor_accountant.V6
 OutDir=.\..\src\condor_accountant.V6
 # End Custom Macros
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "$(OUTDIR)\condor_acct.lib"
 
-!ELSE 
-
-ALL : "$(OUTDIR)\condor_acct.lib"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\Accountant.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_acct.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
- /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=..\src\condor_accountant.V6/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_acct.bsc" 
 BSC32_SBRS= \
@@ -185,38 +162,19 @@ LIB32_OBJS= \
 !ENDIF 
 
 
-!IF "$(CFG)" == "condor_acct - Win32 Release" || "$(CFG)" ==\
- "condor_acct - Win32 Debug"
-SOURCE=..\src\condor_accountant.V6\Accountant.C
-DEP_CPP_ACCOU=\
-	"..\src\condor_c++_util\classad_hashtable.h"\
-	"..\src\condor_c++_util\classad_log.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\log.h"\
-	"..\src\condor_c++_util\log_transaction.h"\
-	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_includes\condor_accountant.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_config.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_expressions.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_state.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
+!IF "$(NO_EXTERNAL_DEPS)" != "1"
+!IF EXISTS("condor_acct.dep")
+!INCLUDE "condor_acct.dep"
+!ELSE 
+!MESSAGE Warning: cannot find "condor_acct.dep"
+!ENDIF 
+!ENDIF 
 
-"$(INTDIR)\Accountant.obj" : $(SOURCE) $(DEP_CPP_ACCOU) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+
+!IF "$(CFG)" == "condor_acct - Win32 Release" || "$(CFG)" == "condor_acct - Win32 Debug"
+SOURCE=..\src\condor_accountant.V6\Accountant.C
+
+"$(INTDIR)\Accountant.obj" : $(SOURCE) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

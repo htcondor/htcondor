@@ -1,12 +1,10 @@
 # Microsoft Developer Studio Generated NMAKE File, Based on condor_kbdd_dll.dsp
 !IF "$(CFG)" == ""
 CFG=condor_kbdd_dll - Win32 Debug
-!MESSAGE No configuration specified. Defaulting to condor_kbdd_dll - Win32\
- Debug.
+!MESSAGE No configuration specified. Defaulting to condor_kbdd_dll - Win32 Debug.
 !ENDIF 
 
-!IF "$(CFG)" != "condor_kbdd_dll - Win32 Release" && "$(CFG)" !=\
- "condor_kbdd_dll - Win32 Debug"
+!IF "$(CFG)" != "condor_kbdd_dll - Win32 Release" && "$(CFG)" != "condor_kbdd_dll - Win32 Debug"
 !MESSAGE Invalid configuration "$(CFG)" specified.
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
@@ -15,10 +13,8 @@ CFG=condor_kbdd_dll - Win32 Debug
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_kbdd_dll - Win32 Release" (based on\
- "Win32 (x86) Dynamic-Link Library")
-!MESSAGE "condor_kbdd_dll - Win32 Debug" (based on\
- "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "condor_kbdd_dll - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "condor_kbdd_dll - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 !ERROR An invalid configuration is specified.
 !ENDIF 
@@ -34,19 +30,12 @@ NULL=nul
 OUTDIR=.\Release
 INTDIR=.\Release
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "..\src\condor_kbdd\condor_kbdd_dll.dll"
 
-!ELSE 
-
-ALL : "..\src\condor_kbdd\condor_kbdd_dll.dll"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\NT-kbdd-dll.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_kbdd_dll.exp"
 	-@erase "$(OUTDIR)\condor_kbdd_dll.lib"
 	-@erase "..\src\condor_kbdd\condor_kbdd_dll.dll"
@@ -55,60 +44,51 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=.\Release/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
 MTL=midl.exe
-MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /o NUL /win32 
+MTL_PROJ=/nologo /D "NDEBUG" /mktyplib203 /o "NUL" /win32 
 RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_kbdd_dll.bsc" 
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib /nologo /subsystem:windows /dll /incremental:no\
- /pdb:"$(OUTDIR)\condor_kbdd_dll.pdb" /machine:I386\
- /out:"..\src\condor_kbdd/condor_kbdd_dll.dll"\
- /implib:"$(OUTDIR)\condor_kbdd_dll.lib" 
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /incremental:no /pdb:"$(OUTDIR)\condor_kbdd_dll.pdb" /machine:I386 /out:"..\src\condor_kbdd/condor_kbdd_dll.dll" /implib:"$(OUTDIR)\condor_kbdd_dll.lib" 
 LINK32_OBJS= \
 	"$(INTDIR)\NT-kbdd-dll.obj"
 
-"..\src\condor_kbdd\condor_kbdd_dll.dll" : "$(OUTDIR)" $(DEF_FILE)\
- $(LINK32_OBJS)
+"..\src\condor_kbdd\condor_kbdd_dll.dll" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
   $(LINK32_FLAGS) $(LINK32_OBJS)
 <<
@@ -121,19 +101,12 @@ INTDIR=.\..\src\condor_kbdd
 OutDir=.\..\src\condor_kbdd
 # End Custom Macros
 
-!IF "$(RECURSE)" == "0" 
-
 ALL : "$(OUTDIR)\condor_kbdd_dll.dll"
 
-!ELSE 
-
-ALL : "$(OUTDIR)\condor_kbdd_dll.dll"
-
-!ENDIF 
 
 CLEAN :
 	-@erase "$(INTDIR)\NT-kbdd-dll.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_kbdd_dll.dll"
 	-@erase "$(OUTDIR)\condor_kbdd_dll.exp"
 	-@erase "$(OUTDIR)\condor_kbdd_dll.lib"
@@ -142,55 +115,47 @@ CLEAN :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /D "WIN32" /D "_DEBUG" /D "_WINDOWS"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=..\src\condor_kbdd/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MDd /W3 /GX /O2 /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
 MTL=midl.exe
-MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /o NUL /win32 
+MTL_PROJ=/nologo /D "_DEBUG" /mktyplib203 /o "NUL" /win32 
 RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_kbdd_dll.bsc" 
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib\
- advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib\
- odbccp32.lib /nologo /subsystem:windows /dll /incremental:no\
- /pdb:"$(OUTDIR)\condor_kbdd_dll.pdb" /machine:I386\
- /out:"$(OUTDIR)\condor_kbdd_dll.dll" /implib:"$(OUTDIR)\condor_kbdd_dll.lib"\
- /pdbtype:sept 
+LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /dll /incremental:no /pdb:"$(OUTDIR)\condor_kbdd_dll.pdb" /machine:I386 /out:"$(OUTDIR)\condor_kbdd_dll.dll" /implib:"$(OUTDIR)\condor_kbdd_dll.lib" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\NT-kbdd-dll.obj"
 
@@ -202,8 +167,16 @@ LINK32_OBJS= \
 !ENDIF 
 
 
-!IF "$(CFG)" == "condor_kbdd_dll - Win32 Release" || "$(CFG)" ==\
- "condor_kbdd_dll - Win32 Debug"
+!IF "$(NO_EXTERNAL_DEPS)" != "1"
+!IF EXISTS("condor_kbdd_dll.dep")
+!INCLUDE "condor_kbdd_dll.dep"
+!ELSE 
+!MESSAGE Warning: cannot find "condor_kbdd_dll.dep"
+!ENDIF 
+!ENDIF 
+
+
+!IF "$(CFG)" == "condor_kbdd_dll - Win32 Release" || "$(CFG)" == "condor_kbdd_dll - Win32 Debug"
 SOURCE="..\src\condor_kbdd\NT-kbdd-dll.C"
 
 "$(INTDIR)\NT-kbdd-dll.obj" : $(SOURCE) "$(INTDIR)"

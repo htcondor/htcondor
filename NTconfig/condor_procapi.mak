@@ -1,12 +1,10 @@
 # Microsoft Developer Studio Generated NMAKE File, Based on condor_procapi.dsp
 !IF "$(CFG)" == ""
 CFG=condor_procapi - Win32 Debug
-!MESSAGE No configuration specified. Defaulting to condor_procapi - Win32\
- Debug.
+!MESSAGE No configuration specified. Defaulting to condor_procapi - Win32 Debug.
 !ENDIF 
 
-!IF "$(CFG)" != "condor_procapi - Win32 Release" && "$(CFG)" !=\
- "condor_procapi - Win32 Debug"
+!IF "$(CFG)" != "condor_procapi - Win32 Release" && "$(CFG)" != "condor_procapi - Win32 Debug"
 !MESSAGE Invalid configuration "$(CFG)" specified.
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
@@ -15,8 +13,7 @@ CFG=condor_procapi - Win32 Debug
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_procapi - Win32 Release" (based on\
- "Win32 (x86) Static Library")
+!MESSAGE "condor_procapi - Win32 Release" (based on "Win32 (x86) Static Library")
 !MESSAGE "condor_procapi - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 !ERROR An invalid configuration is specified.
@@ -42,63 +39,57 @@ ALL : "$(OUTDIR)\condor_procapi.lib"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Release" "condor_cpp_util - Win32 Release"\
- "condor_classad - Win32 Release" "$(OUTDIR)\condor_procapi.lib"
+ALL : "condor_util_lib - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_procapi.lib"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_classad - Win32 ReleaseCLEAN"\
- "condor_cpp_util - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" 
+CLEAN :"condor_classad - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\procapi.obj"
 	-@erase "$(INTDIR)\procinterface.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I\
- "..\src\condor_procapi" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"\
- /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=../src/condor_procapi/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_procapi" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi.bsc" 
 BSC32_SBRS= \
@@ -108,8 +99,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
 	"$(INTDIR)\procinterface.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
 	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -131,63 +122,57 @@ ALL : "$(OUTDIR)\condor_procapi.lib"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Debug" "condor_cpp_util - Win32 Debug"\
- "condor_classad - Win32 Debug" "$(OUTDIR)\condor_procapi.lib"
+ALL : "condor_util_lib - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_procapi.lib"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN"\
- "condor_util_lib - Win32 DebugCLEAN" 
+CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\procapi.obj"
 	-@erase "$(INTDIR)\procinterface.obj"
-	-@erase "$(INTDIR)\vc50.idb"
+	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_procapi.lib"
 
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
 CPP=cl.exe
-CPP_PROJ=/nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes"\
- /I "..\src\condor_procapi" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG"\
- /Fp"..\src\condor_c++_util\condor_common.pch" /Yu"condor_common.h"\
- /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-CPP_OBJS=../src/condor_procapi/
-CPP_SBRS=.
+CPP_PROJ=/nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_procapi" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /Fp"..\src\condor_c++_util\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
 
-.c{$(CPP_OBJS)}.obj::
+.c{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_OBJS)}.obj::
+.cpp{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_OBJS)}.obj::
+.cxx{$(INTDIR)}.obj::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.c{$(CPP_SBRS)}.sbr::
+.c{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cpp{$(CPP_SBRS)}.sbr::
+.cpp{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
-.cxx{$(CPP_SBRS)}.sbr::
+.cxx{$(INTDIR)}.sbr::
    $(CPP) @<<
    $(CPP_PROJ) $< 
 <<
 
+RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_procapi.bsc" 
 BSC32_SBRS= \
@@ -197,8 +182,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_procapi.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\procapi.obj" \
 	"$(INTDIR)\procinterface.obj" \
-	"..\src\condor_c++_util\condor_cpp_util.lib" \
 	"..\src\condor_classad\condor_classad.lib" \
+	"..\src\condor_c++_util\condor_cpp_util.lib" \
 	"..\src\condor_util_lib\condor_util.lib"
 
 "$(OUTDIR)\condor_procapi.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
@@ -209,35 +194,39 @@ LIB32_OBJS= \
 !ENDIF 
 
 
-!IF "$(CFG)" == "condor_procapi - Win32 Release" || "$(CFG)" ==\
- "condor_procapi - Win32 Debug"
+!IF "$(NO_EXTERNAL_DEPS)" != "1"
+!IF EXISTS("condor_procapi.dep")
+!INCLUDE "condor_procapi.dep"
+!ELSE 
+!MESSAGE Warning: cannot find "condor_procapi.dep"
+!ENDIF 
+!ENDIF 
+
+
+!IF "$(CFG)" == "condor_procapi - Win32 Release" || "$(CFG)" == "condor_procapi - Win32 Debug"
 
 !IF  "$(CFG)" == "condor_procapi - Win32 Release"
 
 "condor_classad - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak\
- CFG="condor_classad - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" 
    cd "."
 
 "condor_classad - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_classad.mak\
- CFG="condor_classad - Win32 Release" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
 
 "condor_classad - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak\
- CFG="condor_classad - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" 
    cd "."
 
 "condor_classad - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_classad.mak\
- CFG="condor_classad - Win32 Debug" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -246,28 +235,24 @@ LIB32_OBJS= \
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak\
- CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_cpp_util.mak\
- CFG="condor_cpp_util - Win32 Release" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak\
- CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_cpp_util.mak\
- CFG="condor_cpp_util - Win32 Debug" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -276,131 +261,39 @@ LIB32_OBJS= \
 
 "condor_util_lib - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak\
- CFG="condor_util_lib - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
    cd "."
 
 "condor_util_lib - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_util_lib.mak\
- CFG="condor_util_lib - Win32 Release" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
 
 "condor_util_lib - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak\
- CFG="condor_util_lib - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
    cd "."
 
 "condor_util_lib - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) CLEAN /F .\condor_util_lib.mak\
- CFG="condor_util_lib - Win32 Debug" RECURSE=1 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
 
 SOURCE=..\src\condor_procapi\procapi.C
 
-!IF  "$(CFG)" == "condor_procapi - Win32 Release"
-
-DEP_CPP_PROCA=\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_procapi\procapi.h"\
-	
-
-"$(INTDIR)\procapi.obj" : $(SOURCE) $(DEP_CPP_PROCA) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+"$(INTDIR)\procapi.obj" : $(SOURCE) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
-
-DEP_CPP_PROCA=\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_procapi\procapi.h"\
-	
-
-"$(INTDIR)\procapi.obj" : $(SOURCE) $(DEP_CPP_PROCA) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 SOURCE=..\src\condor_procapi\procinterface.C
 
-!IF  "$(CFG)" == "condor_procapi - Win32 Release"
-
-DEP_CPP_PROCI=\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_procapi\procapi.h"\
-	"..\src\condor_procapi\procinterface.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
-
-"$(INTDIR)\procinterface.obj" : $(SOURCE) $(DEP_CPP_PROCI) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
+"$(INTDIR)\procinterface.obj" : $(SOURCE) "$(INTDIR)" "..\src\condor_c++_util\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
-
-!ELSEIF  "$(CFG)" == "condor_procapi - Win32 Debug"
-
-DEP_CPP_PROCI=\
-	"..\src\condor_c++_util\extArray.h"\
-	"..\src\condor_c++_util\HashTable.h"\
-	"..\src\condor_c++_util\ntsysinfo.h"\
-	"..\src\condor_includes\condor_ast.h"\
-	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attrlist.h"\
-	"..\src\condor_includes\condor_classad.h"\
-	"..\src\condor_includes\condor_commands.h"\
-	"..\src\condor_includes\condor_common.h"\
-	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_network.h"\
-	"..\src\condor_includes\condor_uid.h"\
-	"..\src\condor_includes\stream.h"\
-	"..\src\condor_procapi\procapi.h"\
-	"..\src\condor_procapi\procinterface.h"\
-	"..\src\h\proc.h"\
-	"..\src\h\sched.h"\
-	"..\src\h\startup.h"\
-	
-
-"$(INTDIR)\procinterface.obj" : $(SOURCE) $(DEP_CPP_PROCI) "$(INTDIR)"\
- "..\src\condor_c++_util\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-!ENDIF 
 
 
 !ENDIF 

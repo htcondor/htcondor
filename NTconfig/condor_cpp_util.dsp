@@ -1,5 +1,5 @@
 # Microsoft Developer Studio Project File - Name="condor_cpp_util" - Package Owner=<4>
-# Microsoft Developer Studio Generated Build File, Format Version 5.00
+# Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Static Library" 0x0104
@@ -17,16 +17,16 @@ CFG=condor_cpp_util - Win32 Debug
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "condor_cpp_util - Win32 Release" (based on\
- "Win32 (x86) Static Library")
-!MESSAGE "condor_cpp_util - Win32 Debug" (based on\
- "Win32 (x86) Static Library")
+!MESSAGE "condor_cpp_util - Win32 Release" (based on "Win32 (x86) Static Library")
+!MESSAGE "condor_cpp_util - Win32 Debug" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
 # Begin Project
+# PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
 CPP=cl.exe
+RSC=rc.exe
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
@@ -42,6 +42,8 @@ CPP=cl.exe
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
 # ADD CPP /nologo /MT /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD BASE RSC /l 0x409
+# ADD RSC /l 0x409
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -62,8 +64,10 @@ LIB32=link.exe -lib
 # PROP Intermediate_Dir "../src/condor_c++_util"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
+# ADD CPP /nologo /MDd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /Fp"..\src\condor_c++_util/condor_common.pch" /Yu"condor_common.h" /FD /TP /c
 # SUBTRACT CPP /Fr
+# ADD BASE RSC /l 0x409
+# ADD RSC /l 0x409
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
@@ -160,6 +164,14 @@ SOURCE="..\src\condor_c++_util\condor_state.C"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_ver_info.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_ver_info.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_version.C"
 # SUBTRACT CPP /YX /Yc /Yu
 # End Source File
@@ -190,10 +202,6 @@ SOURCE="..\src\condor_c++_util\directory.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\directory.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\disk.C"
 # End Source File
 # Begin Source File
 
@@ -285,6 +293,14 @@ SOURCE="..\src\condor_c++_util\log_transaction.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\metric_units.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\metric_units.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\misc_utils.C"
 # End Source File
 # Begin Source File
@@ -359,10 +375,6 @@ SOURCE="..\src\condor_c++_util\strnewp.C"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\uids.C"
-# End Source File
-# Begin Source File
-
-SOURCE="..\src\condor_c++_util\up_down.C"
 # End Source File
 # Begin Source File
 
