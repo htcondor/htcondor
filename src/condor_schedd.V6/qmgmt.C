@@ -422,6 +422,7 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
+			dprintf( D_FULLDEBUG, "OwnerCheck: reject %s non-super\n",test_owner );
 			return 0;
 		}
 	}
@@ -431,6 +432,7 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 #if !defined(WIN32)
 		errno = EACCES;
 #endif
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject %s \"nobody\"\n", test_owner );
 		return 0;
 	} 
 
@@ -449,6 +451,8 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 #if !defined(WIN32)
 		errno = EACCES;
 #endif
+		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
+				my_owner, test_owner );
 		return 0;
 	} else {
 		return 1;
@@ -552,10 +556,12 @@ NewCluster()
 	char cluster_str[40];
 	
 	if (CheckConnection() < 0) {
+		dprintf( D_FULLDEBUG, "NewCluser(): CheckConnection failed\n" );
 		return -1;
 	}
 
 	if( !OwnerCheck(NULL, active_owner) ) {
+		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
 		return -1;
 	}
 
