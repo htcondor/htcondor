@@ -10,7 +10,7 @@ Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 	r_pre = NULL;
 	r_reqexp = new Reqexp( &r_classad );
 	r_attr = new ResAttributes( this );
-	r_name = strdup( my_hostname() );
+	r_name = strdup( my_full_hostname() );
 
 	this->coll_sock = coll_sock;
 	this->alt_sock = alt_sock;
@@ -214,7 +214,7 @@ Resource::init_classad()
 	r_classad->Insert( tmp );
 
 		// Grab the hostname of this machine
-	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	sprintf( tmp, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	r_classad->Insert( tmp );
 
 		// STARTD_IP_ADDR (needs to be in all ads)
