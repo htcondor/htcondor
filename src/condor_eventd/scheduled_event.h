@@ -89,9 +89,6 @@ private:
 
 	// put a startd in shutdown mode using DC_CONFIG_PERSIST
 	int EnterShutdownMode(const char startd_name[], const char startd_addr[]);
-	// clean up config when a startd is no longer in shutdown mode
-	int CleanupShutdownModeConfig(const char startd_name[],
-								  const char startd_addr[]);
 
 	ClassAdList *StartdList;
 	char *constraint;
