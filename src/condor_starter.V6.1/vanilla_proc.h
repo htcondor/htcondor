@@ -63,6 +63,17 @@ public:
 		/** Do a family->hardkill(); */
 	virtual bool ShutdownFast();
 
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd.  This function is just
+			virtual, not pure virtual, since OsProc and any derived
+			classes should implement a version of this that publishes
+			any info contained in each class, and each derived version
+			should also call it's parent's version, too.
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	virtual bool PublishUpdateAd( ClassAd* ad );
+
 protected:
 	virtual int UpdateShadow();
 
