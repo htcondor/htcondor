@@ -490,7 +490,6 @@ system.
   for \MacroU{HOSTNAME} and \MacroU{FULL\_HOSTNAME} and inserts them
   into its configuration table.
 
-%%%%%%%%%%%%%%%%%%
 \item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
   For systems with multiple network interfaces, Condor chooses the
   first one defined.  To choose a network interface other than the
@@ -521,7 +520,6 @@ system.
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} (given above) and
   \MacroNI{LOWPORT} must be defined.
-%%%%%%%%%%%%%%%%%%
 
 \item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
   By default, if a user does not specify \AdAttr{notify\_user} in the
@@ -2087,6 +2085,16 @@ These settings affect the \Condor{starter}.
 \subsection{\label{sec:Submit-Config-File-Entries}
 \condor{submit} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[\Macro{DEFAULT\_UNIVERSE}] \label{param:DefaultUniverse}
+The universe under which a job is executed may be specified in the submit
+description file.
+If it is not specified in the submit description file, then
+this variable specifies the universe (when defined).
+If the universe is not specified in the submit description
+file, and if this variable is not defined, then
+the default universe for a job will be the standard universe.
+\end{description}
 
 If you want \Condor{submit} to automatically append an expression to
 the \AdAttr{Requirements} expression or \AdAttr{Rank} expression of 
