@@ -270,13 +270,18 @@ real_config(const char *env_name, const char *file_name,
   /* Jim's insertion into context changed to insertion into
      classAd -> N Anand */
   
-	if( (param("ARCH") == NULL) && ((arch = get_arch()) != NULL) ) {
-		insert( "ARCH", arch, ConfigTab, TABLESIZE );
-		if(classAd)	{
-			char line[80];
-			sprintf(line,"%s = %s","ARCH",arch);
-			classAd->Insert(line);
+	arch = param("ARCH");
+	if( arch == NULL) {
+		if( (arch = get_arch()) != NULL ) {
+			insert( "ARCH", arch, ConfigTab, TABLESIZE );
+			if(classAd)	{
+				char line[80];
+				sprintf( line, "%s=%s", ATTR_ARCH, arch );
+				classAd->Insert(line);
+			}
 		}
+	} else {
+		free( arch );
 	}
 
 		/* If OPSYS is not defined in config file, then try to get value
@@ -284,13 +289,18 @@ real_config(const char *env_name, const char *file_name,
 		   the uname() value.  -Jim B. */
 		/* Jim's insertion into context changed to insertion into
 		   classAd -> N Anand */
-	if( (param("OPSYS") == NULL) && ((op_sys = get_op_sys()) != NULL) ) {
-		insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
-		if(classAd) {
-			char line[80];
-			sprintf(line,"%s = %s","OPSYS",op_sys);
-			classAd->Insert(line);
+	op_sys = param("OPSYS");
+	if( op_sys == NULL ) {
+		if( (op_sys = get_op_sys()) != NULL ) {
+			insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
+			if(classAd) {
+				char line[80];
+				sprintf( line, "%s=%s", ATTR_OPSYS, op_sys );
+				classAd->Insert(line);
+			}
 		}
+	} else {
+		free( op_sys );
 	}
 
 	(void)endpwent();
