@@ -66,6 +66,8 @@ sub Init()
 sub RunIt()
 {
 
+    print STDERR "Test module message to stderr\n";
+
     # Start things off
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
@@ -85,4 +87,6 @@ sub RunIt()
     # Ok, summary is done...
     $Hash->Store( );
     $Hawkeye->Publish( );
+
+    print STDERR "Test module done\n";
 }
