@@ -424,11 +424,17 @@ int ClassAd::fPrint(FILE* f)
 {
     fprintf(f, "MyType = ");
     fprintf(f, "%c", '"');
-    fprintf(f, "%s", GetMyTypeName());
+	if(GetMyTypeName())
+	{
+		fprintf(f, "%s", GetMyTypeName());
+	}
     fprintf(f, "%c\n", '"');
     fprintf(f, "TargetType = ");
     fprintf(f, "%c", '"');
-    fprintf(f, "%s", GetTargetTypeName());
+	if(GetMyTypeName())
+	{
+		fprintf(f, "%s", GetTargetTypeName());
+	}
     fprintf(f, "%c\n", '"');    
 	
 	AttrList::fPrint(f);

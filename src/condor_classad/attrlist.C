@@ -9,6 +9,7 @@
 # include <ctype.h>
 # include <assert.h>
 # include <string.h>
+# include <sys/time.h>
 
 # include "except.h"
 # include "debug.h"
@@ -742,60 +743,60 @@ int AttrList::Delete(char* name)
 
     while(cur)
     {
-	if(!strcasecmp(name, cur->name))
-	// expression to be deleted is found
-	{
-	    // delete the expression
-	    if(cur == exprList)
-	    // the expression to be deleted is at the head of the list
-	    {
-		exprList = exprList->next;
-		if(tail == cur)
+		if(!strcasecmp(name, cur->name))
+		// expression to be deleted is found
 		{
-		    tail = NULL;
+			// delete the expression
+			if(cur == exprList)
+			// the expression to be deleted is at the head of the list
+			{
+				exprList = exprList->next;
+				if(tail == cur)
+				{
+					tail = NULL;
+				}
+			}
+			else
+			{
+				prev->next = cur->next;
+				if(tail == cur)
+				{
+					tail = prev;
+				}
+			}
+
+			if(ptrExpr == cur)
+			{
+				ptrExpr = cur->next;
+			}
+
+			if(ptrName == cur)
+			{
+				ptrName = cur->next;
+			}
+
+			// update the associated aggregate expressions
+			if(inList)	  // this AttrList is in only one AttrList list
+			{
+				inList->UpdateAgg(cur->tree, AGG_REMOVE);
+			}
+			else if(next) // this AttrList is in more than one AttrList lists
+			{
+				AttrListRep* rep = (AttrListRep*)next;
+				while(rep)
+				{
+					rep->attrList->UpdateAgg(cur->tree, AGG_REMOVE);
+				}
+			}
+			delete cur;
+			return TRUE;
 		}
-	    }
-	    else
-	    {
-		prev->next = cur->next;
-		if(tail == cur)
+		else
+		// expression to be deleted not found, continue search
 		{
-		    tail = prev;
+			prev = cur;
+			cur = cur->next;
 		}
-	    }
-
-	    if(ptrExpr == cur)
-	    {
-		ptrExpr = cur->next;
-	    }
-
-	    if(ptrName == cur)
-	    {
-		ptrName = cur->next;
-	    }
-
-	    // update the associated aggregate expressions
-	    if(inList)	  // this AttrList is in only one AttrList list
-	    {
-	        inList->UpdateAgg(cur->tree, AGG_REMOVE);
-	    }
-	    else if(next) // this AttrList is in more than one AttrList lists
-	    {
-	        AttrListRep* rep = (AttrListRep*)next;
-	        while(rep)
-	        {
-	 	    rep->attrList->UpdateAgg(cur->tree, AGG_REMOVE);
-		}
-	    }
-	    delete cur;
-	    return TRUE;
-	}
-	else
-	// expression to be deleted not found, continue search
-	{
-	    prev = cur;
-	    cur = cur->next;
-	}
     }	// end of while loop to search the expression to be deleted
 
     return FALSE; // expression not found
@@ -1009,46 +1010,46 @@ int AttrList::UpdateAgg(ExprTree* expr, int operation)
 
     if(expr->MyType() != LX_ASSIGN)
     {
-	return FALSE;
+		return FALSE;
     }
 
     oldExpr = Lookup(((Variable*)expr->LArg())->Name());
 
     if(!oldExpr)
     {
-	return FALSE;
+		return FALSE;
     }
 
     switch(operation)
     {
-	case AGG_INSERT :
+		case AGG_INSERT :
 
-	    if(oldExpr->RArg()->MyType() == LX_AGGADD)
-	    {
-		expr->Copy();
-		newExpr = new AggAddOp(oldExpr->RArg(), expr);
-		((BinaryOp*)oldExpr)->rArg = newExpr;
-	    }
-	    if(oldExpr->RArg()->MyType() == LX_AGGEQ)
-	    {
-	        expr->Copy();
-		newExpr = new AggEqOp(oldExpr->RArg(), expr);
-		((BinaryOp*)oldExpr)->rArg = newExpr;
-	    }
-	    break;
+			if(oldExpr->RArg()->MyType() == LX_AGGADD)
+			{
+				expr->Copy();
+				newExpr = new AggAddOp(oldExpr->RArg(), expr);
+				((BinaryOp*)oldExpr)->rArg = newExpr;
+			}
+			if(oldExpr->RArg()->MyType() == LX_AGGEQ)
+			{
+				expr->Copy();
+				newExpr = new AggEqOp(oldExpr->RArg(), expr);
+				((BinaryOp*)oldExpr)->rArg = newExpr;
+			}
+			break;
 	
-	case AGG_REMOVE :
+		case AGG_REMOVE :
 
-	     newExpr = oldExpr->RArg();
-	     if(((AggOp*)newExpr)->DeleteChild((AssignOp*)expr))
-	     {
-		 if(!oldExpr->RArg()->LArg() && !oldExpr->RArg()->RArg())
-		 {
-		     Delete(((Variable*)oldExpr->LArg())->Name());
-		     delete oldExpr;
-	     	 }
-	     }
-	     break;
+			 newExpr = oldExpr->RArg();
+			 if(((AggOp*)newExpr)->DeleteChild((AssignOp*)expr))
+			 {
+				 if(!oldExpr->RArg()->LArg() && !oldExpr->RArg()->RArg())
+				 {
+					 Delete(((Variable*)oldExpr->LArg())->Name());
+					 delete oldExpr;
+				 }
+			 }
+			 break;
     }
     return TRUE;
 }
@@ -1097,8 +1098,8 @@ AttrListList::~AttrListList()
 
     while(tmpAttrList)
     {
-	Delete(tmpAttrList);
-	tmpAttrList = NextAttrList();
+		Delete(tmpAttrList);
+		tmpAttrList = NextAttrList();
     }
     this->CloseList();
 }
@@ -1241,6 +1242,7 @@ int AttrListList::Delete(AttrList* attrList)
 		{
 			if(cur == attrList) // this is the AttrList to be deleted
 			{
+				if(cur == ptr) ptr = ptr->next;
 				if(cur == head)
 				// AttrList to be deleted is at the head of the list
 				{
@@ -1283,6 +1285,7 @@ int AttrListList::Delete(AttrList* attrList)
 			if(((AttrListRep *)cur)->attrList == attrList)
 			{
 				// this is the AttrList to be deleted
+				if(cur == ptr) ptr = ptr->next;
 				if(cur == head)
 				{
 					// AttrList to be deleted is at the head of the list
@@ -1335,7 +1338,6 @@ int AttrListList::Delete(AttrList* attrList)
 			}
 		} // end of if a rep is used
     } // end of the loop through the AttrListList
-    CloseList();
     return TRUE;
 }
 
