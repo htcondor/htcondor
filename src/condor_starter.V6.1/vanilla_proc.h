@@ -58,13 +58,15 @@ public:
 	virtual void Continue();
 
 		/** Take a family snapshot, call OsProc::ShutDownGraceful() */
-	virtual void ShutdownGraceful();
+	virtual bool ShutdownGraceful();
 
 		/** Do a family->hardkill(); */
-	virtual void ShutdownFast();
+	virtual bool ShutdownFast();
 
 protected:
 	virtual int UpdateShadow();
+
+	int TransferCompleted(FileTransfer *);
 
 private:
 	ProcFamily *family;
@@ -78,6 +80,13 @@ private:
 
 	// UDP socket back to the shadow command port
 	SafeSock *shadowsock;
+
+	// the real job executable name (after ATTR_JOB_CMD
+	// is switched to condor_exec).
+	char jobtmp[_POSIX_PATH_MAX];
+
+	// if true, transfer files at vacate time (in addtion to job exit)
+	bool TransferAtVacate;
 
 };
 
