@@ -1050,6 +1050,11 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  started.
 #NEGOTIATE_ALL_JOBS_IN_CLUSTER = False
 
+## This setting controls how often, in seconds, the schedd considers
+## periodic job actions given by the user in the submit file.
+## (Currently, these are periodic_hold, periodic_release, and periodic_remove.)
+PERIODIC_EXPR_INTERVAL = 60
+
 ######
 ## Queue management settings:
 ######
