@@ -1,3 +1,7 @@
+02/24/05 V6_7_4-merge-1
+	The state of the V6_7_4-branch for a merge into the
+	V6_7-branch. This merge picks up a number of bug fixes, and
+	patches to make the Windows build work.
 
 02/10/05 V6_7_4-post_merge-V6_6-merge-34
    The state of the V6_7_4-branch after merging in the changes between
