@@ -33,9 +33,8 @@
 #include "condor_network.h"
 #include "internet.h"
 #include "condor_debug.h"
-#include <stdio.h>
 
-extern "C" char *mySubSystem;
+extern char *mySubSystem;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;

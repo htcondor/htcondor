@@ -40,7 +40,8 @@ gss_cred_id_t ReliSock::credential_handle = GSS_C_NO_CREDENTIAL;
 #endif defined(GSS_AUTHENTICATION)
 
 static char _FileName_[] = __FILE__;
-extern "C" char *mySubSystem;
+extern char *mySubSystem;
+
 
 /**************************************************************/
 
