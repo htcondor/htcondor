@@ -35,10 +35,10 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
       remoteHost_    ( NULL  ),
       localDomain_   ( NULL  ),
       fqu_           ( NULL  ),
-      isDaemon_      ( false ),
-      mySock_        ( sock  )
+      mySock_        ( sock  ),
+      isDaemon_      ( false )
 {
-    if (mySock_->isClient()) {
+    //if (mySock_->isClient()) {
         
         //------------------------------------------
         // There are two possible cases:
@@ -61,7 +61,7 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
         if (get_my_uid() == 0) {
             isDaemon_ = true;
         }
-    }
+        //}
 
 		// this will *always* succeed
 	localDomain_ = param( "UID_DOMAIN" );
