@@ -78,14 +78,32 @@ accepting new transfer requests, producing a variety of errors.
   matches whenever the periodic timer in the \Condor{negotiator}
   (\MacroNI{NEGOTIATOR\_INTERVAL}) goes off.
 
+\item Pool administrators can now specify the length of time before
+  the \Condor{starter} sends its initial update to the
+  \Condor{shadow} by defining
+  \Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL}. 
+  The default is 8 seconds.
+  This setting would not normally need changing except to fine-tune a
+  heavily loaded system.
+
+\item Administrators can now specify the default session duration for
+  each Condor subsystem.
+  This allows for fine tuning the image size of running Condor daemons
+  if the memory footprint is a concern.
+  The default for tools is 1 minute, the default for \Condor{submit}
+  is one hour, and the default for daemons is 100 days.
+  This does not mean that tools cannot run more than one minute or
+  submit cannot run for more than an hour; it only affects memory
+  usage.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item Fixed bugs related to network timeouts that impact scalability
-  in Condor:
+\item Fixed bugs related to network communication and timeouts that
+  impact scalability in Condor:
   \begin{itemize}
     \item Fixed a bug inside Condor's network communication layer that 
       could result in Condor daemons blocking trying to read more data
@@ -93,6 +111,10 @@ accepting new transfer requests, producing a variety of errors.
     \item Fixed a \Condor{negotiator} bug that could, in certain rare
       circumstances, cause a \Condor{schedd} to hang for five minutes
       while trying to communicate with it.
+    \item Fixed a bug in which TCP connections would reauthenticate
+      needlessly when Condor's strong authentication was enabled.
+      This was not harmful but incurred a bit of overhead, especially
+      when using Kerberos authentication.
   \end{itemize}
 
 \item Fixed a bug in the standard universe where C++ code that threw an 
