@@ -103,7 +103,7 @@ Macro vos_path(
 Macro mailer_path(
 	"MAIL",
 	"Pathname of program to send mail",
-#if defined(SUNOS41)
+#if defined(SUNOS41) || defined(ULTRIX43)
 	"/usr/ucb/mail"
 #else
 	"/bin/mail"
