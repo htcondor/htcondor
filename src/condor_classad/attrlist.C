@@ -1160,8 +1160,8 @@ int AttrList::IsInList(AttrListList* AttrListList)
 
     if(!this->inList && !this->next)
     {
-	// not in any list
-	return FALSE;
+		// not in any list
+		return FALSE;
     }
     else if(this->inList)
     {
@@ -1303,6 +1303,7 @@ int AttrList::UpdateAgg(ExprTree* expr, int operation)
 //////////////////////////////////////////////////////////////////////////////
 // Create a CONTEXT from an AttrList
 //////////////////////////////////////////////////////////////////////////////
+/*
 int
 AttrList::MakeContext (CONTEXT *c)
 {
@@ -1323,6 +1324,7 @@ AttrList::MakeContext (CONTEXT *c)
 	delete [] line;
 	return TRUE;
 }
+*/
 #endif
 
 
@@ -1424,66 +1426,66 @@ void AttrListList::Insert(AttrList* AttrList)
     if(AttrList->IsInList(this))
     // AttrList is already in this AttrList list
     {
-	return;
+		return;
     }
     if(AttrList->inList)
     // AttrList is in one AttrList list
     {
-	// AttrList to AttrListRep
-	AttrListAbstract *saveNext = AttrList->next;
-	AttrListList *tmpList = AttrList->inList;
-	AttrList->next = NULL;
-	rep = new AttrListRep(AttrList, AttrList->inList);
-	rep->next = saveNext;
-	if(tmpList->head == (AttrListAbstract *)AttrList)
-	{
-	    // AttrList is the first element in the list
-	    tmpList->head = rep;
-	}
-	else
-	{
-	    AttrList->prev->next = rep;
-	}
-	if(tmpList->tail == (AttrListAbstract *)AttrList)
-	{
-	    // AttrList is the last element in the list
-	    tmpList->tail = rep;
-	}
-	else
-	{
-	    rep->next->prev = rep;
-	}
-	if(tmpList->ptr == AttrList)
-	{
-	    tmpList->ptr = rep;
-	}
-	AttrList->prev = NULL;
-	AttrList->inList = NULL;
+		// AttrList to AttrListRep
+		AttrListAbstract *saveNext = AttrList->next;
+		AttrListList *tmpList = AttrList->inList;
+		AttrList->next = NULL;
+		rep = new AttrListRep(AttrList, AttrList->inList);
+		rep->next = saveNext;
+		if(tmpList->head == (AttrListAbstract *)AttrList)
+		{
+			// AttrList is the first element in the list
+			tmpList->head = rep;
+		}
+		else
+		{
+			AttrList->prev->next = rep;
+		}
+		if(tmpList->tail == (AttrListAbstract *)AttrList)
+		{
+			// AttrList is the last element in the list
+			tmpList->tail = rep;
+		}
+		else
+		{
+			rep->next->prev = rep;
+		}
+		if(tmpList->ptr == AttrList)
+		{
+			tmpList->ptr = rep;
+		}
+		AttrList->prev = NULL;
+		AttrList->inList = NULL;
 
-	// allocate new AttrListRep for this AttrList list
-	rep = new AttrListRep(AttrList, this);
+		// allocate new AttrListRep for this AttrList list
+		rep = new AttrListRep(AttrList, this);
     }
     else if(AttrList->next)
     {
-	// AttrList is in more than one AttrList lists
-	rep = new AttrListRep(AttrList, this);
+		// AttrList is in more than one AttrList lists
+		rep = new AttrListRep(AttrList, this);
     }
     else
     {
-	// AttrList is not in any AttrList list
-	rep = (AttrListRep *)AttrList;
-	AttrList->inList = this;
+		// AttrList is not in any AttrList list
+		rep = (AttrListRep *)AttrList;
+		AttrList->inList = this;
     }
     rep->prev = this->tail;
     rep->next = NULL;
     this->tail = rep;
     if(rep->prev != NULL)
     {
-	rep->prev->next = rep;
+		rep->prev->next = rep;
     }
     else
     {
-	this->head = rep;
+		this->head = rep;
     }
 
     this->length++;
