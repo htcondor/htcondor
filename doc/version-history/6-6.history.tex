@@ -9,12 +9,9 @@ in the 6.6 series.
 The details of each version are described below.
 
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-2}Version 6.6.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \noindent Release Notes:
 
@@ -23,7 +20,6 @@ The details of each version are described below.
 \item None.
 
 \end{itemize}
-
 
 
 \noindent New Features:
@@ -40,10 +36,19 @@ The details of each version are described below.
       \Condor{submit} before giving up.  It cannot be set to less than
       1 attempt, or more than 10; if left undefined, it defaults to 6.
 
+\item Added a new tool \Condor{updates\_stats} to dump out the update
+statistics information from ClassAds in a human readable format.
+Condor 6.6.1, by default, publishes ``update statistics'' into the
+ClassAds as published by the \Condor{collector}.  This program parses
+this ouput and displays it to the user in a readable format.
+
+\item Changed the default \Condor{dagman} behavior so that it doesn't
+      check for cycles at startup, only at runtime, since the former
+      could be expensive for large DAGs.  Added a boolean
+      \Attr{DAGMAN\_STARTUP\_CYCLE\_DETECT} config attribute to
+      re-enable cycle-detection at startup.
 
 \end{itemize}
-
-
 
 \noindent Bugs Fixed:
 
@@ -66,46 +71,6 @@ The details of each version are described below.
   line.  Also, if "log" was defined twice in the submit file,
   DAGMan would incorrectly use the first definition, rather than
   the last.
-
-\end{itemize}
-
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-6-2}Version 6.6.2}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item Added a new tool \Condor{updates\_stats} to dump out the update
-statistics information from ClassAds in a human readable format.
-Condor 6.6.1, by default, publishes ``update statistics'' into the
-ClassAds as published by the \Condor{collector}.  This program parses
-this ouput and displays it to the user in a readable format.
-
-\item Changed the default \Condor{dagman} behavior so that it doesn't
-      check for cycles at startup, only at runtime, since the former
-      could be expensive for large DAGs.  Added a boolean
-      \Attr{DAGMAN\_STARTUP\_CYCLE\_DETECT} config attribute to
-      re-enable cycle-detection at startup.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
 
 \item Re-added PVM support for IRIX 6.5.
 
