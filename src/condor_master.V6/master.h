@@ -69,6 +69,8 @@ public:
 	void	Kill( int );
 	void	KillFamily( void );
 	void	Reconfig();
+	void	InitProcFam( int pid );
+	void	DeleteProcFam( void );
 
 private:
 
@@ -88,6 +90,7 @@ private:
 	int		was_not_responding;
 
 	ProcFamily*	procfam;
+	int		procfam_tid;
 };
 
 

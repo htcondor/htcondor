@@ -417,11 +417,8 @@ daemon::Start()
 		daemons.UpdateCollector();
 	}
 
-	if( procfam ) {
-		delete procfam;
-	}
-	procfam = new ProcFamily( pid, PRIV_ROOT );
-	procfam->takePeriodicSnapshot( 15, 60 );
+		// Create a ProcFamily object for this daemon.
+	InitProcFam( pid );
 
 	return pid;	
 }
@@ -555,8 +552,7 @@ daemon::Exited( int status )
 
 		// Now that we're done with that and the pid is gone, we can
 		// delete our ProcFamily object now.
-	delete procfam;
-	procfam = NULL;
+	DeleteProcFam();
 
 		// Set flag saying if it exited cuz it was not responding
 	was_not_responding = daemonCore->Was_Not_Responding(pid);
@@ -724,6 +720,42 @@ daemon::Reconfig()
 		return;
 	}
 	Kill( DC_SIGHUP );
+}
+
+
+void
+daemon::InitProcFam( int pid )
+{
+		// If there's one there already, kill it.
+	DeleteProcFam();
+
+	procfam = new ProcFamily( pid, PRIV_ROOT );
+	if( ! procfam ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+	procfam_tid = daemonCore->
+		Register_Timer( 15, 60,
+						(TimerHandlercpp)&ProcFamily::takesnapshot,
+						"ProcFamily::takesnapshot", procfam );
+	if( procfam_tid < 0 ) {
+		EXCEPT( "Can't register timer for ProcFamily::takesnapshot" );
+	}
+}
+
+
+void
+daemon::DeleteProcFam( void )
+{
+	if( procfam_tid >= 0 ) {
+		daemonCore->Cancel_Timer( procfam_tid );
+		procfam_tid = -1;
+	}
+
+	if( procfam ) {
+		delete procfam;
+		procfam = NULL;
+	}
 }
 
 
