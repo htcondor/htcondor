@@ -3,6 +3,7 @@
 Configuring The Startd for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{SMP machines!configuration|(}
 This section describes how to configure the \Condor{startd} for SMP
 (Symmetric Multi-Processor) machines.
 Beginning with Condor version 6.1, machines with more than one CPU can
@@ -17,26 +18,29 @@ How Shared Resources are Represented to Condor}
 
 The way SMP machines are represented to the Condor system is that
 the shared resources are broken up into individual \Term{virtual
-machines} (``VM'') that can be matched with and claimed by users.
-Each virtual machine is represented by an individual ``ClassAd''
+machines} (each virtual machine is called a VM).
+Each VM can be matched and claimed by users.
+Each VM is represented by an individual ClassAd
 (see the ClassAd reference, section~\ref{classad-reference}, for
 details). 
-In this way, a single SMP machine will appear to the Condor system as
-a collection of separate virtual machines.  
-So for example, if you had an SMP machine named
-``vulture.cs.wisc.edu'', it would appear to Condor as multiple
-machines, named ``vm1@vulture.cs.wisc.edu'',
-``vm2@vulture.cs.wisc.edu'', and so on.
+In this way, each SMP machine will appear to the Condor system as
+a collection of separate VMs.  
+As an example, an SMP machine named
+vulture.cs.wisc.edu would appear to Condor as the
+multiple machines, named vm1@vulture.cs.wisc.edu,
+vm2@vulture.cs.wisc.edu,
+vm3@vulture.cs.wisc.edu, and so on.
 
-You can configure how you want the \Condor{startd} to break up the
-shared system resources into the different virtual machines.  
-All shared system resources (like RAM, disk space, swap space, etc)
+The way that the \Condor{startd} breaks up the
+shared system resources into the different virtual machines  
+is configurable.
+All shared system resources (like RAM, disk space, swap space, etc.)
 can either be divided evenly among all the virtual machines, with each
 CPU getting its own virtual machine, or you can define your own
 \Term{virtual machine types}, so that resources can be unevenly
 partitioned.
 The following section gives details on how to configure Condor to
-divide the resources on an SMP machine into seperate virtual machines.
+divide the resources on an SMP machine into separate virtual machines.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Divide}
@@ -47,7 +51,7 @@ This section describes the settings that allow you to define your own
 virtual machine types and to control how many virtual machines of each
 type are reported to Condor.
 
-There are two main ways to go about dividing an SMP machine:
+There are two main ways to go about partitioning an SMP machine:
 
 \begin{description}
 
@@ -56,88 +60,101 @@ There are two main ways to go about dividing an SMP machine:
   system resources (CPU, RAM, swap space and disk space) go to each
   virtual machine.
   Once you define your own types, you can control how many of each
-  type are being reported at any given time.
+  type are reported at any given time.
 
 \item[Evenly divide all resources.]  
   If you do not define your own types, the \Condor{startd} will
   automatically	partition your machine into virtual machines for you.
-  It will do so by giving each VM a single CPU, and evenly dividing
-  all shared resources among each CPU.
-  With this default partitioning, you only have to specify how many
+  It will do so by placing a single CPU in each VM, and evenly dividing
+  all shared resources among the VMs.
+  With this default partitioning, you only specify how many
   VMs are reported at a time.
   By default, all VMs are reported to Condor.
 
 \end{description}
 
-Begining with Condor version 6.1.6, the number of each type being
-reported can be changed at run-time, by issuing a simple reconfig to
-the \Condor{startd} (sending a SIGHUP or using \Condor{reconfig}).
+Beginning with Condor version 6.1.6, the number of each type being
+reported can be changed at run-time, by issuing a reconfiguration
+command to
+the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
 However, the definitions for the types themselves cannot be changed
-with a reconfig.
-If you change any VM type definitions, you must use ``\condor{restart}
--startd'' for that change to take effect.
+with reconfiguration.
+If you change any VM type definitions, you must use \Condor{restart}
+\begin{verbatim}
+condor_restart -startd
+\end{verbatim}
+for that change to take effect.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:VM-Type-Define}
 Defining Virtual Machine Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To define your own virtual machine types, you simply add config file
+To define your own virtual machine types, add configuration file
 parameters that list how much of each system resource you want in the
-given VM type.  You do this with settings of the form
+given VM type.  Do this by defining configuration
+variables of the form
 \Macro{VIRTUAL\_MACHINE\_TYPE\_<N>}.
-The \Sinful{N} is to be replaced with an integer, for example, 
-\MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}, which specifies the virtual 
-machine type you're defining.
-You will use this number later to configure how many VMs of this type
-you want to advertise.
+The <N> represents an integer (for example, 
+\MacroNI{VIRTUAL\_MACHINE\_TYPE\_1}), which specifies the virtual 
+machine type defined.
+This number is used to configure how many VMs of this type
+are advertised.
 
 A type describes what share of the total system resources a given
 virtual machine has available to it.
 
-The type can be defined in a number of ways:
+The type can be defined by:
 \begin{itemize}
-  \item A simple fraction, such as ``1/4''
-  \item A simple percentage, such as ``25\%''
-  \item A comma-separated list of attributes, and a percentage,
+  % \frac{1}{4} doesn't work
+  %\item A simple fraction, such as \frac{1}{4}
+  \item A simple fraction, such as 1/4
+  \item A simple percentage, such as 25\Percent
+  \item A comma-separated list of attributes, with a percentage,
 	fraction, or value for each one.
 \end{itemize}
-If you just specify a fraction or percentage, that share of the total
-system resources, including the number of cpus, will be used for each
-virtual machine of this type.
-However, if you specify the comma-seperated list, you can fine-tune
+A simple fraction or percentage causes an allocation
+of the total system resources.
+This includes the number of CPUs.
+A comma-separated list allows a fine-tuning of
 the amounts for specific attributes.
 
-Some attributes, such as the number of CPUs and total amount of RAM in
-the machine, do not change (unless the machine is turned off and more
-chips are added to it).
-For these two attributes, you can specify either absolute values, or
+The attributes that specify the number of CPUs
+and the total amount of RAM in
+the SMP machine do not change.
+For these attributes, specify either absolute values or
 percentages of the total available amount.  
-For example, in a machine with 128 megs of RAM, you could specify any
-of the following to get the same effect: ``mem=64'', ``mem=1/2'', or
-``mem=50\%''.
-Other resources are dynamic, such as disk space and swap space.
-For these, you must specify the percentage or fraction of the total
-value that is alloted to each VM, instead of specifying absolute values.
+For example, in a machine with 128 Mbytes of RAM,
+all the following definitions result in the same allocation amount.
+\begin{verbatim}
+mem=64
+mem=1/2
+mem=50%
+\end{verbatim}
+
+Other attributes are dynamic, such as disk space and swap space.
+For these, specify a percentage or fraction of the total
+value that is allocated to each VM, instead of specifying absolute values.
 As the total values of these resources change on your machine, each
 VM will take its fraction of the total and report that as its
 available amount.
 
-All attribute names are case insensitive when defining VM types.
-You can use as much or as little of each word as you'd like.
-The attributes you can tune are:
+The four attribute names are case insensitive when defining VM types.
+The first letter of the attribute name distinguishes between
+the attributes.
+The four attributes, with several examples of acceptable names for
+each are
 \begin{itemize}
-  \item cpus
-  \item ram
-  \item disk (must specify with a fraction or percentage)
-  \item swap (must specify with a fraction or percentage)
+  \item Cpus, C, c, cpu 
+  \item ram, RAM, MEMORY, memory, Mem, R, r, M, m
+  \item disk, Disk, D, d
+  \item swap, SWAP, S, s, VirtualMemory, V, v
 \end{itemize}
-In addition, the following names are equivalent: ``ram'' = ``memory''
-and ``swap'' = ``virtualmemory''.
 
-Assume the host as 4 CPUs and 256 megs of RAM.
-Here are some example VM type definitions, all of which are valid. 
-Types 1-3 are all equivalent with each other, as are types 4-6
+As an example, consider a
+host of 4 CPUs and 256 megs of RAM.
+Here are valid example VM type definitions. 
+Types 1-3 are all equivalent to each other, as are types 4-6
 
 \MacroNI{VIRTUAL\_MACHINE\_TYPE\_1} = cpus=2, ram=128, swap=25\%, disk=1/2
 
@@ -152,25 +169,32 @@ Types 1-3 are all equivalent with each other, as are types 4-6
 \MacroNI{VIRTUAL\_MACHINE\_TYPE\_6} = 1/4
 
 
+The number of virtual machines of each type is set with the
+configuration variable
+\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>},
+where N is the type as given in the
+\MacroNI{VIRTUAL\_MACHINE\_TYPE\_<N>}variable.
+
+Note that it is possible to set the configuration variables such
+that they specify an impossible configuration.
+If this occurs, the \Condor{startd} daemon fails after writing
+a message to its log attempting to indicate the configuration
+requirements that it could not implement.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-VM-Number}
-Configuring the Number of Virtual Machines Reported}
+Evenly Divided Resources}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-If you are not defining your own VM types, all you have to configure
-is how many of the evenly divided VMs you want reported to Condor.
-You do this by setting the \Macro{NUM\_VIRTUAL\_MACHINES} parameter.
-You just supply the number of machines you want reported.
-If you do not define this yourself, Condor will advertise all the CPUs
-in your machines by default.
-
-If you define your own types, things are slightly more complicated.  
-Now, you must specify how many virtual machines of each type should be
-reported.
-You do this with settings of the form
-\Macro{NUM\_VIRTUAL\_MACHINES\_TYPE\_<N>}.
-The \Sinful{N} is to be replaced with an actual number, for example, 
-\MacroNI{NUM\_VIRTUAL\_MACHINES\_TYPE\_1}. 
+If you are not defining your own VM types, then all resources
+are divided equally among the VMs.
+The number of VMs within the SMP machine is the only attribute
+that needs to be defined.
+Its definition is accomplished by setting the configuration
+variable \Macro{NUM\_VIRTUAL\_MACHINES} to the
+integer number of machines desired.
+If variable \MacroNI{NUM\_VIRTUAL\_MACHINES} is not defined,
+it defaults to the number of CPUs within the SMP machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -178,55 +202,103 @@ The \Sinful{N} is to be replaced with an actual number, for example,
 Configuring Startd Policy for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\Note Be sure you have read and understand
-section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
-Policy'' before you proceed with this section.
+\index{configuration!SMP machines}
+Section~\ref{sec:Configuring-Policy} details the Startd
+Policy Configuration.
+This section continues the discussion with respect to SMP machines.
 
-Each virtual machine from an SMP is treated as an independent machine,
-with its own view of its machine state.
-For now, a single set of policy expressions is in place for all
-virtual machines simultaneously.  
-Eventually, you will be able to explicitly specify separate policies
-for each one.
-However, since you do have control over each virtual machine's view of
-its own state, you can effectively have separate policies for each
-resource.
+Each virtual machine within an SMP machine is treated as an
+independent machine,
+each with its own view of its machine state.
+There is a single set of policy expressions for the SMP machine
+as a whole.
+This policy may consider the VM state(s) in its expressions.
+This makes some policies easy to set, but it makes
+other policies difficult or impossible to set.
 
-For example, you can configure how many of the virtual machines
-``notice'' console or tty activity on the SMP as a whole.
-Ones that aren't configured to notice any activity will report
-ConsoleIdle and KeyboardIdle times from when the startd was started,
+An easy policy to set
+configures how many of the virtual machines
+notice console or tty activity on the SMP as a whole.
+VMs that are not configured to notice any activity will report
+ConsoleIdle and KeyboardIdle times from when the
+\Condor{startd} daemon was started,
 (plus a configurable number of seconds).
-So, you can setup a 4 CPU machine with all the default startd policy
-settings and with the keyboard and console ``connected'' to only one
+With this, you can set up a multiple CPU machine with
+the default policy
+settings plus add that the keyboard and console noticed by only one
 virtual machine.
-Assuming there isn't too much load average (see
+Assuming a reasonable load average (see
 section~\ref{sec:SMP-Load} below on ``Load Average for SMP
-Machines''), only one virtual machine will suspend or vacate its job
+Machines''), only the one virtual machine will suspend or vacate its job
 when the owner starts typing at their machine again.
 The rest of the virtual machines could be matched with jobs and leave
 them running, even while the user was interactively using the
 machine. 
+If the default policy is used,
+all virtual machines notice
+tty and console activity
+and
+currently running jobs would suspend or preempt.
 
-Or, if you wish, you can configure all virtual machines to notice all
-tty and console activity.
-In this case, if a machine owner came back to her machine, all the
-currently running jobs would suspend or preempt (depending on your
-policy expressions), all at the same time.
-
-All of this is controlled with the config file parameters listed
-below.    
-These settings are fully described in
-section~\ref{sec:Startd-Config-File-Entries} on
-page~\pageref{sec:Startd-Config-File-Entries} which lists all the
-configuration file settings for the \Condor{startd}.
-
+This example policy is
+controlled with the following configuration variables.
 \begin{itemize}
 \item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}
 \item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}
 \item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
 \end{itemize}
 
+These configuration variables are fully described in
+section~\ref{sec:Startd-Config-File-Entries} on
+page~\pageref{sec:Startd-Config-File-Entries} which lists all the
+configuration file settings for the \Condor{startd}.
+
+% Karen's edit goes to this line.
+% need discussion here about what canNOT be done given the single
+% set  of policy expressions.
+The configuration of virtual machines allows each VM to advertise
+its own machine ClassAd.
+Yet, there is only one set of policy expressions for the SMP
+machine as a whole.
+This makes the implementation of certain types of policies impossible.
+While evaluating the state of one VM (within the SMP machine),
+the state of other VMs (again within the SMP machine) are not
+available.
+Decisions for one VM cannot be based on what other machines within the SMP
+are doing.
+
+Specifically, the evaluation of a VM policy expression works in
+the following way.
+\begin{enumerate}
+\item 
+The configuration file specifies policy expressions that are shared among
+all of the VMs on the SMP machine.
+\item 
+Each VM reads the configuration file and sets up its own machine ClassAd.
+\item 
+Each VM is now separate from the others.  It has a
+different state, a different machine ClassAd, and if there is a job
+running, a separate job ad.
+Each VM periodically
+evaluates the policy expressions, changing its own state
+as necessary.
+This occurs independently of the other VMs on the machine.
+So, if the \Condor{startd} daemon is evaluating a policy expression
+on a specific VM,
+and the policy expression refers to \Attr{ProcID}, \Attr{Owner},
+or any attribute from a job ad,
+it \emph{always} refers to the ClassAd of the
+job running on the specific VM.
+\end{enumerate}
+
+To set a different policy for the VMs within an SMP machine,
+a (\verb@SUSPEND@) policy will be of the form
+\begin{verbatim}
+SUSPEND = ( (VirtualMachineID == 1) && (PolicyForVM1) ) || \
+            ( (VirtualMachineID == 2) && (PolicyForVM2) )
+\end{verbatim}
+where \verb@(PolicyForVM1)@ and \verb@(PolicyForVM2)@ are the
+desired expressions for each VM.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Load}
@@ -235,53 +307,51 @@ Load Average for SMP Machines}
 
 Most operating systems define the load average for an SMP machine as
 the total load on all CPUs.
-For example, if you have a 4 CPU machine with 3 CPU-bound processes
+For example, if you have a 4-CPU machine with 3 CPU-bound processes
 running at the same time, the load would be 3.0
 In Condor, we maintain this view of the total load average and publish
 it in all resource ClassAds as \Attr{TotalLoadAvg}.
 
-However, we also define the ``per-CPU'' load average for SMP machines.
-In this way, the model that each node on an SMP is a virtual machine,
-totally separate from the other nodes, can be maintained.
+Condor also provides a per-CPU load average for SMP machines.
+This nicely represents the model that each node on an SMP is a virtual machine,
+separate from the other nodes.
 All of the default, single-CPU policy expressions can be used directly
 on SMP machines, without modification, since the \Attr{LoadAvg} and
 \Attr{CondorLoadAvg} attributes are the per-virtual machine versions,
 not the total, SMP-wide versions.
 
-The per-CPU load average on SMP machines is a number we basically
-invented. 
-There is no system call you can use to ask your operating system for
-this value.
-Here's how it works:
-
-We already compute the load average generated by Condor on each
+The per-CPU load average on SMP machines is a Condor invention. 
+No system call exists to ask the operating system for this value.
+Condor already computes the load average generated by Condor on each
 virtual machine.
-We do this by close monitoring of all processes spawned by any of the
+It does this by close monitoring of all processes spawned by any of the
 Condor daemons, even ones that are orphaned and then inherited by
-init. 
-This \Term{Condor load average} per virtual machine is reported as
+\Prog{init}. 
+This Condor load average per virtual machine is reported as
+the attribute
 \Attr{CondorLoadAvg} in all resource ClassAds, and the total Condor
 load average for the entire machine is reported as
 \Attr{TotalCondorLoadAvg}. 
-We also have the total, system-wide load average for the entire
-machine (reported as \Attr{TotalLoadAvg}).
-Basically, we walk through all the virtual machines and assign out
+The total, system-wide load average for the entire
+machine  is reported as \Attr{TotalLoadAvg}.
+Basically, Condor walks through all the virtual machines and assigns out
 portions of the total load average to each one. 
-First, we assign out the known Condor load average to each node that
-is generating any.  
-If there's any load average left in the total system load, that's
-considered \Term{owner load}.
-Any virtual machines we already think are in the Owner state (like
-ones that have keyboard activity, etc), are the first to get assigned
+First, Condor assigns the known Condor load average to each node that
+is generating load.  
+If there's any load average left in the total system load, it is
+considered an owner load.
+Any virtual machines Condor believes are in the Owner state (like
+ones that have keyboard activity), are the first to get assigned
 this owner load.
-We hand out owner load in increments of at most 1.0, so generally
+Condor hands out owner load in increments of at most 1.0, so generally
 speaking, no virtual machine has a load average above 1.0.
-If we run out of total load average before we run out of virtual
-machines, all the remaining machines think they have no load average
+If Condor runs out of total load average before it runs out of virtual
+machines, all the remaining machines believe that they have no load average
 at all.
-If, instead, we run out of virtual machines and we still have owner
-load left, we start assigning that load to Condor nodes, too, creating
-individual nodes with a load average higher than 1.0.
+If, instead, Condor runs out of virtual machines and it still has owner
+load remaining, Condor starts assigning that load to Condor nodes as
+well,
+giving individual nodes with a load average higher than 1.0.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -289,16 +359,16 @@ individual nodes with a load average higher than 1.0.
 Debug logging in the SMP Startd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section describes how the startd handles its debug messages for
-SMP machines.
+This section describes how the \Condor{startd} daemon
+handles its debugging messages for SMP machines.
 In general, a given log message will either be something that is
 machine-wide (like reporting the total system load average), or it
 will be specific to a given virtual machine.
-Any log entrees specific to a virtual machine will have an extra
+Any log entrees specific to a virtual machine have an extra
 header printed out in the entry: \texttt{vm\#:}.  
 So, for example, here's the output about system resources that are
 being gathered (with \Dflag{FULLDEBUG} and \Dflag{LOAD} turned on) on
-a 2 CPU machine with no Condor activity, and the keyboard connected to
+a 2-CPU machine with no Condor activity, and the keyboard connected to
 both virtual machines:
 \begin{verbatim}
 11/25 18:15 Swap space: 131064
@@ -318,7 +388,7 @@ both virtual machines:
 \end{verbatim}
 
 If, on the other hand, this machine only had one virtual machine
-connected to the keyboard and console, and the other vm was running a
+connected to the keyboard and console, and the other VM was running a
 job, it might look something like this:
 \begin{verbatim}
 11/25 18:19 Load avg: 1.250000 0.910000 1.090000
@@ -333,5 +403,7 @@ job, it might look something like this:
 \end{verbatim}
 
 As you can see, shared system resources are printed without the header
-(like total swap space), which VM-specific messages (like the load
-average or state of each VM,) get the special header appended.  
+(like total swap space), and VM-specific messages (like the load
+average or state of each VM) get the special header appended.  
+
+\index{SMP machines!configuration|)}
