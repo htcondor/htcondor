@@ -1,3 +1,10 @@
+8/23/01 V6_3-INFN-CondorG-6_3_1
+		The V6_3-branch of what we're calling 6.3.1. It's a CondorG release
+		with the new recoverable job manager support added, proxy management,
+		DUROC support, and more info in the user log. Because of the Grid
+		Manager re-write, it's not clear when this will go to someone other
+		than INFN and Jim Basney.
+ 
 8/17/01 V6_3-pre-merge-V6_3_0-branch-merge-3
 		The state of the V6_3-branch before we merged in the V6_3_0-branch
 		for the third time.
