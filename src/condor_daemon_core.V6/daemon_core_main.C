@@ -63,18 +63,6 @@ int line_where_service_stopped = 0;
 bool	DynamicDirs = false;
 
 
-#define CONFIG_ATTRIBUTE_SECURITY 0
-/* 
-   We need to figure out how we really want to handle this.  As it
-   stands now, it's a little clumsy, not fully thought out, and unset
-   was broken.  For now, we'll just rely on HOSTALLOW_CONFIG and root
-   config files.  We should have a more complete solution at some
-   point, just not before 6.2.0.  Derek Wright 9/7/00
-*/
-#if CONFIG_ATTRIBUTE_SECURITY
-static StringList* SecureAttrList = NULL;
-static void init_secure_attr_list( void );
-#endif
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -549,160 +537,11 @@ handle_config_val( Service*, int, Stream* stream )
 }
 
 
-
-#if CONFIG_ATTRIBUTE_SECURITY
-bool
-check_config_security( const char* config, Sock* sock )
-{
-	char *name, *tmp;
-	char buf[128];
-	char* ip_str;
-
-	if( ! (name = strdup(config)) ) {
-		EXCEPT( "Out of memory!" );
-	}
-	tmp = strchr( name, '=' );
-	if( ! tmp ) {
-		tmp = strchr( name, ':' );
-	}
-	if( ! tmp ) {
-		dprintf( D_ALWAYS, 
-				 "ERROR in handle_config(): can't parse config string \"%s\"\n", 
-				 config );
-		free( name );
-		return false;
-	}
-
-		// Trim off white space
-	*tmp = ' ';
-	while( isspace(*tmp) ) {
-		*tmp = '\0';
-		tmp--;
-	}
-
-		// Now, name should point to a NULL-terminated version of the
-		// attribute name we're trying to set.  This is what we must
-		// compare against the NETWORK_SECURE_ATTRIBUTES list.
-	if( ! SecureAttrList->contains_anycase(name) ) {
-			// Everything's cool.  Continue on.
-		free( name );
-		return true;
-	}
-
-		// If we're still here, someone is trying to set one of the
-		// special settings they shouldn't be.  Try to let as many
-		// people know as possible.  
-
-		// Grab a pointer to this string, since it's a little bit
-		// expensive to re-compute.
-	ip_str = sock->endpoint_ip_str();
-		// Upper-case-ify the string for everything we print out.
-	strupr(name);
-
-		// First, log it.
-	dprintf( D_ALWAYS,
-			 "WARNING: Someone at %s is trying to set \"%s\"\n",
-			 ip_str, name );
-	dprintf( D_ALWAYS, 
-			 "WARNING: Potential security problem, request refused\n" );
-	dprintf( D_ALWAYS, 
-			 "WARNING: Emailing the Condor Administrator\n" );
-
-		// Now, try to email the Condor Admins
-	sprintf( buf, "Potential security attack from %s", ip_str );
-	FILE* email = email_admin_open( buf );
-	if( ! email ) {
-		dprintf( D_ALWAYS, 
-				 "ERROR: Can't send email to the Condor Administrator\n" );
-		free( name );
-		return false;
-	}
-	fprintf( email, 
-			 "Someone at %s is attempting to modify the value of:\n", ip_str );
-	fprintf( email, "\"%s\" on %s (%s)\n\n", name, my_full_hostname(),
-			 inet_ntoa(*(my_sin_addr())) );
-	fprintf( email, 
-			 "This is a potential security attack.  You should probably add\n" );
-	fprintf( email, 
-			 "\"%s\" to your HOSTDENY_READ, HOSTDENY_WRITE, and\n",
-			 ip_str );
-	fprintf( email, "HOSTDENY_ADMINSITRATOR settings.  "
-			 "See the Condor Manual for\n" );
-	fprintf( email, "details on these config file entries.\n\n" );
-	fprintf( email, "If possible, try to further investigate this potential "
-			 "attack.\n" );
-	email_close( email );
-
-	free( name );
-	return false;
-}
-
-
-void
-init_secure_attr_list( void )
-{
-	char buf[64];
-	int i;
-	char* tmp;
-
-	if( SecureAttrList ) {
-		delete( SecureAttrList );
-	}
-	SecureAttrList = new StringList();
-
-	if( (tmp = param("NETWORK_SECURE_ATTRIBUTES")) ) {
-		SecureAttrList->initializeFromString( tmp );
-	} else {
-			// The defaults
-
-			// Paths
-		SecureAttrList->append( "RELEASE_DIR" );
-		SecureAttrList->append( "BIN" );
-		SecureAttrList->append( "SBIN" );
-		
-			// Daemons and programs spawned by Condor
-		SecureAttrList->append( "MASTER" );
-		SecureAttrList->append( "STARTD" );
-		SecureAttrList->append( "SCHEDD" );
-		SecureAttrList->append( "COLLECTOR" );
-		SecureAttrList->append( "NEGOTIATOR" );
-		SecureAttrList->append( "KBDD" );
-		SecureAttrList->append( "EVENTD" );
-		SecureAttrList->append( "CKPT_SERVER" );
-		SecureAttrList->append( "PREEN" );
-		SecureAttrList->append( "MAIL" );
-		SecureAttrList->append( "PVMD" );
-		SecureAttrList->append( "PVMGS" );
-		SecureAttrList->append( "SHADOW" );
-		SecureAttrList->append( "SHADOW_CARMI" );
-		SecureAttrList->append( "SHADOW_GLOBUS" );
-		SecureAttrList->append( "SHADOW_MPI" );
-		SecureAttrList->append( "SHADOW_NT" );
-		SecureAttrList->append( "SHADOWNT" );
-		SecureAttrList->append( "SHADOW_PVM" );
-		SecureAttrList->append( "STARTER" );
-		for( i=0; i<10; i++ ) {
-			sprintf( buf, "STARTER_%d", i );
-			SecureAttrList->append( buf );
-			sprintf( buf, "ALTERNATE_STARTER_%d", i );
-			SecureAttrList->append( buf );
-		}
-
-			// Other settings
-		SecureAttrList->append( "DAEMON_LIST" );
-		SecureAttrList->append( "LOCAL_ROOT_CONFIG_FILE" );
-		SecureAttrList->append( "PREEN_ARGS" );
-	}
-		// In either event, we don't want to let condor_config_val
-		// -set change NETWORK_SECURE_ATTRIBUTES itself!
-	SecureAttrList->append( "NETWORK_SECURE_ATTRIBUTES" );
-}
-#endif /* CONFIG_ATTRIBUTE_SECURITY */
-
 int
 handle_config( Service *, int cmd, Stream *stream )
 {
 	char *admin = NULL, *config = NULL;
+	char *to_check = NULL;
 	int rval = 0;
 	bool failed = false;
 
@@ -721,21 +560,20 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 
-#if CONFIG_ATTRIBUTE_SECURITY 
 	if( config && config[0] ) {
-			// They're trying to set something, so check to make sure
-			// we want to allow that
-		if( ! check_config_security(config, (Sock*)stream) ) {
-				// This config string is insecure, so don't try to do 
-				// anything with it.  We can't return yet, since we
-				// want to send back an rval indicating the error. 
-			free( admin );
-			free( config );
-			rval = -1;
-			failed = true;
-		}
+		to_check = config;
+	} else {
+		to_check = admin;
+	}
+	if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
+			// This request is insecure, so don't try to do anything
+			// with it.  We can't return yet, since we want to send
+			// back an rval indicating the error.
+		free( admin );
+		free( config );
+		rval = -1;
+		failed = true;
 	} 
-#endif /* CONFIG_ATTRIBUTE_SECURITY */
 
 		// If we haven't hit an error yet, try to process the command  
 	if( ! failed ) {
@@ -850,9 +688,7 @@ handle_dc_sighup( Service*, int )
 		drop_pid_file();
 	}
 
-#if CONFIG_ATTRIBUTE_SECURITY
-	init_secure_attr_list();
-#endif
+	daemonCore->InitSettableAttrsLists();
 
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
@@ -1359,13 +1195,16 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_config_val,
 								  "handle_config_val()", 0, READ );
 
+		// The handler for setting config variables does its own
+		// authorization, so these two commands should be registered
+		// as "ALLOW" and the handler will do further checks.
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, CONFIG_PERM );
+								  "handle_config()", 0, ALLOW );
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  (CommandHandler)handle_config,
-								  "handle_config()", 0, CONFIG_PERM );
+								  "handle_config()", 0, ALLOW );
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  (CommandHandler)handle_off_fast,
@@ -1388,11 +1227,10 @@ int main( int argc, char** argv )
 	daemonCore->ReInit();
 
 
-#if CONFIG_ATTRIBUTE_SECURITY
-		// Initialize the StringList that contains the attributes we
-		// don't want to allow anyone to set with condor_config_val. 
-	init_secure_attr_list();
-#endif
+		// Initialize the StringLists that contain the attributes we
+		// will allow people to set with condor_config_val from
+		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
+	daemonCore->InitSettableAttrsLists();
 
 	// call the daemon's main_init()
 	main_init( argc, argv );
