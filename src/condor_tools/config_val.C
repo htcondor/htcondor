@@ -124,7 +124,7 @@ void  SetRemoteParam( char*, char*, char*, char*, ModeType );
 int
 main( int argc, char* argv[] )
 {
-	char	*value, *tmp, *foo, *host = NULL;
+	char	*value, *tmp, *host = NULL;
 	char	*addr = NULL, *name = NULL, *pool = NULL;
 	int		i;
 	bool	ask_a_daemon = false;

@@ -1,10 +1,11 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_q.mak
 
 ..\src\condor_q.V6\queue.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\
+	"..\src\condor_c++_util\error_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\format_time.h"\
 	"..\src\condor_c++_util\generic_query.h"\
@@ -54,7 +55,7 @@
 	"..\src\condor_includes\condor_string.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\match_prefix.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\

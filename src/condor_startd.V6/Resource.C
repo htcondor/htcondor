@@ -29,14 +29,13 @@ Resource::Resource( CpuAttributes* cap, int rid )
 {
 	char tmp[256];
 	char* tmpName;
-	int size = (int)ceil(60.0 / (double)polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_starter = NULL;
 	r_cur = new Match( this );
 	r_pre = NULL;
 	r_reqexp = new Reqexp( this );
-	r_load_queue = new LoadQueue( size );
+	r_load_queue = new LoadQueue( 60 );
 
 	r_id = rid;
 	sprintf( tmp, "vm%d", rid );
@@ -78,6 +77,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
+	r_last_compute_condor_load = resmgr->now();
 
 		// Initialize our procInfo structure so we don't use any
 		// values until we've actually computed them.
@@ -1106,11 +1106,19 @@ Resource::compute_condor_load( void )
 	float avg;
 	float max;
 	float load;
+	float new_val;
 	int numcpus = resmgr->num_cpus();
 	int i;
+	time_t now = resmgr->now();
+	int num_since_last = now - r_last_compute_condor_load;
+	if( num_since_last < 1 ) {
+		num_since_last = 1;
+	}
+	if( num_since_last > polling_interval ) {
+		num_since_last = polling_interval;
+	}
 
 	if( r_starter && r_starter->active() ) { 
-		time_t now = time(NULL);
 		if( now - r_starter->last_snapshot() >= pid_snapshot_interval ) { 
 			r_starter->recompute_pidfamily( now );
 		}
@@ -1153,10 +1161,17 @@ Resource::compute_condor_load( void )
 			dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
 					 r_pinfo.cpuusage );
 		}
-		r_load_queue->push( 1, r_pinfo.cpuusage );
+		new_val = r_pinfo.cpuusage;
 	} else {
-		r_load_queue->push( 1, 0.0 );
+		new_val = 0.0;
 	}
+
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n", 
+				 num_since_last, new_val );
+	}
+	r_load_queue->push( num_since_last, new_val );
+
 	avg = (r_load_queue->avg() / numcpus);
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -1166,24 +1181,13 @@ Resource::compute_condor_load( void )
 				 r_load_queue->size(), r_load_queue->avg(), avg );
 	}
 
+	r_last_compute_condor_load = now;
+
 	max = MAX( numcpus, resmgr->m_attr->load() );
 	load = (avg * max) / 100;
 		// Make sure we don't think the CondorLoad on 1 node is higher
 		// than the total system load.
 	return MIN( load, resmgr->m_attr->load() );
-}
-
-
-void
-Resource::resize_load_queue( void )
-{
-	int size = (int)ceil(60.0 / (double)polling_interval);
-	dprintf( D_FULLDEBUG, "Resizing load queue.  Old: %d, New: %d\n",
-			 r_load_queue->size(), size );
-	float val = r_load_queue->avg();
-	delete r_load_queue;
-	r_load_queue = new LoadQueue( size );
-	r_load_queue->setval( val );
 }
 
 
@@ -1197,7 +1201,7 @@ Resource::compute_cpu_busy( void )
 	if( ! old_cpu_busy && r_cpu_busy ) {
 			// It's busy now and it wasn't before, so set the
 			// start time to now
-		r_cpu_busy_start_time = time( NULL );
+		r_cpu_busy_start_time = resmgr->now();
 	}
 	if( old_cpu_busy && ! r_cpu_busy ) {
 			// It was busy before, but isn't now, so clear the 

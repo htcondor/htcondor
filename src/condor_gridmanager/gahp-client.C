@@ -613,7 +613,7 @@ GahpClient::command_initialize_from_file(const char *proxy_path,
 		command = "INITIALIZE_FROM_FILE";
 	}
 	int x = snprintf(buf,sizeof(buf),"%s %s",command,escape(proxy_path));
-	ASSERT( x > 0 && x < sizeof(buf) );
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
 	write_line(buf);
 	Gahp_Args result;
 	char **argv = result.read_argv(m_gahp_readfd);
@@ -643,7 +643,7 @@ GahpClient::command_response_prefix(const char *prefix)
 
 	char buf[_POSIX_PATH_MAX];
 	int x = snprintf(buf,sizeof(buf),"%s %s",command,escape(prefix));
-	ASSERT( x > 0 && x < sizeof(buf) );
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
 	write_line(buf);
 	Gahp_Args result;
 	char **argv = result.read_argv(m_gahp_readfd);
@@ -748,7 +748,7 @@ GahpClient::globus_gram_client_error_string(int error_code)
 	}
 
 	int x = snprintf(buf,sizeof(buf),"%s %d",command,error_code);
-	ASSERT( x > 0 && x < sizeof(buf) );
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
 	write_line(buf);
 	Gahp_Args result;
 	char **argv = result.read_argv(m_gahp_readfd);
@@ -1600,7 +1600,7 @@ GahpClient::globus_gram_client_callback_allow(
 
 	int reqid = new_reqid();
 	int x = snprintf(buf,sizeof(buf),"%s %d 0",command,reqid);
-	ASSERT( x > 0 && x < sizeof(buf) );
+	ASSERT( x > 0 && x < (int)sizeof(buf) );
 	write_line(buf);
 	Gahp_Args result;
 	char **argv = result.read_argv(m_gahp_readfd);

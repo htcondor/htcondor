@@ -808,9 +808,9 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 }
 
 ReliSock::RcvMsg :: RcvMsg() : 
-    ready(0), 
+    mode_(MD_OFF),
     mdChecker_(0), 
-    mode_(MD_OFF) 
+    ready(0) 
 {
 }
 
@@ -1045,7 +1045,7 @@ ReliSock::serialize(char *buf)
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
 
-    sscanf(ptmp,"%d*",&_special_state);
+    sscanf(ptmp,"%d*",(int*)&_special_state);
     // skip through this
     ptmp = strchr(ptmp, '*');
     ptmp++;

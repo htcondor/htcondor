@@ -40,7 +40,6 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
 {
     char *new_file = NULL;
     int fd = -1;
-    char *owner = NULL;
     int retval = -1;
 	int fail = -1 == 0;
     

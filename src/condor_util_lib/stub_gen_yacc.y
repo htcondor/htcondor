@@ -112,7 +112,6 @@ static char AltLocalName[NAME_LENGTH] = {0};
 static char AltTableName[NAME_LENGTH] = {0};
 static char AltSenderName[NAME_LENGTH] = {0};
 
-static char global_func[20],global_fd[20];
 #if 0
 input
 	: /* empty */
@@ -526,6 +525,7 @@ char	*Prologue;
 char	*Epilogue;
 char	*ProgName;
 
+void
 usage()
 {
 	fprintf( stderr,
@@ -539,14 +539,16 @@ int gen_local_calls = 1;
 int stub_clump_size = 0;
 int stub_clump_num = 0;
 
+
+int
 main( int argc, char *argv[] )
 {
 	char	*arg;
 	FILE	*fp;
 
 	ProgName = *argv;
-	for( argv++; arg = *argv; argv++ ) {
-		if( arg[0] = '-' ) {
+	for( argv++; (arg = *argv); argv++ ) {
+		if( arg[0] == '-' ) {
 			switch( arg[1] ) {
 			  case 'm':
 				arg = *(++argv);
@@ -594,7 +596,7 @@ main( int argc, char *argv[] )
 	}
 
 		/* Copy the prologue */
-	if( fp = open_file(Prologue) ) {
+	if( (fp = open_file(Prologue)) ) {
 		copy_file( fp, stdout );
 	}
 
@@ -602,7 +604,7 @@ main( int argc, char *argv[] )
 	yyparse();
 
 		/* Copy the epilogue */
-	if( fp = open_file(Epilogue) ) {
+	if( (fp = open_file(Epilogue)) ) {
 		copy_file( fp, stdout );
 	}
 
@@ -611,6 +613,7 @@ main( int argc, char *argv[] )
 	} else {
 		exit( 0 );
 	}
+	return 0;
 }
 
 void yyerror( const char * s )
@@ -1028,10 +1031,9 @@ output_tabled_call( struct node *n, struct node *list )
 	printf( " );\n");
 }
 
-void output_extracted_call( struct node *n, struct node *list )
+void
+output_extracted_call( struct node *n, struct node *list )
 {
-	struct node	*p;
-
 	printf("\t\t\trval = (int) %s(", mk_upper(n->id) );
 	if( !is_empty_list(list) ) {
 		printf( " " );
@@ -1040,7 +1042,9 @@ void output_extracted_call( struct node *n, struct node *list )
 	printf( " );\n" );
 }
 
-void output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr, struct node *list )
+void
+output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr, 
+						  struct node *list )
 {
 	struct node	*p;
 
@@ -1144,7 +1148,6 @@ void
 output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 {
 	struct node	*n;
-        struct node     *p;
 	int	found_mapping = 0;
 
 	for( n = list->next; n != list; n = n->next ) {
@@ -1416,7 +1419,6 @@ output_sender( struct node *n )
 {
 	struct node *param_list = n->param_list;
 	struct node *p, *q;
-	static first_output_sender = 1;
 
 	assert( n->node_type == FUNC );
 
@@ -1558,7 +1560,6 @@ output_sender( struct node *n )
 void
 output_switch( struct node *n )
 {
-	char tmpname[NAME_LENGTH];
 	struct node *p;
 	int did_map_name = 0;
 
@@ -1693,11 +1694,9 @@ output_switch( struct node *n )
  * Output an entry to be consumed by the analyze_syscalls shell script
  */
 
+void
 output_listcalls( struct node *n )
 {
-	struct node *param_list = n->param_list;
-	struct node *p, *q;
-
 	assert( n->node_type == FUNC );
 
 	/* don't spit out anything for pseudo syscalls */
@@ -1730,6 +1729,7 @@ output_listcalls( struct node *n )
    Output a stub for the call which also marshalls and sends parameters 
 */
 
+void
 output_send_stub( struct node *n )
 {
 	struct node *param_list = n->param_list;

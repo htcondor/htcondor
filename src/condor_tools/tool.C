@@ -288,7 +288,7 @@ int
 main( int argc, char *argv[] )
 {
 	char *daemonname, *MyName = argv[0];
-	char *cmd_str, **tmp, *foo;
+	char *cmd_str, **tmp;
 	int size, did_one = FALSE;
 
 #ifndef WIN32
@@ -1060,7 +1060,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d(addr);
 		d.startCommand ( command, &sock, 0);
 		sock.encode();
-		while ( token = strtok( NULL, " " ) ) {
+		while( (token = strtok(NULL, " ")) ) {
 			if ( isdigit(token[0]) ) {
 				int dig = atoi( token );
 				if ( !sock.code( dig ) ) {

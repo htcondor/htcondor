@@ -638,7 +638,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	{
 		EXCEPT ("Error reading system time!");
 	}	
-	sprintf (buf, "%s = %d", ATTR_LAST_HEARD_FROM, now);
+	sprintf (buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
 	ad->Insert (buf);
 
 	// this time stamped ad is the new ad

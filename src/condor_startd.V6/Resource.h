@@ -81,7 +81,6 @@ public:
 		// Load Average related methods
 	float	condor_load( void ) {return r_attr->condor_load();};
 	float	compute_condor_load( void );
-	void	resize_load_queue( void ); 
 	float	owner_load( void ) {return r_attr->owner_load();};
 	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
 	void	compute_cpu_busy( void );
@@ -172,6 +171,7 @@ private:
 	bool	r_is_deactivating;	// Are we in the middle of deactivating a claim?
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;
+	time_t	r_last_compute_condor_load;
 };
 
 #endif /* _STARTD_RESOURCE_H */

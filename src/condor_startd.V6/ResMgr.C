@@ -47,7 +47,8 @@ ResMgr::ResMgr()
 	type_nums = NULL;
 	new_type_nums = NULL;
 	is_shutting_down = false;
-	last_in_use = time(NULL);
+	last_in_use = startTime;
+	cur_time = startTime;
 }
 
 
@@ -1188,6 +1189,10 @@ ResMgr::compute( amask_t how_much )
 		return;
 	}
 
+		// Since lots of things want to know this, just get it from
+		// the kernel once and share the value...
+	cur_time = time( 0 ); 
+
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
 	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
@@ -1296,7 +1301,7 @@ ResMgr::assign_keyboard( void )
 		// First, initialize all CPUs to the max idle time we've got,
 		// which is some configurable amount of minutes longer than
 		// the time since we started up.
-	max = (time(0) - startd_startup) + disconnected_keyboard_boost;
+	max = (cur_time - startd_startup) + disconnected_keyboard_boost;
 	for( i = 0; i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( max );
 		resources[i]->r_attr->set_keyboard( max );
@@ -1484,9 +1489,8 @@ ResMgr::makeAdList( ClassAdList *list )
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work. 
-	int now = time(0);
 	char buf[1024];
-	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, now );
+	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)cur_time );
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;

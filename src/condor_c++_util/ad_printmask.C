@@ -131,12 +131,13 @@ display (AttrList *al)
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
-	ExprTree *tree;
+	ExprTree *tree, *rhs;
 	EvalResult result;
 	char * 	retval = new char[1024 * 8];
 	int		intValue;
 	float 	floatValue;
 	char  	stringValue[1024];
+	char*	bool_str = NULL;
 
 	formats.Rewind();
 	attributes.Rewind();
@@ -181,6 +182,27 @@ display (AttrList *al)
 						sprintf( stringValue, fmt->printfFmt, result.i);
 						strcat( retval, stringValue );
 						break;
+
+					case LX_UNDEFINED:
+					case LX_BOOL:
+
+							// if the classad lookup worked, but the
+							// evaluation gave us an undefined result,
+							// (or if it's a bool), we know the
+							// attribute is there.  so, instead of
+							// printing out the evaluated result, just
+							// print out the unevaluated expression.
+						rhs = tree->RArg();
+						if( rhs ) {
+							rhs->PrintToNewStr( &bool_str );
+							if( bool_str ) {
+								sprintf( stringValue, fmt->printfFmt,
+										 bool_str );
+								strcat( retval, stringValue );
+								free( bool_str );
+								break;
+							}
+						}
 
 					default:
 						strcat( retval, alt );

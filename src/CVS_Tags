@@ -2,6 +2,12 @@
 	The state of the V6_5-branch before merging in the V6_4-branch as
 	tagged at V6_4-merge-3.
 
+01/10/03 V6_4-merge-3
+	The state of the V6_4-branch before merging into 6.5.  This
+	may be equivalent to the V6_4_6 tag, but that's coming later,
+	and the merge has to happen now.  The last merge was
+	V6_4-merge-2.
+
 01/09/03 V6_5-post-merge-V6_5-edg-branch-1
 	The state of the V6_5-branch after merging in the V6_5-edg-branch
 	as tagged at V6_5-edg-branch-merge-1

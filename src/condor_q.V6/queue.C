@@ -47,6 +47,7 @@
 #include "basename.h"
 #include "metric_units.h"
 #include "globus_utils.h"
+#include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 
@@ -190,35 +191,25 @@ int main (int argc, char **argv)
 							scheddMachine ) );
 			}
 		} else {
-			char error_message[1024];
-			print_wrapped_text("Error: Couldn't contact the local "
-							   "condor_schedd process.",
-							   stderr);
+			fprintf( stderr, "Error: %s\n", schedd.error() );
 			if (!expert) {
-				char *log_directory = NULL;
-				log_directory = param("LOG");
 				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: the condor_schedd is the local process "
-								   "that runs "
-								   "on this machine and monitors your job "
-								   "submissions. Either it "
-								   "isn't running, or it is failing to "
-								   "communicate. Check with your system administrator "
-								   "to see why.", stderr);
-				fprintf(stderr, "\n");
-				sprintf(error_message, 
-						"If you are the system administrator, check the "
-						"MasterLog and SchedLog in %s "
-						"for possible clues as to why the condor_schedd "
-						"is misbehaving. Also see the Troubleshooting "
-						"section of the manual.", 
-						log_directory ? log_directory : "your Condor log directory");
-				print_wrapped_text(error_message, stderr);
-                if (log_directory) {
-                    free(log_directory);
-                }
+				print_wrapped_text("Extra Info: You probably saw this "
+								   "error because you're running a "
+								   "personal Condor, you have not "
+								   "defined SCHEDD_NAME in your "
+								   "condor_config file, and something "
+								   "is wrong with your "
+								   "SCHEDD_ADDRESS_FILE setting. "
+								   "You must define either or both of "
+								   "those settings in your config "
+								   "file, or you must use the -name "
+								   "option to condor_q. Please see "
+								   "the Condor manual for details on "
+								   "SCHEDD_NAME and "
+								   "SCHEDD_ADDRESS_FILE.",  stderr );
+				exit( 1 );
 			}
-			exit( 1 );
 		}
 	}
 	
@@ -245,9 +236,22 @@ int main (int argc, char **argv)
 			submittorQuery.fetchAds(scheddList);
 	}
 
-	if (result != Q_OK) {
-		fprintf (stderr, "Error %d: %s\n", result, getStrQueryResult(result));
-		exit(1);
+	switch( result ) {
+	case Q_OK:
+		break;
+	case Q_COMMUNICATION_ERROR: 
+			// if we're not an expert, we want verbose output
+		printNoCollectorContact( stderr, pool, !expert );
+		exit( 1 );
+	case Q_NO_COLLECTOR_HOST:
+		assert( pool );
+		fprintf( stderr, "Error: Can't contact condor_collector: "
+				 "invalid hostname: %s\n", pool );
+		exit( 1 );
+	default:
+		fprintf( stderr, "Error fetching ads: %s\n", 
+				 getStrQueryResult(result) );
+		exit( 1 );
 	}
 	
 
@@ -419,12 +423,7 @@ processCommandLineArguments (int argc, char *argv[])
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			delete [] daemonname;
 
-			result = scheddQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint (constraint);
 			i++;
 			querySchedds = true;
 		} 
@@ -471,12 +470,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 
 			// insert the constraints
-			result = submittorQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			submittorQuery.addORConstraint (constraint);
 
 			{
 				char *ownerName = argv[i];
@@ -530,12 +524,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			sprintf(constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
-			result = scheddQuery.addORConstraint(constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint(constraint);
 			i++;
 			querySchedds = true;
 		} 
@@ -1732,15 +1721,14 @@ doRunAnalysisToBuffer( ClassAd *request )
 	}
 	startdAds.Close();
 
-	sprintf( return_buff,
-		"%s---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n" 
-		"\t%5d do not satisfy the request's constraints\n"
-		"\t%5d resource offer constraints are not satisfied by this request\n"
-		"\t%5d are serving equal or higher priority customers%s\n" 
-		"\t%5d do not prefer this job\n"
-		"\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
-		"\t%5d are available to service your request\n",
-
+	sprintf( return_buff, 
+		 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
+		 "  %5d are rejected by your job's requirements\n"
+		 "  %5d reject your job because of their own requirements\n"
+		 "  %5d match, but are serving users with a better priority in the pool%s\n"
+		 "  %5d match, but prefer another specific job despite its worse user-priority\n"
+		 "  %5d match, but cannot currently preempt their existing job\n"
+		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint,
 		fOffConstraint,

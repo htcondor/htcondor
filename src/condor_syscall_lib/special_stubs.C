@@ -123,7 +123,6 @@ int get_port_range(int *low_port, int *high_port)
 		return FALSE;
     }
 	if ( (high = getenv("_condor_HIGHPORT")) == NULL ) {
-		free(low);
         dprintf(D_ALWAYS, "_condor_LOWPORT is defined but _condor_HIGHPORT undefined!\n");
 		return FALSE;
 	}
@@ -135,13 +134,9 @@ int get_port_range(int *low_port, int *high_port)
 		dprintf(D_ALWAYS, "get_port_range - invalid LOWPORT(%d) \
 		                   and/or HIGHPORT(%d)\n",
 		                   *low_port, *high_port);
-		free(low);
-		free(high);
 		return FALSE;
 	}
 
-	free(low);
-	free(high);
 	return TRUE;
 }
 

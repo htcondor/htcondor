@@ -337,6 +337,10 @@ SOURCE="..\src\condor_c++_util\environ.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\error_utils.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\extArray.h"
 # End Source File
 # Begin Source File

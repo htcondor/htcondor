@@ -605,7 +605,6 @@ main(int argc, char *argv[] )
 void
 HandleSyscalls()
 {
-	int				fake_arg;
 	register int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
@@ -761,14 +760,6 @@ Wrapup( )
 {
 	struct rusage local_rusage;
 	char notification[ BUFSIZ ];
-	int pid;
-	int	cnt;
-	int	nfds;
-	FILE	*log_fp;
-	int		s;
-	char coredir[ MAXPATHLEN ];
-	int		coredir_len;
-	int		msg_type;
 
 	dprintf(D_FULLDEBUG, "Entering Wrapup()\n" );
 
@@ -980,8 +971,6 @@ update_job_rusage( struct rusage *localp, struct rusage *remotep )
 void
 update_job_status( struct rusage *localp, struct rusage *remotep )
 {
-	PROC	my_proc;
-	PROC	*proc = &my_proc;
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
@@ -1275,9 +1264,6 @@ ExceptCleanup(int, int, char *buf)
 int
 DoCleanup()
 {
-	int		status = -1;
-	int		fetch_rval;
-
 	dprintf( D_FULLDEBUG, "Shadow: Entered DoCleanup()\n" );
 
 	if( TmpCkptName[0] != '\0' ) {
@@ -1552,7 +1538,9 @@ count_open_fds( const char *file, int line )
 
 void RemoveNewShadowDroppings(char *cluster, char *proc)
 {
-	char names[2][1024] = {0};
+	char names[2][1024];
+	names[0][0] = '\0';
+	names[1][0] = '\0';
 	int j;
 	char *ckpt_name;
 	char *myspool;

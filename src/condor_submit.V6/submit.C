@@ -423,12 +423,7 @@ main( int argc, char *argv[] )
 
 	// Initialize env_delimiter string... note that 
 	// const char env_delimiter is defined in condor_constants.h
-	//sprintf(env_delimiter_string,"%c\0",env_delimiter);
-	// gcc gives a warning for the \0, so we do it in two quick
-	// steps instead. (Why is the \0 there anyway? sprintf
-	// always terminates with a \0, right?)
-	*(env_delimiter_string) = env_delimiter;
-	*(env_delimiter_string+1) = 0;
+	sprintf(env_delimiter_string,"%c",env_delimiter);
 
 	setbuf( stdout, NULL );
 
@@ -2145,7 +2140,7 @@ SetRank()
 	}
 				
 	if( rank[0] == '\0' ) {
-		(void)sprintf( buffer, "%s = 0", ATTR_RANK );
+		(void)sprintf( buffer, "%s = 0.0", ATTR_RANK );
 		InsertJobExpr( buffer );
 	} else {
 		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
@@ -2411,7 +2406,7 @@ SetGlobusParams()
 	sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
 	InsertJobExpr (buffer, false );
 
-	if ( tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK) ) {
+	if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 		sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
 		free(tmp);
 		InsertJobExpr (buff, false );
@@ -2420,7 +2415,7 @@ SetGlobusParams()
 		InsertJobExpr (buff, false );
 	}
 
-	if ( (tmp = condor_param(GlobusRSL)) ) {
+	if( (tmp = condor_param(GlobusRSL)) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );
 		free( tmp );
 		InsertJobExpr ( buff );

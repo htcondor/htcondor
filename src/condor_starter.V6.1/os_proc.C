@@ -411,7 +411,7 @@ OsProc::StartJob()
 		dprintf( D_ALWAYS, "Using wrapper %s to exec %s\n", JobName, 
 				 &(Args[skip]) );
 	} else {
-		if (skip < strlen(Args)){
+		if (skip < (int)strlen(Args)){
 			/* some arguments exist, so skip and print them out */
 			dprintf( D_ALWAYS, "About to exec %s %s\n", JobName,
 				 &(Args[skip]) );
