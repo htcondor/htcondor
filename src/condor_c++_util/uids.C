@@ -715,7 +715,7 @@ set_user_egid()
 		errno = 0;
 		if( (initgroups(UserName, UserGid) < 0) ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
 		}			
 	}
