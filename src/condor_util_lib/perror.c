@@ -22,16 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-
-#include <string.h>
-#include <sys/types.h>
-#include <sys/uio.h>
-
-#if defined(AIX31) || defined(AIX32)
-extern int	errno;
-#else
-extern int errno;
+#include "condor_common.h"
 
 int	sys_nerr;
 extern char *sys_errlist[];
