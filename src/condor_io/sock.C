@@ -673,6 +673,18 @@ bool Sock::do_connect_finish()
 bool Sock::do_connect_tryit()
 {
 	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
+		if ( connect_state.non_blocking_flag ) {
+			//Pretend that we haven't connected yet so that there is
+			//only one code path for all non-blocking connects.
+			//Otherwise, blindly calling DaemonCore::Register_Socket()
+			//after initiating a non-blocking connect will fail if
+			//connect() happens to complete immediately.  Why does
+			//that fail?  Because DaemonCore will see that the socket
+			//is in a connected state and will therefore select() on
+			//reads instead of writes.
+
+			return false;
+		}
 		_state = sock_connect;
 		if( DebugFlags & D_NETWORK ) {
 			char* src = strdup(	sock_to_string(_sock) );
@@ -681,9 +693,6 @@ bool Sock::do_connect_tryit()
 					 src, _sock, dst );
 			free( src );
 			free( dst );
-		}
-		if ( connect_state.non_blocking_flag ) {
-			timeout(connect_state.old_timeout_value);			
 		}
 		return true;
 	}
