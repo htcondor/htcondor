@@ -44,6 +44,7 @@
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "user_log.c++.h"
+#include "shadow_mgr.h"
 
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
@@ -277,6 +278,9 @@ class Scheduler : public Service
 	void			updateCentralMgr( int command, ClassAd* ca, 
 									  char* host, int port ); 
 
+		// object to manage our various shadows and their ClassAds
+	ShadowMgr shadow_mgr;
+
   private:
 	
 	// information about this scheduler
@@ -335,7 +339,6 @@ class Scheduler : public Service
 	
 	// useful names
 	char*			CondorViewHost;
-	char*			Shadow;
 	char*			CondorAdministrator;
 	char*			Mail;
 	char*			filename;					// save UpDown object
