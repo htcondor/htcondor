@@ -86,12 +86,19 @@ bool dynuser::createuser(char *username){
 dynuser::~dynuser() {
 
 	if ( accountname_t ) {
-		NET_API_STATUS nerr = NetUserDel(0,accountname_t);
 
-		if (nerr != NERR_Success) {
-			dprintf(D_ALWAYS,"dynuser: Removing user %s FAILED!\n",accountname);
+		bool success;
+		if ( accountname ) {
+			success = deleteuser(accountname);
 		} else {
+			// should never happen
+			success = false;
+		}
+
+		if (success) {
 			dprintf(D_FULLDEBUG,"dynuser: Removed user %s\n",accountname);
+		} else {
+			dprintf(D_ALWAYS,"dynuser: Removing user %s FAILED!\n",accountname);
 		}
 	}
 
@@ -258,6 +265,35 @@ bool dynuser::add_users_group() {
 	return false;
 }
 
+
+////
+//
+// dynuser::del_users_group:  remove the user from the "users" group
+//
+////
+
+bool dynuser::del_users_group() {
+	// Add this user to group "users"
+	LOCALGROUP_MEMBERS_INFO_0 lmi;
+
+	lmi.lgrmi0_sid = this->psid;
+
+	NET_API_STATUS nerr = NetLocalGroupDelMembers(
+	  NULL,				// LPWSTR servername,      
+	  L"Users",			// LPWSTR LocalGroupName,  
+	  0,				// DWORD level,            
+	  (LPBYTE) &lmi,	// LPBYTE buf,             
+	  1				// DWORD membercount       
+	);
+
+	if ( NERR_Success == nerr ) {
+		return true;
+	}
+
+	dprintf(D_ALWAYS,"dynuser::del_users_group() NetLocalGroupDelMembers failed\n");	
+	return false;
+}
+
 #if 0
 // Dump the groups...
 bool dynuser::dump_groups() {
@@ -313,6 +349,10 @@ void dynuser::update_psid() {
 
 
 bool dynuser::deleteuser(char* username ) {
+
+	bool retval = true;
+
+	// allocate working buffers if needed
 	if (!accountname) 
 		accountname = new char[100];
 	if (!accountname_t)
@@ -321,14 +361,53 @@ bool dynuser::deleteuser(char* username ) {
 	strcpy( accountname, username);	// Used to add condor-run-, but not anymore.
 	
 	this->update_t( );				// Make the accountname_t and password_t accounts
+	this->update_psid();			// Updates our psid;
 
-	NET_API_STATUS nerr = NetUserDel( NULL, accountname_t);
+
+	// get machine name
+	UNICODE_STRING machine;
+	{
+		PWKSTA_INFO_100 pwkiWorkstationInfo;
+		DWORD netret = NetWkstaGetInfo( NULL, 100, 
+			(LPBYTE *)&pwkiWorkstationInfo);
+		if ( netret != NERR_Success ) {
+			EXCEPT("dynuser::deleteuser(): Cannot determine workstation name\n");
+		}
+		InitString( machine, 
+			(wchar_t *)pwkiWorkstationInfo->wki100_computername);
+	}
+
+	// open a policy
+	LSA_HANDLE hPolicy = 0;
+	LSA_OBJECT_ATTRIBUTES oa;//	= { sizeof oa };
+	ZeroMemory(&oa, sizeof(oa));
+	if (LsaOpenPolicy(&machine,		// Computer Name (NULL == this machine?)
+		&oa,						// Object Attributes
+		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT,	// Type of access required
+		&hPolicy ) != STATUS_SUCCESS)					// Pointer to the policy handles
+	{
+		dprintf(D_ALWAYS,"dynuser::deleteuser() LsaOpenPolicy failed\n");
+		retval = false;
+	}
+
+	SetLastError(0);
+
+	// according to microsoft docs, LsaRemoveAccountRights will remove
+	// the account and all rights if the 3rd param is TRUE, so NetUserDel
+	// doesn't need to be called.
+	if (retval && LsaRemoveAccountRights( hPolicy, psid, 1, 0, 0 ) != STATUS_SUCCESS) {
+		dprintf(D_ALWAYS,"dynuser::deleteuser() LsaRemoveAccountRights failed\n");
+		retval = false;
+	}
+
+	LsaClose( hPolicy );
 
 	// Delete accountname_t so destructor does not try to remove the account again
 	delete [] accountname_t;
 	accountname_t = NULL;
 	
-	if ( nerr != NERR_Success ) return false;
-	
-	return true;
+	return retval;
+
 }
+
+

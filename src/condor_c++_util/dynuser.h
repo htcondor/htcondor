@@ -47,6 +47,8 @@ private:
 	bool add_batch_privilege();
 	bool add_users_group();
 
+    bool del_users_group();
+
 #if 0
 	bool dump_groups();
 #endif
