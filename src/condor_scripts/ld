@@ -30,20 +30,6 @@ CONDOR_FULLINSTALL=false
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
 osver=`uname -r`
 
-LINUX_LIB="NOT_SO_LINUX"
-if [ $os = "Linux" ]; then
-        libc=`condor_version -syscall -libc`
-        if [ $libc = "GLIBC21" ]; then
-                LINUX_LIB="glibc21"
-        elif [ -f /lib/libc-2.1* ]; then
-                LINUX_LIB="glibc21"
-        elif [ -f /lib/libc-2.0* ]; then
-                LINUX_LIB="glibc20"
-        else
-                LINUX_LIB="libc5"
-        fi
-fi
-
 # Get the major version number for this Unix
 if [ $os = "HP-UX" ]; then
 	osmajver=`uname -r | awk -F. '{print $2}' -`
@@ -161,6 +147,21 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   osfull="$os$osmajver"
   oscrt0="crt0.o"
   osldalt="/bin/ld"
+
+  LINUX_LIB="NOT_SO_LINUX"
+  if [ $os = "Linux" ]; then
+        libc=`condor_version -syscall -libc`
+        if [ $libc = "GLIBC21" ]; then
+                LINUX_LIB="glibc21"
+        elif [ -f /lib/libc-2.1* ]; then
+                LINUX_LIB="glibc21"
+        elif [ -f /lib/libc-2.0* ]; then
+                LINUX_LIB="glibc20"
+        else
+                LINUX_LIB="libc5"
+        fi
+  fi
+
 
   case $os in
 
