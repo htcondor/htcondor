@@ -42,9 +42,10 @@ struct nlist solarisSpecific::nl[] =
 
 solaris::solaris()
 {
-	 /*tempo set_root_euid(); */
+	if(getuid()==0)
+		 set_root_euid(); 
 	
-  write(2, "solaris::solaris\n", 17);
+  	write(2, "solaris::solaris\n", 17);
 	// initialize kvm
 	specific.kd = kvm_open (NULL, NULL, NULL, O_RDONLY, "sysparam_sun.C");
 	if ( specific.kd ==  NULL) 
@@ -66,7 +67,9 @@ solaris::solaris()
 
 int solaris::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 {
-	/* tempo set_root_euid(); */
+
+	if(getuid()==0)
+		set_root_euid(); 
 
 	switch ( sys )
 	{
