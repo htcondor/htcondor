@@ -258,11 +258,9 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	char buffer[1024];
 
 	// set the constraints on the various queries
-	// 1.  Only obtain startd ads that may be willing to accept jobs
+	// 1.  Fetch all startd ads (no constraint)
 	dprintf (D_ALWAYS, "\tGetting startd ads ...\n");
-	sprintf (buffer, "TARGET.%s != FALSE", ATTR_REQUIREMENTS);
-	if (((result = startdQuery.addConstraint (buffer)) != Q_OK) ||
-		((result = startdQuery.fetchAds(startdAds))    != Q_OK))
+	if ((result = startdQuery.fetchAds(startdAds)) != Q_OK)
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd ads ... aborting\n",
