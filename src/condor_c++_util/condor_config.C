@@ -627,16 +627,19 @@ class RuntimeConfigItem {
 public:
 	RuntimeConfigItem() : admin(NULL), config(NULL) { }
 	~RuntimeConfigItem() { if (admin) free(admin); if (config) free(config); }
-	initialize() { admin = config = NULL; }
+	void initialize() { admin = config = NULL; }
 	char *admin;
 	char *config;
 };
+
+}  // Extern C cannot have templates
 
 #include "extArray.h"
 template class ExtArray<RuntimeConfigItem>;
 
 static ExtArray<RuntimeConfigItem> rArray;
 
+extern "C" { // Begin Extern C
 static char toplevel_runtime_config[_POSIX_PATH_MAX] = { '\0' };
 
 static void
