@@ -56,7 +56,7 @@ XferSummary::~XferSummary()
 
 }
 
-
+int
 XferSummary::init()
 {
 	// Get the collector host name from the config file
@@ -87,7 +87,7 @@ XferSummary::init()
 	}
 }
 
-
+int
 XferSummary::Result(transferinfo *tinfo, bool success_flag,
 					struct in_addr peer, int bytes_transferred)
 {

@@ -91,5 +91,6 @@ void PrintTime(ofstream& outfile)
 
 
 extern "C" {
+int
 SetSyscalls() {}
 }

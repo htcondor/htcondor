@@ -45,6 +45,7 @@ Alarm  rt_alarm;
 
 extern "C" {
 ssize_t stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes );
+int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 }
 
 

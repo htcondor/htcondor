@@ -31,8 +31,8 @@ class XferSummary {
 public:
 	XferSummary();
 	~XferSummary();
-	init();
-	Result(transferinfo *, bool success_flag, struct in_addr peer,
+	int init();
+	int Result(transferinfo *, bool success_flag, struct in_addr peer,
 		   int xfer_size);
 	void time_out(time_t);
 
