@@ -798,7 +798,26 @@ get_lock( char* file_name )
 	MasterLock = new FileLock( MasterLockFD );
 	MasterLock->set_blocking( FALSE );
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
-		EXCEPT( "Can't get lock on \"%s\"", file_name );
+		// we were unable to obtain a lock.  check the config file
+		// to see if this is allowed.
+
+		// the default is no.
+		char  val = 'N';
+
+		char* p = param("DISABLE_MASTER_LOCK_CHECK");
+		if (p) {
+			val = p[0];
+			free (p);
+		}
+
+		// val holds the first char of the param()
+		if (val == 'y' || val == 'Y' || val == 't' || val == 'T') {
+			// no lock, no problem.  lets print a warning.
+			dprintf (D_ALWAYS, "Warning: Can't get lock on \"%s\"\n", file_name);
+		} else {
+			// no lock is fatal.
+			EXCEPT( "Can't get lock on \"%s\"", file_name );
+		}
 	}
 }
 
