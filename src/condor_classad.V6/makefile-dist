@@ -12,19 +12,19 @@ BIN_INSTALL = $(DESTDIR)/bin
 INCLUDE_INSTALL = $(DESTDIR)/include
 
 CPlusPlus = g++
-C_PLUS_FLAGS = $(EXTRA_C_PLUS_FLAGS) -Wall -g -DCLASSAD_DISTRIBUTION 
-INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
-NO_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
+BASE_C_PLUS_FLAGS = $(EXTRA_C_PLUS_FLAGS) -Wall -g -DCLASSAD_DISTRIBUTION 
+INST_C_PLUS_FLAGS = $(BASE_C_PLUS_FLAGS) -w
+C_PLUS_FLAGS = $(TEMPLATE_FLAGS) $(BASE_C_PLUS_FLAGS)
 PURIFY = purify -g++=yes -chain-length=35 $(CPlusPlus)
 
 .C.o:
-	$(CPlusPlus) $(NO_INST_C_PLUS_FLAGS) -c $<
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
 LIB_OBJ = attrrefs.o classad.o collection.o collectionBase.o debug.o	\
 exprList.o exprTree.o fnCall.o indexfile.o lexer.o lexerSource.o		\
 literals.o matchClassad.o operators.o query.o sink.o source.o			\
 transaction.o util.o value.o view.o xmlLexer.o xmlSink.o xmlSource.o	\
-cclassad.o instantiations.o
+cclassad.o $(INSTANTIATIONS_O)
 
 HEADER_FILES = $(shell \ls *.[h])
 
@@ -41,8 +41,8 @@ test_instantiations.o:   test_instantiations.C
 cxi: cxi.o $(LIB_NAME)
 	$(CPlusPlus) -o cxi cxi.o $(LD_FLAGS)
 
-classad_functional_tester: classad_functional_tester.o $(LIB_NAME) test_instantiations.o
-	$(CPlusPlus) -o classad_functional_tester classad_functional_tester.o test_instantiations.o $(LD_FLAGS)
+classad_functional_tester: classad_functional_tester.o $(LIB_NAME) $(TEST_INSTANTIATIONS_O)
+	$(CPlusPlus) -o classad_functional_tester classad_functional_tester.o $(TEST_INSTANTIATIONS_O) $(LD_FLAGS)
 
 classad_unit_tester: classad_unit_tester.o $(LIB_NAME)
 	$(CPlusPlus) -o classad_unit_tester classad_unit_tester.o $(LD_FLAGS)
