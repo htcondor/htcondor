@@ -40,6 +40,57 @@ static char *priv_state_name[] = {
 };
 
 
+/* Start Common Bits */
+#define HISTORY_LENGTH 32
+
+
+
+
+static struct {
+	time_t		timestamp;
+	priv_state	priv;
+	char 		*file;
+	int			line;
+} priv_history[HISTORY_LENGTH];
+static int ph_head=0, ph_count=0;
+
+void
+log_priv(priv_state prev, priv_state new_priv, char file[], int line)
+{
+	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
+			priv_state_name[new_priv], file, line);
+	priv_history[ph_head].timestamp = time(NULL);
+	priv_history[ph_head].priv = new_priv;
+	priv_history[ph_head].file = file; /* should be a constant - no alloc */
+	priv_history[ph_head].line = line;
+	ph_head = (ph_head + 1) % HISTORY_LENGTH;
+	if (ph_count < HISTORY_LENGTH) ph_count++;
+}
+
+
+void
+display_priv_log(void)
+{
+	int i, idx;
+	if (SwitchIds) {
+		dprintf(D_ALWAYS, "running as root; privilege switching in effect\n");
+	} else {
+		dprintf(D_ALWAYS, "running as non-root; no privilege switching\n");
+	}		
+	for (i=0; i < ph_count && i < HISTORY_LENGTH; i++) {
+		idx = (ph_head-i-1+HISTORY_LENGTH)%HISTORY_LENGTH;
+		dprintf(D_ALWAYS, "--> %s at %s:%d %s",
+				priv_state_name[priv_history[idx].priv],
+				priv_history[idx].file, priv_history[idx].line,
+				ctime(&priv_history[idx].timestamp));
+	}
+}
+
+
+/* End Common Bits */
+
+
+
 #if defined(WIN32)
 
 #include "dynuser.h"
@@ -113,11 +164,15 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 {
 	priv_state PrevPrivState = CurrentPrivState;
 
-	// On NT, PRIV_CONDOR = PRIV_ROOT.
-	if ( s == PRIV_CONDOR ) {
-		s = PRIV_ROOT;
+	// On NT, PRIV_CONDOR = PRIV_ROOT, but we let it switch so daemoncore's
+	// priv state checking won't get totally confused.
+	if ( ( s == PRIV_CONDOR  || s == PRIV_ROOT ) &&
+		 ( CurrentPrivState == PRIV_CONDOR || CurrentPrivState == PRIV_ROOT ) )
+	{
+		goto logandreturn;
 	}
 
+	// If this is PRIV_USER or PRIV_USER_FINAL, this isn't redundant
 	if (s == CurrentPrivState) {
 		goto logandreturn;
 	}
@@ -154,12 +209,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 	}
 
 logandreturn:
-	if (dologging) {
-		dprintf(D_PRIV, "%s --> %s at %s:%d\n",	
-			priv_state_name[PrevPrivState], 
-			priv_state_name[CurrentPrivState], 
-			file, line);
-	}
+	if (dologging) log_priv(PrevPrivState, CurrentPrivState, file, line);
 	return PrevPrivState;
 }	
 
@@ -241,8 +291,6 @@ const char* get_condor_username()
 
 #define ROOT 0
 
-#define HISTORY_LENGTH 32
-
 static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
 static int CondorIdsInited = FALSE;
@@ -258,15 +306,6 @@ static int set_user_rgid();
 static int set_root_euid();
 static int set_condor_ruid();
 static int set_condor_rgid();
-
-static struct {
-	time_t		timestamp;
-	priv_state	priv;
-	char 		*file;
-	int			line;
-} priv_history[HISTORY_LENGTH];
-static int ph_head=0, ph_count=0;
-
 
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
@@ -444,38 +483,6 @@ uninit_user_ids()
 	UserIdsInited = FALSE;
 }
 
-
-void
-log_priv(priv_state prev, priv_state new_priv, char file[], int line)
-{
-	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
-			priv_state_name[new_priv], file, line);
-	priv_history[ph_head].timestamp = time(NULL);
-	priv_history[ph_head].priv = new_priv;
-	priv_history[ph_head].file = file; /* should be a constant - no alloc */
-	priv_history[ph_head].line = line;
-	ph_head = (ph_head + 1) % HISTORY_LENGTH;
-	if (ph_count < HISTORY_LENGTH) ph_count++;
-}
-
-
-void
-display_priv_log()
-{
-	int i, idx;
-	if (SwitchIds) {
-		dprintf(D_ALWAYS, "running as root; privilege switching in effect\n");
-	} else {
-		dprintf(D_ALWAYS, "running as non-root; no privilege switching\n");
-	}		
-	for (i=0; i < ph_count && i < HISTORY_LENGTH; i++) {
-		idx = (ph_head-i-1+HISTORY_LENGTH)%HISTORY_LENGTH;
-		dprintf(D_ALWAYS, "--> %s at %s:%d %s",
-				priv_state_name[priv_history[idx].priv],
-				priv_history[idx].file, priv_history[idx].line,
-				ctime(&priv_history[idx].timestamp));
-	}
-}
 
 
 priv_state
