@@ -24,6 +24,7 @@ release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_config_val,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_config_val,config_val.o,$(LIB),$(STATIC_DIR)/bin)
 purecov_c_plus_target(condor_config_val.pc,config_val.pure.o,$(LIB))
+pure_c_plus_target(condor_config_val.pure,config_val.pure.o,$(LIB))
 
 config_val.pure.o: config_val.C
 	$(CPlusPlus) -o config_val.pure.o -c config_val.C -DPURE_DEBUG \
