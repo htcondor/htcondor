@@ -124,6 +124,7 @@ void
 init_ipaddr( int config_done )
 {
 	char *network_interface, *tmp;
+	char *host;
 
     if( ! hostname ) {
 		init_hostnames();
@@ -162,9 +163,14 @@ init_ipaddr( int config_done )
 			dprintf( D_HOSTNAME, "Have not found an IP yet, calling "
 					 "gethostbyname()\n" );
 				// Get our official host info to initialize sin_addr
-			tmp = get_full_hostname( hostname, &sin_addr );
+			if( full_hostname ) {
+				host = full_hostname;
+			} else {
+				host = hostname;
+			}
+			tmp = get_full_hostname( host, &sin_addr );
 			if( ! tmp ) {
-				EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
+				EXCEPT( "gethostbyname(%s) failed, errno = %d", host, errno );
 			}
 			has_sin_addr = true;
 				// We don't need the full hostname, we've already got
