@@ -1,0 +1,35 @@
+%
+%  Set up version, author and copyright notices
+%
+\newcommand{\AuthorNotice}{Condor Team, University of Wisconsin--Madison}
+\newcommand{\VersionNotice}{Version 6.0}
+\newcommand{\CopyrightNotice}{Copyright \copyright\ 1998, (To be completed.)}
+
+%
+%  Common motifs
+%
+\newcommand{\Prog}[1]{\textit{#1}}              	% Program name
+\newcommand{\Cmd}[2]{\textit{#1}(#2)}           	% Command w/ section number
+\newcommand{\Sinful}[1]{$\mathtt{<#1>}}         	% Sinful string
+\newcommand{\File}[1]{\textt{#1}}        	    	% File name
+\newcommand{\Bs}{$\mathtt{\backslash}$}         	% Backslash
+\newcommand{\Bar}{$\mathtt{|}$}                 	% Pipe (i.e., '|')
+\newcommand{\Tilde}{$\tilde{}$}                 	% tilde
+\newcommand{\Dots}{$\dots$}                     	% ...
+\newcommand{\Circum}{\^{}}                      	% ^
+\newcommand{\Lbr}{[}                            	% [
+\newcommand{\Rbr}{]}                            	% ]
+\newcommand{\Percent}{\%}                       	% %
+\newcommand{\Opt}[1]{\mbox{\textbf{#1}}}            % Option
+\newcommand{\Arg}[1]{\mbox{\textit{#1}}}            % Argument
+\newcommand{\OptArg}[2]{\mbox{\Opt{#1}\Arg{#2}}}    % Option with Argument
+\newcommand{\oArg}[1]{\mbox{[\Arg{#1}]}}            % optional Argument
+\newcommand{\oOpt}[1]{\mbox{[\Opt{#1}]}}            % optional Option
+\newcommand{\oOptArg}[2]{\mbox{[\OptArg{#1\ }{#2}]}}% optional Option w/ Arg
+
+
+%
+%  To help with typing in names of condor commands
+%    e.g., condor_submit == \Condor{submit}
+\newcommand{\Condor}[1]{\Prog{condor\_#1}}
+\newcommand{\condor}[1]{condor\_#1}
