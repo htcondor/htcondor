@@ -167,6 +167,7 @@ REMOTE_CONDOR_register_mpi_master_info( char* str )
 	CurrentSysCall = CONDOR_register_mpi_master_info;
 
 	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
 	assert( syscall_sock->code(str) );
 	assert( syscall_sock->end_of_message() );
 
