@@ -62,11 +62,13 @@ public:
 		/** Continue. */
 	virtual void Continue() = 0;
 
-		/** Graceful shutdown, aka soft kill. */
-	virtual void ShutdownGraceful() = 0;
+		/** Graceful shutdown, aka soft kill. 
+			@return true if shutdown complete, false if pending */
+	virtual bool ShutdownGraceful() = 0;
 
-		/** Fast shutdown, aka hard kill. */
-	virtual void ShutdownFast() = 0;
+		/** Fast shutdown, aka hard kill. 
+			@return true if shutdown complete, false if pending */
+	virtual bool ShutdownFast() = 0;
 		//@}
 
 		/** Checkpoint */
@@ -75,6 +77,12 @@ public:
 		/** Returns the pid of this job.
 			@return The pid. */
 	int GetJobPid() { return JobPid; }
+
+		/** Check if user's job process has actually been started yet.
+			For instance, it may not have been forked yet because we're
+			waiting for data files to be transfered.
+			@return true if job has been started, false if not. */
+	bool JobStarted() { return JobPid > 0; }
 
 protected:
 	ClassAd *JobAd;
