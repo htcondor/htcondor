@@ -40,6 +40,7 @@
 #include "get_full_hostname.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
+#include "misc_utils.h"
 
 
 #if !defined(WIN32)
