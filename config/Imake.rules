@@ -823,7 +823,7 @@ XCOMM End translation of func(static_both_tarball)
 #define	pure_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(pure_c_plus_target)	@@\
 program: objlist					@@\
-	purify -g++=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
+	purify -g++=yes -inuse-at-exit=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist		@@\
 XCOMM End translation of func(pure_c_plus_target)
@@ -833,7 +833,7 @@ XCOMM End translation of func(pure_c_plus_target)
 #define	purify_c_plus_target(program,objlist,libs)	@@\
 XCOMM Begin translation of func(purify_c_plus_target)	@@\
 program: objlist					@@\
-	purify -g++=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
+	purify -g++=yes -inuse-at-exit=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist		@@\
 XCOMM End translation of func(purify_c_plus_target)
