@@ -260,13 +260,11 @@ circumstances:
 #include "condor_socket_types.h"
 
 /*
-This group of calls is needed in the syscall lib and
-the standalone ckpt lib, but not in the clipped version.
-All of these calls manipulate the open file table.
+This group of calls is needed in the syscall lib, the standalone ckpt
+lib, *and* in the clipped version (for the old PVM starter).  All of
+these calls manipulate the open file table.
 */ 
-
-#if defined(FILE_TABLE) && !defined(CLIP)
-
+#if defined(FILE_TABLE)
 	int open( const char *path, OPEN_FLAGS_T flags, ... )
 		: file_table
 	{
@@ -274,10 +272,32 @@ All of these calls manipulate the open file table.
 		ALLOC_PATH( path );
 	}
 
+	int close( int fd ) : file_table;
+
+	int unlink( map_name(const char *path) ) {
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int rename( map_name(const char *from), map_name_two(const char *to) ) : pseudo {
+		SEND_PATH( from );
+		SEND_PATH( to );
+		ALLOC_PATH( from );
+		ALLOC_PATH( to );
+	}
+#endif /* FILE_TABLE */
+
+
+/*
+This group of calls is needed in the syscall lib and
+the standalone ckpt lib, but not in the clipped version.
+All of these calls manipulate the open file table.
+*/ 
+
+#if defined(FILE_TABLE) && !defined(CLIP)
+
 	int open64( const char *path, OPEN_FLAGS_T flags, ... )
 		: sender_name(open), file_table_name(open), local_name(open);
-
-	int close( int fd ) : file_table;
 
 	ssize_t read( int fd, void *buf, size_t len )
 		: file_table
@@ -768,18 +788,6 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-	int unlink( map_name(const char *path) ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-
-	int rename( map_name(const char *from), map_name_two(const char *to) ) : pseudo {
-		SEND_PATH( from );
-		SEND_PATH( to );
-		ALLOC_PATH( from );
-		ALLOC_PATH( to );
-	}
-
 	int mknod( map_name(const char *path), mode_t mode, dev_t device ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -879,6 +887,19 @@ either file names or file descriptors.
 		}
 	#endif
 
+
+/*
+These are general-purpose system calls.
+They are not needed for remote I/O, but *are* used by the old PVM
+starter to figure out what uid/gid to try to run the job as, which is
+why they can't be left inside an !defined(CLIP) block...
+*/
+#if defined(REMOTE_SYSCALLS)
+	uid_t getuid()  : pseudo;
+	gid_t getgid()  : pseudo;
+#endif
+
+
 /*
 These are general-purpose system calls.
 They are not needed for remote I/O or for the condor daemons.
@@ -887,8 +908,6 @@ They are not needed for remote I/O or for the condor daemons.
 #if defined(REMOTE_SYSCALLS) && !defined(CLIP)
 
 	pid_t getppid() : EXTRACT, pseudo;
-	uid_t getuid()  : pseudo;
-	gid_t getgid()  : pseudo;
 	pid_t getpid()  : pseudo;
 	pid_t getpgid( pid_t pid );
 	pid_t getpgrp();
