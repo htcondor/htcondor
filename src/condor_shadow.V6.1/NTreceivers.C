@@ -727,6 +727,38 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_get_file_info_new:
+	  {
+		char *  logical_name;
+		char *  actual_url;
+		condor_errno_t terrno;
+ 
+		actual_url = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( actual_url, 0, (unsigned)_POSIX_PATH_MAX );
+		logical_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( logical_name, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(logical_name) );
+		assert( syscall_sock->end_of_message() );;
+ 
+		errno = (condor_errno_t)0;
+		rval = pseudo_get_file_info_new( logical_name , actual_url);
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
+ 
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( syscall_sock->code(actual_url) );
+		}
+		free( (char *)actual_url );
+		free( (char *)logical_name );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );
