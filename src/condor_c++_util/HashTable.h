@@ -49,9 +49,10 @@ class HashTable {
   int tableSize;                                // size of hash table
   HashBucket<Index, Value> **ht;                // actual hash table
   int (*hashfcn)(const Index &index, int numBuckets); // user-provided hash function
-
   int currentBucket;
   HashBucket<Index, Value> *currentItem;
+  int *chainsUsed;	// array which says which chains have items; speeds iterating
+  int chainsUsedLen;	// index to end of chainsUsed array
 };
 
 // Construct hash table. Allocate memory for hash table and
@@ -67,10 +68,17 @@ HashTable<Index,Value>::HashTable(int tableSz,
     cerr << "Insufficient memory for hash table" << endl;
     exit(1);
   }
-  for(int i = 0; i < tableSize; i++)
+  if (!(chainsUsed = new int[tableSize])) {
+    cerr << "Insufficient memory for hash table (chainsUsed array)" << endl;
+    exit(1);
+  }
+  for(int i = 0; i < tableSize; i++) {
     ht[i] = NULL;
+	chainsUsed[i] = -1;
+  }
   currentBucket = -1;
   currentItem = 0;
+  chainsUsedLen = 0;
 }
 
 // Insert entry into hash table mapping Index to Value.
@@ -90,6 +98,10 @@ int HashTable<Index,Value>::insert(const Index &index,const  Value &value)
   bucket->index = index;
   bucket->value = value;
   bucket->next = ht[idx];
+  if ( !ht[idx] ) {
+	// this is the first item we are adding to this chain
+	chainsUsed[chainsUsedLen++] = idx;
+  }
   ht[idx] = bucket;
 
 #ifdef DEBUGHASH
@@ -198,6 +210,7 @@ template <class Index, class Value>
 int HashTable<Index,Value>::remove(const Index &index)
 {
   	int idx = hashfcn(index, tableSize);
+	int i;
 
   	HashBucket<Index, Value> *bucket = ht[idx];
   	HashBucket<Index, Value> *prevBuc = ht[idx];
@@ -231,6 +244,17 @@ int HashTable<Index,Value>::remove(const Index &index)
 
       		delete bucket;
 
+			if ( !ht[idx] ) {
+				// We have removed the last bucket in this chain.
+				// Remove this idx from our chainsUsed array.
+				for (i=0;i<chainsUsedLen;i++) {
+					if ( chainsUsed[i] == idx ) {
+						chainsUsed[i] = chainsUsed[--chainsUsedLen];
+						break;
+					}
+				}
+			}
+
 #			ifdef DEBUGHASH
       		dump();
 #			endif
@@ -258,6 +282,8 @@ int HashTable<Index,Value>::clear()
       delete tmpBuf;
     }
   }
+
+  chainsUsedLen = 0;
 
   return 0;
 }
@@ -288,13 +314,10 @@ iterate (Value &v)
        }
     }
 
-	do
-	{
-		// try next bucket ...
-		currentBucket ++;
-	} while (currentBucket < tableSize && ht[currentBucket] == NULL);
+	// try next bucket ...
+	currentBucket ++;
 
-	if (currentBucket == tableSize)
+	if (currentBucket == chainsUsedLen)
 	{
     	// end of hash table ... no more entries
     	currentBucket = -1;
@@ -304,7 +327,7 @@ iterate (Value &v)
 	}
 	else
 	{
-		currentItem = ht[currentBucket];
+		currentItem = ht[ chainsUsed[currentBucket] ];
 		v = currentItem->value;
 		return 1;
 	}
@@ -338,13 +361,10 @@ iterate (Index &index, Value &v)
        }
     }
 
-	do
-	{
-		// try next bucket ...
-		currentBucket ++;
-	} while (currentBucket < tableSize && ht[currentBucket] == NULL);
+	// try next bucket ...
+	currentBucket ++;
 
-	if (currentBucket == tableSize)
+	if (currentBucket == chainsUsedLen)
 	{
     	// end of hash table ... no more entries
     	currentBucket = -1;
@@ -354,7 +374,7 @@ iterate (Index &index, Value &v)
 	}
 	else
 	{
-		currentItem = ht[currentBucket];
+		currentItem = ht[ chainsUsed[currentBucket] ];
 		index = currentItem->index;
 		v = currentItem->value;
 		return 1;
