@@ -76,13 +76,9 @@ class Scheduler : public Service
 	void			Register();
 	void			RegisterTimers();
 
-	// accessing
-   	int				Port() { return port; }
- 
 	// maintainence
 	void			timeout(); 
 	void			SetClassAd(ClassAd*);
-	void			SetCommandPort(int);
 	void			reconfig();
 	void			shutdown_fast();
 	void			shutdown_graceful();
@@ -124,7 +120,6 @@ class Scheduler : public Service
 	ClassAd*		ad;
 	char*			MySockName;		// dhaval
 	Scheduler*		myself;
-	u_short			port;
 	
 	// information for utilizing cached negotiator socket
 	bool			alreadyStashed;
