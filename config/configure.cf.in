@@ -9,7 +9,7 @@
 */
 
 SYSNAME = @_cv_sysname@
-#define OperatingSystem @_cv_opsys@
+#define OperatingSystem @_cv_op_sys@
 #define Architecture @_cv_arch@
 #define Platform @_cv_arch@-@_cv_opsys_vers@
 #define IS_@_cv_arch@_@_cv_opsys_vers@ YES
@@ -26,24 +26,6 @@ SYSNAME = @_cv_sysname@
 @_cv_libc_majmin@
 @_cv_libc_is_kind@
 
-
-/*
-  This is all stupid, but there's this discrepancy between "SOLARIS"
-  and "Solaris".  The OperatingSystem should really be "Solaris",
-  even though we want "IS_SOLARIS" in all the #defines.  Ugh.
-*/
-#if IS_SOLARIS
-#undef OperatingSystem
-#define OperatingSystem Solaris
-#endif
-
-/* 
-  More stupidity, this time on DUX/OSF1.  Confusion abounds.  
-*/
-#if IS_DUX
-#undef OperatingSystem
-#define OperatingSystem OSF1
-#endif
 
 /* compiler version and info the configure script discovers for us */
 /* we use the #defines for the Imakefiles */
