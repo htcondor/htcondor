@@ -55,7 +55,7 @@ detach()
 
 #if !defined(HPUX9) && !defined(Solaris)
 	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't open /dev/tty\n" );
+		dprintf( D_ALWAYS, "Can't open /dev/tty, errno: %d\n", errno );
 		return;
 	}
 	if( ioctl(fd,TIOCNOTTY,(char *)0) < 0 ) {
