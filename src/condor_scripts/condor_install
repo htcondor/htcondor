@@ -292,7 +292,7 @@ sub configure_submit_only {
     "I can either install these files into a directory that is already in\n",
     "your PATH that you have write access to, or I can put them into any\n",
     "directory you specify (in which case you would have to add that\n",
-    "directory to your PATH or explicity use a full pathname to access the\n",
+    "directory to your PATH or explicitly use a full pathname to access the\n",
     "Condor tools).\n";
     $path = &prompt_install_path();
 
@@ -1140,7 +1140,7 @@ sub configure_full_install {
 	"in the default PATH to point to these binaries, so that Condor users do not\n",
 	"have to change their PATH.  Alternatively, I can leave them where they are\n",
 	"and Condor users will have to add $path\n",
-	"to their PATH or explicity use a full pathname to access the Condor tools.\n",
+	"to their PATH or explicitly use a full pathname to access the Condor tools.\n",
 	"\nShall I create links in some other directory? [yes] ";
 	chop( $_ = <STDIN> );
 	if( /(^[Yy].*)|^$/ ) {    
