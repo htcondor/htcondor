@@ -2223,9 +2223,11 @@ Scheduler::StartJobs()
 			continue;
 		}
 
+#ifdef WANT_NETMAN
 		if (ManageBandwidth && ReactivatingMatch) {
 			RequestBandwidth(id.cluster, id.proc, rec);
 		}
+#endif
 
 		if(!(rec->shadowRec = StartJob(rec, &id)))
                 /* We check the universe of the job.  If it's MPI, 
@@ -2297,15 +2299,14 @@ Scheduler::StartJobs()
 }
 
 
+#ifdef WANT_NETMAN
 void
 Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 {
 	ClassAd request;
 	char buf[100], owner[100], user[100], source[100], dest[100], *str;
-	int executablesize = 0, universe = VANILLA, nice_user = 0;
+	int executablesize = 0, universe = VANILLA, nice_user = 0, vm=1;
 
-	sprintf(buf, "%s = \"ReactivateClaim\"", ATTR_TRANSFER_TYPE);
-	request.Insert(buf);
 	GetAttributeInt(cluster, proc, ATTR_NICE_USER, &nice_user);
 	GetAttributeString(cluster, proc, ATTR_OWNER, owner);
 	sprintf(user, "%s%s@%s", (nice_user) ? "nice-user." : "", owner,
@@ -2321,6 +2322,11 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	request.Insert(buf);
 	GetAttributeInt(cluster, proc, ATTR_EXECUTABLE_SIZE, &executablesize);
 	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, rec->peer);
+	request.Insert(buf);
+	if (rec->my_match_ad) {
+		rec->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID, vm);
+	}
+	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm);
 	request.Insert(buf);
 
 	SafeSock sock;
@@ -2355,6 +2361,8 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
 					inet_ntoa(*(my_sin_addr())));
 		}
+		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
+		request.Insert(buf);
 		request.Insert(buf);
 		sock.put(2);
 		request.put(sock);
@@ -2362,6 +2370,8 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 		sock.put(1);
 	}
 
+	sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
+	request.Insert(buf);
 	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
 			(float)executablesize*1024.0);
 	request.Insert(buf);
@@ -2370,6 +2380,7 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	request.put(sock);
 	sock.end_of_message();
 }
+#endif
 
 void
 Scheduler::StartSchedUniverseJobs()
@@ -3318,6 +3329,13 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
 							   ATTR_REMOTE_POOL, new_rec->match->pool);
 		}
+		if (new_rec->match->my_match_ad) {
+			int vm = 1;
+			new_rec->match->my_match_ad->LookupInteger(ATTR_VIRTUAL_MACHINE_ID,
+													   vm);
+			SetAttributeInt( new_rec->job_id.cluster, new_rec->job_id.proc,
+							 ATTR_REMOTE_VIRTUAL_MACHINE_ID, vm );
+		}
 	}
 	int universe = STANDARD;
 	GetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc,
@@ -3441,6 +3459,8 @@ Scheduler::delete_shadow_rec(int pid)
 		}
 		DeleteAttribute( rec->job_id.cluster, rec->job_id.proc,
 						 ATTR_REMOTE_POOL );
+		DeleteAttribute( rec->job_id.cluster,rec->job_id.proc, 
+			ATTR_REMOTE_VIRTUAL_MACHINE_ID );
 
 		if (rec->removed) {
 			if (!WriteAbortToUserLog(rec->job_id)) {
