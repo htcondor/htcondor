@@ -37,6 +37,7 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_state.h"
+#include "condor_string.h"
 #include "string_list.h"
 #include "get_full_hostname.h"
 #include "condor_random_num.h"
@@ -67,6 +68,7 @@ class Resource;
 #include "ResMgr.h"
 #include "command.h"
 #include "util.h"
+#include "starter_mgr.h"
 
 static const int MAX_STARTERS = 10;
 
