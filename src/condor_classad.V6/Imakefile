@@ -89,7 +89,7 @@ literals.C literals.h matchClassad.C matchClassad.h operators.C \
 operators.h query.C query.h sample.C sink.C sink.h source.C source.h \
 test_classads.C tests.txt transaction.C transaction.h value.C value.h \
 view.C view.h xmlSink.h xmlSink.C classad_distribution.h LICENSE README \
-CHANGELOG
+CHANGELOG configure
 
 dist: $(DIST_FILES)
 	rm -rf $(DISTRIBUTION_DIR) *.gz

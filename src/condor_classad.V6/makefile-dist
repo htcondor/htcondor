@@ -1,6 +1,10 @@
+INSTALL_DIR = /usr/include
+
+# This include will redefine INSTALL_DIR, if Makefile.config exists
+include Makefile.config
+
 all: libclassad.a test_classads sample
 
-INSTALL_DIR = install
 LIB_INSTALL = $(INSTALL_DIR)/lib
 BIN_INSTALL = $(INSTALL_DIR)/bin
 INCLUDE_INSTALL = $(INSTALL_DIR)/include
