@@ -506,6 +506,9 @@ negotiationTime ()
 			scheddUsage = accountant.GetResourcesUsed ( scheddName );
 			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
 			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			if( scheddLimit < 0 ) {
+				scheddLimit = 0;
+			}
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
 			// calculate this schedd's absolute fair-share for allocating
