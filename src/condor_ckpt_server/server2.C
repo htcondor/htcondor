@@ -1033,7 +1033,12 @@ void Server::ReceiveCheckpointFile(int         data_conn_sd,
 	int                buf_size=DATA_BUFFER_SIZE;
 	int				   file_fd;
 	
+#if 1
 	file_fd = open(pathname, O_WRONLY|O_CREAT|O_TRUNC,0664);
+#else
+	file_fd = open("/dev/null", O_WRONLY, 0);
+#endif
+
 	if (file_fd < 0) {
 		exit(CHILDTERM_CANNOT_OPEN_CHKPT_FILE);
 	}
