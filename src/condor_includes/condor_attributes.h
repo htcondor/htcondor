@@ -72,6 +72,7 @@ const char ATTR_JOB_OUTPUT				 [] = "Out";
 const char ATTR_JOB_PRIO                 [] = "JobPrio";
 const char ATTR_JOB_REMOTE_SYS_CPU		 [] = "RemoteSysCpu";
 const char ATTR_JOB_REMOTE_USER_CPU		 [] = "RemoteUserCpu";
+const char ATTR_JOB_REMOTE_WALL_CLOCK	 [] = "RemoteWallClockTime";
 const char ATTR_JOB_ROOT_DIR			 [] = "RootDir";
 const char ATTR_JOB_START                [] = "JobStart";
 const char ATTR_JOB_STATUS               [] = "JobStatus";
