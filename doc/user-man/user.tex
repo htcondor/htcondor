@@ -2,7 +2,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Welcome to Condor}  
 %
-% .... or alternativly called the 'warm fuzzies' section
+% .... or alternatively called the 'warm fuzzies' section
 % <smirk>  
 % 
 %
@@ -39,7 +39,7 @@ will help revolutionize your compute environment as well.
 In a nutshell, Condor is a specialized batch system for managing
 compute-intensive jobs.  Like most batch systems, Condor provides a
 queueing mechanism, scheduling policy, priority scheme, and resource
-clasifications.  Users submit their compute jobs to Condor, Condor puts
+classifications.  Users submit their compute jobs to Condor, Condor puts
 the jobs in a queue, runs them, and then informs the user as to the
 result.
 
@@ -92,7 +92,7 @@ they wish to purchase. Both buyers and sellers may have constraints that
 need to be satisfied. For instance, perhaps the buyer is not willing to
 spend more than X dollars, and the seller requires to receive a minimum
 of Y dollars. Furthermore, both want to rank requests from the other in
-such a fasion that is to their advantage. Certainly a seller would rank
+such a fashion that is to their advantage. Certainly a seller would rank
 a buyer offering \$50 dollars for a service higher than a different
 buyer offering \$25 for the same service. In Condor, users submitting
 jobs can be thought of as buyers of compute resources and machine owners
@@ -216,7 +216,7 @@ LastHeardFrom = 892191963
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Roadmap for running jobs with Condor}
+\section{Road-map for running jobs with Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The road to effectively using Condor is short one.  The basics
@@ -247,7 +247,7 @@ describe to Condor what type of machine you want to run your program.
 \item[Condor Runs the Job.]Once submitted, you'll monitor your job's
 progress via the \Condor{q} and \Condor{status} commands, and/or
 possibly modify the order in which Condor will run your jobs with
-\Condor{prio}. If desired, Condor can even inform you everytime your job
+\Condor{prio}. If desired, Condor can even inform you every time your job
 is checkpointed and/or migrated to a different machine. 
 
 \item[Job Completion.]When your program completes, Condor will tell you
@@ -272,7 +272,7 @@ Universe, or runtime environment, for your job.
 
 Condor runs your program unattended and in the background. Make certain
 that your program can do this before submitting it to Condor. Condor can
-redirect console ouput (stdout and stderr) and keyboard (stdin) input
+redirect console output (stdout and stderr) and keyboard (stdin) input
 to/from files for you, so you may have to create file(s) that contain
 the proper keystrokes needed for your file.
 
@@ -285,8 +285,8 @@ individual run, Condor allows you to easily customize that run's initial
 working directory, stdin, stdout, stderr, command-line arguments, or
 shell environment. Therefore, if your program directly opens its own
 data files, hopefully it can read what filenames to use via either stdin
-or the command-line. If your program opens a static filename everytime,
-you will likely need to make a seperate subdirectory for each run to
+or the command-line. If your program opens a static filename every time,
+you will likely need to make a separate subdirectory for each run to
 store its data files into.
 
 %%%%%%%%%%%%%%%%
@@ -331,7 +331,7 @@ left off}.
 Furthermore, Standard Universe jobs can use Condor's \Term{remote system
 calls} mechanism, which enables the program to access data files from
 any machine in the Condor pool regardless of whether that machine is
-sharing a filesystem via NFS (or AFS) or if the user has an account
+sharing a file-system via NFS (or AFS) or if the user has an account
 there. Even if your files are just sitting on your local hard-drive, or
 in /tmp, Condor jobs can access them.  How it works is when your Condor
 job start up on some remote machine, a corresponding \Condor{shadow}
@@ -346,11 +346,11 @@ like it is simply running on the submit machine, even as it bounces
 around to different machines in the pool.
 
 The transparent checkpoint/migration and remote system calls are highly
-deseriable services. However, all Standard Universe jobs must be
-relinked with the Condor libraries. Although this is a simple process,
+desirable services. However, all Standard Universe jobs must be
+re-linked with the Condor libraries. Although this is a simple process,
 after doing so there are a few restrictions on what the program can do:
 \begin{enumerate}
-	\item On some platfoms, specifically HPUX, SunOS, and Digital Unix
+	\item On some platforms, specifically HPUX, SunOS, and Digital Unix
 (OSF/1), shared libraries are not supported; therefore on these
 platforms applications must be statically linked (Note: shared library
 checkpoint support is available on IRIX, Solaris, and LINUX). 
@@ -384,7 +384,7 @@ source or object code.
 %%%%%%%%%%%%
 
 The Vanilla Universe in Condor is for running any programs which cannot
-be successfully relinked for submission into the Standard Universe.
+be successfully re-linked for submission into the Standard Universe.
 Shell scripts are another good reason to use the Vanilla Universe.
 However, here's the down side: Vanilla jobs cannot checkpoint or use
 remote system calls. So, for example, when a user returns to a
@@ -401,12 +401,12 @@ available in the Standard Universe.
 
 Relinking a program with the Condor libraries (\condor{rt0.o} and
 \condor{syscall\_lib.a}) is a simple one-step process with Condor
-\VersionNotice. To relink a program with the Condor libraries for
+\VersionNotice. To re-link a program with the Condor libraries for
 submission into the Standard Universe, simply run \Condor{compile}. See
 the command reference page for \Condor{compile} on
 page~\pageref{man-condor-compile}.
 
-Note that even once your job is relinked, you can still run your program
+Note that even once your job is re-linked, you can still run your program
 outside of Condor directly from the shell prompt as usual.  When you do
 this, the following message is printed to remind you that this 
 binary is linked with the Condor libraries:
@@ -474,7 +474,7 @@ directories. This is often a convenient way to organize your data if you
 have a large group of condor jobs to run. The example file submits
 ``mathematica'' as a Vanilla Universe job, perhaps because the source
 and/or object code to program ``mathematica'' was not available and
-therefore the relink step necessary for Standard Universe jobs could not
+therefore the re-link step necessary for Standard Universe jobs could not
 be performed. 
 \begin{verbatim}
   ####################     
