@@ -44,7 +44,7 @@ int polls = 0;
 
 static char *_FileName_ = __FILE__;
 
-static void update_central_mgr __P((void));
+void update_central_mgr __P((void));
 
 static int eval_state(resource_info_t* rip)
 {
@@ -340,7 +340,7 @@ static int send_resource_context(resource_info_t* rip)
 	return 0;
 }
 
-static void update_central_mgr()
+void update_central_mgr()
 {
 	dprintf(D_ALWAYS, "update_central_manager called.\n");
 	resmgr_walk(send_resource_context);
