@@ -523,20 +523,77 @@ implement support for this feature in a future release of Condor.
 
 \item[Why do my vanilla jobs keep cycling between suspended and unsuspended?]
 
-This is a load sampling error that Condor performs when starting a many
-process vanilla job with heavy initial load.
+Condor tries to provide a number, the ``Condor Load Average''
+(reported in the machine ClassAd as \AdAttr{CondorLoadAvg}), which is
+intented to represent the total load average on the system caused by
+any running Condor job(s).
+Unfortunately, it is impossible to get an accurate number for
+this without support from the operating system.
+This is not available.
+So, Condor does the best it can, and it mostly works in most cases.
+However, there are a number of ways this statistic can go wrong.
+
+The old default Condor policy was to suspend if the non-Condor load
+average went over a certain threshold.
+However, because of the problems providing accurate numbers for this
+(described below), some jobs would go into a cycle of getting
+suspended and resumed.
+The default suspend policy now shipped with Condor uses the
+solution explained here.
+
+While there are too many technical details of why
+\AdAttr{CondorLoadAvg} might be wrong for a short answer here, a brief
+explanation is presented.
+When a job has periodic behavior, and the load it places upon
+a machine is changing over time,
+the system load also changes over time.  
+However, Condor thinks that the job's share of the system load
+(what it uses to compute the CondorLoad) is also changing.
+So, when the job was running, and then stops, both the system load and
+the Condor load start falling.
+If it all worked correctly, they'd fall at the exact same rate, and
+\AdAttr{NonCondorLoad} would be constant.
+Unfortunately, \AdAttr{CondorLoadAvg} falls faster, since Condor
+thinks the job's share of the total load is falling, too.
+Therefore, \AdAttr{CondorLoadAvg} falls faster than the system load,
+\AdAttr{NonCondorLoad} goes up, and the old default \AdAttr{SUSPEND}
+expression becomes true.
+
+It appears that Condor should be able to avoid this problem, but for a
+host of reasons, it can not.  
+There is no good way (without help from the operating systems Condor runs on;
+the help does not exist) to get this right.
+The only way to compute these numbers more accurately
+without support from the operating system is to sample everything at
+such a high rate that Condor itself would create a large load average,
+just to try to compute the load average.
+This is Heisenberg's uncertainty principle in action.
+
+A similar sampling error can occur when Condor is starting a job
+within the vanilla universe with many processes and with a
+heavy initial load.
 Condor mistakenly decides that the load on the machine has gotten too
 high while the job is in the initialization phase and kicks the job off
 the machine.
 
-What is needed is a way for Condor to check to see if the load of the machine
-has been high over a certain period of time. There is a startd attribute,
-\AdAttr{CpuBusyTime} that can be used for this purpose. This macro
-returns the time \MacroUNI{CpuBusy}(usually defined in the default
-config file) has been true. \MacroUNI{CpuBusy} is defined in terms of
-non-Condor load.
+To correct this problem, Condor needs to check to see if the load of the
+machine has been high over an interval of time.
+There is an attribute, \AdAttr{CpuBusyTime} that can be used for
+this purpose.
+This macro returns the time \MacroUNI{CpuBusy} (defined in the default
+configuratoin file) has been true, or 0 if \MacroUNI{CpuBusy} is false.
+\MacroUNI{CpuBusy} is usually defined in terms of non-Condor load.
+These are the default settings:
 
-To take advantage of this macro, you can use it in your \Macro{SUSPEND}\ macro.
+\begin{verbatim}
+NonCondorLoadAvg    = (LoadAvg - CondorLoadAvg)
+HighLoad            = 0.5
+CPUBusy             = ($(NonCondorLoadAvg) >= $(HighLoad))
+\end{verbatim}
+
+To take advantage of \AdAttr{BpuBusyTime}, you can use it in your
+\Macro{SUSPEND}\ expression. 
+
 Here is an example:
 \begin{verbatim}
 SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
@@ -545,6 +602,7 @@ SUSPEND = (CpuBusyTime > 3 * $(MINUTE)) && ((CurrentTime - JobStart) > 90)
 The above policy says to only suspend the job if the cpu has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
+
 
 \item[Why might my job be preempted (evicted)?]
 

@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Using-Condor-G}Using the Globus Universe}
+\subsection{\label{sec:Using-Condor-G}Using the Globus Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{universe!Globus}
@@ -8,7 +8,7 @@ run, and manage jobs under
 the globus universe.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Grid-Access}Accessing the Grid with Condor-G}
+\subsubsection{\label{sec:Grid-Access}Accessing the Grid with Condor-G}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor-G allows the user to treat the Grid as a local resource,
@@ -31,7 +31,7 @@ semantics.
 
 \begin{figure}[hbt]
 \centering
-\includegraphics{condor-g/gfig1.eps}
+\includegraphics{grids/gfig1.eps}
 \caption{\label{fig:condorg}Remote Execution by Condor-G on Globus managed resources}
 \end{figure}
 
@@ -46,37 +46,18 @@ Condor-G detects and intelligently handles cases
 such as if the remote Globus resource crashes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-G-Install}Condor-G Installation}
+\subsubsection{\label{sec:Condor-G-Install}Condor-G Installation}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!installation}
 \index{contrib module!Condor-G}
 \index{Condor-G!contrib module}
 \index{installation!Condor-G contrib module}
-There are two ways to obtain and install Condor-G.
-The first and recommended method utilizes a full installation
+The preferred method to obtain and install Condor-G
+utilizes a full installation
 of Condor together with a contrib module to acquire the
 ability to submit globus universe jobs.
-If a pool of machines running Condor \VersionNotice
-already exists,
-then the path to submitting globus universe jobs is quite short.
 
-The second way to obtain Condor-G uses the GPT-packaged version.
-GPT is the Grid Packaging Technology from NCSA,
-the native packaging format for the Globus Toolkit(tm).
-The GPT-packaged version of Condor-G will install
-into an existing Globus Toolkit installation.
-It is not capable of providing the functionality of a complete Condor pool,
-but it does allow use of the Condor job queuing interface to the Grid.
-It is appropriate for those who only want to submit jobs to
-Globus-managed resources.
-
-The following sections detail the installation and start up
-of Condor-G based on these two ways.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-FullInstall}Full Install with Condor-G Contrib Module}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-G!installation with Contrib module}
+\index{Condor-G!installation with contrib module}
 Once Condor is obtained via download, installed, and configured,
 (see manual
 section~\ref{sec:install} on page~\pageref{sec:install})
@@ -84,6 +65,21 @@ there are three steps necessary before a globus universe job
 can be submitted:
 
 \begin{enumerate}
+
+\item{Install Globus tools.}
+Three ways are listed for obtaining the Globus tools:
+   \begin{enumerate}
+   \item{Globus}.
+   From the web page at \URL{http://www.globus.org/}, follow links to the
+   globus toolkit to get the resource management client bundle.
+   \item{NMI}.
+   From the web page at \URL{http://www.nsf-middleware.org/}, follow links
+   to the NMI Release, and then to the Components, and finally to the
+   Globus Toolkit. 
+   \item{VDT}.
+   From the web page at \URL{http://www.griphyn.org/vdt},
+   follow link to the Virtual Data Toolkit.
+   \end{enumerate}
 
 \item{Obtain the Condor-G contrib module.}
 From the Condor home page,
@@ -97,11 +93,12 @@ to begin the transfer.
 After the transfer is complete, you will have received some text files
 along with the file \File{condor-g.tar}.
 Untar this file in the existing \MacroUNI{release} directory to 
-produce the three files
+produce the four files
 \begin{verbatim}
     sbin/condor_gridmanager
     sbin/gahp_server
     etc/examples/condor_config.local.condor-g
+    bin/condor_glidein
 \end{verbatim}
 
 \item{Configure for Condor-G.}
@@ -113,6 +110,8 @@ to the existing configuration file.
 If Condor-G is installed as root, the file
 set by the configuration variable
 \Macro{GRIDMANAGER\_LOG} must have world-write permission.
+All of the parent directories for this file must
+also have world-execute permission.
 The Gridmanager runs as the user who submitted the job,
 so the Gridmanager may not be able to write to the ordinary 
 \MacroUNI{log} directory.
@@ -133,7 +132,12 @@ to set \MacroNI{GRIDMANAGER\_LOG} with
 GRIDMANAGER_LOG  = /tmp/GridmanagerLog.$(USERNAME)
 \end{verbatim}
 
-\item{Run Condor.}
+\item{Run or Reconfigure Condor.}
+If Condor is running while Condor-G is added, then a
+\Condor{reconfigure} command must be issued to update
+the configuration.
+If Condor is not running while Condor-G is added, then 
+start Condor running.
 Directions for running the Condor daemons do not change when using
 the Condor-G contrib module.
 See section~\ref{sec:Run-Condor} on page~\pageref{sec:Run-Condor}
@@ -141,13 +145,7 @@ for details.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-GPTNMI}GPT NMI release including Condor-G}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-G!installation with GPT NMI release}
-\Todo
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Running-CondorG-Job}Running a Globus Universe Job}
+\subsubsection{\label{sec:Running-CondorG-Job}Running a Globus Universe Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Condor-G!job submission}
 
@@ -187,9 +185,10 @@ The
 \AdAttr{executable}
 for this example is
 transferred from the local machine to the remote machine.
-By default, Condor transfers the executable.
+By default, Condor transfers the executable, as well as any
+files specified by the \AdAttr{input} command.
 Note that this executable must be compiled for the correct
-platform.
+intended platform.
 
 The \AdAttr{globusscheduler} command is dependent on the
 scheduling software available on remote resource.
@@ -202,9 +201,13 @@ The \verb@universe = globus@ command is required
 in the submit description file.
 
 No input file is specified for this example job.
-Condor transfers the output file produced 
-from the remote machine to the local machine during execution.
-The log file is maintained on the local machine.
+Any output (file specified by the \AdAttr{output})
+or error (file specified by the \AdAttr{error})
+is transferred 
+from the remote machine to the local machine as it is produced.
+This implies that these files may be incomplete in the case
+where the executable does not finish running on the remote resource.
+The job log file is maintained on the local machine.
 
 To submit this job to Condor-G for execution on the
 remote machine, use
@@ -286,14 +289,12 @@ In this case, the
 \AdAttr{executable}
 command gives the path to the executable on the remote machine.
 
-A third example shows how
-Condor-G can set environment variables for a job.
+A third example submits a Perl script to be run as a submitted
+Condor job.
+The Perl script both lists and sets
+environment variables for a job.
 Save the following Perl script with the name \File{env-test.pl},
-and run the Unix command
-\begin{verbatim}
-chmod 755 env-test.pl
-\end{verbatim}
-to make the Perl script executable.
+to be used as a Condor job executable.
 
 \begin{verbatim}
 #!/usr/bin/env perl
@@ -306,7 +307,13 @@ foreach $key (sort keys(%ENV))
 exit 0;
 \end{verbatim}
 
-Now create the following submit file
+Run the Unix command
+\begin{verbatim}
+chmod 755 env-test.pl
+\end{verbatim}
+to make the Perl script executable.
+
+Now create the following submit description file
 (Replace \File{biron.cs.wisc.edu/jobmanager} with a resource
 you are authorized to use.):
 
@@ -403,7 +410,7 @@ The \AdAttr{x509userproxy} command specifies the path to
 an X.509 proxy.
 The command is of the form:
 \begin{verbatim}
-x509userproxy = /path/on/file/system
+x509userproxy = /path/to/proxy
 \end{verbatim}
 If this optional command is not present in the submit description file,
 then Condor-G checks the value of the environment variable
@@ -428,7 +435,7 @@ This example's attribute name for the additional RSL is
 \verb@project@, and the value assigned is \verb@Test_Project@.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-G-Credentials}Configuration and Credential Management}
+\subsubsection{\label{sec:Condor-G-Credentials}Configuration and Credential Management}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The following are required configuration file entries that
@@ -442,7 +449,7 @@ that is used during the installation of the Condor-G contrib module.
 GRIDMANAGER             = $(SBIN)/condor_gridmanager
 GRIDMANAGER_LOG         = $(LOG)/GridmanagerLog
 MAX_GRIDMANAGER_LOG     = 64000
-GRIDMANAGER_DEBUG       = D_COMMAND
+GRIDMANAGER_DEBUG       = D_FULLDEBUG
 GAHP                    = $(SBIN)/gahp_server
 \end{verbatim} 
 
@@ -484,13 +491,18 @@ Condor-G also knows when the proxy of each job will expire,
 and if the proxy is not refreshed before
 \AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
 seconds before the proxy expires,
-Condor-G will shut down.
-In other words, if
+the Condor-G grid manager daemon exits.
+Since the grid manager daemon keeps track of all jobs
+associated with a proxy, its tasks
+(such as authentication, file transfer, job log maintainance)
+will not occur.
+So, if
 \AdAttr{GRIDMANAGER\_MINIMUM\_PROXY\_TIME}
 is 180, and the proxy is 3 minutes away from
 expiring, Condor-G will attempt to safely shut down,
 instead of simply losing
-contact with the remote job because it is unable to authenticate it.
+contact with the remote job because Condor-G is unable to
+authenticate the remote job.
 The default setting is 3 minutes (180 seconds).
 
 % other variables that should probably get documented
