@@ -40,7 +40,6 @@ struct SubmitDagOptions
 	MyString strNotification;
 	MyString strJobLog;
 	MyString strStorkLog;
-	MyString strStorkServer;
 	int iMaxJobs;
 	int iMaxPre;
 	int iMaxPost;
@@ -177,11 +176,6 @@ void submitDag(SubmitDagOptions &opts)
 	if (opts.strStorkLog != "") {
 		printf("Stork Log file for all DaP jobs of this DAG      : %s\n",
 			   	opts.strStorkLog.Value());
-	}
-
-	if (opts.strStorkServer != "") {
-	printf("Stork server to which DaP jobs will be submitted : %s\n",
-		   	opts.strStorkLog.Value());
 	}
 
 	if (opts.bSubmit)
@@ -335,10 +329,6 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 	{
 		strArgs += " -Storklog " + opts.strStorkLog;
     }
-    if(opts.strStorkServer != "") 
-	{
-		strArgs += " -Storkserver " + opts.strStorkServer;
-    }
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
 
@@ -446,12 +436,6 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 				printUsage();
 			opts.strStorkLog = argv[++iArg];
 		}
-		else if (strArg.find("-storkserver") != -1)
-		{
-			if (bIsLastArg)
-				printUsage();
-			opts.strStorkServer = argv[++iArg];
-		}
 		else if (strArg.find("-d") != -1)
 		{
 			if (bIsLastArg)
@@ -483,7 +467,6 @@ int printUsage()
     printf("    -log filename       (Specify the log file shared by all jobs in the DAG)\n");
 // -->STORK
     printf("    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n");
-    printf("    -storkserver hostname (Specify the hostname to submit DaP jobs)\n");
 // <--STORK
     printf("    -notification value (Determines how much email you get from Condor)\n");
     printf("    -debug number       (Determines how verbosely DAGMan logs its work)\n");
