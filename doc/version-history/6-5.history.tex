@@ -16,7 +16,10 @@ The details of each version are described below.
 information in their ClassAds.
 
 \item The Collector now maintains and publishes update statistics
-using the above ClassAd ``sequence number'' and ``start time'' information.
+using the above ClassAd ``sequence number'' and ``start time''
+information.  History information is stored for the past
+COLLECTOR\_CLASS\_HISTORY\_SIZE updates and is also published in the
+Collector's ClassAd as a hex string.
 
 \item The collector and negotiator can now run on configurable
  ports. There are four new configuration parameters you can use:
