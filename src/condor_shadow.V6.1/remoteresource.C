@@ -50,29 +50,11 @@ static char *Resource_State_String [] = {
 	"SUSPENDED",
 };
 
+
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 {
-	executingHost = NULL;
-	capability = NULL;
-	init( shad );
-}
-
-
-RemoteResource::RemoteResource( BaseShadow * shad, 
-								const char * eHost, 
-								const char * cbility )
-{
-	executingHost = NULL;
-	setExecutingHost( eHost );
-	capability    = strnewp( cbility );
-	init( shad );
-}
-
-
-void
-RemoteResource::init( BaseShadow *shad )
-{
 	shadow = shad;
+	dc_startd = NULL;
 	machineName = NULL;
 	starterAddress = NULL;
 	starterArch = NULL;
@@ -80,7 +62,7 @@ RemoteResource::init( BaseShadow *shad )
 	jobAd = NULL;
 	fs_domain = NULL;
 	uid_domain = NULL;
-	claimSock = new ReliSock();
+	claim_sock = NULL;
 	exitReason = exitStatus = -1;
 	memset( &remote_rusage, 0, sizeof(struct rusage) );
 	disk_usage = 0;
@@ -88,17 +70,17 @@ RemoteResource::init( BaseShadow *shad )
 	state = RR_PRE;
 }
 
+
 RemoteResource::~RemoteResource()
 {
-	if ( executingHost ) delete [] executingHost;
+	if ( dc_startd     ) delete dc_startd;
 	if ( machineName   ) delete [] machineName;
-	if ( capability    ) delete [] capability;
 	if ( starterAddress) delete [] starterAddress;
 	if ( starterArch   ) delete [] starterArch;
 	if ( starterOpsys  ) delete [] starterOpsys;
 	if ( uid_domain	   ) delete [] uid_domain;
 	if ( fs_domain     ) delete [] fs_domain;
-	if ( claimSock     ) delete claimSock;
+	if ( claim_sock    ) delete claim_sock;
 	if ( jobAd         ) delete jobAd;
 }
 
@@ -106,13 +88,11 @@ RemoteResource::~RemoteResource()
 bool
 RemoteResource::requestIt( int starterVersion )
 {
-/* starterVersion is a default to 2. */
-
 	int reply;
 	
-	if ( !executingHost || !capability ) {
-		shadow->dprintf ( D_ALWAYS, "executingHost or capability not defined"
-				  "in requestIt.\n" );
+	if ( ! dc_startd ) {
+		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
+						 "information in RemoteResource::requestIt()\n" ); 
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
 		return false;
 	}
@@ -122,47 +102,38 @@ RemoteResource::requestIt( int starterVersion )
 		return false;
 	}
 
-	claimSock->close();	// make sure ClaimSock is a virgin socket
-	claimSock->timeout(SHADOW_SOCK_TIMEOUT);
-	if (!claimSock->connect(executingHost, 0)) {
-		shadow->dprintf(D_ALWAYS, "failed to connect to execute host %s\n", 
-				executingHost);
-		setExitReason(JOB_NOT_STARTED);
+	reply = dc_startd->activateClaim( jobAd, starterVersion,
+									  &claim_sock );
+	switch( reply ) {
+	case OK:
+		shadow->dprintf( D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
+						 dc_startd->addr() );
+		setResourceState( RR_EXECUTING );		
+		return true;
+		break;
+	case CONDOR_TRY_AGAIN:
+			// For right now, treat this as NOT_OK
+	case NOT_OK:
+		shadow->dprintf( D_ALWAYS, "Request to run on %s was REFUSED.\n",
+						 dc_startd->addr() );
+		setExitReason( JOB_NOT_STARTED );
+		if( claim_sock ) {
+			delete claim_sock;
+			claim_sock = NULL;
+		}
 		return false;
-	}
-
-	claimSock->encode();
-	if (!claimSock->put(ACTIVATE_CLAIM)  ||
-		!claimSock->code(capability)     ||
-		!claimSock->code(starterVersion) ||
-		!jobAd->put(*claimSock)          ||
-		!claimSock->end_of_message())
-	{
-		shadow->dprintf(D_ALWAYS, "failed to send ACTIVATE_CLAIM "
-                        "request to %s\n", executingHost);
-		setExitReason(JOB_NOT_STARTED);
+		break;
+	default:
+		shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
+						 "request to run on %s\n", reply,
+						 dc_startd->addr() );
+		setExitReason( JOB_NOT_STARTED );
 		return false;
+		break;
 	}
-
-	claimSock->decode();
-	if (!claimSock->code(reply) || !claimSock->end_of_message()) {
-		shadow->dprintf(D_ALWAYS, "failed to receive ACTIVATE_CLAIM "
-                        "reply from %s\n", executingHost);
-		setExitReason(JOB_NOT_STARTED);
-		return false;
-	}
-
-	if (reply != OK) {
-		shadow->dprintf(D_ALWAYS, "Request to run on %s was REFUSED.\n",
-				executingHost);
-		setExitReason(JOB_NOT_STARTED);
-		return false;
-	}
-
-	shadow->dprintf( D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
-					 executingHost );
-	setResourceState( RR_EXECUTING );
-	return true;
+		// should never get here, but keep gcc happy and return
+		// something. 
+	return false;
 }
 
 
@@ -176,35 +147,17 @@ RemoteResource::killStarter()
 			// just return true right away
 		return true;
 	}
-
-	ReliSock sock;
-
-	if ( !executingHost ) {
-		shadow->dprintf ( D_ALWAYS, "In killStarter, "
-                          "executingHost not defined.\n");
+	if ( ! dc_startd ) {
+		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+						 "DCStartd object NULL!\n");
 		return false;
 	}
-
-	shadow->dprintf( D_ALWAYS, "Removing machine \"%s\".\n", 
-					 machineName ? machineName : executingHost );
-
-	sock.timeout(SHADOW_SOCK_TIMEOUT);
-	if (!sock.connect(executingHost, 0)) {
-		shadow->dprintf(D_ALWAYS, "failed to connect to executing host %s\n",
-				executingHost );
+		// pass "false" so we use forceful shutdown, not graceful
+	if( ! dc_startd->deactivateClaim(false) ) {
+		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
+						 "Could not send command to startd\n" );
 		return false;
 	}
-
-	sock.encode();
-	if (!sock.put(KILL_FRGN_JOB) || 
-		!sock.put(capability)    ||
-		!sock.end_of_message())
-	{
-		shadow->dprintf(D_ALWAYS, "failed to send KILL_FRGN_JOB "
-                        "to startd %s\n", executingHost );
-		return false;
-	}
-
 	if( state != RR_FINISHED ) {
 		setResourceState( RR_PENDING_DEATH );
 	}
@@ -218,16 +171,24 @@ RemoteResource::dprintfSelf( int debugLevel )
 {
 	shadow->dprintf ( debugLevel, "RemoteResource::dprintSelf printing "
 					  "host info:\n");
-	if ( executingHost )
-		shadow->dprintf ( debugLevel, "\texecutingHost: %s\n", executingHost);
-	if ( capability )
-		shadow->dprintf ( debugLevel, "\tcapability:    %s\n", capability);
-	if ( machineName )
-		shadow->dprintf ( debugLevel, "\tmachineName:   %s\n", machineName);
-	if ( starterAddress )
-		shadow->dprintf ( debugLevel, "\tstarterAddr:   %s\n", starterAddress);
-	shadow->dprintf ( debugLevel, "\texitReason:    %d\n", exitReason);
-	shadow->dprintf ( debugLevel, "\texitStatus:    %d\n", exitStatus);
+	if( dc_startd ) {
+		char* addr = dc_startd->addr();
+		char* cap = dc_startd->getCapability();
+		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
+						 addr ? addr : "Unknown" );
+		shadow->dprintf( debugLevel, "\tcapability: %s\n", 
+						 cap ? cap : "Unknown" );
+	}
+	if( machineName ) {
+		shadow->dprintf( debugLevel, "\tmachineName: %s\n",
+						 machineName );
+	}
+	if( starterAddress ) {
+		shadow->dprintf( debugLevel, "\tstarterAddr: %s\n", 
+						 starterAddress );
+	}
+	shadow->dprintf( debugLevel, "\texitReason: %d\n", exitReason );
+	shadow->dprintf( debugLevel, "\texitStatus: %d\n", exitStatus );
 }
 
 
@@ -300,7 +261,7 @@ RemoteResource::handleSysCalls( Stream *sock )
 		// change value of the syscall_sock to correspond with that of
 		// this claim sock right before do_REMOTE_syscall().
 
-	syscall_sock = claimSock;
+	syscall_sock = claim_sock;
 	thisRemoteResource = this;
 
 	if (do_REMOTE_syscall() < 0) {
@@ -316,22 +277,6 @@ RemoteResource::handleSysCalls( Stream *sock )
 
 
 void
-RemoteResource::getExecutingHost( char *& eHost )
-{
-
-	if (!eHost) {
-		eHost = strnewp ( executingHost );
-	} else {
-		if ( executingHost ) {
-			strcpy ( eHost, executingHost );
-		} else {
-			eHost[0] = '\0';
-		}
-	}
-}
-
-
-void
 RemoteResource::getMachineName( char *& mName )
 {
 
@@ -343,6 +288,48 @@ RemoteResource::getMachineName( char *& mName )
 		} else {
 			mName[0] = '\0';
 		}
+	}
+}
+
+
+void
+RemoteResource::getStartdAddress( char *& sinful )
+{
+	if( sinful ) {
+		sinful[0] = '\0';
+	}
+	if( ! dc_startd ) {
+		return;
+	}
+	char* addr = dc_startd->addr();
+	if( ! addr ) {
+		return;
+	}
+	if( ! sinful ) {
+		sinful = strnewp( addr );
+	} else {
+		strcpy( sinful, addr );
+	}
+}
+
+
+void
+RemoteResource::getCapability( char *& cap )
+{
+	if( cap ) {
+		cap[0] = '\0';
+	}
+	if( ! dc_startd ) {
+		return;
+	}
+	char* capab = dc_startd->getCapability();
+	if( ! capab ) {
+		return;
+	}
+	if( ! cap ) {
+		cap = strnewp( capab );
+	} else {
+		strcpy( cap, capab );
 	}
 }
 
@@ -374,22 +361,6 @@ RemoteResource::getFilesystemDomain( char *& filesystemDomain )
 			strcpy( filesystemDomain, fs_domain );
 		} else {
 			filesystemDomain[0] = '\0';
-		}
-	}
-}
-
-
-void
-RemoteResource::getCapability( char *& cbility )
-{
-
-	if (!cbility) {
-		cbility = strnewp( capability );
-	} else {
-		if ( capability ) {
-			strcpy( cbility, capability );
-		} else {
-			cbility[0] = '\0';
 		}
 	}
 }
@@ -444,7 +415,7 @@ RemoteResource::getStarterOpsys( char *& opsys )
 ReliSock*
 RemoteResource::getClaimSock()
 {
-	return claimSock;
+	return claim_sock;
 }
 
 
@@ -463,13 +434,14 @@ RemoteResource::getExitStatus()
 
 
 void
-RemoteResource::setExecutingHost( const char * eHost )
+RemoteResource::setStartdInfo( const char *sinful, 
+							   const char* capability ) 
 {
-
-	if ( executingHost )
-		delete [] executingHost;
-	
-	executingHost = strnewp( eHost );
+	if( dc_startd ) {
+		delete dc_startd;
+	}
+	dc_startd = new DCStartd( sinful, NULL );
+	dc_startd->setCapability( capability );
 
 		/*
 		  Tell daemonCore that we're willing to
@@ -482,13 +454,12 @@ RemoteResource::setExecutingHost( const char * eHost )
 		  Added on 3/15/01 by Todd Tannenbaum <tannenba@cs.wisc.edu>
 		*/
 	char *addr;
-	if( (addr = string_to_ipstr(eHost)) ) {
+	if( (addr = string_to_ipstr(sinful)) ) {
 		daemonCore->AddAllowHost( addr, WRITE );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
-				 eHost );
+				 sinful );
 	}
-
 }
 
 void
@@ -524,17 +495,6 @@ RemoteResource::setFilesystemDomain( const char * filesystemDomain )
 
 
 void
-RemoteResource::setCapability( const char * cbility )
-{
-
-	if ( capability )
-		delete [] capability;
-	
-	capability = strnewp ( cbility );
-}
-
-
-void
 RemoteResource::setStarterAddress( const char * starterAddr )
 {
 	if( starterAddress ) {
@@ -565,13 +525,6 @@ RemoteResource::setStarterOpsys( const char * opsys )
 
 
 void
-RemoteResource::setClaimSock( ReliSock * cSock )
-{
-	claimSock = cSock;
-}
-
-
-void
 RemoteResource::setExitReason( int reason )
 {
 	// Set the exitReason, but not if the reason is JOB_KILLED.
@@ -579,10 +532,11 @@ RemoteResource::setExitReason( int reason )
 	// JOB_NOT_CKPTED or some such when the starter gets killed
 	// and the syscall sock goes away.
 
-	shadow->dprintf ( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
-					  machineName ? machineName : executingHost, reason );
+	shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
+					 machineName ? machineName : dc_startd->addr(),
+					 reason ); 
 
-	if ( exitReason != JOB_KILLED ) {
+	if( exitReason != JOB_KILLED ) {
 		exitReason = reason;
 	}
 }
