@@ -45,18 +45,11 @@
 
 /* Header Files */
 
-#include <sys/types.h>
+#include "condor_common.h"
 #include "constants2.h"
-#include <time.h>
-#include <stdlib.h>
-#include <iostream.h>
 #include "network2.h"
 #include "xferstat2.h"
-#include <stdio.h>
-#include <signal.h>
-#include <string.h>
 #include "xfer_summary.h"
-
 
 
 /* Class TransferState ********************************************************
