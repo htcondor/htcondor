@@ -1,10 +1,15 @@
 #!/s/std/bin/perl
 #!/usr/bin/perl
 
-##these are the files that need to be staged on the remote machine
+	##these are the files that need to be staged on the remote machine
 $config = "condor_config.glidein";
 @DAEMONS = ( "condor_master", "condor_startd", "condor_starter",
 		"condor_starter.pvm", "condor_pvmd" );
+
+	##contact string for globus gass server...Change 'do_remote_setup()' if
+	##you change the method of file staging (e.g. gass to gsiftp)
+$GASS_SERVER = "http://balthazar.cs.wisc.edu:12000/p/condor/public/binaries/glidein";
+
 
 if ( ( $error = parse_command_line() )
 		|| ( $error = gather_info() ) )
@@ -13,37 +18,10 @@ if ( ( $error = parse_command_line() )
 	exit( 1 );
 }
 
-$count = 0;
 foreach $CONTACT ( @CONTACTS ) {
-	if ( ( $CONTACT eq "" ) || !defined( $CONTACT ) ) {
-		print "ERROR: no contacts, exiting\n";
-		exit( 1 );
-	}
-		##don't use commented out entries
-	if ( $CONTACT =~ /#/ ) {
+	if ( host_info() ) {
 		next;
 	}
-	##this mess tries to deal with contacts of forms:
-	##<hostname> OR  <hostname>/jobmanger-<something> OR <full contact string>
-	##and keeping the Contact string and the hostname parts for diff purposes
-	$GLOBUSHOST = $CONTACT; 
-	if ( $CONTACT =~ /\// ) { ## either host:port/... or host/jobmanager...
-		( $GLOBUSHOST = $CONTACT ) =~ s/\/.*//;
-	}
-	if ( $CONTACT =~ /:/ ) {  ## form of host:port
-		( $GLOBUSHOST = $CONTACT ) =~ s/:.*//;
-	}
-		## contact is just host
-	if ( ( $CONTACT !~ /:/ ) && ( $CONTACT !~ /\// ) ) { 
-		$CONTACT = "$CONTACT/jobmanager" . '-' . $scheduler;
-	}
-	( $UID_DOMAIN = $GLOBUSHOST ) =~ s/[^\.]*.//;
-		##by this time, $GLOBUSHOST is fully qualified hostname, and 
-		##$CONTACT is as full of a contact string as we can get. This
-		##is important because using the contact string with the port
-		##number,  and X509 distinguished name won't require globusrun
-		##to contact the MDS. UID_DOMAIN is GLOBUSHOST - hostname
-
 
 		##before anything else, ensure we can run on the remote host
 	if ( silently( "$G_RUN -a -r '$CONTACT'" ) ) {
@@ -66,13 +44,14 @@ exit( 0 );
 
 ## END OF PROGRAM
 sub do_submit() {
-	if ( $arch =~ /linux/ ) {
+
+	if ( $SYSNAME =~ /linux/ ) {
 		$mail_arch = "/usr/bin/mail";
 	}
-	elsif ( $arch =~ /solaris/ ) {
+	elsif ( $SYSNAME =~ /solaris/ ) {
 		$mail_arch = "/usr/ucb/mail";
 	}
-	elsif ( $arch =~ /irix/ ) {
+	elsif ( $SYSNAME =~ /irix/ ) {
 		$mail_arch = "/usr/sbin/mailx";
 	}
 	else {
@@ -189,8 +168,9 @@ sub gather_info() {
 	chomp( $G_RCP = `which globus-rcp` );
 	chomp( $G_INFO = `which grid-proxy-info` );
 	chomp( $G_INIT = `which grid-proxy-init` );
+	chomp( $G_SEARCH = `which grid-info-search` );
 
-	foreach $G_PROG ( $G_RUN, $G_RCP, $G_INFO, $G_INIT ) {
+	foreach $G_PROG ( $G_RUN, $G_RCP, $G_INFO, $G_INIT, $G_SEARCH ) {
 		if ( ! -x $G_PROG ) {
 			return( "Error, cannot find Globus program \"$G_PROG\"" );
 		}
@@ -241,7 +221,7 @@ print STDERR "	Valid options:\n"
 . "   --queue <queue>         Queue to use on Globus scheduler\n"
 . "   --count <CPU count>     Number of CPUs to request [default=1]\n"
 . "   --runfor <mins>         Remote daemons exit gracefully after <mins>\n"
-. "                            without running a Condor job [default=30]\n"
+. "                            without running a Condor job [default=20]\n"
 . "   --anybody               Allow any user to run jobs on your glideins\n"
 . "   --admin <email address> Who to email with problems [default=<you>]\n"
 . "   --genconfig             Generate condor_config.glidein\n"
@@ -252,7 +232,7 @@ sub parse_command_line() {
 		#parse command line options
 	($name = $0) =~ s/.*\///; ## strip off directory path...
 	$scheduler = "fork";
-	$run_for = 30;
+	$run_for = 20;
 	$cpucount = 1;
 	$basedir = '$(HOME)/Condor_glidein';
 	##don't set default archdir because it is built below from pool version, arch
@@ -303,6 +283,7 @@ sub parse_command_line() {
 
 	if ( $gen_config ) {
 		gen_main_config();
+		exit( 0 );
 	}
 
 	return( 0 );
@@ -362,7 +343,7 @@ sub gen_main_config() {
 	SUSPEND_VANILLA : False
 	WANT_SUSPEND_VANILLA : True
 	KILL : False
-	UPDATE_INTERVAL = 30
+	UPDATE_INTERVAL = 20
 	IS_GLIDEIN = True
 	STARTD_EXPRS = IS_GLIDEIN, START
 	PREEN_INTERVAL = 0
@@ -370,8 +351,56 @@ EOF
 	close CONDOR_CONFIG;
 }
 
+sub host_info() 
+{
+		##get rid of everything following '#' in contact entries
+	$CONTACT =~ s/#.*//;
+
+	if ( ( $CONTACT eq "" ) || !defined( $CONTACT ) ) {
+		return( 1 );
+	}
+
+	##need just hostname for grid-info-search
+	$GLOBUSHOST = $CONTACT; 
+	if ( $CONTACT =~ /\// ) { ## either host:port/... or host/jobmanager...
+		( $GLOBUSHOST = $CONTACT ) =~ s/\/.*//;
+	}
+	if ( $CONTACT =~ /:/ ) {  ## form of host:port
+		( $GLOBUSHOST = $CONTACT ) =~ s/:.*//;
+	}
+	( $UID_DOMAIN = $GLOBUSHOST ) =~ s/[^\.]+\.//;
+
+	open( SEARCH, "$G_SEARCH -R '(hn=$GLOBUSHOST)'|" );
+	@SEARCH = <SEARCH>;
+	close( SEARCH );
+
+		##need sysname since ARCH contains macros...
+	$SYSNAME = join('', grep( /canonicalsystemname/, @SEARCH ) );
+	$SYSNAME =~ s/canonicalsystemname=//;
+	$SYSNAME =~ s/ /-/g;
+
+		##determine whether it's just hostname, hostname/jobmanager-scheduler, or
+		##full contact string.
+	if ( $CONTACT !~ /:[0-9]+\// ) {  ## not in full contact string format
+		$WHO = join( '', grep( /contact.*jobmanager-$scheduler/, @SEARCH ) );
+		$WHO =~ s/contact=//;
+		if ( !defined( $WHO ) ) {
+			undef( $CONTACT );
+			return( 1 );
+		}
+		else {
+			chomp( $CONTACT = $WHO );
+		}
+	}
+	if ( ( $CONTACT eq "" ) || !defined( $CONTACT ) ) {
+		print STDERR "Error contacting host $GLOBUSHOST\n";
+		return( 1 );
+	}
+
+	return( 0 );
+}
+
 sub do_remote_setup() {
-	$GASS_SERVER = "https://balthazar.cs.wisc.edu:12000/p/condor/public/binaries/glidein"; ##change this to read it from MDS
 	$DAEMONS = join( ' ', @DAEMONS );
 
 	$REM_SETUP = "/tmp/remote_setup.glidein";
@@ -408,12 +437,17 @@ sub do_remote_setup() {
 		fi
 	done
 	if [ \$GETFILES -eq 1 ];
-		then \$GLOBUS_COPY $GASS_SERVER/\$ARCH.tar file:\$ARCHDIR/\$ARCH.tar &&
-		\$GLOBUS_SH_TAR xf \$ARCH.tar;
-		\$GLOBUS_SH_RM -f \$ARCH.tar;
+		then \$GLOBUS_COPY $GASS_SERVER/\$ARCH.tar file:\$ARCHDIR/\$ARCH.tar;
 	fi
-##need some kind of error if tarball doesn't exist on GASS server!!
-	exit
+
+	if [ ! -f \$ARCHDIR/\$ARCH.tar ]
+		then \$GLOBUS_SH_ECHO "Error: unable to copy $GASS_SERVER/\$ARCH.tar"
+		exit 1;
+	fi
+		
+	\$GLOBUS_SH_TAR xf \$ARCH.tar;
+	\$GLOBUS_SH_RM -f \$ARCH.tar;
+	exit 0;
 
 
 EOF
@@ -421,7 +455,7 @@ EOF
 	$SYSTEM = "globusrun -w -r '$CONTACT' '&(executable=\$(GLOBUS_TOOLS_PATH)/bin/globus-sh-exec)(arguments=\$(GLOBUSRUN_GASS_URL)$REM_SETUP $basedir $archdir $arch $localdir \$(GLOBUS_TOOLS_PATH)/bin/globus-url-copy)'";
 
 	if ( system( $SYSTEM ) ) {
-		return( "Error-- cannot run setup script on remote machine" );
+		return( "Error-- running setup script on remote machine" );
 	}
 	unlink( $REM_SETUP );
 	return( 0 );
