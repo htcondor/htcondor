@@ -602,8 +602,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
     pi->pid       = (long) *((long*)(ctrblk + offsets->procid  ));
     pi->ppid      = ntSysInfo.GetParentPID(pi->pid);
-    pi->imgsize   = (long) *((long*)(ctrblk + offsets->imgsize ));
-    pi->rssize    = (long) *((long*)(ctrblk + offsets->rssize  ));
+    pi->imgsize   = (long) (*((long*)(ctrblk + offsets->imgsize ))) / 1024;
+    pi->rssize    = (long) (*((long*)(ctrblk + offsets->rssize  ))) / 1024;
     pi->minfault  = 0;  // not supported by NT; all faults lumped into major.
     pi->user_time = (long) (LI_to_double( ut ) / objectFrequency);
     pi->sys_time  = (long) (LI_to_double( st ) / objectFrequency);
@@ -1184,8 +1184,8 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
 
 			pi->pid       = 0;  // it's the sum of many pids...
 			pi->ppid      = -1; // ditto.
-			pi->imgsize  += (long) *((long*)(ctrblk + offsets->imgsize ));
-			pi->rssize   += (long) *((long*)(ctrblk + offsets->rssize  ));
+			pi->imgsize  += (long) (*((long*)(ctrblk + offsets->imgsize ))) / 1024;
+			pi->rssize   += (long) (*((long*)(ctrblk + offsets->rssize  ))) / 1024;
 			pi->minfault  = 0;  // not supported by NT; 
                                 //all faults lumped into major.
 			pi->user_time+= (long) (LI_to_double( ut ) / objectFrequency);
