@@ -11,10 +11,12 @@ enum AdTypes
     GATEWAY_AD,
     CKPT_SRVR_AD,
 
+	STARTD_PVT_AD,
+
     NUM_AD_TYPES
 };
 
-#include "condor_commands.h"   // collector commands
+#include "condor_commands.h"
 
 #endif // __COLLECTOR_H__
 

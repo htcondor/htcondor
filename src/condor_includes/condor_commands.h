@@ -99,5 +99,6 @@ const int QUERY_MASTER_ADS       = 7;
 const int QUERY_GATEWAY_ADS      = 8;
 const int QUERY_CKPT_SRVR_ADS  = 9;
 
+const int QUERY_STARTD_PVT_ADS   = 10;
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
