@@ -172,7 +172,7 @@ sub RunTest
     {
 	Condor::RegisterExitFailure( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (returned %info{'retval'})\n";
+	    die "$handle: FAILURE (returned $info{'retval'})\n";
 	} );
     }
 
