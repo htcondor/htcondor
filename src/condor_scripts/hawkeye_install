@@ -60,6 +60,7 @@ sub Main( )
     print "\n\nExtracting tarballs into '$TargetDir'...\n";
     system( "tar -C $TargetDir -xvf $TarBall" );
     system( "tar --gzip -C $TargetDir -xvf hcav.tgz" ) if ( -f "hcav.tgz" );
+    system( "cp README* $TargetDir" );
 
     # Create extra directories...
     die if CreateDir( "$TargetDir/etc" );
