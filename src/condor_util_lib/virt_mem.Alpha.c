@@ -21,15 +21,13 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
 #include <sys/param.h>
 #include <sys/resource.h>
+#include <net/route.h>
+#include <sys/mbuf.h>
 #include <sys/table.h>
 
 static char *_FileName_ = __FILE__;
