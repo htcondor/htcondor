@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include "image.h"
 
+extern "C" int gethostname( char *, int );
+
 int
 main( int argc, char *argv[] )
 {
