@@ -62,6 +62,22 @@ the LHC Computing Grid Project to increase data transfer performance of
 the Condor-G client. Previous versions of Condor-G could bog down in
 accepting new transfer requests, producing a variety of errors. 
 
+\item Added a new configuration setting,
+  \Macro{SUBMIT\_SEND\_RESCHEDULE} which controls whether or not
+  \Condor{submit} should automatically send a \Condor{reschedule}
+  command when it is done.
+  Previously, \Condor{submit} would always send this reschedule so
+  that the \Condor{schedd} knew to start trying to find matches for
+  the new jobs.
+  However, for submit machines that are managing a huge number of jobs
+  (thousands or tens of thousands), this step would hurt performance
+  in such a way that it became an obsticle to scalability.
+  In this case, an administrator can set
+  \MacroNI{SUBMIT\_SEND\_RESCHEDULE} to \verb@FALSE@, this extra
+  step is not performed, and the \Condor{schedd} will try to find
+  matches whenever the periodic timer in the \Condor{negotiator}
+  (\MacroNI{NEGOTIATOR\_INTERVAL}) goes off.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
