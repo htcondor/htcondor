@@ -75,9 +75,9 @@ fi
 # CONDOR_VERIFY_EXTERNALS_DIR written by Derek Wright
 # <wright@cs.wisc.edu> to verify if a given directory is a valid
 # externals directory tree needed for building Condor.  To simplify
-# the macro and make the reporting consistent, this macro uses a
-# simple helper macro (_condor_VERITY_EXT_ERROR) to report any errors
-# found while trying to verify a given path.
+# the macro and make the reporting consistent, this macro uses some
+# helper macros (_condor_VERITY_*) to check for files and directories
+# and report any errors found while trying to verify a given path.
 # Arguments: 
 #  $1 is the path to test
 #  $2 is the error message to report if the given path is invalid
@@ -87,29 +87,84 @@ fi
 #######################################################################
 AC_DEFUN([CONDOR_VERIFY_EXTERNALS_DIR],
 [AC_MSG_CHECKING([if $1 is valid])
- if test ! -d $1; then
-   _condor_VERIFY_EXT_ERROR([$1 is not a directory], [$2])
- fi  
- if test ! -f "$1/build_external"; then
-   _condor_VERIFY_EXT_ERROR([$1/build_external script does not exist], [$2])
- fi
- if test ! -d "$1/bundles"; then
-   _condor_VERIFY_EXT_ERROR([$1/bundles is not a directory], [$2])
- fi
+ _condor_VERIFY_DIR([$1], [$2])
+ _condor_VERIFY_FILE([$1/build_external], [$2])
+ _condor_VERIFY_DIR([$1/bundles], [$2])
  AC_MSG_RESULT(yes)
  ac_cv_externals=$1
 ])
 
+
 #######################################################################
-# CONDOR_VERIFY_EXT_ERROR is a helper for CONDOR_VERIFY_EXTERNALS_DIR 
+# CONDOR_VERIFY_CONFIG_DIR written by Derek Wright
+# <wright@cs.wisc.edu> to verify if a given directory is a valid
+# config directory tree needed for building Condor.  To simplify
+# the macro and make the reporting consistent, this macro uses some
+# helper macros (_condor_VERITY_*) to check for files and directories
+# and report any errors found while trying to verify a given path.
+# Arguments: 
+#  $1 is the path to test
+#  $2 is the error message to report if the given path is invalid
+# Side Effects:
+#  If the given path is valid, the variable $ac_cv_config is set to
+#  hold its value
+#######################################################################
+AC_DEFUN([CONDOR_VERIFY_CONFIG_DIR],
+[AC_MSG_CHECKING([if $1 is valid])
+ _condor_VERIFY_DIR([$1], [$2])
+ _condor_VERIFY_FILE([$1/configure.cf.in], [$2])
+ _condor_VERIFY_FILE([$1/externals.cf.in], [$2])
+ _condor_VERIFY_FILE([$1/config.sh.in], [$2])
+ AC_MSG_RESULT(yes)
+ ac_cv_config=$1
+])
+
+
+#######################################################################
+# _condor_VERIFY_FILE is a helper for the various _condor_VERIFY_*
+# macros 
+# Arguments:
+#  $1 file to test
+#  $2 is the general error message to print which was given to
+#     _condor_VERIFY_*
+# Side Effects:
+#   If the given file doesn't exist, this macro calls
+#   _condor_VERIFY_ERROR which will terminate with AC_MSG_ERROR
+#######################################################################
+AC_DEFUN([_condor_VERIFY_FILE],
+[if test ! -f "$1"; then
+   _condor_VERIFY_ERROR([$1 does not exist], [$2])
+ fi
+])
+
+
+#######################################################################
+# _condor_VERIFY_DIR is a helper for the _condor_VERIFY_* macros 
+# Arguments:
+#  $1 directory to test
+#  $2 is the general error message to print which was given to
+#     _condor_VERIFY_*
+# Side Effects:
+#   If the given directory doesn't exist, this macro calls
+#   _condor_VERIFY_ERROR which will terminate with AC_MSG_ERROR
+#######################################################################
+AC_DEFUN([_condor_VERIFY_DIR],
+[if test ! -d "$1"; then
+   _condor_VERIFY_ERROR([$1 is not a directory], [$2])
+ fi
+])
+
+
+#######################################################################
+# _condor_VERIFY_ERROR is a helper for the _condor_VERIFY_* macros
 # Arguments:
 #  $1 is the specific warning message about why a directory is invalid
 #  $2 is the general error message to print which was given to
-#     _condor_VERIFY_EXTERNALS_DIR
+#     _condor_VERIFY_*_DIR
 # Side Effects:
-#  Calling this macro terminates configure with AC_MSG_ERROR() 
+#  Calling this macro terminates configure with AC_MSG_ERROR
 #######################################################################
-AC_DEFUN([_condor_VERIFY_EXT_ERROR],
+AC_DEFUN([_condor_VERIFY_DIR_ERROR],
 [AC_MSG_RESULT([no])
  AC_MSG_WARN([$1])
  AC_MSG_ERROR([$2])
