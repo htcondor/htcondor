@@ -23,8 +23,6 @@
 #ifndef _NETWORK
 #define _NETWORK
 
-#include "_condor_fix_types.h"
-
 #define SCHED_PORT					9605
 
 #define NEGOTIATOR_PORT					9614

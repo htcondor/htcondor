@@ -32,12 +32,7 @@
 #define INTERNET_H
 
 #include "proc.h"
-#include "_condor_fix_types.h"
 #include "expr.h"
-
-#if !defined(WIN32)
-#include <netinet/in.h>
-#endif
 
 #if !defined(SOCKET) && !defined(WIN32)
 #define SOCKET int

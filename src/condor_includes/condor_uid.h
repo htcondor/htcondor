@@ -44,8 +44,6 @@
 #ifndef _UID_H
 #define _UID_H
 
-#include "_condor_fix_types.h"
-
 #if defined(__cplusplus)
 extern "C" {
 #endif

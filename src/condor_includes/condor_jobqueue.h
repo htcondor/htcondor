@@ -23,11 +23,8 @@
 #ifndef _JOB_QUEUE_H
 #define _JOB_QUEUE_H
 
-
-#include "condor_fix_sys_resource.h"
 #include "condor_xdr.h"
 #include <ndbm.h>
-
 
 #if defined(__cplusplus)
 extern "C" {

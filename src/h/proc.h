@@ -21,14 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #ifndef CONDOR_PROC_INCLUDED
 #define CONDOR_PROC_INCLUDED
-
-#if !defined(WIN32)
-#include "condor_fix_sys_resource.h"
-#endif
 
 typedef struct {
 	int		cluster;
