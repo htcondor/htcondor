@@ -54,6 +54,7 @@ Matchmaker ()
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
 	PreemptionRank = NULL;
+	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	Parse (buf, rankCondStd);
@@ -74,6 +75,7 @@ Matchmaker::
 	delete rankCondPreempt;
 	delete PreemptionReq;
 	delete PreemptionRank;
+	delete sockCache;
 }
 
 
@@ -109,7 +111,7 @@ initialize ()
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
 
-	// Set a timer to renigotiate.  This timer gets reset to 
+	// Set a timer to renegotiate.  This timer gets reset to 
 	// Negotiator interval after each negotiation.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
 			(TimerHandlercpp) &Matchmaker::negotiationTime, 
@@ -141,6 +143,17 @@ reinitialize ()
 		free( tmp );
 	} else {
 		NegotiatorTimeout = 30;
+	}
+
+	delete sockCache;
+	tmp = param("NEGOTIATOR_SOCKET_CACHE_SIZE");
+	if (tmp) {
+		int size = atoi(tmp);
+		dprintf (D_ALWAYS,"NEGOTIATOR_SOCKET_CACHE_SIZE = %d\n", size);
+		sockCache = new SocketCache(size);
+		free(tmp);
+	} else {
+		sockCache = new SocketCache;
 	}
 
 	tmp = param("NEGOTIATOR_TRAFFIC_LIMIT");
@@ -603,14 +616,14 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	int			i;
 	int			reply;
 	int			cluster, proc;
-	int			bandwidth, bw2, bw_request;
+	int			placement_bw, preempt_bw, bw_request, job_status;
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
-	char		prioExpr[128];
+	char		prioExpr[128], startdAddr[32], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!sockCache.getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
+	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
 	{
 		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
@@ -621,7 +634,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	if (!sock->put(NEGOTIATE)||!sock->put(scheddName)||!sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "    Failed to send NEGOTIATE/scheddName/eom\n");
-		sockCache.invalidateSock(scheddAddr);
+		sockCache->invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
 
@@ -637,7 +650,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
 		{
 			dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
-			sockCache.invalidateSock(scheddAddr);
+			sockCache->invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
@@ -648,7 +661,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
 			sock->end_of_message ();
-            sockCache.invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
@@ -665,7 +678,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			// something goofy
 			dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
 			sock->end_of_message ();
-            sockCache.invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 
@@ -675,7 +688,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
-            sockCache.invalidateSock(scheddAddr);
+            sockCache->invalidateSock(scheddAddr);
 			return MM_ERROR;
 		}
 		if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
@@ -698,39 +711,31 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			if (!(offer = matchmakingAlgorithm(scheddName, request, startdAds)))
+			if (!(offer=matchmakingAlgorithm(scheddName, request, startdAds,
+											 priority)))
 			{
-
-				// no offer ...
-				dprintf(D_ALWAYS, "      No offer --- trying preemption\n");
-			
-				// try matchmaking algorithm with preemption mode enabled
-				// (i.e., with priority == priority threshold)
-				if (!(offer=matchmakingAlgorithm(scheddName, request, startdAds,
-												 priority)))
-				{
-					// no preemptable resource offer either ... 
-					dprintf(D_ALWAYS,
-							"      Rejected (no preemptible offers)\n");
-					sock->encode();
-					if (!sock->put(REJECTED) || !sock->end_of_message())
+				// no preemptable resource offer either ... 
+				dprintf(D_ALWAYS,
+						"      Rejected\n");
+				sock->encode();
+				if (!sock->put(REJECTED) || !sock->end_of_message())
 					{
 						dprintf (D_ALWAYS, "      Could not send rejection\n");
 						sock->end_of_message ();
-						sockCache.invalidateSock(scheddAddr);
+						sockCache->invalidateSock(scheddAddr);
 						
 						return MM_ERROR;
 					}
-					result = MM_NO_MATCH;
-					continue;
-				}
-				else
-				{
-					char	remoteUser[128];
-					char	remoteHost[MAXHOSTNAMELEN];
-					double	remotePriority;
+				result = MM_NO_MATCH;
+				continue;
+			}
+			else
+			{
+				char	remoteHost[MAXHOSTNAMELEN];
+				double	remotePriority;
 
-					offer->LookupString(ATTR_REMOTE_USER, remoteUser);
+				if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 1)
+				{
 					offer->LookupString(ATTR_NAME, remoteHost);
 					remotePriority = accountant.GetPriority (remoteUser);
 
@@ -739,20 +744,41 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 							 "for %s (prio=%.2f)\n", remoteUser,
 							 remotePriority, remoteHost, scheddName,
 							 priority );
+				} else {
+					strcpy(remoteUser, "none");
 				}
 			}
 
 			// Make sure this offer won't put us over our network bandwidth
 			// limit.
-			if (!request.LookupInteger (ATTR_IMAGE_SIZE, bandwidth)) {
-				bandwidth = 0;
+			if (!request.LookupInteger (ATTR_JOB_STATUS, job_status)) {
+				job_status = IDLE; // err on the safe side
 			}
-			if (offer->LookupInteger (ATTR_IMAGE_SIZE, bw2)) {
-				bandwidth += bw2;
+			if (job_status == UNEXPANDED) {
+				// We only need to transfer the executable for an
+				// unexpanded job, so ignore the ImageSize attribute
+				// in this case.
+				if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
+											placement_bw)) {
+					placement_bw = 0;
+				}
+			} else {
+				if (!request.LookupInteger (ATTR_IMAGE_SIZE, placement_bw)) {
+					placement_bw = 0;
+				}
 			}
-			dprintf( D_FULLDEBUG, "    Requesting %d kbytes of bandwidth\n",
-					 bandwidth );
-			bw_request = NetUsage.Request(bandwidth);
+			if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
+				preempt_bw = 0;
+			}
+			if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
+				strcpy(startdAddr, "<0.0.0.0:0>");
+			}
+			bw_request = NetUsage.Request(placement_bw+preempt_bw);
+			dprintf( D_BANDWIDTH,
+					 "    %d+%d KB for %d.%d %s %s preempting %s %s %s\n",
+					 placement_bw, preempt_bw, cluster, proc, scheddName,
+					 scheddAddr, remoteUser, startdAddr, 
+					 (bw_request > 0) ? "DENIED" : "GRANTED");
 			if (bw_request > 0) { // reject match -- over bw limit
 				dprintf( D_ALWAYS, "    Not enough bandwidth for this job ---"
 						 " rejecting.\n" );
@@ -761,7 +787,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 				{
 					dprintf (D_ALWAYS, "      Could not send rejection\n");
 					sock->end_of_message ();
-					sockCache.invalidateSock(scheddAddr);
+					sockCache->invalidateSock(scheddAddr);
 					return MM_ERROR;
 				}
 				result = MM_NO_MATCH;
@@ -781,7 +807,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			//			schedd, invalidate the connection and return
 			if (result == MM_ERROR)
 			{
-				sockCache.invalidateSock (scheddAddr);
+				sockCache->invalidateSock (scheddAddr);
 				return MM_ERROR;
 			}
 		}
@@ -810,7 +836,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	if (!sock->put (END_NEGOTIATE) || !sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "    Could not send END_NEGOTIATE/eom\n");
-        sockCache.invalidateSock(scheddAddr);
+        sockCache->invalidateSock(scheddAddr);
 	}
 
 	// ... and continue negotiating with others
@@ -824,17 +850,17 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 {
 	ClassAd 	*candidate;
 	double		candidateRank;
+	double		candidatePreemptRank;
 	ClassAd 	*bestSoFar = NULL;	// using best match
 	double		bestRank = -(FLT_MAX);
+	double		bestPreemptRank = -(FLT_MAX);
 	double		bestOffer= -(FLT_MAX);
 	ExprTree	*requestRank;
 	ExprTree	*offerRank;
 	ExprTree 	*matchCriterion;
 	char		remoteUser[128];
 	EvalResult	result;
-
-	// rank condition depends on whether we are in preemption mode or not
-	matchCriterion = (preemptPrio >= 0) ? rankCondPreempt : rankCondStd;
+	bool		preempting;
 
 	// stash the rank expression of the request
 	requestRank = request.Lookup (ATTR_RANK);
@@ -844,64 +870,75 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 	while ((candidate = startdAds.Next ())) {
 		// the candidate offer and request must match
 		if (*candidate == request) {
-			// are we in preemption mode? 
-			if (preemptPrio >= 0) {
-				// if there is a remote user ....
-				if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
-					// check if the remote user has better priority
-					if( preemptPrio + PriorityDelta >= 
-							accountant.GetPriority(remoteUser) ) {
-						// yes ... ignore this candidate
-						continue;
-					}
-
+			preempting = false;
+			// if there is a remote user, we try preemption ....
+			if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+				preempting = true;
+				// check if the remote user has better priority
+				if( preemptPrio + PriorityDelta >= 
+					accountant.GetPriority(remoteUser) ) {
+					// yes ... ignore this candidate
+					continue;
 				}
 
 				// if the PreemptionReq expression is false, dont preempt
 				if (PreemptionReq 											&& 
 					PreemptionReq->EvalTree(candidate,&request,&result)		&&
 					result.type == LX_INTEGER && result.i == FALSE)
-						continue;
+					continue;
 			}
 
+			// rank condition depends on if we are in preemption mode or not
+			matchCriterion = (preempting) ? rankCondPreempt : rankCondStd;
+
 			// if the offer has no Rank expr, the symmetric match is enough
- 			// if the offer has a Rank expr, the match criterion must hold
+			// if the offer has a Rank expr, the match criterion must hold
 			offerRank = candidate->Lookup(ATTR_RANK);
 			if ((!offerRank) || (offerRank && 
 				matchCriterion->EvalTree(candidate,&request, &result) 	&&
 				(result.type == LX_INTEGER) && (result.i == TRUE)))
 			{
 
-				// Use the PREEMPTION_RANK expression to rank matches if we
-				// are preempting; otherwise, use the request's rank expr
-				if (preemptPrio >= 0 && PreemptionRank) {
+				float tmp;
+				// calculate the request's rank of the offer
+				if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+					tmp = 0.0;
+				}
+				candidateRank = tmp;
+
+				// Use the PREEMPTION_RANK expression to rank matches when
+				// request rank is the same for both matches.  We always
+				// prefer to avoid preemption, so if we are not preempting
+				// we set candidatePreemptRank to FLT_MAX.
+				if (preempting) {
 					// calculate the global rank of the offer
-					if(PreemptionRank->EvalTree(candidate,&request,&result) &&
+					if(PreemptionRank &&
+					   PreemptionRank->EvalTree(candidate,&request,&result) &&
 					   result.type == LX_FLOAT) {
-						candidateRank = result.f;
+						candidatePreemptRank = result.f;
 					} else {
-						dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK"
-								" expression.\n");
-						candidateRank = 0.0;
+						if (PreemptionRank) {
+							dprintf(D_ALWAYS, "Failed to evaluate "
+									"PREEMPTION_RANK expression.\n");
+						}
+						candidatePreemptRank = 0.0;
 					}
 				} else {
-					float tmp;
-					// calculate the request's rank of the offer
-					if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
-						tmp = 0.0;
-					}
-					candidateRank = tmp;
+					candidatePreemptRank = FLT_MAX;
 				}
 
 				// if this rank is the best so far, choose it
-				if (candidateRank > bestRank)
+				if (candidateRank > bestRank ||
+					(candidateRank == bestRank &&
+					 candidatePreemptRank > bestPreemptRank))
 				{
 					bestSoFar = candidate;
 					bestRank = candidateRank;
+					bestPreemptRank = candidatePreemptRank;
 				}
 				else 
 				{
-				// break ties on the basis of the best offer rank
+					// break ties on the basis of the best offer rank
 					if (offerRank && candidateRank == bestRank)
 					{
 						float rankOfOffer;
