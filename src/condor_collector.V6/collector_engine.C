@@ -26,6 +26,8 @@
 extern "C" void event_mgr (void);
 #endif	// of ifndef WIN32
 
+//-------------------------------------------------------------
+
 #include "condor_classad.h"
 #include "condor_parser.h"
 #include "condor_debug.h"
@@ -37,12 +39,21 @@ extern "C" void event_mgr (void);
 #include "fdprintf.h"
 
 #include "condor_attributes.h"
-#include "collector_engine.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+//-------------------------------------------------------------
+
+#include "collector_engine.h"
 
 static char *_FileName_ = __FILE__;
 
-extern char *CondorAdministrator;
+// pointer values for representing master states
+ClassAd* CollectorEngine::RECENTLY_DOWN  = (ClassAd *) 0x1;
+ClassAd* CollectorEngine::DONE_REPORTING = (ClassAd *) 0x2;
+ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
+ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
+
+char* CollectorEngine::CondorAdministrator = NULL;
 
 static void killHashTable (CollectorHashTable &);
 static ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
@@ -51,12 +62,6 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 int		email (char *, char * = NULL); 
 char	*strStatus (ClassAd *);
-
-// pointer values for representing master states
- ClassAd *RECENTLY_DOWN  = (ClassAd *) 0x1;
- ClassAd *DONE_REPORTING = (ClassAd *) 0x2;
- ClassAd *LONG_GONE	  = (ClassAd *) 0x3;
- ClassAd *THRESHOLD	  = (ClassAd *) 0x4;
 
 CollectorEngine::
 CollectorEngine () : 
@@ -352,7 +357,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 				}
 				if (!pvtAd->get(*sock))
 				{
-					dprintf(D_ALWAYS,"\t(Could not get startd's private ad)\n");
+					dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
 					delete pvtAd;
 					break;
 				}
@@ -591,7 +596,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
 
 		// check if it has special status (master ads)
-		if (old_ad < THRESHOLD)
+		if (old_ad < CollectorEngine::THRESHOLD)
 		{
 			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n", hashString,
 								strStatus(old_ad));
@@ -849,7 +854,7 @@ email (char *subject, char *address)
 	char	mailtoURL[128];
 
 	if (address == NULL) {
-		address = CondorAdministrator;
+		address = CollectorEngine::CondorAdministrator;
 	}
 
 	sprintf (mailtoURL, "mailto:%s", address);
@@ -869,16 +874,16 @@ killHashTable (CollectorHashTable &table)
 
 	while (table.iterate (ad))
 	{
-		if (ad > THRESHOLD) delete ad;
+		if (ad > CollectorEngine::THRESHOLD) delete ad;
 	}
 }
 
 char *
 strStatus (ClassAd *ad)
 {
-	if (ad == RECENTLY_DOWN) return "recently down";
-	if (ad == DONE_REPORTING) return "done reporting";
-	if (ad == LONG_GONE) return "long gone";
+	if (ad == CollectorEngine::RECENTLY_DOWN) return "recently down";
+	if (ad == CollectorEngine::DONE_REPORTING) return "done reporting";
+	if (ad == CollectorEngine::LONG_GONE) return "long gone";
 
 	return "(unknown master state)";
 }

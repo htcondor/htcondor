@@ -6,12 +6,12 @@ LDFLAGS = -lm RpcLib SocketLib
 ENGINE_SRC = hashkey.C collector_engine.C
 ENGINE_OBJ = hashkey.o collector_engine.o
 
-SRC = initialize.C collector.C 
-OBJ = initialize.o collector.o totals.o
+SRC = main.C collector.C view_server.C instantiate.C
+OBJ = main.o collector.o view_server.o instantiate.o totals.o
+
 LIB = ../condor_daemon_core.V6/daemon_core.a collector_engine.a \
 		../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a \
 	  ../condor_util_lib/util_lib.a ../condor_io/libcondor.a
-	  
 
 all_target(collector_engine.a condor_collector)
 c_plus_target(condor_collector,$(OBJ),$(LIB))

@@ -30,12 +30,6 @@
 #include "HashTable.h"
 #include "hashkey.h"
 
-// pointer values for representing master states
-extern  ClassAd *RECENTLY_DOWN;
-extern  ClassAd *DONE_REPORTING;
-extern  ClassAd *LONG_GONE;
-extern  ClassAd *THRESHOLD;
-
 class CollectorEngine : public Service
 {
   public:
@@ -104,6 +98,16 @@ class CollectorEngine : public Service
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
 				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
+
+  public:
+	// pointer values for representing master states
+	static ClassAd* RECENTLY_DOWN;
+	static ClassAd* DONE_REPORTING;
+	static ClassAd* LONG_GONE;
+	static ClassAd* THRESHOLD;
+
+	static char* CondorAdministrator;
+
 };
 
 #ifndef WIN32
