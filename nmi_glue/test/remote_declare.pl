@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_declare.pl,v 1.1.2.8 2004-06-25 01:38:10 wright Exp $
+# $Id: remote_declare.pl,v 1.1.2.9 2004-06-25 02:23:51 wright Exp $
 # generate list of all tests to run
 ######################################################################
 
@@ -18,14 +18,26 @@ if( $args ) {
 }
 
 # make sure that what we were given is valid and we recognize it
-if( $decl_type =~ /^quick$/ ||
-    $decl_type =~ /^full$/ )
+if( $decl_type eq "quick" ||
+    $decl_type eq "fortran" ||
+    $decl_type eq "gnu-c-fast" ||
+    $decl_type eq "gnu-c-slow" ||
+    $decl_type eq "gnu-cpp-fast" ||
+    $decl_type eq "gnu-cpp-slow" ||
+    $decl_type eq "vendor-c-fast" ||
+    $decl_type eq "vendor-c-slow" ||
+    $decl_type eq "vendor-cpp-fast" ||
+    $decl_type eq "vendor-cpp-slow" ||
+    $decl_type eq "full" )
 {
     print "Declaring tests for type '$decl_type'\n";
 } else {
     die "Unknown declare-type: '$decl_type'!\n";
 }
 
+# define a list of tests that are included in the 'slow' modes and
+# exluded in the 'fast' modes...
+my @slow_c = ( "big", "printer" );
 
 open( TASKLIST, ">$BaseDir/tasklist.nmi" ) || 
     die "Can't open $BaseDir/tasklist.nmi: $!\n"; 
@@ -76,21 +88,109 @@ foreach $testdir (@testdirs) {
 	while( <RUNLIST> ) {
 	    chomp;
 	    $testname = $_;
-	    if( $decl_type =~ /^full$/ ) {
-		# In 'full' mode, print all tests we fine
-		print TASKLIST "$compiler.$testname\n";
-	    } elsif( $decl_type =~ /^quick$/ ) {
-		# In 'quick' mode, only use a subset for quick testing
-		if( $compiler =~ /g77/ || 
-		    $testname =~ /^env/ || 
-		    $testname =~ /floats/ || 
-		    $testname =~ /fgets/ || 
-		    $testname =~ /fcntl/ )
+	    $taskname = "$compiler.$testname";
+
+	    # Now, based on what declare type we're using, only print
+	    # out tasks that we care about...
+
+	    if( $decl_type eq "full" ) {
+		# In 'full' mode, print all tests we have
+		print TASKLIST "$taskname\n";
+
+	    } elsif( $decl_type eq "fortran" ) {
+		# In 'fortran' mode, print out all the fortran tests
+		if( $compiler eq "g77" ||
+		    $compiler eq "f77" ||
+		    $compiler eq "f90" )
 		{
-		    print TASKLIST "$compiler.$testname\n";
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "gnu-c-fast" ) {
+		# In 'gnu-c-fast' mode, use all gcc tests except the
+		# really slow tests like big and printer.
+		if( $compiler eq "gcc" &&
+		    ! grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "gnu-c-slow" ) {
+		# In 'gnu-c-slow' mode, use only the gcc tests we
+		# excluded from the 'gnu-c-fast' mode above.
+		if( $compiler eq "gcc" &&
+		    grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "gnu-cpp-fast" ) {
+		# In 'gnu-cpp-fast' mode, use all g++ tests except the
+		# really slow tests like big and printer.
+		if( $compiler eq "g++" &&
+		    ! grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "gnu-cpp-slow" ) {
+		# In 'gnu-cpp-slow' mode, use only the g++ tests we
+		# excluded from the 'gnu-cpp-fast' mode above.
+		if( $compiler eq "g++" &&
+		    grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "vendor-c-fast" ) {
+		# In 'vendor-c-fast' mode, use all cc tests except the
+		# really slow tests like big and printer.
+		if( $compiler eq "cc" &&
+		    ! grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "vendor-c-slow" ) {
+		# In 'vendor-c-slow' mode, use only the cc tests we
+		# excluded from the 'vendor-c-fast' mode above.
+		if( $compiler eq "cc" &&
+		    grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "vendor-cpp-fast" ) {
+		# In 'vendor-cpp-fast' mode, use all cc tests except the
+		# really slow tests like big and printer.
+		if( $compiler eq "CC" &&
+		    ! grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "vendor-cpp-slow" ) {
+		# In 'vendor-cpp-slow' mode, use only the cc tests we
+		# excluded from the 'vendor-cpp-fast' mode above.
+		if( $compiler eq "CC" &&
+		    grep { $_ eq "$testname" } @slow_c )
+		{
+		    print TASKLIST "$taskname\n";
+		}
+
+	    } elsif( $decl_type eq "quick" ) {
+		# In 'quick' mode, only use a subset for quick testing
+		if( $compiler eq "g77" || 
+		    $testname eq "env" || 
+		    $testname eq "floats" || 
+		    $testname eq "fgets" || 
+		    $testname eq "fcntl" )
+		{
+		    print TASKLIST "$taskname\n";
 		} else {
 		    print "using quick tests, ignoring $compiler.$testname\n";
 		}
+
 	    } else {
 		die "Impossible: unknown declare type: $decl_type after " .
 		    "we already recognized it!\n";
