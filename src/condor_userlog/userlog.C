@@ -178,8 +178,11 @@ main(int argc, char *argv[])
 }
 
 int
-statsort(const JobStatistics **i, const JobStatistics **j)
+statsort(const void *vi, const void *vj)
 {
+	JobStatistics **i, **j;
+	i = (JobStatistics **)vi;
+	j = (JobStatistics **)vj;
 	int clustercomp;
 	clustercomp = (*i)->cluster - (*j)->cluster;
 	if (clustercomp == 0) {
