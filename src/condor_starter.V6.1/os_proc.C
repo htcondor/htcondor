@@ -283,7 +283,7 @@ OsProc::JobExit(int pid, int status)
 	dprintf( D_FULLDEBUG, "Inside OsProc::JobExit()\n" );
 
 	if (JobPid == pid) {		
-		if ( Requested_Exit == TRUE ) {
+		if ( requested_exit == true ) {
 			reason = JOB_NOT_CKPTED;
 		} else {
 			reason = JOB_EXITED;
@@ -355,7 +355,7 @@ OsProc::ShutdownGraceful()
 	if ( job_suspended == TRUE )
 		Continue();
 
-	Requested_Exit = TRUE;
+	requested_exit = true;
 	daemonCore->Send_Signal(JobPid, DC_SIGTERM);
 	return false;	// return false says shutdown is pending	
 }
@@ -366,7 +366,7 @@ OsProc::ShutdownFast()
 	// We purposely do not do a SIGCONT here, since there is no sense
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
-	Requested_Exit = TRUE;
+	requested_exit = true;
 	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
 	return false;	// return false says shutdown is pending
 }

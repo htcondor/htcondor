@@ -237,7 +237,7 @@ int JavaProc::JobExit(int pid, int status)
 			default:
 			case JAVA_EXIT_SYSTEM_ERROR:
 				status = 0;
-				Requested_Exit = TRUE;
+				requested_exit = true;
 				break;
 		}
 

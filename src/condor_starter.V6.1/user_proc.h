@@ -37,7 +37,7 @@ class UserProc : public Service
 public:
 		/// Constructor
 	UserProc() : JobAd(NULL), JobPid(-1), Cluster(-1), Proc(-1),
-		Requested_Exit(0) {};
+		requested_exit(false) {};
 
 		/// Destructor
 	virtual ~UserProc() {};
@@ -96,7 +96,7 @@ protected:
 	int JobPid;
 	int Cluster;
 	int Proc;
-	int Requested_Exit;
+	bool requested_exit;
 };
 
 #endif /* _CONDOR_USER_PROC_H */

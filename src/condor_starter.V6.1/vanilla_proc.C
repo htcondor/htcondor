@@ -281,11 +281,11 @@ VanillaProc::JobExit(int pid, int status)
 	// may as well do this in the foreground, 
 	// since we do not want to be interrupted by anything short of a hardkill.
 	if ( filetrans && 
-		((Requested_Exit != TRUE) || TransferAtVacate) ) {
+		((requested_exit == false) || TransferAtVacate) ) {
 		// The user job may have created files only readable by the user,
 		// so set_user_priv here.
 		// true if job exited on its own
-		bool final_transfer = (Requested_Exit != TRUE);	
+		bool final_transfer = (requested_exit == false);	
 		priv_state saved_priv = set_user_priv();
 		// this will block
 		ASSERT( filetrans->UploadFiles(true, final_transfer) );	
@@ -383,7 +383,7 @@ VanillaProc::ShutdownFast()
 	// on a ShutdownFast.
 	TransferAtVacate = false;	
 	
-	Requested_Exit = TRUE;
+	requested_exit = true;
 	family->hardkill();
 	return false;	// shutdown is pending, so return false
 }
