@@ -82,12 +82,6 @@ template class HashTable<HashKey, char *>;
 template class HashBucket<HashKey, char *>;
 template class HashTable<PROC_ID, ScheddUpdateAction *>;
 template class HashBucket<PROC_ID, ScheddUpdateAction *>;
-template class List<GlobusJob>;
-template class Item<GlobusJob>;
-template class List<char *>;
-template class Item<char *>;
-template class List<Service>;
-template class Item<Service>;
 template class List<OrphanCallback_t>;
 template class Item<OrphanCallback_t>;
 

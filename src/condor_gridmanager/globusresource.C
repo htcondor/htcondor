@@ -15,6 +15,9 @@
 
 #define LOG_FILE_TIMEOUT		300
 
+template class List<GlobusJob>;
+template class Item<GlobusJob>;
+
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::gahpCallTimeout = 300;	// default value
