@@ -76,8 +76,12 @@ class GlobusResource : public Service
 	int CheckMonitor();
 	void StopMonitor();
 	bool SubmitMonitorJob();
-	bool ReadMonitorJobStatusFile();
+	void StopMonitorJob();
+	void CleanupMonitorJob();
+	enum ReadFileStatus { RFS_OK, RFS_PARTIAL, RFS_ERROR };
+	ReadFileStatus ReadMonitorJobStatusFile();
 	int ReadMonitorLogFile();
+	void AbandonMonitor();
 
 	char *resourceName;
 	bool resourceDown;
@@ -105,10 +109,25 @@ class GlobusResource : public Service
 	static bool enableGridMonitor;
 	int checkMonitorTid;
 	bool monitorActive;
+	int monitorUID;
 	char *monitorJobStatusFile;
 	char *monitorLogFile;
+		// These two timers default to the submission time of the
+		// grid_monitor.  They're updated to time() whenever the grid_monitor
+		// is resubmitted or when the time in question is read.
 	int jobStatusFileLastReadTime;
 	int logFileLastReadTime;
+
+		// Very simily to logFileLastReadTime, but not updated every time the
+		// grid_monitor is resubmitted.  As a result it reliably reports on the
+		// last time we got some sort of result back.  Used for the "Thing have
+		// been failing over and over for too long" timeout.
+	int logFileTimeoutLastReadTime;
+
+		// When true, the monitor is submitted as if it was from scratch.
+		// (Say, the first time, or after a _long_ delay after encountering
+		// problems.)
+	bool initialMonitorStart;
 
 	GahpClient gahp;
 };
