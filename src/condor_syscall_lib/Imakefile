@@ -65,8 +65,12 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 
 #if IS_HPPAR_HPUX9
 UTIL_EXTRACT = GETWD.o
-HP_SPECIFIC_FILES = flock.o seteuid.o setegid.o
+HP_SPECIFIC_FILES = $(FLOCK_OBJ) seteuid.o setegid.o
 HP_CKPT = get_reginfo.HPUX.o
+#endif
+
+#if !HAS_FLOCK
+FLOCK_OBJ = flock.o
 #endif
 
 STUBS = switches.o switches.special.o $(SEND_OBJ) $(SETPRIORITY_OBJ)
@@ -127,7 +131,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 
 
 #if DOES_CHECKPOINTING
-CKPT_OBJ =	flock.o file_state.o image.o tmp_stack.o machdep.$(OS).o \
+CKPT_OBJ =	$(FLOCK_OBJ) file_state.o image.o tmp_stack.o machdep.$(OS).o \
 	syscall_mode.o fake_hooks.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
 	$(SIG_CKPT_OBJS) $(URL_OBJ)
 #else

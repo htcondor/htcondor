@@ -137,7 +137,7 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 depend_target($(SRC) )
 
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o flock.o MMAP.o SYSCALL.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o $(FLOCK_OBJ) MMAP.o SYSCALL.o, )
 #else
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), )
 #endif
