@@ -49,6 +49,8 @@ enum Log_source{
   DAPLOG
 };
 
+class Dagman;
+
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
     and the state of jobs as they are running. Jobs are run by
@@ -81,10 +83,11 @@ class Dag {
     ~Dag();
 
     /** Prepare DAG for initial run.  Call this function ONLY ONCE.
+		@param the appropriate Dagman object
         @param recovery specifies if this is a recovery
         @return true: successful, false: failure
     */
-    bool Bootstrap (bool recovery);
+    bool Bootstrap (const Dagman &dm, bool recovery);
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
@@ -109,12 +112,13 @@ class Dag {
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
 
+		@param the appropriate Dagman object
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
     //    bool ProcessLogEvents (bool recover = false);
 
-    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
+    bool ProcessLogEvents (const Dagman &dm, int logsource, bool recovery = false); //<--DAP
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -183,9 +187,10 @@ class Dag {
 
 		/** Submit all ready jobs, provided they are not waiting on a
 			parent job or being throttled.
+			@param the appropriate Dagman object
 			@return number of jobs successfully submitted
 		*/
-    int SubmitReadyJobs();
+    int SubmitReadyJobs(const Dagman &dm);
   
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -228,7 +233,8 @@ class Dag {
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
 	void DumpDotFile(void);
-	void CheckAllJobs(void);
+
+	void CheckAllJobs(const Dagman &dm);
 	
   protected:
 

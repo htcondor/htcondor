@@ -116,7 +116,7 @@ Dag::~Dag() {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::Bootstrap (bool recovery) {
+bool Dag::Bootstrap (const Dagman &dm, bool recovery) {
     Job* job;
     ListIterator<Job> jobs (_jobs);
 
@@ -135,12 +135,12 @@ bool Dag::Bootstrap (bool recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
 		if( _condorLogFiles.number() > 0 ) {
-			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
+			if( !ProcessLogEvents( dm, CONDORLOG, recovery ) ) {
 				return false;
 			}
 		}
 		if( _dapLogName ) {
-			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
+			if( !ProcessLogEvents( dm, DAPLOG, recovery ) ) {
 				return false;
 			}
 		}
@@ -272,7 +272,7 @@ bool Dag::DetectDaPLogGrowth () {
 
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
-bool Dag::ProcessLogEvents (int logsource, bool recovery) {
+bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 
  if (logsource == CONDORLOG){
     if (!_condorLogInitialized) {
@@ -688,7 +688,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
                 break;
 			}
 
-			if ( dagman.doEventChecks && checkThisEvent ) {
+			if ( dm.doEventChecks && checkThisEvent ) {
 				MyString	eventError;
 				if ( !_ce.CheckAnEvent(e, eventError) ) {
     				debug_printf( DEBUG_VERBOSE, "%s\n",
@@ -776,14 +776,14 @@ Dag::StartNode( Job *node )
 
 // returns number of jobs submitted
 int
-Dag::SubmitReadyJobs()
+Dag::SubmitReadyJobs(const Dagman &dm)
 {
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
 
 	int numSubmitsThisCycle = 0;
-	while( numSubmitsThisCycle < dagman.max_submits_per_interval ) {
+	while( numSubmitsThisCycle < dm.max_submits_per_interval ) {
 
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
@@ -808,7 +808,7 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if( job->NumParents() > 0 && dagman.submit_delay == 0 ) {
+	if( job->NumParents() > 0 && dm.submit_delay == 0 ) {
 			// if we don't already have a submit_delay, sleep for one
 			// second here, so we can be sure that this job's submit
 			// event will be unambiguously later than the termination
@@ -825,11 +825,11 @@ Dag::SubmitReadyJobs()
 	}
 
 		// sleep for a specified time before submitting
-	if( dagman.submit_delay ) {
+	if( dm.submit_delay ) {
 		debug_printf( DEBUG_VERBOSE, "Sleeping for %d s "
 					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
-					  dagman.submit_delay );
-		sleep( dagman.submit_delay );
+					  dm.submit_delay );
+		sleep( dm.submit_delay );
 	}
 
 	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
@@ -868,7 +868,7 @@ Dag::SubmitReadyJobs()
 #endif //BUILD_HELPER
 
     if( job->JobType() == Job::TYPE_CONDOR ) {
-      if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName(),
+      if( ! submit_submit( dm, cmd_file.Value(), condorID, job->GetJobName(),
                            job->varNamesFromDag, job->varValsFromDag ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
@@ -881,7 +881,7 @@ Dag::SubmitReadyJobs()
     } //job ==  condor_job
     
     else if( job->JobType() == Job::TYPE_STORK ) {
-      if( ! dap_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
+      if( ! dap_submit( dm, cmd_file.Value(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
 	job->_Status = Job::STATUS_ERROR;
@@ -1502,9 +1502,9 @@ Dag::DumpDotFile(void)
 //
 //-------------------------------------------------------------------------
 void
-Dag::CheckAllJobs()
+Dag::CheckAllJobs(const Dagman &dm)
 {
-	if ( dagman.doEventChecks ) {
+	if ( dm.doEventChecks ) {
 		MyString	jobError;
 		if ( !_ce.CheckAllJobs(jobError) ) {
 			debug_printf( DEBUG_VERBOSE, "Error checking job events: %s\n",

@@ -99,7 +99,7 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
 
 //-------------------------------------------------------------------------
 bool
-submit_submit( const char* cmdFile, CondorID& condorID,
+submit_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals )
 {
 	const char * exe = "condor_submit";
@@ -139,7 +139,7 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command.Value());
   
 	bool success = false;
-	const int tries = dagman.max_submit_attempts;
+	const int tries = dm.max_submit_attempts;
 	int wait = 1;
 
 	success = submit_try( exe, command.Value(), condorID );
@@ -233,7 +233,7 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
 
 //-------------------------------------------------------------------------
 bool
-dap_submit( const char* cmdFile, CondorID& condorID,
+dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName )
 {
   char* command;
@@ -250,13 +250,13 @@ dap_submit( const char* cmdFile, CondorID& condorID,
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
   sprintf( command, "%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
-  	   exe, dagman.stork_server, cmdFile, DAGNodeName );
+  	   exe, dm.stork_server, cmdFile, DAGNodeName );
 
 
   //  dprintf( D_ALWAYS, "submit command is: %s\n", command );
 
   bool success = false;
-  const int tries = dagman.max_submit_attempts;
+  const int tries = dm.max_submit_attempts;
   int wait = 1;
   
   success = dap_try( exe, command, condorID );

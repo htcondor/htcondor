@@ -31,15 +31,16 @@
 */
 
 // pause DAGMan's event-processing so changes can be made safely
-bool PauseDag();
+bool PauseDag(Dagman &dm);
 // resume DAGMan's normal event-processing
-bool ResumeDag();
+bool ResumeDag(Dagman &dm);
 
-bool AddNode( Job::job_type_t type, const char *name, const char* cmd,
+bool AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
+			  const char* cmd,
 			  const char *precmd, const char *postcmd, bool done,
 			  MyString &failReason );
 
-bool IsValidNodeName( const char *name, MyString &whynot );
+bool IsValidNodeName( const Dagman &dm, const char *name, MyString &whynot );
 bool IsValidSubmitFileName( const char *name, MyString &whynot );
 
 /*

@@ -56,6 +56,4 @@ class Dagman {
     bool Config();
 };
 
-extern Dagman dagman;
-
 #endif	// ifndef DAGMAN_MAIN_H

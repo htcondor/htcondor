@@ -29,9 +29,9 @@
 #include "dagman_commands.h"
 
 bool
-PauseDag()
+PauseDag(Dagman &dm)
 {
-	if( dagman.paused == true ) {
+	if( dm.paused == true ) {
 			// maybe this should be a warning rather than an error,
 			// but it probably indicates that the caller doesn't know
 			// what the h*** is going on, so I'd rather catch it here
@@ -40,14 +40,14 @@ PauseDag()
 		return false;
 	}
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing paused...\n" );
-	dagman.paused = true;
+	dm.paused = true;
 	return true;
 }
 
 bool
-ResumeDag()
+ResumeDag(Dagman &dm)
 {
-	if( dagman.paused != true ) {
+	if( dm.paused != true ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: ResumeDag() called on an "
 					  "un-paused DAG\n" );
 		return false;
@@ -58,17 +58,18 @@ ResumeDag()
 		// degree, the dag modification routines) to make sure they
 		// get everything right...
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing resuming...\n" );
-	dagman.paused = false;
+	dm.paused = false;
 	return true;
 }
 
 bool
-AddNode( Job::job_type_t type, const char *name, const char* cmd,
+AddNode( const Dagman &dm, Job::job_type_t type, const char *name,
+		 const char* cmd,
 		 const char *precmd, const char *postcmd, bool done,
 		 MyString &failReason )
 {
 	MyString why;
-	if( !IsValidNodeName( name, why ) ) {
+	if( !IsValidNodeName( dm, name, why ) ) {
 		failReason = why;
 		return false;
 	}
@@ -101,8 +102,8 @@ AddNode( Job::job_type_t type, const char *name, const char* cmd,
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
-	ASSERT( dagman.dag != NULL );
-	if( !dagman.dag->Add( *node ) ) {
+	ASSERT( dm.dag != NULL );
+	if( !dm.dag->Add( *node ) ) {
 		failReason = "unknown failure adding node to DAG";
 		delete node;
 		return false;
@@ -112,7 +113,7 @@ AddNode( Job::job_type_t type, const char *name, const char* cmd,
 }
 
 bool
-IsValidNodeName( const char *name, MyString &whynot )
+IsValidNodeName( const Dagman &dm, const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
 		whynot = "missing node name";
@@ -126,8 +127,8 @@ IsValidNodeName( const char *name, MyString &whynot )
 		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
 		return false;
 	}
-	ASSERT( dagman.dag != NULL );
-	if( dagman.dag->NodeExists( name ) ) {
+	ASSERT( dm.dag != NULL );
+	if( dm.dag->NodeExists( name ) ) {
 		whynot.sprintf( "node name '%s' already exists in DAG", name );
 		return false;
 	}

@@ -26,7 +26,7 @@
 
 #include "dag.h"
 
-bool parse (char * filename, Dag * dag);
+bool parse (Dagman &dm, char * filename, Dag * dag);
 bool isKeyWord( const char *token );
 //void DFSVisit (Job * job);
 #endif

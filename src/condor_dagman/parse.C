@@ -30,12 +30,14 @@
 #include "list.h"
 #include "util_lib_proto.h"
 #include "dagman_commands.h"
+#include "dagman_main.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
-static bool parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword,
+static bool parse_node( Dagman &dm, Job::job_type_t nodeType,
+						char* nodeTypeKeyword,
 						Dag* dag, char* dagFile, int lineNum );
 
 static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
@@ -75,7 +77,7 @@ isDelimiter( char c ) {
 
 
 //-----------------------------------------------------------------------------
-bool parse (char *filename, Dag *dag) {
+bool parse (Dagman &dm, char *filename, Dag *dag) {
 	ASSERT( dag != NULL );
 
 	FILE *fp = fopen(filename, "r");
@@ -84,7 +86,7 @@ bool parse (char *filename, Dag *dag) {
 			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);
 			return false;
 		}
-    	}
+   	}
 
 	char *line;
 	int lineNumber = 0;
@@ -114,7 +116,7 @@ bool parse (char *filename, Dag *dag) {
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_node( Job::TYPE_CONDOR, token,
+			parsed_line_successfully = parse_node( dm, Job::TYPE_CONDOR, token,
 												   dag, filename, lineNumber );
 		}
 
@@ -122,7 +124,7 @@ bool parse (char *filename, Dag *dag) {
 		// Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
 		//
 		else if (strcasecmp(token, "DAP") == 0) {
-			parsed_line_successfully = parse_node( Job::TYPE_STORK, token,
+			parsed_line_successfully = parse_node( dm, Job::TYPE_STORK, token,
 												   dag, filename, lineNumber );
 		}
 
@@ -177,7 +179,7 @@ bool parse (char *filename, Dag *dag) {
 
 
 static bool 
-parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
+parse_node( Dagman & dm, Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
 			char* dagFile, int lineNum )
 {
 	MyString example;
@@ -214,7 +216,7 @@ parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
 			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 			return false;
 	}
-	if( !AddNode( nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
+	if( !AddNode( dm, nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );

@@ -47,7 +47,7 @@ bool run_post_on_failure = TRUE;
 char* lockFileName = NULL;
 char* DAGManJobId;
 
-Dagman dagman;
+static Dagman dagman;
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -107,14 +107,14 @@ Dagman::~Dagman()
 bool
 Dagman::Config()
 {
-	dagman.submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
-	dagman.max_submit_attempts =
+	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	max_submit_attempts =
 		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 16 );
-	dagman.startup_cycle_detect =
+	startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
-	dagman.max_submits_per_interval =
+	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
-	dagman.stork_server = param( "STORK_SERVER" );
+	stork_server = param( "STORK_SERVER" );
 	return true;
 }
 
@@ -184,10 +184,10 @@ void print_status();
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {
 	if( dagman.paused ) {
-		ResumeDag();
+		ResumeDag(dagman);
 	}
 	else {
-		PauseDag();
+		PauseDag(dagman);
 	}
 	return true;
 }
@@ -453,7 +453,7 @@ int main_init (int argc, char ** const argv) {
     // takes care of adding jobs and dependencies to the DagMan
     //
     debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagman.datafile );
-    if( !parse( dagman.datafile, dagman.dag ) ) {
+    if( !parse( dagman, dagman.datafile, dagman.dag ) ) {
         debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 dagman.datafile );
     }
@@ -530,7 +530,7 @@ int main_init (int argc, char ** const argv) {
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
-        if( !dagman.dag->Bootstrap( recovery ) ) {
+        if( !dagman.dag->Bootstrap( dagman, recovery ) ) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
@@ -594,7 +594,7 @@ void condor_event_timer () {
     static int prevScriptsRunning = 0;
 
 	int justSubmitted;
-	justSubmitted = dagman.dag->SubmitReadyJobs();
+	justSubmitted = dagman.dag->SubmitReadyJobs(dagman);
 	if( justSubmitted ) {
 		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
 					  justSubmitted, justSubmitted == 1 ? "" : "s" );
@@ -602,7 +602,7 @@ void condor_event_timer () {
 
     // If the log has grown
     if( dagman.dag->DetectCondorLogGrowth() ) {
-		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+		if( dagman.dag->ProcessLogEvents( dagman, CONDORLOG ) == false ) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_rescue();
 			return;
@@ -610,7 +610,7 @@ void condor_event_timer () {
     }
 
     if( dagman.dag->DetectDaPLogGrowth() ) {
-      if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
+      if( dagman.dag->ProcessLogEvents( dagman, DAPLOG ) == false ) {
 	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 	main_shutdown_rescue();
 	return;
@@ -646,7 +646,7 @@ void condor_event_timer () {
     //
     if( dagman.dag->Done() ) {
         ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
-		dagman.dag->CheckAllJobs();
+		dagman.dag->CheckAllJobs(dagman);
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		ExitSuccess();
 		return;
