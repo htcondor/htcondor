@@ -1,0 +1,7 @@
+===== Documentation =====
+Document how to have relative and absolute times in a classad
+directly. (Use the apostrophe.) 
+
+===== test_classads =====
+* Individual lexer test functions, to verify proper conversions?
+* Figure out what to do for all of the EXCEPTs in the code. 
