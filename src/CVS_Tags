@@ -1,3 +1,7 @@
+02/09/05 V6_7_4-branch
+  The path to the 6.7.4 release goes through this branch. It is from 
+  the V6_7-branch, rooted at V6_7_4-root
+
 2/3/05 V6_7-condorg_gt4-merge-1
    The state of the V6_7-condorg_gt4-branch when merged back into
    V6_7-branch. This represents our initial support for submitting jobs to 
