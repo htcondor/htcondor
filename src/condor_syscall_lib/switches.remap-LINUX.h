@@ -92,6 +92,7 @@ REMAP_TWO( fchmod, __fchmod, int , int , mode_t )
 REMAP_THREE( fchown, __fchown, int , int , uid_t , gid_t )
 REMAP_TWO( flock, __flock, int , int , int )
 REMAP_ZERO( fork, __fork, pid_t )
+REMAP_ZERO( vfork, __vfork, pid_t )
 REMAP_TWO( fstatfs, __fstatfs, int , int , struct statfs * )
 REMAP_ZERO( getegid, __getegid, gid_t )
 
