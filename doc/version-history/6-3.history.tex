@@ -45,7 +45,7 @@ system.
 
 \item Added support for MPICH jobs on Windows NT and 2000.
 
-\item Added detection of Java during installation process.
+\item Added support for the JAVA universe.
 
 \item When you use \Condor{hold} and \Condor{release}, you now see an
 entry about the event in the UserLog file for the job.
@@ -99,6 +99,13 @@ For more information about how to configure the new settings, see the
 same section of the manual.
 In particular, see section~\ref{sec:Config-Val-Security} on
 page~\pageref{sec:Config-Val-Security}. 
+
+\item Greatly improved the handling of the ``soft kill signal'' you
+can specify for your job.
+This signal is now stored as a signal name, not an integer, so that it
+works across different platforms.
+Also, fixed some bugs where the signal numbers were getting translated
+incorrectly in some circumstances.
 
 \item Added the \Arg{-full} option to \Condor{reconfig}.
 The \Arg{-full} option causes the Condor daemon to clear its cache of
