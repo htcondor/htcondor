@@ -1632,6 +1632,24 @@ SetNewTransferFiles( bool in_files_specified, bool out_files_specified )
 		}
 	}
 	
+	if( found_it && when_output == FTO_ON_EXIT_OR_EVICT && 
+		            should_transfer == STF_IF_NEEDED ) {
+			// error, these are incompatible!
+		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
+			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
+			"The behavior of these two settings together would produce "
+			"incorrect file access in some cases.  Please decide which "
+			"one of those two settings you're more interested in. "
+			"If you really want \"IF_NEEDED\", set "
+			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
+			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
+			"YES\".  After you have corrected this incompatibility, "
+			"please try running condor_submit again.\n";
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
 		// if we found the new syntax, we're done, and we should now
 		// add the appropriate ClassAd attributes to the job.
 	if( found_it ) {
