@@ -556,7 +556,7 @@ fill_attributes()
 		   these are already defined.  -Derek Wright
 		   Amended -Pete Keller 06/01/99 */
 
-	char *tmp;
+	const char *tmp;
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
 		insert( "ARCH", tmp, ConfigTab, TABLESIZE );

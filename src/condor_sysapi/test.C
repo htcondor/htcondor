@@ -61,7 +61,7 @@ sysapi_test_dump_functions(void)
 {
 	int foo = 0;
 	float bar = 0;
-	char *qux = NULL;
+	const char *qux = NULL;
 	time_t t0, t1;
 
 	dprintf(D_ALWAYS, "SysAPI: Calling SysAPI functions....\n");
