@@ -159,8 +159,8 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 			if [ $osmajver = 4 ]; then
 					ldargs="-Bstatic" 
 				else
+					ldargs="" 
 					oscrt0="crt1.o"
-					ldargs="-Bdynamic"
 				fi ;;
 
      OSF1 )		
@@ -219,7 +219,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Replace Standard C lib or GNU Standard C lib with condor_syscall_lib
      -lgcc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lgcc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lgcc`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lgcc`
 				fi
@@ -229,7 +229,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               fi ;;
      -lc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lc`
 				elif [ $os = "OSF1" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lm -lc`
 				else
@@ -245,7 +245,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               fi ;;
      -lstdc++ )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lstdc++`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lstdc++`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lstdc++`
 				fi
@@ -255,7 +255,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               fi ;;
      -lg++ )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lg++`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lg++`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lg++`
 				fi
@@ -266,7 +266,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
      -lf2c )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lf2c`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lf2c`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lf2c`
 				fi
@@ -278,7 +278,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
      -lp2c )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lp2c`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lp2c`
 				else
                  	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lp2c`
 				fi
@@ -326,8 +326,9 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 				ldargs=`echo $ldargs $argument`
 		  	fi ;;
 
-	 # Throw out options that ask for static libs on SunOS 5.x
-	 -Bstatic ) 
+	 # Throw out options that insist on static libs, and do not allow
+	 # us to switch to dynamic when we link in -lsocket, on SunOS 5.x
+	 -dn ) 
 			if [ $osfull != "SunOS5" ]; then
 				ldargs=`echo $ldargs $argument`
 		  	fi ;;
