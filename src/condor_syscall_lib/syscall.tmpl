@@ -1,8 +1,8 @@
 /*
   How to read this file:
 
-  This file is used to generate 3 C language files -  "switches.c",
-  "senders.c", and "receivers.c".  Not all of the information contained
+  This file is used to generate 3 C++ language files -  "switches.C",
+  "senders.C", and "receivers.C".  Not all of the information contained
   here is needed in every case.
 
   Switches are functions which are linked in with the user's code, and
@@ -56,7 +56,15 @@
 	  dlsym() to find the appropriate versions of the calls in
 	  /usr/lib/libc.so.
 
-  in xdr_bytes( &buf, &len, len );
+  : no_sys_chk
+	  By default, a test for defined(SYS_name) is wrapped around
+	  all non-pseudo calls in senders and receivers.  If a call is
+	  marked with no_sys_chk, this test is omitted.  This is useful
+	  for calls which are not system calls on a specific platform
+	  but must still be supported by remote system calls for
+	  cross platform interoperability.
+
+  in code_bytes( buf, len );
 	  A statement like this appears with the prototype for the
 	  write() system call.  Note that the parameter "buf" is a
 	  pointer to void, and it is not immediately obvious whether
@@ -67,8 +75,8 @@
 	  us that data should be sent to the remote system call
 	  receiver by the keyword "in".  If you think of the system
 	  call as simply a function, then "buf" is an "in" parameter to
-	  the write() function.  "xdr_bytes( &buf, &len, len )" is the
-	  xdr routine and arguments which should be used to transfer
+	  the write() function.  "code_bytes( buf, len )" is the
+	  routine and arguments which should be used to transfer
 	  the data.  A similar statement appears with the prototype for
 	  read(), but in this case the keyword "out" indicates that
 	  (from the point of view of the read() system call), "buf" is
@@ -125,6 +133,9 @@
 #define ALPHA_CONST
 #endif
 
+#define SEND_PATH(name) in code(name)
+#define GET_PATH(name) out code(name)
+
 /* on IRIX, we always want to dl_extract */
 #if defined(IRIX53)
 #define EXTRACT dl_extract
@@ -132,8 +143,6 @@
 #define EXTRACT extract
 #endif
 
-#define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
-#define GET_PATH(name) out xdr_string(&name,_POSIX_PATH_MAX)
 #define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
 
 #if !defined (SWITCH) && !defined(CLIP)
@@ -224,12 +233,12 @@
 		*/
 #if !defined( BufferCondorIO )
 		ssize_t write( map(int fd), const void *buf, size_t len ) {
-			in xdr_bytes( &buf, &len, len );
+			in code_bytes( buf, len );
 			alloc( buf, len );
 		}
 
 		ssize_t read( map(int fd), void *buf, size_t len ) {
-			out xdr_bytes( &buf, &rval, len );
+			out code_bytes( buf, rval );
 			alloc( buf, len );
 		} 
 #endif
@@ -323,7 +332,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		they should be built in the special "clipped" version.
 		*/
 	int get_universe( int *univ_id ) : pseudo {
-	    out xdr_int( univ_id );
+	    out code( univ_id );
 	    alloc( univ_id, INT_SIZE );
 	}
 
@@ -350,7 +359,7 @@ int rename( const char *from, const char *to ) : pseudo {
 	int extern_name( const char *path, char *buf, int bufsize ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_bytes( &buf, &bufsize, bufsize );
+		out code_bytes( buf, bufsize );
 		alloc( buf, bufsize );
 	}
 	int free_fs_blocks( const char *pathname ) : pseudo {
@@ -358,30 +367,30 @@ int rename( const char *from, const char *to ) : pseudo {
 		ALLOC_PATH( pathname );
 	}
 	int reallyexit( int *status, struct rusage *use_p ) : pseudo {
-		in xdr_int( status );
+		in code( status );
 		alloc( status, INT_SIZE );
-		in xdr_rusage( use_p );
+		in code( use_p );
 		alloc( use_p, RUSAGE_SIZE );
 		return( NEG_ONE );
 	}
 	int subproc_status(int id,int *status,struct rusage *use_p) : pseudo {
-		in xdr_int( status );
+		in code( status );
 		alloc( status, INT_SIZE );
-		in xdr_rusage( use_p );
+		in code( use_p );
 		alloc( use_p, RUSAGE_SIZE );
 		return( NEG_ONE );
 	}
 	int image_size( int kbytes ) : pseudo;
 	int send_rusage( struct rusage *use_p ) : pseudo {
-		in xdr_rusage( use_p );
+		in code( use_p );
 		alloc( use_p, RUSAGE_SIZE );
 	}
 	int perm_error( const char *msg ) : pseudo {
-		in xdr_string( &msg, MAX_STRING );
+		in code( msg );
 		alloc( msg, MAX_STRING );
 	}
 	int work_request( PROC *p, char *a_out, char *targ, char *orig, int *kill_sig ): pseudo {
-		out xdr_proc( p );
+		out code( p );
 		alloc( p, PROC_SIZE );
 		GET_PATH( a_out );
 		ALLOC_PATH( a_out );
@@ -389,17 +398,17 @@ int rename( const char *from, const char *to ) : pseudo {
 		ALLOC_PATH( targ );
 		GET_PATH( orig );
 		ALLOC_PATH( orig );
-		out xdr_int( kill_sig );
+		out signal( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
 	int startup_info_request( STARTUP_INFO *s ): pseudo {
-		out xdr_startup_info( s );
+		out code( s );
 		alloc( s, STARTUP_INFO_SIZE );
 	}
 	int std_file_info( int which, char *name, int *pipe_fd ) : pseudo {
 		GET_PATH( name );
 		ALLOC_PATH( name );
-		out xdr_int( pipe_fd );
+		out code( pipe_fd );
 		alloc( pipe_fd, INT_SIZE );
 	}
 	int file_info( const char *name, int *pipe_fd, char *extern_path ): pseudo {
@@ -407,7 +416,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		ALLOC_PATH( name );
 		GET_PATH( extern_path );
 		ALLOC_PATH( extern_path );
-		out xdr_int( pipe_fd );
+		out code( pipe_fd );
 		alloc( pipe_fd, INT_SIZE );
 	}
 	int get_iwd( char *path ) : pseudo {
@@ -451,13 +460,13 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( file );
 		ALLOC_PATH( file );
 
-		out xdr_size_t( len );
+		out code( len );
 		alloc( len, SIZE_T_SIZE );
 
-		out xdr_u_int( ip_addr );
+		out code( ip_addr );
 		alloc( ip_addr, U_INT_SIZE );
 
-		out xdr_u_short( port_num );
+		out code( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
 
@@ -476,10 +485,10 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( file );
 		ALLOC_PATH( file );
 
-		out xdr_u_int( ip_addr );
+		out code( ip_addr );
 		alloc( ip_addr, U_INT_SIZE );
 
-		out xdr_u_short( port_num );
+		out code( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
 
@@ -504,21 +513,33 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #if !defined( CLIP )
 
-#	if !defined(AIX32) && !defined(LINUX)
+#	if !defined(AIX32)
+#if defined(LINUX) || defined(IRIX53)
+	int fstat( map(int fd), struct stat *buf ) : no_sys_chk {
+#else
 	int fstat( map(int fd), struct stat *buf ) {
-			out xdr_stat( buf );
+#endif
+			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#if defined(LINUX)
+    int stat( const char *path, struct stat *buf ) : no_sys_chk {
+#else
     int stat( const char *path, struct stat *buf ) {
+#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
-			out xdr_stat( buf );
+			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
+#if defined(LINUX)
+    int lstat( const char *path, struct stat *buf ) : no_sys_chk {
+#else
     int lstat( const char *path, struct stat *buf ) {
+#endif
 			SEND_PATH( path );
 			ALLOC_PATH( path );
-			out xdr_stat( buf );
+			out code( buf );
 			alloc( buf, STAT_SIZE );
 		}
 #	endif
@@ -541,7 +562,7 @@ int rename( const char *from, const char *to ) : pseudo {
 	}
 #	if !defined(SUNOS41) && !defined(ULTRIX43)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
-			out xdr_opaque( buf, STATFS_ARRAY_SIZE );
+			out code_bytes( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
 		}
 #	endif
@@ -549,7 +570,7 @@ int rename( const char *from, const char *to ) : pseudo {
 #if defined(Solaris)
 not_supported{
 	int fstatfs( map(int fd), struct statfs *buf ) {
-		out xdr_statfs( buf );
+		out code( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 	}
@@ -557,9 +578,9 @@ not_supported{
 #if defined(IRIX53)
 	int fstatfs( map(int fd), struct statfs *buf, int len, int fstyp ) {
 #else
-int fstatfs( map(int fd), struct statfs *buf ) {
+	int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
-	out xdr_statfs( buf );
+	out statfs( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 #endif
@@ -582,7 +603,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
 	SEND_PATH( path );
     ALLOC_PATH( path );
-    out xdr_bytes( &buf, &buf_size, buf_size );
+    out code_bytes( buf, buf_size );
     alloc( buf, buf_size );
     }
 
@@ -591,7 +612,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) {
-		out xdr_bytes( &grouplist, gidsetsize * GID_T_SIZE, gidsetsize * GID_T_SIZE );
+		out code_bytes( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
 #if	defined(HPUX9)
@@ -603,25 +624,25 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
 #	if defined(SUNOS41)
 		int getdents( map(int fd), char *buf, int nbytes ) {
-			out xdr_bytes( &buf, &nbytes, nbytes );
+			out code_bytes( buf, nbytes );
 			alloc( buf, nbytes );
 		}
 #	else
 		int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
-			out xdr_bytes( &buf, &rval, rval );
-			in xdr_opaque( basep, EIGHT );
-			out xdr_opaque( basep, EIGHT );
+			out code_bytes( buf, rval );
+			in code_bytes( basep, EIGHT );
+			out code_bytes( basep, EIGHT );
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
-		out xdr_bytes( &addr, nel * lel, nel * lel );
+		out code_bytes( addr, nel * lel );
 		alloc( addr, nel * lel );
 	}
 
 	int gethostname( char *address, int address_len ) {
-		out xdr_bytes( &address, &address_len, address_len );
+		out code_bytes( address, address_len );
 		alloc( address, address_len );
 	}
 	int getdtablesize();
@@ -642,11 +663,13 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int getpriority( int which, int who );
 #if defined(OSF1) || (defined(HPUX9) && !defined(HPUX10)) || defined(LINUX)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
+		out code( tp );
+		out code( tzp );
 #else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
+		out code( tp );
+		out code_bytes( tzp, TIMEZONE_SIZE );
 #endif
-		out xdr_timeval( tp );
-		out xdr_timezone( tp );
 		alloc( tp, TIMEVAL_SIZE );
 		alloc( tzp, TIMEZONE_SIZE );
 	}
@@ -692,7 +715,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	}
 #if defined(Solaris)
 	#if (!defined (SWITCH) && !defined(CLIP))
-		int ftruncate( map(int fd), off_t length ) : extract ;
+		int ftruncate( map(int fd), off_t length ) : extract, no_sys_chk ;
 	#endif
 #else
 	int ftruncate( map(int fd), off_t length );
@@ -710,7 +733,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int utimes( const char *path, struct timeval times[] ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		in xdr_bytes( &times, TIMEVAL_ARRAY_SIZE, TIMEVAL_ARRAY_SIZE );
+		in code_bytes( times, TIMEVAL_ARRAY_SIZE );
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 #if defined(HPUX10)
@@ -723,11 +746,11 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #else
 	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
 #endif
-		in xdr_rlimit( rlp );
+		in code( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
 	int getrlimit( int resource, struct rlimit *rlp ) {
-		in xdr_rlimit( rlp );
+		in code( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
 	pid_t setsid();
@@ -735,14 +758,14 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int statfs( char *path, struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_statfs( buf );
+		out code( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 #elif defined(LINUX)
 	int statfs( const char *path, struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_statfs( buf );
+		out code( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 #elif defined(Solaris)
@@ -753,19 +776,19 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int statfs( const char *path, struct statfs *buf, int len, int fstyp ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_statfs( buf );
+		out code( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 #else
 	int statfs( char *path, struct statfs *buf, int len ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_statfs( buf );
+		out code( buf );
 		alloc( buf, STATFS_SIZE );
 	}
 #endif
 	int getdomainname( char *name, int namelen ) {
-		out xdr_string( &name, namelen );
+		out code( name, namelen );
 		alloc( name, namelen );
 	}
 	int lockf( map(int fd), int request, off_t size );
@@ -778,7 +801,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 		*/
 	not_supported int uname( struct utsname *name ) {
 		/*
-		out xdr_utsname( name );
+		out utsname( name );
 		alloc( name, UTSNAME_SIZE );
 		*/
 	}
@@ -786,12 +809,12 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 
 #	if !defined(AIX32)
 		int mvalid( char * addr, size_t len, int prot ) {
-			out xdr_bytes( &addr, &len, len );
+			out code_bytes( addr, len );
 			alloc( addr, len );
 		}
 
 		int getaddressconf( struct addressconf *buf, size_t length ) {
-			out xdr_bytes( &buf, &length, length );
+			out code_bytes( buf, length );
 			alloc( buf, length );
 		}
 		pid_t getpgid( pid_t pid );
@@ -1088,11 +1111,11 @@ not_supported {
 	int statx( char *path, struct stat *buffer, int length, int command ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_stat( buffer );
+		out code( buffer );
 		alloc( buffer, STAT_SIZE );
 	}
 	int fstatx( map(int fd), struct stat *buffer, int length, int command ) {
-		out xdr_stat( buffer );
+		out code( buffer );
 		alloc( buffer, STAT_SIZE );
 	}
 	int accessx( char *path, int mode, int who ) {
@@ -1103,21 +1126,21 @@ not_supported {
 	int chacl( char *path, struct acl *list, int size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_bytes( &list, &size, size );
+		out code_bytes( list, size );
 		alloc( list, size );
 	}
 	int fchacl( map(int fd), struct acl *list, int size ) {
-		out xdr_bytes( &list, &size, size );
+		out code_bytes( list, size );
 		alloc( list, size );
 	}
 	int fstatacl( map(int fd), int cmd, struct acl *list, int size ) {
-		out xdr_bytes( &list, &size, size );
+		out code_bytes( list, size );
 		alloc( list, size );
 	}
 	int statacl( char *path, int cmd, struct acl *list, int size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out xdr_bytes( &list, &size, size );
+		out code_bytes( list, size );
 		alloc( list, size );
 	}
 	int chownx( char *path, int owner, int group, int ext ) {
@@ -1144,7 +1167,7 @@ not_supported {
 	int psdanger( int sig );
 	int ulimit( int cmd, int lim );
 	int usrinfo( int cmd, char *buf, int count ) {
-		in xdr_bytes( &buf, &count, count );
+		in code_bytes( buf, count );
 		alloc( buf, count );
 	}
 
