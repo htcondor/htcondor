@@ -166,7 +166,7 @@ class FileTransfer {
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
 		*/
-	int DoDownload(ReliSock *s);
+	int DoDownload( filesize_t *total_bytes, ReliSock *s);
 	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
 	void CommitFiles();

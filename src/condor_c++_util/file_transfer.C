@@ -643,6 +643,10 @@ FileTransfer::ComputeFilesToSend()
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
+			//struct stat sb; stat( f, &sb );
+			//dprintf( D_FULLDEBUG, "Time check for '%s': %ld (%ld) vs %ld\n",
+			//		 f, dir->GetModifyTime(), sb.st_mtime, last_download_time );
+
 			if ( dir->GetModifyTime() > last_download_time ) {
 				dprintf( D_FULLDEBUG, 
 						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
@@ -936,8 +940,9 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	read(transobject->TransferPipe[0], (char *)&transobject->Info.bytes,
-		 sizeof(int));
+	read( transobject->TransferPipe[0],
+		  (char *)&transobject->Info.bytes,
+		  sizeof( filesize_t) );
 	close(transobject->TransferPipe[0]);
 	close(transobject->TransferPipe[1]);
 	transobject->TransferPipe[0] = transobject->TransferPipe[1] = -1;
@@ -983,9 +988,9 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 	if (blocking) {
 
-		Info.bytes = DoDownload((ReliSock *)s);
+		int status = DoDownload( &Info.bytes, (ReliSock *) s );
 		Info.duration = time(NULL)-TransferStart;
-		Info.success = (Info.bytes >= 0);
+		Info.success = ( status >= 0 );
 		Info.in_progress = false;
 		return Info.success;
 
@@ -1023,12 +1028,15 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 int
 FileTransfer::DownloadThread(void *arg, Stream *s)
 {
+	filesize_t	total_bytes;
+
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
-	int total_bytes = myobj->DoDownload((ReliSock *)s);
-	write(myobj->TransferPipe[1],	// write-end of pipe
-				(char *)&total_bytes, sizeof(int));
-	return (total_bytes >= 0);
+	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
+	write( myobj->TransferPipe[1],	// write-end of pipe
+		   (char *)&total_bytes,
+		   sizeof(filesize_t) );
+	return ( status == 0 );
 }
 
 
@@ -1045,16 +1053,17 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 
 
 int
-FileTransfer::DoDownload(ReliSock *s)
+FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 {
 	int reply;
-	filesize_t bytes, total_bytes = 0;
+	filesize_t bytes;
 	char filename[_POSIX_PATH_MAX];
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
 	int final_transfer;
 
 	priv_state saved_priv = PRIV_UNKNOWN;
+	*total_bytes = 0;
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -1148,14 +1157,14 @@ FileTransfer::DoDownload(ReliSock *s)
 		if( !s->end_of_message() ) {
 			return_and_resetpriv( -1 );
 		}
-		total_bytes += bytes;
+		*total_bytes += bytes;
 	}
 
 #ifdef WIN32
 		// unsigned __int64 to float is not implemented on Win32
-	bytesRcvd += (float)(signed __int64)total_bytes;
+	bytesRcvd += (float)(signed __int64)(*total_bytes);
 #else
-	bytesRcvd += total_bytes;
+	bytesRcvd += (*total_bytes);
 #endif
 
 	if ( !final_transfer && IsServer() ) {
@@ -1186,7 +1195,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		CommitFiles();
 	}
 
-	return_and_resetpriv( total_bytes );
+	return_and_resetpriv( 0 );
 }
 
 void
@@ -1283,9 +1292,10 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
 	filesize_t	total_bytes;
-	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s);
-	write(myobj->TransferPipe[1],	// write end
-			(char *)&total_bytes, sizeof(int));
+	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s );
+	write( myobj->TransferPipe[1],	// write end
+		   (char *)&total_bytes,
+		   sizeof(filesize_t) );
 	return ( status >= 0 );
 }
 
