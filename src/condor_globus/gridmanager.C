@@ -446,6 +446,18 @@ GridManager::updateSchedd()
 			break;
 		case JOB_UE_REMOVE_JOB:
 			// Remove the job from the schedd queue
+
+			// Before calling DestroyProc, first call
+			// CloseConnection().  This will commit the transaction.
+			// Then call BeginTransaction before calling DestroyProc.
+			// We do this song-and-dance because in DestroryProc, removing
+			// the ClassAd from the queue is transaction aware, but 
+			// moving the ad to the history file is not (it happens 
+			// immediately, not when the transaction is committed).
+			// So, if we do not do this goofy procedure, the job ad
+			// will show up in the history file as still running, etc.
+			CloseConnection();
+			BeginTransaction();
 			DestroyProc(curr_job->procID.cluster,
 						curr_job->procID.proc);
 
