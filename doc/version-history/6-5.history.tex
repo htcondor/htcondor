@@ -12,11 +12,11 @@ The details of each version are described below.
 \noindent New Features:
 \begin{itemize}
 
-\item All daemons now publish ``sequence number'' and ``Start Time'' information in their
-ClassAds.
+\item All daemons now publish ``sequence number'' and ``start time''
+information in their ClassAds.
 
 \item The Collector now maintains and publishes update statistics
-using the above ClassAd ``sequence number'' and ``Start Time'' information.
+using the above ClassAd ``sequence number'' and ``start time'' information.
 
 \item The collector and negotiator can now run on configurable
  ports. There are four new configuration parameters you can use:
@@ -28,30 +28,36 @@ using the above ClassAd ``sequence number'' and ``Start Time'' information.
   \item \Macro{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}
   \end{itemize}
 
-\item When the Condor daemons start up, they now print the
-  configuration files they are using to their log files, right after
-  the startup banner.
+\item When the Condor daemons start up, they now log the names of the
+Configuration files they are using, right after the startup banner.
 
-\item The condor\_config\_val program now has a ``-verbose'' option
-  which will tell you which configuration file and line number a
-  condor configuration parameter is defined on.
+\item The \Condor{config\_val} program now has a \Arg{-verbose} option
+  which will tell you in which configuration file and line number a
+  condor configuration parameter is defined.
+
+\item The value of the \Macro{JOB\_RENICE\_INCREMENT} configuration
+      parameter can now be an arbitrary ClassAd expression rather than
+      just a static integer.  The expression will be evaluated by the
+      \Condor{starter} for each job just before it runs, and can refer
+      to any attribute in the job ClassAd.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 \begin{itemize}
 
-\item 
+\item DAGMan now correctly reports an error and rejects DAGs which
+      contain two nodes with the same name, regardless of their case.
+      (DAGMan has rejected duplicate node names since Condor 6.4.6,
+      but until now it would fail to do so if there was any difference
+      in their case.)
 
 \end{itemize}
 
 \noindent Known Bugs:
 \begin{itemize}
 
-\item DAGMan doesn't detect when users mistakenly specify two
-DAG nodes with the same node name; instead it waits for the
-same node to complete twice, which never happens, and so DAGMan
-goes off into never-never land.
+\item None.
 
 \end{itemize}
 
