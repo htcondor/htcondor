@@ -68,6 +68,8 @@ HashTable<Index,Value>::HashTable(int tableSz,
   }
   for(int i = 0; i < tableSize; i++)
     ht[i] = NULL;
+  currentBucket = -1;
+  currentItem = 0;
 }
 
 // Insert entry into hash table mapping Index to Value.
