@@ -29,6 +29,24 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
+\item Added full support for Linux 2.0.x and 2.2.x kernels using libc5,
+glibc20 and glibc21. Whereas the linux machines had once been fragmented
+across libc5 and glibc, they have been reunified again. Part of this
+reunification process was the removal of shared library support from
+Linux. Also, please use \Condor{compile} on the same machine on which
+you compiled your object files.
+
+\item Fixed a bug in \Condor{shadow} that would send incorrect job
+completion mail under Linux.
+
+\item Added support for statfs(2) and fstatfs(2) in user jobs. We support 
+only the fields
+\textit{f\_bsize, f\_blocks, f\_bfree, f\_bavail, f\_files, f\_ffree} from
+the structure statfs.
+
+\item Fixed a bug in the remote system call of fchdir(2) that caused
+a garbage file descriptor to be used in Standard Universe jobs.
+
 \item Added \Condor{qedit} utility to allow users to modify job
 attributes after submission.  See the new manual page on
 page~\pageref{man-condor-qedit}.
