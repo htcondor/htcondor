@@ -51,8 +51,10 @@ static const char *fltKeywords[] =
 };
 
 // need this global variable to hold information reqd by the scan function
-static ClassAdList *__list;
-static ClassAd     *__query;
+// 30-Dec-2001: These no longer seem needed--nothing refers to them, there
+// doesn't seem to be a scan function.
+//static ClassAdList *__list;
+//static ClassAd     *__query;
 
 
 CondorQ::
