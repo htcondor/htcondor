@@ -50,37 +50,16 @@ free_fs_blocks(const char *filename)
 
 #else
 
-#include <stdio.h>
-#include <string.h>
-
-#if defined(ULTRIX42) || defined(ULTRIX43)
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/mount.h>
-#else	/* ULTRIX */
-#include <sys/types.h>
-
-
-#if defined(IRIX331) || defined(IRIX53)
-#include <sys/statfs.h>
-#elif !defined(OSF1)
-#include <sys/vfs.h>
-#endif
-
-
-#endif	/* ULTRIX */
-
+#include "condor_common.h"
 #include "debug.h"
 
-#define TRUE 1
-#define FALSE 0
+/* Can't include condor_config.h since it depends on classads which is
+   only C++.  -Derek 6/25/98 */
+extern char* param();
 
 #define LOTS_OF_FREE 50000
 
-extern int	errno;
-char	*param();
 static char	*Afs_Cache_Name;
-
 
 #define FS_PROGRAM "/usr/afsws/bin/fs"
 #define FS_COMMAND "getcacheparms"
