@@ -288,6 +288,7 @@ bool mightTransfer( int universe );
 char *owner = NULL;
 char *ntdomain = NULL;
 char *myproxy_password = NULL;
+bool stream_std_file = false;
 
 extern DLL_IMPORT_MAGIC char **environ;
 
@@ -1908,6 +1909,7 @@ SetStdFile( int which_file )
 	if ( macro_value2 ) {
 		if ( macro_value2[0] == 'T' || macro_value2[0] == 't' ) {
 			stream_it = true;
+			stream_std_file = true;
 		} else if( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
 			stream_it = false;
 		}
@@ -2869,6 +2871,11 @@ SetJobLease( void )
 		}
 		lease_duration = 20;
 	}
+	if( stream_std_file ) {
+		fprintf( stderr, "\nERROR: job_lease_duration cannot be used with stream_input, stream_output, or stream_error.\n");
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
 	MyString val = ATTR_JOB_LEASE_DURATION;
 	val += "=";
 	val += lease_duration;
@@ -3513,7 +3520,7 @@ queue(int num)
 		SetTransferFiles();	 // must be called _before_ SetImageSize()
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
-		SetJobLease();
+		SetJobLease();		// must be called _after_ SetStdFile(0,1,2)
 		SetForcedAttributes();
 		SetPeriodicHoldCheck();
 		SetPeriodicRemoveCheck();
