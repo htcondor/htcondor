@@ -728,7 +728,8 @@ format_goodput (int job_status, AttrList *ad)
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
-	float goodput = (wall_clock > 0.0) ? ckpt_time/wall_clock*100.0 : 0.0;
+	if (wall_clock <= 0.0) return " [?????]";
+	float goodput = ckpt_time/wall_clock*100.0;
 	if (goodput > 100.0) goodput = 100.0;
 	else if (goodput < 0.0) return " [?????]";
 	sprintf(result, " %6.1f%%", goodput);
