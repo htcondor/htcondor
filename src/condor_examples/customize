@@ -9,16 +9,16 @@
 # Written by Derek Wright <wright@cs.wisc.edu> on 2/27/98
 #
 
-get_platform_defaults();
-customize_config_file( "condor_config.generic",
+&get_platform_defaults();
+&customize_config_file( "condor_config.generic",
 		       "../release_dir/etc/examples/condor_config.generic" );
-customize_config_file( "condor_config.submit.generic",
+&customize_config_file( "condor_config.submit.generic",
 		       "../release_dir/etc/examples/condor_config.submit.generic" );
-customize_config_file( "condor_config.root.generic",
+&customize_config_file( "condor_config.root.generic",
 		       "../release_dir/etc/examples/condor_config.root.generic" );
-customize_config_file( "condor_config.local.central.manager",
+&customize_config_file( "condor_config.local.central.manager",
 	       "../release_dir/etc/examples/condor_config.local.central.manager" );
-customize_boot_script();
+&customize_boot_script();
 
 
 sub get_platform_defaults {
@@ -28,6 +28,8 @@ sub get_platform_defaults {
     chop($rel = `uname -r`);
     $console_devs="";
     $needs_kbd=0;
+    $special_arch_string="";
+
     $_ = $os;
   SWITCH: {
       if(/^Linux/) { 
@@ -55,20 +57,41 @@ sub get_platform_defaults {
 	  if( /^i86pc/ ) {
 	      $console_devs="kdmouse, vt00, tty00";
 	      $arch_name="INTEL";
-	  } elsif( /^sun4u/ ) {
-	      $console_devs="mouse, kbd";
-	      $arch_name="SUN4u";
 	  } else {
+	      # Sparc
 	      $console_devs="mouse, kbd";
 	      $arch_name="SUN4x";
+	      $special_arch_string = 
+"##
+## Although they all share the same binaries under Solaris 2.x, Condor
+## can handle jobs migrating between sun4c and sun4m CPUs, but jobs which
+## checkpoint on a sun4c or sun4m CPU cannot restart on a sun4u (UltraSparc),
+## and vice-versa.  SO, to ensure jobs which checkpoint on an UltraSparc
+## only restart on an UltraSparc, set the \"ARCH\" parameter below to \"SUN4u\"
+## on any UltraSparc in your pool.  (You should probably set the ARCH here to 
+## the kind of machine you have the most of in your pool, and set the ARCH
+## for the other types in their LOCAL_CONFIG_FILE specified above).\n";
 	  }
 	  last SWITCH;
       }
       if(/^HP-UX/) {
-	  $os_name="HPUX9";
+	  $os_name="HPUX10";
 	  $arch_name="HPPA1";
 	  $console_devs="ps2mouse, ps2kbd, hil1, hil2, hil3, hil4, hil5, hil6, hil7";
 	  $mail_path="/bin/mailx";
+	  $special_arch_string = 
+"##
+## Although HP PA-RISC 1.1 machines and HP PA-RISC 2.x machines, 
+## such as machines with the PA8000 CPU, share the same set of binaries,
+## Condor cannot checkpoint a job on a PA 1.1 machine and restart it on
+## a PA 2.x machine (or vice versa).  SO, to ensure jobs which checkpoint 
+## on a PA 1.1 machine only restart on a PA 1.1 machine, set the \"ARCH\"
+## parameter below to \"HPPA1\" for all PA 1.1 machines (i.e. a 
+## PA7000-series CPU), and set it to \"HPPA2\" for all PA 2.x machine (i.e.
+## based around the PA8000 CPU).  (You should probably set the ARCH here to 
+## the kind of machine you have the most of in your pool, and set the ARCH
+## for the other types in their LOCAL_CONFIG_FILE specified above).\n";
+
 	  last SWITCH;
       }
       if(/^IRIX6/) {
@@ -110,7 +133,10 @@ sub customize_config_file {
   LINE: while( <GENERIC> ) {
     SWITCH: {
 	if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
-	if( /^ARCH.*$/ ) { $_ = "ARCH\t\t= $arch_name\n"; last SWITCH; }
+	if( /^ARCH.*$/ ) { 
+	    print TARGET $special_arch_string;
+	    $_ = "ARCH\t\t= $arch_name\n"; last SWITCH;
+	}
 	if( /^OPSYS.*$/ ) { $_ = "OPSYS\t\t= $os_name\n"; last SWITCH; }
 	if( /^#CONSOLE_DEVICES.*$/ ) {
 	   if( $console_devs ) {
