@@ -910,15 +910,6 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 		return TRUE;
 		break;
 
-	case NEGOTIATOR:
-		if ( sin && 
-		  memcmp(&negotiator_sin_addr,&(sin->sin_addr),sizeof(negotiator_sin_addr)) == 0 ) {
-			return TRUE;
-		} else {
-			return FALSE;
-		}
-		break;
-
 	case IMMEDIATE_FAMILY:
 		// TODO!!!  Implement IMMEDIATE_FAMILY someday!
 		return TRUE;
