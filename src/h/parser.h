@@ -6,6 +6,7 @@
 #define _PARSER_H
 
 #include "scanner.h"
+#include "config.h"
 
 #define TRUE 1
 #define FALSE 0
