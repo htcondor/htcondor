@@ -31,6 +31,17 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
+\item There is no longer any difference in the configuration file
+syntax between ``macros'' (which were specified with an ``='' sign)
+and ``expressions'' (which were specified with a ``:'' sign).  
+Now, all config file entries are treated and referenced as macros. 
+You can use either ``='' or ``:'' and they will work the same way. 
+There is no longer any problem with forward-referencing macros
+(referencing macros you haven't yet defined), so long as they are
+eventually defined in your config files (even if the forward reference
+is to a macro defined in another config file, like the local config
+file, for example).
+
 \item \Condor{userlog} now displays times in days+hours:minutes format
 instead of total hours or total minutes.
 
