@@ -12,9 +12,15 @@ period: 10m
 prefix: pool_
 
 
+parameter: NAME
+Specifies the logical name of the condor pool to monitor.  This is the
+pool name passed to the "condor_pool" program, which has an internal
+default of "condor".
+Example: NAME=testpool
+
 parameter: CONDOR
 flags: REQUIRED
-Speicifies the home directory of the Condor installation on the system
+Specifies the home directory of the Condor installation on the system
 
 parameter: ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts;CONDOR_CONFIG=$(CONDOR)/etc/condor_config
 Sets the PATH & CONDOR_CONFIG used by the condor 
