@@ -823,6 +823,14 @@ character are ignored by the submit-description file parser.
 
 	\OptItem{\Opt{-d}}{Disable file permission checks.}
 
+	\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit
+    file with the given command. This command will be considered to
+    immediately precede the Queue command in the submit file and come
+    after all other previous commands. The submit file is not
+    modified. You can append multiple commands by using the -a option
+    multiple times. If your command has spaces in it, make sure you
+    quote it.}
+
 \end{Options}
 
 \ExitStatus
