@@ -102,6 +102,7 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 // XXX this belong here?  We'll see...
 	init_user_ids(owner);
 	set_user_priv();
+	daemonCore->Register_Priv_State( PRIV_USER );
 
 		// change directory, send mail if failure:
 	if ( cdToIwd() == -1 ) {
