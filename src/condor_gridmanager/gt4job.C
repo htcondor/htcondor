@@ -34,6 +34,7 @@
 #include "gridmanager.h"
 #include "gt4job.h"
 #include "condor_config.h"
+#include "my_username.h"
 
 
 // GridManager job states
@@ -2147,10 +2148,20 @@ GT4Job::printXMLParam (const char * name, const char * value) {
 const char*
 GT4Job::getDummyJobScratchDir() {
 	static MyString dirname;
+#ifndef WIN32 
 	dirname.sprintf ("%s%cempty_dir_u%d", // <scratch>/empty_dir_u<uid>
 					 GridmanagerScratchDir, 
 					 DIR_DELIM_CHAR,
 					 geteuid());
+#else // Windows
+	char *user = my_username();
+	dirname.sprintf ("%s%cempty_dir_u%s", // <scratch>\empty_dir_u<username>
+					 GridmanagerScratchDir, 
+					 DIR_DELIM_CHAR,
+					 user);
+	free(user);
+	user = NULL;
+#endif
 	
 	struct stat stat_buff;
 	if ( stat(dirname.Value(), &stat_buff) < 0 ) {
