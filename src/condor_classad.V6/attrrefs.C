@@ -54,7 +54,7 @@ AttributeReference::
 }
 
 
-AttributeReference *AttributeReference::
+ExprTree *AttributeReference::
 Copy( ) const
 {
 	AttributeReference *newTree = new AttributeReference ();

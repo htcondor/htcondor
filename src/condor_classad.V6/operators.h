@@ -163,7 +163,9 @@ class Operation : public ExprTree
 		static int PrecedenceLevel( OpKind );
 
 		/// Make a deep copy of the expression
-		virtual Operation* Copy( ) const;
+        // We should return an AttributeReference, but Visual
+        // Studio 6 won't accept that part of the standard. 
+		virtual ExprTree* Copy( ) const;
 
 	protected:
 		/// Constructor

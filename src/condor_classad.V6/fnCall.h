@@ -81,7 +81,9 @@ class FunctionCall : public ExprTree
 	void GetComponents( std::string &, std::vector<ExprTree*> &) const;
 	
 	/// Make a deep copy of the expression
-	virtual FunctionCall* Copy( ) const;
+    // We should return an AttributeReference, but Visual
+    // Studio 6 won't accept that part of the standard. 
+	virtual ExprTree* Copy( ) const;
 	
 	static void RegisterFunction(std::string &functionName, ClassAdFunc function);
 	static void RegisterFunctions(ClassAdFunctionMapping *functions);

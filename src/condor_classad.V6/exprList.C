@@ -60,7 +60,7 @@ Clear ()
 }
 
 	
-ExprList *ExprList::
+ExprTree *ExprList::
 Copy( ) const
 {
 	ExprList *newList = new ExprList;

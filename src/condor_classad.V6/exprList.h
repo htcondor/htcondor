@@ -54,7 +54,9 @@ class ExprList : public ExprTree
 		void GetComponents( std::vector<ExprTree*>& list) const;
 
 		/// Make a deep copy of the expression
-		virtual ExprList* Copy( ) const;
+        // We should return an AttributeReference, but Visual
+        // Studio 6 won't accept that part of the standard. 
+		virtual ExprTree* Copy( ) const;
 		
 		// STL-like iterators and functions
 	    typedef std::vector<ExprTree*>::iterator       iterator;

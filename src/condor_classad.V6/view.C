@@ -261,7 +261,7 @@ GetViewInfo( )
 		EXCEPT( "internal error: view has no view info!" );
 	}
 	
-	if( !( newAd = ad->Copy( ) ) ) {
+	if( !( newAd = (ClassAd*) ad->Copy( ) ) ) {
 		CondorErrno = ERR_MEM_ALLOC_FAILED;
 		CondorErrMsg = "";
 		if( newAd ) delete newAd;

@@ -49,7 +49,7 @@ Operation::
 }
 
 
-Operation *Operation::
+ExprTree *Operation::
 Copy( ) const
 {
 	Operation *newTree = new Operation ();

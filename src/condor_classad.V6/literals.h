@@ -79,7 +79,9 @@ class Literal : public ExprTree
 		static Literal* MakeReal(std::string realstr);
 
 		/// Make a deep copy
-		virtual Literal* Copy( ) const;
+        // We should return an AttributeReference, but Visual
+        // Studio 6 won't accept that part of the standard. 
+		virtual ExprTree* Copy( ) const;
 
 		/** Factory method to construct a Literal
 		 * @param v The value to convert to a literal. (Cannot be a classad or

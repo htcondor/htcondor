@@ -93,7 +93,7 @@ Commit( )
     for( itr = opList.begin( ); itr != opList.end( ); itr++ ) {
 			// we're going to write over/destroy an ad; save it first
 		if( ( ad = server->GetClassAd( itr->key ) ) ) {
-			if( !( itr->backup = ad->Copy( ) ) ) {
+			if( !( itr->backup = (ClassAd *) ad->Copy( ) ) ) {
 				xactionErrno = CondorErrno;
 				xactionErrMsg = CondorErrMsg;
 				xactionErrCause = itr->rec;

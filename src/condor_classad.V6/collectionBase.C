@@ -491,7 +491,7 @@ PlayViewOp( int opType, ClassAd *logRec )
             parentView = itr->second;
 
 				// make the viewInfo classad --- mostly the logRec itself
-			if( !( viewInfo = logRec->Copy( ) ) ) {
+			if( !( viewInfo = (ClassAd*) logRec->Copy( ) ) ) {
 				return( false );
 			}
 			viewInfo->Delete( "OpType" );
@@ -522,7 +522,7 @@ PlayViewOp( int opType, ClassAd *logRec )
             parentView = itr->second;
 
 				// make the viewInfo classad --- mostly the logRec itself
-			if( !( viewInfo = logRec->Copy( ) ) ) {
+			if( !( viewInfo = (ClassAd *) logRec->Copy( ) ) ) {
 				return( false );
 			}
 			viewInfo->Delete( "OpType" );
@@ -572,7 +572,7 @@ PlayViewOp( int opType, ClassAd *logRec )
 				CondorErrMsg = "view info bad or missing";
 				return( false );
             }
-			if( !( viewInfo = tmp->Copy( ) ) ) {
+			if( !( viewInfo = (ClassAd *) tmp->Copy( ) ) ) {
 				return( false );
 			}
 				// make sure the "root" view always has 'Requirements=true'
@@ -609,7 +609,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 				return( false );
 			}
 			if( !rec->EvaluateAttr( "Ad", cv ) || !cv.IsClassAdValue( ad ) ||
-				!( newAd = ad->Copy( ) ) ) {
+				!( newAd = (ClassAd *) ad->Copy( ) ) ) {
 				CondorErrno = ERR_BAD_CLASSAD;
 				CondorErrMsg = "bad or missing 'ad' attribute";
 				return( false );
@@ -1792,7 +1792,7 @@ GetStringClassAd(string key, string &ad){
 	 
 	 classad.InsertAttr( "Key", key );
 	 if( ( itr = classadTable.find( key ) ) != classadTable.end( ) ) {
-	   newad=((itr->second).ad)->Copy();
+	   newad=(ClassAd *) ((itr->second).ad)->Copy();
 	   classad.Insert("Ad", newad);
 	 }else{
 	   return false;

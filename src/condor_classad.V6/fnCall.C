@@ -137,7 +137,7 @@ FunctionCall::
 }
 
 
-FunctionCall *FunctionCall::
+ExprTree *FunctionCall::
 Copy( ) const
 {
 	FunctionCall *newTree = new FunctionCall;

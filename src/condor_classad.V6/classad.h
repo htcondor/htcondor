@@ -66,7 +66,9 @@ class ClassAd : public ExprTree
         /** Makes a deep copy of the expression tree
            	@return A deep copy of the expression, or NULL on failure.
          */
-		virtual ClassAd* Copy( ) const;
+        // We should return an AttributeReference, but Visual
+        // Studio 6 won't accept that part of the standard. 
+		virtual ExprTree* Copy( ) const;
 		//@}
 
 		/** Factory method to make a classad

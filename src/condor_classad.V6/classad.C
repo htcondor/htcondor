@@ -610,7 +610,7 @@ Modify( ClassAd& mod )
 }
 
 
-ClassAd* ClassAd::
+ExprTree* ClassAd::
 Copy( ) const
 {
 	ExprTree *tree;

@@ -42,7 +42,7 @@ Literal::
 }
 
 
-Literal *Literal::
+ExprTree *Literal::
 Copy( ) const
 {
 	Literal *newTree = new Literal;
