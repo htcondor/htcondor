@@ -194,11 +194,6 @@ The third explains how to define them using the \Condor{cod} tool.
 Attributes That Describe a COD Application}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%
-%% TODO! 
-%% Flesh out this list and provide useful explainations
-%% 
-
 \index{Computing On Demand!Defining Applications!Required attributes}
 
 The following list of attributes are required for a COD application:
@@ -206,7 +201,7 @@ The following list of attributes are required for a COD application:
 \begin{description}
 
  \item[\Attr{Cmd}] This attribute name is short for \Term{Command}.
-   It definess the full path to the executable program to be run as a
+   It defines the full path to the executable program to be run as a
    COD application.
    Since Condor does not currently provide any mechanism to transfer
    files on behalf of COD applications, this path should be a valid
@@ -261,7 +256,11 @@ The following list of attributes are optional:
    If this attribute is not specified, the default is to use
    \File{/dev/null}.
 
- \item[\Attr{Env}] (string, environment)
+ \item[\Attr{Env}] This string defines what environment variables will
+   be set for a given COD application.
+   Each environment variable has the form \verb@NAME=value@.
+   Multiple variables are delimited with a semicolon \verb@;@.
+   For example: \verb@Env = "PATH=/usr/local/bin:/usr/bin;TERM=vt100"@ 
 
  \item[\Attr{Args}] This string attribute defines the list of
    arguments to be supplied to the program on the command-line.
@@ -297,23 +296,75 @@ The following list of attributes are optional:
    (\verb@KillSig = 3@)
    The default is to use SIGTERM.
 
- \item[\Attr{StarterUserLog}] (string, path to UserLog written by
- \Condor{starter}) 
+ \item[\Attr{StarterUserLog}] This string specifies a filename for a
+   log file the \Condor{starter} can write with entries for relevant 
+   events in the life of a given COD application.
+   It is very similar to the UserLog file specified for regular Condor
+   jobs with the \Attr{Log} setting in the \Condor{submit} description
+   file.
+   However, certain attributes that are placed in the regular UserLog
+   file do not make sense in the COD environment, and are therefore
+   left out.
+   The default is not to write this log file.
 
- \item[\Attr{StarterUserLogUseXML}] (bool, should UserLog use XML or
- old Condor syntax)
-
- \item[\Attr{ClusterId}] (int, job cluster id, can also specify to
- \Condor{cod} with \Opt{-cluster})
-
- \item[\Attr{ProcId}] (int, job process id, can also specify to
- \Condor{cod} with \Opt{-proc})
+ \item[\Attr{StarterUserLogUseXML}] If the \Attr{StarterUserLog}
+   attribute (described above) is defined, the default format is a
+   human-readable format.
+   However, Condor can write out this log in an XML representation,
+   instead.
+   To enable the XML format for this UserLog, the
+   \Attr{StarterUserLogUseXML} boolean can be set to \verb@TRUE@.
+   The default if not specified is \verb@FALSE@.
 
 \end{description}
 
 \Note If any path attribute (\Attr{Cmd}, \Attr{In},
 \Attr{Out},\Attr{Err}, \Attr{StarterUserLog}) is not a full path name,
 Condor automatically prepends the value of \Attr{IWD}.
+
+The final set of attributes define a COD application's \Term{job ID}.
+The job ID is made up of both the \Attr{ClusterId} and \Attr{ProcId}
+attributes (described below).
+This job ID is similar to the job ID that is created whenever a
+regular batch job is submitted to the Condor queue.
+When using COD, the job ID is only used to identify the job in various
+log messages.
+
+The COD job ID is part of the information included in all
+events written to the \Attr{StarterUserLog} (described above)
+regarding a given job.
+The COD job ID is also used in the Condor debugging logs described in
+section~\ref{sec:Daemon-Logging-Config-File-Entries} on
+page~\pageref{sec:Daemon-Logging-Config-File-Entries}
+For example, in the \Condor{starter}'s log file for COD jobs
+(\File{StarterLog.cod} by default) or in the \Condor{startd}'s log
+file (\File{StartLog} by default).
+
+All COD command-line tools use the COD \Term{claim ID} described below
+in section~\ref{sec:cod-managing-claims} on
+page~\pageref{sec:cod-managing-claims} to uniquely identify a given
+instance of a COD application.
+Therefore, under COD the job ID is only useful to define if it helps a
+user with accounting or debugging of their own application.
+There is no special significance to COD for these attributes, and
+therefore, they are optional.
+  
+\begin{description}
+ \item[\Attr{ClusterId}] This integer defines the
+   \Term{cluster identifier} for a COD job.
+   The default value is 1.
+   The \Attr{ClusterId} can also be defined with the
+   \Condor{cod\_activate} command-line tool using the \Opt{-cluster}
+   option.
+
+ \item[\Attr{ProcId}]  This integer defines the
+   \Term{process identifier} for a COD job.
+   The default value is 0.
+   The \Attr{ProcId} can also be defined with the
+   \Condor{cod\_activate} command-line tool using the \Opt{-cluster}
+   option.
+
+\end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
