@@ -50,6 +50,8 @@ public:
 	int		currentfamily( pid_t* & );	
 	int		size() { return family_size; };
 	
+	void	display();		// dprintf's the existing pid family
+
 private:
 	enum KILLFAMILY_DIRECTION {
 		PATRICIDE, 		// parent die first, then kids
