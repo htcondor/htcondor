@@ -25,10 +25,11 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 
-// We do all this stuff here so killfamily.C can be linked in
-// with program using DaemonCore as well as programs which are
-// completely DaemonCore ignorant (like the old starter).
-#ifdef WANT_DC_PM
+// We do all this stuff here so that on Windoze, we use DaemonCore for
+// sending signals and such, since there's no such thing as kill().
+// This is safe b/c on Windoze, the only things that link w/
+// killfamily.o also link w/ DaemonCore....
+#ifdef WIN32
 #	ifdef SIGCONT
 #		undef SIGCONT
 #	endif
@@ -43,7 +44,7 @@
 #		undef SIGKILL
 #	endif
 #	define SIGKILL DC_SIGKILL
-#endif // of WANT_DC_PM
+#endif // WIN32
 
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
@@ -55,9 +56,6 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_user_time = 0;
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
-#ifdef WITH_DAEMONCORE
-	dc_tid = -1;
-#endif
 
 	searchLogin = NULL;
 
@@ -80,11 +78,6 @@ ProcFamily::~ProcFamily()
 	if ( old_pids ) {
 		delete old_pids;
 	}
-#ifdef WITH_DAEMONCORE
-	if( dc_tid >= 0 ) {
-		daemonCore->Cancel_Timer( dc_tid );
-	}
-#endif
 	if ( searchLogin ) {
 		free(searchLogin);
 	}
@@ -184,7 +177,7 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 	}
 
 	if ( !test_only_flag ) {
-#ifdef WANT_DC_PM
+#ifdef WIN32
 		if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
 			dprintf(D_PROCFAMILY,
 				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
@@ -196,11 +189,12 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 				"ProcFamily::safe_kill: kill(%d,%d) failed, errno=%d\n",
 				inpid,sig,errno);
 		}
-#endif
+#endif // WIN32
 	}
 
 	set_priv(priv);
 }
+
 
 void
 ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
@@ -621,27 +615,3 @@ ProcFamily::display()
 		"ProcFamily: alive_cpu_user = %ld, exited_cpu = %ld, max_image = %luk\n",
 		alive_cpu_user_time, exited_cpu_user_time, max_image_size);
 }
-
-
-#ifdef WITH_DAEMONCORE
-// This can't exist until everything that uses ProcFamily links with 
-// DaemonCore, and the V5 starter breaks that.  
-bool
-ProcFamily::takePeriodicSnapshot( int start, int period )
-{
-	if( dc_tid >= 0 ) {
-		daemonCore->Cancel_Timer( dc_tid );
-	}
-	dc_tid = daemonCore->
-		Register_Timer( start, period, 
-						(TimerHandlercpp)&ProcFamily::takesnapshot,
-						"ProcFamily::takesnapshot", this );
-	if( dc_tid < 0 ) {
-			// Error creating the timer
-		dc_tid = -1;
-		return false;
-	}
-	return true;
-}
-#endif /* WITH_DAEMONCORE */
-
