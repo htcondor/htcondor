@@ -405,13 +405,20 @@ int CheckProxies()
 			int new_expiration =
 				x509_proxy_expiration_time( curr_proxy->proxy_filename );
 
-			// Check whether to renew the proxy (renew 4 hrs beforehand)
-			if ( (new_expiration <= now + 4*60*60) &&
-				 (!curr_proxy->myproxy_entries.IsEmpty()) ) {
-				dprintf (D_FULLDEBUG,
-						 "About to RefreshProxyThruMyProxy() for %s\n",
-						 curr_proxy->proxy_filename);
-				RefreshProxyThruMyProxy (curr_proxy);
+			// Check whether to renew the proxy (need to check all myproxy entries)
+			if (!curr_proxy->myproxy_entries.IsEmpty()) {
+				curr_proxy->myproxy_entries.Rewind();
+				MyProxyEntry * myProxyEntry=NULL;
+
+				while (curr_proxy->myproxy_entries.Next (myProxyEntry) != false ) {
+					if (new_expiration <= now + (myProxyEntry->refresh_threshold*60)) {
+						dprintf (D_FULLDEBUG,
+								"About to RefreshProxyThruMyProxy() for %s\n",
+								curr_proxy->proxy_filename);
+						RefreshProxyThruMyProxy (curr_proxy);
+						break;
+					}
+				}
 			}
 
 			curr_proxy->near_expired =
@@ -560,7 +567,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 	sprintf(args, "-v -o %s -s %s -d -t %d -S -l %s",
 			proxy_filename,
 			myproxy_host,
-			12,
+			myProxyEntry->new_proxy_lifetime,
 			username);
 
 
