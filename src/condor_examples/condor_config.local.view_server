@@ -30,8 +30,9 @@
 ##  (usually "condor").  Note: This should be a separate directory,
 ##  not the same as either the SPOOL or LOG directories you have
 ##  already setup for Condor.  There are a few problems putting these
-##  files into either of those directories.
-POOL_HISTORY_DIR = /full/path/to/directory/for/historical/data
+##  files into either of those directories.  You must create this
+##  directory if it does not already exist.
+#POOL_HISTORY_DIR = $(LOCAL_DIR)/ViewHist
 
 ##  If you're setting up a stand-alone view server, instead of turning
 ##  an existing condor_collector into a view server, you should

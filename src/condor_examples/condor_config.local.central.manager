@@ -100,8 +100,16 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  Enable history logging in the collector
 #KEEP_POOL_HISTORY = False
 
-##  Set the directory where history files reside
-#POOL_HISTORY_DIR = $(SPOOL)
+##  This is the directory where historical data will be stored.  There
+##  is a limit to the maximum space required for the files created by
+##  the CondorView server (see below).  This directory must be
+##  writable by whatever user the collector is running as
+##  (usually "condor").  Note: This should be a separate directory,
+##  not the same as either the SPOOL or LOG directories you have
+##  already setup for Condor.  There are a few problems putting these
+##  files into either of those directories.  You must create this
+##  directory if it does not already exist.
+#POOL_HISTORY_DIR = $(LOCAL_DIR)/ViewHist
 
 ##  The maximum combined size of the history files
 #POOL_HISTORY_MAX_STORAGE = 10000000

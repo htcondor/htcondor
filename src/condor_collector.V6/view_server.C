@@ -27,6 +27,7 @@
 #include "condor_attributes.h"
 #include "condor_state.h"
 #include "Set.h"
+#include "directory.h"
 #include "view_server.h"
 
 //-------------------------------------------------------------------
@@ -137,6 +138,8 @@ void ViewServer::Init()
 
 void ViewServer::Config()
 {
+	MyString history_dir_buf;
+	char const *history_dir;
 	dprintf(D_ALWAYS, "In ViewServer::Config()\n");
 	
 	// Configure Collector daemon
@@ -166,30 +169,35 @@ void ViewServer::Config()
 
 	tmp=param("POOL_HISTORY_DIR");
 	if (!tmp) {
-		tmp=param("SPOOL");
+		tmp=param("LOCAL_DIR");
 		if (!tmp) {
-			EXCEPT("No POOL_HISTORY_DIR or SPOOL directory specified in config file\n");
+			EXCEPT("No POOL_HISTORY_DIR or LOCAL_DIR directory specified in config file\n");
 		}
+		history_dir_buf.sprintf("%s/ViewHist",tmp);
 	}
+	else {
+		history_dir_buf = tmp;
+	}
+	history_dir = history_dir_buf.Value();
+	free(tmp);
 
-	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,tmp);
+	dprintf(D_ALWAYS, "Configuration: SAMPLING_INTERVAL=%d, MAX_STORAGE=%d, MaxFileSize=%d, POOL_HISTORY_DIR=%s\n",HistoryInterval,MaxStorage,MaxFileSize,history_dir);
 
-	char Name[200];
+	if(!IsDirectory(history_dir)) {
+		EXCEPT("POOL_HISTORY_DIR (%s) does not exist.\n",history_dir);
+	}
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
 			DataSet[i][j].MaxSamples=4*((int) pow(4,j));
 			DataSet[i][j].NumSamples=0;
-			sprintf(Name,"%s/viewhist%d.%d.old",tmp,i,j);
-			DataSet[i][j].OldFileName=Name;
-			DataSet[i][j].OldStartTime=FindFileStartTime(Name);
-			sprintf(Name,"%s/viewhist%d.%d.new",tmp,i,j);
-			DataSet[i][j].NewFileName=Name;
-			DataSet[i][j].NewStartTime=FindFileStartTime(Name);
+			DataSet[i][j].OldFileName.sprintf("%s/viewhist%d.%d.old",history_dir,i,j);
+			DataSet[i][j].OldStartTime=FindFileStartTime(DataSet[i][j].OldFileName.Value());
+			DataSet[i][j].NewFileName.sprintf("%s/viewhist%d.%d.new",history_dir,i,j);
+			DataSet[i][j].NewStartTime=FindFileStartTime(DataSet[i][j].NewFileName.Value());
 		}
 	}
 
-	free(tmp);
 	return;
 }
 
@@ -449,7 +457,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 // in the file
 //-------------------------------------------------------------------
 
-int ViewServer::FindFileStartTime(char* Name)
+int ViewServer::FindFileStartTime(const char *Name)
 {
 	char Line[200];
 	int T=-1;

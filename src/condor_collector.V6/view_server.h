@@ -111,7 +111,7 @@ private:
 	static int ReadTime(char* Line);
 	static int ReadTimeAndName(char* Line, MyString& Name);
 	static int ReadTimeChkName(char* Line, const MyString& Name);
-	static int FindFileStartTime(char* Name);
+	static int FindFileStartTime(const char *Name);
 };
 
 
