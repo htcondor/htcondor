@@ -127,6 +127,7 @@ void
 XInterface::TryUser(const char *user)
 {
 	static char env[1024];
+	static bool need_uninit = false;
 	passwd *passwd_entry;
 
 	passwd_entry = getpwnam(user);
@@ -141,6 +142,15 @@ XInterface::TryUser(const char *user)
 		if(putenv(env) != 0) {
 			EXCEPT("Putenv failed!.");
 	}
+
+	if ( need_uninit ) {
+		uninit_user_ids();
+	} else {
+		need_uninit = true;
+	}
+
+	init_user_ids( user );
+
 	dprintf( D_FULLDEBUG, "Using %s's .Xauthority: \n", 
 		 passwd_entry->pw_name, env);
 	}
@@ -233,16 +243,17 @@ XInterface::Connect()
 
 	set_root_priv();
 
-	//setutent(); // Reset utmp file to beginning.
-
 	_tried_root = false;
 	_tried_utmp = false;
 	if(_xauth_users != NULL) {
 		_xauth_users->rewind();
 	}
 
+
 	while(!(_display = XOpenDisplay("localhost:0.0") ))
 	{
+		set_condor_priv();
+	
 		rtn = NextEntry();
 
 		if(rtn == -1)
@@ -256,6 +267,9 @@ XInterface::Connect()
 			set_condor_priv();
 			return false;
 		}
+
+		// By this point we've gotten are init_user_ids() call called.
+		set_user_priv();
 	}
 
 	dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
