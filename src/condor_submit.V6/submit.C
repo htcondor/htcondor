@@ -1439,6 +1439,30 @@ SetTransferFiles()
 			InsertJobExpr (output_files);
 		}
 	}
+
+	if( never_transfer && JobUniverse != CONDOR_UNIVERSE_GLOBUS &&
+		JobUniverse != CONDOR_UNIVERSE_JAVA ) {
+		char *transfer_exe;
+		transfer_exe = condor_param(TransferExecutable);
+		if(transfer_exe && *transfer_exe != 'F' && *transfer_exe != 'f') {
+			//User explicitly requested transfer_executable = true,
+			//but they did not turn on transfer_files, so they are
+			//going to be confused when the executable is _not_
+			//transfered!  Better bail out.
+
+			fprintf(stderr,"\nERROR: You explicitly requested transferral of "
+			               "the executable,\nbut for this to be enabled, "
+				           "you must select one of the file\n"
+					       "transfer modes:\n\n"
+					       "transfer_files = ONEXIT     (OR)\n"
+                           "transfer_files = ALWAYS\n");
+
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		free(transfer_exe);
+	}
 }
 
 void
