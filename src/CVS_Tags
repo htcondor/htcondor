@@ -20,6 +20,13 @@
 	stuff, etc.  It should *NOT* contain new classads, new schedd,
 	etc, etc. 
 
+	Note: when merging V6_3-branch condor_netman directory into
+	the trunk, please make sure CVS takes the V6_3-branch version
+	of the code instead of the trunk version.  Jim Basney added
+	the condor_netman directory to both the V6_3-branch and the
+	trunk (by mistake) on 12/1/00.  The V6_3-branch version is the
+	authoritative one.
+
 7/6/00 V6_2-branch The branch for all of Condor version 6.2.X.  In
 	addition, the last few 6.1.X releases (hopefully, just
 	6.1.15), will live on this branch.  config, src, doc, and
