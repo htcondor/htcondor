@@ -71,7 +71,10 @@ do_REMOTE_syscall()
 		assert( syscall_sock->code(fullHostname) );
 		dprintf( D_SYSCALLS, "  fullHostname = %s\n", fullHostname );
 		assert( syscall_sock->code(key) );
-		dprintf( D_SYSCALLS, "  key = %d\n", key);
+			// key is never used, so don't bother printing it.  we
+			// just have to read it off the wire for compatibility.
+			// newer versions of the starter don't even use this RSC,
+			// so they don't send it...
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
