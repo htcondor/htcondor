@@ -1,3 +1,9 @@
+12/28/04 V6_6-merge-29
+   The state of the V6_6-branch for yet another merge into V6_7 (this
+   time into the V6_7_3-branch).  This includes the fixes for core.pid
+   files in the new shadow/starter, a new test in condor_tests, and
+   some fixes to the NWO glue.
+
 12/24/04 V6_6-merge-28
    The state of the V6_6-branch for yet another merge into V6_7 (this
    time into the V6_7_3-branch).  This includes the fixes for
