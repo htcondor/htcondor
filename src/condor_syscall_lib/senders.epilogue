@@ -46,7 +46,7 @@
 	  {
 		char	*local;
 		char	*remote;
-		MODE_T		mode;
+		mode_t		mode;
 		int		loc_fd;
 		int		read_status = 0, write_status;
 		char	buf[ CONDOR_IO_BUF_SIZE ];
@@ -58,7 +58,7 @@
 
 		local = va_arg( ap, char *);
 		remote = va_arg( ap, char *);
-		mode = va_arg( ap, MODE_T );
+		mode = va_arg( ap, mode_t );
 
 			/* Do the local open */
 		if( (loc_fd = open(local,O_RDONLY)) < 0 ) {
