@@ -94,6 +94,15 @@ the Windows SharedAccess service. This bug has been fixed.
 would often wedge until the job was preempted. Now, the starter attempts
 to detect invalid executables and prevent wedging.
 
+\item Fixed issues that would cause \Condor{startd} to ``disappear''
+from the pool because of dropped machine ad updates. This fix applies
+to all platforms, but the symptoms were exhibited predominantly on
+Windows machines.
+
+\item Fixed a bug that could cause \Macro{HIGH\_PORT} and
+\Macro{LOW\_PORT} parameters to be ignored if a Windows machine ran for
+several weeks without being rebooted.
+
 \end{itemize}
 
 \item Starting with RedHat 9, newer versions of Linux began to produce
@@ -106,6 +115,9 @@ to detect invalid executables and prevent wedging.
   This functionality works in all universes, and is independent of
   Condor's file transfer mechanism.
 
+
+\item Fixed a bug that was causing \Condor{startd} to consume large
+amounts of memory over long periods of time.
 
 \item Fixed a bug that was causing \Condor{startd} to fail to start up
 with the message, "caInsert: Can't insert CpuBusy into target classad."
