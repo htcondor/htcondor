@@ -10,6 +10,7 @@
 \oOpt{-run}
 \oOpt{-goodput}
 \oOpt{-io}
+\oOpt{-dag}
 \oOpt{-long}
 \oOptArg{-format} {formatter attribute}
 \oOpt{-cputime}
@@ -75,6 +76,13 @@ a one line summary of information as follows:
 \item[SIZE] The virtual image size of the executable in megabytes. 
 \item[CMD] The name of the executable. 
 \end{description}
+
+If the \Opt{-dag} option is specified, the OWNER column is replaced
+with NODENAME for jobs started by Condor DAGMan.
+
+\Note{The \Opt{-dag} option has no effect on a pre-v6.3.0 Condor
+queue, because older \Condor{schedd} daemons don't pass the necessary
+DAG information to their jobs.}
 
 If the \Opt{-run} option is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
@@ -149,6 +157,7 @@ per machine basis.
 	\OptItem{\Opt{-run}}{Get information about running jobs.}
 	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
 	\OptItem{\Opt{-io}}{Display job input/output summaries.}
+	\OptItem{\Opt{-dag}}{Display DAG jobs under their DAGMan.}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
