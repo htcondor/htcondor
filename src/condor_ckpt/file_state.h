@@ -42,7 +42,7 @@ public:
 	void Display();
 	void Save();
 	void Restore();
-	int PreOpen( int fd, BOOL readable, BOOL writeable );
+	int PreOpen( int fd, BOOL readable, BOOL writeable, BOOL shadow_connection);
 	int DoOpen( const char *path, int flags, int mode );
 	int DoClose( int fd );
 	int DoDup( int fd );

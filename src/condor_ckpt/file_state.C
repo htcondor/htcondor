@@ -37,17 +37,7 @@ OpenFileTable	*FileTab;
 static char				Condor_CWD[ _POSIX_PATH_MAX ];
 static int				MaxOpenFiles;
 
-#define DEBUGGING
 
-#if defined(DEBUGGING)
-#	if defined( OSF1 )
-		extern "C" void srandom( int );
-		extern "C" int random();
-#	else
-		extern "C" void srandom( int );
-		extern "C" long random();
-#	endif
-#endif
 
 char * shorten( char *path );
 extern "C" void Set_CWD( const char *working_dir );
@@ -75,13 +65,10 @@ OpenFileTable::Init()
 	}
 
 	// getcwd( Condor_CWD, sizeof(Condor_CWD) );
-	PreOpen( 0, TRUE, FALSE );
-	PreOpen( 1, FALSE, TRUE );
-	PreOpen( 2, FALSE, TRUE );
+	PreOpen( 0, TRUE, FALSE, FALSE );
+	PreOpen( 1, FALSE, TRUE, FALSE );
+	PreOpen( 2, FALSE, TRUE, FALSE );
 
-#if defined(DEBUGGING)
-	srandom( 0 );
-#endif
 }
 
 
@@ -198,10 +185,11 @@ OpenFileTable::DoClose( int fd )
 	int		i;
 	int		rval;
 
-	if( !file[fd].isOpen() ) {
+	if( !file[fd].isOpen() || file[fd].isShadowSock() ) {
 		errno = EBADF;
 		return -1;
 	}
+
 
 		// See if this file is a dup of another
 	if( file[fd].isDup() ) {
@@ -253,7 +241,8 @@ OpenFileTable::DoClose( int fd )
 
 
 int
-OpenFileTable::PreOpen( int fd, BOOL readable, BOOL writeable )
+OpenFileTable::PreOpen(
+	int fd, BOOL readable, BOOL writeable, BOOL shadow_connection )
 {
 		// Make sure fd not already open
 	if( file[fd].isOpen() ) {
@@ -269,7 +258,7 @@ OpenFileTable::PreOpen( int fd, BOOL readable, BOOL writeable )
 	file[fd].duplicate = FALSE;
 	file[fd].pre_opened = TRUE;
 	file[fd].remote_access = RemoteSysCalls();
-	file[fd].shadow_sock = FALSE;
+	file[fd].shadow_sock = shadow_connection;
 	file[fd].offset = 0;
 	file[fd].real_fd = fd;
 	file[fd].dup_of = 0;
@@ -420,22 +409,6 @@ OpenFileTable::Restore()
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
 
-#if defined(DEBUGGING)
-	 /*
-	When we are operating in remote mode, we could potentially get
-	different sets of real file descriptor numbers to correspond
-	with the user's fd numbers after each migration.  Here we
-	simulate that even in local mode so that we can more thoroughly
-	test the file descriptor mapping stuff.
-	 */
-	int		n_files;
-	n_files = random() % 5;
-
-	for( i=0; i<n_files; i++ ) {
-		(void)open("/dev/null",O_RDONLY);
-	}
-#endif
-		
 
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
@@ -532,6 +505,8 @@ extern "C" {
 
 
 #if defined( SYS_open )
+
+int AvoidNFS;
 
 int
 open( const char *path, int flags, ... )
@@ -685,9 +660,9 @@ LocalAccess( int user_fd )
 }
 
 int
-pre_open( int fd, BOOL readable, BOOL writeable )
+pre_open( int fd, BOOL readable, BOOL writeable, BOOL shadow_connection )
 {
-	return FileTab->PreOpen( fd, readable, writeable );
+	return FileTab->PreOpen( fd, readable, writeable, shadow_connection );
 }
 
 } // end of extern "C"
