@@ -319,7 +319,7 @@ All of these calls manipulate the open file table.
 	ssize_t read( int fd, void *buf, size_t len )
 		: file_table
 	{
-		out code_bytes_bool( buf, len );
+		out code_bytes_bool( buf, rval );
 		alloc( buf, len );
 	}
 	
@@ -684,7 +684,7 @@ version.
 		SOCKET_LENGTH_TYPE *addrlength) : INDIRECT
 
 	#if defined(OSF1)
-		local_name(old_recvfrom);
+		, local_name(old_recvfrom);
 	#else
 		;
 	#endif
@@ -1115,11 +1115,13 @@ they should be built in the special "clipped" version.
                 alloc( fd, INT_SIZE );
         }
 
-	int get_buffer_info( int *bytes, int *block_size ) : pseudo {
+	int get_buffer_info( int *bytes, int *block_size, int *prefetch_size ) : pseudo {
 		out code( bytes );
 		alloc( bytes, INT_SIZE );
 		out code( block_size );
 		alloc( block_size, INT_SIZE );
+		out code( prefetch_size );
+		alloc( prefetch_size, INT_SIZE );
 	}
 	int get_iwd( char *path ) : pseudo {
 		GET_PATH( path );
