@@ -160,6 +160,7 @@ void _mkckpt( char *, char * );
 int SetSyscalls( int foo );
 int	get_machine_name(char*);
 int read_config(char*, char*, CONTEXT*, BUCKET**, int, int);
+char *get_schedd_addr(char *);
 }
 
 int
@@ -268,9 +269,15 @@ reschedule()
 	int			sock = -1;
 	int			cmd;
 	XDR			xdr, *xdrs = NULL;
+	char			*scheddAddr;
+
+	if ((scheddAddr = get_schedd_addr(ThisHost)) == NULL)
+	{
+		EXCEPT("Can't find schedd address on %s\n", ThisHost);
+	}
 
 		/* Connect to the schedd */
-	if( (sock = do_connect(ThisHost, "condor_schedd", SCHED_PORT)) < 0 ) {
+	if ((sock = do_connect(scheddAddr, "condor_schedd", SCHED_PORT)) < 0) {
 		dprintf(D_ALWAYS, "Can't connect to condor_schedd on %s\n", ThisHost);
 		return;
 	}
@@ -1516,9 +1523,10 @@ int SetSyscalls( int foo ) { return foo; }
 }
 
 #include "environ.h"
-
 extern "C" {
-#	include "user_log.h"
+#include "user_log.h"
+USER_LOG *InitUserLog(const char *own, const char *file, int c, int p, int s 
+);
 }
 
 void
@@ -1528,7 +1536,7 @@ log_submit()
 	char	*simple_name;
 	char	*path;
 	char	tmp[ _POSIX_PATH_MAX ];
-	USER_LOG	*usr_log;
+	USER_LOG	*usr_log;		/* XXX */
 	int		hours, minutes;
 
 		// Get name of user log file (if any)
@@ -1549,7 +1557,7 @@ log_submit()
 	get_time_conv( hours, minutes );
 
 		// Output the information
-	usr_log = OpenUserLog( Proc.owner, path, Proc.id.cluster, Proc.id.proc, 0 );
+	usr_log = InitUserLog( Proc.owner, path, Proc.id.cluster, Proc.id.proc, 0 );
 	PutUserLog( usr_log, SUBMIT, ThisHost, hours, minutes );
 	CloseUserLog( usr_log );
 }
