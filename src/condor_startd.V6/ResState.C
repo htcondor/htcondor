@@ -1,7 +1,6 @@
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
-
 ResState::ResState( Resource* rip )
 {
 	r_load_q = new LoadQueue(60);
@@ -39,95 +38,77 @@ ResState::update( ClassAd* cp )
 
 
 int
-ResState::change( State new_state )
+ResState::change( State new_state, Activity new_act )
 {
-	int val;
+	int statechange = FALSE, actchange = FALSE, now;
 
-	if( new_state == r_state ) {
+	if( new_state != r_state ) {
+		statechange = TRUE;
+	}
+	if( new_act != r_act ) {
+		actchange = TRUE;
+	}
+	if( ! (actchange || statechange) ) {
+		return TRUE;   // If we're not changing anything, return
+	}
+
+		// leave_action and enter_action return TRUE if they result in
+		// a state or activity change.  In these cases, we want to
+		// abort the current state change.
+	if( leave_action( r_state, r_act, statechange, actchange ) ) {
 		return TRUE;
 	}
 
-#if 0
-	if( ! is_valid( new_state ) ) {
-		print_error( new_state );
-		return FALSE;
-	} 
-#endif
-	dprintf( D_FULLDEBUG, "Changing state: %s -> %s\n",
-			 state_to_string(r_state), 
-			 state_to_string(new_state) );
-
-	r_state = new_state;
-	stime = (int)time( NULL );
-
-	switch( new_state ) {
-	case owner_state:
-			// Create a new match object.
-		delete rip->r_cur;
-		rip->r_cur = new Match;
-		if( rip->r_pre ) {
-			delete rip->r_pre;
-			rip->r_pre = NULL;
-		}
-
-			// See if we should be in owner or unclaimed state
-		val = rip->r_reqexp->eval();
-		if( val == 0 ) {
-				// Want to be in owner
-			rip->r_reqexp->unavail();		// Sets requirements to false
-			this->change( idle_act );
-			break;
-		} else {
-				// Really want to be in unclaimed.
-			return this->change( unclaimed_state );
-		}
-	case unclaimed_state:
-		rip->r_reqexp->pub();
-		this->change( idle_act );
-		break;
-	case matched_state:
-		rip->r_reqexp->unavail();		// Sets requirements to false
-		this->change( idle_act );
-		break;
-	case claimed_state:
-		rip->r_reqexp->pub();			
-		this->change( idle_act );
-			// Start a timer in case we don't get a keep alive for
-			// this claim 
-		rip->r_cur->start_claim_timer();	
-		break;
-	case preempting_state:
-		rip->r_reqexp->unavail();		// Sets requirements to false
-		if( wants_vacate(rip) ) {
-			vacate_claim( rip );
-		} else {
-				// Don't vacate, go directly to kill
-			kill_claim( rip );
-		}
-		break;
-	default:
-		EXCEPT( "unknown state in ResState::change" );
+	if( statechange && !actchange ) {
+		dprintf( D_FULLDEBUG, "Changing state: %s->%s\n",
+				 state_to_string(r_state), 
+				 state_to_string(new_state) );
+	} else if (actchange && !statechange ) {
+		dprintf( D_FULLDEBUG, "Changing activity: %s->%s\n",
+				 activity_to_string(r_act), 
+				 activity_to_string(new_act) );
+	} else {
+		dprintf( D_FULLDEBUG, 
+				 "Changing state and activity: %s->%s; %s->%s\n", 
+				 state_to_string(r_state), 
+				 state_to_string(new_state),
+				 activity_to_string(r_act), 
+				 activity_to_string(new_act) );
 	}
 
+ 	now = (int)time( NULL );
+	if( statechange ) {
+		stime = now;
+		r_state = new_state;
+	}
+	if( actchange ) {
+		load_activity_change();
+		r_act = new_act;
+		atime = now;
+	}
+
+	if( enter_action( r_state, r_act, statechange, actchange ) ) {
+		return TRUE;
+	}
+	
 		// Note our current state and activity in the classad
 	this->update( rip->r_classad );
 
-		// Since we did a state change, we need to update the Central
-		// Manager for this resource.
-	rip->update();
+	if( statechange ) {
+		rip->update();   // We want to update the CM on every state change
+	}
 
 		// If Condor is using this resource, i.e. claimed, matched or
 		// preempting states, we want to poll the resource and
 		// evaluate it's state frequently (POLLING_INTERVAL from the
 		// config file, defaults to 5 seconds).  Otherwise, we only
 		// need to evaluate the state when we're going to do an
-		// update. 
+		// update.   -- should this be in enter/leave_action ?
 	if( rip->in_use() ) {
 		rip->start_poll_timer();
 	} else {
 		rip->cancel_poll_timer();
 	}
-
 	return TRUE;
 }
 
@@ -135,30 +116,22 @@ ResState::change( State new_state )
 int
 ResState::change( Activity new_act )
 {
-	if( r_act == new_act ) {
-		return TRUE;
+	return change( r_state, new_act );
+}
+
+
+int
+ResState::change( State new_state )
+{
+	if( new_state == preempting_state ) {
+		if( rip->wants_vacate() ) {
+			return change( new_state, vacating_act );
+		} else {
+			return change( new_state, killing_act );
+		}
+	} else {
+		return change( new_state, idle_act );
 	}
-
-#if 0
-	if( ! is_valid( new_act ) ) {
-		print_error( new_act );
-		return FALSE;
-	} 
-#endif 0
-
-	dprintf( D_FULLDEBUG, "Changing activity: %s -> %s\n",
-			 activity_to_string(r_act), 
-			 activity_to_string(new_act) );
-	
-	load_activity_change();
-
-	r_act = new_act;
-	atime = (int)time( NULL );
-
-		// Update our current state and activity in the classad
-	this->update( rip->r_classad );
-
-	return TRUE;
 }
 
 
@@ -173,77 +146,48 @@ ResState::eval()
 	switch( r_state ) {
 
 	case claimed_state:
-		want_suspend = wants_suspend( rip );
+		want_suspend = rip->wants_suspend();
 		if( ((r_act == busy_act) && (!want_suspend)) ||
 			(r_act == suspended_act) ) {
-			if( eval_vacate( rip ) || eval_kill( rip ) ) {
-					// STATE TRANSITION #15 or #16
-				return release_claim( rip );
+					// STATE TRANSITION #15 or #16 (need renumbering)
+			if( rip->eval_kill() ) {
+				return change( preempting_state, killing_act );  
+			}
+			if( rip->eval_vacate() ) {
+				return change( preempting_state, vacating_act ); 
 			}
 		}
 		if( (r_act == busy_act) && want_suspend ) {
-			if( eval_suspend( rip ) ) {
+			if( rip->eval_suspend() ) {
 				// STATE TRANSITION #12
-				return suspend_claim( rip );
+				return change( suspended_act );
 			}
 		}
 		if( r_act == suspended_act ) {
-			if( eval_continue( rip ) ) {
+			if( rip->eval_continue() ) {
 				// STATE TRANSITION #13
-				return continue_claim( rip );
+				return change( busy_act );
 			}
 		}
 		if( (r_act == idle_act) && (rip->r_reqexp->eval() == 0) ) {
 				// STATE TRANSITION #14
-			return release_claim( rip );
+			return change( preempting_state ); 
 		}
 		break;   // case claimed_state:
 
 	case preempting_state:
 		if( r_act == vacating_act ) {
-			if( eval_kill( rip ) ) {
+			if( rip->eval_kill() ) {
 					// STATE TRANSITION #18
-				return kill_claim( rip );
+				return change( killing_act );
 			}
-		}
-		if( r_act == idle_act ) {
-			ClassAd* cp = rip->r_classad;
-			cp->Delete( ATTR_CLIENT_MACHINE );
-			cp->Delete( ATTR_REMOTE_USER );
-			cp->Delete( ATTR_JOB_START );
-			cp->Delete( ATTR_JOB_ID );
-			cp->Delete( ATTR_JOB_UNIVERSE );
-			cp->Delete( ATTR_LAST_PERIODIC_CHECKPOINT );
-			delete rip->r_cur;
-			rip->r_cur = NULL;
-
-				// In english:  "If the owner wants the machine
-				// back, or there's no one waiting..."
-			if( (rip->r_reqexp->eval() == 0) ||
-				( ! (rip->r_pre && rip->r_pre->agentstream()) ) ) {
-
-					// STATE TRANSITION #21
-				rip->r_cur = new Match;
-				if( rip->r_pre ) {
-					rip->r_pre->vacate();
-					delete rip->r_pre;
-					rip->r_pre = NULL;
-				}
-				return rip->r_state->change( owner_state );
-			}
-			if( rip->r_pre && rip->r_pre->agentstream() ) {
-				rip->r_cur = rip->r_pre;
-				rip->r_pre = NULL;
-					// STATE TRANSITION #20
-				accept_request_claim( rip );
-			} 
 		}
 		break;	// case preempting_state:
 
 	case unclaimed_state:
 		// See if we should be owner or unclaimed
 		if( rip->r_reqexp->eval() == 0 ) {
-			this->change( owner_state );
+			return change( owner_state );
 		}
 			// Check to see if we should run benchmarks
 		deal_with_benchmarks( rip );
@@ -415,156 +359,146 @@ LoadQueue::setval( char val )
 	head = 0;
 }
 
-//////////////////////////////////////////////////////////////////////
-//  DEAD CODE
-//////////////////////////////////////////////////////////////////////
-#if 0
-bool
-ResState::is_valid( State new_state )
+
+int
+ResState::leave_action( State s, Activity a, 
+						int statechange, int ) 
 {
-	if( r_state == new_state ) {
-		return true;
+	ClassAd* cp;
+	switch( s ) {
+
+	case preempting_state:
+		cp = rip->r_classad;
+		cp->Delete( ATTR_CLIENT_MACHINE );
+		cp->Delete( ATTR_REMOTE_USER );
+		cp->Delete( ATTR_JOB_START );
+		cp->Delete( ATTR_JOB_ID );
+		cp->Delete( ATTR_JOB_UNIVERSE );
+		cp->Delete( ATTR_LAST_PERIODIC_CHECKPOINT );
+		break;
+	case matched_state:
+	case owner_state:
+	case unclaimed_state:
+		break;
+	case claimed_state:
+		if( a == suspended_act ) {
+			if( rip->r_starter->kill( DC_SIGCONTINUE ) < 0 ) {
+					// Error.  We already have an error message.
+					// Should we do anything else?
+			}
+		}
+		if( statechange ) {
+			rip->r_cur->cancel_claim_timer();	
+		}
+		break;
+	default:
+		EXCEPT("Unknown state in ResState::leave_action");
 	}
 
-	switch( r_state ) {
-	case owner_state:
-		assert( r_act == idle_act );
-		if( new_state == unclaimed_state ) {
-			return true;
-		} else {
-			return false;
-		}
-	case unclaimed_state:
-		if( r_act != idle_act ) {
-			return false;
-		}
-		switch( new_state ) {
-		case matched_state:
-		case claimed_state:
-			return true;
-		default:
-			return false;
-		}
-	case matched_state:
-		assert( r_act == idle_act );
-		switch( new_state ) {
-		case owner_state:
-		case claimed_state:
-			return true;
-		default:
-			return false;
-		}
-	case claimed_state:
-		if( new_state == preempting_state ) {
-			return true;
-		} else {
-			return false;
-		}
-	case preempting_state:
-		if(	r_act != idle_act ) {
-			return false;
-		}
-		switch( new_state ) {
-		case claimed_state:
-		case owner_state:
-			return true;
-		default:
-			return false;
-		}
-	}			
+	return FALSE;
 }
 
 
-bool
-ResState::is_valid( Activity new_act )
-{
-	if( r_act == new_act ) {
-		return true;
-	}
+int
+ResState::enter_action( State s, Activity a,
+						int statechange, int ) 
 
-	switch( r_state ) {
+{
+	switch( s ) {
 	case owner_state:
-		if( new_act == idle_act) {
-			return true;
-		} else {
-			return false;
+			// Always want to create new match objects
+		if( rip->r_cur ) {
+			delete( rip->r_cur );
 		}
-	case unclaimed_state:
-		if( (r_act == idle_act && new_act == benchmarking_act) ||
-			(r_act == benchmarking_act && new_act == idle_act) ) {
-			return true;
-		} else {
-			return false;
+		rip->r_cur = new Match;
+		if( rip->r_pre ) {
+			delete rip->r_pre;
+			rip->r_pre = NULL;
 		}
-	case matched_state:
-		if( new_act == idle_act) {
-			return true;
-		} else {
-			return false;
+			// See if we should be in owner or unclaimed state
+		if( rip->r_reqexp->eval() != 0 ) {
+				// Really want to be in unclaimed.
+			return this->change( unclaimed_state );
 		}
+		rip->r_reqexp->unavail();		
+		break;
+
 	case claimed_state:
-		switch( r_act ) {
-		case idle_act:
-		case suspended_act:
-			if( new_act == busy_act ) {
-				return true;
-			} else {
-				return false;
-			}
-		case busy_act:
-			if( new_act == idle_act || new_act == suspended_act ) {
-				return true;
-			} else {
-				EXCEPT( "unknown activity in claimed state" );
-			}
-		default: 
-			EXCEPT( "unknown activity in claimed state" );
+		rip->r_reqexp->pub();			
+		if( statechange ) {
+			rip->r_cur->start_claim_timer();	
 		}
+		break;
+
+	case unclaimed_state:
+		rip->r_reqexp->pub();
+		if( a == suspended_act ) {
+			if( rip->r_starter->kill( DC_SIGSUSPEND ) < 0 ) {
+					// Error.  We already have an error message.
+					// Should we do anything else?
+			}
+		}
+		break;
+
+	case matched_state:
+		rip->r_reqexp->unavail();
+		break;
+
 	case preempting_state:
-		switch( r_act ) {
+		rip->r_reqexp->unavail();
+		switch( a ) {
+		case idle_act:
+			delete rip->r_cur;
+			rip->r_cur = NULL;
+
+				// In english:  "If the owner wants the machine
+				// back, or there's no one waiting..."
+			if( (rip->r_reqexp->eval() == 0) ||
+				( ! (rip->r_pre && rip->r_pre->agentstream()) ) ) {
+
+					// STATE TRANSITION #21
+				if( rip->r_pre ) {
+					rip->r_pre->vacate();
+					delete rip->r_pre;
+					rip->r_pre = NULL;
+				}
+				change( owner_state );
+				return TRUE;
+			}
+			if( rip->r_pre && rip->r_pre->agentstream() ) {
+				rip->r_cur = rip->r_pre;
+				rip->r_pre = NULL;
+					// STATE TRANSITION #20
+				accept_request_claim( rip );
+				return TRUE;
+			} 
+			break;  // idle_act
 		case killing_act:
-			if( new_act == idle_act ) {
-				return true;
+			if( rip->r_starter->active() ) {
+				rip->r_starter->kill( DC_SIGHARDKILL );
 			} else {
-				return false;
+				return change( idle_act );
 			}
+			break;
+
 		case vacating_act:
-			if( new_act == idle_act || new_act == killing_act ) {
-				return true;
+			if( rip->r_starter->active() ) {
+				rip->r_starter->kill( DC_SIGSOFTKILL );
 			} else {
-				EXCEPT( "unknown activity in preempting state" );
+				return change( idle_act );
 			}
-		case idle_act:
-			return false;
-		default: 
-			EXCEPT( "unknown activity in preempting state" );
+			break;
+
+		default:
+			EXCEPT( "Unknown activity in ResState::enter_action" );
 		}
+		break; 	// preempting_state
+
+	default: 
+		EXCEPT("Unknown state in ResState::enter_action");
 	}
+
+	return FALSE;
 }
 
-
-void
-ResState::print_error( State new_state )
-{
-	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
-	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
-			 state_to_string(r_state),
-			 activity_to_string(r_act) );
-	dprintf( D_ALWAYS, "requested state: %s.\n", 
-			 state_to_string(new_state) );
-}
-
-
-void
-ResState::print_error( Activity new_act )
-{
-	dprintf( D_ALWAYS, "Illegal state/activity change.\n" );
-	dprintf( D_ALWAYS, "current state/activity: %s / %s.\n",
-			 state_to_string(r_state),
-			 activity_to_string(r_act) );
-	dprintf( D_ALWAYS, "requested activity: %s.\n", 
-			 activity_to_string(new_act) );
-}
-
-#endif
 

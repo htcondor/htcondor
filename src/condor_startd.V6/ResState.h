@@ -27,6 +27,7 @@ public:
 	void	update( ClassAd* );
 	int		change( Activity );
 	int		change( State );
+	int		change( State, Activity );
 	int 	eval();
 	float	condor_load();
 private:
@@ -40,12 +41,8 @@ private:
 		// Function called on every activity change which update the load_q
 	void	load_activity_change();  
 
-#if 0
-	bool	is_valid( State );
-	bool	is_valid( Activity );
-	void	print_error( State );
-	void	print_error( Activity );
-#endif
+	int		enter_action( State, Activity, int, int );
+	int		leave_action( State, Activity, int, int );
 };
 
 #endif _RES_STATE_H
