@@ -334,30 +334,34 @@ UserLog::restore_id()
 static void
 switch_ids( uid_t new_euid, gid_t new_egid )
 {
-		/* First set euid to root so we have privilege to do this */
-	if( seteuid(0) < 0 ) {
-		fprintf( stderr, "Can't set euid to root\n" );
-		exit( errno );
-	}
+	    /* need to be root to seteuid(0) */
+	if (getuid() == 0) {
 
-		/* Now set the egid as desired */
-	if( setegid(new_egid) < 0 ) {
-		fprintf( stderr, "Can't set egid to %d\n", new_egid );
-		exit( errno );
-	}
+		    /* First set euid to root so we have privilege to do this */
+		if( seteuid(0) < 0 ) {
+			dprintf( D_ALWAYS, "Can't set euid to root\n" );
+			return;
+		}
 
-		/* Now set the euid as desired */
-	if( seteuid(new_euid) < 0 ) {
-		fprintf( stderr, "Can't set euid to %d\n", new_euid );
-		exit( errno );
+		    /* Now set the egid as desired */
+		if( setegid(new_egid) < 0 ) {
+			dprintf( D_ALWAYS, "Can't set egid to %d\n", new_egid );
+			return;
+		}
+
+		    /* Now set the euid as desired */
+		if( seteuid(new_euid) < 0 ) {
+			dprintf( D_ALWAYS, "Can't set euid to %d\n", new_euid );
+			return;
+		}
 	}
 }
 
 static void
 display_ids()
 {
-	fprintf( stderr, "ruid = %d, euid = %d\n", getuid(), geteuid() );
-	fprintf( stderr, "rgid = %d, egid = %d\n", getgid(), getegid() );
+	dprintf( D_ALWAYS, "ruid = %d, euid = %d\n", getuid(), geteuid() );
+	dprintf( D_ALWAYS, "rgid = %d, egid = %d\n", getgid(), getegid() );
 }
 
 extern "C" LP *
