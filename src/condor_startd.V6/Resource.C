@@ -772,6 +772,9 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in machine-wide attributes 
 	resmgr->m_attr->publish( cap, mask );
 
+		// Put in ResMgr-specific attributes 
+	resmgr->publish( cap, mask );
+
 		// Put in state info
 	r_state->publish( cap, mask );
 
