@@ -331,6 +331,10 @@ protected:
 		/// Helper methods.
 		// //////////////////////////////////////////////////////////
 
+		/** Initializes the object.
+		  */
+	void common_init();
+
 		/** Helper for regular daemons (schedd, startd, master).
 		  This does all the real work of finding the right address,
 		  port, ip_addr, etc.  We check for address files, and query

@@ -39,7 +39,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 
-Daemon::common_init() {
+void Daemon::common_init() {
 	_type = DT_NONE;
 	_port = 0;
 	_is_local = false;
