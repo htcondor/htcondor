@@ -10,8 +10,9 @@
 #endif
 
 #if defined(OSF1)
-/* We need to temporarily define _OSF_SOURCE so that type quad, and
-   u_int and friends get defined */
+/* We need to define _OSF_SOURCE so that type quad, and
+   u_int and friends get defined.  We should leave it on since we'll
+   need it later as well.*/
 #define _OSF_SOURCE
 #endif
 
@@ -59,7 +60,6 @@ we should use memset().
 #if defined(OSF1)
 #undef FD_ZERO
 #define FD_ZERO(p)     memset((char *)(p), 0, sizeof(*(p)))
-#undef _OSF_SOURCE
 #endif
 
 /*
