@@ -1333,12 +1333,34 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					false, false, true, false, false);
 				return;
 			}
-			int kill_sig;
-			kill_sig = findRmKillSig( job_ad );
+			int kill_sig = -1;
+			switch( action ) {
+			case JA_HOLD_JOBS:
+					// for now, use the same as remove
+			case JA_REMOVE_JOBS:
+				kill_sig = findRmKillSig( job_ad );
+				break;
+
+			case JA_VACATE_JOBS:
+				kill_sig = findSoftKillSig( job_ad );
+				break;
+
+			case JA_VACATE_FAST_JOBS:
+				kill_sig = SIGKILL;
+				break;
+
+			default:
+				EXCEPT( "bad action (%d %s) in abort_job_myself()",
+						(int)action, getJobActionString(action) );
+
+			}
+
+				// if we don't have an action-specific kill_sig yet,
+				// fall back on the regular ATTR_KILL_SIG
 			if( kill_sig <= 0 ) {
-					// Fall back on the regular ATTR_KILL_SIG
 				kill_sig = findSoftKillSig( job_ad );
 			}
+				// if we still don't have anything, default to SIGTERM
 			if( kill_sig <= 0 ) {
 				kill_sig = SIGTERM;
 			}
