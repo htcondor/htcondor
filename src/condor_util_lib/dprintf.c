@@ -346,7 +346,8 @@ debug_lock(int debug_level)
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
 #endif
-			fprintf(stderr, "Could not open DebugFile <%s>\n", DebugFile);
+			fprintf( stderr, "Could not open DebugFile <%s>\n", 
+					 DebugFile[debug_level] );
 			_condor_dprintf_exit();
 		}
 			/* Seek to the end */
