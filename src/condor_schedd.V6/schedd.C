@@ -4246,7 +4246,7 @@ Scheduler::invalidate_ads()
 	for( i=0; i<N_Owners; i++ ) {
 		sprintf( line, "%s == \"%s@%s\"", ATTR_NAME, Owners[i].Name,
 				 UidDomain ); 
-		query.addCustom( line );
+		query.addCustomOR( line );
 	}
 		// This will overwrite the Requirements expression in ad.
 	query.makeQuery( *ad );
