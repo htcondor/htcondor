@@ -1,4 +1,4 @@
-#define AllFiles etc include lib bin sbin man
+#define AllFiles etc include src lib bin sbin man 
 
 #define AdminTools sbin/condor_off sbin/condor_on sbin/condor_reconfig \
   sbin/condor_restart sbin/condor_master_off sbin/condor_preen
@@ -93,6 +93,7 @@ TEST_SUITE_C = test_suite_C.V5
 #define StaticDirectories \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
 	static_dir/etc static_dir/etc/examples static_dir/include \
+	static_dir/src static_dir/src/chirp \
 	static_dir/man static_dir/man/man1 \
 	static_contrib static_contrib/bin static_contrib/lib \
 	static_contrib/sbin static_contrib/etc \
@@ -104,9 +105,11 @@ TEST_SUITE_C = test_suite_C.V5
 #define Directories \
 	html condor_release \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
-	release_dir/include release_dir/man release_dir/man/man1 pure_bin \
+	release_dir/include release_dir/src release_dir/src/chirp \
+	release_dir/man release_dir/man/man1 pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
+	strip_dir/src strip_dir/src/chirp \
 	strip_dir/man strip_dir/man/man1 \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
@@ -128,6 +131,8 @@ simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/include)
+simple_dir_target(release_dir/src)
+simple_dir_target(release_dir/src/chirp)
 simple_dir_target(release_dir/man)
 simple_dir_target(release_dir/man/man1)
 
@@ -140,6 +145,8 @@ simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
 simple_dir_target(strip_dir/include)
+simple_dir_target(strip_dir/src)
+simple_dir_target(strip_dir/src/chirp)
 simple_dir_target(strip_dir/man)
 simple_dir_target(strip_dir/man/man1)
 
@@ -159,6 +166,8 @@ simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
 simple_dir_target(static_dir/include)
+simple_dir_target(static_dir/src)
+simple_dir_target(static_dir/src/chirp)
 simple_dir_target(static_dir/man)
 simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_contrib)
