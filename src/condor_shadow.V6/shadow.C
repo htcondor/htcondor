@@ -799,9 +799,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
-						Proc->status);
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
+		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
+		//				Proc->status);
+		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 
 		rusage_to_float( Proc->local_usage, &utime, &stime );
 		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_USER_CPU, 
@@ -1029,12 +1029,12 @@ DoCleanup()
 			status = IDLE;
 		}
 		dprintf(D_FULLDEBUG, "Shadow: setting CurrentHosts back to 0\n");
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS,0);
+		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS,0);
 		Proc->image_size = ImageSize;
 		Proc->status = status;
 
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
-						status);
+		// SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
+		//				status);
 		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
 
