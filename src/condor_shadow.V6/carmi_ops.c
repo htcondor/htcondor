@@ -654,7 +654,7 @@ int pseudo_carmi_class_spawn(char *executable, char **argv, char *class_name,
   int hostid;
   int found = 0;
   AcptLIST* hostnode;
-  char arg_str[90];
+  char arg_str[_POSIX_ARG_MAX];
   pid_t pid;
 
   dprintf(D_ALWAYS, "CARMI_CLASS_SPAWN(%s, argv, %s, %d) \n", executable, class_name, resp_tag);

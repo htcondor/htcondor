@@ -680,9 +680,18 @@ void
 SetArguments()
 {
 	char	*args = condor_param(Arguments);
+	char	argbuf[_POSIX_ARG_MAX + 64];
 
 	if( args == NULL ) {
 		args = "";
+	}
+
+	if (strlen(args) > _POSIX_ARG_MAX) {
+		fprintf(stderr, "ERROR: arguments are too long:\n"
+				"\tPosix limits argument lists to %d bytes\n",
+				_POSIX_ARG_MAX);
+		DoCleanup();
+		exit( 1 );
 	}
 
 	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
