@@ -122,3 +122,191 @@ patch_registers( void *generic_ptr )
 {
 	//Any Needed??  Don't think so.
 }
+
+#ifdef LINUX_SUPPORTS_SHARED_LIBRARIES
+
+// Support for shared library linking
+// Written by Michael J. Greger (greger@cae.wisc.edu) August, 1996
+// Based on Solaris port by Mike Litzkow
+
+
+struct map_t {
+	long	mem_start;
+	long	mem_end;
+	long	offset;
+	int		prot;
+	int		flags;
+	int		inode;
+	char	r, w, x, p;
+};
+
+static map_t	my_map[MAX_SEGS];
+static int		map_count=0;
+static int		text_loc=-1, stack_loc=-1, heap_loc=-1;
+
+int find_map_for_addr(long addr)
+{
+	int		i;
+
+	/*fprintf(stderr, "Finding map for addr:0x%x (map_cnt=%d)\n", addr, map_count);*/
+	for(i=0;i<map_count;i++) {
+		/*fprintf(stderr, "0x%x 0x%x\n", my_map[i].mem_start, my_map[i].mem_end);*/
+		if(addr >= my_map[i].mem_start && addr <= my_map[i].mem_end) {
+			/*fprintf(stderr, "  Found:%d\n", i);*/
+			return i;
+		}
+	}
+	/*fprintf(stderr, "  NOT Found\n");*/
+	return -1;
+}
+
+
+int num_segments()
+{
+	FILE	*pfs;
+	char	proc[128];
+	char	rperm, wperm, xperm, priv;
+	int		scm;
+	int		num_seg=0;
+	int		major, minor, inode;
+	int		mem_start, mem_end;
+	int		offset;
+	char	e, f;
+
+
+	scm=SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
+
+	sprintf(proc, "/proc/%d/maps", syscall(SYS_getpid));
+	pfs=fopen(proc, "r");
+	if(!pfs) {
+		SetSyscalls(scm);
+		return -1;
+	}
+
+	// Count the numer of mmapped files in use by the executable
+	while(1) {
+		int result = fscanf(pfs, "%x-%x %c%c%c%c %x %d:%d %d\n",
+			&mem_start, &mem_end, &rperm, &wperm,
+			&xperm, &priv, &offset, &major, &minor, &inode);
+
+		if(result!=10) break;
+
+		/*fprintf(stderr, "0x%x 0x%x %c%c%c%c 0x%x %d:%d %d\n", 
+			mem_start, mem_end, rperm, wperm, xperm, priv,
+			offset, major, minor, inode);*/
+		my_map[num_seg].mem_start=mem_start;
+		my_map[num_seg].mem_end=mem_end-1;
+		/* FIXME - Greger */
+		if(my_map[num_seg].mem_end-my_map[num_seg].mem_start==0x34000-1)
+			my_map[num_seg].mem_end=my_map[num_seg].mem_start+0x320ff;
+		my_map[num_seg].offset=offset;
+		my_map[num_seg].prot=(rperm=='r'?PROT_READ:0) |
+							 (wperm=='w'?PROT_WRITE:0) |
+							 (xperm=='x'?PROT_EXEC:0);
+		my_map[num_seg].flags=(priv=='p'?:0);
+		my_map[num_seg].inode=inode;
+		my_map[num_seg].r=rperm;
+		my_map[num_seg].w=wperm;
+		my_map[num_seg].x=xperm;
+		my_map[num_seg].p=priv;
+		num_seg++;
+	}
+	fclose(pfs);
+
+	map_count=num_seg;
+	text_loc=find_map_for_addr((long)num_segments);
+	if(StackGrowsDown())
+		stack_loc=find_map_for_addr((long)stack_end_addr());
+	else
+		stack_loc=find_map_for_addr((long)stack_start_addr());
+	heap_loc=find_map_for_addr((long)data_start_addr());
+
+	/*fprintf(stderr, "%d segments\n", num_seg);*/
+	SetSyscalls(scm);
+	return num_seg;
+}
+
+int segment_bounds(int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot)
+{
+	start=(long)my_map[seg_num].mem_start;
+	end=(long)my_map[seg_num].mem_end;
+	prot=my_map[seg_num].prot;
+	if(seg_num==text_loc)
+		return 1;
+	else if(seg_num==stack_loc)
+		return 2;
+	else if(seg_num==heap_loc || 
+		(my_map[seg_num].mem_start >= data_start_addr() &&
+		 my_map[seg_num].mem_start <= data_end_addr()))
+	 	return 3;
+	//else if(!my_map[seg_num].inode)
+		//return 1;
+
+	return 0;
+}
+
+struct ma_flags {
+	int 	flag_val;
+	char	*flag_name;
+};
+
+void display_prmap()
+{
+	int		i;
+
+	for(i=0;i<map_count;i++) {
+		dprintf(D_ALWAYS, "addr= 0x%p, size= 0x%lx, offset= 0x%x\n",
+			my_map[i].mem_start, my_map[i].mem_end-my_map[i].mem_start,
+			my_map[i].offset);
+		dprintf(D_ALWAYS, "Flags: %c%c%c%c inode %d\n", 
+			my_map[i].r, my_map[i].w, my_map[i].x, my_map[i].p,
+			my_map[i].inode);
+	}
+}
+
+/*
+ * This is a hack!  The values found in /proc/pid/maps do not always seem
+ * to be correct.  This function works its way down from the end addr
+ * until it finds an addr that we can read from... - Greger
+ */
+unsigned long find_correct_vm_addr(unsigned long start, unsigned long end,
+	int prot)
+{
+	int scm=SetSyscalls(SYS_LOCAL | SYS_UNMAPPED);
+
+	if((mprotect((char *)start, end-start, PROT_READ))==0) {
+		/*
+		 * We were allowed to do read access to the chunk.  Change
+		 * protection back to what it was before the call.
+		 */
+		if((mprotect((char *)start, end-start, prot))==0) {
+			SetSyscalls(scm);
+			return end;
+		} else {
+			dprintf(D_ALWAYS, "Fatal error, Can't restore memory protection\n");
+		}
+	} else {
+		/*
+		 * We were not allowed read permission to the whole block.  Find
+		 * a smaller block that we do have access to...
+		 */
+		for(;end>start;end-=4) { /* Most lib stuff is alligned on 4 bytes or less??... */
+			if((mprotect((char *)start, end-start, PROT_READ))==0) {
+				/*
+		 		* We were allowed to do read access to the chunk.  Change
+		 		* protection back to what it was before the call.
+		 		*/
+				if((mprotect((char *)start, end-start, prot))==0) {
+					SetSyscalls(scm);	
+					return end;
+				} else {
+					dprintf(D_ALWAYS, "Fatal error, Can't restore memory protection\n");
+				}
+			}
+		}
+		dprintf(D_ALWAYS, "Fatal error, Can't read any of this block\n");
+	}
+	SetSyscalls(scm);
+}
+
+#endif

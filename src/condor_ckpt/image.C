@@ -35,10 +35,9 @@
 #include "file_table_interf.h"
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
+#include "signals_control.h"
 
-/* XXX hack! */
-/*#define dprintf mydprintf*/
-
+static char *_FileName_ = __FILE__;
 
 extern int _condor_in_file_stream;
 
@@ -68,6 +67,25 @@ extern "C" {
 }
 #endif
 
+#if defined(OSF1)
+	extern "C" unsigned int htonl( unsigned int );
+	extern "C" unsigned int ntohl( unsigned int );
+#elif defined(HPUX)
+#	include <netinet/in.h>
+#elif defined(Solaris) && defined(sun4m)
+	#define htonl(x)		(x)
+	#define ntohl(x)		(x)
+#elif defined(Solaris)
+	/* Already included it */
+#elif defined(IRIX)
+	#include <sys/endian.h>
+#elif defined(LINUX)
+	#include <netinet/in.h>
+#else
+	extern "C" unsigned long htonl( unsigned long );
+	extern "C" unsigned long ntohl( unsigned long );
+#endif
+
 #if defined(HPUX10)
 extern "C" int _sigreturn();
 #endif
@@ -80,8 +98,6 @@ extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" int get_ckpt_mode( int sig );
 extern "C" int get_ckpt_speed( );
-extern "C" sigset_t condor_block_signals();
-extern "C" void condor_restore_sigmask(sigset_t);
 
 Image MyImage;
 static jmp_buf Env;
@@ -374,8 +390,7 @@ _condor_prestart( int syscall_mode )
 {
 	MyImage.SetMode( syscall_mode );
 
-		// Initialize open files table
-	InitFileState();
+	_condor_file_table_init();
 
 		// Install initial signal handlers
 	_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
@@ -458,7 +473,7 @@ Image::Save()
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
-	int			 numsegs, prot, rtn, stackseg=-1;
+	int             numsegs, prot, rtn, stackseg=-1;
 #endif
 	RAW_ADDR	data_start, data_end;
 	ssize_t		pos;
@@ -555,7 +570,7 @@ Image::Save()
 			Suicide();
 		}
 	}	
-	   
+
 	if(stackseg==-1) {
 		dprintf(D_ALWAYS,"Image::Save: Never found stackseg!\n");
 		Suicide();
@@ -575,6 +590,7 @@ Image::Save()
 	pos = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
 	for( i=0; i<head.N_Segs(); i++ ) {
 		pos = map[i].SetPos( pos );
+		dprintf( D_ALWAYS,"Pos: %d\n",pos);
 	}
 
 	if( pos < 0 ) {
@@ -855,6 +871,8 @@ RestoreStack()
 		zbuf = Z_NULL;
 	}
 #endif
+
+	_condor_signals_enable();
 
 	LONGJMP( Env, 1 );
 }
@@ -1476,7 +1494,7 @@ Checkpoint( int sig, int code, void *scp )
 		// But condor_block_signals() could call library functions which may not
 		// yet be mapped in if we received the checkpoint signal during restart.
 		// -Todd, 12/99
-	sigset_t omask = condor_block_signals();
+	_condor_signals_disable();
 
 	InRestart = TRUE;	// not strictly true, but needed in our saved data
 	check_sig = sig;
@@ -1553,7 +1571,15 @@ Checkpoint( int sig, int code, void *scp )
 		condor_save_sigstates();
 		dprintf( D_ALWAYS, "Done saving signal state\n" );
 #endif
-		SaveFileState();
+
+		if( sig==SIGTSTP ) {
+			// Suspend all operations and save files
+			_condor_file_table_suspend();
+		} else {
+			// A periodic safety checkpoint
+			_condor_file_table_checkpoint();
+		}
+
 		MyImage.Save();
 		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
@@ -1598,7 +1624,9 @@ Checkpoint( int sig, int code, void *scp )
 			} else {
 				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 			}
-			RestoreFileState();
+
+			_condor_file_table_resume();
+
 			dprintf( D_ALWAYS, "Done restoring files state\n" );
 			int mode = get_ckpt_mode(0);
 			if (mode > 0) {
@@ -1666,7 +1694,7 @@ Checkpoint( int sig, int code, void *scp )
 		SetSyscalls( scm );
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
-		condor_restore_sigmask(omask);
+		_condor_signals_enable();
 		return;
 	}
 }

@@ -211,7 +211,6 @@ MAIN( int argc, char *argv[], char **envp )
 	if( should_restart ) {
 		restart();
 	} else {
-		Set_CWD( init_working_dir2 );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
 #if defined(HPUX)
@@ -264,47 +263,3 @@ condor_get_executable_name()
 {
 	return executable_name;
 }
-
-
-int
-ioserver_open(const char *path, int oflag, mode_t mode)
-{
-	return -1;
-}
-
-off_t
-ioserver_lseek(int filedes, off_t offset, int whence)
-{
-	return -1;
-}
-
-int
-ioserver_close(int filedes)
-{
-	return -1;
-}
-
-#if !defined( HAS_DYNAMIC_USER_JOBS )
-
-
-/* static ckpting needs to have these always fail so no dynamic segments
-	get created */
-int
-__mmap()
-{
-	return -1;
-}
-
-int
-_mmap()
-{
-	return -1;
-}
-
-int
-mmap()
-{
-	return -1;
-}
-
-#endif
