@@ -65,7 +65,8 @@ sub ReadConfig( $$ )
     {
 	chomp $String;
 	$String =~ s/\"//g;
-	return lc( $String );
+	#return lc( $String );
+	return $String;
     }
 }
 
