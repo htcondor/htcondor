@@ -24,6 +24,7 @@
 #include "authentication.h"
 #include "condor_auth_x509.h"
 #include "environ.h"
+#include "globus_utils.h"
 
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
@@ -36,9 +37,8 @@
 #include "credential.h"
 extern DLL_IMPORT_MAGIC char **environ;
 
-#ifdef GSS_AUTHENTICATION
+#ifdef X509_AUTHENTICATION
 
-#define DEFAULT_MIN_TIME_LEFT 8*60*60;
 #define MAX_CRED_NAME 256
 
 X509_Credential :: X509_Credential(){}
@@ -249,123 +249,35 @@ int X509_Credential :: receive_credential(ReliSock *sock, char* name)
 }
 
 
- void  X509_Credential ::  erase_env()
- {
-   int i,j;
-   char *temp=NULL,*temp1=NULL;
-   for (i=0;environ[i] != NULL;i++)
-     {
+void  X509_Credential :: erase_env()
+{
+	int i,j;
+	char *temp=NULL,*temp1=NULL;
+	for (i=0;environ[i] != NULL;i++) {
 
-       temp1 = (char*)strdup(environ[i]);
-       if (!temp1)
-	   	return;
-       temp = (char*)strtok(temp1,"=");
-       if (temp && !strcmp(temp, "X509_USER_PROXY" ))
-	   		break;
-    }
-   for (j = i;environ[j] != NULL;j++)
-	   environ[j] = environ[j+1];
-   return;
- }
+		temp1 = (char*)strdup(environ[i]);
+		if (!temp1) {
+			return;
+		}
+		temp = (char*)strtok(temp1,"=");
+		if (temp && !strcmp(temp, "X509_USER_PROXY" )) {
+			break;
+		}
+	}
+	for (j = i;environ[j] != NULL;j++) {
+		environ[j] = environ[j+1];
+	}
+	return;
+}
 
 bool X509_Credential :: isvalid()
 {
 	int result = check_x509_proxy(crd_name);
-	if (!result )
+	if (!result ) {
 		return TRUE;
-	else
-		return FALSE;
-}
-
-
-int X509_Credential :: check_x509_proxy( char *proxy_file )
-{
-#if !defined(GSS_AUTHENTICATION)
-
-	fprintf( stderr, "This version of Condor doesn't support X509 authentication!\n" );
-	return 1;
-
-#else
-
-	char *min_time_left_param = NULL;
-	int min_time_left;
-	proxy_cred_desc *pcd = NULL;
-	time_t time_after;
-	time_t time_now;
-	time_t time_diff;
-	ASN1_UTCTIME *asn1_time = NULL;
-	struct stat stx;
-
-	/* initialize SSLeay and the error strings */
-	ERR_load_prxyerr_strings(0);
-	SSLeay_add_ssl_algorithms();
-
-    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
-
-    if (!pcd) {
-        dprintf(D_ALWAYS,"ERROR: unable to initialize globus\n");
-        return 1;
-    }
-
-	/* Load proxy */
-	if (!proxy_file) {
-		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
-	}
-
-	if (!proxy_file) {
-		fprintf(stderr,"ERROR: unable to determine proxy file name\n");
-		return 1;
-	}
-
-	if (stat(proxy_file,&stx) != 0) {
-		fprintf(stderr, "ERROR: file %s not found\n",proxy_file);
-		return 1;
-	}
-
-	pcd = proxy_cred_desc_new();
-	if (!pcd) {
-		fprintf(stderr,"ERROR: problem during internal initialization\n");
-		return 1;
-	}
-
-	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
-		fprintf(stderr,"ERROR: unable to load proxy");
-		return 1;
-	}
-
-	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
-		fprintf(stderr,"ERROR: unable to load public key from proxy");
-		return 1;
-	}
-
-	/* validity: set time_diff to time to expiration (in seconds) */
-	asn1_time = ASN1_UTCTIME_new();
-	X509_gmtime_adj(asn1_time,0);
-	time_now = ASN1_UTCTIME_mktime(asn1_time);
-	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
-	time_diff = time_after - time_now ;
-
-	/* check validity */
-	min_time_left_param = param( "CRED_MIN_TIME_LEFT" );
-
-	if ( min_time_left_param != NULL ) {
-		min_time_left = atoi( min_time_left_param );
 	} else {
-		min_time_left = DEFAULT_MIN_TIME_LEFT;
+		return FALSE;
 	}
-
-	if ( time_diff < 0 ) {
-		fprintf(stderr,"ERROR: proxy has expired\n");
-		return 1;
-	}
-
-	if ( time_diff < min_time_left ) {
-		dprintf(D_ALWAYS,"ERROR: proxy lifetime too short\n");
-		return 1;
-	}
-
-	return 0;
-
-#endif
 }
+
 #endif

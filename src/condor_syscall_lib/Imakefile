@@ -568,23 +568,23 @@ import(../condor_ckpt,libcondorc++support.a)
 import( ZLibPath , libz.a )
 
 authentication.o: ../condor_io/authentication.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.C
 
 condor_crypt_3des.o: ../condor_io/condor_crypt_3des.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_3des.C
 
 condor_crypt_blowfish.o: ../condor_io/condor_crypt_blowfish.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt_blowfish.C
 
 CryptKey.o: ../condor_io/CryptKey.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/CryptKey.C
 
 condor_crypt.o: ../condor_io/condor_crypt.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/condor_crypt.C
 
 #if DOES_COMPRESS_CKPT
@@ -611,5 +611,5 @@ remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 depend_source_target($(DEPEND_SRC))
 
 #if CONDOR_ENCRYPTION
-obj_extract( $(OpenSSL_MD_LIB), $(PLATFORM_MD_OBJ) $(OPENSSL_MD_OBJ) )
+obj_extract( $(OPENSSL_MD_LIB), $(PLATFORM_MD_OBJ) $(OPENSSL_MD_OBJ) )
 #endif

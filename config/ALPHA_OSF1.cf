@@ -1,7 +1,9 @@
 #define OperatingSystem	OSF1
 #define Architecture	ALPHA
 
-#define HAS_GLOBUS YES
+#define HAS_GLOBUS	NO
+#define HAS_GSI		NO
+#define HAS_OPENSSL	NO
 
 #define Platform	ALPHA-DUX4
 #define GccArch		alpha-dec-osf4.0

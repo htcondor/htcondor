@@ -5,7 +5,9 @@
 
 #define HAS_PVM	YES
 
-#define HAS_GLOBUS YES
+#define HAS_GLOBUS			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 
 #define		IS_SOLARIS26		YES
 

@@ -38,7 +38,7 @@ const int CAUTH_CLAIMTOBE               = 4;
 const int CAUTH_FILESYSTEM              = 8;
 const int CAUTH_FILESYSTEM_REMOTE       = 16;
 const int CAUTH_NTSSPI                  = 32;
-const int CAUTH_GSS                     = 64;
+const int CAUTH_X509                    = 64;
 const int CAUTH_KERBEROS                = 128;
 
 const char STR_DEFAULT_CONDOR_USER[]    = "condor";    // Default condor user

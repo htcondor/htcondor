@@ -1401,7 +1401,7 @@ Daemons::UpdateCollector()
 {
 	int		error_debug;
 
-#if defined(CONDOR_G)
+#if defined(CONDOR_G_RELEASE)
 	error_debug = D_FULLDEBUG;
 #else
 	error_debug = D_ALWAYS;

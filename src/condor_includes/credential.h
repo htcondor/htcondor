@@ -1,7 +1,7 @@
 #ifndef CREDENTIAL_H
 #define CREDENTIAL_H
 
-#ifdef GSS_AUTHENTICATION
+#ifdef X509_AUTHENTICATION
 
 #define SYSTEM 1
 #define USER 2
@@ -41,7 +41,6 @@ class X509_Credential{
 		bool isvalid();
 		int SetupEnv();
  		void erase_env();
-		int check_x509_proxy( char* );
 };
 
 

@@ -52,7 +52,7 @@
 #define PvmProgs
 #endif
 
-#if WANT_GLOBUS && HAS_GLOBUS
+#if WANT_CONDOR_G && HAS_GLOBUS
 #define GlobusProgs globus
 #else
 #define GlobusProgs
@@ -257,7 +257,7 @@ object_target(daemon_client)
 #endif
 object_target(prio)
 object_target(scripts)
-#if WANT_GLOBUS && HAS_GLOBUS
+#if WANT_CONDOR_G && HAS_GLOBUS
     object_target(globus)
 #endif
 object_target(starter.V6.1)

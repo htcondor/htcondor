@@ -21,7 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#if !defined(SKIP_AUTHENTICATION) && defined(GSS_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(X509_AUTHENTICATION)
 
 #include "condor_auth_x509.h"
 #include "sslutils.h"
@@ -37,7 +37,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 //----------------------------------------------------------------------
 
 Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
-    : Condor_Auth_Base (sock, CAUTH_GSS),
+    : Condor_Auth_Base (sock, CAUTH_X509),
       context_handle   (GSS_C_NO_CONTEXT),
       credential_handle(GSS_C_NO_CREDENTIAL),
       ret_flags        (0)

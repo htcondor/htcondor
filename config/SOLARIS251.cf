@@ -5,8 +5,6 @@
 
 #define HAS_PVM	YES
 
-#define HAS_GLOBUS YES
-
 #define		IS_SOLARIS251		YES
 
 #if IS_X86
@@ -21,6 +19,10 @@
 #define		Platform		SUN4X-SOLARIS251
 #define		IS_EGCS_BUILD		YES
 #define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.5.1/egcs-2.91.66
+
+#define HAS_GLOBUS			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 #endif
 
 #ifndef SC_VERS

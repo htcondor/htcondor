@@ -852,7 +852,7 @@ SetUniverse()
 	};
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
-		if ( have_globus_support() == 0 ) {
+		if ( have_condor_g() == 0 ) {
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}

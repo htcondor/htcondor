@@ -39,13 +39,6 @@
 #include "condor_constants.h"
 #include "condor_macros.h"
 
-#if defined(GSS_AUTHENTICATION)
-#ifndef _GSSAPI_H_
-#define _GSSAPI_H_
-#include "gssapi.h"
-#endif
-#endif
-
 #include "cedar_enums.h"
 #include "../condor_sysapi/sysapi.h"
 

@@ -198,57 +198,46 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-GLOBUS_DIR = /unsup/globus-2.0-beta
-
-#if WANT_GLOBUS && HAS_GLOBUS
-
-# define GLOBUS_SUPPORT 1
-
-  GLOBUS_FLAGS = -DGLOBUS_SUPPORT -DNO_GSSAPI_CONFIG_H \
-    -I$(GLOBUS_DIR)/include/gcc32dbg
-
-  GLOBUS_LIB = $(GLOBUS_DIR)/lib/libglobus_gass_server_ez_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_gass_transfer_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_duroc_control_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_duct_control_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_duroc_common_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_duct_common_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_rsl_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_gram_client_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_nexus_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_gram_protocol_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_dc_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_mp_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_io_gcc32dbg.a \
-    $(GLOBUS_DIR)/lib/libglobus_common_gcc32dbg.a
-
-# define IsCondorG -DCONDOR_G
+#if CONDOR_G_RELEASE
+  #define IsCondorGRelease -DCONDOR_G_RELEASE
 #else
-# define IsCondorG 
-#endif /*HasGlobus && WantsGlobus */
+  #define IsCondorGRelease
+#endif
+
+#if WANT_CONDOR_G && HAS_GLOBUS
+
+  #define NEEDS_GSI YES
+
+  CONDOR_G_FLAGS = -DCONDOR_G
+
+#else
+  CONDOR_G_FLAGS =
+#endif /*HasGlobus && WantCondorG */
+
+GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gass_transfer_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duroc_control_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duct_control_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duroc_common_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duct_common_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_rsl_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gram_client_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_nexus_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gram_protocol_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_dc_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_mp_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_io_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
 
 /* X509 Authentication requires globus*/
-#if (WANT_X509 || WANT_GLOBUS) && HAS_GLOBUS
-
-# if WANT_X509
-    X509_FLAGS = -DGSS_AUTHENTICATION -DNO_GSSAPI_CONFIG_H \
-                 -I$(GLOBUS_DIR)/include -I$(OpenSSLIncludePath)
-# else
-    X509_FLAGS = -DNO_GSSAPI_CONFIG_H \
-                 -I$(GLOBUS_DIR)/include -I$(OpenSSLIncludePath)
-# endif
-
-  X509_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist_gcc32dbg.a \
-            $(GLOBUS_DIR)/lib/libglobus_gssapi_gsi_gcc32dbg.a \
-            $(GLOBUS_DIR)/lib/libglobus_ssl_utils_gcc32dbg.a \
-            $(OpenSSL_LIB)
-             /* OPENSSL_LIB is defined in site.def */
+#if WANT_X509 && HAS_GSI
+  #define NEEDS_GSI YES
+  X509_FLAGS = -DX509_AUTHENTICATION
+  X509_LIB =
 #else
-
   X509_FLAGS =
   X509_LIB   = 
-
-#endif /* !defined( WANT_X509 && HAS_GLOBUS ) */
+#endif /* WANT_X509 && HAS_GSI */
 
 /* Kerberos */
 #if HAS_KERBEROS && WANT_KERBEROS
@@ -258,39 +247,76 @@ GLOBUS_DIR = /unsup/globus-2.0-beta
 #endif /* !defined(WANT_KERBEROS) */
 
 /* Encryption */
-#if CONDOR_3DES_ENCRYPTION
-    CONDOR_3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
-    #define NEED_OPENSSL YES
-    #define CONDOR_ENCRYPTION YES
-#else 
-    CONDOR_3DES_FLAGS =
-#endif
-
-#if CONDOR_BLOWFISH_ENCRYPTION
-    CONDOR_BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
-    #define NEED_OPENSSL YES
-    #define CONDOR_ENCRYPTION YES
+#if WANT_3DES && HAS_OPENSSL
+  #define CONDOR_3DES_ENCRYPTION YES
+  3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
 #else
-    CONDOR_BLOWFISH_FLAGS =
+  3DES_FLAGS =
 #endif
 
-#if CONDOR_ENCRYPTION
-ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(CONDOR_3DES_FLAGS) $(CONDOR_BLOWFISH_FLAGS) -I$(OpenSSLIncludePath)
-#endif
-
-#if NEED_OPENSSL
-  ENCRYPTION_LIB = $(OpenSSL_LIB)
+#if WANT_BLOWFISH && HAS_OPENSSL
+  #define CONDOR_BLOWFISH_ENCRYPTION YES
+  BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
 #else
+  BLOWFISH_FLAGS =
+#endif
+
+#if WANT_ENCRYPTION
+  #define CONDOR_ENCRYPTION YES
+  ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(3DES_FLAGS) $(BLOWFISH_FLAGS)
+  ENCRYPTION_LIB =
+#else
+  ENCRYPTION_FLAGS =
   ENCRYPTION_LIB =
 #endif
 
-#if WANT_MD
-    MD_LIB = $(OpenSSL_LIB)
-    MD_FLAGS = -DCONDOR_MD -I$(OpenSSLIncludePath)
+#if WANT_MD && HAS_OPENSSL
+  #define NEEDS_OPENSSL YES
+  MD_FLAGS = -DCONDOR_MD
+  MD_LIB =
 #else
-    MD_LIB =
-    MD_FLAGS = 
+  MD_FLAGS = 
+  MD_LIB =
 #endif
+
+#if NEEDS_GSI && HAS_GSI
+  /* Make sure that USE_GLOBUS_OPENSSL is set */
+  #define NEEDS_OPENSSL YES
+  GSI_FLAGS = -DCONDOR_GSI
+  GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a
+#else
+  GSI_FLAGS =
+  GSI_LIB   =
+#endif
+
+#if NEEDS_OPENSSL && HAS_OPENSSL
+  #if USE_GLOBUS_OPENSSL
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include/$(GlobusFlavor)
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl_$(GlobusFlavor).a \
+		  $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a 
+  #else
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl.a $(OpenSSLPath)/lib/libcrypto.a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto.a 
+  #endif
+#else
+  OPENSSL_FLAGS =
+  OPENSSL_LIB =
+  OPENSSL_MD_LIB =
+#endif
+
+/* Collect all the security-related variables into a single variable */
+SECURITY_FLAGS = $(X509_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
+SECURITY_LIB   = $(X509_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
 NETMAN_LIB = ../condor_netman/libnetman.a
@@ -302,9 +328,9 @@ NETMAN_FLAGS =
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
-		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS) \
-                 $(MD_FLAGS) -I$(DAEMONCLIENT_INCLUDE)
+		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) \
+		 -I$(DAEMONCLIENT_INCLUDE)
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -344,9 +370,6 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
-/* Credential API related libraries */
-CONDOR_CRED_LIB = 
-
 STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
@@ -360,7 +383,6 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
-  $(GLOBUS_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
@@ -371,9 +393,5 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
-  $(CREDENTIAL_LIB) \
-  $(X509_LIB) \
-  $(KERBEROS_LIB) \
-  $(ENCRYPTION_LIB) \
-  $(MD_LIB)
+  $(SECURITY_LIB)
 

@@ -24,7 +24,7 @@
 #ifndef CONDOR_AUTHENTICATOR_GSS
 #define CONDOR_AUTHENTICATOR_GSS
 
-#if !defined(SKIP_AUTHENTICATION) && defined(GSS_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(X509_AUTHENTICATION)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "globus_gss_assist.h"

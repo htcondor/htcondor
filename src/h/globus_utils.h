@@ -47,7 +47,7 @@ int x509_proxy_seconds_until_expire( char *proxy_file );
 
 const char* x509_error_string();
 
-int have_globus_support();
+int have_condor_g();
 
 #if 0
 int check_globus_rm_contacts( char* resource );
