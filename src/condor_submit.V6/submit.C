@@ -3211,14 +3211,16 @@ connect_to_the_schedd()
 
 	setupAuthentication();
 
-	if( ConnectQ(MySchedd->addr()) == 0 ) {
+	CondorError errstack;
+	if( ConnectQ(MySchedd->addr(), 0 /* default */, true /* default */, &errstack) == 0 ) {
 		if( ScheddName ) {
 			fprintf( stderr, 
-					"\nERROR: Failed to connect to queue manager %s\n",
-					 ScheddName );
+					"\nERROR: Failed to connect to queue manager %s\n%s",
+					 ScheddName, errstack.get_full_text() );
 		} else {
 			fprintf( stderr, 
-				"\nERROR: Failed to connect to local queue manager\n" );
+				"\nERROR: Failed to connect to local queue manager\n%s",
+				errstack.get_full_text());
 		}
 		exit(1);
 	}

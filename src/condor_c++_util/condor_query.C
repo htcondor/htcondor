@@ -266,7 +266,7 @@ addORConstraint (const char *value)
 
 // fetch all ads from the collector that satisfy the constraints
 QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, const char *poolName)
+fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 {
 	Sock*    sock; 
 	int			more;
@@ -332,7 +332,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
-	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0)) ||
+	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0, errstack)) ||
 	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
 		if (sock) {

@@ -72,8 +72,11 @@ do_Q_request(ReliSock *syscall_sock)
 				methods = SecMan::getDefaultAuthenticationMethods();
 			}
 			dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
-			if( ! syscall_sock->authenticate(methods.Value()) ) {
+			CondorError errstack;
+			if( ! syscall_sock->authenticate(methods.Value(), &errstack) ) {
 					// Failed to authenticate
+				dprintf( D_ALWAYS, "SCHEDD: authentication failed\n");
+				dprintf( D_ALWAYS, "%s", errstack.get_full_text() );
 				authenticated = false;
 			}
 		}

@@ -73,7 +73,7 @@ public:
 	const SecMan & operator=(const SecMan &);
 
 
-	bool 					startCommand( int cmd, Sock* sock, bool &can_neg, int subcmd = 0);
+	bool 					startCommand( int cmd, Sock* sock, bool &can_neg, CondorError* errstack, int subcmd = 0);
 
     //------------------------------------------
     // invalidate cache

@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "CondorError.h"
 
 #if !defined(SKIP_AUTHENTICATION)
 
@@ -38,7 +39,7 @@ Condor_Auth_Anonymous :: ~Condor_Auth_Anonymous()
 {
 }
 
-int Condor_Auth_Anonymous :: authenticate(const char * remoteHost)
+int Condor_Auth_Anonymous :: authenticate(const char * remoteHost, CondorError* errstack)
 {
     int retval = 0;
     

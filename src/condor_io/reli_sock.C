@@ -1142,14 +1142,14 @@ ReliSock::prepare_for_nobuffering(stream_coding direction)
 	return ret_val;
 }
 
-int ReliSock::authenticate(KeyInfo *& key, const char* methods)
+int ReliSock::authenticate(KeyInfo *& key, const char* methods, CondorError* errstack)
 {
     if (!isAuthenticated()) {
         if ( !authob ) {
             authob = new Authentication( this );
         }
         if ( authob ) {
-            return( authob->authenticate( hostAddr, key, methods ) );
+            return( authob->authenticate( hostAddr, key, methods, errstack ) );
         }
         return( 0 );  
     }
@@ -1159,14 +1159,14 @@ int ReliSock::authenticate(KeyInfo *& key, const char* methods)
 }
 
 int 
-ReliSock::authenticate(const char* methods ) 
+ReliSock::authenticate(const char* methods, CondorError* errstack ) 
 {
     if ( !isAuthenticated() ) {
         if ( !authob ) {
             authob = new Authentication( this );
         }
         if ( authob ) {
-            return( authob->authenticate( hostAddr, methods ) );
+            return( authob->authenticate( hostAddr, methods, errstack ) );
         }
         return 0;
     }

@@ -1154,10 +1154,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	}
 
 	// fetch queue from schedd and stash it in output_buffer.
+	CondorError errstack;
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
-									 process_buffer_line ) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
-									scheddAddr, scheddMachine);	
+									 process_buffer_line,
+									 &errstack) != Q_OK ) {
+		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
+					scheddAddr, scheddMachine, errstack.get_full_text());	
 		delete output_buffer;
 
 		return false;
@@ -1291,9 +1293,10 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 	static bool	setup_mask = false;
 
 		// fetch queue from schedd	
-	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
-									scheddAddr, scheddMachine);	
+	CondorError errstack;
+	if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
+		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
+					scheddAddr, scheddMachine, errstack.get_full_text());	
 		return false;
 	}
 

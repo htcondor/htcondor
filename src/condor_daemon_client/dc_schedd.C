@@ -207,7 +207,11 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[])
 
 
 		// First, if we're not already authenticated, force that now. 
-	forceAuthentication( &rsock );
+	CondorError errstack;
+	if (!forceAuthentication( &rsock, &errstack )) {
+		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack.get_full_text());
+		return false;
+	}
 
 		// Send the number of jobs
 	rsock.encode();
@@ -356,7 +360,11 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 		return NULL;
 	}
 		// First, if we're not already authenticated, force that now. 
-	forceAuthentication( &rsock );
+	CondorError errstack;
+	if (!forceAuthentication( &rsock, &errstack )) {
+		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack.get_full_text());
+		return false;
+	}
 
 		// Now, put the command classad on the wire
 	if( ! (cmd_ad.put(rsock) && rsock.eom()) ) {

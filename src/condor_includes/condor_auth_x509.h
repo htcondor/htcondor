@@ -53,7 +53,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost);
+    int authenticate(const char * remoteHost, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -93,11 +93,11 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     //------------------------------------------
  private:
 
-    int authenticate_self_gss();
+    int authenticate_self_gss(CondorError* errstack);
 
-    int authenticate_client_gss();
+    int authenticate_client_gss(CondorError* errstack);
 
-    int authenticate_server_gss();
+    int authenticate_server_gss(CondorError* errstack);
 
     char * get_server_info();
 

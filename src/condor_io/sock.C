@@ -1327,13 +1327,15 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, const char * methods)
+int Sock :: authenticate(KeyInfo *&, const char * methods, CondorError* errstack)
 {
 	return -1;
 }
 
-int Sock :: authenticate(const char * methods)
+int Sock :: authenticate(const char * methods, CondorError* errstack)
 {
+	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
+			"Failure: This version of condor was not compiled with authentication enabled");
 	return -1;
 }
 

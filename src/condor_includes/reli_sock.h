@@ -148,9 +148,9 @@ public:
     ///
 	void setOwner( const char * );
     ///
-	int authenticate( const char* methods );
+	int authenticate( const char* methods, CondorError* errstack );
     ///
-	int authenticate( KeyInfo *& key, const char* methods );
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack );
     ///
     virtual const char * getFullyQualifiedUser() const;
     ///

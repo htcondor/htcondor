@@ -25,6 +25,7 @@
 #include "condor_auth_fs.h"
 #include "condor_string.h"
 #include "condor_environ.h"
+#include "CondorError.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -36,7 +37,7 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 {
 }
 
-int Condor_Auth_FS::authenticate(const char * remoteHost)
+int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 {
     char *new_file = NULL;
     int fd = -1;

@@ -27,6 +27,7 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include "string_list.h"
+#include "CondorError.h"
 
 const char STR_CONDOR_KERBEROS_CACHE[]  = "CONDOR_KERBEROS_CACHE";
 const char STR_CONDOR_CACHE_SHARE[]     = "CONDOR_KERBEROS_SHARE_CACHE";
@@ -97,7 +98,7 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
     }
 }
 
-int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
+int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* errstack)
 {
     //temporarily change timeout to 5 minutes so the user can type passwd
     //MUST do this even on server side, since client side might call

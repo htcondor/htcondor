@@ -26,6 +26,7 @@
 
 #include "condor_common.h"
 #include "stream.h"
+#include "CondorError.h"
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -248,9 +249,9 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate(const char * auth_methods);
+	virtual int authenticate(const char * auth_methods, CondorError* errstack);
     ///
-	virtual int authenticate(KeyInfo *&ki, const char * auth_methods);
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack);
     ///
 	virtual int isAuthenticated();
     ///

@@ -262,7 +262,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec )
+Daemon::reliSock( int sec, CondorError* errstack )
 {
 	if( ! _addr ) {
 		if( ! locate() ) {
@@ -277,6 +277,10 @@ Daemon::reliSock( int sec )
 	if( reli->connect(_addr, 0) ) {
 		return reli;
 	} else {
+		if (errstack) {
+			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+				"Failed to connect to %s", _addr);
+		}
 		delete reli;
 		return NULL;
 	}
@@ -284,7 +288,7 @@ Daemon::reliSock( int sec )
 
 
 SafeSock*
-Daemon::safeSock( int sec )
+Daemon::safeSock( int sec, CondorError* errstack )
 {
 	if( ! _addr ) {
 		if( ! locate() ) {
@@ -299,6 +303,10 @@ Daemon::safeSock( int sec )
 	if( safe->connect(_addr, 0) ) {
 		return safe;
 	} else {
+		if (errstack) {
+			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+				"Failed to connect to %s", _addr);
+		}
 		delete safe;
 		return NULL;
 	}
@@ -306,15 +314,15 @@ Daemon::safeSock( int sec )
 
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
+Daemon::startCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
 {
 	Sock* sock;
 	switch( st ) {
 	case Stream::reli_sock:
-		sock = reliSock();
+		sock = reliSock(sec, errstack);
 		break;
 	case Stream::safe_sock:
-		sock = safeSock();
+		sock = safeSock(sec, errstack);
 		break;
 	default:
 		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
@@ -326,7 +334,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 	}
 
 
-	if (startCommand ( cmd, sock, sec )) {
+	if (startCommand ( cmd, sock, sec, errstack )) {
 		return sock;
 	} else {
 		delete sock;
@@ -337,7 +345,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int sec )
+Daemon::startCommand( int cmd, Sock* sock, int sec, CondorError *errstack )
 {
 
 	// basic sanity check
@@ -368,16 +376,35 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		}
 	}
 
-	// handoff to the security manager
-	return _sec_man.startCommand(cmd, sock, other_side_can_negotiate);
+	// if they passed in NULL (the default for backwards compatibility),
+	// we'll collect the errors and dump them in the log if there's a
+	// failure.  to collect the errors, we need our own errstack
+	CondorError stack_errstack;
+
+	// new select which one we will use.  default to ours but pick
+	// the one passed in if it's not NULL.
+	CondorError *errstack_select = &stack_errstack;
+	if ( errstack ) {
+		errstack_select = errstack;
+	}
+
+	// call startCommand with the selected error stack
+	bool result = _sec_man.startCommand(cmd, sock, other_side_can_negotiate, errstack_select);
+
+	// dump the errors in the log if not being collected
+	if (!result && !errstack) {
+		dprintf( D_ALWAYS, "ERROR:\n%s", errstack_select->get_full_text());
+	}
+				
+	return result;
 
 }
 
 bool
-Daemon::sendCommand( int cmd, Sock* sock, int sec )
+Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
 {
 	
-	if( ! startCommand( cmd, sock, sec )) {
+	if( ! startCommand( cmd, sock, sec, errstack )) {
 		return false;
 	}
 	if( ! sock->eom() ) {
@@ -392,9 +419,9 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 
 
 bool
-Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
+Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
 {
-	Sock* tmp = startCommand( cmd, st, sec );
+	Sock* tmp = startCommand( cmd, st, sec, errstack );
 	if( ! tmp ) {
 		return false;
 	}
@@ -446,13 +473,18 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
 		return false;
 	}
 
-	if( ! startCommand(CA_CMD, &cmd_sock, 20) ) {
-		newError( "Failed to send command (CA_CMD)" );
+	CondorError errstack;
+	if( ! startCommand(CA_CMD, &cmd_sock, 20, &errstack) ) {
+		MyString err_msg = "Failed to send command (CA_CMD)";
+		err_msg += "\n";
+		err_msg += errstack.get_full_text();
+		newError( err_msg.Value() );
 		return false;
 	}
 	if( force_auth ) {
-		if( ! forceAuthentication(&cmd_sock) ) {
-			newError( "Client: server failed to authenticate" );
+		CondorError e;
+		if( ! forceAuthentication(&cmd_sock, &e) ) {
+			newError( e.get_full_text() );
 			return false;
 		}
 	}
@@ -777,7 +809,11 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 		}
 		query.addANDConstraint(buf);
-		query.fetchAds(ads, _pool);
+		CondorError errstack;
+		if (query.fetchAds(ads, _pool, &errstack) != Q_OK) {
+			newError( errstack.get_full_text() );
+			return false;
+		};
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
@@ -1264,7 +1300,7 @@ Daemon::checkAddr( void )
 
 
 bool
-Daemon::forceAuthentication( ReliSock* rsock )
+Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
 {
 	if( ! rsock ) {
 		return false;
@@ -1284,7 +1320,7 @@ Daemon::forceAuthentication( ReliSock* rsock )
 	} else {
 		methods = SecMan::getDefaultAuthenticationMethods();
 	}
-	return rsock->authenticate( methods.Value() );
+	return rsock->authenticate( methods.Value(), errstack );
 }
 
 

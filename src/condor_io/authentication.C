@@ -34,6 +34,7 @@
 #include "condor_secman.h"
 #include "condor_environ.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "CondorError.h"
 
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
@@ -68,9 +69,9 @@ Authentication::~Authentication()
 #endif
 }
 
-int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods)
+int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack)
 {
-    int retval = authenticate(hostAddr, auth_methods);
+    int retval = authenticate(hostAddr, auth_methods, errstack);
     
 #if !defined(SKIP_AUTHENTICATION)
     if (retval) {        // will always try to exchange key!
@@ -84,10 +85,13 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* au
     return retval;
 }
 
-int Authentication::authenticate( char *hostAddr, const char* auth_methods )
+int Authentication::authenticate( char *hostAddr, const char* auth_methods,
+		CondorError* errstack)
 {
 #if defined(SKIP_AUTHENTICATION)
 	dprintf(D_ALWAYS, "Skipping....\n");
+	errstack->push ( "AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
+			"this condor was built with SKIP_AUTHENTICATION");
 	return 0;
 #else
 Condor_Auth_Base * auth = NULL;
@@ -116,6 +120,7 @@ Condor_Auth_Base * auth = NULL;
 
 		if ( firm < 0 ) {
 			dprintf(D_ALWAYS, "AUTHENTICATE: handshake failed!\n");
+			errstack->push( "AUTHENTICATE", AUTHENTICATE_ERR_HANDSHAKE_FAILED, "Failure performing handshake" );
 			break;
 		}
 
@@ -163,10 +168,14 @@ Condor_Auth_Base * auth = NULL;
 			case CAUTH_NONE:
 				dprintf(D_ALWAYS,"AUTHENTICATE: no available authentication methods succeeded, "
 						"failing!\n");
+				errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
+						"Failed to authenticate with any method");
 				return 0;
 
 			default:
 				dprintf(D_ALWAYS,"AUTHENTICATE: unsupported method: %i, failing.\n", firm);
+				errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
+						"Failure.  Unsupported method: %i", firm);
 				return 0;
 		}
 
@@ -179,9 +188,12 @@ Condor_Auth_Base * auth = NULL;
 		//------------------------------------------
 		// Now authenticate
 		//------------------------------------------
-		if (!auth->authenticate(hostAddr) ) {
+		if (!auth->authenticate(hostAddr, errstack) ) {
 			delete auth;
 			auth = NULL;
+
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
+					"Failed to authenticate using %s", method_name );
 
 			//if authentication failed, try again after removing from client tries
 			if ( mySock->isClient() ) {

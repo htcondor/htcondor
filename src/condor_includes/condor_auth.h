@@ -69,7 +69,7 @@ class Condor_Auth_Base {
     // RETURNS: None
     //------------------------------------------
 
-    virtual int authenticate(const char * remoteHost) = 0;
+    virtual int authenticate(const char * remoteHost, CondorError* errstack) = 0;
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: 1. Remote host

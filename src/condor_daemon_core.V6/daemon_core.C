@@ -2251,6 +2251,8 @@ int DaemonCore::HandleReq(int socki)
 			return FALSE;
 	}
 
+	CondorError errstack;
+
 	// set up a connection for a tcp socket	
 	if ( is_tcp ) {
 
@@ -2833,10 +2835,12 @@ int DaemonCore::HandleReq(int socki)
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 					}
 
-					if (!sock->authenticate(the_key, auth_methods)) {
+					if (!sock->authenticate(the_key, auth_methods, &errstack)) {
 						free( auth_methods );
 						dprintf( D_ALWAYS, 
 								 "DC_AUTHENTICATE: authenticate failed\n" );
+						dprintf( D_ALWAYS, 
+								 "%s", errstack.get_full_text() );
 						result = FALSE;
 						goto finalize;
 					}

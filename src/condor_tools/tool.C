@@ -780,7 +780,10 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send VACATE_ALL_CLAIMS.
 		if ( name && !sinful && strchr(name, '@') ) {
-			d.startCommand (cmd, &sock);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -801,7 +804,10 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send PCKPT_ALL_JOBS.
 		if( name && !sinful && strchr(name, '@') ) {
-			d.startCommand (cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -821,7 +827,10 @@ doCommand( char *name )
 				cmd = DAEMON_OFF_FAST;
 			}
 
-			d.startCommand( cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand( cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(subsys) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -834,7 +843,10 @@ doCommand( char *name )
 		break;
 	case DAEMON_ON:
 		{
-			d.startCommand (cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(subsys) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -868,7 +880,9 @@ doCommand( char *name )
 	}
 
 	if( !done ) {
-		if( !d.sendCommand(cmd, &sock) ) {
+		CondorError errstack;
+		if( !d.sendCommand(cmd, &sock, 0, &errstack) ) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
 			namePrintf( stderr, name, "Can't send %s command to", 
 						 cmdToStr(cmd) );
 			RESTORE;
@@ -1003,7 +1017,10 @@ handleSquawk( char *line, char *addr ) {
 		
 	case 'd': { /* dump state */
 		Daemon d( DT_ANY, addr );
-        d.startCommand(DUMP_STATE, &sock, 0);
+		CondorError errstack;
+        if (!d.startCommand(DUMP_STATE, &sock, 0, &errstack)) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+		}
 
 		sock.decode();
 
@@ -1032,7 +1049,10 @@ handleSquawk( char *line, char *addr ) {
 		}
 		
 		Daemon d( DT_ANY, addr );
-		d.startCommand (DC_RAISESIGNAL, &sock, 0);
+		CondorError errstack;
+		if (!d.startCommand (DC_RAISESIGNAL, &sock, 0, &errstack)) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+		}
 
 		sock.encode();
 		sock.code( signal );
@@ -1054,7 +1074,10 @@ handleSquawk( char *line, char *addr ) {
 		}
 
 		Daemon d( DT_ANY, addr );
-		d.startCommand ( command, &sock, 0);
+		CondorError errstack;
+		if (!d.startCommand ( command, &sock, 0, &errstack)) {
+			fprintf (stderr, "%s", errstack.get_full_text());
+		}
 		sock.encode();
 		while( (token = strtok(NULL, " ")) ) {
 			if ( isdigit(token[0]) ) {

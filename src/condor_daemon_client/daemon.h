@@ -32,6 +32,7 @@
 #include "condor_network.h" // For the port numbers...
 #include "daemon_types.h"
 #include "KeyCache.h"
+#include "CondorError.h"
 
 
 /** 
@@ -233,7 +234,7 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0 );
+	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0 );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
@@ -242,7 +243,7 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0 );
+	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0 );
 
 public:
 		/** Send the given command to the daemon.  The caller gives
@@ -258,7 +259,7 @@ public:
 		  */
 	bool sendCommand( int cmd, 
 					   Stream::stream_type st = Stream::reli_sock,
-					   int sec = 0 );
+					   int sec = 0, CondorError* errstack = NULL );
 	
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, a pointer to the Sock they
@@ -272,7 +273,7 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @return Success or failure.
 		  */
-	bool sendCommand( int cmd, Sock* sock, int sec = 0 );
+	bool sendCommand( int cmd, Sock* sock, int sec = 0, CondorError* errstack = NULL );
 
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and the type of Sock
@@ -289,7 +290,7 @@ public:
 		  */
 	Sock* startCommand( int cmd, 
 				Stream::stream_type st = Stream::reli_sock,
-				int sec = 0 );
+				int sec = 0, CondorError* errstack = NULL );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -302,7 +303,8 @@ public:
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		*/
-	bool startCommand( int cmd, Sock* sock, int sec = 0 );
+	bool startCommand( int cmd, Sock* sock,
+			int sec = 0, CondorError* errstack = NULL );
 
 protected:
 	// Data members
@@ -463,7 +465,7 @@ protected:
            Helper method for commands to see if we've already
            authenticated this socket, and if not, to try to do so.
 		*/
-    bool forceAuthentication( ReliSock* rsock );
+    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
 
 
  private:

@@ -23,7 +23,9 @@
 #if !defined(_LIBQMGR_H)
 #define _LIBQMGR_H
 
+#include "condor_common.h"
 #include "proc.h"
+#include "../condor_c++_util/CondorError.h"
 class ClassAd;
 
 
@@ -51,7 +53,7 @@ int InitializeReadOnlyConnection(const char * );
 	@return opaque Qmgr_connection structure
 */		 
 Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
-				bool read_only=false );
+				bool read_only=false, CondorError* errstack=NULL );
 
 /** Close the connection to the schedd job queue, and optionally commit
 	the transaction.

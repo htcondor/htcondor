@@ -28,6 +28,7 @@
 #include "environ.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "CondorError.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
@@ -44,8 +45,8 @@ HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
 
 Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
     : Condor_Auth_Base (sock, CAUTH_GSI),
-      context_handle   (GSS_C_NO_CONTEXT),
       credential_handle(GSS_C_NO_CREDENTIAL),
+      context_handle   (GSS_C_NO_CONTEXT),
       token_status     (0),
       ret_flags        (0)
 {
@@ -69,7 +70,7 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
     }
 }
 
-int Condor_Auth_X509 :: authenticate(const char * remoteHost)
+int Condor_Auth_X509 :: authenticate(const char * remoteHost, CondorError* errstack)
 {
     int status = 1;
     int reply = 0;
@@ -78,60 +79,67 @@ int Condor_Auth_X509 :: authenticate(const char * remoteHost)
     //we should BALANCE calls of Authenticate() on client/server side
     //just like end_of_message() calls must balance!
     
-    if ( !authenticate_self_gss() ) {
+    if ( !authenticate_self_gss(errstack) ) {
         dprintf( D_SECURITY, "authenticate: user creds not established\n" );
         status = 0;
-	// If I failed, notify the other side.
-	if (mySock_->isClient()) {
-		// Tell the other side, abort
-		mySock_->encode();
-		mySock_->code(status);
-		mySock_->end_of_message();
-	}
-	else {
-		// I am server, first wait for the other side
-		mySock_->decode();
-   		mySock_->code(reply);
-		mySock_->end_of_message();
-
-		if (reply == 1) { 
-			// The other side was okay, tell them the bad news
-			mySock_->encode();
-			mySock_->code(status);
-			mySock_->end_of_message();
-		}
-	}
-    }
-    else {
-	// wait to see if the other side is okay
-	if (mySock_->isClient()) {
-		// Tell the other side, that I am fine, then wait for answer
-		mySock_->encode();
-		mySock_->code(status);
-		mySock_->end_of_message();
-
-		mySock_->decode();
-		mySock_->code(reply);
-		mySock_->end_of_message();
-		if (reply == 0) {   // The other side failed, abort
-			return 0;
-		}
-	}
-	else {
-		// I am server, first wait for the other side
-		mySock_->decode();
-		mySock_->code(reply);
-		mySock_->end_of_message();
-		
-		if (reply) {
+		// If I failed, notify the other side.
+		if (mySock_->isClient()) {
+			// Tell the other side, abort
 			mySock_->encode();
 			mySock_->code(status);
 			mySock_->end_of_message();
 		}
 		else {
-			return 0;  // The other side failed, abort
+			// I am server, first wait for the other side
+			mySock_->decode();
+			mySock_->code(reply);
+			mySock_->end_of_message();
+
+			if (reply == 1) { 
+				// The other side was okay, tell them the bad news
+				mySock_->encode();
+				mySock_->code(status);
+				mySock_->end_of_message();
+			}
 		}
-	}
+    }
+    else {
+		// wait to see if the other side is okay
+		if (mySock_->isClient()) {
+			// Tell the other side, that I am fine, then wait for answer
+			mySock_->encode();
+			mySock_->code(status);
+			mySock_->end_of_message();
+
+			mySock_->decode();
+			mySock_->code(reply);
+			mySock_->end_of_message();
+			if (reply == 0) {   // The other side failed, abort
+				errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED,
+						"Failed to authenticate because the remote (server) "
+						"side was not able to acquire its credentials.");
+
+				return 0;
+			}
+		}
+		else {
+			// I am server, first wait for the other side
+			mySock_->decode();
+			mySock_->code(reply);
+			mySock_->end_of_message();
+			
+			if (reply) {
+				mySock_->encode();
+				mySock_->code(status);
+				mySock_->end_of_message();
+			}
+			else {
+				errstack->push("GSI", GSI_ERR_REMOTE_SIDE_FAILED,
+						"Failed to authenticate because the remote (client) "
+						"side was not able to acquire its credentials.");
+				return 0;  // The other side failed, abort
+			}
+		}
 
         //temporarily change timeout to 5 minutes so the user can type passwd
         //MUST do this even on server side, since client side might call
@@ -140,10 +148,10 @@ int Condor_Auth_X509 :: authenticate(const char * remoteHost)
         
         switch ( mySock_->isClient() ) {
         case 1: 
-            status = authenticate_client_gss();
+            status = authenticate_client_gss(errstack);
             break;
         default: 
-            status = authenticate_server_gss();
+            status = authenticate_server_gss(errstack);
             break;
         }
         mySock_->timeout(time); //put it back to what it was before
@@ -440,23 +448,30 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 		return 0;
 	}
 
+	MyString user;
+	MyString domain;
 	// we found a map, let's check it now
 	// split it into user@domain
-	char * tmp = strchr(local_user, '@');
+	char* tmp = strchr(local_user, '@');
 	if (tmp == NULL) {
-		dprintf(D_SECURITY, "GSI: bad map. Username '%s' should be in the form "
-			"user@domain. ", local_user);
-		return 0;
+		user = local_user;
+		char * uid_domain = param("UID_DOMAIN");
+		if (uid_domain) {
+			domain = uid_domain;
+			free(uid_domain);
+		} else {
+			dprintf(D_SECURITY, "GSI: failure: UID_DOMAIN not defined.\n");
+			return 0;
+		}
+	} else {
+		// tmp is pointing to '@'
+		*tmp = 0;
+		user = local_user;
+		domain = (tmp+1);
 	}
     
-	int len  = strlen(local_user);
-	int len2 = len - strlen(tmp);
-	char * user = (char *) malloc(len2 + 1);
-	memset(user, 0, len2 + 1);
-	strncpy(user, local_user, len2);
-	setRemoteUser  (user);
-	setRemoteDomain(tmp+1);
-	free(user);
+	setRemoteUser  (user.GetCStr());
+	setRemoteDomain(domain.GetCStr());
 	return 1;
 }
 
@@ -626,7 +641,7 @@ char * Condor_Auth_X509::get_server_info()
     return server;
 }   
 
-int Condor_Auth_X509::authenticate_self_gss()
+int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
 {
     OM_uint32 major_status;
     OM_uint32 minor_status;
@@ -667,6 +682,21 @@ int Condor_Auth_X509::authenticate_self_gss()
     
     if (major_status != GSS_S_COMPLETE)
 	{
+		if (major_status == 851968 && minor_status == 20) {
+			errstack->pushf("GSI", GSI_ERR_NO_VALID_PROXY,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"This indicates that you do not have a valid user proxy.  "
+				"Run grid-proxy-init.", major_status, minor_status);
+		} else if (major_status == 851968 && minor_status == 12) {
+			errstack->pushf("GSI", GSI_ERR_NO_VALID_PROXY,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  "
+				"This indicates that your user proxy has expired.  "
+				"Run grid-proxy-init.", major_status, minor_status);
+		} else {
+			errstack->pushf("GSI", GSI_ERR_ACQUIRING_SELF_CREDINTIAL_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  There is probably a problem with your credentials.  (Did you run grid-proxy-init?)", major_status, minor_status);
+		}
+
         sprintf(comment,"authenticate_self_gss: acquiring self credentials failed. Please check your Condor configuration file if this is a server process. Or the user environment variable if this is a user process. \n");
         print_log( major_status,minor_status,0,comment); 
         credential_handle = GSS_C_NO_CREDENTIAL; 
@@ -677,7 +707,7 @@ int Condor_Auth_X509::authenticate_self_gss()
     return TRUE;
 }
 
-int Condor_Auth_X509::authenticate_client_gss()
+int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 {
     OM_uint32	major_status = 0;
     OM_uint32	minor_status = 0;
@@ -707,6 +737,27 @@ int Condor_Auth_X509::authenticate_client_gss()
     }
 
     if (major_status != GSS_S_COMPLETE)	{
+		if (major_status == 655360 && minor_status == 6) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"This indicates that it was unable to find the issuer "
+				"certificate for your credential", major_status, minor_status);
+		} else if (major_status == 655360 && minor_status == 9) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"This indicates that it was unable to verify the server's "
+				"credential", major_status, minor_status);
+		} else if (major_status == 655360 && minor_status == 11) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i).  ",
+				"This indicates that it was unable verify the server's "
+				"credentials because a signing policy file was not found or "
+				"could not be read.", major_status, minor_status);
+		} else {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i)",
+				major_status, minor_status);
+		}
         print_log(major_status,minor_status,token_status,
                   "Condor GSI authentication failure");
         // Following four lines of code is added to temporarily
@@ -727,9 +778,15 @@ int Condor_Auth_X509::authenticate_client_gss()
         // Now, wait for final signal
         mySock_->decode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
+			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+					"Failed to authenticate with server.  Unable to receive server status");
             dprintf(D_SECURITY, "Unable to receive final confirmation for GSI Authentication!\n");
         }
         if (status == 0) {
+			errstack->push("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to get authorization from server.  Either the server "
+				"does not trust your certificate, or you are not in the server's "
+				"authorization file (grid-mapfile)");
             dprintf(D_SECURITY, "Server is unable to authorize my user name. Check the GRIDMAP file on the server side.\n");
             goto clear; 
         }
@@ -746,12 +803,18 @@ int Condor_Auth_X509::authenticate_client_gss()
             dprintf(D_SECURITY, "valid GSS connection established to %s\n", server);            
         }
         else {
+			errstack->pushf("GSI", GSI_ERR_UNAUTHORIZED_SERVER,
+					"Failed to authenticate because the subject '%s' is not currently trusted by you.  "
+					"If it should be, add it to GSI_DAEMON_NAME in the condor_config, "
+					"or use the environment variable override (check the manual).", server);
             dprintf(D_SECURITY, "The server %s is not specified in the GSI_DAEMON_NAME parameter\n", server);
         }
 
         mySock_->encode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
-            dprintf(D_SECURITY, "Unable to mutual authenticate with server!\n");
+			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+					"Failed to authenticate with server.  Unable to send status");
+            dprintf(D_SECURITY, "Unable to mutually authenticate with server!\n");
             status = 0;
         }
 
@@ -762,7 +825,7 @@ int Condor_Auth_X509::authenticate_client_gss()
     return (status == 0) ? FALSE : TRUE;
 }
 
-int Condor_Auth_X509::authenticate_server_gss()
+int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 {
     char *    GSSClientname;
     int       status = 0;
@@ -790,12 +853,23 @@ int Condor_Auth_X509::authenticate_server_gss()
     set_priv(priv);
     
     if ( (major_status != GSS_S_COMPLETE)) {
+		if (major_status == 655360) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"COMMON Failed to authenticate (%i:%i)", major_status, minor_status);
+		} else {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to authenticate.  Globus is reporting error (%i:%i)",
+				major_status, minor_status);
+		}
         print_log(major_status,minor_status,token_status, 
                   "Condor GSI authentication failure" );
     }
     else {
         // Try to map DN to local name (in the format of name@domain)
         if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
+			errstack->pushf("GSI", GSI_ERR_AUTHENTICATION_FAILED,
+				"Failed to map %s to a local user.  Check the grid-mapfile.",
+				GSSClientname);
             dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
         }
         else {
@@ -804,6 +878,8 @@ int Condor_Auth_X509::authenticate_server_gss()
         }
         mySock_->encode();
         if (!mySock_->code(status) || !mySock_->end_of_message()) {
+			errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+				"Failed to authenticate with client.  Unable to send status");
             dprintf(D_SECURITY, "Unable to send final confirmation\n");
             status = 0;
         }
@@ -812,11 +888,16 @@ int Condor_Auth_X509::authenticate_server_gss()
             // Now, see if client likes me or not
             mySock_->decode();
             if (!mySock_->code(status) || !mySock_->end_of_message()) {
+				errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+					"Failed to authenticate with client.  Unable to receive status");
                 dprintf(D_SECURITY, "Unable to receive client confirmation.\n");
                 status = 0;
             }
             else {
                 if (status == 0) {
+					errstack->push("GSI", GSI_ERR_COMMUNICATIONS_ERROR,
+						"Failed to authenticate with client.  Client does not trust our certificate.  "
+						"You may want to check the GSI_DAEMON_NAME in the condor_config");
                     dprintf(D_SECURITY, "Client rejected my certificate. Please check the GSI_DAEMON_NAME parameter in Condor's config file.\n");
                 }
             }

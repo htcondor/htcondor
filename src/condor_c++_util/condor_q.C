@@ -28,6 +28,7 @@
 #include "condor_qmgr.h"
 #include "format_time.h"
 #include "condor_config.h"
+#include "CondorError.h"
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -119,7 +120,7 @@ addAND (char *value)
 }
 
 int CondorQ::
-fetchQueue (ClassAdList &list, ClassAd *ad)
+fetchQueue (ClassAdList &list, ClassAd *ad, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -139,8 +140,10 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 	if (ad == 0)
 	{
 		// local case
-		if( !(qmgr = ConnectQ( 0, connect_timeout, true)) )
+		if( !(qmgr = ConnectQ( 0, connect_timeout, true, errstack)) ) {
+			errstack->push("TEST", 0, "FOO");
 			return Q_SCHEDD_COMMUNICATION_ERROR;
+		}
 	}
 	else
 	{
@@ -148,7 +151,7 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 		if (!ad->LookupString (ATTR_SCHEDD_IP_ADDR, scheddString))
 			return Q_NO_SCHEDD_IP_ADDR;
 
-		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true)) )
+		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) )
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 
@@ -160,7 +163,7 @@ fetchQueue (ClassAdList &list, ClassAd *ad)
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &list, char *host)
+fetchQueueFromHost (ClassAdList &list, char *host, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -182,7 +185,7 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true)) )
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them
@@ -193,7 +196,7 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 }
 
 int CondorQ::
-fetchQueueFromHostAndProcess ( char *host, process_function process_func )
+fetchQueueFromHostAndProcess ( char *host, process_function process_func, CondorError* errstack )
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -215,7 +218,7 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func )
 	 optimal.  :^).
 	*/
 	init();  // needed to get default connect_timeout
-	if( !(qmgr = ConnectQ( host, connect_timeout, true)) )
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) )
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 
 	// get the ads and filter them

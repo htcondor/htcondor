@@ -23,6 +23,7 @@
 #ifndef __CONDOR_QUERY_H__
 #define __CONDOR_QUERY_H__
 
+#include "condor_common.h"
 #include "condor_classad.h"
 #include "list.h"
 #include "simplelist.h"
@@ -30,6 +31,7 @@
 #include "condor_attributes.h"
 #include "query_result_type.h"
 #include "generic_query.h"
+#include "CondorError.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
@@ -126,7 +128,7 @@ class CondorQuery
 	QueryResult addANDConstraint (const char *);		 // custom constraints
 
 	// fetch from collector
-	QueryResult fetchAds (ClassAdList &, const char [] = "");
+	QueryResult fetchAds (ClassAdList &, const char [] = "", CondorError* errstack = NULL);
 
 	// filter list of ads; arg1 is 'in', arg2 is 'out'
 	QueryResult filterAds (ClassAdList &, ClassAdList &);

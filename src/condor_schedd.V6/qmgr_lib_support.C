@@ -40,7 +40,7 @@ ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, int timeout, bool read_only )
+ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
 {
 	int		rval, ok;
 	char*	tmp;
@@ -49,6 +49,14 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	if( qmgmt_sock ) {
 			// yes; reject new connection (we can only handle one at a time)
 		return( NULL );
+	}
+
+	// set up the error handling so it will clean up automatically on
+	// return.  also allow them to specify their own stack.
+	CondorError  our_errstack;
+	CondorError* errstack_select = &our_errstack;
+	if (errstack) {
+		errstack_select = errstack;
 	}
 
     // no connection active as of now; create a new one
@@ -64,10 +72,12 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	} else { 
 		qmgmt_sock = (ReliSock*) d.startCommand( QMGMT_CMD, 
 												 Stream::reli_sock,
-												 timeout );
+												 timeout,
+												 errstack_select);
 		ok = qmgmt_sock != NULL;
-		if( !ok ) {
-			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
+		if( !ok && !errstack) {
+			dprintf(D_ALWAYS, "Can't connect to queue manager\n%s",
+					errstack_select->get_full_text() );
 		}
 	}
 
@@ -136,9 +146,13 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 				methods = SecMan::getDefaultAuthenticationMethods();
 			}
 
-            if (!qmgmt_sock->authenticate(methods.Value())) {
+            if (!qmgmt_sock->authenticate(methods.Value(), errstack_select)) {
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
+				if (!errstack) {
+					dprintf (D_ALWAYS, "Authentication Error\n%s",
+							errstack_select->get_full_text());
+				}
                 return 0;
             }
         }

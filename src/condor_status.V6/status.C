@@ -264,10 +264,14 @@ main (int argc, char *argv[])
 		}
 	}
 
-	if ((q = query->fetchAds (result, addr)) != Q_OK) {
+	CondorError errstack;
+	if ((q = query->fetchAds (result, addr, &errstack)) != Q_OK) {
 		if (q == Q_COMMUNICATION_ERROR) {
+			fprintf (stderr, "%s", errstack.get_full_text());
 				// if we're not an expert, we want verbose output
-			printNoCollectorContact( stderr, addr, !expert );
+			if (errstack.code(0) == CEDAR_ERR_CONNECT_FAILED) {
+				printNoCollectorContact( stderr, addr, !expert );
+			}
 		}
 		else {
 			fprintf (stderr, "Error:  Could not fetch ads --- %s\n", 

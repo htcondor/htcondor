@@ -54,7 +54,7 @@ void zz1printf(KeyInfo *k) {
 			sprintf (&hexout[i*2], "%02x", *dataptr++);
 		}
 
-		dprintf (D_SECURITY, "KEYCACHE: [%i] %s\n", length, hexout);
+		dprintf (D_FULLDEBUG, "KEYCACHE: [%i] %s\n", length, hexout);
 	}
 }
 
@@ -729,12 +729,14 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 
 bool
-SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
+SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* errstack, int subCmd)
 {
 
 	// basic sanity check
 	if( ! sock ) {
 		dprintf ( D_ALWAYS, "startCommand() called with a NULL Sock*, failing." );
+		errstack->push( "SECMAN", SECMAN_ERR_INTERNAL, "Internal Error - "
+				"startCommand() called with a NULL socket");
 		return false;
 	} else {
 		dprintf ( D_SECURITY, "SECMAN: command %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
@@ -806,6 +808,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
 					 "SECMAN: ERROR: The security policy is invalid.\n" );
+			errstack->push("SECMAN", SECMAN_ERR_INVALID_POLICY,
+				"Configuration Problem: The security policy is invalid.\n" );
 			return false;
 		}
 
@@ -934,6 +938,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 		sprintf (buf, sin_to_string(sock->endpoint()));
 		if (!tcp_auth_sock.connect(buf)) {
 			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", buf);
+			errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+					"TCP connection to %s failed\n", buf);
 			return false;
 		}
 
@@ -942,7 +948,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 		}
 		tcp_auth_sock.timeout(TCP_SOCK_TIMEOUT);
 
-		bool succ = startCommand ( DC_AUTHENTICATE, &tcp_auth_sock, can_negotiate, cmd);
+		bool succ = startCommand ( DC_AUTHENTICATE, &tcp_auth_sock, can_negotiate, errstack, cmd);
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf ( D_SECURITY, "SECMAN: sending eom() and closing TCP sock.\n");
@@ -954,6 +960,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 		if (!succ) {
 			dprintf ( D_SECURITY, "SECMAN: unable to start session via TCP, failing.\n");
+			errstack->push("SECMAN", SECMAN_ERR_NO_SESSION,
+					"Failed to start a session with TCP");
 			return false;
 		} else {
 			if (DebugFlags & D_FULLDEBUG) {
@@ -1046,8 +1054,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 	*/
 
 
-	bool retval = true;
-
 	if (!using_cookie && !is_tcp) {
 
 		// udp works only with an already established session (gotten from a
@@ -1080,6 +1086,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 				dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
 				auth_info.dPrint( D_SECURITY );
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: Action attribute missing");
 				return false;
 			}
 
@@ -1093,6 +1101,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 				if (!ki) {
 					dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+					errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 					return false;
 				}
 
@@ -1117,13 +1127,14 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 				sock->set_MD_mode(MD_ALWAYS_ON, ki, buf);
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-				retval = true;
 			} // if (will_enable_mac)
 
 			if (will_enable_enc == SEC_FEAT_ACT_YES) {
 
 				if (!ki) {
 					dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+					errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 					return false;
 				}
 
@@ -1149,7 +1160,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 				sock->set_crypto_key(ki, buf);
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-				retval = true;
 			} // if (will_enable_enc)
 
 			if (ki) {
@@ -1172,6 +1182,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
     sock->encode();
 	if (! sock->code(authcmd)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send DC_AUTHENTICATE\n");
+		errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to send DC_AUTHENTICATE message" );
 		return false;
 	}
 
@@ -1184,6 +1196,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 	// send the classad
 	if (! auth_info.put(*sock)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
+		errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to send auth_info" );
 		return false;
 	}
 
@@ -1192,6 +1206,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 		if (! sock->end_of_message()) {
 			dprintf ( D_ALWAYS, "SECMAN: failed to end classad message\n");
+			errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to end classad message" );
 			return false;
 		}
 
@@ -1216,6 +1232,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 				if (negotiation == SEC_REQ_REQUIRED) {
 					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
+					errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to end classad message" );
 					return false;
 				}
 
@@ -1232,6 +1250,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 				if (!sock->connect(addrbuf)) {
 					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", addrbuf);
+					errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
+						"TCP connection to %s failed\n", addrbuf);
 					return false;
 				}
 
@@ -1282,6 +1302,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
 			auth_info.dPrint( D_SECURITY );
+			errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: Action attribute missing");
 			return false;
 		}
 
@@ -1306,23 +1328,32 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			char * auth_methods = NULL;
 			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
 			if (auth_methods) {
-				dprintf (D_SECURITY, "SECMAN: ZKM: %s\n", auth_methods);
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods);
+				}
 			} else {
-				dprintf (D_SECURITY, "SECMAN: ZKM: (null)\n", auth_methods);
+				// lookup the 6.4 attribute name
 				auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods);
+				}
 			}
 
 			if (!auth_methods) {
 				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: No auth methods");
 				return false;
 			} else {
-				dprintf ( D_ALWAYS, "SECMAN: zkm: %s\n", auth_methods);
+				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
 			}
 
-			if (!sock->authenticate(ki, auth_methods)) {
-				dprintf ( D_ALWAYS, "SECMAN: authenticate failed!\n");
-				retval = false;
+			if (!sock->authenticate(ki, auth_methods, errstack)) {
+				if(ki) {
+					delete ki;
+				}
+				return false;
 			}
             if (auth_methods) {  
                 free(auth_methods);
@@ -1344,6 +1375,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 			if (!ki) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+				errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 				return false;
 			}
 
@@ -1358,13 +1391,14 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			sock->set_MD_mode(MD_ALWAYS_ON, ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-			retval = true;
 		} // if (will_enable_mac)
 
 		if (will_enable_enc == SEC_FEAT_ACT_YES) {
 
 			if (!ki) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+				errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 				return false;
 			}
 
@@ -1379,11 +1413,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			sock->set_crypto_key(ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			retval = true;
 		} // if (will_enable_enc)
 
 		
-		if (new_session && retval) {
+		if (new_session) {
 			// receive a classAd containing info such as: well, nothing yet
 			sock->encode();
 			sock->eom();
@@ -1392,6 +1425,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			sock->decode();
 			if (!post_auth_info.initFromStream(*sock) || !sock->eom()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
+				errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+							"could not recieve post_auth_info" );
 				return false;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
@@ -1415,12 +1450,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			char *sid = NULL;
 			auth_info.LookupString(ATTR_SEC_SID, &sid);
 			if (sid == NULL) {
+				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Failed to lookup session id");
 				return false;
 			}
 
 			char *cmd_list = NULL;
 			auth_info.LookupString(ATTR_SEC_VALID_COMMANDS, &cmd_list);
 			if (cmd_list == NULL) {
+				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Failure: Unable to lookup valid commands");
 				delete sid;
 				return false;
 			}
@@ -1492,8 +1533,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 			free( sid );
             free( cmd_list );
 
-			retval = true;
-
 		} // if (new_session)
 
 		// clean up
@@ -1503,15 +1542,11 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 	} // if (is_tcp)
 
-	if (retval) {
-		sock->encode();
-		sock->allow_one_empty_message();
-		dprintf ( D_SECURITY, "SECMAN: startCommand succeeded.\n");
-	} else {
-		dprintf ( D_ALWAYS, "SECMAN: startCommand failed.\n");
-	}
+	sock->encode();
+	sock->allow_one_empty_message();
+	dprintf ( D_SECURITY, "SECMAN: startCommand succeeded.\n");
 
-	return retval;
+	return true;
 
 }
 

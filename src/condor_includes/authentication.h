@@ -28,6 +28,7 @@
 #include "condor_auth.h"
 #include "CryptKey.h"
 #include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "CondorError.h"
 
 #define MAX_USERNAMELEN 128
 
@@ -47,7 +48,7 @@ class Authentication {
     
     ~Authentication();
     
-    int authenticate( char *hostAddr, const char* auth_methods);
+    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr     -- host to authenticate
@@ -55,7 +56,7 @@ class Authentication {
     // RETURNS: -1 -- failure
     //------------------------------------------
 
-    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods);
+    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
     //          is written to keep compatibility issues
