@@ -1327,3 +1327,67 @@ get_user_loginname() {
 	return UserName;
 }
 #endif  /* #if defined(WIN32) */
+
+
+const char*
+priv_identifier( priv_state s )
+{
+	static char id[256];
+	switch( s ) {
+
+	case PRIV_UNKNOWN:
+		sprintf( id, "unknown user" );
+		break;
+
+	case PRIV_FILE_OWNER:
+		if( ! OwnerIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"PRIV_FILE_OWNER, but owner ids are not initialized" );
+		}
+#ifdef WIN32
+		EXCEPT( "Programmer Error: priv_identifier() called for "
+				"PRIV_FILE_OWNER, on WIN32" );
+#else
+		sprintf( id, "file owner '%s' (%d.%d)", OwnerName, OwnerUid,
+				 OwnerGid );
+#endif
+		break;
+
+	case PRIV_USER:
+	case PRIV_USER_FINAL:
+		if( ! UserIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"%s, but user ids are not initialized",
+					priv_to_string(s) );
+		}
+#ifdef WIN32
+		sprintf( id, "%s@%s", UserLoginName, UserDomainName );
+#else
+		sprintf( id, "User '%s' (%d.%d)", UserName, UserUid, UserGid );
+#endif
+		break;
+
+#ifdef WIN32
+	case PRIV_ROOT:
+	case PRIV_CONDOR:
+		sprintf( id, "SuperUser (system)" );
+		break;
+#else /* UNIX */
+	case PRIV_ROOT:
+		sprintf( id, "SuperUser (root)" );
+		break;
+
+	case PRIV_CONDOR:
+		sprintf( id, "Condor daemon user '%s' (%d.%d)", CondorUserName, 
+				 CondorUid, CondorGid );
+		break;
+#endif /* WIN32 vs. UNIX */
+
+	default:
+		EXCEPT( "Programmer error: unknown state (%d) in priv_identifier", 
+				(int)s );
+
+	} /* end of switch */
+	return (const char*) id;
+}
+

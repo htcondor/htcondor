@@ -91,6 +91,7 @@ uid_t get_my_uid();
 gid_t get_my_gid();
 priv_state get_priv();
 const char* priv_to_string( priv_state s );
+const char* priv_identifier( priv_state s );
 
 
 #if !defined(WIN32)
