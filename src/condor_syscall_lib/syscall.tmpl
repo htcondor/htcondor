@@ -944,16 +944,19 @@ not_supported{
 
 
 		/*
-		  Not implemented because our xdr_ustname() function isn't
-		  working.  This is because the sizes of the strings are
-		  defined differently on various platforms...
+		Some users relied on uname() returning success,
+		even though it was not supported.  In addition, this
+		doesn't work correctly on Solaris unless we also
+		get nuname().  This is all fixed in the new-syscalls-branch.
 		*/
+#if 0
 	not_supported int uname( struct utsname *name ) {
 		/*
 		out utsname( name );
 		alloc( name, UTSNAME_SIZE );
 		*/
 	}
+#endif /* 0 */
 
 #if defined(OSF1)
 		int getaddressconf( struct addressconf *buf, size_t length ) {
