@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-if [ $# > 0 ]; then
+if [ $# -gt 0 ]; then
 	imake -s Makefile $* -I../config -I../../config
 	exit 0
 fi
