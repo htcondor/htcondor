@@ -340,7 +340,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner)
 		sprintf(gman_final_args,"condor_gridmanager -f %s",gman_args);
 		free(gman_args);
 	} else {
-		sprintf(gman_final_args,"condor_gridmanager -f",gman_args);
+		sprintf(gman_final_args,"condor_gridmanager -f");
 	}
 	dprintf(D_FULLDEBUG,"Execing %s\n",gman_final_args);
 
