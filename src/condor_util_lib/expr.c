@@ -552,10 +552,12 @@ ELEM	*elem;
 			dprintf( D_EXPR, "TYPE: %s\n", op );
 			break;
 		case NAME:
-			dprintf( D_EXPR, "TYPE: %s	VALUE: \"%s\"\n", op, elem->s_val);
-			break;
 		case STRING:
-			dprintf( D_EXPR, "TYPE: %s	VALUE: \"%s\"\n", op, elem->s_val);
+			if( elem->s_val ) {
+				dprintf( D_EXPR, "TYPE: %s	VALUE: \"%s\"\n", op, elem->s_val);
+			} else {
+				dprintf( D_EXPR, "TYPE: %s	VALUE: NULL\n", op );
+			}
 			break;
 		case FLOAT:
 			dprintf( D_EXPR, "TYPE: %s	VALUE: %f\n", op, elem->f_val );
@@ -641,10 +643,12 @@ FILE	*log_fp;
 			fprintf( log_fp, "(ERROR)" );
 			break;
 		case NAME:
-			fprintf( log_fp,  "%s", elem->s_val );
-			break;
 		case STRING:
-			fprintf( log_fp,  "%s", elem->s_val );
+			if( elem->s_val ) {
+				fprintf( log_fp,  "%s", elem->s_val );
+			} else {
+				fprintf( log_fp,  "NULL" );
+			}
 			break;
 		case FLOAT:
 			fprintf( log_fp,  "%f", elem->f_val );
@@ -1255,7 +1259,9 @@ ELEM	*elem;
 {
 	if( elem->type == STRING || elem->type == NAME ) {
 		/* FREE( elem->s_val ); */
-		free( elem->val.string_val );
+		if( elem->val.string_val ) {
+			free( elem->val.string_val );
+		}
 	}
 	FREE( (char *)elem );
 }
