@@ -122,8 +122,9 @@ RemoteResource::activateClaim( int starterVersion )
 			shadow->dprintf( D_ALWAYS, 
 							 "Request to run on %s was ACCEPTED\n",
 							 dc_startd->addr() );
-
-				// Register the claim_sock for remote system calls.
+				// first, set a timeout on the socket 
+			claim_sock->timeout( 300 );
+				// Now, register it for remote system calls.
 				// It's a bit funky, but works.
 			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
