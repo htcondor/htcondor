@@ -389,6 +389,7 @@ HashTable<Index,Value>::~HashTable()
 {
   clear();
   delete [] ht;
+  delete [] chainsUsed;
 }
 
 #ifdef DEBUGHASH
