@@ -2696,7 +2696,7 @@ int DaemonCore::HandleReq(int socki)
 				}
 
 				// add our version to the policy to be sent over
-				sprintf (buf, "%s=\"%s\"", ATTR_SEC_VERSION, CondorVersion());
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
 				the_policy->InsertOrUpdate(buf);
 				
 				// handy policy vars
@@ -2820,7 +2820,7 @@ int DaemonCore::HandleReq(int socki)
 				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 					if ((!new_session)) {
 						char * remote_version = NULL;
-						the_policy->LookupString(ATTR_SEC_VERSION, &remote_version);
+						the_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
 						if(remote_version) {
 							// this attribute was added in 6.6.1.  it's mere
 							// presence means that the remote side is 6.6.1 or
@@ -2978,8 +2978,8 @@ int DaemonCore::HandleReq(int socki)
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
 					// it matters if the version is empty, so we must explicitly delete it
-					the_policy->Delete( ATTR_SEC_VERSION );
-					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_VERSION );
+					the_policy->Delete( ATTR_SEC_REMOTE_VERSION );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_REMOTE_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );

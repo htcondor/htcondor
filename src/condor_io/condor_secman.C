@@ -1020,7 +1020,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 	// the version of the remote side.
 	MyString remote_version;
 	char * rvtmp = NULL;
-	auth_info.LookupString ( ATTR_SEC_VERSION, &rvtmp );
+	auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
 	if (rvtmp) {
 		remote_version = rvtmp;
 		free(rvtmp);
@@ -1029,7 +1029,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 	}
 
 	// fill in our version
-	sprintf(buf, "%s=\"%s\"", ATTR_SEC_VERSION, CondorVersion());
+	sprintf(buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
 	auth_info.InsertOrUpdate(buf);
 
 	// fill in return address, if we are a daemon
@@ -1276,8 +1276,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			// it makes a difference if the version is empty, so we must
 			// explicitly delete it before we copy it.
-			auth_info.Delete(ATTR_SEC_VERSION);
-			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
+			auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
+			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
