@@ -151,7 +151,7 @@ Figure~\ref{fig:dagman-diamond}.
 
 With \File{diamond.dag}, job A must execute first, because all other jobs
 directly or indirectly depend on it.  After job A successfully completes, both
-job B and C are elligible to run.  In fact, they will be submitted at the same
+job B and C are eligible to run.  In fact, they will be submitted at the same
 time and hopefully Condor will find two remote hosts that can run them in
 parallel.  Since job D depends on both B and C, it must wait for both to
 complete successfully before it can be submitted.
@@ -170,7 +170,7 @@ However, two limits are imposed.
 
 First, each \textit{CondorCommandFile} must submit a cluster of size one.
 There cannot be multiple \texttt{queue} lines.  The reasoning is long winded,
-so a brief summary will be attemped.  If multi-job clusters were allowed,
+so a brief summary will be attempted.  If multi-job clusters were allowed,
 DAGMan would have to parse the \textit{CondorCommandFile} to find out how many
 jobs belong to that cluster.  Otherwise, DAGMan would not know for sure if a
 cluster had terminated based on seeing the event from one job of that
@@ -243,58 +243,17 @@ local schedd does not know the difference between DAGMan submitting a job, and
 the user who originally submitted DAGMan, and could have submitted the DAG
 jobs manually.
 
-Here is an example \textit{CondorCommandFile} that would be used to submit the
-DIAMOND DAG from the previous section.
+A DAG is submitted using the \Condor{submit\_dag} script.  For example, to
+submit the \File{diamond.dag} DAG to Condor, simply type
+``\Condor{submit\_dag} \File{diamond.dag}''.  This script will generate the
+\File{diamond.dag.condor} \textit{CondorCommandFile} for the DAG, and submit
+it to Condor.
 
-\begin{verbatim}
-  # Filename: diamond.dag.condor
-  # Condor Command File to submit the DAGMan Program
-  # Submit with:  condor_submit diamond_dag.condor
-  #
-  executable   = /path/condor_dagman
-  output       = diamond.dag.stdout
-  error        = diamond.dag.stderr
-  log          = diamond.dag.log
-  arguments    = -f -t -l . -lockfile diamond.dag.lock -condorlog diamond.dag.condor.log -dag diamond.dag
-  universe     = scheduler
-  notification = ALWAYS
-  queue
-\end{verbatim}
-
-The full executable path of \Condor{dagman} is specified.  The
-\texttt{output=} is highly recommended, as this version of DAGMan (see
-section~\ref{dagman:version}) does not yet implement a command socket for
-status updates.  All progress is reported via stdout, which will change in
-later versions.
-
-The \texttt{arguments=} line is quite loaded and will be reviewed here.  The
-first few arguments are specifically for daemon core, to which DAGMan is
-linked.  Daemon Core recognizes \texttt{-f} to mean, run in the forground.
-The \texttt{-t} option sends error messages to stderr instead of a log file.
-Finally, ``\texttt{-l .}'' overrides the configuration file's log directory.
-With the -t option, a log file is not necessary, but overriding the log
-directory frees us from having to write daemon core configuration files.  The
-remaining options are for DAGMan itself.  The lockfile is created as a flag
-that a DAG is not yet completed.  If DAGMan is killed during the run of a DAG,
-it knows to recover by checking the existence of the lockfile.  Each DAG must
-be given a unique lock file.  The Condor Log is the log file to which every
-job in the DAG must write to.  This limitation is imposed to avoid the
-difficult task of reading multiple log files concurrently.  This first version
-of DAGMan also imposes the limit that the log file must be unique, meaning
-that no other DAGs or Condor jobs can write to this log file.  Future versions
-of DAGMan will allow multiple DAGs and Condor jobs to write to the same log
-file, and DAGMan's recovery engine will be able to distinguish them (see
-section~\ref{dagman:version}).  Finally, the DAG input file is specified to be
-our DIAMOND DAG, \File{diamond.dag}.
-
-The \texttt{universe=scheduler} declares that DAGMan is not a typical Condor
-job, but rather a meta-scheduler.  Meta schedulers are run on the local
-schedd, rather than being submitted to a remote host.
-
-To run the DAG, issue the command \Condor{submit} diamond.dag.condor.  Because
-\texttt{notification=ALWAYS} is specified, Condor will send a single e-mail
-message if something significant (successful completion or error) happens to
-the DAG as a whole.
+If the user prefers to edit the \File{diamond.dag.condor} file before it is
+submitted to Condor (for example, to change the pre-chosen filenames), she can
+issue ``\Condor{submit\_dag} -n \File{diamond.dag}'', which specifies that
+\File{diamond.dag.condor} is generated, but not submitted to Condor.  To run
+the DAG, issue the command \Condor{submit} diamond.dag.condor.
 
 \subsection{Removal}
 
@@ -309,9 +268,9 @@ However, if the machine is scheduled to go down, and the schedd receives a
 shutdown command from the master, the schedd will send a running DAGMan job a
 similar shutdown, which instructs DAGMan to clean up memory and exit.
 However, in this case, DAGMan does not remove its submitted jobs, but rather
-expects them to persistantly exist in the Condor queue after restart.
+expects them to persistently exist in the Condor queue after restart.
 
-The important thing to remember is that DAGMan will not explicitely run
+The important thing to remember is that DAGMan will not explicitly run
 \Condor{rm} on its jobs except as a result of the user running \Condor{rm} on
 the DAGMan job.
 
@@ -361,7 +320,7 @@ This section addresses the features and limitations that exist in the current
 version of DAGMan, and how they may change in future versions.
 
 This first public release of DAGMan was written and tested in the Condor 6.1.0
-environment.  It is shipped seperate from the main Condor system as a
+environment.  It is shipped separate from the main Condor system as a
 contribution program.  As such, it is not as rigorously tested as the core
 components of Condor.  A reasonable effort has been made to test large DAGS
 (on the order of 5000 jobs) on Solaris x86 and Sparc.  However, the DAGMan is
