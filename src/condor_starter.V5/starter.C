@@ -41,6 +41,7 @@
 #include "condor_jobqueue.h"
 #include "condor_uid.h"
 #include "condor_config.h"
+#include "condor_io.h"
 #include <signal.h>
 #include <sys/wait.h>
 #include "proto.h"
@@ -108,7 +109,7 @@ int	CkptLimit = 300;	// How long to wait for proc to ckpt and exit
 const int	VacateLimit = 60;	// How long to wait for proc to exit
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
-XDR		*SyscallStream;			// XDR stream to shadow for remote system calls
+ReliSock	*SyscallStream;		// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 //listuserproc	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute

@@ -53,7 +53,7 @@ NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o analyze_exec.$(OS).o \
 SRC = $(PORTABLE_SRC) $(NON_PORTABLE_SRC)
 OBJ = $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 
-XDR_LIB = ../condor_xdr_lib/xdr_lib.a
+IO_LIB = ../condor_io/libcondor.a
 UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
 
@@ -67,34 +67,34 @@ REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/syscall_numbers.o \
 	../condor_syscall_lib/xfer_file.o \
 	$(UTIL_LIB) \
-	$(XDR_LIB) \
+	$(IO_LIB) \
 	$(CLASS_LIB) \
 	$(PVM_LIB)
 #else
 #if IS_R6000_AIX32 
 REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
 #else
-REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(XDR_LIB) $(PVM_LIB)
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB) $(PVM_LIB)
 #endif
 #endif
 
 #if IS_MIPS_ULTRIX42
 LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
 #elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib SocketLib RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib SocketLib RpcLib MldLib 
 #elif (IS_I386_LINUX)
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib  RpcLib MldLib /usr/lib/libbfd.a /usr/lib/libiberty.a
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib  RpcLib MldLib /usr/lib/libbfd.a /usr/lib/libiberty.a
 #else
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib  RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib  RpcLib MldLib 
 #endif
 
-LIBDIRS = ../condor_util_lib ../condor_xdr_lib
+LIBDIRS = ../condor_util_lib ../condor_io
 
 TOY_SRC = state_machine_driver.C signals.C name_tab.C starter.toy.C \
 	alarm.C
 TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
-TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
+TOY_LIB =  $(UTIL_LIB) $(IO_LIB)
 
 /* all_target(condor_starter.V5 test_it hound) ---we no longer need test_it & hound */
 all_target(condor_starter.V5)
@@ -118,7 +118,7 @@ condor_starter.V5: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(PORTABLE_OBJ) \
 	$(NON_PORTABLE_OBJ) \
 	$(UTIL_LIB) \
-	$(XDR_LIB) \
+	$(IO_LIB) \
 	$(REMOTE_SYSCALL_LIB) \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::

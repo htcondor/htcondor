@@ -28,6 +28,8 @@
 
 #include <signal.h>
 
+#include "condor_io.h"
+
 #if defined(LINUX)
 typedef long	rlim_t;
 #endif
@@ -39,7 +41,7 @@ extern "C" {
 	int SetSyscalls( int );
 	void InitStaticFile( int, int );
 	void set_debug_flags( char * );
-	XDR * RSC_Init( int rscsock, int errsock );
+	ReliSock *RSC_Init( int rscsock, int errsock );
 	int xdr_proc( XDR *xdrs, PROC *proc );
 	int get_file( char *remote, char *local, int mode );
 	int send_file( char *local_name, char *remote_name, int mode );
@@ -135,9 +137,5 @@ extern "C" {
 	void BlockAsynchEvents();
 	char *sig_name( int );
 	int  REMOTE_syscall( int, ... );
-#if 1
-	XDR	 *init_syscall_connection( int );
-#else
-	XDR	 *init_syscall_connection( int, int );
-#endif
+	ReliSock	 *init_syscall_connection( int );
 }

@@ -50,6 +50,7 @@
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_sys.h"
+#include "condor_io.h"
 #include "startup.h"
 #if defined(LINUX)
 #include <unistd.h>
@@ -124,7 +125,7 @@ extern sigset_t	ChildSigMask;
 extern NameTable SigNames;
 extern char *ThisHost;
 extern char *InitiatingHost;
-extern XDR	*SyscallStream;			// XDR stream to shadow for remote system calls
+extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 extern int EventSigs[];
 int UserProc::proc_index = 1;
 
@@ -1105,29 +1106,29 @@ NewConnection( int id )
 	int		syscall = CONDOR_new_connection;
 	int		answer;
 
-	SyscallStream->x_op = XDR_ENCODE;
+	SyscallStream->encode();
 
 		// Send the request
-	if( !xdr_int(SyscallStream,&syscall) ) {
+	if( !SyscallStream->code(syscall) ) {
 		EXCEPT( "Can't send CONDOR_new_connection request" );
 	}
-	if( !xdr_int(SyscallStream,&id) ) {
+	if( !SyscallStream->code(id) ) {
 		EXCEPT( "Can't send process id for CONDOR_new_connection request" );
 	}
 
 		// Turn the stream around
-	xdrrec_endofrecord( SyscallStream, TRUE);
-	SyscallStream->x_op = XDR_DECODE;
-	xdrrec_skiprecord( SyscallStream );
+	SyscallStream->eom();
+	SyscallStream->decode();
 
 		// Read the port number
-	if( !xdr_int(SyscallStream,&portno) ) {
+	if( !SyscallStream->code(portno) ) {
 		EXCEPT( "Can't read port number for new connection" );
 	}
 	if( portno < 0 ) {
-		xdr_int( SyscallStream ,&errno );
+		SyscallStream->code( errno );
 		EXCEPT( "Can't get port for new connection" );
 	}
+	SyscallStream->eom();
 
 	answer = connect_to_port( portno );
 	dprintf(D_FULLDEBUG, "New Socket: %d\n", answer);
