@@ -52,6 +52,12 @@ REMOTE_syscall( int syscall_num, ... )
 	// always unblock SIGTSTP and SIGUSR2, and the starter wants
 	// them to remain blocked in some cases.
 	sigfillset( &mask );
+	sigdelset( &mask, SIGABRT );
+	sigdelset( &mask, SIGBUS );
+	sigdelset( &mask, SIGFPE );
+	sigdelset( &mask, SIGILL );
+	sigdelset( &mask, SIGSEGV );
+	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_SETMASK, &mask, &omask );
 	
 	switch( syscall_num ) {
