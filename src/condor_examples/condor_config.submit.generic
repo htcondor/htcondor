@@ -208,6 +208,13 @@ LOCK		= $(LOCAL_DIR)/log
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
+
+##
+## The flags given in ALL_DEBUG are shared between all daemons.
+##
+
+ALL_DEBUG               =
+
 MAX_SCHEDD_LOG		= 64000
 SCHEDD_DEBUG		=
 
