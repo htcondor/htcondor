@@ -393,7 +393,7 @@ int daemon::StartDaemon()
 	if( access(process_name,X_OK) != 0 ) {
 		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
 		// flag = FALSE;
-		pid = -1; 
+		pid = 0; 
 		return 0;
 	}
 
@@ -423,7 +423,7 @@ int daemon::StartDaemon()
 	if ( pid == FALSE ) {
 			// Create_Process failed!
 		dprintf(D_ALWAYS,"ERROR: Create_Process failed, trying to start %s\n",process_name);
-		pid = -1;
+		pid = 0;
 		return 0;
 	}
 
@@ -642,7 +642,7 @@ void Daemons::SignalAll(int signal)
 {
 	// kills all daemons except the master itself
 	for ( int i=0; i < no_daemons; i++)
-		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid )
+		if ((daemon_ptr[i]->flag == TRUE ) && ( daemon_ptr[i]->pid > 0  )
 		  && ( strcmp(daemon_ptr[i]->name_in_config_file,"MASTER") != 0))
 			do_kill(daemon_ptr[i]->pid, signal);
 }
