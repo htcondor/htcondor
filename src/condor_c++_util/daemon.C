@@ -43,22 +43,25 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 	_tried_locate = false;
 
 	_addr = NULL;
+	_name = NULL;
 	_error = NULL;
 	_id_str = NULL;
 	_hostname = NULL;
 	_full_hostname = NULL;
-
-	if( name && name[0] ) {
-		_name = strnewp( name );
-	} else {
-		_name = NULL;
-	}
 
 	if( pool ) {
 		_pool = strnewp( pool );
 	} else {
 		_pool = NULL;
 	}
+
+	if( name && name[0] ) {
+		if( is_valid_sinful(name) ) {
+			_addr = strnewp( name );
+		} else {
+			_name = strnewp( name );
+		}
+	} 
 }
 
 
@@ -154,6 +157,11 @@ Daemon::idStr( void )
 		sprintf( buf, "%s %s", daemonString(_type), _name );
 	} else if( _addr ) {
 		sprintf( buf, "%s at %s", daemonString(_type), _addr );
+		if( _full_hostname ) {
+			strcat( buf, " (" );
+			strcat( buf, _full_hostname );
+			strcat( buf, ")" );
+		}
 	} else {
 		EXCEPT( "Daemon::idStr: locate() successful but _addr not found" );
 	}
@@ -393,11 +401,11 @@ Daemon::locate( void )
 			*tmp = '\0';
 		}
 		New_hostname( strnewp(buf) );
-	}	
+	}
 
-		// Now that we're done with the get*Info() code, if we still don't 
-		// have a name, fill that in.
-	if( ! _name ) {
+		// Now that we're done with the get*Info() code, if we're a
+		// local daemon and we still don't have a name, fill it in.  
+	if( ! _name && _is_local) {
 		_name = localName();
 	}
 
@@ -412,6 +420,8 @@ Daemon::getDaemonInfo( const char* subsys,
 	char				buf[512], tmpname[512];
 	char				*addr_file, *tmp, *my_name;
 	FILE				*addr_fp;
+	struct				sockaddr_in sockaddr;
+	struct				hostent* hostp;
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
@@ -455,14 +465,31 @@ Daemon::getDaemonInfo( const char* subsys,
 			}           
 		}
 			// Now that we got this far and have the correct name, see
-			// if that matches the name for the local daemon.
+			// if that matches the name for the local daemon.  
+			// If we were given a pool, never assume we're local --
+			// always try to query that pool...
 		my_name = localName();
-		if( !strcmp( _name, my_name ) ) {
+		if( !_pool && !strcmp(_name, my_name) ) {
 			_is_local = true;
 		}
 		delete [] my_name;
+	} else if( _addr ) {
+			// We got no name, but we have an address.  Try to
+			// do an inverse lookup and fill in some hostname info
+			// from the IP address we already have.
+		string_to_sin( _addr, &sockaddr );
+		hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
+							   sizeof(struct in_addr), AF_INET ); 
+		if( ! hostp ) {
+			New_full_hostname( NULL );
+			sprintf( buf, "can't find host info for %s", _addr );
+			newError( buf );
+		} else {
+			New_full_hostname( strnewp(hostp->h_name) );
+		}
 	} else {
-			// We were passed no name, so use the local daemon.
+			// We were passed neither a name nor an address, so use
+			// the local daemon.
 		_is_local = true;
 		New_name( localName() );
 		New_full_hostname( strnewp(my_full_hostname()) );
@@ -470,6 +497,7 @@ Daemon::getDaemonInfo( const char* subsys,
 
 		// Now that we have the real, full names, actually find the
 		// address of the daemon in question.
+
 	if( _is_local ) {
 		sprintf( buf, "%s_ADDRESS_FILE", subsys );
 		addr_file = param( buf );
@@ -542,12 +570,12 @@ bool
 Daemon::getCmInfo( const char* subsys, int port )
 {
 	char buf[128];
-	struct hostent* hostp;
 	char* host = NULL;
 	char* local_host = NULL;
 	char* remote_host = NULL;
 	char* tmp;
 	struct in_addr sin_addr;
+	struct hostent* hostp;
 
 		// We know this without any work.
 	_port = port;
@@ -625,7 +653,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 		hostp = gethostbyaddr( (char*)&sin_addr, 
 							   sizeof(struct in_addr), AF_INET ); 
 		if( ! hostp ) {
-			New_full_hostname( strnewp("unknown host") );
+			New_full_hostname( NULL );
 			sprintf( buf, "can't find host info for %s", _addr );
 			newError( buf );
 		} else {
