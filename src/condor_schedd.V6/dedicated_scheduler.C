@@ -1960,7 +1960,9 @@ DedicatedScheduler::spawnJobs( void )
 			continue;
 		}
 
-		dprintf ( D_ALWAYS, "New MPI shadow spawned, pid = %d\n", pid );
+		dprintf( D_ALWAYS, 
+				 "Started shadow for MPI job %d.0 (shadow pid = %d)\n", 
+				 id.cluster, pid );
 
 		mark_job_running( &id );
 		srec = scheduler.add_shadow_rec( pid, &id, mrec, -1 );
