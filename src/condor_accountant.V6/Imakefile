@@ -8,11 +8,10 @@ CPP = PreProcessCmd
 LDFLAGS = $(LIBDBM)
 
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
-DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 SRC = Accountant.C accountant_main.C
-OBJ = Accountant.o accountant_main.o
-ACCT_LIB_OBJ = Accountant.o
+OBJ = Accountant.o
 
 LIB= $(DAEMON_CORE_LIB) ../condor_c++_util/cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a SocketLib ../condor_c++_util/libapi.a
 
@@ -21,8 +20,8 @@ LIBDIRS=../condor_util_lib ../condor_xdr_lib
 all_target(condor_accountant libacct.a)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
-library_target(libacct.a, $(ACCT_LIB_OBJ))
-c_plus_target(condor_accountant,$(OBJ),$(LIB))
+library_target(libacct.a, $(OBJ))
+c_plus_target(condor_accountant,accountant_main.o $(OBJ),$(LIB))
 pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
 release_target(condor_accountant,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 

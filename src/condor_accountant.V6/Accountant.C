@@ -11,6 +11,8 @@
 #include "condor_attributes.h"
 
 //------------------------------------------------------------------
+// Constructor - One time initialization
+//------------------------------------------------------------------
 
 Accountant::Accountant(int MaxCustomers, int MaxResources) 
   : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc)
@@ -19,8 +21,34 @@ Accountant::Accountant(int MaxCustomers, int MaxResources)
   LastUpdateTime=Time::Now();
   MinPriority=0.5;
   Epsilon=0.001;
+  PriorityFile=param("SPOOL");
+  PriorityFile+="/Priority.log";
 }
 
+//------------------------------------------------------------------
+// Reset to empty
+//------------------------------------------------------------------
+
+void Accountant::Reset() 
+{
+  MyString Name;
+
+  CustomerRecord* Customer;
+  Customers.startIterations();
+  while (Customers.iterate(Name, Customer)) delete Customer;
+  Customers.clear();
+
+  ResourceRecord* Resource;
+  Resources.startIterations();
+  while (Resources.iterate(Name, Resource)) delete Resource;
+  Resources.clear();
+
+  LastUpdateTime=Time::Now();
+  return;
+}
+
+//------------------------------------------------------------------
+// Set library or stand-alone mode (not implemented)
 //------------------------------------------------------------------
 
 void Accountant::SetAccountant(char* sin) 
@@ -28,6 +56,8 @@ void Accountant::SetAccountant(char* sin)
   return;
 }
 
+//------------------------------------------------------------------
+// Return the priority of a customer
 //------------------------------------------------------------------
 
 double Accountant::GetPriority(const MyString& CustomerName) 
@@ -39,6 +69,8 @@ double Accountant::GetPriority(const MyString& CustomerName)
   return Priority;
 }
 
+//------------------------------------------------------------------
+// Set the priority of a customer
 //------------------------------------------------------------------
 
 void Accountant::SetPriority(const MyString& CustomerName, double Priority) 
@@ -54,6 +86,8 @@ void Accountant::SetPriority(const MyString& CustomerName, double Priority)
   Customer->Priority=Priority;
 }
 
+//------------------------------------------------------------------
+// Add a match
 //------------------------------------------------------------------
 
 void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
@@ -82,6 +116,8 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 }
 
 //------------------------------------------------------------------
+// Remove a match
+//------------------------------------------------------------------
 
 void Accountant::RemoveMatch(const MyString& ResourceName)
 {
@@ -103,6 +139,9 @@ void Accountant::RemoveMatch(const MyString& ResourceName)
 }
 
 //------------------------------------------------------------------
+// Go through the list of startd ad's and check of matches
+// that were broken (by checkibg the claimed state)
+//------------------------------------------------------------------
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) {
   ResourceList.Open();
@@ -114,6 +153,9 @@ void Accountant::CheckMatches(ClassAdList& ResourceList) {
 }
 
 //------------------------------------------------------------------
+// Update priorites for all customers (schedd's)
+// Based on the time that passed since the last update
+//------------------------------------------------------------------
 
 void Accountant::UpdatePriorities() 
 {
@@ -122,7 +164,8 @@ void Accountant::UpdatePriorities()
   double AgingFactor=pow(0.5,TimePassed/HalfLifePeriod);
   LastUpdateTime=CurUpdateTime;
 
-  dprintf(D_ALWAYS,"Updating Priorities: AgingFactor=%5.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
+  dprintf(D_ALWAYS,"Updating Priorities: AgingFactor=%8.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
+
   CustomerRecord* Customer;
   MyString CustomerName;
   Customers.startIterations();
@@ -130,13 +173,15 @@ void Accountant::UpdatePriorities()
     double Priority=Customer->Priority;
     double UnchargedResources=0;
     if (TimePassed>0) UnchargedResources=(Customer->UnchargedTime/TimePassed);
-    double ResourcesUsed=Customer->ResourceNames.Count()+UnchargedResources;
-    Priority=Priority*AgingFactor+ResourcesUsed*(1-AgingFactor);
+    double ResourcesUsed=Customer->ResourceNames.Count();
+    Priority=Priority*AgingFactor+(ResourcesUsed+UnchargedResources)*(1-AgingFactor);
+
     dprintf(D_FULLDEBUG,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%1.0f\n",CustomerName.Value(),Customer->Priority,Priority,ResourcesUsed);
-    dprintf(D_FULLDEBUG,"UnchargedResources=%5.3f , UnchargedTime=%5.3f\n",UnchargedResources,Customer->UnchargedTime);
+    dprintf(D_FULLDEBUG,"UnchargedResources=%8.3f , UnchargedTime=%5.3f\n",UnchargedResources,Customer->UnchargedTime);
 #ifdef DEBUG_FLAG
     dprintf(D_ALWAYS,"Resources: "); Customer->ResourceNames.PrintSet();
 #endif
+
     Customer->UnchargedTime=0;
     Customer->Priority=Priority;
     if (Customer->Priority<Epsilon && Customer->ResourceNames.Count()==0) {
@@ -146,9 +191,52 @@ void Accountant::UpdatePriorities()
   }
 }
 
-//---------------------------------------------------------------
-// Utility functions
-//---------------------------------------------------------------
+//------------------------------------------------------------------
+// Load priorities from file
+//------------------------------------------------------------------
+
+void Accountant::LoadPriorities()
+{
+  dprintf(D_FULLDEBUG,"Loading priorities\n");
+  FILE* fp=fopen((const char*)PriorityFile, "r");
+  if (fp==NULL) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::LoadPriorities - failed to open priorities file %s\n",(const char*) PriorityFile);
+    return;
+  }
+
+  char s[40];
+  float f;
+  while (1) {
+    if (fscanf(fp,"%s %f\n",s,&f)==EOF) break;
+    dprintf(D_FULLDEBUG,"Customer=%s, Priority=%5.3f\n",s,f);
+    SetPriority(s,f);
+  }
+  fclose(fp);
+  return;
+}
+
+//------------------------------------------------------------------
+// Save priorities to file
+//------------------------------------------------------------------
+
+void Accountant::SavePriorities()
+{
+  dprintf(D_FULLDEBUG,"Saving priorities\n");
+  FILE* fp=fopen((const char*)PriorityFile, "w");
+  if (fp==NULL) {
+    dprintf(D_ALWAYS, "ERROR in Accountant::SavePriorities - failed  to open priorities file %s\n",(const char*) PriorityFile);
+    return;
+  }
+  CustomerRecord* Customer;
+  MyString CustomerName;
+  Customers.startIterations();
+  while (Customers.iterate(CustomerName, Customer)) {
+    fprintf(fp,"%-30s %8.3f\n", (const char*) CustomerName,Customer->Priority);
+    dprintf(D_FULLDEBUG,"%s %8.3f\n", (const char*) CustomerName,Customer->Priority);
+  }
+  fclose(fp);
+  return;
+}
 
 //------------------------------------------------------------------
 // Extract resource name from class-ad

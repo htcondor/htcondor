@@ -1,42 +1,46 @@
-//////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 //
+// Condor Accountant - Main
 // Adiel Yoaz
 //
-//////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_daemon_core.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
 #include "condor_accountant.h"
 
-// extern int Termlog;
+//---------------------------------------------------------------------------
+
+char* mySubSystem="ACCOUNTANT";
+
+//---------------------------------------------------------------------------
 
 void usage(char* name)
 {
-  dprintf(D_ALWAYS, "Usage: %s [-t]", name); 
+  dprintf(D_ALWAYS, "Usage: %s [-t]\n", name); 
   exit( 1 );
 }
 
-main(int argc, char* argv[])
-{
-  int Termlog=1;
+//---------------------------------------------------------------------------
 
+int main_init(int argc, char* argv[])
+{
   for(int i=1;i<argc;i++) {
     if(argv[i][0] != '-') usage(argv[0]);
-    switch(argv[i][1]) {
-    case 't':
-      Termlog = 1;
-      break;
-    }
   }
 
-  // DaemonCore core(10,10,10);
-  Accountant accountant(100,100);
+  Accountant accountant;
 
-  //----------------------------------------------
-  // Test
-  //----------------------------------------------
+  ClassAd* AccountantClassAd=new ClassAd();
+  config(AccountantClassAd);
+
+#if 1
+
+  //-------------------------------------------------
+  // Testing
+  //-------------------------------------------------
 
   ClassAd* Ad1=new ClassAd("Name = \"1\",StartdIpAddr = \"fred\"",',');
   ClassAd* Ad2=new ClassAd("Name = \"2\",StartdIpAddr = \"fred\"",',');
@@ -59,39 +63,39 @@ main(int argc, char* argv[])
   accountant.SetPriority("Yuval",1);
 
   accountant.UpdatePriorities();
-
-  //  sleep(1);
-  //accountant.RemoveMatch("XXX6.2.3");
-  //sleep(1);
-  //accountant.UpdatePriorities();
-  
-  //sleep(10);
-  sleep(2);
-  accountant.RemoveMatch("1@fred");
-  dprintf(D_ALWAYS,"Before second removal\n");
-  accountant.RemoveMatch("1@fred");
-  sleep(4);
-  dprintf(D_ALWAYS,"Before addMatch\n");
-  accountant.AddMatch("Arieh",Ad1);
-  sleep(4);
-  //for (int i=0,j; i<10000000; i++) j=(i+1)*2/3+(i*7);
+  accountant.SavePriorities();
+  // accountant.Reset();
+  // accountant.SavePriorities();
   accountant.UpdatePriorities();
+  accountant.LoadPriorities();
+  accountant.UpdatePriorities();
+
   sleep(10);
   
-  while(1) { sleep(1); accountant.UpdatePriorities(); }
+  // while(1) { sleep(1); accountant.UpdatePriorities(); }
 
-  dprintf(D_ALWAYS,"End.");
+#endif
 
-  //----------------------------------------------
-  
-  // ClassAd* AccountantClassAd=new ClassAd();
-  // config(AccountantClassAd);
-  
-  //dprintf_config("ACCOUNTANT", 2);
-  //dprintf(D_ALWAYS, "*************************************************\n");
-  //dprintf(D_ALWAYS, "************** ACCOUNTANT START UP **************\n");
-  //dprintf(D_ALWAYS, "*************************************************\n"); 
-  
-  // accountant.Init(&core);
-  //core.Driver(); 
+  return TRUE;
 } 
+
+//---------------------------------------------------------------------------
+
+int main_config()
+{
+  return TRUE;
+}
+
+//---------------------------------------------------------------------------
+
+int main_shutdown_fast()
+{
+  return TRUE;
+}
+
+//---------------------------------------------------------------------------
+
+int main_shutdown_graceful()
+{
+  return TRUE;
+}
