@@ -780,67 +780,89 @@ sub customize_config_file {
 	  $local_config_str, $lock, $name ) = @_;
     local( $ckpt, $view );
 
-    open( CONFIG, ">$config_file" ) || 
-	die "Can't open config file $config_file: $!\n";
-    open( GENERIC, "<$generic_file" ) || 
-	die "Can't open generic config file $generic_file: $!\n";
-    
-    if( $cm eq "condor.cs.wisc.edu" ) {
-	$ckpt = "condor-ckpt.cs.wisc.edu";
-	$view = "condor-view.cs.wisc.edu";
-    }
+	foreach $real_config_file ("$config_file","$config_file.policy", 
+			"$config_file.root","$config_file.security") {
+    	open( CONFIG, ">$real_config_file" ) || 
+		die "Can't open config file $real_config_file: $!\n";
 
-    print "\nConfiguring global condor config file ... ";
-    while( <GENERIC> ) {
-      SWITCH: {
-	  if( /^CONDOR_HOST.*$/ ) { $_ = "CONDOR_HOST\t\t= $cm\n"; last SWITCH; }
-	  if( /^RELEASE_DIR.*$/ ) { $_ = "RELEASE_DIR\t\t= $release_dir\n"; last SWITCH; }
-	  if( /^LOCAL_DIR.*$/ ) { $_ = "LOCAL_DIR\t\t= $local_dir_str\n"; last SWITCH; }
-	  if( /^LOCAL_CONFIG_FILE.*$/ ) { 
-	      if( $local_config_str ) {
-		  $_ = "LOCAL_CONFIG_FILE\t\t= $local_config_str\n";
-	      } else {
-		  $_ = "#LOCAL_CONFIG_FILE\t\t= \$(LOCAL_DIR)/condor_config.local\n";
-	      }
-	      last SWITCH;
-	  }  
-	  if( /^CONDOR_ADMIN.*$/ ) {
-	      $_ = "CONDOR_ADMIN\t\t= $condor_admin\n";
-	      last SWITCH;
-	  }
-	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
-	  if( $lock && /^LOCK.*$/ ) { $_ = "LOCK\t\t\t= $lock\n"; last SWITCH; }
-	  if( $ckpt && /^#USE_CKPT_SERVER.*$/ ) { 
-	      $_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
-	  }
-	  if( $ckpt && /^#CKPT_SERVER_HOST.*$/ ) {
-	      $_ = "CKPT_SERVER_HOST\t= $ckpt\n"; last SWITCH; 
-	  }
-	  if( $name && /^#MASTER_NAME.*$/ ) { 
-	      $_ = "MASTER_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
-	  }
-	  if( $name && /^#SCHEDD_NAME.*$/ ) { 
-	      $_ = "SCHEDD_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
-	  }
-	  if( $view && /^#CONDOR_VIEW_HOST.*$/ ) {
-	      $_ = "CONDOR_VIEW_HOST\t= $view\n"; last SWITCH; 	     
- 	  }
-	  if( $soft_uid && /^#SOFT_UID_DOMAIN.*$/ ) {
-	      $_ = "SOFT_UID_DOMAIN\t= $soft_uid\n"; last SWITCH; 	     
- 	  }
-	  if( $uid_domain && /^UID_DOMAIN.*$/ ) {
-	      $_ = "UID_DOMAIN\t= $uid_domain\n"; last SWITCH; 	     
- 	  }
-	  if( $fs_domain && /^FILESYSTEM_DOMAIN.*$/ ) {
-	      $_ = "FILESYSTEM_DOMAIN\t= $fs_domain\n"; last SWITCH; 	     
- 	  }
-      }
-	print CONFIG "$_";
-    }
-    print "done.\n";
-    print "Created $config_file.\n";
-    close CONFIG;
-    close GENERIC;
+		$real_generic_file = $real_config_file;
+		$real_generic_file =~ s/$config_file//;
+		$real_generic_file = $generic_file.$real_generic_file;
+
+    	open( GENERIC, "<$real_generic_file" ) || 
+		die "Can't open generic config file $real_generic_file: $!\n";
+    
+    	if( $cm eq "condor.cs.wisc.edu" ) {
+			$ckpt = "condor-ckpt.cs.wisc.edu";
+			$view = "condor-view.cs.wisc.edu";
+    	}
+
+    	print "\nConfiguring global condor config file ... ";
+    	while( <GENERIC> ) {
+      	SWITCH: {
+	  	if( /^CONDOR_HOST.*$/ ) { $_ = "CONDOR_HOST\t\t= $cm\n"; last SWITCH; }
+	  	if( /^RELEASE_DIR.*$/ ) { $_ = "RELEASE_DIR\t\t= $release_dir\n"; last SWITCH; }
+	  	if( /^LOCAL_DIR.*$/ ) { $_ = "LOCAL_DIR\t\t= $local_dir_str\n"; last SWITCH; }
+	  	if( /^LOCAL_CONFIG_FILE.*$/ ) { 
+	      	if( $local_config_str ) {
+		  	$_ = "LOCAL_CONFIG_FILE\t\t= $local_config_str\n";
+	      	} else {
+		  	$_ = "#LOCAL_CONFIG_FILE\t\t= \$(LOCAL_DIR)/condor_config.local\n";
+	      	}
+	      	last SWITCH;
+	  	}  
+	  	if( /^CONDOR_ADMIN.*$/ ) {
+	      	$_ = "CONDOR_ADMIN\t\t= $condor_admin\n";
+	      	last SWITCH;
+	  	}
+	  	if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
+	  	if( $lock && /^LOCK.*$/ ) { $_ = "LOCK\t\t\t= $lock\n"; last SWITCH; }
+	  	if( $ckpt && /^#USE_CKPT_SERVER.*$/ ) { 
+	      	$_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
+	  	}
+	  	if( $ckpt && /^#CKPT_SERVER_HOST.*$/ ) {
+	      	$_ = "CKPT_SERVER_HOST\t= $ckpt\n"; last SWITCH; 
+	  	}
+	  	if( $name && /^#MASTER_NAME.*$/ ) { 
+	      	$_ = "MASTER_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
+	  	}
+	  	if( $name && /^#SCHEDD_NAME.*$/ ) { 
+	      	$_ = "SCHEDD_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
+	  	}
+	  	if( $view && /^#CONDOR_VIEW_HOST.*$/ ) {
+	      	$_ = "CONDOR_VIEW_HOST\t= $view\n"; last SWITCH; 	     
+ 	  	}
+	  	if( $soft_uid && /^#SOFT_UID_DOMAIN.*$/ ) {
+	      	$_ = "SOFT_UID_DOMAIN\t= $soft_uid\n"; last SWITCH; 	     
+ 	  	}
+	  	if( $uid_domain && /^UID_DOMAIN.*$/ ) {
+	      	$_ = "UID_DOMAIN\t= $uid_domain\n"; last SWITCH; 	     
+ 	  	}
+	  	if( $fs_domain && /^FILESYSTEM_DOMAIN.*$/ ) {
+	      	$_ = "FILESYSTEM_DOMAIN\t= $fs_domain\n"; last SWITCH; 	     
+ 	  	}
+      	}
+		print CONFIG "$_";
+    	}
+    	print "done.\n";
+    	print "Created $real_config_file.\n";
+    	close CONFIG;
+    	close GENERIC;
+
+		# if this is a root config, chown it to root and make it 644
+		# (only if we're root).
+		if ($real_config_file =~ /root/ && $< ) {
+			$retval = chown( 0, -1, $real_config_file );
+			if ($retval) {
+				print "WARNING: Unable to change $real_config_file to root ownership!\n";
+			}
+			$retval = chmod( 0644, $real_config_file );
+			if ($retval) {
+				print "WARNING: Unable to change $real_config_file file permissions to 644!\n";
+			}
+		}
+			
+	}
 }
 
 
