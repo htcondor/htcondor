@@ -28,7 +28,6 @@
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "proto.h"
-#include "condor_sys.h"
 #include "name_tab.h"
 #include "state_machine_driver.h"
 #include "starter.h"

@@ -28,7 +28,6 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_io.h"
-#include "condor_sys.h"
 #include "my_hostname.h"
 
 void init_sig_mask();

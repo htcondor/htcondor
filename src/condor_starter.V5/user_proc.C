@@ -29,7 +29,6 @@
 #include "condor_file_info.h"
 #include "name_tab.h"
 #include "proto.h"
-#include "condor_sys.h"
 #include "condor_io.h"
 #include "startup.h"
 #include "fileno.h"
@@ -58,7 +57,6 @@ const mode_t LOCAL_DIR_MODE =
 
 
 #include "user_proc.h"
-#include "condor_sys.h"
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 

@@ -31,7 +31,6 @@
 #include "list.h"
 #include "starter.h"
 
-#include "condor_sys.h"
 #include "pvm_user_proc.h"
 #include "pvm3.h"
 #include "sdpro.h"
