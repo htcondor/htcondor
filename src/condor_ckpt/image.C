@@ -292,10 +292,10 @@ SegMap::Contains( void *addr )
 
 
 #if defined(PVM_CHECKPOINTING)
-extern "C" user_restore_pre();
-extern "C" user_restore_post(int);
+extern "C" user_restore_pre(char *, int);
+extern "C" user_restore_post(char *, int);
 
-int		global_user_data;
+char	global_user_data[256];
 #endif
 
 /*
@@ -306,10 +306,10 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
-	int		user_data;
+	char	user_data[256];
 
 #if defined(PVM_CHECKPOINTING)
-	user_data = user_restore_pre();
+	user_restore_pre(user_data, sizeof(user_data));
 #endif
 		// Overwrite our data segment with the one saved at checkpoint
 		// time.
@@ -321,7 +321,7 @@ Image::Restore()
 	fd = save_fd;
 
 #if defined(PVM_CHECKPOINTING)
-	global_user_data = user_data;
+	memcpy(global_user_data, user_data, sizeof(user_data));
 #endif
 
 		// Now we're going to restore the stack, so we move our execution
@@ -382,7 +382,7 @@ RestoreStack()
 	}
 
 #if defined(PVM_CHECKPOINTING)
-	user_restore_post(global_user_data);
+	user_restore_post(global_user_data, sizeof(global_user_data));
 #endif
 
 	LONGJMP( Env, 1 );
@@ -391,7 +391,11 @@ RestoreStack()
 int
 Image::Write()
 {
-	return Write( file_name );
+	if (fd == -1) {
+		return Write( file_name );
+	} else {
+		return Write( fd );
+	}
 }
 
 
@@ -541,11 +545,13 @@ Image::Read()
 {
 	int		i;
 	ssize_t	nbytes;
+	char	buf[100];
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
 		if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
-			perror( "open_ckpt_file" );
+			sprintf(buf, "open_ckpt_file(%s)", file_name);
+			perror( buf );
 			exit( 1 );
 		}
 	}
@@ -737,9 +743,15 @@ void
 ckpt()
 {
 	int		scm;
+	sigset_t	n_sigmask;
+	sigset_t	o_sigmask;
 
+	sigemptyset(&n_sigmask);
+	sigaddset(&n_sigmask, SIGTSTP);
+	sigaddset(&n_sigmask, SIGUSR1);
 	dprintf( D_ALWAYS, "About to send CHECKPOINT signal to SELF\n" );
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	sigprocmask(SIG_UNBLOCK, &n_sigmask, &o_sigmask);
 	kill( getpid(), SIGTSTP );
 }
 
