@@ -375,7 +375,9 @@ int daemon::StartDaemon()
 {
 	char	*shortname;
 	int command_port = TRUE;
+#ifndef WANT_DC_PM
 	int i, max_fds = getdtablesize();
+#endif
 	char argbuf[150];
 
 	if( (shortname = strrchr(process_name,'/')) ) {
@@ -506,7 +508,9 @@ void Daemons::Restart(int pid)
 void Daemons::RestartMaster()
 {
 	int			index = GetIndex("MASTER");
+#ifndef WANT_DC_PM
 	int 		i, max_fds = getdtablesize();
+#endif
 
 	if ( index == -1 ) {
 		dprintf(D_ALWAYS, "Restart Master:MASTER not specified\n");
