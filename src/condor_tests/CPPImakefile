@@ -23,6 +23,11 @@ C_PLUS_FLAGS = $(CFLAGS)
  * Remote System Calls
  ***************************/
 
+DESC(job_rsc_exception_std,"C++ exception handling when linked for RSC")
+CBUILD($(CC),job_rsc_exception_std,C)
+RUN(job_rsc_exception_std)
+TESTCLASS(job_rsc_exception_std,quick)
+
 
 /****************************
  * Checkpointing
