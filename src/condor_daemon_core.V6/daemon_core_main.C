@@ -1648,6 +1648,12 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 0, cookie_refresh, 
 				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
+ 
+	if( !  strcmp(mySubSystem, "MASTER")
+        || strcmp(mySubSystem, "SCHEDD")
+        || strcmp(mySubSystem, "STARTD")) {
+        daemonCore->monitor_data.EnableMonitoring();
+    }
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",

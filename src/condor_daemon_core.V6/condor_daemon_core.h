@@ -51,6 +51,7 @@
 #ifdef WIN32
 #include "ntsysinfo.h"
 #endif
+#include "self_monitor.h"
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
@@ -887,6 +888,8 @@ class DaemonCore : public Service
 	*/
 	bool GetPeacefulShutdown();
 	void SetPeacefulShutdown(bool value);
+
+    SelfMonitorData monitor_data;
 
   private:      
 

@@ -25,7 +25,7 @@ LIB = $(STD_LIBS)
 OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
   daemon_core_instantiate.o condor_ipverify.o condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
-  condor_lock.o
+  condor_lock.o self_monitor.o
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
