@@ -130,6 +130,7 @@ int RequestStore(const char*     owner,
 	int             ret_code;
 	
 	key = getpid();
+	memset((void *)&req, 0, sizeof(req));
 	req.file_size = htonl(len);
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.priority = htonl(0);
@@ -177,6 +178,7 @@ int RequestRestore(const char*     owner,
 	server_sd = ConnectToServer(RESTORE_REQ);
 	if (server_sd < 0)
 		return server_sd;
+	memset((void *)&req, 0, sizeof(req));
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.priority = htonl(0);
 	req.key = htonl(key);
@@ -222,6 +224,7 @@ int RequestService(const char*     owner,
 	server_sd = ConnectToServer(SERVICE_REQ);
 	if (server_sd < 0)
 		return server_sd;
+	memset((void *)&req, 0, sizeof(req));
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.key = htonl(key);
 	req.service = htons((short)type);
