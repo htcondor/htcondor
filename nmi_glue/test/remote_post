@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: remote_post_success,v 1.1.2.3 2004-06-24 19:52:43 wright Exp $
+# $Id: remote_post,v 1.1.2.1 2004-06-25 06:00:16 wright Exp $
 
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
@@ -15,4 +15,4 @@ if [ ! -f $ENV_FILE ]; then
 fi
 . $ENV_FILE
 
-exec ./test_post_success.pl $*
+exec ./test_post.pl $*
