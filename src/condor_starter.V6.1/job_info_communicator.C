@@ -345,6 +345,9 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	char vm_user[255];
 	
 	int vm_num = Starter->getMyVMNumber();
+	if( ! vm_num ) {
+		vm_num = 1;
+	}
 	sprintf(vm_user, "VM%d_USER", vm_num);
 	char *run_jobs_as = param(vm_user);
 

@@ -668,6 +668,18 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	ad->Insert( tmp );
 	free( tmp );
 
+	int vm = Starter->getMyVMNumber();
+	MyString line = ATTR_NAME;
+	line += "=\"";
+	if( vm ) { 
+		line += "vm";
+		line += vm;
+		line += '@';
+	}
+	line += my_full_hostname();
+	line += '"';
+	ad->Insert( line.Value() );
+
 	tmp_val = daemonCore->InfoCommandSinfulString();
 	size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
 	tmp = (char*) malloc( size * sizeof(char) );
@@ -866,7 +878,11 @@ JICShadow::initUserPriv( void )
        // first see if we define VMx_USER in the config file
         char *nobody_user;
         char paramer[20];
-        sprintf(paramer, "VM%d_USER", Starter->getMyVMNumber());
+		int vm = Starter->getMyVMNumber();
+		if( ! vm ) {
+			vm = 1;
+		}
+        sprintf( paramer, "VM%d_USER", vm );
         nobody_user = param(paramer);
 
         if ( nobody_user != NULL ) {

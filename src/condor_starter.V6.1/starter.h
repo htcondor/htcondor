@@ -135,7 +135,8 @@ public:
 		*/
 	JobInfoCommunicator* jic;
 
-		/** Returns the VM number we're running on
+		/** Returns the VM number we're running on, or 0 if we're not
+			running as a VM at all.
 		*/
 	int getMyVMNumber( void );
 

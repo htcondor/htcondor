@@ -787,7 +787,8 @@ CStarter::getMyVMNumber( void )
 	char *logappend = param("STARTER_LOG");		
 	char *tmp = NULL;
 		
-	int vm_number = 1; // default to VM1
+	int vm_number = 0; // default to 0, let our caller decide how to
+					   // interpret that.  
 			
 	if ( logappend ) {
 
@@ -799,7 +800,7 @@ CStarter::getMyVMNumber( void )
 		if ( tmp ) {				
 			if ( sscanf(tmp, ".vm%d", &vm_number) < 1 ) {
 				// if we couldn't parse it, set it to 1.
-				vm_number = 1;
+				vm_number = 0;
 			}
 		} 
 		free(logappend);
