@@ -168,6 +168,7 @@ testSocks( Daemon* d )
 				delete [] state;
 				state = NULL;
 			}
+			delete reli_p;
 		}
 	}
 
@@ -195,6 +196,8 @@ testSocks( Daemon* d )
 			dprintf( dflag, "Sent X_EVENT_NOTIFICATION to %s\n", d->idStr() ); 
 		}
 	}
+
+	delete reli_p;
 
 	dprintf( dflag, "Using safeSock() method...\n" );
 	safe_p = d->safeSock( 3 );
@@ -257,6 +260,7 @@ testSocks( Daemon* d )
 				delete [] state;
 				state = NULL;
 			}
+			delete safe_p;
 		}
 	}
 
@@ -284,6 +288,7 @@ testSocks( Daemon* d )
 			dprintf( dflag, "Sent X_EVENT_NOTIFICATION to %s\n", d->idStr() ); 
 		}	
 	}
+	delete safe_p;
 
 	d->startCommand( GIVE_STATE, NULL, 0 );
 	d->sendCommand( X_EVENT_NOTIFICATION, NULL, 0 );
@@ -320,13 +325,6 @@ testAPI( char* my_name, bool do_socks )
 			 startd.isFound ? "Y" : "N",
 			 id ? id : "(null)",
 			 error ? error : "(null)" );
-
-	if( startd.sinAddr() ) {
-		memcpy( &sock.sin_addr, startd.sinAddr(), sizeof(sock.sin_addr) );
-		sock.sin_port = startd.port();
-		char* foo = sin_to_string( &sock );
-		dprintf( dflag, "sinAddr: %xd (%s)\n", (int)startd.sinAddr(), foo );
-	}
 	if( do_socks ) {
 		testSocks( &startd );
 	}
