@@ -1037,6 +1037,31 @@ Condor evicts the currently running job before proceeding
 with the shutdown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{Condor does not stop the Condor jobs running on my Linux machine
+when I use my keyboard and mouse.  Is there a bug?}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Linux!keyboard and mouse activity}
+
+There is no bug in Condor.
+Unfortunately,
+recent Linux 2.4.x and all Linux 2.6.x kernels through 
+version 2.6.10
+do not post proper state information,
+such that Condor can detect keyboard and mouse activity.
+Condor version 6.6.8 and later versions of Condor
+implement workarounds to piece together the needed
+state information for PS/2 devices.
+A better fix of the problem utilizes the 
+kernel patch posted at
+\URL{http://www.cs.wisc.edu/condor/input\_patch-2.6.10}.
+This patch works better for PS/2 devices, and
+may also work for USB devices.
+A future version of Condor will implement better recognition
+of USB devices,
+such that the kernel patch will also definitively work for USB devices.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What signals get sent to my jobs when Condor needs to preempt or kill them, or when I remove them from the queue?  Can I tell Condor which signals to send?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
