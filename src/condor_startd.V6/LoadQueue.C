@@ -87,11 +87,11 @@ LoadQueue::setval( float val ) {
 void
 LoadQueue::display() {
 	int i, j;
-	dprintf( D_LOAD, "LoadQueue: " );
+	dprintf( D_FULLDEBUG, "LoadQueue: " );
 	for( i=0; i<q_size; i++ ) {
 		j = (head + i) % q_size;
-		dprintf( D_LOAD | D_NOHEADER, "%f ", buf[j] );
+		dprintf( D_FULLDEBUG | D_NOHEADER, "%f ", buf[j] );
 	}
-	dprintf( D_LOAD | D_NOHEADER, "\n" );
+	dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
 }
 
