@@ -13,6 +13,23 @@
 \oOptnm{-name hostname $|$ -addr "\SinfulAny" $|$ hostname ...}
 }
 
+%% Alternative to locate the machines with which you want to mess.
+%% Used by _rm, _hold, and _release.
+\newcommand{\ToolLocate}{
+\oOptnm{-pool centralmanagerhostname}
+\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolJobs}{
+\Argnm{ cluster\Dots $|$ cluster.process\Dots $|$ user\Dots } 
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolAll}{
+\Argnm{ -all } 
+}
+
 %% Which daemons you wish to affect. XXX maybe split up nicer...
 \newcommand{\ToolArgsAffect}{
 \oOptnm{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator 
@@ -37,11 +54,23 @@
 \newcommand{\ToolArgsLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
 	central manager's hostname}
-\OptItem{\OptArg{-name}{hostname}}{Send the specified command to specified 
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
 	machine}
-\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the specified command
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine's master located at "\SinfulAny"}
 \OptItem{\Opt{hostname ...}}{A list of affected machines}
+}
+
+
+%%  Alternative argument descriptions for different classes of arguments 
+%%  Used by _rm, _hold, and _release.
+\newcommand{\ToolLocateDesc}{
+\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
+	central manager's hostname}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
+	machine}
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
+	to a machine's master located at "\SinfulAny"}
 }
 
 %% Descriptions of Affected Daemons
