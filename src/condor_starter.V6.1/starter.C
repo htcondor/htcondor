@@ -23,16 +23,17 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_syscall_mode.h"   // moronic: must go before condor_config
 #include "condor_config.h"
-#include "condor_sys.h"
-#include "condor_syscall_mode.h"
+//#include "condor_sys.h"
 #if defined(__GNUG__)
 #pragma implementation "list.h"
 #endif
 #include "starter.h"
 #include "vanilla_proc.h"
+#include "syscall_numbers.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
+static char *_FileName_ = __FILE__; /* Used by EXCEPT (see except.h)    */
 
 extern "C" int get_random_int();
 

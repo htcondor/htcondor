@@ -29,8 +29,9 @@
 #include "starter.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_attributes.h"
-#include "condor_sys.h"
+//#include "condor_sys.h"
 #include "condor_syscall_mode.h"
+#include "syscall_numbers.h"
 #include "exit.h"
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
