@@ -136,6 +136,7 @@ int
 init_user_ids(const char username[]) 
 {
 	if ( strcmp(username,"nobody") != 0 ) {
+		// we want something *other* than "nobody".
 		// here we call routines to deal with password server
 		// or as Jeff says: "insert hand waving here"  :^)
 		return FALSE;
@@ -443,16 +444,20 @@ init_condor_ids()
 	CondorIdsInited = TRUE;
 }
 
+
 static int
-set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
+set_user_ids_implementation( uid_t uid, gid_t gid, const char *username, 
+							 int is_quiet ) 
 {
 	if( uid == 0 || gid == 0 ) {
-		dprintf( D_ALWAYS, "ERROR: Attempt to initialize user_priv "
+			// NOTE: we want this dprintf() even if we're in quiet
+			// mode, since we should *never* be allowing this.
+		dprintf( D_ALWAYS, "ERROR: Attempt to initialize user_priv " 
 				 "with root privileges rejected\n" );
 		return FALSE;
 	}
 
-	if( UserIdsInited && UserUid != uid ) {
+	if( UserIdsInited && UserUid != uid && !is_quiet ) {
 		dprintf( D_ALWAYS, 
 				 "warning: setting UserUid to %d, was %d previosly\n",
 				 uid, UserUid );
@@ -480,6 +485,7 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
 	} else {
 		UserName = NULL;
 	}
+	return TRUE;
 }
 
 
@@ -489,7 +495,7 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
   condor_starter.V5/starter_common.C: determine_user_ids()
 */
 int
-init_nobody_ids( void )
+init_nobody_ids( int is_quiet )
 {
     struct passwd *pwd_entry = NULL;
 	int nobody_uid = -1;
@@ -502,7 +508,10 @@ init_nobody_ids( void )
 		nobody_uid = 59999;
 		nobody_gid = 59999;
 #else
-		dprintf( D_ALWAYS, "Can't find UID for \"nobody\" in passwd file" );
+		if( ! is_quiet ) {
+			dprintf( D_ALWAYS, 
+					 "Can't find UID for \"nobody\" in passwd file\n" );
+		}
 		return FALSE;
 #endif
 	}
@@ -538,12 +547,13 @@ init_nobody_ids( void )
 		// Now we know what the uid/gid for nobody should *really* be,
 		// so we can actually initialize this as the "user" priv.
 	return set_user_ids_implementation( (uid_t)nobody_uid,
-										(gid_t)nobody_gid, "nobody" ); 
+										(gid_t)nobody_gid, "nobody",
+										is_quiet );
 }
 
 
 int
-init_user_ids( const char username[] )
+init_user_ids_implementation( const char username[], int is_quiet )
 {
     struct passwd       *pwd;
 	int					scm;
@@ -558,24 +568,45 @@ init_user_ids( const char username[] )
 	if( ! stricmp(username, "nobody") ) {
 			// There's so much special logic for user nobody that it's
 			// all in a seperate function now.
-		return init_nobody_ids();
+		return init_nobody_ids( is_quiet );
 	}
 
 	if( (pwd=getpwnam(username)) == NULL ) {
-		dprintf( D_ALWAYS, "%s not in passwd file\n", username );
+		if( ! is_quiet ) {
+			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
+		}
 		return FALSE;
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
 	return set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid,
-										username ); 
+										username, is_quiet ); 
+}
+
+
+int
+init_user_ids( const char username[] ) {
+	return init_user_ids_implementation( username, 0 );
+}
+
+
+int
+init_user_ids_quiet( const char username[] ) {
+	return init_user_ids_implementation( username, 1 );
 }
 
 
 int
 set_user_ids(uid_t uid, gid_t gid)
 {
-	return set_user_ids_implementation( uid, gid, NULL );
+	return set_user_ids_implementation( uid, gid, NULL, 0 );
+}
+
+
+int
+set_user_ids_quiet(uid_t uid, gid_t gid)
+{
+	return set_user_ids_implementation( uid, gid, NULL, 1 );
 }
 
 
