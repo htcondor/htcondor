@@ -45,11 +45,13 @@ int magic_check( char *a_out )
 		dprintf(D_ALWAYS,"EXECUTEABLE %s HAS BAD MAGIC NUMBER\n",a_out);
 		return -1;
 	}
+/****
 #define MYSYS    0x20B // this is for g++ installation bug : dhruba
 	if ( exec_header.system_id != MYSYS ) {
 		dprintf(D_ALWAYS,"EXECUTEABLE %s NOT COMPILED FOR THIS ARCHITECTURE: system_id = %d\n",a_out,exec_header.system_id);
 		return -1;
 	}
+***********/
 
 	return 0;
 }
