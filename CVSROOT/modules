@@ -30,6 +30,8 @@ world		-a .
 
 validate_user	-i co validate_user
 
+bypass          -d bypass src/condor_bypass
+
 # Add other modules here...
 
 V6_COMMON    		-a \
