@@ -77,7 +77,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	tmpnam(local_filename);
 	SetSyscalls(scm);
 
-	sprintf(local_url,"local:%s\n",local_filename);
+	sprintf(local_url,"local:%s",local_filename);
 
 	// Open the local copy, with a private mode.
 
