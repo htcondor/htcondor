@@ -844,16 +844,6 @@ SetUniverse()
 		return;
 	};
 
-	if( univ && stricmp(univ,"mpi") == MATCH ) {
-		JobUniverse = MPI;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, MPI);
-		InsertJobExpr (buffer);
-		InsertJobExpr ("Checkpoint = 0");
-		
-		free(univ);
-		return;
-	}
-
 	if( univ && stricmp(univ,"scheduler") == MATCH ) {
 		JobUniverse = SCHED_UNIVERSE;
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
@@ -882,6 +872,16 @@ SetUniverse()
 		free(univ);
 		return;
 	};
+
+	if( univ && stricmp(univ,"mpi") == MATCH ) {
+		JobUniverse = MPI;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, MPI);
+		InsertJobExpr (buffer);
+		InsertJobExpr ("Checkpoint = 0");
+		
+		free(univ);
+		return;
+	}
 
 	if (!univ) {
 		univ = strdup("standard");
