@@ -57,6 +57,12 @@ my $MAX_SEQUENTIAL_GRID_AGENT_STARTS = undef;
 # --use-gmt
 my $USE_GMT = 0;
 
+# Used to determine timeouts for globus-url-copy transfers
+my $MIN_BYTES_PER_SECOND = 250;
+
+# Minimum time in seconds to let globus-url-copy run for.
+my $MIN_TIMEOUT = 60;
+
 # Arguments to pass to the grid agent when spawned.
 my(@GRID_AGENT_ARGS) = (
 	'--delete-self',
@@ -255,16 +261,54 @@ while(1)
 	sleep $sleep_length if $sleep_length > 0;
 }
 
+################################################################################
+sub timeout_system {
+	my($timeout, @args) = @_;
+
+	my $result = -2;
+	eval {
+		# NB: \n required, otherwise filename/lineno is added
+		local $SIG{ALRM} = sub { die "TIMEOUT_SYSTEM_alarm\n" };
+		alarm $timeout;
+		$result = system(@args);
+		alarm 0;
+	};
+	if ($@) {
+		die unless $@ eq "TIMEOUT_SYSTEM_alarm\n";
+	}
+	return $result;
+}
+
+################################################################################
+# The loop in question is loops on the timeout.
+sub looping_timeout_system {
+	my($loops, $timeout, @args) = @_;
+	while($loops) {
+		my $ret = timeout_system($timeout, @args);
+		if($ret != -2) { return $ret; }
+		$loops--;
+	}
+	return -2;
+}
 
 ################################################################################
 sub send_file {
 	my($src_file, $dst_url) = @_;
 	my $src_url = "file://$src_file";
-	my $ret = system("$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	my $max_timeouts = 2;
+	my $size = -s $src_file;
+	my $timeout = $size / $MIN_BYTES_PER_SECOND;
+	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
+	my $ret = looping_timeout_system($max_timeouts, $timeout,
+		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
 	if($ret == -1) {
 		fatal_error($ERROR_GUC_FAILED,
 			"Failed to execute globus-url-copy $src_url $dst_url "
 			."because of $!");
+	}
+	if($ret == -2) {
+		fatal_error($ERROR_GUC_FAILED,
+			"Timed out attempting globus-url-copy $src_url $dst_url ");
 	}
 	if($ret != 0) {
 		my $real_ret = $ret / 256;
