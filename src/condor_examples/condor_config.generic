@@ -343,6 +343,15 @@ LOCK		= $(LOG)
 GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
+##  If your site needs to use UID_DOMAIN settings (defined above) that
+##  are not real Internet domains that match the hostnames, you can
+##  tell Condor to trust whatever UID_DOMAIN a submit machine gives to
+##  the execute machine and just make sure the two strings match.  The
+##  default for this setting is False, since it is more secure this
+##  way.
+#TRUST_UID_DOMAIN = False
+
+
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
