@@ -368,4 +368,59 @@ name, organization, and telephone number in your message.  If you are having tro
 Condor, please help us troubleshoot by including as much pertinent information as you can, 
 including snippets of Condor log files. 
 
+\section{\label{privacy}Privacy Notice}
+
+%
+% Note to developers:
+% If you change this text, also change
+%   http://www.cs.wisc.edu/condor/privacy.html
+%
+
+The Condor software periodically sends short messages
+to the Condor Project developers at the University of Wisconsin,
+reporting totals of machines and jobs in each running Condor system.
+An example of such a message is given below.
+
+The Condor Project uses these collected reports to publish
+summary figures and tables, such as the total of Condor systems
+worldwide, or the geographic distribution of Condor systems.
+This information helps the Condor Project to understand
+the scale and composition of Condor in the real world
+and improve the software accordingly.
+
+The Condor Project will not use these reports to publically
+identify any Condor system or user without permission.
+The Condor software does not collect or report any personal
+information about individual users.
+
+We hope that you will contribute to the development of Condor
+through this reporting feature.
+However, you are free to disable it at any time by
+changing the configuration variables \Macro{CONDOR\_DEVELOPERS}
+and \Macro{CONDOR\_DEVELOPERS\_COLLECTOR},
+both described in section \ref{param:CondorDevelopers} of this manual.
+
+Example of data reported:
+
+\begin{verbatim}
+This is an automated email from the Condor system
+on machine "your.condor.pool.com".  Do not reply.
+
+This Collector has the following IDs:
+    CondorVersion: 6.6.0 Nov 12 2003
+    CondorPlatform: INTEL-LINUX-GLIBC22
+
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+         INTEL/LINUX      810    52     716        37       0          5
+       INTEL/WINNT50      120     5     115         0       0          0
+     SUN4u/SOLARIS28      114    12      92         9       0          1
+     SUN4x/SOLARIS28        5     1       0         4       0          0
+               Total     1049    70     923        50       0          6
+
+         RunningJobs                IdleJobs
+                 920                    3868
+\end{verbatim}
+
+
 
