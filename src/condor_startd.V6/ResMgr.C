@@ -1205,10 +1205,10 @@ ResMgr::deleteResource( Resource* rip )
 		}
 	}
 	if( dead < 0 ) {
-			// Didn't find it.
-		dprintf( D_ALWAYS,
-				 "ResMgr::deleteResource() failed: couldn't find resource\n" );
-		return;
+			// Didn't find it.  This is where we'll hit if resources
+			// is NULL.  We should never get here, anyway (we'll never
+			// call deleteResource() if we don't have any resources. 
+		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
 	}
 
 	if( nresources > 1 ) {
@@ -1223,7 +1223,7 @@ ResMgr::deleteResource( Resource* rip )
 			} 
 			new_resources[j++] = resources[i];
 		}
-	}
+	} 
 
 		// Remove this rip from our destroy_list.
 	destroy_list.Rewind();
@@ -1234,7 +1234,9 @@ ResMgr::deleteResource( Resource* rip )
 		}
 	}
 
-		// Now, delete the old array and start using the new one.  
+		// Now, delete the old array and start using the new one, if
+		// it's there at all.  If not, it'll be NULL and this will all
+		// still be what we want.
 	delete [] resources;
 	resources = new_resources;
 	nresources--;
@@ -1275,7 +1277,9 @@ ResMgr::processAllocList( void )
 	Resource** new_resources = new Resource* [ new_size ];
 	CpuAttributes* cap;
 
-		// Copy over the old Resource pointers.
+		// Copy over the old Resource pointers.  If nresources is 0
+		// (b/c we used to be configured to have no VMs), this won't
+		// copy anything (and won't seg fault).
 	memcpy( (void*)new_resources, (void*)resources, 
 			(sizeof(Resource*)*nresources) );
 
@@ -1288,7 +1292,9 @@ ResMgr::processAllocList( void )
 	}	
 
 		// Switch over to new_resources:
-	delete [] resources;
+	if( resources ) {
+		delete [] resources;
+	}
 	resources = new_resources;
 	nresources = new_size;
 	delete [] type_nums;
