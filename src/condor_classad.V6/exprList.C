@@ -239,7 +239,7 @@ NextExpr( )
 const ExprTree* ExprListIterator::
 CurrentExpr( ) const
 {
-	return( l ? *itr : NULL );
+	return( l && itr != l->exprList.end( ) ? *itr : NULL );
 }
 
 
