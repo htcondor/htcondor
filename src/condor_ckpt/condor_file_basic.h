@@ -23,10 +23,12 @@ public:
 
 	virtual int ftruncate( size_t s );
 	virtual int fsync();
+	virtual int flush();
 
 	virtual int	is_readable();
 	virtual int	is_writeable();
-	virtual void	set_size(size_t size);
+	virtual int	is_seekable();
+
 	virtual int	get_size();
 	virtual char	*get_url();
 

@@ -39,7 +39,7 @@ int CondorFileLocal::write(int pos, char *data, int length) {
 
 	if(result>0) {
 		if((pos+result)>get_size()) {
-			set_size(pos+result);
+			size = pos+result;
 		}
 	}
 

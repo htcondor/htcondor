@@ -100,7 +100,7 @@ int CondorFileBasic::ftruncate( size_t length )
 {
 	int scm,result;
 
-	set_size(length);
+	size = length;
 	scm = SetSyscalls(syscall_mode);
 	result = ::ftruncate(fd,length);
 	SetSyscalls(scm);
@@ -119,6 +119,11 @@ int CondorFileBasic::fsync()
 	return result;
 }
 
+int CondorFileBasic::flush()
+{
+	/* nothing to flush */
+}
+
 int CondorFileBasic::is_readable()
 {
 	return readable;
@@ -129,9 +134,9 @@ int CondorFileBasic::is_writeable()
 	return writeable;
 }
 
-void CondorFileBasic::set_size( size_t s )
+int CondorFileBasic::is_seekable()
 {
-	size = s;
+	return 1;
 }
 
 int CondorFileBasic::get_size()

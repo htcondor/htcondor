@@ -52,10 +52,12 @@ public:
 	virtual int ioctl( int cmd, int arg )=0;
 	virtual int ftruncate( size_t length )=0; 
 	virtual int fsync()=0;
+	virtual int flush()=0;
 
 	virtual int	is_readable()=0;
 	virtual int	is_writeable()=0;
-	virtual void	set_size(size_t size)=0;
+	virtual int	is_seekable()=0;
+
 	virtual int	get_size()=0;
 	virtual char	*get_url()=0;
 

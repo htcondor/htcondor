@@ -166,11 +166,16 @@ CondorFileBuffer::~CondorFileBuffer()
 	delete original;
 }
 
-int CondorFileBuffer::open( const char *url, int flags, int mode )
+int CondorFileBuffer::open( const char *url_in, int flags, int mode )
 {
+	char junk[_POSIX_PATH_MAX];
+	char sub_url[_POSIX_PATH_MAX];
 	int result;
-	result = original->open(url,flags,mode);
-	size = original->get_size();
+
+	strcpy(url,url_in);
+	sscanf( url, "%[^:]:%s", junk, sub_url );
+	result = original->open( sub_url, flags, mode );
+ 	size = original->get_size();
 	return result;
 }
 
@@ -289,7 +294,7 @@ int CondorFileBuffer::write(int offset, char *data, int length)
 	trim();
 
 	if((offset+length)>get_size()) {
-		set_size(offset+length);
+		size = offset+length;
 	}
 
 	return length;
@@ -314,8 +319,13 @@ int CondorFileBuffer::ftruncate( size_t length )
 
 int CondorFileBuffer::fsync()
 {
-	flush(0);
+	flush();
 	return original->fsync();
+}
+
+int CondorFileBuffer::flush()
+{
+	flush(0);
 }
 
 int CondorFileBuffer::is_readable()
@@ -328,9 +338,9 @@ int CondorFileBuffer::is_writeable()
 	return original->is_writeable();
 }
 
-void CondorFileBuffer::set_size( size_t s )
+int CondorFileBuffer::is_seekable()
 {
-	size = s;
+	return original->is_seekable();
 }
 
 int CondorFileBuffer::get_size()
@@ -340,7 +350,7 @@ int CondorFileBuffer::get_size()
 
 char * CondorFileBuffer::get_url()
 {
-	return original->get_url();
+	return url;
 }
 
 int CondorFileBuffer::get_unmapped_fd()
@@ -395,6 +405,8 @@ void CondorFileBuffer::flush( int deallocate )
 	}
 
 	if(deallocate) head=0;
+
+	original->flush();
 }
 
 /*
@@ -405,7 +417,7 @@ void CondorFileBuffer::clean( CondorChunk *c )
 {
 	if(c && c->dirty) {
 		int result = original->write(c->begin,c->data,c->size);
-		if(!result) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_url(),strerror(errno));
+		if(result!=c->size) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_url(),strerror(errno));
 		c->dirty = 0;
 	}
 }

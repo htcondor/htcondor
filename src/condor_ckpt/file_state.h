@@ -135,8 +135,8 @@ public:
 	/** Report all cached I/O summaries */
 	void	report_all();
 
-	/** If flush mode is set to 1, all writes are immediately flushed */
-	void	set_flush_mode( int on_off );
+	/** Close all files */
+	void	close_all();
 
 	/** If aggravation is enabled, virtual fds will never match real fds. */
 	void	set_aggravate_mode( int on_off );
@@ -245,9 +245,10 @@ private:
 	void	complete_path( const char *short_path, char *long_path );
 	void	lookup_url( char *logical_name, char *url );
 
-	CondorFile * open_url( char *url, int flags, int mode, int allow_buffer );
-	CondorFile * open_url_retry( char *url, int flags, int mode, int allow_buffer );
-	CondorFile * open_file_unique( char *logical_name, int flags, int mode, int allow_buffer );
+	CondorFile * create_url_chain( char *url );
+	CondorFile * open_url( char *url, int flags, int mode );
+	CondorFile * open_url_retry( char *url, int flags, int mode );
+	CondorFile * open_file_unique( char *logical_name, int flags, int mode );
 	CondorFileInfo	* make_info( char *logical_name );
 
 	CondorFilePointer	**pointers;
@@ -258,7 +259,6 @@ private:
 	int	buffer_size;
 	int	buffer_block_size;
 	int	got_buffer_info;
-	int	flush_mode;
 	int	aggravate_mode;
 	int	info_count;
 };

@@ -36,10 +36,12 @@ public:
 	virtual int ioctl( int cmd, int arg );
 	virtual int ftruncate( size_t length ); 
 	virtual int fsync();
+	virtual int flush();
 
 	virtual int	is_readable();
 	virtual int	is_writeable();
-	virtual void	set_size(size_t size);
+	virtual int	is_seekable();
+
 	virtual int	get_size();
 	virtual char	*get_url();
 
@@ -51,6 +53,9 @@ private:
 	void flush( int deallocate );
 	void evict( CondorChunk *c );
 	void clean( CondorChunk *c );
+
+	// The url of this file
+	char url[_POSIX_PATH_MAX];
 
 	// The raw file being buffered
 	CondorFile *original;
