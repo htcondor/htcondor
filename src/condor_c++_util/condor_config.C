@@ -646,6 +646,46 @@ find_file(const char *env_name, const char *file_name)
 			if ( valType == REG_SZ && the_path[0] ) {
 				// got it!  whoohooo!
 				config_file = strdup(the_path);
+
+				if ( strncmp(config_file, "\\\\", 2 ) == 0 ) {
+					// UNC Path, so run a 'net use' on it first.
+					NETRESOURCE nr;
+					nr.dwType = RESOURCETYPE_DISK;
+					nr.lpLocalName = NULL;
+					nr.lpRemoteName = dirname(config_file);
+					nr.lpProvider = NULL;
+					
+					if ( NO_ERROR != WNetAddConnection2(
+										&nr,   /* NetResource */
+										NULL,  /* password (default) */
+										NULL,  /* username (default) */
+										0      /* flags (none) */
+						) ) {
+
+						if ( GetLastError() == ERROR_INVALID_PASSWORD ) {
+							// try again with an empty password
+							WNetAddConnection2(
+										&nr,   /* NetResource */
+										"",    /* password (none) */
+										NULL,  /* username (default) */
+										0      /* flags (none) */
+							);
+						}
+
+						// whether it worked or not, we're gonna continue.
+						// The goal of running the WNetAddConnection2() is 
+						// to make a mapping to the UNC path. For reasons
+						// I don't fully understand, some sites need the 
+						// mapping, and some don't. If it works, great; if 
+						// not, try the open() anyways, and at worst we'll
+						// fail fast and the user can fix their file server.
+					}
+
+					if (nr.lpRemoteName) {
+						free(nr.lpRemoteName);
+					}
+				}
+
 				if( (fd = open( config_file, O_RDONLY)) < 0 ) {
 					free( config_file );
 					config_file = NULL;
