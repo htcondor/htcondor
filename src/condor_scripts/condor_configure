@@ -237,7 +237,7 @@ e.g. mymachine.mydomain.com \n";
     # Make sure $host is just hostname, with no domain.  Grab everything
     # upto the first ".".
     
-    if ($host =~ /(\w+)\.(\w.*)/) {
+    if ($host =~ /^([^.]+)\.(\S+)$/) {
 
 	# $host = mymachine.mydomain.com
 
@@ -250,6 +250,12 @@ e.g. mymachine.mydomain.com \n";
 	# $host = mymachine
 
 	# Lookup the full hostname.
+	if (!gethostbyname($host)) {
+	    die "\nInvalid host name \"$host\". Please set the \
+ environment variable \$HOSTNAME to the full name of this machine \
+ e.g. mymachine.mydomain.com \n";
+       }
+
 	$fullhost=(gethostbyname($host))[0];
 	if( ! ($fullhost =~ /.*\..*/) ) {
 	    # There's no "." in the hostname.  DNS/hosts/YP is probably
@@ -275,7 +281,7 @@ e.g. mymachine.mydomain.com \n";
     }
 }
 
-#
+
 #    ###  Find condor's home directory, if it exists.
 #    
 #}
