@@ -1437,8 +1437,15 @@ SetTransferFiles()
 	// the file is being transfered back, use an intermediate
 	// file in the working directory.  The shadow will move the
 	// output data to the user-specified path when the job finishes.
+	//
+	// NOTE: this behavior is likely to surprise new universes
+	// which have non-standard shadow behavior.  For example, the
+	// globus universe doesn't have a shadow at all!  While the 
+	// globus universe has been special cased out below, perhaps
+	// this is a flawed strategy.
 
-	if ( should_transfer != STF_NO && job ) {
+	if ( should_transfer != STF_NO && job 
+					&& JobUniverse != CONDOR_UNIVERSE_GLOBUS ) {
 		char output[_POSIX_PATH_MAX + 32];
 		char error[_POSIX_PATH_MAX + 32];
 
