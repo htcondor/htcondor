@@ -176,7 +176,7 @@ get_starter_pid( const char *my_name)
 	char	cmd[ 1024];
 	pid_t	answer = 0;
 
-#if defined(AIX32) || defined(HPUX9)	// really SysV
+#if defined(AIX32) || defined(HPUX)	// really SysV
 	sprintf( cmd, "ps -ef | egrep %s", PROG_NAME );
 #else
 	sprintf( cmd, "ps -ax | egrep %s", PROG_NAME );
