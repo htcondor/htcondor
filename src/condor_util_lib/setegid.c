@@ -27,8 +27,7 @@
 ** Compatibility routine for systems which utilize setresgid() for
 ** this purpose.
 */
-setegid( egid )
-int		egid;
+int setegid( int egid )
 {
 #if defined(HPUX)
 	return setresgid( -1, egid, -1 );

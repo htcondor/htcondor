@@ -27,8 +27,7 @@
 ** Compatibility routine for systems which utilize setresuid() for
 ** this purpose.
 */
-seteuid( euid )
-int		euid;
+int seteuid( int euid )
 {
 	return setresuid( -1, euid, -1 );
 }
