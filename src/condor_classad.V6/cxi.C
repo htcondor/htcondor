@@ -74,7 +74,6 @@ main( void )
 		// set formatter options
 	pp.SetClassAdIndentation( true , 4 );
 	pp.SetListIndentation( true , 4 );
-	pp.SetMinimalParentheses( true );
 
 	snk.SetSink( stdout );
 	snk.SetFormatOptions( &pp );
@@ -309,7 +308,7 @@ main( void )
 					free( paramStr );
 					break;
 				}
-				if( !ad->Insert( buffer1, expr ) ) {
+				if( !ad->Insert( attrName, expr ) ) {
 					printf( "Error Inserting: %s = %s\n", buffer1, paramStr );
 				}
 				free( paramStr );
