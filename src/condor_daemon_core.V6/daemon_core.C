@@ -4537,7 +4537,7 @@ DaemonCore::Inherit( void )
 		}
 		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: \"%s\"\n", ptmp );
 		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
-		unsetenv("CONDOR_INHERIT");
+		putenv("CONDOR_INHERIT=");
 	} else {
 		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: is NULL\n", ptmp );
 	}		
