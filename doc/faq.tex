@@ -166,14 +166,7 @@ to be done when the central manager is brought back online.
 
 \subsection{\index{Condor!Y2K compliance}Is Condor Y2K compliant?}
 
-Internally:  yes.
-
-Externally:  Apparently not.  We've found that sometimes Condor's
-date-formatting mechanism prints human-readable years as "100" instead
-of "00" as in \Condor{userprio -usage}.  Since this is only at the
-stage where data is printed to the screen, however, Condor is still
-internally Y2K compliant.  We use the standard UNIX time formatting
-scheme -- the number of seconds since 1/1/1970.
+Yes.
 
 \subsection{\index{Condor!mailing list|(}Is there a Condor mailing list?}
 
