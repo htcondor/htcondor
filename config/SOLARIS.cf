@@ -46,6 +46,7 @@
 #endif
 #define HAS_FLOCK			NO
 #define HAS_ADJTIME			YES
+#define HAS_GETDIRENTRIES		NO
 #define HAS_GETDTABLESIZE		NO
 #define HAS_GETHOSTNAME			YES
 #define HAS__UTSSYS			NO
