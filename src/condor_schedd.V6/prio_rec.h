@@ -15,7 +15,7 @@ typedef struct rec
 {
     PROC_ID     id;
 
-#ifdef 0
+#if 0
     int         prio;                           /* UPDOWN */
 #endif
 
