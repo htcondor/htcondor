@@ -1379,7 +1379,7 @@ void FindPrioJob(int& p)
 		{
 			continue;
 		}
-		if(prio_compar(&PrioRec[0], &PrioRec[i])==-1&&Runnable(&PrioRec[i].id))
+		if(prio_compar(&PrioRec[0], &PrioRec[i])!=-1&&Runnable(&PrioRec[i].id))
 		{
 			PrioRec[0] = PrioRec[i];
 		}
