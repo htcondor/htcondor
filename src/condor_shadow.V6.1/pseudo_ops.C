@@ -303,6 +303,9 @@ static void append_buffer_info( char *url, char *method, char *path )
 
 	filename_split(path,dir,file);
 
+	/* Do not buffer special device files, whether local or remote */
+	if(!strncmp(path,"/dev/",5)) return;
+
 	/* Get the default buffer setting */
 	pseudo_get_buffer_info( &s, &bs, &ps );
 
