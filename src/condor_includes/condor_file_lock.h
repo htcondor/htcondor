@@ -71,6 +71,11 @@
 #include "fake_flock.h"
 #endif
 
+#if defined( AIX )
+#define CONDOR_USE_FLOCK 1
+#include <sys/file.h>
+#endif
+
 #if !defined(CONDOR_USE_FLOCK)
 #error ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #endif
