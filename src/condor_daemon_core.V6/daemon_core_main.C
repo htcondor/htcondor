@@ -48,6 +48,7 @@ extern int main_init(int argc, char *argv[]);	// old main()
 extern int main_config(bool is_full);
 extern int main_shutdown_fast();
 extern int main_shutdown_graceful();
+extern void main_pre_dc_init(int argc, char *argv[]);
 
 // Internal protos
 void dc_reconfig( bool is_full );
@@ -949,6 +950,11 @@ int main( int argc, char** argv )
 
 		// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
+
+		// call out to the handler for pre daemonCore initialization
+		// stuff so that our client side can do stuff before we start
+		// messing with argv[]
+	main_pre_dc_init( argc, argv );
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
