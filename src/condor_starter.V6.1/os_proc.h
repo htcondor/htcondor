@@ -25,6 +25,7 @@
 #define _CONDOR_OS_PROC_H
 
 #include "user_proc.h"
+#include "basename.h"
 
 /** This is a generic sort of "OS" process, the base for other types
 	of jobs.
