@@ -92,10 +92,18 @@ public:
 	int accept(ReliSock *);
 
     ///
+	int put_line_raw( char *buffer );
+    ///
+	int get_line_raw( char *buffer, int max_length );
+    ///
+	int put_bytes_raw( char *buffer, int length );
+    ///
+	int get_bytes_raw( char *buffer, int length );
+    ///
 	int put_bytes_nobuffer(char *buf, int length, int send_size=1);
     ///
-	int get_bytes_nobuffer(char *buffer, int max_length,
-							 int receive_size=1);
+	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
+
     /// returns -1 on failure, else number of bytes transferred
 	int get_file(const char *destination, bool flush_buffers=false);
     /// returns -1 on failure, else number of bytes transferred
