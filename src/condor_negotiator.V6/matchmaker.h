@@ -55,7 +55,7 @@ class Matchmaker : public Service
 
 	private:
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&);	
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
 		int  negotiate(char*, char*, double, int, ClassAdList&, ClassAdList&);
 		ClassAd *matchmakingAlgorithm(char*,ClassAd&,ClassAdList&,double=-1.0);
 		int matchmakingProtocol(ClassAd &,ClassAd *,ClassAdList &,Sock *,char*);
@@ -87,6 +87,7 @@ class Matchmaker : public Service
 
 		// DaemonCore Timer ID for periodic negotiations
 		int negotiation_timerID;
+		bool GotRescheduleCmd;
 };
 
 

@@ -62,6 +62,7 @@ Matchmaker ()
 	Parse (buf, rankCondPreempt);
 
 	negotiation_timerID = -1;
+	GotRescheduleCmd=false;
 }
 
 
@@ -87,31 +88,32 @@ initialize ()
 
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
-            (CommandHandlercpp) &RESCHEDULE_commandHandler, 
+            (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler, 
 			"RESCHEDULE_commandHandler", (Service*) this, WRITE);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
-            (CommandHandlercpp) &RESET_ALL_USAGE_commandHandler, 
+            (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler, 
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (RESET_USAGE, "ResetUsage",
-            (CommandHandlercpp) &RESET_USAGE_commandHandler, 
+            (CommandHandlercpp) &Matchmaker::RESET_USAGE_commandHandler, 
 			"RESET_USAGE_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
-            (CommandHandlercpp) &SET_PRIORITYFACTOR_commandHandler, 
+            (CommandHandlercpp) &Matchmaker::SET_PRIORITYFACTOR_commandHandler, 
 			"SET_PRIORITYFACTOR_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITY, "SetPriority",
-            (CommandHandlercpp) &SET_PRIORITY_commandHandler, 
+            (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler, 
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
-            (CommandHandlercpp) &GET_PRIORITY_commandHandler, 
+		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
-            (CommandHandlercpp) &GET_RESLIST_commandHandler, 
+		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
 
 	// Set a timer to renigotiate.  This timer gets reset to 
 	// Negotiator interval after each negotiation.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
-			(TimerHandlercpp)&negotiationTime, "Time to negotiate", this);
+			(TimerHandlercpp) &Matchmaker::negotiationTime, 
+			"Time to negotiate", this);
 
 }
 
@@ -198,7 +200,9 @@ reinitialize ()
 int Matchmaker::
 RESCHEDULE_commandHandler (int, Stream *)
 {
-	daemonCore->Reset_Timer(negotiation_timerID,3,
+	if (GotRescheduleCmd) return TRUE;
+	GotRescheduleCmd=true;
+	daemonCore->Reset_Timer(negotiation_timerID,10,
 		NegotiatorInterval);
 	return TRUE;
 }
@@ -365,6 +369,8 @@ negotiationTime ()
 	ClassAdList startdAds;			// 1. get from collector
 	ClassAdList startdPvtAds;		// 2. get from collector
 	ClassAdList scheddAds;			// 3. get from collector
+	ClassAdList ClaimedStartdAds;           // 4. get from collector
+
 	ClassAd		*schedd;
 	char		scheddName[80];
 	char		scheddAddr[32];
@@ -381,9 +387,11 @@ negotiationTime ()
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
+	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
+
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds ) )
+	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds, ClaimedStartdAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
@@ -393,7 +401,7 @@ negotiationTime ()
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
-	accountant.CheckMatches( startdAds );
+	accountant.CheckMatches( ClaimedStartdAds );
 	// for ads which have RemoteUser set, add RemoteUserPrio
 	addRemoteUserPrios( startdAds ); 
 
@@ -522,11 +530,13 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 bool Matchmaker::
 obtainAdsFromCollector (ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
-						ClassAdList &startdPvtAds)
+						ClassAdList &startdPvtAds,
+						ClassAdList &ClaimedStartdAds)
 {
 	CondorQuery startdQuery    (STARTD_AD);
 	CondorQuery scheddQuery    (SUBMITTOR_AD);
 	CondorQuery startdPvtQuery (STARTD_PVT_AD);
+	CondorQuery ClaimedStartdQuery    (STARTD_AD);
 	QueryResult result;
 	char buffer[1024];
 
@@ -565,8 +575,21 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 		return false;
 	}
 
-	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private\n",
-		startdAds.MyLength(), scheddAds.MyLength(), startdPvtAds.MyLength());
+	// set the constraints on the various queries
+	// 4.  Fetch ads of startds that are CLAIMED
+	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
+	sprintf (buffer, "(%s == \"%s\")", ATTR_STATE,state_to_string(claimed_state));
+	if (((result = ClaimedStartdQuery.addConstraint(buffer))	!= Q_OK) ||
+		((result = ClaimedStartdQuery.fetchAds(ClaimedStartdAds))		!= Q_OK))
+	{
+		dprintf (D_ALWAYS, 
+			"Error %s:  failed to fetch startd ads ... aborting\n",
+			getStrQueryResult(result));
+		return false;
+	}
+
+	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private ; %d claimed startd\n",
+		startdAds.MyLength(), scheddAds.MyLength(), startdPvtAds.MyLength(),ClaimedStartdAds.MyLength());
 
 	return true;
 }
