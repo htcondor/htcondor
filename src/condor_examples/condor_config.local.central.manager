@@ -124,21 +124,6 @@
 ##  ACCOUNTANT_LOCAL_DOMAIN is defined above).
 #REMOTE_PRIO_FACTOR = 10000
 
-##  The negotiator will not preempt a job running on a given machine
-##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
-##  and the owner of the idle job has a better priority than the owner
-##  of the running job.  This expression defaults to true.  
-PREEMPTION_REQUIREMENTS : $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
-
-##  The PREEMPTION_RANK expression is used to rank machines which the
-##  job ranks the same.  For example, if the job has no preference, it
-##  is usually preferable to preempt a job with a small ImageSize
-##  instead of a job with a large ImageSize.  The default is to rank
-##  all preemptable matches the same.  However, the negotiator will
-##  always prefer to match the job with an idle machine over a
-##  preemptable machine, if the job has no preference between them.
-PREEMPTION_RANK : (RemoteUserPrio * 1000000) - ImageSize
-
 ##  The NEGOTIATOR_TRAFFIC_LIMIT macro specifies the maximum
 ##  amount of network traffic (in KB) the negotiator may initiate per
 ##  NEGOTIATOR_TRAFFIC_INTERVAL for job placement and preemption.

@@ -426,6 +426,8 @@ CONTINUE		= $(UWCS_CONTINUE)
 PREEMPT			= $(UWCS_PREEMPT)
 KILL			= $(UWCS_KILL)
 PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
+PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
+PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -494,6 +496,22 @@ UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
 #			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
 #			  ( $(LastCkpt) > (12 * $(HOUR)) )
 
+##  The negotiator will not preempt a job running on a given machine
+##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
+##  and the owner of the idle job has a better priority than the owner
+##  of the running job.  This expression defaults to true.
+UWCS_PREEMPTION_REQUIREMENTS = $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
+
+##  The PREEMPTION_RANK expression is used to rank machines which the 
+##  job ranks the same.  For example, if the job has no preference, it
+##  is usually preferable to preempt a job with a small ImageSize
+##  instead of a job with a large ImageSize.  The default is to rank
+##  all preemptable matches the same.  However, the negotiator will  
+##  always prefer to match the job with an idle machine over a      
+##  preemptable machine, if the job has no preference between them. 
+UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - ImageSize
+
+
 #####################################################################
 ##  This is a Configuration that will cause your Condor jobs to
 ##  always run.  This is intended for testing only.
@@ -511,7 +529,8 @@ TESTINGMODE_CONTINUE		= True
 TESTINGMODE_PREEMPT		= False
 TESTINGMODE_KILL		= False
 TESTINGMODE_PERIODIC_CHECKPOINT	= False
-
+TESTINGMODE_PREEMPTION_REQUIREMENTS = False
+TESTINGMODE_PREEMPTION_RANK = 0
 
 
 ######################################################################
