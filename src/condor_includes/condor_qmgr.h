@@ -146,6 +146,11 @@ int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
 	@return -1 on failure; 0 on success
 */
 int GetAttributeString(int cluster, int proc, const char *attr, char *value);
+/** Get value of string attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success. Allocates new copy of the string.
+*/
+int GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name, 
+					   char **val );
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
