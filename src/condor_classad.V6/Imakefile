@@ -22,54 +22,67 @@ COLL_OBJ = classad_collection.o classad_collection_ops.o \
 		classad_collection_types.o
 
 
-S_OBJ = $(S_UTL_OBJ) $(S_CPP_OBJ) $(S_LCL_OBJ) $(S_CDR_OBJ)
+/* The S_* files are for standalone classads */
+S_OBJ = $(S_UTL_OBJ) $(S_CPP_OBJ) $(S_LCL_OBJ)
 #if !HAS_FLOCK
 S_UTL_OBJ = except.o dprintf.o uids.o condor_errlst.o escapes.o flock.o
 #else
 S_UTL_OBJ = except.o dprintf.o uids.o condor_errlst.o escapes.o 
 #endif
-S_CPP_OBJ = stringSpace.o instantiate.o
+S_CPP_OBJ = stringSpace.o instantiate.o log.o strnewp.o log_transaction.o
 S_LCL_OBJ = stand_alone.o
-S_CDR_OBJ = buffers.o open_flags.o reli_sock.o sig_num.o fcntl_cmd.o \
-	safe_sock.o sock.o stream.o
 
 
+/* the main condor library target */
 all_target(libclassad.a)
 library_target(libclassad.a,$(OBJ))
 
+
+/* Defining IN_CONDOR activates the 'param' feature in cxi */
+#define IN_CONDOR
 c_plus_target (cxi, cxi.o, $(LIB))
-c_plus_target (cxi-demo, cxi-demo.o, $(LIB))
 pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
 
-standalone: libcasa.a
-library_target(libcasa.a,$(OBJ) $(S_OBJ))
 
+/* Standalone classad library (single .a); still need all condor's headers */
+standalone: libclassads.a
+library_target(libclassads.a,$(OBJ) $(S_OBJ))
+
+
+/* Headers required for standalone classad tarball */
 CONDOR_HEADERS = ../condor_c++_util/list.h ../condor_c++_util/stringSpace.h \
-			../condor_includes/condor_debug.h
+			../condor_includes/condor_debug.h ../condor_c++_util/log.h \
+			../condor_c++_util/log_transaction.h ../condor_c++_util/HashTable.h\
+			../condor_c++_util/MyString.h ../condor_c++_util/extArray.h \
+			../condor_c++_util/Set.h
 
-SPECIAL_HEADERS = distrib/condor_io.h distrib/stream.h distrib/sock.h \
-			distrib/reli_sock.h distrib/safe_sock.h distrib/buffers.h \
-			distrib/HashTable.h distrib/MyString.h distrib/extArray.h
 
-tarball: libcasa.a cxi
+/* Standalone distribution of classads/collections */
+tarball: libclassads.a html
 	rm -rf classads *.gz
-	mkdir -p classads/include classads/lib classads/example
-	cp libcasa.a classads/lib
+	mkdir -p classads/include classads/lib
+	cp libclassads.a classads/lib
+	cp -r distrib classads/example
 	cp cxi.C classads/example
+	cp -r html classads/html-docs
 	cp $(CONDOR_HEADERS) classads/include
-	cp $(SPECIAL_HEADERS) classads/include
 	cp *.h classads/include
-	cp distrib/README classads/.
-	cp distrib/Makefile classads/example
 	tar cvf classads.tar classads
 	gzip classads.tar
 
 
+/* Rule to make documentation */
+doc: html
+
+/* Also depends on several header files, but I'm ignoring that for now */
+html: documentation 
+	doc++ -d html documentation
+
+
 clean::
-	rm -f *.o 
+	rm -f -r *.o *.gz html
 
 
 IMPORT_LINKS = ../../config/import_links
 import( ../condor_util_lib/ , $(S_UTL_OBJ) )
 import( ../condor_c++_util/ , $(S_CPP_OBJ) )
-import( ../condor_io/ , $(S_CDR_OBJ) )
