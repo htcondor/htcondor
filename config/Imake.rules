@@ -329,6 +329,12 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 ** tarball targets
 **
 ** These rules are used for creating the contrib and release tarballs.
+**
+** The "both_tarball" is made with the first list of files from the
+** regular, main directory, and the second list of contrib files that
+** are copied in from the appropriate contrib directory, included in
+** the tarball, then removed.
+**
 ***********************************************************************/
 #ifndef contrib_tarball
 #define contrib_tarball( name, files )	@@\
@@ -342,21 +348,76 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 
 #ifndef full_tarball
 #define full_tarball( name, files, type )		@@\
-##name##: static_##name stripped_##name			@@\
+	strip_full_tarball(  name, files, type )	@@\
+	static_full_tarball( name, files, type )
+#endif /* full_tarball */
+
+#ifndef strip_full_tarball
+#define strip_full_tarball( name, files, type )		@@\
+public::  stripped_##name				@@\
+##name##:: stripped_##name				@@\
 							@@\
 stripped_##name##: stripped				@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name files		@@\
+	cd strip_##type##; tar -cvf name files
+#endif /* strip_full_tarball */
+
+#ifndef static_full_tarball
+#if HAS_STATIC
+#define static_full_tarball( name, files, type )	@@\
+public::  static_##name					@@\
+##name##:: static_##name				@@\
 							@@\
 static_##name##: static					@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name files		@@\
-							@@\
-public::  pub_static_##name pub_stripped_##name		@@\
-pub_static_##name##: static_##name			@@\
-							@@\
-pub_stripped_##name##: stripped_##name
-#endif /* full_tarball */
+	cd static_##type##; tar -cvf name files
+#else 
+#define static_full_tarball( name, files, type ) /* NULL MACRO */
+#endif /* HAS_STATIC */
+#endif /* static_full_tarball */
+
+
+#ifndef both_tarball
+#define both_tarball( name, files, contribfiles )		@@\
+	strip_both_tarball(  name, files, contribfiles )	@@\
+	static_both_tarball( name, files, contribfiles )
+#endif /* both_tarball */
+
+#ifndef strip_both_tarball
+#define strip_both_tarball( name, files, contribfiles )		@@\
+public::  stripped_##name					@@\
+##name##:: stripped_##name					@@\
+								@@\
+stripped_##name##: stripped					@@\
+	/bin/rm -f strip_dir/##name				@@\
+	for file in contribfiles; \				@@\
+	    do cp -f strip_contrib/$$file strip_dir/$$file; \	@@\
+	done;							@@\
+	cd strip_dir; tar -cvf name files contribfiles		@@\
+	for file in contribfiles; \				@@\
+	    do /bin/rm -f strip_dir/$$file; \			@@\
+	done;
+#endif /* strip_both_tarball */
+
+#ifndef static_both_tarball
+#if HAS_STATIC
+#define static_both_tarball( name, files, contribfiles )	@@\
+public::  static_##name						@@\
+##name##:: static_##name					@@\
+								@@\
+static_##name##: static						@@\
+	/bin/rm -f static_##type##/##name			@@\
+	for file in contribfiles; \				@@\
+	    do cp -f static_contrib/$$file static_dir/$$file; \	@@\
+	done;							@@\
+	cd static_dir; tar -cvf name files contribfiles		@@\
+	for file in contribfiles; \				@@\
+	    do /bin/rm -f static_dir/$$file; \			@@\
+	done;
+#else 
+#define static_both_tarball( name, files, contribfiles ) /* NULL MACRO */
+#endif /* HAS_STATIC */
+#endif /* static_both_tarball */
 
 
 /***********************************************************************
@@ -516,6 +577,7 @@ clean::						@@\
 #ifndef object_dir_target
 #define object_dir_target(dir_name)					@@\
 ## dir_name##:								@@\
+	rm -rf dir_name							@@\
 	mkdir dir_name							@@\
 	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
 		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
