@@ -81,7 +81,7 @@ ClassAd::ClassAd(ProcObj* procObj) : AttrList(procObj)
 	targetType = NULL;
 }
 
-ClassAd::ClassAd(CONTEXT* context) : AttrList(context)
+ClassAd::ClassAd(const CONTEXT* context) : AttrList(context)
 {
 	myType = NULL;
 	targetType = NULL;
@@ -240,10 +240,9 @@ ClassAd::~ClassAd()
     }
     if(associatedList)
     {
-		associatedList->associatedAttrLists->Delete(this);
+	associatedList->associatedAttrLists->Delete(this);
     }
-	if(myType)
-
+    if(myType)
     {
         delete myType;
     }
@@ -416,6 +415,54 @@ int ClassAd::IsAMatch(ClassAd* temp)
     return 1;   
 }
 
+bool operator== (ClassAd &lhs, ClassAd &rhs)
+{
+	return (lhs >= rhs && rhs >= lhs);
+}
+
+
+bool operator<= (ClassAd &lhs, ClassAd &rhs)
+{
+	return (rhs >= lhs);
+}
+
+
+bool operator>= (ClassAd &lhs, ClassAd &rhs)
+{
+	ExprTree *tree;
+	EvalResult *val;	
+	
+	if (lhs.GetMyTypeNumber() != rhs.GetTargetTypeNumber())
+		return false;
+
+	if ((val = new EvalResult) == NULL)
+	{
+		cerr << "Out of memory -- quitting" << endl;
+		exit (1);
+	}
+
+	Parse ("MY.Requirement", tree);
+	tree -> EvalTree (&rhs, &lhs, val);
+	if (!val || val->type != LX_BOOL)
+	{
+		delete tree;	
+		delete val;
+		return false;
+	}
+	else
+	if (!val->b)
+	{
+		delete tree;	
+		delete val;
+		return false;
+	}
+
+	delete tree;
+	delete val;
+	return true;
+}
+
+	
 ////////////////////////////////////////////////////////////////////////////////
 // print the whole ClassAd into a file. The expressions are in infix notation.
 // Returns FALSE if the file pointer is NULL; TRUE otherwise.
