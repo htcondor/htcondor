@@ -28,8 +28,18 @@ int
 copy_file(const char *old_filename, const char *new_filename)
 {
 #if defined(WIN32)
-		/* to be filled in later */
-	syntax error
+   		// overwrite destination path
+   BOOL retval;
+   retval = CopyFile(old_filename, new_filename, TRUE);
+
+   if (retval == 0) {
+   		// failure
+	  dprintf(D_ALWAYS, "CopyFile() failed with error=%li\n",
+			  GetLastError());
+	  return -1; 
+   }
+   else { return 0; } // success
+
 #else
 	int rc;
 	int num_bytes;
