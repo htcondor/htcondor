@@ -647,11 +647,9 @@ RunProcess( void )
 		0 );				// Nice increment
 
 	// Close the child FDs
-	dprintf( D_FULLDEBUG, "After CP: Closing: " );
 	CleanFd( &childFds[0] );
 	CleanFd( &childFds[1] );
 	CleanFd( &childFds[2] );
-	printf( "\n" );
 
 	// Did it work?
 	if ( pid < 0 ) {
@@ -778,9 +776,6 @@ OpenFds ( void )
 {
 	int	tmpfds[2];
 
-	char	debugbuf[128], *tbuf = debugbuf;
-	tbuf += sprintf( tbuf, "Creating FDS: " );
-
 	// stdin goes to the bit bucket
 	childFds[0] = -1;
 
@@ -793,7 +788,6 @@ OpenFds ( void )
 	}
 	stdOut = tmpfds[0];
 	childFds[1] = tmpfds[1];
-	tbuf += sprintf( tbuf, "StdOut:%d,%d ", stdOut, childFds[1] );
 
 	// Make it non-blocking -- TODO
 # ifdef UNIX
@@ -809,8 +803,6 @@ OpenFds ( void )
 	}
 	stdErr = tmpfds[0];
 	childFds[2] = tmpfds[1];
-	tbuf += sprintf( tbuf, "StdErr:%d,%d ", stdErr, childFds[2] );
-	dprintf( D_FULLDEBUG, "%s\n", debugbuf );
 
 	// Make it non-blocking -- TODO
 # ifdef UNIX
@@ -826,13 +818,11 @@ void
 CondorCronJob::
 CleanAll ( void )
 {
-	dprintf( D_FULLDEBUG, "Closing: " );
 	CleanFd( &stdOut );
 	CleanFd( &stdErr );
 	CleanFd( &childFds[0] );
 	CleanFd( &childFds[1] );
 	CleanFd( &childFds[2] );
-	printf( "\n" );
 }
 
 // Clean up a FILE *
@@ -842,7 +832,6 @@ CleanFile ( FILE **file )
 {
 	if ( NULL != *file ) {
 		fclose( *file );
-		printf( "File:%p ", *file );
 		*file = NULL;
 	}
 }
@@ -853,7 +842,6 @@ CondorCronJob::
 CleanFd ( int *fd )
 {
 	if ( *fd >= 0 ) {
-		printf( "%d ", *fd );
 		close( *fd );
 		*fd = -1;
 	}
