@@ -273,11 +273,36 @@ CondorCronMgr::ParseJobList( const char *jobString )
 						 "CronMgr: Invalid period modifier '%c' "
 						 "(Job = '%s')\n", modifier, jobDescr );
 			}
+		}
 
-			// Force into "continuous mode" if time is zero
-			if ( 0 == jobPeriod ) {
+		// Parse any remaining options
+		bool	killMode = false;
+		while (  ( tmp = strtok( NULL, ":" ) ) != NULL ) {
+			if ( !strcasecmp( tmp, "kill" ) ) {
+				dprintf( D_FULLDEBUG, "Cron: '%s': Kill option ok\n",
+						 jobName );
+				killMode = true;
+			} else if ( !strcasecmp( tmp, "nokill" ) ) {
+				dprintf( D_FULLDEBUG, "Cron: '%s': NoKill option ok\n",
+						 jobName );
+				killMode = false;
+			} else if ( !strcasecmp( tmp, "continuous" ) ) {
+				dprintf( D_FULLDEBUG, "Cron: '%s': Continuous option ok\n",
+						 jobName );
 				jobMode = CRON_CONTINUOUS;
+			} else {
+				dprintf( D_ALWAYS, "Job '%s': Ignoring unknown option '%s'\n",
+						 jobName, tmp );
 			}
+		}
+
+		// Verify that period==0 is only used in "continuous mode"
+		if ( ( 0 == jobPeriod ) && ( CRON_CONTINUOUS != jobMode ) ) {
+			dprintf( D_ALWAYS,
+					 "CronMgr: Job '%s', Period = 0, not continuous\n",
+					 jobName );
+			free( tmpDescr );
+			continue;
 		}
 
 		// Create the job & add it to the list (if it's new)
@@ -300,25 +325,8 @@ CondorCronMgr::ParseJobList( const char *jobString )
 			}
 		}
 
-		// Parse any remaining options
-		while (  ( tmp = strtok( NULL, ":" ) ) != NULL ) {
-			if ( !strcasecmp( tmp, "kill" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': Kill option ok\n",
-						 jobName );
-				job->SetKill( true );
-			} else if ( !strcasecmp( tmp, "nokill" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': NoKill option ok\n",
-						 jobName );
-				job->SetKill( false );
-			} else if ( !strcasecmp( tmp, "continuous" ) ) {
-				dprintf( D_FULLDEBUG, "Cron: '%s': Continuous option ok\n",
-						 jobName );
-				jobMode = CRON_CONTINUOUS;
-			} else {
-				dprintf( D_ALWAYS, "Job '%s': Unknown option '%s'\n",
-						 jobName, tmp );
-			}
-		}
+		// Set the "Kill" mode
+		job->SetKill( killMode );
 
 		// Are there arguments for it?
 		// Force the first arg to be the "Job Name"..
