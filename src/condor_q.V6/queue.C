@@ -1591,7 +1591,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
-	ClassAd *root;			// NAC
+	MatchClassAd mad;		// NAC
 	Value	result;			// NAC
 	int		cluster, proc;
 	int		jobState;
@@ -1614,6 +1614,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	return_buff[0]='\0';
 
+	mad.ReplaceLeftAd( analyzer.AddExplicitTargets( request ) );	   	// NAC
 
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
 		return "Nothing here.\n";										// NAC
@@ -1651,7 +1652,16 @@ doRunAnalysisToBuffer( ClassAd *request )
 	}
 
   	startdAds.Open();
-	while( ( offer = startdAds.Next() ) ) {
+	while( offer = startdAds.Next( ) ) {
+		offer = analyzer.AddExplicitTargets( offer );
+
+			// FOR BACK COMPATIBILITY
+			// Add conditional operators to offer Rank expression if needed
+		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
+		ExprTree* newRankExpr = analyzer.AddExplicitConditionals( rankExpr );
+		if( newRankExpr != NULL ) {
+			offer->Insert( ATTR_RANK, newRankExpr );
+		}
 
 		// 0.  info from machine
 		remoteUser[0] = '\0';
@@ -1660,18 +1670,15 @@ doRunAnalysisToBuffer( ClassAd *request )
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
-		root = new ClassAd( );										// NAC
-		root->Insert( "TARGET", offer );							// NAC
-		request->SetParentScope(offer);								// NAC
-		if( !request->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {	// NAC
-               // there was a problem with the match				// NAC
+		mad.ReplaceRightAd( offer );// NAC
+
+		if( !mad.EvaluateAttr( "rightMatchesLeft", val ) ) {     	// NAC
+              // there was a problem with the match					// NAC
 			if( verbose ) {											// NAC
 				sprintf( return_buff,								// NAC 
 						 "%sError in matchmaking\n",				// NAC
 						 return_buff );								// NAC
 			}														// NAC
-			request->SetParentScope( NULL );						// NAC
-			offer->SetParentScope( NULL );							// NAC
 			continue;												// NAC
 		}															// NAC
 		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
@@ -1685,24 +1692,17 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 			}
 			fReqConstraint++;
-			request->SetParentScope( NULL );						// NAC
-			offer->SetParentScope( NULL );							// NAC
 			continue;
 		}
 
 			// 2. Offer satisfied? 
-		root = new ClassAd( );										// NAC
-		root->Insert( "TARGET", request );							// NAC
-		offer->SetParentScope( request );							// NAC
-		if( !offer->EvaluateAttr( ATTR_REQUIREMENTS, val ) ) {		// NAC
+		if( !mad.EvaluateAttr( "leftMatchesRight", val ) ) {		// NAC
                 // there was a problem with the match				// NAC
   			if( verbose ) {											// NAC
 				sprintf( return_buff,								// NAC 
 						 "%sError in matchmaking\n",				// NAC
 						 return_buff );								// NAC
 			}														// NAC
-			offer->SetParentScope( NULL );							// NAC
-			request->SetParentScope( NULL );						// NAC
 			continue;												// NAC
 		}															// NAC
 		else if ( ( !val.IsBooleanValue() && !val.IsNumber() )	||	// NAC
@@ -1713,26 +1713,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 				strcat( return_buff, "Failed machine constraint\n");
 			}  
 			fOffConstraint++;
-			offer->SetParentScope( NULL );							// NAC
-			request->SetParentScope( NULL );						// NAC
 			continue;
 		}	
-		offer->SetParentScope( NULL );								// NAC
-		request->SetParentScope( NULL );							// NAC
-
-		root = new ClassAd( );										// NAC
-		root->Insert( "MY", offer );								// NAC
-		root->Insert( "TARGET", request );
-		request->SetParentScope( root );
-		offer->SetParentScope( request );
-
-			// FOR BACK COMPATIBILITY
-			// Add conditional operators to offer Rank expression if needed
-		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
-		ExprTree* newRankExpr = analyzer.AddExplicitConditionals( rankExpr );
-		if( newRankExpr != NULL ) {
-			offer->Insert( ATTR_RANK, newRankExpr );
-		}
 
 		// 3. Is there a remote user?
 		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
