@@ -81,6 +81,7 @@ LEX = @LEX@
 LEXLIB = @LEXLIB@
 YACC = @YACC@
 STRIP = @STRIP@
+TRUE = @TRUE@
 
 TAR_CMD = @TarCmd@
 

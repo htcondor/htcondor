@@ -129,7 +129,7 @@ endif
 
 #if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
 #	define COPY_LIBRARY(src,dst)cp -p src dst
-#	define RANLIB_TOUCH(lib)/bin/true
+#	define RANLIB_TOUCH(lib)$(TRUE)
 #else
 #	if HAS_RANLIB_TOUCH		/* cp lib changes modify time - ranlib -t */
 #		define COPY_LIBRARY(src,dst)cp src dst
