@@ -97,6 +97,7 @@ extern int grow_prio_recs(int);
 void cleanup_ckpt_files(int , int , char*);
 void send_vacate(match_rec*, int);
 void mark_job_stopped(PROC_ID*);
+void mark_job_running(PROC_ID*);
 shadow_rec * find_shadow_rec(PROC_ID*);
 shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
@@ -159,6 +160,7 @@ Scheduler::Scheduler()
 	SchedDInterval = 0;
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	MaxJobsRunning = 0;
+	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
 	JobsIdle = 0;
 	JobsRunning = 0;
@@ -1395,7 +1397,12 @@ Scheduler::negotiate(int, Stream* s)
 
 			switch( op ) {
 				 case REJECTED:
-					 mark_cluster_rejected( cur_cluster );
+					job_universe = 0;
+					ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe);
+						// Always negotiate for all PVM job classes! 
+					if ( job_universe != PVM && !NegotiateAllJobsInCluster ) {
+						mark_cluster_rejected( cur_cluster );
+					}
 					host_cnt = max_hosts + 1;
 					JobsRejected++;
 					break;
@@ -3273,8 +3280,12 @@ Scheduler::delete_shadow_rec(int pid)
 	dprintf( D_FULLDEBUG, "Exited delete_shadow_rec( %d )\n", pid );
 }
 
+/*
+** Mark a job as running.  Do not call directly.  Call the non-underscore
+** version below instead.
+*/
 void
-Scheduler::mark_job_running(PROC_ID* job_id)
+_mark_job_running(PROC_ID* job_id)
 {
 	int status;
 	int orig_max;
@@ -3307,10 +3318,11 @@ Scheduler::mark_job_running(PROC_ID* job_id)
 }
 
 /*
-** Mark a job as stopped, (Idle or Unexpanded).
+** Mark a job as stopped, (Idle or Unexpanded).  Do not call directly.  
+** Call the non-underscore version below instead.
 */
 void
-mark_job_stopped(PROC_ID* job_id)
+_mark_job_stopped(PROC_ID* job_id)
 {
 	int		status;
 	int		orig_max;
@@ -3351,6 +3363,60 @@ mark_job_stopped(PROC_ID* job_id)
 				 job_id->proc );
 	}	
 }
+
+
+/* 
+** Wrapper for _mark_job_running so we mark the whole cluster as running
+** for pvm jobs.
+*/
+void
+mark_job_running(PROC_ID* job_id)
+{
+	int universe = STANDARD;
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
+					&universe);
+	if (universe == PVM) {
+		ClassAd *ad;
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			PROC_ID tmp_id;
+			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			if (tmp_id.cluster == job_id->cluster) {
+				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				_mark_job_running(&tmp_id);
+			}
+			ad = GetNextJob(0);
+		}
+	} else {
+		_mark_job_running(job_id);
+	}
+}
+
+/* PVM jobs may have many procs (job classes) in a cluster.  We should
+   mark all of them stopped when the job stops. */
+void
+mark_job_stopped(PROC_ID* job_id)
+{
+	int universe = STANDARD;
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
+					&universe);
+	if (universe == PVM) {
+		ClassAd *ad;
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			PROC_ID tmp_id;
+			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			if (tmp_id.cluster == job_id->cluster) {
+				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				_mark_job_stopped(&tmp_id);
+			}
+			ad = GetNextJob(0);
+		}
+	} else {
+		_mark_job_running(job_id);
+	}
+}
+
 
 
 void
@@ -3778,6 +3844,33 @@ Scheduler::reaper(int sig)
 }
 #endif
 
+/*
+** Wrapper for setting the job status to deal with PVM jobs, which can 
+** contain multiple procs.
+*/
+void
+set_job_status(int cluster, int proc, int status)
+{
+	int universe = STANDARD;
+	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
+	if (universe == PVM) {
+		ClassAd *ad;
+		ad = GetNextJob(1);
+		while (ad != NULL) {
+			PROC_ID tmp_id;
+			ad->LookupInteger(ATTR_CLUSTER_ID, tmp_id.cluster);
+			if (tmp_id.cluster == cluster) {
+				ad->LookupInteger(ATTR_PROC_ID, tmp_id.proc);
+				SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS,
+								status);
+			}
+			ad = GetNextJob(0);
+		}
+	} else {
+		SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
+	}
+}
+
 void
 Scheduler::child_exit(int pid, int status)
 {
@@ -3878,18 +3971,18 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NO_CKPT_FILE:
 			case JOB_KILLED:
 			case JOB_COREDUMPED:
-				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
-								 ATTR_JOB_STATUS, REMOVED );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc, 
+								REMOVED );
 				break;
 			case JOB_EXITED:
-				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc,
-								 ATTR_JOB_STATUS, COMPLETED );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc,
+								COMPLETED );
 				break;
 			case JOB_SHOULD_HOLD:
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
 						 srec->job_id.cluster, srec->job_id.proc );
-				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
-								 ATTR_JOB_STATUS, HELD );
+				set_job_status( srec->job_id.cluster, srec->job_id.proc, 
+								HELD );
 				break;
 			case DPRINTF_ERROR:
 				dprintf( D_ALWAYS, 
@@ -4261,6 +4354,14 @@ Scheduler::Init()
 		  MaxJobsRunning = atoi( tmp );
 		  free( tmp );
 	 }
+
+	 tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
+	 if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+		 NegotiateAllJobsInCluster = false;
+	 } else {
+		 NegotiateAllJobsInCluster = true;
+	 }
+	if( tmp ) free( tmp );
 
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
