@@ -42,6 +42,7 @@ int main (int argc, char **argv)
 	ClassAd     *job;
 	ClassAd		*ad;
 	bool		first = true;
+	int         numDisplayed = 0;
 	char		scheddAddr[64];
 	char		scheddName[64];
 	char		scheddMachine[64];
@@ -58,7 +59,7 @@ int main (int argc, char **argv)
 
 	// make sure we are querying schedd's or submittors
 	if (!global && !querySchedds && !querySubmittors) {
-		char *host = my_hostname();
+		char *host = my_full_hostname();
 		querySchedds = true;
 		result = scheddQuery.addConstraint (SCHEDD_NAME, host);
 		if (result != Q_OK) {
@@ -113,6 +114,7 @@ int main (int argc, char **argv)
 			if (verbose)
 			{
 				jobs.fPrintAttrListList (stdout);
+				numDisplayed++;
 			}
 			else
 			{
@@ -121,6 +123,7 @@ int main (int argc, char **argv)
 				while (job = jobs.Next())
 				{
 					displayJobShort (job);
+					numDisplayed++;
 				}
 				jobs.Close ();
 			}
@@ -133,6 +136,7 @@ int main (int argc, char **argv)
 					malformed);
 			}
 		}
+
 	
 		first = false;
 	}
@@ -146,6 +150,9 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 
+	if( !numDisplayed ) {
+		printf( "\tNo jobs in the query you requested.\n" );
+	}
 
 	return 0;
 }
@@ -154,7 +161,7 @@ static void
 processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
-	char *arg;
+	char *arg, *at, *fullname;
 
 	for (i = 1; i < argc; i++)
 	{
@@ -188,8 +195,14 @@ processCommandLineArguments (int argc, char *argv[])
 				fprintf( stderr, "Argument -name requires another parameter\n");
 				exit(1);
 			}
-				
-			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, argv[i+1]);
+
+			if( !(fullname = get_full_hostname(argv[i+1])) ) {
+				fprintf( stderr, "%s: unknown host %s\n",
+						 argv[0], argv[i+1] );
+				exit(1);
+			}
+			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, fullname);
+
 			result = scheddQuery.addConstraint (constraint);
 			if (result != Q_OK) {
 				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
@@ -201,8 +214,6 @@ processCommandLineArguments (int argc, char *argv[])
 		} 
 		else
 		if (match_prefix (arg, "submittor")) {
-
-			char *at;
 
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
