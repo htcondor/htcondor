@@ -227,7 +227,7 @@ ResState::eval()
 		EXCEPT( "eval_state: ERROR: unknown state (%d)",
 				(int)rip->r_state );
 	}
-	dprintf( D_FULLDEBUG, "State: %s\tActivity: %s\n", 
+	dprintf( D_FULLDEBUG, "State: %-16.13sActivity: %s\n", 
 			 state_to_string(r_state),
 			 activity_to_string(r_act) );
 	return 0;
