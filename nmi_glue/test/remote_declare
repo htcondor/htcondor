@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# $Id: remote_declare,v 1.1.4.1 2004-07-19 05:28:37 wright Exp $
+
+# Condor implementation of NMI test infrastructure interface
+# Simple wrapper to source the environment file and spawn the
+# corresponding perl script for a given stage of the test.
+
+ENV_FILE=setup_test_env
+
+# include the environment info from the pre-script
+if [ ! -f $ENV_FILE ]; then
+    echo "$ENV_FILE does not exist!"
+    exit 1
+fi
+. $ENV_FILE
+
+exec remote_declare.pl $*
+
+

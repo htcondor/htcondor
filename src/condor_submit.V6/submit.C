@@ -1684,7 +1684,11 @@ void
 SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 {
 	char *macro_value;
-	FileTransferOutput_t when_output;
+	FileTransferOutput_t when_output = FTO_NONE;
+		// this variable is never used (even once we pass it to
+		// InsertFileTransAttrs()) unless should_transfer is set
+		// appropriately.  however, just to be safe, we initialize it
+		// here to avoid passing around uninitialized variables.
 
 	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
 	if( macro_value ) {
@@ -1796,6 +1800,10 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	should += getShouldTransferFilesString( should_transfer );
 	should += '"';
 	if( should_transfer != STF_NO ) {
+		if( ! when_output ) {
+			EXCEPT( "InsertFileTransAttrs() called we might transfer "
+					"files but when_output hasn't been set" );
+		}
 		when += getFileTransferOutputString( when_output );
 		when += '"';
 		if( when_output == FTO_ON_EXIT ) {

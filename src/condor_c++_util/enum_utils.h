@@ -73,6 +73,7 @@ ShouldTransferFiles_t getShouldTransferFilesNum( const char* string );
 
 
 typedef enum { 
+	FTO_NONE = 0,
 	FTO_ON_EXIT = 1,
 	FTO_ON_EXIT_OR_EVICT,
 } FileTransferOutput_t;

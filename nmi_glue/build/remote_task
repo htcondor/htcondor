@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+
+######################################################################
+# $Id: remote_task,v 1.1.4.1 2004-07-19 05:28:36 wright Exp $
+# Perform a given build task, and return the status of that task
+# 0 = success
+# 1 = build failed
+# 3 = internal fatal error (a.k.a. die)
+######################################################################
+
+use Cwd;
+my $BaseDir = getcwd();
+my $SrcDir = "$BaseDir/src";
+
+# autoflush our STDOUT
+$| = 1;
+
+######################################################################
+###### WARNING!!!  The return value of this script has special  ######
+###### meaning, so you can NOT just call die().  you MUST       ######
+###### use the special c_die() method so we return 3!!!!        ######
+######################################################################
+
+if( ! defined $ENV{_NMI_TASKNAME} ) {
+    c_die("_NMI_TASKNAME not in environment, can't build anything!\n");
+}
+my $taskname = $ENV{_NMI_TASKNAME};
+if( ! $taskname ) {
+    # if we have no task, just return success immediately
+    print "No tasks specified, returning SUCCESS\n";
+    exit 0;
+}
+
+
+######################################################################
+# build the task
+######################################################################
+
+chdir("$SrcDir") || c_die("Can't chdir($SrcDir): $!\n");
+open( BUILD, "make $taskname 2>&1 |" ) || 
+    c_die("Can't run make $taskname\n");
+while( <BUILD> ) {
+    print $_;
+}
+close( BUILD );
+$buildstatus = $?;
+if( $buildstatus == 0 ) {
+    print "Building $taskname: SUCCESS\n";
+    exit 0;
+}
+
+print "Building $taskname: FAILURE ($buildstatus)\n";
+if( $taskname eq "externals" && -d "$BaseDir/externals/build" ) {
+    # if the externals failed to build, we want to grab a copy of all
+    # the build logs from the externals tree into our public output
+    # directory.  however, we only care if we got far enough into the
+    # externals build process to have any build logs
+    if( ! -d "$BaseDir/public" ) {
+        mkdir( "$BaseDir/public" ) || 
+            c_die("Can't mkdir($BaseDir/public): $!\n");
+    }
+    $pub_ext_log = "$BaseDir/public/external-logs";
+    if( ! -d "$pub_ext_log" ) {
+        mkdir( "$pub_ext_log" ) || 
+            c_die("Can't mkdir($pub_ext_log): $!\n");
+    }
+    $ext_build = "$BaseDir/externals/build";
+    opendir( DIR, "$ext_build" ) || 
+        c_die("Failed to opendir($ext_build): $!\n");
+    @files = readdir(DIR);
+    closedir DIR;
+    foreach $file ( @files ) {
+        if( $file =~ /log\..*/ ) {
+            system( "cp $ext_build/$file $pub_ext_log" );
+            if( $? >> 8 ) {
+                c_die("Can't cp $ext_build/$file $pub_ext_log\n");
+            }
+        }
+    }
+}
+exit 1;
+
+
+sub c_die {
+    my( $msg ) = @_;
+    print $msg;
+    exit 3;
+}

@@ -21,11 +21,11 @@ HAS_64BIT_STRUCTS = -DHAS_64BIT_STRUCTS
 
 #if DOES_SAVE_SIGSTATE
 	SAVE_SIGSTATE = -DSAVE_SIGSTATE
-	#if IS_DUX
+#       if IS_DUX
 		SIG_CKPT_OBJS = signals_support.o signals_control.o SIGPROCMASK.o SIGSUSPEND.o SIGACTION.o SIGNAL.o _SIGSUSPEND.o
-	#else
+#       else
 		SIG_CKPT_OBJS = signals_support.o signals_control.o
-	#endif
+#       endif
 #endif
 
 #if WANT_NEST

@@ -88,7 +88,21 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
+    // NOTE: we cast this to char* because older MS compilers
+    // (contrary to the ISO C++ spec) won't allow you to delete a
+    // const.  This has apparently been fixed in Visual C++ .NET, but
+    // as of 6/2004 we don't yet use that.  For details, see:
+    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
     delete[] (char*) _dapLogName;
+
+    // delete all jobs in _jobs
+    Job *job = NULL;
+    _jobs.Rewind();
+    while( job = _jobs.Next() ) {
+      ASSERT( job != NULL );
+      delete job;
+      _jobs.DeleteCurrent();
+    }
 
     delete _preScriptQ;
     delete _postScriptQ;
@@ -194,7 +208,7 @@ bool
 Dag::DetectCondorLogGrowth () {
 
 	if( _condorLogFiles.number() <= 0 ) {
-		debug_printf( DEBUG_VERBOSE, "WARNING: DetectCondorLogGrowth() called "
+		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectCondorLogGrowth() called "
 					  "but no Condor log defined\n" );
 		return false;
 	}
@@ -220,7 +234,7 @@ Dag::DetectCondorLogGrowth () {
 //-------------------------------------------------------------------------
 bool Dag::DetectDaPLogGrowth () {
 	if( !_dapLogName ) {
-		debug_printf( DEBUG_VERBOSE, "WARNING: DetectDaPLogGrowth() called "
+		debug_printf( DEBUG_DEBUG_1, "WARNING: DetectDaPLogGrowth() called "
 					  "but no dap log defined\n" );
 		return false;
 	}

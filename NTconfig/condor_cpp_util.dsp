@@ -642,6 +642,14 @@ SOURCE="..\src\condor_c++_util\simplelist.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\status_string.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\status_string.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\store_cred.C"
 # End Source File
 # Begin Source File
