@@ -77,6 +77,7 @@ priv_state _set_priv(priv_state s, char file[], int line, int dologging);
 uid_t get_my_uid();
 gid_t get_my_gid();
 void set_user_ids(uid_t uid, gid_t gid);
+priv_state get_priv();
 
 #if !defined(WIN32)
 uid_t get_condor_uid();

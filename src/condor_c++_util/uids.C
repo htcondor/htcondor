@@ -44,9 +44,6 @@ static char *priv_state_name[] = {
 /* Start Common Bits */
 #define HISTORY_LENGTH 32
 
-
-
-
 static struct {
 	time_t		timestamp;
 	priv_state	priv;
@@ -87,6 +84,12 @@ display_priv_log(void)
 	}
 }
 
+
+priv_state
+get_priv()
+{
+	return CurrentPrivState;
+}
 
 /* End Common Bits */
 
@@ -785,13 +788,3 @@ is_root( void )
 }
 
 #endif  /* #if defined(WIN32) */
-
-
-
-
-
-
-
-
-
-
