@@ -405,7 +405,7 @@ char *getStrQueryResult(QueryResult q)
     	case Q_PARSE_ERROR:			return "parse error";
 	    case Q_COMMUNICATION_ERROR:	return "communication error";
 	    case Q_INVALID_QUERY:		return "invalid query";
-	    case Q_NO_COLLECTOR_HOST:	return "no COLLECTOR_HOST";
+	    case Q_NO_COLLECTOR_HOST:	return "can't find collector";
 		default:
 			return "unknown error";
 	}
