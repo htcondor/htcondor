@@ -146,6 +146,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	buf[0] = '\0';
 	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
 	if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
+		rehashJobContact( this, jobContact, buf );
 		jobContact = strdup( buf );
 	}
 
@@ -371,12 +372,14 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_SUCCESS ) {
 					newJM = false;
 					callbackRegistered = true;
+					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					newJM = true;
 					callbackRegistered = true;
+					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
@@ -612,6 +615,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					newJM = true;
+					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
@@ -774,6 +778,7 @@ int GlobusJob::doEvaluateState()
 			}
 			globusStateErrorCode = 0;
 			if ( jobContact != NULL ) {
+				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				jobContact = NULL;
 				schedd_actions |= UA_UPDATE_CONTACT_STRING;
