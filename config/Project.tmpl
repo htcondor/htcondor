@@ -113,6 +113,10 @@ endif
 #define HAS_INET_NTOA YES
 #endif
 
+#ifndef NEEDS_SPECIAL_STATIC_BUILD
+#define NEEDS_SPECIAL_STATIC_BUILD NO
+#endif
+
 OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
 
