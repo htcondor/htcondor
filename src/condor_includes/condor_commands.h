@@ -82,6 +82,9 @@
 #define GIVE_CLASSAD		(SCHED_VERS+50)
 #define GET_PRIORITY		(SCHED_VERS+51)		// negotiator
 #define GIVE_REQUEST_AD		(SCHED_VERS+52)		// Starter -> Startd
+#define RESTART				(SCHED_VERS+53)
+#define DAEMONS_OFF			(SCHED_VERS+54)
+#define DAEMONS_ON			(SCHED_VERS+55)
 
 /************
 *** Command ids used by the collector 
