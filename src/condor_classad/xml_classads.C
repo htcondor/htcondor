@@ -1323,7 +1323,7 @@ static XMLToken *ReadToken(XMLSource &source)
 			if (character == EOF) {
 				break;
 			}
-			text += character;
+			text += ((char) character);
 			if (!isspace(character)) {
 				break;
 			}
@@ -1346,7 +1346,7 @@ static XMLToken *ReadToken(XMLSource &source)
 				character = source.ReadCharacter();
 			}
 			while (character != EOF && character != '>') {
-				text += character;
+				text += ((char) character);
 				character = source.ReadCharacter();
 			}
 			
@@ -1410,7 +1410,7 @@ static XMLToken *ReadToken(XMLSource &source)
 					source.PushbackCharacter();
 					break;
 				} else {
-					text += character;
+					text += ((char) character);
 				}
 			}
 			token->SetText(text.Value());
