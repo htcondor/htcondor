@@ -929,10 +929,21 @@ and all three of these machines are ranked higher than others.
 A shared file system is presumed for submitting jobs to Condor
 under some circumstances.
 Condor works well without a shared file system,
-but the user must specify which files to transfer from the
-machine where a job is submitted to the machine where the
-job is executed.
-The specification is done within the submit description file.
+but the user must enable Condor's file transfering mechanism.
+In this case, Condor will transfer any files needed by your job into a
+temporary working directory on the remote machine, execute your job,
+and transfer back the output to your submitting machine.
+To use this feature, the user must specify which files to transfer,
+and when the output files should be copied back to your submit
+machine.
+This specification is done within the submit description file for the
+job. 
+The default behavior regarding file transfers varies across the
+different Condor universes, and between UNIX and Windows machines.
+
+%%%%%%%%%%%% 
+\subsubsection{Default behavior across the Condor Universes}
+%%%%%%%%%%%%
 
 For the standard universe, the existence of a shared file system
 is not relevant.
@@ -941,41 +952,15 @@ remote system call mechanism.
 Therefore, the user does not need to change the submit description
 file if there is no shared file system.
 
-For both the vanilla universe and the mpi universe,
-access to files through a shared file system is presumed as
-a default.
-If there is no shared file system, then
-Condor must be explicitly told to transfer the job's input files.
-Two commands accomplish this task.
-\begin{verbatim}
-  transfer_files = ONEXIT
-  transfer_input_files = file1 file2 file3
-\end{verbatim}
-The \verb@transfer_files@ command tells Condor when files are to be
-transferred.
-When set to \verb@ONEXIT@, it transfers files from the execute machine
-back to the submit machine when the job exits (completes).
-Alternatively, it could be set to \verb@ALWAYS@, and Condor will do
-the transfer when the job exits, or when it is preempted, or when
-it is to be killed.
-The \verb@transfer_input_files@ command tells Condor which files 
-(other than the executable, and the files used in an \verb@input@
-command) to transfer.
-
-For the Java universe,
-placing no additional commands into the submit description file
-causes behavior that requires a shared file system.
-When no shared file system exists, place
-\begin{verbatim}
-  transfer_files = ONEXIT
-\end{verbatim}
-or
-\begin{verbatim}
-  transfer_files = ALWAYS
-\end{verbatim}
-into the submit description file.  
-With either of these commands, the executable and any jar files
-(listed in a \verb@jar_files@ command) will be transferred.
+For the vanilla, Java, and MPI universes, access to files (including
+the executable) through a shared file system is presumed as a default
+on UNIX machines.
+If there is no shared file system, then Condor's file transfer
+mechanism must be explicitly enabled (see below).
+On Windows machines, Condor presumes no access to a shared file
+system, enabling the file transfer mechanism by default.
+However, the user still might need to specify which files to
+transfer.  
 
 For the globus universe,
 jobs are to be executed on remote machines, so there would never
@@ -993,6 +978,75 @@ PVM jobs are set up to have the master direct the workers.
 For the scheduler universe,
 Condor is only using the machine from where the job is submitted,
 therefore the existence of a shared file system is not relevant.
+
+
+%%%%%%%%%%%% 
+\subsubsection{Condor's File Transfer Mechanism}
+%%%%%%%%%%%%
+
+To enable the file transfer feature, you must specify
+\verb@transfer_files@ in the job's submit description file.
+An example is:
+
+\begin{verbatim}
+  transfer_files = ONEXIT
+\end{verbatim}
+
+The \verb@transfer_files@ command tells Condor when output files are
+to be transferred back to the submit machine after the job
+has executed on a remote machine.
+It also enables transfering input files to your job (see below). 
+There are three possible values for \verb@transfer_files@:
+
+\begin{enumerate}
+\item \verb@ONEXIT@: Condor transfers output files back to the submit
+machine only when the job exits on its own.
+\item \verb@ALWAYS@: Condor will always do the transfer, whether the
+job completes on its own, was preempted by another job, or killed.
+This is usually only useful if partial runs of your job are valuable
+for some reason (for example, if your application does its own
+checkpointing).
+\item \verb@NEVER@: Condor's file transfer mechanism is disabled. 
+\end{enumerate}
+
+For vanilla, Java, and MPI universes, the defaults for
+\verb@transfer_files@ are \verb@NEVER@ for UNIX, and \verb@ONEXIT@
+for Windows.
+
+If file transfer is enabled, Condor will automatically transfer the
+executable, the file defined as the standard input (if specified with
+\verb@input@), and any jar files (for Java universe),  before the job
+is run on a remote machine.
+If the job requires any other input files, the user should utilize the
+\verb@transfer_input_files@ command.
+This list specifies any other files you want Condor to transfer to a
+remote site to set up the execution environment for the job before it
+is run.
+All of these files are placed in the same temporary working directory
+as the job's executable.
+At this time, directories can not be transfered in this way.
+For example:
+
+\begin{verbatim}
+  transfer_input_files = file1 file2 
+\end{verbatim}
+
+By default, any files that are modified or created by the job in the
+temporary directory at the remote site are sent back.
+Most of the time, this is the best option.
+To restrict the files that are transfered, specify
+the exact list with \verb@transfer_output_files@.
+If you define this list and any of the files do not exist when the
+job exits, Condor considers this an error, and re-runs the job.
+\Warn Do not specify \verb@transfer_output_files@ unless there is a
+really good reason -- it is best to let Condor figure things out by
+itself based upon what the job produces.
+For example:
+
+\begin{verbatim}
+  transfer_output_files = final-results
+\end{verbatim}
+
 
 %%%%%%%%%%%% 
 \subsection{Heterogeneous Submit: Execution on Differing Architectures} 
