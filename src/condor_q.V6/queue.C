@@ -1396,9 +1396,10 @@ doRunAnalysisToBuffer( ClassAd *request )
 		available );
 
 	if( niceUser ) {
-		sprintf( "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
-			"has a\n\t     very low priority and is unlikely to preempt other "
-			"requests.\n", return_buff );
+		sprintf( return_buff, 
+				 "%s\n\t(*)  Since this is a \"nice-user\" request, this request "
+				 "has a\n\t     very low priority and is unlikely to preempt other "
+				 "requests.\n", return_buff );
 	}
 			
 
