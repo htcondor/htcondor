@@ -305,6 +305,10 @@ DedicatedScheduler::DedicatedScheduler()
 
 	num_matches = 0;
 
+	ds_owner = strnewp( "DedicatedScheduler" );
+	char buf[256];
+	sprintf( buf, "%s@%s", ds_owner, my_full_hostname() );
+	ds_name = strnewp( buf );
 }
 
 
@@ -313,6 +317,8 @@ DedicatedScheduler::~DedicatedScheduler()
 	if(	idle_jobs ) delete idle_jobs;
 	if(	resources ) delete resources;
 	if(	avail_time_list ) delete avail_time_list;
+	if( ds_owner ) delete [] ds_owner;
+	if( ds_name ) delete [] ds_name;
 
         // for the stored claim records
 	AllocationNode* foo;
@@ -346,10 +352,9 @@ DedicatedScheduler::initialize( void )
 	dummy_job.SetTargetTypeName( STARTD_ADTYPE );
 	sprintf( buf, "%s = True", ATTR_REQUIREMENTS );
 	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"dedicatedScheduler\"", ATTR_OWNER );
+	sprintf( buf, "%s = \"%s\"", ATTR_OWNER, ds_owner );
 	dummy_job.Insert( buf );
-	sprintf( buf, "%s = \"dedicatedScheduler@%s\"", ATTR_USER,
-			 my_full_hostname() );
+	sprintf( buf, "%s = \"%s\"", ATTR_USER, ds_name );
 	dummy_job.Insert( buf );
 	sprintf( buf, "%s = %d", ATTR_JOB_UNIVERSE, MPI );
 	dummy_job.Insert( buf );

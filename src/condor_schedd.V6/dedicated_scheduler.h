@@ -120,6 +120,9 @@ class DedicatedScheduler : public Service {
 	bool DelMrec( char* capability );
 	bool DelMrec( match_rec* rec );
 
+	char* name( void ) { return ds_name; };
+	char* owner( void ) { return ds_owner; };
+
  private:
 		// This gets a list of all dedicated resources we control.
 		// This is called at the begining of each handleDedicatedJobs
@@ -177,6 +180,9 @@ class DedicatedScheduler : public Service {
     static const int MPIShadowSockTimeout;
 
 	ClassAd		dummy_job;		// Dummy ad used for claiming startds 
+
+	char* ds_name;		// Name of this dedicated scheduler
+	char* ds_owner;		// "Owner" to identify this dedicated scheduler 
 
 };
 
