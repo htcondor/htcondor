@@ -205,8 +205,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
 
-// This is the version of getProcInfo for Solaris 2.6 
-#ifdef Solaris26 
+// This is the version of getProcInfo for Solaris 2.6 and 2.7
+#if defined(Solaris26) || defined(Solaris27)
 
 	char path[64];
 	int fd, rval = 0;
@@ -306,7 +306,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Solaris26 */
+#endif /* Solaris26 || Solaris27 */
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
@@ -774,7 +774,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
    returned for total & available mem are consistent with the numbers
    reported by top.  */
 
-#if ( defined(Solaris251) || defined(Solaris26)  )
+#if ( defined(Solaris)  )
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	if( pagesize == 0 ) {
@@ -784,7 +784,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = sysconf(_SC_AVPHYS_PAGES) * pagesize;
 	return 0;
 }
-#endif /* Solaris251 || Solaris26 */
+#endif /* Solaris */
 
 #ifdef LINUX
 int

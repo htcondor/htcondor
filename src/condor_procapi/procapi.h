@@ -44,13 +44,13 @@
 
 #ifndef HPUX               // neither of these are in hpux.
 
-#ifndef Solaris26          
-#include <sys/procfs.h>    // /proc stuff for all but Solaris 2.6
+#if defined(Solaris26) || defined(Solaris27)
+#include <procfs.h>        // /proc stuff for Solaris 2.6 and 2.7
 #else
-#include <procfs.h>        // /proc stuff for Solaris 2.6 
+#include <sys/procfs.h>    // /proc stuff for everything else
 #endif
 
-#endif
+#endif /* ! HPUX */
 
 #ifdef HPUX                // hpux has to be different, of course.
 #include <sys/param.h>     // used in pstat().
