@@ -74,8 +74,8 @@ long
 stack_start_addr()
 {
 	long	answer;
-
 	jmp_buf env;
+
 	(void)SETJMP( env );
 	return JMP_BUF_SP(env) & ~1023; // Curr sp, rounded down
 }
