@@ -116,10 +116,11 @@ class ExprTree
 		*/
 		NodeKind GetKind (void) const { return nodeKind; }
 
-
-
 		/// A debugging method; send expression to stdout
 		void Puke( ) const;
+
+		// ajr--made public on 4-nov-2002. Is this okay? Needed for user functions.
+		bool Evaluate( EvalState &, Value & ) const; 
 		
   	protected:
 		ExprTree ();
@@ -129,7 +130,6 @@ class ExprTree
 		bool Flatten( Value& val, ExprTree*& tree) const;
 
 		bool Flatten( EvalState&, Value&, ExprTree*&, int* = NULL ) const;
-		bool Evaluate( EvalState &, Value & ) const; 
 		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
 
 		const ClassAd	*parentScope;
