@@ -13,6 +13,7 @@
 #define IS_DUX4		YES
 
 #define PlatformLdFlags -lmld
+#define VendorFTestFlags -assume recursive 
 
 #define IS_EGCS_BUILD YES
 #define EgcsPath /s/egcs-1.1.2/alpha_dux40d/lib/gcc-lib/alpha-dec-osf4.0d/egcs-2.91.66
