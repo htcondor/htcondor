@@ -1,5 +1,5 @@
 universe   = vanilla
-executable = /bin/cp
+executable = x_copy_binary_file.pl
 log = job_filexfer_basic_van.log
 output = job_filexfer_basic_van.out
 error = job_filexfer_basic_van.err
