@@ -2577,7 +2577,7 @@ int DaemonCore::HandleReq(int socki)
 			// compare it to the one we have internally
 			char *real_cookie       = NULL;
 			int   len = 0;
-			get_cookie( len, (unsigned char*)real_cookie );
+			get_cookie( len, (unsigned char*&)real_cookie );
 
 			MyString t1 = incoming_cookie;
 			MyString t2 = real_cookie;
@@ -4357,11 +4357,16 @@ int DaemonCore::Create_Process(
 
 
 #ifdef WIN32  
+
 		// declare these variables early so MSVS doesn't complain
+
 		// about them being declared inside of the goto's below.
 	BOOL inherit_handles = FALSE;
+
 	char *newenv = NULL;
+
 	MyString strArgs;
+
 	bool bIs16Bit = FALSE;
 #else
 	int inherit_handles;
