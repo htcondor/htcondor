@@ -85,6 +85,7 @@ extern char My_UID_Domain[];
 extern int	UseAFS;
 extern int  UseNFS;
 extern int  UseCkptServer;
+extern char *Spool;
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -863,7 +864,7 @@ pseudo_std_file_info( int which, char *name, int *pipe_fd )
 int
 pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 {
-	int		answer;
+	int		answer, len;
 	char	full_path[ _POSIX_PATH_MAX ];
 
 	dprintf( D_SYSCALLS, "\tname = \"%s\"\n", name );
@@ -890,8 +891,13 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	dprintf( D_SYSCALLS, "\tpipe_fd = %d\n", *pipe_fd);
 	dprintf( D_SYSCALLS, "\tCurrentWorkingDir = \"%s\"\n", CurrentWorkingDir );
 	dprintf( D_SYSCALLS, "\textern_path = \"%s\"\n", extern_path );
+	dprintf( D_SYSCALLS, "\tSpool = \"%s\"\n", Spool );
 
-	if( access_via_afs(full_path) ) {
+	if(strlen(Spool) < strlen(full_path) &&
+	   strncmp(Spool, full_path, strlen(Spool)) == MATCH) {
+		answer = IS_RSC;
+		dprintf( D_SYSCALLS, "\tanswer = IS_RSC\n" );
+	} else if( access_via_afs(full_path) ) {
 		answer = IS_AFS;
 		dprintf( D_SYSCALLS, "\tanswer = IS_AFS\n" );
 	} else if(access_via_nfs(full_path) ) {
