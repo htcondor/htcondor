@@ -530,11 +530,15 @@ doContactSchedd()
 			 curr_actions->actions & UA_DELETE_FROM_SCHEDD ) {
 			contact_schedd = true;
 		}
-		if ( curr_actions->actions & UA_LOG_SUBMIT_EVENT ) {
+		if ( curr_actions->actions & UA_LOG_SUBMIT_EVENT &&
+			 !curr_job->submitLogged ) {
 			WriteGlobusSubmitEventToUserLog( curr_job );
+			curr_job->submitLogged = true;
 		}
-		if ( curr_actions->actions & UA_LOG_EXECUTE_EVENT ) {
+		if ( curr_actions->actions & UA_LOG_EXECUTE_EVENT &&
+			 !curr_job->executeLogged ) {
 			WriteGlobusExecuteEventToUserLog( curr_job );
+			curr_job->executeLogged = true;
 		}
 		if ( curr_actions->actions & UA_LOG_SUBMIT_FAILED_EVENT ) {
 			WriteGlobusSubmitFailedToUserLog( curr_job );

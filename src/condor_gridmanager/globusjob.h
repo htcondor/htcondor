@@ -23,7 +23,7 @@ class GlobusJob : public Service
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	void UpdateCondorState( int new_state );
-	void UpdateGlobusState( int new_state );
+	void UpdateGlobusState( int new_state, int new_error_code );
 	GlobusResource *GetResource();
 
 	// New variables
@@ -31,6 +31,7 @@ class GlobusJob : public Service
 	int condorState;
 	int gmState;
 	int globusState;
+	int globusStateErrorCode;
 	bool jmUnreachable;
 	GlobusResource *myResource;
 	int evaluateStateTid;
@@ -53,8 +54,8 @@ class GlobusJob : public Service
 	char *userLogFile;
 	bool removedByUser;
 	int exitValue;
+	bool submitLogged;
 	bool executeLogged;
-	bool exitLogged;
 	bool stateChanged;
 	bool newJM;		// This means a jobmanager that supports restart
 					// and two-phase commit

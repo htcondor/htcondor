@@ -90,7 +90,6 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	jmFailureCode = copy.jmFailureCode;
 	userLogFile = (copy.userLogFile == NULL) ? NULL : strdup( copy.userLogFile );
 	executeLogged = copy.executeLogged;
-	exitLogged = copy.exitLogged;
 	stateChanged = copy.stateChanged;
 	newJM = copy.newJM;
 	restartingJM = copy.restartingJM;
@@ -131,8 +130,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	globusError = 0;
 	jmFailureCode = 0;
 	exitValue = 0;
+	submitLogged = false;
 	executeLogged = false;
-	exitLogged = false;
 	stateChanged = false;
 	newJM = false;
 	restartingJM = false;
@@ -241,7 +240,6 @@ void GlobusJob::SetEvaluateState()
 
 int GlobusJob::doEvaluateState()
 {
-	bool new_call = true;
 	bool connect_failure = false;
 	int old_gm_state;
 	int old_globus_state;
@@ -254,7 +252,9 @@ int GlobusJob::doEvaluateState()
 	evaluateStateTid = TIMER_UNSET;
 
 	if ( jmUnreachable || resourceDown ) {
-		new_call = false;
+		globus_gahp_set_new_call( false );
+	} else {
+		globus_gahp_set_new_call( true );
 	}
 
 	do {
@@ -269,7 +269,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				rc = globus_gram_client_job_signal( jobContact,
 										(globus_gram_client_job_signal_t)0,
-										NULL, &status, &error, new_call );
+										NULL, &status, &error );
 				if ( rc == WOULD_CALL || rc == PENDING ) {
 					break;
 				}
@@ -297,7 +297,7 @@ int GlobusJob::doEvaluateState()
 			rc = globus_gram_client_job_callback_register( jobContact,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &status,
-										&error, new_call );
+										&error );
 			if ( rc == WOULD_CALL || rc == PENDING ) {
 				break;
 			}
@@ -312,9 +312,19 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			callbackRegistered = true;
-			globusStatus = status;
+			if ( status == PENDING || status == ACTIVE ||
+				 status == SUSPENDED || status == DONE ) {
+				submitLogged = true;
+			}
+			if ( status == ACTIVE || status == SUSPENDED || status == DONE ) {
+				executeLogged = true;
+			}
+			UpdateGlobusState( status, error );
+/*
+			globusState = status;
 			globusError = error;
 			addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE );
+*/
 			if ( newJM ) {
 				gmState = GM_STDIO_UPDATE;
 			} else {
@@ -376,8 +386,7 @@ int GlobusJob::doEvaluateState()
 				char *job_contact;
 				rc = globus_gram_client_job_request( rmContact, rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact,
-										new_call );
+										gramCallbackContact, &job_contact );
 				if ( rc == WOULD_CALL || rc == PENDING ) {
 					break;
 				}
@@ -400,6 +409,11 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_SUBMIT_UNCOMMITTED;
 				} else {
 					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					globusError = rc;
+					WriteGlobusSubmitFailedToUserLog( this );
+					gmState = GM_UNSUBMITTED;
+					reevaluate_state = true;
 				}
 			}
 			break;
@@ -425,7 +439,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
-								NULL, &status, &error, new_call );
+								NULL, &status, &error );
 				if ( rc == WOULD_CALL || rc == PENDING ) {
 					break;
 				}
@@ -436,6 +450,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+					WriteGlobusSubmitFailedToUserLog( this );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -475,7 +490,7 @@ int GlobusJob::doEvaluateState()
 						sprintf( size_str, "%d %d", output_size, error_size );
 						rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
-									size_str, &status, &error, new_call );
+									size_str, &status, &error );
 						if ( rc == WOULD_CALL || rc == PENDING ) {
 							break;
 						}
@@ -507,7 +522,7 @@ int GlobusJob::doEvaluateState()
 						if ( newJM ) {
 							rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error, new_call );
+									NULL, &status, &error );
 							if ( rc == WOULD_CALL || rc == PENDING ) {
 								break;
 							}
@@ -571,7 +586,7 @@ int GlobusJob::doEvaluateState()
 		case GM_DONE_SAVED:
 			rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error, new_call );
+									NULL, &status, &error );
 			if ( rc == WOULD_CALL || rc == PENDING ) {
 				break;
 			}
@@ -590,7 +605,7 @@ int GlobusJob::doEvaluateState()
 		case GM_STOP_AND_RESTART:
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER,
-								NULL, &status, &error, new_call );
+								NULL, &status, &error );
 			if ( rc == WOULD_CALL || rc == PENDING ) {
 				break;
 			}
@@ -637,8 +652,7 @@ int GlobusJob::doEvaluateState()
 				}
 				rc = globus_gram_client_job_request( rmContact, rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
-										gramCallbackContact, &job_contact,
-										new_call );
+										gramCallbackContact, &job_contact );
 				if ( rc == WOULD_CALL || rc == PENDING ) {
 					break;
 				}
@@ -672,7 +686,7 @@ int GlobusJob::doEvaluateState()
 		case GM_RESTART_SAVED:
 			rc = globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
-								NULL, &status, &error, new_call );
+								NULL, &status, &error );
 			if ( rc == WOULD_CALL || rc == PENDING ) {
 				break;
 			}
@@ -721,7 +735,7 @@ int GlobusJob::doEvaluateState()
 				if ( newJM ) {
 					rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error, new_call );
+									NULL, &status, &error );
 					if ( rc == WOULD_CALL || rc == PENDING ) {
 						break;
 					}
@@ -732,7 +746,6 @@ int GlobusJob::doEvaluateState()
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-						gmState = GM_CLEAR_REQUEST;
 					}
 				}
 				if ( condorState == REMOVED ) {
@@ -750,7 +763,7 @@ int GlobusJob::doEvaluateState()
 					if ( newJM ) {
 						rc = globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
-									NULL, &status, &error, new_call );
+									NULL, &status, &error );
 						if ( rc == WOULD_CALL || rc == PENDING ) {
 							break;
 						}
@@ -761,7 +774,6 @@ int GlobusJob::doEvaluateState()
 						if ( rc != GLOBUS_SUCCESS ) {
 							// unhandled error
 							LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-							gmState = GM_CLEAR_REQUEST;
 						}
 					}
 					if ( condorState == REMOVED ) {
@@ -801,7 +813,13 @@ int GlobusJob::doEvaluateState()
 			}
 			break;
 		case GM_DELETE:
-			rc = addScheddUpdateAction( this, UA_DELETE_FROM_SCHEDD,
+			int schedd_actions = UA_DELETE_FROM_SCHEDD;
+			if ( condorState == REMOVED ) {
+				schedd_actions |= UA_LOG_ABORT_EVENT;
+			} else if ( condorState == COMPLETED ) {
+				schedd_actions |= UA_LOG_TERMINATE_EVENT;
+			}
+			rc = addScheddUpdateAction( this, update_actions,
 										GM_DELETE );
 			if ( rc == PENDING ) {
 				break;
@@ -873,13 +891,31 @@ void GlobusJob::UpdateCondorState( int new_state )
 	SetEvaluateState();
 }
 
-void GlobusJob::UpdateGlobusState( int new_state )
+void GlobusJob::UpdateGlobusState( int new_state, new_error_code )
 {
 	if ( globusState != new_state ) {
-		globusState = new_state;
-		enteredCurrentGlobusState = time(NULL);
 		// where to put logging of events: here or in EvaluateState?
-		addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
+		int update_actions = UA_UPDATE_GLOBUS_STATE;
+
+		if ( !submitLogged && new_state != UNSUBMITTED ) {
+			if ( new_state == FAILED ) {
+					// TODO: should SUBMIT_FAILED_EVENT be used only on
+					//   certain errors (ones we know are submit-related)?
+				update_actions |= UA_LOG_SUBMIT_FAILED_EVENT;
+			} else {
+				update_actions |= UA_LOG_SUBMIT_EVENT;
+			}
+		}
+		if ( (new_state == ACTIVE || new_state == DONE ||
+			  new_state == SUSPENDED) && !executeLogged ) {
+			update_actions |= UA_LOG_EXECUTE_EVENT;
+		}
+
+		globusState = new_state;
+		globusStateErrorCode = new_error_code;
+		enteredCurrentGlobusState = time(NULL);
+
+		addScheddUpdateAction( this, update_actions, 0 );
 	}
 	SetEvaluateState(); // should this be inside the if statement?
 }
