@@ -396,6 +396,8 @@ struct sockaddr_in * ReliSock::endpoint()
 {
 	int addr_len;
 
+	addr_len = sizeof(sockaddr_in);
+
 	if (getpeername(_sock, (struct sockaddr *) &_who, &addr_len) < 0) 
 		return NULL;	// socket not connected
 
