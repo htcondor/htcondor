@@ -41,7 +41,7 @@ ClassAd * ProcAd::getProcAd ( pid_t pid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  spy.getProcInfo ( pid, pi );
+  ProcAPI::getProcInfo ( pid, pi );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -56,7 +56,7 @@ ClassAd * ProcAd::getProcSetAd ( pid_t *pids, int numpids ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  spy.getProcSetInfo( pids, numpids, pi );
+  ProcAPI::getProcSetInfo( pids, numpids, pi );
 
   ad = dumpToAd ( pi );
   delete pi;
@@ -71,7 +71,7 @@ ClassAd * ProcAd::getFamilyAd ( pid_t fatherpid ) {
 
   piPTR pi = NULL;
   ClassAd *ad;
-  spy.getFamilyInfo( fatherpid, pi );
+  ProcAPI::getFamilyInfo( fatherpid, pi );
 
   ad = dumpToAd ( pi );
   delete pi;

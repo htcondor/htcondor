@@ -77,9 +77,6 @@ class ProcAd {
  private:
 
   ClassAd * dumpToAd ( piPTR );
-
-  /* The ProcAPI class I'll keep around: */
-  ProcAPI spy;
 };
 
 #endif
