@@ -123,6 +123,7 @@ const char ATTR_JOB_ACTION               [] = "JobAction";
 const char ATTR_JOB_ARGUMENTS			 [] = "Args";
 const char ATTR_JOB_CMD					 [] = "Cmd";
 const char ATTR_JOB_CMDEXT				 [] = "CmdExt";
+const char ATTR_JOB_CORE_DUMPED			 [] = "JobCoreDumped";
 const char ATTR_JOB_CURRENT_START_DATE	 [] = "JobCurrentStartDate";
 const char ATTR_JOB_DURATION			 [] = "JobDuration";
 const char ATTR_JOB_ENVIRONMENT			 [] = "Env";
