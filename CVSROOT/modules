@@ -54,7 +54,6 @@ AIX_CODE	-a Distfile GENERIC config \
 			src/condor_q \
 			src/condor_rm \
 			src/condor_schedd \
-			src/condor_schedd.fsa.C++ \
 			src/condor_scripts \
 			src/condor_shadow \
 			src/condor_standalone \
