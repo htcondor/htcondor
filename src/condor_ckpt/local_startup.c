@@ -174,7 +174,15 @@ report_image_size( int kbytes )
 int
 get_ckpt_mode(int sig)
 {
-	/* noop in local mode */
+	/* should never be called in local mode */
+	return 0;
+}
+
+int
+get_ckpt_speed()
+{
+	/* should never be called in local mode */
+	return 0;
 }
 
 
