@@ -1002,6 +1002,11 @@ ReliSock::serialize() const
     strcat(parent_state, crypto);
     strcat(parent_state, "*");
 
+    // serialize MD info
+    char * md = serializeMdInfo();
+    strcat(parent_state, md);
+    strcat(parent_state, "*");
+
     const char * tmp = getFullyQualifiedUser();
     char buf[5];
     int len = 0;
@@ -1019,6 +1024,7 @@ ReliSock::serialize() const
 
 	delete []outbuf;
     delete []crypto;
+    delete []md;
 	return( parent_state );
 }
 
@@ -1051,6 +1057,9 @@ ReliSock::serialize(char *buf)
         ptmp = ++ptr;
         // The next part is for crypto
         ptmp = serializeCryptoInfo(ptmp);
+        // Followed by Md
+        ptmp = serializeMdInfo(ptmp);
+
         sscanf(ptmp, "%d*", &len);
         
         if (len > 0) {

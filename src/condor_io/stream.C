@@ -1925,6 +1925,18 @@ const KeyInfo& Stream :: get_crypto_key() const
 	return  crypto_->get_key();  // just to make compiler happy...
 }
 
+const KeyInfo& Stream :: get_md_key() const
+{
+#if defined(CONDOR_ENCRYPTION)
+    if (mdKey_) {
+        return *mdKey_;
+    }
+#endif
+    ASSERT(0);
+    return *mdKey_;
+}
+
+
 bool 
 Stream::set_crypto_key(KeyInfo * key, const char * keyId)
 {

@@ -883,6 +883,37 @@ char * Sock::serializeCryptoInfo() const
 	return( outbuf );
 }
 
+char * Sock::serializeMdInfo() const
+{
+    const unsigned char * kmd = NULL;
+    int len = 0;
+
+    if (isOutgoing_MD5_on()) {
+        kmd = get_md_key().getKeyData();
+        len = get_md_key().getKeyLength();
+    }
+
+	// here we want to save our state into a buffer
+	char * outbuf = NULL;
+    if (len > 0) {
+        int buflen = len*2+32;
+        outbuf = new char[buflen];
+        sprintf(outbuf,"%d*", len*2);
+
+        // Hex encode the binary key
+        char * ptr = outbuf + strlen(outbuf);
+        for (int i=0; i < len; i++, kmd++, ptr+=2) {
+            sprintf(ptr, "%02X", *kmd);
+        }
+    }
+    else {
+        outbuf = new char[2];
+        memset(outbuf, 0, 2);
+        sprintf(outbuf,"%d",0);
+    }
+	return( outbuf );
+}
+
 char * Sock::serializeCryptoInfo(char * buf)
 {
 	unsigned char * kserial = NULL;
@@ -925,6 +956,52 @@ char * Sock::serializeCryptoInfo(char * buf)
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
         set_crypto_key(&k, 0);
         free(kserial);
+		ASSERT( *ptmp == '*' );
+        // Now, skip over this one
+        ptmp++;
+    }
+    else {
+        ptmp = strchr(ptmp, '*');
+        ptmp++;
+    }
+	return ptmp;
+}
+
+char * Sock::serializeMdInfo(char * buf)
+{
+	unsigned char * kmd = NULL;
+    char * ptmp = buf;
+    int    len = 0, encoded_len = 0;
+
+    // kmd may be a problem since reli_sock also has stuff after
+    // it. As a result, kmd may contains not just the key, but
+    // other crap from reli_sock as well. Hence the code below. Hao
+    ASSERT(ptmp);
+
+    sscanf(ptmp, "%d*", &encoded_len);
+    if ( encoded_len > 0 ) {
+        len = encoded_len/2;
+        kmd = (unsigned char *) malloc(len);
+
+        // skip the *
+        ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
+        ptmp++;
+
+        // Now, convert from Hex back to binary
+        unsigned char * ptr = kmd;
+        unsigned int hex;
+        for(int i = 0; i < len; i++) {
+            sscanf(ptmp, "%2X", &hex);
+            *ptr = (unsigned char)hex;
+			ptmp += 2;  // since we just consumed 2 bytes of hex
+			ptr++;      // since we just stored a single byte of binary
+        }        
+
+        // Initialize crypto info
+        KeyInfo k((unsigned char *)kmd, len);
+        set_MD_mode(MD_ALWAYS_ON, &k, 0);
+        free(kmd);
 		ASSERT( *ptmp == '*' );
         // Now, skip over this one
         ptmp++;
