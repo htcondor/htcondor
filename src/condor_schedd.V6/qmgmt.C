@@ -438,7 +438,7 @@ NewCluster()
 		return -1;
 	}
 
-	if( !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
+	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
 		return -1;
 	}
@@ -465,7 +465,7 @@ NewProc(int cluster_id)
 		return -1;
 	}
 
-	if( !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
+	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
 	}
 
@@ -510,12 +510,18 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 	// Only the owner can delete a proc.
-	if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
+	if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
 
 	// Remove checkpoint files
-	cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
+	if ( !Q_SOCK ) {
+		//if socket is dead, have cleanup lookup ad owner
+		cleanup_ckpt_files(cluster_id,proc_id,NULL );
+	}
+	else {
+		cleanup_ckpt_files(cluster_id,proc_id,Q_SOCK->getOwner() );
+	}
 
     // Append to history file
     AppendHistory(ad);
@@ -566,7 +572,7 @@ int DestroyCluster(int cluster_id)
 				ad->LookupInteger(ATTR_PROC_ID, proc_id);
 
 				// Only the owner can delete a cluster
-				if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
+				if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 					return -1;
 				}
 
@@ -637,7 +643,7 @@ int DestroyClusterByConstraint(const char* constraint)
 	while(JobQueue->IterateAllClassAds(ad)) {
 		// check cluster first to avoid header ad
 		if (ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster) == 1) {
-			if (OwnerCheck(ad, Q_SOCK->getOwner() )) {
+			if ( !Q_SOCK || OwnerCheck(ad, Q_SOCK->getOwner() )) {
 				if (EvalBool(ad, constraint)) {
 					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
 
@@ -717,9 +723,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	if (JobQueue->LookupClassAd(key, ad)) {
-		if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
+		if ( Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 			dprintf(D_ALWAYS, "OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
-					Q_SOCK->getOwner() , cluster_id, proc_id);
+					Q_SOCK->getOwner(), cluster_id, proc_id);
 			return -1;
 		}
 	} else {
@@ -730,9 +736,19 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 	}
+
+// TODO: should only set ATTR_OWNER from authenticated owner over socket!
+// so attempts to do so here should be an EXCEPT, and the code which sets
+// ATTR_OWNER should be set elsewhere, perhaps SCHEDD?
+
 		
 	// check for security violations
-	if (strcmp(attr_name, ATTR_OWNER) == 0) {
+	if (strcmp(attr_name, ATTR_OWNER) == 0) 
+	{
+		if ( !Q_SOCK ) {
+			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
+		}
+
 		char *test_owner = new char [strlen(Q_SOCK->getOwner() )+3];
 		sprintf(test_owner, "\"%s\"", Q_SOCK->getOwner() );
 		if (strcmp(attr_value, test_owner) != 0) {
@@ -745,7 +761,8 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 		delete [] test_owner;
-	} else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
+	} 
+	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -929,7 +946,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		}
 	}
 
-	if (!OwnerCheck(ad, Q_SOCK->getOwner() )) {
+	if (Q_SOCK && !OwnerCheck(ad, Q_SOCK->getOwner() )) {
 		return -1;
 	}
 
@@ -1056,6 +1073,9 @@ SendSpoolFile(char *filename)
 
 	sprintf(path, "%s/%s", Spool, filename);
 
+	if ( !Q_SOCK ) {
+		EXCEPT( "SendSpoolFile called when Q_SOCK is NULL" );
+	}
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->encode();
 	Q_SOCK->put(0);
