@@ -555,8 +555,15 @@ by globus-url-copy on the remote site.)
   However, if you include entries which are not Condor daemons, the
   \Condor{master} will no longer add a \Opt{-f}.
 
-\item The files specified in \Opt{transfer\_input\_files} can now
-  contain spaces in the filenames.
+\item The files specified in \Attr{transfer\_input\_files} and/or 
+  \Attr{transfer\_output\_files} can now contain spaces in the
+  filenames.
+  If there are multiple names, they \emph{must} be seperated by a
+  comma.
+  Any spaces before a comma are considered part of the previous
+  filename (though a single directly after a comma will be ignored).
+  This allows filenames containing spaces (which are common on Windows
+  platforms) to be easily described.
 
 \end{itemize}
 
