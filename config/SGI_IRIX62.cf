@@ -1,5 +1,9 @@
-#define OperatingSystem IRIX53 -DIRIX62
-#define Architecture SGI
+#define OperatingSystem		IRIX53 -DIRIX62
+#define Architecture		SGI
+#define Platform		SGI_IRIX62
+#define ImakeOpsysFlag		-DIS_IRIX6
+#define IS_IRIX			YES
+#define Platform		SGI_IRIX62
 
 #define RpcSvc	/usr/lib/librpcsvc.so
 #define RpcSun	/usr/lib/libsun.a
@@ -16,8 +20,6 @@
 
 #define XLibPath -lX11
 #define XExtLibPath /usr/lib/libXext.a
-
-#define DbmLibrary
 
 #define IS_SGI_IRIX53			YES
 #define IS_SGI_IRIX62			YES

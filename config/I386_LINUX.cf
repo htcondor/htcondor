@@ -1,5 +1,11 @@
-#define OperatingSystem LINUX
-#define Architecture I386
+#define Platform		I386_LINUX
+#define OperatingSystem		LINUX
+#define Architecture		I386
+#define IS_LINUX		YES
+#define IS_I386_LINUX		YES
+#define ImakeOpsysFlag		-DIS_LINUX
+
+#define PlatformFlags		-m486 GlibCFlag
 
 #define Tilde /home/condor
 #define RpcLib /**/
@@ -14,14 +20,18 @@
 
 #define XLibPath /usr/X11R6/lib/libX11.a
 #define XExtLibPath /usr/X11R6/lib/libXext.a
-#define DbmLibrary -lmgdbm
+
+
 
 #if defined( IS_GLIBC )
 #   undef IS_GLIBC
-#   define IS_GLIBC			YES
+#   define IS_GLIBC		YES
+#   define GlibCFlag		-DGLIBC
+#   define PublicTargetName	i386_linux2-glibc
+#   define ImakeOtherFlag	-DIS_GLIBC
+#else
+#   define GlibCFlag
 #endif
-
-#define IS_I386_LINUX			YES
 
 #define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
@@ -85,8 +95,4 @@
 #define MkDepend Tilde/CONDOR.new/GENERIC/mdepend.sh
 #endif MkDepend
 
-#define TypicalMemory 16
-#define ShadowSizeEstimate 400
-
-#define LINUX_INCLUDE_DIR /**/
-
+#define YACC byacc
