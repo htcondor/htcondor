@@ -66,4 +66,6 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_GLOBUS	NO
 
+#define WANT_NETMAN	YES
+
 #endif  /* AfterVendorCF */
