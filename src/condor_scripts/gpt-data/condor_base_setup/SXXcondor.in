@@ -1,0 +1,41 @@
+#!/bin/sh 
+
+GLOBUS_LOCATION=@GLOBUS_LOCATION@
+
+export GLOBUS_LOCATION
+
+. ${GLOBUS_LOCATION}/libexec/globus-script-initializer
+. ${libexecdir}/globus-sh-tools.sh
+
+
+case "$1" in
+
+  start)
+
+    echo "Starting up Condor-G Master"
+
+    ${sbindir}/condor_master 
+
+    if [ $? -ne 0 ] ; then
+      echo "Failed to start up the Condor-G Master"
+    fi
+
+#    ${GLOBUS_SH_SLEEP} 2
+
+
+    ;;
+
+  stop)
+
+    echo "Sending shutdown command to Condor-G Master"
+
+    ${sbindir}/condor_off -master
+
+    ;;
+  *)
+    echo "Usage: $0 ( start | stop )"
+    exit 1
+esac
+
+exit 0
+
