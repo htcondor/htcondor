@@ -29,7 +29,7 @@ sub Init {
 sub RunIt {
 
     ###
-    ### Get uptime output for the top n processes
+    ### Get & parse the output of 'w'
     ###
 
     my $Hash = HawkeyeHash->new( \$Hawkeye, "" );

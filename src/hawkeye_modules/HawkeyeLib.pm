@@ -62,7 +62,7 @@ sub ParseUptime
     s/,//g;
 
     # If we've been up for less than 1 day, make the lines consistent!
-    if ( ! /days/ ) {
+    if ( ! /day/ ) {
 	s/up/up 0 days/;
     }
 
@@ -81,11 +81,11 @@ sub ParseUptime
     	splice( @Fields, 5, 1 );
 	my $Hours = 0;
 	my $Minutes = $Fields[4];
-	$HashRef->{Uptime} = 
+	$HashRef->{Uptime} =
 	    ( $Fields[2] * 24 * 60 ) + ( $Hours * 60 ) + $Minutes;
     } else {
 	my ( $Hours, $Minutes ) = split( /:/, $Fields[4] );
-	$HashRef->{Uptime} = 
+	$HashRef->{Uptime} =
 	    ( $Fields[2] * 24 * 60 ) + ( $Hours * 60 ) + $Minutes;
     }
 
