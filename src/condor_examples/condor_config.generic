@@ -320,6 +320,15 @@ KILL		: $(ActivityTimer) > $(MaxVacateTime)
 			  ( $(MachineBusy) && (Activity != "Suspended") )
 #KILL_VANILLA		: $(ActivityTimer) > $(MaxVacateTime)
 
+##  The RANK expression controls which jobs this machine prefers to
+##  run over others.  Some examples from the manual include:
+##    RANK : ImageSize
+##    RANK : RANK : (Owner == "coltrane") + (Owner == "tyner") \
+##                  + ((Owner == "garrison") * 10) + (Owner == "jones")
+##  By default, RANK is always 0, meaning that all jobs have an equal
+##  ranking.
+#RANK			: 0
+
 ##  Periodic checkpointing, comment out to disable.  For jobs smaller
 ##  than 60 megs, we periodic checkpoint every 6 hours.  For larger
 ##  jobs, we only checkpoint every 12 hours.
