@@ -107,16 +107,16 @@ public:
 
 	/** Connect is inherited from ReliSock for clients who haven't yet 
 	    connected to the server, e.g. called AuthSock() for a bare socket 
-	    RETURNS: TRUE on success else FALSE
 	    @param host: form of "host.org.domain" OR "<x.x.x.x:x>" (sinful string)
 	    @param port: server port number (ignored if host is sinful string)
+	    @return: TRUE on success else FALSE
 	 */
 	virtual int connect(char *host, int port);
 
 	/** Helper function for AuthSock *accept(), does setup and calls 
                                        ReliSock::accept(ReliSock &). 
-	    RETURNS: TRUE on success else FALSE
 	    @param sock: current AuthSock, copied to a new accepted socket connection
+	    @return: TRUE on success else FALSE
 	 */
 	int accept(AuthSock &sock);
 
@@ -126,18 +126,18 @@ public:
 	/** Perform synchronous GSS authentication over current AuthSock.
 	    Must be balanced by a call to authenticate on the other side 
        of the connection. 
-	    RETURNS: TRUE on success else FALSE
+	    @return TRUE on success else FALSE
 	 */
 	int authenticate();
 
 	/** Check X509 certificate and possibly prompt for passphrase.
 	    Passphrase is needed for certificates of submittors to Condor. 
-	    RETURNS: TRUE on success else FALSE
+	    @return TRUE on success else FALSE
 	 */
 	int authenticate_user();
 
 	/** Check to see if the connection is authenticated.
-	    RETURNS: TRUE on success else FALSE
+	    @return TRUE on success else FALSE
 	 */
 	int isAuthenticated() { return ( conn_auth_state == auth_cert ); };
 
