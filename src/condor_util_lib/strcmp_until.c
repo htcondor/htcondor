@@ -16,5 +16,19 @@ strcmp_until( const char *s1, const char *s2, const char until ) {
       s1++;
       s2++;
    }
+
+	if (*s1 == until && *s2 != until)
+	{
+		return -1;
+	}
+
+	if (*s1 != until && *s2 == until)
+	{
+		return 1;
+	}
+
    return( 0 );
 }
+
+
+
