@@ -124,7 +124,6 @@ submit_submit( const char* cmdFile, CondorID& condorID,
 	while(nameIter.Next(name) && valIter.Next(val)) {
 		anotherLine = MyString(" -a ") + quote +
 			name + " = " + val + quote;
-		debug_printf(DEBUG_VERBOSE, "Got another line: %s", anotherLine.Value());
 		prependLines += anotherLine;
 	}
 
