@@ -38,12 +38,6 @@ Portability
 
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#include </usr/ucbinclude/sys/wait.h>
-#endif
-
 #if defined(ULTRIX42) || defined(ULTRIX43)
 typedef char *  caddr_t;
 #endif
@@ -163,36 +157,8 @@ physical_file_size( char *name )
 #endif
 }
 
-#if defined(AIX32)
-#	undef _POSIX_SOURCE
-#	define _BSD
-#	include <sys/m_wait.h>
-#elif defined(OSF1)
-#	undef _POSIX_SOURCE
-#	define _BSD
-#	define _OSF_SOURCE
-#	include <sys/wait.h>
-#elif defined(SUNOS41) 
-#	undef _POSIX_SOURCE
-#	include <sys/wait.h>
-#elif defined(Solaris)
-#	undef _POSIX_SOURCE
-#	include <sys/wait.h>
-#elif defined(ULTRIX43)
-#	undef _POSIX_SOURCE
-#	include <sys/wait.h>
-#elif defined(HPUX9)
-#	undef _POSIX_SOURCE
-#	define _BSD
-#	include <sys/wait.h>
-#elif defined(LINUX)
-#	undef _POSIX_SOURCE
-#	define __USE_BSD
-#	include <sys/wait.h>
-#elif defined(IRIX53)
-#	undef _POSIX_SOURCE
-#	include <sys/wait.h>
-#endif
+
+#include "condor_fix_wait.h"
 
 
 #include <errno.h>
