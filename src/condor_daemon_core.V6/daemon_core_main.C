@@ -156,6 +156,8 @@ drop_addr_file()
 		if( (ADDR_FILE = fopen(addrFile, "w")) ) {
 			fprintf( ADDR_FILE, "%s\n", 
 					 daemonCore->InfoCommandSinfulString() );
+			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
+			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
 			fclose( ADDR_FILE );
 		} else {
 			dprintf( D_ALWAYS,
