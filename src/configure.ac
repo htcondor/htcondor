@@ -1067,15 +1067,76 @@ fi
 AC_SUBST([has_pthreads],[$_cv_has_pthreads])
 
 
+############################################################
 # checks for header files
+############################################################
 
+# Check for sys_types.h
+AC_CHECK_HEADER(sys/types.h, _cv_has_sys_types_h="yes", _cv_has_sys_types_h="no")
+if test "$_cv_has_sys_types_h" = "yes" ; then
+ AC_SUBST(has_sys_types_h,"YES")
+else
+ AC_SUBST(has_sys_types_h,"NO")
+fi
+
+# Check for stdint.h
+AC_CHECK_HEADER(stdint.h, _cv_has_stdint_h="yes", _cv_has_stdint_h="no")
+if test "$_cv_has_stdint_h" = "yes" ; then
+ AC_SUBST(has_stdint_h,"YES")
+else
+ AC_SUBST(has_stdint_h,"NO")
+fi
+
+# Check for inttypes.h
+AC_CHECK_HEADER(inttypes.h, _cv_has_inttypes_h="yes", _cv_has_inttypes_h="no")
+if test "$_cv_has_inttypes_h" = "yes" ; then
+ AC_SUBST(has_inttypes_h,"YES")
+else
+ AC_SUBST(has_inttypes_h,"NO")
+fi
+
+
+############################################################
 # checks for types
+############################################################
+
+# Check for int64_t type family
+AC_CHECK_TYPE(int64_t, _cv_has_int64_t="yes", _cv_has_int64_t="no")
+if test "$_cv_has_int64_t" = "yes" ; then
+ AC_SUBST(has_int64_t,"YES")
+else
+ AC_SUBST(has_int64_t,"NO")
+fi
+
+# Check for long long
+AC_CHECK_TYPE(long long, _cv_has_longlong="yes", _cv_has_longlong="no")
+if test "$_cv_has_longlong" = "yes" ; then
+ AC_SUBST(has_longlong,"YES")
+else
+ AC_SUBST(has_longlong,"NO")
+fi
+
+# Check for M$ __int64 type
+AC_CHECK_TYPE(__int64, _cv_has___int64="yes", _cv_has___int64="no")
+if test "$_cv_has___int64" = "yes" ; then
+ AC_SUBST(has___int64,"YES")
+else
+ AC_SUBST(has___int64,"NO")
+fi
 
 # checks for structures
 
 # checks for compiler characteristics
 
 # checks for library functions
+
+# Check for stat64()
+AC_CHECK_FUNC(stat64, _cv_has_stat64="yes", _cv_has_stat64="no")
+if test "$_cv_has_stat64" = "yes" ; then
+ AC_SUBST(has_stat64,"YES")
+else
+ AC_SUBST(has_stat64,"NO")
+fi
 
 # checks for system services
 
