@@ -40,16 +40,12 @@ all_symlink_target(../condor_scripts/safe_append.pl,safe_append.pl)
 all_symlink_target(../condor_scripts/batch_test.pl,batch_test.pl)
 
 BUILD_DEP($(CC),x_return-n,c,x_waste_second.o)
-BUILD_DEP($(CC),x_dumpcore,c,x_dumpcore.o)
-BUILD_DEP($(CC),x_trapsig,c,x_trapsig.o)
-
+BUILD($(CC),x_dumpcore,c)
+BUILD($(CC),x_trapsig,c)
 
 /************************************************************************
    Rules for all the single-compiler (or no compiler) tests
 ************************************************************************/
-
-BUILD($(CC),x_dumpcore,c)
-BUILD($(CC),x_trapsig,c)
 
 /* Library tests */
 
