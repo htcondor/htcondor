@@ -716,7 +716,7 @@ accounts would only use cycles not wanted by other users of the system.
 
 When Condor needs to vacate a job from a machine for whatever reason, it
 sends the job an asynchronous signal specified in the ``KillSig''
-attribute of the job's classad.  This value of this attribute be specifed by
+attribute of the job's classad.  The value of this attribute can be specifed by
 the user at submit time by placing the \Arg{kill\_sig} command in the
 \Condor{submit} submit-description command file.  
 
@@ -740,6 +740,10 @@ by calling one of the following functions exported by the Condor libraries:
 \item[ckpt\_and\_exit()] Will checkpoint and exit; Condor will then
 restart the process again later, potentially on a different machine
 \end{description}
+
+For jobs submitted into the Vanilla Universe, the default value for
+KillSig is SIGTERM, which is the usual method to nicely terminate a
+program in Unix.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
