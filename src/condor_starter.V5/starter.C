@@ -124,7 +124,7 @@ printClassAd( void )
 int
 main( int argc, char *argv[] )
 {
-	if( argc == 2 && strcmp(argv[1], "-classad") == MATCH ) {
+	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );
 	}
