@@ -55,7 +55,8 @@ extern "C" {
 	char * get_tilde();
 	char * param ( char *name );
 	void insert ( char *name, char *value, BUCKET *table[], int table_size );
-	char * expand_macro ( char *value, BUCKET *table[], int table_size );
+	char * expand_macro ( char *value, BUCKET *table[], int table_size,
+						  char *self=NULL );
 	char * lookup_macro ( char *name, BUCKET *table[], int table_size );
 	char * macro_expand ( char *name );
 	int param_in_pattern ( char *parameter, char *pattern);
