@@ -38,11 +38,9 @@
 #include "string_list.h"
 
 
-#if !defined(SKIP_AUTHENTICATION)
 #if defined(GSS_AUTHENTICATION)
 gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
 #endif defined(GSS_AUTHENTICATION)
-#endif !defined(SKIP_AUTHENTICATION)
 
 
 Authentication::Authentication( ReliSock *sock )
