@@ -94,6 +94,10 @@ void	mark_job_stopped(PROC_ID*);
 shadow_rec*     find_shadow_rec(PROC_ID*);
 shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
+
+
+
+
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
@@ -136,6 +140,7 @@ Scheduler::Scheduler()
     JobsStarted = 0;
     JobsRunning = 0;
     ReservedSwap = 0;
+	SwapSpace = 0;
 	alreadyStashed = false;
 
     ShadowSizeEstimate = 0;
@@ -277,6 +282,9 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 	
     sprintf(tmp, "%s = \"%s\"", ATTR_NAME, Name);
+    ad->InsertOrUpdate(tmp);
+
+    sprintf(tmp, "%s = %d", ATTR_VIRTUAL_MEMORY, SwapSpace );
     ad->InsertOrUpdate(tmp);
 
 	// The schedd's ad should not have idle and running job counts --- 
