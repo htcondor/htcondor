@@ -7,6 +7,13 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+10/22/04 V6_6-pre-merge-V6_6_7-doc-merge-1
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_7-branch as tagged V6_6_7-doc-merge-1.
+
+10/22/04 V6_6_7-doc-merge-1
+    The state of the doc directory in V6_6_7-branch before a 
+    first time merge into the V6_6-branch.
 
 10/13/04 V6_6_7-branch
     A release branch for the 6.6.7 manual, created from the V6_6_7-root
