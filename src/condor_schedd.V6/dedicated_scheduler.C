@@ -350,8 +350,10 @@ DedicatedScheduler::DedicatedScheduler()
 	avail_time_list = NULL;
 	resources = NULL;
 	resource_requests = NULL;
+	unclaimed_resources = NULL;
 	scheduling_interval = 0;
 	scheduling_tid = -1;
+	hdjt_tid = -1;
 
 		// TODO: Be smarter about the sizes of these tables
 	allocations = new HashTable < int, AllocationNode*> 
@@ -379,6 +381,11 @@ DedicatedScheduler::~DedicatedScheduler()
 	if( ds_scheduler ) { delete [] ds_scheduler; }
 	if( ds_owner ) { delete [] ds_owner; }
 	if( ds_name ) { delete [] ds_name; }
+	if( unclaimed_resources ) { delete unclaimed_resources; }
+
+	if( hdjt_tid != -1 ) {
+		daemonCore->Cancel_Timer( hdjt_tid );
+	}
 
         // for the stored claim records
 	AllocationNode* foo;
@@ -1140,10 +1147,43 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 
 	scheduler.checkContactQueue();
 
+		// Set a timer to call handleDedicatedJobs() in 1 second,
+		// since we might be able to spawn something now.
+	handleDedicatedJobTimer( 2 );
+
 	return TRUE;
 }
 #undef BAILOUT
 
+
+void
+DedicatedScheduler::handleDedicatedJobTimer( int seconds )
+{
+	if( hdjt_tid != -1 ) {
+		dprintf( D_FULLDEBUG, 
+				 "Already have a timer for handleDedicatedJobs()\n" );
+			// Nothing to do, we've already been here
+		return;
+	}
+	hdjt_tid = daemonCore->
+		Register_Timer( seconds, 0,
+				(Eventcpp)&DedicatedScheduler::callHandleDedicatedJobs,
+						"callHandleDedicatedJobs", this );
+	if( hdjt_tid == -1 ) {
+		EXCEPT( "Can't register DC timer!" );
+	}
+	dprintf( D_FULLDEBUG, 
+			 "Started timer (%d) to call handleDedicatedJobs() in %d secs\n",
+			 hdjt_tid, seconds );
+}
+
+
+void
+DedicatedScheduler::callHandleDedicatedJobs( void )
+{
+	hdjt_tid = -1;
+	handleDedicatedJobs();
+}
 
 
 bool
@@ -1687,6 +1727,8 @@ DedicatedScheduler::handleDedicatedJobs( void )
 		delete avail_time_list;
 		avail_time_list = NULL;
 	}
+	clearUnclaimedResources();
+	clearResources();
 
 	dprintf( D_FULLDEBUG, 
 			 "Finished DedicatedScheduler::handleDedicatedJobs\n" );
@@ -1726,12 +1768,17 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 
 	char constraint[256];
 
-	if( resources ) {
-		delete resources;
-	}
+		// First clear out any potentially stale info in the
+		// unclaimed_resources list.
+	clearUnclaimedResources();
+
+		// Now, clear out any old list we might have for the resources
+		// themselves. 
+	clearResources();
+	
+		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-	
 	sprintf( constraint, "DedicatedScheduler == \"%s\"", name() ); 
 	query.addORConstraint( constraint );
 
@@ -1773,10 +1820,10 @@ DedicatedScheduler::sortResources( void )
 		HashKey key(buf);
 		if( all_matches->lookup(key, mrec) < 0 ) {
 				// We don't have a match_rec for this resource yet, so
-				// request one
+				// put it in our unclaimed_resources list
 			dprintf( D_FULLDEBUG, "sortResources(): No match_rec for %s, "
-					 "requesting\n", buf );
-			generateRequest( res );
+					 "storing in unclaimed_resources list\n", buf );
+			addUnclaimedResource( res );
 			continue;
 		}
 
@@ -1795,6 +1842,16 @@ DedicatedScheduler::sortResources( void )
 		avail_time_list->addResource( mrec );
 	}
 	avail_time_list->display( D_FULLDEBUG );
+}
+
+
+void
+DedicatedScheduler::clearResources( void )
+{
+	if( resources ) {
+		delete resources;
+		resources = NULL;
+	}
 }
 
 
@@ -1917,6 +1974,7 @@ DedicatedScheduler::computeSchedule( void )
 	int proc, cluster, max_hosts;
 	ClassAd *job = NULL, *ad;
 	CAList *candidates = NULL;
+	CAList* un_candidates = NULL;
 	ResTimeNode *cur;
 	AllocationNode *alloc;
 	match_rec* mrec;
@@ -1933,7 +1991,8 @@ DedicatedScheduler::computeSchedule( void )
 			continue;
 		}
 
-		if( ! avail_time_list->hasAvailResources() ) {
+		if( ! avail_time_list->hasAvailResources() 
+			&& (!hasUnclaimedResources()) ) {
 				// We no longer have any resources that are available
 				// to run jobs right now, so there's nothing more we
 				// can do.
@@ -1967,16 +2026,8 @@ DedicatedScheduler::computeSchedule( void )
 		total_matched = 0;
 		avail_time_list->Rewind();
 		cur = avail_time_list->Next();
-		if( ! cur ) {
-				// We ran out of resources... this job is screwed.
-			dprintf( D_FULLDEBUG, "Out of resources for dedicated "
-					 "job %d.%d\n", cluster, proc );
-			delete candidates;
-			candidates = NULL;
-			continue;
-		}		
-		
-		if( cur->satisfyJob(job, max_hosts, candidates) ) {
+		if( cur && (cur->time == 0) && 
+			cur->satisfyJob(job, max_hosts, candidates) ) {
 				// We're done with this job.  Make an allocation node
 				// for it, remove the given classads from this
 				// ResTimeNode, and continue
@@ -2071,6 +2122,9 @@ DedicatedScheduler::computeSchedule( void )
 				// Save this AllocationNode in our table
 			allocations->insert( cluster, alloc );
 
+				// Show world what we did
+			alloc->display();
+
 				// Get rid of our master_ip string, so we don't leak
 				// memory. 
 			if( master_ip ) {
@@ -2083,8 +2137,91 @@ DedicatedScheduler::computeSchedule( void )
 			candidates = NULL;
 			continue;
 		}
+
 			// If we're here, we couldn't schedule the job right now.
 
+			// If satisfyJob() failed, it might have partially
+			// satisfied the job.  If so, the candidates list will
+			// have some things in it.  If so, we need to see if we
+			// could satisfy the job with a combination of unclaimed
+			// and already-claimed resources.  If that's the case,
+			// we'll need to hold onto the old
+
+		int unclaimed_needed = max_hosts;
+		if( candidates->Length() > 0 ) {
+			unclaimed_needed -= candidates->Length();
+				// If we don't need more hosts, satisfyJob() shouldn't
+ 				// have failed.
+			ASSERT( unclaimed_needed > 0 );
+		}
+
+			// Now, see if we could satisfy it with resources we
+			// don't yet have claimed.
+		if( unclaimed_resources ) {
+			un_candidates = new CAList; 
+			dprintf( D_FULLDEBUG, "Have partial match (%d), trying to find %d unclaimed resources\n", candidates->Length(), unclaimed_needed ); 
+			if( ! unclaimed_resources->satisfyJob(job,
+												  unclaimed_needed, 
+												  un_candidates) ) {
+					// Couldn't satisfy it at all.  Give up and move
+					// on to the next job.
+				delete un_candidates;
+				un_candidates = NULL;
+				delete candidates;
+				candidates = NULL;
+				continue;
+			}
+
+				// Cool, we could run it if we requested more
+				// resources.  Go through the candidates, generate
+				// resources requests for each one, remove them from
+				// the unclaimed_resources list, and go onto the next
+				// job.
+			dprintf( D_FULLDEBUG, "Satisfied job %d with unclaimed "
+					 "resources, generating resource requests.\n", 
+					 cluster );
+
+			un_candidates->Rewind();
+			while( (ad = un_candidates->Next()) ) {
+					// Make a request
+				generateRequest( ad );
+					// Remove the resource from unclaimed_resources
+					// (so we don't think we could satisfy any other
+					// jobs with it).
+				unclaimed_resources->res_list->Delete( ad );
+			}
+				// Now that we're done with these candidates, we can
+				// safely delete the list.
+			delete un_candidates;
+			un_candidates = NULL;
+
+				// If we had partially satisfied this job w/ claimed
+				// resources, we want to take those out of
+				// consideration for further jobs.
+			if( candidates->Length() > 0 ) {
+
+					// If we got here, we must have had some resources
+					// available at time 0, or else we wouldn't have
+					// anything in the candidates list
+				ASSERT( cur );
+				ASSERT( cur->time == 0 );
+
+				candidates->Rewind();
+				while( (ad = candidates->Next()) ) {
+					avail_time_list->removeResource( ad, cur );
+				}
+			}
+
+				// Finally, deallocate the candidates list
+			delete candidates;
+			candidates = NULL;
+
+				// Go onto the next job
+			continue;
+		} else {
+			dprintf( D_FULLDEBUG, "Have NO unclaimed resources\n" );
+		}
+		
 			// For now, just give up on this job, delete the
 			// candidates (since there weren't enough to satisfy the
 			// job and we therefore can't use them), and try to
@@ -2496,7 +2633,8 @@ DedicatedScheduler::requestResources( void )
 			// If we've got things we want to grab, publish a ClassAd
 			// to ask to negotiate for them...
 		displayResourceRequests();
-		publishRequestAd();	
+		publishRequestAd();
+		scheduler.sendReschedule();
 	}
 	return true;
 }
@@ -2522,6 +2660,36 @@ DedicatedScheduler::displayResourceRequests( void )
 			continue;
 		}
 		displayRequest( req, "", D_FULLDEBUG );
+	}
+}
+
+
+void
+DedicatedScheduler::addUnclaimedResource( ClassAd* resource )
+{
+	if( ! unclaimed_resources ) {
+		unclaimed_resources = new ResTimeNode( -1 );
+	}
+	unclaimed_resources->res_list->Insert( resource );
+}
+
+
+bool
+DedicatedScheduler::hasUnclaimedResources( void )
+{
+	if( ! unclaimed_resources ) {
+		return false;
+	}
+	return( unclaimed_resources->res_list->Length() > 0 );
+}
+
+
+void
+DedicatedScheduler::clearUnclaimedResources( void )
+{
+	if( unclaimed_resources ) {
+		delete unclaimed_resources;
+		unclaimed_resources = NULL;
 	}
 }
 
