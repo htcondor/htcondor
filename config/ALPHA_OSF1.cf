@@ -16,6 +16,7 @@
 #define DbmLibrary
 
 #define IS_ALPHA_OSF1			YES
+#define IS_V5					YES
 
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS	YES

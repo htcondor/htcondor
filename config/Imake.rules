@@ -79,7 +79,7 @@ CheckPlatformType:														@@\
 /*
 ** Build a library from .o files.
 */
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define library_target(libname, objlist)			@@\
 ## libname ## :	objlist								@@\
 	rm -f libname									@@\
@@ -102,7 +102,7 @@ clean ## ::											@@\
 /*
 ** Build a program from .o files and libraries.
 */
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define	program_target(program, objlist, libs)			@@\
 ##program: objlist libs									@@\
 	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
@@ -123,8 +123,6 @@ clean:: 												@@\
 /*
 ** Build a C++ program from .o files and libraries.
 */
-#ifndef c_plus_target
-
 .SUFFIXES: .C
 
 .C.o:
@@ -134,8 +132,7 @@ clean:: 												@@\
 DEMANGLE = 2>&1 | demangle
 #endif
 
-
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define	c_plus_target(program, objlist, libs )						@@\
 ##program: objlist libs												@@\
 	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
@@ -152,7 +149,7 @@ clean:: 															@@\
 	cp program $(RELEASE_DIR)/bin
 #endif
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define SET_GID_MODE	02775
 #define EXECUTABLE_MODE	0755
 #define OBJECT_MODE		0644
@@ -164,7 +161,7 @@ clean:: 															@@\
 ##release##:: dir##/##file
 #endif
 
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define release_library(lib, dir )									@@\
 ##dir##/##lib##: lib												@@\
 	COPY_LIBRARY( lib, dir##/##lib )								@@\
@@ -185,7 +182,6 @@ clean:: 												@@\
 #else
 #define	pure_cplus_targ(program, objlist, libs, rel)	/* NULL MACRO */
 #endif	/* pure_cplus_targ */
-#endif	/* c_plus_target */
 
 /*
 ** Make sure setgid bit gets turned on after this program gets
@@ -231,7 +227,7 @@ depend: ALWAYS										@@\
 /*
 ** List everything which should be built in this object tree.
 */
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define all_target(targetlist)						@@\
 ## all: targetlist
 #else
@@ -352,7 +348,7 @@ clean::																@@\
 /*
 ** Generate a platform specific version of a shell script file using imake.
 */
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define script_target(targ,dir,dest,mode)									@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
@@ -385,7 +381,7 @@ release::																	@@\
 /*
 ** Generate a platform specific version of a text file file using imake.
 */
-#if IS_ALPHA_OSF1
+#if IS_V5
 #define text_target(targ,dir,dest)											@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
