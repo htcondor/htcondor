@@ -1,11 +1,13 @@
 // #include "condor_config.h"
 #include "classad_package.h"
+#include <ctype.h>
 
 enum Commands {
 	_NO_CMD_,
 
 	CLEAR_TOPLEVEL, 
 	DEEP_INSERT_ATTRIBUTE, 
+	DEEP_REMOVE_ATTRIBUTE,
 	EVALUATE, 
 	EVALUATE_WITH_SIGNIFICANCE,
 	FLATTEN, 
@@ -25,6 +27,7 @@ char CommandWords[][32] = {
 
 	"clear_toplevel",
 	"deep_insert",
+	"deep_remove",
 	"evaluate",
 	"sigeval",
 	"flatten",
@@ -94,6 +97,8 @@ main( void )
 				ad->evaluateExpr( expr, value );
 				if( !value.isClassAdValue( adptr ) ) {
 					printf( "Error:  Primary expression was not a classad\n" );
+					delete expr;
+					expr = NULL;
 					break;
 				}	
 				if( !adptr->insert( buffer1, fexpr ) ) {
@@ -102,6 +107,32 @@ main( void )
 				delete expr;
 				adptr = NULL;
 				expr  = NULL;
+				break;
+
+			case DEEP_REMOVE_ATTRIBUTE:
+				if( scanf( "%s", buffer1 ) != 1 ) { // expr
+					printf( "Error reading primary expression\n" );
+					break;
+				}
+				src.setSource( buffer1, 2048 );
+				if( !src.parseExpression( expr, true ) ) {
+					printf( "Error parsing expression: %s\n", buffer1 );
+					break;
+				}
+				fgets( buffer2, 2048, stdin ); // name
+				expr->setParentScope( ad );
+				ad->evaluateExpr( expr, value );
+				if( !value.isClassAdValue( adptr ) ) {
+					printf( "Error:  Primary expression was not a classad\n" );
+					delete expr;
+					expr = NULL;
+					break;
+				}
+				if( !adptr->remove( buffer2 ) ) {
+					printf( "Warning:  Attribute %s not found\n", buffer2 );
+				}
+				delete expr;
+				expr = NULL;
 				break;
 
 			case EVALUATE:
@@ -256,19 +287,28 @@ void
 help( void )
 {
 	printf( "\nCommands are:\n" );
-	printf( "\tc\t\t- (C)lear toplevel ad\n" );
-	printf( "\td <e1><name><e2>- (D)eep insert e2 into classad e1\n");
-	printf( "\te <expr>\t- (E)valuate expression (in toplevel ad)\n" );	
-	printf( "\tf <expr>\t- (F)latten expression (in toplevel ad)\n" );
-	printf( "\th\t\t- (H)elp; This screen\n" );
-	printf( "\ti <name><expr>\t- (I)nsert expression into toplevel ad\n" );
-	printf( "\tn <classad>\t- Enter (n)ew toplevel ad\n" );
-	printf( "\to\t\t- (O)utput toplevel ad\n" );
+	printf( "clear_toplevel\n\tClear toplevel ad\n\n" );
+	printf( "deep_insert <expr1> <name> <expr2>\n\tInsert (<name>,<expr2>) into"
+		" classad <expr1>. (No inter-token spaces\n\tallowed in <expr1>.)\n\n");
+	printf( "deep_remove <expr> <name>\n\tRemove <name> from classad "
+		"<expr>. (No inter-token spaces allowed\n\tin <expr>.\n\n" );
+	printf( "evaluate <expr>\n\tEvaluate <expr> (in toplevel ad)\n\n" );	
+	printf( "sigeval <expr>\n\tEvaluate <expr> (in toplevel) and "
+		"identify significant\n\tsubexpressions\n\n" );
+	printf( "flatten <expr>\n\tFlatten <expr> (in toplevel ad)\n\n" );
+	printf( "help\n\tHelp --- this screen\n\n" );
+	printf( "insert_attribute <name> <expr>\n\tInsert attribute (<name>,<expr>)"
+		"into toplevel\n\n" );
+	printf( "new_toplevel <classad>\n\tEnter new toplevel ad\n\n" );
+	printf( "output_toplevel\n\tOutput toplevel ad\n\n" );
 /*
-	printf( "\tp <name>\t- (P)aram from config file and insert in toplevel\n" );
+	printf( "p <name>\t- (P)aram from config file and insert in toplevel\n" );
 */
-	printf( "\tq\t\t- (Q)uit\n" );
-	printf( "\ts\t\t- (S)etup Condor toplevel ad\n" );
+	printf( "quit\n\tQuit\n\n" );
+	printf( "remove_attribute <name>\n\tRemove attribute <name> from "
+		"toplevel\n\n" );
+	printf( "set_condor_toplevel\n\tSetup a toplevel ad for matching\n\n" );
+	printf( "\nA command may be specified by an unambiguous prefix\n\n" );
 }
 
 int
@@ -298,7 +338,7 @@ findCommand( char *cmdStr )
 	}
 
 	printf( "\nAmbiguous command %s; matches\n", cmdStr );
-	for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_-1 ; i++ ) {
+	for( int i = _NO_CMD_+1 ; i < _LAST_COMMAND_ ; i++ ) {
 		if( strncmp( cmdStr, CommandWords[i], len ) == 0 ) {
 			printf( "\t%s\n", CommandWords[i] );
 		}
