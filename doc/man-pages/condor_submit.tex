@@ -366,14 +366,14 @@ the job exits after less than an hour, you would like it to be placed on
 hold and notified by e-mail instead of being allowed to leave the queue.
 
 \begin{verbatim}
-	on_exit_hold = (ServerStartTime - JobStartDate) < 3600
+	on_exit_hold = (CurrentTime - JobStartDate) > (60 * $(MINUTE))
 \end{verbatim}
 
 The above expression will place the job on hold if it exits for any reason
 before running for an hour. An e-mail will be sent to the user explaining
-that the job was placed on hold because this expression became true.
+that the job was placed on hold because this expression became \Expr{True}.
 
-periodic\_$*$ expressions(defined elsewhere in this man page) take
+periodic\_$*$ expressions(defined elsewhere in this manual page) take
 precedent over on\_exit\_$*$ expressions and any $*$\_hold expression takes
 precedent over a $*$\_remove expression.
 
@@ -1012,12 +1012,39 @@ the cleanup associated with completion.
 Defaults to \Expr{False}.
 
 %%%%%%%%%%%%%%%%%%%
+%% match_list_length
+%%%%%%%%%%%%%%%%%%%
+
+\item[match\_list\_length = $<$integer value$>$] 
+\index{submit commands!match\_list\_length}
+When \Opt{match\_list\_length} is defined with an integer value
+greater than zero (0),
+attributes are placed in the job ClassAd.
+The maximum number of attributes defined is given by the integer
+value.
+The job ClassAds introduced are given as
+\begin{verbatim} 
+LastMatchName0 = "most-recent-Name"
+LastMatchName1 = "next-most-recent-Name"
+\end{verbatim} 
+
+The value for each introduced ClassAd is given by the
+value of the \Attr{Name} attribute 
+from the machine ClassAd of a previous execution (match).
+As a job is matched, the definitions for these attributes
+will roll, 
+with \verb@LastMatchName1@ becoming \verb@LastMatchName2@,
+\verb@LastMatchName0@ becoming \verb@LastMatchName1@,
+and \verb@LastMatchName0@ being set by the most recent
+value of the \Attr{Name} attribute.
+
+%%%%%%%%%%%%%%%%%%%
 %% Transfer_Executable
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
 \index{submit commands!transfer\_executable}
-\Expr{false}, then Condor looks for the executable on the remote machine, and
+\Expr{False}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
