@@ -29,12 +29,13 @@
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "globus_gss_assist.h"
 
-const char STR_X509_USER_PROXY[]       = "X509_USER_PROXY";
 const char STR_X509_DIRECTORY[]        = "X509_DIRECTORY";
+const char STR_X509_USER_PROXY[]       = "X509_USER_PROXY";
 const char STR_X509_CERT_DIR[]         = "X509_CERT_DIR";
 const char STR_X509_USER_CERT[]        = "X509_USER_CERT";
 const char STR_X509_USER_KEY[]         = "X509_USER_KEY";
 const char STR_SSLEAY_CONF[]           = "SSLEAY_CONF";
+const char STR_X509_MAPFILE[]          = "GRIDMAP";
 
 class GSSComms {
 public:
@@ -109,7 +110,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     /** Check whether the security context of the scoket is valid or not 
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
-    
+
     /** A specialized function that is needed for secure personal
         condor. When schedd and the user are running under the
         same userid we would still want the authentication process

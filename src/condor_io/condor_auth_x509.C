@@ -45,7 +45,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
     
     memset(buffer, 0, 1024);
     
-    if (!mySock_->isClient()){
+    if (!mySock_->isClient() || isDaemon()){
         erase_env();
 
         pbuf = param( STR_X509_DIRECTORY );
@@ -64,9 +64,16 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
             
             free(pbuf);
         }
+
+        pbuf = param( STR_X509_MAPFILE );
+        if (pbuf) {
+            sprintf( buffer, "%s=%s", STR_X509_MAPFILE, pbuf);
+            putenv( strdup (buffer) );
+            free(pbuf);
+        }
     }	
     else{
-        pbuf = param(STR_X509_DIRECTORY );   // in condor_config
+        pbuf = getenv(STR_X509_DIRECTORY );   
         
         if (pbuf) {
 	    if (!getenv(STR_X509_CERT_DIR )){	
@@ -88,7 +95,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
                 sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf );
                 putenv( strdup ( buffer ) );
 	    }
-            
+
 	    //free( pbuf );
         }
     }
@@ -105,6 +112,7 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 Condor_Auth_X509 ::  ~Condor_Auth_X509()
 {
     // Delete context handle if exist
+
     if (context_handle) {
         OM_uint32 minor_status = 0;
         gss_delete_sec_context(&minor_status,&context_handle,GSS_C_NO_BUFFER);
@@ -328,66 +336,33 @@ int Condor_Auth_X509::nameGssToLocal(char * GSSClientname)
 {
     //this might need to change with SSLK5 stuff
     //just extract username from /CN=<username>@<domain,etc>
-    
-    char filename[MAXPATHLEN];
-    int found = 0,i=0;
-    char line[256],ch_temp,ch = 9,temp[2];
-    char *pos,*pos1, *pos_temp;
-    FILE *index;
-    
-    sprintf( filename, "%.*s/index.txt", MAXPATHLEN-11, getenv( STR_X509_CERT_DIR ) );
-    
-    if ( !(index = fopen(  filename, "r" ) ) ) {
-        dprintf( D_ALWAYS, "unable to open index file %s, errno %d\n", 
-                 filename, errno );
-        return 0;
-    }
-    
-    sprintf(temp,"%c",ch);
-    while ( !found){ 
-        for (i=0;(line[i] = fgetc(index)) != '\n' && (ch_temp=line[i]) != EOF;i++);
-        line[i] = '\0';
+    OM_uint32 major_status;
+    char *local;
 
-        //Valid user entries have 'V' as first byte in their cert db entry
-        if ( line[0] == 'V'){
-            pos = line;
-            pos1 = pos+ strlen(pos) -1;
-            while (*pos1 != 9) pos1--;
-            pos_temp = pos1;
-            pos1++;
-            while (*pos != '/') pos++;
-            while (*pos_temp	== ' ' || *pos_temp == 9 )
-                pos_temp--;
-            pos_temp++;
-            *pos_temp = '\0';
-            if (!strcmp(pos,GSSClientname)) {
-                found = 1;
-            }
-        }
-        if (ch_temp == EOF) break;
-    }
-    fclose( index );
-    if (found) {
-        // split it into user@domain
-        char * tmp = strchr(pos1, '@');
-        if (tmp == NULL) {
-            dprintf(D_SECURITY, "X509 certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", pos1);
-            return 0;
-        }
-        int len  = strlen(pos1);
-        int len2 = len - strlen(tmp);
-        char * user = (char *) malloc(len2 + 1);
-        memset(user, 0, len2 + 1);
-        strncpy(user, pos1, len2);
-        setRemoteUser  (user);
-        setRemoteDomain(tmp+1);
-        free(user);
-        return 1;
-    }
-    else {
-        dprintf(D_SECURITY, "X509 certificate name lookup failure\n");
+    if ( (major_status = globus_gss_assist_gridmap(GSSClientname, &local)) 
+         != GSS_S_COMPLETE) {
+        dprintf(D_SECURITY, "Unable to map X509 user name %s to local id.\n", GSSClientname);
         return 0;
     }
+
+    // we found a map, let's check it now
+    // split it into user@domain
+    char * tmp = strchr(local, '@');
+    if (tmp == NULL) {
+        dprintf(D_SECURITY, "X509 certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", local);
+        return 0;
+    }
+    
+    int len  = strlen(local);
+    int len2 = len - strlen(tmp);
+    char * user = (char *) malloc(len2 + 1);
+    memset(user, 0, len2 + 1);
+    strncpy(user, local, len2);
+    setRemoteUser  (user);
+    setRemoteDomain(tmp+1);
+    free(user);
+    free(local);
+    return 1;
 }
 
 //cannot make this an AuthSock method, since gss_assist method expects
@@ -515,8 +490,8 @@ int Condor_Auth_X509::authenticate_client_gss()
 {
     OM_uint32	major_status = 0;
     OM_uint32	minor_status = 0;
-    char      * proxy = NULL;
     GSSComms    authComms;
+    int         status = 0;
 
     authComms.sock   = mySock_;
     authComms.buffer = NULL;
@@ -557,11 +532,14 @@ int Condor_Auth_X509::authenticate_client_gss()
     if (major_status != GSS_S_COMPLETE)	{
         print_log(major_status,minor_status,token_status,
                   "Condor_Auth_X509 Failure on client side");
-        //free(gateKeeper);
+        free(gateKeeper);
         return FALSE;
     }
     
-    dprintf(D_ALWAYS,"valid GSS connection established to %s\n", gateKeeper);
+    dprintf(D_SECURITY, "valid GSS connection established to %s\n", gateKeeper);
+    free(gateKeeper);
+
+    //char      * proxy = NULL;
     //proxy = getenv(STR_X509_USER_PROXY);
     //my_credential = new X509_Credential(USER, proxy);
     //free(proxy);
@@ -569,8 +547,18 @@ int Condor_Auth_X509::authenticate_client_gss()
     //if (!my_credential -> forward_credential(mySock_))
     //	dprintf(D_ALWAYS,"Successfully forwarded credentials\n");
     //delete my_credential;
+
+    // Now, wait for final signal
+    mySock_->decode();
+    if (!mySock_->code(status) || !mySock_->end_of_message()) {
+        dprintf(D_SECURITY, "Unable to receive final confirmation for GSS Authentication!\n");
+        return FALSE;
+    }
+    if (status == 0) {
+        dprintf(D_SECURITY, "Servier is unable to authorize my user name. Check the GRIDMAP file on the server side.\n");
+        return FALSE;
+    }
     
-    free(gateKeeper);
     
     return TRUE;
 }
@@ -578,8 +566,8 @@ int Condor_Auth_X509::authenticate_client_gss()
 int Condor_Auth_X509::authenticate_server_gss()
 {
     char *    GSSClientname;
-    int       rc;
     int	      token_status = 0;
+    int       status = 0;
     OM_uint32 major_status = 0;
     OM_uint32 minor_status = 0;
     GSSComms  authComms;
@@ -609,23 +597,25 @@ int Condor_Auth_X509::authenticate_server_gss()
     set_priv(priv);
     
     if ( (major_status != GSS_S_COMPLETE)) {
-        if (major_status != GSS_S_COMPLETE) {
-            print_log(major_status,minor_status,token_status,
-                      "X509 GSS authentication failure on server side" );
-        }
-        else {
-            dprintf( D_SECURITY, "X509 server: user lookup failure.\n" );
-        }
+        print_log(major_status,minor_status,token_status,
+                  "X509 GSS authentication failure on server side" );
         return FALSE;
     }
     
-    if ( !nameGssToLocal(GSSClientname) ) {
-        dprintf(D_SECURITY,"Could not find X509 local mapping \n");
-        return( FALSE );
+    // Try to map DN to local name (in the format of name@domain)
+    if ( (status = nameGssToLocal(GSSClientname) ) == 0) {
+        dprintf(D_SECURITY, "Could not map user's DN to local name.\n");
     }
-    
-    dprintf(D_FULLDEBUG,"Valid GSS connection established to %s\n", 
-            GSSClientname);
+    else {
+        dprintf(D_SECURITY,"Valid GSS connection established to %s\n", 
+                GSSClientname);
+    }
+        
+    mySock_->encode();
+    if (!mySock_->code(status) || !mySock_->end_of_message()) {
+        dprintf(D_SECURITY, "Unable to send final confirmation\n");
+        status = 0;
+    }
     
     //my_credential = new X509_Credential(SYSTEM,NULL); 
     //if (my_credential -> 
@@ -638,7 +628,11 @@ int Condor_Auth_X509::authenticate_server_gss()
     
     //delete my_credential;
     
-    return TRUE;
+    if (GSSClientname) {
+        free(GSSClientname);
+    }
+    
+    return (status == 0) ? FALSE : TRUE;
 }
 
 #endif
