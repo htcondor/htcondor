@@ -51,6 +51,7 @@ UniShadow::updateFromStarter(int command, Stream *s)
 	bool disk_change = false;
 	bool image_change = false;
 	bool rusage_change = false;
+	bool state_change = false;
 	int int_val;
 	struct rusage rusage_val;
 	
@@ -71,6 +72,7 @@ UniShadow::updateFromStarter(int command, Stream *s)
 	int prev_image = remRes->getImageSize();
 	int prev_disk = remRes->getDiskUsage();
 	struct rusage prev_rusage = remRes->getRUsage();
+	ResourceState old_state = remRes->getResourceState();
 
 		// Stick everything we care about in our RemoteResource. 
 	remRes->updateFromStarter( &updateAd );
@@ -108,6 +110,28 @@ UniShadow::updateFromStarter(int command, Stream *s)
 		rusage_change = true;
 	}
 		
+	int total_susp, cumulative_susp, last_susp;
+	if( old_state != remRes->getResourceState() ) {
+			// We don't need to record anything in our classad, since
+			// RemoteResource::updateFromStarter() already did
+			// that.  We've just got to tell the schedd what changed. 
+		had_change = true;
+		state_change = true;
+			// grab the values we'll need, too
+		ClassAd *ad = getJobAd();
+		if( !ad->LookupInteger(ATTR_TOTAL_SUSPENSIONS, total_susp) ) {
+			total_susp = 0;
+		}
+		if( !ad->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME,
+							   cumulative_susp) ) { 
+			cumulative_susp = 0;
+		}
+		if( !ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_susp) ) {
+			last_susp = 0;
+		}
+	}
+
+
 	if( ! had_change ) {
 			// we're done, no need to connect to the schedd
 		return TRUE;
@@ -120,7 +144,6 @@ UniShadow::updateFromStarter(int command, Stream *s)
 		if( image_change ) {
 			SetAttributeInt( getCluster(), getProc(), ATTR_IMAGE_SIZE,
 							 remRes->getImageSize() );
-			
 		}
 
 		if( disk_change ) {
@@ -137,6 +160,18 @@ UniShadow::updateFromStarter(int command, Stream *s)
 			SetAttributeFloat( getCluster(), getProc(),
 							   ATTR_JOB_REMOTE_USER_CPU, 
 							   rusage_val.ru_utime.tv_sec );
+		}
+
+		if( state_change ) {
+			SetAttributeInt( getCluster(), getProc(),
+							 ATTR_TOTAL_SUSPENSIONS, total_susp ); 
+
+			SetAttributeInt( getCluster(), getProc(),
+							 ATTR_CUMULATIVE_SUSPENSION_TIME,
+							 cumulative_susp ); 
+
+			SetAttributeInt( getCluster(), getProc(),
+							 ATTR_LAST_SUSPENSION_TIME, last_susp ); 
 		}
 
 			// close our connection to the queue
