@@ -71,7 +71,7 @@ long-running, and that the user will not wait at the terminal for their
 completion. Because of this, the standard files which normally access
 the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
 must refer to files. Thus,
-the filename specified with \Opt{input} should contain any keyboard
+the file name specified with \Opt{input} should contain any keyboard
 input the program requires (that is, this file becomes \File{stdin}).
 If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
@@ -82,7 +82,7 @@ for submission to an NT machine.
 %% output
 %%%%%%%%%%%%%%%%%%%
 
-\item[output = $<$pathname$>$] The \Opt{output} filename will capture
+\item[output = $<$pathname$>$] The \Opt{output} file name will capture
 any information the program would normally write to the screen
 (that is, this file becomes \File{stdout}).
 If not specified, the default value of
@@ -97,7 +97,7 @@ another.
 %% error
 %%%%%%%%%%%%%%%%%%%
 
-\item[error = $<$pathname$>$] The \Opt{error} filename will capture any
+\item[error = $<$pathname$>$] The \Opt{error} file name will capture any
 error messages the program would normally write to the screen
 (that is, this file becomes \File{stderr}).
 If not specified, the default value of
@@ -113,7 +113,8 @@ this will cause one job to overwrite the errors of another.
 
 \item[arguments = $<$argument\_list$>$] List of arguments to be supplied
 to the program on the command line.   In the Java Universe, the first
-argument must be the main of the class containing \Code{main}.
+argument must be the name of the class containing \Code{main}.
+Arguments are delimited (separated) by space characters.
 
 %%%%%%%%%%%%%%%%%%%
 %% initialdir
@@ -132,7 +133,7 @@ as the value for \Opt{initialdir}.
 \item[transfer\_input\_files = $<$ file1, file2, file... $>$] 
 Lists all the files to be transferred into the 
 working directory for the job before the job is started.
-Separate multiple filenames with a comma.
+Separate multiple file names with a comma.
 By default, the file specified in the
 \Opt{executable} command and any file specified in the \Opt{input}
 command (for example, \File{stdin}) are transferred.
@@ -525,7 +526,7 @@ Place spaces within the parameter list only if required.
 %% log
 %%%%%%%%%%%%%%%%%%%
 
-\item[log = $<$pathname$>$] Use \Opt{log} to specify a filename where
+\item[log = $<$pathname$>$] Use \Opt{log} to specify a file name where
 Condor will write a log file of what is happening with this job cluster.
 For example, Condor will log into this file when and where the job
 begins running, when the job is checkpointed and/or migrated, when the
@@ -630,7 +631,7 @@ If your job attempts to access any of the files mentioned in this list,
 Condor will automatically compress them (if writing) or decompress them (if reading).
 The compress format is the same as used by GNU gzip.
 
-The files given in this list may be simple filenames or complete paths and may
+The files given in this list may be simple file names or complete paths and may
 include $*$ as a wildcard.  For example, this list causes the file /tmp/data.gz,
 any file named event.gz, and any file ending in .gzip to be automatically
 compressed or decompressed as needed:
@@ -705,9 +706,9 @@ This option only applies to standard-universe jobs.
 
 \item[file\_remaps $=$ $<$ `` name $=$ newname ; name2 $=$ newname2 ... ''$>$ ]
 
-Directs Condor to use a new filename in place of an old one.  \Arg{name}
-describes a filename that your job may attempt to open, and \Arg{newname}
-describes the filename it should be replaced with.
+Directs Condor to use a new file name in place of an old one.  \Arg{name}
+describes a file name that your job may attempt to open, and \Arg{newname}
+describes the file name it should be replaced with.
 \Arg{newname} may include an optional leading
 access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
