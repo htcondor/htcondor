@@ -123,7 +123,7 @@ int				proc;
 
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
-
+/* (Also allow strings of the form "<hostname>:pppp>")  */
 int
 string_to_sin(char *addr, struct sockaddr_in *sin)
 {
@@ -133,21 +133,38 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	int 	temp=0;
 	char*	addrCpy = (char*)malloc(strlen(addr)+1);
 	char*	string = addrCpy;
+	char*   colon = 0;
+	struct  hostent *hostptr;
 
 	strcpy(addrCpy, addr);
 	string++;					/* skip the leading '<' */
-	cur_byte = (char *) &(sin->sin_addr);
-	for(end_string = string; end_string != 0; ) {
-		end_string = (char *)strchr((const char *)string, '.');
-		if (end_string == 0) {
-			end_string = (char *)strchr((const char *)string, ':');
-		}
-		if (end_string) {
-			*end_string = '\0';
-			*cur_byte = atoi(string);
-			cur_byte++;
-			string = end_string + 1;
-			*end_string = '.';
+
+	/* allow strings of the form "<hostname:pppp>" */
+	colon = strchr(string, ':');
+	*colon = '\0';
+	if ((hostptr=gethostbyname(string)) != NULL && hostptr->h_addrtype==AF_INET)
+	{
+			sin->sin_addr = *(struct in_addr *)(hostptr->h_addr_list[0]);
+			string = colon + 1;
+	}
+	else
+	{	
+		/* parse the string in the traditional <xxx.yyy.zzz.aaa> form ... */	
+		*colon = ':';
+		cur_byte = (char *) &(sin->sin_addr);
+		for(end_string = string; end_string != 0; ) {
+			end_string = strchr(string, '.');
+			if (end_string == 0) {
+				end_string = strchr(string, ':');
+				if (end_string) colon = end_string;
+			}
+			if (end_string) {
+				*end_string = '\0';
+				*cur_byte = atoi(string);
+				cur_byte++;
+				string = end_string + 1;
+				*end_string = '.';
+			}
 		}
 	}
 	
@@ -156,8 +173,9 @@ string_to_sin(char *addr, struct sockaddr_in *sin)
 	sin->sin_family = AF_INET;
 	string[temp-1] = '>';
 	string[temp] = '\0';
-	string[temp-6] = ':';
+	*colon = ':';
 	free(addrCpy);
+
 	return 1;
 }
 
@@ -171,6 +189,8 @@ sin_to_string(struct sockaddr_in *sin)
 	char    *cur_byte;
 	unsigned char   this_byte;
 
+	buf[0] = '\0';
+	if (!sin) return buf;
 	buf[0] = '<';
 	buf[1] = '\0';
 	cur_byte = (char *) &(sin->sin_addr);
