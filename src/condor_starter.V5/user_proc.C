@@ -63,7 +63,6 @@ extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP
 
 extern "C" {
 	void _updateckpt( char *, char *, char * );
-	void killkids(pid_t, int);
 }
 void open_std_file( int which );
 void set_iwd();
@@ -770,11 +769,11 @@ UserProc::send_sig( int sig )
 	priv = set_user_priv();  
 
 	if ( job_class == VANILLA ) {
-		// Here we call killkids() to forward the signal to all of our
+		// Here we call ProcFamily methods to forward the signal to all of our
 		// decendents, since a VANILLA job in condor can fork.  But first,
 		// we block all of our async events, since killkids is relatively
-		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
-		// -Todd Tannenbaum, 5/9/95
+		// slow, could potentially do a  popen and runs /bin/ps, etc.  
+		// Thus it is not re-enterant. -Todd Tannenbaum, 5/9/95
 		switch (sig) {
 		case SIGTERM:
 			family->softkill(sig);
