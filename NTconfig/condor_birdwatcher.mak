@@ -186,14 +186,14 @@ SOURCE=..\src\condor_birdwatcher\birdwatcher.rc
 
 
 "$(INTDIR)\birdwatcher.res" : $(SOURCE) "$(INTDIR)"
-	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor_builds\v66-branch\src\condor_birdwatcher" /d "NDEBUG" $(SOURCE)
+	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor-v66\src\condor_birdwatcher" /d "NDEBUG" $(SOURCE)
 
 
 !ELSEIF  "$(CFG)" == "condor_birdwatcher - Win32 Debug"
 
 
 "$(INTDIR)\birdwatcher.res" : $(SOURCE) "$(INTDIR)"
-	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor_builds\v66-branch\src\condor_birdwatcher" /d "_DEBUG" $(SOURCE)
+	$(RSC) /l 0x409 /fo"$(INTDIR)\birdwatcher.res" /i "\condor-v66\src\condor_birdwatcher" /d "_DEBUG" $(SOURCE)
 
 
 !ENDIF 
