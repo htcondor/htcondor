@@ -64,15 +64,14 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	if( result == FALSE )
 	{
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");
+		if (filename) free(filename);
 		return;
 	}
-
-	priv = set_root_priv();
 
 	dprintf(D_FULLDEBUG, "Switching to user uid: %d gid: %d.\n", uid, gid);
 
 	set_user_ids(uid, gid);
-	set_user_priv();
+	priv = set_user_priv();
 
 	dprintf(D_FULLDEBUG, "After switch uid: %d gid: %d.\n", geteuid(), 
 			getegid());
@@ -95,6 +94,7 @@ void attempt_access_handler(Service *, int i, Stream *s)
 			break;
 		  default:
 			dprintf(D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n");
+			if (filename) free(filename);
 			return;
 		}
 	}
@@ -104,6 +104,7 @@ void attempt_access_handler(Service *, int i, Stream *s)
 				"File %s doesn't exist, not checking permissions.\n", 
 				filename);
 	}
+	if (filename) free(filename);
 	
 	dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
 	set_priv(priv);
