@@ -2707,6 +2707,12 @@ int DaemonCore::Create_Process(
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
+			/* Note (by MEY): We now have little communication with the
+			   starter...there are a few (rare) cases where we can
+			   fail.  One is after the exec(), if the binary file
+			   is not a good binary.  There we exit with the errno - 
+			   number 8 (ENOEXEC).  This will actually show up as a normal 
+			   exit(), with an exit status of 8. */
 
 			// make the args / env  into something we can use:
 
@@ -2743,7 +2749,7 @@ int DaemonCore::Create_Process(
 			{
 				dprintf(D_ALWAYS, "Create_Process: setsid() failed: %s\n",
 						strerror(errno) );
-				exit(1); // Yes, we really want to exit here.
+				exit(errno); // Yes, we really want to exit here.
 			}
 		}
 	
@@ -2758,7 +2764,7 @@ int DaemonCore::Create_Process(
 				char currwd[_POSIX_PATH_MAX];
 				if ( getcwd( currwd, _POSIX_PATH_MAX ) == NULL ) {
 					dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
-					exit(1);
+					exit(errno);
 				}
 
 				char nametemp[_POSIX_PATH_MAX];
@@ -2850,7 +2856,7 @@ int DaemonCore::Create_Process(
 			if ( !SetEnv( unix_env[j] ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: Failed to put "
 						  "\"%s\" into environment.\n", unix_env[j] );
-				exit(1); // Yes, we really want to exit here.
+				exit(errno); // Yes, we really want to exit here.
 			}
 		}
 
@@ -2859,7 +2865,7 @@ int DaemonCore::Create_Process(
 		if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set "
 					"CONDOR_INHERIT env.\n");
-			exit(1); // Yes, we really want to exit here.
+			exit(errno); // Yes, we really want to exit here.
 		}
 
             /* Re-nice ourself */
@@ -2899,7 +2905,7 @@ int DaemonCore::Create_Process(
 			if( chdir(cwd) == -1 ) {
 				dprintf(D_ALWAYS, "Create_Process: chdir(%s) failed: %s\n",
 						cwd, strerror(errno) );
-				exit(1); // Let's exit.
+				exit(errno); // Let's exit.
 			}
 		}
 
@@ -2920,7 +2926,7 @@ int DaemonCore::Create_Process(
 		{
 				// We no longer have privs to dprintf. :-(.
 				// Let's exit with our errno.
-			exit(13); // Yes, we really want to exit here.
+			exit(errno); // Yes, we really want to exit here.
 		}		
 	}
 	else if( newpid > 0 ) // Parent Process
