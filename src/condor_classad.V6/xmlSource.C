@@ -98,6 +98,7 @@ ParseClassAd(void)
 				if (token.tag_type   == XMLLexer::tagType_Start) {
 					in_classad = true;
 					classad = new ClassAd();
+					classad->DisableDirtyTracking();
 				} else {
 					// We're done, return the ClassAd we got, if any.
 					break;
@@ -126,6 +127,9 @@ ParseClassAd(void)
 				}
 			}
 		}
+	}
+	if (classad != NULL) {
+		classad->EnableDirtyTracking();
 	}
 	return classad;
 }
