@@ -22,6 +22,7 @@ CONLIBAPI_OBJ = $(API_OBJ) \
 	../condor_util_lib/except.o \
 	../condor_util_lib/lock_file.NON_POSIX.o \
 	$(FLOCK_OBJ) \
+	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
 	uids.o \
 	../condor_util_lib/chomp.o \
