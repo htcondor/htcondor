@@ -1,0 +1,25 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_constructor_std.cmd';
+$testname = 'C++ Constructor Test';
+
+$foo = <<"_EOX";
+"Hello World"
+"Goodby World"
+Normal End Of Job
+_EOX
+
+@CondorTest::expected_output = split '\n', $foo;
+
+CondorTest::RegisterExitedSuccess( $testname,
+				   \&CondorTest::DefaultOutputTest );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+    print "$testname: SUCCESS\n";
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
+
