@@ -31,6 +31,9 @@ machines in your pool to the same version.
 
 \begin{itemize}
 
+\item IRIX 6.5 has been added to the list of ports that now support
+remote system calls and checkpointing.
+
 \item \Condor{q} has been fixed to be faster and much more memory
 efficient.  This is much more obvous when getting the queue from
 \Condor{schedd}'s that have more than 1000 jobs.
@@ -73,6 +76,18 @@ compatible with this change.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item An extremely rare segmentation fault during checkpoint/restart has
+been fixed in IRIX 6.5.
+
+\item A signal race condition during restart of a Condor job has
+been fixed.
+
+\item In a Condor linked job, \Syscall{getdomainname} did not work. This
+has been fixed.
+
+\item IRIX 6.5 can give negative time reports for how long a process has been
+running. We account for that now in our statistics about usage times.
 
 \item The \Condor{status} memory error introduced in version 6.1.10
 has been fixed.
