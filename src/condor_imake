@@ -63,6 +63,8 @@ elif [ $os = "SunOS" ]; then
 		Opsys="-DIS_SOLARIS26"
 	elif [ $osversion = "5.7" ] ; then
 		Opsys="-DIS_SOLARIS27"
+	elif [ $osversion = "5.8" ] ; then
+		Opsys="-DIS_SOLARIS28"
 	fi
 
 elif [ $os = "IRIX" ] ; then
