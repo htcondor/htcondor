@@ -22,8 +22,6 @@ char * xmllogfilename = NULL;
 char * userlogfilename = NULL;
 char * clientagenthost = NULL;
 
-char * STORK_CONFIG_FILE = "stork.config";
-
 extern int  transfer_dap_reaper_id, reserve_dap_reaper_id, release_dap_reaper_id;
 extern int  requestpath_dap_reaper_id;
 
@@ -86,14 +84,6 @@ void parse_arguments(int argc, char **argv)
 	Usage();
       }
       userlogfilename = argv[i];
-    }
-    else if (!strcmp("-Config", argv[i])) {
-      i++;
-      if (argc <= i) {
-	dprintf( D_ALWAYS, "No config file specified!\n" );
-	Usage();
-      }
-      STORK_CONFIG_FILE = argv[i];
     }
     else if (!strcmp("-Clientagent", argv[i])) {
       i++;
@@ -200,6 +190,7 @@ int main_init(int argc, char **argv)
 int main_config(bool v)
 {
   dprintf(D_ALWAYS,"RECONFIGURING ......\n");
+  read_config_file();
   return TRUE;
 }
 
@@ -220,7 +211,7 @@ int main_shutdown_fast()
 int main_shutdown_graceful()
 {
   dprintf(D_ALWAYS,"SHUTDOWN GRACEFULLY ....\n");
-  exit(0);
+
   DC_Exit(0);
   return TRUE;	// to satisfy c++
 }
