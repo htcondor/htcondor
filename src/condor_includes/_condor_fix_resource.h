@@ -5,8 +5,15 @@
 extern "C" {
 #endif
 
+#if defined(ULTRIX43)
+	#include <time.h>
+#endif
+
+#if defined(SUNOS41)
+	typedef int rlim_t;
+#endif
+
 #if !defined(HPUX9)
-#include <sys/time.h>
 #include <sys/resource.h>
 #else
 
