@@ -28,8 +28,16 @@
 
 #if defined(__cplusplus)
 
-#include "condor_constants.h"
+/* Since this is a Condor API header file, we want to minimize our
+   reliance on other Condor files to ease distribution.  -Jim B. */
+
+typedef int BOOLEAN;
+static const int TRUE = 1;
+static const int FALSE = 0;
+
+#if defined(NEW_PROC)
 #include "proc.h"
+#endif
 #include "file_lock.h"
 #include "condor_event.h"
 
@@ -40,7 +48,9 @@ public:
 	~UserLog();
 
 	// to initialize if not initialized bt ctor
+#if defined(NEW_PROC)
 	void initialize(PROC *);
+#endif
 	void initialize(const char *, const char *, int, int, int);
 
 	// use this function to access log (see condor_event.h)   --RR
