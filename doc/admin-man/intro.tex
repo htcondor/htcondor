@@ -200,7 +200,7 @@ that are waiting to run, and resources are claimed by a user with a
 worse priority, the negotiator can preempt that resource and match it
 with the user with better priority.
 
-\textbf{NOTE:} A higher numerical value of the user priority in Condor
+\Note A higher numerical value of the user priority in Condor
 translate into worse priority for that user.  The best priority you
 can have is 0.5, the lowest numerical value, and your priority gets
 worse as this number grows.
@@ -222,3 +222,11 @@ files for a given job back to the submit machine.
 
 \end{description} 
 
+See figure~\ref{fig:pool-arch} for a graphical representation of the
+pool architecture. 
+
+\begin{figure}[hbt]
+\centering
+\includegraphics{admin-man/pool-arch.eps}
+\caption{\label{fig:pool-arch}Pool Architecture}
+\end{figure}
