@@ -23,10 +23,6 @@
 #ifndef __CONDOR_MASTER
 #define __CONDOR_MASTER
 
-// An exponential ceilinged back-off scheme is implemented to control the
-// restart elapse time of a daemon.
-// Weiru
-
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
@@ -47,7 +43,8 @@ public:
 	int		pid;
 	int 	restarts;
 	int		newExec; 
-	time_t	timeStamp;
+	time_t	timeStamp;		// Timestamp of this daemon's binary.
+	time_t	startTime;		// Time this daemon was started
 
 #if 0
 	char*	port;				 	// for config server
@@ -79,6 +76,7 @@ private:
 	int		stop_fast_tid;
 	int 	hard_kill_tid;
 
+	int		needs_update;
 	StopStateT stop_state;
 
 };
@@ -132,6 +130,10 @@ public:
 	void	StartTimers();
 	int		immediate_restart;
 	int		immediate_restart_master;
+
+	void	Update( ClassAd* );
+	void	UpdateCollector();
+
 private:
 	daemon **daemon_ptr;
 	int	no_daemons;
@@ -139,6 +141,7 @@ private:
 	int check_new_exec_tid;
 	int update_tid;
 	int preen_tid;
+	int master;  		// index of the master in our daemon table
 	AllGoneT all_daemons_gone_action;
 	ReaperT reaper;
 
