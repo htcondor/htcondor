@@ -16,7 +16,7 @@ extern "C" {
 #	include </usr/ucbinclude/sys/rusage.h>
 #endif
 
-#if defined(SUNOS41) || defined(HPUX9) || defined(ULTRIX43)
+#if defined(SUNOS41) || ( defined(HPUX9) && !defined(HPUX10) ) || defined(ULTRIX43)
 	typedef int rlim_t;
 #endif
 
