@@ -4123,7 +4123,7 @@ Scheduler::Init()
 				schedd_name_in_config = 1;
 				free( tmp );
 			} else {
-				Name = strnewp( my_full_hostname() );
+				Name = default_daemon_name();
 			}
 		}
 	}

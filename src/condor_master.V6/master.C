@@ -636,10 +636,16 @@ init_classad()
 	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	ad->Insert(line);
 
+	char* defaultName = NULL;
 	if( MasterName ) {
 		sprintf(line, "%s = \"%s\"", ATTR_NAME, MasterName );
 	} else {
-		sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
+		defaultName = default_daemon_name();
+		if( ! defaultName ) {
+			EXCEPT( "default_daemon_name() returned NULL" );
+		}
+		sprintf(line, "%s = \"%s\"", ATTR_NAME, defaultName );
+		delete [] defaultName;
 	}
 	ad->Insert(line);
 
