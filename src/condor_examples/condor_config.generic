@@ -731,7 +731,8 @@ DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
 #PREEN_ADMIN		= $(CONDOR_ADMIN)
 
 ##  What files should condor_preen leave in the spool directory?
-VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, Accountant.log
+VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
+                          Accountant.log, Accountantnew.log
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core
