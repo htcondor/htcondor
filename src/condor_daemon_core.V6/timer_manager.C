@@ -295,6 +295,7 @@ void TimerManager::CancelAllTimers()
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;
 		timer_list = timer_list->next;
+		daemonCore->free_descrip( timer_ptr->event_descrip);
 		delete timer_ptr;
 	}
 	timer_list = NULL;
