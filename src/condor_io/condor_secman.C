@@ -117,6 +117,7 @@ SecMan::sec_lookup_feat_act( ClassAd &ad, const char* pname ) {
 	if (res) {
 		char buf[2];
 		strncpy (buf, res, 1);
+		buf[1] = 0;
 		free (res);
 
 		return sec_alpha_to_sec_feat_act(buf);
@@ -198,6 +199,7 @@ SecMan::sec_lookup_req( ClassAd &ad, const char* pname ) {
 	if (res) {
 		char buf[2];
 		strncpy (buf, res, 1);
+		buf[1] = 0;
 		free (res);
 
 		return sec_alpha_to_sec_req(buf);
