@@ -34,7 +34,7 @@
 
 #include "gridmanager.h"
 
-#define QMGMT_TIMEOUT 5
+#define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
 
