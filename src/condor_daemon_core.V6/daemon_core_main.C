@@ -328,7 +328,11 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	char* env_str = (char*) malloc( (strlen(param_name) + 10 +
 									 strlen(newdir)) * sizeof(char) ); 
 	sprintf( env_str, "_condor_%s=%s", param_name, newdir );
-	putenv( env_str );
+	if( putenv(env_str) < 0 ) {
+		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
+				 env_str );
+		exit( 4 );
+	}
 }
 
 
@@ -349,12 +353,16 @@ handle_dynamic_dirs()
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
 	set_dynamic_dir( "EXECUTE", buf );
-	
+
 		// Final, evil hack.  Set the _condor_STARTD_NAME environment
 		// variable, so that the startd will have a unique name. 
-	char env_str[64];
-	sprintf( env_str, "_condor_STARTD_NAME=%d", mypid );
-	putenv( env_str );
+	sprintf( buf, "_condor_STARTD_NAME=%d", mypid );
+	char* env_str = strdup( buf );
+	if( putenv(env_str) < 0 ) {
+		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
+				 env_str );
+		exit( 4 );
+	}
 }
 
 
