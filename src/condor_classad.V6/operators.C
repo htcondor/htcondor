@@ -206,30 +206,44 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			return( SIG_CHLD3 );
 		}
 	} else if( op == SUBSCRIPT_OP ) {
-		int            index;
-		const ExprList *elist;
-
 		// subscripting from a list (strict)
-		if( vt1 != Value::LIST_VALUE || vt2 != Value::INTEGER_VALUE) {
+
+		if (vt1 == Value::CLASSAD_VALUE && vt2 == Value::STRING_VALUE) {
+			ClassAd  *classad;
+			string   index;
+			
+			val1.IsClassAdValue(classad);
+			val2.IsStringValue(index);
+			
+			if (!classad->EvaluateAttr(index, result)) {
+				result.SetUndefinedValue();
+				return SIG_CHLD2;
+			}
+
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		} else if (vt1 == Value::LIST_VALUE && vt2 == Value::INTEGER_VALUE) {
+			int            index;
+			const ExprList *elist;
+
+			val1.IsListValue( elist );		
+			val2.IsIntegerValue( index );
+			
+			// check bounds
+			ExprListIterator itr( elist );
+			if( index < 0 || !itr.ToNth( index ) ) {
+				result.SetUndefinedValue();
+				return SIG_CHLD2;
+			}
+			
+			// get value
+			if( !itr.CurrentValue( result, es ) ) {
+				result.SetErrorValue( );
+			}
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		} else {
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
-
-		val1.IsListValue( elist );		
-		val2.IsIntegerValue( index );
-
-		// check bounds
-		ExprListIterator itr( elist );
-		if( index < 0 || !itr.ToNth( index ) ) {
-			result.SetUndefinedValue();
-			return SIG_CHLD2;
-		}
-
-		// get value
-		if( !itr.CurrentValue( result, es ) ) {
-			result.SetErrorValue( );
-		}
-		return( SIG_CHLD1 | SIG_CHLD2 );
 	}	
 	
 	// should not reach here
