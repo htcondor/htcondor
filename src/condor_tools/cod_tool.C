@@ -311,13 +311,27 @@ dumpAdIntoRequest( ClassAd* req )
 {
 	bool read_something = false;
     char buf[1024];
+	char *tmp;
 	while( fgets(buf, 1024, JOBAD_PATH) ) {
         read_something = true;
 		chomp( buf );
-        if( ! req->Insert(buf) ) {
-            fprintf( stderr, "Failed to insert \"%s\" into ClassAd, "
-                     "ignoring this line\n", buf );
-        }
+			// skip any white space
+		tmp = &buf[0];
+		while( *tmp && isspace(*tmp)) {
+			tmp++;
+		}
+		if( *tmp && *tmp == '#' ) {
+				// skip comments
+			continue;
+		}
+		if( *tmp ) {
+				// if we got this far and there's still data, try to
+				// insert it into our classad...
+			if( ! req->Insert(tmp) ) {
+				fprintf( stderr, "Failed to insert \"%s\" into ClassAd, "
+						 "ignoring this line\n", tmp );
+			}
+		}
     }
 	fclose( JOBAD_PATH );
 	return read_something;
