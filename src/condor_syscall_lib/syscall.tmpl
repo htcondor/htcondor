@@ -892,6 +892,15 @@ either file names or file descriptors.
 		}
 #	endif
 
+#	if !defined(SWITCH)
+		/* The shadow can choose whether or not to execute
+			this particular security unconcious system call depending upon the
+			administrator's policies. */
+	int shell( char *command, int len ) : pseudo, no_sys_chk {
+		in code_bytes_bool( command, len );
+		alloc( command, len );
+	}
+#	endif
 
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
