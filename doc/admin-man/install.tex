@@ -712,7 +712,16 @@ what each step is for, and suggests how to answer the questions
      section~\ref{param:SoftUidDomain} on
      page~\pageref{param:SoftUidDomain} for details.  
 
-\item[STEP 6: Where should public programs be installed?]
+\item[STEP 6: Java Universe support in Condor.]
+
+	Condor has the ability to run Java programs with remote i/o,
+	but no checkpointing. If you would like to enable this feature
+	in Condor, then select yes for enabling of Java Universe. The
+	installer will try to determine if you have a valid JVM and
+	prompt you if nothing suitable can be found. If you do not care
+	to use the Java Universe, then it is safe to say no here.
+
+\item[STEP 7: Where should public programs be installed?]
 
      It is recommended that you install the user-level Condor programs
      in the release directory, (where they go by default).  This way,
@@ -752,7 +761,7 @@ Skip to the appropriate section below, based on the kind of installation.
 
 \begin{description}
 
-\item[STEP 7: What machine will be your central manager?]
+\item[STEP 8: What machine will be your central manager?]
 
      Type in the full hostname of the machine you have chosen
      for your central manager.  If \Condor{install} cannot find
@@ -760,7 +769,7 @@ Skip to the appropriate section below, based on the kind of installation.
      it will print out an error message and ask you to confirm.
 
 
-\item[STEP 8: Where will the local directory go?]
+\item[STEP 9: Where will the local directory go?]
 
      This is the directory discussed in question 5 of the installation
      introduction.  \Condor{install} tries to make some educated guesses
@@ -793,7 +802,7 @@ Skip to the appropriate section below, based on the kind of installation.
      can start up Condor.
 
 
-\item[STEP 9: Where will the local (machine-specific) configuration files go?]
+\item[STEP 10: Where will the local (machine-specific) configuration files go?]
 
 \index{configuration files!location}
      As discussed in question STEP 6 above, there are a few different
@@ -816,7 +825,7 @@ Skip to the appropriate section below, based on the kind of installation.
      your pool from a centralized location.
 
 
-\item[STEP 10: How shall Condor find its configuration file?]
+\item[STEP 11: How shall Condor find its configuration file?]
 
      Since there are a few known places Condor looks to find your
      configuration file, we recommend that you put a soft link from one of
@@ -831,7 +840,7 @@ Skip to the appropriate section below, based on the kind of installation.
 
 \end{description}
 
-Once you have completed STEP 10, you are done.  \Condor{install} prints
+Once you have completed STEP 11, you are done.  \Condor{install} prints
 out a messages describing what to do next.  Please skip to 
 section~\ref{installed-now-what}.
 
