@@ -101,7 +101,9 @@ class ExprTree
 		// memory which (belive it!) on HPUX happened to be 'k', and
 		// really bad things happened!  Yes, this bug was a pain 
 		// in the #*&@! to find!  -Todd, 7/97
-		ExprTree::ExprTree():unit('\0') {};
+		// and now init sumFlag as well... not sure if it should be
+		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
+		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE) {};
 
     protected :
 
