@@ -44,6 +44,7 @@
 #include "condor_debug.h"
 #include "clib.h"
 #include "except.h"
+#include "exit.h"
 #include "condor_uid.h"
 
 
@@ -633,5 +634,5 @@ dprintf_exit()
 
 		/* Actually exit now */
 	fflush (stderr);
-	exit(1);
+	exit(DPRINTF_ERROR);
 }
