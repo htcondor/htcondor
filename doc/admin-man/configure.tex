@@ -886,6 +886,9 @@ server, shadow, and starter, none of which use DaemonCore yet).
   the \Condor{submit} manual page
   on page~\pageref{man-condor-submit} for details.
 
+  The \Condor{startd} \MacroU{STARTD\_EXPRS} defaults to
+  ``JobUniverse''.
+
   Because of the different syntax of the configuration
   file and ClassAds, a little extra work is required to get a
   given entry into a ClassAd.  In particular, ClassAds require quote
@@ -2516,9 +2519,59 @@ These macros affect the \Condor{collector}.
   while setting it to high will produce less precise statistical
   information.
 
+\item[\Macro{COLLECTOR\_DAEMON\_STATS}]
+  \label{param:CollectorDaemonStats}
+  This macro controls whether or not the Collector keeps update
+  statistics on incoming updates.  The default value is FALSE.  If
+  defined, the collector will insert several attributes into ClassAds
+  that it stores and sends.  ClassAds without the
+  ``UpdateSequenceNumber'' and ``DaemonStartTime'' attributes will not
+  be counted, and will not have attributes inserted.
+
+  The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
+  and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
+  updates (of this ad type) the Collector has received from this host.
+  ``UpdatesSequenced'' is the number of updates that the Collector
+  could have as lost.  In particular, for the first update from a
+  daemon it's impossible to tell if any previous ones have been lost
+  or not.  ``UpdatesLost'' is the number of updates that the Collector
+  has detected as being lost.
+
+\item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
+  \label{param:CollectorDaemonHistorySize} This macro controls the
+  size of the published update history that the Collector inserts into
+  the ClassAds it stores and sends.  The default value is zero.  This
+  macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS} is not
+  enabled.
+
+  If this has a non-zero value, the Collector will insert
+  ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
+  above).  ``UpdatesHistory'' is a hexidecimal string which reresents
+  a bitmap of the last \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
+  updates.  The most significant bit (MSB) of the bitmap reresents the
+  most recent update, and the least significant bit (LSB) represents
+  the least recent.  A value of zero means that the update was not
+  lost, and a value of 1 indicates that the update was detected as
+  lost.
+
+  For example, if the last update was not lost, the previous lost, and
+  the previous two not, the bitmap would be 0100, and the matching hex
+  digit would be ``4''.  Note that the MSB can never be marked as lost
+  because it's loss can only be detected by a non-lost update (a
+  ``gap'' is found in the sequence numbers).
+
+ \item[\Macro{COLLECTOR\_QUERY\_WORKERS}]
+  \label{param:CollectorQueryWorkers} This macro sets the maximum
+  number of ``worker'' processes that the Collector can have.  When
+  recieving a query request, the UNIX Collector will ``fork'' a new
+  process to handle the query, freeing the main process to handle
+  other requests.  When the number of outstanding ``worker'' processes
+  reaches this maximum, the request is handled by the main process.
+  This macro is ignored on Windows, and it's default value is zero.
+
 \item[\Macro{COLLECTOR\_DEBUG}] \label{param:CollectorDebug} This
-  macro (and other macros related to debug logging in the
-  collector) is described in section~\ref{param:SubsysDebug} as
+  macro (and other macros related to debug logging in the collector)
+  is described in section~\ref{param:SubsysDebug} as
   \MacroNI{SUBSYS\_DEBUG}.
 
 \end{description}
