@@ -1,3 +1,9 @@
+02/18/05 V6_7-spooldir-branch
+  Work on revamping SPOOL usage for per-job files.  Notably will allow schedd
+  to run as root when sandboxing jobs via Condor-C, SOAP, or condor_submit -r
+  -s.  Will be merged back into V6_7-branch when basic functionality is
+  working.
+
 02/14/05 V6_7_4
   The 6.7.4 release tag. Sadly, it came from the V6_7_3-branch, becuase
   the 6_7_4-branch was not ready for it. 
