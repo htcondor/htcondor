@@ -253,6 +253,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 
 	lastRemoteStatusServerTime = 0;
 
+	gahp = NULL;
+
 	// This is a BaseJob variable. At no time do we want BaseJob mucking
 	// around with job runtime attributes, so set it to false and leave it
 	// that way.
@@ -328,6 +330,8 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	return;
 
  error_exit:
+		// We must ensure that the code-path from GM_HOLD doesn't depend
+		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
 	if ( error_string ) {
 		UpdateJobAdString( ATTR_HOLD_REASON, error_string );
@@ -383,7 +387,9 @@ int MirrorJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, remoteState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
-	gahp->setMode( GahpClient::normal );
+	if ( gahp ) {
+		gahp->setMode( GahpClient::normal );
+	}
 
 	do {
 		reevaluate_state = false;
@@ -945,7 +951,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending gahp call, we're not
 			// anymore so purge it.
-			gahp->purgePendingRequests();
+			if ( gahp ) {
+				gahp->purgePendingRequests();
+			}
 			// If we were calling a gahp func that used gahpAd, we're done
 			// with it now, so free it.
 			if ( gahpAd ) {
