@@ -23,7 +23,14 @@ int NewProc( int );
 int DestroyProc(int, int);
 int DestroyCluster(int);
 int DestroyClusterByConstraint(const char*); 
+int SetAttributeByConstraint(const char *, const char *, char *);
+int SetAttributeIntByConstraint(const char *, const char *, int);
+int SetAttributeFloatByConstraint(const char *, const char *, float);
+int SetAttributeStringByConstraint(const char *, const char *, char *);
 int SetAttribute(int, int, const char *, char *);
+int SetAttributeInt(int, int, const char *, int);
+int SetAttributeFloat(int, int, const char *, float);
+int SetAttributeString(int, int, const char *, char *);
 int CloseConnection();
 
 int GetAttributeFloat(int, int, const char *, float *);
@@ -65,20 +72,7 @@ int GetProc(int, int, PROC *);
 }
 #endif
 
-#define SetAttributeInt(cl, pr, name, val){\
-										   char buf[100]; \
-										   sprintf(buf, "%d", val); \
-										   SetAttribute(cl, pr, name, buf);\
-									   }
-#define SetAttributeFloat(cl, pr, name, val){\
-										   char buf[100]; \
-										   sprintf(buf, "%f", val); \
-										   SetAttribute(cl, pr, name, buf);\
-									   }
-#define SetAttributeString(cl, pr, name, val){\
-										   char buf[1000]; \
-										   sprintf(buf, "\"%s\"", val); \
-										   SetAttribute(cl, pr, name, buf);\
-									   }
 #define SetAttributeExpr(cl, pr, name, val) SetAttribute(cl, pr, name, val);
+#define SetAttributeExprByConstraint(con, name, val) SetAttributeByConstraint(con, name, val);
+
 #endif
