@@ -830,9 +830,9 @@ parsePrimaryExpression(ExprTree *&tree)
 					tree = NULL;
 					return false;
 				};
-				// special case function-calls (like ieee754), should
-				// be converted into a literal expression if the
-				// argument is a string literal
+				// special case function-calls should be converted
+				// into a literal expression if the argument is a
+				// string literal
 				if (shouldEvaluateAtParseTime(fnName.c_str(), argList)){
 					tree = evaluateFunction(fnName, argList);
 				} else {
@@ -1199,7 +1199,7 @@ bool ClassAdParser::shouldEvaluateAtParseTime(
 
 	should_eval = false;
 	c_function_name = functionName.c_str();
-	if (   strcasecmp(c_function_name, "ieee754")
+	if (   strcasecmp(c_function_name, "real")
 		|| strcasecmp(c_function_name, "absTime")
 		|| strcasecmp(c_function_name, "relTime")) {
 		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
@@ -1224,7 +1224,7 @@ ExprTree *ClassAdParser::evaluateFunction(
 
 	string string_value;
 	if (val.IsStringValue(string_value)) {
-		if (strcasecmp(c_function_name, "ieee754") == 0) {
+		if (strcasecmp(c_function_name, "real") == 0) {
 			tree = Literal::MakeReal(string_value);
 		} else if (strcasecmp(c_function_name, "absTime") == 0) {
 			tree = Literal::MakeAbsTime(string_value);

@@ -37,8 +37,6 @@ ClassAdUnParser()
 {
 	oldClassAd = false;
 	xmlUnparse = false;
-	printRealsInIEEE = true;
-	commentsForIEEE = true;
 	delimiter = '\"';
 	return;
 }
@@ -174,29 +172,20 @@ Unparse( string &buffer, const Value &val )
 		case Value::REAL_VALUE: {
 			double real;
 			val.IsRealValue(real);
-			if (printRealsInIEEE) {
-				double_to_hex(real, tempBuf);
-				buffer += "ieee754(\"";
-				buffer += tempBuf;
-				buffer += "\")";
-
-				if (commentsForIEEE) {
-					sprintf(tempBuf, "%g", real);
-					buffer += "/* ";
-					buffer += tempBuf;
-					buffer += " */";
-				}
-
-			} else {
-				sprintf(tempBuf, "%g", real);
-				buffer += tempBuf;
-				if ((strchr(tempBuf, '.') == NULL)  && !isnan(real)){
-					// There is no decimal in there, so when
-					// we reparse this later, we'll think it's
-					// an integer unless we tack an a .0
-					buffer += ".0";
-				}
-			}
+            if (real == 0.0) {
+                buffer += "0.0";
+            } else if (real == -0.0) {
+                buffer += "-0.0";
+            } else if (isnan(real)) {
+                buffer += "real(\"NaN\")";
+            } else if (isinf(real) == -1){
+                buffer += "real(\"-INF\")";
+            } else if (isinf(real) == 1) {
+                buffer += "real(\"INF\")";
+            } else {
+                sprintf(tempBuf, "%1.15E", real);
+                buffer += tempBuf;
+            }
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
@@ -566,9 +555,6 @@ GetOldClassAd()
 PrettyPrint::
 PrettyPrint( )
 {
-	printRealsInIEEE = false;
-	commentsForIEEE = true;
-
 	classadIndent = 4;
 	listIndent = 3;
 	wantStringQuotes = true;

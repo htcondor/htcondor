@@ -50,28 +50,6 @@ class ClassAdUnParser
 		// This can be changed to '\'' to unparse quoted attributes, with this function
 		void setDelimiter(char delim);
 
-		/// Set output representation for reals. False by default.
-		void SetUseIEEE754ForReals( bool _printRealsInIEEE )
-		{ 
-			printRealsInIEEE = _printRealsInIEEE;
-		}
-		/// Return output representation for reals
-		bool GetUseIEEE754ForReals( void )
-		{
-			return printRealsInIEEE;
-		}
-
-		void SetCommentsForIEEE754( bool _commentsForIEEE )
-		{
-			commentsForIEEE = _commentsForIEEE;
-		}
-
-		bool GetCommentsForIEEE754( void )
-		{
-			return commentsForIEEE;
-		}
-
-
 		/** Unparse a value 
 		 * 	@param buffer The string to unparse to
 		 * 	@param val The value to unparse
@@ -108,8 +86,6 @@ class ClassAdUnParser
 		static char *opString[];
 
  protected:
-		bool printRealsInIEEE;
-		bool commentsForIEEE;
 		bool oldClassAd;
 		bool xmlUnparse;
 		char delimiter; // string delimiter - initialized to '\"' in the constructor
