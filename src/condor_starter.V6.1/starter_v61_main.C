@@ -51,8 +51,17 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
 	printf( "%s = True\n", ATTR_HAS_MPI );
-	printf( "%s = True\n", ATTR_HAS_JAVA );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+
+/*
+The starter should not automatically advertise that it has Java
+until it has sucessfully tested the local installation.
+Currently, this is done in the startd, thus this attribute
+is commented out.  A more clean solution would put the testing of
+this feature into the starter itself.  I'm working on it now.  -thain
+	printf( "%s = True\n", ATTR_HAS_JAVA );
+*/
+
 }
 
 
