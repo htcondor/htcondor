@@ -68,10 +68,10 @@ or at home sleeping).
 
 Condor is a software system that creates a High-Throughput Computing
 (HTC) environment by effectively harnessing the power of a cluster of
-UNIX workstations on a network. Although Condor can manage a dedicated
-cluster of workstations, a key appeal of Condor is its ability to
-effectively harness non-dedicated, preexisting resources in a
-distributed ownership 
+UNIX or NT workstations on a network. Although Condor can manage a
+dedicated cluster of workstations, a key appeal of Condor is its
+ability to effectively harness non-dedicated, preexisting resources in
+a distributed ownership 
 \index{distributed ownership!of machines}
 setting such as machines sitting on people's desks
 in offices and labs. 
@@ -190,13 +190,12 @@ their programs there. The program behaves under Condor as if it was
 running as the user that submitted the job on the workstation where it
 was originally submitted, no matter on which machine it really ends up
 executing on.
-	\item[No Changes Necessary to User's Source Code.] No special programming
-is required to use Condor. Condor is able to run normal UNIX programs.
-The checkpoint and migration of programs by Condor is transparent and
-automatic, as is the use of remote system calls.
-If these facilities are desired, the user only re-links
-the program.
-The code is not compiled or changed.
+	\item[No Changes Necessary to User's Source Code.] No special
+programming is required to use Condor. Condor is able to run normal
+non-interactive UNIX or NT programs.  The checkpoint and migration of
+programs by Condor is transparent and automatic, as is the use of
+remote system calls.  If these facilities are desired, the user only
+re-links the program.  The code is not compiled or changed.
 	\item[Sensitive to the Desires of Workstation Owners.] The
 owner of a
 workstation has complete priority over the workstation,
@@ -287,14 +286,14 @@ desire the Condor source code, please contact the Condor Team in order to discus
 (see Section~\ref{contact-info}, on page~\pageref{contact-info}).
 
 \begin{center}
-\begin{table}
+\begin{table}[hbt]
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
 Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6, 2.7 \\ \hline
 Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.2, 6.3, 6.4 \\ 
  & IRIX 6.5 \\ \hline
-Intel x86, Pentium series & Linux 2.0.x, 2.2.x, glibc20, glibc21, libc5 \\
+Intel x86 & Linux 2.0.x, 2.2.x, glibc20, glibc21, libc5 \\
  & Solaris 2.5.x, 2.6, 2.7 \\ 
  & Windows NT 4.0 (``clipped'') \\ \hline
 Digital ALPHA & OSF/1 (Digital Unix) 4.x \\
