@@ -279,7 +279,15 @@ char *filename;
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
-	free_kbytes = statfsbuf.f_bavail * statfsbuf.f_bsize / 1024;
+	/* fix the overflow problem. weiru */
+	if(statfsbuf.f_bavail >= 0x7fffffff / statfsbuf.f_bsize)
+	{
+		free_kbytes = 0x7fffffff;
+	}
+	else
+	{
+		free_kbytes = statfsbuf.f_bavail * statfsbuf.f_bsize / 1024;
+	}
 
 	dprintf(D_FULLDEBUG, "number of kbytes available for filename(%s): %d\n", 
 			filename, free_kbytes);
