@@ -20,6 +20,8 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -374,6 +376,7 @@ Resource::update()
 
 		// Set a flag to indicate that we've done an update.
 	did_update = TRUE;
+	return rval;
 }
 
 
@@ -719,7 +722,7 @@ Resource::compute_condor_load()
 	float load;
 	int numcpus = resmgr->num_cpus();
 	procInfo* pinfo = NULL;
-	static int num_called = 0;
+	static int num_called = 8;
 
 	if( r_starter->active() ) { 
 		num_called++;
