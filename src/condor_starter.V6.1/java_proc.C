@@ -59,7 +59,7 @@ int JavaProc::StartJob()
 
 	ClassAdUnParser unp;
 	unp.SetOldClassAd( true );
-	string treeString;
+	std::string treeString;
 
 	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
 		jarfiles_list = new StringList(jarfiles);
