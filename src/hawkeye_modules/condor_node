@@ -48,6 +48,9 @@ sub Init {
 # Do the real work here...
 sub RunIt {
 
+    # Start things off
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
     # Data we'll gather...
     my %CondorInfo = (
 		      "NumStarters"	=> 0,
@@ -283,19 +286,20 @@ sub RunIt {
     {
 	if ( ref( $CondorInfo{$Key} ) eq "ARRAY" )
 	{
-	    $Hawkeye->Store( $Key, join( ",", @{$CondorInfo{$Key}} ) );
-	}
-	elsif (  ( $CondorInfo{$Key} =~ /[a-zA-Z]/ ) ||
-		 ( $CondorInfo{$Key} eq "" )   )
-	{
-	    $Hawkeye->Store( $Key, $CondorInfo{$Key} );
+	    $Hash->Add( $Key,
+			HawkeyePublish::TypeString,
+			join( ",", @{$CondorInfo{$Key}} ) );
 	}
 	else
 	{
-	    $Hawkeye->StoreNum( $Key, $CondorInfo{$Key} );
+	    $Hash->Add( $Key,
+			HawkeyePublish::TypeAuto,
+			$CondorInfo{$Key} );
 	}
     }
 
-    # Let 'er rip!
+
+    # Ok, summary is done...
+    $Hash->Store( );
     $Hawkeye->Publish( );
 }
