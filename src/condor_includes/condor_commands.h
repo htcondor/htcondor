@@ -244,7 +244,8 @@ const int QUERY_ANY_ADS = 48;
 #define DC_CONFIG_VAL		(DC_BASE+7)
 #define DC_CHILDALIVE		(DC_BASE+8)
 #define DC_SERVICEWAITPIDS	(DC_BASE+9) 
-#define DC_AUTHENTICATE         (DC_BASE+10)
+#define DC_AUTHENTICATE     (DC_BASE+10)
+#define DC_NOP              (DC_BASE+11)
 
 /*
 *** Commands used by the FileTransfer object

@@ -491,6 +491,12 @@ handle_reconfig( Service*, int, Stream* )
 	
 
 int
+handle_nop( Service*, int, Stream* )
+{
+	return TRUE;
+}
+
+int
 handle_config_val( Service*, int, Stream* stream ) 
 {
 	char *param_name = NULL, *tmp;
@@ -1368,6 +1374,10 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_OFF_GRACEFUL, "DC_OFF_GRACEFUL",
 								  (CommandHandler)handle_off_graceful,
 								  "handle_off_graceful()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_NOP, "DC_NOP",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, READ );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 
