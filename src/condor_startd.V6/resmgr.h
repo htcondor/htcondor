@@ -9,8 +9,8 @@ typedef struct {
 	int r_pid;
 	resource_param_t r_param;
 	int r_state;
-        ClassAd	*r_context;
-	ClassAd *r_jobcontext;
+        ClassAd	*r_classad;
+	ClassAd *r_jobclassad;
 	char *r_starter;
 	int r_port;
 	int r_sock;
@@ -34,8 +34,9 @@ resource_info_t *resmgr_getbypid(int);
 int resmgr_walk(int (*) (resource_info_t *));
 int resmgr_vacateall(void);
 bool resmgr_resourceinuse(void);
-extern "C" ClassAd *resmgr_context(resource_id_t rid);
-int resource_initcontext(resource_info_t *);
-ClassAd *resource_context(resource_info_t *);
+extern "C" ClassAd *resmgr_classad(resource_id_t rid);
+int resource_initclassad(resource_info_t *);
+ClassAd *resource_update_classad(resource_info_t *);
+ClassAd *resource_timeout_classad(resource_info_t *);
 
 #endif /* _CONDOR_RESMGR_H */
