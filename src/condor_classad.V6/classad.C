@@ -421,7 +421,7 @@ Modify( ClassAd& mod )
 
 		// Step 1:  Process Replace attribute
 	if( ( expr = mod.Lookup( ATTR_REPLACE ) ) != NULL ) {
-		const ClassAd	*ad;
+		ClassAd	*ad;
 		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Clear( );
 			ctx->Update( *ad );
@@ -430,7 +430,7 @@ Modify( ClassAd& mod )
 
 		// Step 2:  Process Updates attribute
 	if( ( expr = mod.Lookup( ATTR_UPDATES ) ) != NULL ) {
-		const ClassAd *ad;
+		ClassAd *ad;
 		if( expr->Evaluate( val ) && val.IsClassAdValue( ad ) ) {
 			ctx->Update( *ad );
 		}
@@ -513,7 +513,7 @@ Copy( ) const
 bool ClassAd::
 _Evaluate( EvalState&, Value& val ) const
 {
-	val.SetClassAdValue( this );
+	val.SetClassAdValue( (ClassAd*)this );
 	return( this );
 }
 
@@ -521,7 +521,7 @@ _Evaluate( EvalState&, Value& val ) const
 bool ClassAd::
 _Evaluate( EvalState&, Value &val, ExprTree *&tree ) const
 {
-	val.SetClassAdValue( this );
+	val.SetClassAdValue( (ClassAd*)this );
 	return( ( tree = Copy( ) ) );
 }
 
@@ -572,8 +572,8 @@ _Flatten( EvalState& state, Value&, ExprTree*& tree, int* ) const
 ClassAd *ClassAd::
 _GetDeepScope( ExprTree *tree ) const
 {
-	const ClassAd	*scope;
-	Value			val;
+	ClassAd	*scope;
+	Value	val;
 
 	if( !tree ) return( NULL );
 	tree->SetParentScope( this );
@@ -697,7 +697,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return( true );
 
         case ATTRREF_NODE: {
-            const ClassAd   *start;
+            ClassAd   		*start;
             ExprTree        *tree, *result;
             string          attr;
             Value           val;
@@ -835,7 +835,7 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return( true );
 
         case ATTRREF_NODE: {
-            const ClassAd   *start;
+            ClassAd   		*start;
             ExprTree        *tree, *result;
             string          attr;
             Value           val;

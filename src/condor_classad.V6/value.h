@@ -111,7 +111,7 @@ class Value
 		/** Sets a ClassAd value; previous value discarded.
 			@param c The ClassAd value.
 		*/
-		void SetClassAdValue(const ClassAd* c);	
+		void SetClassAdValue(ClassAd* c);	
 
 		/** Sets a string value; previous value discarded.
 			@param str The string value.
@@ -196,7 +196,7 @@ class Value
 			@param c The ClassAd if the value is a ClassAd.
 			@return true iff the value is a ClassAd.
 		*/
-		inline bool IsClassAdValue(const ClassAd *&c) const; 
+		inline bool IsClassAdValue(ClassAd *&c) const; 
 		/** Checks if the value is a ClassAd.
 			@return true iff the value is a ClassAd value.
 		*/
@@ -259,7 +259,7 @@ class Value
 			int				integerValue;
 			double 			realValue;
 			const ExprList	*listValue;
-			const ClassAd	*classadValue;
+			ClassAd			*classadValue;
 			time_t			timeValueSecs;
 		};
 		string			strValue;		// has ctor/dtor cannot be in the union
@@ -342,7 +342,7 @@ IsStringValue( string &s ) const
 }
 
 inline bool Value::
-IsClassAdValue(const ClassAd *&ad) const
+IsClassAdValue(ClassAd *&ad) const
 {
 	ad = classadValue;
 	return( valueType == CLASSAD_VALUE );	

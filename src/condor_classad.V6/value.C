@@ -219,7 +219,7 @@ SetListValue( const ExprList *l)
 }
 
 void Value::
-SetClassAdValue( const ClassAd *ad )
+SetClassAdValue( ClassAd *ad )
 {
 	valueType = CLASSAD_VALUE;
 	classadValue = ad;
