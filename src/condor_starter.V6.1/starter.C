@@ -137,8 +137,14 @@ CStarter::ShutdownGraceful(int)
 	dprintf(D_ALWAYS, "ShutdownGraceful all jobs.\n");
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
-		jobRunning = true;
-		job->ShutdownGraceful();
+		if ( job->ShutdownGraceful() ) {
+			// job is completely shut down, so delete it
+			JobList.DeleteCurrent();
+			delete job;
+		} else {
+			// job shutdown is pending, so just set our flag
+			jobRunning = true;
+		}
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
@@ -158,8 +164,14 @@ CStarter::ShutdownFast(int)
 	dprintf(D_ALWAYS, "ShutdownFast all jobs.\n");
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
-		jobRunning = true;
-		job->ShutdownFast();
+		if ( job->ShutdownFast() ) {
+			// job is completely shut down, so delete it
+			JobList.DeleteCurrent();
+			delete job;
+		} else {
+			// job shutdown is pending, so just set our flag
+			jobRunning = true;
+		}
 	}
 	ShuttingDown = TRUE;
 	if (!jobRunning) {
@@ -185,7 +197,7 @@ CStarter::StartJob()
 		return;
 	}
 
-    printAdToFile( jobAd, "/tmp/starter_ad" );
+    // printAdToFile( jobAd, "/tmp/starter_ad" );
 
     int universe = STANDARD;
     if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
@@ -245,6 +257,7 @@ CStarter::StartJob()
 }
 
 int
+
 CStarter::Suspend(int)
 {
 	dprintf(D_ALWAYS, "Suspending all jobs.\n");
