@@ -552,7 +552,11 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
+#if defined(OSF1)
+	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
+#else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
+#endif
 		out xdr_timeval( tp );
 		out xdr_timezone( tp );
 		alloc( tp, TIMEVAL_SIZE );
