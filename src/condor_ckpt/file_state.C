@@ -2441,6 +2441,9 @@ fcntl(int fd, int cmd, ...)
 	
         switch (cmd) {
         case F_DUPFD:
+#if defined(Solaris26)
+        case F_DUP2FD:
+#endif
                 va_start( ap, cmd );
 // Linux uses a long as the type for the third argument.  All other
 // platforms use an int.  For Linux, we just cast the long to an int
@@ -2520,6 +2523,9 @@ _fcntl(int fd, int cmd, ...)
 	struct flock *lockarg = NULL;
 	switch (cmd) {
 	case F_DUPFD:
+#if defined(Solaris26)
+    case F_DUP2FD:
+#endif
 	case F_SETFD:
 	case F_SETFL:
 		va_start( ap, cmd );
@@ -2550,6 +2556,9 @@ __fcntl(int fd, int cmd, ...)
 	int arg = 0;
 	struct flock *lockarg = NULL;
 	switch (cmd) {
+#if defined(Solaris26)
+	case F_DUP2FD:
+#endif
 	case F_DUPFD:
 	case F_SETFD:
 	case F_SETFL:
