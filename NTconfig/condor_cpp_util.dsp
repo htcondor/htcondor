@@ -337,6 +337,14 @@ SOURCE=..\src\condor_daemon_client\dc_startd.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_client\dc_starter.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_client\dc_starter.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\directory.C"
 # End Source File
 # Begin Source File

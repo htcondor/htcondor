@@ -98,6 +98,38 @@ SOURCE=..\src\condor_daemon_core.V6\condor_ipverify.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\condor_lock.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_base.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_base.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_file.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_file.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_implementation.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\condor_lock_implementation.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\condor_timer_manager.h
 # End Source File
 # Begin Source File

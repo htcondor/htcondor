@@ -96,6 +96,14 @@ SOURCE=..\src\condor_dagman\dag.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_dagman\dagman_commands.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_dagman\dagman_commands.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_dagman\dagman_instantiate.C
 # End Source File
 # Begin Source File

@@ -568,7 +568,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-InputDir=..\src\h
+InputDir=\v67\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -580,7 +580,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-InputDir=..\src\h
+InputDir=\v67\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
