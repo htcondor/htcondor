@@ -117,7 +117,17 @@ AC_ARG_WITH(externals,
 )
 AC_SUBST(ext_root,$ac_cv_externals)
 
-# Now, try to find a condor_analyze binary
+# Now, try to find condor_analyze binaries.  In any directory we're
+# searching, we look for condor_analyze.(strip|static|release).  If
+# any type-specific version doesn't exist, we look for
+# "condor_analyze" and try to use that.  We first see if the
+# --with-condor_analyze command-line option is set, and if so, look in
+# there.  If that fails for any reason, we treat it as a fatal error.
+# If that's not set, we look in <externals>/install/condor_analyze.
+# If we find anything, we use it, otherwise, we look in
+# /usr/local/condor/analyze.  If we still didn't find anything, we
+# just print a message, assume the user doesn't want to worry about
+# condor_analyze, and set HAS_CONDOR_ANALYZE to "NO" in externals.cf.
 AC_MSG_CHECKING([for condor_analyze])
 ac_condor_analyze_dir=""
 ac_has_condor_analyze=NO
