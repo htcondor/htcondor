@@ -3307,7 +3307,9 @@ SetGlobusParams()
 		if (stricmp (JobGridType, "gt4") != MATCH ) {
 			fprintf(stderr, "\nWARNING: Param %s is not supported for grid types other than gt4\n", GlobusJobmanagerType );
 		}
-		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE, jobmanager_type );
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_JOBMANAGER_TYPE,
+				 jobmanager_type );
+		InsertJobExpr (buffer, false );
 		free (jobmanager_type);
 	}
 
