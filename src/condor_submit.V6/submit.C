@@ -182,6 +182,7 @@ char	*TransferInput = "transfer_input";
 char	*TransferOutput = "transfer_output";
 char	*TransferError = "transfer_error";
 
+char	*StreamInput = "stream_input";
 char	*StreamOutput = "stream_output";
 char	*StreamError = "stream_error";
 
@@ -1868,11 +1869,18 @@ SetStdFile( int which_file )
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
+	if(JobUniverse==CONDOR_UNIVERSE_GLOBUS) {
+		stream_it = true;
+	} else {
+		stream_it = false;
+	}
+
 	switch( which_file ) 
 	{
 	case 0:
 		generic_name = Input;
 		macro_value = condor_param( TransferInput, ATTR_TRANSFER_INPUT );
+		macro_value2 = condor_param( StreamInput, ATTR_STREAM_INPUT );
 		break;
 	case 1:
 		generic_name = Output;
@@ -1898,7 +1906,9 @@ SetStdFile( int which_file )
 	}
 
 	if ( macro_value2 ) {
-		if ( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
+		if ( macro_value2[0] == 'T' || macro_value2[0] == 't' ) {
+			stream_it = true;
+		} else if( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
 			stream_it = false;
 		}
 		free( macro_value2 );
@@ -1942,6 +1952,8 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_RDONLY );
+			sprintf( buffer, "%s = %s", ATTR_STREAM_INPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( buffer );
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
 			InsertJobExpr( buffer );
@@ -1952,10 +1964,8 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			if ( !stream_it ) {
-				sprintf( buffer, "%s = FALSE", ATTR_STREAM_OUTPUT );
-				InsertJobExpr( buffer );
-			}
+			sprintf( buffer, "%s = %s", ATTR_STREAM_OUTPUT, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( buffer );
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
 			InsertJobExpr( buffer );
@@ -1966,10 +1976,8 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
-			if ( !stream_it ) {
-				sprintf( buffer, "%s = FALSE", ATTR_STREAM_ERROR );
-				InsertJobExpr( buffer );
-			}
+			sprintf( buffer, "%s = %s", ATTR_STREAM_ERROR, stream_it ? "TRUE" : "FALSE" );
+			InsertJobExpr( buffer );
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
 			InsertJobExpr( buffer );

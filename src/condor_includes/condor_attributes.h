@@ -317,6 +317,7 @@ const char ATTR_STARTER_ULOG_FILE        [] = "StarterUserLog";
 const char ATTR_STARTER_ULOG_USE_XML     [] = "StarterUserLogUseXML";
 const char ATTR_STARTER_WAIT_FOR_DEBUG   [] = "StarterWaitForDebug";
 const char ATTR_STATUS					 [] = "Status";
+const char ATTR_STREAM_INPUT			 [] = "StreamIn";
 const char ATTR_STREAM_OUTPUT			 [] = "StreamOut";
 const char ATTR_STREAM_ERROR			 [] = "StreamErr";
 const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";

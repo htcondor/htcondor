@@ -37,6 +37,7 @@
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "stream_handler.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -247,6 +248,12 @@ OsProc::StartJob()
 			starter_stdin = true;
 			dprintf( D_ALWAYS, "Input file: using STDIN of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamInput()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stdin",false)) {
+				Starter->jic->notifyStarterError("unable to establish standard input stream\n",true);
+			}
+			fds[0] = handler->GetJobPipe();
 		} else {
 			if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
 				failed_stdin = 1;
@@ -283,6 +290,12 @@ OsProc::StartJob()
 			starter_stdout = true;
 			dprintf( D_ALWAYS, "Output file: using STDOUT of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamOutput()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stdout",true)) {
+				Starter->jic->notifyStarterError("unable to establish standard output stream\n",true);
+			}
+			fds[1] = handler->GetJobPipe();
 		} else {
 			if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{
@@ -326,6 +339,12 @@ OsProc::StartJob()
 			starter_stderr = true;
 			dprintf( D_ALWAYS, "Error file: using STDERR of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamError()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stderr",true)) {
+				Starter->jic->notifyStarterError("unable to establish standard error stream\n",true);
+			}
+			fds[2] = handler->GetJobPipe();
 		} else {
 			if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{

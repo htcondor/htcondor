@@ -92,6 +92,10 @@ public:
 		*/
 	virtual const char* jobErrorFilename( void );	
 
+	virtual bool streamInput();
+	virtual bool streamOutput();
+	virtual bool streamError();
+
 		/** Return a pointer to the job's initial working directory. 
 		*/
 	virtual const char* jobIWD( void );

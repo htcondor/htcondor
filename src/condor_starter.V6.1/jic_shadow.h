@@ -58,6 +58,9 @@ public:
 		/// If needed, transfer files.
 	void setupJobEnvironment( void );
 
+	bool streamInput();
+	bool streamOutput();
+	bool streamError();
 
 		// // // // // // // // // // // //
 		// Information about the job 

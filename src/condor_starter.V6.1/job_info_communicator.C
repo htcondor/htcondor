@@ -134,6 +134,23 @@ JobInfoCommunicator::jobErrorFilename( void )
 	return (const char*) job_error_name;
 }
 
+bool
+JobInfoCommunicator::streamInput()
+{
+	return false;
+}
+
+bool
+JobInfoCommunicator::streamOutput()
+{
+	return false;
+}
+
+bool
+JobInfoCommunicator::streamError()
+{
+	return false;
+}
 
 const char*
 JobInfoCommunicator::jobIWD( void )

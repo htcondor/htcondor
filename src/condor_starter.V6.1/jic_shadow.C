@@ -229,6 +229,29 @@ JICShadow::setupJobEnvironment( void )
 	transferCompleted( NULL );
 }
 
+bool
+JICShadow::streamInput()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_INPUT,result);
+	return result;
+}
+
+bool
+JICShadow::streamOutput()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_OUTPUT,result);
+	return result;
+}
+
+bool
+JICShadow::streamError()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_ERROR,result);
+	return result;
+}
 
 float
 JICShadow::bytesSent( void )
