@@ -39,7 +39,7 @@ ExtArray (int sz)
 {
 	// create array of required size
 	size = sz;
-	last = 0;
+	last = -1;
 	array = new Element[size];
 	if (!array)
 	{
@@ -58,7 +58,6 @@ ExtArray (const ExtArray &old)
 	if (&old == this) return;
 
 	// establish new array of required size;
-	delete [] array;
 	size = old.size;
 	last = old.last;
 	array = new Element[size];

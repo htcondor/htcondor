@@ -92,7 +92,7 @@ getCanonical (char *str, int adopt)
 
 	// if case insensitive, convert to lower case
 	if( !caseSensitive ) {
-		for( int i = myStr.Length(); i >= 0 ; i++ ) {
+		for( int i = myStr.Length(); i >= 0 ; i-- ) {
 			myStr[i] = tolower( myStr[i] );
 		}
 	}
