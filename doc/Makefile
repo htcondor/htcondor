@@ -24,6 +24,8 @@ ADMIN_FILES = admin-man/admin.tex \
               admin-man/special.tex \
               admin-man/startd-states.eps \
               admin-man/startd-states.fig \
+              admin-man/startd-activities.eps \
+              admin-man/startd-activities.fig \
               admin-man/uid.tex
 
 admin.dvi:  admin.tex condor-macros.tex $(ADMIN_FILES)
@@ -76,6 +78,9 @@ admin-man/startd-states.eps: admin-man/startd-states.fig
 	rm -f admin-man/startd-states.eps
 	fig2dev -L ps -m .6 admin-man/startd-states.fig > admin-man/startd-states.eps 
 
+admin-man/startd-activities.eps: admin-man/startd-activities.fig
+	rm -f admin-man/startd-states.eps
+	fig2dev -L ps -m .6 admin-man/startd-activities.fig > admin-man/startd-activities.eps 
 
 clean:
 	rm -rf ref man user admin *.dvi *.ps *.html *.log *.aux *.toc
