@@ -35,11 +35,18 @@
 #include "get_daemon_addr.h"
 #include "get_full_hostname.h"
 #include "daemon_types.h"
+#include "sig_install.h"
+#include "command_strings.h"
 
 void doCommand( char *name );
 void version();
 void namePrintf( FILE* stream, char* name, char* str, ... );
 void handleAll();
+void doSquawk( char *addr );
+int handleSquawk( char *line, char *addr );
+int doSquawkReconnect( char *addr );
+void squawkHelp( char *token );
+int  printAdToFile(ClassAd *ad, char* filename);
 
 // Global variables
 int cmd = 0;
@@ -163,6 +170,10 @@ usage( char *str )
 				 "once", 
 				 "they are done checkpointing." );
 		break;
+	case SQUAWK:
+		fprintf( stderr, "  %s\n", str, 
+				 "is a developer-only command used to talk to daemons." );
+		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
@@ -208,6 +219,8 @@ cmdToStr( int c )
 		return "Reschedule";
 	case DC_RECONFIG:
 		return "Reconfig";
+	case SQUAWK:
+		return "Squawk";
 	}
 	fprintf( stderr, "Unknown Command (%d) in cmdToStr()\n", c );
 	exit(1);
@@ -305,6 +318,9 @@ main( int argc, char *argv[] )
 		cmd = VACATE_CLAIM;
 	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_JOB;
+	} else if ( !strcmp( cmd_str, "_squawk" ) ) {
+		cmd = SQUAWK;
+		takes_subsys = 1;
 	} else {
 		fprintf( stderr, "Error: unknown command %s\n", MyName );
 		usage( "condor" );
@@ -549,6 +565,15 @@ doCommand( char *name )
 		return;
 	}
 
+		/* Squawking does its own connect... */
+	if ( cmd == SQUAWK ) {
+		doSquawk( addr );
+		printf ( "Bye!\n" );
+		done = 1;
+		RESTORE;
+		return;
+	}
+
 		/* Connect to the daemon */
 	ReliSock sock;
 	if(!sock.connect(addr)) {
@@ -715,6 +740,294 @@ handleAll()
 		// Todo *grin*
 }
 
+void
+doSquawk( char *address ) {
+
+		/* making own addr here; memory management in tool confusing. */
+	char line[256], addr[256];
+	int i, done = FALSE;
+	strcpy( addr, address );
+	
+	while ( !done ) {
+		printf ( "> " );
+		fflush ( stdout );
+
+		if ( !fgets( line, 256, stdin ) ) {
+			done = TRUE;
+		} else {
+			for ( i=0 ; line[i] != '\0' ; i++ ) {
+				line[i] = tolower ( line[i] );
+			}
+			if ( line[i-1] == '\n' ) { 
+				line[i-1] = '\0';
+			}
+			done = ! handleSquawk( line, addr );
+		}
+	}
+}
+
+int
+handleSquawk( char *line, char *addr ) {
+	
+	char *token;
+	int command, signal;
+
+	token = strtok( line, " " );
+
+	if ( !token ) return TRUE;
+	
+	switch ( token[0] ) {
+	case 'e': /* exit */
+	case 'q': /* quit */
+		return FALSE;
+		
+	case 'd': { /* dump state */
+		ReliSock sock;
+		if ( !sock.connect( addr ) ) {
+			printf ( "Problems connecting to %s\n", addr );
+			return TRUE;
+		}
+		sock.encode();
+		sock.put( DUMP_STATE );
+		sock.eom();
+		sock.decode();
+		ClassAd *ad = new ClassAd;
+		ad->get ( sock );
+
+		printAdToFile( ad, NULL );
+		
+		delete ad;
+		
+		return TRUE;
+	}
+	case 's':  { /* Send a DC signal */
+		token = strtok( NULL, " " );
+		if ( !token ) {
+			printf ( "You must specify a signal to send.\n" );
+			return TRUE;
+		}
+		if ( strncmp( token, "dc_", 3 ) ) {
+			printf ( "The signal must be a daemoncore signal "
+					 "(starts with DC_).\n" );
+			return TRUE;
+		}
+		
+		signal = get_command_num ( token );
+		if ( signal == -1 ) {
+			printf ( "Signal %s not known.\n", token );
+			return TRUE;
+		}
+		
+		ReliSock sock;
+		if ( !sock.connect( addr ) ) {
+			printf ( "Problems connecting to %s\n", addr );
+			return TRUE;
+		}
+		sock.encode();
+		sock.put( DC_RAISESIGNAL );
+		sock.code( signal );
+		sock.eom();
+		
+		return TRUE;
+	}
+	case 'c': { /* Send a DC Command */
+		token = strtok( NULL, " " );
+		if ( !token ) {
+			printf ( "You must specify a command to send.\n" );
+			return TRUE;
+		}
+		
+		command = get_command_num ( token );
+		if ( command == -1 ) {
+			printf ( "Command %s not known.\n", token );
+			return TRUE;
+		}
+
+		ReliSock sock;
+		if ( !sock.connect( addr ) ) {
+			printf ( "Problems connecting to %s\n", addr );
+			return TRUE;
+		}
+		sock.encode();
+		sock.code( command );
+		while ( token = strtok( NULL, " " ) ) {
+			if ( isdigit(token[0]) ) {
+				int dig = atoi( token );
+				if ( !sock.code( dig ) ) {
+					printf ( "Error coding %d.\n", dig );
+					return TRUE;
+				}
+			} else {
+				if ( !sock.code( token ) ) {
+					printf ( "Error coding %s.\n", token );
+					return TRUE;
+				}
+			}
+		}
+		sock.eom();
+
+		return TRUE;
+	}
+	case 'r':
+		if ( doSquawkReconnect( addr ) ) {
+			printf ( "Now talking to %s.\n", addr );
+		}
+		return TRUE;
+
+	case '\n':
+		return TRUE;
+
+	case 'h': /* help */
+		if ( ( token = strtok( NULL, " " )) != NULL ) {
+			squawkHelp( token );
+			return TRUE;
+		}
+			/* Generic help falls thru to here: */
+	default:
+		printf( "Valid commands are \"help\", \"signal\", \"command\"," );
+		printf( "\"reconnect\",\n\"dump\" (state into a ClassAd) and" );
+		printf( "\"quit\".\n");
+		return TRUE;
+	} /* switch */		
+
+	return TRUE; /* for a happy C++ compiler */
+}
+
+int
+doSquawkReconnect( char *addr ) {
+	
+	char *token;
+	
+	if ( (token = strtok( NULL, " " )) == NULL ) {
+		printf ( "You must specify a daemon to connect to...\n" );
+		return FALSE;
+	}
+	
+	if ( token[0] == '<' ) {
+		strcpy( addr, token );
+		return TRUE;
+	}
+	
+		/* get -pool if it exists */
+	if ( token[0] == '-' && token[1] == 'p' ) {
+		if ( (token = strtok( NULL, " " )) == NULL ) {
+			printf ( "-pool needs another argument...\n" );
+			return FALSE;
+		}
+		char *tmp = token;
+		if ( (token = strtok( NULL, " " )) == NULL ) {
+			printf ( "Need more arguments.\n" );
+			return FALSE;
+		}
+		
+		if ( pool ) delete pool;
+		
+		if( (pool = get_full_hostname((const char *)(tmp))) == NULL ) {
+			fprintf( stderr, "Unknown host %s\n", tmp );
+			return FALSE;
+		} else {
+			printf ( "Using pool %s.\n", tmp );
+		}
+	}
+	
+		/* get hostname */
+	char *hostname;
+	if( ( hostname = get_daemon_name(token)) == NULL ) {
+		printf( "Unknown host %s\n", get_host_part(token) );
+		return FALSE;
+	}
+	
+	if ( (token = strtok( NULL, " " )) == NULL ) {
+		dt = DT_MASTER;
+	} else {
+		switch ( token[1] ) {  /* skip '-' */
+		case 's':
+			if ( token[2] == 't' ) dt = DT_STARTD;
+			else if ( token[2] == 'c' ) dt = DT_SCHEDD;
+			else dt = DT_MASTER;
+			break;
+		case 'c':
+			dt = DT_COLLECTOR;
+			break;
+		case 'm':
+			dt = DT_MASTER;
+			break;
+		case 'n':
+			dt = DT_NEGOTIATOR;
+			break;
+		case 'k':
+			dt = DT_KBDD;
+			break;
+		default:
+			dt = DT_MASTER;
+		}
+	}
+	char *tmp = get_daemon_addr( dt, hostname, pool );
+	if ( !tmp ) {
+		printf ( "Failed to contact daemon.\n" );
+		return FALSE;
+	}
+	strcpy ( addr, tmp );
+	delete [] hostname;
+	
+	return TRUE;	
+}
+
+void squawkHelp( char *token ) {
+	switch( token[0] ) {
+	case 's': 
+		printf ( "Send a daemoncore signal.\n" ); 
+		break;
+	case 'c': 
+		printf ( "Send a daemoncore command.  Each word after "
+				 "the command\nwill also be sent.  If you send "
+				 "a number, it will be sent\nas an integer.\n" );
+		break;
+	case 'r':
+		printf( "Connect to a different daemon.  The format is:\n" );
+		printf( "reconnect <host:port> or\n" );
+		printf( "reconnect [-pool poolname] hostname [-deamontype]\n");
+		break;
+	case 'e':
+	case 'q':
+		printf( "Terminates this squawking session.\n" );
+		break;
+	default:
+		printf ( "Don't know command %s.\n", token );
+	}
+}
+
+int 
+printAdToFile(ClassAd *ad, char* filename) {
+
+	FILE *fp;
+
+	if ( filename ) {
+	    if ( (fp = fopen(filename,"a")) == NULL ) {
+			printf ( "ERROR appending to %s.\n", filename );
+			return FALSE;
+		}
+	} else {
+		fp = stdout;
+	}
+
+    if (!ad->fPrint(fp)) {
+        printf( "ERROR - failed to write ad to file.\n" );
+        if ( filename ) fclose(fp);
+        return FALSE;
+    }
+    fprintf(fp,"***\n");   // separator
+	
+	if ( filename ) {
+		fclose(fp);
+	} 		
+
+    return TRUE;
+}
+
+
 extern "C" int SetSyscalls() {return 0;}
+
+
 
 
