@@ -26,6 +26,7 @@
 #include "except.h"
 #include "debug.h"
 #include "dgram_io_handle.h"
+#include "condor_socket_types.h"
 
 
 unsigned short find_port_num( const char *service_name, 
@@ -321,6 +322,9 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 	fd_set  		readfds;
 	struct timeval 	timer;
 	int				newsock;
+	SOCKET_LENGTH_TYPE slt_len;
+
+	slt_len = *len;
 
     timer.tv_sec = timeout;
     timer.tv_usec = 0;
@@ -349,7 +353,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
     if( count == 0 ) {
 		return -2;
     } else if( FD_ISSET(ConnectionSock,&readfds) ) {
-		newsock =  accept( ConnectionSock, (struct sockaddr *)sin, len);
+		newsock =  accept( ConnectionSock, (struct sockaddr *)sin, &slt_len);
 		if ( newsock > -1 ) {
 			int on = 1;
 			setsockopt( newsock, SOL_SOCKET, SO_KEEPALIVE, (char*)&on,
