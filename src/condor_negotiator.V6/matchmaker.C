@@ -644,6 +644,11 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	// 2.  negotiation loop with schedd
 	for (i = 0; i < scheddLimit;  i++)
 	{
+		// Service any interactive commands on our command socket.
+		// This keeps condor_userprio hanging to a minimum when
+		// we are involved in a lot of schedd negotiating.
+		daemonCore->ServiceCommandSocket();
+
 		// 2a.  ask for job information
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
