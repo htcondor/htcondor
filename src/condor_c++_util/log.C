@@ -44,14 +44,14 @@ LogRecord::readword(int fd, char * &str)
 	int		i, rval, bufsize = 1024;
 	char	*buf = (char *)malloc(bufsize);
 
-	// ignore leading whitespace
+	// ignore leading whitespace but don't pass newline
 	do {
 		rval = read(fd, &(buf[0]), 1);
-		if (rval <= 0) {
+		if (rval < 0) {
 			free(buf);
 			return -1;
 		}
-	} while (isspace(buf[0]));
+	} while( rval>0 && isspace(buf[0]) && buf[0]!='\n' );
 
 	// read until whitespace
 	for (i = 1; rval > 0 && !isspace(buf[i-1]) && buf[i-1] != '\0'; i++) {
@@ -60,15 +60,18 @@ LogRecord::readword(int fd, char * &str)
 			bufsize *= 2;
 		} 
 		rval = read(fd, &(buf[i]), 1);
-		if (rval < 0) {
-			free(buf);
-			return rval;
-		}
 	}
+
+		// check for error (no input is also an error)
+	if (rval <= 0 || i==1 ) {
+		free(buf);
+		return -1;
+	}
+
 	buf[i-1] = '\0';
 	str = strdup(buf);
 	free(buf);
-	return i;
+	return i-1;
 }
 
 int
@@ -77,14 +80,14 @@ LogRecord::readword(FILE *fp, char * &str)
 	int		i, bufsize = 1024;
 	char	*buf = (char *)malloc(bufsize);
 
-	// ignore leading whitespace
+	// ignore leading whitespace but don't pass newline
 	do {
 		buf[0] = fgetc( fp );
 		if( buf[0] == EOF && !feof( fp ) ) {
 			free( buf );
 			return( -1 );
 		}
-	} while (isspace(buf[0]) && buf[0] != EOF );
+	} while (isspace(buf[0]) && buf[0]!=EOF && buf[0]!='\n' );
 
 	// read until whitespace
 	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0' && buf[i-1]!=EOF; i++) {
@@ -98,10 +101,17 @@ LogRecord::readword(FILE *fp, char * &str)
 			return( -1 );
 		}
 	}
+
+		// no input is also an error
+	if( feof( fp ) || i==1 ) {
+		free( buf );
+		return( -1 );
+	}
+
 	buf[i-1] = '\0';
 	str = strdup(buf);
 	free(buf);
-	return i;
+	return i-1;
 }
 
 
@@ -111,13 +121,13 @@ LogRecord::readline(int fd, char * &str)
 	int		i, rval, bufsize = 1024;
 	char	*buf = (char *)malloc(bufsize);
 
-	// ignore leading whitespace
+	// ignore leading whitespace but don't pass newline
 	do {
 		rval = read(fd, &(buf[0]), 1);
 		if (rval < 0) {
 			return rval;
 		}
-	} while (isspace(buf[0]));
+	} while( rval>0 && isspace(buf[0]) && buf[0] != '\n' );
 
 	// read until newline
 	for (i = 1; rval > 0 && buf[i-1] != '\n' && buf[i-1] != '\0'; i++) {
@@ -126,14 +136,18 @@ LogRecord::readline(int fd, char * &str)
 			bufsize *= 2;
 		}
 		rval = read(fd, &(buf[i]), 1);
-		if (rval < 0) {
-			return rval;
-		}
 	}
+
+		// report read errors, EOF and no input as errors
+	if (rval <= 0 || i==1 ) {
+		free(buf);
+		return -1;
+	}
+
 	buf[i-1] = '\0';
 	str = strdup(buf);
 	free(buf);
-	return i;
+	return i-1;
 }
 
 int
@@ -142,14 +156,14 @@ LogRecord::readline(FILE *fp, char * &str)
 	int		i, bufsize = 1024;
 	char	*buf = (char *)malloc(bufsize);
 
-	// ignore leading whitespace
+	// ignore leading whitespace but don't pass newline
 	do {
 		buf[0] = fgetc( fp );
 		if( buf[0] == EOF && !feof( fp ) ) {
 			free( buf );
 			return( -1 );
 		}
-	} while (isspace(buf[0]) && buf[0] != EOF );
+	} while( isspace(buf[0]) && buf[0] != EOF && buf[0] != '\n' );
 
 	// read until newline
 	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {
@@ -163,10 +177,17 @@ LogRecord::readline(FILE *fp, char * &str)
 			return( -1 );
 		}
 	}
+
+		// treat no input as newline
+	if( feof( fp ) || i==1 ) {
+		free( buf );
+		return( -1 );
+	}
+
 	buf[i-1] = '\0';
 	str = strdup(buf);
 	free(buf);
-	return i;
+	return i-1;
 }
 
 int
@@ -261,14 +282,14 @@ LogRecord::ReadHeader(FILE *fp)
 int
 LogRecord::ReadTail(FILE *fp)
 {
-	return 0;
+	return( 0 );
 }
 
 
 int
 LogRecord::ReadTail(int fd)
 {
-	return 0;
+	return( 0 );
 }
 
 

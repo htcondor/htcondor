@@ -56,11 +56,12 @@ public:
 
 	virtual int Play(void *) { return 0; }
 
+	static int readword(FILE*, char *&);
+	static int readline(FILE*, char *&);
+	static int readword(int, char *&);
+	static int readline(int, char *&);
+
 protected:
-	int readword(FILE*, char *&);
-	int readline(FILE*, char *&);
-	int readword(int, char *&);
-	int readline(int, char *&);
 	int op_type;	/* This is the type of operation being performed */
 
 private:
