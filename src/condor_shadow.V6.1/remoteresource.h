@@ -38,8 +38,21 @@
 
 	For all functions that start with 'get' and are passed a char*, 
 	the following applies: if a NULL value is passed in as the argument, 
-	space is new'ed for you.  If the parameter is not NULL, it is 
-	assumed to point to valid memory, and the char* will be copied in.<p>
+	space is new'ed for you, *unless* the member you requested is NULL.  
+	If it is NULL, space is not new'ed and a NULL is returned.  If the 
+	parameter you pass is not NULL, it is assumed to point to valid memory, 
+	and the char* will be copied in.  If the member you request is NULL, 
+	the parameter you passed in will be set to "".<p>
+	
+    <b>Summary of get* functions:</b><p>
+	<pre>
+	Parameter  Member   Results
+	---------  ------   ----------
+	  NULL     exists    string strnewp'ed and returned
+	  NULL      NULL     NULL returned
+	 !NULL     exists    strcpy occurs
+	 !NULL      NULL     "" into parameter
+	</pre>
 
 	More to come...<p>
 
@@ -60,12 +73,6 @@ class RemoteResource : public Service {
 		*/
 	RemoteResource( BaseShadow *shadow, const char * executingHost, 
 					const char * capability );
-
-		/** Copy Constructor */
-	RemoteResource( const RemoteResource& );
-
-		/** Asignment operator */
-	RemoteResource& operator = ( const RemoteResource& );
 
 		/// Destructor
 	~RemoteResource();
@@ -98,25 +105,22 @@ class RemoteResource : public Service {
 		*/
 	int handleSysCalls( Stream *sock );
 
-		/** Return the sinful string of the remote host.  If it is NULL, 
-			a "" will be returned.
+		/** Return the sinful string of the remote host.
 			@param executingHost Will contain the host's sinful string.
 		*/ 
 	void getExecutingHost( char *& executingHost );
 
-		/** Return the machine name of the remote host.  If it is NULL, 
-			a "" will be returned.
+		/** Return the machine name of the remote host.
 			@param machineName Will contain the host's machine name.
 		*/ 
 	void getMachineName( char *& machineName );
 
-		/** Return the capability for talking to the host.  If is is
-			NULL, a "" will be returned.
+		/** Return the capability for talking to the host.
 			@param capability Will contain the capability for the host.
 		*/ 
 	void getCapability( char *& capability );
 	
-		/** Return the sinful string of the starter.  If NULL, a "" returned.
+		/** Return the sinful string of the starter.
 			@param starterAddr Will contain the starter's sinful string.
 		*/
 	void getStarterAddress( char *& starterAddr );
@@ -192,10 +196,10 @@ class RemoteResource : public Service {
 	char *executingHost;
 	char *machineName;
 	char *capability;
+	char *starterAddress;
 	ReliSock *claimSock;
 	int exitReason;
 	int exitStatus;
-	char *starterAddress;
 
 		/// This is the timeout period to hear from a startd.  (90 seconds).
 	static const int SHADOW_SOCK_TIMEOUT;
@@ -212,6 +216,16 @@ class RemoteResource : public Service {
 		// we keep a pointer to the shadow class around.  This is useful
 		// in handleSysCalls.
 	BaseShadow *shadow;
+	
+ private:
+		// initialization done in both constructors.
+	void init ( BaseShadow *shad );
+
+		// Making these private PREVENTS copying.
+	RemoteResource( const RemoteResource& );
+	RemoteResource& operator = ( const RemoteResource& );
+
+
 };
 
 

@@ -27,7 +27,7 @@
 #include "remoteresource.h"
 #include "exit.h"             // for JOB_BLAH_BLAH exit reasons
 #include "condor_debug.h"     // for D_debuglevel #defines
-
+#include "condor_string.h"    // for strnewp()
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h) */
 
@@ -41,41 +41,30 @@ RemoteResource *thisRemoteResource;
 // 90 seconds to wait for a socket timeout:
 const int RemoteResource::SHADOW_SOCK_TIMEOUT = 90;
 
-RemoteResource::RemoteResource( BaseShadow *shad ) {
-	shadow = shad;
+RemoteResource::RemoteResource( BaseShadow *shad ) 
+{
 	executingHost = NULL;
-	machineName = NULL;
 	capability = NULL;
-	starterAddress = NULL;
-	jobAd = NULL;
-	claimSock = new ReliSock();
-	exitReason = exitStatus = -1;
+	init( shad );
 }
 
-RemoteResource::RemoteResource( BaseShadow *shad, const char * eHost, 
-								const char * cbility ) {
+RemoteResource::RemoteResource( BaseShadow * shad, 
+								const char * eHost, 
+								const char * cbility )
+{
+	executingHost = strnewp( eHost );
+	capability    = strnewp( cbility );
+	init( shad );
+}
 
-	executingHost = new char[strlen(eHost)+1];
-	capability = new char[strlen(cbility)+1];
-
-	strcpy( executingHost, eHost );
-	strcpy( capability, cbility );
-
+void RemoteResource::init( BaseShadow *shad ) {
 	shadow = shad;
 	machineName = NULL;
 	starterAddress = NULL;
 	jobAd = NULL;
 	claimSock = new ReliSock();
 	exitReason = exitStatus = -1;
-}
-
-RemoteResource::RemoteResource( const RemoteResource & ) {
-		// XXX must implement!
-}
-
-RemoteResource& RemoteResource::operator = ( const RemoteResource& ) {
-		// XXX must implement!
-}
+}	
 
 RemoteResource::~RemoteResource() {
 	if ( executingHost ) delete [] executingHost;
@@ -205,79 +194,55 @@ int RemoteResource::handleSysCalls( Stream *sock ) {
 }
 
 void RemoteResource::getExecutingHost( char *& eHost ) {
-		// yes, this looks yucky, but I wanted to cover all the cases...
 
 	if (!eHost) {
-		int len;
-		if ( executingHost )
-			len = strlen(executingHost)+1;
-		else
-			len = 1;
-
-		eHost = new char[len];
+		eHost = strnewp ( executingHost );
+	} else {
+		if ( executingHost ) {
+			strcpy ( eHost, executingHost );
+		} else {
+			eHost[0] = '\0';
+		}
 	}
-	
-	if ( executingHost )
-		strcpy ( eHost, executingHost );
-	else
-		eHost[0] = '\0';
 }
 
 void RemoteResource::getMachineName( char *& mName ) {
-		// yes, this looks yucky, but I wanted to cover all the cases...
 
-	if (!mName) {
-		int len;
-		if ( machineName )
-			len = strlen(machineName)+1;
-		else
-			len = 1;
-
-		mName = new char[len];
+	if ( !mName ) {
+		mName = strnewp( machineName );
+	} else {
+		if ( machineName ) {
+			strcpy( mName, machineName );
+		} else {
+			mName[0] = '\0';
+		}
 	}
-	
-	if ( machineName )
-		strcpy ( mName, machineName );
-	else
-		mName[0] = '\0';
-}
+}			
 
 void RemoteResource::getCapability( char *& cbility ) {
-		// yes, this looks yucky, but I wanted to cover all the cases...
 
 	if (!cbility) {
-		int len;
-		if ( capability )
-			len = strlen(capability)+1;
-		else
-			len = 1;
-
-		cbility = new char[len];
+		cbility = strnewp( capability );
+	} else {
+		if ( capability ) {
+			strcpy( cbility, capability );
+		} else {
+			cbility[0] = '\0';
+		}
 	}
-	
-	if ( capability )
-		strcpy ( cbility, capability );
-	else
-		cbility[0] = '\0';
 }
 
 void RemoteResource::getStarterAddress( char *& starterAddr ) {
-		// yes, this looks yucky, but I wanted to cover all the cases...
 
 	if (!starterAddr) {
-		int len;
-		if ( starterAddress )
-			len = strlen(starterAddress)+1;
-		else
-			len = 1;
-
-		starterAddr = new char[len];
+		starterAddr = strnewp( starterAddress );
+	} else {
+		if ( starterAddress ) {
+			strcpy( starterAddr, starterAddress );
+		} else {
+			starterAddr[0] = '\0';
+		}
 	}
-	
-	if ( starterAddress )
-		strcpy ( starterAddr, starterAddress );
-	else
-		starterAddr[0] = '\0';
 }
 
 ReliSock* RemoteResource::getClaimSock() {
@@ -293,47 +258,35 @@ int RemoteResource::getExitStatus() {
 }
 
 void RemoteResource::setExecutingHost( const char * eHost ) {
-	if ( !eHost )
-		return;
 
 	if ( executingHost )
 		delete [] executingHost;
 	
-	executingHost = new char[strlen(eHost)+1];
-	strcpy( executingHost, eHost );
+	executingHost = strnewp( eHost );
 }
 
 void RemoteResource::setMachineName( const char * mName ) {
-	if ( !mName )
-		return;
 
 	if ( machineName )
 		delete [] machineName;
 	
-	machineName = new char[strlen(mName)+1];
-	strcpy( machineName, mName );
+	machineName = strnewp ( mName );
 }
 
 void RemoteResource::setCapability( const char * cbility ) {
-	if ( !cbility )
-		return;
 
 	if ( capability )
 		delete [] capability;
 	
-	capability = new char[strlen(cbility)+1];
-	strcpy( capability, cbility );
+	capability = strnewp ( cbility );
 }
 
 void RemoteResource::setStarterAddress( const char * starterAddr ) {
-	if ( !starterAddr )
-		return;
 
 	if ( starterAddress )
 		delete [] starterAddress;
 	
-	starterAddress = new char[strlen(starterAddr)+1];
-	strcpy( starterAddress, starterAddr );
+	starterAddress = strnewp( starterAddr );
 }
 
 void RemoteResource::setClaimSock( ReliSock * cSock ) {
