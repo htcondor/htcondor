@@ -16,6 +16,8 @@
 #include "condor_ast.h"
 #include "condor_attrlist.h"
 
+#include "stream.h"
+
 struct AdType                   // type of a ClassAd.
 {
     int		number;             // type number, internal thing.
@@ -49,6 +51,10 @@ class ClassAd : public AttrList
 		friend bool operator==(ClassAd&,ClassAd&);// same as symmetric match
 		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
 		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
+
+        int put(Stream& s);
+        int get(Stream& s);
+        int code(Stream& s);
 
     private :
 

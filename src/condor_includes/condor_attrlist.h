@@ -14,6 +14,8 @@
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
 
+#include "stream.h"
+
 enum							// various AttrLists
 {
     ATTRLISTENTITY,
@@ -104,6 +106,11 @@ class AttrList : public AttrListAbstract
 
 		int			fPrintExpr(FILE*, char*);	// print an expression
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+
+		// shipping functions
+        int put(Stream& s);
+        int get(Stream& s);
+        int code(Stream& s);
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
