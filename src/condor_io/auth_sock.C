@@ -55,14 +55,30 @@ AuthSock::lookup_user( char *client_name ) {
 	char command[MAXPATHLEN+32];
 
 	sprintf( filename, "%s/index.txt", getenv( "X509_CERT_DIR" ) );
-//fix this to do a better job, this is just a quick hack!
-	sprintf( command, "grep -q 'V.*%s' %s", client_name, filename );
 
-	if ( system( command ) ) {
-		dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
-				client_name, filename );
+	FILE *index;
+	if ( !(index = fopen(  filename, "r" ) ) ) {
+		dprintf( D_ALWAYS, "unable to open index file %s, errno %d\n", 
+				filename, errno );
 		return -1;
 	}
+
+	//find entry
+	int found = 0;
+	char line[81];
+	while ( !found && fgets( line, 80, index ) ) {
+		//Valid user entries have 'V' as first byte in their cert db entry
+		if ( line[0] == 'V' &&  strstr( line, client_name ) ) {
+			found = 1;
+		}
+	}
+	fclose( index );
+	if ( !found ) {
+		dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
+				filename, client_name );
+		return( -1 );
+	}
+
 	dprintf( D_ALWAYS,"GSS authenticated %s\n", client_name );
 	return 0;
 }
@@ -169,6 +185,7 @@ AuthSock::authenticate_user()
 	{
 		dprintf( D_ALWAYS, "gss-api failure initializing user credentials, "
 				"stats: 0x%x\n", major_status );
+		credential_handle = GSS_C_NO_CREDENTIAL; 
 		return FALSE;
 	}
 
@@ -218,10 +235,6 @@ AuthSock::auth_connection_client()
 								major_status );
 		return FALSE;
 	}
-
-//	decode();
-//	code( GSSClientname );
-//	end_of_message();
 
 	/* 
 	 * once connection is authenticated, don't need sec_context any more
@@ -284,10 +297,6 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 		}
 		return FALSE;
 	}
-
-//	authsock.encode();
-//	authsock.code( authsock.GSSClientname );
-//	authsock.end_of_message();
 
 	/* 
 	 * once connection is authenticated, don't need sec_context any more
