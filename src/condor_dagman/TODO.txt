@@ -1,3 +1,6 @@
+- new -maxidlejobs throttle [for CDF (Igor Sfiligoi); see Message-Id
+  <5.2.0.9.2.20031229065542.03a5aec0@cobalt.cs.wisc.edu>]
+
 - one-at-a-time node constraint feature for Ewa Deelman (miron has
   thoughts on how this should be done more generally)
 
