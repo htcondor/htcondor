@@ -764,6 +764,12 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					connect_failure = true;
+					break;
+				}
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR("refresh_credentials()",rc);
