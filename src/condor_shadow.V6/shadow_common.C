@@ -560,7 +560,7 @@ part_send_job(
   /* Send the job info */
   if (!JobAd) {   // just get the job ad from the schedd once
 	//new syntax, can use filesystem to authenticate
-  	ConnectQ(schedd,0,0,1);
+  	ConnectQ(schedd);
   	JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
   	DisconnectQ(NULL);
   }
