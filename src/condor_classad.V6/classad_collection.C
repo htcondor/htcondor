@@ -1,6 +1,5 @@
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_attributes.h"
 
 #include "classad_collection.h"
 #include "classad_collection_ops.h"
