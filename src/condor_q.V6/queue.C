@@ -1695,7 +1695,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		return big_return_buff;
 	}
 
-	request_copy = request->Copy( );
+	request_copy = (ClassAd *)request->Copy( );
 	mad.ReplaceLeftAd( request_copy );	// NAC
 
   	startdAds.Open();
