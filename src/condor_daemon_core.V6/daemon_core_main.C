@@ -771,6 +771,12 @@ unix_sigusr1(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 }
 
+void
+unix_sigusr2(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+}
+
 #endif /* ! WIN32 */
 
 
@@ -1033,6 +1039,7 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
+	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif // of ifndef WIN32
 
