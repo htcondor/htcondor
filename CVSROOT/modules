@@ -77,7 +77,10 @@ V6_SRC		-a \
 			src/condor_classad \
 			src/condor_collector.V6 \
 			src/condor_daemon_core.V6 \
+			src/condor_dagman \
+			src/condor_eventd \
 			src/condor_examples \
+			src/condor_globus \
 			src/condor_includes \
 			src/condor_io \
 			src/condor_kbdd \
@@ -106,8 +109,6 @@ V6_SRC		-a \
 			src/condor_tools \
 			src/condor_userlog \
 			src/condor_util_lib \
-			src/condor_dagman \
-			src/condor_eventd \
 			src/h \
 			src/html
 
