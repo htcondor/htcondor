@@ -63,11 +63,11 @@ Matchmaker ()
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 //	Parse (buf, rankCondStd);
-	parser.ParseExpression( string( buf ), rankCondStd );
+	parser.ParseExpression( std::string( buf ), rankCondStd );
 	
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 //	Parse (buf, rankCondPrioPreempt);
-	parser.ParseExpression( string( buf ), rankCondPrioPreempt );
+	parser.ParseExpression( std::string( buf ), rankCondPrioPreempt );
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
@@ -178,7 +178,7 @@ reinitialize ()
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
 //		if( Parse(tmp, PreemptionReq) ) {
-		if( !parser.ParseExpression( string( tmp ), PreemptionReq ) ) {
+		if( !parser.ParseExpression( std::string( tmp ), PreemptionReq ) ) {
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
@@ -197,7 +197,7 @@ reinitialize ()
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
 //		if( Parse(tmp, PreemptionRank) ) {
-		if( !parser.ParseExpression( string( tmp ), PreemptionRank ) ) {
+		if( !parser.ParseExpression( std::string( tmp ), PreemptionRank ) ) {
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
@@ -210,7 +210,8 @@ reinitialize ()
 	NegotiatorPreJobRank = NULL;
 	tmp = param("NEGOTIATOR_PRE_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPreJobRank) ) {
+        //if( Parse(tmp, NegotiatorPreJobRank) ) {
+		if( !parser.ParseExpression( std::string( tmp ), NegotiatorPreJobRank ) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 	}
@@ -223,7 +224,8 @@ reinitialize ()
 	NegotiatorPostJobRank = NULL;
 	tmp = param("NEGOTIATOR_POST_JOB_RANK");
 	if( tmp ) {
-		if( Parse(tmp, NegotiatorPostJobRank) ) {
+		//if( Parse(tmp, NegotiatorPostJobRank) ) {
+		if( !parser.ParseExpression( std::string( tmp ), NegotiatorPostJobRank ) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 	}
