@@ -40,6 +40,17 @@ if it encounters a double run of the same node job (set the
 \item Fixed a \Condor{dagman} bug that could cause it to leave jobs running
 when aborting a DAG.
 
+\item Fixed a bug in Condor's file transfer mechanism that showed up
+  when users tried to use streaming output for either STDOUT or
+  STDERR.
+  There were situations where Condor would attempt to transfer back
+  the STDOUT or STDERR file from the execution host, even though these
+  files didn't exist and all the data was already streamed back to the
+  submit host.
+  Now, if either \Attr{stream_output} or \Attr{stream_error} are set
+  to true, Condor will transfer any other output but will not attempt
+  to transfer back STDOUT or STDERR.
+
 \end{itemize}
 
 \noindent Known Bugs:
