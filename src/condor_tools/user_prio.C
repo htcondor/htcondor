@@ -26,7 +26,6 @@
 //-----------------------------------------------------------------
 
 #include "condor_common.h"
-#include <iostream.h>
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "condor_classad.h"
@@ -34,6 +33,7 @@
 #include "condor_io.h"
 #include "MyString.h"
 #include "format_time.h"
+#include "daemon.h"
 
 //-----------------------------------------------------------------
 
@@ -79,7 +79,7 @@ main(int argc, char* argv[])
   int SetPrio=0;
   bool ResetAll=false;
   int GetResList=0;
-  MyString NegotiatorHost;
+  char* pool = NULL;
 
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
@@ -130,7 +130,7 @@ main(int argc, char* argv[])
     }
     else if (strcmp(argv[i],"-pool")==0) {
       if (argc-i<=1) usage(argv[0]);
-      NegotiatorHost=argv[i+1];
+      pool = argv[i+1];
       i++;
 	}
     else {
@@ -140,18 +140,8 @@ main(int argc, char* argv[])
       
   //----------------------------------------------------------
 
-  if (NegotiatorHost.Length()==0) {
-    config( 0 );
-    char* tmp=param("NEGOTIATOR_HOST");
-    if (!tmp) {
-      tmp=param("NEGOTIATOR_HOST");
-      if (!tmp) {
-        fprintf( stderr, "No NegotiatorHost host specified in config file\n" );
-	    exit(1);
-      }
-    }
-    NegotiatorHost=tmp;
-  }
+	  // Get into on our negotiator
+  Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
 
   if (SetPrio) { // set priority
 
@@ -169,7 +159,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(SET_PRIORITY) ||
         !sock.put(argv[SetPrio+1]) ||
         !sock.put(Priority) ||
@@ -198,7 +188,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(SET_PRIORITYFACTOR) ||
         !sock.put(argv[SetFactor+1]) ||
         !sock.put(Factor) ||
@@ -226,7 +216,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(RESET_USAGE) ||
         !sock.put(argv[ResetUsage+1]) ||
         !sock.end_of_message()) {
@@ -243,7 +233,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(RESET_ALL_USAGE) ||
         !sock.end_of_message()) {
       fprintf( stderr, "failed to send RESET_ALL_USAGE command to negotiator\n" );
@@ -269,7 +259,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(GET_RESLIST) ||
         !sock.put(argv[GetResList+1]) ||
         !sock.end_of_message()) {
@@ -295,7 +285,7 @@ main(int argc, char* argv[])
     // send request
     ReliSock sock;
     sock.encode();
-    if (!sock.connect((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT) ||
+    if (!sock.connect(negotiator.addr(), 0) ||
 		!sock.put(GET_PRIORITY) ||
         !sock.end_of_message()) {
       fprintf( stderr, "failed to send GET_PRIORITY command to negotiator\n" );
