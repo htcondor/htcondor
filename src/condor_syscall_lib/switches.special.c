@@ -48,7 +48,8 @@ int _lxstat(int, const char *, struct stat *);
 #	endif
 #endif
 
-#include <sys/uio.h>
+#include "condor_fix_sys_uio.h"
+
 #include "debug.h"
 
 #if defined(IRIX53)
@@ -924,6 +925,12 @@ getlogin()
 
 #if defined( LINUX  )
 
+#if defined(GLIBC) 
+#	define MMAP_T char*
+#else
+#	define MMAP_T void*
+#endif
+
 /* 
    Linux's mmap can be passed a special flag, MAP_ANONYMOUS, which
    means that you don't want to use a file, in which case, mmap
@@ -931,10 +938,14 @@ getlogin()
    here, and if it's set, don't do anything with the fd we were passed
    and always do the mmap locally.  The C library uses mmap with
    MAP_ANONYMOUS to allocate I/O buffers.  -Derek Wright 3/12/98 
+
+   Plus, glibc's mmap returns and takes as it's first arg a caddr_t,
+   which is really a char*
+
 */
 #include <sys/mman.h>		/* for MAP_ANONYMOUS */
-void*
-mmap( void* a, size_t l, int p, int f, int fd, off_t o )
+MMAP_T
+mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 {
 	int		rval;
 	int		user_fd;
@@ -946,7 +957,7 @@ mmap( void* a, size_t l, int p, int f, int fd, off_t o )
 		use_local_access = TRUE;
 	} else {
 		if( (user_fd=MapFd(fd)) < 0 ) {
-			return (void *)-1;
+			return (MMAP_T)-1;
 		}
 		if( LocalAccess(fd) ) {
 			use_local_access = TRUE;
@@ -958,8 +969,8 @@ mmap( void* a, size_t l, int p, int f, int fd, off_t o )
 		rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
 	}
 	
-	return (void *)rval;
+	return (MMAP_T)rval;
 }
-
+#undef MMAP_T
 #endif /* defined( LINUX ) */
 
