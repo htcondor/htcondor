@@ -77,7 +77,6 @@ MAIN( int argc, char *argv[], char **envp )
 
 	_condor_prestart( SYS_LOCAL );
 
-
 		/*
 		If the command line looks like 
 			exec_name -_condor_ckpt <ckpt_file> ...
@@ -85,9 +84,6 @@ MAIN( int argc, char *argv[], char **envp )
 		*/
 	if( argc >= 3 && strcmp("-_condor_ckpt",argv[1]) == MATCH ) {
 		init_image_with_file_name( argv[2] );
-#if 0
-		init_file_table();
-#endif
 		getcwd( init_working_dir, sizeof(init_working_dir) );
 		Set_CWD( init_working_dir );
 		argc -= 2;
@@ -115,9 +111,6 @@ MAIN( int argc, char *argv[], char **envp )
 	if( argc < 3 ) {
 		sprintf( buf, "%s.ckpt", argv[0] );
 		init_image_with_file_name( buf );
-#if 0
-		init_file_table();
-#endif
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 #if defined(HPUX9)
 		return(_start( argc, argv, envp ));
