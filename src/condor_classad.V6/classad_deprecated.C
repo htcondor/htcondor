@@ -138,30 +138,39 @@ LookupString( const char *name, char *value )
 int ClassAd::
 LookupInteger( const char *name, int &value )
 {
-	bool boolVal;
-	if( !EvaluateAttrInt( string( name ), value ) ) {
-		if( !EvaluateAttrBool( string( name ), boolVal ) ) {
-			return 0;
-		}
+	bool    boolVal;
+	int     haveInteger;
+	string  sName;
+
+	sName = string(name);
+	if( EvaluateAttrInt(sName, value ) ) {
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
 		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
 	}
-	return 1;
+	return haveInteger;
 }
 
 int ClassAd::
 LookupFloat( const char *name, float &value )
 {
-	double doubleVal;
-	int intVal;
-	if( !EvaluateAttrReal( string( name ), doubleVal ) ) {
-		if( !EvaluateAttrInt( string( name ), intVal ) ) {
-			return 0;
-		}
+	double  doubleVal;
+	int     intVal;
+	int     haveFloat;
+
+	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
+		haveFloat = TRUE;
+		value = (float) doubleVal;
+	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
+		haveFloat = TRUE;
 		value = (float)intVal;
-		return 1;
+	} else {
+		haveFloat = FALSE;
 	}
-	value = (float)doubleVal;
-	return 1;
+	return haveFloat;
 }
 
 int ClassAd::
@@ -371,6 +380,8 @@ dPrint( int level )
 
 	pp.Unparse( buffer, this );
 	dprintf( level, "%s", buffer.c_str( ) );
+
+	return;
 }
 
 
@@ -383,6 +394,8 @@ SetMyTypeName( const char *myType )
 	if( myType ) {
 		InsertAttr( ATTR_MY_TYPE, string( myType ) );
 	}
+
+	return;
 }
 
 const char*	ClassAd::
@@ -401,6 +414,8 @@ SetTargetTypeName( const char *targetType )
 	if( targetType ) {
 		InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
 	}
+
+	return;
 }
 
 const char*	ClassAd::
