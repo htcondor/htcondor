@@ -351,6 +351,10 @@ case $os in
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
 
+		if [ $myname = "cxx" ]; then
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
+		fi
+
 		if [ $myname = "c89" ]; then
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
