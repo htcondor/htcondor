@@ -88,19 +88,21 @@ extern const char * ULogEventOutcomeNames[];
     base class for more specific types of event objects.  The general
     procedure for using a ULogEvent object is first instantiate one of the
     _derived_ classes of ULogEvent, either with with its default constructor,
-    or with the instantiateEvent() function.
+    or with the instantiateEvent() function.<p>
 
     If the event is being created for the purpose of writing to a log file,
     then fill it with data by setting each of its public members, and call
-    putEvent().
+    putEvent(). <p>
 
     If the event is being read from a log, then call getEvent and then read
-    the appropriate data members from the object.
+    the appropriate data members from the object.  <p>
 
     Below is an example log entry from Condor v6.  The first line not
     including "Job terminated" represents the log entry header, the last line
     "..."  terminates the log entry, and the lines between are the log body.
+    <p>
 
+    <pre>
     005 (5173.000.000) 10/20 16:59:24 Job terminated.
             (1) Normal termination (return value 0)
                     Usr 0 00:01:21, Sys 0 00:00:00  -  Run Remote Usage
@@ -108,20 +110,19 @@ extern const char * ULogEventOutcomeNames[];
                     Usr 0 00:01:21, Sys 0 00:00:00  -  Total Remote Usage
                     Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
     ...
+    </pre>
 
-    Log Header:
+    <DL>
+    <DT>Log Header
+    <DD>"005" is the (enum ULogEventNumber) ULOG_JOB_TERMINATED.
+        (5173.000.000) is the condorID: cluster, proc, subproc
+        The next 2 fields are the date and time of day.
+    <DT>Log Body
+    <DD>The last field on the first line is a human readable version of the
+    UlogEventNumber
+    </DL>
 
-      "005" is the (enum ULogEventNumber) ULOG_JOB_TERMINATED.
-      (5173.000.000) is the condorID: cluster, proc, subproc
-      The next 2 fields are the date and time of day.
-
-    Log Body:
-
-      The last field on the first line is a human readable version of the
-      UlogEventNumber
-
-      The remaining lines are human readable text.
-
+    The remaining lines are human readable text.
 */
 class ULogEvent {
   public:
@@ -142,7 +143,6 @@ class ULogEvent {
     
     /** Write the currently stored event values to the log file.
         Writes the log header and body.
-
         @param file the non-NULL writable log file.
         @return 0 for failure, 1 for success
     */
@@ -214,10 +214,12 @@ ULogEvent *instantiateEvent (ULogEventNumber event);
 
 //----------------------------------------------------------------------------
 /** Framework for a single Submit Log Event object.  Below is an example
-    Submit Log entry from Condor v6.
+    Submit Log entry from Condor v6. <p>
 
+<PRE>
 000 (172.000.000) 10/20 16:56:54 Job submitted from host: <128.105.165.12:32779>
-
+...
+</PRE>
 */
 class SubmitEvent : public ULogEvent
 {
@@ -249,7 +251,7 @@ class SubmitEvent : public ULogEvent
 //----------------------------------------------------------------------------
 /** Framework for a Generic User Log Event object.
     This subclass of ULogEvent provides a application programmer with
-    the mechanism to add his/her own custom defined log entry.
+    the mechanism to add his/her own custom defined log entry. <p>
 
     All generic events are seen the same by Condor, but a specific application
     can differentiate different subtypes of generic event by putting a special
@@ -285,11 +287,12 @@ class GenericEvent : public ULogEvent
 
 //----------------------------------------------------------------------------
 /** This event occurs when a job begins running on a machine.
-    Below is an example Execute Log Event from Condor v6.
+    Below is an example Execute Log Event from Condor v6. <p>
 
+<PRE>
 001 (5176.000.000) 10/20 16:57:47 Job executing on host: <128.105.65.28:35247>
 ...
-
+</PRE>
  */
 class ExecuteEvent : public ULogEvent
 {
@@ -407,13 +410,15 @@ class JobAbortedEvent : public ULogEvent
 
 //----------------------------------------------------------------------------
 /** Framework for an Evicted Event object.
-    Below is an example Evicted Log entry for Condor v6.
+    Below is an example Evicted Log entry for Condor v6.<p>
 
+<PRE>
 004 (5164.000.000) 10/20 17:08:13 Job was evicted.
         (0) Job was not checkpointed.
                 Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
                 Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
 ...
+</PRE>
 
 */
 class JobEvictedEvent : public ULogEvent
@@ -447,8 +452,9 @@ class JobEvictedEvent : public ULogEvent
 
 //----------------------------------------------------------------------------
 /** Framework for a single Job Terminated Event Log object.
-    Below is an example Job Termination Event Log entry for Condor v6.
+    Below is an example Job Termination Event Log entry for Condor v6.<p>
 
+<PRE>
 005 (5170.000.000) 10/20 17:04:41 Job terminated.
         (1) Normal termination (return value 0)
                 Usr 0 00:01:16, Sys 0 00:00:00  -  Run Remote Usage
@@ -456,7 +462,7 @@ class JobEvictedEvent : public ULogEvent
                 Usr 0 00:01:16, Sys 0 00:00:00  -  Total Remote Usage
                 Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
 ...
-
+</PRE>
 */
 class JobTerminatedEvent : public ULogEvent
 {

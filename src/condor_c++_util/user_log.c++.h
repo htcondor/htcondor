@@ -49,26 +49,27 @@ typedef int BOOL_T;
 
 /** API for writing a log file.  Since an API for reading a log file
     was not originally needed, a ReadUserLog class did not exist,
-    so it was not forseen to call this class WriteUserLog.
+    so it was not forseen to call this class WriteUserLog. <p>
 
     This class was written before the ULogEvent class existed.  Therefore,
     there are several functions and parameters, marked deprecated,
     whose necessity is rid of with the use of ULogEvent.  Those functions
     and parameters still exist for backward compatibility with Condor
     code that hasn't yet been update.  New Condor code ABSOLUTELY SHOULD NOT
-    use these deprecated functions.
+    use these deprecated functions. <p>
 
     The typical use of this class (for example, condor_shadow) producing
-    log events for a job, will be the following:
+    log events for a job, will be the following:<p>
 
+    <UL>
       Initialize this object with the job owner's username, the log file path,
       and the job's condorID, which the UserLog object will fill in the
-      condorID for each event given to it in writeEvent().
+      condorID for each event given to it in writeEvent(). <p>
 
       Call writeEvent() for each event to be written to the log.  The condorID
       of the event will automatically be assigned the condorID of this
       ULogEvent object.
-
+    </UL>
 */
 class UserLog {
   public:
