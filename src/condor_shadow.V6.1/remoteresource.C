@@ -164,11 +164,13 @@ RemoteResource::activateClaim( int starterVersion )
 
 
 bool
-RemoteResource::killStarter()
+RemoteResource::killStarter( bool graceful )
 {
-	static bool already_killed_starter = false;
+	static bool already_killed_graceful = false;
+	static bool already_killed_fast = false;
 
-	if( already_killed_starter ) {
+	if( (graceful && already_killed_graceful) ||
+		(!graceful && already_killed_fast) ) {
 			// we've already sent this command to the startd.  we can
 			// just return true right away
 		return true;
@@ -178,8 +180,8 @@ RemoteResource::killStarter()
 						 "DCStartd object NULL!\n");
 		return false;
 	}
-		// pass "false" so we use forceful shutdown, not graceful
-	if( ! dc_startd->deactivateClaim(false) ) {
+
+	if( ! dc_startd->deactivateClaim(graceful) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
 						 "Could not send command to startd\n" );
 		return false;
@@ -188,11 +190,17 @@ RemoteResource::killStarter()
 	if( state != RR_FINISHED ) {
 		setResourceState( RR_PENDING_DEATH );
 	}
-	already_killed_starter = true;
+
+	if( graceful ) {
+		already_killed_graceful = true;
+	} else {
+		already_killed_fast = true;
+	}
 
 	char* addr = dc_startd->addr();
 	if( addr ) {
-		dprintf( D_FULLDEBUG, "Killed starter at %s\n", addr );
+		dprintf( D_FULLDEBUG, "Killed starter (%s) at %s\n", 
+				 graceful ? "graceful" : "fast", addr );
 	}
 
 	return true;
