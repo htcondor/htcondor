@@ -27,6 +27,7 @@
 #include "condor_uid.h"
 #include "condor_config.h"
 #include "condor_io.h"
+#include "my_hostname.h"
 
 #include "proto.h"
 #include "condor_sys.h"
@@ -152,45 +153,83 @@ main( int argc, char *argv[] )
 void
 initial_bookeeping( int argc, char *argv[] )
 {
-	struct utsname uts;
-	char	my_host[ _POSIX_PATH_MAX ];
-
-		/* These items must be completed before we can print anything */
-	if( argc > 1 ) {
-		if( argv[1][0] == '-' && argv[1][1] == 'p' ) {
-			UsePipes = TRUE;
-		} else {
-			UsePipes = FALSE;
-		}
-	}
+	char*	logAppend = NULL;
+	char*	submitHost = NULL;
+	int		usageError = FALSE;
+	char**	ptr;
+	char*	tmp;
 
 	(void) SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+
+           // Process command line args.
+	submitHost = argv[1];
+	for(ptr = argv + 2; *ptr && !usageError; ptr++) {
+		if(ptr[0][0] == '<') {
+				// We were passed the startd sinful string, which for
+				// now, we're just ignoring.
+			continue;
+		}
+		if(ptr[0][0] == '-') {
+			switch( ptr[0][1] ) {
+			case 'p':
+				UsePipes = TRUE;
+				break;
+			case 'l':
+				ptr++;
+				if( ptr && *ptr ) {
+					logAppend = *ptr;
+				} else {
+					usageError = TRUE;
+				}
+				break;
+			default:
+				fprintf( stderr, "Error:  Unknown option %s\n", *ptr );
+				usageError = TRUE;
+			}
+		}
+	}
 
 	set_condor_priv();
 
 	init_shadow_connections();
 
 	read_config_files();
+
+		// If we're told on the command-line to append something to
+		// the name of our log file (b/c of the SMP startd), we do
+		// that here, so that when we setup logging, we get the right
+		// filename.  -Derek Wright 9/2/98
+	if( logAppend ) {
+		char *tmp1, *tmp2;
+		if( !(tmp1 = param("STARTER_LOG")) ) { 
+			EXCEPT( "STARTER_LOG not defined!" );
+		}
+		tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2) *
+							  sizeof(char) );
+		if( !tmp2 ) {
+			EXCEPT( "Out of memory!" );
+		}
+		sprintf( tmp2, "%s.%s", tmp1, logAppend );
+		config_insert( "STARTER_LOG", tmp2 );
+		free( tmp1 );
+		free( tmp2 );
+	}
+
 	init_logging();
 
+
 		/* Now if we have an error, we can print a message */
-	if( argc != 2 && argc != 3 ) {
+	if( usageError ) {
 		usage( argv[0] );	/* usage() exits */
 	}
 
 	init_sig_mask();
 
-	if( uname(&uts) < 0 ) {
-		EXCEPT( "Can't find own hostname" );
-	}
-	ThisHost = uts.nodename;
-
 	if( UsePipes ) {
-		InitiatingHost = ThisHost;
+		InitiatingHost = my_hostname();
 	} else {
-		InitiatingHost = argv[1];
+		InitiatingHost = submitHost;
 	}
-
 
 	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
 	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
