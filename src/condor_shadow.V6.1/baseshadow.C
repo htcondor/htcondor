@@ -262,7 +262,7 @@ FILE* BaseShadow::shutDownEmail(int reason, int exitStatus)
 		FILE* mailer;
 		char buf[50];
 
-		sprintf(buf,"Job %d.%d",cluster,proc);
+		sprintf( buf, "Condor Job %d.%d", cluster, proc );
 		if ( (mailer=emailUser(buf)) ) {
 			return mailer;
 		}
