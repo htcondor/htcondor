@@ -2405,33 +2405,36 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
 	char tmpCwd[_POSIX_PATH_MAX];
-	tmpCwd = getcwd( tmpCwd, _POSIX_PATH_MAX );
+	char *p_tmpCwd = tmpCwd;
+	p_tmpCwd = getcwd( p_tmpCwd, _POSIX_PATH_MAX );
 	chdir(iwd);
 
 		// now open future in|out|err files
 	int inouterr[3];
+	bool cannot_open_files = false;
 	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
-		set_priv( priv );  // back to regular privs...
-		return NULL;
+		cannot_open_files = true;
 	}
 	if ((inouterr[1] = open(input, O_WRONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
-		set_priv( priv );  // back to regular privs...
-		return NULL;
+		cannot_open_files = true;
 	}
 	if ((inouterr[2] = open(input, O_WRONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
-		set_priv( priv );  // back to regular privs...
-		return NULL;
+		cannot_open_files = true;
 	}
 
 	//change back to whence we came
-	if ( tmpCwd ) {
-		chdir( tmpCwd );
+	if ( p_tmpCwd ) {
+		chdir( p_tmpCwd );
 	}
 
 	set_priv( priv );  // back to regular privs...
+
+	if ( cannot_open_files ) {
+		return NULL;
+	}
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
 							env) < 0) {
