@@ -68,6 +68,9 @@ extern	char*	accountant_host;
 // Others
 extern	int		match_timeout;	// How long you're willing to be
 								// matched before claimed 
+extern	int		killing_timeout;  // How long you're willing to be
+	                              // in preempting/killing before you
+								  // drop the hammer on the starter
 extern	int		last_x_event;	// Time of the last x event
 
 #endif _STARTD_NO_DECLARE_GLOBALS
