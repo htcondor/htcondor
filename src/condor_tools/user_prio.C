@@ -207,8 +207,8 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 	Res+=LR[i].Res;
   }
 
-  printf(Fmt2,"----","--------","--------------");
-  printf(Fmt3,"Total","",Res);
+  // printf(Fmt2,"----","--------","--------------");
+  // printf(Fmt3,"Total","",Res);
 
   return;
 }

@@ -4,6 +4,8 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 
+#include "MyString.h"
+
 //------------------------------------------------------------------------
 
 static void displayJobShort(ClassAd *ad);
@@ -175,14 +177,16 @@ short_print(
         int image_size,
         const char *cmd
         ) {
+		MyString SubmitDateStr=format_date(date);
+		MyString CompDateStr=format_date(CompDate);
         printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-11s %-3d %-4.1f %-18s\n",
                 cluster,
                 proc,
                 owner,
-                format_date(date),
+                (const char*) SubmitDateStr,
                 format_time(time),
                 encode_status(status),
-                format_date(CompDate),
+                (const char*) CompDateStr,
                 prio,
                 image_size/1024.0,
                 cmd
