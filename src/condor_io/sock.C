@@ -255,15 +255,12 @@ int Sock::bind(
 	// Make certain SO_LINGER is Off.  This will result in the default
 	// of closesocket returning immediately and the system attempts to 
 	// send any unsent data.
-	// If there is no timeout on the socket, set KEEPALIVE so we know
-	// if the socket disappears.
+	// Also set KEEPALIVE so we know if the socket disappears.
 	if ( type() == Stream::reli_sock ) {
 		struct linger linger = {0,0};
 		int on = 1;
 		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
-		if ( _timeout == 0 ) {
-			setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
-		}
+		setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
 	}
 
 	return TRUE;
@@ -471,16 +468,10 @@ int Sock::timeout(int sec)
 		unsigned long mode = 0;	// reset blocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
 			return -1;
-		if ( type() == Stream::reli_sock ) {	// turn on KEEPALIVE
-			setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
-		}
 	} else {
 		unsigned long mode = 1;	// nonblocking mode
 		if (ioctlsocket(_sock, FIONBIO, &mode) < 0)
 			return -1;
-		if ( type() == Stream::reli_sock ) {	// turn off KEEPALIVE
-			setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&off, sizeof(on));
-		}
 	}
 
 	return t;
