@@ -8,6 +8,11 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
 
+02/16/04 V6_6-cdf-branch
+   A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
+   This will hold various changed made for CDF, some of which are new
+   features.
+
 2/13/04 V6_6_1-branch
     A release branch for the 6.6.1 manual.  Created from the
     V6_6_1-root tag.  Any changes to the 6.6.1 manual should be done
