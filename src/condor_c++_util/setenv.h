@@ -45,6 +45,15 @@ int SetEnv( char *env_var );
     @return TRUE on success, FALSE on failure
 */
 int UnsetEnv( const char *env_var );
+
+/** Look up env_var in the environment
+    @param env_var Desired variable name to search for in the environment;
+    @return A pointer to the corresponding value or NULL (if an error
+	occurred or the variable is not present). The returned string should
+	not be deallocated and is valid until the next call to GenEnv() or
+	SetEnv().
+*/
+const char *GetEnv( const char *env_var );
 //@}
 
 #endif  // _SETENV_H

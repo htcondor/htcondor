@@ -133,3 +133,24 @@ int UnsetEnv( const char *env_var )
 
 	return TRUE;
 }
+
+const char *GetEnv( const char *env_var )
+{
+	assert( env_var );
+
+#ifdef WIN32
+	static char value[2048];
+	int rc = GetEnvironmentVariable( env_var, value, sizeof(value) );
+	if ( rc > sizeof(value) - 1 ) {
+		dprintf( D_ALWAYS, "GetEnv(): environment variable too big: %d\n",
+				 rc );
+		return NULL;
+	} else if ( rc == 0 ) {
+		return NULL;
+	} else {
+		return value;
+	}
+#else
+	return getenv( env_var );
+#endif
+}
