@@ -26,5 +26,6 @@ library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 release:
 
 strip_target(condor_ckpt_server,../strip_ckpt_server/sbin,EXECUTABLE_MODE)
+static_target(condor_ckpt_server,$(OBJ),$(LIB),../static_ckpt_server/sbin)
 
 depend_target($(SRC))

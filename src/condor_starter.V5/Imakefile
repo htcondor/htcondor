@@ -4,8 +4,8 @@ SRC_DIR = $(SRC_TREE)/condor_starter
 CKPT_FLAG = -DNO_CKPT
 #endif
 
-CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC -fno-implicit-templates
+CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
 
 /*
   The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
@@ -22,14 +22,8 @@ OS = IRIX62
 OS = OperatingSystem
 #endif
 
-
-#if IS_V5 || IS_V6
 CLASS_LIB_SRC = alarm.C
 CLASS_LIB_OBJ = alarm.o
-#else
-CLASS_LIB_SRC = alarm.C state_machine_driver.C name_tab.C 
-CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o 
-#endif
 
 PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
 	user_proc.C starter.toy.C tables.C 
@@ -49,7 +43,6 @@ UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 
-#if IS_V5 || IS_V6
 REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/senders.o \
 	../condor_syscall_lib/syscall_mode.o \
@@ -61,14 +54,6 @@ REMOTE_SYSCALL_LIB = \
 	$(CLASSAD_LIB) \
 	$(UTIL_LIB) \
 	$(IO_LIB) 
-
-#else
-#if IS_R6000_AIX32 
-REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a 
-#else
-REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB) 
-#endif
-#endif
 
 LIB = $(REMOTE_SYSCALL_LIB) 
 
@@ -86,38 +71,14 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 TOY_LIB =  $(UTIL_LIB) $(IO_LIB)
 
-/* all_target(condor_starter.V5 test_it hound) ---we no longer need test_it & hound */
 all_target(condor_starter)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
-/*  We no longer need test_it and hound *
-c_plus_target(test_it,test_it.o,$(NULL))
-c_plus_target(hound,hound.o,$(NULL))
-*/
-
-#if IS_R6000_AIX31 || IS_R6000_AIX32 
-G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
-condor_starter: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
-	$(G++_DIR)/ld \
-	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
-	-L/usr/gnu/lib \
-	-L$(INSTALL_DIR)/lib \
-	-o condor_starter \
-	/lib/crt0.o \
-	$(PORTABLE_OBJ) \
-	$(NON_PORTABLE_OBJ) \
-	$(UTIL_LIB) \
-	$(IO_LIB) \
-	$(REMOTE_SYSCALL_LIB) \
-	-lg++ $(G++_DIR)/libgcc.a -lc
-clean::
-	rm -f condor_starter $(OBJ)
-#else
 c_plus_target(condor_starter,$(OBJ),$(LIB))
-#endif
 release_target(condor_starter,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_starter,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_starter,$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
 

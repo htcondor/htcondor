@@ -19,3 +19,4 @@ tags_target($(SRC),$(NULL))
 depend_target($(SRC))
 release:
 stripped:
+static:

@@ -56,3 +56,4 @@ import(../condor_io, $(IO_OBJ))
 
 release:
 stripped:
+static:

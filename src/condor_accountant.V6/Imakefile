@@ -30,3 +30,4 @@ import(../condor_util_lib, stub_gen)
 
 release:
 stripped:
+static:

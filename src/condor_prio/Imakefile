@@ -17,3 +17,5 @@ depend_target($(SRC))
 c_plus_target(condor_prio,$(OBJ),$(LIB))
 release_target(condor_prio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_prio,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_prio,$(OBJ),$(LIB),$(STATIC_DIR)/bin)
+

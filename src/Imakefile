@@ -14,7 +14,8 @@ CFLAGS = $(STD_C_FLAGS)
 
 #if WANT_PVM && HAS_PVM
    #define PvmProgs starter.jim shadow.jim 
-   #define PvmDirs strip_pvm strip_pvm/lib strip_pvm/sbin
+   #define PvmDirs strip_pvm strip_pvm/lib strip_pvm/sbin \
+			static_pvm static_pvm/lib static_pvm/sbin
 #else
    #define PvmProgs
    #define PvmDirs
@@ -39,11 +40,16 @@ CFLAGS = $(STD_C_FLAGS)
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/etc strip_dir/etc/examples PvmDirs \
 	strip_ckpt_server strip_ckpt_server/sbin strip_ckpt_server/etc \
-	strip_ckpt_server/etc/examples
+	strip_ckpt_server/etc/examples \
+	static_ckpt_server static_ckpt_server/sbin static_ckpt_server/etc \
+	static_ckpt_server/etc/examples \
+	static_dir static_dir/bin static_dir/sbin static_dir/lib \
+	static_dir/etc static_dir/etc/examples
 
 all: h makefiles Directories Libraries Programs examples
 release:: all
 stripped:: all
+static:: all
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
 	sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
@@ -51,16 +57,22 @@ stripped:: all
 	sbin/condor_reconfig_schedd sbin/condor_reschedule \
 	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
 
-#ifndef PublicTarget
-#define PublicTarget /p/condor/workspaces/release/V6_release
-#endif
-PUBLIC_TARGET = PublicTarget
-public: release.tar
-	rm -f $(PUBLIC_TARGET)/release.tar
-	cp strip_dir/release.tar $(PUBLIC_TARGET)
+PUBLIC_D_TARGET = /p/condor/workspaces/release/V6_release
+PUBLIC_S_TARGET = /p/condor/workspaces/release/V6_static_release
 
-release.tar: stripped
+public: strip.tar 
+	rm -f $(PUBLIC_D_TARGET)/release.tar 
+	cp strip_dir/release.tar $(PUBLIC_D_TARGET)
+
+public_static: static.tar
+	rm -f $(PUBLIC_S_TARGET)/release.tar 
+	cp static_dir/release.tar $(PUBLIC_S_TARGET)
+
+strip.tar: stripped
 	cd strip_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
+
+static.tar: static
+	cd static_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 
 submit.tar: stripped
 	cd strip_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
@@ -87,11 +99,26 @@ simple_dir_target(strip_dir/etc/examples)
 simple_dir_target(strip_pvm)
 simple_dir_target(strip_pvm/sbin)
 simple_dir_target(strip_pvm/lib)
+simple_dir_target(static_pvm)
+simple_dir_target(static_pvm/sbin)
+simple_dir_target(static_pvm/lib)
 #endif
 simple_dir_target(strip_ckpt_server)
 simple_dir_target(strip_ckpt_server/sbin)
 simple_dir_target(strip_ckpt_server/etc)
 simple_dir_target(strip_ckpt_server/etc/examples)
+simple_dir_target(static_ckpt_server)
+simple_dir_target(static_ckpt_server/sbin)
+simple_dir_target(static_ckpt_server/etc)
+simple_dir_target(static_ckpt_server/etc/examples)
+
+simple_dir_target(static_dir)
+simple_dir_target(static_dir/bin)
+simple_dir_target(static_dir/lib)
+simple_dir_target(static_dir/sbin)
+simple_dir_target(static_dir/etc)
+simple_dir_target(static_dir/etc/examples)
+
 object_target(util_lib)
 object_target(c++_util)
 object_target(tools)
@@ -148,5 +175,6 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile */Makefile.* release_dir strip_dir \
-		strip_pvm strip_ckpt_server
+	rm -rf Makefile */Makefile */Makefile.* release_dir \
+		strip_dir strip_pvm strip_ckpt_server \
+		static_dir static_pvm static_ckpt_server
