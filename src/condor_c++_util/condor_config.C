@@ -24,10 +24,14 @@
 /* 
 
   This file implements config(), the function all daemons call to
-  configure themselves.  It takes up to two arguments: a pointer to a
-  ClassAd to fill up with the expressions in the config_file, and
-  optionally a pointer to a string containing the hostname that should
-  be inserted for $(HOSTNAME).
+  configure themselves.  It takes an optional argument which
+  determines if config should be quiet or verbos on errors.  It
+  defaults to verbose error reporting.
+
+  There's also an entry point, config_host() where you pass in a
+  string that should be filled in for HOSTNAME.  This is only used by
+  special arguments to condor_config_val used by condor_init to
+  bootstrap the installation process.
 
   When looking for the global config file, config() checks the
   "CONDOR_CONFIG" environment variable to find its location.  If that
@@ -61,8 +65,8 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(ClassAd *classAd, char* host, int wantsQuiet);
-int Read_config(char*, ClassAd*, BUCKET**, int, int);
+void real_config(char* host, int wantsQuiet);
+int Read_config(char*, BUCKET**, int, int);
 int SetSyscalls(int);
 char* find_global();
 char* find_global_root();
@@ -73,9 +77,9 @@ void check_domain_attributes();
 void init_config();
 void clear_config();
 void reinsert_specials(char*);
-void process_file(char*, char*, char*, ClassAd*);
-void process_locals( char*, char*, ClassAd*);
-int  process_runtime_configs(ClassAd *);
+void process_file(char*, char*, char*);
+void process_locals( char*, char*);
+int  process_runtime_configs();
 void check_params();
 
 // External variables
@@ -144,21 +148,21 @@ config_fill_ad( ClassAd* ad )
 
 
 void
-config( ClassAd* classAd, int wantsQuiet )
+config( int wantsQuiet )
 {
-	real_config( classAd, NULL, wantsQuiet );
+	real_config( NULL, wantsQuiet );
 }
 
 
 void
-config_host( ClassAd* classAd, char* host )
+config_host( char* host )
 {
-	real_config( classAd, host, 0 );
+	real_config( host, 0 );
 }
 
 
 void
-real_config(ClassAd *classAd, char* host, int wantsQuiet)
+real_config(char* host, int wantsQuiet)
 {
 	char		*config_file, *tmp;
 	int			scm;
@@ -230,7 +234,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 	}
 
 		// Read in the global file
-	process_file( config_file, "global config file", NULL, classAd );
+	process_file( config_file, "global config file", NULL );
 	free( config_file );
 
 		// Insert entries for "hostname" and "full_hostname".  We do
@@ -254,7 +258,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
 		// all the files in the order they are listed.
-	process_locals( "LOCAL_CONFIG_FILE", host, classAd );
+	process_locals( "LOCAL_CONFIG_FILE", host );
 			
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
@@ -304,7 +308,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 
 		// Try to find and read the global root config file
 	if( config_file = find_global_root() ) {
-		process_file( config_file, "global root config file", host, classAd );
+		process_file( config_file, "global root config file", host );
 
 			// Re-insert the special macros.  We don't want the user
 			// to override them, since it's not going to work.
@@ -312,19 +316,18 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 
 			// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
 			// process all the files in the order they are listed.
-		process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
+		process_locals( "LOCAL_ROOT_CONFIG_FILE", host );
 	}
 
 		// Re-insert the special macros.  We don't want the user
 		// to override them, since it's not going to work.
 	reinsert_specials( host );
 
-	if (process_runtime_configs(classAd) == 1) {
+	if( process_runtime_configs() == 1 ) {
 			// if we found runtime config files, we process the root
 			// config file again
 		if (config_file) {
-			process_file( config_file, "global root config file", host,
-						  classAd );
+			process_file( config_file, "global root config file", host );
 
 				// Re-insert the special macros.  We don't want the user
 				// to override them, since it's not going to work.
@@ -332,7 +335,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 
 				// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
 				// process all the files in the order they are listed.
-			process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
+			process_locals( "LOCAL_ROOT_CONFIG_FILE", host );
 		}
 	}
 
@@ -357,10 +360,6 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 		// correct.
 	check_domain_attributes();
 
-		// If mySubSystem_EXPRS is set, insert those expressions into
-		// the given classad.
-	config_fill_ad( classAd );
-
 		// We have to do some platform-specific checking to make sure
 		// all the parameters we think are defined really are.  
 	check_params();
@@ -370,7 +369,7 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 
 
 void
-process_file( char* file, char* name, char* host, ClassAd* classAd )
+process_file( char* file, char* name, char* host )
 {
 	int rval;
 	if( access( file, R_OK ) != 0 ) {
@@ -380,8 +379,7 @@ process_file( char* file, char* name, char* host, ClassAd* classAd )
 			exit( 1 );
 		} 
 	} else {
-		rval = Read_config( file, classAd, ConfigTab, TABLESIZE,
-							EXPAND_LAZY );
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY );
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -395,7 +393,7 @@ process_file( char* file, char* name, char* host, ClassAd* classAd )
 // Param for given name, read it in as a string list, and process each
 // config file listed there.
 void
-process_locals( char* param_name, char* host, ClassAd* classAd )
+process_locals( char* param_name, char* host )
 {
 	StringList locals;
 	char *file;
@@ -406,7 +404,7 @@ process_locals( char* param_name, char* host, ClassAd* classAd )
 		free( file );
 		locals.rewind();
 		while( (file = locals.next()) ) {
-			process_file( file, "config file", host, classAd );
+			process_file( file, "config file", host );
 		}
 	}
 }
@@ -987,7 +985,7 @@ set_runtime_config(char *admin, char *config)
 ** by this function.
 */
 static int
-process_runtime_configs(ClassAd *classAd)
+process_runtime_configs()
 {
 	char filename[_POSIX_PATH_MAX];
 	char *tmp;
@@ -1001,7 +999,7 @@ process_runtime_configs(ClassAd *classAd)
 
 		processed = true;
 
-		rval = Read_config( toplevel_runtime_config, classAd, ConfigTab,
+		rval = Read_config( toplevel_runtime_config, ConfigTab,
 							TABLESIZE, EXPAND_LAZY );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
@@ -1021,7 +1019,7 @@ process_runtime_configs(ClassAd *classAd)
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
 		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
-		rval = Read_config( filename, classAd, ConfigTab, TABLESIZE,
+		rval = Read_config( filename, ConfigTab, TABLESIZE,
 							EXPAND_LAZY );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
@@ -1051,7 +1049,7 @@ process_runtime_configs(ClassAd *classAd)
 					 "process_runtime_configs\n", errno );
 			exit(1);
 		}
-		rval = Read_config( filename, classAd, ConfigTab, TABLESIZE,
+		rval = Read_config( filename, ConfigTab, TABLESIZE,
 							EXPAND_LAZY );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
