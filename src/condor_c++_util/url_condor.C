@@ -46,7 +46,7 @@ URLProtocol::URLProtocol(char *protocol_key, char *protocol_name,
 	open_func = protocol_open_func;
 	next = protocol_list;
 	protocol_list = this;
-	fprintf(stderr, "New URL protocol '%s' (%s)\n", name, key);
+/*	fprintf(stderr, "New URL protocol '%s' (%s)\n", name, key); */
 }
 
 
@@ -54,7 +54,7 @@ URLProtocol::~URLProtocol()
 {
 	URLProtocol		*ptr;
 
-	fprintf(stderr, "Deleteing URL protocol '%s' (%s)\n", name, key);
+/*	fprintf(stderr, "Deleteing URL protocol '%s' (%s)\n", name, key); */
 
 	free(key);
 	free(name);
@@ -79,7 +79,7 @@ FindProtocolByKey(const char *key)
 {
 	URLProtocol		*protocol;
 
-	fprintf(stderr, "Looking for URL key %s\n", key);
+/*	fprintf(stderr, "Looking for URL key %s\n", key); */
 
 	for( protocol = protocol_list; protocol != 0; 
 		protocol = protocol->get_next()) {
