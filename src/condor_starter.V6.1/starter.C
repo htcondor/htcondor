@@ -303,53 +303,63 @@ CStarter::createTempExecuteDir( void )
 			return false;
 		}
 	}
-
+	
 	// if the user wants the execute directory encrypted, 
 	// go ahead and set that up now too
-
+	
 	char* eed = param("ENCRYPT_EXECUTE_DIRECTORY");
-
+	
 	if ( eed ) {
-		// dynamically load our encryption functions to preserve 
-		// compatability with NT4 :(
-
-		typedef BOOL (WINAPI *FPEncryptionDisable)(LPCWSTR,BOOL);
-		typedef BOOL (WINAPI *FPEncryptFileA)(LPCSTR);
-		bool efs_support = true;
-
-		HINSTANCE advapi = LoadLibrary("ADVAPI32.dll");
-		if ( !advapi ) {
-			dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
-			efs_support = false;
-		}
-		FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
-			GetProcAddress(advapi,"EncryptionDisable");
-		if ( !EncryptionDisable ) {
-			dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
-			efs_support = false;
-		}
-		FPEncryptFileA EncryptFile = (FPEncryptFileA) 
-			GetProcAddress(advapi,"EncryptFileA");
-		if ( !EncryptFile ) {
-			dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
-			efs_support = false;
-		}
-
-		if ( efs_support && (eed[0] == 'T' || eed[0] == 't')) {
-			wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
-			swprintf(WorkingDir_w, L"%S", WorkingDir);
-			EncryptionDisable(WorkingDir_w, FALSE);
-			delete[] WorkingDir_w;
+		
+		if (eed[0] == 'T' || eed[0] == 't') { // user wants encryption
 			
-			if ( EncryptFile(WorkingDir) == 0 ) {
-				dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", 
-					GetLastError());
+			// dynamically load our encryption functions to preserve 
+			// compatability with NT4 :(
+			
+			typedef BOOL (WINAPI *FPEncryptionDisable)(LPCWSTR,BOOL);
+			typedef BOOL (WINAPI *FPEncryptFileA)(LPCSTR);
+			bool efs_support = true;
+			
+			HINSTANCE advapi = LoadLibrary("ADVAPI32.dll");
+			if ( !advapi ) {
+				dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
+				efs_support = false;
 			}
-		}
+			FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+				GetProcAddress(advapi,"EncryptionDisable");
+			if ( !EncryptionDisable ) {
+				dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+				efs_support = false;
+			}
+			FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+				GetProcAddress(advapi,"EncryptFileA");
+			if ( !EncryptFile ) {
+				dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+				efs_support = false;
+			}
+			
+			if ( efs_support ) {
+				wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
+				swprintf(WorkingDir_w, L"%S", WorkingDir);
+				EncryptionDisable(WorkingDir_w, FALSE);
+				delete[] WorkingDir_w;
+				
+				if ( EncryptFile(WorkingDir) == 0 ) {
+					dprintf(D_ALWAYS, "Could not encrypt execute directory (err=%li)\n", 
+						GetLastError());
+				}
+			} else {
+				// tell the user it didn't work out
+				dprintf(D_ALWAYS, "ENCRYPT_EXECUTE_DIRECTORY set to True, but the Encryption"
+					" functions are unavailable!");
+			}
 
+		} // ENCRYPT_EXECUTE_DIRECTORY is True
+		
 		free(eed);
 		eed = NULL;
-	}
+
+	} // ENCRYPT_EXECUTE_DIRECTORY has a value
 	
 
 #endif /* WIN32 */
