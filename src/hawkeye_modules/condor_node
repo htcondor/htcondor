@@ -58,6 +58,7 @@ sub RunIt {
 		      "NumShadows"	=> 0,
 		      "NumRunaway"	=> 0,
 		      "Vms"		=> "",
+		      "RunawayPids"	=> [],
 		     );
 
     # Table to translate "ps-command" regex to $CondorInfo key..
@@ -119,6 +120,7 @@ sub RunIt {
 		     ( $CmdString =~ /condor_exec/ ) )
 		{
 		    $CondorInfo{NumRunaway}++;
+		    push( @{$CondorInfo{RunawayPids}}, $Pid );
 		}
 	    }
 
@@ -240,8 +242,12 @@ sub RunIt {
     # Publish 'em all
     foreach my $Key ( keys %CondorInfo )
     {
-	if (  ( $CondorInfo{$Key} =~ /[a-zA-Z]/ ) ||
-	      ( $CondorInfo{$Key} eq "" )   )
+	if ( ref( $CondorInfo{$Key} ) eq "ARRAY" )
+	{
+	    $Hawkeye->Store( $Key, join( ",", @{$CondorInfo{$Key}} ) );
+	}
+	elsif (  ( $CondorInfo{$Key} =~ /[a-zA-Z]/ ) ||
+		 ( $CondorInfo{$Key} eq "" )   )
 	{
 	    $Hawkeye->Store( $Key, $CondorInfo{$Key} );
 	}
