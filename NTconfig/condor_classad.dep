@@ -1,6 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_classad.mak
 
 ..\src\condor_classad\ast.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -28,11 +29,12 @@
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -41,6 +43,7 @@
 	
 
 ..\src\condor_classad\astbase.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -54,11 +57,13 @@
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\attrlist.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\iso_dates.h"\
@@ -86,12 +91,13 @@
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\condor_xml_classads.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -100,6 +106,7 @@
 	
 
 ..\src\condor_classad\buildtable.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -115,11 +122,13 @@
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\classad.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -142,10 +151,11 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_registration.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -153,6 +163,7 @@
 	
 
 ..\src\condor_classad\classad_lookup.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
@@ -181,10 +192,11 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -192,6 +204,7 @@
 	
 
 ..\src\condor_classad\classad_util.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -212,10 +225,11 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -223,6 +237,7 @@
 	
 
 ..\src\condor_classad\classifiedjobs.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -243,10 +258,11 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -254,6 +270,7 @@
 	
 
 ..\src\condor_classad\environment.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -268,11 +285,13 @@
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\evaluateOperators.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -294,10 +313,11 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -305,6 +325,7 @@
 	
 
 ..\src\condor_classad\operators.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_classad\operators.h"\
 	"..\src\condor_classad\value.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -312,11 +333,13 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\parser.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -343,11 +366,12 @@
 	"..\src\condor_includes\condor_scanner.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -356,17 +380,20 @@
 	
 
 ..\src\condor_classad\registration.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_registration.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\scanner.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -385,10 +412,11 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_scanner.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -396,17 +424,20 @@
 	
 
 ..\src\condor_classad\value.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_classad\value.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\h\fake_flock.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_classad\xml_classads.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -432,12 +463,13 @@
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\condor_xml_classads.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\

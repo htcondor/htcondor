@@ -120,6 +120,14 @@ SOURCE=..\src\condor_includes\condor_collector.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_collector.V6\forkwork.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_collector.V6\forkwork.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_collector.V6\hashkey.C
 # End Source File
 # Begin Source File

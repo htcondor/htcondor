@@ -14,7 +14,6 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
@@ -27,6 +26,5 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	

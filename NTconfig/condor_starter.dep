@@ -35,6 +35,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -48,7 +49,6 @@
 	"..\src\condor_starter.V6.1\io_proxy.h"\
 	"..\src\condor_starter.V6.1\io_proxy_handler.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -91,6 +91,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -104,7 +105,6 @@
 	"..\src\condor_starter.V6.1\io_proxy_handler.h"\
 	"..\src\condor_starter.v6.1\ntsenders.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -134,12 +134,12 @@
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_starter.V6.1\java_detect.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -186,6 +186,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -201,7 +202,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -254,6 +254,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -273,7 +274,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -321,6 +321,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -337,7 +338,6 @@
 	"..\src\condor_starter.V6.1\local_user_log.h"\
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -400,6 +400,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -421,7 +422,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -469,6 +469,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -483,7 +484,6 @@
 	"..\src\condor_starter.V6.1\local_user_log.h"\
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -529,6 +529,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -544,7 +545,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\exit.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -589,6 +589,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -604,7 +605,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -654,6 +654,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -672,7 +673,6 @@
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -718,6 +718,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -736,7 +737,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_sys.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -790,6 +790,7 @@
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_syscall_mode.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -807,7 +808,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\exit.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -853,6 +853,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -868,7 +869,6 @@
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -920,6 +920,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -938,7 +939,6 @@
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -992,6 +992,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1015,7 +1016,6 @@
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	"..\src\h\proc.h"\
@@ -1075,6 +1075,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1096,7 +1097,6 @@
 	"..\src\condor_starter.V6.1\starter.h"\
 	"..\src\condor_starter.V6.1\user_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
@@ -1145,6 +1145,7 @@
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_syscall_mode.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -1163,7 +1164,6 @@
 	"..\src\condor_starter.V6.1\vanilla_proc.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\exit.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\
