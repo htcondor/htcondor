@@ -4,11 +4,11 @@ CONDOR_INCS = -I$(SRC_TREE)/h -I$(SRC_TREE)/condor_includes \
 		-I$(SRC_TREE)/condor_c++_util 
 
 CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -gstabs -Wall -pedantic -Wno-unused \
-$(INCS) $(DEFINES) -DVERBOSE -g
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -gstabs -Wall -pedantic \
+$(INCS) $(DEFINES) -g
 
-SRC = main.C CondorSubmit.C DagMan.C NodeInfo.C Recovery.C util.C Parse.C 
-OBJ = main.o CondorSubmit.o DagMan.o NodeInfo.o Recovery.o util.o Parse.o
+SRC = main.C submit.C dag.C job.C util.C parse.C debug.c types.C
+OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o
 
 LIB = ../condor_c++_util/cplus_lib.a  ../condor_util_lib/util_lib.a 
 
@@ -19,5 +19,9 @@ library_target(dagman.a,$(OBJ))
 tags_target($(SRC),$(NULL))
 
 c_plus_target(condor_dagman,$(OBJ),$(LIB))
+
+purecov_c_plus_target(condor_dagman.pc,$(OBJ),$(LIB))
+pure_c_plus_target(condor_dagman.pure,$(OBJ),$(LIB))
+
 depend_target($(SRC) $(LIB))
 
