@@ -267,7 +267,14 @@ program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBL
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
 #endif
 
-program_target(ToUpper,ToUpper.o,$(NULL))
+ToUpper.o: ToUpper.c
+	gcc $(C_FLAGS) -c ToUpper.c
+
+ToUpper: ToUpper.o
+	gcc $(CFLAGS) -o ToUpper ToUpper.o $(ALL_LDFLAGS)
+
+clean::
+	rm -f ToUpper ToUpper.o
 
 #if DOES_COMPRESS_CKPT
 malloc.o : malloc.c
