@@ -250,7 +250,9 @@ cat >> $target_dir/sbin/myproxy-get-delegation-wrapper.sh <<\EOF
 #!/bin/sh
 
 # ----- !!!! EDIT GLOBUS_LOCATION !!!! ------------
-GLOBUS_LOCATION=/p/condor/workspaces/externals/install/globus-2.4.3.vdt.1.1.14
+if [ ! -d "$GLOBUS_LOCATION" ]; then
+    GLOBUS_LOCATION=/opt/globus
+fi
 export GLOBUS_LOCATION
 
 LD_LIBRARY_PATH=$GLOBUS_LOCATION/lib:$LD_LIBRARY_PATH

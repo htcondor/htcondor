@@ -1,3 +1,4 @@
+#!/s/std/bin/bash
 #!/bin/bash
 # CredD test harness.  Currently, this harness tests condor_credd,
 # condor_list_cred, condor_rm_cred, condor_store_cred.  Tests can optionally be
@@ -18,11 +19,11 @@ MYPROXY_TESTS=false
 
 # list_cred invocation
 CRED_LIST=condor_list_cred
-CRED_LIST_OPTS="$CRED_LIST_OPTS -v"
+CRED_LIST_OPTS="$CRED_LIST_OPTS -d"
 
 # rm_cred invocation
 CRED_RM=condor_rm_cred
-CRED_RM_OPTS="$CRED_RM_OPTS -v"
+CRED_RM_OPTS="$CRED_RM_OPTS -d"
 
 # The following parameters for setting a brief proxy valid duration, and
 # reading a refreshed brief proxy, must be kept in agreement.
@@ -62,6 +63,7 @@ parse_cmd() {
 				set -x
 				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO"
 				export _CONDOR_CREDD_DEBUG=$_DEBUG
+				export _TOOL_DEBUG=$_DEBUG
 				;;
 			-a|-all|--all) parse_cmd -credd -leak -myproxy ;;
 			-credd) CRED_CORE_TESTS=true ;;
@@ -180,7 +182,7 @@ count_dir_credentials () {
 list_cred_0creds() {
 	name="$1"; shift;
 	test_announce "$name"
-	CRED_LIST_OPTS="$CRED_LIST_OPTS -s $CREDD_HOST_PORT"
+	CRED_LIST_OPTS="$CRED_LIST_OPTS -n $CREDD_HOST"	# optional 
 	cmd="$CRED_LIST $CRED_LIST_OPTS"
 	run_fg $name $cmd
 	status=$?
@@ -242,8 +244,8 @@ list_cred_1creds() {
 rm_cred() {
 	name="$1"; shift;
 	test_announce "$name"
-	CRED_RM_OPTS="$CRED_RM_OPTS -s $CREDD_HOST_PORT"
-	cmd="$CRED_RM $CRED_RM_OPTS -n $CRED_NAME"
+	CRED_RM_OPTS="$CRED_RM_OPTS -n $CREDD_HOST:$CREDD_PORT"	# optional
+	cmd="$CRED_RM $CRED_RM_OPTS -N $CRED_NAME"
 	run_fg $name $cmd
 	status=$?
 	if [ $status -ne 0 ];then
@@ -279,7 +281,7 @@ refresh_proxy () {
 		return $status
 	fi
 	echo $myproxy_pw | run_fg $name \
-	$CRED_STORE $CRED_STORE_OPTS -f $brief_proxy -n $CRED_NAME -S \
+	$CRED_STORE $CRED_STORE_OPTS -f $brief_proxy -N $CRED_NAME -S \
 	-m $USER@$MYPROXY_SERVER:$MYPROXY_SERVER_PORT -D "$MYPROXY_SERVER_DN"
 	status=$?
 	if [ $status -ne 0 ];then
@@ -310,7 +312,8 @@ setup
 
 # Start tests.
 FAIL_COUNT=0	# total count of test failures
-trap finish $SIGSPEC
+#trap finish $SIGSPEC || echo "trap finish $SIGSPEC" failed
+sig_handler finish	# Always run finish() function upon termination
 
 if $CREDD_TESTS; then
 	echo

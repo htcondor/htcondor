@@ -43,7 +43,8 @@
 extern char *mySubSystem;
 
 
-void Daemon::common_init() {
+void
+Daemon::common_init() {
 	_type = DT_NONE;
 	_port = -1;
 	_is_local = false;
@@ -809,8 +810,10 @@ Daemon::locate( void )
 bool
 Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 {
-	MyString buf;
-	char *tmp, *my_name;
+	MyString			buf;
+	char				*tmp, *my_name;
+	char				*host = NULL;
+	bool				nameHasPort = false;
 
 	if( _subsys ) {
 		delete [] _subsys;
@@ -836,12 +839,59 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 					 buf.Value(), specified_host );
 			free(specified_host);
 		}
+	} else {
+		// See if daemon name containts a port specification
+		_port = getPortFromAddr( _name );
+		if ( _port >= 0 ) {
+			host = getHostFromAddr( _name );
+			if ( host ) {
+				nameHasPort = true;
+			} else {
+				dprintf( D_ALWAYS, "warning: unable to parse hostname from '%s'"
+						" but will attempt to use this daemon name anyhow\n",
+						_name);
+			}
+		}
 	}
 
+		// _name was explicitly specified as host:port, so this information can
+		// be used directly.  Further name resolution is not necessary.
+	if( nameHasPort ) {
+		struct in_addr sin_addr;
+		char buf[128];
+		
+		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
+
+		if( is_ipaddr(host, &sin_addr) ) {
+			sprintf( buf, "<%s:%d>", host, _port );
+			New_addr( strnewp(buf) );
+			dprintf( D_HOSTNAME,
+					"Host info \"%s\" is an IP address\n", host );
+		} else {
+				// We were given a hostname, not an address.
+			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+					 "finding IP address\n", host );
+			tmp = get_full_hostname( host, &sin_addr );
+			if( ! tmp ) {
+					// With a hostname, this is a fatal Daemon error.
+				sprintf( buf, "unknown host %s", host );
+				newError( CA_LOCATE_FAILED, buf );
+				if (host) free( host );
+				return false;
+			}
+			sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
+			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
+			New_addr( strnewp(buf) );
+			New_full_hostname( tmp );
+		}
+
+		if (host) free( host );
+		_is_local = false;
+		return true;
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
-	if( _name ) {
+	} else if( _name ) {
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
 
@@ -990,7 +1040,7 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype, bool query_collector)
 bool
 Daemon::getCmInfo( const char* subsys )
 {
-	char buf[128];
+	MyString buf;
 	char* host = NULL;
 	char* tmp;
 	struct in_addr sin_addr;
@@ -1059,9 +1109,9 @@ Daemon::getCmInfo( const char* subsys )
 	}
 
 	if( ! host || !host[0]) {
-		sprintf( buf, "%s address or hostname not specified in config file",
+		buf.sprintf("%s address or hostname not specified in config file",
 				 subsys ); 
-		newError( CA_LOCATE_FAILED, buf );
+		newError( CA_LOCATE_FAILED, buf.Value() );
 		_is_configured = false;
 		if( host ) free( host );
 		return false;
@@ -1111,17 +1161,17 @@ Daemon::getCmInfo( const char* subsys )
 
 
 	if ( !host ) {
-		sprintf( buf, "%s address or hostname not specified in config file",
+		buf.sprintf( "%s address or hostname not specified in config file",
 				 subsys ); 
-		newError( CA_LOCATE_FAILED, buf );
+		newError( CA_LOCATE_FAILED, buf.Value() );
 		_is_configured = false;
 		return false;
 	}
 
 
 	if( is_ipaddr(host, &sin_addr) ) {
-		sprintf( buf, "<%s:%d>", host, _port );
-		New_addr( strnewp(buf) );
+		buf.sprintf( "<%s:%d>", host, _port );
+		New_addr( strnewp(buf.Value() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
@@ -1130,15 +1180,14 @@ Daemon::getCmInfo( const char* subsys )
 		tmp = get_full_hostname( host, &sin_addr );
 		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
-			MyString err_msg = "unknown host ";
-			err_msg += host;
-			newError( CA_LOCATE_FAILED, err_msg.Value() );
+			buf.sprintf( "unknown host %s", host );
+			newError( CA_LOCATE_FAILED, buf.Value() );
 			free( host );
 			return false;
 		}
-		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
-		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
-		New_addr( strnewp(buf) );
+		buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
+		New_addr( strnewp(buf.Value() ) );
 		New_full_hostname( tmp );
 	}
 

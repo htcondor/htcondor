@@ -1,13 +1,20 @@
+#if WANT_NEW_CLASSADS
+#define New_classads_includes	-I$(NEW_CLASSADS_INC)
+#define New_classads_obj		dc_credd.o
+#else
+#define New_classads_includes
+#define New_classads_obj
+#endif
 all_target(libdaemonclient.a)
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC)
+CFLAGS = $(STD_C_FLAGS) New_classads_includes
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) New_classads_includes
 LIB = $(STD_LIBS)
 
 ### NOTE!  If you add anything here, also add it to the
 ### DAEMON_CLIENT_OBJ line in condor_c++_util/Imakefile   
 OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o dc_schedd.o \
-	dc_collector.o dc_starter.o daemon_list.o
+	dc_collector.o dc_starter.o daemon_list.o New_classads_obj
 
 library_target(libdaemonclient.a,$(OBJ))
 

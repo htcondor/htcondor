@@ -11,8 +11,6 @@ DEVNULL=/dev/null
 MEMORY_TESTS=true	# run memory tests
 LEAK_TESTS=false	# run memory leak tests.  implies MEM_TESTS
 
-SIGSPEC="0 1 2 3 15"	# signals to catch.  Run finish() function.
-
 # Optional memory debugger harness. Uncomment VALGRIND definition to enable
 # memory debugging.
 VALGRIND=~nleroy/local/bin/valgrind		# FIXME
@@ -26,7 +24,7 @@ VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --leak-check=yes"
 #VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --show-reachable=yes"	#too noisy
 #VALGRINDCMD="$VALGRIND $VALGRIND_OPTS"
 
-CREDD_HOST=localhost	# CredD host
+#CREDD_HOST=localhost	# CredD host
 CREDD_HOST=`hostname`	# CredD host
 CREDD_START_DELAY=4	# daemon startup/shutdown delay
 
@@ -36,7 +34,8 @@ CREDD_OPTS="$CREDD_OPTS -f"
 
 # store_cred invocation
 CRED_STORE=condor_store_cred
-CRED_STORE_OPTS="$CRED_STORE_OPTS -v"
+CRED_STORE_OPTS="$CRED_STORE_OPTS -d"
+CRED_STORE_OPTS="$CRED_STORE_OPTS -t x509"
 
 
 PERL=perl	# Perl program
@@ -80,8 +79,24 @@ LOG_FILES=
 CRED_STORE_DIR=
 CRED_NAME=
 NEXT_PORT=10000	#next unique TCP server listen port to try
+declare -a KILL_PIDS	# array of process PIDs to kill upon exit
+declare -a KILL_CMDs	# array of process commands to kill upon exit
 
 # Functions
+
+# Catch signals and program exit.  This function is needed to avoid a bug in
+# the bash implmentation of "trap".  The workaround is to always "trap 0"
+# before other sigspecs.
+sig_handler() {
+	# signals to catch.  SIGNAL 0 MUST BE LISTED FIRST!
+	local SIGSPEC="0 1 2 15"
+	local handler=$1
+	local sig
+	for sig in $SIGSPEC; do
+		trap "$handler" $sig || echo "trap \"$handler\" $sig failed!"
+	done
+	#trap -p	# for debugging
+}
 
 register_log_file () {
 	LOG_FILES="$LOG_FILES $1"
@@ -177,16 +192,39 @@ memory_leaks () {
 	return $status
 }
 
+# Announce a test error
+error() {
+	echo
+	echo "  ERROR: " "$@" 1>&2
+}
+
+# Register a process id to kill upon program exit
+register_kill_pid ()
+{
+	KILL_PIDS=( "${KILL_PIDS[@]}" "$1" )
+}
+
+# Register a command to kill upon program exit
+register_kill_cmd ()
+{
+	KILL_CMDS=( "${KILL_CMDS[@]}" "$1" )
+}
+
 # Program cleanup and results summary
 finish() {
-	trap "" $SIGSPEC	# ignore signals until we exit
-	kill 0				# kill any lingering processes in this process group
+	# ignore signals until we exit
+	#sig_handler	# set a null signal handler so we can finish cleaning up
+	#kill 0				# kill any lingering processes in this process group
+	# Clean up any lingering background processes.
+	local pid
+	for pid in ${KILL_PIDS[@]}; do
+		kill $pid || error killing PID $pid
+	done
+	local cmd
+	for cmd in "${KILL_CMDS[@]}"; do
+		pkill -f "$cmd" || error killing "\"$cmd\""
+	done
 	wait				# wait for child processes to exit
-	# myproxy server starts a new process group and new session, and must be
-	# killed separately.  wait will not work for myproxy
-	if [ -n "$MYPROXYCMD" ]; then
-		pkill -f "$MYPROXYCMD"
-	fi
 
 	echo
 	echo scanning logs for errors ...
@@ -204,17 +242,10 @@ finish() {
 	exit $FAIL_COUNT	# program exit point
 }
 
-
 # Fatal error message and exit
 fatal () {
 	echo $PROG ERROR: "$@" 1>&2
 	exit 
-}
-
-# Announce a test error
-error() {
-	echo
-	echo "  ERROR: " "$@" 1>&2
 }
 
 # announce a test
@@ -395,6 +426,7 @@ EOF
 	MYPROXYCMD="$MYPROXYCMD -c $config"
 	MYPROXYCMD="$MYPROXYCMD --storage $storage"
 	MYPROXYCMD="$MYPROXYCMD --port $MYPROXY_SERVER_PORT"
+	register_kill_cmd "$MYPROXYCMD"
 	local out=$MYPROXYD.out
 	(
 		export X509_USER_CERT=$X509PROXY
@@ -402,7 +434,7 @@ EOF
 		$MYPROXYCMD >$out 2>&1	# start myproxy-server daemon
 	)
 	export MYPROXY_SERVER_DN=`$GRID_PROXY_INFO -subject -file $X509PROXY`
-export MYPROXY_SERVER_DN=`grid-cert-info -subject`	# FIXME
+	export MYPROXY_SERVER_DN=`grid-cert-info -subject`	# FIXME
 	sleep $MYPROXY_START_DELAY
 	echo
 	export MYPROXY_SERVER=localhost
@@ -445,8 +477,8 @@ store_myproxy () {
 store_cred() {
 	name="$1"; shift;
 	test_announce "$name"
-	CRED_STORE_OPTS="$CRED_STORE_OPTS -s $CREDD_HOST_PORT"
-	cmd="$CRED_STORE $CRED_STORE_OPTS -f $X509PROXY -n $CRED_NAME"
+	#CRED_STORE_OPTS="$CRED_STORE_OPTS -n $CREDD_HOST"
+	cmd="$CRED_STORE $CRED_STORE_OPTS -f $X509PROXY -N $CRED_NAME"
 	run_fg $name $cmd
 	status=$?
 	if [ $status -ne 0 ];then
@@ -480,6 +512,7 @@ run_bg() {
 	fi
 	$MEMTEST $LOGFILE "$@" >"$out.out" 2>&1 &
 	status=$?	# is this pointless?
+	register_kill_pid $!
 	return $status
 }
 
@@ -500,8 +533,9 @@ credd () {
 
 	# Update config via environment
 	export _CONDOR_CRED_CHECK_INTERVAL=2
+	export _CONDOR_CREDD_ADDRESS_FILE="$TESTDIR/.credd_address"
 	CREDD_PORT=`next_port`
-	CREDD_HOST_PORT="${CREDD_HOST}:${CREDD_PORT}"
+	#CREDD_HOST_PORT="${CREDD_HOST}:${CREDD_PORT}"
 	CREDD_OPTS="$CREDD_OPTS -p $CREDD_PORT"
 	cmd="$CREDD $CREDD_OPTS"
 	echo starting $cmd ...

@@ -20,14 +20,16 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include "globus_utils.h"
 
 
 #define MAX_CRED_DATA_SIZE 100000
 #define DEF_CRED_CHECK_INTERVAL		60	/* seconds */
 
 template class SimpleList<Credential*>;
+template class SimpleList<CredentialWrapper*>;
 
-SimpleList <Credential*> credentials;
+SimpleList <CredentialWrapper*> credentials;
 
 extern int myproxyGetDelegationReaperId;
 
@@ -46,8 +48,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   int rc;
   char * temp_file_name = NULL;
   bool found_cred;
-  Credential * temp_cred = NULL;
-  Credential * cred = NULL;
+  CredentialWrapper * temp_cred = NULL;
   int data_size = -1;
   classad::ClassAd * _classad = NULL;
   classad::ClassAd classad;
@@ -56,6 +57,8 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   classad::ClassAdParser parser;
   ReliSock * socket = (ReliSock*)stream;
   const char * user = NULL;
+
+  CredentialWrapper * cred_wrapper;
 
   if (!socket->isAuthenticated()) { 
     char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
@@ -105,22 +108,24 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 
 
   if (type == X509_CREDENTIAL_TYPE) {
-    cred = new X509CredentialWrapper (classad);
-    dprintf (D_ALWAYS, "Name=%s Size=%d\n", cred->GetName(), cred->GetDataSize());
+	cred_wrapper = new X509CredentialWrapper (classad);
+    dprintf (D_ALWAYS, "Name=%s Size=%d\n", 
+			 cred_wrapper->cred->GetName(), 
+			 cred_wrapper->cred->GetDataSize());
 
   } else {
-    dprintf (D_ALWAYS, "Unsupported credential type %d\n", type);
-    goto EXIT;
+	  dprintf (D_ALWAYS, "Unsupported credential type %d\n", type);
+	  goto EXIT;
   }
 
-  cred->SetOrigOwner (socket->getOwner()); // original remote uname
-  cred->SetOwner (user);                   // mapped uname
+  cred_wrapper->cred->SetOrigOwner (socket->getOwner()); // original remote uname
+  cred_wrapper->cred->SetOwner (user);                   // mapped uname
 
   // Receive credential data
-  data_size = cred->GetDataSize();
+  data_size = cred_wrapper->cred->GetDataSize();
   if (data_size > MAX_CRED_DATA_SIZE) {
-    dprintf (D_ALWAYS, "ERROR: Credential data size %d > maximum allowed (%d)\n", data_size, MAX_CRED_DATA_SIZE);
-    goto EXIT;
+	  dprintf (D_ALWAYS, "ERROR: Credential data size %d > maximum allowed (%d)\n", data_size, MAX_CRED_DATA_SIZE);
+	  goto EXIT;
   }
 
   data = malloc (data_size);
@@ -131,34 +136,38 @@ store_cred_handler(Service * service, int i, Stream *stream) {
     dprintf (D_ALWAYS, "Error receiving credential data\n");
     goto EXIT;
   }
-  cred->SetData (data, data_size);
+  cred_wrapper->cred->SetData (data, data_size);
   
 
   // Check whether credential under this name already exists
   found_cred=false;
   credentials.Rewind();
   while (credentials.Next(temp_cred)) {
-    if ((strcmp(cred->GetName(), temp_cred->GetName()) == 0) && 
-	(strcmp(cred->GetOwner(), temp_cred->GetOwner()) == 0)) {
-	found_cred=true;
-	break; // found it
-    }
+	  if ((strcmp(cred_wrapper->cred->GetName(), 
+				  temp_cred->cred->GetName()) == 0) && 
+		  (strcmp(cred_wrapper->cred->GetOwner(), 
+				  temp_cred->cred->GetOwner()) == 0)) {
+		  found_cred=true;
+		  break; // found it
+	  }
   }
 
   if (found_cred) {
-    dprintf (D_ALWAYS, "Credential %s for owner %s already exists!\n", cred->GetName(), cred->GetOwner());
-    delete cred;
-    socket->encode();
-    int rc=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
-    socket->code(rc);
-    goto EXIT;
+	  dprintf (D_ALWAYS, "Credential %s for owner %s already exists!\n", 
+			   cred_wrapper->cred->GetName(), 
+			   cred_wrapper->cred->GetOwner());
+	  delete cred_wrapper;
+	  socket->encode();
+	  int rc=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
+	  socket->code(rc);
+	  goto EXIT;
   }
 
   
   // Write data to a file
   temp_file_name = dircat (cred_store_dir, "credXXXXXX");
   mkstemp (temp_file_name);
-  cred->SetStorageName (temp_file_name);
+  cred_wrapper->SetStorageName (temp_file_name);
   
   init_user_id_from_FQN (user);
   if (!StoreData(temp_file_name,data,data_size)) {
@@ -168,8 +177,11 @@ store_cred_handler(Service * service, int i, Stream *stream) {
     goto EXIT;
   }
 
+  ((X509CredentialWrapper*)cred_wrapper)->cred->SetRealExpirationTime (
+			   x509_proxy_expiration_time(temp_file_name));
+
   // Write metadata to a file
-  credentials.Append (cred);
+  credentials.Append (cred_wrapper);
   SaveCredentialList();
 
   // Write response to the client
@@ -177,6 +189,12 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   rc = CREDD_SUCCESS;
   socket->code(rc);
 
+  dprintf( D_ALWAYS, "Credential name %s owner %s successfully stored\n",
+			 cred_wrapper->cred->GetName(), cred_wrapper->cred->GetOwner() );
+
+  if (type == X509_CREDENTIAL_TYPE) {
+	((X509Credential*)cred_wrapper->cred)->display( D_FULLDEBUG );
+  }
   rtnVal = TRUE;
 
 EXIT:
@@ -196,9 +214,10 @@ get_cred_handler(Service * service, int i, Stream *stream) {
   char * name = NULL;
   int rtnVal = FALSE;
   bool found_cred=false;
-  Credential * cred = NULL;
+  CredentialWrapper * cred = NULL;
   char * owner = NULL;
-  const char * user;
+  const char * user = NULL;
+  void * data = NULL;
 
   ReliSock * socket = (ReliSock*)stream;
 
@@ -261,23 +280,20 @@ get_cred_handler(Service * service, int i, Stream *stream) {
 
   credentials.Rewind();
   while (credentials.Next(cred)) {
-    if (cred->GetType() == X509_CREDENTIAL_TYPE) {
-      if ((strcmp(cred->GetName(), name) == 0) && 
-	  (strcmp(cred->GetOwner(), owner) == 0)) {
-	found_cred=true;
-	break; // found it
+	  if (cred->cred->GetType() == X509_CREDENTIAL_TYPE) {
+		  if ((strcmp(cred->cred->GetName(), name) == 0) && 
+			  (strcmp(cred->cred->GetOwner(), owner) == 0)) {
+			  found_cred=true;
+			  break; // found it
       }
     }
   }
-  
-  free (owner);
   
   socket->encode();
 
   if (found_cred) {
     dprintf (D_FULLDEBUG, "Found cred %s\n", cred->GetStorageName());
     
-    void * data=NULL;
     int data_size;
 
     
@@ -289,7 +305,8 @@ get_cred_handler(Service * service, int i, Stream *stream) {
     
     socket->code (data_size);
     socket->code_bytes (data, data_size);
-    free (data);
+    dprintf (D_ALWAYS, "Credential name %s for owner %s returned to user %s\n",
+			name, owner, user);
   }
   else {
     dprintf (D_ALWAYS, "Cannot find cred %s\n", name);
@@ -302,16 +319,26 @@ EXIT:
   if ( name != NULL) {
 	  free (name);
   }
+  if ( owner != NULL) {
+	  free (owner);
+  }
+  if ( data != NULL) {
+	  free (data);
+  }
   return rtnVal;
 }
 
 
 int 
 query_cred_handler(Service * service, int i, Stream *stream) {
+
+  classad::ClassAdUnParser unparser;
+  std::string adbuffer;
+
   char * request = NULL;
   int rtnVal = FALSE;
   int length;
-  Credential * cred = NULL;
+  CredentialWrapper * cred = NULL;
   SimpleList <Credential*> result_list;
 
   ReliSock * socket = (ReliSock*)stream;
@@ -354,11 +381,11 @@ query_cred_handler(Service * service, int i, Stream *stream) {
   // Find credentials for this user
   credentials.Rewind();
   while (credentials.Next(cred)) {
-    if (cred->GetType() == X509_CREDENTIAL_TYPE) {
-      if (strcmp(cred->GetOwner(), user) == 0) {
-	result_list.Append (cred);
-      }
-    }
+	  if (cred->cred->GetType() == X509_CREDENTIAL_TYPE) {
+		  if (strcmp(cred->cred->GetOwner(), user) == 0) {
+			  result_list.Append (cred->cred);
+		  }
+	  }
   }
 
 
@@ -367,16 +394,17 @@ query_cred_handler(Service * service, int i, Stream *stream) {
   length = result_list.Length();
   dprintf (D_FULLDEBUG, "User has %d credentials\n", length);
   socket->code (length);
-
-  result_list.Rewind();
-  while (result_list.Next(cred)) {
-	  classad::ClassAd _temp (*(cred->GetClassAd()));
-#if 0
-    _temp.put (*socket);
-#else
-	putOldClassAd(socket, _temp);
-#endif
 	
+
+  Credential * _cred;
+  result_list.Rewind();
+  while (result_list.Next(_cred)) {
+	  classad::ClassAd * _temp = cred->GetMetadata();
+	  unparser.Unparse(adbuffer,_temp);
+	  char * classad_str = strdup(adbuffer.c_str());
+	  socket->code (classad_str);
+	  free (classad_str);
+	  delete _temp;
   }
   rtnVal = TRUE;
   
@@ -394,7 +422,7 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
   int rtnVal = FALSE;
   int rc;
   bool found_cred;
-  Credential * cred = NULL;
+  CredentialWrapper * cred_wrapper = NULL;
   char * owner = NULL;
   const char * user;
 
@@ -461,26 +489,27 @@ rm_cred_handler(Service * service, int i, Stream *stream) {
 
   found_cred=false;
   credentials.Rewind();
-  while (credentials.Next(cred)) {
-    if (cred->GetType() == X509_CREDENTIAL_TYPE) {
-      if ((strcmp(cred->GetName(), name) == 0) && 
-	  (strcmp(cred->GetOwner(), owner) == 0)) {
-	credentials.DeleteCurrent();
-	found_cred=true;
-	break; // found it
-      }
-    }
+  while (credentials.Next(cred_wrapper)) {
+	  if (cred_wrapper->cred->GetType() == X509_CREDENTIAL_TYPE) {
+		  if ((strcmp(cred_wrapper->cred->GetName(), name) == 0) && 
+			  (strcmp(cred_wrapper->cred->GetOwner(), owner) == 0)) {
+			  credentials.DeleteCurrent();
+			  found_cred=true;
+			  break; // found it
+		  }
+	  }
   }
 
 
   if (found_cred) {
     priv_state priv = set_root_priv();
     // Remove credential data
-    unlink (cred->GetStorageName());
+    unlink (cred_wrapper->GetStorageName());
     // Save the metadata list
     SaveCredentialList();
     set_priv(priv);
-    delete cred;
+    delete cred_wrapper;
+    dprintf (D_ALWAYS, "Removed credential %s for owner %s\n", name, owner);
   } else {
     dprintf (D_ALWAYS, "Unable to remove credential %s:%s (not found)\n", owner, name); 
   }
@@ -515,12 +544,12 @@ SaveCredentialList() {
 
 
   classad::ClassAdXMLUnParser unparser;
-  Credential * pCred = NULL;
+  CredentialWrapper * pCred = NULL;
 
   // Clear the old list
   credentials.Rewind();
   while (credentials.Next(pCred)) {
-    const classad::ClassAd * pclassad = pCred->GetClassAd();
+    const classad::ClassAd * pclassad = pCred->cred->GetMetadata();
 	classad::ClassAd temp_classad(*pclassad); // lame
     std::string buff;
     unparser.Unparse (buff, &temp_classad);
@@ -535,7 +564,7 @@ SaveCredentialList() {
 
 int
 LoadCredentialList () {
-  Credential * pCred;
+  CredentialWrapper * pCred;
 
   // Clear the old list
   if (!credentials.IsEmpty()) {
@@ -591,7 +620,7 @@ LoadCredentialList () {
 
 int
 CheckCredentials () {
-  Credential * pCred;
+  CredentialWrapper * pCred;
   credentials.Rewind();  
   dprintf (D_FULLDEBUG, "In CheckCredentials()\n");
 
@@ -600,25 +629,25 @@ CheckCredentials () {
 
   while (credentials.Next(pCred)) {
     
-    init_user_id_from_FQN (pCred->GetOwner());
+    init_user_id_from_FQN (pCred->cred->GetOwner());
     priv_state priv = set_user_priv();
 
-    time_t time = pCred->GetRealExpirationTime();
+    time_t time = pCred->cred->GetRealExpirationTime();
     dprintf (D_FULLDEBUG, "Checking %s:%s = %d\n",
-	       pCred->GetOwner(),
-               pCred->GetName(),
+	       pCred->cred->GetOwner(),
+               pCred->cred->GetName(),
 	       time);
 
     if (time - now < 0) {
       dprintf (D_FULLDEBUG, "Credential %s:%s expired!\n",
-	       pCred->GetOwner(),
-	       pCred->GetName());
+	       pCred->cred->GetOwner(),
+	       pCred->cred->GetName());
     }
     else if (time - now < default_cred_expire_threshold) {
       dprintf (D_FULLDEBUG, "Credential %s:%s about to expire\n",
-	       pCred->GetOwner(),
-	       pCred->GetName());
-      if (pCred->GetType() == X509_CREDENTIAL_TYPE) {
+	       pCred->cred->GetOwner(),
+	       pCred->cred->GetName());
+      if (pCred->cred->GetType() == X509_CREDENTIAL_TYPE) {
 	RefreshProxyThruMyProxy ((X509CredentialWrapper*)pCred);
       }
     }
@@ -636,8 +665,8 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   char * myproxy_host = NULL;
   int status;
 
-  if (proxy->GetMyProxyServerHost() == NULL) {
-    dprintf (D_ALWAYS, "Skipping %s\n", proxy->GetName());
+  if (((X509Credential*)proxy->cred)->GetMyProxyServerHost() == NULL) {
+    dprintf (D_ALWAYS, "Skipping %s\n", proxy->cred->GetName());
     return FALSE;
   }
 
@@ -668,9 +697,9 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   Env myEnv;
   MyString strBuff;
 
-  if (proxy->GetMyProxyServerDN()) {
+  if (((X509Credential*)proxy->cred)->GetMyProxyServerDN()) {
     strBuff="MYPROXY_SERVER_DN=";
-    strBuff+= proxy->GetMyProxyServerDN();
+    strBuff+= ((X509Credential*)proxy->cred)->GetMyProxyServerDN();
     myEnv.Put (strBuff.Value());
     dprintf (D_FULLDEBUG, "%s\n", strBuff.Value());
   }
@@ -683,11 +712,11 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 
 
   // Get password (this will end up in stdin for myproxy-get-delegation)
-  const char * myproxy_password = proxy->GetRefreshPassword();
+  const char * myproxy_password =((X509Credential*)proxy->cred)->GetRefreshPassword();
   if (myproxy_password == NULL ) {
     dprintf (D_ALWAYS, "No MyProxy password specified for %s:%s\n",
-	     proxy->GetName(),
-	     proxy->GetOwner());
+	     proxy->cred->GetName(),
+	     proxy->cred->GetOwner());
     myproxy_password = "";
   }
 
@@ -705,45 +734,46 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
 
 
   // Figure out user name;
-  const char * username = proxy->GetOrigOwner();
+  const char * username = proxy->cred->GetOrigOwner();
 
   // Figure out myproxy host and port
-  myproxy_host = getHostFromAddr (proxy->GetMyProxyServerHost());
-  int myproxy_port = getPortFromAddr (proxy->GetMyProxyServerHost());
+  myproxy_host = getHostFromAddr (((X509Credential*)proxy->cred)->GetMyProxyServerHost());
+  int myproxy_port = getPortFromAddr (((X509Credential*)proxy->cred)->GetMyProxyServerHost());
 
-  // construt arguments
+  // construct arguments
   MyString strArgs = "";
-  strArgs += " -v";
+  strArgs += " --verbose ";
 
-  strArgs += " -o ";
+  strArgs += " --out ";
   strArgs += proxy_filename;
 
-  strArgs += " -s ";
+  strArgs += " --pshost ";
   strArgs += myproxy_host;
   if ( myproxy_host != NULL ) {
 	  free ( myproxy_host );
   }
 
-  strArgs += " -d ";
+  strArgs += " --dn_as_username ";
 
-  strArgs += " -t ";
+  strArgs += " --proxy_lifetime ";	// hours
   strArgs += 6;
 
-  strArgs += " -S ";
+  strArgs += " --stdin_pass ";
 
-  strArgs += " -l ";
+  strArgs += " --username ";
   strArgs += username;
 
   // Optional port argument
   if (myproxy_port) {
-    strArgs += " -p ";
+    strArgs += " --psport ";
     strArgs += myproxy_port;
   }
 
   // Optional credential name
-  if (proxy->GetCredentialName()) {
-    strArgs += " -k ";
-    strArgs += proxy->GetCredentialName();
+  if	(	((X509Credential*)proxy->cred)->GetCredentialName() && 
+  			( ((X509Credential*)proxy->cred)->GetCredentialName() )[0] ) {
+    strArgs += " --credname ";
+    strArgs += ((X509Credential*)proxy->cred)->GetCredentialName();
   }
 
 
@@ -826,12 +856,12 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
   dprintf (D_ALWAYS, "MyProxyGetDelegationReaper pid = %d, rc = %d\n", exitPid, exitStatus);
 
   credentials.Rewind(); 
-  Credential * cred;
+  CredentialWrapper * cred_wrapper;
   X509CredentialWrapper * matched_entry = NULL;
-  while (credentials.Next (cred)) {
-    if (cred->GetType() == X509_CREDENTIAL_TYPE) {
-      if (((X509CredentialWrapper*)cred)->get_delegation_pid == exitPid) {
-	matched_entry = (X509CredentialWrapper*)cred;
+  while (credentials.Next (cred_wrapper)) {
+    if (cred_wrapper->cred->GetType() == X509_CREDENTIAL_TYPE) {
+      if (((X509CredentialWrapper*)cred_wrapper)->get_delegation_pid == exitPid) {
+	matched_entry = (X509CredentialWrapper*)cred_wrapper;
 	break;
       }
     }
@@ -845,8 +875,8 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 		if (offset == (off_t)-1) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s), "
 					"stderr tmp file %s lseek() failed: %s\n", 
-					matched_entry->GetOwner(),
-					matched_entry->GetName(),
+					matched_entry->cred->GetOwner(),
+					matched_entry->cred->GetName(),
 					matched_entry->get_delegation_err_filename,
 					strerror(errno)
 				);
@@ -858,8 +888,8 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 		if (status == -1) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s), "
 					"stderr tmp file %s fstat() failed: %s\n", 
-					matched_entry->GetOwner(),
-					matched_entry->GetName(),
+					matched_entry->cred->GetOwner(),
+					matched_entry->cred->GetName(),
 					matched_entry->get_delegation_err_filename,
 					strerror(errno)
 				);
@@ -876,8 +906,8 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 		if (bytes_read < 0 ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s), "
 					"stderr tmp file %s read() failed: %s\n", 
-					matched_entry->GetOwner(),
-					matched_entry->GetName(),
+					matched_entry->cred->GetOwner(),
+					matched_entry->cred->GetName(),
 					matched_entry->get_delegation_err_filename,
 					strerror(errno)
 				);
@@ -886,27 +916,29 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 		if ( WIFEXITED(exitStatus) ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"exited with status %d, output:\n%s\n\n",
-				matched_entry->GetOwner(),
-				matched_entry->GetName(),
+				"exited with status %d, output (top):\n%s\n\n",
+				matched_entry->cred->GetOwner(),
+				matched_entry->cred->GetName(),
 				WEXITSTATUS(exitStatus),
 				matched_entry->get_delegation_err_buff
 			);
 			break;
 		} else if ( WIFSIGNALED(exitStatus) ) {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"terminated by signal %d, output:\n%s\n\n",
-				matched_entry->GetOwner(),
-				matched_entry->GetName(),
+
+				"terminated by signal %d, output (top):\n%s\n\n",
+				matched_entry->cred->GetOwner(),
+				matched_entry->cred->GetName(),
 				WTERMSIG(exitStatus),
 				matched_entry->get_delegation_err_buff
 			);
 			break;
 		} else {
 			dprintf (D_ALWAYS, "myproxy-get-delegation for proxy (%s, %s),  "
-				"unknown status %d, output:\n%s\n\n",
-				matched_entry->GetOwner(),
-				matched_entry->GetName(),
+
+				"unknown status %d, output (top):\n%s\n\n",
+				matched_entry->cred->GetOwner(),
+				matched_entry->cred->GetName(),
 				exitStatus,
 				matched_entry->get_delegation_err_buff
 			);

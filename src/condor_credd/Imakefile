@@ -4,7 +4,7 @@ all_target( $(NAME) )
 CFLAGS = $(STD_C_FLAGS) -I$(NEW_CLASSADS_INC)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I$(NEW_CLASSADS_INC)
 LIB = $(STD_LIBS) -L$(NEW_CLASSADS_LIB) -lclassad_ns
-CRED_LIB = credential.o X509credential.o client_common.o classadUtil.o
+CRED_LIB = classadUtil.o
 
 c_plus_target(condor_store_cred, store_cred.o $(CRED_LIB),$(LIB))
 release_target(condor_store_cred,bin,EXECUTABLE_MODE)

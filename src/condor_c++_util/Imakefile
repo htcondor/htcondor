@@ -1,7 +1,17 @@
+#if WANT_NEW_CLASSADS
+#define New_classads_includes	-I$(NEW_CLASSADS_INC)
+#define New_classads_obj		credential.o X509credential.o
+#define New_classads_dc_obj		dc_credd.o
+#else
+#define New_classads_includes
+#define New_classads_obj
+#define New_classads_dc_obj
+#endif
+
 all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) New_classads_includes
+CFLAGS = $(STD_C_FLAGS) New_classads_includes
 LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
@@ -95,7 +105,8 @@ CONLIBAPI_OBJ = \
 	$(SETEGID_OBJ)
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
-	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o
+	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o \
+	New_classads_dc_obj
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o user_job_policy.o classad_support.o \
@@ -119,7 +130,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	RegExer.o my_distribution.o error_utils.o $(DH_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
 	condor_parameters.o extra_param_info.o classad_command_util.o \
-	domain_tools.o CondorError.o utc_time.o status_string.o
+	domain_tools.o CondorError.o utc_time.o status_string.o \
+	New_classads_obj
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))

@@ -1,5 +1,19 @@
 							  Stork Release Notes
 
+release-TBD:
+
+*Numerous stability fixes, and memory leak fixes.
+
+*The command line option for all CredD tools to specify a remote CredD
+server has changed, from "-s host:port" to "-n host:port".  This
+change is needed to make CredD tool command line options consistent
+with  Condor tool options.
+
+*The command line option for all CredD tools to enable debugging
+output server has changed, from "-v" to "-d".  This change is needed
+to make CredD tool command line options consistent with  Condor tool
+options.  Further, debugging output was broken, and is now fixed.
+
 0.9.1 2004-10-20:
 
 The Condor Project is pleased to announce the release of version 0.9.1

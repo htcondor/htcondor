@@ -1,11 +1,31 @@
 #ifndef __X509CREDENTIALWRAPPER_H__
 #define __X509CREDENTIALWRAPPER_H__
 #include "X509credential.h"
+#include "classad_distribution.h"
+
+#define CREDATTR_STORAGE_NAME "_StorageName"
+
+class CredentialWrapper {
+ public:
+	CredentialWrapper();
+	virtual ~CredentialWrapper();
+	
+	Credential * cred;
+
+	virtual classad::ClassAd * GetMetadata();
+
+	virtual const char * GetStorageName();
+	virtual void SetStorageName (const char * name);
+
+ protected:
+	MyString storage_name;
+
+};
 
 // The X509credentialWrapper object is for server-side use of X509 credentials,
 // and augments the X509credential objects with extra MyProxy get_delegation
 // child process interfaces.
-class X509CredentialWrapper : public X509Credential {
+class X509CredentialWrapper : public CredentialWrapper {
 public:
 
   X509CredentialWrapper (const classad::ClassAd&);
@@ -23,7 +43,6 @@ public:
   int get_delegation_password_pipe[2]; // to send pwd via stdin
   void get_delegation_reset(void);
 
-  
 protected:
   void init(void);
   

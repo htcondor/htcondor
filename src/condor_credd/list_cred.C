@@ -4,91 +4,112 @@
 #include "X509credential.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
-#include "client_common.h"
 #include "classadUtil.h"
+#include "dc_credd.h"
+#include "condor_version.h"
 
-const char * MyName = "condor_list_cred";
 
 void
-usage()
+version()
 {
-	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", MyName );
+	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+	exit( 0 );
+}
+
+void
+usage(const char *myName)
+{
+	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", myName );
 	fprintf( stderr, "      Valid options:\n" );
-	fprintf( stderr, "      -s <host>\tsubmit to the specified credd\n" );
-	fprintf( stderr, "      \t(e.g. \"-s myhost.cs.wisc.edu\")\n\n");
+	fprintf( stderr, "      -d\tdebug output\n\n" );
+	fprintf( stderr, "      -n <host:port>\tsubmit to the specified credd\n" );
+	fprintf( stderr, "      \t(e.g. \"-s myhost.cs.wisc.edu:1234\")\n\n");
 	fprintf( stderr, "      -h\tprint this message\n\n");
-	fprintf( stderr, "      -v\tverbose output\n\n" );
+	fprintf( stderr, "      -v\tprint version\n\n" );
 }
 
 int main(int argc, char **argv)
 {
 	char * server_address = NULL;
 	char ** ptr;
+	const char * myName;
 
+	// find our name
+	myName = strrchr( argv[0], DIR_DELIM_CHAR );
+	if( !myName ) {
+		myName = argv[0];
+	} else {
+		myName++;
+	}
 
+	// read config file
 	myDistro->Init (argc, argv);
+	config ();
 
 	for (ptr=argv+1,argc--; argc > 0; argc--,ptr++) {
 		if ( ptr[0][0] == '-' ) {
 			switch ( ptr[0][1] ) {
 			case 'h':
-				usage();
+				usage(myName);
 				exit(0);
 				break;
-			case 'v':
+			case 'd':
 					// dprintf to console
 				Termlog = 1;
 				dprintf_config ("TOOL", 2 );
 				break;
-			case 's':
+			case 'n':
 				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -s requires another argument\n",
-							 MyName );
+					fprintf( stderr, "%s: -n requires another argument\n",
+							 myName );
 					exit(1);
 				}
 	
 				server_address = strdup (*ptr);
 
 				break;
+			case 'v':
+				version();	// this function calls exit(0)
+				break;
 			default:
 				fprintf( stderr, "%s: Unknown option %s\n",
-						 MyName, *ptr);
-				usage();
+						 myName, *ptr);
+				usage(myName);
 				exit(1);
 			}
 		} //fi
 	} //rof
 
-	config ();
 
-	ReliSock * sock = NULL;
-	if (!start_command_and_authenticate (server_address, CREDD_QUERY_CRED, sock)) {
+	CondorError errorstack;
+	int number = 0;
+	SimpleList <Credential*> result;
+
+	DCCredd credd(server_address);
+
+	// resolve server address
+	if ( ! credd.locate() ) {
+		fprintf (stderr, "%s\n", credd.error() );
 		return 1;
 	}
 
+	if (!credd.listCredentials (result,
+								number,
+								errorstack)) {
+		fprintf (stderr, "Unable to retrieve credentials (%s)\n",
+				 errorstack.getFullText(true));
+		return 1;
+	}
+	 
 
-		// Send request
-	sock->encode();
-	char * request = "_";
-	sock->code (request);
-	sock->eom();
 
-		// Receive response
-	sock->decode();
-
-	int number = -1;
-	sock->code (number); 
-  
 	if (number > 0) {
+		Credential * cred;
+		result.Rewind();
 		printf ("Name\tType\n-----\t-----\n");
-		for (int i=0; i<number; i++) {
-			classad::ClassAd classad;
-			//classad.initFromStream (*sock);
-			getOldClassAd(sock, classad);
-      
-			X509Credential cred (classad);
-
-			printf ("%s\t%s\n", cred.GetName(), cred.GetTypeString());
+		while (result.Next (cred)) {
+			
+			printf ("%s\t%s\n", cred->GetName(), cred->GetTypeString());
 		}
 
 		printf ("\nTotal %d\n", number);
@@ -96,10 +117,9 @@ int main(int argc, char **argv)
 		printf ("No credentials currently stored on this server\n");
 	} else {
 		fprintf (stderr, "ERROR\n");
+		return 1;
 	}
 
-	sock->close();
-	delete sock;
 	return 0;
 }
 

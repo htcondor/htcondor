@@ -13,7 +13,7 @@ condor_master.  If started by condor_master, stork and CredD should be stopped
 by condor_master_off.
 1) User creates a GSI proxy with grid-proxy-init
 2) User submits GSI proxy to the CredD on the Stork server machine using:
-    condor_store_cred -file /tmp/x509up_u500 -name MyCred -s <stork server>
+    condor_store_cred -file /tmp/x509up_u500 -Name MyCred -s <stork server>
 3) User creates a Stork submit file that contains a line:
    ...
    cred_name = "MyCred";
@@ -216,20 +216,25 @@ Submitting credentials to the CredD
 condor_store_cred has the following options:
 Usage: condor_store_cred [options] [cmdfile]
       Valid options:
-      -v        verbose output
+      -d        debug output
 
-      -s <host> submit to the specifized credd (default - local credD)
-        (e.g. "-s myhost.cs.wisc.edu")
+      -n <host:port> submit to the specified credd (default - local credD)
+        (e.g. "-n myhost.cs.wisc.edu:1234")
 
       -f <file> specify where credential is stored
 
-      -n <name> specify credential name
+      -t <type> specify credential type, this option is required
+       (type is currently restricted to "x509"
+
+      -N <name> specify credential name
 
       -m [user@]host[:port]     specify MyProxy user/server
         (e.g. "-m wright@myproxy.cs.wisc.edu:1234")
 
       -D <DN>   specify myproxy server DN (if not standard)
         (e.g. "-D '/CN=My/CN=Proxy/O=Host'")
+
+      -v        print version
 
       -h        print this message
 
