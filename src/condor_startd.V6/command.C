@@ -1352,6 +1352,34 @@ command_classad_handler( Service*, int, Stream* s )
 	dprintf( D_COMMAND, "Serving request for %s by user '%s'\n", 
 			 cmd_str, owner );
 
+	char* tmp = NULL;
+	ad.LookupString( ATTR_OWNER, &tmp );
+	if( tmp ) {
+		if( strcmp(tmp, owner) ) {
+				// they're different!
+			MyString err_msg = ATTR_OWNER;
+			err_msg += " specified in ClassAd as '";
+			err_msg += tmp;
+			err_msg += "' yet request sent by user '";
+			err_msg += owner;
+			err_msg += "', possible security attack, request refused!";
+			sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+			free( claim_id );
+			free( cmd_str );
+			free( tmp );
+			return FALSE;
+		} 
+		free( tmp );
+	} else {
+			// ATTR_OWNER not defined, set it ourselves...
+		MyString line = ATTR_OWNER;
+		line += "=\"";
+		line += owner;
+		line += '"';
+		ad.Insert( line.Value() );
+	}
+ 
+
 		// now, find the CODMgr managing this Claim, and call the
 		// appropriate method for the given command
 	CODMgr* cod_mgr = claim->getCODMgr();
