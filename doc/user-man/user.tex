@@ -283,7 +283,7 @@ relinking the program with the Condor library using the
 The manual page on page~\pageref{man-condor-submit} has details.
 
 The vanilla universe provides a way to run jobs that cannot be
-?.
+relinked.
 It depends on a shared file system for access to input and output
 files,
 and there is no way to take a checkpoint or migrate a job executed
@@ -456,9 +456,9 @@ or it can give up and restart the job \emph{from the beginning}
 on another machine in the pool.
 
 \Notice{
-In UNIX, jobs submitted as vanilla universe jobs can only rely on an
+In UNIX, jobs submitted as vanilla universe jobs can rely only on an
 external mechanism for accessing data files from different machines
-such as NFS or AFS. The job \emph{must} be able to access your data
+such as NFS or AFS. The job \emph{must} be able to access the data
 files on any machine on which it could potentially run. As an example,
 suppose your work machine is blackbird.cs.wisc.edu and your job requires
 a particular data file \File{/u/p/s/psilord/data.txt}. You wish to
@@ -471,7 +471,7 @@ Condor deals with this restriction of the vanilla universe by
 the \AdAttr{FileSystemDomain} and \AdAttr{UidDomain} machine
 ClassAd attributes that reflect the reality of the pool's disk
 mounting structure. If you have a large pool spanning multiple
-\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s then you must specify
+\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, then you must specify
 your \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
 \AdAttr{FileSystemDomain}s that your jobs need to access your data
 files.
@@ -895,20 +895,21 @@ If migrated to a different machine, correct execution requires that
 the platform must remain the same.
 
 In previous versions of Condor, the author of the heterogeneous
-submission file would have to write extra policy expressions in the
-\AdAttr{requirements} expression that would force Condor to choose the
-same type of platform to restart a checkpointed job.
-However, since it in needed in the common case, we at Condor added a default
-to the \AdAttr{requirements} expression that automatically enforces
-this policy with the checkpointed job provided the user does not use
+submission file would need to write extra policy expressions in the
+\AdAttr{requirements} expression to force Condor to choose the
+same type of platform when continuing a checkpointed job.
+However, since it is needed in the common case, this
+additional policy is now automatically added
+to the \AdAttr{requirements} expression.
+The additional expression is added
+provided the user does not use
 \AdAttr{CkptArch} in the \AdAttr{requirements} expression.
 Condor will remain backwards compatible for those users who have explicitly
 specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
 in their \AdAttr{requirements} expression.
 
-If you do not specify \AdAttr{CkptArch} in your \AdAttr{requirements}
-expression, then we will add this expression to your \AdAttr{requirements}
-expression in this way:
+The expression added when the attribute \AdAttr{CkptArch} is not specified 
+will default to
 
 \begin{verbatim}
   # Added by Condor
@@ -918,6 +919,7 @@ expression in this way:
   Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
 
+% DONE TO HERE
 The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
 \AdAttr{requirements} is as follows.
 The \AdAttr{CkptRequirements} expression guarantees correct operation
