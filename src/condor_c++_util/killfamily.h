@@ -74,7 +74,7 @@ public:
 	
 	void	display();		// dprintf's the existing pid family
 
-	
+	void	setFamilyLogin( char *login );
 
 private:
 	enum KILLFAMILY_DIRECTION {
@@ -95,6 +95,13 @@ private:
 		// See the comment for takePeriodicSnapshot.
 	int dc_tid;
 #endif 
+
+#ifdef WIN32
+	CSysinfo sysinfo;
+	ExtArray<HANDLE> familyHandles;
+#endif
+
+	void closeFamilyHandles();
 
 	class a_pid {
 		public:
@@ -127,6 +134,9 @@ private:
 	long alive_cpu_sys_time;
 
 	unsigned long max_image_size;
+
+	int getPidFamilyByLogin(pid_t *pidFamily);
+	char *searchLogin;
 };
 
 #endif
