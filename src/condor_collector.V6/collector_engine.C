@@ -566,7 +566,7 @@ housekeeper()
 	if (pvtAds)
 	{
 		dprintf (D_ALWAYS, "\tCleaning StartdPrivateAds ...\n");
-		cleanHashTable (StartdAds, now, makeStartdAdHashKey);
+		cleanHashTable (StartdPrivateAds, now, makeStartdAdHashKey);
 	}
 
 	dprintf (D_ALWAYS, "\tCleaning ScheddAds ...\n");
