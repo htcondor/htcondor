@@ -163,7 +163,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr,int new_mask)
 		
 		// hueristic: if the mask already contains what we
 		// want, we are done.
-		if ( old_mask & new_mask == new_mask ) {
+		if ( (old_mask & new_mask) == new_mask ) {
 			return TRUE;
 		}
 
