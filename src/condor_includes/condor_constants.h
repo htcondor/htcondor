@@ -89,7 +89,7 @@ static const char CONDOR_EXEC[] = "condor_exec.exe";
 #else
 static const char DIR_DELIM_CHAR = '/';
 static const char NULL_FILE[] = "/dev/null";
-static const char CONDOR_EXEC[] = "condor_exec";
+static const char CONDOR_EXEC[] = "condor_exec.exe";
 #endif
 
 /* This is the username of the NiceUser (i.e., dirt user) */
