@@ -1,6 +1,12 @@
 SRC_DIR = $(SRC_TREE)/condor_tools
 CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS) -DNEW_PROC
+
+#if IS_SGI_IRIX53 || IS_SGI_IRIX62
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG 
+#else
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG -fexternal-templates
+#endif
+
 #remove static for libdl.so
 LDFLAGS = $(LIBDBM)
 
