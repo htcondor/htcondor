@@ -71,14 +71,14 @@ typedef enum {
 typedef int uid_t;
 typedef int gid_t;
 HANDLE priv_state_get_handle();
-void init_user_nobody_loginname(const char *);
+void init_user_nobody_loginname();
 const char *get_user_nobody_loginname();
 #endif
 
 void _condor_disable_uid_switching();
 void init_condor_ids();
 void uninit_user_ids();
-int init_user_ids(const char username[]);
+void init_user_ids(const char username[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
 int set_user_ids_quiet(uid_t uid, gid_t gid);
