@@ -43,6 +43,7 @@ CLEAN :
 	-@erase "$(INTDIR)\ckpt_name.obj"
 	-@erase "$(INTDIR)\condor_common_c.obj"
 	-@erase "$(INTDIR)\condor_common_c.pch"
+	-@erase "$(INTDIR)\condor_snutils.obj"
 	-@erase "$(INTDIR)\condor_universe.obj"
 	-@erase "$(INTDIR)\cronos.obj"
 	-@erase "$(INTDIR)\d_format_time.obj"
@@ -111,7 +112,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj"
+	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\condor_snutils.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -133,6 +135,7 @@ CLEAN :
 	-@erase "$(INTDIR)\ckpt_name.obj"
 	-@erase "$(INTDIR)\condor_common_c.obj"
 	-@erase "$(INTDIR)\condor_common_c.pch"
+	-@erase "$(INTDIR)\condor_snutils.obj"
 	-@erase "$(INTDIR)\condor_universe.obj"
 	-@erase "$(INTDIR)\cronos.obj"
 	-@erase "$(INTDIR)\d_format_time.obj"
@@ -200,7 +203,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj"
+	"$(INTDIR)\strcmp_until.obj" \
+	"$(INTDIR)\condor_snutils.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -297,6 +301,12 @@ CPP_SWITCHES=/nologo /MD /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_include
 
 
 !ENDIF 
+
+SOURCE=..\src\condor_util_lib\condor_snutils.c
+
+"$(INTDIR)\condor_snutils.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common_c.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_util_lib\condor_universe.c
 
@@ -518,7 +528,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-InputDir=\temp\ws63\src\h
+InputDir=\stolley\v65\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -530,7 +540,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-InputDir=\temp\ws63\src\h
+InputDir=\stolley\v65\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"

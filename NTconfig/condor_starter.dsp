@@ -148,6 +148,22 @@ SOURCE=..\src\condor_starter.V6.1\os_proc.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_starter.V6.1\parallel_comrade_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\parallel_comrade_proc.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\parallel_master_proc.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_starter.V6.1\parallel_master_proc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_starter.V6.1\starter.h
 # End Source File
 # Begin Source File
