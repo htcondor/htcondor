@@ -3035,7 +3035,7 @@ int DaemonCore::Create_Process(
 		return FALSE;
 	}
 
-	sprintf(inheritbuf,"%lu ",mypid);
+	sprintf(inheritbuf,"%lu ",(unsigned long)mypid);
 
 	strcat(inheritbuf,InfoCommandSinfulString());
 
