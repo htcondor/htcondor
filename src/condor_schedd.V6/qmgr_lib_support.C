@@ -81,7 +81,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
     // no connection active as of now; create a new one
 	if(scheddAddr) {
-        Daemon d (scheddAddr);
+        Daemon d( DT_SCHEDD, scheddAddr );
         qmgmt_sock = (ReliSock*) d.startCommand (QMGMT_CMD, Stream::reli_sock, timeout);
         ok = qmgmt_sock != NULL;
         if( !ok ) {
