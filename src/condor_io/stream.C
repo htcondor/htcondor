@@ -316,6 +316,7 @@ int Stream::code(PROC_ID &id)
 int Stream::code(struct rusage &r)
 {
 	STREAM_ASSERT(code(r.ru_utime));
+	STREAM_ASSERT(code(r.ru_stime));
 	STREAM_ASSERT(code(r.ru_maxrss));
 	STREAM_ASSERT(code(r.ru_ixrss));
 	STREAM_ASSERT(code(r.ru_idrss));
