@@ -60,9 +60,19 @@ char *mk_config_name();
 char *param();
 #endif
 
+
 do_connect( host, service, port )
+char 	*host, *service;
+u_short	port;
+{
+	return do_connect_with_timeout(host, service, port, 0);
+}
+
+
+do_connect_with_timeout( host, service, port, timeout )
 char	*host, *service;
 u_short		port;
+int		timeout;
 {
 	struct sockaddr_in	sin;
 	struct hostent		*hostentp;
@@ -99,7 +109,17 @@ u_short		port;
 	/*
 	dprintf( D_ALWAYS, "Connecting now...\n" );
 	*/
-	if( (status = connect(fd,(struct sockaddr *)&sin,sizeof(sin))) == 0 ) {
+	
+	if (timeout == 0) {
+		status = connect(fd,(struct sockaddr *)&sin,sizeof(sin));
+	} else {
+		status = tcp_connect_timeout(fd, &sin, sizeof(sin), timeout);
+		if (status == fd) {
+			status = 0;
+		}
+	}
+
+	if( status == 0 ) {
 		/*
 		dprintf( D_ALWAYS, "Done connecting\n" );
 		*/
@@ -360,7 +380,7 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
  NOT TESTED.  --raghu 5/23
 */
 
-int tcp_accept_timeout(int ConnectionSock, struct sockadrr *sin, int *len,
+int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
                        int timeout) 
 {
 	int             count;
@@ -392,7 +412,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockadrr *sin, int *len,
     if( count == 0 ) {
 		return -2;
     } else if( FD_ISSET(ConnectionSock,&readfds) ) {
-		return (  accept( ConnectionSock, (struct sockaddr *)sin, len)  );    
+		return (  accept( ConnectionSock, (struct sockaddr *)sin, len)  );
     } else {
 		EXCEPT( "select: unknown connection, readfds = 0x%x, count = %d",
 			   readfds, count );
