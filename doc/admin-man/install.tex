@@ -3,13 +3,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section contains the instructions for installing Condor at your
-site.  Condor's installation will setup a default configuration which
+Unix site.  Condor's installation will set up a default configuration which
 you can then learn how to customize in the sections which follow.
 
 Please read the copyright and disclaimer information in 
 section~\ref{sec:copyright-and-disclaimer} on
 page~\pageref{sec:copyright-and-disclaimer} of the manual, or in the
-file LICENSE.TXT, before proceeding.  Installation and
+file \File{LICENSE.TXT}, before proceeding.  Installation and
 use of Condor is acknowledgement that you have read and agreed to these
 terms.
 
@@ -17,16 +17,16 @@ The Condor binary distribution is packaged in the following 5 files
 and 2 directories:
 
 \begin{description}
-\item[DOC] file containing directions for where to find the 
+\item[\File{DOC}] file containing directions for where to find the 
 		  Condor documentation
-\item[INSTALL] these installation directions
-\item[LICENSE.TXT] by installing Condor, you agree to the contents of
+\item[\File{INSTALL}] these installation directions
+\item[\File{LICENSE.TXT}] by installing Condor, you agree to the contents of
 		  the LICENSE.TXT file
-\item[README] general info
-\item[condor\_install] Perl script to install and configure Condor
-\item[examples] directory containing C, Fortran and C++ example
+\item[\File{README}] general info
+\item[\File{condor\_install}] Perl script to install and configure Condor
+\item[\File{examples}] directory containing C, Fortran and C++ example
 		  programs to run with Condor
-\item[release.tar] tar file of the 'release directory', which contains
+\item[\File{release.tar}] tar file of the 'release directory', which contains
 		  the Condor binaries and libraries
 \end{description}
 
@@ -40,7 +40,7 @@ to \Email{majordomo@cs.wisc.edu} with the body:
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preparing-to-Install}Preparing to Install
-Condor} 
+Condor under Unix} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you install Condor at your site, there are a few important
@@ -48,21 +48,21 @@ decisions you must make about the basic layout of your pool.  These
 are:
 
 \begin{enumerate}
-\item What machine will be the Central Manager?
+\item What machine will be the central manager?
 \item Will Condor run as root or not?
 \item Who will be administering Condor on the machines in your pool?
-\item Will you have a 'condor' user and will it's home directory be
+\item Will you have a Unix user named condor and will its home directory be
    shared? 
 \item Where should the machine-specific directories for Condor go?
 \item Where should the parts of the Condor system be installed? 
 	\begin{itemize}
-	\item Config Files
+	\item Config files
 	\item Release directory
 		\begin{itemize}
-		\item User Binaries
-		\item System Binaries 
-		\item Lib Directory
-	  	\item Etc Directory
+		\item user binaries
+		\item system binaries 
+		\item \File{lib} directory
+	  	\item \File{etc} directory
 		\end{itemize}
 	\item Documentation
 	\end{itemize}
@@ -71,66 +71,92 @@ are:
 \end{enumerate}
 
 If you feel you already know the answers to these questions, you can
-skip to the 'Installation Procedure' section below,
+skip to the Installation Procedure section below,
 section~\ref{sec:install-procedure} on
 page~\pageref{sec:install-procedure}.
 If you are unsure about any of them, read on.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{What machine will be the Central Manager?}
+\subsubsection{What machine will be the central manager?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-One machine in your pool must be the Central Manager.  You should
-setup and install Condor on this machine first.  This is the
-centralized information repository for the Condor pool and is also the
-machine that does match-making between available machines and waiting
-jobs.  If the Central Manager machine crashes, any currently active
+One machine in your pool must be the central manager.
+\index{central manager!installation issues}
+Setup and install Condor on this machine first.  This is the
+centralized information repository for the Condor pool,
+and it is also the
+machine that does match-making between available machines and
+submitted
+jobs.  If the central manager machine crashes, any currently active
 matches in the system will keep running, but no new matches will be
 made.  Moreover, most Condor tools will stop working.  Because of the
-importance of this machine for the proper functioning of Condor, we
-recommend you install it on a machine that is likely to stay up all the
-time, or at the very least, one that will be rebooted quickly if it
-does crash.  Also, because all the daemons will send updates (by
-default every 5 minutes) to this machine, it is advisable to consider
+importance of this machine for the proper functioning of Condor,
+install the central manager on a machine that is likely to stay up all the
+time, or on one that will be rebooted quickly if it
+does crash.
+Also
+consider
 network traffic and your network layout when choosing your central
 manager.
+All the daemons send updates (by
+default, every 5 minutes) to this machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Will Condor run as root or not?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We strongly recommend that you start up the Condor daemons as root.
-Otherwise, Condor can do very little to enforce security and policy
-decisions.  If you don't have root access and would like to install
-Condor, under most platforms you can run Condor under any user you'd
-like.  However, there are serious security consequences of this.
+\index{installation!running as root}
+Start up the Condor daemons as the Unix user root.
+Without this,
+Condor can do very little to enforce security and policy
+decisions.
+You can install Condor under any user,
+however
+there are both serious security and performance consequences.
 Please see section~\ref{sec:Non-Root} on page~\pageref{sec:Non-Root}
-in the manual for details on running Condor as non-root.
+in the manual for the details and ramifications of
+on running Condor as a Unix user other
+than root.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Who will be administering Condor on the machines in your pool?}
+\subsubsection{Who will administer Condor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{Condor!Unix administrator}
+\index{Unix administrator}
+\index{Unix user!root}
+
+% administrator is a person, not an account
+% responsibilities of the administrator needed here
+% 1. to install
+% 2. to customize policies
+% 3. to receive e-mail
 
 Either root will be administering Condor directly, or someone else
 would be acting as the Condor administrator.  If root has delegated
 the responsibility to another person but doesn't want to grant that
-person root access, root can specify a condor\_config.root file that
-will override settings in the other condor config files.  This way,
-the global condor\_config file can be owned and controlled by whoever
-is condor-admin, and the condor\_config.root can be owned and
+person root access, root can specify a 
+\File{condor\_config.root} file that
+will override settings in the other condor configuration
+files.  This way,
+the global 
+\File{condor\_config} file can be owned and controlled by whoever
+is condor-admin, and the 
+condor\_config.root can be owned and
 controlled only by root.  Settings that would compromise root security
 (such as which binaries are started as root) can be specified in the
-condor\_config.root file while other settings that only control policy
+\File{condor\_config.root} file while other settings that only control policy
 or condor-specific settings can still be controlled without root
 access.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Will you have a 'condor' user and will it's home
+\subsubsection{Will you have a Unix user named condor, and will its home
 directory be shared? }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{Unix user!condor}
 To simplify installation of Condor at your site, we recommend that you
-create a 'condor' user on all machines in your pool.  The condor
+create a Unix user named condor on all machines in your pool.  The Condor
 daemons will create files (such as the log files) owned by this user,
 and the home directory can be used to specify the location of files
 and directories needed by Condor.  The home directory of this user can
@@ -142,10 +168,11 @@ resource usage such that you potentially need a lot of space for a
 single shared home directory.  See the section below on
 machine-specific directories for more details.
 
+% where is this environment variable set?
 If you choose not to create a condor user, you must specify via the
 CONDOR\_IDS environment variable which uid.gid pair should be used for
 the ownership of various Condor files.  See section~\ref{sec:uids} on
-``UIDs in Condor'' on page~\pageref{sec:uids} in the Administrator's
+UIDs in Condor on page~\pageref{sec:uids} in the Administrator's
 Manual for details.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -154,77 +181,104 @@ Condor go?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor needs a few directories that are unique on every machine in
-your pool.  These are 'spool', 'log', and 'execute'.  Generally, all
+your pool.  These are 
+\File{spool}, 
+\File{log}, and 
+\File{execute}.  Generally, all
 three are subdirectories of a single machine specific directory called
-the 'local directory' (specified by the \Macro{LOCAL\_DIR} parameter
-in the config file).
+the local directory (specified by the \Macro{LOCAL\_DIR} macro
+in the configuration file).
 
-If you have a 'condor' user with a local home directory on each
+If you have a Unix user named condor with a local home directory on each
 machine, the \Macro{LOCAL\_DIR} could just be user condor's home
-directory ('\Macro{LOCAL\_DIR} = \MacroU{TILDE}' in the config file).
+directory (\Macro{LOCAL\_DIR} = \MacroU{TILDE} in the 
+configuration file).
 If this user's home directory is shared among all machines in your
 pool, you would want to create a directory for each host (named by
-hostname) for the local directory ('\Macro{LOCAL\_DIR} =
-\MacroU{TILDE}/hosts/\MacroU{HOSTNAME}' for example).  If you don't
+hostname) for the local directory (for example, \Macro{LOCAL\_DIR} =
+\MacroU{TILDE}/hosts/\MacroU{HOSTNAME}).  If you do not
 have a condor account on your machines, you can put these directories
 wherever you'd like.  However, where to place them will require some
 thought, as each one has its own resource needs:
 
 \begin{description}
-\item[execute] This is the directory that acts as the current working
+\index{Unix directory!\File{execute}}
+\index{disk space requirement!\File{execute} directory}
+\item[\File{execute}] This is the directory that acts as the current working
 directory for any Condor jobs that run on a given execute machine.
-The binary for the remote job is copied into this directory, so you
-must have enough space for that.  (Condor won't send a job to a
-machine that doesn't have enough disk space to hold the initial
+The binary for the remote job is copied into this directory, so
+there
+must be enough space for it.  (Condor will not send a job to a
+machine that does not have enough disk space to hold the initial
 binary).  In addition, if the remote job dumps core for some reason,
 it is first dumped to the execute directory before it is sent back to
-the submit machine.  So, you will want to put the execute directory on
+the submit machine.  So, put the execute directory on
 a partition with enough space to hold a possible core file from the
 jobs submitted to your pool.
 
-\item[spool] The spool directory holds the job queue and history
+\index{Unix directory!\File{spool}}
+\index{disk space requirement!\File{spool} directory}
+\item[\File{spool}] The spool directory holds the job queue and history
 files, and the checkpoint files for all jobs submitted from a given
 machine.  As a result, disk space requirements for spool can be quite
 large, particularly if users are submitting jobs with very large
 executables or image sizes.  By using a checkpoint server (see
-section~\ref{sec:Ckpt-Server} on ``Installing a Checkpoint Server'' on
+section~\ref{sec:Ckpt-Server} on Installing a Checkpoint Server on
 page~\pageref{sec:Ckpt-Server} for details), you can ease the disk
 space requirements, since all checkpoint files are stored on the
 server instead of the spool directories for each machine.  However,
 the initial checkpoint files (the executables for all the clusters you
-submit) are still stored in the spool directory, so you will need some
-space, even with a checkpoint server.
+submit) are still stored in the spool directory, so you will need
+%
+% how much?!?
+%
+some space, even with a checkpoint server.
 
-\item[log] Each Condor daemon writes its own log file which is placed
-in the log directory.  You can specify what size you want these files
-to grow to before they are rotated, so the disk space requirements of
-the log directory are configurable.  The larger the logs, the more
-historical information they will hold if there's a problem, but the
-more disk space they use up.  If you have a network filesystem
+\index{Unix directory!\File{log}}
+\index{disk space requirement!\File{log} directory}
+\item[\File{log}] Each Condor daemon writes its own log file,
+and each log file is placed
+in the \File{log} directory.  You can specify what size you want these files
+to grow to before they are rotated,
+%
+% rotated?  Maybe this is talking about wrapping around to
+% overwrite the oldest entries first
+%
+so the disk space requirements of
+the directory are configurable.
+The larger the log files, the more
+historical information they will hold if there is a problem, but the
+more disk space they use up.  If you have a network file system
 installed at your pool, you might want to place the log directories in
-a shared location (such as \File{/usr/local/condor/logs/\$(HOSTNAME)})
+a shared location (such as \File{/usr/local/condor/logs/\$(HOSTNAME)}),
 so that you can view the log files from all your machines in a single
 location.  However, if you take this approach, you will have to
-specify a local partition for the lock directory (see below).
+specify a local partition for the \File{lock} directory (see below).
 
+\index{Unix directory!\File{lock}}
 \item[lock] Condor uses a small number of lock files to synchronize
-access to some files that are shared between multiple daemons.
-Because of problems we've had with file locking and network
-filesystems (particularly NFS), these lock files should be placed on a
-local partition on each machine.  By default, they are just placed in
-the log directory.  If you place your log directory on a network
-filesystem partition, you should specify a local partition for the
-lock files with the 'LOCK' parameter in the config file (such as
+access to certain files that are shared between multiple daemons.
+Because of problems encountered with file locking and network
+file systems (particularly NFS), these lock files should be placed on a
+local partition on each machine.  By default, they are placed in
+the \File{log} directory.  If you place your \File{log}
+directory on a network
+file system partition, specify a local partition for the
+lock files with the \Macro{LOCK} parameter in the configuration file (such as
 \File{/var/lock/condor}).
 
 \end{description}
 
-Generally speaking, we recommend that you do not put these directories
-(except lock) on the same partition as \File{/var}, since if the partition
-fills up, you will fill up \File{/var} as well, which will cause lots of
-problems for your machines.  Ideally, you'd have a separate partition
-for the Condor directories that the only consequence of filling up
-would be Condor's malfunction, not your whole machine.
+\index{disk space requirement!\Condor files}
+Generally speaking, it is recommended that you do not put these directories
+(except \File{lock}) on the same partition as \File{/var},
+since if the partition
+fills up, you will fill up \File{/var} as well. 
+This will cause lots of
+problems for your machines.  Ideally, you will have a separate partition
+for the Condor directories. Then, the only consequence of filling up
+the directories
+will be Condor's malfunction, not your whole machine.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Where should the parts of the Condor system be
@@ -232,48 +286,50 @@ installed?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	\begin{itemize}
-	\item Config Files
+	\item Configuration Files
 	\item Release directory
 		\begin{itemize}
 		\item User Binaries
 		\item System Binaries 
-		\item Lib Directory
-	  	\item Etc Directory
+		\item \File{lib} Directory
+	  	\item \File{etc} Directory
 		\end{itemize}
 	\item Documentation
 	\end{itemize}
 
 \begin{description}
-\item[Config Files] There are a number of config files that allow you
+\item[Configuration Files] There are a number of configuration files
+that allow you
 different levels of control over how Condor is configured at each
 machine in your pool.  
-The global config file is shared by all machines in the pool.
+The global configuration file is shared by all machines in the pool.
 For ease of administration, this file should be located on a shared
-filesystem, if possible.
+file system, if possible.
 In addition, there is a local
-config file for each machine, where you can override settings in the
+configuration file for each machine, where you can override settings in the
 global file.  This allows you to have different daemons running,
 different policies for when to start and stop Condor jobs, and so on.
-You can also have config files specific to each platform in your pool.
+You can also have configuration files specific to each platform in your pool.
 See
 section~\ref{sec:Multiple-Platforms} on
-page~\pageref{sec:Multiple-Platforms} about ``Configuring Condor for
-Multiple Platforms'' for details.
+page~\pageref{sec:Multiple-Platforms} about Configuring Condor for
+Multiple Platforms for details.
 
 In addition, because we recommend that you start the Condor daemons as
-root, we allow you to create config files that are owned and
-controlled by root that will override any other condor settings.  This
-way, if the condor administrator isn't root, the regular condor config
-files can be owned and writable by condor-admin, but root doesn't have
+root, we allow you to create configuration files that are owned and
+controlled by root that will override any other Condor settings.  This
+way, if the Condor administrator is not root, the regular Condor configuration
+files can be owned and writable by condor-admin, but root does not have
 to grant root access to this person.  See
 section~\ref{sec:Root-Config} on page~\pageref{sec:Root-Config} in the
-manual for a detailed discussion of the root config files, if you
+manual for a detailed discussion of the root configuration files, if you
 should use them, and what settings should be in them.
 
-In general, there are a number of places that condor will look to find
-its config files.  The first file it looks for is the global config
-file.  These locations are searched in order until a config file is
-found.  If none contain a valid config file, Condor will print an
+\index{configuration files!location}
+In general, there are a number of places that Condor will look to find
+its configuration files.  The first file it looks for is the global configuration
+file.  These locations are searched in order until a configuration file is
+found.  If none contain a valid configuration file, Condor will print an
 error message and exit:
 \begin{enumerate}
    \item File specified in \Env{CONDOR\_CONFIG} environment variable
@@ -281,39 +337,41 @@ error message and exit:
    \item \File{\Tilde condor/condor\_config}
 \end{enumerate}
 
-Next, Condor tries to load the local config file(s).
-The only way to specify the local config file(s) is in the global config
-file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro isn't
-set, no local config file is used.  This macro can be a list of files
+Next, Condor tries to load the local configuration file(s).
+The only way to specify the local configuration file(s) is in the global configuration
+file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro is not
+set, no local configuration file is used.  This macro can be a list of files
 or a single file.
 
-The root config files come in last.  The global file is searched for
+The root configuration files come in last.  The global file is searched for
 in the following places:
 \begin{enumerate}
    \item \File{/etc/condor/condor\_config.root}
    \item \File{\Tilde condor/condor\_config.root}
 \end{enumerate}
 
-The local root config file(s) are found with the
-\Macro{LOCAL\_ROOT\_CONFIG\_FILE} macro.  If that isn't set, no local
-root config file is used.  This
+The local root configuration file(s) are found with the
+\Macro{LOCAL\_ROOT\_CONFIG\_FILE} macro.  If that is not set, no local
+root configuration file is used.  This
 macro can be a list of files or a single file.
 
 \item[Release Directory]
 
-Every binary distribution contains a 'release.tar' file that contains
-four subdirectories: 'bin', 'etc', 'lib' and 'sbin'.  Wherever you
-choose to install these 4 directories we call the 'release directory'
-(specified by the 'RELEASE\_DIR' parameter in the config file).  Each
-release directory contains platform dependent binaries and libraries,
+Every binary distribution contains a \File{release.tar} file that contains
+four subdirectories: \File{bin}, \File{etc}, \File{lib} and \File{sbin}.
+Wherever you
+choose to install these 4 directories we call the release directory
+(specified by the \Macro{RELEASE\_DIR} macro in the configuration file).
+Each
+release directory contains platform-dependent binaries and libraries,
 so you will need to install a separate one for each kind of machine in
 your pool.  For ease of administration, these directories should be
-located on a shared filesystem, if possible.
+located on a shared file system, if possible.
 
 \begin{itemize}
      \item User Binaries:
 
-     All of the files in the 'bin' directory are programs the end
+     All of the files in the \File{bin} directory are programs the end
      Condor users should expect to have in their path.  You could
      either put them in a well known location (such as
      \File{/usr/local/condor/bin}) which you have Condor users add to
@@ -325,39 +383,39 @@ located on a shared filesystem, if possible.
 
      \item System Binaries:
 
-     All of the files in the 'sbin' directory are Condor daemons and
+     All of the files in the \File{sbin} directory are Condor daemons and
      agents, or programs that only the Condor administrator would need
-     to run.  Therefore, we recommend that you only add these programs
+     to run.  Therefore, add these programs only
      to the \Env{PATH} of the Condor administrator.
 
-     \item Lib Directory:
+     \item \File{lib} Directory:
 
-     The files in the 'lib' directory are the condor libraries that
+     The files in the \File{lib} directory are the Condor libraries that
      must be linked in with user jobs for all of Condor's
-     checkpointing and migration features to be used.  'lib' also
+     checkpointing and migration features to be used.  \File{lib} also
      contains scripts used by the \Condor{compile} program to help
-     relink jobs with the condor libraries.  These files should be
+     re-link jobs with the Condor libraries.  These files should be
      placed in a location that is world-readable, but they do not need
-     to be placed in anyone's PATH.  The \Condor{compile} script checks
-     the config file for the location of the lib directory.
+     to be placed in anyone's \Env{PATH}.  The \Condor{compile} script checks
+     the configuration file for the location of the \File{lib} directory.
 
-     \item Etc Directory:
+     \item \File{etc} Directory:
 
-     'etc' contains an 'examples' subdirectory which holds various
-     example config files and other files used for installing Condor.
-     'etc' is the recommended location to keep the master copy of your
-     config files.  You can put in soft links from one of the places
-     mentioned above that Condor checks automatically to find it's
-     global config file. 
+     \File{etc} contains an \File{examples} subdirectory which holds various
+     example configuration files and other files used for installing Condor.
+     \File{etc} is the recommended location to keep the master copy of your
+     configuration files.  You can put in soft links from one of the places
+     mentioned above that Condor checks automatically to find its
+     global configuration file. 
 \end{itemize}
 
 \item[Documentation]
 
-The documentation provided with Condor is currently only available in
-HTML, Postscript and PDF (Adobe Acrobat).  It can be locally installed
-wherever is customary at your site.  You can also find the Condor
-documentation on the web at:
-\Url{http://www.cs.wisc.edu/condor/manual}.
+The documentation provided with Condor is currently available in
+     HTML, Postscript and PDF (Adobe Acrobat).  It can be locally installed
+     wherever is customary at your site.  You can also find the Condor
+     documentation on the web at:
+     \Url{http://www.cs.wisc.edu/condor/manual}.
 
 \end{description}
 
@@ -368,8 +426,9 @@ documentation on the web at:
 If you are using AFS at your site, be sure to read the
 section~\ref{sec:Condor-AFS} on page~\pageref{sec:Condor-AFS} in the
 manual.  Condor does not currently have a way to authenticate itself
-to AFS.  We're working on a solution, it's just not ready for version
-6.0.  So, what this means is that you are probably not going to want
+to AFS.  We're working on a solution, it is just not ready for
+\VersionNotice{}.
+So, what this means is that you are probably not going to want
 to have the \Macro{LOCAL\_DIR} for Condor on AFS.  However, you can
 (and probably should) have the Condor \Macro{RELEASE\_DIR} on AFS, so
 that you can share one copy of those files and upgrade them in a
@@ -381,21 +440,22 @@ section~\ref{sec:Condor-AFS} for all the gory details.
 \subsubsection{Do I have enough disk space for Condor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{disk space requirement!all versions}
 The Condor release directory takes up a fair amount of space.  This is
 another reason why it's a good idea to have it on a shared
-filesystem.  The rough size requirements for the release
+file system.  The rough size requirements for the release
 directory on various platforms are listed in table~\ref{install-sizes}.
 
 \begin{center}
 \begin{table}
 \begin{tabular}{|ll|} \hline
 \emph{Platform} 	&	\emph{Size}		\\	\hline \hline
-	  Intel/Linux   &	11   megs (statically linked) \\
-	  Intel/Linux   &	6.5 megs (dynamically linked) \\
-	  Intel/Solaris &	8   megs \\
-	  Sparc/Solaris &	10   megs \\
-	  SGI/IRIX	    &	17.5 megs \\
-	  Alpha/Digital Unix & 	15.5 megs \\ \hline
+	  Intel/Linux   &	11   Mbytes (statically linked) \\
+	  Intel/Linux   &	6.5 Mbytes (dynamically linked) \\
+	  Intel/Solaris &	8   Mbytes \\
+	  Sparc/Solaris &	10   Mbytes \\
+	  SGI/IRIX	    &	17.5 Mbytes \\
+	  Alpha/Digital Unix & 	15.5 Mbytes \\ \hline
 \end{tabular}
 \caption{\label{install-sizes}Release Directory Size Requirements}
 \end{table}
@@ -410,33 +470,37 @@ above for details on this.
 Installation Procedure}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-IF YOU HAVE DECIDED TO CREATE A 'condor' USER AND GROUP, YOU SHOULD DO
+IF YOU HAVE DECIDED TO CREATE A condor USER AND GROUP, DO
 THAT ON ALL YOUR MACHINES BEFORE YOU DO ANYTHING ELSE.
 
+\index{installation!scripts}
+\index{Unix installation!scripts}
 The easiest way to install Condor is to use one or both of the scripts
-provided to help you: \Condor{install} and \Condor{init}.  You should
-run these scripts as the user that you are going to run the Condor
+provided to help you: \Condor{install} and \Condor{init}.
+\index{\Condor{install} script}
+\index{\Condor{init} script}
+Run these scripts as the user that you are going to run the Condor
 daemons as.  First, run \Condor{install} on the machine that will be a
-fileserver for shared files used by Condor, such as the release
+file server for shared files used by Condor, such as the release
 directory, and possibly the condor user's home directory.  When you
 do, choose the ``full-install'' option in step \#1 described below.
 
-Once you have run \Condor{install} on a file server to setup your
+Once you have run \Condor{install} on a file server to set up your
 release directory and configure Condor for your site, you should run
 \Condor{init} on any other machines in your pool to create any locally
-used files that aren't created by \Condor{install}.  In the most
+used files that are not created by \Condor{install}.  In the most
 simple case, where nearly all of Condor is installed on a shared file
-system, even though Condor{install} will create nearly all the files
+system, even though \Condor{install} will create nearly all the files
 and directories you need, you will still need to use \Condor{init} to
 create the \Macro{LOCK} directory on the local disk of each machine.
 If you have a shared release directory, but the \Macro{LOCAL\_DIR} is
 local on each machine, \Condor{init} will create all the directories
 and files needed in \Macro{LOCAL\_DIR}.  In addition, \Condor{init}
 will create any soft links on each machine that are needed so that
-Condor can find its global config file.
+Condor can find its global configuration file.
 
-If you don't have a shared filesystem, you will need to run
-\Condor{install} on each machine in your pool to setup Condor.  In
+If you do not have a shared file system, you need to run
+\Condor{install} on each machine in your pool to set up Condor.  In
 this case, there is no need to run \Condor{init} at all.
 
 In addition, you will want to run \Condor{install} on your central
@@ -446,16 +510,16 @@ using the ``central-manager'' option in step \#1 described below.  Run
 manager.  If this step fails for some reason (NFS permissions, etc),
 you can do it manually quite easily.  All this does is copy the
 \File{condor\_config.local.central.manager} file from
-\Release{etc/examples} to the proper location for the local config
+\Release{etc/examples} to the proper location for the local configuration
 file of your central manager machine.  If your central manager is an
-Alpha or an SGI, you might want to add ``KBDD'' to the
-\Macro{DAEMON\_LIST} parameter.  See
-section~\ref{sec:Configuring-Condor} ``Configuring Condor'' on
+Alpha or an SGI, you might want to add \Macro{KBDD} to the
+\MacroU{DAEMON\_LIST} macro.  See
+section~\ref{sec:Configuring-Condor} Configuring Condor on
 page~\pageref{sec:Configuring-Condor} of the manual for details.
 
 \Condor{install} assumes you have perl installed in \File{/usr/bin/perl}.  If
-this is not the case, you can either edit the script to put the right
-path in, or you will have to invoke perl directly from your shell
+this is not the case, you can either edit the script to put in the right
+path, or you will have to invoke perl directly from your shell
 (assuming perl is in your PATH):
 \begin{verbatim}
 % perl condor_install
@@ -480,11 +544,11 @@ what each step is for, and suggests how to answer the questions
      and run Condor jobs.  
 
      If you are planning to run Condor jobs on your machines, you
-     should either install and run Condor as root, or as user
-     'condor'.  
+     should either install and run Condor as root, or as the Unix
+     user condor.  
 
-     If you are planning to setup a submit only machine, you can
-     either install Condor machine-wide as root or user 'condor', or,
+     If you are planning to set up a submit-only machine, you can
+     either install Condor machine-wide as root or user condor, or,
      you can install Condor as yourself into your home directory.
 
      The other possible installation type is setting up a machine as a
@@ -497,85 +561,97 @@ what each step is for, and suggests how to answer the questions
 
 \item[STEP 2: How many machines are you setting up this way?]
 
-     If you are installing Condor for multiple machines, and you have
-     a shared file system, \Condor{install} will prompt you for the
+     If you are installing Condor for multiple machines and you have
+     a shared file system, then \Condor{install} will prompt you for the
      hostnames of each machine you want to add to your Condor pool.
-     If you don't have a shared file system, you will have to run
-     \Condor{install} locally on each machine, anyway, so it doesn't
-     bother asking you for the names.  If you provide a list, it will
+     If you do not have a shared file system, you will have to run
+     \Condor{install} locally on each machine, so \Condor{install}
+     does not
+     ask for the names.  If you provide a list, it will
      use the names to automatically create directories and files
      later.  At the end, \Condor{install} will dump out this list to a
-     'roster' file which can be used by scripts to help maintain your
+     \File{roster} file which can be used by scripts to help maintain your
      Condor pool.
 
-     If you are only installing Condor on 1 machine, you would just
-     answer 'no' to the first question, and move on.
+     If you are only installing Condor on 1 machine, you would
+     answer no to the first question, and move on.
 
 \item[STEP 3: Install the Condor release directory] 
-     The release directory contains four subdirectories: 'bin', 'etc',
-     'lib' and 'sbin'.  bin contains user-level executable programs.
-     etc is the recommended location for your Condor config files, and
-     also includes an 'examples' directory with default config files
-     and other default files used for installing condor.  lib contains
-     libraries to link condor user programs and scripts used by the
-     Condor system.  sbin contains all administrative executable
+     The release directory contains four subdirectories: 
+     \File{bin}, \File{etc},
+     \File{lib} and \File{sbin}.  
+     \File{bin} contains user-level executable programs.
+     \File{etc} is the recommended location for your Condor configuration
+     files, and
+     it also includes an \File{examples} directory with default
+     configuration files
+     and other default files used for installing Condor.  \File{lib} contains
+     libraries to link Condor user programs and scripts used by the
+     Condor system.  \File{sbin} contains all administrative executable
      programs and the Condor daemons.  
 
-     If you have multiple machines with a shared filesystem that will
-     be running Condor, you should put the release directory on that
-     shared filesystem so you only have one copy of all the binaries,
+     If you have multiple machines with a shared file system that will
+     be running Condor, put the release directory on that
+     shared file system so you only have one copy of all the binaries,
      and so that when you update them, you can do so in one place.
-     Note that the release directory is architecture dependent, so you
-     will need to download separate binary distributions for every
+     Note that the release directory is architecture dependent, so
+     download separate binary distributions for every
      platform in your pool.
 
      \Condor{install} tries to find an already installed release
-     directory.  If it can't find one, it asks if you have installed
+     directory.  If it cannot find one, it asks if you have installed
      one already.  If you have not installed one, it tries to do so
-     for you by untarring the release.tar file from the binary
+     for you by untarring the \File{release.tar} file from the binary
      distribution.  
 
-\underline{NOTE}: If you are only setting up a central manager (you chose 'central
-     manager' in step 1) step 3 is the last question you will need to
+\Note If you are only setting up a central manager (you chose 'central
+     manager' in step 1), step 3 is the last question you will need to
      answer.
 
-\item[STEP 4: How and where should Condor send email if things go wrong?]
+\item[STEP 4: How and where should Condor send e-mail if things go wrong?]
 
-     Various parts of Condor will send email to a condor administrator
+\index{administrator!e-mail to}
+     Various parts of Condor will send e-mail to a condor administrator
      if something goes wrong that needs human attention.  You will
-     need to specify the email address of this administrator.  
+     need to specify the e-mail address of this administrator.  
 
-     You will also need to specify the full path to a mail program
-     that Condor will use to send the email.  This program needs to
-     understand the '-s' option, which is how you specify a subject
+     You also specify the full path to a mail program
+     that Condor will use to send the e-mail.  This program needs to
+     understand the \Opt{-s} option, to specify a subject
      for the outgoing message.  The default on most platforms will
      probably be correct.  On Linux machines, since there is such
-     variation in Linux distributions and installations, you should
+     variation in Linux distributions and installations,
      verify that the default works.  If the script complains that it
-     cannot find the mail program that was specified, you can try
-     'which mail' from your shell prompt to see what 'mail' program is
-     currently in your PATH.  If there is none, try 'which mailx'.  If
-     you still can't find anything, ask your system administrator.
-     You should verify that the program you end up using supports
-     '-s'.  The man page for that program will probably tell you.
+     cannot find the mail program that was specified, try
+\begin{verbatim}
+% which mail
+\end{verbatim}
+     to see what mail program is
+     currently in your PATH.  If there is none, try 
+\begin{verbatim}
+% which mailx
+\end{verbatim}
+     If you still cannot find anything, ask your system administrator.
+     Verify that the program you use supports
+     \Opt{-s}.  The man page for that program will probably tell you.
 
-\item[STEP 5: Filesystem and UID domains.]
+\item[STEP 5: File system and UID domains.]
 
-     While Condor does not depend on a shared filesystem or common UID
-     space for running standard jobs, if you intend to run
-     \Term{vanilla} jobs (ones that aren't relinked with the Condor
-     libaries), you need a shared filesystem and a common UID space.  
+     While Condor does not depend on a shared file system or common UID
+     space for running jobs in the standard universe,
+     vanilla jobs (ones that are not relinked with the Condor
+     libraries) do need a shared file system and a common UID space.  
      Therefore, it is very important for you to correctly configure
-     Condor to tell it about a shared filesystem if you have one.
+     Condor with respect to a shared file system.
      For complete details on what these settings do and how you
-     should answer the questions, be sure to read
+     should answer the questions, read
      section~\ref{sec:Shared-Filesystem-Config-File-Entries},
-     ``Shared Filesystem Config File Entries'', on
+     Shared File System Configuration File Entries'', on
      page~\pageref{sec:Shared-Filesystem-Config-File-Entries}.
 
-     You will be asked if you have a shared filesystem.  If so,
+     You will be asked if you have a shared file system.  If so,
      \condor{install} will configure your \Macro{FILESYSTEM\_DOMAIN} 
-     setting to be set to the domainname of the machine running
+     setting to be set to the domain name of the machine running
      \condor{install}.
      If not, \Macro{FILESYSTEM\_DOMAIN} will be set to
      \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its
@@ -586,7 +662,7 @@ what each step is for, and suggests how to answer the questions
      If so, \Macro{UID\_DOMAIN} will be set to the domainname of the
      machine running \condor{install}. 
      If not, \Macro{UID\_DOMAIN} will be set to
-     MacroU{FULL\_HOSTNAME}, indicating that each machine is in its 
+     \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its 
      own domain.
 
      If you have a common \Macro{UID\_DOMAIN}, \condor{install} will
@@ -599,7 +675,7 @@ what each step is for, and suggests how to answer the questions
 
 \item[STEP 6: Where should public programs be installed?]
 
-     It is recommended that you install the user-level condor programs
+     It is recommended that you install the user-level Condor programs
      in the release directory, (where they go by default).  This way,
      when you want to install a new version of the Condor binaries,
      you can just replace your release directory and everything will
@@ -608,11 +684,12 @@ what each step is for, and suggests how to answer the questions
      programs.  However, we recommend putting in soft links from some
      directory already in their PATH (such as \File{/usr/local/bin}) that
      point back to the Condor user programs.  \Condor{install} will do
-     this for you, all you have to do is tell it what directory to put
-     these links into.  This way, users don't have to change their
-     PATH to use Condor but you can still have the binaries installed
+     this for you. All you do is tell it what directory to put
+     these links into.  This way, users do not have to change their
+     PATH to use Condor, and you can still have the binaries installed
      in their own location.
 
+% untwist this first sentence!
      If you are installing Condor as neither root nor condor, there is
      a perl script wrapper to all the Condor tools that is created
      which sets some appropriate environment variables and
@@ -638,22 +715,23 @@ depending on what kind of installation you selected in STEP 1 above.
 
 \item[STEP 7: What machine will be your central manager?]
 
-     Simply type in the full hostname of the machine you have chosen
-     for your central manager.  If \Condor{install} can't find
+     Type in the full hostname of the machine you have chosen
+     for your central manager.  If \Condor{install} cannot find
      information about the host you typed by querying your nameserver,
      it will print out an error message and ask you to confirm.
 
 
-\item[STEP 8: Where will the 'local directory' go?]
+\item[STEP 8: Where will the local directory go?]
 
      This is the directory discussed in question \#5 from the
      introduction.  \Condor{install} tries to make some educated guesses
-     as to what directory you want to use for the purpose.  Simply
-     agree to the correct guess, or (when \Condor{install} has run out
+     as to what directory you want to use for the purpose.
+     Agree to the correct guess, or (when \Condor{install} has run out
      of guesses) type in what you want.  Since this directory needs to
      be unique, it is common to use the hostname of each machine in
      its name.  When typing in your own path, you can use
-     '\MacroU{HOSTNAME}' which \Condor{install} (and the Condor config files)
+     '\MacroU{HOSTNAME}' which \Condor{install}
+     (and the Condor configuration files)
      will expand to the hostname of the machine you are currently on.
      \Condor{install} will try to create the corresponding directories
      for all the machines you told it about in STEP 2 above.
@@ -672,36 +750,41 @@ depending on what kind of installation you selected in STEP 1 above.
      \Condor{install} will prompt you for the location of your lock
      files, as discussed in question \#5 above.  In this case, when
      \Condor{install} is finished, you will have to run \Condor{init} on
-     each machine in your pool to create the lock directory before you
+     each machine in your pool to create the \File{lock} directory before you
      can start up Condor.
 
 
-\item[STEP 9: Where will the local (machine-specific) config files go?]
+\item[STEP 9: Where will the local (machine-specific) configuration files go?]
 
+\index{configuration files!location}
      As discussed in question \#6 above, there are a few different
-     levels of Condor config file.  There's the global config file
+     levels of Condor configuration files.  There is the
+     global configuration file
      that will be installed in \Release{etc/condor\_config}, and
-     there are machine-specific, or local config files that override
+     there are machine-specific, or local configuration files,
+     that override
      the settings in the global file.  If you are installing on
      multiple machines or are configuring your central manager
-     machine, you must select a location for your local config files. 
+     machine, you must select a location for your local 
+     configuration files. 
 
      The two main options are to have a single directory that holds
-     all the local config files, each one named '\MacroU{HOSTNAME}.local',
-     or to have the local config files go into the individual local
-     directories for each machine.  Given a shared filesystem, we
+     all the local configuration files, each one 
+     named \File{\MacroU{HOSTNAME}.local},
+     or to have the local configuration files go into the individual local
+     directories for each machine.  Given a shared file system, we
      recommend the first option, since it makes it easier to configure
      your pool from a centralized location.
 
 
-\item[STEP 10: How do you want Condor to find its config file?]
+\item[STEP 10: How shall Condor find its configuration file?]
 
      Since there are a few known places Condor looks to find your
-     config file, we recommend that you put a soft link from one of
+     configuration file, we recommend that you put a soft link from one of
      them to point to \Release{etc/condor\_config}.  This way, you
      can keep your Condor configuration in a centralized location, but
      all the Condor daemons and tools will be able to find their
-     config files.  Alternatively, you can set the CONDOR\_CONFIG
+     configuration files.  Alternatively, you can set the CONDOR\_CONFIG
      environment variable to contain \Release{etc/condor\_config}.
 
      \Condor{install} will ask you if you want to create a soft link
@@ -709,7 +792,7 @@ depending on what kind of installation you selected in STEP 1 above.
 
 \end{description}
 
-Once you have completed STEP 10, you're done.  \Condor{install} prints
+Once you have completed STEP 10, you are done.  \Condor{install} prints
 out a messages describing what to do next.  Please skip to 
 section~\ref{installed-now-what}.
 
@@ -732,7 +815,7 @@ things you should check before you start up Condor.
 \item Read through the \Release{etc/condor\_config} file.  There are a
     lot of possible settings and you should at least take a look at
     the first two main sections to make sure everything looks okay.
-    In particular, you might want to setup host/ip based security for
+    In particular, you might want to set up host/ip based security for
     Condor.  See the section~\ref{sec:Host-Security} on
     page~\pageref{sec:Host-Security} in the manual to learn how to do
     this.
@@ -740,24 +823,26 @@ things you should check before you start up Condor.
 \item Condor can monitor the activity of your mouse and keyboard,
     provided that you tell it where to look.  You do this with the
     \Macro{CONSOLE\_DEVICES} entry in the \condor{startd} section of
-    the config file.  On most platforms, we provide reasonable
-    defaults.  For example, the default device for the mouse on Linux
+    the configuration file.  On most platforms, reasonable
+    defaults are provided.
+    For example, the default device for the mouse on Linux
     is 'mouse', since most Linux installations have a soft link from
-    '\File{/dev/mouse}' that points to the right device (such as
+    \File{/dev/mouse} that points to the right device (such as
     \File{tty00} if you have a serial mouse, \File{psaux} if you have
-    a PS/2 bus mouse, etc).  If you don't have a \File{/dev/mouse}
-    link, you should either create one (you'll be glad you did), or
-    change the \Macro{CONSOLE\_DEVICES} entry in Condor's config file.
-    This entry is just a comma seperated list, so you can have any
+    a PS/2 bus mouse, etc).  If you do not have a \File{/dev/mouse}
+    link, you should either create one (you will be glad you did), or
+    change the \Macro{CONSOLE\_DEVICES} entry in Condor's
+    configuration file.
+    This entry is a comma separated list, so you can have any
     devices in \File{/dev} count as 'console devices' and activity
-    will be reported in the \condor{startd}'s classad as
+    will be reported in the \condor{startd}'s ClassAd as
     \AdAttr{ConsoleIdleTime}.
 
-\item  (Linux only) Condor needs to be able to find the 'utmp' file.
+\item  (Linux only) Condor needs to be able to find the \File{utmp} file.
     According to the Linux File System Standard, this file should be
-    \File{/var/run/utmp}.  If Condor can't find it there, it looks in
-    \File{/var/adm/utmp}.  If it still can't find it, it gives up.  So, if
-    your Linux distribution puts this file somewhere else, be sure to
+    \File{/var/run/utmp}.  If Condor cannot find it there, it looks in
+    \File{/var/adm/utmp}.  If it still cannot find it, it gives up.  So, if
+    your Linux distribution places this file somewhere else, be sure to
     put a soft link from \File{/var/run/utmp} to point to the real location.
 
 \end{enumerate}
@@ -766,17 +851,18 @@ things you should check before you start up Condor.
 \subsection{Starting up the Condor daemons}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To start up the Condor daemons, all you need to do is execute
+To start up the Condor daemons, execute
 \Release{sbin/condor\_master}.  This is the Condor master, whose
 only job in life is to make sure the other Condor daemons are running.
 The master keeps track of the daemons, restarts them if they crash,
 and periodically checks to see if you have installed new binaries (and
 if so, restarts the affected daemons).
 
-If you're setting up your own pool, you should start Condor on your
+If you are setting up your own pool, you should start Condor on your
 central manager machine first.  If you have done a submit-only
-installation and are adding machines to an existing pool, it doesn't
-matter what order to start them in.
+installation and are adding machines to an existing pool,
+the start order does not
+matter.
 
 To ensure that Condor is running, you can run either:
 \begin{verbatim}
@@ -801,24 +887,24 @@ On all other machines in your pool you should have processes for:
 	\item \condor{startd}
 	\item \condor{schedd}
 \end{itemize}
-(\textbf{NOTE}: On Alphas and IRIX machines, there will also be a
-	'\Condor{kbdd}' -- see section~\ref{sec:kbdd} on
+(\Note On Alphas and IRIX machines, there will also be a
+	\condor{kbdd} -- see section~\ref{sec:kbdd} on
 	page~\pageref{sec:kbdd} of the manual for details.)  If you
-	have setup a submit-only machine, you will only see:
+	have set up a submit-only machine, you will only see:
 \begin{itemize}
 	\item \condor{master}
 	\item \condor{schedd}
 \end{itemize}
 
-Once you're sure the Condor daemons are running, check to make sure
+Once you are sure the Condor daemons are running, check to make sure
 that they are communicating with each other.  You can run
 \Condor{status} to get a one line summary of the status of each
 machine in your pool.
 
-Once you're sure Condor is working properly, you should add
-``condor\_master" into your startup/bootup scripts (i.e. \File{/etc/rc} ) so
+Once you are sure Condor is working properly, you should add
+\Condor{master} into your startup/bootup scripts (i.e. \File{/etc/rc} ) so
 that your machine runs \Condor{master} upon bootup.  \Condor{master}
-will then fire up the neccesary Condor daemons whenever your machine
+will then fire up the necessary Condor daemons whenever your machine
 is rebooted.  
 
 If your system uses System-V style init scripts, you can look in
@@ -830,8 +916,8 @@ various directories (for example, \File{/etc/rc2.d}) that point back to
 will vary on different platforms.
 
 If your system uses BSD style boot scripts, you probably have an
-\File{/etc/rc.local} file.  Just add a line in there to start up
-\Release{sbin/condor\_master} and you're done.
+\File{/etc/rc.local} file.  Add a line to start up
+\Release{sbin/condor\_master}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -862,7 +948,7 @@ can and should do:
 section~\ref{sec:Condor-AFS} on page~\pageref{sec:Condor-AFS} in the
 manual.
 
-\item We strongly recommend that you start up Condor (i.e. run the
+\item We strongly recommend that you start up Condor (run the
 \Condor{master} daemon) as user root.  If you must start Condor as
 some user other than root, see section~\ref{sec:Non-Root} on
 page~\pageref{sec:Non-Root}.
