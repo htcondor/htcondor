@@ -136,7 +136,6 @@ MPIShadow::getResources( void )
 	ClassAd *tmp_ad = NULL;
 	int nodenum = 1;
 	ReliSock* sock;
-	int cmd = GIVE_MATCHES;
 
 	cluster = getCluster();
     rr = ResourceList[0];
