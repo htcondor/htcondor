@@ -38,6 +38,18 @@ if it is positively confirmed that the desired jobs have completed.
 Any other exit should indicate EXIT_FAILURE.
 */
 
+/* on Windows, and perhaps other OS's, EXIT_SUCCESS and EXIT_FAILURE are
+   defined in stdlib.h as the numbers 0 and 1, respectively. Since they 
+   are used differently in this file, we undefine them first. 
+*/
+
+#if defined(EXIT_SUCCESS)
+	#undef EXIT_SUCCESS
+#endif
+#if defined(EXIT_FAILURE)
+	#undef EXIT_FAILURE
+#endif
+
 #define EXIT_SUCCESS exit(0)
 #define EXIT_FAILURE exit(1)
 
@@ -221,4 +233,6 @@ int main( int argc, char *argv[] )
 		fprintf(stderr,"Couldn't open %s: %s\n",log_file_name,strerror(errno));
 	}
 	EXIT_FAILURE;
+	
+	return 1; /* meaningless, but it makes Windows happy */
 }
