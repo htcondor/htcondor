@@ -9,7 +9,9 @@ page~\pageref{command-reference}) for more information.
 When jobs are submitted, Condor will attempt to find resources
 to run the jobs. 
 A list of all those with jobs submitted
-may be obtained through \Condor{status} with the 
+may be obtained through \Condor{status}
+\index{Condor commands!condor\_status}
+with the 
 \Arg{-submitters} option. 
 An example of this would yield output similar to:
 \begin{verbatim}
@@ -36,6 +38,7 @@ ashoks@jules.ncsa.ui                74                   54
 \subsection{Checking on the progress of jobs}
 At any time, you can check on the status of your jobs with the \Condor{q}
 command.
+\index{Condor commands!condor\_q}
 This command displays the status of all queued jobs.
 An example of the output from \Condor{q} is
 \begin{verbatim}
@@ -52,6 +55,7 @@ An example of the output from \Condor{q} is
 \end{verbatim} 
 This output contains many columns of information about the
 queued jobs.
+\index{status!of queued jobs}
 The \verb@ST@ column (for status) shows the status of
 current jobs in the queue. An \verb@R@ in the status column
 means the the job is currently running.
@@ -88,6 +92,8 @@ Also logged is the time at which the event occurred.
 
 % Karen's note:  degraded performance where?
 When your job begins to run, Condor starts up a \Condor{shadow} process
+\index{condor\_shadow}
+\index{remote system call!condor\_shadow}
 on the submit machine.  The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.  
@@ -101,7 +107,9 @@ the number of jobs that can run simultaneously through the
 system administrator for the necessary configuration change.
 
 You can also find all the machines that are running your job through the
-\Condor{status} command.  For example, to find all the machines that are
+\Condor{status} command.
+\index{Condor commands!condor\_status}
+For example, to find all the machines that are
 running jobs submitted by ``breach@cs.wisc.edu,'' type:
 \begin{verbatim}
 %  condor_status -constraint 'RemoteUser == "breach@cs.wisc.edu"'
@@ -139,6 +147,7 @@ bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
 
 \subsection{Removing a job from the queue}
 A job can be removed from the queue at any time by using the \Condor{rm}
+\index{Condor commands!condor\_rm}
 command.  If the job that is being removed is currently running, the job
 is killed without a checkpoint, and its queue entry is removed.  
 The following example shows the queue of jobs before and after
@@ -169,13 +178,17 @@ Job 132.0 removed.
 \subsection{\label{sec:job-prio}Changing the priority of jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{job!priority}
+\index{priority!of a job}
 In addition to the priorities assigned to each user, Condor also provides
 each user with the capability of assigning priorities to each submitted job.
 These job priorities are local to each queue and range from -20 to +20, with
 higher values meaning better priority.
 
 The default priority of a job is 0, but can be changed using the \Condor{prio}
-command.  For example, to change the priority of a job to -15,
+command.
+\index{Condor commands!condor\_prio}
+For example, to change the priority of a job to -15,
 \begin{verbatim}
 %  condor_q raman
 
@@ -203,12 +216,16 @@ identify the relative importance of jobs among all the jobs submitted by the
 user to that specific queue.
 
 \subsection{Why does the job not run?}
+\index{job!analysis}
+\index{job!not running}
 Users sometimes find that their jobs do not run.  There are several reasons why
 a specific job does not run.  These reasons include failed job or machine
 constraints, bias due to preferences, insufficient priority, and the preemption
 throttle that is implemented by the \Condor{negotiator} to prevent
 thrashing.  Many of these reasons can be diagnosed by using the \Arg{-analyze}
-option of \Condor{q}.  For example, the following job submitted by user
+option of \Condor{q}.
+\index{Condor commands!condor\_q}
+For example, the following job submitted by user
 jbasney was found to have not run for several days.
 \begin{verbatim}
 % condor_q
@@ -267,6 +284,7 @@ Requirements = Arch == "INTEL" && OpSys == "IRIX6" &&
 
 For this job,
 the \Attr{Requirements}
+\index{ClassAd attribute!requirements}
 expression specifies a platform that does not exist.
 Therefore, the expression always evaluates to false.
 

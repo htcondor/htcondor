@@ -5,6 +5,8 @@
 \newcommand{\func}[1]{\texttt{#1}}
 
 Applications that use PVM (Parallel Virtual Machines) may use
+\index{PVM (Parallel Virtual Machines)|(}
+\index{Parallel Virtual Machines (PVM)}
 Condor.
 PVM offers a set of message passing primitives for use in
 C and C++ language programs.
@@ -21,6 +23,7 @@ to run PVM applications, Condor does not.
 Condor can be used to dynamically 
 construct PVM virtual machines from a Condor pool of machines.
 
+\index{Condor!PVM applications}
 In Condor PVM, Condor acts as the
 resource manager for the PVM daemon.  Whenever your PVM program asks
 for nodes (machines), the request is re-mapped to Condor.  Condor then
@@ -57,6 +60,8 @@ ask your site administrator to download and install Condor PVM from
 
 There are several different parallel programming paradigms.  One of the
 more common is the \Term{master-worker} (or \Term{pool of tasks})
+\index{master-worker paradigm}
+\index{PVM!master-worker paradigm}
 arrangement.  In a master-worker program model, one node acts as the
 controlling master for the parallel application and sends pieces work 
 out to worker nodes.
@@ -129,7 +134,9 @@ Condor environment:
   one platform.
   Under Condor PVM, machines of
   different architectures belong to different machine classes.
-  With the concept machine class, Condor can be told what type
+  With the concept machine class,
+\index{PVM!machine class}
+  Condor can be told what type
   of machine to allocate.
   Machine classes are assigned integer values, starting with 0.
   A machine class is
@@ -208,6 +215,7 @@ Condor environment:
 
 The following is a sample PVM program that works well under Condor.
 It is an extensively commented skeleton of a sample PVM
+\index{PVM!example program}
 program \Prog{master\_sum.c}, which will help you to
 write PVM code that is better suited for a non-dedicated opportunistic
 environment like Condor.
@@ -669,7 +677,9 @@ main()
 
 PVM jobs are submitted to the PVM universe.
 The following is an
-example of a submitdescription file for a PVM job.  
+example of a submit description file for a PVM job.  
+\index{PVM!submit description file}
+\index{submit description file!for PVM application}
 This job has a master PVM program called \func{master\_pvm}.
 
 \CondorSmall
@@ -739,3 +749,4 @@ class.
 The \func{queue} command should be inserted after the specifications of
 each class.
 
+\index{PVM (Parallel Virtual Machines)|)}
