@@ -36,7 +36,7 @@ $tilde=$pwdent[7];
 chop($host=`hostname`);
 # Make sure $host is just hostname, with no domain.  Grab everything
 # upto the first ".".
-$host =~ s/(.*?)\..*/$1/;
+$host =~ s/(\w*)\..*/$1/;
 # Lookup the full hostname.
 $fullhost=(gethostbyname($host))[0];
 
@@ -262,7 +262,7 @@ sub prompt_full_install {
 
 
 sub configure_submit_only {
-    local( $pool, $config_file, $name, $path, %pool_config_file, %pool_user_name );
+    local( $pool, $config_file, $path, %pool_config_file );
 
     print "\n***************************************************************************\n",
     "\tSTEP 5: Where should public programs be installed?\n",
@@ -287,22 +287,19 @@ sub configure_submit_only {
 	    print "\n---------------------------------------------------------------------------\n",
 	    "Configuring pool: $pool\n",
 	    "---------------------------------------------------------------------------\n";
-
-	    ($config_file, $name) = &configure_pool($pool);
+	    $config_file = &configure_pool($pool);
 	    $pool_config_file{$pool} = $config_file;
-	    $pool_user_name{$pool} = $name;
 	}
     } else {
 	print "\n---------------------------------------------------------------------------\n",
 	"Setting up for a single pool.\n",
 	"---------------------------------------------------------------------------\n";
-	($config_file, $name) = &configure_pool("");
+	$config_file = &configure_pool("");
 	$pool_config_file{"default"} = $config_file;
-	$pool_user_name{"default"} = $name;
 	push( @pools, "default" );
     }
 
-    &customize_condor_script( *pools, *pool_config_file, *pool_user_name );
+    &customize_condor_script( *pools, *pool_config_file, );
 }
 
 
@@ -333,7 +330,7 @@ sub find_perl {
 
 
 sub customize_condor_script {
-    local( *pool_ref, *conf_ref, *name_ref ) = @_;
+    local( *pool_ref, *conf_ref ) = @_;
     local( $def_pool, $pool, $tool, $perl_path );
     $def_pool = $pool_ref[0];
 
@@ -377,13 +374,6 @@ sub customize_condor_script {
 	      }
 	      last SWITCH;
 	  }
-	  if( /^\%nameused.*$/ ) {
-	      print CONDOR $_;
-	      foreach $pool (@pool_ref) {
-		  print CONDOR "\t\"$pool\",\t\"$name_ref{$pool}\",\n";
-	      }
-	      last SWITCH;
-	  } 
 	  if( /^\#\!\/usr\/bin\/perl.*$/ && $perl_path ) {
 	      print CONDOR "#!$perl_path\n";
 	      last SWITCH;
@@ -561,13 +551,13 @@ sub prompt_pool_user_name {
     "[$who\@$fullhost] ";
     chop( $_ = <STDIN> );
     if( /^$/ ) {    
-	$name = "$who\\\@$fullhost";
+	$name = "$who";
     } elsif( ! /^.*\@.*$/ ) {
-	# There's no '@' in the name, append one.
-	$name = "$_\\\@";
+	# There's no '@' in the name, we're in good shape.
+	$name = $_;
     } else {
-	# There's a '@' in the name, make sure we add a '\' in front of it:
-	s/^(.*)\@(.*)$/$1\\\@$2/;
+	# There's a '@' in the name, trim it off.
+	s/^(.*)\@(.*)$/$1/;
 	$name = $_;
     }
     return $name;
@@ -575,20 +565,15 @@ sub prompt_pool_user_name {
 
 sub configure_pool {
     local( $pool, $cm, $pool_dir, $local_dir_str, $config_file, $mach,
-       $local_config_str, $local_config_dir, $name, $lock, $ckpt, @args );
+       $local_config_str, $local_config_dir, $name, $lock, @args );
     $pool = $_[0];
 
     # Initialize the local_config_str so that if we don't set it,
     # we'll have a null string by default.
     $local_config_str = "";
-    $ckpt = "";
 
     # Figure out the central manager.
     $cm = &prompt_central_manager( 1 );
-
-    if( $cm eq "condor.cs.wisc.edu" ) {
-	$ckpt = "condor-ckpt.cs.wisc.edu";
-    }
 
     # Figure out where the files should go for this pool.
     if( $pool ) {
@@ -628,10 +613,10 @@ sub configure_pool {
 
     @args=( $config_file, 
 	   "$release_dir/etc/examples/condor_config.submit.generic", 
-	   $cm, $local_dir_str, $local_config_str, $lock, $ckpt );
+	   $cm, $local_dir_str, $local_config_str, $lock, $name );
     &customize_config_file( @args );
 
-    return( $config_file, $name );
+    return( $config_file );
 }
 
 
@@ -737,21 +722,29 @@ sub condor_init {
     foreach $_ (@_) {
 	(-d "$local_dir/$_") || mkdir("$local_dir/$_", 0777) || 
 	    die "\nCan't create \"$local_dir/$_\"\n\n";
-	chown($owner, -1, "$local_dir/$_") ||
-	    die "\nCan't chown $local_dir/$_\n\n";
+	if( $owner != $< ) {
+	    chown($owner, -1, "$local_dir/$_") ||
+		die "\nCan't chown $local_dir/$_\n\n";
+	}
     }
 }
 
 
 sub customize_config_file {
     local( $config_file, $generic_file, $cm, $local_dir_str, 
-	  $local_config_str, $lock, $ckpt ) = @_;
+	  $local_config_str, $lock, $name ) = @_;
+    local( $ckpt, $view );
 
     open( CONFIG, ">$config_file" ) || 
 	die "Can't open config file $config_file: $!\n";
     open( GENERIC, "<$generic_file" ) || 
 	die "Can't open generic config file $generic_file: $!\n";
     
+    if( $cm eq "condor.cs.wisc.edu" ) {
+	$ckpt = "condor-ckpt.cs.wisc.edu";
+	$view = "condor-view.cs.wisc.edu";
+    }
+
     print "\nConfiguring global condor config file ... ";
     while( <GENERIC> ) {
       SWITCH: {
@@ -775,10 +768,18 @@ sub customize_config_file {
 	  if( $ckpt && /^USE_CKPT_SERVER.*$/ ) { 
 	      $_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
 	  }
-	  if( $ckpt && /^#CKPT_SERVER_HOST.*$/ ) { 
+	  if( $ckpt && /^#CKPT_SERVER_HOST.*$/ ) {
 	      $_ = "CKPT_SERVER_HOST\t= $ckpt\n"; last SWITCH; 
 	  }
-
+	  if( $name && /^#MASTER_NAME.*$/ ) { 
+	      $_ = "MASTER_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
+	  }
+	  if( $name && /^#SCHEDD_NAME.*$/ ) { 
+	      $_ = "SCHEDD_NAME\t= $name\@\$(FULL_HOSTNAME)\n"; last SWITCH; 
+	  }
+	  if( $view && /^#CONDOR_VIEW_HOST.*$/ ) {
+	      $_ = "CONDOR_VIEW_HOST\t= $view\n"; last SWITCH; 	     
+ 	  }
       }
 	print CONFIG "$_";
     }
@@ -1261,16 +1262,20 @@ sub configure_full_install {
     "daemons and tools can find their config file.\n";
 
     if( $condor_home ) {
+	if( -f "$condor_home/condor_config" ) {
+	    print "$condor_home/condor_config exists.\n",
+	    "Renaming to: $condor_home/condor_config.old.\n";
+	    rename( "$condor_home/condor_config", 
+		   "$condor_home/condor_config.old" );
+	}       
 	print "\nShould I put in a soft link from $condor_home/condor_config to\n",
 	"$config_file [yes] ";
 	$_ = <STDIN>;
 	if( /(^[Yy].*)|^$/ ) {
-	    -f "$condor_home/condor_config" && 
-		rename( "$condor_home/condor_config", 
-		       "$condor_home/condor_config.old" );
 	    symlink( $config_file, "$condor_home/condor_config" ) ||
 		die "Can't create symbolic link: $!\n";
-	} 
+	    &customize_init_script( "home" );
+	}
     }
     if( ( ! -f "$condor_home/condor_config") && (-w "/etc") ) {
 	print "\nShould I put in a soft link from /etc/condor/condor_config to\n",
@@ -1284,6 +1289,7 @@ sub configure_full_install {
 		       "/etc/condor/condor_config.old" );
 	    symlink( $config_file, "/etc/condor/condor_config" ) ||
 		die "Can't create symbolic link: $!\n";
+	    &customize_init_script( "etc" );
 	} 
     }	
 
@@ -1342,6 +1348,78 @@ sub configure_full_install {
     "file for things you should do before and after starting the Condor daemons.\n",
     "In particular, you might want to set up host/ip access security.  See the\n",
     "Adminstrator's Manual for details.\n";
+}
+
+
+sub customize_init_script {
+    local( $type ) = $_[0];
+    local( $init_name ) = "$release_dir/sbin/condor_init";
+
+    rename( $init_name, "$init_name.old" ) 
+	|| die "Can't rename $init_name: $!\n";
+
+    open( GENERIC, "<$init_name.old" );
+    open( INIT, ">$init_name" );
+
+    while( <GENERIC> ) {
+	if( /^# Create soft link, as needed, to find the global.*/ ) {
+	   print INIT $_;
+	   if( $type eq "home" ) {
+	       print INIT 
+"HOME=`\$CONFIG_VAL_PATH -tilde 2> /dev/null`\n",
+"if [ ! -n \"\$HOME\" ]; then\n",
+"   echo \"Error: Can't find user condor's home directory.\"\n",
+"   echo \"Either create a 'condor' account on this machine, or re-run\"\n",
+"   echo \"condor_install to configure it not to use a condor home directory.\"\n", 
+"   exit 1\n",
+"fi\n",
+"if [ ! -f \"\$HOME/condor_config\" ]; then\n",
+"   ln -s $release_dir/etc/condor_config \$HOME/condor_config\n",
+"   if [ ! -f \"\$HOME/condor_config\" ]; then\n",
+"      echo \"Can't create soft link: \$HOME/condor_config\"\n",
+"      echo \"Aborting.\"\n",
+"      exit 1\n",
+"   else\n",
+"      echo \"Created soft link: \$HOME/condor_config\"\n",
+"   fi\n",
+"else\n",
+"   echo \"\$HOME/condor_config already exists.\"\n",
+"fi\n";
+	   } elsif( $type eq "etc" ) {
+	       print INIT 
+"if [ ! -d \"/etc/condor\" ]; then\n",
+"   mkdir /etc/condor\n",
+"   if [ ! -d \"/etc/condor\" ]; then\n",
+"      echo \"Can't create directory: /etc/condor\"\n",
+"      echo \"Aborting.\"\n",
+"      exit 1\n",
+"   fi\n",
+"fi\n",
+"if [ ! -f \"/etc/condor/condor_config\" ]; then\n",
+"   ln -s $release_dir/etc/condor_config /etc/condor/condor_config\n",
+"   if [ ! -f \"/etc/condor/condor_config\" ]; then\n",
+"      echo \"Can't create soft link: /etc/condor/condor_config\"\n",
+"      echo \"Aborting.\"\n",
+"      exit 1\n",
+"   else\n",
+"      echo \"Created /etc/condor/condor_config\"\n",
+"   fi\n",
+"else\n",
+"   echo \"/etc/condor/condor_config already exists\"\n",
+"fi\n";
+	   } else {
+	       die "Unknown type: $type in customize_init_script\n";
+	   }
+       } elsif( /^CONFIG_VAL_PATH=.*$/ ) {
+	   print INIT "CONFIG_VAL_PATH=\"$release_dir/bin/condor_config_val\"\n";
+       } else {
+	   print INIT $_;
+       }
+    }
+    close GENERIC;
+    close INIT;
+    unlink( "$init_name.old" );
+    chmod( 0777, $init_name );
 }
 
 
