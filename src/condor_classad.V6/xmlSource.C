@@ -97,7 +97,8 @@ ParseClassAd(void)
 					}
 				} else if (   token.tag_id != XMLLexer::tagID_XML
 							  && token.tag_id != XMLLexer::tagID_XMLStylesheet
-							  && token.tag_id != XMLLexer::tagID_Doctype) {
+							  && token.tag_id != XMLLexer::tagID_Doctype
+							  && token.tag_id != XMLLexer::tagID_ClassAds) {
 					// We got a non-attribute, non-xml thingy within a 
 					// ClassAd. That must be an error, but we'll just skip
 					// it in the hopes of recovering.
