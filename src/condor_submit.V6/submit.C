@@ -1149,7 +1149,7 @@ SetTransferFiles()
 
 			// first, check to make sure the user didn't already
 			// specify mpich.dll in transfer_input_files
-		if( ! input_file_list.contains(dll_name.GetCStr()) ) {
+		if( ! input_file_list.contains(dll_name.Value()) ) {
 				// nothing there yet, try to find it ourselves
 			MyString dll_path = which( dll_name );
 			if( dll_path.Length() == 0 ) {
@@ -1164,7 +1164,7 @@ SetTransferFiles()
 				// If we made it here, which() gave us a real path.
 				// so, now we just have to append that to our list of
 				// files. 
-			input_file_list.append( dll_path.GetCStr() );
+			input_file_list.append( dll_path.Value() );
 		}
 	}
 #endif /* WIN32 */
@@ -1857,7 +1857,7 @@ SetEnvironment()
 
 	newenv += "\"";
 
-	InsertJobExpr (newenv.GetCStr());
+	InsertJobExpr (newenv.Value());
 	if( env ) {
 		free(env);
 	}
@@ -3022,9 +3022,9 @@ check_open( const char *name, int flags )
 		delete list;
 	}
 
-	if( (fd=open(strPathname.GetCStr(),flags,0664)) < 0 ) {
+	if( (fd=open(strPathname.Value(),flags,0664)) < 0 ) {
 		fprintf( stderr, "\nERROR: Can't open \"%s\"  with flags 0%o\n",
-				 strPathname.GetCStr(), flags );
+				 strPathname.Value(), flags );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
