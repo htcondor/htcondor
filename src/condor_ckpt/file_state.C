@@ -86,8 +86,8 @@ static int				Condor_isremote;
 
 char * shorten( char *path );
 extern "C" void Set_CWD( const char *working_dir );
-extern "C" sigset_t block_condor_signals(void);
-extern "C" void restore_condor_sigmask(sigset_t omask);
+extern "C" sigset_t condor_block_signals(void);
+extern "C" void condor_restore_sigmask(sigset_t omask);
 
 extern volatile int check_sig;
 
@@ -364,7 +364,7 @@ OpenFileTable::DoClose( int fd )
 		/* we don't want to be interrupted by a checkpoint between when
 		   we close this file and we mark it closed in our local data
 		   structure */
-		sigset_t omask = block_condor_signals();
+		sigset_t omask = condor_block_signals();
 		if( file[fd].isRemoteAccess() ) {
 			rval = REMOTE_syscall( CONDOR_close, file[fd].real_fd );
 		} else {
@@ -374,7 +374,7 @@ OpenFileTable::DoClose( int fd )
 		file[fd].open = FALSE;
 		delete [] file[fd].pathname;
 		file[fd].pathname = NULL;
-		restore_condor_sigmask(omask);
+		condor_restore_sigmask(omask);
 		dprintf(D_FULLDEBUG, "Leaving DoClose: fd = %d is closed\n", fd);
 		return rval;
 	}
@@ -722,14 +722,20 @@ OpenFileTable::Save()
 				} else {
 					pos = REMOTE_syscall( CONDOR_lseek, f->real_fd, (off_t)0,SEEK_CUR);
 				}
-
+			} else if ( strcmp(f->pathname, "/dev/null") == MATCH ||
+						strcmp(f->pathname, "/dev/zero") == MATCH) {
+				// We want a special case for /dev/null and /dev/zero, since
+				// the job may read/write a lot to/from these files and
+				// overflow the off_t.  Since we don't need offsets into these
+				// files anyway, this shouldn't cause a failed checkpoint.
+				pos = (off_t)0;
 			} else {
 				pos = syscall( SYS_lseek, f->real_fd, (off_t)0, SEEK_CUR);
 			}
 			if( pos < (off_t)0 && f->isPreOpened() ) {
 				pos = (off_t)0;		// probably it's a tty
 			}
-			if( pos < (off_t)0 ) {
+			if( pos == (off_t)-1 ) {
 				dprintf(D_ALWAYS, "lseek failed for %d: %s\n", f->real_fd,
 						strerror(errno));
 				Suicide();
@@ -1199,18 +1205,18 @@ off_t lseek( int fd, off_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
                 return (off_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1223,7 +1229,7 @@ off_t lseek( int fd, off_t offset, int whence )
                 rval = REMOTE_syscall( CONDOR_lseek, user_fd, offset, whence );
         }
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
         return (off_t)rval;
 }
@@ -1238,18 +1244,18 @@ llseek( int fd, offset_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
                 return (offset_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1262,7 +1268,7 @@ llseek( int fd, offset_t offset, int whence )
                 rval = REMOTE_syscall( CONDOR_llseek, user_fd, offset, whence );
         }
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
         return (offset_t)rval;
 }
 
@@ -1273,18 +1279,18 @@ lseek64( int fd, off64_t offset, int whence )
         int     user_fd;
         int use_local_access = FALSE;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
-		    	restore_condor_sigmask(sigs);
+		    	condor_restore_sigmask(sigs);
 			return BufferGlueSeek( f, offset, whence );
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
                 return (off64_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1297,7 +1303,7 @@ lseek64( int fd, off64_t offset, int whence )
                 rval = REMOTE_syscall( CONDOR_lseek64, user_fd, offset, whence );
         }
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
         return (off64_t)rval;
 }
@@ -1311,18 +1317,18 @@ ssize_t read( int fd, void *buf, size_t len )
         int     user_fd;
         int use_local_access = FALSE;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
 			return BufferGlueRead( f, (char *)buf, len );
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
                 return (ssize_t)-1;
         }
         if( LocalAccess(fd) ) {
@@ -1335,7 +1341,7 @@ ssize_t read( int fd, void *buf, size_t len )
                 rval = REMOTE_syscall( CONDOR_read, user_fd, buf, len );
         }
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
         return (ssize_t)rval;
 }
@@ -1346,18 +1352,18 @@ ssize_t write( int fd, const void *buf, size_t len )
         int     user_fd;
         int use_local_access = FALSE;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if(MappingFileDescriptors()) {
 		File *f = FileTab->getFile(fd);
 		if( BufferGlueActive(f) ) {
 			return BufferGlueWrite( f, (char *)buf, len );
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 		}
 	}
 
         if( (user_fd=MapFd(fd)) < 0 ) {
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
 
                 return (ssize_t)-1;
         }
@@ -1371,7 +1377,7 @@ ssize_t write( int fd, const void *buf, size_t len )
                 rval = REMOTE_syscall( CONDOR_write, user_fd, buf, len );
         }
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
         return (ssize_t)rval;
 }
@@ -1399,7 +1405,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	/* we don't want to be interrupted by a checkpoint between when
 	   we open this file and we mark it opened in our local data
 	   structure */
-	omask = block_condor_signals();
+	omask = condor_block_signals();
 	dprintf(D_FULLDEBUG, "Entering _condor_open()\n");
 
 	if ( FileTab == NULL )
@@ -1467,7 +1473,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	Condor_isremote = is_remote;
 
 	if( fd < 0 ) {
-		restore_condor_sigmask(omask);
+		condor_restore_sigmask(omask);
 		return -1;
 	}
 
@@ -1478,7 +1484,7 @@ int	_condor_open( const char *path, int flags, va_list ap )
 	dprintf(D_FULLDEBUG, "Ending test for DoOpen call\n");
 
 	dprintf(D_FULLDEBUG, "Leaving _condor_open()\n");
-	restore_condor_sigmask(omask);
+	condor_restore_sigmask(omask);
 	return fd;
 }
 #endif
@@ -1562,7 +1568,7 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 int
 close( int fd )
 {
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	dprintf(D_FULLDEBUG, "Entering close(): fd=%d\n", fd);
 	if ( FileTab == NULL )
@@ -1573,7 +1579,7 @@ close( int fd )
       int scm = SetSyscalls(SYS_LOCAL | SYS_MAPPED);
       int rval=ioserver_close(fd);
       SetSyscalls(scm);
-      restore_condor_sigmask(sigs);
+      condor_restore_sigmask(sigs);
       return rval;
     }
   
@@ -1585,24 +1591,24 @@ close( int fd )
 		// successfully, to allow sockets and pipes to be used
 		// successfully between checkpoints.
 		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 			return syscall( SYS_close, fd );
 		}
 		dprintf(D_FULLDEBUG, "standalone close: fd=%d, rval = %d\n", fd, rval);
 		dprintf(D_FULLDEBUG, "Leaving close(): closing fd = %d\n", fd);
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
 
 		return rval;
 	} else {
 		if( LocalSysCalls() ) {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): closing fd = %d\n", fd);
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 			return syscall( SYS_close, fd );
 		} else {
 			dprintf(D_FULLDEBUG, 
 				"Leaving close(): remote closing fd = %d\n", fd);
-			restore_condor_sigmask(sigs);
+			condor_restore_sigmask(sigs);
 			return REMOTE_syscall( CONDOR_close, fd );
 		}
 	}
@@ -1636,10 +1642,10 @@ dup( int old )
 
 	/* we don't want to be interrupted by a checkpoint between when
 	   modify our local file table and actually make the change */
-	omask = block_condor_signals();
+	omask = condor_block_signals();
 	if( MappingFileDescriptors() ) {
 		rval = FileTab->DoDup( old );
-		restore_condor_sigmask(omask);
+		condor_restore_sigmask(omask);
 		// In standalone mode, this fd might be a socket or pipe which
 		// we didn't catch.  Allow the application to dup it
 		// successfully, to allow sockets and pipes to be used
@@ -1652,11 +1658,11 @@ dup( int old )
 
 	if( LocalSysCalls() ) {
 		rval = syscall( SYS_dup, old );
-		restore_condor_sigmask(omask);
+		condor_restore_sigmask(omask);
 		return rval;
 	} else {
 		rval = REMOTE_syscall( CONDOR_dup, old );
-		restore_condor_sigmask(omask);
+		condor_restore_sigmask(omask);
 		return rval;
 	}
 }
@@ -1668,7 +1674,7 @@ dup2( int old, int new_fd )
 {
 	int		rval;
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if ( FileTab == NULL )
 		InitFileState();
@@ -1681,7 +1687,7 @@ dup2( int old, int new_fd )
 		if (MyImage.GetMode() == STANDALONE)
 			rval = syscall( SYS_dup2, old, new_fd );
 
-		restore_condor_sigmask(sigs);
+		condor_restore_sigmask(sigs);
 
 		return rval;
 	}
@@ -1692,7 +1698,7 @@ dup2( int old, int new_fd )
 		rval =  REMOTE_syscall( CONDOR_dup2, old, new_fd );
 	}
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
 	return rval;
 }
@@ -1711,7 +1717,7 @@ socket( int addr_family, int type, int protocol )
 	};
 #endif
 
-	sigset_t sigs = block_condor_signals();
+	sigset_t sigs = condor_block_signals();
 
 	if ( FileTab == NULL )
 		InitFileState();
@@ -1739,7 +1745,7 @@ socket( int addr_family, int type, int protocol )
 		rval =  REMOTE_syscall( CONDOR_socket, addr_family, type, protocol );
 	}
 
-	restore_condor_sigmask(sigs);
+	condor_restore_sigmask(sigs);
 
 	return rval;
 }
@@ -1829,6 +1835,8 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	struct flock64 *lock64arg;
 #endif
 	
+	sigset_t sigs = condor_block_signals();
+
 	if ( FileTab == NULL )
 		InitFileState();
 	
@@ -1837,6 +1845,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 		if (MyImage.GetMode() == STANDALONE) {
 			real_fd = fd;
 		} else {
+			condor_restore_sigmask(sigs);
 			return -1;
 		}
 	}
@@ -1869,26 +1878,31 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 			if (MyImage.GetMode() == STANDALONE) {
 				rval = syscall( SYS_fcntl, real_fd, cmd, arg );
 			}
+			condor_restore_sigmask(sigs);
 			return rval;
 		}
 
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, arg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
 				// In remote mode, we want to send a CONDOR_dup2 on
 				// the wire, not an fcntl(), so we have a prayer of
 				// heterogeneous syscalls working.  -Derek W. and Jim
 				// B. 8/18/98
-			return REMOTE_syscall( CONDOR_dup2, real_fd, arg );
+			rval = REMOTE_syscall( CONDOR_dup2, real_fd, arg );
 		}
+		condor_restore_sigmask(sigs);
+		return rval;
 	case F_GETFD:
 	case F_GETFL:
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, arg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
-			return REMOTE_syscall( CONDOR_fcntl,
+			rval = REMOTE_syscall( CONDOR_fcntl,
 								   real_fd, cmd, arg );
 		}
+		condor_restore_sigmask(sigs);
+		return rval;
 	case F_SETFD:
 	case F_SETFL:
 #if defined(LINUX)
@@ -1897,10 +1911,12 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 		arg = va_arg( ap, int );
 #endif
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, arg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, arg );
 		} else {
-			return REMOTE_syscall( CONDOR_fcntl, real_fd, cmd, arg );
+			rval = REMOTE_syscall( CONDOR_fcntl, real_fd, cmd, arg );
 		}	
+		condor_restore_sigmask(sigs);
+		return rval;
 
 	// These fcntl commands use a struct flock pointer for their
 	// 3rd arg.  Supporting these as remote calls would require a
@@ -1911,9 +1927,12 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_SETLKW: 
 		lockarg = va_arg ( ap, struct flock* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, lockarg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, lockarg );
+			condor_restore_sigmask(sigs);
+			return rval;
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+			condor_restore_sigmask(sigs);
 			return -1;
 		}
 	// If we have 64 bit syscalls/structs, we'll have some flock64
@@ -1924,9 +1943,12 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_SETLKW64: 
 		lock64arg = va_arg ( ap, struct flock64* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, lock64arg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, lock64arg );
+			condor_restore_sigmask(sigs);
+			return rval;
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+			condor_restore_sigmask(sigs);
 			return -1;
 		}
 #endif /* HAS_64BIT_SYSCALLS */
@@ -1937,7 +1959,9 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 #endif
 		lockarg = va_arg ( ap, struct flock* );
 		if ( LocalSysCalls() || use_local_access ) {
-			return syscall( SYS_fcntl, real_fd, cmd, lockarg );
+			rval = syscall( SYS_fcntl, real_fd, cmd, lockarg );
+			condor_restore_sigmask(sigs);
+			return rval;
 		} else {
 			if( lockarg->l_whence == 0 && 
 				lockarg->l_start >= 0 &&
@@ -1950,11 +1974,14 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 					// and whence and len are zero, then I believe
 					// (see man fcntl) that it means to truncate the
 					// file to l_start bytes long. -Peter Keller 09/15/99
-				return ftruncate( fd, lockarg->l_start );
+				rval = ftruncate( fd, lockarg->l_start );
+				condor_restore_sigmask(sigs);
+				return rval;
 			} else {
 				dprintf( D_ALWAYS, "Unsupported fcntl() command(%d) "
 					"(l_whence:%d, l_start:%d, l_len:%d)\n", 
 					cmd, lockarg->l_whence, lockarg->l_start, lockarg->l_len);
+				condor_restore_sigmask(sigs);
 				return -1;
 			}
 		}
@@ -1963,6 +1990,7 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	default:
 		dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 	}
+	condor_restore_sigmask(sigs);
 	return -1;
 }
 
