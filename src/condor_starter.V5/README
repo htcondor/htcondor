@@ -73,10 +73,14 @@ State Machine Driver
     in the transition table.  If a function pointer is provided,
     that function will be called upon delivery of the event.  After
     the function completes, one of two actions will be taken.  Either
-    a transition to another state, or a return to the current state.
-    In the latter case, this is handled like an interrupt, i.e.
+    a transition to another state, or a return to the current state, as dictated 
+	by the transition table.  In the latter case, this is handled like an interrupt, i.e.
     we return to where we left off in the current state, not at the
     beginning.
+	[Change 9/95: A transition function can now return must return an int with
+	a value of 0 or of -2.  A return of 0 means follow what the transition
+	table dictates, i.e. same as before.  A return of -2 means "abort the transition
+	function", and return like an interrupt return - Todd].
 
     8. The programmer is free to choose which POSIX signals encode
     asynchronous events.  A list must be given to the state machine
