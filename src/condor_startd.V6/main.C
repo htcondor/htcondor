@@ -32,9 +32,12 @@ char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
 // Others
-int		match_timeout;			// How long you're willing to be
-								// matched before claimed 
-int		last_x_event = 0;		// Time of the last x event
+int		match_timeout;		// How long you're willing to be
+							// matched before claimed 
+int		killing_timeout;	// How long you're willing to be in
+							// preempting/killing before you drop the
+							// hammer on the starter
+int		last_x_event = 0;	// Time of the last x event
 
 char*	mySubSystem = "STARTD";
 
@@ -273,6 +276,14 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	tmp = param( "KILLING_TIMEOUT" );
+	if( !tmp ) {
+		killing_timeout = 15;
+	} else {
+		killing_timeout = atoi( tmp );
+		free( tmp );
+	}
+
 	if( kbd_dev ) {
 		free( kbd_dev );
 	}
@@ -287,13 +298,31 @@ init_params( int first_time)
 }
 
 
+void
+startd_exit() 
+{
+	dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );
+	resmgr->final_update();
+	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
+	exit(0);
+}
+
 int
 main_shutdown_fast()
 {
+	if( !resmgr->in_use() ) {
+			// Machine is free, we can just exit right away.
+		startd_exit();
+	}
+
+	daemonCore->Cancel_Signal( DC_SIGCHLD );
+	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
+								 (SignalHandler)shutdown_sigchld,
+								 "shutdown_sigchld" );
+
 		// Quickly kill all the starters that are running
-	resmgr->walk( Resource::hardkill_claim );
-	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-	exit(0);
+	resmgr->walk( Resource::kill_claim );
+
 	return TRUE;
 }
 
@@ -301,6 +330,11 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	if( !resmgr->in_use() ) {
+			// Machine is free, we can just exit right away.
+		startd_exit();
+	}
+
 	daemonCore->Cancel_Signal( DC_SIGCHLD );
 	daemonCore->Register_Signal( DC_SIGCHLD, "DC_SIGCHLD", 
 								 (SignalHandler)shutdown_sigchld,
@@ -309,11 +343,6 @@ main_shutdown_graceful()
 		// Release all claims, active or not
 	resmgr->walk( Resource::release_claim );
 
-	if( !resmgr->in_use() ) {
-			// Machine is free, we can just exit right away.
-		dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-		exit(0);
-	}
 	return TRUE;
 }
 
@@ -359,12 +388,11 @@ shutdown_sigchld( Service*, int )
 {
 	reaper_loop();
 	if( ! resmgr->in_use() ) {
-		dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-		exit(0);
-
+		startd_exit();
 	} 
 	return TRUE;
 }
+
 
 int
 do_cleanup()
