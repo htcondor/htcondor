@@ -210,7 +210,7 @@ char *filename;
 	/* bfreen is in kbytes */
 	free_kbytes = fs->bfreen;
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for filename(%s): %d\n", 
+	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
 			filename, free_kbytes);
 
 	return(free_kbytes);
@@ -263,7 +263,7 @@ raw_free_fs_blocks(filename)
 char *filename;
 {
 	struct statfs statfsbuf;
-	int free_kbytes;
+	unsigned long free_kbytes;
 
 #if defined(IRIX331) || defined(Solaris) || defined(IRIX53)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
@@ -280,16 +280,14 @@ char *filename;
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
 	/* fix the overflow problem. weiru */
-	if(statfsbuf.f_bavail >= 0x7fffffff / statfsbuf.f_bsize)
+	free_kbytes = (unsigned long)statfsbuf.f_bavail * (unsigned long)statfsbuf.f_bsize / 1024;
+	if(free_kbytes > 0x7fffffff)
 	{
-		free_kbytes = 0x7fffffff;
-	}
-	else
-	{
-		free_kbytes = statfsbuf.f_bavail * statfsbuf.f_bsize / 1024;
+		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
+		return(LOTS_OF_FREE);
 	}
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for filename(%s): %d\n", 
+	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
 			filename, free_kbytes);
 
 	return(free_kbytes);
