@@ -5634,7 +5634,7 @@ Scheduler::child_exit(int pid, int status)
 			set_job_status( job_id.cluster, job_id.proc, IDLE ); 
 		} else 
 		if(WIFEXITED(status)) {
-			dprintf( D_FULLDEBUG,
+			dprintf( D_ALWAYS,
 					 "scheduler universe job (%d.%d) pid %d "
 					 "exited with status %d\n", job_id.cluster,
 					 job_id.proc, pid, WEXITSTATUS(status) );
@@ -5687,7 +5687,7 @@ Scheduler::child_exit(int pid, int status)
 			// make the schedd treat this like a Shadow Exception so job
 			// just goes back into the queue as idle, but if it happens
 			// to many times we relinquish the match.
-			dprintf(D_FULLDEBUG,
+			dprintf(D_ALWAYS,
 				"Shadow pid %d successfully killed because it was hung.\n"
 				,pid);
 			status = JOB_EXCEPTION;
@@ -5698,8 +5698,10 @@ Scheduler::child_exit(int pid, int status)
 					srec->job_id.cluster, srec->job_id.proc );
 		}
 		if( WIFEXITED(status) ) {			
-            dprintf( D_FULLDEBUG, "Shadow pid %d for job %d.%d exited with status %d\n",
-					 pid, srec->job_id.cluster, srec->job_id.proc, WEXITSTATUS(status) );
+            dprintf( D_ALWAYS,
+					 "Shadow pid %d for job %d.%d exited with status %d\n",
+					 pid, srec->job_id.cluster, srec->job_id.proc,
+					 WEXITSTATUS(status) );
 
 			switch( WEXITSTATUS(status) ) {
 			case JOB_NO_MEM:
