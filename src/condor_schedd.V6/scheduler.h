@@ -138,7 +138,7 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
-	void			Agent(char*, char*, char*, char*, int, ClassAd*);
+	int				Agent(char*, char*, char*, char*, int, ClassAd*);
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
@@ -209,7 +209,10 @@ class Scheduler : public Service
 	int				count_jobs();
 	void			update_central_mgr(int command, char *host, int port);
 	int				insert_owner(char*);
-	void			reaper(int, int, struct sigcontext*);
+#ifndef WIN32
+	void			reaper(int);
+#endif
+	void			child_exit(int, int);
 	void			clean_shadow_recs();
 	void			preempt(int);
 	int				permission(char*, char*, char*, PROC_ID*);
