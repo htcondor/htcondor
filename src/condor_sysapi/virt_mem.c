@@ -40,7 +40,8 @@ sysapi_swap_space_raw()
 	MEMORYSTATUS status;
 	sysapi_internal_reconfig();
 	GlobalMemoryStatus(&status);
-	return (int)status.dwAvailPageFile/1024;
+	return (int) (status.dwAvailPageFile/1024L);
+		
 }
 
 #elif defined(LINUX)

@@ -24,6 +24,7 @@
 #define NTSYSINFO_H
 
 #include "extArray.h"
+#include <tlhelp32.h>	// If trying to build on NT4, just comment this out
 
 class CSysinfo
 {
@@ -31,6 +32,11 @@ class CSysinfo
 	typedef DWORD (__stdcall *FPNtQuerySystemInformation)(DWORD, DWORD*, DWORD, DWORD);
 	typedef DWORD (__stdcall *FPNtOpenThread)(void*, DWORD, void*, void*);
 	typedef DWORD (__stdcall *FPNtClose)(HANDLE);
+
+	// some typdefs for function pointers into KERNEL32.DLL on Win2K and up
+	typedef HANDLE (WINAPI *FPCreateToolhelp32Snapshot)(DWORD, DWORD);
+	typedef BOOL (WINAPI *FPThread32First)(HANDLE, LPTHREADENTRY32);
+	typedef BOOL (WINAPI *FPThread32Next)(HANDLE, LPTHREADENTRY32);
 
 	public:
 	CSysinfo();
@@ -61,9 +67,15 @@ class CSysinfo
 	DWORD* FindBlock (DWORD pid);
 
 	static HINSTANCE hNtDll;
+	static HINSTANCE hKernel32Dll;
 	static FPNtQuerySystemInformation NtQuerySystemInformation;
 	static FPNtOpenThread NtOpenThread;
 	static FPNtClose NtClose;
+	static FPCreateToolhelp32Snapshot CreateToolhelp32Snapshot;
+	static FPThread32First Thread32First;
+	static FPThread32Next Thread32Next;
+
+	static bool IsWin2k;
 
 	private:
 	static int reference_count;

@@ -63,7 +63,8 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 
 #ifdef WIN32
 	// Always find the family via the Condor run login on NT, for now
-	searchLogin = strdup("condor-run-dir");
+	//searchLogin = strdup("condor-run-dir");
+	searchLogin = strdup("condor-run-");
 
 	// On Win32, all ProcFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;

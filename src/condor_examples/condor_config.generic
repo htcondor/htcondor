@@ -431,15 +431,15 @@ MaxVacateTime		= 10 * $(MINUTE)
 
 KeyboardBusy		= (KeyboardIdle < $(MINUTE))
 ConsoleBusy		= (ConsoleIdle  < $(MINUTE))
-CPU_Idle		= ($(NonCondorLoadAvg) <= $(BackgroundLoad))
-CPU_Busy		= ($(NonCondorLoadAvg) >= $(HighLoad))
+CPUIdle			= ($(NonCondorLoadAvg) <= $(BackgroundLoad))
+CPUBusy			= ($(NonCondorLoadAvg) >= $(HighLoad))
 
 BigJob		= (TARGET.ImageSize >= (50 * 1024))
 MediumJob	= (TARGET.ImageSize >= (15 * 1024) && TARGET.ImageSize < (50 * 1024))
 SmallJob	= (TARGET.ImageSize <  (15 * 1024))
 
-JustCPU			= ($(CPU_Busy) && ($(KeyboardBusy) == False))
-MachineBusy		= ($(CPU_Busy) || $(KeyboardBusy))
+JustCPU			= ($(CPUBusy) && ($(KeyboardBusy) == False))
+MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
 
 ##  The RANK expression controls which jobs this machine prefers to
 ##  run over others.  Some examples from the manual include:
@@ -502,7 +502,7 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 ##  have any (or many) machines with 128 megabytes (or more) of RAM, your
 ##  jobs will *NOT* start unless you specify MemoryRequirements in 
 ##  your command file!
-#UWCS_START		= ( ($(CPU_Idle) && KeyboardIdle > $(StartIdleTime)) \
+#UWCS_START		= ( ($(CPUIdle) && KeyboardIdle > $(StartIdleTime)) \
 #			   && (TARGET.ImageSize <= (Memory*1024)) \
 #			   && ( (MemoryRequirements < Memory) || \
 #			   (MemoryRequirements =?= UNDEFINED && \
@@ -513,9 +513,9 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 ##  (The memory requirements are implied to be that the amount of RAM
 ##  the incoming job requires will be less than the amount of memory on
 ##  this machine).
-UWCS_START		= $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
+UWCS_START		= $(CPUIdle) && KeyboardIdle > $(StartIdleTime)
 UWCS_SUSPEND		= $(MachineBusy)
-UWCS_CONTINUE		= $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
+UWCS_CONTINUE		= $(CPUIdle) && KeyboardIdle > $(ContinueIdleTime)
 UWCS_PREEMPT		= ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 			   (Activity == "Suspended") ) || \
 			   ( SUSPEND && (WANT_SUSPEND == False) )
@@ -524,7 +524,7 @@ UWCS_KILL		= $(ActivityTimer) > $(MaxVacateTime)
 ##  Only define vanilla versions of these if you want to make them
 ##  different from the above settings.
 #SUSPEND_VANILLA	= $(MachineBusy)
-#CONTINUE_VANILLA	= $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
+#CONTINUE_VANILLA	= $(CPUIdle) && KeyboardIdle > $(ContinueIdleTime)
 #PREEMPT_VANILLA	= ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 			   (Activity == "Suspended") ) || \
 			  ( SUSPEND_VANILLA && (Activity != "Suspended") )

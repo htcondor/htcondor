@@ -89,6 +89,82 @@ syscalls and standalone checkpointing.
 
 #ifdef FILE_TABLE
 
+#if defined(LINUX)
+
+/*
+__getdents has a very special switch on Linux.
+There are two distinct problems.
+
+1 - The kernel structure is different fron the user level structure.
+This requires that we transform from user space to kernel space
+before returning.
+
+2 - The internal libc functions have a completely unnecessary
+calling optimization.  We must reproduce the compiler flags that
+are used to generate it within libc.
+
+*/
+
+#include <dirent.h>
+
+struct condor_kernel_dirent {
+	long            d_ino;
+	off_t           d_off;
+	unsigned short  d_reclen;
+	char            d_name[256]; 
+};
+
+extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
+{
+	struct condor_kernel_dirent kbuf;
+	int rval,do_local=0;
+	errno = 0;
+
+	_condor_signals_disable();
+
+	if( MappingFileDescriptors() ) {
+		do_local = _condor_is_fd_local( fd );
+		fd = _condor_get_unmapped_fd( fd );
+	}
+
+	if( LocalSysCalls() || do_local ) {
+		rval = syscall( SYS_getdents, fd , &kbuf , sizeof(kbuf) );
+		if(rval>0) {
+			buf->d_ino = kbuf.d_ino;
+			buf->d_off = kbuf.d_off;
+			buf->d_type = 0;
+			strcpy(buf->d_name,kbuf.d_name);
+			buf->d_reclen = sizeof(*buf) - sizeof(buf->d_name) + strlen(buf->d_name) + 1;
+
+			/*
+			If I was very clever, I would convert all of the data returned.
+			Instead, just convert one, and put the seek pointer
+			at the beginning of the next one.
+			*/
+
+			int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
+			lseek(fd,buf->d_off,SEEK_SET);
+			SetSyscalls(scm);
+
+			rval = buf->d_reclen;
+		}       
+	} else {
+		rval = REMOTE_syscall( CONDOR_getdents, fd , buf , nbytes );
+	}
+
+	_condor_signals_enable();
+
+	return (int  ) rval;
+}
+
+extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+
+extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
+	return getdents(fd,dirp,count);
+}
+
+#endif /* LINUX */
+
 #undef ngetdents
 #if defined( SYS_ngetdents )
 extern "C" int REMOTE_CONDOR_getdents( int, struct dirent*, size_t);

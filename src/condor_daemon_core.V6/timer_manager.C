@@ -366,6 +366,9 @@ TimerManager::Timeout()
 			(*handler)(s);		// typedef int (*Event)(Service*)
 		}
 
+		// Make sure we didn't leak our priv state
+		daemonCore->CheckPrivState();
+
 		// Clear curr_dataptr
 		daemonCore->curr_dataptr = NULL;
 

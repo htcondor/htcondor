@@ -2441,6 +2441,7 @@ int DaemonCore::Suspend_Process(pid_t pid)
 		return FALSE;	// cannot suspend our parent
 
 #if defined(WIN32)
+
 	// We need to enum all the threads in the process, and
 	// then suspend all the threads.  We need to repeat this
 	// process until all the threads are suspended, since a thread
@@ -2456,6 +2457,9 @@ int DaemonCore::Suspend_Process(pid_t pid)
 
 	numTids = ntsysinfo.GetTIDs(pid,tids);
 
+	dprintf(D_DAEMONCORE,"Suspend_Process(%d) - numTids = %d\n",
+		pid, numTids);
+
 	// if numTids is 0, this process has no threads, which likely
 	// means the process does not exist (or an error in GetTIDs).
 	if ( !numTids ) {
@@ -2467,6 +2471,9 @@ int DaemonCore::Suspend_Process(pid_t pid)
 	// open handles to all the threads.
 	for (j=0; j < numTids; j++) {
 		hThreads[j] = ntsysinfo.OpenThread(tids[j]);
+		dprintf(D_DAEMONCORE,
+			"Suspend_Process(%d) - thread %d  tid=%d  handle=%p\n",
+			pid, j, tids[j], hThreads[j]);
 	}
 
 	// Keep calling SuspendThread until they are all suspended.
@@ -2475,10 +2482,17 @@ int DaemonCore::Suspend_Process(pid_t pid)
 		allDone = TRUE;
 		for (j=0; j < numTids; j++) {
 			if ( hThreads[j] ) {
+				dprintf(D_DAEMONCORE,
+					"Suspend_Process(%d) calling SuspendThread on handle %p\n",
+					pid, hThreads[j]);
 				// Note: SuspendThread returns > 1 if already suspended
 				if ( ::SuspendThread(hThreads[j]) == 0 ) {
 					 allDone = FALSE;
 				}
+			} else {
+				dprintf(D_DAEMONCORE,
+					"Suspend_Process(%d) - NULL thread handle! (thread #%d)\n",
+					pid, j);
 			}
 		}
 		if ( allDone == FALSE ) {

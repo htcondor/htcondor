@@ -3259,6 +3259,7 @@ Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, match_rec* mrec, int fd )
 	new_rec->conn_fd = fd;
     new_rec->sinfulString = 
         strnewp( daemonCore->InfoCommandSinfulString( pid ) );
+	new_rec->isZombie = FALSE; 
 	
 	if (pid) {
 		add_shadow_rec(new_rec);
@@ -3664,9 +3665,16 @@ Scheduler::clean_shadow_recs()
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1) {
 		if( !is_alive(rec) ) {
-			dprintf( D_ALWAYS,
-			"Cleaning up ShadowRec for pid %d\n", rec->pid );
-			delete_shadow_rec( rec->pid );
+			if ( rec->isZombie ) { // bad news...means we missed a reaper
+				dprintf( D_ALWAYS,
+				"Zombie process has not been cleaned up by reaper - pid %d\n", rec->pid );
+			} else {
+				dprintf( D_FULLDEBUG, "Setting isZombie status for pid %d\n", rec->pid );
+				rec->isZombie = TRUE;
+			}
+
+			// we don't want this old safety code to run anymore (stolley)
+			//			delete_shadow_rec( rec->pid );
 		}
 	}
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );

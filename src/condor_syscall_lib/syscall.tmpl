@@ -612,7 +612,7 @@ version.
 		}
 	#endif
 
-	#if defined(Solaris) || defined(IRIX)  
+	#if defined(Solaris) || defined(IRIX) || ( defined(LINUX) && !defined(SWITCH) )
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
 			also_implements(getdents64)
 		{
@@ -753,7 +753,7 @@ their physical locations by the file table when mapping
 is in effect.  If a syscall deals with two path names,
 it should apply map_name_two() to the second one, which
 will compares its results to that of map_name() and
-report an error if they are not the same.
+report an error if reside on different devices.
 */
 
 	int link( map_name(const char *p1), map_name_two(const char *p2) ) {

@@ -35,8 +35,6 @@
 #   endif
 #endif   /* IRIX */
 
-#define GENERIC_EVENT 1
-
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
@@ -61,9 +59,7 @@ enum ULogEventNumber {
     /** Job terminated            */  ULOG_JOB_TERMINATED 			= 5,
     /** Image size of job updated */  ULOG_IMAGE_SIZE 				= 6,
     /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION 		= 7,
-#if defined(GENERIC_EVENT)
     /** Generic Log Event         */  ULOG_GENERIC 					= 8,
-#endif      
     /** Job Aborted               */  ULOG_JOB_ABORTED 				= 9,
 	/** Job was suspended         */  ULOG_JOB_SUSPENDED 			= 10,
 	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED 			= 11,
@@ -261,8 +257,6 @@ class SubmitEvent : public ULogEvent
 };
 
 
-#if defined(GENERIC_EVENT)
-
 //----------------------------------------------------------------------------
 /** Framework for a Generic User Log Event object.
     This subclass of ULogEvent provides a application programmer with
@@ -298,7 +292,6 @@ class GenericEvent : public ULogEvent
     /// A string with unspecified format.
     char info[128];
 };
-#endif /* ifdef GENERIC_EVENT */
 
 //----------------------------------------------------------------------------
 /** This event occurs when a job begins running on a machine.

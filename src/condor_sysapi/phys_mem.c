@@ -195,7 +195,7 @@ sysapi_phys_memory_raw(void)
 int
 sysapi_phys_memory_raw(void)
 {
-	MEMORYSTATUS status;
+	MEMORYSTATUS status;		
 	sysapi_internal_reconfig();
 	GlobalMemoryStatus(&status);
 	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );

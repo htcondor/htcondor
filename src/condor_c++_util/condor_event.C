@@ -37,6 +37,7 @@
 					 return 0; }
 
 const char * ULogEventNumberNames[] = {
+<<<<<<< condor_event.C
 	"ULOG_SUBMIT",					// Job submitted
 	"ULOG_EXECUTE",					// Job now running
 	"ULOG_EXECUTABLE_ERROR",		// Error in executable
@@ -45,9 +46,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_TERMINATED",			// Job terminated
 	"ULOG_IMAGE_SIZE",				// Image size of job updated
 	"ULOG_SHADOW_EXCEPTION",		// Shadow threw an exception
-#if defined(GENERIC_EVENT)
 	"ULOG_GENERIC",
-#endif	    
 	"ULOG_JOB_ABORTED",  			// Job aborted
 	"ULOG_JOB_SUSPENDED",			// Job was suspended
 	"ULOG_JOB_UNSUSPENDED",			// Job was unsuspended
@@ -99,10 +98,8 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_SHADOW_EXCEPTION:
 		return new ShadowExceptionEvent;
 
-#if defined(GENERIC_EVENT)
 	case ULOG_GENERIC:
 		return new GenericEvent;
-#endif
 
 	  case ULOG_JOB_ABORTED:
 		return new JobAbortedEvent;
@@ -606,7 +603,6 @@ readEvent (FILE *file)
 	return 1;
 }
 
-#if defined(GENERIC_EVENT)
 // ----- the GenericEvent class
 GenericEvent::
 GenericEvent()
@@ -642,7 +638,6 @@ readEvent(FILE *file)
     }
     return 1;
 }
-#endif
 	
 
 // ----- the ExecuteEvent class
@@ -1320,6 +1315,7 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
+<<<<<<< condor_event.C
 
 
 // ----- the NodeExecuteEvent class
@@ -1445,3 +1441,5 @@ readEvent( FILE* file )
     }
     return 1;
 }
+=======
+>>>>>>> 1.19.8.2
