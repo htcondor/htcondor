@@ -31,14 +31,14 @@
     @param value
     @return TRUE on success, FALSE on failure
 */
-int SetEnv( const char *key, char *value);
+int SetEnv( const char *key, const char *value);
 
 /** Put env_var into the environment
     @param env_var Desired string to go into environment;
     must be of the form 'name=value' 
     @return TRUE on success, FALSE on failure
 */
-int SetEnv( char *env_var );
+int SetEnv( const char *env_var );
 
 /** Remove env_var from the environment
     @param env_var Desired variable name to remove from environment;

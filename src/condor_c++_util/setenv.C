@@ -23,12 +23,30 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "classad_hashtable.h"
 
 #include "setenv.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
 
-int SetEnv( const char *key, char *value)
+// Under unix, we maintain a hash-table of all environment variables that
+// have been inserted using SetEnv() below. If they are overwritten by
+// another call to SetEnv() or removed by UnsetEnv(), we delete the
+// allocated memory. Windows does its own memory management for environment
+// variables, so this hash-table is unnecessary there.
+
+#define HASH_TABLE_SIZE		50
+
+#ifndef WIN32
+
+template class HashTable<HashKey, char *>;
+template class HashBucket<HashKey, char *>;
+
+HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
+
+#endif
+
+int SetEnv( const char *key, const char *value)
 {
 	assert(key);
 	assert(value);
@@ -40,9 +58,6 @@ int SetEnv( const char *key, char *value)
 		return FALSE;
 	}
 #else
-	// XXX: We should actually put all of this in a hash table, so that 
-	// we don't leak memory.  This is just quick and dirty to get something
-	// working.
 	char *buf;
 	buf = new char[strlen(key) + strlen(value) + 2];
 	sprintf(buf, "%s=%s", key, value);
@@ -52,17 +67,32 @@ int SetEnv( const char *key, char *value)
 				strerror(errno), errno);
 		return FALSE;
 	}
+
+	char *hashed_var;
+	if ( EnvVars.lookup( HashKey( key ), hashed_var ) == 0 ) {
+			// found old one
+			// remove old one
+		EnvVars.remove( HashKey( key ) );
+			// delete old one
+		delete [] hashed_var;
+			// insert new one
+		EnvVars.insert( HashKey( key ), buf );
+	} else {
+			// no old one
+			// add new one
+		EnvVars.insert( HashKey( key ), buf );
+	}
 #endif
 	return TRUE;
 }
 
-int SetEnv( char *env_var ) 
+int SetEnv( const char *env_var ) 
 {
 		// this function used if you've already got a name=value type
 		// of string, and want to put it into the environment.  env_var
 		// must therefore contain an '='.
 	if ( !env_var ) {
-		dprintf (D_ALWAYS, "DaemonCore::SetEnv, env_var = NULL!\n" );
+		dprintf (D_ALWAYS, "SetEnv, env_var = NULL!\n" );
 		return FALSE;
 	}
 
@@ -79,7 +109,6 @@ int SetEnv( char *env_var )
 		return FALSE; 
 	}
 
-#ifdef WIN32  // will this ever be used?  Hmmm....
 		// hack up string and pass to other SetEnv version.
 	int namelen = (int) equalpos - (int) env_var;
 	int valuelen = strlen(env_var) - namelen - 1;
@@ -96,17 +125,6 @@ int SetEnv( char *env_var )
 	delete [] name;
 	delete [] value;
 	return retval;
-#else
-		// XXX again, this is a memory-leaking quick hack; see above.
-	char *buf = new char[strlen(env_var) +1];
-	strcpy ( buf, env_var );
-	if( putenv(buf) != 0 ) {
-		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
-				strerror(errno), errno);
-		return FALSE;
-	}
-	return TRUE;
-#endif
 }
 
 int UnsetEnv( const char *env_var ) 
@@ -131,6 +149,15 @@ int UnsetEnv( const char *env_var )
 			}
 		    break;
 		}
+	}
+
+	char *hashed_var;
+	if ( EnvVars.lookup( HashKey( env_var ), hashed_var ) == 0 ) {
+			// found it
+			// remove it
+		EnvVars.remove( HashKey( env_var ) );
+			// delete it
+		delete [] hashed_var;
 	}
 
 	return TRUE;
