@@ -4844,6 +4844,7 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 				   char *user, char *pool)
 {
 	match_rec *rec;
+	char* addr;
 
 	if(!id || !peer)
 	{
@@ -4857,6 +4858,23 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 	} 
 	matches->insert(HashKey(id), rec);
 	numMatches++;
+
+		/*
+		  Finally, we want to tell daemonCore that we're willing to
+		  grant WRITE permission to whatever machine we were matched
+		  with.  This greatly simplifies DaemonCore permission stuff
+		  for flocking, since submitters don't have to know all the
+		  hosts they might possibly run on, all they have to do is
+		  trust the central managers of all the pools they're flocking
+		  to (which they have to do, already).  Added on 7/13/00 by
+		  Derek Wright <wright@cs.wisc.edu>
+		*/
+	if( (addr = string_to_ipstr(peer)) ) {
+		daemonCore->AddAllowHost( addr, WRITE );
+	} else {
+		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
+				 peer );
+	}
 	return rec;
 }
 
