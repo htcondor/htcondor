@@ -152,7 +152,11 @@ extern "C" {
 	int getdtablesize();
 	int getpriority( int, id_t );
 	int setpriority( int, id_t, int );
+#if defined(Solaris27)
+	int utimes( const char*, const struct timeval* );
+#else
 	int utimes( const char*, struct timeval* );
+#endif /* Solaris 27 */
 	int getdomainname( char*, size_t );
 #endif
 
