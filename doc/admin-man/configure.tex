@@ -480,6 +480,26 @@ system.
   for \MacroU{HOSTNAME} and \MacroU{FULL\_HOSTNAME} and inserts them
   into its configuration table.
 
+\item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
+  By default, if a user does not specify \AdAttr{notify\_user} in the
+  submit description file, any email Condor sends about that job will
+  go to "username@UID\_DOMAIN".
+  If your machines all share a common UID domain (so that you would
+  set \Macro{UID\_DOMAIN} to be the same across all machines in your
+  pool), but email to user@UID\_DOMAIN is not the right place for
+  Condor to send email for your site, you can define the default
+  domain to use for email.
+  A common example would be to set \Macro{EMAIL\_DOMAIN} to the fully
+  qualified hostname of each machine in your pool, so users submitting
+  jobs from a specific machine would get email sent to
+  user@machine.your.domain, instead of user@your.domain.  
+  You would do this by setting \Macro{EMAIL\_DOMAIN} to
+  \MacroU{FULL\_HOSTNAME}. 
+  In general, you should leave this setting commented out unless two
+  things are true: 1) \Macro{UID\_DOMAIN} is set to your domain, not
+  \MacroU{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
+  work. 
+
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
   Defines whether or not Condor daemons are to
   create a core file if something really bad happens.  It is
