@@ -846,7 +846,7 @@ MakeProc(ClassAd *ad, PROC *p)
 	char	*s;
 	ExprTree *e;
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 	const char	*s2;
 	
 	p->version_num = 3;
