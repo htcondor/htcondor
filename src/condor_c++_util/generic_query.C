@@ -1,4 +1,4 @@
-#include <string.h>
+#include "condor_common.h"
 #include "generic_query.h"
 #include "condor_attributes.h"
 #include "condor_parser.h"

@@ -1,7 +1,7 @@
 #ifndef __AD_PRINT_MASK__
 #define __AD_PRINT_MASK__
 
-#include <stdio.h>
+#include "condor_common.h"
 #include "list.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"

@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include "condor_common.h"
 
 #pragma implementation "list.h"
 #include "list.h"

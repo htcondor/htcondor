@@ -26,10 +26,7 @@
 **
 */ 
 
-#include <string.h>
-#include <sys/wait.h>
 #include "condor_common.h"
-#include "condor_fix_wait.h"
 #include "url_condor.h"
 
 #define READ_END 0

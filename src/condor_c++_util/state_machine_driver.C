@@ -4,11 +4,7 @@
 ** All rights reserved except as provided by specific written agreement.
 ** 
 */ 
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_fix_setjmp.h"
 #include "state_machine_driver.h"

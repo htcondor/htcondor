@@ -25,8 +25,6 @@
 ** Author:  Jim Pruyne
 **
 */ 
-
-#include <string.h>
 #include "condor_common.h"
 #include "url_condor.h"
 

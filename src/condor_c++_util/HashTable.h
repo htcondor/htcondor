@@ -5,6 +5,7 @@
 #pragma interface
 #endif
 
+#include "condor_common.h"
 #include <iostream.h>
 
 // a generic hash bucket class

@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "condor_state.h"
+
 static char *_FileName_ = __FILE__;
 
 static char* condor_states [] = { "Owner", "Unclaimed", "Matched",
@@ -55,4 +56,5 @@ activity_to_string( Activity act )
 		return "Unknown";
 	}
 }
+
 

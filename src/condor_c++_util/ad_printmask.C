@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include "ad_printmask.h"
 
 static char *new_strdup (const char *);
