@@ -192,6 +192,11 @@ CStarter::StartJob()
 		return false;
 	}
 
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
+		dprintf( D_ALWAYS, "Job doesn't specify universe, assuming STANDARD\n" );
+	}
+
 		// Now that we have the job ad, figure out what the owner
 		// should be and initialize our priv_state code:
 
@@ -267,7 +272,7 @@ CStarter::StartJob()
 		dprintf(D_ALWAYS,"StartJob: Job has %s=%s\n",ATTR_WANT_IO_PROXY,want_io_proxy?"true":"false");
 	}
 
-	if(want_io_proxy) {
+	if( want_io_proxy || universe==CONDOR_UNIVERSE_JAVA ) {
 		sprintf(io_proxy_config_file,"%s%cchirp.config",WorkingDir,DIR_DELIM_CHAR);
 		if(!io_proxy.init(io_proxy_config_file)) {
 			dprintf(D_ALWAYS,"StartJob: Couldn't initialize proxy.\n");
@@ -290,10 +295,6 @@ CStarter::StartJob()
 		// Now that the scratch dir is setup, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
-	int universe = CONDOR_UNIVERSE_STANDARD;
-	if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
-		dprintf( D_ALWAYS, "Job doesn't specify universe, assuming STANDARD\n" );
-	}
 
 	dprintf( D_ALWAYS, "Starting a %s universe job.\n",CondorUniverseName(universe));
 
