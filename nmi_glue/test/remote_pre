@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.2.6 2004-06-24 19:47:45 wright Exp $
+# $Id: remote_pre,v 1.1.2.7 2004-06-24 23:16:40 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -117,11 +117,6 @@ while( <ORIG> ) {
     print FIX;
   }
 }
-
-# ADD NUM_CPUS and NUM_VMS to speed up tests
-print FIX "NUM_CPUS = 3\n";
-print FIX "NUM_VIRTUAL_MACHINES = 3\n";
-print FIX "STARTD_EXPRS = NUM_CPUS\n";
 
 # ADD size for log files and debug level
 # default settings are in condor_config, set here to override 
