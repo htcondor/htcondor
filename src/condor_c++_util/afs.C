@@ -95,11 +95,14 @@ AFS_Info::find_my_cell()
 	char	buf[_POSIX_PATH_MAX ];
 	FILE	*fp;
 	char	*ptr;
-	SubProc	p( fs_pathname, "wscell", "r" );
 
+	// must check has_afs _first_, because if it is not true,
+	// then fs_pathname is unitialized.  -Todd 7/97
 	if( !has_afs ) {
 		return NULL;
 	}
+
+	SubProc	p( fs_pathname, "wscell", "r" );
 	return p.parse_output( "belongs to cell", "'", "'" );
 }
 
