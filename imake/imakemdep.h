@@ -194,9 +194,8 @@ in this Software without prior written authorization from The Open Group.
  *     all colons).  One way to tell if you need this is to see whether or not
  *     your Makefiles have no tabs in them and lots of @@ strings.
  */
-#if defined(sun) || defined(SYSV) || defined(SVR4) || defined(hcx) || defined(WIN32) || defined(sco) || (defined(AMOEBA) && defined(CROSS_COMPILE))
 #define FIXUP_CPP_WHITESPACE
-#endif
+
 #ifdef WIN32
 #define REMOVE_CPP_LEADSPACE
 #define INLINE_SYNTAX
