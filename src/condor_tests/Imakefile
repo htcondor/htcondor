@@ -70,6 +70,8 @@ BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -
 
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
+DEPS(lib_userlog,x_read_joblog.exe)
+DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
 
 /* Condor-C Tests */
