@@ -82,6 +82,10 @@ LIB32=link.exe -lib
 # Name "condor_daemon_core - Win32 Release"
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\accessdesktop.WIN32.C
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\condor_daemon_core.h
 # End Source File
 # Begin Source File
