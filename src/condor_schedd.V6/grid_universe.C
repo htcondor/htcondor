@@ -212,8 +212,6 @@ GridUniverseLogic::SendRemoveSignal(Service *)
 void
 GridUniverseLogic::signal_all(int sig)
 {
-	gman_node_t* gman_node = NULL;
-
 	// Iterate through our entire table and send the desired sig
 
 	if (gman_pid_table) {

@@ -948,7 +948,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
 	ClassAd			*ad;
-	char			*tmp;
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
