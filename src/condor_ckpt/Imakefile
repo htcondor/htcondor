@@ -314,7 +314,7 @@ clean::
 #endif
 
 clean::
-	rm -f c_plus_alloc.o syscall_mode.o
+	rm -f *.o
 
 html:
 
