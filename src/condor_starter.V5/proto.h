@@ -117,7 +117,7 @@ int calc_hdr_blocks();
 int calc_text_blocks( char * );
 int core_is_valid( char * );
 int have_running_process();
-int exception_cleanup();
+int exception_cleanup(int,int,char*);
 extern "C" {
 	void display_sigmask( char *name, sigset_t *mask );
 	void display_cur_sigmask();
