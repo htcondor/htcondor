@@ -32,7 +32,8 @@ static const char* daemon_names[] = {
 	"collector",
 	"negotiator",
 	"kbdd",
-	"dagman"
+	"dagman", 
+	"view_collector",
 };
 
 extern "C" {
