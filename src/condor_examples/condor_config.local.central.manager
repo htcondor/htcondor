@@ -9,6 +9,11 @@
 ##  may want to customize and settings you should probably leave alone
 ##  (unless you know what you're doing).
 ##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
 ######################################################################
 
 ######################################################################
@@ -29,6 +34,12 @@
 ##  (it is generally safe to leave these untouched) 
 ######################################################################
 ######################################################################
+
+##  Every pool can have a name associated with it.  This should be a
+##  short description (20 characters or so) that describes your site.
+##  For example, the name for the UW-Madison Computer Science Condor
+##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
+#COLLECTOR_NAME		= Short Description of your pool
 
 ##  What daemons do you want to run on your central manager?  
 ##  NOTE: For it to be the central manager, you need the NEGOTIATOR
@@ -56,28 +67,22 @@ NEGOTIATOR	= $(SBIN)/condor_negotiator
 ##  How long can a classad remain in the collector before it is
 ##  discarded as stale information?  (Defaults to 15 minutes.  The 
 ##  daemons send updates every 5 minutes by default).
-CLASSAD_LIFETIME	= 900
+#CLASSAD_LIFETIME	= 900
 
 ##  How often should the collector check for machines that don't have
 ##  classads from the condor_master and send email about it? (3
 ##  hours by default).
-MASTER_CHECK_INTERVAL	= 10800
+#MASTER_CHECK_INTERVAL	= 10800
 
 ##  Network timeout when talking to daemons that are sending an
 ##  update: 
-CLIENT_TIMEOUT		= 30
+#CLIENT_TIMEOUT		= 30
 
 ##  Network timeout when talking to anyone doing a query:
-QUERY_TIMEOUT		= 60
+#QUERY_TIMEOUT		= 60
 
 ##  Email address of the condor-developers at UW-Madison.  
-CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
-
-##  Every pool can have a name associated with it.  This should be a
-##  short description (20 characters or so) that describes your site.
-##  For example, the name for the UW-Madison Computer Science Condor
-##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
-#COLLECTOR_NAME		= Short Description of your pool
+#CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 
 ##  By default, every pool sends periodic updates to a central
 ##  condor_collector at UW-Madison with basic information about the
@@ -91,7 +96,7 @@ CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 #CONDOR_DEVELOPERS_COLLECTOR = NONE
 
 ##  Enable history logging in the collector
-#KEEP_POOL_HISTORY = false
+#KEEP_POOL_HISTORY = False
 
 ##  Set the directory where history files reside
 #POOL_HISTORY_DIR = $(SPOOL)
@@ -106,23 +111,27 @@ CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 ##  condor_negotiator
 ##--------------------------------------------------------------------
 ##  How often should the negotiator start a negotiation cycle?
-NEGOTIATOR_INTERVAL	= 300
+#NEGOTIATOR_INTERVAL	= 300
 
 ##  What timeout should the negotiator use on it's network connections
 ##  to the schedds and startds?
-NEGOTIATOR_TIMEOUT	= 30
+#NEGOTIATOR_TIMEOUT	= 30
 
 ##  What is the halflife of the user priorities? (1 day)
-PRIORITY_HALFLIFE	= 86400
+#PRIORITY_HALFLIFE	= 86400
 
 ##  The default priority factor for nice users
 #NICE_USER_PRIO_FACTOR = 10000000
 
-##  The default priority factor for remote users
-#REMOTE_PRIO_FACTOR = 10000
+##  The UID_DOMAIN of users who are considered local.  If undefined,
+##  all users are considered local.  Remote (non-local) users get a
+##  configurable boost to their priority value (giving them worse
+##  priority in your pool).  See below.
+#ACCOUNTANT_LOCAL_DOMAIN = $(UID_DOMAIN)
 
-##  The UID_DOMAIN of users who are considered local
-#ACCOUNTANT_LOCAL_DOMAIN = cs.wisc.edu
+##  The default priority factor for remote users (only used if
+##  ACCOUNTANT_LOCAL_DOMAIN is defined above).
+#REMOTE_PRIO_FACTOR = 10000
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
@@ -141,7 +150,7 @@ PREEMPTION_RANK : (RemoteUserPrio * 1000000) - ImageSize
 
 ##  The NEGOTIATOR_TRAFFIC_LIMIT macro specifies the maximum
 ##  amount of network traffic (in KB) the negotiator may initiate per
-##  NEGOTIATOR_TRAFFIC_INTERVAL} for job placement and preemption.
+##  NEGOTIATOR_TRAFFIC_INTERVAL for job placement and preemption.
 ##  The negotiator uses the job ImageSize and ExecutableSize
 ##  parameters to track network usage.  The negotiator will try to use
 ##  bandwidth up to the limit, so if starting a large ImageSize job
@@ -168,3 +177,4 @@ PREEMPTION_RANK : (RemoteUserPrio * 1000000) - ImageSize
 ##  value greater than the number of schedds submitting jobs to the
 ##  negotiator at any time.
 #NEGOTIATOR_SOCKET_CACHE_SIZE = 16
+
