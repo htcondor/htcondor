@@ -12,6 +12,7 @@ class daemon : public Service
 public:
 	daemon(char *name);
 	char*	name_in_config_file;
+	char*	daemon_name; 
 	char*	log_filename_in_config_file;
 	char*	flag_in_config_file;
 	char*	process_name;

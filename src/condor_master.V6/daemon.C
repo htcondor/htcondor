@@ -140,10 +140,44 @@ daemon::daemon(char *name)
 	char	buf[1000];
 
 	name_in_config_file = strdup(name);
+	daemon_name = strchr(name_in_config_file, '-');
+	if(daemon_name)
+	{
+		daemon_name++;
+		if(*daemon_name == '_')
+		{
+			daemon_name++;
+			if(*daemon_name == '\0')
+			{
+				daemon_name = NULL;
+			}
+		}
+		else
+		{
+			daemon_name = NULL;
+		}
+	} 
+	
 	sprintf(buf, "%s_LOG", name);
 	log_filename_in_config_file = strdup(buf);
 	sprintf(buf, "%s_FLAG", name);
 	flag_in_config_file = param(buf);
+
+	// Weiru
+	// In the case that we have several for example schedds running on the
+	// same machine, we specify SCHEDD__1, SCHEDD_2, ... in the config file.
+	// We want to be able to specify only one executable for them as well as
+	// different executables, or one flag for all of them as well as
+	// different flags for each. So we instead of specifying in config file
+	// SCHEDD__1 = /unsup/condor/bin/condor_schedd, SCHEDD__2 = /unsup/condor/
+	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
+	if(!flag_in_config_file && daemon_name)
+	{
+		*(daemon_name - 2) = '\0';
+		sprintf(buf, "%s_FLAG", name_in_config_file);
+		flag_in_config_file = param(buf);
+		*(daemon_name - 2) = '_';
+	} 
 	process_name = 0;
 	log_name = 0;
 	if (strcmp(name, "MASTER") != MATCH) {
@@ -263,6 +297,13 @@ void Daemons::InitParams()
 	for ( int i =0; i < no_daemons; i++) {
 		daemon_ptr[i]->process_name = 
 			param(daemon_ptr[i]->name_in_config_file);
+		if(daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->daemon_name)
+		{
+			*(daemon_ptr[i]->daemon_name - 2) = '\0'; 
+			daemon_ptr[i]->process_name = param(daemon_ptr[i]->name_in_config_file);
+			*(daemon_ptr[i]->daemon_name - 2) = '_';
+		}
+		
 		if ( daemon_ptr[i]->process_name == NULL && daemon_ptr[i]->flag ) {
 			dprintf(D_ALWAYS, "Process not found in config file: %s\n", 
 					daemon_ptr[i]->name_in_config_file);
@@ -443,11 +484,25 @@ int daemon::StartDaemon()
 		{
 			if(doConfigFromServer && config_location)
 			{
-				(void)execl( process_name, shortname, "-f", "-c", config_location, 0 );
-			}
+				if(daemon_name)
+				{
+					(void)execl( process_name, shortname, "-f", "-n", daemon_name, "-c", config_location, 0 );
+				}
+				else
+				{
+					(void)execl( process_name, shortname, "-f", "-c", config_location, 0 );
+				} 
+			} 
 			else
 			{
-				(void)execl( process_name, shortname, "-f", 0 );
+				if(daemon_name)
+				{
+					(void)execl( process_name, shortname, "-f", "-n", daemon_name, 0); 
+				}
+				else
+				{
+					(void)execl( process_name, shortname, "-f", 0 );
+				} 
 			} 
 		}
 		
@@ -477,6 +532,7 @@ void Daemons::Restart(int pid)
 			// this is the daemon that died: schedule to restart it
 			dprintf( D_ALWAYS, "The %s (process %d ) died\n",
 						daemon_ptr[i]->name_in_config_file,pid);
+			daemon_ptr[i]->pid = 0; 
 			do_killpg( pid, SIGKILL ) ;
 
 			// restart
@@ -563,7 +619,7 @@ void Daemons::CheckForNewExecutable()
 									&daemon_ptr[i]->timeStamp)) {
 			daemon_ptr[i]->restarts = 0;
 			daemon_ptr[i]->newExec = TRUE;
-			if(daemon_ptr[i]->pid >= 0)
+			if(daemon_ptr[i]->pid > 0)
 			{
 				dprintf(D_ALWAYS,"%s was modified.Killing %d\n", 
 						daemon_ptr[i]->name_in_config_file, daemon_ptr[i]->pid);

@@ -1425,7 +1425,5 @@ void StartConfigServer()
 
 void siggeneric_handler(int sig)
 {
-	dprintf(D_ALWAYS, "signal (%d) received at %s, %d\n", sig, __FILE__,
-			__LINE__);
-	return;
+	EXCEPT("signal (%d) received\n");
 }
