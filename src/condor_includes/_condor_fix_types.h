@@ -57,7 +57,7 @@ need these extra definitions...
 #	define HAS_U_TYPES
 #endif
 
- #if defined(Solaris)
+#if defined(Solaris)
 #       define HAS_U_TYPES
 #endif
 
