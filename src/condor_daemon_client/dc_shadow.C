@@ -50,7 +50,7 @@ DCShadow::~DCShadow( void )
 bool
 DCShadow::initFromClassAd( ClassAd* ad )
 {
-	string tmp;
+	std::string tmp;
 
 	if( ! ad ) {
 		dprintf( D_ALWAYS, 
