@@ -120,9 +120,21 @@
 	int dup( int old_fd );
 	int dup2( int old_fd, int new_fd );
 	int fchdir( map(int fd) );
-	int chdir( const char *path ) {
+	int chdir( const char *path ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
+	}
+	int register_afs_cell( const char *cell ) : pseudo {
+		SEND_PATH( cell );
+		ALLOC_PATH( cell );
+	}
+	int register_fs_domain( const char *domain ) : pseudo {
+		SEND_PATH( domain );
+		ALLOC_PATH( domain );
+	}
+	int register_uid_domain( const char *domain ) : pseudo {
+		SEND_PATH( domain );
+		ALLOC_PATH( domain );
 	}
 #endif	/* not SWITCH and not CLIP */
 
@@ -243,6 +255,39 @@ int rename( const char *from, const char *to ) {
 		out xdr_int( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
+	int startup_info_request( STARTUP_INFO *s ): pseudo {
+		out xdr_startup_info( s );
+		alloc( s, STARTUP_INFO_SIZE );
+	}
+	int std_file_info( int which, char *name, int *pipe_fd ) : pseudo {
+		GET_PATH( name );
+		ALLOC_PATH( name );
+		out xdr_int( pipe_fd );
+		alloc( pipe_fd, INT_SIZE );
+	}
+	int file_info( const char *name, int *pipe_fd, char *extern_path ): pseudo {
+		SEND_PATH( name );
+		ALLOC_PATH( name );
+		GET_PATH( extern_path );
+		ALLOC_PATH( extern_path );
+		out xdr_int( pipe_fd );
+		alloc( pipe_fd, INT_SIZE );
+	}
+	int get_iwd( char *path ) : pseudo {
+		GET_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int get_ckpt_name( char *path ) : pseudo {
+		GET_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int get_a_out_name( char *path ) : pseudo {
+		GET_PATH( path );
+		ALLOC_PATH( path );
+	}
+
 
 #if !defined (SWITCH) && !defined(RECEIVER)
 	int pvm_info( const char *response, int mytid ) : pseudo {
@@ -263,23 +308,6 @@ int rename( const char *from, const char *to ) {
 		the result is the length of the file, a hostname, and a port
 		number from which the actual bytes can be read.
 		*/
-#if 0
-	int get_file_stream(
-		const char *file, size_t *len, char *host, u_short *port_num ): pseudo {
-
-		SEND_PATH( file );
-		ALLOC_PATH( file );
-
-		out xdr_size_t( len );
-		alloc( len, SIZE_T_SIZE );
-
-		out xdr_string( &host, MAX_STRING );
-		alloc( host, MAX_STRING );
-
-		out xdr_u_short( port_num );
-		alloc( port_num, U_SHORT_SIZE );
-	}
-#else
 	int get_file_stream( const char *file, size_t *len, unsigned int *ip_addr,
 		u_short *port_num ): pseudo {
 
@@ -295,7 +323,6 @@ int rename( const char *from, const char *to ) {
 		out xdr_u_short( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
-#endif
 
 		/*
 		This function is intended for setting up the transfer
@@ -306,20 +333,6 @@ int rename( const char *from, const char *to ) {
 		the result is a hostname and a port number to which the
 		actual bytes can be written.
 		*/
-#if 0
-	int put_file_stream(
-		const char *file, size_t len,  char *host, u_short *port_num ): pseudo {
-
-		SEND_PATH( file );
-		ALLOC_PATH( file );
-
-		out xdr_string( &host, MAX_STRING );
-		alloc( host, MAX_STRING );
-
-		out xdr_u_short( port_num );
-		alloc( port_num, U_SHORT_SIZE );
-	}
-#else
 	int put_file_stream( const char *file, size_t len,
 						unsigned int *ip_addr, u_short *port_num ): pseudo {
 
@@ -332,7 +345,6 @@ int rename( const char *from, const char *to ) {
 		out xdr_u_short( port_num );
 		alloc( port_num, U_SHORT_SIZE );
 	}
-#endif
 
 #	if !defined( SENDER )
 		/*
@@ -458,7 +470,12 @@ int rename( const char *from, const char *to ) {
 		int poll();
 	}
 
+#if 0
+		/* conflicts with library routine in csim.  Also probably not
+		   a reasonable system call for Condor to support.
+		*/
 	int setpriority( int which, int who, int priority );
+#endif
 	int getpriority( int which, int who );
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 		out xdr_timeval( tp );
