@@ -412,6 +412,14 @@ protected:
 		  */
 	char* localName( void );
 
+		/** Code for parsing a locally-written address file to find
+			the IP, port (and version, if available) for our daemon.
+			This is shared in a couple of places, so it now lives in a
+			seperate helper method.
+			@return true if we found the address in the file, false if not
+		*/
+	bool readAddressFile( const char* subsys );
+
 		/* 
 		   These helpers prevent memory leaks.  Whenever we want to
 		   set one of these strings, you just use the helper, which
