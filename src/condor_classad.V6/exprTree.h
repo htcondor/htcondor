@@ -27,6 +27,7 @@
 #include "classad_stl.h"
 #include "common.h"
 #include "value.h"
+#include <ostream>
 
 BEGIN_NAMESPACE( classad )
 
