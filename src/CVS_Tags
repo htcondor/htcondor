@@ -16,6 +16,17 @@
 		V6_3-new-gridmanager-branch tagged in case we merge from this
 		branch again.  (unlikely, we plan to abandon)
 
+03/19/02 V6_3_2-Condor-G-GT2
+		The V6_3-branch, from about the same state as the VDT Condor-G
+		release, plus a DAGMan bugfix. The version string is 6.3.2
+		CondorG-GT2
+
+03/19/02 V6_3_2-Condor-G-Globus113
+		The V6_3-branch, from the tag V6_3-pre-globus2_0-switch, which was
+		the state of the 6_3-branch right before the switchover to GT2.
+		The Condor-G release of this has a version string of 6.3.2
+		CondorG-113
+
 03/17/02 V6_3-CondorG-VDT-1_0
 		The V6_3-branch tagged for the 1.0 VDT Condor-G release. 
 		Built with WANT_GLOBUS=yes
