@@ -282,3 +282,90 @@ remove any previous checkpoints left on other servers.
 keep trying to contact that server as described above.
 It will not use alternate checkpoint servers.
 This may change in future versions of Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Checkpoint-Server-Domains} 
+Checkpoint Server Domains}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The configuration described in the previous section ensures that jobs
+will always write checkpoints to their nearest checkpoint server.  In
+some circumstances, it is also useful to configure Condor to localize
+checkpoint read transfers, which occur when the job restarts from its
+last checkpoint on a new machine.  To localize these transfers, we
+want to schedule the job on a machine which is near the checkpoint
+server on which the job's checkpoint is stored.
+
+We can say that all of the machines configured to use checkpoint
+server ``A'' are in ``checkpoint server domain A.''  To localize
+checkpoint transfers, we want jobs which run on machines in a given
+checkpoint server domain to continue running on machines in that
+domain, transferring checkpoint files in a single local area of the
+network.  There are two possible configurations which specify what a
+job should do when there are no available machines in its checkpoint
+server domain:
+\begin{itemize}
+\item The job can remain idle until a workstation in its checkpoint
+server domain becomes available.
+\item The job can try to immediately begin executing on a machine
+in another checkpoint server domain.  In this case, the job transfers
+to a new checkpoint server domain.
+\end{itemize}
+These two configurations are described below.
+
+The first step in implementing checkpoint server domains is to include
+the name of the nearest checkpoint server in the machine
+ClassAd, so this information can be used in job scheduling decisions.
+To do this, add the following configuration to each machine:
+\begin{verbatim}
+  CkptServer = "$(CKPT_SERVER_HOST)"
+  STARTD_EXPRS = $(STARTD_EXPRS), CkptServer
+\end{verbatim}
+For convenience, we suggest that you set these parameters in the
+global config file.  Note that this example assumes that
+\Macro{STARTD\_EXPRS} is defined previously in your configuration.  If
+not, then you should use the following configuration instead:
+\begin{verbatim}
+  CkptServer = "$(CKPT_SERVER_HOST)"
+  STARTD_EXPRS = CkptServer
+\end{verbatim}
+Now, all machine ClassAds will include a \AdAttr{CkptServer}
+attribute, which is the name of the checkpoint server closest to this
+machine.  So, the \AdAttr{CkptServer} attribute defines the checkpoint
+server domain of each machine.
+
+To restrict jobs to one checkpoint server domain, we need to modify
+the jobs' \AdAttr{Requirements} expression as follows:
+\begin{verbatim}
+  Requirements = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+\end{verbatim}
+This \AdAttr{Requirements} expression uses the \AdAttr{LastCkptServer}
+attribute in the job's ClassAd, which specifies where the job last
+wrote a checkpoint, and the \AdAttr{CkptServer} attribute in the
+machine ClassAd, which specifies the checkpoint server domain.  If the
+job has not written a checkpoint yet, the \AdAttr{LastCkptServer}
+attribute will be UNDEFINED, and the job will be able to execute in
+any checkpoint server domain.  However, once the job performs a
+checkpoint,
+\AdAttr{LastCkptServer} will be defined and the job will be restricted to the
+checkpoint server domain where it started running.
+
+If instead we want to allow jobs to transfer to other checkpoint
+server domains when there are no available machines in the current
+checkpoint server domain, we need to modify the jobs' \AdAttr{Rank} expression
+as follows:
+\begin{verbatim}
+  Rank = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+\end{verbatim}
+This \AdAttr{Rank} expression will evaluate to 1 for machines in the
+job's checkpoint server domain and 0 for other machines.  So, the job
+will prefer to run on machines in its checkpoint server domain, but if
+no such machines are available, the job will run in a new checkpoint
+server domain.
+
+You can automatically append the checkpoint server domain
+\AdAttr{Requirements} or \AdAttr{Rank} expressions to all STANDARD
+universe jobs submitted in your pool using
+\Macro{APPEND\_REQ\_STANDARD} or \Macro{APPEND\_RANK\_STANDARD}.
+See section~\ref{sec:Submit-Config-File-Entries} on
+page~\pageref{sec:Submit-Config-File-Entries} for more details.
