@@ -57,13 +57,18 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			/* Read a block of the file */
 		read_size = sizeof(buf) < bytes_to_go ? sizeof(buf) : bytes_to_go;
 		bytes_read = read( src_fd, buf, read_size );
+		dprintf(D_FULLDEBUG,"The number of bytes read from %d are %d\n",src_fd,bytes_read);
 		if( bytes_read <= 0 ) {
+		dprintf(D_FULLDEBUG,"Entering bytes_read <=0, about to return -1\n");
 			return -1;
 		}
 
 			/* Send it */
 		bytes_written = write( dst_fd, buf, bytes_read );
+		fflush(NULL); /* a must for a guaranteed successful restart  ..dhaval 11/29/95 */
+		dprintf(D_FULLDEBUG,"The number of bytes read are %d and the number of bytes written to %d are %d\n",bytes_read,dst_fd,bytes_written);
 		if( bytes_written != bytes_read ) {
+		dprintf(D_FULLDEBUG,"Entering bytes_read <=0, about to return -1\n");
 			return -1;
 		}
 
