@@ -53,6 +53,11 @@ const int KILO = 1024;
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" void report_image_size( int );
 
+#ifdef SAVE_SIGSTATE
+extern "C" void condor_save_sigstates();
+extern "C" void condor_restore_sigstates();
+#endif
+
 #if defined(OSF1)
 	extern "C" unsigned int htonl( unsigned int );
 	extern "C" unsigned int ntohl( unsigned int );
@@ -149,6 +154,9 @@ extern "C"
 void
 _condor_prestart( int syscall_mode )
 {
+	struct sigaction action;
+	sigset_t		 sig_mask;
+
 	MyImage.SetMode( syscall_mode );
 
 		// Initialize open files table
@@ -632,6 +640,9 @@ Checkpoint( int sig, int code, void *scp )
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		InRestart = TRUE;	// not strictly true, but needed in our saved data
+#ifdef SAVE_SIGSTATE
+		condor_save_sigstates();
+#endif
 		SaveFileState();
 		MyImage.Save();
 		MyImage.Write();
@@ -649,7 +660,12 @@ Checkpoint( int sig, int code, void *scp )
 			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		}
 		RestoreFileState();
-
+		syscall( SYS_write, 1, "Done restoring files state\n", 27 );
+#ifdef SAVE_SIGSTATE
+		syscall( SYS_write, 1, "About to restore signal state\n", 30 );
+		condor_restore_sigstates();
+		syscall( SYS_write, 1, "Done restoring signal state\n", 28 );
+#endif
 		SetSyscalls( scm );
 		InRestart = FALSE;
 		syscall( SYS_write, 1, "About to return to user code\n", 29 );
@@ -727,7 +743,14 @@ terminate_with_sig( int sig )
 
 		// Make sure we have the default action in place for the sig
 	if( sig != SIGKILL && sig != SIGSTOP ) {
-		_install_signal_handler( sig, (SIG_HANDLER)SIG_DFL );
+		act.sa_handler = (SIG_HANDLER)SIG_DFL;
+		// mask everything so no user-level sig handlers run
+		sigfillset( &act.sa_mask );
+		act.sa_flags = 0;
+		errno = 0;
+		if( sigaction(sig,&act,0) < 0 ) {
+			EXCEPT( "sigaction" );
+		}
 	}
 
 		// Send ourself the signal
@@ -737,8 +760,10 @@ terminate_with_sig( int sig )
 		EXCEPT( "kill" );
 	}
 
-		// Wait to die...
-	sigemptyset( &mask );
+		// Wait to die... and mask all sigs except the one to kill us; this
+		// way a user's sig won't sneak in on us - Todd 12/94
+	sigfillset( &mask );
+	sigdelset( &mask, sig );
 	sigsuspend( &mask );
 
 		// Should never get here
