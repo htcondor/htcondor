@@ -108,7 +108,7 @@ instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
 literals.C literals.h matchClassad.C matchClassad.h operators.C			\
 operators.h query.C query.h sample.C shared.C sink.C sink.h source.C	\
 source.h test_classads.C test_xml.C tests.txt transaction.C				\
-transaction.h util.C value.C value.h view.C view.h xmlLexer.C xmlLexer.h\
+transaction.h util.C value.C value.h view.C view.h xmlLexer.C xmlLexer.h \
 xmlSink.h xmlSink.C xmlSource.h xmlSource.C classad_distribution.h		\
 cclassad.C cclassad.h classad_stl.h LICENSE README CHANGELOG configure
 
