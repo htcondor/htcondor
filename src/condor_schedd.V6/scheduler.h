@@ -78,7 +78,6 @@ class Scheduler : public Service
 
 	// maintainence
 	void			timeout(); 
-	void			SetClassAd(ClassAd*);
 	void			reconfig();
 	void			shutdown_fast();
 	void			shutdown_graceful();
