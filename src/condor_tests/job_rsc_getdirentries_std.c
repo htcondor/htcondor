@@ -33,12 +33,15 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 #if defined(HPUX)
 #include <ndir.h>
 #else
 #include <dirent.h>
 #endif
+
+#define MATCH (0)
 
 #ifdef LINUX
 
@@ -76,6 +79,7 @@ int main() {
 	char buf[8192];
 	DENT *window;
 	unsigned long voidstar;
+	int numfiles, expectednumfiles, totalfiles;
 
 	results = mkdir("testdir", 0777);	
 	if(results == -1) {
@@ -84,15 +88,15 @@ int main() {
 	}
 
     // now let's create some files...
-	fd = open("testdir/first", O_RDWR | O_CREAT);	
+	fd = open("testdir/first", O_CREAT | O_TRUNC, O_RDWR);	
 	if(fd < 0) { perror("Open First"); return -1; }
 	close(fd);
 
-	fd = open("testdir/second", O_RDWR | O_CREAT);	
+	fd = open("testdir/second", O_CREAT | O_TRUNC, O_RDWR);	
 	if(fd < 0) { perror("Open Second"); return -1; }
 	close(fd);
 
-	fd = open("testdir/third", O_RDWR | O_CREAT);	
+	fd = open("testdir/third", O_CREAT | O_TRUNC, O_RDWR);	
 	if(fd < 0) { perror("Open Third"); return -1; }
 	close(fd);
 
@@ -107,17 +111,57 @@ int main() {
 #endif
 	if(results < 0) {perror("getdirentries: "); return -1;}
 
+	numfiles = 0;
+	expectednumfiles = 5; /* '.', '..', 'first', 'second', 'third' */
+	totalfiles = 0;
+
 	voidstar = (unsigned long int)buf;
 	// Walk the list we got back from dirents	
 	window = (DENT *)voidstar;
 	while(window->d_reclen > 0) {
-		printf("ENTRY: %s\n", window->d_name);	
+
+		/* commented out but left present so you can see how to access the 
+			name of the file out of the structure */
+/*		printf("ENTRY: %s\n", window->d_name);	*/
+
+		/* check to make sure I found what I wanted */
+		if (strcmp(window->d_name, ".") == MATCH) {
+			numfiles++;
+		}
+
+		if (strcmp(window->d_name, "..") == MATCH) {
+			numfiles++;
+		}
+
+		if (strcmp(window->d_name, "first") == MATCH) {
+			numfiles++;
+		}
+
+		if (strcmp(window->d_name, "second") == MATCH) {
+			numfiles++;
+		}
+
+		if (strcmp(window->d_name, "third") == MATCH) {
+			numfiles++;
+		}
+
+		totalfiles++;
+
 		voidstar = voidstar + window->d_reclen;
 		window = (DENT *)voidstar;
 	}
 	close(fd);
 	
-	fprintf(stdout, "completed successfully\n");
+	/* this is not a transitive boolean, because it implies I found
+		_certain_ expected files. */
+	if (numfiles == expectednumfiles && expectednumfiles == totalfiles) {
+		fprintf(stdout, "completed successfully\n");
+	} else {
+		fprintf(stdout, "expectednumfiles = %d\n", expectednumfiles);
+		fprintf(stdout, "totalfiles = %d\n", totalfiles);
+		fprintf(stdout, "numfiles = %d\n", numfiles);
+		fprintf(stdout, "failed\n");
+	}
 #endif
 	return 0;
 }
