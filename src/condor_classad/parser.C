@@ -187,6 +187,15 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
             Match(LX_SUB, s, count);
 			if(ParseExpr(s, expr, count))
 			{
+				if( expr->MyType() == LX_INTEGER ) {
+					newTree = new Integer( - ((IntegerBase*)expr)->Value() );
+					delete expr;
+					return TRUE;
+				} else if( expr->MyType() == LX_FLOAT ) {
+					newTree = new Float( - ((FloatBase*)expr)->Value() );
+					delete expr;
+					return TRUE;
+				}
 				newTree = new SubOp(NULL, expr);
 				return TRUE;
 			}
