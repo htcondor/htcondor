@@ -188,6 +188,7 @@ const char ATTR_REMOTE_POOL				 [] = "RemotePool";
 const char ATTR_REMOTE_USER              [] = "RemoteUser";
 const char ATTR_REMOTE_USER_PRIO         [] = "RemoteUserPrio";
 const char ATTR_REMOTE_VIRTUAL_MACHINE_ID [] = "RemoteVirtualMachineID";
+const char ATTR_REMOVE_KILL_SIG          [] = "RemoveKillSig";
 const char ATTR_REQUIREMENTS             [] = "Requirements";
 const char ATTR_RSC_BYTES_SENT			 [] = "RSCBytesSent";
 const char ATTR_RSC_BYTES_RECVD			 [] = "RSCBytesRecvd";
