@@ -40,7 +40,6 @@ extern "C" {
 int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
-void lower_case ( register char *str );
 int hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
@@ -96,7 +95,6 @@ PROC *ConstructProc( int, PROC *);
 int blankline ();
 char * gen_exec_name ();
 
-void lower_case ();
 int hash ();
 char * getline ();
 
