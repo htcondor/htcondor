@@ -317,9 +317,9 @@ int Variable::_EvalTreeRecursive( char *name, AttrList* my_classad, AttrList* ta
 	}
 
 	if(prefix[0]) {	
-		if(!strcmp(prefix,"MY") ) {
+		if(!strcasecmp(prefix,"MY") ) {
 			return _EvalTreeRecursive(rest,my_classad,target_classad,val);
-		} else if(!strcmp(prefix,"TARGET")) {
+		} else if(!strcasecmp(prefix,"TARGET")) {
 			return _EvalTreeRecursive(rest,target_classad,my_classad,val);
 		} else {
 			ExprTree *expr;
