@@ -53,6 +53,6 @@ parameter: HAWKEYE_POOL_PATHADD=$(CONDOR)/scripts:$(CONDOR)/bin
 Forcibly add this string to the PATH used by the module.  Can also be
 accomplished using the HAWKEYE_POOL_ENV param (above)
 
-Hawkeye_pool_ckpt = false
+parameter: Hawkeye_pool_ckpt = false
 Specify whether to report on the health of the Condor checkpoint
 servers
