@@ -309,10 +309,12 @@ Directory::~Directory()
 
 #ifndef WIN32
 	// Unix
-	(void)closedir( dirp );
+	if( dirp ) {
+		(void)closedir( dirp );
+	}
 #else
 	// Win32
-	if ( dirp ) {
+	if( dirp != -1 ) {
 		(void)_findclose(dirp);
 	}
 #endif
