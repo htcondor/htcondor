@@ -372,232 +372,217 @@ file_info_node* FileIndex::GetFileInfo(struct in_addr machine_IP,
 
 
 int FileIndex::RenameFile(struct in_addr  machine_IP,
-			  const char*     owner_name,
-			  const char*     file_name,
-			  const char*     new_file_name,
-			  file_info_node* file_info_ptr)
+						  const char*     owner_name,
+						  const char*     file_name,
+						  const char*     new_file_name,
+						  file_info_node* file_info_ptr)
 {
-  int A_code;
-
-  if (Exists(machine_IP, owner_name, file_name) != EXISTS)
-    return DOES_NOT_EXIST;
-  A_code = AddNewFile(machine_IP, owner_name, new_file_name, file_info_ptr);
-  if (A_code == EXISTS)
-    return FILE_ALREADY_EXISTS;
-  (void) DeleteFile(machine_IP, owner_name, file_name);
-  return RENAMED;
-  
+	int A_code;
+	
+	if (Exists(machine_IP, owner_name, file_name) != EXISTS)
+		return DOES_NOT_EXIST;
+	A_code = AddNewFile(machine_IP, owner_name, new_file_name, file_info_ptr);
+	if (A_code == EXISTS)
+		return FILE_ALREADY_EXISTS;
+	(void) DeleteFile(machine_IP, owner_name, file_name);
+/*	return RENAMED; */
+	return 0;
 }
 
 
 int FileIndex::DeleteFile(struct in_addr machine_IP,
-			  const char*    owner_name,
-			  const char*    file_name)
+						  const char*    owner_name,
+						  const char*    file_name)
 {
-  machine_node* machine_trail=NULL;
-  machine_node* machine_ptr;
-  int           m_temp;
-  machine_node* machine_rep_trail=NULL;
-  machine_node* machine_rep_ptr;
-  owner_node*   owner_trail=NULL;
-  owner_node*   owner_ptr;
-  int           o_temp;
-  owner_node*   owner_rep_trail=NULL;
-  owner_node*   owner_rep_ptr;
-  file_node*    file_trail=NULL;
-  file_node*    file_ptr;
-  int           f_temp;
-  file_node*    file_rep_trail=NULL;
-  file_node*    file_rep_ptr;
-  int           hash_bucket;
-  int           retCode=REMOVED_FILE;
-  char          machine_name[MAX_MACHINE_NAME_LENGTH];
-  char          pathname[MAX_PATHNAME_LENGTH];
+	machine_node* machine_trail=NULL;
+	machine_node* machine_ptr;
+	int           m_temp;
+	machine_node* machine_rep_trail=NULL;
+	machine_node* machine_rep_ptr;
+	owner_node*   owner_trail=NULL;
+	owner_node*   owner_ptr;
+	int           o_temp;
+	owner_node*   owner_rep_trail=NULL;
+	owner_node*   owner_rep_ptr;
+	file_node*    file_trail=NULL;
+	file_node*    file_ptr;
+	int           f_temp;
+	file_node*    file_rep_trail=NULL;
+	file_node*    file_rep_ptr;
+	int           hash_bucket;
+/*	int           retCode=REMOVED_FILE; */
+	int           retCode=0;
+	char          machine_name[MAX_MACHINE_NAME_LENGTH];
+	char          pathname[MAX_PATHNAME_LENGTH];
+	
+	hash_bucket = Hash(machine_IP);
+	machine_ptr = hash_table[hash_bucket];
+	while ((machine_ptr != NULL) && 
+		   (machine_ptr->machine_IP.s_addr != machine_IP.s_addr)) {
+		machine_trail = machine_ptr;
+		m_temp = (machine_IP.s_addr < machine_ptr->machine_IP.s_addr);
+		if (m_temp)
+			machine_ptr = machine_ptr->left;
+		else
+			machine_ptr = machine_ptr->right;
+    }
+	if (machine_ptr == NULL) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
+			<< endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		exit(IMDS_INDEX_ERROR);
+    }
+	owner_ptr = machine_ptr->owner_root;
+	while ((owner_ptr != NULL) && ((o_temp=strncmp(owner_name, 
+												   owner_ptr->owner_name, 
+												   MAX_NAME_LENGTH)) != 0)) {
+		owner_trail = owner_ptr;
+		if (o_temp < 0)
+			owner_ptr = owner_ptr->left;
+		else
+			owner_ptr = owner_ptr->right;
+    }
+	if (owner_ptr == NULL) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
+			<< endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		exit(IMDS_INDEX_ERROR);
+    }
+	file_ptr = owner_ptr->file_root;
+	while ((file_ptr != NULL) && ((f_temp=strncmp(file_name, 
+												  file_ptr->file_name, 
+												  MAX_CONDOR_FILENAME_LENGTH)) 
+								  != 0)) {
+		file_trail = file_ptr;
+		if (f_temp < 0)
+			file_ptr = file_ptr->left;
+		else
+			file_ptr = file_ptr->right;
+    }
+	if (file_ptr == NULL) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
+			<< endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		exit(IMDS_INDEX_ERROR);
+    }
 
-  hash_bucket = Hash(machine_IP);
-  machine_ptr = hash_table[hash_bucket];
-  while ((machine_ptr != NULL) && 
-	 (machine_ptr->machine_IP.s_addr != machine_IP.s_addr))
-    {
-      machine_trail = machine_ptr;
-      m_temp = (machine_IP.s_addr < machine_ptr->machine_IP.s_addr);
-      if (m_temp)
-	machine_ptr = machine_ptr->left;
-      else
-	machine_ptr = machine_ptr->right;
-    }
-  if (machine_ptr == NULL)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-	   << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      exit(IMDS_INDEX_ERROR);
-    }
-  owner_ptr = machine_ptr->owner_root;
-  while ((owner_ptr != NULL) && ((o_temp=strncmp(owner_name, 
-						 owner_ptr->owner_name, 
-						 MAX_NAME_LENGTH)) != 0))
-    {
-      owner_trail = owner_ptr;
-      if (o_temp < 0)
-	owner_ptr = owner_ptr->left;
-      else
-	owner_ptr = owner_ptr->right;
-    }
-  if (owner_ptr == NULL)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-	   << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      exit(IMDS_INDEX_ERROR);
-    }
-  file_ptr = owner_ptr->file_root;
-  while ((file_ptr != NULL) && ((f_temp=strncmp(file_name, 
-						file_ptr->file_name, 
-						MAX_CONDOR_FILENAME_LENGTH)) 
-				!= 0))
-    {
-      file_trail = file_ptr;
-      if (f_temp < 0)
-	file_ptr = file_ptr->left;
-      else
-	file_ptr = file_ptr->right;
-    }
-  if (file_ptr == NULL)
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-	   << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      exit(IMDS_INDEX_ERROR);
-    }
-  strncpy(machine_name, file_ptr->file_data->data.machine_IP_name, 
-	  MAX_MACHINE_NAME_LENGTH);
-  file_rep_ptr = file_ptr->left;
-  if (file_rep_ptr == NULL)
-    {
-      if (file_trail == NULL)
-	owner_ptr->file_root = file_ptr->right;
-      else if (file_trail->left == file_ptr)
-	file_trail->left = file_ptr->right;
-      else
-	file_trail->right = file_ptr->right;
-    }
-  else
-    {
-      while (file_rep_ptr->right != NULL)
-	{
-	  file_rep_trail = file_rep_ptr;
-	  file_rep_ptr = file_rep_ptr->right;
+	strcpy(machine_name, inet_ntoa(file_ptr->file_data->data.machine_IP));
+
+	sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
+			owner_name, file_name);
+	if (unlink(pathname)) {
+		retCode = CANNOT_DELETE_FILE;
 	}
-      if (file_rep_trail == NULL)
-	file_rep_ptr->right = file_ptr->right;
-      else
-	{
-	  file_rep_trail->right = file_rep_ptr->left;
-	  file_rep_ptr->left = file_ptr->left;
-	  file_rep_ptr->right = file_ptr->right;
-	}
-      if (file_trail == NULL)
-	owner_ptr->file_root = file_rep_ptr;
-      else if (file_trail->left == file_ptr)
-	file_trail->left = file_rep_ptr;
-      else
-	file_trail->right = file_rep_ptr;
-    }
-  delete file_ptr;
-  if (owner_ptr->file_root == NULL)
-    {
-      owner_rep_ptr = owner_ptr->left;
-      if (owner_rep_ptr == NULL)
-	{
-	  if (owner_trail == NULL)
-	    machine_ptr->owner_root = owner_ptr->right;
-	  else if (owner_trail->left == owner_ptr)
-	    owner_trail->left = owner_ptr->right;
-	  else
-	    owner_trail->right = owner_ptr->right;
-	}
-      else
-	{
- 	  while (owner_rep_ptr->right != NULL)
-	    {
-	      owner_rep_trail = owner_rep_ptr;
-	      owner_rep_ptr = owner_rep_ptr->right;
-	    }
-	  if (owner_rep_trail == NULL)
-	    owner_rep_ptr->right = owner_ptr->right;
-	  else
-	    {
-	      owner_rep_trail->right = owner_rep_ptr->left;
-	      owner_rep_ptr->left = owner_ptr->left;
-	      owner_rep_ptr->right = owner_ptr->right;
-	    }
-	  if (owner_trail == NULL)
-	    machine_ptr->owner_root = owner_rep_ptr;
-	  else if (owner_trail->left == owner_ptr)
-	    owner_trail->left = owner_rep_ptr;
-	  else
-	    owner_trail->right = owner_rep_ptr;
-	}
-      delete owner_ptr;
-      if (machine_ptr->owner_root == NULL)
-	{
-	  sprintf(pathname, "%s%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
-		  owner_name);
-	  if (rmdir(pathname) != 0)
-	    retCode = CANNOT_DELETE_DIRECTORY;
-	  machine_rep_ptr = machine_ptr->left;
-	  if (machine_rep_ptr == NULL)
-	    {
-	      if (machine_trail == NULL)
-		hash_table[hash_bucket] = machine_ptr->right;
-	      else if (machine_trail->left == machine_ptr)
-		machine_trail->left = machine_ptr->right;
-	      else
-		machine_trail->right = machine_ptr->right;
-	    }
-	  else
-	    {
-	      while (machine_rep_ptr->right != NULL)
-		{
-		  machine_rep_trail = machine_rep_ptr;
-		  machine_rep_ptr = machine_rep_ptr->right;
+
+	file_rep_ptr = file_ptr->left;
+	if (file_rep_ptr == NULL) {
+		if (file_trail == NULL)
+			owner_ptr->file_root = file_ptr->right;
+		else if (file_trail->left == file_ptr)
+			file_trail->left = file_ptr->right;
+		else
+			file_trail->right = file_ptr->right;
+    } else {
+		while (file_rep_ptr->right != NULL) {
+			file_rep_trail = file_rep_ptr;
+			file_rep_ptr = file_rep_ptr->right;
 		}
-	      if (machine_rep_trail == NULL)
-		machine_rep_ptr->right = machine_ptr->right;
-	      else
-		{
-		  machine_rep_trail->right = machine_rep_ptr->left;
-		  machine_rep_ptr->left = machine_ptr->left;
-		  machine_rep_ptr->right = machine_ptr->right;
+		if (file_rep_trail == NULL)
+			file_rep_ptr->right = file_ptr->right;
+		else {
+			file_rep_trail->right = file_rep_ptr->left;
+			file_rep_ptr->left = file_ptr->left;
+			file_rep_ptr->right = file_ptr->right;
 		}
-	      if (machine_trail == NULL)
-		hash_table[hash_bucket] = machine_rep_ptr;
-	      else if (machine_trail->left == machine_ptr)
-		machine_trail->left = machine_rep_ptr;
-	      else
-		machine_trail->right = machine_rep_ptr;
-	    }
-	  delete machine_ptr;
-	  if ((hash_table[hash_bucket] == NULL) && 
-	      (retCode != CANNOT_DELETE_DIRECTORY))
-	    {
-	      sprintf(pathname, "%s%s", LOCAL_DRIVE_PREFIX, machine_name);
-	      if (rmdir(pathname) != 0)
-		retCode = CANNOT_DELETE_DIRECTORY;
-	    }
-	}
+		if (file_trail == NULL)
+			owner_ptr->file_root = file_rep_ptr;
+		else if (file_trail->left == file_ptr)
+			file_trail->left = file_rep_ptr;
+		else
+			file_trail->right = file_rep_ptr;
     }
-  return retCode;
+	delete file_ptr;
+	if (owner_ptr->file_root == NULL) {
+		owner_rep_ptr = owner_ptr->left;
+		if (owner_rep_ptr == NULL) {
+			if (owner_trail == NULL)
+				machine_ptr->owner_root = owner_ptr->right;
+			else if (owner_trail->left == owner_ptr)
+				owner_trail->left = owner_ptr->right;
+			else
+				owner_trail->right = owner_ptr->right;
+		}
+		else {
+			while (owner_rep_ptr->right != NULL) {
+				owner_rep_trail = owner_rep_ptr;
+				owner_rep_ptr = owner_rep_ptr->right;
+			}
+			if (owner_rep_trail == NULL)
+				owner_rep_ptr->right = owner_ptr->right;
+			else {
+				owner_rep_trail->right = owner_rep_ptr->left;
+				owner_rep_ptr->left = owner_ptr->left;
+				owner_rep_ptr->right = owner_ptr->right;
+			}
+			if (owner_trail == NULL)
+				machine_ptr->owner_root = owner_rep_ptr;
+			else if (owner_trail->left == owner_ptr)
+				owner_trail->left = owner_rep_ptr;
+			else
+				owner_trail->right = owner_rep_ptr;
+		}
+		delete owner_ptr;
+		if (machine_ptr->owner_root == NULL) {
+			sprintf(pathname, "%s%s/%s", LOCAL_DRIVE_PREFIX, machine_name, 
+					owner_name);
+			if (rmdir(pathname) != 0)
+/*				retCode = CANNOT_DELETE_DIRECTORY; */ ;
+			machine_rep_ptr = machine_ptr->left;
+			if (machine_rep_ptr == NULL) {
+				if (machine_trail == NULL)
+					hash_table[hash_bucket] = machine_ptr->right;
+				else if (machine_trail->left == machine_ptr)
+					machine_trail->left = machine_ptr->right;
+				else
+					machine_trail->right = machine_ptr->right;
+			} else {
+				while (machine_rep_ptr->right != NULL) {
+					machine_rep_trail = machine_rep_ptr;
+					machine_rep_ptr = machine_rep_ptr->right;
+				}
+				if (machine_rep_trail == NULL)
+					machine_rep_ptr->right = machine_ptr->right;
+				else {
+					machine_rep_trail->right = machine_rep_ptr->left;
+					machine_rep_ptr->left = machine_ptr->left;
+					machine_rep_ptr->right = machine_ptr->right;
+				}
+				if (machine_trail == NULL)
+					hash_table[hash_bucket] = machine_rep_ptr;
+				else if (machine_trail->left == machine_ptr)
+					machine_trail->left = machine_rep_ptr;
+				else
+					machine_trail->right = machine_rep_ptr;
+			}
+			delete machine_ptr;
+			if ((hash_table[hash_bucket] == NULL) && 
+				(retCode != CANNOT_DELETE_DIRECTORY)) {
+				sprintf(pathname, "%s%s", LOCAL_DRIVE_PREFIX, machine_name);
+				if (rmdir(pathname) != 0)
+/*					retCode = CANNOT_DELETE_DIRECTORY; */ ;
+			}
+		}
+    }
+	return retCode;
 }
 
 

@@ -15,9 +15,9 @@ SERVER_STAT_OBJ = server_stat.o gen_lib.o network2.o
 
 SERVER_API_OBJ = network2.o server_interface.o
 
-all_target(server2 server_stat ckpt_server_api.a)
+all_target(condor_ckpt_server server_stat ckpt_server_api.a)
 
-c_plus_target(server2,$(OBJ),$(LIB))
+c_plus_target(condor_ckpt_server,$(OBJ),$(LIB))
 
 c_plus_target(server_stat,$(SERVER_STAT_OBJ),$(LIB))
 

@@ -137,12 +137,13 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
 int FileInformation::RenameFileInfo(file_info_node* r_ptr,
                                     const char*     new_file_name)
 {
-  if (r_ptr != NULL)
-    if (r_ptr->lock != UNLOCKED)
-      return FILE_LOCKED;
-    else
-      strcpy(r_ptr->data.file_name, new_file_name);
-  return RENAMED;
+	if (r_ptr != NULL)
+		if (r_ptr->lock != UNLOCKED)
+			return FILE_LOCKED;
+		else
+			strcpy(r_ptr->data.file_name, new_file_name);
+/*	return RENAMED; */
+	return OK;
 }
 
 

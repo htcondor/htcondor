@@ -74,115 +74,113 @@ void Server::Init(int max_new_xfers,
 		  int max_new_store_xfers,
 		  int max_new_restore_xfers)
 {
-  struct stat log_stat;
-  char        log_filename[100];
-  char        old_log_filename[100];
+	struct stat log_stat;
+	char        log_filename[100];
+	char        old_log_filename[100];
 #ifdef DEBUG
-  char        log_msg[256];
-  char        hostname[100];
-  int         buf_size, len;
+	char        log_msg[256];
+	char        hostname[100];
+	int         buf_size, len;
 #endif
-
-  max_xfers = max_new_xfers;
-  max_store_xfers = max_new_store_xfers;
-  max_restore_xfers = max_new_restore_xfers;
-  num_store_xfers = 0;
-  num_restore_xfers = 0;
-  sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
-  if (stat(log_filename, &log_stat) == 0)
-    {
-      sprintf(old_log_filename, "%s%s", LOCAL_DRIVE_PREFIX, OLD_LOG_FILE);
-      rename(log_filename, old_log_filename);
+	
+	max_xfers = max_new_xfers;
+	max_store_xfers = max_new_store_xfers;
+	max_restore_xfers = max_new_restore_xfers;
+	num_store_xfers = 0;
+	num_restore_xfers = 0;
+	sprintf(log_filename, "%s%s", LOCAL_DRIVE_PREFIX, LOG_FILE);
+	if (stat(log_filename, &log_stat) == 0) {
+		sprintf(old_log_filename, "%s%s", LOCAL_DRIVE_PREFIX, OLD_LOG_FILE);
+		rename(log_filename, old_log_filename);
     }
-  log_file.open(log_filename);
-  if (log_file.fail())
-    {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: unable to open checkpoint server log file" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl << endl;
-      exit(LOG_FILE_OPEN_ERROR);
+	log_file.open(log_filename);
+	if (log_file.fail()) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: unable to open checkpoint server log file" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(LOG_FILE_OPEN_ERROR);
     }
-  store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
-  restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
-  service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
-  max_req_sd_plus1 = store_req_sd;
-  if (restore_req_sd > max_req_sd_plus1)
-    max_req_sd_plus1 = restore_req_sd;
-  if (service_req_sd > max_req_sd_plus1)
-    max_req_sd_plus1 = service_req_sd;
-  max_req_sd_plus1++;
-  InstallSigHandlers();
+	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
+	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
+	service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
+	max_req_sd_plus1 = store_req_sd;
+	if (restore_req_sd > max_req_sd_plus1)
+		max_req_sd_plus1 = restore_req_sd;
+	if (service_req_sd > max_req_sd_plus1)
+		max_req_sd_plus1 = service_req_sd;
+	max_req_sd_plus1++;
+	InstallSigHandlers();
 #ifdef DEBUG
-  Log(req_ID, "Server Initializing:");
-  Log("Server:                            ");
-  if (gethostname(hostname, 99) == 0)
-    {
-      hostname[99] = '\0';
-      Log(hostname);
+	Log(req_ID, "Server Initializing:");
+	Log("Server:                            ");
+	if (gethostname(hostname, 99) == 0) {
+		hostname[99] = '\0';
+		Log(hostname);
     }
-  else
-    Log("Cannot resolve host name");
-  sprintf(log_msg, "%s%d", "Store Request Port:                ", 
-	  CKPT_SVR_STORE_REQ_PORT);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Store Request Socket Descriptor:   ",
-	  store_req_sd);
-  Log(log_msg);
-  len = sizeof(buf_size);
-  if (getsockopt(store_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
-		 &len) < 0)
-    sprintf(log_msg, "%s%s", "Store Request Buffer Size:         ",
-	    "Cannot access buffer size");
-  else
-    sprintf(log_msg, "%s%d", "Store Request Buffer Size:         ", buf_size);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Restore Request Port:              ",
-	  CKPT_SVR_RESTORE_REQ_PORT);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Restore Request Socket Descriptor: ",
-	  restore_req_sd);
-  Log(log_msg);
-  len = sizeof(buf_size);
-  if (getsockopt(restore_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
-		 &len) < 0)
-    sprintf(log_msg, "%s%s", "Restore Request Buffer Size:       ",
-	    "Cannot access buffer size");
-  else
-    sprintf(log_msg, "%s%d", "Restore Request Buffer Size:       ", buf_size);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Service Request Port:              " ,
-	  CKPT_SVR_SERVICE_REQ_PORT);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Service Request Socket Descriptor: ",
-	  service_req_sd);
-  Log(log_msg);
-  len = sizeof(buf_size);
-  if (getsockopt(service_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
-		 &len) < 0)
-    sprintf(log_msg, "%s%s", "Service Request Buffer Size:       ", 
-	    "Cannot access buffer size");
-  else
-    sprintf(log_msg, "%s%d", "Service Request Buffer Size:       ",
-	    buf_size);
-  Log(log_msg);
-  Log("Signal handlers installed:         SIGCHLD");
-  Log("                                   SIGUSR1");
-  Log("                                   SIGUSR2");
-  Log("                                   SIGALRM");
-  sprintf(log_msg, "%s%d", "Total allowable transfers:         ", max_xfers);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Number of storing transfers:       ",
-	  max_store_xfers);
-  Log(log_msg);
-  sprintf(log_msg, "%s%d", "Number of restoring transfers:     ",
-	  max_restore_xfers);
-  Log(log_msg);
-  log_file << endl << endl << endl;
+	else
+		Log("Cannot resolve host name");
+	sprintf(log_msg, "%s%d", "Store Request Port:                ", 
+			CKPT_SVR_STORE_REQ_PORT);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Store Request Socket Descriptor:   ",
+			store_req_sd);
+	Log(log_msg);
+	len = sizeof(buf_size);
+	if (getsockopt(store_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
+				   &len) < 0)
+		sprintf(log_msg, "%s%s", "Store Request Buffer Size:         ",
+				"Cannot access buffer size");
+	else
+		sprintf(log_msg, "%s%d", "Store Request Buffer Size:         ", 
+				buf_size);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Restore Request Port:              ",
+			CKPT_SVR_RESTORE_REQ_PORT);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Restore Request Socket Descriptor: ",
+			restore_req_sd);
+	Log(log_msg);
+	len = sizeof(buf_size);
+	if (getsockopt(restore_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
+				   &len) < 0)
+		sprintf(log_msg, "%s%s", "Restore Request Buffer Size:       ",
+				"Cannot access buffer size");
+	else
+		sprintf(log_msg, "%s%d", "Restore Request Buffer Size:       ", buf_size);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Service Request Port:              " ,
+			CKPT_SVR_SERVICE_REQ_PORT);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Service Request Socket Descriptor: ",
+			service_req_sd);
+	Log(log_msg);
+	len = sizeof(buf_size);
+	if (getsockopt(service_req_sd, SOL_SOCKET, SO_RCVBUF, (char*) &buf_size,
+				   &len) < 0)
+		sprintf(log_msg, "%s%s", "Service Request Buffer Size:       ", 
+				"Cannot access buffer size");
+	else
+		sprintf(log_msg, "%s%d", "Service Request Buffer Size:       ",
+				buf_size);
+	Log(log_msg);
+	Log("Signal handlers installed:         SIGCHLD");
+	Log("                                   SIGUSR1");
+	Log("                                   SIGUSR2");
+	Log("                                   SIGALRM");
+	sprintf(log_msg, "%s%d", "Total allowable transfers:         ", max_xfers);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Number of storing transfers:       ",
+			max_store_xfers);
+	Log(log_msg);
+	sprintf(log_msg, "%s%d", "Number of restoring transfers:     ",
+			max_restore_xfers);
+	Log(log_msg);
+	log_file << endl << endl << endl;
 #endif
-  log_file << "   Local Time    Request ID   Event" << endl;
-  log_file << "   ----------    ----------   -----" << endl;
+	log_file << "   Local Time    Request ID   Event" << endl;
+	log_file << "   ----------    ----------   -----" << endl;
 }
 
 
@@ -194,8 +192,7 @@ int Server::SetUpPort(u_short port)
   int                ret_code;
 
   temp_sd = I_socket();
-  if (temp_sd == INSUFFICIENT_RESOURCES)
-    {
+  if (temp_sd == INSUFFICIENT_RESOURCES) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: insufficient resources for new socket" << endl;
@@ -204,8 +201,7 @@ int Server::SetUpPort(u_short port)
       Log(0, "ERROR: insufficient resources for new socket");
       exit(INSUFFICIENT_RESOURCES);
     }
-  else if (temp_sd == SOCKET_ERROR)
-    {
+  else if (temp_sd == SOCKET_ERROR) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: cannot open a server request socket" << endl;
@@ -213,14 +209,13 @@ int Server::SetUpPort(u_short port)
       cerr << "ERROR:" << endl << endl;
       Log(0, "ERROR: cannot open a server request socket");
       exit(SOCKET_ERROR);
-    }
+  }
   bzero((char*) &socket_addr, sizeof(struct sockaddr_in));
   socket_addr.sin_family = AF_INET;
   socket_addr.sin_port = htons(port);
   memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
 	 sizeof(struct in_addr));
-  if ((ret_code=I_bind(temp_sd, &socket_addr)) != OK)
-    {
+  if ((ret_code=I_bind(temp_sd, &socket_addr)) != OK) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: I_bind() returns an error (#" << ret_code << ")" << endl;
@@ -229,9 +224,8 @@ int Server::SetUpPort(u_short port)
       sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", ret_code);
       Log(0, log_msg);
       exit(ret_code);
-    }
-  if (I_listen(temp_sd, 5) != OK)
-    {
+  }
+  if (I_listen(temp_sd, 5) != OK) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: cannot listen on a socket" << endl;
@@ -239,9 +233,8 @@ int Server::SetUpPort(u_short port)
       cerr << "ERROR:" << endl << endl;
       Log(0, "ERROR: I_listen() fails");
       exit(LISTEN_ERROR);
-    }
-  if (ntohs(socket_addr.sin_port) != port)
-    {
+  }
+  if (ntohs(socket_addr.sin_port) != port) {
       cerr << endl << "ERROR:" << endl;
       cerr << "ERROR:" << endl;
       cerr << "ERROR: cannot use Condor well-known port " << port << endl;
@@ -249,7 +242,7 @@ int Server::SetUpPort(u_short port)
       cerr << "ERROR:" << endl << endl;
       Log(0, "ERROR: cannot use Condor well-known port");
       exit(BIND_ERROR);
-    }
+  }
   return temp_sd;
 }
 
@@ -527,7 +520,8 @@ void Server::ProcessServiceReq(int             req_id,
 				if (data_conn_sd == INSUFFICIENT_RESOURCES) {
 					service_reply.server_addr.s_addr = htonl(0);
 					service_reply.port = htons(0);
-					service_reply.req_status = htons(abs(INSUFFICIENT_RESOURCES));
+					service_reply.req_status = 
+						htons(abs(INSUFFICIENT_RESOURCES));
 					net_write(req_sd, (char*) &service_reply, 
 							  sizeof(service_reply));
 					sprintf(log_msg, "Service request from %s DENIED:", 
@@ -715,11 +709,13 @@ void Server::ProcessServiceReq(int             req_id,
 						imds.AddFile(shadow_IP, service_req.owner_name, 
 									 service_req.file_name, 
 									 chkpt_file_status.st_size, ON_SERVER);
-						service_reply.req_status = htons(EXISTS);
+/*						service_reply.req_status = htons(EXISTS); */
+						service_reply.req_status = htons(0);
 					} else
 						service_reply.req_status = htons(DOES_NOT_EXIST);
 				} else
-					service_reply.req_status = htons(EXISTS);
+/*					service_reply.req_status = htons(EXISTS); */
+					service_reply.req_status = htons(0);
 			}
 			break;
 			
