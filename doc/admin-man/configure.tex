@@ -659,12 +659,21 @@ of the subsystem corresponding to the daemon.
 
 \begin{description}
 \label{list:debug-level-description}
-  
+
+\item[\Dflag{ALL}] \label{dflag:all}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ALL@\texttt{D\_ALL}}
+  This flag turns on \emph{all} debugging output by enabling all of the debug
+  levels at once.  There is no need to list any other debug levels in addition
+  to \Dflag{ALL}; doing so would be redundant.  Be warned: we are talking
+  about a HUGE amount of output.  If you are interested in just a higher
+  level of output than the default, consider using \Dflag{FULLDEBUG} before
+  using this option.
+
 \item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FULLDEBUG@\texttt{D\_FULLDEBUG}}
   This level
-  provides very verbose output in the log files.  
-  Only exceptionally frequent log messages for very specific debugging
+  provides verbose output of a general nature into the log files.  
+  Frequent log messages for very specific debugging
   purposes would be excluded. In those cases, the messages would
   be viewed by having that another flag and \Dflag{FULLDEBUG} both
   listed in the configuration file.
@@ -762,13 +771,42 @@ The \Condor{startd} keeps track
   work because of problems with DNS, NIS or other host name resolving
   systems your machines are using.
 
+\item[\Dflag{CKPT}] \label{dflag:ckpt}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_CKPT@\texttt{D\_CKPT}}
+  When this flag is set,
+  the Condor process checkpoint support code, which is linked into a STANDARD 
+  universe user job, will output some low-level details about the checkpoint
+  procedure into the \MacroUNI{SHADOW\_LOG}.
+
+\item[\Dflag{SECURITY}] \label{dflag:security}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_SECURITY@\texttt{D\_SECURITY}}
+  This flag will enable debug messages pertaining to the setup of 
+  secure network communication, 
+  including messages for the negotiation of a socket 
+  authentication mechanism, the management of a session key cache.
+  and messages about the authentication process itself.  See
+  section~\ref{sec:Config-Security} for more information about
+  secure communication configuration.
+
+\item[\Dflag{PROCFAMILY}] \label{dflag:procfamily}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
+  Condor often times needs to manage an entire family of processes, i.e. a 
+  process and all descendents of that process.  This debug flag will 
+  turn on debugging output for the management of families of processes.
+
+\item[\Dflag{ACCOUNTANT}] \label{dflag:accountant}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_ACCOUNTANT@\texttt{D\_ACCOUNTANT}}
+  When this flag is set,
+  the \condor{negotiator} will output debug messages relating to the computation
+  of user priorities (see section~\ref{sec:UserPrio}).
+	
 \end{description}
 
 \item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
   share a debug flag, simply set the parameter \MacroNI{ALL\_DEBUG}
   instead of changing all of the individual parameters.  For example,
-  to turn on network debugging in all subsystems, set
-  \verb$ALL_DEBUG = D_NETWORK$.
+  to turn on all debugging in all subsystems, set
+  \verb$ALL_DEBUG = D_ALL$.
 
 \end{description}
 
