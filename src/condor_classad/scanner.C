@@ -38,7 +38,7 @@ Token::~Token()
 void Scanner(char*& s, Token& t)
 { 
     char	str[MAXVARNAME];
-    char*	tmp;		// working variable
+    char	*tmp, *tmp2;		// working variables
 
     // skip white space
     t.length = 0;
@@ -144,7 +144,7 @@ void Scanner(char*& s, Token& t)
     // token is a string
     {
         s++;
-		tmp = str;
+		tmp2 = tmp = new char[strlen(s) + 1]; // make sure to have enough space
 		t.length++;
         while(*s != '"' && *s != '\0')
 		{
@@ -162,15 +162,17 @@ void Scanner(char*& s, Token& t)
 		{
 			 t.type = LX_ERROR;
 			 t.length = 0;
+			 delete [] tmp2;
 			 return;
 		}
         s++;
 		t.length++;
         *tmp = '\0';
-		t.strVal = new char[strlen(str) + 1];
-		strcpy(t.strVal, str);
+		t.strVal = new char[strlen(tmp2) + 1];
+		strcpy(t.strVal, tmp2);
         t.type = LX_STRING; 
 		t.isString = TRUE;
+		delete [] tmp2;
 		return;
     }
 
