@@ -7,6 +7,11 @@ struct timeval {
 	long    tv_sec;     /* seconds */
 	long    tv_usec;    /* and microseconds */
 };
+struct  itimerval {
+    struct  timeval it_interval;    /* timer interval */
+    struct  timeval it_value;   /* current value */
+};
+
 #endif	/* _ALL_SOURCE */
 #else
 #include <sys/time.h>
