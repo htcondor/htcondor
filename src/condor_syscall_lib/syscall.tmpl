@@ -238,10 +238,25 @@ This is an attempt to do autoconf-style configuration of the little
 details.  Ideally, we would collect all these little details about
 _all_ the calls and put them in one standard place.
 */
-
-#if defined(Solaris)
+#if defined(Solaris27)
+	#define SOCKET_DATA_TYPE void*
+	#define SOCKET_LENGTH_TYPE unsigned int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE void
+	#define SOCKET_DATA_CONST const
+	#define SOCKET_MSG_CONST const
+	#define SOCKET_ADDR_TYPE struct sockaddr*
+	#define SOCKET_ADDR_CONST_CONNECT const
+	#define SOCKET_ADDR_CONST_BIND const
+	#define SOCKET_ADDR_CONST_ACCEPT
+	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE ssize_t
+	#define SOCKET_SENDRECV_LENGTH_TYPE unsigned int
+	#define SOCKET_FLAGS_TYPE int
+	#define SOCKET_COUNT_TYPE int
+#elif defined(Solaris26) || defined(Solaris251)
 	#define SOCKET_DATA_TYPE char*
 	#define SOCKET_LENGTH_TYPE int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE struct sockaddr*
@@ -249,12 +264,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
 #elif defined(OSF1)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST
 	#define SOCKET_ADDR_TYPE struct sockaddr*
@@ -262,12 +279,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
 #elif defined(HPUX10)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE size_t
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE struct sockaddr*
@@ -275,12 +294,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE ssize_t
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
 #elif defined(LINUX) && defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE socklen_t
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE struct sockaddr*
@@ -288,12 +309,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE unsigned int
 #elif defined(LINUX) && !defined(GLIBC)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE struct sockaddr*
@@ -301,12 +324,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT const
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE const unsigned int
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
 #elif defined(IRIX)
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE void*
@@ -314,12 +339,14 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND const
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE int
 	#define SOCKET_COUNT_TYPE int
 #else
 	#define SOCKET_DATA_TYPE void*
 	#define SOCKET_LENGTH_TYPE int
+	#define SOCKET_ALTERNATE_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_DATA_CONST const
 	#define SOCKET_MSG_CONST const
 	#define SOCKET_ADDR_TYPE void*
@@ -327,6 +354,7 @@ _all_ the calls and put them in one standard place.
 	#define SOCKET_ADDR_CONST_BIND
 	#define SOCKET_ADDR_CONST_ACCEPT
 	#define SOCKET_SENDRECV_TYPE int
+	#define SOCKET_RECVFROM_TYPE int
 	#define SOCKET_SENDRECV_LENGTH_TYPE SOCKET_LENGTH_TYPE
 	#define SOCKET_FLAGS_TYPE unsigned int
 	#define SOCKET_COUNT_TYPE int
@@ -576,7 +604,7 @@ version.
 
 	#if defined(HAS_64BIT_SYSCALLS)
 
-	#if defined(Solaris26) && !defined(IRIX)
+	#if (defined(Solaris) && !defined(Solaris251)) && !defined(IRIX)
 		/* when I can test this for sure, I'll remove the IRIX stuff from
 			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
@@ -710,7 +738,7 @@ version.
 	int accept(
 		map(int fd),
 		SOCKET_ADDR_CONST_ACCEPT SOCKET_ADDR_TYPE addr,
-		SOCKET_LENGTH_TYPE * length) : INDIRECT;
+		SOCKET_ALTERNATE_LENGTH_TYPE * length) : INDIRECT;
 	int bind(
 		map(int fd),
 		SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
@@ -722,17 +750,17 @@ version.
 	int getpeername(
 		map(int fd),
 		SOCKET_ADDR_TYPE addr,
-		SOCKET_LENGTH_TYPE * length) : INDIRECT;
+		SOCKET_ALTERNATE_LENGTH_TYPE * length) : INDIRECT;
 	int getsockname(
 		map(int fd),
 		SOCKET_ADDR_TYPE addr,
-		SOCKET_LENGTH_TYPE * length) : INDIRECT;
+		SOCKET_ALTERNATE_LENGTH_TYPE * length) : INDIRECT;
 	int getsockopt(
 		map(int fd),
 		int level,
 		int option,
 		SOCKET_DATA_TYPE value,
-		SOCKET_LENGTH_TYPE * length) : INDIRECT;
+		SOCKET_ALTERNATE_LENGTH_TYPE * length) : INDIRECT;
 	int listen(
 		map(int fd),
 		SOCKET_COUNT_TYPE count) : INDIRECT;
@@ -754,13 +782,13 @@ version.
 
 	/* On OSF1, this doesn't work unless recvfrom calls SYS_old_recvfrom.  I don't know why.  */
 
-	SOCKET_SENDRECV_TYPE recvfrom(
+	SOCKET_RECVFROM_TYPE recvfrom(
 		map(int fd),
 		SOCKET_DATA_TYPE data,
 		SOCKET_SENDRECV_LENGTH_TYPE length,
 		SOCKET_FLAGS_TYPE flags,
 		SOCKET_ADDR_TYPE addr,
-		SOCKET_LENGTH_TYPE *addrlength) : INDIRECT
+		SOCKET_ALTERNATE_LENGTH_TYPE *addrlength) : INDIRECT
 
 	#if defined(OSF1)
 		, local_name(old_recvfrom);
@@ -1552,7 +1580,9 @@ not_supported {
 not_supported {
 	#if defined(LINUX)
 		int profil( char *buf, int buf_size, int offset, int scale );
-	#elif defined(Solaris)
+	#elif defined(Solaris27)
+		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
+	#elif defined(Solaris26) || defined(Solaris251)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
