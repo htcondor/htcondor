@@ -4,7 +4,7 @@
 ##
 ####################
 universe        = standard
-executable      = job_core_coredump_std.cndr.exe.$$(OPSYS).$$(ARCH)
+executable      = job_core_coredump.cndr.exe.$$(OPSYS).$$(ARCH)
 error           = job_core_coredump-none_std.err
 output          = job_core_coredump-none_std.out
 log             = job_core_coredump-none_std.log
