@@ -45,6 +45,7 @@
 #include <sys/wait.h>
 #include "proc.h"
 #include "debug.h"
+#include "expr.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include <time.h>
@@ -479,3 +480,34 @@ PROC	*proc;
 	FREE( proc );
 }
 #endif /* NEW_PROC */
+
+CONTEXT *
+build_job_context( proc )
+PROC	*proc;
+{
+	char	line[1024];
+	CONTEXT	*answer;
+	CONTEXT *create_context();
+
+	answer = create_context();
+
+	(void)sprintf( line,
+		"JOB_REQUIREMENTS = (%s) && (Disk >= %d) && (VirtualMemory >= %d)",
+		proc->requirements, calc_disk_needed(proc), proc->image_size  );
+	store_stmt( scan(line), answer );
+
+	if( proc->preferences && proc->preferences[0] ) {
+		(void)sprintf( line, "JOB_PREFERENCES = %s", proc->preferences );
+	} else {
+		(void)sprintf( line, "JOB_PREFERENCES = T" );
+	}
+	store_stmt( scan(line), answer );
+
+	(void)sprintf( line, "Owner = \"%s\"", proc->owner );
+	store_stmt( scan(line), answer );
+
+	(void)sprintf( line, "UNIVERSE = %d", proc->universe );
+	store_stmt( scan(line), answer );
+
+	return answer;
+}
