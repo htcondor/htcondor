@@ -63,6 +63,7 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static 	bool		customFormat = false;
 static  bool		cputime = false;
 static	bool		current_run = false;
 static  char		*JOB_TIME = "RUN_TIME";
@@ -71,6 +72,7 @@ static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	char		*pool = NULL;
 static	char		scheddAddr[64];	// used by format_remote_host()
+static	AttrListPrintMask 	mask;
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -328,7 +330,6 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 			summarize = 0;
 		} 
-
 		else
 		if (match_prefix (arg, "address")) {
 
@@ -359,6 +360,18 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 			querySchedds = true;
 		} 
+		else
+		if( match_prefix( arg, "format" ) ) {
+				// make sure we have at least two more arguments
+			if( argc <= i+2 ) {
+				fprintf( stderr, "Argument -format requires format and"
+					" attribute parameters\n" );
+				exit( 1 );
+			}
+			customFormat = true;
+			mask.registerFormat( argv[i+1], argv[i+2] );
+			i+=2;
+		}
 		else
 		if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
 			sprintf (constraint, "((%s == %d) && (%s == %d))", 
@@ -649,6 +662,7 @@ usage (char *myName)
 		"\t\t-name <name>\t\tName of schedd\n"
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-long\t\t\tVerbose output\n"
+		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
@@ -714,9 +728,11 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		
 		if( verbose ) {
 			jobs.fPrintAttrListList( stdout );
+		} else if( customFormat ) {
+			summarize = false;
+			mask.display( stdout, &jobs );
 		} else if ( run || goodput ) {
 			summarize = false;
-			AttrListPrintMask mask;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
 					"SUBMITTED", JOB_TIME,
 					run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
