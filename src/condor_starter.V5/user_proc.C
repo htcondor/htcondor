@@ -767,20 +767,20 @@ UserProc::send_sig( int sig )
 
 	if( sig != SIGCONT ) {
 		if( kill(pid,SIGCONT) < 0 ) {
+			set_priv(priv);
 			if( errno == ESRCH ) {	// User proc already exited
 				return;
 			}
-			set_priv(priv);
 			perror("kill");
 			EXCEPT( "kill(%d,SIGCONT)", pid  );
 		}
 	}
 
 	if( kill(pid,sig) < 0 ) {
+		set_priv(priv);
 		if( errno == ESRCH ) {	// User proc already exited
 			return;
 		}
-		set_priv(priv);
 		perror("kill");
 		EXCEPT( "kill(%d,%d)", pid, sig );
 	}
