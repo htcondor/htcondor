@@ -423,16 +423,9 @@ pseudo_get_file_stream(
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait = 1;
-	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
-
-	/* We want to be Condor to access files in the spool directory
-	   (checkpoints and executables).  I'm assuming that these
-	   functions are only called to transfer files in the spool
-	   directory...  If I'm wrong, this is a security problem.  -Jim B. */
-	priv = set_condor_priv();
 
 	*len = 0;
 		/* open the file */
@@ -466,10 +459,8 @@ pseudo_get_file_stream(
 		if ( rval ) {
 			/* Oops, couldn't find it on the checkpoint server either */
 			errno = ENOENT;
-			set_priv(priv);
 			return -1;
 		} else {
-			set_priv(priv);
 			return 0;
 		}
 	} else {
@@ -486,7 +477,6 @@ pseudo_get_file_stream(
 		switch( child_pid = fork() ) {
 		    case -1:	/* error */
 			    dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
-				set_priv(priv);
 				return -1;
 			case 0:	/* the child */
 				data_sock = connect_file_stream( connect_sock );
@@ -523,13 +513,11 @@ pseudo_get_file_stream(
 			default:	/* the parent */
 				close( file_fd );
 				close( connect_sock );
-				set_priv(priv);
 				return 0;
 			}
 	}
 
 		/* Can never get here */
-	set_priv(priv);
 	return -1;
 }
 
@@ -550,18 +538,11 @@ pseudo_put_file_stream(
 	pid_t	child_pid;
 	int		rval;
 	PROC *p = (PROC *)Proc;
-	priv_state	priv;
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_put_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 	dprintf( D_ALWAYS, "\tlen = %d\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
-
-	/* We want to be Condor to access files in the spool directory
-	   (checkpoints and executables).  I'm assuming that these
-	   functions are only called to transfer files in the spool
-	   directory...  If I'm wrong, this is a security problem.  -Jim B. */
-	priv = set_condor_priv();
 
 	get_host_addr( ip_addr );
 	display_ip_addr( *ip_addr );
@@ -583,12 +564,10 @@ pseudo_put_file_stream(
 	}
 	if (!rval) {
 		/* Checkpoint server says ok */
-		set_priv(priv);
 		return 0;
 	}
 		
 	if( (file_fd=open(file,O_WRONLY|O_CREAT|O_TRUNC,0664)) < 0 ) {
-		set_priv(priv);
 		return -1;
 	}
 
@@ -601,7 +580,6 @@ pseudo_put_file_stream(
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
-		set_priv(priv);
 		return -1;
 	  case 0:	/* the child */
 		data_sock = connect_file_stream( connect_sock );
@@ -621,12 +599,10 @@ pseudo_put_file_stream(
 	  default:	/* the parent */
 	    close( file_fd );
 		close( connect_sock );
-		set_priv(priv);
 		return 0;
 	}
 
 		/* Can never get here */
-	set_priv(priv);
 	return -1;
 }
 
