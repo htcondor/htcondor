@@ -552,7 +552,28 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 	// usually the case because 95% of the time each user in the
 	// system has a different priority.
 
-	if (prio1==prio2) return (strcmp(scheddName1,scheddName2) < 0);
+	if (prio1==prio2) {
+		int namecomp = strcmp(scheddName1,scheddName2);
+		if (namecomp != 0) return (namecomp < 0);
+
+			// We don't always want to negotiate with schedds with the
+			// same name in the same order or we might end up only
+			// running jobs this user has submitted to the first
+			// schedd.  The general problem is that we rely on the
+			// schedd to order each user's jobs, so when a user
+			// submits to multiple schedds, there is no guaranteed
+			// order.  Our hack is to order the schedds randomly,
+			// which should be a little bit better than always
+			// negotiating in the same order.  We use the timestamp on
+			// the classads to get a random ordering among the schedds
+			// (consistent throughout our sort).
+
+		int ts1=0, ts2=0;
+		ad1->LookupInteger (ATTR_LAST_HEARD_FROM, ts1);
+		ad2->LookupInteger (ATTR_LAST_HEARD_FROM, ts2);
+		return ( (ts1 % 1009) < (ts2 % 1009) );
+	}
+
 	return (prio1 < prio2);
 }
 
