@@ -44,7 +44,7 @@ void Daemon::common_init() {
 	_port = -1;
 	_is_local = false;
 	_tried_locate = false;
-
+	_is_configured = true;
 	_addr = NULL;
 	_name = NULL;
 	_pool = NULL;
@@ -831,6 +831,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( buf );
+		_is_configured = false;
 		if( local_host ) free( local_host );
 		if( remote_host ) free( remote_host );
 		return false;
