@@ -119,7 +119,7 @@ friend class ListIterator<ObjType>;
 public:
 		// General
 	List();
-	~List();
+	virtual ~List();
 	bool	Append( ObjType & obj );
 	bool	Append( ObjType * obj );
 
@@ -131,9 +131,12 @@ public:
 		// Scans
 	void	Rewind();
 	bool	Current( ObjType & obj ) const;
-	bool	Next( ObjType & obj );
 	ObjType *Current() const;
-	ObjType *Next();
+
+	ObjType *   Next ();
+    bool        Next (ObjType   & obj);
+    inline bool Next (ObjType * & obj) { return (obj = Next()) != NULL; }
+
 	bool	AtEnd() const;
 	void	DeleteCurrent();
 
@@ -172,8 +175,11 @@ public:
 	void Initialize( const List<ObjType>& );
 	void ToBeforeFirst( );
 	void ToAfterLast( );
-	bool Next( ObjType& );
-	ObjType* Next( );
+
+	ObjType *   Next ();
+	bool        Next (ObjType   & obj);
+    inline bool Next (ObjType * & obj) { return (obj = Next()) != NULL; }
+
 	bool Current( ObjType& ) const;
 	ObjType* Current( ) const;
 	bool Prev( ObjType& );
