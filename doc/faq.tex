@@ -1128,26 +1128,11 @@ Use the solutions given above.
 \end{description}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}
-\index{Condor!Y2K}
-\index{Y2K}
 \index{Condor!mailing-list}
 \index{Condor!new versions, notification of}
 \index{upgrading!6.0 to 6.2}
 
 \begin{description}
-
-\item[Is Condor Y2K-compliant?]
-
-Yes.
-Internally, Condor uses the standard UNIX time representation (the
-number of seconds since 1/1/1970) and is not affected by the Y2K bug.
-In addition, the Condor tools now correctly display the four-digit
-year in their output.
-
-The output of Condor tools from some older versions (pre-6.2) may
-display years incorrectly, but their internal representation is still
-correct and their display bugs do not affect the operation of Condor.
-
 
 \item[Is there a Condor mailing-list?]
 
@@ -1165,12 +1150,12 @@ of:
 
 The usual process for upgrading is to copy the original 6.0 binaries
 to $<$name$>$.old versions and then copy the 6.2 binaries over the 6.0
-binaries. The \Condor{master} will automatically(in about 5 minutes)
+binaries. The \Condor{master} will automatically (in about 5 minutes)
 notice that new binaries have been installed and exec them. Please be sure
-to upgrade the config files to match the 6.2 version and pay attention
-to copying over your site's specific policy to the new config file. Some
+to upgrade the configuration files to match the 6.2 version and pay attention
+to copying over your site's specific policy to the new configuration file. Some
 macros and their meanings have changed and need to be addressed in the
-upgrade, you may find them in section~\ref{sec:V60-Policy-diffs} of the
+upgrade. You may find them in section~\ref{sec:V60-Policy-diffs} of the
 manual.
 
 One special note: You must relink your 6.0 standard universe jobs with
