@@ -3,11 +3,8 @@
 #include "condor_config.h"
 #include "condor_classad.h"
 #else
-#include "classad_package.h"
 #include <ctype.h>
-#endif
-
-#if defined( WANT_NAMESPACES )
+#include "classad_package.h"
 using namespace classad;
 #endif
 
