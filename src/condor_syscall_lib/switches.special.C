@@ -1742,8 +1742,8 @@ getlogin()
 
 	if( LocalSysCalls() ) {
 #if defined( SYS_getlogin )
-		rval = (char *) syscall( SYS_getlogin );
-		return rval;
+		char* rval_str = (char *) syscall( SYS_getlogin );
+		return rval_str;
 #elif defined( DL_EXTRACT ) 
 		{
         void *handle;
@@ -1770,10 +1770,11 @@ getlogin()
 		rval = REMOTE_CONDOR_getlogin( loginbuf );
 	}
 
-	if ( rval >= 0 )
+	if( rval >= 0 ) {
 		return loginbuf;
-	else
-		return NULL;  
+	} else {
+		return NULL;
+	}
 }
 
 /* Special kill that allows us to send signals to ourself, but not any
