@@ -26,9 +26,17 @@
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
+
+#if defined(CONDOR_BLOWFISH_ENCRYPTION)
 #include "condor_crypt_blowfish.h"
+#endif 
+#if defined(CONDOR_3DES_ENCRYPTION)
 #include "condor_crypt_3des.h"
+#endif
+
+#if defined(CONDOR_MD)
 #include "condor_md.h"                // Message authentication stuff
+#endif
 
 /* The macro definition and file was added for debugging purposes */
 
@@ -1836,7 +1844,7 @@ Stream::wrap(unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
     bool code = false;
-#if defined(CONDOR_BLOWFISH_ENCRYPTION) || defined(CONDOR_3DES_ENCRYPTION)  
+#if defined(CONDOR_ENCRYPTION)
     if (get_encryption()) {
         code = crypto_->encrypt(d_in, l_in, d_out, l_out);
     }
@@ -1849,7 +1857,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
     bool code = false;
-#if defined(CONDOR_BLOWFISH_ENCRYPTION) || defined(CONDOR_3DES_ENCRYPTION)  
+#if defined(CONDOR_ENCRYPTION)
     if (get_encryption()) {
         code = crypto_->decrypt(d_in, l_in, d_out, l_out);
     }
@@ -1859,7 +1867,7 @@ Stream::unwrap(unsigned char* d_in,int l_in,
 
 void Stream::resetCrypto()
 {
-#if defined(CONDOR_BLOWFISH_ENCRYPTION) || defined(CONDOR_3DES_ENCRYPTION)  
+#if defined(CONDOR_ENCRYPTION)
   if (get_encryption()) {
     crypto_->resetState();
   }
@@ -1910,7 +1918,7 @@ bool
 Stream::set_crypto_key(KeyInfo * key, const char * keyId)
 {
     bool inited = true;
-#if defined(CONDOR_BLOWFISH_ENCRYPTION) || defined(CONDOR_3DES_ENCRYPTION)
+#if defined(CONDOR_ENCRYPTION)
 
     if (key != 0) {
         inited = initialize_crypto(key);
