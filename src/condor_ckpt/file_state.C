@@ -88,11 +88,7 @@ File::Init()
 	pathname = 0;
 }
 
-#if defined(Solaris)
-extern "C" char *getcwd( char *, size_t size);
-#else
 extern "C" char *getwd( char * );
-#endif
 
 void
 OpenFileTable::Init()
@@ -112,11 +108,7 @@ OpenFileTable::Init()
 #endif
 	}
 
-#if defined(Solaris)
-	getcwd( Condor_CWD, sizeof(Condor_CWD) );
-#else
 	getwd( Condor_CWD );
-#endif
 	PreOpen( 0, TRUE, FALSE, FALSE );
 	PreOpen( 1, FALSE, TRUE, FALSE );
 	PreOpen( 2, FALSE, TRUE, FALSE );
@@ -516,11 +508,7 @@ OpenFileTable::Save()
 	off_t	pos;
 	File	*f;
 
-#if defined(Solaris)
-	getcwd( cwd, sizeof(cwd) );
-#else
 	getwd( cwd );
-#endif
 
 	for( i=0; i<MaxOpenFiles; i++ ) {
 		f = &file[i];
