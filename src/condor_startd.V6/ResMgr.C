@@ -395,11 +395,7 @@ ResMgr::init_socks()
 	if( coll_sock ) {
 		delete coll_sock;
 	}
-	coll_sock = new SafeSock;
-	if (!coll_sock->connect( collector_host, COLLECTOR_UDP_COMM_PORT )) {
-		dprintf(D_ALWAYS, "Failed to connect to collector <%s:%d>\n",
-				collector_host, COLLECTOR_UDP_COMM_PORT);
-	}
+	coll_sock = Collector->safeSock();
 
 	if( view_sock ) {
 		delete view_sock;
@@ -676,7 +672,7 @@ ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 		} else {
 			dprintf( D_ALWAYS,
 					 "Error sending UDP update to the collector (%s)\n", 
-					 collector_host );
+					 Collector->fullHostname() );
 		}
 	}  
 
@@ -687,7 +683,7 @@ ResMgr::send_update( ClassAd* public_ad, ClassAd* private_ad )
 		} else {
 			dprintf( D_ALWAYS, 
 					 "Error sending UDP update to the collector (%s)\n", 
-					 collector_host );
+					 condor_view_host );
 		}
 	}
 
@@ -738,7 +734,7 @@ ResMgr::report_updates()
 	if( coll_sock ) {
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
-				 num_updates, collector_host );
+				 num_updates, Collector->fullHostname() );
 	}  
 	if( view_sock ) {
 		dprintf( D_FULLDEBUG, 
@@ -788,11 +784,13 @@ ResMgr::assign_load()
 	}
 	if( is_smp() ) {
 			// Print out the totals we already know.
-		dprintf( D_LOAD, 
-				 "%s %.3f\t%s %.3f\t%s %.3f\n",  
-				 "SystemLoad:", m_attr->load(),
-				 "TotalCondorLoad:", m_attr->condor_load(),
-				 "TotalOwnerLoad:", total_owner_load );
+		if( DebugFlags & D_LOAD ) {
+			dprintf( D_FULLDEBUG, 
+					 "%s %.3f\t%s %.3f\t%s %.3f\n",  
+					 "SystemLoad:", m_attr->load(),
+					 "TotalCondorLoad:", m_attr->condor_load(),
+					 "TotalOwnerLoad:", total_owner_load );
+		}
 
 			// Initialize everything to 0.  Only need this for SMP
 			// machines, since on single CPU machines, we just assign
