@@ -25,10 +25,10 @@ extern "C" unsigned int htonl( unsigned int );
 extern "C" unsigned int ntohl( unsigned int );
 #endif
 
+void terminate_with_sig( int sig );
+
 Image MyImage;
 static jmp_buf Env;
-
-static int CkptMode;
 
 
 void
@@ -103,6 +103,7 @@ void
 _condor_prestart( int syscall_mode )
 {
 	struct sigaction action;
+	sigset_t		 sig_mask;
 
 	MyImage.SetMode( syscall_mode );
 
@@ -119,6 +120,7 @@ _condor_prestart( int syscall_mode )
 		perror( "sigaction" );
 		exit( 1 );
 	}
+
 }
 
 
@@ -288,6 +290,10 @@ RestoreStack()
 		nbytes = htonl( nbytes );
 		status = write( MyImage.GetFd(), &nbytes, sizeof(nbytes) );
 		dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE RECEIVED OK\n" );
+
+		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+	} else {
+		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
 
 	LONGJMP( Env, 1 );
@@ -498,8 +504,16 @@ extern "C" {
 void
 Checkpoint( int sig, int code, void *scp )
 {
+	int		scm;
 
-	SetSyscalls( CkptMode );
+
+	if( MyImage.GetMode() == REMOTE ) {
+		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+	} else {
+		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	}
+
+
 	dprintf( D_ALWAYS, "Got SIGTSTP\n" );
 	if( SETJMP(Env) == 0 ) {
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
@@ -508,14 +522,25 @@ Checkpoint( int sig, int code, void *scp )
 		MyImage.Write();
 		dprintf( D_ALWAYS,  "Ckpt exit\n" );
 		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		exit( 0 );
+		terminate_with_sig( SIGUSR2 );
 	} else {
+		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		patch_registers( scp );
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 		MyImage.Close();
-		SetSyscalls( CkptMode );
+
+#if 1
+		if( MyImage.GetMode() == REMOTE ) {
+			SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+		} else {
+			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		}
+#else
+		SetSyscalls( scm );
+#endif
+		syscall( SYS_write, 1, "About to restore files state\n", 29 );
 		RestoreFileState();
-		// SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		syscall( SYS_write, 1, "Done restoring files state\n", 27 );
+		SetSyscalls( scm );
 		syscall( SYS_write, 1, "About to return to user code\n", 29 );
 		return;
 	}
@@ -559,6 +584,46 @@ ckpt()
 {
 	int		scm;
 
-	CkptMode = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	dprintf( D_ALWAYS, "About to send CHECKPOINT signal to SELF\n" );
+	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	kill( getpid(), SIGTSTP );
+}
+
+/*
+  Arrange to terminate abnormally with the given signal.  Note: the
+  expectation is that the signal is one whose default action terminates
+  the process - could be with a core dump or not, depending on the sig.
+*/
+void
+terminate_with_sig( int sig )
+{
+	sigset_t	mask;
+	struct sigaction	act;
+	pid_t		my_pid;
+
+		// Make sure all system calls handled "straight through"
+	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+
+		// Make sure we have the default action in place for the sig
+	act.sa_handler = SIG_DFL;
+	sigemptyset( &act.sa_mask );
+	act.sa_flags = 0;
+	if( sigaction(sig,&act,0) < 0 ) {
+		EXCEPT( "sigaction" );
+	}
+
+		// Send ourself the signal
+	my_pid = getpid();
+	dprintf( D_ALWAYS, "About to send signal %d to process %d\n", sig, my_pid );
+	if( kill(my_pid,sig) < 0 ) {
+		EXCEPT( "kill" );
+	}
+
+		// Wait to die...
+	sigemptyset( &mask );
+	sigsuspend( &mask );
+
+		// Should never get here
+	EXCEPT( "Should never get here" );
+
 }
