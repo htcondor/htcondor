@@ -8,7 +8,9 @@
 #include <fcntl.h>
 #include "image.h"
 
+#if !defined(HPUX9)	// HPUX-9 has this in <unistd.h>
 extern "C" int gethostname( char *, int );
+#endif
 
 int
 main( int argc, char *argv[] )
@@ -26,5 +28,10 @@ main( int argc, char *argv[] )
 		printf( "i = %d\n", i );
 		ckpt();
 	}
-	return 13;
+
+		// Must exit with a status rather than return status for AIX 3.2
+	exit( 13 );
+
+		// but, must have a return to match our prototype...
+	return 0;	// Can never get here
 }
