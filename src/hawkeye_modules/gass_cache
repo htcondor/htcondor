@@ -34,6 +34,7 @@ my %Directories = (
 
 my %Config = (
 	      MaxAge => 24 * 60 * 60,
+	      MaxSize => 500 * 1024 * 1024,
 	     );
 
 # Do it
@@ -70,6 +71,10 @@ sub Init()
     # Max age
     my $Tmp = HawkeyeLib::ReadConfig( "_maxage", "" );
     $Config{MaxAge} = HawkeyeLib::ParseSeconds( $Tmp, $Config{MaxAge} );
+
+    # Max size
+    $Tmp = HawkeyeLib::ReadConfig( "_maxsize", "" );
+    $Config{MaxSize} = HawkeyeLib::ParseBytes( $Tmp, $Config{MaxSize} );
 
     # Finally, parse the command line...
     foreach my $Arg ( @ARGV )
@@ -115,6 +120,7 @@ sub RunIt()
     CheckOrphans( );
     CacheUsage( );
     CheckAge( );
+    CheckSize( );
 
     # Ok, summary is done...
     $Hash->Store( );
@@ -334,7 +340,7 @@ sub CheckAge(  )
 	my $Age = $CurTime - $FileTime;
 
 	# Some quick calcs.
-	$Count++;
+	$Count++ if ( $File->{IsGlobal} );
 	$TotalAge += $Age;
 	$MaxAge = $Age if ( $Age > $MaxAge );
 
@@ -352,6 +358,8 @@ sub CheckAge(  )
     # Avoid divide by zeros...
     $Count = 1 if ( 0 == $Count );
 
+    my $OldPct = 100.0 * $OldCount / $Count;
+
     $Hash->Add( "OldCount", "n", $OldCount );
     $Hash->Add( "OldOrphanCount", "n", $OldOrphanCount );
     $OldCount = 1 if ( 0 == $OldCount );
@@ -367,7 +375,57 @@ sub CheckAge(  )
     $Hash->Add( "OldTotalBlocks", "n", $OldTotalBlocks );
     $Hash->Add( "OldMeanBlocks", "n",
 		sprintf "%.1f", $OldTotalBlocks / $OldCount );
+    $Hash->Add( "OldPct", "n",
+		sprintf "%.1f", $OldPct );
 
     # And, the old age threshold that we used...
-    $Hash->Add( "AgeThreshold", "n", $Config{MaxAge} );
+    $Hash->Add( "OldThreshold", "n", $Config{MaxAge} );
+}
+
+# Check file sizes
+sub CheckSize(  )
+{
+    my $MaxSize = 0;
+
+    my $BigCount = 0;
+    my $BigTotalBytes = 0;
+    my $BigTotalBlocks = 0;
+    my $Count = 0;
+
+    foreach my $File ( @DataFiles )
+    {
+	my $Size = $File->{Bytes};
+
+	my $Count++ if ( $File->{IsGlobal} );
+
+	# Some quick calcs.
+	$MaxSize = $Size if ( $Size > $MaxSize );
+
+	# If it's an old global file, note it..
+	if (  ( $File->{IsGlobal} ) && ( $Size > $Config{MaxSize} )  )
+	{
+	    $BigCount++;
+	    $BigTotalBytes += $File->{Bytes};
+	    $BigTotalBlocks += $File->{Blocks};
+	}
+    }
+
+    # Avoid divide by zeros...
+    $Count = 1 if ( 0 == $Count );
+
+    $Hash->Add( "BigCount", "n", $BigCount );
+    $BigCount = 1 if ( 0 == $BigCount );
+
+    # Store the results...
+    $Hash->Add( "BigTotalBytes", "n",
+		$BigTotalBytes );
+    $Hash->Add( "BigMeanBytes", "n",
+		sprintf "%.1f", $BigTotalBytes / $BigCount );
+    $Hash->Add( "BigTotalBlocks", "n",
+		$BigTotalBlocks );
+    $Hash->Add( "BigMeanBlocks", "n",
+		sprintf "%.1f", $BigTotalBlocks / $BigCount );
+
+    # And, the old age threshold that we used...
+    $Hash->Add( "BigThreshold", "n", $Config{MaxSize} );
 }
