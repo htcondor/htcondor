@@ -411,11 +411,12 @@ See the Condor User's Manual for more information about using Universe.
 %%%%%%%%%%%%%%%%%%%
 %% grid_type
 %%%%%%%%%%%%%%%%%%%
-\item[grid\_type = " $<$ gt2 \Bar\ gt3 \Bar\ oracle \Bar\ nordugrid $>$  "] A
+\item[grid\_type = " $<$ gt2 \Bar\ gt3 \Bar\ oracle \Bar\ nordugrid \Bar\ condor $>$  "] A
 \index{submit commands!grid\_type}
 case insensitive string to further specify the intended type of resource
-for \Opt{grid} or \Opt{globus} universe jobs.
+for \Opt{grid} universe jobs.
 The default value is \Opt{"gt2"}.
+The quote marks are currently optional.
 
 %%%%%%%%%%%%%%%%%%%
 %% MaxJobRetirementTime
@@ -1471,6 +1472,18 @@ universe and \Expr{False} otherwise.
 and java universe jobs only, the duration (in seconds) of a
 job lease.  The default value is undefined.
 See section~\ref{sec:Job-Lease} for details of job leases.
+
+%%%%%%%%%%%%%%%%%%%
+%% remote_pool
+%%%%%%%%%%%%%%%%%%%
+\item[remote\_pool = $<$machine-name$>$]
+\index{submit commands!remote\_pool}
+For a \Arg{grid} universe job, with a \Opt{grid\_type} of \Arg{condor},
+the machine that receives a query from the submit machine.
+The query is to the \Condor{collector} daemon
+(assumed to be at a standard IP address and port),
+and it is for the location (IP address and port) of the
+\Condor{schedd} daemon.
 
 %%%%%%%%%%%%%%%%%%%
 % +

@@ -15,11 +15,19 @@ Condor calls this flocking.
 If a machine within the pool where a job is submitted is not
 available to run the job,
 the job makes its way to another pool.
-This is enabled by configuration of the pools.
+This is enabled by the configuration of the pools.
 
-Some of Condor's grid computing features utilize Globus software
+Condor-C allows the use grid computing resources
+wherever Condor is running and configured to allow
+jobs.
+Jobs submitted to Condor-C may relocate from one machine's
+job queue to another machine's job queue.
+
+Condor-G provides
+grid computing features utilizing Globus software
 (\URL{http://www.globus.org/}).
 Globus provides infrastructure for authentication, authorization,
 and remote job submission (including data transfer) on Grid resources.
 Condor-G provides all of Condor's job submission features,
 but for these far-removed resources.
+
