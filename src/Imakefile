@@ -37,7 +37,9 @@ CFLAGS = $(STD_C_FLAGS)
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
-	strip_dir/etc strip_dir/etc/examples PvmDirs 
+	strip_dir/etc strip_dir/etc/examples PvmDirs \
+	strip_ckpt_server strip_ckpt_server/sbin strip_ckpt_server/etc \
+	strip_ckpt_server/etc/examples
 
 all: h makefiles Directories Libraries Programs examples
 release:: all
@@ -83,6 +85,10 @@ simple_dir_target(strip_pvm)
 simple_dir_target(strip_pvm/sbin)
 simple_dir_target(strip_pvm/lib)
 #endif
+simple_dir_target(strip_ckpt_server)
+simple_dir_target(strip_ckpt_server/sbin)
+simple_dir_target(strip_ckpt_server/etc)
+simple_dir_target(strip_ckpt_server/etc/examples)
 object_target(util_lib)
 object_target(c++_util)
 object_target(tools)
@@ -133,4 +139,5 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile */Makefile.* release_dir strip_dir strip_pvm
+	rm -rf Makefile */Makefile */Makefile.* release_dir strip_dir \
+		strip_pvm strip_ckpt_server
