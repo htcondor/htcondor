@@ -290,7 +290,9 @@ int INFNBatchJob::doEvaluateState()
 			// attempt a restart of a jobmanager only to be told that the
 			// old jobmanager process is still alive.
 			errorString = "";
-			if ( remoteJobId == NULL ) {
+			if ( condorState == COMPLETED ) {
+				gmState = GM_DONE_COMMIT;
+			} else if ( remoteJobId == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				gmState = GM_SUBMITTED;
