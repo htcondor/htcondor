@@ -127,7 +127,7 @@ usage( char *str )
 	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 	fprintf( stderr, 
-			 "  -all\t\t\tall hosts in your pool (overrides other targets)\n" );
+			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
 	fprintf( stderr, "    hostname\t\tgiven host\n" );
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
