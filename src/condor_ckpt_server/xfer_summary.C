@@ -46,7 +46,6 @@ extern "C" {
 
 XferSummary::XferSummary() 
 {
-	s = 0;
 	subnet = 0;
 	log_file = 0;
 	CondorViewHost=NULL;
@@ -57,7 +56,6 @@ XferSummary::XferSummary()
 XferSummary::~XferSummary() 
 {
 	if( log_file ) { fclose(log_file); }
-	if( s ) { delete s; }
 	if( subnet ) { free(subnet); }
 
 }
@@ -65,19 +63,9 @@ XferSummary::~XferSummary()
 
 XferSummary::init()
 {
-	if( s ) { delete s; }
-	s = new SafeSock();
-	s->timeout(30);
-
-	char* tmp = param( "COLLECTOR_HOST" );
-	if( tmp ) {
-		if( ! s->connect(tmp, COLLECTOR_PORT) ) {
-			EXCEPT( "Can't connect to collector: %s", tmp );
-		}
-		free( tmp );
-	} else {
-		EXCEPT( "COLLECTOR_HOST not defined." );
-	}
+	// Get the collector host name from the config file
+	if (CollectorHost) free (CollectorHost);
+	CollectorHost = param( "COLLECTOR_HOST" );
 
 	// Get the condor view host name from the config file
 	if( CondorViewHost ) free( CondorViewHost );
@@ -154,7 +142,6 @@ XferSummary::time_out(time_t now)
 	ClassAd	   	info;
 	char		line[128], *tmp;
 	int			command = UPDATE_CKPT_SRVR_AD;
-	struct in_addr addr;
 
 	info.SetMyTypeName("CkptServer");
 	info.SetTargetTypeName("CkptFile");
@@ -194,10 +181,16 @@ XferSummary::time_out(time_t now)
 	sprintf(line, "Disk = %d", free_fs_blocks(pwd) );
 	info.Insert(line);
 	
-	s->encode();
-	s->code(command);
-	info.put(*s);
-	s->eom();
+	// Send to collector
+	if (CollectorHost) {
+        SafeSock sock(CollectorHost, COLLECTOR_PORT);
+        sock.encode();
+        if (!sock.put(command) ||
+            !info.put(sock) ||
+            !sock.end_of_message()) {
+            dprintf(D_ALWAYS, "failed to update collector!\n");
+		}
+	}
 
 	// Send to condor view host
 	if (CondorViewHost) {

@@ -49,9 +49,9 @@ private:
 	FILE	*log_file;
 
 	char	*subnet;
-	SafeSock *s;
 	char	pwd[_POSIX_PATH_MAX];
 
+	char* CollectorHost;
 	char* CondorViewHost;
 
 	void log_transfer(time_t, transferinfo *, bool success_flag,
