@@ -395,7 +395,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
 	if (!paramer) {
 		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
-		dprintf ( D_SECURITY, "getDefCryptoMeth -> %s\n", paramer);
 	}
 
 	if (paramer) {
@@ -420,7 +419,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
 			 SecMan::sec_req_rev[sec_negotiation] );
 	ad->Insert(buf);
-	dprintf (D_SECURITY, "ad->Insert(%s)\n", buf);
 
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
 			 SecMan::sec_req_rev[sec_authentication] ); 
@@ -1033,7 +1031,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 	// fill in our version
 	sprintf(buf, "%s=\"%s\"", ATTR_SEC_VERSION, CondorVersion());
 	auth_info.InsertOrUpdate(buf);
-	dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 
 	// fill in return address, if we are a daemon
 	char* dcss = global_dc_sinful();
@@ -1045,13 +1042,11 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 	// fill in command
 	sprintf(buf, "%s=%i", ATTR_SEC_COMMAND, cmd);
 	auth_info.Insert(buf);
-	dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 
 	if (cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
 		sprintf(buf, "%s=%i", ATTR_SEC_AUTH_COMMAND, subCmd);
 		auth_info.Insert(buf);
-		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
 	}
 
 
