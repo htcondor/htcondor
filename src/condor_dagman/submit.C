@@ -178,10 +178,9 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
   // Parse DAP server's return message for dap_id.  This desperately
   // needs to be replaced by a DAP Submit API.
   //
-  // Typical dap_submit output looks like:
+  // Typical stork_submit output looks like:
 
-  //skywalker(6)% dap_submit skywalker 1.dap
-  //Trying 128.105.165.17...
+  //skywalker(6)% stork_submit skywalker 1.dap
   //connected to skywalker..
   //sending request:
   //     [
@@ -208,8 +207,9 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
       return false;
     }
 	command_output += buffer;
+
   } while (strstr(buffer, "dap_id") == NULL);
-  
+
   {
     int status = pclose(fp);
     if (status == -1) {
@@ -222,7 +222,7 @@ dap_try( const char *exe, const char *command, CondorID &condorID )
   }
 
 
-  if (1 == sscanf(buffer, "request accepted by the server and assigned a dap_id: %d",
+  if (1 == sscanf(buffer, "Request accepted by the server and assigned a dap_id: %d",
                   & condorID._cluster)) {
   }
   
@@ -236,7 +236,7 @@ dap_submit( const char* cmdFile, CondorID& condorID,
 {
   char* command;
   int cmdLen;
-  const char * exe = "dap_submit";
+  const char * exe = "stork_submit";
 
   cmdLen = strlen( exe ) + strlen( cmdFile ) + 512;
   command = new char[cmdLen];
@@ -259,7 +259,7 @@ dap_submit( const char* cmdFile, CondorID& condorID,
   
   success = dap_try( exe, command, condorID );
   for (int i = 1 ; i < tries && !success ; i++) {
-      debug_printf( DEBUG_NORMAL, "dap_submit try %d/%d failed, "
+      debug_printf( DEBUG_NORMAL, "stork_submit try %d/%d failed, "
                      "will try again in %d second%s\n", i, tries, wait,
 					 wait == 1 ? "" : "s" );
       sleep( wait );
@@ -267,7 +267,7 @@ dap_submit( const char* cmdFile, CondorID& condorID,
 	  wait = wait * 2;
   }
   if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
-    dprintf( D_ALWAYS, "dap_submit failed after %d tr%s.\n", tries,
+    dprintf( D_ALWAYS, "stork_submit failed after %d tr%s.\n", tries,
 			tries == 1 ? "y" : "ies" );
     dprintf( D_ALWAYS, "submit command was: %s\n", command );
 	delete[] command;
@@ -277,3 +277,8 @@ dap_submit( const char* cmdFile, CondorID& condorID,
   return success;
 }
 //<-- DAP
+
+
+
+
+

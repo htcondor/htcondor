@@ -52,8 +52,8 @@ static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
-	    "\t\t-Daplog <dap_userlog>\n"                       //-->DAP
-	    "\t\t-Dapserver <dap server name>\n"                //-->DAP
+	    "\t\t-Storklog <stork_userlog>\n"                       //-->DAP
+	    "\t\t-Storkserver <stork server name>\n"                //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
@@ -201,17 +201,17 @@ int main_init (int argc, char ** const argv) {
            }
             condorLogName = argv[i];
 	//-->DAP
-	} else if (!strcmp("-Daplog", argv[i])) {
+	} else if (!strcmp("-Storklog", argv[i])) {
             i++;
             if (argc <= i) {
-                debug_printf( DEBUG_SILENT, "No dap log specified" );
+                debug_printf( DEBUG_SILENT, "No stork log specified" );
                 Usage();
            }
             dapLogName = argv[i];        
-	} else if (!strcmp("-Dapserver", argv[i])) {
+	} else if (!strcmp("-Storkserver", argv[i])) {
 	    i++;
 	    if (argc <= i) {
-	        debug_printf( DEBUG_SILENT, "No dap server specified" );
+	        debug_printf( DEBUG_SILENT, "No stork server specified" );
 	        Usage();
 	  }
 	    DAP_SERVER = argv[i];   
@@ -344,18 +344,27 @@ int main_init (int argc, char ** const argv) {
 		// Attempt to get the log file name(s) from the submit files;
 		// if that doesn't work, use the value from the command-line
 		// argument.
+    
 	MyString dagFileName(G.datafile);
 	MyString jobKeyword("job");
-    MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
 				dagFileName, jobKeyword, G.condorLogFiles);
-    if( msg != "" || G.condorLogFiles.number() == 0 ) {
+
+
+	// the part below prevents DAGs with consisting only from DaP jobs to run.
+	// it should be corrected!
+	/*
+	if( msg != "" || G.condorLogFiles.number() == 0 ) {
+
 		G.condorLogFiles.rewind();
 		while( G.condorLogFiles.next() ) {
 		    G.condorLogFiles.deleteCurrent();
 		}
 
 		G.condorLogFiles.append(condorLogName);
-	}
+	 }
+	*/ 
+
 
 	if( G.condorLogFiles.number() > 0 ) {
 		G.condorLogFiles.rewind();
@@ -369,8 +378,7 @@ int main_init (int argc, char ** const argv) {
     if( G.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
     }
-  
-
+    
     //
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
@@ -600,7 +608,8 @@ void dap_event_timer () {
 
     // If the log has grown
     if (G.dag->DetectDaPLogGrowth()) {
-        if (G.dag->ProcessLogEvents(DAPLOG) == false) {
+
+      if (G.dag->ProcessLogEvents(DAPLOG) == false) {
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 			main_shutdown_graceful();
 			return;

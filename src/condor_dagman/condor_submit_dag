@@ -208,10 +208,10 @@ if ( $job_log ){
 }
 # -->DAP
 if ( $dap_log ){
-  print "DaP Log file for all DaP jobs of this DAG      : $dap_log\n";
+  print "Stork Log file for all DaP jobs of this DAG      : $stork_log\n";
 }
 if ( $dap_server ){
-  print "DaP server to which DaP jobs will be submitted : $dap_server\n";
+  print "Stork server to which DaP jobs will be submitted : $stork_server\n";
 }
 # <--DAP
 if( $submit ) {
@@ -243,8 +243,8 @@ sub usage {
     print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
     print "    -log filename       (Specify the Condor log file shared by all Condor jobs in the DAG)\n";
 # -->DAP
-    print "    -daplog filename    (Specify the DaP log file shared by all DaP jobs in the DAG)\n";
-    print "    -dapserver hostname (Specify the hostname to submit DaP jobs)\n";
+    print "    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n";
+    print "    -storkserver hostname (Specify the hostname to submit DaP jobs)\n";
 # <--DAP
     print "    -notification value (Determines how much email you get from Condor)\n";
     print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
@@ -329,11 +329,11 @@ sub write_submit_file {
     if( $job_log ){
         $args = $args . " -Condorlog $job_log";
     }
-    if( $dap_log ){
-        $args = $args . " -Daplog $dap_log";
+    if( $stork_log ){
+        $args = $args . " -Storklog $stork_log";
     }
-    if( $dap_server ){
-        $args = $args . " -Dapserver $dap_server";
+    if( $stork_server ){
+        $args = $args . " -Storkserver $stork_server";
     }
     # <-- DAP
     if( $max_jobs ) {

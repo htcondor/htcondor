@@ -250,6 +250,7 @@ bool Dag::DetectDaPLogGrowth () {
 //-------------------------------------------------------------------------
 // Developer's Note: returning false tells main_timer to abort the DAG
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
+
  if (logsource == CONDORLOG){
     if (!_condorLogInitialized) {
       _condorLogInitialized = _condorLog.initialize(_condorLogFiles);
@@ -261,13 +262,14 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
     }
   }
 
+ 
  bool done = false;  // Keep scaning until ULOG_NO_EVENT
  bool result = true;
  static int log_unk_count = 0;
  static int ulog_rd_error_count = 0;
 
  while (!done) {
-        
+
         ULogEvent* e = NULL;
         ULogEventOutcome outcome;
 
@@ -284,7 +286,8 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
         
-        debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
+        //debug_printf( DEBUG_DEBUG_4, "Log outcome: %s\n",
+        debug_printf( DEBUG_NORMAL, "Log outcome: %s\n",
                       ULogEventOutcomeNames[outcome] );
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
@@ -292,7 +295,10 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
         switch (outcome) {
             
             //----------------------------------------------------------------
-          case ULOG_NO_EVENT:      
+          case ULOG_NO_EVENT:     
+	    
+	    debug_printf(DEBUG_NORMAL, "* NO EVENT *\n");
+ 
             done = true;
             break;
             //----------------------------------------------------------------
@@ -601,6 +607,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 									  expectedJob->GetJobName() );
 						// put expectedJob back onto submit queue
 						_submitQ->enqueue( expectedJob );
+
 						break;
 					}
 
@@ -701,7 +708,6 @@ Dag::StartNode( Job *node )
 int
 Dag::SubmitReadyJobs()
 {
-
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
