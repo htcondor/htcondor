@@ -1886,12 +1886,16 @@ void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                                                 pid, WEXITSTATUS(status) );
                 if( WEXITSTATUS(status) == JOB_NO_MEM ) {
                     swap_space_exhausted();
-                }
+                } else if( WEXITSTATUS(status) == JOB_NOT_STARTED ) {
+						/* unable to start job -- throw away match */
+					Relinquish(srec->match);
+					DelMrec(srec->match);
+				}
             } else if( WIFSIGNALED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
                                                 pid, WTERMSIG(status) );
             }
-            delete_shadow_rec( pid );
+			delete_shadow_rec( pid );
         }
     }
     if( sig == 0 ) {
@@ -2558,9 +2562,15 @@ void Scheduler::send_alive()
 			sock = new ReliSock(rec[i]->peer, 0);
             if(!sock->snd_int(ALIVE, TRUE))
             {
-                dprintf(D_PROTOCOL, "\t(Can't send alive message to %d)\n",
+                dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
                         rec[i]->peer);
 				delete sock;
+				/* If we can't contact the startd to send an alive message,
+				   and we don't have a job running on this machine, then
+				   throw away the record -- the startd is probably dead. */
+				if (rec[i]->shadowRec == NULL) {
+					DelMrec(rec[i]);
+				}
                 continue;
             }
 			delete sock;
