@@ -37,7 +37,8 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o GETWD.o GETLOGIN.o
 #	elif IS_I386_LINUX
 EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
-		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o GETLOGIN.o
+		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o GETLOGIN.o \
+		__PREV_FSTAT.o __PREV_LSTAT.o __PREV_STAT.o
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o 
@@ -199,6 +200,9 @@ uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKS
 
 #if (IS_I386_LINUX)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),__prev_stat.o,__PREV_STAT.o,stat,STAT)
+uppercase_target($(SIMPLE_LIBC),__prev_lstat.o,__PREV_LSTAT.o,lstat,LSTAT)
+uppercase_target($(SIMPLE_LIBC),__prev_fstat.o,__PREV_FSTAT.o,fstat,FSTAT)
 #endif
 
 #if (IS_X86_SOLARIS25)
