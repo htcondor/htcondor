@@ -314,8 +314,11 @@ V6_6_7_KRB_1_2_7_EXT	-a -a V6_6_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gahp/1.0.12
 
+# Externals needed for V6_6_8
+V6_6_8_EXT	-a V6_6_7_EXT
+
 # Externals needed for the head of the V6_6-branch
-V6_6_EXT	-a V6_6_7_EXT
+V6_6_EXT	-a V6_6_8_EXT
 
 # The common externals needed for all V6_7_* releases
 V6_7_COMMON_EXT	-a EXT_COMMON \
