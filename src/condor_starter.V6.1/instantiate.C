@@ -31,4 +31,6 @@
 template class List<UserProc>;
 template class HashTable<MyString, FileTransfer *>;
 template class HashBucket<MyString, FileTransfer *>;
+template class HashTable<int, FileTransfer *>;
+template class HashBucket<int, FileTransfer *>;
 template class Item<UserProc>;
