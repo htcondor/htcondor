@@ -791,10 +791,21 @@ Stream::code(struct utsname &n)
 int
 Stream::code(condor_mode_t &m)
 {
-	int y = m & (S_IRUSR|S_IWUSR|S_IXUSR|
-				 S_IRGRP|S_IWGRP|S_IXGRP|
-				 S_IROTH|S_IWOTH|S_IXOTH);
-	STREAM_ASSERT(code(y));
+	mode_t mask = 0, y = 0;
+	mask |= (S_IRUSR|S_IWUSR|S_IXUSR|
+			 S_IRGRP|S_IWGRP|S_IXGRP|
+			 S_IROTH|S_IWOTH|S_IXOTH);
+
+    if( _coding == stream_encode ) {
+		y = m & mask;
+	}
+
+ 	STREAM_ASSERT(code(y));
+
+    if( _coding == stream_decode ) {
+		m = (condor_mode_t)(y & mask);
+	}
+	
 	return TRUE;
 }
 
