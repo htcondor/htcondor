@@ -51,6 +51,7 @@
 #include "condor_ver_info.h"
 #include "grid_universe.h"
 #include "globus_utils.h"
+#include "env.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -3072,6 +3073,11 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 							env) < 0) {
 		env[0] = '\0';
 	}
+
+	// stick a CONDOR_ID environment variable in job's environment
+	char condor_id_string[32];
+	snprintf( condor_id_string, 32, "%d.%d", job_id->cluster, job_id->proc );
+	AppendEnvVariable( env, "CONDOR_ID", condor_id_string );
 
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
 							args) < 0) {
