@@ -62,25 +62,28 @@ typedef enum {
 #define set_user_priv_final() _set_priv(PRIV_USER_FINAL, __FILE__, __LINE__, 1)
 #define set_root_priv()	_set_priv(PRIV_ROOT, __FILE__, __LINE__, 1)
 
+#ifdef WIN32
+typedef int uid_t;
+typedef int gid_t;
+#endif
+
 void _condor_disable_uid_switching();
 void init_condor_ids();
 void init_user_ids(const char username[]);
 void uninit_user_ids();
-#if !defined(WIN32)
 void set_user_ids(uid_t uid, gid_t gid);
-#endif
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
+uid_t get_my_uid();
+gid_t get_my_gid();
 #if !defined(WIN32)
 uid_t get_condor_uid();
 gid_t get_condor_gid();
 uid_t get_user_uid();
 gid_t get_user_gid();
-uid_t get_my_uid();
-gid_t get_my_gid();
 uid_t get_real_condor_uid();
 gid_t get_real_condor_gid();
-char* get_condor_username();
 #endif
+char* get_condor_username();
 void display_priv_log();
 
 #if defined(__cplusplus)
