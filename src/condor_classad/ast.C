@@ -12,7 +12,7 @@
 #include "condor_classad.h"
 #include "condor_buildtable.h"
 
-extern void evalFromEnvironment (char *, EvalResult *);
+extern void evalFromEnvironment (const char *, EvalResult *);
 
 #define EatSpace(ptr)  while(*ptr != '\0') ptr++;
 

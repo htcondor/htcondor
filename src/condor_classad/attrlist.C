@@ -23,6 +23,7 @@ extern 	"C" int _EXCEPT_(char*, ...);
 extern	"C"	void dprintf(int, char* fmt, ...);
 extern  "C" int  xdr_mywrapstring (XDR *, char **);
 extern  "C" int store_stmt (EXPR *, CONTEXT *);
+extern void evalFromEnvironment (const char *, EvalResult *);
 
 ////////////////////////////////////////////////////////////////////////////////
 // AttrListElem constructor.

@@ -3,7 +3,7 @@
 #include <time.h>
 
 void
-evalFromEnvironment (char *name, EvalResult *val)
+evalFromEnvironment (const char *name, EvalResult *val)
 {
 	if (strcmp (name, "CurrentTime") == 0)
 	{
