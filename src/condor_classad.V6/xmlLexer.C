@@ -23,6 +23,8 @@
 #include "common.h"
 #include "xmlLexer.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 
 // Note that these must be in the same order as the enum TagID
@@ -149,7 +151,7 @@ SetLexText( const string &new_buffer)
 {
 	Initialize();
 	buffer        = new_buffer.c_str();
-	buffer_length = strlen(buffer);
+	buffer_length = new_buffer.length();
 	buffer_offset = -1;
 
 	return;
@@ -236,6 +238,7 @@ bool XMLLexer::
 GrabTag(void)
 {
 	bool    have_token;
+	int     start, count;
 	string  complete_tag; // the tag and it's attributes
 
 	current_token.token_type = tokenType_Tag;
@@ -247,10 +250,15 @@ GrabTag(void)
 		buffer_offset++;
 	}
 
+	start = buffer_offset;
+	count = 0;
 	while (buffer_offset < buffer_length && buffer[buffer_offset] != '>') {
-		complete_tag += buffer[buffer_offset];
+		//complete_tag += buffer[buffer_offset];
 		buffer_offset++;
+		count++;
 	}
+	// With gcc-2.x's STL, this is faster than using a bunch of += statements.
+	complete_tag.assign(buffer+start, count);
 
 	if (buffer[buffer_offset] != '>') { 
 		// We have an unclosed tag. This will not do. 
@@ -266,7 +274,8 @@ void XMLLexer::
 BreakdownTag(const char *complete_tag)
 {
 	int length, i;
-	
+	int start, count;
+
 	length = strlen(complete_tag);
 	
 	// Skip whitespace
@@ -287,10 +296,15 @@ BreakdownTag(const char *complete_tag)
 	
 	// Now pull out the tag name
 	current_token.text = "";
+	start = i;
+	count = 0;
 	while (i < length && i != '>' && !isspace(complete_tag[i])) {
-		current_token.text += complete_tag[i];
+		//current_token.text += complete_tag[i];
 		i++;
+		count++;
 	}
+	// With gcc-2.x's STL, this is faster than using a bunch of += statements.
+	current_token.text.assign(complete_tag+start, count);
 
 	// Figure out which tag it is
 	current_token.tag_id = tagID_NoTag;
@@ -315,12 +329,17 @@ BreakdownTag(const char *complete_tag)
 		}
 
 		// Now take text up to a whitespace or equal sign. This is the name
+		start = i;
+		count = 0;
 		while (i < length 
 			   && !isspace(complete_tag[i]) 
 			   && complete_tag[i] != '=') {
-			name += complete_tag[i];
+			//name += complete_tag[i];
 			i++;
+			count++;
 		}
+		// With gcc-2.x's STL, this is faster than using a bunch of += statements.
+		name.assign(complete_tag+start, count);
 
 		// Now skip whitespace and equal signs
 		// Note that this allows some technically illegal things
