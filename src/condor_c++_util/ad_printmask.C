@@ -23,6 +23,8 @@
 #include "condor_common.h"
 #include "ad_printmask.h"
 #include "escapes.h"
+#include "MyString.h"
+#include "condor_string.h"
 
 static char *new_strdup (const char *);
 
@@ -133,17 +135,16 @@ display (AttrList *al)
 	char 	*attr, *alt;
 	ExprTree *tree, *rhs;
 	EvalResult result;
-	char * 	retval = new char[1024 * 8];
+	MyString  retval("");
 	int		intValue;
 	float 	floatValue;
-	char  	stringValue[1024];
+	MyString stringValue;
 	char*	bool_str = NULL;
+	char *value_from_classad = NULL;
 
 	formats.Rewind();
 	attributes.Rewind();
 	alternates.Rewind();
-
-	retval[0] = '\0'; // Clear the return value;
 
 	// for each item registered in the print mask
 	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
@@ -156,8 +157,8 @@ display (AttrList *al)
 				if (!(tree = al->Lookup (attr)))
 				{
 					if ( alt ) {
-						sprintf( stringValue, "%s", alt );
-						strcat( retval, stringValue );
+						stringValue.sprintf( "%s", alt );
+						retval += stringValue;
 					}
 					continue;
 				}
@@ -168,19 +169,18 @@ display (AttrList *al)
 					switch (result.type)
 					{
 					case LX_STRING:
-						sprintf( stringValue, fmt->printfFmt,
-							result.s );
-						strcat( retval, stringValue );
+						stringValue.sprintf( fmt->printfFmt, result.s );
+						retval += stringValue;
 						break;
 
 					case LX_FLOAT:
-						sprintf( stringValue, fmt->printfFmt, result.f);
-						strcat( retval, stringValue );
+						stringValue.sprintf( fmt->printfFmt, result.f );
+						retval += stringValue;
 						break;
 
 					case LX_INTEGER:
-						sprintf( stringValue, fmt->printfFmt, result.i);
-						strcat( retval, stringValue );
+						stringValue.sprintf( fmt->printfFmt, result.i );
+						retval += stringValue;
 						break;
 
 					case LX_UNDEFINED:
@@ -196,16 +196,16 @@ display (AttrList *al)
 						if( rhs ) {
 							rhs->PrintToNewStr( &bool_str );
 							if( bool_str ) {
-								sprintf( stringValue, fmt->printfFmt,
-										 bool_str );
-								strcat( retval, stringValue );
+								stringValue.sprintf(	fmt->printfFmt,
+														bool_str );
+								retval += stringValue;
 								free( bool_str );
 								break;
 							}
 						}
 
 					default:
-						strcat( retval, alt );
+						retval += alt;
 						continue;
 					}
 				}
@@ -213,34 +213,36 @@ display (AttrList *al)
 
 		  	case INT_CUSTOM_FMT:
 				if( al->EvalInteger( attr, NULL, intValue ) ) {
-					strcat( retval, (fmt->df)( intValue , al ) );
+					retval += (fmt->df)( intValue , al );
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 
 		  	case FLT_CUSTOM_FMT:
 				if( al->EvalFloat( attr, NULL, floatValue ) ) {
-					strcat( retval, (fmt->ff)( floatValue , al ) );
+					retval += (fmt->ff)( floatValue , al );
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 
 		  	case STR_CUSTOM_FMT:
-				if( al->EvalString( attr, NULL, stringValue ) ) {
-					strcat( retval, (fmt->sf)( stringValue , al ) );
+				if( al->EvalString( attr, NULL, &value_from_classad ) ) {
+					retval += (fmt->sf)(value_from_classad, al);
+					free(value_from_classad);
 				} else {
-					strcat( retval, alt );
+					retval += alt;
 				}
 				break;
 	
 			default:
-				strcat( retval, alt );
+				retval += alt;
 		}
 	}
 
-	return retval;
+	// Convert return MyString to new char *.
+	return strnewp(retval.Value() );
 }
 
 
