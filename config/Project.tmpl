@@ -1,0 +1,243 @@
+TILDE = Tilde
+LIBC = LibC
+SIMPLE_LIBC = SimpleLibC
+CRT0 = Crt0
+SYSCALLS_EXP = SyscallsExp
+
+TOP = Top
+INSTALL_DIR = InstallDir
+TMP_DIR = TmpDir
+
+PLATFORM_DIR =		$(TOP)/Platform
+RELEASE_DIR =		$(PLATFORM_DIR)/release_dir
+LIB_DIR =			$(RELEASE_DIR)/lib
+CONFIG_DIR = 		$(TOP)/config
+SRC_TREE =			$(TOP)/src
+DOC_TREE =			$(TOP)/doc
+INCLUDE_DIR =		$(SRC_TREE)/h
+NEW_INCLUDE_DIR =	$(SRC_TREE)/condor_includes
+C_PLUS_INCLUDE =	../condor_c++_util
+PS_DIR =			$(DOC_TREE)/POSTSCRIPT
+CAT_DIR = 			$(DOC_TREE)/CAT
+PLATFORM =			Platform
+
+LIBX = XLibPath
+LIBXEXT = XExtLibPath
+CC = CCompiler
+CPlusPlus = CPlusCompiler
+MKDEPEND = MkDepend
+STAR	= *
+
+SYSCALL_LIB = syscall_lib
+
+#define UNIX_RT0    $(CRT0)
+#define UNIX_LIBC   $(LIBC)
+#define CKPT_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
+#define CONDOR_RT0	$(RELEASE_DIR)/lib/condor_rt0.o
+#if IS_SGI_IRIX331
+#define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a $(LIBC)
+#define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a $(LIBC)
+#else
+#define CKPT_LIBC	$(RELEASE_DIR)/lib/libckpt.a
+#define CONDOR_LIBC	$(RELEASE_DIR)/lib/libcondor.a
+#endif
+
+#if HAS_NDBM
+#define DbmFlag -DNDBM
+#else
+#define DbmFlag
+#endif
+LIBDBM = DbmLibrary
+
+#if HAS_VOID_SIGNAL_RETURN
+#define SigFlag -DVOID_SIGNAL_RETURN
+#else
+#define SigFlag
+#endif
+
+#if IS_R6000_AIX31 || IS_R6000_AIX32
+#define PsFlag -ef
+#else
+#define PsFlag -ax
+#endif
+
+
+
+#define AR_DELETE(libname,objects) ar d libname objects
+#define AR_EXTRACT(libname,objects) ar x libname objects
+
+#if HAS_AR_S_OPTION
+#define AR_REPLACE(libname,objects) ar vrs libname objects
+#else
+#define AR_REPLACE(libname,objects) \
+	ar vr libname objects @@\
+	ranlib libname
+#endif
+
+#if IS_SGI_IRIX331 || IS_HPPAR_HPUX8
+#define RANLIB_TOUCH(libname) /**/
+#else
+#if HAS_RANLIB_TOUCH
+#define RANLIB_TOUCH(libname) ranlib -t libname
+#else
+#define RANLIB_TOUCH(libname) ranlib libname
+#endif
+#endif
+
+#ifdef XIncludeFlag
+#define XInclude XIncludeFlag
+#else
+#define XInclude
+#endif
+
+#if IS_R6000_AIX32
+PLATFORM_C_FLAGS = -qsrcmsg
+#endif
+
+
+
+STD_C_PLUS_FLAGS =  \
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D/**/Architecture -D/**/OperatingSystem -DNFSFIX DbmFlag SigFlag CompatFlags -g
+STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
+
+
+/*
+** Platform specific rules for building "condor" versions of user
+** programs written in C and FORTRAN.  The "Ckpt" versions have checkpointing,
+** but no remote execution library.  The "Condor" versions have both
+** checkpointing and remote execution.  The BSD rule works for many
+** platforms, so we put it here rather than repeating in every Platform.cf file.
+*/
+#if IS_R6000_AIX31 || IS_R6000_AIX32
+#define Build_C(program,objlist,libs,startup,libc,comp)		@@\
+program: objlist libs startup libc  						@@\
+	comp $(CFLAGS) -o program objlist libs
+#define BuildSimple_C(p,o,l) Build_C(p,o,l,UNIX_RT0,UNIX_LIBC,bsdcc)
+#define BuildCkpt_C(p,o,l) Build_C(p,o,l,CKPT_RT0,CKPT_LIBC,ckptcc)
+#define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC,condorcc)
+#endif
+
+#if IS_R6000_AIX31 || IS_R6000_AIX32
+#define Build_F(name,obj,lib,startup,libc,comp)				@@\
+name: obj lib startup libc 									@@\
+	comp $(FFLAGS) -o name obj lib
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC,xlf)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC,ckptxlf)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC,condorxlf)
+#endif
+
+
+#if IS_SPARC_SUNOS41 || IS_MC68020_SUNOS41 || IS_SPARC_CMOS
+#define Build_C(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld -o program -dc -e start -Bstatic startup objlist libs libc
+#define BuildSimple_C(p,o,l) Build_C(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_C(p,o,l) Build_C(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_MC68020_SUNOS41
+#define Build_F(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld -dc -dp -e start -Bstatic -u _MAIN_ -u _main -X -o program startup /usr/lib/Fcrt1.o -L/usr/lib/fsoft objlist -lF77 -lI77 -lU77 -lm libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_SPARC_SUNOS41 || IS_SPARC_CMOS
+#define Build_F(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld FortranLeft -o program startup FortranMiddle objlist libs FortranRight libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+
+
+#if IS_MIPS_ULTRIX42 || IS_VAX_ULTRIX || IS_MC68020_BSD43 || IS_IBM032_BSD43 || IS_I386_DYNIX
+#define Build_C(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld -o program startup objlist libs libc
+#define BuildSimple_C(p,o,l) Build_C(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_C(p,o,l) Build_C(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_HPPAR_HPUX8
+#define Build_C(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld -o program -a archive startup objlist libs libc /usr/lib/end.o
+#define BuildSimple_C(p,o,l) Build_C(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_C(p,o,l) Build_C(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_SGI_IRIX331
+#define Build_C(program,objlist,libs,startup,libc)			@@\
+program: objlist libs startup libc							@@\
+	ld -o program startup objlist libs libc CrtN
+#define BuildSimple_C(p,o,l) Build_C(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_C(p,o,l) Build_C(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_MIPS_ULTRIX42
+#define Build_F(name,obj,lib,startup,libc)					@@\
+name: obj lib startup libc									@@\
+	ld -o name -G 8 -g0 -nocount startup -count obj -nocount lib -u main -lF77 -lI77 -lU77 -lm libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_SGI_IRIX331
+#define Build_F(name,obj,lib,startup,libc)					@@\
+name: obj lib startup libc									@@\
+	ld -o name -G 8 -g0 -nocount startup -count obj -nocount lib -u main -lF77 -lI77 -lU77  -lisam -lm libc CrtN
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_VAX_ULTRIX
+#define Build_F(name,obj,lib,startup,libc,main_flags)		@@\
+name: obj lib startup libc									@@\
+	ld -o name -X main_flags startup obj lib -lU77 -lF77 -lI77 -lm libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC, -u _MAIN_)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC, -u _main -u _MAIN_)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC, -u _main -u _MAIN_)
+#endif
+
+#if IS_IBM032_BSD43
+#define Build_F(name,obj,lib,startup,libc,main_flags)		@@\
+name: obj lib startup libc									@@\
+	ld -o name -X main_flags startup obj lib -lU77 -lF77 -lI77 -lm libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC, -u _MAIN_)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC, -u _main -u _MAIN_)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC, -u _main -u _MAIN_)
+#endif
+
+#if IS_I386_DYNIX
+#define Build_F(name,obj,lib,startup,libc)					@@\
+name: obj lib startup libc									@@\
+	ld -o name -X startup obj lib -lf -u __flsbuf libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+#if IS_HPPAR_HPUX8
+#define Build_F(name,obj,lib,startup,libc)					@@\
+name: obj lib startup libc									@@\
+	ld -o name -a archive -x startup obj lib -lcl libc
+#define BuildSimple_F(p,o,l) Build_F(p,o,l,UNIX_RT0,UNIX_LIBC)
+#define BuildCkpt_F(p,o,l) Build_F(p,o,l,CKPT_RT0,CKPT_LIBC)
+#define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
+#endif
+
+
+#ifndef TypicalMemory
+#define TypicalMemory 12
+#endif

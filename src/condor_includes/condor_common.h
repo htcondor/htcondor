@@ -1,0 +1,9 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <limits.h>
+#include <string.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include "_condor_fix_types.h"
+#include <errno.h>

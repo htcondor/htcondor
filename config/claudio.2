@@ -1,0 +1,97 @@
+From cicci@hps.cern.ch Tue Jul 21 11:10 MET 1992
+Received: from dxmint.cern.ch by piaf5.cern.ch with SMTP
+	(16.8/16.2) id AA00749; Tue, 21 Jul 92 11:10:56 +0200
+Return-Path: <cicci@hps.cern.ch>
+Received: by dxmint.cern.ch (dxcern) (5.57/3.14)
+	id AA18906; Tue, 21 Jul 92 11:11:06 +0200
+Received: by hps.cern.ch
+	(15.11/15.6+ISC) id AA23752; Tue, 21 Jul 92 11:12:05 wet
+From: Claudio Condini <cicci@hps.cern.ch>
+Message-Id: <9207211012.AA23752@hps.cern.ch>
+Subject: Re:  swap info. (fwd)
+To: condor@piaf5.cern.ch
+Date: Tue, 21 Jul 92 11:12:04 WETDST
+Mailer: Elm [revision: 64.9]
+
+
+Mike,
+
+This is the message from Alan.  Unfortunately 8.07 is what we have
+currently, I hope we can circumvent the problems with it.
+
+Cheers
+
+Claudio.
+
++---------------------------------------------------------------+
+|   cicci@hplb.hpl.hp.com        |   Claudio Condini            |
+|   cicci@hpl.hp.co.uk           |   c/o Hewlett-Packard S.A.   |
+|   cicci@hps.cern.ch            |   Route du Nant-d'Avril 150  |
+|   Tel (CERN): +41 22 767 4987  |   1217 Meyrin 2, Geneva      |
+|               +41 22 767 6659  |   Switzerland                |
+|   Fax (CERN): +41 22 767 7155  |                              |
++---------------------------------------------------------------+
+
+========================================================================
+> 
+> I'm back from a week away...
+> 
+> > One of the think they need to know before they move a process on a
+> > machine is whether the machine has actually got enough resources to
+> > run the process.  So Mike asked me whether there is a way to learn the
+> > available swap on a machine running HP-UX.  He mentioned pstat or
+> > reading directly the relevant information from /dev/kmem.  Someone in
+> > Bristol also mentioned /etc/swapinfo but I am not sure whether it's
+> > good for the job.
+> 
+> Swapinfo is what you need, if you don't mind running an external
+> command.  It's available starting with S700 8.07 and S300/400/800 next
+> major release.  The 8.07 version had some problems, see attached.
+> 
+> At this time there is no pstat() call for getting the swap info from
+> the kernel.  You must read /dev/kmem and it's not documented and it's
+> not trivial to get it right either.
+> 
+> Thanks,
+> Alan Silverstein
+> 
+> 
+> 	PROBLEMS WITH SWAPINFO:
+> 
+> 	* HOLD SPACE:  Swapinfo reports "hold space" and supports an -h
+> 	  option.  Latest word from Jack Applin is that this is
+> 	  legitimate, the space is not actually allocated on any device
+> 	  or file system.  I don't remember why, but earlier I thought
+> 	  it was in fact allocated, and swapinfo was wrong.  If the
+> 	  "hold space" concept is a correct representation, then no
+> 	  major changes are required; swapinfo already uses swapspc_max
+> 	  and swapspc_cnt.
+> 
+> 	* SWAP CHUNKS:  Swapinfo doesn't know that space is taken from
+> 	  file systems in 2Mb (swapchunk) sized bites.  It should
+> 	  reflect the actual space taken, somehow, more accurately.
+> 	  Merely showing the space allocated to processes gives an
+> 	  incorrect idea how much is tied up and unavailable to user
+> 	  processes.  But if it merely rounds up the space used on a
+> 	  file system to a multiple of swapchunk, this would overstate
+> 	  the swap space not available for new processes.  Perhaps it
+> 	  needs to explicitly represent space grabbed by the swap system
+> 	  but not on hold or allocated to processes, so the total (file
+> 	  system + free + in use by swap) always adds up.
+> 
+> 	* KERNEL INFO:  Swapinfo needs correct, reliable information on
+> 	  the state of the swap system, preferably through a pstat()
+> 	  call (see related proposal).  Currently it gets its
+> 	  information from reading /dev/kmem and the values are not
+> 	  documented.  Furthermore, S800 9.0 memory reading is
+> 	  apparently broken, see FSDdt09939.
+> 
+> 	* MANUAL ENTRY:  After I revise swapinfo and its manual entry
+> 	  once more, I want someone from the kernel group who *knows*
+> 	  the swap system to non-author code read both for correctness.
+> 	  Given the history of the command so far, I think this is
+> 	  warranted.
+> 
+> 	* DEVNM:  Swapinfo needs to start using devnm(3) to support LVM.
+> 
+

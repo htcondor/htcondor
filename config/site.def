@@ -1,0 +1,14 @@
+#define Top 				$(TILDE)/CONDOR
+#define InstallDir				/usr/psup/condor
+#define LocalDir			$(TILDE)
+#define TmpDir				/tmp
+
+#if MALLOC_DEBUG
+#define CFlags				-DMALLOC_DEBUG
+#else
+#define CFlags				/**/
+#endif
+
+#define CentralMgrHost		frigg.cs.wisc.edu
+#define CondorAdministrator	condor-admin
+#define YpLib
