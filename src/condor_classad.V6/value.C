@@ -265,7 +265,7 @@ ostream& operator<<(ostream &stream, Value &value)
 		stream << value.integerValue;
 		break;
 	case Value::REAL_VALUE:
-		printf("%18f", value.realValue);
+		stream << value.realValue;
 		break;
 	case Value::RELATIVE_TIME_VALUE:
 		stream << "time value";
