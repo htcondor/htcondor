@@ -971,15 +971,15 @@ It serves as a quick reference.
 
 \item[\Expr{MaxJobRetirementTime}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
-seconds) that the startd is willing to wait for the job to finish on
-its own.  The clock starts when the job is started and is paused
-during any suspension, so the job may count on at least the specified
-amount of runtime without getting killed by the startd.  The job may
+seconds) that the startd will wait for the job to finish naturally
+(without any kill signals from the startd).  The clock starts when the
+job is started and is paused during any suspension.  The job may
 provide its own expression for \Expr{MaxJobRetirementTime}, but this
 can only be used to take \emph{less} than the time granted by the
 startd, never more.  (For convenience, standard universe and
-nice\_user jobs have a default retirement time of 0, so they will
-normally not wait in retirement.)
+nice\_user jobs are submitted with a default retirement time of 0, so
+they will never wait in retirement unless the user overrides the
+default.)
 
 Once the job finishes or if the retirement time expires, the machine
 enters the Preempting state.
