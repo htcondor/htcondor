@@ -5016,7 +5016,10 @@ int DaemonCore::Create_Process(
 									 closed_fds[i], strerror(errno) );
 						}
 					}
-					close( fd_null );
+					// Close the /dev/null descriptor _IF_ it's not stdin/out/err
+					if ( fd_null > 2 ) {
+						close( fd_null );
+					}
 				}
 			}
         }

@@ -1300,7 +1300,8 @@ int main( int argc, char** argv )
 							 NULL_FILE, fd, strerror(errno) );
 				}
 			}
-			if ( fd >= 0 ) {
+			// Close the /dev/null descriptor _IF_ it's not stdin/out/err
+			if ( fd_null > 2 ) {
 				close( fd );
 			}
 		}
