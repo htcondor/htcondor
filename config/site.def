@@ -52,8 +52,8 @@
 GAHP_DIR = /p/condor/workspaces/epaulson/gahp.V65/bin
 
 #define USE_GLOBUS_OPENSSL YES
-OpenSSLPath        = /unsup/globus-2.2.3
-GlobusPath = /unsup/globus-2.2.3
+OpenSSLPath        = /unsup/globus-2.2.4
+GlobusPath = /unsup/globus-2.2.4
 
 #endif  /* BeforeVendorCF */
 
