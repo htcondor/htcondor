@@ -301,8 +301,6 @@ MAIN( int argc, char *argv[], char **envp )
 		dprintf( D_ALWAYS, "fd number is %d\n", cmd_fd );
 		delay();
 #endif
-		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
-		pre_open( cmd_fd, TRUE, FALSE, FALSE );
 
 #if 0
 		dprintf( D_ALWAYS, "\nBefore reading commands\n" );
