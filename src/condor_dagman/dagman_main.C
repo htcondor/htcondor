@@ -91,6 +91,7 @@ Global::Global() :
 	rescue_file (NULL),
 	paused (false),
 	submit_delay (0),
+	max_submit_attempts (0),
 	datafile (NULL)
 {
 }
@@ -106,6 +107,8 @@ bool
 Global::Config()
 {
 	G.submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	G.max_submit_attempts =
+		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 10 );
 	G.startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
 	return true;

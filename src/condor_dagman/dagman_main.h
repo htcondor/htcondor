@@ -38,6 +38,9 @@ class Global {
 	// number of seconds to wait before consecutive calls to
 	// condor_submit (or dap_submit, etc.)
     int submit_delay;
+		// number of times in a row to attempt to execute
+		// condor_submit (or dap_submit) before giving up
+    int max_submit_attempts;
     char *datafile;
 	StringList condorLogFiles;
 		// whether to peform expensive cycle-detection at startup
