@@ -44,7 +44,7 @@ getcwd( char *path, size_t size )
 /* We want to remap these underscore versions so we don't miss them. */
 REMAP_ONE( getwd, _getwd, char *, char * )
 REMAP_ONE( getwd, __getwd, char *, char * )
-#if !defined(IRIX62)
+#if !defined(IRIX)
 REMAP_TWO( getcwd, _getcwd, char *, char *, size_t )
 REMAP_TWO( getcwd, __getcwd, char *, char *, size_t )
 #else

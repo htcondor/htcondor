@@ -5,4 +5,3 @@
 #define PlatformFlags		-DIRIX65
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
-

@@ -40,11 +40,11 @@ STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
 
-ifdef SMP_NUM_JOBS
+#ifdef SMP_NUM_JOBS
 SMP_FLAGS = -j $(SMP_NUM_JOBS)
-else
+#else
 SMP_FLAGS =
-endif
+#endif
 
 #define UNIX_RT0	$(CRT0)
 #define UNIX_LIBC	$(LIBC)

@@ -70,7 +70,7 @@ sysapi_load_avg_raw(void)
   }
 }
 
-#elif defined(IRIX53) || defined(IRIX62)
+#elif defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
 
 #include "condor_uid.h"
 
@@ -533,7 +533,7 @@ int main()
 /*----------------------------------------------------------------------*/
 /* only include this helper function on these architectures */
 
-#if defined(Solaris) || defined(IRIX53) || defined(IRIX62)
+#if defined(Solaris) || defined(IRIX53) || defined(IRIX62) || defined(IRIX65)
 
 /*
  *  We will use uptime(1) to get the load average.  We will return the one
@@ -651,5 +651,5 @@ lookup_load_avg_via_uptime()
 	return DEFAULT_LOADAVG;
 }
 
-#endif /* #if defined(Solaris) || defined(IRIX53) || defined(IRIX62) */
+#endif /* #if defined(Solaris) || defined(IRIX53) || defined(IRIX62) || defined(IRIX(65) */
 

@@ -9,6 +9,8 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_SGI_IRIX62
 OS = IRIX62
+#elif IS_SGI_IRIX65
+OS = IRIX65
 #else
 OS = OperatingSystem
 #endif

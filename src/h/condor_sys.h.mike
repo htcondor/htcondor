@@ -31,11 +31,7 @@
 #include "syscall.aix.h"
 #endif
 
-#if defined(IRIX331)
-#include <sys.s>
-#endif
-
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331)
+#if !defined(AIX31) && !defined(AIX32)  
 #include <syscall.h>
 #endif
 

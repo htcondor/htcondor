@@ -102,26 +102,45 @@ export CONDOR_LD_DIR
 PATH=$PATH:/bin:/usr/bin
 
 # Figure out what architecture we're running on 
-os=`uname`
+
+# Make sure if we get back something that begins with "IRIX" that we
+# strip off anything after it (e.g. "IRIX64", etc).
+os=`uname -s | sed 's/IRIX.*/IRIX/'`
+
 osver=`uname -r`
 if [ $os = "HP-UX" ]; then
 	osmajver=`uname -r | awk -F. '{print $2}' -`
 else
 	osmajver=`uname -r | awk -F. '{print $1}' -`
 fi
+
 osfull="$os$osmajver"
 
 # Determine if the system ld has been replaced with our ld script
 # or not.
 CONDOR_FULLINSTALL=false
+abi=""
+
 case $os in
-	IRIX | IRIX5 | IRIX53 | IRIX62 | IRIX63 | IRIX64 )
+	IRIX )
 		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
 			CONDOR_FULLINSTALL=true
 		fi
-		# Also, on IRIX, set SGI_ABI environment variable to old 32-bit code
-		# only, since that is what condor_syscall_lib expects.
-		SGI_ABI=-32
+		
+		#6/3/99 mikeu: we need to support use of all three ABIs, so we must
+		#figure out which one to use: -o32, -n32 or -64
+		abi=`printenv SGI_ABI`  #extract from ENV
+
+		if [ X$abi = X ]; then
+		  #if not overridden in env, then use system default
+		  abi=-`sed -e 's/.*abi=//' -e 's/:.*//' /etc/compiler.defaults`
+		fi
+		#O32 ABI might be specified as -o32 or -32, maybe even -O32
+		if [ X$abi = X-32 -o X$abi = X-O32 ]; then
+			abi="-o32"
+		fi
+
+		SGI_ABI=$abi
 		export SGI_ABI
 		;;
 	HP-UX )
@@ -238,7 +257,7 @@ fi
 
 case $os in 
 
-	IRIX | IRIX62 | IRIX63 | IRIX64 | OSF1 )
+	IRIX | OSF1 )
 		if [ $myname = "cc" ]; then
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi

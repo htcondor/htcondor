@@ -79,7 +79,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 {
 
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
-#if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
+#if ( defined(Solaris251) || defined(IRIX) || defined(OSF1) )
 
 	char path[64];
 	struct prpsinfo pri;
@@ -132,7 +132,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			nowmajf = pru.pr_majf;  
 #endif
 
-#ifdef IRIX62   // dang things named differently in irix.
+#ifdef IRIX   // dang things named differently in irix.
 			nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
 			nowmajf = pru.pu_majf;  
 #endif
@@ -202,7 +202,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return rval;
 
-#endif /* defined(Solaris251) || defined(IRIX62) || defined(OSF1) */
+#endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
 
 // This is the version of getProcInfo for Solaris 2.6 
 #ifdef Solaris26 
@@ -844,7 +844,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 }
 #endif /* OSF1 */
 
-#ifdef IRIX62
+#ifdef IRIX
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
@@ -862,7 +862,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = rmi.freemem * pagesize;
 	return 0;
 }
-#endif /* IRIX62 */
+#endif /* IRIX */
 
 #ifdef HPUX
 int

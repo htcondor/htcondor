@@ -78,7 +78,7 @@ REMOTE_syscall( int syscall_num, ... )
 	int		rval;
 	sigset_t	omask;
 	va_list ap;
-#if defined(USE_STUB_CLUMPS) || defined(IRIX53)
+#if defined(USE_STUB_CLUMPS) || defined(IRIX)
 	int keep_going = 0;
 #endif
 

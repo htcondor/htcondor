@@ -24,7 +24,7 @@
 
 #define _FIX_SETJMP
 
-#ifdef IRIX53
+#ifdef IRIX
 #define _save_posix _POSIX90
 #define _save_ansi _NO_ANSIMODE
 #undef _POSIX90
@@ -47,7 +47,7 @@
 #	define __FAVOR_BSD
 #endif
 
-#ifdef IRIX53
+#ifdef IRIX
 #undef _POSIX90
 #undef _NO_ANSIMODE
 #define _POSIX90 _save_posix

@@ -5,7 +5,12 @@ all_target($(NAME))
 CKPT_FLAG = -DNO_CKPT
 #endif
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
+#if (IS_LINUX)
+LDFLAGS = KernLib RpcLib -lbfd -liberty
+#else
+LDFLAGS = KernLib SocketLib RpcLib MldLib
+#endif
 
 REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/senders.o \
@@ -16,11 +21,7 @@ REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/xfer_file.o
 LIB = $(REMOTE_SYSCALL_LIB) $(STD_LIBS)
 
-#if IS_SGI_IRIX62
-OS = IRIX62
-#else
 OS = OperatingSystem
-#endif
 
 CLASS_LIB_OBJ = alarm.o
 

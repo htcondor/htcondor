@@ -27,9 +27,7 @@
 #include "syscall.aix.h"
 #endif
 
-#if defined(IRIX331)
-#include <sys.s>
-#elif defined(IRIX53)
+#if defined(IRIX)
 #	undef SYSVoffset
 #	undef __SYS_S__
 #	include <sys.s>
@@ -41,7 +39,7 @@
 #include <sys/syscall.h>
 #endif
 
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(Solaris) && !defined(IRIX53) && !defined(WIN32)
+#if !defined(AIX31) && !defined(AIX32)  && !defined(Solaris) && !defined(IRIX) && !defined(WIN32)
 #include <syscall.h> 
 #endif
 

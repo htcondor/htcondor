@@ -23,7 +23,7 @@
 #ifndef __CONDOR_EVENT_H__
 #define __CONDOR_EVENT_H__
 
-#if defined(IRIX62)
+#if defined(IRIX)
 #   ifdef _NO_ANSIMODE
 #       define _TMP_NO_ANSIMODE
 #   endif
@@ -33,7 +33,7 @@
 #       define _NO_ANSIMODE
 #       undef _TMP_NO_ANSIMODE
 #   endif
-#endif   /* IRIX62 */
+#endif   /* IRIX */
 
 #define GENERIC_EVENT 1
 

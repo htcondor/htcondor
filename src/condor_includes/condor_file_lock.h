@@ -61,7 +61,7 @@
 #include "fake_flock.h"
 #endif
 
-#if defined(IRIX53)
+#if defined(IRIX)
 #define CONDOR_USE_FLOCK 0
 #include <sys/file.h>
 #endif

@@ -48,10 +48,10 @@
 #	endif
 #endif
 
-#if defined( IS_IRIX6 )
+#if defined( IS_IRIX62 )
 #	define PlatformIncludeFile <SGI_IRIX.cf>
 #	define OSVersionIncludeFile <SGI_IRIX62.cf>
-#	undef IS_IRIX6
+#	undef IS_IRIX62
 #endif
 
 #if defined( IS_IRIX65 )

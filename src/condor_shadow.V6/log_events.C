@@ -36,6 +36,9 @@
 #include "condor_attributes.h"
 #include "condor_io.h"
 
+#if !defined( WCOREDUMP )
+#define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
+#endif
 extern UserLog		ULog;
 
 extern int JobStatus;

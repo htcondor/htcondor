@@ -11,8 +11,8 @@
 #include "switches.remap-SOLARIS26.h"
 #endif
 
-#ifdef IRIX62
-#include "switches.remap-IRIX62.h"
+#ifdef IRIX
+#include "switches.remap-IRIX.h"
 #endif
 
 #ifdef LINUX

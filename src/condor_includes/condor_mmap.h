@@ -32,7 +32,7 @@
 #	else
 #		define MMAP_T void*
 #	endif
-#elif defined(IRIX62)
+#elif defined(IRIX)
 #	define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #	define MMAP_T void*
 #elif defined(Solaris)

@@ -3,6 +3,7 @@ all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LDFLAGS = SocketLib 
 LIB = $(STD_LIBS)
 
 OBJ = prio.o

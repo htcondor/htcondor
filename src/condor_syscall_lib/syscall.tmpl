@@ -685,7 +685,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) && !defined(HPUX)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
@@ -743,7 +743,7 @@ not_supported{
 
 #if defined(LINUX) || defined(Solaris26)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(IRIX62) || defined(OSF1)
+#elif defined(IRIX) || defined(OSF1)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
@@ -762,7 +762,7 @@ not_supported{
 		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
-#	if defined(Solaris) || defined(IRIX62)
+#	if defined(Solaris) || defined(IRIX)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
@@ -776,14 +776,14 @@ not_supported{
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) && !defined(HPUX)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX) && !defined(HPUX)
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out code_bytes_bool( addr, nel * lel );
 		alloc( addr, nel * lel );
 	}
 #endif
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(IRIX65)
 	int gethostname( char *address, size_t address_len ) {
 #else 
 	int gethostname( char *address, int address_len ) {
@@ -794,7 +794,7 @@ not_supported{
 	int getdtablesize();
 
 	not_supported {
-#if defined(LINUX) || defined(OSF1) || defined(IRIX62)
+#if defined(LINUX) || defined(OSF1) || defined(IRIX)
 		int select(int numfds, fd_set *readfds, fd_set *writefds,
 			fd_set *exceptfds, struct timeval *timeout);
 #else
@@ -962,7 +962,7 @@ not_supported{
 		}
 #endif
 		pid_t getpgid( pid_t pid );
-#if defined(Solaris) || defined(LINUX) || defined(IRIX62) || defined(HPUX)
+#if defined(Solaris) || defined(LINUX) || defined(IRIX) || defined(HPUX)
 	not_supported { 
 		int mvalid( char * addr, size_t len, int prot ) {
 			out code_bytes_bool( addr, len );
@@ -978,7 +978,7 @@ not_supported{
 		}
 
 		int uswitch( int cmd, int value );
-#endif /* Solaris || Linux || IRIX62 */
+#endif /* Solaris || Linux || IRIX */
 
 		/*
 		Things having to do with signals - we may support these
@@ -1006,7 +1006,7 @@ not_supported{
 #endif  /* of !defined(SAVE_SIGSTATE) */
 
 
-#if	defined(LINUX) || defined(Solaris251) || defined(HPUX)
+#if	defined(LINUX) || defined(Solaris251) || defined(HPUX) || defined(IRIX65)
 		int setitimer( int which, const struct itimerval *value,
 				struct itimerval *oval );
 #else

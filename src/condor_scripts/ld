@@ -26,14 +26,8 @@ PATH=/bin:/usr/bin:$PATH
 # On linux and SunOS5, they are simply in a directory other than /bin.
 CONDOR_FULLINSTALL=false
 
-# Call uname to get the OS.  On IRIX, this should return IRIX, but
-# on some systems it returns things like IRIX64, etc.  (AFS install?)
-# So add an extra check for IRIX.
-if [ -f /etc/mipsabiversion ]; then
-	os=IRIX
-else
-	os=`uname`
-fi
+# Call uname to get the OS. IRIX sometimes reports as IRIX64, strip it.
+os=`uname -s | sed 's/IRIX.*/IRIX/'`
 
 # Get the major version number for this Unix
 if [ $os = "HP-UX" ]; then
@@ -42,8 +36,16 @@ else
 	osmajver=`uname -r | awk -F. '{print $1}' -`
 fi
 
+#abi is needed throughout for IRIX
+abi="" 
+if [ $os = "IRIX" ]; then
+	#6/3/99 mikeu: we need to support use of all three ABIs, so we must
+	#figure out which one to use: -o32, -n32 or -64
+	abi=`printenv SGI_ABI`  #extract from ENV
+fi
+
 case $os in
-	IRIX | IRIX5 | IRIX53 | IRIX62 | IRIX63 | IRIX64 )
+	IRIX )
 		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
 			CONDOR_FULLINSTALL=true
 		fi
@@ -61,11 +63,16 @@ case $os in
 		else
 			if [ $brokenbase = "old_ld" ]; then
 				osld="/usr/lib/old_ld"
-			elif [ $brokenbase = "real-ld" -a $osmajver = 6 ]; then
+			elif [ $brokenbase = "real-ld" ]; then
 				osld="/usr/lib/old_ld"
 			else
 				osld="/bin/$brokenbase"
 			fi
+		fi
+		#6/3/99 mikeu: force o32 ABI if using old_ld/uld
+		finalbase=`basename $osld`
+		if [ $finalbase = old_ld -o $finalbase = uld ]; then
+			abi="-o32"
 		fi
 		;;
 	HP-UX )
@@ -144,7 +151,7 @@ case $os in
 		;;
 esac
 
-if [ A$CONDOR_COMPILE = Ayes ]; then
+if [ A$CONDOR_COMPILE = Ayes ]; then 
   osver=`uname -r`
   osfull="$os$osmajver"
   oscrt0="crt0.o"
@@ -152,40 +159,53 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
   case $os in
 
-     HP-UX )	
-				ldargs="-a archive" ;;
+	HP-UX )	
+				ldargs="-a archive" 
+	;;
 
-     SunOS )	
+	SunOS )	
 	 			if [ $osmajver = 4 ]; then
 					ldargs="-Bstatic" 
 				else
 					ldargs="" 
 					oscrt0="crt1.o"
-				fi ;;
+				fi 
+	;;
 
-     OSF1 )		
-				ldargs="-non_shared" ;;
+	OSF1 )		
+				ldargs="-non_shared" 
+	;;
 
-	 Linux )
+	Linux )
 				oscrt0="crt1.o"
-				ldargs="" ;;
+				ldargs="" 
+	;;
 
-	 IRIX | IRIX62 | IRIX63 | IRIX64 )		
-				oscrt0="crt1.o"
-				ldargs="-mips2 -o32" 
-				# must use old_ld to link with Condor on IRIX6
-				# this is because the Condor libs are compiled
-				# with gcc/g++ ver 2.7.2 which only deals with old_ld
-	 			if [ $osmajver = 6 ]; then
-					if [ $CONDOR_FULLINSTALL = true ]; then
-						osld="/usr/lib/condor/old_ld"
-					else
-						osld="/usr/lib/old_ld"
-					fi
-				fi ;;
+	IRIX )		
+		oscrt0="crt1.o"
+		#6/3/99 mikeu: only force old vals for O32 ABI
+		if [ X$abi = X-o32 ]; then
+			ldargs="-mips2 $abi" 
+		else
+			ldargs="$abi"
+		fi
 
-     * ) 		echo "ERROR: condor_compile: I do not know how to link for this operating system"
-         		exit 1 ;;
+	#6/3/99 mikeu: the rest of this is redoing the work done in prev case stmt
+	#	# must use old_ld to link with Condor on IRIX
+	#	# this is because the Condor libs are compiled
+	#	# with gcc/g++ ver 2.7.2 which only deals with old_ld
+	#	if [ $osmajver = 6 ]; then
+	#		if [ $CONDOR_FULLINSTALL = true ]; then
+	#			osld="/usr/lib/condor/old_ld"
+	#		else
+	#			osld="/usr/lib/old_ld"
+	#		fi
+	#	fi 
+	;;
+
+	* ) 		echo "ERROR: condor_compile: I do not know how to link for this operating system"
+         		exit 1 
+	;;
 
   esac
 
@@ -267,18 +287,17 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # universe job was not linked with condor_syscall_lib.
      -s ) ;;
 
-	 # Condor on IRIX6 only supports old-32 bit mode, because of 
-	 # restrictions with gcc/g++ (which compiled up condor_syscall_lib),
-	 # thus throw out any options that try using any other MIPS ABI modes
+	#if using old_ld on IRIX, skip these, old_ld can't handle these.
+	#otherwise, keep em.
 	 -n32 | -64 | -mips3 | -mips4 | -dont_warn_unused | -warn_unused )
-			if [ $osfull != "IRIX6" ]; then
+			if [ $os != "IRIX" -o X$abi != X-o32 ]; then
 				ldargs=`echo $ldargs $argument`
 		  	fi ;;
 
-	 # Throw out the woff options on IRIX.  woff is only understood
-	 # by the new linker, and we are linking with old_ld
+	 # Throw out the woff options on IRIX for old_ld.  woff is only 
+	#understood  by the new linker
 	 -woff ) 			
-			if [ $os = "IRIX" ]; then
+			if [ $os = "IRIX" -a X$abi = X-o32 ]; then
 		 		ignore=true
 		  	else
 				ldargs=`echo $ldargs $argument`
@@ -320,6 +339,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
      esac
   done
+
   echo "LINKING FOR CONDOR : $osld $ldargs"
 fi
 

@@ -51,7 +51,7 @@ SafeSock::SafeSock() 				/* virgin safesock	*/
 SafeSock::SafeSock(const SafeSock & orig) 
 {
 	init();
-	Sock::Sock(orig);
+	Sock::Sock((const Sock&)orig);
 }
 
 SafeSock::~SafeSock()

@@ -155,7 +155,7 @@ BOOL StackGrowsDown();
 int JmpBufSP_Index();
 void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX)
      int find_map_for_addr(caddr_t addr);
      int num_segments( );
      int segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end,

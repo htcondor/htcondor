@@ -21,23 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef _CONDOR_NFS_H
-#define _CONDOR_NFS_H
+ 
 
-#include <sys/mount.h>
 
-#if defined(LINUX)
-#	include <linux/nfs.h>
-#	include <linux/ipc.h>
-#	include <dirent.h>
-    typedef struct fhandle fhandle_t;
-#elif !defined(IRIX)
-#	include <rpc/rpc.h>
-#	include <nfs/nfs.h>
-#if !defined(OSF1)
-#	include <nfs/export.h>
-#endif
-#endif
 
-#endif /* _CONDOR_NFS_H */
-
+void set_resource_limits()
+{
+	/* not yet implemented for IRIX */
+}

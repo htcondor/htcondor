@@ -27,7 +27,7 @@
 #	include "syscall.aix.h"
 #elif defined(Solaris)
 #	include <sys/syscall.h>
-#elif defined(IRIX53)
+#elif defined(IRIX)
 #	undef SYSVoffset
 #	undef __SYS_S__
 #	include <sys.s>

@@ -40,6 +40,10 @@
 #include "clib.h"
 #include "shadow.h"
 
+#if !defined( WCOREDUMP )
+#define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
+#endif
+
 extern "C" {
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );
 	void display_errors( FILE *fp );

@@ -61,7 +61,7 @@ void display_sigstate( int line, const char * file );
 
 #if defined(LINUX)
 typedef int				SS_TYPE;
-#elif defined(Solaris) || defined(IRIX53)
+#elif defined(Solaris) || defined(IRIX)
 typedef struct sigaltstack SS_TYPE;
 #else
 typedef struct sigstack SS_TYPE;
@@ -121,7 +121,7 @@ condor_save_sigstates()
 	}
 
 	/* Save pointer to signal stack (not POSIX, but widely supported) */	
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX)
 	sigaltstack( (SS_TYPE *) 0, &(signal_states.sig_stack) ); 
 #elif !defined(LINUX)
 	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
@@ -185,7 +185,7 @@ condor_restore_sigstates()
 	sigprocmask(SIG_SETMASK,&(signal_states.user_mask),NULL);
 
 	/* Restore signal stack pointer */
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX)
 	sigaltstack( &(signal_states.sig_stack), (SS_TYPE *) 0 );  
 #elif !defined(LINUX)
 	sigstack( &(signal_states.sig_stack), (struct sigstack *) 0 );  
@@ -420,7 +420,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 
 #if defined(OSF1) || defined(ULTRIX43) || defined(Solaris)
 	return SIGACTION( sig, my_act, oact);
-#elif defined(IRIX53)
+#elif defined(IRIX)
 	return syscall(SYS_ksigaction, sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);

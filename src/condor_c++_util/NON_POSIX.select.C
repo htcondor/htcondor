@@ -27,7 +27,7 @@
 #include "condor_debug.h"
 #include "selector.h"
 
-#if defined(IRIX53)
+#if defined(IRIX)
 #	include<bstring.h>
 #endif
 

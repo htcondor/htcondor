@@ -53,7 +53,7 @@ extern "C" {
 
 #include <rpc/types.h> 
 
-#if defined(IRIX62)
+#if defined(IRIX)
 #define xdr_time_t xdr_hidemetimet
 #endif
 
@@ -83,7 +83,7 @@ extern "C" {
 #undef xdr_string
 #endif /* __STDC__ || __cplusplus */
 
-#if defined(IRIX62)
+#if defined(IRIX)
 #undef xdr_time_t
 #endif
 
@@ -115,7 +115,7 @@ bool_t xdr_enum(XDR *, enum_t *);
 bool_t xdr_float(XDR *, float *);
 #if defined(Solaris) || defined(OSF1) || defined(LINUX)
 void     xdr_free(xdrproc_t, char *);
-#elif defined(IRIX53)
+#elif defined(IRIX)
 void	xdr_free(xdrproc_t, void *);
 #else
 void xdr_free(XDR *, char *);

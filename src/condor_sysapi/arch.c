@@ -200,9 +200,13 @@ init_arch()
 			sprintf( tmp, "HPUX%s", buf.release );
 		}
 	} else if( match_prefix(buf.sysname, "IRIX") ) {
-		if( buf.release[0] == '6' ) {
-			sprintf( tmp, "IRIX6" );
-		} else {
+		if( !strcmp( buf.release, "6.5" ) ) {
+			sprintf( tmp, "IRIX65" );
+		}
+		else if( !strcmp( buf.release, "6.2" ) ) {
+			sprintf( tmp, "IRIX62" );
+		} 
+		else {
 			sprintf( tmp, "IRIX%s", buf.release );
 		}
 	} else {

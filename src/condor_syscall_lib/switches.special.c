@@ -312,7 +312,7 @@ isatty( int filedes )
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX62) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
+#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
 ssize_t
 readv( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -397,7 +397,7 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris) || defined(IRIX62) || defined(OSF1) || defined(HPUX10)
+#elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
 ssize_t
 writev( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -480,7 +480,7 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #	include <sys/ioctl.h>
 #endif
 
-#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53) || defined(HPUX10)
+#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX) || defined(HPUX10)
 /* int
 ioctl( int fd, int request, ...) */
 #else
@@ -853,11 +853,9 @@ _sysconf(int name)
    so we can't override them.  Instead, we override the following three
    xstat definitions.  */
 
-#if defined(IRIX53) || defined(Solaris)
+#if defined(IRIX) || defined(Solaris)
 
-#if defined(IRIX53) && !defined(IRIX62)
-int _xstat(int ver, char *path, struct stat *buf)
-#elif defined(Solaris) || defined(IRIX62)
+#if defined(Solaris) || defined(IRIX)
 int _xstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -872,9 +870,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(IRIX53) && !defined(IRIX62)
-int _lxstat(int ver, char *path, struct stat *buf)
-#elif defined(Solaris) || defined(IRIX62)
+#if defined(Solaris) || defined(IRIX)
 int _lxstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -889,9 +885,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(IRIX53) && !defined(IRIX62)
-int _fxstat(int ver, int fd, struct stat *buf)
-#elif defined(Solaris) || defined(IRIX62)
+#if defined(Solaris) || defined(IRIX)
 int _fxstat(const int ver, int fd, struct stat *buf)
 #endif
 {

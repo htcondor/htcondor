@@ -50,7 +50,7 @@ sysapi_phys_memory_raw(void)
 	}
 }
 
-#elif defined(IRIX62)
+#elif defined(IRIX62) || defined(IRIX65)
 
 #include <unistd.h>
 #include <sys/types.h>

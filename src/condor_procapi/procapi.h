@@ -61,7 +61,7 @@
 #include <sys/table.h>     // memory in OSF1
 #endif
 
-#ifdef IRIX62              // this is the include for memory info in Irix.
+#ifdef IRIX              // this is the include for memory info in Irix.
 #include <sys/sysmp.h>
 #endif
 

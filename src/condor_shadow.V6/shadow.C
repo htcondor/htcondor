@@ -57,6 +57,10 @@
 #include "clib.h"
 #include "shadow.h"
 
+#if !defined( WCOREDUMP )
+#define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
+#endif
+
 int	UsePipes;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -676,7 +680,7 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 
 		unblock_signal(SIGCHLD);
 		unblock_signal(SIGUSR1);
-#if defined(LINUX) || defined(IRIX62) || defined(Solaris)
+#if defined(LINUX) || defined(IRIX) || defined(Solaris)
 		cnt = select(nfds, &readfds, (fd_set *)0, (fd_set *)0,
 					 (struct timeval *)0);
 #else

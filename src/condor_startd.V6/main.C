@@ -269,6 +269,15 @@ main_init( int, char* argv[] )
 		(ReaperHandler)reaper, "reaper" );
 	assert(rval == 1);	// we assume reaper id 1 for now
 
+#if defined( OSF1 ) || defined (IRIX) || defined(WIN32)
+		// Pretend we just got an X event so we think our console idle
+		// is something, even if we haven't heard from the kbdd yet.
+		// We do this on Win32 as well, since Win32 uses last_x_event
+		// variable in a similar fasion to the X11 condor_kbdd, and
+		// thus it must be initialized.
+	command_x_event( 0, 0, 0 );
+#endif
+
 	resmgr->start_update_timer();
 
 		// Evaluate the state of all resources and update CM 

@@ -1,15 +1,7 @@
 /* Things that are specific to IRIX 6.2 */
 
 #define Platform		SGI_IRIX62
-#define ImakeOpsysFlag		-DIS_IRIX6
+#define ImakeOpsysFlag		-DIS_IRIX62
 #define IS_SGI_IRIX62		YES
 #define IS_IRIX62		YES
-
-/*
-   ARGH!!!! This is so evil.  We shouldn't have IRIX53 defined 
-   here.  Yuck.  Someday, maybe, we'll fix this. *sigh* -Derek
-*/
-#define PlatformFlags		-DIRIX62 -DIRIX53
-#define IS_SGI_IRIX53		YES
-
-
+#define PlatformFlags		-DIRIX62 

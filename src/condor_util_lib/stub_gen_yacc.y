@@ -524,7 +524,7 @@ main( int argc, char *argv[] )
 	}
 }
 
-yyerror( char * s )
+void yyerror( const char * s )
 {
 	fprintf( stderr, "%s at \"%s\" on line %d\n", s, yylval.tok.val, yyline );
 	ErrorEncountered = TRUE;

@@ -187,11 +187,11 @@ extern "C" {
 void PatchSockets( int oldsockfd, int newsockfd )
 {
  	for ( int i = 0 ; i < MaxOpenFiles; i++)
-	  if ( FileTab->getSockFd(i) == oldsockfd )
-	  {
-	    FileTab->setSockFd(i,newsockfd);
-	    return ;
-          }
+		if ( FileTab->getSockFd(i) == oldsockfd )
+		{
+			FileTab->setSockFd(i,newsockfd);
+			return;
+		}
 }
 
 }
@@ -684,7 +684,7 @@ OpenFileTable::Save()
 //				DoOpen(path,f->flags,-1,0,IS_IOSERVER);
 				SetSyscalls( scm );
 			}
-			*/
+	*/
 
 		}
 	}

@@ -14,18 +14,40 @@
 #define IS_IRIX			YES
 #define Architecture		SGI
 
-#define RpcSvc /usr/lib/librpcsvc.so 
-#define RpcSun /usr/lib/libsun.a
-#define RpcLib RpcSvc RpcSun
-#define SimpleLibC /usr/lib/nonshared/libc.a
-#define LibC RpcLib SimpleLibC
-#define Crt0 /usr/lib/crt1.o
-#define CrtN /usr/lib/crtn.o
+/*** This should change to define all these things for all three ABIs ***
+**** but for now, at least make it work for one of them               ***
+**** see also Platform_CFLAGS below                                   ***/
+#if !defined( IRIXABI )
+#	define IRIXABI -n32
+#endif
 
-PLATFORM_LDFLAGS = /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
+#define IRIX_ABI IRIXABI
+#if IRIXABI == -n32
+#	define BaseLibPath /usr/lib32
+#elif IRIXABI == -64
+#	define BaseLibPath /usr/lib64
+#else
+#	define BaseLibPath /usr/lib
+#endif
+
+
+#define MldLib concat(BaseLibPath,/libelf.a)
+#define RpcSvc	concat(BaseLibPath,/librpcsvc.so)
+#define RpcSun	concat(BaseLibPath,/libsun.a)
+#define RpcLib RpcSvc RpcSun 
+#define MallocLib	concat(BaseLibPath,/libmalloc.so)
+#define KernLib /**/
+#define SimpleLibC concat(BaseLibPath,/libc.so)
+#define LibC RpcLib SimpleLibC
+#define Crt0 concat(BaseLibPath,/crt1.o)
+#define CrtN concat(BaseLibPath,/crtn.o)
+
+PLATFORM_LDFLAGS = MldLib /usr/lib/libmld.a RpcLib
+#define SyscallsExp /**/
+#define SocketLib /**/
 
 #define XLibPath -lX11
-#define XExtLibPath /usr/lib/libXext.a
+#define XExtLibPath concat(BaseLibPath,/libXext.a)
 
 #define IS_V5				YES
 
@@ -89,7 +111,7 @@ PLATFORM_LDFLAGS = /usr/lib/libelf.a /usr/lib/libmld.a RpcLib
 #define MkDepend /usr/sbin/mkdepend
 #endif MkDepend
 
-#define Platform_CFLAGS -cckr
+#define Platform_CFLAGS -cckr IRIXABI
 
 /**************************************************************************
 ** Include OS version-specific config files

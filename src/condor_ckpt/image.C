@@ -71,7 +71,7 @@ extern "C" {
 #elif defined(Solaris) && defined(sun4m)
     #define htonl(x)        (x)
     #define ntohl(x)        (x)
-#elif defined(IRIX62)
+#elif defined(IRIX)
     #include <sys/endian.h>
 #elif defined(LINUX)
     #include <netinet/in.h>
@@ -477,7 +477,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 void
 Image::Save()
 {
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX53)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX)
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
@@ -497,7 +497,7 @@ Image::Save()
 	head.AltHeap(alt_heap);
 #endif
 
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX53)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX)
 
 		// Set up data segment
 	data_start = data_start_addr();
@@ -521,7 +521,7 @@ Image::Save()
 
 	numsegs = num_segments();
 
-#if !defined(IRIX53) && !defined(Solaris)
+#if !defined(IRIX) && !defined(Solaris)
 
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
@@ -532,7 +532,7 @@ Image::Save()
 
 #else
 
-	// sbrk() doesn't give reliable values on IRIX53 and Solaris
+	// sbrk() doesn't give reliable values on IRIX and Solaris
 	// use ioctl info instead
 	data_start=MAXLONG;
 	data_end=0;
@@ -670,8 +670,8 @@ SegMap::Contains( void *addr )
 
 #define USER_DATA_SIZE 256
 #if defined(PVM_CHECKPOINTING)
-extern "C" user_restore_pre(char *, int);
-extern "C" user_restore_post(char *, int);
+extern "C" int user_restore_pre(char *, int);
+extern "C" int user_restore_post(char *, int);
 char	global_user_data[USER_DATA_SIZE];
 #endif
 
@@ -805,7 +805,7 @@ void Image::RestoreAllSegsExceptStack()
 	int		i;
 	int		save_fd = fd;
 
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX)
 	dprintf( D_ALWAYS, "Current segmap dump follows\n");
 	display_prmap();
 #endif
@@ -1238,7 +1238,7 @@ SegMap::Read( int fd, ssize_t pos )
 		cur_brk = (char *)sbrk(0);
 	}
 
-#if defined(Solaris) || defined(IRIX53) || defined(LINUX)
+#if defined(Solaris) || defined(IRIX) || defined(LINUX)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 		int zfd, segSize = len;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
@@ -1266,7 +1266,7 @@ SegMap::Read( int fd, ssize_t pos )
 				  prot|PROT_WRITE,
 				  MAP_PRIVATE|MAP_FIXED, zfd,
 				  (off_t)0)) == MAP_FAILED) {
-#elif defined(IRIX53)
+#elif defined(IRIX)
 		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
 				 (saved_prot|PROT_WRITE)&(~MA_SHARED),
 				 MAP_PRIVATE|MAP_FIXED, zfd,
@@ -1340,7 +1340,7 @@ SegMap::Read( int fd, ssize_t pos )
 
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 65536 ? 65536 : bytes_to_go;
-#if defined(Solaris) || defined(IRIX53) || defined(LINUX)
+#if defined(Solaris) || defined(IRIX) || defined(LINUX)
 		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );

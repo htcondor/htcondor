@@ -109,7 +109,7 @@ char	*default_daemon_list[] = {
 	"MASTER",
 	"STARTD",
 	"SCHEDD",
-#if defined(OSF1) || defined(IRIX53)    // Only need KBDD on alpha and sgi
+#if defined(OSF1) || defined(IRIX)    // Only need KBDD on alpha and sgi
 	"KBDD",
 #endif
 	0};

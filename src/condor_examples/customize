@@ -60,12 +60,6 @@ sub get_platform_defaults {
 	  $mail_path="/bin/mailx";
 	  last SWITCH;
       }
-      if(/^IRIX5/) {
-	  $ps_path="/bin/ps -ef";
-	  $mail_path="/usr/sbin/Mail";
-	  $needs_kbd=1;
-	  last SWITCH;
-      }
       if(/^IRIX/) {
 	  $ps_path="/bin/ps -ef";
 	  $mail_path="/usr/sbin/mailx";

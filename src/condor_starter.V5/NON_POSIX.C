@@ -88,7 +88,7 @@ physical_file_size( char *name )
 	}
 
 
-#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX53)
+#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX)
 
 	   /*  On these systems struct stat member st_blocks is
 	       defined, and appears to be in 512 byte blocks. */
@@ -101,15 +101,6 @@ physical_file_size( char *name )
 
 	return buf.st_blocks;
 
-#elif defined(IRIX401)
-
-	/*  On this system struct stat member st_blocks is not defined.
-		Also, it appears that gaps take up real blocks here.  We just
-		return the number of blocks to store the data.  Probably
-		there will be some overhead, but it's not clear how to
-		determine what it is, so we ignore it.  */
-
-	return (buf.st_size + 1023 ) / 1024;
 #else
 #	error "Don't know how to determine file size on this platform."
 #endif

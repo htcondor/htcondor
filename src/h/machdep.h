@@ -24,11 +24,7 @@
  
 
 
-#ifdef IRIX331
-#include <sys/sysmacros.h>
-#else
 #include <machine/vmparam.h>
-#endif
 
 /*
 **	Machine dependent things are defined here
@@ -109,9 +105,6 @@
 	(N_TXTOFF(x) + (x).a_text + (x).a_data + (x).a_trsize)
 #endif N_DROFF
 
-#if defined(IRIX331)
-#define STACKGROW 0
-#endif
 
 #ifdef notdef
 

@@ -93,7 +93,9 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 PLATFORM_UTIL_OBJ = seteuid.o setegid.o
 #endif
 
-#if IS_IRIX62
+#if IS_IRIX65
+DEP_OS = IRIX65
+#elif IS_IRIX62
 DEP_OS = IRIX62
 #elif IS_HPUX10
 DEP_OS = HPUX10
@@ -345,6 +347,8 @@ STUB_GEN_PLATFORM = -DSolaris26
 STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_IRIX62
 STUB_GEN_PLATFORM = -DIRIX62
+#elif IS_IRIX65
+STUB_GEN_PLATFORM = -DIRIX65
 #endif
 
 STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
@@ -384,7 +388,6 @@ import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_c++_util,$(CPP_UTIL_OBJ))
 import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
-import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
 import(../condor_shadow.V6, pseudo_ops.h)

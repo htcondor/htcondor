@@ -28,11 +28,7 @@
 ** included on various platforms. 
 **********************************************************************/
 
-#if defined(IRIX53) && !defined(IRIX62)
-struct timeval;
-#endif
-
-#if defined(IRIX62)
+#if defined(IRIX)
 #if !defined(_SYS_SELECT_H)
 typedef struct fd_set fd_set;
 #endif
@@ -48,7 +44,7 @@ typedef struct fd_set fd_set;
 #define __vfork fork
 #define _save_BSD_COMPAT _BSD_COMPAT
 #undef _BSD_COMPAT
-#endif /* IRIX62 */
+#endif /* IRIX */
 
 #if defined(LINUX)
 #	define idle _hide_idle
@@ -95,7 +91,7 @@ int pipe(int fildes[2]);
 #	endif
 #endif
 
-#if defined(IRIX62)
+#if defined(IRIX)
 #	undef _SGIAPI
 #	define _SGIAPI _save_SGIAPI
 #	undef _save_SGIAPI

@@ -230,7 +230,7 @@
 		);
 		rval =  -1;
 	}
-#if defined(USE_STUB_CLUMPS) || defined(IRIX53)
+#if defined(USE_STUB_CLUMPS) || defined(IRIX)
 	}
 #endif 
 

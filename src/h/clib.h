@@ -30,20 +30,8 @@
 #include <string.h>
 #endif
 
-#if defined(IRIX331)
-void	*calloc();
-char	*ctime();
-void	*malloc();
-char	*param();
-void	*realloc();
-char	*strcat();
-char	*strcpy();
-char	*strncpy();
-int		sprintf();
-#endif
-
 #if 0
-#if !defined(AIX31) && !defined(AIX32)  && !defined(IRIX331) && !defined(HPUX8) && !defined(OSF1)
+#if !defined(AIX31) && !defined(AIX32)  && !defined(HPUX8) && !defined(OSF1)
 char	*calloc();
 char	*ctime();
 char	*getwd();
