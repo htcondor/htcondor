@@ -245,7 +245,9 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	if( ! filename ) {
 			// If there's nothing specified, we always want to open
 			// the system-appropriate NULL file (/dev/null or NUL).
-			// Otherwise, we can treat this just there's a filename.
+			// Otherwise, we can mostly treat this as if the job
+			// defined a real local filename.  For the few cases were
+			// we have to behave differently, record it in a bool. 
 		filename = NULL_FILE;
 		is_null_file = true;
 	}
