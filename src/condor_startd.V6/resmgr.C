@@ -34,6 +34,7 @@ static fd_set cur_fds;
 static int resmgr_vacateone	__P((resource_info_t *));
 static int resmgr_addfd		__P((resource_info_t *));
 static int resmgr_command	__P((resource_info_t *));
+void update_central_mgr __P((void));
 
 extern "C" int resmgr_setsocks(fd_set* fds);
 extern "C" int resmgr_call(fd_set* fds);
@@ -329,6 +330,8 @@ void resmgr_changestate(resource_id_t rid, int new_state)
   
   sprintf(tmp,"EnteredCurrentState=%d",(int)time((time_t*)0));
   cp->InsertOrUpdate(tmp);
+
+  update_central_mgr();
 }
 	
 /*void
