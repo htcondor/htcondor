@@ -25,12 +25,23 @@ PATH=/bin:/usr/bin:$PATH
 # are multiple linkers, so we mess around to see which one we should call.
 # On linux and SunOS5, they are simply in a directory other than /bin.
 CONDOR_FULLINSTALL=false
-os=`uname`
+
+# Call uname to get the OS.  On IRIX, this should return IRIX, but
+# on some systems it returns things like IRIX64, etc.  (AFS install?)
+# So add an extra check for IRIX.
+if [ -f /etc/mipsabiversion ]; then
+	os=IRIX
+else
+	os=`uname`
+fi
+
+# Get the major version number for this Unix
 if [ $os = "HP-UX" ]; then
 	osmajver=`uname -r | awk -F. '{print $2}' -`
 else
 	osmajver=`uname -r | awk -F. '{print $1}' -`
 fi
+
 case $os in
 	IRIX | IRIX5 | IRIX53 | IRIX62 | IRIX63 | IRIX64 )
 		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
@@ -281,8 +292,17 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Condor on IRIX6 only supports old-32 bit mode, because of 
 	 # restrictions with gcc/g++ (which compiled up condor_syscall_lib),
 	 # thus throw out any options that try using any other MIPS ABI modes
-	 -n32 | -64 | -mips3 | -mips4 )
+	 -n32 | -64 | -mips3 | -mips4 | -dont_warn_unused | -warn_unused )
 			if [ $osfull != "IRIX6" ]; then
+				ldargs=`echo $ldargs $argument`
+		  	fi ;;
+
+	 # Throw out the woff options on IRIX.  woff is only understood
+	 # by the new linker, and we are linking with old_ld
+	 -woff ) 			
+			if [ $os = "IRIX" ]; then
+		 		ignore=true
+		  	else
 				ldargs=`echo $ldargs $argument`
 		  	fi ;;
 

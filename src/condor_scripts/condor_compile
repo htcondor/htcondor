@@ -108,6 +108,10 @@ case $os in
 		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
 			CONDOR_FULLINSTALL=true
 		fi
+		# Also, on IRIX, set SGI_ABI environment variable to old 32-bit code
+		# only, since that is what condor_syscall_lib expects.
+		SGI_ABI=-32
+		export SGI_ABI
 		;;
 	HP-UX )
 		if [ $osmajver = "10" ]; then
