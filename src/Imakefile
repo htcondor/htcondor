@@ -125,7 +125,7 @@ release_tarball( master.tar, MasterFiles )
 /* contrib_tarball( view_client.tar, ViewClientFiles ) */
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
-contrib_tarball( sdk.tar, SDKFiles )
+/* contrib_tarball( sdk.tar, SDKFiles ) */
 
 both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
@@ -142,7 +142,7 @@ contrib_tarball( pvm.tar, PvmFiles )
 
 contrib_tarball( mpi.tar, MpiFiles )
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar sdk.tar
+all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
 
 afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
 	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
@@ -241,13 +241,13 @@ object_target(scripts)
 object_target(globus)
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
-object_target(sdk)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
 object_dir_target(condor_release)
 object_dir_target(html)
 object_dir_target(condor_bypass)
+object_dir_target(condor_sdk)
 
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
