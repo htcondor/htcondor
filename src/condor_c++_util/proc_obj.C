@@ -46,9 +46,11 @@
 #include "proc_obj_tmpl.h"
 /*Solaris specific change ..dhaval 6/27 */
 /*Solaris 2.5.1 specific change ..weiru */
-#if defined(Solaris) && !defined(Solaris551)
+/*
+#if defined(Solaris) && !defined(Solaris251)
 #include</usr/ucbinclude/sys/rusage.h>
 #endif
+*/
 
 /* include "proc_obj_tmpl.h" seems redundant ..dhaval 6/26 */ 
 

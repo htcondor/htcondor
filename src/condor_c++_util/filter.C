@@ -111,6 +111,8 @@ ProcFilter::Install()
 	GlobalList = list;
 }
 
+#pragma interface
+
 template <class Type>
 static int
 get_cluster( Type *p )
