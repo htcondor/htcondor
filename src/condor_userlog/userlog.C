@@ -250,6 +250,22 @@ new_record(int cluster, int proc, int evict_time, int wall_time,
 	static bool initialized = false;
 	char hash[40];
 
+	// We detect bad records here.  One cause of bad records is the
+	// fact that userlogs timestamps do not contain years, so we
+	// always assume we are in the same year, which causes time to run
+	// backwards at the turn of the year.
+	if (wall_time < 0 ||
+		good_time < 0 ||
+		cpu_usage < 0) {
+		if (debug_mode) {
+			fprintf(stderr, "internal error: negative time computed for "
+					"%d.%d!\n", cluster, proc);
+			fprintf(stderr, "  (records around the turn of "
+					"the year are not handled correctly)\n");
+		}
+		return;
+	}
+
 	sprintf(hash, "%d.%d", cluster, proc);
 	HashKey jobkey(hash);
 
