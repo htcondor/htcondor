@@ -24,7 +24,7 @@
 #define _JOB_QUEUE_H
 
 
-#include "_condor_fix_resource.h"
+#include "condor_fix_sys_resource.h"
 #include "condor_xdr.h"
 #include <ndbm.h>
 
