@@ -216,10 +216,6 @@ sub gather_info() {
 	if ( ! -x $G_SEARCH ) {
 	    return( "Error, cannot find grid-info-search" );
 	}
-	chomp( $G_FTP = `which gsincftpget 2>/dev/null` );
-	if ( ! -x $G_FTP ) {
-	    return( "Error, cannot find gsincftpget" );
-	}
 	chomp( $G_HOSTNAME = `which globus-hostname 2>/dev/null` );
 	if ( ! -x $G_HOSTNAME ) {
 	    return( "Error, cannot find globus-hostname" );
