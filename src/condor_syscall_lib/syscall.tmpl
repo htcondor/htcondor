@@ -802,8 +802,8 @@ not_supported{
 
 #if defined(LINUX)
 	int fchmod( map(int fd), mode_t mode );
-	int setreuid( uid_t ruid, uid_t euid );
-	int setregid( uid_t rgid, uid_t egid );
+	not_supported int setreuid( uid_t ruid, uid_t euid );
+	not_supported int setregid( uid_t rgid, uid_t egid );
 	int truncate( const char *path, size_t length ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -811,8 +811,8 @@ not_supported{
 	int ftruncate( map(int fd), size_t length );
 #elif defined(OSF1)
 	int fchmod( map(int fd), MODE_T mode );
-	int setreuid( uid_t ruid, uid_t euid );
-	int setregid( gid_t rgid, gid_t egid );
+	not_supported int setreuid( uid_t ruid, uid_t euid );
+	not_supported int setregid( gid_t rgid, gid_t egid );
 	int truncate( const char *path, off_t length ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -822,8 +822,8 @@ not_supported{
 #endif
 #else
 	int fchmod( map(int fd), MODE_T mode );
-	int setreuid( int ruid, int euid );
-	int setregid( int rgid, int egid );
+	not_supported int setreuid( int ruid, int euid );
+	not_supported int setregid( int rgid, int egid );
 	int truncate( const char *path, off_t length ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
