@@ -303,18 +303,39 @@ resource_free(resource_id_t rid)
 
 	if (!(rip = resmgr_getbyrid(rid)))
 		return -1;
-	if (rip->r_pid == NO_PID)
-		return -1;
+
+	if( rip->r_client ) {
+		free(rip->r_client);
+		rip->r_client = NULL;
+	}
+
+	if( rip->r_capab ) {
+		free(rip->r_capab);
+		rip->r_capab = NULL;
+	}
+
+	if( rip->r_clientmachine ) {
+		free(rip->r_clientmachine);
+		rip->r_clientmachine = NULL;
+	}
+
+	if( rip->r_user ) {
+		free(rip->r_user);
+		rip->r_user = NULL;
+	}
+
 	if (rip->r_jobclassad) {
 		delete rip->r_jobclassad;
 		rip->r_jobclassad = NULL;
 	}
-	/* XXX boundary crossing */
-	free(rip->r_clientmachine);
-	rip->r_clientmachine = NULL;
+
 	rip->r_pid = NO_PID;
+	rip->r_claimed = FALSE;
+
+	resmgr_changestate(rip->r_rid, NO_JOB);
 	return 0;
 }
+
 
 int
 resource_event(resource_id_t rid, job_id_t jid, task_id_t tid, event_t ev)
@@ -565,6 +586,18 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		 *		EXCEPT( "setpgrp(0, %d)", getpid() );
 		 *	}
 		 */
+			/*
+			 * We _DO_ want to create the starter with it's own
+			 * process group, since when KILL evaluates to True, we
+			 * don't want to kill the startd as well.  The master no
+			 * longer kills via a process group to do a quick clean
+			 * up, it just sends signals to the startd and schedd and
+			 * they, in turn, do whatever quick cleaning needs to be 
+			 * done. 
+			 */
+		if( setsid() < 0 ) {
+			EXCEPT( "setsid()" );
+		}
 
 		if (dup2(main_sock,0) < 0) {
 			EXCEPT("dup2(%d,%d)", main_sock, 0);
@@ -714,7 +747,6 @@ int
 event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
-	int rval;
 
 	dprintf(D_ALWAYS, "Called event_killjob()\n");
 	if (!(rip = resmgr_getbyrid(rid))) {
@@ -727,12 +759,11 @@ event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	rval = kill_starter(rip->r_pid, SIGINT);
-	if( rval == 0 ) {
-		resmgr_changestate(rip->r_rid, NO_JOB);
-	}
-	return rval;
+		// Don't tranisition to state NO_JOB here.  We're still
+		// claimed by the schedd.  We only go to NO_JOB when we
+		// relinquish a match.  -Derek 9/10/97
 
+	return kill_starter(rip->r_pid, SIGINT);
 }
 
 int
@@ -751,8 +782,6 @@ event_new_proc_order(resource_id_t rid, job_id_t jid, task_id_t tid)
 		return -1;
 	}
 
-	// resmgr_changestate(rip->r_rid, NO_JOB);
-
 	return kill_starter(rip->r_pid, SIGHUP);
 }
 
@@ -769,43 +798,44 @@ event_pcheckpoint(resource_id_t rid, job_id_t jid, task_id_t tid)
 	return kill_starter(rip->r_pid, SIGUSR2);
 }
 
-/*
- * XXX this kill function is way too harsh (why kill myself? such a shame)
- */
 int
 event_killall(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
 	resource_info_t *rip;
+	priv_state priv;
 
 	if (!(rip = resmgr_getbyrid(rid))) {
-		dprintf(D_ALWAYS, "kill: could not find resource.\n");
+		dprintf(D_ALWAYS, "killall: could not find resource.\n");
 		return -1;
 	}
 
-	pid_t pgrp;
-
-#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(OSF1)
-	pgrp = getpgrp();
-#else
-	pgrp = getpgrp(0);
-#endif
-
-	resmgr_changestate(rip->r_rid, NO_JOB);
-
-	dprintf(D_FULLDEBUG, "***** About to kill( -%d, SIGKILL ) *****\n", pgrp );
-
-	set_root_priv();
-
-	if( kill( -pgrp, SIGKILL ) < 0 ) {
-		EXCEPT("kill( my_process_group ) euid = %d\n", geteuid());
+	if ( rip->r_pid == NO_PID ) {
+		dprintf(D_ALWAYS, "killall: could not find starter pid/pgrp.\n");
+		return -1;
 	}
-	sigpause(0);	/* huh? */
+
+	dprintf(D_FULLDEBUG, "***** About to kill( -%d, SIGKILL ) *****\n", 
+			rip->r_pid );
+
+	priv = set_root_priv();
+
+	if( kill( -rip->r_pid, SIGKILL ) < 0 ) {
+		EXCEPT("kill( starter_process_group ) euid = %d\n", geteuid());
+	}
+
+	set_priv( priv );
 }
 
 int
 event_exited(resource_id_t rid, job_id_t jid, task_id_t tid)
 {
-	resource_free(rid);
+		// We don't want to free the resource here, because we're
+		// still claimed.  We should only free the resource when the
+		// match is relinquished.  -Derek 9/10/97
+      //  	resource_free(rid);
+
+	/* TODO: change states to CLAIMED ? */
+
 	cleanup_execute_dir();
 	event_timeout();
 }
@@ -1193,3 +1223,5 @@ get_load_avg()
 	dprintf(D_ALWAYS, "calc_load_avg -> %f\n", val);
 	return val;
 }
+
+
