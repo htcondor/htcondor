@@ -49,7 +49,7 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
 #elif IS_HPPAR_HPUX9
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
-		   seteuid.o setegid.o
+		   seteuid.o setegid.o getwd.o
 #else
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
 #endif
