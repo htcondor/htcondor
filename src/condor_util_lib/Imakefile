@@ -107,7 +107,7 @@ clean::
 IMPORT_LINKS = ../../config/import_links
 import(../h,syscall_numbers.c)
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all
 html:

@@ -152,9 +152,9 @@ OBJ =	syscall_mode.o shared_utils.o
 #else /* Not DOES_CHECKPOINTING */
 
 all_target($(OBJ) ToUpper)
-release: all
-stripped: all
-static: all
+release:: all
+stripped:: all
+static:: all
 
 #endif
 

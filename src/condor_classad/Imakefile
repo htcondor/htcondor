@@ -15,7 +15,7 @@ pure_c_plus_target(test.pure, test.o, libclassad.a $(CUTIL_LIB) SocketLib)
 clean::
 	rm -f *.o libclassad.a
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all
 html:

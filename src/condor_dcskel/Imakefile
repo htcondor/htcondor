@@ -9,6 +9,6 @@ OBJ = dcskel_main.o
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
 html:
-release:
-static:
-stripped:
+release:: all
+stripped:: all
+static:: all

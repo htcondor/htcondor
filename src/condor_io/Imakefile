@@ -23,6 +23,6 @@ c_plus_target(netMnger.t, netMnger.t.o, $(LIB))
 c_plus_target(cedar.band.t, cedar.band.t.o, $(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all

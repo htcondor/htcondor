@@ -469,9 +469,9 @@ static_library($(COMPRESS_LIB),$(STATIC_DIR)/lib)
 CMNT If no remote syscalls & no checkpointing support, then no need
 CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
 #if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all
 #endif
 
 CPP = PreProcessCmd

@@ -12,7 +12,7 @@ library_target(libacct.a, $(LIB_OBJ))
 c_plus_target(condor_accountant,$(OBJ),$(LIB))
 pure_c_plus_target(condor_accountant.pure,$(OBJ),$(LIB))
 
-release:
-stripped:
-static:
+release:: all
+stripped:: all
+static:: all
 html:

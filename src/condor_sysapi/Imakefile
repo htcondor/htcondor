@@ -15,7 +15,6 @@ c_plus_target(sysapi.tester,sysapi.t.o,$(LIB))
 pure_c_plus_target(sysapi.tester.pure,sysapi.t.o,$(LIB))
 
 html:
-release:
-stripped:
-static: 
-
+release:: all
+stripped:: all
+static:: all

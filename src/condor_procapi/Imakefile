@@ -15,7 +15,6 @@ pure_c_plus_target(nt-testprocapi.pure, testprocapi.o, $(LIB))
 
 html_target( procapi.h procinterface.h )
 
-release:
-stripped:
-static: 
-
+release:: all
+stripped:: all
+static:: all
