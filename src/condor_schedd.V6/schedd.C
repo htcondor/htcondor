@@ -3011,7 +3011,7 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 		dprintf ( D_ALWAYS, "About to Create_Process( %s, %s, ... )\n", 
 				  Shadow, args );
 		
-		pid = daemonCore->Create_Process( Shadow, args, PRIV_UNKNOWN, 
+		pid = daemonCore->Create_Process( Shadow, args, PRIV_ROOT, 
 										  1, FALSE, NULL, NULL, FALSE, 
 										  NULL, fds );
 
