@@ -1051,10 +1051,14 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 
 	_condor_signals_disable();
 
-	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
-		rval = -1;
+	if( MappingFileDescriptors() ) {
+		_condor_file_table_init();
+		rval = FileTab->fstat( fd, &sbuf );	
+		if (rval == 0 ) {
+			_condor_s_stat_convert( version, &sbuf, buf );
+		}		
 	} else {
-		if( LocalSysCalls() || _condor_is_fd_local(fd) ) {
+		if( LocalSysCalls() ) {
 			rval = syscall( CONDOR_SYS_fstat, OPT_STAT_VERSION real_fd, &kbuf );
 			if (rval >= 0) {
 				_condor_k_stat_convert( version, &kbuf, buf );
@@ -1083,10 +1087,14 @@ _condor_fxstat64(int version, int fd, struct stat64 *buf)
 
 	_condor_signals_disable();
 
-	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
-		rval = -1;
+	if( MappingFileDescriptors() ) {
+		_condor_file_table_init();
+		rval = FileTab->fstat( fd, &sbuf );	
+		if (rval == 0 ) {
+			_condor_s_stat_convert64( version, &sbuf, buf );
+		}		
 	} else {
-		if( LocalSysCalls() || _condor_is_fd_local(fd) ) {
+		if( LocalSysCalls() ) {
 			rval = syscall( CONDOR_SYS_fstat, real_fd, &kbuf );
 			if (rval >= 0) {
 				_condor_k_stat_convert64( version, &kbuf, buf );
@@ -1223,10 +1231,11 @@ int _fxstat(const int ver, int fd, struct stat *buf)
 
 	_condor_signals_disable();
 
-	if( (real_fd=_condor_get_unmapped_fd(fd)) < 0 ) {
-		rval = -1;
+	if( MappingFileDescriptors() ) {
+		_condor_file_table_init();
+		rval = FileTab->fstat( fd, buf );
 	} else {
-		if( LocalSysCalls() || _condor_is_fd_local(fd) ) {
+		if( LocalSysCalls() ) {
 			rval = syscall( SYS_fxstat, ver, real_fd, buf );
 		} else {
 			rval = REMOTE_syscall( CONDOR_fstat, real_fd, buf );
