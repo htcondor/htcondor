@@ -2291,13 +2291,15 @@ int DaemonCore::HandleReq(int socki)
 			tmp = info_list.next();
 			if (tmp) {
 				sess_id = strdup(tmp);
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is MD5ed with key %s.\n", sess_id);
-
 				tmp = info_list.next();
 				if (tmp) {
 					return_address_ss = strdup(tmp);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses MD5 session %s.\n",
+							return_address_ss, sess_id);
+				} else {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses MD5 session %s.\n", sess_id);
 				}
+
 			} else {
 				// protocol violation... StringList didn't give us anything!
 				// this is unlikely to work, but we may as well try... so, we
@@ -2394,13 +2396,16 @@ int DaemonCore::HandleReq(int socki)
 			tmp = info_list.next();
 			if (tmp) {
 				sess_id = strdup(tmp);
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is encrypted with key %s.\n", sess_id);
 
 				tmp = info_list.next();
 				if (tmp) {
 					return_address_ss = strdup(tmp);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses crypto session %s.\n",
+							return_address_ss, sess_id);
+				} else {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses crypto session %s.\n", sess_id);
 				}
+
 			} else {
 				// protocol violation... StringList didn't give us anything!
 				// this is unlikely to work, but we may as well try... so, we
@@ -2780,25 +2785,31 @@ int DaemonCore::HandleReq(int socki)
 				// it will be detected as long as some crypto is used.
 
 
-				char * auth_method = NULL;
-				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS, &auth_method);
+				char * auth_methods = NULL;
+				the_policy->LookupString(ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods);
+				if (!auth_methods) {
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
+					result = FALSE;
+					goto finalize;
+				}
 
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
 				}
-				if (!sock->authenticate(the_key, sec_man->getAuthBitmask(auth_method))) {
-					free( auth_method );
+
+				if (!sock->authenticate(the_key, auth_methods)) {
+					free( auth_methods );
 					dprintf( D_ALWAYS, 
 							 "DC_AUTHENTICATE: authenticate failed\n" );
 					result = FALSE;
 					goto finalize;
 				}
-				free( auth_method );
+				free( auth_methods );
 
 
 				// check to see if the kerb IP is the same
 				// as the socket IP.  this cast is safe because
-				// we return above is sock is not a ReliSock.
+				// we return above if sock is not a ReliSock.
 				if ( ((ReliSock*)sock)->authob ) {
 					const char* sockip = sin_to_string(sock->endpoint());
 					const char* kerbip = ((ReliSock*)sock)->authob->getRemoteAddress() ;

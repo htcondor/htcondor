@@ -1561,7 +1561,15 @@ Scheduler::actOnJobs(int, Stream* s)
 	rsock->timeout( 10 );  
 	rsock->decode();
 	if( ! rsock->isAuthenticated() ) {
-		if( ! rsock->authenticate() ) {
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "WRITE");
+		MyString methods;
+		if (p) {
+			methods = p;
+			free (p);
+		} else {
+			methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		if( ! rsock->authenticate(methods.Value()) ) {
 				// we failed to authenticate, we should bail out now
 				// since we don't know what user is trying to perform
 				// this action.

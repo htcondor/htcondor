@@ -1316,16 +1316,16 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, int clientFlags)
+int Sock :: authenticate(KeyInfo *&, const char * methods)
 {
 	return -1;
 }
 
-int Sock :: authenticate(int clientFlags)
+int Sock :: authenticate(const char * methods)
 {
 	return -1;
 }
- 
+
 int Sock :: isAuthenticated()
 {
 	return -1;

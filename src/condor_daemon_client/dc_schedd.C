@@ -236,7 +236,15 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 	}
 		// First, if we're not already authenticated, force that now. 
 	if( ! rsock.isAuthenticated() ) {
-		rsock.authenticate();
+		char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
+		MyString methods;
+		if (p) {
+			methods = p;
+			free(p);
+		} else {
+			methods = SecMan::getDefaultAuthenticationMethods();
+		}
+		rsock.authenticate(methods.Value());
 	}
 
 		// Now, put the command classad on the wire

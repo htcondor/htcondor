@@ -37,6 +37,7 @@
 #include "HashTable.h"
 #include "KeyCache.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "condor_secman.h"
 #include "classad_merge.h"
 
@@ -273,7 +274,7 @@ bool
 SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad, 
 								bool other_side_can_negotiate )
 {
-	char buf[256];
+	char buf[512];
 
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -376,37 +377,15 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	char *paramer;
 
 	// auth methods
-	sprintf(buf, "SEC_%s_AUTHENTICATION_METHODS", auth_level);
-	paramer = param(buf);
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-		}
-		paramer = param("SEC_DEFAULT_AUTHENTICATION_METHODS");
-		if (paramer == NULL) {
-#if defined(WIN32)
-			// default windows method
-			paramer = strdup("NTSSPI");
-#else
-			// default unix method
-			paramer = strdup("FS");
-#endif
-			if( DebugFlags & D_FULLDEBUG ) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
-						 "== NULL, using \"%s\"\n", paramer );
-			}
+		paramer = strdup(SecMan::getDefaultAuthenticationMethods().Value());
+	}
+	if( DebugFlags & D_FULLDEBUG ) {
+		if (paramer) {
+			dprintf( D_SECURITY, "SECMAN: authentication methods == %s\n", paramer);
 		} else {
-			if( DebugFlags & D_FULLDEBUG ) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
-						 "== %s\n", paramer );
-			}
-		}
-	} else {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
-					 paramer ); 
+			dprintf( D_SECURITY, "SECMAN: authentication methods == NULL!\n");
 		}
 	}
 
@@ -418,33 +397,40 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		if (DebugFlags & D_FULLDEBUG ) {
 			dprintf( D_SECURITY, "SECMAN: %s\n", buf );
 		}
+	} else {
+		if( sec_authentication == SEC_REQ_REQUIRED ) {
+			dprintf( D_SECURITY, "SECMAN: no auth methods, "
+					 "but it was required! failing...\n" );
+			return false;
+		} else {
+			// try disabling authentication.  but, we'd better reconcile this
+			// disabling with the crypto requirements.
+			sec_authentication = SEC_REQ_NEVER;
+			if (!ReconcileSecurityDependency (sec_authentication, sec_encryption) ||
+				!ReconcileSecurityDependency (sec_authentication, sec_integrity)) {
+				dprintf( D_SECURITY, "SECMAN: no auth methods, "
+					 	"but disabling auth would violate crypto requirements, failing!\n" );
+				return false;
+			} else {
+				// disable auth
+				dprintf( D_SECURITY, "SECMAN: no auth methods, "
+					 	"disabling authentication, crypto, and integrity.\n" );
+				sec_authentication = SEC_REQ_NEVER;
+				sec_encryption = SEC_REQ_NEVER;
+				sec_integrity = SEC_REQ_NEVER;
+			}
+		}
 	}
 
 
+
 	// crypto methods
-	sprintf(buf, "SEC_%s_CRYPTO_METHODS", auth_level);
-	paramer = param(buf);
-	if (paramer == NULL) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-		}
-		paramer = param("SEC_DEFAULT_CRYPTO_METHODS");
+	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
+	if (DebugFlags & D_FULLDEBUG) {
 		if (paramer) {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == %s\n",
-						 paramer );
-			}
+			dprintf( D_SECURITY, "SECMAN: crypto methods == %s\n", paramer );
 		} else {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == NULL\n" );
-			}
-		}
-	} else {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
-					 paramer );
+			dprintf( D_SECURITY, "SECMAN: crypto methods == NULL!\n");
 		}
 	}
 
@@ -470,50 +456,24 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 
-	// for now, we always want the top bracket of code.
-	if ( TRUE ||
-		 sec_is_negotiable(sec_authentication) || 
- 		 sec_is_negotiable(sec_encryption) || 
- 		 sec_is_negotiable(sec_integrity) ) {
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
+			 SecMan::sec_req_rev[sec_negotiation] );
+	ad->Insert(buf);
 
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
-				 SecMan::sec_req_rev[sec_negotiation] );
-		ad->Insert(buf);
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
+			 SecMan::sec_req_rev[sec_authentication] ); 
+	ad->Insert(buf);
 
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
-				 SecMan::sec_req_rev[sec_authentication] ); 
-		ad->Insert(buf);
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
+			 SecMan::sec_req_rev[sec_encryption] ); 
+	ad->Insert(buf);
 
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
-				 SecMan::sec_req_rev[sec_encryption] ); 
-		ad->Insert(buf);
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
+			 SecMan::sec_req_rev[sec_integrity] ); 
+	ad->Insert(buf);
 
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
-				 SecMan::sec_req_rev[sec_integrity] ); 
-		ad->Insert(buf);
-
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "NO" );
-		ad->Insert(buf);
-	} else {
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
-		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
-		ad->Insert(buf);
-
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION,
-		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]); 
-		ad->Insert(buf);
-
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENCRYPTION,
-		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]); 
-		ad->Insert(buf);
-
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_INTEGRITY,
-		   SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]); 
-		ad->Insert(buf);
-		
-		sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "YES" );
-		ad->Insert(buf);
-	}
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_ENACT, "NO" );
+	ad->Insert(buf);
 
 
 	// subsystem
@@ -524,11 +484,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
-	sprintf(buf, "SEC_%s_SESSION_DURATION", auth_level);
-	paramer = param(buf);
-	if (!paramer) {
-		paramer = param("SEC_DEFAULT_SESSION_DURATION");
-	}
+	paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
 
 	if (paramer) {
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SESSION_DURATION, paramer);
@@ -550,6 +506,36 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 	return true;
+}
+
+char* 
+SecMan::getSecSetting( const char* fmt, const char* authorization_level ) {
+
+	// for those of you reading this code, a 'paramer'
+	// is a thing that param()s.
+	char *paramer = NULL;
+	char buf[512];
+
+	if (authorization_level && authorization_level[0]) {
+		sprintf(buf, fmt, authorization_level);
+		paramer = param(buf);
+		if (paramer == NULL) {
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
+			}
+		}
+	}
+	if (!paramer) {
+		sprintf(buf, fmt, "DEFAULT");
+		paramer = param(buf);
+		if (paramer == NULL) {
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
+			}
+		}
+	}
+	// it is up to the caller to free the result (just like param)
+	return paramer;
 }
 
 
@@ -774,12 +760,9 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &cli_methods) &&
 		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &srv_methods)) {
 
-		char* the_method = ReconcileMethodLists( cli_methods, srv_methods );
-		if (the_method) {
-			sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
-			action_ad->Insert(buf);
-			free( the_method );
-		}
+		MyString the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_methods.Value());
+		action_ad->Insert(buf);
 	}
 
 	if (cli_methods) {
@@ -794,12 +777,9 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	if (cli_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &cli_methods) &&
 		srv_ad.LookupString( ATTR_SEC_CRYPTO_METHODS, &srv_methods)) {
 
-		char *the_method = ReconcileMethodLists( cli_methods, srv_methods );
-		if (the_method) {
-			sprintf (buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, the_method);
-			action_ad->Insert(buf);
-			free( the_method );
-		}
+		MyString the_methods = ReconcileMethodLists( cli_methods, srv_methods );
+		sprintf (buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, the_methods.Value());
+		action_ad->Insert(buf);
 	}
 
 	if (cli_methods) {
@@ -1343,20 +1323,20 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
-			char * auth_method = NULL;
-			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_method );
-			if (!auth_method) {
-				// there's no auth method.
+			char * auth_methods = NULL;
+			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+			if (!auth_methods) {
+				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				return false;
 			}
 
-			if (!sock->authenticate(ki, sec_char_to_auth_method(auth_method))) {
+			if (!sock->authenticate(ki, auth_methods)) {
 				dprintf ( D_ALWAYS, "SECMAN: authenticate failed!\n");
 				retval = false;
 			}
-            if (auth_method) {  
-                free(auth_method);
+            if (auth_methods) {  
+                free(auth_methods);
             }
 		} else {
 			// !new_session is equivilant to use_session in this client.
@@ -1487,7 +1467,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			char *p;
 
 			coms.rewind();
-			while (p = coms.next() ) {
+			while ( (p = coms.next()) ) {
 				sprintf (keybuf, "{%s,<%s>}", sin_to_string(sock->endpoint()), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
@@ -1623,7 +1603,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
             if (command_map) {
                 cmd_list.rewind();
                 char * cmd = NULL;
-                while (cmd = cmd_list.next() ) {
+                while ( (cmd = cmd_list.next()) ) {
                     memset(keybuf, 0, 128);
                     sprintf (keybuf, "{%s,<%s>}", addr, cmd);
                     command_map->remove(keybuf);
@@ -1658,7 +1638,7 @@ SecMan::sec_char_to_auth_method( char* method ) {
 
 
 int
-SecMan::getAuthBitmask ( char * methods ) {
+SecMan::getAuthBitmask ( const char * methods ) {
 
 	if (methods) {
 		if (DebugFlags & D_FULLDEBUG) {
@@ -1676,7 +1656,7 @@ SecMan::getAuthBitmask ( char * methods ) {
 	int retval = 0;
 
 	server.rewind();
-	while ( tmp = server.next() ) {
+	while ( (tmp = server.next()) ) {
 		retval |= sec_char_to_auth_method(tmp);
 	}
 
@@ -1685,29 +1665,43 @@ SecMan::getAuthBitmask ( char * methods ) {
 
 
 
-char*
+MyString
 SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 	// algorithm:
-	// step through the server's types in order.  the first
-	// one the client supports will be the one.
+	// step through the server's methods in order.  if the method is
+	// present in the clients list, then append it to the results.
+	// the output will be a list of methods supported by both, in the
+	// order that the server prefers.
 
 	StringList server_methods( srv_methods );
 	StringList client_methods( cli_methods );
 	char *sm = NULL;
 	char *cm = NULL;
 
+	MyString results;
+	int match = 0;
+
+	// server methods, one at a time
 	server_methods.rewind();
-	while ( sm = server_methods.next() ) {
+	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
-		while (cm = client_methods.next() ) {
-			if (stricmp(sm, cm) == 0) {
-				return strdup(cm);
+		while ( (cm = client_methods.next()) ) {
+			if (!stricmp(sm, cm)) {
+				// add a comma if it isn't the first match
+				if (match) {
+					results += ",";
+				} else {
+					match = 1;
+				}
+
+				// and of course, append the common method
+				results += cm;
 			}
 		}
 	}
 
-	return NULL;
+	return results;
 }
 
 
@@ -1799,7 +1793,7 @@ SecMan :: invalidateExpiredCache()
 
     list->rewind();
     char * p;
-    while (p = list->next()) {
+    while ( (p = list->next()) ) {
         invalidateKey(p);
     }
     delete list;
@@ -1842,3 +1836,26 @@ SecMan :: invalidateExpiredCache()
 
 			goto choose_action;
 */
+
+
+MyString SecMan::getDefaultAuthenticationMethods() {
+	MyString methods;
+#if defined(WIN32)
+	// default windows method
+	methods = "NTSSPI";
+#else
+	// default unix method
+	methods = "FS";
+#endif
+
+#if defined(KERBEROS_AUTHENTICATION) 
+	methods += ",KERBEROS";
+#endif
+
+#if defined(GSI_AUTHENTICATION)
+	methods += ",GSI";
+#endif
+
+	return methods;
+}
+

@@ -90,22 +90,21 @@ public:
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
 	bool 					ReconcileSecurityDependency (sec_req &a, sec_req &b);
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);
-	char* 					ReconcileMethodLists( char * cli_methods, char * srv_methods );
+	MyString			ReconcileMethodLists( char * cli_methods, char * srv_methods );
 
-	int 					getAuthBitmask ( char * methods );
-
-
-	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
-	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
-	SecMan::sec_req 		sec_lookup_req( ClassAd &ad, const char* pname );
-	SecMan::sec_feat_act 	sec_lookup_feat_act( ClassAd &ad, const char* pname );
+	static	int 			getAuthBitmask ( const char * methods );
+	static	char* 			getSecSetting( const char* fmt, const char* authorization_level );
+	static	MyString 		getDefaultAuthenticationMethods();
+	static	SecMan::sec_req 		sec_alpha_to_sec_req(char *b);
+	static	SecMan::sec_feat_act 	sec_alpha_to_sec_feat_act(char *b);
+	static	SecMan::sec_req 		sec_lookup_req( ClassAd &ad, const char* pname );
+	static	SecMan::sec_feat_act 	sec_lookup_feat_act( ClassAd &ad, const char* pname );
 
 	SecMan::sec_req 		sec_param( char* pname, sec_req def = SEC_REQ_UNDEFINED );
-
 	bool 					sec_is_negotiable (sec_req r);
 	SecMan::sec_feat_act 	sec_req_to_feat_act (sec_req r);
 
-	int 					sec_char_to_auth_method( char* method );
+	static	int 			sec_char_to_auth_method( char* method );
 
 	bool 					sec_copy_attribute( ClassAd &dest, ClassAd &source, const char* attr );
 

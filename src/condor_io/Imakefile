@@ -53,3 +53,6 @@ static:: all
 #  $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \
 #  -c reli_sock.C -o reli_sock_no_auth.o
 
+#IMPORT_LINKS = ../../config/import_links
+#import(../condor_c++_util,MyString.o)
+

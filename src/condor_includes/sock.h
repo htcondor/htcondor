@@ -24,6 +24,7 @@
 #ifndef SOCK_H
 #define SOCK_H
 
+#include "condor_common.h"
 #include "stream.h"
 
 // retry failed connects for CONNECT_TIMEOUT seconds
@@ -247,9 +248,9 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate(int clientFlags = 0);
+	virtual int authenticate(const char * auth_methods);
     ///
-	virtual int authenticate(KeyInfo *&ki, int clientFlags = 0);
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods);
     ///
 	virtual int isAuthenticated();
     ///

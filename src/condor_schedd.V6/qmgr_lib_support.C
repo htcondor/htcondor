@@ -151,7 +151,16 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         }
 
         if ( !read_only ) {
-            if (!qmgmt_sock->authenticate()) {
+			char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
+			MyString methods;
+			if (p) {
+				methods = p;
+				free(p);
+			} else {
+				methods = SecMan::getDefaultAuthenticationMethods();
+			}
+
+            if (!qmgmt_sock->authenticate(methods.Value())) {
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
                 return 0;

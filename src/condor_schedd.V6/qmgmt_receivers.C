@@ -26,6 +26,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
+#include "condor_secman.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -62,8 +63,16 @@ do_Q_request(ReliSock *syscall_sock)
 	
 			// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->isAuthenticated() ) {
-			dprintf(D_SECURITY,"Calling authenticate() in qmgmt_receivers\n");
-			if( ! syscall_sock->authenticate() ) {
+			char * p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS", "WRITE" );
+			MyString methods;
+			if (p) {
+				methods = p;
+				free (p);
+			} else {
+				methods = SecMan::getDefaultAuthenticationMethods();
+			}
+			dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
+			if( ! syscall_sock->authenticate(methods.Value()) ) {
 					// Failed to authenticate
 				authenticated = false;
 			}
