@@ -538,10 +538,12 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 		if( summarize ) {
 			printf( "\n%d jobs; "
-					"%d idle, %d running, %d held, "
-					"%d malformed\n",
+					"%d idle, %d running, %d held",
 					unexpanded+idle+running+held+malformed,
-					idle,running,held,malformed);
+					idle,running,held);
+			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
+			if (malformed>0) printf( ", %d malformed",malformed);
+            printf("\n");
 		}
 	}
 	return true;
