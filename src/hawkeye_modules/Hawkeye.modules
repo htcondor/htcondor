@@ -2,7 +2,7 @@
 directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
 
 target: all
-version: 1.0-rc1
+version: 1.0-rc2
 +condor_node
 +condor_pool
 +df
@@ -10,7 +10,7 @@ version: 1.0-rc1
 +gdmphb
 +grid_probe
 +memory
-+network_errors
++network_stats
 +open_files
 +top
 +uptime
@@ -23,11 +23,11 @@ version: 1.0-rc1
 +condor_node
 
 target: condor_pool
-version: 1.0-rc1
+version: 1.0-rc2
 +condor_pool
 
 target: df
-version: 1.0-rc1
+version: 1.0-rc2
 +df
 
 target: gass_cache
@@ -46,9 +46,9 @@ target: memory
 version: 1.0-rc1
 +memory
 
-target: network_errors
+target: network_stats
 version: 1.0-rc1
-+network_errors
++network_stats
 
 target: open_files
 version: 1.0-rc1
