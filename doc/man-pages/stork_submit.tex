@@ -1,0 +1,137 @@
+\begin{ManPage}{\label{man-stork-submit}\Stork{submit}}{1}
+{submit a Stork job}
+\Synopsis \SynProg{\Stork{submit}}
+\ToolArgsBase
+
+\SynProg{\Stork{submit}}
+\oOpt{-debug}
+\oOpt{-stdin}
+\oOptArg{-name}{server\_name}
+\oOptArg{-lognotes}{"prose"}
+\Arg{submit-descpription-file}
+
+
+\index{Condor commands!stork\_submit}
+\index{Stork commands!stork\_submit}
+\index{stork\_submit command}
+
+\Description 
+
+\Stork{submit} is used to submit a job that deals with data placement. 
+Upon job submission, an integer identifier is assigned to the
+submission.
+This identifier can be used in Stork commands.
+
+The name of the Stork submit description file is the single,
+required, command-line argument.
+
+\emph{STORK SUBMIT DESCRIPTION FILE COMMANDS}
+\begin{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% dap\_type
+%%%%%%%%%%%%%%%%%%%
+\item[dap\_type = $<$reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove $>$]
+\index{Stork submit commands!dap\_type}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% dest_host
+%%%%%%%%%%%%%%%%%%%
+\item[dest\_host = $<$machine-name$>$]
+\index{Stork submit commands!dest\_host}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% src_url
+%%%%%%%%%%%%%%%%%%%
+\item[src\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!src\_url}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% dest_url
+%%%%%%%%%%%%%%%%%%%
+\item[dest\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!dest\_url}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% reserve_id
+%%%%%%%%%%%%%%%%%%%
+\item[reserve\_id = $<$ID$>$]
+\index{Stork submit commands!reserve\_id}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% reserve_size
+%%%%%%%%%%%%%%%%%%%
+\item[reserve\_size = $<$size-in-bytes$>$]
+\index{Stork submit commands!reserve\_size}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+%% x509proxy
+%%%%%%%%%%%%%%%%%%%
+\item[x509proxy = $<$path-to-proxy$>$]
+\index{Stork submit commands!x509proxy}
+% The path to and file name of an X.509 proxy to be used in GSI
+% authentication.
+
+%%%%%%%%%%%%%%%%%%%
+%% cred_name
+%%%%%%%%%%%%%%%%%%%
+\item[cred\_name = $<$credential-handle$>$]
+\index{Stork submit commands!cred\_name}
+Identification of a credential name (or handle) that the 
+\Prog{credential-manager} will use to provide a credential.
+
+\end{description}
+
+\emph{STORK SUPPORTED URL PROTOCOLS}
+
+\begin{description}
+\item[file:/]
+  A local file.
+\item[ftp://]
+  FTP (File Transfer Protocol).
+\item[http://]
+  HTTP (Hypertext Transfer Protocol).
+\item[gsiftp://]
+  Grid FTP.
+\item[nest://]
+  NeST (Chirp) protocol.
+\item[srb://]
+  SRB (Storage Resource Broker).
+\item[lbnlsrm://]
+  LBNL SRM managed server.
+\item[jlabsrm://]
+  JLAB SRM managed server.
+\item[fnalsrm://]
+  FNAL SRM managed server.
+\item[unitree://]
+  NCSA's Mass Storage System.
+\item[diskrouter://]
+  UW DiskRouter Tool.
+\end{description}
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-debug}}{Show extra debugging information.}
+	\OptItem{\Opt{-stdin}}{Read commands from \File{stdin} instead of from a file.}
+	\OptItem{\OptArg{-name}{server\_name}}{Name of \Stork{server}. }
+	\OptItem{\OptArg{-lognotes}{"prose"}}{The string given within the quote marks is appended to the \Arg{submit-description-file} before the job is submitted}
+\end{Options}
+
+\ExitStatus
+
+\Stork{submit} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

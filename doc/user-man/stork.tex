@@ -3,6 +3,137 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Stork|(}
 
+Stork does data placement.
+Data is generated and used for computation all over the world.
+An unfortunate reality is that the placement of the data
+may be quite different from the location where it will be used
+in computation.
+This requires moving or copying the data, 
+which may be quite large in size.
+
+Stork has been integrated into the Condor environment.
+Before this integration,
+a Condor job (the computation part of this process)
+presumed that the necessary data (input files) were
+accessible within the pool from where the job is submitted.
+Even Condor-G is limited by this, unless data is 
+pre-staged on a remote machine.
+
+A Stork job is one that may copy data from a remote
+location (outside the Condor pool) into a pool-accessible
+location for use with a Condor job.
+As with Condor jobs, Stork jobs are specified with
+a submit description file.
+The syntax of the submit description file for a Stork
+job is different than that used by Condor jobs.
+Stork submit description files are written in
+the ClassAd Language.
+See \URL{http://www.cs.wisc.edu/condor/classad} for information
+on the ClassAd language.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Job-Submission}Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Stork jobs can handle more than simply copying data
+from one location to another.
+
+\begin{description}
+\item [Reserve and Release storage space.]
+  Local storage space will be used to stage remote files required for
+  a computation.
+  Further, this storage space may be required for multiple
+  staging efforts,
+  eventually requiring more storage space than exists.
+  This situation may cause more than one staging effort to
+  fail.
+  The cure for this difficulty is to allow staging efforts
+  to declare their space requirements through a reservation
+  mechanism.
+  Some storage systems support this mechanism.
+
+\item [Transfer or Stage files.]
+  This is the common usage for Stork jobs.
+  Files in one location may be copied to another location.
+  Locations are described using URLs (Uniform Resource Locators),
+  which in turn include a protocol assumed for file transfer.
+
+\item [Remove files.]
+%% NEED DESCRIPTION HERE.
+\end{description}
+
+Jobs require a submit description file analogous to the one used
+for Condor jobs.
+Commands within the submit description file
+describe items necessary to identify the type of job,
+the source and destination of files,
+as well as information necessary for security measures
+such as proxies for authentication.
+See the \Stork{submit} manual page on
+on page~\pageref{man-stork-submit}
+for command details.
+
+A first example transfers a single file using a Stork job.
+Both the source and destination are accessible from
+within the Condor pool where the job is submitted.
+A Stork submit description file gives the information
+necessary to the transfer.
+
+\footnotesize
+\begin{verbatim}
+[
+  dap_type = transfer;
+  src_url = "file:/etc/termcap";
+  dest_url = "file:$HOME/file-termcap";
+]
+\end{verbatim}
+\normalsize
+
+The type of the Stork job is \AdAttr{transfer}.
+This copies the \File{/etc/termcap} file to the
+home directory of the user that submits this Stork job.
+The \File{file:} qualifier in the URL implies
+that the local filesystem of the \Stork{server}
+daemon is to be used.
+
+Assuming that the Stork submit description file
+is named \File{transfer1.submit}
+This Stork job is submitted to Condor using the command
+\footnotesize
+\begin{verbatim}
+   stork_submit transfer1.submit
+\end{verbatim}
+\normalsize
+
+A slightly more complex example transfers from a remote location
+using the protocol \File{gsiftp:} (Globus Grid FTP).
+This protocol does authentication using X.509 certificates.
+Condor further requires either a proxy created from the certificate
+or a credential name.
+This example identifies the proxy. 
+
+\footnotesize
+\begin{verbatim}
+[
+  dap_type = transfer;
+  x509proxy = "/tmp/x509up_u222";
+  src_url = "gsiftp://example.com/projectX/input.data/file26";
+  dest_url = "file:$HOME/condor-jobs/run26.input";
+]
+\end{verbatim}
+\normalsize
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Job-Management}Managing Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Advanced}Running Stork Jobs Under DAGMan}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Stork!as jobs with DAGMan}
+\index{DAGMan!Stork job submission}
 \Todo
 
 \index{Stork|)}

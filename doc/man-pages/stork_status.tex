@@ -1,0 +1,37 @@
+\begin{ManPage}{\label{man-stork-status}\Stork{status}}{1}
+{print a Stork job's status}
+\Synopsis \SynProg{\Stork{status}}
+\ToolArgsBase
+
+\SynProg{\Stork{status}}
+\oOpt{-debug}
+\oOptArg{-name}{server\_name}
+\Arg{job-id}
+
+
+\index{Condor commands!stork\_status}
+\index{Stork commands!stork\_status}
+\index{stork\_status command}
+
+\Description 
+
+\Stork{status} prints information about a Stork job.
+The single, required command-line argument is the identifier
+of the Stork job (given by \Stork{submit}).
+The information is printed as a ClassAd.
+See \URL{http://www.cs.wisc.edu/condor/classad} for information
+on the ClassAd language.
+
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-debug}}{Show extra debugging information.}
+	\OptItem{\OptArg{-name}{server\_name}}{Name of \Stork{server}. }
+\end{Options}
+
+\ExitStatus
+
+\Stork{status} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
