@@ -236,8 +236,8 @@ segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot )
 	else if (seg_num == stack_loc)
 		return 2;
 	else if (seg_num == heap_loc ||
-		 (my_map[seg_num].pr_vaddr >= data_start_addr() &&
-		  my_map[seg_num].pr_vaddr <= data_end_addr()))
+		 ((unsigned)my_map[seg_num].pr_vaddr >= (unsigned)data_start_addr() &&
+		  (unsigned)my_map[seg_num].pr_vaddr <= (unsigned)data_end_addr()))
 	        return 3;
 	return 0;
 }
