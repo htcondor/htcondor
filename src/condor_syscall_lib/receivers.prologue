@@ -46,6 +46,14 @@
 #	include <sys/poll.h>
 #endif
 
+#if defined(AIX32)
+	struct fsid {
+		long    val[2];
+	};
+	typedef struct fsid fsid_t;
+#	include <sys/statfs.h>		 /* for struct statfs */
+#endif
+
 #if defined(SUNOS41)
 #	include <sys/vfs.h>
 #endif
