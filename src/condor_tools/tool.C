@@ -33,7 +33,7 @@
 #include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_addr.h"   // only for daemon names
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -700,16 +700,14 @@ cmd = old_cmd
 void
 doCommand( char *name )
 {
-	char		*addr = NULL;
 	int 		sinful = 0, done = 0;
 	daemon_t 	old_dt = dt;
 	int			old_cmd = cmd;
 
-		// See if we were passed a sinful string, and if so, use it. 
+		// See if we were passed a sinful string
 	if( name && *name == '<' ) {
-		addr = name;
 		sinful = 1;
-		dt = DT_NONE;
+		dt = DT_ANY;
 	} 
 
 		// DAEMONS_OFF has some special cases to handle:
@@ -748,10 +746,8 @@ doCommand( char *name )
 	}
 
 
-	if( ! addr ) {
-		addr = get_daemon_addr( dt, name, pool ? pool->addr() : NULL );
-	}
-	if( ! addr ) {
+	Daemon d( dt, name, pool ? pool->addr() : NULL );
+	if( ! d.locate() ) {
 		namePrintf( stderr, name, "Can't find address for" );
 		fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
 		RESTORE;
@@ -760,18 +756,17 @@ doCommand( char *name )
 
 		/* Squawking does its own connect... */
 	if ( cmd == SQUAWK ) {
-		doSquawk( addr );
+		doSquawk( d.addr() );
 		printf ( "Bye!\n" );
 		done = 1;
 		RESTORE;
 		return;
 	}
 
-		/* Connect to the daemon */
-	Daemon d( DT_ANY, addr );
+
 	/* Connect to the daemon */
 	ReliSock sock;
-	if(!sock.connect(addr)) {
+	if( !sock.connect(d.addr()) ) {
 		namePrintf( stderr, name, "Can't connect to" );
 		RESTORE;
 		return;
@@ -932,7 +927,7 @@ namePrintf( FILE* stream, char* name, char* str, ... )
 	if( name ) {
 		if( *name == '<' ) {
 				// sinful string,
-			if( dt ) {
+			if( dt != DT_NONE & dt != DT_ANY ) {
 				fprintf( stream, " %s at %s\n", daemonString(dt), name );			
 			} else {
 				fprintf( stream, " daemon at %s\n", name );			
@@ -1173,12 +1168,12 @@ doSquawkReconnect( char *addr ) {
 			dt = DT_MASTER;
 		}
 	}
-	char *tmp = get_daemon_addr( dt, hostname, pool ? pool->addr() : NULL );
-	if ( !tmp ) {
+	Daemon d( dt, hostname, pool ? pool->addr() : NULL );
+	if( ! d.locate() ) {
 		printf ( "Failed to contact daemon.\n" );
 		return FALSE;
 	}
-	strcpy ( addr, tmp );
+	strcpy ( addr, d.addr() );
 	delete [] hostname;
 	
 	return TRUE;	
