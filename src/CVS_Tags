@@ -161,3 +161,6 @@
 2/6/95	V5_a5_3
 	Supports Signals and Threads code.  Released to local Dec and Sun
 	machines on 2/7/95.
+2/20/95	V5_a5_4
+	Fixes negotiator bugs related to preemption.  Installed on local
+	Sun and Dec machines 2/21/95.
