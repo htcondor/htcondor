@@ -56,6 +56,8 @@ REMOTE_syscall( int syscall_num, ... )
 		char *fullHostname;
 		int key;
 
+        dprintf ( D_SYSCALLS, "Doing CONDOR_register_machine_info\n" );
+
 		CurrentSysCall = CONDOR_register_machine_info;
 
 		uiddomain = va_arg( ap, char *);
@@ -79,6 +81,7 @@ REMOTE_syscall( int syscall_num, ... )
 			assert( syscall_sock->code(terrno) );
 			assert( syscall_sock->end_of_message() );
 			errno = terrno;
+            dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 			break;
 		}
 		assert( syscall_sock->end_of_message() );
@@ -88,6 +91,8 @@ REMOTE_syscall( int syscall_num, ... )
 	case CONDOR_get_job_info:
 	{
 		ClassAd *ad;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_get_job_info\n" );
 
 		CurrentSysCall = CONDOR_get_job_info;
 
@@ -103,6 +108,7 @@ REMOTE_syscall( int syscall_num, ... )
 			assert( syscall_sock->code(terrno) );
 			assert( syscall_sock->end_of_message() );
 			errno = terrno;
+            dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 			break;
 		}
 		assert( ad->get(*syscall_sock) );
@@ -114,6 +120,8 @@ REMOTE_syscall( int syscall_num, ... )
 	case CONDOR_get_executable:
 	{
 		char *destination;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_get_executable\n" );
 
 		CurrentSysCall = CONDOR_get_executable;
 
@@ -129,6 +137,7 @@ REMOTE_syscall( int syscall_num, ... )
 			assert( syscall_sock->code(terrno) );
 			assert( syscall_sock->end_of_message() );
 			errno = terrno;
+            dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 			break;
 		}
 		assert( syscall_sock->get_file(destination) > -1 );
@@ -141,6 +150,8 @@ REMOTE_syscall( int syscall_num, ... )
 	{
 		int status;
 		int reason;
+
+        dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
 
 		CurrentSysCall = CONDOR_job_exit;
 
@@ -159,6 +170,7 @@ REMOTE_syscall( int syscall_num, ... )
 			assert( syscall_sock->code(terrno) );
 			assert( syscall_sock->end_of_message() );
 			errno = terrno;
+            dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 			break;
 		}
 		assert( syscall_sock->end_of_message() );
@@ -167,10 +179,9 @@ REMOTE_syscall( int syscall_num, ... )
 
 
 	default:
-		fprintf(
-			stderr,
-			"Don't know how to do system call %d remotely - yet\n",
-			syscall_num	);
+		fprintf( stderr,
+				 "Don't know how to do system call %d remotely - yet\n",
+				 syscall_num );
 		rval =  -1;
 	}
 

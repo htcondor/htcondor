@@ -39,6 +39,7 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
 
 OsProc::OsProc()
 {
+    dprintf ( D_FULLDEBUG, "In OsProc::OsProc()\n" );
 	JobAd = NULL;
 	JobPid = Cluster = Proc = -1;
 	job_suspended = FALSE;
@@ -94,8 +95,13 @@ OsProc::StartJob()
 		return 0;
 	}
 
+	if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
+		dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
+		return 0;
+	}
+
 	// get sinfullstring of our shadow, if shadow told us
-	JobAd->LookupString(ATTR_MY_IP_ADDR,ShadowAddr);
+	JobAd->LookupString(ATTR_MY_ADDRESS, ShadowAddr);
 
 	// if name is condor_exec, we transferred it, so make certain
 	// it is executable.
@@ -106,15 +112,12 @@ OsProc::StartJob()
 		}
 	}
 
-	// get job universe
-
-	// init_user_ids
-
 	char Args[_POSIX_ARG_MAX];
 	char tmp[_POSIX_ARG_MAX];
+
 	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, tmp) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  "
-				"Aborting DC_StartCondorJob.\n", ATTR_JOB_CMD);
+				"Aborting DC_StartCondorJob.\n", ATTR_JOB_ARGUMENTS);
 		return 0;
 	}
 		// for now, simply prepend "condor_exec" to the args - this
@@ -145,17 +148,17 @@ OsProc::StartJob()
 	char outfile[_POSIX_PATH_MAX];
 	char errfile[_POSIX_PATH_MAX];
 
-		// we have to prepend the full path...
-	sprintf ( infile, "%s%c%", Cwd, DIR_DELIM_CHAR );
-	sprintf ( outfile, "%s%c%", Cwd, DIR_DELIM_CHAR );
-	sprintf ( errfile, "%s%c%", Cwd, DIR_DELIM_CHAR );
-
 		// in order to open these files we must have the user's privs:
 	priv_state priv;
 	priv = set_user_priv();
 
 	if (JobAd->LookupString(ATTR_JOB_INPUT, filename) == 1) {
-		if ( strcmp(filename,NULL_FILE) != 0 ) {
+		if ( strcmp(filename,"NUL") != 0 ) {
+            if ( filename[0] != '/' ) {  // prepend full path
+                sprintf( infile, "%s%c", Cwd, DIR_DELIM_CHAR );
+            } else {
+                infile[0] = '\0';
+            }
 			strcat ( infile, filename );
 			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
 				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
@@ -166,7 +169,12 @@ OsProc::StartJob()
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename) == 1) {
-		if ( strcmp(filename,NULL_FILE) != 0 ) {
+		if ( strcmp(filename,"NUL") != 0 ) {
+            if ( filename[0] != '/' ) {  // prepend full path
+                sprintf( outfile, "%s%c", Cwd, DIR_DELIM_CHAR );
+            } else {
+                outfile[0] = '\0';
+            }
 			strcat ( outfile, filename );
 			if ((fds[1]=open(outfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
 					// if failed, try again without O_TRUNC
@@ -181,7 +189,12 @@ OsProc::StartJob()
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_ERROR, filename) == 1) {
-		if ( strcmp(filename,NULL_FILE) != 0 ) {
+		if ( strcmp(filename,"NUL") != 0 ) {
+            if ( filename[0] != '/' ) {  // prepend full path
+                sprintf( errfile, "%s%c", Cwd, DIR_DELIM_CHAR );
+            } else {
+                errfile[0] = '\0';
+            }
 			strcat ( errfile, filename );
 			if ((fds[2]=open( errfile,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 ) {
 					// if failed, try again without O_TRUNC
@@ -207,7 +220,9 @@ OsProc::StartJob()
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
 	for (i=0;i<3;i++) {
-		if ( fds[i] != -1 ) close(i);
+		if ( fds[i] != -1 ) {
+			close(fds[i]);
+		}
 	}
 
 	if ( JobPid == FALSE ) {
@@ -276,12 +291,3 @@ OsProc::ShutdownFast()
 	Requested_Exit = TRUE;
 	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
 }
-
-
-
-
-
-
-
-
-

@@ -39,7 +39,7 @@ class VanillaProc : public OsProc
 {
 public:
 		/// Constructor
-	VanillaProc();
+	VanillaProc( ClassAd * jobAd );
 		/// Destructor
 	virtual ~VanillaProc();
 

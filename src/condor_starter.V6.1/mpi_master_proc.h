@@ -21,17 +21,25 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "list.h"
-#include "HashTable.h"
-#include "MyString.h"
-#include "file_transfer.h"
-#include "user_proc.h"
+#ifndef _CONDOR_MPI_MASTER_PROC
+#define _CONDOR_MPI_MASTER_PROC
 
-template class List<UserProc>;
-template class HashTable<MyString, FileTransfer *>;
-template class HashTable<int, FileTransfer *>;
-template class HashBucket<MyString, FileTransfer *>;
-template class HashTable<int, FileTransfer *>;
-template class HashBucket<int, FileTransfer *>;
-template class Item<UserProc>;
+#include "condor_common.h"
+#include "condor_classad.h"
+#include "mpi_comrade_proc.h"
+
+class MPIMasterProc : public MPIComradeProc
+{
+ public:
+    
+    MPIMasterProc( ClassAd * jobAd );
+    virtual ~MPIMasterProc();
+
+    virtual int StartJob();
+
+ private:
+        /// puts sneaky rsh first in path; puts MPI_SHADOW_SINFUL in env
+    int alterEnv();
+};
+
+#endif

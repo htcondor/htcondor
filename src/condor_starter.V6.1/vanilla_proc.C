@@ -34,10 +34,12 @@
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc()
+VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc()
 {
+    dprintf ( D_FULLDEBUG, "Constructor of MPIVanillaProc::MPIVanillaProc\n" );
 	family = NULL;
 	filetrans = NULL;
+    JobAd = jobAd;
 	snapshot_tid = -1;
 	shadowupdate_tid = -1;
 	shadowsock = NULL;
@@ -76,17 +78,6 @@ VanillaProc::StartJob()
 	char jobtmp[_POSIX_PATH_MAX];
 
 	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
-
-	// TEMPORARY HACK
-	if (JobAd) delete JobAd;
-	JobAd = new ClassAd();
-
-	if (REMOTE_syscall(CONDOR_get_job_info, JobAd) < 0) {
-		dprintf(D_ALWAYS, 
-				"Failed to get job info from Shadow.  Aborting StartJob.\n");
-		return 0;
-	}
-	// end of temporary hack
 
 	// for now, stash the executable in jobtmp, and switch the ad to 
 	// say the executable is condor_exec
@@ -133,7 +124,8 @@ VanillaProc::StartJob()
 		}
 		// also pass /Q and /C arguments to cmd.exe, to tell it we do not
 		// want an interactive shell -- just run the command and exit
-		sprintf(tmp,"%s=\"/Q /C condor_exec.bat %s\"",ATTR_JOB_ARGUMENTS,argstmp);
+		sprintf ( tmp, "%s=\"/Q /C condor_exec.bat %s\"",
+				  ATTR_JOB_ARGUMENTS, argstmp );
 		JobAd->InsertOrUpdate(tmp);		
 
 		// finally we must rename file condor_exec to condor_exec.bat
@@ -164,10 +156,10 @@ VanillaProc::StartJob()
 			(TimerHandlercpp)&VanillaProc::UpdateShadow,
 			"VanillaProc::UpdateShadow", this);
 
-		return 1;
+		return TRUE;
 	} else {
 		// failure
-		return 0;
+		return FALSE;
 	}
 }
 
@@ -292,11 +284,6 @@ VanillaProc::ShutdownFast()
 	Requested_Exit = TRUE;
 	family->hardkill();
 }
-
-
-
-
-
 
 
 

@@ -43,15 +43,19 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"  // god only knows why I must include this!
 
-char * sysapi_opsys();
-char * sysapi_condor_arch();
+// uncomment for poop to be left on hard drive.
+// #define MAKE_DROPPINGS
 
 int main ( int argc, char *argv[] ) {
 
+#ifdef MAKE_DROPPINGS
 	FILE* fp;
-	if ( (fp=fopen( "/tmp/dropping", "w" )) == NULL ) {
-		exit(29);
+		// We don't want to exit if we can't open this file!
+	int droppings = true;
+	if ( (fp=fopen( "/tmp/dropping", "a" )) == NULL ) {
+		droppings = false;
 	}
+#endif
 
     char *buf = new char[1024];
     sprintf ( buf, "%s", argv[1] );
@@ -63,15 +67,21 @@ int main ( int argc, char *argv[] ) {
     char *shadow = NULL;
     shadow = getenv( "MPI_SHADOW_SINFUL" );
 
-	if ( shadow ) {
-		fprintf ( fp, "MPI_SHADOW_SINFUL = %s\n", shadow );
-		fprintf ( fp, "args: %s\n", buf );
+#ifdef MAKE_DROPPINGS
+	if ( droppings ) {
+		fprintf ( fp, "\n\n" );
+
+		if ( shadow ) {
+			fprintf ( fp, "MPI_SHADOW_SINFUL = %s\n", shadow );
+			fprintf ( fp, "args: %s\n", buf );
+		}
+		else {
+			fprintf ( fp, "No MPI_Shadow_Sinful!  Aborting!\n" );
+			fclose( fp );
+			exit(30);
+		}
 	}
-	else {
-		fprintf ( fp, "No MPI_Shadow_Sinful!  Aborting!\n" );
-		fclose( fp );
-		exit(30);
-	}
+#endif
 
     ReliSock *s = new ReliSock;
 
@@ -98,8 +108,15 @@ int main ( int argc, char *argv[] ) {
     delete s;
     delete [] buf;
 
-	fprintf ( fp, "Sent args.\n" );
-	fclose ( fp );
+#ifdef MAKE_DROPPINGS
+	if ( droppings ) {
+		fprintf ( fp, "Sent args.\n" );
+		fclose ( fp );
+	}
+#endif
 
     return 0;
 }
+
+
+

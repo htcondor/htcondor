@@ -30,9 +30,12 @@
 #endif
 #include "starter.h"
 #include "vanilla_proc.h"
+#include "mpi_master_proc.h"
+#include "mpi_comrade_proc.h"
 #include "syscall_numbers.h"
 #include "my_hostname.h"
 #include "condor_string.h"  // for strnewp
+#include "condor_attributes.h"
 #include "condor_random_num.h"
 
 extern "C" int get_random_int();
@@ -83,7 +86,7 @@ CStarter::Init(char peer[])
 		this);
 
 	// move to working directory
-	sprintf(WorkingDir, "%s%cdir_%d", Execute, DIR_DELIM_CHAR, 
+	sprintf(WorkingDir, "%s%cdir_%ld", Execute, DIR_DELIM_CHAR, 
 			daemonCore->getpid());
 	if (mkdir(WorkingDir,0777) < 0) {
 		EXCEPT("mkdir(%s)", WorkingDir);
@@ -170,7 +173,64 @@ CStarter::ShutdownFast(int)
 void
 CStarter::StartJob()
 {
-	UserProc *job = new VanillaProc();
+        // We want to get the jobAd first, make an appropriate 
+        // type of starter, *then* call StartJob() on it.
+    dprintf ( D_FULLDEBUG, "In CStarter::StartJob()\n" );
+
+    ClassAd *jobAd = new ClassAd;
+
+	if (REMOTE_syscall(CONDOR_get_job_info, jobAd) < 0) {
+		dprintf(D_ALWAYS, 
+				"Failed to get job info from Shadow.  Aborting StartJob.\n");
+		return;
+	}
+
+    printAdToFile( jobAd, "/tmp/starter_ad" );
+
+    int universe = STANDARD;
+    if ( jobAd->LookupInteger( ATTR_JOB_UNIVERSE, universe ) < 1 ) {
+        dprintf( D_ALWAYS, "No universe attr. in jobAd!\n" );
+    }
+
+    UserProc *job;
+
+    switch ( universe )  
+    {
+        case VANILLA:
+        case STANDARD: { 
+            dprintf ( D_FULLDEBUG, "Firing up a VanillaProc\n" );
+            job = new VanillaProc( jobAd );
+            break;
+        }
+        case MPI: {
+            int is_master = FALSE;
+            dprintf ( D_FULLDEBUG, "Is master: %s\n", ATTR_MPI_IS_MASTER );
+            if ( jobAd->LookupBool( ATTR_MPI_IS_MASTER, is_master ) < 1 ) {
+                is_master = FALSE;
+            }
+            
+            dprintf ( D_FULLDEBUG, "is_master : %d\n", is_master );
+
+            if ( is_master ) {
+                dprintf ( D_FULLDEBUG, "Firing up a MPIMasterProc\n" );
+                job = new MPIMasterProc( jobAd );
+            } else {
+                dprintf ( D_FULLDEBUG, "Firing up a MPIComradeProc\n" );
+                job = new MPIComradeProc( jobAd );
+            }
+            break;
+        }
+        case PVM: {
+            dprintf ( D_ALWAYS, "PVM not (yet) supported\n" );
+            return;
+        }
+        default: {
+            dprintf ( D_ALWAYS, "What the heck kinda universe is %d?\n", 
+                      universe );
+            return;
+        }
+    } /* switch */
+
 	if (job->StartJob()) {
 		JobList.Append(job);		
 	} else {
@@ -222,10 +282,6 @@ CStarter::Reaper(int pid, int exit_status)
 	int all_jobs = 0;
 	UserProc *job;
 
-		/* This shifts exit_status back to where it should be (MEY) */
-		/* Huh? This looks very wrong.  I am commenting it out. -Todd */
-	//  exit_status = exit_status >> 8;
-
 	dprintf(D_ALWAYS,"Job exited, pid=%d, status=%d\n",pid,exit_status);
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -249,3 +305,21 @@ CStarter::Reaper(int pid, int exit_status)
 	return 0;
 }
 
+int CStarter::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
+
+    FILE* LogFile=fopen(JobHistoryFileName,"a");
+    if ( !LogFile ) {
+        dprintf(D_ALWAYS,"ERROR saving to history file; cannot open%s\n", 
+                JobHistoryFileName);
+        return false;
+    }
+    if (!ad->fPrint(LogFile)) {
+        dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to "
+                "write classad to log file %s\n", JobHistoryFileName);
+        fclose(LogFile);
+        return false;
+    }
+    fprintf(LogFile,"***\n");   // separator
+    fclose(LogFile);
+    return true;
+}

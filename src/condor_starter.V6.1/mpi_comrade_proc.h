@@ -21,17 +21,32 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "list.h"
-#include "HashTable.h"
-#include "MyString.h"
-#include "file_transfer.h"
-#include "user_proc.h"
+#ifndef _CONDOR_MPI_COMRADE_PROC_H
+#define _CONDOR_MPI_COMRADE_PROC_H
 
-template class List<UserProc>;
-template class HashTable<MyString, FileTransfer *>;
-template class HashTable<int, FileTransfer *>;
-template class HashBucket<MyString, FileTransfer *>;
-template class HashTable<int, FileTransfer *>;
-template class HashBucket<int, FileTransfer *>;
-template class Item<UserProc>;
+#include "condor_common.h"
+#include "condor_classad.h"
+#include "vanilla_proc.h"
+
+class MPIComradeProc : public VanillaProc
+{
+ public:
+
+    MPIComradeProc( ClassAd * jobAd );
+    virtual ~MPIComradeProc();
+
+    virtual int StartJob();
+
+    virtual int JobExit( int pid, int status );
+
+    virtual void Suspend();
+
+    virtual void Continue();
+
+    virtual void ShutDownGraceful();
+
+    virtual void ShutdownFast();
+
+};
+
+#endif

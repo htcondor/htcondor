@@ -104,6 +104,9 @@ private:
 	char WorkingDir[_POSIX_PATH_MAX];
 	int Key;
 	int ShuttingDown;
+
+    int printAdToFile(ClassAd *ad, char* JobHistoryFileName);
+
 };
 
 #endif
