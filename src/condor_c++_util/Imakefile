@@ -71,8 +71,6 @@ libapi.tar: libapi.a
 
 c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
-c_plus_target(test_context, $(TEST_LIBS) ../condor_xdr_lib/xdr_lib.a)
-
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
 
 test: test.o user_log.o
