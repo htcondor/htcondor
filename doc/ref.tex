@@ -59,6 +59,11 @@
 	%
 	\usepackage[Bjarne]{fncychap}
 }
+%
+% generate index
+%
+\usepackage{makeidx}
+\makeindex
 
 \begin{document}
 
@@ -92,14 +97,7 @@
 \label{admin-manual}
 \input{admin-man/admin.tex}
 
-%
-%  The fancy header package gets confused after the man pages, so reset
-%  the header and footer style
-%
-% \fancyhead[LE,RO]{\thepage}
-% \fancyhead[RE]{\leftmark}
-% \fancyhead[LO]{\rightmark}
-% \fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
+
 \chapter{Miscellaneous Concepts}
 \section{\label{classad-reference}
 An Introduction to Condor's ClassAd Mechanism}
@@ -113,5 +111,20 @@ The Condor Perl Module}
 \chapter{Command Reference Manual (man pages)}
 \label{command-reference}
 \input{man-pages/man.tex}
+
+%
+%  The fancy header package gets confused after the man pages, so reset
+%  the header and footer style
+%
+  \fancyhead[LE,RO]{\thepage}
+  \fancyhead[RE]{\leftmark}
+  \fancyhead[LO]{\rightmark}
+  \fancyfoot[C]{Condor \VersionNotice\ Reference Manual}
+
+% the index goes at the end of the documentation
+\backmatter
+\addcontentsline{toc}{chapter}{Index}
+\label{index}
+\printindex
 
 \end{document}
