@@ -210,6 +210,15 @@ public:
 	    perform a UNIX fsync/fdsync/fdatasync as appropriate. */
 	int	fsync( int fd );
 
+	/** Do a UNIX fstat() */
+	int fstat( int fd, struct stat *buf);
+
+	/** Do a UNIX stat() */
+	int stat( char *name, struct stat *buf);
+
+	/** Do a UNIX lstat() */
+	int lstat( char *name, struct stat *buf);
+
 	/** Return the max number of bytes to buffer per file */
 	int	get_buffer_size();
 
