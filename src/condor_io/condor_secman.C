@@ -1613,6 +1613,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 }
 
+// Given a sinful string, clear out any associated sessions (incoming or outgoing)
 bool SecMan :: invalidateHost(const char * sin)
 {
     bool removed = true;
@@ -1625,24 +1626,28 @@ bool SecMan :: invalidateHost(const char * sin)
             session_cache->key_table->startIterations();
             while (session_cache->key_table->iterate(id, keyEntry)) {
 				char * remote_sinful = sin_to_string(keyEntry->addr());
+					// if this is an outgoing session, we need to check against the keyEntry->addr()
 				if (addr == MyString(remote_sinful)) {
 					if (DebugFlags & D_FULLDEBUG) {
 						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), remote_sinful);
 					}
-					remove_commands(keyEntry);
-					session_cache->remove(id.Value());
-				}
-				char * local_sinful = NULL;
-				keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
-				if (addr == MyString(local_sinful)) {
-					if (DebugFlags & D_FULLDEBUG) {
-						dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), local_sinful);
+					remove_commands(keyEntry);	// removing mapping from DC command int to session entry
+					session_cache->remove(id.Value());	// remove session entry
+				} else {
+						// if it did not match, it might be an incoming session, so check against the
+						// ServerCommandSock that is in the cached policy classad.
+					char * local_sinful = NULL;
+					keyEntry->policy()->LookupString( ATTR_SEC_SERVER_COMMAND_SOCK, &local_sinful);
+					if (addr == MyString(local_sinful)) {
+						if (DebugFlags & D_FULLDEBUG) {
+							dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", id.Value(), local_sinful);
+						}
+						// remove_commands shouldn't be necessary for incoming connections
+						// remove_commands(keyEntry);
+						session_cache->remove(id.Value());
 					}
-					// remove_commands shouldn't be necessary for incoming connections
-					// remove_commands(keyEntry);
-					session_cache->remove(id.Value());
+					free(local_sinful);
 				}
-				free(local_sinful);
             }
         }
     }
