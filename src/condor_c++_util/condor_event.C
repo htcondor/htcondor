@@ -964,9 +964,9 @@ JobEvictedEvent::writeEvent( FILE *file )
 	if( terminate_and_requeued ) { 
 		retval = fprintf( file, "(0) Job terminated and was requeued\n\t" );
 	} else if( checkpointed ) {
-		retval = fprintf( file, "(1) Job was checkpointed\n\t" );
+		retval = fprintf( file, "(1) Job was checkpointed.\n\t" );
 	} else {
-		retval = fprintf( file, "(0) Job was not checkpointed\n\t" );
+		retval = fprintf( file, "(0) Job was not checkpointed.\n\t" );
 	}
 	if( retval < 0 ) {
 		return 0;
