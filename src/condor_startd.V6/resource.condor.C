@@ -349,6 +349,11 @@ int
 resource_initAd(resource_info_t* rip)
 {
 	init_static_info(rip);
+
+		// Save the orig. requirement expression for later use.
+	rip->r_origreqexp = malloc( sizeof(char) * 512 );
+	((rip->r_classad)->Lookup(ATTR_REQUIREMENTS))->PrintToStr(rip->r_origreqexp);
+
 	return (rip->r_classad)->Insert("State=\"NoJob\"");
 }
 
@@ -403,7 +408,7 @@ resource_update_classad(resource_info_t* rip)
 
 	rp = &rip->r_param;
 	cp = rip->r_classad;
-  
+
 	resource_update_params(rip->r_rid, NO_JID, NO_TID, rp, NULL);
  
 	sprintf(line,"VirtualMemory=%d",rp->res.res_memavail);
@@ -423,6 +428,33 @@ resource_update_classad(resource_info_t* rip)
 		cp->Insert(line);
 	}
 
+		// Hack for Miron.  Locally evaluate REQUIREMENTS expression.
+		// If it evaluates to False, stick that in the classad and set
+		// RESOURCE_STATE=Owner.  It it evalutes to True, stick True
+		// into classad and set RESOURCE_STATE=Condor.  Only if it
+		// evaluates to Undefined do we actually ship out the
+		// expression.  Undefined means we should be in  
+	ClassAd ad;
+	int tmp;
+	cp->Insert(rip->r_origreqexp);
+	if( cp->EvalBool(ATTR_REQUIREMENTS,&ad,tmp) == 0 ) {
+			// Evaluation failed for some reason, say we're in
+			// Condor state and leave requirements alone.
+		sprintf(line,"ResourceState=condor");
+		cp->Insert(line);
+	} else {
+		if( tmp ) {
+			sprintf(line,"Requirements=T");
+			cp->Insert(line);
+			sprintf(line,"ResourceState=condor");
+			cp->Insert(line);
+		} else {
+			sprintf(line,"Requirements=F");
+			cp->Insert(line);
+			sprintf(line,"ResourceState=owner");
+			cp->Insert(line);
+		}
+	}
 	return cp;
 }
 

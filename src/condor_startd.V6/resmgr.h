@@ -23,6 +23,7 @@ typedef struct {
 	time_t r_captime;
 	time_t r_receivetime;
 	int r_interval;
+	char *r_origreqexp;
 } resource_info_t;
 
 int resmgr_init(void);
