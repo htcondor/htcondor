@@ -103,7 +103,7 @@ command_request_claim( Service* serv, int cmd, Stream* stream )
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(cap) < 0 ) {
+	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
 		free( cap );
 		return FALSE;
@@ -142,7 +142,7 @@ command_match_info( Service* serv, int cmd, Stream* stream )
 	int rval;
 	char *str = NULL;
 
-	if( ! stream->code(cap) < 0 ) {
+	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
 		free( cap );
 		return FALSE;
