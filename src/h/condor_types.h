@@ -29,6 +29,7 @@
 
 
 #include "condor_expressions.h"
+#include "condor_getmnt.h"
 
 #if !defined(AIX31) && !defined(AIX32)
 #define NFDS(x) (x)
@@ -42,20 +43,6 @@ struct qelem {
 	char	q_data[1];
 };
 #endif
-
-/* struct bucket definition removed -- duplicate of definition in config.h */
-
-#if !defined(ULTRIX42) || defined(ULTRIX43)
-struct fs_data_req {
-	dev_t	dev;
-	char	*devname;
-	char	*path;
-};
-struct fs_data {
-	struct fs_data_req fd_req;
-};
-#endif
-
 
 #if !defined(RUSAGE_SELF)
 
@@ -96,18 +83,6 @@ typedef char * caddr_t;
 
 
 #include "proc.h"
-
-typedef struct status_line {
-	char	*name;
-	int		run;
-	int		tot;
-	int		prio;
-	char	*state;
-	float	load_avg;
-	int		kbd_idle;
-	char	*arch;
-	char	*op_sys;
-} STATUS_LINE;
-
+#include "condor_status.h"
 
 #endif

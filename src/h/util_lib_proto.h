@@ -22,6 +22,9 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_status.h"		/* For STATUS_LINE */
 #include "condor_config.h"
+#include "condor_getmnt.h"
+#include "condor_types.h"
+#include "condor_ckpt_name.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -30,8 +33,7 @@ extern "C" {
 #ifndef __CEXTRACT__
 #if defined(HAS_PROTO) || defined(__STDC__) || defined(__cplusplus) || !defined(Solaris)
 
-int blankline ( const char *str );
-char * gen_ckpt_name ( char *directory, int cluster, int proc, int subproc );
+int blankline ( char *str );
 char * gen_exec_name ( int cluster, int proc, int subproc );
 
 void lower_case ( register char *str );
@@ -73,7 +75,6 @@ int evaluate_int ( char *name, int *answer, CONTEXT *context1, CONTEXT *context2
 int evaluate_string ( char *name, char **answer, CONTEXT *context1, CONTEXT *context2 );
 int flock ( int fd, int op );
 int getdtablesize ( void );
-int getmnt ( int *start, struct fs_data buf[], unsigned bufsize, int mode, char *path );
 
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
@@ -112,7 +113,6 @@ PROC *ConstructProc( int, PROC *);
 #else /* HAS_PROTO */
 
 int blankline ();
-char * gen_ckpt_name ();
 char * gen_exec_name ();
 
 void lower_case ();
