@@ -585,9 +585,9 @@ abort_job_myself(PROC_ID job_id)
 			   "Found record for scheduler universe job %d.%d\n",
 			   job_id.cluster, job_id.proc);
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-		  dprintf(D_FULLDEBUG,"Sending SIGKILL to scheduler universe job pid=%d\n",srec->pid);
 		  char owner[_POSIX_PATH_MAX];
 		  GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+		  dprintf(D_FULLDEBUG,"Sending SIGKILL to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
     	  init_user_ids(owner);
 		  priv_state priv = set_user_priv();
 		  kill( srec->pid, SIGKILL );
@@ -2008,10 +2008,21 @@ Scheduler::cluster_rejected(int cluster)
 ** sendable, it doesn't actually send one.
 */
 int
-Scheduler::is_alive(int pid)
+Scheduler::is_alive(shadow_rec* srec)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	return( kill(pid,0) == 0 );
+	int status;
+	if (IsSchedulerUniverse(srec)) {
+		char owner[_POSIX_PATH_MAX];
+		GetAttributeString(srec->job_id.cluster, srec->job_id.proc, ATTR_OWNER, owner);
+   		init_user_ids(owner);
+		priv_state priv = set_user_priv();
+		status=kill(srec->pid,0);
+		set_priv(priv);
+	} else {
+		status=kill(srec->pid,0);
+	}
+	return (status==0);
 #else
 	return 0;
 #endif
@@ -2023,9 +2034,10 @@ Scheduler::clean_shadow_recs()
 	shadow_rec *rec;
 
 	dprintf( D_FULLDEBUG, "============ Begin clean_shadow_recs =============\n" );
+
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1) {
-		if( !is_alive(rec->pid) ) {
+		if( !is_alive(rec) ) {
 			dprintf( D_ALWAYS,
 			"Cleaning up ShadowRec for pid %d\n", rec->pid );
 			delete_shadow_rec( rec->pid );
@@ -2048,7 +2060,7 @@ Scheduler::preempt(int n)
 	}
 	shadowsByPid->startIterations();
 	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
-		if( is_alive(rec->pid) ) {
+		if( is_alive(rec) ) {
 			if (rec->match) {	/* scheduler universe job check (?) */
 				if( !rec->preempted ) {
 					send_vacate( rec->match, CKPT_FRGN_JOB );
@@ -2320,7 +2332,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 // Check scheduler universe
 static int IsSchedulerUniverse(shadow_rec* srec)
 {
-	dprintf(D_FULLDEBUG,"Scheduler::IsSchedulerUniverse - checking job universe\n");
+	// dprintf(D_FULLDEBUG,"Scheduler::IsSchedulerUniverse - checking job universe\n");
 	if (srec==NULL || srec->match!=NULL) return FALSE;
 	int universe=STANDARD;
 	GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_UNIVERSE,&universe);
@@ -3286,7 +3298,7 @@ Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 		}
 	}
 	if (!found) {
-		dprintf(D_FULLDEBUG, "failed to remove shadow rec from mrec!\n");
+		dprintf(D_FULLDEBUG, "Shadow does not have a match record, so did not remove it from the match\n");
 	}
 }
 
