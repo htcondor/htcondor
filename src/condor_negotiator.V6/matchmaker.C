@@ -56,16 +56,7 @@ Matchmaker ()
 	PreemptionRank = NULL;
 	sockCache = NULL;
 
-	// rankCondStd also needs to make certain ATTR_RANK > 0.0 
-	// because with old pre-v6.3.x startds, ATTR_CURRENT_RANK
-	// would default to be -1.0 and ATTR_RANK would default to 
-	// be 0.0.  Thus just RANK > CUURENT_RANK would always eval to 
-	// True.  This is especially problemtaic  in the case of a 
-	// pool with v6.2 startds and a newer v6.3 negotiatotor which 
-	// has the only-preempt-for-startd-rank logic which we 
-	// did for MPI.  -Todd <tannenba@cs.wisc.edu>
-	sprintf (buf, "(MY.%s > MY.%s) && (MY.%s > 0.0)", ATTR_RANK, 
-		ATTR_CURRENT_RANK, ATTR_RANK);
+	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	Parse (buf, rankCondStd);
 
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
@@ -422,7 +413,6 @@ negotiationTime ()
 	ClassAdList startdAds;
 	ClassAdList startdPvtAds;
 	ClassAdList scheddAds;
-	ClassAdList ClaimedStartdAds;
 	ClassAdList allAds;
 
 	ClassAd		*schedd;
@@ -446,6 +436,7 @@ negotiationTime ()
 	int 		send_ad_to_schedd;	
 	static time_t completedLastCycleTime = 0;
 	bool ignore_schedd_limit;
+	int			num_idle_jobs;
 
 	// Check if we just finished a cycle less than 20 seconds ago.
 	// If we did, reset our timer so at least 20 seconds will elapse
@@ -476,7 +467,7 @@ negotiationTime ()
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
 	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
-		startdPvtAds, ClaimedStartdAds ) )
+		startdPvtAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
@@ -490,7 +481,7 @@ negotiationTime ()
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
-	accountant.CheckMatches( ClaimedStartdAds );
+	accountant.CheckMatches( startdAds );
 	// for ads which have RemoteUser set, add RemoteUserPrio
 	addRemoteUserPrios( startdAds ); 
 
@@ -537,8 +528,16 @@ negotiationTime ()
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
 				return FALSE;
 			}	
-			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
-				scheddAddr);
+			num_idle_jobs = 0;
+			schedd->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
+			if ( num_idle_jobs < 0 ) {
+				num_idle_jobs = 0;
+			}
+
+			if ( num_idle_jobs > 0 ) {
+				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
+					scheddAddr);
+			}
 
 			// should we send the startd ad to this schedd?
 			send_ad_to_schedd = FALSE;
@@ -561,36 +560,56 @@ negotiationTime ()
 				maxAbsPrioValue/(scheddPrioFactor*normalAbsFactor);
 
 			// print some debug info
-			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
-				"following parameters\n");
-			dprintf (D_FULLDEBUG, "    ScheddPrio       = %f\n", scheddPrio);
-			dprintf (D_FULLDEBUG, "    ScheddPrioFactor = %f\n",
+			if ( num_idle_jobs > 0 ) {
+				dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
+					"following parameters\n");
+				dprintf (D_FULLDEBUG, "    ScheddPrio       = %f\n",
+					scheddPrio);
+				dprintf (D_FULLDEBUG, "    ScheddPrioFactor = %f\n",
 					 scheddPrioFactor);
-			dprintf (D_FULLDEBUG, "    scheddShare      = %f\n", scheddShare);
-			dprintf (D_FULLDEBUG, "    scheddAbsShare   = %f\n",
-					 scheddAbsShare);
-			dprintf (D_FULLDEBUG, "    ScheddUsage      = %d\n", scheddUsage);
-			dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n", scheddLimit);
-			dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
-					 MaxscheddLimit);
+				dprintf (D_FULLDEBUG, "    scheddShare      = %f\n",
+					scheddShare);
+				dprintf (D_FULLDEBUG, "    scheddAbsShare   = %f\n",
+					scheddAbsShare);
+				dprintf (D_FULLDEBUG, "    ScheddUsage      = %d\n",
+					scheddUsage);
+				dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n",
+					scheddLimit);
+				dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
+					MaxscheddLimit);
+			}
 
-				// Optimization: If limit is 0, don't waste time with negotiate.
-				// However, on the first spin of the pie (spin_pie==1), we must
-				// still negotiate because on the first spin we tell the negotiate
-				// function to ignore the scheddLimit w/ respect to jobs which
-				// are strictly preferred by resource offers (via startd rank).
-			if ( scheddLimit < 1 && spin_pie > 1 ) {
-				result = MM_RESUME;
+			// initialize reasons for match failure; do this now
+			// in case we never actually call negotiate() below.
+			rejForNetwork = false;
+			rejForNetworkShare = false;
+			rejPreemptForPrio = false;
+			rejPreemptForPolicy = false;
+			rejPreemptForRank = false;
+
+			// Optimizations: 
+			// If number of idle jobs = 0, don't waste time with negotiate.
+			// Likewise, if limit is 0, don't waste time with negotiate EXCEPT
+			// on the first spin of the pie (spin_pie==1), we must
+			// still negotiate because on the first spin we tell the negotiate
+			// function to ignore the scheddLimit w/ respect to jobs which
+			// are strictly preferred by resource offers (via startd rank).
+			if ( num_idle_jobs == 0 ) {
+				result = MM_DONE;
 			} else {
-				if ( spin_pie == 1 ) {
-					ignore_schedd_limit = true;
+				if ( scheddLimit < 1 && spin_pie > 1 ) {
+					result = MM_RESUME;
 				} else {
-					ignore_schedd_limit = false;
-				}
-				result=negotiate( scheddName,scheddAddr,scheddPrio,
+					if ( spin_pie == 1 ) {
+						ignore_schedd_limit = true;
+					} else {
+						ignore_schedd_limit = false;
+					}
+					result=negotiate( scheddName,scheddAddr,scheddPrio,
 								  scheddAbsShare, scheddLimit,
 								  startdAds, startdPvtAds, 
 								  send_ad_to_schedd,ignore_schedd_limit);
+				}
 			}
 
 			switch (result)
@@ -613,8 +632,8 @@ negotiationTime ()
 					} else {
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
-						dprintf(D_FULLDEBUG,"  This schedd got all it wants; "
-								"removing it.\n");
+						dprintf(D_FULLDEBUG,"  Schedd %s got all it wants; "
+								"removing it.\n", scheddName );
 						scheddAds.Delete( schedd);
 					}
 					break;
@@ -625,8 +644,8 @@ negotiationTime ()
 			}
 		}
 		scheddAds.Close();
-	} while ((hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
-			 && MaxscheddLimit>0);
+	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
+			 && (MaxscheddLimit > 0) && (startdAds.MyLength() > 0) );
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -690,14 +709,12 @@ obtainAdsFromCollector (
 						ClassAdList &allAds,
 						ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
-						ClassAdList &startdPvtAds,
-						ClassAdList &ClaimedStartdAds )
+						ClassAdList &startdPvtAds )
 {
 	CondorQuery publicQuery(ANY_AD);
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
 	ClassAd *ad;
-	char state[ATTRLIST_MAX_EXPRESSION];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
 	result = publicQuery.fetchAds(allAds);
@@ -716,12 +733,7 @@ obtainAdsFromCollector (
 
 		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
 			startdAds.Insert(new ClassAd(*ad));
-			if( ad->LookupString(ATTR_STATE,state) ) {
-				if( !strcmp(state,"Claimed") ) {
-					ClaimedStartdAds.Insert(new ClassAd(*ad));
-				}
-			}
-		} else if( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) ) {
+		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 			scheddAds.Insert(new ClassAd (*ad));
 		}
 	}
@@ -737,8 +749,8 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
 	        allAds.MyLength(),startdPvtAds.MyLength());
 
-	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd, %d claimed startd\n",
-		scheddAds.MyLength(), startdAds.MyLength(), ClaimedStartdAds.MyLength() );
+	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd\n",
+		scheddAds.MyLength(), startdAds.MyLength() );
 
 	return true;
 }
@@ -1018,7 +1030,7 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
 		// to store results of evaluations
-	char			remoteUser[128];
+	char			remoteUser[256];
 	EvalResult		result;
 	float			tmp;
 
@@ -1090,24 +1102,38 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 
 		candidatePreemptState = NO_PREEMPTION;
 
+		remoteUser[0] = '\0';
+		candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+
 		// if only_for_startdrank flag is true, check if the offer strictly
-		// prefers this request _irregardless_ of whether or not there is a 
-		// remote user present on the resource or not.  If the offer does 
+		// prefers this request.  Since this is the only case we care about
+		// when the only_for_startdrank flag is set, if the offer does 
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
 		if ( only_for_startdrank ) {
+			if ( remoteUser[0] == '\0' ) {
+					// offer does not have a remote user, thus we cannot eval
+					// startd rank yet because it does not make sense (the
+					// startd has nothing to compare against).  
+					// So try the next offer...
+				continue;
+			}
 			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 				continue;
 			}
+			// If we made it here, we have a candidate which strictly prefers
+			// this request.  Set the candidatePreemptState properly so that
+			// we consider PREEMPTION_RANK down below as we should.
+			candidatePreemptState = RANK_PREEMPTION;
 		}
 
 		// if there is a remote user, consider preemption ....
 		// Note: we skip this if only_for_startdrank is true since we already
 		//       tested above for the only condition we care about.
-		if ( (candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) &&
+		if ( (remoteUser[0] != '\0') &&
 			 (!only_for_startdrank) ) {
 			if( rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
