@@ -764,8 +764,6 @@ REMOTE_CONDOR_ulog_error( char const *str )
 int
 REMOTE_CONDOR_ulog( ClassAd *ad )
 {
-	condor_errno_t		terrno;
-	int		rval=-1;
 	int result = 0;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_ulog\n" );
