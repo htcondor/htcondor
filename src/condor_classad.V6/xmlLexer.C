@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "xmlLexer.h"
+#include "lexer.h"
 
 using namespace std;
 
@@ -33,12 +34,14 @@ struct xml_tag_mapping tag_mappings[] =
 	{"classads",        XMLLexer::tagID_ClassAds},
 	{"c",               XMLLexer::tagID_ClassAd},
 	{"a",               XMLLexer::tagID_Attribute},
-	{"n",               XMLLexer::tagID_Number},
+	{"i",               XMLLexer::tagID_Integer},
+	{"r",              XMLLexer::tagID_Real},
 	{"s",               XMLLexer::tagID_String},
 	{"b",               XMLLexer::tagID_Bool},
 	{"un",              XMLLexer::tagID_Undefined},
 	{"er",              XMLLexer::tagID_Error},
-	{"t",               XMLLexer::tagID_Time},
+	{"at",               XMLLexer::tagID_AbsoluteTime},
+	{"rt",               XMLLexer::tagID_RelativeTime},
 	{"l",               XMLLexer::tagID_List},
 	{"e",               XMLLexer::tagID_Expr},
 	{"?xml",            XMLLexer::tagID_XML},
@@ -58,9 +61,7 @@ struct entity entities[] =
 {
 	{"&amp;",  "&",  5},
 	{"&lt;",   "<",  4},
-	{"&gt;",   ">",  4},
-	{"&quot;", "\"", 6},
-	{"&apos;", "'",  6}
+	{"&gt;",   ">",  4}
 };
 
 XMLLexer::Token::
@@ -104,12 +105,14 @@ DumpToken(void)
 		case tagID_ClassAds:  printf("classads\n"); break;
 		case tagID_ClassAd:   printf("classad\n"); break;
 		case tagID_Attribute: printf("attribute\n"); break;
-		case tagID_Number:    printf("number\n"); break;
+		case tagID_Integer:    printf("integer\n"); break;
+		case tagID_Real:    printf("real\n"); break;
 		case tagID_String:    printf("string\n"); break;
 		case tagID_Bool:      printf("bool\n"); break;
 		case tagID_Undefined: printf("undefined\n"); break;
 		case tagID_Error:     printf("error\n"); break;
-		case tagID_Time:      printf("time\n"); break;
+		case tagID_AbsoluteTime:      printf("absolutetime\n"); break;
+		case tagID_RelativeTime:      printf("relativetime\n"); break;
 		case tagID_List:      printf("list\n"); break;
 		case tagID_Expr:      printf("expr\n"); break;
 		case tagID_XML:       printf("?xml\n"); break;
@@ -272,6 +275,7 @@ GrabTag(void)
 void XMLLexer::
 BreakdownTag(const char *complete_tag)
 {
+
 	int length, i;
 	int start, count;
 
@@ -348,16 +352,43 @@ BreakdownTag(const char *complete_tag)
 			i++;
 		}
 
+		i++; // go past 1st \"
+
 		// Now pick out the value
-		while (i < length && !isspace(complete_tag[i])) {
-			if (complete_tag[i] != '"') {
-				value += complete_tag[i];
-			}
+		char oldCh = 0;
+		// consume the string literal; read upto " ignoring \"
+		while (    (i<length)  
+				&& (    complete_tag[i] != '\"' 
+					 || ( complete_tag[i] == '\"' && oldCh == '\\' ) ) ) {
+			oldCh = complete_tag[i];
+			value += complete_tag[i];
 			i++;
 		}
-		if (name.size() > 0 && value.size() > 0) {
-			current_token.attributes[name] = value;
+		// scan string for &...; & replace them with their corresponding entities
+		for (unsigned int k=0; k< value.length(); k++) {
+			if (value[k] == '&') { // create substring
+				int index = k-1;
+				string str;
+				do {
+					index++;
+					str += value[index];
+				} while(value[index] != ';');
+				for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
+					if (!strcmp(str.c_str(), entities[i].name)) {
+						value.replace(k, str.length(), entities[i].replacement_text);
+					}
+				}
+			}
 		}
+		bool validStr = true;
+		value += " ";
+		Lexer::convert_escapes(value, validStr);		
+		if(!validStr) {  // contains a \0 escape char
+			current_token.tag_type = tagType_Invalid;
+		}
+		else if (name.size() > 0 && value.size() > 0) {
+			current_token.attributes[name] = value;
+		}		
 	}
 	return;
 }
@@ -407,25 +438,16 @@ GrabText(void)
 						break;
 					} else if (ch == ';') {
 						bool replaced_entity = false;
-						if (entity_text[1] == '#') {
-							// We have a numeric entity, like &#65; for 'A'
-							const char *number_string = entity_text.c_str();
-							int number = atoi(number_string+2); // +2 to skip &#
-							if (number <= 255) {
-								current_token.text += number;
-								replaced_entity = true;
-							}
-						} else {
-							// Non-numeric entity, do a comparison
-							entity_text += ch;
-							for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
-								if (!strcmp(entity_text.c_str(), entities[i].name)) {
-									current_token.text += entities[i].replacement_text;
-									replaced_entity = true;
-									break;
-								}
-							}
+						// Non-numeric entity, do a comparison
+						entity_text += ch;
+						for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
+						  if (!strcmp(entity_text.c_str(), entities[i].name)) {
+						    current_token.text += entities[i].replacement_text;
+						    replaced_entity = true;
+						    break;
+						  }
 						}
+					       
 						if (!replaced_entity) {
 							current_token.text += entity_text;
 						}
@@ -442,7 +464,7 @@ GrabText(void)
 			}
 		}
 	}
-
+	
 	if (!have_nonspace) {
 		// We know that we're at the end of the buffer, because
 		// otherwise GrabTag would have been called.
