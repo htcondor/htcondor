@@ -78,8 +78,6 @@ functionality is provided in the \File{libcondorzsyscall.a} and
 If \File{/usr/lib/libz.a} exists on your workstation, \Condor{compile}
 will automatically link your job with the compression-enabled version
 of the checkpointing library.
-Currently, compression is used only for periodic checkpoints, while we
-experiment with this new functionality.
 
 By default, a checkpoint is written to a file on the local disk of the
 machine where the job was submitted.  A checkpoint server is available
@@ -129,11 +127,19 @@ assume we are an original invocation, and that we should write any
 checkpoints to the name by which we were invoked with a
 ``ckpt'' extension.
 
+\subsection{\label{sec:ckpt-api}Checkpoint Library Interface}
+
 To cause a program to checkpoint and exit, send it a SIGTSTP signal.  For 
 example, in C you would add the following line to your code:
 
 \begin{verbatim}
 	kill( getpid(), SIGTSTP );
+\end{verbatim}
+
+Alternatively, you can call the C function:
+
+\begin{verbatim}
+	void ckpt_and_exit();
 \end{verbatim}
 
 Note that most Unix shells are configured to send a TSTP signal to the
@@ -145,8 +151,13 @@ running), sent it a SIGUSR2:
 	kill( getpid(), SIGUSR2 );
 \end{verbatim}
 
-In addition to the command-line parameters interface described above,
-a C interface is also provided for restarting a program from a
+Alternatively, you can call the C function:
+
+\begin{verbatim}
+	void ckpt();
+\end{verbatim}
+
+A C interface is also provided for restarting a program from a
 checkpoint file.  The prototypes are:
 
 \begin{verbatim}
@@ -160,3 +171,11 @@ init\_image\_with\_file\_descriptor() functions are used to specify
 the location of the checkpoint file.  Only one of the two must be
 used.  The restart() function causes the process image from the
 specified file to be read and restored.
+
+Also, the following external C variables may be used to configure the
+library:
+
+\begin{verbatim}
+	extern int condor_compress_ckpt; /* compression off(0) or on(1) */
+	extern int condor_debug_output;  /* debugging msgs off(0) or on(1) */
+\end{verbatim}
