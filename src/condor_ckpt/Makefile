@@ -1,8 +1,8 @@
 .SUFFIXES: .C
 CC = gcc
-CFLAGS = -g -DULTRIX42
+CFLAGS = -g -DSUNOS41
 CPlusPlus = g++
-CPlusFlags = -g -Wall -DULTRIX42 
+CPlusFlags = -g -Wall -DSUNOS41 
 LD = /usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5/ld
 LDFLAGS = -dc -e start -Bstatic
 LIB_PATH = -L/usr/psup/gcc/lib/gcc-lib/sparc-sun-sunos4.1.3/2.4.5 -L/usr/psup/gcc/lib
@@ -20,7 +20,7 @@ PACKAGE = image.o stubs.o machdep.o
 .C.o:
 	$(CPlusPlus) $(CPlusFlags) -c $<
 
-all: test test2
+all: test3
 
 test: driver.o $(PACKAGE)
 	$(CPlusPlus) -o test -static driver.o $(PACKAGE)
