@@ -35,9 +35,17 @@ ViewMember( )
 	rank.SetUndefinedValue( );
 }
 
+ViewMember::ViewMember(const ViewMember &other)
+{
+	key = other.key;
+	rank.CopyFrom( (Value&) other.rank );
+	return;
+}
+
 ViewMember::
 ~ViewMember( )
 {
+	return;
 }
 
 
@@ -80,6 +88,7 @@ operator=( const ViewMember &vm )
 bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 {
 	bool                lessThan;
+	bool                isEqual;
 	Value				val1, val2;
 	Value::ValueType	vt1, vt2;
 
@@ -94,24 +103,27 @@ bool operator<(const ViewMember &vm1, const ViewMember &vm2)
 	if( ( vt1==vt2 && vt1!=Value::CLASSAD_VALUE && vt2!=Value::LIST_VALUE ) ||
 			( vt1==Value::INTEGER_VALUE && vt2==Value::REAL_VALUE )			||
 			( vt1 == Value::REAL_VALUE && vt2 == Value::INTEGER_VALUE ) ) {
-		Value	result;
-		Operation::Operate( Operation::LESS_THAN_OP, val1, val2, result );
-		lessThan = result.IsBooleanValue( lessThan ) && lessThan;
+		Value	lessThanResult, equalResult;
+		Operation::Operate( Operation::LESS_THAN_OP, val1, val2, lessThanResult );
+		Operation::Operate( Operation::EQUAL_OP, val1, val2, equalResult);
+		lessThan = lessThanResult.IsBooleanValue( lessThan ) && lessThan;
+		isEqual  = equalResult.IsBooleanValue( isEqual) && isEqual;
 	} else {
 		// otherwise, rank them by their type numbers
-		lessThan = vt1 < vt2;
+		lessThan = (vt1 < vt2);
+		isEqual  = false;
 	}
 
-	// If they aren't ranked by value, rank them by key. 
-	// This is important, because otherwise two members with the same 
-	// rank are considered to have the same rank, and when we try to
-	// erase a singlemember from the viewMembers, it will erase everything 
-	// with the same rank, whether or not they have the same key.
-	if (lessThan == 0) {
-		string key1, key2;
+	// If they are equal, rank them by key.  This is important,
+	// because otherwise two members with the same rank are considered
+	// to be equal, but they may have different keys, and when we try
+	// to erase a single member from the viewMembers, it will erase
+	// everything with the same rank, whether or not they have the
+	// same key.
+	if (isEqual) {
 		lessThan = (vm1.key < vm2.key);
 	}
-
+	
 	return lessThan;
 }
 
@@ -873,7 +885,7 @@ ClassAdInserted( ClassAdCollection *coll, const string &key,
 		// insert ad into list of view members and update index
 	vm.SetKey( key );
 	vm.SetRankValue( rankValue );
-	memberIndex[key] = viewMembers.insert( vm );
+	memberIndex[key] = viewMembers.insert(vm);
 
 	return( true );
 }
@@ -885,7 +897,7 @@ ClassAdPreModify( ClassAdCollection *coll, ClassAd *ad )
 {
 	SubordinateViews::iterator	xi;
 	PartitionedViews::iterator	mi;
-
+	
 		// stash signature of ad
 	oldAdSignature = makePartitionSignature( ad );
 
@@ -898,6 +910,7 @@ ClassAdPreModify( ClassAdCollection *coll, ClassAd *ad )
 	for( mi = partitionedViews.begin( ); mi != partitionedViews.end( ); mi++ ) {
 		mi->second->ClassAdPreModify( coll, ad );
 	}
+
 }
 
 
@@ -932,9 +945,10 @@ ClassAdModified( ClassAdCollection *coll, const string &key,
 		if( !equal.IsBooleanValue( sameRank ) || !sameRank ) {
 				// rank changed ... need to re-order
 			ViewMember	vm;
+
 				// remove old view member ...
 			vm.SetRankValue( oldAdRank );
-			vm.SetKey( key );
+			vm.SetKey(key);
 			viewMembers.erase( vm );
 				// re-insert with new rank value and update member index
 			vm.SetRankValue( rankValue );

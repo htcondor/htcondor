@@ -45,6 +45,7 @@ class ClassAdCollectionServer;
 class ViewMember {
 public:
 	ViewMember( );
+	ViewMember(const ViewMember &other);
 	~ViewMember( );
 
 	void SetKey( const string &key );
