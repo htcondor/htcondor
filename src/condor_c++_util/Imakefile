@@ -26,7 +26,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	$(API_OBJ) $(DAEMON_CLIENT_OBJ) \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
-	linebuffer.o \
+	linebuffer.o cron.o cronmgr.o cronjob.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
