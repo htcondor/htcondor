@@ -117,6 +117,46 @@ AC_ARG_WITH(externals,
 )
 AC_SUBST(ext_root,$ac_cv_externals)
 
+# Now, try to find a condor_analyze binary
+AC_MSG_CHECKING([for condor_analyze])
+ac_condor_analyze_dir=""
+ac_has_condor_analyze=NO
+AC_ARG_WITH(condor_analyze,
+ AC_HELP_STRING([--with-condor_analyze=DIR],
+ [full path to the directory containing pre-compiled versions of condor_analyze to include in the Condor release tarballs (default is to search <externals>/install/condor_analyze, then if nothing was found, /usr/local/condor/analyze)]),
+ [if test $withval = no ; then
+    ac_has_condor_analyze=NO
+  else
+    if test -d $withval ; then
+      CONDOR_VERIFY_ANALYZE_DIR([$withval])
+      if test $ac_has_condor_analyze = "NO" ; then
+        AC_MSG_RESULT([ERROR])
+        AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not contain any condor_analyze binaries])
+      fi 
+    else
+      AC_MSG_RESULT([ERROR])
+      AC_MSG_ERROR([directory specified with --with-condor_analyze ($withval) does not exist])
+    fi
+  fi
+ ],
+ [
+  CONDOR_VERIFY_ANALYZE_DIR([$ac_cv_externals/install/condor_analyze])
+  if test $ac_has_condor_analyze = "NO" ; then
+    CONDOR_VERIFY_ANALYZE_DIR([/usr/local/condor/analyze])
+  fi
+ ]
+)
+AC_SUBST(has_condor_analyze,$ac_has_condor_analyze)
+if test $ac_has_condor_analyze = "YES" ; then
+  AC_MSG_RESULT([$ac_condor_analyze_dir])
+  CONDOR_SET_ANALYZE([ac_condor_analyze_release],[release],fatal)
+  CONDOR_SET_ANALYZE([ac_condor_analyze_static],[static],no)
+  CONDOR_SET_ANALYZE([ac_condor_analyze_strip],[strip],fatal)
+else
+  AC_MSG_RESULT([no])
+fi
+
+
 AC_ARG_VAR(TMPDIR, [Directory for temp files during Condor build [/tmp]])
 if test "$ac_cv_env_TMPDIR_set" != set; then
     TMPDIR=/tmp
