@@ -114,12 +114,9 @@ private:
 class CpuAttributes
 {
 public:
+	friend class AvailAttributes;
 
-	CpuAttributes( MachAttributes*, int num_cpus, 
-				   float phys_mem_percent, float virt_mem_percent,
-				   float disk_percent );
-
-	CpuAttributes( MachAttributes*, int num_cpus, 
+	CpuAttributes( MachAttributes*, int vm_type, int num_cpus, 
 				   int num_phys_mem, float virt_mem_percent,
 				   float disk_percent );
 
@@ -139,10 +136,11 @@ public:
 	void set_console( time_t k ) { c_console_idle = k; };
 	time_t keyboard_idle() { return c_idle; };
 	time_t console_idle() { return c_console_idle; };
+	int	type() { return c_type; };
 
 	void display( amask_t );
-
 	void dprintf( int, char*, ... );
+	void show_totals( int );
 
 private:
 	Resource*	 	rip;
@@ -162,13 +160,28 @@ private:
 
 		// These hold the percentages of shared, dynamic resources
 		// that are allocated to this CPU.
-	float			c_phys_mem_percent;
 	float			c_virt_mem_percent;
 	float			c_disk_percent;
 
-	void	init( MachAttributes* map, int num_cpus,  
-				  float virt_mem_percent, float disk_percent ); 
+	int				c_type;		// The type of this resource
 };	
+
+
+// Available machine-wide attributes
+class AvailAttributes
+{
+public:
+	AvailAttributes( MachAttributes* map );
+
+	bool decrement( CpuAttributes* cap );
+	void show_totals( int );
+
+private:
+	int				a_num_cpus;
+	int				a_phys_mem;
+	float			a_virt_mem_percent;
+	float			a_disk_percent;
+};
 
 
 void deal_with_benchmarks( Resource* );
