@@ -65,7 +65,6 @@ class Resource;
 #include "ResState.h"
 #include "Resource.h"
 #include "ResMgr.h"
-#include "calc.h"
 #include "command.h"
 #include "util.h"
 
