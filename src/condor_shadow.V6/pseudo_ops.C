@@ -1179,7 +1179,7 @@ int pseudo_get_buffer_info( int *blocks_out, int *block_size_out, int *prefetch_
 
 	if(buffer_size>0) {
 
-		if(block_size<=0) block_size=16384;
+		if(block_size<=0) block_size=32768;
 
 		blocks = (buffer_size/block_size);
 		if( (blocks*block_size) < buffer_size ) {
