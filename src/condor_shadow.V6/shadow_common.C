@@ -634,40 +634,39 @@ part_send_job(
 int
 send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 {
-  int sd;
-  
-  // connect to the startd - when sin_host is given, START_PORT is ignored ?
-  sd = do_connect(sin_host, "condor_startd", START_PORT);
-  if( sd < 0 ) {
-    dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
-	     sin_host);
-    return -1;
+  // create a relisock to communicate with startd
+  ReliSock sock;
+  if( !sock.timeout( 20 ) ) {
+	  dprintf( D_ALWAYS, "Can't set timeout on sock.\n" );
+	  return -5;
+  }
+  if( !sock.connect( sin_host, 0 ) ) {
+	  dprintf( D_ALWAYS, "Can't connect to startd at %s\n", sin_host );
+	  return -1;
   }
 
-  // create a relisock to communicate with startd
-  ReliSock        *sock;
-  sock = new ReliSock();
-  sock->attach_to_file_desc(sd);
-  sock->encode();
+  sock.encode();
 
   // Send the command
-  if( !sock->code(cmd) ) {
-    dprintf( D_ALWAYS, "sock->code(%d)", cmd );
+  if( !sock.code(cmd) ) {
+    dprintf( D_ALWAYS, "sock.code(%d)", cmd );
     return -2;
   }
   
   // send the capability
   dprintf(D_FULLDEBUG, "send capability %s\n", capability);
-  if(!sock->put(capability, SIZE_OF_CAPABILITY_STRING)){
-    dprintf( D_ALWAYS, "sock->put()" );
+  if(!sock.code(capability)){
+    dprintf( D_ALWAYS, "sock.code(%s)", capability );
     return -3;
   }
 
   // send end of message
-  if( !sock->end_of_message() ) {
+  if( !sock.end_of_message() ) {
     dprintf( D_ALWAYS, "end_of_message failed" );
     return -4;
   }
+  dprintf( D_FULLDEBUG, "Sent command %d to startd at %s with cap %s\n",
+		   cmd, sin_host, capability );
 
   return 0;
 }
