@@ -107,7 +107,9 @@ ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #if USE_FLOCK
 
 #include <sys/file.h>
+#if !defined(SUNOS41)	/* sunos41 has the definitions in sys/file.h --Weiru */
 #include "fake_flock.h" 
+#endif
 
 /* Solaris specific change because of the enclosure of this header in HPUX9 
    definition but is used unconditionally in following code ..dhaval 6/24 */
