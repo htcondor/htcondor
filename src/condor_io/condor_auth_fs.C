@@ -128,8 +128,6 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
                     new_file ? new_file : "(null)" );
         }
         
-        // test
-        retval = -1;
         mySock_->code( retval );
         mySock_->end_of_message();
         free( new_file );
