@@ -113,7 +113,7 @@ bool Literal::
 _Evaluate( EvalState &state, Value &val, ExprTree *&tree )
 {
 	_Evaluate( state, val );
-	return( !( tree = Copy() ) );
+	return( ( tree = Copy() ) );
 }
 
 
