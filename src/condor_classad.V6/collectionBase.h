@@ -28,8 +28,10 @@
 //#ifdef ADDCACHE
   #include "indexfile.h"
   #include <string>
+#ifndef WIN32
   #include <sys/time.h>
   #include <unistd.h>
+#endif
 //#endif
 #define MaxCacheSize 5
 
