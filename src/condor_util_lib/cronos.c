@@ -72,22 +72,17 @@
 **
 *****************************************************************/
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <time.h>
-
-#define TRUE 1
-#define FALSE 0
+#include "condor_common.h"
 
 /*
 ** Represent a moment in time by a 5 element tuple
 ** (month,day,hour,minute,second)
 */
-#define MONTH	0
-#define DAY		1
-#define HOUR	2
-#define MINUTE	3
-#define SECOND	4
+#define CMONTH	0
+#define CDAY	1
+#define CHOUR	2
+#define CMINUTE	3
+#define CSECOND	4
 #define N_ELEM	5
 
 typedef void (*FUNC_P)();
@@ -129,11 +124,11 @@ static int check_schedule( int prev[], int now[] );
 schedule_event( int month, int day, int hour, int minute, int second,
 															FUNC_P func )
 {
-	Schedule[N_Events].pattern[MONTH] = month;
-	Schedule[N_Events].pattern[DAY] = day;
-	Schedule[N_Events].pattern[HOUR] = hour;
-	Schedule[N_Events].pattern[MINUTE] = minute;
-	Schedule[N_Events].pattern[SECOND] = second;
+	Schedule[N_Events].pattern[CMONTH] = month;
+	Schedule[N_Events].pattern[CDAY] = day;
+	Schedule[N_Events].pattern[CHOUR] = hour;
+	Schedule[N_Events].pattern[CMINUTE] = minute;
+	Schedule[N_Events].pattern[CSECOND] = second;
 	Schedule[N_Events].func = func;
 	N_Events += 1;
 }
@@ -259,11 +254,11 @@ get_moment( int cur[] )
 
 	(void)time( &clock );
 	tm = localtime( &clock );
-	cur[MONTH] = tm->tm_mon + 1;
-	cur[DAY] = tm->tm_mday;
-	cur[HOUR] = tm->tm_hour;
-	cur[MINUTE] = tm->tm_min;
-	cur[SECOND] = tm->tm_sec;
+	cur[CMONTH] = tm->tm_mon + 1;
+	cur[CDAY] = tm->tm_mday;
+	cur[CHOUR] = tm->tm_hour;
+	cur[CMINUTE] = tm->tm_min;
+	cur[CSECOND] = tm->tm_sec;
 	/*
 	display_moment( cur );
 	*/
@@ -273,5 +268,5 @@ static
 display_moment( int mom[] )
 {
 	printf( "%02d/%02d %02d:%02d:%02d\n",
-			mom[MONTH], mom[DAY], mom[HOUR], mom[MINUTE], mom[SECOND] );
+			mom[CMONTH], mom[CDAY], mom[CHOUR], mom[CMINUTE], mom[CSECOND] );
 }
