@@ -938,7 +938,7 @@ int Stream::get(
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
-				if (get_bytes(&pad, INT_SIZE-sizeof(int))
+				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
 					return FALSE;
 				}
@@ -981,7 +981,7 @@ int Stream::get(
 
 		case external: {
 			if (INT_SIZE > sizeof(int)) { // get overflow bytes
-				if (get_bytes(&pad, INT_SIZE-sizeof(int))
+				if (get_bytes(pad, INT_SIZE-sizeof(int))
 					!= INT_SIZE-sizeof(int)) {
 					return FALSE;
 				}
@@ -1027,7 +1027,7 @@ int Stream::get(
 				l = (long) i;
 			} else {
 				if (sizeof(long) < INT_SIZE) {
-					if (get_bytes(&pad, INT_SIZE-sizeof(long))
+					if (get_bytes(pad, INT_SIZE-sizeof(long))
 						!= INT_SIZE-sizeof(long)) {
 						return FALSE;
 					}
@@ -1074,7 +1074,7 @@ int Stream::get(
 				l = (long) i;
 			} else {
 				if (sizeof(long) < INT_SIZE) {
-					if (get_bytes(&pad, INT_SIZE-sizeof(long))
+					if (get_bytes(pad, INT_SIZE-sizeof(long))
 						!= INT_SIZE-sizeof(long)) {
 						return FALSE;
 					}
