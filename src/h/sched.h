@@ -159,6 +159,7 @@ typedef struct {        /* record sent by startd to shadow */
 #define REQ_NEW_PROC		(SCHED_VERS+35)
 #define PCKPT_FRGN_JOB                (SCHED_VERS+36)
 #define SEND_RUNNING_JOBS     (SCHED_VERS+37)
+#define CHECK_CAPABILITY    (SCHED_VERS+38)
 
 #define SCHED_PORT		9605
 #define START_PORT		9611
@@ -196,6 +197,9 @@ typedef struct {        /* record sent by startd to shadow */
 #define BLOCKED			7
 #define SYSTEM			8
 #define CONDOR_DOWN		-1
+
+#define CONNECTION_FAILED	1
+#define	CAPABILITY_FAILED	2
 
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
