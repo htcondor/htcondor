@@ -110,7 +110,7 @@ int perm::get_permissions( const char *file_name ) {
 	const char* OS = sysapi_opsys();
 	
 	
-	if ( strcmp( OS, "WINNT50" ) == 0 )
+    if ( strcmp( OS, "WINNT50" ) == 0 )
 	{
 		
 		// Fill in the Trustee thing-a-ma-jig(tm).	What's a thing-a-ma-jig(tm) you ask?
@@ -179,9 +179,12 @@ int perm::get_permissions( const char *file_name ) {
 	return AccessRights;
 }
 
+//
 // returns true if account1 and account2 match
 // and domain1 is null, empty, or domain1 and domain2
-// match. That is, return a match if the accounts match and the domains match or are unspecified
+// match. That is, return a match if the accounts match
+// and the domains match or are unspecified
+//
 bool perm::domainAndNameMatch( const char *account1, const char *account2, const char *domain1, const char *domain2 ) {
 	
 	// for debugging
@@ -192,6 +195,7 @@ bool perm::domainAndNameMatch( const char *account1, const char *account2, const
 		strcmp ( domain1, domain2 ) == 0 ) );	
 }
 
+//
 //  returns account and domain string from a SID pointer
 //  It's just a wrapper method, but it saves time since this is a common operation
 //
@@ -241,6 +245,7 @@ int perm::getAccountFromSid( LPTSTR Sid, char* &account, char* &domain ) {
 //
 // determines if user and domain matches the user and domain specifed in trustee
 // 1 = yes, 0 = no, -1 = unknown/error
+//
 int perm::processUserTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
 	
 	char *trustee_name = NULL;		// name of the trustee we're looking at
@@ -249,6 +254,8 @@ int perm::processUserTrustee( const char *account, const char *domain, const TRU
 	// if we have a user, we'll get the name of the user either 
 	// from a string or Sid inside the trustee
 	
+	dprintf(D_FULLDEBUG,"in perm::processUserTrustee()\n");
+
 	if ( trustee->TrusteeForm == TRUSTEE_IS_NAME ) // buffer that identifies Trustee is a string
 	{			
 		// break the trustee string down into domain and name
@@ -306,10 +313,13 @@ int perm::processUserTrustee( const char *account, const char *domain, const TRU
 // Determines if user is a member of the local group specified in trustee
 //
 //  1 = yes, 0 = no, -1 = error
+//
 int perm::processLocalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
 	
 	LOCALGROUP_MEMBERS_INFO_3 *buf, *cur; // group members output buffer pointers
 	
+	dprintf(D_FULLDEBUG,"in perm::processLocalGroupTrustee()\n");
+
 	char *trustee_name = NULL;		// name of the trustee we're looking at
 	char *trustee_domain = NULL;	// domain of the trustee we're looking at
 	
@@ -339,8 +349,7 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 	NET_API_STATUS status;
 	wchar_t *trustee_name_unicode = new wchar_t[strlen(trustee_name)+1]; 
 	MultiByteToWideChar(CP_ACP, 0, trustee_name, -1, trustee_name_unicode, strlen(trustee_name)+1);
-	wchar_t *trustee_domain_unicode = new wchar_t[strlen(trustee_domain)+1]; 
-	MultiByteToWideChar(CP_ACP, 0, trustee_domain, -1, trustee_domain_unicode, strlen(trustee_domain)+1);
+	
 	DWORD resume_handle = 0;
 	
 	do {	 // loop until we have checked all the group members
@@ -350,7 +359,7 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			trustee_name_unicode,					// name of group
 			3,										// information level
 			(BYTE**) &buf,							// pointer to buffer that receives data
-			16384,					// preferred length of data
+			16384,									// preferred length of data
 			&entries_read,							// number of entries read
 			&total_entries,							// total entries available
 			&resume_handle							// resume handle 
@@ -361,7 +370,6 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_ACCESS_DENIED\n");
 			NetApiBufferFree( buf );
 			delete[] trustee_name_unicode;	
-			delete[] trustee_domain_unicode; 
 			delete[] trustee_domain; 
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
 			return -1;
@@ -370,7 +378,6 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_InvalidComputer\n");
 			NetApiBufferFree( buf );
 			delete[] trustee_name_unicode;	
-			delete[] trustee_domain_unicode; 
 			delete[] trustee_domain; 
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
 			return -1;
@@ -379,7 +386,6 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: ERROR_NO_SUCH_ALIAS\n");
 			NetApiBufferFree( buf );
 			delete[] trustee_name_unicode;	
-			delete[] trustee_domain_unicode; 
 			delete[] trustee_domain; 
 			dprintf(D_ALWAYS, "perm::NetLocalGroupGetMembers failed: (total entries: %d, entries read: %d )\n", total_entries, entries_read );
 			return -1;
@@ -404,7 +410,6 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 			{
 				delete[] member;
 				delete[] trustee_name_unicode;	
-				delete[] trustee_domain_unicode; 
 				delete[] trustee_domain; 
 				NetApiBufferFree( buf );
 				return 1;
@@ -413,7 +418,6 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 		}
 	} while ( status == ERROR_MORE_DATA );
 	delete[] trustee_name_unicode;	
-	delete[] trustee_domain_unicode; 
 	delete[] trustee_domain; 
 	// having exited the for loop without finding anything, we conclude
 	// that the account does not exist in the explicit access structure
@@ -426,10 +430,14 @@ int perm::processLocalGroupTrustee( const char *account, const char *domain, con
 // Determines if user is a member of the global group specified in trustee
 //
 //  1 = yes, 0 = no, -1 = error
+//
 int perm::processGlobalGroupTrustee( const char *account, const char *domain, const TRUSTEE *trustee ) {
 	
 	char *trustee_name = NULL;		// name of the trustee we're looking at
 	char *trustee_domain = NULL;	// domain of the trustee we're looking at
+
+	dprintf(D_FULLDEBUG,"in perm::processGlobalGroupTrustee()\n");
+
 	if ( trustee->TrusteeForm == TRUSTEE_IS_SID )
 	{
 		if ( getAccountFromSid( trustee->ptstrName, trustee_name, trustee_domain ) != 0 ) {
@@ -625,8 +633,14 @@ perm::perm() {
 
 perm::~perm() {
 	if ( psid && must_freesid ) FreeSid(psid);
-	delete[] Account_name;
-	delete[] Domain_name;
+	
+	if ( Account_name ) {
+		delete[] Account_name;
+	}
+
+	if ( Domain_name ) {
+		delete[] Domain_name;
+	}
 }
 
 bool perm::init( char *accountname, char *domain ) 
@@ -637,12 +651,17 @@ bool perm::init( char *accountname, char *domain )
 	must_freesid = false;
 	
 	psid = (PSID) &sidBuffer;
+
+	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) domain (%s)\n", accountname, domain);
 	
 	Account_name = new char[ strlen(accountname) +1 ];
-	Domain_name = new char[ strlen(domain) +1 ];
-	
 	strcpy( Account_name, accountname );
-	strcpy( Domain_name, domain );
+
+	if ( domain )
+	{
+		Domain_name = new char[ strlen(domain) +1 ];
+		strcpy( Domain_name, domain );
+	}
 	
 	if ( !LookupAccountName( domain,		// Domain
 		accountname,						// Account name

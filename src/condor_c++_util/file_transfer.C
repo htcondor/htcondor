@@ -309,7 +309,11 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 			priv_state old_priv = set_condor_priv();
+			
+
+			
 			if( (mkdir(SpoolSpace,0777) < 0) ) {
+				// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
 				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
 						 SpoolSpace, errno );
