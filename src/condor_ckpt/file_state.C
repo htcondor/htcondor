@@ -377,7 +377,7 @@ CondorFile * CondorFileTable::open_url( char *url, int flags, int mode, int allo
 	} else if(!strncmp(url,"special",7)) {
 		f = new CondorFileSpecial;
 	} else if(!strncmp(url,"remote",6)) {
-		if( allow_buffer && !buffer_size && !buffer_block_size ) {
+		if( !allow_buffer || !buffer_size || !buffer_block_size ) {
 			f = new CondorFileRemote;
 		} else {
 			f = new CondorFileBuffer(new CondorFileRemote);
