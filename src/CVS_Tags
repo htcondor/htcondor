@@ -1,3 +1,9 @@
+6/16/99 V6_1_7
+	The 6.1.7 release tag, which lives on the V6_1_6-branch.
+
+6/14/99 V6_1_6
+	The 6.1.6 release tag, which lives on the V6_1_6-branch.
+
 6/10/99 cae-special-603-branch
 	Some bugs fixes related to fortran.
 	Compiled only for sparc solaris 551 and given to them in binary form.
