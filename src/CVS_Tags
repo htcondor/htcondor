@@ -1,3 +1,10 @@
+
+6/17/02 V6_3-dzero-branch
+	A new branch to hold the changes to Condor-G for DZero.  
+	Specifically, the first pass at Alain's old ClassAd "plugin"
+	support, and Todd's first pass at matchmaking Globus Universe
+	jobs.
+
 5/31/02 V6_3_3
 	The 6.3.3 release tag, which lives on the V6_3-branch
 
