@@ -14,10 +14,11 @@
 #             turn condor on/off; also added logging of the hostname
 # 17-Jul-2000 Erik Paulson <epaulson@cs.wisc.edu> updated 'check' so it
 #             lists outstanding checkouts from the logfile.
+# 25-Jul-2000 Peter Couvares <pfc@cs.wisc.edu> fixed status checking
+#             to ask nodes directly so fast shutdown works reliably
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
-#   knowing who reserved a node
 #   reservations into the future
 #   length of reservations
 #   automatic checking of stale/idle reservations
@@ -56,7 +57,7 @@ use Sys::Hostname;
                     "-set 'start_daemons = false'";
        $CONFIG_ON = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-unset start_daemons";
-   $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL";
+   $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_POOL -direct";
  $CONDOR_RECONFIG = "$SBIN/condor_reconfig -pool $CONDOR_POOL";
 $CONDOR_HOSTALLOW = "$BIN/condor_config_val -pool $CONDOR_POOL " .
                     "-name c33 hostallow_administrator";
@@ -251,29 +252,6 @@ sub find_avail {
 }
 
 
-sub condor_up()
-{
-    my $node = shift;
-
-    open( CMD, "$CONDOR_STATUS $node |" )
-	|| die "$0: error running \"$CONDOR_STATUS $node\": $!\n";
-
-    while( <CMD> )
-    {
-	chomp;
-	if ( /^condor_status: / )
-	{
-	    die "$_\n$0: error running \"$CONDOR_STATUS $node\"\n";
-	}
-	elsif ( /^vm\d+\@$node/ || /^$node/ )
-	{
-	    return 1;
-	}
-    }
-    return 0;
-}
-
-
 sub kill_condor {
     my( $host ) = @_;
     `$CONDOR_OFF $host`;
@@ -284,99 +262,131 @@ sub kill_condor {
 
 sub check_condor {
     my( @hosts ) = @_;
-
-	%nodes = ();
-	$date = '';
-	$user = '';
-	$checkedOut = 'returned';
-
-	foreach $host ( @hosts )
+    
+    %nodes = ();
+    $date = '';
+    $user = '';
+    $checkedOut = 'returned';
+    
+    foreach $host ( @hosts )
+    {
+	#if the user just specifies a number, prepend the "cXX" node name
+	if( $host =~ /^\d+$/ ) 
 	{
-		 #if the user just specifies a number, prepend the "cXX" node name
-		if( $host =~ /^\d+$/ ) 
-		{
-			if( $host < 10 ) 
-			{
-				$host = "c0$host";
-	   	 	}
-			else
-			{
-				$host = "c$host";
-			}
-		}
-	    push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
+	    if( $host < 10 ) 
+	    {
+		$host = "c0$host";
+	    }
+	    else
+	    {
+		$host = "c$host";
+	    }
 	}
-
-	open(CLUSTER_LOG, $LOGFILE) || die "Can't open logfile!";
-	while(<CLUSTER_LOG>)
+	push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
+    }
+    
+    open( CLUSTER_LOG, $LOGFILE ) || die "$0: error opening $LOGFILE: $!\n";
+    while( <CLUSTER_LOG> )
+    {
+	if( /(given|returned)/ )
 	{
-		if(/(given|returned)/)
-		{
-			$chomp;
-			($dow, $month, $day, $tod, $year, $who, $what, $which) = split;
-			$date = join (" ", $dow, $month, $day, $tod, $year);
-			$what =~ s/\(//;
-			$which =~ s/\)//;
-			#print "$which: $what at $date by $who\n";
-			if($what eq "returned")
-			{
-				if( ${$nodes{$which}}[2] ne "given" ) {
-					#print "$who returning $which at $date",
-					#", which was never checked out! \n";
-				}
-
-				${$nodes{$which}}[0] = "";
-				${$nodes{$which}}[1] = "";
-				${$nodes{$which}}[2] = $what;
-			}
-			if($what eq "given")
-			{
-				if( ${$nodes{$which}}[2] ne "returned") {
-					#print "$who checked out $which at $date,",
-					#" which was already checked out by",
-					#" ${$nodes{$which}}[1] at",
-					#" ${$nodes{$which}}[0]\n";
-
-				}
-
-				${$nodes{$which}}[0] = $date;
-				${$nodes{$which}}[1] = $who;
-				${$nodes{$which}}[2] = $what;
-			}
-
+	    chomp;
+	    ($dow, $month, $day, $tod, $year, $who, $what, $which) = split;
+	    $date = join (" ", $dow, $month, $day, $tod, $year);
+	    $what =~ s/\(//;
+	    $which =~ s/\)//;
+	    #print "$which: $what at $date by $who\n";
+	    if( $what eq "returned" )
+	    {
+		if( ${$nodes{$which}}[2] ne "given" )
+	        {
+		    #print "$who returning $which at $date",
+		    #", which was never checked out! \n";
 		}
+	    
+	        ${$nodes{$which}}[0] = "";
+	        ${$nodes{$which}}[1] = "";
+                ${$nodes{$which}}[2] = $what;
+            }
+            if( $what eq "given" )
+            {
+                if( ${$nodes{$which}}[2] ne "returned")
+                {
+                    #print "$who checked out $which at $date,",
+                    #" which was already checked out by",
+		    #" ${$nodes{$which}}[1] at",
+		    #" ${$nodes{$which}}[0]\n";
+                }
+ 		${$nodes{$which}}[0] = $date;
+		${$nodes{$which}}[1] = $who;
+		${$nodes{$which}}[2] = $what;
+	    }
+
 	}
+    }
 
-	#foreach $node (sort keys %nodes) 
-	foreach $host(@hosts)
-	{
-		$isUp = check_host($host);
-		print "$host: $isUp ";
-		if ( ${$nodes{$host}}[2] eq "given"){
-			print " checked out by ${$nodes{$host}}[1] at ";
-			print "${$nodes{$host}}[0]";
-		}
-		print"\n";
+    #foreach $node (sort keys %nodes) 
+    foreach $host (@hosts)
+    {
+	$isUp = check_host($host);
+	print "$host: $isUp";
+	if ( ${$nodes{$host}}[2] eq "given")
+        {
+	    print " (reserved by ${$nodes{$host}}[1] at ";
+	    print "${$nodes{$host}}[0])";
+	}
+        print"\n";
     }
 }
 
-sub check_host {
-    my( $host ) = @_;
+
+sub check_host
+{
+    my $host = shift;
     my( $status );
-    open( CMD, "$CONDOR_STATUS $host 2>&1 |" );
-    while( <CMD> ) {
-	if( /unknown host/ ) {
-	    $status = "Unknown host";
-	} elsif( /^$/ ) {
-	    $status = "Condor is down";
-	} else {
-	    $status = "Condor is up";
-	}
+
+    $up = condor_up( $host );
+
+    if( $up == 1 )
+    {
+	$status = "Condor is on ";
     }
-    return $status
+    elsif( $up == -1 )
+    {
+	$status = "unknown host";
+    }
+    else
+    {
+	$status = "Condor is off";
+    }
+    return $status;
 }
 
 
 sub timestamp {
     return scalar localtime();
+}
+
+
+sub condor_up()
+{
+    my $node = shift;
+
+    open( CMD, "$CONDOR_STATUS $node 2>&1 |" )
+	|| die "$0: error running \"$CONDOR_STATUS $node\": $!\n";
+
+    while( <CMD> )
+    {
+	chomp;
+	if ( /^vm\d+\@$node/ || /^$node/ )
+	{
+	    return 1;
+	}
+	# will never happen with condor_status -direct ...
+	elsif( /unknown host/ )
+	{
+	    return -1;
+	}
+    }
+    return 0;
 }
