@@ -31,8 +31,6 @@
 
 #define SDKFiles src include lib/libcondorsdk.a
 
-#define ViewServerFiles sbin/condor_collector sbin/condor_stats
-
 #define ViewClientFiles sbin/condor_stats
 
 #if HAS_FORTRAN
@@ -153,8 +151,6 @@ contrib_tarball(ckpt_server.tar,CkptServerFiles)
 contrib_tarball(eventd.tar,EventdFiles)
 /* contrib_tarball(sdk.tar,SDKFiles) */
 
-both_tarball(view_server.tar,ViewServerFiles,ViewServerContribFiles)
-
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
 #define AfsPvmTar afs_pvm.tar
@@ -170,9 +166,9 @@ both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
 #else
 #define CondorGTar 
 #endif /* Condor-G */
-all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
+all_tarballs: ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
 
-afs_tarballs: afs_view_server.tar afs_release.tar \
+afs_tarballs: afs_release.tar \
 	afs_ckpt_server.tar AfsEventdTar AfsPvmTar
 
 public:: all_tarballs
