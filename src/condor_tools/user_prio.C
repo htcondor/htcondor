@@ -526,8 +526,8 @@ static void PrintResList(AttrList* ad)
 
 int CalcTime(int month, int day, int year) {
   struct tm time_str;
-  if (year>1900) year-=1900;
   if (year<50) year +=100; // If I ask for 1 1 00, I want 1 1 2000, not 1 1 1900
+  if (year>1900) year-=1900;
   time_str.tm_year=year;  time_str.tm_mon=month-1;
   time_str.tm_mday=day;
   time_str.tm_hour=0;
