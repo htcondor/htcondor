@@ -19,7 +19,7 @@ int VarTypeTable::FindType(char *var)
     if(!strcmp(var, tmpEntry->MyName()))
       return tmpEntry->MyType();
   
-  return FIXED; 
+  return VTAB_FIXED; 
 }
 
 void VarTypeTable::AddEntry(char *var, int type)
@@ -53,5 +53,5 @@ void BuildVarTypeTable(FILE *f, VarTypeTable *table)
     if(!strcmp(type, "RANGE") || !strcmp(type, "range"))
       table->AddEntry(name, RANGE);
     else
-      table->AddEntry(name, FIXED);
+      table->AddEntry(name, VTAB_FIXED);
 }
