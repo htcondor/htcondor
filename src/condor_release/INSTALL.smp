@@ -4,9 +4,9 @@ online browsing at URL:
    http://www.cs.wisc.edu/condor/manual
 
 We recommend that you go to the above URL and download the Condor
-Manual.  However, section 3.3.1 of the manual which provides
-installation directions for the SMP-Startd contrib module is
-reproduced below in ASCII. 
+Manual.  However, section 3.3.1 of the 6.0 manual, which provides
+installation directions for the SMP-Startd contrib module, is
+reproduced below in ASCII.
 
 After that, we include section 3.8, ``Managing your Condor Pool''
 which contains instructions that are referenced in the installation

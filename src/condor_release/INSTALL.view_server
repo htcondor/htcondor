@@ -4,9 +4,9 @@ online browsing at URL:
    http://www.cs.wisc.edu/condor/manual
 
 We recommend that you go to the above URL and download the Condor
-Manual.  However, section 3.3.3 of the manual which provides
-installation directions for the CondorView Server contrib module is 
-reproduced below in ASCII. 
+Manual.  However, section 3.3.3 of the 6.0 manual, which provides
+installation directions for the CondorView Server contrib module, is
+reproduced below in ASCII.
 
      _________________________________________________________________
 
