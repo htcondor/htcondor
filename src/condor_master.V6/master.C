@@ -150,7 +150,7 @@ master_exit(int retval)
 		terminate(retval);
 #endif
 
-	exit(retval);
+	DC_Exit(retval);
 	return 1;	// just to satisfy vc++
 }
 

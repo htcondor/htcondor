@@ -78,13 +78,13 @@ int
 main_shutdown_graceful()
 {
     delete xinter;
-    exit(EXIT_SUCCESS);
+    DC_Exit(EXIT_SUCCESS);
 }
 
 int 
 main_shutdown_fast()
 {
-    exit(EXIT_SUCCESS);
+	DC_Exit(EXIT_SUCCESS);
 }
 
 int 
