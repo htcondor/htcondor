@@ -250,12 +250,11 @@ handle_config_val( Service*, int, Stream* stream )
 			free( tmp );
 			return FALSE;
 		}
+		free( tmp );
 		if( ! stream->end_of_message() ) {
 			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
-			free( tmp );
 			return FALSE;
 		}
-
 	}
 	return TRUE;
 }
@@ -403,7 +402,7 @@ int main( int argc, char** argv )
 	int		i;
 	ReliSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
-	int		wantsKill = FALSE;
+	int		wantsKill = FALSE, wantsQuiet = FALSE;
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
@@ -554,6 +553,10 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}
 			break;
+		case 'q':
+			wantsQuiet = TRUE;
+			dcargs++;
+			break;			
 		default:
 			done = TRUE;
 			break;	
@@ -569,7 +572,7 @@ int main( int argc, char** argv )
 	}
 
 		// call config so we can call param.  
-	config(NULL);
+	config(NULL, wantsQuiet);
 
 		// If want to override which thing is our config file, we've
 		// got to set that here, between where we config and where we
