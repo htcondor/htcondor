@@ -1,4 +1,11 @@
 Changes for version 0.9.8:
+* regexprMember has been added.
+
+* The subscript operator now returns error instead of undefined if the
+  argument is out of bounds.
+
+* -0.0 is now handled correctly. 
+
 * You can now do math with booleans. True is 1, False is 0. This lets
   us do things like:
 

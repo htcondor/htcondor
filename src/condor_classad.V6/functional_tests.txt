@@ -94,13 +94,14 @@ eval x = [
          ]
 same $x["a"], 3
 same $x["b"], "alain"
-same $x["c"], undefined
+same $x["c"], error
+eval d = $x["c"]
 same $x[strcat("a", "b")], 4
 eval x = {"a", "b", "c"}
 same $x[0], "a"
 same $x[1], "b"
 same $x[2], "c"
-same $x[3], undefined
+same $x[3], error
 
 /////////////////////////////////
 echo Testing functions...
@@ -160,6 +161,12 @@ same regexp("Alain.*Roy", "Alain Aslag Roy"), true
 same regexp("alain.*roy", "Alain Aslag Roy"), false
 same regexp("alain.*roy", "Alain Aslag Roy", "i"), true
 
+same regexpMember("b.*", {}), false
+same regexpMember("b.*", {"aa"}), false
+same regexpMember("b.*", {"aa", "bb"}), true
+same regexpMember("b.*", {"bb", "aa"}), true
+same regexpMember("b.*", {1, "bb"} ), error
+
 eval t = absTime("1970-01-02T:03:04:05Z")
 same splitTime($t).year, 1970
 same splitTime($t).month, 1
@@ -196,12 +203,21 @@ eval f = formatTime(splitTime($t), "%H:%M:%S")
 same $f, "15:04:05"
 eval f = formatTime($t)
 
+same size({}), 0
+same size({1}), 1
+same size({1, 2, 3, 4, 5}), 5
+same size([]), 0
+same size([a = 1;]), 1
+same size([a = 1; b = 2;]), 2
+same size(""), 0
+same size("a"), 1
+same size("ab"), 2
+same size(3), error
+same size(3.4), error
+
 eval list0 = {}
-same size($list0), 0
 eval list1 = {1}
-same size($list1), 1
 eval list5 = {1, 2, 3, 4, 5}
-same size($list5), 5
 
 same sum($list0), undefined
 same avg($list0), undefined
