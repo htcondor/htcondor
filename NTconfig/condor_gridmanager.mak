@@ -86,6 +86,8 @@ LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.li
 LINK32_OBJS= \
 	"$(INTDIR)\basejob.obj" \
 	"$(INTDIR)\baseresource.obj" \
+	"$(INTDIR)\condorjob.obj" \
+	"$(INTDIR)\condorresource.obj" \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
@@ -98,8 +100,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\mirrorjob.obj" \
 	"$(INTDIR)\mirrorresource.obj" \
 	"$(INTDIR)\proxymanager.obj" \
-	"$(INTDIR)\condorjob.obj" \
-	"$(INTDIR)\condorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -170,6 +170,8 @@ LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel3
 LINK32_OBJS= \
 	"$(INTDIR)\basejob.obj" \
 	"$(INTDIR)\baseresource.obj" \
+	"$(INTDIR)\condorjob.obj" \
+	"$(INTDIR)\condorresource.obj" \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
@@ -182,8 +184,6 @@ LINK32_OBJS= \
 	"$(INTDIR)\mirrorjob.obj" \
 	"$(INTDIR)\mirrorresource.obj" \
 	"$(INTDIR)\proxymanager.obj" \
-	"$(INTDIR)\condorjob.obj" \
-	"$(INTDIR)\condorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \

@@ -75,8 +75,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon_core.obj" \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
-	"$(INTDIR)\timer_manager.obj" \
-	"$(INTDIR)\self_monitor.obj"
+	"$(INTDIR)\self_monitor.obj" \
+	"$(INTDIR)\timer_manager.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -129,8 +129,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\daemon_core.obj" \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
-	"$(INTDIR)\timer_manager.obj" \
-	"$(INTDIR)\self_monitor.obj"
+	"$(INTDIR)\self_monitor.obj" \
+	"$(INTDIR)\timer_manager.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<

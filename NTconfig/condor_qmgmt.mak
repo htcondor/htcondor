@@ -61,8 +61,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\qmgmt_common.obj" \
 	"$(INTDIR)\qmgmt_send_stubs.obj" \
-	"$(INTDIR)\qmgr_lib_support.obj" \
-	"$(INTDIR)\qmgr_job_updater.obj"
+	"$(INTDIR)\qmgr_job_updater.obj" \
+	"$(INTDIR)\qmgr_lib_support.obj"
 
 "$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -101,8 +101,8 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_qmgmt.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\qmgmt_common.obj" \
 	"$(INTDIR)\qmgmt_send_stubs.obj" \
-	"$(INTDIR)\qmgr_lib_support.obj" \
-	"$(INTDIR)\qmgr_job_updater.obj"
+	"$(INTDIR)\qmgr_job_updater.obj" \
+	"$(INTDIR)\qmgr_lib_support.obj"
 
 "$(OUTDIR)\condor_qmgmt.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
