@@ -1727,7 +1727,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		 "  %5d reject your job because of their own requirements\n"
 		 "  %5d match, but are serving users with a better priority in the pool%s\n"
 		 "  %5d match, but prefer another specific job despite its worse user-priority\n"
-		 "  %5d match, but cannot currently preempt their existing job\n"
+		 "  %5d match, but will not currently preempt their existing job\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint,
