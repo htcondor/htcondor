@@ -140,7 +140,7 @@ NotifyUser( char *buf, PROC *proc )
                 }
         }
 
-		sprintf(subject, "Condor Job %d.%d\n", 
+		sprintf(subject, "Condor Job %d.%d", 
 				proc->id.cluster, proc->id.proc);
 
 		if( ! JobAd ) {
