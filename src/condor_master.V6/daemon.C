@@ -1538,7 +1538,7 @@ Daemons::InitMaster()
 		// initialize master data structure
 	master = GetIndex("MASTER");
 	if ( master == -1 ) {
-		EXCEPT("InitMaster: MASTER not Specifed");
+		EXCEPT("InitMaster: MASTER not Specified");
 	}
 	daemon_ptr[master]->timeStamp = 
 		GetTimeStamp(daemon_ptr[master]->watch_name);
