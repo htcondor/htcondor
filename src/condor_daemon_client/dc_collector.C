@@ -28,6 +28,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 #include "daemon.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dc_collector.h"
 #include "condor_parameters.h"
 
@@ -223,6 +224,24 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 		int	seq = adSeqMan.GetSequence( ad2 );
 		sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
 		ad2->InsertOrUpdate( tmp );
+	}
+
+	// Insert "my address"
+	sprintf( tmp, "%s=\"%s\"", ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString( ) );
+	char	*tmp2;
+	if ( ad1 ) {
+		if ( ad1->LookupString( ATTR_MY_ADDRESS, &tmp2 ) ) {
+			free( tmp2 );
+		} else {
+			ad1->InsertOrUpdate( tmp );
+		}
+	}
+	if ( ad2 ) {
+		if ( ad2->LookupString( ATTR_MY_ADDRESS, &tmp2 ) ) {
+			free( tmp2 );
+		} else {
+			ad2->InsertOrUpdate( tmp );
+		}
 	}
 
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
