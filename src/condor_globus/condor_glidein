@@ -323,6 +323,7 @@ print STDERR "	Valid options:\n"
 . "   -setuponly|-runonly     Setup and exit  |  No setup, just run\n"
 . "   -forcesetup             During setup, force copying of files\n"
 . "   -setup_jobmanager <X>   Jobmanager to use for setup.\n"
+. "   -setup_here             Run setup procedure directly rather than remotely.\n"
 . "   -arch <architecture>    Condor architecture to install on remote fesource.\n"
 . "   -queue <queue>          Queue to use on Globus scheduler\n"
 . "   -project <project>      Project to use on Globus resource\n"
@@ -383,6 +384,7 @@ sub parse_command_line() {
 		"usestartup=s" => \$use_glidein_startup,
 		"gensubmit" => \$gen_submit,
 		"edg" => \$edg_mds_schema,
+		"setup_here" => \$setup_here,
 		"setup_jobmanager=s" => \$setup_jobmanager,
 		"setup_queue=s" => \$setup_queue,
 		"arch=s" => \$setup_arch,
@@ -477,6 +479,8 @@ exec \${_condor_SBIN}/condor_master "\$@"
 EOF
 	close GLIDEIN_STARTUP
 	    or die "Error writing to $filename: $!";
+
+	chmod 0755, $filename;
 }
 
 sub gen_main_config {
@@ -736,6 +740,10 @@ sub host_info()
 		$CONTACT_SETUP_QUEUE = "unknown";
 	    }
 	}
+	if( $setup_here ) {
+	    $CONTACT_SETUP = "none";
+	    $CONTACT_SETUP_QUEUE = "unknown";
+	}
 	if( $setup_arch ne "" ) {
 	    $arch = $setup_arch;
 	}
@@ -898,18 +906,28 @@ sub do_remote_setup() {
 		fi
 	done
 
-	#Write config file
-	cat > \$CONFIG.\$\$ <<END_CONFIG
+	if [ \$FORCE -ne 0 -o ! -f \$CONFIG ]; then
+		#Write config file
+		echo "Installing \$CONFIG.";
+		cat > \$CONFIG.\$\$ <<END_CONFIG
 $glidein_condor_config_text
 END_CONFIG
-	mv -f \$CONFIG.\$\$ \$CONFIG;
+		mv -f \$CONFIG.\$\$ \$CONFIG;
+	else
+		echo "Already installed: \$CONFIG.";
+	fi
 
-	#Write startup file
-	cat > \$STARTUP.\$\$ <<END_STARTUP
+	if [ \$FORCE -ne 0 -o ! -x \$STARTUP ]; then
+		#Write startup file
+		echo "Installing \$STARTUP.";
+		cat > \$STARTUP.\$\$ <<END_STARTUP
 $glidein_startup_text
 END_STARTUP
-	chmod a+x \$STARTUP.\$\$
-	mv -f \$STARTUP.\$\$ \$STARTUP;
+		chmod a+x \$STARTUP.\$\$;
+		mv -f \$STARTUP.\$\$ \$STARTUP;
+	else
+		echo "Already installed: \$STARTUP.";
+	fi
 
 	cd \$ARCHDIR
 	GETFILES=0
@@ -920,6 +938,7 @@ END_STARTUP
 	done
 	if [ \$FORCE -ne 0 -o \$GETFILES -ne 0 ]; then
 		#Convert from comma separated URL list to space separated.
+		echo "Installing Condor daemons in \$ARCHDIR.";
 		TARBALL_SERVER_LIST=`echo \$TARBALL_SERVERS | \$GLOBUS_SH_SED 's/,/ /g'`;
 		if [ "\$?" != "0" ]; then
 			echo "Error: failed to process GLIDEIN_SERVER_URLS information.";
@@ -934,7 +953,7 @@ END_STARTUP
 			rc=\$?;
 			if [ \$rc != 0 -o ! -f \$ARCHDIR/\$ARCH.tar.gz ] &&
 			   echo \$TARBALL_URL | \$GLOBUS_SH_GREP -q -E '(^http)|(^ftp)'; then
-				echo "globus-url-copy failed; try wget"
+				echo "globus-url-copy failed; trying wget"
 				wget -q -O \$ARCHDIR/\$ARCH.tar.gz \$TARBALL_URL
 				rc=\$?;
 			fi
@@ -961,6 +980,8 @@ END_STARTUP
 			echo "Glidein tarball not successfully downloaded from \$TARBALL_SERVERS"
 			exit 1
 		fi
+	else
+		echo "Already installed: \$ARCHDIR.";
 	fi
 	#NOTE: the following text is expected to verify success.
 	echo "Installation successfully completed.";
@@ -968,6 +989,54 @@ END_STARTUP
 
 EOF
 	close( REM_SETUP );
+	chmod 0755, $glidein_remote_setup;
+
+
+	$glidein_setup_submit = "glidein_setup.submit$suffix";
+	$glidein_setup_output = "glidein_setup.output$suffix";
+	$glidein_setup_error = "glidein_setup.error$suffix";
+	$glidein_setup_log = "glidein_setup.log$suffix";
+
+
+	if( $setup_here ) {
+	    #Run setup script directly rather than submitting it
+	    #for remote execution on the gatekeeper.
+
+	    my $basedir_arg = $basedir;
+	    my $archdir_arg = $archdir;
+	    my $localdir_arg = $localdir;
+	    $basedir_arg  =~ s/\$\(HOME\)/$ENV{'HOME'}/g;
+	    $archdir_arg  =~ s/\$\(HOME\)/$ENV{'HOME'}/g;
+	    $localdir_arg =~ s/\$\(HOME\)/$ENV{'HOME'}/g;
+
+	    my $setup_here_pid = open(SETUP_HERE_FH, "$glidein_remote_setup '$basedir_arg' '$archdir_arg' '$arch' '$localdir_arg' '$SERVER_URL' '$force_setup' >& $glidein_setup_output|");
+
+	    my $output_pos = 0;
+	    while( 1 ) {
+		print get_more_output($glidein_setup_output,\$output_pos);
+
+		$child_exited = waitpid($setup_here_pid,&WNOHANG);
+		if($child_exited == $setup_here_pid || $child_exited < 0) {
+		    last;
+		}
+	    }
+	    close( SETUP_HERE_FH );
+
+	    #Show any output not already displayed.
+	    print get_more_output($glidein_setup_output,\$output_pos);
+
+	    #Check for successful completion of the setup process.
+	    $err = system("grep -q 'Installation successfully completed' $glidein_setup_output");
+	    if ( $err ) {
+		return( "running setup script on local machine" );
+	    }
+
+	    #Cleanup temporary files.
+	    unlink( $glidein_setup_output);
+	    unlink( $glidein_remote_setup );
+
+	    return( 0 );
+	}
 
 
 		##Escape '$' in submit file entries
@@ -978,10 +1047,6 @@ EOF
 	$archdir_arg =~ s/\$/\$(DOLLAR)/g;
 	$localdir_arg =~ s/\$/\$(DOLLAR)/g;
 
-	$glidein_setup_submit = "glidein_setup.submit$suffix";
-	$glidein_setup_output = "glidein_setup.output$suffix";
-	$glidein_setup_error = "glidein_setup.error$suffix";
-	$glidein_setup_log = "glidein_setup.log$suffix";
 	open( SETUP_SUBMIT_FILE, ">$glidein_setup_submit" );
 
 	print SETUP_SUBMIT_FILE <<"EOF";
@@ -1044,6 +1109,15 @@ EOF
 	    #so make sure job is not on hold or we'll wait forever.
 	    if(system("grep -q 'Job was held' $glidein_setup_log") == 0) {
 		print "Error: the setup job has been put on hold!  Reason given:\n";
+		#Sometimes it takes a few seconds for the hold reason
+		#to appear in the ClassAd.
+		my $hold_reason_timeout_time = time() + 30;
+		while ( time() < $hold_reason_timeout_time ) {
+		    if(system("condor_q -l $job_id | grep -q ^HoldReason") == 0) {
+			last;
+		    }
+		    sleep 5;
+		}
 		system("condor_q -f '%s\\n' HoldReason $job_id\n");
 		system("condor_rm $job_id >& /dev/null\n");
 		return( "failed to run setup script on remote machine" );
