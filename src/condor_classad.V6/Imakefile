@@ -88,6 +88,7 @@ S_LCL_OBJ = ./stand_alone.o
 all_target(libclassad.a test_classads test_xml extra_tests)
 library_target(libclassad.a,$(OBJ))
 
+release:: all
 
 /* template instantiations go in here */
 template_inst( instantiations.C, instantiations.o ) 	/* main classad insts */
