@@ -104,6 +104,7 @@ V6_SRC		-a \
 			src/condor_tools \
 			src/condor_util_lib \
 			src/condor_dagman \
+			src/condor_eventd \
 			src/h \
 			src/html
 
