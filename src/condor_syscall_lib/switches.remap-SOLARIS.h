@@ -110,6 +110,7 @@ REMAP_ONE( setuid, _setuid, int , uid_t )
 REMAP_TWO( stat, _stat, int, const char *, struct stat * )
 REMAP_FOUR( statfs, _statfs, int , const char *, struct statfs *, int, int )
 REMAP_TWO( symlink, _symlink, int , const char *, const char *)
+REMAP_ZERO_VOID( sync, _sync, void );
 REMAP_ONE( umask, _umask, mode_t , mode_t )
 REMAP_ONE( uname, _uname, int , struct utsname *)
 REMAP_ONE( unlink, _unlink, int , const char *)
