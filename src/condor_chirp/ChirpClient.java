@@ -96,6 +96,14 @@ public class ChirpClient {
 	}
 
 	/**
+	Same as the three-argument open, but the server selects a default initial UNIX mode.
+	*/
+
+	public int open( String path, String flags ) throws IOException {
+		return open(path,flags,0777);
+	}
+
+	/**
 	Close a file.
 	@param fd The file descriptor to close.
 	@throws IOException
@@ -204,14 +212,27 @@ public class ChirpClient {
 		simple_command("rename "+name+" "+newname+"\n");
 	}
 
+
 	/**	
 	Create a directory.
 	@param name The directory name.
+	@param mode The initial UNIX access mode.
 	@throws IOException
 	*/
 
 	public void mkdir( String name, int mode ) throws IOException {
 		simple_command("mkdir "+name+" "+mode+"\n");
+	}
+
+	/**	
+	Create a directory.
+	The server selects default initial permissions for the directory.
+	@param name The directory name.
+	@throws IOException
+	*/
+
+	public void mkdir( String name ) throws IOException {
+		mkdir(name,0777);
 	}
 
 	/**	
