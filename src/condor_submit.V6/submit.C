@@ -213,7 +213,6 @@ int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
 void 	compress( char *str );
 char	*full_path(const char *name, bool use_iwd=true);
-void 	magic_check();
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
@@ -2256,41 +2255,77 @@ check_requirements( char *orig )
 	int		has_disk = FALSE;
 	int		has_virtmem = FALSE;
 	int		has_fsdomain = FALSE;
+	int		has_ckpt_arch = FALSE;
 	char	*ptr;
-	static char	answer[2048];
+	static char	answer[4096];
 
-	for( ptr = orig; *ptr; ptr++ ) {
+	if( strlen(orig) ) {
+		(void)sprintf( answer, "(%s)", orig );
+	} else {
+		answer[0] = '\0';
+	}
+
+	if ( JobUniverse == VANILLA ) {
+		ptr = param("APPEND_REQ_VANILLA");
+		if ( ptr != NULL ) {
+			if( answer[0] ) {
+				(void) strcat( answer," && (" );
+			} else {
+				(void) strcat( answer,"(" );
+			}
+			(void) strcat( answer, ptr );
+			(void) strcat( answer,")" );
+			free( ptr );
+		}
+	}
+
+	if ( JobUniverse == STANDARD ) {
+		ptr = param("APPEND_REQ_STANDARD");
+		if ( ptr != NULL ) {
+			if( answer[0] ) {
+				(void) strcat( answer," && (" );
+			} else {
+				(void) strcat( answer,"(" );
+			}
+			(void) strcat( answer, ptr );
+			(void) strcat( answer,")" );
+			free( ptr );
+		}
+	}
+				
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_ARCH,ptr,4) == MATCH ) {
 			has_arch = TRUE;
 			break;
 		}
 	}
 
-	for( ptr = orig; *ptr; ptr++ ) {
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_OPSYS,ptr,5) == MATCH ) {
 			has_opsys = TRUE;
 			break;
 		}
 	}
  
-	for( ptr = orig; *ptr; ptr++ ) {
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_DISK,ptr,5) == MATCH ) {
 			has_disk = TRUE;
 			break;
 		}
 	}
  
-	for( ptr = orig; *ptr; ptr++ ) {
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_VIRTUAL_MEMORY,ptr,5) == MATCH ) {
 			has_virtmem = TRUE;
 			break;
 		}
 	}
  
-	if( strlen(orig) ) {
-		(void)sprintf( answer, "(%s)", orig );
-	} else {
-		answer[0] = '\0';
+	for( ptr = answer; *ptr; ptr++ ) {
+		if( strincmp(ATTR_CKPT_ARCH,ptr,4) == MATCH ) {
+			has_ckpt_arch = TRUE;
+			break;
+		}
 	}
 
 	if( !has_arch ) {
@@ -2309,8 +2344,11 @@ check_requirements( char *orig )
 		(void)strcat( answer, "\")" );
 	}
 
-	if( !has_opsys && !has_arch ) {
-		magic_check();
+	if ( JobUniverse == STANDARD && !has_ckpt_arch ) {
+		(void)strcat( answer, " && ((CkptArch == Arch) ||" );
+		(void)strcat( answer, " (CkptArch =?= UNDEFINED))" );
+		(void)strcat( answer, " && ((CkptOpSys == OpSys) ||" );
+		(void)strcat( answer, "(CkptOpSys =?= UNDEFINED))" );
 	}
 
 	if( !has_disk ) {
@@ -2318,7 +2356,8 @@ check_requirements( char *orig )
 	}
 
 	if ( !has_virtmem ) {
-		(void)strcat( answer, " && (VirtualMemory >= ImageSize)" );
+		(void)strcat( answer, " && ( (VirtualMemory + (Memory * 1024))" );
+		(void)strcat( answer, " >= ImageSize )" );
 	}
 
 	if ( JobUniverse == PVM ) {
@@ -2338,19 +2377,12 @@ check_requirements( char *orig )
 	} 
 
 	if ( JobUniverse == VANILLA ) {
-		ptr = param("APPEND_REQ_VANILLA");
-		if ( ptr != NULL ) {
-			(void) strcat( answer," && (" );
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-		}
 		for( ptr = answer; *ptr; ptr++ ) {
 			if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
 				has_fsdomain = TRUE;
 				break;
 			}
 		}
-
 		if ( !has_fsdomain && never_transfer) {
 			(void)strcat( answer, " && (FileSystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
@@ -2359,15 +2391,6 @@ check_requirements( char *orig )
 
 	}
 
-	if ( JobUniverse == STANDARD ) {
-		ptr = param("APPEND_REQ_STANDARD");
-		if ( ptr != NULL ) {
-			(void) strcat( answer," && (" );
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-		}
-	}
-				
 	return answer;
 }
 
@@ -2568,11 +2591,6 @@ compress( char *str )
 	*dst = '\0';
 }
 
-void
-magic_check()
-{
-	return;
-}
 
 void
 delete_commas( char *ptr )
