@@ -50,10 +50,15 @@ static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 
 // ThreadInteract allows the calling thread to access the visable,
 // interactive desktop in order to set a hook. 
-BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta)   
+BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
 {      
 	HDESK   hdeskTest;
+	HDESK	hdesk;
+	HWINSTA	hwinsta;
 	
+	*hdesk_input = NULL;
+	*hwinsta_input = NULL;
+
 	// Obtain a handle to WinSta0 - service must be running
 	// in the LocalSystem account or this will fail!!!!!     
 	hwinsta = OpenWindowStation("winsta0", FALSE,
@@ -92,6 +97,9 @@ BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta)
 	// Set the desktop to be "default"   
 	if (!SetThreadDesktop(hdesk))           
 	  return FALSE;   
+
+	*hdesk_input = hdesk;
+	*hwinsta_input = hwinsta;
 
 	return TRUE;
 }
