@@ -963,7 +963,7 @@ contact_schedd_next_add_job:
 			pendingScheddUpdates.remove( curr_job->procID );
 			pendingScheddVacates.remove( curr_job->procID );
 			pendingJobStatus.remove( curr_job->procID );
-			pendingJobStatus.remove( curr_job->procID );
+			completedJobStatus.remove( curr_job->procID );
 			completedScheddVacates.remove( curr_job->procID );
 			delete curr_job;
 
