@@ -10,10 +10,11 @@ my $Modules = "hawkeye_modules";
 my $ModulesTarget = "modules";
 my $Examples = "condor_examples";
 my $CondorRel = "condor_release";
+my $Scripts = "condor_scripts";
 my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
 my $ReleaseDir = "../Hawkeye-Release";
-my $TarBallPat = "$ReleaseDir/Hawkeye-%s.tar";
-my $RelTarBallPat = "$ReleaseDir/Hawkeye-%s.tar.gz";
+my $TarBallPat = "Hawkeye-%s.tar";
+my $RelTarBallPat = "Hawkeye-%s.tar.gz";
 
 # Script version, etc
 my $Version = "0.1";
@@ -66,36 +67,56 @@ CopyAll( "$Modules", "$Temp/$ModulesTarget", "*" );
 
 # Copy the example configs
 CopyAll( $Examples, "$Temp", "*hawkeye*" );
+system( "mv $Temp/hawkeye_config $Temp/hawkeye_config.example" )
+    if ( -f "$Temp/hawkeye_config" );
 
 # Create the release directory
 mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
 
 # Finally, make the damn tarball
+my $BinTarBall;
 {
     my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
-    print "Creating tarball '$TarBall'...  ";
-    system( "gtar -C $Temp -cf $TarBall ." );
+    my $TarBallPath = "$ReleaseDir/$TarBall";
+    print "Creating tarball '$TarBallPath'...  ";
+    system( "gtar -C $Temp -cf $TarBallPath ." );
     print "Done\n";
-    system( "ls -l $TarBall" );
+    system( "ls -l $TarBallPath" );
 
     # Blow away tmp, and move the newly created tarball there
     system( "rm -r $Temp" );
     die "Can't create $Temp" if ( ! mkdir( "$Temp", 0755 ) );
-    system( "mv $TarBall $Temp" );
-
+    system( "mv $TarBallPath $Temp" );
+    $BinTarBall = $TarBall;
 }
 
 # Copy in the last minute pieces..
 CopyAll( $CondorRel, $Temp, "*hawkeye*" );
 CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
 
+# Copy the install script, but clean it up along the way...
+{
+    my $InstallIn = "$Scripts/hawkeye_install";
+    my $InstallOut = "$Temp/hawkeye_install";
+    open( IN, $InstallIn ) || die "Can't read '$InstallIn'\n";
+    open( OUT, ">$InstallOut" ) || die "Can't write to '$InstallOut'\n";
+    while( <IN> )
+    {
+	s/TARBALL/$BinTarBall/;
+	print OUT;
+    }
+    close( IN );
+    close( OUT );
+}
+
 # Now, make the release tarball...
 {
     my $TarBall = sprintf( $RelTarBallPat, $HawkeyeVersion );
-    print "Creating release tarball '$TarBall'...  ";
-    system( "gtar --gzip -C $Temp -cf $TarBall ." );
-    system( "ls -l $TarBall" );
-    system( "tar --gzip -tvf $TarBall" );
+    my $TarBallPath = "$ReleaseDir/$TarBall";
+    print "Creating release tarball '$TarBallPath'...  ";
+    system( "gtar --gzip -C $Temp -cf $TarBallPath ." );
+    system( "ls -l $TarBallPath" );
+    system( "tar --gzip -tvf $TarBallPath" );
     print "Done\n";
 }
 
