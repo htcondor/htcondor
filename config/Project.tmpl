@@ -176,7 +176,7 @@ program: objlist libs startup libc							@@\
 
 
 
-#if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43 || IS_VAX_ULTRIX || IS_MC68020_BSD43 || IS_IBM032_BSD43 || IS_I386_DYNIX
+#if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43 || IS_VAX_ULTRIX || IS_MC68020_BSD43 || IS_IBM032_BSD43 || IS_I386_DYNIX || IS_ALPHA_OSF1
 #define Build_C(program,objlist,libs,startup,libc)			@@\
 program: objlist libs startup libc							@@\
 	ld -o program startup objlist libs libc
