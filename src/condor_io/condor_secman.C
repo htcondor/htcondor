@@ -357,8 +357,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		return false;
 	}
 
-	dprintf(D_SECURITY, "sec_negotiation is %s.\n", sec_req_rev[sec_negotiation]);
-
 	// for those of you reading this code, a 'paramer'
 	// is a thing that param()s.
 	char *paramer;
@@ -368,22 +366,12 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	if (paramer == NULL) {
 		paramer = strdup(SecMan::getDefaultAuthenticationMethods().Value());
 	}
-	if( DebugFlags & D_FULLDEBUG ) {
-		if (paramer) {
-			dprintf( D_SECURITY, "SECMAN: authentication methods == %s\n", paramer);
-		} else {
-			dprintf( D_SECURITY, "SECMAN: authentication methods == NULL!\n");
-		}
-	}
 
 	if (paramer) {
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, paramer);
 		free(paramer);
 
 		ad->Insert(buf);
-		if (DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_SECURITY, "SECMAN: %s\n", buf );
-		}
 	} else {
 		if( sec_authentication == SEC_REQ_REQUIRED ) {
 			dprintf( D_SECURITY, "SECMAN: no auth methods, "
@@ -409,22 +397,12 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
 		dprintf ( D_SECURITY, "getDefCryptoMeth -> %s\n", paramer);
 	}
-	if (DebugFlags & D_FULLDEBUG) {
-		if (paramer) {
-			dprintf( D_SECURITY, "SECMAN: crypto methods == %s\n", paramer );
-		} else {
-			dprintf( D_SECURITY, "SECMAN: crypto methods == NULL!\n");
-		}
-	}
 
 	if (paramer) {
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, paramer);
 		free(paramer);
 
 		ad->Insert(buf);
-		if (DebugFlags & D_FULLDEBUG ) {
-			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
-		}
 	} else {
 		if( sec_encryption == SEC_REQ_REQUIRED || 
 			sec_integrity == SEC_REQ_REQUIRED ) {
@@ -475,17 +453,11 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		paramer = NULL;
 
 		ad->Insert(buf);
-		if (DebugFlags & D_FULLDEBUG ) {
-			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
-		}
 	} else {
 		// default: 1 hour
 		sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
 
 		ad->Insert(buf);
-		if (DebugFlags & D_FULLDEBUG ) {
-			dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
-		}
 	}
 
 	return true;
@@ -502,20 +474,10 @@ SecMan::getSecSetting( const char* fmt, const char* authorization_level ) {
 	if (authorization_level && authorization_level[0]) {
 		sprintf(buf, fmt, authorization_level);
 		paramer = param(buf);
-		if (paramer == NULL) {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-			}
-		}
 	}
 	if (!paramer) {
 		sprintf(buf, fmt, "DEFAULT");
 		paramer = param(buf);
-		if (paramer == NULL) {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-			}
-		}
 	}
 	// it is up to the caller to free the result (just like param)
 	return paramer;
@@ -776,7 +738,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 		dprintf ( D_ALWAYS, "startCommand() called with a NULL Sock*, failing." );
 		return false;
 	} else {
-		dprintf ( D_SECURITY, "SECMAN: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
+		dprintf ( D_SECURITY, "SECMAN: command %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 	}
 
 
@@ -1543,10 +1505,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 	} // if (is_tcp)
 
 	if (retval) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: setting sock->encode()\n");
-			dprintf ( D_SECURITY, "SECMAN: setting sock->allow_one_empty_message()\n");
-		}
 		sock->encode();
 		sock->allow_one_empty_message();
 		dprintf ( D_SECURITY, "SECMAN: startCommand succeeded.\n");
@@ -1668,14 +1626,7 @@ SecMan::sec_char_to_auth_method( char* method ) {
 int
 SecMan::getAuthBitmask ( const char * methods ) {
 
-	if (methods) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: in getAuthBitmask('%s')\n", methods);
-		}
-	} else {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: getAuthBitmask( NULL ) called!\n");
-		}
+	if (!methods || !*methods) {
 		return 0;
 	}
 
