@@ -276,7 +276,7 @@ sub configure_submit_only {
     local( $pool, $config_file, $path, %pool_config_file );
 
     print "\n***************************************************************************\n",
-    "\tSTEP 7: Where should public programs be installed?\n",
+    "\tSTEP 6: Where should public programs be installed?\n",
     "***************************************************************************\n";
     print "\n",
     "When I'm done, I'm going to need to install some scripts and links.\n",
