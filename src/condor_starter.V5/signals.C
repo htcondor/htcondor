@@ -28,7 +28,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include "signals.h"
 #include "proto.h"
 #include "name_tab.h"

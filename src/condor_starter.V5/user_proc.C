@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_string.h"
 #include "condor_config.h"
-#include "condor_jobqueue.h"
 #include "condor_uid.h"
 #include "condor_file_info.h"
 #include "name_tab.h"

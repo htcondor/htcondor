@@ -28,7 +28,6 @@ Purpose:
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include <sys/file.h>
 #if !defined( IRIX65 )
 #include <sys/user.h>

@@ -46,7 +46,6 @@ Portability:
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include "condor_syscall_mode.h"
 #include <sys/file.h>
 #include <bfd.h>

@@ -35,7 +35,6 @@ Bugs:
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include <sys/file.h>
 
 

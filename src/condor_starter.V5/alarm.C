@@ -25,7 +25,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_jobqueue.h"
 #include "proto.h"
 #include "alarm.h"
 

@@ -29,7 +29,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_jobqueue.h"
 #include "name_tab.h"
 #include <signal.h>
 #include "state_machine_driver.h"
