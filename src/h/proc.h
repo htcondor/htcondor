@@ -25,6 +25,7 @@
 #define CONDOR_PROC_INCLUDED
 
 #include "condor_universe.h"
+#include "condor_header_features.h"
 
 #define NEW_PROC 1
 
@@ -206,6 +207,11 @@ char    *JobStatusNames[] = {
 extern char *JobStatusNames[];
 #endif
 
+BEGIN_C_DECLS
+
+PROC_ID getProcByString( const char* str );
+
+END_C_DECLS
 
 #define ICKPT -1
 
