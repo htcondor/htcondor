@@ -1,5 +1,9 @@
 #define _POSIX_SOURCE
 
+#if defined(IRIX62)
+typedef struct fd_set fd_set;
+#endif
+
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>

@@ -1,6 +1,18 @@
 #ifndef __CONDOR_EVENT_H__
 #define __CONDOR_EVENT_H__
 
+#if defined(IRIX62)
+#	ifdef _NO_ANSIMODE
+#		define _TMP_NO_ANSIMODE
+#	endif
+#	undef _NO_ANSIMODE
+#	include <time.h>
+#	ifdef _TMP_NO_ANSIMODE
+#		define _NO_ANSIMODE
+#		undef _TMP_NO_ANSIMODE
+#	endif
+#endif   /* IRIX62 */
+
 #include "condor_common.h"
 #include "_condor_fix_resource.h"
 

@@ -33,6 +33,13 @@
 #include <sys/time.h>
 #endif
 
+/* On IRIX62, include condor_fdset.h early because condor_fdset.h fixes
+ * the IRIX62 sys/select.h, so we want to make certain condor_fdset.h 
+ * is the first to include sys/select.h.  -Todd, 1/31/97 */
+#if defined(IRIX62)
+#include "condor_fdset.h"
+#endif
+
 #include "_condor_fix_types.h"
 #include "condor_common.h"
 #include "condor_constants.h"
