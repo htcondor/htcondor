@@ -528,7 +528,8 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 	if (paramer) {
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SESSION_DURATION, paramer);
-		delete paramer;
+		free( paramer );
+		paramer = NULL;
 
 		ad->Insert(buf);
 		dprintf ( D_SECURITY, "SECMAN: %s\n", buf);
