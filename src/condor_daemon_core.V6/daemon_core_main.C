@@ -25,13 +25,13 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_version.h"
+#include "limit.h"
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
-
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -47,10 +47,12 @@ int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
 DaemonCore*	daemonCore;
 static int is_master = 0;
-
+char*	logDir = NULL;
+char*	pidFile = NULL;
 
 void
-drop_addr_file() {
+drop_addr_file()
+{
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
 	char	*tmp;
@@ -66,6 +68,141 @@ drop_addr_file() {
 			dprintf( D_ALWAYS,
 					 "DaemonCore: ERROR: Can't open address file %s\n",
 					 tmp );
+		}
+		free( tmp );
+	}
+}
+
+
+void
+drop_pid_file() 
+{
+	FILE	*PID_FILE;
+
+	if( !pidFile ) {
+			// There's no file, just return
+		return;
+	}
+
+	if( (PID_FILE = fopen(pidFile, "w")) ) {
+		fprintf( PID_FILE, "%d\n", 
+				 daemonCore->getpid() );
+		fclose( PID_FILE );
+	} else {
+		dprintf( D_ALWAYS,
+				 "DaemonCore: ERROR: Can't open pid file %s\n",
+				 pidFile );
+	}
+}
+
+
+void
+do_kill() 
+{
+	FILE	*PID_FILE;
+	int 	pid = 0;
+	char	*log, *tmp;
+
+	if( !pidFile ) {
+		fprintf( stderr, 
+				 "DaemonCore: ERROR: no pidfile specified for -kill\n" );
+		exit( 1 );
+	}
+	if( pidFile[0] != '/' ) {
+			// There's no absolute path, append the LOG directory
+		if( (log = param("LOG")) ) {
+			tmp = malloc( (strlen(log) + strlen(pidFile) + 2) *
+						   sizeof(char) );
+			sprintf( tmp, "%s/%s", log, pidFile );
+			free( log );
+			pidFile = tmp;
+		}
+	}
+	if( (PID_FILE = fopen(pidFile, "r")) ) {
+		fscanf( PID_FILE, "%d", &pid ); 
+		fclose( PID_FILE );
+	} else {
+		fprintf( stderr, 
+				 "DaemonCore: ERROR: Can't open pid file %s for reading\n",
+				 pidFile );
+		exit( 1 );
+	}
+	if( pid > 0 ) {
+			// We have a valid pid, try to kill it.
+#ifndef WIN32
+		if( kill(pid, SIGTERM) < 0 ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: can't send SIGTERM to pid (%d)\n",  
+					 pid );
+			fprintf( stderr, 
+					 "\terrno: %d (%s)\n", errno, strerror(errno) );
+			exit( 1 );
+		} 
+#endif
+			// kill worked, now, make sure the thing is gone.  Keep
+			// trying to send signal 0 (test signal) to the process
+			// until that fails.  
+		while( kill(pid, 0) == 0 ) {
+			sleep( 3 );
+		}
+			// The thing has exited, so wipe out the pidfile
+		if( unlink(pidFile) < 0 ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: Can't delete pid file %s\n",
+					 pidFile );
+			exit( 1 );
+		}
+			// Everything's cool, exit normally.
+		exit( 0 );
+	} else {  	// Invalid pid
+		fprintf( stderr, 
+				 "DaemonCore: ERROR: pid (%d) in pid file (%s) is invalid.\n",
+				 pid, pidFile );	
+		exit( 1 );
+	}
+}
+
+
+void
+set_log_dir()
+{
+	if( !logDir ) {
+		return;
+	}
+	mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
+	struct stat stats;
+	if( stat(logDir, &stats) >= 0 ) {
+		if( ! S_ISDIR(stats.st_mode) ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: %s exists and is not a directory.\n", 
+					 logDir );
+			exit( 1 );
+		}
+	} else {
+		if( mkdir(logDir, mode) < 0 ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: can't create directory %s\n", 
+					 logDir );
+			fprintf( stderr, 
+					 "\terrno: %d (%s)\n", errno, strerror(errno) );
+			exit( 1 );
+		}
+	}
+	config_insert( "LOG", logDir );
+}
+
+
+// See if we should set the limits on core files.  If the parameter is
+// defined, do what it says.  Otherwise, do nothing.
+void
+check_core_files()
+{
+	char* tmp;
+	if( (tmp = param("CREATE_CORE_FILES")) ) {
+		if( *tmp == 't' || *tmp == 'T' ) {
+			limit( RLIMIT_CORE, RLIM_INFINITY );
+		} else {
+			limit( RLIMIT_CORE, 0 );
 		}
 		free( tmp );
 	}
@@ -111,6 +248,14 @@ handle_dc_sighup( Service*, int )
 		// nice goin', Todd).  *grin*
 	config(NULL);
 
+		// If we're supposed to be using our own log file, reset that here. 
+	if( logDir ) {
+		set_log_dir();
+	}
+
+		// See if we're supposed to be allowing core files or not
+	check_core_files();
+
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
 	
@@ -131,6 +276,11 @@ handle_dc_sighup( Service*, int )
 
 	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
+
+		// Re-drop the pid file, if it's requested, just to be safe.
+	if( pidFile ) {
+		drop_pid_file();
+	}
 
 	// call this daemon's specific main_config()
 	main_config();
@@ -202,6 +352,7 @@ int main( int argc, char** argv )
 	int		i;
 	ReliSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
+	int		wantsKill = FALSE;
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
@@ -253,51 +404,112 @@ int main( int argc, char** argv )
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
-	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
-	{
+	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		int done = FALSE;
 
 		if(ptr[0][0] != '-') {
 			break;
 		}
-		switch(ptr[0][1])
-		{
-		  case 'f':		// run in foreground
+		switch(ptr[0][1]) {
+		case 'f':		// run in foreground
 			Foreground = 1;
 			dcargs++;
 			break;
-		  case 't':		// log to terminal (stderr)
+		case 't':		// log to terminal (stderr)
 			Termlog = 1;
 			dcargs++;
 			break;
-		  case 'b':		// run in background (default)
+		case 'b':		// run in background (default)
 			Foreground = 0;
 			dcargs++;
 			break;
-		  case 'p':		// use well-known port for command socket				
-						// note: "-p 0" means _no_ command socket
-			command_port = atoi( *(++ptr) );
-			dcargs += 2;
-			break;
-		  case 'c':		// specify directory where config file lives
-			ptmp = *(++ptr);
-			dcargs += 2;
-			ptmp1 = (char *)malloc( strlen(ptmp) + 25 );
-			if ( ptmp1 ) {
-				sprintf(ptmp1,"CONDOR_CONFIG=%s\0",ptmp);
-				putenv(ptmp1);
+		case 'p':		
+			if( ptr[0][2] && ptr[0][2] == 'i' ) {
+					// Specify a pidfile
+				ptr++;
+				if( ptr && *ptr ) {
+					pidFile = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -pidfile needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify a filename to store the pid.\n" );
+					exit( 1 );
+				}
+			} else {
+					// use well-known port for command socket				
+					// note: "-p 0" means _no_ command socket
+				ptr++;
+				if( ptr && *ptr ) {
+					command_port = atoi( *ptr );
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -port needs another argument.\n" );
+					fprintf( stderr, 
+					   "   Please specify the port to use for the command socket.\n" );
+
+					exit( 1 );
+				}
 			}
 			break;
-		  case 'v':		// display version info and exit
+		case 'c':		// specify directory where config file lives
+			ptr++;
+			if( ptr && *ptr ) {
+				ptmp = *ptr;
+				dcargs += 2;
+				ptmp1 = (char *)malloc( strlen(ptmp) + 25 );
+				if ( ptmp1 ) {
+					sprintf(ptmp1,"CONDOR_CONFIG=%s\0",ptmp);
+					putenv(ptmp1);
+				}
+			} else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -config needs another argument.\n" );
+				fprintf( stderr, 
+						 "   Please specify the filename of the config file.\n" );
+				exit( 1 );
+			}				  
+			break;
+		case 'v':		// display version info and exit
 			printf( "%s\n", CondorVersion() );
 			exit(0);
 			break;
-		  default:
+		case 'l':
+			ptr++;
+			if( ptr && *ptr ) {
+				logDir = *ptr;
+				dcargs += 2;
+			} else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -log needs another argument.\n" );
+				fprintf( stderr, 
+						 "   Please specify a directory to use for logging.\n" );
+				exit( 1 );
+			}				  
+			break;
+		case 'k':
+			ptr++;
+			if( ptr && *ptr ) {
+				pidFile = *ptr;
+				wantsKill = TRUE;
+				dcargs += 2;
+			} else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -kill needs another argument.\n" );
+				fprintf( stderr, 
+				  "   Please specify a file that holds the pid you want to kill.\n" );
+				exit( 1 );
+			}
+			break;
+		default:
 			done = TRUE;
 			break;	
 		}
-		if ( done == TRUE )
+		if ( done == TRUE ) {
 			break;		// break out of for loop
+		}
 	}
 
 	// using "-t" also implicitly sets "-f"; i.e. only to stderr in the foreground
@@ -305,10 +517,25 @@ int main( int argc, char** argv )
 		Foreground = 1;
 	}
 
-	// call config so we can call param.  
+		// call config so we can call param.  
 	config(NULL);
 
-	// Set up logging
+		// If want to override which thing is our config file, we've
+		// got to set that here, between where we config and where we
+		// setup logging.  Note: we also have to do this in reconfig.
+	if( logDir ) {
+		set_log_dir();
+	}
+
+		// See if we're supposed to be allowing core files or not
+	check_core_files();
+
+		// If we want to kill something, do that now.
+	if( wantsKill ) {
+		do_kill();
+	}
+
+		// Set up logging
 	dprintf_config(mySubSystem,2);
 
 	dprintf(D_ALWAYS,"******************************************************\n");
@@ -376,6 +603,12 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 	dprintf(D_ALWAYS,"******************************************************\n");
+
+		// Now that we have our pid, we could dump our pidfile, if we
+		// want it. 
+	if( pidFile ) {
+		drop_pid_file();
+	}
 
 #ifndef WIN32
 		// Now that logging is setup, create a pipe to deal with unix 
