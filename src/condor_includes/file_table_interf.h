@@ -45,11 +45,8 @@ void _condor_file_table_aggravate( int on_off );
 /** Set up the file table if necessary.  Calling this function multiple times is harmless.  All system calls that access FileTab should call this function first. */
 void _condor_file_table_init();
 
-/** Perform a periodic checkpoint of the file state. */
+/** Checkpoint the state of the file table */
 void _condor_file_table_checkpoint();
-
-/** Checkpoint the file state in preparation for a vacation. */
-void _condor_file_table_suspend();
 
 /** Restore the file state after a checkpoint. */
 void _condor_file_table_resume();
