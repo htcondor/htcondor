@@ -152,6 +152,8 @@ extern "C"  void log_termination(struct rusage *, struct rusage *);
 extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
 
+int		TryLogExecute = 0;
+
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
@@ -195,7 +197,7 @@ int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
-int Termlog;
+extern int Termlog;
 
 time_t	RunTime;
 
@@ -580,6 +582,11 @@ HandleSyscalls()
 
 		if( cnt < 0 && errno == EINTR ) {
 			continue;
+		}
+
+		if( TryLogExecute ) {
+			log_execute( ExecutingHost );
+			TryLogExecute = 0;
 		}
 
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
@@ -1149,6 +1156,24 @@ reaper()
 			);
 		}
 	}
+		
+		/* 
+
+		   Set a flag so we try to log a ULOG_EXECUTE event the next
+		   time we return from select().  We do this here because the
+		   only children the shadow has are from the old file transfer
+		   protocol, and the first time one of those children exits is
+		   when the initial checkpoint has been completely transfered
+		   to the remote machine.  Doing it this way, instead ofas
+		   soon as the shadow spawns, gives much more accurate timing
+		   in the UserLog.  The execute event will only happen once,
+		   b/c log_execute() is only called in the parent shadow
+		   process, and it has its own flag to ensure it only logs
+		   once.
+		   Derek Wright <wright@cs.wisc.edu>
+		*/
+	TryLogExecute = 1;
+
 
 #ifdef HPUX
 #define _BSD
