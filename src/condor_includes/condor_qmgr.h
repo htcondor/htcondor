@@ -45,7 +45,7 @@ int NewCluster();
 int NewProc( int );
 int DestroyProc(int, int);
 int DestroyCluster(int);
-int DestroyClusterByConstraint(const char*); 
+// int DestroyClusterByConstraint(const char*); 
 int SetAttributeByConstraint(const char *, const char *, char *);
 int SetAttributeIntByConstraint(const char *, const char *, int);
 int SetAttributeFloatByConstraint(const char *, const char *, float);
