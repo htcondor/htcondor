@@ -1576,6 +1576,11 @@ These macros control the \Condor{master}.
         DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
 
+  \Note This setting cannot be changed with a simple reconfig (either
+  by sending a SIGHUP or using \Condor{reconfig}.
+  If you change this, you must restart the \Condor{master} for the
+  change to take effect (by using \condor{restart}).
+
   \Note On your central manager, your \MacroUNI{DAEMON\_LIST}
   will be different from your regular pool, since it will include
   entries for the \Condor{collector} and \Condor{negotiator}.  
