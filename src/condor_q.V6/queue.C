@@ -81,6 +81,8 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static  ClassAdAnalyzer analyzer;	// NAC
+
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
 //    orderly manner (and don't need to rely on the cluster.proc to be
@@ -1651,12 +1653,14 @@ doRunAnalysisToBuffer( ClassAd *request )
 		strcat( return_buff, "\n" ); 	// NAC
 	}
 
+	string buffer_string = "";			// NAC
+	char ana_buffer[2048];				// NAC
+
 	if( fReqConstraint > 0 ) {
-		string buffer_string;			// NAC
-		char buffer[2048];				// NAC
-		AnalyzeJobToBuffer( request, startdAds, buffer_string );// NAC
-		strncpy( buffer, buffer_string.c_str( ), 2048 );			// NAC
-		strcat( return_buff, buffer );	// NAC
+		analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
+			// NAC
+		strncpy( ana_buffer, buffer_string.c_str( ), 2048 );			// NAC
+		strcat( return_buff, ana_buffer );	// NAC
 	}
 
 	if( fOffConstraint == totalMachines ) {
@@ -1665,9 +1669,12 @@ doRunAnalysisToBuffer( ClassAd *request )
 			"machine's requirements\n\n", return_buff, cluster, proc);
 	}
 
-//	if( fOffConstraint > 0 ) { 			// NAC
-//		testJobAttrAnalysis( request, startdAds );	// NAC
-//	}									// NAC
+	if( fOffConstraint > 0 ) { 			// NAC
+		buffer_string = "";
+		analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
+		strncpy( ana_buffer, buffer_string.c_str( ), 2048 );			// NAC
+		strcat( return_buff, ana_buffer );	// NAC
+	}									// NAC
 
 	return return_buff;
 }
