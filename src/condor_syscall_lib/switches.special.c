@@ -84,6 +84,7 @@ static int linux_fake_writev( int fd, const struct iovec *iov, int iovcnt );
 #endif
 
 char	*getwd( char * );
+void    *malloc();     
 
 /*
   The process should exit making the status value available to its parent
@@ -910,3 +911,35 @@ int _fxstat(int ver, int fd, struct stat *buf)
 	return rval;
 }
 #endif
+
+/* getlogin needs to be special because it returns a char*, and until
+ * we make stub_gen return longs instead of ints, casting char* to an int
+ * causes problems on some platforms...  also, stubgen does not deal
+ * well with a function like getlogin which returns a NULL on error */
+char *
+getlogin()
+{
+	int rval;
+	static char *loginbuf = NULL;
+	char *loc_rval;
+
+	if( LocalSysCalls() ) {
+#if defined( SYS_getlogin )
+		loc_rval = (char *) syscall( SYS_getlogin );
+		return loc_rval;
+#else
+		extern char *GETLOGIN();
+		return (  GETLOGIN() );
+#endif
+	} else {
+		if (loginbuf == NULL)
+			loginbuf = (char *)malloc(35);
+		rval = REMOTE_syscall( CONDOR_getlogin, loginbuf );
+	}
+
+	if ( rval >= 0 )
+		return loginbuf;
+	else
+		return NULL;  
+}
+

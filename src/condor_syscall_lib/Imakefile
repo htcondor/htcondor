@@ -27,32 +27,32 @@ SIG_CKPT_OBJS = signals_support.o
 
 #	if IS_SPARC_SUNOS41
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o
+		  MMAP.o PIPE.o GETLOGIN.o
 #	elif IS_R6000_AIX32
 /* Don't extract anything */
 #	elif IS_HPPAR_HPUX9
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
-		  MMAP.o PIPE.o GETWD.o
+		  MMAP.o PIPE.o GETWD.o GETLOGIN.o
 #	elif IS_I386_LINUX
 EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
-		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o
+		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o GETLOGIN.o
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o
+		  MMAP.o PIPE.o 
 #	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
-		  SYSCONF.o	
+		  SYSCONF.o	GETLOGIN.o
 #	elif (IS_X86_SOLARIS25)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
-		  i386_data.o SYSCONF.o
+		  i386_data.o SYSCONF.o GETLOGIN.o
 
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		  MMAP.o PIPE.o
+		  MMAP.o PIPE.o GETLOGIN.o
 #	endif
 
 #else	/* =============  DOES NOT DO CHECKPOINTING ============*/
@@ -186,6 +186,7 @@ ToUpper:
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
 uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
+uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 #if !IS_ALPHA_OSF1

@@ -117,10 +117,19 @@
 
 #if defined(OSF1)
 #define SYSCALL_PTR	void
+#define INV_SYSCALL_PTR	char
 #define ALPHA_CONST	const
 #else
 #define SYSCALL_PTR	char
+#define INV_SYSCALL_PTR	void
 #define ALPHA_CONST
+#endif
+
+/* on IRIX, we always want to dl_extract */
+#if defined(IRIX53)
+#define EXTRACT dl_extract
+#else
+#define EXTRACT extract
 #endif
 
 #define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
@@ -255,6 +264,22 @@
 		gid_t getgid()  : pseudo;
 #	endif
 	pid_t getpid()  : pseudo;
+	
+	/*
+	getlogin() returns a pointer to a static buffer - our generator is not
+	quite yet sophisticated enough to generate correct stubs for this.
+	So we have a special switch for it in switches.special.c that
+	allocates the static space for it.
+	Furthermore, we make it pseudo cuz we want the shadow to return the
+	job's Owner as the value.  -Todd , 4/97
+	*/
+#if !defined(SWITCH)
+	int getlogin( char *loginbuf ) : pseudo {
+		out xdr_string( &loginbuf, _POSIX_PATH_MAX );
+		alloc ( loginbuf, _POSIX_PATH_MAX );
+	}  
+#endif  /* not SWITCH for getlogin() */
+
 #endif /* not CLIP */
 
 	/*
@@ -542,7 +567,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
 	SEND_PATH( path );
     ALLOC_PATH( path );
-    out xdr_bytes( &buf, buf_size, buf_size );
+    out xdr_bytes( &buf, &buf_size, buf_size );
     alloc( buf, buf_size );
     }
 
@@ -841,14 +866,19 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	one day soon.
 	*/
 not_supported {
+#	if defined(IRIX53) || defined(OSF1)
 #	if defined(IRIX53)
 	void * mmap( void * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : dl_extract;
+#	elif defined(OSF1)
+	void * mmap( void * a, size_t l, int p, int f, map(int fd),
+														off_t o ) : extract;
+#	endif  /* of OSF1 */
 	int munmap( void * addr, size_t len );
-	int mprotect( void * addr, size_t len, int prot );
-	int madvise( void * addr, size_t len, int behav );
+	int mprotect( ALPHA_CONST void * addr, size_t len, int prot );
+	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
 	int msync( void * addr, size_t len, int flags );
-#	else
+#	else 
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
 	int munmap( char * addr, size_t len );
@@ -894,11 +924,13 @@ not_supported {
 	int setdomainname( const char *name, size_t namelen );
 	int swapon( const char *path, int swapflags );
 #else
-
 #if defined(Solaris)
 		int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
 		int acct( const char *path );
-	#else
+#elif defined(OSF1)
+		int mount( int type, char *mnt_path, int mnt_flag, char *data );
+		int acct( char *path );
+#else
 		int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 		int acct( char *path );
 #endif
@@ -908,8 +940,8 @@ not_supported {
 	int settimeofday( struct timeval *tp, struct timezone *tzp );
 	int setdomainname( char *name, int namelen );
 	int swapon( char *path, int flags, int lo_water, int hi_water );
-#endif
 }
+#endif  /* of not LINUX */
 
 	/* Calls having to do with multiple process jobs */
 not_supported {
@@ -986,14 +1018,6 @@ not_supported {
 					int *start, char *arg );
 }
 
-
-	/*
-	Returns a pointer to a static buffer - our generator is not
-	yet sophisticated enough to generate correct stubs for this.
-	*/
-not_supported {
-	char *getlogin();
-}
 
 	/*
 	Stuff having to do with message queues.  Probably won't support
