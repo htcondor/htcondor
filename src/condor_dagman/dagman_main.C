@@ -82,10 +82,52 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 
+
+Global::Global() :
+	dag (NULL),
+	maxJobs (0),
+	maxPreScripts (0),
+	maxPostScripts (0),
+	rescue_file (NULL),
+	paused (false),
+	submit_delay (0),
+	datafile (NULL)
+{
+}
+
+
+Global::~Global()
+{
+	delete dag;
+}
+
+
+bool
+Global::Config()
+{
+	const char* submit_delay_attr = "DAGMAN_SUBMIT_DELAY";
+	char* submit_delay_str = param( submit_delay_attr );
+	char* endptr = NULL;
+	if( submit_delay_str ) {
+		G.submit_delay = strtol( submit_delay_str, &endptr, 10 );
+		if( !endptr || *endptr != '\0' || G.submit_delay < 0 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR: invalid %s: \"%s\"\n",
+						  submit_delay_attr, submit_delay_str );
+			G.submit_delay = 0;
+		}
+	}
+	debug_printf( DEBUG_NORMAL, "%s = %d (\"%s\")\n", submit_delay_attr,
+				  G.submit_delay, submit_delay_str );
+	free( submit_delay_str );
+	return true;
+}
+
+
+// NOTE: this is only called on reconfig, not at startup
 int
 main_config( bool is_full )
 {
-		// nothing to read in from the config files here...
+	G.Config();
 	return 0;
 }
 
@@ -100,7 +142,6 @@ main_shutdown_fast()
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
 int main_shutdown_graceful() {
-    G.CleanUp();
 	DC_Exit( 1 );
     return FALSE;
 }
@@ -136,7 +177,6 @@ int main_shutdown_remove(Service *, int) {
 
 void ExitSuccess() {
 	unlink( lockFileName ); 
-    G.CleanUp();
 	DC_Exit( 0 );
 }
 
@@ -164,6 +204,9 @@ int main_init (int argc, char ** const argv) {
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
+
+		// process any config vars
+	G.Config();
 
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",

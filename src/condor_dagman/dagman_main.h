@@ -27,23 +27,21 @@
 
 class Global {
   public:
-    inline Global ():
-        dag          (NULL),
-        maxJobs      (0),
-        maxPreScripts (0),
-        maxPostScripts (0),
-        rescue_file  (NULL),
-		paused (false),
-        datafile     (NULL) {}
-    inline void CleanUp () { delete dag; }
+	Global();
+	~Global();
     Dag * dag;
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
     char *rescue_file;
 	bool paused;
+	// number of seconds to wait before consecutive calls to
+	// condor_submit (or dap_submit, etc.)
+    int submit_delay;
     char *datafile;
 	StringList condorLogFiles;
+
+    bool Config();
 };
 
 extern Global G;

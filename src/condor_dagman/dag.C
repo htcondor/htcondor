@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "submit.h"
 #include "util.h"
+#include "dagman_main.h"
 
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
@@ -729,10 +730,11 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if( job->NumParents() > 0 ) {
-			// Sleep for one second here, so we can be sure that this
-			// job's submit event is unambiguously later than the
-			// termination events of its parents, given that userlogs
+	if( job->NumParents() > 0 && G.submit_delay == 0 ) {
+			// if we don't already have a submit_delay, sleep for one
+			// second here, so we can be sure that this job's submit
+			// event will be unambiguously later than the termination
+			// events of its parents, given that userlog timestamps
 			// only have a resolution of one second.  (Because of the
 			// new feature allowing distinct userlogs for each job, we
 			// can't just rely on the physical order in a single log
@@ -743,6 +745,9 @@ Dag::SubmitReadyJobs()
 			// skip the sleep...
 		sleep( 1 );
 	}
+
+		// sleep for a specified time before submitting
+	sleep( G.submit_delay );
 
 	if (job->job_type == Job::CONDOR_JOB){
 	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
