@@ -715,6 +715,7 @@ main_shutdown_fast()
 		daemons.AllDaemonsGone();
 	}
 
+	daemons.CancelRestartTimers();
 	daemons.StopFastAllDaemons();
 	return TRUE;
 }
@@ -732,6 +733,7 @@ main_shutdown_graceful()
 		daemons.AllDaemonsGone();
 	}
 
+	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
 	return TRUE;
 }
