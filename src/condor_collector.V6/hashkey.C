@@ -28,7 +28,7 @@ void HashKey::sprint (char *s)
 		sprintf (s, "< %s >", name);
 }
 
-bool operator== (HashKey &lhs, HashKey &rhs)
+bool operator== (const HashKey &lhs, const HashKey &rhs)
 {
     return (strcmp (lhs.name, rhs.name) == 0    &&
 			strcmp (lhs.ip_addr, rhs.ip_addr) == 0);
@@ -41,7 +41,7 @@ ostream &operator<< (ostream &out, const HashKey &hk)
 	return out;
 }
 
-int hashFunction (HashKey &key, int numBuckets)
+int hashFunction (const HashKey &key, int numBuckets)
 {
     unsigned int bkt = 0;
     int i;
@@ -54,7 +54,7 @@ int hashFunction (HashKey &key, int numBuckets)
     return bkt;
 }
 
-int hashOnName (HashKey &key, int numBuckets)
+int hashOnName (const HashKey &key, int numBuckets)
 {
 	unsigned int bkt = 0;
 	int i;

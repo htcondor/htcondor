@@ -22,12 +22,12 @@ class HashKey
 
 	void   sprint (char *);
 	friend ostream& operator<< (ostream &out, const HashKey &); 
-    friend bool operator== (HashKey &, HashKey &);
+    friend bool operator== (const HashKey &, const HashKey &);
 };
 
 // the hash functions
-int hashFunction (HashKey &, int);
-int hashOnName   (HashKey &, int);
+int hashFunction (const HashKey &, int);
+int hashOnName   (const HashKey &, int);
 
 // type for the hash tables ...
 typedef HashTable <HashKey, ClassAd *> CollectorHashTable;
