@@ -589,7 +589,12 @@ main(int argc, char *argv[] )
 	{
 		static_policy();
 	}
-
+    if( My_UID_Domain ) {
+        free( My_UID_Domain );
+    }
+    if( My_Filesystem_Domain ) {
+        free( My_Filesystem_Domain );
+    }
 	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
 		ExitReason );
 	exit( ExitReason );
