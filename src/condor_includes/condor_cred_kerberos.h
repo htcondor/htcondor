@@ -41,6 +41,7 @@ public Condor_Credential_B {
 
  public:
   Condor_Kerberos();
+  Condor_Kerberos(const Condor_Kerberos& copy);
   //------------------------------------------
   // PURPOSE: Create a kerberos object for local
   //          user

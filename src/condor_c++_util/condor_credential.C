@@ -119,7 +119,7 @@ bool Condor_Cred_Map :: hasValidCredential(Credential_t type)
   bool isValid = FALSE;
 
   Condor_Credential_B * cred = NULL;
-  if (cred = find(type)) {
+  if ((cred = find(type))) {
     isValid = cred->is_valid();
   }
 
@@ -187,13 +187,17 @@ bool Condor_Credential_M :: forward_all(ReliSock * sock)
 
 
 bool Condor_Credential_M :: receive_credential(ReliSock   * sock,
-					       Credential_t type)
+                                               Credential_t type)
 {
+  Condor_Credential_B * cred = NULL;
+
   if (credMap_->find(type)) {
     credMap_->remove(type);
   }
 
-  credMap_->add(create_new_cred(type, sock));
+  cred = create_new_cred(type);
+  cred->receive_credential(sock);
+  credMap_->add(cred);
 
   return TRUE; // Add exception catching
 }
@@ -205,12 +209,19 @@ bool Condor_Credential_M :: has_valid_credential(Credential_t cred_type) const
 
 bool Condor_Credential_M :: remove_user_cred(Credential_t type)
 {
-  // try {
   credMap_->remove(type);
-  //}
-  // catch ()
   
   return TRUE;
+}
+
+bool Condor_Credential_M :: add_user_cred(Condor_Credential_B ** newCred)
+{
+    assert(*newCred);
+    credMap_->remove((*newCred)->credential_type());
+    credMap_->add((*newCred));
+    *newCred = NULL;
+
+    return TRUE;
 }
 
 bool Condor_Credential_M :: add_user_cred(Credential_t type)
@@ -229,12 +240,13 @@ bool Condor_Credential_M :: add_service_cred(Credential_t type)
   return add_user_cred(type);
 }
 
-Condor_Credential_B * create_new_cred(Credential_t type, ReliSock * sock)
+Condor_Credential_B * create_new_cred(Credential_t type)
 {
   Condor_Credential_B * newCred = NULL;
   
   switch (type) {
   case CONDOR_CRED_CLAIMTOBE:
+      // newCred = new Condor_ClaimToBe();
     break;
   case CONDOR_CRED_FILESYSTEM:
     break;
@@ -246,12 +258,7 @@ Condor_Credential_B * create_new_cred(Credential_t type, ReliSock * sock)
     break;
 #ifdef KERBEROS_AUTHENTICATION
   case CONDOR_CRED_KERBEROS:
-    if (sock) {
-      newCred = new Condor_Kerberos(sock);
-    }
-    else {
       newCred = new Condor_Kerberos();
-    }
     break;
 #endif
   default:

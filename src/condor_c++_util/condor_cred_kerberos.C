@@ -49,6 +49,17 @@ Condor_Kerberos :: Condor_Kerberos(ReliSock * sock)
   // Throw an exception if not successful
 }
 
+Condor_Kerberos :: Condor_Kerberos(const Condor_Kerberos& copy)
+    : Condor_Credential_B (CONDOR_CRED_KERBEROS),
+      forwarded_          (copy.forwarded_),
+      context_            (copy.context_),
+      ccname_             (0)
+{
+  // Let's copy it now
+  ccname_ = new char[CONDOR_KRB_DIR_LENGTH];
+  strcpy(ccname_, copy.ccname_);
+}
+
 //------------------------------------------
 // Use this constructor for creating a
 // credential object for user

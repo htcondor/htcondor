@@ -35,9 +35,18 @@ Condor_Credential_B :: Condor_Credential_B(Credential_t type)
 {
 }
 
+Condor_Credential_B :: Condor_Credential_B(const Condor_Credential_B& copy)
+  : type_ (copy.type_)
+{
+}
+
 Credential_t Condor_Credential_B :: credential_type() const
 {
   return type_;
+}
+
+Condor_Credential_B :: ~Condor_Credential_B()
+{
 }
 
 bool Condor_Credential_B :: Condor_set_credential_env()

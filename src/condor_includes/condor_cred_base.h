@@ -21,14 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-
-//----------------------------------------------------------------------
-// Description:  Base class of condor credential management API      
-//               Every authentication class should derive from this class
-// 
-// $id:$
-//----------------------------------------------------------------------
-
 #ifndef CONDOR_CRED_BASE_H
 #define CONDOR_CRED_BASE_H
 
@@ -45,7 +37,14 @@ class Condor_Credential_B
   // RETURNS: NONE
   //------------------------------------------
 
-  virtual ~Condor_Credential_B() = 0;
+  Condor_Credential_B(const Condor_Credential_B& copy);
+  //------------------------------------------
+  // PURPOSE: virtual Copy Constructor
+  // REQUIRE: copy -- the original
+  // RETURNS: NONE
+  //------------------------------------------
+
+  virtual ~Condor_Credential_B();
   //------------------------------------------
   // PURPOSE: Pure virtual destructor
   // REQUIRE: NONE
@@ -117,7 +116,7 @@ class Condor_Credential_B
  protected:
   char * condor_cred_dir();
   //------------------------------------------
-  // PURPOSE: Get the default credentual directory
+  // PURPOSE: Get the default credential directory
   // REQUIRE: NONE
   // RETURNS: char * points to the default credential dir
   //          DO NOT FREE it!

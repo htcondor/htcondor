@@ -52,7 +52,7 @@ class Condor_Credential_M
   //------------------------------------------
 
   Condor_Credential_M(const char   * userid,
-		      ReliSock     * sock);
+                      ReliSock     * sock);
   //------------------------------------------
   // PURPOSE: Constructor
   // REQUIRE: userid, sock
@@ -82,7 +82,7 @@ class Condor_Credential_M
   //------------------------------------------
 
   bool receive_credential(ReliSock   * sock, 
-			  Credential_t cred_type =  CONDOR_CRED_ALL);
+                          Credential_t cred_type =  CONDOR_CRED_ALL);
   //------------------------------------------
   // PURPOSE: Receive a set of credentials from
   //          a remote/local process
@@ -112,6 +112,7 @@ class Condor_Credential_M
   //------------------------------------------
 
   bool add_user_cred(Credential_t type = CONDOR_CRED_ALL);
+  bool add_user_cred(Condor_Credential_B ** newCred);
   //------------------------------------------
   // PURPOSE: Different from receiving credentials, this call
   //          will actually read/retrieve credentials for a 
@@ -132,8 +133,7 @@ class Condor_Credential_M
   //------------------------------------------
  private:
   
-  Condor_Credential_B * create_new_cred(Credential_t type,
-					ReliSock   * sock = NULL);
+  Condor_Credential_B * create_new_cred(Credential_t type);
   //------------------------------------------
   // PURPOSE: Create a corresponding credential
   // REQUIRE: Credential type
