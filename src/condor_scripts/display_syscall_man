@@ -12,9 +12,16 @@
 # Figure out where things are.
 ######################################################################
 
+$uname = `uname`;
+if( $uname =~ /IRIX.*/ ) {
+    $irix = 1;
+}
+
 if( -d "/usr/man" ) {
     $mandir = "/usr/man";
-} else {
+} elsif ( -d "/usr/share/catman/p_man" )  {
+    $mandir = "/usr/share/catman/p_man";
+} else { 
     $mandir = "/notthere";
 }
 
@@ -27,6 +34,9 @@ if( -f "$mandir/man2/open.2" ) {
 } elsif( -f "$mandir/man2/open.2.Z" ) {
     $manext = ".Z";
     $cat = "zcat";
+} elsif( -f "$mandir/cat2/standard/open.z" ) {
+    $manext = ".z";
+    $cat = "gzcat";
 }
 
 ######################################################################
@@ -46,10 +56,18 @@ exit 0;
 
 sub find_file() {
     my( $sys ) = $_[0];
-    my( $file );
-    foreach $i ("2", "3", "3c", "3b", "3t", "3s", "3n" ) {
-	$file = "$mandir/man$i/$sys.$i$manext";
-	if( -f $file ) { return $file; }
+    my( $file, $i );
+
+    if( $irix ) {
+	foreach $i ("2", "3", "3c", "3b", "3t", "3s", "3n", "3t", "3p" ) {
+	    $file = "$mandir/cat$i/standard/$sys$manext";
+	    if( -f $file ) { return $file; }
+	}
+    } else {
+	foreach $i ("2", "3", "3c", "3b", "3t", "3s", "3n", "3r" ) {
+	    $file = "$mandir/man$i/$sys.$i$manext";
+	    if( -f $file ) { return $file; }
+	}
     }
     return "";
 }
@@ -99,11 +117,20 @@ sub display_line() {
     undef $/;
     $_ = <MAN>;
 
-    if( /.*SH NAME(.|\n)*?\\-(.*)/ ) {
-	print $2;
+    if( $irix ) {
+	if( /(.|\n)*?-(.*)/ ) {
+	    print $2;
+	}
+	# Don't bother with alternates on IRIX, since alternates are
+	# handled with soft links instead of nroff.
 	return 1;
     } else {
-	return 0;
+	if( /.*SH NAME(.|\n)*?\\-(.*)/ ) {
+	    print $2;
+	    return 1;
+	} else {
+	    return 0;
+	}
     }
 }
 
