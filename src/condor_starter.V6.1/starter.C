@@ -56,8 +56,6 @@ CStarter::CStarter()
 	Execute = NULL;
 	UIDDomain = NULL;
 	FSDomain = NULL;
-	Arch = NULL;
-	Opsys = NULL;
 	ShuttingDown = FALSE;
 	ShadowVersion = NULL;
 	shadow = NULL;
@@ -80,12 +78,6 @@ CStarter::~CStarter()
 	}
 	if( FSDomain ) {
 		free(FSDomain);
-	}
-	if( Arch ) {
-		free(Arch);
-	}
-	if( Opsys ) {
-		free(Opsys);
 	}
 	if( ShadowVersion ) {
 		delete ShadowVersion;
@@ -160,14 +152,6 @@ CStarter::Config()
 	if ((FSDomain = param("FILESYSTEM_DOMAIN")) == NULL) {
 		EXCEPT("FILESYSTEM_DOMAIN not specified in config file.");
 	}
-
-		// Arch and Opsys can never be NULL, since the config code
-		// inserts these automatically using sysapi.
-	if( Arch ) free( Arch );
-	Arch = param( "ARCH" );
-
-	if( Opsys ) free( Opsys );
-	Opsys = param( "OPSYS" );
 }
 
 int
@@ -273,6 +257,7 @@ CStarter::RegisterStarterInfo( void )
 	if( ShadowVersion && ShadowVersion->built_since_version(6,3,2) ) {
 		ClassAd* starter_info = new ClassAd;
 		char *tmp = NULL;
+		char* tmp_val = NULL;
 		int size;
 
 		size = strlen(UIDDomain) + strlen(ATTR_UID_DOMAIN) + 5;
@@ -287,31 +272,45 @@ CStarter::RegisterStarterInfo( void )
 		starter_info->Insert( tmp );
 		free( tmp );
 
-		size = strlen(my_full_hostname()) + strlen(ATTR_MACHINE) + 5;
+		tmp_val = my_full_hostname();
+		size = strlen(tmp_val) + strlen(ATTR_MACHINE) + 5;
 		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, my_full_hostname() );
+		sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, tmp_val );
 		starter_info->Insert( tmp );
 		free( tmp );
 
-		size = strlen(daemonCore->InfoCommandSinfulString()) +
-			strlen(ATTR_STARTER_IP_ADDR) + 5;
+		tmp_val = daemonCore->InfoCommandSinfulString();
+ 		size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
 		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR,
-				 daemonCore->InfoCommandSinfulString() );
+		sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR, tmp_val );
 		starter_info->Insert( tmp );
 		free( tmp );
 
-		size = strlen(Arch) + strlen(ATTR_ARCH) + 5;
+		tmp_val = param( "ARCH" );
+		size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
 		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, Arch );
+		sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
 		starter_info->Insert( tmp );
 		free( tmp );
+		free( tmp_val );
 
-		size = strlen(Opsys) + strlen(ATTR_OPSYS) + 5;
+		tmp_val = param( "OPSYS" );
+		size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
 		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, Opsys );
+		sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
 		starter_info->Insert( tmp );
 		free( tmp );
+		free( tmp_val );
+
+		tmp_val = param( "CKPT_SERVER_HOST" );
+		if( tmp_val ) {
+			size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
+			tmp = (char*) malloc( size * sizeof(char) );
+			sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
+			starter_info->Insert( tmp );
+			free( tmp );
+			free( tmp_val );
+		}
 
 		rval = REMOTE_CONDOR_register_starter_info( starter_info );
 		
