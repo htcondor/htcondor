@@ -33,9 +33,12 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/times.h>
+#include <sys/resource.h>
 #include "fcntl.h"
 #include <string.h>
 #include "condor_syscalls.h"
+#include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
 
@@ -81,7 +84,10 @@ extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 Image MyImage;
 static jmp_buf Env;
 static RAW_ADDR SavedStackLoc;
-int InRestart = FALSE;
+volatile int InRestart = FALSE;
+volatile int check_sig;		// the signal which activated the checkpoint; used
+							// by some routines to determine if this is a periodic
+							// checkpoint (USR2) or a check & vacate (TSTP).
 static size_t StackSaveSize;
 
 void
@@ -165,6 +171,7 @@ _condor_prestart( int syscall_mode )
 
 		// Install initial signal handlers
 	_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
+	_install_signal_handler( SIGUSR2, (SIG_HANDLER)Checkpoint );
 	_install_signal_handler( SIGUSR1, (SIG_HANDLER)Suicide );
 
 	calc_stack_to_save();
@@ -181,6 +188,13 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 
 	action.sa_handler = handler;
 	sigemptyset( &action.sa_mask );
+	/* We do not want "recursive" checkpointing going on.  So block SIGUSR2
+		during a SIGTSTP checkpoint, and vice-versa.  -Todd Tannenbaum, 8/95 */
+	if ( sig == SIGTSTP )
+		sigaddset(&action.sa_mask,SIGUSR2);
+	if ( sig == SIGUSR2 )
+		sigaddset(&action.sa_mask,SIGTSTP);
+	
 	action.sa_flags = 0;
 
 	if( sigaction(sig,&action,NULL) < 0 ) {
@@ -645,6 +659,9 @@ extern "C" {
   elements of our context (register values, etc.).  A process wishing
   to checkpoint itself should generate the correct signal, not call this
   routine directory, (the ckpt()) function does this.
+  8/95: And now, SIGTSTP means "checkpoint and vacate", and other signal
+  that gets here (aka SIGUSR2) means checkpoint and keep running (a 
+  periodic checkpoint). -Todd Tannenbaum
 */
 void
 Checkpoint( int sig, int code, void *scp )
@@ -656,17 +673,27 @@ Checkpoint( int sig, int code, void *scp )
 		// No sense trying to do a checkpoint in the middle of a
 		// restart, just quit leaving the current ckpt entact.
 	if( InRestart ) {
-		Suicide();
+		if ( sig == SIGTSTP )
+			Suicide();
+		else
+			return;
 	}
+
+	check_sig = sig;
 
 	if( MyImage.GetMode() == REMOTE ) {
-		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
 	} else {
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
 
 
-	dprintf( D_ALWAYS, "Got SIGTSTP\n" );
+	if ( sig == SIGTSTP ) {
+		dprintf( D_ALWAYS, "Got SIGTSTP\n" );
+	} else {
+		dprintf( D_ALWAYS, "Got SIGUSR2\n" );
+	}
+
 	if( SETJMP(Env) == 0 ) {	// Checkpoint
 		dprintf( D_ALWAYS, "About to save MyImage\n" );
 		InRestart = TRUE;	// not strictly true, but needed in our saved data
@@ -678,25 +705,67 @@ Checkpoint( int sig, int code, void *scp )
 		SaveFileState();
 		MyImage.Save();
 		MyImage.Write();
-		dprintf( D_ALWAYS,  "Ckpt exit\n" );
-		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		terminate_with_sig( SIGUSR2 );
-	} else {					// Restart
-		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		patch_registers( scp );
-		MyImage.Close();
-
-		if( MyImage.GetMode() == REMOTE ) {
-			SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+		if ( sig == SIGTSTP ) {
+			/* we have just checkpointed; now time to vacate */
+			dprintf( D_ALWAYS,  "Ckpt exit\n" );
+			SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+			terminate_with_sig( SIGUSR2 );
+			/* should never get here */
 		} else {
-			SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+			/* we have just checkpointed, but this is a periodic checkpoint.
+			 * so, update the shadow with accumulated CPU time info if we
+			 * are not standalone, and then continue running. -Todd Tannenbaum */
+			if ( MyImage.GetMode() == REMOTE ) {
+				/* update shadow with CPU time info.  unfortunately, we need
+				 * to convert to struct rusage here in the user code, because
+				 * clock_tick is platform dependent and we don't want CPU times
+				 * messed up if the shadow is running on a different architecture */
+				struct tms posix_usage;
+				struct rusage bsd_usage;
+				long clock_tick;
+
+				scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+				memset(&bsd_usage,0,sizeof(struct rusage));
+				times( &posix_usage );
+#if defined(OSF1)
+			    clock_tick = CLK_TCK;
+#else
+        		clock_tick = sysconf( _SC_CLK_TCK );
+#endif
+				bsd_usage.ru_utime.tv_sec = posix_usage.tms_utime / clock_tick;
+				bsd_usage.ru_utime.tv_usec = posix_usage.tms_utime % clock_tick;
+				(bsd_usage.ru_utime.tv_usec) *= 1000000 / clock_tick;
+				bsd_usage.ru_stime.tv_sec = posix_usage.tms_stime / clock_tick;
+				bsd_usage.ru_stime.tv_usec = posix_usage.tms_stime % clock_tick;
+				(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
+				SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+				(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
+				SetSyscalls( scm );
+			}
+					
+			dprintf(D_ALWAYS, "Periodic Ckpt complete, doing a virtual restart...\n");
+			LONGJMP( Env, 1);
 		}
-		RestoreFileState();
-		syscall( SYS_write, 1, "Done restoring files state\n", 27 );
+	} else {					// Restart
+		if ( check_sig == SIGTSTP ) {
+			scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+			patch_registers( scp );
+			MyImage.Close();
+
+			if( MyImage.GetMode() == REMOTE ) {
+				SetSyscalls( SYS_REMOTE | SYS_MAPPED );
+			} else {
+				SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+			}
+			RestoreFileState();
+			syscall( SYS_write, 1, "Done restoring files state\n", 27 );
+		} else {
+			patch_registers( scp );
+		}
 #ifdef SAVE_SIGSTATE
-		dprintf( D_ALWAYS, "About to restore signal state\n" );
+		syscall( SYS_write, 1, "About to restore signal state\n", 30 );
 		condor_restore_sigstates();
-		dprintf( D_ALWAYS, "Done restoring signal state\n" );
+		syscall( SYS_write, 1, "Done restoring signal state\n", 28 );
 #endif
 		SetSyscalls( scm );
 		InRestart = FALSE;

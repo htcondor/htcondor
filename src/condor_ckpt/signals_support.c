@@ -154,6 +154,7 @@ condor_restore_sigstates()
 			/* Do not fiddle with the special Condor signals under
 			 * any circumstance! */
 			case SIGUSR1:
+			case SIGUSR2:
 			case SIGTSTP:
 			case SIGKILL:
 			case SIGSTOP:
@@ -170,6 +171,7 @@ condor_restore_sigstates()
 	 * handler returns, the previous mask will be replaced. So this
 	 * probably need not be here....  -Todd 12/94 */
 	sigdelset(&(signal_states.user_mask),SIGUSR1);
+	sigdelset(&(signal_states.user_mask),SIGUSR2);
 	sigdelset(&(signal_states.user_mask),SIGTSTP);
 	sigdelset(&(signal_states.user_mask),SIGKILL);
 	sigdelset(&(signal_states.user_mask),SIGSTOP);
@@ -188,6 +190,7 @@ condor_restore_sigstates()
 			/* Do not fiddle with the special Condor signals under
 			 * any circumstance! */
 			case SIGUSR1:
+			case SIGUSR2:
 			case SIGTSTP:
 			case SIGKILL:
 			case SIGSTOP:
@@ -229,6 +232,7 @@ struct sigvec *ovec;
 				/* disallow the special Condor signals */
 				/* this list could be shortened */
 		case SIGUSR1:
+		case SIGUSR2:
 		case SIGTSTP:
 		case SIGCONT:
 			rval = -1;
@@ -241,9 +245,11 @@ struct sigvec *ovec;
 #if defined(LINUX)
 				nvec.sv_mask |= __sigmask( SIGTSTP );
 				nvec.sv_mask |= __sigmask( SIGUSR1 );
+				nvec.sv_mask |= __sigmask( SIGUSR2 );
 #else
 				nvec.sv_mask |= sigmask( SIGTSTP );
 				nvec.sv_mask |= sigmask( SIGUSR1 );
+				nvec.sv_mask |= sigmask( SIGUSR2 );
 #endif
 			}
 
@@ -290,10 +296,10 @@ MASK_TYPE mask;
 	} else {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -314,10 +320,10 @@ MASK_TYPE mask;
 	if ( MappingFileDescriptors() ) {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -340,10 +346,10 @@ MASK_TYPE mask;
 	} else {
 		/* mask out the special Condor signals */
 #if defined(LINUX)
-		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) | __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
 #else
-		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
+		condor_sig_mask = ~(sigmask( SIGUSR1 ) | sigmask( SIGUSR2 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
 #endif
 		mask &= condor_sig_mask;
@@ -373,13 +379,14 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 	if ( MappingFileDescriptors() && act ) {		/* called by User code */
 		switch (sig) {
 			case SIGUSR1:
+			case SIGUSR2:
 			case SIGTSTP:
 			case SIGCONT: /* don't let user code mess with these signals */
 				errno = EINVAL;
 				return -1;
 			default: /* block checkpointing inside users signal handler */
 				sigaddset( &(my_act->sa_mask), SIGTSTP );
-				sigaddset( &(my_act->sa_mask), SIGUSR1 );
+				sigaddset( &(my_act->sa_mask), SIGUSR2 );
 		}
 	}
 
@@ -412,6 +419,7 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 	if ( MappingFileDescriptors() && set ) {
 		if ( (how == SIG_BLOCK) || (how == SIG_SETMASK) ) {
 			sigdelset(my_set,SIGUSR1);
+			sigdelset(my_set,SIGUSR2);
 			sigdelset(my_set,SIGTSTP);
 			sigdelset(my_set,SIGCONT);
 		}
@@ -436,6 +444,7 @@ const sigset_t *set;
 	sigset_t	my_set = *set;
 	if ( MappingFileDescriptors() ) {
 		sigdelset(&my_set,SIGUSR1);
+		sigdelset(&my_set,SIGUSR2);
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
@@ -461,6 +470,7 @@ void (*func)(int);
 		switch (sig) {
 			/* don't let user code mess with these signals */
 			case SIGUSR1:
+			case SIGUSR2:
 			case SIGTSTP:
 			case SIGCONT:
 				errno = EINVAL;

@@ -78,6 +78,7 @@ char * shorten( char *path );
 extern "C" void Set_CWD( const char *working_dir );
 
 extern int errno;
+extern volatile int check_sig;
 
 void
 File::Init()
@@ -503,9 +504,14 @@ OpenFileTable::Save()
 
 				// Close shadow end so we don't have a fd leak if
 				// we're doing checkpoint/restart repetitively
-			if( f->isRemoteAccess() ) {
+				// 8/95: modified so that we only do this on a
+				// SIGTSTP (i.e. a checkpoint & vacate).  Specifically, we
+				// want to _avoid_ doing this during a periodic checkpoint
+				// -Todd Tannenbaum
+			if( (f->isRemoteAccess()) && (check_sig == SIGTSTP) ) {
 				REMOTE_syscall( CONDOR_close, f->real_fd );
 			}
+
 		}
 	}
 }
