@@ -116,14 +116,14 @@ LogPtrList::NextEntry(LogRecord *prev)
 
 
 void
-Transaction::Commit(int fd, ClassAdHashTable &table)
+Transaction::Commit(int fd, void *data_structure)
 {
 	LogRecord		*log;
 
 	for (log = op_log.FirstEntry(); log != 0; 
 		 log = op_log.NextEntry(log)) {
 		if (fd >= 0) log->Write(fd);
-		log->Play(table);
+		log->Play(data_structure);
 	}
 	if (fd >= 0) fsync(fd);
 }

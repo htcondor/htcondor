@@ -64,7 +64,7 @@ class LogNewClassAd : public LogRecord {
 public:
 	LogNewClassAd(const char *key, char *mytype, char *targettype);
 	~LogNewClassAd();
-	int Play(ClassAdHashTable &table);
+	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_mytype() { return strdup(mytype); }
 	char *get_targettype() { return strdup(targettype); }
@@ -83,7 +83,7 @@ class LogDestroyClassAd : public LogRecord {
 public:
 	LogDestroyClassAd(const char *key);
 	~LogDestroyClassAd();
-	int Play(ClassAdHashTable &table);
+	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 
 private:
@@ -98,7 +98,7 @@ class LogSetAttribute : public LogRecord {
 public:
 	LogSetAttribute(const char *key, const char *name, char *value);
 	~LogSetAttribute();
-	int Play(ClassAdHashTable &table);
+	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_name() { return strdup(name); }
 	char *get_value() { return strdup(value); }
@@ -116,7 +116,7 @@ class LogDeleteAttribute : public LogRecord {
 public:
 	LogDeleteAttribute(const char *key, const char *name);
 	~LogDeleteAttribute();
-	int Play(ClassAdHashTable &table);
+	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_name() { return strdup(name); }
 

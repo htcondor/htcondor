@@ -67,7 +67,7 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
 						"log may be bogus...", filename);
 			} else {
-				active_transaction->Commit(-1, table); // commit in memory only
+				active_transaction->Commit(-1, (void *)&table); // commit in memory only
 				delete active_transaction;
 				active_transaction = NULL;
 			}
@@ -77,7 +77,7 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 			if (active_transaction) {
 				active_transaction->AppendLog(log_rec);
 			} else {
-				log_rec->Play(table);
+				log_rec->Play((void *)&table);
 				delete log_rec;
 			}
 		}
@@ -102,7 +102,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 	} else {
 		log->Write(log_fd);
 		fsync(log_fd);
-		log->Play(table);
+		log->Play((void *)&table);
 	}
 }
 
@@ -165,7 +165,7 @@ ClassAdLog::CommitTransaction()
 	assert(active_transaction);
 	LogEndTransaction *log = new LogEndTransaction;
 	active_transaction->AppendLog(log);
-	active_transaction->Commit(log_fd, table);
+	active_transaction->Commit(log_fd, (void *)&table);
 	delete active_transaction;
 	active_transaction = NULL;
 }
@@ -293,12 +293,13 @@ LogNewClassAd::~LogNewClassAd()
 }
 
 int
-LogNewClassAd::Play(ClassAdHashTable &table)
+LogNewClassAd::Play(void *data_structure)
 {
+	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
 	ad->SetMyTypeName(mytype);
 	ad->SetTargetTypeName(targettype);
-	return table.insert(HashKey(key), ad);
+	return table->insert(HashKey(key), ad);
 }
 
 
@@ -354,15 +355,16 @@ LogDestroyClassAd::~LogDestroyClassAd()
 
 
 int
-LogDestroyClassAd::Play(ClassAdHashTable &table)
+LogDestroyClassAd::Play(void *data_structure)
 {
+	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	HashKey hkey(key);
 	ClassAd *ad;
-	if (table.lookup(hkey, ad) < 0) {
+	if (table->lookup(hkey, ad) < 0) {
 		return -1;
 	}
 	delete ad;
-	return table.remove(hkey);
+	return table->remove(hkey);
 }
 
 
@@ -392,11 +394,12 @@ LogSetAttribute::~LogSetAttribute()
 
 
 int
-LogSetAttribute::Play(ClassAdHashTable &table)
+LogSetAttribute::Play(void *data_structure)
 {
+	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	int rval;
 	ClassAd *ad;
-	if (table.lookup(HashKey(key), ad) < 0)
+	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
 	sprintf(tmp_expr, "%s = %s", name, value);
@@ -481,10 +484,11 @@ LogDeleteAttribute::~LogDeleteAttribute()
 
 
 int
-LogDeleteAttribute::Play(ClassAdHashTable &table)
+LogDeleteAttribute::Play(void *data_structure)
 {
+	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd *ad;
-	if (table.lookup(HashKey(key), ad) < 0)
+	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 	return ad->Delete(name);
 }

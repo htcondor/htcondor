@@ -2,9 +2,10 @@
 #define _LOG_TRANSACTION_H
 
 /*
-   This defines a transaction log for ClassAd operations.  Calling Commit
-   will play the log for the given ClassAd hash table.  Destroying the
-   Transaction class aborts the transaction.
+   This defines a transaction log for data structure operations.
+   Calling Commit() will log the operations to disk and perform
+   the operations on the data structure in memory.  Destroying 
+   the Transaction class aborts the transaction.
 */
 
 #include "log.h"
@@ -38,7 +39,7 @@ private:
 
 class Transaction {
 public:
-	void Commit(int fd, ClassAdHashTable &table);
+	void Commit(int fd, void *data_structure);
 	void AppendLog(LogRecord *);
 	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
 	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }
