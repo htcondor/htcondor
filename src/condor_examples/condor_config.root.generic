@@ -34,11 +34,8 @@ NEGOTIATOR		= $(SBIN)/condor_negotiator
 KBDD			= $(SBIN)/condor_kbdd
 PREEN			= $(SBIN)/condor_preen -m -r
 SHADOW			= $(SBIN)/condor_shadow
-SHADOW_PVM		= $(SBIN)/condor_shadow.carmi
+SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 PVMD			= $(SBIN)/condor_pvmd
 STARTER			= $(SBIN)/condor_starter
-ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.carmi
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter
+ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
 MAIL			= /usr/ucb/mail
-
-
