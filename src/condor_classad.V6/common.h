@@ -63,6 +63,10 @@
 #define _POSIX_C_SOURCE 199506L /* To get asctime_r */
 #endif
 
+#ifdef __cplusplus
+using namespace std;
+#endif
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
@@ -101,16 +105,15 @@ static const char ATTR_RANK					[]	= "Rank";
 #endif
 
 #if defined(__cplusplus)
-using namespace std;
 #include <string>
 struct CaseIgnLTStr {
-    bool operator( )( const string &s1, const string &s2 ) const {
+    bool operator( )( const std::string &s1, const std::string &s2 ) const {
        return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
 	}
 };
 
 struct CaseIgnEqStr {
-	bool operator( )( const string &s1, const string &s2 ) const {
+	bool operator( )( const std::string &s1, const std::string &s2 ) const {
 		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
 	}
 };
@@ -123,7 +126,7 @@ struct ExprHash {
 };
 
 struct StringHash {
-	size_t operator()( const string &s ) const {
+	size_t operator()( const std::string &s ) const {
 		size_t h = 0;
 		for( int i = s.size()-1; i >= 0; i-- ) {
 			h = 5*h + s[i];
@@ -133,7 +136,7 @@ struct StringHash {
 };
 
 struct StringCaseIgnHash {
-	size_t operator()( const string &s ) const {
+	size_t operator()( const std::string &s ) const {
 		size_t h = 0;
 		for( int i = s.size()-1; i >= 0; i-- ) {
 			h = 5*h + tolower(s[i]);
@@ -152,8 +155,8 @@ extern int 		CondorErrno;
 
 #ifdef __cplusplus
 #include <string>
-extern string 	CondorErrMsg;
-static const string NULL_XACTION = "";
+extern std::string       CondorErrMsg;
+static const std::string NULL_XACTION = "";
 #endif
 
 #if defined(CLASSAD_DISTRIBUTION)
