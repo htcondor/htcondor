@@ -9,7 +9,7 @@
 #include "gahp-client.h"
 #include "globusresource.h"
 
-#define JM_COMMIT_TIMEOUT	300
+#define JM_COMMIT_TIMEOUT	600
 
 class GlobusResource;
 
