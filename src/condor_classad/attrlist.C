@@ -1428,7 +1428,13 @@ int AttrListList::Delete(AttrList* attrList)
 			if(cur == attrList) // this is the AttrList to be deleted
 			{
 				if(cur == ptr) ptr = ptr->next;
-				if(cur == head)
+				if(cur == head && cur == tail)
+				// AttrList to be deleted is the only entry in the list
+				{
+					head = NULL;
+					tail = NULL;
+				}
+				else if(cur == head)
 				// AttrList to be deleted is at the head of the list
 				{
 					head = head->next;
@@ -1449,6 +1455,29 @@ int AttrListList::Delete(AttrList* attrList)
 				else
 				// AttrList deleted is at neither the head nor the tail
 				{
+					// we should be able to say 
+					//    cur->prev->next = cur->next
+					// but sometimes cur->prev is NULL!!!!  since
+					// v6.1 will be completely replacing classads
+					// and I've spent quite some time and failed to
+					// find the bug, I've just patched the bug
+					// here.  -Todd 1/98
+					if ( cur->prev == NULL ) {
+						// this should not happen, but it did.
+						// figure out what cur->prev should be
+						// by traversing the next pointers.
+						// if we cannot figure it out by 
+						// traversing all the next pointers,
+						// we'll fall through and SEGV - this is
+						// better than an EXCEPT since we'll get a core
+						AttrListAbstract *cur1;
+						for (cur1=head; cur1; cur1=cur1->next ) {
+							if ( cur1->next == cur ) {
+								cur->prev = cur1;
+								break;
+							}
+						}
+					}
 					cur->prev->next = cur->next;
 					cur->next->prev = cur->prev;
 				}
