@@ -251,7 +251,7 @@ ClassAdLog::LogState(int fd)
 	HashKey		hashval;
 	char		key[_POSIX_PATH_MAX];
 	char		*attr_name = NULL;
-	char		attr_val[_POSIX_PATH_MAX];
+	char		attr_val[ATTRLIST_MAX_EXPRESSION];
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
