@@ -28,7 +28,7 @@ conditions:
    and (2) any user documentation or other similar material
    which is provided with the Software.
 
-2. Any user documentation included with a redistribution, 
+2. Any user documentation included with a redistribution 
    must include the following notice:
 
        "This product includes software from the Condor (r) Project
