@@ -70,11 +70,7 @@ operator=(const AttributeReference &ref)
 }
 
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-AttributeReference *AttributeReference::
-#else
 ExprTree *AttributeReference::
-#endif
 Copy( ) const
 {
 	AttributeReference *newTree = new AttributeReference ();
@@ -103,8 +99,7 @@ CopyFrom(const AttributeReference &ref)
 	if( ref.expr && ( expr=ref.expr->Copy( ) ) == NULL ) {
         success = false;
 	} else {
-        nodeKind = ref.nodeKind;
-        parentScope = ref.parentScope;
+        ExprTree::CopyFrom(ref);
         absolute = ref.absolute;
     }
     return success;

@@ -62,11 +62,7 @@ class AttributeReference : public ExprTree
 		 */
 		void GetComponents( ExprTree *&expr,std::string &attr, bool &abs ) const;
 
-#ifdef USE_COVARIANT_RETURN_TYPES
-		virtual AttributeReference* Copy( ) const;
-#else
 		virtual ExprTree* Copy( ) const;
-#endif
 
         bool CopyFrom(const AttributeReference &ref);
 
