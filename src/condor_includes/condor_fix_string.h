@@ -52,5 +52,15 @@ char *strdup( const char * );
 }
 #endif
 
+#if defined(OSF1)
+/* On Digital Unix, basename() has the wrong prototype.  Normally,
+   we'd "hide" it, but the system header files are already doing wierd
+   things with it, like "#define basename _Ebasename", etc.  So, to
+   effectively hide it, all we have to do is undef what the system
+   header files have done. -Derek Wright 10/30/98 */
+#undef basename
+#endif
+
+
 #endif
 
