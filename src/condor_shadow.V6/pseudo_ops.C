@@ -1132,13 +1132,13 @@ pseudo_startup_info_request( STARTUP_INFO *s )
 	s->env = Strdup( p->env );
 	s->iwd = Strdup( p->iwd );
 
-	s->is_restart = has_ckpt_file();
-
 	if (JobAd->LookupBool(ATTR_WANT_CHECKPOINT, s->ckpt_wanted) == 0) {
 		s->ckpt_wanted = TRUE;
 	}
 
 	CkptWanted = s->ckpt_wanted;
+
+	s->is_restart = has_ckpt_file();
 
 	if (JobAd->LookupInteger(ATTR_CORE_SIZE, s->coredump_limit) == 1) {
 		s->coredump_limit_exists = TRUE;
@@ -1623,6 +1623,7 @@ has_ckpt_file()
 	long	accum_usage;
 
 	if (p->universe != STANDARD) return 0;
+	if (!CkptWanted) return 0;
 	accum_usage = p->remote_usage[0].ru_utime.tv_sec +
 		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
