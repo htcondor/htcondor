@@ -33,6 +33,8 @@ class ViewServer : public CollectorDaemon {
 
 public:
 
+	ViewServer();			 // constructor
+
 	void Init();             // main_init
 	void Config();           // main_config
 	void Exit();             // main__shutdown_fast
@@ -61,9 +63,9 @@ private:
 
 	// Constants
 
-	const int HistoryLevels=3;
+	enum { HistoryLevels=3 };
 	enum { SubmittorData, StartdData, GroupsData, SubmittorGroupsData, CkptData, DataSetCount };
-	const int MaxGroups=20;
+	const int MaxGroups;
 
 	// State variables - data set information
 
@@ -89,5 +91,6 @@ private:
 	static int ReadTimeChkName(char* Line, const MyString& Name);
 	static int FindFileStartTime(char* Name);
 };
+
 
 #endif

@@ -45,6 +45,13 @@ MyString ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 int ViewServer::KeepHistory;
 
+//-----------------------
+// Constructor
+//------------------------
+ViewServer::ViewServer() : MaxGroups(20) {}
+
+
+
 //-------------------------------------------------------------------
 // Initialization
 //-------------------------------------------------------------------
