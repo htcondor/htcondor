@@ -1268,9 +1268,10 @@ DedicatedScheduler::sendAlives( void )
 			}
 		}
 	}
-			
-	dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-			 "%d dedicated startds)\n", numsent );
+	if( numsent ) {
+		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
+				 "%d dedicated startds)\n", numsent );
+	}
 }
 
 int
