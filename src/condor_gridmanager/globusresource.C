@@ -602,11 +602,11 @@ GlobusResource::SubmitMonitorJob()
 			 resourceName, monitorJobStatusFile, errno );
 		return false;
 	}
-	rc = creat( monitorJobStatusFile, S_IRUSR|S_IWUSR );
+	rc = creat( monitorJobStatusFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
 			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorJobStatusFile, S_IRUSR|S_IWUSR, errno );
+			 resourceName, monitorJobStatusFile, S_IREAD|S_IWRITE, errno );
 		return false;
 	} else {
 		close( rc );
@@ -619,11 +619,11 @@ GlobusResource::SubmitMonitorJob()
 			 resourceName, monitorLogFile, errno );
 		return false;
 	}
-	rc = creat( monitorLogFile, S_IRUSR|S_IWUSR );
+	rc = creat( monitorLogFile, S_IREAD|S_IWRITE );
 	if ( rc < 0 ) {
 		dprintf( D_ALWAYS, "Failed to submit grid_monitor to %s: "
 			"creat(%s,%d) failed, errno=%d\n",
-			 resourceName, monitorLogFile, S_IRUSR|S_IWUSR, errno );
+			 resourceName, monitorLogFile, S_IREAD|S_IWRITE, errno );
 		return false;
 	} else {
 		close( rc );
