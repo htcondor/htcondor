@@ -1169,6 +1169,12 @@ GahpClient::clear_pending()
 }
 
 int
+GahpClient::reset_user_timer_alarm()
+{
+	return reset_user_timer(pending_timeout_tid);
+}
+
+int
 GahpClient::reset_user_timer(int tid)
 {
 	int retval = TRUE;
@@ -1236,8 +1242,8 @@ GahpClient::now_pending(const char *command,const char *buf)
 
 	if (pending_timeout) {
 		pending_timeout_tid = daemonCore->Register_Timer(pending_timeout + 1,
-			(TimerHandlercpp)&GahpClient::reset_user_timer,
-			"GahpClient::reset_user_timer",this);
+			(TimerHandlercpp)&GahpClient::reset_user_timer_alarm,
+			"GahpClient::reset_user_timer_alarm",this);
 		pending_timeout += time(NULL);
 	}
 }

@@ -281,6 +281,7 @@ class GahpClient : public Service {
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
+		int reset_user_timer_alarm();
 
 			// Methods for private GAHP commands
 		bool command_version(bool banner_string = false);
