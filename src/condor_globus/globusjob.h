@@ -20,6 +20,7 @@ class GlobusJob
 	bool callback( int state = 0, int error = 0 );
 	bool cancel();
 	bool probe();
+	bool callback_register();
 
 	const char *errorString();
 
@@ -32,6 +33,9 @@ class GlobusJob
 	char *rmContact;
 	int errorCode;
 	char *userLogFile;
+
+ protected:
+	bool callback_already_registered;
 };
 
 #endif
