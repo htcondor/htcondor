@@ -537,7 +537,7 @@ handle_q(Service *, int, Stream *sock)
 
 
 int
-InitializeConnection( char *owner, char *tmp_file, int auth=0 )
+InitializeConnection( char *owner, char *tmp_file, int auth )
 {
 	char	*new_file;
 
@@ -646,8 +646,6 @@ int DestroyProc(int cluster_id, int proc_id)
 	char				*ckpt_file_name;
 	ClassAd				*ad = NULL;
 	LogDestroyClassAd	*log;
-	PROC_ID				job_id;
-	int					c, p;
 	int					*numOfProcs = NULL;
 
 	if (CheckConnection() < 0) {
@@ -701,7 +699,6 @@ int DestroyCluster(int cluster_id)
 	char				key[_POSIX_PATH_MAX];
 	LogDestroyClassAd	*log;
 	char				*ickpt_file_name;
-    PROC_ID				job_id;
 
 	if (CheckConnection() < 0) {
 		return -1;
@@ -1195,23 +1192,15 @@ int GetJobList(const char *constraint, ClassAdList &list)
 int
 SendSpoolFile(char *filename)
 {
-	int filesize, total=0, nbytes, written;
-	FILE *fp;
-	char path[_POSIX_PATH_MAX], buf[4*1024];
+	char path[_POSIX_PATH_MAX];
 
-	if (strchr(filename, '/') != NULL) {
+	if (strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
 		dprintf(D_ALWAYS, "ReceiveFile called with a path (%s)!\n",
 				filename);
 		return -1;
 	}
 
 	sprintf(path, "%s/%s", Spool, filename);
-
-	if ((fp = fopen(path, "w")) == NULL) {
-		dprintf(D_ALWAYS, "Failed to open file %s.\n",
-				path);
-		return -1;
-	}
 
 	/* Tell client to go ahead with file transfer. */
 	Q_SOCK->encode();
@@ -1220,34 +1209,15 @@ SendSpoolFile(char *filename)
 
 	/* Read file size from client. */
 	Q_SOCK->decode();
-	if (!Q_SOCK->code(filesize)) {
-		dprintf(D_ALWAYS, "Failed to receive file size from client in SendSpoolFile.\n");
+	if (!Q_SOCK->get_file(path)) {
+		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->eom();
-		fclose(fp);
 		return -1;
 	}
 
-	while (total < filesize &&
-		   (nbytes = Q_SOCK->code_bytes(buf, sizeof(buf))) > 0) {
-		dprintf(D_FULLDEBUG, "read %d bytes\n", nbytes);
-		if ((written = fwrite(&buf, sizeof(char), nbytes, fp)) < nbytes) {
-			dprintf(D_ALWAYS, "failed to write %d bytes (only wrote %d)\n",
-					nbytes, written);
-			EXCEPT("fwrite");
-		}
-		dprintf(D_FULLDEBUG, "wrote %d bytes\n", written);
-		total += written;
-	}
-	Q_SOCK->eom();
+	// Q_SOCK->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
-	dprintf(D_FULLDEBUG, "successfully wrote %s (%d bytes)\n",
-			path, total);
-
-	if (fclose(fp) == EOF) {
-		EXCEPT("fclose");
-	}
-
-	return total;
+	return 0;
 }
 
 } /* should match the extern "C" */
