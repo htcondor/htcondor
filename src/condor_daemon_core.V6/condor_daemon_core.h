@@ -226,10 +226,12 @@ class DaemonCore : public Service
     */
     int InfoCommandPort();
 
-    /** Not_Yet_Documented
-        @param pid Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
+    /** Returns the Sinful String <host:port> of this process
+        as a default.  If given a pid, it returns the sinful
+        string of that pid.
+        @param pid The pid to ask about.  -1 (Default) means
+                   the calling process
+        @return A pointer into a static buffer!  Ick! */
     char* InfoCommandSinfulString (int pid = -1);
     
     /** Not_Yet_Documented
