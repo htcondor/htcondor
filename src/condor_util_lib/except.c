@@ -21,13 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <varargs.h>
-#include <time.h>
+#include "condor_common.h"
 #include "condor_sys.h"
 #include "exit.h"
 #include "debug.h"
@@ -53,17 +47,13 @@ int		SetSyscalls(int);
 void	dprintf ( int flags, char *fmt, ... );
 
 void
-_EXCEPT_(va_alist)
-va_dcl
+_EXCEPT_(char *fmt, ...)
 {
 	va_list pvar;
-	char *fmt;
 	char buf[ BUFSIZ ];
 
 	(void)SetSyscalls( SYS_LOCAL | SYS_RECORDED );
-	va_start(pvar);
-
-	fmt = va_arg(pvar, char *);
+	va_start(pvar, fmt);
 
 #if vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
 	{
