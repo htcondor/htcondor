@@ -1125,8 +1125,9 @@ GahpClient::globus_gram_client_ping(const char * resource_contact)
 bool
 GahpClient::is_pending(const char *command, const char *buf) 
 {
+		// note: do _NOT_ check pending reqid here.
 	if ( strcmp(command,pending_command)==0 && 
-		 strcmp(buf,pending_args)==0 )	// note: do not check pending_reqid
+		 ( (pending_args==NULL) || strcmp(buf,pending_args)==0) )
 	{
 		return true;
 	} 
@@ -1247,7 +1248,7 @@ GahpClient::get_pending_result(const char *,const char *)
 		// Handle blocking mode if enabled
 	if ( (m_mode == blocking) && (!pending_result) ) {
 		for (;;) {
-			poll();
+			// poll();
 			if ( pending_result ) {
 					// We got the result, stop blocking
 				break;
@@ -1410,6 +1411,13 @@ GahpClient::check_pending_timeout(const char *,const char *)
 
 		// if no command is pending, there is no timeout
 	if ( pending_reqid == 0 ) {
+		return false;
+	}
+
+		// if the command has not yet been given to the gahp server
+		// (i.e. it is in the WaitingToSubmit queue), then there is
+		// no timeout.
+	if ( pending_submitted_to_gahp == false ) {
 		return false;
 	}
 
