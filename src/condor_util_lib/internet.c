@@ -77,6 +77,7 @@ char*	buffer;
 	return 1;
 }
 
+#if 0 /* don't use CONTEXTs in V6 */
 /*
 ** extract the internet-wide unique job_id from the job-context
 */
@@ -120,7 +121,7 @@ int				proc;
 	 add_stmt(scan(line), context);
 	 return 1;
 }
-
+#endif
 
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
