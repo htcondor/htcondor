@@ -1379,8 +1379,16 @@ Scheduler::negotiate(int, Stream* s)
 		mail_problem_message();
 	}
 
-	qsort((char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
-		  (int(*)(const void*, const void*))prio_compar);
+		// N_PrioRecs might be 0, if we have no jobs to run at the
+		// moment.  If so, we don't want to call qsort(), since that's
+		// bad.  We can still try to find the owner in the Owners
+		// array, since that's not that expensive, and we need it for
+		// all the flocking logic at the end of this function.
+		// Discovered by Derek Wright and insure-- on 2/28/01
+	if( N_PrioRecs ) {
+		qsort( (char *)PrioRec, N_PrioRecs, sizeof(PrioRec[0]),
+			   (int(*)(const void*, const void*))prio_compar );
+	}
 	jobs = N_PrioRecs;
 
 	N_RejectedClusters = 0;
