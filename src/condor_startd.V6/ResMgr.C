@@ -1260,6 +1260,29 @@ ResMgr::deleteResource( Resource* rip )
 }
 
 
+void
+ResMgr::makeAdList( ClassAdList *list )
+{
+	ClassAd* ad;
+	int i;
+
+		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
+		// collector normally does this, so if we're servicing a
+		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
+		// some timing stuff won't work. 
+	int now = time(0);
+	char buf[1024];
+	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, now );
+
+	for( i=0; i<nresources; i++ ) {
+		ad = new ClassAd;
+		resources[i]->publish( ad, A_PUBLIC | A_ALL );
+		ad->Insert( buf );
+		list->Insert( ad );
+	}
+}
+
+
 bool
 ResMgr::processAllocList( void )
 {

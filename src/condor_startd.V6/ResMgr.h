@@ -140,6 +140,9 @@ public:
 
 	void		deleteResource( Resource* );
 
+	void		makeAdList( ClassAdList* );   // Make a list of the
+		// ClassAds from each VM we represent.
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
