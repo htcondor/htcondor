@@ -672,23 +672,20 @@ bad_file( char *dir, char *name )
 State
 get_machine_state()
 {
-	char* addr = get_startd_addr( my_full_hostname() );
+	char* addr = get_startd_addr(0);
 	char* state_str;
 	State s;
 
 	if( !addr ) {
-		dprintf( D_ALWAYS, 
-				 "Can't find startd address for %s\n", my_full_hostname() );
+		dprintf( D_ALWAYS, "Can't find local startd address.\n" );
 		return _error_state_;
 	}
 
 	ReliSock sock;
 	if( ! sock.connect( addr, 5 ) ) {
 		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", addr );
-		free(addr);
 		return _error_state_;
 	}
-	free(addr);
 
 	sock.encode();
 	sock.put( GIVE_STATE );
