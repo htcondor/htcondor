@@ -69,7 +69,8 @@ class Matchmaker : public Service
 						ClassAdList &startdPvtAds, Sock *sock,
 						char* scheddName, char* scheddAddr,
 						int send_ad_to_schedd);
-		void calculateNormalizationFactor (ClassAdList &, double &, double &);
+		void calculateNormalizationFactor (ClassAdList &, double &, double &,
+										   double &, double &);
 		char *getCapability (char *, char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 
