@@ -549,7 +549,11 @@ part_send_job(
   free(capability);
                
   /* send the starter number */
-  dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
+  if( test_starter ) {
+	  dprintf( D_ALWAYS, "Requesting Alternate Starter %d\n", test_starter );
+  } else {
+	  dprintf( D_ALWAYS, "Requesting Primarty Starter\n" );
+  }
   if( !sock->code(test_starter) ) {
     EXCEPT( "sock->code(%d)", test_starter );
   }
