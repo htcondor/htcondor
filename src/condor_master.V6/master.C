@@ -60,7 +60,7 @@ extern "C"
 void	init_params();
 void	init_daemon_list();
 void	init_classad();
-void	get_lock(char * );
+void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
@@ -273,12 +273,6 @@ main_init( int argc, char* argv[] )
 			// process group.
 		setsid();
 	}
-#endif
-
-	/* Make sure we are the only copy of condor_master running */
-#ifndef WIN32
-	char*	log_file = daemons.DaemonLog( daemonCore->getpid() );
-	get_lock( log_file);  
 #endif
 
 	if( StartDaemons ) {
@@ -787,10 +781,10 @@ init_classad()
 FileLock *MasterLock;
 
 void
-get_lock( char* file_name )
+lock_or_except( const char* file_name )
 {
-	if( (MasterLockFD=open(file_name,O_RDWR,0)) < 0 ) {
-		EXCEPT( "open(%s,0,0)", file_name );
+	if( (MasterLockFD=open(file_name,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR)) < 0 ) {
+		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", file_name, errno );
 	}
 
 	// This must be a global so that it doesn't go out of scope
@@ -798,26 +792,7 @@ get_lock( char* file_name )
 	MasterLock = new FileLock( MasterLockFD );
 	MasterLock->set_blocking( FALSE );
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
-		// we were unable to obtain a lock.  check the config file
-		// to see if this is allowed.
-
-		// the default is no.
-		char  val = 'N';
-
-		char* p = param("DISABLE_MASTER_LOCK_CHECK");
-		if (p) {
-			val = p[0];
-			free (p);
-		}
-
-		// val holds the first char of the param()
-		if (val == 'y' || val == 'Y' || val == 't' || val == 'T') {
-			// no lock, no problem.  lets print a warning.
-			dprintf (D_ALWAYS, "Warning: Can't get lock on \"%s\"\n", file_name);
-		} else {
-			// no lock is fatal.
-			EXCEPT( "Can't get lock on \"%s\"", file_name );
-		}
+		EXCEPT( "Can't get lock on \"%s\"", file_name );
 	}
 }
 
@@ -1009,3 +984,46 @@ void
 main_pre_dc_init( int argc, char* argv[] )
 {
 }
+
+
+void
+main_pre_command_sock_init()
+{
+	/* Make sure we are the only copy of condor_master running */
+#ifndef WIN32
+	MyString lock_file;
+	char*  p;
+
+	// see if a file is given explicitly
+	p = param ("MASTER_INSTANCE_LOCK");
+	if (p) {
+		lock_file = p;
+		free (p);
+	} else {
+		// no filename given.  use $(LOCK)/InstanceLock.
+		p = param ("LOCK");
+		if (p) {
+			lock_file = p;
+			lock_file = lock_file + "/InstanceLock";
+			free (p);
+		} else {
+			// no LOCK dir?  strange.  fall back to the
+			// old behavior which is to lock the log file
+			// itself.
+			p = param("MASTER_LOG");
+			if (p) {
+				lock_file = p;
+				free (p);
+			} else {
+				// i give up.  have a hardcoded default and like it. :)
+				lock_file = "/tmp/InstanceLock";
+			}
+		}
+	}
+	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.Value() );
+	lock_or_except( lock_file.Value() );
+	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
+#endif
+
+}
+
