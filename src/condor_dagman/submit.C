@@ -22,6 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_attributes.h"
 
 //
 // Local DAGMan includes
@@ -154,24 +155,25 @@ do_submit( const Dagman &dm, const char *command, CondorID &condorID,
 //-------------------------------------------------------------------------
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals )
+			   const char* DAGNodeName, MyString DAGParentNodeNames,
+			   List<MyString>* names, List<MyString>* vals )
 {
 	const char * exe = "condor_submit";
 	MyString prependLines;
 	MyString command;
 	char quote[2] = {commandLineQuoteChar, '\0'};
 
-	// add arguments to condor_submit to identify the job's name in the
-	// DAG and the DAGMan's job id, and to print the former in the
-	// submit log
+	// construct arguments to condor_submit to add attributes to the
+	// job classad which identify the job's node name in the DAG, the
+	// node names of its parents in the DAG, and the job ID of DAGMan
+	// itself; then, define submit_event_notes to print the job's node
+	// name inside the submit event in the userlog
 
-	prependLines = MyString(" -a ") + quote +
-		"dag_node_name = " + DAGNodeName + quote +
-		" -a " + quote +
-		"+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
-		" -a " + quote +
-		"submit_event_notes = DAG Node: $(dag_node_name)" +
-		quote;
+	prependLines = prependLines +
+		" -a " + quote + "+" + ATTR_DAG_NODE_NAME + " = \"" + DAGNodeName + "\"" + quote +
+		" -a " + quote + "+DAGParentNodeNames = \"" + DAGParentNodeNames + "\"" + quote +
+		" -a " + quote + "+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
+		" -a " + quote + "submit_event_notes = DAG Node: " + DAGNodeName + quote;
 
 	MyString anotherLine;
 	ListIterator<MyString> nameIter(*names);

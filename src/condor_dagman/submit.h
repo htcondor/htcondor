@@ -48,12 +48,14 @@ const char commandLineQuoteChar = '\'';
     @param cmdFile the job's Condor command file.
     @param condorID will hold the ID for the submitted job (if successful)
     @param DAGNodeName the name of the job's DAG node
+	@param DAGParentNodeNames a delimited string listing the node's parents
     @param DAGManJobId the Condor jobID of the master DAGMan job
     @return true on success, false on failure
 */
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-	const char* DAGNodeName, List<MyString>* names, List<MyString>* vals );
+					const char* DAGNodeName, MyString DAGParentNodeNames,
+					List<MyString>* names, List<MyString>* vals );
 
 bool dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		 const char* DAGNodeName );  //--> DAP
