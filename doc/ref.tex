@@ -3,10 +3,9 @@
 %
 %  For use with latex2html
 %
-%\usepackage{times}
-\input{timesfont.tex}
 \usepackage{html}
 \usepackage{graphicx}
+\usepackage{makeidx}
 
 %
 %  Set the size of the margins and text area
@@ -59,10 +58,14 @@
 	%
 	\usepackage[Bjarne]{fncychap}
 }
+
 %
+% Input a file written by our Makefile, which will setup to use Times font
+% and pull in the hyperref package if we are building the PDF version.
+\input{timesfont.tex}
+
 % generate index
 %
-\usepackage{makeidx}
 \makeindex
 
 \begin{document}
@@ -77,7 +80,7 @@
 
 \sloppy
 \begin{small}
-\subsubsection{Copyright and Disclaimer}
+\subsubsection*{Copyright and Disclaimer}
 \label{sec:copyright-and-disclaimer}
 \input{copyright.tex}
 \end{small}
