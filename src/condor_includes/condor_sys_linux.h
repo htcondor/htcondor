@@ -172,5 +172,11 @@ int getpriority(int, int);
 END_C_DECLS
 #endif /* GLIBC */
 
+#if defined(LINUX) && defined(GLIBC21)
+#include <search.h>
+#endif
+
+
+
 #endif /* CONDOR_SYS_LINUX_H */
 
