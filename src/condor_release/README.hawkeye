@@ -73,14 +73,25 @@ will be "xxx_abc = xyzzy".  These should be unique, as well.
 
 path - This specifies the path to run the module itself.
 
-period - This defines the frequency with which to run the module.  A
-value of 0 is valid only in "continuous mode", in which the module
-runs constantly outputing data periodically (see below and look at top
-for an example).  The modifiers "s", "m", and "h" for seconds,
-minutes, and hours (respectively) are recognized.  Thus 5m means run
-every five minutes.  If no modifier is specified, seconds is assumed.
-For continuous mode, this specifies how long after the process dies
-before it's restarted.
+period - This defines the frequency with which Hawkeye launches
+the module.
+
+  If an earlier instance of the module is already running,
+  Hawkeye's behavior is defined by the nokill option (see below).
+
+  In "continuous mode", in which the module runs constantly and
+  outputs data periodically (see below and look at top for an
+  example), the period instead defines the delay between when the
+  module exits and when Hawkeye restarts it.
+
+  The modifiers "s", "m", and "h" for seconds, minutes, and hours
+  (respectively) are recognized.  Thus, 5m means run every five
+  minutes.  If no modifier is specified, seconds is assumed.
+
+  A value of 0 is automatically reset to 1 in continuous mode, so
+  that Hawkeye won't busy-loop if the job fails to execute for
+  some reason.  A value of 0 is marked as an error for other job
+  modes, since it's an invalid period.
 
 options - Several options are currently defined:
 
