@@ -685,12 +685,12 @@ ClassAd* ClassAdList::Lookup(const char* name)
 	return (ClassAd*)list;
 }
 
-void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*))
+void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*, void*), void* info)
 {
-	Sort(SmallerThan, head);
+	Sort(SmallerThan, info, head);
 }
 
-void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*), AttrListAbstract*& list)
+void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*, void*), void* info, AttrListAbstract*& list)
 {
 	ClassAd*	first;
 	ClassAd*	prev;
@@ -706,14 +706,14 @@ void ClassAdList::Sort(int(*SmallerThan)(ClassAd*, ClassAd*), AttrListAbstract*&
 	ad = (ClassAd*)list->next;
 	for(; ad; prev = ad, ad = (ClassAd*)ad->next)
 	{
-		if(SmallerThan(ad, first))
+		if(SmallerThan(ad, first, info))
 		{
 			prev->next = ad->next;
 			ad->next = first;
 			list = (AttrListAbstract*)ad;
 		}
 	}
-	Sort(SmallerThan, list->next);
+	Sort(SmallerThan, info, list->next);
 }
 
 ClassAd* ClassAd::FindNext()
